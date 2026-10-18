@@ -13,6 +13,7 @@ use blitz_dom::BaseDocument;
 use dioxus::prelude::*;
 use dioxus_native_dom::{NodeHandle, NodeId};
 
+use super::FreeDoc;
 use super::{BlitzElement, Callbacks, Doc, ancestors, anchor, defer, doc, flush_soon, reveal};
 use crate::platform::{
     ElementApi, FocusMove, SilentFocusApi, SilentFocusSubscription, focus::OnMove,
@@ -62,7 +63,7 @@ pub(super) fn mouse_pressed(event: &Event<MouseData>) {
     let wrapper = doc.wrapper_id();
     // `<html>` or the wrapper: nothing of the app's held focus to keep.
     let owner = doc.anchor().as_ref().and_then(|anchor| {
-        let doc = anchor.try_doc()?;
+        let doc = anchor.free_doc()?;
         let owner = doc.get_focussed_node_id()?;
         (owner != doc.root_element().id && Some(owner) != wrapper).then_some(owner)
     });
@@ -145,10 +146,10 @@ pub(super) fn watch_revealing(document: &BaseDocument) {
 /// A Tab reaching [`Listener`](super::Listener): Blitz moves focus after the
 /// dispatch, unless a handler prevented it.
 pub(super) fn keyed(event: &Event<KeyboardData>) {
-    if event.key() != Key::Tab || !event.default_action_enabled() {
+    if event.key() != Key::Named(NamedKey::Tab) || !event.default_action_enabled() {
         return;
     }
-    if let Some(doc) = anchor().as_ref().and_then(|anchor| anchor.try_doc()) {
+    if let Some(doc) = anchor().as_ref().and_then(|anchor| anchor.free_doc()) {
         watch_revealing(&doc);
     }
 }
@@ -163,7 +164,7 @@ pub(super) fn check(doc: &Doc) {
     let Some(anchor) = doc.anchor() else {
         return;
     };
-    let Some(now) = anchor.try_doc().map(|doc| doc.get_focussed_node_id()) else {
+    let Some(now) = anchor.free_doc().map(|doc| doc.get_focussed_node_id()) else {
         return;
     };
     if now == before {
@@ -199,7 +200,7 @@ fn holds(element: &Rc<MountedData>, focus: Option<NodeId>) -> bool {
         return false;
     };
     handle
-        .try_doc()
+        .free_doc()
         .is_some_and(|doc| ancestors(&doc, focus).any(|id| id == target))
 }
 
@@ -215,7 +216,7 @@ impl FocusMove for Moved {
     /// As the web's `relatedTarget`: `<html>`, the wrapper or a removed node
     /// read as `<body>`.
     fn entered_from(&self, boundary: &str) -> Option<Option<Box<dyn ElementApi>>> {
-        let doc = self.anchor.try_doc()?;
+        let doc = self.anchor.free_doc()?;
         let from = self.before.filter(|&id| {
             id != doc.root_element().id
                 && Some(id) != self.wrapper
@@ -261,7 +262,7 @@ pub(in crate::platform::backend) fn focus_lands_in(boundary: &str) -> bool {
     let Some(anchor) = anchor() else {
         return false;
     };
-    let Some(doc) = anchor.try_doc() else {
+    let Some(doc) = anchor.free_doc() else {
         return false;
     };
     let (Some(now), Ok(hosts)) = (doc.get_focussed_node_id(), doc.query_selector_all(boundary))

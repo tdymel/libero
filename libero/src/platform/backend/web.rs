@@ -3,8 +3,8 @@ use std::rc::Rc;
 use std::time::Duration;
 
 use dioxus::prelude::{
-    Code, Event, FocusData, Key, KeyboardData, Modifiers, MountedData, MouseData, PointerData,
-    TransitionData,
+    Code, Event, FocusData, Key, KeyboardData, Modifiers, MountedData, MouseData, NamedKey,
+    PointerData, TransitionData,
 };
 use wasm_bindgen::{JsCast, JsValue};
 
@@ -1535,7 +1535,10 @@ impl WebKeyboard {
                 }
 
                 // As `KeyboardData` parses it.
-                let key = event.key().parse().unwrap_or(Key::Unidentified);
+                let key = event
+                    .key()
+                    .parse()
+                    .unwrap_or(Key::Named(NamedKey::Unidentified));
                 let mut modifiers = Modifiers::empty();
                 modifiers.set(Modifiers::CONTROL, event.ctrl_key());
                 modifiers.set(Modifiers::SHIFT, event.shift_key());

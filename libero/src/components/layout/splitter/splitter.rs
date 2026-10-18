@@ -286,12 +286,12 @@ pub fn Splitter(props: SplitterProps) -> Element {
         // The arrow moves the divider the way it points.
         let right = step * inline_sign(vertical && root.is_rtl());
         match event.key() {
-            Key::ArrowRight if vertical => go_to(current + right),
-            Key::ArrowLeft if vertical => go_to(current - right),
-            Key::ArrowDown if !vertical => go_to(current + step),
-            Key::ArrowUp if !vertical => go_to(current - step),
-            Key::Home => go_to(min_size),
-            Key::End => go_to(100.0 - min_size),
+            Key::Named(NamedKey::ArrowRight) if vertical => go_to(current + right),
+            Key::Named(NamedKey::ArrowLeft) if vertical => go_to(current - right),
+            Key::Named(NamedKey::ArrowDown) if !vertical => go_to(current + step),
+            Key::Named(NamedKey::ArrowUp) if !vertical => go_to(current - step),
+            Key::Named(NamedKey::Home) => go_to(min_size),
+            Key::Named(NamedKey::End) => go_to(100.0 - min_size),
             _ => {}
         }
     });

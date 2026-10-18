@@ -160,10 +160,10 @@ pub(super) fn key_resize(key: &Key, shift: bool, rtl: bool) -> Option<KeyResize>
     let step = if shift { MENU_STEP } else { KEY_STEP };
     let outward = if rtl { -step } else { step };
     match key {
-        Key::ArrowRight => Some(KeyResize::By(outward)),
-        Key::ArrowLeft => Some(KeyResize::By(-outward)),
-        Key::Home => Some(KeyResize::Min),
-        Key::End => Some(KeyResize::Max),
+        Key::Named(NamedKey::ArrowRight) => Some(KeyResize::By(outward)),
+        Key::Named(NamedKey::ArrowLeft) => Some(KeyResize::By(-outward)),
+        Key::Named(NamedKey::Home) => Some(KeyResize::Min),
+        Key::Named(NamedKey::End) => Some(KeyResize::Max),
         _ => None,
     }
 }
@@ -324,20 +324,23 @@ mod tests {
     #[test]
     fn arrows_move_the_grip_the_way_they_point() {
         assert_eq!(
-            key_resize(&Key::ArrowRight, false, false),
+            key_resize(&Key::Named(NamedKey::ArrowRight), false, false),
             Some(KeyResize::By(10.0))
         );
         assert_eq!(
-            key_resize(&Key::ArrowLeft, true, false),
+            key_resize(&Key::Named(NamedKey::ArrowLeft), true, false),
             Some(KeyResize::By(-50.0))
         );
         // Under RTL the grip is the left edge: Left widens.
         assert_eq!(
-            key_resize(&Key::ArrowLeft, false, true),
+            key_resize(&Key::Named(NamedKey::ArrowLeft), false, true),
             Some(KeyResize::By(10.0))
         );
-        assert_eq!(key_resize(&Key::Home, false, true), Some(KeyResize::Min));
-        assert_eq!(key_resize(&Key::Enter, false, false), None);
+        assert_eq!(
+            key_resize(&Key::Named(NamedKey::Home), false, true),
+            Some(KeyResize::Min)
+        );
+        assert_eq!(key_resize(&Key::Named(NamedKey::Enter), false, false), None);
     }
 
     #[test]

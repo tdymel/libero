@@ -226,13 +226,18 @@ impl ChipFocus {
     /// The arrows walk, Backspace and Delete remove; Tab, Escape and chords pass.
     pub(crate) fn key(&self, event: &KeyboardEvent, index: usize, remove: Callback<()>) {
         let key = logical_key(event);
-        if is_tab(event) || matches!(key, Key::Escape) || !event.modifiers().is_empty() {
+        if is_tab(event)
+            || matches!(key, Key::Named(NamedKey::Escape))
+            || !event.modifiers().is_empty()
+        {
             return;
         }
         match key {
-            Key::ArrowLeft => self.focus(Some(index.saturating_sub(1))),
-            Key::ArrowRight => self.focus(Some(index + 1).filter(|next| *next < self.count)),
-            Key::Backspace | Key::Delete => remove.call(()),
+            Key::Named(NamedKey::ArrowLeft) => self.focus(Some(index.saturating_sub(1))),
+            Key::Named(NamedKey::ArrowRight) => {
+                self.focus(Some(index + 1).filter(|next| *next < self.count))
+            }
+            Key::Named(NamedKey::Backspace) | Key::Named(NamedKey::Delete) => remove.call(()),
             _ => return,
         }
         event.stop_propagation();
@@ -947,12 +952,14 @@ fn trigger_key(event: &KeyboardEvent, keys: &TriggerKeys, typed: &SelectTypeahea
         return;
     }
     match logical_key(event) {
-        Key::ArrowLeft if chip_count > 0 => {
+        Key::Named(NamedKey::ArrowLeft) if chip_count > 0 => {
             event.prevent_default();
             chips.focus(Some(chip_count - 1));
         }
         // Like a chip and `TagsField`, a chorded Backspace or Delete keeps the selection.
-        Key::Backspace | Key::Delete if chip_count > 0 && event.modifiers().is_empty() => {
+        Key::Named(NamedKey::Backspace) | Key::Named(NamedKey::Delete)
+            if chip_count > 0 && event.modifiers().is_empty() =>
+        {
             let Some(onremove) = onremove else {
                 return;
             };
@@ -960,18 +967,22 @@ fn trigger_key(event: &KeyboardEvent, keys: &TriggerKeys, typed: &SelectTypeahea
             onremove.call(chip_count - 1);
         }
         // APG select-only: ArrowUp opens on the selection, Home/End on the first/last enabled row.
-        key @ (Key::ArrowUp | Key::Home | Key::End) if !state.is_open() => {
+        key @ (Key::Named(NamedKey::ArrowUp)
+        | Key::Named(NamedKey::Home)
+        | Key::Named(NamedKey::End))
+            if !state.is_open() =>
+        {
             event.prevent_default();
             open.open(true);
             let last = open.picked.peek().selected.len().saturating_sub(1);
             match key {
-                Key::Home => state.set_active(Some(0)),
-                Key::End => state.set_active(Some(last)),
+                Key::Named(NamedKey::Home) => state.set_active(Some(0)),
+                Key::Named(NamedKey::End) => state.set_active(Some(last)),
                 _ => {}
             }
         }
         // Select-only also opens on Enter and Space; Enter on an open list is the core's pick.
-        Key::Enter if !state.is_open() => {
+        Key::Named(NamedKey::Enter) if !state.is_open() => {
             event.prevent_default();
             open.open(true);
         }

@@ -421,7 +421,7 @@ fn say(template: &str, label: &str, index: usize, count: usize) -> String {
 fn lifts(key: &Key) -> bool {
     match key {
         Key::Character(c) => c == " ",
-        Key::Enter => true,
+        Key::Named(NamedKey::Enter) => true,
         _ => false,
     }
 }
@@ -809,7 +809,7 @@ pub(crate) fn use_fixed_sortable(
             .and_then(|s| s.keyed.map(|to| (s.from, to, s.spans.len(), s.sign)));
         let Some((from, to, count, sign)) = keyed else {
             // Escape puts a pointer drag's item back too.
-            if key == Key::Escape && session.peek().is_some() {
+            if key == Key::Named(NamedKey::Escape) && session.peek().is_some() {
                 event.prevent_default();
                 finish(false);
             } else if lifts(&key) && session.peek().is_none() && !starting.peek().0 {
@@ -840,17 +840,17 @@ pub(crate) fn use_fixed_sortable(
                 finish(true);
                 return;
             }
-            Key::Escape => {
+            Key::Named(NamedKey::Escape) => {
                 event.prevent_default();
                 finish(false);
                 return;
             }
-            Key::ArrowDown if !*horizontal.peek() => to as isize + 1,
-            Key::ArrowUp if !*horizontal.peek() => to as isize - 1,
-            Key::ArrowRight if *horizontal.peek() => to as isize + step(true),
-            Key::ArrowLeft if *horizontal.peek() => to as isize + step(false),
-            Key::Home => 0,
-            Key::End => last as isize,
+            Key::Named(NamedKey::ArrowDown) if !*horizontal.peek() => to as isize + 1,
+            Key::Named(NamedKey::ArrowUp) if !*horizontal.peek() => to as isize - 1,
+            Key::Named(NamedKey::ArrowRight) if *horizontal.peek() => to as isize + step(true),
+            Key::Named(NamedKey::ArrowLeft) if *horizontal.peek() => to as isize + step(false),
+            Key::Named(NamedKey::Home) => 0,
+            Key::Named(NamedKey::End) => last as isize,
             _ => return,
         };
         event.prevent_default();

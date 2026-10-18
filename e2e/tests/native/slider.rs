@@ -206,7 +206,7 @@ fn escape_hides_the_hover_preview() {
             "hovering opened no preview (thumb focused: {focus_thumb})\n{}",
             page.tree()
         );
-        page.press(Key::Escape);
+        page.press(Key::Named(NamedKey::Escape));
         assert!(
             !page.exists(&preview),
             "Escape left the preview (thumb focused: {focus_thumb})\n{}",

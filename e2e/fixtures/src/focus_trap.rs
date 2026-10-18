@@ -82,7 +82,7 @@ fn ExitPage() -> Element {
             FocusTrap { restore_focus: true,
                 div {
                     onkeydown: move |event: KeyboardEvent| {
-                        if event.key() == Key::Escape {
+                        if event.key() == Key::Named(NamedKey::Escape) {
                             on.set(false);
                         }
                     },

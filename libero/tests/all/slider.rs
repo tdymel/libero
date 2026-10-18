@@ -726,12 +726,12 @@ mod dispatched {
             for thumb in thumbs {
                 let pick = |find: &FindClickListener| find.element("keydown", "aria-label", thumb);
                 for key in [
-                    Key::ArrowRight,
-                    Key::ArrowLeft,
-                    Key::Home,
-                    Key::End,
-                    Key::PageUp,
-                    Key::PageDown,
+                    Key::Named(NamedKey::ArrowRight),
+                    Key::Named(NamedKey::ArrowLeft),
+                    Key::Named(NamedKey::Home),
+                    Key::Named(NamedKey::End),
+                    Key::Named(NamedKey::PageUp),
+                    Key::Named(NamedKey::PageDown),
                 ] {
                     let data = || key_event(key.clone());
                     let (moved, _) = send(app, false, "keydown", pick, data);

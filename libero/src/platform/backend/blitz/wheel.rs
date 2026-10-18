@@ -7,6 +7,7 @@ use blitz_dom::BaseDocument;
 use dioxus::{html::geometry::WheelDelta, prelude::*};
 use dioxus_native_dom::NodeId;
 
+use super::FreeDoc;
 use super::{ancestors, doc, resolved_style_value};
 
 /// How long a pause ends a gesture (Chromium and Firefox: a few hundred ms).
@@ -62,7 +63,7 @@ pub(super) fn wheeled(event: &Event<WheelData>) {
             && now.duration_since(latch.at).as_millis() < PAUSE_MS
     });
     let (start, locked) = {
-        let Some(doc) = anchor.try_doc() else {
+        let Some(doc) = anchor.free_doc() else {
             return;
         };
         (
@@ -101,7 +102,7 @@ fn present(anchor: &dioxus_native_dom::NodeHandle, scroller: Scroller) -> bool {
     let Some(node) = scroller else {
         return true;
     };
-    anchor.try_doc().is_some_and(|doc| {
+    anchor.free_doc().is_some_and(|doc| {
         doc.get_node(node)
             .is_some_and(|node| node.flags.is_in_document())
     })

@@ -207,7 +207,7 @@ fn switch_in_a_form() -> Element {
 /// left to the browser, which submits as for a native checkbox (508).
 #[test]
 fn enter_toggles_a_switch_outside_a_form_only() {
-    let enter = || key_event(Key::Enter);
+    let enter = || key_event(Key::Named(NamedKey::Enter));
     let (heard, _) = send(readonly_switch, false, "keydown", last_keydown, enter);
     assert_eq!(heard, ["true"], "outside a form");
     let (heard, _) = send(switch_in_a_form, false, "keydown", last_keydown, enter);
@@ -239,7 +239,7 @@ fn a_read_only_radio_group_cancels_the_native_arrow() {
         HEARD.with_borrow_mut(Vec::clear);
         let Page { mut dom, rec: find } = Page::build(readonly_radio_group);
 
-        let arrow = Event::new(key_event(Key::ArrowDown), true);
+        let arrow = Event::new(key_event(Key::Named(NamedKey::ArrowDown)), true);
         dom.runtime()
             .handle_event("keydown", arrow.clone(), last_keydown(&find));
         dom.render_immediate(&mut dioxus::core::NoOpMutations);
@@ -303,15 +303,23 @@ fn tier_press(value: Option<Tier>, off: &[Tier], key: Key) -> (Vec<(bool, String
 /// step over them, wrapping.
 #[test]
 fn a_radio_group_steps_over_the_options_its_list_disabled() {
-    let (inputs, picked) = tier_press(Some(Tier::Free), &[Tier::Pro], Key::ArrowDown);
+    let (inputs, picked) = tier_press(
+        Some(Tier::Free),
+        &[Tier::Pro],
+        Key::Named(NamedKey::ArrowDown),
+    );
     let off: Vec<bool> = inputs.iter().map(|(off, _)| *off).collect();
     assert_eq!(off, [false, true, false], "{inputs:?}");
     assert_eq!(picked, ["Team"]);
 
-    let (_, picked) = tier_press(Some(Tier::Team), &[Tier::Pro], Key::ArrowUp);
+    let (_, picked) = tier_press(
+        Some(Tier::Team),
+        &[Tier::Pro],
+        Key::Named(NamedKey::ArrowUp),
+    );
     assert_eq!(picked, ["Free"]);
     // Positive control: without the option disabled, the arrow lands on it.
-    let (_, picked) = tier_press(Some(Tier::Free), &[], Key::ArrowDown);
+    let (_, picked) = tier_press(Some(Tier::Free), &[], Key::Named(NamedKey::ArrowDown));
     assert_eq!(picked, ["Pro"]);
 }
 
@@ -324,10 +332,10 @@ fn a_radio_group_never_puts_its_tab_stop_on_a_disabled_option() {
             .filter(|&i| inputs[i].1 == "0")
             .collect::<Vec<_>>()
     };
-    let (inputs, _) = tier_press(None, &[Tier::Free], Key::Tab);
+    let (inputs, _) = tier_press(None, &[Tier::Free], Key::Named(NamedKey::Tab));
     assert_eq!(stop(&inputs), [1], "{inputs:?}");
-    let (inputs, _) = tier_press(Some(Tier::Pro), &[Tier::Pro], Key::Tab);
+    let (inputs, _) = tier_press(Some(Tier::Pro), &[Tier::Pro], Key::Named(NamedKey::Tab));
     assert_eq!(stop(&inputs), [0], "{inputs:?}");
-    let (inputs, _) = tier_press(Some(Tier::Pro), &[], Key::Tab);
+    let (inputs, _) = tier_press(Some(Tier::Pro), &[], Key::Named(NamedKey::Tab));
     assert_eq!(stop(&inputs), [1], "{inputs:?}");
 }

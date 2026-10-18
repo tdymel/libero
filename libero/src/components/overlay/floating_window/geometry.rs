@@ -26,10 +26,10 @@ pub(super) fn pinned_growth(placement: Placement) -> (f64, f64) {
 
 fn arrow_delta(key: &Key, step: f64) -> Option<(f64, f64)> {
     match key {
-        Key::ArrowLeft => Some((-step, 0.0)),
-        Key::ArrowRight => Some((step, 0.0)),
-        Key::ArrowUp => Some((0.0, -step)),
-        Key::ArrowDown => Some((0.0, step)),
+        Key::Named(NamedKey::ArrowLeft) => Some((-step, 0.0)),
+        Key::Named(NamedKey::ArrowRight) => Some((step, 0.0)),
+        Key::Named(NamedKey::ArrowUp) => Some((0.0, -step)),
+        Key::Named(NamedKey::ArrowDown) => Some((0.0, step)),
         _ => None,
     }
 }
@@ -331,8 +331,8 @@ impl WindowGeometry {
         }
         let key = event.key();
         let request = match key {
-            Key::Home => Some(Err((0.0, 0.0))),
-            Key::End => Some(Err((f64::from(u16::MAX), f64::from(u16::MAX)))),
+            Key::Named(NamedKey::Home) => Some(Err((0.0, 0.0))),
+            Key::Named(NamedKey::End) => Some(Err((f64::from(u16::MAX), f64::from(u16::MAX)))),
             _ => {
                 let step = if event.modifiers().shift() {
                     1.0

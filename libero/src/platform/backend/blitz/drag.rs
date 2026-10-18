@@ -4,6 +4,7 @@ use blitz_dom::{QualName, local_name, ns};
 use dioxus::prelude::*;
 use dioxus_native_dom::{NodeHandle, NodeId};
 
+use super::FreeDoc;
 use super::{HIT_AREA_STYLE, ancestors, anchor, defer, doc, node_of, resolved_style_value};
 
 thread_local! {
@@ -37,7 +38,7 @@ pub(in crate::platform::backend) fn follow_pointer(
         onup,
     }));
     let cursor = anchor
-        .try_doc()
+        .free_doc()
         .map(|doc| resolved_style_value(&doc, node_id, "cursor"))
         .unwrap_or_default();
     catch_pointer(Some(cursor));
@@ -75,7 +76,7 @@ pub(super) fn followed(event: &Event<PointerData>, up: bool) {
     }
     let point = event.page_coordinates();
     let outside = anchor().and_then(|anchor| {
-        let doc = anchor.try_doc()?;
+        let doc = anchor.free_doc()?;
         // Gone with its element, and so are the handlers.
         if !doc
             .get_node(follow.capture)

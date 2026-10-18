@@ -211,7 +211,7 @@ fn escape_closes_a_card_in_a_modal_before_the_modal() {
         page.tree()
     );
 
-    page.press(Key::Escape);
+    page.press(Key::Named(NamedKey::Escape));
     assert!(
         !page.exists(CARD),
         "Escape did not close the card:\n{}",
@@ -220,7 +220,7 @@ fn escape_closes_a_card_in_a_modal_before_the_modal() {
     assert!(page.exists("#modal-body"), "Escape closed the modal too");
 
     page.focus("#inside");
-    page.press(Key::Escape);
+    page.press(Key::Named(NamedKey::Escape));
     assert!(
         !page.exists("#modal-body"),
         "the second Escape did not close the modal"
@@ -266,10 +266,10 @@ fn escape_closes_a_modal_over_a_card_before_the_card() {
         page.tree()
     );
     page.focus("#open");
-    page.press(Key::Enter);
+    page.press(Key::Named(NamedKey::Enter));
     assert!(page.exists("#modal-body"), "Enter did not open the modal");
 
-    page.press(Key::Escape);
+    page.press(Key::Named(NamedKey::Escape));
     assert!(
         !page.exists("#modal-body"),
         "Escape did not close the modal"
@@ -280,7 +280,7 @@ fn escape_closes_a_modal_over_a_card_before_the_card() {
     );
 
     page.focus("#open");
-    page.press(Key::Escape);
+    page.press(Key::Named(NamedKey::Escape));
     assert!(
         !page.exists(CARD),
         "the second Escape did not close the card"

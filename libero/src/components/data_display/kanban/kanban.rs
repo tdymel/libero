@@ -736,8 +736,8 @@ pub fn KanbanCard(props: KanbanCardProps) -> Element {
     let keys = carried.onkeydown;
     let onkeydown = use_callback(move |event: Event<KeyboardData>| {
         let forward = match event.key() {
-            Key::ArrowRight => true,
-            Key::ArrowLeft => false,
+            Key::Named(NamedKey::ArrowRight) => true,
+            Key::Named(NamedKey::ArrowLeft) => false,
             _ => return keys.call(event),
         };
         let Some(slot) = item.lifted_slot(false) else {

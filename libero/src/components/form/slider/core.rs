@@ -1145,12 +1145,12 @@ fn key_target(
     let distance = if shift { slider.big_step } else { slider.step } * unit;
     // Under RTL ArrowLeft raises the value, as on a native range.
     Some(match key {
-        Key::ArrowRight | Key::ArrowUp => thumb + distance,
-        Key::ArrowLeft | Key::ArrowDown => thumb - distance,
-        Key::PageUp => thumb + slider.big_step * unit,
-        Key::PageDown => thumb - slider.big_step * unit,
-        Key::Home => grid.min,
-        Key::End => grid.max,
+        Key::Named(NamedKey::ArrowRight) | Key::Named(NamedKey::ArrowUp) => thumb + distance,
+        Key::Named(NamedKey::ArrowLeft) | Key::Named(NamedKey::ArrowDown) => thumb - distance,
+        Key::Named(NamedKey::PageUp) => thumb + slider.big_step * unit,
+        Key::Named(NamedKey::PageDown) => thumb - slider.big_step * unit,
+        Key::Named(NamedKey::Home) => grid.min,
+        Key::Named(NamedKey::End) => grid.max,
         _ => return None,
     })
 }

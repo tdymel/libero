@@ -15,6 +15,7 @@ use dioxus::prelude::*;
 use dioxus_native_dom::{NodeHandle, NodeId};
 use style::values::computed::Overflow;
 
+use super::FreeDoc;
 use super::{Doc, client_rect, doc, resolved_style_value, sticky, when_free, when_laid_out};
 use crate::platform::{
     ContentSubscription, Dimensions, ScrollSubscription, TimerSubscription,
@@ -198,7 +199,7 @@ pub(super) fn watch_placed(base: &BaseDocument, placed: bool) {
 /// The window's size and scale, `None` while the document is borrowed.
 fn window(doc: &Doc) -> Option<((u32, u32), f64)> {
     let anchor = doc.anchor()?;
-    let base = anchor.try_doc()?;
+    let base = anchor.free_doc()?;
     Some(size(&base))
 }
 
@@ -326,7 +327,7 @@ pub(super) fn check(doc: &Doc) {
         let Some(anchor) = watched.first().map(|watched| watched.anchor.clone()) else {
             break 'measured Vec::new();
         };
-        let Some(base) = anchor.try_doc() else {
+        let Some(base) = anchor.free_doc() else {
             break 'measured Vec::new();
         };
         watched

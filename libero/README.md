@@ -59,11 +59,11 @@ See it running, with every component and its live demos, at
 
 ## Installation
 
-Libero 0.2 pins Dioxus `=0.8.0-alpha.2`; add that exact version, or a second
+Libero 0.2 pins Dioxus `=0.8.0-alpha.3`; add that exact version, or a second
 copy of dioxus would not share libero's contexts:
 
 ```shell
-cargo add dioxus@=0.8.0-alpha.2
+cargo add dioxus@=0.8.0-alpha.3
 cargo add libero
 ```
 

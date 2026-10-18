@@ -1,7 +1,12 @@
-use std::{rc::Rc, time::Duration};
+use std::{
+    cell::{Cell, Ref},
+    rc::Rc,
+    time::Duration,
+};
 
 use blitz_dom::BaseDocument;
 use dioxus::core::Runtime;
+use dioxus::logger::tracing;
 use dioxus::prelude::*;
 use dioxus_native_dom::NodeHandle;
 
@@ -23,11 +28,45 @@ pub(super) fn flush_soon() {
 /// Runs `run` now if the document is free, else at [`Outlet`]'s next flush,
 /// where it is: reads made there answer.
 pub(in crate::platform::backend) fn when_free(run: Box<dyn FnOnce()>) {
-    if anchor().is_none_or(|anchor| anchor.try_doc().is_some()) {
+    if anchor().is_none_or(|anchor| !stale() && anchor.try_doc().is_some()) {
         run();
         return;
     }
     later(run);
+}
+
+thread_local! {
+    /// In [`when_laid_out`]'s batch, where the document is current and laid out.
+    static LAID_OUT_RUN: Cell<bool> = const { Cell::new(false) };
+}
+
+/// dioxus-native applies a render's mutations only after the vdom ran (#5943): a body or
+/// a task there finds the document free but a render behind, so its commands wait for the flush.
+fn stale() -> bool {
+    rendering()
+        || !LAID_OUT_RUN.get()
+            && Runtime::try_current().is_some_and(|runtime| runtime.current_task().is_some())
+}
+
+fn rendering() -> bool {
+    Runtime::try_current().is_some_and(|runtime| runtime.vdom_is_rendering())
+}
+
+/// `try_doc`, `None` too in a component body, where the document is a render behind.
+/// Not in a task: one polled outside the render pass reads a current document.
+pub(super) trait FreeDoc {
+    fn free_doc(&self) -> Option<Ref<'_, BaseDocument>>;
+}
+
+impl FreeDoc for NodeHandle {
+    #[track_caller]
+    fn free_doc(&self) -> Option<Ref<'_, BaseDocument>> {
+        if rendering() {
+            tracing::debug!(at = %std::panic::Location::caller(), "a render-time read waits for the document");
+            return None;
+        }
+        self.try_doc()
+    }
 }
 
 /// Runs `run` where the document is free and laid out: effects run before the
@@ -42,21 +81,35 @@ pub(in crate::platform::backend) fn when_laid_out(run: Box<dyn FnOnce()>) {
         waiting.push(in_origin(run));
         waiting.len() == 1
     };
-    if !first {
-        return;
+    if first {
+        wake_laid_out(&doc, Duration::ZERO, geometry());
     }
-    let weak = Rc::downgrade(&doc);
+}
+
+/// Blitz's layout count, bumped by every `resolve`.
+fn geometry() -> Option<u64> {
+    Some(anchor()?.try_doc()?.tree().geometry_generation())
+}
+
+fn wake_laid_out(doc: &Rc<Doc>, delay: Duration, since: Option<u64>) {
+    let weak = Rc::downgrade(doc);
     let wait = crate::platform::backend::thread::timer().map(|timer| {
         timer.after(
-            Duration::ZERO,
+            delay,
             Box::new(move || {
                 let Some(doc) = weak.upgrade() else {
                     return;
                 };
+                // Woken in the poll that asked, before any layout: once more, a frame later.
+                if delay.is_zero() && since.is_some() && geometry() == since {
+                    return wake_laid_out(&doc, RETRY_STEP, since);
+                }
                 let waiting = std::mem::take(&mut *doc.laid_out.borrow_mut());
+                let outer = LAID_OUT_RUN.replace(true);
                 for run in waiting {
                     when_free(run);
                 }
+                LAID_OUT_RUN.set(outer);
             }),
         )
     });
@@ -141,7 +194,7 @@ pub(super) fn run_deferred(doc: &Doc) {
 
 /// Runs `run` now if the document is free, else at [`Outlet`]'s next flush.
 pub(super) fn run_or_defer(anchor: &NodeHandle, run: impl FnOnce(&mut BaseDocument) + 'static) {
-    if anchor.try_doc().is_some() {
+    if !stale() && anchor.try_doc().is_some() {
         run(&mut anchor.doc_mut());
     } else {
         defer(anchor, run);

@@ -3,7 +3,7 @@
 
 use std::rc::Rc;
 
-use dioxus::core::{AttributeValue, ElementId, WriteMutations};
+use dioxus::core::{BorrowedAttributeValue, ElementId, WriteMutations};
 use dioxus::html::PlatformEventData;
 
 use super::*;
@@ -49,11 +49,11 @@ impl WriteMutations for FindKeydownListeners {
     fn replace_with(&mut self, _m: usize) {}
     fn insert_after(&mut self, _m: usize) {}
     fn insert_before(&mut self, _m: usize) {}
-    fn set_attribute(&mut self, n: &str, _ns: Option<&str>, v: &AttributeValue) {
+    fn set_attribute(&mut self, n: &str, _ns: Option<&str>, v: BorrowedAttributeValue<'_>) {
         if n == "id"
-            && let AttributeValue::Text(value) = v
+            && let BorrowedAttributeValue::Text(value) = v
         {
-            match value.as_str() {
+            match value {
                 "trigger" => self.trigger = self.last,
                 "dropdown" => self.dropdown = self.last,
                 _ => {}
@@ -61,7 +61,7 @@ impl WriteMutations for FindKeydownListeners {
         }
         if n == "role"
             && self.combobox.is_none()
-            && let AttributeValue::Text(value) = v
+            && let BorrowedAttributeValue::Text(value) = v
             && value == "combobox"
         {
             self.combobox = self.last;

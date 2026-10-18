@@ -26,14 +26,14 @@ fn rejecting() -> Element {
 fn a_rejected_press_owes_no_focus_once_tab_leaves() {
     let mut page = mount(rejecting);
     page.focus(LAST);
-    page.press(Key::Enter);
+    page.press(Key::Named(NamedKey::Enter));
     page.tab();
     assert!(
         page.is_focused("#reset"),
         "after Tab: {}",
         page.focus_owner()
     );
-    page.press(Key::Enter);
+    page.press(Key::Named(NamedKey::Enter));
     let moved = page.wait_for(|page| page.text("[aria-current=page]") == "2");
     assert!(moved, "the reset never reached page 2");
     assert!(

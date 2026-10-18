@@ -35,21 +35,21 @@ zip = { version = "2", default-features = false, features = ["deflate"] }
 # browser tier builds no Blitz: `cargo test -p e2e --features native --test all
 # -- ::native` for the scenarios, `--test native` for the Blitz-only tests.
 e2e-fixtures = { path = "fixtures", optional = true }
-dioxus = { version = "=0.8.0-alpha.2", default-features = false, features = ["macro", "html", "signals", "hooks", "document", "mounted", "router", "logger"], optional = true }
+dioxus = { version = "=0.8.0-alpha.3", default-features = false, features = ["macro", "html", "signals", "hooks", "document", "mounted", "router", "logger"], optional = true }
 libero = { path = "../libero", default-features = false, features = ["native", "code-lang-rust", "fake-file-dialog", "held-clock"], optional = true }
 # The windowless half of dioxus-native: no winit, no renderer. The `blitz-*`
 # versions match dioxus-native's, so this is the same Blitz the native docs run.
-dioxus-native-dom = { version = "=0.8.0-alpha.2", optional = true }
-blitz-dom = { version = "0.3.0-beta.3", default-features = false, optional = true }
+dioxus-native-dom = { version = "=0.8.0-alpha.3", optional = true }
+blitz-dom = { version = "0.3.0-beta.4", default-features = false, optional = true }
 # Only for `HtmlProvider`: without it every `<style dangerous_inner_html>`
 # arrives empty and libero renders unstyled.
-blitz-html = { version = "0.3.0-beta.3", default-features = false, optional = true }
-blitz-traits = { version = "0.3.0-beta.3", optional = true }
+blitz-html = { version = "0.3.0-beta.4", default-features = false, optional = true }
+blitz-traits = { version = "0.3.0-beta.4", optional = true }
 # `Page::computed`: stylo's resolved values. The version blitz-dom uses.
 style = { package = "stylo", version = "0.22", optional = true }
 # What Blitz paints, not what stylo computed: `Page::painted_*` records the
 # scene the shell would draw; `svg` rasterises inline svgs too (todo 882).
-blitz-paint = { version = "0.3.0-beta.3", default-features = false, features = ["svg"], optional = true }
+blitz-paint = { version = "0.3.0-beta.4", default-features = false, features = ["svg"], optional = true }
 anyrender = { version = "0.14", optional = true }
 # `Page::painted_pixel` rasterises that scene with the shell's CPU renderer.
 anyrender_vello_cpu = { version = "0.18", default-features = false, optional = true }

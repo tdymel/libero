@@ -809,7 +809,7 @@ pub(super) fn use_board_card(
     let onkeydown = use_callback(move |event: Event<KeyboardData>| {
         if !*drag.sorting.peek() {
             keys.call(event);
-        } else if event.key() == Key::Escape {
+        } else if event.key() == Key::Named(NamedKey::Escape) {
             event.prevent_default();
             drag.cancel.call(());
         }

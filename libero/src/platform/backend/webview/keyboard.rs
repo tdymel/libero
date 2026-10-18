@@ -1,7 +1,7 @@
 use std::rc::Rc;
 
 use dioxus::core::Runtime;
-use dioxus::prelude::{Code, Key, Modifiers, spawn};
+use dioxus::prelude::{Code, Key, Modifiers, NamedKey, spawn};
 use serde_json::json;
 
 use super::{Slot, WebViewListener, eval_with, page, runs_scripts};
@@ -146,7 +146,7 @@ impl WebViewKeyboard {
                     )>()
                     .await
             {
-                let key = key.parse().unwrap_or(Key::Unidentified);
+                let key = key.parse().unwrap_or(Key::Named(NamedKey::Unidentified));
                 let mut modifiers = Modifiers::empty();
                 modifiers.set(Modifiers::CONTROL, ctrl);
                 modifiers.set(Modifiers::SHIFT, shift);

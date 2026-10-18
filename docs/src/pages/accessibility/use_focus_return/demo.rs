@@ -33,7 +33,7 @@ pub fn Filters() -> Element {
                     gap: "sm",
                     sx: sx().padding("md").background("muted.1").border_radius("8px"),
                     onkeydown: move |event: KeyboardEvent| {
-                        if event.key() == Key::Escape {
+                        if event.key() == Key::Named(NamedKey::Escape) {
                             open.set(false);
                             trigger.restore();
                         }

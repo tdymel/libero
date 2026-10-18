@@ -350,10 +350,10 @@ fn NumberFieldShell<T: NumberValue>(
                 return;
             }
             let steps = match event.key() {
-                Key::ArrowUp => 1,
-                Key::ArrowDown => -1,
-                Key::PageUp => 10,
-                Key::PageDown => -10,
+                Key::Named(NamedKey::ArrowUp) => 1,
+                Key::Named(NamedKey::ArrowDown) => -1,
+                Key::Named(NamedKey::PageUp) => 10,
+                Key::Named(NamedKey::PageDown) => -10,
                 _ => return,
             };
             // Otherwise the caret jumps to the end of the text as well.

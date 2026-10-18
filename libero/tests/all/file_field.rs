@@ -576,7 +576,7 @@ mod dispatched {
     /// picker, and the clear button, stand down.
     #[test]
     fn a_read_only_file_field_removes_nothing() {
-        let backspace = || key_event(Key::Backspace);
+        let backspace = || key_event(Key::Named(NamedKey::Backspace));
         let (removed, _) = send(readonly_files, false, "keydown", first_keydown, backspace);
         assert_eq!(removed, ["1"], "Backspace is the control");
         let (heard, html) = send(readonly_files, true, "keydown", first_keydown, backspace);

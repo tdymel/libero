@@ -136,7 +136,7 @@ fn FiltersPage() -> Element {
                     direction: "column",
                     gap: "sm",
                     onkeydown: move |event: KeyboardEvent| {
-                        if event.key() == Key::Escape {
+                        if event.key() == Key::Named(NamedKey::Escape) {
                             open.set(false);
                             trigger.restore();
                         }

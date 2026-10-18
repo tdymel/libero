@@ -594,16 +594,16 @@ fn tags_field_chips<F: Fn(Vec<String>) + Clone + 'static>(
                     let key = logical_key(&event);
                     // Tab, Escape and chords pass; every other key is the cursor's.
                     if is_tab(&event)
-                        || matches!(key, Key::Escape)
+                        || matches!(key, Key::Named(NamedKey::Escape))
                         || !event.modifiers().is_empty()
                     {
                         return;
                     }
                     event.stop_propagation();
                     match key {
-                        Key::ArrowLeft => cursor.focus(Some(index.saturating_sub(1))),
-                        Key::ArrowRight => cursor.focus(Some(index + 1).filter(|next| *next < count)),
-                        Key::Delete | Key::Backspace if !locked => remove.call(()),
+                        Key::Named(NamedKey::ArrowLeft) => cursor.focus(Some(index.saturating_sub(1))),
+                        Key::Named(NamedKey::ArrowRight) => cursor.focus(Some(index + 1).filter(|next| *next < count)),
+                        Key::Named(NamedKey::Delete) | Key::Named(NamedKey::Backspace) if !locked => remove.call(()),
                         _ => return,
                     }
                     event.prevent_default();
@@ -769,7 +769,7 @@ fn tags_field_input<F: Fn(Vec<String>) + Clone + 'static>(
             match logical_key(&event) {
                 // A highlighted row owns Enter; with nothing typed it bubbles
                 // and a form still submits.
-                Key::Enter
+                Key::Named(NamedKey::Enter)
                     if !(state.is_open() && state.active().is_some() && row_count > 0)
                         && !text().trim().is_empty() =>
                 {
@@ -781,7 +781,7 @@ fn tags_field_input<F: Fn(Vec<String>) + Clone + 'static>(
                 }
                 // The input edits the value, unlike `MultiSelect`'s search box;
                 // with text in it, or with Ctrl or Alt held, Backspace only edits.
-                Key::Backspace
+                Key::Named(NamedKey::Backspace)
                     if text().is_empty() && !held.is_empty() && event.modifiers().is_empty() =>
                 {
                     let Some(onchange) = &onchange else {
@@ -793,7 +793,7 @@ fn tags_field_input<F: Fn(Vec<String>) + Clone + 'static>(
                     onchange(next);
                 }
                 // From an empty draft, or from the start of one, which stays.
-                Key::ArrowLeft
+                Key::Named(NamedKey::ArrowLeft)
                     if (text().is_empty() || caret_at_start(cursor.input))
                         && !held.is_empty()
                         && event.modifiers().is_empty() =>

@@ -513,7 +513,7 @@ fn a_wheel_to_the_bottom_reaches_it_once() {
 fn end_reaches_the_bottom_once() {
     let mut page = mount(edged);
     page.focus(&format!("{PANE} > [role=region]"));
-    page.press(e2e::native::Key::End);
+    page.press(e2e::native::Key::Named(NamedKey::End));
     assert_eq!(reached_after(&mut page), "1");
 }
 
@@ -540,16 +540,16 @@ fn a_key_leaves_an_axis_the_area_does_not_scroll() {
     let mut page = mount(one_axis);
     page.focus("#vertical");
     let start = page.rect("#tall");
-    page.press(Key::ArrowRight);
-    page.press(Key::ArrowDown);
+    page.press(Key::Named(NamedKey::ArrowRight));
+    page.press(Key::Named(NamedKey::ArrowDown));
     let moved = page.rect("#tall");
     assert_eq!(moved.0, start.0, "ArrowRight scrolled the hidden x axis");
     assert!(moved.1 < start.1, "ArrowDown did not scroll");
 
     page.focus("#unscrolled");
     let start = page.rect("#clipped");
-    page.press(Key::ArrowDown);
-    page.press(Key::End);
+    page.press(Key::Named(NamedKey::ArrowDown));
+    page.press(Key::Named(NamedKey::End));
     assert_eq!(page.rect("#clipped"), start, "a `none` area scrolled");
 }
 

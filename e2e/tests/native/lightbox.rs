@@ -73,7 +73,7 @@ fn zoomed(page: &mut Page) -> String {
 fn z_zooms_and_an_arrow_pans() {
     let mut page = mount(app);
     let zoomed = zoomed(&mut page);
-    page.press(Key::ArrowLeft);
+    page.press(Key::Named(NamedKey::ArrowLeft));
     settle_until(&mut page, |page| transform(page) != zoomed);
     let panned = page.computed(PICTURE, "transform");
     assert_ne!(zoomed, panned, "ArrowLeft did not pan it");
@@ -118,7 +118,7 @@ fn the_zoom_buttons_step_and_disable_at_their_limits() {
 
     page.focus(ZOOM_IN);
     for _ in 0..10 {
-        page.press(Key::Enter);
+        page.press(Key::Named(NamedKey::Enter));
         settle(&mut page);
     }
     settle_until(&mut page, |page| {
@@ -135,7 +135,7 @@ fn the_zoom_buttons_step_and_disable_at_their_limits() {
 
     page.focus(ZOOM_OUT);
     for _ in 0..12 {
-        page.press(Key::Enter);
+        page.press(Key::Named(NamedKey::Enter));
         settle(&mut page);
     }
     settle_until(&mut page, |page| {
@@ -259,7 +259,7 @@ fn every_picture_comes_to_rest_centred() {
     assert_centred(&mut page, 0);
     page.focus(PICTURE);
     for index in 1..3 {
-        page.press(Key::ArrowRight);
+        page.press(Key::Named(NamedKey::ArrowRight));
         assert_centred(&mut page, index);
     }
 }

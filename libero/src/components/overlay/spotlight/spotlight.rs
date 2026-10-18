@@ -341,7 +341,12 @@ pub fn use_spotlight(options: SpotlightOptions) -> SpotlightHandle {
         // A key can land before the render of the input event before it (todo 2388):
         // the rows come from the live query, as `ComboboxCore` reads `active_now()`.
         let onkeydown = move |event: KeyboardEvent| {
-            if !matches!(event.key(), Key::ArrowDown | Key::ArrowUp | Key::Enter) {
+            if !matches!(
+                event.key(),
+                Key::Named(NamedKey::ArrowDown)
+                    | Key::Named(NamedKey::ArrowUp)
+                    | Key::Named(NamedKey::Enter)
+            ) {
                 return;
             }
             // An `onquery` caller has not answered a newer query's `loading` yet (todo 2408).
@@ -626,18 +631,18 @@ fn spotlight_key(
         return;
     }
     match event.key() {
-        Key::ArrowDown => {
+        Key::Named(NamedKey::ArrowDown) => {
             event.prevent_default();
             state.set_active(Some(active.map_or(0, |row| (row + 1) % count)));
         }
-        Key::ArrowUp => {
+        Key::Named(NamedKey::ArrowUp) => {
             event.prevent_default();
             state.set_active(Some(match active {
                 None | Some(0) => count - 1,
                 Some(row) => row - 1,
             }));
         }
-        Key::Enter => {
+        Key::Named(NamedKey::Enter) => {
             if let Some(row) = active {
                 event.prevent_default();
                 run_row(row);

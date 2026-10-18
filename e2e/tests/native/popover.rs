@@ -116,7 +116,7 @@ fn it_lands_below_the_anchor_in_a_scrolled_document() {
     );
     // The harness's pointer has no page offset, so a key opens it.
     page.focus(ANCHOR);
-    page.press(Key::Enter);
+    page.press(Key::Named(NamedKey::Enter));
     page.wait(std::time::Duration::from_millis(50));
     let (_, ay, _, ah2) = page.rect(ANCHOR);
     let (_, fy, ..) = page.rect(FLOATING);

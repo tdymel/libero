@@ -1,5 +1,6 @@
 use blitz_dom::{QualName, ns};
 
+use super::FreeDoc;
 use super::{BlitzElement, PRESS, anchor, doc, run_or_defer};
 use crate::platform::{Dimensions, DocumentApi, ElementApi, PlatformError, Read};
 
@@ -14,7 +15,7 @@ static DOCUMENT: BlitzDocument = BlitzDocument;
 impl DocumentApi for BlitzDocument {
     fn viewport(&self) -> Read<Dimensions> {
         let anchor = anchor();
-        let answer = match anchor.as_ref().and_then(|anchor| anchor.try_doc()) {
+        let answer = match anchor.as_ref().and_then(|anchor| anchor.free_doc()) {
             Some(doc) => {
                 // `window_size` is physical pixels; layout, and so every
                 // rect `client_offset` answers, is in CSS pixels.
@@ -32,7 +33,7 @@ impl DocumentApi for BlitzDocument {
 
     fn active_element(&self) -> Option<Box<dyn ElementApi>> {
         let anchor = anchor()?;
-        let doc = anchor.try_doc()?;
+        let doc = anchor.free_doc()?;
         let focused = doc.get_focussed_node_id();
         // Focus unmoved since a press means Blitz has yet to move it there.
         let pressed = PRESS.get().filter(|&(before, target)| {

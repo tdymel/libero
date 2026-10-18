@@ -298,10 +298,10 @@ pub(super) fn lightbox_slide(
                     }
                     let from = zooming.held();
                     let pan = match event.key() {
-                        Key::ArrowLeft => Some((PAN_STEP, 0.0)),
-                        Key::ArrowRight => Some((-PAN_STEP, 0.0)),
-                        Key::ArrowUp => Some((0.0, PAN_STEP)),
-                        Key::ArrowDown => Some((0.0, -PAN_STEP)),
+                        Key::Named(NamedKey::ArrowLeft) => Some((PAN_STEP, 0.0)),
+                        Key::Named(NamedKey::ArrowRight) => Some((-PAN_STEP, 0.0)),
+                        Key::Named(NamedKey::ArrowUp) => Some((0.0, PAN_STEP)),
+                        Key::Named(NamedKey::ArrowDown) => Some((0.0, -PAN_STEP)),
                         _ => None,
                     };
                     if let Some((dx, dy)) = pan
@@ -320,10 +320,10 @@ pub(super) fn lightbox_slide(
                     // The pan above stays physical; the slides follow the
                     // strip, which mirrors under RTL.
                     match logical_key(&event) {
-                        Key::ArrowLeft => stage.go(i.saturating_sub(1), true),
-                        Key::ArrowRight => stage.go(i + 1, true),
-                        Key::Home => stage.go(0, true),
-                        Key::End => stage.go(last, true),
+                        Key::Named(NamedKey::ArrowLeft) => stage.go(i.saturating_sub(1), true),
+                        Key::Named(NamedKey::ArrowRight) => stage.go(i + 1, true),
+                        Key::Named(NamedKey::Home) => stage.go(0, true),
+                        Key::Named(NamedKey::End) => stage.go(last, true),
                         Key::Character(ref c) if c.eq_ignore_ascii_case("z") => {
                             zoom_about(frame, image, zooming, i, None, move |scale| {
                                 zooming.step_scale(scale)
@@ -439,10 +439,10 @@ pub(super) fn lightbox_thumbnails(
                             return;
                         }
                         let target = match logical_key(&event) {
-                            Key::ArrowLeft => i.saturating_sub(1),
-                            Key::ArrowRight => (i + 1).min(last),
-                            Key::Home => 0,
-                            Key::End => last,
+                            Key::Named(NamedKey::ArrowLeft) => i.saturating_sub(1),
+                            Key::Named(NamedKey::ArrowRight) => (i + 1).min(last),
+                            Key::Named(NamedKey::Home) => 0,
+                            Key::Named(NamedKey::End) => last,
                             _ => return,
                         };
                         event.prevent_default();

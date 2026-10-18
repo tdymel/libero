@@ -27,17 +27,17 @@ fn a_backspace_binding_does_not_undo_the_cells_own_edit() {
     for digit in ["1", "2"] {
         page.press(Key::Character(digit.into()));
     }
-    page.press_with_binding(Key::Backspace);
+    page.press_with_binding(Key::Named(NamedKey::Backspace));
     assert_eq!(
         (page.text("#echo").as_str(), focused_cell(&page).as_str()),
         ("12", "1")
     );
-    page.press_with_binding(Key::Backspace);
+    page.press_with_binding(Key::Named(NamedKey::Backspace));
     assert_eq!(
         (page.text("#echo").as_str(), focused_cell(&page).as_str()),
         ("1", "0")
     );
-    page.press_with_binding(Key::Backspace);
+    page.press_with_binding(Key::Named(NamedKey::Backspace));
     assert_eq!(
         (page.text("#echo").as_str(), focused_cell(&page).as_str()),
         ("", "0")

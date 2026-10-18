@@ -35,7 +35,7 @@ fn on_a_scrolled_page_a_click_beside_the_open_picker_reaches_book() {
     assert_eq!(page.viewport_scroll(), (0.0, 400.0));
     page.click(DAY);
     typing(&mut page, "October 3, 2026");
-    page.press(Key::ArrowDown);
+    page.press(Key::Named(NamedKey::ArrowDown));
     assert!(page.exists(DIALOG), "{}", page.tree());
     // The right end of Book, clear of the picker.
     let (x, y, width, height) = page.rect(BOOK);

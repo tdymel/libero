@@ -202,16 +202,16 @@ pub(super) fn Saturation(props: SaturationProps) -> Element {
         let value = *value.peek();
         let (saturation, brightness) = (value.saturation(), value.value());
         let moved = match event.key() {
-            Key::ArrowRight => (saturation + step, brightness),
-            Key::ArrowLeft => (saturation - step, brightness),
-            Key::ArrowUp => (saturation, brightness + step),
-            Key::ArrowDown => (saturation, brightness - step),
+            Key::Named(NamedKey::ArrowRight) => (saturation + step, brightness),
+            Key::Named(NamedKey::ArrowLeft) => (saturation - step, brightness),
+            Key::Named(NamedKey::ArrowUp) => (saturation, brightness + step),
+            Key::Named(NamedKey::ArrowDown) => (saturation, brightness - step),
             // APG slider: Home/End take `aria-valuenow`, the saturation, to
             // its ends; Page Up/Down step the brightness ten.
-            Key::Home => (0.0, brightness),
-            Key::End => (1.0, brightness),
-            Key::PageUp => (saturation, brightness + KEY_STEP * 10.0),
-            Key::PageDown => (saturation, brightness - KEY_STEP * 10.0),
+            Key::Named(NamedKey::Home) => (0.0, brightness),
+            Key::Named(NamedKey::End) => (1.0, brightness),
+            Key::Named(NamedKey::PageUp) => (saturation, brightness + KEY_STEP * 10.0),
+            Key::Named(NamedKey::PageDown) => (saturation, brightness - KEY_STEP * 10.0),
             _ => return,
         };
         event.prevent_default();

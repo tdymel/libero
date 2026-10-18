@@ -150,14 +150,14 @@ fn a_submit_button_click_submits_once() {
 fn enter_on_a_submit_button_submits() {
     let mut page = filled();
     page.focus("#native-submit");
-    page.press(Key::Enter);
+    page.press(Key::Named(NamedKey::Enter));
     assert_eq!(submits(&page), "1");
 }
 
 #[test]
 fn enter_in_a_text_field_submits() {
     let mut page = filled();
-    page.press(Key::Enter);
+    page.press(Key::Named(NamedKey::Enter));
     assert_eq!(submits(&page), "1");
 }
 
@@ -168,7 +168,7 @@ fn enter_in_a_date_field_submits_the_committed_date() {
     for character in "March 5, 2026".chars() {
         page.press(Key::Character(character.to_string()));
     }
-    page.press(Key::Enter);
+    page.press(Key::Named(NamedKey::Enter));
     assert_eq!(submits(&page), "1", "{}", page.tree());
 }
 
@@ -176,7 +176,7 @@ fn enter_in_a_date_field_submits_the_committed_date() {
 fn enter_in_an_empty_date_field_is_blocked_by_its_rule() {
     let mut page = mount(dated);
     page.click(DUE);
-    page.press(Key::Enter);
+    page.press(Key::Named(NamedKey::Enter));
     assert_eq!(submits(&page), "0");
     assert!(page.exists("[data-slot=summary]"), "{}", page.tree());
 }
@@ -185,7 +185,7 @@ fn enter_in_an_empty_date_field_is_blocked_by_its_rule() {
 fn enter_submits_nothing_with_two_fields_and_no_button() {
     let mut page = mount(two_fields);
     page.focus("#first");
-    page.press(Key::Enter);
+    page.press(Key::Named(NamedKey::Enter));
     assert_eq!(submits(&page), "0");
 }
 
@@ -198,11 +198,11 @@ fn enter_in_a_checkable_submits_through_the_button() {
     for (app, button, expected) in [(with, true, ["1", "2"]), (without, false, ["0", "0"])] {
         let mut page = mount(app);
         page.focus("#switch");
-        page.press(Key::Enter);
+        page.press(Key::Named(NamedKey::Enter));
         assert_eq!(submits(&page), expected[0], "the switch, button {button}");
         assert!(page.attr("#switch", "checked").is_none_or(|v| v == "false"));
         page.focus("[role=radiogroup] input:checked");
-        page.press(Key::Enter);
+        page.press(Key::Named(NamedKey::Enter));
         assert_eq!(submits(&page), expected[1], "the segment, button {button}");
     }
 }

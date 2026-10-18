@@ -223,7 +223,7 @@ fn a_tab_within_the_carousel_keeps_it_playing() {
         "Play did not play"
     );
 
-    page.press(Key::Tab);
+    page.press(Key::Named(NamedKey::Tab));
     assert!(
         page.is_focused(TRACK),
         "Tab did not reach the track, focus on {}",

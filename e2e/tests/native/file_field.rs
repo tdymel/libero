@@ -193,13 +193,13 @@ fn a_picked_image_is_cropped_natively_before_the_field_takes_it() {
 fn deleting_a_chip_moves_focus_to_the_one_left_then_to_browse() {
     let mut page = mount(chips);
     page.focus("#contract-file-1");
-    page.press(Key::Delete);
+    page.press(Key::Named(NamedKey::Delete));
     assert!(
         page.is_focused("#contract-file-0"),
         "after removing beta: {}",
         page.focus_owner()
     );
-    page.press(Key::Delete);
+    page.press(Key::Named(NamedKey::Delete));
     assert!(
         page.is_focused("#contract"),
         "after removing alpha: {}",
@@ -212,7 +212,7 @@ fn deleting_a_chip_moves_focus_to_the_one_left_then_to_browse() {
 fn removing_a_card_moves_focus_to_what_took_its_place() {
     let mut page = mount(cards);
     page.focus("[aria-label=\"Remove beta.txt\"]");
-    page.press(Key::Enter);
+    page.press(Key::Named(NamedKey::Enter));
     assert!(
         page.is_focused("[aria-label=\"Remove alpha.txt\"]"),
         "after removing beta: {}",

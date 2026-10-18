@@ -37,10 +37,10 @@ pub fn Knob() -> Element {
                 aria_valuenow: "{x}",
                 onkeydown: move |event: KeyboardEvent| {
                     let next = match event.key() {
-                        Key::ArrowLeft | Key::ArrowDown => x() - 10.0,
-                        Key::ArrowRight | Key::ArrowUp => x() + 10.0,
-                        Key::Home => 0.0,
-                        Key::End => 200.0,
+                        Key::Named(NamedKey::ArrowLeft) | Key::Named(NamedKey::ArrowDown) => x() - 10.0,
+                        Key::Named(NamedKey::ArrowRight) | Key::Named(NamedKey::ArrowUp) => x() + 10.0,
+                        Key::Named(NamedKey::Home) => 0.0,
+                        Key::Named(NamedKey::End) => 200.0,
                         _ => return,
                     };
                     event.prevent_default();

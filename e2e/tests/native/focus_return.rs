@@ -48,7 +48,7 @@ fn a_trigger_that_stops_its_pointerdown_gets_the_old_answer() {
         "focus is on {}",
         page.focus_owner()
     );
-    page.press(Key::Escape);
+    page.press(Key::Named(NamedKey::Escape));
     assert!(
         page.wait_for(|page| !page.exists(DIALOG)),
         "{}",

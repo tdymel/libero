@@ -91,11 +91,11 @@ impl Level {
             return;
         }
         match event.key() {
-            Key::ArrowDown | Key::Home => {
+            Key::Named(NamedKey::ArrowDown) | Key::Named(NamedKey::Home) => {
                 event.prevent_default();
                 self.focus(0);
             }
-            Key::ArrowUp | Key::End => {
+            Key::Named(NamedKey::ArrowUp) | Key::Named(NamedKey::End) => {
                 event.prevent_default();
                 self.focus(self.len - 1);
             }
@@ -136,48 +136,55 @@ impl Level {
         // Ctrl/Alt/Meta with a navigation key is the browser's chord.
         let navigation = matches!(
             event.key(),
-            Key::ArrowDown | Key::ArrowUp | Key::ArrowLeft | Key::ArrowRight | Key::Home | Key::End
+            Key::Named(NamedKey::ArrowDown)
+                | Key::Named(NamedKey::ArrowUp)
+                | Key::Named(NamedKey::ArrowLeft)
+                | Key::Named(NamedKey::ArrowRight)
+                | Key::Named(NamedKey::Home)
+                | Key::Named(NamedKey::End)
         );
         if navigation && has_shortcut_modifier(&event) {
             return;
         }
         let key = logical_key(&event);
         match key {
-            Key::ArrowDown => {
+            Key::Named(NamedKey::ArrowDown) => {
                 event.prevent_default();
                 self.step(index, true);
             }
-            Key::ArrowUp => {
+            Key::Named(NamedKey::ArrowUp) => {
                 event.prevent_default();
                 self.step(index, false);
             }
             // Home on the first or End on the last item scrolls the page.
-            Key::Home if index == 0 => {}
-            Key::End if index + 1 == self.len => {}
-            Key::Home => {
+            Key::Named(NamedKey::Home) if index == 0 => {}
+            Key::Named(NamedKey::End) if index + 1 == self.len => {}
+            Key::Named(NamedKey::Home) => {
                 event.prevent_default();
                 self.focus(0);
             }
-            Key::End => {
+            Key::Named(NamedKey::End) => {
                 event.prevent_default();
                 self.focus(self.len - 1);
             }
-            Key::ArrowRight if opens => {
+            Key::Named(NamedKey::ArrowRight) if opens => {
                 event.prevent_default();
                 hover.cancel();
                 self.enter_submenu(index);
             }
             // Closes this submenu only. On the root it is the menubar's.
-            Key::ArrowLeft if self.depth > 0 => {
+            Key::Named(NamedKey::ArrowLeft) if self.depth > 0 => {
                 event.prevent_default();
                 self.dismiss.dismiss();
             }
             // Unanswered here, so they go up.
-            Key::ArrowLeft | Key::ArrowRight if self.onedge.is_some() => {
+            Key::Named(NamedKey::ArrowLeft) | Key::Named(NamedKey::ArrowRight)
+                if self.onedge.is_some() =>
+            {
                 event.prevent_default();
                 if let Some(onedge) = self.onedge {
                     onedge.call(match key {
-                        Key::ArrowLeft => MenuEdge::Previous,
+                        Key::Named(NamedKey::ArrowLeft) => MenuEdge::Previous,
                         _ => MenuEdge::Next,
                     });
                 }

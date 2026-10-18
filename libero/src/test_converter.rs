@@ -22,8 +22,8 @@ pub(crate) struct FakeEscape {
 impl HasKeyboardData for FakeEscape {
     fn key(&self) -> Key {
         match self.arrow_down {
-            true => Key::ArrowDown,
-            false => Key::Escape,
+            true => Key::Named(NamedKey::ArrowDown),
+            false => Key::Named(NamedKey::Escape),
         }
     }
     fn code(&self) -> Code {

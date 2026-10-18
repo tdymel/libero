@@ -186,7 +186,7 @@ pub fn ColorControl(
                 div {
                     // The picker lets Escape bubble: close and hand focus back to the swatch.
                     onkeydown: move |event: KeyboardEvent| {
-                        if event.key() == Key::Escape {
+                        if event.key() == Key::Named(NamedKey::Escape) {
                             event.stop_propagation();
                             open.set(false);
                             let _ = trigger.query_selector("button").and_then(|button| button.focus());

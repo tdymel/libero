@@ -4,6 +4,7 @@ use blitz_dom::BaseDocument;
 use dioxus::prelude::*;
 use dioxus_native_dom::NodeId;
 
+use super::FreeDoc;
 use super::{anchor, node_of};
 
 /// Taffy lays a row out right to left under `direction: rtl`, as the web does.
@@ -12,7 +13,7 @@ pub(in crate::platform::backend) fn is_rtl(mounted: &Rc<MountedData>) -> bool {
         return false;
     };
     handle
-        .try_doc()
+        .free_doc()
         .is_some_and(|doc| node_is_rtl(&doc, node_id))
 }
 
@@ -29,7 +30,7 @@ pub(in crate::platform::backend) fn rtl_target() -> bool {
     let Some(anchor) = anchor() else {
         return false;
     };
-    anchor.try_doc().is_some_and(|doc| {
+    anchor.free_doc().is_some_and(|doc| {
         doc.get_focussed_node_id()
             .is_some_and(|id| node_is_rtl(&doc, id))
     })

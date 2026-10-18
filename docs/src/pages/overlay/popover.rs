@@ -156,7 +156,7 @@ fn PopoverDemo(
                 tabindex: "-1",
                 attributes: popover.floating_events(),
                 onkeydown: move |event: KeyboardEvent| {
-                    if event.key() == Key::Tab {
+                    if event.key() == Key::Named(NamedKey::Tab) {
                         close(&event);
                     }
                 },
@@ -184,7 +184,7 @@ fn PopoverDemo(
                 // Focus is back here after a click that closed the box, or
                 // before the box is placed.
                 onkeydown: move |event: KeyboardEvent| {
-                    if event.key() == Key::Tab && opened() {
+                    if event.key() == Key::Named(NamedKey::Tab) && opened() {
                         opened.set(false);
                     }
                 },

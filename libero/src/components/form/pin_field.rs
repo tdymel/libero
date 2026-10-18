@@ -486,24 +486,24 @@ impl PinEdit {
             return;
         }
         match event.key() {
-            Key::ArrowLeft => {
+            Key::Named(NamedKey::ArrowLeft) => {
                 event.prevent_default();
                 self.focus(index.wrapping_sub(1));
             }
-            Key::ArrowRight => {
+            Key::Named(NamedKey::ArrowRight) => {
                 event.prevent_default();
                 self.focus(index + 1);
             }
-            Key::Home => {
+            Key::Named(NamedKey::Home) => {
                 event.prevent_default();
                 self.focus(0);
             }
-            Key::End => {
+            Key::Named(NamedKey::End) => {
                 event.prevent_default();
                 self.focus(length - 1);
             }
             // Native `readonly` does not stop a handler clearing a cell.
-            Key::Delete => {
+            Key::Named(NamedKey::Delete) => {
                 event.prevent_default();
                 self.handled_delete.set(true);
                 // An empty cell reports nothing: `oninput` would see an unchanged pin.
@@ -511,7 +511,7 @@ impl PinEdit {
                     self.edit(index, None);
                 }
             }
-            Key::Backspace => {
+            Key::Named(NamedKey::Backspace) => {
                 event.prevent_default();
                 self.handled_delete.set(true);
                 match self.cells[index].is_some() && !readonly {

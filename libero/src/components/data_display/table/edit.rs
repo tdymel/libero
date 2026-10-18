@@ -142,8 +142,10 @@ pub(super) enum Leave {
 /// What a key does in the editor: whether to save, and how to leave. `None` types on.
 fn key_exit(key: &Key, tab: bool, shift: bool) -> Option<(bool, Leave)> {
     match key {
-        Key::Enter => Some((true, Leave::To(if shift { Move::Up } else { Move::Down }))),
-        Key::Escape => Some((false, Leave::Stay)),
+        Key::Named(NamedKey::Enter) => {
+            Some((true, Leave::To(if shift { Move::Up } else { Move::Down })))
+        }
+        Key::Named(NamedKey::Escape) => Some((false, Leave::Stay)),
         _ if tab => Some((
             true,
             Leave::To(if shift { Move::Left } else { Move::Right }),
@@ -377,24 +379,27 @@ mod tests {
     fn enter_and_tab_save_and_move_escape_cancels() {
         let exit = |key: Key, tab, shift| key_exit(&key, tab, shift);
         assert_eq!(
-            exit(Key::Enter, false, false),
+            exit(Key::Named(NamedKey::Enter), false, false),
             Some((true, Leave::To(Move::Down)))
         );
         assert_eq!(
-            exit(Key::Enter, false, true),
+            exit(Key::Named(NamedKey::Enter), false, true),
             Some((true, Leave::To(Move::Up)))
         );
         assert_eq!(
-            exit(Key::Tab, true, false),
+            exit(Key::Named(NamedKey::Tab), true, false),
             Some((true, Leave::To(Move::Right)))
         );
         assert_eq!(
-            exit(Key::Tab, true, true),
+            exit(Key::Named(NamedKey::Tab), true, true),
             Some((true, Leave::To(Move::Left)))
         );
-        assert_eq!(exit(Key::Escape, false, false), Some((false, Leave::Stay)));
+        assert_eq!(
+            exit(Key::Named(NamedKey::Escape), false, false),
+            Some((false, Leave::Stay))
+        );
         assert_eq!(exit(Key::Character("a".into()), false, false), None);
-        assert_eq!(exit(Key::ArrowLeft, false, false), None);
+        assert_eq!(exit(Key::Named(NamedKey::ArrowLeft), false, false), None);
     }
 
     #[test]
@@ -457,7 +462,7 @@ mod tests {
             &mut self,
             _n: &str,
             _ns: Option<&str>,
-            _v: &dioxus::core::AttributeValue,
+            _v: dioxus::core::BorrowedAttributeValue<'_>,
         ) {
         }
         fn set_text(&mut self, _value: &str) {}

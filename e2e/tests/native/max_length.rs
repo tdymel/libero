@@ -24,7 +24,7 @@ fn paste(page: &mut Page, text: &str) {
 fn a_paste_into_a_controlled_field_is_cut_where_it_lands() {
     let mut page = mount(app);
     page.focus("#code");
-    page.press(Key::Home);
+    page.press(Key::Named(NamedKey::Home));
     paste(&mut page, "XYZW");
     assert_eq!(page.text("#echo"), "XYZab");
     assert_eq!(page.editor_text("#code"), "XYZab");

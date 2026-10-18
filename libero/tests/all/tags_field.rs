@@ -257,16 +257,19 @@ mod dispatched {
         };
 
         type_draft(&mut dom, "wasm");
-        press(&mut dom, composing_key_event(Key::Enter));
+        press(&mut dom, composing_key_event(Key::Named(NamedKey::Enter)));
         type_draft(&mut dom, "");
-        press(&mut dom, composing_key_event(Key::Backspace));
+        press(
+            &mut dom,
+            composing_key_event(Key::Named(NamedKey::Backspace)),
+        );
         assert!(
             CHANGES.with_borrow(Vec::is_empty),
             "a composing key changed the tags"
         );
 
         type_draft(&mut dom, "wasm");
-        press(&mut dom, key_event(Key::Enter));
+        press(&mut dom, key_event(Key::Named(NamedKey::Enter)));
         assert_eq!(
             CHANGES.with_borrow(Clone::clone),
             [["rust", "wasm"]],

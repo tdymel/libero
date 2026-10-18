@@ -82,7 +82,7 @@ fn use_drawer_escape(mut open: Signal<bool>, burger: ElementHandle, search: Spot
     use_effect(use_reactive!(|drawer| {
         *slot.borrow_mut() = keyboard().filter(|_| drawer).map(|api| {
             api.on_key_unfiltered(Box::new(move |chord| {
-                if chord.key != Key::Escape || chord.repeat || search.is_open() {
+                if chord.key != Key::Named(NamedKey::Escape) || chord.repeat || search.is_open() {
                     return false;
                 }
                 let next = pressed.peek().wrapping_add(1);

@@ -635,40 +635,42 @@ impl ComboboxKeys {
                 CaretKeys::Always => false,
             };
         match event.key() {
-            Key::ArrowDown => {
+            Key::Named(NamedKey::ArrowDown) => {
                 event.prevent_default();
                 go_to(arrows.down);
             }
-            Key::ArrowUp | Key::Home if !opened && self.closed_row_keys => {
+            Key::Named(NamedKey::ArrowUp) | Key::Named(NamedKey::Home)
+                if !opened && self.closed_row_keys =>
+            {
                 event.prevent_default();
                 go_to(arrows.first);
             }
-            Key::End if !opened && self.closed_row_keys => {
+            Key::Named(NamedKey::End) if !opened && self.closed_row_keys => {
                 event.prevent_default();
                 go_to(arrows.last);
             }
-            Key::ArrowUp if opened => {
+            Key::Named(NamedKey::ArrowUp) if opened => {
                 event.prevent_default();
                 go_to(arrows.up);
             }
-            Key::PageDown if opened => {
+            Key::Named(NamedKey::PageDown) if opened => {
                 event.prevent_default();
                 go_to(arrows.page_down);
             }
-            Key::PageUp if opened => {
+            Key::Named(NamedKey::PageUp) if opened => {
                 event.prevent_default();
                 go_to(arrows.page_up);
             }
-            Key::Home if row_keys => {
+            Key::Named(NamedKey::Home) if row_keys => {
                 event.prevent_default();
                 go_to(arrows.first);
             }
-            Key::End if row_keys => {
+            Key::Named(NamedKey::End) if row_keys => {
                 event.prevent_default();
                 go_to(arrows.last);
             }
             // Nothing highlighted: Enter bubbles, so a form still submits.
-            Key::Enter if opened && active_row.is_some() => {
+            Key::Named(NamedKey::Enter) if opened && active_row.is_some() => {
                 event.prevent_default();
                 pick();
                 if self.close_on_pick {
@@ -684,7 +686,7 @@ impl ComboboxKeys {
                     request(false);
                 }
             }
-            Key::Escape if opened => {
+            Key::Named(NamedKey::Escape) if opened => {
                 event.prevent_default();
                 request(false);
             }

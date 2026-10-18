@@ -189,7 +189,7 @@ impl Drop for LayerGuard {
 /// Whether an element-level Escape closes the overlay: not a repeat, not
 /// mid-composition, not [`key_taken`] inside (the document transport uses [`use_field_list_layer`]).
 pub(crate) fn escape_closes(event: &Event<KeyboardData>) -> bool {
-    event.key() == Key::Escape
+    event.key() == Key::Named(NamedKey::Escape)
         && !event.is_auto_repeating()
         && !event.is_composing()
         && !key_taken(event)
@@ -751,7 +751,7 @@ fn use_document_escape(listen: bool, global: bool, mut onescape: impl FnMut() + 
         // Unfiltered: a dismissible surface has to hear Escape from inside its
         // own text field - a menu's filter box, a palette's search box.
         let subscription = api.on_key_unfiltered(Box::new(move |chord| {
-            if chord.key != Key::Escape || chord.repeat || !layer.is_top() {
+            if chord.key != Key::Named(NamedKey::Escape) || chord.repeat || !layer.is_top() {
                 // Declining must not prevent the default, or this layer eats
                 // the press for the layer above it.
                 return false;

@@ -4,7 +4,7 @@
 use std::cell::{Cell, RefCell};
 use std::rc::Rc;
 
-use dioxus::core::{AttributeValue, ElementId, WriteMutations};
+use dioxus::core::{BorrowedAttributeValue, ElementId, WriteMutations};
 use dioxus::html::PlatformEventData;
 use dioxus::prelude::*;
 
@@ -112,7 +112,7 @@ impl WriteMutations for LastClick {
     fn replace_with(&mut self, _m: usize) {}
     fn insert_after(&mut self, _m: usize) {}
     fn insert_before(&mut self, _m: usize) {}
-    fn set_attribute(&mut self, _n: &str, _ns: Option<&str>, _v: &AttributeValue) {}
+    fn set_attribute(&mut self, _n: &str, _ns: Option<&str>, _v: BorrowedAttributeValue<'_>) {}
     fn set_text(&mut self, _value: &str) {}
     fn remove_event_listener(&mut self, _name: &str) {}
     fn remove(&mut self) {}

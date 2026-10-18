@@ -956,7 +956,11 @@ mod dispatched {
         #[test]
         fn arrow_down_on_a_readonly_select_claims_no_listbox() {
             let (mut dom, find) = mount(|| city(true));
-            press(&mut dom, last_keydown(&find), Key::ArrowDown);
+            press(
+                &mut dom,
+                last_keydown(&find),
+                Key::Named(NamedKey::ArrowDown),
+            );
             assert_no_listbox_claimed(&dom, "readonly after ArrowDown");
         }
 
@@ -996,7 +1000,7 @@ mod dispatched {
         /// bare trigger; an editable combobox types its space and Tab only closes.
         #[test]
         fn select_only_picks_on_space_and_tab() {
-            for key in [Key::Character(" ".into()), Key::Tab] {
+            for key in [Key::Character(" ".into()), Key::Named(NamedKey::Tab)] {
                 assert!(
                     picked_by(true, key.clone()),
                     "select_only: {key:?} picked nothing"
@@ -1010,7 +1014,11 @@ mod dispatched {
         #[test]
         fn a_select_disabled_while_open_claims_no_listbox() {
             let (mut dom, find) = mount(|| city(false));
-            press(&mut dom, last_keydown(&find), Key::ArrowDown);
+            press(
+                &mut dom,
+                last_keydown(&find),
+                Key::Named(NamedKey::ArrowDown),
+            );
             assert_listbox(&dom, "enabled after ArrowDown");
 
             lock(&mut dom, &mut dioxus::core::NoOpMutations);
@@ -1071,7 +1079,7 @@ mod dispatched {
         fn arrow_down_on_a_readonly_phone_field_opens_no_list() {
             let (mut dom, find) = mount(|| phone(true));
             let button = find.first_click.expect("the country button takes clicks");
-            press(&mut dom, button, Key::ArrowDown);
+            press(&mut dom, button, Key::Named(NamedKey::ArrowDown));
             assert_no_listbox_claimed(&dom, "readonly after ArrowDown");
         }
 
@@ -1101,7 +1109,11 @@ mod dispatched {
             ];
             for (how, app) in cases {
                 let (mut dom, find) = mount(app);
-                press(&mut dom, last_keydown(&find), Key::ArrowDown);
+                press(
+                    &mut dom,
+                    last_keydown(&find),
+                    Key::Named(NamedKey::ArrowDown),
+                );
                 assert_listbox(&dom, "enabled after ArrowDown");
 
                 lock(&mut dom, &mut dioxus::core::NoOpMutations);

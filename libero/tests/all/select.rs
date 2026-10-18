@@ -589,17 +589,17 @@ mod dispatched {
 
             // Opening already arms the first row, as a native `<select>` does.
             assert!(rows(&dom).is_some_and(|id| id.ends_with("-option-0")));
-            press(&mut dom, trigger, Key::ArrowDown);
+            press(&mut dom, trigger, Key::Named(NamedKey::ArrowDown));
             assert!(rows(&dom).is_some_and(|id| id.ends_with("-option-1")));
             // Row 2 is Bochum, which is disabled.
-            press(&mut dom, trigger, Key::ArrowDown);
+            press(&mut dom, trigger, Key::Named(NamedKey::ArrowDown));
             let id = rows(&dom).expect("a row to point at");
             assert!(
                 id.ends_with("-option-3"),
                 "the arrows stopped on Bochum: {id}"
             );
             // And back up over it.
-            press(&mut dom, trigger, Key::ArrowUp);
+            press(&mut dom, trigger, Key::Named(NamedKey::ArrowUp));
             let id = rows(&dom).expect("a row to point at");
             assert!(id.ends_with("-option-1"), "{id}");
 
@@ -687,7 +687,7 @@ mod dispatched {
         fn opening_after_skipped_renders_highlights_the_selected_row() {
             let (mut dom, trigger) = mount("Hamburg", false);
             rerender(&mut dom, 2);
-            press(&mut dom, trigger, Key::ArrowDown);
+            press(&mut dom, trigger, Key::Named(NamedKey::ArrowDown));
             let html = body(&dioxus_ssr::render(&dom));
             let label = html
                 .find(r#"data-slot="label">Hamburg"#)
@@ -733,8 +733,8 @@ mod dispatched {
             page.render();
             let trigger = *page.rec.keydown.last().expect("the trigger takes keys");
             let mut dom = page.dom;
-            press_twice(&mut dom, trigger, Key::ArrowDown);
-            press_twice(&mut dom, trigger, Key::ArrowDown);
+            press_twice(&mut dom, trigger, Key::Named(NamedKey::ArrowDown));
+            press_twice(&mut dom, trigger, Key::Named(NamedKey::ArrowDown));
             let html = body(&dioxus_ssr::render(&dom));
             assert!(row(&html, "Bonn 1").contains("active"), "{html}");
 

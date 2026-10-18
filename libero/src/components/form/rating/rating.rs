@@ -254,16 +254,20 @@ pub fn Rating(props: RatingProps) -> Element {
         let one = if event.modifiers().shift() { whole } else { 1 };
         // Under RTL ArrowLeft raises the value, as on a native range.
         let (next, down) = match logical_key(&event) {
-            Key::ArrowRight | Key::ArrowUp => {
+            Key::Named(NamedKey::ArrowRight) | Key::Named(NamedKey::ArrowUp) => {
                 (stepped(value, one, fractions, lowest, count), false)
             }
-            Key::ArrowLeft | Key::ArrowDown => {
+            Key::Named(NamedKey::ArrowLeft) | Key::Named(NamedKey::ArrowDown) => {
                 (stepped(value, -one, fractions, lowest, count), true)
             }
-            Key::PageUp => (stepped(value, whole, fractions, lowest, count), false),
-            Key::PageDown => (stepped(value, -whole, fractions, lowest, count), true),
-            Key::Home => (lowest, true),
-            Key::End => (f64::from(count), false),
+            Key::Named(NamedKey::PageUp) => {
+                (stepped(value, whole, fractions, lowest, count), false)
+            }
+            Key::Named(NamedKey::PageDown) => {
+                (stepped(value, -whole, fractions, lowest, count), true)
+            }
+            Key::Named(NamedKey::Home) => (lowest, true),
+            Key::Named(NamedKey::End) => (f64::from(count), false),
             _ => return,
         };
         event.prevent_default();

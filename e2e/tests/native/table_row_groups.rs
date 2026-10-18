@@ -202,7 +202,7 @@ fn enter_on_group_by_groups_the_rows() {
         .find(|item| page.exists(item) && page.text(item).trim() == "Group by Team")
         .unwrap_or_else(|| panic!("no Group by Team entry:\n{}", page.tree()));
     page.focus(&entry);
-    page.press(Key::Enter);
+    page.press(Key::Named(NamedKey::Enter));
     assert!(
         page.exists("button[aria-label=\"Sales, 1 row\"]"),
         "{}",

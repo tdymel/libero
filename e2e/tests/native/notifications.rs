@@ -79,7 +79,7 @@ fn run_until_closed(page: &mut Page) {
 fn a_click_shows_one_without_taking_focus() {
     let mut page = mount(app);
     page.focus(TRIGGER);
-    page.press(Key::Enter);
+    page.press(Key::Named(NamedKey::Enter));
     finish(&mut page);
     assert_eq!(page.query_all(ITEM).len(), 1, "{}", page.tree());
     assert!(page.text(ITEM).contains("Saved to your library"));
@@ -111,7 +111,7 @@ fn enter_on_its_close_button_closes_it() {
     page.click(TRIGGER);
     finish(&mut page);
     page.focus(CLOSE);
-    page.press(Key::Enter);
+    page.press(Key::Named(NamedKey::Enter));
     run_until_closed(&mut page);
     assert!(!page.exists(ITEM), "{}", page.tree());
 }
@@ -134,7 +134,7 @@ fn closing_a_focused_one_hands_focus_on_and_back_out() {
     let mut page = mount(app);
     page.focus(TRIGGER);
     for _ in 0..3 {
-        page.press(Key::Enter);
+        page.press(Key::Named(NamedKey::Enter));
     }
     finish(&mut page);
     let closes = page.query_all(CLOSE);
@@ -151,7 +151,7 @@ fn closing_a_focused_one_hands_focus_on_and_back_out() {
         first.is_some_and(|id| closes.contains(&id)),
         "Tab never reached a close button"
     );
-    page.press(Key::Enter);
+    page.press(Key::Named(NamedKey::Enter));
     finish(&mut page);
     assert_eq!(page.query_all(CLOSE).len(), 2);
     assert!(
@@ -161,9 +161,9 @@ fn closing_a_focused_one_hands_focus_on_and_back_out() {
         page.focus_owner()
     );
 
-    page.press(Key::Enter);
+    page.press(Key::Named(NamedKey::Enter));
     finish(&mut page);
-    page.press(Key::Enter);
+    page.press(Key::Named(NamedKey::Enter));
     run_until_closed(&mut page);
     assert!(!page.exists(ITEM), "{}", page.tree());
     assert!(page.is_focused(SLOW), "focus is on {}", page.focus_owner());
@@ -179,7 +179,7 @@ fn closing_the_last_one_hands_focus_back_to_where_it_came_from() {
     page.focus(ELSEWHERE);
     page.shift_tab();
     assert!(page.is_focused(CLOSE), "focus is on {}", page.focus_owner());
-    page.press(Key::Enter);
+    page.press(Key::Named(NamedKey::Enter));
     finish(&mut page);
     assert!(!page.exists(ITEM), "{}", page.tree());
     assert!(
@@ -195,7 +195,7 @@ fn closing_the_last_one_hands_focus_back_to_where_it_came_from() {
 fn one_shown_from_the_keyboard_closes_itself() {
     let mut page = mount(app);
     page.focus(TIMED);
-    page.press(Key::Enter);
+    page.press(Key::Named(NamedKey::Enter));
     run_until_closed(&mut page);
     assert!(
         !page.exists(ITEM),
@@ -211,7 +211,7 @@ fn one_shown_from_the_keyboard_closes_itself() {
 fn tabbing_into_one_pauses_it_until_focus_leaves() {
     let mut page = mount(app);
     page.focus(SLOW);
-    page.press(Key::Enter);
+    page.press(Key::Named(NamedKey::Enter));
     page.tab();
     assert!(page.is_focused(CLOSE), "Tab went to {}", page.focus_owner());
     finish(&mut page);
@@ -235,7 +235,7 @@ fn a_click_out_after_tabbing_in_resumes_it() {
     for (target, out) in [(Some(ELSEWHERE), "a button"), (None, "nothing")] {
         let mut page = mount(app);
         page.focus(SLOW);
-        page.press(Key::Enter);
+        page.press(Key::Named(NamedKey::Enter));
         page.tab();
         assert!(page.is_focused(CLOSE), "Tab went to {}", page.focus_owner());
         match target {
@@ -318,7 +318,7 @@ fn Inside() -> Element {
 fn a_contained_host_unmounting_focuses_the_control_before_it() {
     let mut page = mount(contained);
     page.focus(TRIGGER);
-    page.press(Key::Enter);
+    page.press(Key::Named(NamedKey::Enter));
     finish(&mut page);
     page.tab();
     assert!(
@@ -326,7 +326,7 @@ fn a_contained_host_unmounting_focuses_the_control_before_it() {
         "Tab went to {}",
         page.focus_owner()
     );
-    page.press(Key::Enter);
+    page.press(Key::Named(NamedKey::Enter));
     finish(&mut page);
     assert!(!page.exists(".drop-host"), "{}", page.tree());
     assert!(
@@ -354,7 +354,7 @@ fn a_scrolled_root_keeps_the_outlet_on_the_viewport() {
     assert!(page.rect(TRIGGER).1 < 0.0, "the root did not scroll");
 
     page.focus(TRIGGER);
-    page.press(Key::Enter);
+    page.press(Key::Named(NamedKey::Enter));
     finish(&mut page);
     let (x, y, ..) = page.rect(OUTLET);
     assert!(x.abs() < 0.5 && y.abs() < 0.5, "outlet at ({x}, {y})");

@@ -4,6 +4,7 @@ use blitz_dom::{BaseDocument, local_name};
 use dioxus::prelude::*;
 use dioxus_native_dom::{NodeHandle, NodeId};
 
+use super::FreeDoc;
 use super::activated;
 
 /// A submit button, enabled or not.
@@ -45,7 +46,7 @@ pub(in crate::platform::backend) fn activated_submitter(form: &Rc<MountedData>) 
     let Some(form) = form.downcast::<NodeHandle>() else {
         return false;
     };
-    let Some(doc) = form.try_doc() else {
+    let Some(doc) = form.free_doc() else {
         return false;
     };
     activated(&doc).is_some_and(|target| {
@@ -97,7 +98,7 @@ pub(in crate::platform::backend) fn implicit_submission(form: &Rc<MountedData>) 
     let Some(form) = form.downcast::<NodeHandle>() else {
         return false;
     };
-    let Some(doc) = form.try_doc() else {
+    let Some(doc) = form.free_doc() else {
         return false;
     };
     let form_id = form.node_id();
@@ -198,7 +199,7 @@ pub(in crate::platform::backend) fn form_values(
     let Some(form) = form.downcast::<NodeHandle>() else {
         return Vec::new();
     };
-    let Some(doc) = form.try_doc() else {
+    let Some(doc) = form.free_doc() else {
         return Vec::new();
     };
     let form_id = form.node_id();

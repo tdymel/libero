@@ -79,17 +79,17 @@ impl CascaderKeys {
             return;
         }
         let key = match is_tab(&event) {
-            true => Key::Tab,
+            true => Key::Named(NamedKey::Tab),
             false => event.key(),
         };
         let paths_layout = self.layout == CascaderLayout::Paths;
         match key {
-            Key::Escape => {
+            Key::Named(NamedKey::Escape) => {
                 event.prevent_default();
                 self.state.close();
             }
             // The search box is portaled after the page: Tab moves on from the trigger (todo 2289).
-            Key::Tab => {
+            Key::Named(NamedKey::Tab) => {
                 // Marked blurred: Blitz moves focus without a blur, and the close would refocus the trigger (todo 2354).
                 if self.searchable {
                     // A WebView's `focus()` lands after Tab's own move: the page tabs on for it.
@@ -110,7 +110,13 @@ impl CascaderKeys {
                 event.prevent_default();
                 self.activate();
             }
-            Key::ArrowDown | Key::ArrowUp | Key::Home | Key::End | Key::Enter if paths_layout => {
+            Key::Named(NamedKey::ArrowDown)
+            | Key::Named(NamedKey::ArrowUp)
+            | Key::Named(NamedKey::Home)
+            | Key::Named(NamedKey::End)
+            | Key::Named(NamedKey::Enter)
+                if paths_layout =>
+            {
                 self.paths(event)
             }
             _ => self.columns(event),
@@ -192,15 +198,19 @@ impl CascaderKeys {
         let open = &self.open;
         let key = logical_key(&event);
         let forward = match key {
-            Key::ArrowDown | Key::ArrowRight | Key::Enter | Key::Home => true,
-            Key::ArrowUp | Key::End => false,
+            Key::Named(NamedKey::ArrowDown)
+            | Key::Named(NamedKey::ArrowRight)
+            | Key::Named(NamedKey::Enter)
+            | Key::Named(NamedKey::Home) => true,
+            Key::Named(NamedKey::ArrowUp) | Key::Named(NamedKey::End) => false,
             Key::Character(ref character) if character == " " => true,
             _ => return,
         };
         event.prevent_default();
         open(true);
         // APG select-only: Home/End open on the first/last row; other keys keep the committed path.
-        if (matches!(key, Key::Home | Key::End) || cursor.read().is_empty())
+        if (matches!(key, Key::Named(NamedKey::Home) | Key::Named(NamedKey::End))
+            || cursor.read().is_empty())
             && let Some(next) = self.edge(forward)
         {
             cursor.set(next);
@@ -296,7 +306,7 @@ impl CascaderKeys {
         let here = cursor.read().clone();
         let row = visible.iter().position(|path| path.indices == here);
         let key = event.key();
-        if key == Key::Enter {
+        if key == Key::Named(NamedKey::Enter) {
             if self.activate() {
                 event.prevent_default();
             }
@@ -304,10 +314,13 @@ impl CascaderKeys {
         }
         event.prevent_default();
         let from = match key {
-            Key::Home | Key::End => None,
+            Key::Named(NamedKey::Home) | Key::Named(NamedKey::End) => None,
             _ => row,
         };
-        let forward = matches!(key, Key::ArrowDown | Key::Home);
+        let forward = matches!(
+            key,
+            Key::Named(NamedKey::ArrowDown) | Key::Named(NamedKey::Home)
+        );
         if let Some(index) = step(
             visible.len(),
             |index| visible[index].disabled,
@@ -325,13 +338,21 @@ impl CascaderKeys {
         let here = cursor.read().clone();
         let key = logical_key(&event);
         match key {
-            Key::ArrowDown | Key::ArrowUp | Key::Home | Key::End => {
+            Key::Named(NamedKey::ArrowDown)
+            | Key::Named(NamedKey::ArrowUp)
+            | Key::Named(NamedKey::Home)
+            | Key::Named(NamedKey::End) => {
                 event.prevent_default();
                 // The parent row is the column's first: Down goes back to the cursor's row.
-                if self.on_parent().is_some() && matches!(key, Key::ArrowUp | Key::Home) {
+                if self.on_parent().is_some()
+                    && matches!(
+                        key,
+                        Key::Named(NamedKey::ArrowUp) | Key::Named(NamedKey::Home)
+                    )
+                {
                     return;
                 }
-                if self.on_parent().is_some() && key == Key::ArrowDown {
+                if self.on_parent().is_some() && key == Key::Named(NamedKey::ArrowDown) {
                     self.parent_row.leave();
                     return;
                 }
@@ -340,28 +361,31 @@ impl CascaderKeys {
                     None => (Vec::new(), None),
                 };
                 let from = match key {
-                    Key::Home | Key::End => None,
+                    Key::Named(NamedKey::Home) | Key::Named(NamedKey::End) => None,
                     _ => from,
                 };
-                let forward = matches!(key, Key::ArrowDown | Key::Home);
+                let forward = matches!(
+                    key,
+                    Key::Named(NamedKey::ArrowDown) | Key::Named(NamedKey::Home)
+                );
                 match step_in(nodes, &parents, from, forward) {
                     Some(index) => {
                         let mut next = parents;
                         next.push(index);
                         self.parent_row.leave();
                         cursor.set(next.clone());
-                        if key == Key::Home {
+                        if key == Key::Named(NamedKey::Home) {
                             self.parent_row.reach(nodes, self.any_level, &next);
                         }
                     }
                     // Up from the first row.
-                    None if key == Key::ArrowUp => {
+                    None if key == Key::Named(NamedKey::ArrowUp) => {
                         self.parent_row.reach(nodes, self.any_level, &here)
                     }
                     None => {}
                 }
             }
-            Key::ArrowRight if !paths_layout && self.on_parent().is_none() => {
+            Key::Named(NamedKey::ArrowRight) if !paths_layout && self.on_parent().is_none() => {
                 event.prevent_default();
                 let column = children_at(nodes, &here);
                 // A disabled branch does not open, as a click on it does not.
@@ -374,7 +398,7 @@ impl CascaderKeys {
                     cursor.set(next);
                 }
             }
-            Key::ArrowLeft if !paths_layout => {
+            Key::Named(NamedKey::ArrowLeft) if !paths_layout => {
                 event.prevent_default();
                 if here.len() > 1 {
                     let mut next = here;
@@ -383,7 +407,7 @@ impl CascaderKeys {
                 }
             }
             // Unhandled, Enter bubbles, so a form still submits.
-            Key::Enter if self.activate() => event.prevent_default(),
+            Key::Named(NamedKey::Enter) if self.activate() => event.prevent_default(),
             _ => {}
         }
     }

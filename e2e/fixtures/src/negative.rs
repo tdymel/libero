@@ -269,10 +269,10 @@ pub fn ManyTabStops() -> Element {
                     },
                     onkeydown: move |event: Event<KeyboardData>| {
                         let target = match event.key() {
-                            Key::ArrowRight => (index + 1) % TABS.len(),
-                            Key::ArrowLeft => (index + TABS.len() - 1) % TABS.len(),
-                            Key::Home => 0,
-                            Key::End => TABS.len() - 1,
+                            Key::Named(NamedKey::ArrowRight) => (index + 1) % TABS.len(),
+                            Key::Named(NamedKey::ArrowLeft) => (index + TABS.len() - 1) % TABS.len(),
+                            Key::Named(NamedKey::Home) => 0,
+                            Key::Named(NamedKey::End) => TABS.len() - 1,
                             _ => return,
                         };
                         event.prevent_default();
@@ -312,7 +312,7 @@ pub fn NoFocusReturn() -> Element {
                     let _ = event.data().set_focus(true).await;
                 },
                 onkeydown: move |event| {
-                    if event.key() == Key::Escape {
+                    if event.key() == Key::Named(NamedKey::Escape) {
                         // Closes, and deliberately returns focus nowhere.
                         open.set(false);
                     }
@@ -358,8 +358,8 @@ pub fn DanglingActiveDescendant() -> Element {
             "aria-activedescendant": if open() { "option-that-does-not-exist" } else { "" },
             readonly: true,
             onkeydown: move |event| match event.key() {
-                Key::ArrowDown => open.set(true),
-                Key::Escape => open.set(false),
+                Key::Named(NamedKey::ArrowDown) => open.set(true),
+                Key::Named(NamedKey::Escape) => open.set(false),
                 _ => {}
             },
         }
@@ -403,8 +403,8 @@ fn FakeCombobox(id: &'static str, highlight: Option<&'static str>) -> Element {
             "aria-activedescendant": highlight.filter(|_| open()),
             readonly: true,
             onkeydown: move |event| match event.key() {
-                Key::ArrowDown => open.set(true),
-                Key::Escape => open.set(false),
+                Key::Named(NamedKey::ArrowDown) => open.set(true),
+                Key::Named(NamedKey::Escape) => open.set(false),
                 _ => {}
             },
         }

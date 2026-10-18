@@ -21,18 +21,18 @@ pub(crate) enum NavigationChord {
 
 /// The press's [`NavigationChord`]; `None` for a plain press or another key.
 pub(crate) fn navigation_chord(event: &dioxus::prelude::KeyboardEvent) -> Option<NavigationChord> {
-    use dioxus::prelude::{Key, ModifiersInteraction};
+    use dioxus::prelude::{Key, ModifiersInteraction, NamedKey};
 
     let navigation = matches!(
         event.key(),
-        Key::ArrowDown
-            | Key::ArrowUp
-            | Key::ArrowLeft
-            | Key::ArrowRight
-            | Key::Home
-            | Key::End
-            | Key::PageUp
-            | Key::PageDown
+        Key::Named(NamedKey::ArrowDown)
+            | Key::Named(NamedKey::ArrowUp)
+            | Key::Named(NamedKey::ArrowLeft)
+            | Key::Named(NamedKey::ArrowRight)
+            | Key::Named(NamedKey::Home)
+            | Key::Named(NamedKey::End)
+            | Key::Named(NamedKey::PageUp)
+            | Key::Named(NamedKey::PageDown)
     );
     if !navigation || !has_shortcut_modifier(event) {
         return None;
@@ -40,8 +40,8 @@ pub(crate) fn navigation_chord(event: &dioxus::prelude::KeyboardEvent) -> Option
     let modifiers = event.data().modifiers();
     let alt_only = modifiers.alt() && !modifiers.ctrl() && !meta_held(modifiers);
     Some(match event.key() {
-        Key::ArrowDown if alt_only => NavigationChord::Open,
-        Key::ArrowUp if alt_only => NavigationChord::Close,
+        Key::Named(NamedKey::ArrowDown) if alt_only => NavigationChord::Open,
+        Key::Named(NamedKey::ArrowUp) if alt_only => NavigationChord::Close,
         _ => NavigationChord::Browser,
     })
 }

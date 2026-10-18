@@ -139,18 +139,22 @@ impl View {
         let years = if event.modifiers().shift() { 12 } else { 1 };
         // Skip disabled days: `focus()` on one does nothing and the grid would lose its tab stop.
         let next = match logical_key(&event) {
-            Key::ArrowLeft => self.seek(add_days(tab_stop, -1), -1),
-            Key::ArrowRight => self.seek(add_days(tab_stop, 1), 1),
-            Key::ArrowUp => self.seek(add_days(tab_stop, -7), -7),
-            Key::ArrowDown => self.seek(add_days(tab_stop, 7), 7),
-            Key::Home => self.nearest(add_days(tab_stop, -column), 1),
-            Key::End => self.nearest(add_days(tab_stop, 6 - column), -1),
-            Key::PageUp => self.nearest(add_months(tab_stop, -years), -1),
-            Key::PageDown => self.nearest(add_months(tab_stop, years), 1),
+            Key::Named(NamedKey::ArrowLeft) => self.seek(add_days(tab_stop, -1), -1),
+            Key::Named(NamedKey::ArrowRight) => self.seek(add_days(tab_stop, 1), 1),
+            Key::Named(NamedKey::ArrowUp) => self.seek(add_days(tab_stop, -7), -7),
+            Key::Named(NamedKey::ArrowDown) => self.seek(add_days(tab_stop, 7), 7),
+            Key::Named(NamedKey::Home) => self.nearest(add_days(tab_stop, -column), 1),
+            Key::Named(NamedKey::End) => self.nearest(add_days(tab_stop, 6 - column), -1),
+            Key::Named(NamedKey::PageUp) => self.nearest(add_months(tab_stop, -years), -1),
+            Key::Named(NamedKey::PageDown) => self.nearest(add_months(tab_stop, years), 1),
             _ => return,
         };
         // Home or End on the week's end day scrolls the page (todo 3053).
-        if matches!(logical_key(&event), Key::Home | Key::End) && next == Some(tab_stop) {
+        if matches!(
+            logical_key(&event),
+            Key::Named(NamedKey::Home) | Key::Named(NamedKey::End)
+        ) && next == Some(tab_stop)
+        {
             return;
         }
         event.prevent_default();
@@ -230,14 +234,14 @@ impl View {
             ),
         };
         let cells = match logical_key(&event) {
-            Key::ArrowLeft => -1,
-            Key::ArrowRight => 1,
-            Key::ArrowUp => -3,
-            Key::ArrowDown => 3,
-            Key::Home => -column,
-            Key::End => 2 - column,
-            Key::PageUp => -cells_per_page,
-            Key::PageDown => cells_per_page,
+            Key::Named(NamedKey::ArrowLeft) => -1,
+            Key::Named(NamedKey::ArrowRight) => 1,
+            Key::Named(NamedKey::ArrowUp) => -3,
+            Key::Named(NamedKey::ArrowDown) => 3,
+            Key::Named(NamedKey::Home) => -column,
+            Key::Named(NamedKey::End) => 2 - column,
+            Key::Named(NamedKey::PageUp) => -cells_per_page,
+            Key::Named(NamedKey::PageDown) => cells_per_page,
             _ => return,
         };
         // Home or End on the row's end cell scrolls the page (todo 3053).
@@ -310,16 +314,20 @@ impl Strip {
             return;
         }
         let next = match logical_key(&event) {
-            Key::ArrowLeft => view.seek(add_days(self.stop, -1), -1),
-            Key::ArrowRight => view.seek(add_days(self.stop, 1), 1),
-            Key::Home => view.nearest(self.start, 1),
-            Key::End => view.nearest(self.end, -1),
-            Key::PageUp => view.nearest(add_days(self.stop, -self.days), -1),
-            Key::PageDown => view.nearest(add_days(self.stop, self.days), 1),
+            Key::Named(NamedKey::ArrowLeft) => view.seek(add_days(self.stop, -1), -1),
+            Key::Named(NamedKey::ArrowRight) => view.seek(add_days(self.stop, 1), 1),
+            Key::Named(NamedKey::Home) => view.nearest(self.start, 1),
+            Key::Named(NamedKey::End) => view.nearest(self.end, -1),
+            Key::Named(NamedKey::PageUp) => view.nearest(add_days(self.stop, -self.days), -1),
+            Key::Named(NamedKey::PageDown) => view.nearest(add_days(self.stop, self.days), 1),
             _ => return,
         };
         // Home on the first or End on the last day scrolls the page (todo 3053).
-        if matches!(logical_key(&event), Key::Home | Key::End) && next == Some(self.stop) {
+        if matches!(
+            logical_key(&event),
+            Key::Named(NamedKey::Home) | Key::Named(NamedKey::End)
+        ) && next == Some(self.stop)
+        {
             return;
         }
         event.prevent_default();

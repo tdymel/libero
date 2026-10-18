@@ -116,7 +116,7 @@ impl FullscreenHandle {
         }
         attributes.extend([
             listener("onkeydown", move |event: Event<KeyboardData>| {
-                if *handle.drawn.peek() && event.key() == Key::Escape {
+                if *handle.drawn.peek() && event.key() == Key::Named(NamedKey::Escape) {
                     event.prevent_default();
                     handle.exit();
                 }

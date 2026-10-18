@@ -99,13 +99,13 @@ fn the_hole_pads_the_target_and_the_card_takes_focus() {
 fn arrow_right_moves_the_hole_and_escape_returns_focus() {
     let mut page = started();
     until(&mut page, |page| page.is_focused(CARD));
-    page.press(Key::ArrowRight);
+    page.press(Key::Named(NamedKey::ArrowRight));
     assert!(
         until(&mut page, |page| hole_on(page, "#second")),
         "ArrowRight did not move the hole:\n{}",
         page.tree()
     );
-    page.press(Key::Escape);
+    page.press(Key::Named(NamedKey::Escape));
     assert!(
         until(&mut page, |page| !page.exists(CARD)),
         "Escape left the tour open"
@@ -165,7 +165,7 @@ fn an_interactive_target_takes_presses_and_tab() {
     let mut page = mount(more_app);
     page.click("#start");
     until(&mut page, |page| page.is_focused(CARD));
-    page.press(Key::ArrowRight);
+    page.press(Key::Named(NamedKey::ArrowRight));
     assert!(
         until(&mut page, |page| hole_on(page, "#pressable")),
         "ArrowRight did not move the hole:\n{}",
@@ -176,7 +176,7 @@ fn an_interactive_target_takes_presses_and_tab() {
     // Tab off the card's last control reaches the target; Tab from it, the card's first.
     let mut reached = false;
     for _ in 0..6 {
-        page.press(Key::Tab);
+        page.press(Key::Named(NamedKey::Tab));
         until(&mut page, |page| !page.is_focused(CARD));
         if page.is_focused("#pressable") {
             reached = true;
@@ -188,14 +188,14 @@ fn an_interactive_target_takes_presses_and_tab() {
         "Tab never reached the target: on {}",
         page.focus_owner()
     );
-    page.press(Key::Tab);
+    page.press(Key::Named(NamedKey::Tab));
     assert!(
         until(&mut page, |page| page
             .is_focused("[data-lsx-tour] [data-slot=close]")),
         "Tab from the target went to {}",
         page.focus_owner()
     );
-    page.press_with(Key::Tab, Modifiers::SHIFT);
+    page.press_with(Key::Named(NamedKey::Tab), Modifiers::SHIFT);
     assert!(
         until(&mut page, |page| page.is_focused("#pressable")),
         "Shift+Tab from the card's first control went to {}",

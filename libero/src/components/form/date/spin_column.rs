@@ -215,12 +215,12 @@ pub(super) fn SpinColumn(props: SpinColumnProps) -> Element {
                 .filter(|(_, option)| !option.disabled)
         };
         let next = match event.key() {
-            Key::ArrowUp => stepped(options, at, 1, wrap),
-            Key::ArrowDown => stepped(options, at, -1, wrap),
-            Key::PageUp => stepped(options, at, page as isize, wrap),
-            Key::PageDown => stepped(options, at, -(page as isize), wrap),
-            Key::Home => open().next().map(|(index, _)| index),
-            Key::End => open().next_back().map(|(index, _)| index),
+            Key::Named(NamedKey::ArrowUp) => stepped(options, at, 1, wrap),
+            Key::Named(NamedKey::ArrowDown) => stepped(options, at, -1, wrap),
+            Key::Named(NamedKey::PageUp) => stepped(options, at, page as isize, wrap),
+            Key::Named(NamedKey::PageDown) => stepped(options, at, -(page as isize), wrap),
+            Key::Named(NamedKey::Home) => open().next().map(|(index, _)| index),
+            Key::Named(NamedKey::End) => open().next_back().map(|(index, _)| index),
             Key::Character(key)
                 if key.chars().count() == 1 && key.chars().all(char::is_alphanumeric) =>
             {
@@ -244,7 +244,7 @@ pub(super) fn SpinColumn(props: SpinColumnProps) -> Element {
                 }
                 return;
             }
-            Key::Enter => {
+            Key::Named(NamedKey::Enter) => {
                 event.prevent_default();
                 typing.set(String::new());
                 ondone.call(column);

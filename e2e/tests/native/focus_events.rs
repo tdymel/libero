@@ -38,7 +38,7 @@ fn expanded(page: &Page) -> bool {
 fn tab_out_of_an_open_menu_closes_it() {
     let mut page = mount(menu_app);
     page.focus(TRIGGER);
-    page.press(Key::Enter);
+    page.press(Key::Named(NamedKey::Enter));
     assert!(expanded(&page), "Enter did not open it:\n{}", page.tree());
 
     page.tab();
@@ -77,10 +77,10 @@ fn focusing_menu_app() -> Element {
 fn focus_moved_out_of_an_open_menu_by_code_closes_it() {
     let mut page = mount(focusing_menu_app);
     page.focus(TRIGGER);
-    page.press(Key::Enter);
+    page.press(Key::Named(NamedKey::Enter));
     assert!(expanded(&page), "Enter did not open it:\n{}", page.tree());
 
-    page.press(Key::Enter);
+    page.press(Key::Named(NamedKey::Enter));
     assert!(
         page.is_focused("#search"),
         "focus is on {}",
@@ -120,7 +120,7 @@ fn focus_from_a_click_handler_wins_over_the_click() {
     );
 
     page.focus("#go");
-    page.press(Key::Enter);
+    page.press(Key::Named(NamedKey::Enter));
     assert!(
         page.is_focused("#search"),
         "focus is on {}",
@@ -214,7 +214,7 @@ fn escape_from_inside_a_keyboard_opened_card_returns_to_the_trigger_and_stays_cl
         page.focus_owner()
     );
 
-    page.press(Key::Escape);
+    page.press(Key::Named(NamedKey::Escape));
     assert!(
         page.is_focused("#trigger"),
         "focus is on {}",
@@ -413,7 +413,7 @@ fn autocomplete_app() -> Element {
 fn tab_out_of_an_autocomplete_closes_its_list() {
     let mut page = mount(autocomplete_app);
     page.focus("input");
-    page.press(Key::ArrowDown);
+    page.press(Key::Named(NamedKey::ArrowDown));
     assert!(page.exists("[role=listbox]"), "{}", page.tree());
 
     page.tab();
@@ -448,7 +448,7 @@ fn tab_out_of_a_select_closes_its_list() {
         "focus is on {}",
         page.focus_owner()
     );
-    page.press(Key::ArrowDown);
+    page.press(Key::Named(NamedKey::ArrowDown));
     assert!(page.exists("[role=listbox]"), "{}", page.tree());
 
     page.tab();

@@ -402,16 +402,22 @@ pub(crate) fn render_segmented_control(view: SegmentedControlView, root: String)
                 }
                 let key = logical_key(&event);
                 let step = match key {
-                    Key::ArrowDown | Key::ArrowRight => 1,
-                    Key::ArrowUp | Key::ArrowLeft => -1,
+                    Key::Named(NamedKey::ArrowDown) | Key::Named(NamedKey::ArrowRight) => 1,
+                    Key::Named(NamedKey::ArrowUp) | Key::Named(NamedKey::ArrowLeft) => -1,
                     _ => return,
                 };
                 // In a toolbar, an arrow along its axis leaves past the last segment.
                 let along = match bar_axis {
                     Some(Orientation::Horizontal) => {
-                        matches!(key, Key::ArrowLeft | Key::ArrowRight)
+                        matches!(
+                            key,
+                            Key::Named(NamedKey::ArrowLeft) | Key::Named(NamedKey::ArrowRight)
+                        )
                     }
-                    Some(Orientation::Vertical) => matches!(key, Key::ArrowUp | Key::ArrowDown),
+                    Some(Orientation::Vertical) => matches!(
+                        key,
+                        Key::Named(NamedKey::ArrowUp) | Key::Named(NamedKey::ArrowDown)
+                    ),
                     None => false,
                 };
                 if let Some(item) = toolbar_item

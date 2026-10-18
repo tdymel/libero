@@ -7,6 +7,7 @@ use blitz_dom::{BaseDocument, local_name};
 use dioxus::prelude::*;
 use dioxus_native_dom::NodeId;
 
+use super::FreeDoc;
 use super::{
     BLANK_PRESS, activate, ancestors, anchor, defer, doc, focus, focusable_ancestor, forget_press,
     is_rendered,
@@ -74,7 +75,7 @@ pub(super) fn release(event: &Event<PointerData>) {
     };
     let wrapper = doc().and_then(|doc| doc.wrapper_id());
     let (before, target) = {
-        let Some(doc) = anchor.try_doc() else {
+        let Some(doc) = anchor.free_doc() else {
             return;
         };
         let Some(hit) = doc.hit(point.x as f32, point.y as f32) else {
@@ -110,7 +111,7 @@ pub(super) fn release(event: &Event<PointerData>) {
 /// Tab or Shift+Tab whose next stop Blitz would find under `inert` or not rendered
 /// (`visibility: hidden`, `display: none`): prevented, and focus goes to the next one outside it.
 pub(super) fn tab(event: &Event<KeyboardData>) {
-    if event.key() != Key::Tab || !event.default_action_enabled() {
+    if event.key() != Key::Named(NamedKey::Tab) || !event.default_action_enabled() {
         return;
     }
     let Some(anchor) = anchor() else {
@@ -118,7 +119,7 @@ pub(super) fn tab(event: &Event<KeyboardData>) {
     };
     let back = event.modifiers().shift();
     let next = {
-        let Some(doc) = anchor.try_doc() else {
+        let Some(doc) = anchor.free_doc() else {
             return;
         };
         let Some(start) = doc.get_focussed_node_id().and_then(|id| doc.get_node(id)) else {

@@ -571,7 +571,11 @@ fn TourLayer(act: Callback<Move>, index: usize, options: TourOptions) -> Element
                 let outside = positioner
                     .try_mounted()
                     .is_some_and(|mounted| !chord.within(&mounted, positioner.tag()));
-                if chord.key != Key::Escape || chord.repeat || !outside || !layer.is_top() {
+                if chord.key != Key::Named(NamedKey::Escape)
+                    || chord.repeat
+                    || !outside
+                    || !layer.is_top()
+                {
                     return false;
                 }
                 bump(stray_escape);
@@ -601,7 +605,7 @@ fn TourLayer(act: Callback<Move>, index: usize, options: TourOptions) -> Element
                 else {
                     return false;
                 };
-                if chord.key != Key::Tab || !chord.within(&mounted, target.tag()) {
+                if chord.key != Key::Named(NamedKey::Tab) || !chord.within(&mounted, target.tag()) {
                     return false;
                 }
                 tab_in_target(&target, &positioner, chord.modifiers.shift())
@@ -709,8 +713,10 @@ fn TourLayer(act: Callback<Move>, index: usize, options: TourOptions) -> Element
         }
         // A held arrow steps once, and none finishes: the last step stops it (2262).
         match logical_key(&event) {
-            Key::ArrowRight if !event.is_auto_repeating() => act.call(Move::Forward),
-            Key::ArrowLeft if !event.is_auto_repeating() => act.call(Move::Prev),
+            Key::Named(NamedKey::ArrowRight) if !event.is_auto_repeating() => {
+                act.call(Move::Forward)
+            }
+            Key::Named(NamedKey::ArrowLeft) if !event.is_auto_repeating() => act.call(Move::Prev),
             _ => {}
         }
     });

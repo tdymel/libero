@@ -59,9 +59,9 @@ mod warnings;
 pub use blitz_traits::shell::ColorScheme;
 pub use dioxus::prelude::{Code, Key, Location, Modifiers};
 
-/// The platform's command modifier: Cmd on a macOS host, which blitz-shell reports as SUPER.
+/// The platform's command modifier: Cmd on a macOS host.
 pub const MOD: Modifiers = if cfg!(target_os = "macos") {
-    Modifiers::SUPER
+    Modifiers::META
 } else {
     Modifiers::CONTROL
 };
@@ -667,11 +667,11 @@ impl Page {
     }
 
     pub fn tab(&mut self) {
-        self.press(Key::Tab);
+        self.press(Key::Named(NamedKey::Tab));
     }
 
     pub fn shift_tab(&mut self) {
-        self.press_with(Key::Tab, Modifiers::SHIFT);
+        self.press_with(Key::Named(NamedKey::Tab), Modifiers::SHIFT);
     }
 
     /// Pointer down and up at the centre of the first match.
@@ -1336,8 +1336,10 @@ fn key_event(key: Key, state: KeyState, modifiers: Modifiers) -> BlitzKeyEvent {
 /// The AppKit command a macOS shell sends after a key Blitz leaves to it: only Backspace.
 fn apple_key_binding(key: &Key, modifiers: Modifiers) -> Option<&'static str> {
     match key {
-        Key::Backspace if modifiers.contains(Modifiers::ALT) => Some("deleteWordBackward:"),
-        Key::Backspace => Some("deleteBackward:"),
+        Key::Named(NamedKey::Backspace) if modifiers.contains(Modifiers::ALT) => {
+            Some("deleteWordBackward:")
+        }
+        Key::Named(NamedKey::Backspace) => Some("deleteBackward:"),
         _ => None,
     }
 }

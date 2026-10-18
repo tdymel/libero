@@ -197,8 +197,14 @@ fn indicator_key_target(
         return None;
     }
     let (previous, next) = match orientation {
-        Orientation::Horizontal => (Key::ArrowLeft, Key::ArrowRight),
-        Orientation::Vertical => (Key::ArrowUp, Key::ArrowDown),
+        Orientation::Horizontal => (
+            Key::Named(NamedKey::ArrowLeft),
+            Key::Named(NamedKey::ArrowRight),
+        ),
+        Orientation::Vertical => (
+            Key::Named(NamedKey::ArrowUp),
+            Key::Named(NamedKey::ArrowDown),
+        ),
     };
     Some(match key {
         key if key == next => match index >= high {
@@ -212,8 +218,8 @@ fn indicator_key_target(
             false => index - 1,
         },
         // Home on the first or End on the last dot scrolls the page (todo 3053).
-        Key::Home if index > low => low,
-        Key::End if index < high => high,
+        Key::Named(NamedKey::Home) if index > low => low,
+        Key::Named(NamedKey::End) if index < high => high,
         _ => return None,
     })
 }
@@ -225,18 +231,35 @@ mod tests {
     /// Todo 2465: a lone dot leaves the keys to the page; two still wrap or clamp.
     #[test]
     fn a_lone_dot_takes_no_key() {
-        for key in [Key::ArrowRight, Key::ArrowLeft, Key::Home, Key::End] {
+        for key in [
+            Key::Named(NamedKey::ArrowRight),
+            Key::Named(NamedKey::ArrowLeft),
+            Key::Named(NamedKey::Home),
+            Key::Named(NamedKey::End),
+        ] {
             assert_eq!(
                 indicator_key_target(key, Orientation::Horizontal, 0, (0, 0), false),
                 None
             );
         }
         assert_eq!(
-            indicator_key_target(Key::ArrowRight, Orientation::Horizontal, 1, (0, 1), true),
+            indicator_key_target(
+                Key::Named(NamedKey::ArrowRight),
+                Orientation::Horizontal,
+                1,
+                (0, 1),
+                true
+            ),
             Some(0)
         );
         assert_eq!(
-            indicator_key_target(Key::ArrowRight, Orientation::Horizontal, 1, (0, 1), false),
+            indicator_key_target(
+                Key::Named(NamedKey::ArrowRight),
+                Orientation::Horizontal,
+                1,
+                (0, 1),
+                false
+            ),
             Some(1)
         );
     }
@@ -247,10 +270,10 @@ mod tests {
         let target = |key, index, looping| {
             indicator_key_target(key, Orientation::Horizontal, index, (0, 2), looping)
         };
-        assert_eq!(target(Key::Home, 0, false), None);
-        assert_eq!(target(Key::End, 2, true), None);
-        assert_eq!(target(Key::Home, 2, false), Some(0));
-        assert_eq!(target(Key::End, 0, false), Some(2));
+        assert_eq!(target(Key::Named(NamedKey::Home), 0, false), None);
+        assert_eq!(target(Key::Named(NamedKey::End), 2, true), None);
+        assert_eq!(target(Key::Named(NamedKey::Home), 2, false), Some(0));
+        assert_eq!(target(Key::Named(NamedKey::End), 0, false), Some(2));
     }
 
     /// Todo 3748: the dots take the track's pair for the orientation; the other
@@ -260,14 +283,23 @@ mod tests {
         let target =
             |key, orientation, index| indicator_key_target(key, orientation, index, (0, 2), false);
         let (horizontal, vertical) = (Orientation::Horizontal, Orientation::Vertical);
-        assert_eq!(target(Key::ArrowRight, horizontal, 1), Some(2));
-        assert_eq!(target(Key::ArrowLeft, horizontal, 1), Some(0));
-        assert_eq!(target(Key::ArrowDown, horizontal, 1), None);
-        assert_eq!(target(Key::ArrowUp, horizontal, 1), None);
-        assert_eq!(target(Key::ArrowDown, vertical, 1), Some(2));
-        assert_eq!(target(Key::ArrowUp, vertical, 1), Some(0));
-        assert_eq!(target(Key::ArrowRight, vertical, 1), None);
-        assert_eq!(target(Key::ArrowLeft, vertical, 1), None);
+        assert_eq!(
+            target(Key::Named(NamedKey::ArrowRight), horizontal, 1),
+            Some(2)
+        );
+        assert_eq!(
+            target(Key::Named(NamedKey::ArrowLeft), horizontal, 1),
+            Some(0)
+        );
+        assert_eq!(target(Key::Named(NamedKey::ArrowDown), horizontal, 1), None);
+        assert_eq!(target(Key::Named(NamedKey::ArrowUp), horizontal, 1), None);
+        assert_eq!(
+            target(Key::Named(NamedKey::ArrowDown), vertical, 1),
+            Some(2)
+        );
+        assert_eq!(target(Key::Named(NamedKey::ArrowUp), vertical, 1), Some(0));
+        assert_eq!(target(Key::Named(NamedKey::ArrowRight), vertical, 1), None);
+        assert_eq!(target(Key::Named(NamedKey::ArrowLeft), vertical, 1), None);
     }
 
     /// A plain strip clamps at its ends; a looping one wraps.
@@ -276,9 +308,9 @@ mod tests {
         let target = |key, index, looping| {
             indicator_key_target(key, Orientation::Horizontal, index, (1, 3), looping)
         };
-        assert_eq!(target(Key::ArrowRight, 3, false), Some(3));
-        assert_eq!(target(Key::ArrowLeft, 1, false), Some(1));
-        assert_eq!(target(Key::ArrowRight, 3, true), Some(1));
-        assert_eq!(target(Key::ArrowLeft, 1, true), Some(3));
+        assert_eq!(target(Key::Named(NamedKey::ArrowRight), 3, false), Some(3));
+        assert_eq!(target(Key::Named(NamedKey::ArrowLeft), 1, false), Some(1));
+        assert_eq!(target(Key::Named(NamedKey::ArrowRight), 3, true), Some(1));
+        assert_eq!(target(Key::Named(NamedKey::ArrowLeft), 1, true), Some(3));
     }
 }

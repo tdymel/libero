@@ -6,7 +6,7 @@ edition = "2024"
 [dependencies]
 # TEMPORARY: see the matching comment in libero/Cargo.toml - upstream dioxus
 # main by git instead of crates.io, unwind before any real release.
-dioxus = { version = "=0.8.0-alpha.2", default-features = true, features = ["router"] }
+dioxus = { version = "=0.8.0-alpha.3", default-features = true, features = ["router"] }
 # Only what these pages actually highlight.
 libero = { path = "../libero", default-features = false, features = [
     "code-lang-rust",
@@ -36,7 +36,7 @@ web-time = "1.1"
 # default renderer (`vello-hybrid`) can't be switched off from here - so
 # `native-cpu` depends on it directly, with the default set minus the
 # renderer. See that feature.
-dioxus-native = { version = "=0.8.0-alpha.2", optional = true, default-features = false, features = [
+dioxus-native = { version = "=0.8.0-alpha.3", optional = true, default-features = false, features = [
     "accessibility",
     "hot-reload",
     "net",
@@ -57,7 +57,7 @@ serde_json = "1"
 
 # Render-to-string, for the tests of shared docs components; libero's dioxus rev.
 [dev-dependencies]
-dioxus-ssr = { version = "=0.8.0-alpha.2" }
+dioxus-ssr = { version = "=0.8.0-alpha.3" }
 
 [features]
 # Render with Blitz (dioxus-native) in a winit window instead of the browser.

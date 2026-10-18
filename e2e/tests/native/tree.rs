@@ -65,7 +65,7 @@ fn the_arrows_work_after_a_click_on_a_row_button() {
         "focus on {}",
         page.focus_owner()
     );
-    page.press(Key::ArrowUp);
+    page.press(Key::Named(NamedKey::ArrowUp));
     assert!(
         page.is_focused("[data-tree-id='src']"),
         "focus on {}",
@@ -94,7 +94,7 @@ fn the_arrows_work_after_a_click_on_a_row_link() {
         "focus on {}",
         page.focus_owner()
     );
-    page.press(Key::ArrowUp);
+    page.press(Key::Named(NamedKey::ArrowUp));
     assert!(
         page.is_focused("[data-tree-id='src']"),
         "focus on {}",
@@ -107,7 +107,7 @@ fn the_painted_chevron_turns_too() {
     let mut page = mount(app);
     let collapsed = page.painted_transform(CHEVRON);
     page.focus("[tabindex='0']");
-    page.press(Key::ArrowRight);
+    page.press(Key::Named(NamedKey::ArrowRight));
     page.advance(1.0);
     let expanded = page.painted_transform(CHEVRON);
     assert_ne!(

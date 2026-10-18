@@ -340,16 +340,22 @@ pub fn Menubar(props: MenubarProps) -> Element {
                 let key = logical_key(&event);
                 // A lone trigger has nowhere to go: the keys scroll the page (todo 2465).
                 if len == 1
-                    && matches!(key, Key::ArrowRight | Key::ArrowLeft | Key::Home | Key::End)
+                    && matches!(
+                        key,
+                        Key::Named(NamedKey::ArrowRight)
+                            | Key::Named(NamedKey::ArrowLeft)
+                            | Key::Named(NamedKey::Home)
+                            | Key::Named(NamedKey::End)
+                    )
                 {
                     return;
                 }
                 let target = match key {
-                    Key::ArrowRight => row.step(index, true),
-                    Key::ArrowLeft => row.step(index, false),
-                    Key::Home => (len > 0).then_some(0),
-                    Key::End => len.checked_sub(1),
-                    Key::Escape => {
+                    Key::Named(NamedKey::ArrowRight) => row.step(index, true),
+                    Key::Named(NamedKey::ArrowLeft) => row.step(index, false),
+                    Key::Named(NamedKey::Home) => (len > 0).then_some(0),
+                    Key::Named(NamedKey::End) => len.checked_sub(1),
+                    Key::Named(NamedKey::Escape) => {
                         row.armed.set(None);
                         return;
                     }
@@ -370,7 +376,9 @@ pub fn Menubar(props: MenubarProps) -> Element {
                     _ => return,
                 };
                 // Home on the first or End on the last trigger scrolls the page (todo 3053).
-                if matches!(key, Key::Home | Key::End) && target == Some(index) {
+                if matches!(key, Key::Named(NamedKey::Home) | Key::Named(NamedKey::End))
+                    && target == Some(index)
+                {
                     return;
                 }
                 event.prevent_default();

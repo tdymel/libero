@@ -611,8 +611,8 @@ impl GridFocus {
         shift: bool,
     ) -> bool {
         let space = matches!(event.key(), Key::Character(ref text) if text == " ");
-        let enter = event.key() == Key::Enter;
-        let f2 = event.key() == Key::F2;
+        let enter = event.key() == Key::Named(NamedKey::Enter);
+        let f2 = event.key() == Key::Named(NamedKey::F2);
         if !(space || enter || f2) {
             return false;
         }

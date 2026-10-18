@@ -1879,7 +1879,10 @@ mod dispatched {
         let Page { mut dom, rec: find } = Page::build(app);
         let second = find.element("keydown", "aria-label", "Character 2 of 4");
 
-        for key in [Key::Backspace, Key::Delete] {
+        for key in [
+            Key::Named(NamedKey::Backspace),
+            Key::Named(NamedKey::Delete),
+        ] {
             dom.runtime()
                 .handle_event("keydown", Event::new(key_event(key), true), second);
             dom.render_immediate(&mut dioxus::core::NoOpMutations);
@@ -1983,7 +1986,7 @@ mod dispatched {
     /// and the steppers are the field's own, so they are refused in Rust.
     #[test]
     fn a_read_only_number_field_does_not_step() {
-        let arrow = || key_event(Key::ArrowUp);
+        let arrow = || key_event(Key::Named(NamedKey::ArrowUp));
         let (stepped, _) = send(readonly_number, false, "keydown", last_keydown, arrow);
         assert_eq!(stepped, ["4"], "the arrow is the control");
         let (heard, html) = send(readonly_number, true, "keydown", last_keydown, arrow);
@@ -2034,7 +2037,11 @@ mod dispatched {
         let (minus, plus) = (find.first_click.unwrap(), last_click(&find));
         send("click", plus, click_event());
         send("click", plus, click_event());
-        send("keydown", last_keydown(&find), key_event(Key::ArrowUp));
+        send(
+            "keydown",
+            last_keydown(&find),
+            key_event(Key::Named(NamedKey::ArrowUp)),
+        );
         send("click", minus, click_event());
 
         assert_eq!(HEARD.with_borrow(Clone::clone), ["4", "5", "6", "5"]);

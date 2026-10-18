@@ -470,7 +470,7 @@ mod dispatched {
         let recent = find.element("keydown", "aria-haspopup", "menu");
         dom.runtime().handle_event(
             "keydown",
-            Event::new(key_event(Key::ArrowRight), true),
+            Event::new(key_event(Key::Named(NamedKey::ArrowRight)), true),
             recent,
         );
         settle_menu(&mut dom, &mut find);
@@ -512,8 +512,11 @@ mod dispatched {
     fn escape_in_a_submenu_closes_only_the_submenu() {
         let (mut dom, mut find, submenu) = open_submenu();
         let item = find.element("keydown", "id", &format!("{submenu}-item-0"));
-        dom.runtime()
-            .handle_event("keydown", Event::new(key_event(Key::Escape), true), item);
+        dom.runtime().handle_event(
+            "keydown",
+            Event::new(key_event(Key::Named(NamedKey::Escape)), true),
+            item,
+        );
         settle_menu(&mut dom, &mut find);
         let html = dioxus_ssr::render(&dom);
         assert_eq!(open_menus(&html), 1, "the root menu stays");

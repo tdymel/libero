@@ -63,7 +63,7 @@ fn a_phone_scrolls_a_low_cascader_above_its_sheet() {
     let mut page = mount(low_cascader);
     page.resize(320, 568);
     page.focus(TRIGGER);
-    page.press(Key::ArrowDown);
+    page.press(Key::Named(NamedKey::ArrowDown));
     let opened = page.wait_for(|page| page.exists("[role=listbox]"));
     assert!(opened, "no sheet: {}", page.tree());
     let clear = |page: &e2e::native::Page| {
@@ -88,7 +88,7 @@ fn a_phone_scrolls_a_low_cascader_above_its_sheet() {
 fn a_narrowed_autocomplete_keeps_each_label_on_one_line() {
     let mut page = mount(narrowing);
     page.focus(TRIGGER);
-    page.press(Key::ArrowDown);
+    page.press(Key::Named(NamedKey::ArrowDown));
     assert!(
         page.query_all("[role=option]").len() > 60,
         "{}",

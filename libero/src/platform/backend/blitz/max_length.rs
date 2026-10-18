@@ -7,6 +7,7 @@ use blitz_dom::{Node, QualName, local_name, ns};
 use dioxus::prelude::*;
 use dioxus_native_dom::NodeId;
 
+use super::FreeDoc;
 use super::{anchor, run_or_defer};
 use crate::platform::max_length::fit_insertion;
 
@@ -32,7 +33,7 @@ pub(super) fn key_down(event: &Event<KeyboardData>) {
     let Some(anchor) = anchor() else {
         return;
     };
-    let over = anchor.try_doc().is_some_and(|doc| {
+    let over = anchor.free_doc().is_some_and(|doc| {
         let Some(node) = doc.get_focussed_node_id().and_then(|id| doc.get_node(id)) else {
             return false;
         };
@@ -59,11 +60,13 @@ pub(super) fn key_down(event: &Event<KeyboardData>) {
 /// How many UTF-16 units the press would type; `0` for a paste.
 fn typed_units(event: &Event<KeyboardData>, node: &Node) -> Option<usize> {
     let modifiers = event.modifiers();
-    let chord = modifiers.intersects(Modifiers::CONTROL | Modifiers::META | Modifiers::SUPER);
+    let chord = modifiers.intersects(Modifiers::CONTROL | Modifiers::META);
     match event.key() {
         Key::Character(text) if chord => text.eq_ignore_ascii_case("v").then_some(0),
         Key::Character(text) => Some(text.encode_utf16().count()),
-        Key::Enter if !chord && node.data.is_element_with_tag_name(&local_name!("textarea")) => {
+        Key::Named(NamedKey::Enter)
+            if !chord && node.data.is_element_with_tag_name(&local_name!("textarea")) =>
+        {
             Some(1)
         }
         _ => None,

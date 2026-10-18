@@ -229,12 +229,20 @@ impl ClockView {
             _ => (15 / step).max(1),
         };
         let next = match event.key() {
-            Key::ArrowUp | Key::ArrowRight => self.stepped(self.base, 1),
-            Key::ArrowDown | Key::ArrowLeft => self.stepped(self.base, -1),
-            Key::PageUp => (0..page).try_fold(self.base, |from, _| self.stepped(from, 1)),
-            Key::PageDown => (0..page).try_fold(self.base, |from, _| self.stepped(from, -1)),
-            Key::Home | Key::End => {
-                let last = event.key() == Key::End;
+            Key::Named(NamedKey::ArrowUp) | Key::Named(NamedKey::ArrowRight) => {
+                self.stepped(self.base, 1)
+            }
+            Key::Named(NamedKey::ArrowDown) | Key::Named(NamedKey::ArrowLeft) => {
+                self.stepped(self.base, -1)
+            }
+            Key::Named(NamedKey::PageUp) => {
+                (0..page).try_fold(self.base, |from, _| self.stepped(from, 1))
+            }
+            Key::Named(NamedKey::PageDown) => {
+                (0..page).try_fold(self.base, |from, _| self.stepped(from, -1))
+            }
+            Key::Named(NamedKey::Home) | Key::Named(NamedKey::End) => {
+                let last = event.key() == Key::Named(NamedKey::End);
                 let (hour, minute, second) =
                     (self.base.hour(), self.base.minute(), self.base.second());
                 let edge = match (hand(), last) {
@@ -250,7 +258,7 @@ impl ClockView {
                     false => self.stepped(edge, if last { -1 } else { 1 }),
                 }
             }
-            Key::Enter => {
+            Key::Named(NamedKey::Enter) => {
                 event.prevent_default();
                 self.advance();
                 return;

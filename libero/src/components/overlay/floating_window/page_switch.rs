@@ -38,7 +38,7 @@ pub(super) fn use_page_switch(
         let callback = Box::new(move |chord: KeyChord| {
             let modifiers = chord.modifiers;
             // Shift+F6 too: with two stops, backward is forward.
-            if chord.key != Key::F6
+            if chord.key != Key::Named(NamedKey::F6)
                 || modifiers.ctrl()
                 || modifiers.alt()
                 || meta_held(modifiers)

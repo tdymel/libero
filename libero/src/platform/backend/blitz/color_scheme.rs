@@ -5,6 +5,7 @@ use std::{
 
 use blitz_traits::shell;
 
+use super::FreeDoc;
 use super::{Doc, doc};
 use crate::{
     platform::{
@@ -29,7 +30,7 @@ const SCHEME_INTERVAL: Duration = Duration::from_millis(500);
 
 fn viewport_scheme(doc: &Doc) -> Option<ColorScheme> {
     let anchor = doc.anchor()?;
-    let doc = anchor.try_doc()?;
+    let doc = anchor.free_doc()?;
     Some(match doc.viewport().color_scheme {
         shell::ColorScheme::Dark => ColorScheme::Dark,
         shell::ColorScheme::Light => ColorScheme::Light,

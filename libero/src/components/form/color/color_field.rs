@@ -455,16 +455,16 @@ pub fn ColorField(props: ColorFieldProps) -> Element {
             // A composing key picks an IME candidate, it is not a command.
             _ if event.is_composing() => {}
             // Focus stays, and the error line is no live region.
-            Key::Enter if unparsable() => {
+            Key::Named(NamedKey::Enter) if unparsable() => {
                 rejected.set(true);
                 announcer.say(labels.invalid.to_string());
             }
-            Key::Enter => {
+            Key::Named(NamedKey::Enter) => {
                 let mut settle_typed = settle_typed;
                 settle_typed();
             }
             // APG: Alt+ArrowDown enters like ArrowDown; Ctrl/Meta is the caret's.
-            Key::ArrowDown
+            Key::Named(NamedKey::ArrowDown)
                 if has_dropdown
                     && !readonly
                     && navigation_chord(&event) != Some(NavigationChord::Browser) =>
@@ -473,7 +473,7 @@ pub fn ColorField(props: ColorFieldProps) -> Element {
                 opened.set(true);
                 entering.set(true);
             }
-            Key::Escape if showing => {
+            Key::Named(NamedKey::Escape) if showing => {
                 event.prevent_default();
                 opened.set(false);
             }
@@ -496,7 +496,7 @@ pub fn ColorField(props: ColorFieldProps) -> Element {
             })
             .event("onfocusout", focus.focusout(1))
             .event("onkeydown", move |event: KeyboardEvent| match event.key() {
-                Key::Escape => {
+                Key::Named(NamedKey::Escape) => {
                     event.prevent_default();
                     focus_input();
                     opened.set(false);

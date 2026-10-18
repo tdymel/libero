@@ -1,6 +1,6 @@
 use std::rc::Rc;
 
-use dioxus::prelude::{Code, Event, Key, KeyboardData, Modifiers, MountedData};
+use dioxus::prelude::{Code, Event, Key, KeyboardData, Modifiers, MountedData, NamedKey};
 
 use super::backend;
 
@@ -117,9 +117,9 @@ pub(crate) fn mod_is_meta() -> bool {
     backend::mod_is_meta()
 }
 
-/// Whether Cmd (or the Windows key) is held: browsers say `META`, Blitz `SUPER`.
+/// Whether Cmd (or the Windows key) is held.
 pub(crate) fn meta_held(modifiers: Modifiers) -> bool {
-    modifiers.intersects(Modifiers::META | Modifiers::SUPER)
+    modifiers.contains(Modifiers::META)
 }
 
 /// Whether a tap on a field raises a soft keyboard that covers its dropdown: a
@@ -155,7 +155,10 @@ pub(crate) fn rtl_target(event: &Event<KeyboardData>) -> bool {
 pub(crate) fn logical_key(event: &Event<KeyboardData>) -> Key {
     let key = event.key();
     // Direction is read only for the two keys it changes.
-    if matches!(key, Key::ArrowLeft | Key::ArrowRight) {
+    if matches!(
+        key,
+        Key::Named(NamedKey::ArrowLeft) | Key::Named(NamedKey::ArrowRight)
+    ) {
         logical_arrow(key, rtl_target(event))
     } else {
         key
@@ -166,8 +169,8 @@ pub(crate) fn logical_key(event: &Event<KeyboardData>) -> Key {
 /// its `code` stays `Tab` (2702).
 pub(crate) fn is_tab(event: &Event<KeyboardData>) -> bool {
     match event.key() {
-        Key::Tab => true,
-        Key::Unidentified => event.code() == Code::Tab,
+        Key::Named(NamedKey::Tab) => true,
+        Key::Named(NamedKey::Unidentified) => event.code() == Code::Tab,
         _ => false,
     }
 }
@@ -175,8 +178,8 @@ pub(crate) fn is_tab(event: &Event<KeyboardData>) -> bool {
 /// ArrowLeft and ArrowRight swapped when `rtl`, every other key unchanged.
 pub(crate) fn logical_arrow(key: Key, rtl: bool) -> Key {
     match key {
-        Key::ArrowLeft if rtl => Key::ArrowRight,
-        Key::ArrowRight if rtl => Key::ArrowLeft,
+        Key::Named(NamedKey::ArrowLeft) if rtl => Key::Named(NamedKey::ArrowRight),
+        Key::Named(NamedKey::ArrowRight) if rtl => Key::Named(NamedKey::ArrowLeft),
         key => key,
     }
 }
@@ -212,15 +215,19 @@ pub(crate) fn takes_arrows(tag: &str, input_type: Option<&str>) -> bool {
 /// Navigation keys count with any modifier; browser shortcuts with Ctrl/Cmd.
 pub(crate) fn reserved_chord(key: &Key, modifiers: Modifiers) -> Option<&'static str> {
     let named = match key {
-        Key::Tab => Some("moving focus"),
-        Key::Escape => Some("closing and cancelling"),
-        Key::Enter => Some("activating the focused control"),
-        Key::ArrowUp | Key::ArrowDown | Key::ArrowLeft | Key::ArrowRight => {
-            Some("arrow-key navigation and scrolling")
-        }
-        Key::Home | Key::End | Key::PageUp | Key::PageDown => Some("scrolling and list navigation"),
-        Key::F5 => Some("the browser's reload"),
-        Key::F6 => Some("moving focus between the page and the browser"),
+        Key::Named(NamedKey::Tab) => Some("moving focus"),
+        Key::Named(NamedKey::Escape) => Some("closing and cancelling"),
+        Key::Named(NamedKey::Enter) => Some("activating the focused control"),
+        Key::Named(NamedKey::ArrowUp)
+        | Key::Named(NamedKey::ArrowDown)
+        | Key::Named(NamedKey::ArrowLeft)
+        | Key::Named(NamedKey::ArrowRight) => Some("arrow-key navigation and scrolling"),
+        Key::Named(NamedKey::Home)
+        | Key::Named(NamedKey::End)
+        | Key::Named(NamedKey::PageUp)
+        | Key::Named(NamedKey::PageDown) => Some("scrolling and list navigation"),
+        Key::Named(NamedKey::F5) => Some("the browser's reload"),
+        Key::Named(NamedKey::F6) => Some("moving focus between the page and the browser"),
         Key::Character(text) if text == " " => Some("activating the focused control"),
         _ => None,
     };
@@ -372,10 +379,24 @@ mod tests {
 
     #[test]
     fn rtl_swaps_only_the_horizontal_arrows() {
-        assert_eq!(logical_arrow(Key::ArrowLeft, true), Key::ArrowRight);
-        assert_eq!(logical_arrow(Key::ArrowRight, true), Key::ArrowLeft);
-        assert_eq!(logical_arrow(Key::ArrowLeft, false), Key::ArrowLeft);
-        for key in [Key::ArrowUp, Key::ArrowDown, Key::Home, Key::End] {
+        assert_eq!(
+            logical_arrow(Key::Named(NamedKey::ArrowLeft), true),
+            Key::Named(NamedKey::ArrowRight)
+        );
+        assert_eq!(
+            logical_arrow(Key::Named(NamedKey::ArrowRight), true),
+            Key::Named(NamedKey::ArrowLeft)
+        );
+        assert_eq!(
+            logical_arrow(Key::Named(NamedKey::ArrowLeft), false),
+            Key::Named(NamedKey::ArrowLeft)
+        );
+        for key in [
+            Key::Named(NamedKey::ArrowUp),
+            Key::Named(NamedKey::ArrowDown),
+            Key::Named(NamedKey::Home),
+            Key::Named(NamedKey::End),
+        ] {
             assert_eq!(logical_arrow(key.clone(), true), key);
         }
     }
@@ -383,12 +404,12 @@ mod tests {
     #[test]
     fn a11y_keys_are_reserved_with_any_modifier() {
         for key in [
-            Key::Tab,
-            Key::Escape,
-            Key::Enter,
-            Key::ArrowLeft,
-            Key::Home,
-            Key::PageDown,
+            Key::Named(NamedKey::Tab),
+            Key::Named(NamedKey::Escape),
+            Key::Named(NamedKey::Enter),
+            Key::Named(NamedKey::ArrowLeft),
+            Key::Named(NamedKey::Home),
+            Key::Named(NamedKey::PageDown),
         ] {
             assert!(reserved_chord(&key, Modifiers::empty()).is_some(), "{key}");
             assert!(reserved_chord(&key, Modifiers::SHIFT).is_some(), "{key}");
@@ -441,6 +462,6 @@ mod tests {
             assert!(bare_chord_warning(&key("k"), held).is_none());
         }
         assert!(bare_chord_warning(&key(" "), Modifiers::empty()).is_none());
-        assert!(bare_chord_warning(&Key::F8, Modifiers::empty()).is_none());
+        assert!(bare_chord_warning(&Key::Named(NamedKey::F8), Modifiers::empty()).is_none());
     }
 }

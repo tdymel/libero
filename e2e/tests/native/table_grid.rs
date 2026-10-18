@@ -69,14 +69,14 @@ fn an_input_in_a_cell_takes_typing() {
     page.double_click(AGE);
     assert!(page.is_focused(EDITOR), "{}", page.focus_owner());
     // Blitz puts the caret first.
-    page.press(Key::End);
+    page.press(Key::Named(NamedKey::End));
     for _ in 0..2 {
-        page.press(Key::Backspace);
+        page.press(Key::Named(NamedKey::Backspace));
     }
     for digit in ["4", "0"] {
         page.press(Key::Character(digit.into()));
     }
-    page.press(Key::Enter);
+    page.press(Key::Named(NamedKey::Enter));
     assert!(!page.exists(EDITOR), "the editor stays open");
     assert_eq!(page.text(AGE).trim(), "40");
 }

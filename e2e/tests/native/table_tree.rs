@@ -56,7 +56,7 @@ fn a_tree_toggle_opens_its_children_under_it() {
         "the child's toggle ({child_x}) is not indented past its parent's ({parent_x})"
     );
     page.focus(SITE);
-    page.press(Key::Enter);
+    page.press(Key::Named(NamedKey::Enter));
     assert_eq!(page.query_all("tbody tr").len(), 2, "{}", page.tree());
 }
 
@@ -226,21 +226,21 @@ fn a_focused_tree_row_is_one_ring_under_rtl() {
 fn the_arrows_open_and_close_a_focused_row() {
     let mut page = mount(app);
     page.focus("tbody tr:nth-child(1)");
-    page.press(Key::ArrowRight);
+    page.press(Key::Named(NamedKey::ArrowRight));
     assert_eq!(page.query_all("tbody tr").len(), 4, "{}", page.tree());
-    page.press(Key::ArrowDown);
-    page.press(Key::ArrowRight);
+    page.press(Key::Named(NamedKey::ArrowDown));
+    page.press(Key::Named(NamedKey::ArrowRight));
     assert!(
         page.is_focused("tbody tr:nth-child(2)"),
         "{}",
         page.focus_owner()
     );
-    page.press(Key::ArrowLeft);
+    page.press(Key::Named(NamedKey::ArrowLeft));
     assert!(
         page.is_focused("tbody tr:nth-child(1)"),
         "{}",
         page.focus_owner()
     );
-    page.press(Key::ArrowLeft);
+    page.press(Key::Named(NamedKey::ArrowLeft));
     assert_eq!(page.query_all("tbody tr").len(), 2, "{}", page.tree());
 }

@@ -1,6 +1,6 @@
 //! The grid's key map and steps, pure: positions in, positions out.
 
-use dioxus::prelude::Key;
+use dioxus::prelude::{Key, NamedKey};
 
 use super::{header_groups::HeaderCell, pipeline::VisibleRow};
 use crate::platform::logical_arrow;
@@ -47,16 +47,16 @@ pub(super) enum Move {
 pub(super) fn key_move(key: Key, ctrl: bool, rtl: bool, page: usize) -> Option<Move> {
     let page = page.max(1);
     Some(match (logical_arrow(key, rtl), ctrl) {
-        (Key::ArrowLeft, false) => Move::Left,
-        (Key::ArrowRight, false) => Move::Right,
-        (Key::ArrowUp, false) => Move::Up,
-        (Key::ArrowDown, false) => Move::Down,
-        (Key::Home, false) => Move::RowStart,
-        (Key::End, false) => Move::RowEnd,
-        (Key::Home, true) => Move::GridStart,
-        (Key::End, true) => Move::GridEnd,
-        (Key::PageUp, false) => Move::PageUp(page),
-        (Key::PageDown, false) => Move::PageDown(page),
+        (Key::Named(NamedKey::ArrowLeft), false) => Move::Left,
+        (Key::Named(NamedKey::ArrowRight), false) => Move::Right,
+        (Key::Named(NamedKey::ArrowUp), false) => Move::Up,
+        (Key::Named(NamedKey::ArrowDown), false) => Move::Down,
+        (Key::Named(NamedKey::Home), false) => Move::RowStart,
+        (Key::Named(NamedKey::End), false) => Move::RowEnd,
+        (Key::Named(NamedKey::Home), true) => Move::GridStart,
+        (Key::Named(NamedKey::End), true) => Move::GridEnd,
+        (Key::Named(NamedKey::PageUp), false) => Move::PageUp(page),
+        (Key::Named(NamedKey::PageDown), false) => Move::PageDown(page),
         _ => return None,
     })
 }
@@ -255,9 +255,18 @@ mod tests {
 
     #[test]
     fn ctrl_home_and_end_reach_the_grid_corners() {
-        assert_eq!(key_move(Key::Home, true, false, 1), Some(Move::GridStart));
-        assert_eq!(key_move(Key::End, true, false, 1), Some(Move::GridEnd));
-        assert_eq!(key_move(Key::ArrowDown, true, false, 1), None);
+        assert_eq!(
+            key_move(Key::Named(NamedKey::Home), true, false, 1),
+            Some(Move::GridStart)
+        );
+        assert_eq!(
+            key_move(Key::Named(NamedKey::End), true, false, 1),
+            Some(Move::GridEnd)
+        );
+        assert_eq!(
+            key_move(Key::Named(NamedKey::ArrowDown), true, false, 1),
+            None
+        );
         assert_eq!(step(at(1, 2), Move::GridStart, 3, plain), at(0, 0));
         assert_eq!(step(at(1, 2), Move::GridEnd, 3, plain), at(2, 3));
     }
@@ -265,7 +274,7 @@ mod tests {
     #[test]
     fn page_down_moves_by_the_given_rows() {
         assert_eq!(
-            key_move(Key::PageDown, false, false, 0),
+            key_move(Key::Named(NamedKey::PageDown), false, false, 0),
             Some(Move::PageDown(1))
         );
         assert_eq!(step(at(0, 1), Move::PageDown(5), 20, plain), at(5, 1));
@@ -275,10 +284,22 @@ mod tests {
 
     #[test]
     fn rtl_swaps_sideways_arrows() {
-        assert_eq!(key_move(Key::ArrowLeft, false, true, 1), Some(Move::Right));
-        assert_eq!(key_move(Key::ArrowRight, false, true, 1), Some(Move::Left));
-        assert_eq!(key_move(Key::ArrowUp, false, true, 1), Some(Move::Up));
-        assert_eq!(key_move(Key::Home, false, true, 1), Some(Move::RowStart));
+        assert_eq!(
+            key_move(Key::Named(NamedKey::ArrowLeft), false, true, 1),
+            Some(Move::Right)
+        );
+        assert_eq!(
+            key_move(Key::Named(NamedKey::ArrowRight), false, true, 1),
+            Some(Move::Left)
+        );
+        assert_eq!(
+            key_move(Key::Named(NamedKey::ArrowUp), false, true, 1),
+            Some(Move::Up)
+        );
+        assert_eq!(
+            key_move(Key::Named(NamedKey::Home), false, true, 1),
+            Some(Move::RowStart)
+        );
     }
 
     /// Row 1 spans its first three columns in one cell.

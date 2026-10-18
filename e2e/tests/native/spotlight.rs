@@ -52,7 +52,7 @@ fn a_narrowed_list_keeps_each_label_on_one_line() {
 #[test]
 fn ctrl_k_reopens_the_palette_opened_with_nothing_focused() {
     let mut page = mount(narrowing);
-    for close in [Key::Escape, Key::Character("k".into())] {
+    for close in [Key::Named(NamedKey::Escape), Key::Character("k".into())] {
         page.press_with(Key::Character("k".into()), Modifiers::CONTROL);
         assert!(
             page.wait_for(|page| page.exists("[role=dialog]")),
@@ -60,7 +60,7 @@ fn ctrl_k_reopens_the_palette_opened_with_nothing_focused() {
             page.focus_owner()
         );
         let modifiers = match close {
-            Key::Escape => Modifiers::empty(),
+            Key::Named(NamedKey::Escape) => Modifiers::empty(),
             _ => Modifiers::CONTROL,
         };
         page.press_with(close, modifiers);

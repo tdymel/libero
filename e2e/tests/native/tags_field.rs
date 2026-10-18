@@ -23,7 +23,7 @@ fn app() -> Element {
 fn a_backspace_binding_does_not_open_the_suggestions_after_it_drops_a_tag() {
     let mut page = mount(app);
     page.focus(INPUT);
-    page.press_with_binding(Key::Backspace);
+    page.press_with_binding(Key::Named(NamedKey::Backspace));
     assert_eq!(page.text("#echo"), "alpha");
     assert_eq!(page.attr(INPUT, "aria-expanded").as_deref(), Some("false"));
 }

@@ -39,7 +39,7 @@ mod wheel;
 pub(super) use activate::focus_selectors;
 use color_scheme::check_scheme;
 pub(super) use color_scheme::color_scheme;
-use deferred::{Deferred, defer, flush_soon, later, run_deferred, run_or_defer};
+use deferred::{Deferred, FreeDoc, defer, flush_soon, later, run_deferred, run_or_defer};
 pub(super) use deferred::{awaits_layout, when_free, when_laid_out, when_laid_out_retry};
 pub(super) use direction::{is_rtl, rtl_target};
 pub(super) use document::document;

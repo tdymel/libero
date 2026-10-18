@@ -869,7 +869,10 @@ pub(super) fn ChartOverlay(props: ChartOverlayProps) -> Element {
                     return;
                 }
             }
-            if event.key() == Key::Escape && onrange.is_some() && selection.peek().is_some() {
+            if event.key() == Key::Named(NamedKey::Escape)
+                && onrange.is_some()
+                && selection.peek().is_some()
+            {
                 event.stop_propagation();
                 selection.set(None);
                 announcer.say(labels.selection_cleared.to_string());
@@ -879,14 +882,14 @@ pub(super) fn ChartOverlay(props: ChartOverlayProps) -> Element {
                 return;
             }
             let step = match event.key() {
-                Key::ArrowRight => Step::Next,
-                Key::ArrowLeft => Step::Previous,
-                Key::ArrowDown => Step::Down,
-                Key::ArrowUp => Step::Up,
-                Key::Home => Step::First,
-                Key::End => Step::Last,
+                Key::Named(NamedKey::ArrowRight) => Step::Next,
+                Key::Named(NamedKey::ArrowLeft) => Step::Previous,
+                Key::Named(NamedKey::ArrowDown) => Step::Down,
+                Key::Named(NamedKey::ArrowUp) => Step::Up,
+                Key::Named(NamedKey::Home) => Step::First,
+                Key::Named(NamedKey::End) => Step::Last,
                 // Unprevented, Android's WebView follows Enter with a click at the layer's centre.
-                Key::Enter => {
+                Key::Named(NamedKey::Enter) => {
                     event.prevent_default();
                     click(active_mark());
                     return;
@@ -896,7 +899,7 @@ pub(super) fn ChartOverlay(props: ChartOverlayProps) -> Element {
                     click(active_mark());
                     return;
                 }
-                Key::Escape if active.peek().is_some() => {
+                Key::Named(NamedKey::Escape) if active.peek().is_some() => {
                     event.stop_propagation();
                     pinned.set(false);
                     set_active(None);

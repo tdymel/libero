@@ -23,9 +23,9 @@ fn typing(page: &mut Page, text: &str) {
 
 /// Empties the focused text input: Blitz has no select-all shortcut here.
 fn clear(page: &mut Page) {
-    page.press(Key::End);
+    page.press(Key::Named(NamedKey::End));
     for _ in 0..40 {
-        page.press(Key::Backspace);
+        page.press(Key::Named(NamedKey::Backspace));
     }
 }
 
@@ -52,7 +52,7 @@ fn a_typed_date_commits_on_enter() {
     page.click(INPUT);
     clear(&mut page);
     typing(&mut page, "October 3, 2026");
-    page.press(Key::Enter);
+    page.press(Key::Named(NamedKey::Enter));
     assert_eq!(page.text("#echo"), "2026-10-03", "{}", page.tree());
 }
 
@@ -82,7 +82,7 @@ fn tab_into_the_date_field_does_not_open_the_dialog() {
     page.tab();
     assert!(page.is_focused(INPUT), "{}", page.focus_owner());
     assert!(!page.exists(DIALOG), "{}", page.tree());
-    page.press(Key::ArrowDown);
+    page.press(Key::Named(NamedKey::ArrowDown));
     assert!(page.exists(DIALOG), "{}", page.tree());
 }
 
@@ -107,14 +107,14 @@ fn tab_out_of_the_date_field_commits_and_closes() {
 fn the_keys_pick_a_day_in_the_date_dialog() {
     let mut page = mount(chrono_field);
     page.click(INPUT);
-    page.press(Key::ArrowDown);
+    page.press(Key::Named(NamedKey::ArrowDown));
     assert!(
         page.is_focused("[data-date='2026-09-25']"),
         "Arrow Down focuses the held day, not {}",
         page.focus_owner()
     );
-    page.press(Key::ArrowRight);
-    page.press(Key::Enter);
+    page.press(Key::Named(NamedKey::ArrowRight));
+    page.press(Key::Named(NamedKey::Enter));
     assert_eq!(page.text("#echo"), "2026-09-26", "{}", page.tree());
     assert!(!page.exists(DIALOG), "{}", page.tree());
     assert!(page.is_focused(INPUT), "{}", page.focus_owner());
@@ -124,8 +124,8 @@ fn the_keys_pick_a_day_in_the_date_dialog() {
 fn escape_closes_the_date_dialog_and_returns_to_the_input() {
     let mut page = mount(chrono_field);
     page.click(INPUT);
-    page.press(Key::ArrowDown);
-    page.press(Key::Escape);
+    page.press(Key::Named(NamedKey::ArrowDown));
+    page.press(Key::Named(NamedKey::Escape));
     assert_eq!(
         page.attr(INPUT, "aria-expanded").as_deref(),
         Some("false"),
@@ -161,14 +161,14 @@ fn month_field() -> Element {
 fn the_keys_pick_a_month_in_a_month_field() {
     let mut page = mount(month_field);
     page.click(INPUT);
-    page.press(Key::ArrowDown);
+    page.press(Key::Named(NamedKey::ArrowDown));
     assert!(
         page.is_focused("[data-date='2026-03-01']"),
         "{}",
         page.focus_owner()
     );
-    page.press(Key::ArrowRight);
-    page.press(Key::Enter);
+    page.press(Key::Named(NamedKey::ArrowRight));
+    page.press(Key::Named(NamedKey::Enter));
     assert_eq!(page.text("#echo"), "2026-04-01", "{}", page.tree());
 }
 
@@ -195,14 +195,14 @@ fn a_click_on_a_day_picks_it() {
 fn the_arrows_walk_the_days_and_enter_picks() {
     let mut page = mount(picker);
     page.focus("[data-date='2026-09-25']");
-    page.press(Key::ArrowDown);
+    page.press(Key::Named(NamedKey::ArrowDown));
     assert!(
         page.is_focused("[data-date='2026-10-02']"),
         "{}",
         page.focus_owner()
     );
-    page.press(Key::ArrowLeft);
-    page.press(Key::Enter);
+    page.press(Key::Named(NamedKey::ArrowLeft));
+    page.press(Key::Named(NamedKey::Enter));
     assert_eq!(page.text("#echo"), "2026-10-01", "{}", page.tree());
 }
 
@@ -213,8 +213,8 @@ fn a_picked_day_focused_by_the_arrows_keeps_its_fill() {
     const PICKED: &str = "[data-date='2026-09-25']";
     let mut page = mount(picker);
     page.focus(PICKED);
-    page.press(Key::ArrowRight);
-    page.press(Key::ArrowLeft);
+    page.press(Key::Named(NamedKey::ArrowRight));
+    page.press(Key::Named(NamedKey::ArrowLeft));
     assert!(page.is_focused(PICKED), "{}", page.focus_owner());
     assert_eq!(page.attr(PICKED, "disabled"), None);
     assert_eq!(page.computed(PICKED, "opacity"), "1");
@@ -245,7 +245,7 @@ fn a_typed_time_commits_on_enter() {
     page.click(INPUT);
     clear(&mut page);
     typing(&mut page, "14:45");
-    page.press(Key::Enter);
+    page.press(Key::Named(NamedKey::Enter));
     assert_eq!(page.text("#echo"), "14:45:00", "{}", page.tree());
 }
 
@@ -285,13 +285,13 @@ fn the_keys_turn_a_digital_column() {
     assert!(page.is_focused(HOURS), "{}", page.focus_owner());
     page.tab();
     assert!(page.is_focused(MINUTES), "{}", page.focus_owner());
-    page.press(Key::ArrowUp);
+    page.press(Key::Named(NamedKey::ArrowUp));
     assert_eq!(page.text("#echo"), "09:35:00", "{}", page.tree());
-    page.press(Key::PageDown);
+    page.press(Key::Named(NamedKey::PageDown));
     assert_eq!(page.text("#echo"), "09:20:00", "{}", page.tree());
-    page.press(Key::End);
+    page.press(Key::Named(NamedKey::End));
     assert_eq!(page.text("#echo"), "09:55:00", "{}", page.tree());
-    page.press(Key::ArrowUp);
+    page.press(Key::Named(NamedKey::ArrowUp));
     assert_eq!(
         page.text("#echo"),
         "09:00:00",
@@ -337,7 +337,7 @@ fn a_typed_duration_commits_on_enter() {
     page.click(INPUT);
     clear(&mut page);
     typing(&mut page, "2h15");
-    page.press(Key::Enter);
+    page.press(Key::Named(NamedKey::Enter));
     assert_eq!(page.text("#echo"), "8100", "{}", page.tree());
     assert_eq!(page.attr(INPUT, "value").as_deref(), Some("2 h 15 min"));
 }
@@ -362,8 +362,8 @@ fn the_keys_turn_a_duration_column() {
     page.tab();
     page.tab();
     assert!(page.is_focused(MINUTES), "{}", page.focus_owner());
-    page.press(Key::ArrowUp);
-    page.press(Key::ArrowUp);
+    page.press(Key::Named(NamedKey::ArrowUp));
+    page.press(Key::Named(NamedKey::ArrowUp));
     assert_eq!(page.text("#echo"), "3600", "no carry: {}", page.tree());
     page.focus(HOURS);
     typing(&mut page, "42");

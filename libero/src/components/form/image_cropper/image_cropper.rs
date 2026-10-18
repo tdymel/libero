@@ -723,12 +723,12 @@ pub fn ImageCropper(props: ImageCropperProps) -> Element {
             };
             let centre = (0.5, 0.5);
             let rect = match event.key() {
-                Key::ArrowLeft => shift(grabbed, -step, 0.0),
-                Key::ArrowRight => shift(grabbed, step, 0.0),
-                Key::ArrowUp => shift(grabbed, 0.0, -step),
-                Key::ArrowDown => shift(grabbed, 0.0, step),
-                Key::Home => shown.extreme(grabbed, false, ratio, min),
-                Key::End => shown.extreme(grabbed, true, ratio, min),
+                Key::Named(NamedKey::ArrowLeft) => shift(grabbed, -step, 0.0),
+                Key::Named(NamedKey::ArrowRight) => shift(grabbed, step, 0.0),
+                Key::Named(NamedKey::ArrowUp) => shift(grabbed, 0.0, -step),
+                Key::Named(NamedKey::ArrowDown) => shift(grabbed, 0.0, step),
+                Key::Named(NamedKey::Home) => shown.extreme(grabbed, false, ratio, min),
+                Key::Named(NamedKey::End) => shown.extreme(grabbed, true, ratio, min),
                 Key::Character(c) if pan && (c == "+" || c == "=") => {
                     shown.zoomed(ZOOM_STEP, centre, centre, min)
                 }

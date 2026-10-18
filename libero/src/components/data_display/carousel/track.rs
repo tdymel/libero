@@ -161,8 +161,14 @@ enum TrackKey {
 /// carousel does not act on. A plain strip ends at the reachable window.
 fn track_key_target(key: Key, orientation: Orientation, nav: Nav) -> Option<TrackKey> {
     let (previous, next) = match orientation {
-        Orientation::Horizontal => (Key::ArrowLeft, Key::ArrowRight),
-        Orientation::Vertical => (Key::ArrowUp, Key::ArrowDown),
+        Orientation::Horizontal => (
+            Key::Named(NamedKey::ArrowLeft),
+            Key::Named(NamedKey::ArrowRight),
+        ),
+        Orientation::Vertical => (
+            Key::Named(NamedKey::ArrowUp),
+            Key::Named(NamedKey::ArrowDown),
+        ),
     };
     let wraps = nav.clones > 0;
     // One reachable position has nowhere to go: the keys scroll the page (todo 2465).
@@ -177,8 +183,8 @@ fn track_key_target(key: Key, orientation: Orientation, nav: Nav) -> Option<Trac
     match key {
         key if key == previous => Some(TrackKey::Step(false)),
         key if key == next => Some(TrackKey::Step(true)),
-        Key::Home => to(if wraps { 0 } else { nav.first }),
-        Key::End => to(if wraps {
+        Key::Named(NamedKey::Home) => to(if wraps { 0 } else { nav.first }),
+        Key::Named(NamedKey::End) => to(if wraps {
             nav.count.saturating_sub(1)
         } else {
             nav.last

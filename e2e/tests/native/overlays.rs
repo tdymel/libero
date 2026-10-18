@@ -118,7 +118,7 @@ fn a_modal_is_centred_in_a_scrolled_document() {
     assert!(page.rect("#open").1 < 100.0, "the root did not scroll");
     // The harness's pointer has no page offset, so a key opens it.
     page.focus("#open");
-    page.press(Key::Enter);
+    page.press(Key::Named(NamedKey::Enter));
     page.wait(std::time::Duration::from_millis(50));
     let (x, y, width, height) = page.rect(DIALOG);
     let (cx, cy) = (x + width / 2.0, y + height / 2.0);
@@ -222,7 +222,7 @@ fn content_that_is_no_dialog_takes_focus_on_its_box() {
         "focus is not on the content box:\n{}",
         page.tree()
     );
-    page.press(Key::Escape);
+    page.press(Key::Named(NamedKey::Escape));
     page.wait(std::time::Duration::from_millis(50));
     assert!(!page.exists("#sheet"), "Escape did not close it");
 }

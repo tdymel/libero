@@ -339,7 +339,7 @@ pub fn FocusTrap(props: FocusTrapProps) -> Element {
     use_hook(move || {
         Rc::new(keyboard().map(|api| {
             api.on_key_unfiltered(Box::new(move |chord: KeyChord| {
-                chord.key == Key::Tab
+                chord.key == Key::Named(NamedKey::Tab)
                     && holds_last(id)
                     && focus_fell()
                     && root

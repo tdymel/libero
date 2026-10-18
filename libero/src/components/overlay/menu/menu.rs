@@ -149,17 +149,17 @@ pub fn Menu(props: MenuProps) -> Element {
                         return;
                     }
                     match event.key() {
-                        Key::ArrowDown => {
+                        Key::Named(NamedKey::ArrowDown) => {
                             event.prevent_default();
                             state.open_at(MenuFocus::First);
                         }
-                        Key::ArrowUp => {
+                        Key::Named(NamedKey::ArrowUp) => {
                             event.prevent_default();
                             state.open_at(MenuFocus::Last);
                         }
                         // Off the web no document listener hears this press;
                         // on the web closing twice is harmless.
-                        Key::Escape if state.is_open() => {
+                        Key::Named(NamedKey::Escape) if state.is_open() => {
                             event.prevent_default();
                             event.stop_propagation();
                             state.close();

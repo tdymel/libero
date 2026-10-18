@@ -237,8 +237,8 @@ pub fn RadioGroup<T: Options>(props: RadioGroupProps<T>) -> Element {
                 return;
             }
             let step = match logical_key(&event) {
-                Key::ArrowDown | Key::ArrowRight => 1,
-                Key::ArrowUp | Key::ArrowLeft => -1,
+                Key::Named(NamedKey::ArrowDown) | Key::Named(NamedKey::ArrowRight) => 1,
+                Key::Named(NamedKey::ArrowUp) | Key::Named(NamedKey::ArrowLeft) => -1,
                 _ => return,
             };
             // A lone enabled option has nowhere to go: the keys scroll the page (todo 2465).

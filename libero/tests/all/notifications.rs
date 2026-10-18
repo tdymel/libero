@@ -99,7 +99,7 @@ fn the_stacks_sit_in_one_region_named_after_the_hotkey() {
     }
     fn f9() -> Element {
         rsx! {
-            LiberoProvider { Notifications { hotkey: Key::F9 } }
+            LiberoProvider { Notifications { hotkey: Key::Named(NamedKey::F9) } }
         }
     }
 

@@ -178,7 +178,7 @@ pub(super) const CLICK_BOUNDARY: &str = "label, div[data-state~=\"card\"]";
 fn activates(event: &KeyboardData, enter: bool) -> bool {
     match event.key() {
         Key::Character(ref c) => c == " ",
-        Key::Enter => enter,
+        Key::Named(NamedKey::Enter) => enter,
         _ => false,
     }
 }

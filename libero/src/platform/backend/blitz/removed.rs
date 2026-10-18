@@ -7,6 +7,7 @@ use blitz_dom::BaseDocument;
 use dioxus::prelude::*;
 use dioxus_native_dom::NodeId;
 
+use super::FreeDoc;
 use super::{Doc, ancestors, anchor, doc, flush_soon, focus, refused};
 
 thread_local! {
@@ -57,9 +58,9 @@ pub(super) fn keyed(event: &Event<KeyboardData>) {
     let Some(anchor) = anchor() else {
         return;
     };
-    if event.key() == Key::Tab && event.default_action_enabled() {
+    if event.key() == Key::Named(NamedKey::Tab) && event.default_action_enabled() {
         let next = {
-            let Some(doc) = anchor.try_doc() else {
+            let Some(doc) = anchor.free_doc() else {
                 return;
             };
             next_stop(&doc, event.modifiers().shift())
@@ -73,7 +74,7 @@ pub(super) fn keyed(event: &Event<KeyboardData>) {
             return;
         }
     }
-    let Some(doc) = anchor.try_doc() else {
+    let Some(doc) = anchor.free_doc() else {
         return;
     };
     let wrapper = self::doc().and_then(|doc| doc.wrapper_id());
@@ -92,7 +93,7 @@ pub(super) fn check(doc: &Doc) {
         return;
     };
     let lost = {
-        let Some(document) = anchor.try_doc() else {
+        let Some(document) = anchor.free_doc() else {
             return;
         };
         let gone = OWNER.with_borrow(|owner| {

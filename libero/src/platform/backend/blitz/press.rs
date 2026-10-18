@@ -4,6 +4,7 @@ use blitz_dom::{BaseDocument, local_name};
 use dioxus::prelude::*;
 use dioxus_native_dom::{NodeHandle, NodeId};
 
+use super::FreeDoc;
 use super::{INTERACTIVE, activate, ancestors, anchor, doc, refused, removed};
 
 thread_local! {
@@ -38,7 +39,7 @@ pub(super) fn pressed(event: &Event<PointerData>) {
     let wrapper = self::doc().and_then(|doc| doc.wrapper_id());
     HIT.set(None);
     let press = anchor().and_then(|anchor| {
-        let doc = anchor.try_doc()?;
+        let doc = anchor.free_doc()?;
         let hit = doc.hit(point.x as f32, point.y as f32)?.node_id;
         HIT.set(Some(hit));
         // The wrapper is no press target: Blitz sends such a press's focus to `<html>`.
@@ -55,7 +56,7 @@ pub(super) fn pressed(event: &Event<PointerData>) {
 /// The web starts Tab from a clicked node that takes no focus, Blitz from the
 /// wrapper: focus goes to that node first, and Blitz walks on from it.
 pub(super) fn tab_from_start(event: &Event<KeyboardData>) {
-    if event.key() != Key::Tab {
+    if event.key() != Key::Named(NamedKey::Tab) {
         return;
     }
     let Some(start) = START.take() else {
@@ -70,7 +71,7 @@ pub(super) fn tab_from_start(event: &Event<KeyboardData>) {
     let (Some(anchor), Some(wrapper)) = (doc.anchor(), doc.wrapper_id()) else {
         return;
     };
-    let Some(doc) = anchor.try_doc() else {
+    let Some(doc) = anchor.free_doc() else {
         return;
     };
     // Focus moved since the press: the web starts from the new owner too.
@@ -97,7 +98,7 @@ pub(in crate::platform::backend) fn nested_interactive(boundary: &str) -> bool {
     let nested = || -> Option<bool> {
         let hit = HIT.get()?;
         let anchor = anchor()?;
-        let doc = anchor.try_doc()?;
+        let doc = anchor.free_doc()?;
         let boundaries = doc.query_selector_all(boundary).ok()?;
         let path: Vec<NodeId> = ancestors(&doc, hit).collect();
         let within = path.iter().position(|id| boundaries.contains(id))?;
@@ -136,7 +137,7 @@ pub(in crate::platform::backend) fn focus_pressed(
         return;
     };
     let point = event.page_coordinates();
-    let Some(doc) = handle.try_doc() else {
+    let Some(doc) = handle.free_doc() else {
         return;
     };
     let Some(hit) = doc.hit(point.x as f32, point.y as f32) else {

@@ -372,7 +372,7 @@ mod dispatched {
     #[test]
     fn a_read_only_segmented_control_picks_nothing() {
         let (_, html) = send(readonly_segments, false, "keydown", first_keydown, || {
-            key_event(Key::ArrowRight)
+            key_event(Key::Named(NamedKey::ArrowRight))
         });
         assert_eq!(
             checked_states(&html),
@@ -380,7 +380,7 @@ mod dispatched {
             "the arrow is the control"
         );
         let (heard, html) = send(readonly_segments, true, "keydown", first_keydown, || {
-            key_event(Key::ArrowRight)
+            key_event(Key::Named(NamedKey::ArrowRight))
         });
         assert_eq!(heard, Vec::<String>::new());
         assert_eq!(checked_states(&html), [true, false]);
@@ -426,7 +426,7 @@ mod dispatched {
     /// one it is left to the browser, which submits as for a native radio (508).
     #[test]
     fn enter_picks_a_segment_outside_a_form_only() {
-        let enter = || key_event(Key::Enter);
+        let enter = || key_event(Key::Named(NamedKey::Enter));
         let (heard, html) = send(readonly_segments, false, "keydown", last_keydown, enter);
         assert_eq!(heard, ["true"], "outside a form");
         assert_eq!(checked_states(&html), [false, true]);
@@ -471,23 +471,25 @@ mod dispatched {
     #[test]
     fn segment_arrows_step_past_a_disabled_pick_both_ways() {
         assert_eq!(
-            segment_press_around_a_disabled_pick(0, Key::ArrowRight),
+            segment_press_around_a_disabled_pick(0, Key::Named(NamedKey::ArrowRight)),
             ["Team"]
         );
         assert_eq!(
-            segment_press_around_a_disabled_pick(2, Key::ArrowLeft),
+            segment_press_around_a_disabled_pick(2, Key::Named(NamedKey::ArrowLeft)),
             ["Free"]
         );
         assert_eq!(
-            segment_press_around_a_disabled_pick(0, Key::ArrowLeft),
+            segment_press_around_a_disabled_pick(0, Key::Named(NamedKey::ArrowLeft)),
             ["Team"]
         );
         assert_eq!(
-            segment_press_around_a_disabled_pick(2, Key::ArrowRight),
+            segment_press_around_a_disabled_pick(2, Key::Named(NamedKey::ArrowRight)),
             ["Free"]
         );
         // The disabled radio takes no focus in a browser, and answers no key here.
-        assert!(segment_press_around_a_disabled_pick(1, Key::ArrowRight).is_empty());
+        assert!(
+            segment_press_around_a_disabled_pick(1, Key::Named(NamedKey::ArrowRight)).is_empty()
+        );
     }
 }
 

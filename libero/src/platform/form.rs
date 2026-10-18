@@ -47,7 +47,7 @@ fn submit_click(form: Option<Rc<MountedData>>) -> bool {
 /// Enter in a field of `form` that submits it, by the web's implicit submission
 /// rules.
 fn implicit_submit(event: &Event<KeyboardData>, form: Option<Rc<MountedData>>) -> bool {
-    event.key() == Key::Enter
+    event.key() == Key::Named(NamedKey::Enter)
         && event.default_action_enabled()
         && !event.is_composing()
         && form.is_some_and(|form| backend::implicit_submission(&form))

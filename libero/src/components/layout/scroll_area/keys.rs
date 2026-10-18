@@ -24,14 +24,14 @@ enum Move {
 fn key_move(key: &Key, shift: bool, on_area: bool, view_height: f64) -> Option<Move> {
     let page = (view_height * PAGE).max(LINE);
     Some(match key {
-        Key::ArrowUp => Move::By(0.0, -LINE),
-        Key::ArrowDown => Move::By(0.0, LINE),
-        Key::ArrowLeft => Move::By(-LINE, 0.0),
-        Key::ArrowRight => Move::By(LINE, 0.0),
-        Key::PageUp => Move::By(0.0, -page),
-        Key::PageDown => Move::By(0.0, page),
-        Key::Home => Move::Top,
-        Key::End => Move::Bottom,
+        Key::Named(NamedKey::ArrowUp) => Move::By(0.0, -LINE),
+        Key::Named(NamedKey::ArrowDown) => Move::By(0.0, LINE),
+        Key::Named(NamedKey::ArrowLeft) => Move::By(-LINE, 0.0),
+        Key::Named(NamedKey::ArrowRight) => Move::By(LINE, 0.0),
+        Key::Named(NamedKey::PageUp) => Move::By(0.0, -page),
+        Key::Named(NamedKey::PageDown) => Move::By(0.0, page),
+        Key::Named(NamedKey::Home) => Move::Top,
+        Key::Named(NamedKey::End) => Move::Bottom,
         Key::Character(space) if space == " " && on_area => {
             Move::By(0.0, if shift { -page } else { page })
         }
@@ -43,8 +43,7 @@ fn key_move(key: &Key, shift: bool, on_area: bool, view_height: f64) -> Option<M
 /// does not scroll too.
 pub(crate) fn scroll_on_key(root: ElementHandle, event: Event<KeyboardData>) {
     let modifiers = event.modifiers();
-    if modifiers
-        .intersects(Modifiers::CONTROL | Modifiers::ALT | Modifiers::META | Modifiers::SUPER)
+    if modifiers.intersects(Modifiers::CONTROL | Modifiers::ALT | Modifiers::META)
         || key_taken(&event)
         || typing_target(&event)
     {
@@ -53,7 +52,10 @@ pub(crate) fn scroll_on_key(root: ElementHandle, event: Event<KeyboardData>) {
     let key = event.key();
     let arrow = matches!(
         key,
-        Key::ArrowUp | Key::ArrowDown | Key::ArrowLeft | Key::ArrowRight
+        Key::Named(NamedKey::ArrowUp)
+            | Key::Named(NamedKey::ArrowDown)
+            | Key::Named(NamedKey::ArrowLeft)
+            | Key::Named(NamedKey::ArrowRight)
     );
     if arrow && arrow_target(&event) {
         return;
@@ -86,22 +88,25 @@ mod tests {
     #[test]
     fn arrows_step_a_line_and_pages_most_of_the_view() {
         assert_eq!(
-            key_move(&Key::ArrowDown, false, false, 400.0),
+            key_move(&Key::Named(NamedKey::ArrowDown), false, false, 400.0),
             Some(Move::By(0.0, 40.0))
         );
         assert_eq!(
-            key_move(&Key::ArrowLeft, false, false, 400.0),
+            key_move(&Key::Named(NamedKey::ArrowLeft), false, false, 400.0),
             Some(Move::By(-40.0, 0.0))
         );
         assert_eq!(
-            key_move(&Key::PageDown, false, false, 400.0),
+            key_move(&Key::Named(NamedKey::PageDown), false, false, 400.0),
             Some(Move::By(0.0, 350.0))
         );
         assert_eq!(
-            key_move(&Key::PageUp, false, false, 20.0),
+            key_move(&Key::Named(NamedKey::PageUp), false, false, 20.0),
             Some(Move::By(0.0, -40.0))
         );
-        assert_eq!(key_move(&Key::End, false, false, 400.0), Some(Move::Bottom));
+        assert_eq!(
+            key_move(&Key::Named(NamedKey::End), false, false, 400.0),
+            Some(Move::Bottom)
+        );
     }
 
     /// Space presses a focused button inside, so it pages only on the area.

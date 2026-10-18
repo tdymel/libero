@@ -261,8 +261,8 @@ fn NativeSelectShell<T: Options>(live: Signal<Option<T>>, field: NativeSelectPro
         let bound_value = bound_value.clone();
         move |event: KeyboardEvent| {
             let forward = match event.key() {
-                Key::ArrowDown => true,
-                Key::ArrowUp => false,
+                Key::Named(NamedKey::ArrowDown) => true,
+                Key::Named(NamedKey::ArrowUp) => false,
                 _ => return,
             };
             if has_shortcut_modifier(&event) {

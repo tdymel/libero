@@ -275,10 +275,10 @@ fn AccordionSection<T: Options>(
         }
         // Arrows move focus and never toggle - the opposite of `Tabs`.
         let to = match event.key() {
-            Key::ArrowDown => next,
-            Key::ArrowUp => previous,
-            Key::Home => first,
-            Key::End => last,
+            Key::Named(NamedKey::ArrowDown) => next,
+            Key::Named(NamedKey::ArrowUp) => previous,
+            Key::Named(NamedKey::Home) => first,
+            Key::Named(NamedKey::End) => last,
             _ => return,
         };
         // Home on the first or End on the last trigger scrolls the page.

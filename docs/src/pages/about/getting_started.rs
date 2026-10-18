@@ -148,7 +148,7 @@ const FEATURES_EXAMPLE: &str = r#"libero = { version = "0.2", default-features =
 ] }"#;
 
 // snippet: ignore - shell commands, not Rust
-const INSTALL_COMMANDS: &str = "cargo add dioxus@=0.8.0-alpha.2
+const INSTALL_COMMANDS: &str = "cargo add dioxus@=0.8.0-alpha.3
 cargo add libero";
 
 const QUICK_START_EXAMPLE: &str = r#"fn App() -> Element {
@@ -176,7 +176,7 @@ pre_compress = true"#;
 
 // snippet: ignore - a Cargo.toml fragment, not Rust
 const NATIVE_CARGO: &str = r#"[dependencies]
-dioxus = { version = "=0.8.0-alpha.2", features = ["native"] }
+dioxus = { version = "=0.8.0-alpha.3", features = ["native"] }
 libero = { version = "0.2", features = ["native"] }
 
 # Blitz is unusably slow unoptimised; this keeps your own crate debuggable.
@@ -264,7 +264,7 @@ pub fn GettingStarted() -> Element {
                 Alert { title: "Dioxus 0.8 alpha",
                     Text {
                         "Libero 0.2 pins Dioxus "
-                        Code { source: "=0.8.0-alpha.2" }
+                        Code { source: "=0.8.0-alpha.3" }
                         ", so add that exact version: a second copy of dioxus would not share libero's contexts."
                     }
                 }
@@ -457,10 +457,10 @@ fn DesktopPanel() -> Element {
             Text { "On Linux you need:" }
             Checklist {
                 ListItem {
-                    "WebKitGTK 4.1, GTK 3 and xdo to build ("
-                    Code { source: "libwebkit2gtk-4.1-dev libgtk-3-dev libxdo-dev" }
+                    "WebKitGTK 4.1 and GTK 3 to build ("
+                    Code { source: "libwebkit2gtk-4.1-dev libgtk-3-dev" }
                     " on Debian and Ubuntu, "
-                    Code { source: "webkit2gtk-4.1 xdotool" }
+                    Code { source: "webkit2gtk-4.1" }
                     " on Arch)."
                 }
             }

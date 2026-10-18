@@ -38,7 +38,7 @@ fn round_trip(mut page: Page, control: &str) {
         "still shown after typing: {}",
         page.tree()
     );
-    page.press(Key::Backspace);
+    page.press(Key::Named(NamedKey::Backspace));
     assert!(
         page.exists(SHOWN),
         "not back after clearing: {}",
@@ -153,7 +153,7 @@ fn a_tags_field_draws_its_placeholder_until_a_tag_is_held() {
     page.click("input");
     typing(&mut page, "rust");
     assert!(!page.exists(SHOWN), "still shown after typing");
-    page.press(Key::Enter);
+    page.press(Key::Named(NamedKey::Enter));
     assert!(
         !page.exists("[data-lsx-placeholder]"),
         "drawn beside a held tag: {}",

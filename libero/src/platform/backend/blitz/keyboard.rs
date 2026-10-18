@@ -31,11 +31,7 @@ pub(super) fn keyed(event: &Event<KeyboardData>) {
         .filter(|(_, skip_text_entry, ..)| !(typing && *skip_text_entry))
         .map(|(_, skip_text_entry, origin, callback)| (*skip_text_entry, *origin, callback.clone()))
         .collect();
-    let (key, mut modifiers) = (event.key(), event.modifiers());
-    // blitz-shell reports Cmd as SUPER; a chord reads it as META, as on the web.
-    if modifiers.contains(Modifiers::SUPER) {
-        modifiers.insert(Modifiers::META);
-    }
+    let (key, modifiers) = (event.key(), event.modifiers());
     let mut taken = false;
     for (skip_text_entry, origin, callback) in callbacks {
         let chord = KeyChord {

@@ -72,7 +72,7 @@ fn Demo() -> Element {
             tabindex: "-1",
             attributes: popover.floating_events(),
             onkeydown: move |event: KeyboardEvent| {
-                if event.key() == Key::Tab {
+                if event.key() == Key::Named(NamedKey::Tab) {
                     close(&event);
                 }
             },
@@ -89,7 +89,7 @@ fn Demo() -> Element {
             onclick: move |_| opened.toggle(),
             attributes: popover.anchor_events(),
             onkeydown: move |event: KeyboardEvent| {
-                if event.key() == Key::Tab && opened() {
+                if event.key() == Key::Named(NamedKey::Tab) && opened() {
                     opened.set(false);
                 }
             },

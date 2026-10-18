@@ -36,7 +36,7 @@ fn Demo() -> Element {
                         direction: "row",
                         gap: "sm",
                         onkeydown: move |event: KeyboardEvent| {
-                            if event.key() == Key::Escape {
+                            if event.key() == Key::Named(NamedKey::Escape) {
                                 trapped.set(false);
                             }
                         },

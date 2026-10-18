@@ -84,9 +84,9 @@ fn a_native_select_draws_a_listbox_natively() {
 fn arrow_down_on_a_native_select_picks_the_next_option() {
     let mut page = mount(native);
     page.focus("[role=combobox]");
-    page.press(Key::ArrowDown);
-    page.press(Key::ArrowDown);
-    page.press(Key::Enter);
+    page.press(Key::Named(NamedKey::ArrowDown));
+    page.press(Key::Named(NamedKey::ArrowDown));
+    page.press(Key::Named(NamedKey::Enter));
     assert_eq!(page.text("#picked"), "Some(Banana)", "{}", page.tree());
 }
 

@@ -8,6 +8,7 @@ use blitz_dom::{
 use dioxus::prelude::*;
 use dioxus_native_dom::{NodeHandle, NodeId};
 
+use super::FreeDoc;
 use super::{
     LAYOUT_TRIES, activate, ancestors, checked_attr, client_extent, client_rect, doc, focus,
     notify_scroll, remember_document, resolved_style_value, run_or_defer, show,
@@ -38,7 +39,7 @@ impl dioxus::html::RenderedElementBacking for Found {
 
 pub(in crate::platform::backend) fn mounted_by_selector(selector: &str) -> Option<Rc<MountedData>> {
     let anchor = doc()?.anchor()?;
-    let node_id = anchor.try_doc()?.query_selector(selector).ok()??;
+    let node_id = anchor.free_doc()?.query_selector(selector).ok()??;
     Some(Rc::new(MountedData::new(Found { anchor, node_id })))
 }
 
@@ -74,7 +75,7 @@ pub(in crate::platform::backend) fn element_contains(
         return false;
     };
     inner
-        .try_doc()
+        .free_doc()
         .is_some_and(|doc| ancestors(&doc, node_id).any(|id| id == target))
 }
 
@@ -89,7 +90,7 @@ impl BlitzElement {
     /// A read answers when called, not awaited: the document stays borrowed
     /// while dioxus drains tasks, so a read made in a `spawn` fails.
     fn read<T: 'static>(&self, from: impl FnOnce(&BaseDocument, NodeId) -> Option<T>) -> Read<T> {
-        let Some(doc) = self.anchor.try_doc() else {
+        let Some(doc) = self.anchor.free_doc() else {
             return Box::pin(std::future::ready(Err(PlatformError::Unsupported)));
         };
         let answer = from(&doc, self.node_id).ok_or(PlatformError::NotFound);
@@ -151,14 +152,14 @@ impl ElementApi for BlitzElement {
 
     fn is_focused(&self) -> bool {
         self.anchor
-            .try_doc()
+            .free_doc()
             .is_some_and(|doc| doc.get_focussed_node_id() == Some(self.node_id))
     }
 
     /// `IS_IN_DOCUMENT`, Blitz's own `isConnected`; a missing node is gone. A
     /// borrowed document (tasks draining) answers `true`, the trait's rule.
     fn is_connected(&self) -> bool {
-        let Some(doc) = self.anchor.try_doc() else {
+        let Some(doc) = self.anchor.free_doc() else {
             return true;
         };
         doc.get_node(self.node_id)
@@ -250,7 +251,7 @@ impl ElementApi for BlitzElement {
     fn scroll_to(&self, x: f64, y: f64) -> Result<(), PlatformError> {
         if self
             .anchor
-            .try_doc()
+            .free_doc()
             .is_some_and(|doc| doc.get_node(self.node_id).is_none())
         {
             return Err(PlatformError::NotFound);
@@ -334,7 +335,7 @@ impl ElementApi for BlitzElement {
     }
 
     fn attribute(&self, name: &str) -> Result<Option<String>, PlatformError> {
-        let doc = self.anchor.try_doc().ok_or(PlatformError::Unsupported)?;
+        let doc = self.anchor.free_doc().ok_or(PlatformError::Unsupported)?;
         let element = doc
             .get_node(self.node_id)
             .and_then(|node| node.element_data())
@@ -347,7 +348,7 @@ impl ElementApi for BlitzElement {
     }
 
     fn matches(&self, selector: &str) -> Result<bool, PlatformError> {
-        let doc = self.anchor.try_doc().ok_or(PlatformError::Unsupported)?;
+        let doc = self.anchor.free_doc().ok_or(PlatformError::Unsupported)?;
         let found = doc
             .query_selector_all(selector)
             .map_err(|_| PlatformError::NotFound)?;
@@ -362,7 +363,7 @@ impl ElementApi for BlitzElement {
     }
 
     fn selection_start(&self) -> Option<u32> {
-        let doc = self.anchor.try_doc()?;
+        let doc = self.anchor.free_doc()?;
         let editor = &doc
             .get_node(self.node_id)?
             .element_data()?
@@ -374,7 +375,7 @@ impl ElementApi for BlitzElement {
     }
 
     fn set_caret(&self, at: u32) -> Result<(), PlatformError> {
-        let doc = self.anchor.try_doc().ok_or(PlatformError::Unsupported)?;
+        let doc = self.anchor.free_doc().ok_or(PlatformError::Unsupported)?;
         let editor = &doc
             .get_node(self.node_id)
             .and_then(|node| node.element_data())
@@ -405,7 +406,7 @@ impl ElementApi for BlitzElement {
         &self,
         selector: &str,
     ) -> Result<Option<Box<dyn ElementApi>>, PlatformError> {
-        let doc = self.anchor.try_doc().ok_or(PlatformError::Unsupported)?;
+        let doc = self.anchor.free_doc().ok_or(PlatformError::Unsupported)?;
         let matches = doc
             .query_selector_all(selector)
             .map_err(|_| PlatformError::NotFound)?;
@@ -442,7 +443,9 @@ impl ElementApi for BlitzElement {
     }
 
     fn query_selector(&self, selector: &str) -> Result<Box<dyn ElementApi>, PlatformError> {
-        let doc = self.anchor.try_doc().ok_or(PlatformError::Unsupported)?;
+        let doc = self.anchor.free_doc().ok_or(PlatformError::Unsupported)?;
+        // A dropped node panics in Blitz's query (#1185).
+        doc.get_node(self.node_id).ok_or(PlatformError::NotFound)?;
         let node_id = doc
             .query_selector_in(self.node_id, &activate::focus_selectors(selector))
             .map_err(|_| PlatformError::NotFound)?
@@ -455,7 +458,8 @@ impl ElementApi for BlitzElement {
         &self,
         selector: &str,
     ) -> Result<Vec<Box<dyn ElementApi>>, PlatformError> {
-        let doc = self.anchor.try_doc().ok_or(PlatformError::Unsupported)?;
+        let doc = self.anchor.free_doc().ok_or(PlatformError::Unsupported)?;
+        doc.get_node(self.node_id).ok_or(PlatformError::NotFound)?;
         let nodes = doc
             .query_selector_all_in(self.node_id, &activate::focus_selectors(selector))
             .map_err(|_| PlatformError::NotFound)?;

@@ -580,7 +580,12 @@ fn TreeCore(props: TreeCoreProps) -> Element {
         // Ctrl/Alt/Meta with a navigation key is the browser's chord.
         let navigation = matches!(
             event.key(),
-            Key::ArrowDown | Key::ArrowUp | Key::ArrowLeft | Key::ArrowRight | Key::Home | Key::End
+            Key::Named(NamedKey::ArrowDown)
+                | Key::Named(NamedKey::ArrowUp)
+                | Key::Named(NamedKey::ArrowLeft)
+                | Key::Named(NamedKey::ArrowRight)
+                | Key::Named(NamedKey::Home)
+                | Key::Named(NamedKey::End)
         );
         if navigation && has_shortcut_modifier(&event) {
             return;
@@ -590,7 +595,10 @@ fn TreeCore(props: TreeCoreProps) -> Element {
         if lone
             && matches!(
                 event.key(),
-                Key::ArrowDown | Key::ArrowUp | Key::Home | Key::End
+                Key::Named(NamedKey::ArrowDown)
+                    | Key::Named(NamedKey::ArrowUp)
+                    | Key::Named(NamedKey::Home)
+                    | Key::Named(NamedKey::End)
             )
         {
             return;
@@ -598,26 +606,26 @@ fn TreeCore(props: TreeCoreProps) -> Element {
         let at = |end: Option<&VisibleNode>| end.is_some_and(|end| end.id == current);
         match logical_key(&event) {
             // Home on the first or End on the last row scrolls the page (todo 3053).
-            Key::Home if at(order.first()) => {}
-            Key::End if at(order.last()) => {}
-            Key::ArrowDown => {
+            Key::Named(NamedKey::Home) if at(order.first()) => {}
+            Key::Named(NamedKey::End) if at(order.last()) => {}
+            Key::Named(NamedKey::ArrowDown) => {
                 event.prevent_default();
                 go_to(sibling_id(&order, &current, 1));
             }
-            Key::ArrowUp => {
+            Key::Named(NamedKey::ArrowUp) => {
                 event.prevent_default();
                 go_to(sibling_id(&order, &current, -1));
             }
-            Key::Home => {
+            Key::Named(NamedKey::Home) => {
                 event.prevent_default();
                 go_to(order.first().map(|node| node.id.to_string()));
             }
-            Key::End => {
+            Key::Named(NamedKey::End) => {
                 event.prevent_default();
                 go_to(order.last().map(|node| node.id.to_string()));
             }
-            key @ (Key::ArrowRight | Key::ArrowLeft) => {
-                let forward = key == Key::ArrowRight;
+            key @ (Key::Named(NamedKey::ArrowRight) | Key::Named(NamedKey::ArrowLeft)) => {
+                let forward = key == Key::Named(NamedKey::ArrowRight);
                 let Some(step) = horizontal(&order, node, is_expanded, forward)
                     .filter(|step| !lone || *step == Horizontal::Toggle)
                 else {
@@ -630,7 +638,7 @@ fn TreeCore(props: TreeCoreProps) -> Element {
                     Horizontal::Stay => {}
                 }
             }
-            Key::Enter => {
+            Key::Named(NamedKey::Enter) => {
                 if !node.disabled {
                     event.prevent_default();
                     if node.has_children {

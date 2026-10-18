@@ -58,7 +58,7 @@ fn enter_on_a_link_item_opens_its_url() {
     let mut page = opened();
     assert!(page.navigations().is_empty());
     page.focus("[role=menu] a[role=menuitem]");
-    page.press(Key::Enter);
+    page.press(Key::Named(NamedKey::Enter));
     assert_eq!(page.navigations(), [URL], "{}", page.tree());
 }
 

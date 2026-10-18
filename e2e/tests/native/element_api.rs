@@ -66,10 +66,10 @@ fn caret_app() -> Element {
             r#type: "text",
             onmounted: field.mount(),
             onkeydown: move |event: KeyboardEvent| {
-                if event.key() == Key::Enter {
+                if event.key() == Key::Named(NamedKey::Enter) {
                     out.set(format!("{:?}", field.selection_start()));
                 }
-                if event.key() == Key::Escape {
+                if event.key() == Key::Named(NamedKey::Escape) {
                     let _ = field.set_caret(1);
                 }
             },
@@ -86,11 +86,11 @@ fn reads_the_caret_of_a_text_input() {
     page.focus("#caret");
     page.press(Key::Character("é".into()));
     page.press(Key::Character("b".into()));
-    page.press(Key::Enter);
+    page.press(Key::Named(NamedKey::Enter));
     assert_eq!(page.text("#out"), "Some(2)", "{}", page.tree());
-    page.press(Key::ArrowLeft);
-    page.press(Key::ArrowLeft);
-    page.press(Key::Enter);
+    page.press(Key::Named(NamedKey::ArrowLeft));
+    page.press(Key::Named(NamedKey::ArrowLeft));
+    page.press(Key::Named(NamedKey::Enter));
     assert_eq!(page.text("#out"), "Some(0)");
 }
 
@@ -101,7 +101,7 @@ fn puts_the_caret_of_a_text_input() {
     page.focus("#caret");
     page.press(Key::Character("é".into()));
     page.press(Key::Character("b".into()));
-    page.press(Key::Escape);
-    page.press(Key::Enter);
+    page.press(Key::Named(NamedKey::Escape));
+    page.press(Key::Named(NamedKey::Enter));
     assert_eq!(page.text("#out"), "Some(1)", "{}", page.tree());
 }

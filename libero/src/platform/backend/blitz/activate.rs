@@ -21,6 +21,7 @@ use dioxus::{
 };
 use dioxus_native_dom::{NodeHandle, NodeId, synthetic_click_event};
 
+use super::FreeDoc;
 use super::{anchor, defer, focus, later};
 use crate::platform::keyboard::takes_typing;
 
@@ -210,20 +211,20 @@ pub(super) fn key_down(event: &Event<KeyboardData>) {
     }
     let modified = event
         .modifiers()
-        .intersects(Modifiers::CONTROL | Modifiers::ALT | Modifiers::META | Modifiers::SUPER);
+        .intersects(Modifiers::CONTROL | Modifiers::ALT | Modifiers::META);
     if !event.default_action_enabled() || event.is_composing() || modified {
         return;
     }
     let Some(anchor) = anchor() else {
         return;
     };
-    let Some((focused, (enter, space))) = anchor.try_doc().and_then(|doc| {
+    let Some((focused, (enter, space))) = anchor.free_doc().and_then(|doc| {
         let focused = doc.get_focussed_node_id()?;
         Some((focused, activation(&doc, focused)))
     }) else {
         return;
     };
-    if enter && event.key() == Key::Enter {
+    if enter && event.key() == Key::Named(NamedKey::Enter) {
         click(&anchor, focused);
     } else if space && is_space(event) {
         SPACE.set(Some(focused));
@@ -239,7 +240,7 @@ pub(super) fn key_up(event: &Event<KeyboardData>) {
         return;
     };
     let unmoved = anchor
-        .try_doc()
+        .free_doc()
         .is_some_and(|doc| doc.get_focussed_node_id() == Some(armed));
     if event.default_action_enabled() && unmoved {
         click(&anchor, armed);
@@ -298,7 +299,7 @@ pub(super) fn takes_over(
     let takes = !prevented
         && !anchor()
             .zip(hit)
-            .is_none_or(|(anchor, hit)| anchor.try_doc().is_none_or(|doc| blitz_acts(&doc, hit)));
+            .is_none_or(|(anchor, hit)| anchor.free_doc().is_none_or(|doc| blitz_acts(&doc, hit)));
     if takes {
         event.prevent_default();
     } // Blitz fires `dblclick` from its click default, which no longer runs (todo 1413).

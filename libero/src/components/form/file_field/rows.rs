@@ -235,20 +235,24 @@ impl ChipKeys {
         }
         let last = self.count - 1;
         let target = match (logical_key(&event), at) {
-            (Key::ArrowLeft, Some(index)) => Some(index.saturating_sub(1)),
+            (Key::Named(NamedKey::ArrowLeft), Some(index)) => Some(index.saturating_sub(1)),
             // From the Browse button, the last chip - the one Backspace takes.
-            (Key::ArrowLeft, None) if self.multiple => Some(last),
+            (Key::Named(NamedKey::ArrowLeft), None) if self.multiple => Some(last),
             // Past the last chip is the Browse button, not a wrap.
-            (Key::ArrowRight, Some(index)) => (index < last).then_some(index + 1),
+            (Key::Named(NamedKey::ArrowRight), Some(index)) => (index < last).then_some(index + 1),
             // Home on the first or End on the last chip scrolls the page (todo 3053).
-            (Key::Home, Some(index)) if index > 0 => Some(0),
-            (Key::End, Some(index)) if index < last => Some(last),
-            (Key::Backspace | Key::Delete, Some(index)) if self.editable => {
+            (Key::Named(NamedKey::Home), Some(index)) if index > 0 => Some(0),
+            (Key::Named(NamedKey::End), Some(index)) if index < last => Some(last),
+            (Key::Named(NamedKey::Backspace) | Key::Named(NamedKey::Delete), Some(index))
+                if self.editable =>
+            {
                 event.prevent_default();
                 self.remove_at.call(index);
                 return;
             }
-            (Key::Backspace | Key::Delete, None) if self.editable => {
+            (Key::Named(NamedKey::Backspace) | Key::Named(NamedKey::Delete), None)
+                if self.editable =>
+            {
                 event.prevent_default();
                 self.drop_at.call(last);
                 return;

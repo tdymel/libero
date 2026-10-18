@@ -231,7 +231,7 @@ fn FieldDropdown(open: Signal<bool>) -> Element {
     style.attr("id", "dropdown").render(
         HtmlTag::Div,
         vec![listener("onkeydown", move |event: Event<KeyboardData>| {
-            if event.key() == Key::Escape && open() {
+            if event.key() == Key::Named(NamedKey::Escape) && open() {
                 event.prevent_default();
                 let mut open = open;
                 open.set(false);

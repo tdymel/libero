@@ -92,7 +92,7 @@ fn titled() -> Element {
 fn a_focused_heading_draws_no_ring() {
     let mut page = mount(titled);
     page.focus("#to-b");
-    page.press(Key::Enter);
+    page.press(Key::Named(NamedKey::Enter));
     assert!(page.is_focused("#title"), "focus on {}", page.focus_owner());
     assert_eq!(page.computed("#title", "outline-style"), "none");
     assert_eq!(page.computed("#title", "box-shadow"), "none");

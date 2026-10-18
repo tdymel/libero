@@ -1,7 +1,7 @@
 //! The shared recorder: reads the mutations a render emits, which is the only
 //! way to address an element from outside the dom.
 
-use dioxus::core::{AttributeValue, ElementId, WriteMutations};
+use dioxus::core::{BorrowedAttributeValue, ElementId, WriteMutations};
 use std::collections::{HashMap, HashSet};
 
 /// Records the element the `click` listener landed on, which is the only way
@@ -162,14 +162,14 @@ impl WriteMutations for FindClickListener {
     fn replace_with(&mut self, _m: usize) {}
     fn insert_after(&mut self, _m: usize) {}
     fn insert_before(&mut self, _m: usize) {}
-    fn set_attribute(&mut self, name: &str, _ns: Option<&str>, value: &AttributeValue) {
+    fn set_attribute(&mut self, name: &str, _ns: Option<&str>, value: BorrowedAttributeValue<'_>) {
         self.writes.push((name.to_string(), format!("{value:?}")));
         if name == "data-frame" {
             self.frame = self.last;
         }
-        if let (Some(id), AttributeValue::Text(value)) = (self.owner, value) {
+        if let (Some(id), BorrowedAttributeValue::Text(value)) = (self.owner, value) {
             let attributes = self.attributes.entry(id).or_default();
-            attributes.insert(name.to_string(), value.clone());
+            attributes.insert(name.to_string(), value.to_string());
         }
     }
     fn set_text(&mut self, _value: &str) {}

@@ -116,7 +116,11 @@ pub(crate) fn Modal(props: ModalProps) -> Element {
                 let outside = root
                     .try_mounted()
                     .is_some_and(|mounted| !chord.within(&mounted, root.tag()));
-                if chord.key != Key::Escape || chord.repeat || !outside || !layer.is_top() {
+                if chord.key != Key::Named(NamedKey::Escape)
+                    || chord.repeat
+                    || !outside
+                    || !layer.is_top()
+                {
                     return false;
                 }
                 crate::utils::bump(stray_escape);

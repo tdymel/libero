@@ -261,10 +261,10 @@ fn TabStrip(
             return;
         }
         let next = match logical_key(&event) {
-            Key::ArrowRight => neighbour(&disabled, at, 1),
-            Key::ArrowLeft => neighbour(&disabled, at, -1),
-            Key::Home => disabled.iter().position(|off| !off),
-            Key::End => disabled.iter().rposition(|off| !off),
+            Key::Named(NamedKey::ArrowRight) => neighbour(&disabled, at, 1),
+            Key::Named(NamedKey::ArrowLeft) => neighbour(&disabled, at, -1),
+            Key::Named(NamedKey::Home) => disabled.iter().position(|off| !off),
+            Key::Named(NamedKey::End) => disabled.iter().rposition(|off| !off),
             _ => return,
         };
         // Home on the first or End on the last tab scrolls the page (todo 3053).

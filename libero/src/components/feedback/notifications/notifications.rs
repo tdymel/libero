@@ -55,7 +55,7 @@ pub fn Notifications(
     contained: bool,
     /// Focuses the newest notification from anywhere. A single character such as
     /// `n` needs an app setting to turn it off or remap it (WCAG 2.1.4).
-    #[props(default = Key::F8)]
+    #[props(default = Key::Named(NamedKey::F8))]
     hotkey: Key,
     /// Rendered inside a contained host, before its stacks.
     #[props(default)]

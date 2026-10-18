@@ -41,7 +41,7 @@ fn a_click_and_enter_turn_the_root_and_rename_the_button() {
     );
 
     page.focus(BUTTON);
-    page.press(Key::Enter);
+    page.press(Key::Named(NamedKey::Enter));
     assert_eq!(page.attr("html", "dir").as_deref(), Some("ltr"));
     assert_eq!(
         page.attr(BUTTON, "aria-label").as_deref(),

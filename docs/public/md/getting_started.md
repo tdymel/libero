@@ -10,11 +10,11 @@ accessibility, and configurability.
 
 ## Installation
 
-Libero 0.2 pins Dioxus `=0.8.0-alpha.2`, so add that exact version: a second
+Libero 0.2 pins Dioxus `=0.8.0-alpha.3`, so add that exact version: a second
 copy of dioxus would not share libero's contexts.
 
 ```shell
-cargo add dioxus@=0.8.0-alpha.2
+cargo add dioxus@=0.8.0-alpha.3
 cargo add libero
 ```
 
@@ -74,7 +74,7 @@ libero, and name your platform (`linux`, `macos` or `windows`).
 
 ```toml
 [dependencies]
-dioxus = { version = "=0.8.0-alpha.2", features = ["native"] }
+dioxus = { version = "=0.8.0-alpha.3", features = ["native"] }
 libero = { version = "0.2", features = ["native"] }
 
 # Blitz is unusably slow unoptimised; this keeps your own crate debuggable.
@@ -120,9 +120,9 @@ dx build --platform desktop --renderer webview --release
 
 On Linux you need:
 
-- WebKitGTK 4.1, GTK 3 and xdo to build
-  (`libwebkit2gtk-4.1-dev libgtk-3-dev libxdo-dev` on Debian and Ubuntu,
-  `webkit2gtk-4.1 xdotool` on Arch).
+- WebKitGTK 4.1 and GTK 3 to build
+  (`libwebkit2gtk-4.1-dev libgtk-3-dev` on Debian and Ubuntu,
+  `webkit2gtk-4.1` on Arch).
 
 On Windows dioxus serves the page from `http://dioxus.index.html`, which
 WebView2 does not count as a secure context: the camera, microphone, location,

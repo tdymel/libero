@@ -271,7 +271,7 @@ fn DeleteTreePage() -> Element {
     rsx! {
         div {
             onkeydown: move |event: KeyboardEvent| {
-                if event.key() != Key::Delete {
+                if event.key() != Key::Named(NamedKey::Delete) {
                     return;
                 }
                 let focused = document::eval("return document.activeElement?.dataset.treeId");

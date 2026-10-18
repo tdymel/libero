@@ -157,7 +157,7 @@ impl Chord {
     fn alt_composed(&self, pressed: &KeyChord) -> bool {
         let composed = match &pressed.key {
             Key::Character(got) => !got.is_ascii(),
-            got => *got == Key::Dead,
+            got => *got == Key::Named(NamedKey::Dead),
         };
         let Key::Character(want) = &self.key else {
             return false;
@@ -176,7 +176,7 @@ fn parse_key(text: &str) -> Option<Key> {
     match lower.as_str() {
         "" => return None,
         "space" => return Some(Key::Character(" ".into())),
-        "esc" => return Some(Key::Escape),
+        "esc" => return Some(Key::Named(NamedKey::Escape)),
         _ => {}
     }
     if text.chars().count() == 1 {
@@ -189,7 +189,7 @@ fn parse_key(text: &str) -> Option<Key> {
     [text.to_owned(), capitalised, text.to_ascii_uppercase()]
         .iter()
         .find_map(|name| Key::from_str(name).ok())
-        .filter(|key| !matches!(key, Key::Unidentified | Key::Character(_)))
+        .filter(|key| !matches!(key, Key::Named(NamedKey::Unidentified) | Key::Character(_)))
 }
 
 struct Entry {
@@ -444,7 +444,7 @@ mod tests {
         };
         let alt_a = Chord::parse("alt+a", true).unwrap();
         assert!(alt_a.matches(&on(character("å"), Code::KeyA)));
-        assert!(alt_a.matches(&on(Key::Dead, Code::KeyA)));
+        assert!(alt_a.matches(&on(Key::Named(NamedKey::Dead), Code::KeyA)));
         assert!(!alt_a.matches(&on(character("å"), Code::KeyB)));
         assert!(!alt_a.matches(&on(character("b"), Code::KeyA)));
         assert!(
@@ -482,10 +482,16 @@ mod tests {
     #[test]
     fn modifiers_and_named_keys_parse_in_any_case() {
         let chord = Chord::parse("Ctrl+Shift+F8", false).unwrap();
-        assert_eq!(chord.key, Key::F8);
+        assert_eq!(chord.key, Key::Named(NamedKey::F8));
         assert!(chord.ctrl && chord.shift && !chord.alt);
-        assert_eq!(Chord::parse("esc", false).unwrap().key, Key::Escape);
-        assert_eq!(Chord::parse("ArrowUp", false).unwrap().key, Key::ArrowUp);
+        assert_eq!(
+            Chord::parse("esc", false).unwrap().key,
+            Key::Named(NamedKey::Escape)
+        );
+        assert_eq!(
+            Chord::parse("ArrowUp", false).unwrap().key,
+            Key::Named(NamedKey::ArrowUp)
+        );
         assert_eq!(
             Chord::parse("alt+space", false).unwrap().key,
             character(" ")
@@ -536,23 +542,16 @@ mod tests {
     #[test]
     fn a_bare_named_key_rejects_ctrl_alt_and_meta() {
         let chord = Chord::parse("f8", false).unwrap();
-        assert!(chord.matches(&pressed(Key::F8, Modifiers::empty())));
-        for held in [
-            Modifiers::CONTROL,
-            Modifiers::ALT,
-            Modifiers::META,
-            Modifiers::SUPER,
-        ] {
-            assert!(!chord.matches(&pressed(Key::F8, held)));
+        assert!(chord.matches(&pressed(Key::Named(NamedKey::F8), Modifiers::empty())));
+        for held in [Modifiers::CONTROL, Modifiers::ALT, Modifiers::META] {
+            assert!(!chord.matches(&pressed(Key::Named(NamedKey::F8), held)));
         }
     }
 
-    /// Blitz's shell reports Cmd as `SUPER` (todo 3317).
     #[test]
-    fn an_apple_mod_chord_takes_cmd_as_meta_or_super() {
+    fn an_apple_mod_chord_takes_cmd_as_meta() {
         let chord = Chord::parse("mod+k", true).unwrap();
         assert!(chord.matches(&pressed(character("k"), Modifiers::META)));
-        assert!(chord.matches(&pressed(character("k"), Modifiers::SUPER)));
         assert!(!chord.matches(&pressed(character("k"), Modifiers::CONTROL)));
     }
 

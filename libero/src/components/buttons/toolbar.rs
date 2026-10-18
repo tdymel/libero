@@ -160,7 +160,10 @@ pub fn Toolbar(props: ToolbarProps) -> Element {
         if is_tab(&event) && *arrived.peek() {
             arrived.set(false);
         }
-        if logical_key(&event) == Key::Escape && *arrived.peek() && !key_taken(&event) {
+        if logical_key(&event) == Key::Named(NamedKey::Escape)
+            && *arrived.peek()
+            && !key_taken(&event)
+        {
             arrived.set(false);
             event.prevent_default();
             event.stop_propagation();
@@ -175,11 +178,11 @@ pub fn Toolbar(props: ToolbarProps) -> Element {
         }
         let vertical = orientation == Orientation::Vertical;
         let step = match logical_key(&event) {
-            Key::ArrowRight if !vertical => Some(1),
-            Key::ArrowLeft if !vertical => Some(-1),
-            Key::ArrowDown if vertical => Some(1),
-            Key::ArrowUp if vertical => Some(-1),
-            Key::Home | Key::End => None,
+            Key::Named(NamedKey::ArrowRight) if !vertical => Some(1),
+            Key::Named(NamedKey::ArrowLeft) if !vertical => Some(-1),
+            Key::Named(NamedKey::ArrowDown) if vertical => Some(1),
+            Key::Named(NamedKey::ArrowUp) if vertical => Some(-1),
+            Key::Named(NamedKey::Home) | Key::Named(NamedKey::End) => None,
             _ => return,
         };
         // A text field keeps its caret's keys; an arrow leaves it at the caret's edge.
@@ -198,7 +201,7 @@ pub fn Toolbar(props: ToolbarProps) -> Element {
             let items = scope.items();
             // Home on the first or End on the last item scrolls the page (todo 3053).
             let end = match event.key() {
-                Key::Home => items.first(),
+                Key::Named(NamedKey::Home) => items.first(),
                 _ => items.last(),
             };
             if step.is_none() && end.is_some_and(|&end| Some(end) == scope.stop()) {
@@ -210,7 +213,7 @@ pub fn Toolbar(props: ToolbarProps) -> Element {
                     by,
                     wrap: loop_focus,
                 },
-                (None, Key::Home) => FocusStep::First,
+                (None, Key::Named(NamedKey::Home)) => FocusStep::First,
                 (None, _) => FocusStep::Last,
             };
             event.prevent_default();
@@ -230,7 +233,7 @@ pub fn Toolbar(props: ToolbarProps) -> Element {
                 .checked_add_signed(step)
                 .filter(|&next| next < items.len())
                 .or(Some(at)),
-            (None, Key::Home) => Some(0),
+            (None, Key::Named(NamedKey::Home)) => Some(0),
             (None, _) => items.len().checked_sub(1),
         };
         if step.is_none() && target == Some(at) {

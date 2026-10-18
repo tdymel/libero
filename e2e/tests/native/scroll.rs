@@ -368,7 +368,7 @@ fn menu_top(page: &Page) -> String {
 fn an_open_menu_follows_its_anchor_on_a_wheel() {
     let mut page = mount(menu_in_a_scroller);
     page.focus("[aria-haspopup]");
-    page.press(Key::Enter);
+    page.press(Key::Named(NamedKey::Enter));
     let before = menu_top(&page);
 
     page.hover(BOX);

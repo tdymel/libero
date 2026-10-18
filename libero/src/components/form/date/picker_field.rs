@@ -515,20 +515,22 @@ pub(super) fn use_picker_field<V: FieldValue>(
         .event("onkeydown", move |event: KeyboardEvent| match event.key() {
             // A composing Enter picks an IME candidate, it does not commit the draft.
             _ if readonly || event.is_composing() => {}
-            Key::Enter => {
+            Key::Named(NamedKey::Enter) => {
                 if let Some(error) = commit_on_enter() {
                     announcer.say(error);
                 }
             }
             // APG: Alt+ArrowDown enters like ArrowDown; Ctrl/Meta is the caret's.
-            Key::ArrowDown if navigation_chord(&event) != Some(NavigationChord::Browser) => {
+            Key::Named(NamedKey::ArrowDown)
+                if navigation_chord(&event) != Some(NavigationChord::Browser) =>
+            {
                 event.prevent_default();
                 // The picker then enters on the typed day, not the one it showed.
                 commit_on_enter_picker();
                 open_to(true);
                 entering.set(true);
             }
-            Key::Escape if opened() => {
+            Key::Named(NamedKey::Escape) if opened() => {
                 event.prevent_default();
                 open_to(false);
             }
@@ -577,7 +579,7 @@ pub(super) fn use_picker_field<V: FieldValue>(
             })
             .event("onfocusout", focus.focusout(1))
             .event("onkeydown", move |event: KeyboardEvent| match event.key() {
-                Key::Escape => {
+                Key::Named(NamedKey::Escape) => {
                     event.prevent_default();
                     focus_input();
                     open_to(false);

@@ -101,7 +101,7 @@ fn AgeEditor(ctx: EditCtx) -> Element {
                 changed.call(());
             },
             onkeydown: move |event| {
-                if event.key() == Key::Enter {
+                if event.key() == Key::Named(NamedKey::Enter) {
                     event.stop_propagation();
                     commit.call(draft());
                 }
