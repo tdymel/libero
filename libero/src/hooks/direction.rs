@@ -87,3 +87,42 @@ impl DirectionHandle {
         self.set(next);
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use std::cell::RefCell;
+
+    use super::*;
+    use crate::LiberoProvider;
+
+    thread_local! {
+        static HANDLE: RefCell<Option<DirectionHandle>> = const { RefCell::new(None) };
+    }
+
+    #[component]
+    fn Probe() -> Element {
+        let direction = use_direction();
+        HANDLE.with(|handle| *handle.borrow_mut() = Some(direction.clone()));
+        rsx! { span { "{direction.get().as_str()}" } }
+    }
+
+    fn app() -> Element {
+        rsx! { LiberoProvider { Probe {} } }
+    }
+
+    #[test]
+    fn toggle_turns_the_text_each_time() {
+        let mut dom = VirtualDom::new(app);
+        dom.rebuild_in_place();
+        let handle = HANDLE
+            .with(|handle| handle.borrow().clone())
+            .expect("the probe rendered");
+
+        for expected in ["rtl", "ltr", "rtl"] {
+            dom.in_scope(ScopeId::APP, || handle.toggle());
+            dom.render_immediate(&mut dioxus::core::NoOpMutations);
+            let html = dioxus_ssr::render(&dom);
+            assert!(html.contains(&format!(">{expected}<")), "{html}");
+        }
+    }
+}

@@ -6,8 +6,8 @@ use crate::{
     components::{
         common::{
             HtmlTag, Input, Orientation, Part, States, TOOLBAR_ITEM, ToolbarScope, base_props,
-            has_shortcut_modifier, names_itself, neighbour, parts_enum, use_name_warning,
-            use_provide_toolbar, use_toolbar,
+            has_shortcut_modifier, names_itself, parts_enum, use_name_warning, use_provide_toolbar,
+            use_toolbar,
         },
         layout::use_box,
     },
@@ -222,7 +222,9 @@ pub fn Toolbar(props: ToolbarProps) -> Element {
         };
         // Disabled items stay focusable, so none is skipped.
         let target = match (step, event.key()) {
-            (Some(step), _) if loop_focus => neighbour(&vec![false; items.len()], at, step),
+            (Some(step), _) if loop_focus => {
+                Some((at as isize + step).rem_euclid(items.len() as isize) as usize)
+            }
             // At an end that does not wrap, focus stays.
             (Some(step), _) => at
                 .checked_add_signed(step)

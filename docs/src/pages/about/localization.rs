@@ -9,6 +9,7 @@ use libero::{
     theme::Direction,
     use_formats_handle, use_localization_handle,
 };
+use std::{cell::Cell, rc::Rc};
 
 /// What ships: the const, its first weekday, a day and a time.
 const SHIPPED: [(&str, &str, &str, &str); 2] = [
@@ -226,12 +227,15 @@ fn LocalizationPreview(values: DemoValues) -> Element {
     let direction = use_direction();
     let site = use_hook(|| (localization.get(), formats.get(), direction.kept()));
     let turn_to = if rtl { Direction::Rtl } else { Direction::Ltr };
+    // Not read from the handle: that would subscribe the effect and undo the header toggle.
+    let applied = use_hook(|| Rc::new(Cell::new(direction.get())));
     {
         let direction = direction.clone();
         use_effect(use_reactive!(|language, conventions, turn_to| {
             localization.set(language);
             formats.set(conventions);
-            if direction.get() != turn_to {
+            if applied.get() != turn_to {
+                applied.set(turn_to);
                 direction.set(turn_to);
             }
         }));
@@ -271,6 +275,17 @@ mod tests {
     use super::*;
     use libero::context::LiberoProvider;
 
+    thread_local! {
+        static HANDLE: std::cell::RefCell<Option<libero::hooks::DirectionHandle>> =
+            const { std::cell::RefCell::new(None) };
+    }
+
+    #[component]
+    fn Probe() -> Element {
+        HANDLE.with(|handle| *handle.borrow_mut() = Some(use_direction()));
+        rsx! {}
+    }
+
     #[component]
     fn Preview(language: &'static str) -> Element {
         let values = DemoValues::defaults(&[
@@ -279,8 +294,32 @@ mod tests {
             Control::toggle("direction", ["ltr", "rtl"]),
         ]);
         rsx! {
-            LiberoProvider { LocalizationPreview { values } }
+            LiberoProvider {
+                Probe {}
+                LocalizationPreview { values }
+            }
         }
+    }
+
+    /// The header toggle sticks: the preview's effect must not turn the direction back.
+    #[test]
+    fn a_header_toggle_is_not_undone_by_the_preview() {
+        let mut dom = VirtualDom::new_with_props(
+            Preview,
+            PreviewProps {
+                language: "English",
+            },
+        );
+        dom.rebuild_in_place();
+        dom.render_immediate(&mut dioxus::core::NoOpMutations);
+        let handle = HANDLE
+            .with(|handle| handle.borrow().clone())
+            .expect("the probe rendered");
+
+        dom.in_scope(ScopeId::APP, || handle.toggle());
+        dom.render_immediate(&mut dioxus::core::NoOpMutations);
+        dom.render_immediate(&mut dioxus::core::NoOpMutations);
+        assert!(dom.in_runtime(|| handle.is_rtl()));
     }
 
     /// WCAG 3.1.2: German words in the preview sit under `lang="de"` (todo 1994).

@@ -34,6 +34,7 @@ fn the_sized_triggers_meet_the_baseline() {
         .targets(TRIGGER)
         .run();
 }
+
 /// `https://libero-ui.dev/md/menu.md`, percent-encoded.
 const PAGE: &str = "https%3A%2F%2Flibero-ui.dev%2Fmd%2Fmenu.md";
 
@@ -49,7 +50,6 @@ async fn open<D: Driver>(d: &mut D) -> Result<()> {
 
 async fn every_provider_links_to_its_chat<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
     eventually_text(d, TRIGGER, "TLDR", "mounting").await?;
-    // Focus on the first link: the web test below; on Android 958 blocks it.
     open(d).await?;
     for prefix in [
         "https://chat.openai.com/?q=Summarize%20and%20analyze",

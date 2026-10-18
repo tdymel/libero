@@ -242,6 +242,28 @@ fn a_blank_button_and_action_icon_say_they_open_a_new_tab() {
     assert_eq!(html.matches("data-slot=\"new-tab\"").count(), 1, "{html}");
 }
 
+/// Todo 3745: a link-mode `Button` can opt out of the new-tab hint, as `Anchor` can.
+#[test]
+fn a_blank_button_can_drop_the_new_tab_hint() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider {
+                Button {
+                    to: "https://example.com",
+                    target: "_blank",
+                    new_tab_hint: false,
+                    new_tab_icon: true,
+                    "Docs"
+                }
+            }
+        }
+    }
+
+    let html = render(app);
+    assert!(!html.contains("opens in a new tab"), "{html}");
+    assert!(!html.contains("data-slot=\"new-tab\""), "{html}");
+}
+
 /// Todo 3620: every link built on the shared anchor path drops a script `href` and keeps the element.
 #[test]
 fn a_script_target_renders_an_anchor_without_an_href() {

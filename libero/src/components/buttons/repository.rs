@@ -38,6 +38,7 @@ impl RepoHost {
 
     /// The repository's page, where the button leads.
     pub fn page_url(self, repo: &str) -> String {
+        let repo = path_encoded(repo);
         match self {
             Self::GitHub => format!("https://github.com/{repo}"),
             Self::GitLab => format!("https://gitlab.com/{repo}"),
@@ -46,6 +47,7 @@ impl RepoHost {
 
     /// The public, unauthenticated endpoint that knows the star count.
     fn api_url(self, repo: &str) -> String {
+        let repo = path_encoded(repo);
         match self {
             Self::GitHub => format!("https://api.github.com/repos/{repo}"),
             // GitLab names a project by its path, URL-encoded.
@@ -63,6 +65,20 @@ impl RepoHost {
             Self::GitLab => "star_count",
         }
     }
+}
+
+/// `repo` as URL path text: slashes stay, so a stray `?` or `#` cannot change the URL.
+fn path_encoded(repo: &str) -> String {
+    let mut encoded = String::with_capacity(repo.len());
+    for byte in repo.bytes() {
+        match byte {
+            b'A'..=b'Z' | b'a'..=b'z' | b'0'..=b'9' | b'-' | b'.' | b'_' | b'~' | b'/' => {
+                encoded.push(byte as char)
+            }
+            _ => encoded.push_str(&format!("%{byte:02X}")),
+        }
+    }
+    encoded
 }
 
 /// Session cache key: unauthenticated calls are rate limited (GitHub: 60 an hour).
@@ -329,6 +345,19 @@ pub fn Repository(props: RepositoryProps) -> Element {
 mod tests {
     use super::*;
     use crate::components::common::part_table;
+
+    #[test]
+    fn a_stray_query_or_fragment_stays_in_the_path() {
+        let repo = "a/b?x=1#y c";
+        assert_eq!(
+            RepoHost::GitHub.page_url(repo),
+            "https://github.com/a/b%3Fx%3D1%23y%20c"
+        );
+        assert_eq!(
+            RepoHost::GitLab.api_url(repo),
+            "https://gitlab.com/api/v4/projects/a%2Fb%3Fx%3D1%23y%20c"
+        );
+    }
 
     /// The slot names are public: a rename here is a breaking change.
     #[test]

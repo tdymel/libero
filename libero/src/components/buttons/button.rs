@@ -233,6 +233,9 @@ base_props! {
         to: Input<NavigationTarget>,
         #[props(default)]
         target: Option<String>,
+        /// With `target: "_blank"`, a hidden "(opens in a new tab)". `false` drops it and the icon.
+        #[props(default = true)]
+        new_tab_hint: bool,
         /// With `target: "_blank"`, draws the new-tab icon. Unset, the theme's `anchor.new_tab_icon`, off.
         #[props(default)]
         new_tab_icon: Option<bool>,
@@ -405,7 +408,7 @@ pub fn Button(props: ButtonProps) -> Element {
                 .render(HtmlTag::A, props.attributes, label);
         }
 
-        let label = if wants_new_tab_hint(props.target.as_deref(), true) {
+        let label = if wants_new_tab_hint(props.target.as_deref(), props.new_tab_hint) {
             rsx! {
                 {label}
                 NewTabHint { icon: props.new_tab_icon }

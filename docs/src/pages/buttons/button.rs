@@ -54,6 +54,9 @@ pub fn ButtonPage() -> Element {
                     .doc("Renders a link instead of a `<button>`. Takes a path, a URL or a typed route (`Route::Foo {}`)."),
                 prop("target", "String")
                     .doc("The link's `target` attribute. `\"_blank\"` adds a hidden \"(opens in a new tab)\"."),
+                prop("new_tab_hint", "bool")
+                    .default("true")
+                    .doc("With `target: \"_blank\"`, the hidden \"(opens in a new tab)\". `false` drops it and the icon."),
                 prop("new_tab_icon", "bool")
                     .default(if theme.anchor.new_tab_icon { "true" } else { "false" })
                     .doc("With `target: \"_blank\"`, draws a small external icon after the label. Unset, the theme's `anchor.new_tab_icon`, which is off."),
