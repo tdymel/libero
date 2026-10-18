@@ -158,8 +158,8 @@ explains how parts work.
 | Key | Action |
 |---|---|
 | `Tab` | Enters the track, then Previous and Next, then the indicators as one tab stop. With `autoplay`, the pause button comes first. |
-| `Left` or `Right` | Moves to the previous or next slide, on the track or the indicators. |
-| `Up` or `Down` | The same, when vertical. |
+| `Left` or `Right` | Moves to the previous or next slide, on the track or the indicators, when horizontal. |
+| `Up` or `Down` | The same, when vertical. The other axis scrolls the page. |
 | `Home` or `End` | Goes to the first or last slide. |
 
 ### Libero handles
@@ -207,7 +207,7 @@ shows, out of how many.
 | `indicators_gap` | `&'static str` | `8px` | Between dots. |
 | `indicator_color` | `ColorValue` | `muted.6` | An idle dot. It needs 3:1 against the surface (SC 1.4.11). `muted.6` is 3.32:1 on white, `muted.4` only 1.49:1. |
 | `indicator_current_color` | `ColorValue` | `primary.6` | The current dot. |
-| `control_background` | `ColorValue` | `white` | The previous/next and pause buttons' fill. |
+| `control_background` | `ColorValue` | `surface.1` | The previous/next and pause buttons' fill. |
 | `control_hover_background` | `ColorValue` | `muted.1` | A previous/next button's fill under the pointer. |
 | `control_color` | `ColorValue` | `muted.7` | The controls' glyph, and their focus ring. Change it with `control_background`. |
 | `autoplay_delay` | `u32` | `4000` | Milliseconds between advances. |

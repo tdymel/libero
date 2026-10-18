@@ -124,9 +124,8 @@ pub(super) static CAROUSEL_PAUSE_SX: StaticSx = StaticSx::new(|| {
         .focus_visible(focus_ring_sx())
 });
 
-/// The previous/next pair, over the viewport. A looping carousel has no ends,
-/// so its controls never disable. Its own scope, as the status and the dots:
-/// only these read `current`/`settled`, so a move skips the track.
+/// The previous/next pair, over the viewport; a looping carousel never disables
+/// them. Its own scope, so a move skips the track.
 #[component]
 pub(super) fn CarouselControls(view: CarouselView) -> Element {
     let CarouselView { setup, state, .. } = view;

@@ -3,7 +3,7 @@ use dioxus::prelude::*;
 use super::{CarouselPart, numbered, state::CarouselView};
 use crate::{
     components::{
-        common::{Input, Part, States, focus_ring_sx, has_shortcut_modifier, states},
+        common::{Input, Orientation, Part, States, focus_ring_sx, has_shortcut_modifier, states},
         layout::Box,
     },
     hooks::{ElementHandle, id_selector},
@@ -107,9 +107,8 @@ fn focus_indicator(root: ElementHandle, track_id: &str, index: usize) {
     let _ = root.query_selector(&selector).and_then(|dot| dot.focus());
 }
 
-/// The dot strip: one dot per reachable position, which under a centred or end
-/// alignment does not start at zero. A looping carousel is one dot per real
-/// slide instead.
+/// The dot strip: one dot per reachable position (not from zero under a centred
+/// or end alignment); a looping carousel has one per real slide.
 #[component]
 pub(super) fn CarouselIndicators(view: CarouselView) -> Element {
     let CarouselView {
@@ -164,8 +163,13 @@ pub(super) fn CarouselIndicators(view: CarouselView) -> Element {
                         if has_shortcut_modifier(&event) {
                             return;
                         }
-                        let Some(target) = indicator_key_target(logical_key(&event), index, low, high, looping)
-                        else {
+                        let Some(target) = indicator_key_target(
+                            logical_key(&event),
+                            orientation,
+                            index,
+                            (low, high),
+                            looping,
+                        ) else {
                             return;
                         };
                         event.prevent_default();
@@ -178,26 +182,31 @@ pub(super) fn CarouselIndicators(view: CarouselView) -> Element {
     }
 }
 
-/// Where an arrow, `Home` or `End` on a dot goes. Wraps only when the carousel
-/// does, so dots and track agree.
+/// Where an arrow, `Home` or `End` on a dot goes. The arrows are the track's
+/// pair for the orientation, so the other axis scrolls the page; it wraps only
+/// when the carousel does.
 fn indicator_key_target(
     key: Key,
+    orientation: Orientation,
     index: usize,
-    low: usize,
-    high: usize,
+    (low, high): (usize, usize),
     looping: bool,
 ) -> Option<usize> {
     // A lone dot has nowhere to go: the keys scroll the page (todo 2465).
     if low >= high {
         return None;
     }
+    let (previous, next) = match orientation {
+        Orientation::Horizontal => (Key::ArrowLeft, Key::ArrowRight),
+        Orientation::Vertical => (Key::ArrowUp, Key::ArrowDown),
+    };
     Some(match key {
-        Key::ArrowRight | Key::ArrowDown => match index >= high {
+        key if key == next => match index >= high {
             true if looping => low,
             true => high,
             false => index + 1,
         },
-        Key::ArrowLeft | Key::ArrowUp => match index <= low {
+        key if key == previous => match index <= low {
             true if looping => high,
             true => low,
             false => index - 1,
@@ -217,14 +226,17 @@ mod tests {
     #[test]
     fn a_lone_dot_takes_no_key() {
         for key in [Key::ArrowRight, Key::ArrowLeft, Key::Home, Key::End] {
-            assert_eq!(indicator_key_target(key, 0, 0, 0, false), None);
+            assert_eq!(
+                indicator_key_target(key, Orientation::Horizontal, 0, (0, 0), false),
+                None
+            );
         }
         assert_eq!(
-            indicator_key_target(Key::ArrowRight, 1, 0, 1, true),
+            indicator_key_target(Key::ArrowRight, Orientation::Horizontal, 1, (0, 1), true),
             Some(0)
         );
         assert_eq!(
-            indicator_key_target(Key::ArrowRight, 1, 0, 1, false),
+            indicator_key_target(Key::ArrowRight, Orientation::Horizontal, 1, (0, 1), false),
             Some(1)
         );
     }
@@ -232,9 +244,41 @@ mod tests {
     /// Todo 3053: Home on the first dot and End on the last leave the keys to the page.
     #[test]
     fn home_and_end_at_their_end_take_no_key() {
-        assert_eq!(indicator_key_target(Key::Home, 0, 0, 2, false), None);
-        assert_eq!(indicator_key_target(Key::End, 2, 0, 2, true), None);
-        assert_eq!(indicator_key_target(Key::Home, 2, 0, 2, false), Some(0));
-        assert_eq!(indicator_key_target(Key::End, 0, 0, 2, false), Some(2));
+        let target = |key, index, looping| {
+            indicator_key_target(key, Orientation::Horizontal, index, (0, 2), looping)
+        };
+        assert_eq!(target(Key::Home, 0, false), None);
+        assert_eq!(target(Key::End, 2, true), None);
+        assert_eq!(target(Key::Home, 2, false), Some(0));
+        assert_eq!(target(Key::End, 0, false), Some(2));
+    }
+
+    /// Todo 3748: the dots take the track's pair for the orientation; the other
+    /// axis is left to the page.
+    #[test]
+    fn the_arrows_follow_the_orientation() {
+        let target =
+            |key, orientation, index| indicator_key_target(key, orientation, index, (0, 2), false);
+        let (horizontal, vertical) = (Orientation::Horizontal, Orientation::Vertical);
+        assert_eq!(target(Key::ArrowRight, horizontal, 1), Some(2));
+        assert_eq!(target(Key::ArrowLeft, horizontal, 1), Some(0));
+        assert_eq!(target(Key::ArrowDown, horizontal, 1), None);
+        assert_eq!(target(Key::ArrowUp, horizontal, 1), None);
+        assert_eq!(target(Key::ArrowDown, vertical, 1), Some(2));
+        assert_eq!(target(Key::ArrowUp, vertical, 1), Some(0));
+        assert_eq!(target(Key::ArrowRight, vertical, 1), None);
+        assert_eq!(target(Key::ArrowLeft, vertical, 1), None);
+    }
+
+    /// A plain strip clamps at its ends; a looping one wraps.
+    #[test]
+    fn the_ends_clamp_or_wrap() {
+        let target = |key, index, looping| {
+            indicator_key_target(key, Orientation::Horizontal, index, (1, 3), looping)
+        };
+        assert_eq!(target(Key::ArrowRight, 3, false), Some(3));
+        assert_eq!(target(Key::ArrowLeft, 1, false), Some(1));
+        assert_eq!(target(Key::ArrowRight, 3, true), Some(1));
+        assert_eq!(target(Key::ArrowLeft, 1, true), Some(3));
     }
 }

@@ -403,7 +403,7 @@ pub(super) struct CarouselSetup {
     pub(super) autoplay_delay: u32,
     /// Whether the caller named the region, for the name warning.
     pub(super) named: bool,
-    /// Every slide fits under `CarouselQuietWhenFits`: no status, no track tab stop.
+    /// Every slide fits and the carousel does not loop (`quiet`): no status, no track tab stop.
     pub(super) quiet: bool,
     /// The track is a tab stop: not quiet, and no slide holds the stop instead.
     pub(super) track_stop: bool,

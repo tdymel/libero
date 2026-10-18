@@ -45,7 +45,7 @@ base_props! {
         data: String,
         #[props(default, into)]
         robustness: Input<QrRobustness>,
-        /// Required: the code's accessible name.
+        /// Required: the code's accessible name. Blank leaves the code decorative.
         aria_label: String,
     }
 }
@@ -83,8 +83,11 @@ pub fn QrCode(props: QrCodeProps) -> Element {
     let theme = use_theme();
     let robustness = props.robustness.copied_or(theme.qr_code.robustness);
     let data = props.data.clone();
+    // A blank name would make an unnamed `role="img"`: the code is decorative, as `Pictogram`.
+    let label = (!props.aria_label.trim().is_empty()).then(|| props.aria_label.clone());
+    let named = label.is_some() || names_itself(&props.attributes);
     use_name_warning(
-        !props.aria_label.trim().is_empty() || names_itself(&props.attributes),
+        named,
         "QrCode: no `aria_label` - name the code, e.g. what it links to; it is the only way \
          to the payload for a screen reader.",
     );
@@ -106,8 +109,9 @@ pub fn QrCode(props: QrCodeProps) -> Element {
     };
 
     boxed
-        .attr("role", "img")
-        .attr("aria-label", props.aria_label)
+        .attr("role", named.then_some("img"))
+        .attr("aria-label", label)
+        .attr("aria-hidden", (!named).then_some("true"))
         .render(
             HtmlTag::Div,
             props.attributes,
@@ -130,5 +134,19 @@ mod tests {
         let html = dioxus_ssr::render(&dom);
         assert!(html.contains("role=\"img\""), "{html}");
         assert!(html.contains("<svg"), "{html}");
+    }
+
+    /// Todo 3748: a blank name is decorative, not an unnamed `role="img"`.
+    #[test]
+    fn a_blank_name_leaves_the_code_decorative() {
+        let mut dom = VirtualDom::new(|| {
+            rsx! { crate::LiberoProvider { QrCode { data: "a", aria_label: "  " } } }
+        });
+        dom.rebuild_in_place();
+        let html = dioxus_ssr::render(&dom);
+        assert!(html.contains("<svg"), "{html}");
+        assert!(!html.contains("role=\"img\""), "{html}");
+        assert!(!html.contains("aria-label"), "{html}");
+        assert!(html.contains("aria-hidden=\"true\""), "{html}");
     }
 }

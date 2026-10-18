@@ -73,6 +73,7 @@ mod icon_provider;
 mod image;
 mod image_cropper;
 mod image_list;
+mod indicator;
 mod isolation;
 mod journal;
 mod kanban;

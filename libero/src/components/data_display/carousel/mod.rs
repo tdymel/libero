@@ -50,10 +50,9 @@ static CAROUSEL_VIEWPORT_SX: StaticSx = StaticSx::new(|| {
     sx().position("relative").overflow("hidden")
 });
 
-/// From a caller swapping slides and `index` in one render (`Lightbox`): the move
-/// is instant, or a smooth scroll fetches lazy pictures in passing (todo 323).
-/// A count, so a swap survives a re-render before the effect. Also tells the track
-/// that a slide holds the tab stop, so the track takes none (todo 2833).
+/// A caller's slide-and-`index` swap (`Lightbox`) moves instantly, not by a smooth
+/// scroll that fetches lazy pictures (todo 323); a count, so it survives a re-render.
+/// Also tells the track a slide holds the tab stop (todo 2833).
 #[derive(Clone, Default)]
 pub(crate) struct CarouselJump(Rc<Cell<u64>>, Rc<Cell<bool>>);
 

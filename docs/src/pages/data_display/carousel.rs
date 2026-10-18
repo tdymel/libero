@@ -103,8 +103,8 @@ pub fn CarouselPage() -> Element {
             ],
             accessibility: a11y()
                 .key(["Tab"], "Enters the track, then Previous and Next, then the indicators as one tab stop. With `autoplay`, the pause button comes first.")
-                .key(["Left", "Right"], "Moves to the previous or next slide, on the track or the indicators.")
-                .key(["Up", "Down"], "The same, when vertical.")
+                .key(["Left", "Right"], "Moves to the previous or next slide, on the track or the indicators, when horizontal.")
+                .key(["Up", "Down"], "The same, when vertical. The other axis scrolls the page.")
                 .key(["Home", "End"], "Goes to the first or last slide.")
                 .handles([
                     "The carousel is a region named by `aria_label`, and each slide is a group a screen reader calls a slide. Slides out of view leave the Tab and reading order.",
