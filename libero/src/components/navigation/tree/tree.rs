@@ -235,14 +235,14 @@ impl TreeDom {
         format!("[{OBSERVE_ATTR}='{tag}'] [data-tree-id={}]", css_string(id))
     }
 
-    // A leaf's link or button is out of the tab order, so Enter clicks it from here.
+    // A leaf's link, button or `TreeItem` is out of the tab order, so Enter clicks it from here.
     fn click(self, target_id: &str) {
         let id = css_string(target_id);
-        let selector = format!("[data-tree-id={id}] a, [data-tree-id={id}] button");
+        let selector = format!("[data-tree-id={id}] :is(a, button, [data-tree-activate])");
         match self.root.query_selector(&selector) {
             Err(PlatformError::Unsupported) => {
                 let row = self.page_row(target_id);
-                let _ = click_selector(&format!("{row} a, {row} button"));
+                let _ = click_selector(&format!("{row} :is(a, button, [data-tree-activate])"));
             }
             found => {
                 let _ = found.and_then(|el| el.click());
@@ -264,12 +264,12 @@ impl TreeDom {
     // hands focus back to the row.
     fn refocus_from_control(self, target_id: &str) {
         let id = css_string(target_id);
-        let selector = format!("[data-tree-id={id}] > div :is(a, button)");
+        let selector = format!("[data-tree-id={id}] > div :is(a, button, [data-tree-activate])");
         match self.root.query_selector(&selector) {
             Err(PlatformError::Unsupported) => {
                 let row = self.page_row(target_id);
                 let _ = focus_closest_of_focused(
-                    &format!("{row} > div :is(a, button)"),
+                    &format!("{row} > div :is(a, button, [data-tree-activate])"),
                     &format!("[data-tree-id={id}]"),
                 );
             }

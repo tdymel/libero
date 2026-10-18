@@ -10,7 +10,7 @@ use crate::{
         common::{
             HtmlTag, Input, Part, Parts, ROW_HOVER_TINT, ScaleOrCss, States, Variables, base_props,
             disabled_look_sx, forced_on_sx, has_shortcut_modifier, inset_focus_ring_sx, parts_enum,
-            variables,
+            use_name_warning, variables,
         },
         layout::use_box,
     },
@@ -252,6 +252,10 @@ impl Row {
 pub fn Menubar(props: MenubarProps) -> Element {
     let theme = use_theme();
     let id = use_id();
+    use_name_warning(
+        !props.aria_label.trim().is_empty(),
+        "Menubar: empty `aria_label`, so it is announced as just \"menubar\".",
+    );
     let bar = use_element();
     let current = use_signal(|| None::<usize>);
     let typeahead = use_typeahead(TYPEAHEAD_RESET);
@@ -349,7 +353,7 @@ pub fn Menubar(props: MenubarProps) -> Element {
                         row.armed.set(None);
                         return;
                     }
-                    Key::Character(ref text) if !has_shortcut_modifier(&event) => {
+                    Key::Character(ref text) => {
                         let Some(ch) = text.chars().next() else {
                             return;
                         };

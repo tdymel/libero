@@ -8,8 +8,8 @@ use libero::{
     components::{NavLink, Tree, TreeItem, TreeItemContent, TreeNode, TreeNodeRenderArgs},
 };
 
-/// The row hands its content the tab stop and the `disabled` flag through
-/// context, so a `TreeItem` needs neither at the call site.
+/// Outside a row a `TreeItem` is a tab-stop button; inside one it is the treeitem's
+/// own label (D41-F1), so the name is read once.
 #[test]
 fn a_tree_item_takes_its_tabindex_from_the_row() {
     fn app() -> Element {
@@ -31,12 +31,11 @@ fn a_tree_item_takes_its_tabindex_from_the_row() {
         rsx! { LiberoProvider { TreeItem { "Alpha" } } }
     }
 
-    let in_row = attributes_of(&body(&render(app)), "button");
-    assert_eq!(
-        in_row.get("tabindex").map(String::as_str),
-        Some("-1"),
-        "{in_row:?}"
-    );
+    // Inside a row the treeitem is the widget: a label, not a second tab stop or button.
+    let in_row = body(&render(app));
+    assert!(!in_row.contains("<button"), "{in_row}");
+    let label = tag_with(&in_row, "data-tree-activate");
+    assert_eq!(label.get("tabindex"), None, "{label:?}");
     let alone = attributes_of(&body(&render(loose)), "button");
     assert_eq!(
         alone.get("tabindex").map(String::as_str),
@@ -462,7 +461,7 @@ fn a_standard_item_draws_its_icons_around_the_label() {
     let label = alpha.find("Alpha").unwrap();
     let probe = alpha.find("data-probe").unwrap();
     assert!(icon < label && label < probe, "{alpha}");
-    let beta = &body[body.find("<button").unwrap()..];
+    let beta = &body[body.find("data-tree-activate").unwrap()..];
     assert!(
         beta.find("Beta").unwrap() < beta.find("data-tree-icon").unwrap(),
         "{beta}"

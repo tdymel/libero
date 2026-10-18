@@ -306,7 +306,7 @@ fn buttons_in_a_disabled_fieldset_look_disabled() {
                 "#fs-tree-item true 0.5 not-allowed",
                 "#fs-phone button true 0.5 not-allowed",
                 "#fs-image button true 0.5 not-allowed",
-                "#tree-off true 0.5 not-allowed",
+                "#tree-off false 0.5 not-allowed",
             ],
             "[id :disabled opacity cursor]"
         );

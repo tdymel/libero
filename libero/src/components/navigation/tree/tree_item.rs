@@ -37,7 +37,7 @@ fn item_parts_sx(base: Sx) -> Sx {
     .selector("& > [data-tree-icon]", sx().flex_shrink("0"))
 }
 
-// The page's type and the row's vertical padding are this button's job.
+// The page's type and the row's vertical padding are this label's (or button's) job.
 static TREE_ITEM_SX: StaticSx = StaticSx::new(|| {
     item_parts_sx(
         sx().display("flex")
@@ -55,6 +55,8 @@ static TREE_ITEM_SX: StaticSx = StaticSx::new(|| {
             .letter_spacing("inherit")
             .text_align_start()
             .cursor("pointer")
+            // A row's label takes the row's cursor, `not-allowed` while disabled.
+            .selector("&[data-tree-activate]", sx().cursor("inherit"))
             // Disabled by its row or a `Fieldset` (todo 514); only the Fieldset's case dims here.
             .selector("&:disabled", sx().cursor("not-allowed"))
             .selector(
@@ -133,8 +135,8 @@ base_props! {
         /// Drawn at the row's inline end.
         #[props(default, into)]
         trailing_icon: Option<SvgData>,
-        /// After `trailing_icon`, such as a count. Inside a `TreeItem` it sits in a
-        /// button: never interactive.
+        /// After `trailing_icon`, such as a count. Inside a `TreeItem` it is part of
+        /// the activated label: never interactive.
         #[props(default)]
         trailing: Option<Element>,
         /// The label.
@@ -200,7 +202,7 @@ base_props! {
         /// Drawn at the row's inline end.
         #[props(default, into)]
         trailing_icon: Option<SvgData>,
-        /// After `trailing_icon`, such as a count. Never interactive: it sits in the button.
+        /// After `trailing_icon`, such as a count. Never interactive: it is part of the activated label.
         #[props(default)]
         trailing: Option<Element>,
         /// The label.
@@ -208,9 +210,9 @@ base_props! {
     }
 }
 
-/// A button row for a custom `render_node`, taking the row's tab stop and
-/// `disabled`, laid out like [`TreeItemContent`]. A link row is a `NavLink` with
-/// `TreeNodeRenderArgs::tabindex`.
+/// An activatable row for a custom `render_node`, laid out like [`TreeItemContent`]:
+/// inside a `Tree` a plain label the treeitem names and Enter clicks, outside one
+/// an ordinary button. A link row is a `NavLink` with `TreeNodeRenderArgs::tabindex`.
 ///
 /// ```
 /// # use dioxus::prelude::*;
@@ -252,19 +254,29 @@ pub fn TreeItem(props: TreeItemProps) -> Element {
         props.children,
     );
 
-    use_box()
+    let in_tree = row.is_some();
+    let item = use_box()
         .framework_sx(&TREE_ITEM_SX)
         .class(&props.class)
         .sx(&props.sx)
         .states(&props.states)
         .prepare()
-        .attr("type", "button")
-        .attr("tabindex", tabindex)
-        .attr("disabled", disabled)
         .event("onclick", move |event: MouseEvent| {
+            if disabled {
+                return;
+            }
             if let Some(onclick) = &props.onclick {
                 onclick.call(event);
             }
-        })
-        .render(HtmlTag::Button, props.attributes, parts)
+        });
+    // The treeitem is the widget: a nested button would read the label twice.
+    if in_tree {
+        item.attr("data-tree-activate", true)
+            .render(HtmlTag::Span, props.attributes, parts)
+    } else {
+        item.attr("type", "button")
+            .attr("tabindex", tabindex)
+            .attr("disabled", disabled)
+            .render(HtmlTag::Button, props.attributes, parts)
+    }
 }

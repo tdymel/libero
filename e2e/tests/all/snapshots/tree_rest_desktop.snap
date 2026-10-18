@@ -5,11 +5,8 @@ expression: tree
 ---
 tree "Project files" [orientation=vertical]
   treeitem "src" [expanded=false] [level=1] [selected=false]
-    button "src"
-      StaticText "src"
+    StaticText "src"
   treeitem "docs" [expanded=false] [level=1] [selected=false]
-    button "docs"
-      StaticText "docs"
+    StaticText "docs"
   treeitem "README.md" [level=1] [selected=false]
-    button "README.md"
-      StaticText "README.md"
+    StaticText "README.md"

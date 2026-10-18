@@ -113,7 +113,7 @@ state, not part of `Tree`.
 row's live `expanded` state. `TreeItemContent` is the standard row: the
 chevron, an `icon`, the label and a `trailing_icon`, icons as `SvgData` (see
 [`Pictogram`](pictogram.md)). The default row is one. `TreeItem` lays a row out
-the same way as a button that picks up the tab stop and `disabled`. A row that
+the same way as a plain label the row names and Enter clicks (a button outside a `Tree`). A row that
 links somewhere is a [`NavLink`](nav_link.md) with `args.tabindex`.
 `default_tree_render(args)` draws the default row, so a custom `render_node`
 can fall back to it.
@@ -184,14 +184,14 @@ chevron's colour.
 
 ### `TreeItem`
 
-A button laid out like `TreeItemContent`, chevron included.
+An activatable label laid out like `TreeItemContent`, chevron included: inside a `Tree` the treeitem is the widget (no nested button), outside one it is a button.
 
 | Prop | Type | Default | Description |
 |---|---|---|---|
 | `onclick` | `EventHandler<MouseEvent>` | - | Click handler. |
 | `icon` | `SvgData` | - | Drawn after the chevron, before the label. |
 | `trailing_icon` | `SvgData` | - | Drawn at the row's end. |
-| `trailing` | `Element` | - | After `trailing_icon`, such as a count. Never interactive: it sits in the button. |
+| `trailing` | `Element` | - | After `trailing_icon`, such as a count. Never interactive: it is part of the activated label. |
 | `children` | `Element` | required | The label. |
 
 ## Style API
@@ -216,7 +216,7 @@ parts work.
 | `Up` or `Down` | Moves between visible rows. |
 | `Left` or `Right` | Collapses and expands, or jumps to the parent and first child. |
 | `Home` or `End` | Jumps to the first or last row. |
-| `Enter` or `Space` | Opens or closes a branch, or clicks a leaf's link or button. |
+| `Enter` or `Space` | Opens or closes a branch, or clicks a leaf's link, button or `TreeItem`. |
 | `*` | Opens every closed sibling of the row. |
 
 ### Libero handles

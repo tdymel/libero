@@ -34,8 +34,8 @@ fn a_row_starts_its_content_at_the_edge() {
             }
         }
     });
-    let row = page.rect("[role=treeitem] button");
-    let first = page.rect("[role=treeitem] button > *");
+    let row = page.rect("[role=treeitem] [data-tree-activate]");
+    let first = page.rect("[role=treeitem] [data-tree-activate] > *");
     assert_eq!(
         first.0,
         row.0,
@@ -59,7 +59,7 @@ fn the_arrows_work_after_a_click_on_a_row_button() {
             }
         }
     });
-    page.click("[data-tree-id='README.md'] button");
+    page.click("[data-tree-id='README.md'] [data-tree-activate]");
     assert!(
         page.is_focused("[data-tree-id='README.md']"),
         "focus on {}",

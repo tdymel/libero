@@ -7,12 +7,12 @@ use dioxus::prelude::*;
 use crate::{
     LiberoProvider,
     components::{
-        ActionIcon, AlphaSlider, Anchor, Audio, Avatar, Button, ButtonGroup, Carousel, Checkbox,
-        CircularProgress, ColorCode, ColorPicker, ColorSwatch, Dialog, Drawer, Fieldset,
-        FloatingWindowOptions, HoverCard, HueSlider, ProgressBar, QrCode, Radio, RadioGroup,
-        RangeSlider, Rating, RichTextEditor, ScrollArea, SegmentedControl, Slider, Splitter,
-        SpotlightOptions, Switch, Table, Tabs, Toolbar, ToolbarGroup, TourOptions, TourStep, Video,
-        column,
+        ActionIcon, AlphaSlider, Anchor, Audio, Avatar, BottomNavigation, BottomNavigationItem,
+        Button, ButtonGroup, Carousel, Checkbox, CircularProgress, ColorCode, ColorPicker,
+        ColorSwatch, Dialog, Drawer, Fieldset, FloatingWindowOptions, HoverCard, HueSlider,
+        Menubar, MenubarMenu, ProgressBar, QrCode, Radio, RadioGroup, RangeSlider, Rating,
+        RichTextEditor, ScrollArea, SegmentedControl, Slider, Splitter, SpotlightOptions, Switch,
+        Table, Tabs, Toolbar, ToolbarGroup, TourOptions, TourStep, Video, column,
         rich_text::{NodeViewProps, NodeViews, use_rich_text_editor},
         use_spotlight, use_tour,
     },
@@ -158,6 +158,36 @@ fn an_unnamed_toolbar_warns() {
     assert!(!warns(
         || rsx! { LiberoProvider { Toolbar { "aria-labelledby": "heading", ActionIcon { aria_label: "Bold", "B" } } } },
         "Toolbar:"
+    ));
+}
+
+#[test]
+fn a_blank_menubar_name_warns() {
+    assert!(warns(
+        || rsx! { LiberoProvider { Menubar { aria_label: " ", menus: vec![MenubarMenu::new("File", vec![])] } } },
+        "Menubar:"
+    ));
+    assert!(!warns(
+        || rsx! { LiberoProvider { Menubar { aria_label: "Main", menus: vec![MenubarMenu::new("File", vec![])] } } },
+        "Menubar:"
+    ));
+}
+
+/// The icon span is aria-hidden, so a badge is heard only through the item's name.
+#[test]
+fn a_bottom_navigation_badge_without_a_name_warns() {
+    let prefix = "BottomNavigationItem: `badge`";
+    assert!(warns(
+        || rsx! { LiberoProvider { BottomNavigation { "aria-label": "Main", BottomNavigationItem { icon: rsx! { "i" }, badge: rsx! { "3" }, "Inbox" } } } },
+        prefix
+    ));
+    assert!(!warns(
+        || rsx! { LiberoProvider { BottomNavigation { "aria-label": "Main", BottomNavigationItem { "aria-label": "Inbox, 3 unread", icon: rsx! { "i" }, badge: rsx! { "3" }, "Inbox" } } } },
+        prefix
+    ));
+    assert!(!warns(
+        || rsx! { LiberoProvider { BottomNavigation { "aria-label": "Main", BottomNavigationItem { icon: rsx! { "i" }, "Inbox" } } } },
+        prefix
     ));
 }
 

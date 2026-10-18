@@ -69,6 +69,7 @@ pub const ROUTES: Routes = &[
     ("/tree/controlled", || rsx! { ControlledTreePage {} }),
     ("/tree/chevron", || rsx! { ChevronTreePage {} }),
     ("/tree/activate", || rsx! { ActivateTreePage {} }),
+    ("/tree/activate-item", || rsx! { ActivateItemTreePage {} }),
     ("/tree/guides", || rsx! { GuidesTreePage {} }),
     ("/tree/links/current", || rsx! { CurrentLinkTreePage {} }),
     (
@@ -176,6 +177,29 @@ fn ActivateTreePage() -> Element {
                         },
                         "{args.data}"
                     }
+                }
+            },
+        }
+    }
+}
+
+/// Leaves that are `TreeItem`s whose `onclick` `#activated` records.
+#[component]
+fn ActivateItemTreePage() -> Element {
+    let mut activated = use_signal(|| String::from("none"));
+    let data = vec![
+        TreeNode::new("here", "Here"),
+        TreeNode::new("elsewhere", "Elsewhere"),
+    ];
+    rsx! {
+        output { id: "activated", "{activated}" }
+        Tree {
+            aria_label: "Pages",
+            data,
+            render_node: move |args: TreeNodeRenderArgs<&'static str>| {
+                let id = args.id.to_string();
+                rsx! {
+                    TreeItem { onclick: move |_| activated.set(id.clone()), "{args.data}" }
                 }
             },
         }

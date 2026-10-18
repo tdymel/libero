@@ -5,18 +5,13 @@ expression: tree
 ---
 tree "Project files" [orientation=vertical]
   treeitem "src" [expanded] [level=1] [selected=false]
-    button "src"
-      StaticText "src"
+    StaticText "src"
     group
       treeitem "lib.rs" [level=2] [selected=false]
-        button "lib.rs"
-          StaticText "lib.rs"
+        StaticText "lib.rs"
       treeitem "main.rs" [level=2] [selected=false]
-        button "main.rs"
-          StaticText "main.rs"
+        StaticText "main.rs"
   treeitem "docs" [expanded=false] [level=1] [selected=false]
-    button "docs"
-      StaticText "docs"
+    StaticText "docs"
   treeitem "README.md" [level=1] [selected=false]
-    button "README.md"
-      StaticText "README.md"
+    StaticText "README.md"

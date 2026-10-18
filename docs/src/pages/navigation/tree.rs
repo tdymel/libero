@@ -203,7 +203,7 @@ pub fn TreePage() -> Element {
                     prop("onclick", "EventHandler<MouseEvent>").doc("Click handler."),
                     prop("icon", "SvgData").doc("Drawn after the chevron, before the label."),
                     prop("trailing_icon", "SvgData").doc("Drawn at the row's end."),
-                    prop("trailing", "Element").doc("After `trailing_icon`, such as a count. Never interactive: it sits in the button."),
+                    prop("trailing", "Element").doc("After `trailing_icon`, such as a count. Never interactive: it is part of the activated label."),
                     prop("children", "Element").default("required").doc("The label."),
                 ]),
             ],
@@ -212,7 +212,7 @@ pub fn TreePage() -> Element {
                 .key(["Up", "Down"], "Moves between visible rows.")
                 .key(["Left", "Right"], "Collapses and expands, or jumps to the parent and first child.")
                 .key(["Home", "End"], "Jumps to the first or last row.")
-                .key(["Enter", "Space"], "Opens or closes a branch, or clicks a leaf's link or button.")
+                .key(["Enter", "Space"], "Opens or closes a branch, or clicks a leaf's link, button or `TreeItem`.")
                 .key(["*"], "Opens every closed sibling of the row.")
                 .handles([
                     "Typing jumps to the next row whose `tree_label` matches.",
@@ -325,9 +325,9 @@ pub fn TreePage() -> Element {
                     Code { source: "trailing_icon" }
                     ". The default row is one. "
                     Code { source: "TreeItem" }
-                    " lays a row out the same way as a button that picks up the tab stop and "
-                    Code { source: "disabled" }
-                    ". A row that links somewhere is a "
+                    " lays a row out the same way as a plain label the row names and Enter clicks (a button outside a "
+                    Code { source: "Tree" }
+                    "). A row that links somewhere is a "
                     Code { source: "NavLink" }
                     " with "
                     Code { source: "args.tabindex" }

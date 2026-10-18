@@ -109,6 +109,21 @@ e2e::scenario!(
     enter_clicks_the_link
 );
 
+/// Enter on a `TreeItem` leaf fires its `onclick`, and no button in the row names the label twice.
+async fn enter_clicks_the_tree_item<D: Driver>(d: &mut D, route: &str) -> Result<()> {
+    ensure!(
+        !d.exists("[role=treeitem] button").await?,
+        "a nested button in a tree row"
+    );
+    enter_clicks_the_link(d, route).await
+}
+
+e2e::scenario!(
+    enter_on_a_tree_item_leaf_fires_its_onclick,
+    "/tree/activate-item",
+    enter_clicks_the_tree_item
+);
+
 /// Each level's label starts further in than its parent's (the indent of `List`'s nested rows).
 async fn levels_indent<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
     let mut starts = Vec::new();
@@ -235,7 +250,7 @@ fn the_arrows_work_after_a_click_on_a_row_button() {
     block_on(async {
         let fixture = Fixture::open("/tree", Viewport::Desktop).await.unwrap();
         let page = &fixture.page;
-        pointer::click(page, "[data-tree-id='README.md'] button")
+        pointer::click(page, "[data-tree-id='README.md'] [data-tree-activate]")
             .await
             .unwrap();
         wait::for_js_true(

@@ -390,6 +390,11 @@ pub fn BottomNavigationItem(props: BottomNavigationItemProps) -> Element {
                 );
             }
         });
+        // The icon span is aria-hidden, so the badge is only heard through the item's name.
+        use_name_warning(
+            props.badge.is_none() || names_itself(&props.attributes),
+            "BottomNavigationItem: `badge` without an `aria-label` or `aria-labelledby` carrying the count, so it is not announced.",
+        );
     }
 
     let disabled = props.disabled.unwrap_or(false);
