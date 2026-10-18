@@ -11,13 +11,18 @@ use e2e::suite::Step;
 use e2e::{Fixture, Suite, Viewport, wait};
 
 const DIALOG: &str = "[role=dialog]";
-// Focus alone opens the dialog, so the "open" state is the one Arrow Down entered.
+// The "open" state is the one Arrow Down entered.
 const ENTERED: &str = "[role=dialog]:focus-within";
 
 const FIELDS: [(&str, &str); 2] = [
     ("/color-field", "#color-field"),
     ("/chrono-field", "#chrono-field"),
 ];
+
+/// The colour field still opens on focus; the date field only on Arrow Down or a click.
+fn opens_on_focus(input: &str) -> bool {
+    input != "#chrono-field"
+}
 
 /// Todo 1012: a tap on a date field opens the calendar and, on a phone, no
 /// soft keyboard over it. The web keeps its keyboard.
@@ -157,7 +162,9 @@ fn only_alt_arrow_down_enters_the_dialog() {
             let fixture = Fixture::open(route, Viewport::Desktop).await.unwrap();
             let page = &fixture.page;
             keyboard::tab_to(page, input, 5).await.unwrap();
-            wait::for_visible(page, DIALOG).await.unwrap();
+            if opens_on_focus(input) {
+                wait::for_visible(page, DIALOG).await.unwrap();
+            }
             keyboard::assert_chords_ignored_with(
                 page,
                 &[("Ctrl", keyboard::CTRL), ("Meta", keyboard::META)],
@@ -216,10 +223,22 @@ fn a_typed_range_reads_at_the_theme_separator() {
 }
 
 async fn dialog_contract(page: &Page, input: &str) -> Result<()> {
-    // Focus alone opens it, and focus stays in the input.
     keyboard::tab_to(page, input, 5).await?;
-    wait::for_visible(page, DIALOG).await?;
-    focus::assert_focused(page, input, "focus opening the dropdown").await?;
+    if opens_on_focus(input) {
+        wait::for_visible(page, DIALOG).await?;
+    } else {
+        // WCAG 3.2.1: focus alone opens nothing.
+        wait::for_js_true(
+            page,
+            &format!(
+                "document.querySelector({input:?})?.getAttribute('aria-expanded') === 'false' \
+                 && !document.querySelector({DIALOG:?})"
+            ),
+            "the focused field to stay closed",
+        )
+        .await?;
+    }
+    focus::assert_focused(page, input, "tabbing into the field").await?;
 
     keyboard::press(page, keyboard::ARROW_DOWN).await?;
     wait::for_js_true(
@@ -286,6 +305,7 @@ fn a_date_range_field_opens_one_month_on_a_narrow_page() {
             keyboard::tab_to(page, "#date-range-field", 5)
                 .await
                 .unwrap();
+            keyboard::press(page, keyboard::ARROW_DOWN).await.unwrap();
             wait::for_js_true(
                 page,
                 &format!("document.querySelectorAll('{DIALOG} [role=grid]').length === {months}"),

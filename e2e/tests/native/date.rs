@@ -74,13 +74,15 @@ fn tabbed_chrono_field() -> Element {
     }
 }
 
-/// On the web focus alone opens it; Tab fires no `focus` natively, so the
-/// silent move stands in.
+/// WCAG 3.2.1: Tab into the field opens nothing; Arrow Down does.
 #[test]
-fn tab_opens_the_date_dialog() {
+fn tab_into_the_date_field_does_not_open_the_dialog() {
     let mut page = mount(tabbed_chrono_field);
     page.click("#before");
     page.tab();
+    assert!(page.is_focused(INPUT), "{}", page.focus_owner());
+    assert!(!page.exists(DIALOG), "{}", page.tree());
+    page.press(Key::ArrowDown);
     assert!(page.exists(DIALOG), "{}", page.tree());
 }
 

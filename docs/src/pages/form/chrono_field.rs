@@ -123,19 +123,19 @@ pub fn ChronoFieldPage() -> Element {
                 .dropdown_parts("ChronoDropdownPart", chrono_dropdown_parts()),
             ],
             accessibility: a11y()
-                .key(["Down"], "Moves focus into the picker, onto the picked day or the clock, where the `ChronoPicker` keys apply.")
+                .key(["Down", "Alt+Down"], "Opens the dropdown and moves focus into the picker, onto the picked day or the clock, where the `ChronoPicker` keys apply.")
                 .key(["Enter"], "In the text: reads and commits it. Text it cannot read is refused, with the reason announced.")
                 .key(["Escape"], "Closes the dropdown. From inside it, moves focus back to the text.")
                 .key(["Tab", "Shift+Tab"], "Past the dropdown's last stop: moves on as Tab from the text would. Before its first stop: back to the text.")
                 .handles([
-                    "Focus opens the dropdown and stays in the text, so you can type at once.",
+                    "Focus alone does not open the dropdown, so tabbing through the form changes nothing. A click opens it and stays in the text, so you can type at once.",
                     "A pick that closes the dropdown moves focus back to the text.",
                     "Focus leaving both the text and the dropdown closes it.",
                     "A mouse click in the dropdown leaves focus in the text.",
                     "Android's Back button closes the dropdown rather than the app. Focus in the dropdown goes back to the text.",
                 ])
                 .must(["Without a `label`, set `aria_label`. Otherwise screen readers announce an unnamed combobox."])
-                .example("A delivery date, `ChronoField { label: \"Delivery date\", .. }`: focus opens the calendar while the caret stays in the text, so you can type the date at once, or press Down to pick a day with the arrows."),
+                .example("A delivery date, `ChronoField { label: \"Delivery date\", .. }`: type the date at once, click to open the calendar with the caret staying in the text, or press Down to open it and pick a day with the arrows."),
             lead: rsx! {
                 Text {
                     "A text field for every date and time value, with a "

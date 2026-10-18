@@ -317,8 +317,6 @@ pub(super) fn use_picker_field<V: FieldValue>(
     let mut draft = use_signal(|| Option::<String>::None);
     // Why the last commit was refused; cleared by the next keystroke.
     let mut rejected = use_signal(|| Option::<String>::None);
-    // Focus returning from the closed dropdown must not open it again.
-    let mut returning = use_signal(|| false);
     // Arrow Down asked for focus in the picker, once the dropdown is drawn.
     let mut entering = use_signal(|| false);
     let anchor = use_element();
@@ -453,15 +451,10 @@ pub(super) fn use_picker_field<V: FieldValue>(
             }
         });
     };
-    let mut focus_input = move || {
-        returning.set(true);
-        if anchor
+    let focus_input = move || {
+        let _ = anchor
             .query_selector("input[data-controlled]")
-            .and_then(|input| input.focus())
-            .is_err()
-        {
-            returning.set(false);
-        }
+            .and_then(|input| input.focus());
     };
     // On the Escape stack exactly while the handler below takes Escape, so a `HoverCard` leaves it.
     use_field_list_layer(
@@ -473,23 +466,13 @@ pub(super) fn use_picker_field<V: FieldValue>(
             open_to(false);
         }),
     );
-    let focused = move || match (returning(), readonly) {
-        (true, _) | (_, true) => returning.set(false),
-        (false, false) => open_to(true),
-    };
     // Element 0 is the text input, 1 the dropdown; closes once focus is in neither.
+    // Focus alone does not open (WCAG 3.2.1): Arrow Down or a click does.
     let focus = use_focus_within(
         move || vec![anchor.mounted(), floating.mounted()],
         move |change| {
-            match (change.element, change.within) {
-                (0, true) => {
-                    let mut focused = focused;
-                    focused();
-                }
-                (0, false) => {
-                    commit_on_blur.clone()();
-                }
-                _ => {}
+            if let (0, false) = (change.element, change.within) {
+                commit_on_blur.clone()();
             }
             match change.in_group {
                 Some(true) => {}

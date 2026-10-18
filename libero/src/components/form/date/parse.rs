@@ -204,11 +204,14 @@ fn month_named(word: &str, names: &DateLocale) -> Option<u32> {
     prefixed.next().is_none().then_some(index as u32 + 1)
 }
 
+/// A whole name or a prefix of two letters, like the duration units: one letter is too ambiguous.
 fn is_weekday(word: &str, names: &DateLocale) -> bool {
+    let prefix = word.chars().count() >= 2;
     [names.weekdays, names.weekdays_short, names.weekdays_min]
         .iter()
         .flatten()
-        .any(|name| name.to_lowercase().starts_with(word))
+        .map(|name| name.to_lowercase())
+        .any(|name| name == word || (prefix && name.starts_with(word)))
 }
 
 #[cfg(test)]
@@ -266,6 +269,13 @@ mod tests {
         assert_eq!(parse("01022026", DMY), date(2026, 2, 1));
         assert_eq!(parse("20260201", "YYYY-MM-DD"), date(2026, 2, 1));
         assert_eq!(parse("1022026", DMY), Err(Unreadable));
+    }
+
+    #[test]
+    fn a_weekday_needs_two_letters() {
+        assert_eq!(parse("Mon 1 2 2026", DMY), date(2026, 2, 1));
+        assert_eq!(parse("mo 1 2 2026", DMY), date(2026, 2, 1));
+        assert_eq!(parse("1 m 2 2026", DMY), Err(Unreadable));
     }
 
     #[test]

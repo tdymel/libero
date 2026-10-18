@@ -86,6 +86,55 @@ fn a_typed_month_is_held_as_its_first_day() {
     });
 }
 
+/// WCAG 3.2.1: Tab into the field opens nothing; Arrow Down and a click do.
+#[test]
+fn tabbing_into_the_field_does_not_open_the_dropdown() {
+    block_on(async {
+        let fixture = Fixture::open("/chrono-field/day", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+
+        keyboard::tab_to(page, INPUT, 5).await.unwrap();
+        expect(
+            page,
+            &format!(
+                "document.activeElement === document.querySelector({INPUT:?}) \
+                 && !document.querySelector('[role=dialog]') \
+                 && document.querySelector({INPUT:?}).getAttribute('aria-expanded') === 'false'"
+            ),
+            "the focused field to stay closed",
+        )
+        .await;
+
+        keyboard::press(page, keyboard::ARROW_DOWN).await.unwrap();
+        expect(
+            page,
+            "!!document.querySelector('[role=dialog]')",
+            "Arrow Down to open the dropdown",
+        )
+        .await;
+        keyboard::press(page, keyboard::ESCAPE).await.unwrap();
+        expect(
+            page,
+            "!document.querySelector('[role=dialog]')",
+            "Escape to close the dropdown",
+        )
+        .await;
+
+        pointer::click(page, INPUT).await.unwrap();
+        expect(
+            page,
+            "!!document.querySelector('[role=dialog]')",
+            "a click to open the dropdown",
+        )
+        .await;
+
+        fixture.console.assert_clean("opening on request").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
 #[test]
 fn the_dropdown_opens_on_the_month_grid() {
     block_on(async {
@@ -95,12 +144,11 @@ fn the_dropdown_opens_on_the_month_grid() {
         let page = &fixture.page;
 
         keyboard::tab_to(page, INPUT, 5).await.unwrap();
+        keyboard::press(page, keyboard::ARROW_DOWN).await.unwrap();
         let grid = "(() => { const dialog = document.querySelector('[role=dialog]'); \
              return !!dialog && !!dialog.querySelector(\"[data-date='2026-03-01']\") \
                && !dialog.querySelector('[data-slot=day]'); })()";
         expect(page, grid, "the dropdown to show months, not days").await;
-
-        keyboard::press(page, keyboard::ARROW_DOWN).await.unwrap();
         expect(
             page,
             "document.activeElement.getAttribute('data-date') === '2026-03-01'",
@@ -149,6 +197,7 @@ fn a_reopened_dropdown_asks_the_clock_again() {
         let page = &fixture.page;
 
         keyboard::tab_to(page, INPUT, 5).await.unwrap();
+        keyboard::press(page, keyboard::ARROW_DOWN).await.unwrap();
         expect(
             page,
             &today_is("new Date()"),
