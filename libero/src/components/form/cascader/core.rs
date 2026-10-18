@@ -5,15 +5,17 @@ use dioxus::prelude::*;
 use crate::{
     components::{
         accessibility::VisuallyHidden,
-        common::{HtmlTag, Input, Part, Parts, ScaleOrCss, input_from_str},
+        common::{HtmlTag, Input, Parts, ScaleOrCss, input_from_str},
         form::{
-            Asks, ComboboxState, DropdownPart, clear_button, combobox::nothing_found_row,
-            field_parts_enum, field_props, use_combobox, use_field, use_field_frame,
-            use_refocus_on_close, with_drawn_placeholder,
+            Asks, ComboboxState, DropdownPart, PreparedField, PreparedFrame, clear_button,
+            combobox::nothing_found_row, field_parts_enum, field_props, use_combobox, use_field,
+            use_field_frame, use_refocus_on_close,
         },
-        layout::use_box,
+        layout::{BoxStyle, use_box},
     },
-    hooks::{TYPEAHEAD_RESET, use_element, use_localization, use_theme, use_typeahead},
+    hooks::{
+        ElementHandle, TYPEAHEAD_RESET, use_element, use_localization, use_theme, use_typeahead,
+    },
     str_enum::str_enum,
     theme::Size,
 };
@@ -24,9 +26,10 @@ use super::{
     keys::CascaderKeys,
     nodes::{FlatPath, flatten_paths, join_labels},
     option::CascaderNode,
+    parent_row::{ParentRow, use_parent_row},
     rows::CascaderRows,
-    search::{CascaderSearch, SEARCH_INSET, search_header},
-    trigger::{CASCADER_TRIGGER_SX, Trigger, cascader_trigger},
+    search::{CascaderSearch, search_header},
+    trigger::{CASCADER_TRIGGER_SX, Trigger, cascader_trigger, trigger_control},
 };
 
 str_enum! {
@@ -187,62 +190,36 @@ pub(crate) fn CascaderCore(props: CascaderCoreProps) -> Element {
     let cursor_now = cursor.read().clone();
     // The cursor as a row of `visible`, the `Paths` keyboard's index.
     let path_row = visible.iter().position(|path| path.indices == cursor_now);
+    let parent_row = use_parent_row();
+    let parent_active = parent_row
+        .picks(&nodes, any_level, layout, &cursor_now)
+        .is_some();
 
     let id = state.id();
     let listbox_id = format!("{id}-listbox");
     let controlled_id = controlled_id(&listbox_id, layout, &cursor_now);
 
     // `Rc`: each is shared by several handlers and captures a non-`Copy` path.
-    let open = open_handler(cursor, state, committed.clone());
+    let open = open_handler(cursor, state, committed.clone(), parent_row);
     let onpick = props.onpick;
     let commit = commit_handler(state, onpick, committed.clone(), props.allow_deselect);
 
     let blurred = use_refocus_on_close(opened, searchable, trigger_element, query);
 
-    let field = use_field()
-        .labelled_by()
-        .label(&props.label)
-        .description(&props.description)
-        .helper(&props.helper)
-        .status(&props.status)
-        .rules(props.rules.clone())
-        .name(props.name.as_deref())
-        .required(required)
-        .empty(committed.is_none())
-        .asks(Asks::Select)
-        .readonly(readonly)
-        .disabled(disabled)
-        .size(size)
-        .radius(radius.clone())
-        .class(&props.class)
-        .sx(&props.sx)
-        .parts(&props.parts)
-        .states(&props.states)
-        .attributes(&props.attributes)
-        .prepare();
-
-    let clear = clear_button(
-        props.clearable && committed.is_some() && !disabled && !readonly,
-        size,
+    let CascaderField {
+        field,
+        frame,
+        control,
+        clear,
+    } = use_cascader_field(
+        &props,
+        state,
         trigger_element,
-        Some(&field),
-        move |_| {
-            onpick.call(None);
-            state.close();
-        },
+        size,
+        &radius,
+        disabled,
+        readonly,
     );
-
-    let frame = use_field_frame()
-        .trailing(&clear)
-        .states(field.states())
-        .prepare();
-
-    // The frame draws the ring.
-    let control = use_box()
-        .framework_sx(&CASCADER_TRIGGER_SX)
-        .focus_ring(false)
-        .states(field.states())
-        .prepare();
 
     let keys = Rc::new(CascaderKeys {
         nodes: nodes.clone(),
@@ -260,6 +237,7 @@ pub(crate) fn CascaderCore(props: CascaderCoreProps) -> Element {
         trigger: trigger_element,
         trigger_id: field.id().to_string(),
         blurred,
+        parent_row,
     });
 
     let rows = CascaderRows {
@@ -276,6 +254,7 @@ pub(crate) fn CascaderCore(props: CascaderCoreProps) -> Element {
         radius: radius.size,
         labels: drill_labels,
         state,
+        parent_active,
     };
     let body = use_cascader_body(
         rows,
@@ -324,28 +303,26 @@ pub(crate) fn CascaderCore(props: CascaderCoreProps) -> Element {
         None => body,
     };
 
-    let descendant = active_descendant(&id, layout, &cursor_now, path_row);
+    let descendant = active_descendant(&id, layout, &cursor_now, path_row, parent_active);
     let header = searchable.then(|| {
-        let search_placeholder = props.search_placeholder.clone().unwrap_or_default();
-        with_drawn_placeholder(
-            Some(&search_placeholder),
-            SEARCH_INSET,
-            search_header(
-                search_box,
-                CascaderSearch {
-                    element: search,
-                    query,
-                    cursor,
-                    state,
-                    blurred,
-                },
-                // No listbox while nothing matches; a dangling id is invalid (todo 2291).
-                nothing_found.is_none().then(|| controlled_id.clone()),
-                descendant.clone(),
-                search_placeholder.clone(),
-                &field,
-                required,
-            ),
+        let search = CascaderSearch {
+            element: search,
+            query,
+            cursor,
+            state,
+            blurred,
+        };
+        // No listbox while nothing matches; a dangling id is invalid (todo 2291).
+        let controls = nothing_found.is_none().then(|| controlled_id.clone());
+        let placeholder = props.search_placeholder.clone().unwrap_or_default();
+        search_header(
+            search_box,
+            search,
+            controls,
+            descendant.clone(),
+            placeholder,
+            &field,
+            required,
         )
     });
 
@@ -363,17 +340,8 @@ pub(crate) fn CascaderCore(props: CascaderCoreProps) -> Element {
     }));
 
     // ---- the trigger --------------------------------------------------
-    // The open search box is the combobox; a role-less trigger may not carry `aria-required`.
-    let control = match searchable && opened {
-        true => control
-            .attr("data-slot", CascaderPart::Control.slot())
-            .attr("id", field.id().to_string()),
-        false => field
-            .aria(control)
-            .attr("aria-labelledby", field.label_id()),
-    };
     let trigger = cascader_trigger(
-        control,
+        trigger_control(control, &field, searchable && opened),
         Trigger {
             element: trigger_element,
             state,
@@ -443,20 +411,99 @@ pub(super) fn option_id(id: &str, level: usize, index: usize) -> String {
     format!("{id}-option-{level}-{index}")
 }
 
+/// The narrow list's parent row, heading column `level`.
+pub(super) fn parent_option_id(id: &str, level: usize) -> String {
+    format!("{id}-option-{level}-parent")
+}
+
 /// Opens on the committed path, like a native `<select>`; with none, nothing is highlighted.
 fn open_handler(
     cursor: Signal<Vec<usize>>,
     state: ComboboxState,
     seed: Option<Vec<usize>>,
+    parent_row: ParentRow,
 ) -> Rc<dyn Fn(bool)> {
     Rc::new(move |next: bool| {
         // A local copy lets an `Fn` closure write the signal.
         let mut cursor = cursor;
         if next && !state.is_open() {
             cursor.set(seed.clone().unwrap_or_default());
+            parent_row.leave();
         }
         state.set_open(next);
     })
+}
+
+/// What frames the trigger: the field, its frame, the control's style and the x.
+struct CascaderField {
+    field: PreparedField,
+    frame: PreparedFrame,
+    control: BoxStyle,
+    clear: Option<Element>,
+}
+
+fn use_cascader_field(
+    props: &CascaderCoreProps,
+    state: ComboboxState,
+    trigger: ElementHandle,
+    size: Size,
+    radius: &ScaleOrCss,
+    disabled: bool,
+    readonly: bool,
+) -> CascaderField {
+    let empty = props.committed.is_none();
+    let field = use_field()
+        .labelled_by()
+        .label(&props.label)
+        .description(&props.description)
+        .helper(&props.helper)
+        .status(&props.status)
+        .rules(props.rules.clone())
+        .name(props.name.as_deref())
+        .required(props.required.unwrap_or(false))
+        .empty(empty)
+        .asks(Asks::Select)
+        .readonly(readonly)
+        .disabled(disabled)
+        .size(size)
+        .radius(radius.clone())
+        .class(&props.class)
+        .sx(&props.sx)
+        .parts(&props.parts)
+        .states(&props.states)
+        .attributes(&props.attributes)
+        .prepare();
+
+    let onpick = props.onpick;
+    let clear = clear_button(
+        props.clearable && !empty && !disabled && !readonly,
+        size,
+        trigger,
+        Some(&field),
+        move |_| {
+            onpick.call(None);
+            state.close();
+        },
+    );
+
+    let frame = use_field_frame()
+        .trailing(&clear)
+        .states(field.states())
+        .prepare();
+
+    // The frame draws the ring.
+    let control = use_box()
+        .framework_sx(&CASCADER_TRIGGER_SX)
+        .focus_ring(false)
+        .states(field.states())
+        .prepare();
+
+    CascaderField {
+        field,
+        frame,
+        control,
+        clear,
+    }
 }
 
 /// The one commit path for keyboard and mouse. `allow_deselect` turns a re-pick into a clear;
@@ -507,18 +554,22 @@ pub(super) fn controlled_id(listbox_id: &str, layout: CascaderLayout, cursor: &[
     }
 }
 
-/// The row `aria-activedescendant` names: the cursor's deepest node, or its `Paths` row.
+/// The row `aria-activedescendant` names: the cursor's deepest node, its `Paths` row, or the narrow parent row.
 pub(super) fn active_descendant(
     id: &str,
     layout: CascaderLayout,
     cursor: &[usize],
     path_row: Option<usize>,
+    parent_active: bool,
 ) -> Option<String> {
     match layout {
         CascaderLayout::Paths => path_row.map(|row| option_id(id, 0, row)),
         CascaderLayout::Columns => {
             let (last, parents) = cursor.split_last()?;
-            Some(option_id(id, parents.len(), *last))
+            Some(match parent_active {
+                true => parent_option_id(id, parents.len()),
+                false => option_id(id, parents.len(), *last),
+            })
         }
     }
 }

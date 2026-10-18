@@ -7,14 +7,15 @@ use crate::{
         accessibility::VISUALLY_HIDDEN_FIXED_SX,
         common::{
             ClassList, HtmlTag, Input, NavigationChord, Part, Parts, ScaleOrCss, States, Variables,
-            base_props, navigation_chord, variables,
+            base_props, has_shortcut_modifier, navigation_chord, variables,
         },
         form::DropdownPart,
         layout::{paper_sx, use_box},
     },
     hooks::{
-        ElementHandle, POPOVER_AVAILABLE_HEIGHT, PopoverOptions, PopoverWidth,
-        current_localization, use_element, use_field_list_layer, use_popover_on, use_theme,
+        ElementHandle, POPOVER_AVAILABLE_HEIGHT, PopoverOptions, PopoverWidth, TYPEAHEAD_RESET,
+        Typeahead, current_localization, typeahead_match, use_element, use_field_list_layer,
+        use_popover_on, use_theme, use_typeahead,
     },
     platform::{ElementApi, is_tab},
     sx::{StaticSx, Sx, ThemeAwareValue, sx},
@@ -112,6 +113,10 @@ base_props! {
         /// Space picks the highlight, like Enter: a list with no text to type in.
         #[props(default)]
         space_picks: bool,
+        /// Parallel to `rows`: typing moves the highlight to the next row starting with it, as
+        /// APG select-only. Empty is off, and a skin with its own type-ahead leaves it so.
+        #[props(default)]
+        typeahead: Vec<String>,
         #[props(default)]
         multiselectable: bool,
         /// Usually the field's label id.
@@ -188,10 +193,19 @@ pub(crate) fn ComboboxCore(props: ComboboxCoreProps) -> Element {
         shown_keys.set(props.row_keys.clone());
     }
 
+    let mut labels = use_hook(|| CopyValue::new(Vec::new()));
+    if *labels.peek() != props.typeahead {
+        labels.set(props.typeahead.clone());
+    }
+    let typed = use_typeahead(TYPEAHEAD_RESET);
+    let typed = use_hook(|| CopyValue::new(typed));
+
     let keys = ComboboxKeys {
         state: props.state,
         enabled: enabled_rows,
         row_keys: shown_keys,
+        labels,
+        typed,
         set_active,
         onopened: props.onopened,
         picks: context.picks,
@@ -231,8 +245,12 @@ pub(crate) fn ComboboxCore(props: ComboboxCoreProps) -> Element {
 
     // Nothing to show draws nothing, but a `header` keeps the box: a failed search must stay editable.
     let showing = opened && (loading || count > 0 || empty.is_some() || props.header.is_some());
-    // Open in the state but nothing on screen: the trigger must not claim `aria-expanded`.
-    props.state.set_held(props.state.is_open() && !showing);
+    // Open in the state but no listbox on screen (nothing drawn, or only "No results"): the
+    // trigger must not claim `aria-expanded`. Loading keeps it, as its loader is the popup.
+    let listless = !loading && count == 0;
+    props
+        .state
+        .set_held(props.state.is_open() && (!showing || listless));
     // Mounted only while showing, so a closed list pays for no popover.
     let popup = showing.then(|| {
         rsx! {
@@ -493,6 +511,9 @@ struct ComboboxKeys {
     enabled: CopyValue<Vec<usize>>,
     /// Each row's key, as last drawn; empty is index keys. Picks are registered by key.
     row_keys: CopyValue<Vec<usize>>,
+    /// Each row's text for type-ahead, as last drawn; empty is off.
+    labels: CopyValue<Vec<String>>,
+    typed: CopyValue<Typeahead>,
     set_active: EventHandler<usize>,
     onopened: EventHandler<bool>,
     picks: CopyValue<HashMap<usize, Callback<()>>>,
@@ -518,6 +539,40 @@ pub(crate) enum CaretKeys {
 }
 
 impl ComboboxKeys {
+    /// APG select-only: the typed text moves the highlight and opens a closed list. `true` when it did.
+    fn type_ahead(
+        self,
+        event: &KeyboardEvent,
+        active_row: Option<usize>,
+        enabled: &[usize],
+    ) -> bool {
+        let labels = self.labels.peek();
+        let Key::Character(ref key) = event.key() else {
+            return false;
+        };
+        let Some(ch) = key.chars().next().filter(|_| !labels.is_empty()) else {
+            return false;
+        };
+        let typed = self.typed.peek().clone();
+        // A space mid-query is part of the text, otherwise Space picks.
+        if has_shortcut_modifier(event) || (ch == ' ' && !typed.is_typing()) {
+            return false;
+        }
+        let query = typed.push(ch);
+        let found = typeahead_match(labels.len(), active_row, &query, |row| {
+            enabled.contains(&row).then(|| labels[row].as_str())
+        });
+        let Some(row) = found else {
+            return false;
+        };
+        event.prevent_default();
+        self.set_active.call(row);
+        if !self.opened {
+            self.onopened.call(true);
+        }
+        true
+    }
+
     fn handle(self, event: KeyboardEvent) {
         // A composing key commits or picks an IME candidate (todo 2377).
         if self.disabled || event.is_composing() {
@@ -568,6 +623,9 @@ impl ComboboxKeys {
             }
             Some(_) => return,
             None => {}
+        }
+        if self.type_ahead(&event, active_row, &enabled) {
+            return;
         }
         // Typing leaves no highlight, and then Home/End are text editing keys.
         let row_keys = opened

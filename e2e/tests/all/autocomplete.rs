@@ -275,7 +275,16 @@ pub fn editable_combobox_typing(route: &str, query: &str) {
 
         keyboard::type_text(page, "zzz").await.unwrap();
         wait_for_nothing_found(page, &format!("{route}: a query matching nothing")).await;
-        // The popup draws the text, and no listbox is left to point at.
+        // The popup draws the text, and no listbox is left to expand or point at.
+        wait::for_js_true(
+            page,
+            &format!(
+                "document.querySelector({TRIGGER:?}).getAttribute('aria-expanded') === 'false'"
+            ),
+            &format!("{route}: nothing found to collapse the combobox"),
+        )
+        .await
+        .unwrap();
         let wiring: (Option<String>, Option<String>) = page
             .evaluate(format!(
                 "(t => [t.getAttribute('aria-expanded'), t.getAttribute('aria-controls')])(document.querySelector({TRIGGER:?}))"
@@ -286,7 +295,7 @@ pub fn editable_combobox_typing(route: &str, query: &str) {
             .unwrap();
         assert_eq!(
             wiring,
-            (Some("true".into()), None),
+            (Some("false".into()), None),
             "{route}: nothing found"
         );
 
@@ -322,10 +331,14 @@ async fn typing_keeps_the_list_honest<D: Driver>(d: &mut D, _route: &str) -> Res
             && d.text(STATUS).await?.contains("No results"))
     })
     .await?;
+    eventually(d, "the combobox to collapse", async |d| {
+        Ok(d.attr(TRIGGER, "aria-expanded").await?.as_deref() == Some("false"))
+    })
+    .await?;
     let expanded = d.attr(TRIGGER, "aria-expanded").await?;
     let controls = d.attr(TRIGGER, "aria-controls").await?;
     ensure!(
-        expanded.as_deref() == Some("true") && controls.is_none(),
+        expanded.as_deref() == Some("false") && controls.is_none(),
         "{:?}: nothing found wired as {expanded:?} {controls:?}",
         d.platform()
     );

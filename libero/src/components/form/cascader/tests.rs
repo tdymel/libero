@@ -90,10 +90,13 @@ fn a_disabled_row_dims_its_text() {
 fn aria_controls_names_the_column_the_active_row_is_in() {
     let cursor = vec![1, 0];
     let controls = controlled_id("x-listbox", CascaderLayout::Columns, &cursor);
-    let active = active_descendant("x", CascaderLayout::Columns, &cursor, None).unwrap();
+    let active = active_descendant("x", CascaderLayout::Columns, &cursor, None, false).unwrap();
     assert_eq!(controls, "x-listbox-1");
     // Column `{listbox_id}-{level}`, row `{id}-option-{level}-{index}`: the levels match.
     assert_eq!(active, "x-option-1-0");
+    // The narrow parent row heads that same column.
+    let parent = active_descendant("x", CascaderLayout::Columns, &cursor, None, true).unwrap();
+    assert_eq!(parent, "x-option-1-parent");
 
     // Nothing highlighted: the one root column is named.
     assert_eq!(

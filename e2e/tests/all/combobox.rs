@@ -233,6 +233,33 @@ fn a_closed_select_only_list_opens_on_the_first_or_last_row_by_key() {
     });
 }
 
+/// Todo 3754 (D23-F1, APG select-only): typing opens a closed list on the row it starts, then moves the highlight.
+#[test]
+fn a_select_only_list_types_ahead() {
+    const LIT: &str =
+        "document.querySelector('[role=option][data-state~=active]')?.textContent.trim()";
+    block_on(async {
+        let fixture = Fixture::open("/combobox/select-only", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        keyboard::tab_to(page, TRIGGER, 10).await.unwrap();
+        keyboard::type_text(page, "da").await.unwrap();
+        wait::for_js_true(
+            page,
+            &format!("{LIT} === 'Damson'"),
+            "a typed da to open the list on Damson",
+        )
+        .await
+        .unwrap();
+        fixture
+            .console
+            .assert_clean("a select-only combobox")
+            .unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
 /// Todo 3057: a select-only list opens on its `selected_index` row, not the first.
 #[test]
 fn a_select_only_list_opens_on_its_selected_row() {
@@ -337,7 +364,7 @@ fn an_rtl_dropdown_stays_inside_the_viewport() {
     });
 }
 
-/// Todo 1269: an open list with no options draws and says its empty label, so it is expanded.
+/// Todo 1269: an open list with no options draws and says its empty label; with no listbox it is not expanded.
 #[test]
 fn an_empty_open_list_says_its_empty_label() {
     block_on(async {
@@ -355,13 +382,13 @@ fn an_empty_open_list_says_its_empty_label() {
         )
         .await
         .unwrap();
-        let expanded: Option<String> = page
-            .evaluate("document.querySelector('[role=combobox]').getAttribute('aria-expanded')")
-            .await
-            .unwrap()
-            .into_value()
-            .unwrap();
-        assert_eq!(expanded.as_deref(), Some("true"), "a drawn empty label");
+        wait::for_js_true(
+            page,
+            "document.querySelector('[role=combobox]').getAttribute('aria-expanded') === 'false'",
+            "no listbox, so not expanded (todo 3754)",
+        )
+        .await
+        .unwrap();
         fixture.close().await.unwrap();
     });
 }

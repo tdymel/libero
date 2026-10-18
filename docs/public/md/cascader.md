@@ -199,6 +199,7 @@ The dropdown is portaled out of the field, so its parts take the
 | `Down` or `Up` | Open: moves within the column, skipping disabled rows. |
 | `Right` | Open, in `"columns"`: expands the row, the cursor onto its first enabled child. |
 | `Left` | Open, in `"columns"`: up one level. At the root, nothing. |
+| `Up` | Open, below `sm` with `any_level`, on a column's first row: moves to the parent row at its head ("Select Europe"), which `Enter` picks. `Down` returns. |
 | `Enter` | Open, on a leaf: picks it and closes. On the committed leaf it keeps the value, or clears it with `allow_deselect`. |
 | `Enter` | Open, on a branch: expands it. Picks it too, with `any_level`. |
 | `Space` | Open, unless searchable: as `Enter`. |

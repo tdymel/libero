@@ -5,6 +5,7 @@ mod dropdown;
 mod keys;
 mod nodes;
 mod option;
+mod parent_row;
 mod rows;
 mod search;
 #[cfg(test)]

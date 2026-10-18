@@ -60,6 +60,7 @@ fn mode_code(_: &Control, values: &DemoValues) -> Vec<String> {
     ];
     if !suggesting(values) {
         code.push("select_only: true".to_string());
+        code.push("option_label: move |fruit: Fruit| fruit.label()".to_string());
         code.push(
             "selected_index: picked().and_then(|fruit| Fruit::options().iter().position(|f| *f == fruit))"
                 .to_string(),
@@ -154,6 +155,8 @@ pub fn ComboboxPage() -> Element {
                         .doc("For a trigger with no text to type in, such as a button: Space picks the highlighted row like Enter, and Tab or Alt+Up pick it before closing, as a `Select` does."),
                     prop("selected_index", "usize")
                         .doc("With `select_only`: the row the list opens on, usually the picked one, so Enter keeps the value instead of replacing it with the first row. Unset, or past the end, it opens on the first or last row."),
+                    prop("option_label", "Callback<T, String>")
+                        .doc("An option's plain text, which `select_only` types ahead on: a typed \"b\" highlights the next option starting with it and opens the list. Unset, nothing is typed ahead."),
                 ])
                 .parts("DropdownPart", list_dropdown_parts(COMBOBOX_DROPDOWN)),
                 props("ComboboxOption", vec![
@@ -191,6 +194,7 @@ pub fn ComboboxPage() -> Element {
                 .key(["PageUp", "PageDown"], "Moves the highlight 10 rows, stopping at the first or last.")
                 .key(["Enter"], "Open: picks the highlighted row. Every open starts on the first row, unless a key named another (End: the last; a `select_only` list opens on its `selected_index`), so in a suggestion list Enter replaces the typed text; press `Escape` first to keep it.")
                 .key(["Escape"], "Open: closes the list and keeps the typed text. Enter then goes to the field, so a form submits.")
+                .key(["Letter"], "With `select_only` and `option_label`: moves the highlight to the next enabled row starting with the typed text, and opens a closed list.")
                 .key(["Space"], "With `select_only`, open: picks the highlighted row, as Enter does.")
                 .key(["Tab"], "Closes the list. With `select_only`, picks the highlighted row first.")
                 .handles([

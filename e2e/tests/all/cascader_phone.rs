@@ -169,6 +169,61 @@ fn a_phone_picks_a_branch_from_its_first_row() {
     });
 }
 
+/// Todo 3754 (D24-F3): Up from a column's first row reaches the "Select <parent>" row, which
+/// is then the active, selected option and picks on Enter.
+#[test]
+fn a_phone_reaches_the_parent_row_by_keyboard() {
+    block_on(async {
+        let fixture = Fixture::open("/cascader/any-level", Viewport::Mobile)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        keyboard::tab_to(page, TRIGGER, 10).await.unwrap();
+        keyboard::press(page, keyboard::ARROW_DOWN).await.unwrap();
+        keyboard::press(page, keyboard::ARROW_RIGHT).await.unwrap();
+        keyboard::press(page, keyboard::ARROW_UP).await.unwrap();
+        expect(
+            page,
+            "Select Europe|2|true",
+            "Up to the parent row",
+            "mobile",
+        )
+        .await;
+        keyboard::press(page, keyboard::ARROW_DOWN).await.unwrap();
+        expect(
+            page,
+            "France|2|true",
+            "Down back to the first row",
+            "mobile",
+        )
+        .await;
+        keyboard::press(page, keyboard::ARROW_UP).await.unwrap();
+        expect(
+            page,
+            "Select Europe|2|true",
+            "Up to the parent row again",
+            "mobile",
+        )
+        .await;
+        keyboard::press(page, keyboard::ENTER).await.unwrap();
+        wait::for_js_true(
+            page,
+            &format!(
+                "document.querySelector('#picked').textContent === 'europe' \
+                 && document.querySelector({TRIGGER:?}).getAttribute('aria-expanded') === 'false'"
+            ),
+            "Enter on the parent row to pick Europe and close",
+        )
+        .await
+        .unwrap();
+        fixture
+            .console
+            .assert_clean("a phone's parent row")
+            .unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
 /// Todo 1084: the hidden columns leave the tree, and the shown one keeps its name
 /// from its hidden parent row (accname follows `aria-labelledby` into hidden content).
 #[test]

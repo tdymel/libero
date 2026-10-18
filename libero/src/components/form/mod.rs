@@ -47,14 +47,14 @@ pub use cascader::{
 pub use checkbox::{Checkbox, CheckboxPart, CheckboxProps};
 pub(crate) use checkbox::{CheckboxLook, LightState, use_checkbox_look};
 pub use chip::{Chip, ChipPart, ChipProps};
-pub(crate) use clear::{clear_button, use_refocus_on_close};
+pub(crate) use clear::clear_button;
 pub use color::{
     AlphaSlider, AlphaSliderProps, ColorCode, ColorField, ColorFieldProps, ColorFormat,
     ColorPicker, ColorPickerPart, ColorPickerProps, ColorSliderPart, ColorSwatch, ColorSwatchProps,
     HueSlider, HueSliderProps, ParseColorError, Swatches,
 };
 pub(crate) use combobox::{
-    CaretKeys, ComboboxCore, RowCache, VIRTUAL_ROWS, row_label, use_row_cache,
+    CaretKeys, ComboboxCore, RowCache, VIRTUAL_ROWS, row_label, use_refocus_on_close, use_row_cache,
 };
 pub use combobox::{
     Combobox, ComboboxOption, ComboboxOptionArgs, ComboboxOptionProps, ComboboxProps,

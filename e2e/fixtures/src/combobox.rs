@@ -52,6 +52,7 @@ fn SelectOnlyPage() -> Element {
             state: fruit,
             options: Fruit::options().to_vec(),
             select_only: true,
+            option_label: move |fruit: Fruit| fruit.label(),
             selected_index: Some(2),
             option: move |o: ComboboxOptionArgs<Fruit>| rsx! {
                 ComboboxOption { onpick: move |_| fruit.close(), "{o.value.label()}" }

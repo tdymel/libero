@@ -235,6 +235,7 @@ pub fn CascaderPage() -> Element {
                 .key(["Down", "Up"], "Open: moves within the column, skipping disabled rows.")
                 .key(["Right"], "Open, in `\"columns\"`: expands the row, the cursor onto its first enabled child.")
                 .key(["Left"], "Open, in `\"columns\"`: up one level. At the root, nothing.")
+                .key(["Up"], "Open, below `sm` with `any_level`, on a column's first row: moves to the parent row at its head (\"Select Europe\"), which `Enter` picks. `Down` returns.")
                 .key(["Enter"], "Open, on a leaf: picks it and closes. On the committed leaf it keeps the value, or clears it with `allow_deselect`.")
                 .key(["Enter"], "Open, on a branch: expands it. Picks it too, with `any_level`.")
                 .key(["Space"], "Open, unless searchable: as `Enter`.")

@@ -32,6 +32,18 @@ pub(super) fn node_at<'a>(
     children_at(nodes, parents).get(*last)
 }
 
+/// The parent path the last column's parent row picks, under `any_level`: the
+/// cursor minus its last index, when that is an enabled node.
+pub(super) fn parent_pick(
+    nodes: &[CascaderNode],
+    any_level: bool,
+    cursor: &[usize],
+) -> Option<Vec<usize>> {
+    let parents = cursor.split_last().map(|(_, parents)| parents)?;
+    let enabled = any_level && node_at(nodes, parents).is_some() && !disabled_at(nodes, parents);
+    enabled.then(|| parents.to_vec())
+}
+
 /// Disabled itself or by an ancestor. An unresolved path counts as disabled, so a stale cursor never commits.
 pub(super) fn disabled_at(nodes: &[CascaderNode], indices: &[usize]) -> bool {
     let mut level = nodes;
@@ -185,6 +197,18 @@ mod tests {
         assert_eq!(node_at(&tree, &[0, 0, 1]).unwrap().label, "Pear");
         assert_eq!(node_at(&tree, &[1]).unwrap().label, "Drink");
         assert!(node_at(&tree, &[]).is_none());
+    }
+
+    #[test]
+    fn parent_pick_needs_any_level_an_enabled_parent_and_a_second_column() {
+        let tree = tree();
+        assert_eq!(parent_pick(&tree, true, &[0, 1]), Some(vec![0]));
+        assert_eq!(parent_pick(&tree, true, &[0, 0, 0]), Some(vec![0, 0]));
+        assert_eq!(parent_pick(&tree, false, &[0, 1]), None);
+        // The roots have no parent; a disabled parent cannot be picked.
+        assert_eq!(parent_pick(&tree, true, &[1]), None);
+        assert_eq!(parent_pick(&tree, true, &[1, 0]), None);
+        assert_eq!(parent_pick(&tree, true, &[]), None);
     }
 
     #[test]

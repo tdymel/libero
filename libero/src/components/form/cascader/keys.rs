@@ -15,6 +15,7 @@ use super::{
     core::CascaderLayout,
     nodes::{FlatPath, children_at, disabled_at, first_enabled, last_enabled, step, step_in},
     option::CascaderNode,
+    parent_row::ParentRow,
 };
 
 /// The keyboard, by layout: `Columns` walks the tree, `Paths` a flat list (Left/Right stay the caret's).
@@ -37,9 +38,17 @@ pub(super) struct CascaderKeys {
     pub(super) trigger_id: String,
     /// `use_refocus_on_close`'s blur mark.
     pub(super) blurred: Signal<bool>,
+    pub(super) parent_row: ParentRow,
 }
 
 impl CascaderKeys {
+    /// The path a pick takes while the highlight is on the narrow list's parent row.
+    fn on_parent(&self) -> Option<Vec<usize>> {
+        let cursor = self.cursor.read();
+        self.parent_row
+            .picks(&self.nodes, self.any_level, self.layout, &cursor)
+    }
+
     pub(super) fn handle(&self, event: KeyboardEvent) {
         // A composing key picks an IME candidate in the search box (todo 3033).
         if self.disabled || event.is_composing() {
@@ -111,7 +120,9 @@ impl CascaderKeys {
     /// APG select-only: Tab and Alt+ArrowUp keep a pickable highlight, then
     /// close. Re-picking the committed path would clear it under `allow_deselect`.
     fn leave(&self) {
-        let here = self.cursor.read().clone();
+        let here = self
+            .on_parent()
+            .unwrap_or_else(|| self.cursor.read().clone());
         let pickable = match self.layout {
             CascaderLayout::Paths => self
                 .visible
@@ -144,6 +155,14 @@ impl CascaderKeys {
                 true
             }
             CascaderLayout::Columns => {
+                if let Some(parent) = self.on_parent() {
+                    // Re-picking the committed parent would clear it under `allow_deselect`.
+                    match self.committed.as_ref() == Some(&parent) {
+                        true => self.state.close(),
+                        false => (self.commit)(parent, true),
+                    }
+                    return true;
+                }
                 if here.is_empty() || disabled_at(&self.nodes, &here) {
                     return false;
                 }
@@ -265,6 +284,7 @@ impl CascaderKeys {
         if !open {
             (self.open)(true);
         }
+        self.parent_row.leave();
         let mut cursor = self.cursor;
         cursor.set(next);
         true
@@ -307,6 +327,14 @@ impl CascaderKeys {
         match key {
             Key::ArrowDown | Key::ArrowUp | Key::Home | Key::End => {
                 event.prevent_default();
+                // The parent row is the column's first: Down goes back to the cursor's row.
+                if self.on_parent().is_some() && matches!(key, Key::ArrowUp | Key::Home) {
+                    return;
+                }
+                if self.on_parent().is_some() && key == Key::ArrowDown {
+                    self.parent_row.leave();
+                    return;
+                }
                 let (parents, from) = match here.split_last() {
                     Some((last, parents)) => (parents.to_vec(), Some(*last)),
                     None => (Vec::new(), None),
@@ -316,13 +344,24 @@ impl CascaderKeys {
                     _ => from,
                 };
                 let forward = matches!(key, Key::ArrowDown | Key::Home);
-                if let Some(index) = step_in(nodes, &parents, from, forward) {
-                    let mut next = parents;
-                    next.push(index);
-                    cursor.set(next);
+                match step_in(nodes, &parents, from, forward) {
+                    Some(index) => {
+                        let mut next = parents;
+                        next.push(index);
+                        self.parent_row.leave();
+                        cursor.set(next.clone());
+                        if key == Key::Home {
+                            self.parent_row.reach(nodes, self.any_level, &next);
+                        }
+                    }
+                    // Up from the first row.
+                    None if key == Key::ArrowUp => {
+                        self.parent_row.reach(nodes, self.any_level, &here)
+                    }
+                    None => {}
                 }
             }
-            Key::ArrowRight if !paths_layout => {
+            Key::ArrowRight if !paths_layout && self.on_parent().is_none() => {
                 event.prevent_default();
                 let column = children_at(nodes, &here);
                 // A disabled branch does not open, as a click on it does not.

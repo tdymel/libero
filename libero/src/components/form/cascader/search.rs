@@ -3,7 +3,7 @@ use dioxus::prelude::*;
 use crate::{
     components::{
         common::{HtmlTag, Part, inset_focus_ring_sx},
-        form::{ComboboxState, DropdownPart, PreparedField},
+        form::{ComboboxState, DropdownPart, PreparedField, with_drawn_placeholder},
         layout::BoxStyle,
     },
     hooks::ElementHandle,
@@ -66,7 +66,8 @@ pub(super) fn search_header(
         state,
         mut blurred,
     } = search;
-    style
+    let drawn = placeholder.clone();
+    let input = style
         .element(&element)
         .attr_default("type", "text")
         .attr("data-slot", DropdownPart::Search.slot())
@@ -78,7 +79,8 @@ pub(super) fn search_header(
         .attr("aria-autocomplete", "list")
         .attr("role", "combobox")
         .attr("aria-haspopup", "listbox")
-        .attr("aria-expanded", "true")
+        // Expanded only while a listbox is there to control.
+        .attr("aria-expanded", controlled_id.is_some().to_string())
         .attr("aria-controls", controlled_id)
         .attr("aria-labelledby", field.label_id())
         .attr("aria-describedby", field.describedby())
@@ -98,7 +100,8 @@ pub(super) fn search_header(
             }
         })
         // No `onkeydown`: the portaled dropdown has it, and a second pass reopened a committing Enter.
-        .render(HtmlTag::Input, Vec::new(), ())
+        .render(HtmlTag::Input, Vec::new(), ());
+    with_drawn_placeholder(Some(&drawn), SEARCH_INSET, input)
 }
 
 /// Focuses the search box once the list is placed, the first moment it is visible and focus can take.

@@ -55,6 +55,10 @@ pub struct ComboboxProps<T: Clone + PartialEq + 'static> {
     /// With `select_only`: the row the list opens on, usually the picked one, instead of the first.
     #[props(default)]
     selected_index: Option<usize>,
+    /// An option's plain text, which `select_only` types ahead on: "b" highlights the next
+    /// option starting with "b", opening the list. Without it, nothing is typed ahead.
+    #[props(default)]
+    option_label: Option<Callback<T, String>>,
     #[props(extends = GlobalAttributes)]
     attributes: Vec<Attribute>,
     #[props(default, into)]
@@ -166,11 +170,20 @@ pub fn Combobox<T: Clone + PartialEq + 'static>(props: ComboboxProps<T>) -> Elem
         false => vec![VNode::empty(); count],
     };
 
+    let typeahead: Vec<String> = match (props.select_only, props.option_label) {
+        (true, Some(label)) => values
+            .iter()
+            .map(|value| label.call(value.clone()))
+            .collect(),
+        _ => Vec::new(),
+    };
+
     rsx! {
         ComboboxCore {
             rows,
             groups,
             row_disabled,
+            typeahead,
             active: active_row,
             onactive: move |row| state.set_active(Some(row)),
             opened,

@@ -320,8 +320,8 @@ pub fn Autocomplete<T: Options>(props: AutocompleteProps<T>) -> Element {
             row_keys,
             active: state.active(),
             onactive: move |row| state.set_active(Some(row)),
-            // Nothing to show is not open: `aria-expanded` must not claim a
-            // popup that draws nothing.
+            // "No results" still draws a popup, but `ComboboxCore` holds `aria-expanded`
+            // false without a listbox.
             opened: state.is_open()
                 && !disabled
                 && !readonly

@@ -16,8 +16,8 @@ use crate::{
 };
 
 use super::{
-    core::{CascaderRender, CascaderRowArgs, narrow_query, option_id},
-    nodes::{FlatPath, children_at, disabled_at, first_enabled, node_at},
+    core::{CascaderRender, CascaderRowArgs, narrow_query, option_id, parent_option_id},
+    nodes::{FlatPath, children_at, disabled_at, first_enabled, node_at, parent_pick},
     option::CascaderNode,
 };
 
@@ -162,6 +162,8 @@ pub(super) struct CascaderRows {
     pub(super) radius: Size,
     pub(super) labels: CascaderLabels,
     pub(super) state: ComboboxState,
+    /// The highlight is on the narrow list's parent row, not on the cursor's.
+    pub(super) parent_active: bool,
 }
 
 impl CascaderRows {
@@ -185,8 +187,9 @@ impl CascaderRows {
         let has_children = node.is_some_and(|node| !node.children.is_empty());
         let row_disabled = disabled_at(nodes, &indices);
         // One row per column: the active descendant always carries `aria-selected` (APG).
-        let on_cursor = self.cursor_now.starts_with(&indices);
-        let is_cursor = self.cursor_now == indices;
+        let yielded = self.parent_active && indices.len() == self.cursor_now.len();
+        let on_cursor = self.cursor_now.starts_with(&indices) && !yielded;
+        let is_cursor = self.cursor_now == indices && !yielded;
         // `Paths` is one listbox holding the cursor's ancestors too, so only the cursor row is marked.
         let marked = match whole_path {
             true => is_cursor,
@@ -269,23 +272,21 @@ impl CascaderRows {
     }
 
     /// Under `any_level`, the narrow list's first row picks the parent: a tap on it only drilled in.
-    /// Outside the keyboard's rows: Enter on the parent already picks it.
+    /// The keyboard reaches it with Up from the first row (`ParentRow`).
     fn pick_parent(&self, level: usize) -> Option<Element> {
-        let parents = self.cursor_now.get(..level).filter(|_| level > 0)?;
-        let parent = node_at(&self.nodes, parents).filter(|_| self.any_level)?;
-        if disabled_at(&self.nodes, parents) {
-            return None;
-        }
+        let parents = parent_pick(&self.nodes, self.any_level, &self.cursor_now)?;
+        let parent = node_at(&self.nodes, &parents)?;
         let text = fill(self.labels.select, &[("label", &parent.label)]);
-        let is_committed = self.committed.as_slice() == parents;
-        let (commit, state, picked) = (self.commit.clone(), self.state, parents.to_vec());
+        let is_committed = self.committed == parents;
+        let (commit, state, picked) = (self.commit.clone(), self.state, parents);
         Some(rsx! {
             ComboboxOption {
                 key: "{level}-parent",
-                id: format!("{}-option-{level}-parent", self.id),
+                id: parent_option_id(&self.id, level),
                 size: self.size,
                 radius: self.radius,
-                selected: false,
+                selected: self.parent_active,
+                active: self.parent_active,
                 states: States::new().with("committed", is_committed),
                 "data-slot": "pick-parent",
                 onpick: move |_| match is_committed {
@@ -316,7 +317,15 @@ impl CascaderRows {
                 let highlighted = cursor.get(level).copied();
                 let scroll_y = highlighted
                     .filter(|_| column.len() > 1)
-                    .map(|index| index as f64 / (column.len() - 1) as f64 * 100.0);
+                    .map(|index| index as f64 / (column.len() - 1) as f64 * 100.0)
+                    // The parent row heads the column.
+                    .map(|y| {
+                        if self.parent_active && level + 1 == depth {
+                            0.0
+                        } else {
+                            y
+                        }
+                    });
                 // Named by its parent row, so no English literal is needed.
                 let labelled_by = match level {
                     0 => label_id.clone(),

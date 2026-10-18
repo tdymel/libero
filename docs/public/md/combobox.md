@@ -37,6 +37,7 @@ fn Demo() -> Element {
             options: Fruit::options().to_vec(),
             // A button has no text to type in: Space and Tab pick, as in a `Select`.
             select_only: true,
+            option_label: move |fruit: Fruit| fruit.label(),
             selected_index: picked().and_then(|fruit| Fruit::options().iter().position(|f| *f == fruit)),
             option: move |o: ComboboxOptionArgs<Fruit>| rsx! {
                 ComboboxOption {
@@ -231,6 +232,7 @@ fn Demo() -> Element {
 | `disabled` | `bool` | `false` | Draws no list and ignores the keys, and the trigger reads as closed. Disable the trigger too. |
 | `select_only` | `bool` | `false` | For a trigger with no text to type in, such as a button: Space picks the highlighted row like Enter, and Tab or Alt+Up pick it before closing, as a `Select` does. |
 | `selected_index` | `usize` | - | With `select_only`: the row the list opens on, usually the picked one, so Enter keeps the value instead of replacing it with the first row. Unset, or past the end, it opens on the first or last row. |
+| `option_label` | `Callback<T, String>` | - | An option's plain text, which `select_only` types ahead on: a typed "b" highlights the next option starting with it and opens the list. Unset, nothing is typed ahead. |
 
 `T` is any `Clone + PartialEq`. `Options` is not required, since you hand the
 list in.
@@ -303,6 +305,7 @@ match at any depth inside the list.
 | `PageUp` or `PageDown` | Moves the highlight 10 rows, stopping at the first or last. |
 | `Enter` | Open: picks the highlighted row. Every open starts on the first row, unless a key named another (End: the last; a `select_only` list opens on its `selected_index`), so in a suggestion list Enter replaces the typed text; press `Escape` first to keep it. |
 | `Escape` | Open: closes the list and keeps the typed text. Enter then goes to the field, so a form submits. |
+| `Letter` | With `select_only` and `option_label`: moves the highlight to the next enabled row starting with the typed text, and opens a closed list. |
 | `Space` | With `select_only`, open: picks the highlighted row, as Enter does. |
 | `Tab` | Closes the list. With `select_only`, picks the highlighted row first. |
 

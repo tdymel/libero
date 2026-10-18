@@ -6,7 +6,7 @@ use pictogram_icons_lucide as lucide;
 use crate::{
     components::{
         common::{Glyph, HtmlTag, Part, attr},
-        form::{ComboboxState, field_control_sx},
+        form::{ComboboxState, PreparedField, field_control_sx},
         layout::BoxStyle,
     },
     context::IconSlot,
@@ -83,6 +83,22 @@ fn value_slot(display: &str, placeholder: Option<&str>) -> Element {
                 span { "data-slot": CascaderPart::Value.slot(), "data-placeholder": "true", "{placeholder}" }
             }
         }
+    }
+}
+
+/// The open search box is the combobox; a role-less trigger may not carry `aria-required`.
+pub(super) fn trigger_control(
+    control: BoxStyle,
+    field: &PreparedField,
+    search_open: bool,
+) -> BoxStyle {
+    match search_open {
+        true => control
+            .attr("data-slot", CascaderPart::Control.slot())
+            .attr("id", field.id().to_string()),
+        false => field
+            .aria(control)
+            .attr("aria-labelledby", field.label_id()),
     }
 }
 
