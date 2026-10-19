@@ -95,12 +95,12 @@ pub fn ColorFieldPage() -> Element {
                 .extends("input"),
             ],
             accessibility: a11y()
-                .key(["Down"], "Moves focus into the picker, onto the saturation area or the first swatch, where the `ColorPicker` keys apply.")
+                .key(["Down", "Alt+Down"], "Opens the dropdown and moves focus into the picker, onto the saturation area or the first swatch, where the `ColorPicker` keys apply.")
                 .key(["Enter"], "On text that does not parse: announces the refusal and keeps the text. On text that parses: sends `End`, which typing alone does not. A revert on blur is announced too.")
                 .key(["Escape"], "Closes the dropdown. From inside it, moves focus back to the text.")
                 .key(["Tab", "Shift+Tab"], "Past the dropdown's last stop: moves on as Tab from the text would. Before its first stop: back to the text.")
                 .handles([
-                    "Focus opens the dropdown and stays in the text, so typing works at once.",
+                    "Focus alone does not open the dropdown, so tabbing through the form changes nothing. A click opens it and stays in the text, so typing works at once.",
                     "A swatch that closes the dropdown moves focus back to the text.",
                     "Focus leaving both the text and the dropdown closes it.",
                     "Leaving text that does not parse announces the localization's `color.invalid`, whether `fix_on_blur` reverts it or keeps it. It is said once, so a blur after Enter does not repeat it.",
@@ -108,7 +108,7 @@ pub fn ColorFieldPage() -> Element {
                     "Android's Back button closes the dropdown rather than the app. Focus in the dropdown goes back to the text.",
                 ])
                 .must(["Without a `label`, set `aria_label`. Otherwise screen readers announce an unnamed combobox."])
-                .example("A brand color field, `ColorField { label: \"Brand color\" }`: focus opens the dropdown and stays in the text, so `#228be6` can be typed at once. Down moves into the picker, and Escape brings focus back to the text."),
+                .example("A brand color field, `ColorField { label: \"Brand color\" }`: type `#228be6` at once, click to open the dropdown with the caret staying in the text, or press Down to open it and move into the picker. Escape brings focus back to the text."),
             lead: rsx! {
                 Text {
                     "A text field holding a "

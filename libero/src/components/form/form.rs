@@ -18,6 +18,7 @@ use crate::{
     platform::{self, ElementApi},
     sx::{StaticSx, sx},
     theme::FormDefaults,
+    utils::warn,
 };
 
 /// What a `Form` or `Fieldset` can hold as its value.
@@ -81,7 +82,8 @@ base_props! {
         /// A heading over the error summary.
         #[props(default, into)]
         summary_title: Option<String>,
-        /// Controls the form from outside, made with `use_form()`. Taken once.
+        /// Controls the form from outside, made with `use_form()`. Taken once: a swapped
+        /// handle is ignored with a warning, so `key` the `Form` to use another.
         #[props(default)]
         form: Option<FormHandle>,
         children: Element,
@@ -119,6 +121,9 @@ base_props! {
 #[component]
 pub fn Form<V: FormValue>(props: FormProps<V>) -> Element {
     let handle = use_hook(|| props.form.unwrap_or_else(FormHandle::new));
+    if props.form.is_some_and(|form| form != handle) {
+        warn("Form: a `form` handle swapped after mount is ignored; key the Form to use another.");
+    }
     let mut scope = handle.scope;
     use_context_provider(|| scope);
     use_context_provider(|| handle);

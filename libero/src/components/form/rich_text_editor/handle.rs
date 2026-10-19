@@ -317,4 +317,37 @@ mod tests {
         assert_ne!(ran_in, Some(caller));
         assert!(dom.in_scope(caller, || handle.run(Builtin::Undo)));
     }
+
+    thread_local! {
+        static PAIR: Cell<Option<(RichTextHandle, RichTextHandle, Signal<bool>)>> =
+            const { Cell::new(None) };
+    }
+
+    /// Todo 3796: a `handle` swapped after mount takes the editor over, and the old one lets go.
+    #[test]
+    fn a_swapped_handle_takes_over_the_editor() {
+        let mut dom = VirtualDom::new(|| {
+            let (first, second) = (use_rich_text_editor(), use_rich_text_editor());
+            let swapped = use_signal(|| false);
+            use_hook(|| PAIR.set(Some((first, second, swapped))));
+            let handle = if swapped() { second } else { first };
+            rsx! { LiberoProvider { RichTextEditor { label: "Comment", handle } } }
+        });
+        dom.rebuild_in_place();
+        dom.render_immediate(&mut dioxus::core::NoOpMutations);
+        let (first, second, mut swapped) = PAIR.get().expect("the caller rendered");
+        let insert = |dom: &mut VirtualDom, handle: RichTextHandle| {
+            dom.in_scope(ScopeId::APP, || handle.edit(|state| state.insert_text("a")))
+        };
+        assert!(insert(&mut dom, first));
+        assert!(!insert(&mut dom, second));
+
+        dom.in_scope(ScopeId::APP, || swapped.set(true));
+        for _ in 0..3 {
+            dom.process_events();
+            dom.render_immediate(&mut dioxus::core::NoOpMutations);
+        }
+        assert!(insert(&mut dom, second));
+        assert!(!insert(&mut dom, first));
+    }
 }

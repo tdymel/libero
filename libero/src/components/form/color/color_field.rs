@@ -152,9 +152,6 @@ pub fn ColorField(props: ColorFieldProps) -> Element {
     // The text as typed, while it differs from `value`'s own spelling. `None`
     // shows `value` in `format`.
     let mut draft = use_signal(|| Option::<String>::None);
-    // Focus is coming back to the text input from the dropdown, which closed:
-    // that focus must not open it again.
-    let mut returning = use_signal(|| false);
     // Arrow Down asked for focus in the picker, once the dropdown is drawn.
     let mut entering = use_signal(|| false);
     // Asked after mount: a server render has no eyedropper, and a client that
@@ -347,15 +344,10 @@ pub fn ColorField(props: ColorFieldProps) -> Element {
             }
         });
     };
-    let mut focus_input = move || {
-        returning.set(true);
-        if anchor
+    let focus_input = move || {
+        let _ = anchor
             .query_selector("input[data-controlled]")
-            .and_then(|input| input.focus())
-            .is_err()
-        {
-            returning.set(false);
-        }
+            .and_then(|input| input.focus());
     };
     // On the Escape stack exactly while the key handler below would take
     // Escape, so a `HoverCard` around this field leaves the press to it.
@@ -368,10 +360,6 @@ pub fn ColorField(props: ColorFieldProps) -> Element {
             opened.set(false);
         }),
     );
-    let focused = move || match returning() {
-        true => returning.set(false),
-        false => opened.set(true),
-    };
     // Text that parsed was already emitted, so it goes back to the value's own
     // spelling; text that did not stays only if asked.
     let unparsable = move || {
@@ -394,21 +382,14 @@ pub fn ColorField(props: ColorFieldProps) -> Element {
         }
     };
     // Element 0 is the text input, 1 the dropdown; the box closes once focus
-    // is in neither.
+    // is in neither. Focus alone does not open it (WCAG 3.2.1): Arrow Down or a click does.
     let focus = use_focus_within(
         move || vec![anchor.mounted(), floating.mounted()],
         move |change| {
             let mut opened = opened;
-            match (change.element, change.within) {
-                (0, true) => {
-                    let mut focused = focused;
-                    focused();
-                }
-                (0, false) => {
-                    let mut blurred = blurred;
-                    blurred();
-                }
-                _ => {}
+            if let (0, false) = (change.element, change.within) {
+                let mut blurred = blurred;
+                blurred();
             }
             match change.in_group {
                 Some(false) => opened.set(false),

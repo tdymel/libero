@@ -25,7 +25,8 @@ pub struct NodeViewProps {
 /// island, so its text must name the node for screen readers.
 ///
 /// Built-ins draw the same way under their names: `paragraph`, `heading` (`level`),
-/// `quote`, `list` (`ordered`, `start`), `list_item` and `rule`. `code_block` stays fixed.
+/// `quote`, `list` (`ordered`, `start`), `list_item` (`checked` on a task; its children
+/// hold the task box) and `rule`. `code_block` stays fixed.
 ///
 /// ```rust
 /// # use dioxus::prelude::*;

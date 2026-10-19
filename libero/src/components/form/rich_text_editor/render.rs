@@ -148,36 +148,39 @@ fn block(block: &Block, ctx: RenderCtx<'_>) -> Element {
             ol { start: (*start != 1).then(|| start.to_string()), {blocks(block.children(), ctx)} }
         },
         BlockKind::List { .. } => rsx! { ul { {blocks(block.children(), ctx)} } },
-        BlockKind::ListItem { checked } => {
-            let children = block.children();
-            // Inside the first line's leaf, so a caret beside the box is still in the text.
-            let lead = children.first().filter(|first| {
-                checked.is_some()
-                    && first.kind == BlockKind::Paragraph
-                    && !ctx.views.contains("paragraph")
-            });
-            // The box is named by its task's text; an empty line keeps the generic label.
-            let text_id = lead
-                .filter(|first| !first.is_empty())
-                .map(|first| format!("{}-task-{}", ctx.id_prefix, first.key.0));
-            let task = checked.map(|checked| task_box(checked, block.key, text_id.clone(), ctx));
-            let rest = if lead.is_some() {
-                &children[1..]
-            } else {
-                children
-            };
-            rsx! {
-                li { "data-checked": checked.map(|checked| checked.to_string()),
-                    match lead {
-                        Some(first) => paragraph(first, text_id, task, ctx),
-                        None => rsx! { {task} },
-                    }
-                    {blocks(rest, ctx)}
-                }
+        BlockKind::ListItem { checked } => rsx! {
+            li { "data-checked": checked.map(|checked| checked.to_string()),
+                {item_content(block, *checked, ctx)}
             }
-        }
+        },
         BlockKind::Rule => rsx! { hr { "data-key": key, contenteditable: "false" } },
         BlockKind::Custom { name, attrs, .. } => custom(name, attrs, key, &block.content, ctx),
+    }
+}
+
+/// A list item's task box, if any, and its blocks.
+fn item_content(block: &Block, checked: Option<bool>, ctx: RenderCtx<'_>) -> Element {
+    let children = block.children();
+    // Inside the first line's leaf, so a caret beside the box is still in the text.
+    let lead = children.first().filter(|first| {
+        checked.is_some() && first.kind == BlockKind::Paragraph && !ctx.views.contains("paragraph")
+    });
+    // The box is named by its task's text; an empty line keeps the generic label.
+    let text_id = lead
+        .filter(|first| !first.is_empty())
+        .map(|first| format!("{}-task-{}", ctx.id_prefix, first.key.0));
+    let task = checked.map(|checked| task_box(checked, block.key, text_id.clone(), ctx));
+    let rest = if lead.is_some() {
+        &children[1..]
+    } else {
+        children
+    };
+    rsx! {
+        match lead {
+            Some(first) => paragraph(first, text_id, task, ctx),
+            None => rsx! { {task} },
+        }
+        {blocks(rest, ctx)}
     }
 }
 
@@ -236,6 +239,12 @@ fn builtin_view(name: &str, block: &Block, key: String, ctx: RenderCtx<'_>) -> E
             heading(level, key.clone(), inlines(block.inlines(), ctx))
         }
         BlockKind::Rule => VNode::empty(),
+        BlockKind::ListItem { checked } => {
+            if let Some(checked) = checked {
+                attrs.insert("checked".into(), (*checked).into());
+            }
+            item_content(block, *checked, ctx)
+        }
         kind => {
             if let BlockKind::List { ordered, start } = kind {
                 attrs.insert("ordered".into(), (*ordered).into());
@@ -412,7 +421,7 @@ fn marked(text: &str, marks: &Marks) -> Element {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::components::form::rich_text_editor::model::Doc;
+    use crate::components::form::rich_text_editor::{model::Doc, node_view::NodeViewProps};
 
     fn app() -> Element {
         let doc = Doc::from_markdown("- [x] Buy milk\n- [ ] ");
@@ -450,5 +459,45 @@ mod tests {
             1,
             "{html}"
         );
+    }
+
+    fn task_item(props: NodeViewProps) -> Element {
+        let checked = props
+            .attrs
+            .get("checked")
+            .and_then(|checked| checked.as_bool());
+        rsx! {
+            li { "data-checked": checked.map(|checked| checked.to_string()), {props.children} }
+        }
+    }
+
+    fn with_view() -> Element {
+        let doc = Doc::from_markdown("- [x] Buy milk\n- plain");
+        let views = NodeViews::new().with("list_item", task_item);
+        blocks(
+            &doc.blocks,
+            RenderCtx {
+                source_code: None,
+                on_code: None,
+                on_task: None,
+                task_label: "Task done",
+                id_prefix: "ed",
+                views: &views,
+                fence: None,
+                heading_offset: 0,
+            },
+        )
+    }
+
+    /// Todo 3794: a caller's `list_item` view still gets the task box and its state.
+    #[test]
+    fn a_list_item_view_keeps_the_task_box() {
+        let mut dom = VirtualDom::new(with_view);
+        dom.rebuild_in_place();
+        let html = dioxus_ssr::render(&dom);
+        assert_eq!(html.matches("role=\"checkbox\"").count(), 1, "{html}");
+        assert!(html.contains("aria-checked=\"true\""), "{html}");
+        assert_eq!(html.matches("data-checked=\"true\"").count(), 1, "{html}");
+        assert_eq!(html.matches("data-checked").count(), 1, "{html}");
     }
 }

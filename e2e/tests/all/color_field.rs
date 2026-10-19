@@ -68,7 +68,7 @@ fn tab_past_the_dropdown_moves_on_from_the_field() {
 }
 
 /// Todo 706: a blur of the text input closes the dropdown, as natively and in
-/// `ChronoField` (the wrapper's `focusout` since 8eea95fa).
+/// `ChronoField` (the wrapper's `focusout` since 8eea95fa). Todo 3765: focus alone never opens it.
 #[test]
 fn a_blur_of_the_text_input_closes_the_dropdown() {
     block_on(async {
@@ -77,10 +77,20 @@ fn a_blur_of_the_text_input_closes_the_dropdown() {
             .unwrap();
         let page = &fixture.page;
         keyboard::tab_to(page, INPUT, 5).await.unwrap();
+        crate::settle::painted(page).await.unwrap();
+        expect(
+            page,
+            "!document.querySelector('[role=dialog]')",
+            "focus alone to leave the dropdown closed (WCAG 3.2.1)",
+        )
+        .await;
+        page.evaluate(format!("document.querySelector({INPUT:?}).click()"))
+            .await
+            .unwrap();
         expect(
             page,
             "!!document.querySelector('[role=dialog]')",
-            "focus on the text input to open the dropdown",
+            "a click on the text input to open the dropdown",
         )
         .await;
         page.evaluate(format!("document.querySelector({INPUT:?}).blur()"))

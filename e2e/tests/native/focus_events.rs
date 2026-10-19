@@ -380,13 +380,19 @@ fn color_app() -> Element {
     }
 }
 
-/// Focus alone opens it on the web; natively the silent move does.
+/// Focus alone opens nothing (WCAG 3.2.1); Arrow Down opens it.
 #[test]
-fn tab_onto_a_colour_field_opens_it_and_tab_out_closes_it() {
+fn tab_onto_a_colour_field_opens_nothing_and_tab_out_closes_it() {
     let mut page = mount(color_app);
     page.click("#before");
     page.tab();
-    assert!(page.exists("[role=dialog]"), "Tab onto it opened nothing");
+    assert!(!page.exists("[role=dialog]"), "Tab onto it opened it");
+    page.press(Key::Named(NamedKey::ArrowDown));
+    assert!(page.exists("[role=dialog]"), "Arrow Down opened nothing");
+    page.press(Key::Named(NamedKey::Escape));
+    assert!(!page.exists("[role=dialog]"), "Escape left it open");
+    page.click("input[data-controlled]");
+    assert!(page.exists("[role=dialog]"), "a click opened nothing");
 
     page.shift_tab();
     assert!(

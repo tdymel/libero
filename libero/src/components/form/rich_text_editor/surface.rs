@@ -83,7 +83,7 @@ const current = () => {
         +f.dataset.key, units(f, s.focusNode, s.focusOffset)], caret: caretAt(s, f) };
 };
 const report = () => {
-    if (!root()) { document.removeEventListener('selectionchange', report); return; }
+    if (!root()) { teardown(); return; }
     const now = current();
     if (now) dioxus.send({ ...now, press: fresh });
 };
@@ -106,16 +106,19 @@ let pressed = false, fresh = false, held = 0, lastKey = '';
 let shiftEnter = false;
 // A press outside, as the toolbar's, reports the fresh press at once: its `selectionchange`
 // may come after the command runs (todo 2624).
-document.addEventListener('mousedown', (e) => {
+const onDown = (e) => {
     const r = root();
+    if (!r) { teardown(); return; }
     const inside = !!r && r.contains(e.target);
-    if (fresh && r && !inside) report();
+    if (fresh && !inside) report();
     fresh = inside;
     if (fresh) pressed = true;
-}, true);
+};
+document.addEventListener('mousedown', onDown, true);
 // Typed text and clipboard keys go natively; another key waits for held input too (todo 2071).
 const native = ['Control', 'Meta', 'Shift', 'Alt', 'AltGraph', 'CapsLock', 'Process', 'Unidentified', 'Dead'];
-document.addEventListener('keydown', (e) => {
+const onKey = (e) => {
+    if (!root()) { teardown(); return; }
     lastKey = e.key;
     if (e.key === 'Enter' || e.key === 'Process') shiftEnter = e.shiftKey;
     fresh = false;
@@ -126,11 +129,13 @@ document.addEventListener('keydown', (e) => {
     e.stopImmediatePropagation();
     held += 1;
     dioxus.send({ key: [e.key, e.code, e.ctrlKey, e.metaKey, e.altKey, e.shiftKey] });
-}, true);
-document.addEventListener('beforeinput', (e) => {
+};
+document.addEventListener('keydown', onKey, true);
+const onInput = (e) => {
     const r = root();
+    if (!r) { teardown(); return; }
     // A spelling or autocorrect replacement: the target range, else a non-collapsed selection.
-    if (r && r.contains(e.target) && e.inputType === 'insertReplacementText') {
+    if (r.contains(e.target) && e.inputType === 'insertReplacementText') {
         const data = e.data ?? (e.dataTransfer && e.dataTransfer.getData('text/plain'));
         const t = e.getTargetRanges()[0], s = document.getSelection();
         const [sn, so, en, eo] = t ? [t.startContainer, t.startOffset, t.endContainer, t.endOffset]
@@ -142,7 +147,7 @@ document.addEventListener('beforeinput', (e) => {
         if (a && h && data != null) dioxus.send({ replace: [+a.dataset.key, units(a, sn, so), +h.dataset.key, units(h, en, eo), data] });
         return;
     }
-    if (!r || !r.contains(e.target) || !(pressed || held) || e.isComposing
+    if (!r.contains(e.target) || !(pressed || held) || e.isComposing
         || e.inputType === 'insertCompositionText') return;
     const now = current();
     if (!now) return;
@@ -151,12 +156,13 @@ document.addEventListener('beforeinput', (e) => {
     held += 1;
     dioxus.send({ ...now, press: pressed, input: [e.inputType, e.data, lastKey] });
     pressed = false;
-}, true);
+};
+document.addEventListener('beforeinput', onInput, true);
 // A scroll or resize moves the caret in the viewport: re-place an open overlay. Both fire
 // at most once a frame; no requestAnimationFrame, which a background tab never runs.
 const onMove = () => {
     const r = root();
-    if (!r) { removeEventListener('scroll', onMove, true); removeEventListener('resize', onMove); return; }
+    if (!r) { teardown(); return; }
     const s = document.getSelection(), f = s && leafOf(s.focusNode);
     if (f && document.querySelector(`[data-overlay="${token}"]`)) dioxus.send({ caret: caretAt(s, f) });
 };
@@ -164,11 +170,12 @@ addEventListener('scroll', onMove, { capture: true, passive: true });
 addEventListener('resize', onMove);
 // Chrome steps over a rendered code block (contenteditable=false): step into it instead.
 const onArrow = (e) => {
+    if (!root()) { teardown(); return; }
     const up = e.key === 'ArrowUp';
     if (!up && e.key !== 'ArrowDown') return;
     if (e.shiftKey || e.altKey || e.ctrlKey || e.metaKey || e.isComposing) return;
     const r = root(), s = document.getSelection();
-    if (!r || !r.contains(e.target) || !s || !s.isCollapsed || !s.rangeCount) return;
+    if (!r.contains(e.target) || !s || !s.isCollapsed || !s.rangeCount) return;
     const l = leafOf(s.focusNode);
     if (!l) return;
     const stops = [...r.querySelectorAll('[data-key], [data-code-key]')];
@@ -187,7 +194,8 @@ document.addEventListener('keydown', onArrow);
 // A press in the empty space under the last block puts the caret on a line there.
 const onPress = (e) => {
     const r = root();
-    if (!r || e.target !== r || e.button !== 0 || r.contentEditable !== 'true') return;
+    if (!r) { teardown(); return; }
+    if (e.target !== r || e.button !== 0 || r.contentEditable !== 'true') return;
     const parts = r.querySelectorAll('[data-key], [data-code], [data-node]');
     const bottom = Math.max(...[...parts].map((p) => p.getBoundingClientRect().bottom));
     if (!parts.length || e.clientY <= bottom) return;
@@ -200,7 +208,7 @@ document.addEventListener('mousedown', onPress);
 let clip = null;
 const onClip = (e) => {
     const r = root();
-    if (!r) { removeEventListener('copy', onClip, true); removeEventListener('cut', onClip, true); return; }
+    if (!r) { teardown(); return; }
     const now = current(), text = String(document.getSelection());
     if (!r.contains(e.target) || !e.clipboardData || !now || !text) return;
     const same = clip && clip.at.every((v, i) => v === now.selection[i]);
@@ -209,6 +217,20 @@ const onClip = (e) => {
     e.preventDefault();
 };
 if (clips) { addEventListener('copy', onClip, true); addEventListener('cut', onClip, true); }
+// The editor is gone: drop every document and window listener this script added.
+function teardown() {
+    document.removeEventListener('selectionchange', report);
+    document.removeEventListener('mousedown', onDown, true);
+    document.removeEventListener('keydown', onKey, true);
+    document.removeEventListener('beforeinput', onInput, true);
+    document.removeEventListener('keydown', onArrow);
+    document.removeEventListener('mousedown', onPress);
+    removeEventListener('scroll', onMove, true);
+    removeEventListener('resize', onMove);
+    removeEventListener('copy', onClip, true);
+    removeEventListener('cut', onClip, true);
+}
+try {
 while (true) {
     const m = await dioxus.recv();
     if (m.ack) held -= 1;
@@ -233,6 +255,7 @@ while (true) {
         setTimeout(() => dioxus.send({ synced: true }), 0);
     }
 }
+} finally { teardown(); }
 "#;
 
 /// What the script reports.
@@ -282,7 +305,7 @@ pub(crate) struct Caret {
     pub rtl: bool,
 }
 
-/// One editor's script. Dropping the editor leaves the listener until the next event.
+/// One editor's script. Its listeners go when the editor's root is gone or the channel closes.
 #[derive(Clone, Copy)]
 pub(crate) struct Surface {
     eval: Signal<Option<document::Eval>>,
@@ -364,4 +387,24 @@ impl Surface {
 
 fn clip_message(anchor: (u64, usize), head: (u64, usize), markdown: String) -> serde_json::Value {
     serde_json::json!({ "clip": [anchor.0, anchor.1, head.0, head.1], "markdown": markdown })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::SCRIPT;
+
+    /// Todo 3795: every listener the script adds goes when the editor's root is gone.
+    #[test]
+    fn the_script_removes_every_listener_it_adds() {
+        let teardown = SCRIPT
+            .split("function teardown() {")
+            .nth(1)
+            .and_then(|rest| rest.split("\n}\n").next())
+            .expect("a teardown");
+        assert_eq!(
+            SCRIPT.matches("addEventListener(").count(),
+            teardown.matches("removeEventListener(").count(),
+            "{teardown}"
+        );
+    }
 }

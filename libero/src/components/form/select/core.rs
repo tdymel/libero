@@ -197,8 +197,15 @@ impl ChipFocus {
             .and_then(|button| button.focus())
             .or_else(|_| slot.query_selector(&chip).and_then(|chip| chip.focus()));
         // A WebView queries nothing below a handle.
-        if let Err(PlatformError::Unsupported) = focused {
-            let _ = focus_selector(&button).or_else(|_| focus_selector(&chip));
+        let focused = match focused {
+            Err(PlatformError::Unsupported) => {
+                focus_selector(&button).or_else(|_| focus_selector(&chip))
+            }
+            other => other,
+        };
+        // A chip that is gone leaves the trigger, not the page.
+        if focused.is_err() {
+            let _ = self.handles.trigger.focus();
         }
     }
 

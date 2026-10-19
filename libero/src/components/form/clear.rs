@@ -8,8 +8,8 @@ use crate::{
         form::{PreparedField, SLOT_BUTTON_SX, slot_icon_size},
     },
     context::IconSlot,
-    hooks::{ElementHandle, current_localization},
-    platform::ElementApi,
+    hooks::{ElementHandle, current_localization, id_selector},
+    platform::{ElementApi, focus_selector},
     sx::ThemeAwareValue,
     theme::Size,
 };
@@ -30,6 +30,7 @@ pub(crate) fn clear_button(
         .and_then(PreparedField::label_id)
         .zip(id.clone())
         .map(|(label, id)| format!("{id} {label}"));
+    let control = field.map(|field| id_selector(field.id()));
     show.then(|| {
         rsx! {
             ActionIcon {
@@ -39,7 +40,12 @@ pub(crate) fn clear_button(
                 size: icon_size,
                 sx: &SLOT_BUTTON_SX,
                 onclick: move |event: MouseEvent| {
-                    let _ = target.focus();
+                    // A target the handle cannot reach (a WebView) is found by the field's id.
+                    if target.focus().is_err()
+                        && let Some(control) = &control
+                    {
+                        let _ = focus_selector(control);
+                    }
                     onclear(event);
                 },
                 Glyph { slot: IconSlot::Close, icon: lucide::x::outlined }

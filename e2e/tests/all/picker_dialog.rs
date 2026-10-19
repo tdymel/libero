@@ -19,11 +19,6 @@ const FIELDS: [(&str, &str); 2] = [
     ("/chrono-field", "#chrono-field"),
 ];
 
-/// The colour field still opens on focus; the date field only on Arrow Down or a click.
-fn opens_on_focus(input: &str) -> bool {
-    input != "#chrono-field"
-}
-
 /// Todo 1012: a tap on a date field opens the calendar and, on a phone, no
 /// soft keyboard over it. The web keeps its keyboard.
 async fn a_tap_opens_only_the_calendar<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
@@ -162,9 +157,6 @@ fn only_alt_arrow_down_enters_the_dialog() {
             let fixture = Fixture::open(route, Viewport::Desktop).await.unwrap();
             let page = &fixture.page;
             keyboard::tab_to(page, input, 5).await.unwrap();
-            if opens_on_focus(input) {
-                wait::for_visible(page, DIALOG).await.unwrap();
-            }
             keyboard::assert_chords_ignored_with(
                 page,
                 &[("Ctrl", keyboard::CTRL), ("Meta", keyboard::META)],
@@ -224,20 +216,16 @@ fn a_typed_range_reads_at_the_theme_separator() {
 
 async fn dialog_contract(page: &Page, input: &str) -> Result<()> {
     keyboard::tab_to(page, input, 5).await?;
-    if opens_on_focus(input) {
-        wait::for_visible(page, DIALOG).await?;
-    } else {
-        // WCAG 3.2.1: focus alone opens nothing.
-        wait::for_js_true(
-            page,
-            &format!(
-                "document.querySelector({input:?})?.getAttribute('aria-expanded') === 'false' \
-                 && !document.querySelector({DIALOG:?})"
-            ),
-            "the focused field to stay closed",
-        )
-        .await?;
-    }
+    // WCAG 3.2.1: focus alone opens nothing.
+    wait::for_js_true(
+        page,
+        &format!(
+            "document.querySelector({input:?})?.getAttribute('aria-expanded') === 'false' \
+             && !document.querySelector({DIALOG:?})"
+        ),
+        "the focused field to stay closed",
+    )
+    .await?;
     focus::assert_focused(page, input, "tabbing into the field").await?;
 
     keyboard::press(page, keyboard::ARROW_DOWN).await?;

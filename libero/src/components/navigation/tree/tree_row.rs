@@ -184,6 +184,9 @@ pub(super) struct TreeRowProps {
     /// Under a disabled branch, so the row acts disabled too.
     #[props(default)]
     pub ancestor_disabled: bool,
+    /// A disabled `Fieldset` around the tree, on its top-level rows.
+    #[props(default)]
+    pub group_disabled: bool,
     pub guides: bool,
 }
 
@@ -203,7 +206,8 @@ pub(super) fn TreeRow(props: TreeRowProps) -> Element {
         _ => Vec::new(),
     };
     drop(open);
-    let disabled = node.disabled || props.ancestor_disabled;
+    let own_disabled = node.disabled || props.group_disabled;
+    let disabled = own_disabled || props.ancestor_disabled;
     let is_roving_active = props.active.as_deref().is_some_and(<[usize]>::is_empty);
     // The `<li>` is the roving tab stop; `render_node`'s content is always "-1".
     let li_tabindex = if is_roving_active { "0" } else { "-1" };
@@ -270,7 +274,7 @@ pub(super) fn TreeRow(props: TreeRowProps) -> Element {
 
     // The node's own flag, unless an ancestor's opacity already covers this row.
     let row_states = states()
-        .with("disabled", node.disabled && !props.ancestor_disabled)
+        .with("disabled", own_disabled && !props.ancestor_disabled)
         .with("guides", props.guides)
         .with(props.size.state_name(), props.guides)
         .into();

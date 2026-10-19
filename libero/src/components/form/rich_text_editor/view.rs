@@ -492,96 +492,118 @@ pub fn RichTextEditor(props: RichTextEditorProps) -> Element {
         ran
     };
 
-    let handle = use_hook(|| {
-        let handle = props.handle;
-        if let Some(handle) = handle {
-            let owner = token.clone();
-            // The caller's scope sits above the values these read, so they run as the editor's.
-            let scope = current_scope_id();
-            let as_editor = move |f: &mut dyn FnMut() -> bool| {
-                Runtime::try_current().is_some_and(|runtime| {
-                    runtime.in_scope(scope, || {
-                        let seen = placed.peek().0;
-                        let ran = f();
-                        if placed.peek().0 != seen {
-                            let mut reveal = reveal;
-                            reveal.set(true);
-                        }
-                        ran
-                    })
-                })
-            };
-            let run = Rc::new(move |name: CommandName| {
-                as_editor(&mut || run_command(name.clone(), true, false))
-            });
-            let clear = Rc::new(move || {
-                as_editor(&mut || {
-                    let before = editor.peek().doc().clone();
-                    if !*can_edit.peek() || before == Doc::new() {
-                        return false;
+    let runner = use_hook(|| {
+        // The caller's scope sits above the values these read, so they run as the editor's.
+        let scope = current_scope_id();
+        let as_editor = move |f: &mut dyn FnMut() -> bool| {
+            Runtime::try_current().is_some_and(|runtime| {
+                runtime.in_scope(scope, || {
+                    let seen = placed.peek().0;
+                    let ran = f();
+                    if placed.peek().0 != seen {
+                        let mut reveal = reveal;
+                        reveal.set(true);
                     }
-                    let (mut editor, mut generation, mut changed) = (editor, generation, changed);
-                    editor.write().reset(Doc::new());
-                    generation += 1;
-                    changed(Some(before), true);
-                    true
+                    ran
                 })
-            });
-            let focus = Rc::new(move || {
-                as_editor(&mut || {
-                    let mut changed = changed;
-                    let editable = *can_edit.peek();
-                    if editable {
-                        changed(None, true);
-                    }
-                    editable
-                })
-            });
-            let edit = Rc::new(move |f: &mut dyn FnMut(&mut EditorState) -> bool| {
-                as_editor(&mut || {
-                    if !*can_edit.peek() {
-                        return false;
-                    }
-                    let f = std::cell::RefCell::new(&mut *f);
-                    let mut edit = edit;
-                    edit(
-                        &|live| live.apply(Record::Step, |state| (f.borrow_mut())(state)),
-                        true,
-                    )
-                })
-            });
-            let runner = Runner {
-                run,
-                edit,
-                clear,
-                focus,
-            };
-            handle.attach(&owner, runner);
+            })
+        };
+        let run = Rc::new(move |name: CommandName| {
+            as_editor(&mut || run_command(name.clone(), true, false))
+        });
+        let clear = Rc::new(move || {
+            as_editor(&mut || {
+                let before = editor.peek().doc().clone();
+                if !*can_edit.peek() || before == Doc::new() {
+                    return false;
+                }
+                let (mut editor, mut generation, mut changed) = (editor, generation, changed);
+                editor.write().reset(Doc::new());
+                generation += 1;
+                changed(Some(before), true);
+                true
+            })
+        });
+        let focus = Rc::new(move || {
+            as_editor(&mut || {
+                let mut changed = changed;
+                let editable = *can_edit.peek();
+                if editable {
+                    changed(None, true);
+                }
+                editable
+            })
+        });
+        let edit = Rc::new(move |f: &mut dyn FnMut(&mut EditorState) -> bool| {
+            as_editor(&mut || {
+                if !*can_edit.peek() {
+                    return false;
+                }
+                let f = std::cell::RefCell::new(&mut *f);
+                let mut edit = edit;
+                edit(
+                    &|live| live.apply(Record::Step, |state| (f.borrow_mut())(state)),
+                    true,
+                )
+            })
+        });
+        Runner {
+            run,
+            edit,
+            clear,
+            focus,
         }
-        handle
     });
+    // The handle the runner is attached to; a swapped `handle` prop moves it in the effect below.
+    let mut attached = use_hook(|| {
+        if let Some(handle) = props.handle {
+            handle.attach(&token, runner.clone());
+        }
+        CopyValue::new(props.handle)
+    });
+    let publish = {
+        let token = token.clone();
+        move |handle: RichTextHandle| {
+            let live = editor.peek();
+            handle.publish(
+                &token,
+                Status::of(live.state(), live.can_undo(), live.can_redo()),
+                live.state(),
+            );
+        }
+    };
+    {
+        let (token, publish) = (token.clone(), publish.clone());
+        let wanted = props.handle;
+        use_effect(use_reactive!(|wanted| {
+            let before = *attached.peek();
+            if before == wanted {
+                return;
+            }
+            if let Some(old) = before {
+                old.detach(&token);
+            }
+            if let Some(new) = wanted {
+                new.attach(&token, runner.clone());
+                publish(new);
+            }
+            attached.set(wanted);
+        }));
+    }
     {
         let token = token.clone();
         use_drop(move || {
-            if let Some(handle) = handle {
+            if let Some(handle) = *attached.peek() {
                 handle.detach(&token);
             }
         });
     }
-    {
-        let token = token.clone();
-        use_effect(move || {
-            let _ = revision();
-            if let Some(handle) = handle {
-                let live = editor.peek();
-                handle.publish(
-                    &token,
-                    Status::of(live.state(), live.can_undo(), live.can_redo()),
-                    live.state(),
-                );
-            }
-        });
-    }
+    use_effect(move || {
+        let _ = revision();
+        if let Some(handle) = *attached.peek() {
+            publish(handle);
+        }
+    });
 
     // Kept current for the surface's held-back input, which runs outside a render.
     let mut intercept = use_hook(|| CopyValue::new(props.intercept));

@@ -8,6 +8,7 @@ use crate::{
             Input, base_props, css_string, has_shortcut_modifier, parts_enum, parts_under_sx,
         },
         data_display::List,
+        form::Disabled,
     },
     hooks::{
         ElementHandle, TYPEAHEAD_RESET, listener, typeahead_match, use_element, use_theme,
@@ -37,16 +38,17 @@ struct VisibleNode<'a> {
     label: &'a str,
 }
 
-/// `disabled` cascades to the nodes under a disabled branch.
+/// `disabled` cascades to the nodes under a disabled branch, or all of them when `off`.
 fn push_visible_nodes<'a>(
     nodes: &'a [TreeNodeErased],
     expanded: &HashSet<String>,
     parent: Option<(&'a str, bool)>,
+    off: bool,
     out: &mut Vec<VisibleNode<'a>>,
 ) {
     let (parent_id, inherited) = (parent.map(|(id, _)| id), parent.is_some_and(|(_, off)| off));
     for node in nodes {
-        let disabled = inherited || node.disabled;
+        let disabled = off || inherited || node.disabled;
         out.push(VisibleNode {
             id: &node.id,
             parent_id,
@@ -55,7 +57,13 @@ fn push_visible_nodes<'a>(
             label: &node.label,
         });
         if node.has_children() && expanded.contains(&node.id) {
-            push_visible_nodes(&node.children, expanded, Some((&node.id, disabled)), out);
+            push_visible_nodes(
+                &node.children,
+                expanded,
+                Some((&node.id, disabled)),
+                off,
+                out,
+            );
         }
     }
 }
@@ -63,9 +71,10 @@ fn push_visible_nodes<'a>(
 fn visible_order<'a>(
     nodes: &'a [TreeNodeErased],
     expanded: &HashSet<String>,
+    off: bool,
 ) -> Vec<VisibleNode<'a>> {
     let mut out = Vec::new();
-    push_visible_nodes(nodes, expanded, None, &mut out);
+    push_visible_nodes(nodes, expanded, None, off, &mut out);
     out
 }
 
@@ -112,6 +121,25 @@ fn path_to<'a>(nodes: &'a [TreeNodeErased], id: &str) -> Option<Vec<&'a str>> {
         path.insert(0, node.id.as_str());
         Some(path)
     })
+}
+
+/// Where focus goes if `id` cannot take it: its parent, then the rows around it, nearest first.
+fn focus_fallbacks(order: &[VisibleNode], id: &str) -> Vec<String> {
+    let Some(index) = order.iter().position(|node| node.id == id) else {
+        return Vec::new();
+    };
+    let near = (1..order.len()).flat_map(|gap| {
+        [index.checked_sub(gap), index.checked_add(gap)]
+            .into_iter()
+            .flatten()
+            .filter_map(|at| order.get(at))
+    });
+    order[index]
+        .parent_id
+        .into_iter()
+        .chain(near.map(|node| node.id).take(4))
+        .map(str::to_string)
+        .collect()
 }
 
 fn sibling_id(order: &[VisibleNode], current: &str, offset: isize) -> Option<String> {
@@ -281,15 +309,12 @@ impl TreeDom {
         }
     }
 
-    fn focus(self, target_id: &str) {
+    /// Whether the row was found and focused.
+    fn focus(self, target_id: &str) -> bool {
         let selector = format!("[data-tree-id={}]", css_string(target_id));
         match self.root.query_selector(&selector) {
-            Err(PlatformError::Unsupported) => {
-                let _ = focus_selector(&self.page_row(target_id));
-            }
-            found => {
-                let _ = found.and_then(|el| el.focus());
-            }
+            Err(PlatformError::Unsupported) => focus_selector(&self.page_row(target_id)).is_ok(),
+            found => found.and_then(|el| el.focus()).is_ok(),
         }
     }
 
@@ -493,7 +518,9 @@ fn TreeCore(props: TreeCoreProps) -> Element {
     let size = props.size.copied_or(theme.tree.size);
     let guides = props.guides.unwrap_or(theme.tree.guides);
 
-    let order = visible_order(&props.data, &expanded.read());
+    // A disabled `Fieldset` cannot reach a span row the way it does a button.
+    let group_disabled = try_use_context::<Disabled>().is_some_and(|Disabled(group)| group());
+    let order = visible_order(&props.data, &expanded.read(), group_disabled);
     let visible = |id: &String| order.iter().any(|node| node.id == id);
     // So a removed row hands the tab stop to the row taking its place.
     let mut last_index = use_hook(|| CopyValue::new(0_usize));
@@ -526,9 +553,16 @@ fn TreeCore(props: TreeCoreProps) -> Element {
     // A focused row that leaves `data` takes focus with it. Read before the
     // DOM update, while the doomed row still holds focus.
     let refocus = vanished && dom.holds_focus();
-    use_effect(use_reactive!(|resolved_active, refocus| {
+    let fallbacks = match (&resolved_active, refocus) {
+        (Some(id), true) => focus_fallbacks(&order, id),
+        _ => Vec::new(),
+    };
+    use_effect(use_reactive!(|resolved_active, refocus, fallbacks| {
         if let Some(id) = resolved_active.filter(|_| refocus) {
-            dom.focus(&id);
+            // A row that is not drawn leaves focus to its parent, then its nearest rows.
+            let _ = std::iter::once(id)
+                .chain(fallbacks)
+                .any(|id| dom.focus(&id));
         }
     }));
     // The first row with that id, as `Tabs` does.
@@ -563,7 +597,7 @@ fn TreeCore(props: TreeCoreProps) -> Element {
         if !dom.focused(&current) {
             return;
         }
-        let order = visible_order(&data_for_keydown, &expanded.read());
+        let order = visible_order(&data_for_keydown, &expanded.read(), group_disabled);
         let Some(node) = order.iter().find(|node| node.id == current) else {
             return;
         };
@@ -738,6 +772,7 @@ fn TreeCore(props: TreeCoreProps) -> Element {
                     active_id,
                     render_node: props.render_node.clone(),
                     guides,
+                    group_disabled,
                 }
             }
         }
@@ -906,7 +941,7 @@ mod tests {
             TreeNode::new("b", "b".to_string()),
         ]);
         let open: HashSet<String> = ["a".to_string()].into();
-        let order = visible_order(&nodes, &open);
+        let order = visible_order(&nodes, &open, false);
         let disabled: Vec<_> = order.iter().map(|node| (node.id, node.disabled)).collect();
         assert_eq!(disabled, [("a", true), ("a1", true), ("b", false)]);
         assert_eq!(order[1].parent_id, Some("a"));
@@ -926,6 +961,70 @@ mod tests {
         let open: HashSet<String> = ["c".to_string()].into();
         assert_eq!(closed_siblings(&order, &order[4], &open), ["a"]);
         assert_eq!(closed_siblings(&order, &order[3], &open), ["c1"]);
+    }
+
+    /// Todo 3779: a span row is no native control, so the fieldset's flag reaches every row.
+    #[test]
+    fn a_disabled_fieldset_disables_every_row() {
+        fn app() -> Element {
+            let data = vec![
+                TreeNode::new("a", "a".to_string())
+                    .children(vec![TreeNode::new("a1", "a1".to_string())]),
+                TreeNode::new("b", "b".to_string()),
+            ];
+            rsx! {
+                crate::LiberoProvider {
+                    crate::components::Fieldset::<()> { disabled: true,
+                        Tree { aria_label: "Files", data, default_expanded: HashSet::from(["a".to_string()]) }
+                    }
+                }
+            }
+        }
+        let mut dom = VirtualDom::new(app);
+        dom.rebuild_in_place();
+        let html = dioxus_ssr::render(&dom);
+        assert_eq!(html.matches("role=\"treeitem\"").count(), 3, "{html}");
+        assert_eq!(html.matches("aria-disabled=\"true\"").count(), 3, "{html}");
+    }
+
+    /// Todo 3780: a row that cannot take focus hands it to its parent, then the nearest rows.
+    #[test]
+    fn focus_falls_back_to_the_parent_then_the_nearest_rows() {
+        let order = [
+            node("a", "a", false),
+            VisibleNode {
+                parent_id: Some("a"),
+                ..node("a1", "a1", false)
+            },
+            VisibleNode {
+                parent_id: Some("a"),
+                ..node("a2", "a2", false)
+            },
+            node("b", "b", false),
+        ];
+        assert_eq!(focus_fallbacks(&order, "a2"), ["a", "a1", "b", "a"]);
+        assert_eq!(focus_fallbacks(&order, "a"), ["a1", "a2", "b"]);
+        assert!(focus_fallbacks(&order, "zzz").is_empty());
+    }
+
+    #[test]
+    fn a_disabled_group_disables_the_keys_on_every_visible_row() {
+        let nodes = erase_nodes::<String>(&[
+            TreeNode::new("a", "a".to_string())
+                .children(vec![TreeNode::new("a1", "a1".to_string())]),
+            TreeNode::new("b", "b".to_string()),
+        ]);
+        let open: HashSet<String> = ["a".to_string()].into();
+        assert!(
+            visible_order(&nodes, &open, true)
+                .iter()
+                .all(|node| node.disabled)
+        );
+        assert!(
+            visible_order(&nodes, &open, false)
+                .iter()
+                .all(|node| !node.disabled)
+        );
     }
 
     #[test]

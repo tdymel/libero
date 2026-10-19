@@ -1177,6 +1177,34 @@ fn a_blank_status_or_rule_message_warns() {
 }
 
 /// Todo 2822: a composite rule's blank message warns too, once per `Form`.
+/// Todo 3796: the `form` prop is taken once, so a swapped handle says it is ignored.
+#[test]
+fn a_swapped_form_handle_warns() {
+    fn app() -> Element {
+        let (first, second) = (use_form(), use_form());
+        let flip = use_context_provider(|| Signal::new(false));
+        let form = if flip() { second } else { first };
+        rsx! {
+            LiberoProvider {
+                Form::<()> { form }
+            }
+        }
+    }
+    let mut dom = VirtualDom::new(app);
+    dom.rebuild_in_place();
+    dom.render_immediate(&mut dioxus::core::NoOpMutations);
+    crate::utils::take_warnings();
+    dom.in_scope(ScopeId::APP, || consume_context::<Signal<bool>>().set(true));
+    dom.render_immediate(&mut dioxus::core::NoOpMutations);
+    let warnings = crate::utils::take_warnings();
+    assert!(
+        warnings
+            .iter()
+            .any(|warning| warning.contains("swapped after mount")),
+        "{warnings:?}"
+    );
+}
+
 #[test]
 fn a_blank_composite_rule_message_warns_once() {
     use crate::utils::warnings_of;
