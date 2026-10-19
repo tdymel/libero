@@ -134,7 +134,11 @@ pub fn ShortcutHelp(props: ShortcutHelpProps) -> Element {
             dd { "{shortcut.description}" }
         })
     });
-    let title = props.title.unwrap_or_else(|| words.title.to_string());
+    // A blank title names neither the dialog nor the scroll region (todo 3841).
+    let title = props
+        .title
+        .filter(|title| !title.trim().is_empty())
+        .unwrap_or_else(|| words.title.to_string());
 
     // A named tab stop only while it scrolls, so the keyboard can scroll it (todo 1615).
     let scroll_element = use_element();
@@ -213,6 +217,24 @@ mod tests {
             .collect();
         assert!(RENDERS.load(Ordering::Relaxed) >= 3);
         assert_eq!(bad.len(), 1, "{bad:?}");
+    }
+
+    /// Todo 3841: a blank title falls back to the localized one.
+    #[test]
+    fn a_blank_title_falls_back() {
+        fn app() -> Element {
+            rsx! {
+                crate::LiberoProvider {
+                    ShortcutHelp { title: " ", shortcuts: vec![Shortcut::new("mod+b", "Bold")] }
+                }
+            }
+        }
+        let mut dom = VirtualDom::new(app);
+        dom.rebuild_in_place();
+        let html = dioxus_ssr::render(&dom);
+
+        let title = ShortcutHelpLabels::ENGLISH.title;
+        assert!(html.contains(&format!(">{title}</h2>")), "{html}");
     }
 
     /// Todo 2449: Space, Meta and the named keys follow the localization.

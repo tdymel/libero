@@ -379,19 +379,21 @@ pub fn use_spotlight(options: SpotlightOptions) -> SpotlightHandle {
                 .clone()
                 .unwrap_or_else(|| rsx! { "{labels.nothing_found}" })
         });
+        // A blank one names nothing, so the localized label stands (todo 3800).
         let aria_label = options
             .aria_label
             .clone()
+            .filter(|label| !label.trim().is_empty())
             .unwrap_or_else(|| labels.label.to_string());
-        // A given placeholder says what this palette searches, so it names the box too (todo 2380).
-        let search_label = options
+        let given_placeholder = options
             .placeholder
+            .clone()
+            .filter(|placeholder| !placeholder.trim().is_empty());
+        // A given placeholder says what this palette searches, so it names the box too (todo 2380).
+        let search_label = given_placeholder
             .clone()
             .unwrap_or_else(|| labels.search.to_string());
-        let placeholder = options
-            .placeholder
-            .clone()
-            .unwrap_or_else(|| labels.placeholder.to_string());
+        let placeholder = given_placeholder.unwrap_or_else(|| labels.placeholder.to_string());
         // `ComboboxCore`'s linear map: the active row lands in view, nothing measured.
         let scroll_y = active
             .filter(|_| count > 1)
@@ -583,7 +585,7 @@ fn spotlight_rows(
             })
             .collect();
         rows.push(match group {
-            Some(group) => {
+            Some(group) if !group.trim().is_empty() => {
                 let label_id = format!("{id}-group-{group_index}");
                 rsx! {
                     div {
@@ -601,8 +603,8 @@ fn spotlight_rows(
                     }
                 }
             }
-            // Bare rows, as in `Combobox`: an unnamed group adds nothing.
-            None => rsx! {
+            // Bare rows, as in `Combobox`: an unnamed or blank group adds nothing.
+            _ => rsx! {
                 Fragment { key: "group-{generation}-{group_index}", {options_rows.into_iter()} }
             },
         });
@@ -692,5 +694,40 @@ mod tests {
             .collect();
 
         assert_eq!(table, expected);
+    }
+
+    /// Todo 3800, 3840: blank names fall back to the localized ones, a blank group is bare.
+    #[test]
+    fn blank_names_name_nothing() {
+        #[component]
+        fn Palette() -> Element {
+            let spotlight = use_spotlight(SpotlightOptions {
+                actions: Some(Callback::new(|_: String| {
+                    vec![SpotlightAction::new("Home").group(" ").onclick(|_| {})]
+                })),
+                aria_label: Some(" ".into()),
+                placeholder: Some(" ".into()),
+                ..Default::default()
+            });
+            use_hook(|| spotlight.open());
+            rsx! {}
+        }
+        fn app() -> Element {
+            rsx! {
+                crate::LiberoProvider { Palette {} }
+            }
+        }
+        let mut dom = VirtualDom::new(app);
+        dom.rebuild_in_place();
+        for _ in 0..3 {
+            dom.render_immediate(&mut dioxus::core::NoOpMutations);
+        }
+        let html = dioxus_ssr::render(&dom);
+
+        assert!(html.contains(">Home<"), "{html}");
+        // The stylesheet names groups, so look for the label id.
+        assert!(!html.contains("-group-0"), "{html}");
+        assert!(!html.contains("aria-label=\" \""), "{html}");
+        assert!(!html.contains("placeholder=\" \""), "{html}");
     }
 }

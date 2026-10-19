@@ -183,8 +183,9 @@ pub(crate) fn FloatingWindow(props: FloatingWindowProps) -> Element {
     } = props.options;
     let onclose = props.onclose;
     let placement = placement.copied_or(defaults.placement);
-    // A blank one names nothing, and must not mask the title.
+    // A blank one names nothing: the label must not mask the title, nor the title the label.
     let aria_label = aria_label.filter(|label| !label.trim().is_empty());
+    let title = title.filter(|title| !title.trim().is_empty());
     // Non-modal: content opened from a modal must not inherit its close.
     use_context_provider(|| ModalContext::NONE);
     let title_id = use_id();

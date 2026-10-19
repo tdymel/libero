@@ -228,18 +228,20 @@ pub(crate) fn Lightbox(opening: LightboxOpening, options: LightboxOptions) -> El
     let slides: Vec<Element> = (0..count)
         .map(|i| lightbox_slide(stage_parts, i, &items[i], picture(i), described.clone()))
         .collect();
+    // A blank one names nothing, so the localized label stands (todo 3801).
+    let given_label = options
+        .aria_label
+        .clone()
+        .filter(|label| !label.trim().is_empty());
     use_name_warning(
-        options.aria_label.is_some(),
+        given_label.is_some(),
         "Lightbox: no `aria_label`, falling back to the localization's. A dialog needs a name of its own to be told apart.",
     );
     use_name_warning(
         items.iter().all(|item| !item.alt.trim().is_empty()),
         "Lightbox: a `LightboxItem` has an empty `alt`. Its picture is focusable and would have no name.",
     );
-    let label = options
-        .aria_label
-        .clone()
-        .unwrap_or_else(|| localization.lightbox.label.to_string());
+    let label = given_label.unwrap_or_else(|| localization.lightbox.label.to_string());
 
     // The zoomable picture is the tab stop, so the stage's track takes none.
     jump.set_slide_stop(options.zoom);
@@ -377,5 +379,48 @@ pub(crate) fn Lightbox(opening: LightboxOpening, options: LightboxOptions) -> El
                 }
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use dioxus::prelude::*;
+
+    use crate::hooks::{LightboxItem, LightboxOptions, use_lightbox};
+
+    /// Todo 3801: a blank `aria_label` falls back to the localized one.
+    #[test]
+    fn a_blank_aria_label_falls_back() {
+        #[component]
+        fn Opener() -> Element {
+            let lightbox = use_lightbox(LightboxOptions {
+                aria_label: Some(" ".into()),
+                ..Default::default()
+            });
+            use_hook(move || {
+                lightbox.open_with((
+                    vec![
+                        LightboxItem::new("/a.jpg", "A lake"),
+                        LightboxItem::new("/b.jpg", "A hill"),
+                    ],
+                    0,
+                ))
+            });
+            rsx! {}
+        }
+        fn app() -> Element {
+            rsx! {
+                crate::LiberoProvider { Opener {} }
+            }
+        }
+        let mut dom = VirtualDom::new(app);
+        dom.rebuild_in_place();
+        for _ in 0..3 {
+            dom.render_immediate(&mut dioxus::core::NoOpMutations);
+        }
+        let html = dioxus_ssr::render(&dom);
+
+        assert!(!html.contains("aria-label=\" \""), "{html}");
+        assert!(html.contains("aria-label=\"Gallery\""), "{html}");
     }
 }

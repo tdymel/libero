@@ -308,6 +308,11 @@ pub fn HoverCard(props: HoverCardProps) -> Element {
         let name = |name| attribute_text(&props.attributes, name).filter(|_| text_stop);
         let (stop_label, stop_labelledby) = (name("aria-label"), name("aria-labelledby"));
         let mut attributes = props.attributes.clone();
+        // A blank name is no name: dropped, not spread as `aria-label=""` (todo 3841).
+        attributes.retain(|attribute| {
+            !(matches!(attribute.name, "aria-label" | "aria-labelledby")
+                && matches!(&attribute.value, AttributeValue::Text(text) if text.trim().is_empty()))
+        });
         attributes.extend(dismiss.floating_events());
         attributes.extend(owner_link(&anchor));
         card.element(&floating)
@@ -466,5 +471,28 @@ fn card_tab(event: &KeyboardEvent, anchor: ElementHandle, floating: ElementHandl
     // Forward off the trigger, the browser's own Tab moves on.
     if inside || (via_trigger && backwards) {
         event.prevent_default();
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// Todo 3841: a blank `aria_label` is not spread onto the dialog.
+    #[test]
+    fn a_blank_aria_label_is_not_spread() {
+        fn app() -> Element {
+            rsx! {
+                crate::LiberoProvider {
+                    HoverCard { open: true, aria_label: " ", content: rsx! { "Profile" }, "Ada" }
+                }
+            }
+        }
+        let mut dom = VirtualDom::new(app);
+        dom.rebuild_in_place();
+        let html = dioxus_ssr::render(&dom);
+
+        assert!(html.contains("role=\"dialog\""), "{html}");
+        assert!(!html.contains("aria-label"), "{html}");
     }
 }

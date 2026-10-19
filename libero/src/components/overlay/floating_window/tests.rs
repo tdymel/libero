@@ -83,6 +83,35 @@ fn a_window_inside_a_modal_is_not_modal() {
     assert!(!html.contains("aria-modal=\"true\""), "{html}");
 }
 
+/// Todo 3802: a blank title renders no empty heading and no dangling `aria-labelledby`.
+#[test]
+fn a_blank_title_names_nothing() {
+    fn app() -> Element {
+        let onclose = use_callback(|()| {});
+        rsx! {
+            LiberoProvider {
+                FloatingWindow {
+                    options: FloatingWindowOptions {
+                        title: Some("  ".into()),
+                        aria_label: Some("Notes".into()),
+                        ..Default::default()
+                    },
+                    onclose,
+                    onmount: |_| {},
+                    opener: |()| None,
+                    "content"
+                }
+            }
+        }
+    }
+    let mut dom = VirtualDom::new(app);
+    dom.rebuild_in_place();
+    let html = dioxus_ssr::render(&dom);
+    assert!(!html.contains("<h2"), "{html}");
+    assert!(!html.contains("aria-labelledby=\"\""), "{html}");
+    assert!(html.contains("aria-label=\"Notes\""), "{html}");
+}
+
 const BOUNDS: WindowBounds = WindowBounds {
     min: (240.0, 120.0),
     max: (480.0, 360.0),

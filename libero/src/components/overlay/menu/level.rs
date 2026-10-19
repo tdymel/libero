@@ -379,6 +379,10 @@ fn draw_rows(
                 rows.push(draw_item(item, *index));
                 *index += 1;
             }
+            MenuEntry::Group { label, items } if label.trim().is_empty() => {
+                // A blank label names nothing, and an unnamed group adds nothing (todo 3840).
+                rows.extend(draw_rows(items, level_id, index, group, draw_item));
+            }
             MenuEntry::Group { label, items } => {
                 let label_id = format!("{level_id}-group-{group}");
                 let key = *group;

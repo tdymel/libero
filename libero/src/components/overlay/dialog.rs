@@ -294,7 +294,9 @@ fn DialogHeader(
                     variant: "standard",
                     color: "muted",
                     size: "sm",
-                    aria_label: close_label.unwrap_or_else(|| current_localization().common.close.to_string()),
+                    aria_label: close_label
+                        .filter(|label| !label.trim().is_empty())
+                        .unwrap_or_else(|| current_localization().common.close.to_string()),
                     onclick: move |_: MouseEvent| close.call(()),
                     Glyph { slot: IconSlot::Close, icon: lucide::x::outlined }
                 }
@@ -345,6 +347,24 @@ mod tests {
         assert!(!html.contains("aria-label=\" \""), "{html}");
         assert_eq!(html.matches("<h2").count(), 1, "{html}");
         assert!(html.contains("aria-label=\"Notes\""), "{html}");
+    }
+
+    /// Todo 3791: a blank `close_label` falls back to the localized close.
+    #[test]
+    fn a_blank_close_label_falls_back() {
+        fn app() -> Element {
+            rsx! {
+                crate::LiberoProvider {
+                    Dialog { title: "Notes", close_button: true, close_label: " ", "one" }
+                }
+            }
+        }
+        let mut dom = VirtualDom::new(app);
+        dom.rebuild_in_place();
+        let html = dioxus_ssr::render(&dom);
+
+        assert!(!html.contains("aria-label=\" \""), "{html}");
+        assert!(html.contains("aria-label=\"Close\""), "{html}");
     }
 
     /// Todo 2564: a spread `alertdialog` survives, any other role gives way.

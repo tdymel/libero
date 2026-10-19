@@ -124,7 +124,7 @@ impl MenuItem {
 
     /// Opens `url` in a new tab as an `<a role="menuitem">`, with `Anchor`'s hidden new-tab
     /// hint and [`new_tab_icon`](Self::new_tab_icon). Replaces [`onselect`](Self::onselect) or
-    /// [`submenu`](Self::submenu). Disabled, or a `javascript:`/`data:`/`vbscript:` URL: a plain button.
+    /// [`submenu`](Self::submenu). Disabled: an `<a>` without `href`. A `javascript:`/`data:`/`vbscript:` URL: a plain button.
     ///
     /// ```no_run
     /// # use libero::components::MenuItem;

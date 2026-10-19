@@ -907,10 +907,13 @@ fn TourCard(
     let first = index == 0;
     let last = index + 1 >= total;
     let progress = fill(labels.progress, &[("n", &(index + 1)), ("m", &total)]);
+    // A blank one names nothing, so the localized label stands (todo 3839).
+    let title = step.title.clone().filter(|title| !title.trim().is_empty());
     let name = options
         .aria_label
         .clone()
-        .or_else(|| step.title.is_none().then(|| labels.label.to_string()));
+        .filter(|label| !label.trim().is_empty())
+        .or_else(|| title.is_none().then(|| labels.label.to_string()));
     // Next's key first: under RTL that is ArrowLeft, as `logical_key` reads it.
     let rtl = try_use_context::<LiberoContext>()
         .is_some_and(|context| *context.direction.read() == Direction::Rtl);
@@ -942,7 +945,7 @@ fn TourCard(
                 progress,
                 act,
             };
-            let name = name.clone().or_else(|| step.title.clone());
+            let name = name.clone().or_else(|| title.clone());
             rsx! {
                 layout::Box {
                     "data-slot": TourPart::Card.slot(),
@@ -972,7 +975,7 @@ fn TourCard(
             rsx! {
                 Dialog {
                     "data-slot": TourPart::Card.slot(),
-                    title: step.title.clone(),
+                    title,
                     aria_label: name,
                     close_label: labels.close,
                     onclose: move |_| act.call(Move::Close),
@@ -1031,6 +1034,48 @@ fn TourCard(
 mod tests {
     use super::*;
     use crate::components::common::part_table;
+    use crate::localization::Localization;
+
+    thread_local! {
+        static CUSTOM: Cell<bool> = const { Cell::new(false) };
+    }
+
+    #[component]
+    fn BlankTour() -> Element {
+        let tour = use_tour(TourOptions {
+            steps: vec![TourStep::new("a").title(" ").description("Hello")],
+            aria_label: Some(" ".into()),
+            card: CUSTOM
+                .get()
+                .then(|| Callback::new(|_: TourView| rsx! { p { "custom" } })),
+            ..Default::default()
+        });
+        use_hook(|| tour.start());
+        rsx! {}
+    }
+
+    /// Todo 3839: a blank `aria_label` and a blank step title fall back to the localized label.
+    #[test]
+    fn blank_names_fall_back_in_both_cards() {
+        fn app() -> Element {
+            rsx! {
+                crate::LiberoProvider { BlankTour {} }
+            }
+        }
+        for custom in [false, true] {
+            CUSTOM.set(custom);
+            let mut dom = VirtualDom::new(app);
+            dom.rebuild_in_place();
+            for _ in 0..4 {
+                dom.render_immediate(&mut dioxus::core::NoOpMutations);
+            }
+            let html = dioxus_ssr::render(&dom);
+
+            let label = Localization::ENGLISH.tour.label;
+            assert!(html.contains(&format!("aria-label=\"{label}\"")), "{html}");
+            assert!(!html.contains("aria-label=\" \""), "{html}");
+        }
+    }
 
     /// The slot names are public: a rename here is a breaking change.
     #[test]
