@@ -53,14 +53,18 @@ pub fn DirectionToggle(props: DirectionToggleProps) -> Element {
     let labels = use_localization().direction_toggle;
 
     let next = direction.get().flipped();
-    let aria_label = match props.label {
-        Some(label) => label.call(next),
-        None => match next {
-            Direction::Rtl => labels.to_rtl,
-            Direction::Ltr => labels.to_ltr,
-        }
-        .to_string(),
-    };
+    // A blank name names nothing: fall back to the localized one.
+    let aria_label = props
+        .label
+        .map(|label| label.call(next))
+        .filter(|label| !label.trim().is_empty())
+        .unwrap_or_else(|| {
+            match next {
+                Direction::Rtl => labels.to_rtl,
+                Direction::Ltr => labels.to_ltr,
+            }
+            .to_string()
+        });
     let group = use_button_group();
     let variant = Input::Value(
         props

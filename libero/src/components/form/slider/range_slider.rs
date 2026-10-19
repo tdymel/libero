@@ -174,11 +174,16 @@ pub fn RangeSlider<V: SliderValue>(props: RangeSliderProps<V>) -> Element {
         .states(&props.states)
         .attributes(&props.attributes)
         .prepare();
+    // A blank name names nothing: it neither renders nor counts as one.
+    let named = |name: Option<String>| name.filter(|name| !name.trim().is_empty());
+    let aria_label = named(props.aria_label.clone());
+    let aria_label_from = named(props.aria_label_from.clone());
+    let aria_label_to = named(props.aria_label_to.clone());
     crate::components::common::use_name_warning(
         field.label_id().is_some()
-            || props.aria_label.is_some()
-            || props.aria_label_from.is_some()
-            || props.aria_label_to.is_some(),
+            || aria_label.is_some()
+            || aria_label_from.is_some()
+            || aria_label_to.is_some(),
         "RangeSlider: no `label` or `aria_label`, so the thumbs are announced as just \"Minimum\" and \"Maximum\".",
     );
 
@@ -194,7 +199,7 @@ pub fn RangeSlider<V: SliderValue>(props: RangeSliderProps<V>) -> Element {
     // Unlabelled, each thumb's own name carries the group's and says required,
     // as the label's id would.
     let unlabelled = field.label_id().is_none();
-    let group_label = props.aria_label.filter(|_| unlabelled);
+    let group_label = aria_label.filter(|_| unlabelled);
     let thumb_name = |name: String| {
         let name = match &group_label {
             Some(group) => format!("{group} {name}"),
@@ -224,8 +229,8 @@ pub fn RangeSlider<V: SliderValue>(props: RangeSliderProps<V>) -> Element {
             disabled: Some(bound.disabled(props.disabled)),
             readonly: props.readonly.unwrap_or(false),
             label: labelled.then_some(label),
-            aria_label: thumb_name(props.aria_label_from.unwrap_or_else(|| labels.minimum.to_string())),
-            aria_label_to: thumb_name(props.aria_label_to.unwrap_or_else(|| labels.maximum.to_string())),
+            aria_label: thumb_name(aria_label_from.unwrap_or_else(|| labels.minimum.to_string())),
+            aria_label_to: thumb_name(aria_label_to.unwrap_or_else(|| labels.maximum.to_string())),
             labelledby: field.label_id(),
             group_label: group_label.clone(),
             describedby: field.describedby(),

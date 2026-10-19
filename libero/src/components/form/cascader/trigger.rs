@@ -50,22 +50,24 @@ pub(super) static CASCADER_TRIGGER_SX: StaticSx = StaticSx::new(|| {
 fn trigger_aria(
     searchable: bool,
     opened: bool,
+    empty: bool,
     controlled_id: &str,
     descendant: Option<String>,
 ) -> Vec<Attribute> {
     if searchable && opened {
         return vec![attr("aria-haspopup", "listbox")];
     }
+    let expanded = opened && !empty;
     let mut trigger = vec![
         attr("role", "combobox"),
         attr("aria-haspopup", "listbox"),
-        attr("aria-expanded", opened.to_string()),
+        attr("aria-expanded", expanded.to_string()),
     ];
     // The list is mounted only while open; a dangling id is invalid.
-    if opened {
+    if expanded {
         trigger.push(attr("aria-controls", controlled_id.to_string()));
     }
-    if let Some(target) = descendant.filter(|_| opened) {
+    if let Some(target) = descendant.filter(|_| expanded) {
         trigger.push(attr("aria-activedescendant", target));
     }
     trigger
@@ -110,6 +112,8 @@ pub(super) struct Trigger {
     pub(super) disabled: bool,
     pub(super) readonly: bool,
     pub(super) searchable: bool,
+    /// No option to list: open, the trigger must not claim an expanded popup.
+    pub(super) empty: bool,
     /// Nothing to clear, so the trigger draws its chevron.
     pub(super) chevron: bool,
     pub(super) display: String,
@@ -133,6 +137,7 @@ pub(super) fn cascader_trigger(
         disabled,
         readonly,
         searchable,
+        empty,
         chevron,
         display,
         placeholder,
@@ -140,7 +145,7 @@ pub(super) fn cascader_trigger(
         descendant,
     } = parts;
 
-    let mut attributes = trigger_aria(searchable, opened, &controlled_id, descendant);
+    let mut attributes = trigger_aria(searchable, opened, empty, &controlled_id, descendant);
     attributes.extend(extra);
 
     let value_slot = value_slot(&display, placeholder.as_deref());
@@ -180,4 +185,28 @@ pub(super) fn cascader_trigger(
                 }
             },
         )
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use dioxus::dioxus_core::AttributeValue;
+
+    fn names(attributes: &[Attribute]) -> Vec<&'static str> {
+        attributes.iter().map(|attribute| attribute.name).collect()
+    }
+
+    #[test]
+    fn an_open_trigger_over_no_options_claims_no_popup() {
+        let empty = trigger_aria(false, true, true, "id-listbox", Some("row".into()));
+        assert!(!names(&empty).contains(&"aria-controls"));
+        assert!(!names(&empty).contains(&"aria-activedescendant"));
+        let expanded = empty.iter().find(|a| a.name == "aria-expanded").unwrap();
+        assert!(matches!(&expanded.value, AttributeValue::Text(text) if text == "false"));
+
+        let full = trigger_aria(false, true, false, "id-listbox", Some("row".into()));
+        assert!(names(&full).contains(&"aria-controls"));
+        let expanded = full.iter().find(|a| a.name == "aria-expanded").unwrap();
+        assert!(matches!(&expanded.value, AttributeValue::Text(text) if text == "true"));
+    }
 }

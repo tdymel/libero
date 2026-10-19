@@ -218,6 +218,12 @@ pub fn Carousel(props: CarouselProps) -> Element {
     // Read in render, so a swap re-runs the controlled-index effect.
     let swaps = jump.as_ref().map(CarouselJump::count);
 
+    // A blank name names nothing: it falls back to the localized one and still warns.
+    let own_label = props
+        .aria_label
+        .clone()
+        .filter(|label| !label.trim().is_empty());
+
     let setup = CarouselSetup {
         track,
         count,
@@ -234,7 +240,7 @@ pub fn Carousel(props: CarouselProps) -> Element {
         autoplay_delay: props
             .autoplay_delay
             .unwrap_or(theme.carousel.autoplay_delay),
-        named: props.aria_label.is_some(),
+        named: own_label.is_some(),
         quiet,
         track_stop: !quiet && !jump.as_ref().is_some_and(CarouselJump::slide_stop),
     };
@@ -251,10 +257,7 @@ pub fn Carousel(props: CarouselProps) -> Element {
     };
 
     // A generic name beats none; the warning still asks for a better one.
-    let aria_label = props
-        .aria_label
-        .clone()
-        .unwrap_or_else(|| labels.label.to_string());
+    let aria_label = own_label.unwrap_or_else(|| labels.label.to_string());
 
     let root_states: Input<States> = props
         .states

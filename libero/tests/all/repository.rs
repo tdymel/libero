@@ -49,6 +49,23 @@ fn aria_label_replaces_the_subject() {
 }
 
 #[test]
+fn a_blank_name_falls_back_to_the_host_and_repo_and_does_not_mask_the_default() {
+    fn own() -> Element {
+        rsx! { LiberoProvider { Repository { repo: "tdymel/libero", aria_label: "  " } } }
+    }
+    fn spread() -> Element {
+        rsx! { LiberoProvider { Repository { repo: "tdymel/libero", "aria-label": "  " } } }
+    }
+    for app in [own, spread] {
+        let link = attributes_of(&body(&render(app)), "a");
+        assert_eq!(
+            link["aria-label"],
+            "GitHub tdymel/libero (opens in a new tab)"
+        );
+    }
+}
+
+#[test]
 fn gitlab_links_its_own_page_in_the_localized_words() {
     fn app() -> Element {
         rsx! {

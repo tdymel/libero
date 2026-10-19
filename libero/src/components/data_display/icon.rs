@@ -1,11 +1,11 @@
-use dioxus::prelude::*;
+use dioxus::{dioxus_core::AttributeValue, prelude::*};
 
 use crate::{
     components::{
         common::{
             HtmlTag, Input, States, Variables, Variant, VariantVars, base_color, base_props,
             contrast_color, css_string, fill_color, literal_contrast, media_url, names_itself,
-            text_color, variables, variant_chrome_sx, variant_colors,
+            text_color, use_name_warning, variables, variant_chrome_sx, variant_colors,
         },
         data_display::{Pictogram, SvgData},
         layout::use_box,
@@ -196,6 +196,14 @@ pub fn Icon(props: IconProps) -> Element {
     // `aria-hidden` on a focusable control leaves a Tab stop nothing announces.
     let interactive = is_interactive(component);
     let hideable = !named && !interactive;
+    let blank_label = props.attributes.iter().any(|attribute| {
+        attribute.name == "aria-label"
+            && matches!(&attribute.value, AttributeValue::Text(text) if text.trim().is_empty())
+    });
+    use_name_warning(
+        !(interactive && blank_label && !named),
+        "Icon: a blank `aria-label` names nothing, so a focusable icon may be announced without a name.",
+    );
     let children = match (props.src, props.svg) {
         (Some(src), _) => match media_url(&src, "Icon") {
             Some(src) => rsx! { IconMask { src } },
@@ -272,6 +280,25 @@ mod tests {
             crate::LiberoProvider { Icon { "aria-label": "Verified", "x" } }
         });
         assert!(html.contains(r#"role="img""#), "{html}");
+    }
+
+    #[test]
+    fn a_blank_label_on_a_focusable_icon_warns() {
+        let warnings = crate::utils::warnings_of(|| {
+            rsx! {
+                crate::LiberoProvider { Icon { component: HtmlTag::Button, "aria-label": "  " } }
+            }
+        });
+        assert!(
+            warnings.iter().any(|w| w.starts_with("Icon:")),
+            "{warnings:?}"
+        );
+        let warnings = crate::utils::warnings_of(|| {
+            rsx! {
+                crate::LiberoProvider { Icon { component: HtmlTag::Button, "aria-label": "Close" } }
+            }
+        });
+        assert!(warnings.is_empty(), "{warnings:?}");
     }
 
     #[test]

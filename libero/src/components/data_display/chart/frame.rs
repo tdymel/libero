@@ -370,6 +370,8 @@ impl Frame {
             true => vec![labels.all_hidden.to_string()],
             false => summary,
         };
+        // A blank title names nothing: no empty heading to point at, and the fallback name stays.
+        let title = title.filter(|title| !title.trim().is_empty());
         let title_id = title.as_ref().map(|_| format!("{id}-title"));
         let unnamed = title.is_none() && !names_itself(&attributes);
         let description_id = description.as_ref().map(|_| format!("{id}-description"));

@@ -1530,7 +1530,9 @@ fn SliderThumbs(props: SliderThumbsProps) -> Element {
         );
         // `aria-labelledby` beats `aria-label`, so a range thumb lists itself
         // after the label ("Price Minimum"); a single thumb's label wins alone.
-        let aria_label = aria_labels[index].clone();
+        let aria_label = aria_labels[index]
+            .clone()
+            .filter(|label| !label.trim().is_empty());
         let (own_id, labelledby) = match (&props.labelledby, &aria_label) {
             (Some(label), Some(_)) if range => {
                 let own_id = format!("{label}-thumb-{index}");

@@ -24,6 +24,16 @@ fn rule<'a>(html: &'a str, selector: &str) -> &'a str {
     &rule[..rule.find('}').expect("an unterminated rule")]
 }
 
+#[test]
+fn a_blank_close_label_falls_back_to_the_localized_close() {
+    fn app() -> Element {
+        rsx! { LiberoProvider { Alert { close_label: "  ", onclose: move |_| {}, "Saved." } } }
+    }
+
+    let html = body(&render(app));
+    assert!(html.contains(r#"aria-label="Close""#), "{html}");
+}
+
 /// Only error and warning interrupt; the default `info`, the rest of the
 /// palette and a literal colour are a polite `status`.
 #[test]

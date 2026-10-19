@@ -286,11 +286,16 @@ base_props! {
 #[component]
 pub fn ProgressBar(props: ProgressBarProps) -> Element {
     let theme = use_theme();
+    let mut attributes = props.attributes;
+    let named = names_itself(&attributes);
     use_name_warning(
-        names_itself(&props.attributes),
+        named,
         "ProgressBar: no `aria_label` or `aria-labelledby`, so it is announced as just \
          \"progress bar\" and a percentage.",
     );
+    if !named {
+        attributes.retain(|attribute| !matches!(attribute.name, "aria-label" | "aria-labelledby"));
+    }
     let color = props
         .color
         .as_ref()
@@ -392,7 +397,7 @@ pub fn ProgressBar(props: ProgressBarProps) -> Element {
         None => track.attr_default("aria-valuetext", default_text),
     };
 
-    track.render(HtmlTag::Div, props.attributes, inner)
+    track.render(HtmlTag::Div, attributes, inner)
 }
 
 /// One segment's place and fill, as inline vars.

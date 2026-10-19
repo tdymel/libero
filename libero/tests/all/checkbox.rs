@@ -1,6 +1,6 @@
 //! Checkbox, Switch, Radio and RadioGroup, driven through dispatched events.
 
-use crate::common::tags_with;
+use crate::common::{attributes_of, body, render, tags_with};
 use crate::dispatch::*;
 use dioxus::prelude::*;
 use libero::{
@@ -338,4 +338,24 @@ fn a_radio_group_never_puts_its_tab_stop_on_a_disabled_option() {
     assert_eq!(stop(&inputs), [0], "{inputs:?}");
     let (inputs, _) = tier_press(Some(Tier::Pro), &[], Key::Named(NamedKey::Tab));
     assert_eq!(stop(&inputs), [1], "{inputs:?}");
+}
+
+/// A blank `aria_label` names nothing, so it is not rendered on the input.
+#[test]
+fn a_blank_aria_label_is_not_put_on_the_input() {
+    fn checkbox() -> Element {
+        rsx! { LiberoProvider { Checkbox { aria_label: "  ", checked: false, onchange: move |_| {} } } }
+    }
+    fn switch() -> Element {
+        rsx! { LiberoProvider { Switch { aria_label: "  ", checked: false, onchange: move |_| {} } } }
+    }
+    fn radio() -> Element {
+        rsx! { LiberoProvider { Radio { aria_label: "  ", checked: false, onselect: move |_| {} } } }
+    }
+
+    for app in [checkbox, switch, radio] {
+        let html = body(&render(app));
+        let input = attributes_of(&html, "input");
+        assert_eq!(input.get("aria-label"), None, "{input:?}");
+    }
 }

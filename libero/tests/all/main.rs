@@ -145,6 +145,7 @@ mod theme_set;
 mod theme_switcher;
 mod timeline;
 mod title;
+mod tldr;
 mod toolbar;
 mod tooltip;
 mod tour;

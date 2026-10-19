@@ -5,8 +5,8 @@ use crate::{
     components::{
         buttons::ActionIcon,
         common::{
-            HtmlTag, Input, Part, States, Variant, base_props, parts_enum, parts_under_sx,
-            use_button_group,
+            HtmlTag, Input, Part, States, Variant, aria_label_of, base_props, parts_enum,
+            parts_under_sx, use_button_group,
         },
         data_display::Pictogram,
         layout::use_box,
@@ -251,18 +251,20 @@ pub fn Repository(props: RepositoryProps) -> Element {
     let subject = props
         .aria_label
         .clone()
+        .filter(|label| !label.trim().is_empty())
         .unwrap_or_else(|| format!("{} {}", host.name(), props.repo));
     // `ActionIcon` adds the new-tab cue to this.
     let aria_label = match count {
         Some(count) => named_with_stars(&subject, count, &localization.repository, formats),
         None => subject,
     };
-    // A raw `aria-label` attribute is the whole name: a blank own label lets it through unchanged.
-    let aria_label = match props.attributes.iter().any(|a| a.name == "aria-label") {
-        true => String::new(),
-        false => aria_label,
-    };
-    let attributes = props.attributes.clone();
+    // A raw `aria-label` attribute is the whole name; a blank one names nothing and is dropped.
+    let named = aria_label_of(&props.attributes).is_some();
+    let aria_label = if named { String::new() } else { aria_label };
+    let mut attributes = props.attributes.clone();
+    if !named {
+        attributes.retain(|attribute| attribute.name != "aria-label");
+    }
     let group = use_button_group();
     let variant = props
         .variant

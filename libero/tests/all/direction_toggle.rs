@@ -44,3 +44,16 @@ fn right_to_left_it_offers_the_way_back_in_the_localized_words() {
     );
     assert!(html.contains(TO_LTR) && !html.contains(TO_RTL), "{html}");
 }
+
+#[test]
+fn a_blank_label_falls_back_to_the_localized_name() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider {
+                DirectionToggle { label: |_| "  ".to_string() }
+            }
+        }
+    }
+    let button = attributes_of(&body(&render(app)), "button");
+    assert_eq!(button["aria-label"], "Switch to right-to-left text");
+}

@@ -6,6 +6,16 @@ use crate::common::{attributes_of, body, render};
 use dioxus::prelude::*;
 use libero::{LiberoProvider, components::ProgressBar};
 
+#[test]
+fn a_blank_name_is_not_put_on_the_root() {
+    fn app() -> Element {
+        rsx! { LiberoProvider { ProgressBar { "aria-label": "  ", value: 3.0 } } }
+    }
+
+    let root = attributes_of(&body(&render(app)), "div");
+    assert_eq!(root.get("aria-label"), None, "{root:?}");
+}
+
 /// The role and all four values sit on the root - the element that always has
 /// size - and the fill inside it is decorative. The name reaches the root as a
 /// plain global attribute, so there is no `aria_label` prop.

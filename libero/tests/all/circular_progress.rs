@@ -23,6 +23,16 @@ fn the_root_carries_the_role_the_raw_values_and_the_name() {
     assert_eq!(root["aria-valuetext"], "30%", "{html}");
 }
 
+#[test]
+fn a_blank_name_is_not_put_on_the_root() {
+    fn app() -> Element {
+        rsx! { LiberoProvider { CircularProgress { "aria-label": "  ", value: 3.0 } } }
+    }
+
+    let root = attributes_of(&body(&render(app)), "span");
+    assert_eq!(root.get("aria-label"), None, "{root:?}");
+}
+
 /// Native bakes an inline svg from its attributes, so the arc's length is one.
 #[test]
 fn the_arc_is_drawn_by_svg_attributes() {

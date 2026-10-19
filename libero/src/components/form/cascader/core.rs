@@ -350,6 +350,7 @@ pub(crate) fn CascaderCore(props: CascaderCoreProps) -> Element {
             disabled,
             readonly,
             searchable,
+            empty: visible.is_empty(),
             chevron: clear.is_none(),
             display: props.display.clone(),
             placeholder: props.placeholder.clone(),

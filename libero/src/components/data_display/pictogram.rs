@@ -39,8 +39,8 @@ pub struct PictogramProps {
 #[component]
 pub fn Pictogram(props: PictogramProps) -> Element {
     let mut attributes = props.attributes;
-    // An empty name would make an unnamed `role="img"`, so it stays decorative.
-    if let Some(label) = props.aria_label.filter(|label| !label.is_empty()) {
+    // A blank name would make an unnamed `role="img"`, so it stays decorative.
+    if let Some(label) = props.aria_label.filter(|label| !label.trim().is_empty()) {
         attributes.push(Attribute::new("aria-label", label, None, false));
     }
     draw_svg(&props.icon, attributes)
@@ -87,9 +87,9 @@ mod tests {
     }
 
     #[test]
-    fn an_empty_aria_label_stays_decorative() {
+    fn a_blank_aria_label_stays_decorative() {
         let html = dioxus_ssr::render_element(rsx! {
-            Pictogram { icon: STROKED, aria_label: "" }
+            Pictogram { icon: STROKED, aria_label: "  " }
         });
         assert!(html.contains(r#"aria-hidden="true""#), "{html}");
         assert!(!html.contains("role="), "{html}");

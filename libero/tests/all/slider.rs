@@ -11,6 +11,32 @@ use libero::{
 };
 
 #[test]
+fn a_blank_aria_label_is_not_put_on_the_thumb() {
+    fn slider() -> Element {
+        rsx! { LiberoProvider { Slider { value: 25.0, aria_label: "  ", oninput: move |_| {} } } }
+    }
+    fn range() -> Element {
+        rsx! {
+            LiberoProvider {
+                RangeSlider {
+                    value: (10.0, 20.0),
+                    aria_label: "  ",
+                    aria_label_from: "",
+                    aria_label_to: " ",
+                    oninput: move |_| {},
+                }
+            }
+        }
+    }
+
+    let thumb = tag_with(&body(&render(slider)), r#"role="slider""#);
+    assert_eq!(thumb.get("aria-label"), None, "{thumb:?}");
+    let thumbs = tags_with(&body(&render(range)), r#"role="slider""#);
+    let names: Vec<_> = thumbs.iter().map(|t| t["aria-label"].as_str()).collect();
+    assert_eq!(names, ["Minimum", "Maximum"], "{thumbs:?}");
+}
+
+#[test]
 fn slider_renders_a_thumb_with_the_value_and_its_marks() {
     fn app() -> Element {
         rsx! {

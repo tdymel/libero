@@ -474,6 +474,23 @@ mod tests {
         assert_eq!(named.matches("aria-label=\"Sales\"").count(), 1, "{named}");
     }
 
+    /// A blank title is no heading to point at: the figure keeps the fallback name.
+    #[test]
+    fn a_blank_title_leaves_the_figure_named_chart() {
+        let html = render(|| {
+            rsx! {
+                LiberoProvider {
+                    BarChart { title: "  ", x: ["Q1"], series: vec![Series::new("2025", [3.0])] }
+                }
+            }
+        });
+        assert!(html.contains("aria-label=\"chart\""), "{html}");
+        assert!(
+            !html.contains("aria-labelledby=\"") || !html.contains("-title\""),
+            "{html}"
+        );
+    }
+
     /// One category is named once, not as a range from it to itself.
     #[test]
     fn one_category_is_not_a_range() {

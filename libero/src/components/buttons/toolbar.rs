@@ -128,10 +128,15 @@ pub fn Toolbar(props: ToolbarProps) -> Element {
     let scope = use_provide_toolbar(orientation);
     let bar = use_element();
 
+    let mut attributes = props.attributes;
+    let named = names_itself(&attributes);
     use_name_warning(
-        names_itself(&props.attributes),
+        named,
         "Toolbar: no `aria-label` or `aria-labelledby`, so it is announced as just \"toolbar\".",
     );
+    if !named {
+        attributes.retain(|attribute| !matches!(attribute.name, "aria-label" | "aria-labelledby"));
+    }
 
     // Alt+F10 (APG editor menubar); set while Escape has focus to hand back.
     let focus_return = use_focus_return();
@@ -308,7 +313,7 @@ pub fn Toolbar(props: ToolbarProps) -> Element {
             "aria-orientation",
             (orientation == Orientation::Vertical).then_some("vertical"),
         )
-        .render(HtmlTag::Div, props.attributes, props.children)
+        .render(HtmlTag::Div, attributes, props.children)
 }
 
 /// Makes the focused item, if any, the tab stop.

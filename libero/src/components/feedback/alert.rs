@@ -274,6 +274,7 @@ pub fn Alert(props: AlertProps) -> Element {
     let close_label = props
         .close_label
         .clone()
+        .filter(|label| !label.trim().is_empty())
         .unwrap_or_else(|| common.close.to_string());
 
     let onclose = props.onclose;

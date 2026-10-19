@@ -29,6 +29,21 @@ fn the_autoplay_toggle_has_a_fixed_name() {
     assert!(!html.contains("Play slideshow"), "{html}");
 }
 
+#[test]
+fn a_blank_aria_label_falls_back_to_the_localized_name() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider {
+                Carousel { aria_label: "  ", slides: vec![rsx! { "a" }, rsx! { "b" }] }
+            }
+        }
+    }
+
+    let html = body(&render(app));
+    assert!(html.contains(r#"aria-label="Carousel""#), "{html}");
+    assert!(!html.contains(r#"aria-label="  ""#), "{html}");
+}
+
 /// The track's id. The track is the one element described by the status, so
 /// its tag is the one carrying `aria-describedby`.
 fn track_id_of(html: &str) -> String {

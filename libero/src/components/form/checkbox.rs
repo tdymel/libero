@@ -219,6 +219,11 @@ pub fn Checkbox(props: CheckboxProps) -> Element {
     use_effect(use_reactive!(|indeterminate| {
         let _ = element.set_indeterminate(indeterminate);
     }));
+    // A blank name names nothing: it neither renders nor counts as one.
+    let aria_label = props
+        .aria_label
+        .clone()
+        .filter(|label| !label.trim().is_empty());
     let field = use_field()
         .inline()
         .card(card)
@@ -240,11 +245,11 @@ pub fn Checkbox(props: CheckboxProps) -> Element {
         .sx(&props.sx)
         .parts(&props.parts)
         .states(&props.states)
-        .aria_label(props.aria_label.as_deref())
+        .aria_label(aria_label.as_deref())
         .attributes(&props.attributes)
         .prepare();
     use_name_warning(
-        !props.label.is_none() || props.aria_label.is_some() || names_itself(&props.attributes),
+        !props.label.is_none() || aria_label.is_some() || names_itself(&props.attributes),
         "Checkbox: no `label` or `aria_label`, so it is announced as just \"checkbox\".",
     );
 
@@ -284,7 +289,7 @@ pub fn Checkbox(props: CheckboxProps) -> Element {
         )
         .attr("aria-readonly", readonly.then_some("true"))
         .attr("required", required)
-        .attr("aria-label", props.aria_label)
+        .attr("aria-label", aria_label)
         .attr(TOOLBAR_ITEM, item.map(ToolbarItem::key))
         .attr("tabindex", item.map(ToolbarItem::tabindex))
         // Void element - `()` costs no dynamic node.

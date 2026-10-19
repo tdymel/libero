@@ -250,7 +250,13 @@ pub fn Tldr(props: TldrProps) -> Element {
                     // A no-op `onclick` makes it a `<button>`; the click bubbles to the menu.
                     onclick: |_| {},
                     attributes,
-                    {props.label.clone().unwrap_or_else(|| words.label.into())}
+                    {
+                        props
+                            .label
+                            .clone()
+                            .filter(|label| !label.trim().is_empty())
+                            .unwrap_or_else(|| words.label.into())
+                    }
                 }
             }
         }

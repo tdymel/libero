@@ -161,6 +161,11 @@ pub fn Slider<V: SliderValue>(props: SliderProps<V>) -> Element {
 
     // The thumb carries `role="slider"`, and `for` names only a labelable
     // element - so the field hands its ids over rather than applying them.
+    // A blank name names nothing: it neither renders nor counts as one.
+    let aria_label = props
+        .aria_label
+        .clone()
+        .filter(|label| !label.trim().is_empty());
     let field = use_field()
         .labelled_by()
         .label(&props.label)
@@ -177,11 +182,11 @@ pub fn Slider<V: SliderValue>(props: SliderProps<V>) -> Element {
         .sx(&props.sx)
         .parts(&props.parts)
         .states(&props.states)
-        .aria_label(props.aria_label.as_deref())
+        .aria_label(aria_label.as_deref())
         .attributes(&props.attributes)
         .prepare();
     crate::components::common::use_name_warning(
-        field.label_id().is_some() || props.aria_label.is_some(),
+        field.label_id().is_some() || aria_label.is_some(),
         "Slider: no `label` or `aria_label`, so the thumb is announced as just \"slider\".",
     );
 
@@ -211,7 +216,7 @@ pub fn Slider<V: SliderValue>(props: SliderProps<V>) -> Element {
             readonly: props.readonly.unwrap_or(false),
             label: labelled.then_some(label),
             // Unlabelled, the thumb's own name says required instead of the label.
-            aria_label: props.aria_label.map(|name| match required && field.label_id().is_none() {
+            aria_label: aria_label.map(|name| match required && field.label_id().is_none() {
                 true => format!("{name} {required_word}"),
                 false => name,
             }),

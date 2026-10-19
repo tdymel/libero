@@ -17,6 +17,21 @@ fn root_of(html: &str, role: &str) -> std::collections::BTreeMap<String, String>
 }
 
 #[test]
+fn a_blank_aria_label_is_not_put_on_the_slider_or_the_image() {
+    fn editable() -> Element {
+        rsx! { LiberoProvider { Rating { aria_label: "  ", value: 3.0, onchange: move |_| {} } } }
+    }
+    fn display() -> Element {
+        rsx! { LiberoProvider { Rating { aria_label: "  ", value: 3.0, focusable: false } } }
+    }
+
+    let root = root_of(&render(editable), "slider");
+    assert_eq!(root.get("aria-label"), None, "{root:?}");
+    let image = root_of(&render(display), "img");
+    assert_eq!(image["aria-label"], "3 of 5", "{image:?}");
+}
+
+#[test]
 fn a_rating_is_one_slider_with_its_value_spoken() {
     fn app() -> Element {
         rsx! {

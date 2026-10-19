@@ -193,6 +193,11 @@ pub fn Radio(props: RadioProps) -> Element {
     };
 
     let element = use_element();
+    // A blank name names nothing: it neither renders nor counts as one.
+    let aria_label = props
+        .aria_label
+        .clone()
+        .filter(|label| !label.trim().is_empty());
     let field = use_field()
         .inline()
         .card(card)
@@ -211,7 +216,7 @@ pub fn Radio(props: RadioProps) -> Element {
         .attributes(&props.attributes)
         .prepare();
     use_name_warning(
-        !props.label.is_none() || props.aria_label.is_some() || names_itself(&props.attributes),
+        !props.label.is_none() || aria_label.is_some() || names_itself(&props.attributes),
         "Radio: no `label` or `aria_label`, so it is announced as just \"radio button\".",
     );
 
@@ -248,7 +253,7 @@ pub fn Radio(props: RadioProps) -> Element {
         .attr("data-controlled", true)
         .attr("disabled", disabled)
         .attr("required", required)
-        .attr("aria-label", props.aria_label)
+        .attr("aria-label", aria_label)
         // Void element - `()` costs no dynamic node.
         .render(HtmlTag::Input, props.attributes, ());
 

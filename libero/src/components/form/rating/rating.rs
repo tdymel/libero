@@ -289,6 +289,11 @@ pub fn Rating(props: RatingProps) -> Element {
         ),
     };
 
+    // A blank name names nothing: it neither renders nor counts as one.
+    let aria_label = props
+        .aria_label
+        .clone()
+        .filter(|label| !label.trim().is_empty());
     let field = use_field()
         .labelled_by()
         .label(&props.label)
@@ -307,11 +312,11 @@ pub fn Rating(props: RatingProps) -> Element {
         .sx(&props.sx)
         .parts(&props.parts)
         .states(&props.states)
-        .aria_label(props.aria_label.as_deref())
+        .aria_label(aria_label.as_deref())
         .attributes(&props.attributes)
         .prepare();
     use_name_warning(
-        field.label_id().is_some() || props.aria_label.is_some() || names_itself(&props.attributes),
+        field.label_id().is_some() || aria_label.is_some() || names_itself(&props.attributes),
         "Rating: no `label` or `aria_label`, so it is announced without a name.",
     );
 
@@ -374,7 +379,7 @@ pub fn Rating(props: RatingProps) -> Element {
         .attr("id", id.clone());
     let control = if display {
         // The label, then the value: "Average 4.3 of 5".
-        let (label, labelledby) = match (field.label_id(), &props.aria_label) {
+        let (label, labelledby) = match (field.label_id(), &aria_label) {
             (Some(label), _) => (text, Some(format!("{label} {id}"))),
             (None, Some(name)) => (format!("{name}, {text}"), None),
             (None, None) => (text, None),
@@ -394,7 +399,7 @@ pub fn Rating(props: RatingProps) -> Element {
             .attr("aria-valuemax", count.to_string())
             .attr("aria-valuenow", number_text(value, "."))
             .attr("aria-valuetext", text)
-            .attr("aria-label", props.aria_label)
+            .attr("aria-label", aria_label)
             .attr("aria-labelledby", field.label_id())
             .attr("aria-describedby", field.describedby())
             .attr("aria-invalid", field.invalid().then_some("true"))

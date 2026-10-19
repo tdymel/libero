@@ -294,11 +294,16 @@ base_props! {
 #[component]
 pub fn CircularProgress(props: CircularProgressProps) -> Element {
     let theme = use_theme();
+    let mut attributes = props.attributes;
+    let named = names_itself(&attributes);
     use_name_warning(
-        names_itself(&props.attributes),
+        named,
         "CircularProgress: no `aria_label` or `aria-labelledby`, so it is announced as just \
          \"progress bar\" and a percentage.",
     );
+    if !named {
+        attributes.retain(|attribute| !matches!(attribute.name, "aria-label" | "aria-labelledby"));
+    }
     let color = props
         .color
         .as_ref()
@@ -387,7 +392,7 @@ pub fn CircularProgress(props: CircularProgressProps) -> Element {
         None => root.attr_default("aria-valuetext", fraction.map(percentage)),
     };
 
-    root.render(HtmlTag::Span, props.attributes, inner)
+    root.render(HtmlTag::Span, attributes, inner)
 }
 
 #[cfg(test)]

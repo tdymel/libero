@@ -232,6 +232,11 @@ pub fn Switch(props: SwitchProps) -> Element {
     let item = use_toolbar_item();
     let owner = use_form_owner(element, !in_form);
     let in_form = in_form || owner().is_some();
+    // A blank name names nothing: it neither renders nor counts as one.
+    let aria_label = props
+        .aria_label
+        .clone()
+        .filter(|label| !label.trim().is_empty());
     let field = use_field()
         .inline()
         .card(card)
@@ -254,12 +259,12 @@ pub fn Switch(props: SwitchProps) -> Element {
         .sx(&props.sx)
         .parts(&props.parts)
         .states(&props.states)
-        .aria_label(props.aria_label.as_deref())
+        .aria_label(aria_label.as_deref())
         .attributes(&props.attributes)
         .prepare();
     // A `<label for>` names it, so there is no label id to ask the field for.
     use_name_warning(
-        !props.label.is_none() || props.aria_label.is_some() || names_itself(&props.attributes),
+        !props.label.is_none() || aria_label.is_some() || names_itself(&props.attributes),
         "Switch: no `label` or `aria_label`, so it is announced as just \"switch\".",
     );
 
@@ -302,7 +307,7 @@ pub fn Switch(props: SwitchProps) -> Element {
         )
         .attr("aria-readonly", readonly.then_some("true"))
         .attr("required", required)
-        .attr("aria-label", props.aria_label)
+        .attr("aria-label", aria_label)
         .attr(TOOLBAR_ITEM, item.map(ToolbarItem::key))
         .attr("tabindex", item.map(ToolbarItem::tabindex))
         // Void element - `()` costs no dynamic node.

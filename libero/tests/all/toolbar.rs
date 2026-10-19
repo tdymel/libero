@@ -67,6 +67,24 @@ fn a_toolbar_is_one_tab_stop_across_its_items() {
 }
 
 #[test]
+fn a_blank_name_is_not_put_on_the_toolbar() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider {
+                Toolbar { "aria-label": "  ",
+                    ActionIcon { aria_label: "Bold", "B" }
+                }
+            }
+        }
+    }
+
+    let html = body(&render(app));
+    let bar = tags_with(&html, r#"role="toolbar""#);
+    assert_eq!(bar.len(), 1, "{html}");
+    assert!(!bar[0].contains("aria-label"), "{}", bar[0]);
+}
+
+#[test]
 fn a_vertical_toolbar_says_so_and_lays_its_separators_flat() {
     fn app() -> Element {
         rsx! {
