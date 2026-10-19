@@ -292,6 +292,8 @@ pub(crate) fn use_popover_on(
     let resized: Rc<Cell<bool>> = use_hook(|| Rc::new(Cell::new(false)));
     // The viewport height the last pass of this open measured.
     let last_height: Rc<Cell<Option<f64>>> = use_hook(|| Rc::new(Cell::new(None)));
+    // Bumped when an open ends: a measure still in flight then places nothing.
+    let closes: Rc<Cell<u32>> = use_hook(|| Rc::new(Cell::new(0)));
 
     use_effect(use_reactive!(|(open, options)| {
         // Reading it is what re-runs this on a scroll.
@@ -305,6 +307,7 @@ pub(crate) fn use_popover_on(
             capped.set(false);
             resized.set(false);
             last_height.set(None);
+            closes.set(closes.get().wrapping_add(1));
             // A `set` redraws even when unchanged: every opening ran this before
             // its box mounted and redrew the whole consumer for nothing.
             if placed.peek().is_some() {
@@ -342,6 +345,7 @@ pub(crate) fn use_popover_on(
         let capped = capped.clone();
         let resized = resized.clone();
         let last_height = last_height.clone();
+        let (closes, opened) = (closes.clone(), closes.get());
         // A WebView cannot tell where focus is; there only the shrink guards the scroll.
         let focused = !reads_dom_synchronously()
             || [anchor.mounted(), floating.mounted()]
@@ -360,6 +364,9 @@ pub(crate) fn use_popover_on(
             };
             // A panned visual viewport (todos 2200, 2219): place in the visible part, shifted back below.
             let band = band.await.unwrap_or(VisibleBand::WHOLE);
+            if closes.get() != opened {
+                return;
+            }
             let top = band.top.min(viewport.height);
             let left = band.left.min(viewport.width);
             let right = band.right.clamp(left, viewport.width);

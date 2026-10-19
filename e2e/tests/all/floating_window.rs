@@ -3,6 +3,7 @@
 
 use anyhow::{Result, bail};
 use chromiumoxide::Page;
+use chromiumoxide::cdp::browser_protocol::emulation::SetDeviceMetricsOverrideParams;
 use e2e::archetypes::Overlay;
 use e2e::browser::block_on;
 use e2e::driver::{Driver, Rect, eventually, eventually_focused};
@@ -301,6 +302,55 @@ async fn menu_adjust(page: &Page) -> Result<()> {
     let back = rect(page, DIALOG).await?;
     assert_report(page, MOVE_REPORT, back, "Reset").await?;
     assert_report(page, RESIZE_REPORT, back, "Reset").await
+}
+
+/// Todo 3828: a browser resize after the window opened lowers its size cap, which the
+/// separator's range announces.
+#[test]
+fn a_browser_resize_lowers_the_size_cap() {
+    const NARROW: i64 = 700;
+    block_on(async {
+        let fixture = Fixture::open("/floating-window-sized", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        open(page).await.unwrap();
+        let widest = separator_max(page).await.unwrap();
+        assert!(
+            widest > NARROW as f64,
+            "the cap {widest} was below {NARROW}"
+        );
+
+        page.execute(SetDeviceMetricsOverrideParams::new(
+            NARROW,
+            Viewport::Desktop.size().1,
+            1.0,
+            false,
+        ))
+        .await
+        .unwrap();
+        let narrowed = wait::until("the size cap to follow the viewport", || async move {
+            Ok(separator_max(page).await? <= NARROW as f64)
+        })
+        .await;
+        assert!(
+            narrowed.is_ok(),
+            "the cap stayed {} after the viewport shrank to {NARROW}",
+            separator_max(page).await.unwrap()
+        );
+        fixture.close().await.unwrap();
+    });
+}
+
+async fn separator_max(page: &Page) -> Result<f64> {
+    let max: Option<f64> = page
+        .evaluate(format!(
+            "parseFloat(document.querySelector({})?.getAttribute('aria-valuemax'))",
+            serde_json::to_string(SEPARATOR)?
+        ))
+        .await?
+        .into_value()?;
+    max.ok_or_else(|| anyhow::anyhow!("the separator has no aria-valuemax"))
 }
 
 /// Open the title-bar menu and click the item named `label`.

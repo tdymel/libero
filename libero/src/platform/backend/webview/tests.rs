@@ -162,6 +162,39 @@ fn two_pages_on_one_thread_keep_their_own_scheme() {
 }
 
 #[test]
+fn a_dropped_scope_forgets_its_taken_chords() {
+    #[component]
+    fn Taker() -> Element {
+        use_hook(|| {
+            let scope = Runtime::current().current_scope_id();
+            keyboard::remember_chord(&page().unwrap(), scope, "mod+k");
+        });
+        rsx! {}
+    }
+    fn parent() -> Element {
+        let shown = use_context_provider(|| Signal::new(true));
+        rsx! {
+            if shown() {
+                Taker {}
+            }
+        }
+    }
+    let mut dom = VirtualDom::new(parent);
+    dom.rebuild_in_place();
+    let taken = |dom: &VirtualDom| {
+        dom.in_scope(ScopeId::ROOT, || {
+            page().unwrap().taken_chords.borrow().len()
+        })
+    };
+    assert_eq!(taken(&dom), 1);
+
+    let mut shown = dom.in_scope(ScopeId::APP, consume_context::<Signal<bool>>);
+    dom.in_runtime(|| shown.set(false));
+    dom.render_immediate(&mut dioxus::core::NoOpMutations);
+    assert_eq!(taken(&dom), 0);
+}
+
+#[test]
 fn base64_decodes_as_btoa_wrote_it() {
     assert_eq!(decode_base64("").unwrap(), b"");
     assert_eq!(decode_base64("YQ==").unwrap(), b"a");

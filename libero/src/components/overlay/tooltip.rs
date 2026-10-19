@@ -13,7 +13,8 @@ use crate::{
     },
     hooks::{
         Align, ElementHandle, PopoverOptions, Rect, escape_closes, place, use_css, use_element,
-        use_escape_dismiss, use_focus_within, use_popover_on, use_portal_slot, use_theme,
+        use_escape_dismiss, use_focus_within, use_popover_on, use_portal_slot, use_resize_fallback,
+        use_theme,
     },
     platform::{Dimensions, ElementApi, document, keyboard, when_laid_out},
     sx::{REDUCED_MOTION, StaticSx, Sx, ThemeAwareValue, sx},
@@ -333,7 +334,7 @@ pub fn Tooltip(props: TooltipProps) -> Element {
 }
 
 /// A bubble on a rect its caller works out each render, a slider thumb's from
-/// its value: portaled, measured once per show, and hidden, not unmounted (2188).
+/// its value: portaled, measured per show and on its own resize, and hidden, not unmounted (2188).
 #[component]
 pub(crate) fn TooltipPinned(
     label: Element,
@@ -354,8 +355,12 @@ pub(crate) fn TooltipPinned(
     // The bubble's size and the viewport, which a drag does not change.
     let mut measured = use_signal(|| None::<(Dimensions, Dimensions)>);
     let retry = use_signal(|| 0u8);
+    // A label that changes size while shown is measured again.
+    let mut resized = use_signal(|| 0u64);
+    use_resize_fallback(floating, move |_| resized += 1);
     use_effect(use_reactive!(|shown| {
         let tries = retry();
+        let _ = resized();
         if !shown || floating.mount_token().is_none() {
             return;
         }
@@ -375,7 +380,9 @@ pub(crate) fn TooltipPinned(
                 });
                 return;
             }
-            measured.set(Some((size, viewport)));
+            if *measured.peek() != Some((size, viewport)) {
+                measured.set(Some((size, viewport)));
+            }
         });
     }));
 

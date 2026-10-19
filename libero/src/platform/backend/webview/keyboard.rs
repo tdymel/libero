@@ -1,10 +1,10 @@
 use std::rc::Rc;
 
-use dioxus::core::Runtime;
+use dioxus::core::{Runtime, ScopeId};
 use dioxus::prelude::{Code, Key, Modifiers, NamedKey, spawn};
 use serde_json::json;
 
-use super::{Slot, WebViewListener, eval_with, page, runs_scripts};
+use super::{PageState, Slot, WebViewListener, eval_with, page, runs_scripts};
 use crate::platform::keyboard::{CLICKED_INPUT_TYPES, warn_reserved_chord};
 use crate::platform::{KeyChord, KeySubscription, KeyboardApi, OBSERVE_ATTR, OWNER_ATTR};
 
@@ -98,6 +98,35 @@ pub(crate) fn claim_escape(open: bool) {
     }
 }
 
+/// Forgets a scope's chords when it drops, so a recycled `ScopeId` starts clean.
+struct ChordsGuard {
+    page: Rc<PageState>,
+    scope: ScopeId,
+}
+
+impl Drop for ChordsGuard {
+    fn drop(&mut self) {
+        if let Ok(mut taken) = self.page.taken_chords.try_borrow_mut() {
+            taken.remove(&self.scope);
+        }
+    }
+}
+
+pub(super) fn remember_chord(page: &Rc<PageState>, scope: ScopeId, name: &str) {
+    let first = !page.taken_chords.borrow().contains_key(&scope);
+    (page.taken_chords.borrow_mut())
+        .entry(scope)
+        .or_default()
+        .insert(name.to_string());
+    if first && let Some(runtime) = Runtime::try_current() {
+        let guard = ChordsGuard {
+            page: page.clone(),
+            scope,
+        };
+        runtime.provide_context(scope, Rc::new(guard));
+    }
+}
+
 impl WebViewKeyboard {
     fn listen(
         &self,
@@ -168,10 +197,7 @@ impl WebViewKeyboard {
                 }
                 if taken.insert(name.clone()) {
                     if let Some((page, scope)) = page.as_ref().zip(scope) {
-                        (page.taken_chords.borrow_mut())
-                            .entry(scope)
-                            .or_default()
-                            .insert(name.clone());
+                        remember_chord(page, scope, &name);
                     }
                     task_slot.call("take", json!(name));
                 }

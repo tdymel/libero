@@ -213,7 +213,8 @@ pub struct TourHandle {
     index: Signal<usize>,
     latest: CopyValue<Latest>,
     focus_return: FocusReturn,
-    seen: Option<LocalText>,
+    /// Follows [`TourOptions::storage_key`] each render.
+    seen: CopyValue<Option<LocalText>>,
 }
 
 impl PartialEq for TourHandle {
@@ -275,12 +276,12 @@ impl TourHandle {
     /// # }
     /// ```
     pub fn seen(&self) -> bool {
-        self.seen.is_some_and(|seen| seen.is_stored())
+        self.seen.read().is_some_and(|seen| seen.is_stored())
     }
 
     /// Drops what [`seen`](Self::seen) remembers.
     pub fn forget(&self) {
-        if let Some(seen) = self.seen {
+        if let Some(seen) = *self.seen.peek() {
             seen.remove();
         }
     }
@@ -352,7 +353,7 @@ impl TourHandle {
         let mut open = self.open;
         open.set(false);
         self.focus_return.restore();
-        if let Some(seen) = self.seen.filter(|_| remember) {
+        if let Some(seen) = (*self.seen.peek()).filter(|_| remember) {
             seen.set("true".to_string());
         }
         true
@@ -451,7 +452,8 @@ pub fn use_tour(options: TourOptions) -> TourHandle {
     let open = use_signal(|| false);
     let index = use_signal(|| 0usize);
     let focus_return = use_focus_return();
-    let seen = use_hook(|| options.storage_key.as_deref().map(local_text));
+    let mut seen = use_hook(|| CopyValue::new(None::<LocalText>));
+    seen.set(options.storage_key.as_deref().map(local_text));
     let mut latest = use_hook(|| CopyValue::new(Latest::default()));
     latest.set(Latest {
         total: options.steps.len(),
@@ -1032,6 +1034,8 @@ fn TourCard(
 
 #[cfg(test)]
 mod tests {
+    use std::cell::RefCell;
+
     use super::*;
     use crate::components::common::part_table;
     use crate::localization::Localization;
@@ -1075,6 +1079,74 @@ mod tests {
             assert!(html.contains(&format!("aria-label=\"{label}\"")), "{html}");
             assert!(!html.contains("aria-label=\" \""), "{html}");
         }
+    }
+
+    thread_local! {
+        static KEY: RefCell<String> = const { RefCell::new(String::new()) };
+        static HANDLE: Cell<Option<TourHandle>> = const { Cell::new(None) };
+    }
+
+    #[component]
+    fn KeyedTour() -> Element {
+        let _ = use_context::<Signal<u32>>()();
+        let tour = use_tour(TourOptions {
+            steps: vec![TourStep::new("a").title("A")],
+            storage_key: Some(KEY.with_borrow(Clone::clone)),
+            ..Default::default()
+        });
+        HANDLE.set(Some(tour));
+        rsx! {}
+    }
+
+    /// Todo 3827: `seen` follows a changed `storage_key`.
+    #[test]
+    fn the_seen_flag_follows_the_storage_key() {
+        fn app() -> Element {
+            use_context_provider(|| Signal::new(0u32));
+            rsx! {
+                crate::LiberoProvider { KeyedTour {} }
+            }
+        }
+        let render = |dom: &mut VirtualDom| {
+            for _ in 0..3 {
+                dom.render_immediate(&mut dioxus::core::NoOpMutations);
+            }
+        };
+        KEY.set("first".into());
+        let mut dom = VirtualDom::new(app);
+        dom.rebuild_in_place();
+        render(&mut dom);
+        let tour = HANDLE.get().unwrap();
+        dom.in_runtime(|| {
+            tour.start();
+            tour.finish();
+        });
+        assert!(
+            dom.in_runtime(|| tour.seen()),
+            "the first key was not stored"
+        );
+
+        KEY.set("second".into());
+        let mut tick = dom.in_scope(ScopeId::APP, consume_context::<Signal<u32>>);
+        dom.in_runtime(|| tick += 1);
+        render(&mut dom);
+        assert!(
+            !dom.in_runtime(|| tour.seen()),
+            "still reading the first key"
+        );
+
+        dom.in_runtime(|| {
+            tour.start();
+            tour.finish();
+            tour.forget();
+        });
+        KEY.set("first".into());
+        dom.in_runtime(|| tick += 1);
+        render(&mut dom);
+        assert!(
+            dom.in_runtime(|| tour.seen()),
+            "the second key forgot the first"
+        );
     }
 
     /// The slot names are public: a rename here is a breaking change.

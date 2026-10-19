@@ -3,8 +3,11 @@ use dioxus::prelude::*;
 use super::options::WindowRect;
 use crate::{
     components::{common::has_shortcut_modifier, layout::Placement},
-    hooks::{Drag, DragMove, DragOptions, DragStart, ElementHandle, use_drag},
-    platform::ElementApi,
+    hooks::{
+        Drag, DragMove, DragOptions, DragStart, ElementHandle, use_drag, use_subscription_slot,
+    },
+    platform::{ElementApi, ScrollSubscription, on_viewport_resize},
+    utils::bump,
 };
 
 /// How a pinned window's size follows the grip's logical travel: it grows about
@@ -141,9 +144,16 @@ pub(super) fn use_window_geometry(
     let mut size = use_signal(|| None::<(f64, f64)>);
     let measured = use_signal(|| None::<(f64, f64)>);
     let bounds = use_signal(|| None::<WindowBounds>);
+    // Bumped by the callback outside every scope; the effect below reads the caps again.
+    let viewport_tick = use_signal(|| 0u64);
+    let resizing = use_subscription_slot::<dyn ScrollSubscription>();
     use_effect(move || {
+        let _ = viewport_tick();
         if root.is_mounted() {
             read_bounds(root, bounds);
+            if !resizing.is_some() {
+                resizing.set(on_viewport_resize(Box::new(move || bump(viewport_tick))));
+            }
         }
     });
     // Where a pointer drag started, read once at pointerdown.

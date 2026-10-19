@@ -2,6 +2,7 @@
 //! `VirtualDom` rendered after each firing the way a renderer would.
 
 use std::cell::RefCell;
+use std::time::Duration;
 
 use dioxus::prelude::*;
 
@@ -222,6 +223,19 @@ fn a_stopped_timeout_never_fires() {
     assert!(log(&dom).is_empty());
 }
 
+#[test]
+fn a_timeout_stopped_after_it_fired_but_before_the_render_does_not_call_back() {
+    let _clock = manual_timer::install();
+    let mut dom = started(timeout_app);
+    dom.in_runtime(|| timeout().start());
+    let due = manual_timer::now() + Duration::from_millis(60);
+    dom.in_runtime(|| manual_timer::advance_to(due));
+    dom.in_runtime(|| timeout().stop());
+
+    flush(&mut dom);
+    assert!(log(&dom).is_empty());
+}
+
 fn reading_timeout_app() -> Element {
     let log = use_context_provider(|| Signal::new(Vec::<String>::new()));
     let label = use_context_provider(|| Signal::new("fired".to_string()));
@@ -273,4 +287,17 @@ fn an_interval_ticks_between_start_and_stop() {
     assert!(!dom.in_runtime(|| interval().active()));
     elapse(&mut dom, 60);
     assert_eq!(log(&dom).len(), 3, "kept ticking after stop");
+}
+
+#[test]
+fn an_interval_stopped_after_a_tick_but_before_the_render_does_not_call_back() {
+    let _clock = manual_timer::install();
+    let mut dom = started(interval_app);
+    dom.in_runtime(|| interval().start());
+    let due = manual_timer::now() + Duration::from_millis(30);
+    dom.in_runtime(|| manual_timer::advance_to(due));
+    dom.in_runtime(|| interval().stop());
+
+    flush(&mut dom);
+    assert!(log(&dom).is_empty());
 }

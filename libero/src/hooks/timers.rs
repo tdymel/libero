@@ -16,6 +16,8 @@ pub(crate) struct Scheduled {
     fired: Signal<u64>,
     /// Replacing or dropping the subscription cancels it.
     pending: CopyValue<Option<Box<dyn TimerSubscription>>>,
+    /// The firings the scope has handled; a cancel skips those not rendered yet.
+    seen: CopyValue<u64>,
 }
 
 impl Scheduled {
@@ -34,6 +36,12 @@ impl Scheduled {
     pub(crate) fn cancel(&self) {
         let mut pending = self.pending;
         pending.set(None);
+        self.skip_fired();
+    }
+
+    fn skip_fired(&self) {
+        let mut seen = self.seen;
+        seen.set(*self.fired.peek());
     }
 
     fn replace(
@@ -42,6 +50,7 @@ impl Scheduled {
     ) {
         let mut pending = self.pending;
         pending.set(timer().map(make));
+        self.skip_fired();
     }
 }
 
@@ -51,7 +60,11 @@ pub(crate) fn use_scheduled(mut on_fire: impl FnMut(Scheduled) + 'static) -> Sch
     let fired = use_hook(|| Signal::new_in_scope(0, ScopeId::ROOT));
     let pending = use_hook(|| CopyValue::new(None::<Box<dyn TimerSubscription>>));
     let mut seen = use_hook(|| CopyValue::new(0u64));
-    let scheduled = Scheduled { fired, pending };
+    let scheduled = Scheduled {
+        fired,
+        pending,
+        seen,
+    };
     use_drop(move || {
         scheduled.cancel();
         fired.manually_drop();
