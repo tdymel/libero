@@ -74,3 +74,19 @@ fn a_sidebar_is_an_aside_unless_told_otherwise() {
     assert_eq!(attributes_of(&html, "aside")["id"], "rail");
     assert_eq!(attributes_of(&html, "nav")["id"], "menu");
 }
+
+#[test]
+fn a_blank_name_is_dropped_from_the_panel_and_its_scroll_tab_stop() {
+    fn blank() -> Element {
+        rsx! { LiberoProvider { Sidebar { aria_label: " ", "content" } } }
+    }
+    fn named() -> Element {
+        rsx! { LiberoProvider { Sidebar { aria_label: "Filters", "content" } } }
+    }
+
+    assert!(!render(blank).contains("aria-label"));
+    assert_eq!(
+        attributes_of(&render(named), "aside")["aria-label"],
+        "Filters"
+    );
+}

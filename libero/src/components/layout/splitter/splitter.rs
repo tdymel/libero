@@ -139,8 +139,9 @@ pub fn Splitter(props: SplitterProps) -> Element {
     let divider = use_element();
     // The divider controls pane A, so it points there.
     let panel_a_id = use_id();
+    let aria_label = props.aria_label.filter(|label| !label.trim().is_empty());
     use_name_warning(
-        props.aria_label.is_some(),
+        aria_label.is_some(),
         "Splitter: no `aria_label`, so the divider is announced as just \"separator\" \
          and a number.",
     );
@@ -364,7 +365,7 @@ pub fn Splitter(props: SplitterProps) -> Element {
                     vertical,
                     size,
                     min_size,
-                    aria_label: props.aria_label,
+                    aria_label,
                     controls: panel_a_id(),
                     onpointerdown: ondividerdown,
                     onkeydown,

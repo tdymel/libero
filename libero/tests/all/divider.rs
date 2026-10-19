@@ -76,6 +76,24 @@ fn a_callers_separator_role_keeps_the_label_name() {
 }
 
 #[test]
+fn a_blank_aria_label_does_not_mask_the_label_name() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider {
+                Divider { aria_label: " ", "Or" }
+            }
+        }
+    }
+
+    let html = render(app);
+
+    assert!(
+        attributes_of(&html, "div").contains_key("aria-labelledby"),
+        "{html}"
+    );
+}
+
+#[test]
 fn a_callers_aria_label_replaces_the_label_name() {
     fn app() -> Element {
         rsx! {

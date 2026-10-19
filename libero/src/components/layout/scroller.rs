@@ -668,7 +668,7 @@ pub fn Scroller(props: ScrollerProps) -> Element {
             "data-slot": ScrollerPart::Viewport.slot(),
             id: viewport_id(),
             role: "region",
-            aria_label: props.aria_label,
+            aria_label: (!props.aria_label.trim().is_empty()).then_some(props.aria_label),
             onscroll: move |event: ScrollPositionEvent| {
                 measure();
                 if matches!(event, ScrollPositionEvent::End(..)) && *clearing.peek() {

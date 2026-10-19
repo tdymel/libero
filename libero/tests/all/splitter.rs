@@ -149,3 +149,25 @@ fn a_non_finite_size_falls_back_instead_of_panicking() {
     assert!(body.contains("--lsx-splitter-a:50%;"));
     assert!(!body.contains("NaN"));
 }
+
+#[test]
+fn a_blank_name_is_not_put_on_the_divider() {
+    fn named() -> Element {
+        rsx! {
+            LiberoProvider {
+                Splitter { initial_size: 50.0, aria_label: "Resize", panel_a: rsx! { "a" }, panel_b: rsx! { "b" } }
+            }
+        }
+    }
+    fn blank() -> Element {
+        rsx! {
+            LiberoProvider {
+                Splitter { initial_size: 50.0, aria_label: " ", panel_a: rsx! { "a" }, panel_b: rsx! { "b" } }
+            }
+        }
+    }
+
+    let separator = r#"role="separator""#;
+    assert_eq!(tag_with(&render(named), separator)["aria-label"], "Resize");
+    assert_eq!(tag_with(&render(blank), separator).get("aria-label"), None);
+}

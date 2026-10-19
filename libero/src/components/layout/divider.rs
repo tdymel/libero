@@ -5,8 +5,8 @@ use crate::{
     CssLayer,
     components::{
         common::{
-            HtmlTag, Input, Orientation, Part, Variables, base_props, input_from_str, parts_enum,
-            variables,
+            HtmlTag, Input, Orientation, Part, Variables, base_props, input_from_str, names_itself,
+            parts_enum, variables,
         },
         layout::use_box,
     },
@@ -231,10 +231,7 @@ pub fn Divider(props: DividerProps) -> Element {
         attribute.name == "role"
             && !matches!(&attribute.value, AttributeValue::Text(role) if role == "separator")
     });
-    let caller_names_it = props
-        .attributes
-        .iter()
-        .any(|attribute| matches!(attribute.name, "aria-label" | "aria-labelledby"));
+    let caller_names_it = names_itself(&props.attributes);
     let labelled_by = (has_label && !other_role && !caller_names_it).then_some(label_id.cloned());
     let aria_orientation = (vertical && !other_role).then_some("vertical");
 

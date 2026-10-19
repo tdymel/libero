@@ -5,7 +5,7 @@ use crate::{
     components::{
         common::{
             HtmlTag, Input, Part, ScaleOrCss, States, Variables, base_props, input_from_str,
-            parts_enum, variables,
+            names_itself, parts_enum, variables,
         },
         layout::{ScrollArea, use_box},
     },
@@ -116,9 +116,14 @@ pub fn Sidebar(props: SidebarProps) -> Element {
         .active(size.size.state_name())
         .into();
 
+    // A blank name names nothing: it is dropped, not copied to the tab stop.
+    let mut attributes = props.attributes;
+    attributes.retain(|attribute| {
+        !matches!(attribute.name, "aria-label" | "aria-labelledby")
+            || names_itself(std::slice::from_ref(attribute))
+    });
     // An overflowing sidebar's scroll area is a tab stop: it carries the panel's name.
-    let mut scroll_attributes: Vec<Attribute> = props
-        .attributes
+    let mut scroll_attributes: Vec<Attribute> = attributes
         .iter()
         .filter(|attribute| matches!(attribute.name, "aria-label" | "aria-labelledby"))
         .cloned()
@@ -140,7 +145,7 @@ pub fn Sidebar(props: SidebarProps) -> Element {
         .prepare()
         .render(
             component,
-            props.attributes,
+            attributes,
             rsx! {
                 ScrollArea {
                     scrollbars: "both",

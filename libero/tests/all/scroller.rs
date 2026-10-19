@@ -175,3 +175,20 @@ fn the_theme_declares_the_fade_and_the_control_sizes() {
         "{html}"
     );
 }
+
+#[test]
+fn a_blank_name_leaves_the_region_without_a_label() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider {
+                Scroller { aria_label: "  ", span { "one" } }
+            }
+        }
+    }
+
+    let html = body(&render(app));
+    let region = html.find(r#"role="region""#).expect("a region");
+    let open = html[..region].rfind("<div").unwrap();
+
+    assert!(!attributes_of(&html[open..], "div").contains_key("aria-label"));
+}
