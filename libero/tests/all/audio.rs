@@ -43,6 +43,23 @@ fn the_player_is_a_named_group_round_a_bare_audio_element() {
     assert!(!audio.contains_key("controls"), "{html}");
 }
 
+/// Todo 3844: the mute button keeps one name and says its state with `aria-pressed`.
+#[test]
+fn the_mute_button_keeps_its_name_and_says_whether_it_is_on() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider { Audio { src: "/a.ogg", label: "Episode 1" } }
+        }
+    }
+
+    let html = body(&render(app));
+    assert!(!html.contains(r#"aria-label="Unmute""#), "{html}");
+    let at = html.find(r#"aria-label="Mute""#).expect(&html);
+    let tag = &html[html[..at].rfind("<button").unwrap()..];
+    let tag = &tag[..tag.find('>').unwrap()];
+    assert!(tag.contains(r#"aria-pressed="false""#), "{tag}");
+}
+
 #[test]
 fn the_controls_start_paused_with_an_unknown_duration() {
     fn app() -> Element {

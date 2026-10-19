@@ -9,9 +9,9 @@ use crate::{
         accessibility::visually_hidden_sx,
         common::{
             HtmlTag, Input, Part, States, Variables, attr, base_props, disabled_look_sx,
-            forced_on_sx, input_from_str, inset_focus_ring_sx, names_itself, on_tint_color,
-            parts_enum, safe_area_padding, sx_source, use_name_warning, use_style_attributes,
-            variables,
+            forced_on_sx, input_from_str, inset_focus_ring_sx, is_empty_element, names_itself,
+            on_tint_color, parts_enum, safe_area_padding, sx_source, use_name_warning,
+            use_style_attributes, variables,
         },
         layout::{Float, box_style, render_anchor, use_box},
     },
@@ -399,6 +399,11 @@ pub fn BottomNavigationItem(props: BottomNavigationItemProps) -> Element {
         use_name_warning(
             props.badge.is_none() || names_itself(&props.attributes),
             "BottomNavigationItem: `badge` without an `aria-label` or `aria-labelledby` carrying the count, so it is not announced.",
+        );
+        // The icon is aria-hidden, so an item without a label or a spread name is announced as just "link" or "button".
+        use_name_warning(
+            !is_empty_element(&props.children) || names_itself(&props.attributes),
+            "BottomNavigationItem: no label and no `aria-label` or `aria-labelledby`, so it is announced as just \"link\" or \"button\".",
         );
     }
 

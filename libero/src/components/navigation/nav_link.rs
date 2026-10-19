@@ -10,7 +10,11 @@ use crate::{
             with_parts,
         },
         layout::{Collapse, box_style, use_box},
-        navigation::{NewTabHint, tree::row_draws_current, wants_new_tab_hint},
+        navigation::{
+            NewTabHint,
+            tree::{row_disabled, row_draws_current},
+            wants_new_tab_hint,
+        },
     },
     context::IconSlot,
     hooks::{
@@ -244,7 +248,9 @@ pub fn NavLink(props: NavLinkProps) -> Element {
     let (toggle_id, panel_id, description_id) = (use_id(), use_id(), use_id());
     let mut own_opened = use_signal(|| props.default_opened);
     let opened = props.opened.unwrap_or(own_opened());
-    let disabled = props.disabled.unwrap_or(false);
+    // A link in a disabled tree row follows the row, which already draws the faded look.
+    let own_disabled = props.disabled.unwrap_or(false);
+    let disabled = props.disabled.unwrap_or_else(row_disabled);
     let is_active = props.active.unwrap_or_else(|| match &props.to {
         NavigationTarget::Internal(path) => try_router()
             .map(|router| route_matches(&router.full_route_string(), path))
@@ -260,7 +266,7 @@ pub fn NavLink(props: NavLinkProps) -> Element {
     let states: Input<States> = props
         .states
         .unwrap_or_default()
-        .with("disabled", disabled)
+        .with("disabled", own_disabled)
         .with("active", is_active && !row_draws_current())
         .into();
     // On a live link, an explicit `active: false` overrides the router `Link`'s own `aria-current`.

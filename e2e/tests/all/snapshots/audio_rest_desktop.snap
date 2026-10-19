@@ -8,7 +8,7 @@ group "Silence"
     button "Play" [keyshortcuts=K]
     slider "Seek" = 0 [orientation=horizontal] [valuemax=4] [valuemin=0]
       description "0:00 of 0:04"
-    button "Mute" [keyshortcuts=M]
+    button "Mute" [keyshortcuts=M] [pressed=false]
     button "Volume" [expanded=false] [haspopup=dialog]
     button "Playback speed 1×"
       StaticText "1×"
@@ -19,7 +19,7 @@ group "Broken"
       description "This media could not be played."
     slider "Seek" = 0 [disabled] [orientation=horizontal] [valuemax=1] [valuemin=0]
       description "0:00 of --:--"
-    button "Mute" [keyshortcuts=M]
+    button "Mute" [keyshortcuts=M] [pressed=false]
     button "Volume" [expanded=false] [haspopup=dialog]
     button "Playback speed 1×"
       StaticText "1×"
@@ -31,7 +31,7 @@ group "Muted"
     button "Play" [keyshortcuts=K]
     slider "Seek" = 0 [orientation=horizontal] [valuemax=4] [valuemin=0]
       description "0:00 of 0:04"
-    button "Unmute" [keyshortcuts=M]
+    button "Mute" [keyshortcuts=M] [pressed]
     button "Volume" [expanded=false] [haspopup=dialog]
     button "Playback speed 1×"
       StaticText "1×"
@@ -41,7 +41,7 @@ group "Right to left"
     button "Play" [keyshortcuts=K]
     slider "Seek" = 0 [orientation=horizontal] [valuemax=4] [valuemin=0]
       description "0:00 of 0:04"
-    button "Mute" [keyshortcuts=M]
+    button "Mute" [keyshortcuts=M] [pressed=false]
     button "Volume" [expanded=false] [haspopup=dialog]
     button "Playback speed 1×"
       StaticText "1×"
@@ -51,7 +51,7 @@ group "Inline"
     button "Play" [keyshortcuts=K]
     slider "Seek" = 0 [orientation=horizontal] [valuemax=4] [valuemin=0]
       description "0:00 of 0:04"
-    button "Mute" [keyshortcuts=M]
+    button "Mute" [keyshortcuts=M] [pressed=false]
     button "Volume" [expanded=false] [haspopup=dialog]
     button "Playback speed 1×"
       StaticText "1×"

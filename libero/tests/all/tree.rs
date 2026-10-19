@@ -223,6 +223,55 @@ fn an_active_nav_link_in_the_current_row_leaves_the_look_to_the_row() {
     assert!(!active(&links[1]), "the current row draws it: {links:?}");
 }
 
+/// Todo 3837: a `NavLink` in a disabled row, or under a disabled branch, goes nowhere; an
+/// explicit `disabled: false` keeps its link.
+#[test]
+fn a_nav_link_in_a_disabled_row_has_no_href() {
+    fn app() -> Element {
+        let data = vec![
+            TreeNode::new("open", "Open".to_string()),
+            TreeNode::new("off", "Off".to_string()).disabled(true),
+            TreeNode::new("branch", "Branch".to_string())
+                .disabled(true)
+                .children(vec![TreeNode::new("child", "Child".to_string())]),
+            TreeNode::new("kept", "Kept".to_string()).disabled(true),
+        ];
+        rsx! {
+            LiberoProvider {
+                Tree {
+                    aria_label: "Pages",
+                    data,
+                    default_expanded: ["branch".to_string()].into(),
+                    render_node: move |args: TreeNodeRenderArgs<String>| rsx! {
+                        NavLink {
+                            to: "/page",
+                            disabled: (args.id == "kept").then_some(false),
+                            "{args.data}"
+                        }
+                    },
+                }
+            }
+        }
+    }
+    let html = body(&render(app));
+
+    let link = |label: &str| {
+        let at = html.find(&format!(">{label}</a>")).expect(label);
+        let tag = &html[html[..at].rfind("<a").unwrap()..=at];
+        attributes_of(tag, "a")
+    };
+    for label in ["Off", "Branch", "Child"] {
+        let link = link(label);
+        assert!(!link.contains_key("href"), "{label}: {link:?}");
+        assert_eq!(link["aria-disabled"], "true", "{label}: {link:?}");
+    }
+    for label in ["Open", "Kept"] {
+        let link = link(label);
+        assert!(link.contains_key("href"), "{label}: {link:?}");
+        assert!(!link.contains_key("aria-disabled"), "{label}: {link:?}");
+    }
+}
+
 /// A `current` hidden in a collapsed branch hands the tab stop to the branch.
 #[test]
 fn a_collapsed_current_node_puts_the_tab_stop_on_its_branch() {

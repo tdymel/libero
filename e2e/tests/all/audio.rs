@@ -338,8 +338,12 @@ fn the_speaker_mutes_and_the_volume_sits_in_a_menu() {
     block_on(async {
         let fixture = Fixture::open("/audio", Viewport::Desktop).await.unwrap();
         let page = &fixture.page;
-        let label = |selector: &str, name: &str| {
-            format!("document.querySelector('{selector}').getAttribute('aria-label') === '{name}'")
+        // The name stays "Mute"; `aria-pressed` says whether it is muted (todo 3844).
+        let pressed = |selector: &str, state: &str| {
+            format!(
+                "document.querySelector('{selector}').getAttribute('aria-label') === 'Mute'
+                 && document.querySelector('{selector}').getAttribute('aria-pressed') === '{state}'"
+            )
         };
 
         wait::for_js_true(
@@ -347,9 +351,9 @@ fn the_speaker_mutes_and_the_volume_sits_in_a_menu() {
             &format!(
                 "{} && {}",
                 audio("muted", "a.muted"),
-                label(SPEAKER, "Unmute")
+                pressed(SPEAKER, "true")
             ),
-            "a muted player to offer Unmute",
+            "a muted player to show the speaker pressed",
         )
         .await
         .unwrap();
@@ -360,7 +364,7 @@ fn the_speaker_mutes_and_the_volume_sits_in_a_menu() {
             &format!(
                 "{} && {}",
                 audio("muted", "!a.muted"),
-                label(SPEAKER, "Mute")
+                pressed(SPEAKER, "false")
             ),
             "the speaker to unmute",
         )

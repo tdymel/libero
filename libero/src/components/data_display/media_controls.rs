@@ -671,7 +671,9 @@ pub(super) fn MediaVolume(
     rsx! {
         div { "data-slot": VOLUME,
             ActionIcon {
-                aria_label: if silent { labels.unmute } else { labels.mute },
+                // One static name plus `aria-pressed`, as the password reveal (todo 498).
+                aria_label: labels.mute,
+                aria_pressed: if silent { "true" } else { "false" },
                 tooltip: true,
                 shortcut: "m",
                 size: icon_size(&size),

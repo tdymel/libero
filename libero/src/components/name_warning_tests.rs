@@ -191,6 +191,24 @@ fn a_bottom_navigation_badge_without_a_name_warns() {
     ));
 }
 
+/// Todo 3854: an item whose only content is the aria-hidden icon is announced as just "link".
+#[test]
+fn an_unlabelled_bottom_navigation_item_warns() {
+    let prefix = "BottomNavigationItem: no label";
+    assert!(warns(
+        || rsx! { LiberoProvider { BottomNavigation { "aria-label": "Main", BottomNavigationItem { to: "/inbox", icon: rsx! { "i" }, children: rsx! {} } } } },
+        prefix
+    ));
+    assert!(!warns(
+        || rsx! { LiberoProvider { BottomNavigation { "aria-label": "Main", BottomNavigationItem { to: "/inbox", "aria-label": "Inbox", icon: rsx! { "i" }, children: rsx! {} } } } },
+        prefix
+    ));
+    assert!(!warns(
+        || rsx! { LiberoProvider { BottomNavigation { "aria-label": "Main", BottomNavigationItem { to: "/inbox", icon: rsx! { "i" }, "Inbox" } } } },
+        prefix
+    ));
+}
+
 /// Todo 1593: a group inside a toolbar is announced as just "group" without a name.
 #[test]
 fn an_unnamed_toolbar_group_warns() {

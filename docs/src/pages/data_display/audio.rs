@@ -74,7 +74,7 @@ pub fn AudioPage() -> Element {
                 .key(["Tab"], "Moves through every control in visual order: play, seek, mute, volume, speed. In the volume menu, returns to its button.")
                 .handles([
                     "The player is a group named by `label`. Each button and slider is its own Tab stop.",
-                    "Buttons say what a press does: Play or Pause, Mute or Unmute. The speed button reads \"Playback speed 1×\" and steps to 1.5×, 2× and back to 1×.",
+                    "Buttons say what a press does: Play or Pause. The mute button keeps the name \"Mute\" and says it is on with `aria-pressed`. The speed button reads \"Playback speed 1×\" and steps to 1.5×, 2× and back to 1×.",
                     "The seek slider reads the time as \"1:05 of 4:56\". The visible time is hidden from screen readers, so it is not read twice.",
                     "The chevron beside the speaker, named \"Volume\", opens the volume slider and focuses it. Raising the volume unmutes.",
                     "The loudness bars on the seek track are hidden from screen readers; the slider's keys, press and drag work on them.",

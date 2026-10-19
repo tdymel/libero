@@ -101,6 +101,26 @@ fn a_loading_list_names_no_row() {
     assert!(descendant(&mut dom).is_some_and(|id| id.ends_with("-option-0")));
 }
 
+/// Todo 3771: the loader is no listbox, so the trigger does not claim `aria-expanded`.
+#[test]
+fn a_loading_list_does_not_claim_expanded() {
+    let mut dom = mount();
+    assert_eq!(
+        trigger_attribute(&mut dom, "aria-expanded").0.as_deref(),
+        Some("true")
+    );
+
+    dom.in_runtime(|| get(&LOADING).set(true));
+    let (expanded, html) = trigger_attribute(&mut dom, "aria-expanded");
+    assert_eq!(expanded.as_deref(), Some("false"), "{html}");
+
+    dom.in_runtime(|| get(&LOADING).set(false));
+    assert_eq!(
+        trigger_attribute(&mut dom, "aria-expanded").0.as_deref(),
+        Some("true")
+    );
+}
+
 #[test]
 fn an_empty_list_names_no_row() {
     let mut dom = mount();

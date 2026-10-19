@@ -1,4 +1,7 @@
-use dioxus::{dioxus_core::AttributeValue, prelude::*};
+use dioxus::{
+    dioxus_core::{AttributeValue, DynamicNode},
+    prelude::*,
+};
 
 use crate::utils::warn;
 
@@ -12,6 +15,17 @@ pub(crate) fn names_itself(attributes: &[Attribute]) -> bool {
                 AttributeValue::Text(text) => !text.trim().is_empty(),
                 _ => true,
             }
+    })
+}
+
+/// Whether `element` is the bare `rsx! {}`: a label that draws nothing.
+pub(crate) fn is_empty_element(element: &Element) -> bool {
+    element.as_ref().is_ok_and(|element| {
+        element.template().strings().is_empty()
+            && element
+                .dynamic_node_values()
+                .iter()
+                .all(|node| matches!(node, DynamicNode::Fragment(children) if children.is_empty()))
     })
 }
 
@@ -84,6 +98,17 @@ pub(crate) fn allowed_href(url: &str, owner: &str) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn only_a_bare_rsx_is_an_empty_element() {
+        let bare: Element = rsx! {};
+        let text: Element = rsx! { "x" };
+        let node: Element = rsx! { span {} };
+        assert!(is_empty_element(&bare));
+        assert!(is_empty_element(&VNode::empty()));
+        assert!(!is_empty_element(&text));
+        assert!(!is_empty_element(&node));
+    }
 
     fn attribute(name: &'static str) -> Attribute {
         Attribute::new(name, AttributeValue::Text("x".to_string()), None, false)

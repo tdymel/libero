@@ -5,6 +5,7 @@ pub struct MediaLabels {
     pub play: &'static str,
     pub pause: &'static str,
     pub mute: &'static str,
+    /// Unused: the mute button keeps `mute` and sets `aria-pressed` (kept for compatibility).
     pub unmute: &'static str,
     pub seek: &'static str,
     pub volume: &'static str,

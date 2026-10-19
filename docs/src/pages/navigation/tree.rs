@@ -218,6 +218,7 @@ pub fn TreePage() -> Element {
                     "Typing jumps to the next row whose `tree_label` matches.",
                     "The arrow keys reach a disabled node, but typing skips it and nothing activates, expands or collapses it.",
                     "`TreeItem` takes `args.tabindex` for you.",
+                    "A `NavLink` in a disabled row is disabled with it and goes nowhere, unless it sets `disabled: false`.",
                 ])
                 .must([
                     "Name the tree with `aria_label`. It is required.",

@@ -425,7 +425,7 @@ pub fn PhoneField(props: PhoneFieldProps) -> Element {
             country,
             picker_name: name_of(country),
             flag,
-            opened,
+            opened: !rows.is_empty(),
             home_row: home_row.clone(),
             disabled,
             readonly,
@@ -675,7 +675,7 @@ struct PickerButton {
     country: &'static Country,
     picker_name: String,
     flag: Option<Callback<String, Element>>,
-    /// Whether the list is drawn, which a disabled or read-only field never is.
+    /// Whether the list has rows on screen: never when disabled or read-only, nor for a query nothing matches.
     opened: bool,
     /// The current country's row, which a click opens on.
     home_row: Rc<dyn Fn() -> Option<usize>>,

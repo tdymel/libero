@@ -485,6 +485,42 @@ fn a_query_ranks_names_starting_with_it_first() {
     });
 }
 
+/// Todo 3771: a query nothing matches draws no listbox, so the button stops saying expanded.
+#[test]
+fn a_query_without_a_match_leaves_the_button_collapsed() {
+    block_on(async {
+        let fixture = Fixture::open("/phone-field", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        keyboard::tab_to(page, PICKER, 10).await.unwrap();
+        keyboard::press(page, keyboard::ENTER).await.unwrap();
+        wait_open(page, "Enter").await;
+        wait::for_js_true(
+            page,
+            &format!("document.querySelector({PICKER:?}).getAttribute('aria-expanded') === 'true'"),
+            "the open list to say expanded",
+        )
+        .await
+        .unwrap();
+
+        keyboard::type_text(page, "zzzz").await.unwrap();
+        wait::for_js_true(
+            page,
+            &format!(
+                "document.querySelector({PICKER:?}).getAttribute('aria-expanded') === 'false' \
+                 && !document.querySelector('[role=listbox]')"
+            ),
+            "a query without a match to leave no listbox and no expanded button",
+        )
+        .await
+        .unwrap();
+
+        fixture.console.assert_clean("/phone-field").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
 /// Todo 793: the list sorts by the shown, German name, an umlaut with its base
 /// letter: Deutschland among the D's, Österreich among the O's.
 #[test]

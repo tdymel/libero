@@ -245,9 +245,9 @@ pub(crate) fn ComboboxCore(props: ComboboxCoreProps) -> Element {
 
     // Nothing to show draws nothing, but a `header` keeps the box: a failed search must stay editable.
     let showing = opened && (loading || count > 0 || empty.is_some() || props.header.is_some());
-    // Open in the state but no listbox on screen (nothing drawn, or only "No results"): the
-    // trigger must not claim `aria-expanded`. Loading keeps it, as its loader is the popup.
-    let listless = !loading && count == 0;
+    // Open in the state but no listbox on screen (nothing drawn, only "No results" or the
+    // loader): the trigger must not claim `aria-expanded`. The status region says "loading".
+    let listless = count == 0;
     props
         .state
         .set_held(props.state.is_open() && (!showing || listless));

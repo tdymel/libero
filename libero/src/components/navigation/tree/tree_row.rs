@@ -47,6 +47,11 @@ pub(crate) fn row_draws_current() -> bool {
     try_consume_context::<TreeRowContext>().is_some_and(|row| row.0.read().current_look)
 }
 
+/// Whether the enclosing tree row is disabled, by its own flag or an ancestor's; outside a tree, `false`.
+pub(crate) fn row_disabled() -> bool {
+    try_consume_context::<TreeRowContext>().is_some_and(|row| row.0.read().disabled)
+}
+
 // No hover here: the `<li>` holds its descendants, so it would paint the chain.
 // Only the subtree drops the pointer, so the `<li>` shows `not-allowed` (todo 596).
 static TREE_ROW_SX: StaticSx = StaticSx::new(|| {

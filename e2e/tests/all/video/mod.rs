@@ -443,8 +443,12 @@ fn the_speaker_mutes_and_the_volume_sits_in_a_menu() {
         let fixture = Fixture::open("/video", Viewport::Desktop).await.unwrap();
         _fullscreen = e2e::frames::keep_fullscreen().await;
         let page = &fixture.page;
-        let speaker = |name: &str| {
-            format!("document.querySelector('{SPEAKER}')?.getAttribute('aria-label') === '{name}'")
+        // The name stays "Mute"; `aria-pressed` says whether it is muted (todo 3844).
+        let speaker = |pressed: &str| {
+            format!(
+                "document.querySelector('{SPEAKER}')?.getAttribute('aria-label') === 'Mute'
+                 && document.querySelector('{SPEAKER}').getAttribute('aria-pressed') === '{pressed}'"
+            )
         };
         // The metadata widens the time and moves the speaker; a click aimed before lands beside it (todo 1673).
         wait::for_js_true(
@@ -452,7 +456,7 @@ fn the_speaker_mutes_and_the_volume_sits_in_a_menu() {
             &format!(
                 "{} && document.querySelector('#player [data-slot=time]').textContent === '0:00 / 0:04'
                  && document.querySelector('#player [role=alert]') === null",
-                speaker("Mute")
+                speaker("false")
             ),
             "the speaker, once the metadata has settled the bar",
         )
@@ -461,7 +465,7 @@ fn the_speaker_mutes_and_the_volume_sits_in_a_menu() {
         pointer::click(page, SPEAKER).await.unwrap();
         wait::for_js_true(
             page,
-            &format!("{VIDEO}.muted && {}", speaker("Unmute")),
+            &format!("{VIDEO}.muted && {}", speaker("true")),
             "the speaker to mute",
         )
         .await
@@ -469,7 +473,7 @@ fn the_speaker_mutes_and_the_volume_sits_in_a_menu() {
         pointer::click(page, SPEAKER).await.unwrap();
         wait::for_js_true(
             page,
-            &format!("!{VIDEO}.muted && {}", speaker("Mute")),
+            &format!("!{VIDEO}.muted && {}", speaker("false")),
             "the speaker to unmute",
         )
         .await
@@ -640,8 +644,8 @@ fn muted_mutes_and_the_speed_reads_left_to_right() {
         wait::for_js_true(
             page,
             "document.querySelector('#muted video').muted
-             && document.querySelector('#muted [data-slot=volume] button').getAttribute('aria-label') === 'Unmute'",
-            "the muted player to be muted and offer Unmute",
+             && document.querySelector('#muted [data-slot=volume] button').getAttribute('aria-pressed') === 'true'",
+            "the muted player to be muted and show the speaker pressed",
         )
         .await
         .unwrap();
