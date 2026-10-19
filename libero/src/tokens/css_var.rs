@@ -1,7 +1,7 @@
 use std::fmt::Display;
 
 use super::{ColorShade, Size};
-use crate::css::CssDeclaration;
+use crate::css::{CssDeclaration, is_property_name};
 
 /// The per-instance twin of a themed var: `Theme` declares `--lsx-icon-size`, a prop
 /// sets `--lsx-icon-size-override`. Always derived, so the two can't drift.
@@ -67,11 +67,7 @@ impl CssVar {
     }
 
     pub fn parse_name(value: &str) -> Option<&str> {
-        if value.starts_with("--") {
-            Some(value)
-        } else {
-            None
-        }
+        (value.starts_with("--") && is_property_name(value)).then_some(value)
     }
 
     pub fn parse_value(value: &str) -> Option<&str> {
@@ -247,6 +243,15 @@ mod tests {
     fn the_same_name_compares_equal_across_variants() {
         assert_eq!(CssVar::new("--lsx-x"), CssVar::Owned("--lsx-x".to_string()));
         assert_ne!(CssVar::new("--lsx-x"), CssVar::new("--lsx-y"));
+    }
+
+    #[test]
+    fn parse_refuses_a_name_that_breaks_out_of_var() {
+        assert!(CssVar::parse("--lsx-x").is_some());
+        assert!(CssVar::parse("var(--lsx-x)").is_some());
+        for bad in ["--x)", "--x;color:red", "--x}", "var(--x;y)", "--a b"] {
+            assert!(CssVar::parse(bad).is_none(), "{bad}");
+        }
     }
 
     #[test]

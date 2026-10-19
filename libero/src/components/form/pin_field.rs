@@ -8,7 +8,7 @@ use dioxus::prelude::*;
 use crate::{
     components::{
         common::{
-            HtmlTag, Input, Part, ScaleOrCss, States, input_from_str, names_itself,
+            HtmlTag, Input, Part, ScaleOrCss, States, input_from_str, is_alt_graph, names_itself,
             navigation_chord, use_name_warning,
         },
         form::{
@@ -479,7 +479,8 @@ impl PinEdit {
     fn keys(&self, index: usize, event: Event<KeyboardData>) {
         let (length, readonly) = (self.length, self.readonly);
         self.handled_delete.set(false);
-        let modified = event.modifiers().ctrl() || meta_held(event.modifiers());
+        let modifiers = event.modifiers();
+        let modified = (modifiers.ctrl() && !is_alt_graph(modifiers)) || meta_held(modifiers);
         // A composing key edits the IME's candidate, not the cell (todo 3033).
         // Ctrl/Alt/Meta+arrow, Home or End is the caret's or the browser's.
         if event.is_composing() || navigation_chord(&event).is_some() {

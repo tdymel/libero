@@ -81,6 +81,25 @@ fn bare(word: &str) -> String {
     word.to_lowercase().replace('.', "")
 }
 
+/// `1.5` or `1,5`, or a `.5`: a fraction, which `read_duration` refuses instead of
+/// reading `1.5 h` as 15 h.
+fn has_decimal_separator(text: &str) -> bool {
+    let chars: Vec<char> = text.chars().collect();
+    let digit = |index: Option<usize>| {
+        index
+            .and_then(|index| chars.get(index))
+            .is_some_and(char::is_ascii_digit)
+    };
+    chars.iter().enumerate().any(|(at, &c)| {
+        let (before, after) = (at.checked_sub(1), Some(at + 1));
+        match c {
+            '.' => digit(after) && !before.is_some_and(|b| chars[b].is_alphabetic()),
+            ',' => digit(before) && digit(after),
+            _ => false,
+        }
+    })
+}
+
 /// Which part a unit word names: 0 hours, 1 minutes, 2 seconds. The locale's
 /// words and English's; a word of two letters or more may be cut short.
 fn unit_of(word: &str, names: &DateLocale) -> Option<usize> {
@@ -131,7 +150,11 @@ fn unit_of(word: &str, names: &DateLocale) -> Option<usize> {
 /// Reads `1 h 30 min`, `1h30`, `90 min`, `1:30`, `1:30:15` or bare minutes.
 /// A number after a unit counts in the next smaller one. Nothing negative.
 fn read_duration(text: &str, names: &DateLocale) -> Result<TimeDelta, Unreadable> {
-    let text = bare(&fold_digits(text.trim()));
+    let text = fold_digits(text.trim());
+    if has_decimal_separator(&text) {
+        return Err(Unreadable);
+    }
+    let text = bare(&text);
     if text.contains(':') {
         let numbers = text
             .split(':')
@@ -494,6 +517,17 @@ mod tests {
         ] {
             assert_eq!(read(text), None, "{text:?}");
         }
+    }
+
+    /// Todo 3803: the separator was dropped, so `1.5 h` read as 15 h.
+    #[test]
+    fn refuses_a_fraction_instead_of_dropping_its_separator() {
+        let read = |text| read_duration(text, EN).ok();
+        for text in ["1.5 h", "1,5 h", "1.5:30", "1.5", ".5 h", "0,5"] {
+            assert_eq!(read(text), None, "{text:?}");
+        }
+        assert_eq!(read("1 h, 30 min"), Some(of(1, 30, 0)));
+        assert_eq!(read_duration("1 Std. 30 Min.", DE).ok(), Some(of(1, 30, 0)));
     }
 
     #[test]

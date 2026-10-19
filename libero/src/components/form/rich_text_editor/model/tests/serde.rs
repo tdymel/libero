@@ -84,6 +84,18 @@ fn loading_gives_fresh_keys_and_repairs_runs_and_emptiness() {
 }
 
 #[test]
+fn a_stored_heading_level_loads_clamped_and_writes_markdown() {
+    let json = r#"{"blocks":[
+        {"type":"heading","level":0,"inlines":[{"type":"text","text":"low"}]},
+        {"type":"heading","level":7,"inlines":[{"type":"text","text":"high"}]}
+    ]}"#;
+    let doc: Doc = serde_json::from_str(json).unwrap();
+    assert_eq!(doc.blocks[0].kind, BlockKind::heading(1));
+    assert_eq!(doc.blocks[1].kind, BlockKind::heading(6));
+    assert_eq!(doc.to_markdown(), "# low\n\n###### high\n");
+}
+
+#[test]
 fn loading_repairs_the_structure() {
     let json = r#"{"blocks":[
         {"type":"heading","level":9,"inlines":[{"type":"text","text":"h"}]},

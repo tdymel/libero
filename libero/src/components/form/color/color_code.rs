@@ -354,7 +354,7 @@ fn hue(text: &str) -> Result<f64, ParseColorError> {
     }
 }
 
-/// `80%` or `0.8`, as `0.0..=1.0`.
+/// `80%` or `80`, as `0.0..=1.0`; a bare number is a percent, as in CSS `hsl()`.
 fn percent(text: &str) -> Result<f64, ParseColorError> {
     let value = match text.strip_suffix('%') {
         Some(percent) => number(percent)? / 100.0,
@@ -440,6 +440,18 @@ mod tests {
             "hsla(208, 80%, 52%, 0.5)"
         );
         assert_eq!(parse("hsl(120, 100, 50)").to_hex(), "#00ff00");
+    }
+
+    /// Todo 3850: a bare number is a percent as in CSS, so `0.8` is 0.8%, not 80%.
+    #[test]
+    fn a_bare_hsl_number_is_a_percent_not_a_fraction() {
+        assert_eq!(percent("80"), Ok(0.8));
+        assert_eq!(percent("80%"), Ok(0.8));
+        assert!((percent("0.8").unwrap() - 0.008).abs() < 1e-12);
+        assert_eq!(
+            parse("hsl(210, 0.8, 0.5)").to_hex(),
+            parse("hsl(210, 0.8%, 0.5%)").to_hex()
+        );
     }
 
     /// Todo 2295: percent rgb channels and every CSS hue unit.

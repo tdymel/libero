@@ -18,6 +18,7 @@ use crate::{
         overlay::Shortcut,
     },
     context::{HostOutlet, PortalHost},
+    css::declaration_value,
     hooks::{
         FULLSCREEN_ATTR, Hotkey, MediaError, MediaHandle, TimeoutHandle, listener, use_cache,
         use_element, use_fullscreen, use_localization, use_media, use_portal_slot, use_scroll_lock,
@@ -431,7 +432,7 @@ fn bar_style(bar: Option<f64>, size: Option<Size>, aspect_ratio: Option<&str>) -
             )
         }
     };
-    match aspect_ratio {
+    match aspect_ratio.and_then(|ratio| declaration_value("aspect-ratio", ratio)) {
         Some(ratio) => format!("{bar}aspect-ratio: {ratio};"),
         None => bar,
     }
@@ -1068,6 +1069,8 @@ mod tests {
             "{estimate}"
         );
         assert!(!bar_style(None, None, None).contains("aspect-ratio"));
+        let escaping = bar_style(None, None, Some("1/1;position:fixed"));
+        assert!(!escaping.contains("aspect-ratio") && !escaping.contains("fixed"));
     }
 
     #[test]

@@ -52,7 +52,7 @@ pub(crate) use focus_ring::{
 pub(crate) use focusable::FOCUSABLE_SELECTOR;
 pub(crate) use hit_area::{COARSE_POINTER, coarse_hit_area_sx, min_hit_area_sx};
 pub(crate) use icons::{Glyph, draw_svg};
-pub(crate) use keys::{NavigationChord, has_shortcut_modifier, navigation_chord};
+pub(crate) use keys::{NavigationChord, has_shortcut_modifier, is_alt_graph, navigation_chord};
 pub(crate) use logical_text::LogicalTextAlign;
 pub(crate) use neighbour::neighbour;
 pub use number_value::NumberValue;

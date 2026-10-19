@@ -457,6 +457,47 @@ fn modifier_chords_leave_the_highlight() {
     });
 }
 
+/// Todo 3855: Shift+Arrow selects text in the search box, so it neither moves the
+/// highlight nor cancels the key.
+#[test]
+fn shift_arrows_select_text_instead_of_moving_the_highlight() {
+    block_on(async {
+        let fixture = Fixture::open("/spotlight", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        open_by_keyboard(page).await;
+        keyboard::press(page, keyboard::ARROW_DOWN).await.unwrap();
+        let first: String = js(page, &format!("document.querySelector({OPTIONS:?}).id")).await;
+        expect_active(page, &first, "ArrowDown to the first row").await;
+        let _: bool = js(
+            page,
+            "(window.__shiftKeys = [], window.addEventListener('keydown', \
+             e => { if (e.shiftKey) window.__shiftKeys.push(e.defaultPrevented); }), true)",
+        )
+        .await;
+        for key in [keyboard::ARROW_DOWN, keyboard::ARROW_UP] {
+            keyboard::press_shift(page, key).await.unwrap();
+        }
+        wait::for_js_true(
+            page,
+            "window.__shiftKeys.length >= 2",
+            "both Shift+Arrow presses to reach the page",
+        )
+        .await
+        .unwrap();
+        let cancelled: String = js(page, "JSON.stringify(window.__shiftKeys)").await;
+        assert_eq!(cancelled, "[false,false]", "Shift+Arrow was cancelled");
+        expect_active(page, &first, "Shift+Arrow").await;
+
+        fixture
+            .console
+            .assert_clean("spotlight shift arrows")
+            .unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
 /// Ctrl+K and Cmd+K each open the palette with focus in its search box, and
 /// the same chord from inside it closes it again.
 #[test]

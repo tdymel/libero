@@ -24,6 +24,7 @@ use super::{
 use crate::{
     components::{accessibility::VisuallyHidden, common::Glyph},
     context::IconSlot,
+    css::declaration_value,
     hooks::{ElementHandle, listener},
     localization::fill,
     platform,
@@ -148,10 +149,16 @@ pub(super) fn header_specs<T>(
                 _ => sizing.widths.get(&column.header).copied(),
             }
             .map(|width| format!("{width}px"));
-            let width = resized.as_deref().or(resolved.width);
+            let width = resized
+                .as_deref()
+                .or(resolved.width)
+                .and_then(|width| declaration_value("width", width));
             // An overflowing auto table holds each column at its content width, past a
             // resized `width`: a resize is a floor too, or Widen shows nothing (todo 2017).
-            let min_width = resized.as_deref().or(resolved.min_width);
+            let min_width = resized
+                .as_deref()
+                .or(resolved.min_width)
+                .and_then(|width| declaration_value("min-width", width));
             HeaderSpec {
                 header: column.header.clone(),
                 align: resolved.align,
@@ -1337,6 +1344,18 @@ mod tests {
             style(PinSide::End),
             "inset-inline-start:auto;inset-inline-end:2rem;"
         );
+    }
+
+    #[test]
+    fn a_width_that_leaves_its_declaration_is_dropped() {
+        let (_, mut columns) = ages();
+        columns[0] = columns[0].clone().width("10px;position:fixed");
+        columns[1] = columns[1].clone().width("12rem").min_width("10px}");
+        let headers = header_specs(&columns, &ColumnDefaults::new(), &[], unsized_spec());
+
+        assert_eq!(headers[0].width, None);
+        assert_eq!(headers[1].width.as_deref(), Some("12rem"));
+        assert_eq!(headers[1].min_width, None);
     }
 
     /// 2017: an overflowing table keeps a resized column at its width.

@@ -633,6 +633,8 @@ fn spotlight_key(
         return;
     }
     match event.key() {
+        // Shift+Arrow selects text in the search box.
+        Key::Named(NamedKey::ArrowDown | NamedKey::ArrowUp) if event.modifiers().shift() => {}
         Key::Named(NamedKey::ArrowDown) => {
             event.prevent_default();
             state.set_active(Some(active.map_or(0, |row| (row + 1) % count)));

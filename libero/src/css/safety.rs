@@ -1,5 +1,7 @@
 use std::borrow::Cow;
 
+use crate::utils::warn;
+
 /// `css` safe as a `<style>`'s text: `</` becomes `<\/`, the same in a CSS string, so
 /// no `</style>` in it ends the element when the page is rendered as HTML (todo 2621).
 pub(crate) fn style_text(css: &str) -> Cow<'_, str> {
@@ -38,6 +40,18 @@ pub(crate) fn stays_in_declaration(value: &str) -> bool {
         }
     }
     quote.is_none() && depth == 0
+}
+
+/// `value` when it stays in its declaration, else `None` and a debug warning: a free
+/// string a component writes into an inline style is dropped, not escaped (todo 3705).
+pub(crate) fn declaration_value<'a>(property: &str, value: &'a str) -> Option<&'a str> {
+    if stays_in_declaration(value) {
+        return Some(value);
+    }
+    warn(&format!(
+        "`{property}: {value}` dropped: it would leave its declaration."
+    ));
+    None
 }
 
 /// Whether `name` is a plain property name, a custom one included.
@@ -101,6 +115,13 @@ mod tests {
         ] {
             assert!(stays_in_declaration(value), "{value}");
         }
+    }
+
+    #[test]
+    fn a_declaration_value_that_escapes_is_dropped() {
+        assert_eq!(declaration_value("width", "10px"), Some("10px"));
+        assert_eq!(declaration_value("width", "10px;position:fixed"), None);
+        assert_eq!(declaration_value("width", "10px}"), None);
     }
 
     #[test]

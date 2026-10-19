@@ -677,8 +677,20 @@ impl ComboboxKeys {
                     request(false);
                 }
             }
+            // The trigger button would otherwise take the typed space as a click and close.
             Key::Character(ref key)
-                if key == " " && self.space_picks && opened && active_row.is_some() =>
+                if key == " " && self.space_picks && self.typed.peek().is_typing() =>
+            {
+                event.prevent_default();
+            }
+            Key::Character(ref key)
+                if key == " "
+                    && space_picks_highlight(
+                        self.space_picks,
+                        opened,
+                        active_row.is_some(),
+                        self.typed.peek().is_typing(),
+                    ) =>
             {
                 event.prevent_default();
                 pick();
@@ -696,9 +708,23 @@ impl ComboboxKeys {
     }
 }
 
+/// Select-only Space picks the highlight, except mid-query where it is typed text (todo 3823).
+fn space_picks_highlight(space_picks: bool, opened: bool, highlighted: bool, typing: bool) -> bool {
+    space_picks && opened && highlighted && !typing
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn space_mid_query_does_not_pick_the_highlight() {
+        assert!(space_picks_highlight(true, true, true, false));
+        assert!(!space_picks_highlight(true, true, true, true));
+        assert!(!space_picks_highlight(false, true, true, false));
+        assert!(!space_picks_highlight(true, false, true, false));
+        assert!(!space_picks_highlight(true, true, false, false));
+    }
 
     #[test]
     fn page_keys_jump_ten_enabled_rows_and_clamp_at_the_ends() {

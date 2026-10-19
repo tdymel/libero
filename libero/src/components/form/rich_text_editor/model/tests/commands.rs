@@ -132,6 +132,19 @@ fn shifted_digits_match_by_code_but_letters_follow_the_layout() {
 }
 
 #[test]
+fn a_symbol_chord_naming_shift_ignores_the_bare_symbol() {
+    let chord = Chord::parse("Shift+/").unwrap();
+    let key = |shift| KeyPress {
+        shift,
+        ..KeyPress::new("/")
+    };
+    assert!(chord.matches(&key(true), false));
+    assert!(!chord.matches(&key(false), false));
+    let bare = Chord::parse("/").unwrap();
+    assert!(bare.matches(&key(true), false) && bare.matches(&key(false), false));
+}
+
+#[test]
 fn alt_graph_characters_type_instead_of_running_a_chord() {
     let keymap = Keymap::default();
     // Windows, German layout: AltGr+2 is Ctrl+Alt+2 and types `²`.

@@ -1,6 +1,8 @@
 use std::fmt::{self, Display};
 
+use crate::css::{is_property_name, stays_in_declaration};
 use crate::tokens::CssVar;
+use crate::utils::warn;
 
 /// CSS custom properties on an element's `style` attribute, so a shared class can
 /// read a per-instance value through `var(--name)` instead of minting a class per value.
@@ -14,11 +16,19 @@ impl Variables {
     }
 
     /// Sets `name`, replacing an earlier value. `None` or empty clears it instead,
-    /// so an optional override chains directly.
+    /// so an optional override chains directly. A name or value that would leave its
+    /// declaration is dropped, not escaped (todo 3705).
     pub fn with(mut self, name: CssVar, value: impl Into<Option<String>>) -> Self {
         self.0.retain(|(existing, _)| existing != &name);
         if let Some(value) = value.into().filter(|value| !value.is_empty()) {
-            self.0.push((name, value));
+            if is_property_name(name.name()) && stays_in_declaration(&value) {
+                self.0.push((name, value));
+            } else {
+                warn(&format!(
+                    "Variable `{}: {value}` dropped: it would leave its declaration.",
+                    name.name()
+                ));
+            }
         }
         self
     }
@@ -116,6 +126,36 @@ mod tests {
             .with(owned, "blue".to_string());
 
         assert_eq!(variables.to_string(), "--lsx-test-color:blue;");
+    }
+
+    #[test]
+    fn a_value_or_name_that_leaves_its_declaration_is_dropped() {
+        let variables = variables()
+            .with(
+                COLOR,
+                "0;background:url(https://evil.example/x)".to_string(),
+            )
+            .with(CssVar::new("--lsx-a"), "1px}body{x:y".to_string())
+            .with(CssVar::new("--lsx-b"), "calc(1px".to_string())
+            .with(CssVar::Owned("--x:red;--y".to_string()), "1px".to_string())
+            .with(
+                CssVar::new("--lsx-ok"),
+                "calc(1px + var(--gap, 2px))".to_string(),
+            );
+
+        assert_eq!(
+            variables.to_string(),
+            "--lsx-ok:calc(1px + var(--gap, 2px));"
+        );
+    }
+
+    #[test]
+    fn a_refused_value_clears_an_earlier_one() {
+        let variables = variables()
+            .with(COLOR, "red".to_string())
+            .with(COLOR, "red;x:y".to_string());
+
+        assert_eq!(variables.to_string(), "");
     }
 
     #[test]

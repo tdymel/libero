@@ -271,7 +271,11 @@ pub fn ChronoFieldPage() -> Element {
                     Code { source: "1h30" }
                     ", "
                     Code { source: "1:30" }
-                    " or a bare number of minutes."
+                    " or a bare number of minutes. A fraction such as "
+                    Code { source: "1.5 h" }
+                    " or "
+                    Code { source: "1,5 h" }
+                    " is refused as unreadable, not rounded."
                 }
                 Text {
                     "The dropdown has a column each for the hours, the minutes at "

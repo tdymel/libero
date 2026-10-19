@@ -142,14 +142,18 @@ impl Chord {
             (Key::Character(want), Key::Character(got)) => want.eq_ignore_ascii_case(got),
             (want, got) => want == got,
         } || (held.alt() && self.alt_composed(pressed));
-        // A symbol's shift is already in the key: `?` is Shift+/ on most layouts.
+        // A symbol's shift is already in the key: `?` is Shift+/ on most layouts. A chord
+        // that names Shift still needs it held, so `shift+/` ignores a bare `/`.
         let symbol = matches!(&self.key, Key::Character(text)
             if !text.chars().any(char::is_alphanumeric));
         key_matches
             && self.ctrl == held.ctrl()
             && self.meta == meta_held(held)
             && self.alt == held.alt()
-            && (symbol || self.shift == held.shift())
+            && match self.shift {
+                true => held.shift(),
+                false => symbol || !held.shift(),
+            }
     }
 
     /// Option on a Mac composes the key (`alt+a` gives `å`, `alt+e` a dead key):
@@ -627,5 +631,15 @@ mod tests {
         assert!(chord.matches(&pressed(character("?"), Modifiers::SHIFT)));
         assert!(chord.matches(&pressed(character("?"), Modifiers::empty())));
         assert!(!chord.matches(&pressed(character("?"), Modifiers::CONTROL)));
+    }
+
+    #[test]
+    fn a_symbol_chord_that_names_shift_needs_it_held() {
+        let chord = Chord::parse("shift+/", false).unwrap();
+        assert!(chord.matches(&pressed(character("/"), Modifiers::SHIFT)));
+        assert!(!chord.matches(&pressed(character("/"), Modifiers::empty())));
+        let bare = Chord::parse("/", false).unwrap();
+        assert!(bare.matches(&pressed(character("/"), Modifiers::SHIFT)));
+        assert!(bare.matches(&pressed(character("/"), Modifiers::empty())));
     }
 }

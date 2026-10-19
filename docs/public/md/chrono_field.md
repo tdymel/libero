@@ -59,7 +59,8 @@ fn Demo() -> Element {
 
 A `TimeDelta` field holds a span of time rather than a moment. It shows
 `1 h 30 min`, with the units from `DateLocale`, and posts ISO 8601, `PT1H30M`.
-Typing reads `1 h 30 min`, `1h30`, `1:30` or a bare number of minutes.
+Typing reads `1 h 30 min`, `1h30`, `1:30` or a bare number of minutes. A
+fraction such as `1.5 h` or `1,5 h` is refused as unreadable, not rounded.
 
 The dropdown has a column each for the hours, the minutes at `step` and, with
 `with_seconds`, the seconds. The minutes and seconds wrap round without
