@@ -71,9 +71,9 @@ pub struct ChronoSizeLevel {
 pub struct ChronoPickerDefaults {
     pub size: Size,
     pub sizes: Sizes<ChronoSizeLevel>,
-    /// A month of days, or the mini calendar's row.
+    /// A month of days, or the mini calendar's row. Not read by the range pickers and fields.
     pub calendar: CalendarVariant,
-    /// Days in the mini calendar's row.
+    /// Days in the mini calendar's row. Not read by the range pickers and fields.
     pub days: usize,
 }
 

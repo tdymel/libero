@@ -833,9 +833,10 @@ fn a_drop_on_a_disabled_field_is_refused_not_opened() {
     });
 }
 
-/// Todo 3806: a file dropped on the dropzone's card list is refused, not opened.
+/// Todos 3806, 3807: a file dropped on the dropzone's card list is taken like a drop on the
+/// surface, and the browser does not open it.
 #[test]
-fn a_drop_on_the_card_list_is_refused_not_opened() {
+fn a_drop_on_the_card_list_is_taken_not_opened() {
     block_on(async {
         let fixture = Fixture::open("/file-field", Viewport::Desktop)
             .await
@@ -847,8 +848,17 @@ fn a_drop_on_the_card_list_is_refused_not_opened() {
         wait::for_selector(page, REMOVE_BETA).await.unwrap();
 
         watch_drag_defaults(page).await;
-        drop_files(page, "[data-fixture-ready] ul[role=list]", disk.paths()).await;
+        let more = OnDisk::with(&["gamma.txt"]);
+        drop_files(page, "[data-fixture-ready] ul[role=list]", more.paths()).await;
         assert_drag_cancelled(page, "a drop on the card list").await;
+        wait::for_js_true(
+            page,
+            "[...document.querySelectorAll('[data-fixture-ready] ul[role=list] [data-slot=name]')]\
+             .map(name => name.textContent).join() === 'gamma.txt'",
+            "the dropped file's card, as the surface's drop would leave it",
+        )
+        .await
+        .unwrap();
 
         fixture
             .console

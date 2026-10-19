@@ -6,7 +6,7 @@ use pictogram_icons_lucide as lucide;
 use crate::{
     components::{
         common::{Glyph, HtmlTag, ROW_HOVER_TINT, States},
-        form::{ComboboxOption, ComboboxState},
+        form::ComboboxOption,
         layout::{Box, BoxStyle, ScrollArea},
     },
     context::IconSlot,
@@ -161,7 +161,6 @@ pub(super) struct CascaderRows {
     pub(super) size: Size,
     pub(super) radius: Size,
     pub(super) labels: CascaderLabels,
-    pub(super) state: ComboboxState,
     /// The highlight is on the narrow list's parent row, not on the cursor's.
     pub(super) parent_active: bool,
 }
@@ -238,7 +237,8 @@ impl CascaderRows {
                     cursor.set(next_cursor.clone());
                     match has_children {
                         false => commit(picked.clone(), true),
-                        true if any_level => commit(picked.clone(), false),
+                        // Drilling into the committed branch is navigation: it never deselects.
+                        true if any_level && !is_committed => commit(picked.clone(), false),
                         true => {}
                     }
                 },
@@ -278,7 +278,7 @@ impl CascaderRows {
         let parent = node_at(&self.nodes, &parents)?;
         let text = fill(self.labels.select, &[("label", &parent.label)]);
         let is_committed = self.committed == parents;
-        let (commit, state, picked) = (self.commit.clone(), self.state, parents);
+        let (commit, picked) = (self.commit.clone(), parents);
         Some(rsx! {
             ComboboxOption {
                 key: "{level}-parent",
@@ -289,11 +289,7 @@ impl CascaderRows {
                 active: self.parent_active,
                 states: States::new().with("committed", is_committed),
                 "data-slot": "pick-parent",
-                onpick: move |_| match is_committed {
-                    // Re-picking would clear it under `allow_deselect`.
-                    true => state.close(),
-                    false => commit(picked.clone(), true),
-                },
+                onpick: move |_| commit(picked.clone(), true),
                 span { "data-slot": "label", "{text}" }
             }
         })

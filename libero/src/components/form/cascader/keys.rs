@@ -162,11 +162,7 @@ impl CascaderKeys {
             }
             CascaderLayout::Columns => {
                 if let Some(parent) = self.on_parent() {
-                    // Re-picking the committed parent would clear it under `allow_deselect`.
-                    match self.committed.as_ref() == Some(&parent) {
-                        true => self.state.close(),
-                        false => (self.commit)(parent, true),
-                    }
+                    (self.commit)(parent, true);
                     return true;
                 }
                 if here.is_empty() || disabled_at(&self.nodes, &here) {
@@ -178,7 +174,8 @@ impl CascaderKeys {
                     return true;
                 }
                 // A branch expands; with `any_level` it is also picked, and the list stays open.
-                if self.any_level {
+                // The committed one only expands: navigation never deselects.
+                if self.any_level && self.committed.as_ref() != Some(&here) {
                     (self.commit)(here.clone(), false);
                 }
                 if let Some(index) = first_enabled(children) {

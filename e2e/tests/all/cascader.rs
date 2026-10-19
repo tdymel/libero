@@ -71,6 +71,7 @@ pub(super) const BACK: &str = "[data-slot=drill-back]";
 pub(super) const EUROPE: &str = "[role=option][id$='-option-0-0']";
 pub(super) const FRANCE: &str = "[role=option][id$='-option-1-0']";
 const LYON: &str = "[role=option][id$='-option-2-1']";
+const OCEANIA: &str = "[role=option][id$='-option-0-2']";
 
 /// Whether the viewport is below `sm` (48rem), where the list drills in (todo 1084).
 async fn is_narrow<D: Driver>(d: &mut D) -> Result<bool> {
@@ -325,6 +326,92 @@ fn composing_arrows_leave_the_search_cursor_alone() {
         .unwrap();
         fixture.console.assert_clean("composing arrows").unwrap();
         fixture.close().await.unwrap();
+    });
+}
+
+/// Todo 3815: a press in the search box's text places the caret there; the box's
+/// `mousedown` cancel covers the rows and padding only.
+#[test]
+fn a_press_in_the_search_text_places_the_caret() {
+    block_on(async {
+        let fixture = Fixture::open("/cascader/search", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        keyboard::tab_to(page, TRIGGER, 10).await.unwrap();
+        keyboard::press(page, keyboard::ARROW_DOWN).await.unwrap();
+        wait::for_js_true(
+            page,
+            &format!("document.activeElement === document.querySelector({SEARCH:?})"),
+            "the search box to take focus",
+        )
+        .await
+        .unwrap();
+        keyboard::type_text(page, "ab").await.unwrap();
+        wait::for_js_true(
+            page,
+            &format!("document.querySelector({SEARCH:?}).selectionStart === 2"),
+            "the caret after the typed text",
+        )
+        .await
+        .unwrap();
+        let (x, y): (f64, f64) = page
+            .evaluate(format!(
+                "(() => {{ const r = document.querySelector({SEARCH:?}).getBoundingClientRect(); \
+                 return [r.left + 9, r.top + r.height / 2]; }})()"
+            ))
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        pointer::click_at(page, pointer::Point { x, y })
+            .await
+            .unwrap();
+        wait::for_js_true(
+            page,
+            &format!(
+                "(s => document.activeElement === s && s.selectionStart === 0)\
+                 (document.querySelector({SEARCH:?}))"
+            ),
+            "the caret to move to the press",
+        )
+        .await
+        .unwrap();
+        fixture
+            .console
+            .assert_clean("a press in the search")
+            .unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
+/// Todo 3814: under `any_level` + `allow_deselect`, a click on the committed branch only
+/// drills in; it does not clear the value.
+#[test]
+fn a_click_on_the_committed_branch_keeps_it() {
+    block_on(async {
+        let fixture = Fixture::open("/cascader/any-level-deselect", Viewport::Desktop)
+            .await
+            .unwrap();
+        let mut d = e2e::driver::Web { fixture };
+        d.click(TRIGGER).await.unwrap();
+        eventually(&mut d, "the roots", async |d| shown(d, EUROPE).await)
+            .await
+            .unwrap();
+        d.click(EUROPE).await.unwrap();
+        eventually_text(&mut d, "#picked", "europe", "the first click")
+            .await
+            .unwrap();
+        d.click(EUROPE).await.unwrap();
+        d.click(OCEANIA).await.unwrap();
+        eventually_text(&mut d, "#picked", "oceania", "a click on Oceania")
+            .await
+            .unwrap();
+        // Europe, then Oceania: the second click on Europe changed nothing.
+        eventually_text(&mut d, "#changes", "2", "the changes")
+            .await
+            .unwrap();
+        d.finish("re-picking the committed branch").await.unwrap();
     });
 }
 

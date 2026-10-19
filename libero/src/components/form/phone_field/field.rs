@@ -1021,9 +1021,12 @@ mod tests {
             ("+12135550123", "US"),
             ("+18095550123", "US"),
             ("+13405550123", "VI"),
+            ("+50012345", "FK"),
         ] {
             assert_eq!(country_for(Some(value), country("DE")).iso, iso, "{value}");
         }
+        // South Georgia shares +500 with the Falklands and keeps a pick that fits it.
+        assert_eq!(country_for(Some("+50012345"), country("GS")).iso, "GS");
         // A pick that shares the code keeps the number, area code and all.
         assert_eq!(country_for(Some("+18295550123"), country("DO")).iso, "DO");
         assert_eq!(

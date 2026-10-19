@@ -206,6 +206,7 @@ pub(super) const GERMAN: &[(&str, &str)] = &[
     ("SB", "Salomonen"),
     ("SO", "Somalia"),
     ("ZA", "Südafrika"),
+    ("GS", "Südgeorgien und die Südlichen Sandwichinseln"),
     ("KR", "Südkorea"),
     ("SS", "Südsudan"),
     ("ES", "Spanien"),

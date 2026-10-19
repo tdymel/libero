@@ -10,6 +10,9 @@ pub const ROUTES: Routes = &[
     ("/cascader/search", || rsx! { CascaderSearchPage {} }),
     ("/cascader/paths", || rsx! { CascaderPathsPage {} }),
     ("/cascader/any-level", || rsx! { CascaderAnyLevelPage {} }),
+    ("/cascader/any-level-deselect", || {
+        rsx! { CascaderAnyLevelDeselectPage {} }
+    }),
     ("/cascader/low", || rsx! { CascaderLowPage {} }),
     ("/cascader/outside", || rsx! { CascaderOutsidePage {} }),
 ];
@@ -74,6 +77,32 @@ fn CascaderAnyLevelPage() -> Element {
                 onchange: move |next: Option<String>| place.set(next),
             }
             Text { id: "picked", {place().unwrap_or_default()} }
+        }
+    }
+}
+
+/// `any_level` with `allow_deselect` (3814): `#picked` shows the committed value, `#changes`
+/// how many times it changed.
+#[component]
+fn CascaderAnyLevelDeselectPage() -> Element {
+    let mut place = use_signal(|| None::<String>);
+    let mut changes = use_signal(|| 0);
+
+    rsx! {
+        Flex { direction: "column", gap: "md", max_width: "320px",
+            Cascader {
+                label: "Place",
+                any_level: true,
+                allow_deselect: true,
+                data: places(),
+                value: place(),
+                onchange: move |next: Option<String>| {
+                    place.set(next);
+                    changes += 1;
+                },
+            }
+            Text { id: "picked", {place().unwrap_or_default()} }
+            Text { id: "changes", "{changes}" }
         }
     }
 }

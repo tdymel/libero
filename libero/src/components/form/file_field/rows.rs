@@ -1,3 +1,5 @@
+use std::rc::Rc;
+
 use dioxus::html::FileData;
 use dioxus::prelude::*;
 use pictogram_icons_lucide as lucide;
@@ -282,7 +284,10 @@ pub(super) fn card_list(
     list_element: ElementHandle,
     stand_in: Option<StandIn>,
     drawn: Vec<Element>,
+    on_drop: impl Fn(DragEvent) + 'static,
+    on_drag: impl Fn(bool) + 'static,
 ) -> Element {
+    let on_drag = Rc::new(on_drag);
     let StandIn {
         labelledby,
         describedby,
@@ -300,9 +305,16 @@ pub(super) fn card_list(
         // Safari with VoiceOver drops list semantics from a `list-style: none`
         // list.
         .attr("role", "list")
-        // The list takes no drop, but the browser must not open the file either.
-        .event("ondragover", |event: DragEvent| event.prevent_default())
-        .event("ondrop", |event: DragEvent| event.prevent_default())
+        // A drop on the list is a drop on the field, so the browser never opens the file.
+        .event("ondragover", {
+            let on_drag = on_drag.clone();
+            move |event: DragEvent| {
+                event.prevent_default();
+                on_drag(true);
+            }
+        })
+        .event("ondragleave", move |_: DragEvent| on_drag(false))
+        .event("ondrop", on_drop)
         .render(HtmlTag::Ul, Vec::new(), drawn)
 }
 

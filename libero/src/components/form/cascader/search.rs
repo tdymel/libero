@@ -92,6 +92,10 @@ pub(super) fn search_header(
             // A new list: nothing is armed until an arrow says so.
             cursor.set(Vec::new());
         })
+        // Kept from the box's `mousedown` cancel, which would stop a click placing the caret.
+        .event("onmousedown", move |event: MouseEvent| {
+            event.stop_propagation()
+        })
         // Closes while searchable; the rows cancel `mousedown`, so a click inside never blurs.
         .event("onblur", move |event: FocusEvent| {
             if blur_counts(&event) {

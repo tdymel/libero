@@ -169,6 +169,39 @@ fn a_phone_picks_a_branch_from_its_first_row() {
     });
 }
 
+/// Todo 3814: with `allow_deselect`, a tap on the committed parent's "Select" row clears it, as
+/// a re-picked leaf does, and closes.
+#[test]
+fn a_phone_clears_the_committed_branch_from_its_first_row() {
+    const PICK: &str = "[data-slot=pick-parent]";
+    block_on(async {
+        let fixture = Fixture::open("/cascader/any-level-deselect", Viewport::Mobile)
+            .await
+            .unwrap();
+        let mut d = e2e::driver::Web { fixture };
+        d.click(TRIGGER).await.unwrap();
+        eventually(&mut d, "the roots", async |d| shown(d, EUROPE).await)
+            .await
+            .unwrap();
+        d.click(EUROPE).await.unwrap();
+        d.click(FRANCE).await.unwrap();
+        eventually(&mut d, "France picked and opened", async |d| {
+            Ok(d.text("#picked").await? == "france" && shown(d, PICK).await?)
+        })
+        .await
+        .unwrap();
+        d.click(&format!("{LAST} {PICK}")).await.unwrap();
+        eventually(&mut d, "France cleared and closed", async |d| {
+            Ok(d.text("#picked").await?.is_empty()
+                && d.attr(TRIGGER, "aria-expanded").await?.as_deref() == Some("false"))
+        })
+        .await
+        .unwrap();
+
+        d.finish("a phone's re-picked branch").await.unwrap();
+    });
+}
+
 /// Todo 3754 (D24-F3): Up from a column's first row reaches the "Select <parent>" row, which
 /// is then the active, selected option and picks on Enter.
 #[test]

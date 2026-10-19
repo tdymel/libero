@@ -256,7 +256,6 @@ pub(crate) fn CascaderCore(props: CascaderCoreProps) -> Element {
         size,
         radius: radius.size,
         labels: drill_labels,
-        state,
         parent_active,
     };
     // The caller's `aria-label` names the open search box and listboxes the trigger no longer carries.

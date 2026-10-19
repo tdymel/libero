@@ -226,6 +226,7 @@ pub(crate) static COUNTRIES: &[Country] = &[
     row("SB", "Solomon Islands", "677"),
     row("SO", "Somalia", "252"),
     row("ZA", "South Africa", "27"),
+    row("GS", "South Georgia and South Sandwich Islands", "500"),
     row("KR", "South Korea", "82"),
     row("SS", "South Sudan", "211"),
     row("ES", "Spain", "34"),
@@ -289,8 +290,8 @@ pub(crate) fn by_dial(digits: &str) -> Option<&'static Country> {
 /// Rows that lose a dial-code tie to the main country, or `+39` would read as
 /// the Vatican rather than Italy.
 pub(crate) const SHARING: &[&str] = &[
-    "AQ", "AX", "BL", "BQ", "CA", "CC", "CX", "DO", "EH", "GG", "IM", "JE", "JM", "KZ", "MF", "PN",
-    "PR", "SJ", "VA", "YT",
+    "AQ", "AX", "BL", "BQ", "CA", "CC", "CX", "DO", "EH", "GG", "GS", "IM", "JE", "JM", "KZ", "MF",
+    "PN", "PR", "SJ", "VA", "YT",
 ];
 
 /// `+{dial}{national}`, or an empty string when nothing was typed - an empty

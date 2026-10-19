@@ -49,7 +49,7 @@ pub(super) struct Surface {
 }
 
 impl Surface {
-    /// The group's own drop, for the frame around it: the padding takes a file
+    /// The group's own drop, for the frame around it and the card list: the padding takes a file
     /// too (todo 531). A disabled one refuses the file instead of leaving the page.
     fn frame_drop(&self) -> impl Fn(DragEvent) + 'static {
         let (take, dragging, editable) = (self.take, self.dragging.clone(), self.editable);
@@ -364,6 +364,7 @@ pub(super) fn file_dropzone_variant(
     } = cards;
 
     let focusable = control.interactive && !control.editable;
+    let (on_drop, on_drag) = (control.frame_drop(), control.frame_drag());
     let drop_target = rsx! {
         FileDropzoneControl { control, states, shown: surface, {prompt} }
     };
@@ -374,7 +375,8 @@ pub(super) fn file_dropzone_variant(
         loading,
         focusable,
     });
-    let card_list = has_files.then(|| card_list(style, list_element, stand_in, drawn));
+    let card_list =
+        has_files.then(|| card_list(style, list_element, stand_in, drawn, on_drop, on_drag));
 
     field.render(rsx! {
         {drop_target}
