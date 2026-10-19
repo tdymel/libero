@@ -1,6 +1,6 @@
 # Skipped e2e scenarios
 
-Scenarios: 619
+Scenarios: 621
 
 Generated from the `scenario!` skips in `e2e/tests/all` by `cargo test -p e2e --lib skips`; edit the skip, not this file. A reason starting `upstream:` waits on Dioxus, Blitz, wry or the engine (revisit on their update, todo 3362), a number names the todo that removes it.
 
@@ -261,6 +261,7 @@ The performance scenarios (units `perf`, `table_perf`) are no skips but run on r
 | `share::android_shares_a_file_through_the_share_sheet` | all but android | 3351: the JNI share sheet is Android's |
 | `share::android_shares_the_link_through_the_share_sheet` | all but android | 3351: the JNI share sheet is Android's |
 | `share::android_shares_two_files_through_the_share_sheet` | all but android | 3361: ACTION_SEND_MULTIPLE is Android's |
+| `shortcut_help::a_list_that_grows_scrolls` | native | Blitz has no `:has()`, which fixes the scroll box's height |
 | `shortcut_help::a_narrow_list_stacks_each_row` | native | 1224: Blitz drops `@container`, so the rows stay side by side |
 | `slider::a_drag_released_past_the_end_tracks_and_ends` | ios | a touch screen has no hover |
 | `slider_touch_keyboard::a_touch_held_on_the_thumb_leaves_no_bubble_after_the_release` | desktop | 1126: no touch input under Xvfb |
@@ -305,6 +306,7 @@ The performance scenarios (units `perf`, `table_perf`) are no skips but run on r
 | `table_grid::enter_on_a_header_sorts` | android | 958: roving keys are inert in the emulator's WebView |
 | `table_grid::enter_on_a_sort_button_sorts_once` | android | 958: roving keys are inert in the emulator's WebView |
 | `table_grid::home_end_and_ctrl_home_end` | android | 958: roving keys are inert in the emulator's WebView |
+| `table_grid::page_down_leaves_out_the_sticky_edges` | android | 958: roving keys are inert in the emulator's WebView |
 | `table_grid::page_down_moves_a_view` | android | 958: roving keys are inert in the emulator's WebView |
 | `table_grid::shift_space_selects_the_row` | android | 958: roving keys are inert in the emulator's WebView |
 | `table_grid::space_on_the_select_all_box_acts_once` | android | 958: roving keys are inert in the emulator's WebView |
