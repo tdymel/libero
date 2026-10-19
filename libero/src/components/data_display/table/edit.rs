@@ -182,8 +182,8 @@ fn settle(done: bool, save: bool, commit: impl FnOnce() -> bool, cancel: impl Fn
 /// The editor in an editing cell: Enter, Tab or leaving it commits, Escape or the
 /// cancel button (on a touch screen, where no Escape is) puts the value back.
 /// `commit` takes the text and how to leave, and answers whether it took the text;
-/// one it did not keeps the editor open, with `error`, until the next input; on a
-/// blur it closes the editor and answers `true`, the old value back.
+/// one it did not keeps the editor open, with `error`, until the next input; a blur
+/// commits too, but a refused text puts the old value back and answers `true`.
 #[component]
 pub(super) fn CellEditor(
     value: String,

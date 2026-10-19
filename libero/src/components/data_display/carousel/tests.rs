@@ -180,6 +180,17 @@ fn a_strip_with_nothing_to_scroll_stays_at_zero() {
     assert_eq!(index_at(0.0, 100.0, 0, 1.0, CarouselAlign::Start), 0);
 }
 
+/// A strip that fits rests on the first reachable index of its alignment, not 0.
+#[test]
+fn a_strip_with_nothing_to_scroll_rests_on_its_first_reachable_index() {
+    for align in [CarouselAlign::Center, CarouselAlign::End] {
+        let (first, _) = index_range(3, 3.0, align);
+        assert!(first > 0, "{align:?}");
+        assert_eq!(index_at(0.0, 0.0, 3, 3.0, align), first, "{align:?}");
+        assert_eq!(index_at(50.0, 0.0, 3, 3.0, align), first, "{align:?}");
+    }
+}
+
 #[test]
 fn an_offset_never_leaves_the_scrollable_range() {
     assert_eq!(offset_for(99, 400.0, 4, 1.0, CarouselAlign::Start), 400.0);

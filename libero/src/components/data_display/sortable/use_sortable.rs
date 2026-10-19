@@ -5,7 +5,7 @@ use dioxus::prelude::*;
 
 use super::reorder::{SortableMove, Span, clamp_offset, shift, slot_offset, target_index};
 use crate::{
-    components::common::Orientation,
+    components::common::{Orientation, has_shortcut_modifier},
     hooks::{
         DragMove, DragOptions, DragStart, ElementHandle, current_localization, edge_scroll_step,
         use_distance_drag_cancel, use_early_measure, use_element, use_interval,
@@ -845,6 +845,8 @@ pub(crate) fn use_fixed_sortable(
                 finish(false);
                 return;
             }
+            // Alt+Arrow is the browser's Back and Forward.
+            _ if has_shortcut_modifier(&event) => return,
             Key::Named(NamedKey::ArrowDown) if !*horizontal.peek() => to as isize + 1,
             Key::Named(NamedKey::ArrowUp) if !*horizontal.peek() => to as isize - 1,
             Key::Named(NamedKey::ArrowRight) if *horizontal.peek() => to as isize + step(true),

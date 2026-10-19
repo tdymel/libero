@@ -390,15 +390,20 @@ fn AudioControls(
 /// where it fails (a cross-origin file without CORS, no Web Audio, Blitz).
 fn use_waveform(src: &str, decode: bool) -> Option<[f64; BARS]> {
     let mut decoded = use_signal(|| None::<(String, [f64; BARS])>);
+    let mut latest = use_hook(|| CopyValue::new(0_u64));
     let src = src.to_string();
     use_effect(use_reactive!(|src, decode| {
+        // An older decode answering after a newer request must not overwrite it.
+        let request = latest.peek().wrapping_add(1);
+        latest.set(request);
         let Some(api) = waveform().filter(|_| decode) else {
             return;
         };
         // Started here, not in the task: a WebView's eval needs the calling scope.
         let peaks = api.peaks(&src, BARS);
         spawn(async move {
-            if let Some(heights) = peaks.await.as_deref().and_then(scaled_heights) {
+            let heights = peaks.await.as_deref().and_then(scaled_heights);
+            if let Some(heights) = heights.filter(|_| *latest.peek() == request) {
                 decoded.set(Some((src, heights)));
             }
         });

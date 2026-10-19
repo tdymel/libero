@@ -115,13 +115,13 @@ pub(super) fn index_at(
     align: CarouselAlign,
 ) -> usize {
     let span = count as f64 - per_view;
+    let (first, last) = index_range(count, per_view, align);
     if max <= 0.0 || span <= 0.0 {
-        return 0;
+        return first;
     }
     let raw = (offset / max * span + align_shift(per_view, align))
         .round()
         .max(0.0) as usize;
-    let (first, last) = index_range(count, per_view, align);
 
     raw.clamp(first, last)
 }
@@ -328,7 +328,7 @@ impl Nav {
     /// The strip came to rest on `raw`: moves `settled`, which the live region and
     /// `onindexchange` read, and crosses the seam from a clone.
     pub(super) fn land(mut self, raw: usize) {
-        let next = self.real_for(raw);
+        let next = self.clamp_index(self.real_for(raw));
         // No scroll snap natively: go to the nearest slide; Blitz scrolls instantly.
         if !snaps_scroll() {
             self.lower_seam();

@@ -123,6 +123,19 @@ async fn the_keyboard_moves_it<D: Driver>(d: &mut D, _route: &str) -> Result<()>
     Ok(())
 }
 
+/// Alt+ArrowDown is the browser's chord (Back/Forward on the sides): a lifted item does not take it.
+async fn shortcut_chords_pass_through<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    d.focus("#Alpha button").await?;
+    d.press(keyboard::SPACE).await?;
+    eventually_text(d, STATUS, "Lifted Alpha, position 1 of 4.", "Space to lift").await?;
+    d.press_alt(keyboard::ARROW_DOWN).await?;
+    // A plain step after it: one slot only if the chord moved nothing.
+    d.press(keyboard::ARROW_DOWN).await?;
+    eventually_text(d, STATUS, "Alpha moved to position 2 of 4.", "ArrowDown").await?;
+    d.press(keyboard::ESCAPE).await?;
+    Ok(())
+}
+
 async fn escape_puts_it_back<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
     d.focus("#Beta button").await?;
     d.press(keyboard::SPACE).await?;
@@ -439,6 +452,11 @@ e2e::scenario!(
     space_lifts_the_arrows_move_and_space_drops_with_each_step_announced,
     "/sortable",
     the_keyboard_moves_it
+);
+e2e::scenario!(
+    an_alt_arrow_chord_leaves_a_lifted_item_where_it_is,
+    "/sortable",
+    shortcut_chords_pass_through
 );
 e2e::scenario!(
     escape_puts_a_lifted_item_back_and_says_so,

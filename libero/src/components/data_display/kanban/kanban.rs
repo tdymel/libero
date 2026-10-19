@@ -15,7 +15,10 @@ use crate::{
     CssLayer,
     components::{
         accessibility::{Announcer, use_announcer},
-        common::{Glyph, HtmlTag, Input, Orientation, Part, States, base_props, parts_enum},
+        common::{
+            Glyph, HtmlTag, Input, Orientation, Part, States, base_props, has_shortcut_modifier,
+            parts_enum,
+        },
         data_display::sortable::{
             SORTABLE_CONTENT_SX, SORTABLE_HANDLE_SX, SORTABLE_MOVE_SX, SortableMove,
             SortableOptions, item_name, slide_transition, sortable_item_sx, use_handle_name,
@@ -740,6 +743,10 @@ pub fn KanbanCard(props: KanbanCardProps) -> Element {
             Key::Named(NamedKey::ArrowLeft) => false,
             _ => return keys.call(event),
         };
+        // Alt+Arrow is the browser's Back and Forward.
+        if has_shortcut_modifier(&event) {
+            return keys.call(event);
+        }
         let Some(slot) = item.lifted_slot(false) else {
             return keys.call(event);
         };

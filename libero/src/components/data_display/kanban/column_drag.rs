@@ -90,6 +90,7 @@ impl ColumnDrag {
         );
         let mut board = self.board;
         let mut reading = self.reading;
+        let pressed = self.pressed;
         spawn(async move {
             let (at, size, client, content, scroll) = reads;
             let (at, size, content, scroll) = (at.await, size.await, content.await, scroll.await);
@@ -104,13 +105,16 @@ impl ColumnDrag {
             let most = (content.width - extent).max(0.0);
             // Right to left, `scrollLeft` runs from 0 down to minus the overflow.
             let range = if rtl { (-most, 0.0) } else { (0.0, most) };
-            board.set(Some(Board {
-                left,
-                width: size.width,
-                range,
-                scroll,
-                top,
-            }));
+            // A release before the read resolved leaves no board to restore.
+            if *pressed.peek() {
+                board.set(Some(Board {
+                    left,
+                    width: size.width,
+                    range,
+                    scroll,
+                    top,
+                }));
+            }
         });
     }
 }

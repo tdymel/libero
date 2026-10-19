@@ -1057,7 +1057,7 @@ mod tests {
         assert_eq!(calls.get(), 3);
 
         assert_eq!(sorted.order(&data, &counted("M"), &up, "en"), vec![1, 2, 0]);
-        assert_eq!(calls.get(), 6, "a changed column reuses the old keys");
+        assert_eq!(calls.get(), 6, "a changed column computes the keys again");
         let columns = counted("N");
         sorted.order(&data, &columns, &up, "en");
         calls.set(0);
@@ -1065,14 +1065,14 @@ mod tests {
             sorted.order(&data, &columns, &vec![(0, Descending)], "en"),
             vec![0, 2, 1]
         );
-        assert_eq!(calls.get(), 3, "a changed sort reuses the old keys");
+        assert_eq!(calls.get(), 3, "a changed sort computes the keys again");
         sorted.order(&data, &columns, &vec![(0, Descending)], "de");
         assert_eq!(calls.get(), 6, "a changed language sorts again");
         assert_eq!(
             sorted.order(&Rc::new(vec![0, 1, 2]), &columns, &up, "de"),
             vec![0, 1, 2]
         );
-        assert_eq!(calls.get(), 9, "changed rows reuse the old keys");
+        assert_eq!(calls.get(), 9, "changed rows compute the keys again");
     }
 
     fn headers(names: &[&str]) -> Vec<HeaderSpec> {

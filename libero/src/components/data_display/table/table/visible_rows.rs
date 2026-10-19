@@ -306,8 +306,7 @@ pub(super) fn order_rows<T: Clone + PartialEq + 'static>(
     }
 }
 
-/// Cuts `order` to the page shown, with its pager, unless `manual_pagination`. Also
-/// the rows on the pages before and every row: a windowed table counts the other pages' too (APG grid, todo 1421).
+/// Cuts `order` to the page shown, with its pager, unless `manual_pagination`; also returns the first shown row's index and the row count over every page, which `aria-rowindex` and `aria-rowcount` use.
 pub(super) fn page_window<T: Clone + PartialEq + 'static>(
     props: &mut TableProps<T>,
     state: TableState,

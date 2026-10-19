@@ -657,6 +657,18 @@ async fn left_and_right_move_a_lifted_card_across_mirrored<D: Driver>(
     lifted_cards_cross_by_keys(d, keyboard::ARROW_LEFT, keyboard::ARROW_RIGHT).await
 }
 
+/// Alt+ArrowRight is the browser's Forward: a lifted card does not cross by it.
+async fn shortcut_chords_pass_through<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    lift(d, "Beta", "2 of 3").await?;
+    d.press_alt(keyboard::ARROW_RIGHT).await?;
+    // A plain step after it: the card is still in To do only if the chord moved nothing.
+    d.press(keyboard::ARROW_DOWN).await?;
+    eventually_text(d, STATUS, "Beta moved to position 3 of 3.", "ArrowDown").await?;
+    ensure!(d.text("#moves").await?.is_empty(), "the chord moved a card");
+    d.press(keyboard::ESCAPE).await?;
+    Ok(())
+}
+
 /// A card dropped before another of a column lifts by keyboard at once (its slot was lost to a transient position).
 async fn a_card_dropped_before_another_lifts_again<D: Driver>(
     d: &mut D,
@@ -745,6 +757,11 @@ e2e::scenario!(
     "/kanban/rtl",
     left_and_right_move_a_lifted_card_across_mirrored,
     macos: skip("upstream: WebKit orders the RTL columns unlike WebKitGTK")
+);
+e2e::scenario!(
+    an_alt_arrow_chord_does_not_move_a_lifted_card_across,
+    "/kanban",
+    shortcut_chords_pass_through
 );
 e2e::scenario!(
     left_or_right_moves_no_resting_card_and_a_refused_move_is_not_announced,
