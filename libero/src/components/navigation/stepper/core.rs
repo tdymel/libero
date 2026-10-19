@@ -8,8 +8,8 @@ use crate::{
         accessibility::VisuallyHidden,
         common::{
             ClassList, Glyph, HtmlTag, Input, LogicalTextAlign, Orientation, Part, Rail, RailInset,
-            States, Variables, focus_ring_sx, inset_focus_ring_sx, on_ring_sx, parts_enum,
-            reveal_inline, use_closing_focus, variables,
+            States, Variables, focus_ring_sx, inset_focus_ring_sx, names_itself, on_ring_sx,
+            parts_enum, reveal_inline, use_closing_focus, variables,
         },
         layout::{Collapse, use_box},
     },
@@ -606,8 +606,11 @@ pub(crate) fn render_stepper(view: StepperView, root: String) -> Element {
         .into_iter()
         .partition(|attribute| matches!(attribute.name, "aria-label" | "aria-labelledby"));
 
+    // A blank name neither names the list nor masks the strip's own.
+    let named = names_itself(&naming);
+    let naming = if named { naming } else { Vec::new() };
     // A focused strip needs a name; the caller's wins.
-    let strip_name = (strip_tab_stop && naming.is_empty()).then_some(strip_label);
+    let strip_name = (strip_tab_stop && !named).then_some(strip_label);
 
     use_box()
         .framework_sx(&STEPPER_SX)

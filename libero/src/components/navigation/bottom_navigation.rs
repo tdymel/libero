@@ -276,10 +276,15 @@ pub fn BottomNavigation(props: BottomNavigationProps) -> Element {
     let position = props.position.copied_or_default();
     let labels = props.show_labels.copied_or_default();
 
+    let mut attributes = props.attributes;
+    let named = names_itself(&attributes);
     use_name_warning(
-        names_itself(&props.attributes),
+        named,
         "BottomNavigation: no `aria-label` or `aria-labelledby`, so it is announced as just \"navigation\".",
     );
+    if !named {
+        attributes.retain(|attribute| !matches!(attribute.name, "aria-label" | "aria-labelledby"));
+    }
     // Fixed per build, so the hook order holds.
     if cfg!(debug_assertions) {
         use_context_provider(ItemCount::default);
@@ -321,7 +326,7 @@ pub fn BottomNavigation(props: BottomNavigationProps) -> Element {
         .variables(&variables)
         .prepare()
         .event("onresize", onresize)
-        .render(HtmlTag::Nav, props.attributes, props.children)
+        .render(HtmlTag::Nav, attributes, props.children)
 }
 
 base_props! {

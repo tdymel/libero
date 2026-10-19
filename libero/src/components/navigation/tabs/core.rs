@@ -174,10 +174,12 @@ pub(crate) fn render_tabs(view: TabsView, root: String) -> Element {
     let (naming, attributes): (Vec<Attribute>, Vec<Attribute>) = attributes
         .into_iter()
         .partition(|attribute| matches!(attribute.name, "aria-label" | "aria-labelledby"));
+    let named = names_itself(&naming);
     use_name_warning(
-        names_itself(&naming),
+        named,
         "Tabs: no `aria-label` or `aria-labelledby`, so the tab list is announced without a name.",
     );
+    let naming = if named { naming } else { Vec::new() };
     let panel_id = selected.map(|selected| format!("{root}-panel-{selected}"));
     let panel_labelled_by = selected.map(|selected| format!("{root}-tab-{selected}"));
 

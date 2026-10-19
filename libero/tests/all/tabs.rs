@@ -1,4 +1,4 @@
-use crate::common::{attributes_of, body, render};
+use crate::common::{attributes_of, body, render, tag_with};
 
 use dioxus::prelude::*;
 use libero::{
@@ -298,4 +298,24 @@ mod dispatched {
         assert!(!html.contains("first body"));
         assert_eq!(body(&html).matches("aria-selected=\"true\"").count(), 1);
     }
+}
+
+#[test]
+fn a_blank_name_is_not_put_on_the_tablist() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider {
+                Tabs {
+                    value: Section::Admin,
+                    onchange: move |_| {},
+                    options: sections_with_disabled(&[]),
+                    panel: |_: Section| rsx! { "body" },
+                    "aria-label": "  ",
+                }
+            }
+        }
+    }
+
+    let list = tag_with(&body(&render(app)), "role=\"tablist\"");
+    assert_eq!(list.get("aria-label"), None, "{list:?}");
 }

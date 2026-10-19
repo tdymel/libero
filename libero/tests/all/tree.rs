@@ -515,3 +515,17 @@ mod dispatched {
         }
     }
 }
+
+#[test]
+fn a_blank_name_is_not_put_on_the_tree() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider {
+                Tree { aria_label: " ", data: vec![TreeNode::new("a", "Alpha".to_string())] }
+            }
+        }
+    }
+
+    let tree = tag_with(&body(&render(app)), "role=\"tree\"");
+    assert_eq!(tree.get("aria-label"), None, "{tree:?}");
+}

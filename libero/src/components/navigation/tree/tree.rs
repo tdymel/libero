@@ -716,7 +716,7 @@ fn TreeCore(props: TreeCoreProps) -> Element {
             states: props.states,
             size,
             "role": "tree",
-            "aria-label": props.aria_label,
+            "aria-label": Some(props.aria_label).filter(|label| !label.trim().is_empty()),
             onkeydown,
             onclick,
             attributes: [

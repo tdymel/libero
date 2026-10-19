@@ -96,13 +96,13 @@ fn default_label(labels: &BurgerLabels, open: Option<bool>) -> &'static str {
     }
 }
 
-/// Removes a spread text `aria-label` and returns it.
+/// Removes a spread text `aria-label` and returns it, `None` when blank.
 fn take_spread_label(attributes: &mut Vec<Attribute>) -> Option<String> {
     let index = attributes.iter().position(|attribute| {
         attribute.name == "aria-label" && matches!(attribute.value, AttributeValue::Text(_))
     })?;
     match attributes.remove(index).value {
-        AttributeValue::Text(label) => Some(label),
+        AttributeValue::Text(label) => Some(label).filter(|label| !label.trim().is_empty()),
         _ => None,
     }
 }
@@ -164,11 +164,12 @@ pub fn Burger(props: BurgerProps) -> Element {
     // `ActionIcon` writes its own `aria-label` over a spread one, so it moves over here.
     let mut attributes = props.attributes;
     let spread_label = take_spread_label(&mut attributes);
-    let aria_label = match (spread_label, props.label) {
-        (Some(label), _) => label,
-        (None, Some(label)) => label.call(open),
-        (None, None) => default_label(&labels, props.open).to_string(),
-    };
+    let aria_label = spread_label
+        .or_else(|| {
+            let label = props.label?.call(open);
+            Some(label).filter(|label| !label.trim().is_empty())
+        })
+        .unwrap_or_else(|| default_label(&labels, props.open).to_string());
 
     if is_orphan_disclosure(props.open, &attributes) {
         warn(

@@ -316,3 +316,29 @@ fn a_literal_color_gets_readable_current_page_text() {
         "black text on the yellow fill: {html}"
     );
 }
+
+#[test]
+fn a_blank_name_neither_labels_the_nav_nor_masks_a_spread_one() {
+    fn blank() -> Element {
+        rsx! {
+            LiberoProvider {
+                Pagination { total: 10, page: 4, aria_label: " ", onchange: |_| {} }
+            }
+        }
+    }
+    fn masked() -> Element {
+        rsx! {
+            LiberoProvider {
+                Pagination { total: 10, page: 4, aria_label: "", "aria-label": "Results", onchange: |_| {} }
+            }
+        }
+    }
+
+    assert_eq!(attributes_of(&markup(blank), "nav").get("aria-label"), None);
+    assert_eq!(
+        attributes_of(&markup(masked), "nav")
+            .get("aria-label")
+            .map(String::as_str),
+        Some("Results")
+    );
+}

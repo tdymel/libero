@@ -394,8 +394,12 @@ pub fn Pagination(props: PaginationProps) -> Element {
                 }
             },
         );
-    nav.attr("aria-label", props.aria_label)
-        .render(HtmlTag::Nav, props.attributes, list_element)
+    // A blank one names nothing and would mask a spread `aria-labelledby`.
+    nav.attr(
+        "aria-label",
+        Some(props.aria_label).filter(|label| !label.trim().is_empty()),
+    )
+    .render(HtmlTag::Nav, props.attributes, list_element)
 }
 
 /// First, previous, next or last. Its own scope: `ActionIcon` takes the icon

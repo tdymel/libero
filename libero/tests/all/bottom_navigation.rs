@@ -66,3 +66,19 @@ fn a_docked_bar_states_its_position_and_label_visibility() {
     assert!(nav["data-state"].contains("fixed"), "{nav:?}");
     assert!(nav["data-state"].contains("labels-selected"), "{nav:?}");
 }
+
+#[test]
+fn a_blank_name_is_not_put_on_the_nav() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider {
+                BottomNavigation { "aria-label": "  ",
+                    BottomNavigationItem { onclick: |_| {}, icon: rsx! { "H" }, "Home" }
+                }
+            }
+        }
+    }
+
+    let nav = attributes_of(&body(&render(app)), "nav");
+    assert_eq!(nav.get("aria-label"), None, "{nav:?}");
+}

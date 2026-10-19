@@ -87,6 +87,20 @@ fn the_callers_name_goes_to_the_step_list() {
 }
 
 #[test]
+fn a_blank_name_is_not_put_on_the_step_list() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider {
+                Stepper::<Stage> { id: "a", aria_label: "  ", value: Some(Stage::Account) }
+            }
+        }
+    }
+
+    let html = render(app);
+    assert_eq!(all(&html, "ol")[0].get("aria-label"), None, "{html}");
+}
+
+#[test]
 fn position_derives_completed_active_and_pending() {
     let html = render(middle_app);
     let states = states(&html);

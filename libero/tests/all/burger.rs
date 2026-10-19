@@ -259,3 +259,23 @@ fn disabled_reaches_the_underlying_button() {
     let attributes = attributes_of(&html, "button");
     assert!(attributes.contains_key("disabled"), "{html}");
 }
+
+/// A blank name from the spread or the callback is dropped: the localized default names it.
+#[test]
+fn a_blank_label_gives_way_to_the_default_name() {
+    fn spread() -> Element {
+        rsx! { LiberoProvider { Burger { "aria-label": " " } } }
+    }
+    fn callback() -> Element {
+        rsx! { LiberoProvider { Burger { label: move |_: bool| String::new() } } }
+    }
+
+    for app in [spread as fn() -> Element, callback] {
+        assert_eq!(
+            attributes_of(&body(&render(app)), "button")
+                .get("aria-label")
+                .map(String::as_str),
+            Some("Open navigation")
+        );
+    }
+}
