@@ -263,16 +263,14 @@ pub(super) fn select_action(
     })
 }
 
-/// A windowed grid's pitch, its sticky edges and where each grid row sits in the window.
+/// A windowed grid's pitch and where each grid row sits in the window.
 pub(super) fn grid_window(
     pitch: f64,
-    edges: (f64, f64),
     focused: Signal<Option<VisibleRow>>,
     order: &[VisibleRow],
 ) -> GridWindow {
     GridWindow {
         pitch,
-        edges,
         focused,
         slots: order
             .iter()

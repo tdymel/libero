@@ -1,6 +1,7 @@
 use super::{
     CAROUSEL_ROOT_SX, CarouselAlign,
     controls::{CAROUSEL_CONTROL_SX, CAROUSEL_PAUSE_SX, showing_status},
+    drags_alone,
     indicators::CAROUSEL_INDICATOR_SX,
     slide::CAROUSEL_SLIDE_SX,
     state::*,
@@ -41,6 +42,15 @@ fn the_part_table_is_stable() {
             ("pause", "& > [data-slot='pause']"),
         ]
     );
+}
+
+/// Todo 3818: a drag with no buttons and no dots is the only pointer way to move.
+#[test]
+fn a_drag_without_controls_or_indicators_is_drag_only() {
+    assert!(drags_alone(true, false, false));
+    assert!(!drags_alone(true, true, false));
+    assert!(!drags_alone(true, false, true));
+    assert!(!drags_alone(false, false, false));
 }
 
 /// Six slides three-up run out of scroll at index 3, not 5 - the last

@@ -194,6 +194,35 @@ e2e::scenario!(
     android: skip("958: roving keys are inert in the emulator's WebView")
 );
 
+/// Without windowing, PageDown still leaves out the sticky header and footer (todo 3812).
+async fn page_down_between_the_sticky_edges<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    into_body(d, 1).await?;
+    let area = d.rect(AREA).await?.height;
+    let edges = d.rect("thead").await?.height + d.rect("tfoot").await?.height;
+    let pitch = d.rect(&cell(2, 1)).await?.y - d.rect(&cell(1, 1)).await?.y;
+    let page = ((area - edges) / pitch).floor() as i64;
+    if page >= (area / pitch).floor() as i64 {
+        bail!("the sticky edges ({edges}px) cost no row of {pitch}px in {area}px");
+    }
+    d.press(keyboard::PAGE_DOWN).await?;
+    eventually(d, "PageDown to move a view", async |d| {
+        Ok(stop_id(d).await? > 1 && d.is_focused(STOP).await?)
+    })
+    .await?;
+    let moved = stop_id(d).await? as i64 - 1;
+    if (moved - page).abs() > 1 {
+        bail!("PageDown moved {moved} rows, not the {page} between the sticky edges");
+    }
+    Ok(())
+}
+
+e2e::scenario!(
+    page_down_leaves_out_the_sticky_edges,
+    "/table-grid/sticky",
+    page_down_between_the_sticky_edges,
+    android: skip("958: roving keys are inert in the emulator's WebView")
+);
+
 /// Ctrl+End reaches the last row's last cell (500 squared), out of the window, and shows
 /// it; Ctrl+Home comes back.
 async fn reveals<D: Driver>(d: &mut D, _route: &str) -> Result<()> {

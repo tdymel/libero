@@ -32,6 +32,7 @@ use crate::{
     platform::page_task,
     sx::{StaticSx, ThemeAwareValue, sx},
     theme::{CAROUSEL_GAP, CAROUSEL_PER_VIEW, CssVar, SizeCss},
+    utils::warn,
 };
 
 pub use crate::theme::CarouselAlign;
@@ -153,7 +154,8 @@ base_props! {
         /// Names the region; unset warns.
         #[props(default, into)]
         aria_label: Option<String>,
-        /// Mouse drag-to-scroll over the track; touch already swipes.
+        /// Mouse drag-to-scroll over the track; touch already swipes. With `controls` and
+        /// `indicators` both off, a drag is the only pointer way to move: it warns (WCAG 2.5.7).
         #[props(default)]
         draggable: bool,
         /// Advances on a timer, with a pause control (WCAG 2.2.2). Without `loop` it stops on the last slide.
@@ -214,6 +216,13 @@ pub fn Carousel(props: CarouselProps) -> Element {
     let controls = !empty && props.controls.unwrap_or(theme.carousel.controls);
     let indicators = !empty && !quiet && props.indicators.unwrap_or(theme.carousel.indicators);
     let (first, last) = index_range(count, per_view, align);
+    use_hook(|| {
+        if drags_alone(props.draggable, controls, indicators) {
+            warn(
+                "Carousel: `draggable` with no `controls` and no `indicators` leaves a drag as the only pointer way to move (WCAG 2.5.7). Turn one on.",
+            );
+        }
+    });
 
     // Read in render, so a swap re-runs the controlled-index effect.
     let swaps = jump.as_ref().map(CarouselJump::count);
@@ -341,6 +350,11 @@ pub fn Carousel(props: CarouselProps) -> Element {
             }
         },
     )
+}
+
+/// Whether a drag is the only way the pointer moves the strip: `controls` and `indicators` as drawn.
+fn drags_alone(draggable: bool, controls: bool, indicators: bool) -> bool {
+    draggable && !controls && !indicators
 }
 
 /// `template` with `{n}` one-based (read aloud) and `{m}` the count.

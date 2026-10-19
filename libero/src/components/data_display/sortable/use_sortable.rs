@@ -1251,6 +1251,16 @@ mod tests {
         assert_eq!(slot_offset(&spans, 0, 2), 80.0);
     }
 
+    /// Todo 3832: the settle's keyframes exist only without reduced motion, so under it the inline
+    /// `animation` names nothing and the drop lands at once.
+    #[test]
+    fn the_settle_keyframes_exist_only_without_reduced_motion() {
+        let keyframes = crate::theme::SORTABLE_KEYFRAMES;
+        assert!(keyframes.starts_with("@media (prefers-reduced-motion: no-preference){"));
+        assert!(keyframes.contains(&format!("@keyframes {SORTABLE_SETTLE}{{")));
+        assert_eq!(keyframes.matches("@keyframes").count(), 1);
+    }
+
     fn slot(id: usize) -> Option<Registered> {
         Some(Registered {
             id,

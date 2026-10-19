@@ -180,7 +180,8 @@ base_props! {
         #[props(default)]
         oncolumnmove: Option<EventHandler<KanbanColumnMove>>,
         /// Each card's two buttons moving it one slot in its column without a drag (WCAG 2.5.7),
-        /// and each column's two with `oncolumnmove`.
+        /// and each column's two with `oncolumnmove`. Off, only a drag, the handle's keys and the
+        /// cards' Move to menu move anything: columns have no pointer way but dragging (2.5.7).
         #[props(default = true)]
         move_buttons: bool,
         /// [`KanbanColumn`]s, keyed by their data.

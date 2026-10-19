@@ -5,7 +5,7 @@ use dioxus::prelude::*;
 use super::{
     cell_value::{CellAlign, CellValue, EditValue, FilterKind, SortKey},
     column_filter::SelectOption,
-    edit::{ColumnEdit, EditCtx},
+    edit::{ColumnEdit, EditCtx, EditExtras},
     resize::ResizeLimits,
 };
 use crate::localization::Aggregate;
@@ -62,6 +62,8 @@ pub struct Column<T> {
     pub(super) render: Option<CellRender<T>>,
     /// With `editable`.
     pub(super) edit: Option<ColumnEdit<T>>,
+    /// A `validate` or `editor` set before `editable`.
+    extras: EditExtras<T>,
 }
 
 type CellRender<T> = Rc<dyn Fn(&T) -> Element>;
@@ -102,6 +104,7 @@ impl ColumnHeader {
             value_text: Rc::new(move |row| raw_value(row).cell_text()),
             render: None,
             edit: None,
+            extras: EditExtras::default(),
         }
     }
 
@@ -479,15 +482,15 @@ impl<T> Column<T> {
         self.edit = Some(ColumnEdit {
             kind: V::edit_kind(),
             set: Rc::new(move |row, text| V::parse(text).map(|value| set(row, value))),
-            validate: None,
-            editor: None,
+            validate: self.extras.validate.take(),
+            editor: self.extras.editor.take(),
         });
         self
     }
 
     /// Checks an edited value before the commit: an `Err` keeps the editor open,
-    /// marked invalid, its message shown under it and announced. After
-    /// [`editable`](Self::editable), with its `V`.
+    /// marked invalid, its message shown under it and announced. `V` is the
+    /// [`editable`](Self::editable) one, which this may come before or after.
     ///
     /// ```rust
     /// # use libero::components::column;
@@ -504,16 +507,18 @@ impl<T> Column<T> {
         mut self,
         check: impl Fn(&T, &V) -> Result<(), String> + 'static,
     ) -> Self {
-        if let Some(edit) = &mut self.edit {
-            edit.validate = Some(Rc::new(move |row, text| match V::parse(text) {
-                Some(value) => check(row, &value),
-                None => Ok(()),
-            }));
+        let check = Rc::new(move |row: &T, text: &str| match V::parse(text) {
+            Some(value) => check(row, &value),
+            None => Ok(()),
+        });
+        match &mut self.edit {
+            Some(edit) => edit.validate = Some(check),
+            None => self.extras.validate = Some(check),
         }
         self
     }
 
-    /// Replaces the built-in editor, after [`editable`](Self::editable). Hook-less
+    /// Replaces the built-in editor. Hook-less
     /// as `render`; a component it draws may use hooks, and commits or cancels
     /// through the [`EditCtx`].
     ///
@@ -536,8 +541,10 @@ impl<T> Column<T> {
     ///     });
     /// ```
     pub fn editor(mut self, editor: impl Fn(EditCtx) -> Element + 'static) -> Self {
-        if let Some(edit) = &mut self.edit {
-            edit.editor = Some(Rc::new(editor));
+        let editor = Rc::new(editor);
+        match &mut self.edit {
+            Some(edit) => edit.editor = Some(editor),
+            None => self.extras.editor = Some(editor),
         }
         self
     }
@@ -571,6 +578,7 @@ impl<T> Clone for Column<T> {
             value_text: self.value_text.clone(),
             render: self.render.clone(),
             edit: self.edit.clone(),
+            extras: self.extras.clone(),
         }
     }
 }

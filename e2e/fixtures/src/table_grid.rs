@@ -2,13 +2,13 @@
 //! one with a button in each row, one selectable with column menus, a windowed
 //! one of 500 rows, and one with editable Age and City cells, which stores its
 //! edits or (`/kept`) only logs them, `/button` with a button in each City cell,
-//! `/custom` with its own Age editor, `/windowed` with fixed 28px rows, `/formats`
+//! `/custom` with its own Age editor, `/windowed` with fixed 28px rows, `/sticky` with a sum footer, `/formats`
 //! with empty yes/no and date cells.
 
 use dioxus::prelude::*;
 use libero::{
     chrono::NaiveDate,
-    components::{EditCtx, RowUpdate, Table, column},
+    components::{Aggregate, EditCtx, RowUpdate, Table, column},
     hooks::use_localization_handle,
     localization::Localization,
 };
@@ -20,6 +20,7 @@ pub const ROUTES: Routes = &[
     ("/table-grid/widgets", || rsx! { GridPage { widgets: true } }),
     ("/table-grid/selectable", || rsx! { GridPage { selectable: true } }),
     ("/table-grid/windowed", || rsx! { WindowedGridPage {} }),
+    ("/table-grid/sticky", || rsx! { StickyGridPage {} }),
     ("/table-grid/editable", || rsx! { EditableGridPage { store: true } }),
     ("/table-grid/editable/kept", || rsx! { EditableGridPage { store: false } }),
     ("/table-grid/editable/button", || rsx! { EditableGridPage { store: true, button: true } }),
@@ -232,6 +233,25 @@ fn CollationGridPage() -> Element {
 #[derive(Clone, PartialEq)]
 struct Item {
     id: u32,
+}
+
+/// 40 rows under a 300px `max_height` with a sum footer, none windowed: a page is the
+/// rows between the sticky header and footer.
+#[component]
+fn StickyGridPage() -> Element {
+    rsx! {
+        Table {
+            aria_label: "Items",
+            cell_focus: true,
+            max_height: "300px",
+            data: (1..=40).map(|id| Item { id }).collect::<Vec<_>>(),
+            columns: vec![
+                column("Id").value(|item: &Item| item.id).row_header().aggregate(Aggregate::Sum),
+                column("Double").value(|item: &Item| item.id * 2),
+            ],
+            row_key: |item: &Item| item.id.to_string(),
+        }
+    }
 }
 
 #[component]

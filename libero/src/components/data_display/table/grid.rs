@@ -76,11 +76,9 @@ struct Reveal {
     edges: (f64, f64),
 }
 
-/// A windowed body: the row pitch, the sticky header and footer heights, and the
-/// focused row the window keeps rendered.
+/// A windowed body: the row pitch and the focused row the window keeps rendered.
 pub(super) struct GridWindow {
     pub pitch: f64,
-    pub edges: (f64, f64),
     pub focused: Signal<Option<VisibleRow>>,
     /// Each grid row's slot in the window, which counts the group rows the arrows pass by.
     pub slots: Rc<[usize]>,
@@ -94,6 +92,8 @@ pub(super) struct GridRows {
     pub head: Rc<Vec<Vec<HeadCell>>>,
     pub spans: Rc<dyn Fn(VisibleRow) -> Vec<usize>>,
     pub window: Option<GridWindow>,
+    /// The sticky header and footer heights a scrolling table keeps over its rows.
+    pub edges: (f64, f64),
     /// Enter or Space on a header cell, by header index: its sort; Ctrl+Enter
     /// (`true`): its column menu.
     pub header: Callback<(usize, bool)>,
@@ -752,7 +752,7 @@ impl GridFocus {
                 Some(Reveal {
                     slot: window.slots.get(body).copied().unwrap_or(body),
                     pitch: window.pitch,
-                    edges: window.edges,
+                    edges: rows.edges,
                 })
             }
             _ => None,
@@ -831,10 +831,8 @@ impl GridFocus {
     /// natively a spawned task cannot read the document.
     fn page(self, rows: &GridRows) -> impl Future<Output = usize> + 'static {
         let view = self.region.dimensions();
-        let window = rows
-            .window
-            .as_ref()
-            .map(|window| (window.pitch, window.edges));
+        let edges = rows.edges;
+        let window = rows.window.as_ref().map(|window| window.pitch);
         let row = window.is_none().then(|| {
             self.table
                 .query_selector("tbody > tr")
@@ -844,10 +842,10 @@ impl GridFocus {
             let Ok(view) = view.await else {
                 return PAGE_ROWS;
             };
-            let (pitch, (head, foot)) = match (window, row) {
-                (Some(at), _) => at,
+            let pitch = match (window, row) {
+                (Some(pitch), _) => pitch,
                 (None, Some(Ok(row))) => match row.await {
-                    Ok(row) => (row.height, (0.0, 0.0)),
+                    Ok(row) => row.height,
                     Err(_) => return PAGE_ROWS,
                 },
                 _ => return PAGE_ROWS,
@@ -855,14 +853,26 @@ impl GridFocus {
             if pitch <= 0.0 {
                 return PAGE_ROWS;
             }
-            (((view.height - head - foot) / pitch).floor() as usize).max(1)
+            page_rows(view.height, pitch, edges)
         }
     }
+}
+
+/// The rows a view of `height` shows between the sticky header and footer.
+fn page_rows(height: f64, pitch: f64, (head, foot): (f64, f64)) -> usize {
+    (((height - head - foot) / pitch).floor() as usize).max(1)
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn a_page_leaves_out_the_sticky_header_and_footer() {
+        assert_eq!(page_rows(400.0, 40.0, (0.0, 0.0)), 10);
+        assert_eq!(page_rows(400.0, 40.0, (40.0, 40.0)), 8);
+        assert_eq!(page_rows(40.0, 40.0, (40.0, 40.0)), 1);
+    }
 
     /// Columns 0 to 3 shown as 2, 0, 3 after one lead: 1 sits after 0.
     #[test]

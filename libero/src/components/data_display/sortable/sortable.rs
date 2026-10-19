@@ -126,7 +126,8 @@ base_props! {
         /// Called on drop when an item changed place. Apply it to your data.
         onreorder: EventHandler<SortableMove>,
         /// Each item's two buttons moving it one slot without a drag (WCAG 2.5.7).
-        /// Hidden, give the reader another way to reorder without dragging.
+        /// Off, only a drag and the handle's keys reorder: the pointer has no way but dragging
+        /// (2.5.7), so offer one yourself.
         #[props(default = true)]
         move_buttons: bool,
         /// [`SortableItem`]s, keyed by their data.

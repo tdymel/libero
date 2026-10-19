@@ -9,6 +9,7 @@ use crate::{
         common::{Input, Part, States, states},
         layout::Box,
     },
+    hooks::{ElementHandle, use_element},
     platform::ElementApi,
     sx::{StaticSx, sx},
     theme::{CAROUSEL_GAP, CAROUSEL_PER_VIEW, CAROUSEL_RADIUS, FOCUS_RING_HALO_SPREAD},
@@ -78,6 +79,7 @@ pub(super) fn carousel_slides(
                     key: "{position}",
                     nav,
                     controlled: setup.controlled,
+                    track_stop: setup.track_stop,
                     applied: state.applied,
                     position,
                     index,
@@ -91,12 +93,46 @@ pub(super) fn carousel_slides(
         .collect()
 }
 
+macro_rules! focusable {
+    () => {
+        "a[href], button, input, select, textarea, summary, [tabindex], [contenteditable], video[controls], audio[controls]"
+    };
+}
+
+/// Whether `slide` or a focusable descendant holds the focus; not by `:focus`, which an
+/// `inert` ancestor stops matching.
+fn holds_focus(slide: &ElementHandle) -> bool {
+    slide.is_focused()
+        || slide
+            .query_selector_all(focusable!())
+            .is_ok_and(|inside| inside.iter().any(|element| element.is_focused()))
+}
+
+/// The track takes the focus; where a slide holds the tab stop instead, the showing slide's first stop.
+fn rescue_focus(track: &ElementHandle, track_stop: bool) {
+    let target = match track_stop {
+        true => None,
+        false => track.query_selector(SHOWING_STOP).ok(),
+    };
+    let _ = match target {
+        Some(stop) => stop.focus(),
+        None => track.focus(),
+    };
+}
+
+const SHOWING_STOP: &str = concat!(
+    "[data-slot='slide']:not([inert]) :is(",
+    focusable!(),
+    "):not([tabindex='-1'], :disabled)"
+);
+
 /// One slide group, its own scope so a move redraws only the slides that flip.
 #[component]
 fn CarouselSlide(
     slide: Element,
     nav: Nav,
     controlled: Option<usize>,
+    track_stop: bool,
     applied: Signal<Option<usize>>,
     position: usize,
     index: usize,
@@ -133,6 +169,16 @@ fn CarouselSlide(
         }));
     let (live, hidden, current) = flags();
     let track = nav.track;
+    // No `focusout` fires when `inert` takes the focus, so a settle by wheel, touch, drag or timer
+    // is seen here; a slide that held the focus passes it on (2.4.3).
+    let element = use_element();
+    let mut shown = use_hook(|| CopyValue::new(false));
+    use_effect(use_reactive!(|hidden| {
+        let was_shown = shown.replace(!hidden);
+        if was_shown && hidden && holds_focus(&element) {
+            rescue_focus(&track.element, track_stop);
+        }
+    }));
     // No `current` token: callers read `data-current`.
     let slide_states: Input<States> = states().with(nav.align.state_name(), true).into();
 
@@ -146,13 +192,7 @@ fn CarouselSlide(
             aria_label: live.then_some(label),
             aria_hidden: (!live).then(|| "true".to_string()),
             inert: hidden.then_some(true),
-            // Focus in a slide that just went `inert` would drop to `<body>`:
-            // the track takes it instead.
-            onfocusout: move |_| {
-                if hidden {
-                    let _ = track.element.focus();
-                }
-            },
+            onmounted: element.mount(),
             "data-current": current.then_some("true"),
             {slide}
         }

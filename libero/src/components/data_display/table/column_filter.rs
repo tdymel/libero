@@ -2,6 +2,7 @@ use super::{
     cell_value::{FilterKind, SortKey, date_number},
     column::Column,
 };
+use crate::localization::Formats;
 
 /// One column's filter: rows stay whose cell passes `operator` with `value`.
 /// Keyed by header text, like [`TableSort`](super::TableSort).
@@ -161,14 +162,38 @@ impl FilterOperator {
     }
 }
 
-/// A number as typed: a lone comma is the decimal point, so `1,5` is 1.5.
-pub(super) fn parse_number(text: &str) -> Option<f64> {
+/// A number as typed. The locale's group separator is dropped where it splits the whole into
+/// threes (`1,000`, `12.500,5`); else a lone comma is the decimal point, so `1,5` is 1.5.
+pub(super) fn parse_number(text: &str, formats: &Formats) -> Option<f64> {
     let text = text.trim();
+    let text = ungrouped(text, formats.group_separator).unwrap_or_else(|| text.to_string());
     let text = match (text.matches(',').count(), text.contains('.')) {
         (1, false) => text.replace(',', "."),
-        _ => text.to_string(),
+        _ => text,
     };
     text.parse::<f64>().ok().filter(|value| value.is_finite())
+}
+
+/// `text` without its group separators when they split the whole into threes; else `None`.
+fn ungrouped(text: &str, group: &str) -> Option<String> {
+    if group.is_empty() {
+        return None;
+    }
+    let (sign, rest) = match text.strip_prefix('-') {
+        Some(rest) => ("-", rest),
+        None => ("", text),
+    };
+    let parts: Vec<&str> = rest.split(group).collect();
+    let digits = |part: &str| part.chars().take_while(char::is_ascii_digit).count();
+    let (first, last) = (parts.first()?, parts.last()?);
+    let grouped = parts.len() > 1
+        && (1..=3).contains(&first.len())
+        && digits(first) == first.len()
+        && parts[1..parts.len() - 1]
+            .iter()
+            .all(|part| part.len() == 3 && digits(part) == 3)
+        && digits(last) == 3;
+    grouped.then(|| format!("{sign}{}", parts.concat()))
 }
 
 /// An ISO day as its sort number, `None` when it does not parse.
@@ -195,7 +220,7 @@ pub(super) enum CellTest {
 impl CellTest {
     /// `None` when the filter keeps every row: no value yet, a number that
     /// does not parse, or an operator `kind` does not offer.
-    pub fn new(filter: &ColumnFilter, kind: FilterKind) -> Option<Self> {
+    pub fn new(filter: &ColumnFilter, kind: FilterKind, formats: &Formats) -> Option<Self> {
         use FilterOperator::*;
         let operator = filter.operator;
         if !FilterOperator::of(kind).contains(&operator) {
@@ -221,7 +246,9 @@ impl CellTest {
             return None;
         }
         match kind {
-            FilterKind::Number => parse_number(value).map(|number| Self::Number(operator, number)),
+            FilterKind::Number => {
+                parse_number(value, formats).map(|number| Self::Number(operator, number))
+            }
             FilterKind::Boolean => match value.to_lowercase().as_str() {
                 "true" => Some(Self::Boolean(true)),
                 "false" => Some(Self::Boolean(false)),
@@ -306,6 +333,7 @@ impl CellTest {
 pub(super) fn cell_tests<T>(
     columns: &[Column<T>],
     filters: &[ColumnFilter],
+    formats: &Formats,
 ) -> Vec<(usize, CellTest)> {
     filters
         .iter()
@@ -313,7 +341,7 @@ pub(super) fn cell_tests<T>(
             let index = columns
                 .iter()
                 .position(|column| column.filterable && column.header == filter.column)?;
-            CellTest::new(filter, columns[index].filter_kind).map(|test| (index, test))
+            CellTest::new(filter, columns[index].filter_kind, formats).map(|test| (index, test))
         })
         .collect()
 }
@@ -385,7 +413,11 @@ mod tests {
     use FilterOperator::*;
 
     fn test(kind: FilterKind, operator: FilterOperator, value: &str) -> Option<CellTest> {
-        CellTest::new(&ColumnFilter::new("A", operator, value), kind)
+        CellTest::new(
+            &ColumnFilter::new("A", operator, value),
+            kind,
+            &Formats::AMERICAN,
+        )
     }
 
     fn text(operator: FilterOperator, value: &str, cell: &str) -> bool {
@@ -447,7 +479,7 @@ mod tests {
     }
 
     fn pick(filter: &ColumnFilter, cell: &str) -> Option<bool> {
-        CellTest::new(filter, FilterKind::Select)
+        CellTest::new(filter, FilterKind::Select, &Formats::AMERICAN)
             .map(|test| test.passes(cell, &SortKey::text(cell)))
     }
 
@@ -479,7 +511,11 @@ mod tests {
                 .format(|row: &String| row.to_uppercase())
                 .options([("admin", "Administrator"), ("editor", "Editor")]),
         ];
-        let tests = cell_tests(&columns, &[ColumnFilter::new("Role", Is, "admin")]);
+        let tests = cell_tests(
+            &columns,
+            &[ColumnFilter::new("Role", Is, "admin")],
+            &Formats::AMERICAN,
+        );
         let kept = |row: &str| passes_all(&row.to_string(), &columns, &tests, FilterLogic::And);
         assert!(kept("admin"));
         assert!(!kept("ADMIN"));
@@ -514,7 +550,7 @@ mod tests {
         let day = |d| chrono::NaiveDate::from_ymd_opt(2024, 3, d).unwrap();
         let passes = |filter: ColumnFilter, d: Option<u32>| {
             let key = d.map_or(SortKey::Empty, |d| day(d).sort_key());
-            CellTest::new(&filter, FilterKind::Date)
+            CellTest::new(&filter, FilterKind::Date, &Formats::AMERICAN)
                 .unwrap()
                 .passes("", &key)
         };
@@ -556,11 +592,26 @@ mod tests {
     }
 
     #[test]
-    fn a_comma_is_the_decimal_point_only_alone() {
-        assert_eq!(parse_number("1,5"), Some(1.5));
-        assert_eq!(parse_number("1.5"), Some(1.5));
-        assert_eq!(parse_number("1,000.5"), None);
-        assert_eq!(parse_number("inf"), None);
+    fn a_lone_comma_is_the_decimal_point_unless_it_groups_threes() {
+        let us = |text| parse_number(text, &Formats::AMERICAN);
+        assert_eq!(us("1,5"), Some(1.5));
+        assert_eq!(us("1.5"), Some(1.5));
+        assert_eq!(us("1,000"), Some(1000.0));
+        assert_eq!(us("-12,500.5"), Some(-12_500.5));
+        assert_eq!(us("1,234,567"), Some(1_234_567.0));
+        assert_eq!(us("1.000"), Some(1.0));
+        assert_eq!(us("1,00.5"), None);
+        assert_eq!(us("inf"), None);
+    }
+
+    #[test]
+    fn the_german_group_is_a_dot_and_a_lone_comma_stays_a_decimal() {
+        let de = |text| parse_number(text, &Formats::GERMAN);
+        assert_eq!(de("1.000"), Some(1000.0));
+        assert_eq!(de("12.500,5"), Some(12_500.5));
+        assert_eq!(de("1,5"), Some(1.5));
+        assert_eq!(de("1,000"), Some(1.0));
+        assert_eq!(de("1.5"), Some(1.5));
     }
 
     #[test]
@@ -580,6 +631,7 @@ mod tests {
                 ColumnFilter::new("Id", Equals, "1"),
                 ColumnFilter::new("Gone", Contains, "a"),
             ],
+            &Formats::AMERICAN,
         );
         assert_eq!(tests.len(), 1);
         let and = FilterLogic::And;
@@ -606,6 +658,7 @@ mod tests {
                 ColumnFilter::new("Name", StartsWith, "a"),
                 ColumnFilter::new("Name", StartsWith, "b"),
             ],
+            &Formats::AMERICAN,
         );
         let pass = |row: &str, logic| passes_all(&row.to_string(), &columns, &tests, logic);
         assert!(pass("Bob", FilterLogic::Or));

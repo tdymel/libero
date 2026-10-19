@@ -768,6 +768,35 @@ fn a_looping_wrap_steps_onto_the_clone() {
     });
 }
 
+/// Todo 3816: a slide that held the focus goes `inert` on a settle that is no key press, and the
+/// track takes the focus instead of `<body>`.
+#[test]
+fn a_scroll_away_from_the_focused_slide_keeps_the_focus_in_the_carousel() {
+    block_on(async {
+        let fixture = Fixture::open("/carousel/buttons", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        instant_scroll(page).await;
+        page.evaluate("document.querySelector('[aria-roledescription=slide] button').focus()")
+            .await
+            .unwrap();
+        page.evaluate(format!(
+            "(() => {{ const t = document.querySelector({TRACK:?}); t.scrollTo(t.scrollWidth, 0); }})()"
+        ))
+        .await
+        .unwrap();
+        wait::for_js_true(
+            page,
+            &format!("document.activeElement === document.querySelector({TRACK:?})"),
+            "the track to take the focus from the slide that scrolled away",
+        )
+        .await
+        .unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
 async fn focus_track(page: &Page) {
     page.evaluate(format!("document.querySelector({TRACK:?}).focus()"))
         .await

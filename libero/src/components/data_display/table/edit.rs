@@ -80,15 +80,23 @@ pub struct EditCtx {
 type EditSet<T> = Rc<dyn Fn(&mut T, &str) -> Option<()>>;
 type EditCheck<T> = Rc<dyn Fn(&T, &str) -> Result<(), String>>;
 
+type EditorFn = Rc<dyn Fn(EditCtx) -> Element>;
+
 /// An editable column's parts; `set` parses the text and sets it, `None` when it does not parse.
 pub(super) struct ColumnEdit<T> {
     pub kind: EditKind,
     pub set: EditSet<T>,
     pub validate: Option<EditCheck<T>>,
-    pub editor: Option<Rc<dyn Fn(EditCtx) -> Element>>,
+    pub editor: Option<EditorFn>,
 }
 
-// Hand-written: a derive would demand `T: Clone`.
+/// A column's `validate` and `editor`, held until `editable` makes the [`ColumnEdit`].
+pub(super) struct EditExtras<T> {
+    pub validate: Option<EditCheck<T>>,
+    pub editor: Option<EditorFn>,
+}
+
+// Hand-written: a derive would demand `T: Clone` or `T: Default`.
 impl<T> Clone for ColumnEdit<T> {
     fn clone(&self) -> Self {
         Self {
@@ -96,6 +104,24 @@ impl<T> Clone for ColumnEdit<T> {
             set: self.set.clone(),
             validate: self.validate.clone(),
             editor: self.editor.clone(),
+        }
+    }
+}
+
+impl<T> Clone for EditExtras<T> {
+    fn clone(&self) -> Self {
+        Self {
+            validate: self.validate.clone(),
+            editor: self.editor.clone(),
+        }
+    }
+}
+
+impl<T> Default for EditExtras<T> {
+    fn default() -> Self {
+        Self {
+            validate: None,
+            editor: None,
         }
     }
 }
@@ -365,6 +391,23 @@ mod tests {
             commit_edit(&ana(), &checked, "200"),
             Err(EditError::Invalid("Too old".into()))
         );
+    }
+
+    #[test]
+    fn validate_and_editor_hold_before_editable() {
+        let column = column("Age")
+            .value(|p: &Person| p.age)
+            .validate(|_: &Person, age: &u32| match *age <= 150 {
+                true => Ok(()),
+                false => Err("Too old".into()),
+            })
+            .editor(|_: EditCtx| rsx! {})
+            .editable(|p: &mut Person, age: u32| p.age = age);
+        assert_eq!(
+            commit_edit(&ana(), &column, "200"),
+            Err(EditError::Invalid("Too old".into()))
+        );
+        assert!(column.edit.is_some_and(|edit| edit.editor.is_some()));
     }
 
     #[test]

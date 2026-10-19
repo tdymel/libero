@@ -19,8 +19,8 @@ use crate::{
         overlay::MenuPart,
     },
     hooks::{
-        use_debounced_callback, use_element, use_id, use_localization, use_resize_fallback,
-        use_theme,
+        use_debounced_callback, use_element, use_formats, use_id, use_localization,
+        use_resize_fallback, use_theme,
     },
     platform::{ElementApi, sticks_table_heads, widens_sized_tables},
     sx::{StaticSx, Sx, sx},
@@ -1412,7 +1412,7 @@ pub fn Table<T: Clone + PartialEq + 'static>(mut props: TableProps<T>) -> Elemen
         .collect();
     let editable = props.columns.iter().any(|column| column.edit.is_some());
     let cell_focus = props.cell_focus || editable;
-    let tests = cell_tests(&props.columns, &state.column_filters.read());
+    let tests = cell_tests(&props.columns, &state.column_filters.read(), use_formats());
     let active_filters = tests.len();
     if props.toolbar.is_some() {
         tools.show(ToolView {
@@ -1746,9 +1746,8 @@ pub fn Table<T: Clone + PartialEq + 'static>(mut props: TableProps<T>) -> Elemen
                 VisibleRow::Data(index) => context.spans(&data[index]),
                 VisibleRow::Group(_) => Vec::new(),
             }),
-            window: row_height.map(|pitch| {
-                grid_window(pitch, (*head.peek(), foot_gap), row_focus.focused, &order)
-            }),
+            window: row_height.map(|pitch| grid_window(pitch, row_focus.focused, &order)),
+            edges: (*head.peek(), foot_gap),
             header,
             select,
             editable: columns.iter().map(|column| column.edit.is_some()).collect(),

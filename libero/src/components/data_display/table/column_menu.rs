@@ -23,7 +23,7 @@ use crate::{
         overlay::{Menu, MenuEntry, MenuItem, MenuPart, use_menu},
     },
     context::IconSlot,
-    hooks::{Align, ElementHandle, use_press_marker},
+    hooks::{Align, ElementHandle, use_formats, use_press_marker},
     localization::TableLabels,
     platform::{ElementApi, next_observe_tag, observes_by_tag},
     theme::Size,
@@ -350,9 +350,10 @@ pub(super) fn ColumnMenu(
         None,
         false,
     ));
+    let formats = use_formats();
     let filtered = filter.as_ref().is_some_and(|target| {
         filter_of(&target.slice.read(), &target.column)
-            .is_some_and(|item| CellTest::new(item, target.kind).is_some())
+            .is_some_and(|item| CellTest::new(item, target.kind, formats).is_some())
     });
     let marked: Vec<Attribute> = filter_marker
         .attribute()

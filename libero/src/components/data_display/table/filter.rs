@@ -295,6 +295,7 @@ mod tests {
         let tests = cell_tests(
             &columns,
             &[ColumnFilter::new("Age", FilterOperator::LessThan, "50")],
+            &crate::localization::Formats::AMERICAN,
         );
         let mut filtered = FilteredRows::default();
         let only_tests = filtered
