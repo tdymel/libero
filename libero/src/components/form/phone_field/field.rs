@@ -150,7 +150,8 @@ field_props! {
         /// wins; a change re-emits the number under the new code.
         #[props(default, into)]
         country: Option<String>,
-        /// The user picked another country; `oninput` re-emits the value too.
+        /// The user picked another country, or typed another dial code; `oninput`
+        /// re-emits the value too.
         #[props(default)]
         oncountrychange: Option<EventHandler<String>>,
         /// `false` pins the country and draws a static `+49` instead.
@@ -377,8 +378,7 @@ pub fn PhoneField(props: PhoneFieldProps) -> Element {
     let prefix_box = use_box().framework_sx(&PREFIX_SX).prepare();
     let search_box = use_box().framework_sx(&SEARCH_SX).prepare();
 
-    // Built only while the list is open - it is the only time `ComboboxCore`
-    // renders it, and it carries three event closures.
+    // Built on every render, drawn by `ComboboxCore` only while the list is open.
     let search = search_box
         .element(&search_element)
         .attr_default("type", "text")
@@ -942,8 +942,6 @@ fn phone_input<F: Fn(String) + Clone + 'static>(
 /// otherwise post that - the `Slider`/`PinField`/`TagsField` shape.
 fn phone_hidden(name: Option<String>, e164: &str, disabled: bool) -> Option<Element> {
     let e164 = e164.to_string();
-    // The E.164 is what posts. The visible input holds the display text and
-    // would otherwise post that - the `Slider`/`PinField`/`TagsField` shape.
     name.map(|name| {
         rsx! {
             input {

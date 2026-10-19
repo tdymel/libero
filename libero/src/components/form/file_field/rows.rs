@@ -300,6 +300,9 @@ pub(super) fn card_list(
         // Safari with VoiceOver drops list semantics from a `list-style: none`
         // list.
         .attr("role", "list")
+        // The list takes no drop, but the browser must not open the file either.
+        .event("ondragover", |event: DragEvent| event.prevent_default())
+        .event("ondrop", |event: DragEvent| event.prevent_default())
         .render(HtmlTag::Ul, Vec::new(), drawn)
 }
 

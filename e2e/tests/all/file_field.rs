@@ -750,6 +750,114 @@ fn a_drop_on_the_frame_padding_is_taken() {
     });
 }
 
+/// Records, after every handler has run, whether the last `dragover` and `drop` were
+/// cancelled: an uncancelled file drop is the browser opening the file.
+async fn watch_drag_defaults(page: &Page) {
+    page.evaluate(
+        "window.__cancelled = {}; for (const kind of ['dragover', 'drop']) \
+         window.addEventListener(kind, (e) => { window.__cancelled[kind] = e.defaultPrevented; });",
+    )
+    .await
+    .unwrap();
+}
+
+async fn assert_drag_cancelled(page: &Page, what: &str) {
+    let cancelled: (Option<bool>, Option<bool>) = page
+        .evaluate("[window.__cancelled.dragover ?? null, window.__cancelled.drop ?? null]")
+        .await
+        .unwrap()
+        .into_value()
+        .unwrap();
+    assert_eq!(
+        cancelled,
+        (Some(true), Some(true)),
+        "{what}: (dragover, drop) cancelled"
+    );
+}
+
+/// Todo 3806: a file dropped on a disabled field is refused, not opened by the browser,
+/// whether it lands on the group or on the frame's padding.
+#[test]
+fn a_drop_on_a_disabled_field_is_refused_not_opened() {
+    block_on(async {
+        let fixture = Fixture::open("/file-field/modes", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        wait::for_visible(page, "#modes").await.unwrap();
+        pointer::click(page, "#to-disabled").await.unwrap();
+        wait::for_js_true(
+            page,
+            "document.querySelector('#modes').disabled",
+            "the field to turn disabled",
+        )
+        .await
+        .unwrap();
+
+        let disk = OnDisk::new();
+        watch_drag_defaults(page).await;
+        drop_files(
+            page,
+            "[role=group][aria-labelledby=modes-label]",
+            disk.paths(),
+        )
+        .await;
+        assert_drag_cancelled(page, "a drop on the disabled group").await;
+
+        let (x, y): (f64, f64) = page
+            .evaluate(
+                "(() => { const r = document.querySelector('#modes').closest('[data-frame]')\
+                 .getBoundingClientRect(); return [r.left + 3, r.top + r.height / 2]; })()",
+            )
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        watch_drag_defaults(page).await;
+        drop_files_at(page, x, y, disk.paths()).await;
+        assert_drag_cancelled(page, "a drop on the disabled frame's padding").await;
+
+        assert!(
+            page.evaluate("!document.querySelector('#modes-file-0')")
+                .await
+                .unwrap()
+                .into_value::<bool>()
+                .unwrap(),
+            "the disabled field took a file"
+        );
+        fixture
+            .console
+            .assert_clean("dropping on a disabled field")
+            .unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
+/// Todo 3806: a file dropped on the dropzone's card list is refused, not opened.
+#[test]
+fn a_drop_on_the_card_list_is_refused_not_opened() {
+    block_on(async {
+        let fixture = Fixture::open("/file-field", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        wait::for_visible(page, SURFACE).await.unwrap();
+        let disk = OnDisk::new();
+        drop_files(page, SURFACE, disk.paths()).await;
+        wait::for_selector(page, REMOVE_BETA).await.unwrap();
+
+        watch_drag_defaults(page).await;
+        drop_files(page, "[data-fixture-ready] ul[role=list]", disk.paths()).await;
+        assert_drag_cancelled(page, "a drop on the card list").await;
+
+        fixture
+            .console
+            .assert_clean("dropping on the card list")
+            .unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
 /// Todo 2553: a file dragged over the `Input` variant's frame, padding included, tints it
 /// and draws a primary border, as the dropzone does; the drop clears it.
 #[test]

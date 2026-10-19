@@ -75,7 +75,9 @@ fn use_sheet_clearance(
     let mut clearance = use_signal(|| 0.0);
     let placed = popover.placed();
     let sheet = *popover.floating();
+    let mut live = use_signal(|| false);
     use_effect(use_reactive!(|(opened, placed)| {
+        live.set(opened && placed);
         if !(opened && placed) {
             if *clearance.peek() != 0.0 {
                 clearance.set(0.0);
@@ -107,7 +109,8 @@ fn use_sheet_clearance(
             {
                 bottom = bottom.max(field_top + field_size.height);
             }
-            if sheet_top < bottom && sheet_top + sheet_size.height > top {
+            // The list may have closed during the measures above.
+            if *live.peek() && sheet_top < bottom && sheet_top + sheet_size.height > top {
                 clearance.set(sheet_size.height + gap + bottom - trigger_bottom);
             }
         });

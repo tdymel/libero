@@ -50,27 +50,27 @@ pub(super) struct Surface {
 
 impl Surface {
     /// The group's own drop, for the frame around it: the padding takes a file
-    /// too (todo 531). `None` when disabled, as the group's dragover is.
-    fn frame_drop(&self) -> Option<impl Fn(DragEvent) + 'static> {
+    /// too (todo 531). A disabled one refuses the file instead of leaving the page.
+    fn frame_drop(&self) -> impl Fn(DragEvent) + 'static {
         let (take, dragging, editable) = (self.take, self.dragging.clone(), self.editable);
-        self.interactive.then_some(move |event: DragEvent| {
+        move |event: DragEvent| {
             event.prevent_default();
             dragging.set(false);
             if editable {
                 take.call(event.files());
             }
-        })
+        }
     }
 
-    /// The frame's drag cue, for a drag over its padding as well. `None` when disabled.
-    fn frame_drag(&self) -> Option<impl Fn(bool) + 'static> {
+    /// The frame's drag cue, for a drag over its padding as well. Only an editable field tints.
+    fn frame_drag(&self) -> impl Fn(bool) + 'static {
         let (dragging, editable) = (self.dragging.clone(), self.editable);
-        self.interactive.then_some(move |over: bool| {
+        move |over: bool| {
             let over = over && editable;
             if dragging.get() != over {
                 dragging.set(over);
             }
-        })
+        }
     }
 
     /// `chips` come before the button, `after` after its ring.
@@ -178,14 +178,12 @@ impl Surface {
                 }
             })
             .event("ondragover", move |event: DragEvent| {
-                if interactive {
-                    // Else the browser opens the file and leaves the form, so
-                    // a read-only field takes the drop and refuses it.
-                    event.prevent_default();
-                    // `dragover` fires every few ms; `set` re-renders even on an equal value.
-                    if dragging_over.get() != editable {
-                        dragging_over.set(editable);
-                    }
+                // Else the browser opens the file and leaves the form, so a read-only or
+                // disabled field takes the drop and refuses it.
+                event.prevent_default();
+                // `dragover` fires every few ms; `set` re-renders even on an equal value.
+                if interactive && dragging_over.get() != editable {
+                    dragging_over.set(editable);
                 }
             })
             .event("ondragleave", move |_: DragEvent| dragging_off.set(false))
@@ -235,8 +233,8 @@ fn FileInputControl(
     let frame = use_field_frame()
         .trailing(&trailing)
         .states(&frame_states)
-        .ondrop(control.frame_drop())
-        .ondrag(control.frame_drag())
+        .ondrop(Some(control.frame_drop()))
+        .ondrag(Some(control.frame_drag()))
         .prepare();
     // The frame draws the ring, so neither box may draw a second.
     let group = use_box()

@@ -109,15 +109,12 @@ static SLIDER_ROOT_SX: StaticSx = StaticSx::new(|| {
         .when("marks-labeled", sx().padding_bottom("1.5em"))
         // No grab cursor for a drag `onstart` refuses.
         .when("readonly", sx().selector("& *", sx().cursor("default")))
-        // No `pointer-events: none`, so `not-allowed` shows (todo 596): `onstart`
-        // refuses the drag, and the thumb's bubble is held shut. After `readonly`. Focus inside
-        // lifts the fade, which the thumb's ring would fade with.
+        // No `pointer-events: none`, so `not-allowed` shows (todo 596); `onstart` refuses the
+        // drag. After `readonly`; focus inside lifts the fade the thumb's ring would take.
         .when(
             "disabled",
             disabled_look_within_sx("not-allowed").selector("& *", sx().cursor("not-allowed")),
         )
-        // White ring and dark halo read on any track color. The shadow only
-        // unfocused, or it outranks the thumb's `:focus-visible` ring.
         // As the `Audio` seek track: the bars draw it, and a press anywhere on them moves.
         .when(
             "bars",
@@ -134,6 +131,8 @@ static SLIDER_ROOT_SX: StaticSx = StaticSx::new(|| {
                 sx().background("transparent"),
             ),
         )
+        // White ring and dark halo read on any track color. The shadow only
+        // unfocused, or it outranks the thumb's `:focus-visible` ring.
         .when(
             "plain",
             sx().selector(

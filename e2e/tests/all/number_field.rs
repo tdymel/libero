@@ -304,6 +304,19 @@ fn emptying_the_field_clears_the_value_and_junk_reverts() {
         keyboard::press(page, keyboard::TAB).await.unwrap();
         held(page, RANGED, "42").await.unwrap();
 
+        // Todo 3847: a float field reverts `NaN`, which `str::parse` accepts but no caller wants.
+        keyboard::tab_to(page, "#weight", 10).await.unwrap();
+        retype(page, "NaN").await.unwrap();
+        keyboard::press(page, keyboard::TAB).await.unwrap();
+        wait::for_js_true(
+            page,
+            "(() => { const el = document.querySelector('#weight'); \
+             return el.value === '1.5' && el.getAttribute('aria-valuenow') === '1.5'; })()",
+            "the weight to revert from NaN",
+        )
+        .await
+        .unwrap();
+
         fixture.console.assert_clean("emptying a number").unwrap();
         fixture.close().await.unwrap();
     });
