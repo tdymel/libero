@@ -55,7 +55,7 @@ const ON_KEY: &str = "const [skipTyping, clicked, seeded, observe, owner] = data
         if (!(target instanceof Element)) return false;
         if (target.tagName === 'TEXTAREA' || target.tagName === 'SELECT') return true;
         if (target.tagName === 'INPUT') {
-            return !clicked.includes((target.getAttribute('type') ?? '').trim().toLowerCase());
+            return !clicked.includes((target.getAttribute('type') ?? '').toLowerCase());
         }
         return target.isContentEditable === true;
     };

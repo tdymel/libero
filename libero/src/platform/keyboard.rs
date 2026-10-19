@@ -189,9 +189,8 @@ pub(crate) fn logical_arrow(key: Key, rtl: bool) -> Key {
 pub(crate) fn takes_typing(tag: &str, input_type: Option<&str>) -> bool {
     match tag {
         "TEXTAREA" | "SELECT" => true,
-        "INPUT" => !input_type.is_some_and(|kind| {
-            CLICKED_INPUT_TYPES.contains(&kind.trim().to_ascii_lowercase().as_str())
-        }),
+        "INPUT" => !input_type
+            .is_some_and(|kind| CLICKED_INPUT_TYPES.contains(&kind.to_ascii_lowercase().as_str())),
         _ => false,
     }
 }
@@ -206,9 +205,8 @@ pub(crate) const CLICKED_INPUT_TYPES: &[&str] = &[
 /// `radio`, the complement of [`takes_typing`]. A backstop for raw caller HTML.
 pub(crate) fn takes_arrows(tag: &str, input_type: Option<&str>) -> bool {
     tag == "INPUT"
-        && input_type.is_some_and(|kind| {
-            matches!(kind.trim().to_ascii_lowercase().as_str(), "range" | "radio")
-        })
+        && input_type
+            .is_some_and(|kind| matches!(kind.to_ascii_lowercase().as_str(), "range" | "radio"))
 }
 
 /// What a global hotkey on this chord would take from the user, or `None`.
@@ -350,6 +348,11 @@ mod tests {
             "checkbox", "radio", "RADIO", "button", "submit", "range", "color", "file",
         ] {
             assert!(!takes_typing("INPUT", Some(kind)), "{kind}");
+        }
+        // A padded `type` is no known type, so a text field, as in a browser.
+        for kind in [" checkbox", "range ", "\tradio"] {
+            assert!(takes_typing("INPUT", Some(kind)), "{kind:?}");
+            assert!(!takes_arrows("INPUT", Some(kind)), "{kind:?}");
         }
         assert!(takes_typing("TEXTAREA", None));
         assert!(takes_typing("SELECT", None));

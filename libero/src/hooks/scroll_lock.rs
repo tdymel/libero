@@ -27,12 +27,19 @@ fn scrollbar_gutter(viewport: Option<f64>, root: Option<f64>) -> f64 {
     }
 }
 
+/// A measure that resolves after the close is dropped, or the next open reuses its gutter.
+fn settled(live: bool, measure: (f64, f64)) -> Option<(f64, f64)> {
+    live.then_some(measure)
+}
+
 /// Locks the page's scroll while `active`, as `Modal` and a drawn fullscreen do. Render
 /// the returned `style` inside `root`, a fixed, full-bleed box, measured before the lock
 /// mounts: the scrollbar is gone after. Not `body:has(..)`: `:has()` never matches natively.
 pub(crate) fn use_scroll_lock(root: ElementHandle, active: bool) -> Option<Element> {
     let mut lock = use_signal(|| None::<(f64, f64)>);
+    let mut live = use_signal(|| false);
     use_effect(use_reactive!(|active| {
+        live.set(active);
         if !active {
             if lock.peek().is_some() {
                 lock.set(None);
@@ -51,7 +58,9 @@ pub(crate) fn use_scroll_lock(root: ElementHandle, active: bool) -> Option<Eleme
                 Some(read) => read.await.ok().map(|viewport| viewport.width),
                 None => None,
             };
-            lock.set(Some((scrollbar_gutter(screen, width), padding)));
+            if let Some(measure) = settled(live(), (scrollbar_gutter(screen, width), padding)) {
+                lock.set(Some(measure));
+            }
         });
     }));
     let (gutter, padding) = lock().filter(|_| active)?;
@@ -69,6 +78,12 @@ mod tests {
         assert_eq!(scrollbar_gutter(Some(1280.0), Some(1265.0)), 15.0);
         // On top of the page's own padding, which it must not replace.
         assert!(scroll_lock_css(15.0, 8.0).contains("html { padding-right: 23px !important; }"));
+    }
+
+    #[test]
+    fn a_measure_after_the_close_is_not_kept() {
+        assert_eq!(settled(true, (15.0, 8.0)), Some((15.0, 8.0)));
+        assert_eq!(settled(false, (15.0, 8.0)), None);
     }
 
     #[test]

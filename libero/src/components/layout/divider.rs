@@ -224,8 +224,8 @@ pub fn Divider(props: DividerProps) -> Element {
         CssLayer::Framework,
     );
 
-    // A separator is named only by its author, never by its content. Not with
-    // another caller role: a global aria attribute would undo a `role: "none"`.
+    // A separator's content does not name it, so the label does, unless the caller does.
+    // Not with another caller role: a global aria attribute would undo a `role: "none"`.
     let label_id = use_id();
     let other_role = props.attributes.iter().any(|attribute| {
         attribute.name == "role"
