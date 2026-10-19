@@ -257,6 +257,28 @@ fn only_the_selected_segment_draws_a_hidden_check() {
     assert!(!body(&render(plain)).contains("data-slot=\"check\""));
 }
 
+/// Todo 3833: a blank segment name names nothing, so the radio does not carry it.
+#[test]
+fn a_blank_segment_name_is_not_put_on_its_radio() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider {
+                SegmentedControl::<String> {
+                    "aria-label": "Emphasis",
+                    value: "b".to_string(),
+                    onchange: move |_| {},
+                    options: OptionList::new(["  ".to_string(), "b".to_string()]),
+                }
+            }
+        }
+    }
+
+    let html = body(&render(app));
+    let radios = tags_with(&html, "<input");
+    let names: Vec<_> = radios.iter().map(|radio| radio.get("aria-label")).collect();
+    assert_eq!(names, [None, Some(&"b".to_string())], "{html}");
+}
+
 /// Todo 371: the per-segment flag rides on the option, and `options` left
 /// unset is not an empty list - it still means every `Options::options()`.
 #[test]

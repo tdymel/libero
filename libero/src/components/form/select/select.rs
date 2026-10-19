@@ -302,6 +302,50 @@ pub(super) fn draw_rows<T: Options>(
 mod tests {
     use super::*;
 
+    fn warns(app: fn() -> Element) -> bool {
+        crate::utils::warnings_of(app)
+            .iter()
+            .any(|warning| warning.starts_with("Select: searchable"))
+    }
+
+    /// Todo 3834: the search box of a searchable `Select` with no name is named by its placeholder only.
+    #[test]
+    fn a_searchable_select_without_a_name_warns() {
+        fn bare() -> Element {
+            rsx! {
+                crate::LiberoProvider {
+                    Select::<String> { searchable: true, options: vec!["Berlin".to_string()], onchange: move |_| {} }
+                }
+            }
+        }
+        fn labelled() -> Element {
+            rsx! {
+                crate::LiberoProvider {
+                    Select::<String> { label: "City", searchable: true, options: vec!["Berlin".to_string()], onchange: move |_| {} }
+                }
+            }
+        }
+        fn aria_labelled() -> Element {
+            rsx! {
+                crate::LiberoProvider {
+                    Select::<String> { "aria-label": "City", searchable: true, options: vec!["Berlin".to_string()], onchange: move |_| {} }
+                }
+            }
+        }
+        fn plain() -> Element {
+            rsx! {
+                crate::LiberoProvider {
+                    Select::<String> { options: vec!["Berlin".to_string()], onchange: move |_| {} }
+                }
+            }
+        }
+
+        assert!(warns(bare));
+        assert!(!warns(labelled));
+        assert!(!warns(aria_labelled));
+        assert!(!warns(plain));
+    }
+
     /// Default rows put their text in the label slot, the one that can ellipsise.
     #[test]
     fn a_default_row_puts_its_text_in_the_label_slot() {

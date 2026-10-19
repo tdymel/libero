@@ -304,7 +304,7 @@ pub fn ColorPicker(props: ColorPickerProps) -> Element {
                 PickerAlphaSlider {
                     value: value.alpha(),
                     size,
-                    aria_label: props.alpha_label.clone().or_else(|| Some(labels.alpha.into())),
+                    aria_label: part_name(props.alpha_label.as_deref(),labels.alpha),
                     focusable,
                     oninput: alpha_input,
                 }
@@ -322,7 +322,7 @@ pub fn ColorPicker(props: ColorPickerProps) -> Element {
             Saturation {
                 value: color,
                 oninput,
-                aria_label: props.saturation_label.clone().or_else(|| Some(labels.saturation.into())),
+                aria_label: part_name(props.saturation_label.as_deref(),labels.saturation),
                 focusable,
             }
             div { "data-slot": ColorPickerPart::Body.slot(),
@@ -330,7 +330,7 @@ pub fn ColorPicker(props: ColorPickerProps) -> Element {
                     HueSlider {
                         value: value.hue(),
                         size,
-                        aria_label: props.hue_label.clone().or_else(|| Some(labels.hue.into())),
+                        aria_label: part_name(props.hue_label.as_deref(),labels.hue),
                         focusable,
                         oninput: hue_input,
                     }
@@ -418,6 +418,7 @@ fn SwatchRow(props: SwatchRowProps) -> Element {
         let pressed = selected.as_ref() == Some(&color.to_rgba());
         let name = swatches
             .label(index)
+            .filter(|label| !label.trim().is_empty())
             .map_or_else(|| color.to_string(), str::to_string);
         rsx! {
             ColorSwatch {
@@ -450,6 +451,12 @@ fn SwatchRow(props: SwatchRowProps) -> Element {
     }
 }
 
+/// A part's caller name, or the localized default when the caller's is unset or blank.
+fn part_name(custom: Option<&str>, default: &str) -> Option<String> {
+    let custom = custom.filter(|label| !label.trim().is_empty());
+    Some(custom.unwrap_or(default).to_string())
+}
+
 /// A swatch as the picker offers it: opaque unless alpha can be picked.
 fn swatch_color(color: ColorCode, with_alpha: bool) -> ColorCode {
     match with_alpha {
@@ -462,6 +469,13 @@ fn swatch_color(color: ColorCode, with_alpha: bool) -> ColorCode {
 mod tests {
     use super::*;
     use crate::components::common::part_table;
+
+    #[test]
+    fn a_blank_part_name_falls_back_to_the_default() {
+        assert_eq!(part_name(None, "Hue").as_deref(), Some("Hue"));
+        assert_eq!(part_name(Some("  "), "Hue").as_deref(), Some("Hue"));
+        assert_eq!(part_name(Some("Tint"), "Hue").as_deref(), Some("Tint"));
+    }
 
     /// The slot names are public: a rename here is a breaking change.
     #[test]

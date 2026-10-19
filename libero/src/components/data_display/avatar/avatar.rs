@@ -144,7 +144,7 @@ base_props! {
         #[props(default, into)]
         initials: Option<String>,
         /// Overrides the announced name; `""` hides the avatar whole, so nothing
-        /// focusable may sit in it.
+        /// focusable may sit in it. Other blank text counts as unset.
         #[props(default, into)]
         alt: Option<String>,
         #[props(default, into)]
@@ -186,7 +186,12 @@ pub fn Avatar(props: AvatarProps) -> Element {
         .and_then(|src| media_url(src, "Avatar"));
     let probe = use_svg_probe(own_src.as_deref().unwrap_or_default());
     use_name_warning(
-        !props.name.trim().is_empty() || props.alt.is_some() || names_itself(&props.attributes),
+        !props.name.trim().is_empty()
+            || props
+                .alt
+                .as_deref()
+                .is_some_and(|alt| alt.is_empty() || !alt.trim().is_empty())
+            || names_itself(&props.attributes),
         "Avatar: an empty `name` and no `alt`, so it is announced as an unnamed image. Set `alt: \"\"` if it is decorative.",
     );
 
@@ -262,11 +267,12 @@ pub fn Avatar(props: AvatarProps) -> Element {
         _ => fallback,
     };
 
-    // The image rule: no `alt` uses the name, `""` is decorative.
+    // The image rule: no `alt` uses the name, `""` is decorative. A blank text names nothing.
+    let named = |text: String| Some(text).filter(|text| !text.trim().is_empty());
     let (role, label) = match props.alt.as_deref() {
-        None => ("img", Some(props.name)),
         Some("") => ("presentation", None),
-        Some(_) => ("img", props.alt),
+        Some(alt) if !alt.trim().is_empty() => ("img", props.alt),
+        _ => ("img", named(props.name)),
     };
     // `presentation` alone would leave the initials read as loose text.
     let hidden = (role == "presentation").then_some("true");

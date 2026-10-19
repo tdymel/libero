@@ -76,11 +76,11 @@ impl FieldBuilder<'_> {
                 FieldEntry {
                     id: id_value.clone(),
                     // A field named by `aria_label` only is still told apart in the summary (1526).
-                    label: label
-                        .text()
-                        .or(self.aria_label)
-                        .map(str::to_string)
-                        .or_else(|| attribute_text(self.attributes, "aria-label")),
+                    label: summary_label(
+                        label.text(),
+                        self.aria_label,
+                        attribute_text(self.attributes, "aria-label"),
+                    ),
                     name: name.clone(),
                     status: worst(explicit.clone(), rules.clone()),
                     explicit_error: explicit.is_error(),
@@ -233,6 +233,21 @@ impl FieldBuilder<'_> {
     }
 }
 
+/// The field's name in the error summary: the label, then `aria_label`, then a spread one;
+/// blank text names nothing.
+fn summary_label(
+    label: Option<&str>,
+    aria_label: Option<&str>,
+    spread: Option<String>,
+) -> Option<String> {
+    label
+        .into_iter()
+        .chain(aria_label)
+        .map(str::to_string)
+        .chain(spread)
+        .find(|text| !text.trim().is_empty())
+}
+
 /// Whether a `focusout` inside `root` took focus out of it. The web reads `relatedTarget`; Blitz
 /// fires it after the move, so asks where focus is. A WebView cannot answer: any move counts.
 fn focus_left(event: &FocusEvent, root: Option<ElementHandle>) -> bool {
@@ -242,5 +257,27 @@ fn focus_left(event: &FocusEvent, root: Option<ElementHandle>) -> bool {
     match platform::focus_left(event, &mounted) {
         Some(left) => left,
         None => !platform::reads_dom_synchronously() || !platform::focus_is_in(&mounted),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn a_blank_name_does_not_head_a_summary_line() {
+        assert_eq!(summary_label(Some(" "), None, None), None);
+        assert_eq!(
+            summary_label(Some(" "), Some("Email"), Some("x".into())).as_deref(),
+            Some("Email")
+        );
+        assert_eq!(
+            summary_label(None, Some(""), Some("Email".into())).as_deref(),
+            Some("Email")
+        );
+        assert_eq!(
+            summary_label(Some("Name"), Some("Email"), None).as_deref(),
+            Some("Name")
+        );
     }
 }

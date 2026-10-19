@@ -34,6 +34,18 @@ fn a_blank_close_label_falls_back_to_the_localized_close() {
     assert!(html.contains(r#"aria-label="Close""#), "{html}");
 }
 
+#[test]
+fn a_blank_title_leaves_nothing_for_aria_labelledby_to_point_at() {
+    fn app() -> Element {
+        rsx! { LiberoProvider { Alert { title: "  ", "Saved." } } }
+    }
+
+    let html = body(&render(app));
+    let root = attributes_of(&html, "div");
+    assert!(!root.contains_key("aria-labelledby"), "{root:?}");
+    assert!(!html.contains(r#"data-slot="title""#), "{html}");
+}
+
 /// Only error and warning interrupt; the default `info`, the rest of the
 /// palette and a literal colour are a polite `status`.
 #[test]

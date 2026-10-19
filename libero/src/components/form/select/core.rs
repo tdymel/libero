@@ -7,7 +7,8 @@ use crate::{
         common::{
             ComboboxState, Glyph, HtmlTag, Input, Part, Parts, ScaleOrCss, States, TOOLBAR_ITEM,
             ToolbarItem, aria_label_of, attr, focus_ring_sx, has_shortcut_modifier,
-            inset_focus_ring_sx, navigation_chord, ring_overlay, use_toolbar_item,
+            inset_focus_ring_sx, names_itself, navigation_chord, ring_overlay, use_name_warning,
+            use_toolbar_item,
         },
         form::{
             Asks, CaretKeys, ComboboxCore, ComboboxOption, DropdownPart, PreparedField, RowCache,
@@ -438,6 +439,10 @@ pub(crate) fn SelectCore(props: SelectCoreProps) -> Element {
         .states(&props.states)
         .attributes(&props.attributes)
         .prepare();
+    use_name_warning(
+        !props.searchable || field.label_id().is_some() || names_itself(&props.attributes),
+        "Select: searchable without `label` or `aria_label`, so the search box is named by its placeholder only.",
+    );
 
     let onclear = props.onclear;
     let clear = clear_button(
@@ -1209,7 +1214,12 @@ fn select_search_box(
         trigger,
     } = search;
     let trigger_id = field.id().to_string();
-    attributes.extend(naming);
+    // A blank name names nothing, so it is not moved onto the box.
+    attributes.extend(
+        naming
+            .into_iter()
+            .filter(|attribute| names_itself(std::slice::from_ref(attribute))),
+    );
     search_box
         .element(&search)
         .attr_default("type", "text")

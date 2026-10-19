@@ -5,7 +5,10 @@ use dioxus::prelude::*;
 use crate::{
     components::{
         accessibility::VisuallyHidden,
-        common::{HtmlTag, Input, Parts, ScaleOrCss, input_from_str},
+        common::{
+            HtmlTag, Input, Parts, ScaleOrCss, aria_label_of, input_from_str, names_itself,
+            use_name_warning,
+        },
         form::{
             Asks, ComboboxState, DropdownPart, PreparedField, PreparedFrame, clear_button,
             combobox::nothing_found_row, field_parts_enum, field_props, use_combobox, use_field,
@@ -256,6 +259,15 @@ pub(crate) fn CascaderCore(props: CascaderCoreProps) -> Element {
         state,
         parent_active,
     };
+    // The caller's `aria-label` names the open search box and listboxes the trigger no longer carries.
+    let aria_label = aria_label_of(&props.attributes);
+    use_name_warning(
+        !searchable
+            || field.label_id().is_some()
+            || aria_label.is_some()
+            || names_itself(&props.attributes),
+        "Cascader: searchable without `label` or `aria_label`, so the search box is named by its placeholder only.",
+    );
     let body = use_cascader_body(
         rows,
         Body {
@@ -265,6 +277,7 @@ pub(crate) fn CascaderCore(props: CascaderCoreProps) -> Element {
             path_row,
             listbox_id: listbox_id.clone(),
             label_id: field.label_id(),
+            aria_label: aria_label.clone(),
             column_width: props.column_width.clone(),
             max_height: theme.combobox.max_dropdown_height,
         },
@@ -315,8 +328,9 @@ pub(crate) fn CascaderCore(props: CascaderCoreProps) -> Element {
         // No listbox while nothing matches; a dangling id is invalid (todo 2291).
         let controls = nothing_found.is_none().then(|| controlled_id.clone());
         let placeholder = props.search_placeholder.clone().unwrap_or_default();
+        let name = aria_label.filter(|_| field.label_id().is_none());
         search_header(
-            search_box,
+            search_box.attr("aria-label", name),
             search,
             controls,
             descendant.clone(),

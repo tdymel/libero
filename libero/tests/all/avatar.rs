@@ -131,6 +131,27 @@ fn an_empty_alt_marks_the_avatar_decorative() {
     assert_eq!(root["aria-hidden"], "true");
 }
 
+/// Todo 3853: only `""` is decorative; other blank text counts as unset, so the name stays.
+#[test]
+fn a_whitespace_alt_does_not_hide_or_blank_the_avatar() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider { Avatar { name: "Ada Lovelace", alt: "   ", initials: "AL" } }
+        }
+    }
+    fn nameless() -> Element {
+        rsx! {
+            LiberoProvider { Avatar { name: " ", alt: "   ", initials: "AL" } }
+        }
+    }
+
+    let root = attributes_of(&body(&render(app)), "span");
+    assert_eq!(root["role"], "img");
+    assert_eq!(root["aria-label"], "Ada Lovelace");
+    let root = attributes_of(&body(&render(nameless)), "span");
+    assert!(!root.contains_key("aria-label"), "{root:?}");
+}
+
 /// Through `attr_default`, not `attr`: a component's own attributes render
 /// after the caller's, so `attr` would silently win the duplicate.
 #[test]

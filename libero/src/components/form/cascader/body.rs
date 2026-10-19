@@ -18,6 +18,8 @@ pub(super) struct Body {
     pub(super) path_row: Option<usize>,
     pub(super) listbox_id: String,
     pub(super) label_id: Option<String>,
+    /// Names the roots' and the paths' listbox when there is no `label_id`.
+    pub(super) aria_label: Option<String>,
     pub(super) column_width: String,
     pub(super) max_height: &'static str,
 }
@@ -31,6 +33,7 @@ pub(super) fn use_cascader_body(rows: CascaderRows, parts: Body) -> Element {
         path_row,
         listbox_id,
         label_id,
+        aria_label,
         column_width,
         max_height,
     } = parts;
@@ -54,9 +57,17 @@ pub(super) fn use_cascader_body(rows: CascaderRows, parts: Body) -> Element {
             columns,
             &listbox_id,
             label_id.clone(),
+            aria_label.clone(),
             &column_width,
             max_height,
         ),
-        CascaderLayout::Paths => rows.paths(&visible, path_row, &listbox_id, label_id, max_height),
+        CascaderLayout::Paths => rows.paths(
+            &visible,
+            path_row,
+            &listbox_id,
+            label_id,
+            aria_label,
+            max_height,
+        ),
     }
 }

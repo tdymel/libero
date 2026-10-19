@@ -2,7 +2,7 @@
 //! and one live region for the board.
 
 use crate::{
-    common::{body, render},
+    common::{body, render, tags_with},
     recorder::mounted_listeners,
 };
 
@@ -51,6 +51,40 @@ fn each_column_is_a_list_named_by_its_header() {
     assert!(html.contains(">To do</div>"), "{html}");
     assert!(html.contains(">Done</div>"), "{html}");
     assert_eq!(count(&html, "aria-labelledby="), 2, "{html}");
+}
+
+/// Todo 3853: a blank label names nothing: a custom header names the list, else it is unnamed.
+#[test]
+fn a_blank_column_label_is_not_the_lists_name() {
+    fn headed() -> Element {
+        rsx! {
+            LiberoProvider {
+                Kanban { onmove: move |_: KanbanMove| {},
+                    KanbanColumn { index: 0, label: "  ", header: rsx! { "To do (3)" } }
+                }
+            }
+        }
+    }
+    fn bare() -> Element {
+        rsx! {
+            LiberoProvider {
+                Kanban { onmove: move |_: KanbanMove| {},
+                    KanbanColumn { index: 0, label: "  " }
+                }
+            }
+        }
+    }
+
+    let list = |app: fn() -> Element| {
+        let html = body(&render(app));
+        tags_with(&html, r#"role="list""#).remove(0)
+    };
+    let headed = list(headed);
+    assert!(!headed.contains_key("aria-label"), "{headed:?}");
+    assert!(headed.contains_key("aria-labelledby"), "{headed:?}");
+    let bare = list(bare);
+    assert!(!bare.contains_key("aria-label"), "{bare:?}");
+    assert!(!bare.contains_key("aria-labelledby"), "{bare:?}");
 }
 
 #[test]

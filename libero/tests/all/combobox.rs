@@ -1141,6 +1141,42 @@ mod dispatched {
             }
         }
 
+        fn named_category() -> Element {
+            rsx! {
+                LiberoProvider {
+                    Cascader {
+                        "aria-label": "Category",
+                        searchable: true,
+                        data: vec![CascaderOption::new("tea", "Tea")],
+                        onchange: move |_: Option<String>| {},
+                    }
+                }
+            }
+        }
+
+        /// Todo 3813: the caller's `aria-label` follows the role onto the open search box,
+        /// and names the listbox, which has no field label to point at.
+        #[test]
+        fn an_open_searchable_cascader_without_a_label_names_its_search_box_and_list() {
+            let (mut dom, find) = mount(named_category);
+            press(
+                &mut dom,
+                last_keydown(&find),
+                Key::Named(NamedKey::ArrowDown),
+            );
+            let html = body(&dioxus_ssr::render(&dom));
+            let search = crate::common::tags_with(&html, r#"data-slot="search""#);
+            let lists = crate::common::tags_with(&html, r#"role="listbox""#);
+            let named = |tags: &[std::collections::BTreeMap<String, String>]| {
+                !tags.is_empty()
+                    && tags
+                        .iter()
+                        .all(|tag| tag.get("aria-label").map(String::as_str) == Some("Category"))
+            };
+            assert!(named(&search), "search box: {search:?}\n{html}");
+            assert!(named(&lists), "listboxes: {lists:?}");
+        }
+
         fn due(readonly: bool) -> Element {
             rsx! {
                 LiberoProvider {

@@ -117,7 +117,11 @@ impl Surface {
             .iter()
             .filter(|_| labelledby.is_none())
             .find_map(|attribute| match &attribute.value {
-                AttributeValue::Text(text) if attribute.name == "aria-label" => Some(text.clone()),
+                AttributeValue::Text(text)
+                    if attribute.name == "aria-label" && !text.trim().is_empty() =>
+                {
+                    Some(text.clone())
+                }
                 _ => None,
             });
         let press = move || {

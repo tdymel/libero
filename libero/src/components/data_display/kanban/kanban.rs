@@ -17,7 +17,7 @@ use crate::{
         accessibility::{Announcer, use_announcer},
         common::{
             Glyph, HtmlTag, Input, Orientation, Part, States, base_props, has_shortcut_modifier,
-            parts_enum,
+            parts_enum, use_name_warning,
         },
         data_display::sortable::{
             SORTABLE_CONTENT_SX, SORTABLE_HANDLE_SX, SORTABLE_MOVE_SX, SortableMove,
@@ -344,7 +344,8 @@ base_props! {
     pub struct KanbanColumnProps {
         /// The column's position on the board, from 0. Key it by its data, not this.
         index: usize,
-        /// The column's name: the header's text, the list's name, a Move to entry.
+        /// The column's name: the header's text, the list's name, a Move to entry. A blank
+        /// one names nothing: the list is named by `header` instead, or not at all.
         #[props(into)]
         label: String,
         /// The header's content instead of `label`, which stays the list's name.
@@ -362,6 +363,11 @@ base_props! {
 pub fn KanbanColumn(props: KanbanColumnProps) -> Element {
     let board = use_context::<Board>();
     let column = props.index;
+    let labelled = !props.label.trim().is_empty();
+    use_name_warning(
+        labelled || props.header.is_some(),
+        "KanbanColumn: a blank `label` and no `header`, so the list is announced without a name.",
+    );
     let mut index = use_signal(|| column);
     if *index.peek() != column {
         index.set(column);
@@ -486,10 +492,11 @@ pub fn KanbanColumn(props: KanbanColumnProps) -> Element {
         )
         .into();
 
-    // A custom header may hold more than the name: `label` then names the list.
-    let (name_attr, name) = match props.header {
-        Some(_) => ("aria-label", props.label.clone()),
-        None => ("aria-labelledby", header_id()),
+    // A custom header may hold more than the name: `label` then names the list, unless blank.
+    let (name_attr, name) = match (&props.header, labelled) {
+        (Some(_), true) => ("aria-label", Some(props.label.clone())),
+        (Some(_), false) | (None, true) => ("aria-labelledby", Some(header_id())),
+        (None, false) => ("aria-labelledby", None),
     };
     // As `Sortable`'s: a touch screen reader's tap on the handle lifts nothing (2452).
     let described = match (touch(), (board.move_buttons)()) {
@@ -925,6 +932,35 @@ pub fn KanbanCard(props: KanbanCardProps) -> Element {
 mod tests {
     use super::*;
     use crate::{Stylesheet, components::common::part_table};
+
+    /// Todo 3853: a column with a blank label and no header leaves the list unnamed.
+    #[test]
+    fn a_blank_column_label_without_a_header_warns() {
+        fn blank() -> Element {
+            rsx! {
+                crate::LiberoProvider {
+                    Kanban { onmove: move |_: KanbanMove| {}, KanbanColumn { index: 0, label: " " } }
+                }
+            }
+        }
+        fn headed() -> Element {
+            rsx! {
+                crate::LiberoProvider {
+                    Kanban { onmove: move |_: KanbanMove| {},
+                        KanbanColumn { index: 0, label: " ", header: rsx! { "To do" } }
+                    }
+                }
+            }
+        }
+        let warns = |app: fn() -> Element| {
+            crate::utils::warnings_of(app)
+                .iter()
+                .any(|warning| warning.starts_with("KanbanColumn:"))
+        };
+
+        assert!(warns(blank));
+        assert!(!warns(headed));
+    }
 
     #[test]
     fn a_narrow_card_wraps_its_buttons_below_the_content() {

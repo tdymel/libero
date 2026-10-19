@@ -72,6 +72,7 @@ mod icon;
 mod icon_provider;
 mod ids;
 mod image;
+mod image_cropper;
 mod image_list;
 mod indexed_db;
 mod indicator;

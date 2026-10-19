@@ -70,6 +70,22 @@ fn an_aria_label_names_the_group_of_a_field_without_a_label() {
     assert_eq!(group["aria-label"], "Receipt", "{body}");
 }
 
+/// Todo 3833: a blank `aria_label` names nothing, so the group does not carry it.
+#[test]
+fn a_blank_aria_label_is_not_put_on_the_group() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider {
+                FileField { aria_label: "  ", onchange: move |_| {} }
+            }
+        }
+    }
+
+    let body = body(&render(app));
+    let group = tag_with(&body, r#"role="group""#);
+    assert!(!group.contains_key("aria-label"), "{group:?}");
+}
+
 #[test]
 fn a_dropzone_file_field_renders_its_prompt_instead_of_a_frame() {
     fn app() -> Element {

@@ -5,6 +5,36 @@ use super::{
 };
 use crate::css::Stylesheet;
 
+/// Todo 3813: a searchable `Cascader` with no name leaves its search box named by the placeholder only.
+#[test]
+fn a_searchable_cascader_without_a_name_warns() {
+    use crate::{LiberoProvider, components::Cascader, components::CascaderOption};
+    use dioxus::prelude::*;
+
+    fn warns(app: fn() -> Element) -> bool {
+        crate::utils::warnings_of(app)
+            .iter()
+            .any(|warning| warning.starts_with("Cascader: searchable"))
+    }
+    fn bare() -> Element {
+        rsx! {
+            LiberoProvider {
+                Cascader { searchable: true, data: vec![CascaderOption::new("tea", "Tea")], onchange: move |_: Option<String>| {} }
+            }
+        }
+    }
+    fn named() -> Element {
+        rsx! {
+            LiberoProvider {
+                Cascader { "aria-label": "Category", searchable: true, data: vec![CascaderOption::new("tea", "Tea")], onchange: move |_: Option<String>| {} }
+            }
+        }
+    }
+
+    assert!(warns(bare));
+    assert!(!warns(named));
+}
+
 /// Columns grow into a wider trigger's room, so chevrons reach the edge. Reads the rule, not a layout.
 #[test]
 fn the_columns_fill_the_dropdown() {

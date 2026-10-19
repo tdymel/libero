@@ -456,7 +456,7 @@ pub(crate) fn render_segmented_control(view: SegmentedControlView, root: String)
                 value: segment.value.clone(),
                 // The label's text is not the name when the label is an icon,
                 // so the radio carries it.
-                "aria-label": segment.name.clone(),
+                "aria-label": Some(segment.name.clone()).filter(|name| !name.trim().is_empty()),
                 checked: selected == Some(index),
                 // `Some(true)` or nothing: dioxus-native writes `false` as a
                 // string, and Blitz reads `disabled` by presence.

@@ -278,7 +278,10 @@ fn SaturationThumb(
         .attr("data-slot", ColorPickerPart::Thumb.slot())
         .attr("role", "slider")
         .attr("tabindex", if tab_stop { "0" } else { "-1" })
-        .attr("aria-label", aria_label)
+        .attr(
+            "aria-label",
+            aria_label.filter(|label| !label.trim().is_empty()),
+        )
         .attr("aria-valuemin", 0)
         .attr("aria-valuemax", 100)
         .attr("aria-valuenow", percent(value.saturation()))

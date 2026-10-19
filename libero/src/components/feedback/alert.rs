@@ -267,7 +267,9 @@ pub fn Alert(props: AlertProps) -> Element {
         .with(variant.state_name(), true)
         .into();
 
-    let title_id = props.title.as_ref().map(|_| format!("{}-title", id()));
+    // A blank title draws no span, so nothing is left for `aria-labelledby` to point at.
+    let title = props.title.clone().filter(|title| !title.trim().is_empty());
+    let title_id = title.as_ref().map(|_| format!("{}-title", id()));
     // No `aria-describedby` pointing at an empty message.
     let message = (props.children != VNode::empty()).then(|| props.children.clone());
     let body_id = message.as_ref().map(|_| format!("{}-body", id()));
@@ -280,7 +282,6 @@ pub fn Alert(props: AlertProps) -> Element {
     let onclose = props.onclose;
     let icon = props.icon.clone();
     let actions = props.actions.clone();
-    let title = props.title.clone();
     let children = rsx! {
         if let Some(icon) = icon {
             span { "data-slot": AlertPart::Icon.slot(), "aria-hidden": "true", {icon} }

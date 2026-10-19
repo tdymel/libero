@@ -1,9 +1,11 @@
-use crate::common::{attributes_of, body, render};
+use crate::common::{attributes_of, body, render, tags_with};
 
 use dioxus::prelude::*;
 use libero::{
     LiberoProvider,
-    components::{ColorCode, ColorField, ColorPicker, ColorSwatch, Swatches},
+    components::{
+        AlphaSlider, ColorCode, ColorField, ColorPicker, ColorSwatch, HueSlider, Swatches,
+    },
 };
 
 /// Todo 2819: forced colours drop a swatch's background and ring unless it opts out.
@@ -107,6 +109,59 @@ fn a_labelled_swatch_is_named_by_its_label() {
     let html = body(&render(app));
     assert!(html.contains(r#"aria-label="Red""#), "{html}");
     assert!(!html.contains("#fa5252"), "{html}");
+}
+
+/// A blank label names nothing: the part keeps its default name, and a blank swatch label
+/// falls back to the hex.
+#[test]
+fn blank_picker_labels_fall_back_to_the_defaults() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider {
+                ColorPicker {
+                    value: ColorCode::default(),
+                    oninput: move |_| {},
+                    with_alpha: true,
+                    saturation_label: "  ",
+                    hue_label: "",
+                    alpha_label: " ",
+                    swatches: Swatches::labelled([("#fa5252", " ")]),
+                }
+            }
+        }
+    }
+    let html = body(&render(app));
+    let sliders = tags_with(&html, r#"role="slider""#);
+    assert_eq!(sliders.len(), 3, "{html}");
+    for slider in sliders {
+        let name = slider.get("aria-label").map_or("", String::as_str);
+        assert!(!name.trim().is_empty(), "{slider:?}");
+    }
+    assert!(html.contains(r##"aria-label="#fa5252""##), "{html}");
+}
+
+/// The standalone sliders and the panel drop a blank name instead of rendering `aria-label=""`.
+#[test]
+fn a_blank_slider_name_is_not_rendered() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider {
+                HueSlider { value: 10.0, aria_label: "  ", oninput: move |_| {} }
+                AlphaSlider {
+                    value: 0.5,
+                    color: ColorCode::default(),
+                    aria_label: " ",
+                    oninput: move |_| {},
+                }
+            }
+        }
+    }
+    let html = body(&render(app));
+    let sliders = tags_with(&html, r#"role="slider""#);
+    assert_eq!(sliders.len(), 2, "{html}");
+    for slider in sliders {
+        assert_eq!(slider.get("aria-label"), None, "{slider:?}");
+    }
 }
 
 thread_local! {

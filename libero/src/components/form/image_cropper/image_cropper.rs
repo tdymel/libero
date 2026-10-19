@@ -871,6 +871,7 @@ pub fn ImageCropper(props: ImageCropperProps) -> Element {
     let aria_label = props
         .aria_label
         .clone()
+        .filter(|label| !label.trim().is_empty())
         .unwrap_or_else(|| words.label.to_string());
 
     let handles = Grip::HANDLES.into_iter().filter(|_| !pan).map(|grabbed| {

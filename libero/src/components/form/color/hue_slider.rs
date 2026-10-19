@@ -59,8 +59,13 @@ pub fn HueSlider(props: HueSliderProps) -> Element {
     let theme = use_theme();
     let size = props.size.copied_or(theme.color_picker.size);
     let sx = color_slider_sx(&props.sx, &props.parts);
+    // A blank name names nothing: it neither renders nor counts as one.
+    let aria_label = props
+        .aria_label
+        .clone()
+        .filter(|label| !label.trim().is_empty());
     use_name_warning(
-        props.aria_label.is_some(),
+        aria_label.is_some(),
         "HueSlider: no `aria_label`, so the thumb is announced as just \"slider\".",
     );
 
@@ -89,7 +94,7 @@ pub fn HueSlider(props: HueSliderProps) -> Element {
             disabled: props.disabled,
             label: Some(valuetext),
             marks: Vec::new(),
-            aria_label: props.aria_label,
+            aria_label,
             aria_label_to: None,
             labelledby: None,
             describedby: None,

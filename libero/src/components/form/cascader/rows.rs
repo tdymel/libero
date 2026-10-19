@@ -305,10 +305,12 @@ impl CascaderRows {
         strip: BoxStyle,
         listbox_id: &str,
         label_id: Option<String>,
+        aria_label: Option<String>,
         width: &str,
         max_height: &'static str,
     ) -> Element {
         let cursor = &self.cursor_now;
+        let aria_label = aria_label.filter(|_| label_id.is_none());
         let depth = cursor.len().max(1);
         let columns: Vec<Element> = (0..depth)
             .map(|level| {
@@ -355,6 +357,7 @@ impl CascaderRows {
                             "data-slot": "listbox",
                             "role": "listbox",
                             "aria-labelledby": labelled_by,
+                            "aria-label": aria_label.clone().filter(|_| level == 0),
                             {pick_parent}
                             for row in rows {
                                 {row}
@@ -387,8 +390,10 @@ impl CascaderRows {
         path_row: Option<usize>,
         listbox_id: &str,
         label_id: Option<String>,
+        aria_label: Option<String>,
         max_height: &'static str,
     ) -> Element {
+        let aria_label = aria_label.filter(|_| label_id.is_none());
         let rows: Vec<Element> = visible
             .iter()
             .enumerate()
@@ -407,6 +412,7 @@ impl CascaderRows {
                     "data-slot": "listbox",
                     "role": "listbox",
                     "aria-labelledby": label_id,
+                    "aria-label": aria_label,
                     for row in rows {
                         {row}
                     }
