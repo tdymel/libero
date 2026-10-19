@@ -13,7 +13,28 @@ pub const ROUTES: Routes = &[
     ("/transition-mount", || rsx! { MountPage {} }),
     ("/transition-corner", || rsx! { CornerPage {} }),
     ("/transition-from", || rsx! { FromPage {} }),
+    ("/transition-descendant", || rsx! { DescendantPage {} }),
 ];
+
+/// A slow exit, for a descendant's `transitionend` to arrive while it runs.
+#[component]
+fn DescendantPage() -> Element {
+    let mut open = use_signal(|| true);
+
+    rsx! {
+        Flex { direction: "column", gap: "md", max_width: "320px",
+            Button {
+                id: "toggle",
+                variant: "outlined",
+                onclick: move |_| open.toggle(),
+                "Toggle"
+            }
+            Transition { id: "panel", open: open(), duration: 3000,
+                Text { id: "panel-text", "Hello" }
+            }
+        }
+    }
+}
 
 /// A caller's from-state: blurred while closed, sharp once open.
 #[component]

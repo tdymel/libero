@@ -847,6 +847,8 @@ struct Hover {
     track: CopyValue<Option<ThumbTrack>>,
     x: CopyValue<Option<f64>>,
     measuring: CopyValue<Option<TrackMeasure>>,
+    /// Counts resets, so a measure that lands after one is dropped.
+    resets: CopyValue<u32>,
     refresh: Callback<()>,
 }
 
@@ -859,6 +861,7 @@ fn use_hover(live: Signal<Live>, grid: Grid, elements: Elements) -> Hover {
     let mut busy = use_hook(|| CopyValue::new(false));
     let mut dirty = use_hook(|| CopyValue::new(false));
     let mut measuring = use_hook(|| CopyValue::new(None::<TrackMeasure>));
+    let resets = use_hook(|| CopyValue::new(0u32));
 
     // Requests coalesce into one update per task: a WebView sends each move over IPC.
     let refresh = use_callback(move |()| {
@@ -900,7 +903,12 @@ fn use_hover(live: Signal<Live>, grid: Grid, elements: Elements) -> Hover {
                 if let Some(pending) = pending
                     && track.peek().is_none()
                 {
-                    track.set(pending.await);
+                    let reset = *resets.peek();
+                    let measured = pending.await;
+                    // A resize meanwhile queued a fresh measure for the next pass.
+                    if *resets.peek() == reset {
+                        track.set(measured);
+                    }
                 }
                 next_task().await;
                 let geometry = track.peek().filter(|_| !*muted.peek());
@@ -928,6 +936,7 @@ fn use_hover(live: Signal<Live>, grid: Grid, elements: Elements) -> Hover {
         track,
         x,
         measuring,
+        resets,
         refresh,
     }
 }
@@ -950,9 +959,10 @@ impl Hover {
 
     /// A resize or fullscreen moves the track: measured again for the pointer still on it.
     fn resize(&self) {
-        let (mut track, mut measuring) = (self.track, self.measuring);
+        let (mut track, mut measuring, mut resets) = (self.track, self.measuring, self.resets);
         track.set(None);
         measuring.set(None);
+        *resets.write() += 1;
         if self.x.peek().is_some() {
             self.refresh.call(());
         }
@@ -1570,8 +1580,12 @@ fn SliderThumbs(props: SliderThumbsProps) -> Element {
             .attr("aria-invalid", props.invalid.then_some("true"))
             // No `aria-required`: ARIA 1.2 does not allow it on `slider`, and a
             // slider always holds a value anyway (todo 532).
-            .attr("aria-disabled", !interactive)
-            .attr("aria-readonly", props.readonly.then_some("true"))
+            .attr("aria-disabled", props.disabled)
+            // No `oninput` on an enabled slider: it looks enabled, so it reads as read-only.
+            .attr(
+                "aria-readonly",
+                (props.readonly || !interactive && !props.disabled).then_some("true"),
+            )
             .element(&thumb_elements[index])
             .event("onkeydown", move |event: Event<KeyboardData>| {
                 onkeydown.call((index, event))

@@ -8,8 +8,8 @@ use crate::{
         layout::{Box, use_box},
     },
     context::IconSlot,
-    sx::{StaticSx, Sx, sx},
-    theme::{ICON_SIZE, Size},
+    sx::{REDUCED_MOTION, StaticSx, Sx, sx},
+    theme::{ICON_SIZE, Size, TREE_CHEVRON_DURATION},
 };
 
 use super::tree_row::TreeRowContext;
@@ -19,8 +19,9 @@ fn item_parts_sx(base: Sx) -> Sx {
     base.selector(
         "& [data-tree-chevron]",
         sx().flex_shrink("0")
-            .transition("transform 120ms ease")
-            .transform("rotate(0deg)"),
+            .transition(format!("transform {} ease", TREE_CHEVRON_DURATION.value()))
+            .transform("rotate(0deg)")
+            .media(REDUCED_MOTION, sx().transition("none")),
     )
     // A closed row's chevron points to the start of the line. Before the
     // expanded rule, which wins at equal specificity.

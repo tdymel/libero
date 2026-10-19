@@ -75,6 +75,11 @@ fn an_open_tooltip_portals_its_bubble() {
     assert!(bubble["data-state"].contains("size-lg"), "{bubble:?}");
     assert!(bubble["style"].contains("position:fixed;"), "{bubble:?}");
     assert!(!bubble["style"].contains("max-width"), "{bubble:?}");
+    // The rest of the popover's style stays whole around the dropped cap.
+    assert!(
+        bubble["style"].contains("min-width:auto;visibility:"),
+        "{bubble:?}"
+    );
     assert!(html.contains("max-width:min(20rem,"));
     assert!(html.contains("max-width:12rem"));
 }

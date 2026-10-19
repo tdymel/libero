@@ -10,7 +10,9 @@ use crate::{
     components::{
         accessibility::VisuallyHidden,
         buttons::{ActionIcon, Button, TooltipOpenDelay},
-        common::{Glyph, HtmlTag, Input, Part, Parts, allowed_href, parts_enum},
+        common::{
+            Glyph, HtmlTag, Input, Part, Parts, allowed_href, has_shortcut_modifier, parts_enum,
+        },
         form::{HoverPreview, Slider, SliderChangeEvent, SliderSegment, SliderTrack},
         layout::{paper_sx, use_box},
         overlay::{Menu, MenuItem, Shortcut, ShortcutHelp, use_menu},
@@ -473,9 +475,15 @@ fn CaptionsMenu(
 /// Space on a slider plays and pauses; a button keeps its own Space, so no hotkey.
 pub(super) fn space_toggles(media: MediaHandle) -> impl FnMut(KeyboardEvent) + Copy {
     move |event: KeyboardEvent| {
-        if event.key() == Key::Character(" ".into()) && !key_taken(&event) {
+        // A chord is the browser's; a held key keeps the page still but toggles once.
+        if event.key() == Key::Character(" ".into())
+            && !key_taken(&event)
+            && !has_shortcut_modifier(&event)
+        {
             event.prevent_default();
-            media.toggle();
+            if !event.is_auto_repeating() {
+                media.toggle();
+            }
         }
     }
 }

@@ -393,8 +393,8 @@ pub use transition::{
     TRANSITION_ROTATE, TRANSITION_SCALE, TRANSITION_SKEW, TransitionDefaults,
 };
 pub use tree::{
-    TREE_GUIDE_ACTIVE_COLOR, TREE_GUIDE_ACTIVE_WIDTH, TREE_GUIDE_COLOR, TREE_GUIDE_WIDTH,
-    TreeDefaults,
+    TREE_CHEVRON_DURATION, TREE_GUIDE_ACTIVE_COLOR, TREE_GUIDE_ACTIVE_WIDTH, TREE_GUIDE_COLOR,
+    TREE_GUIDE_WIDTH, TreeDefaults,
 };
 pub use variant::Variant;
 pub use z_index::{

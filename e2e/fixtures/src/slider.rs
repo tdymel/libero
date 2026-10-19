@@ -21,7 +21,25 @@ pub const ROUTES: Routes = &[
     ("/slider/segments", || rsx! { SliderSegmentsPage {} }),
     ("/slider/preview", || rsx! { SliderPreviewPage {} }),
     ("/slider/grouped", || rsx! { SliderGroupedPage {} }),
+    ("/slider/preview-resize", || rsx! { SliderPreviewResizePage {} }),
 ];
+
+/// Todo 3799: a hover-preview track in a 400px box that a test narrows while the pointer stays.
+#[component]
+fn SliderPreviewResizePage() -> Element {
+    let mut value = use_signal(|| 0.0f64);
+    rsx! {
+        div { id: "box", style: "width: 400px",
+            Slider {
+                id: "single",
+                label: "Volume",
+                value: value(),
+                preview_on_hover: true,
+                oninput: move |e: SliderChangeEvent<f64>| value.set(e.value()),
+            }
+        }
+    }
+}
 
 /// Todo 3412: 400px tracks over 0..10000 that group their bubble's thousands.
 #[component]

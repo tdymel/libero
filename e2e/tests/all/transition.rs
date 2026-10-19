@@ -151,6 +151,44 @@ fn reduced_motion_switches_its_transitions_off() {
     });
 }
 
+/// Todo 3788: a descendant's bubbling `transitionend` on the same property does not end
+/// the root's slow exit.
+#[test]
+fn a_descendants_transition_end_does_not_unmount_a_closing_root() {
+    block_on(async {
+        let fixture = Fixture::open("/transition-descendant", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+
+        pointer::click(page, TOGGLE).await.unwrap();
+        wait::for_js_true(
+            page,
+            &format!("document.querySelector({ROOT:?}).dataset.state.includes('closed')"),
+            "the panel to start closing",
+        )
+        .await
+        .unwrap();
+        page.evaluate(format!(
+            "document.querySelector({CONTENT:?}).dispatchEvent(new TransitionEvent('transitionend', \
+             {{ propertyName: 'opacity', bubbles: true }}))"
+        ))
+        .await
+        .unwrap();
+        clock::settle(page).await.unwrap();
+
+        let mounted: bool = page
+            .evaluate(format!("!!document.querySelector({CONTENT:?})"))
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        assert!(mounted, "the descendant's end unmounted the closing panel");
+
+        fixture.close().await.unwrap();
+    });
+}
+
 /// Finishes what runs, as `Suite` does, and waits for an end event per finished animation.
 async fn finish_and_hear(page: &chromiumoxide::Page, what: &str) -> usize {
     page.evaluate("window.__ends = []").await.unwrap();

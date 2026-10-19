@@ -234,6 +234,25 @@ fn a_disabled_thumb_is_skipped_and_a_readonly_thumb_is_reached() {
     );
 }
 
+/// Todo 3798: no `oninput` on an enabled slider reads as read-only, not disabled.
+#[test]
+fn a_slider_without_oninput_is_read_only_not_disabled() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider { Slider { aria_label: "Volume", value: 40.0 } }
+        }
+    }
+
+    let thumb = tag_with(&render(app), r#"role="slider""#);
+
+    assert_eq!(thumb["aria-readonly"], "true", "{thumb:?}");
+    assert_ne!(
+        thumb.get("aria-disabled").map(String::as_str),
+        Some("true"),
+        "{thumb:?}"
+    );
+}
+
 #[test]
 fn a_range_slider_names_its_thumbs_from_the_localization_unless_told() {
     static WORDS: Localization = Localization {

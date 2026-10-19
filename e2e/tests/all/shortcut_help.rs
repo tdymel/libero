@@ -93,3 +93,30 @@ e2e::scenario!(
     "/shortcut-help",
     a_long_list_scrolls_inside
 );
+
+/// A list that outgrows its capped box while open becomes a named tab stop (3792).
+async fn a_list_that_grows_becomes_a_tab_stop<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    const REGION: &str = "#growing [role=region]";
+    ensure!(
+        !d.exists(REGION).await?,
+        "the short list is a region before it grows"
+    );
+    d.click("#grow").await?;
+    eventually(d, "the grown list's region", async |d| {
+        d.exists(REGION).await
+    })
+    .await?;
+    let tabindex = d.attr(REGION, "tabindex").await?;
+    ensure!(
+        tabindex.as_deref() == Some("0"),
+        "the grown list takes no focus to scroll by keyboard"
+    );
+    Ok(())
+}
+
+e2e::scenario!(
+    a_list_that_grows_scrolls,
+    "/shortcut-help-grow",
+    a_list_that_grows_becomes_a_tab_stop,
+    native: skip("Blitz has no `:has()`, which fixes the scroll box's height")
+);

@@ -218,6 +218,15 @@ pub(super) fn transition_property(event: &Event<TransitionData>) -> Option<Strin
     )
 }
 
+pub(super) fn transition_from_descendant(event: &Event<TransitionData>) -> bool {
+    event
+        .downcast::<web_sys::TransitionEvent>()
+        .is_some_and(|event| match (event.target(), event.current_target()) {
+            (Some(target), Some(current)) => target != current,
+            _ => false,
+        })
+}
+
 /// The native event outlives its dispatch, so `defaultPrevented` still reads
 /// what the capture-phase `KeyboardApi` listener did to it.
 pub(super) fn key_taken(event: &Event<KeyboardData>) -> bool {

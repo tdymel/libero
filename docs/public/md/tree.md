@@ -251,6 +251,7 @@ indent values live in `ListDefaults`.
 | `guide_active_color` | `ColorValue` | The `current` row's marker, `primary.6`. |
 | `guide_width` | `u8` | The guide's width in px, `1`. |
 | `guide_active_width` | `u8` | The marker's width in px, `2`. |
+| `chevron_duration` | `u32` | Milliseconds for the chevron's turn, `120`. None under reduced motion. |
 
 ## CSS variables
 
@@ -260,6 +261,7 @@ indent values live in `ListDefaults`.
 | `--lsx-tree-guide-active-color` | The `current` row's marker colour. |
 | `--lsx-tree-guide-width` | The guide's width. |
 | `--lsx-tree-guide-active-width` | The marker's width. |
+| `--lsx-tree-chevron-duration` | The chevron's turn. |
 
 Sizing comes from `List`'s `--lsx-list-gap-<size>` and
 `--lsx-list-indent-<size>`. With `guides`, a level's indent is the guide's

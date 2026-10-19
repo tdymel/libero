@@ -5,6 +5,7 @@ pub const TREE_GUIDE_COLOR: CssVar = CssVar::new("--lsx-tree-guide-color");
 pub const TREE_GUIDE_ACTIVE_COLOR: CssVar = CssVar::new("--lsx-tree-guide-active-color");
 pub const TREE_GUIDE_WIDTH: CssVar = CssVar::new("--lsx-tree-guide-width");
 pub const TREE_GUIDE_ACTIVE_WIDTH: CssVar = CssVar::new("--lsx-tree-guide-active-width");
+pub const TREE_CHEVRON_DURATION: CssVar = CssVar::new("--lsx-tree-chevron-duration");
 
 /// Theme defaults for `Tree`, set on [`Theme`](crate::theme::Theme).
 /// It renders through `List`, so `size` picks one of `List`'s levels.
@@ -19,6 +20,8 @@ pub struct TreeDefaults {
     pub guide_active_color: ColorValue,
     pub guide_width: u8,
     pub guide_active_width: u8,
+    /// Milliseconds for the chevron's turn.
+    pub chevron_duration: u32,
 }
 
 impl TreeDefaults {
@@ -29,6 +32,7 @@ impl TreeDefaults {
         guide_active_color: ColorValue::Shade(Color::Primary, ColorShade::S6),
         guide_width: 1,
         guide_active_width: 2,
+        chevron_duration: 120,
     };
 }
 
@@ -39,6 +43,7 @@ impl ToCssDeclarations for TreeDefaults {
             TREE_GUIDE_ACTIVE_COLOR.declare(self.guide_active_color.value()),
             TREE_GUIDE_WIDTH.declare(format!("{}px", self.guide_width)),
             TREE_GUIDE_ACTIVE_WIDTH.declare(format!("{}px", self.guide_active_width)),
+            TREE_CHEVRON_DURATION.declare(format!("{}ms", self.chevron_duration)),
         ]
     }
 }

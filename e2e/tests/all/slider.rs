@@ -988,6 +988,37 @@ fn group_digits_groups_the_bubble() {
     });
 }
 
+/// Todo 3799: a track that resizes under a hovering mouse is measured again for the next move.
+#[test]
+fn the_hover_preview_follows_a_resized_track() {
+    block_on(async {
+        let fixture = Fixture::open("/slider/preview-resize", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        let outcome = async {
+            pointer::move_to(page, track_point(page, "single", 0.75).await?).await?;
+            wait::for_js_true(page, &preview_js("75"), "the preview of 75").await?;
+            page.evaluate("document.querySelector('#box').style.width = '200px'")
+                .await?;
+            e2e::clock::next_frame(page).await?;
+            pointer::move_to(page, track_point(page, "single", 0.5).await?).await?;
+            wait::for_js_true(
+                page,
+                &preview_js("50"),
+                "the preview of 50 on the narrowed track",
+            )
+            .await?;
+            Ok::<_, anyhow::Error>(())
+        }
+        .await;
+        let console = fixture.console.assert_clean("the resized preview");
+        fixture.close().await.unwrap();
+        outcome.unwrap();
+        console.unwrap();
+    });
+}
+
 /// Todo 2212: `preview_on_hover` shows the value under a hovering mouse on a Slider and a
 /// RangeSlider; Escape hides it until the pointer leaves (WCAG 1.4.13).
 #[test]

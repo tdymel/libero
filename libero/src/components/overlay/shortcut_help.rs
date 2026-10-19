@@ -158,6 +158,12 @@ pub fn ShortcutHelp(props: ShortcutHelpProps) -> Element {
         });
     };
     use_resize_fallback(scroll_element, move |_| measure());
+    // A capped box keeps its size when the list changes, so no resize fires.
+    let shortcuts = props.shortcuts.clone();
+    use_effect(use_reactive!(|shortcuts| {
+        let _ = shortcuts;
+        measure();
+    }));
     let scrolls = overflows();
     // `role=region` on the `dl` itself would drop its list semantics.
     let scroll_box = use_box()

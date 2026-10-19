@@ -44,6 +44,30 @@ fn a_tree_item_takes_its_tabindex_from_the_row() {
     );
 }
 
+/// Todo 3785: the chevron's turn takes the theme's duration and stops under reduced motion.
+#[test]
+fn the_chevron_turn_takes_the_theme_duration_and_a_reduced_motion_guard() {
+    fn app() -> Element {
+        rsx! { LiberoProvider { TreeItem { "Alpha" } } }
+    }
+    let html = render(app);
+
+    assert!(
+        html.contains("transition:transform var(--lsx-tree-chevron-duration) ease;"),
+        "{html}"
+    );
+    assert!(
+        html.contains("--lsx-tree-chevron-duration:120ms;"),
+        "{html}"
+    );
+    assert!(
+        html.split("@media (prefers-reduced-motion: reduce)")
+            .skip(1)
+            .any(|block| block.contains("[data-tree-chevron]{transition:none;}")),
+        "{html}"
+    );
+}
+
 /// Read at the first render: a closed branch says `false`, an open one `true`
 /// and shows its group, a leaf says nothing.
 #[test]

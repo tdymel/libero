@@ -98,6 +98,15 @@ impl PopoverHandle {
     /// Every declaration is emitted on every render: a renderer never removes
     /// one that stops being printed. The CSS width cap keeps it on a phone (todo 357).
     pub fn style(&self) -> String {
+        self.style_with(true)
+    }
+
+    /// [`style`](Self::style) without the width cap, for a box whose class carries it.
+    pub(crate) fn style_uncapped(&self) -> String {
+        self.style_with(false)
+    }
+
+    fn style_with(&self, capped: bool) -> String {
         let (x, y, visibility, available) = match *self.placed.read() {
             Some(placed) => (
                 placed.x,
@@ -119,10 +128,14 @@ impl PopoverHandle {
             _ => (String::from("auto"), String::from("auto")),
         };
 
-        let edges = 2.0 * self.padding;
+        let cap = if capped {
+            format!("max-width:calc(100vw - {}px);", 2.0 * self.padding)
+        } else {
+            String::new()
+        };
 
         format!(
-            "position:fixed;left:{x}px;top:{y}px;width:{width};min-width:{min_width};max-width:calc(100vw - {edges}px);visibility:{visibility};{}:{available};",
+            "position:fixed;left:{x}px;top:{y}px;width:{width};min-width:{min_width};{cap}visibility:{visibility};{}:{available};",
             AVAILABLE_HEIGHT.name()
         )
     }

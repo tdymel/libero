@@ -746,6 +746,17 @@ pub(crate) fn transition_property(event: &Event<TransitionData>) -> Option<Strin
     };
 }
 
+/// Only the web reads the target - see
+/// [`transition_from_descendant`](crate::platform::transition_from_descendant).
+pub(crate) fn transition_from_descendant(event: &Event<TransitionData>) -> bool {
+    #[cfg(not(target_arch = "wasm32"))]
+    let _ = event;
+    #[cfg(target_arch = "wasm32")]
+    return web::transition_from_descendant(event);
+    #[cfg(not(target_arch = "wasm32"))]
+    return false;
+}
+
 /// Only the web can say - see [`focus_visible`](crate::platform::focus_visible).
 pub(crate) fn focus_visible(event: &Event<FocusData>) -> Option<bool> {
     #[cfg(not(target_arch = "wasm32"))]

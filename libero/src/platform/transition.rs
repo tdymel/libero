@@ -11,6 +11,12 @@ pub(crate) fn transition_property(event: &Event<TransitionData>) -> Option<Strin
     backend::transition_property(event)
 }
 
+/// Whether the event bubbled up from a descendant, `false` where unreadable: only the
+/// web reads an event's target.
+pub(crate) fn transition_from_descendant(event: &Event<TransitionData>) -> bool {
+    backend::transition_from_descendant(event)
+}
+
 /// The WebView arm, against dioxus-desktop's real payload: a wrapped
 /// `SerializedTransitionData`.
 #[cfg(all(test, not(target_arch = "wasm32")))]

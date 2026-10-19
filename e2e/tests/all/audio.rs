@@ -623,6 +623,58 @@ fn keys_act_inside_the_player_only() {
     });
 }
 
+/// Space on the seek slider ignores a chord, and a held key plays once, not on every repeat.
+#[test]
+fn space_on_the_slider_ignores_chords_and_key_repeat() {
+    block_on(async {
+        let fixture = Fixture::open("/audio", Viewport::Desktop).await.unwrap();
+        let page = &fixture.page;
+
+        wait::for_js_true(
+            page,
+            &format!("{} === '0:04'", time_text("player")),
+            "the duration",
+        )
+        .await
+        .unwrap();
+        page.evaluate(format!("document.querySelector('{SEEK}').focus()"))
+            .await
+            .unwrap();
+
+        keyboard::press_with(page, keyboard::SPACE, keyboard::ALT)
+            .await
+            .unwrap();
+        keyboard::press_with(page, keyboard::SPACE, keyboard::META)
+            .await
+            .unwrap();
+        e2e::clock::settle(page).await.unwrap();
+        let paused = || async {
+            let paused: bool = page
+                .evaluate(audio("player", "a.paused"))
+                .await
+                .unwrap()
+                .into_value()
+                .unwrap();
+            paused
+        };
+        assert!(paused().await, "Alt+Space or Meta+Space toggled the player");
+
+        // Two events, the second an auto-repeat: one toggle, not two.
+        keyboard::hold(page, keyboard::SPACE, 0, 2).await.unwrap();
+        wait::for_js_true(
+            page,
+            &audio("player", "!a.paused"),
+            "a held Space to play once",
+        )
+        .await
+        .unwrap();
+        e2e::clock::settle(page).await.unwrap();
+        assert!(!paused().await, "the auto-repeat paused it again");
+
+        fixture.close().await.unwrap();
+    });
+}
+
 /// The speed button steps 1x, 1.5x, 2x and back, its name following.
 #[test]
 fn the_speed_button_cycles() {

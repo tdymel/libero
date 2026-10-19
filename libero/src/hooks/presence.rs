@@ -2,7 +2,7 @@ use std::time::Duration;
 
 use dioxus::prelude::*;
 
-use crate::platform::{prefers_reduced_motion, transition_property};
+use crate::platform::{prefers_reduced_motion, transition_from_descendant, transition_property};
 
 use super::timers::use_scheduled;
 
@@ -38,8 +38,12 @@ impl Presence {
     }
 
     /// Attach to the element's `ontransitionend`. Filtered on `property` (the
-    /// shortest one ends first); a match stops propagating, so no nested exit ends an outer one.
+    /// shortest one ends first) and on its own element: a descendant's bubbling end,
+    /// such as a hover fade, is not the exit. A match stops propagating, so no nested exit ends an outer one.
     pub fn on_transition_end(&self, event: &Event<TransitionData>) {
+        if transition_from_descendant(event) {
+            return;
+        }
         // Unreadable counts as a match: unmount rather than never
         // (`platform::transition_property` lists the backends).
         if transition_property(event).is_some_and(|property| property != self.property) {

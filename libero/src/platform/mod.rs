@@ -210,5 +210,5 @@ pub(crate) use task::{
 #[cfg(all(not(target_arch = "wasm32"), feature = "native"))]
 pub use task::{reveal_in, watch_focus_in};
 pub use timer::{TimerApi, TimerSubscription, timer};
-pub(crate) use transition::transition_property;
+pub(crate) use transition::{transition_from_descendant, transition_property};
 pub(crate) use waveform::waveform;
