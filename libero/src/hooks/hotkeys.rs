@@ -19,8 +19,9 @@ use crate::utils::bump;
 /// A chord is modifiers and a key joined by `+`: `ctrl`, `alt`, `shift`, `meta`
 /// (or `cmd`), `mod`, then the key, a character or a name like `f8`, `escape`,
 /// `space`. `mod` is Cmd on Apple platforms and Ctrl elsewhere. Modifiers must
-/// match exactly, apart from Shift on a symbol such as `?`. A debug build warns
-/// about a chord that does not parse, since it never fires.
+/// match exactly, apart from Shift on a symbol such as `?`. Name the symbol Shift
+/// makes (`shift+?`), not the key under it (`shift+/`, which a US layout never reports).
+/// A debug build warns about a chord that does not parse, since it never fires.
 ///
 /// A page-wide chord on a single character, such as `"k"` or `"?"`, fires
 /// when speech-input users dictate. WCAG 2.1.4 then asks the app for a setting
@@ -156,6 +157,21 @@ impl Chord {
             }
     }
 
+    /// Dev warning for Shift on a key that reports another symbol under Shift on
+    /// a US layout (`shift+/` is `?`), so the chord never fires there.
+    fn shifted_symbol_warning(&self) -> Option<String> {
+        let Key::Character(text) = &self.key else {
+            return None;
+        };
+        let shifted = shifted_symbol(text.chars().next()?)?;
+        self.shift.then(|| {
+            format!(
+                "hotkey \"shift+{text}\" never fires on a layout where Shift reports {shifted:?}: \
+                 name that symbol instead, \"shift+{shifted}\""
+            )
+        })
+    }
+
     /// Option on a Mac composes the key (`alt+a` gives `å`, `alt+e` a dead key):
     /// a letter or digit chord then matches the physical key instead.
     fn alt_composed(&self, pressed: &KeyChord) -> bool {
@@ -173,6 +189,24 @@ impl Chord {
             .filter(|rest| rest.len() == 1);
         composed && physical.is_some_and(|rest| want.eq_ignore_ascii_case(rest))
     }
+}
+
+/// What Shift makes of a punctuation key on a US layout.
+fn shifted_symbol(symbol: char) -> Option<char> {
+    Some(match symbol {
+        '/' => '?',
+        ',' => '<',
+        '.' => '>',
+        ';' => ':',
+        '\'' => '"',
+        '[' => '{',
+        ']' => '}',
+        '\\' => '|',
+        '-' => '_',
+        '=' => '+',
+        '`' => '~',
+        _ => return None,
+    })
 }
 
 fn parse_key(text: &str) -> Option<Key> {
@@ -227,9 +261,9 @@ impl Entry {
 /// Bindings are read again every render, so handlers see current state. A
 /// debug build warns once about a chord that would shadow a browser or
 /// accessibility shortcut such as Tab, Escape or Ctrl+L, a page-wide chord on a
-/// single character (see [`Hotkey`] for WCAG 2.1.4), and a chord that does not
-/// parse. Where there is no
-/// keyboard, as in a server render, nothing is bound.
+/// single character (see [`Hotkey`] for WCAG 2.1.4), a chord that does not
+/// parse, and Shift on a key such as `/` whose symbol under Shift is `?`. Where
+/// there is no keyboard, as in a server render, nothing is bound.
 ///
 /// ```rust
 /// # use dioxus::prelude::*;
@@ -249,12 +283,14 @@ impl Entry {
 pub fn use_hotkeys(bindings: impl IntoIterator<Item = Hotkey>) {
     let apple = mod_is_meta();
     let mut unparsed = Vec::new();
+    let mut shifted = Vec::new();
     let entries: Vec<Entry> = bindings
         .into_iter()
         .map(|binding| {
             let chord = Chord::parse(&binding.chord, apple);
-            if chord.is_none() {
-                unparsed.push(binding.chord);
+            match &chord {
+                Some(chord) => shifted.extend(chord.shifted_symbol_warning()),
+                None => unparsed.push(binding.chord),
             }
             Entry {
                 chord,
@@ -281,13 +317,16 @@ pub fn use_hotkeys(bindings: impl IntoIterator<Item = Hotkey>) {
         move || listening.borrow_mut().clear()
     });
 
-    use_effect(use_reactive!(|chords, unparsed| {
+    use_effect(use_reactive!(|chords, unparsed, shifted| {
         for chord in &chords {
             warn_reserved_chord(&chord.key, held_modifiers(chord));
             warn_bare_chord(&chord.key, held_modifiers(chord));
         }
         for text in &unparsed {
             warn_once(unparsed_warning(text));
+        }
+        for message in shifted {
+            warn_once(message);
         }
     }));
 
@@ -623,6 +662,15 @@ mod tests {
             warnings[1].contains("\"ctl+k\" does not parse"),
             "{warnings:?}"
         );
+    }
+
+    #[test]
+    fn shift_on_the_key_under_a_symbol_is_warned_about() {
+        let warning = |chord: &str| Chord::parse(chord, false).unwrap().shifted_symbol_warning();
+        assert!(warning("shift+/").unwrap().contains("\"shift+?\""));
+        assert_eq!(warning("shift+?"), None);
+        assert_eq!(warning("/"), None);
+        assert_eq!(warning("shift+k"), None);
     }
 
     #[test]

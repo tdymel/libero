@@ -1220,8 +1220,8 @@ fn SliderBody(live: Signal<Live>, core: SliderCoreProps) -> Element {
     let disabled = props.disabled.unwrap_or(false);
 
     let interactive = props.oninput.is_some() && !disabled;
-    // `interactive` keeps the tab stop, `editable` moves the value: a
-    // read-only thumb is still reached, read and posted.
+    // `editable` moves the value; any enabled thumb is a tab stop, so a
+    // read-only one is still reached, read and posted.
     let editable = interactive && !props.readonly;
     let focusable = props.focusable;
 
@@ -1566,7 +1566,11 @@ fn SliderThumbs(props: SliderThumbsProps) -> Element {
             .attr("role", "slider")
             .attr(
                 "tabindex",
-                if interactive && focusable { "0" } else { "-1" },
+                if !props.disabled && focusable {
+                    "0"
+                } else {
+                    "-1"
+                },
             )
             .attr("aria-orientation", "horizontal")
             .attr("aria-valuemin", thumb_min)

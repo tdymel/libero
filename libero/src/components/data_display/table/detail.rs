@@ -108,7 +108,7 @@ pub(super) fn SlidingDetail(
     columns: usize,
 ) -> Element {
     let duration = use_theme().collapse.duration;
-    // The `Collapse` inside ends on this property; its `transitionend` bubbles here.
+    // The inner `Collapse` stops its `transitionend`, so the exit timer unmounts the row.
     let presence = use_presence(
         open,
         "grid-template-rows",
@@ -127,7 +127,6 @@ pub(super) fn SlidingDetail(
             "data-detail": true,
             "data-sliding": true,
             onmounted: move |_| presence.on_mounted(),
-            ontransitionend: move |event| presence.on_transition_end(&event),
             td { colspan: "{columns}",
                 Collapse { open,
                     div { "data-detail-body": true, {last.peek().clone()} }
