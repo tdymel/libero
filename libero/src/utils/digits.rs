@@ -32,6 +32,30 @@ pub(crate) fn digits_of(text: &str) -> String {
     text.chars().filter_map(ascii_digit).collect()
 }
 
+/// The trimmed `text` without its `group` separators when they split the whole into threes,
+/// as `12.500,5`; else `None`, so a German `1.5` from a numpad stays a decimal.
+pub(crate) fn ungrouped(text: &str, group: &str) -> Option<String> {
+    if group.is_empty() {
+        return None;
+    }
+    let text = text.trim();
+    let (sign, rest) = match text.strip_prefix('-') {
+        Some(rest) => ("-", rest),
+        None => ("", text),
+    };
+    let parts: Vec<&str> = rest.split(group).collect();
+    let digits = |part: &str| part.chars().take_while(char::is_ascii_digit).count();
+    let (first, last) = (parts.first()?, parts.last()?);
+    let grouped = parts.len() > 1
+        && (1..=3).contains(&first.len())
+        && digits(first) == first.len()
+        && parts[1..parts.len() - 1]
+            .iter()
+            .all(|part| part.len() == 3 && digits(part) == 3)
+        && digits(last) == 3;
+    grouped.then(|| format!("{sign}{}", parts.concat()))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -41,5 +65,39 @@ mod tests {
         assert_eq!(fold_digits("\u{0661}\u{06F2}\u{FF13}x7"), "123x7");
         assert_eq!(digits_of("(\u{0966}\u{0967}) 2-\u{E53}"), "0123");
         assert_eq!(ascii_digit('a'), None);
+    }
+
+    #[test]
+    fn plain_text_has_no_groups_to_drop() {
+        assert_eq!(ungrouped("1234", ","), None);
+        assert_eq!(ungrouped("12", "."), None);
+        assert_eq!(ungrouped("1,000", ""), None);
+    }
+
+    #[test]
+    fn groups_of_three_are_dropped() {
+        assert_eq!(ungrouped("1,234", ",").as_deref(), Some("1234"));
+        assert_eq!(
+            ungrouped(" -12,345,678 ", ",").as_deref(),
+            Some("-12345678")
+        );
+        assert_eq!(ungrouped("1\u{a0}234", "\u{a0}").as_deref(), Some("1234"));
+    }
+
+    #[test]
+    fn the_decimal_separator_after_the_groups_stays() {
+        assert_eq!(ungrouped("12.500,5", ".").as_deref(), Some("12500,5"));
+        assert_eq!(ungrouped("1,234.75", ",").as_deref(), Some("1234.75"));
+        assert_eq!(ungrouped("1.5", "."), None);
+    }
+
+    #[test]
+    fn text_not_in_threes_is_no_grouping() {
+        assert_eq!(ungrouped("1,23", ","), None);
+        assert_eq!(ungrouped("1,2345", ","), None);
+        assert_eq!(ungrouped("1234,567", ","), None);
+        assert_eq!(ungrouped("1,23,456", ","), None);
+        assert_eq!(ungrouped("a,123", ","), None);
+        assert_eq!(ungrouped("", ","), None);
     }
 }

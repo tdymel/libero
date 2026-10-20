@@ -25,7 +25,7 @@ use crate::{
     platform::{ElementApi, next_task},
     sx::{StaticSx, Sx, ThemeAwareValue, sx},
     theme::Size,
-    utils::{ascii_digit, warn},
+    utils::{ascii_digit, ungrouped, warn},
 };
 
 /// The steppers in the trailing slot. Not the native spinner: `type="number"`
@@ -470,26 +470,6 @@ fn built_in<T: 'static>() -> bool {
         TypeId::of::<usize>(),
     ]
     .contains(&TypeId::of::<T>())
-}
-
-/// `text` without its group separators when they split the whole into threes, as
-/// `12.500,5`; else `None`, so a German `1.5` from a numpad stays a decimal.
-fn ungrouped(text: &str, group: &str) -> Option<String> {
-    let (sign, rest) = match text.trim().strip_prefix('-') {
-        Some(rest) => ("-", rest),
-        None => ("", text.trim()),
-    };
-    let parts: Vec<&str> = rest.split(group).collect();
-    let digits = |part: &str| part.chars().take_while(char::is_ascii_digit).count();
-    let (first, last) = (parts.first()?, parts.last()?);
-    let grouped = parts.len() > 1
-        && (1..=3).contains(&first.len())
-        && digits(first) == first.len()
-        && parts[1..parts.len() - 1]
-            .iter()
-            .all(|part| part.len() == 3 && digits(part) == 3)
-        && digits(last) == 3;
-    grouped.then(|| format!("{sign}{}", parts.concat()))
 }
 
 /// The caret of grouped text (UTF-16 units) and where it lands once the separators go.

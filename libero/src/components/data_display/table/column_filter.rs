@@ -2,7 +2,7 @@ use super::{
     cell_value::{FilterKind, SortKey, date_number},
     column::Column,
 };
-use crate::localization::Formats;
+use crate::{localization::Formats, utils::ungrouped};
 
 /// One column's filter: rows stay whose cell passes `operator` with `value`.
 /// Keyed by header text, like [`TableSort`](super::TableSort).
@@ -172,28 +172,6 @@ pub(super) fn parse_number(text: &str, formats: &Formats) -> Option<f64> {
         _ => text,
     };
     text.parse::<f64>().ok().filter(|value| value.is_finite())
-}
-
-/// `text` without its group separators when they split the whole into threes; else `None`.
-fn ungrouped(text: &str, group: &str) -> Option<String> {
-    if group.is_empty() {
-        return None;
-    }
-    let (sign, rest) = match text.strip_prefix('-') {
-        Some(rest) => ("-", rest),
-        None => ("", text),
-    };
-    let parts: Vec<&str> = rest.split(group).collect();
-    let digits = |part: &str| part.chars().take_while(char::is_ascii_digit).count();
-    let (first, last) = (parts.first()?, parts.last()?);
-    let grouped = parts.len() > 1
-        && (1..=3).contains(&first.len())
-        && digits(first) == first.len()
-        && parts[1..parts.len() - 1]
-            .iter()
-            .all(|part| part.len() == 3 && digits(part) == 3)
-        && digits(last) == 3;
-    grouped.then(|| format!("{sign}{}", parts.concat()))
 }
 
 /// An ISO day as its sort number, `None` when it does not parse.
