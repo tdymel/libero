@@ -1260,6 +1260,10 @@ fn select_search_box(
                 blurred.set(true);
             }
         })
+        // Kept from the dropdown's `mousedown` cancel, which would stop a click placing the caret.
+        .event("onmousedown", move |event: MouseEvent| {
+            event.stop_propagation()
+        })
         // Closes while searchable; the rows cancel `mousedown`, so a click inside never blurs.
         .event("onblur", move |event: FocusEvent| {
             if blur_counts(&event) {

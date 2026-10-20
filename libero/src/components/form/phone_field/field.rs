@@ -395,6 +395,10 @@ pub fn PhoneField(props: PhoneFieldProps) -> Element {
             // The list under the highlight just changed; arm its top row.
             state.set_active(Some(0));
         })
+        // Kept from the dropdown's `mousedown` cancel, which would stop a click placing the caret.
+        .event("onmousedown", move |event: MouseEvent| {
+            event.stop_propagation()
+        })
         // The list cancels `mousedown`, so only an outside click blurs this.
         .event("onblur", move |_: FocusEvent| state.close())
         // Portaled after the page: Tab moves on from the country button (todo 2289).

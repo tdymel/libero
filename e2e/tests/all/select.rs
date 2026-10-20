@@ -1232,6 +1232,55 @@ fn a_click_off_a_row_keeps_focus_in_the_search_box() {
     });
 }
 
+/// Todo 3862: a press in the search box's text places the caret there; the dropdown's
+/// `mousedown` cancel covers the rows and padding only.
+#[test]
+fn a_press_in_the_search_text_places_the_caret() {
+    const ROUTE: &str = "/select/field";
+    block_on(async {
+        let fixture = Fixture::open(ROUTE, Viewport::Desktop).await.unwrap();
+        let page = &fixture.page;
+        keyboard::tab_to(page, TRIGGER, 10).await.unwrap();
+        keyboard::press(page, keyboard::ARROW_DOWN).await.unwrap();
+        let search = format!("document.querySelector({SEARCH:?})");
+        wait::for_js_true(
+            page,
+            &format!("document.activeElement === {search}"),
+            "the search box to take focus",
+        )
+        .await
+        .unwrap();
+        keyboard::type_text(page, "ab").await.unwrap();
+        wait::for_js_true(
+            page,
+            &format!("{search}.selectionStart === 2"),
+            "the caret after the typed text",
+        )
+        .await
+        .unwrap();
+        let spot: Vec<f64> = js(
+            page,
+            &format!("(r => [r.left + 9, r.top + r.height / 2])({search}.getBoundingClientRect())"),
+        )
+        .await;
+        let [x, y] = spot[..] else {
+            panic!("no spot on the search box: {spot:?}")
+        };
+        pointer::click_at(page, pointer::Point { x, y })
+            .await
+            .unwrap();
+        wait::for_js_true(
+            page,
+            &format!("(s => document.activeElement === s && s.selectionStart === 0)({search})"),
+            "the caret to move to the press",
+        )
+        .await
+        .unwrap();
+        fixture.console.assert_clean(ROUTE).unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
 /// Todo 842: a controlled caller refusing a pick keeps the old row, in the form value and
 /// `aria-selected`; one it takes moves both.
 #[test]

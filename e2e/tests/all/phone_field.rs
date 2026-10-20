@@ -485,6 +485,50 @@ fn a_query_ranks_names_starting_with_it_first() {
     });
 }
 
+/// Todo 3862: a press in the search box's text places the caret there; the dropdown's
+/// `mousedown` cancel covers the rows and padding only.
+#[test]
+fn a_press_in_the_search_text_places_the_caret() {
+    block_on(async {
+        let fixture = Fixture::open("/phone-field", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        keyboard::tab_to(page, PICKER, 10).await.unwrap();
+        keyboard::press(page, keyboard::ENTER).await.unwrap();
+        wait_open(page, "Enter").await;
+        let search = format!("document.querySelector({SEARCH:?})");
+        keyboard::type_text(page, "ab").await.unwrap();
+        wait::for_js_true(
+            page,
+            &format!("{search}.selectionStart === 2"),
+            "the caret after the typed text",
+        )
+        .await
+        .unwrap();
+        let (x, y): (f64, f64) = page
+            .evaluate(format!(
+                "(r => [r.left + 9, r.top + r.height / 2])({search}.getBoundingClientRect())"
+            ))
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        pointer::click_at(page, pointer::Point { x, y })
+            .await
+            .unwrap();
+        wait::for_js_true(
+            page,
+            &format!("(s => document.activeElement === s && s.selectionStart === 0)({search})"),
+            "the caret to move to the press",
+        )
+        .await
+        .unwrap();
+        fixture.console.assert_clean("/phone-field").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
 /// Todo 3771: a query nothing matches draws no listbox, so the button stops saying expanded.
 #[test]
 fn a_query_without_a_match_leaves_the_button_collapsed() {
