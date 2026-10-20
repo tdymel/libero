@@ -112,25 +112,29 @@ The dropdown is portaled out of the field, so its parts take the
 
 | Key | Action |
 |---|---|
-| `Down` | Moves focus into the picker, onto the saturation area or the first swatch, where the [ColorPicker](color_picker.md#accessibility) keys apply. |
-| `Enter` | On text that does not parse: announces the refusal and keeps the text. On text that parses: sends `End`, which typing alone does not. |
+| `Down` or `Alt+Down` | Opens the dropdown and moves focus into the picker, onto the saturation area or the first swatch, where the [ColorPicker](color_picker.md#accessibility) keys apply. |
+| `Enter` | On text that does not parse: announces the refusal and keeps the text. On text that parses: sends `End`, which typing alone does not. A revert on blur is announced too. |
 | `Escape` | Closes the dropdown. From inside it, moves focus back to the text. |
 | `Tab` or `Shift+Tab` | Past the dropdown's last stop: moves on as Tab from the text would. Before its first stop: back to the text. |
 
 ### Libero handles
 
-- Focus opens the dropdown and stays in the text, so typing works at once.
+- Focus alone does not open the dropdown, so tabbing through the form changes
+  nothing. A click opens it and stays in the text, so typing works at once.
 - A swatch that closes the dropdown moves focus back to the text.
 - Focus leaving both the text and the dropdown closes it.
+- Leaving text that does not parse announces the localization's
+  `color.invalid`, whether `fix_on_blur` reverts it or keeps it. It is said
+  once, so a blur after Enter does not repeat it.
 - A mouse click in the dropdown leaves focus in the text.
 - Android's Back button closes the dropdown rather than the app. Focus in the
   dropdown goes back to the text.
 
 ### Example
 
-A brand color field, `ColorField { label: "Brand color" }`: focus opens the
-dropdown and stays in the text, so `#228be6` can be typed at once. Down moves
-into the picker, and Escape brings focus back to the text.
+A brand color field, `ColorField { label: "Brand color" }`: type `#228be6` at
+once, click to open the dropdown with the caret staying in the text, or press
+Down to open it and move into the picker. Escape brings focus back to the text.
 
 ## Theme defaults
 

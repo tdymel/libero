@@ -24,7 +24,7 @@ pub fn SortablePage() -> Element {
                         .doc("Fires on drop, or on a move button, when an item changed place. Apply the move to your data with `SortableMove::apply`; until then the list keeps its old order."),
                     prop("move_buttons", "bool")
                         .default("true")
-                        .doc("Each item's two buttons that move it one slot without dragging (WCAG 2.5.7). Hidden, offer another way to reorder without a drag."),
+                        .doc("Each item's two buttons that move it one slot without dragging (WCAG 2.5.7). Off, only a drag and the handle's keys reorder: the pointer has no way but dragging (WCAG 2.5.7), so offer one yourself."),
                     prop("children", "Element").default("required").doc("The `SortableItem`s."),
                 ]),
                 props("SortableItem", vec![

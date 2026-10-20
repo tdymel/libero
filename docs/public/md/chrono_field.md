@@ -213,14 +213,15 @@ The dropdown is portaled out of the field, so its parts take the
 
 | Key | Action |
 |---|---|
-| `Down` | Moves focus into the picker, onto the picked day or the clock, where the [ChronoPicker](chrono_picker.md#accessibility) keys apply. |
+| `Down` or `Alt+Down` | Opens the dropdown and moves focus into the picker, onto the picked day or the clock, where the [ChronoPicker](chrono_picker.md#accessibility) keys apply. |
 | `Enter` | In the text: reads and commits it. Text it cannot read is refused, with the reason announced. |
 | `Escape` | Closes the dropdown. From inside it, moves focus back to the text. |
 | `Tab` or `Shift+Tab` | Past the dropdown's last stop: moves on as Tab from the text would. Before its first stop: back to the text. |
 
 ### Libero handles
 
-- Focus opens the dropdown and stays in the text, so you can type at once.
+- Focus alone does not open the dropdown, so tabbing through the form changes
+  nothing. A click opens it and stays in the text, so you can type at once.
 - A pick that closes the dropdown moves focus back to the text.
 - Focus leaving both the text and the dropdown closes it.
 - A mouse click in the dropdown leaves focus in the text.
@@ -229,9 +230,9 @@ The dropdown is portaled out of the field, so its parts take the
 
 ### Example
 
-A delivery date, `ChronoField { label: "Delivery date", .. }`: focus opens the
-calendar while the caret stays in the text, so you can type the date at once,
-or press Down to pick a day with the arrows.
+A delivery date, `ChronoField { label: "Delivery date", .. }`: type the date at
+once, click to open the calendar with the caret staying in the text, or press
+Down to open it and pick a day with the arrows.
 
 ## Theme defaults
 

@@ -77,7 +77,7 @@ pub fn CarouselPage() -> Element {
                         .doc("Names the region. Unset, it falls back to the localization's label and warns."),
                     prop("draggable", "bool")
                         .default("false")
-                        .doc("Drag to scroll with a mouse. Touch swipes without it. On Blitz and the WebView a drag stops once the pointer leaves the track."),
+                        .doc("Drag to scroll with a mouse. Touch swipes without it. On Blitz and the WebView a drag stops once the pointer leaves the track. With `controls` and `indicators` both off a drag is the only pointer way to move (WCAG 2.5.7), and a debug build warns."),
                     prop("autoplay", "bool")
                         .default("false")
                         .doc("Advances on a timer, with a pause button first in Tab order. Hover pauses it, and focus stops it until the button is pressed. Under `prefers-reduced-motion: reduce` it opens paused. Without `loop` it stops on the last slide and presses Pause; Play there starts over from the first."),

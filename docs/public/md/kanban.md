@@ -75,7 +75,7 @@ in each column's `header`.
 |---|---|---|---|
 | `onmove` | `EventHandler<KanbanMove>` | required | Fires when a card changed place: on a drop, a move button or a Move to entry. Apply it to your data with `KanbanMove::apply`; until then the board keeps its old order. |
 | `oncolumnmove` | `Option<EventHandler<KanbanColumnMove>>` | `None` | Fires when a column changed place, by a drag or the keys of its header's reorder handle, or by its move buttons. Set, each column header shows them. Apply it with `KanbanColumnMove::apply` to the column names and to the cards, so the `index` of each column follows; until then the board keeps its old order. |
-| `move_buttons` | `bool` | `true` | Each card's two buttons that move it one slot in its column without dragging (WCAG 2.5.7), and with `oncolumnmove` each column's two that move it one place on the board. |
+| `move_buttons` | `bool` | `true` | Each card's two buttons that move it one slot in its column without dragging (WCAG 2.5.7), and with `oncolumnmove` each column's two that move it one place on the board. Off, only a drag, the handle's keys and the cards' Move to menu move anything: columns have no pointer way but dragging (WCAG 2.5.7). |
 | `children` | `Element` | required | The `KanbanColumn`s. |
 
 ### KanbanColumn

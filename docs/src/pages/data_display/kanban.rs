@@ -24,7 +24,7 @@ pub fn KanbanPage() -> Element {
                         .doc("Fires when a column changed place, by a drag or the keys of its header's reorder handle, or by its move buttons. Set, each column header shows them. Apply it with `KanbanColumnMove::apply` to the column names and to the cards, so the `index` of each column follows; until then the board keeps its old order."),
                     prop("move_buttons", "bool")
                         .default("true")
-                        .doc("Each card's two buttons that move it one slot in its column without dragging (WCAG 2.5.7), and with `oncolumnmove` each column's two that move it one place on the board."),
+                        .doc("Each card's two buttons that move it one slot in its column without dragging (WCAG 2.5.7), and with `oncolumnmove` each column's two that move it one place on the board. Off, only a drag, the handle's keys and the cards' Move to menu move anything: columns have no pointer way but dragging (WCAG 2.5.7)."),
                     prop("children", "Element").default("required").doc("The `KanbanColumn`s."),
                 ]),
                 props("KanbanColumn", vec![
