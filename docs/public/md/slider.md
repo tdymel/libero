@@ -193,7 +193,7 @@ fn Demo() -> Element {
 | Prop | Type | Default | Description |
 |---|---|---|---|
 | `size` | `Size` | `md` | Track, thumb and font size. |
-| `color` | `ThemeAwareValue` | `primary` | Accent color. A theme color name or any CSS color. |
+| `color` | `ThemeAwareValue` | `primary` | Accent color. A theme color name or any CSS color. A theme color name paints its text shade, darker on a light page so the fill stands out. |
 | `value` | `Option<V>` | - | The value. Pair it with `oninput`, or bind it with a path `name` inside a `Form`. |
 | `oninput` | `EventHandler<SliderChangeEvent<V>>` | - | Fires per value while dragging. `Start` and `End` bracket a drag, `Change` carries each new value. A key press sends `Change`, then `End`. |
 | `min` | `V` | `first option, or 0.0` | Lower bound, in the value's own type. |

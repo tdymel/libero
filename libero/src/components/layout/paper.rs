@@ -17,6 +17,7 @@ use crate::{
         NamedColorCss, PAPER_BORDER_COLOR, PRESSED_LAYER, PaperDefaults, SURFACE_LABEL, Size,
         SizeCss, gradient_hover_sx, gradient_pressed_sx, gradient_surface_sx,
     },
+    utils::warn,
 };
 
 /// The library's surface as an `Sx`, to build a `PaperProps::framework_sx` on,
@@ -111,6 +112,18 @@ fn paper_interactive(component: HtmlTag, attributes: &[Attribute]) -> bool {
             matches!(attribute.name, "href" | "onclick")
                 && !matches!(attribute.value, AttributeValue::None)
         })
+}
+
+/// A spread `onclick` on a surface with no role or tab stop of its own: the look without a
+/// keyboard path (todo 3821). A `tabindex` says the caller wired the keys.
+fn paper_unreachable_press(component: HtmlTag, attributes: &[Attribute]) -> bool {
+    let has = |name: &str| {
+        attributes.iter().any(|attribute| {
+            attribute.name == name && !matches!(attribute.value, AttributeValue::None)
+        })
+    };
+    let reachable = component == HtmlTag::Button || has("href") || has("tabindex");
+    has("onclick") && !reachable
 }
 
 // Own vars, not `PAPER_BACKGROUND`: an uncoloured `Paper` nested inside keeps the surface.
@@ -259,6 +272,11 @@ pub fn Paper(props: PaperProps) -> Element {
     };
 
     let component = props.component.copied_or_default();
+    if paper_unreachable_press(component, &props.attributes) {
+        warn(
+            "Paper: `onclick` on a surface with no tab stop has no keyboard path; render it as `a` or `button`.",
+        );
+    }
 
     use_box()
         .framework_sx(props.framework_sx.unwrap_or(&PAPER_BASE_SX))
@@ -343,6 +361,36 @@ mod tests {
             sx: Input::None,
             states: Input::None,
         }
+    }
+
+    /// Todo 3821: only a press with no keyboard path warns.
+    #[test]
+    fn an_onclick_without_a_tab_stop_warns() {
+        use crate::{LiberoProvider, utils::warnings_of};
+
+        fn unreachable() -> Element {
+            rsx! {
+                LiberoProvider { Paper { onclick: |_| {}, "sheet" } }
+            }
+        }
+        fn reachable() -> Element {
+            rsx! {
+                LiberoProvider {
+                    Paper { component: "button", onclick: |_| {}, "sheet" }
+                    Paper { component: "a", href: "/orders", onclick: |_| {}, "sheet" }
+                    Paper { tabindex: "0", role: "button", onclick: |_| {}, "sheet" }
+                    Paper { "sheet" }
+                }
+            }
+        }
+
+        let warns = |app| {
+            warnings_of(app)
+                .iter()
+                .any(|warning| warning.starts_with("Paper:"))
+        };
+        assert!(warns(unreachable));
+        assert!(!warns(reachable));
     }
 
     #[test]

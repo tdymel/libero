@@ -62,7 +62,7 @@ pub fn ScrollAreaPage() -> Element {
                     .default(theme.scroll_area.size.as_str())
                     .doc("`thin` or `auto`: the CSS `scrollbar-width`, or 8px and 12px for the bar `always` draws."),
                 prop("scrollbar_color", "ThemeAwareValue")
-                    .doc("Thumb color. The track stays transparent. Unset it is `muted.6`."),
+                    .doc("Thumb color. A theme color name paints its text shade, darker on a light page so the thumb stands out. The track stays transparent. Unset it is `muted.6`."),
                 prop("offset_scrollbars", "bool")
                     .default("false")
                     .doc("Pads the end edge by the drawn bar's width, 8px or 12px, so a flush trailing control is not under it. Only for the bar `always` draws; it pads even while the content fits, so the layout does not shift when it starts to overflow."),

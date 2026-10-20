@@ -12,7 +12,7 @@ use crate::{
     components::{
         common::{
             FOCUSABLE_SELECTOR, HtmlTag, Input, States, Variables, base_props, input_from_str,
-            names_itself, parts_enum, variables,
+            names_itself, parts_enum, text_color, variables,
         },
         layout::use_box,
     },
@@ -229,7 +229,8 @@ fn static_skeleton(pitch: &str) -> Sx {
 
 fn scroll_area_variables(color: Option<&ThemeAwareValue>, pitch: Option<f64>) -> Variables {
     variables()
-        .with(SCROLL_AREA_THUMB_VAR, color.and_then(|v| v.resolve(None)))
+        // The text role, darker on a light page: success, warning and info reach 3:1 (todo 3736).
+        .with(SCROLL_AREA_THUMB_VAR, color.and_then(text_color))
         .with(
             SCROLL_AREA_PITCH_VAR,
             pitch.map(|pitch| format!("{pitch}px")),
@@ -978,9 +979,39 @@ mod tests {
             format!(
                 "{}:{};",
                 SCROLL_AREA_THUMB_VAR.name(),
-                ColorValue::Shade(Color::Primary, ColorShade::DEFAULT).value()
+                ColorValue::Text(Color::Primary, ColorShade::DEFAULT).value()
             )
         );
+    }
+
+    /// Todo 3736: a named thumb is the only cue of the scroll position, so it needs 3:1 on the page (1.4.11).
+    #[test]
+    fn every_status_thumb_reaches_3_to_1_on_the_page() {
+        use crate::{components::feedback::sheet_hex, css::Stylesheet, theme::ThemeSet};
+
+        let mut short = Vec::new();
+        for set in ThemeSet::CATALOGUE {
+            for theme in [Some(set.light_theme()), set.dark_theme()]
+                .into_iter()
+                .flatten()
+            {
+                let css = Stylesheet::from(theme).as_str().to_string();
+                for name in ["primary", "error", "info", "success", "warning"] {
+                    let color = ThemeAwareValue::from(name);
+                    let thumb = scroll_area_variables(Some(&color), None).to_string();
+                    let thumb = thumb
+                        .trim_start_matches(&format!("{}:", SCROLL_AREA_THUMB_VAR.name()))
+                        .trim_end_matches(';')
+                        .to_string();
+                    let ratio = sheet_hex(&css, thumb).contrast_ratio(theme.surface);
+                    if ratio < 3.0 {
+                        let scheme = theme.surface.color_scheme();
+                        short.push(format!("{} {scheme} {name}: {ratio:.2}:1", set.name()));
+                    }
+                }
+            }
+        }
+        assert!(short.is_empty(), "a thumb fell under 3:1: {short:?}");
     }
 
     #[test]

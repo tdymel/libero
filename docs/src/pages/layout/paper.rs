@@ -98,7 +98,7 @@ pub fn PaperPage() -> Element {
             accessibility: a11y().must([
                 "Give a `Paper` rendered as an `aside` an `aria-label`: it is a landmark. A `section` becomes a landmark once you give it an `aria-label`, so name the ones a reader should find.",
                 "Put nothing interactive inside a `Paper` rendered as an `a`: the whole surface is one link, named by its contents.",
-                "Render a pressable `Paper` as an `a` or a `button`. An `onclick` on a `div` gives the look but not a role, a tab stop or Enter and Space: add those yourself.",
+                "Render a pressable `Paper` as an `a` or a `button`. An `onclick` on a `div` gives the look but not a role, a tab stop or Enter and Space: add those yourself. A debug build warns on an `onclick` without `tabindex`.",
             ])
                 .example("A related-links panel, `Paper { component: \"aside\", \"aria-label\": \"Related articles\", .. }`: a screen reader lists it as the \"Related articles\" landmark."),
             lead: rsx! {

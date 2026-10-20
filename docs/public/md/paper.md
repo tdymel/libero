@@ -71,7 +71,7 @@ reaches the element untouched.
   surface is one link, named by its contents.
 - Render a pressable `Paper` as an `a` or a `button`. An `onclick` on a `div`
   gives the look but not a role, a tab stop or Enter and Space: add those
-  yourself.
+  yourself. A debug build warns on an `onclick` without `tabindex`.
 
 ### Example
 

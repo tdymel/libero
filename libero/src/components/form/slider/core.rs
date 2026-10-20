@@ -9,7 +9,7 @@ use crate::{
     components::{
         common::{
             COARSE_POINTER, ClassList, HtmlTag, Input, Part, States, Variables, base_color,
-            disabled_look_within_sx, has_shortcut_modifier, shadow_sx, variables,
+            disabled_look_within_sx, has_shortcut_modifier, shadow_sx, text_color, variables,
         },
         form::field_parts_enum,
         layout::use_box,
@@ -392,6 +392,12 @@ pub(crate) fn segment_filled(start: f64, end: f64, filled: f64) -> f64 {
 /// How many of `count` bars are filled at `fraction`: the `Audio` track's rule.
 fn filled_bars(fraction: f64, count: usize) -> usize {
     (fraction.clamp(0.0, 1.0) * count as f64).round() as usize
+}
+
+/// The fill and thumb ring in the text role, darker on a light page: success, warning and
+/// info reach 3:1 there, as ProgressBar's fill (todos 1577, 3736).
+fn slider_variables(color: &ThemeAwareValue) -> Variables {
+    variables().with(SLIDER_COLOR, text_color(color))
 }
 
 /// A range fills *between* its thumbs, so the bar starts at the lower one's
@@ -1327,8 +1333,7 @@ fn SliderBody(live: Signal<Live>, core: SliderCoreProps) -> Element {
         .with("segments", !segments.is_empty())
         .into();
 
-    let root_variables: Input<Variables> =
-        variables().with(SLIDER_COLOR, color.resolve(None)).into();
+    let root_variables: Input<Variables> = slider_variables(&color).into();
     let track_class = use_css(Some(&SLIDER_TRACK_SX), CssLayer::Framework);
     let track_style = props
         .track
@@ -1740,6 +1745,42 @@ mod tests {
         segment_filled, segment_label, track_segments, value_text,
     };
     use crate::localization::Formats;
+
+    /// Todo 3736: the fill and thumb ring carry the value, so they need 3:1 on the page (1.4.11).
+    #[test]
+    fn every_status_fill_reaches_3_to_1_on_the_page() {
+        use super::{SLIDER_COLOR, slider_variables};
+        use crate::{
+            components::{common::base_color, feedback::sheet_hex},
+            css::Stylesheet,
+            sx::ThemeAwareValue,
+            theme::ThemeSet,
+        };
+
+        let mut short = Vec::new();
+        for set in ThemeSet::CATALOGUE {
+            for theme in [Some(set.light_theme()), set.dark_theme()]
+                .into_iter()
+                .flatten()
+            {
+                let css = Stylesheet::from(theme).as_str().to_string();
+                for name in ["primary", "error", "info", "success", "warning"] {
+                    let color = base_color(Some(&ThemeAwareValue::from(name)));
+                    let fill = slider_variables(&color).to_string();
+                    let fill = fill
+                        .trim_start_matches(&format!("{}:", SLIDER_COLOR.name()))
+                        .trim_end_matches(';')
+                        .to_string();
+                    let ratio = sheet_hex(&css, fill).contrast_ratio(theme.surface);
+                    if ratio < 3.0 {
+                        let scheme = theme.surface.color_scheme();
+                        short.push(format!("{} {scheme} {name}: {ratio:.2}:1", set.name()));
+                    }
+                }
+            }
+        }
+        assert!(short.is_empty(), "a fill fell under 3:1: {short:?}");
+    }
 
     /// Todo 3412: a bare bubble groups its thousands only when asked.
     #[test]

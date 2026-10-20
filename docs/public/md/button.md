@@ -51,7 +51,7 @@ pill without an accessible name.
 | `selected` | `bool` | - | Makes it a toggle button with the selected look. Leave it unset for a plain action. |
 | `disabled` | `bool` | `false` | Disables and dims the button. |
 | `focusable_when_disabled` | `bool` | `false` | With `disabled`: keeps the button in the Tab order. It renders `aria-disabled` rather than `disabled` and ignores presses. |
-| `loading` | `bool` | `false` | Shows a `Loader` over the label and ignores clicks. The button stays focusable and keeps its width. Ignored on a link. |
+| `loading` | `bool` | `false` | Shows a `Loader` over the label and ignores clicks. The button stays focusable and keeps its width, and sets `aria-busy`; announce the progress in your own status region. Ignored on a link. |
 | `onclick` | `EventHandler<MouseEvent>` | - | Click handler. Not called on a link. |
 | `to` | `NavigationTarget` | - | Renders a link instead of a `<button>`. Takes a path, a URL or a typed route (`Route::Foo {}`). |
 | `target` | `String` | - | The link's `target` attribute. `"_blank"` adds a hidden "(opens in a new tab)". |
@@ -86,11 +86,15 @@ parts work.
   announces no state.
 - `focusable_when_disabled` keeps a disabled button in the Tab order, with
   `aria-disabled`.
+- `loading` sets `aria-busy` and keeps the button focusable, so focus stays on
+  it while it works.
 
 ### You must
 
 - Pass a label that may be cut as `title` too, so sighted users can read it on
   hover.
+- Announce the progress and the result of a `loading` button in your own
+  `role="status"` region. The button announces nothing itself.
 
 ```rust
 use dioxus::prelude::*;

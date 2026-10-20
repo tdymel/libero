@@ -188,7 +188,7 @@ pub fn SliderPage() -> Element {
                     prop("size", "Size").default(theme.slider.size.as_str()).doc("Track, thumb and font size."),
                     prop("color", "ThemeAwareValue")
                         .default(theme.slider.color.as_str())
-                        .doc("Accent color. A theme color name or any CSS color."),
+                        .doc("Accent color. A theme color name or any CSS color. A theme color name paints its text shade, darker on a light page so the fill stands out."),
                     prop("value", "Option<V>").doc("The value. Pair it with `oninput`, or bind it with a path `name` inside a `Form`."),
                     prop("oninput", "EventHandler<SliderChangeEvent<V>>")
                         .doc("Fires per value while dragging. `Start` and `End` bracket a drag, `Change` carries each new value. A key press sends `Change`, then `End`."),

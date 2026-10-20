@@ -18,3 +18,6 @@ pub use notifications::{
 };
 pub use progress_bar::{ProgressBar, ProgressBarPart, ProgressBarProps, ProgressBarSegment};
 pub use skeleton::{Skeleton, SkeletonProps};
+
+#[cfg(test)]
+pub(crate) use progress_value::sheet_hex;

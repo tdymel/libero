@@ -53,7 +53,7 @@ pub fn ActionIconPage() -> Element {
                     .doc("With `disabled`: keeps the button in the Tab order. It renders `aria-disabled` rather than `disabled` and ignores presses."),
                 prop("loading", "bool")
                     .default("false")
-                    .doc("Shows a `Loader` over the icon and ignores clicks. The button stays focusable. Ignored on a link."),
+                    .doc("Shows a `Loader` over the icon and ignores clicks. The button stays focusable and sets `aria-busy`; announce the progress in your own status region. Ignored on a link."),
                 prop("onclick", "EventHandler<MouseEvent>")
                     .doc("Click handler. Not called on a link."),
                 prop("to", "NavigationTarget")
@@ -76,10 +76,12 @@ pub fn ActionIconPage() -> Element {
                     "`focusable_when_disabled` keeps a disabled button in the Tab order, with `aria-disabled`.",
                     "`tooltip` repeats the accessible name, and `shortcut` writes `aria-keyshortcuts` in the ARIA key names (`Control+B`).",
                     "A link with `target: \"_blank\"` adds \"(opens in a new tab)\" to the accessible name and the tooltip. With `new_tab_icon`, it also draws a small icon in the corner for sighted users.",
+                    "`loading` sets `aria-busy` and keeps the button focusable, so focus stays on it while it works.",
                 ])
                 .must([
                     "Name the button with `aria_label`: the icon gives a screen reader nothing to read.",
                     "Below 24px, keep other targets clear of that 24x24 box, or the one drawn later takes the overlap.",
+                    "Announce the progress and the result of a `loading` button in your own `role=\"status\"` region. The button announces nothing itself.",
                 ])
                 .example("A bold button in an editor bar, `ActionIcon { aria_label: \"Bold\", shortcut: \"Control+B\", .. }`: a screen reader reads \"Bold, button\" and announces the shortcut."),
             lead: rsx! {

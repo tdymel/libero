@@ -275,6 +275,7 @@ base_props! {
         #[props(default)]
         selected: Option<bool>,
         /// Overlays a `Loader` and swallows clicks; stays focusable. Ignored in link mode.
+        /// Sets only `aria-busy`: announce the progress in your own `role="status"` region.
         #[props(default)]
         loading: Option<bool>,
         // `Option`, not a bare `EventHandler`: see `Button`.

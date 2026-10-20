@@ -47,7 +47,7 @@ pub fn ButtonPage() -> Element {
                     .doc("With `disabled`: keeps the button in the Tab order. It renders `aria-disabled` rather than `disabled` and ignores presses."),
                 prop("loading", "bool")
                     .default("false")
-                    .doc("Shows a `Loader` over the label and ignores clicks. The button stays focusable and keeps its width. Ignored on a link."),
+                    .doc("Shows a `Loader` over the label and ignores clicks. The button stays focusable and keeps its width, and sets `aria-busy`; announce the progress in your own status region. Ignored on a link."),
                 prop("onclick", "EventHandler<MouseEvent>")
                     .doc("Click handler. Not called on a link."),
                 prop("to", "NavigationTarget")
@@ -77,8 +77,12 @@ pub fn ButtonPage() -> Element {
                     "A link with `target: \"_blank\"` reads a hidden \"(opens in a new tab)\". With `new_tab_icon`, it also draws a small external icon.",
                     "`selected: Some(false)` announces a toggle that is off. An unset `selected` announces no state.",
                     "`focusable_when_disabled` keeps a disabled button in the Tab order, with `aria-disabled`.",
+                    "`loading` sets `aria-busy` and keeps the button focusable, so focus stays on it while it works.",
                 ])
-                .must(["Pass a label that may be cut as `title` too, so sighted users can read it on hover."])
+                .must([
+                    "Pass a label that may be cut as `title` too, so sighted users can read it on hover.",
+                    "Announce the progress and the result of a `loading` button in your own `role=\"status\"` region. The button announces nothing itself.",
+                ])
                 .example("A narrow toolbar button whose label may be cut, `Button { title: \"Export as PDF\", \"Export as PDF\" }`: a screen reader still reads the full label, and the title shows it on hover."),
             lead: rsx! {
                 Text {

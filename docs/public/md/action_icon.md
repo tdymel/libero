@@ -62,7 +62,7 @@ A `Button` with an icon and no text is a wide pill and has no name unless you ad
 | `selected` | `bool` | - | Makes it a toggle button. A bare toggle shows a 1px ring while on; with `variant` or `color` set it takes that variant's selected look. Leave it unset for a plain action. |
 | `disabled` | `bool` | `false` | Disables and dims the button. |
 | `focusable_when_disabled` | `bool` | `false` | With `disabled`: keeps the button in the Tab order. It renders `aria-disabled` rather than `disabled` and ignores presses. |
-| `loading` | `bool` | `false` | Shows a `Loader` over the icon and ignores clicks. The button stays focusable. Ignored on a link. |
+| `loading` | `bool` | `false` | Shows a `Loader` over the icon and ignores clicks. The button stays focusable and sets `aria-busy`; announce the progress in your own status region. Ignored on a link. |
 | `onclick` | `EventHandler<MouseEvent>` | - | Click handler. Not called on a link. |
 | `to` | `NavigationTarget` | - | Renders a link instead of a `<button>`. |
 | `target` | `String` | - | The link's `target` attribute. |
@@ -87,6 +87,8 @@ Like every component, `ActionIcon` also takes the shared props `sx`, `class`,
 - A link with `target: "_blank"` adds "(opens in a new tab)" to the accessible
   name and the tooltip. With `new_tab_icon`, it also draws a small icon in the
   corner for sighted users.
+- `loading` sets `aria-busy` and keeps the button focusable, so focus stays on
+  it while it works.
 
 ### You must
 
@@ -94,6 +96,8 @@ Like every component, `ActionIcon` also takes the shared props `sx`, `class`,
   read.
 - Below 24px, keep other targets clear of that 24x24 box, or the one drawn
   later takes the overlap.
+- Announce the progress and the result of a `loading` button in your own
+  `role="status"` region. The button announces nothing itself.
 
 ### Example
 

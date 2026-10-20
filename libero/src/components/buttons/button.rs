@@ -223,6 +223,7 @@ base_props! {
         #[props(default)]
         focusable_when_disabled: Option<bool>,
         /// Overlays a `Loader` and swallows clicks; stays focusable. Ignored in link mode.
+        /// Sets only `aria-busy`: announce the progress in your own `role="status"` region.
         #[props(default)]
         loading: Option<bool>,
         // `Option`: a defaulted `EventHandler` allocates on every render (~300 ns).
