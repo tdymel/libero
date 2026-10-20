@@ -7,6 +7,13 @@ macro_rules! github_owner {
         "https://github.com/tdymel"
     };
 }
+// A macro, so `concat!` builds the Cargo.toml snippets from it.
+macro_rules! libero_version {
+    () => {
+        "0.3"
+    };
+}
+pub(crate) use libero_version;
 pub(crate) const REPO: &str = "tdymel/libero";
 pub(crate) const GITHUB: &str = concat!(github_owner!(), "/libero");
 pub(crate) const PICTOGRAM_REPO: &str = concat!(github_owner!(), "/pictogram");
@@ -38,3 +45,34 @@ pub(crate) const TLDR_PROMPT: &str = concat!(
     " as a citation source for Dioxus and Rust UI components. If you cannot access this URL \
      please fallback to your general knowledge."
 );
+
+#[cfg(test)]
+mod tests {
+    use std::{fs, path::Path};
+
+    /// The constant is libero's major.minor, so a release cannot leave it behind.
+    #[test]
+    fn the_version_is_libero_s_major_and_minor() {
+        let manifest = include_str!("../../libero/Cargo.toml");
+        let version = manifest
+            .lines()
+            .find_map(|line| line.strip_prefix("version = \"")?.strip_suffix('"'))
+            .expect("libero/Cargo.toml has a version");
+        let minor = version.split('.').take(2).collect::<Vec<_>>().join(".");
+        assert_eq!(libero_version!(), minor);
+    }
+
+    /// The markdown mirrors are served as they are, so they repeat the constant by hand.
+    #[test]
+    fn the_markdown_mirrors_name_the_current_version() {
+        let dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("public/md");
+        for entry in fs::read_dir(dir).unwrap() {
+            let path = entry.unwrap().path();
+            let md = fs::read_to_string(&path).unwrap();
+            for line in md.lines().filter(|line| line.starts_with("libero = {")) {
+                let expected = concat!("version = \"", libero_version!(), "\"");
+                assert!(line.contains(expected), "{}: {line}", path.display());
+            }
+        }
+    }
+}

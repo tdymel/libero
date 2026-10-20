@@ -65,7 +65,7 @@ Bootstrap and Phosphor have no text direction glyph: `TextDirectionLtr` and
 `TextDirectionRtl` keep lucide. Override single slots on top with `with`:
 
 ```toml
-libero = { version = "0.1", features = ["icons-material"] }
+libero = { version = "0.3", features = ["icons-material"] }
 ```
 
 ```rust,ignore

@@ -1,4 +1,5 @@
 use crate::components::{DocPage, DocSection};
+use crate::site::libero_version;
 use libero::components::Pictogram;
 use pictogram_icons_lucide as lucide;
 
@@ -142,10 +143,14 @@ fn ci_platforms() -> Vec<(&'static str, &'static str, String)> {
 }
 
 // snippet: ignore - a Cargo.toml fragment, not Rust
-const FEATURES_EXAMPLE: &str = r#"libero = { version = "0.2", default-features = false, features = [
+const FEATURES_EXAMPLE: &str = concat!(
+    r#"libero = { version = ""#,
+    libero_version!(),
+    r#"", default-features = false, features = [
     "code-lang-rust",
     "full-polymorphism",
-] }"#;
+] }"#
+);
 
 // snippet: ignore - shell commands, not Rust
 const INSTALL_COMMANDS: &str = "cargo add dioxus@=0.8.0-alpha.3
@@ -175,9 +180,12 @@ const WEB_DIOXUS: &str = r#"[web]
 pre_compress = true"#;
 
 // snippet: ignore - a Cargo.toml fragment, not Rust
-const NATIVE_CARGO: &str = r#"[dependencies]
+const NATIVE_CARGO: &str = concat!(
+    r#"[dependencies]
 dioxus = { version = "=0.8.0-alpha.3", features = ["native"] }
-libero = { version = "0.2", features = ["native"] }
+libero = { version = ""#,
+    libero_version!(),
+    r#"", features = ["native"] }
 
 # Blitz is unusably slow unoptimised; this keeps your own crate debuggable.
 [profile.dev.package."*"]
@@ -188,7 +196,8 @@ opt-level = 3
 inherits = "release"
 opt-level = 3
 lto = "thin"
-codegen-units = 16"#;
+codegen-units = 16"#
+);
 
 // snippet: ignore - shell commands, not Rust
 const NATIVE_COMMANDS: &str = "dx serve --platform linux --renderer native

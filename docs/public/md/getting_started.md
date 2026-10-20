@@ -75,7 +75,7 @@ libero, and name your platform (`linux`, `macos` or `windows`).
 ```toml
 [dependencies]
 dioxus = { version = "=0.8.0-alpha.3", features = ["native"] }
-libero = { version = "0.2", features = ["native"] }
+libero = { version = "0.3", features = ["native"] }
 
 # Blitz is unusably slow unoptimised; this keeps your own crate debuggable.
 [profile.dev.package."*"]
@@ -247,7 +247,7 @@ Every feature is additive.
 | `icons-tabler` | The Tabler Icons set for [IconProvider](icon_provider.md), as `IconSet::tabler()`. Without it libero's glyphs are Lucide. |
 
 ```toml
-libero = { version = "0.2", default-features = false, features = [
+libero = { version = "0.3", default-features = false, features = [
     "code-lang-rust",
     "full-polymorphism",
 ] }
