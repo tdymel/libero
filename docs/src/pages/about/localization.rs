@@ -228,10 +228,11 @@ fn LocalizationPreview(values: DemoValues) -> Element {
     let direction = use_direction();
     let site = use_hook(|| (localization.get(), formats.get(), direction.kept()));
     let turn_to = if rtl { Direction::Rtl } else { Direction::Ltr };
-    // Not read from the handle: that would subscribe the effect and undo the header toggle.
+    // The direction both effects last agreed on: the control's effect must not read the handle,
+    // or it would undo the header toggle.
     let applied = use_hook(|| Rc::new(Cell::new(direction.get())));
     {
-        let direction = direction.clone();
+        let (direction, applied) = (direction.clone(), applied.clone());
         use_effect(use_reactive!(|language, conventions, turn_to| {
             localization.set(language);
             formats.set(conventions);
@@ -240,6 +241,20 @@ fn LocalizationPreview(values: DemoValues) -> Element {
                 direction.set(turn_to);
             }
         }));
+    }
+    {
+        let direction = direction.clone();
+        // A header toggle moves the Direction control along.
+        use_effect(move || {
+            let now = direction.get();
+            if applied.get() != now {
+                applied.set(now);
+                values.set(
+                    "direction",
+                    if now == Direction::Rtl { "rtl" } else { "ltr" },
+                );
+            }
+        });
     }
     use_drop(move || {
         localization.set(site.0);
@@ -275,6 +290,8 @@ fn LocalizationPreview(values: DemoValues) -> Element {
 mod tests {
     use super::*;
     use libero::context::LiberoProvider;
+    // Renamed: the snippet generator counts a page's demos by that call's name.
+    use crate::components::Demo as Host;
 
     thread_local! {
         static HANDLE: std::cell::RefCell<Option<libero::hooks::DirectionHandle>> =
@@ -321,6 +338,55 @@ mod tests {
         dom.render_immediate(&mut dioxus::core::NoOpMutations);
         dom.render_immediate(&mut dioxus::core::NoOpMutations);
         assert!(dom.in_runtime(|| handle.is_rtl()));
+    }
+
+    thread_local! {
+        static SEEN: std::cell::RefCell<String> = const { std::cell::RefCell::new(String::new()) };
+    }
+
+    #[component]
+    fn InDemo() -> Element {
+        rsx! {
+            LiberoProvider {
+                Probe {}
+                Host {
+                    component: "LiberoProvider",
+                    children_text: "",
+                    controls: vec![
+                        Control::toggle("localization", options(&LANGUAGES)),
+                        Control::toggle("formats", options(&FORMATS)),
+                        Control::toggle("direction", ["ltr", "rtl"]),
+                    ],
+                    render: move |values: DemoValues| {
+                        SEEN.with(|seen| *seen.borrow_mut() = values.str("direction"));
+                        rsx! { LocalizationPreview { values } }
+                    },
+                }
+            }
+        }
+    }
+
+    /// The Direction control follows the document, and the document follows the control.
+    #[test]
+    fn the_direction_control_mirrors_the_document() {
+        let mut dom = VirtualDom::new(InDemo);
+        dom.rebuild_in_place();
+        let settle = |dom: &mut VirtualDom| {
+            for _ in 0..4 {
+                dom.process_events();
+                dom.render_immediate(&mut dioxus::core::NoOpMutations);
+            }
+        };
+        settle(&mut dom);
+        let handle = HANDLE
+            .with(|handle| handle.borrow().clone())
+            .expect("the probe rendered");
+        assert_eq!(SEEN.with(|seen| seen.borrow().clone()), "ltr");
+
+        dom.in_scope(ScopeId::APP, || handle.toggle());
+        settle(&mut dom);
+        assert!(dom.in_runtime(|| handle.is_rtl()));
+        assert_eq!(SEEN.with(|seen| seen.borrow().clone()), "rtl");
     }
 
     /// WCAG 3.1.2: German words in the preview sit under `lang="de"` (todo 1994).

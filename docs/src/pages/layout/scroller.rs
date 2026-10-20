@@ -155,7 +155,7 @@ pub fn ScrollerPage() -> Element {
                         .doc("Pixels one control press scrolls."),
                     prop("controls", "ScrollerControls")
                         .default(theme.scroller.controls.as_str())
-                        .doc("`auto` shows each control while there is content that way. `always` keeps both, dimmed at their end. `never` shows neither."),
+                        .doc("`auto` shows each control while there is content that way. `always` keeps both, dimmed at their end, and leaves room for them at both ends. `never` shows neither."),
                     prop("control_size", "Size")
                         .default(theme.scroller.control_size.as_str())
                         .doc("Width of each control and its glyph."),

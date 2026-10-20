@@ -874,8 +874,8 @@ fn a_rich_text_key_redraws_no_toolbar_button() {
     });
 }
 
-/// Opening a date picker draws its picker once; focus then click both opened it, and the
-/// picker redrew with the field (todo 2002).
+/// Opening a date picker draws its picker once; the click opens it, focus alone does not
+/// (todo 2002, 3756).
 #[test]
 fn a_date_picker_opens_in_one_pass() {
     block_on(async {

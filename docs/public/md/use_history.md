@@ -144,6 +144,6 @@ pub fn use_history<T: 'static>(initial: impl FnOnce() -> UndoHistory<T>, group_m
 
 `UndoHistory` has the same `push`, `merge`, `seal`, `undo`, `redo`, `reset`,
 `can_undo` and `can_redo` as the handle. `group_ms` 0 never closes a group by
-time, nor does a target without a timer, such as a server render. Sealing a
+time, nor does a server render, whose timer never fires. Sealing a
 group renders nothing; every other change renders the readers. Call the hook
 unconditionally, in the same order every render.

@@ -70,7 +70,7 @@ strip. With `controls: "never"`, move the strip from your own buttons through a
 |---|---|---|---|
 | `aria_label` | `String` | required | Names the strip, a tab stop while it overflows with nothing focusable inside. |
 | `scroll_amount` | `u32` | `200` | Pixels one control press scrolls. |
-| `controls` | `ScrollerControls` | `auto` | `auto` shows each control while there is content that way. `always` keeps both, dimmed at their end. `never` shows neither. |
+| `controls` | `ScrollerControls` | `auto` | `auto` shows each control while there is content that way. `always` keeps both, dimmed at their end, and leaves room for them at both ends. `never` shows neither. |
 | `control_size` | `Size` | `md` | Width of each control and its glyph. |
 | `fade_color` | `ThemeAwareValue` | paper background | The colour the content fades into under a control. Set it to the surface the strip sits on. |
 | `draggable` | `bool` | `false` | Lets the mouse drag the strip. Touch and trackpad scroll it either way. With `controls: "never"` it only drags when a `handle` is bound, for your own buttons (WCAG 2.5.7). |
