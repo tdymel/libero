@@ -5,6 +5,7 @@ use anyhow::{Result, bail};
 use e2e::browser::block_on;
 use e2e::driver::{Driver, Platform, eventually, eventually_focused};
 use e2e::passes::keyboard;
+use e2e::wait::PageBounded;
 use e2e::{Fixture, Viewport};
 
 use super::floating_window::{
@@ -65,7 +66,7 @@ fn under_rtl_a_keyboard_resize_moves_the_grips_corner_of_an_anchored_window() {
             .await
             .unwrap();
         let page = &fixture.page;
-        page.evaluate("document.documentElement.dir = 'rtl'")
+        page.evaluate_bounded("document.documentElement.dir = 'rtl'")
             .await
             .unwrap();
         open(page).await.unwrap();
@@ -111,7 +112,7 @@ async fn pinned_resize_by_key(rtl: bool) {
         .unwrap();
     let page = &fixture.page;
     if rtl {
-        page.evaluate("document.documentElement.dir = 'rtl'")
+        page.evaluate_bounded("document.documentElement.dir = 'rtl'")
             .await
             .unwrap();
     }
@@ -175,7 +176,7 @@ fn under_rtl_the_grip_resizes_from_the_bottom_left() {
             .await
             .unwrap();
         let page = &fixture.page;
-        page.evaluate("document.documentElement.dir = 'rtl'")
+        page.evaluate_bounded("document.documentElement.dir = 'rtl'")
             .await
             .unwrap();
         open(page).await.unwrap();

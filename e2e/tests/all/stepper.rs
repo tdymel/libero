@@ -7,6 +7,7 @@ use e2e::browser::block_on;
 use e2e::driver::{Driver, eventually, eventually_focused};
 use e2e::passes::keyboard;
 use e2e::suite::Step;
+use e2e::wait::PageBounded;
 use e2e::{Fixture, Suite, Viewport, wait};
 
 fn header(index: usize) -> String {
@@ -109,7 +110,7 @@ fn under_rtl_the_vertical_rail_stays_under_the_markers() {
             .await
             .unwrap();
         let page = &fixture.page;
-        page.evaluate("document.documentElement.dir = 'rtl'")
+        page.evaluate_bounded("document.documentElement.dir = 'rtl'")
             .await
             .unwrap();
         wait::for_js_true(
@@ -120,7 +121,7 @@ fn under_rtl_the_vertical_rail_stays_under_the_markers() {
         .await
         .unwrap();
         let (off, content): (Vec<f64>, String) = page
-            .evaluate(
+            .evaluate_bounded(
                 "(() => { const items = [...document.querySelectorAll('ol > li')].slice(0, -1); \
                  const off = items.map(li => { \
                    const box = li.getBoundingClientRect(); \
@@ -210,10 +211,15 @@ fn a_long_label_wraps_instead_of_widening_the_page() {
         let page = &fixture.page;
         wait::for_visible(page, "#vertical-step-1").await.unwrap();
         for width in [390, 320] {
-            page.execute(SetDeviceMetricsOverrideParams::new(width, 800, 1.0, true))
+            page.execute_bounded(SetDeviceMetricsOverrideParams::new(width, 800, 1.0, true))
                 .await
                 .unwrap();
-            let widths: Vec<[f64; 3]> = page.evaluate(WIDTHS).await.unwrap().into_value().unwrap();
+            let widths: Vec<[f64; 3]> = page
+                .evaluate_bounded(WIDTHS)
+                .await
+                .unwrap()
+                .into_value()
+                .unwrap();
             // Not `innerWidth`: mobile emulation widens it to the content (todo 2029).
             let viewport = f64::from(width);
             let page_width = widths[0][0];
@@ -263,16 +269,21 @@ fn many_steps_shrink_then_scroll_in_their_strip() {
         let page = &fixture.page;
         wait::for_visible(page, "#below-9-step-8").await.unwrap();
         for width in [390, 320] {
-            page.execute(SetDeviceMetricsOverrideParams::new(width, 800, 1.0, true))
+            page.execute_bounded(SetDeviceMetricsOverrideParams::new(width, 800, 1.0, true))
                 .await
                 .unwrap();
             let page_width: f64 = page
-                .evaluate("document.documentElement.scrollWidth")
+                .evaluate_bounded("document.documentElement.scrollWidth")
                 .await
                 .unwrap()
                 .into_value()
                 .unwrap();
-            let many: Many = page.evaluate(MANY).await.unwrap().into_value().unwrap();
+            let many: Many = page
+                .evaluate_bounded(MANY)
+                .await
+                .unwrap()
+                .into_value()
+                .unwrap();
             assert!(
                 page_width <= f64::from(width),
                 "{width}px: the page scrolls sideways: {many:?}"
@@ -286,7 +297,7 @@ fn many_steps_shrink_then_scroll_in_their_strip() {
             // The strip scrolls before a word splits (todo 2030).
             for id in ["#side-5", "#below-5"] {
                 let (split, words): (Vec<String>, usize) = page
-                    .evaluate(SPLIT_WORDS.replace("#plain", id))
+                    .evaluate_bounded(SPLIT_WORDS.replace("#plain", id))
                     .await
                     .unwrap()
                     .into_value()
@@ -329,12 +340,12 @@ fn a_step_scrolled_in_by_focus_keeps_its_ring_room() {
             .unwrap();
         let page = &fixture.page;
         wait::for_visible(page, "#below-9-step-8").await.unwrap();
-        page.execute(SetDeviceMetricsOverrideParams::new(320, 800, 1.0, true))
+        page.execute_bounded(SetDeviceMetricsOverrideParams::new(320, 800, 1.0, true))
             .await
             .unwrap();
         // From the start, a step comes in on the right; from the end, on the left.
         for (scroll, index) in [("0", 6), ("ol.scrollWidth", 2)] {
-            page.evaluate(format!(
+            page.evaluate_bounded(format!(
                 "(() => {{ const ol = document.querySelector('#below-9 ol'); \
                  ol.scrollLeft = {scroll}; \
                  document.getElementById('below-9-step-{index}').focus(); }})()"
@@ -367,14 +378,14 @@ fn the_current_step_scrolls_into_its_strip() {
         wait::for_js_true(page, &roomy("late", 5), "the mounted current step in view")
             .await
             .unwrap();
-        page.evaluate("document.getElementById('late-last').click()")
+        page.evaluate_bounded("document.getElementById('late-last').click()")
             .await
             .unwrap();
         wait::for_js_true(page, &roomy("late", 8), "the moved current step in view")
             .await
             .unwrap();
         let focus: bool = page
-            .evaluate("!document.querySelector('#late')?.contains(document.activeElement)")
+            .evaluate_bounded("!document.querySelector('#late')?.contains(document.activeElement)")
             .await
             .unwrap()
             .into_value()
@@ -395,10 +406,15 @@ fn the_side_fallback_follows_the_step_count() {
         let page = &fixture.page;
         wait::for_visible(page, "#side-5-step-4").await.unwrap();
         for (width, five, nine) in [(500, "column", "column"), (1280, "row", "row")] {
-            page.execute(SetDeviceMetricsOverrideParams::new(width, 800, 1.0, false))
+            page.execute_bounded(SetDeviceMetricsOverrideParams::new(width, 800, 1.0, false))
                 .await
                 .unwrap();
-            let many: Many = page.evaluate(MANY).await.unwrap().into_value().unwrap();
+            let many: Many = page
+                .evaluate_bounded(MANY)
+                .await
+                .unwrap()
+                .into_value()
+                .unwrap();
             assert_eq!(many[0].5, five, "{width}px: {many:?}");
             assert_eq!(many[2].5, nine, "{width}px: {many:?}");
         }
@@ -431,14 +447,14 @@ fn a_scrolling_strip_without_buttons_takes_a_tab_stop() {
         .await
         .unwrap();
         let clickable: bool = page
-            .evaluate("document.querySelector('#side-9 > ol').hasAttribute('tabindex')")
+            .evaluate_bounded("document.querySelector('#side-9 > ol').hasAttribute('tabindex')")
             .await
             .unwrap()
             .into_value()
             .unwrap();
         assert!(!clickable, "a strip of buttons took a tab stop");
 
-        page.execute(SetDeviceMetricsOverrideParams::new(1600, 800, 1.0, false))
+        page.execute_bounded(SetDeviceMetricsOverrideParams::new(1600, 800, 1.0, false))
             .await
             .unwrap();
         wait::for_js_true(
@@ -483,11 +499,11 @@ fn ordinary_labels_fit_320px_whole() {
             .unwrap();
         let page = &fixture.page;
         wait::for_visible(page, "#plain-step-1").await.unwrap();
-        page.execute(SetDeviceMetricsOverrideParams::new(320, 800, 1.0, true))
+        page.execute_bounded(SetDeviceMetricsOverrideParams::new(320, 800, 1.0, true))
             .await
             .unwrap();
         let (split, words): (Vec<String>, usize) = page
-            .evaluate(SPLIT_WORDS)
+            .evaluate_bounded(SPLIT_WORDS)
             .await
             .unwrap()
             .into_value()
@@ -509,7 +525,7 @@ fn side_labels_stack_in_a_narrow_box() {
         let page = &fixture.page;
         wait::for_visible(page, "#boxed-step-1").await.unwrap();
         let directions: Vec<String> = page
-            .evaluate(
+            .evaluate_bounded(
                 "['#boxed-step-0', '#side-step-0'].map(s => \
                  getComputedStyle(document.querySelector(s)).flexDirection)",
             )
@@ -519,7 +535,7 @@ fn side_labels_stack_in_a_narrow_box() {
             .unwrap();
         assert_eq!(directions, ["column", "row"]);
         let (split, words): (Vec<String>, usize) = page
-            .evaluate(SPLIT_WORDS.replace("#plain", "#boxed"))
+            .evaluate_bounded(SPLIT_WORDS.replace("#plain", "#boxed"))
             .await
             .unwrap()
             .into_value()
@@ -558,7 +574,7 @@ fn completed_and_current_steps_show_in_forced_colours() {
         let page = &fixture.page;
         e2e::browser::force_colours(page).await.unwrap();
         let [completed, canvas, current, pending]: [String; 4] = page
-            .evaluate(
+            .evaluate_bounded(
                 "(() => { const probe = document.createElement('div'); \
                  probe.style.background = 'Canvas'; document.body.append(probe); \
                  const canvas = getComputedStyle(probe).backgroundColor; probe.remove(); \
@@ -579,7 +595,7 @@ fn completed_and_current_steps_show_in_forced_colours() {
         );
         // Todo 715: forcing drops the on-state `box-shadow`; an outline stands in.
         let outlines: [String; 2] = page
-            .evaluate(
+            .evaluate_bounded(
                 "[1, 2].map(i => getComputedStyle(document.querySelector(`#plain-step-${i} [data-slot=marker]`)).outlineStyle)",
             )
             .await

@@ -2,12 +2,13 @@
 
 use e2e::browser::block_on;
 use e2e::passes::{keyboard, pointer};
+use e2e::wait::PageBounded;
 use e2e::{Fixture, Viewport, wait};
 
 const LAYER: &str = "(sel) => { const s = getComputedStyle(document.querySelector(sel)); return s.backgroundImage + '|' + s.cursor; }";
 
 async fn look(page: &chromiumoxide::Page, selector: &str) -> String {
-    page.evaluate(format!("({LAYER})({selector:?})"))
+    page.evaluate_bounded(format!("({LAYER})({selector:?})"))
         .await
         .unwrap()
         .into_value()
@@ -55,7 +56,7 @@ fn a_coloured_paper_steps_its_shade_under_the_pointer() {
         let page = &fixture.page;
         wait::for_visible(page, "#press-primary").await.unwrap();
         let fill = async |selector: &str| -> String {
-            page.evaluate(format!("({FILL})({selector:?})"))
+            page.evaluate_bounded(format!("({FILL})({selector:?})"))
                 .await
                 .unwrap()
                 .into_value()
@@ -87,7 +88,7 @@ fn a_button_paper_is_no_submit_and_drops_the_user_agent_look() {
         wait::for_visible(page, "#press").await.unwrap();
 
         let look: (Option<String>, String, String, String) = page
-            .evaluate(
+            .evaluate_bounded(
                 "(() => { const e = document.querySelector('#press'); const s = getComputedStyle(e); \
                  return [e.getAttribute('type'), s.borderTopWidth, s.paddingLeft, s.textAlign]; })()",
             )
@@ -104,7 +105,9 @@ fn a_button_paper_is_no_submit_and_drops_the_user_agent_look() {
         assert_ne!(look.3, "center", "{look:?}");
 
         let bordered: String = page
-            .evaluate("getComputedStyle(document.querySelector('#press-bordered')).borderTopWidth")
+            .evaluate_bounded(
+                "getComputedStyle(document.querySelector('#press-bordered')).borderTopWidth",
+            )
             .await
             .unwrap()
             .into_value()
@@ -148,7 +151,7 @@ fn a_link_paper_shows_the_focus_ring() {
 
         keyboard::tab_to(page, "#link", 3).await.unwrap();
         let (style, width, color): (String, f64, String) = page
-            .evaluate(
+            .evaluate_bounded(
                 "(() => { const s = getComputedStyle(document.querySelector('#link')); \
                  return [s.outlineStyle, parseFloat(s.outlineWidth), s.outlineColor]; })()",
             )

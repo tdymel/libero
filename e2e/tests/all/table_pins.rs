@@ -5,6 +5,7 @@ use anyhow::Result;
 use e2e::browser::block_on;
 use e2e::driver::{Driver, Platform, eventually, eventually_text};
 use e2e::passes::keyboard;
+use e2e::wait::PageBounded;
 use e2e::{Fixture, Viewport, wait};
 
 /// 1156-2d: scrolled to its far end, the checkbox and Name columns hold at the
@@ -30,7 +31,7 @@ fn pinned_columns_hold_at_their_edges_in_both_directions() {
             .unwrap();
             // Edges as [start, end] in reading order: left/right flip in RTL.
             let state: String = page
-                .evaluate(format!(
+                .evaluate_bounded(format!(
                     "(() => {{ const rtl = {rtl}; \
                      const edges = s => {{ const b = document.querySelector(s).getBoundingClientRect(); \
                        return rtl ? [b.right, b.left] : [b.left, b.right]; }}; \
@@ -119,7 +120,7 @@ fn a_focused_header_button_stays_clear_of_the_pinned_columns() {
                 )
                 .await;
                 let state: String = page
-                    .evaluate(check.clone())
+                    .evaluate_bounded(check.clone())
                     .await
                     .unwrap()
                     .into_value()
@@ -167,7 +168,7 @@ fn a_focus_scroll_clears_an_unsized_pinned_column() {
         )
         .await
         .unwrap();
-        page.evaluate(format!("document.querySelector({ORIGIN:?}).focus()"))
+        page.evaluate_bounded(format!("document.querySelector({ORIGIN:?}).focus()"))
             .await
             .unwrap();
         let check = format!(
@@ -182,7 +183,12 @@ fn a_focus_scroll_clears_an_unsized_pinned_column() {
         let cleared =
             wait::for_js_true(page, &format!("{check} === 'clear'"), "the focus scroll").await;
         if cleared.is_err() {
-            let state: String = page.evaluate(check).await.unwrap().into_value().unwrap();
+            let state: String = page
+                .evaluate_bounded(check)
+                .await
+                .unwrap()
+                .into_value()
+                .unwrap();
             panic!("the focused Origin button stays under the pinned Name: {state}");
         }
         fixture
@@ -215,7 +221,7 @@ fn a_windowed_table_keeps_its_header_and_pins_while_scrolled() {
         .await
         .unwrap();
         let state: String = page
-            .evaluate(format!(
+            .evaluate_bounded(format!(
                 "(() => {{ const box = s => document.querySelector(s).getBoundingClientRect(); \
                  const area = document.querySelector({AREA:?}); \
                  const a = area.getBoundingClientRect(); \

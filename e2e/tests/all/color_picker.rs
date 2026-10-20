@@ -5,6 +5,7 @@ use anyhow::Result;
 use e2e::browser::block_on;
 use e2e::driver::{Driver, eventually, eventually_focused, eventually_text};
 use e2e::passes::{keyboard, pointer};
+use e2e::wait::PageBounded;
 use e2e::{Fixture, Suite, Viewport, wait};
 
 const THUMB: &str = "[role=slider][aria-label=Saturation]";
@@ -45,7 +46,7 @@ fn a_swatch_keeps_its_colour_in_forced_colours() {
             .await
             .unwrap();
         let page = &fixture.page;
-        page.execute(
+        page.execute_bounded(
             SetEmulatedMediaParams::builder()
                 .features(vec![MediaFeature::new("forced-colors", "active")])
                 .build(),
@@ -60,7 +61,7 @@ fn a_swatch_keeps_its_colour_in_forced_colours() {
         .await
         .unwrap();
         let images: Vec<String> = page
-            .evaluate(
+            .evaluate_bounded(
                 "[...document.querySelectorAll('[data-slot=swatch]')]\
                  .map(s => getComputedStyle(s).backgroundImage)",
             )
@@ -113,7 +114,12 @@ fn a_slider_thumb_takes_presses_in_a_24px_square_at_every_size() {
         wait::for_visible(page, "#picker-xs [data-slot=sliders] [data-slot=thumb]")
             .await
             .unwrap();
-        let misses: String = page.evaluate(MISSES).await.unwrap().into_value().unwrap();
+        let misses: String = page
+            .evaluate_bounded(MISSES)
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
         assert_eq!(misses, "");
         fixture.close().await.unwrap();
     });
@@ -134,7 +140,7 @@ fn an_early_move_on_the_pad_still_lands() {
         )
         .await
         .unwrap();
-        page.evaluate(format!(
+        page.evaluate_bounded(format!(
             "(() => {{ const pad = document.querySelector({THUMB:?}).parentElement;
                const r = pad.getBoundingClientRect();
                const at = (type, x) => pad.dispatchEvent(new PointerEvent(type, {{
@@ -218,7 +224,12 @@ fn a_swatch_near_the_page_colour_has_a_3_to_1_edge() {
         wait::for_visible(page, "[data-slot=swatches] > button")
             .await
             .unwrap();
-        let rings: String = page.evaluate(RINGS).await.unwrap().into_value().unwrap();
+        let rings: String = page
+            .evaluate_bounded(RINGS)
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
         let rings: Vec<&str> = rings.split(',').collect();
         for (light, ring) in [(1, rings[1]), (2, rings[2])] {
             let ratio: f64 = ring.parse().unwrap();
@@ -389,7 +400,7 @@ fn a_press_on_the_pad_or_the_hue_track_jumps_the_thumb() {
         .unwrap();
 
         let track: [f64; 4] = page
-            .evaluate(format!(
+            .evaluate_bounded(format!(
                 "(() => {{ let el = document.querySelector({HUE:?}); \
                  while (el.getBoundingClientRect().width < 100) el = el.parentElement; \
                  const r = el.getBoundingClientRect(); return [r.x, r.y, r.width, r.height]; }})()"
@@ -413,7 +424,7 @@ fn a_press_on_the_pad_or_the_hue_track_jumps_the_thumb() {
         .await
         {
             let state: String = page
-                .evaluate(format!(
+                .evaluate_bounded(format!(
                     "`${{document.querySelector({HUE:?}).getAttribute('aria-valuenow')}} on ${{document.activeElement.outerHTML.slice(0, 120)}} track ${{JSON.stringify({track:?})}} hit ${{document.elementFromPoint({}, {})?.outerHTML.slice(0, 160)}}`",
                     x, y
                 ))
@@ -494,7 +505,11 @@ fn the_saturation_thumb_parts_from_the_pad() {
 }
 
 async fn reading(page: &chromiumoxide::Page) -> String {
-    page.evaluate(READING).await.unwrap().into_value().unwrap()
+    page.evaluate_bounded(READING)
+        .await
+        .unwrap()
+        .into_value()
+        .unwrap()
 }
 
 /// Two points on the pad, each as a fraction of its width and height.
@@ -504,7 +519,7 @@ async fn pad_points(
     to: (f64, f64),
 ) -> (pointer::Point, pointer::Point) {
     let rect: [f64; 4] = page
-        .evaluate(format!(
+        .evaluate_bounded(format!(
             "(() => {{ const r = document.querySelector({THUMB:?}).parentElement.getBoundingClientRect(); \
              return [r.x, r.y, r.width, r.height]; }})()"
         ))

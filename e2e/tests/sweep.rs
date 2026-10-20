@@ -6,6 +6,7 @@ use e2e::browser::block_on;
 use e2e::passes::contrast::COLOUR_JS;
 use e2e::passes::pointer::{self, Point};
 use e2e::passes::{contrast, keyboard};
+use e2e::wait::PageBounded;
 use e2e::{Fixture, Scheme, Viewport, wait};
 
 #[test]
@@ -84,7 +85,7 @@ fn a_route_change_closes_the_drawer() {
         wait::for_js_true(page, &open, "the drawer to open again")
             .await
             .unwrap();
-        page.evaluate("history.back()").await.unwrap();
+        page.evaluate_bounded("history.back()").await.unwrap();
         wait::for_js_true(page, &format!("{path} === '/'"), "the route to change back")
             .await
             .unwrap();
@@ -141,7 +142,7 @@ fn the_drawer_and_the_skip_link_move_focus() {
         .await
         .unwrap();
 
-        page.evaluate("document.querySelector('a[href=\"#docs-main\"]').focus()")
+        page.evaluate_bounded("document.querySelector('a[href=\"#docs-main\"]').focus()")
             .await
             .unwrap();
         keyboard::press(page, keyboard::ENTER).await.unwrap();
@@ -301,7 +302,7 @@ fn only_a_text_only_doc_panel_is_a_tab_stop() {
             .await
             .unwrap();
         for (label, stop) in [("Properties", "'0'"), ("Style API", "null")] {
-            page.evaluate(doc_tab_js(label)).await.unwrap();
+            page.evaluate_bounded(doc_tab_js(label)).await.unwrap();
             wait::for_js_true(page, &format!("{panel_stop} === {stop}"), label)
                 .await
                 .unwrap();
@@ -324,7 +325,9 @@ fn a_doc_tab_switch_hides_the_old_panel() {
         .await
         .unwrap();
         let page = &fixture.page;
-        page.evaluate(doc_tab_js("Properties")).await.unwrap();
+        page.evaluate_bounded(doc_tab_js("Properties"))
+            .await
+            .unwrap();
         let kept = "(() => { const kids = [...document.querySelector('#docs-main [role=tabpanel]').children]; \
             const off = kids.filter(k => k.hidden); \
             return off.some(k => k.childElementCount > 0) && off.every(k => k.inert); })()";
@@ -342,7 +345,9 @@ fn a_doc_tab_switch_hides_the_old_panel() {
         .await
         .unwrap();
         let page = &fixture.page;
-        page.evaluate(doc_tab_js("Properties")).await.unwrap();
+        page.evaluate_bounded(doc_tab_js("Properties"))
+            .await
+            .unwrap();
         wait::for_js_true(
             page,
             "!document.querySelector('#docs-main video')",
@@ -376,7 +381,7 @@ fn the_marquee_preview_fits_its_box() {
         wait::for_js_true(page, fits, "the preview to fit its box")
             .await
             .unwrap();
-        page.evaluate("document.documentElement.dir = 'rtl'")
+        page.evaluate_bounded("document.documentElement.dir = 'rtl'")
             .await
             .unwrap();
         wait::for_js_true(page, fits, "the preview to fit its box right to left")
@@ -401,7 +406,7 @@ fn the_demo_controls_cut_no_label() {
                         .await
                         .unwrap();
                     let page = &fixture.page;
-                    page.evaluate(
+                    page.evaluate_bounded(
                         "(() => { const s = document.querySelector('#docs-main select'); \
                            s.value = 'outlined'; s.dispatchEvent(new Event('change', { bubbles: true })); })()",
                     )
@@ -506,7 +511,7 @@ fn the_landing_gradients_are_measured() {
                 .unwrap();
             let lines: Vec<String> = fixture
                 .page
-                .evaluate(format!("(() => {{ {COLOUR_JS} {GRADIENT_MEASURE} }})()"))
+                .evaluate_bounded(format!("(() => {{ {COLOUR_JS} {GRADIENT_MEASURE} }})()"))
                 .await
                 .unwrap()
                 .into_value()
@@ -580,7 +585,7 @@ async fn spent(
 ) -> (std::collections::BTreeMap<String, f64>, [f64; 3]) {
     use chromiumoxide::cdp::browser_protocol::performance::GetMetricsParams;
     let now: std::collections::BTreeMap<String, f64> = page
-        .execute(GetMetricsParams::default())
+        .execute_bounded(GetMetricsParams::default())
         .await
         .unwrap()
         .result
@@ -600,7 +605,7 @@ async fn spent(
 /// A client-side navigation, as the router's own back button would do it, then until 60 ms
 /// pass with under 2 ms of main-thread work.
 async fn go(page: &chromiumoxide::Page, path: &str, ready: &str) {
-    page.evaluate(format!(
+    page.evaluate_bounded(format!(
         "history.pushState(null, '', {path:?}); dispatchEvent(new PopStateEvent('popstate'))"
     ))
     .await
@@ -654,17 +659,19 @@ fn docs_interactions() {
         let fixture = opened.unwrap();
         let page = &fixture.page;
         let front = e2e::frames::bring_to_front(page).await.unwrap();
-        page.execute(chromiumoxide::cdp::browser_protocol::performance::EnableParams::default())
-            .await
-            .unwrap();
+        page.execute_bounded(
+            chromiumoxide::cdp::browser_protocol::performance::EnableParams::default(),
+        )
+        .await
+        .unwrap();
         // `PERF_PROFILE=1`: the 30 functions most sampled per action, as `docs_mount`.
         let profiling = std::env::var_os("PERF_PROFILE").is_some();
         if profiling {
             use chromiumoxide::cdp::js_protocol::profiler;
-            page.execute(profiler::EnableParams::default())
+            page.execute_bounded(profiler::EnableParams::default())
                 .await
                 .unwrap();
-            page.execute(profiler::SetSamplingIntervalParams::new(100))
+            page.execute_bounded(profiler::SetSamplingIntervalParams::new(100))
                 .await
                 .unwrap();
         }
@@ -697,15 +704,21 @@ fn docs_interactions() {
                     quiet(page).await;
                 }
                 if profiling {
-                    page.execute(chromiumoxide::cdp::js_protocol::profiler::StartParams::default())
-                        .await
-                        .unwrap();
+                    page.execute_bounded(
+                        chromiumoxide::cdp::js_protocol::profiler::StartParams::default(),
+                    )
+                    .await
+                    .unwrap();
                 }
                 let (before, _) = spent(page, &Default::default()).await;
                 match name {
                     "scheme toggle" => {
-                        let was: String =
-                            page.evaluate(SCHEME).await.unwrap().into_value().unwrap();
+                        let was: String = page
+                            .evaluate_bounded(SCHEME)
+                            .await
+                            .unwrap()
+                            .into_value()
+                            .unwrap();
                         e2e::passes::pointer::click(page, &format!("{TOOLS} [data-slot=toggle]"))
                             .await
                             .unwrap();
@@ -719,9 +732,13 @@ fn docs_interactions() {
                     }
                     "theme-set pick" => {
                         let set = if rep % 2 == 0 { "Ayu" } else { "Libero" };
-                        let bg: String =
-                            page.evaluate(PAGE_BG).await.unwrap().into_value().unwrap();
-                        page.evaluate(format!(
+                        let bg: String = page
+                            .evaluate_bounded(PAGE_BG)
+                            .await
+                            .unwrap()
+                            .into_value()
+                            .unwrap();
+                        page.evaluate_bounded(format!(
                             "(e => {{ e.setAttribute('data-e2e', 'set'); e.scrollIntoView({{ block: 'nearest' }}); }})\
                              ([...document.querySelectorAll('[role=menuitemradio]')].find((e) => e.textContent.trim() === {set:?}))"
                         ))
@@ -754,7 +771,9 @@ fn docs_interactions() {
                 let (_, times) = spent(page, &before).await;
                 if profiling {
                     let profile = page
-                        .execute(chromiumoxide::cdp::js_protocol::profiler::StopParams::default())
+                        .execute_bounded(
+                            chromiumoxide::cdp::js_protocol::profiler::StopParams::default(),
+                        )
                         .await
                         .unwrap();
                     for node in &profile.result.profile.nodes {
@@ -790,7 +809,7 @@ fn docs_interactions() {
         let mut control: Vec<f64> = Vec::new();
         for _ in 0..9 {
             control.push(
-                page.evaluate(
+                page.evaluate_bounded(
                     "(() => { const t = performance.now(); let x = 0; \
                      for (let i = 0; i < 2e6; i++) x += Math.sqrt(i); \
                      return performance.now() - t + (x < 0 ? 1 : 0); })()",
@@ -843,22 +862,24 @@ fn docs_mount() {
             .unwrap();
         let page = &fixture.page;
         let front = e2e::frames::bring_to_front(page).await.unwrap();
-        page.execute(chromiumoxide::cdp::browser_protocol::performance::EnableParams::default())
-            .await
-            .unwrap();
+        page.execute_bounded(
+            chromiumoxide::cdp::browser_protocol::performance::EnableParams::default(),
+        )
+        .await
+        .unwrap();
         // `PERF_PROFILE=1`: the 30 functions most sampled (100 us) per page, by self time.
         let profiling = std::env::var_os("PERF_PROFILE").is_some();
         if profiling {
-            page.evaluate(
+            page.evaluate_bounded(
                 "(() => { const seen = window.__styleReads = {}; const get = CSSStyleDeclaration.prototype.getPropertyValue; \
                  CSSStyleDeclaration.prototype.getPropertyValue = function (name) { seen[name] = (seen[name] || 0) + 1; return get.call(this, name); }; })()",
             )
             .await
             .unwrap();
-            page.execute(profiler::EnableParams::default())
+            page.execute_bounded(profiler::EnableParams::default())
                 .await
                 .unwrap();
-            page.execute(profiler::SetSamplingIntervalParams::new(100))
+            page.execute_bounded(profiler::SetSamplingIntervalParams::new(100))
                 .await
                 .unwrap();
         }
@@ -873,7 +894,7 @@ fn docs_mount() {
             for rep in 0..4 {
                 go(page, BASE, AT_BASE).await;
                 if profiling {
-                    page.execute(profiler::StartParams::default())
+                    page.execute_bounded(profiler::StartParams::default())
                         .await
                         .unwrap();
                 }
@@ -881,14 +902,17 @@ fn docs_mount() {
                 go(page, path, &ready).await;
                 let (_, [task, script, layout]) = spent(page, &before).await;
                 if profiling {
-                    let profile = page.execute(profiler::StopParams::default()).await.unwrap();
+                    let profile = page
+                        .execute_bounded(profiler::StopParams::default())
+                        .await
+                        .unwrap();
                     for node in &profile.result.profile.nodes {
                         *hot.entry(node.call_frame.function_name.clone())
                             .or_default() += node.hit_count.unwrap_or(0);
                     }
                 }
                 let nodes: f64 = page
-                    .evaluate("document.querySelectorAll('#docs-main *').length")
+                    .evaluate_bounded("document.querySelectorAll('#docs-main *').length")
                     .await
                     .unwrap()
                     .into_value()
@@ -910,7 +934,7 @@ fn docs_mount() {
             }
             if profiling {
                 let reads: String = page
-                    .evaluate("(() => { const r = JSON.stringify(window.__styleReads); for (const k in window.__styleReads) delete window.__styleReads[k]; return r; })()")
+                    .evaluate_bounded("(() => { const r = JSON.stringify(window.__styleReads); for (const k in window.__styleReads) delete window.__styleReads[k]; return r; })()")
                     .await
                     .unwrap()
                     .into_value()
@@ -949,7 +973,9 @@ fn a_combobox_demo_closes_on_an_outside_click() {
             wait::for_js_true(page, &format!("!!{control}"), "the mode switch")
                 .await
                 .unwrap();
-            page.evaluate(format!("{control}.click()")).await.unwrap();
+            page.evaluate_bounded(format!("{control}.click()"))
+                .await
+                .unwrap();
             wait::for_js_true(
                 page,
                 &format!(

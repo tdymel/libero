@@ -6,6 +6,7 @@ use chromiumoxide::Page;
 use e2e::browser::block_on;
 use e2e::driver::{Driver, eventually, eventually_text};
 use e2e::passes::{keyboard, pointer};
+use e2e::wait::PageBounded;
 use e2e::{Fixture, Suite, Viewport, wait};
 
 const INPUT: &str = "#quantity";
@@ -98,7 +99,7 @@ fn the_steppers_and_the_arrows_step_from_the_current_value() {
         settle(page, "5").await.unwrap();
 
         // A click moves Tab's starting point to the stepper, so focus by script.
-        page.evaluate(format!("document.querySelector({INPUT:?}).focus()"))
+        page.evaluate_bounded(format!("document.querySelector({INPUT:?}).focus()"))
             .await
             .unwrap();
         keyboard::press(page, keyboard::ARROW_UP).await.unwrap();
@@ -129,7 +130,7 @@ fn a_stepper_press_keeps_the_focus_on_the_field() {
         click(page, PLUS).await.unwrap();
         settle(page, "4").await.unwrap();
         let focused: bool = page
-            .evaluate(format!(
+            .evaluate_bounded(format!(
                 "document.activeElement === document.querySelector({INPUT:?})"
             ))
             .await
@@ -289,7 +290,7 @@ fn emptying_the_field_clears_the_value_and_junk_reverts() {
         let page = &fixture.page;
 
         keyboard::tab_to(page, RANGED, 6).await.unwrap();
-        page.evaluate("document.activeElement.select()")
+        page.evaluate_bounded("document.activeElement.select()")
             .await
             .unwrap();
         keyboard::press(page, BACKSPACE).await.unwrap();
@@ -339,7 +340,7 @@ fn a_form_reset_drops_an_unparsed_minus() {
             .await
             .unwrap();
         // By script: a real click would blur the field, and its change commit drops the text.
-        page.evaluate("document.querySelector('#reset').click()")
+        page.evaluate_bounded("document.querySelector('#reset').click()")
             .await
             .unwrap();
         wait::for_js_true(
@@ -401,7 +402,8 @@ fn modifier_chords_do_not_step() {
 
 /// Select the field's text and type `text` over it.
 async fn retype(page: &Page, text: &str) -> Result<()> {
-    page.evaluate("document.activeElement.select()").await?;
+    page.evaluate_bounded("document.activeElement.select()")
+        .await?;
     keyboard::type_text(page, text).await
 }
 
@@ -422,7 +424,7 @@ async fn held(page: &Page, selector: &str, value: &str) -> Result<()> {
 /// A real pointer click at the centre of `selector`.
 async fn click(page: &Page, selector: &str) -> Result<()> {
     let (x, y): (f64, f64) = page
-        .evaluate(format!(
+        .evaluate_bounded(format!(
             "(() => {{ const r = document.querySelector({selector:?}).getBoundingClientRect(); \
              return [r.x + r.width / 2, r.y + r.height / 2]; }})()"
         ))
@@ -462,7 +464,7 @@ fn caret_after_focus(press: bool, caret: &str) {
         .await
         .unwrap();
         let (x, y): (f64, f64) = page
-            .evaluate(format!(
+            .evaluate_bounded(format!(
                 "(() => {{ const el = document.querySelector({AMOUNT:?}); \
                  const style = getComputedStyle(el), r = el.getBoundingClientRect(); \
                  const ctx = document.createElement('canvas').getContext('2d'); \
@@ -479,7 +481,7 @@ fn caret_after_focus(press: bool, caret: &str) {
                 .await
                 .unwrap();
         } else {
-            page.evaluate(format!(
+            page.evaluate_bounded(format!(
                 "(el => {{ el.setSelectionRange(4, 4); el.focus(); }})(document.querySelector({AMOUNT:?}))"
             ))
             .await
@@ -496,7 +498,7 @@ fn caret_after_focus(press: bool, caret: &str) {
         .await;
         if let Err(error) = settled {
             let state: (String, Option<u32>, Option<u32>) = page
-                .evaluate(format!(
+                .evaluate_bounded(format!(
                     "(el => [el.value, el.selectionStart, el.selectionEnd])(document.querySelector({AMOUNT:?}))"
                 ))
                 .await

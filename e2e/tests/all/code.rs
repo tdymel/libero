@@ -4,6 +4,7 @@
 use e2e::browser::block_on;
 use e2e::passes::{contrast, keyboard};
 use e2e::wait;
+use e2e::wait::PageBounded;
 use e2e::{Fixture, Suite, Viewport, ax};
 
 const COPY: &str = "#diff-block button";
@@ -79,11 +80,11 @@ fn code_stays_ltr_on_an_rtl_page() {
     block_on(async {
         let fixture = Fixture::open("/code", Viewport::Desktop).await.unwrap();
         let page = &fixture.page;
-        page.evaluate("document.documentElement.dir = 'rtl'")
+        page.evaluate_bounded("document.documentElement.dir = 'rtl'")
             .await
             .unwrap();
         let (direction, at_left, mirrored): (String, bool, bool) = page
-            .evaluate(RTL_LAYOUT)
+            .evaluate_bounded(RTL_LAYOUT)
             .await
             .unwrap()
             .into_value()
@@ -112,7 +113,7 @@ fn a_keyboard_copy_is_announced() {
         .await
         .unwrap();
         let name: String = page
-            .evaluate("document.activeElement.getAttribute('aria-label')")
+            .evaluate_bounded("document.activeElement.getAttribute('aria-label')")
             .await
             .unwrap()
             .into_value()
@@ -190,7 +191,7 @@ fn a_keyword_after_a_non_ascii_letter_is_highlighted_by_the_browsers_regexp() {
 
         let spans: Vec<(String, Option<String>)> = fixture
             .page
-            .evaluate(pieces("non-ascii-code"))
+            .evaluate_bounded(pieces("non-ascii-code"))
             .await
             .unwrap()
             .into_value()
@@ -230,7 +231,7 @@ fn a_nested_block_comment_is_one_comment_on_the_web() {
 
         let spans: Vec<(String, Option<String>)> = fixture
             .page
-            .evaluate(pieces("nested-comment-code"))
+            .evaluate_bounded(pieces("nested-comment-code"))
             .await
             .unwrap()
             .into_value()
@@ -381,7 +382,7 @@ fn a_short_code_span_keeps_its_token_whole() {
         let fixture = Fixture::open("/code", Viewport::Desktop).await.unwrap();
         let page = &fixture.page;
         let lines: i64 = page
-            .evaluate("document.querySelector('#short-code').getClientRects().length")
+            .evaluate_bounded("document.querySelector('#short-code').getClientRects().length")
             .await
             .unwrap()
             .into_value()
@@ -389,7 +390,7 @@ fn a_short_code_span_keeps_its_token_whole() {
         assert_eq!(lines, 1, "the short span broke across lines");
 
         let overflow: bool = page
-            .evaluate(
+            .evaluate_bounded(
                 "(() => { const t = document.querySelector('#long-code-text'); \
                  return t.scrollWidth > t.clientWidth \
                  || document.querySelector('#long-code').getClientRects().length < 2; })()",
@@ -439,7 +440,7 @@ fn the_row_pitch_follows_a_larger_default_font_size() {
     block_on(async {
         let fixture = Fixture::open("/code", Viewport::Desktop).await.unwrap();
         let page = &fixture.page;
-        page.evaluate("document.documentElement.style.fontSize = '32px'")
+        page.evaluate_bounded("document.documentElement.style.fontSize = '32px'")
             .await
             .unwrap();
         const PITCH: &str = r#"(() => {
@@ -492,7 +493,7 @@ fn a_code_blocks_line_numbers_are_hidden_from_readers() {
 
         let gutter: Vec<(String, Option<String>)> = fixture
             .page
-            .evaluate(GUTTER)
+            .evaluate_bounded(GUTTER)
             .await
             .unwrap()
             .into_value()

@@ -7,6 +7,7 @@ use e2e::browser::block_on;
 use e2e::driver::{Driver, eventually_focused, eventually_text};
 use e2e::passes::target_size::MINIMUM;
 use e2e::suite::Step;
+use e2e::wait::PageBounded;
 use e2e::{Fixture, Suite, Viewport, passes::keyboard};
 
 pub const RADIOS: &str = "[role=radiogroup] input[type=radio]";
@@ -129,7 +130,7 @@ fn an_unanswered_group_enters_at_the_first_enabled_option() {
         keyboard::tab_to(page, "button", 5).await.unwrap();
         keyboard::press(page, keyboard::TAB).await.unwrap();
         let entered: i64 = page
-            .evaluate(focused.clone())
+            .evaluate_bounded(focused.clone())
             .await
             .unwrap()
             .into_value()
@@ -179,7 +180,7 @@ fn a_circle_click_checks_and_focuses_the_radio() {
 async fn hovered_cursor(page: &chromiumoxide::Page, index: usize) -> String {
     let circle = format!("{RADIOS}[data-radio-index=\"{index}\"] + span");
     e2e::passes::pointer::hover(page, &circle).await.unwrap();
-    page.evaluate(format!(
+    page.evaluate_bounded(format!(
         "getComputedStyle(document.querySelector({circle:?})).cursor"
     ))
     .await
@@ -209,7 +210,7 @@ fn the_circle_shows_it_takes_a_click() {
         // Todo 3138: `pointer` at rest is a Tab stop under the Android WebView's spatial navigation.
         let resting: String = fixture
             .page
-            .evaluate(format!(
+            .evaluate_bounded(format!(
                 "getComputedStyle(document.querySelector({RADIOS:?}).parentElement).cursor"
             ))
             .await
@@ -263,7 +264,7 @@ fn its_rows_are_undersized_so_the_spacing_exception_is_load_bearing() {
             let fixture = Fixture::open("/radio-group", viewport).await.unwrap();
             let heights: Vec<f64> = fixture
                 .page
-                .evaluate(format!(
+                .evaluate_bounded(format!(
                     "[...document.querySelectorAll({ROWS:?})]\
                      .map(el => el.getBoundingClientRect().height)"
                 ))
@@ -302,7 +303,7 @@ fn the_checked_dot_shows_in_forced_colours() {
             .await
             .unwrap();
         let page = &fixture.page;
-        page.execute(
+        page.execute_bounded(
             SetEmulatedMediaParams::builder()
                 .features(vec![MediaFeature::new("forced-colors", "active")])
                 .build(),
@@ -317,7 +318,7 @@ fn the_checked_dot_shows_in_forced_colours() {
         .await
         .unwrap();
         let [dot, page_bg]: [String; 2] = page
-            .evaluate(
+            .evaluate_bounded(
                 "(() => {
                     const dot = document.querySelector('input[type=radio]:checked ~ span > span');
                     return [getComputedStyle(dot).backgroundColor,
@@ -344,7 +345,7 @@ fn a_disabled_circle_turns_gray_text_in_forced_colours() {
         let page = &fixture.page;
         e2e::browser::force_colours(page).await.unwrap();
         let [enabled, disabled, gray]: [String; 3] = page
-            .evaluate(format!(
+            .evaluate_bounded(format!(
                 "(() => {{
                     const probe = document.createElement('div');
                     probe.style.color = 'GrayText';

@@ -7,6 +7,7 @@ use e2e::browser::block_on;
 use e2e::driver::{Driver, eventually, eventually_focused};
 use e2e::suite::Step;
 use e2e::wait;
+use e2e::wait::PageBounded;
 use e2e::{
     Fixture, Suite, Viewport,
     passes::{focus, keyboard, pointer},
@@ -367,7 +368,7 @@ fn a_click_on_the_dialog_text_keeps_escape_and_the_trap() {
         for _ in 0..4 {
             keyboard::press_shift(page, keyboard::TAB).await.unwrap();
             let inside: bool = page
-                .evaluate(
+                .evaluate_bounded(
                     "document.querySelector('[role=dialog]').contains(document.activeElement)",
                 )
                 .await
@@ -524,11 +525,15 @@ e2e::scenario!(
 );
 
 async fn eval_bool(page: &chromiumoxide::Page, js: &str) -> bool {
-    page.evaluate(js).await.unwrap().into_value().unwrap()
+    page.evaluate_bounded(js)
+        .await
+        .unwrap()
+        .into_value()
+        .unwrap()
 }
 
 async fn dialog_count(page: &chromiumoxide::Page) -> i64 {
-    page.evaluate("document.querySelectorAll('[role=dialog]').length")
+    page.evaluate_bounded("document.querySelectorAll('[role=dialog]').length")
         .await
         .unwrap()
         .into_value()
@@ -678,7 +683,7 @@ fn the_scrollbar_and_the_wheel_beside_a_tall_dialog_scroll_it() {
         keyboard::press(page, keyboard::ENTER).await.unwrap();
         wait::for_visible(page, DIALOG).await.unwrap();
         let geometry: Vec<f64> = page
-            .evaluate(format!(
+            .evaluate_bounded(format!(
                 "(() => {{ const s = {SCROLLER}; const r = s.getBoundingClientRect(); \
                  const d = document.querySelector('[role=dialog]').getBoundingClientRect(); \
                  return [s.offsetWidth - s.clientWidth, s.scrollHeight - s.clientHeight, \
@@ -697,7 +702,7 @@ fn the_scrollbar_and_the_wheel_beside_a_tall_dialog_scroll_it() {
             "the dialog fits the viewport, nothing to scroll"
         );
         let scroll_top = async || -> f64 {
-            page.evaluate(format!("{SCROLLER}.scrollTop"))
+            page.evaluate_bounded(format!("{SCROLLER}.scrollTop"))
                 .await
                 .unwrap()
                 .into_value()
@@ -750,7 +755,7 @@ fn the_scrollbar_and_the_wheel_beside_a_tall_dialog_scroll_it() {
             .build()
             .unwrap();
         e2e::frames::in_front(page, async {
-            page.execute(beside).await?;
+            page.execute_bounded(beside).await?;
             Ok(())
         })
         .await
@@ -765,7 +770,7 @@ fn the_scrollbar_and_the_wheel_beside_a_tall_dialog_scroll_it() {
         .await;
         if let Err(error) = scrolled {
             let state: String = page
-                .evaluate(format!(
+                .evaluate_bounded(format!(
                     "(() => {{ const s = {SCROLLER}; const at = document.elementFromPoint({x}, {y}); \
                      return `scrollTop ${{s?.scrollTop}} of ${{s && s.scrollHeight - s.clientHeight}}, \
                      at the wheel ${{at?.outerHTML.slice(0, 80)}}`; }})()"
@@ -789,7 +794,7 @@ fn the_scrollbar_and_the_wheel_beside_a_tall_dialog_scroll_it() {
 /// locked page moved to show it (todo 1307).
 pub async fn assert_reachable(page: &chromiumoxide::Page, element: &str, what: &str) {
     let probe: String = page
-        .evaluate(format!(
+        .evaluate_bounded(format!(
             "(() => {{ const a = {element}; if (!a) return JSON.stringify({{missing: true}}); \
              a.scrollIntoView({{block: 'nearest'}}); const r = a.getBoundingClientRect(); \
              const locked = getComputedStyle(document.body).overflow === 'hidden'; const stuck = []; \
@@ -914,7 +919,7 @@ fn the_scroll_lock_keeps_the_scrollbar_gutter() {
             .unwrap();
         let gutter: f64 = hidden
             .page
-            .evaluate(GUTTER)
+            .evaluate_bounded(GUTTER)
             .await
             .unwrap()
             .into_value()
@@ -927,13 +932,24 @@ fn the_scroll_lock_keeps_the_scrollbar_gutter() {
             .unwrap();
         let page = &fixture.page;
         // The page's own padding, which the lock adds to rather than replaces.
-        page.evaluate("document.documentElement.style.paddingRight = '8px'")
+        page.evaluate_bounded("document.documentElement.style.paddingRight = '8px'")
             .await
             .unwrap();
         const WIDTH: &str = "document.querySelector('#ruler').getBoundingClientRect().width";
-        let width = async || -> f64 { page.evaluate(WIDTH).await.unwrap().into_value().unwrap() };
+        let width = async || -> f64 {
+            page.evaluate_bounded(WIDTH)
+                .await
+                .unwrap()
+                .into_value()
+                .unwrap()
+        };
         let before = width().await;
-        let gutter: f64 = page.evaluate(GUTTER).await.unwrap().into_value().unwrap();
+        let gutter: f64 = page
+            .evaluate_bounded(GUTTER)
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
         assert!(gutter > 0.0, "no classic scrollbar to test with");
         let (w, _) = Viewport::Desktop.size();
         let (strip_x, backdrop_x) = (w as f64 - 2.0, w as f64 - gutter - 20.0);
@@ -980,7 +996,7 @@ fn the_scroll_lock_keeps_the_scrollbar_gutter() {
         .unwrap();
         assert_eq!(width().await, before, "the page shifted on close");
         let padding: String = page
-            .evaluate("document.documentElement.style.paddingRight")
+            .evaluate_bounded("document.documentElement.style.paddingRight")
             .await
             .unwrap()
             .into_value()

@@ -13,6 +13,7 @@ use e2e::driver::{
     Driver, Host, Platform, eventually, eventually_answered, eventually_text, record_outcome,
 };
 use e2e::passes::pointer;
+use e2e::wait::PageBounded;
 use e2e::{Fixture, Viewport, wait};
 
 /// Nothing prompts until asked; elsewhere than the web, push is unsupported.
@@ -133,7 +134,7 @@ e2e::scenario!(
 
 async fn set_permission(page: &Page, setting: PermissionSetting) -> Result<()> {
     let descriptor = PermissionDescriptor::new("notifications");
-    page.execute(SetPermissionParams::new(descriptor, setting))
+    page.execute_bounded(SetPermissionParams::new(descriptor, setting))
         .await?;
     Ok(())
 }
@@ -165,7 +166,7 @@ fn the_web_shows_closes_and_reports_a_denial() {
         reads(page, "#pending", "false").await.unwrap();
         reads(page, "#error", "None").await.unwrap();
         // Keeps each shown notification so a click can be dispatched on it, and counts closes.
-        page.evaluate(
+        page.evaluate_bounded(
             "window.shown = []; window.closes = 0; window.focused = 0;
             window.focus = () => window.focused++;
             window.Notification = class extends Notification {
@@ -181,12 +182,12 @@ fn the_web_shows_closes_and_reports_a_denial() {
             .await
             .unwrap();
         reads(page, "#error", "None").await.unwrap();
-        page.evaluate("window.shown.at(-1).dispatchEvent(new Event('click'))")
+        page.evaluate_bounded("window.shown.at(-1).dispatchEvent(new Event('click'))")
             .await
             .unwrap();
         reads(page, "#clicks", "1").await.unwrap();
         let focused = page
-            .evaluate("window.focused")
+            .evaluate_bounded("window.focused")
             .await
             .unwrap()
             .into_value::<u32>()
@@ -214,7 +215,7 @@ fn the_web_shows_closes_and_reports_a_denial() {
         reads(page, "#push-error", "Some(Denied)").await.unwrap();
         reads(page, "#push-pending", "false").await.unwrap();
         let registered = page
-            .evaluate("navigator.serviceWorker.getRegistration().then((r) => !!r)")
+            .evaluate_bounded("navigator.serviceWorker.getRegistration().then((r) => !!r)")
             .await
             .unwrap()
             .into_value::<bool>()
@@ -230,7 +231,7 @@ fn the_web_shows_closes_and_reports_a_denial() {
         // As in Chrome on Android, where the constructor throws. The worker calls are
         // recorded: whether the browser lists a shown notification again is its own
         // timing (todo 2626), so the token comes from the call, not from `getNotifications`.
-        page.evaluate(
+        page.evaluate_bounded(
             "window.focused = 0; window.focus = () => window.focused++;
             window.Notification = class extends Notification {
                 constructor() { throw new TypeError('Illegal constructor'); }
@@ -285,11 +286,11 @@ fn the_web_shows_closes_and_reports_a_denial() {
                     new MessageEvent('message', {{ data: {{ libero: {libero}, event: 'click' }} }})))"
             )
         };
-        page.evaluate(post("'another'")).await.unwrap();
-        page.evaluate(post("token")).await.unwrap();
+        page.evaluate_bounded(post("'another'")).await.unwrap();
+        page.evaluate_bounded(post("token")).await.unwrap();
         reads(page, "#clicks", "2").await.unwrap();
         let focused = page
-            .evaluate("window.focused")
+            .evaluate_bounded("window.focused")
             .await
             .unwrap()
             .into_value::<u32>()
@@ -305,7 +306,7 @@ fn the_web_shows_closes_and_reports_a_denial() {
         )
         .await
         .unwrap();
-        page.evaluate(format!(
+        page.evaluate_bounded(format!(
             "{latest}.then((token) => navigator.serviceWorker.dispatchEvent(
                 new MessageEvent('message', {{ data: {{ libero: token, event: 'action', action: 'retry' }} }})))"
         ))
@@ -314,7 +315,7 @@ fn the_web_shows_closes_and_reports_a_denial() {
         reads(page, "#action", "retry").await.unwrap();
         reads(page, "#clicks", "2").await.unwrap();
 
-        page.evaluate("window.listed = 0").await.unwrap();
+        page.evaluate_bounded("window.listed = 0").await.unwrap();
         click(page, "#close").await;
         wait::for_js_true(
             page,
@@ -331,7 +332,7 @@ fn the_web_shows_closes_and_reports_a_denial() {
         // The display is proven by `showNotification` resolving above; the browser's listing
         // is its own timing (todo 2626), so a close is checked on whatever the lookup listed.
         let closed = page
-            .evaluate("window.matched === window.workerCloses")
+            .evaluate_bounded("window.matched === window.workerCloses")
             .await
             .unwrap()
             .into_value::<bool>()

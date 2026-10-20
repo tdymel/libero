@@ -2,6 +2,7 @@
 //! reduced motion wins over them in libero's CSS (954) and is kept (981).
 
 use e2e::browser::{Scheme, block_on, emulate_media};
+use e2e::wait::PageBounded;
 use e2e::{Fixture, Viewport, wait};
 
 /// Test pages share one profile, so a kept `reduce` would leak into later fixtures.
@@ -26,7 +27,7 @@ fn shield_storage(kept: Option<&str>) -> String {
 
 /// What libero tried to keep, and what reached the real store.
 async fn kept(page: &chromiumoxide::Page) -> (Vec<String>, Option<String>) {
-    page.evaluate("[window.__stored, window.__realStorage.getItem('lsx-reduced-motion')]")
+    page.evaluate_bounded("[window.__stored, window.__realStorage.getItem('lsx-reduced-motion')]")
         .await
         .unwrap()
         .into_value()
@@ -47,7 +48,7 @@ async fn wait_for(page: &chromiumoxide::Page, motion: &str, width: &str) {
 }
 
 async fn click(page: &chromiumoxide::Page, id: &str) {
-    page.evaluate(format!("document.querySelector('#{id}').click()"))
+    page.evaluate_bounded(format!("document.querySelector('#{id}').click()"))
         .await
         .unwrap();
 }
@@ -59,7 +60,7 @@ fn reduced_motion_follows_the_browser_until_forced() {
             .await
             .unwrap();
         let page = &fixture.page;
-        page.evaluate(shield_storage(None)).await.unwrap();
+        page.evaluate_bounded(shield_storage(None)).await.unwrap();
         emulate_media(page, Scheme::Light, Some(false))
             .await
             .unwrap();
@@ -106,7 +107,7 @@ fn a_kept_choice_wins_after_a_reload() {
             .unwrap();
         wait_for(page, "no-preference", "10px").await;
 
-        page.evaluate_on_new_document(shield_storage(Some("reduce")))
+        page.evaluate_on_new_document_bounded(shield_storage(Some("reduce")))
             .await
             .unwrap();
         page.reload().await.unwrap();

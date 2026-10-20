@@ -1,6 +1,7 @@
 //! `List`: a nested list takes the indent of the list it sits in.
 
 use e2e::browser::block_on;
+use e2e::wait::PageBounded;
 use e2e::{Fixture, Suite, Viewport, wait};
 
 #[test]
@@ -23,10 +24,15 @@ fn an_icon_floats_and_a_long_word_wraps_beside_it() {
              const column = li.parentElement.getBoundingClientRect(); \
              return [getComputedStyle(li.querySelector('[data-slot=icon]')).float, \
                      body.left >= icon.right, body.top < icon.bottom, body.right <= column.right + 1].join(); })()";
-        let ltr: String = page.evaluate(READ).await.unwrap().into_value().unwrap();
+        let ltr: String = page
+            .evaluate_bounded(READ)
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
         assert_eq!(ltr, "left,true,true,true");
 
-        page.evaluate("document.documentElement.dir = 'rtl'")
+        page.evaluate_bounded("document.documentElement.dir = 'rtl'")
             .await
             .unwrap();
         let float = "getComputedStyle(document.querySelector('#long-item [data-slot=icon]')).float";
@@ -46,7 +52,7 @@ fn a_nested_list_is_indented_by_its_parent_list_only() {
         wait::for_visible(page, "#inner").await.unwrap();
 
         let indents: Vec<String> = page
-            .evaluate(
+            .evaluate_bounded(
                 "['#outer', '#middle', '#inner', '#raw', '#iconed'].map(id => \
                    getComputedStyle(document.querySelector(id)).paddingInlineStart)",
             )

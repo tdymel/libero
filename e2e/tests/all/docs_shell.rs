@@ -2,6 +2,7 @@
 //! through the docs' own file.
 
 use e2e::browser::block_on;
+use e2e::wait::PageBounded;
 use e2e::{Fixture, Viewport, wait};
 
 #[test]
@@ -13,13 +14,13 @@ fn a_navigation_focuses_the_new_heading_but_a_load_does_not() {
         let page = &fixture.page;
         wait::for_visible(page, "#to-b").await.unwrap();
         let focused: String = page
-            .evaluate("document.activeElement.tagName")
+            .evaluate_bounded("document.activeElement.tagName")
             .await
             .unwrap()
             .into_value()
             .unwrap();
         assert_eq!(focused, "BODY", "the first render moved focus");
-        page.evaluate("document.querySelector('#to-b').click()")
+        page.evaluate_bounded("document.querySelector('#to-b').click()")
             .await
             .unwrap();
         wait::for_js_true(
@@ -46,7 +47,7 @@ fn a_navigation_starts_the_new_page_at_the_top() {
             .unwrap();
         let page = &fixture.page;
         wait::for_visible(page, "#to-b").await.unwrap();
-        page.evaluate(
+        page.evaluate_bounded(
             "document.querySelectorAll('#page-area, #page-area *').forEach((e) => e.scrollTop = 600)",
         )
         .await
@@ -54,7 +55,7 @@ fn a_navigation_starts_the_new_page_at_the_top() {
         wait::for_js_true(page, &format!("{AREA_SCROLL} >= 600"), "the area to scroll")
             .await
             .unwrap();
-        page.evaluate("document.querySelector('#to-b').click()")
+        page.evaluate_bounded("document.querySelector('#to-b').click()")
             .await
             .unwrap();
         wait::for_js_true(
@@ -78,7 +79,7 @@ fn a_section_navigation_lands_on_the_section() {
             .unwrap();
         let page = &fixture.page;
         wait::for_visible(page, "#to-far").await.unwrap();
-        page.evaluate("document.querySelector('#to-far').click()")
+        page.evaluate_bounded("document.querySelector('#to-far').click()")
             .await
             .unwrap();
         wait::for_js_true(

@@ -5,6 +5,7 @@
 use anyhow::{Result, bail, ensure};
 use e2e::driver::{Driver, Platform, Rect, eventually, eventually_focused, eventually_text};
 use e2e::passes::keyboard;
+use e2e::wait::PageBounded;
 
 const ORDER: &str = "#order";
 
@@ -554,7 +555,7 @@ fn a_windowed_row_held_at_the_bottom_edge_scrolls_on() {
             .unwrap();
         let page = &fixture.page;
         let bottom: f64 = page
-            .evaluate(format!("{AREA}.getBoundingClientRect().bottom"))
+            .evaluate_bounded(format!("{AREA}.getBoundingClientRect().bottom"))
             .await
             .unwrap()
             .into_value()
@@ -602,7 +603,7 @@ fn a_windowed_row_held_above_the_footer_scrolls_on() {
             .unwrap();
         let page = &fixture.page;
         let foot_top: f64 = page
-            .evaluate("document.querySelector('tfoot td').getBoundingClientRect().top")
+            .evaluate_bounded("document.querySelector('tfoot td').getBoundingClientRect().top")
             .await
             .unwrap()
             .into_value()
@@ -882,6 +883,8 @@ mod a_deep_windowed_drag_keeps_the_table_size {
     #[cfg(feature = "android")]
     #[test]
     fn android() {
+        use e2e::wait::PageBounded;
+
         e2e::android::block_on(async {
             const AREA: &str = "document.querySelector('[data-table-scroll]')";
             const HANDLE: &str = "[aria-label=\"Reorder Row 1002\"]";
@@ -901,7 +904,7 @@ mod a_deep_windowed_drag_keeps_the_table_size {
             .await
             .unwrap();
             // Every frame's body height, until 40 frames after the drop.
-            page.evaluate(format!(
+            page.evaluate_bounded(format!(
                 "(() => {{ const body = {AREA}.querySelector('tbody'), moves = document.querySelector('#moves');
                   const heights = window.__heights = []; let after = 0;
                   const frame = () => {{
@@ -925,13 +928,13 @@ mod a_deep_windowed_drag_keeps_the_table_size {
             .await
             .unwrap();
             let heights: Vec<f64> = page
-                .evaluate("window.__heights")
+                .evaluate_bounded("window.__heights")
                 .await
                 .unwrap()
                 .into_value()
                 .unwrap();
             let moves: String = page
-                .evaluate("document.querySelector('#moves').textContent")
+                .evaluate_bounded("document.querySelector('#moves').textContent")
                 .await
                 .unwrap()
                 .into_value()
@@ -968,7 +971,7 @@ fn a_grip_held_at_the_region_edge_scrolls_to_the_last_gap() {
             .unwrap();
         let page = &fixture.page;
         let ends: Vec<f64> = page
-            .evaluate(format!("[{REGION}.right, {ORIGIN}.right]"))
+            .evaluate_bounded(format!("[{REGION}.right, {ORIGIN}.right]"))
             .await
             .unwrap()
             .into_value()
@@ -1024,7 +1027,7 @@ fn the_ghost_and_the_drop_line_show_mid_drag() {
         pointer::drag_held(page, from, origin, 8).await.unwrap();
         // Hit-testable for the probe only: both are `pointer-events: none`.
         let state: String = page
-            .evaluate(
+            .evaluate_bounded(
                 "(() => { const top = s => { const el = document.querySelector(s); \
                  if (!el) return 'missing'; const r = el.getBoundingClientRect(); \
                  el.style.pointerEvents = 'auto'; \

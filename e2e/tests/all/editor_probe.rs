@@ -9,6 +9,7 @@ use chromiumoxide::cdp::browser_protocol::input::{
 use chromiumoxide::cdp::js_protocol::runtime::EvaluateParams;
 use e2e::browser::block_on;
 use e2e::passes::keyboard::{self, BACKSPACE, CTRL, ENTER, Key};
+use e2e::wait::PageBounded;
 use e2e::{Fixture, Viewport, clock, wait};
 
 const KEY_B: Key = Key {
@@ -20,7 +21,7 @@ const KEY_B: Key = Key {
 
 async fn log(page: &Page) -> Vec<String> {
     let text: String = page
-        .evaluate("document.getElementById('log').textContent")
+        .evaluate_bounded("document.getElementById('log').textContent")
         .await
         .unwrap()
         .into_value()
@@ -29,7 +30,7 @@ async fn log(page: &Page) -> Vec<String> {
 }
 
 async fn editor_text(page: &Page) -> String {
-    page.evaluate("document.getElementById('editor').innerText")
+    page.evaluate_bounded("document.getElementById('editor').innerText")
         .await
         .unwrap()
         .into_value()
@@ -37,7 +38,7 @@ async fn editor_text(page: &Page) -> String {
 }
 
 async fn focus_editor(page: &Page) {
-    page.evaluate("document.getElementById('editor').focus()")
+    page.evaluate_bounded("document.getElementById('editor').focus()")
         .await
         .unwrap();
 }
@@ -49,7 +50,7 @@ async fn paste(page: &Page, text: &str) {
          document.body.append(t); t.select(); const ok = document.execCommand('copy'); \
          t.remove(); return ok; }})()"
     );
-    page.evaluate(
+    page.evaluate_bounded(
         EvaluateParams::builder()
             .expression(copy)
             .user_gesture(true)
@@ -63,7 +64,7 @@ async fn paste(page: &Page, text: &str) {
         DispatchKeyEventType::RawKeyDown,
         DispatchKeyEventType::KeyUp,
     ] {
-        page.execute(
+        page.execute_bounded(
             DispatchKeyEventParams::builder()
                 .r#type(kind.clone())
                 .key("v")
@@ -101,7 +102,7 @@ fn editing_events_reach_rust_and_cancel() {
 
         for cancel in [false, true] {
             if cancel {
-                page.evaluate(
+                page.evaluate_bounded(
                     "document.getElementById('cancel').click(); \
                      document.getElementById('editor').textContent = ''",
                 )
@@ -115,25 +116,25 @@ fn editing_events_reach_rust_and_cancel() {
             keyboard::press(page, BACKSPACE).await.unwrap();
             keyboard::press(page, ENTER).await.unwrap();
             keyboard::type_text(page, "c").await.unwrap();
-            page.evaluate(
+            page.evaluate_bounded(
                 "(() => { const s = getSelection(); s.selectAllChildren(document.getElementById('editor')); })()",
             )
             .await
             .unwrap();
             keyboard::press_with(page, KEY_B, CTRL).await.unwrap();
-            page.evaluate("getSelection().collapseToEnd()")
+            page.evaluate_bounded("getSelection().collapseToEnd()")
                 .await
                 .unwrap();
             paste(page, "pasted").await;
-            page.evaluate(SYNTHETIC_PASTE).await.unwrap();
+            page.evaluate_bounded(SYNTHETIC_PASTE).await.unwrap();
             focus_editor(page).await;
-            page.evaluate("getSelection().selectAllChildren(document.getElementById('editor')); getSelection().collapseToEnd()")
+            page.evaluate_bounded("getSelection().selectAllChildren(document.getElementById('editor')); getSelection().collapseToEnd()")
                 .await
                 .unwrap();
-            page.execute(ImeSetCompositionParams::new("に", 1, 1))
+            page.execute_bounded(ImeSetCompositionParams::new("に", 1, 1))
                 .await
                 .unwrap();
-            page.execute(ImeSetCompositionParams::new("にほ", 2, 2))
+            page.execute_bounded(ImeSetCompositionParams::new("にほ", 2, 2))
                 .await
                 .unwrap();
             keyboard::insert_text(page, "日本").await.unwrap();
@@ -161,7 +162,7 @@ fn editing_events_reach_rust_and_cancel() {
             let lines = log(page).await.split_off(before);
             let text = editor_text(page).await;
             let bold: bool = page
-                .evaluate("!!document.querySelector('#editor b, #editor strong')")
+                .evaluate_bounded("!!document.querySelector('#editor b, #editor strong')")
                 .await
                 .unwrap()
                 .into_value()
@@ -229,10 +230,10 @@ fn highlight_cost_per_keystroke() {
                 let set = format!(
                     "(() => {{ const c = document.getElementById('rust'); if (c.checked !== {rust}) c.click(); }})()"
                 );
-                page.evaluate(set).await.unwrap();
+                page.evaluate_bounded(set).await.unwrap();
                 clock::settle(page).await.unwrap();
                 let ms: f64 = page
-                    .evaluate(format!("({MEASURE})({lines}, 30)"))
+                    .evaluate_bounded(format!("({MEASURE})({lines}, 30)"))
                     .await
                     .unwrap()
                     .into_value()

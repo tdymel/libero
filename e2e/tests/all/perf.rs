@@ -8,17 +8,20 @@ use std::time::{Duration, Instant};
 use chromiumoxide::Page;
 use e2e::browser::block_on;
 use e2e::passes::{keyboard, pointer};
+use e2e::wait::PageBounded;
 use e2e::{Fixture, Viewport, clock, wait};
 
 type Renders = BTreeMap<String, u32>;
 
 async fn reset(page: &Page) {
-    page.evaluate("window.__lsxRendersReset()").await.unwrap();
+    page.evaluate_bounded("window.__lsxRendersReset()")
+        .await
+        .unwrap();
 }
 
 async fn read(page: &Page) -> Renders {
     let json: String = page
-        .evaluate("window.__lsxRenders()")
+        .evaluate_bounded("window.__lsxRenders()")
         .await
         .unwrap()
         .into_value()
@@ -41,7 +44,7 @@ async fn settled(page: &Page, what: &str) -> Renders {
         clock::frame(page).await.unwrap();
         let now = read(page).await;
         let animating: bool = page
-            .evaluate(ANIMATING)
+            .evaluate_bounded(ANIMATING)
             .await
             .unwrap()
             .into_value()
@@ -185,7 +188,7 @@ fn a_select_pick_stays_in_budget() {
             "opening a select of five",
         );
         reset(page).await;
-        page.evaluate(
+        page.evaluate_bounded(
             "[...document.querySelectorAll('[role=option]')].find((o) => o.textContent.trim() === 'Cherry').setAttribute('data-e2e', 'cherry')",
         )
         .await
@@ -230,7 +233,7 @@ fn a_multi_select_pick_stays_in_budget() {
         wait::for_visible(page, "[role=option]").await.unwrap();
         settled(page, "opening the multi-select").await;
         reset(page).await;
-        page.evaluate(
+        page.evaluate_bounded(
             "[...document.querySelectorAll('[role=option]')].find((o) => o.textContent.trim() === 'Cherry').setAttribute('data-e2e', 'cherry')",
         )
         .await
@@ -549,7 +552,7 @@ fn scrolling_a_virtual_list_stays_in_budget() {
         let fixture = open("/perf/scroll").await;
         let page = &fixture.page;
         for step in 1..=10 {
-            page.evaluate(format!("{AREA}.scrollTop = {}", step * 200))
+            page.evaluate_bounded(format!("{AREA}.scrollTop = {}", step * 200))
                 .await
                 .unwrap();
             let row = step * 10 + 5;
@@ -935,7 +938,7 @@ impl Act {
         match self {
             Act::Click(selector) => pointer::click(page, selector).await,
             Act::Nth(selector, n) => {
-                page.evaluate(format!(
+                page.evaluate_bounded(format!(
                     "(() => {{ document.querySelectorAll('[data-e2e-nth]').forEach((e) => e.removeAttribute('data-e2e-nth')); \
                      const e = document.querySelectorAll({selector:?})[{n}]; \
                      e.setAttribute('data-e2e-nth', ''); e.scrollIntoView({{ block: 'center' }}); }})()"
@@ -947,7 +950,7 @@ impl Act {
             }
             Act::Hover(selector) => pointer::hover(page, selector).await,
             Act::Focus(selector) => {
-                page.evaluate(format!("document.querySelector({selector:?}).focus()"))
+                page.evaluate_bounded(format!("document.querySelector({selector:?}).focus()"))
                     .await?;
                 Ok(())
             }
@@ -1377,7 +1380,8 @@ fn survey() {
                         settled(page, s.0).await;
                         reset(page).await;
                         step(page, s).await?;
-                        let running: String = page.evaluate(ANIMATIONS).await?.into_value()?;
+                        let running: String =
+                            page.evaluate_bounded(ANIMATIONS).await?.into_value()?;
                         if !running.is_empty() {
                             println!("animations | {} | {} | {running}", case.component, s.0);
                         }
@@ -1399,7 +1403,7 @@ fn survey() {
 async fn mount_cases(page: &Page) -> Vec<String> {
     let only = std::env::var("PERF_CASE").ok();
     let all: Vec<String> = page
-        .evaluate("[...document.querySelectorAll('[id^=m-]')].map((b) => b.id.slice(2))")
+        .evaluate_bounded("[...document.querySelectorAll('[id^=m-]')].map((b) => b.id.slice(2))")
         .await
         .unwrap()
         .into_value()
@@ -1514,13 +1518,23 @@ fn mount_survey() {
             for pass in 0..2 {
                 mount(page, None).await.unwrap();
                 settled(page, "unmount").await;
-                let before: u32 = page.evaluate(NODES).await.unwrap().into_value().unwrap();
+                let before: u32 = page
+                    .evaluate_bounded(NODES)
+                    .await
+                    .unwrap()
+                    .into_value()
+                    .unwrap();
                 reset(page).await;
                 mount(page, Some(&stem)).await.unwrap();
                 let renders = settled(page, &stem).await;
-                let after: u32 = page.evaluate(NODES).await.unwrap().into_value().unwrap();
+                let after: u32 = page
+                    .evaluate_bounded(NODES)
+                    .await
+                    .unwrap()
+                    .into_value()
+                    .unwrap();
                 let shape: String = page
-                    .evaluate(MOUNTED_SHAPE)
+                    .evaluate_bounded(MOUNTED_SHAPE)
                     .await
                     .unwrap()
                     .into_value()
@@ -1647,6 +1661,7 @@ pub(crate) mod timing {
 
     pub(crate) use e2e::timing::quiet;
     use e2e::timing::{delta_ms, metrics};
+    use e2e::wait::PageBounded;
 
     pub(crate) struct Rows(BTreeMap<&'static str, Vec<Rep>>);
 
@@ -1659,14 +1674,14 @@ pub(crate) mod timing {
         let mut rows = Rows(BTreeMap::new());
         for i in 0..WARM_UP + reps {
             quiet(page).await?;
-            page.evaluate("window.__timing.reset()").await?;
+            page.evaluate_bounded("window.__timing.reset()").await?;
             let before = metrics(page).await?;
             let row = act(i).await?;
             quiet(page).await?;
             let after = metrics(page).await?;
             let seen: Seen = serde_json::from_str(
                 &page
-                    .evaluate("window.__timing.read()")
+                    .evaluate_bounded("window.__timing.read()")
                     .await?
                     .into_value::<String>()?,
             )?;
@@ -1806,13 +1821,13 @@ pub(crate) mod timing {
         let page = &fixture.page;
         let front = frames::bring_to_front(page).await.unwrap();
         let outcome = async {
-            page.execute(EnableParams::default()).await?;
+            page.execute_bounded(EnableParams::default()).await?;
             // `PERF_THROTTLE=4`: a slower CPU, as DevTools' 4x slowdown (todo 2234).
             if let Ok(rate) = std::env::var("PERF_THROTTLE") {
-                page.execute(SetCpuThrottlingRateParams::new(rate.parse::<f64>()?))
+                page.execute_bounded(SetCpuThrottlingRateParams::new(rate.parse::<f64>()?))
                     .await?;
             }
-            page.evaluate(RECORDER).await?;
+            page.evaluate_bounded(RECORDER).await?;
             run(page).await
         }
         .await;
@@ -1826,7 +1841,7 @@ pub(crate) mod timing {
         page: &Page,
         expression: &str,
     ) -> Result<T> {
-        Ok(page.evaluate(expression).await?.into_value()?)
+        Ok(page.evaluate_bounded(expression).await?.into_value()?)
     }
 
     /// The first element under `#pane` that scrolls.
@@ -1843,7 +1858,7 @@ pub(crate) mod timing {
         measure(page, reps, async |i| {
             let down = i < total / 2;
             let before: f64 = js(page, &format!("{SCROLLER}.scrollTop")).await?;
-            page.execute(
+            page.execute_bounded(
                 DispatchMouseEventParams::builder()
                     .r#type(DispatchMouseEventType::MouseWheel)
                     .x(at.x)
@@ -2185,7 +2200,7 @@ pub(crate) mod timing {
         let config = TraceConfig::builder()
             .included_categories(vec!["devtools.timeline".to_string()])
             .build();
-        page.execute(
+        page.execute_bounded(
             StartParams::builder()
                 .trace_config(config)
                 .transfer_mode(StartTransferMode::ReportEvents)
@@ -2196,7 +2211,7 @@ pub(crate) mod timing {
             act(i).await?;
             quiet(page).await?;
         }
-        page.execute(EndParams::default()).await?;
+        page.execute_bounded(EndParams::default()).await?;
         complete.next().await;
         let frame = page.mainframe().await?.context("no main frame")?;
         let (mut restyled, mut dirtied) = (0.0, 0.0);
@@ -2273,7 +2288,7 @@ pub(crate) mod timing {
                 "disabled-by-default-devtools.timeline".to_string(),
             ])
             .build();
-        page.execute(
+        page.execute_bounded(
             StartParams::builder()
                 .trace_config(config)
                 .transfer_mode(StartTransferMode::ReportEvents)
@@ -2281,7 +2296,7 @@ pub(crate) mod timing {
         )
         .await?;
         act().await?;
-        page.execute(EndParams::default()).await?;
+        page.execute_bounded(EndParams::default()).await?;
         complete.next().await;
         let frame = page.mainframe().await?.context("no main frame")?;
         let (mut started, mut seen) = (0.0, Vec::new());
@@ -2318,7 +2333,7 @@ pub(crate) mod timing {
                 timed(&format!("/timing/{}", case.stem), async |page| {
                     // Extra CSS for an ablation, e.g. `*, ::after { animation: none !important }`.
                     if let Ok(css) = std::env::var("PERF_CSS") {
-                        page.evaluate(format!(
+                        page.evaluate_bounded(format!(
                             "document.head.insertAdjacentHTML('beforeend', {:?})",
                             format!("<style>{css}</style>")
                         ))

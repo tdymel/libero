@@ -6,6 +6,7 @@ use chromiumoxide::Page;
 use e2e::browser::block_on;
 use e2e::driver::{Driver, eventually_focused};
 use e2e::passes::{focus, keyboard};
+use e2e::wait::PageBounded;
 use e2e::{Fixture, Viewport, ax, wait};
 
 /// Arrow Down enters the picker on the typed day, not on the grid cell the
@@ -134,7 +135,7 @@ fn the_stats_section_is_named_by_a_hidden_h2() {
             .unwrap();
 
         let facts: Vec<Option<String>> = page
-            .evaluate(
+            .evaluate_bounded(
                 "(() => { const s = document.querySelector('section'); \
                  const h = document.getElementById(s.getAttribute('aria-labelledby')); \
                  const r = h.firstElementChild.getBoundingClientRect(); \

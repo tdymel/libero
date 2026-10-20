@@ -8,6 +8,7 @@ use e2e::clock;
 use e2e::driver::{Driver, eventually, eventually_focused};
 use e2e::passes::{focus, keyboard, pointer};
 use e2e::suite::Step;
+use e2e::wait::PageBounded;
 use e2e::{Fixture, Suite, Viewport, wait};
 
 async fn shown<D: Driver>(d: &mut D, selector: &str, open: bool, after: &str) -> Result<()> {
@@ -541,7 +542,7 @@ fn the_text_stop_ring_shows_at_200_percent_text_dark_and_in_forced_colours() {
                 .await
                 .unwrap();
             let page = &fixture.page;
-            page.evaluate("document.documentElement.style.fontSize = '200%'")
+            page.evaluate_bounded("document.documentElement.style.fontSize = '200%'")
                 .await
                 .unwrap();
             if dark {
@@ -566,7 +567,12 @@ fn the_text_stop_ring_shows_at_200_percent_text_dark_and_in_forced_colours() {
                 .await
                 .unwrap();
 
-            let ring: StopRing = page.evaluate(PROBE).await.unwrap().into_value().unwrap();
+            let ring: StopRing = page
+                .evaluate_bounded(PROBE)
+                .await
+                .unwrap()
+                .into_value()
+                .unwrap();
             assert!(ring.padding >= 2.0, "{what}: text under the ring band");
             assert!(
                 ring.inside_card,
@@ -620,7 +626,7 @@ fn disabling_a_hover_card_keeps_a_focused_trigger() {
             .unwrap();
         let page = &fixture.page;
         keyboard::tab_to(page, "#trigger", 5).await.unwrap();
-        page.evaluate("window.__trigger = document.getElementById('trigger')")
+        page.evaluate_bounded("window.__trigger = document.getElementById('trigger')")
             .await
             .unwrap();
         keyboard::press(page, keyboard::ENTER).await.unwrap();
@@ -942,7 +948,10 @@ fn the_start_side_and_align_follow_the_direction() {
                 rtl = dir == "rtl"
             );
             wait::until(&format!("{dir}: the cards placed"), || async {
-                let sides: Sides = page.evaluate(expression.as_str()).await?.into_value()?;
+                let sides: Sides = page
+                    .evaluate_bounded(expression.as_str())
+                    .await?
+                    .into_value()?;
                 Ok(sides.on_start && sides.start_aligned)
             })
             .await

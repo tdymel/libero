@@ -1,6 +1,7 @@
 //! Shared field props and the removable chip (todo 449 review).
 
 use e2e::browser::block_on;
+use e2e::wait::PageBounded;
 use e2e::{Fixture, Viewport, wait};
 
 use crate::rtl_keys::open_in;
@@ -14,7 +15,7 @@ fn read_only_fields_stay_reachable_and_are_not_disabled() {
             .unwrap();
         let bad: Vec<String> = fixture
             .page
-            .evaluate(
+            .evaluate_bounded(
                 "[...document.querySelectorAll('#text, #area, #rating, #range-label-thumb-0, #range-label-thumb-1, #cascader, #date')] \
                  .filter(e => e.tabIndex !== 0 || e.disabled || e.getAttribute('aria-disabled') === 'true' \
                      || !(e.readOnly || e.getAttribute('aria-readonly') === 'true')).map(e => e.id)",
@@ -63,7 +64,9 @@ fn removing_a_chip_is_announced() {
             .unwrap();
         fixture
             .page
-            .evaluate("document.querySelector(\"button[aria-label='Remove rust']\").click()")
+            .evaluate_bounded(
+                "document.querySelector(\"button[aria-label='Remove rust']\").click()",
+            )
             .await
             .unwrap();
         wait::for_js_true(

@@ -2,6 +2,7 @@
 
 use e2e::browser::block_on;
 use e2e::passes::{keyboard, pointer};
+use e2e::wait::PageBounded;
 use e2e::{Fixture, Suite, Viewport, ax, wait};
 
 const BARE: &str = "#bare button";
@@ -39,7 +40,7 @@ fn a_press_is_announced_and_leaving_resets_it() {
         .await
         .unwrap();
         let name: String = page
-            .evaluate("document.activeElement.getAttribute('aria-label')")
+            .evaluate_bounded("document.activeElement.getAttribute('aria-label')")
             .await
             .unwrap()
             .into_value()
@@ -47,7 +48,7 @@ fn a_press_is_announced_and_leaving_resets_it() {
         assert_eq!(name, "Copy the install command");
 
         // A second copy resets and announces again: the status empties, then fills.
-        page.evaluate(
+        page.evaluate_bounded(
             "window.__mutations = 0; new MutationObserver(r => window.__mutations += r.length) \
              .observe(document.querySelector('#named [role=status]'), \
              { childList: true, characterData: true, subtree: true })",
@@ -81,7 +82,7 @@ fn a_press_is_announced_and_leaving_resets_it() {
         .await
         .unwrap();
         let bare_name: String = page
-            .evaluate(format!(
+            .evaluate_bounded(format!(
                 "document.querySelector('{BARE}').getAttribute('aria-label')"
             ))
             .await
@@ -112,7 +113,7 @@ fn a_missing_clipboard_announces_the_failure() {
         let fixture = Fixture::open("/copy", Viewport::Desktop).await.unwrap();
         let page = &fixture.page;
 
-        page.evaluate(
+        page.evaluate_bounded(
             "(() => { Object.defineProperty(Navigator.prototype, 'clipboard', \
              { get: () => undefined, configurable: true }); return true; })()",
         )
@@ -145,7 +146,7 @@ fn a_disabled_copy_cannot_be_focused() {
         let page = &fixture.page;
 
         let unfocusable: bool = page
-            .evaluate(
+            .evaluate_bounded(
                 "(() => { const b = document.querySelector('#off button'); \
                  b.focus(); return b.disabled && document.activeElement !== b; })()",
             )

@@ -4,6 +4,7 @@
 use chromiumoxide::cdp::browser_protocol::emulation::SetDeviceMetricsOverrideParams;
 use e2e::browser::block_on;
 use e2e::passes::keyboard;
+use e2e::wait::PageBounded;
 use e2e::{Fixture, Suite, Viewport, wait};
 
 #[test]
@@ -24,7 +25,7 @@ fn box_renders_the_asked_tag_with_the_callers_attributes() {
         wait::for_visible(page, "#poly-nav").await.unwrap();
 
         let seen: Vec<String> = page
-            .evaluate(
+            .evaluate_bounded(
                 "['#poly-nav', '#poly-link', '#poly-button', '#container', '#sidebar'].map(s => { \
                    const el = document.querySelector(s); \
                    return [el.tagName, el.getAttribute('aria-label'), el.getAttribute('href'), \
@@ -60,7 +61,7 @@ fn every_wrapper_reflows_inside_320px() {
         wait::for_visible(page, "#ratio").await.unwrap();
 
         let past: Vec<String> = page
-            .evaluate(
+            .evaluate_bounded(
                 "(() => { const column = document.querySelector('#column').getBoundingClientRect(); \
                    return [...document.querySelectorAll('#column *')] \
                      .filter(el => getComputedStyle(el).display !== 'contents') \
@@ -90,7 +91,7 @@ fn an_oversized_child_of_center_spills_toward_the_end() {
         wait::for_visible(page, "#wide").await.unwrap();
 
         let edges: Vec<f64> = page
-            .evaluate(
+            .evaluate_bounded(
                 "(() => { const stage = document.querySelector('#stage').getBoundingClientRect(); \
                    const wide = document.querySelector('#wide').getBoundingClientRect(); \
                    return [wide.left - stage.left, wide.top - stage.top]; })()",
@@ -117,7 +118,7 @@ fn a_nested_flex_does_not_inherit_its_ancestors_props() {
         wait::for_visible(page, "#inner").await.unwrap();
 
         let seen: Vec<String> = page
-            .evaluate(
+            .evaluate_bounded(
                 "['#outer', '#inner'].map(s => { const c = getComputedStyle(document.querySelector(s)); \
                    return [c.flexWrap, c.alignItems, c.justifyContent].join('|'); })",
             )
@@ -154,7 +155,7 @@ fn a_focused_child_of_aspect_ratio_keeps_its_ring() {
         keyboard::tab_to(page, "#ratio-link", 10).await.unwrap();
 
         let clipped: f64 = page
-            .evaluate(RING_CLIPPED)
+            .evaluate_bounded(RING_CLIPPED)
             .await
             .unwrap()
             .into_value()
@@ -180,7 +181,7 @@ fn a_focused_container_keeps_its_ring_inside() {
         let fixture = Fixture::open("/layout", Viewport::Desktop).await.unwrap();
         let page = &fixture.page;
         wait::for_visible(page, "#ring-container").await.unwrap();
-        page.evaluate("document.getElementById('ring-container').focus()")
+        page.evaluate_bounded("document.getElementById('ring-container').focus()")
             .await
             .unwrap();
 
@@ -220,11 +221,11 @@ fn a_responsive_gap_follows_the_viewport() {
         wait::for_visible(page, "#zero-gap").await.unwrap();
 
         for (width, gap) in [(390, 4.0), (1280, 20.0)] {
-            page.execute(SetDeviceMetricsOverrideParams::new(width, 900, 1.0, false))
+            page.execute_bounded(SetDeviceMetricsOverrideParams::new(width, 900, 1.0, false))
                 .await
                 .unwrap();
             let seen: f64 = page
-                .evaluate(gap_of("responsive-gap"))
+                .evaluate_bounded(gap_of("responsive-gap"))
                 .await
                 .unwrap()
                 .into_value()
@@ -235,7 +236,7 @@ fn a_responsive_gap_follows_the_viewport() {
             );
 
             let zero: f64 = page
-                .evaluate(gap_of("zero-gap"))
+                .evaluate_bounded(gap_of("zero-gap"))
                 .await
                 .unwrap()
                 .into_value()
@@ -249,7 +250,7 @@ fn a_responsive_gap_follows_the_viewport() {
                 ("row", "b.left - a.right")
             };
             let seen: String = page
-                .evaluate(format!(
+                .evaluate_bounded(format!(
                     "(() => {{ const el = document.querySelector('#responsive-direction'); \
                        const [a, b] = [...el.children].map(c => c.getBoundingClientRect()); \
                        return getComputedStyle(el).flexDirection + ' ' + Math.round({turned}); }})()"

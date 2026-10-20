@@ -6,6 +6,7 @@ use e2e::archetypes::RadioSet;
 use e2e::browser::block_on;
 use e2e::driver::{Driver, eventually_focused, eventually_text};
 use e2e::suite::Step;
+use e2e::wait::PageBounded;
 use e2e::{
     Fixture, Suite, Viewport,
     passes::{keyboard, pointer},
@@ -243,7 +244,7 @@ async fn until_at(fixture: &Fixture, focused: Option<i64>, checked: i64, what: &
 async fn focused(fixture: &Fixture) -> i64 {
     fixture
         .page
-        .evaluate(format!(
+        .evaluate_bounded(format!(
             "[...document.querySelectorAll('{RADIOS}')].indexOf(document.activeElement)"
         ))
         .await
@@ -255,7 +256,7 @@ async fn focused(fixture: &Fixture) -> i64 {
 async fn checked(fixture: &Fixture) -> i64 {
     fixture
         .page
-        .evaluate(format!(
+        .evaluate_bounded(format!(
             "[...document.querySelectorAll('{RADIOS}')].findIndex(el => el.checked)"
         ))
         .await
@@ -268,7 +269,7 @@ async fn checked(fixture: &Fixture) -> i64 {
 async fn tab_in(fixture: &Fixture) -> i64 {
     fixture
         .page
-        .evaluate("document.activeElement && document.activeElement.blur()")
+        .evaluate_bounded("document.activeElement && document.activeElement.blur()")
         .await
         .unwrap();
     for _ in 0..4 {
@@ -298,7 +299,7 @@ fn the_group_carries_the_field_wiring() {
         );
         let described: String = fixture
             .page
-            .evaluate(
+            .evaluate_bounded(
                 "document.querySelector('[role=radiogroup]').getAttribute('aria-describedby')\
                  .split(' ').map(id => document.getElementById(id).textContent).join(' | ')",
             )
@@ -456,7 +457,7 @@ fn a_long_strip_wraps_inside_a_phone() {
             .unwrap();
         let [page_overflow, strip_overflow]: [f64; 2] = fixture
             .page
-            .evaluate(
+            .evaluate_bounded(
                 "(() => { const strip = document.querySelector('[role=radiogroup]'); \
                  const edge = strip.parentElement.getBoundingClientRect().right; \
                  const right = Math.max(...[...strip.querySelectorAll('label')] \

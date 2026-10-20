@@ -4,6 +4,7 @@
 use chromiumoxide::Page;
 use e2e::browser::block_on;
 use e2e::passes::{focus, keyboard};
+use e2e::wait::PageBounded;
 use e2e::{Fixture, Suite, Viewport, wait};
 
 const GITHUB: &str = "#github";
@@ -31,7 +32,7 @@ fn a_count_on_a_fill_takes_the_label_colour() {
             .unwrap();
         for id in ["#filled", "#gradient"] {
             let (label, count): (String, String) = page
-                .evaluate(format!(
+                .evaluate_bounded(format!(
                     "(() => {{ const a = document.querySelector('{id}'); \
                      const c = a.querySelector('[data-slot=\"count\"]'); \
                      return [getComputedStyle(a).color, getComputedStyle(c).color]; }})()"
@@ -58,7 +59,7 @@ fn the_new_tab_cue_clears_the_count() {
             .await
             .unwrap();
         let (count_end, cue_start, cue_end, pill_end): (f64, f64, f64, f64) = page
-            .evaluate(
+            .evaluate_bounded(
                 "(() => { const a = document.querySelector('#github'); \
                  const c = a.querySelector('[data-slot=\"count\"]').getBoundingClientRect(); \
                  const n = a.querySelector('[data-slot=\"new-tab\"]').getBoundingClientRect(); \
@@ -83,7 +84,7 @@ fn the_new_tab_cue_clears_the_count() {
 /// recording each URL and counting settled answers in `__settled`, then mounts
 /// both buttons and waits for both to have asked.
 async fn mount_with_fetch(page: &Page, body: &str) {
-    page.evaluate(format!(
+    page.evaluate_bounded(format!(
         "(() => {{ sessionStorage.clear(); window.__urls = []; window.__settled = 0; \
          window.fetch = (url) => {{ window.__urls.push(url); const body = {body}; \
          const p = body === null ? Promise.reject(new TypeError('blocked')) \
@@ -111,7 +112,7 @@ async fn link(page: &Page, selector: &str, text: &str) -> (String, String, f64, 
     )
     .await
     .unwrap();
-    page.evaluate(format!(
+    page.evaluate_bounded(format!(
         "(() => {{ const a = document.querySelector('{selector}'); \
          const r = a.getBoundingClientRect(); \
          return [a.getAttribute('aria-label'), a.textContent.trim(), r.width, r.height]; }})()"
@@ -144,7 +145,7 @@ fn a_failed_fetch_leaves_the_plain_icon() {
         assert_eq!(text, "", "a count showed after an error");
         assert_eq!(width, height, "the icon box changed shape");
         let cached: bool = page
-            .evaluate("sessionStorage.length > 0")
+            .evaluate_bounded("sessionStorage.length > 0")
             .await
             .unwrap()
             .into_value()
@@ -191,7 +192,7 @@ fn each_host_asks_its_endpoint_and_links_its_page() {
             "GitLab group/sub/repo, 3 stars (opens in a new tab)"
         );
         let (mut urls, hrefs): (Vec<String>, Vec<String>) = page
-            .evaluate(
+            .evaluate_bounded(
                 "[window.__urls, [...document.querySelectorAll('#github, #gitlab')].map(a => a.href + ' ' + a.target)]",
             )
             .await
@@ -231,7 +232,7 @@ fn a_count_joins_the_icon_and_is_cached_for_the_session() {
         assert_eq!(text, "1.2k");
         assert!(width > height, "no pill: {width}x{height}");
         // Unmount and mount again: the count comes from the session, not a second call.
-        page.evaluate("document.querySelector('#mount').click()")
+        page.evaluate_bounded("document.querySelector('#mount').click()")
             .await
             .unwrap();
         wait::for_js_true(
@@ -241,13 +242,13 @@ fn a_count_joins_the_icon_and_is_cached_for_the_session() {
         )
         .await
         .unwrap();
-        page.evaluate("document.querySelector('#mount').click()")
+        page.evaluate_bounded("document.querySelector('#mount').click()")
             .await
             .unwrap();
         let (_, text, _, _) = link(page, GITHUB, "1.2k").await;
         assert_eq!(text, "1.2k");
         let calls: u32 = page
-            .evaluate("window.__urls.length")
+            .evaluate_bounded("window.__urls.length")
             .await
             .unwrap()
             .into_value()
@@ -287,7 +288,7 @@ fn in_a_button_group_it_takes_the_group_s_variant_disabled_and_width() {
         let page = &fixture.page;
         link(page, "#gradient", "1.2k").await;
         let (label, count): (String, String) = page
-            .evaluate(
+            .evaluate_bounded(
                 "(() => { const a = document.querySelector('#gradient'); \
                  const c = a.querySelector('[data-slot=\"count\"]'); \
                  return [getComputedStyle(a).color, getComputedStyle(c).color]; })()",
@@ -303,7 +304,7 @@ fn in_a_button_group_it_takes_the_group_s_variant_disabled_and_width() {
 
         link(page, "#disabled", "1.2k").await;
         let (href, disabled): (Option<String>, Option<String>) = page
-            .evaluate(
+            .evaluate_bounded(
                 "(() => { const a = document.querySelector('#disabled'); \
                  return [a.getAttribute('href'), a.getAttribute('aria-disabled')]; })()",
             )
@@ -316,7 +317,7 @@ fn in_a_button_group_it_takes_the_group_s_variant_disabled_and_width() {
 
         let (_, _, width, _) = link(page, "#vertical", "1.2k").await;
         let widest: f64 = page
-            .evaluate("document.querySelector('#wide').getBoundingClientRect().width")
+            .evaluate_bounded("document.querySelector('#wide').getBoundingClientRect().width")
             .await
             .unwrap()
             .into_value()
@@ -337,7 +338,7 @@ fn enter_follows_the_link() {
         let fixture = open().await;
         let page = &fixture.page;
         mount_with_fetch(page, "null").await;
-        page.evaluate(
+        page.evaluate_bounded(
             "document.addEventListener('click', (e) => { const a = e.target.closest('a'); \
              if (a) { window.__followed = a.href; e.preventDefault(); } }, true)",
         )

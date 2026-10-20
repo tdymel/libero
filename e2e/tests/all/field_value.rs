@@ -5,6 +5,7 @@ use anyhow::Result;
 use chromiumoxide::Page;
 use e2e::browser::block_on;
 use e2e::passes::keyboard;
+use e2e::wait::PageBounded;
 use e2e::{Fixture, Viewport, wait};
 
 const TEXT: &str = "[data-case=text] input";
@@ -54,7 +55,7 @@ fn every_keystroke_and_pick_reaches_the_control_and_its_slot() {
         .await
         .unwrap();
 
-        page.evaluate(format!(
+        page.evaluate_bounded(format!(
             "(() => {{ const s = document.querySelector({NATIVE:?}); s.value = 'Cherry'; \
              s.dispatchEvent(new Event('change', {{ bubbles: true }})); }})()"
         ))
@@ -81,7 +82,7 @@ fn every_keystroke_and_pick_reaches_the_control_and_its_slot() {
         )
         .await
         .unwrap();
-        page.evaluate(format!("document.querySelector({REVEAL:?}).click()"))
+        page.evaluate_bounded(format!("document.querySelector({REVEAL:?}).click()"))
             .await
             .unwrap();
         settle(
@@ -114,7 +115,7 @@ fn every_keystroke_and_pick_reaches_the_control_and_its_slot() {
 
 /// Focus with the caret at the end, as a click after the text would leave it.
 async fn focus(page: &Page, selector: &str) -> Result<()> {
-    page.evaluate(format!(
+    page.evaluate_bounded(format!(
         "(() => {{ const el = document.querySelector({selector:?}); el.focus(); \
          const end = el.value.length; el.setSelectionRange(end, end); }})()"
     ))

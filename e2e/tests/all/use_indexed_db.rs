@@ -8,6 +8,7 @@ use chromiumoxide::Page;
 use e2e::browser::block_on;
 use e2e::driver::{Driver, eventually_text};
 use e2e::passes::pointer;
+use e2e::wait::PageBounded;
 use e2e::{Fixture, Viewport, wait};
 
 async fn writes_and_removes<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
@@ -49,7 +50,7 @@ async fn click(page: &Page, selector: &str) {
 async fn stored(page: &Page, key: &str) -> Option<String> {
     // In an array: chromiumoxide reads a bare `null` as no value.
     let [raw]: [Option<String>; 1] = (page
-        .evaluate(format!(
+        .evaluate_bounded(format!(
             r#"new Promise((resolve) => {{
             const open = indexedDB.open('libero', 1);
             open.onerror = () => resolve([null]);
@@ -171,21 +172,21 @@ fn a_full_store_reports_and_keeps_the_value() {
             .unwrap();
         let page = &fixture.page;
         reads(page, "#loaded", "true").await.unwrap();
-        page.evaluate(WATCH_REMOVE).await.unwrap();
+        page.evaluate_bounded(WATCH_REMOVE).await.unwrap();
         click(page, "#remove").await;
         reads(page, "#stored", "false").await.unwrap();
         wait::for_js_true(page, "window.__removed === true", "the remove to commit")
             .await
             .unwrap();
 
-        page.evaluate(FILL).await.unwrap();
+        page.evaluate_bounded(FILL).await.unwrap();
         click(page, "#add").await;
         reads(page, "#error", "Some(Full)").await.unwrap();
         reads(page, "#count", "1").await.unwrap();
         reads(page, "#twin", "1").await.unwrap();
         assert_eq!(stored(page, "e2e-idb-errors-count").await, None);
 
-        page.evaluate("window.__unfill()").await.unwrap();
+        page.evaluate_bounded("window.__unfill()").await.unwrap();
         click(page, "#add").await;
         reads(page, "#error", "None").await.unwrap();
         reads(page, "#count", "2").await.unwrap();
@@ -215,7 +216,7 @@ fn blocked_indexed_db_reports_unavailable_and_keeps_the_value() {
             .await
             .unwrap();
         let page = &fixture.page;
-        page.evaluate_on_new_document(BLOCK).await.unwrap();
+        page.evaluate_on_new_document_bounded(BLOCK).await.unwrap();
         page.reload().await.unwrap();
         reads(page, "#loaded", "true").await.unwrap();
         reads(page, "#error", "Some(Unavailable)").await.unwrap();

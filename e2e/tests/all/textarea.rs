@@ -6,6 +6,7 @@ use anyhow::ensure;
 use e2e::browser::block_on;
 use e2e::driver::{Driver, eventually_text};
 use e2e::passes::keyboard::{self, ARROW_DOWN, ARROW_UP, BACKSPACE, END, ENTER, HOME};
+use e2e::wait::PageBounded;
 use e2e::{Fixture, Suite, Viewport, wait};
 
 async fn typing_reaches_the_value<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
@@ -98,7 +99,7 @@ fn the_counter_speaks_only_near_the_limit() {
             wait::for_js_true(page, &reads("0/20", ""), "an empty count")
                 .await
                 .unwrap();
-            page.evaluate(format!(
+            page.evaluate_bounded(format!(
                 "document.querySelectorAll('textarea')[{index}].focus()"
             ))
             .await
@@ -150,7 +151,7 @@ fn the_status_speaks_only_after_typing_pauses() {
         wait::for_js_true(page, &counter_reads(0, "0/20", ""), "an empty count")
             .await
             .unwrap();
-        page.evaluate(
+        page.evaluate_bounded(
             "(() => { const area = document.querySelectorAll('textarea')[0]; \
                const status = area.closest('[data-frame]').parentElement.querySelector('[role=status]'); \
                window.__pause = { typed: 0, said: 0 }; \
@@ -170,7 +171,7 @@ fn the_status_speaks_only_after_typing_pauses() {
             .await
             .unwrap();
         let gap: f64 = page
-            .evaluate("window.__pause.said - window.__pause.typed")
+            .evaluate_bounded("window.__pause.said - window.__pause.typed")
             .await
             .unwrap()
             .into_value()
@@ -216,14 +217,14 @@ fn an_uncontrolled_count_follows_a_raw_form_reset() {
             .await
             .unwrap();
         for round in 0..2 {
-            page.evaluate("document.querySelector('textarea').focus()")
+            page.evaluate_bounded("document.querySelector('textarea').focus()")
                 .await
                 .unwrap();
             keyboard::type_text(page, "hello").await.unwrap();
             wait::for_js_true(page, &reads("7/20"), &format!("typed, round {round}"))
                 .await
                 .unwrap();
-            page.evaluate("document.querySelector('button[type=reset]').click()")
+            page.evaluate_bounded("document.querySelector('button[type=reset]').click()")
                 .await
                 .unwrap();
             wait::for_js_true(
@@ -258,14 +259,14 @@ fn an_uncontrolled_count_follows_a_form_reset() {
             .await
             .unwrap();
         for button in ["Clear", "Reset"] {
-            page.evaluate("document.querySelector('textarea').focus()")
+            page.evaluate_bounded("document.querySelector('textarea').focus()")
                 .await
                 .unwrap();
             keyboard::type_text(page, "hello").await.unwrap();
             wait::for_js_true(page, &reads("7/20"), "typed")
                 .await
                 .unwrap();
-            page.evaluate(format!(
+            page.evaluate_bounded(format!(
                 "[...document.querySelectorAll('button')].find(b => b.textContent.trim() === {button:?}).click()"
             ))
             .await

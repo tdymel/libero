@@ -6,6 +6,7 @@ use e2e::archetypes::{self, Overlay};
 use e2e::browser::block_on;
 use e2e::driver::{Driver, eventually, eventually_focused, eventually_text};
 use e2e::suite::Step;
+use e2e::wait::PageBounded;
 use e2e::{Fixture, Suite, Viewport, js, passes::keyboard, wait};
 
 use crate::modal;
@@ -455,7 +456,7 @@ fn arrow_left_goes_forward_in_rtl() {
     block_on(async {
         let fixture = Fixture::open("/tour", Viewport::Desktop).await.unwrap();
         let page = &fixture.page;
-        page.evaluate("document.documentElement.dir = 'rtl'")
+        page.evaluate_bounded("document.documentElement.dir = 'rtl'")
             .await
             .unwrap();
         keyboard::tab_to(page, TRIGGER, 5).await.unwrap();
@@ -549,7 +550,7 @@ fn a_growing_target_grows_the_hole() {
         wait::for_js_true(page, &hole_js("#first"), "the hole on #first")
             .await
             .unwrap();
-        page.evaluate("document.querySelector('#first').style.width = '260px'")
+        page.evaluate_bounded("document.querySelector('#first').style.width = '260px'")
             .await
             .unwrap();
         wait::for_js_true(page, &hole_js("#first"), "the hole to grow with #first")
@@ -696,7 +697,7 @@ fn a_long_card_scrolls_in_a_short_viewport() {
             .await
             .unwrap();
         let page = &fixture.page;
-        page.execute(SetDeviceMetricsOverrideParams::new(320, 256, 1.0, false))
+        page.execute_bounded(SetDeviceMetricsOverrideParams::new(320, 256, 1.0, false))
             .await
             .unwrap();
         wait::for_js_true(

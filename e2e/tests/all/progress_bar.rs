@@ -6,6 +6,7 @@ use e2e::browser::block_on;
 use e2e::driver::{Driver, eventually};
 use e2e::passes::contrast::COLOUR_JS;
 use e2e::passes::{motion, pointer};
+use e2e::wait::PageBounded;
 use e2e::{Fixture, Suite, Viewport, wait};
 
 const UPLOAD: &str = "#upload";
@@ -84,7 +85,7 @@ fn the_segments_keep_their_contrast() {
         .unwrap();
         // Todo 2403: the value at 50 is in the "Send" stretch, said after the percentage.
         let text: String = page
-            .evaluate("document.querySelector('#segments').getAttribute('aria-valuetext')")
+            .evaluate_bounded("document.querySelector('#segments').getAttribute('aria-valuetext')")
             .await
             .unwrap()
             .into_value()
@@ -99,7 +100,7 @@ fn the_segments_keep_their_contrast() {
             return [CONTRAST(fill, track), CONTRAST(fill, base)]; }})()"#
         );
         let [on_track, on_page]: [f64; 2] = page
-            .evaluate(ratios.as_str())
+            .evaluate_bounded(ratios.as_str())
             .await
             .unwrap()
             .into_value()
@@ -112,7 +113,7 @@ fn the_segments_keep_their_contrast() {
             on_page >= 3.0,
             "a segment's fill is {on_page:.2}:1 on the page"
         );
-        page.execute(
+        page.execute_bounded(
             SetEmulatedMediaParams::builder()
                 .features(vec![MediaFeature::new("forced-colors", "active")])
                 .build(),
@@ -157,7 +158,7 @@ async fn striped_fill_keeps_its_contrast(page: &chromiumoxide::Page) {
                 CONTRAST(paint, under), CONTRAST(paint, base)]; }})()"#
     );
     let [striped, on_track, on_page]: [f64; 3] = page
-        .evaluate(probe.as_str())
+        .evaluate_bounded(probe.as_str())
         .await
         .unwrap()
         .into_value()
@@ -180,7 +181,7 @@ async fn sweep_starts_off_the_track(page: &chromiumoxide::Page) {
                 return [f.right - t.left, t.right - f.left]; }})()"
         );
         let [inside_from_left, inside_from_right]: [f64; 2] = page
-            .evaluate(probe.as_str())
+            .evaluate_bounded(probe.as_str())
             .await
             .unwrap()
             .into_value()
@@ -207,7 +208,7 @@ fn track_and_fill_show_in_forced_colours() {
             .await
             .unwrap();
         let page = &fixture.page;
-        page.execute(
+        page.execute_bounded(
             SetEmulatedMediaParams::builder()
                 .features(vec![MediaFeature::new("forced-colors", "active")])
                 .build(),
@@ -222,7 +223,7 @@ fn track_and_fill_show_in_forced_colours() {
         .await
         .unwrap();
         let bare: Vec<String> = page
-            .evaluate(format!(
+            .evaluate_bounded(format!(
                 "(() => {{
                     const track = document.querySelector('{UPLOAD}');
                     const bg = el => getComputedStyle(el).backgroundColor;
@@ -279,7 +280,7 @@ fn reduced_motion_stops_the_ease_and_the_sweep() {
                 // No 25% stub parked at the left, which would read as a value.
                 for bar in [SYNC, SYNC_RTL] {
                     let (share, opacity): (f64, f64) = page
-                        .evaluate(fill(bar))
+                        .evaluate_bounded(fill(bar))
                         .await
                         .unwrap()
                         .into_value()
@@ -305,7 +306,7 @@ fn reduced_motion_stops_the_ease_and_the_sweep() {
                 .await
                 .unwrap();
                 let (share, _): (f64, f64) = page
-                    .evaluate(fill(UPLOAD))
+                    .evaluate_bounded(fill(UPLOAD))
                     .await
                     .unwrap()
                     .into_value()

@@ -6,6 +6,7 @@ use e2e::Suite;
 use e2e::driver::{Driver, eventually, eventually_focused, eventually_text};
 use e2e::passes::keyboard;
 use e2e::suite::Step;
+use e2e::wait::PageBounded;
 
 const STATUS: &str = "[role=status]";
 const START: &str = "Alpha Beta Gamma | Delta | ";
@@ -1119,7 +1120,7 @@ fn a_touch_drags_a_column_by_its_handle_and_a_swipe_elsewhere_scrolls() {
         let name = "#column-doing > [data-slot=header] > [data-name]";
         let at = centre(page, name).await;
         let before: f64 = page
-            .evaluate("document.querySelector('#board').scrollLeft")
+            .evaluate_bounded("document.querySelector('#board').scrollLeft")
             .await
             .unwrap()
             .into_value()
@@ -1146,7 +1147,7 @@ fn a_touch_drags_a_column_by_its_handle_and_a_swipe_elsewhere_scrolls() {
         .await
         .unwrap();
         let order: String = page
-            .evaluate("document.querySelector('#order').textContent")
+            .evaluate_bounded("document.querySelector('#order').textContent")
             .await
             .unwrap()
             .into_value()
@@ -1172,7 +1173,7 @@ fn a_column_held_at_the_end_edge_scrolls_the_board() {
             .unwrap();
         let page = &fixture.page;
         let most: f64 = page
-            .evaluate(format!("{BOARD}.scrollWidth - {BOARD}.clientWidth"))
+            .evaluate_bounded(format!("{BOARD}.scrollWidth - {BOARD}.clientWidth"))
             .await
             .unwrap()
             .into_value()
@@ -1180,7 +1181,7 @@ fn a_column_held_at_the_end_edge_scrolls_the_board() {
         assert!(most > 100.0, "the board has columns to scroll to");
         e2e::clock::hold(page, &[AUTO_SCROLL_MS]).await.unwrap();
         let right: f64 = page
-            .evaluate(format!("{BOARD}.getBoundingClientRect().right"))
+            .evaluate_bounded(format!("{BOARD}.getBoundingClientRect().right"))
             .await
             .unwrap()
             .into_value()
@@ -1281,7 +1282,7 @@ fn a_narrow_column_wraps_the_move_buttons_below_the_content() {
         let fixture = Fixture::open("/kanban", Viewport::Mobile).await.unwrap();
         let measured: String = fixture
             .page
-            .evaluate(
+            .evaluate_bounded(
                 "(() => { const r = s => document.querySelector('#Beta ' + s).getBoundingClientRect(); \
                  return [document.querySelector('#column-0').getBoundingClientRect().width, \
                  r('[data-slot=content]').width, r('[data-slot=handle]').bottom, \
@@ -1319,7 +1320,7 @@ fn a_narrow_column_wraps_the_move_buttons_below_the_content() {
         // Room for 8rem and the buttons: one line.
         let one_line: bool = fixture
             .page
-            .evaluate(
+            .evaluate_bounded(
                 "(() => { const c = document.querySelector('#Beta'); c.parentElement.style.width = '420px'; \
                  const r = s => c.querySelector(s).getBoundingClientRect(); \
                  return ['move-earlier', 'move-later', 'move-to'].every(s => r(`[data-slot=${s}]`).top < r('[data-slot=handle]').bottom); })()",
@@ -1357,7 +1358,7 @@ async fn mouse_at(
         .click_count(1)
         .build()
         .unwrap();
-    page.execute(event).await.unwrap();
+    page.execute_bounded(event).await.unwrap();
 }
 
 /// The board's auto-scroll tick (libero's kanban `AUTO_SCROLL_MS`).
@@ -1366,7 +1367,7 @@ const AUTO_SCROLL_MS: u32 = 40;
 /// Runs held auto-scroll ticks, each with the scroll read it spawned, until `done` or
 /// `most` ticks, in the page: a round trip per tick took longer than the real clock.
 async fn ticks(page: &chromiumoxide::Page, done: &str, most: u32) -> bool {
-    page.evaluate(format!(
+    page.evaluate_bounded(format!(
         "(async () => {{
             for (let n = 0; !({done}) && n < {most}; n++) {{
                 const armed = window.__heldClock.fireAll({AUTO_SCROLL_MS});
@@ -1428,26 +1429,26 @@ fn drag_held_at_the_end_edge(rtl: bool, classic: bool) {
         .unwrap();
         let page = &fixture.page;
         if classic {
-            page.evaluate("document.querySelector('#board').style.maxWidth = '342px'")
+            page.evaluate_bounded("document.querySelector('#board').style.maxWidth = '342px'")
                 .await
                 .unwrap();
         }
         let most: f64 = page
-            .evaluate("(() => { const b = document.querySelector('#board'); return b.scrollWidth - b.clientWidth; })()")
+            .evaluate_bounded("(() => { const b = document.querySelector('#board'); return b.scrollWidth - b.clientWidth; })()")
             .await
             .unwrap()
             .into_value()
             .unwrap();
         e2e::clock::hold(page, &[AUTO_SCROLL_MS]).await.unwrap();
         let hidden: bool = page
-            .evaluate(done(hidden))
+            .evaluate_bounded(done(hidden))
             .await
             .unwrap()
             .into_value()
             .unwrap();
         assert!(hidden, "Done starts in view: nothing to scroll to");
         let side: f64 = page
-            .evaluate(format!(
+            .evaluate_bounded(format!(
                 "document.querySelector('#board').getBoundingClientRect().{end}"
             ))
             .await
@@ -1490,7 +1491,7 @@ fn drag_held_at_the_end_edge(rtl: bool, classic: bool) {
         // A few more ticks, held at the edge.
         ticks(page, "false", 8).await;
         let past: bool = page
-            .evaluate(done(past))
+            .evaluate_bounded(done(past))
             .await
             .unwrap()
             .into_value()
@@ -1535,7 +1536,12 @@ fn a_dragged_card_tints_the_column_it_would_land_in() {
     block_on(async {
         let fixture = Fixture::open("/kanban", Viewport::Desktop).await.unwrap();
         let page = &fixture.page;
-        let idle: String = page.evaluate(FILL).await.unwrap().into_value().unwrap();
+        let idle: String = page
+            .evaluate_bounded(FILL)
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
         let (handle, doing) = (
             centre(page, "#Alpha [data-slot=handle]").await,
             centre(page, "#column-1").await,
@@ -1555,7 +1561,12 @@ fn a_dragged_card_tints_the_column_it_would_land_in() {
         )
         .await
         .unwrap();
-        let target: String = page.evaluate(FILL).await.unwrap().into_value().unwrap();
+        let target: String = page
+            .evaluate_bounded(FILL)
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
         assert_ne!(target, "rgba(0, 0, 0, 0)", "the target tint is transparent");
         assert_ne!(target, idle, "the target column kept its idle fill");
         in_front(page, async {
@@ -1591,7 +1602,7 @@ fn a_cancelled_pointer_puts_the_card_back() {
         )
         .await
         .unwrap();
-        page.evaluate(crate::sortable::cancel_held(HANDLE))
+        page.evaluate_bounded(crate::sortable::cancel_held(HANDLE))
             .await
             .unwrap();
         wait::for_js_true(
@@ -1604,7 +1615,7 @@ fn a_cancelled_pointer_puts_the_card_back() {
         .unwrap();
         in_front(page, pointer::release(page, doing)).await.unwrap();
         let (order, moves): (String, String) = page
-            .evaluate("[document.querySelector('#order').textContent, document.querySelector('#moves').textContent]")
+            .evaluate_bounded("[document.querySelector('#order').textContent, document.querySelector('#moves').textContent]")
             .await
             .unwrap()
             .into_value()
@@ -1624,7 +1635,7 @@ fn a_menu_move_to_a_hidden_column_scrolls_it_into_view() {
     block_on(async {
         let fixture = Fixture::open("/kanban", Viewport::Mobile).await.unwrap();
         let page = &fixture.page;
-        page.evaluate("document.querySelector('#Beta [data-slot=move-to]').focus()")
+        page.evaluate_bounded("document.querySelector('#Beta [data-slot=move-to]').focus()")
             .await
             .unwrap();
         // ArrowUp opens the menu on its last item: Done.
@@ -1705,7 +1716,7 @@ fn a_touch_on_the_handle_drags_across_and_elsewhere_scrolls_the_board() {
         .await
         .unwrap();
         let order: String = page
-            .evaluate("document.querySelector('#order').textContent")
+            .evaluate_bounded("document.querySelector('#order').textContent")
             .await
             .unwrap()
             .into_value()
@@ -1813,7 +1824,7 @@ fn a_board_with_a_height_scrolls_to_the_cards_below_its_edge() {
             .unwrap();
         let at = pointer::centre_of(page, "#card-0").await.unwrap();
         for _ in 0..6 {
-            page.execute(
+            page.execute_bounded(
                 DispatchMouseEventParams::builder()
                     .r#type(DispatchMouseEventType::MouseWheel)
                     .x(at.x)
@@ -1857,7 +1868,7 @@ fn a_drag_held_at_the_bottom_edge_scrolls_a_capped_board_to_the_cards_below() {
         wait::for_visible(page, "#card-0").await.unwrap();
         e2e::clock::hold(page, &[AUTO_SCROLL_MS]).await.unwrap();
         let (most, bottom): (f64, f64) = page
-            .evaluate(format!(
+            .evaluate_bounded(format!(
                 "[{BOARD}.scrollHeight - {BOARD}.clientHeight, \
                  {BOARD}.getBoundingClientRect().bottom]"
             ))
@@ -1893,7 +1904,7 @@ fn a_drag_held_at_the_bottom_edge_scrolls_a_capped_board_to_the_cards_below() {
         );
         ticks(page, "false", 8).await;
         let top: f64 = page
-            .evaluate(format!("{BOARD}.scrollTop"))
+            .evaluate_bounded(format!("{BOARD}.scrollTop"))
             .await
             .unwrap()
             .into_value()
@@ -1942,9 +1953,14 @@ async fn drag_below_the_columns(fixture: e2e::browser::Fixture) {
     use e2e::wait;
     const WIDTH: &str = "document.querySelector('#board').clientWidth";
     let page = &fixture.page;
-    let width: f64 = page.evaluate(WIDTH).await.unwrap().into_value().unwrap();
+    let width: f64 = page
+        .evaluate_bounded(WIDTH)
+        .await
+        .unwrap()
+        .into_value()
+        .unwrap();
     let bottom: f64 = page
-        .evaluate("document.querySelector('#board').getBoundingClientRect().bottom")
+        .evaluate_bounded("document.querySelector('#board').getBoundingClientRect().bottom")
         .await
         .unwrap()
         .into_value()
@@ -1977,7 +1993,7 @@ async fn drag_below_the_columns(fixture: e2e::browser::Fixture) {
     .await
     .unwrap();
     let held: (f64, String, f64) = page
-        .evaluate(format!(
+        .evaluate_bounded(format!(
             "(() => {{ const b = document.querySelector('#board'); \
              return [{WIDTH}, getComputedStyle(b).overflowY, b.scrollTop]; }})()"
         ))
@@ -2019,7 +2035,7 @@ fn a_card_stands_apart_from_its_column_in_both_schemes() {
             .await
             .unwrap();
             let [card, column, border]: [String; 3] = page
-                .evaluate(
+                .evaluate_bounded(
                     "(() => { const card = getComputedStyle(document.querySelector('#Alpha')); \
                      const column = getComputedStyle(document.querySelector('#column-0')); \
                      return [card.backgroundColor, column.backgroundColor, \
@@ -2089,7 +2105,7 @@ fn a_column_keeps_an_edge_in_forced_colours() {
         let page = &fixture.page;
         e2e::browser::force_colours(page).await.unwrap();
         let edge: String = page
-            .evaluate(
+            .evaluate_bounded(
                 "(() => { const s = getComputedStyle(document.querySelector('#column-0')); \
                  return s.borderTopWidth + ' ' + s.borderTopStyle + ' ' + s.borderTopColor; })()",
             )

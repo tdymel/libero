@@ -5,6 +5,7 @@ use anyhow::{Result, ensure};
 use e2e::browser::block_on;
 use e2e::driver::{Driver, eventually};
 use e2e::passes::pointer;
+use e2e::wait::PageBounded;
 use e2e::{Fixture, Viewport, wait};
 
 const OUTER: &str = "#outer input[data-controlled]";
@@ -88,7 +89,7 @@ fn the_inner_provider_shares_the_outer_sheets() {
         .await
         .unwrap();
         let counts: (usize, usize) = page
-            .evaluate(
+            .evaluate_bounded(
                 "(() => { const texts = [...document.querySelectorAll('style')].map(s => s.textContent); \
                  return [texts.filter(t => t.startsWith('@layer lsx-base,')).length, \
                  texts.filter(t => t.startsWith('@layer lsx-base{}')).length]; })()",

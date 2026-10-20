@@ -6,6 +6,7 @@ use e2e::clock::HELD_CLOCK;
 use e2e::driver::{Driver, eventually};
 use e2e::passes::{keyboard, pointer};
 use e2e::suite::Step;
+use e2e::wait::PageBounded;
 use e2e::{Fixture, Suite, Viewport, js, wait};
 
 const TRIGGER: &str = "#notify";
@@ -303,7 +304,7 @@ fn the_live_regions_are_mounted_and_silent_before_anything_happens() {
         let page = &fixture.page;
 
         let regions: usize = page
-            .evaluate("document.querySelectorAll('[aria-live], [role=status]').length")
+            .evaluate_bounded("document.querySelectorAll('[aria-live], [role=status]').length")
             .await
             .unwrap()
             .into_value()
@@ -315,7 +316,7 @@ fn the_live_regions_are_mounted_and_silent_before_anything_happens() {
         );
 
         let spoken: bool = page
-            .evaluate(
+            .evaluate_bounded(
                 "[...document.querySelectorAll('[aria-live], [role=status]')]\
                  .some(el => el.textContent.trim().length > 0)",
             )
@@ -331,7 +332,7 @@ fn the_live_regions_are_mounted_and_silent_before_anything_happens() {
         // Queried by what the regions are, not by a role the host may not use
         // (`[role=status]` found nothing).
         let polite: usize = page
-            .evaluate(
+            .evaluate_bounded(
                 "[...document.querySelectorAll('[aria-live], [role=status]')]\
                  .filter(el => (el.getAttribute('aria-live') || \
                    (el.getAttribute('role') === 'status' ? 'polite' : '')) === 'polite').length",
@@ -347,7 +348,7 @@ fn the_live_regions_are_mounted_and_silent_before_anything_happens() {
         );
 
         let empty: usize = page
-            .evaluate(EMPTY_LISTS)
+            .evaluate_bounded(EMPTY_LISTS)
             .await
             .unwrap()
             .into_value()
@@ -728,7 +729,9 @@ fn f8_focuses_the_newest_notification() {
         let page = &fixture.page;
 
         let region: String = page
-            .evaluate("document.querySelector('[role=region]')?.getAttribute('aria-label') ?? ''")
+            .evaluate_bounded(
+                "document.querySelector('[role=region]')?.getAttribute('aria-label') ?? ''",
+            )
             .await
             .unwrap()
             .into_value()

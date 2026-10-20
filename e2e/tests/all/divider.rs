@@ -1,6 +1,7 @@
 //! `Divider`: a separator named by its label, and a caller's decorative role.
 
 use e2e::browser::block_on;
+use e2e::wait::PageBounded;
 use e2e::{Fixture, Suite, Viewport, ax, wait};
 
 #[test]
@@ -53,7 +54,7 @@ fn the_label_lines_show_in_forced_colours() {
     block_on(async {
         let fixture = Fixture::open("/divider", Viewport::Desktop).await.unwrap();
         let page = &fixture.page;
-        page.execute(
+        page.execute_bounded(
             SetEmulatedMediaParams::builder()
                 .features(vec![MediaFeature::new("forced-colors", "active")])
                 .build(),
@@ -69,7 +70,7 @@ fn the_label_lines_show_in_forced_colours() {
         .unwrap();
         // Each half: `drawn` if its fill or its edge differs from the page's `Canvas`.
         let halves: Vec<String> = page
-            .evaluate(
+            .evaluate_bounded(
                 "(() => { const probe = document.createElement('div'); \
                  probe.style.background = 'Canvas'; document.body.append(probe); \
                  const canvas = getComputedStyle(probe).backgroundColor; probe.remove(); \
@@ -106,7 +107,7 @@ fn a_caller_role_replaces_separator() {
 
         // `aria-orientation` is not allowed on `none` (axe `aria-allowed-attr`).
         let attributes: Vec<String> = page
-            .evaluate(
+            .evaluate_bounded(
                 "['#decorative', '#decorative-vertical'].map(id => { \
                    const rule = document.querySelector(id); \
                    return `${id} ${rule.getAttribute('role')} ${rule.getAttribute('aria-orientation')}`; })",
@@ -132,7 +133,7 @@ fn the_label_position_moves_the_label() {
         wait::for_visible(page, "#end").await.unwrap();
 
         let sides: Vec<String> = page
-            .evaluate(
+            .evaluate_bounded(
                 "['#start', '#labelled', '#end'].map(id => { \
                    const rule = document.querySelector(id); \
                    const half = pseudo => parseFloat(getComputedStyle(rule, pseudo).width); \
@@ -158,7 +159,7 @@ fn a_long_label_wraps_inside_its_column() {
         wait::for_visible(page, "#long").await.unwrap();
 
         let fit: String = page
-            .evaluate(
+            .evaluate_bounded(
                 "(() => { const rule = document.querySelector('#long'); \
                    const label = rule.querySelector('[data-slot=label]'); \
                    const r = rule.getBoundingClientRect(), l = label.getBoundingClientRect(); \

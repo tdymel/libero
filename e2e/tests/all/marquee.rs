@@ -3,6 +3,7 @@
 
 use e2e::browser::block_on;
 use e2e::passes::{keyboard, motion};
+use e2e::wait::PageBounded;
 use e2e::{Fixture, Suite, Viewport, wait};
 
 const LINKS: &str = "[data-slot=group]:first-child a";
@@ -32,7 +33,7 @@ fn reduced_motion_shows_one_still_copy_without_the_toggle() {
             .await
             .unwrap();
         let shown: Vec<bool> = page
-            .evaluate(format!(
+            .evaluate_bounded(format!(
                 "[...document.querySelectorAll('[data-slot=group]'), document.querySelector({PAUSE:?})]\
                  .map(e => getComputedStyle(e).display !== 'none')"
             ))
@@ -67,7 +68,7 @@ fn an_rtl_marquee_keeps_its_seam() {
         .await
         .unwrap();
         let [start_gap, worst_blank, seam]: [f64; 3] = page
-            .evaluate(
+            .evaluate_bounded(
                 r#"(() => {
                     const track = document.querySelector('[data-slot=track]');
                     const root = track.parentElement.getBoundingClientRect();
@@ -112,7 +113,7 @@ fn a_link_focused_out_of_view_scrolls_into_it() {
             let page = &fixture.page;
             wait::for_visible(page, PAUSE).await.unwrap();
             let unseen: Vec<String> = page
-            .evaluate(format!(
+            .evaluate_bounded(format!(
                 r#"(async () => {{
                     const track = document.querySelector('[data-slot=track]');
                     const root = track.parentElement.getBoundingClientRect();
@@ -161,7 +162,7 @@ fn a_focused_link_keeps_its_ring() {
             ] {
                 keyboard::tab_to(page, link, 20).await.unwrap();
                 let clipped: f64 = page
-                    .evaluate(crate::image_list::ring_clipped(":has(> [data-slot=track])"))
+                    .evaluate_bounded(crate::image_list::ring_clipped(":has(> [data-slot=track])"))
                     .await
                     .unwrap()
                     .into_value()
@@ -186,7 +187,7 @@ fn a_focused_link_is_never_hidden_under_the_pause_toggle() {
         let page = &fixture.page;
         wait::for_visible(page, PAUSE).await.unwrap();
         let hidden: Vec<String> = page
-            .evaluate(format!(
+            .evaluate_bounded(format!(
                 r#"(async () => {{
                     const track = document.querySelector('[data-slot=track]');
                     const anim = track.getAnimations()[0];
@@ -231,7 +232,7 @@ fn a_focused_link_is_never_hidden_under_the_pause_toggle() {
         );
 
         // Tab from the last link still reaches the toggle, drawn again.
-        page.evaluate(format!(
+        page.evaluate_bounded(format!(
             "[...document.querySelectorAll({LINKS:?})].pop().focus()"
         ))
         .await
@@ -295,13 +296,23 @@ fn the_fade_steps_aside_for_a_focused_link() {
         wait::for_visible(page, PAUSE).await.unwrap();
         let fades = "['::before', '::after'].map(p => \
             getComputedStyle(document.querySelector('[data-slot=track]').parentElement, p).display)";
-        let shown: Vec<String> = page.evaluate(fades).await.unwrap().into_value().unwrap();
+        let shown: Vec<String> = page
+            .evaluate_bounded(fades)
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
         assert_eq!(shown, ["block", "block"], "the fade shows at rest");
 
         keyboard::tab_to(page, "[data-slot=group]:first-child a:first-child", 20)
             .await
             .unwrap();
-        let shown: Vec<String> = page.evaluate(fades).await.unwrap().into_value().unwrap();
+        let shown: Vec<String> = page
+            .evaluate_bounded(fades)
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
         assert_eq!(shown, ["none", "none"], "the fade covers a focused link");
         fixture.console.assert_clean("the faded marquee").unwrap();
         fixture.close().await.unwrap();

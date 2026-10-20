@@ -6,6 +6,7 @@ use chromiumoxide::Page;
 use e2e::browser::block_on;
 use e2e::driver::{Driver, Host, Platform, eventually, eventually_focused, eventually_text};
 use e2e::passes::{keyboard, pointer};
+use e2e::wait::PageBounded;
 use e2e::{Fixture, Suite, Viewport, ax, wait};
 
 const SORT: &str = "th[data-sortable] button";
@@ -244,7 +245,7 @@ fn the_boxes_show_their_state_in_forced_colours() {
         .unwrap();
         e2e::browser::force_colours(page).await.unwrap();
         let wrong: Vec<String> = page
-            .evaluate(
+            .evaluate_bounded(
                 "(() => { const probe = document.createElement('div'); \
                  probe.style.background = 'Canvas'; document.body.append(probe); \
                  const canvas = getComputedStyle(probe).backgroundColor; probe.remove(); \
@@ -320,7 +321,7 @@ async fn cancel_touch(page: &Page, selector: &str) -> Result<()> {
         "document.querySelector({selector:?}).dispatchEvent(\
          new PointerEvent('pointercancel', {{bubbles: true, pointerType: 'touch'}}))"
     );
-    page.evaluate(script).await?;
+    page.evaluate_bounded(script).await?;
     Ok(())
 }
 
@@ -407,7 +408,7 @@ fn a_keyed_row_keeps_its_node_when_a_row_is_prepended() {
             .unwrap();
         let page = &fixture.page;
 
-        page.evaluate("document.querySelector('tr[data-name=\"Apple\"]').marked = true")
+        page.evaluate_bounded("document.querySelector('tr[data-name=\"Apple\"]').marked = true")
             .await
             .unwrap();
         pointer::click(page, "#prepend").await.unwrap();
@@ -504,7 +505,7 @@ fn the_sort_button_keeps_focus_and_draws_the_library_ring() {
 
             keyboard::tab_to(page, SORT, 5).await.unwrap();
             let outline: String = page
-                .evaluate(format!(
+                .evaluate_bounded(format!(
                     "getComputedStyle(document.querySelector({SORT:?})).outlineStyle"
                 ))
                 .await
@@ -637,7 +638,7 @@ fn the_column_menu_button_takes_a_finger_in_a_44px_box() {
             .await
             .unwrap();
         let page = &fixture.page;
-        page.execute(SetTouchEmulationEnabledParams::new(true))
+        page.execute_bounded(SetTouchEmulationEnabledParams::new(true))
             .await
             .unwrap();
         wait::for_js_true(
@@ -649,7 +650,7 @@ fn the_column_menu_button_takes_a_finger_in_a_44px_box() {
         .unwrap();
 
         let misses: Vec<String> = page
-            .evaluate(
+            .evaluate_bounded(
                 "(() => {
                     const el = document.querySelector('button[aria-label=\"Name column options\"]');
                     el.scrollIntoView({ block: 'center' });
@@ -712,7 +713,12 @@ fn a_column_menu_sorts_hides_and_shows_columns() {
             wait::for_js_true(page, &format!("!!{centre}"), item)
                 .await
                 .unwrap();
-            let (x, y): (f64, f64) = page.evaluate(centre).await.unwrap().into_value().unwrap();
+            let (x, y): (f64, f64) = page
+                .evaluate_bounded(centre)
+                .await
+                .unwrap()
+                .into_value()
+                .unwrap();
             pointer::click_at(page, pointer::Point { x, y })
                 .await
                 .unwrap();
@@ -748,7 +754,7 @@ fn a_column_menu_sorts_hides_and_shows_columns() {
         wait::for_js_true(page, &menu_opacity("0"), "the idle menu button faded")
             .await
             .unwrap();
-        page.evaluate(format!("document.querySelector({STOCK_MENU:?}).focus()"))
+        page.evaluate_bounded(format!("document.querySelector({STOCK_MENU:?}).focus()"))
             .await
             .unwrap();
         wait::for_js_true(page, &menu_opacity("1"), "the focused menu button shown")
@@ -790,7 +796,7 @@ fn a_column_menu_sorts_hides_and_shows_columns() {
         .unwrap();
         // The hidden column still sorts first.
         assert_eq!(
-            page.evaluate("document.querySelector('tbody th').textContent")
+            page.evaluate_bounded("document.querySelector('tbody th').textContent")
                 .await
                 .unwrap()
                 .into_value::<String>()
@@ -818,7 +824,7 @@ fn a_column_menu_sorts_hides_and_shows_columns() {
 }
 
 async fn count(page: &Page, selector: &str) -> f64 {
-    page.evaluate(format!("document.querySelectorAll({selector:?}).length"))
+    page.evaluate_bounded(format!("document.querySelectorAll({selector:?}).length"))
         .await
         .unwrap()
         .into_value()
@@ -850,7 +856,7 @@ fn a_row_header_column_names_its_rows() {
             .await
             .unwrap();
         let same_look: bool = page
-            .evaluate(
+            .evaluate_bounded(
                 "(() => { const ths = document.querySelectorAll('tbody th[scope=row]'); \
                  const td = document.querySelector('tbody td'); \
                  return ths.length === 3 && getComputedStyle(ths[0]).fontWeight === getComputedStyle(td).fontWeight; })()",

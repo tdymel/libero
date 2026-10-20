@@ -11,6 +11,7 @@ use e2e::browser::block_on;
 use e2e::passes::keyboard::{self, BACKSPACE};
 use e2e::passes::pointer::{self, Point};
 use e2e::wait;
+use e2e::wait::PageBounded;
 
 use super::perf::timing::{Rows, SCROLLER, drag_reps, js, measure, report, timed, wheel_reps};
 
@@ -87,7 +88,7 @@ fn header(name: &str) -> String {
 
 /// Tags the element `expression` finds with `data-e2e="{tag}"`, for a selector.
 async fn tag(page: &Page, expression: &str, tag: &str) -> Result<String> {
-    page.evaluate(format!("{expression}.setAttribute('data-e2e', '{tag}')"))
+    page.evaluate_bounded(format!("{expression}.setAttribute('data-e2e', '{tag}')"))
         .await?;
     Ok(format!("[data-e2e={tag}]"))
 }
@@ -262,7 +263,7 @@ fn paging() {
         )
         .await?;
         // Below the rows: in view first, where every page keeps it.
-        page.evaluate(format!(
+        page.evaluate_bounded(format!(
             "document.querySelector('{next}').scrollIntoView({{ block: 'center' }})"
         ))
         .await?;
@@ -272,7 +273,7 @@ fn paging() {
         })
         .await?;
         report(TABLE, &rows, BUDGETS);
-        page.evaluate("window.scrollTo(0, 0)").await?;
+        page.evaluate_bounded("window.scrollTo(0, 0)").await?;
         report(TABLE, &sort_reps(page, "Age").await?, BUDGETS);
         select_reps(page, TABLE).await
     }));
@@ -285,7 +286,8 @@ fn a_windowed_table() {
     const TABLE: &str = "Table windowed 10k";
     block_on(timed("/table-perf/windowed", async |page| {
         report(TABLE, &wheel_reps(page, REPS).await?, BUDGETS);
-        page.evaluate(format!("{SCROLLER}.scrollTop = 0")).await?;
+        page.evaluate_bounded(format!("{SCROLLER}.scrollTop = 0"))
+            .await?;
         let rows = measure(page, REPS, async |_| {
             // A scrollbar drag's worth: rows none of which were drawn.
             let top: f64 = js(page, &format!("{SCROLLER}.scrollTop += 4000")).await?;
@@ -303,12 +305,13 @@ fn a_windowed_table() {
         })
         .await?;
         report(TABLE, &rows, BUDGETS);
-        page.evaluate(format!("{SCROLLER}.scrollTop = 0")).await?;
+        page.evaluate_bounded(format!("{SCROLLER}.scrollTop = 0"))
+            .await?;
         report(TABLE, &sort_reps(page, "Age").await?, BUDGETS);
         report(TABLE, &select_all_reps(page).await?, BUDGETS);
         report(TABLE, &column_drag_reps(page).await?, BUDGETS);
         // Deep in the list, where a reorder was laggy (todo 2584).
-        page.evaluate(format!("{SCROLLER}.scrollTop = 200000"))
+        page.evaluate_bounded(format!("{SCROLLER}.scrollTop = 200000"))
             .await?;
         wait::for_js_true(
             page,

@@ -6,6 +6,7 @@ use e2e::browser::block_on;
 use e2e::driver::{Driver, Host, Platform, eventually, eventually_focused};
 use e2e::passes::keyboard;
 use e2e::suite::Step;
+use e2e::wait::PageBounded;
 use e2e::{Fixture, Suite, Viewport, wait};
 
 const ITEMS: &str = "[role=toolbar] [data-toolbar-item]";
@@ -361,7 +362,7 @@ fn the_separator_shows_in_forced_colours() {
         ] {
             let fixture = Fixture::open(route, Viewport::Desktop).await.unwrap();
             let page = &fixture.page;
-            page.execute(
+            page.execute_bounded(
                 SetEmulatedMediaParams::builder()
                     .features(vec![MediaFeature::new("forced-colors", "active")])
                     .build(),
@@ -377,7 +378,7 @@ fn the_separator_shows_in_forced_colours() {
             .unwrap();
             // The page is `Canvas`; a line of the same colour is no line.
             let [fill, color, width]: [String; 3] = page
-                .evaluate(format!(
+                .evaluate_bounded(format!(
                     "(() => {{ const probe = document.createElement('div'); \
                      probe.style.background = 'Canvas'; document.body.append(probe); \
                      const canvas = getComputedStyle(probe).backgroundColor; probe.remove(); \

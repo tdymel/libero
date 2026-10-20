@@ -8,6 +8,7 @@ use e2e::browser::block_on;
 use e2e::driver::{Driver, Platform, eventually, linger};
 use e2e::passes::{focus, keyboard};
 use e2e::suite::Step;
+use e2e::wait::PageBounded;
 use e2e::{Fixture, Suite, Viewport, wait};
 
 const DIALOG: &str = "[role=dialog]";
@@ -249,7 +250,7 @@ async fn dialog_contract(page: &Page, input: &str) -> Result<()> {
     keyboard::press(page, keyboard::ARROW_DOWN).await?;
     wait::for_visible(page, DIALOG).await?;
     let name: String = page
-        .evaluate(format!(
+        .evaluate_bounded(format!(
             "document.querySelector({:?})?.getAttribute('aria-label') ?? ''",
             DIALOG
         ))
@@ -259,7 +260,7 @@ async fn dialog_contract(page: &Page, input: &str) -> Result<()> {
         bail!("the dialog has no accessible name");
     }
     let modal: bool = page
-        .evaluate(format!(
+        .evaluate_bounded(format!(
             "document.querySelector({:?})?.hasAttribute('aria-modal')",
             DIALOG
         ))
@@ -286,7 +287,7 @@ fn a_date_range_field_opens_one_month_on_a_narrow_page() {
             let fixture = Fixture::open(route, viewport).await.unwrap();
             let page = &fixture.page;
             if narrow {
-                page.execute(SetDeviceMetricsOverrideParams::new(320, 800, 1.0, true))
+                page.execute_bounded(SetDeviceMetricsOverrideParams::new(320, 800, 1.0, true))
                     .await
                     .unwrap();
             }
@@ -308,7 +309,7 @@ fn a_date_range_field_opens_one_month_on_a_narrow_page() {
                 Viewport::Desktop.size().0
             };
             let overflow: f64 = page
-                .evaluate(format!("document.documentElement.scrollWidth - {width}"))
+                .evaluate_bounded(format!("document.documentElement.scrollWidth - {width}"))
                 .await
                 .unwrap()
                 .into_value()

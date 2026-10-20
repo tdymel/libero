@@ -3,6 +3,7 @@
 
 use e2e::browser::block_on;
 use e2e::passes::{keyboard, pointer};
+use e2e::wait::PageBounded;
 use e2e::{Fixture, Suite, Viewport, wait};
 
 const CLOSE: &str = "#dismissible [data-slot=close]";
@@ -26,7 +27,7 @@ fn a_long_title_wraps_rather_than_being_cut() {
         wait::for_visible(page, "#long-title").await.unwrap();
 
         let (scroll, client, lines): (f64, f64, f64) = page
-            .evaluate(
+            .evaluate_bounded(
                 "(() => { const t = document.querySelector('#long-title [data-slot=title]'); \
                  const s = getComputedStyle(t); \
                  return [t.scrollWidth, t.clientWidth, \
@@ -61,7 +62,7 @@ fn an_unbreakable_action_label_wraps_instead_of_clipping() {
         wait::for_visible(page, "#long-action").await.unwrap();
 
         let (alert, button, scroll, client): (f64, f64, f64, f64) = page
-            .evaluate(
+            .evaluate_bounded(
                 "(() => { const a = document.querySelector('#long-action'); \
                  const b = a.querySelector('[data-slot=actions] > *'); \
                  return [a.getBoundingClientRect().right, b.getBoundingClientRect().right, \
@@ -97,7 +98,7 @@ fn parts_style_the_inner_parts() {
             format!("getComputedStyle(document.querySelector('{selector}')).{property}")
         };
         let read = |js: String| async move {
-            page.evaluate(js)
+            page.evaluate_bounded(js)
                 .await
                 .unwrap()
                 .into_value::<String>()

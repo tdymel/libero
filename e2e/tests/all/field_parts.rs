@@ -3,6 +3,7 @@
 
 use e2e::browser::block_on;
 use e2e::passes::pointer;
+use e2e::wait::PageBounded;
 use e2e::{Fixture, Viewport, wait};
 
 #[test]
@@ -14,7 +15,7 @@ fn parts_style_the_inner_parts() {
         let page = &fixture.page;
         wait::for_visible(page, "#file").await.unwrap();
         let read = |selector: &'static str, property: &'static str| async move {
-            page.evaluate(format!(
+            page.evaluate_bounded(format!(
                 "(() => {{ const el = document.querySelector({selector:?}); \
                  return el ? getComputedStyle(el).{property} : 'missing'; }})()"
             ))
@@ -56,7 +57,7 @@ fn parts_style_the_inner_parts() {
         // The frame and helper of `#text`, reached from its own wrapper.
         let frame = "#text";
         let border = page
-            .evaluate(format!(
+            .evaluate_bounded(format!(
                 "getComputedStyle(document.querySelector({frame:?}).closest('[data-slot=frame]')).borderTopWidth"
             ))
             .await
@@ -65,7 +66,7 @@ fn parts_style_the_inner_parts() {
             .unwrap();
         assert_eq!(border, "3px");
         let nested_border = page
-            .evaluate(
+            .evaluate_bounded(
                 "getComputedStyle(document.querySelector('#nested').closest('[data-slot=frame]')).borderTopWidth",
             )
             .await
@@ -127,7 +128,7 @@ fn parts_reach_the_summary_the_dropdown_and_the_color_parts() {
         ];
         for (selector, property, expected) in cases {
             let value = page
-                .evaluate(format!(
+                .evaluate_bounded(format!(
                     "(() => {{ const el = document.querySelector({selector:?}); \
                      return el ? getComputedStyle(el).{property} : 'missing'; }})()"
                 ))

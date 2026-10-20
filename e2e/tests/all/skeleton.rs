@@ -3,6 +3,7 @@
 use e2e::browser::block_on;
 use e2e::passes::{keyboard, motion, pointer};
 use e2e::suite::Step;
+use e2e::wait::PageBounded;
 use e2e::{Fixture, Suite, Viewport, wait};
 
 use crate::settle;
@@ -54,7 +55,7 @@ fn the_grace_recipe_keeps_a_fast_fetch_from_flashing() {
             let page = &fixture.page;
 
             keyboard::tab_to(page, "#load", 3).await.unwrap();
-            page.evaluate(WATCH_GREY).await.unwrap();
+            page.evaluate_bounded(WATCH_GREY).await.unwrap();
             keyboard::press(page, keyboard::ENTER).await.unwrap();
 
             if flashes {
@@ -62,7 +63,7 @@ fn the_grace_recipe_keeps_a_fast_fetch_from_flashing() {
                     .await
                     .unwrap();
                 let at: f64 = page
-                    .evaluate("window.__grey")
+                    .evaluate_bounded("window.__grey")
                     .await
                     .unwrap()
                     .into_value()
@@ -81,7 +82,7 @@ fn the_grace_recipe_keeps_a_fast_fetch_from_flashing() {
                 settle::painted(page).await.unwrap();
                 // `-1` for never: a `null` result reads back as no value at all.
                 let at: f64 = page
-                    .evaluate("window.__grey === null ? -1 : window.__grey")
+                    .evaluate_bounded("window.__grey === null ? -1 : window.__grey")
                     .await
                     .unwrap()
                     .into_value()
@@ -107,7 +108,7 @@ fn the_grey_shows_in_forced_colours() {
         let fixture = Fixture::open("/skeleton", Viewport::Desktop).await.unwrap();
         let page = &fixture.page;
         pointer::click(page, RELOAD).await.unwrap();
-        page.execute(
+        page.execute_bounded(
             SetEmulatedMediaParams::builder()
                 .features(vec![MediaFeature::new("forced-colors", "active")])
                 .build(),
@@ -123,7 +124,7 @@ fn the_grey_shows_in_forced_colours() {
         .await
         .unwrap();
         let bare: Vec<String> = page
-            .evaluate(
+            .evaluate_bounded(
                 "(() => {
                     const page = getComputedStyle(document.body).backgroundColor;
                     return [...document.querySelectorAll('#profile [data-state~=visible]')]
@@ -149,7 +150,7 @@ fn a_loaded_skeleton_is_not_inert() {
         let page = &fixture.page;
         wait::for_visible(page, "#name-text").await.unwrap();
         let inert: Vec<String> = page
-            .evaluate(
+            .evaluate_bounded(
                 "[...document.querySelectorAll('#avatar, #name')]\
                  .filter(el => el.inert || el.hasAttribute('aria-hidden')).map(el => el.id)",
             )
@@ -173,7 +174,7 @@ fn a_loaded_skeleton_does_not_trap_a_fixed_child() {
         let page = &fixture.page;
         wait::for_visible(page, "#pinned").await.unwrap();
         let at: Vec<f64> = page
-            .evaluate(
+            .evaluate_bounded(
                 "(() => { const r = document.querySelector('#pinned').getBoundingClientRect(); \
                  return [r.left, r.top]; })()",
             )
@@ -219,8 +220,12 @@ fn reduced_motion_stops_the_pulse_and_keeps_the_grey() {
             let still = motion::assert_still(page, PROFILE).await;
             if reduced {
                 still.expect("the loading skeletons under reduced motion");
-                let greys: Vec<(String, String)> =
-                    page.evaluate(GREYS).await.unwrap().into_value().unwrap();
+                let greys: Vec<(String, String)> = page
+                    .evaluate_bounded(GREYS)
+                    .await
+                    .unwrap()
+                    .into_value()
+                    .unwrap();
                 assert_eq!(greys.len(), 2, "{greys:?}");
                 for (id, opacity) in greys {
                     assert_eq!(opacity, "0.7", "#{id}'s grey under reduced motion");

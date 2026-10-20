@@ -1,6 +1,7 @@
 //! `QrCode`: one image named by `aria_label`, drawn dark on light.
 
 use e2e::browser::{block_on, force_colours};
+use e2e::wait::PageBounded;
 use e2e::{Fixture, Suite, Viewport, wait};
 
 #[test]
@@ -51,7 +52,7 @@ fn the_code_stays_dark_on_light_in_forced_colours() {
 async fn colours(fixture: &Fixture) -> Vec<String> {
     fixture
         .page
-        .evaluate(
+        .evaluate_bounded(
             "[getComputedStyle(document.querySelector('#qr')).backgroundColor, \
              getComputedStyle(document.querySelector('#qr svg path')).fill]",
         )

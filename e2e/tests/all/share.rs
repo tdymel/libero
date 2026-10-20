@@ -6,6 +6,7 @@ use anyhow::Result;
 use e2e::browser::block_on;
 use e2e::driver::{Driver, eventually, eventually_text};
 use e2e::passes::{keyboard, pointer};
+use e2e::wait::PageBounded;
 use e2e::{Fixture, Suite, Viewport, ax, wait};
 
 const BARE: &str = "#bare button";
@@ -64,7 +65,11 @@ fn outcome_is(text: &str) -> String {
 }
 
 async fn strings(page: &chromiumoxide::Page, script: &str) -> Vec<String> {
-    page.evaluate(script).await.unwrap().into_value().unwrap()
+    page.evaluate_bounded(script)
+        .await
+        .unwrap()
+        .into_value()
+        .unwrap()
 }
 
 /// Enter shares the title, text and url; the sheet is its own announcement, so
@@ -75,7 +80,7 @@ fn a_press_hands_the_data_to_the_share_sheet() {
         let fixture = Fixture::open("/share", Viewport::Desktop).await.unwrap();
         let page = &fixture.page;
 
-        page.evaluate(stub_share("ok", true)).await.unwrap();
+        page.evaluate_bounded(stub_share("ok", true)).await.unwrap();
         keyboard::tab_to(page, BARE, 5).await.unwrap();
         keyboard::press(page, keyboard::ENTER).await.unwrap();
         wait::for_js_true(page, &outcome_is("Shared"), "the share to settle")
@@ -89,14 +94,14 @@ fn a_press_hands_the_data_to_the_share_sheet() {
             ]
         );
         assert!(
-            page.evaluate(status_is("bare", ""))
+            page.evaluate_bounded(status_is("bare", ""))
                 .await
                 .unwrap()
                 .into_value::<bool>()
                 .unwrap()
         );
         let name: String = page
-            .evaluate("document.activeElement.getAttribute('aria-label')")
+            .evaluate_bounded("document.activeElement.getAttribute('aria-label')")
             .await
             .unwrap()
             .into_value()
@@ -121,7 +126,9 @@ fn the_button_is_busy_while_the_sheet_is_open() {
         );
         let busy_is = |text: &str| format!("({busy}).includes('{text}')");
 
-        page.evaluate(stub_share("pending", true)).await.unwrap();
+        page.evaluate_bounded(stub_share("pending", true))
+            .await
+            .unwrap();
         keyboard::tab_to(page, BARE, 5).await.unwrap();
         keyboard::press(page, keyboard::ENTER).await.unwrap();
         wait::for_js_true(page, &busy_is("true"), "aria-busy while the sheet is open")
@@ -139,7 +146,7 @@ fn the_button_is_busy_while_the_sheet_is_open() {
         .await
         .unwrap();
 
-        page.evaluate("window.__settle()").await.unwrap();
+        page.evaluate_bounded("window.__settle()").await.unwrap();
         wait::for_js_true(page, &outcome_is("Shared"), "the share to settle")
             .await
             .unwrap();
@@ -161,33 +168,35 @@ fn a_cancel_is_silent_and_a_refusal_is_announced() {
 
         let glyph = format!("document.querySelector('{BARE} svg').innerHTML");
         let rest: String = page
-            .evaluate(glyph.clone())
+            .evaluate_bounded(glyph.clone())
             .await
             .unwrap()
             .into_value()
             .unwrap();
 
-        page.evaluate(stub_share("AbortError", true)).await.unwrap();
+        page.evaluate_bounded(stub_share("AbortError", true))
+            .await
+            .unwrap();
         pointer::click(page, BARE).await.unwrap();
         wait::for_js_true(page, &outcome_is("Cancelled"), "the cancel to settle")
             .await
             .unwrap();
         assert!(
-            page.evaluate(status_is("bare", ""))
+            page.evaluate_bounded(status_is("bare", ""))
                 .await
                 .unwrap()
                 .into_value::<bool>()
                 .unwrap()
         );
         let cancelled: String = page
-            .evaluate(glyph.clone())
+            .evaluate_bounded(glyph.clone())
             .await
             .unwrap()
             .into_value()
             .unwrap();
         assert_eq!(cancelled, rest, "a cancel changed the glyph");
 
-        page.evaluate(stub_share("NotAllowedError", true))
+        page.evaluate_bounded(stub_share("NotAllowedError", true))
             .await
             .unwrap();
         pointer::click(page, BARE).await.unwrap();
@@ -205,7 +214,12 @@ fn a_cancel_is_silent_and_a_refusal_is_announced() {
         )
         .await
         .unwrap();
-        let failed: String = page.evaluate(glyph).await.unwrap().into_value().unwrap();
+        let failed: String = page
+            .evaluate_bounded(glyph)
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
         assert_ne!(failed, rest, "a refusal left the share glyph as it was");
 
         fixture.close().await.unwrap();
@@ -220,7 +234,7 @@ fn without_a_share_sheet_the_link_is_copied() {
         let fixture = Fixture::open("/share", Viewport::Desktop).await.unwrap();
         let page = &fixture.page;
 
-        page.evaluate(NO_SHARE_SHEET).await.unwrap();
+        page.evaluate_bounded(NO_SHARE_SHEET).await.unwrap();
         keyboard::tab_to(page, LABELLED, 5).await.unwrap();
         keyboard::press(page, keyboard::ENTER).await.unwrap();
         wait::for_js_true(
@@ -259,7 +273,7 @@ fn files_are_shared_where_can_share_takes_them() {
         let fixture = Fixture::open("/share", Viewport::Desktop).await.unwrap();
         let page = &fixture.page;
 
-        page.evaluate(stub_share("ok", true)).await.unwrap();
+        page.evaluate_bounded(stub_share("ok", true)).await.unwrap();
         pointer::click(page, FILE).await.unwrap();
         wait::for_js_true(page, &outcome_is("Shared"), "the file share to settle")
             .await
@@ -269,8 +283,10 @@ fn files_are_shared_where_can_share_takes_them() {
             [r#"{"title":"Report","files":["report.csv text/csv 8"]}"#]
         );
 
-        page.evaluate(stub_share("ok", false)).await.unwrap();
-        page.evaluate("document.querySelector('#outcome').textContent = ''")
+        page.evaluate_bounded(stub_share("ok", false))
+            .await
+            .unwrap();
+        page.evaluate_bounded("document.querySelector('#outcome').textContent = ''")
             .await
             .unwrap();
         pointer::click(page, FILE).await.unwrap();
@@ -297,7 +313,7 @@ fn several_files_are_shared_in_one_call() {
         let fixture = Fixture::open("/share", Viewport::Desktop).await.unwrap();
         let page = &fixture.page;
 
-        page.evaluate(stub_share("ok", true)).await.unwrap();
+        page.evaluate_bounded(stub_share("ok", true)).await.unwrap();
         pointer::click(page, FILES).await.unwrap();
         wait::for_js_true(page, &outcome_is("Shared"), "the share to settle")
             .await
@@ -390,7 +406,7 @@ fn the_labelled_button_is_named_by_its_text() {
         );
 
         let unfocusable: bool = page
-            .evaluate(
+            .evaluate_bounded(
                 "(() => { const b = document.querySelector('#off button'); \
                  b.focus(); return b.disabled && document.activeElement !== b; })()",
             )

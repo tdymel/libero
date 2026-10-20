@@ -7,6 +7,7 @@ use e2e::driver::{Driver, eventually, eventually_focused};
 use e2e::passes::keyboard::{self, ENTER, SPACE};
 use e2e::passes::pointer::{self, Point};
 use e2e::suite::Step;
+use e2e::wait::PageBounded;
 use e2e::{Fixture, Suite, Viewport};
 
 #[test]
@@ -32,7 +33,7 @@ fn it_meets_the_baseline() {
 async fn emitted(fixture: &Fixture) -> String {
     fixture
         .page
-        .evaluate("document.querySelector('[data-emitted]').dataset.emitted")
+        .evaluate_bounded("document.querySelector('[data-emitted]').dataset.emitted")
         .await
         .unwrap()
         .into_value()
@@ -47,7 +48,7 @@ fn a_form_reset_keeps_a_selectable_chip_as_shown() {
             .await
             .unwrap();
         let page = &fixture.page;
-        page.evaluate("document.querySelector('#tag label').click()")
+        page.evaluate_bounded("document.querySelector('#tag label').click()")
             .await
             .unwrap();
         e2e::wait::for_js_true(
@@ -57,7 +58,7 @@ fn a_form_reset_keeps_a_selectable_chip_as_shown() {
         )
         .await
         .unwrap();
-        page.evaluate("document.querySelector('#restart').click()")
+        page.evaluate_bounded("document.querySelector('#restart').click()")
             .await
             .unwrap();
         settle(&fixture).await;
@@ -93,7 +94,7 @@ async fn focused(fixture: &Fixture) -> String {
     fixture
         .page
         // The focused input's chip: its parent carries the fixture's id.
-        .evaluate("document.activeElement.parentElement?.id ?? ''")
+        .evaluate_bounded("document.activeElement.parentElement?.id ?? ''")
         .await
         .unwrap()
         .into_value()
@@ -229,7 +230,7 @@ fn a_click_anywhere_on_the_pill_toggles_it() {
         let page = &fixture.page;
 
         let edge: Point = page
-            .evaluate(
+            .evaluate_bounded(
                 "(() => { const r = document.getElementById('small').getBoundingClientRect(); \
                  return { x: r.left + 3, y: r.top + r.height / 2 }; })()",
             )
@@ -284,7 +285,7 @@ fn buttons_in_a_disabled_fieldset_look_disabled() {
             .unwrap();
         let looks: Vec<String> = fixture
             .page
-            .evaluate(
+            .evaluate_bounded(
                 "['#fs-chip', '#fs-button', '#fs-icon', '#fs-swatch', '#fs-tree-item', \
                  '#fs-phone button', '#fs-image button', '#tree-off'].map((id) => { \
                  const el = document.querySelector(id); let opacity = 1; \
@@ -362,7 +363,7 @@ fn an_icon_keeps_the_gap_and_the_text_centre() {
             .unwrap();
         let failures: Vec<serde_json::Value> = fixture
             .page
-            .evaluate(
+            .evaluate_bounded(
                 "['in-children', 'in-prop', 'in-prop-xs'].flatMap(id => { \
                  const chip = document.getElementById(id); \
                  const icon = chip.querySelector('svg').getBoundingClientRect(); \
@@ -399,7 +400,7 @@ fn a_new_tab_chip_shows_an_icon_and_says_so() {
         let tree = e2e::ax::snapshot(page, "#new-tab").await.unwrap();
         assert!(tree.contains("External (opens in a new tab)"), "{tree}");
         let drawn: bool = page
-            .evaluate(
+            .evaluate_bounded(
                 "['#new-tab', '#new-tab-long'].every(id => { \
                  const svg = document.querySelector(id + ' svg').getBoundingClientRect(); \
                  const chip = document.querySelector(id).getBoundingClientRect(); \
@@ -459,7 +460,7 @@ fn every_size_fits_its_label_at_200_percent_text() {
             .unwrap();
         let clipped: Vec<String> = fixture
             .page
-            .evaluate(
+            .evaluate_bounded(
                 "(() => { document.documentElement.style.fontSize = '200%'; \
                  return [...document.querySelectorAll('#sizes > span')] \
                  .filter(c => parseFloat(getComputedStyle(c).fontSize) * 1.2 > c.clientHeight \
@@ -491,7 +492,7 @@ fn an_icon_only_chip_is_named_by_its_icons_label() {
         assert!(named.contains("checkbox \"Pinned\""), "{named}");
         let on_root: bool = fixture
             .page
-            .evaluate("document.querySelector('#named').hasAttribute('aria-label')")
+            .evaluate_bounded("document.querySelector('#named').hasAttribute('aria-label')")
             .await
             .unwrap()
             .into_value()
@@ -522,7 +523,7 @@ fn a_readonly_chip_is_focusable_but_does_not_toggle_and_still_posts() {
         }
 
         let state: String = page
-            .evaluate(
+            .evaluate_bounded(
                 "(() => { const form = document.getElementById('chip-form'); \
                  const inputs = [...form.querySelectorAll('input')]; \
                  return inputs.map(i => `${i.checked} ${i.getAttribute('aria-readonly')}`).join(',') \

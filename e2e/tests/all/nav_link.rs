@@ -6,6 +6,7 @@ use e2e::browser::block_on;
 use e2e::driver::{Driver, eventually, eventually_focused};
 use e2e::passes::contrast::COLOUR_JS;
 use e2e::passes::keyboard;
+use e2e::wait::PageBounded;
 use e2e::{Fixture, Suite, Viewport, wait};
 
 async fn the_toggle_shows_nested<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
@@ -127,7 +128,7 @@ fn the_focus_ring_is_not_clipped_by_the_sidebar() {
 
         keyboard::tab_to(page, "#here", 5).await.unwrap();
         let inside: bool = page
-            .evaluate(RING_INSIDE_SIDEBAR)
+            .evaluate_bounded(RING_INSIDE_SIDEBAR)
             .await
             .unwrap()
             .into_value()
@@ -338,7 +339,7 @@ fn a_new_tab_anchor_shows_an_icon_and_says_so() {
             "{tree}"
         );
         let drawn: bool = page
-            .evaluate(
+            .evaluate_bounded(
                 "(() => { const svg = document.querySelector('#external svg').getBoundingClientRect(); \
                  const link = document.querySelector('#external').getBoundingClientRect(); \
                  return svg.width > 8 && svg.width < 16 && svg.right <= link.right + 1 \
@@ -368,7 +369,7 @@ fn an_opted_out_new_tab_anchor_has_no_icon_and_no_hint() {
         assert!(tree.contains("the quiet one"), "{tree}");
         assert!(!tree.contains("opens in a new tab"), "{tree}");
         let icon: bool = page
-            .evaluate("document.querySelector('#quiet svg') !== null")
+            .evaluate_bounded("document.querySelector('#quiet svg') !== null")
             .await
             .unwrap()
             .into_value()
@@ -435,7 +436,7 @@ fn a_closed_panels_links_are_out_of_the_tab_order() {
         keyboard::tab_to(page, "#docs + button", 20).await.unwrap();
         keyboard::press(page, keyboard::TAB).await.unwrap();
         let id: String = page
-            .evaluate("document.activeElement.id || document.activeElement.tagName")
+            .evaluate_bounded("document.activeElement.id || document.activeElement.tagName")
             .await
             .unwrap()
             .into_value()
@@ -463,7 +464,9 @@ fn a_query_on_the_address_keeps_the_route_link_current() {
                 let fixture = Fixture::open(route, Viewport::Desktop).await.unwrap();
                 let current = fixture
                     .page
-                    .evaluate("document.querySelector('#auto').getAttribute('aria-current')")
+                    .evaluate_bounded(
+                        "document.querySelector('#auto').getAttribute('aria-current')",
+                    )
                     .await
                     .unwrap()
                     .into_value::<Option<String>>()
@@ -485,7 +488,7 @@ fn an_inactive_link_to_the_current_route_is_not_the_current_page() {
             .unwrap();
         let current = fixture
             .page
-            .evaluate("document.querySelector('#not-current').getAttribute('aria-current')")
+            .evaluate_bounded("document.querySelector('#not-current').getAttribute('aria-current')")
             .await
             .unwrap()
             .into_value::<Option<String>>()
@@ -522,7 +525,7 @@ fn the_description_reads_on_the_active_tint_and_on_hover() {
                 let expression = description_ratio(id);
                 async move {
                     let text: String = page
-                        .evaluate(expression)
+                        .evaluate_bounded(expression)
                         .await
                         .unwrap()
                         .into_value()

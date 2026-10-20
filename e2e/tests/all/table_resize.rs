@@ -5,6 +5,7 @@
 use anyhow::{Result, bail};
 use e2e::driver::{Driver, Platform, eventually, eventually_focused, eventually_text};
 use e2e::passes::keyboard;
+use e2e::wait::PageBounded;
 
 const WIDTHS: &str = "#widths";
 const NAME: &str = "th[aria-label=Name]";
@@ -57,7 +58,7 @@ fn a_touch_in_the_grip_lane_resizes_the_column() {
             .unwrap();
         let page = &fixture.page;
         // The 24px lane is coarse-only: measure the edge once the page took the touch screen.
-        page.execute(SetTouchEmulationEnabledParams::new(true))
+        page.execute_bounded(SetTouchEmulationEnabledParams::new(true))
             .await
             .unwrap();
         wait::for_js_true(
@@ -68,7 +69,7 @@ fn a_touch_in_the_grip_lane_resizes_the_column() {
         .await
         .unwrap();
         let (edge, width): ((f64, f64), f64) = page
-            .evaluate(format!(
+            .evaluate_bounded(format!(
                 "(r => [[r.right, r.y + r.height / 2], r.width])(document.querySelector('{NAME}').getBoundingClientRect())"
             ))
             .await

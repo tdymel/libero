@@ -6,6 +6,7 @@ use e2e::archetypes;
 use e2e::browser::block_on;
 use e2e::driver::{Driver, eventually, eventually_text};
 use e2e::passes::keyboard;
+use e2e::wait::PageBounded;
 use e2e::{Fixture, Viewport, wait};
 
 use super::cascader::{BACK, EUROPE, FRANCE, LAST, TRIGGER, expect, shown, taps_walk_the_levels};
@@ -50,7 +51,7 @@ fn a_phone_scrolls_a_low_trigger_above_the_sheet() {
             .await
             .unwrap();
         let page = &fixture.page;
-        page.execute(SetDeviceMetricsOverrideParams::new(320, 568, 1.0, true))
+        page.execute_bounded(SetDeviceMetricsOverrideParams::new(320, 568, 1.0, true))
             .await
             .unwrap();
         keyboard::tab_to(page, TRIGGER, 10).await.unwrap();

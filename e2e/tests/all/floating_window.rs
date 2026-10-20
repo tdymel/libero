@@ -8,6 +8,7 @@ use e2e::archetypes::Overlay;
 use e2e::browser::block_on;
 use e2e::driver::{Driver, Rect, eventually, eventually_focused};
 use e2e::suite::Step;
+use e2e::wait::PageBounded;
 use e2e::{
     Fixture, Suite, Viewport,
     passes::{focus, keyboard, pointer, target_size},
@@ -48,7 +49,7 @@ fn the_move_handle_keeps_24px_under_a_smaller_page_font() {
             .await
             .unwrap();
         let page = &fixture.page;
-        page.evaluate("document.documentElement.style.fontSize = '13px'")
+        page.evaluate_bounded("document.documentElement.style.fontSize = '13px'")
             .await
             .unwrap();
         pointer::click(page, TRIGGER).await.unwrap();
@@ -213,13 +214,13 @@ async fn assert_separator(page: &Page, drawn: (f64, f64, f64, f64), what: &str) 
     let settled = wait::until(
         &format!("the separator to announce {expected:?} after {what}"),
         || async move {
-            let text: Option<String> = page.evaluate(js.to_string()).await?.into_value()?;
+            let text: Option<String> = page.evaluate_bounded(js.to_string()).await?.into_value()?;
             Ok(text.as_deref() == Some(wanted))
         },
     )
     .await;
     if settled.is_err() {
-        let text: Option<String> = page.evaluate(read.clone()).await?.into_value()?;
+        let text: Option<String> = page.evaluate_bounded(read.clone()).await?.into_value()?;
         bail!(
             "after {what} the window is drawn at {expected:?} (value, text, min, max), but the \
              separator says {:?}",
@@ -263,7 +264,7 @@ async fn menu_adjust(page: &Page) -> Result<()> {
     keyboard::press(page, keyboard::ESCAPE).await?;
     expect_focus(page, MENU, "Escape to hand focus back to the menu button").await?;
     if page
-        .evaluate("!!document.querySelector('[data-slot=steps]')")
+        .evaluate_bounded("!!document.querySelector('[data-slot=steps]')")
         .await?
         .into_value::<bool>()?
         || rect(page, DIALOG).await.is_err()
@@ -321,7 +322,7 @@ fn a_browser_resize_lowers_the_size_cap() {
             "the cap {widest} was below {NARROW}"
         );
 
-        page.execute(SetDeviceMetricsOverrideParams::new(
+        page.execute_bounded(SetDeviceMetricsOverrideParams::new(
             NARROW,
             Viewport::Desktop.size().1,
             1.0,
@@ -344,7 +345,7 @@ fn a_browser_resize_lowers_the_size_cap() {
 
 async fn separator_max(page: &Page) -> Result<f64> {
     let max: Option<f64> = page
-        .evaluate(format!(
+        .evaluate_bounded(format!(
             "parseFloat(document.querySelector({})?.getAttribute('aria-valuemax'))",
             serde_json::to_string(SEPARATOR)?
         ))
@@ -358,7 +359,7 @@ async fn choose(page: &Page, label: &str) -> Result<()> {
     pointer::click(page, MENU).await?;
     wait::for_visible(page, "[role=menu]").await?;
     let at: Option<(f64, f64)> = page
-        .evaluate(format!(
+        .evaluate_bounded(format!(
             "(() => {{ const el = [...document.querySelectorAll('[role=menuitem]')].find(e => e.textContent.trim() === {label:?}); \
              if (!el) return null; const r = el.getBoundingClientRect(); return [r.x + r.width / 2, r.y + r.height / 2]; }})()"
         ))
@@ -402,7 +403,7 @@ pub(super) async fn open(page: &Page) -> Result<()> {
 /// `(x, y, width, height)` of `selector`, as the browser drew it.
 pub(super) async fn rect(page: &Page, selector: &str) -> Result<(f64, f64, f64, f64)> {
     let found: Option<(f64, f64, f64, f64)> = page
-        .evaluate(format!(
+        .evaluate_bounded(format!(
             "(() => {{ const el = document.querySelector({}); if (!el) return null; \
              const r = el.getBoundingClientRect(); return [r.x, r.y, r.width, r.height]; }})()",
             serde_json::to_string(selector)?
@@ -484,13 +485,13 @@ async fn assert_report(
     let settled = wait::until(
         &format!("{what} to be reported as {expected:?}"),
         || async move {
-            let text: Option<String> = page.evaluate(js.to_string()).await?.into_value()?;
+            let text: Option<String> = page.evaluate_bounded(js.to_string()).await?.into_value()?;
             Ok(text.as_deref() == Some(wanted))
         },
     )
     .await;
     if settled.is_err() {
-        let text: Option<String> = page.evaluate(read.clone()).await?.into_value()?;
+        let text: Option<String> = page.evaluate_bounded(read.clone()).await?.into_value()?;
         bail!(
             "after {what} the window is drawn at {expected:?}, but it reported {:?}",
             text.unwrap_or_default()
@@ -523,7 +524,7 @@ fn each_window_closes_alone_and_a_close_from_the_page_keeps_focus() {
         )
         .await;
         let z: Vec<i32> = page
-            .evaluate("[...document.querySelectorAll('[role=dialog]')].map(d => +getComputedStyle(d.parentElement).zIndex)")
+            .evaluate_bounded("[...document.querySelectorAll('[role=dialog]')].map(d => +getComputedStyle(d.parentElement).zIndex)")
             .await
             .unwrap()
             .into_value()
@@ -542,7 +543,7 @@ fn each_window_closes_alone_and_a_close_from_the_page_keeps_focus() {
         .await;
         crate::settle::painted(page).await.unwrap();
         let active: String = page
-            .evaluate("document.activeElement?.id ?? ''")
+            .evaluate_bounded("document.activeElement?.id ?? ''")
             .await
             .unwrap()
             .into_value()
@@ -563,7 +564,7 @@ fn a_long_title_wraps_at_320px() {
             .await
             .unwrap();
         let page = &fixture.page;
-        page.execute(SetDeviceMetricsOverrideParams::new(320, 640, 1.0, true))
+        page.execute_bounded(SetDeviceMetricsOverrideParams::new(320, 640, 1.0, true))
             .await
             .unwrap();
         activate(page, "#open-first").await;
@@ -593,13 +594,14 @@ pub async fn assert_fits_at_320(page: &Page, dialog: &str, boxes: &str) {
     );
     let js = probe.as_str();
     let fits = wait::until("everything inside the 320px viewport", || async move {
-        let over: Vec<serde_json::Value> = page.evaluate(js.to_string()).await?.into_value()?;
+        let over: Vec<serde_json::Value> =
+            page.evaluate_bounded(js.to_string()).await?.into_value()?;
         Ok(over.is_empty())
     })
     .await;
     if fits.is_err() {
         let over: Vec<serde_json::Value> = page
-            .evaluate(probe.clone())
+            .evaluate_bounded(probe.clone())
             .await
             .unwrap()
             .into_value()
@@ -672,7 +674,7 @@ fn f6_moves_focus_between_the_page_and_the_top_window() {
         )
         .await;
 
-        page.evaluate("document.querySelector('#close-first').focus()")
+        page.evaluate_bounded("document.querySelector('#close-first').focus()")
             .await
             .unwrap();
         keyboard::press(page, F6).await.unwrap();
@@ -697,7 +699,7 @@ fn f6_moves_focus_between_the_page_and_the_top_window() {
 
 /// Focus `selector` and press Enter on it.
 async fn activate(page: &Page, selector: &str) {
-    page.evaluate(format!(
+    page.evaluate_bounded(format!(
         "document.querySelector({}).focus()",
         serde_json::to_string(selector).unwrap()
     ))
@@ -872,7 +874,7 @@ fn menu_parts_style_the_portaled_menu() {
             pointer::click(page, MENU).await?;
             wait::for_visible(page, "[role=menu] [data-slot=label]").await?;
             let style: String = page
-                .evaluate(
+                .evaluate_bounded(
                     "getComputedStyle(document.querySelector('[role=menu] [data-slot=label]')).fontStyle",
                 )
                 .await?

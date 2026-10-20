@@ -4,6 +4,7 @@ use e2e::browser::block_on;
 use e2e::passes::contrast::COLOUR_JS;
 use e2e::passes::keyboard::{self, CTRL};
 use e2e::passes::pointer;
+use e2e::wait::PageBounded;
 use e2e::{Fixture, Viewport, wait};
 
 const LOADED: &str = "['prop', 'vtt', 'both', 'rtl', 'narrow'].every((id) =>
@@ -65,7 +66,7 @@ fn the_segments_keep_their_contrast() {
         wait::for_js_true(page, LOADED, "every duration")
             .await
             .unwrap();
-        page.evaluate("document.querySelector('#prop video').currentTime = 2")
+        page.evaluate_bounded("document.querySelector('#prop video').currentTime = 2")
             .await
             .unwrap();
         let ratios = format!(
@@ -78,14 +79,14 @@ fn the_segments_keep_their_contrast() {
                 ratio(style('[data-slot=segment-fill]').backgroundColor)]; }})()"#
         );
         let [segment, fill]: [f64; 2] = page
-            .evaluate(ratios.as_str())
+            .evaluate_bounded(ratios.as_str())
             .await
             .unwrap()
             .into_value()
             .unwrap();
         assert!(segment >= 3.0, "a segment is {segment:.2}:1");
         assert!(fill >= 3.0, "a segment's fill is {fill:.2}:1");
-        page.execute(
+        page.execute_bounded(
             SetEmulatedMediaParams::builder()
                 .features(vec![MediaFeature::new("forced-colors", "active")])
                 .build(),
@@ -118,7 +119,7 @@ fn a_press_or_the_menu_seeks_to_a_chapter() {
             .await
             .unwrap();
         let middle: pointer::Point = page
-            .evaluate(
+            .evaluate_bounded(
                 "(() => { const r = document.querySelectorAll('#prop [data-slot=segment]')[1].getBoundingClientRect();
                  return { x: r.x + r.width / 2, y: r.y + r.height / 2 }; })()",
             )
@@ -145,7 +146,9 @@ fn a_press_or_the_menu_seeks_to_a_chapter() {
         )
         .await
         .unwrap();
-        page.evaluate(format!("{outro}.click()")).await.unwrap();
+        page.evaluate_bounded(format!("{outro}.click()"))
+            .await
+            .unwrap();
         wait::for_js_true(page, &format!("{} === 3", time("prop")), "Outro picked")
             .await
             .unwrap();
@@ -170,7 +173,7 @@ fn a_hovering_mouse_previews_the_time_and_chapter() {
             .unwrap();
         for (id, fullscreen) in [("prop", false), ("rtl", false), ("prop", true)] {
             // The fourth player sits below the fold.
-            page.evaluate(format!(
+            page.evaluate_bounded(format!(
                 "document.querySelector('#{id}').scrollIntoView({{ block: 'center' }})"
             ))
             .await
@@ -191,7 +194,7 @@ fn a_hovering_mouse_previews_the_time_and_chapter() {
             }
             let segment = format!("document.querySelectorAll('#{id} [data-slot=segment]')[1]");
             let middle: pointer::Point = page
-                .evaluate(format!(
+                .evaluate_bounded(format!(
                     "(() => {{ const r = {segment}.getBoundingClientRect();
                      return {{ x: r.x + r.width / 2, y: r.y + r.height / 2 }}; }})()"
                 ))
@@ -252,7 +255,7 @@ fn ctrl_arrows_step_through_the_chapters() {
             ("prop", keyboard::ARROW_RIGHT, keyboard::ARROW_LEFT),
             ("rtl", keyboard::ARROW_LEFT, keyboard::ARROW_RIGHT),
         ] {
-            page.evaluate(format!(
+            page.evaluate_bounded(format!(
                 "document.querySelector('#{id} [role=slider]').focus()"
             ))
             .await

@@ -6,6 +6,7 @@ use e2e::browser::block_on;
 use e2e::driver::{Driver, eventually};
 use e2e::passes::keyboard::{self, Key};
 use e2e::passes::{pointer, target_size};
+use e2e::wait::PageBounded;
 use e2e::{Fixture, Suite, Viewport, js, wait};
 
 const PLAY: &str = "#player [data-slot=controls] button";
@@ -122,7 +123,7 @@ fn the_controls_fit_a_narrow_player() {
             (208, 208, 4),
             (160, 160, 4),
         ] {
-            page.evaluate(format!(
+            page.evaluate_bounded(format!(
                 "document.querySelector('#player').style.width = '{width}px'"
             ))
             .await
@@ -226,7 +227,7 @@ fn shift_question_lists_the_keys() {
         )
         .await
         .unwrap();
-        page.evaluate(format!("document.querySelector('{PLAY}').focus()"))
+        page.evaluate_bounded(format!("document.querySelector('{PLAY}').focus()"))
             .await
             .unwrap();
         keyboard::press_with(page, QUESTION_DE, keyboard::SHIFT)
@@ -277,7 +278,7 @@ fn a_healthy_player_mounting_never_shows_the_error() {
             .await
             .unwrap();
         let page = &fixture.page;
-        page.evaluate(
+        page.evaluate_bounded(
             "window.alerted = false;
              new MutationObserver(() => {
                  if (document.querySelector('#late [role=alert]')) window.alerted = true;
@@ -437,7 +438,7 @@ fn the_bars_follow_the_time_and_a_click_seeks() {
             .await
             .unwrap();
             let track: (f64, f64, f64) = page
-                .evaluate(format!(
+                .evaluate_bounded(format!(
                     "(() => {{ const r = document.querySelector('#{id} [data-slot=bars]').getBoundingClientRect();
                      return [r.left, r.width, r.top + r.height / 2]; }})()"
                 ))
@@ -575,14 +576,14 @@ fn keys_act_inside_the_player_only() {
         keyboard::press(page, M).await.unwrap();
         keyboard::tab_to(page, PLAY, 5).await.unwrap();
         let time: f64 = page
-            .evaluate(audio("player", "a.currentTime"))
+            .evaluate_bounded(audio("player", "a.currentTime"))
             .await
             .unwrap()
             .into_value()
             .unwrap();
         assert_eq!(time, 0.0, "L outside the player jumped");
         let muted: bool = page
-            .evaluate(audio("player", "a.muted"))
+            .evaluate_bounded(audio("player", "a.muted"))
             .await
             .unwrap()
             .into_value()
@@ -591,9 +592,11 @@ fn keys_act_inside_the_player_only() {
 
         keyboard::press(page, M).await.unwrap();
         // Space on the seek slider plays; the hotkeys stay off Space, which a button keeps.
-        page.evaluate("document.querySelector('#player [data-slot=seek] [role=slider]').focus()")
-            .await
-            .unwrap();
+        page.evaluate_bounded(
+            "document.querySelector('#player [data-slot=seek] [role=slider]').focus()",
+        )
+        .await
+        .unwrap();
         keyboard::press(page, keyboard::SPACE).await.unwrap();
         wait::for_js_true(
             page,
@@ -637,7 +640,7 @@ fn space_on_the_slider_ignores_chords_and_key_repeat() {
         )
         .await
         .unwrap();
-        page.evaluate(format!("document.querySelector('{SEEK}').focus()"))
+        page.evaluate_bounded(format!("document.querySelector('{SEEK}').focus()"))
             .await
             .unwrap();
 
@@ -650,7 +653,7 @@ fn space_on_the_slider_ignores_chords_and_key_repeat() {
         e2e::clock::settle(page).await.unwrap();
         let paused = || async {
             let paused: bool = page
-                .evaluate(audio("player", "a.paused"))
+                .evaluate_bounded(audio("player", "a.paused"))
                 .await
                 .unwrap()
                 .into_value()

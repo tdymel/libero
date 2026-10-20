@@ -3,6 +3,7 @@
 
 use e2e::browser::block_on;
 use e2e::passes::{keyboard, pointer};
+use e2e::wait::PageBounded;
 use e2e::{Fixture, Suite, Viewport, frames, wait};
 
 const MINUTES: &str = "#digital [data-column='Minutes']";
@@ -26,7 +27,7 @@ fn a_digital_column_turns_by_keys_presses_wheel_and_drag() {
             };
 
             let roles: String = page
-                .evaluate(
+                .evaluate_bounded(
                     "[...document.querySelectorAll('#digital [role=spinbutton]')].map(s => \
                      [s.getAttribute('aria-label'), s.getAttribute('aria-valuenow'), \
                       s.getAttribute('aria-valuemin'), s.getAttribute('aria-valuemax')].join()).join(';')",
@@ -38,7 +39,7 @@ fn a_digital_column_turns_by_keys_presses_wheel_and_drag() {
             assert_eq!(roles, "Hours,9,0,23;Minutes,30,0,55", "at {at}");
             // The press is the drag's single-pointer alternative: a 24px target (todo 1554).
             let lowest: f64 = page
-                .evaluate(
+                .evaluate_bounded(
                     "Math.min(...[...document.querySelectorAll('#digital [data-slot=neighbour]')] \
                      .map(n => n.getBoundingClientRect().height))",
                 )
@@ -48,7 +49,7 @@ fn a_digital_column_turns_by_keys_presses_wheel_and_drag() {
                 .unwrap();
             assert!(lowest >= 24.0, "at {at}: a neighbour is {lowest}px tall");
 
-            page.evaluate(format!("document.querySelector({MINUTES:?}).focus()"))
+            page.evaluate_bounded(format!("document.querySelector({MINUTES:?}).focus()"))
                 .await
                 .unwrap();
             keyboard::press(page, keyboard::ARROW_UP).await.unwrap();
@@ -106,7 +107,7 @@ fn typing_fills_the_digital_columns() {
             .await
             .unwrap();
         let page = &fixture.page;
-        page.evaluate(format!("document.querySelector({HOURS:?}).focus()"))
+        page.evaluate_bounded(format!("document.querySelector({HOURS:?}).focus()"))
             .await
             .unwrap();
         digits(page, "1445").await;
@@ -124,7 +125,7 @@ fn typing_fills_the_digital_columns() {
             .await
             .unwrap();
         let page = &fixture.page;
-        page.evaluate(format!("document.querySelector({limited:?}).focus()"))
+        page.evaluate_bounded(format!("document.querySelector({limited:?}).focus()"))
             .await
             .unwrap();
         keyboard::press(page, keyboard::HOME).await.unwrap();
@@ -179,7 +180,7 @@ fn a_date_time_range_takes_the_days_then_both_times() {
             let page = &fixture.page;
             let tabs = || async move {
                 let tabs: String = page
-                    .evaluate(
+                    .evaluate_bounded(
                         "[...document.querySelectorAll('[role=tab]')].map(t => \
                          (t.getAttribute('aria-selected') === 'true' ? '*' : '') + t.textContent).join('|')",
                     )
@@ -196,7 +197,7 @@ fn a_date_time_range_takes_the_days_then_both_times() {
             };
             assert_eq!(tabs().await, "*Dates|Start time|End time", "at {at}");
             let list: String = page
-                .evaluate("document.querySelector('[role=tablist]').getAttribute('aria-label')")
+                .evaluate_bounded("document.querySelector('[role=tablist]').getAttribute('aria-label')")
                 .await
                 .unwrap()
                 .into_value()
@@ -243,7 +244,7 @@ fn a_date_time_range_takes_the_days_then_both_times() {
             );
 
             // The strip is APG tabs: the arrows move the selection along it.
-            page.evaluate("document.querySelector('[role=tab][aria-selected=true]').focus()")
+            page.evaluate_bounded("document.querySelector('[role=tab][aria-selected=true]').focus()")
                 .await
                 .unwrap();
             keyboard::press(page, keyboard::HOME).await.unwrap();
@@ -284,7 +285,7 @@ async fn wheel(page: &chromiumoxide::Page, selector: &str, dy: f64) {
         DispatchMouseEventParams, DispatchMouseEventType,
     };
     let at = pointer::centre_of(page, selector).await.unwrap();
-    page.execute(
+    page.execute_bounded(
         DispatchMouseEventParams::builder()
             .r#type(DispatchMouseEventType::MouseWheel)
             .x(at.x)
@@ -355,7 +356,7 @@ fn a_time_picked_first_lands_on_today() {
                      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; })()";
         // Today read before the pick and at each check: a run across midnight passes (todo 1775).
         let _: bool = e2e::js(page, format!("(window.__before = {today}, true)")).await;
-        page.evaluate(format!("document.querySelector({HOURS_ANY:?}).focus()"))
+        page.evaluate_bounded(format!("document.querySelector({HOURS_ANY:?}).focus()"))
             .await
             .unwrap();
         digits(page, "10").await;
@@ -392,7 +393,7 @@ fn modifier_chords_go_to_the_browser() {
             .unwrap();
         fixture
             .page
-            .evaluate(format!("document.querySelector({MINUTES:?}).focus()"))
+            .evaluate_bounded(format!("document.querySelector({MINUTES:?}).focus()"))
             .await
             .unwrap();
         keyboard::assert_chords_ignored(
@@ -409,7 +410,7 @@ fn modifier_chords_go_to_the_browser() {
             .unwrap();
         fixture
             .page
-            .evaluate("document.querySelector('#fine [data-slot=face]').focus()")
+            .evaluate_bounded("document.querySelector('#fine [data-slot=face]').focus()")
             .await
             .unwrap();
         keyboard::assert_chords_ignored(
@@ -480,7 +481,7 @@ fn the_analog_face_reaches_every_minute_and_second() {
             .await
             .unwrap();
         showing(1, "the minutes button to show the minutes").await;
-        page.evaluate("document.querySelector('#fine [data-slot=face]').focus()")
+        page.evaluate_bounded("document.querySelector('#fine [data-slot=face]').focus()")
             .await
             .unwrap();
         keyboard::press(page, keyboard::ARROW_UP).await.unwrap();
@@ -514,7 +515,7 @@ fn the_face_takes_home_end_and_page_keys() {
             .unwrap();
         let page = &fixture.page;
         let focus_face =
-            || page.evaluate("document.querySelector('#fine [data-slot=face]').focus()");
+            || page.evaluate_bounded("document.querySelector('#fine [data-slot=face]').focus()");
         let press = |key: keyboard::Key, value: &'static str, what: &'static str| async move {
             keyboard::press(page, key).await.unwrap();
             let check = format!("document.getElementById('fine-value').textContent === {value:?}");
@@ -554,7 +555,7 @@ async fn press_at(page: &chromiumoxide::Page, at: pointer::Point) {
 
 /// The point on `#fine`'s outer ring a `turn` clockwise from 12.
 async fn face_point(page: &chromiumoxide::Page, turn: f64) -> pointer::Point {
-    page.evaluate(format!(
+    page.evaluate_bounded(format!(
         "(() => {{ const r = document.querySelector('#fine [data-slot=face]').getBoundingClientRect(); \
          const a = {turn} * 2 * Math.PI; \
          return {{ x: r.x + r.width / 2 + 0.4 * r.width * Math.sin(a), \
@@ -568,7 +569,7 @@ async fn face_point(page: &chromiumoxide::Page, turn: f64) -> pointer::Point {
 
 /// The centre of the mark labelled `label` under `root`.
 async fn mark_centre(page: &chromiumoxide::Page, root: &str, label: &str) -> pointer::Point {
-    page.evaluate(format!(
+    page.evaluate_bounded(format!(
         "(() => {{ const r = [...document.querySelectorAll('{root} [data-slot=mark]')] \
          .find(mark => mark.textContent === {label:?}).getBoundingClientRect(); \
          return {{ x: r.x + r.width / 2, y: r.y + r.height / 2 }}; }})()"
@@ -609,7 +610,7 @@ fn picks_and_the_hand_show_in_forced_colours() {
         let page = &fixture.page;
         e2e::browser::force_colours(page).await.unwrap();
         let canvas_filled: Vec<String> = page
-            .evaluate(
+            .evaluate_bounded(
                 "(() => { const probe = document.createElement('div'); \
                  probe.style.background = 'Canvas'; document.body.append(probe); \
                  const canvas = getComputedStyle(probe).backgroundColor; probe.remove(); \
@@ -673,7 +674,7 @@ fn the_readout_hand_is_ringed_and_disabled_parts_gray_out() {
         let page = &fixture.page;
         assert_on_marker(page, ACTIVE, IDLE).await;
         let [active, idle]: [String; 2] = page
-            .evaluate(format!(
+            .evaluate_bounded(format!(
                 "[{ACTIVE:?}, {IDLE:?}].map(q => getComputedStyle(document.querySelector(q)).backgroundColor)"
             ))
             .await

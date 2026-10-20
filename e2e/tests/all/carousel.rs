@@ -10,6 +10,7 @@ use e2e::passes::keyboard;
 use e2e::passes::pointer;
 use e2e::passes::target_size::MINIMUM;
 use e2e::suite::Step;
+use e2e::wait::PageBounded;
 use e2e::{Fixture, Suite, Viewport, wait};
 
 /// The slide pads by exactly the ring's reach, so a fractional slide width can
@@ -68,7 +69,7 @@ fn a_focused_slide_keeps_its_ring() {
                 keyboard::press(page, keyboard::TAB).await.unwrap();
             }
             let clipped: f64 = page
-                .evaluate(crate::image_list::ring_clipped(
+                .evaluate_bounded(crate::image_list::ring_clipped(
                     "[aria-roledescription=carousel]",
                 ))
                 .await
@@ -87,7 +88,7 @@ fn a_focused_slide_keeps_its_ring() {
         let page = &fixture.page;
         reach(page, BUTTON).await.unwrap();
         let clipped: f64 = page
-            .evaluate(crate::image_list::ring_clipped(
+            .evaluate_bounded(crate::image_list::ring_clipped(
                 "[aria-roledescription=carousel]",
             ))
             .await
@@ -142,7 +143,7 @@ pub(super) async fn reach(page: &Page, selector: &str) -> Result<()> {
 }
 
 pub(super) async fn index(page: &Page) -> Result<i64> {
-    let index: i64 = page.evaluate(INDEX).await?.into_value()?;
+    let index: i64 = page.evaluate_bounded(INDEX).await?.into_value()?;
     if index < 0 {
         bail!("no slide carries data-current, so the carousel's index cannot be read");
     }
@@ -337,7 +338,7 @@ fn home_and_end_at_the_ends_leave_the_page_to_scroll() {
 /// hit-tests to that dot.
 async fn dot_corners(page: &Page, offset: f64) -> Result<Vec<Vec<bool>>> {
     Ok(page
-        .evaluate(format!(
+        .evaluate_bounded(format!(
             "[...document.querySelectorAll({INDICATORS:?})].map(dot => {{ \
              const r = dot.getBoundingClientRect(); \
              const x = r.x + r.width / 2, y = r.y + r.height / 2; \
@@ -351,7 +352,7 @@ async fn dot_corners(page: &Page, offset: f64) -> Result<Vec<Vec<bool>>> {
 /// The centre of the `n`th dot, in viewport coordinates.
 async fn dot_centre(page: &Page, n: usize) -> Result<pointer::Point> {
     let (x, y): (f64, f64) = page
-        .evaluate(format!(
+        .evaluate_bounded(format!(
             "(() => {{ const r = document.querySelectorAll({INDICATORS:?})[{n}]\
              .getBoundingClientRect(); return [r.x + r.width / 2, r.y + r.height / 2]; }})()"
         ))
@@ -377,7 +378,7 @@ fn a_visible_clone_is_not_hidden_from_assistive_tech() {
         .await
         .unwrap();
         let hidden_focusable: Vec<String> = page
-            .evaluate(
+            .evaluate_bounded(
                 "[...document.querySelectorAll('[aria-roledescription=carousel] [aria-hidden=true]')]\
                  .flatMap(h => [...h.querySelectorAll('button, a[href], input, [tabindex]')])\
                  .filter(el => !el.closest('[inert]'))\
@@ -392,7 +393,7 @@ fn a_visible_clone_is_not_hidden_from_assistive_tech() {
             "focusable content under aria-hidden: {hidden_focusable:?}"
         );
         let names: Vec<String> = page
-            .evaluate(
+            .evaluate_bounded(
                 "[...document.querySelectorAll('[aria-roledescription=slide]')]\
                  .filter(el => !el.closest('[inert]'))\
                  .map(el => el.getAttribute('aria-label'))",
@@ -423,7 +424,7 @@ fn a_looping_strip_opens_on_its_first_slide() {
             .await
             .unwrap();
         let page = &fixture.page;
-        page.evaluate_on_new_document(format!(
+        page.evaluate_on_new_document_bounded(format!(
             "window.__carouselSamples = []; \
              requestAnimationFrame(function sample() {{ \
              const t = document.querySelector({TRACK:?}); \
@@ -446,7 +447,7 @@ fn a_looping_strip_opens_on_its_first_slide() {
         .unwrap();
         // Sampled from load: an instant placement has no frame between the two.
         let between: Vec<f64> = page
-            .evaluate(format!(
+            .evaluate_bounded(format!(
                 "window.__carouselSamples.filter(v => v > 0 && \
                  v < document.querySelector({TRACK:?}).scrollLeft - 1)"
             ))
@@ -469,7 +470,7 @@ fn a_looping_strip_opens_on_its_first_slide() {
 /// A smooth scroll's late settle in a background page reads back a "rotation" autoplay
 /// never made. The autoplay units test the timer, so the strip jumps.
 pub(super) async fn instant_scroll(page: &Page) {
-    page.evaluate(format!(
+    page.evaluate_bounded(format!(
         "(() => {{ const s = document.createElement('style'); \
          s.textContent = '{TRACK} {{ scroll-behavior: auto !important; }}'; \
          document.head.append(s); }})()"
@@ -486,7 +487,7 @@ fn the_dots_show_in_forced_colours() {
     block_on(async {
         let fixture = Fixture::open("/carousel", Viewport::Desktop).await.unwrap();
         let page = &fixture.page;
-        page.execute(
+        page.execute_bounded(
             SetEmulatedMediaParams::builder()
                 .features(vec![MediaFeature::new("forced-colors", "active")])
                 .build(),
@@ -510,7 +511,7 @@ fn the_dots_show_in_forced_colours() {
         .unwrap();
         // The page itself is `Canvas`; a fill the same colour is no fill.
         let [current, other, canvas]: [String; 3] = page
-            .evaluate(format!(
+            .evaluate_bounded(format!(
                 "(() => {{ const probe = document.createElement('div'); \
                  probe.style.background = 'Canvas'; document.body.append(probe); \
                  const canvas = getComputedStyle(probe).backgroundColor; probe.remove(); \
@@ -629,7 +630,7 @@ fn a_drag_released_on_a_clone_crosses_the_seam() {
         let page = &fixture.page;
         instant_scroll(page).await;
         let home = scroll_left(page).await;
-        page.evaluate(format!(
+        page.evaluate_bounded(format!(
             "(() => {{ const t = document.querySelector({TRACK:?}); window.__far = 0; \
              t.addEventListener('scroll', () => window.__far = Math.max(window.__far, t.scrollLeft)); }})()"
         ))
@@ -656,7 +657,7 @@ fn a_drag_released_on_a_clone_crosses_the_seam() {
 const PREVIOUS: &str = "[aria-roledescription=carousel] button[aria-label='Previous slide']";
 
 async fn scroll_left(page: &Page) -> f64 {
-    page.evaluate(format!("document.querySelector({TRACK:?}).scrollLeft"))
+    page.evaluate_bounded(format!("document.querySelector({TRACK:?}).scrollLeft"))
         .await
         .unwrap()
         .into_value()
@@ -666,7 +667,7 @@ async fn scroll_left(page: &Page) -> f64 {
 /// Runs `act`, which wraps the strip from rest `from` to rest `to`, and returns every
 /// `scrollLeft` sampled until it rests on `to`.
 async fn wrap_samples(page: &Page, act: impl AsyncFnOnce(), to: f64, what: &str) -> Vec<f64> {
-    page.evaluate(format!(
+    page.evaluate_bounded(format!(
         "(() => {{ const t = document.querySelector({TRACK:?}); window.__wrap = []; \
          if (window.__wrapOn) return; window.__wrapOn = true; \
          t.addEventListener('scroll', () => window.__wrap.push(t.scrollLeft)); \
@@ -682,7 +683,7 @@ async fn wrap_samples(page: &Page, act: impl AsyncFnOnce(), to: f64, what: &str)
     )
     .await
     .unwrap();
-    page.evaluate("window.__wrap")
+    page.evaluate_bounded("window.__wrap")
         .await
         .unwrap()
         .into_value()
@@ -778,10 +779,12 @@ fn a_scroll_away_from_the_focused_slide_keeps_the_focus_in_the_carousel() {
             .unwrap();
         let page = &fixture.page;
         instant_scroll(page).await;
-        page.evaluate("document.querySelector('[aria-roledescription=slide] button').focus()")
-            .await
-            .unwrap();
-        page.evaluate(format!(
+        page.evaluate_bounded(
+            "document.querySelector('[aria-roledescription=slide] button').focus()",
+        )
+        .await
+        .unwrap();
+        page.evaluate_bounded(format!(
             "(() => {{ const t = document.querySelector({TRACK:?}); t.scrollTo(t.scrollWidth, 0); }})()"
         ))
         .await
@@ -798,7 +801,7 @@ fn a_scroll_away_from_the_focused_slide_keeps_the_focus_in_the_carousel() {
 }
 
 async fn focus_track(page: &Page) {
-    page.evaluate(format!("document.querySelector({TRACK:?}).focus()"))
+    page.evaluate_bounded(format!("document.querySelector({TRACK:?}).focus()"))
         .await
         .unwrap();
 }
@@ -846,7 +849,7 @@ fn slides_that_all_fit_leave_no_dead_stop() {
         .await
         .unwrap();
         let [status, dots, stops]: [usize; 3] = page
-            .evaluate(
+            .evaluate_bounded(
                 "(() => { const q = (s) => document.querySelectorAll(`[aria-roledescription=carousel] ${s}`).length; \
                  return [q('[role=status]'), q('[data-slot=indicators]'), q('[tabindex=\"0\"]:not(button)')]; })()",
             )

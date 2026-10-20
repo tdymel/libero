@@ -8,6 +8,7 @@ use chromiumoxide::Page;
 use e2e::browser::block_on;
 use e2e::passes::keyboard::{self, CTRL, ENTER, Key};
 use e2e::passes::pointer;
+use e2e::wait::PageBounded;
 use e2e::{Fixture, Viewport, js, wait};
 
 #[test]
@@ -20,7 +21,9 @@ fn a_caller_toolbar_runs_commands_and_reads_state_through_the_handle() {
         let undo_disabled = "document.getElementById('ext-undo').disabled";
         assert!(js::<bool>(page, undo_disabled).await);
 
-        page.evaluate(format!("{EDITOR}.focus()")).await.unwrap();
+        page.evaluate_bounded(format!("{EDITOR}.focus()"))
+            .await
+            .unwrap();
         keyboard::type_text(page, "ab").await.unwrap();
         out_eq(page, "ab\n").await;
         select_first_leaf(page).await;
@@ -66,7 +69,9 @@ fn link_dialog_shortcut_help_block_menu_and_announcements() {
             .await
             .unwrap();
         let page = &fixture.page;
-        page.evaluate(format!("{EDITOR}.focus()")).await.unwrap();
+        page.evaluate_bounded(format!("{EDITOR}.focus()"))
+            .await
+            .unwrap();
         keyboard::type_text(page, "ab").await.unwrap();
         out_eq(page, "ab\n").await;
 
@@ -100,7 +105,7 @@ fn link_dialog_shortcut_help_block_menu_and_announcements() {
         )
         .await
         .unwrap();
-        page.evaluate(
+        page.evaluate_bounded(
             "(() => { const i = document.querySelector('[role=dialog] input'); i.select(); })()",
         )
         .await
@@ -209,7 +214,7 @@ fn a_toolbar_with_larger_icons_still_keeps_one_row() {
         let page = &fixture.page;
         assert!(until(page, MORE).await, "no More trigger");
         let (_, _, before): (bool, u32, u32) = js(page, TOOLBAR_ROWS).await;
-        page.evaluate(
+        page.evaluate_bounded(
             "(() => { const s = document.createElement('style'); \
                s.textContent = '[role=toolbar] button:not([aria-haspopup]) { min-width: 56px; }'; \
                document.head.append(s); })()",
@@ -253,7 +258,7 @@ fn the_handle_scrolls_a_far_editor_into_view_when_it_focuses_it() {
             ("far-insert", "edit() to bring the editor into view"),
             ("far-clear", "clear() to bring the editor into view"),
         ] {
-            page.evaluate("document.activeElement.blur(); scrollTo(0, 0)")
+            page.evaluate_bounded("document.activeElement.blur(); scrollTo(0, 0)")
                 .await
                 .unwrap();
             let top: f64 = js(page, "scrollY").await;
@@ -371,7 +376,9 @@ fn a_custom_toggle_is_announced() {
             .unwrap();
         let page = &fixture.page;
         editor_status(page).await;
-        page.evaluate(format!("{EDITOR}.focus()")).await.unwrap();
+        page.evaluate_bounded(format!("{EDITOR}.focus()"))
+            .await
+            .unwrap();
         pointer::click(page, LOUD).await.unwrap();
         announced(page, "Loud on").await;
         pointer::click(page, LOUD).await.unwrap();
@@ -390,7 +397,9 @@ fn toolbar_and_menu_actions_are_announced() {
             .unwrap();
         let page = &fixture.page;
         editor_status(page).await;
-        page.evaluate(format!("{EDITOR}.focus()")).await.unwrap();
+        page.evaluate_bounded(format!("{EDITOR}.focus()"))
+            .await
+            .unwrap();
         keyboard::type_text(page, "ab").await.unwrap();
         wait::for_js_true(page, &out_is("ab\n"), "the typed text")
             .await
@@ -424,12 +433,14 @@ fn the_toolbar_and_its_block_menu_work_from_the_keyboard() {
             .await
             .unwrap();
         let page = &fixture.page;
-        page.evaluate(format!("{EDITOR}.focus()")).await.unwrap();
+        page.evaluate_bounded(format!("{EDITOR}.focus()"))
+            .await
+            .unwrap();
         keyboard::type_text(page, "ab").await.unwrap();
         out_eq(page, "ab\n").await;
         let at = |index: &str| format!("{ITEMS}.indexOf(document.activeElement) === {index}");
 
-        page.evaluate("document.activeElement.blur()")
+        page.evaluate_bounded("document.activeElement.blur()")
             .await
             .unwrap();
         keyboard::tab_to(page, "[role=toolbar] button", 10)

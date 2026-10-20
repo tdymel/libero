@@ -5,6 +5,7 @@ use anyhow::Result;
 use e2e::browser::block_on;
 use e2e::driver::{Driver, eventually};
 use e2e::passes::pointer;
+use e2e::wait::PageBounded;
 use e2e::{Fixture, Viewport, wait};
 
 /// No Firebase bridge on the web: unsupported, and a register says so.
@@ -23,7 +24,7 @@ fn the_web_has_no_firebase_bridge() {
         .await
         .unwrap();
         let supported: String = page
-            .evaluate("document.querySelector('#supported').textContent")
+            .evaluate_bounded("document.querySelector('#supported').textContent")
             .await
             .unwrap()
             .into_value()

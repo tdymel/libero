@@ -7,6 +7,7 @@ use chromiumoxide::cdp::browser_protocol::input::InsertTextParams;
 use e2e::browser::block_on;
 use e2e::driver::{Driver, eventually, eventually_focused, eventually_text};
 use e2e::passes::keyboard;
+use e2e::wait::PageBounded;
 use e2e::{Fixture, Suite, Viewport, ax, wait};
 
 const CELL: &str = "[role=group] input";
@@ -55,7 +56,7 @@ fn a_composing_backspace_leaves_the_cells_alone() {
             .unwrap();
         crate::settle::painted(page).await.unwrap();
         let held: String = page
-            .evaluate("document.querySelector('#echo').textContent")
+            .evaluate_bounded("document.querySelector('#echo').textContent")
             .await
             .unwrap()
             .into_value()
@@ -114,7 +115,7 @@ fn the_rule_waits_until_focus_leaves_the_cells() {
 
 /// `js` once the render a move scheduled has landed: two frames on.
 async fn after_two_frames(page: &Page, js: &str) -> bool {
-    page.evaluate(format!(
+    page.evaluate_bounded(format!(
         "new Promise(r => requestAnimationFrame(() => requestAnimationFrame(() => r({js}))))"
     ))
     .await
@@ -254,7 +255,7 @@ fn every_cell_is_named_and_described() {
             .unwrap();
         let page = &fixture.page;
         let checks: String = page
-            .evaluate(
+            .evaluate_bounded(
                 "[...document.querySelectorAll('[role=group] input')].map((cell, i) => { \
                     const ids = (cell.getAttribute('aria-describedby') || '').split(' '); \
                     const text = ids.map(id => document.getElementById(id)?.textContent).join(' '); \
@@ -293,7 +294,7 @@ fn modifier_chords_leave_the_focus_on_its_cell() {
         let page = &fixture.page;
         let cell =
             "[...document.querySelectorAll('[role=group] input')].indexOf(document.activeElement)";
-        page.evaluate("document.querySelectorAll('[role=group] input')[1].focus()")
+        page.evaluate_bounded("document.querySelectorAll('[role=group] input')[1].focus()")
             .await
             .unwrap();
         keyboard::assert_chords_ignored(
@@ -324,7 +325,7 @@ fn modifier_chords_leave_the_focus_on_its_cell() {
 
 /// Focuses cell `index` with the caret at `caret`.
 async fn focus_at(page: &Page, index: usize, caret: usize) {
-    page.evaluate(format!(
+    page.evaluate_bounded(format!(
         "(() => {{ const i = document.querySelectorAll('[role=group] input')[{index}]; \
          i.focus(); i.setSelectionRange({caret}, {caret}); }})()"
     ))
@@ -396,11 +397,15 @@ fn a_paste_into_a_filled_cell_replaces_from_there() {
         expect_cells(page, "1|2|3|4 @3", "1234 typed").await;
 
         focus_at(page, 1, 1).await;
-        page.execute(InsertTextParams::new("98")).await.unwrap();
+        page.execute_bounded(InsertTextParams::new("98"))
+            .await
+            .unwrap();
         expect_cells(page, "1|9|8|4 @3", "98 pasted after the 2").await;
 
         focus_at(page, 1, 0).await;
-        page.execute(InsertTextParams::new("56")).await.unwrap();
+        page.execute_bounded(InsertTextParams::new("56"))
+            .await
+            .unwrap();
         expect_cells(page, "1|5|6|4 @3", "56 pasted before the 9").await;
 
         fixture.console.assert_clean("pin field paste").unwrap();
@@ -410,7 +415,7 @@ fn a_paste_into_a_filled_cell_replaces_from_there() {
 
 /// A clipboard paste of `text` over cell `index`'s selected character, as after a Tab.
 async fn paste_over_selection(page: &Page, index: usize, text: &str) {
-    page.evaluate(format!(
+    page.evaluate_bounded(format!(
         "(() => {{ const i = document.querySelectorAll('[role=group] input')[{index}]; \
          i.focus(); i.select(); const data = new DataTransfer(); \
          data.setData('text/plain', {text:?}); \
@@ -442,7 +447,9 @@ fn a_paste_over_a_selected_cell_writes_the_code() {
 
         // The same junk as text beside the digit, as a soft keyboard sends it.
         focus_at(page, 0, 1).await;
-        page.execute(InsertTextParams::new("x")).await.unwrap();
+        page.execute_bounded(InsertTextParams::new("x"))
+            .await
+            .unwrap();
         expect_cells(page, "1|2|5|6 @0", "x inserted after the 1").await;
 
         fixture.console.assert_clean("pin field paste").unwrap();
@@ -463,19 +470,23 @@ fn an_autofill_over_a_cell_holding_its_first_or_last_digit_keeps_every_digit() {
         press_digit(page, "1").await;
         expect_cells(page, "1||| @1", "1 typed").await;
 
-        page.evaluate("document.querySelectorAll('[role=group] input')[0].select()")
+        page.evaluate_bounded("document.querySelectorAll('[role=group] input')[0].select()")
             .await
             .unwrap();
-        page.execute(InsertTextParams::new("1234")).await.unwrap();
+        page.execute_bounded(InsertTextParams::new("1234"))
+            .await
+            .unwrap();
         expect_cells(page, "1|2|3|4 @3", "1234 filled over the 1").await;
 
         focus_at(page, 0, 0).await;
         press_digit(page, "4").await;
         expect_cells(page, "4|2|3|4 @1", "4 typed over the 1").await;
-        page.evaluate("document.querySelectorAll('[role=group] input')[0].select()")
+        page.evaluate_bounded("document.querySelectorAll('[role=group] input')[0].select()")
             .await
             .unwrap();
-        page.execute(InsertTextParams::new("1234")).await.unwrap();
+        page.execute_bounded(InsertTextParams::new("1234"))
+            .await
+            .unwrap();
         expect_cells(page, "1|2|3|4 @3", "1234 filled over the 4").await;
 
         fixture.console.assert_clean("pin field autofill").unwrap();
@@ -498,10 +509,14 @@ fn a_soft_keyboard_backspace_steps_back_from_the_emptied_cell() {
         keyboard::type_text(page, "1234").await.unwrap();
         expect_cells(page, "1|2|3|4 @3", "1234 typed").await;
 
-        page.evaluate(EMPTY.replace('%', "3")).await.unwrap();
+        page.evaluate_bounded(EMPTY.replace('%', "3"))
+            .await
+            .unwrap();
         expect_cells(page, "1|2|3| @3", "the last cell emptied").await;
 
-        page.evaluate(EMPTY.replace('%', "2")).await.unwrap();
+        page.evaluate_bounded(EMPTY.replace('%', "2"))
+            .await
+            .unwrap();
         expect_cells(page, "1|2|| @1", "a middle cell emptied").await;
 
         fixture
@@ -525,7 +540,7 @@ fn digits_of_another_script_fill_the_cells() {
         expect_cells(page, "1|2|3|4 @3", "Arabic-Indic digits pasted").await;
 
         focus_at(page, 0, 0).await;
-        page.execute(InsertTextParams::new("\u{FF19}"))
+        page.execute_bounded(InsertTextParams::new("\u{FF19}"))
             .await
             .unwrap();
         expect_cells(page, "9|2|3|4 @1", "a full-width 9 typed before the 1").await;
@@ -577,7 +592,7 @@ fn eight_letter_cells_fit_a_phone_and_read_as_cells_only() {
         .await
         .unwrap();
         let checks: Vec<bool> = page
-            .evaluate(
+            .evaluate_bounded(
                 "(() => { const group = document.querySelector('[role=group]'); \
                  const box = document.getElementById('box').getBoundingClientRect(); \
                  const cells = [...group.querySelectorAll('input')]; \
@@ -625,7 +640,9 @@ fn every_cell_reports_required_and_invalid() {
             "every cell required and invalid:\n{tree}"
         );
         let on_group: bool = page
-            .evaluate("document.querySelector('[role=group]').hasAttribute('aria-required')")
+            .evaluate_bounded(
+                "document.querySelector('[role=group]').hasAttribute('aria-required')",
+            )
             .await
             .unwrap()
             .into_value()

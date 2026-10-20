@@ -4,6 +4,7 @@
 use chromiumoxide::cdp::browser_protocol::emulation::SetDeviceMetricsOverrideParams;
 use e2e::browser::block_on;
 use e2e::passes::keyboard;
+use e2e::wait::PageBounded;
 use e2e::{Fixture, Suite, Viewport, wait};
 use serde::Deserialize;
 
@@ -46,7 +47,7 @@ fn a_quilted_below_bar_stays_inside_its_cell() {
             .await
             .unwrap();
         let problems: Vec<String> = page
-            .evaluate(
+            .evaluate_bounded(
                 "(() => { const cells = [...document.querySelectorAll('[role=list] > li')]; \
                  const rects = cells.map(c => c.getBoundingClientRect()); const out = []; \
                  cells.forEach((cell, i) => { const r = rects[i]; \
@@ -79,7 +80,7 @@ fn an_unbreakable_caption_word_wraps_inside_its_cell() {
             .await
             .unwrap();
         let problems: Vec<String> = page
-            .evaluate(
+            .evaluate_bounded(
                 "(() => { const out = []; \
                  for (const [i, bar] of document.querySelectorAll('[role=list] figcaption').entries()) { \
                    const cell = bar.closest('li').getBoundingClientRect(); \
@@ -108,7 +109,7 @@ fn a_focused_link_cell_keeps_its_ring() {
         let page = &fixture.page;
         keyboard::tab_to(page, "[role=list] a", 10).await.unwrap();
         let clipped: f64 = page
-            .evaluate(ring_clipped("[role=list]"))
+            .evaluate_bounded(ring_clipped("[role=list]"))
             .await
             .unwrap()
             .into_value()
@@ -151,7 +152,7 @@ fn a_zoom_button_and_a_below_bar_button_keep_their_rings() {
         for target in [ZOOM, "#below-start", "#below-action"] {
             keyboard::tab_to(page, target, 10).await.unwrap();
             let clipped: f64 = page
-                .evaluate(ring_clipped("[role=list]"))
+                .evaluate_bounded(ring_clipped("[role=list]"))
                 .await
                 .unwrap()
                 .into_value()
@@ -163,7 +164,9 @@ fn a_zoom_button_and_a_below_bar_button_keep_their_rings() {
             if target == ZOOM {
                 // The picture covers the button's own inset shadows: the stripe is the overlay's.
                 let overlay: String = page
-                    .evaluate("getComputedStyle(document.activeElement, '::after').boxShadow")
+                    .evaluate_bounded(
+                        "getComputedStyle(document.activeElement, '::after').boxShadow",
+                    )
                     .await
                     .unwrap()
                     .into_value()
@@ -247,7 +250,7 @@ fn a_linked_cell_bar_passes_clicks_to_the_link_but_not_from_its_controls() {
             ("#bar-action", "bar-action"),
         ] {
             let hit: String = page
-                .evaluate(hit_at(selector))
+                .evaluate_bounded(hit_at(selector))
                 .await
                 .unwrap()
                 .into_value()
@@ -307,12 +310,17 @@ async fn measure(viewport: Viewport, widths: &[&str]) {
     let page = &fixture.page;
 
     for width in widths {
-        page.evaluate(format!(
+        page.evaluate_bounded(format!(
             "document.querySelector('#quilt-frame').style.width = '{width}'"
         ))
         .await
         .unwrap();
-        let quilt: Quilt = page.evaluate(MEASURE).await.unwrap().into_value().unwrap();
+        let quilt: Quilt = page
+            .evaluate_bounded(MEASURE)
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
         eprintln!("{} {width}: {quilt:?}", viewport.name());
 
         let g = quilt.row_gap;
@@ -383,11 +391,11 @@ fn responsive_cols_follow_the_viewport() {
         let page = &fixture.page;
 
         for (width, cols) in [(390, 1.0), (800, 2.0), (1280, 4.0)] {
-            page.execute(SetDeviceMetricsOverrideParams::new(width, 900, 1.0, false))
+            page.execute_bounded(SetDeviceMetricsOverrideParams::new(width, 900, 1.0, false))
                 .await
                 .unwrap();
             let row: Row = page
-                .evaluate(MEASURE_ROW)
+                .evaluate_bounded(MEASURE_ROW)
                 .await
                 .unwrap()
                 .into_value()
@@ -437,7 +445,7 @@ fn masonry_keeps_the_reading_order_of_the_dom() {
         .await
         .unwrap();
         let cells: Vec<[f64; 2]> = page
-            .evaluate(MEASURE_MASONRY)
+            .evaluate_bounded(MEASURE_MASONRY)
             .await
             .unwrap()
             .into_value()

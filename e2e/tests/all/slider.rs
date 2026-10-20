@@ -5,6 +5,7 @@ use e2e::browser::block_on;
 use e2e::driver::{Driver, Platform, eventually, eventually_text, swipe_scrolls_on_android};
 use e2e::passes::target_size::MINIMUM;
 use e2e::passes::{keyboard, pointer};
+use e2e::wait::PageBounded;
 use e2e::{Fixture, Suite, Viewport, wait};
 
 pub(super) const VALUE_NOW: &str =
@@ -352,7 +353,7 @@ fn the_value_bubble_rides_the_thumb_through_a_drag() {
             .await
             .unwrap();
         let page = &fixture.page;
-        page.evaluate(SAMPLE_BUBBLE).await.unwrap();
+        page.evaluate_bounded(SAMPLE_BUBBLE).await.unwrap();
         let from = pointer::centre_of(page, THUMB).await.unwrap();
         let to = pointer::Point {
             x: from.x + 240.0,
@@ -364,7 +365,7 @@ fn the_value_bubble_rides_the_thumb_through_a_drag() {
         .await
         .unwrap();
         let (frames, worst): (usize, f64) = page
-            .evaluate("(() => { window.__sampled = true; return [__offsets.length, Math.max(0, ...__offsets)]; })()")
+            .evaluate_bounded("(() => { window.__sampled = true; return [__offsets.length, Math.max(0, ...__offsets)]; })()")
             .await
             .unwrap()
             .into_value()
@@ -398,7 +399,9 @@ fn sample_bubble(thumb: &str, check: &str) -> String {
 
 /// Drags `thumb` 120px with `sample_bubble` running; the frames shown and failed.
 async fn drag_sampled(page: &chromiumoxide::Page, thumb: &str, check: &str) -> (usize, String) {
-    page.evaluate(sample_bubble(thumb, check)).await.unwrap();
+    page.evaluate_bounded(sample_bubble(thumb, check))
+        .await
+        .unwrap();
     let from = pointer::centre_of(page, thumb).await.unwrap();
     let to = pointer::Point {
         x: from.x + 120.0,
@@ -410,7 +413,7 @@ async fn drag_sampled(page: &chromiumoxide::Page, thumb: &str, check: &str) -> (
     })
     .await
     .unwrap();
-    page.evaluate(
+    page.evaluate_bounded(
         "(() => { window.__sampled = true; return [__shown, JSON.stringify(__failed)]; })()",
     )
     .await
@@ -511,7 +514,7 @@ fn the_thumb_takes_the_pointer_over_24px() {
 async fn corners_on_thumb(fixture: &Fixture, centre: pointer::Point, offset: f64) -> Vec<bool> {
     fixture
         .page
-        .evaluate(format!(
+        .evaluate_bounded(format!(
             "[[-1,-1],[1,-1],[-1,1],[1,1]].map(([dx, dy]) => {{ \
              const el = document.elementFromPoint({x} + dx * {offset}, {y} + dy * {offset}); \
              return !!el && !!el.closest('[role=slider]'); }})",
@@ -532,7 +535,7 @@ fn the_thumb_is_centred_on_its_value() {
         let fixture = Fixture::open("/slider", Viewport::Desktop).await.unwrap();
         let [dx, dy]: [f64; 2] = fixture
             .page
-            .evaluate(
+            .evaluate_bounded(
                 "(() => { \
                  const thumb = document.querySelector('[role=slider]'); \
                  const t = thumb.getBoundingClientRect(); \
@@ -592,7 +595,7 @@ fn a_required_thumb_carries_no_aria_required() {
             .await
             .unwrap();
         let (required, asterisk): (Option<String>, bool) = page
-            .evaluate(
+            .evaluate_bounded(
                 "(() => { const t = document.querySelector('#quality [role=slider]'); \
                  const label = document.getElementById(t.getAttribute('aria-labelledby')); \
                  return [t.getAttribute('aria-required'), label.textContent.includes('*')]; })()",
@@ -620,7 +623,7 @@ fn track_bar_and_marks_show_in_forced_colours() {
             .await
             .unwrap();
         let page = &fixture.page;
-        page.execute(
+        page.execute_bounded(
             SetEmulatedMediaParams::builder()
                 .features(vec![MediaFeature::new("forced-colors", "active")])
                 .build(),
@@ -636,7 +639,7 @@ fn track_bar_and_marks_show_in_forced_colours() {
         .unwrap();
         // `#quality` sits on Medium: bar, one filled mark on it, one mark past it.
         let bare: Vec<String> = page
-            .evaluate(
+            .evaluate_bounded(
                 "(() => {
                     const bg = el => getComputedStyle(el).backgroundColor;
                     const outlined = el => {
@@ -750,7 +753,7 @@ fn a_disabled_slider_shows_not_allowed_and_ignores_the_pointer() {
         pointer::move_to(page, from).await.unwrap();
         e2e::clock::settle(page).await.unwrap();
         let (now, bubble): (String, bool) = page
-            .evaluate(format!(
+            .evaluate_bounded(format!(
                 "[{value}, [...document.querySelectorAll('[role=tooltip]')].some(t => t.checkVisibility())]"
             ))
             .await
@@ -777,9 +780,14 @@ fn focus_on_a_disabled_thumb_lifts_the_fade() {
             .await
             .unwrap();
         let page = &fixture.page;
-        let rest: f64 = page.evaluate(OPACITY).await.unwrap().into_value().unwrap();
+        let rest: f64 = page
+            .evaluate_bounded(OPACITY)
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
         assert_eq!(rest, 0.5, "the disabled slider's resting fade");
-        page.evaluate("document.querySelector('#locked [role=slider]').focus()")
+        page.evaluate_bounded("document.querySelector('#locked [role=slider]').focus()")
             .await
             .unwrap();
         wait::for_js_true(
@@ -811,8 +819,12 @@ fn under_rtl_the_track_runs_right_to_left() {
             let rtl = dir == "rtl";
             let fixture = crate::rtl_keys::open_in("/slider", dir).await;
             let page = &fixture.page;
-            let (along, [left, top, width, height]): (Vec<f64>, [f64; 4]) =
-                page.evaluate(ALONG).await.unwrap().into_value().unwrap();
+            let (along, [left, top, width, height]): (Vec<f64>, [f64; 4]) = page
+                .evaluate_bounded(ALONG)
+                .await
+                .unwrap()
+                .into_value()
+                .unwrap();
             // The value is 40.
             let drawn = if rtl { 1.0 - along[0] } else { along[0] };
             assert!(
@@ -839,7 +851,7 @@ fn under_rtl_the_track_runs_right_to_left() {
             .unwrap();
 
             let before: String = page
-                .evaluate(VALUE_NOW)
+                .evaluate_bounded(VALUE_NOW)
                 .await
                 .unwrap()
                 .into_value()
@@ -868,7 +880,7 @@ fn under_rtl_a_range_puts_its_minimum_on_the_right() {
             let fixture = crate::rtl_keys::open_in("/range-slider", dir).await;
             let (along, _): (Vec<f64>, [f64; 4]) = fixture
                 .page
-                .evaluate(ALONG)
+                .evaluate_bounded(ALONG)
                 .await
                 .unwrap()
                 .into_value()
@@ -911,12 +923,12 @@ fn a_bars_track_fills_from_the_minimum_in_either_direction() {
             for id in ["bars", "bars-rtl"] {
                 wait::for_visible(page, &format!("#{id} [data-slot=bars] > span")).await?;
                 let (filled, before, no_line): (usize, bool, bool) =
-                    page.evaluate(bars_js(id)).await?.into_value()?;
+                    page.evaluate_bounded(bars_js(id)).await?.into_value()?;
                 ensure!(filled == 2, "#{id}: {filled} of 8 bars filled at 25");
                 ensure!(before, "#{id}: the filled bars are not on the minimum's side");
                 ensure!(no_line, "#{id}: the line track's bar still draws");
             }
-            page.evaluate("document.querySelector('#bars-rtl [role=slider]').focus()")
+            page.evaluate_bounded("document.querySelector('#bars-rtl [role=slider]').focus()")
                 .await?;
             keyboard::press(page, keyboard::END).await?;
             wait::for_js_true(
@@ -950,7 +962,7 @@ async fn track_point(
     fraction: f64,
 ) -> Result<pointer::Point> {
     Ok(page
-        .evaluate(format!(
+        .evaluate_bounded(format!(
             "(() => {{ const t = document.querySelector('#{id} [data-slot=track]').getBoundingClientRect();
              const w = document.querySelector('#{id} [role=slider]').getBoundingClientRect().width;
              return {{ x: t.x + w / 2 + {fraction} * (t.width - w), y: t.y + t.height / 2 }}; }})()"
@@ -999,7 +1011,7 @@ fn the_hover_preview_follows_a_resized_track() {
         let outcome = async {
             pointer::move_to(page, track_point(page, "single", 0.75).await?).await?;
             wait::for_js_true(page, &preview_js("75"), "the preview of 75").await?;
-            page.evaluate("document.querySelector('#box').style.width = '200px'")
+            page.evaluate_bounded("document.querySelector('#box').style.width = '200px'")
                 .await?;
             e2e::clock::next_frame(page).await?;
             pointer::move_to(page, track_point(page, "single", 0.5).await?).await?;
@@ -1048,7 +1060,10 @@ fn preview_on_hover_shows_the_value_and_escape_hides_it() {
                 pointer::move_to(page, track_point(page, id, 0.8).await?).await?;
                 e2e::clock::settle(page).await?;
                 e2e::clock::next_frame(page).await?;
-                let back: bool = page.evaluate(preview_js("80")).await?.into_value()?;
+                let back: bool = page
+                    .evaluate_bounded(preview_js("80"))
+                    .await?
+                    .into_value()?;
                 ensure!(
                     !back,
                     "#{id}: the preview came back before the pointer left"

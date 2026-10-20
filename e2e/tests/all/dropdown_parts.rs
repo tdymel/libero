@@ -4,6 +4,7 @@
 use e2e::browser::block_on;
 use e2e::passes::keyboard;
 use e2e::passes::pointer;
+use e2e::wait::PageBounded;
 use e2e::{Fixture, Viewport, wait};
 
 /// A selector, a computed-style property and its expected value.
@@ -18,7 +19,7 @@ fn dropdown_parts_style_the_portaled_dropdowns() {
         let page = &fixture.page;
         wait::for_visible(page, "#color").await.unwrap();
         let read = |selector: &'static str, property: &'static str| async move {
-            page.evaluate(format!(
+            page.evaluate_bounded(format!(
                 "(() => {{ const el = document.querySelector({selector:?}); \
                  return el ? getComputedStyle(el).{property} : 'missing'; }})()"
             ))

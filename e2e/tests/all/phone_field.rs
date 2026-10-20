@@ -5,6 +5,7 @@ use chromiumoxide::Page;
 use e2e::browser::block_on;
 use e2e::driver::{Driver, Platform, Rect, eventually, eventually_text};
 use e2e::suite::Step;
+use e2e::wait::PageBounded;
 use e2e::{Fixture, Suite, Viewport, ax, passes::keyboard, passes::pointer, wait};
 
 const PICKER: &str = "button[aria-haspopup=listbox]";
@@ -119,7 +120,7 @@ fn the_country_list_fits_a_shrunk_visual_viewport() {
         )
         .await
         .unwrap();
-        page.execute(SetPageScaleFactorParams::new(2.0))
+        page.execute_bounded(SetPageScaleFactorParams::new(2.0))
             .await
             .unwrap();
         wait::for_js_true(
@@ -157,10 +158,10 @@ fn the_country_list_stays_below_a_panned_visual_viewport_top() {
         )
         .await
         .unwrap();
-        page.execute(SetPageScaleFactorParams::new(3.0))
+        page.execute_bounded(SetPageScaleFactorParams::new(3.0))
             .await
             .unwrap();
-        page.evaluate(format!(
+        page.evaluate_bounded(format!(
             "document.querySelector('{PICKER}').scrollIntoView({{ block: 'start' }})"
         ))
         .await
@@ -204,10 +205,10 @@ fn the_country_list_shifts_into_a_sideways_panned_visual_viewport() {
         )
         .await
         .unwrap();
-        page.execute(SetPageScaleFactorParams::new(3.0))
+        page.execute_bounded(SetPageScaleFactorParams::new(3.0))
             .await
             .unwrap();
-        page.evaluate(format!(
+        page.evaluate_bounded(format!(
             "document.querySelector('{TEL}').scrollIntoView({{ block: 'nearest', inline: 'end' }})"
         ))
         .await
@@ -273,7 +274,7 @@ fn an_error_field_meets_the_baseline() {
 
 /// The highlighted row's text, or `None`.
 async fn highlighted(page: &Page) -> Option<String> {
-    page.evaluate(format!(
+    page.evaluate_bounded(format!(
         "(s => {{ const id = s && s.getAttribute('aria-activedescendant'); \
          return id ? document.getElementById(id).textContent : null; }})(document.querySelector({SEARCH:?}))"
     ))
@@ -440,7 +441,7 @@ fn a_read_only_picker_is_focusable_but_opens_nothing() {
         );
         assert!(!tree.contains("listbox \""), "the list opened:\n{tree}");
         let focused: bool = page
-            .evaluate(format!(
+            .evaluate_bounded(format!(
                 "document.activeElement === document.querySelector({PICKER:?})"
             ))
             .await
@@ -507,7 +508,7 @@ fn a_press_in_the_search_text_places_the_caret() {
         .await
         .unwrap();
         let (x, y): (f64, f64) = page
-            .evaluate(format!(
+            .evaluate_bounded(format!(
                 "(r => [r.left + 9, r.top + r.height / 2])({search}.getBoundingClientRect())"
             ))
             .await
@@ -590,7 +591,7 @@ fn the_list_sorts_by_the_localized_name() {
         .unwrap();
         // Windowed above 200 rows (todo 2234): scroll through, keying each drawn name by its offset.
         let names: Vec<String> = page
-            .evaluate(
+            .evaluate_bounded(
                 r#"(async () => {
                 const list = document.querySelector('[role=listbox]');
                 const area = [list, ...list.querySelectorAll('*')].find(e => e.scrollHeight > e.clientHeight + 100);
@@ -669,7 +670,7 @@ fn the_dial_code_reads_left_to_right_under_rtl() {
         .await
         .unwrap();
         let order: Vec<(String, bool)> = page
-            .evaluate(
+            .evaluate_bounded(
                 "[...document.querySelectorAll('[data-slot=dial]')].map(el => {
                    const text = el.firstChild, range = document.createRange();
                    range.setStart(text, 0); range.setEnd(text, 1);
@@ -706,7 +707,12 @@ fn a_rule_added_after_mount_waits_for_the_field_to_lose_focus() {
             .unwrap();
         keyboard::tab_to(page, PICKER, 10).await.unwrap();
         let moves = "Number(document.getElementById('moves').textContent)";
-        let before: u32 = page.evaluate(moves).await.unwrap().into_value().unwrap();
+        let before: u32 = page
+            .evaluate_bounded(moves)
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
         keyboard::press(page, keyboard::TAB).await.unwrap();
         wait::for_js_true(
             page,
@@ -724,7 +730,12 @@ fn a_rule_added_after_mount_waits_for_the_field_to_lose_focus() {
         .await
         .unwrap();
         let shown = "document.body.textContent.includes('Enter a number.')";
-        let early: bool = page.evaluate(shown).await.unwrap().into_value().unwrap();
+        let early: bool = page
+            .evaluate_bounded(shown)
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
         assert!(!early, "the move inside the field touched it");
 
         keyboard::press(page, keyboard::TAB).await.unwrap();
@@ -813,7 +824,7 @@ fn typing_keeps_the_caret_and_blur_groups() {
         let page = &fixture.page;
         keyboard::tab_to(page, TEL, 10).await.unwrap();
         keyboard::type_text(page, "213734253").await.unwrap();
-        page.evaluate(format!(
+        page.evaluate_bounded(format!(
             "document.querySelector({TEL:?}).setSelectionRange(3, 3)"
         ))
         .await
@@ -821,7 +832,7 @@ fn typing_keeps_the_caret_and_blur_groups() {
         keyboard::type_text(page, "3").await.unwrap();
         let read = format!("(t => [t.value, t.selectionStart])(document.querySelector({TEL:?}))");
         let typed: (String, usize) = page
-            .evaluate(read.as_str())
+            .evaluate_bounded(read.as_str())
             .await
             .unwrap()
             .into_value()
@@ -842,7 +853,7 @@ fn typing_keeps_the_caret_and_blur_groups() {
         .unwrap();
 
         let wiring: Vec<Option<String>> = page
-            .evaluate(format!(
+            .evaluate_bounded(format!(
                 "(t => ['type', 'inputmode', 'autocomplete', 'aria-invalid', 'aria-required', 'required'] \
                  .map(name => t.getAttribute(name)))(document.querySelector({TEL:?}))"
             ))

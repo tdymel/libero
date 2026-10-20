@@ -5,6 +5,7 @@ use anyhow::{Result, ensure};
 use e2e::Suite;
 use e2e::driver::{Driver, Platform, eventually};
 use e2e::passes::keyboard;
+use e2e::wait::PageBounded;
 
 const LAYER: &str = "#chart [data-chart-layer]";
 const TOOLTIP: &str = "#chart [data-slot=tooltip]";
@@ -242,7 +243,12 @@ fn forced_colours_draw_the_ink_in_system_colours() {
         )
         .await
         .unwrap();
-        let ink: String = page.evaluate(INK).await.unwrap().into_value().unwrap();
+        let ink: String = page
+            .evaluate_bounded(INK)
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
         let (background, fills, strokes, [canvas, text], stand_in): (
             String,
             Vec<String>,

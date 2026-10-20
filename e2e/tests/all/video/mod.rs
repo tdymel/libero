@@ -12,6 +12,7 @@ use e2e::driver::{Driver, Platform, eventually};
 use e2e::passes::contrast::COLOUR_JS;
 use e2e::passes::keyboard::{self, Key};
 use e2e::passes::pointer;
+use e2e::wait::PageBounded;
 use e2e::{Fixture, Suite, Viewport, clock, wait};
 
 const PLAY: &str = "#player [data-slot=controls] button";
@@ -70,7 +71,7 @@ fn the_controls_fit_a_narrow_player() {
             (320, "flex", "none", true),
             (160, "flex", "none", false),
         ] {
-            page.evaluate(format!(
+            page.evaluate_bounded(format!(
                 "document.querySelector('#player').style.width = '{width}px'"
             ))
             .await
@@ -108,13 +109,15 @@ fn every_control_is_a_tab_stop_in_visual_order() {
         )
         .await
         .unwrap();
-        page.evaluate("document.querySelector('#player [data-slot=seek] [role=slider]').focus()")
-            .await
-            .unwrap();
+        page.evaluate_bounded(
+            "document.querySelector('#player [data-slot=seek] [role=slider]').focus()",
+        )
+        .await
+        .unwrap();
         let mut names = Vec::new();
         for _ in 0..7 {
             let name: String = page
-                .evaluate("document.activeElement.getAttribute('aria-label')")
+                .evaluate_bounded("document.activeElement.getAttribute('aria-label')")
                 .await
                 .unwrap()
                 .into_value()
@@ -171,7 +174,7 @@ fn the_speed_menu_sets_the_rate() {
         )
         .await
         .unwrap();
-        page.evaluate(
+        page.evaluate_bounded(
             "[...document.querySelectorAll('[role=menuitemradio]')].find((e) => e.textContent.includes('1.5×')).click()",
         )
         .await
@@ -227,7 +230,7 @@ fn the_overlay_bar_keeps_its_contrast_over_a_white_picture() {
         .await
         .unwrap();
         for scheme in ["light", "dark"] {
-            page.execute(
+            page.execute_bounded(
                 SetEmulatedMediaParams::builder()
                     .features(vec![MediaFeature::new("prefers-color-scheme", scheme)])
                     .build(),
@@ -235,7 +238,7 @@ fn the_overlay_bar_keeps_its_contrast_over_a_white_picture() {
             .await
             .unwrap();
             let [time, speed, icon, track, thumb]: [f64; 5] = page
-                .evaluate(contrast.as_str())
+                .evaluate_bounded(contrast.as_str())
                 .await
                 .unwrap()
                 .into_value()
@@ -258,7 +261,7 @@ fn the_picture_has_an_edge_under_forced_colours() {
     block_on(async {
         let fixture = Fixture::open("/video", Viewport::Desktop).await.unwrap();
         let page = &fixture.page;
-        page.execute(
+        page.execute_bounded(
             SetEmulatedMediaParams::builder()
                 .features(vec![MediaFeature::new("forced-colors", "active")])
                 .build(),
@@ -560,8 +563,12 @@ fn at_xs_the_speaker_and_the_chevron_each_own_a_24px_target() {
             .await
             .is_err()
         {
-            let measured: Option<String> =
-                page.evaluate(owned).await.unwrap().into_value().unwrap();
+            let measured: Option<String> = page
+                .evaluate_bounded(owned)
+                .await
+                .unwrap()
+                .into_value()
+                .unwrap();
             panic!("a volume button owns less than 24px: {measured:?}");
         }
         fixture.close().await.unwrap();
@@ -582,7 +589,7 @@ fn a_press_on_the_seek_track_seeks() {
         .await
         .unwrap();
         let track: pointer::Point = page
-            .evaluate(
+            .evaluate_bounded(
                 "(() => { const r = document.querySelector('#player [data-slot=seek] [data-slot=track]').getBoundingClientRect();
                  return { x: r.x + r.width * 0.75, y: r.y + r.height / 2 }; })()",
             )
@@ -623,7 +630,12 @@ fn a_control_tooltip_waits_two_seconds_on_hover() {
             .await
             .unwrap();
         clock::settle(page).await.unwrap();
-        let early: bool = page.evaluate(TIP).await.unwrap().into_value().unwrap();
+        let early: bool = page
+            .evaluate_bounded(TIP)
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
         assert!(!early, "the tooltip opened before its 2 s timer");
         clock::fire(page, 2000).await.unwrap();
         wait::for_js_true(page, TIP, "the tooltip after the delay")
@@ -688,7 +700,7 @@ fn shift_question_lists_the_keys_inside_the_player() {
         .await
         .unwrap();
 
-        page.evaluate("document.activeElement?.blur()")
+        page.evaluate_bounded("document.activeElement?.blur()")
             .await
             .unwrap();
         keyboard::press_with(page, QUESTION, keyboard::SHIFT)
@@ -696,14 +708,14 @@ fn shift_question_lists_the_keys_inside_the_player() {
             .unwrap();
         clock::settle(page).await.unwrap();
         let stray: bool = page
-            .evaluate(format!("document.querySelector('{DIALOG}') !== null"))
+            .evaluate_bounded(format!("document.querySelector('{DIALOG}') !== null"))
             .await
             .unwrap()
             .into_value()
             .unwrap();
         assert!(!stray, "Shift+? outside the player opened the help");
 
-        page.evaluate(format!("document.querySelector('{PLAY}').focus()"))
+        page.evaluate_bounded(format!("document.querySelector('{PLAY}').focus()"))
             .await
             .unwrap();
         keyboard::press_with(page, QUESTION, keyboard::SHIFT)

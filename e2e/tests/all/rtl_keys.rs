@@ -4,6 +4,7 @@
 use chromiumoxide::Page;
 use e2e::browser::block_on;
 use e2e::passes::keyboard::{self, Key};
+use e2e::wait::PageBounded;
 use e2e::{Fixture, Viewport, wait};
 
 async fn open_rtl(route: &str) -> Fixture {
@@ -15,7 +16,7 @@ pub(crate) async fn open_in(route: &str, dir: &str) -> Fixture {
     let fixture = Fixture::open(route, Viewport::Desktop).await.unwrap();
     fixture
         .page
-        .evaluate(format!("document.documentElement.dir = '{dir}'"))
+        .evaluate_bounded(format!("document.documentElement.dir = '{dir}'"))
         .await
         .unwrap();
     wait::for_js_true(
@@ -101,7 +102,7 @@ fn a_submenu_opens_on_the_left_on_arrow_left() {
         let fixture = open_rtl("/menubar-docs").await;
         let page = &fixture.page;
         // Centred, so either side has room and no collision flip decides it.
-        page.evaluate(
+        page.evaluate_bounded(
             "document.querySelector('[role=menubar]').parentElement.style.marginInline = 'auto'",
         )
         .await
@@ -291,7 +292,7 @@ fn carousel_dots_step_forward_on_arrow_left() {
 /// Which way a glyph points on screen: the x of its `(vx, vy)` after every transform up to
 /// the root (the `ChevronRight` glyph draws `(1, 0)`, `ChevronDown` `(0, 1)`).
 async fn screen_x(page: &Page, selector: &str, vx: f64, vy: f64) -> Option<f64> {
-    page.evaluate(format!(
+    page.evaluate_bounded(format!(
         "(() => {{ let el = document.querySelector({selector:?}); \
          if (!el) return null; \
          let m = new DOMMatrix(); \

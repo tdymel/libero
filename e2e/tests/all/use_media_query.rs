@@ -5,6 +5,7 @@ use anyhow::Result;
 use chromiumoxide::cdp::browser_protocol::emulation::SetDeviceMetricsOverrideParams;
 use e2e::browser::block_on;
 use e2e::driver::{Driver, Platform, eventually};
+use e2e::wait::PageBounded;
 use e2e::{Fixture, Viewport, wait};
 
 async fn answers<D: Driver>(d: &mut D) -> Result<(String, String)> {
@@ -46,7 +47,7 @@ fn the_web_follows_a_resize() {
         reads(page, "#mobile", "no").await.unwrap();
 
         for (width, wide, mobile) in [(390, "no", "yes"), (800, "no", "no"), (1280, "yes", "no")] {
-            page.execute(SetDeviceMetricsOverrideParams::new(width, 800, 1.0, false))
+            page.execute_bounded(SetDeviceMetricsOverrideParams::new(width, 800, 1.0, false))
                 .await
                 .unwrap();
             reads(page, "#wide", wide)

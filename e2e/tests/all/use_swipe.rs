@@ -174,14 +174,14 @@ mod an_edge_swipe_opens_while_the_page_flings {
     #[test]
     fn android() {
         use e2e::driver::{Android, Driver};
-        use e2e::wait;
+        use e2e::wait::{self, PageBounded};
 
         e2e::android::block_on(async {
             let mut driver = Android::open("/use-swipe/drawer").await.unwrap();
             let page = driver.page().clone();
             // The code box the whole page long: the swipe starts on it wherever the fling stops.
             // The fling's own cancel does not count, so nothing sits between the two (3139).
-            page.evaluate(
+            page.evaluate_bounded(
                 "document.querySelector('#scroller').style.height = '2800px';
                  window.__cancels = 0; let fling = null;
                  addEventListener('pointerdown', e => { fling ??= e.pointerId; }, true);
@@ -205,7 +205,7 @@ mod an_edge_swipe_opens_while_the_page_flings {
             .await
             .unwrap();
             let cancels: u32 = page
-                .evaluate("__cancels")
+                .evaluate_bounded("__cancels")
                 .await
                 .unwrap()
                 .into_value()

@@ -3,6 +3,7 @@
 
 use e2e::browser::block_on;
 use e2e::passes::{keyboard, pointer};
+use e2e::wait::PageBounded;
 use e2e::{Fixture, Viewport, frames, js, wait};
 
 /// A chord one unit sends leaves every other page alone (597): Ctrl+PageDown once
@@ -21,9 +22,13 @@ fn a_chord_in_one_page_does_not_navigate_another() {
             keyboard::assert_chords_ignored(page, &[keyboard::PAGE_UP, keyboard::PAGE_DOWN], "1")
                 .await?;
             keyboard::press_with(page, keyboard::ARROW_LEFT, keyboard::ALT).await?;
-            page.evaluate("new Promise(r => setTimeout(() => r(1), 300))")
+            page.evaluate_bounded("new Promise(r => setTimeout(() => r(1), 300))")
                 .await?;
-            let href: String = other.page.evaluate("location.href").await?.into_value()?;
+            let href: String = other
+                .page
+                .evaluate_bounded("location.href")
+                .await?
+                .into_value()?;
             anyhow::ensure!(href.ends_with("/loader"), "the other page went to {href}");
             Ok(())
         }
@@ -62,7 +67,7 @@ fn a_page_keeps_focus_while_another_opens() {
 
         let (has_focus, still_open): (bool, bool) = first
             .page
-            .evaluate(format!("[document.hasFocus(), {expanded}]"))
+            .evaluate_bounded(format!("[document.hasFocus(), {expanded}]"))
             .await
             .unwrap()
             .into_value()

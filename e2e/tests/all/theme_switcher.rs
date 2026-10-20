@@ -8,6 +8,7 @@ use e2e::browser::block_on;
 use e2e::driver::{Driver, eventually};
 use e2e::passes::{focus, keyboard, pointer};
 use e2e::suite::Step;
+use e2e::wait::PageBounded;
 use e2e::{Fixture, Suite, Viewport, ax, wait};
 
 const BUTTON: &str = "#scheme";
@@ -54,7 +55,7 @@ fn a_finger_on_the_toggles_right_half_hits_the_toggle() {
             .await
             .unwrap();
         let page = &fixture.page;
-        page.execute(SetTouchEmulationEnabledParams::new(true))
+        page.execute_bounded(SetTouchEmulationEnabledParams::new(true))
             .await
             .unwrap();
         wait::for_js_true(
@@ -66,7 +67,7 @@ fn a_finger_on_the_toggles_right_half_hits_the_toggle() {
         .unwrap();
 
         let hits: Vec<String> = page
-            .evaluate(format!(
+            .evaluate_bounded(format!(
                 "(() => {{
                     const t = document.querySelector({TOGGLE:?}).getBoundingClientRect();
                     const p = document.querySelector({CHEVRON:?}).getBoundingClientRect();
@@ -125,11 +126,11 @@ fn the_menu_opens_on_the_checked_theme() {
             .await
             .unwrap();
         let page = &fixture.page;
-        page.evaluate(SHIELD_STORAGE).await.unwrap();
+        page.evaluate_bounded(SHIELD_STORAGE).await.unwrap();
         let outcome = async {
             pointer::click(page, CHEVRON).await?;
             wait::for_visible(page, "[role=menuitemradio]").await?;
-            page.evaluate(format!(
+            page.evaluate_bounded(format!(
                 "[...document.querySelectorAll('{MENU} [role=menuitemradio]')].at(-1).click()"
             ))
             .await?;
@@ -147,7 +148,7 @@ fn the_menu_opens_on_the_checked_theme() {
             )
             .await?;
             let (shown, scrolled): (bool, f64) = page
-                .evaluate(format!(
+                .evaluate_bounded(format!(
                     "(() => {{ const menu = document.querySelector('{MENU}'); \
                      const item = menu.querySelector('[aria-checked=true]').getBoundingClientRect(); \
                      const box = menu.getBoundingClientRect(); \
@@ -175,7 +176,7 @@ fn a_pinned_scheme_after_a_named_theme_shows_the_pair() {
             .await
             .unwrap();
         let page = &fixture.page;
-        page.evaluate(SHIELD_STORAGE).await.unwrap();
+        page.evaluate_bounded(SHIELD_STORAGE).await.unwrap();
         let root_var = |name: &str| {
             format!("getComputedStyle(document.documentElement).getPropertyValue('{name}').trim()")
         };
@@ -285,7 +286,7 @@ async fn wait_for_pin(page: &Page, pin: Option<&str>) {
 }
 
 async fn text_colour(page: &Page) -> String {
-    page.evaluate("getComputedStyle(document.querySelector('#page-text')).color")
+    page.evaluate_bounded("getComputedStyle(document.querySelector('#page-text')).color")
         .await
         .unwrap()
         .into_value()
@@ -300,8 +301,8 @@ fn a_dark_platform_cycles_light_then_dark_then_system() {
             .await
             .unwrap();
         let page = &fixture.page;
-        page.evaluate(SHIELD_STORAGE).await.unwrap();
-        page.execute(
+        page.evaluate_bounded(SHIELD_STORAGE).await.unwrap();
+        page.execute_bounded(
             SetEmulatedMediaParams::builder()
                 .features(vec![MediaFeature::new("prefers-color-scheme", "dark")])
                 .build(),
@@ -334,8 +335,8 @@ fn label_gets_the_scheme_shown_next_not_the_stored_setting() {
             .await
             .unwrap();
         let page = &fixture.page;
-        page.evaluate(SHIELD_STORAGE).await.unwrap();
-        page.execute(
+        page.evaluate_bounded(SHIELD_STORAGE).await.unwrap();
+        page.execute_bounded(
             SetEmulatedMediaParams::builder()
                 .features(vec![MediaFeature::new("prefers-color-scheme", "light")])
                 .build(),
@@ -365,8 +366,8 @@ fn each_press_flips_the_scheme_and_renames_the_button() {
             .await
             .unwrap();
         let page = &fixture.page;
-        page.evaluate(SHIELD_STORAGE).await.unwrap();
-        page.execute(
+        page.evaluate_bounded(SHIELD_STORAGE).await.unwrap();
+        page.execute_bounded(
             SetEmulatedMediaParams::builder()
                 .features(vec![MediaFeature::new("prefers-color-scheme", "light")])
                 .build(),
@@ -390,7 +391,7 @@ fn each_press_flips_the_scheme_and_renames_the_button() {
         wait_for_name(page, "Switch to the dark theme").await;
 
         let (stored, leaked): (Vec<String>, Option<String>) = page
-            .evaluate("[window.__stored, window.__realStorage.getItem('lsx-color-scheme')]")
+            .evaluate_bounded("[window.__stored, window.__realStorage.getItem('lsx-color-scheme')]")
             .await
             .unwrap()
             .into_value()
@@ -419,8 +420,8 @@ fn each_press_steps_the_cycle_and_renames_the_button() {
             .await
             .unwrap();
         let page = &fixture.page;
-        page.evaluate(SHIELD_STORAGE).await.unwrap();
-        page.execute(
+        page.evaluate_bounded(SHIELD_STORAGE).await.unwrap();
+        page.execute_bounded(
             SetEmulatedMediaParams::builder()
                 .features(vec![MediaFeature::new("prefers-color-scheme", "light")])
                 .build(),
@@ -457,7 +458,7 @@ fn each_press_steps_the_cycle_and_renames_the_button() {
         wait_for_name(page, "Switch to the dark theme").await;
 
         let (stored, leaked): (Vec<String>, Option<String>) = page
-            .evaluate("[window.__stored, window.__realStorage.getItem('lsx-color-scheme')]")
+            .evaluate_bounded("[window.__stored, window.__realStorage.getItem('lsx-color-scheme')]")
             .await
             .unwrap()
             .into_value()
@@ -493,7 +494,7 @@ fn a_disabled_theme_switcher_cannot_be_focused_or_open_the_menu() {
 
         for button in ["#off", "#off-split > button", "#off-split > div > button"] {
             let unfocusable: bool = page
-                .evaluate(format!(
+                .evaluate_bounded(format!(
                     "(() => {{ const b = document.querySelector('{button}'); \
                      b.focus(); return b.disabled && document.activeElement !== b; }})()"
                 ))
@@ -508,7 +509,7 @@ fn a_disabled_theme_switcher_cannot_be_focused_or_open_the_menu() {
             .await
             .unwrap();
         let opened: bool = page
-            .evaluate(format!(
+            .evaluate_bounded(format!(
                 "!!document.querySelector('{MENU}') || \
                  document.querySelector('#off-split > div > button').getAttribute('aria-expanded') === 'true'"
             ))
@@ -535,7 +536,7 @@ fn menu_parts_style_the_portaled_menu() {
             pointer::click(page, CHEVRON).await?;
             wait::for_visible(page, "[role=menu] [data-slot=label]").await?;
             let style: String = page
-                .evaluate(
+                .evaluate_bounded(
                     "getComputedStyle(document.querySelector('[role=menu] [data-slot=label]')).fontStyle",
                 )
                 .await?

@@ -3,6 +3,7 @@
 
 use e2e::browser::{Scheme, block_on, emulate_media};
 use e2e::passes::contrast::COLOUR_JS;
+use e2e::wait::PageBounded;
 use e2e::{Fixture, Viewport, wait};
 
 /// In scope of every `body`, beside [`COLOUR_JS`]: `RATIO(a, b)` of two opaque computed
@@ -43,8 +44,12 @@ fn assert_ratios(path: &str, body: &str, floor: f64) {
             )
             .await
             .unwrap();
-            let pairs: Vec<(String, f64)> =
-                page.evaluate(pairs).await.unwrap().into_value().unwrap();
+            let pairs: Vec<(String, f64)> = page
+                .evaluate_bounded(pairs)
+                .await
+                .unwrap()
+                .into_value()
+                .unwrap();
             for (name, ratio) in pairs {
                 eprintln!("{path} {}: {name} {ratio:.2}:1", scheme.name());
                 assert!(

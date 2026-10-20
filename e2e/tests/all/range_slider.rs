@@ -4,6 +4,7 @@ use anyhow::Result;
 use e2e::browser::block_on;
 use e2e::driver::{Driver, eventually};
 use e2e::passes::{keyboard, pointer};
+use e2e::wait::PageBounded;
 use e2e::{Fixture, Suite, Viewport, wait};
 
 const UPPER: &str = "document.querySelectorAll('[role=slider]')[1]";
@@ -181,7 +182,7 @@ fn a_drag_moves_the_grabbed_thumb_only_on_a_phone() {
         // Read directly: `centre_of` takes the first match, the lower thumb.
         let upper: Vec<f64> = fixture
             .page
-            .evaluate(format!(
+            .evaluate_bounded(format!(
                 "(() => {{ const r = {UPPER}.getBoundingClientRect(); \
                  return [r.x + r.width / 2, r.y + r.height / 2]; }})()"
             ))
@@ -231,7 +232,7 @@ fn a_touch_drags_the_upper_thumb() {
             .unwrap();
         let (x, y): (f64, f64) = fixture
             .page
-            .evaluate(format!(
+            .evaluate_bounded(format!(
                 "(() => {{ const r = {UPPER}.getBoundingClientRect(); \
                  return [r.x + r.width / 2, r.y + r.height / 2]; }})()"
             ))
@@ -273,7 +274,7 @@ fn a_touch_tap_on_the_track_moves_the_nearest_thumb() {
         let high = pointer::centre_of(page, UPPER_THUMB).await.unwrap();
         for (value, collapse, lower, upper) in TAPS {
             if collapse {
-                page.evaluate(format!("document.querySelector('{MAXIMUM}').focus()"))
+                page.evaluate_bounded(format!("document.querySelector('{MAXIMUM}').focus()"))
                     .await
                     .unwrap();
                 keyboard::press(page, keyboard::HOME).await.unwrap();
@@ -312,7 +313,7 @@ fn each_thumb_is_described_by_its_value_bubble() {
             .unwrap();
         let open: u32 = fixture
             .page
-            .evaluate("document.querySelectorAll('[role=tooltip]:not([hidden])').length")
+            .evaluate_bounded("document.querySelectorAll('[role=tooltip]:not([hidden])').length")
             .await
             .unwrap()
             .into_value()

@@ -9,6 +9,7 @@ use chromiumoxide::cdp::browser_protocol::page::{
 use e2e::browser::block_on;
 use e2e::driver::{Driver, Platform};
 use e2e::passes::pointer;
+use e2e::wait::PageBounded;
 use e2e::{Fixture, Suite, Viewport, ax, wait};
 
 const FILL: &str = "getComputedStyle(document.querySelector('#icon')).backgroundColor";
@@ -24,7 +25,12 @@ fn a_filled_icon_repaints_when_its_colour_changes() {
         let fixture = Fixture::open("/icon", Viewport::Desktop).await.unwrap();
         let page = &fixture.page;
 
-        let before: String = page.evaluate(FILL).await.unwrap().into_value().unwrap();
+        let before: String = page
+            .evaluate_bounded(FILL)
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
         assert_ne!(before, "rgba(0, 0, 0, 0)", "a filled icon draws a fill");
 
         pointer::click(page, "#swap").await.unwrap();
@@ -55,7 +61,7 @@ fn a_contained_glyph_is_inset_and_a_bare_one_fills_the_box() {
 
         let filled: f64 = fixture
             .page
-            .evaluate(share("icon"))
+            .evaluate_bounded(share("icon"))
             .await
             .unwrap()
             .into_value()
@@ -63,7 +69,7 @@ fn a_contained_glyph_is_inset_and_a_bare_one_fills_the_box() {
         assert!((filled - 0.6).abs() < 0.02, "filled glyph share {filled}");
         let bare: f64 = fixture
             .page
-            .evaluate(share("bare"))
+            .evaluate_bounded(share("bare"))
             .await
             .unwrap()
             .into_value()
@@ -120,7 +126,7 @@ async fn pixel(page: &Page, x: f64, y: f64) -> Result<Vec<u8>> {
 /// the colour; a WebView that drops the mask draws one solid box.
 async fn src_glyph_is_masked(page: &Page) -> Result<()> {
     let [x, y, w, h]: [f64; 4] = page
-        .evaluate(
+        .evaluate_bounded(
             "(() => { const e = document.querySelector('#stencil span'); \
              e.scrollIntoView({ block: 'center' }); const r = e.getBoundingClientRect(); \
              return [r.left + scrollX, r.top + scrollY, r.width, r.height]; })()",
@@ -137,7 +143,7 @@ async fn src_glyph_is_masked(page: &Page) -> Result<()> {
     let ring = pixel(page, cx + w * 9.0 / 24.0, cy).await?;
     if corner != page_bg || centre != page_bg {
         let support: String = page
-            .evaluate(
+            .evaluate_bounded(
                 "`mask-image ${CSS.supports('mask-image', 'url(x)')}, \
                  -webkit-mask-image ${CSS.supports('-webkit-mask-image', 'url(x)')}, \
                  ${navigator.userAgent}`",

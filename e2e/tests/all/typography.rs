@@ -2,6 +2,7 @@
 //! schemes, and text that reflows in a 320px column.
 
 use e2e::browser::block_on;
+use e2e::wait::PageBounded;
 use e2e::{Fixture, Suite, Viewport, ax, wait};
 
 /// Todos 2542, 2590: a key's size is `rem`, so at a 32px root it doubles with the
@@ -16,13 +17,18 @@ fn the_keys_grow_with_the_root_font_size() {
         wait::for_visible(page, "#kbds kbd").await.unwrap();
         const SIZES: &str = "[...document.querySelectorAll('#kbds kbd')] \
                              .map((k) => getComputedStyle(k).fontSize).join(' ')";
-        let before: String = page.evaluate(SIZES).await.unwrap().into_value().unwrap();
+        let before: String = page
+            .evaluate_bounded(SIZES)
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
         assert_eq!(
             before, "10px 12px 14px 16px 20px 24px",
             "the default look moved"
         );
 
-        page.evaluate("document.documentElement.style.fontSize = '32px'")
+        page.evaluate_bounded("document.documentElement.style.fontSize = '32px'")
             .await
             .unwrap();
         wait::for_js_true(
@@ -70,7 +76,7 @@ fn a_link_in_the_caption_is_underlined_at_rest() {
         wait::for_visible(page, "#attribution-link").await.unwrap();
 
         let lines: Vec<String> = page
-            .evaluate(
+            .evaluate_bounded(
                 "['#quote-link', '#attribution-link'].map(id => \
                    getComputedStyle(document.querySelector(id)).textDecorationLine)",
             )
@@ -85,7 +91,7 @@ fn a_link_in_the_caption_is_underlined_at_rest() {
 
 /// How far `selector` pokes out past the right edge of its paragraph (a heading: its column), in px.
 async fn overflow(page: &chromiumoxide::Page, selector: &str) -> f64 {
-    page.evaluate(format!(
+    page.evaluate_bounded(format!(
         "(() => {{ const el = document.querySelector({selector:?}); \
          const column = (el.closest('p') ?? el.parentElement).getBoundingClientRect(); \
          return Math.max(...[...el.getClientRects()].map(r => r.right)) - column.right; }})()"
@@ -162,7 +168,7 @@ fn a_long_title_stays_inside_its_paper() {
         wait::for_visible(page, "#paper-title").await.unwrap();
 
         let past: f64 = page
-            .evaluate(
+            .evaluate_bounded(
                 "(() => { const title = document.querySelector('#paper-title'); \
                  const paper = title.parentElement; \
                  const edge = paper.getBoundingClientRect().right \
@@ -197,11 +203,11 @@ fn text_spacing_overrides_lose_nothing() {
             .unwrap();
         let page = &fixture.page;
         wait::for_visible(page, "#code-long").await.unwrap();
-        page.evaluate(TEXT_SPACING).await.unwrap();
+        page.evaluate_bounded(TEXT_SPACING).await.unwrap();
 
         // Every element that clips its overflow must still fit its content.
         let clipped: Vec<String> = page
-            .evaluate(
+            .evaluate_bounded(
                 "[...document.querySelectorAll('[data-fixture-ready] *')] \
                  .filter(el => { const s = getComputedStyle(el); \
                    return (s.overflowX !== 'visible' || s.overflowY !== 'visible') \

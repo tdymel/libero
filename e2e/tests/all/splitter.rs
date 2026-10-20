@@ -7,6 +7,7 @@ use e2e::driver::{
     Driver, Platform, eventually, eventually_focused, eventually_text, swipe_scrolls_on_android,
 };
 use e2e::passes::{keyboard, pointer};
+use e2e::wait::PageBounded;
 use e2e::{Fixture, Suite, Viewport, wait};
 
 const DIVIDER: &str = "[role=separator]";
@@ -236,7 +237,7 @@ fn under_rtl_the_divider_moves_the_way_the_arrow_and_pointer_go() {
         let page = &fixture.page;
 
         let pane_a_right: bool = page
-            .evaluate(
+            .evaluate_bounded(
                 "(() => { const s = document.querySelector('[role=separator]'); \
                  const a = document.getElementById(s.getAttribute('aria-controls')); \
                  return a.getBoundingClientRect().left > s.getBoundingClientRect().left; })()",
@@ -266,7 +267,7 @@ fn under_rtl_the_divider_moves_the_way_the_arrow_and_pointer_go() {
 
 async fn value_now(page: &chromiumoxide::Page) -> f64 {
     let now: String = page
-        .evaluate(VALUE_NOW)
+        .evaluate_bounded(VALUE_NOW)
         .await
         .unwrap()
         .into_value()
@@ -331,7 +332,9 @@ fn a_click_only_focuses_and_a_double_click_in_a_pane_does_nothing() {
 
         // Pointer capture sends every `dblclick` to the root: one in a pane is not the divider's.
         let pane_a: String = page
-            .evaluate("document.querySelector('[role=separator]').getAttribute('aria-controls')")
+            .evaluate_bounded(
+                "document.querySelector('[role=separator]').getAttribute('aria-controls')",
+            )
             .await
             .unwrap()
             .into_value()
@@ -339,7 +342,7 @@ fn a_click_only_focuses_and_a_double_click_in_a_pane_does_nothing() {
         pointer::double_click(page, &format!("[id={pane_a:?}]"))
             .await
             .unwrap();
-        page.evaluate(format!("document.querySelector({DIVIDER:?}).focus()"))
+        page.evaluate_bounded(format!("document.querySelector({DIVIDER:?}).focus()"))
             .await
             .unwrap();
         keyboard::press(page, keyboard::ARROW_LEFT).await.unwrap();
@@ -366,7 +369,7 @@ fn the_default_hit_area_is_24px_thick() {
         let fixture = Fixture::open("/splitter", Viewport::Desktop).await.unwrap();
         let width: f64 = fixture
             .page
-            .evaluate(format!(
+            .evaluate_bounded(format!(
                 "document.querySelector({DIVIDER:?}).getBoundingClientRect().width"
             ))
             .await
@@ -410,14 +413,14 @@ fn a_raised_min_size_clamps_the_moved_divider() {
         .unwrap();
 
         let now: String = page
-            .evaluate(VALUE_NOW)
+            .evaluate_bounded(VALUE_NOW)
             .await
             .unwrap()
             .into_value()
             .unwrap();
         assert_eq!(now, "40", "aria-valuenow below the raised aria-valuemin");
         let pane_share: f64 = page
-            .evaluate(
+            .evaluate_bounded(
                 "(() => { const s = document.querySelector('[role=separator]'); \
                  const a = document.getElementById(s.getAttribute('aria-controls')); \
                  return a.getBoundingClientRect().width / a.parentElement.getBoundingClientRect().width * 100; })()",
@@ -446,7 +449,7 @@ fn the_divider_line_shows_in_forced_colours() {
         let page = &fixture.page;
         e2e::browser::force_colours(page).await.unwrap();
         let (line, canvas_text): (String, String) = page
-            .evaluate(format!(
+            .evaluate_bounded(format!(
                 "(() => {{ const probe = document.createElement('div'); \
                  probe.style.background = 'CanvasText'; document.body.append(probe); \
                  const text = getComputedStyle(probe).backgroundColor; probe.remove(); \
@@ -496,7 +499,7 @@ fn pane_a_scrollbar_is_not_under_the_hit_area() {
         wait::for_visible(page, "#pane-a").await.unwrap();
         for dir in ["ltr", "rtl"] {
             let verdict: String = page
-                .evaluate(format!(
+                .evaluate_bounded(format!(
                     "(() => {{ document.body.dir = '{dir}'; \
                      const pane = document.getElementById('pane-a').parentElement; \
                      const bar = pane.offsetWidth - pane.clientWidth; \

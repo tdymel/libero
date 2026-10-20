@@ -3,6 +3,7 @@
 
 use e2e::browser::block_on;
 use e2e::wait;
+use e2e::wait::PageBounded;
 
 use crate::rtl_keys::open_in;
 
@@ -93,7 +94,7 @@ fn an_end_drawer_docks_at_the_end() {
             let fixture = open_in("/drawer", dir).await;
             fixture
                 .page
-                .evaluate(format!(
+                .evaluate_bounded(format!(
                     "document.querySelector('{}').click()",
                     crate::drawer::TRIGGER
                 ))

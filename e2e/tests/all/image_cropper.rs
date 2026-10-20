@@ -6,6 +6,7 @@ use anyhow::Result;
 use e2e::browser::block_on;
 use e2e::driver::{Driver, eventually, eventually_focused, eventually_text};
 use e2e::passes::{keyboard, pointer};
+use e2e::wait::PageBounded;
 use e2e::{Fixture, Suite, Viewport, frames, wait};
 
 const BOX: &str = "[data-slot=box]";
@@ -87,7 +88,9 @@ fn the_dim_mask_stays_in_forced_colours() {
         let page = &fixture.page;
         e2e::browser::force_colours(page).await.unwrap();
         let shadow: String = page
-            .evaluate("getComputedStyle(document.querySelector('[data-slot=mask] > *')).boxShadow")
+            .evaluate_bounded(
+                "getComputedStyle(document.querySelector('[data-slot=mask] > *')).boxShadow",
+            )
             .await
             .unwrap()
             .into_value()
@@ -145,7 +148,7 @@ fn a_failed_crop_keeps_the_dialog_and_emits_nothing() {
         )
         .await
         .unwrap();
-        page.evaluate("window.createImageBitmap = () => Promise.reject(new Error('e2e'))")
+        page.evaluate_bounded("window.createImageBitmap = () => Promise.reject(new Error('e2e'))")
             .await
             .unwrap();
         pointer::click(page, apply).await.unwrap();
@@ -158,7 +161,7 @@ fn a_failed_crop_keeps_the_dialog_and_emits_nothing() {
         .await
         .unwrap();
         let out: String = page
-            .evaluate("document.getElementById('out').textContent")
+            .evaluate_bounded("document.getElementById('out').textContent")
             .await
             .unwrap()
             .into_value()
@@ -183,7 +186,7 @@ fn a_dropped_image_is_cropped_before_the_field_takes_it() {
             .unwrap();
         let page = &fixture.page;
         // On Browse, which the dialog hands the focus back to (todo 2549).
-        page.evaluate("document.getElementById('avatar').focus()")
+        page.evaluate_bounded("document.getElementById('avatar').focus()")
             .await
             .unwrap();
         crate::file_field::drop_files(page, "[data-fixture-ready] [role=group]", file.drop_arg())
@@ -464,7 +467,7 @@ fn a_touch_drags_the_box_and_two_pinch_it() {
         // Room to scroll, so a drag that scrolled the page would show.
         let _: bool = e2e::js(page, "(document.body.style.paddingBottom = '200vh', true)").await;
         let (left, top, width, height, scroll, scrolls): (f64, f64, f64, f64, f64, bool) = page
-            .evaluate(
+            .evaluate_bounded(
                 "(() => { const r = document.querySelector('[data-slot=image]').getBoundingClientRect();
                   return [r.left, r.top, r.width, r.height, scrollY,
                     document.documentElement.scrollHeight > innerHeight]; })()",
@@ -490,7 +493,7 @@ fn a_touch_drags_the_box_and_two_pinch_it() {
         let (after, shrunk) = frames::in_front(page, async {
             pointer::touch_drag(page, centre, to, 8).await?;
             wait::for_js_true(page, &format!("{crop} === '15,15,50,50'"), "a touch drag").await?;
-            let after: f64 = page.evaluate("scrollY").await?.into_value()?;
+            let after: f64 = page.evaluate_bounded("scrollY").await?.into_value()?;
 
             // Spread three times as far: the box grows to the whole image and no further.
             let middle = Point {
@@ -512,7 +515,7 @@ fn a_touch_drags_the_box_and_two_pinch_it() {
                 "a pinch in to about a fifth, centred",
             )
             .await?;
-            let shrunk: String = page.evaluate(crop).await?.into_value()?;
+            let shrunk: String = page.evaluate_bounded(crop).await?.into_value()?;
             Ok((after, shrunk))
         })
         .await
@@ -552,7 +555,7 @@ fn a_drag_or_wheel_beside_the_box_moves_or_scales_it() {
             .await
             .unwrap();
         let (left, top, width, height): (f64, f64, f64, f64) = page
-            .evaluate(
+            .evaluate_bounded(
                 "(() => { const r = document.querySelector('[data-slot=image]').getBoundingClientRect();
                   return [r.left, r.top, r.width, r.height]; })()",
             )
@@ -593,7 +596,7 @@ fn a_drag_or_wheel_beside_the_box_moves_or_scales_it() {
                     .modifiers(if ctrl { 2 } else { 0 })
                     .build()
                     .map_err(anyhow::Error::msg)?;
-                page.execute(event).await?;
+                page.execute_bounded(event).await?;
                 wait::for_js_true(page, &format!("{crop} === '{expected}'"), "a wheel notch")
                     .await?;
             }
@@ -689,6 +692,25 @@ async fn the_arrows_resize_from_a_corner<D: Driver>(d: &mut D, _route: &str) -> 
     eventually_text(d, "#crop", "25,24,51,51", "ArrowUp on the top left corner").await
 }
 
+/// Home and End: on the box, to the left or right edge; on a corner, the least or greatest width (3775).
+async fn home_and_end_on_the_box_and_a_corner<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    d.focus(BOX).await?;
+    d.press(keyboard::HOME).await?;
+    eventually_text(d, "#crop", "0,25,50,50", "Home on the box").await?;
+    d.press(keyboard::END).await?;
+    eventually_text(d, "#crop", "50,25,50,50", "End on the box").await?;
+    d.focus(SOUTH_EAST).await?;
+    d.press(keyboard::HOME).await?;
+    eventually_text(d, "#crop", "50,25,5,50", "Home on the bottom right corner").await?;
+    d.press(keyboard::END).await?;
+    eventually_text(d, "#crop", "50,25,50,50", "End on the bottom right corner").await?;
+    d.focus(NORTH_WEST).await?;
+    d.press(keyboard::END).await?;
+    eventually_text(d, "#crop", "0,25,100,50", "End on the top left corner").await?;
+    d.press(keyboard::HOME).await?;
+    eventually_text(d, "#crop", "95,25,5,50", "Home on the top left corner").await
+}
+
 /// A drag by a tenth of the picture, which a phone draws narrower than its 400 px.
 async fn tenth_of_the_picture<D: Driver>(d: &mut D) -> Result<(f64, f64)> {
     let picture = d.rect("[data-slot=image]").await?;
@@ -758,6 +780,11 @@ e2e::scenario!(
     the_arrows_resize_from_a_corner,
     "/image-cropper",
     the_arrows_resize_from_a_corner
+);
+e2e::scenario!(
+    home_and_end_move_the_box_and_size_a_corner,
+    "/image-cropper",
+    home_and_end_on_the_box_and_a_corner
 );
 e2e::scenario!(
     a_drag_on_a_corner_resizes_and_focuses_it,
@@ -880,14 +907,19 @@ fn a_touch_pans_and_pinch_zooms_the_image_under_the_box() {
             const [root, frame, image, box, zoom, controls] = ['#cropper', '[data-slot=frame]', '[data-slot=image]', '[data-slot=box]', '[data-slot=zoom]', '[data-slot=controls]'].map(r);
             return [root.left, root.top, root.width, root.height - zoom.height - controls.height, frame.width, frame.height,
                 image.width, box.left - root.left, box.width]; })()";
-        let before: Vec<f64> = page.evaluate(rects).await.unwrap().into_value().unwrap();
+        let before: Vec<f64> = page
+            .evaluate_bounded(rects)
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
         let (left, top, width, height) = (before[0], before[1], before[2], before[3]);
         assert!(
             (before[4] - width).abs() < 1.0 && (before[5] - height).abs() < 1.0,
             "the frame does not cover the picture: {before:?}"
         );
         let overflow: String = page
-            .evaluate("getComputedStyle(document.getElementById('cropper')).overflow")
+            .evaluate_bounded("getComputedStyle(document.getElementById('cropper')).overflow")
             .await
             .unwrap()
             .into_value()
@@ -914,7 +946,12 @@ fn a_touch_pans_and_pinch_zooms_the_image_under_the_box() {
         })
         .await
         .unwrap();
-        let after: Vec<f64> = page.evaluate(rects).await.unwrap().into_value().unwrap();
+        let after: Vec<f64> = page
+            .evaluate_bounded(rects)
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
         assert!(
             (after[6] / width - 2.0).abs() < 0.02,
             "the image did not double: {after:?}"
@@ -957,7 +994,7 @@ fn the_wheel_and_a_trackpad_pinch_zoom_the_image() {
                 .modifiers(if ctrl { 2 } else { 0 })
                 .build()
                 .unwrap();
-            page.execute(event).await.unwrap();
+            page.execute_bounded(event).await.unwrap();
         };
 
         // In front: behind, each wheel event waits about a second for a frame.
@@ -998,7 +1035,7 @@ fn the_zoom_slider_zooms_with_one_pointer() {
         )
         .await
         .unwrap();
-        page.evaluate(format!("document.querySelector('{thumb}').focus()"))
+        page.evaluate_bounded(format!("document.querySelector('{thumb}').focus()"))
             .await
             .unwrap();
         keyboard::press(page, keyboard::HOME).await.unwrap();

@@ -6,6 +6,7 @@ use chromiumoxide::Page;
 use e2e::browser::block_on;
 use e2e::driver::{Driver, eventually, eventually_focused};
 use e2e::passes::{keyboard, pointer};
+use e2e::wait::PageBounded;
 use e2e::{Fixture, Suite, Viewport, wait};
 
 const PREVIOUS: &str = "[aria-label=\"Go to previous page\"]";
@@ -69,7 +70,7 @@ fn the_controls_grow_with_the_text_size() {
             .unwrap();
         let [before, after]: [f64; 2] = fixture
             .page
-            .evaluate(
+            .evaluate_bounded(
                 "(() => { const h = () => document.querySelector('[aria-label=\"Go to page 3\"]')\
                  .getBoundingClientRect().height; const before = h(); \
                  document.documentElement.style.fontSize = '200%'; return [before, h()]; })()",
@@ -173,7 +174,7 @@ fn clicking_the_current_page_emits_no_change() {
             .unwrap();
         wait_for_page(page, 3, "/pagination").await;
         let changes: String = page
-            .evaluate("document.querySelector('#page').dataset.changes")
+            .evaluate_bounded("document.querySelector('#page').dataset.changes")
             .await
             .unwrap()
             .into_value()
@@ -218,7 +219,7 @@ fn a_rejected_press_owes_no_focus_once_focus_leaves() {
 
 /// `[:disabled, aria-disabled, opacity, cursor, name]` of every button in the nav `id`.
 async fn looks(page: &Page, id: &str) -> Vec<String> {
-    page.evaluate(format!(
+    page.evaluate_bounded(format!(
         "[...document.querySelectorAll('#{id} button')].map((b) => {{ \
          const s = getComputedStyle(b); \
          return `${{b.matches(':disabled')}} ${{b.getAttribute('aria-disabled') === 'true'}} \
@@ -267,10 +268,10 @@ fn disabling_keeps_focus_on_the_page_button() {
             .unwrap();
         let page = &fixture.page;
         let flip = "document.querySelector('#flip').click()";
-        page.evaluate(format!("document.querySelector('{PAGE_3}').focus()"))
+        page.evaluate_bounded(format!("document.querySelector('{PAGE_3}').focus()"))
             .await
             .unwrap();
-        page.evaluate(flip).await.unwrap();
+        page.evaluate_bounded(flip).await.unwrap();
         wait::for_js_true(
             page,
             &format!(
@@ -283,7 +284,7 @@ fn disabling_keeps_focus_on_the_page_button() {
         .unwrap();
         // Ignored while disabled: the re-enabled press below is the first change.
         keyboard::press(page, keyboard::ENTER).await.unwrap();
-        page.evaluate(flip).await.unwrap();
+        page.evaluate_bounded(flip).await.unwrap();
         wait::for_js_true(
             page,
             &format!("!document.querySelector('{PAGE_3}').hasAttribute('aria-disabled')"),
@@ -292,7 +293,7 @@ fn disabling_keeps_focus_on_the_page_button() {
         .await
         .unwrap();
         let unchanged: String = page
-            .evaluate("document.querySelector('#flip-page').dataset.page")
+            .evaluate_bounded("document.querySelector('#flip-page').dataset.page")
             .await
             .unwrap()
             .into_value()
@@ -320,7 +321,7 @@ fn the_current_page_shows_in_forced_colours() {
             .await
             .unwrap();
         let page = &fixture.page;
-        page.execute(
+        page.execute_bounded(
             SetEmulatedMediaParams::builder()
                 .features(vec![MediaFeature::new("forced-colors", "active")])
                 .build(),
@@ -336,7 +337,7 @@ fn the_current_page_shows_in_forced_colours() {
         .unwrap();
         // The page itself is `Canvas`; a fill the same colour is no fill.
         let [current, canvas]: [String; 2] = page
-            .evaluate(
+            .evaluate_bounded(
                 "(() => { const probe = document.createElement('div'); \
                  probe.style.background = 'Canvas'; document.body.append(probe); \
                  const canvas = getComputedStyle(probe).backgroundColor; probe.remove(); \
@@ -361,7 +362,7 @@ fn a_long_row_wraps_inside_a_phone() {
             .unwrap();
         let overflowing: Vec<String> = fixture
             .page
-            .evaluate(
+            .evaluate_bounded(
                 "[...document.querySelectorAll('nav')].filter((nav) => \
                  [...nav.querySelectorAll('button')].some((b) => \
                  b.getBoundingClientRect().right > nav.getBoundingClientRect().right + 0.5)) \

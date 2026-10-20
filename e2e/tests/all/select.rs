@@ -5,6 +5,7 @@ use e2e::archetypes::{self, Combobox};
 use e2e::browser::block_on;
 use e2e::driver::{Driver, Platform, eventually};
 use e2e::suite::Step;
+use e2e::wait::PageBounded;
 use e2e::{
     Fixture, Suite, Viewport, ax, js,
     passes::{keyboard, pointer},
@@ -310,7 +311,7 @@ fn a_long_select_never_paints_its_top_rows_on_open() {
             .unwrap();
         let page = &fixture.page;
         let painted: Vec<String> = page
-            .evaluate(
+            .evaluate_bounded(
                 r#"(async () => {
                 const frame = () => new Promise(requestAnimationFrame);
                 document.querySelector('[role=combobox]').click();
@@ -506,7 +507,7 @@ pub fn selected_row_is_marked(route: &str) {
         wait::for_visible(page, "[role=option]").await.unwrap();
         let js = rows_js();
         let rows = async || -> [String; 3] {
-            page.evaluate(js.as_str())
+            page.evaluate_bounded(js.as_str())
                 .await
                 .unwrap()
                 .into_value()
@@ -589,7 +590,7 @@ fn the_open_search_box_is_announced_as_the_field() {
         .unwrap();
 
         let wiring: Vec<Option<String>> = page
-            .evaluate(format!(
+            .evaluate_bounded(format!(
                 "(() => {{ const s = document.querySelector({SEARCH:?}); \
                  return ['aria-labelledby', 'aria-describedby', 'aria-invalid', 'aria-required'] \
                  .map(name => s.getAttribute(name)); }})()"
@@ -809,7 +810,7 @@ fn space_while_typing_commits_nothing() {
             // A search box that took the space is still open, whatever it
             // matches. The trigger keeps the field's id, role or not.
             let (open, value): (bool, String) = page
-                .evaluate(format!(
+                .evaluate_bounded(format!(
                     "(s => [s ? s.value === 'd ' : !!document.querySelector({LISTBOX:?}), \
                      document.getElementById('lsx-1').textContent])(document.querySelector({SEARCH:?}))"
                 ))
@@ -912,7 +913,7 @@ fn a_caller_aria_label_follows_the_combobox_role() {
              return [t.getAttribute('aria-label'), s && s.getAttribute('aria-label')]; }})()"
         );
         let read = async || -> Vec<Option<String>> {
-            page.evaluate(names.as_str())
+            page.evaluate_bounded(names.as_str())
                 .await
                 .unwrap()
                 .into_value()
@@ -1012,7 +1013,7 @@ pub fn search_home_end_edit_the_query(route: &str, trigger: &str, query: &str) {
             "(s => [s.selectionStart, s.getAttribute('aria-activedescendant')])(document.querySelector({SEARCH:?}))"
         );
         let read = async || -> (usize, Option<String>) {
-            page.evaluate(probe.as_str())
+            page.evaluate_bounded(probe.as_str())
                 .await
                 .unwrap()
                 .into_value()
@@ -1126,7 +1127,11 @@ fn a_filter_keeps_the_option_ids_and_enter_picks_the_named_row() {
         .await
         .unwrap();
         let read = async || -> Vec<(String, String)> {
-            page.evaluate(OPTIONS).await.unwrap().into_value().unwrap()
+            page.evaluate_bounded(OPTIONS)
+                .await
+                .unwrap()
+                .into_value()
+                .unwrap()
         };
         let before = read().await;
         assert_eq!(before.len(), 5, "{before:?}");
@@ -1291,12 +1296,17 @@ fn a_refused_pick_keeps_the_old_selection() {
     block_on(async {
         let fixture = Fixture::open(ROUTE, Viewport::Desktop).await.unwrap();
         let page = &fixture.page;
-        let read =
-            async |js: &str| -> String { page.evaluate(js).await.unwrap().into_value().unwrap() };
+        let read = async |js: &str| -> String {
+            page.evaluate_bounded(js)
+                .await
+                .unwrap()
+                .into_value()
+                .unwrap()
+        };
         let pick = async |label: &str| {
             pointer::click(page, TRIGGER).await.unwrap();
             wait::for_visible(page, "[role=option]").await.unwrap();
-            page.evaluate(format!(
+            page.evaluate_bounded(format!(
                 "[...document.querySelectorAll('[role=option]')].find((o) => o.textContent.trim() === {label:?}).setAttribute('data-e2e', 'pick')"
             ))
             .await

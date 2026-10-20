@@ -19,6 +19,7 @@ pub const ROUTES: Routes = &[
     ("/table-grid", || rsx! { GridPage {} }),
     ("/table-grid/widgets", || rsx! { GridPage { widgets: true } }),
     ("/table-grid/selectable", || rsx! { GridPage { selectable: true } }),
+    ("/table-grid/resizable", || rsx! { GridPage { resizable: true } }),
     ("/table-grid/windowed", || rsx! { WindowedGridPage {} }),
     ("/table-grid/sticky", || rsx! { StickyGridPage {} }),
     ("/table-grid/editable", || rsx! { EditableGridPage { store: true } }),
@@ -51,7 +52,11 @@ fn people() -> Vec<Person> {
 }
 
 #[component]
-fn GridPage(#[props(default)] widgets: bool, #[props(default)] selectable: bool) -> Element {
+fn GridPage(
+    #[props(default)] widgets: bool,
+    #[props(default)] selectable: bool,
+    #[props(default)] resizable: bool,
+) -> Element {
     let mut columns = vec![
         column("Name").value(|p: &Person| p.name.to_string()).sortable().row_header(),
         column("Age").value(|p: &Person| p.age).sortable(),
@@ -70,7 +75,8 @@ fn GridPage(#[props(default)] widgets: bool, #[props(default)] selectable: bool)
             caption: "Team",
             cell_focus: true,
             selectable,
-            column_menu: selectable,
+            column_menu: selectable || resizable,
+            resizable_columns: resizable,
             data: people(),
             columns,
             row_key: |p: &Person| p.name.to_string(),

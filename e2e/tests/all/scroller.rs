@@ -4,6 +4,7 @@ use anyhow::{Result, bail};
 use e2e::browser::block_on;
 use e2e::driver::{Driver, eventually, eventually_focused};
 use e2e::passes::{focus, keyboard, motion, pointer};
+use e2e::wait::PageBounded;
 use e2e::{Fixture, Suite, Viewport, wait};
 
 /// The strip's scrolling viewport.
@@ -45,7 +46,12 @@ async fn tab_along(page: &chromiumoxide::Page) {
         if let Err(error) =
             wait::for_js_true(page, &format!("{HIDDEN} <= 0.5"), &format!("tag-{i} clear")).await
         {
-            let hidden: f64 = page.evaluate(HIDDEN).await.unwrap().into_value().unwrap();
+            let hidden: f64 = page
+                .evaluate_bounded(HIDDEN)
+                .await
+                .unwrap()
+                .into_value()
+                .unwrap();
             panic!("tag-{i} has {hidden}px hidden: {error}");
         }
     }
@@ -53,7 +59,7 @@ async fn tab_along(page: &chromiumoxide::Page) {
 
 async fn focused_index(page: &chromiumoxide::Page) -> usize {
     let id: String = page
-        .evaluate("document.activeElement.id")
+        .evaluate_bounded("document.activeElement.id")
         .await
         .unwrap()
         .into_value()
@@ -107,7 +113,12 @@ fn an_edge_items_focus_ring_is_not_clipped() {
             wait::for_js_true(page, &format!("{HIDDEN} <= 0.5"), "the item in view")
                 .await
                 .unwrap();
-            let cut: [f64; 4] = page.evaluate(RING_CUT).await.unwrap().into_value().unwrap();
+            let cut: [f64; 4] = page
+                .evaluate_bounded(RING_CUT)
+                .await
+                .unwrap()
+                .into_value()
+                .unwrap();
             for side in sides {
                 assert!(cut[side] <= 0.5, "{tag}: ring cut [l, t, r, b] {cut:?}");
             }
@@ -172,7 +183,7 @@ fn the_strip_is_a_tab_stop_only_while_it_overflows() {
         .await
         .unwrap();
         let narrow_stop: Option<String> = page
-            .evaluate(format!(
+            .evaluate_bounded(format!(
                 "document.querySelector('{narrow}').getAttribute('tabindex')"
             ))
             .await
@@ -235,7 +246,7 @@ fn a_clicked_control_stays_shown_at_the_end_of_the_strip() {
         .unwrap();
         for _ in 0..30 {
             let done: bool = page
-                .evaluate(ended.as_str())
+                .evaluate_bounded(ended.as_str())
                 .await
                 .unwrap()
                 .into_value()
@@ -246,7 +257,7 @@ fn a_clicked_control_stays_shown_at_the_end_of_the_strip() {
             // Ended mid-click: the control then takes no pointer, so the press reaches the item.
             if let Err(miss) = pointer::click(page, FORWARD).await {
                 let done: bool = page
-                    .evaluate(ended.as_str())
+                    .evaluate_bounded(ended.as_str())
                     .await
                     .unwrap()
                     .into_value()
@@ -296,7 +307,7 @@ fn under_rtl_the_controls_mirror_and_step_to_the_end() {
 
         for (control, side, glyph) in [(FORWARD, -1.0, 1.0), (BACK, 1.0, -1.0)] {
             let [at, turn]: [f64; 2] = page
-                .evaluate(side_and_glyph(control))
+                .evaluate_bounded(side_and_glyph(control))
                 .await
                 .unwrap()
                 .into_value()
@@ -402,7 +413,7 @@ fn a_drag_is_inert_under_controls_never() {
         .await
         .unwrap();
         let moved: f64 = page
-            .evaluate(format!("document.querySelector('{never}').scrollLeft"))
+            .evaluate_bounded(format!("document.querySelector('{never}').scrollLeft"))
             .await
             .unwrap()
             .into_value()

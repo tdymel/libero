@@ -3,6 +3,7 @@
 
 use e2e::browser::block_on;
 use e2e::passes::{focus, keyboard, pointer};
+use e2e::wait::PageBounded;
 use e2e::{Fixture, Suite, Viewport, wait};
 
 /// The 16px and 20px sizes take presses in an invisible 24x24 box.
@@ -39,7 +40,12 @@ fn an_icon_glyph_is_sized_and_coloured_like_a_child_svg() {
             let page = &fixture.page;
             let script = look(id);
             async move {
-                let value: String = page.evaluate(script).await.unwrap().into_value().unwrap();
+                let value: String = page
+                    .evaluate_bounded(script)
+                    .await
+                    .unwrap()
+                    .into_value()
+                    .unwrap();
                 value
             }
         };
@@ -95,7 +101,12 @@ fn a_spinner_started_by_a_press_covers_the_glyph() {
         wait::for_js_true(page, &format!("{LOOK} !== null"), "the spinner and ripple")
             .await
             .unwrap();
-        let look: Vec<String> = page.evaluate(LOOK).await.unwrap().into_value().unwrap();
+        let look: Vec<String> = page
+            .evaluate_bounded(LOOK)
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
         assert_eq!(look, ["absolute", "0"], "position and glyph opacity");
 
         fixture.console.assert_clean("pressing to load").unwrap();
@@ -114,7 +125,7 @@ fn a_click_on_a_disabled_icons_glyph_runs_nothing() {
         let page = &fixture.page;
         wait::for_visible(page, "#disabled").await.unwrap();
 
-        page.evaluate(
+        page.evaluate_bounded(
             "document.querySelector('#disabled > svg').dispatchEvent(\
              new MouseEvent('click', { bubbles: true }))",
         )
@@ -129,7 +140,12 @@ fn a_click_on_a_disabled_icons_glyph_runs_nothing() {
         )
         .await
         .unwrap();
-        let clicks: String = page.evaluate(CLICKS).await.unwrap().into_value().unwrap();
+        let clicks: String = page
+            .evaluate_bounded(CLICKS)
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
         assert_eq!(clicks, "0", "the disabled icon ran its handler");
 
         fixture.close().await.unwrap();
@@ -187,7 +203,7 @@ fn a_link_icon_is_a_link_enabled_or_disabled() {
             "the disabled link is exposed as:\n{tree}"
         );
         let (href, disabled_href): (Option<String>, Option<String>) = page
-            .evaluate(
+            .evaluate_bounded(
                 "[document.getElementById('link').getAttribute('href'), \
                  document.getElementById('disabled-link').getAttribute('href')]",
             )
@@ -221,13 +237,13 @@ fn a_plain_icon_takes_the_surrounding_text_colour() {
         wait::for_visible(page, "#plain").await.unwrap();
 
         for scheme in ["light", "dark"] {
-            page.evaluate(format!(
+            page.evaluate_bounded(format!(
                 "document.documentElement.setAttribute('data-lsx-theme', '{scheme}')"
             ))
             .await
             .unwrap();
             let (icon, parent): (String, String) = page
-                .evaluate(PLAIN_COLORS)
+                .evaluate_bounded(PLAIN_COLORS)
                 .await
                 .unwrap()
                 .into_value()
@@ -298,7 +314,7 @@ fn a_rem_sized_icon_is_compact() {
         let page = &fixture.page;
         wait::for_visible(page, "#rem").await.unwrap();
         let state: String = page
-            .evaluate("document.getElementById('rem').getAttribute('data-state')")
+            .evaluate_bounded("document.getElementById('rem').getAttribute('data-state')")
             .await
             .unwrap()
             .into_value()
@@ -322,20 +338,20 @@ const DISABLED_LOOK: &str = "(() => {
 /// nothing: the variant's `:hover` skips a disabled control.
 pub async fn assert_disabled_look(page: &chromiumoxide::Page, selector: &str) {
     wait::for_visible(page, selector).await.unwrap();
-    page.evaluate(format!(
+    page.evaluate_bounded(format!(
         "document.querySelector('{selector}').setAttribute('data-disabled-probe', '')"
     ))
     .await
     .unwrap();
     let (_, _, rest): (bool, String, String) = page
-        .evaluate(DISABLED_LOOK)
+        .evaluate_bounded(DISABLED_LOOK)
         .await
         .unwrap()
         .into_value()
         .unwrap();
     pointer::hover(page, selector).await.unwrap();
     let (hit, cursor, hovered): (bool, String, String) = page
-        .evaluate(DISABLED_LOOK)
+        .evaluate_bounded(DISABLED_LOOK)
         .await
         .unwrap()
         .into_value()

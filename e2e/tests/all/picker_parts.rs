@@ -2,6 +2,7 @@
 //! calendar inside a date-time's tab panel too.
 
 use e2e::browser::block_on;
+use e2e::wait::PageBounded;
 use e2e::{Fixture, Viewport, wait};
 
 #[test]
@@ -15,7 +16,7 @@ fn parts_style_the_picker_parts() {
             .await
             .unwrap();
         let read = |selector: &'static str, property: &'static str| async move {
-            page.evaluate(format!(
+            page.evaluate_bounded(format!(
                 "(() => {{ const el = document.querySelector({selector:?}); \
                  return el ? getComputedStyle(el).{property} : 'missing'; }})()"
             ))

@@ -5,6 +5,7 @@ use anyhow::{Result, bail};
 use e2e::browser::block_on;
 use e2e::driver::{Driver, Platform, eventually, eventually_focused, eventually_text};
 use e2e::passes::{keyboard, pointer};
+use e2e::wait::PageBounded;
 use e2e::{Fixture, Viewport, ax, wait};
 use std::time::{Duration, Instant};
 
@@ -361,7 +362,7 @@ fn a_windowed_table_has_no_blank_rows_while_scrolling() {
              return Math.max(0, first - top) + Math.max(0, bottom - last); })()";
         // Firefox anchored on the drawn scrollbar layer and scrolled on after it, to the bottom.
         let anchor: String = page
-            .evaluate(
+            .evaluate_bounded(
                 "getComputedStyle(document.querySelector('[data-table-scroll] > [data-slot=scrollbars]')).overflowAnchor",
             )
             .await
@@ -374,7 +375,7 @@ fn a_windowed_table_has_no_blank_rows_while_scrolling() {
         );
         // Todo 1454: the scrollbar runs beside the rows, not over the header.
         let bar: String = page
-            .evaluate(
+            .evaluate_bounded(
                 "(() => { const bar = document.querySelector('[data-table-scroll] [data-orientation=vertical]'); \
                  const head = document.querySelector('thead').getBoundingClientRect(); \
                  const area = document.querySelector('[data-table-scroll]').getBoundingClientRect(); \
@@ -393,13 +394,13 @@ fn a_windowed_table_has_no_blank_rows_while_scrolling() {
         let mut report = Vec::new();
         for step in 1..=20 {
             let at = step * 150;
-            page.evaluate(format!("document.querySelector({AREA:?}).scrollTop = {at}"))
+            page.evaluate_bounded(format!("document.querySelector({AREA:?}).scrollTop = {at}"))
                 .await
                 .unwrap();
             let settled =
                 wait::for_js_true(page, &format!("{GAP} < 1"), "the rows to cover the area").await;
             let (gap, top): (f64, f64) = page
-                .evaluate(format!(
+                .evaluate_bounded(format!(
                     "[{GAP}, document.querySelector({AREA:?}).scrollTop]"
                 ))
                 .await
@@ -433,7 +434,9 @@ fn a_windowed_row_keeps_its_node_through_a_sort() {
         wait::for_js_true(page, &format!("!!{ROW}"), "the row of stock 4")
             .await
             .unwrap();
-        page.evaluate(format!("{ROW}.marked = true")).await.unwrap();
+        page.evaluate_bounded(format!("{ROW}.marked = true"))
+            .await
+            .unwrap();
         pointer::click(page, "th[data-sortable] [data-sort-button]")
             .await
             .unwrap();
@@ -483,7 +486,7 @@ fn a_held_tab_walks_a_windowed_body_row_by_row() {
         for (modifiers, step) in [(0, BURST as i64), (keyboard::SHIFT, -(BURST as i64))] {
             for _ in 0..BURSTS {
                 let from: String = page
-                    .evaluate(FOCUSED_ROW)
+                    .evaluate_bounded(FOCUSED_ROW)
                     .await
                     .unwrap()
                     .into_value()
@@ -498,7 +501,7 @@ fn a_held_tab_walks_a_windowed_body_row_by_row() {
                     .is_err()
                 {
                     let landed: String = page
-                        .evaluate(FOCUSED_ROW)
+                        .evaluate_bounded(FOCUSED_ROW)
                         .await
                         .unwrap()
                         .into_value()
@@ -548,7 +551,7 @@ fn a_windowed_table_reads_as_the_whole_table() {
         .unwrap();
         // Unsorted, a row's stock is its place in `data`: its row index less the header row.
         let placed: String = page
-            .evaluate(
+            .evaluate_bounded(
                 "(() => { const rows = [...document.querySelectorAll('table tr')]; \
                  const at = rows.map(r => +r.getAttribute('aria-rowindex')); \
                  const count = +document.querySelector('table').getAttribute('aria-rowcount'); \
@@ -601,7 +604,7 @@ fn a_wide_table_scrolls_from_a_focused_header() {
             let page = &fixture.page;
 
             let state: String = page
-                .evaluate(format!(
+                .evaluate_bounded(format!(
                     "(() => {{ const r = document.querySelector({REGION:?}); \
                      const c = document.querySelector('caption'); \
                      return [r.scrollWidth > r.clientWidth, \
@@ -618,7 +621,7 @@ fn a_wide_table_scrolls_from_a_focused_header() {
                 "at {at}: overflows itself, not the page; no stop beside its header buttons"
             );
 
-            page.evaluate("document.querySelector('th button').focus()")
+            page.evaluate_bounded("document.querySelector('th button').focus()")
                 .await
                 .unwrap();
             keyboard::press(page, keyboard::ARROW_RIGHT).await.unwrap();
@@ -657,7 +660,7 @@ fn a_narrow_windowed_table_scrolls_instead_of_squeezing() {
         .await
         .unwrap();
         let state: String = page
-            .evaluate(format!(
+            .evaluate_bounded(format!(
                 "(() => {{ const area = document.querySelector({AREA:?}); \
                  const cells = [...document.querySelectorAll('thead th')].map(th => th.getBoundingClientRect().width); \
                  const row = document.querySelector('tbody tr[aria-rowindex=\"2\"] td').getBoundingClientRect().width; \

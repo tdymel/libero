@@ -5,6 +5,7 @@ use e2e::browser::block_on;
 use e2e::driver::{Driver, eventually, eventually_focused, eventually_text};
 use e2e::passes::keyboard;
 use e2e::suite::Step;
+use e2e::wait::PageBounded;
 use e2e::{Fixture, Suite, Viewport, wait};
 
 /// The distance between two neighbours' tops (or lefts, in a row).
@@ -527,12 +528,12 @@ fn a_row_scrolls_inside_itself_at_320px() {
             .await
             .unwrap();
         let page = &fixture.page;
-        page.execute(SetDeviceMetricsOverrideParams::new(320, 640, 1.0, true))
+        page.execute_bounded(SetDeviceMetricsOverrideParams::new(320, 640, 1.0, true))
             .await
             .unwrap();
         wait::for_visible(page, "#Alpha").await.unwrap();
         let widths: Vec<f64> = page
-            .evaluate(
+            .evaluate_bounded(
                 "(() => {
                     const list = document.querySelector('#list');
                     const handle = document.querySelector('#Alpha button');
@@ -616,13 +617,13 @@ fn a_scroll_mid_drag_keeps_the_item_under_the_pointer() {
         let outcome = async {
             wait::for_visible(page, "#Item2 button").await?;
             let pitch: f64 = page
-                .evaluate(
+                .evaluate_bounded(
                     "document.querySelector('#Item3').getBoundingClientRect().top \
                      - document.querySelector('#Item2').getBoundingClientRect().top",
                 )
                 .await?
                 .into_value()?;
-            let top: f64 = page.evaluate(TOP).await?.into_value()?;
+            let top: f64 = page.evaluate_bounded(TOP).await?.into_value()?;
             let from = pointer::centre_of(page, "#Item2 button").await?;
             let to = Point {
                 x: from.x,
@@ -630,10 +631,10 @@ fn a_scroll_mid_drag_keeps_the_item_under_the_pointer() {
             };
             pointer::drag_held(page, from, to, 4).await?;
             wait::for_visible(page, "#Item2[data-state~=dragging]").await?;
-            page.evaluate(format!("window.scrollBy(0, {})", pitch * 5.0))
+            page.evaluate_bounded(format!("window.scrollBy(0, {})", pitch * 5.0))
                 .await?;
             wait::until("the dragged item to follow the pointer", || async {
-                let now: f64 = page.evaluate(TOP).await?.into_value()?;
+                let now: f64 = page.evaluate_bounded(TOP).await?.into_value()?;
                 Ok((now - (top + 10.0)).abs() < 2.0)
             })
             .await?;
@@ -679,7 +680,7 @@ fn a_cancelled_pointer_puts_it_back() {
             };
             pointer::drag_held(page, from, to, 4).await?;
             wait::for_visible(page, "#Item2[data-state~=dragging]").await?;
-            page.evaluate(cancel_held("#Item2 button")).await?;
+            page.evaluate_bounded(cancel_held("#Item2 button")).await?;
             wait::for_js_true(
                 page,
                 "!document.querySelector('#Item2[data-state~=dragging]')",
@@ -688,7 +689,7 @@ fn a_cancelled_pointer_puts_it_back() {
             .await?;
             pointer::release(page, to).await?;
             let order: String = page
-                .evaluate("document.querySelector('#order').textContent")
+                .evaluate_bounded("document.querySelector('#order').textContent")
                 .await?
                 .into_value()?;
             ensure!(
@@ -714,7 +715,7 @@ fn a_held_lift_key_does_not_toggle_on_its_repeats() {
         let page = &fixture.page;
         let outcome = async {
             wait::for_visible(page, "#Alpha").await?;
-            page.evaluate("document.querySelector('#Alpha button').focus()")
+            page.evaluate_bounded("document.querySelector('#Alpha button').focus()")
                 .await?;
             keyboard::press(page, keyboard::SPACE).await?;
             wait::for_visible(page, "#Alpha[data-state~=dragging]").await?;
@@ -732,7 +733,7 @@ fn a_held_lift_key_does_not_toggle_on_its_repeats() {
                         .auto_repeat(repeat)
                         .build()
                         .map_err(anyhow::Error::msg)?;
-                    page.execute(event).await?;
+                    page.execute_bounded(event).await?;
                 }
             }
             // Handled in order: a dropped item would not move.

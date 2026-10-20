@@ -7,6 +7,7 @@ use e2e::browser::block_on;
 use e2e::driver::{Driver, Platform, eventually, eventually_focused};
 use e2e::passes::{focus, keyboard::Key, pointer};
 use e2e::suite::Step;
+use e2e::wait::PageBounded;
 use e2e::{Fixture, Suite, Viewport, js, passes::keyboard, wait};
 
 pub const TRIGGER: &str = "#open-spotlight";
@@ -575,7 +576,7 @@ fn a_long_label_wraps_in_its_row() {
             .await
             .unwrap();
         let page = &fixture.page;
-        page.execute(SetDeviceMetricsOverrideParams::new(320, 640, 1.0, true))
+        page.execute_bounded(SetDeviceMetricsOverrideParams::new(320, 640, 1.0, true))
             .await
             .unwrap();
         open_by_keyboard(page).await;

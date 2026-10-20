@@ -3,6 +3,7 @@
 
 use chromiumoxide::cdp::browser_protocol::emulation::SetDeviceMetricsOverrideParams;
 use e2e::browser::block_on;
+use e2e::wait::PageBounded;
 use e2e::{Fixture, Viewport, passes::pointer, wait};
 
 /// Every overflowing part as `[what, scrollWidth, clientWidth]`, the page included.
@@ -70,20 +71,20 @@ fn a_long_label_wraps_instead_of_widening_the_page() {
             .unwrap();
         let page = &fixture.page;
         for width in [390, 320] {
-            page.execute(SetDeviceMetricsOverrideParams::new(width, 800, 1.0, true))
+            page.execute_bounded(SetDeviceMetricsOverrideParams::new(width, 800, 1.0, true))
                 .await
                 .unwrap();
             pointer::click(page, "[aria-haspopup=menu]").await.unwrap();
             wait::for_visible(page, "[role=menu]").await.unwrap();
             let overflows: Vec<serde_json::Value> = page
-                .evaluate(OVERFLOWS)
+                .evaluate_bounded(OVERFLOWS)
                 .await
                 .unwrap()
                 .into_value()
                 .unwrap();
             assert!(overflows.is_empty(), "{width}px: {overflows:?}");
             let single: Vec<(String, bool, bool, bool)> = page
-                .evaluate(SINGLE_LINE)
+                .evaluate_bounded(SINGLE_LINE)
                 .await
                 .unwrap()
                 .into_value()

@@ -4,6 +4,7 @@ use anyhow::{Result, ensure};
 use e2e::browser::block_on;
 use e2e::driver::{Driver, eventually};
 use e2e::passes::{keyboard, motion, pointer};
+use e2e::wait::PageBounded;
 use e2e::{Fixture, Viewport, clock, wait};
 
 const TOGGLE: &str = "#toggle";
@@ -169,7 +170,7 @@ fn a_descendants_transition_end_does_not_unmount_a_closing_root() {
         )
         .await
         .unwrap();
-        page.evaluate(format!(
+        page.evaluate_bounded(format!(
             "document.querySelector({CONTENT:?}).dispatchEvent(new TransitionEvent('transitionend', \
              {{ propertyName: 'opacity', bubbles: true }}))"
         ))
@@ -178,7 +179,7 @@ fn a_descendants_transition_end_does_not_unmount_a_closing_root() {
         clock::settle(page).await.unwrap();
 
         let mounted: bool = page
-            .evaluate(format!("!!document.querySelector({CONTENT:?})"))
+            .evaluate_bounded(format!("!!document.querySelector({CONTENT:?})"))
             .await
             .unwrap()
             .into_value()
@@ -191,7 +192,7 @@ fn a_descendants_transition_end_does_not_unmount_a_closing_root() {
 
 /// Finishes what runs, as `Suite` does, and waits for an end event per finished animation.
 async fn finish_and_hear(page: &chromiumoxide::Page, what: &str) -> usize {
-    page.evaluate("window.__ends = []").await.unwrap();
+    page.evaluate_bounded("window.__ends = []").await.unwrap();
     let finished = clock::finish_animations(page, std::time::Duration::from_secs(5))
         .await
         .unwrap()
@@ -235,7 +236,7 @@ fn a_finished_animation_still_sends_its_end_event() {
             if let Some(ms) = exit_timer {
                 clock::hold(page, &[ms]).await.unwrap();
             }
-            page.evaluate(
+            page.evaluate_bounded(
                 "for (const type of ['transitionend', 'animationend']) document.addEventListener(type, \
                  (e) => window.__ends.push(e.animationName || e.propertyName), true); 1",
             )

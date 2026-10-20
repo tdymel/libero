@@ -5,6 +5,7 @@ use anyhow::Result;
 use e2e::browser::block_on;
 use e2e::driver::{Driver, eventually, eventually_focused};
 use e2e::passes::keyboard;
+use e2e::wait::PageBounded;
 use e2e::{Fixture, Viewport, ax, wait};
 
 const CONTROL: &str = "[role=combobox]";
@@ -152,7 +153,7 @@ fn the_x_is_named_with_its_fields_label() {
 async fn expect(page: &chromiumoxide::Page, check: &str, what: &str) {
     if let Err(error) = wait::for_js_true(page, check, what).await {
         let focus: String = page
-            .evaluate("document.activeElement.outerHTML.slice(0, 160)")
+            .evaluate_bounded("document.activeElement.outerHTML.slice(0, 160)")
             .await
             .and_then(|value| Ok(value.into_value()?))
             .unwrap_or_default();

@@ -2,6 +2,7 @@
 
 use e2e::browser::block_on;
 use e2e::suite::Suite;
+use e2e::wait::PageBounded;
 use e2e::{Fixture, Viewport, wait};
 
 #[test]
@@ -56,7 +57,7 @@ fn a_done_dot_fills_and_a_pending_one_stays_a_ring() {
 
         let bullets: Vec<(String, String)> = fixture
             .page
-            .evaluate(BULLETS)
+            .evaluate_bounded(BULLETS)
             .await
             .unwrap()
             .into_value()
@@ -72,7 +73,7 @@ fn a_done_dot_fills_and_a_pending_one_stays_a_ring() {
         // The AX snapshot keeps no `current`, so the one current event is read here.
         let current: Vec<String> = fixture
             .page
-            .evaluate(
+            .evaluate_bounded(
                 "[...document.querySelectorAll('#left > li')] \
                  .map(li => li.getAttribute('aria-current') || '-')",
             )
@@ -98,7 +99,7 @@ fn done_and_pending_bullets_stay_apart_in_forced_colours() {
     block_on(async {
         let fixture = Fixture::open("/timeline", Viewport::Desktop).await.unwrap();
         let page = &fixture.page;
-        page.execute(
+        page.execute_bounded(
             SetEmulatedMediaParams::builder()
                 .features(vec![MediaFeature::new("forced-colors", "active")])
                 .build(),
@@ -114,7 +115,7 @@ fn done_and_pending_bullets_stay_apart_in_forced_colours() {
         .unwrap();
         // `[background, glyph colour]` of the done and a pending bullet, per list.
         let bullets: Vec<Vec<(String, String)>> = page
-            .evaluate(
+            .evaluate_bounded(
                 "['#left', '#alternate'].map(id => [1, 3].map(n => { \
                  const s = getComputedStyle(document.querySelector(`${id} > li:nth-child(${n}) > span`)); \
                  return [s.backgroundColor, s.color]; }))",
@@ -156,7 +157,7 @@ fn the_sides_mirror_under_rtl() {
         for (dir, sides) in [("ltr", [1.0, -1.0, 1.0]), ("rtl", [-1.0, 1.0, -1.0])] {
             let fixture = Fixture::open("/timeline", Viewport::Desktop).await.unwrap();
             let page = &fixture.page;
-            page.evaluate(format!("document.documentElement.dir = '{dir}'"))
+            page.evaluate_bounded(format!("document.documentElement.dir = '{dir}'"))
                 .await
                 .unwrap();
             wait::for_js_true(
@@ -166,7 +167,12 @@ fn the_sides_mirror_under_rtl() {
             )
             .await
             .unwrap();
-            let measured: Vec<[f64; 2]> = page.evaluate(SIDES).await.unwrap().into_value().unwrap();
+            let measured: Vec<[f64; 2]> = page
+                .evaluate_bounded(SIDES)
+                .await
+                .unwrap()
+                .into_value()
+                .unwrap();
             for (([off, side], want), id) in
                 measured
                     .iter()

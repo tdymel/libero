@@ -1,6 +1,7 @@
 //! A component's inline `style` must not wipe the caller's style attributes.
 
 use e2e::browser::block_on;
+use e2e::wait::PageBounded;
 use e2e::{Fixture, Viewport, wait};
 
 const BOX: &str = "(() => { const s = getComputedStyle(document.querySelector('#sized')); return s.position + '|' + s.left + '|' + s.height; })()";
@@ -14,7 +15,12 @@ fn a_coloured_paper_keeps_its_style_attributes() {
         let page = &fixture.page;
         wait::for_visible(page, "#sized").await.unwrap();
 
-        let style: String = page.evaluate(BOX).await.unwrap().into_value().unwrap();
+        let style: String = page
+            .evaluate_bounded(BOX)
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
         assert_eq!(style, "relative|5px|40px");
         fixture.close().await.unwrap();
     });

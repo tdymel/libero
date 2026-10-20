@@ -5,6 +5,7 @@ use e2e::browser::block_on;
 use e2e::driver::{Driver, eventually, eventually_focused, eventually_text};
 use e2e::passes::{keyboard, pointer};
 use e2e::suite::Step;
+use e2e::wait::PageBounded;
 use e2e::{Fixture, Suite, Viewport, wait};
 
 /// `a11y_attributes()` gives the trigger a generated id, so the attribute finds it.
@@ -237,7 +238,7 @@ fn space_and_enter_follow_the_link_and_return_focus() {
         let fixture = Fixture::open("/tldr", Viewport::Desktop).await.unwrap();
         let page = &fixture.page;
         wait::for_visible(page, TRIGGER).await.unwrap();
-        page.evaluate(format!("document.querySelector('{TRIGGER}').focus()"))
+        page.evaluate_bounded(format!("document.querySelector('{TRIGGER}').focus()"))
             .await
             .unwrap();
         keyboard::press(page, keyboard::ENTER).await.unwrap();
@@ -262,7 +263,7 @@ fn space_and_enter_follow_the_link_and_return_focus() {
         .unwrap();
 
         // Records whether the menu cancelled the click, then cancels it so no tab opens.
-        page.evaluate(
+        page.evaluate_bounded(
             "window.__clicks = []; document.addEventListener('click', (e) => { \
              if (e.target.closest('a')) { window.__clicks.push(e.defaultPrevented); e.preventDefault(); } })",
         )
@@ -316,7 +317,7 @@ fn menu_parts_style_the_portaled_menu() {
             pointer::click(page, TRIGGER).await?;
             wait::for_visible(page, "[role=menu] [data-slot=label]").await?;
             let style: String = page
-                .evaluate(
+                .evaluate_bounded(
                     "getComputedStyle(document.querySelector('[role=menu] [data-slot=label]')).fontStyle",
                 )
                 .await?

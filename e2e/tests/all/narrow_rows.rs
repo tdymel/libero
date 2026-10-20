@@ -1,6 +1,7 @@
 //! A flex row narrower than its item's content: the item fits it (WCAG 1.4.10).
 
 use e2e::browser::block_on;
+use e2e::wait::PageBounded;
 use e2e::{Fixture, Viewport, wait};
 
 /// Every part past its row, as `case: TAG.slot left-right`.
@@ -23,7 +24,12 @@ fn every_item_fits_a_narrow_flex_row() {
         wait::for_visible(page, "[data-case=segmented] label")
             .await
             .unwrap();
-        let past: Vec<String> = page.evaluate(PAST).await.unwrap().into_value().unwrap();
+        let past: Vec<String> = page
+            .evaluate_bounded(PAST)
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
         assert!(past.is_empty(), "past the 200px row: {past:?}");
         fixture.console.assert_clean("narrow rows").unwrap();
         fixture.close().await.unwrap();
@@ -42,7 +48,7 @@ fn an_overlong_button_label_keeps_its_start() {
             .await
             .unwrap();
         let edges: Vec<f64> = page
-            .evaluate(
+            .evaluate_bounded(
                 "(() => { const button = document.querySelector('[data-case=button] button'); \
                    const range = document.createRange(); range.selectNodeContents(button); \
                    return [range.getBoundingClientRect().left, button.getBoundingClientRect().left]; })()",

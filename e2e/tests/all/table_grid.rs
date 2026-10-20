@@ -5,6 +5,7 @@ use anyhow::{Result, bail};
 use e2e::browser::block_on;
 use e2e::driver::{Driver, Platform, eventually, eventually_focused, eventually_text};
 use e2e::passes::keyboard;
+use e2e::wait::PageBounded;
 use e2e::{Fixture, Suite, Viewport, ax};
 
 const STOP: &str = "[data-cell-stop]";
@@ -122,6 +123,63 @@ e2e::scenario!(
     "/table-grid",
     one_stop,
     android: skip("958: roving keys are inert in the emulator's WebView")
+);
+
+/// Tab in and Tab out: the header's sort buttons are not stops beside the first header cell (3768).
+async fn header_one_stop<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    d.focus("#before").await?;
+    eventually_focused(d, "#before", "focus").await?;
+    d.press(keyboard::TAB).await?;
+    eventually_focused(d, &head(1), "Tab into the grid").await?;
+    d.press(keyboard::TAB).await?;
+    eventually_focused(d, "#after", "Tab out of the grid past the sort buttons").await
+}
+
+e2e::scenario!(
+    the_header_cell_is_the_only_tab_stop,
+    "/table-grid",
+    header_one_stop,
+    android: skip("958: roving keys are inert in the emulator's WebView")
+);
+
+/// A sort or menu button and a resize grip in a header cell are `tabindex=-1`, none missing.
+const HEADER_BUTTONS: &str = "(() => {
+    const count = (selector) => document.querySelectorAll(`thead ${selector}`).length;
+    const stops = [...document.querySelectorAll(
+        'thead [data-sort-button], thead [data-column-menu], thead [data-resize-handle]'
+    )].filter((e) => e.getAttribute('tabindex') !== '-1').map((e) => e.outerHTML.slice(0, 80));
+    return {
+        sort: count('[data-sort-button]'),
+        menu: count('[data-column-menu]'),
+        grip: count('[data-resize-handle]'),
+        stops,
+    };
+})()";
+
+async fn header_buttons_leave_the_tab_order<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    eventually(d, "the header's buttons", async |d| {
+        d.exists("thead [data-column-menu]").await
+    })
+    .await?;
+    let seen = d.evaluate(HEADER_BUTTONS).await?;
+    for kind in ["sort", "menu", "grip"] {
+        if seen[kind].as_u64().unwrap_or(0) == 0 {
+            bail!("no {kind} in the header: {seen}");
+        }
+    }
+    if seen["stops"]
+        .as_array()
+        .is_none_or(|stops| !stops.is_empty())
+    {
+        bail!("a header button or grip is a Tab stop: {seen}");
+    }
+    Ok(())
+}
+
+e2e::scenario!(
+    sort_menu_buttons_and_grips_are_not_tab_stops,
+    "/table-grid/resizable",
+    header_buttons_leave_the_tab_order
 );
 
 /// Ben's age stays the stop when the age sort moves his row from second to fourth.
@@ -761,7 +819,7 @@ fn the_cell_cancel_button_takes_a_finger_in_a_44px_box() {
             .await
             .unwrap();
         let page = &fixture.page;
-        page.execute(SetTouchEmulationEnabledParams::new(true))
+        page.execute_bounded(SetTouchEmulationEnabledParams::new(true))
             .await
             .unwrap();
         wait::for_js_true(
@@ -776,7 +834,7 @@ fn the_cell_cancel_button_takes_a_finger_in_a_44px_box() {
         wait::for_visible(page, CANCEL).await.unwrap();
 
         let misses: Vec<String> = page
-            .evaluate(format!(
+            .evaluate_bounded(format!(
                 "(() => {{
                     const el = document.querySelector({CANCEL:?});
                     const r = el.getBoundingClientRect();

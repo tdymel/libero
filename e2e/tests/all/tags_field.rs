@@ -3,6 +3,7 @@
 use e2e::archetypes::Combobox;
 use e2e::browser::block_on;
 use e2e::suite::Step;
+use e2e::wait::PageBounded;
 use e2e::{Fixture, Suite, Viewport, ax, passes::keyboard, wait};
 
 pub const TRIGGER: &str = "[role=combobox]";
@@ -161,7 +162,7 @@ fn chip(label: &str) -> String {
 }
 
 async fn tags(page: &chromiumoxide::Page) -> Vec<String> {
-    page.evaluate(
+    page.evaluate_bounded(
         "[...document.querySelectorAll(\"[data-slot='tag'] [data-slot='label']\")].map(e => e.textContent)",
     )
     .await
@@ -189,7 +190,7 @@ fn a_refused_tag_stays_in_the_draft_and_is_announced() {
         .await
         .unwrap();
         let draft: String = page
-            .evaluate(format!("document.querySelector({CURSOR:?}).value"))
+            .evaluate_bounded(format!("document.querySelector({CURSOR:?}).value"))
             .await
             .unwrap()
             .into_value()
@@ -238,7 +239,7 @@ fn the_chip_cursor_enters_from_the_start_of_a_draft() {
         keyboard::tab_to(page, CURSOR, 10).await.unwrap();
         keyboard::type_text(page, "go").await.unwrap();
         let draft = || async {
-            page.evaluate(format!("document.querySelector({CURSOR:?}).value"))
+            page.evaluate_bounded(format!("document.querySelector({CURSOR:?}).value"))
                 .await
                 .unwrap()
                 .into_value::<String>()
@@ -341,7 +342,7 @@ fn a_long_tag_wraps_and_keeps_its_x_on_the_first_line() {
             .unwrap();
         let page = &fixture.page;
         let facts: Vec<f64> = page
-            .evaluate(
+            .evaluate_bounded(
                 "(() => {
                     const [long, short] = document.querySelectorAll(\"[data-slot='tag']\");
                     const box = e => e.getBoundingClientRect();

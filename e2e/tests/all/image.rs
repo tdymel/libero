@@ -4,6 +4,7 @@
 use e2e::browser::block_on;
 use e2e::passes::keyboard::{self, ESCAPE};
 use e2e::passes::pointer;
+use e2e::wait::PageBounded;
 use e2e::{Fixture, Suite, Viewport, wait};
 
 #[test]
@@ -19,7 +20,7 @@ fn it_meets_the_baseline() {
 async fn attr(fixture: &Fixture, selector: &str, name: &str) -> String {
     fixture
         .page
-        .evaluate(format!(
+        .evaluate_bounded(format!(
             "document.querySelector({selector:?}).getAttribute({name:?}) ?? '-'"
         ))
         .await
@@ -73,7 +74,7 @@ fn an_empty_fallback_keeps_the_broken_source() {
 /// pictures fail once, then mounts them again: the browser has the failure by then.
 async fn open_missed_error(fixture: &Fixture) {
     let page = &fixture.page;
-    page.evaluate(
+    page.evaluate_bounded(
         "window.addEventListener('error', e => { \
          if (e.target instanceof HTMLImageElement) e.stopImmediatePropagation(); }, true)",
     )
@@ -189,7 +190,7 @@ fn the_zoom_button_has_the_picture_radius() {
         wait::for_visible(&fixture.page, "#zoom").await.unwrap();
         let [button, img]: [String; 2] = fixture
             .page
-            .evaluate(
+            .evaluate_bounded(
                 "['#zoom', '#zoom > img'].map(q => \
                  getComputedStyle(document.querySelector(q)).borderRadius)",
             )
@@ -222,7 +223,7 @@ fn the_zoom_button_opens_a_named_dialog_and_escape_returns_focus() {
         let fixture = Fixture::open("/image", Viewport::Desktop).await.unwrap();
         let page = &fixture.page;
         wait::for_visible(page, "#zoom").await.unwrap();
-        page.evaluate("document.querySelector('#zoom').focus()")
+        page.evaluate_bounded("document.querySelector('#zoom').focus()")
             .await
             .unwrap();
         keyboard::press(page, keyboard::ENTER).await.unwrap();

@@ -3,6 +3,7 @@
 
 use e2e::browser::block_on;
 use e2e::passes::keyboard::{self, TAB};
+use e2e::wait::PageBounded;
 use e2e::{Fixture, Suite, Viewport, wait};
 
 #[test]
@@ -21,7 +22,7 @@ async fn clearance_after_shift_tab(padded: bool) -> f64 {
     let fixture = Fixture::open("/header", Viewport::Desktop).await.unwrap();
     let page = &fixture.page;
     wait::for_visible(page, "#banner").await.unwrap();
-    page.evaluate(
+    page.evaluate_bounded(
         "(() => { document.querySelector('#item-6').focus(); \
          const covered = document.querySelector('#item-5').getBoundingClientRect().bottom; \
          const banner = document.querySelector('#banner').getBoundingClientRect().height; \
@@ -30,13 +31,13 @@ async fn clearance_after_shift_tab(padded: bool) -> f64 {
     .await
     .unwrap();
     if !padded {
-        page.evaluate("document.documentElement.style.scrollPaddingTop = '0px'")
+        page.evaluate_bounded("document.documentElement.style.scrollPaddingTop = '0px'")
             .await
             .unwrap();
     }
     // The banner publishes both on `:root` itself; the height with a top inset of 0px added.
     let published: String = page
-        .evaluate(
+        .evaluate_bounded(
             "(() => { const root = getComputedStyle(document.documentElement); \
              return resolved('var(--lsx-header-height)') + 'px|' + root.scrollPaddingTop; })()"
                 .replace("resolved", RESOLVED_HEIGHT),
@@ -52,7 +53,7 @@ async fn clearance_after_shift_tab(padded: bool) -> f64 {
     keyboard::press_shift(page, TAB).await.unwrap();
 
     let clearance: f64 = page
-        .evaluate(
+        .evaluate_bounded(
             "(() => { if (document.activeElement.id !== 'item-5') return NaN; \
              return document.activeElement.getBoundingClientRect().bottom \
              - document.querySelector('#banner').getBoundingClientRect().bottom; })()",
@@ -77,7 +78,7 @@ fn only_an_opted_in_header_publishes_its_height() {
         let page = &fixture.page;
         wait::for_visible(page, "#nested").await.unwrap();
         let heights: String = page
-            .evaluate(
+            .evaluate_bounded(
                 "(() => [resolved('var(--lsx-header-height)'), resolved('var(--lsx-header-height-lg)'), \
                  document.querySelector('#nested').getBoundingClientRect().height].join('|'))()"
                     .replace("resolved", RESOLVED_HEIGHT),
@@ -148,9 +149,14 @@ fn glass_blurs_and_turns_opaque_where_asked() {
             .unwrap();
         let page = &fixture.page;
         wait::for_visible(page, "#card").await.unwrap();
-        let glass: String = page.evaluate(GLASS).await.unwrap().into_value().unwrap();
+        let glass: String = page
+            .evaluate_bounded(GLASS)
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
         let body: String = page
-            .evaluate("getComputedStyle(document.body).color")
+            .evaluate_bounded("getComputedStyle(document.body).color")
             .await
             .unwrap()
             .into_value()
@@ -167,7 +173,7 @@ fn glass_blurs_and_turns_opaque_where_asked() {
             "the tint share never drops below 80%: {glass}"
         );
         let label: String = page
-            .evaluate("getComputedStyle(document.querySelector('#banner')).getPropertyValue('--lsx-header-color')")
+            .evaluate_bounded("getComputedStyle(document.querySelector('#banner')).getPropertyValue('--lsx-header-color')")
             .await
             .unwrap()
             .into_value()
@@ -185,14 +191,19 @@ fn glass_blurs_and_turns_opaque_where_asked() {
             MediaFeature::new("forced-colors", "active"),
         ] {
             let name = feature.name.clone();
-            page.execute(
+            page.execute_bounded(
                 SetEmulatedMediaParams::builder()
                     .features(vec![feature])
                     .build(),
             )
             .await
             .unwrap();
-            let opaque: String = page.evaluate(GLASS).await.unwrap().into_value().unwrap();
+            let opaque: String = page
+                .evaluate_bounded(GLASS)
+                .await
+                .unwrap()
+                .into_value()
+                .unwrap();
             for surface in opaque.split(" / ") {
                 let parts: Vec<&str> = surface.split('|').collect();
                 assert_eq!(parts[0], "none", "{name}: {opaque}");
@@ -225,7 +236,7 @@ fn a_float_scrolls_under_a_sticky_header() {
             .unwrap();
         let page = &fixture.page;
         wait::for_visible(page, "#badge").await.unwrap();
-        page.evaluate(
+        page.evaluate_bounded(
             "window.scrollBy(0, document.querySelector('#card').getBoundingClientRect().top - 10)",
         )
         .await

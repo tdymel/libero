@@ -4,6 +4,7 @@ use anyhow::{Result, ensure};
 use e2e::browser::block_on;
 use e2e::driver::{Driver, eventually, eventually_focused};
 use e2e::passes::{keyboard, pointer};
+use e2e::wait::PageBounded;
 use e2e::{Fixture, Suite, Viewport, wait};
 
 #[test]
@@ -43,7 +44,7 @@ fn track_and_thumb_keep_an_outline_in_forced_colours() {
     block_on(async {
         let fixture = Fixture::open("/switch", Viewport::Desktop).await.unwrap();
         let page = &fixture.page;
-        page.execute(
+        page.execute_bounded(
             SetEmulatedMediaParams::builder()
                 .features(vec![MediaFeature::new("forced-colors", "active")])
                 .build(),
@@ -58,7 +59,7 @@ fn track_and_thumb_keep_an_outline_in_forced_colours() {
         .await
         .unwrap();
         let bare: Vec<String> = page
-            .evaluate(
+            .evaluate_bounded(
                 "(() => {
                     const track = document.querySelector('#plain ~ [aria-hidden]');
                     return [['track', track], ['thumb', track.firstElementChild]]
@@ -89,7 +90,7 @@ pub(crate) async fn assert_inputs_over_their_boxes(route: &str) {
         .unwrap();
     // A card's input centres on the card, all hit area: not a box to hit.
     let misses: Vec<String> = page
-        .evaluate(
+        .evaluate_bounded(
             "[...document.querySelectorAll('[data-slot=control] > input')]
                 .filter(i => getComputedStyle(i.parentElement).position === 'relative')
                 .filter(i => {
@@ -118,7 +119,7 @@ fn a_click_at_the_hidden_input_lands_on_the_track() {
         let fixture = Fixture::open("/switch", Viewport::Desktop).await.unwrap();
         let page = &fixture.page;
         let before: bool = page
-            .evaluate(checked("plain"))
+            .evaluate_bounded(checked("plain"))
             .await
             .unwrap()
             .into_value()
@@ -218,7 +219,7 @@ fn enter_submits_a_raw_form() {
             .await
             .unwrap();
         let on: bool = page
-            .evaluate(checked("alerts"))
+            .evaluate_bounded(checked("alerts"))
             .await
             .unwrap()
             .into_value()
@@ -256,7 +257,7 @@ fn a_readonly_switch_refuses_keys_and_clicks() {
         .await
         .unwrap();
         let (count, on): (String, bool) = page
-            .evaluate(format!("[{}, {}]", changes(), checked("readonly")))
+            .evaluate_bounded(format!("[{}, {}]", changes(), checked("readonly")))
             .await
             .unwrap()
             .into_value()
@@ -313,7 +314,7 @@ fn a_disabled_track_shows_it_takes_no_click() {
                 .unwrap();
             let cursor: String = fixture
                 .page
-                .evaluate(format!(
+                .evaluate_bounded(format!(
                     "getComputedStyle(document.querySelector({track:?})).cursor"
                 ))
                 .await

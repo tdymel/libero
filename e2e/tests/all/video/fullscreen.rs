@@ -5,6 +5,7 @@ use anyhow::Result;
 use e2e::browser::block_on;
 use e2e::driver::{Driver, Platform, eventually};
 use e2e::passes::{keyboard, pointer};
+use e2e::wait::PageBounded;
 use e2e::{Fixture, Viewport, wait};
 
 use super::{F, FULLSCREEN, PLAY, STATE};
@@ -42,7 +43,12 @@ fn fullscreen_takes_the_player_and_escape_or_f_gives_it_back() {
         )
         .await
         .unwrap();
-        let state: String = page.evaluate(STATE).await.unwrap().into_value().unwrap();
+        let state: String = page
+            .evaluate_bounded(STATE)
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
         assert_eq!(state, "drawn", "the refused player draws its own box");
         wait::for_js_true(
             page,
@@ -255,7 +261,7 @@ fn the_speed_menu_works_in_fullscreen() {
         )
         .await
         .unwrap();
-        page.evaluate(
+        page.evaluate_bounded(
             "[...document.querySelectorAll('[role=menuitemradio]')].find((e) => e.textContent.includes('1.5×')).dataset.pick = ''",
         )
         .await

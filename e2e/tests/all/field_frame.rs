@@ -15,6 +15,7 @@ use chromiumoxide::cdp::browser_protocol::page::{
 use e2e::browser::block_on;
 use e2e::driver::{Driver, eventually_text};
 use e2e::passes::{focus, keyboard, pointer};
+use e2e::wait::PageBounded;
 use e2e::{Fixture, Viewport, js, wait};
 use futures::StreamExt;
 
@@ -42,7 +43,7 @@ fn a_press_on_the_padding_is_a_press_on_the_control() {
 
         // A press on the padding leaves a selection alone; a drag in the input
         // still selects.
-        page.evaluate(format!(
+        page.evaluate_bounded(format!(
             "document.querySelector({input:?}).setSelectionRange(1, 3)"
         ))
         .await
@@ -158,7 +159,9 @@ fn typing_a_pin_fills_and_clears_one_cell_at_a_time() {
             )
         };
 
-        page.evaluate(format!("{cells}[0].focus()")).await.unwrap();
+        page.evaluate_bounded(format!("{cells}[0].focus()"))
+            .await
+            .unwrap();
         let mut typed = String::new();
         for (index, digit) in ["1", "2", "3", "4"].into_iter().enumerate() {
             keyboard::type_text(page, digit).await.unwrap();
@@ -256,7 +259,7 @@ fn a_file_field_opens_its_picker_once_per_press() {
             .await
             .unwrap();
         let page = &fixture.page;
-        page.execute(SetInterceptFileChooserDialogParams::new(true))
+        page.execute_bounded(SetInterceptFileChooserDialogParams::new(true))
             .await
             .unwrap();
         let opened = Arc::new(AtomicUsize::new(0));
@@ -314,7 +317,7 @@ fn a_press_without_a_move_enters_its_target() {
         pointer::move_to(page, pointer::Point { x: 2.0, y: 2.0 })
             .await
             .unwrap();
-        page.evaluate(format!(
+        page.evaluate_bounded(format!(
             "(() => {{ window.__seen = []; const el = document.querySelector({input:?}); \
              for (const kind of ['pointerover', 'pointerenter', 'mouseover', 'mouseenter', \
                  'pointerdown', 'mousedown', 'click']) \
@@ -331,7 +334,7 @@ fn a_press_without_a_move_enters_its_target() {
         .await
         .unwrap();
         let seen: Vec<String> = page
-            .evaluate("window.__seen")
+            .evaluate_bounded("window.__seen")
             .await
             .unwrap()
             .into_value()
@@ -350,7 +353,7 @@ fn a_press_without_a_move_enters_its_target() {
             "the events a press with no move sent"
         );
         assert!(
-            page.evaluate(format!(
+            page.evaluate_bounded(format!(
                 "document.querySelector({input:?}).matches(':hover')"
             ))
             .await
@@ -375,7 +378,7 @@ fn an_empty_trigger_fills_its_frame() {
 
         for case in ["select-bare", "multi-bare", "cascader"] {
             let (trigger, frame, hit): (f64, f64, bool) = page
-                .evaluate(format!(
+                .evaluate_bounded(format!(
                     "(() => {{ const f = document.querySelector('[data-case={case}] [data-frame]'); \
                      f.scrollIntoView({{ block: 'center' }}); \
                      const t = f.querySelector('[role=combobox]'); const s = getComputedStyle(f); \
@@ -411,7 +414,7 @@ fn a_native_select_fills_its_frames_height() {
         let page = &fixture.page;
 
         let (top, bottom): (bool, bool) = page
-            .evaluate(
+            .evaluate_bounded(
                 "(() => { const f = document.querySelector('[data-case=native] [data-frame]'); \
                  f.scrollIntoView({ block: 'center' }); const r = f.getBoundingClientRect(); \
                  const s = f.querySelector('select'); const x = r.x + r.width / 2; \
@@ -533,14 +536,14 @@ fn centre(selector: &str) -> String {
 
 /// A real pointer press and release at the point `at` evaluates to.
 async fn press(page: &Page, at: &str) -> Result<()> {
-    let (x, y): (f64, f64) = page.evaluate(at).await?.into_value()?;
+    let (x, y): (f64, f64) = page.evaluate_bounded(at).await?.into_value()?;
     pointer::click_at(page, pointer::Point { x, y }).await
 }
 
 /// Drags across the input's text, from its left edge rightwards.
 async fn drag_across(page: &Page, input: &str) -> Result<()> {
     let (x, y, width): (f64, f64, f64) = page
-        .evaluate(format!(
+        .evaluate_bounded(format!(
             "(() => {{ const r = document.querySelector({input:?}).getBoundingClientRect(); \
              return [r.x, r.y + r.height / 2, r.width]; }})()"
         ))
@@ -559,17 +562,17 @@ async fn drag_across(page: &Page, input: &str) -> Result<()> {
             .map_err(anyhow::Error::msg)
     };
     let (from, to) = (x + 1.0, x + width - 2.0);
-    page.execute(mouse(DispatchMouseEventType::MousePressed, from, 1)?)
+    page.execute_bounded(mouse(DispatchMouseEventType::MousePressed, from, 1)?)
         .await?;
-    page.execute(mouse(DispatchMouseEventType::MouseMoved, to, 1)?)
+    page.execute_bounded(mouse(DispatchMouseEventType::MouseMoved, to, 1)?)
         .await?;
-    page.execute(mouse(DispatchMouseEventType::MouseReleased, to, 0)?)
+    page.execute_bounded(mouse(DispatchMouseEventType::MouseReleased, to, 0)?)
         .await?;
     Ok(())
 }
 
 async fn blur(page: &Page) -> Result<()> {
-    page.evaluate("document.activeElement && document.activeElement.blur()")
+    page.evaluate_bounded("document.activeElement && document.activeElement.blur()")
         .await?;
     Ok(())
 }

@@ -3,6 +3,7 @@
 
 use e2e::browser::block_on;
 use e2e::passes::{focus, keyboard};
+use e2e::wait::PageBounded;
 use e2e::{Fixture, Scheme, Viewport};
 
 const PROBE: &str = "#ring-probe";
@@ -18,7 +19,7 @@ fn an_undeclared_focus_contrast_resolves_to() {
 
         let (outline, colour): (String, String) = fixture
             .page
-            .evaluate(
+            .evaluate_bounded(
                 "(() => { const s = getComputedStyle(document.querySelector('#ring-probe')); \
                  return [s.outline, s.outlineColor]; })()",
             )

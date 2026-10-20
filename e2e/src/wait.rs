@@ -116,7 +116,8 @@ where
 }
 
 /// [`Page`]'s CDP calls under [`bounded`], named by their script or method.
-pub(crate) trait PageBounded {
+#[allow(async_fn_in_trait)]
+pub trait PageBounded {
     async fn evaluate_bounded(
         &self,
         expression: impl Into<EvaluateParams>,

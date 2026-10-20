@@ -7,6 +7,7 @@ use e2e::browser::block_on;
 use e2e::driver::{Driver, eventually, eventually_focused};
 use e2e::passes::{keyboard, pointer};
 use e2e::suite::Step;
+use e2e::wait::PageBounded;
 use e2e::{Fixture, Suite, Viewport, wait};
 
 pub const TRIGGERS: &str = "[role=menubar] [data-menubar-index]";
@@ -310,7 +311,7 @@ async fn tap(page: &chromiumoxide::Page, selector: &str) -> anyhow::Result<()> {
             .touch_point(point)
             .build()
             .map_err(anyhow::Error::msg)?;
-        page.execute(event).await?;
+        page.execute_bounded(event).await?;
     }
     Ok(())
 }
@@ -326,7 +327,7 @@ fn a_tap_on_another_trigger_opens_its_menu() {
             .unwrap();
         let page = &fixture.page;
         let outcome = async {
-            page.execute(SetTouchEmulationEnabledParams::new(true))
+            page.execute_bounded(SetTouchEmulationEnabledParams::new(true))
                 .await?;
             tap(page, &trigger(0)).await?;
             wait::for_js_true(page, &format!("{EXPANDED} === '1000'"), "File open").await?;
@@ -425,7 +426,7 @@ fn a_menu_dropped_while_open_comes_back_closed() {
         let toggle =
             "document.getElementById('drop').dispatchEvent(new Event('input', { bubbles: true }))";
 
-        page.evaluate(format!("document.querySelector({view:?}).focus()"))
+        page.evaluate_bounded(format!("document.querySelector({view:?}).focus()"))
             .await
             .unwrap();
         keyboard::press(page, keyboard::ARROW_DOWN).await.unwrap();
@@ -437,7 +438,7 @@ fn a_menu_dropped_while_open_comes_back_closed() {
         .await
         .unwrap();
 
-        page.evaluate(toggle).await.unwrap();
+        page.evaluate_bounded(toggle).await.unwrap();
         wait::for_js_true(
             page,
             &format!("!document.querySelector({view:?})"),
@@ -445,7 +446,7 @@ fn a_menu_dropped_while_open_comes_back_closed() {
         )
         .await
         .unwrap();
-        page.evaluate(toggle).await.unwrap();
+        page.evaluate_bounded(toggle).await.unwrap();
         wait::for_js_true(
             page,
             &format!(
@@ -510,7 +511,7 @@ fn a_trigger_is_24px_high_at_line_height_1() {
             .unwrap();
         let page = &fixture.page;
         wait::for_visible(page, FIRST).await.unwrap();
-        page.evaluate("document.querySelector('[role=menubar]').style.lineHeight = '1'")
+        page.evaluate_bounded("document.querySelector('[role=menubar]').style.lineHeight = '1'")
             .await
             .unwrap();
         wait::for_js_true(
@@ -574,7 +575,7 @@ fn menu_parts_style_the_portaled_menus() {
             pointer::click(page, FIRST).await?;
             wait::for_visible(page, "[role=menu] [data-slot=label]").await?;
             let style: String = page
-                .evaluate(
+                .evaluate_bounded(
                     "getComputedStyle(document.querySelector('[role=menu] [data-slot=label]')).fontStyle",
                 )
                 .await?

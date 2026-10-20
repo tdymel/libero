@@ -3,6 +3,7 @@
 use e2e::browser::block_on;
 use e2e::passes::{keyboard, motion, pointer};
 use e2e::suite::Step;
+use e2e::wait::PageBounded;
 use e2e::{Fixture, Suite, Viewport, wait};
 
 const UPLOAD: &str = "#upload";
@@ -31,7 +32,7 @@ fn every_variant_shows_in_forced_colours() {
         let fixture = Fixture::open("/loader", Viewport::Desktop).await.unwrap();
         let page = &fixture.page;
         pointer::click(page, UPLOAD).await.unwrap();
-        page.execute(
+        page.execute_bounded(
             SetEmulatedMediaParams::builder()
                 .features(vec![MediaFeature::new("forced-colors", "active")])
                 .build(),
@@ -47,7 +48,7 @@ fn every_variant_shows_in_forced_colours() {
         .unwrap();
         wait::for_visible(page, "#dots").await.unwrap();
         let bare: Vec<String> = page
-            .evaluate(
+            .evaluate_bounded(
                 "(() => {
                     const page = getComputedStyle(document.body).backgroundColor;
                     const oval = getComputedStyle(document.querySelector('#oval'), '::after');
@@ -106,8 +107,12 @@ fn reduced_motion_stops_every_variant_and_keeps_it_drawn() {
             }
 
             if reduced {
-                let ink: Vec<(String, String, String)> =
-                    page.evaluate(INK).await.unwrap().into_value().unwrap();
+                let ink: Vec<(String, String, String)> = page
+                    .evaluate_bounded(INK)
+                    .await
+                    .unwrap()
+                    .into_value()
+                    .unwrap();
                 assert_eq!(ink.len(), 7, "{ink:?}");
                 for (what, opacity, transform) in ink {
                     assert_eq!(opacity, "1", "{what} under reduced motion");

@@ -3,6 +3,7 @@
 
 use e2e::browser::block_on;
 use e2e::passes::keyboard;
+use e2e::wait::PageBounded;
 use e2e::{Fixture, Suite, Viewport, ax, wait};
 
 #[test]
@@ -49,7 +50,7 @@ fn a_top_or_bottom_sidebar_sizes_its_height() {
         wait::for_visible(page, "#bottom").await.unwrap();
 
         let sides: Vec<String> = page
-            .evaluate(
+            .evaluate_bounded(
                 "[['#top', 'Bottom'], ['#bottom', 'Top']].map(([id, edge]) => { \
                    const panel = document.querySelector(id), s = getComputedStyle(panel); \
                    const width = panel.parentElement.clientWidth; \
@@ -76,7 +77,7 @@ fn top_and_bottom_sidebars_leave_content_room_at_256px() {
         wait::for_visible(page, "#short-rest").await.unwrap();
 
         let heights: Vec<f64> = page
-            .evaluate(
+            .evaluate_bounded(
                 "['#short-a', '#short-top', '#short-rest', '#short-bottom'].map(id => \
                    document.querySelector(id).getBoundingClientRect().height)",
             )
@@ -104,7 +105,7 @@ fn a_top_sidebar_in_an_auto_height_parent_is_not_capped() {
         wait::for_visible(page, "#auto-top").await.unwrap();
 
         let height: f64 = page
-            .evaluate("document.querySelector('#auto-top').getBoundingClientRect().height")
+            .evaluate_bounded("document.querySelector('#auto-top').getBoundingClientRect().height")
             .await
             .unwrap()
             .into_value()
@@ -124,7 +125,7 @@ fn wide_content_scrolls_inside_the_sidebar() {
         wait::for_visible(page, "#wide-content").await.unwrap();
 
         let fit: String = page
-            .evaluate(
+            .evaluate_bounded(
                 "(() => { const column = document.querySelector('#column'); \
                    const wide = document.querySelector('#wide'); \
                    const scroll = wide.querySelector('[data-slot=scroll]'); \
@@ -158,7 +159,7 @@ fn the_default_sidebar_leaves_content_room_at_320px() {
         wait::for_visible(page, "#default-rest").await.unwrap();
 
         let widths: Vec<f64> = page
-            .evaluate(
+            .evaluate_bounded(
                 "['#column', '#default', '#default-rest'].map(id => \
                    document.querySelector(id).getBoundingClientRect().width)",
             )

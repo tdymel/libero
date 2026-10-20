@@ -8,6 +8,7 @@ use chromiumoxide::Page;
 use e2e::browser::block_on;
 use e2e::driver::{Driver, eventually_text};
 use e2e::passes::pointer;
+use e2e::wait::PageBounded;
 use e2e::{Fixture, Viewport, wait};
 
 /// Both keys removed: a past run may have left values.
@@ -88,7 +89,9 @@ async fn click(page: &Page, selector: &str) {
 /// The raw text under `key` in `area` (`localStorage` or `sessionStorage`).
 async fn raw(page: &Page, area: &str, key: &str) -> Option<String> {
     // In an array: chromiumoxide reads a bare `null` as no value.
-    let [raw]: [Option<String>; 1] = (page.evaluate(format!("[{area}.getItem({key:?})]")).await)
+    let [raw]: [Option<String>; 1] = (page
+        .evaluate_bounded(format!("[{area}.getItem({key:?})]"))
+        .await)
         .unwrap()
         .into_value()
         .unwrap();
@@ -177,7 +180,7 @@ fn a_read_after_mount_shows_bare_text() {
             .await
             .unwrap();
         let page = &fixture.page;
-        page.evaluate("localStorage.setItem('e2e-storage-late', 'hello')")
+        page.evaluate_bounded("localStorage.setItem('e2e-storage-late', 'hello')")
             .await
             .unwrap();
         page.reload().await.unwrap();
@@ -217,7 +220,7 @@ fn bad_text_and_a_full_store_report_and_keep_the_value() {
             .await
             .unwrap();
         let page = &fixture.page;
-        page.evaluate(format!("localStorage.setItem({KEY:?}, '{{bad')"))
+        page.evaluate_bounded(format!("localStorage.setItem({KEY:?}, '{{bad')"))
             .await
             .unwrap();
         page.reload().await.unwrap();
@@ -229,7 +232,7 @@ fn bad_text_and_a_full_store_report_and_keep_the_value() {
             Some("{bad")
         );
 
-        page.evaluate(FILL).await.unwrap();
+        page.evaluate_bounded(FILL).await.unwrap();
         click(page, "#add-local").await;
         reads(page, "#error", "Some(Full)").await.unwrap();
         reads(page, "#local", "1").await.unwrap();
@@ -240,7 +243,7 @@ fn bad_text_and_a_full_store_report_and_keep_the_value() {
             "a refused write changed the store"
         );
 
-        page.evaluate("window.__unfill()").await.unwrap();
+        page.evaluate_bounded("window.__unfill()").await.unwrap();
         click(page, "#add-local").await;
         reads(page, "#error", "None").await.unwrap();
         reads(page, "#local", "2").await.unwrap();

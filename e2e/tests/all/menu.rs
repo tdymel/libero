@@ -6,6 +6,7 @@ use e2e::archetypes::Overlay;
 use e2e::browser::block_on;
 use e2e::driver::{Driver, Platform, eventually, eventually_focused, eventually_text};
 use e2e::suite::Step;
+use e2e::wait::PageBounded;
 use e2e::{
     Fixture, Suite, Viewport,
     passes::{keyboard, pointer},
@@ -257,7 +258,7 @@ fn the_trigger_centres_beside_its_text() {
         let fixture = Fixture::open("/menu-row", Viewport::Desktop).await.unwrap();
         let offset: f64 = fixture
             .page
-            .evaluate(format!(
+            .evaluate_bounded(format!(
                 "(() => {{ const mid = e => {{ const r = e.getBoundingClientRect(); return r.top + r.height / 2; }}; \
                  const text = document.querySelector('#menu-row-text'); \
                  const range = document.createRange(); range.selectNodeContents(text); \
@@ -438,7 +439,7 @@ fn parts_and_sx_style_every_level() {
             )
             .await?;
             let [italic, spacing]: [Vec<String>; 2] = page
-                .evaluate(
+                .evaluate_bounded(
                     "(() => { \
                        const labels = [...document.querySelectorAll('[role=menu] [data-slot=label]')]; \
                        const menus = [...document.querySelectorAll('[role=menu]')]; \
@@ -555,7 +556,7 @@ fn chords_on_the_trigger_and_in_a_submenu_go_to_the_browser() {
     block_on(async {
         let fixture = Fixture::open("/menu", Viewport::Desktop).await.unwrap();
         let page = &fixture.page;
-        page.evaluate(
+        page.evaluate_bounded(
             "window.__prevented = []; \
              window.addEventListener('keydown', e => { if (e.altKey) window.__prevented.push(e.defaultPrevented) })",
         )
@@ -777,7 +778,7 @@ fn a_lone_toggle_lines_up_and_a_disabled_shortcut_dims() {
             wait::for_visible(page, MENU).await?;
             // The rows outside the group: Show grid, Export, Print.
             let [lefts, colours]: [Vec<String>; 2] = page
-                .evaluate(
+                .evaluate_bounded(
                     "(() => { \
                        const rows = [...document.querySelectorAll('[role=menu] > [data-menu-index]')]; \
                        const kbd = r => getComputedStyle(r.querySelector('kbd')).color \

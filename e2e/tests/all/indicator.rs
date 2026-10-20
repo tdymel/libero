@@ -2,6 +2,7 @@
 
 use e2e::browser::block_on;
 use e2e::passes::motion;
+use e2e::wait::PageBounded;
 use e2e::{Fixture, Viewport, wait};
 
 /// The ping's `::before` animation name; `none` when it does not run.
@@ -15,7 +16,7 @@ fn a_count_is_capped_and_hidden_from_the_tree() {
         let fixture = Fixture::open("/badge", Viewport::Desktop).await.unwrap();
         let [capped, plain, shown]: [bool; 3] = fixture
             .page
-            .evaluate(
+            .evaluate_bounded(
                 "(() => { const dots = [...document.querySelectorAll('span[aria-hidden=true]')]; \
                  const texts = dots.map(d => d.textContent); \
                  return [texts.includes('99+') && !texts.includes('128'), texts.includes('7'), \
@@ -41,7 +42,7 @@ fn the_ring_is_drawn_outside_the_dot() {
         wait::for_visible(&fixture.page, "#ringed").await.unwrap();
         let [ringed, bare, border]: [String; 3] = fixture
             .page
-            .evaluate(
+            .evaluate_bounded(
                 "(() => { const box = id => { const r = document.querySelector(id).getBoundingClientRect(); \
                  return `${r.width}x${r.height}`; }; \
                  const s = getComputedStyle(document.querySelector('#ringed')); \

@@ -13,6 +13,7 @@ use e2e::driver::{
 };
 use e2e::frames::in_front;
 use e2e::passes::{keyboard, pointer};
+use e2e::wait::PageBounded;
 use e2e::{Fixture, Viewport, wait};
 
 /// Nothing prompts or opens until asked; Blitz has no capture API.
@@ -200,7 +201,7 @@ e2e::scenario!(
 
 async fn set_permission(page: &Page, setting: PermissionSetting) -> Result<()> {
     for name in ["camera", "microphone"] {
-        page.execute(SetPermissionParams::new(
+        page.execute_bounded(SetPermissionParams::new(
             PermissionDescriptor::new(name),
             setting.clone(),
         ))
@@ -216,12 +217,12 @@ async fn reads(page: &Page, selector: &str, text: &str) -> Result<()> {
         return read;
     }
     let state: String = page
-        .evaluate("[...document.querySelectorAll('p[id]')].map((p) => p.id + '=' + p.textContent).join(' ')")
+        .evaluate_bounded("[...document.querySelectorAll('p[id]')].map((p) => p.id + '=' + p.textContent).join(' ')")
         .await?
         .into_value()?;
     // Todo 2085, a stale second permission query in libero: whether the browser holds the new state.
     let browser: String = page
-        .evaluate(
+        .evaluate_bounded(
             "Promise.all(['camera', 'microphone'].map((name) => navigator.permissions.query({ name }) \
              .then((s) => name + '=' + s.state))).then((all) => all.join(' ') + ' ' + document.visibilityState)",
         )

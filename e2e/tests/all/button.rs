@@ -6,6 +6,7 @@ use e2e::browser::block_on;
 use e2e::driver::Driver;
 use e2e::passes::contrast::COLOUR_JS;
 use e2e::passes::{keyboard, pointer};
+use e2e::wait::PageBounded;
 use e2e::{Fixture, Suite, Viewport, wait};
 
 const PLAIN: &str = "#plain";
@@ -23,14 +24,16 @@ fn every_size_fits_its_label_at_200_percent_text() {
         let page = &fixture.page;
         wait::for_visible(page, "#sizes > button").await.unwrap();
         let xs: f64 = page
-            .evaluate("document.querySelector('#sizes > button').getBoundingClientRect().height")
+            .evaluate_bounded(
+                "document.querySelector('#sizes > button').getBoundingClientRect().height",
+            )
             .await
             .unwrap()
             .into_value()
             .unwrap();
         assert_eq!(xs, 24.0, "the xs step changed height at 100%");
         let clipped: Vec<String> = page
-            .evaluate(
+            .evaluate_bounded(
                 "(() => { document.documentElement.style.fontSize = '200%'; \
                  return [...document.querySelectorAll('#sizes > button, #sizes label')] \
                  .filter(b => parseFloat(getComputedStyle(b).fontSize) * 1.2 > b.clientHeight) \
@@ -58,7 +61,12 @@ fn a_focused_disabled_button_fades_less_and_keeps_its_ring() {
             .await
             .unwrap();
         let page = &fixture.page;
-        let rest: Vec<String> = page.evaluate(READ).await.unwrap().into_value().unwrap();
+        let rest: Vec<String> = page
+            .evaluate_bounded(READ)
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
         assert_eq!(rest[0], "0.5", "{rest:?}");
 
         keyboard::tab_to(page, "#soft", 5).await.unwrap();
@@ -70,7 +78,7 @@ fn a_focused_disabled_button_fades_less_and_keeps_its_ring() {
         .await
         .unwrap();
 
-        page.execute(
+        page.execute_bounded(
             SetEmulatedMediaParams::builder()
                 .features(vec![MediaFeature::new("forced-colors", "active")])
                 .build(),
@@ -84,7 +92,12 @@ fn a_focused_disabled_button_fades_less_and_keeps_its_ring() {
         )
         .await
         .unwrap();
-        let forced: Vec<String> = page.evaluate(READ).await.unwrap().into_value().unwrap();
+        let forced: Vec<String> = page
+            .evaluate_bounded(READ)
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
         assert!(
             forced[1] == "solid" && forced[2] != "0px",
             "no ring in forced colours: {forced:?}"
@@ -130,7 +143,7 @@ fn a_literal_fill_gets_a_readable_label() {
         let fixture = Fixture::open("/button", Viewport::Desktop).await.unwrap();
         let colors: Vec<String> = fixture
             .page
-            .evaluate(
+            .evaluate_bounded(
                 "['#literal-filled', '#literal-tonal', '#literal-named']\
                  .map(s => getComputedStyle(document.querySelector(s)).color)\
                  .concat([String(CSS.supports('color', 'contrast-color(red)'))])",
@@ -158,7 +171,7 @@ fn a_button_and_a_link_share_the_theme_font() {
         let fixture = Fixture::open("/button", Viewport::Desktop).await.unwrap();
         let fonts: Vec<String> = fixture
             .page
-            .evaluate(format!(
+            .evaluate_bounded(format!(
                 "['body', '{PLAIN}', '{LINK}'].map(q => {{ const s = getComputedStyle(document.querySelector(q)); \
                  return `${{s.fontFamily}} | ${{s.letterSpacing}}`; }})"
             ))
@@ -220,7 +233,7 @@ fn button_rooted_parts_take_the_page_font() {
 /// no UA sheet or theme has, so a `<button>` that resets either shows (todo 2376).
 pub(crate) async fn assert_takes_the_page_font(page: &chromiumoxide::Page, selectors: &[&str]) {
     let fonts: Vec<String> = page
-        .evaluate(format!(
+        .evaluate_bounded(format!(
             "(() => {{ document.body.style.fontFamily = 'Georgia, serif'; \
              document.body.style.letterSpacing = '0.1em'; \
              const font = q => {{ const s = getComputedStyle(document.querySelector(q)); \
@@ -232,7 +245,7 @@ pub(crate) async fn assert_takes_the_page_font(page: &chromiumoxide::Page, selec
         .into_value()
         .unwrap();
     let body: Vec<String> = page
-        .evaluate(format!(
+        .evaluate_bounded(format!(
             "{selectors:?}.map(q => {{ const s = getComputedStyle(document.body); \
              return `${{q}}: ${{s.fontFamily}} | ${{s.letterSpacing}}`; }})"
         ))
@@ -281,7 +294,7 @@ fn a_loading_button_swallows_enter_and_space() {
         .unwrap();
 
         let busy: String = page
-            .evaluate(presses("busy"))
+            .evaluate_bounded(presses("busy"))
             .await
             .unwrap()
             .into_value()
@@ -459,7 +472,7 @@ async fn assert_marked(page: &chromiumoxide::Page, on: &str, off: &str, mark: &s
     );
     if let Err(e) = wait::for_js_true(page, &marked, "the on-state marker").await {
         let styles: Vec<String> = page
-            .evaluate(format!(
+            .evaluate_bounded(format!(
                 "['{on}', '{off}'].map(q => {{ const s = getComputedStyle(document.querySelector(q)); \
                  return `${{s.color}} | ${{s.boxShadow}} | ${{s.backgroundImage}} ${{s.backgroundSize}}`; }})"
             ))
@@ -484,7 +497,7 @@ pub async fn assert_unmarked_in_forced_colours(page: &chromiumoxide::Page, on: &
 
 async fn assert_forced_colours(page: &chromiumoxide::Page, on: &str, off: &str, marker: bool) {
     let [on_bg, off_bg, highlight]: [String; 3] = page
-        .evaluate(format!(
+        .evaluate_bounded(format!(
             "(() => {{ const probe = document.createElement('div'); \
              probe.style.background = 'Highlight'; document.body.append(probe); \
              const highlight = getComputedStyle(probe).backgroundColor; probe.remove(); \
@@ -501,7 +514,7 @@ async fn assert_forced_colours(page: &chromiumoxide::Page, on: &str, off: &str, 
     // Unforced, or Chromium backs the label with a `Canvas` plate (646). The start bar
     // turns `HighlightText` too (764): its author colour vanishes on `Highlight`.
     let [adjust, stray, line, label]: [String; 4] = page
-        .evaluate(format!(
+        .evaluate_bounded(format!(
             "(() => {{ {COLOUR_JS} {RING} {BAR} const probe = document.createElement('div'); \
              probe.style.color = 'HighlightText'; document.body.append(probe); \
              const text = getComputedStyle(probe).color; probe.remove(); \
@@ -530,7 +543,7 @@ async fn assert_forced_colours(page: &chromiumoxide::Page, on: &str, off: &str, 
     // Todo 686: `forced-color-adjust: none` is inherited, so a descendant's own
     // fill or border (a Badge, a filled x) kept its author colour under HighlightText.
     let painted: String = page
-        .evaluate(format!(
+        .evaluate_bounded(format!(
             "(() => {{ const probe = document.createElement('div'); \
              probe.style.color = 'HighlightText'; document.body.append(probe); \
              const text = getComputedStyle(probe).color; probe.remove(); \
@@ -563,7 +576,7 @@ pub async fn assert_text_in_forced_colours(
     system: &str,
 ) {
     let [color, expected]: [String; 2] = page
-        .evaluate(format!(
+        .evaluate_bounded(format!(
             "(() => {{ const probe = document.createElement('div'); \
              probe.style.color = '{system}'; document.body.append(probe); \
              const expected = getComputedStyle(probe).color; probe.remove(); \
@@ -635,13 +648,18 @@ fn a_loading_submit_button_does_not_submit_its_form() {
         keyboard::press(page, keyboard::ENTER).await.unwrap();
         keyboard::press(page, keyboard::SPACE).await.unwrap();
 
-        page.evaluate("document.querySelector('#form').requestSubmit()")
+        page.evaluate_bounded("document.querySelector('#form').requestSubmit()")
             .await
             .unwrap();
         wait::for_js_true(page, &format!("{submits} !== '0'"), "the scripted submit")
             .await
             .unwrap();
-        let count: String = page.evaluate(submits).await.unwrap().into_value().unwrap();
+        let count: String = page
+            .evaluate_bounded(submits)
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
         assert_eq!(count, "1", "a loading submit button submitted its form");
 
         fixture
@@ -660,13 +678,15 @@ fn link_mode_navigates_through_the_router() {
         let fixture = Fixture::open("/button", Viewport::Desktop).await.unwrap();
         let page = &fixture.page;
 
-        page.evaluate("window.__buttonMarker = 1").await.unwrap();
+        page.evaluate_bounded("window.__buttonMarker = 1")
+            .await
+            .unwrap();
         keyboard::tab_to(page, LINK, 5).await.unwrap();
         keyboard::press(page, keyboard::ENTER).await.unwrap();
 
         wait::for_selector(page, "#landing").await.unwrap();
         let (path, kept): (String, bool) = page
-            .evaluate("[location.pathname, window.__buttonMarker === 1]")
+            .evaluate_bounded("[location.pathname, window.__buttonMarker === 1]")
             .await
             .unwrap()
             .into_value()

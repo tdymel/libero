@@ -6,6 +6,7 @@ use e2e::browser::block_on;
 use e2e::driver::{Driver, eventually_focused};
 use e2e::passes::{focus, keyboard, pointer};
 use e2e::suite::Step;
+use e2e::wait::PageBounded;
 use e2e::{Fixture, Suite, Viewport, wait};
 
 const OPEN: &str = "#open-dialog";
@@ -217,7 +218,7 @@ fn focus_that_falls_out_of_the_trap_comes_back() {
             .await
             .unwrap();
 
-        page.evaluate(
+        page.evaluate_bounded(
             "document.activeElement.dispatchEvent(new FocusEvent('focusout', { bubbles: true }))",
         )
         .await
@@ -280,7 +281,7 @@ fn a_used_initial_focus_placeholder_does_not_take_focus_back() {
             .await
             .unwrap();
         // Chromium sends no `focusout` for a removed element; this is the one the trap would see.
-        page.evaluate(
+        page.evaluate_bounded(
             "document.getElementById('first').dispatchEvent(new FocusEvent('focusout', { bubbles: true }))",
         )
         .await

@@ -10,6 +10,7 @@ use e2e::browser::block_on;
 use e2e::driver::{Driver, Platform, eventually};
 use e2e::passes::contrast::COLOUR_JS;
 use e2e::passes::{focus, keyboard, pointer};
+use e2e::wait::PageBounded;
 use e2e::{Fixture, Suite, Viewport, wait};
 
 /// The list's scrolling box (the area's root) and its rows; the rewrap page's likewise.
@@ -327,7 +328,7 @@ mod the_window_follows_a_touch_fling {
     fn android() {
         use super::{AREA, FIRST_ROW};
         use e2e::driver::{Android, Driver};
-        use e2e::wait;
+        use e2e::wait::{self, PageBounded};
 
         e2e::android::block_on(async {
             let mut driver = Android::open("/scroll-area").await.unwrap();
@@ -340,17 +341,17 @@ mod the_window_follows_a_touch_fling {
                 .await
                 .unwrap();
             // Mid-list, so every window step moves the padding; a drag is held to the pane.
-            page.evaluate(format!("{AREA}.scrollTop = 10000"))
+            page.evaluate_bounded(format!("{AREA}.scrollTop = 10000"))
                 .await
                 .unwrap();
             wait::for_js_true(&page, &format!("{FIRST_ROW} > 400"), "the window mid-list")
                 .await
                 .unwrap();
-            page.evaluate(super::SAMPLE_LEADING).await.unwrap();
+            page.evaluate_bounded(super::SAMPLE_LEADING).await.unwrap();
             driver.drag("#list-pane", 0.0, -120.0).await.unwrap();
             e2e::driver::eventually(&mut driver, "the list to come to rest", async |_| {
                 let frames: Vec<(f64, String)> = page
-                    .evaluate("window.__leading.frames.slice(-10)")
+                    .evaluate_bounded("window.__leading.frames.slice(-10)")
                     .await?
                     .into_value()?;
                 Ok(frames.len() == 10 && frames.iter().all(|f| f.0 == frames[0].0))
@@ -358,7 +359,7 @@ mod the_window_follows_a_touch_fling {
             .await
             .unwrap();
             let frames: Vec<(f64, String)> = page
-                .evaluate("(() => { __leading.on = false; return __leading.frames })()")
+                .evaluate_bounded("(() => { __leading.on = false; return __leading.frames })()")
                 .await
                 .unwrap()
                 .into_value()
@@ -403,7 +404,7 @@ fn a_windowed_list_covers_its_bars_in_the_surface_it_sits_on() {
             .await
             .unwrap();
         let page = &fixture.page;
-        page.evaluate("document.querySelector('#cover-trigger').click()")
+        page.evaluate_bounded("document.querySelector('#cover-trigger').click()")
             .await
             .unwrap();
         let lists = [
@@ -420,13 +421,13 @@ fn a_windowed_list_covers_its_bars_in_the_surface_it_sits_on() {
         .unwrap();
 
         for scheme in ["light", "dark"] {
-            page.evaluate(format!(
+            page.evaluate_bounded(format!(
                 "document.documentElement.setAttribute('data-lsx-theme', '{scheme}')"
             ))
             .await
             .unwrap();
             let pairs: Vec<(String, String, String)> = page
-                .evaluate(format!("({COVER_VS_SURFACE})({lists:?})"))
+                .evaluate_bounded(format!("({COVER_VS_SURFACE})({lists:?})"))
                 .await
                 .unwrap()
                 .into_value()
@@ -466,13 +467,13 @@ fn the_scrollbar_thumb_has_3_to_1_against_the_page() {
         let page = &fixture.page;
 
         for scheme in ["light", "dark"] {
-            page.evaluate(format!(
+            page.evaluate_bounded(format!(
                 "document.documentElement.setAttribute('data-lsx-theme', '{scheme}')"
             ))
             .await
             .unwrap();
             let ratio: f64 = page
-                .evaluate(thumb_contrast(REGION_THUMB))
+                .evaluate_bounded(thumb_contrast(REGION_THUMB))
                 .await
                 .unwrap()
                 .into_value()
@@ -546,18 +547,23 @@ fn an_overflowing_area_of_plain_content_is_a_tab_stop() {
             ("links", "links inside"),
             ("grow", "two lines"),
         ] {
-            let tab_stop: bool = page.evaluate(stop(id)).await.unwrap().into_value().unwrap();
+            let tab_stop: bool = page
+                .evaluate_bounded(stop(id))
+                .await
+                .unwrap()
+                .into_value()
+                .unwrap();
             assert!(!tab_stop, "#{id} is a tab stop with {why}");
         }
 
-        page.evaluate("document.querySelector('#grow-more').click()")
+        page.evaluate_bounded("document.querySelector('#grow-more').click()")
             .await
             .unwrap();
         wait::for_js_true(page, &stop("grow"), "the grown area to take Tab")
             .await
             .unwrap();
 
-        page.evaluate("document.querySelector('#short-pane').style.height = '8px'")
+        page.evaluate_bounded("document.querySelector('#short-pane').style.height = '8px'")
             .await
             .unwrap();
         wait::for_js_true(page, &stop("short"), "the squeezed area to take Tab")
@@ -599,11 +605,16 @@ fn the_name_waits_for_a_role() {
             ("listed", "Items"),
             ("region", "Release notes"),
         ] {
-            let seen: String = page.evaluate(name(id)).await.unwrap().into_value().unwrap();
+            let seen: String = page
+                .evaluate_bounded(name(id))
+                .await
+                .unwrap()
+                .into_value()
+                .unwrap();
             assert_eq!(seen, expected, "#{id}'s name");
         }
 
-        page.evaluate("document.querySelector('#short-pane').style.height = '8px'")
+        page.evaluate_bounded("document.querySelector('#short-pane').style.height = '8px'")
             .await
             .unwrap();
         wait::for_js_true(
@@ -613,7 +624,7 @@ fn the_name_waits_for_a_role() {
         )
         .await
         .unwrap();
-        page.evaluate("document.querySelector('#short-pane').style.height = '120px'")
+        page.evaluate_bounded("document.querySelector('#short-pane').style.height = '120px'")
             .await
             .unwrap();
         wait::for_js_true(
@@ -648,15 +659,20 @@ fn a_change_inside_a_child_component_re_checks_the_tab_stop() {
         wait::for_js_true(page, &STOP.replace("nested", "plain"), "the mount check")
             .await
             .unwrap();
-        let tab_stop: bool = page.evaluate(STOP).await.unwrap().into_value().unwrap();
+        let tab_stop: bool = page
+            .evaluate_bounded(STOP)
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
         assert!(!tab_stop, "two lines made a tab stop");
 
-        page.evaluate(STEP).await.unwrap();
+        page.evaluate_bounded(STEP).await.unwrap();
         wait::for_js_true(page, STOP, "forty lines to make a tab stop")
             .await
             .unwrap();
 
-        page.evaluate(STEP).await.unwrap();
+        page.evaluate_bounded(STEP).await.unwrap();
         wait::for_js_true(page, &format!("!({STOP})"), "a link to take the stop away")
             .await
             .unwrap();
@@ -696,7 +712,7 @@ fn under_rtl_the_percent_counts_from_the_right_edge() {
         .await
         .unwrap();
 
-        page.evaluate(format!("{AREA}.scrollLeft = 0"))
+        page.evaluate_bounded(format!("{AREA}.scrollLeft = 0"))
             .await
             .unwrap();
         wait::for_js_true(
@@ -726,7 +742,7 @@ fn the_reached_callbacks_fire_at_both_ends() {
             .unwrap();
         let page = &fixture.page;
 
-        page.evaluate(format!("{AREA}.scrollTop = {AREA}.scrollHeight"))
+        page.evaluate_bounded(format!("{AREA}.scrollTop = {AREA}.scrollHeight"))
             .await
             .unwrap();
         wait::for_js_true(
@@ -737,7 +753,7 @@ fn the_reached_callbacks_fire_at_both_ends() {
         .await
         .unwrap();
 
-        page.evaluate(format!("{AREA}.scrollTop = 0"))
+        page.evaluate_bounded(format!("{AREA}.scrollTop = 0"))
             .await
             .unwrap();
         wait::for_js_true(
@@ -801,7 +817,7 @@ fn flex_and_grid_areas_lay_out_as_without_the_bars() {
         ] {
             let test = format!("Math.abs(p.left - {left}) < 1 && Math.abs(p.top - {top}) < 1");
             let at: bool = page
-                .evaluate(item(id, n, &test))
+                .evaluate_bounded(item(id, n, &test))
                 .await
                 .unwrap()
                 .into_value()
@@ -832,7 +848,7 @@ fn without_scroll_timelines_the_track_still_stays_put() {
             .unwrap();
         let page = &fixture.page;
         // Before the app reads it: a reload runs the script first.
-        page.execute(AddScriptToEvaluateOnNewDocumentParams::new(
+        page.execute_bounded(AddScriptToEvaluateOnNewDocumentParams::new(
             "(() => { const supports = CSS.supports.bind(CSS); \
              CSS.supports = (...a) => !String(a.join(':')).includes('animation-timeline') && supports(...a); \
              addEventListener('DOMContentLoaded', () => { const s = document.createElement('style'); \
@@ -853,7 +869,7 @@ fn without_scroll_timelines_the_track_still_stays_put() {
             .await
             .unwrap();
 
-        page.evaluate(format!("{AREA}.scrollTop = 300"))
+        page.evaluate_bounded(format!("{AREA}.scrollTop = 300"))
             .await
             .unwrap();
         wait::for_js_true(
@@ -890,7 +906,7 @@ fn timelines_the_app_misses_never_grow_the_range() {
             .await
             .unwrap();
         let page = &fixture.page;
-        page.execute(AddScriptToEvaluateOnNewDocumentParams::new(
+        page.execute_bounded(AddScriptToEvaluateOnNewDocumentParams::new(
             "(() => { const supports = CSS.supports.bind(CSS); \
              CSS.supports = (...a) => !String(a.join(':')).includes('animation-timeline') && supports(...a); })()",
         ))
@@ -909,12 +925,12 @@ fn timelines_the_app_misses_never_grow_the_range() {
             .unwrap();
 
         let content: f64 = page
-            .evaluate(format!("{AREA}.scrollHeight"))
+            .evaluate_bounded(format!("{AREA}.scrollHeight"))
             .await
             .unwrap()
             .into_value()
             .unwrap();
-        page.evaluate(format!("{AREA}.scrollTop = 1e6"))
+        page.evaluate_bounded(format!("{AREA}.scrollTop = 1e6"))
             .await
             .unwrap();
         wait::for_js_true(
@@ -925,7 +941,7 @@ fn timelines_the_app_misses_never_grow_the_range() {
         .await
         .unwrap();
         // A second scroll to the end reads the range the first one left.
-        page.evaluate(format!("{AREA}.scrollTop = 1e6"))
+        page.evaluate_bounded(format!("{AREA}.scrollTop = 1e6"))
             .await
             .unwrap();
         wait::for_js_true(
@@ -949,12 +965,12 @@ async fn wheel_step(page: &chromiumoxide::Page, selector: &str) {
     let at = pointer::centre_of(page, selector).await.unwrap();
     let top = format!("document.querySelector('{selector}').scrollTop");
     let before: f64 = page
-        .evaluate(top.as_str())
+        .evaluate_bounded(top.as_str())
         .await
         .unwrap()
         .into_value()
         .unwrap();
-    page.execute(
+    page.execute_bounded(
         DispatchMouseEventParams::builder()
             .r#type(DispatchMouseEventType::MouseWheel)
             .x(at.x)
@@ -992,7 +1008,7 @@ fn a_resize_between_scrolls_keeps_the_thumb_on_its_track() {
         )
         .await
         .unwrap();
-        page.evaluate("document.querySelector('#bars-pane').style.height = '300px'")
+        page.evaluate_bounded("document.querySelector('#bars-pane').style.height = '300px'")
             .await
             .unwrap();
         wait::for_js_true(
@@ -1045,7 +1061,7 @@ fn always_draws_its_own_bar_pinned_to_the_corner() {
             .await
             .unwrap();
         let hidden: bool = page
-            .evaluate(format!(
+            .evaluate_bounded(format!(
                 "getComputedStyle({AREA}).scrollbarWidth === 'none' \
                  && {AREA}.querySelector('[data-slot=scrollbars]').getAttribute('aria-hidden') === 'true' \
                  && [...{AREA}.querySelectorAll('[data-slot=scrollbars] *')].every(e => e.tabIndex < 0)"
@@ -1066,7 +1082,7 @@ fn always_draws_its_own_bar_pinned_to_the_corner() {
         .await
         .unwrap();
 
-        page.evaluate(format!(
+        page.evaluate_bounded(format!(
             "{AREA}.scrollTop = ({AREA}.scrollHeight - {AREA}.clientHeight) / 2"
         ))
         .await
@@ -1078,7 +1094,7 @@ fn always_draws_its_own_bar_pinned_to_the_corner() {
         )
         .await
         .unwrap();
-        page.evaluate(format!("{AREA}.scrollTop = {AREA}.scrollHeight"))
+        page.evaluate_bounded(format!("{AREA}.scrollTop = {AREA}.scrollHeight"))
             .await
             .unwrap();
         wait::for_js_true(
@@ -1097,7 +1113,7 @@ fn always_draws_its_own_bar_pinned_to_the_corner() {
         .unwrap();
 
         let none: bool = page
-            .evaluate("!document.querySelector('#bars-hover [data-slot=scrollbars]')")
+            .evaluate_bounded("!document.querySelector('#bars-hover [data-slot=scrollbars]')")
             .await
             .unwrap()
             .into_value()
@@ -1161,7 +1177,7 @@ fn the_drawn_thumb_drags_and_the_track_takes_a_press() {
         .await
         .unwrap();
 
-        page.evaluate("document.querySelector('#bars-pane').style.height = '300px'")
+        page.evaluate_bounded("document.querySelector('#bars-pane').style.height = '300px'")
             .await
             .unwrap();
         wait::for_js_true(
@@ -1248,7 +1264,7 @@ fn both_axes_share_the_corner_and_rtl_starts_at_the_right() {
         )
         .await
         .unwrap();
-        page.evaluate(format!("{RTL}.scrollLeft = -{RTL}.scrollWidth"))
+        page.evaluate_bounded(format!("{RTL}.scrollLeft = -{RTL}.scrollWidth"))
             .await
             .unwrap();
         wait::for_js_true(
@@ -1281,13 +1297,13 @@ fn the_drawn_thumb_has_contrast_and_shows_in_forced_colours() {
 
         let contrast = thumb_contrast(THUMB);
         for scheme in ["light", "dark"] {
-            page.evaluate(format!(
+            page.evaluate_bounded(format!(
                 "document.documentElement.setAttribute('data-lsx-theme', '{scheme}')"
             ))
             .await
             .unwrap();
             let ratio: f64 = page
-                .evaluate(contrast.as_str())
+                .evaluate_bounded(contrast.as_str())
                 .await
                 .unwrap()
                 .into_value()
@@ -1297,7 +1313,7 @@ fn the_drawn_thumb_has_contrast_and_shows_in_forced_colours() {
 
         e2e::browser::force_colours(page).await.unwrap();
         let [thumb, canvas]: [String; 2] = page
-            .evaluate(format!(
+            .evaluate_bounded(format!(
                 "(() => {{ const probe = document.createElement('div'); \
                  probe.style.background = 'Canvas'; document.body.append(probe); \
                  const canvas = getComputedStyle(probe).backgroundColor; probe.remove(); \
@@ -1358,7 +1374,7 @@ fn offset_scrollbars_keep_the_track_off_a_flush_trailing_control() {
             ("offset-rtl", true),
         ] {
             let value: f64 = page
-                .evaluate(gap(id, rtl))
+                .evaluate_bounded(gap(id, rtl))
                 .await
                 .unwrap()
                 .into_value()
@@ -1373,7 +1389,9 @@ fn offset_scrollbars_keep_the_track_off_a_flush_trailing_control() {
         );
 
         let fits: String = page
-            .evaluate("getComputedStyle(document.querySelector('#offset-fits')).paddingInlineEnd")
+            .evaluate_bounded(
+                "getComputedStyle(document.querySelector('#offset-fits')).paddingInlineEnd",
+            )
             .await
             .unwrap()
             .into_value()

@@ -4,6 +4,7 @@
 use e2e::archetypes::{Combobox, Orientation, Overlay, RovingTabindex};
 use e2e::browser::block_on;
 use e2e::passes::{contrast, dismissal, focus, keyboard, reflow, target_size};
+use e2e::wait::PageBounded;
 use e2e::{Fixture, Viewport, selftest, wait};
 
 /// `must_fail` itself: a green check and a failure for another reason are both refused.
@@ -28,7 +29,10 @@ fn must_fail_refuses_a_green_check_and_a_wrong_reason() {
             Some("window.planted = 1"),
             "planted",
             async |page| {
-                let planted: bool = page.evaluate("window.planted === 1").await?.into_value()?;
+                let planted: bool = page
+                    .evaluate_bounded("window.planted === 1")
+                    .await?
+                    .into_value()?;
                 anyhow::ensure!(!planted, "planted");
                 Ok(())
             },
@@ -253,7 +257,7 @@ fn a_settled_recorder_holds_what_the_page_just_logged() {
         for n in 0..20 {
             fixture
                 .page
-                .evaluate(format!("console.warn('settled {n}')"))
+                .evaluate_bounded(format!("console.warn('settled {n}')"))
                 .await
                 .unwrap();
             fixture.console.settle().await.unwrap();
@@ -505,7 +509,7 @@ fn the_snapshot_records_a_dangling_aria_controls() {
         let fixture = Fixture::open("/tabs", Viewport::Desktop).await.unwrap();
         fixture
             .page
-            .evaluate(
+            .evaluate_bounded(
                 "document.querySelector('[role=tab]:nth-child(2)')\
                  .setAttribute('aria-controls', 'planted-nowhere')",
             )
@@ -648,7 +652,7 @@ fn for_js_change_refuses_a_null_before_and_waits_for_a_real_change() {
             "String(window.__e2eStep ?? 0)",
             "a real change",
             || async {
-                page.evaluate("window.__e2eStep = 1").await?;
+                page.evaluate_bounded("window.__e2eStep = 1").await?;
                 Ok(())
             },
         )

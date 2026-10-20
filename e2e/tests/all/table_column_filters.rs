@@ -5,6 +5,7 @@ use anyhow::{Result, bail, ensure};
 use e2e::browser::block_on;
 use e2e::driver::{Driver, Platform, eventually, eventually_focused, eventually_text};
 use e2e::passes::keyboard;
+use e2e::wait::PageBounded;
 use e2e::{Fixture, Viewport, wait};
 
 /// 1156-3a: typing narrows the rows, goes back to page 1 and, once settled,
@@ -166,7 +167,7 @@ fn the_filtered_button_takes_a_finger_in_a_44px_box() {
             .unwrap();
         let page = &fixture.page;
         let outcome = async {
-            page.execute(SetTouchEmulationEnabledParams::new(true))
+            page.execute_bounded(SetTouchEmulationEnabledParams::new(true))
                 .await?;
             wait::for_js_true(
                 page,
@@ -174,8 +175,10 @@ fn the_filtered_button_takes_a_finger_in_a_44px_box() {
                 "a coarse pointer",
             )
             .await?;
-            page.evaluate("document.querySelector('[aria-label=\"Name column options\"]').focus()")
-                .await?;
+            page.evaluate_bounded(
+                "document.querySelector('[aria-label=\"Name column options\"]').focus()",
+            )
+            .await?;
             keyboard::press(page, keyboard::ENTER).await?;
             wait::for_js_true(
                 page,
@@ -202,7 +205,7 @@ fn the_filtered_button_takes_a_finger_in_a_44px_box() {
             .await?;
 
             let misses: Vec<String> = page
-                .evaluate(
+                .evaluate_bounded(
                     "(() => {
                         const el = document.querySelector('[data-filtered]');
                         const r = el.getBoundingClientRect();
@@ -240,12 +243,14 @@ fn a_filter_popover_caps_at_the_available_height() {
             .unwrap();
         let page = &fixture.page;
         let (width, _) = Viewport::Desktop.size();
-        page.execute(SetDeviceMetricsOverrideParams::new(width, 200, 1.0, false))
+        page.execute_bounded(SetDeviceMetricsOverrideParams::new(width, 200, 1.0, false))
             .await
             .unwrap();
-        page.evaluate("document.querySelector('[aria-label=\"Name column options\"]').focus()")
-            .await
-            .unwrap();
+        page.evaluate_bounded(
+            "document.querySelector('[aria-label=\"Name column options\"]').focus()",
+        )
+        .await
+        .unwrap();
         keyboard::press(page, keyboard::ENTER).await.unwrap();
         wait::for_js_true(
             page,
@@ -274,7 +279,12 @@ fn a_filter_popover_caps_at_the_available_height() {
         let capped =
             wait::for_js_true(page, &format!("{state} === 'capped'"), "the capped popover").await;
         if capped.is_err() {
-            let state: String = page.evaluate(state).await.unwrap().into_value().unwrap();
+            let state: String = page
+                .evaluate_bounded(state)
+                .await
+                .unwrap()
+                .into_value()
+                .unwrap();
             panic!("the filter popover is not capped inside a 200px viewport: {state}");
         }
         fixture

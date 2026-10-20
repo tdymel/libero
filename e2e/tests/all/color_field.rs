@@ -5,6 +5,7 @@ use anyhow::Result;
 use e2e::browser::block_on;
 use e2e::driver::{Driver, eventually, eventually_focused};
 use e2e::passes::keyboard;
+use e2e::wait::PageBounded;
 use e2e::{Fixture, Viewport, wait};
 
 const INPUT: &str = "input[data-controlled]";
@@ -84,7 +85,7 @@ fn a_blur_of_the_text_input_closes_the_dropdown() {
             "focus alone to leave the dropdown closed (WCAG 3.2.1)",
         )
         .await;
-        page.evaluate(format!("document.querySelector({INPUT:?}).click()"))
+        page.evaluate_bounded(format!("document.querySelector({INPUT:?}).click()"))
             .await
             .unwrap();
         expect(
@@ -93,7 +94,7 @@ fn a_blur_of_the_text_input_closes_the_dropdown() {
             "a click on the text input to open the dropdown",
         )
         .await;
-        page.evaluate(format!("document.querySelector({INPUT:?}).blur()"))
+        page.evaluate_bounded(format!("document.querySelector({INPUT:?}).blur()"))
             .await
             .unwrap();
         expect(
@@ -159,7 +160,7 @@ fn a_composing_enter_does_not_judge_the_text() {
             .unwrap();
         let page = &fixture.page;
         keyboard::tab_to(page, INPUT, 5).await.unwrap();
-        page.evaluate(format!("document.querySelector({INPUT:?}).select()"))
+        page.evaluate_bounded(format!("document.querySelector({INPUT:?}).select()"))
             .await
             .unwrap();
         keyboard::type_text(page, "nope").await.unwrap();
@@ -168,7 +169,7 @@ fn a_composing_enter_does_not_judge_the_text() {
             .unwrap();
         crate::settle::painted(page).await.unwrap();
         let judged: bool = page
-            .evaluate(format!(
+            .evaluate_bounded(format!(
                 "document.querySelector({INPUT:?}).getAttribute('aria-invalid') === 'true'"
             ))
             .await
@@ -198,7 +199,7 @@ fn unparsable_text_shows_and_says_an_error() {
             .unwrap();
         let page = &fixture.page;
         keyboard::tab_to(page, INPUT, 5).await.unwrap();
-        page.evaluate(format!("document.querySelector({INPUT:?}).select()"))
+        page.evaluate_bounded(format!("document.querySelector({INPUT:?}).select()"))
             .await
             .unwrap();
         keyboard::type_text(page, "nope").await.unwrap();
@@ -239,7 +240,7 @@ fn blur_on_unparsable_text_keeps_it_with_an_error() {
             .unwrap();
         let page = &fixture.page;
         keyboard::tab_to(page, INPUT, 5).await.unwrap();
-        page.evaluate(format!("document.querySelector({INPUT:?}).select()"))
+        page.evaluate_bounded(format!("document.querySelector({INPUT:?}).select()"))
             .await
             .unwrap();
         keyboard::type_text(page, "nope").await.unwrap();
@@ -277,11 +278,11 @@ fn a_reverting_blur_says_the_error() {
             .unwrap();
         let page = &fixture.page;
         keyboard::tab_to(page, INPUT, 5).await.unwrap();
-        page.evaluate(format!("document.querySelector({INPUT:?}).select()"))
+        page.evaluate_bounded(format!("document.querySelector({INPUT:?}).select()"))
             .await
             .unwrap();
         keyboard::type_text(page, "nope").await.unwrap();
-        page.evaluate("document.getElementById('after').focus()")
+        page.evaluate_bounded("document.getElementById('after').focus()")
             .await
             .unwrap();
         let error = "Not a valid color";
@@ -312,7 +313,7 @@ fn typed_text_ends_once_on_enter_or_blur() {
             .unwrap();
         let page = &fixture.page;
         keyboard::tab_to(page, INPUT, 5).await.unwrap();
-        page.evaluate(format!("document.querySelector({INPUT:?}).select()"))
+        page.evaluate_bounded(format!("document.querySelector({INPUT:?}).select()"))
             .await
             .unwrap();
         keyboard::type_text(page, "#fa5252").await.unwrap();
@@ -349,7 +350,7 @@ fn typed_text_ends_once_on_enter_or_blur() {
 async fn expect(page: &chromiumoxide::Page, check: &str, what: &str) {
     if let Err(error) = wait::for_js_true(page, check, what).await {
         let focus: String = page
-            .evaluate("document.activeElement.outerHTML.slice(0, 160)")
+            .evaluate_bounded("document.activeElement.outerHTML.slice(0, 160)")
             .await
             .and_then(|value| Ok(value.into_value()?))
             .unwrap_or_default();

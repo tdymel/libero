@@ -5,6 +5,7 @@ use e2e::browser::block_on;
 use e2e::driver::{Driver, eventually, eventually_focused};
 use e2e::passes::focus;
 use e2e::passes::keyboard::{self, ENTER, ESCAPE, TAB};
+use e2e::wait::PageBounded;
 use e2e::{Fixture, Viewport, wait};
 
 const TRIGGER: &str = "#open-modal";
@@ -65,7 +66,7 @@ fn closing_the_panel_returns_focus_to_its_trigger() {
             .unwrap();
         let page = &fixture.page;
         wait::for_visible(page, "#filters").await.unwrap();
-        page.evaluate("document.querySelector('#filters').focus()")
+        page.evaluate_bounded("document.querySelector('#filters').focus()")
             .await
             .unwrap();
 
@@ -114,12 +115,12 @@ fn a_removed_trigger_hands_focus_to_the_fallback() {
             .unwrap();
         let page = &fixture.page;
         wait::for_visible(page, "#delete-alpha").await.unwrap();
-        page.evaluate("document.querySelector('#delete-alpha').focus()")
+        page.evaluate_bounded("document.querySelector('#delete-alpha').focus()")
             .await
             .unwrap();
         keyboard::press(page, ENTER).await.unwrap();
         wait::for_visible(page, "#confirm").await.unwrap();
-        page.evaluate("document.querySelector('#confirm').focus()")
+        page.evaluate_bounded("document.querySelector('#confirm').focus()")
             .await
             .unwrap();
         keyboard::press(page, ENTER).await.unwrap();
@@ -151,7 +152,7 @@ fn a_trigger_remembered_on_mount_takes_focus_on_every_close() {
         wait::for_visible(page, "#trigger").await.unwrap();
 
         for round in ["first", "second"] {
-            page.evaluate("document.querySelector('#trigger').focus()")
+            page.evaluate_bounded("document.querySelector('#trigger').focus()")
                 .await
                 .unwrap();
             keyboard::press(page, ENTER).await.unwrap();

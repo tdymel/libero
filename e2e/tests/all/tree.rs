@@ -8,6 +8,7 @@ use e2e::driver::{Driver, eventually, eventually_focused};
 use e2e::passes::{focus, keyboard, pointer};
 use e2e::suite::Step;
 use e2e::wait;
+use e2e::wait::PageBounded;
 use e2e::{Fixture, Suite, Viewport};
 
 const ROW: &str = "[role=treeitem]";
@@ -36,7 +37,7 @@ fn a_current_link_row_draws_one_look() {
             .await
             .unwrap();
         let looks: Vec<[String; 5]> = page
-            .evaluate(CURRENT_LOOKS)
+            .evaluate_bounded(CURRENT_LOOKS)
             .await
             .unwrap()
             .into_value()
@@ -51,7 +52,7 @@ fn a_current_link_row_draws_one_look() {
 
         e2e::browser::force_colours(page).await.unwrap();
         let looks: Vec<[String; 5]> = page
-            .evaluate(CURRENT_LOOKS)
+            .evaluate_bounded(CURRENT_LOOKS)
             .await
             .unwrap()
             .into_value()
@@ -287,7 +288,7 @@ fn the_arrows_work_after_a_click_in_the_indent() {
             .unwrap();
         // Just before main.rs's row, inside src's: the indent, no row of its own.
         let (x, y, gutter): (f64, f64, bool) = page
-            .evaluate(
+            .evaluate_bounded(
                 "(() => { const r = document.querySelector(\"[data-tree-id='src/main.rs']\")\
                  .getBoundingClientRect(); const x = r.left - 2, y = r.top + r.height / 2; \
                  const hit = document.elementFromPoint(x, y); \
@@ -393,7 +394,7 @@ fn an_open_branch_rings_its_row_line_not_its_subtree() {
         .await
         .unwrap();
         let rings: String = page
-            .evaluate(
+            .evaluate_bounded(
                 "(() => { const li = document.activeElement; \
                  const line = li.querySelector(':scope > [data-slot=content]'); \
                  return [li, line].map(el => { const s = getComputedStyle(el); \
@@ -582,7 +583,7 @@ fn a_disabled_row_shows_not_allowed_and_takes_no_focus() {
         crate::settle::painted(&fixture.page).await.unwrap();
         let focused: String = fixture
             .page
-            .evaluate("document.activeElement.dataset.treeId ?? document.activeElement.id")
+            .evaluate_bounded("document.activeElement.dataset.treeId ?? document.activeElement.id")
             .await
             .unwrap()
             .into_value()
@@ -628,13 +629,13 @@ fn a_focused_row_under_a_disabled_branch_fades_to_three_quarters() {
         let page = &fixture.page;
         for id in ["inner", "inner-off"] {
             let rest: f64 = page
-                .evaluate(opacity(id))
+                .evaluate_bounded(opacity(id))
                 .await
                 .unwrap()
                 .into_value()
                 .unwrap();
             assert_eq!(rest, 0.5, "{id}'s resting fade");
-            page.evaluate(format!(
+            page.evaluate_bounded(format!(
                 "document.querySelector('[data-tree-id=\"{id}\"]').focus()"
             ))
             .await
@@ -646,7 +647,7 @@ fn a_focused_row_under_a_disabled_branch_fades_to_three_quarters() {
             )
             .await
             .unwrap();
-            page.evaluate("document.activeElement.blur()")
+            page.evaluate_bounded("document.activeElement.blur()")
                 .await
                 .unwrap();
         }

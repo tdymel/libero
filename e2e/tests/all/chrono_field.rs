@@ -4,6 +4,7 @@
 use e2e::browser::block_on;
 use e2e::passes::{keyboard, pointer};
 use e2e::suite::Step;
+use e2e::wait::PageBounded;
 use e2e::{Fixture, Suite, Viewport, wait};
 
 const INPUT: &str = "input[data-controlled]";
@@ -20,12 +21,12 @@ fn a_composing_enter_does_not_commit_the_typed_month() {
 
         keyboard::tab_to(page, INPUT, 5).await.unwrap();
         let before: String = page
-            .evaluate("document.querySelector('#readout').textContent.trim()")
+            .evaluate_bounded("document.querySelector('#readout').textContent.trim()")
             .await
             .unwrap()
             .into_value()
             .unwrap();
-        page.evaluate(format!("document.querySelector({INPUT:?}).select()"))
+        page.evaluate_bounded(format!("document.querySelector({INPUT:?}).select()"))
             .await
             .unwrap();
         keyboard::type_text(page, "9/2026").await.unwrap();
@@ -67,7 +68,7 @@ fn a_typed_month_is_held_as_its_first_day() {
             "the month shown as MMMM YYYY",
         )
         .await;
-        page.evaluate(format!("document.querySelector({INPUT:?}).select()"))
+        page.evaluate_bounded(format!("document.querySelector({INPUT:?}).select()"))
             .await
             .unwrap();
         keyboard::type_text(page, "9/2026").await.unwrap();
@@ -212,7 +213,7 @@ fn a_reopened_dropdown_asks_the_clock_again() {
         )
         .await;
 
-        page.evaluate(
+        page.evaluate_bounded(
             "(() => { const Real = Date, shift = 40 * 864e5; \
              window.Date = class extends Real { \
                constructor(...a) { a.length ? super(...a) : super(Real.now() + shift); } \
@@ -341,7 +342,7 @@ fn a_refused_date_says_which_rule_it_broke() {
             ("March 21, 2026", "That date is not available"),
             ("Marchember", "Not a valid date"),
         ] {
-            page.evaluate(format!("document.querySelector({INPUT:?}).select()"))
+            page.evaluate_bounded(format!("document.querySelector({INPUT:?}).select()"))
                 .await
                 .unwrap();
             keyboard::type_text(page, text).await.unwrap();
@@ -460,7 +461,7 @@ fn a_typed_duration_reads_its_units_and_refuses_the_bounds() {
             ("1:05:30", "3930", "1 h 5 min 30 s", "PT1H5M30S"),
             ("20", "1200", "20 min", "PT20M"),
         ] {
-            page.evaluate(format!("document.querySelector({INPUT:?}).select()"))
+            page.evaluate_bounded(format!("document.querySelector({INPUT:?}).select()"))
                 .await
                 .unwrap();
             keyboard::type_text(page, text).await.unwrap();
@@ -490,7 +491,7 @@ fn a_typed_duration_reads_its_units_and_refuses_the_bounds() {
             ("5 min", "Must be at least 15 min"),
             ("soon", "Not a valid duration"),
         ] {
-            page.evaluate(format!("document.querySelector({INPUT:?}).select()"))
+            page.evaluate_bounded(format!("document.querySelector({INPUT:?}).select()"))
                 .await
                 .unwrap();
             keyboard::type_text(page, text).await.unwrap();
@@ -588,7 +589,7 @@ fn readout_is(text: &str) -> String {
 async fn expect(page: &chromiumoxide::Page, check: &str, what: &str) {
     if let Err(error) = wait::for_js_true(page, check, what).await {
         let state: String = page
-            .evaluate(format!(
+            .evaluate_bounded(format!(
                 "`value=${{document.querySelector({INPUT:?}).value}} readout=${{document.querySelector('#readout').textContent}} focus=${{document.activeElement.outerHTML.slice(0, 120)}}`"
             ))
             .await

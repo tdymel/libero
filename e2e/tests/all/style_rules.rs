@@ -4,11 +4,12 @@
 use chromiumoxide::Page;
 use e2e::browser::block_on;
 use e2e::passes::pointer;
+use e2e::wait::PageBounded;
 use e2e::{Fixture, Viewport, wait};
 
 /// The rules in the outlet's blocks that mention `needle`, and the page's `<style>` count.
 async fn rules_and_styles(page: &Page, needle: &str) -> (usize, usize) {
-    page.evaluate(format!(
+    page.evaluate_bounded(format!(
         "(() => {{ const blocks = [...document.querySelectorAll('style')] \
          .find(s => s.textContent.startsWith('@layer lsx-base{{}}')); \
          const rules = blocks ? [...blocks.sheet.cssRules].flatMap(b => [...b.cssRules]) : []; \
@@ -22,7 +23,7 @@ async fn rules_and_styles(page: &Page, needle: &str) -> (usize, usize) {
 }
 
 async fn computed(page: &Page, selector: &str, property: &str) -> String {
-    page.evaluate(format!(
+    page.evaluate_bounded(format!(
         "getComputedStyle(document.querySelector({selector:?})).{property}"
     ))
     .await
@@ -36,7 +37,7 @@ async fn before(page: &Page, selector: &str, property: &str) -> String {
 }
 
 async fn pseudo(page: &Page, selector: &str, element: &str, property: &str) -> String {
-    page.evaluate(format!(
+    page.evaluate_bounded(format!(
         "getComputedStyle(document.querySelector({selector:?}), {element:?}).{property}"
     ))
     .await

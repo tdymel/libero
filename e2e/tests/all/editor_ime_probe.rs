@@ -9,6 +9,7 @@ use chromiumoxide::Page;
 use chromiumoxide::cdp::browser_protocol::input::{ImeSetCompositionParams, InsertTextParams};
 use e2e::driver::{Driver, eventually};
 use e2e::passes::keyboard;
+use e2e::wait::PageBounded;
 
 /// Records every input event at the window, before (capture) and after (bubble) dioxus's
 /// root listener; the gap is the handler's round trip. Also stamps each Rust echo of the selection.
@@ -34,7 +35,7 @@ const RECORDER: &str = r#"(() => {
 
 async fn js<T: serde::de::DeserializeOwned>(page: &Page, expression: &str) -> Result<T> {
     let json: String = page
-        .evaluate(format!("JSON.stringify({expression})"))
+        .evaluate_bounded(format!("JSON.stringify({expression})"))
         .await?
         .into_value()?;
     Ok(serde_json::from_str(&json)?)
@@ -126,11 +127,11 @@ async fn observe<D: Driver>(d: &mut D, page: &Page, report: &mut String) -> Resu
     section(d, page, report, "observe: CDP Enter").await?;
     keyboard::press(page, keyboard::BACKSPACE).await?;
     section(d, page, report, "observe: CDP Backspace").await?;
-    page.execute(ImeSetCompositionParams::new("n", 1, 1))
+    page.execute_bounded(ImeSetCompositionParams::new("n", 1, 1))
         .await?;
-    page.execute(ImeSetCompositionParams::new("ni", 2, 2))
+    page.execute_bounded(ImeSetCompositionParams::new("ni", 2, 2))
         .await?;
-    page.execute(InsertTextParams::new("你")).await?;
+    page.execute_bounded(InsertTextParams::new("你")).await?;
     section(
         d,
         page,

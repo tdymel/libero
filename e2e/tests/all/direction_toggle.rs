@@ -6,6 +6,7 @@ use chromiumoxide::Page;
 use e2e::browser::block_on;
 use e2e::driver::{Driver, eventually, eventually_focused};
 use e2e::passes::{focus, keyboard, pointer};
+use e2e::wait::PageBounded;
 use e2e::{Fixture, Suite, Viewport, ax, wait};
 
 const BUTTON: &str = "#direction";
@@ -63,7 +64,7 @@ async fn wait_for_dir(page: &Page, dir: &str) {
     .await;
     if let Err(error) = result {
         let now: String = page
-            .evaluate("document.documentElement.dir")
+            .evaluate_bounded("document.documentElement.dir")
             .await
             .unwrap()
             .into_value()
@@ -75,7 +76,7 @@ async fn wait_for_dir(page: &Page, dir: &str) {
 /// Whether the page text sits after the button in reading order: to its right
 /// left to right, to its left right to left.
 async fn text_follows_button(page: &Page) -> bool {
-    page.evaluate(
+    page.evaluate_bounded(
         "(() => { const t = document.querySelector('#page-text').getBoundingClientRect(); \
          const b = document.querySelector('#direction').getBoundingClientRect(); \
          return document.documentElement.dir === 'rtl' ? t.right <= b.left : t.left >= b.right; })()",
@@ -94,7 +95,7 @@ fn each_press_turns_the_direction_and_renames_the_button() {
             .await
             .unwrap();
         let page = &fixture.page;
-        page.evaluate(SHIELD_STORAGE).await.unwrap();
+        page.evaluate_bounded(SHIELD_STORAGE).await.unwrap();
 
         wait_for_name(page, "Switch to right-to-left text").await;
         wait_for_dir(page, "").await;
@@ -126,7 +127,7 @@ fn each_press_turns_the_direction_and_renames_the_button() {
         wait_for_dir(page, "rtl").await;
 
         let (stored, leaked, pressed): (Vec<String>, Option<String>, Option<String>) = page
-            .evaluate(
+            .evaluate_bounded(
                 "[window.__stored, window.__realStorage.getItem('lsx-direction'), \
                  document.querySelector('#direction').getAttribute('aria-pressed')]",
             )
@@ -162,7 +163,7 @@ fn clearing_drops_the_choice_and_the_roots_dir() {
             .await
             .unwrap();
         let page = &fixture.page;
-        page.evaluate(SHIELD_STORAGE).await.unwrap();
+        page.evaluate_bounded(SHIELD_STORAGE).await.unwrap();
         let kept_is =
             |kept: &str| format!("document.querySelector('#kept').textContent === '{kept}'");
 
@@ -180,7 +181,7 @@ fn clearing_drops_the_choice_and_the_roots_dir() {
             .await
             .unwrap();
         let (has_dir, stored): (bool, Vec<String>) = page
-            .evaluate("[document.documentElement.hasAttribute('dir'), window.__stored]")
+            .evaluate_bounded("[document.documentElement.hasAttribute('dir'), window.__stored]")
             .await
             .unwrap()
             .into_value()

@@ -7,6 +7,7 @@ use e2e::browser::block_on;
 use e2e::driver::{Driver, eventually, eventually_focused};
 use e2e::passes::{keyboard, pointer};
 use e2e::suite::Step;
+use e2e::wait::PageBounded;
 use e2e::{Fixture, Suite, Viewport, ax, wait};
 
 pub const TRIGGER: &str = "[role=combobox]";
@@ -83,8 +84,12 @@ pub(crate) fn the_trigger_names_the_lit_row(route: &str, expected: &str) {
             "(([named, refused, lit]) => named === {expected:?} && refused === null && lit === named)({js})"
         );
         let _ = wait::for_js_true(page, &settled, "the trigger naming the lit row").await;
-        let read: (Option<String>, Option<String>, Option<String>) =
-            page.evaluate(js).await.unwrap().into_value().unwrap();
+        let read: (Option<String>, Option<String>, Option<String>) = page
+            .evaluate_bounded(js)
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
         assert_eq!(
             read.1, None,
             "{route}: the trigger names a refused row: {read:?}"
@@ -107,7 +112,7 @@ pub(crate) fn the_open_list_is_named_by_aria_label(route: &str, name: &str) {
         keyboard::press(page, keyboard::ARROW_DOWN).await.unwrap();
         wait::for_visible(page, LISTBOX).await.unwrap();
         let read: Vec<Option<String>> = page
-            .evaluate(format!(
+            .evaluate_bounded(format!(
                 "(() => {{ const l = document.querySelector({LISTBOX:?}); \
                  return [l.getAttribute('aria-label'), l.getAttribute('aria-labelledby')]; }})()"
             ))
@@ -143,7 +148,7 @@ fn a_bare_combobox_aria_label_names_the_list_once() {
         keyboard::press(page, keyboard::ARROW_DOWN).await.unwrap();
         wait::for_visible(page, LISTBOX).await.unwrap();
         let named: usize = page
-            .evaluate("document.querySelectorAll('[aria-label=\"Fruit list\"]').length")
+            .evaluate_bounded("document.querySelectorAll('[aria-label=\"Fruit list\"]').length")
             .await
             .unwrap()
             .into_value()
@@ -332,7 +337,7 @@ fn an_rtl_dropdown_stays_inside_the_viewport() {
         e2e::browser::at_once(["/combobox", "/select"], async |route| {
             let fixture = Fixture::open(route, Viewport::Mobile).await.unwrap();
             let page = &fixture.page;
-            page.evaluate("document.documentElement.dir = 'rtl'")
+            page.evaluate_bounded("document.documentElement.dir = 'rtl'")
                 .await
                 .unwrap();
             wait::for_js_true(
@@ -354,8 +359,12 @@ fn an_rtl_dropdown_stays_inside_the_viewport() {
                 .await
                 .is_err()
             {
-                let (left, right, width): (f64, f64, f64) =
-                    page.evaluate(edges).await.unwrap().into_value().unwrap();
+                let (left, right, width): (f64, f64, f64) = page
+                    .evaluate_bounded(edges)
+                    .await
+                    .unwrap()
+                    .into_value()
+                    .unwrap();
                 panic!("{route}: the dropdown spans {left}..{right} in a {width}px viewport");
             }
             fixture.close().await.unwrap();

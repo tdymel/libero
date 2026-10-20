@@ -3,6 +3,7 @@
 
 use e2e::browser::block_on;
 use e2e::passes::{keyboard, pointer};
+use e2e::wait::PageBounded;
 use e2e::{Fixture, Viewport, wait};
 
 use super::{C, CAPTIONS, PLAY};
@@ -51,7 +52,7 @@ fn the_captions_button_and_c_toggle_the_subtitle_track() {
 
         // Todo 1324: without tracks the button stays, disabled but focusable and explained.
         let plain: bool = page
-            .evaluate(
+            .evaluate_bounded(
                 "(() => { const b = document.querySelector('#plain button[aria-label=Captions]');
                  b.focus(); b.click();
                  return document.activeElement === b && b.getAttribute('aria-disabled') === 'true'
@@ -131,7 +132,7 @@ fn two_tracks_make_the_captions_button_a_track_menu() {
         )
         .await
         .unwrap();
-        page.evaluate(format!("document.querySelector('{CAPTIONS}').focus()"))
+        page.evaluate_bounded(format!("document.querySelector('{CAPTIONS}').focus()"))
             .await
             .unwrap();
         keyboard::press(page, C).await.unwrap();
@@ -162,7 +163,7 @@ fn two_tracks_make_the_captions_button_a_track_menu() {
         )
         .await
         .unwrap();
-        page.evaluate(format!(
+        page.evaluate_bounded(format!(
             "{ITEM}.find((e) => e.textContent.includes('Deutsch')).click()"
         ))
         .await
@@ -202,7 +203,7 @@ fn two_tracks_make_the_captions_button_a_track_menu() {
         )
         .await
         .unwrap();
-        page.evaluate(format!(
+        page.evaluate_bounded(format!(
             "{ITEM}.find((e) => e.textContent.includes('Off')).click()"
         ))
         .await
@@ -237,13 +238,13 @@ async fn cue_bottom(page: &chromiumoxide::Page) -> anyhow::Result<Option<f64>> {
             .find_map(find)
     }
     let document = page
-        .execute(GetDocumentParams::builder().depth(-1).pierce(true).build())
+        .execute_bounded(GetDocumentParams::builder().depth(-1).pierce(true).build())
         .await?;
     let Some(cue) = find(&document.result.root).map(|node| node.backend_node_id) else {
         return Ok(None);
     };
     let model = page
-        .execute(GetBoxModelParams::builder().backend_node_id(cue).build())
+        .execute_bounded(GetBoxModelParams::builder().backend_node_id(cue).build())
         .await?;
     // Corners clockwise from the top left: the bottom edge's y is the sixth number.
     Ok(model.result.model.border.inner().get(5).copied())
@@ -271,7 +272,9 @@ async fn captions_clear_the_bar(route: &str) {
     .unwrap();
     pointer::click(page, PLAY).await.unwrap();
     let seek_top: f64 = page
-        .evaluate("document.querySelector('#player [data-slot=seek]').getBoundingClientRect().top")
+        .evaluate_bounded(
+            "document.querySelector('#player [data-slot=seek]').getBoundingClientRect().top",
+        )
         .await
         .unwrap()
         .into_value()

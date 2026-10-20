@@ -5,6 +5,7 @@ use anyhow::{Result, ensure};
 use e2e::browser::block_on;
 use e2e::driver::{Driver, eventually};
 use e2e::passes::pointer;
+use e2e::wait::PageBounded;
 use e2e::{Fixture, Viewport, wait};
 
 use super::slider::{BUBBLE, SCROLL_THUMB, THUMB, VALUE_NOW};
@@ -72,7 +73,7 @@ fn a_touch_drags_only_from_the_thumb() {
         pointer::touch_drag(page, track, aside, 6).await.unwrap();
         settle::painted(page).await.unwrap();
         let (now, ended): (String, String) = page
-            .evaluate(format!(
+            .evaluate_bounded(format!(
                 "[{value}, document.querySelector('#slider-end').textContent]"
             ))
             .await
@@ -293,7 +294,7 @@ fn tab_reaches_readonly_and_skips_disabled() {
         .await
         .unwrap();
         let state: Vec<String> = page
-            .evaluate(
+            .evaluate_bounded(
                 "[document.querySelector('#fixed [role=slider]').getAttribute('aria-valuenow'), \
                  document.activeElement.closest('#locked') ? 'locked' : 'elsewhere']",
             )
@@ -326,7 +327,7 @@ fn escape_hides_the_focus_bubble() {
             .await
             .unwrap_or_else(|e| panic!("Escape left the value bubble open: {e}"));
         let kept: bool = page
-            .evaluate(format!(
+            .evaluate_bounded(format!(
                 "document.activeElement === document.querySelector('{THUMB}') && {VALUE_NOW} === '40'"
             ))
             .await

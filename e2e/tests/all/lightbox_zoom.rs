@@ -9,6 +9,7 @@ use chromiumoxide::cdp::browser_protocol::input::{
 };
 use e2e::browser::block_on;
 use e2e::driver::{Driver, eventually};
+use e2e::wait::PageBounded;
 use e2e::{
     Fixture, Viewport, passes::focus, passes::keyboard, passes::motion, passes::pointer, wait,
 };
@@ -54,7 +55,12 @@ fn plus_and_minus_zoom_to_max_zoom_and_back() {
         .await
         .is_err()
         {
-            let style: String = page.evaluate(STYLE).await.unwrap().into_value().unwrap();
+            let style: String = page
+                .evaluate_bounded(STYLE)
+                .await
+                .unwrap()
+                .into_value()
+                .unwrap();
             panic!("ten presses of + left the picture at {style:?}, not the theme's max_zoom 8x");
         }
         for _ in 0..10 {
@@ -104,7 +110,7 @@ async fn zoom_buttons(page: &Page) -> Result<()> {
     };
     let wait_style = async |check: String, what: &str| -> Result<()> {
         if wait::for_js_true(page, &check, what).await.is_err() {
-            let style: String = page.evaluate(STYLE).await?.into_value()?;
+            let style: String = page.evaluate_bounded(STYLE).await?.into_value()?;
             bail!("waiting for {what}, the picture's style is {style:?}");
         }
         Ok(())
@@ -130,9 +136,9 @@ async fn zoom_buttons(page: &Page) -> Result<()> {
     let look = format!(
         "(() => {{ const s = getComputedStyle(document.querySelector({ZOOM_OUT:?})); return [s.opacity, s.backgroundColor, s.color].join(' '); }})()"
     );
-    let rest: String = page.evaluate(look.as_str()).await?.into_value()?;
+    let rest: String = page.evaluate_bounded(look.as_str()).await?.into_value()?;
     pointer::hover(page, ZOOM_OUT).await?;
-    let hovered: String = page.evaluate(look.as_str()).await?.into_value()?;
+    let hovered: String = page.evaluate_bounded(look.as_str()).await?.into_value()?;
     if !rest.starts_with("0.5 ") || hovered != rest {
         bail!("disabled zoom out: {rest:?} at rest, {hovered:?} hovered");
     }
@@ -228,7 +234,7 @@ async fn zoomed_resize(page: &Page) -> Result<()> {
     motion::set_reduced_motion(page, true).await?;
     // Short, so the 400x260 picture at 2x overhangs the 70vh stage (350px)
     // and has somewhere to pan; still over the phone layout's 30rem.
-    page.execute(SetDeviceMetricsOverrideParams::new(900, 500, 1.0, false))
+    page.execute_bounded(SetDeviceMetricsOverrideParams::new(900, 500, 1.0, false))
         .await?;
     keyboard::tab_to(page, TRIGGER, 5).await?;
     keyboard::press(page, keyboard::ENTER).await?;
@@ -263,16 +269,16 @@ async fn zoomed_resize(page: &Page) -> Result<()> {
         .is_err()
     {
         let style: String = page
-            .evaluate("document.querySelector('[role=dialog] [data-lightbox-frame=\"0\"] img').style.cssText")
+            .evaluate_bounded("document.querySelector('[role=dialog] [data-lightbox-frame=\"0\"] img').style.cssText")
             .await?
             .into_value()?;
         let actual = focus::active_element(page).await?;
         bail!("the pan never reached the picture's edge: style {style:?}, focus {actual:?}");
     }
-    let [dx, dy, ..]: [f64; 4] = page.evaluate(PAN_JS).await?.into_value()?;
+    let [dx, dy, ..]: [f64; 4] = page.evaluate_bounded(PAN_JS).await?.into_value()?;
 
     let (width, height) = Viewport::Mobile.size();
-    page.execute(SetDeviceMetricsOverrideParams::new(
+    page.execute_bounded(SetDeviceMetricsOverrideParams::new(
         width, height, 1.0, true,
     ))
     .await?;
@@ -283,13 +289,13 @@ async fn zoomed_resize(page: &Page) -> Result<()> {
         .await
         .is_err()
     {
-        let seen: [f64; 4] = page.evaluate(PAN_JS).await?.into_value()?;
+        let seen: [f64; 4] = page.evaluate_bounded(PAN_JS).await?.into_value()?;
         bail!(
             "after the resize the picture sits at {seen:?} ([dx, dy, x_bound, y_bound]); it left its frame"
         );
     }
     // The clamp had to act: the old pan lies outside the new bounds.
-    let [.., bx, by]: [f64; 4] = page.evaluate(PAN_JS).await?.into_value()?;
+    let [.., bx, by]: [f64; 4] = page.evaluate_bounded(PAN_JS).await?.into_value()?;
     if dx.abs() <= bx + 1.0 && dy.abs() <= by + 1.0 {
         bail!(
             "the old pan ({dx}, {dy}) still fits the new bounds ({bx}, {by}); the resize tested nothing"
@@ -323,7 +329,7 @@ async fn click_pan(page: &Page) -> Result<()> {
     const STATUS: &str = "[...document.querySelectorAll('[role=dialog] [role=status]')].map(s => s.textContent).join('|')";
     motion::set_reduced_motion(page, true).await?;
     // As in `zoomed_resize`: the picture at 2x overhangs the stage vertically.
-    page.execute(SetDeviceMetricsOverrideParams::new(900, 500, 1.0, false))
+    page.execute_bounded(SetDeviceMetricsOverrideParams::new(900, 500, 1.0, false))
         .await?;
     keyboard::tab_to(page, TRIGGER, 5).await?;
     keyboard::press(page, keyboard::ENTER).await?;
@@ -337,7 +343,7 @@ async fn click_pan(page: &Page) -> Result<()> {
     .await?;
     keyboard::tab_to(page, PICTURE, 12).await?;
     let described: bool = page
-        .evaluate(format!(
+        .evaluate_bounded(format!(
             "(() => {{ const ids = document.querySelector({PICTURE:?}).getAttribute('aria-describedby') || ''; \
              return ids.split(' ').some(id => document.getElementById(id)?.textContent.startsWith('Z, plus or minus to zoom')); }})()"
         ))
@@ -367,7 +373,7 @@ async fn click_pan(page: &Page) -> Result<()> {
         .await
         .is_err()
     {
-        let seen: [f64; 4] = page.evaluate(PAN_JS).await?.into_value()?;
+        let seen: [f64; 4] = page.evaluate_bounded(PAN_JS).await?.into_value()?;
         bail!("a click 60px below the centre left the picture at {seen:?}, not dy -60");
     }
     // A drag's release is no click: the pan stays where the drag put it.
@@ -380,7 +386,7 @@ async fn click_pan(page: &Page) -> Result<()> {
         .await
         .is_err()
     {
-        let seen: [f64; 4] = page.evaluate(PAN_JS).await?.into_value()?;
+        let seen: [f64; 4] = page.evaluate_bounded(PAN_JS).await?.into_value()?;
         bail!("a 30px drag down from dy -60 left the picture at {seen:?}, not dy -30");
     }
 
@@ -419,7 +425,7 @@ async fn press_at(page: &Page, at: pointer::Point, button: MouseButton, clicks: 
         (DispatchMouseEventType::MousePressed, held),
         (DispatchMouseEventType::MouseReleased, 0),
     ] {
-        page.execute(
+        page.execute_bounded(
             DispatchMouseEventParams::builder()
                 .r#type(kind)
                 .x(at.x)
@@ -439,7 +445,7 @@ async fn double_click_off_centre(page: &Page) -> Result<()> {
     const IMG: &str = "[role=dialog] [data-lightbox-frame=\"0\"] img";
     motion::set_reduced_motion(page, true).await?;
     // As in `click_pan`: the picture at 2x overhangs the stage vertically only.
-    page.execute(SetDeviceMetricsOverrideParams::new(900, 500, 1.0, false))
+    page.execute_bounded(SetDeviceMetricsOverrideParams::new(900, 500, 1.0, false))
         .await?;
     pointer::click(page, TRIGGER).await?;
     wait::for_visible(page, DIALOG).await?;
@@ -476,8 +482,8 @@ async fn double_click_off_centre(page: &Page) -> Result<()> {
         .await
         .is_err()
     {
-        let seen: [f64; 4] = page.evaluate(PAN_JS).await?.into_value()?;
-        let style: String = page.evaluate(style.as_str()).await?.into_value()?;
+        let seen: [f64; 4] = page.evaluate_bounded(PAN_JS).await?.into_value()?;
+        let style: String = page.evaluate_bounded(style.as_str()).await?.into_value()?;
         bail!(
             "a double-click 40px below the centre at 2x left {seen:?}, style {style:?}, not dy -40 at 4x"
         );
@@ -493,7 +499,7 @@ async fn double_click_off_centre(page: &Page) -> Result<()> {
     )
     .await?;
     let state: String = page
-        .evaluate(format!(
+        .evaluate_bounded(format!(
             "document.querySelector({IMG:?}).dataset.state ?? ''"
         ))
         .await?

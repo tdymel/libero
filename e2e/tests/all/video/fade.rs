@@ -5,6 +5,7 @@ use anyhow::Result;
 use e2e::browser::block_on;
 use e2e::driver::{Driver, Platform, eventually};
 use e2e::passes::{keyboard, pointer};
+use e2e::wait::PageBounded;
 use e2e::{Fixture, Viewport, clock, wait};
 
 use super::{FULLSCREEN, PLAY, reads};
@@ -236,7 +237,7 @@ fn a_mid_playback_error_shows_the_controls_and_no_buffering() {
         wait::for_js_true(page, PLAYING, "playing").await.unwrap();
         fade(page).await;
         // A stream dying on cue cannot be served: the element's state is faked as one leaves it.
-        page.evaluate(
+        page.evaluate_bounded(
             "(() => { const video = document.querySelector('#player video');
              Object.defineProperty(video, 'error', { get: () => ({ code: 2 }) });
              Object.defineProperty(video, 'readyState', { get: () => 1 });
@@ -257,7 +258,7 @@ fn a_mid_playback_error_shows_the_controls_and_no_buffering() {
         .await
         .unwrap();
         let status: String = page
-            .evaluate("document.querySelector('#player [role=status]').textContent")
+            .evaluate_bounded("document.querySelector('#player [role=status]').textContent")
             .await
             .unwrap()
             .into_value()
@@ -286,7 +287,7 @@ fn focus_from_code_shows_the_faded_controls() {
             .unwrap();
         pointer::click(page, PLAY).await.unwrap();
         fade(page).await;
-        page.evaluate(format!("document.querySelector('{FULLSCREEN}').focus()"))
+        page.evaluate_bounded(format!("document.querySelector('{FULLSCREEN}').focus()"))
             .await
             .unwrap();
         wait::for_js_true(
@@ -303,7 +304,7 @@ fn focus_from_code_shows_the_faded_controls() {
         clock::fire_all(page, IDLE_MS).await.unwrap();
         clock::settle(page).await.unwrap();
         let faded: bool = page
-            .evaluate(faded_js())
+            .evaluate_bounded(faded_js())
             .await
             .unwrap()
             .into_value()
@@ -376,7 +377,7 @@ fn a_space_on_the_focused_play_button_keeps_the_controls_shown() {
         wait::for_js_true(page, LONG_DURATION, "the duration")
             .await
             .unwrap();
-        page.evaluate(format!("document.querySelector('{PLAY}').focus()"))
+        page.evaluate_bounded(format!("document.querySelector('{PLAY}').focus()"))
             .await
             .unwrap();
         keyboard::press(page, keyboard::SPACE).await.unwrap();
@@ -389,7 +390,7 @@ fn a_space_on_the_focused_play_button_keeps_the_controls_shown() {
         clock::fire_all(page, IDLE_MS).await.unwrap();
         clock::settle(page).await.unwrap();
         let faded: bool = page
-            .evaluate(faded_js())
+            .evaluate_bounded(faded_js())
             .await
             .unwrap()
             .into_value()
@@ -413,7 +414,7 @@ fn a_mouse_press_then_leave_fades_the_bar_with_focus_on_the_button() {
             .unwrap();
         pointer::click(page, PLAY).await.unwrap();
         wait::for_js_true(page, PLAYING, "playing").await.unwrap();
-        page.evaluate(format!(
+        page.evaluate_bounded(format!(
             "document.querySelector('{GROUP}').dispatchEvent(
                  new PointerEvent('pointerleave', {{ pointerType: 'mouse' }}))"
         ))
@@ -449,7 +450,7 @@ fn a_cancelled_press_does_not_stop_focus_showing_the_controls() {
             .unwrap();
         pointer::click(page, PLAY).await.unwrap();
         wait::for_js_true(page, PLAYING, "playing").await.unwrap();
-        page.evaluate(
+        page.evaluate_bounded(
             "(() => { const video = document.querySelector('#player video');
              for (const type of ['pointerdown', 'pointercancel'])
                  video.dispatchEvent(new PointerEvent(type, { bubbles: true, pointerType: 'touch' })); })()",
@@ -457,7 +458,7 @@ fn a_cancelled_press_does_not_stop_focus_showing_the_controls() {
         .await
         .unwrap();
         fade(page).await;
-        page.evaluate(format!("document.querySelector('{FULLSCREEN}').focus()"))
+        page.evaluate_bounded(format!("document.querySelector('{FULLSCREEN}').focus()"))
             .await
             .unwrap();
         wait::for_js_true(

@@ -6,6 +6,7 @@ use e2e::browser::block_on;
 use e2e::driver::{Driver, Platform, eventually, eventually_focused, eventually_text};
 use e2e::passes::{keyboard, pointer};
 use e2e::suite::Step;
+use e2e::wait::PageBounded;
 use e2e::{Fixture, Suite, Viewport, wait};
 
 pub(super) const TRIGGER: &str = "[role=combobox]";
@@ -309,12 +310,22 @@ fn composing_arrows_leave_the_search_cursor_alone() {
         )
         .await
         .unwrap();
-        let before: String = page.evaluate(CURSOR).await.unwrap().into_value().unwrap();
+        let before: String = page
+            .evaluate_bounded(CURSOR)
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
         keyboard::press_composing(page, SEARCH, &["ArrowDown", "ArrowDown"])
             .await
             .unwrap();
         crate::settle::painted(page).await.unwrap();
-        let after: String = page.evaluate(CURSOR).await.unwrap().into_value().unwrap();
+        let after: String = page
+            .evaluate_bounded(CURSOR)
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
         assert_eq!(after, before, "a composing arrow moved the cursor");
         keyboard::press(page, keyboard::ARROW_DOWN).await.unwrap();
         wait::for_js_true(
@@ -356,7 +367,7 @@ fn a_press_in_the_search_text_places_the_caret() {
         .await
         .unwrap();
         let (x, y): (f64, f64) = page
-            .evaluate(format!(
+            .evaluate_bounded(format!(
                 "(() => {{ const r = document.querySelector({SEARCH:?}).getBoundingClientRect(); \
                  return [r.left + 9, r.top + r.height / 2]; }})()"
             ))
@@ -434,7 +445,7 @@ fn the_open_search_box_is_announced_as_the_field() {
         .unwrap();
 
         let wiring: Vec<Option<String>> = page
-            .evaluate(format!(
+            .evaluate_bounded(format!(
                 "(() => {{ const s = document.querySelector({SEARCH:?}); \
                  const t = document.getElementById('lsx-1'); \
                  return ['aria-labelledby', 'aria-describedby', 'aria-invalid', 'aria-required'] \
@@ -709,7 +720,7 @@ fn tab_on_a_branch_commits_nothing() {
         expect(page, "closed", "Tab to close", "desktop").await;
         e2e::clock::settle(page).await.unwrap();
         let picked: String = page
-            .evaluate("document.querySelector('#picked').textContent")
+            .evaluate_bounded("document.querySelector('#picked').textContent")
             .await
             .unwrap()
             .into_value()
@@ -933,7 +944,7 @@ fn a_disabled_branch_does_not_open() {
         const ASIA: &str = "[role=option][id$='-option-0-1']";
         wait::for_visible(page, ASIA).await.unwrap();
         let disabled: Option<String> = page
-            .evaluate(format!(
+            .evaluate_bounded(format!(
                 "document.querySelector({ASIA:?}).getAttribute('aria-disabled')"
             ))
             .await
@@ -991,7 +1002,7 @@ fn the_drilled_rows_read_as_a_path() {
 
         // Per column: each selected row's label and whether it draws the bar.
         let marked: Vec<Vec<(String, bool)>> = page
-            .evaluate(
+            .evaluate_bounded(
                 "[...document.querySelectorAll('[role=listbox]')].map(list => \
                  [...list.querySelectorAll('[role=option][aria-selected=true]')].map(row => \
                  [row.querySelector('[data-slot=label]').textContent, \
@@ -1020,7 +1031,12 @@ const fn letter(key: &'static str, code: &'static str, vk: i64) -> keyboard::Key
 
 pub(super) async fn expect(page: &chromiumoxide::Page, want: &str, what: &str, at: &str) {
     if let Err(e) = wait::for_js_true(page, &format!("{CURSOR} === {want:?}"), what).await {
-        let actual: String = page.evaluate(CURSOR).await.unwrap().into_value().unwrap();
+        let actual: String = page
+            .evaluate_bounded(CURSOR)
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
         panic!("at {at}: {e}; cursor reads {actual:?}");
     }
 }

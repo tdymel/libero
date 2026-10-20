@@ -7,6 +7,7 @@ use e2e::browser::Scheme;
 use e2e::browser::block_on;
 use e2e::driver::{Driver, eventually, eventually_focused, eventually_text};
 use e2e::passes::{contrast, focus, keyboard, pointer};
+use e2e::wait::PageBounded;
 use e2e::{Fixture, Viewport, wait};
 
 const INPUT: &str = "input[name=email]";
@@ -145,7 +146,7 @@ fn every_summary_line_focuses_something_in_its_field() {
             .unwrap();
         let page = &fixture.page;
         // Below the fold with every field type: a click off screen hits nothing.
-        page.evaluate("document.querySelector('button[type=submit]').scrollIntoView()")
+        page.evaluate_bounded("document.querySelector('button[type=submit]').scrollIntoView()")
             .await
             .unwrap();
         pointer::click(page, "button[type=submit]").await.unwrap();
@@ -153,7 +154,7 @@ fn every_summary_line_focuses_something_in_its_field() {
             .await
             .unwrap();
         let lines: usize = page
-            .evaluate("document.querySelectorAll('[data-slot=summary] a').length")
+            .evaluate_bounded("document.querySelectorAll('[data-slot=summary] a').length")
             .await
             .unwrap()
             .into_value()
@@ -161,7 +162,7 @@ fn every_summary_line_focuses_something_in_its_field() {
         assert_eq!(lines, 21);
         // A field named by `aria_label` only still names its line (1526).
         let texts: Vec<String> = page
-            .evaluate(
+            .evaluate_bounded(
                 "[...document.querySelectorAll('[data-slot=summary] a')].map((a) => a.textContent)",
             )
             .await
@@ -178,9 +179,11 @@ fn every_summary_line_focuses_something_in_its_field() {
                 "no {line:?} in {texts:?}"
             );
         }
-        page.evaluate("window.__landed = new Set()").await.unwrap();
+        page.evaluate_bounded("window.__landed = new Set()")
+            .await
+            .unwrap();
         for line in 0..lines {
-            page.evaluate(format!(
+            page.evaluate_bounded(format!(
                 "document.querySelectorAll('[data-slot=summary] a')[{line}].click()"
             ))
             .await
@@ -197,7 +200,7 @@ fn every_summary_line_focuses_something_in_its_field() {
             .await
             .unwrap();
             // Back on the summary, so a line that focuses nothing shows.
-            page.evaluate("document.querySelector('[data-slot=summary]').focus()")
+            page.evaluate_bounded("document.querySelector('[data-slot=summary]').focus()")
                 .await
                 .unwrap();
         }
@@ -210,7 +213,7 @@ const DUE: &str = "input[data-e2e=due]";
 
 /// Tags the date field's text input as `DUE`.
 async fn tag_due(page: &Page) -> Result<()> {
-    page.evaluate(
+    page.evaluate_bounded(
         "[...document.querySelectorAll('label')].find(l => l.textContent.trim() === 'Due') \
          .control.setAttribute('data-e2e', 'due')",
     )
@@ -234,7 +237,7 @@ fn enter_in_a_date_field_submits_the_committed_date() {
             .await
             .unwrap();
         let texts: Vec<String> = page
-            .evaluate(
+            .evaluate_bounded(
                 "[...document.querySelectorAll('[data-slot=summary] a')].map((a) => a.textContent)",
             )
             .await
@@ -273,7 +276,7 @@ fn a_reset_drops_a_refused_date() {
         )
         .await
         .unwrap();
-        page.evaluate("document.querySelector('button[type=reset]').click()")
+        page.evaluate_bounded("document.querySelector('button[type=reset]').click()")
             .await
             .unwrap();
         let cleared = wait::for_js_true(
@@ -289,7 +292,7 @@ fn a_reset_drops_a_refused_date() {
         .await;
         if let Err(error) = cleared {
             let state: String = page
-                .evaluate(format!(
+                .evaluate_bounded(format!(
                     "(() => {{ const input = document.querySelector({DUE:?}); \
                      const ids = (input.getAttribute('aria-describedby') || '').split(' '); \
                      return JSON.stringify([input.value, \
@@ -314,7 +317,7 @@ fn a_native_reset_clears_the_summary_and_the_shown_errors() {
             .await
             .unwrap();
         let page = &fixture.page;
-        page.evaluate("document.querySelector('button[type=submit]').click()")
+        page.evaluate_bounded("document.querySelector('button[type=submit]').click()")
             .await
             .unwrap();
         wait::for_js_true(
@@ -325,7 +328,7 @@ fn a_native_reset_clears_the_summary_and_the_shown_errors() {
         )
         .await
         .unwrap();
-        page.evaluate("document.querySelector('button[type=reset]').click()")
+        page.evaluate_bounded("document.querySelector('button[type=reset]').click()")
             .await
             .unwrap();
         wait::for_js_true(
@@ -351,7 +354,7 @@ async fn submits(page: &Page, count: u32) -> Result<()> {
 }
 
 async fn click_button(page: &Page, text: &str) -> Result<()> {
-    page.evaluate(format!(
+    page.evaluate_bounded(format!(
         "[...document.querySelectorAll('button')].find(b => b.textContent.trim() === {text:?}).setAttribute('data-e2e', {text:?})"
     ))
     .await?;

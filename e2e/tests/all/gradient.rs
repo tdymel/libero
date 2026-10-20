@@ -5,6 +5,7 @@ use chromiumoxide::Page;
 use e2e::browser::block_on;
 use e2e::passes::{contrast, pointer};
 use e2e::suite::Suite;
+use e2e::wait::PageBounded;
 use e2e::{Fixture, Viewport, wait};
 
 #[test]
@@ -75,7 +76,7 @@ fn the_contrast_pass_measures_text_on_a_gradient() {
     block_on(async {
         let fixture = Fixture::open("/gradient", Viewport::Desktop).await.unwrap();
         let page = &fixture.page;
-        page.evaluate(
+        page.evaluate_bounded(
             "(() => { const p = document.createElement('p'); p.id = 'faint'; p.textContent = 'Faint label'; \
              p.style.cssText = 'background-image: linear-gradient(90deg, #fff, #ddd); color: #999; padding: 8px; margin: 0; position: fixed; top: 0; left: 600px; z-index: 9999'; \
              document.body.append(p); return true; })()",
@@ -147,7 +148,7 @@ const GLASS_RATIO: &str = "(sel => { const el = document.querySelector(sel); \
     return Math.min(...points.map(p => ratio(p, label))); })";
 
 async fn ratio(page: &Page, script: &str, selector: &str) -> f64 {
-    page.evaluate(format!("{script}('{selector}')"))
+    page.evaluate_bounded(format!("{script}('{selector}')"))
         .await
         .unwrap()
         .into_value()
@@ -155,7 +156,7 @@ async fn ratio(page: &Page, script: &str, selector: &str) -> f64 {
 }
 
 async fn scheme(page: &Page, scheme: &str) {
-    page.evaluate(format!(
+    page.evaluate_bounded(format!(
         "document.documentElement.setAttribute('data-lsx-theme', '{scheme}')"
     ))
     .await
@@ -163,7 +164,7 @@ async fn scheme(page: &Page, scheme: &str) {
 }
 
 async fn style(page: &Page, selector: &str, property: &str) -> String {
-    page.evaluate(format!(
+    page.evaluate_bounded(format!(
         "getComputedStyle(document.querySelector('{selector}')).getPropertyValue('{property}')"
     ))
     .await
@@ -439,7 +440,7 @@ fn forced_colours_drop_the_image() {
     block_on(async {
         let fixture = Fixture::open("/gradient", Viewport::Desktop).await.unwrap();
         let page = &fixture.page;
-        page.execute(
+        page.execute_bounded(
             SetEmulatedMediaParams::builder()
                 .features(vec![MediaFeature::new("forced-colors", "active")])
                 .build(),

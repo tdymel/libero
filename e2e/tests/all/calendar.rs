@@ -5,6 +5,7 @@ use chromiumoxide::cdp::browser_protocol::emulation::SetDeviceMetricsOverridePar
 use e2e::browser::block_on;
 use e2e::passes::keyboard::{self, Key};
 use e2e::passes::pointer;
+use e2e::wait::PageBounded;
 use e2e::{Fixture, Suite, Viewport, wait};
 
 const STOP: &str = "[role=grid] [data-date='2026-03-18']:not([data-outside])";
@@ -35,7 +36,7 @@ fn an_inline_picker_asks_the_clock_again_on_focus_in() {
         wait::for_js_true(page, &marks("2031-06-15"), "the mount to mark today")
             .await
             .unwrap();
-        page.evaluate(
+        page.evaluate_bounded(
             "(() => { const Real = Date, shift = 40 * 864e5; \
              window.Date = class extends Real { \
                constructor(...a) { a.length ? super(...a) : super(Real.now() + shift); } \
@@ -99,7 +100,7 @@ fn a_disabled_day_grays_out_in_forced_colours() {
         e2e::browser::force_colours(page).await.unwrap();
         crate::button::assert_gray_in_forced_colours(page, CLOSED).await;
         let [border, canvas]: [String; 2] = page
-            .evaluate(format!(
+            .evaluate_bounded(format!(
                 "(() => {{ const probe = document.createElement('div'); \
                  probe.style.color = 'Canvas'; document.body.append(probe); \
                  const canvas = getComputedStyle(probe).color; probe.remove(); \
@@ -401,7 +402,7 @@ fn the_keyboard_previews_a_range_and_its_days_are_selected() {
         .await
         .unwrap();
         let preview: [String; 3] = page
-            .evaluate(format!(
+            .evaluate_bounded(format!(
                 "[{}, {}, {}]",
                 selected("2026-03-10"),
                 selected("2026-03-11"),
@@ -661,7 +662,7 @@ async fn expect_focus(page: &chromiumoxide::Page, date: &str, month: &str, what:
         wait::for_js_true(page, &check, &format!("{what} to focus {date} in {month}")).await
     {
         let actual: String = page
-            .evaluate(
+            .evaluate_bounded(
                 "(() => { const el = document.activeElement; const grid = el && el.closest('[role=grid]'); \
                  return `${el && el.getAttribute('data-date')} in ${grid && grid.getAttribute('aria-label')}`; })()",
             )
@@ -690,7 +691,7 @@ fn today_and_the_range_show_in_forced_colours() {
 
         // `Canvas` as this page resolves it; a border or fill that colour is none.
         let colours: [String; 5] = page
-            .evaluate(format!(
+            .evaluate_bounded(format!(
                 "(() => {{ const probe = document.createElement('div'); \
                  probe.style.background = 'Canvas'; document.body.append(probe); \
                  const canvas = getComputedStyle(probe).backgroundColor; probe.remove(); \
@@ -726,7 +727,7 @@ fn the_picked_day_shows_in_forced_colours() {
         e2e::browser::force_colours(page).await.unwrap();
         // The page itself is `Canvas`; a fill the same colour is no fill.
         let [picked, canvas]: [String; 2] = page
-            .evaluate(format!(
+            .evaluate_bounded(format!(
                 "(() => {{ const probe = document.createElement('div'); \
                  probe.style.background = 'Canvas'; document.body.append(probe); \
                  const canvas = getComputedStyle(probe).backgroundColor; probe.remove(); \
@@ -750,13 +751,13 @@ fn the_mini_strip_fits_320px() {
             .await
             .unwrap();
         let page = &fixture.page;
-        page.execute(SetDeviceMetricsOverrideParams::new(320, 800, 1.0, true))
+        page.execute_bounded(SetDeviceMetricsOverrideParams::new(320, 800, 1.0, true))
             .await
             .unwrap();
         wait::for_visible(page, "[data-slot=strip]").await.unwrap();
         // Against 320, not `innerWidth`: a mobile layout viewport widens to its content.
         let [overflow, right, days]: [f64; 3] = page
-            .evaluate(
+            .evaluate_bounded(
                 "(() => { const strip = document.querySelector('[data-slot=strip]'); \
                  return [document.documentElement.scrollWidth - 320, \
                    strip.getBoundingClientRect().right - 320, \

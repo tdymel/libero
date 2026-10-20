@@ -3,6 +3,7 @@
 
 use e2e::browser::{Scheme, block_on};
 use e2e::passes::pointer;
+use e2e::wait::PageBounded;
 use e2e::{Fixture, Viewport, wait};
 
 const SHADOW: &str = "getComputedStyle(document.getElementById('card')).boxShadow";
@@ -18,7 +19,12 @@ fn every_surface_casts_a_shadow_in_both_schemes() {
             let page = &fixture.page;
             wait::for_visible(page, "[role=menu]").await.unwrap();
 
-            let shadow: String = page.evaluate(SHADOW).await.unwrap().into_value().unwrap();
+            let shadow: String = page
+                .evaluate_bounded(SHADOW)
+                .await
+                .unwrap()
+                .into_value()
+                .unwrap();
             assert_ne!(
                 shadow,
                 "none",
@@ -37,7 +43,9 @@ fn every_surface_casts_a_shadow_in_both_schemes() {
             pointer::click(page, "#open-dialog").await.unwrap();
             wait::for_visible(page, "[role=dialog]").await.unwrap();
             let dialog: String = page
-                .evaluate("getComputedStyle(document.querySelector('[role=dialog]')).boxShadow")
+                .evaluate_bounded(
+                    "getComputedStyle(document.querySelector('[role=dialog]')).boxShadow",
+                )
                 .await
                 .unwrap()
                 .into_value()

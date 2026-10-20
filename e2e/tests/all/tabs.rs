@@ -7,6 +7,7 @@ use e2e::browser::block_on;
 use e2e::driver::{Driver, eventually, eventually_focused};
 use e2e::passes::pointer;
 use e2e::suite::Step;
+use e2e::wait::PageBounded;
 use e2e::{Fixture, Suite, Viewport, passes::keyboard, wait};
 
 pub const TAB: &str = "[role=tab]";
@@ -136,7 +137,7 @@ fn the_selected_tab_stands_out_in_forced_colours() {
     block_on(async {
         let fixture = Fixture::open("/tabs", Viewport::Desktop).await.unwrap();
         let page = &fixture.page;
-        page.execute(
+        page.execute_bounded(
             SetEmulatedMediaParams::builder()
                 .features(vec![MediaFeature::new("forced-colors", "active")])
                 .build(),
@@ -151,7 +152,7 @@ fn the_selected_tab_stands_out_in_forced_colours() {
         .await
         .unwrap();
         let (selected, others): (String, Vec<String>) = page
-            .evaluate(
+            .evaluate_bounded(
                 "(() => {
                     const line = el => getComputedStyle(el).borderBottomColor;
                     const tabs = [...document.querySelectorAll('[role=tablist] > [role=tab]')];
@@ -257,7 +258,7 @@ const FOCUS_AND_SELECTION: &str = "(() => { const tabs = [...document.querySelec
 async fn focus_and_selection(fixture: &Fixture) -> String {
     fixture
         .page
-        .evaluate(FOCUS_AND_SELECTION)
+        .evaluate_bounded(FOCUS_AND_SELECTION)
         .await
         .unwrap()
         .into_value()
@@ -321,7 +322,7 @@ fn manual_activation_selects_on_enter_and_space() {
             until_focus_and_selection(&fixture, expected, &format!("after {key:?}")).await;
         }
         let panel: String = page
-            .evaluate("document.querySelector('[role=tabpanel]').textContent")
+            .evaluate_bounded("document.querySelector('[role=tabpanel]').textContent")
             .await
             .unwrap()
             .into_value()
@@ -342,7 +343,7 @@ fn shortcut_chords_pass_through() {
     block_on(async {
         let fixture = Fixture::open("/tabs", Viewport::Desktop).await.unwrap();
         let page = &fixture.page;
-        page.evaluate(
+        page.evaluate_bounded(
             "window.__prevented = []; \
              window.addEventListener('keydown', e => window.__prevented.push(e.defaultPrevented))",
         )
@@ -351,7 +352,9 @@ fn shortcut_chords_pass_through() {
         reset_tab_position(page).await.unwrap();
         keyboard::press(page, keyboard::TAB).await.unwrap();
         until_focus_and_selection(&fixture, "0:0", "Tab to focus the first tab").await;
-        page.evaluate("window.__prevented = []").await.unwrap();
+        page.evaluate_bounded("window.__prevented = []")
+            .await
+            .unwrap();
         for modifier in [keyboard::ALT, keyboard::CTRL, keyboard::META] {
             keyboard::press_with(page, keyboard::ARROW_RIGHT, modifier)
                 .await
@@ -366,7 +369,7 @@ fn shortcut_chords_pass_through() {
         .unwrap();
         assert_eq!(focus_and_selection(&fixture).await, "0:0");
         let prevented: String = page
-            .evaluate("window.__prevented.filter(Boolean).length + ''")
+            .evaluate_bounded("window.__prevented.filter(Boolean).length + ''")
             .await
             .unwrap()
             .into_value()
@@ -389,7 +392,7 @@ fn a_crowded_strip_scrolls_inside_itself() {
         let page = &fixture.page;
         let (width, _) = Viewport::Mobile.size();
         let page_width: i64 = page
-            .evaluate("document.documentElement.scrollWidth")
+            .evaluate_bounded("document.documentElement.scrollWidth")
             .await
             .unwrap()
             .into_value()
@@ -423,7 +426,7 @@ async fn open_full_width() -> Fixture {
         .await
         .unwrap();
     let page = &fixture.page;
-    page.execute(SetDeviceMetricsOverrideParams::new(320, 800, 1.0, true))
+    page.execute_bounded(SetDeviceMetricsOverrideParams::new(320, 800, 1.0, true))
         .await
         .unwrap();
     page.reload().await.unwrap();
@@ -469,7 +472,7 @@ fn a_nested_strip_ignores_the_outer_full_width() {
         let fixture = open_full_width().await;
         let grow: Vec<String> = fixture
             .page
-            .evaluate(
+            .evaluate_bounded(
                 "['#outer > [role=tablist] > [role=tab]', '#inner [role=tab]'] \
                  .map(s => getComputedStyle(document.querySelector(s)).flexGrow)",
             )
@@ -499,7 +502,7 @@ fn a_selected_tab_scrolls_into_its_strip() {
     block_on(async {
         let fixture = Fixture::open("/tabs-late", Viewport::Mobile).await.unwrap();
         let page = &fixture.page;
-        page.execute(SetDeviceMetricsOverrideParams::new(320, 800, 1.0, true))
+        page.execute_bounded(SetDeviceMetricsOverrideParams::new(320, 800, 1.0, true))
             .await
             .unwrap();
         // Mounted at 320px: the reveal follows the value, not a later resize.
@@ -517,7 +520,7 @@ fn a_selected_tab_scrolls_into_its_strip() {
             .await
             .unwrap();
         let page_width: f64 = page
-            .evaluate("document.documentElement.scrollWidth")
+            .evaluate_bounded("document.documentElement.scrollWidth")
             .await
             .unwrap()
             .into_value()
@@ -576,7 +579,7 @@ fn a_small_tab_takes_a_finger_in_a_44px_box() {
     block_on(async {
         let fixture = Fixture::open("/tabs-sm", Viewport::Desktop).await.unwrap();
         let page = &fixture.page;
-        page.execute(SetTouchEmulationEnabledParams::new(true))
+        page.execute_bounded(SetTouchEmulationEnabledParams::new(true))
             .await
             .unwrap();
         wait::for_js_true(
@@ -588,7 +591,7 @@ fn a_small_tab_takes_a_finger_in_a_44px_box() {
         .unwrap();
 
         let misses: Vec<String> = page
-            .evaluate(
+            .evaluate_bounded(
                 "[...document.querySelectorAll('[role=tab]')].flatMap(el => {
                     const r = el.getBoundingClientRect();
                     const cx = r.x + r.width / 2, cy = r.y + r.height / 2;

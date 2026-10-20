@@ -3,6 +3,7 @@
 
 use e2e::browser::block_on;
 use e2e::suite::Suite;
+use e2e::wait::PageBounded;
 use e2e::{Fixture, Viewport, ax, wait};
 
 #[test]
@@ -18,7 +19,7 @@ fn a_badge_grows_with_the_text_size() {
         let fixture = Fixture::open("/badge", Viewport::Desktop).await.unwrap();
         let clipped: Vec<String> = fixture
             .page
-            .evaluate(
+            .evaluate_bounded(
                 "(() => { document.documentElement.style.fontSize = '200%'; \
                  return [...document.querySelectorAll('#badge-sizes > span')] \
                  .filter(b => parseFloat(getComputedStyle(b).fontSize) * 1.2 > b.clientHeight) \
@@ -41,7 +42,7 @@ fn a_literal_fill_takes_the_readable_label() {
         let fixture = Fixture::open("/badge", Viewport::Desktop).await.unwrap();
         let labels: Vec<String> = fixture
             .page
-            .evaluate(
+            .evaluate_bounded(
                 "['#literal-light', '#literal-dark'] \
                  .map(id => getComputedStyle(document.querySelector(id)).color)",
             )
@@ -61,7 +62,7 @@ fn an_ordered_list_shows_its_numbers() {
         let fixture = Fixture::open("/badge", Viewport::Desktop).await.unwrap();
         let shown: bool = fixture
             .page
-            .evaluate(
+            .evaluate_bounded(
                 "(() => { const ol = document.querySelector('ol#ordered-list'); \
                  const li = ol.querySelector('li'); const s = getComputedStyle(li); \
                  return s.display === 'list-item' && s.listStyleType === 'decimal' \
@@ -86,7 +87,7 @@ fn an_icon_replaces_the_number_and_its_gutter() {
         let fixture = Fixture::open("/badge", Viewport::Desktop).await.unwrap();
         let [icon_list, mixed_icon, mixed_plain]: [String; 3] = fixture
             .page
-            .evaluate(
+            .evaluate_bounded(
                 "(() => { const gutter = li => `${getComputedStyle(li).listStyleType === 'decimal' \
                  && getComputedStyle(li).display === 'list-item'}:${Math.round(li.getBoundingClientRect().left \
                  - li.parentElement.getBoundingClientRect().left)}`; \
@@ -129,7 +130,7 @@ fn a_nested_float_does_not_inherit_the_outer_shift() {
         let fixture = Fixture::open("/badge", Viewport::Desktop).await.unwrap();
         let [outer, inner]: [f64; 2] = fixture
             .page
-            .evaluate(
+            .evaluate_bounded(
                 "['#nested-outer', '#nested-inner'] \
                  .map(id => document.querySelector(id).getBoundingClientRect().top)",
             )
@@ -153,7 +154,7 @@ fn a_bare_indicator_dot_shows_in_forced_colours() {
     block_on(async {
         let fixture = Fixture::open("/badge", Viewport::Desktop).await.unwrap();
         let page = &fixture.page;
-        page.execute(
+        page.execute_bounded(
             SetEmulatedMediaParams::builder()
                 .features(vec![MediaFeature::new("forced-colors", "active")])
                 .build(),
@@ -168,7 +169,7 @@ fn a_bare_indicator_dot_shows_in_forced_colours() {
         .await
         .unwrap();
         let [dot, ping, ring, canvas]: [String; 4] = page
-            .evaluate(
+            .evaluate_bounded(
                 "(() => { const probe = document.createElement('div'); \
                  probe.style.background = 'Canvas'; document.body.append(probe); \
                  const canvas = getComputedStyle(probe).backgroundColor; probe.remove(); \

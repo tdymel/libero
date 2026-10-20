@@ -6,6 +6,7 @@ use e2e::archetypes::Combobox;
 use e2e::browser::block_on;
 use e2e::driver::{Driver, eventually_focused, eventually_text};
 use e2e::suite::Step;
+use e2e::wait::PageBounded;
 use e2e::{
     Fixture, Suite, Viewport, clock,
     passes::{keyboard, pointer},
@@ -151,7 +152,7 @@ fn leaving_keeps_the_value(key: keyboard::Key, modifiers: i64) {
         .unwrap();
         clock::settle(page).await.unwrap();
         let text: String = page
-            .evaluate("document.body.innerText")
+            .evaluate_bounded("document.body.innerText")
             .await
             .unwrap()
             .into_value()
@@ -236,14 +237,14 @@ fn a_refused_pick_keeps_the_old_selection() {
         let fixture = Fixture::open(ROUTE, Viewport::Desktop).await.unwrap();
         let page = &fixture.page;
         let read = async |js: &str| -> String {
-            page.evaluate(format!("String({js})"))
+            page.evaluate_bounded(format!("String({js})"))
                 .await
                 .unwrap()
                 .into_value()
                 .unwrap()
         };
         let pick = async |label: &str| {
-            page.evaluate(format!(
+            page.evaluate_bounded(format!(
                 "document.querySelector('[data-e2e=pick]')?.removeAttribute('data-e2e'); \
                  [...document.querySelectorAll('[role=option]')].find((o) => o.textContent.trim() === {label:?}).setAttribute('data-e2e', 'pick')"
             ))

@@ -7,6 +7,7 @@ use e2e::browser::block_on;
 use e2e::driver::{Driver, eventually, eventually_focused};
 use e2e::passes::{keyboard, motion};
 use e2e::suite::Step;
+use e2e::wait::PageBounded;
 use e2e::{Fixture, Suite, Viewport, js, wait};
 
 use chromiumoxide::Page;
@@ -61,7 +62,7 @@ fn a_long_label_wraps_instead_of_widening_the_page() {
         let page = &fixture.page;
         wait::for_visible(page, "#long-trigger-0").await.unwrap();
         let widths: Vec<f64> = page
-            .evaluate(
+            .evaluate_bounded(
                 "(() => {
                     const b = document.querySelector('#long-trigger-0');
                     const chevron = b.querySelector('[data-accordion-chevron]');
@@ -99,7 +100,7 @@ fn wide_panel_content_wraps_or_scrolls_inside_the_panel() {
         let page = &fixture.page;
         wait::for_visible(page, "#wide-child").await.unwrap();
         let widths: Vec<f64> = page
-            .evaluate(
+            .evaluate_bounded(
                 "(() => {
                     const body = document.querySelector('#wide [data-accordion-body]');
                     const word = document.querySelector('#word');
@@ -200,7 +201,7 @@ fn home_and_end_at_the_ends_leave_the_page_to_scroll() {
 /// Presses `keys` on the focused element and asserts none was cancelled and focus
 /// stayed: a lone roving item leaves them to the page (todos 2432, 2465).
 pub(crate) async fn assert_keys_left_to_page(page: &Page, keys: &[keyboard::Key]) {
-    page.evaluate(
+    page.evaluate_bounded(
         "window.__prevented = []; window.__focused = document.activeElement; \
          if (!window.__listening) { window.__listening = true; \
          window.addEventListener('keydown', e => window.__prevented.push(e.defaultPrevented)); }",
@@ -238,7 +239,7 @@ fn hidden(index: usize) -> String {
 
 /// The region's role and label, as `[role, aria-labelledby]`.
 async fn region(page: &Page, index: usize) -> (Option<String>, Option<String>) {
-    page.evaluate(format!(
+    page.evaluate_bounded(format!(
         "(() => {{ const r = document.querySelector('#checkout-region-{index}'); \
          return [r.getAttribute('role'), r.getAttribute('aria-labelledby')]; }})()"
     ))

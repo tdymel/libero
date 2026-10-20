@@ -8,6 +8,7 @@ use chromiumoxide::Page;
 use e2e::browser::{Scheme, block_on};
 use e2e::passes::keyboard::{self, CTRL, ENTER, Key};
 use e2e::passes::{contrast, pointer};
+use e2e::wait::PageBounded;
 use e2e::{Fixture, Viewport, js, wait};
 
 /// No transition or animation still running, as a screenshot or a colour read needs.
@@ -168,7 +169,9 @@ fn a_task_box_click_toggles_its_item_and_the_caret_skips_it() {
             .await
             .unwrap();
         let page = &fixture.page;
-        page.evaluate(format!("{EDITOR}.focus()")).await.unwrap();
+        page.evaluate_bounded(format!("{EDITOR}.focus()"))
+            .await
+            .unwrap();
         editor_status(page).await;
         keyboard::type_text(page, "- [ ] one").await.unwrap();
         keyboard::press(page, ENTER).await.unwrap();
@@ -220,7 +223,7 @@ fn a_task_box_click_toggles_its_item_and_the_caret_skips_it() {
             "the caret at the end of \"one\"",
         )
         .await;
-        page.evaluate(SYNCED).await.unwrap();
+        page.evaluate_bounded(SYNCED).await.unwrap();
         keyboard::type_text(page, "s").await.unwrap();
         out_eq(page, "- [x] ones\n- [ ] twos\n").await;
 
@@ -269,7 +272,7 @@ async fn enter_code(page: &Page) {
     wait::for_selector(page, "[role=textbox] [data-code=source]")
         .await
         .unwrap();
-    page.evaluate(SYNCED).await.unwrap();
+    page.evaluate_bounded(SYNCED).await.unwrap();
 }
 
 #[test]
@@ -292,14 +295,14 @@ fn a_trailing_code_block_is_left_by_arrow_down_mod_enter_and_a_click_below() {
         out_eq(page, both).await;
 
         // Outside a code block Mod+Enter is not the editor's: a caller's send still sees it.
-        page.evaluate(
+        page.evaluate_bounded(
             "window.__free = 0; addEventListener('keydown', e => { if (e.ctrlKey && e.key === 'Enter' && !e.defaultPrevented) __free++; })",
         )
         .await
         .unwrap();
         keyboard::press_with(page, ENTER, CTRL).await.unwrap();
         // The editor handles a key within it; past its caret sync it has done all it would.
-        page.evaluate(SYNCED).await.unwrap();
+        page.evaluate_bounded(SYNCED).await.unwrap();
         let free: u32 = js(page, "window.__free").await;
         assert_eq!(free, 1);
         assert_eq!(out(page).await, both);
@@ -435,7 +438,7 @@ fn the_fence_button_and_mod_shift_l_change_the_language_and_return_to_the_caret(
         wait::for_js_true(page, IN_TEXT, "focus back in the text after Escape")
             .await
             .unwrap();
-        page.evaluate(SYNCED).await.unwrap();
+        page.evaluate_bounded(SYNCED).await.unwrap();
         keyboard::type_text(page, "z").await.unwrap();
         out_eq(page, "intro\n\n```\nlet x = 1;z\n```\n").await;
         fixture.close().await.unwrap();
@@ -597,7 +600,9 @@ fn a_view_shows_a_doc_read_only_and_follows_an_editor() {
         .await;
         assert_eq!(editing, 0, "a view is not an editing surface");
 
-        page.evaluate(format!("{EDITOR}.focus()")).await.unwrap();
+        page.evaluate_bounded(format!("{EDITOR}.focus()"))
+            .await
+            .unwrap();
         keyboard::type_text(page, "ab").await.unwrap();
         wait::for_js_true(
             page,

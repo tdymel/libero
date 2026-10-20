@@ -14,6 +14,7 @@ use e2e::driver::{
     Driver, Host, Platform, eventually, eventually_answered, eventually_text, record_outcome,
 };
 use e2e::passes::pointer;
+use e2e::wait::PageBounded;
 use e2e::{Fixture, Viewport, wait};
 
 /// Nothing prompts or locates until asked; Blitz has no Geolocation API.
@@ -114,13 +115,13 @@ fn fake_fix_on_android() {
 
 async fn set_permission(page: &Page, setting: PermissionSetting) -> Result<()> {
     let descriptor = PermissionDescriptor::new("geolocation");
-    page.execute(SetPermissionParams::new(descriptor, setting))
+    page.execute_bounded(SetPermissionParams::new(descriptor, setting))
         .await?;
     Ok(())
 }
 
 async fn move_to(page: &Page, latitude: f64, longitude: f64) -> Result<()> {
-    page.execute(
+    page.execute_bounded(
         SetGeolocationOverrideParams::builder()
             .latitude(latitude)
             .longitude(longitude)

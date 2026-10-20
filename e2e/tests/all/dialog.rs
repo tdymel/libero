@@ -3,6 +3,7 @@
 
 use e2e::browser::block_on;
 use e2e::passes::{focus, pointer};
+use e2e::wait::PageBounded;
 use e2e::{Fixture, Suite, Viewport, wait};
 
 const CLOSE: &str = "#inline button[aria-label='Close']";
@@ -26,7 +27,7 @@ fn an_inline_dialog_is_named_by_its_title_and_not_modal() {
         wait::for_selector(page, "#inline").await.unwrap();
 
         let facts: Vec<Option<String>> = page
-            .evaluate(
+            .evaluate_bounded(
                 "(() => { const d = document.querySelector('#inline'); \
                  const h = document.getElementById(d.getAttribute('aria-labelledby')); \
                  return [d.getAttribute('role'), d.getAttribute('aria-modal'), \
@@ -56,7 +57,7 @@ fn a_long_dialog_title_stays_inside_the_dialog() {
         wait::for_selector(page, "#long").await.unwrap();
 
         let past: f64 = page
-            .evaluate(
+            .evaluate_bounded(
                 "(() => { const d = document.querySelector('#long'); \
                  const t = document.getElementById(d.getAttribute('aria-labelledby')); \
                  return t.getBoundingClientRect().width - d.getBoundingClientRect().width; })()",
@@ -83,7 +84,7 @@ fn an_inline_dialog_fits_its_container() {
         wait::for_selector(page, "#inline").await.unwrap();
 
         let (overhang, page_overflow): (f64, f64) = page
-            .evaluate(
+            .evaluate_bounded(
                 "(() => { const d = document.querySelector('#inline'); \
                  const p = d.parentElement.getBoundingClientRect(); \
                  const e = document.documentElement; \

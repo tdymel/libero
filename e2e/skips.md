@@ -1,6 +1,6 @@
 # Skipped e2e scenarios
 
-Scenarios: 621
+Scenarios: 624
 
 Generated from the `scenario!` skips in `e2e/tests/all` by `cargo test -p e2e --lib skips`; edit the skip, not this file. A reason starting `upstream:` waits on Dioxus, Blitz, wry or the engine (revisit on their update, todo 3362), a number names the todo that removes it.
 
@@ -313,6 +313,7 @@ The performance scenarios (units `perf`, `table_perf`) are no skips but run on r
 | `table_grid::tab_and_shift_enter_move_the_stop` | android | 958: roving keys are inert in the emulator's WebView |
 | `table_grid::tab_enters_and_leaves_in_one_stop` | android | 958: roving keys are inert in the emulator's WebView |
 | `table_grid::the_editor_opens_with_its_text_selected` | android | 958: roving keys are inert in the emulator's WebView |
+| `table_grid::the_header_cell_is_the_only_tab_stop` | android | 958: roving keys are inert in the emulator's WebView |
 | `table_groups::a_focused_windowed_row_clears_the_footer` | android | 958: element identity on the WebView |
 | `table_groups::a_focused_windowed_row_clears_the_footer` | ios | 958: element identity on the WebView |
 | `table_groups::a_footer_lines_up_under_its_columns_and_sticks` | android | 958: element identity on the WebView |

@@ -3,6 +3,7 @@
 
 use e2e::browser::block_on;
 use e2e::passes::keyboard;
+use e2e::wait::PageBounded;
 use e2e::{Fixture, Suite, Viewport, wait};
 
 #[test]
@@ -78,10 +79,15 @@ fn the_initials_are_legible_and_follow_the_text_size() {
         let page = &fixture.page;
         let sizes = "[...document.querySelectorAll('#sizes > *')]\
                      .map(a => parseFloat(getComputedStyle(a).fontSize))";
-        let at_default: Vec<f64> = page.evaluate(sizes).await.unwrap().into_value().unwrap();
+        let at_default: Vec<f64> = page
+            .evaluate_bounded(sizes)
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
         assert_eq!(at_default, [10.0, 12.0, 15.0, 22.0, 34.0, 48.0]);
         let doubled: Vec<f64> = page
-            .evaluate(format!(
+            .evaluate_bounded(format!(
                 "(() => {{ document.documentElement.style.fontSize = '200%'; return {sizes}; }})()"
             ))
             .await
@@ -101,7 +107,7 @@ fn the_group_ring_shows_in_forced_colours() {
     block_on(async {
         let fixture = Fixture::open("/avatar", Viewport::Desktop).await.unwrap();
         let page = &fixture.page;
-        page.execute(
+        page.execute_bounded(
             SetEmulatedMediaParams::builder()
                 .features(vec![MediaFeature::new("forced-colors", "active")])
                 .build(),
@@ -116,7 +122,7 @@ fn the_group_ring_shows_in_forced_colours() {
         .await
         .unwrap();
         let rings: Vec<String> = page
-            .evaluate(
+            .evaluate_bounded(
                 "(() => { const probe = document.createElement('div'); \
                  probe.style.color = 'Canvas'; document.body.append(probe); \
                  const canvas = getComputedStyle(probe).color; probe.remove(); \

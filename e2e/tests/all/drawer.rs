@@ -8,6 +8,7 @@ use e2e::driver::{Driver, eventually, eventually_focused};
 
 use crate::modal;
 use e2e::suite::Step;
+use e2e::wait::PageBounded;
 use e2e::{Fixture, Suite, Viewport, passes::keyboard};
 
 pub const TRIGGER: &str = "#open-drawer";
@@ -176,7 +177,7 @@ fn a_drawer_title_is_its_heading_and_name() {
         keyboard::press(page, keyboard::ENTER).await.unwrap();
         e2e::wait::for_visible(page, DIALOG).await.unwrap();
         let facts: Vec<Option<String>> = page
-            .evaluate(
+            .evaluate_bounded(
                 "(() => { const d = document.querySelector('[role=dialog]'); \
                  const h = document.getElementById(d.getAttribute('aria-labelledby')); \
                  return [d.getAttribute('aria-label'), h && h.tagName + ':' + h.textContent]; })()",
@@ -197,14 +198,14 @@ fn an_end_drawer_docks_left_in_rtl() {
     block_on(async {
         let fixture = Fixture::open("/drawer", Viewport::Desktop).await.unwrap();
         let page = &fixture.page;
-        page.evaluate("document.documentElement.dir = 'rtl'")
+        page.evaluate_bounded("document.documentElement.dir = 'rtl'")
             .await
             .unwrap();
         keyboard::tab_to(page, TRIGGER, 5).await.unwrap();
         keyboard::press(page, keyboard::ENTER).await.unwrap();
         e2e::wait::for_visible(page, DIALOG).await.unwrap();
         let x: f64 = page
-            .evaluate("document.querySelector('[role=dialog]').getBoundingClientRect().x")
+            .evaluate_bounded("document.querySelector('[role=dialog]').getBoundingClientRect().x")
             .await
             .unwrap()
             .into_value()
@@ -225,7 +226,7 @@ fn a_drawer_taller_than_the_viewport_scrolls() {
             keyboard::press(page, keyboard::ENTER).await.unwrap();
             e2e::wait::for_visible(page, DIALOG).await.unwrap();
             let reachable: bool = page
-                .evaluate(
+                .evaluate_bounded(
                     "(() => { const a = document.querySelector('#drawer-close'); a.focus(); \
                      const b = a.getBoundingClientRect(); return b.top >= 0 && b.bottom <= innerHeight; })()",
                 )
@@ -258,7 +259,7 @@ fn a_bottom_drawer_taller_than_the_viewport_is_capped_and_scrolls() {
             keyboard::press(page, keyboard::ENTER).await.unwrap();
             e2e::wait::for_visible(page, DIALOG).await.unwrap();
             let (top, bottom, height, scrolls): (f64, f64, f64, bool) = page
-                .evaluate(
+                .evaluate_bounded(
                     "(() => { const p = document.querySelector('[role=dialog]'); \
                      const b = p.getBoundingClientRect(); \
                      return [b.top, b.bottom, innerHeight, p.scrollHeight > p.clientHeight]; })()",
@@ -294,7 +295,7 @@ fn a_wide_drawer_stays_inside_a_narrow_viewport() {
             keyboard::press(page, keyboard::ENTER).await.unwrap();
             e2e::wait::for_visible(page, DIALOG).await.unwrap();
             let (right, width): (f64, f64) = page
-                .evaluate(
+                .evaluate_bounded(
                     "(() => { const b = document.querySelector('[role=dialog]').getBoundingClientRect(); \
                      return [b.right, innerWidth]; })()",
                 )
@@ -325,7 +326,7 @@ fn a_long_title_stays_inside_a_narrow_drawer() {
         keyboard::press(page, keyboard::ENTER).await.unwrap();
         e2e::wait::for_visible(page, "#drawer-title").await.unwrap();
         let past: f64 = page
-            .evaluate(
+            .evaluate_bounded(
                 "(() => { const panel = document.querySelector('[role=dialog]').getBoundingClientRect(); \
                  const title = document.querySelector('#drawer-title'); \
                  return Math.max(...[...title.getClientRects()].map(r => r.right)) - panel.right; })()",

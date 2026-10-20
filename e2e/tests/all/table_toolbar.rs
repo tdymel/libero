@@ -8,6 +8,7 @@ use chromiumoxide::cdp::browser_protocol::browser::{
 use e2e::browser::block_on;
 use e2e::driver::{Driver, Rect, eventually, eventually_focused, eventually_text};
 use e2e::passes::{keyboard, pointer};
+use e2e::wait::PageBounded;
 use e2e::{Fixture, Viewport, wait};
 
 /// Clicks the open menu's entry reading `label`, once it shows (todo 1502).
@@ -151,7 +152,7 @@ fn the_toolbar_wraps_in_a_narrow_flex_parent() {
         let page = &fixture.page;
         wait::for_visible(page, "[data-toolbar]").await.unwrap();
         let outside: Vec<String> = page
-            .evaluate(
+            .evaluate_bounded(
                 "(() => { const root = document.querySelector('[data-toolbar]').parentElement; \
                  Object.assign(root.parentElement.style, { display: 'flex', width: '160px' }); \
                  root.querySelector('table').style.minWidth = '600px'; \
@@ -181,7 +182,7 @@ fn an_export_saved_with_save_file_downloads_the_csv() {
             .unwrap();
         fixture
             .page
-            .execute(
+            .execute_bounded(
                 SetDownloadBehaviorParams::builder()
                     .behavior(SetDownloadBehaviorBehavior::Allow)
                     .download_path(dir.to_string_lossy())

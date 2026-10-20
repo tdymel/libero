@@ -10,6 +10,7 @@ use chromiumoxide::cdp::browser_protocol::input::{
 use e2e::browser::block_on;
 use e2e::frames;
 use e2e::passes::pointer;
+use e2e::wait::PageBounded;
 use e2e::{Fixture, Viewport};
 
 /// A page that burns 50 ms in every frame must show frames of 50 ms and more.
@@ -20,7 +21,7 @@ fn the_recorder_sees_a_page_that_burns_fifty_milliseconds_per_frame() {
             .await
             .unwrap();
         let page = &fixture.page;
-        page.evaluate(
+        page.evaluate_bounded(
             "(() => { const burn = () => { const end = performance.now() + 50; \
              while (performance.now() < end) {} requestAnimationFrame(burn); }; \
              requestAnimationFrame(burn); })()",
@@ -59,7 +60,7 @@ fn frame_time_of_a_scroll_area_under_the_wheel() {
         front.release().await.unwrap();
         let front = frames::start(page).await.unwrap();
         for _ in 0..40 {
-            page.execute(
+            page.execute_bounded(
                 DispatchMouseEventParams::builder()
                     .r#type(DispatchMouseEventType::MouseWheel)
                     .x(at.x)
@@ -90,6 +91,7 @@ mod scroll_area_swipe {
     fn android() {
         use e2e::driver::{Android, Driver};
         use e2e::frames;
+        use e2e::wait::PageBounded;
 
         if std::env::var_os("E2E_FRAMES").is_none() {
             println!("frame-time report skipped: set E2E_FRAMES=1");
@@ -99,7 +101,7 @@ mod scroll_area_swipe {
             let mut driver = Android::open("/scroll-area").await.unwrap();
             let page = driver.page().clone();
             let first_row = async || -> String {
-                page.evaluate("document.querySelector('#list-pane [data-row]').dataset.row")
+                page.evaluate_bounded("document.querySelector('#list-pane [data-row]').dataset.row")
                     .await
                     .unwrap()
                     .into_value()

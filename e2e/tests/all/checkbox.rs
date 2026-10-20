@@ -6,6 +6,7 @@ use e2e::driver::{Driver, eventually, eventually_focused};
 use e2e::passes::keyboard::{self, ENTER, SPACE};
 use e2e::passes::{focus, pointer};
 use e2e::suite::Step;
+use e2e::wait::PageBounded;
 use e2e::{Fixture, Suite, Viewport};
 
 #[test]
@@ -46,7 +47,7 @@ fn only_a_checked_or_mixed_box_shows_its_mark_in_forced_colours() {
         .unwrap();
         e2e::browser::force_colours(page).await.unwrap();
         let wrong: Vec<String> = page
-            .evaluate(
+            .evaluate_bounded(
                 "[...document.querySelectorAll('[data-slot=control] > [data-slot=box]')].flatMap(box => { \
                    const input = box.previousElementSibling, mark = box.querySelector('svg'); \
                    const on = input.checked || input.indeterminate; \
@@ -66,7 +67,7 @@ fn only_a_checked_or_mixed_box_shows_its_mark_in_forced_colours() {
 async fn emitted(fixture: &Fixture) -> String {
     fixture
         .page
-        .evaluate("document.querySelector('[data-emitted]').dataset.emitted")
+        .evaluate_bounded("document.querySelector('[data-emitted]').dataset.emitted")
         .await
         .unwrap()
         .into_value()
@@ -101,7 +102,7 @@ fn space_and_clicks_toggle_and_a_mixed_box_turns_true() {
         assert!(all.contains("[checked=mixed]"), "{all}");
         // ARIA in HTML forbids `aria-checked` on a native checkbox (todo 2952).
         let attribute: bool = page
-            .evaluate("document.querySelector('#all').hasAttribute('aria-checked')")
+            .evaluate_bounded("document.querySelector('#all').hasAttribute('aria-checked')")
             .await
             .unwrap()
             .into_value()
@@ -164,7 +165,7 @@ fn a_disabled_box_shows_it_takes_no_click() {
                 .unwrap();
             let actual: String = fixture
                 .page
-                .evaluate(format!(
+                .evaluate_bounded(format!(
                     "getComputedStyle(document.querySelector({box_:?})).cursor"
                 ))
                 .await

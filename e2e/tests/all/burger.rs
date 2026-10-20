@@ -2,6 +2,7 @@
 
 use e2e::browser::block_on;
 use e2e::passes::{focus, keyboard};
+use e2e::wait::PageBounded;
 use e2e::{Fixture, Suite, Viewport, wait};
 
 const BURGER: &str = "#burger";
@@ -25,7 +26,12 @@ fn enter_and_space_toggle_the_disclosure_and_keep_the_name_and_focus() {
         wait::for_js_true(page, &format!("{EXPANDED} === 'false'"), "a closed burger")
             .await
             .unwrap();
-        let name: String = page.evaluate(LABEL).await.unwrap().into_value().unwrap();
+        let name: String = page
+            .evaluate_bounded(LABEL)
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
         assert_eq!(name, "Toggle navigation");
 
         keyboard::tab_to(page, BURGER, 6).await.unwrap();
@@ -40,7 +46,12 @@ fn enter_and_space_toggle_the_disclosure_and_keep_the_name_and_focus() {
                 .await
                 .unwrap();
             focus::assert_focused(page, BURGER, step).await.unwrap();
-            let label: String = page.evaluate(LABEL).await.unwrap().into_value().unwrap();
+            let label: String = page
+                .evaluate_bounded(LABEL)
+                .await
+                .unwrap()
+                .into_value()
+                .unwrap();
             assert_eq!(label, name, "the name changed after {step}");
         }
 

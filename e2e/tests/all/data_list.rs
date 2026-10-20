@@ -2,6 +2,7 @@
 
 use e2e::browser::block_on;
 use e2e::suite::Suite;
+use e2e::wait::PageBounded;
 use e2e::{Fixture, Viewport};
 
 /// Pins the `term`/`definition` roles a styled `dl` keeps.
@@ -28,7 +29,7 @@ fn a_term_and_its_description_sit_side_by_side() {
 
         let laid_out: String = fixture
             .page
-            .evaluate(LAID_OUT)
+            .evaluate_bounded(LAID_OUT)
             .await
             .unwrap()
             .into_value()

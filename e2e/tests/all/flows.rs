@@ -7,6 +7,7 @@ use chromiumoxide::cdp::browser_protocol::emulation::SetDeviceMetricsOverridePar
 use e2e::browser::block_on;
 use e2e::passes::keyboard;
 use e2e::passes::{focus, pointer};
+use e2e::wait::PageBounded;
 use e2e::{Fixture, Viewport, wait};
 
 /// Marks the first `css` element whose trimmed text is `text` and returns a
@@ -29,7 +30,7 @@ async fn by_text(page: &Page, css: &str, text: &str) -> Result<String> {
 /// `pointer::click`, after scrolling the element into view: a flow's page is
 /// taller than the viewport.
 async fn click(page: &Page, selector: &str) -> Result<()> {
-    page.evaluate(format!(
+    page.evaluate_bounded(format!(
         "document.querySelector({selector:?})?.scrollIntoView({{ block: 'center' }})"
     ))
     .await?;
@@ -45,7 +46,7 @@ async fn click_text(page: &Page, css: &str, text: &str) -> Result<()> {
 /// types `text`.
 async fn fill(page: &Page, selector: &str, text: &str) -> Result<()> {
     click(page, selector).await?;
-    page.evaluate(format!("document.querySelector({selector:?}).select()"))
+    page.evaluate_bounded(format!("document.querySelector({selector:?}).select()"))
         .await?;
     keyboard::press(page, keyboard::BACKSPACE).await?;
     keyboard::type_text(page, text).await
@@ -55,7 +56,7 @@ async fn fill(page: &Page, selector: &str, text: &str) -> Result<()> {
 /// kind had its per-key pass (todo 1832).
 async fn fill_plain(page: &Page, selector: &str, text: &str) -> Result<()> {
     click(page, selector).await?;
-    page.evaluate(format!("document.querySelector({selector:?}).select()"))
+    page.evaluate_bounded(format!("document.querySelector({selector:?}).select()"))
         .await?;
     keyboard::press(page, keyboard::BACKSPACE).await?;
     keyboard::insert_text(page, text).await
@@ -63,7 +64,7 @@ async fn fill_plain(page: &Page, selector: &str, text: &str) -> Result<()> {
 
 async fn texts(page: &Page, css: &str) -> Result<Vec<String>> {
     Ok(page
-        .evaluate(format!(
+        .evaluate_bounded(format!(
             "[...document.querySelectorAll({css:?})].map((el) => el.textContent.trim())"
         ))
         .await?
@@ -88,7 +89,7 @@ async fn wait_texts(page: &Page, css: &str, expected: &[&str], what: &str) {
 }
 
 async fn data(page: &Page, id: &str, key: &str) -> String {
-    page.evaluate(format!("document.getElementById({id:?}).dataset.{key}"))
+    page.evaluate_bounded(format!("document.getElementById({id:?}).dataset.{key}"))
         .await
         .unwrap()
         .into_value()
@@ -119,7 +120,7 @@ fn the_signup_form_works_at_320px() {
             .await
             .unwrap();
         let page = &fixture.page;
-        page.execute(SetDeviceMetricsOverrideParams::new(320, 844, 1.0, true))
+        page.execute_bounded(SetDeviceMetricsOverrideParams::new(320, 844, 1.0, true))
             .await
             .unwrap();
         wait::for_js_true(
@@ -131,7 +132,7 @@ fn the_signup_form_works_at_320px() {
         .unwrap();
         signup(page).await;
         let overflow: f64 = page
-            .evaluate("document.documentElement.scrollWidth - 320")
+            .evaluate_bounded("document.documentElement.scrollWidth - 320")
             .await
             .unwrap()
             .into_value()
@@ -258,7 +259,7 @@ async fn signup(page: &Page) {
     click_text(page, "button", "Sign up").await.unwrap();
     wait::for_selector(page, "#submitted").await.unwrap();
     let submitted: String = page
-        .evaluate("document.getElementById('submitted').textContent")
+        .evaluate_bounded("document.getElementById('submitted').textContent")
         .await
         .unwrap()
         .into_value()
@@ -275,7 +276,7 @@ async fn signup(page: &Page) {
 const ROWS: &str = "table tbody tr";
 
 async fn customers(page: &Page) -> Vec<String> {
-    page.evaluate(format!(
+    page.evaluate_bounded(format!(
         "[...document.querySelectorAll({ROWS:?})].map((tr) => tr.children[1]?.textContent.trim() ?? tr.textContent.trim())"
     ))
     .await
@@ -303,7 +304,7 @@ async fn wait_customers(page: &Page, expected: &[&str], what: &str) {
 /// Totals of the page's rows, in drawn order.
 async fn totals(page: &Page) -> Vec<u32> {
     let cells: Vec<String> = page
-        .evaluate(format!(
+        .evaluate_bounded(format!(
             "[...document.querySelectorAll({ROWS:?})].map((tr) => tr.children[2].textContent.trim())"
         ))
         .await
@@ -456,7 +457,7 @@ fn a_dialog_form_refuses_saves_and_dismisses() {
         keyboard::press(page, keyboard::ENTER).await.unwrap();
         wait::for_visible(page, DIALOG).await.unwrap();
         let empty: String = page
-            .evaluate(format!("document.querySelector({name:?}).value"))
+            .evaluate_bounded(format!("document.querySelector({name:?}).value"))
             .await
             .unwrap()
             .into_value()

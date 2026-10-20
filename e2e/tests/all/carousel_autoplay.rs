@@ -8,6 +8,7 @@ use e2e::driver::{Driver, eventually, eventually_focused};
 use e2e::passes::keyboard;
 use e2e::passes::motion;
 use e2e::passes::pointer;
+use e2e::wait::PageBounded;
 use e2e::{Fixture, Viewport, clock, wait};
 
 use super::carousel::{NEXT, TRACK, index, instant_scroll, reach};
@@ -30,7 +31,12 @@ fn autoplay_stops_once_focus_enters_until_play() {
                     .getAttribute('aria-live')";
         let start = index(page).await.unwrap();
         rotates(page, start, "autoplay to advance").await;
-        let polite: String = page.evaluate(live).await.unwrap().into_value().unwrap();
+        let polite: String = page
+            .evaluate_bounded(live)
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
         assert_eq!(polite, "off", "the status while rotating");
 
         reach(page, TRACK).await.unwrap();
@@ -50,7 +56,7 @@ fn autoplay_stops_once_focus_enters_until_play() {
 
         keyboard::press(page, keyboard::TAB).await.unwrap();
         let first: bool = page
-            .evaluate(format!("document.activeElement.matches({PAUSE:?})"))
+            .evaluate_bounded(format!("document.activeElement.matches({PAUSE:?})"))
             .await
             .unwrap()
             .into_value()
@@ -85,7 +91,7 @@ fn autoplay_without_loop_rests_on_the_last_slide() {
         assert_pressed(page, "true", "the last slide's tick").await;
         assert_stopped(page, 3, "rotated past the last slide").await;
 
-        page.evaluate(format!("document.querySelector({PAUSE:?}).click()"))
+        page.evaluate_bounded(format!("document.querySelector({PAUSE:?}).click()"))
             .await
             .unwrap();
         rotates(page, 3, "Play on the last slide to start over").await;
@@ -110,7 +116,7 @@ fn a_pointer_press_on_pause_pauses() {
         instant_scroll(page).await;
         assert_pressed(page, "false", "load").await;
         let (x, y): (f64, f64) = page
-            .evaluate(format!(
+            .evaluate_bounded(format!(
                 "(() => {{ const r = document.querySelector({PAUSE:?}).getBoundingClientRect(); \
                  return [r.x + r.width * 0.15, r.y + r.height / 2]; }})()"
             ))
@@ -194,7 +200,7 @@ fn autoplay_waits_for_its_control_under_reduced_motion() {
         let start = index(page).await.unwrap();
         assert_stopped(page, start, "rotated under reduced motion").await;
         let pressed: String = page
-            .evaluate(format!(
+            .evaluate_bounded(format!(
                 "document.querySelector({pause:?}).getAttribute('aria-pressed')"
             ))
             .await
@@ -203,7 +209,7 @@ fn autoplay_waits_for_its_control_under_reduced_motion() {
             .unwrap();
         assert_eq!(pressed, "true", "the pause control under reduced motion");
 
-        page.evaluate(format!("document.querySelector({pause:?}).click()"))
+        page.evaluate_bounded(format!("document.querySelector({pause:?}).click()"))
             .await
             .unwrap();
         rotates(page, start, "autoplay to advance once started").await;
@@ -245,7 +251,7 @@ fn autoplay_pauses_when_reduced_motion_turns_on() {
         assert_stopped(page, held, "rotated after reduced motion turned on").await;
 
         // Play pressed under reduced motion is the reader's choice, and holds.
-        page.evaluate(format!("document.querySelector({pause:?}).click()"))
+        page.evaluate_bounded(format!("document.querySelector({pause:?}).click()"))
             .await
             .unwrap();
         rotates(page, held, "autoplay to advance once started again").await;
@@ -266,7 +272,7 @@ fn the_pause_control_leaves_next_uncovered() {
             let fixture = Fixture::open("/carousel/autoplay", viewport).await.unwrap();
             let hit: bool = fixture
                 .page
-                .evaluate(format!(
+                .evaluate_bounded(format!(
                     "(() => {{ const next = document.querySelector({NEXT:?}); \
                      const r = next.getBoundingClientRect(); \
                      const at = document.elementFromPoint(r.x + r.width / 2, r.y + r.height / 2); \
@@ -290,7 +296,7 @@ fn the_pause_control_stays_off_the_dots() {
             let fixture = Fixture::open("/carousel/autoplay", viewport).await.unwrap();
             let clear: Vec<f64> = fixture
                 .page
-                .evaluate(format!(
+                .evaluate_bounded(format!(
                     "(() => {{ const p = document.querySelector({PAUSE:?}).getBoundingClientRect(); \
                      const dot = document.querySelector('[aria-roledescription=carousel] [role=group] > button') \
                        .getBoundingClientRect(); \
@@ -362,9 +368,9 @@ fn a_press_without_focus_leaves_the_next_entry_an_entry() {
              b.dispatchEvent(new PointerEvent('pointerdown', o)); \
              b.dispatchEvent(new PointerEvent('pointerup', o)); b.click(); }})()"
         );
-        page.evaluate(press.clone()).await.unwrap();
+        page.evaluate_bounded(press.clone()).await.unwrap();
         assert_pressed(page, "true", "a focusless press on Pause").await;
-        page.evaluate(press).await.unwrap();
+        page.evaluate_bounded(press).await.unwrap();
         assert_pressed(page, "false", "a focusless press on Play").await;
         let start = index(page).await.unwrap();
         rotates(page, start, "autoplay to advance once Play is pressed").await;
@@ -391,7 +397,7 @@ fn a_press_released_off_pause_leaves_the_next_entry_an_entry() {
         let page = &fixture.page;
         hold_rotation(page).await;
         instant_scroll(page).await;
-        page.evaluate(format!(
+        page.evaluate_bounded(format!(
             "(() => {{ const b = document.querySelector({PAUSE:?}); \
              const t = document.querySelector({TRACK:?}); \
              const o = {{ bubbles: true, pointerType: 'mouse', isPrimary: true }}; \
@@ -517,7 +523,7 @@ fn nothing_to_rotate_shows_no_pause() {
         .await
         .unwrap();
         let pauses: i64 = page
-            .evaluate(format!("document.querySelectorAll({PAUSE:?}).length"))
+            .evaluate_bounded(format!("document.querySelectorAll({PAUSE:?}).length"))
             .await
             .unwrap()
             .into_value()

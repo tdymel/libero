@@ -3,6 +3,7 @@
 
 use e2e::browser::block_on;
 use e2e::passes::{keyboard, pointer};
+use e2e::wait::PageBounded;
 use e2e::{Fixture, Viewport, wait};
 
 const INPUT: &str = "input[data-controlled]";
@@ -22,7 +23,7 @@ async fn pick_a_time_first(route: &str) -> Fixture {
     wait::for_js_true(page, &selector_exists(HOURS), "the clock's hours")
         .await
         .unwrap();
-    page.evaluate(format!("document.querySelector({HOURS:?}).focus()"))
+    page.evaluate_bounded(format!("document.querySelector({HOURS:?}).focus()"))
         .await
         .unwrap();
     keyboard::press(page, keyboard::ARROW_UP).await.unwrap();

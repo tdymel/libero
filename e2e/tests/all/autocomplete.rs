@@ -7,6 +7,7 @@ use e2e::browser::block_on;
 use e2e::driver::{Driver, eventually};
 use e2e::passes::{dismissal, keyboard, live_region};
 use e2e::suite::Step;
+use e2e::wait::PageBounded;
 use e2e::{Fixture, Suite, Viewport, wait};
 
 const TRIGGER: &str = "[role=combobox]";
@@ -152,7 +153,7 @@ fn a_pending_fetch_says_loading_not_nothing_found() {
         .await
         .unwrap();
         let nothing: bool = page
-            .evaluate(
+            .evaluate_bounded(
                 "document.body.textContent.includes('No results') \
                  || document.querySelector(\"[data-slot='nothing-found']\") !== null",
             )
@@ -258,7 +259,7 @@ pub fn editable_combobox_typing(route: &str, query: &str) {
             "(t => [t.selectionStart, t.getAttribute('aria-activedescendant')])(document.querySelector({TRIGGER:?}))"
         );
         let read = async || -> (usize, Option<String>) {
-            page.evaluate(probe.as_str())
+            page.evaluate_bounded(probe.as_str())
                 .await
                 .unwrap()
                 .into_value()
@@ -286,7 +287,7 @@ pub fn editable_combobox_typing(route: &str, query: &str) {
         .await
         .unwrap();
         let wiring: (Option<String>, Option<String>) = page
-            .evaluate(format!(
+            .evaluate_bounded(format!(
                 "(t => [t.getAttribute('aria-expanded'), t.getAttribute('aria-controls')])(document.querySelector({TRIGGER:?}))"
             ))
             .await
@@ -363,7 +364,11 @@ fn odd_and_equal_labels_get_stable_unique_option_ids() {
         let fixture = Fixture::open(ROUTE, Viewport::Desktop).await.unwrap();
         let page = &fixture.page;
         let read = async |js: &str| -> Vec<String> {
-            page.evaluate(js).await.unwrap().into_value().unwrap()
+            page.evaluate_bounded(js)
+                .await
+                .unwrap()
+                .into_value()
+                .unwrap()
         };
         keyboard::tab_to(page, TRIGGER, 10).await.unwrap();
         // Every label holds an "r".

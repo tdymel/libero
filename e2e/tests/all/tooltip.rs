@@ -6,6 +6,7 @@ use e2e::browser::block_on;
 use e2e::driver::{Driver, eventually, eventually_focused};
 use e2e::passes::{keyboard, pointer};
 use e2e::suite::Step;
+use e2e::wait::PageBounded;
 use e2e::{Fixture, Suite, Viewport, clock, js, wait};
 
 const TRIGGER: &str = "#save";
@@ -346,11 +347,16 @@ fn the_bubble_text_follows_the_root_text_size() {
         let page = &fixture.page;
         wait::for_visible(page, BUBBLE).await.unwrap();
         let size = "parseFloat(getComputedStyle(document.querySelector('#save-tip')).fontSize)";
-        let at_default: f64 = page.evaluate(size).await.unwrap().into_value().unwrap();
+        let at_default: f64 = page
+            .evaluate_bounded(size)
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
         // The default `lg`, the 14px label floor (todo 2707).
         assert_eq!(at_default, 14.0);
         let doubled: f64 = page
-            .evaluate(format!(
+            .evaluate_bounded(format!(
                 "(() => {{ document.documentElement.style.fontSize = '200%'; return {size}; }})()"
             ))
             .await
@@ -371,7 +377,7 @@ fn disabling_a_tooltip_keeps_a_focused_trigger() {
             .unwrap();
         let page = &fixture.page;
         keyboard::tab_to(page, TRIGGER, 5).await.unwrap();
-        page.evaluate("window.__trigger = document.getElementById('save')")
+        page.evaluate_bounded("window.__trigger = document.getElementById('save')")
             .await
             .unwrap();
         keyboard::press(page, keyboard::ENTER).await.unwrap();
@@ -643,7 +649,7 @@ fn a_long_word_wraps_in_the_bubble() {
             .await
             .unwrap();
         let page = &fixture.page;
-        page.execute(SetDeviceMetricsOverrideParams::new(320, 640, 1.0, true))
+        page.execute_bounded(SetDeviceMetricsOverrideParams::new(320, 640, 1.0, true))
             .await
             .unwrap();
         wait::for_visible(page, BUBBLE).await.unwrap();

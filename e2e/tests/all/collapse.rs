@@ -7,6 +7,7 @@ use e2e::driver::{Driver, eventually};
 use e2e::passes::keyboard::{self, TAB};
 use e2e::passes::{focus, motion, pointer};
 use e2e::suite::Step;
+use e2e::wait::PageBounded;
 use e2e::{Fixture, Suite, Viewport, ax, wait};
 
 pub const TOGGLE: &str = "#toggle-details";
@@ -104,7 +105,7 @@ fn a_closed_kept_panel_is_neither_focusable_nor_announced() {
         wait::for_visible(page, "#toggle-kept").await.unwrap();
         let focus_trigger = "document.querySelector('#toggle-kept').focus()";
 
-        page.evaluate(focus_trigger).await.unwrap();
+        page.evaluate_bounded(focus_trigger).await.unwrap();
         keyboard::press(page, TAB).await.unwrap();
         focus::wait_for_focus(page, "#after", "Tab past the closed panel")
             .await
@@ -117,7 +118,7 @@ fn a_closed_kept_panel_is_neither_focusable_nor_announced() {
 
         pointer::click(page, "#toggle-kept").await.unwrap();
         wait::for_visible(page, "#inside").await.unwrap();
-        page.evaluate(focus_trigger).await.unwrap();
+        page.evaluate_bounded(focus_trigger).await.unwrap();
         keyboard::press(page, TAB).await.unwrap();
         focus::wait_for_focus(page, "#inside", "Tab into the open panel")
             .await
@@ -140,7 +141,7 @@ fn an_open_panel_inside_a_closed_one_is_neither_focusable_nor_announced() {
         wait::for_visible(page, "#toggle-outer").await.unwrap();
         let focus_trigger = "document.querySelector('#toggle-outer').focus()";
 
-        page.evaluate(focus_trigger).await.unwrap();
+        page.evaluate_bounded(focus_trigger).await.unwrap();
         keyboard::press(page, TAB).await.unwrap();
         focus::wait_for_focus(page, "#after-nested", "Tab past the closed outer panel")
             .await
@@ -150,7 +151,7 @@ fn an_open_panel_inside_a_closed_one_is_neither_focusable_nor_announced() {
 
         pointer::click(page, "#toggle-outer").await.unwrap();
         wait::for_visible(page, "#deep").await.unwrap();
-        page.evaluate(focus_trigger).await.unwrap();
+        page.evaluate_bounded(focus_trigger).await.unwrap();
         keyboard::press(page, TAB).await.unwrap();
         focus::wait_for_focus(page, "#deep", "Tab into the open nested panel")
             .await
@@ -173,7 +174,7 @@ fn an_open_transition_inside_a_closed_panel_is_neither_focusable_nor_announced()
         wait::for_visible(page, "#toggle-wrapper").await.unwrap();
         let focus_trigger = "document.querySelector('#toggle-wrapper').focus()";
 
-        page.evaluate(focus_trigger).await.unwrap();
+        page.evaluate_bounded(focus_trigger).await.unwrap();
         keyboard::press(page, TAB).await.unwrap();
         focus::wait_for_focus(page, "#after-transition", "Tab past the closed panel")
             .await
@@ -183,7 +184,7 @@ fn an_open_transition_inside_a_closed_panel_is_neither_focusable_nor_announced()
 
         pointer::click(page, "#toggle-wrapper").await.unwrap();
         wait::for_visible(page, "#faded").await.unwrap();
-        page.evaluate(focus_trigger).await.unwrap();
+        page.evaluate_bounded(focus_trigger).await.unwrap();
         keyboard::press(page, TAB).await.unwrap();
         focus::wait_for_focus(page, "#faded", "Tab into the open panel's transition")
             .await

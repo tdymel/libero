@@ -12,6 +12,7 @@ use e2e::browser::block_on;
 use e2e::driver::{Driver, eventually, eventually_text};
 use e2e::passes::keyboard::Key;
 use e2e::passes::{contrast, focus, keyboard, pointer};
+use e2e::wait::PageBounded;
 use e2e::{Fixture, Suite, Viewport, ax, wait};
 
 /// The dropzone's Browse button: the only one the fixture draws.
@@ -218,7 +219,7 @@ async fn drag_files_at(page: &Page, x: f64, y: f64, files: Vec<String>, release:
             .data(data)
             .build()
             .unwrap();
-        page.execute(params)
+        page.execute_bounded(params)
             .await
             .unwrap_or_else(|e| panic!("dispatching {kind:?}: {e}"));
     }
@@ -240,7 +241,7 @@ async fn open_with_two_files() -> (Fixture, OnDisk) {
 /// Counts the picker's openings, and keeps the dialog shut: the component
 /// opens it by clicking the hidden input.
 async fn count_openings(page: &Page) {
-    page.evaluate(
+    page.evaluate_bounded(
         "window.__opened = 0; document.addEventListener('click', e => { \
          if (e.target.matches('input[type=file]')) { window.__opened++; e.preventDefault(); } \
          }, true)",
@@ -250,7 +251,7 @@ async fn count_openings(page: &Page) {
 }
 
 async fn openings(page: &Page) -> u32 {
-    page.evaluate("window.__opened")
+    page.evaluate_bounded("window.__opened")
         .await
         .unwrap()
         .into_value()
@@ -258,7 +259,7 @@ async fn openings(page: &Page) -> u32 {
 }
 
 async fn active_id(page: &Page) -> String {
-    page.evaluate("document.activeElement && document.activeElement.id")
+    page.evaluate_bounded("document.activeElement && document.activeElement.id")
         .await
         .unwrap()
         .into_value()
@@ -278,7 +279,7 @@ fn modifier_chords_leave_the_chips_alone() {
         let disk = OnDisk::new();
         drop_files(page, CONTROL, disk.paths()).await;
         wait::for_selector(page, REMOVE_BETA).await.unwrap();
-        page.evaluate(format!("document.querySelector({CONTROL:?}).focus()"))
+        page.evaluate_bounded(format!("document.querySelector({CONTROL:?}).focus()"))
             .await
             .unwrap();
 
@@ -341,7 +342,7 @@ fn a_held_field_keeps_a_picker_cue() {
         wait::for_visible(page, CONTROL).await.unwrap();
         let cue = format!("document.querySelector({CONTROL:?} + ' > svg[aria-hidden=true]')");
         let empty: bool = page
-            .evaluate(format!("{cue} === null"))
+            .evaluate_bounded(format!("{cue} === null"))
             .await
             .unwrap()
             .into_value()
@@ -552,7 +553,7 @@ fn read_only_and_disabled_refuse_the_picker_and_the_remove() {
         crate::settle::painted(page).await.unwrap();
         assert_eq!(openings(page).await, 2, "read-only opened the picker");
         assert!(
-            page.evaluate("!!document.querySelector('#modes-file-1')")
+            page.evaluate_bounded("!!document.querySelector('#modes-file-1')")
                 .await
                 .unwrap()
                 .into_value::<bool>()
@@ -675,7 +676,7 @@ fn an_empty_control_fills_its_frame_and_takes_a_drop() {
         wait::for_selector(page, "#bare").await.unwrap();
 
         let (control, frame): (f64, f64) = page
-            .evaluate(
+            .evaluate_bounded(
                 "(() => { const c = document.querySelector('#bare'); \
                  const f = c.closest('[data-frame]'); const s = getComputedStyle(f); \
                  const inner = f.clientHeight - parseFloat(s.paddingTop) - parseFloat(s.paddingBottom); \
@@ -721,7 +722,7 @@ fn a_drop_on_the_frame_padding_is_taken() {
         wait::for_selector(page, "#bare").await.unwrap();
 
         let (x, y, on_frame): (f64, f64, bool) = page
-            .evaluate(
+            .evaluate_bounded(
                 "(() => { const f = document.querySelector('#bare').closest('[data-frame]'); \
                  const r = f.getBoundingClientRect(); const x = r.left + 3, y = r.top + r.height / 2; \
                  return [x, y, document.elementFromPoint(x, y) === f]; })()",
@@ -753,7 +754,7 @@ fn a_drop_on_the_frame_padding_is_taken() {
 /// Records, after every handler has run, whether the last `dragover` and `drop` were
 /// cancelled: an uncancelled file drop is the browser opening the file.
 async fn watch_drag_defaults(page: &Page) {
-    page.evaluate(
+    page.evaluate_bounded(
         "window.__cancelled = {}; for (const kind of ['dragover', 'drop']) \
          window.addEventListener(kind, (e) => { window.__cancelled[kind] = e.defaultPrevented; });",
     )
@@ -763,7 +764,7 @@ async fn watch_drag_defaults(page: &Page) {
 
 async fn assert_drag_cancelled(page: &Page, what: &str) {
     let cancelled: (Option<bool>, Option<bool>) = page
-        .evaluate("[window.__cancelled.dragover ?? null, window.__cancelled.drop ?? null]")
+        .evaluate_bounded("[window.__cancelled.dragover ?? null, window.__cancelled.drop ?? null]")
         .await
         .unwrap()
         .into_value()
@@ -805,7 +806,7 @@ fn a_drop_on_a_disabled_field_is_refused_not_opened() {
         assert_drag_cancelled(page, "a drop on the disabled group").await;
 
         let (x, y): (f64, f64) = page
-            .evaluate(
+            .evaluate_bounded(
                 "(() => { const r = document.querySelector('#modes').closest('[data-frame]')\
                  .getBoundingClientRect(); return [r.left + 3, r.top + r.height / 2]; })()",
             )
@@ -818,7 +819,7 @@ fn a_drop_on_a_disabled_field_is_refused_not_opened() {
         assert_drag_cancelled(page, "a drop on the disabled frame's padding").await;
 
         assert!(
-            page.evaluate("!document.querySelector('#modes-file-0')")
+            page.evaluate_bounded("!document.querySelector('#modes-file-0')")
                 .await
                 .unwrap()
                 .into_value::<bool>()
@@ -885,7 +886,7 @@ fn a_drag_over_the_input_frame_draws_the_dragging_look() {
              return [f.dataset.state.split(' ').includes('dragging'), s.borderTopColor, s.backgroundImage]; }})()"
         );
         let at_rest: (bool, String, String) = page
-            .evaluate(look.clone())
+            .evaluate_bounded(look.clone())
             .await
             .unwrap()
             .into_value()
@@ -893,7 +894,7 @@ fn a_drag_over_the_input_frame_draws_the_dragging_look() {
         assert!(!at_rest.0, "dragging before any drag");
 
         let (x, y): (f64, f64) = page
-            .evaluate(format!(
+            .evaluate_bounded(format!(
                 "(() => {{ const r = {frame}.getBoundingClientRect(); return [r.left + 3, r.top + r.height / 2]; }})()"
             ))
             .await
@@ -910,7 +911,7 @@ fn a_drag_over_the_input_frame_draws_the_dragging_look() {
         .await
         .unwrap();
         let dragged: (bool, String, String) = page
-            .evaluate(look.clone())
+            .evaluate_bounded(look.clone())
             .await
             .unwrap()
             .into_value()
@@ -1002,7 +1003,7 @@ fn a_refused_drop_is_announced() {
         .unwrap();
         assert!(
             !page
-                .evaluate("document.querySelector('#photo').closest('[role=group]').textContent.includes('note.pdf')")
+                .evaluate_bounded("document.querySelector('#photo').closest('[role=group]').textContent.includes('note.pdf')")
                 .await
                 .unwrap()
                 .into_value::<bool>()

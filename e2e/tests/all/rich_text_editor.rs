@@ -6,6 +6,7 @@ use chromiumoxide::cdp::browser_protocol::input::ImeSetCompositionParams;
 use e2e::browser::block_on;
 use e2e::passes::keyboard::{self, BACKSPACE, CTRL, ENTER, Key};
 use e2e::passes::{live_region, pointer};
+use e2e::wait::PageBounded;
 use e2e::{Fixture, Viewport, js, wait};
 
 pub(super) const KEY_B: Key = Key {
@@ -34,7 +35,7 @@ pub(super) async fn out(page: &Page) -> String {
 pub(super) async fn out_where(page: &Page, what: &str, check: impl Fn(&str) -> bool) {
     let last = std::cell::RefCell::new(String::new());
     let held = wait::until(what, || async {
-        let now: String = page.evaluate(OUT).await?.into_value()?;
+        let now: String = page.evaluate_bounded(OUT).await?.into_value()?;
         let passes = check(&now);
         *last.borrow_mut() = now;
         Ok(passes)
@@ -54,7 +55,7 @@ pub(super) const SYNCED: &str = "new Promise(r => setTimeout(r))";
 /// Runs `script`, which moves the DOM selection, and returns once the model has it: the
 /// editor's `selectionchange` listener, added before ours, hands it over before ours runs.
 pub(super) async fn select(page: &Page, script: &str) {
-    page.evaluate(format!(
+    page.evaluate_bounded(format!(
         "{SYNCED}.then(() => new Promise((r, fail) => {{ \
            document.addEventListener('selectionchange', () => r(true), {{ once: true }}); \
            setTimeout(() => fail(new Error('the selection did not move')), 5000); {script}; }}))"
@@ -133,7 +134,9 @@ fn escape_then_tab_leaves_a_list() {
             .await
             .unwrap();
         let page = &fixture.page;
-        page.evaluate(format!("{EDITOR}.focus()")).await.unwrap();
+        page.evaluate_bounded(format!("{EDITOR}.focus()"))
+            .await
+            .unwrap();
         let hint: String = js(
             page,
             &format!(
@@ -182,7 +185,9 @@ fn typing_enter_backspace_undo_and_shortcuts_edit_the_model() {
             .await
             .unwrap();
         let page = &fixture.page;
-        page.evaluate(format!("{EDITOR}.focus()")).await.unwrap();
+        page.evaluate_bounded(format!("{EDITOR}.focus()"))
+            .await
+            .unwrap();
 
         let placeholder: String = js(
             page,
@@ -236,7 +241,7 @@ fn typing_enter_backspace_undo_and_shortcuts_edit_the_model() {
         .await;
 
         // A foreign value resets the editor.
-        page.evaluate("document.getElementById('replace').click()")
+        page.evaluate_bounded("document.getElementById('replace').click()")
             .await
             .unwrap();
         out_eq(page, "").await;
@@ -288,7 +293,7 @@ async fn clipboard(page: &Page, kind: &str) -> (String, String, bool) {
 
 /// Pastes `text` as plain text into the editor.
 async fn paste_text(page: &Page, text: &str) {
-    page.evaluate(format!(
+    page.evaluate_bounded(format!(
         "(() => {{ const d = new DataTransfer(); d.setData('text/plain', {text:?}); \
            {EDITOR}.dispatchEvent(new ClipboardEvent('paste', {{ clipboardData: d, bubbles: true, cancelable: true }})); }})()"
     ))
@@ -304,7 +309,9 @@ fn typed_and_pasted_urls_and_typed_markdown_links_become_links() {
             .await
             .unwrap();
         let page = &fixture.page;
-        page.evaluate(format!("{EDITOR}.focus()")).await.unwrap();
+        page.evaluate_bounded(format!("{EDITOR}.focus()"))
+            .await
+            .unwrap();
 
         keyboard::type_text(page, "see https://a.example ok")
             .await
@@ -377,7 +384,9 @@ fn backspace_right_after_a_made_link_turns_it_back_to_text() {
             .unwrap();
         let page = &fixture.page;
         let links = format!("{EDITOR}.querySelectorAll('a').length");
-        page.evaluate(format!("{EDITOR}.focus()")).await.unwrap();
+        page.evaluate_bounded(format!("{EDITOR}.focus()"))
+            .await
+            .unwrap();
 
         keyboard::type_text(page, "https://a.example ")
             .await
@@ -447,7 +456,9 @@ fn toolbar_buttons_keep_the_caret_and_composition_lands_in_the_model() {
             .await
             .unwrap();
         let page = &fixture.page;
-        page.evaluate(format!("{EDITOR}.focus()")).await.unwrap();
+        page.evaluate_bounded(format!("{EDITOR}.focus()"))
+            .await
+            .unwrap();
 
         keyboard::type_text(page, "ab").await.unwrap();
         out_eq(page, "ab\n").await;
@@ -469,21 +480,21 @@ fn toolbar_buttons_keep_the_caret_and_composition_lands_in_the_model() {
 
         // Of the DOM moves probed, only focus leaving and coming back commits "に" this way
         // (`- abcに日本`), so a failure names the focus moves.
-        page.evaluate(
+        page.evaluate_bounded(
             "window.__moves = []; for (const type of ['focusin', 'focusout'])
              document.addEventListener(type, (e) => __moves.push(type + ' ' + e.target.outerHTML.slice(0, 80)), true)",
         )
         .await
         .unwrap();
-        page.execute(ImeSetCompositionParams::new("に", 1, 1))
+        page.execute_bounded(ImeSetCompositionParams::new("に", 1, 1))
             .await
             .unwrap();
-        page.execute(ImeSetCompositionParams::new("にほ", 2, 2))
+        page.execute_bounded(ImeSetCompositionParams::new("にほ", 2, 2))
             .await
             .unwrap();
         keyboard::insert_text(page, "日本").await.unwrap();
         let composed = wait::until("the composition in the model", || async {
-            let now: String = page.evaluate(OUT).await?.into_value()?;
+            let now: String = page.evaluate_bounded(OUT).await?.into_value()?;
             Ok(now == "- abc日本\n")
         })
         .await;
@@ -508,7 +519,7 @@ fn toolbar_buttons_keep_the_caret_and_composition_lands_in_the_model() {
         wait::for_selector(page, "[role=textbox] [data-code=source] pre")
             .await
             .unwrap();
-        page.evaluate("document.getElementById('replace').focus()")
+        page.evaluate_bounded("document.getElementById('replace').focus()")
             .await
             .unwrap();
         wait::for_selector(page, "[role=textbox] [data-code=view]")
@@ -587,7 +598,9 @@ fn a_replacement_across_a_bold_run_is_one_undo_step() {
             .await
             .unwrap();
         let page = &fixture.page;
-        page.evaluate(format!("{EDITOR}.focus()")).await.unwrap();
+        page.evaluate_bounded(format!("{EDITOR}.focus()"))
+            .await
+            .unwrap();
         keyboard::type_text(page, "brwon").await.unwrap();
         out_eq(page, "brwon\n").await;
         select(
@@ -621,7 +634,9 @@ fn ctrl_backspace_and_ctrl_delete_take_a_word_and_replacements_apply_at_their_ra
             .await
             .unwrap();
         // The caret starts before "intro"; moving it from script would race the model.
-        page.evaluate(format!("{EDITOR}.focus()")).await.unwrap();
+        page.evaluate_bounded(format!("{EDITOR}.focus()"))
+            .await
+            .unwrap();
         keyboard::type_text(page, "^").await.unwrap();
         wait::for_js_true(page, &out_is(&format!("^intro{CODE}")), "the typed key")
             .await
@@ -697,7 +712,7 @@ fn a_first_press_puts_the_caret_where_it_lands() {
         keyboard::type_text(page, "xy").await.unwrap();
         out_eq(page, "above\n\n```\nlet x = 1;\n```\n\nbexylow\n").await;
 
-        page.evaluate(
+        page.evaluate_bounded(
             "(() => { const i = document.createElement('input'); i.id = 'other'; document.body.prepend(i); i.focus(); })()",
         )
         .await
@@ -727,7 +742,7 @@ fn a_key_behind_held_input_runs_after_it() {
         out_eq(page, "above\n\n```\nlet x = 1;\n```\n\nbelow\n").await;
         // One task: the press's caret moves to `ab|ove` unreported, as Chrome queues its
         // `selectionchange` behind input, and the typed key is still held when Enter comes.
-        page.evaluate(format!(
+        page.evaluate_bounded(format!(
             "(() => {{ const r = {EDITOR}; \
                const leaf = [...r.querySelectorAll('[data-key]')].find(l => l.textContent === 'above'); \
                document.getSelection().collapse(leaf.firstChild, 2); \
@@ -758,7 +773,7 @@ fn a_press_while_syncing_moves_the_model_caret() {
         out_eq(page, "above\n\n```\nlet x = 1;\n```\n\nbexlow\n").await;
 
         // The editor's synced reply is a 0 ms timer: hold it while the press lands.
-        page.evaluate(
+        page.evaluate_bounded(
             "(() => { const real = window.setTimeout; window.__realTimeout = real; window.__synced = []; \
                window.setTimeout = (f, ms, ...a) => ms ? real(f, ms, ...a) : (window.__synced.push(f), 0); })()",
         )
@@ -771,7 +786,7 @@ fn a_press_while_syncing_moves_the_model_caret() {
             .unwrap();
         // The editor's listener came first, so its report is out once ours sees the press.
         // A selectionchange from its own caret may still be queued: that one does not count.
-        page.evaluate(
+        page.evaluate_bounded(
             "document.addEventListener('selectionchange', () => { if (document.getSelection().anchorNode?.textContent === 'above') window.__moved = true; })",
         )
         .await
@@ -785,7 +800,7 @@ fn a_press_while_syncing_moves_the_model_caret() {
         )
         .await
         .unwrap();
-        page.evaluate(
+        page.evaluate_bounded(
             "(() => { window.setTimeout = window.__realTimeout; window.__synced.forEach(f => f()); })()",
         )
         .await
@@ -809,7 +824,7 @@ fn a_toolbar_press_reports_the_fresh_press_at_once() {
         let page = &fixture.page;
         wait::for_selector(page, BULLETS).await.unwrap();
         let reads: Vec<u32> = page
-            .evaluate(format!(
+            .evaluate_bounded(format!(
                 "(() => {{ const root = document.querySelector('[data-lsx-rich-text]'); \
                    const toolbar = document.querySelector({BULLETS:?}); \
                    const real = document.getSelection; let reads = 0; \

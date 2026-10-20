@@ -3,6 +3,7 @@
 
 use e2e::browser::block_on;
 use e2e::passes::{keyboard, motion, pointer};
+use e2e::wait::PageBounded;
 use e2e::{Fixture, Viewport, wait};
 use serde::Deserialize;
 
@@ -53,7 +54,7 @@ fn small_action_icons_take_presses_in_a_24px_box() {
         ];
         for (selector, drawn) in cases {
             let hit: Hit = page
-                .evaluate(format!(
+                .evaluate_bounded(format!(
                     "(() => {{ {PROBE} return HIT(document.querySelector({selector:?})); }})()"
                 ))
                 .await
@@ -92,7 +93,7 @@ fn a_small_switch_track_takes_presses_in_a_24px_box() {
 
         for (id, drawn) in [("switch-xs", 16.0), ("switch-sm", 18.0)] {
             let hit: Hit = page
-                .evaluate(format!(
+                .evaluate_bounded(format!(
                     "(() => {{
                         const el = document.querySelector('#{id} ~ [data-slot=track]');
                         el.scrollIntoView({{ block: 'center' }});
@@ -140,7 +141,7 @@ fn a_finger_presses_small_controls_in_a_44px_box() {
     block_on(async {
         let fixture = Fixture::open("/hit-area", Viewport::Desktop).await.unwrap();
         let page = &fixture.page;
-        page.execute(SetTouchEmulationEnabledParams::new(true))
+        page.execute_bounded(SetTouchEmulationEnabledParams::new(true))
             .await
             .unwrap();
         wait::for_js_true(
@@ -169,7 +170,7 @@ fn a_finger_presses_small_controls_in_a_44px_box() {
         ];
         for (selector, sides) in cases {
             let hit: Hit = page
-                .evaluate(format!(
+                .evaluate_bounded(format!(
                     "(() => {{
                         const el = document.querySelector({selector:?});
                         el.scrollIntoView({{ block: 'center' }});
@@ -209,7 +210,7 @@ fn a_medium_icon_in_a_group_keeps_its_own_box_under_a_finger() {
     block_on(async {
         let fixture = Fixture::open("/hit-area", Viewport::Desktop).await.unwrap();
         let page = &fixture.page;
-        page.execute(SetTouchEmulationEnabledParams::new(true))
+        page.execute_bounded(SetTouchEmulationEnabledParams::new(true))
             .await
             .unwrap();
         wait::for_js_true(
@@ -221,7 +222,7 @@ fn a_medium_icon_in_a_group_keeps_its_own_box_under_a_finger() {
         .unwrap();
 
         let hit: Hit = page
-            .evaluate(
+            .evaluate_bounded(
                 "(() => {
                     const first = document.querySelector('#group-first');
                     const second = document.querySelector('#group-second');
@@ -255,7 +256,7 @@ fn a_compact_icon_in_a_group_keeps_its_width_under_a_finger() {
     block_on(async {
         let fixture = Fixture::open("/hit-area", Viewport::Desktop).await.unwrap();
         let page = &fixture.page;
-        page.execute(SetTouchEmulationEnabledParams::new(true))
+        page.execute_bounded(SetTouchEmulationEnabledParams::new(true))
             .await
             .unwrap();
         wait::for_js_true(
@@ -267,7 +268,7 @@ fn a_compact_icon_in_a_group_keeps_its_width_under_a_finger() {
         .unwrap();
 
         let misses: Vec<String> = page
-            .evaluate(
+            .evaluate_bounded(
                 "(() => {
                     const ids = ['first', 'second', 'third'];
                     const icons = ids.map(id => document.querySelector('#compact-' + id));
@@ -321,7 +322,7 @@ fn the_choice_controls_skip_their_transitions_under_reduced_motion() {
 
         motion::set_reduced_motion(page, false).await.unwrap();
         let still: Vec<String> = page
-            .evaluate(moving.clone())
+            .evaluate_bounded(moving.clone())
             .await
             .unwrap()
             .into_value()
@@ -358,7 +359,7 @@ fn a_nameless_radio_and_checkbox_take_presses_in_a_24px_box() {
             "[data-case=checkbox] [data-slot=box]",
         ] {
             let hit: Hit = page
-                .evaluate(format!(
+                .evaluate_bounded(format!(
                     "(() => {{
                         const el = document.querySelector({selector:?});
                         el.scrollIntoView({{ block: 'center' }});
@@ -400,7 +401,7 @@ fn a_table_row_checkbox_takes_presses_in_a_24px_box() {
         let page = &fixture.page;
 
         let hit: Hit = page
-            .evaluate(
+            .evaluate_bounded(
                 "(() => {
                     const el = document.querySelector('tbody tr:nth-child(2) [data-slot=control]');
                     el.scrollIntoView({ block: 'center' });
@@ -426,7 +427,7 @@ fn a_table_row_checkbox_takes_presses_in_a_24px_box() {
         );
 
         let (x, y): (f64, f64) = page
-            .evaluate(
+            .evaluate_bounded(
                 "(() => { const r = document.querySelector('tbody tr:nth-child(2) [data-slot=control]')\
                  .getBoundingClientRect(); return [r.x + r.width / 2 - 11.5, r.y + r.height / 2 + 11.5]; })()",
             )
@@ -435,7 +436,7 @@ fn a_table_row_checkbox_takes_presses_in_a_24px_box() {
             .into_value()
             .unwrap();
         let before: String = page
-            .evaluate("document.querySelector('#selection').textContent")
+            .evaluate_bounded("document.querySelector('#selection').textContent")
             .await
             .unwrap()
             .into_value()
@@ -450,14 +451,14 @@ fn a_table_row_checkbox_takes_presses_in_a_24px_box() {
         .await
         .unwrap();
         let clicked: String = page
-            .evaluate("document.querySelector('#clicked').textContent")
+            .evaluate_bounded("document.querySelector('#clicked').textContent")
             .await
             .unwrap()
             .into_value()
             .unwrap();
         assert!(clicked.is_empty(), "the corner press also clicked the row");
 
-        page.evaluate("document.querySelector('tbody tr:nth-child(2) input').focus()")
+        page.evaluate_bounded("document.querySelector('tbody tr:nth-child(2) input').focus()")
             .await
             .unwrap();
         keyboard::press(page, keyboard::SPACE).await.unwrap();
@@ -487,7 +488,7 @@ fn the_ripple_stays_inside_an_unclipped_button() {
         motion::set_reduced_motion(page, false).await.unwrap();
 
         let (x, y): (f64, f64) = page
-            .evaluate(
+            .evaluate_bounded(
                 "(() => { const el = document.querySelector('#icon-sm'); \
                  el.scrollIntoView({ block: 'center' }); const r = el.getBoundingClientRect(); \
                  return [r.x + r.width / 2, r.y + r.height / 2]; })()",
@@ -531,7 +532,7 @@ fn the_stepper_boxes_meet_without_overlapping() {
 
         for size in ["xs", "md", "xl"] {
             let report: Vec<(String, bool)> = page
-                .evaluate(format!(
+                .evaluate_bounded(format!(
                     "(() => {{
                         const f = document.querySelector('[data-case=number-{size}]');
                         f.scrollIntoView({{ block: 'center' }});
@@ -574,7 +575,7 @@ fn a_slot_button_does_not_grow_the_frame() {
 
         for size in ["xs", "md", "xl"] {
             let heights: Vec<(String, f64)> = page
-                .evaluate(format!(
+                .evaluate_bounded(format!(
                     "[...document.querySelectorAll('[data-size={size}] [data-case]')].map(c =>
                         [c.dataset.case, c.querySelector('[data-frame]').getBoundingClientRect().height])"
                 ))

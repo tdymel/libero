@@ -3,6 +3,7 @@
 
 use e2e::browser::block_on;
 use e2e::passes::keyboard;
+use e2e::wait::PageBounded;
 use e2e::{Fixture, Suite, Viewport, wait};
 
 #[test]
@@ -22,7 +23,12 @@ fn a_focusable_skip_link_shows_on_focus() {
             .unwrap();
         let page = &fixture.page;
 
-        let hidden: f64 = page.evaluate(WIDTH).await.unwrap().into_value().unwrap();
+        let hidden: f64 = page
+            .evaluate_bounded(WIDTH)
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
         assert!(hidden <= 1.0, "hidden until focused, got {hidden}px");
 
         keyboard::tab_to(page, "#skip-link", 3).await.unwrap();
@@ -30,7 +36,7 @@ fn a_focusable_skip_link_shows_on_focus() {
             .await
             .unwrap();
 
-        page.evaluate("document.activeElement.blur()")
+        page.evaluate_bounded("document.activeElement.blur()")
             .await
             .unwrap();
         wait::for_js_true(page, &format!("{WIDTH} <= 1"), "the link to hide again")
@@ -56,7 +62,7 @@ fn a_focused_skip_link_sits_above_a_sticky_header() {
             .unwrap();
 
         let on_top: bool = page
-            .evaluate(
+            .evaluate_bounded(
                 "(() => { const r = document.querySelector('#skip-link').getBoundingClientRect();
                     return document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2)
                         === document.querySelector('#skip-link'); })()",

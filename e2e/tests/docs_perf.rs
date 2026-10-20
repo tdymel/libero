@@ -29,6 +29,7 @@ use e2e::browser::block_on;
 use e2e::passes::keyboard::{self, ARROW_LEFT, ARROW_RIGHT, BACKSPACE, ESCAPE};
 use e2e::passes::pointer::{self, Point};
 use e2e::timing::{delta_ms, metrics, quiet};
+use e2e::wait::PageBounded;
 use e2e::{Fixture, Scheme, Viewport, frames};
 use serde::{Deserialize, Serialize};
 
@@ -181,7 +182,7 @@ fn wanted(kinds: &Option<Vec<String>>, kind: &str) -> bool {
 }
 
 async fn js<T: serde::de::DeserializeOwned>(page: &Page, expression: &str) -> Result<T> {
-    Ok(page.evaluate(expression).await?.into_value()?)
+    Ok(page.evaluate_bounded(expression).await?.into_value()?)
 }
 
 /// Polls `condition` for up to 1.5 s: a control that does not react fails its row, not the run.
@@ -201,7 +202,7 @@ async fn rep<F: AsyncFnOnce() -> Result<()>>(page: &Page, act: F) -> Result<Rep>
     // Headless Chromium runs no rAF in a tab that lost the front, and some acts take it.
     page.bring_to_front().await?;
     quiet(page).await?;
-    page.evaluate("window.__dp.reset()").await?;
+    page.evaluate_bounded("window.__dp.reset()").await?;
     let before = metrics(page).await?;
     act().await?;
     quiet(page).await?;
@@ -241,7 +242,7 @@ async fn expand_nav(page: &Page) -> Result<()> {
         if before == 0 {
             return Ok(());
         }
-        page.evaluate(format!(
+        page.evaluate_bounded(format!(
             "document.querySelector({COLLAPSED:?}).querySelector('[data-tree-chevron], button, a, span')?.click() \
              ?? document.querySelector({COLLAPSED:?}).click()"
         ))
@@ -284,7 +285,7 @@ async fn navigate(page: &Page, path: &str) -> Result<()> {
     match aim(page, path).await? {
         true => pointer::click(page, NAV_LINK).await?,
         false => {
-            page.evaluate(format!(
+            page.evaluate_bounded(format!(
                 "history.pushState(null, '', {p}); dispatchEvent(new PopStateEvent('popstate'))"
             ))
             .await?;
@@ -320,13 +321,13 @@ async fn load(page: &Page, path: &str) -> Result<()> {
         "the reload",
     )
     .await?;
-    page.evaluate(RECORDER).await?;
+    page.evaluate_bounded(RECORDER).await?;
     expand_nav(page).await
 }
 
 /// `#docs-main`'s markup set again as plain DOM beside it: the lean baseline of a mount.
 async fn plain(page: &Page) -> Result<()> {
-    page.evaluate(
+    page.evaluate_bounded(
         "(() => { const m = document.querySelector('#docs-main'); window.__dpHtml = m.innerHTML; \
          const d = document.createElement(m.tagName); d.className = m.className; d.id = 'docs-perf-plain'; \
          m.style.display = 'none'; m.before(d); d.innerHTML = window.__dpHtml; })()",
@@ -336,7 +337,7 @@ async fn plain(page: &Page) -> Result<()> {
 }
 
 async fn unplain(page: &Page) -> Result<()> {
-    page.evaluate(
+    page.evaluate_bounded(
         "(() => { document.getElementById('docs-perf-plain')?.remove(); \
          document.querySelector('#docs-main').style.display = ''; })()",
     )
@@ -471,7 +472,7 @@ async fn exercise(page: &Page, path: &str, c: &Control, round: usize, rows: &mut
     let name = |step: &str| format!("{path} | {} {step} | {} {}", c.kind, c.zone, c.name);
     // In view and quiet before the clock starts: the scroll is not the control's cost.
     let _ = page
-        .evaluate(format!(
+        .evaluate_bounded(format!(
             "{el}?.scrollIntoView({{ block: 'center', behavior: 'instant' }})"
         ))
         .await;
@@ -496,7 +497,7 @@ async fn exercise(page: &Page, path: &str, c: &Control, round: usize, rows: &mut
             }
         }
         "type" => {
-            let _ = page.evaluate(format!("{el}.focus()")).await;
+            let _ = page.evaluate_bounded(format!("{el}.focus()")).await;
             let value = format!("(() => {{ const e = {el}; return e.value ?? e.textContent; }})()");
             for step in ["key", "backspace"] {
                 let outcome = rep(page, async || {
@@ -516,10 +517,12 @@ async fn exercise(page: &Page, path: &str, c: &Control, round: usize, rows: &mut
                 record(rows, name(step), round, outcome);
             }
             let _ = keyboard::press(page, ESCAPE).await;
-            let _ = page.evaluate("document.activeElement?.blur()").await;
+            let _ = page
+                .evaluate_bounded("document.activeElement?.blur()")
+                .await;
         }
         "key" => {
-            let _ = page.evaluate(format!("{el}.focus()")).await;
+            let _ = page.evaluate_bounded(format!("{el}.focus()")).await;
             let value = format!("{el}.getAttribute('aria-valuenow')");
             for (step, key, back) in [
                 ("right", ARROW_RIGHT, ARROW_LEFT),
@@ -541,7 +544,9 @@ async fn exercise(page: &Page, path: &str, c: &Control, round: usize, rows: &mut
                 .await;
                 record(rows, name(step), round, outcome);
             }
-            let _ = page.evaluate("document.activeElement?.blur()").await;
+            let _ = page
+                .evaluate_bounded("document.activeElement?.blur()")
+                .await;
         }
         "drag" => {
             let value = format!("String({el}.getAttribute('aria-valuenow'))");
@@ -633,7 +638,7 @@ async fn exercise(page: &Page, path: &str, c: &Control, round: usize, rows: &mut
             };
             for (step, back) in [("next", false), ("back", true)] {
                 let outcome = rep(page, async || {
-                    page.evaluate(next(back)).await?;
+                    page.evaluate_bounded(next(back)).await?;
                     Ok(())
                 })
                 .await;
@@ -667,7 +672,9 @@ async fn exercise(page: &Page, path: &str, c: &Control, round: usize, rows: &mut
     }
     // Whatever a control opened or where it went, back to the page as it was.
     let _ = keyboard::press(page, ESCAPE).await;
-    let _ = page.evaluate("document.activeElement?.blur()").await;
+    let _ = page
+        .evaluate_bounded("document.activeElement?.blur()")
+        .await;
     let elsewhere = js::<bool>(
         page,
         &format!(
@@ -710,7 +717,7 @@ async fn scroll(page: &Page, path: &str, round: usize, rows: &mut Rows) {
     for (step, dy) in [("down", 240.0), ("up", -240.0)] {
         let outcome = rep(page, async || {
             let before: f64 = js(page, &format!("{SCROLLER}.scrollTop")).await?;
-            page.execute(
+            page.execute_bounded(
                 DispatchMouseEventParams::builder()
                     .r#type(DispatchMouseEventType::MouseWheel)
                     .x(at.x)
@@ -1060,7 +1067,7 @@ fn survey() {
             .unwrap();
         let page = &fixture.page;
         let front = frames::bring_to_front(page).await.unwrap();
-        page.execute(EnableParams::default()).await.unwrap();
+        page.execute_bounded(EnableParams::default()).await.unwrap();
         let mut variants = vec![Variant {
             label: "A",
             base: e2e::base_url(),
@@ -1079,7 +1086,10 @@ fn survey() {
             let tab = Fixture::open_until(&start, Viewport::Desktop, Scheme::Light, READY)
                 .await
                 .unwrap();
-            tab.page.execute(EnableParams::default()).await.unwrap();
+            tab.page
+                .execute_bounded(EnableParams::default())
+                .await
+                .unwrap();
             other = Some(tab);
         }
         let tabs: Vec<&Page> = std::iter::once(page)
@@ -1106,7 +1116,7 @@ fn survey() {
                 // Both tabs opened on A's server: B loads its own on the first round.
                 if round == 0 {
                     if i == 0 {
-                        page.evaluate(RECORDER).await.unwrap();
+                        page.evaluate_bounded(RECORDER).await.unwrap();
                         expand_nav(page).await.unwrap();
                     } else {
                         load(page, &start).await.unwrap();

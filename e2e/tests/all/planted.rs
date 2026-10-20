@@ -7,6 +7,7 @@ use chromiumoxide::Page;
 use e2e::archetypes::{Combobox, Orientation, Overlay, RadioSet, RovingTabindex, count_tab_stops};
 use e2e::browser::block_on;
 use e2e::passes::{contrast, focus, keyboard, motion, pointer, target_size};
+use e2e::wait::PageBounded;
 use e2e::{Fixture, Scheme, Viewport, selftest, wait};
 
 /// A stylesheet appended to the document, as a plant.
@@ -174,7 +175,7 @@ fn tree_with_no_tab_stop_at_all_counts_zero() {
         let fixture = Fixture::open("/tree", Viewport::Desktop).await.unwrap();
         fixture
             .page
-            .evaluate(
+            .evaluate_bounded(
                 // Guarded: `setAttribute` records a mutation even when unchanged, so an
                 // unguarded observer loops forever and every CDP call times out (661 s).
                 "(() => { const strip = () => document.querySelectorAll('[role=treeitem]')\
@@ -357,7 +358,7 @@ async fn menu_coverage_with(
     keyboard::tab_to(page, crate::menu::TRIGGER, 10).await?;
     keyboard::press(page, keyboard::ARROW_DOWN).await?;
     wait::for_visible(page, "[role=menu]").await?;
-    page.evaluate(before).await?;
+    page.evaluate_bounded(before).await?;
     enabled.set(
         e2e::js(
             page,
@@ -370,7 +371,7 @@ async fn menu_coverage_with(
     contrast::assert_covers(page, "[data-fixture-ready]", "[role=menu]")
         .await
         .map_err(|e| anyhow::anyhow!("green half: {e:#}"))?;
-    page.evaluate(stylesheet(MENU_CLIPPED)).await?;
+    page.evaluate_bounded(stylesheet(MENU_CLIPPED)).await?;
     contrast::assert_covers(page, "[data-fixture-ready]", "[role=menu]")
         .await
         .map(|_| ())
@@ -459,7 +460,7 @@ fn a_closed_details_body_is_no_hole_but_its_clipped_summary_is() {
                         .await
                         .map_err(|e| anyhow::anyhow!("green half: {e:#}"))?,
                 );
-                page.evaluate(stylesheet(
+                page.evaluate_bounded(stylesheet(
                     "#planted-box { overflow: hidden !important; height: 0 !important; }",
                 ))
                 .await?;
@@ -651,7 +652,7 @@ fn a_colour_fixed_for_the_light_page_fails_only_in_the_dark_run() {
             let fixture = Fixture::open_in("/button", Viewport::Desktop, scheme)
                 .await
                 .unwrap_or_else(|e| panic!("opening /button ({}): {e}", scheme.name()));
-            fixture.page.evaluate(plant.as_str()).await.unwrap();
+            fixture.page.evaluate_bounded(plant.as_str()).await.unwrap();
             let outcome = contrast::assert_clean(&fixture.page, "[data-fixture-ready]").await;
             let _ = fixture.close().await;
             outcomes.push(outcome.map_err(|e| format!("{e:#}")));
@@ -683,7 +684,7 @@ fn a_page_pinned_light_under_dark_emulation_fails_the_scheme_check() {
             .unwrap_or_else(|e| panic!("opening /button (dark): {e}"));
         fixture
             .page
-            .evaluate("document.documentElement.setAttribute('data-lsx-theme', 'light')")
+            .evaluate_bounded("document.documentElement.setAttribute('data-lsx-theme', 'light')")
             .await
             .unwrap();
         let outcome = fixture.assert_scheme().await;

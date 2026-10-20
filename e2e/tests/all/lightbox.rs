@@ -6,6 +6,7 @@ use chromiumoxide::Page;
 use e2e::archetypes::Overlay;
 use e2e::browser::block_on;
 use e2e::suite::Step;
+use e2e::wait::PageBounded;
 use e2e::{
     Fixture, Suite, Viewport, passes::focus, passes::keyboard, passes::motion, passes::pointer,
     wait,
@@ -71,7 +72,7 @@ fn a_strip_whose_thumbnails_all_fit_is_quiet() {
         keyboard::press(page, keyboard::ENTER).await.unwrap();
         wait::for_visible(page, DIALOG).await.unwrap();
         let [status, stops, thumbnails]: [usize; 3] = page
-            .evaluate(
+            .evaluate_bounded(
                 "(() => { const strip = [...document.querySelectorAll('[role=dialog] [aria-roledescription=carousel]')].at(-1); \
                  return [strip.querySelectorAll('[role=status]').length, \
                  strip.querySelectorAll('[tabindex=\"0\"]:not(button)').length, \
@@ -145,7 +146,7 @@ fn the_current_thumbnail_shows_in_forced_colours() {
 /// nor the other thumbnails' (an unstyled one is transparent, not `Canvas`).
 pub async fn the_current_thumbnail_stands_out(page: &Page) -> Result<()> {
     use chromiumoxide::cdp::browser_protocol::emulation::{MediaFeature, SetEmulatedMediaParams};
-    page.execute(
+    page.execute_bounded(
         SetEmulatedMediaParams::builder()
             .features(vec![MediaFeature::new("forced-colors", "active")])
             .build(),
@@ -155,7 +156,7 @@ pub async fn the_current_thumbnail_stands_out(page: &Page) -> Result<()> {
     keyboard::press(page, keyboard::ENTER).await?;
     wait::for_visible(page, DIALOG).await?;
     let [current, other, canvas]: [String; 3] = page
-        .evaluate(
+        .evaluate_bounded(
             "(() => { const probe = document.createElement('div'); \
              probe.style.background = 'Canvas'; document.body.append(probe); \
              const canvas = getComputedStyle(probe).backgroundColor; probe.remove(); \
@@ -295,7 +296,7 @@ pub(super) async fn wait_showing(page: &Page, index: usize) -> Result<()> {
         return Ok(());
     }
     let seen: String = page
-        .evaluate(format!(
+        .evaluate_bounded(format!(
             r#"(() => {{
                 const d = document.querySelector('{DIALOG}')?.getBoundingClientRect();
                 const frames = [...document.querySelectorAll('{DIALOG} [data-lightbox-frame]')].map(f => {{
@@ -341,7 +342,7 @@ async fn wait_picture_focused(page: &Page, index: usize) -> Result<()> {
 
 async fn assert_picture_focused(page: &Page, index: usize) -> Result<()> {
     let on: bool = page
-        .evaluate(picture_focused_js(index))
+        .evaluate_bounded(picture_focused_js(index))
         .await?
         .into_value()?;
     if !on {
@@ -355,7 +356,7 @@ async fn assert_picture_focused(page: &Page, index: usize) -> Result<()> {
 /// `tabindex="0"` first, so only `inert` keeps Tab out.
 async fn assert_tab_skips_inert(page: &Page) -> Result<()> {
     let candidates: usize = page
-        .evaluate(format!(
+        .evaluate_bounded(format!(
             r#"(() => {{
                 const d = document.querySelector('{DIALOG}');
                 return d ? d.querySelectorAll('a[href],button,input,select,textarea,[tabindex]').length : 0;
@@ -364,7 +365,7 @@ async fn assert_tab_skips_inert(page: &Page) -> Result<()> {
         .await?
         .into_value()?;
     let inert: usize = page
-        .evaluate(format!(
+        .evaluate_bounded(format!(
             r#"(() => {{
                 const pictures = document.querySelectorAll('{DIALOG} [inert] [data-lightbox-frame] img');
                 pictures.forEach(img => {{ img.setAttribute('tabindex', '0'); img.dataset.planted = ''; }});
@@ -380,7 +381,7 @@ async fn assert_tab_skips_inert(page: &Page) -> Result<()> {
     for step in 1..=candidates + 2 {
         keyboard::press(page, keyboard::TAB).await?;
         let in_inert: bool = page
-            .evaluate("!!document.activeElement?.closest('[inert]')")
+            .evaluate_bounded("!!document.activeElement?.closest('[inert]')")
             .await?
             .into_value()?;
         if in_inert {
@@ -390,7 +391,7 @@ async fn assert_tab_skips_inert(page: &Page) -> Result<()> {
     }
     // Put the plant back: dioxus writes `tabindex` only when it changes, so
     // it would outlive the walk and hold a second tab stop once live.
-    page.evaluate(
+    page.evaluate_bounded(
         "document.querySelectorAll('[data-planted]').forEach(img => { img.setAttribute('tabindex', '-1'); delete img.dataset.planted; })",
     )
     .await?;
@@ -417,13 +418,13 @@ async fn double_click_selection(page: &Page) -> Result<()> {
     // The toolbar row's centre is empty: the dialog's own surface.
     for target in [PICTURE, "[role=dialog] > div:first-child"] {
         pointer::double_click(page, target).await?;
-        let selected: String = page.evaluate(SELECTED).await?.into_value()?;
+        let selected: String = page.evaluate_bounded(SELECTED).await?.into_value()?;
         if !selected.is_empty() {
             bail!("a double-click on {target} selected {selected:?}");
         }
     }
     pointer::double_click(page, "[role=dialog] p").await?;
-    let selected: String = page.evaluate(SELECTED).await?.into_value()?;
+    let selected: String = page.evaluate_bounded(SELECTED).await?.into_value()?;
     if selected.is_empty() {
         bail!("a double-click on the caption selected nothing");
     }
@@ -484,7 +485,8 @@ async fn centred(page: &Page) -> Result<()> {
 }
 
 async fn assert_centred(page: &Page, index: usize) -> Result<()> {
-    let [dialog, frame, picture]: [[f64; 2]; 3] = page.evaluate(CENTRES_JS).await?.into_value()?;
+    let [dialog, frame, picture]: [[f64; 2]; 3] =
+        page.evaluate_bounded(CENTRES_JS).await?.into_value()?;
     // The frame is below the close button, so only its width is centred.
     if dialog.iter().any(|d| d.abs() > 1.0) || frame[0].abs() > 1.0 || picture[0].abs() > 1.0 {
         bail!(
@@ -534,7 +536,7 @@ async fn gallery_swap(page: &Page, viewport: Viewport) -> Result<()> {
     // scrolls instantly (todo 687): the spy below reads what was asked for.
     motion::set_reduced_motion(page, false).await?;
     let reduced: bool = page
-        .evaluate("matchMedia('(prefers-reduced-motion: reduce)').matches")
+        .evaluate_bounded("matchMedia('(prefers-reduced-motion: reduce)').matches")
         .await?
         .into_value()?;
     if reduced {
@@ -552,14 +554,14 @@ async fn gallery_swap(page: &Page, viewport: Viewport) -> Result<()> {
     wait_stage_smooth(page).await?;
     motion::spy_scrolls(page, STAGE, false).await?;
     // An observer, not `performance.getEntries`: its buffer holds 250 entries and drops the rest.
-    page.evaluate(
+    page.evaluate_bounded(
         "window.__swapFetched = new Set(); new PerformanceObserver((list) => \
          list.getEntries().forEach((entry) => window.__swapFetched.add(entry.name))) \
          .observe({ type: 'resource' })",
     )
     .await?;
     // The trigger is under the modal, so a script presses it.
-    page.evaluate("document.querySelector('#swap-gallery').click()")
+    page.evaluate_bounded("document.querySelector('#swap-gallery').click()")
         .await?;
     wait::for_js_true(
         page,
@@ -595,7 +597,7 @@ async fn gallery_swap(page: &Page, viewport: Viewport) -> Result<()> {
     if let Err(error) = settled {
         // Per eager picture: loading, complete, and whether its fetch was seen.
         let state: Vec<String> = page
-            .evaluate(format!(
+            .evaluate_bounded(format!(
                 "{eager}.map(img => `${{img.loading}}:${{img.complete}}:${{window.__swapFetched.has(img.src)}}`)"
             ))
             .await?
@@ -610,7 +612,7 @@ async fn gallery_swap(page: &Page, viewport: Viewport) -> Result<()> {
     }
 
     let fetched: Vec<usize> = page
-        .evaluate(
+        .evaluate_bounded(
             r#"(() => [...window.__swapFetched]
                 .filter(n => n.endsWith('?second'))
                 .map(n => Number(n.match(/\/(\d)[^/]*\.svg\?second$/)?.[1]) - 1)
@@ -639,7 +641,7 @@ fn the_options_sx_and_parts_style_the_viewer() {
             pointer::click(page, TRIGGER).await?;
             wait::for_visible(page, "[role=dialog] [data-slot=caption]").await?;
             let [spacing, caption, thumbnail]: [String; 3] = page
-                .evaluate(
+                .evaluate_bounded(
                     "(() => { const d = document.querySelector('[role=dialog]'); \
                      return [getComputedStyle(d).letterSpacing, \
                      getComputedStyle(d.querySelector('[data-slot=caption]')).fontStyle, \

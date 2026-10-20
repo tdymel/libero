@@ -4,6 +4,7 @@
 use e2e::browser::block_on;
 use e2e::passes::{contrast, focus};
 use e2e::wait;
+use e2e::wait::PageBounded;
 use e2e::{Fixture, Suite, Viewport};
 
 /// Rings again under the dark scheme, whose tints differ.
@@ -66,7 +67,7 @@ fn a_mark_keeps_its_highlight_in_forced_colours() {
             const ok = marks.length > 0 && marks.every(m => { const s = getComputedStyle(m); \
             return s.backgroundColor === want.backgroundColor && s.color === want.color; }); \
             probe.remove(); return ok; })()";
-        page.execute(
+        page.execute_bounded(
             SetEmulatedMediaParams::builder()
                 .features(vec![MediaFeature::new("forced-colors", "active")])
                 .build(),
@@ -88,7 +89,7 @@ fn a_mark_underlines_only_the_anchors_that_underline_on_hover() {
         let page = &fixture.page;
         wait::for_visible(page, "#mark-never").await.unwrap();
         let line = |id: &'static str| async move {
-            page.evaluate(format!(
+            page.evaluate_bounded(format!(
                 "getComputedStyle(document.querySelector('{id}')).textDecorationLine"
             ))
             .await

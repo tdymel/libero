@@ -6,6 +6,7 @@ use e2e::browser::block_on;
 use e2e::driver::{Driver, eventually};
 use e2e::passes::contrast::COLOUR_JS;
 use e2e::passes::motion;
+use e2e::wait::PageBounded;
 use e2e::{Fixture, Suite, Viewport, wait};
 
 const UPLOAD: &str = "#upload";
@@ -77,7 +78,7 @@ fn the_arc_keeps_its_contrast_and_shows_in_forced_colours() {
             .await
             .unwrap();
         let [on_track, on_page]: [f64; 2] = page
-            .evaluate(ratios(UPLOAD).as_str())
+            .evaluate_bounded(ratios(UPLOAD).as_str())
             .await
             .unwrap()
             .into_value()
@@ -85,7 +86,7 @@ fn the_arc_keeps_its_contrast_and_shows_in_forced_colours() {
         assert!(on_track >= 3.0, "the arc is {on_track:.2}:1 on its track");
         assert!(on_page >= 3.0, "the arc is {on_page:.2}:1 on the page");
 
-        page.execute(
+        page.execute_bounded(
             SetEmulatedMediaParams::builder()
                 .features(vec![MediaFeature::new("forced-colors", "active")])
                 .build(),
@@ -121,7 +122,7 @@ fn the_md_label_fits_the_ring_at_200_percent_text() {
         wait::for_js_true(page, "!!document.querySelector('#percent svg')", "the ring")
             .await
             .unwrap();
-        page.evaluate("document.documentElement.style.fontSize = '200%'")
+        page.evaluate_bounded("document.documentElement.style.fontSize = '200%'")
             .await
             .unwrap();
         wait::for_js_true(
@@ -132,7 +133,7 @@ fn the_md_label_fits_the_ring_at_200_percent_text() {
         .await
         .unwrap();
         let [edge, label, font]: [f64; 3] = page
-            .evaluate(
+            .evaluate_bounded(
                 "(() => { const ring = document.querySelector('#percent');
                     const label = ring.querySelector('[data-slot=label]');
                     return [ring.getBoundingClientRect().width, label.getBoundingClientRect().width,
@@ -174,7 +175,7 @@ fn reduced_motion_stops_the_spin_and_dashes_the_ring() {
             if reduced {
                 // No frozen quarter, which would read as 25% done.
                 let dashes: String = page
-                    .evaluate(format!(
+                    .evaluate_bounded(format!(
                         "getComputedStyle(document.querySelector('{spin} > circle')).strokeDasharray"
                     ))
                     .await
@@ -191,7 +192,7 @@ fn reduced_motion_stops_the_spin_and_dashes_the_ring() {
                 assert!((dash - 7.0).abs() < 0.1, "the still ring is {dashes:?}");
                 // The stylesheet draws the dashes on the web; the attributes keep the spin's arc.
                 let attributes: String = page
-                    .evaluate(format!(
+                    .evaluate_bounded(format!(
                         "(c => c.getAttribute('stroke-dasharray') + '|' + c.getAttribute('stroke-dashoffset'))(document.querySelector('{spin} > circle'))"
                     ))
                     .await

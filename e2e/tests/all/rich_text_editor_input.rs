@@ -9,6 +9,7 @@ use chromiumoxide::Page;
 use e2e::browser::block_on;
 use e2e::passes::keyboard::{self, BACKSPACE, ENTER, MOD};
 use e2e::passes::{contrast, pointer};
+use e2e::wait::PageBounded;
 use e2e::{Fixture, Viewport, js, wait};
 
 const SENT: &str = "document.getElementById('sent').textContent";
@@ -17,7 +18,7 @@ const SENT: &str = "document.getElementById('sent').textContent";
 async fn sent_eq(page: &Page, want: &str) {
     let last = std::cell::RefCell::new(String::new());
     let held = wait::until(&format!("#sent to read {want:?}"), || async {
-        let now: String = page.evaluate(SENT).await?.into_value()?;
+        let now: String = page.evaluate_bounded(SENT).await?.into_value()?;
         let passes = now == want;
         *last.borrow_mut() = now;
         Ok(passes)
@@ -36,7 +37,7 @@ async fn pick(page: &Page, id: &str) {
     let last = std::cell::RefCell::new(String::new());
     wait::until("the list placed and still", || async {
         let rect: String = page
-            .evaluate(
+            .evaluate_bounded(
                 "(() => { const o = document.querySelector('[data-overlay]'); \
                  return o && getComputedStyle(o).visibility === 'visible' \
                  ? JSON.stringify(o.getBoundingClientRect()) : ''; })()",
@@ -64,7 +65,7 @@ async fn pick(page: &Page, id: &str) {
 
 /// Pastes `text` as plain text into the editor.
 async fn paste(page: &Page, text: &str) {
-    page.evaluate(format!(
+    page.evaluate_bounded(format!(
         "(() => {{ const d = new DataTransfer(); d.setData('text/plain', {text:?}); \
            {EDITOR}.dispatchEvent(new ClipboardEvent('paste', {{ clipboardData: d, bubbles: true, cancelable: true }})); }})()"
     ))
@@ -85,7 +86,9 @@ fn enter_sends_a_message_and_the_limit_and_handle_serve_a_chat_box() {
             .await
             .unwrap();
         let page = &fixture.page;
-        page.evaluate(format!("{EDITOR}.focus()")).await.unwrap();
+        page.evaluate_bounded(format!("{EDITOR}.focus()"))
+            .await
+            .unwrap();
         let hint: String = js(page, &format!("{EDITOR}.getAttribute('enterkeyhint')")).await;
         assert_eq!(hint, "send");
         // Todo 2743: the send key is named on the text.
@@ -179,7 +182,9 @@ fn mod_enter_sends_a_comment_and_the_handle_clears_and_focuses() {
             .await
             .unwrap();
         let page = &fixture.page;
-        page.evaluate(format!("{EDITOR}.focus()")).await.unwrap();
+        page.evaluate_bounded(format!("{EDITOR}.focus()"))
+            .await
+            .unwrap();
         let hint: bool = js(page, &format!("{EDITOR}.hasAttribute('enterkeyhint')")).await;
         assert!(!hint, "Enter is a new paragraph here, not send");
         let keys: String = js(page, &format!("{EDITOR}.getAttribute('aria-keyshortcuts')")).await;
@@ -213,7 +218,7 @@ fn mod_enter_sends_a_comment_and_the_handle_clears_and_focuses() {
         .await
         .unwrap();
 
-        page.evaluate("document.activeElement.blur()")
+        page.evaluate_bounded("document.activeElement.blur()")
             .await
             .unwrap();
         pointer::click(page, "#focus").await.unwrap();
@@ -249,7 +254,7 @@ fn android() {
         .await
         .unwrap();
         // Every input event after dioxus handled it, for the failure message.
-        page.evaluate(
+        page.evaluate_bounded(
             "window.__events = []; for (const t of ['keydown', 'beforeinput', 'compositionstart', 'compositionupdate', 'compositionend']) addEventListener(t, e => __events.push([t, e.inputType ?? e.key ?? '', e.data ?? '', e.ctrlKey ? 'ctrl' : '', e.defaultPrevented ? 'prevented' : ''].join('|'))); document.addEventListener('selectionchange', () => { const s = getSelection(); __events.push(['sel', s.anchorNode?.textContent, s.anchorOffset, s.focusOffset].join('|')); })",
         )
         .await
@@ -334,7 +339,7 @@ mod composing_keyboard {
                 eprintln!("no AOSP keyboard enabled: skipped");
                 return None;
             }
-            d.page().evaluate(RECORD).await.unwrap();
+            d.page().evaluate_bounded(RECORD).await.unwrap();
             d.click("[role=textbox]").await.unwrap();
             eventually(&mut d, "the editor to take focus", async |d| {
                 d.is_focused("[role=textbox]").await
@@ -400,7 +405,9 @@ fn a_mention_list_follows_the_caret_and_takes_keys_through_intercept() {
             .await
             .unwrap();
         let page = &fixture.page;
-        page.evaluate(format!("{EDITOR}.focus()")).await.unwrap();
+        page.evaluate_bounded(format!("{EDITOR}.focus()"))
+            .await
+            .unwrap();
         let overlay = "document.querySelector('[data-overlay]')";
         let active = format!("{EDITOR}.getAttribute('aria-activedescendant')");
         let options = |count: u32| async move {
@@ -504,7 +511,9 @@ fn a_mention_list_is_not_clipped_by_its_parent() {
             .await
             .unwrap();
         let page = &fixture.page;
-        page.evaluate(format!("{EDITOR}.focus()")).await.unwrap();
+        page.evaluate_bounded(format!("{EDITOR}.focus()"))
+            .await
+            .unwrap();
         keyboard::type_text(page, "@a").await.unwrap();
         wait::for_visible(page, "#mention-alan").await.unwrap();
         holds(
@@ -535,7 +544,9 @@ fn a_mention_list_in_a_modal_counts_as_inside() {
         wait::for_selector(page, "[role=dialog] [role=textbox]")
             .await
             .unwrap();
-        page.evaluate(format!("{EDITOR}.focus()")).await.unwrap();
+        page.evaluate_bounded(format!("{EDITOR}.focus()"))
+            .await
+            .unwrap();
         keyboard::type_text(page, "@a").await.unwrap();
         wait::for_visible(page, "#mention-alan").await.unwrap();
         pick(page, "mention-alan").await;
@@ -572,7 +583,7 @@ fn a_mention_list_near_the_viewport_bottom_flips_above_the_caret() {
         let page = &fixture.page;
         let leaf = format!("{EDITOR}.querySelector('[data-key]')");
         // The text line 40px above the viewport's bottom edge.
-        page.evaluate(format!(
+        page.evaluate_bounded(format!(
             "(() => {{ document.body.style.paddingTop = innerHeight + 'px'; window.scrollBy(0, {leaf}.getBoundingClientRect().bottom - (innerHeight - 40)); {EDITOR}.focus(); }})()"
         ))
         .await
@@ -590,7 +601,7 @@ fn a_mention_list_near_the_viewport_bottom_flips_above_the_caret() {
 
         // Scrolled to the middle, the list moves back under the line. Headless Chrome may hold
         // the scroll event until its next frame, so one is sent too.
-        page.evaluate(
+        page.evaluate_bounded(
             "document.body.style.paddingBottom = innerHeight + 'px'; window.scrollBy(0, innerHeight / 2); document.dispatchEvent(new Event('scroll'))",
         )
         .await
