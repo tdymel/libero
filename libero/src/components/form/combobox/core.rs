@@ -14,8 +14,8 @@ use crate::{
     },
     hooks::{
         ElementHandle, POPOVER_AVAILABLE_HEIGHT, PopoverOptions, PopoverWidth, TYPEAHEAD_RESET,
-        Typeahead, current_localization, typeahead_match, use_element, use_field_list_layer,
-        use_popover_on, use_theme, use_typeahead,
+        Typeahead, current_localization, placement_sx, typeahead_match, use_element,
+        use_field_list_layer, use_popover_on, use_theme, use_typeahead,
     },
     platform::{ElementApi, is_tab},
     sx::{StaticSx, Sx, ThemeAwareValue, sx},
@@ -27,7 +27,7 @@ use super::{ComboboxState, dropdown::ComboboxDropdown, option::ComboboxContext};
 // A `paper_sx()` surface, through `use_box` rather than `Paper` for the popover's handle and events.
 pub(crate) static COMBOBOX_DROPDOWN_SX: StaticSx = StaticSx::new(|| {
     paper_sx()
-        // Position and width come from `use_popover` as an inline style.
+        .and(placement_sx(true))
         .z_index(Z_INDEX_POPOVER.value())
         .display("flex")
         .flex_direction("column")
@@ -365,7 +365,7 @@ fn ComboboxPopup(props: ComboboxPopupProps) -> Element {
         .parts(&props.parts)
         .states(&props.states)
         .variables(&radius_variables)
-        .style(Some(popover.style()))
+        .style(Some(popover.vars()))
         .prepare();
 
     // Placed means measured and visible, the first moment focus can take.

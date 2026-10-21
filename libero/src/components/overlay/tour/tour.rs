@@ -20,8 +20,8 @@ use crate::{
     context::LiberoContext,
     hooks::{
         ElementHandle, ElementRect, FocusReturn, LocalText, POPOVER_AVAILABLE_HEIGHT,
-        PopoverOptions, Rect, escape_closes, local_text, use_back, use_dismiss_layer, use_element,
-        use_element_rect, use_focus_return, use_id, use_localization, use_popover_on,
+        PopoverOptions, Rect, escape_closes, local_text, placement_sx, use_back, use_dismiss_layer,
+        use_element, use_element_rect, use_focus_return, use_id, use_localization, use_popover_on,
         use_portal_slot, use_scheduled, use_theme,
     },
     localization::fill,
@@ -118,7 +118,7 @@ static CENTRED_SX: StaticSx = StaticSx::new(|| {
         .var(POPOVER_AVAILABLE_HEIGHT, "100%")
 });
 
-static PLACED_SX: StaticSx = StaticSx::new(|| sx().display("block"));
+static PLACED_SX: StaticSx = StaticSx::new(|| sx().display("block").and(placement_sx(true)));
 
 // Never past the room on its side: it scrolls instead (WCAG 1.4.10).
 static CARD_SX: StaticSx = StaticSx::new(|| {
@@ -927,7 +927,7 @@ fn TourCard(
 
     let positioned = use_box()
         .framework_sx(if centred { &CENTRED_SX } else { &PLACED_SX })
-        .style((!centred).then(|| popover.style_in_layer()))
+        .style((!centred).then(|| popover.vars_in_layer()))
         .prepare();
     let card_sx = sx()
         .width(format!("{max_width}px"))

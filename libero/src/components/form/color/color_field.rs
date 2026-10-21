@@ -18,7 +18,7 @@ use crate::{
     },
     context::IconSlot,
     hooks::{
-        POPOVER_AVAILABLE_HEIGHT, PopoverOptions, use_element, use_field_list_layer,
+        POPOVER_AVAILABLE_HEIGHT, PopoverOptions, placement_sx, use_element, use_field_list_layer,
         use_focus_within, use_form_owner, use_localization, use_popover_on, use_theme,
     },
     platform::{ElementApi, eye_dropper, is_tab, next_task},
@@ -27,8 +27,8 @@ use crate::{
 };
 
 static COLOR_FIELD_DROPDOWN_SX: StaticSx = StaticSx::new(|| {
-    // Position comes from `use_popover` as an inline style.
     paper_sx()
+        .and(placement_sx(true))
         .z_index(Z_INDEX_POPOVER.value())
         .padding(SizeCss::SPACING.value(Size::Sm))
         // The field's corner, and a shadow: the dropdown floats over the page.
@@ -318,7 +318,7 @@ pub fn ColorField(props: ColorFieldProps) -> Element {
         .framework_sx(&COLOR_FIELD_DROPDOWN_SX)
         .parts(&props.dropdown_parts)
         .states(&dropdown_states)
-        .style(Some(popover.style()))
+        .style(Some(popover.vars()))
         .prepare();
     // Waits for placement too: Arrow Down on a closed field opens it, and the
     // picker is not drawn until the box has been measured.

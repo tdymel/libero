@@ -73,11 +73,19 @@ fn an_open_tooltip_portals_its_bubble() {
     // No close counts down on a bubble nobody left.
     assert!(!bubble.contains_key("data-closing"), "{bubble:?}");
     assert!(bubble["data-state"].contains("size-lg"), "{bubble:?}");
-    assert!(bubble["style"].contains("position:fixed;"), "{bubble:?}");
-    assert!(!bubble["style"].contains("max-width"), "{bubble:?}");
-    // The rest of the popover's style stays whole around the dropped cap.
+    // The placement is vars the class reads, so the caller's `sx` cap wins.
     assert!(
-        bubble["style"].contains("min-width:auto;visibility:"),
+        bubble["style"].contains("--lsx-popover-position:fixed;"),
+        "{bubble:?}"
+    );
+    assert!(
+        !bubble["style"]
+            .split(';')
+            .any(|declaration| declaration.starts_with("max-width")),
+        "{bubble:?}"
+    );
+    assert!(
+        bubble["style"].contains("--lsx-popover-min-width:auto;"),
         "{bubble:?}"
     );
     assert!(html.contains("max-width:min(20rem,"));

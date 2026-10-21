@@ -4,7 +4,7 @@ use crate::{
         common::{LogicalTextAlign, Part, ROW_HOVER_TINT, disabled_look_sx, inset_focus_ring_sx},
         layout::paper_sx,
     },
-    hooks::POPOVER_AVAILABLE_HEIGHT,
+    hooks::{POPOVER_AVAILABLE_HEIGHT, placement_sx},
     sx::{StaticSx, sx},
     theme::{
         MENU_ITEM_FONT, MENU_ITEM_MIN_HEIGHT, MENU_ITEM_PAD_X, MENU_ITEM_RADIUS, MENU_LABEL_FONT,
@@ -18,6 +18,7 @@ pub(super) static MENU_SX: StaticSx = StaticSx::new(|| {
     let item = MenuPart::Item.selector();
     let glyphs = "& [data-slot='item'] > :is([data-slot='chevron'], [data-slot='check'])";
     paper_sx()
+        .and(placement_sx(true))
         .and(MenuDefaults::theme_vars())
         .z_index(Z_INDEX_POPOVER.value())
         .display("flex")

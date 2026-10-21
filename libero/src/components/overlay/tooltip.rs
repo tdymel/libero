@@ -12,9 +12,9 @@ use crate::{
         layout::use_box,
     },
     hooks::{
-        Align, ElementHandle, PopoverOptions, Rect, escape_closes, place, use_css, use_element,
-        use_escape_dismiss, use_focus_within, use_popover_on, use_portal_slot, use_resize_fallback,
-        use_theme,
+        Align, ElementHandle, PopoverOptions, Rect, escape_closes, place, placement_sx, use_css,
+        use_element, use_escape_dismiss, use_focus_within, use_popover_on, use_portal_slot,
+        use_resize_fallback, use_theme,
     },
     platform::{Dimensions, ElementApi, document, keyboard, when_laid_out},
     sx::{REDUCED_MOTION, StaticSx, Sx, ThemeAwareValue, sx},
@@ -76,7 +76,8 @@ fn bubble_sx() -> Sx {
 }
 
 static TOOLTIP_BUBBLE_SX: StaticSx = StaticSx::new(|| {
-    Side::ALL.iter().fold(bubble_sx(), |base, &side| {
+    let placed = bubble_sx().and(placement_sx(false));
+    Side::ALL.iter().fold(placed, |base, &side| {
         base.when(side.state_name(), bridge_sx(side))
     })
 });
@@ -488,8 +489,8 @@ fn TooltipBubble(
             tooltip.z_index.resolve(None),
         )
         .into();
-    // The class carries the popover's inline cap, so a caller `sx` can change it.
-    let style = Some(popover.style_uncapped());
+    // The class carries the width cap, so a caller `sx` can change it.
+    let style = Some(popover.vars());
 
     let bubble = use_box()
         .framework_sx(&TOOLTIP_BUBBLE_SX)

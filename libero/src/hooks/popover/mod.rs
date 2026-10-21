@@ -24,6 +24,7 @@ use crate::{
         Dimensions, ElementApi, ScrollSubscription, VisibleBand, document, focus_is_in,
         on_viewport_resize, reads_dom_synchronously, scroll, visible_band, when_laid_out_retry,
     },
+    sx::{Sx, sx},
     theme::CssVar,
     utils::bump,
 };
@@ -36,6 +37,31 @@ pub(crate) use place::place;
 /// The room on the box's side, set by [`PopoverHandle::style`]: a box that can
 /// grow tall takes `max-height: min(<own>, var(.., <own>))` and scrolls (WCAG 1.4.10).
 pub(crate) const AVAILABLE_HEIGHT: CssVar = CssVar::new("--lsx-popover-available-height");
+
+// Set inline by [`PopoverHandle::vars`], read by [`placement_sx`].
+const POSITION: CssVar = CssVar::new("--lsx-popover-position");
+const X: CssVar = CssVar::new("--lsx-popover-x");
+const Y: CssVar = CssVar::new("--lsx-popover-y");
+const WIDTH: CssVar = CssVar::new("--lsx-popover-width");
+const MIN_WIDTH: CssVar = CssVar::new("--lsx-popover-min-width");
+const MAX_WIDTH: CssVar = CssVar::new("--lsx-popover-max-width");
+/// The anchor's measured width, for a caller's `sx`: `width: var(--lsx-popover-anchor-width)`.
+const ANCHOR_WIDTH: CssVar = CssVar::new("--lsx-popover-anchor-width");
+
+/// The placement [`PopoverHandle::vars`] computes, as class rules: a caller's `sx`
+/// beats them without `!important` (minmax 3892). `capped` takes the width cap too.
+pub(crate) fn placement_sx(capped: bool) -> Sx {
+    let placed = sx()
+        .position(POSITION.value())
+        .with("left", X.value())
+        .with("top", Y.value())
+        .width(WIDTH.value())
+        .min_width(MIN_WIDTH.value());
+    match capped {
+        true => placed.max_width(MAX_WIDTH.value()),
+        false => placed,
+    }
+}
 
 /// A popover's own state: where its box goes, and the portal slot it goes in.
 /// Built by [`use_popover`]; `Copy`, so it travels into handlers.
@@ -52,6 +78,16 @@ pub struct PopoverHandle {
     slot: PortalSlot,
     /// `None` from `use_popover_on`, whose consumers run their own `use_dismiss`.
     dismiss: Option<PopoverDismiss>,
+}
+
+/// The values [`PopoverHandle::style`] and [`PopoverHandle::vars`] print.
+struct Declarations {
+    x: f64,
+    y: f64,
+    width: String,
+    min_width: String,
+    visibility: &'static str,
+    available: String,
 }
 
 /// [`PopoverOptions::dismiss`]'s wiring: `use_dismiss` plus the caller's close.
@@ -98,21 +134,61 @@ impl PopoverHandle {
     /// Every declaration is emitted on every render: a renderer never removes
     /// one that stops being printed. The CSS width cap keeps it on a phone (todo 357).
     pub fn style(&self) -> String {
-        self.style_with(true, "fixed")
+        let Declarations {
+            x,
+            y,
+            width,
+            min_width,
+            visibility,
+            available,
+        } = self.declarations();
+        format!(
+            "position:fixed;left:{x}px;top:{y}px;width:{width};min-width:{min_width};max-width:calc(100vw - {}px);visibility:{visibility};{}:{available};",
+            2.0 * self.padding,
+            AVAILABLE_HEIGHT.name()
+        )
     }
 
-    /// [`style`](Self::style) without the width cap, for a box whose class carries it.
-    pub(crate) fn style_uncapped(&self) -> String {
-        self.style_with(false, "fixed")
+    /// [`style`](Self::style) as inline vars, for a box whose class takes
+    /// [`placement_sx`], so the caller's `sx` can move or size it. Adds `ANCHOR_WIDTH` once measured.
+    pub(crate) fn vars(&self) -> String {
+        self.vars_in("fixed")
     }
 
-    /// [`style`](Self::style) as `absolute`, the same box in a `fixed` viewport-wide layer:
+    /// [`vars`](Self::vars) as `absolute`, the same box in a `fixed` viewport-wide layer:
     /// Blitz paints a nested `fixed` box at the root's level, under a z-indexed `Header` (3875).
-    pub(crate) fn style_in_layer(&self) -> String {
-        self.style_with(true, "absolute")
+    pub(crate) fn vars_in_layer(&self) -> String {
+        self.vars_in("absolute")
     }
 
-    fn style_with(&self, capped: bool, position: &str) -> String {
+    fn vars_in(&self, position: &str) -> String {
+        let Declarations {
+            x,
+            y,
+            width,
+            min_width,
+            visibility,
+            available,
+        } = self.declarations();
+        // Never unmeasured again once measured, so no stale value outlives a dropped declaration.
+        let anchor = match *self.anchor_width.read() {
+            Some(anchor) => format!("{}:{anchor}px;", ANCHOR_WIDTH.name()),
+            None => String::new(),
+        };
+        format!(
+            "{anchor}{}:{position};{}:{x}px;{}:{y}px;{}:{width};{}:{min_width};{}:calc(100vw - {}px);visibility:{visibility};{}:{available};",
+            POSITION.name(),
+            X.name(),
+            Y.name(),
+            WIDTH.name(),
+            MIN_WIDTH.name(),
+            MAX_WIDTH.name(),
+            2.0 * self.padding,
+            AVAILABLE_HEIGHT.name()
+        )
+    }
+
+    fn declarations(&self) -> Declarations {
         let (x, y, visibility, available) = match *self.placed.read() {
             Some(placed) => (
                 placed.x,
@@ -133,17 +209,14 @@ impl PopoverHandle {
             (PopoverWidth::Min, Some(anchor)) => (String::from("auto"), format!("{anchor}px")),
             _ => (String::from("auto"), String::from("auto")),
         };
-
-        let cap = if capped {
-            format!("max-width:calc(100vw - {}px);", 2.0 * self.padding)
-        } else {
-            String::new()
-        };
-
-        format!(
-            "position:{position};left:{x}px;top:{y}px;width:{width};min-width:{min_width};{cap}visibility:{visibility};{}:{available};",
-            AVAILABLE_HEIGHT.name()
-        )
+        Declarations {
+            x,
+            y,
+            width,
+            min_width,
+            visibility,
+            available,
+        }
     }
 
     /// Portals the box, `None` takes it away. Already rendered, so its reads

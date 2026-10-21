@@ -17,7 +17,7 @@ use crate::{
     },
     hooks::{
         Align, DismissOptions, ElementHandle, POPOVER_AVAILABLE_HEIGHT, PopoverOptions, Side,
-        owner_link, use_dismiss, use_element, use_focus_within, use_popover_on,
+        owner_link, placement_sx, use_dismiss, use_element, use_focus_within, use_popover_on,
         use_resize_fallback, use_theme,
     },
     platform::{ElementApi, PlatformError, is_tab, next_task, scrolls_on_keys},
@@ -30,6 +30,7 @@ input_from_str!(Align);
 // `paper_sx()` through `use_box`, not `Paper`: it needs the popover's element and events.
 static HOVER_CARD_SX: StaticSx = StaticSx::new(|| {
     paper_sx()
+        .and(placement_sx(true))
         .z_index(Z_INDEX_POPOVER.value())
         .padding(SizeCss::SPACING.value(Size::Md))
         // Never past the room on its side: it scrolls instead (WCAG 1.4.10).
@@ -300,7 +301,7 @@ pub fn HoverCard(props: HoverCardProps) -> Element {
         .sx(&props.sx)
         .states(&states)
         .variables(&radius_variables)
-        .style(Some(popover.style()))
+        .style(Some(popover.vars()))
         .prepare();
 
     popover.show(open.then(|| {

@@ -558,7 +558,7 @@ mod combobox_highlight {
         let html = render_pass(&mut dom);
 
         let style = style_of(&dropdown_root(&html));
-        assert_eq!(style["position"], "fixed", "{style:?}");
+        assert_eq!(style["--lsx-popover-position"], "fixed", "{style:?}");
         assert_eq!(
             style["visibility"], "hidden",
             "the dropdown is shown before its first measurement, which under \
@@ -578,7 +578,7 @@ mod combobox_highlight {
 
         let style = style_of(&dropdown_root(&html));
         assert_eq!(
-            style["max-width"], "calc(100vw - 16px)",
+            style["--lsx-popover-max-width"], "calc(100vw - 16px)",
             "the dropdown can grow past the viewport: {style:?}"
         );
     }

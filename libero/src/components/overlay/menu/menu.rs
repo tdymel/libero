@@ -12,11 +12,14 @@ use crate::{
         },
         layout::use_box,
     },
-    hooks::{Align, Side, use_element, use_press_marker, use_theme},
+    hooks::{Align, Side, id_selector, use_element, use_press_marker, use_theme},
     platform::mounted_by_selector,
-    sx::ThemeAwareValue,
+    sx::{StaticSx, ThemeAwareValue, sx},
     theme::Size,
 };
+
+// No box of its own, so a trigger sized in percent fills the Menu's parent (minmax 3893).
+static MENU_WRAPPER_SX: StaticSx = StaticSx::new(|| sx().display("contents"));
 
 parts_enum! {
     /// [`Menu`]'s inner parts, for its `parts` prop. Every level's box takes them,
@@ -102,16 +105,27 @@ pub fn Menu(props: MenuProps) -> Element {
     let id = state.id();
 
     let wrapper = use_element();
+    let trigger = use_element();
     let floating = use_element();
     let owner = use_hook(dioxus::core::current_scope_id);
-    let wrapper_box = use_box().prepare();
+    let wrapper_box = use_box().framework_sx(&MENU_WRAPPER_SX).prepare();
+    let opened = state.is_open();
     // Found, not `onmounted`: on a WebView each is a blocking round trip, one per row menu (todo 2749).
     let wrapper_selector = format!("[data-menu-wrapper={}]", css_string(&id));
+    let trigger_selector = id_selector(&trigger_id(&id));
+    let first_child = format!("{wrapper_selector} > *");
     use_effect(use_reactive!(|wrapper_selector| {
         wrapper.point_at(mounted_by_selector(&wrapper_selector));
     }));
+    // The contents-box wrapper measures nothing, so the menu anchors on the trigger.
+    // Found per open, as the caller may have swapped it; no id falls back to the first child.
+    use_effect(use_reactive!(|(trigger_selector, first_child, opened)| {
+        let _ = opened;
+        trigger.point_at(
+            mounted_by_selector(&trigger_selector).or_else(|| mounted_by_selector(&first_child)),
+        );
+    }));
 
-    let opened = state.is_open();
     // No empty `role="menu"`: it reads as "menu, 0 items" (todo 447). The state
     // stays open, so items arriving later show the menu.
     let empty = props.items.is_empty();
@@ -175,7 +189,7 @@ pub fn Menu(props: MenuProps) -> Element {
             items: if open { props.items } else { Vec::new() },
             id: menu_id(&id),
             labelledby: trigger_id(&id),
-            anchor: wrapper,
+            anchor: trigger,
             floating,
             root: owner,
             wrapper,

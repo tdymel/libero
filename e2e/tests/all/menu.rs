@@ -967,6 +967,51 @@ e2e::scenario!(
     a_short_menu_keeps_its_height
 );
 
+/// minmax 3893: the wrapper has no box, so a trigger at 100% fills its parent and anchors the menu.
+async fn a_trigger_fills_its_box<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    let parent = d.rect("#fill-box").await?;
+    let trigger = d.rect(TRIGGER).await?;
+    anyhow::ensure!(
+        (trigger.width - parent.width).abs() < 1.0 && (trigger.height - parent.height).abs() < 1.0,
+        "the trigger {trigger:?} fills its box {parent:?}"
+    );
+    d.click(TRIGGER).await?;
+    eventually(d, "the menu below the trigger, at its start", async |d| {
+        if !d.exists(MENU).await? {
+            return Ok(false);
+        }
+        let menu = d.rect(MENU).await?;
+        let below = menu.y - (trigger.y + trigger.height);
+        Ok((0.0..=16.0).contains(&below) && (menu.x - trigger.x).abs() < 1.0)
+    })
+    .await
+}
+
+/// minmax 3892: the placement lives in a class, so the caller's `sx` docks the menu.
+async fn sx_docks_the_menu<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    let (width, height) = d.viewport().await?;
+    let dock = d.rect("#dock").await?;
+    d.click(TRIGGER).await?;
+    eventually(d, "the menu full width, flush on the row", async |d| {
+        if !d.exists(MENU).await? {
+            return Ok(false);
+        }
+        let menu = d.rect(MENU).await?;
+        Ok(menu.x.abs() < 1.0
+            && (menu.width - width).abs() < 1.0
+            && (menu.y + menu.height - dock.y).abs() < 1.0
+            && dock.y < height)
+    })
+    .await
+}
+
+e2e::scenario!(
+    a_trigger_fills_its_box,
+    "/menu-fill",
+    a_trigger_fills_its_box
+);
+e2e::scenario!(sx_docks_the_menu, "/menu-docked", sx_docks_the_menu);
+
 /// Todo 3053: Home on the first item and End on the last stay the page's.
 #[test]
 fn home_and_end_at_the_ends_leave_the_page_to_scroll() {

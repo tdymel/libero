@@ -48,12 +48,12 @@ static MENUBAR_SX: StaticSx = StaticSx::new(|| {
         // Bar and long labels wrap instead of widening the page (1.4.10).
         .flex_wrap("wrap")
         .gap(MENUBAR_GAP.value())
-        // Each `Menu` wrapper is the flex item. `anywhere` already floors it at a glyph, and
-        // no min-content measure spares Blitz a label broken per glyph (886).
-        .selector("& > *", sx().min_width("0"))
         .selector(
             trigger,
-            sx().display("inline-flex")
+            // The flex item, through its `display: contents` wrapper. `anywhere` already floors it
+            // at a glyph, and no min-content measure spares Blitz a label broken per glyph (886).
+            sx().min_width("0")
+                .display("inline-flex")
                 .align_items("center")
                 .padding(format!(
                     "{} {}",

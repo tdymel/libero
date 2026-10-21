@@ -4,6 +4,7 @@ use dioxus::prelude::*;
 use libero::components::{
     Button, Flex, Menu, MenuEntry, MenuItem, MenuPart, Parts, Text, use_menu,
 };
+use libero::hooks::Side;
 use libero::sx::sx;
 use libero::theme::MENU_MAX_HEIGHT;
 
@@ -25,7 +26,65 @@ pub const ROUTES: Routes = &[
         "/menu-tall/above",
         || rsx! { MenuTallPage { top: "calc(100vh - 100px)" } },
     ),
+    ("/menu-fill", || rsx! { MenuFillPage {} }),
+    ("/menu-docked", || rsx! { MenuDockedPage {} }),
 ];
+
+/// minmax 3893: a round trigger at 100% of a sized box fills it, and the menu anchors on it.
+#[component]
+fn MenuFillPage() -> Element {
+    let menu = use_menu();
+    let items = vec![MenuItem::new("Copper").onselect(|_| {}).into()];
+
+    rsx! {
+        div { id: "fill-box", width: "120px", height: "120px", margin: "40px",
+            Menu {
+                state: menu,
+                items,
+                Button {
+                    attributes: menu.a11y_attributes(),
+                    sx: sx().width("100%").height("100%").border_radius("50%"),
+                    "Ore"
+                }
+            }
+        }
+    }
+}
+
+/// minmax 3892: a row docked at the bottom opens a menu as wide as the viewport, flush on
+/// the row's top edge, by `sx` alone.
+#[component]
+fn MenuDockedPage() -> Element {
+    let menu = use_menu();
+    let items = vec![
+        MenuItem::new("Slot 1").onselect(|_| {}).into(),
+        MenuItem::new("Slot 2").onselect(|_| {}).into(),
+    ];
+
+    rsx! {
+        div { id: "dock", position: "fixed", left: "0", right: "0", bottom: "0", height: "52px",
+            Menu {
+                state: menu,
+                items,
+                side: Side::Top,
+                radius: "0",
+                sx: sx()
+                    .left("0")
+                    .right("0")
+                    .width("auto")
+                    .max_width("none")
+                    .top("auto")
+                    .bottom("52px")
+                    .box_shadow("none"),
+                Button {
+                    attributes: menu.a11y_attributes(),
+                    sx: sx().width("100%").height("100%").border_radius("0"),
+                    "Queue"
+                }
+            }
+        }
+    }
+}
 
 /// Forty items and no theme cap, the trigger at `top`: only the room on the
 /// side it lands on holds the box (1739).

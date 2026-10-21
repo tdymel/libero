@@ -20,8 +20,8 @@ use crate::{
     context::IconSlot,
     hooks::{
         Align, ElementHandle, FullscreenHandle, Hotkey, MediaError, MediaHandle, ModalScope,
-        PopoverOptions, Side, owner_link, use_element, use_formats, use_hotkeys, use_id,
-        use_localization, use_modal, use_popover, use_theme,
+        PopoverOptions, Side, owner_link, placement_sx, use_element, use_formats, use_hotkeys,
+        use_id, use_localization, use_modal, use_popover, use_theme,
     },
     localization::fill,
     platform::{ElementApi, is_tab, key_taken},
@@ -56,6 +56,7 @@ pub(super) fn use_late_tooltips() {
 /// The volume menu: a slider on a card.
 static VOLUME_MENU_SX: StaticSx = StaticSx::new(|| {
     paper_sx()
+        .and(placement_sx(true))
         .z_index(Z_INDEX_POPOVER.value())
         .padding(SizeCss::SPACING.value(Size::Sm))
         // The card sizes to its content, which a `100%` track has none of.
@@ -621,7 +622,7 @@ pub(super) fn MediaVolume(
     let card = use_box()
         .framework_sx(&VOLUME_MENU_SX)
         .parts(&parts)
-        .style(Some(popover.style()))
+        .style(Some(popover.vars()))
         .prepare();
 
     // Focus goes to the slider once the card is placed, once per opening.

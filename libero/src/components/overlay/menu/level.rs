@@ -290,7 +290,7 @@ pub(super) fn MenuLevel(props: MenuLevelProps) -> Element {
         .parts(&props.parts)
         .states(&states)
         .variables(&radius_variables)
-        .style(open.then(|| popover.style()))
+        .style(open.then(|| popover.vars()))
         .prepare();
 
     popover.show(rows.map(|rows| {

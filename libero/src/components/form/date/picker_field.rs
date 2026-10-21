@@ -27,7 +27,7 @@ use crate::{
         layout::{paper_sx, use_box},
     },
     hooks::{
-        POPOVER_AVAILABLE_HEIGHT, PopoverOptions, use_element, use_field_list_layer,
+        POPOVER_AVAILABLE_HEIGHT, PopoverOptions, placement_sx, use_element, use_field_list_layer,
         use_focus_within, use_form_owner, use_localization, use_popover_on, use_theme,
     },
     localization::DateLocale,
@@ -37,8 +37,8 @@ use crate::{
 };
 
 static PICKER_FIELD_DROPDOWN_SX: StaticSx = StaticSx::new(|| {
-    // Position comes from `use_popover` as an inline style.
     paper_sx()
+        .and(placement_sx(true))
         .z_index(Z_INDEX_POPOVER.value())
         .padding(SizeCss::SPACING.value(Size::Sm))
         // The field's corner, and a floating shadow over the surface's resting one.
@@ -426,7 +426,7 @@ pub(super) fn use_picker_field<V: FieldValue>(
         .framework_sx(&PICKER_FIELD_DROPDOWN_SX)
         .parts(field.dropdown_parts)
         .states(&dropdown_states)
-        .style(Some(popover.style()))
+        .style(Some(popover.vars()))
         .prepare();
     // Waits for placement: the picker is not drawn until the box is measured.
     use_effect(move || {

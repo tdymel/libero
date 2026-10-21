@@ -4,12 +4,39 @@ use crate::components::{
 };
 use dioxus::prelude::*;
 use libero::{
-    components::{Code, Kbd, MenuPart, Text},
+    components::{Code, CodeBlock, Kbd, MenuPart, Text},
     use_theme,
 };
 
 mod demo;
-use demo::MenuDemo;
+use demo::{DockedMenuDemo, MenuDemo};
+
+/// minmax 3892: `sx` alone docks the menu on its trigger's top edge, as wide as the trigger.
+const DOCKED: &str = r#"let queue = use_menu();
+let slots = vec![
+    MenuItem::new("Iron sword, 2m 10s left").onselect(|_| {}).into(),
+    MenuItem::new("Copper ring, queued").onselect(|_| {}).into(),
+    MenuItem::new("Free slot").onselect(|_| {}).into(),
+];
+
+Menu {
+    state: queue,
+    items: slots,
+    side: Side::Top,
+    radius: "0",
+    sx: sx()
+        .width("var(--lsx-popover-anchor-width)")
+        .max_width("none")
+        .margin_top("var(--lsx-popover-gap)")
+        .box_shadow("none"),
+    Button {
+        variant: "light",
+        radius: "0",
+        attributes: queue.a11y_attributes(),
+        sx: sx().width("100%").height("52px"),
+        "Queue: Iron sword, 2m 10s left"
+    }
+}"#;
 
 /// The live demo; its state, pick handler and items print above the `rsx!`.
 const FILE: DemoFile = DemoFile(include_str!("menu/demo.rs"));
@@ -213,6 +240,25 @@ pub fn MenuPage() -> Element {
                     Code { source: "url" }
                     " in a new tab. Space activates it like Enter."
                 }
+            }
+
+            DocSection {
+                title: "Docked",
+                Text {
+                    "The menu's position and width are class rules, so "
+                    Code { source: "sx" }
+                    " moves and sizes it without "
+                    Code { source: "!important" }
+                    ". "
+                    Code { source: "var(--lsx-popover-anchor-width)" }
+                    " is the trigger's width, and "
+                    Code { source: "var(--lsx-popover-gap)" }
+                    " the space between them. The trigger fills the box it sits in, as "
+                    Code { source: "Menu" }
+                    " adds no box around it."
+                }
+                DockedMenuDemo {}
+                CodeBlock { source: DOCKED, language: "rust" }
             }
         }
     }
