@@ -2,7 +2,7 @@
 
 Crate: `libero`
 Import: `use libero::hooks::{LightboxItem, LightboxOptions, use_lightbox};`
-Feature: `lightbox` (on by default, turns on `carousel`; [features.md](features.md))
+Feature: `lightbox` (off by default, turns on `carousel`; [features.md](features.md))
 Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/overlay/lightbox/use_lightbox.rs>
 Index: [index.md](index.md) lists every other page
 Description: A modal image viewer, `use_modal` with a gallery around it, with zoom, pan, captions and a thumbnail strip.

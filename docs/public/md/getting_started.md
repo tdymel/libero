@@ -236,8 +236,8 @@ Every feature is additive.
 
 | Flag | What it does |
 |---|---|
-| `<component>`, `<category>` | One feature per component, and one per category that turns on its components. The default has the common ones; see [Features](features.md). |
-| `code-lang-<name>` | One grammar for [Code](code.md) and [CodeBlock](code_block.md), 30 in all. Rust, Bash, Markdown, HTML and CSS are the default. |
+| `<component>`, `<category>` | One feature per component, and one per category that turns on its components. None is on by default; see [Features](features.md). |
+| `code-lang-<name>` | One grammar for [Code](code.md) and [CodeBlock](code_block.md), 30 in all, none on by default. |
 | `collation` | [Table](table.md) sorts text by the app's language on desktop, Android and native too, with ICU4X's collation data (about 1.2 MB of binary). Without it the web sorts by language and the rest by accent-folded letters. |
 | `full-polymorphism` | [Box](box.md) renders the rarer HTML elements too (metadata, media, web components). Without it they fall back to a `div`. |
 | `native` | Element access through Blitz, for apps on `dioxus-native`. |

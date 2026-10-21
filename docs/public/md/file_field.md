@@ -2,7 +2,7 @@
 
 Crate: `libero`
 Import: `use libero::components::{FileField, Files};`
-Feature: `file-field` (on by default, turns on `chip`, `select`; [features.md](features.md))
+Feature: `file-field` (off by default, turns on `chip`, `select`; [features.md](features.md))
 Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/form/file_field>
 Index: [index.md](index.md) lists every other page
 Description: Files picked from the system dialog or dropped on the control, as a one-line input or a drop surface.

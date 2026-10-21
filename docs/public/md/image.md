@@ -2,7 +2,7 @@
 
 Crate: `libero`
 Import: `use libero::components::Image;`
-Feature: `image` (on by default; [features.md](features.md))
+Feature: `image` (off by default; [features.md](features.md))
 Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/data_display/image.rs>
 Index: [index.md](index.md) lists every other page
 Description: An `<img>` with a fallback source on load error, rounded corners and an optional click-to-zoom overlay.

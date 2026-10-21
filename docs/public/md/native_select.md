@@ -2,7 +2,7 @@
 
 Crate: `libero`
 Import: `use libero::components::{Options, NativeSelect};`
-Feature: `native-select` (on by default, turns on `combobox`, `select`; [features.md](features.md))
+Feature: `native-select` (off by default, turns on `combobox`, `select`; [features.md](features.md))
 Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/form/native_select.rs>
 Index: [index.md](index.md) lists every other page
 Description: A styled native `<select>` over an enum, with the field slots.

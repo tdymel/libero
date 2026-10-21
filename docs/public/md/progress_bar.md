@@ -2,7 +2,7 @@
 
 Crate: `libero`
 Import: `use libero::components::ProgressBar;`
-Feature: `progress-bar` (on by default, turns on `slider`; [features.md](features.md))
+Feature: `progress-bar` (off by default, turns on `slider`; [features.md](features.md))
 Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/feedback/progress_bar.rs>
 Index: [index.md](index.md) lists every other page
 Description: A determinate or indeterminate progress bar over any `min..=max` range.

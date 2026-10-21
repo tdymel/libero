@@ -8,7 +8,7 @@ pub(super) const LANGUAGE_DOC: &str = "One of 30 grammars, each behind its own `
 feature, so a build pays only for what it highlights: bash, c, cpp, csharp, css, dart, go, graphql, \
 haskell, html, java, javascript, json, kotlin, lua, markdown, objective-c, perl, php, powershell, \
 python, r, ruby, rust, scala, sql, swift, toml, typescript, yaml. Aliases such as `rs`, `py` and `c#` \
-work too. The default features cover `rust`, `bash`, `css` and a few more. An unknown name, or one \
+work too. None is on by default. An unknown name, or one \
 whose feature is off, renders plain text.";
 
 /// Inline `Code` earns its keep mid-sentence, so the demo shows it there

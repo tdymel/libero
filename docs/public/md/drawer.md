@@ -2,7 +2,7 @@
 
 Crate: `libero`
 Import: `use libero::hooks::{DrawerOptions, ModalScope, use_drawer};`
-Feature: `drawer` (on by default; [features.md](features.md))
+Feature: `drawer` (off by default; [features.md](features.md))
 Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/overlay/use_drawer.rs>
 Index: [index.md](index.md) lists every other page
 Description: A dimmed, focus-trapped panel docked to one edge, `use_modal` with the docking around it.

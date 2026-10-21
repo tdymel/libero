@@ -2,7 +2,7 @@
 
 Crate: `libero`
 Import: `use libero::components::Code;`
-Feature: `code` (on by default, turns on `copy`; [features.md](features.md))
+Feature: `code` (off by default, turns on `copy`; [features.md](features.md))
 Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/typography/code/code.rs>
 Index: [index.md](index.md) lists every other page
 Description: An inline `<code>` snippet, optionally syntax highlighted.
@@ -35,7 +35,7 @@ fn Demo() -> Element {
 | Prop | Type | Default | Description |
 |---|---|---|---|
 | `source` | `String` | required | The text. Highlighted when `language` names a grammar this build compiles in. |
-| `language` | `Language` | - | One of 30 grammars, each behind its own `code-lang-*` feature, so a build pays only for what it highlights: bash, c, cpp, csharp, css, dart, go, graphql, haskell, html, java, javascript, json, kotlin, lua, markdown, objective-c, perl, php, powershell, python, r, ruby, rust, scala, sql, swift, toml, typescript, yaml. Aliases such as `rs`, `py` and `c#` work too. The default features cover `rust`, `bash`, `css` and a few more. An unknown name, or one whose feature is off, renders plain text. |
+| `language` | `Language` | - | One of 30 grammars, each behind its own `code-lang-*` feature, so a build pays only for what it highlights: bash, c, cpp, csharp, css, dart, go, graphql, haskell, html, java, javascript, json, kotlin, lua, markdown, objective-c, perl, php, powershell, python, r, ruby, rust, scala, sql, swift, toml, typescript, yaml. Aliases such as `rs`, `py` and `c#` work too. None is on by default. An unknown name, or one whose feature is off, renders plain text. |
 
 Like every component, `Code` also takes the shared props `sx`, `class`,
 `style`, `states`, and any extra HTML attributes.

@@ -2,7 +2,7 @@
 
 Crate: `libero`
 Import: `use libero::components::{Options, Select};`
-Feature: `select` (on by default, turns on `combobox`, `chip`; [features.md](features.md))
+Feature: `select` (off by default, turns on `combobox`, `chip`; [features.md](features.md))
 Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/form/select/select.rs>
 Index: [index.md](index.md) lists every other page
 Description: A listbox over an enum with rows you can draw yourself, in the same field frame as every other input.

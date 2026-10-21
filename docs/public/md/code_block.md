@@ -2,7 +2,7 @@
 
 Crate: `libero`
 Import: `use libero::components::CodeBlock;`
-Feature: `code` (on by default, turns on `copy`; [features.md](features.md))
+Feature: `code` (off by default, turns on `copy`; [features.md](features.md))
 Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/typography/code/code_block.rs>
 Index: [index.md](index.md) lists every other page
 Description: A multi-line code block with line numbers, a copy button, a language header, diffs and highlighted lines.
@@ -86,7 +86,7 @@ fn Demo() -> Element {
 | Prop | Type | Default | Description |
 |---|---|---|---|
 | `source` | `String` | required | The text. Highlighted when `language` names a grammar this build compiles in. |
-| `language` | `Language` | - | One of 30 grammars, each behind its own `code-lang-*` feature, so a build pays only for what it highlights: bash, c, cpp, csharp, css, dart, go, graphql, haskell, html, java, javascript, json, kotlin, lua, markdown, objective-c, perl, php, powershell, python, r, ruby, rust, scala, sql, swift, toml, typescript, yaml. Aliases such as `rs`, `py` and `c#` work too. The default features cover `rust`, `bash`, `css` and a few more. An unknown name, or one whose feature is off, renders plain text. |
+| `language` | `Language` | - | One of 30 grammars, each behind its own `code-lang-*` feature, so a build pays only for what it highlights: bash, c, cpp, csharp, css, dart, go, graphql, haskell, html, java, javascript, json, kotlin, lua, markdown, objective-c, perl, php, powershell, python, r, ruby, rust, scala, sql, swift, toml, typescript, yaml. Aliases such as `rs`, `py` and `c#` work too. None is on by default. An unknown name, or one whose feature is off, renders plain text. |
 | `header` | `bool` | `true` | A bar above the code naming the language. Left out when there is no language and no copy button. |
 | `copyable` | `bool` | `true` | Shows a [`Copy`](copy.md). Without `header`, it floats in the top-right corner. |
 | `max_lines` | `u32` | - | Caps the height at about this many lines and scrolls the rest. Unset, the block grows to fit. |

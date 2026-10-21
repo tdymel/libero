@@ -2,7 +2,7 @@
 
 Crate: `libero`
 Import: `use libero::components::Checkbox;`
-Feature: `checkbox` (on by default; [features.md](features.md))
+Feature: `checkbox` (off by default; [features.md](features.md))
 Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/form/checkbox.rs>
 Index: [index.md](index.md) lists every other page
 Description: A checkbox with its label beside the box, the field slots under both, and an indeterminate state.

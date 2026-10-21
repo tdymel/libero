@@ -2,7 +2,7 @@
 
 Crate: `libero`
 Import: `use libero::components::{BottomNavigation, BottomNavigationItem};`
-Feature: `bottom-navigation` (on by default, turns on `nav-link`; [features.md](features.md))
+Feature: `bottom-navigation` (off by default, turns on `nav-link`; [features.md](features.md))
 Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/navigation/bottom_navigation.rs>
 Index: [index.md](index.md) lists every other page
 Description: A phone's bar of three to five top-level destinations, each an icon over a label, the current one marked with `aria-current`.

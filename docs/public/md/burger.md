@@ -2,7 +2,7 @@
 
 Crate: `libero`
 Import: `use libero::components::Burger;`
-Feature: `burger` (on by default; [features.md](features.md))
+Feature: `burger` (off by default; [features.md](features.md))
 Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/navigation/burger.rs>
 Index: [index.md](index.md) lists every other page
 Description: Three bars that morph into an X, an `ActionIcon` with the ARIA a nav toggle needs.

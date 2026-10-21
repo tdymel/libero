@@ -2,7 +2,7 @@
 
 Crate: `libero`
 Import: `use libero::{chrono::{NaiveDate, NaiveTime}, components::{DateLevel, ChronoPicker, DateRange}};`
-Feature: `date-time` (on by default, turns on `tabs`; [features.md](features.md))
+Feature: `date-time` (off by default, turns on `tabs`; [features.md](features.md))
 Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/form/date/chrono_picker.rs>
 Index: [index.md](index.md) lists every other page
 Description: One picker for every date and time value, from days, months and years to times, date-times and ranges of them.

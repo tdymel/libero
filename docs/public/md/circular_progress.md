@@ -2,7 +2,7 @@
 
 Crate: `libero`
 Import: `use libero::components::CircularProgress;`
-Feature: `circular-progress` (on by default; [features.md](features.md))
+Feature: `circular-progress` (off by default; [features.md](features.md))
 Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/feedback/circular_progress.rs>
 Index: [index.md](index.md) lists every other page
 Description: A ring that fills clockwise from the top over any `min..=max` range, or spins, with an optional label in its middle.
