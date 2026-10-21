@@ -548,33 +548,63 @@ async fn sweep_must_report(route: &str, family: &'static str, element: &'static 
 }
 
 #[test]
-fn the_sweep_reports_each_family() {
-    block_on(async {
-        sweep_must_report("/broken/contrast", "text-contrast", "#faint", "").await;
-        sweep_must_report(
-            "/broken/layered-text",
-            "text-contrast",
-            "#layered",
-            "measured by the sweep",
-        )
-        .await;
-        sweep_must_report(
-            "/broken/faint-boundary",
-            "boundary-contrast",
-            "#faint-boundary",
-            "",
-        )
-        .await;
-        sweep_must_report("/broken/focus-ring", "focus-ring-missing", "#no-ring", "").await;
-        sweep_must_report(
-            "/broken/faint-field-ring",
-            "focus-ring-contrast",
-            "#faint-input",
-            "",
-        )
-        .await;
-        sweep_must_report("/broken/target-spacing", "target-size", "#cramped-a", "").await;
-    });
+fn the_sweep_reports_faint_text() {
+    block_on(sweep_must_report(
+        "/broken/contrast",
+        "text-contrast",
+        "#faint",
+        "",
+    ));
+}
+
+#[test]
+fn the_sweep_reports_layered_text() {
+    block_on(sweep_must_report(
+        "/broken/layered-text",
+        "text-contrast",
+        "#layered",
+        "measured by the sweep",
+    ));
+}
+
+#[test]
+fn the_sweep_reports_a_faint_boundary() {
+    block_on(sweep_must_report(
+        "/broken/faint-boundary",
+        "boundary-contrast",
+        "#faint-boundary",
+        "",
+    ));
+}
+
+#[test]
+fn the_sweep_reports_a_missing_focus_ring() {
+    block_on(sweep_must_report(
+        "/broken/focus-ring",
+        "focus-ring-missing",
+        "#no-ring",
+        "",
+    ));
+}
+
+#[test]
+fn the_sweep_reports_a_faint_field_ring() {
+    block_on(sweep_must_report(
+        "/broken/faint-field-ring",
+        "focus-ring-contrast",
+        "#faint-input",
+        "",
+    ));
+}
+
+#[test]
+fn the_sweep_reports_cramped_targets() {
+    block_on(sweep_must_report(
+        "/broken/target-spacing",
+        "target-size",
+        "#cramped-a",
+        "",
+    ));
 }
 
 /// `wait::until` gives up inside `expecting_failure`'s share of the budget, naming what it

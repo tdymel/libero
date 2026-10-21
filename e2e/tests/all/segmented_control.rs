@@ -128,38 +128,55 @@ fn it_meets_the_baseline() {
         .run();
 }
 
-/// The field with its error, read-only, the disabled segments and long labels (todo 1773).
+/// The field with its error, read-only, the disabled segments and long labels (todo 1773), one
+/// test each to stay under the 20 s budget.
+fn variant_baseline(name: &'static str, route: &'static str, stop: &'static str) {
+    Suite::new(name, route)
+        .focusable(stop)
+        .targets("[role=radiogroup] label")
+        .run();
+}
+
 #[test]
-fn the_other_variants_meet_the_baseline() {
-    // The disabled pick's tab stop is the first enabled segment.
-    for (name, route, stop) in [
-        (
-            "segmented_control-field",
-            "/segmented-control/field",
-            CHECKED,
-        ),
-        (
-            "segmented_control-readonly",
-            "/segmented-control/readonly",
-            CHECKED,
-        ),
-        (
-            "segmented_control-disabled-middle",
-            "/segmented-control/disabled-middle",
-            CHECKED,
-        ),
-        (
-            "segmented_control-disabled-pick",
-            "/segmented-control/disabled-pick",
-            "input[aria-label=Left]",
-        ),
-        ("segmented_control-long", "/segmented-control/long", CHECKED),
-    ] {
-        Suite::new(name, route)
-            .focusable(stop)
-            .targets("[role=radiogroup] label")
-            .run();
-    }
+fn the_field_variant_meets_the_baseline() {
+    variant_baseline(
+        "segmented_control-field",
+        "/segmented-control/field",
+        CHECKED,
+    );
+}
+
+#[test]
+fn the_readonly_variant_meets_the_baseline() {
+    variant_baseline(
+        "segmented_control-readonly",
+        "/segmented-control/readonly",
+        CHECKED,
+    );
+}
+
+#[test]
+fn the_disabled_middle_variant_meets_the_baseline() {
+    variant_baseline(
+        "segmented_control-disabled-middle",
+        "/segmented-control/disabled-middle",
+        CHECKED,
+    );
+}
+
+/// The disabled pick's tab stop is the first enabled segment.
+#[test]
+fn the_disabled_pick_variant_meets_the_baseline() {
+    variant_baseline(
+        "segmented_control-disabled-pick",
+        "/segmented-control/disabled-pick",
+        "input[aria-label=Left]",
+    );
+}
+
+#[test]
+fn the_long_variant_meets_the_baseline() {
+    variant_baseline("segmented_control-long", "/segmented-control/long", CHECKED);
 }
 
 #[test]

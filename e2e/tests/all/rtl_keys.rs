@@ -307,73 +307,87 @@ async fn screen_x(page: &Page, selector: &str, vx: f64, vy: f64) -> Option<f64> 
     .unwrap()
 }
 
+/// Asserts each `(glyph, (vx, vy), forward)` on `route` points the way the layout goes:
+/// `vx, vy` is the vector it draws, `forward` +1 for next and -1 for previous.
+async fn chevrons_mirror(route: &str, glyphs: &[(&str, (f64, f64), f64)]) {
+    let fixture = open_rtl(route).await;
+    let page = &fixture.page;
+    if route == "/cascader" {
+        keyboard::tab_to(page, "[role=combobox]", 10).await.unwrap();
+        keyboard::press(page, keyboard::ARROW_DOWN).await.unwrap();
+        wait::for_visible(page, glyphs[0].0).await.unwrap();
+    }
+    // The tree chevron turns with a transition when `dir` flips.
+    wait::for_js_true(
+        page,
+        "document.getAnimations().every(a => a.playState !== 'running')",
+        "transitions to end",
+    )
+    .await
+    .unwrap();
+    let mut wrong = Vec::new();
+    for &(glyph, (vx, vy), forward) in glyphs {
+        // Under RTL forward is towards -x.
+        let x = screen_x(page, glyph, vx, vy).await;
+        if x.is_none_or(|x| x * forward > -0.5) {
+            wrong.push(format!("{route} {glyph}: x {x:?}"));
+        }
+    }
+    fixture.close().await.unwrap();
+    assert!(
+        wrong.is_empty(),
+        "chevrons not mirrored under RTL: {wrong:#?}"
+    );
+}
+
 /// A chevron that means "previous", "next" or "has children" points the way
 /// the layout goes, so under RTL it mirrors (the Scroller and Menu rule).
 #[test]
-fn directional_chevrons_mirror() {
-    block_on(async {
-        let mut wrong = Vec::new();
-        // Route, glyph, the vector it draws, and +1 for forward, -1 for back.
-        let cases: [(&str, &str, (f64, f64), f64); 7] = [
-            (
-                "/carousel",
-                "[aria-label='Next slide'] svg",
-                (1.0, 0.0),
-                1.0,
-            ),
-            (
-                "/carousel",
-                "[aria-label='Previous slide'] svg",
-                (-1.0, 0.0),
-                -1.0,
-            ),
-            (
-                "/pagination",
-                "[aria-label='Go to previous page'] svg",
-                (-1.0, 0.0),
-                -1.0,
-            ),
-            (
-                "/pagination",
-                "[aria-label='Go to next page'] svg",
-                (1.0, 0.0),
-                1.0,
-            ),
-            ("/calendar", "[aria-label^='Next'] svg", (1.0, 0.0), 1.0),
-            (
-                "/tree/default",
-                "[data-tree-id='src'] [data-tree-chevron] svg",
-                (1.0, 0.0),
-                1.0,
-            ),
-            ("/cascader", "[data-slot='branch'] svg", (0.0, 1.0), 1.0),
-        ];
-        for (route, glyph, (vx, vy), forward) in cases {
-            let fixture = open_rtl(route).await;
-            let page = &fixture.page;
-            if route == "/cascader" {
-                keyboard::tab_to(page, "[role=combobox]", 10).await.unwrap();
-                keyboard::press(page, keyboard::ARROW_DOWN).await.unwrap();
-                wait::for_visible(page, glyph).await.unwrap();
-            }
-            // The tree chevron turns with a transition when `dir` flips.
-            wait::for_js_true(
-                page,
-                "document.getAnimations().every(a => a.playState !== 'running')",
-                "transitions to end",
-            )
-            .await
-            .unwrap();
-            // Under RTL forward is towards -x.
-            let x = screen_x(page, glyph, vx, vy).await;
-            if x.is_none_or(|x| x * forward > -0.5) {
-                wrong.push(format!("{route} {glyph}: x {x:?}"));
-            }
-            fixture.close().await.unwrap();
-        }
-        assert!(
-            wrong.is_empty(),
-            "chevrons not mirrored under RTL: {wrong:#?}"
-        );
-    });
+fn directional_chevrons_mirror_in_the_carousel() {
+    block_on(chevrons_mirror(
+        "/carousel",
+        &[
+            ("[aria-label='Next slide'] svg", (1.0, 0.0), 1.0),
+            ("[aria-label='Previous slide'] svg", (-1.0, 0.0), -1.0),
+        ],
+    ));
+}
+
+#[test]
+fn directional_chevrons_mirror_in_the_pagination() {
+    block_on(chevrons_mirror(
+        "/pagination",
+        &[
+            ("[aria-label='Go to previous page'] svg", (-1.0, 0.0), -1.0),
+            ("[aria-label='Go to next page'] svg", (1.0, 0.0), 1.0),
+        ],
+    ));
+}
+
+#[test]
+fn directional_chevrons_mirror_in_the_calendar() {
+    block_on(chevrons_mirror(
+        "/calendar",
+        &[("[aria-label^='Next'] svg", (1.0, 0.0), 1.0)],
+    ));
+}
+
+#[test]
+fn directional_chevrons_mirror_in_the_tree() {
+    block_on(chevrons_mirror(
+        "/tree/default",
+        &[(
+            "[data-tree-id='src'] [data-tree-chevron] svg",
+            (1.0, 0.0),
+            1.0,
+        )],
+    ));
+}
+
+#[test]
+fn directional_chevrons_mirror_in_the_cascader() {
+    block_on(chevrons_mirror(
+        "/cascader",
+        &[("[data-slot='branch'] svg", (0.0, 1.0), 1.0)],
+    ));
 }

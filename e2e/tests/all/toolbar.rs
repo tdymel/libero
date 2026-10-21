@@ -412,13 +412,18 @@ fn it_meets_the_baseline() {
         .run();
 }
 
-/// The vertical bar, fields as items, and the editor's bar with its help dialog (todo 1773).
+/// The vertical bar, fields as items, and the editor's bar with its help dialog (todo 1773),
+/// one test each to stay under the 20 s budget.
 #[test]
-fn the_other_toolbars_meet_the_baseline() {
+fn the_vertical_toolbar_meets_the_baseline() {
     Suite::new("toolbar-vertical", "/toolbar-vertical")
         .focusable("#pen")
         .targets("[role=toolbar] button[data-toolbar-item]")
         .run();
+}
+
+#[test]
+fn the_fields_toolbar_meets_the_baseline() {
     Suite::new("toolbar-fields", "/toolbar-fields")
         .focusable("#first")
         .targets("[role=toolbar] button[data-toolbar-item]")
@@ -427,6 +432,10 @@ fn the_other_toolbars_meet_the_baseline() {
             "[role=toolbar] [data-slot=control], [role=toolbar] [role=radiogroup] label",
         )
         .run();
+}
+
+#[test]
+fn the_editor_toolbar_meets_the_baseline() {
     Suite::new("toolbar-editor", "/toolbar-editor")
         .focusable("#bold")
         .targets("[role=toolbar] button[data-toolbar-item]")

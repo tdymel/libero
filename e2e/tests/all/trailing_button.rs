@@ -112,14 +112,17 @@ fn tab_out_past_the_clear_button_closes_the_list() {
 /// Todo 1498: the x borrows the field's label, "Clear Fruit"; with no label it stays "Clear".
 #[test]
 fn the_x_is_named_with_its_fields_label() {
+    const LABELLED: [(&str, &str); 5] = [
+        ("/trailing-button/select", "Clear Fruit"),
+        ("/trailing-button/multi-select", "Clear Fruit"),
+        ("/trailing-button/autocomplete", "Clear City"),
+        ("/trailing-button/cascader", "Clear Place"),
+        ("/trailing-button/tags-field", "Clear Topics"),
+    ];
+    // The pages run at once, as `tab_out_past_the_clear_button_closes_the_list`'s do.
     block_on(async {
-        for (route, name) in [
-            ("/trailing-button/select", "Clear Fruit"),
-            ("/trailing-button/multi-select", "Clear Fruit"),
-            ("/trailing-button/autocomplete", "Clear City"),
-            ("/trailing-button/cascader", "Clear Place"),
-            ("/trailing-button/tags-field", "Clear Topics"),
-        ] {
+        let _pages = e2e::browser::page_permit(LABELLED.len() + 1).await;
+        let labelled = futures::future::join_all(LABELLED.map(async |(route, name)| {
             let fixture = Fixture::open(route, Viewport::Desktop).await.unwrap();
             let page = &fixture.page;
             wait::for_visible(page, CLEAR).await.unwrap();
@@ -128,25 +131,28 @@ fn the_x_is_named_with_its_fields_label() {
             assert_eq!(first, format!("button {name:?}"), "{route}: {tree}");
             fixture.console.assert_clean(route).unwrap();
             fixture.close().await.unwrap();
-        }
-        let route = "/trailing-button/unlabelled";
-        let fixture = Fixture::open(route, Viewport::Desktop).await.unwrap();
-        let page = &fixture.page;
-        for field in [
-            "select",
-            "multi-select",
-            "autocomplete",
-            "cascader",
-            "tags-field",
-        ] {
-            let x = format!("#u-{field} {CLEAR}");
-            wait::for_visible(page, &x).await.unwrap();
-            let tree = ax::snapshot(page, &x).await.unwrap();
-            let first = tree.lines().next().unwrap_or_default();
-            assert_eq!(first, "button \"Clear\"", "unlabelled {field}: {tree}");
-        }
-        fixture.console.assert_clean(route).unwrap();
-        fixture.close().await.unwrap();
+        }));
+        let unlabelled = async {
+            let route = "/trailing-button/unlabelled";
+            let fixture = Fixture::open(route, Viewport::Desktop).await.unwrap();
+            let page = &fixture.page;
+            for field in [
+                "select",
+                "multi-select",
+                "autocomplete",
+                "cascader",
+                "tags-field",
+            ] {
+                let x = format!("#u-{field} {CLEAR}");
+                wait::for_visible(page, &x).await.unwrap();
+                let tree = ax::snapshot(page, &x).await.unwrap();
+                let first = tree.lines().next().unwrap_or_default();
+                assert_eq!(first, "button \"Clear\"", "unlabelled {field}: {tree}");
+            }
+            fixture.console.assert_clean(route).unwrap();
+            fixture.close().await.unwrap();
+        };
+        futures::future::join(labelled, unlabelled).await;
     });
 }
 

@@ -410,16 +410,21 @@ fn the_duration_field_meets_the_baseline() {
         .run();
 }
 
-/// The other levels, open on their grid or clock (todo 1773).
+/// The other levels, open on their grid or clock (todo 1773), one test each to stay under the
+/// 20 s budget.
 #[test]
-fn the_other_fields_meet_the_baseline() {
-    for (name, route) in [
-        ("chrono_field-day", "/chrono-field/day"),
-        ("chrono_field-month", "/chrono-field/month"),
-        ("chrono_field-digital", "/chrono-field/digital"),
-    ] {
-        baseline(name, route);
-    }
+fn the_day_field_meets_the_baseline() {
+    baseline("chrono_field-day", "/chrono-field/day");
+}
+
+#[test]
+fn the_month_field_meets_the_baseline() {
+    baseline("chrono_field-month", "/chrono-field/month");
+}
+
+#[test]
+fn the_digital_field_meets_the_baseline() {
+    baseline("chrono_field-digital", "/chrono-field/digital");
 }
 
 /// The date-time field, apart to keep each test under the 20 s budget.
