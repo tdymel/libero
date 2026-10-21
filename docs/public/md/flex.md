@@ -2,6 +2,7 @@
 
 Crate: `libero`
 Import: `use libero::components::Flex;`
+Feature: none, always compiled ([features.md](features.md))
 Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/layout/flex.rs>
 Index: [index.md](index.md) lists every other page
 Description: A flexbox container with theme-aware direction, gap, alignment and wrapping.

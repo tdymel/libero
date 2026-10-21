@@ -11,7 +11,11 @@ use libero::{
     sx::sx,
 };
 
-const FEATURES: [(&str, &str); 9] = [
+const FEATURES: [(&str, &str); 10] = [
+    (
+        "<component>, <category>",
+        "One feature per component, and one per category that turns on its components. The default has the common ones; see Features.",
+    ),
     (
         "code-lang-<name>",
         "One grammar for Code and CodeBlock, 30 in all. Rust, Bash, Markdown, HTML and CSS are the default.",

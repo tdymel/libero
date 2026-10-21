@@ -2,6 +2,7 @@
 
 Crate: `libero`
 Import: `use libero::components::PasswordField;`
+Feature: `password-field` (on by default, turns on `text-field`; [features.md](features.md))
 Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/form/password_field.rs>
 Index: [index.md](index.md) lists every other page
 Description: A `TextField` for secrets, with a button in its trailing slot that shows the text.

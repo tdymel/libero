@@ -287,3 +287,64 @@ fn md_mirrors_list_the_props_of_their_page() {
     problems.dedup();
     assert!(problems.is_empty(), "{}", problems.join("\n"));
 }
+
+/// `md` with its `Feature:` line set to `line`, after `Import:` (else `Crate:`), or removed.
+fn with_feature_line(md: &str, line: Option<&str>) -> String {
+    let mut lines: Vec<&str> = md.lines().filter(|l| !l.starts_with("Feature: ")).collect();
+    if let Some(line) = line {
+        let anchor = ["Import: ", "Crate: "]
+            .iter()
+            .find_map(|head| lines.iter().position(|l| l.starts_with(head)))
+            .unwrap_or(0);
+        lines.insert(anchor + 1, line);
+    }
+    lines.join("\n") + "\n"
+}
+
+/// Todo 3887: every component page names its Cargo feature (or that it is always compiled)
+/// in its header and its mirror. Mirrors are rewritten when stale.
+#[test]
+fn component_pages_name_their_feature() {
+    use crate::pages::about::features::{md_line, page_feature};
+    let public = Path::new(env!("CARGO_MANIFEST_DIR")).join("public");
+    let components = [
+        "/accessibility/",
+        "/buttons/",
+        "/data-display/",
+        "/feedback/",
+        "/form/",
+        "/layout/",
+        "/navigation/",
+        "/overlay/",
+        "/typography/",
+    ];
+    let mut problems = Vec::new();
+    let mut stale = Vec::new();
+    for Rendered { route, pages, .. } in rendered() {
+        let path = route.to_string();
+        let feature = page_feature(&path);
+        let component_page = components.iter().any(|prefix| path.starts_with(prefix))
+            && !path.starts_with("/accessibility/use-")
+            && path != "/form/getting-started";
+        if component_page && feature.is_none() {
+            problems.push(format!("{path}: no feature in `about/features.rs`"));
+        }
+        let Some(markdown) = pages.first().and_then(|page| page.markdown.as_ref()) else {
+            continue;
+        };
+        let file = public.join(markdown.trim_start_matches('/'));
+        let md = std::fs::read_to_string(&file).unwrap();
+        let line = feature.map(md_line);
+        let current = md.lines().find(|l| l.starts_with("Feature: "));
+        if current != line.as_deref() {
+            std::fs::write(&file, with_feature_line(&md, line.as_deref())).unwrap();
+            stale.push(markdown.clone());
+        }
+    }
+    assert!(problems.is_empty(), "{}", problems.join("\n"));
+    assert!(
+        stale.is_empty(),
+        "rewritten, commit them: {}",
+        stale.join(", ")
+    );
+}

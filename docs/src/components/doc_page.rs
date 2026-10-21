@@ -10,6 +10,7 @@ use super::{A11yDoc, A11yPanel, PartsPanel, PropGroup, PropertyTable, doc_sectio
 use crate::{
     Route, heading_focus,
     nav::neighbours,
+    pages::about::features::FeatureNote,
     site::{SITE, TLDR_PROMPT, github_tree, public_url},
 };
 use pictogram_icons_simple as simple;
@@ -72,7 +73,7 @@ pub fn DocPage(
     });
     // Assistants read the markdown mirror, else the route.
     let route = use_route::<Route>().to_string();
-    let tldr_path = markdown.clone().unwrap_or(route);
+    let tldr_path = markdown.clone().unwrap_or(route.clone());
     let pending = try_use_context::<heading_focus::PendingSection>().map(|p| p.0);
     let extra_id = extra_tab.as_ref().map(|extra| extra.id);
     let landing = move |id: Option<String>| id.is_some() && id.as_deref() == extra_id;
@@ -209,6 +210,7 @@ pub fn DocPage(
                     }
                 }
                 {lead}
+                FeatureNote { route }
             }
             if tabs.len() == 1 {
                 {children}

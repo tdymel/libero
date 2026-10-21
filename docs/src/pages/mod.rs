@@ -1,4 +1,4 @@
-mod about;
+pub(crate) mod about;
 mod accessibility;
 mod buttons;
 mod data_display;

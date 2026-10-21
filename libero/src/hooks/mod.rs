@@ -151,14 +151,25 @@ pub use user_media::{
 // The overlay hooks render a component, so they live beside it (todo 178).
 // The layer rule (`tests/all/architecture.rs`) exempts only this `use`.
 // archunit: ignore components::overlay
-pub use crate::components::overlay::{
-    lightbox::use_lightbox::{LightboxItem, LightboxOpening, LightboxOptions, use_lightbox},
-    use_drawer::{DrawerOptions, use_drawer},
-    use_floating_window::{FloatingWindowHandle, use_floating_window},
-    use_modal::{ModalHandle, ModalScope, Opening, OpeningFuture, use_modal, use_modal_close},
+pub use crate::components::overlay::use_modal::{
+    ModalHandle, ModalScope, Opening, OpeningFuture, use_modal, use_modal_close,
+};
+// archunit: ignore components::overlay
+#[cfg(feature = "lightbox")]
+pub use crate::components::overlay::lightbox::use_lightbox::{
+    LightboxItem, LightboxOpening, LightboxOptions, use_lightbox,
+};
+// archunit: ignore components::overlay
+#[cfg(feature = "drawer")]
+pub use crate::components::overlay::use_drawer::{DrawerOptions, use_drawer};
+// archunit: ignore components::overlay
+#[cfg(feature = "floating-window")]
+pub use crate::components::overlay::use_floating_window::{
+    FloatingWindowHandle, use_floating_window,
 };
 // The sortable hooks share `Sortable`'s context and orientation, so they live beside it.
 // archunit: ignore components::data_display
+#[cfg(feature = "sortable")]
 pub use crate::components::data_display::sortable::{
     SortableHandle, SortableItemHandle, SortableMove, SortableOptions, use_labelled_sortable_item,
     use_sortable, use_sortable_item,

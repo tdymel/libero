@@ -2,6 +2,7 @@
 
 Crate: `libero`
 Import: `use libero::components::Textarea;`
+Feature: `textarea` (on by default; [features.md](features.md))
 Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/form/textarea.rs>
 Index: [index.md](index.md) lists every other page
 Description: A multi-line text field, sized by `rows` and resizable by the user.

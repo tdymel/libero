@@ -2,6 +2,7 @@
 
 Crate: `libero`
 Import: `use libero::{IconProvider, IconSet, IconSlot};`
+Feature: none, always compiled ([features.md](features.md))
 Source: <https://github.com/tdymel/libero/tree/main/libero/src/context/icons.rs>
 Index: [index.md](index.md) lists every other page
 Description: Swaps the glyphs libero draws itself (chevrons, close, checks, ...), slot by slot, for everything below it; lucide by default.

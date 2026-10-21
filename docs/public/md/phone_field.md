@@ -2,6 +2,7 @@
 
 Crate: `libero`
 Import: `use libero::components::PhoneField;`
+Feature: `phone-field` (off by default, turns on `combobox`; [features.md](features.md))
 Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/form/phone_field/field.rs>
 Index: [index.md](index.md) lists every other page
 Description: A country picker in front of a `tel` input, whose value is an E.164 string.

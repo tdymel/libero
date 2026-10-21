@@ -2,6 +2,7 @@
 
 Crate: `libero`
 Import: `use libero::components::HoverCard;`
+Feature: `hover-card` (on by default; [features.md](features.md))
 Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/overlay/hover_card.rs>
 Index: [index.md](index.md) lists every other page
 Description: An interactive card that opens while its trigger is hovered or focused, a named, dismissible dialog on a paper surface.

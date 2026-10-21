@@ -2,6 +2,7 @@
 
 Crate: `libero`
 Import: `use libero::components::{Toolbar, ToolbarGroup, ToolbarSeparator};`
+Feature: `toolbar` (on by default; [features.md](features.md))
 Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/buttons/toolbar.rs>
 Index: [index.md](index.md) lists every other page
 Description: A row of buttons, action icons and selects that is one tab stop, moved through with the arrow keys.

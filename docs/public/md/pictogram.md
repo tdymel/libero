@@ -2,6 +2,7 @@
 
 Crate: `libero`
 Import: `use libero::components::{Pictogram, SvgData};`
+Feature: none, always compiled ([features.md](features.md))
 Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/data_display/pictogram.rs>
 Index: [index.md](index.md) lists every other page
 Description: An inline svg drawn from `SvgData`, such as a lucide icon, in `currentColor` and with no size of its own.

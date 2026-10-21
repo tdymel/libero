@@ -2,6 +2,7 @@
 
 Crate: `libero`
 Import: `use libero::components::Share;`
+Feature: `share` (on by default; [features.md](features.md))
 Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/buttons/share.rs>
 Index: [index.md](index.md) lists every other page
 Description: A button that opens the system share sheet, or copies the link where there is none, and says "Copied".

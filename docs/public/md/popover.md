@@ -2,6 +2,7 @@
 
 Crate: `libero`
 Import: `use libero::hooks::{use_element, use_popover, Align, PopoverOptions, PopoverWidth, Side};`
+Feature: none, always compiled ([features.md](features.md))
 Source: <https://github.com/tdymel/libero/tree/main/libero/src/hooks/popover/mod.rs>
 Index: [index.md](index.md) lists every other page
 Description: A hook that anchors a portaled box to a trigger, flipping and shifting it to stay on screen.

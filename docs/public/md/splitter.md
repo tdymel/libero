@@ -2,6 +2,7 @@
 
 Crate: `libero`
 Import: `use libero::components::{Splitter, SplitterResizeEvent};`
+Feature: none, always compiled ([features.md](features.md))
 Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/layout/splitter>
 Index: [index.md](index.md) lists every other page
 Description: Two panes split by a divider you can drag or move with the keyboard. Nest another `Splitter` in a pane for more than two.

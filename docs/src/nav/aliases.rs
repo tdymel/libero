@@ -25,6 +25,13 @@ pub(super) fn aliases(group: Option<&str>, label: &str) -> &'static [&'static st
 // Hidden search names other libraries use for a page, and related words, by its label.
 fn label_aliases(label: &str) -> &'static [&'static str] {
     match label {
+        "Features" => &[
+            "cargo features",
+            "feature flags",
+            "compile time",
+            "default-features",
+            "build size",
+        ],
         "Philosophy" => &["principles", "design goals", "vision"],
         "Styling" => &["css", "sx", "style props", "class", "custom styles"],
         "Theming" => &[

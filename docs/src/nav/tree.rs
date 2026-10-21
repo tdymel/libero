@@ -87,6 +87,7 @@ pub(super) fn nav_tree() -> Vec<TreeNode<NavEntry>> {
             "About",
             vec![
                 page(Route::GettingStarted {}, "Getting started"),
+                page(Route::FeaturesPage {}, "Features"),
                 page(Route::PhilosophyPage {}, "Philosophy"),
                 page(Route::StylingPage {}, "Styling"),
                 page(Route::ThemingPage {}, "Theming"),

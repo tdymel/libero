@@ -9,9 +9,14 @@ The docs site is a Dioxus app, so its HTML carries no content until the wasm
 runs - these files are the readable source of the same pages. Start here, then
 fetch only the file you need.
 
+Each component sits behind a Cargo feature, named on its page's `Feature:`
+line. Add libero with `default-features = false` and turn on the feature of
+each component you use, see [features.md](features.md).
+
 ## About
 
 - [Getting started](getting_started.md): Installing libero, wrapping an app in LiberoProvider, building for the web, natively, in a desktop WebView and for Android, and the feature flags.
+- [Features](features.md): Each component behind its own Cargo feature: the recommended setup, the default, the category features and what each component feature turns on.
 - [Philosophy](philosophy.md): The four principles behind libero in order of priority (developer experience, accessibility, batteries included, simple yet modern) and what we do about each.
 - [Styling](styling.md): The `sx` styling builder every component takes: theme values, states, selectors, responsive, media and container queries, cascade layers and the `parts` Style API.
 - [Theming](theming.md): How to customize a Libero theme and use it: colors, scales, per-component defaults, light and dark pairs, and reading the active theme.

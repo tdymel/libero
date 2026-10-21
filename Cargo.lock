@@ -4526,6 +4526,7 @@ dependencies = [
  "icu_locale_core",
  "image",
  "js-sys",
+ "libero",
  "libero-macros",
  "manganis",
  "objc2-app-kit 0.3.2",

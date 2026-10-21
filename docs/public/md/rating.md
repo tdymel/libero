@@ -2,6 +2,7 @@
 
 Crate: `libero`
 Import: `use libero::components::Rating;`
+Feature: `rating` (on by default; [features.md](features.md))
 Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/form/rating/rating.rs>
 Index: [index.md](index.md) lists every other page
 Description: A row of stars picking a value, whole or in halves, by click, sideways drag or arrow keys; read-only or display-only.

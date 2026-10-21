@@ -110,6 +110,7 @@ md_pages! {
     ChronoPicker => "chrono_picker",
     Dialog => "dialog",
     DirectionToggle => "direction_toggle",
+    Features => "features",
     Divider => "divider",
     Drawer => "drawer",
     Fieldset => "fieldset",

@@ -2,6 +2,7 @@
 
 Crate: `libero`
 Import: `use libero::components::Marquee;`
+Feature: `marquee` (off by default; [features.md](features.md))
 Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/data_display/marquee.rs>
 Index: [index.md](index.md) lists every other page
 Description: Content that scrolls on its own in an endless loop, with a pause toggle and a still fallback under reduced motion.

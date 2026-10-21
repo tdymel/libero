@@ -2,6 +2,7 @@
 
 Crate: `libero`
 Import: `use libero::components::{RichTextEditor, rich_text::Doc};`
+Feature: `rich-text-editor` (off by default, turns on `toolbar`, `text-field`, `menu`, `code`; [features.md](features.md))
 Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/form/rich_text_editor/view.rs>
 Index: [index.md](index.md) lists every other page
 Description: A rich text field over a `Doc`: headings, lists, quotes, code blocks and marks, with undo, shortcuts and Markdown typing.

@@ -2,6 +2,7 @@
 
 Crate: `libero`
 Import: `use libero::components::Carousel;`
+Feature: `carousel` (on by default; [features.md](features.md))
 Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/data_display/carousel>
 Index: [index.md](index.md) lists every other page
 Description: A strip of slides that snaps as it scrolls and knows which one it is on, with controls, indicators and optional autoplay.

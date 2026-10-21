@@ -2,6 +2,7 @@
 
 Crate: `libero`
 Import: `use libero::components::Chip;`
+Feature: `chip` (on by default; [features.md](features.md))
 Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/form/chip.rs>
 Index: [index.md](index.md) lists every other page
 Description: A compact token: a tag, a filter, a small action or a link.

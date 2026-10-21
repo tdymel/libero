@@ -2,6 +2,7 @@
 
 Crate: `libero`
 Import: `use libero::components::Code;`
+Feature: `code` (on by default, turns on `copy`; [features.md](features.md))
 Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/typography/code/code.rs>
 Index: [index.md](index.md) lists every other page
 Description: An inline `<code>` snippet, optionally syntax highlighted.

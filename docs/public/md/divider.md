@@ -2,6 +2,7 @@
 
 Crate: `libero`
 Import: `use libero::components::Divider;`
+Feature: none, always compiled ([features.md](features.md))
 Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/layout/divider.rs>
 Index: [index.md](index.md) lists every other page
 Description: A horizontal or vertical rule, with an optional label sitting in the line.

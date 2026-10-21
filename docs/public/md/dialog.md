@@ -2,6 +2,7 @@
 
 Crate: `libero`
 Import: `use libero::components::Dialog;`
+Feature: none, always compiled ([features.md](features.md))
 Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/overlay/dialog.rs>
 Index: [index.md](index.md) lists every other page
 Description: The dialog surface with a header and `role="dialog"`, which inside a modal also names and closes itself.

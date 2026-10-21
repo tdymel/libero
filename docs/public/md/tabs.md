@@ -2,6 +2,7 @@
 
 Crate: `libero`
 Import: `use libero::components::{OptionLabel, Options, Tabs};`
+Feature: `tabs` (on by default; [features.md](features.md))
 Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/navigation/tabs>
 Index: [index.md](index.md) lists every other page
 Description: One strip of tabs over an enum, with only the selected tab's panel built.

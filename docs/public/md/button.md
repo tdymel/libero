@@ -2,6 +2,7 @@
 
 Crate: `libero`
 Import: `use libero::components::Button;`
+Feature: none, always compiled ([features.md](features.md))
 Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/buttons/button.rs>
 Index: [index.md](index.md) lists every other page
 Description: A clickable action, a toggle, or a router-aware link.

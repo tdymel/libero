@@ -16,7 +16,7 @@ categories = ["gui", "wasm", "web-programming"]
 # Exact pin: libero reaches into dioxus-native-dom internals, which an alpha may change.
 # `dx` must be the same version (see ci.yml's e2e job), or CLI and app speak different wire protocols.
 dioxus = { version = "=0.8.0-alpha.3", default-features = false, features = ["macro", "html", "signals", "hooks", "document", "mounted", "router", "logger"] }
-fast_qr = { version = "0.13.1", default-features = false, features = ["svg"] }
+fast_qr = { version = "0.13.1", default-features = false, features = ["svg"], optional = true }
 libero-macros = { path = "../libero-macros", version = "0.2.0" }
 # The date and time components hold `chrono`'s naive types. No `clock` here:
 # on the web today comes from JS `Date`, so chrono pulls in no second `js-sys`
@@ -27,8 +27,8 @@ chrono = { version = "0.4", default-features = false, features = ["std"] }
 pictogram-core = "0.5"
 pictogram-icons-lucide = "0.5"
 # Brand marks: `Tldr`'s providers (lobe), `Repository`'s hosts (simple). Unused consts compile away.
-pictogram-icons-lobe = "0.5"
-pictogram-icons-simple = "0.5"
+pictogram-icons-lobe = { version = "0.5", optional = true }
+pictogram-icons-simple = { version = "0.5", optional = true }
 # Whole sets for `IconProvider`, one `icons-<set>` feature each (`IconSet::material_rounded()`, ...).
 pictogram-icons-bootstrap = { version = "0.5", optional = true }
 pictogram-icons-material = { version = "0.5", optional = true }
@@ -146,6 +146,8 @@ syn = { version = "2", features = ["full", "visit"] }
 proc-macro2 = "1"
 # The use_timers page's printed stopwatch, compiled as a doc-test.
 web-time = "1.1"
+# The tests cover every component, the ones off by default too (todo 3887).
+libero = { path = ".", features = ["all-components"] }
 
 [features]
 # Reach elements through Blitz directly when running under `dioxus-native`.
@@ -168,12 +170,70 @@ collation = ["dep:icu_collator", "dep:icu_locale_core"]
 # For e2e harnesses only (todo 1514): under `native`, `platform::fake_file_dialog`
 # answers the next pick in place of rfd's dialog. Never in an app build.
 fake-file-dialog = []
+# Common components on, so an app that names none still builds. For a faster build, turn
+# `default-features` off and list the components you use (docs: /about/features).
 default = [
     "code-lang-rust",
     "code-lang-bash",
     "code-lang-markdown",
     "code-lang-html",
     "code-lang-css",
+    "button-group",
+    "copy",
+    "direction-toggle",
+    "share",
+    "theme-switcher",
+    "toolbar",
+    "accordion",
+    "avatar",
+    "badge",
+    "carousel",
+    "data-list",
+    "image",
+    "image-list",
+    "lightbox",
+    "image-cropper",
+    "sortable",
+    "indicator",
+    "list",
+    "table",
+    "timeline",
+    "circular-progress",
+    "notifications",
+    "progress-bar",
+    "skeleton",
+    "autocomplete",
+    "checkbox",
+    "chip",
+    "combobox",
+    "date-time",
+    "file-field",
+    "native-select",
+    "number-field",
+    "password-field",
+    "pin-field",
+    "radio",
+    "radio-group",
+    "rating",
+    "segmented-control",
+    "select",
+    "slider",
+    "switch",
+    "tags-field",
+    "text-field",
+    "textarea",
+    "bottom-navigation",
+    "burger",
+    "menubar",
+    "nav-link",
+    "pagination",
+    "stepper",
+    "tabs",
+    "tree",
+    "drawer",
+    "hover-card",
+    "menu",
+    "code",
 ]
 # `Box` (and anything built on it - `Title`, `Text`, `Icon`, ...) can render
 # as any of the 111 HTML5 elements via `component: HtmlTag::...`/a tag name
@@ -198,35 +258,126 @@ icons-phosphor = ["dep:pictogram-icons-phosphor"]
 icons-tabler = ["dep:pictogram-icons-tabler"]
 # Each turns on one hand-ported grammar in `components/typography/code/languages/`
 # (see `language_catalog.rs`) - only the languages you enable are compiled in.
-code-lang-bash = []
-code-lang-c = []
-code-lang-cpp = []
-code-lang-csharp = []
-code-lang-css = []
-code-lang-dart = []
-code-lang-go = []
-code-lang-graphql = []
-code-lang-haskell = []
-code-lang-html = []
-code-lang-java = []
-code-lang-javascript = []
-code-lang-json = []
-code-lang-kotlin = []
-code-lang-lua = []
-code-lang-markdown = []
-code-lang-objective-c = []
-code-lang-perl = []
-code-lang-php = []
-code-lang-powershell = []
-code-lang-python = []
-code-lang-r = []
-code-lang-ruby = []
-code-lang-rust = []
-code-lang-scala = []
-code-lang-sql = []
-code-lang-swift = []
-code-lang-toml = []
-code-lang-typescript = []
-code-lang-yaml = []
+code-lang-bash = ["code"]
+code-lang-c = ["code"]
+code-lang-cpp = ["code"]
+code-lang-csharp = ["code"]
+code-lang-css = ["code"]
+code-lang-dart = ["code"]
+code-lang-go = ["code"]
+code-lang-graphql = ["code"]
+code-lang-haskell = ["code"]
+code-lang-html = ["code"]
+code-lang-java = ["code"]
+code-lang-javascript = ["code"]
+code-lang-json = ["code"]
+code-lang-kotlin = ["code"]
+code-lang-lua = ["code"]
+code-lang-markdown = ["code"]
+code-lang-objective-c = ["code"]
+code-lang-perl = ["code"]
+code-lang-php = ["code"]
+code-lang-powershell = ["code"]
+code-lang-python = ["code"]
+code-lang-r = ["code"]
+code-lang-ruby = ["code"]
+code-lang-rust = ["code"]
+code-lang-scala = ["code"]
+code-lang-sql = ["code"]
+code-lang-swift = ["code"]
+code-lang-toml = ["code"]
+code-lang-typescript = ["code"]
+code-lang-yaml = ["code"]
+
+# Components (todo 3887): one feature per component, a component's feature turns on the
+# ones it is built from. Layout, typography, `Button`, `ActionIcon`, `Icon`, `Alert`,
+# `Dialog`, `Tooltip`, `Form` and their kin are always compiled. Docs: /about/features.
+all-components = ["buttons", "data-display", "feedback", "form", "navigation", "overlay", "typography"]
+
+buttons = ["button-group", "copy", "direction-toggle", "repository", "share", "theme-switcher", "tldr", "toolbar"]
+button-group = []
+copy = []
+direction-toggle = []
+# Pulls in the simple-icons brand marks.
+repository = ["dep:pictogram-icons-simple"]
+share = []
+theme-switcher = ["menu"]
+# Pulls in the lobe-icons brand marks.
+tldr = ["chip", "menu", "dep:pictogram-icons-lobe"]
+toolbar = []
+
+data-display = ["accordion", "audio", "avatar", "badge", "carousel", "charts", "data-list", "image", "image-list", "indicator", "kanban", "list", "marquee", "qr-code", "sortable", "table", "timeline", "video"]
+accordion = []
+audio = ["slider", "menu"]
+avatar = []
+badge = []
+carousel = []
 # `LineChart` and its kin, drawn by charts-rs (+~240 KB brotli on the web).
-charts = ["dep:charts-rs"]
+charts = ["dep:charts-rs", "skeleton"]
+data-list = []
+image = ["lightbox"]
+image-list = ["image"]
+indicator = []
+kanban = ["sortable", "menu"]
+list = []
+marquee = []
+qr-code = ["dep:fast_qr"]
+sortable = []
+table = ["badge", "progress-bar", "skeleton", "checkbox", "native-select", "select", "text-field", "pagination", "menu", "sortable", "date-time"]
+timeline = []
+video = ["slider", "menu"]
+
+feedback = ["circular-progress", "notifications", "progress-bar", "skeleton"]
+circular-progress = []
+notifications = []
+progress-bar = ["slider"]
+skeleton = []
+
+form = ["autocomplete", "cascader", "checkbox", "chip", "color", "combobox", "date-time", "file-field", "image-cropper", "native-select", "number-field", "password-field", "phone-field", "pin-field", "radio", "radio-group", "rating", "rich-text-editor", "segmented-control", "select", "slider", "switch", "tags-field", "text-field", "textarea"]
+autocomplete = ["combobox"]
+cascader = ["combobox"]
+checkbox = []
+chip = []
+color = ["slider"]
+combobox = []
+date-time = ["tabs"]
+file-field = ["chip", "image-cropper", "select"]
+image-cropper = ["slider"]
+native-select = ["combobox", "select"]
+number-field = []
+password-field = ["text-field"]
+phone-field = ["combobox"]
+pin-field = []
+radio = []
+radio-group = ["radio"]
+rating = []
+rich-text-editor = ["toolbar", "text-field", "menu", "code"]
+segmented-control = []
+select = ["combobox", "chip"]
+slider = []
+switch = []
+tags-field = ["combobox", "chip", "select"]
+text-field = []
+textarea = []
+
+navigation = ["bottom-navigation", "burger", "menubar", "nav-link", "pagination", "stepper", "tabs", "tree"]
+bottom-navigation = ["nav-link"]
+burger = []
+menubar = ["menu"]
+nav-link = ["tree"]
+pagination = []
+stepper = []
+tabs = []
+tree = ["list"]
+
+overlay = ["drawer", "floating-window", "hover-card", "lightbox", "menu", "spotlight", "tour"]
+drawer = []
+floating-window = ["menu"]
+hover-card = []
+lightbox = ["carousel"]
+menu = []
+spotlight = ["combobox"]
+tour = []
+
+typography = ["code"]
+code = ["copy"]

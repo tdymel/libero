@@ -2,6 +2,7 @@
 
 Crate: `libero`
 Import: `use libero::components::CodeBlock;`
+Feature: `code` (on by default, turns on `copy`; [features.md](features.md))
 Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/typography/code/code_block.rs>
 Index: [index.md](index.md) lists every other page
 Description: A multi-line code block with line numbers, a copy button, a language header, diffs and highlighted lines.

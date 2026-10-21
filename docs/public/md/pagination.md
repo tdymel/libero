@@ -2,6 +2,7 @@
 
 Crate: `libero`
 Import: `use libero::components::Pagination;`
+Feature: `pagination` (on by default; [features.md](features.md))
 Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/navigation/pagination/pagination.rs>
 Index: [index.md](index.md) lists every other page
 Description: A row of page buttons in a named nav landmark, with an ellipsis that keeps the row the same width.

@@ -91,6 +91,8 @@ pub(crate) enum Route {
 
     #[route("/about/getting-started")]
     GettingStarted {},
+    #[route("/about/features")]
+    FeaturesPage {},
     #[route("/about/philosophy")]
     PhilosophyPage {},
     #[route("/about/styling")]

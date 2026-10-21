@@ -2,6 +2,7 @@
 
 Crate: `libero`
 Import: `use libero::components::Center;`
+Feature: none, always compiled ([features.md](features.md))
 Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/layout/center.rs>
 Index: [index.md](index.md) lists every other page
 Description: Centers its child horizontally and vertically.

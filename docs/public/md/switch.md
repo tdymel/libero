@@ -2,6 +2,7 @@
 
 Crate: `libero`
 Import: `use libero::components::Switch;`
+Feature: `switch` (on by default; [features.md](features.md))
 Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/form/switch.rs>
 Index: [index.md](index.md) lists every other page
 Description: An on/off toggle drawn as a track and thumb, announced as a switch, with the field slots.

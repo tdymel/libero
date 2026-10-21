@@ -2,6 +2,7 @@
 
 Crate: `libero`
 Import: `use libero::components::{ColorField, ColorCode};`
+Feature: `color` (off by default, turns on `slider`; [features.md](features.md))
 Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/form/color/color_field.rs>
 Index: [index.md](index.md) lists every other page
 Description: A text field holding a `ColorCode`, with a preview swatch, an eyedropper and a `ColorPicker` in a dropdown.

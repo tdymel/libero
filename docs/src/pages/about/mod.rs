@@ -1,4 +1,5 @@
 mod credits;
+pub(crate) mod features;
 mod getting_started;
 mod localization;
 mod philosophy;
@@ -8,6 +9,7 @@ mod styling;
 mod theming;
 
 pub use credits::CreditsPage;
+pub use features::FeaturesPage;
 pub use getting_started::GettingStarted;
 pub use localization::LocalizationPage;
 pub use philosophy::PhilosophyPage;

@@ -2,6 +2,7 @@
 
 Crate: `libero`
 Import: `use libero::components::NumberField;`
+Feature: `number-field` (on by default; [features.md](features.md))
 Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/form/number_field.rs>
 Index: [index.md](index.md) lists every other page
 Description: A numeric field over your own number type, with optional steppers in its trailing slot.

@@ -2,6 +2,7 @@
 
 Crate: `libero`
 Import: `use libero::components::Alert;`
+Feature: none, always compiled ([features.md](features.md))
 Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/feedback/alert.rs>
 Index: [index.md](index.md) lists every other page
 Description: A tinted surface for something the reader has to know, with a title, an optional icon and close button, and a role that follows its color.

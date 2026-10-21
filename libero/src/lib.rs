@@ -11,6 +11,11 @@
 // On Android, clippy flags `thread_local!` initializers that already are
 // `const { .. }` (7 false positives).
 #![cfg_attr(target_os = "android", allow(clippy::missing_const_for_thread_local))]
+// With components feature-gated off, the shared helpers only they use sit idle (todo 3887).
+#![cfg_attr(
+    not(feature = "all-components"),
+    allow(dead_code, unused_imports, unused_macros, unnameable_types)
+)]
 
 pub mod components;
 pub mod context;

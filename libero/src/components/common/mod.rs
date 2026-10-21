@@ -3,6 +3,7 @@ mod button_group_context;
 mod closing_focus;
 mod color_variant;
 mod combobox_aria;
+#[cfg(feature = "combobox")]
 mod combobox_state;
 mod focus_ring;
 mod focusable;
@@ -42,6 +43,7 @@ pub(crate) use color_variant::{
     shade_color, text_color, tint_color, warning_edge,
 };
 pub(crate) use combobox_aria::{group_id, listbox_id, option_id};
+#[cfg(feature = "combobox")]
 pub use combobox_state::{ComboboxState, use_combobox};
 pub(crate) use focus_ring::{
     REPLACED_ELEMENTS, ROW_HOVER_TINT, Sides, borderless_on_state_sx, disabled_look_sx,

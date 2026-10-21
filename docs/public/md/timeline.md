@@ -2,6 +2,7 @@
 
 Crate: `libero`
 Import: `use libero::components::{Timeline, TimelineEvent, TimelineLine};`
+Feature: `timeline` (on by default; [features.md](features.md))
 Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/data_display/timeline>
 Index: [index.md](index.md) lists every other page
 Description: An ordered list of events drawn against a rail, with an `active` index colouring the bullets and connectors up to the current one.

@@ -2,6 +2,7 @@
 
 Crate: `libero`
 Import: `use libero::components::Mark;`
+Feature: none, always compiled ([features.md](features.md))
 Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/typography/mark.rs>
 Index: [index.md](index.md) lists every other page
 Description: A `mark` element that highlights text with a light tint of a theme color.

@@ -2,6 +2,7 @@
 
 Crate: `libero`
 Import: `use libero::components::Skeleton;`
+Feature: `skeleton` (on by default; [features.md](features.md))
 Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/feedback/skeleton.rs>
 Index: [index.md](index.md) lists every other page
 Description: A placeholder for loading content, as a standalone grey shape or a wrapper that hides the real content until it is ready.

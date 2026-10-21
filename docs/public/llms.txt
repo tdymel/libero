@@ -11,6 +11,9 @@ runs. Every docs page therefore also exists as plain markdown under `/md/`.
   file, grouped by component group. Start here - each entry links the page's
   own file, which carries the import line, examples, props, theme defaults,
   CSS variables and data attributes.
+- [Features](/md/features.md): each component sits behind a Cargo feature.
+  Add libero with `default-features = false` and turn on the feature of each
+  component you use; each page's `Feature:` line names it.
 
 ## Source
 

@@ -2,6 +2,7 @@
 
 Crate: `libero`
 Import: `use libero::components::Indicator;`
+Feature: `indicator` (on by default; [features.md](features.md))
 Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/data_display/indicator.rs>
 Index: [index.md](index.md) lists every other page
 Description: A dot or a small capped count pinned to something else with a `Float`, never read out itself.

@@ -2,6 +2,7 @@
 
 Crate: `libero`
 Import: `use libero::components::Audio;`
+Feature: `audio` (off by default, turns on `slider`, `menu`; [features.md](features.md))
 Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/data_display/audio.rs>
 Index: [index.md](index.md) lists every other page
 Description: An `<audio>` with libero's own controls, and the `use_media` hook behind them.

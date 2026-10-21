@@ -2,6 +2,7 @@
 
 Crate: `libero`
 Import: `use libero::components::{MenuEntry, MenuItem, Menubar, MenubarMenu};`
+Feature: `menubar` (on by default, turns on `menu`; [features.md](features.md))
 Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/navigation/menubar.rs>
 Index: [index.md](index.md) lists every other page
 Description: A row of menus. Each menu is a `Menu`, and the bar is a single tab stop with one menu open at most.
