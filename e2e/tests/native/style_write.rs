@@ -3,6 +3,7 @@
 
 use dioxus::prelude::*;
 use e2e::native::mount;
+use libero::components::{Table, column};
 
 /// `height` sorts before `style` in the slot, `width` after it.
 fn app() -> Element {
@@ -22,6 +23,31 @@ fn style_attributes_alone_size_a_box() {
     let page = mount(plain_app);
     let (_, _, width, height) = page.rect("#box");
     assert_eq!((width, height), (20.0, 40.0));
+}
+
+#[derive(Clone, PartialEq)]
+struct Row(&'static str);
+
+/// A caller's row `style` beside `opacity`, which sorts before it.
+fn table_app() -> Element {
+    rsx! {
+        Table {
+            data: vec![Row("Ada")],
+            columns: vec![column("Name").value(|row: &Row| row.0.to_string())],
+            row_attrs: |_: &Row| vec![
+                Attribute::new("style", "color: rgb(255, 0, 0)", None, false),
+                Attribute::new("opacity", "0.5", Some("style"), false),
+            ],
+        }
+    }
+}
+
+/// libero folds a caller's row style attributes into its `style` string.
+#[test]
+fn a_tables_row_keeps_a_callers_style_attributes() {
+    let page = mount(table_app);
+    assert_eq!(page.computed("tbody tr", "opacity"), "0.5");
+    assert_eq!(page.computed("tbody tr", "color"), "rgb(255, 0, 0)");
 }
 
 #[test]

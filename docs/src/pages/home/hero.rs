@@ -61,7 +61,8 @@ pub fn Hero() -> Element {
                     "volleyball court, it covers the defence: accessibility, keyboard support "
                     "and theming are handled, so you can focus on your app."
                 }
-                Flex { direction: "column", align: "center", gap: "sm",
+                // Stretched: Blitz sized this centred column past the card, so its line ran over the edge (3699).
+                Flex { direction: "column", align: "center", gap: "sm", sx: sx().align_self("stretch"),
                     Text {
                         component: "p",
                         sx: sx()

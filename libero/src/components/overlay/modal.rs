@@ -26,6 +26,8 @@ static MODAL_SX: StaticSx = StaticSx::new(|| {
         .z_index(MODAL_Z_INDEX_VAR.value())
 });
 
+static MODAL_SCRIM_SX: StaticSx = StaticSx::new(|| sx().position("absolute"));
+
 // On the `FocusTrap` as an `sx`, to beat its `display: contents`. Scrolls when the
 // dialog outgrows the viewport; it takes pointer events, so its scrollbar works (2560).
 // `absolute` is the same box under the fixed root; Blitz misses hits in a nested `fixed` one.
@@ -170,7 +172,8 @@ pub(crate) fn Modal(props: ModalProps) -> Element {
             attributes,
             rsx! {
                 {scroll_lock}
-                Overlay { z_index: 0 }
+                // `absolute`, the same box: Blitz paints a `fixed` one at the root's level, under a z-indexed `Header` (3697).
+                Overlay { z_index: 0, sx: &MODAL_SCRIM_SX }
                 // The `tabindex`: with nothing focusable and no `Dialog`, focus lands here (2559).
                 FocusTrap { sx: &MODAL_CONTENT_SX, tabindex: "-1",
                     div { class: frame_class,

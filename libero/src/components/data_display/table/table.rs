@@ -22,7 +22,7 @@ use crate::{
         use_debounced_callback, use_element, use_formats, use_id, use_localization,
         use_resize_fallback, use_theme,
     },
-    platform::{ElementApi, sticks_table_heads, widens_sized_tables},
+    platform::{ElementApi, spaces_inline_boxes, sticks_table_heads, widens_sized_tables},
     sx::{StaticSx, Sx, sx},
     theme::{
         CHECKBOX_BOX_SIZE, CssVar, NamedColorCss, Size, TABLE_GROUP, TABLE_PAD_X, TableDefaults,
@@ -790,7 +790,12 @@ static TABLE_SX: StaticSx = StaticSx::new(|| {
     // Apart from the toggle when the toggle's column aggregates too.
     .selector(
         "& [data-group-toggle] + [data-group-aggregate]",
-        sx().with("margin-inline-start", "12px"),
+        match spaces_inline_boxes() {
+            true => sx(),
+            // Blitz drops an inline box's side margin.
+            false => sx().display("inline-block"),
+        }
+        .with("margin-inline-start", "12px"),
     )
     // The footer's and the group rows' one cell over the lead columns holds with them.
     .when(

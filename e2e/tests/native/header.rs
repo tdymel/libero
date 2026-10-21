@@ -5,6 +5,7 @@ use dioxus::prelude::*;
 use e2e::native::{Page, mount};
 use libero::{
     components::{Header, HeaderPosition, ScrollArea, Select, Table, column},
+    hooks::{ModalScope, use_modal},
     sx::sx,
 };
 
@@ -14,6 +15,57 @@ fn page_banner() -> Element {
         Header { id: "banner", sx: sx().background("rgb(255, 0, 0)"), "Libero" }
         div { id: "content", height: "3000px", "Content" }
     }
+}
+
+fn banner_and_modal() -> Element {
+    let dialog = use_modal(|_: ModalScope<()>| {
+        rsx! {
+            div { role: "dialog", width: "100px", height: "50px", pointer_events: "auto", "Dialog" }
+        }
+    });
+    rsx! {
+        Header { id: "banner", sx: sx().background("rgb(255, 0, 0)"), "Libero" }
+        div { height: "300px",
+            button { id: "open", onclick: move |_| { dialog.open(); }, "Open" }
+        }
+    }
+}
+
+/// Todo 3697: the scrim covers a z-indexed `Header`, as on the web.
+#[test]
+fn a_modal_scrim_covers_the_banner() {
+    let mut page = mount(banner_and_modal);
+    let (_, _, width, height) = page.rect("#banner");
+    let (x, y) = ((width - 10.0) as u32, (height / 2.0) as u32);
+    assert_eq!(page.painted_pixel(x, y), "rgb(255, 0, 0)");
+    page.click("#open");
+    page.wait_for(|page| page.exists("[role=dialog]"));
+    page.advance(1.0);
+    assert_ne!(
+        page.painted_pixel(x, y),
+        "rgb(255, 0, 0)",
+        "{}",
+        page.tree()
+    );
+}
+
+/// A `fixed` z 0 box inside a z-indexed `fixed` one.
+fn nested_fixed() -> Element {
+    rsx! {
+        div { id: "banner", position: "relative", z_index: "100", height: "64px", background: "rgb(255, 0, 0)" }
+        div { style: "position: fixed; inset: 0; z-index: 1000; pointer-events: none",
+            div { style: "position: fixed; inset: 0; z-index: 0; background: rgba(0, 0, 0, 0.6)" }
+        }
+    }
+}
+
+/// Blitz paints an out-of-flow box with its containing block, not its stacking context: the
+/// inner box paints at the root's level, under the banner. `Modal`'s scrim is `absolute` for it.
+#[test]
+#[ignore = "needs Blitz: a fixed box paints outside the stacking context of its fixed parent"]
+fn a_fixed_box_paints_in_its_parents_stacking_context() {
+    let page = mount(nested_fixed);
+    assert_ne!(page.painted_pixel(500, 30), "rgb(255, 0, 0)");
 }
 
 fn top(page: &Page, selector: &str) -> f64 {

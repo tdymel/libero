@@ -558,6 +558,10 @@ pub(crate) const COLORS_FORM_CONTROLS: bool =
 /// Blitz has no `-webkit-line-clamp`; see [`clamps_lines`](crate::platform::clamps_lines).
 pub(crate) const CLAMPS_LINES: bool = !cfg!(all(not(target_arch = "wasm32"), feature = "native"));
 
+/// Blitz drops an inline box's side spacing; see [`spaces_inline_boxes`](crate::platform::spaces_inline_boxes).
+pub(crate) const SPACES_INLINE_BOXES: bool =
+    !cfg!(all(not(target_arch = "wasm32"), feature = "native"));
+
 pub(crate) fn document() -> Option<&'static dyn DocumentApi> {
     #[cfg(target_arch = "wasm32")]
     return web::document();

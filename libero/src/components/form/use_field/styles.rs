@@ -32,7 +32,9 @@ pub(in crate::components::form) static FIELD_SX: StaticSx = StaticSx::new(|| {
         )
         .selector(
             "& label > [data-slot='required']",
-            sx().color("error.7")
+            // Inline-block: Blitz drops an inline box's side margin.
+            sx().display("inline-block")
+                .color("error.7")
                 .margin_left("2px")
                 .rtl(sx().margin_left("0").margin_right("2px")),
         )

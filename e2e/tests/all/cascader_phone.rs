@@ -124,6 +124,40 @@ fn native_narrow_window_shows_a_bottom_sheet() {
     assert!(height <= 844.0 * 0.7 + 1.0, "too tall: {height}");
 }
 
+/// Todo 3772: Blitz has no media query to ask, so the narrow parent row hears the window width.
+#[cfg(feature = "native")]
+#[test]
+fn native_narrow_window_reaches_the_parent_row_by_keyboard() {
+    async fn active_label(d: &mut e2e::driver::Native) -> Result<String> {
+        match d.attr(TRIGGER, "aria-activedescendant").await? {
+            Some(id) => d.text(&format!("[id='{id}'] [data-slot=label]")).await,
+            None => Ok(String::new()),
+        }
+    }
+    let mut d = e2e::driver::Native::open("/cascader/any-level");
+    d.page.resize(390, 844);
+    e2e::futures::executor::block_on(async {
+        d.focus(TRIGGER).await.unwrap();
+        d.press(keyboard::ARROW_DOWN).await.unwrap();
+        d.press(keyboard::ARROW_RIGHT).await.unwrap();
+        eventually(&mut d, "France under Europe", async |d| {
+            Ok(active_label(d).await? == "France")
+        })
+        .await
+        .unwrap();
+        d.press(keyboard::ARROW_UP).await.unwrap();
+        eventually(&mut d, "Up to the parent row", async |d| {
+            Ok(active_label(d).await? == "Select Europe")
+        })
+        .await
+        .unwrap();
+        d.press(keyboard::ENTER).await.unwrap();
+        eventually_text(&mut d, "#picked", "europe", "Enter on the parent row")
+            .await
+            .unwrap();
+    });
+}
+
 /// Todo 1084: `any_level` on a phone, the first row picks the parent a tap only drilled into.
 #[test]
 fn a_phone_picks_a_branch_from_its_first_row() {

@@ -47,3 +47,9 @@ pub(crate) fn colors_form_controls() -> bool {
 pub(crate) fn clamps_lines() -> bool {
     backend::CLAMPS_LINES
 }
+
+/// Whether a `display: inline` box's horizontal margin and padding take room.
+/// Blitz adds no width for them; an `inline-block` keeps both (todo 3698).
+pub(crate) fn spaces_inline_boxes() -> bool {
+    backend::SPACES_INLINE_BOXES
+}

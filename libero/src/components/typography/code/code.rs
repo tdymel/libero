@@ -7,7 +7,7 @@ use crate::{
         common::{HtmlTag, Input, States, base_props},
         layout::use_box,
     },
-    platform::paints_outer_inline_backgrounds,
+    platform::{paints_outer_inline_backgrounds, spaces_inline_boxes},
     sx::{StaticSx, sx},
     theme::CODE_FONT_FAMILY,
 };
@@ -18,6 +18,11 @@ static CODE_INLINE_SX: StaticSx = StaticSx::new(|| {
         // Blitz fills a token's text from the token span alone.
         false => sx().selector("& > span", sx().background("inherit")),
     };
+    let short = match spaces_inline_boxes() {
+        true => sx().white_space("nowrap"),
+        // An unbroken span loses nothing as an inline-block, which keeps its side padding natively.
+        false => sx().white_space("nowrap").display("inline-block"),
+    };
     base.display("inline")
         .background("muted.2")
         .border_radius("4px")
@@ -27,7 +32,7 @@ static CODE_INLINE_SX: StaticSx = StaticSx::new(|| {
         // An identifier has no break point; unbroken it runs out of a 320px column (WCAG 1.4.10).
         .with("overflow-wrap", "anywhere")
         // `anywhere` lowers min-content, so shrink-to-fit parents split short spans (todo 732).
-        .when("short", sx().white_space("nowrap"))
+        .when("short", short)
 });
 
 /// Up to this many characters a span stays on one line: ~170px, under a 320px column.

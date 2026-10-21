@@ -9,7 +9,7 @@ use crate::{
     CssLayer,
     components::{
         accessibility::{Announcer, VisuallyHidden},
-        common::{Glyph, Orientation},
+        common::{Glyph, Orientation, styling_attributes},
         layout::use_kept_slot,
     },
     context::IconSlot,
@@ -218,10 +218,11 @@ pub(super) fn ReorderRow(
             }
         }
     });
+    // One `style` string: a caller's style-namespace attributes would be wiped by its rewrite natively.
+    let attributes = styling_attributes(None, None, style, attributes);
     rsx! {
         tr {
             "data-reorder-row": row,
-            style,
             "data-cell-moved": cells,
             "data-state": states,
             "data-stripe": stripe.then_some(true),

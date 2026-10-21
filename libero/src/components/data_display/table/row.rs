@@ -20,7 +20,7 @@ use super::{
 use crate::{
     components::{
         accessibility::Announcer,
-        common::{Glyph, States, attr},
+        common::{Glyph, States, attr, styling_attributes},
     },
     context::IconSlot,
     hooks::listener,
@@ -223,7 +223,9 @@ impl<T: Clone + 'static> RowContext<T> {
             open,
             body: detail.filter(|_| open),
         });
-        let mut attributes = self.row_attrs.call(row).unwrap_or_default();
+        // A caller's `style` beside style-namespace attributes would wipe them natively: one string.
+        let caller = self.row_attrs.call(row).unwrap_or_default();
+        let mut attributes = styling_attributes(None, None, None, caller);
         if let Some(rowindex) = rowindex {
             attributes.push(attr("aria-rowindex", rowindex.to_string()));
         }

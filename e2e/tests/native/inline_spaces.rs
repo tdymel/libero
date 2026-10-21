@@ -21,7 +21,7 @@ fn app() -> Element {
     }
 }
 
-/// An inline-block (`Kbd`, `Badge`) lays its text out apart, hence the gaps.
+/// An inline-block (`Kbd`, `Badge`, a short `Code`) lays its text out apart, hence the gaps.
 #[test]
 fn inline_components_keep_the_spaces_around_them() {
     let mut page = mount(app);
@@ -30,7 +30,7 @@ fn inline_components_keep_the_spaces_around_them() {
         ("#mark", "Highlights a chunk of text."),
         ("#combo", "Press  +  to search."),
         ("#badge", "Status  today."),
-        ("#code", "Call run() once."),
+        ("#code", "Call  once."),
         ("#anchor", "Read the guide first."),
         ("#nested", "A chunk with  inside here."),
     ] {
@@ -44,6 +44,15 @@ fn a_callers_edge_spaces_survive() {
     let mut page = mount(app);
     page.settle();
     assert_eq!(page.laid_out_text("#edge"), "x spaced y");
+}
+
+/// Todo 3698: a short `Code` is an inline-block natively, so its side padding takes room.
+#[test]
+fn a_short_code_keeps_its_side_padding() {
+    let mut page = mount(app);
+    page.settle();
+    assert_eq!(page.computed("#code code", "display"), "inline-block");
+    assert_eq!(page.computed("#code code", "padding-left"), "6px");
 }
 
 /// Blitz adds no width for a plain inline element's horizontal margin or padding, so libero
