@@ -257,7 +257,7 @@ fn a_broken_image_in_the_crop_dialog_says_so() {
               const apply = [...document.querySelectorAll('[role=dialog] button')]
                 .find((button) => button.textContent.trim() === 'Apply');
               return !!alert && alert.textContent.includes('could not be loaded')
-                && !!apply && apply.disabled
+                && !!apply && apply.getAttribute('aria-disabled') === 'true'
                 && !document.querySelector('[role=dialog] [data-slot=box]'); })()",
             "the dialog to report the broken image",
         )
