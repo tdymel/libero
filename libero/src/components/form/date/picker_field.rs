@@ -544,6 +544,8 @@ pub(super) fn use_picker_field<V: FieldValue>(
             input {
                 r#type: "hidden",
                 name: name.to_string(),
+                // A disabled field posts nothing (todo 3873).
+                disabled,
                 value: value
                     .filter(|value| value.is_complete())
                     .map(FieldValue::iso)

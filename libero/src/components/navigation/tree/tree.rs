@@ -984,7 +984,8 @@ mod tests {
         dom.rebuild_in_place();
         let html = dioxus_ssr::render(&dom);
         assert_eq!(html.matches("role=\"treeitem\"").count(), 3, "{html}");
-        assert_eq!(html.matches("aria-disabled=\"true\"").count(), 3, "{html}");
+        // The three rows and the fieldset itself.
+        assert_eq!(html.matches("aria-disabled=\"true\"").count(), 4, "{html}");
     }
 
     /// Todo 3780: a row that cannot take focus hands it to its parent, then the nearest rows.

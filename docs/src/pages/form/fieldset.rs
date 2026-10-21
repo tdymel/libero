@@ -108,7 +108,7 @@ pub fn FieldsetPage() -> Element {
                     .doc("Where the group sits inside a `Form`'s value, such as `Order::FIELDS.address()`. The names of the fields inside and the paths in `validate` are relative to it."),
                 prop("disabled", "bool")
                     .default("false")
-                    .doc("Disables every field inside, nested fieldsets included. A field's own `disabled: false` cannot re-enable it."),
+                    .doc("Disables every Libero control inside, nested fieldsets included. A field's own `disabled: false` cannot re-enable it. A raw `<input>` or `<button>` keeps its own `disabled`."),
                 prop("children", "Element").default("required").doc("The fields."),
             ])
             .parts("FieldsetPart", vec![
@@ -121,7 +121,7 @@ pub fn FieldsetPage() -> Element {
                 .handles([
                     "A native `<fieldset>`, named by its `<legend>`, the `label`.",
                     "`description`, `helper` and the group's status join its `aria-describedby`.",
-                    "`disabled` reaches every field inside, Libero's own and nested fieldsets included, not only native controls.",
+                    "`disabled` reaches every Libero control inside, nested fieldsets included. Inputs disable natively, so a submit leaves them out; buttons soft-disable, so a focused one keeps its focus.",
                 ])
                 .must(["Give the group a `label`, so screen readers announce what its fields are for."])
                 .example("A shipping address, `Fieldset { label: \"Shipping address\", .. }` around street, city and postcode: a screen reader announces \"Shipping address\" as you enter the first field."),

@@ -642,7 +642,7 @@ fn a_disabled_fieldset_disables_its_fields_and_nested_groups_and_follows_a_toggl
 }
 
 /// Each fieldset, input and `data-state` element of a fieldset's markup, in
-/// document order, and whether it says disabled.
+/// document order, and whether it says disabled (`aria-disabled` on a fieldset).
 fn disabled_parts(html: &str) -> Vec<(&str, bool)> {
     let body = &html[html.find("<fieldset").unwrap_or(0)..];
     let body = &body[..body.find("<style").unwrap_or(body.len())];
@@ -650,9 +650,9 @@ fn disabled_parts(html: &str) -> Vec<(&str, bool)> {
         .filter_map(|tag| {
             let (name, attributes) = tag[..tag.find('>')?].split_once(' ')?;
             match name {
-                "fieldset" | "input" => {
-                    Some((name, attribute(attributes, "disabled") == Some("true")))
-                }
+                // The group renders no native `disabled` (todo 3873).
+                "fieldset" => Some((name, attribute(attributes, "aria-disabled") == Some("true"))),
+                "input" => Some((name, attribute(attributes, "disabled") == Some("true"))),
                 _ => {
                     let state = attribute(attributes, "data-state")?;
                     let part = attribute(attributes, "data-slot").unwrap_or("wrapper");

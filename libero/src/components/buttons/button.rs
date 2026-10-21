@@ -12,6 +12,7 @@ use crate::{
             variant_selected_sx,
         },
         feedback::Loader,
+        form::use_fieldset_disabled,
         layout::{render_anchor, use_box},
         navigation::{NewTabHint, wants_new_tab_hint},
     },
@@ -83,8 +84,6 @@ static BUTTON_BASE_SX: StaticSx = StaticSx::new(|| {
         })
         // No `pointer-events: none`: the variant's `:hover` skips it already.
         .when("disabled", disabled_look_sx("not-allowed"))
-        // A disabled `Fieldset` disables the `<button>` natively (todo 499).
-        .selector("&:disabled", disabled_look_sx("not-allowed"))
         .when("full-width", sx().width("100%"))
         .when("loading", loading_sx())
         .and(zoom_height_sx())
@@ -271,11 +270,13 @@ pub fn Button(props: ButtonProps) -> Element {
         .copied_or(group.variant.unwrap_or(theme.button.variant));
     let color_prop = props.color.as_ref().or(group.color.as_ref());
     let color = base_color(color_prop);
-    let disabled = props.disabled.or(group.disabled).unwrap_or(false);
+    let is_link = props.to.as_ref().is_some();
+    // A disabled `Fieldset` reaches no link, as a native one (todo 3873).
+    let in_disabled_group = use_fieldset_disabled() && !is_link;
+    let disabled = props.disabled.or(group.disabled).unwrap_or(false) || in_disabled_group;
     let full_width = props.full_width.unwrap_or(false);
     let selectable = props.selected.is_some();
     let selected = props.selected.unwrap_or(false);
-    let is_link = props.to.as_ref().is_some();
     let loading = props.loading.unwrap_or(false) && !is_link;
     // A toolbar keeps its disabled items in the arrow order.
     let soft_disabled = disabled

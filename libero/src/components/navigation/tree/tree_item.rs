@@ -5,6 +5,7 @@ use crate::{
     components::{
         common::{Glyph, HtmlTag, Input, LogicalTextAlign, States, base_props},
         data_display::{Icon, SvgData},
+        form::use_fieldset_disabled,
         layout::{Box, use_box},
     },
     context::IconSlot,
@@ -58,11 +59,10 @@ static TREE_ITEM_SX: StaticSx = StaticSx::new(|| {
             .cursor("pointer")
             // A row's label takes the row's cursor, `not-allowed` while disabled.
             .selector("&[data-tree-activate]", sx().cursor("inherit"))
-            // Disabled by its row or a `Fieldset` (todo 514); only the Fieldset's case dims here.
-            .selector("&:disabled", sx().cursor("not-allowed"))
+            // The button form, soft-disabled by a `Fieldset` (todos 514, 3873).
             .selector(
-                "&:disabled:not([aria-disabled=\"true\"] *)",
-                sx().opacity("0.5"),
+                "&[aria-disabled=\"true\"]",
+                sx().cursor("not-allowed").opacity("0.5"),
             ),
     )
 });
@@ -240,12 +240,13 @@ base_props! {
 pub fn TreeItem(props: TreeItemProps) -> Element {
     // Outside a `Tree`, an ordinary button.
     let row = use_hook(try_consume_context::<TreeRowContext>);
+    let group_disabled = use_fieldset_disabled();
     let (tabindex, disabled) = match row {
         Some(row) => {
             let state = row.0.read();
             (state.tabindex, state.disabled)
         }
-        None => ("0", false),
+        None => (if group_disabled { "-1" } else { "0" }, group_disabled),
     };
     let parts = item_parts(
         row_expanded(row),
@@ -275,9 +276,10 @@ pub fn TreeItem(props: TreeItemProps) -> Element {
         item.attr("data-tree-activate", true)
             .render(HtmlTag::Span, props.attributes, parts)
     } else {
+        // Soft-disabled as `Button`: a native `disabled` would drop its focus (todo 3873).
         item.attr("type", "button")
             .attr("tabindex", tabindex)
-            .attr("disabled", disabled)
+            .attr("aria-disabled", disabled.then_some("true"))
             .render(HtmlTag::Button, props.attributes, parts)
     }
 }

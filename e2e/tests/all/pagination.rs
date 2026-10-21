@@ -233,23 +233,20 @@ async fn looks(page: &Page, id: &str) -> Vec<String> {
 
 /// The page buttons carry no `disabled` state, so `disabled: true` dimmed only
 /// the arrows; a disabled `Fieldset` dimmed nothing but the arrows (todo 514).
-/// The prop soft-disables, so every control stays focusable (todo 2418).
+/// The prop soft-disables, so every control stays focusable (todo 2418); a disabled
+/// `Fieldset` does the same (todo 3873).
 #[test]
 fn every_control_of_a_disabled_pagination_looks_disabled() {
     block_on(async {
         let fixture = Fixture::open("/pagination/states", Viewport::Desktop)
             .await
             .unwrap();
-        // The prop: focusable and `aria-disabled`. The `Fieldset`: native, either way.
-        for (id, focusable) in [("pg-disabled", true), ("pg-fieldset", false)] {
+        for id in ["pg-disabled", "pg-fieldset"] {
             let looks = looks(&fixture.page, id).await;
             assert_eq!(looks.len(), 9, "{id}: {looks:?}");
             let enabled: Vec<_> = looks
                 .iter()
-                .filter(|look| match focusable {
-                    true => !look.starts_with("false true 0.5 default "),
-                    false => !look.starts_with("true ") || !look.contains(" 0.5 default "),
-                })
+                .filter(|look| !look.starts_with("false true 0.5 default "))
                 .collect();
             assert!(enabled.is_empty(), "{id} looks enabled: {enabled:?}");
         }

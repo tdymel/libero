@@ -275,8 +275,8 @@ fn a_disabled_link_chip_is_still_a_link() {
     });
 }
 
-/// A disabled `Fieldset` disables a `<button>` natively, so every button-rooted control
-/// must dim (499, 514). Opacity is the product up the tree: double dimming shows.
+/// Every button-rooted control in a disabled `Fieldset` dims (499, 514), soft-disabled
+/// but for a field's own button (3873). Opacity is the product up the tree: double dimming shows.
 #[test]
 fn buttons_in_a_disabled_fieldset_look_disabled() {
     block_on(async {
@@ -300,13 +300,13 @@ fn buttons_in_a_disabled_fieldset_look_disabled() {
         assert_eq!(
             looks,
             [
-                "#fs-chip true 0.5 not-allowed",
-                "#fs-button true 0.5 not-allowed",
-                "#fs-icon true 0.5 not-allowed",
-                "#fs-swatch true 0.5 not-allowed",
-                "#fs-tree-item true 0.5 not-allowed",
+                "#fs-chip false 0.5 not-allowed",
+                "#fs-button false 0.5 not-allowed",
+                "#fs-icon false 0.5 not-allowed",
+                "#fs-swatch false 0.5 not-allowed",
+                "#fs-tree-item false 0.5 not-allowed",
                 "#fs-phone button true 0.5 not-allowed",
-                "#fs-image button true 0.5 not-allowed",
+                "#fs-image button false 0.5 not-allowed",
                 "#tree-off false 0.5 not-allowed",
             ],
             "[id :disabled opacity cursor]"

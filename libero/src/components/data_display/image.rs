@@ -8,6 +8,7 @@ use crate::{
             on_failed_after_mount, parts_enum, parts_under_sx, states, svg_fit, svg_fit_sx,
             svg_fit_variables, use_svg_probe, variables,
         },
+        form::use_fieldset_disabled,
         layout::use_box,
     },
     hooks::{LightboxItem, LightboxOptions, use_lightbox, use_localization, use_theme},
@@ -116,8 +117,11 @@ static ZOOM_BUTTON_SX: StaticSx = StaticSx::new(|| {
         // A picture under 24px still takes a press in a 24px box (WCAG 2.5.8).
         .position("relative")
         .and(min_hit_area_sx("::before"))
-        // A disabled `Fieldset` disables the `<button>` (todo 514).
-        .selector("&:disabled", sx().opacity("0.5").cursor("not-allowed"))
+        // A disabled `Fieldset` soft-disables the `<button>` (todos 514, 3873).
+        .selector(
+            "&[aria-disabled='true']",
+            sx().opacity("0.5").cursor("not-allowed"),
+        )
         .focus_visible(focus_ring_sx())
 });
 
@@ -393,12 +397,18 @@ fn ZoomButton(props: ZoomButtonProps) -> Element {
 
     let label = zoom_label(&props.alt, &use_localization().image);
     let item = props.item.clone();
+    // Soft-disabled as `Button`: a native `disabled` would drop its focus (todo 3873).
+    let disabled = use_fieldset_disabled();
     // A dialog opener, not a toggle: the open state lives in the `Lightbox`.
     root.attr("type", "button")
         .attr("aria-haspopup", "dialog")
         .attr_default("aria-label", label)
+        .attr("aria-disabled", disabled.then_some("true"))
+        .attr("tabindex", disabled.then_some("-1"))
         .event("onclick", move |_: Event<MouseData>| {
-            zoom.open_with(item.clone());
+            if !disabled {
+                zoom.open_with(item.clone());
+            }
         })
         .render(HtmlTag::Button, props.attributes, props.children)
 }

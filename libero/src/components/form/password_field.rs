@@ -5,7 +5,7 @@ use crate::{
     components::{
         buttons::ActionIcon,
         common::{Glyph, Input},
-        form::{Disabled, FormScope, SLOT_BUTTON_SX, TextField, field_props, slot_icon_size},
+        form::{FormScope, SLOT_BUTTON_SX, TextField, field_props, slot_icon_size},
     },
     context::IconSlot,
     hooks::{use_localization, use_theme},
@@ -69,9 +69,6 @@ pub fn PasswordField(props: PasswordFieldProps) -> Element {
         .reveal_button
         .unwrap_or(theme.password_field.reveal_button);
 
-    // A disabled `Fieldset` disables the input, so the toggle follows it.
-    let group = try_use_context::<Disabled>();
-    let disabled = props.disabled.unwrap_or(false) || group.is_some_and(|Disabled(group)| group());
     // One static name plus `aria-pressed`: a name that flips is announced as a
     // different button, not as a state change (todo 498).
     let labels = use_localization().password_field;
@@ -111,7 +108,8 @@ pub fn PasswordField(props: PasswordFieldProps) -> Element {
                     "aria-pressed": revealed().to_string(),
                     size,
                     sx: &SLOT_BUTTON_SX,
-                    disabled,
+                    // `ActionIcon` follows a disabled `Fieldset` itself.
+                    disabled: props.disabled,
                     onclick: move |_| revealed_at.set((!revealed()).then_some(settled)),
                     // A struck-through eye while the secret is readable.
                     if revealed() {

@@ -15,6 +15,7 @@ use crate::{
     components::{
         accessibility::VisuallyHidden,
         common::{ClassList, HtmlTag, Input, Parts, States, base_color},
+        form::use_fieldset_disabled,
         layout::use_box,
         navigation::{TabSpec, TabsView, render_tabs},
     },
@@ -202,6 +203,8 @@ fn flow_root(
         .style(Some(FLOW_STYLE.to_string()))
         .prepare()
         .element(root)
+        // A disabled `Fieldset` renders no native `disabled`: the flow takes no input (todo 3873).
+        .attr("inert", use_fieldset_disabled())
         .event("onfocusin", move |_: FocusEvent| refresh_today.ask())
         .render(HtmlTag::Div, attributes, children)
 }
@@ -225,12 +228,14 @@ fn use_handoff() -> (ElementHandle, Signal<bool>) {
     (root, handoff)
 }
 
-/// A hidden input posting the value as ISO 8601, when the flow has a name.
+/// A hidden input posting the value as ISO 8601, when the flow has a name. A hook.
 fn hidden(name: Option<String>, value: Option<impl FieldValue>) -> Element {
     let value = value.map(FieldValue::iso).unwrap_or_default();
+    // A disabled `Fieldset` renders no native `disabled` (todo 3873).
+    let disabled = use_fieldset_disabled();
     rsx! {
         if let Some(name) = name {
-            input { r#type: "hidden", name, value }
+            input { r#type: "hidden", name, value, disabled }
         }
     }
 }

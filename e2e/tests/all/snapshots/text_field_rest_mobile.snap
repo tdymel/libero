@@ -33,7 +33,7 @@ LabelText
   StaticText "PIN"
 textbox "PIN"
 button "Show password" [pressed=false]
-group "Locked"
+group "Locked" [disabled]
   Legend
     StaticText "Locked"
   LabelText

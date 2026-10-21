@@ -94,7 +94,7 @@ Form {
 | `value` | `Store<V>` | - | The group's own value, for a fieldset outside a `Form`. A fieldset with no `value`, `path` or rules needs `Fieldset::<()>` so Rust can infer its type. |
 | `validate` | `Validators<V>` | - | Rules over the group's value, one or an array. A rule with `.on(..)` shows on the fields it names. One without shows under the fields once any field in the group was touched. |
 | `path` | `FieldName<V>` | - | Where the group sits inside a `Form`'s value, such as `Order::FIELDS.address()`. The names of the fields inside and the paths in `validate` are relative to it. |
-| `disabled` | `bool` | `false` | Disables every field inside, nested fieldsets included. A field's own `disabled: false` cannot re-enable it. |
+| `disabled` | `bool` | `false` | Disables every Libero control inside, nested fieldsets included. A field's own `disabled: false` cannot re-enable it. A raw `<input>` or `<button>` keeps its own `disabled`. |
 | `children` | `Element` | required | The fields. |
 
 `Fieldset` also takes the `<fieldset>` HTML attributes and, like every
@@ -120,8 +120,9 @@ explains how parts work.
 
 - A native `<fieldset>`, named by its `<legend>`, the `label`.
 - `description`, `helper` and the group's status join its `aria-describedby`.
-- `disabled` reaches every field inside, Libero's own and nested fieldsets
-  included, not only native controls.
+- `disabled` reaches every Libero control inside, nested fieldsets included.
+  Inputs disable natively, so a submit leaves them out; buttons soft-disable, so
+  a focused one keeps its focus.
 
 ### You must
 

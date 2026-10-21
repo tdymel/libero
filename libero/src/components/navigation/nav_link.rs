@@ -9,6 +9,7 @@ use crate::{
             on_tint_color, parts_enum, parts_source, sx_source, use_style_attributes, variables,
             with_parts,
         },
+        form::use_fieldset_disabled,
         layout::{Collapse, box_style, use_box},
         navigation::{
             NewTabHint,
@@ -143,11 +144,7 @@ static NAV_GROUP_SX: StaticSx = StaticSx::new(|| {
                 .cursor("pointer")
                 .focus_visible(inset_focus_ring_sx("-2px"))
                 .hover(sx().background(ROW_HOVER_TINT))
-                // `:disabled` for a disabled `Fieldset` around it.
-                .selector(
-                    "&:is(:disabled, [aria-disabled='true'])",
-                    disabled_look_sx("not-allowed"),
-                )
+                .selector("&[aria-disabled='true']", disabled_look_sx("not-allowed"))
                 .selector(
                     "& > svg",
                     sx().width("16px")
@@ -255,6 +252,9 @@ pub fn NavLink(props: NavLinkProps) -> Element {
     // A link in a disabled tree row follows the row, which already draws the faded look.
     let own_disabled = props.disabled.unwrap_or(false);
     let disabled = props.disabled.unwrap_or_else(row_disabled);
+    // A disabled `Fieldset` reaches the toggle button, not the link (todo 3873).
+    let group_disabled = use_fieldset_disabled();
+    let toggle_disabled = disabled || group_disabled;
     let is_active = props.active.unwrap_or_else(|| match &props.to {
         NavigationTarget::Internal(path) => try_router()
             .map(|router| route_matches(&router.full_route_string(), path))
@@ -366,7 +366,7 @@ pub fn NavLink(props: NavLinkProps) -> Element {
     let controlled = props.opened.is_some();
     let onchange = props.onchange;
     let toggle = move |event: MouseEvent| {
-        if disabled {
+        if toggle_disabled {
             event.prevent_default();
             return;
         }
@@ -392,8 +392,8 @@ pub fn NavLink(props: NavLinkProps) -> Element {
                     "aria-expanded": opened.to_string(),
                     "aria-controls": panel_id(),
                     // Soft-disabled as `Button`: a native `disabled` would drop its focus (todo 3838).
-                    "aria-disabled": disabled.then_some("true"),
-                    tabindex: disabled.then_some("-1"),
+                    "aria-disabled": toggle_disabled.then_some("true"),
+                    tabindex: toggle_disabled.then_some("-1"),
                     onclick: toggle,
                     Glyph { slot: IconSlot::ChevronDown, icon: lucide::chevron_down::outlined }
                 }

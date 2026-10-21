@@ -18,10 +18,18 @@ const CONTROLS: [&str; 7] = [
 
 #[test]
 fn a_control_that_becomes_disabled_keeps_its_focus() {
+    keeps_focus("/soft-disabled");
+}
+
+/// Todo 3873: the same when a `Fieldset` around them turns disabled.
+#[test]
+fn a_control_whose_fieldset_becomes_disabled_keeps_its_focus() {
+    keeps_focus("/soft-disabled/fieldset");
+}
+
+fn keeps_focus(route: &str) {
     block_on(async {
-        let fixture = Fixture::open("/soft-disabled", Viewport::Desktop)
-            .await
-            .unwrap();
+        let fixture = Fixture::open(route, Viewport::Desktop).await.unwrap();
         let page = &fixture.page;
         wait::for_visible(page, "#item").await.unwrap();
         // `click()` by script: the flip moves no focus.

@@ -14,6 +14,7 @@ use crate::{
         },
         data_display::{Pictogram, SvgData},
         feedback::Loader,
+        form::use_fieldset_disabled,
         layout::{InternalAnchor, use_box},
         navigation::wants_new_tab_hint,
         overlay::{Tooltip, chord_kbd, chord_words},
@@ -149,11 +150,8 @@ static ACTION_ICON_BASE_SX: StaticSx = StaticSx::new(|| {
         )
     });
 
-    // `:disabled` too: a disabled `Fieldset` disables the `<button>` (todo 499).
-    let disabled = || disabled_look_sx("not-allowed");
     // Last, as on `Button`: the elevated variant's shadow ties the ring's on specificity.
-    base.when("disabled", disabled())
-        .selector("&:disabled", disabled())
+    base.when("disabled", disabled_look_sx("not-allowed"))
         .when("loading", loading_sx())
         .focus_visible(focus_ring_sx())
 });
@@ -365,10 +363,12 @@ fn action_icon(mut props: ActionIconProps) -> Element {
     let group = use_button_group();
     fill_from_group(&mut props, group);
     let item = use_toolbar_item();
-    let disabled = props.disabled.unwrap_or(false);
+    let is_link = props.to.as_ref().is_some();
+    // A disabled `Fieldset` reaches no link, as a native one (todo 3873).
+    let in_disabled_group = use_fieldset_disabled() && !is_link;
+    let disabled = props.disabled.unwrap_or(false) || in_disabled_group;
     let selectable = props.selected.is_some();
     let selected = props.selected.unwrap_or(false);
-    let is_link = props.to.as_ref().is_some();
     let loading = props.loading.unwrap_or(false) && !is_link;
     // A toolbar keeps its disabled items in the arrow order.
     let soft_disabled = disabled && props.focusable_when_disabled.unwrap_or(item.is_some());

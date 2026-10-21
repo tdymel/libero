@@ -208,8 +208,7 @@ fn ChipNewTabPage() -> Element {
     }
 }
 
-/// Button-rooted controls in a disabled `Fieldset`: the browser disables the
-/// `<button>`, so each has to look disabled too (todo 499).
+/// Button-rooted controls in a disabled `Fieldset`: each has to look disabled (todos 499, 3873).
 #[component]
 fn ChipFieldsetPage() -> Element {
     rsx! {

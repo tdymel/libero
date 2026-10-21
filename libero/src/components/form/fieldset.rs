@@ -105,7 +105,8 @@ base_props! {
         /// The group's own status, under the fields. A bare `&str` is an error.
         #[props(default, into)]
         status: Input<FieldStatus>,
-        /// Disables every field inside, nested fieldsets included.
+        /// Disables every Libero control inside, nested fieldsets included. A raw `<input>`
+        /// or `<button>` keeps its own `disabled`: the group renders no native one.
         #[props(default)]
         disabled: Option<bool>,
         children: Element,
@@ -177,8 +178,8 @@ pub fn Fieldset<V: FormValue>(props: FieldsetProps<V>) -> Element {
         provide_context(binding.clone());
     }
 
-    // `<fieldset disabled>` only reaches native controls, so the group also
-    // tells its fields - which draw their own disabled look - and nested groups.
+    // No native `disabled`: it would drop a focused button's focus (todo 3873). Every
+    // control inside reads this context and disables itself, nested groups included.
     let parent_disabled = use_hook(try_consume_context::<Disabled>);
     let mut own_disabled = use_hook(|| Disabled(Signal::new(false)));
     use_context_provider(|| own_disabled);
@@ -304,7 +305,7 @@ pub fn Fieldset<V: FormValue>(props: FieldsetProps<V>) -> Element {
         .states(&states)
         .prepare()
         .attr("id", id.clone())
-        .attr("disabled", disabled)
+        .attr("aria-disabled", disabled.then_some("true"))
         .attr("aria-describedby", describedby)
         .render(HtmlTag::Fieldset, props.attributes, children)
 }

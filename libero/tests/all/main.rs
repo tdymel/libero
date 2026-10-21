@@ -57,6 +57,7 @@ mod drawer;
 mod events;
 mod field;
 mod field_slot_ring;
+mod fieldset;
 mod file_field;
 mod flex;
 mod float;

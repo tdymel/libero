@@ -123,3 +123,8 @@ impl Binding {
 /// fields still follow a toggle.
 #[derive(Clone, Copy)]
 pub(crate) struct Disabled(pub Signal<bool>);
+
+/// Whether an enclosing `Fieldset` is disabled. A hook, for a control that is no field.
+pub(crate) fn use_fieldset_disabled() -> bool {
+    use_hook(try_consume_context::<Disabled>).is_some_and(|Disabled(group)| group())
+}

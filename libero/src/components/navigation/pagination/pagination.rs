@@ -9,6 +9,7 @@ use crate::{
             coarse_hit_area_sx, contrast_color, fill_color, focus_ring_sx, focused_disabled_sx,
             literal_contrast, on_state_sx, parts_enum, variables,
         },
+        form::use_fieldset_disabled,
         layout::{BoxStyle, use_box},
     },
     context::IconSlot,
@@ -90,8 +91,6 @@ static PAGINATION_CONTROL_SX: StaticSx = StaticSx::new(|| {
         .when("disabled", faded_sx())
         // Page buttons have no `disabled` state: `disabled` soft-disables them (todo 2418).
         .selector("&[aria-disabled='true']", faded_sx())
-        // A disabled `Fieldset` disables them natively (todo 514).
-        .selector("&:disabled", faded_sx())
         // The row runs right to left, so the arrows point the other way.
         .rtl(sx().selector("& svg", sx().transform("scaleX(-1)")))
 });
@@ -189,7 +188,9 @@ pub fn Pagination(props: PaginationProps) -> Element {
     let radius = ScaleOrCss::new(props.radius.as_ref(), defaults.radius).resolve(SizeCss::RADIUS);
     let siblings = props.siblings.unwrap_or(defaults.siblings);
     let boundaries = props.boundaries.unwrap_or(defaults.boundaries);
-    let disabled = props.disabled.unwrap_or(false);
+    // A disabled `Fieldset` renders no native `disabled` (todo 3873).
+    let group_disabled = use_fieldset_disabled();
+    let disabled = props.disabled.unwrap_or(false) || group_disabled;
     let with_controls = props.with_controls.unwrap_or(true);
     let with_edges = props.with_edges.unwrap_or(false);
 

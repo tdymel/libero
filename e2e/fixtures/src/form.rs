@@ -4,11 +4,11 @@
 use dioxus::prelude::*;
 use libero::chrono::NaiveDate;
 use libero::components::{
-    Autocomplete, Button, Cascader, CascaderOption, Checkbox, ColorCode, ColorField, DateField,
-    FieldStatus, Fields, Fieldset, FileField, Files, Flex, Form, MultiSelect, NativeSelect, NumberField,
-    Options, PasswordField, PhoneField, PinField, RadioGroup, Rating, Rule, SegmentedControl,
-    Select, Slider, SliderChangeEvent, Switch, TagsField, Text, TextField, Textarea, min_length,
-    not_empty, use_form,
+    Autocomplete, Button, Cascader, CascaderOption, Checkbox, Chip, ColorCode, ColorField,
+    DateField, DatePicker, DateRangePicker, DateTimeField, FieldStatus, Fields, Fieldset, FileField, Files, Flex, Form,
+    MonthPicker, MultiSelect, NativeSelect, NumberField, Options, PasswordField, PhoneField, PinField, Radio,
+    RadioGroup, RangeSlider, Rating, Rule, SegmentedControl, Select, Slider, SliderChangeEvent,
+    Switch, TagsField, Text, TextField, Textarea, TimeField, TimePicker, YearPicker, min_length, not_empty, use_form,
 };
 
 use crate::Routes;
@@ -19,6 +19,7 @@ pub const ROUTES: Routes = &[
     ("/form/targets", || rsx! { TargetsPage {} }),
     ("/form/required", || rsx! { RequiredPage {} }),
     ("/form/fieldset-disabled", || rsx! { DisabledFieldsetPage {} }),
+    ("/form/fieldset-submit", || rsx! { DisabledFieldsetSubmitPage {} }),
     ("/form/server", || rsx! { ServerStatusPage { at_once: false } }),
     ("/form/server-sync", || rsx! { ServerStatusPage { at_once: true } }),
 ];
@@ -111,6 +112,60 @@ fn DisabledFieldsetPage() -> Element {
                 TextField { label: "Street" }
             }
             Text { id: "probe", sx: libero::sx::sx().color("muted.6"), "Probe" }
+        }
+    }
+}
+
+/// Todo 3873: the group renders no native `disabled`, so each named field inside
+/// must leave the submit by its own; `outside` proves the submit is read.
+#[component]
+fn DisabledFieldsetSubmitPage() -> Element {
+    let one = vec!["x".to_string()];
+    let date = NaiveDate::from_ymd_opt(2026, 1, 2);
+    rsx! {
+        form { id: "sent",
+            Fieldset::<()> { label: "Locked", disabled: true,
+                TextField { label: "Text", name: "text", value: "x" }
+                PasswordField { label: "Password", name: "password", value: "x" }
+                Textarea { label: "Textarea", name: "textarea", value: "x" }
+                NumberField::<u32> { label: "Number", name: "number", value: Some(3), onchange: |_| {} }
+                PinField { label: "Pin", name: "pin", value: "12", length: 4usize }
+                PhoneField { label: "Phone", name: "phone", value: Some("+4912345".to_string()) }
+                TagsField { label: "Tags", name: "tags", value: one.clone(), onchange: |_| {} }
+                Autocomplete { label: "City", name: "city", value: "x", options: one.clone(), oninput: |_| {} }
+                Checkbox { label: "Check", name: "check", checked: true, onchange: |_| {} }
+                Switch { label: "Switch", name: "switch", checked: true, onchange: |_| {} }
+                Chip { name: "chip", checked: true, onchange: |_| {}, "Chip" }
+                Radio { label: "Radio", name: "radio", value: "x", checked: true, onselect: |_| {} }
+                RadioGroup::<Plan> { label: "Group", name: "group", value: Some(Plan::Pro) }
+                NativeSelect::<Plan> { label: "Native", name: "native", value: Some(Plan::Pro), onchange: |_| {} }
+                Select::<Plan> { label: "Select", name: "select", value: Some(Plan::Pro), onchange: |_| {} }
+                MultiSelect { label: "Multi", name: "multi", options: one.clone(), value: one.clone(), onchange: |_| {} }
+                SegmentedControl::<Plan> { label: "Segments", name: "segments", value: Some(Plan::Pro) }
+                Cascader::<String> {
+                    label: "Cascader",
+                    name: "cascader",
+                    data: vec![CascaderOption::new("x", "X")],
+                    value: Some("x".to_string()),
+                    onchange: |_| {},
+                }
+                Rating { label: "Rating", name: "rating", value: 3.0 }
+                Slider { label: "Slider", name: "slider", value: 3.0 }
+                RangeSlider { label: "Range", name: "range", value: (2.0, 4.0) }
+                ColorField { label: "Colour", name: "colour", value: ColorCode::rgba(1, 2, 3, 1.0) }
+                FileField { label: "File", name: "file" }
+                DateField { label: "Date", name: "date", value: date }
+                DateTimeField { label: "Date time", name: "datetime" }
+                TimeField { label: "Time", name: "time" }
+                // No soft-disabled form yet: `inert`, and a disabled hidden input.
+                DatePicker { name: "date-picker", value: date }
+                DateRangePicker { name: "range-picker" }
+                MonthPicker { name: "month-picker" }
+                YearPicker { name: "year-picker" }
+                TimePicker { name: "time-picker" }
+            }
+            TextField { label: "Outside", name: "outside", value: "x" }
+            button { id: "submit", r#type: "submit", "Send" }
         }
     }
 }

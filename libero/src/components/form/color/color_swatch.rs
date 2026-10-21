@@ -7,6 +7,7 @@ use crate::{
             HtmlTag, Input, ScaleOrCss, States, Variables, base_props, disabled_look_sx,
             min_hit_area_sx, names_itself, shadow_sx, use_name_warning, variables,
         },
+        form::use_fieldset_disabled,
         layout::use_box,
     },
     hooks::use_theme,
@@ -66,8 +67,8 @@ static COLOR_SWATCH_SX: StaticSx = StaticSx::new(|| {
                 .position("relative")
                 .and(min_hit_area_sx("::before")),
         )
-        // A disabled `Fieldset` disables a clickable swatch's `<button>` (todo 514).
-        .selector("&:disabled", disabled_look_sx("not-allowed"))
+        // A disabled `Fieldset` soft-disables a clickable swatch (todos 514, 3873).
+        .when("disabled", disabled_look_sx("not-allowed"))
 });
 
 base_props! {
@@ -109,6 +110,8 @@ pub fn ColorSwatch(props: ColorSwatchProps) -> Element {
     let size = props.size.copied_or(theme.color_swatch.size);
     let radius = ScaleOrCss::new(props.radius.as_ref(), theme.color_swatch.radius);
     let clickable = props.onclick.is_some();
+    let in_disabled_group = use_fieldset_disabled();
+    let disabled = clickable && in_disabled_group;
     use_name_warning(
         !clickable || names_itself(&props.attributes),
         "ColorSwatch: an `onclick` without an `aria-label`, so it is announced as just \"button\".",
@@ -121,6 +124,7 @@ pub fn ColorSwatch(props: ColorSwatchProps) -> Element {
         .with(radius.size.radius_state_name(), true)
         .with("shadow", props.with_shadow.unwrap_or(true))
         .with("clickable", clickable)
+        .with("disabled", disabled)
         .with("on-light", on_light(props.color))
         .with("near-paper", near_paper(props.color))
         .into();
@@ -142,9 +146,15 @@ pub fn ColorSwatch(props: ColorSwatchProps) -> Element {
         .prepare();
 
     match props.onclick {
+        // Soft-disabled as `Button`: a native `disabled` would drop its focus (todo 3873).
         Some(onclick) => swatch
             .attr_default("type", "button")
-            .event("onclick", move |event: MouseEvent| onclick.call(event))
+            .attr("aria-disabled", disabled.then_some("true"))
+            .attr("tabindex", disabled.then_some("-1"))
+            .event("onclick", move |event: MouseEvent| match disabled {
+                true => event.prevent_default(),
+                false => onclick.call(event),
+            })
             .render(HtmlTag::Button, props.attributes, props.children),
         None => swatch.render(HtmlTag::Div, props.attributes, props.children),
     }

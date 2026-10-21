@@ -108,7 +108,7 @@ pub(crate) use use_field_frame::{
 };
 pub(crate) use validation::{
     Binding, Disabled, FieldEntry, FormScope, Source, SummaryItem, issues_of,
-    join as validation_join, worst,
+    join as validation_join, use_fieldset_disabled, worst,
 };
 pub use validation::{
     FieldName, FieldPath, Fields, IsEmpty, Rule, Step, StepKey, Validator, Validators, is_email,

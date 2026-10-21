@@ -17,6 +17,7 @@ use super::{
 use crate::{
     components::{
         common::{ClassList, HtmlTag, Input, Part, Parts, States},
+        form::use_fieldset_disabled,
         layout::use_box,
     },
     hooks::{use_element, use_localization, use_theme},
@@ -459,23 +460,29 @@ pub(super) fn DurationClock(props: DurationClockProps) -> Element {
         .parts(&props.parts)
         .states(&states)
         .prepare();
+    // A disabled `Fieldset` renders no native `disabled`: post nothing, take no input (todo 3873).
+    let group_disabled = use_fieldset_disabled();
     let hidden = props.name.map(|name| {
         rsx! {
             input {
                 r#type: "hidden",
                 name,
                 value: value.map(|_| iso_duration(base)).unwrap_or_default(),
+                disabled: group_disabled,
             }
         }
     });
-    root_box.element(&root).render(
-        HtmlTag::Div,
-        props.attributes,
-        rsx! {
-            {body}
-            {hidden}
-        },
-    )
+    root_box
+        .element(&root)
+        .attr("inert", group_disabled)
+        .render(
+            HtmlTag::Div,
+            props.attributes,
+            rsx! {
+                {body}
+                {hidden}
+            },
+        )
 }
 
 #[cfg(test)]

@@ -522,3 +522,39 @@ e2e::scenario!(
     "/form/fieldset-disabled",
     a_disabled_fieldset_dims_its_text
 );
+
+/// Todo 3873: the group renders no native `disabled`, so a real submit must still
+/// send nothing from inside it; only the field outside it is sent.
+#[test]
+fn a_disabled_fieldset_sends_no_field_value() {
+    block_on(async {
+        let fixture = Fixture::open("/form/fieldset-submit", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        wait::for_visible(page, "#submit").await.unwrap();
+        page.evaluate_bounded(
+            "document.querySelector('#sent').addEventListener('submit', (event) => { \
+             event.preventDefault(); \
+             window.sent = [...new FormData(event.target, event.submitter).keys()]; })",
+        )
+        .await
+        .unwrap();
+        pointer::click(page, "#submit").await.unwrap();
+        wait::for_js_true(page, "Array.isArray(window.sent)", "the submit")
+            .await
+            .unwrap();
+        let sent: Vec<String> = page
+            .evaluate_bounded("window.sent")
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        assert_eq!(
+            sent,
+            ["outside"],
+            "fields of the disabled fieldset were sent"
+        );
+        fixture.close().await.unwrap();
+    });
+}

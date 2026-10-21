@@ -13,6 +13,7 @@ use crate::{
             on_tint_color, parts_enum, safe_area_padding, sx_source, use_name_warning,
             use_style_attributes, variables,
         },
+        form::use_fieldset_disabled,
         layout::{Float, box_style, render_anchor, use_box},
     },
     css::Stylesheet,
@@ -407,7 +408,9 @@ pub fn BottomNavigationItem(props: BottomNavigationItemProps) -> Element {
         );
     }
 
-    let disabled = props.disabled.unwrap_or(false);
+    // A disabled `Fieldset` reaches the button form only, as a native one (todo 3873).
+    let in_disabled_group = use_fieldset_disabled() && props.to.as_ref().is_none();
+    let disabled = props.disabled.unwrap_or(false) || in_disabled_group;
     let selected = props.selected.unwrap_or_else(|| match props.to.as_ref() {
         Some(NavigationTarget::Internal(path)) => try_router()
             .map(|router| route_matches(&router.full_route_string(), path))

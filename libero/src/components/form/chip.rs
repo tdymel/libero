@@ -119,9 +119,6 @@ static CHIP_BASE_SX: StaticSx = StaticSx::new(|| {
                 ),
         )
         .when("disabled", disabled_sx())
-        // A button chip ignores a disabled `Fieldset`, but the browser still
-        // disables its `<button>` (todo 499).
-        .selector("&:disabled", disabled_sx())
         // The hidden checkbox has the focus; the overlay draws the root's ring.
         // Scoped to that child so the delete button's ring is not doubled.
         .selector("& > [data-ring]", ring_overlay_sx().inset("-1px"))
@@ -318,13 +315,14 @@ pub fn Chip(props: ChipProps) -> Element {
 
     // A `name` alone makes it a checkbox too: it has something to post.
     let selectable = props.onchange.is_some() || !props.name.is_empty();
-    // A disabled `Fieldset` around a checkbox chip counts, as for every
-    // field. A plain or button chip keeps only its own `disabled`.
-    let disabled = match selectable {
+    let clickable = props.onclick.is_some() || props.to.as_ref().is_some();
+    // A disabled `Fieldset` reaches a checkbox or button chip, as a native one;
+    // a plain or link chip keeps only its own `disabled`.
+    let in_group = selectable || props.onclick.is_some() && props.to.as_ref().is_none();
+    let disabled = match in_group {
         true => bound.disabled(props.disabled),
         false => props.disabled.unwrap_or(false),
     };
-    let clickable = props.onclick.is_some() || props.to.as_ref().is_some();
 
     if selectable && clickable {
         warn("Chip: `onchange` ignores `onclick`/`to` - a checkbox chip is not a button.");

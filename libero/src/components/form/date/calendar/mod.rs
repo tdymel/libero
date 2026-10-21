@@ -17,6 +17,7 @@ use super::{
 use crate::{
     components::{
         common::{ClassList, HtmlTag, Input, Part, Parts, States},
+        form::use_fieldset_disabled,
         layout::use_box,
     },
     hooks::{ElementHandle, use_element, use_formats, use_localization},
@@ -415,9 +416,11 @@ pub(super) fn Calendar(props: CalendarProps) -> Element {
         .parts(&props.parts)
         .states(&states)
         .prepare();
+    // A disabled `Fieldset` renders no native `disabled`: post nothing, take no input (todo 3873).
+    let group_disabled = use_fieldset_disabled();
     let hidden = props.hidden.map(|(name, value)| {
         rsx! {
-            input { r#type: "hidden", name, value }
+            input { r#type: "hidden", name, value, disabled: group_disabled }
         }
     });
 
@@ -425,6 +428,7 @@ pub(super) fn Calendar(props: CalendarProps) -> Element {
     let onfocusin = move |_: FocusEvent| refresh_today.ask();
     root_box
         .element(&root)
+        .attr("inert", group_disabled)
         .event("onfocusin", onfocusin)
         .render(
             HtmlTag::Div,
