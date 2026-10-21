@@ -244,28 +244,14 @@ fn a_clicked_control_stays_shown_at_the_end_of_the_strip() {
         )
         .await
         .unwrap();
-        for _ in 0..30 {
-            let done: bool = page
-                .evaluate_bounded(ended.as_str())
-                .await
-                .unwrap()
-                .into_value()
-                .unwrap();
-            if done {
-                break;
-            }
-            // Ended mid-click: the control then takes no pointer, so the press reaches the item.
-            if let Err(miss) = pointer::click(page, FORWARD).await {
-                let done: bool = page
-                    .evaluate_bounded(ended.as_str())
-                    .await
-                    .unwrap()
-                    .into_value()
-                    .unwrap();
-                assert!(done, "{miss}");
-                break;
-            }
-        }
+        // One click from the end: a lagging end state in a longer walk sends the press to the item.
+        page.evaluate_bounded(
+            "(() => { const v = document.querySelector('[role=region]'); \
+             v.scrollLeft = v.scrollWidth - v.clientWidth - 60; })()",
+        )
+        .await
+        .unwrap();
+        pointer::click(page, FORWARD).await.unwrap();
         wait::for_js_true(page, &ended, "the forward control to reach the end")
             .await
             .unwrap();

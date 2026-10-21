@@ -179,7 +179,36 @@ async fn header_buttons_leave_the_tab_order<D: Driver>(d: &mut D, _route: &str) 
 e2e::scenario!(
     sort_menu_buttons_and_grips_are_not_tab_stops,
     "/table-grid/resizable",
-    header_buttons_leave_the_tab_order
+    header_buttons_leave_the_tab_order,
+    native: skip("Blitz reads no script")
+);
+
+/// A filtered column's indicator button in a header cell is `tabindex=-1` too (3868).
+async fn filtered_button_leaves_the_tab_order<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    eventually(d, "the filtered indicator", async |d| {
+        d.exists("thead [data-filtered]").await
+    })
+    .await?;
+    let seen = d
+        .evaluate(
+            "[...document.querySelectorAll('thead [data-filtered]')]
+                .map((e) => e.getAttribute('tabindex'))",
+        )
+        .await?;
+    if seen
+        .as_array()
+        .is_none_or(|tabs| tabs.is_empty() || tabs.iter().any(|t| t != "-1"))
+    {
+        bail!("a filtered button is a Tab stop: {seen}");
+    }
+    Ok(())
+}
+
+e2e::scenario!(
+    a_filtered_button_is_not_a_tab_stop,
+    "/table-grid/header-filters",
+    filtered_button_leaves_the_tab_order,
+    native: skip("Blitz reads no script")
 );
 
 /// Ben's age stays the stop when the age sort moves his row from second to fourth.

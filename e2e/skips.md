@@ -1,6 +1,6 @@
 # Skipped e2e scenarios
 
-Scenarios: 624
+Scenarios: 625
 
 Generated from the `scenario!` skips in `e2e/tests/all` by `cargo test -p e2e --lib skips`; edit the skip, not this file. A reason starting `upstream:` waits on Dioxus, Blitz, wry or the engine (revisit on their update, todo 3362), a number names the todo that removes it.
 
@@ -292,6 +292,7 @@ The performance scenarios (units `perf`, `table_perf`) are no skips but run on r
 | `table_filter::a_select_filter_narrows_a_table` | android | 958: element identity on the WebView |
 | `table_filter::a_select_filter_narrows_a_table` | ios | 958: element identity on the WebView |
 | `table_grid::a_custom_editor_clears_the_error_by_changed` | android | 958: roving keys are inert in the emulator's WebView |
+| `table_grid::a_filtered_button_is_not_a_tab_stop` | native | Blitz reads no script |
 | `table_grid::a_second_tap_opens_the_editor` | desktop | no touch input in the desktop driver |
 | `table_grid::a_second_tap_opens_the_editor` | ios | 3416: the first tap's touch end reaches the page 2.4 s late, so WebKit raises no click on the cell |
 | `table_grid::a_sort_follows_the_apps_language` | native | 3386: reads the page language by script, Blitz has none and no Intl.Collator |
@@ -309,6 +310,7 @@ The performance scenarios (units `perf`, `table_perf`) are no skips but run on r
 | `table_grid::page_down_leaves_out_the_sticky_edges` | android | 958: roving keys are inert in the emulator's WebView |
 | `table_grid::page_down_moves_a_view` | android | 958: roving keys are inert in the emulator's WebView |
 | `table_grid::shift_space_selects_the_row` | android | 958: roving keys are inert in the emulator's WebView |
+| `table_grid::sort_menu_buttons_and_grips_are_not_tab_stops` | native | Blitz reads no script |
 | `table_grid::space_on_the_select_all_box_acts_once` | android | 958: roving keys are inert in the emulator's WebView |
 | `table_grid::tab_and_shift_enter_move_the_stop` | android | 958: roving keys are inert in the emulator's WebView |
 | `table_grid::tab_enters_and_leaves_in_one_stop` | android | 958: roving keys are inert in the emulator's WebView |

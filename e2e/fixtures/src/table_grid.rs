@@ -3,12 +3,12 @@
 //! one of 500 rows, and one with editable Age and City cells, which stores its
 //! edits or (`/kept`) only logs them, `/button` with a button in each City cell,
 //! `/custom` with its own Age editor, `/windowed` with fixed 28px rows, `/sticky` with a sum footer, `/formats`
-//! with empty yes/no and date cells.
+//! with empty yes/no and date cells, `/header-filters` with a filtered Name column.
 
 use dioxus::prelude::*;
 use libero::{
     chrono::NaiveDate,
-    components::{Aggregate, EditCtx, RowUpdate, Table, column},
+    components::{Aggregate, ColumnFilter, EditCtx, FilterOperator, RowUpdate, Table, column},
     hooks::use_localization_handle,
     localization::Localization,
 };
@@ -20,6 +20,7 @@ pub const ROUTES: Routes = &[
     ("/table-grid/widgets", || rsx! { GridPage { widgets: true } }),
     ("/table-grid/selectable", || rsx! { GridPage { selectable: true } }),
     ("/table-grid/resizable", || rsx! { GridPage { resizable: true } }),
+    ("/table-grid/header-filters", || rsx! { GridPage { header_filters: true } }),
     ("/table-grid/windowed", || rsx! { WindowedGridPage {} }),
     ("/table-grid/sticky", || rsx! { StickyGridPage {} }),
     ("/table-grid/editable", || rsx! { EditableGridPage { store: true } }),
@@ -56,6 +57,7 @@ fn GridPage(
     #[props(default)] widgets: bool,
     #[props(default)] selectable: bool,
     #[props(default)] resizable: bool,
+    #[props(default)] header_filters: bool,
 ) -> Element {
     let mut columns = vec![
         column("Name").value(|p: &Person| p.name.to_string()).sortable().row_header(),
@@ -75,8 +77,14 @@ fn GridPage(
             caption: "Team",
             cell_focus: true,
             selectable,
-            column_menu: selectable || resizable,
+            column_menu: selectable || resizable || header_filters,
             resizable_columns: resizable,
+            header_filters,
+            default_column_filters: if header_filters {
+                vec![ColumnFilter::new("Name", FilterOperator::Contains, "e")]
+            } else {
+                vec![]
+            },
             data: people(),
             columns,
             row_key: |p: &Person| p.name.to_string(),
