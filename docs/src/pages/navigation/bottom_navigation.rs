@@ -5,6 +5,7 @@ use libero::{
         BottomNavigation, BottomNavigationItem, BottomNavigationPart, Box, Code, Indicator,
         Pictogram, SvgData, Text,
     },
+    hooks::use_media_query,
     sx::sx,
     use_theme,
 };
@@ -57,13 +58,22 @@ fn wrap_bar(values: &DemoValues, code: &str) -> String {
             ))
         })
         .collect();
-    format!("BottomNavigation {{\n    \"aria-label\": \"Main\",{body}{items}}}")
+    let bar = format!("BottomNavigation {{\n    \"aria-label\": \"Main\",{body}{items}}}");
+    match values.str("variant").as_str() {
+        RESPONSIVE => format!("let wide = use_media_query({WIDE_QUERY:?});\n\n{bar}"),
+        _ => bar,
+    }
 }
+
+/// The demo's default: a bar on a phone, a rail from the `sm` breakpoint up.
+const RESPONSIVE: &str = "responsive";
+const WIDE_QUERY: &str = "(min-width: 48rem)";
 
 #[component]
 pub fn BottomNavigationPage() -> Element {
     let theme = use_theme();
     let mut current = use_signal(|| 0usize);
+    let wide = use_media_query(WIDE_QUERY);
 
     rsx! {
         DocPage {
@@ -72,6 +82,9 @@ pub fn BottomNavigationPage() -> Element {
             markdown: "/md/bottom_navigation.md",
             properties: vec![
                 props("BottomNavigation", vec![
+                    prop("variant", "BottomNavigationVariant")
+                        .default("bar")
+                        .doc("`\"bar\"`, a row along the bottom edge for a phone, or `\"rail\"`, an 88px column on the inline-start edge for a tablet or a desktop: the right edge in a right-to-left page. A rail spans the viewport's height and sticks to its top, or docks to the viewport with `position: \"fixed\"`, and publishes its measured width as `--lsx-navigation-rail-width` in place of the bar's height. Switch between them with `use_media_query`, as in the example."),
                     prop("position", "BottomNavigationPosition")
                         .default("static")
                         .doc("`\"static\"` stays in the flow. `\"sticky\"` holds it at the bottom of its scroller, `\"fixed\"` at the viewport's; both publish the bar's measured height as `--lsx-bottom-navigation-height` and keep focus clear of the bar. A native app docks both the same way."),
@@ -106,6 +119,7 @@ pub fn BottomNavigationPage() -> Element {
                     "The selected item carries `aria-current=\"page\"`.",
                     "The icon is hidden from screen readers, so the label names the item. A label hidden by `show_labels` stays in the accessibility tree.",
                     "Every item is at least 56px tall and shares the bar's width equally. A long label wraps to two lines, then ends in an ellipsis.",
+                    "A rail keeps its items in the same reading and Tab order, top to bottom. At 200% text it stays 88px wide: labels wrap and the rail scrolls rather than covering the page.",
                     "A sticky or fixed bar pads the page's scroll, so a focused element is not hidden under it.",
                     "In forced colors the selected pill takes the system highlight.",
                     "More than five items logs a warning in debug builds.",
@@ -113,7 +127,8 @@ pub fn BottomNavigationPage() -> Element {
                 .must([
                     "Name the bar with an `aria-label`, such as \"Main\"; a debug build warns without one.",
                     "Put a badge's count in the item's `aria-label`, starting with the visible label: \"Inbox, 3 unread\".",
-                    "With `position: \"fixed\"`, pad the page by `var(--lsx-bottom-navigation-height)`.",
+                    "With `position: \"fixed\"`, pad the page by `var(--lsx-bottom-navigation-height)`, or a fixed rail's inline-start by `var(--lsx-navigation-rail-width)`.",
+                    "Switch to the rail with the same items in the same order, so the page keeps its landmarks and current item at every width.",
                     "A sticky bar closing a scrolling pane of its own: give the pane `scroll-padding-bottom: var(--lsx-bottom-navigation-height)`, so a focused element in it scrolls clear of the bar.",
                 ])
                 .limits([
@@ -125,7 +140,7 @@ pub fn BottomNavigationPage() -> Element {
                 Text {
                     "A phone's bar of three to five top-level destinations, a "
                     Code { source: "<nav>" }
-                    " of icons over labels. The selected item gets "
+                    " of icons over labels, that turns into a rail down the side from a tablet up. The selected item gets "
                     Code { source: "aria-current" }
                     " and a pill in a light tint of its "
                     Code { source: "color" }
@@ -141,6 +156,16 @@ pub fn BottomNavigationPage() -> Element {
                 component: "BottomNavigation",
                 children_text: "",
                 controls: vec![
+                    Control::toggle("variant", [RESPONSIVE, "bar", "rail"])
+                        .labels(["Responsive", "Bar", "Rail"])
+                        .default(RESPONSIVE)
+                        .code(|_, values| match values.str("variant").as_str() {
+                            RESPONSIVE => vec![
+                                "variant: if wide() { \"rail\" } else { \"bar\" }".to_string(),
+                            ],
+                            "rail" => vec!["variant: \"rail\"".to_string()],
+                            _ => vec![],
+                        }),
                     Control::toggle("show_labels", ["always", "selected", "never"])
                         .labels(["Always", "Selected", "Never"]),
                     Control::color("color").default(theme.bottom_navigation.color.as_str()),
@@ -152,19 +177,34 @@ pub fn BottomNavigationPage() -> Element {
                     let color = values.str("color");
                     let badge = values.str("badge") == "true";
                     let disabled = values.str("disabled") == "true";
+                    let rail = match values.str("variant").as_str() {
+                        RESPONSIVE => wide(),
+                        variant => variant == "rail",
+                    };
+                    let frame = sx()
+                        .max_width("100%")
+                        .border("1px solid")
+                        .border_color("muted.4")
+                        .border_radius("md")
+                        .overflow("hidden");
+                    // A tablet-like frame: the rail spans its height, not the viewport's.
+                    let (frame, nav) = match rail {
+                        true => (
+                            frame.display("flex").width("480px").height("360px"),
+                            sx().height("100%"),
+                        ),
+                        false => (frame.width("360px"), sx()),
+                    };
                     rsx! {
                         // A phone-width frame: a fixed bar would leave the page.
-                        Box {
-                            sx: sx()
-                                .width("360px")
-                                .max_width("100%")
-                                .border("1px solid")
-                                .border_color("muted.4")
-                                .border_radius("md")
-                                .overflow("hidden"),
-                            Box { sx: sx().padding("md").min_height("120px"), "{ITEMS[current()].0}" }
+                        Box { sx: frame,
+                            if !rail {
+                                Box { sx: sx().padding("md").min_height("120px"), "{ITEMS[current()].0}" }
+                            }
                             BottomNavigation {
                                 "aria-label": "Main",
+                                variant: if rail { "rail" } else { "bar" },
+                                sx: nav,
                                 show_labels: show_labels.as_str(),
                                 color,
                                 for (index, (label, _, _, icon)) in ITEMS.into_iter().enumerate() {
@@ -179,6 +219,9 @@ pub fn BottomNavigationPage() -> Element {
                                         "{label}"
                                     }
                                 }
+                            }
+                            if rail {
+                                Box { sx: sx().padding("md").flex("1"), "{ITEMS[current()].0}" }
                             }
                         }
                     }

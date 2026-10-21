@@ -20,7 +20,7 @@ use crate::{
     hooks::{use_css, use_theme},
     platform::{SCROLL_PADDING_VARS, clamps_lines},
     str_enum::str_enum,
-    sx::{StaticSx, ThemeAwareValue, sx},
+    sx::{StaticSx, Sx, ThemeAwareValue, sx},
     theme::{
         Color, ColorShade, ColorValue, CssVar, PAPER_BACKGROUND, Size, TEXT_FONT_SIZE,
         Z_INDEX_HEADER,
@@ -45,6 +45,21 @@ str_enum! {
 input_from_str!(BottomNavigationPosition);
 
 str_enum! {
+    /// The shape of a [`BottomNavigation`].
+    pub enum BottomNavigationVariant {
+        /// A row along the bottom edge, for a phone.
+        #[default]
+        Bar = "bar",
+        /// A full-height column on the inline-start edge, for a tablet or a desktop.
+        /// Sticky, or docked to the viewport with `position: "fixed"`; pad the page by
+        /// `var(--lsx-navigation-rail-width)`.
+        Rail = "rail",
+    }
+}
+
+input_from_str!(BottomNavigationVariant);
+
+str_enum! {
     /// Which item labels show. A hidden label still names its item.
     #[non_exhaustive]
     pub enum LabelVisibility {
@@ -60,6 +75,10 @@ input_from_str!(LabelVisibility);
 
 /// The bar's height on `:root` while a sticky or fixed one is mounted.
 const BOTTOM_NAVIGATION_HEIGHT_VAR: CssVar = CssVar::new("--lsx-bottom-navigation-height");
+/// The rail's width on `:root` while one is mounted.
+const NAVIGATION_RAIL_WIDTH_VAR: CssVar = CssVar::new("--lsx-navigation-rail-width");
+/// The rail's width, its border included (M3).
+const RAIL_WIDTH: &str = "88px";
 
 const PILL_BACKGROUND_VAR: CssVar = CssVar::new("--lsx-bottom-navigation-pill");
 const PILL_COLOR_VAR: CssVar = CssVar::new("--lsx-bottom-navigation-pill-color");
@@ -104,6 +123,14 @@ static BOTTOM_NAVIGATION_SX: StaticSx = StaticSx::new(|| {
                 .with("inset-inline", "0")
                 .with("inset-block-end", "0"),
         )
+        .when(BottomNavigationVariant::Rail.state_name(), rail_sx())
+        .when(
+            "rail-fixed",
+            sx().position("fixed")
+                .with("inset-block", "0")
+                .with("inset-inline-start", "0")
+                .height("auto"),
+        )
         .when("labels-never", sx().selector(label, visually_hidden_sx()))
         .when(
             "labels-selected",
@@ -113,6 +140,37 @@ static BOTTOM_NAVIGATION_SX: StaticSx = StaticSx::new(|| {
             ),
         )
 });
+
+/// A sticky column on the inline-start edge, padded clear of the top, bottom and that
+/// edge's safe areas; a 200% label wraps and the column scrolls, never widens.
+fn rail_sx() -> Sx {
+    let side = |left: &str, right: &str| {
+        sx().width(safe_area_padding(RAIL_WIDTH, left))
+            .with(format!("padding-{left}"), safe_area_padding("0px", left))
+            .with(format!("padding-{right}"), "0")
+    };
+    sx().position("sticky")
+        .with("inset-block-start", "0")
+        .align_self("flex-start")
+        .flex_direction("column")
+        .flex_shrink("0")
+        .gap("4px")
+        .height("100dvh")
+        .overflow_y("auto")
+        .border_top("0")
+        .with(
+            "border-inline-end",
+            format!(
+                "1px solid {}",
+                ColorValue::Shade(Color::Muted, ColorShade::S4).value()
+            ),
+        )
+        .with("padding-block-start", safe_area_padding("12px", "top"))
+        .with("padding-block-end", safe_area_padding("12px", "bottom"))
+        .and(side("left", "right"))
+        .rtl(side("right", "left"))
+        .selector(BottomNavigationPart::Item.selector(), sx().flex("0 0 auto"))
+}
 
 static BOTTOM_NAVIGATION_ITEM_SX: StaticSx = StaticSx::new(|| {
     sx().position("relative")
@@ -214,6 +272,15 @@ fn publish_css(measured: Option<f64>) -> String {
     )
 }
 
+/// The rail's width, for a page beside a fixed rail to pad by.
+fn publish_rail_css(measured: Option<f64>) -> String {
+    let width = match measured {
+        Some(width) => format!("{width}px"),
+        None => RAIL_WIDTH.to_string(),
+    };
+    format!(":root{{{}:{width};}}", NAVIGATION_RAIL_WIDTH_VAR.name())
+}
+
 /// Counts mounted items, to warn once past [`MAX_ITEMS`].
 #[derive(Clone, Default)]
 struct ItemCount {
@@ -240,6 +307,10 @@ base_props! {
         /// `--lsx-bottom-navigation-height` and pad focus clear of the bar.
         #[props(default, into)]
         position: Input<BottomNavigationPosition>,
+        /// `bar` (default) along the bottom edge, or `rail`, a column on the inline-start
+        /// edge that publishes `--lsx-navigation-rail-width`. Switch with `use_media_query`.
+        #[props(default, into)]
+        variant: Input<BottomNavigationVariant>,
         /// `always` (default), `selected` or `never`.
         #[props(default, into)]
         show_labels: Input<LabelVisibility>,
@@ -256,6 +327,7 @@ base_props! {
 /// A phone's bar of three to five top-level destinations, a `<nav>` landmark.
 /// Each item is its own Tab stop. Name it with an `aria-label`. It pads the
 /// bottom, left and right safe-area insets, for a `viewport-fit=cover` page.
+/// From a tablet up, `variant: "rail"` turns it into a column on the inline-start edge.
 ///
 /// ```
 /// # use dioxus::prelude::*;
@@ -291,18 +363,29 @@ pub fn BottomNavigation(props: BottomNavigationProps) -> Element {
         use_context_provider(ItemCount::default);
     }
 
-    let publishes = position != BottomNavigationPosition::Static;
+    let rail = props.variant.copied_or_default() == BottomNavigationVariant::Rail;
+    let publishes = rail || position != BottomNavigationPosition::Static;
     // Measured, so a two-line label or larger text still clears the page.
-    let mut measured = use_signal(|| None::<f64>);
+    // Keyed by the variant: a switch must not publish the bar's height as the rail's width.
+    let mut measured = use_signal(|| None::<(bool, f64)>);
     let onresize = publishes.then_some(move |event: Event<ResizeData>| {
-        if let Ok(size) = event.get_border_box_size()
-            && *measured.peek() != Some(size.height)
-        {
-            measured.set(Some(size.height));
+        if let Ok(size) = event.get_border_box_size() {
+            let extent = Some((rail, if rail { size.width } else { size.height }));
+            if *measured.peek() != extent {
+                measured.set(extent);
+            }
         }
     });
     use_css(
-        publishes.then(|| Stylesheet::from(publish_css(measured()).as_str())),
+        publishes.then(|| {
+            let extent = measured().filter(|(of_rail, _)| *of_rail == rail);
+            let extent = extent.map(|(_, extent)| extent);
+            let css = match rail {
+                true => publish_rail_css(extent),
+                false => publish_css(extent),
+            };
+            Stylesheet::from(css.as_str())
+        }),
         CssLayer::Framework,
     );
 
@@ -313,7 +396,12 @@ pub fn BottomNavigation(props: BottomNavigationProps) -> Element {
     let states: Input<States> = props
         .states
         .unwrap_or_default()
-        .with(position.state_name(), true)
+        .with(position.state_name(), !rail)
+        .with(BottomNavigationVariant::Rail.state_name(), rail)
+        .with(
+            "rail-fixed",
+            rail && position == BottomNavigationPosition::Fixed,
+        )
         .with("labels-never", labels == LabelVisibility::Never)
         .with("labels-selected", labels == LabelVisibility::Selected)
         .into();
@@ -535,6 +623,35 @@ mod tests {
                 css.as_str()
             );
         }
+    }
+
+    #[test]
+    fn a_rail_publishes_its_width_and_not_the_bar_height() {
+        assert_eq!(
+            publish_rail_css(None),
+            ":root{--lsx-navigation-rail-width:88px;}"
+        );
+        assert_eq!(
+            publish_rail_css(Some(96.0)),
+            ":root{--lsx-navigation-rail-width:96px;}"
+        );
+    }
+
+    /// Todo 3890: the rail pads the top, bottom and inline-start safe areas, mirrored in RTL.
+    #[test]
+    fn the_rail_pads_its_own_safe_areas() {
+        let css = Stylesheet::from(&BOTTOM_NAVIGATION_SX);
+        let css = css.as_str();
+        for padding in [
+            "padding-block-start:calc(12px + env(safe-area-inset-top, 0px))",
+            "padding-block-end:calc(12px + env(safe-area-inset-bottom, 0px))",
+            "padding-left:calc(0px + env(safe-area-inset-left, 0px))",
+            "padding-right:calc(0px + env(safe-area-inset-right, 0px))",
+            "width:calc(88px + env(safe-area-inset-right, 0px))",
+        ] {
+            assert!(css.contains(padding), "{padding}: {css}");
+        }
+        assert!(css.contains(":dir(rtl)"), "{css}");
     }
 
     #[test]

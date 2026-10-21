@@ -1,5 +1,6 @@
 //! Five `BottomNavigationItem`s in a 320px column, a three-item RTL bar, and a
-//! fixed bar over a tall page with only the selected label shown.
+//! fixed bar over a tall page with only the selected label shown, and a rail in
+//! either direction.
 
 use dioxus::prelude::*;
 use libero::components::{BottomNavigation, BottomNavigationItem, Indicator, Pictogram, SvgData};
@@ -12,7 +13,35 @@ pub const ROUTES: Routes = &[
     ("/bottom-navigation/fixed", || rsx! { FixedPage {} }),
     ("/bottom-navigation/scroller", || rsx! { ScrollerPage {} }),
     ("/bottom-navigation/unselected", || rsx! { UnselectedPage {} }),
+    ("/bottom-navigation/rail", || rsx! { RailPage { dir: "ltr" } }),
+    ("/bottom-navigation/rail-rtl", || rsx! { RailPage { dir: "rtl" } }),
 ];
+
+/// A rail beside a tall page, as a tablet layout (todo 3890).
+#[component]
+fn RailPage(dir: &'static str) -> Element {
+    let mut current = use_signal(|| 0usize);
+    rsx! {
+        div { id: "layout", dir, style: "display: flex;",
+            BottomNavigation { id: "rail", "aria-label": "Main", variant: "rail",
+                for (index, (id, label, icon)) in ITEMS.into_iter().enumerate() {
+                    BottomNavigationItem {
+                        key: "{id}",
+                        id: "rail-{id}",
+                        selected: current() == index,
+                        onclick: move |_| current.set(index),
+                        icon: rsx! { Pictogram { icon } },
+                        "{label}"
+                    }
+                }
+            }
+            div { id: "content", style: "flex: 1; min-width: 0; padding: 16px;",
+                a { id: "after", href: "#after", "After the rail" }
+                div { style: "height: 2000px", "Page" }
+            }
+        }
+    }
+}
 
 /// A link to the page it is on, with `selected: false`.
 #[component]

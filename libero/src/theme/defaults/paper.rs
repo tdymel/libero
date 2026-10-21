@@ -94,7 +94,7 @@ impl PaperDefaults {
     }
 
     fn shadow_sx(shadow: Size) -> Sx {
-        sx().box_shadow(SizeCss::SHADOW.value(shadow))
+        sx().box_shadow(SizeCss::SHADOW.overridable(shadow))
     }
 
     /// The surface colour for non-`Paper` surfaces. Never `background(PAPER_BACKGROUND.value())`
@@ -115,6 +115,8 @@ impl PaperDefaults {
             .border_radius(PAPER_RADIUS.value())
             .box_shadow(PAPER_SHADOW.value())
             .per_radius(Self::radius_sx)
+            // Only the instance with a custom `shadow` reads the override, not a nested surface.
+            .var(SizeCss::SHADOW.override_var(), "initial")
             .per_shadow(Self::shadow_sx)
     }
 

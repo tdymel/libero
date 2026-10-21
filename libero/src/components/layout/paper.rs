@@ -201,9 +201,9 @@ base_props! {
         /// Corner radius: a step on the radius scale, or any CSS, as `radius: "0"`.
         #[props(default, into)]
         radius: Input<ThemeAwareValue>,
-        /// Elevation, a step on the shadow scale.
+        /// Elevation: a step on the shadow scale, `"none"`, or any CSS `box-shadow`.
         #[props(default, into)]
-        shadow: Input<Size>,
+        shadow: Input<ThemeAwareValue>,
         /// A hairline border in the themed surface border colour.
         #[props(default)]
         bordered: bool,
@@ -262,14 +262,20 @@ pub fn Paper(props: PaperProps) -> Element {
     );
     // At most one is set: a gradient takes `color` as its first stop.
     let style = paper_variables(&props, tint).or(gradient);
-    let style = match paper_radius(&props).custom_css(SizeCss::RADIUS) {
-        Some(radius) => Some(format!(
-            "{}{}:{radius};",
-            style.unwrap_or_default(),
-            SizeCss::RADIUS.override_var().name()
-        )),
-        None => style,
-    };
+    let custom = [
+        (SizeCss::RADIUS, paper_radius(&props)),
+        (SizeCss::SHADOW, paper_shadow(&props)),
+    ];
+    let style = custom.into_iter().fold(style, |style, (scale, value)| {
+        match value.custom_css(scale) {
+            Some(css) => Some(format!(
+                "{}{}:{css};",
+                style.unwrap_or_default(),
+                scale.override_var().name()
+            )),
+            None => style,
+        }
+    });
 
     let component = props.component.copied_or_default();
     if paper_unreachable_press(component, &props.attributes) {
@@ -295,11 +301,15 @@ fn paper_radius(props: &PaperProps) -> ScaleOrCss {
     ScaleOrCss::new(props.radius.as_ref(), Size::Md)
 }
 
+fn paper_shadow(props: &PaperProps) -> ScaleOrCss {
+    ScaleOrCss::new(props.shadow.as_ref(), Size::Md)
+}
+
 /// A token only per axis the caller set, unlike `Button`: a `[data-state]` block
 /// would beat the radius or shadow a surface built on [`paper_sx`] chains on.
 fn paper_states(props: &PaperProps) -> Input<States> {
     let radius = props.radius.as_ref().map(|_| paper_radius(props).size);
-    let shadow = props.shadow.as_ref();
+    let shadow = props.shadow.as_ref().map(|_| paper_shadow(props).size);
     let glass = props.glass && draws_backdrop_filter();
     let gradient = props.gradient.is_some();
     let colored = props.color.as_ref().is_some() && !gradient;
@@ -402,7 +412,7 @@ mod tests {
     fn each_axis_gets_its_own_namespaced_token() {
         let states = paper_states(&PaperProps {
             radius: Input::Value(Size::Lg.into()),
-            shadow: Input::Value(Size::Xl),
+            shadow: Input::Value(Size::Xl.into()),
             bordered: true,
             ..props()
         });
@@ -410,6 +420,39 @@ mod tests {
         assert_eq!(
             states.as_ref().and_then(States::data_state).as_deref(),
             Some("radius-lg shadow-xl bordered")
+        );
+    }
+
+    /// Todo 3891: `"none"` or any CSS rides a step's class and replaces its value.
+    #[test]
+    fn a_custom_shadow_overrides_the_step() {
+        let props = PaperProps {
+            shadow: Input::Value("none".into()),
+            ..props()
+        };
+
+        assert_eq!(
+            paper_states(&props)
+                .as_ref()
+                .and_then(States::data_state)
+                .as_deref(),
+            Some("shadow-md")
+        );
+        assert_eq!(
+            paper_shadow(&props).custom_css(SizeCss::SHADOW).as_deref(),
+            Some("none")
+        );
+        let css = Stylesheet::from(&paper_sx());
+        assert!(
+            css.as_str()
+                .contains("box-shadow:var(--lsx-shadow-override, var(--lsx-shadow-md));"),
+            "{}",
+            css.as_str()
+        );
+        assert!(
+            css.as_str().contains("--lsx-shadow-override:initial;"),
+            "{}",
+            css.as_str()
         );
     }
 

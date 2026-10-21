@@ -1,6 +1,7 @@
 //! `BottomNavigation` (todo 1209): a `nav` of items, each its own Tab stop, the
 //! selected one `aria-current`; 48px targets and no overflow at 320px; RTL;
-//! a fixed bar at the viewport's bottom that publishes its height.
+//! a fixed bar at the viewport's bottom that publishes its height; a rail
+//! (todo 3890) on the inline-start edge that publishes its width.
 
 use anyhow::Result;
 use e2e::browser::block_on;
@@ -485,3 +486,149 @@ e2e::scenario!(
     "/bottom-navigation/fixed",
     a_fixed_bar_docks
 );
+
+#[test]
+fn the_rail_meets_the_baseline() {
+    Suite::new("bottom_navigation-rail", "/bottom-navigation/rail")
+        .focusable("#rail-home")
+        .targets("#rail [id^=rail-]")
+        .tab_budget(20)
+        .run();
+}
+
+/// Todo 3890: an 88px column on the inline-start edge, as tall as the viewport,
+/// that holds through a scroll; Tab walks it top to bottom, Enter selects.
+async fn a_rail_docks_at_the_inline_start<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    eventually(d, "the rail to span the viewport's height", async |d| {
+        let (_, height) = d.viewport().await?;
+        let (rail, layout) = (d.rect("#rail").await?, d.rect("#layout").await?);
+        Ok((rail.x - layout.x).abs() < 1.0
+            && (rail.width - 88.0).abs() < 1.0
+            && (rail.y - layout.y).abs() < 1.0
+            && (rail.height - height).abs() < 1.0)
+    })
+    .await?;
+    let (home, search) = (d.rect("#rail-home").await?, d.rect("#rail-search").await?);
+    anyhow::ensure!(
+        (home.x - search.x).abs() < 1.0 && search.y >= home.y + home.height - 1.0,
+        "{:?}: the items are not a column: {home:?} {search:?}",
+        d.platform()
+    );
+    let (main, rail) = (d.rect("#content").await?, d.rect("#rail").await?);
+    anyhow::ensure!(
+        main.x >= rail.x + rail.width - 1.0,
+        "{:?}: the page sits under the rail: {main:?}",
+        d.platform()
+    );
+
+    d.focus("#rail-home").await?;
+    for next in ["search", "inbox", "long", "profile"] {
+        d.press(keyboard::TAB).await?;
+        eventually_focused(d, &format!("#rail-{next}"), "Tab").await?;
+    }
+    d.focus("#rail-inbox").await?;
+    d.press(keyboard::ENTER).await?;
+    eventually(d, "Enter to select Inbox", async |d| {
+        Ok(
+            d.attr("#rail-inbox", "aria-current").await?.as_deref() == Some("page")
+                && d.attr("#rail-home", "aria-current").await?.is_none(),
+        )
+    })
+    .await?;
+
+    d.scroll_by(600.0).await?;
+    d.idle().await;
+    let rail = d.rect("#rail").await?;
+    anyhow::ensure!(
+        rail.y.abs() < 1.0,
+        "{:?}: the rail left the top after a scroll: {rail:?}",
+        d.platform()
+    );
+    anyhow::ensure!(
+        d.rect("#content").await?.y < -100.0,
+        "{:?}: the page did not scroll",
+        d.platform()
+    );
+    Ok(())
+}
+
+e2e::scenario!(
+    a_rail_docks_at_the_inline_start_everywhere,
+    "/bottom-navigation/rail",
+    a_rail_docks_at_the_inline_start
+);
+
+/// The rail publishes its width, not the bar's height, and RTL puts it on the right.
+#[test]
+fn the_rail_publishes_its_width_and_flips_in_rtl() {
+    block_on(async {
+        for (route, right) in [
+            ("/bottom-navigation/rail", false),
+            ("/bottom-navigation/rail-rtl", true),
+        ] {
+            let fixture = Fixture::open(route, Viewport::Desktop).await.unwrap();
+            let page = &fixture.page;
+            wait::for_visible(page, "#rail-home").await.unwrap();
+            wait::for_js_true(
+                page,
+                "getComputedStyle(document.documentElement).getPropertyValue('--lsx-navigation-rail-width').trim() === '88px'",
+                "the measured rail width",
+            )
+            .await
+            .unwrap();
+
+            let report = js::<serde_json::Value>(
+                page,
+                "(() => { \
+                    const rail = document.querySelector('#rail').getBoundingClientRect(); \
+                    const layout = document.querySelector('#layout').getBoundingClientRect(); \
+                    const root = getComputedStyle(document.documentElement); \
+                    return { left: rail.left - layout.left, right: Math.round(layout.right - rail.right), \
+                        height: root.getPropertyValue('--lsx-bottom-navigation-height').trim(), \
+                        current: document.querySelector('#rail-home').getAttribute('aria-current') }; \
+                })()",
+            )
+            .await;
+            match right {
+                true => assert_eq!(report["right"], 0, "{route}: {report}"),
+                false => assert_eq!(report["left"], 0.0, "{route}: {report}"),
+            }
+            assert_eq!(report["height"], "", "{route}: {report}");
+            assert_eq!(report["current"], "page", "{route}: {report}");
+            fixture.close().await.unwrap();
+        }
+    });
+}
+
+/// 1.4.4: at 200% text the rail keeps its width, its labels wrap inside it and
+/// nothing overflows sideways.
+#[test]
+fn the_rail_holds_200_percent_text_without_overflow() {
+    block_on(async {
+        let fixture = Fixture::open("/bottom-navigation/rail", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        wait::for_visible(page, "#rail-home").await.unwrap();
+
+        let report = js::<serde_json::Value>(
+            page,
+            "(() => { \
+                document.documentElement.style.fontSize = '200%'; \
+                const rail = document.querySelector('#rail'); \
+                const labels = [...rail.querySelectorAll('[data-slot=label]')]; \
+                return { width: rail.getBoundingClientRect().width, \
+                    overflow: rail.scrollWidth > rail.clientWidth, \
+                    wide: labels.filter(l => l.scrollWidth > l.clientWidth + 1).map(l => l.textContent), \
+                    grew: parseFloat(getComputedStyle(labels[0]).fontSize) >= 24 }; \
+            })()",
+        )
+        .await;
+        assert_eq!(report["width"], 88.0, "{report}");
+        assert_eq!(report["overflow"], false, "{report}");
+        assert_eq!(report["wide"], serde_json::json!([]), "{report}");
+        assert_eq!(report["grew"], true, "{report}");
+
+        fixture.close().await.unwrap();
+    });
+}

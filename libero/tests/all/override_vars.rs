@@ -25,7 +25,8 @@ use libero::{
     components::{
         ActionIcon, Alert, AspectRatio, Avatar, Badge, Burger, Button, Carousel, Center, Collapse,
         Container, Dialog, Float, Header, Icon, Image, ImageItem, ImageList, Indicator, Marquee,
-        Options, Overlay, Scroller, SegmentedControl, Sidebar, Timeline, Tooltip, Transition,
+        Options, Overlay, Paper, Scroller, SegmentedControl, Sidebar, Timeline, Tooltip,
+        Transition,
     },
     hooks::{DrawerOptions, ModalScope, use_drawer},
 };
@@ -90,6 +91,7 @@ fn app() -> Element {
             Indicator { radius: "sm" }
             Marquee { duration: 9000, "marquee" }
             Overlay { opacity: "0.5", z_index: "5", blur: "2px" }
+            Paper { shadow: "none", "paper" }
             Scroller { aria_label: "Tags", fade_color: "red", span { "one" } }
             Sidebar { size: "18rem", "sidebar" }
             SegmentedControl { gap: "3px", value: Pick::One, onchange: move |_| {} }

@@ -95,12 +95,55 @@ fn Demo() -> Element {
 }
 ```
 
+From a tablet up, `variant: "rail"` turns the bar into an 88px column on the
+inline-start edge, the right one in a right-to-left page: icons over labels,
+sticky to the top and as tall as the viewport, clear of the top, bottom and
+inline-start safe areas. It publishes its measured width as
+`--lsx-navigation-rail-width`, not the bar's height. Switch with
+`use_media_query`, which answers in a native app too; keep the same items in
+the same order.
+
+```rust
+use dioxus::prelude::*;
+use libero::{
+    components::{BottomNavigation, BottomNavigationItem, Box},
+    hooks::use_media_query,
+    sx::sx,
+};
+
+#[component]
+fn Demo() -> Element {
+    let wide = use_media_query("(min-width: 48rem)");
+    let nav = rsx! {
+        BottomNavigation { "aria-label": "Main", position: "sticky",
+            variant: if wide() { "rail" } else { "bar" },
+            BottomNavigationItem { to: "/", icon: rsx! { "⌂" }, "Home" }
+            BottomNavigationItem { to: "/search", icon: rsx! { "⌕" }, "Search" }
+        }
+    };
+
+    rsx! {
+        // The rail beside the page, the bar below it: reading order matches the layout.
+        if wide() {
+            Box { sx: sx().display("flex"),
+                {nav}
+                Box { sx: sx().flex("1"), "Page" }
+            }
+        } else {
+            Box { "Page" }
+            {nav}
+        }
+    }
+}
+```
+
 ## Props
 
 ### BottomNavigation
 
 | Prop | Type | Default | Description |
 |---|---|---|---|
+| `variant` | `BottomNavigationVariant` | `bar` | `"bar"`, a row along the bottom edge for a phone, or `"rail"`, an 88px column on the inline-start edge for a tablet or a desktop: the right edge in a right-to-left page. A rail spans the viewport's height and sticks to its top, or docks to the viewport with `position: "fixed"`, and publishes its measured width as `--lsx-navigation-rail-width` in place of the bar's height. Switch between them with `use_media_query`, as in the example. |
 | `position` | `BottomNavigationPosition` | `static` | `"static"` stays in the flow. `"sticky"` holds it at the bottom of its scroller, `"fixed"` at the viewport's; both publish the bar's measured height as `--lsx-bottom-navigation-height` and keep focus clear of the bar. A native app docks both the same way. |
 | `show_labels` | `LabelVisibility` | `always` | `"always"`, `"selected"` (only the selected item's) or `"never"`. A hidden label still names its item. |
 | `color` | `ThemeAwareValue` | `primary` | Colours the selected item's pill. Only the color family counts: the pill is its lightest shade. |
@@ -146,6 +189,9 @@ parts work.
   hidden by `show_labels` stays in the accessibility tree.
 - Every item is at least 56px tall and shares the bar's width equally. A long
   label wraps to two lines, then ends in an ellipsis.
+- A rail keeps its items in the same reading and Tab order, top to bottom. At
+  200% text it stays 88px wide: labels wrap and the rail scrolls rather than
+  covering the page.
 - A sticky or fixed bar pads the page's scroll, so a focused element is not
   hidden under it.
 - In forced colors the selected pill takes the system highlight.
@@ -157,7 +203,10 @@ parts work.
   without one.
 - Put a badge's count in the item's `aria-label`, starting with the visible
   label: "Inbox, 3 unread".
-- With `position: "fixed"`, pad the page by `var(--lsx-bottom-navigation-height)`.
+- With `position: "fixed"`, pad the page by `var(--lsx-bottom-navigation-height)`,
+  or a fixed rail's inline-start by `var(--lsx-navigation-rail-width)`.
+- Switch to the rail with the same items in the same order, so the page keeps
+  its landmarks and current item at every width.
 - A sticky bar closing a scrolling pane of its own: give the pane
   `scroll-padding-bottom: var(--lsx-bottom-navigation-height)`, so a focused
   element in it scrolls clear of the bar. In a native app set
@@ -187,6 +236,7 @@ lists the "Main" navigation, and the current item reads as the current page.
 | Variable | Description |
 |---|---|
 | `--lsx-bottom-navigation-height` | On `:root` while a sticky or fixed bar is mounted: its measured height, bottom safe area included. |
+| `--lsx-navigation-rail-width` | On `:root` while a rail is mounted: its measured width, inline-start safe area included. |
 | `--lsx-bottom-navigation-pill` | Background of the selected item's pill, the lightest shade of the color family. |
 | `--lsx-bottom-navigation-pill-color` | Icon colour on the pill, a darker shade of the color family that reaches 4.5:1 on it. |
 
@@ -196,7 +246,9 @@ State tokens on the bar's `data-state`.
 
 | Token | Condition |
 |---|---|
-| `static`, `sticky`, `fixed` | The `position`. |
+| `static`, `sticky`, `fixed` | The bar's `position`. |
+| `rail` | `variant: "rail"`. |
+| `rail-fixed` | A rail with `position: "fixed"`. |
 | `labels-selected`, `labels-never` | `show_labels` is set to it. |
 
 State tokens on an item's `data-state`.

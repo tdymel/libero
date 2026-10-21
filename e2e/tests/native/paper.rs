@@ -114,6 +114,28 @@ fn a_coloured_paper_paints_its_fill_natively() {
     assert!(px.iter().all(|p| *p == px[0]), "the stripes show through");
 }
 
+fn shadows_app() -> Element {
+    rsx! {
+        Paper { id: "flat", shadow: "none",
+            Paper { id: "nested", shadow: "md", "nested" }
+        }
+        Paper { id: "custom", shadow: "0 0 0 3px red", "custom" }
+    }
+}
+
+/// Todo 3891: `"none"` or any CSS replaces the step's shadow, and a nested step keeps its own.
+#[test]
+fn a_custom_shadow_replaces_the_step_but_not_a_nested_one() {
+    let page = mount(shadows_app);
+    assert_eq!(page.computed("#flat", "box-shadow"), "none");
+    assert_ne!(page.computed("#nested", "box-shadow"), "none");
+    assert!(
+        page.computed("#custom", "box-shadow").contains("3px"),
+        "{}",
+        page.computed("#custom", "box-shadow")
+    );
+}
+
 /// Needs a backend that draws `backdrop-filter`, then `DRAWS_BACKDROP_FILTER`
 /// turned on for Blitz.
 #[test]

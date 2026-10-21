@@ -6,7 +6,6 @@ use dioxus::prelude::*;
 use libero::{
     components::{Box, Code, Flex, Input, Paper, Text, Title},
     sx::sx,
-    theme::Size,
     use_theme,
 };
 
@@ -16,12 +15,9 @@ const CONTENT: &str = r#"Title { size: "md", component: "h2", "Invoice #4021" }
 Text { "Due 30 September." }"#;
 
 /// Padding is the caller's `sx`, deliberately: `Paper` is the surface, not the
-/// box model. The shadow control rewrites this line when it is turned off.
+/// box model.
 // snippet: in Paper { .. }
 const PADDING: &str = r#"sx: sx().padding("lg")"#;
-
-// snippet: in Paper { .. }
-const NO_SHADOW: &str = r#"sx: sx().padding("lg").box_shadow("none")"#;
 
 /// An id nothing has, so the demo link scrolls and navigates nowhere.
 const HREF: &str = "#order-4021";
@@ -72,9 +68,9 @@ pub fn PaperPage() -> Element {
                     prop("radius", "ThemeAwareValue")
                         .default(theme.paper.radius.as_str())
                         .doc("Corner radius, a step on the shared radius scale, or any CSS, e.g. `radius: \"0\"`."),
-                    prop("shadow", "Size")
+                    prop("shadow", "ThemeAwareValue")
                         .default(theme.paper.shadow.as_str())
-                        .doc("Elevation, a step on the shared shadow scale. For a flat surface use `sx().box_shadow(\"none\")`."),
+                        .doc("Elevation, a step on the shared shadow scale, `\"none\"` for a flat surface, or any CSS `box-shadow`."),
                     prop("bordered", "bool")
                         .default("false")
                         .doc("A hairline border in the theme's surface border colour. Works together with a shadow."),
@@ -122,11 +118,10 @@ pub fn PaperPage() -> Element {
                     // `0` is plain CSS, next to the size scale.
                     Control::slider("radius", ["0", "xs", "sm", "md", "lg", "xl", "xxl"])
                         .default(theme.paper.radius.as_str()),
-                    // `none` is not a `Size`: it prints the `sx` override that does it.
+                    // `none` is plain CSS, next to the shadow scale.
                     Control::slider("shadow", ["none", "xs", "sm", "md", "lg", "xl", "xxl"])
                         .default(theme.paper.shadow.as_str())
                         .code(|control, values| match values.str("shadow").as_str() {
-                            "none" => vec![NO_SHADOW.to_string()],
                             // At the default only the padding prints.
                             shadow if shadow == control.default => vec![PADDING.to_string()],
                             shadow => {
@@ -159,22 +154,12 @@ pub fn PaperPage() -> Element {
                         .hidden_when(|values| values.str("link") == "true"),
                 ],
                 render: move |values: DemoValues| {
-                    let flat = values.str("shadow") == "none";
                     let link = values.str("link") == "true";
-                    let sx = match flat {
-                        true => sx().padding("lg").box_shadow("none"),
-                        false => sx().padding("lg"),
-                    };
-                    let shadow: Input<Size> = match flat {
-                        true => Input::None,
-                        false => values.str("shadow").into(),
-                    };
-
                     let glass = values.str("glass") == "true";
                     let paper = rsx! {
                         Paper {
                             radius: values.str("radius"),
-                            shadow,
+                            shadow: values.str("shadow"),
                             bordered: values.str("bordered") == "true",
                             glass,
                             color: match values.str("color").as_str() {
@@ -188,7 +173,7 @@ pub fn PaperPage() -> Element {
                                 false => Input::from(values.str("component")),
                             },
                             href: link.then_some(HREF),
-                            sx,
+                            sx: sx().padding("lg"),
                             // Level is a document decision, size a design one ([[codebase/heading-order]]).
                             Title { size: "md", component: "h2", "Invoice #4021" }
                             Text { "Due 30 September." }

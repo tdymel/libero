@@ -1,0 +1,19 @@
+---
+source: e2e/src/suite.rs
+description: bottom_navigation-rail at mobile (rest)
+expression: tree
+---
+navigation "Main"
+  button "Home" [current=page]
+    StaticText "Home"
+  button "Search"
+    StaticText "Search"
+  button "Inbox"
+    StaticText "Inbox"
+  button "Notifications and messages"
+    StaticText "Notifications and messages"
+  button "Profile"
+    StaticText "Profile"
+link "After the rail"
+  StaticText "After the rail"
+StaticText "Page"
