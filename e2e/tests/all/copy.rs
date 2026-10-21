@@ -138,23 +138,27 @@ fn a_missing_clipboard_announces_the_failure() {
     });
 }
 
-/// A disabled `Copy` is a disabled button that focus cannot reach.
+/// A disabled `Copy` is out of the Tab order, soft so a focused one keeps its focus (todo 3838).
 #[test]
-fn a_disabled_copy_cannot_be_focused() {
+fn a_disabled_copy_is_not_a_tab_stop() {
     block_on(async {
         let fixture = Fixture::open("/copy", Viewport::Desktop).await.unwrap();
         let page = &fixture.page;
 
-        let unfocusable: bool = page
+        let soft: bool = page
             .evaluate_bounded(
                 "(() => { const b = document.querySelector('#off button'); \
-                 b.focus(); return b.disabled && document.activeElement !== b; })()",
+                 return !b.disabled && b.getAttribute('aria-disabled') === 'true' \
+                     && b.tabIndex === -1; })()",
             )
             .await
             .unwrap()
             .into_value()
             .unwrap();
-        assert!(unfocusable, "the disabled Copy took focus");
+        assert!(
+            soft,
+            "the disabled Copy is not soft-disabled out of the Tab order"
+        );
 
         fixture.console.assert_clean("disabled copy").unwrap();
         fixture.close().await.unwrap();

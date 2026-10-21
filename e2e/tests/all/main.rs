@@ -137,6 +137,7 @@ mod sidebar;
 mod skeleton;
 mod slider;
 mod slider_touch_keyboard;
+mod soft_disabled;
 mod sortable;
 mod spatnav;
 mod splitter;

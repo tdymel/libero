@@ -482,10 +482,10 @@ fn each_press_steps_the_cycle_and_renames_the_button() {
     });
 }
 
-/// Todo 3022: a disabled switcher's toggle and picker are disabled buttons focus cannot
-/// reach, and a press on the picker opens no menu.
+/// Todo 3022: a disabled switcher's toggle and picker are no Tab stops, soft-disabled
+/// (todo 3838), and a press on the picker opens no menu.
 #[test]
-fn a_disabled_theme_switcher_cannot_be_focused_or_open_the_menu() {
+fn a_disabled_theme_switcher_is_no_tab_stop_and_opens_no_menu() {
     block_on(async {
         let fixture = Fixture::open("/theme-switcher/off", Viewport::Desktop)
             .await
@@ -493,16 +493,16 @@ fn a_disabled_theme_switcher_cannot_be_focused_or_open_the_menu() {
         let page = &fixture.page;
 
         for button in ["#off", "#off-split > button", "#off-split > div > button"] {
-            let unfocusable: bool = page
+            let soft: bool = page
                 .evaluate_bounded(format!(
                     "(() => {{ const b = document.querySelector('{button}'); \
-                     b.focus(); return b.disabled && document.activeElement !== b; }})()"
+                     return b.getAttribute('aria-disabled') === 'true' && b.tabIndex === -1; }})()"
                 ))
                 .await
                 .unwrap()
                 .into_value()
                 .unwrap();
-            assert!(unfocusable, "the disabled {button} took focus");
+            assert!(soft, "the disabled {button} is a Tab stop");
         }
 
         pointer::click(page, "#off-split > div > button")

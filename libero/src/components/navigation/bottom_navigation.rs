@@ -468,12 +468,16 @@ pub fn BottomNavigationItem(props: BottomNavigationItemProps) -> Element {
         }
         None => {
             let onclick = props.onclick;
+            // Soft-disabled as `Button`: a native `disabled` would drop its focus (todo 3838).
             box_style(style_attributes)
                 .attr("type", "button")
-                .attr("disabled", disabled.then_some(true))
+                .attr("aria-disabled", disabled.then_some("true"))
+                .attr("tabindex", disabled.then_some("-1"))
                 .attr("aria-current", aria_current)
                 .event("onclick", move |event: MouseEvent| {
-                    if let Some(onclick) = &onclick {
+                    if disabled {
+                        event.prevent_default();
+                    } else if let Some(onclick) = &onclick {
                         onclick.call(event);
                     }
                 })

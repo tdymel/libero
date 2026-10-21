@@ -91,8 +91,8 @@ Like every component, `Tooltip` also takes the shared props `sx`, `class`,
 - Give the bubble an id with `label_id` and point your trigger's
   `aria-describedby` at it, so a screen reader reads the label.
 - Keep a disabled trigger focusable: `Button { disabled }` drops out of the
-  Tab order, so its tooltip is mouse-only. Set `focusable_when_disabled: true`,
-  which uses `aria-disabled` instead.
+  Tab order, so its tooltip is mouse-only. Set `focusable_when_disabled: true`
+  to keep its tab stop.
 
 ```rust
 use dioxus::prelude::*;

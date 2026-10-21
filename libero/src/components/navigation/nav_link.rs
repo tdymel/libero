@@ -143,7 +143,11 @@ static NAV_GROUP_SX: StaticSx = StaticSx::new(|| {
                 .cursor("pointer")
                 .focus_visible(inset_focus_ring_sx("-2px"))
                 .hover(sx().background(ROW_HOVER_TINT))
-                .selector("&:disabled", disabled_look_sx("not-allowed"))
+                // `:disabled` for a disabled `Fieldset` around it.
+                .selector(
+                    "&:is(:disabled, [aria-disabled='true'])",
+                    disabled_look_sx("not-allowed"),
+                )
                 .selector(
                     "& > svg",
                     sx().width("16px")
@@ -361,7 +365,11 @@ pub fn NavLink(props: NavLinkProps) -> Element {
 
     let controlled = props.opened.is_some();
     let onchange = props.onchange;
-    let toggle = move |_: MouseEvent| {
+    let toggle = move |event: MouseEvent| {
+        if disabled {
+            event.prevent_default();
+            return;
+        }
         if !controlled {
             own_opened.set(!opened);
         }
@@ -383,7 +391,9 @@ pub fn NavLink(props: NavLinkProps) -> Element {
                     "aria-labelledby": "{toggle_id} {link_id}",
                     "aria-expanded": opened.to_string(),
                     "aria-controls": panel_id(),
-                    disabled: disabled.then_some(true),
+                    // Soft-disabled as `Button`: a native `disabled` would drop its focus (todo 3838).
+                    "aria-disabled": disabled.then_some("true"),
+                    tabindex: disabled.then_some("-1"),
                     onclick: toggle,
                     Glyph { slot: IconSlot::ChevronDown, icon: lucide::chevron_down::outlined }
                 }

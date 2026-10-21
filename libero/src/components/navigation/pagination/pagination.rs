@@ -458,9 +458,11 @@ fn use_pagination_focus_repair(list: ElementHandle, page: u32) -> Signal<Option<
             return;
         }
         owed_focus.set(None);
-        // Chromium keeps a just-disabled button as `activeElement` until its
-        // next focus fixup, so it still matches `:focus` here.
-        if list.query_selector(":focus:not(:disabled)").is_ok() {
+        // A disabled arrow out of the Tab order keeps its focus: hand it to the page too.
+        if list
+            .query_selector(":focus:not(:disabled, [aria-disabled='true'][tabindex='-1'])")
+            .is_ok()
+        {
             return;
         }
         let _ = list

@@ -74,7 +74,7 @@ pub fn ToolbarPage() -> Element {
                 .handles([
                     "The root is a `role=\"toolbar\"`, with `aria-orientation=\"vertical\"` when vertical.",
                     "The bar is one tab stop: the controls inside get a roving `tabindex`.",
-                    "A disabled `Button`, `ActionIcon` or `Select` inside stays focusable with `aria-disabled`, so a keyboard user finds it; `focusable_when_disabled: false` opts out. A disabled field stays focusable too, read-only with `aria-disabled`.",
+                    "A disabled `Button`, `ActionIcon` or `Select` inside stays focusable with `aria-disabled`, so a keyboard user finds it; `focusable_when_disabled: false` opts out, still `aria-disabled` but out of the arrow order. A disabled field stays focusable too, read-only with `aria-disabled`.",
                     "A key a control uses itself stays its own: `Select` opens on Home, End and Up, a slider keeps its arrows.",
                     "`Checkbox`, `Switch`, `SegmentedControl`, `TextField` and `NumberField` join the arrow order. A `SegmentedControl` moves through its segments and passes the arrow on past its last one.",
                     "A text field keeps Left and Right until the caret sits at its start or end with nothing selected; then the arrow moves on. Home and End stay the field's.",

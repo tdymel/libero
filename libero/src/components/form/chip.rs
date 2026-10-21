@@ -463,11 +463,17 @@ pub fn Chip(props: ChipProps) -> Element {
         if let Some(onclick) = props.onclick {
             // `<button>` defaults to `submit`; `attr_default` still lets a
             // caller ask for one.
+            // Soft-disabled as `Button`: a native `disabled` would drop its focus (todo 3838).
             return root
                 .event("onclick", move |event: Event<MouseData>| {
+                    if disabled {
+                        event.prevent_default();
+                        return;
+                    }
                     onclick.call(event)
                 })
-                .attr("disabled", disabled)
+                .attr("aria-disabled", disabled.then_some("true"))
+                .attr("tabindex", disabled.then_some("-1"))
                 .attr_default("type", "button")
                 .attr_default("aria-pressed", props.checked.map(|on| on.to_string()))
                 .render(HtmlTag::Button, props.attributes, content);

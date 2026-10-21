@@ -29,7 +29,7 @@ fn a_disabled_button_that_becomes_enabled_clears_the_attribute() {
     let disabled = writes
         .writes
         .iter()
-        .find(|(name, _)| name == "disabled")
+        .find(|(name, _)| name == "aria-disabled")
         .map(|(_, value)| value.as_str());
 
     assert_eq!(

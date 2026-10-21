@@ -74,7 +74,7 @@ parts work.
 - The bar is one tab stop: the controls inside get a roving `tabindex`.
 - A disabled `Button`, `ActionIcon` or `Select` inside stays focusable with
   `aria-disabled`, so a keyboard user finds it; `focusable_when_disabled: false`
-  opts out. A disabled field stays focusable too, read-only with
+  opts out, still `aria-disabled` but out of the arrow order. A disabled field stays focusable too, read-only with
   `aria-disabled`.
 - A key a control uses itself stays its own: `Select` opens on Home, End and Up,
   a slider keeps its arrows.

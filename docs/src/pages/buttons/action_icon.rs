@@ -47,10 +47,10 @@ pub fn ActionIconPage() -> Element {
                     .doc("Makes it a toggle button. A bare toggle shows a 1px ring while on; with `variant` or `color` set it takes that variant's selected look. Leave it unset for a plain action."),
                 prop("disabled", "bool")
                     .default("false")
-                    .doc("Disables and dims the button."),
+                    .doc("Disables and dims the button: `aria-disabled` rather than `disabled`, so a focused button keeps its focus. It leaves the Tab order and ignores presses."),
                 prop("focusable_when_disabled", "bool")
                     .default("false")
-                    .doc("With `disabled`: keeps the button in the Tab order. It renders `aria-disabled` rather than `disabled` and ignores presses."),
+                    .doc("With `disabled`: keeps the button in the Tab order."),
                 prop("loading", "bool")
                     .default("false")
                     .doc("Shows a `Loader` over the icon and ignores clicks. The button stays focusable and sets `aria-busy`; announce the progress in your own status region. Ignored on a link."),

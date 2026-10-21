@@ -257,7 +257,8 @@ fn disabled_reaches_the_underlying_button() {
 
     let html = body(&render(app));
     let attributes = attributes_of(&html, "button");
-    assert!(attributes.contains_key("disabled"), "{html}");
+    assert_eq!(attributes["aria-disabled"], "true", "{html}");
+    assert_eq!(attributes["tabindex"], "-1", "{html}");
 }
 
 /// A blank name from the spread or the callback is dropped: the localized default names it.

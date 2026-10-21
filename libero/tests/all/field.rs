@@ -1639,8 +1639,9 @@ fn a_disabled_fieldset_disables_the_reveal_button() {
         attributes_of(&body, "input").contains_key("disabled"),
         "{body}"
     );
-    assert!(
-        attributes_of(&body, "button").contains_key("disabled"),
+    assert_eq!(
+        attributes_of(&body, "button")["aria-disabled"],
+        "true",
         "{body}"
     );
 }

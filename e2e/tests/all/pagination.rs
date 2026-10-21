@@ -127,7 +127,7 @@ async fn a_disabling_arrow_hands_focus_on<D: Driver>(d: &mut D, route: &str) -> 
     d.press(keyboard::ENTER).await?;
     reached(d, 1, route).await?;
     anyhow::ensure!(
-        d.attr(PREVIOUS, "disabled").await?.is_some(),
+        d.attr(PREVIOUS, "aria-disabled").await?.as_deref() == Some("true"),
         "{route}: previous at page 1"
     );
     eventually_focused(d, CURRENT, "previous to page 1").await?;
@@ -135,7 +135,7 @@ async fn a_disabling_arrow_hands_focus_on<D: Driver>(d: &mut D, route: &str) -> 
     d.click(LAST).await?;
     reached(d, 10, route).await?;
     anyhow::ensure!(
-        d.attr(LAST, "disabled").await?.is_some(),
+        d.attr(LAST, "aria-disabled").await?.as_deref() == Some("true"),
         "{route}: last at page 10"
     );
     eventually_focused(d, CURRENT, "clicking last").await

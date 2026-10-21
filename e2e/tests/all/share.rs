@@ -405,16 +405,18 @@ fn the_labelled_button_is_named_by_its_text() {
             "Link to the docs"
         );
 
-        let unfocusable: bool = page
+        // Todo 3838: soft-disabled, out of the Tab order.
+        let soft: bool = page
             .evaluate_bounded(
                 "(() => { const b = document.querySelector('#off button'); \
-                 b.focus(); return b.disabled && document.activeElement !== b; })()",
+                 return !b.disabled && b.getAttribute('aria-disabled') === 'true' \
+                     && b.tabIndex === -1; })()",
             )
             .await
             .unwrap()
             .into_value()
             .unwrap();
-        assert!(unfocusable, "the disabled Share took focus");
+        assert!(soft, "the disabled Share is a Tab stop");
 
         fixture.console.assert_clean("labelled share").unwrap();
         fixture.close().await.unwrap();

@@ -104,8 +104,9 @@ fn disabled_renders_a_disabled_button() {
 
     let html = body(&render(app));
 
-    assert!(
-        attributes_of(&html, "button").contains_key("disabled"),
+    assert_eq!(
+        attributes_of(&html, "button")["aria-disabled"],
+        "true",
         "{html}"
     );
 }

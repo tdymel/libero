@@ -62,7 +62,7 @@ fn the_defaults_reach_each_button_and_its_own_prop_wins() {
 
     let icon = attributes_of(&html[html.find("Two").unwrap()..], "button");
     assert!(has(&icon["data-state"], "filled"), "{icon:?}");
-    assert!(icon.contains_key("disabled"), "{icon:?}");
+    assert_eq!(icon["aria-disabled"], "true", "{icon:?}");
 }
 
 /// Todo 2815: a disabled group takes its buttons out of the Tab order, bar one that keeps it.
@@ -87,10 +87,14 @@ fn a_button_keeps_its_tab_stop_in_a_disabled_group_by_its_own_prop() {
         .map(|button| attributes_of(&format!("<button{button}"), "button"))
         .collect();
     assert_eq!(buttons.len(), 3, "{html}");
-    assert!(buttons[0].contains_key("disabled"), "{:?}", buttons[0]);
+    assert_eq!(buttons[0]["tabindex"], "-1", "{:?}", buttons[0]);
     for soft in &buttons[1..] {
-        assert!(!soft.contains_key("disabled"), "{soft:?}");
-        assert_eq!(soft["aria-disabled"], "true", "{soft:?}");
+        assert!(!soft.contains_key("tabindex"), "{soft:?}");
+    }
+    // Todo 3838: never native, so a focused button keeps its focus.
+    for button in &buttons {
+        assert!(!button.contains_key("disabled"), "{button:?}");
+        assert_eq!(button["aria-disabled"], "true", "{button:?}");
     }
 }
 
@@ -117,10 +121,10 @@ fn a_disabled_group_forwards_focusable_when_disabled() {
         .collect();
     assert_eq!(buttons.len(), 3, "{html}");
     for soft in &buttons[..2] {
-        assert!(!soft.contains_key("disabled"), "{soft:?}");
+        assert!(!soft.contains_key("tabindex"), "{soft:?}");
         assert_eq!(soft["aria-disabled"], "true", "{soft:?}");
     }
-    assert!(buttons[2].contains_key("disabled"), "{:?}", buttons[2]);
+    assert_eq!(buttons[2]["tabindex"], "-1", "{:?}", buttons[2]);
 }
 
 #[test]

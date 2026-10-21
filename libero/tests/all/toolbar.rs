@@ -124,13 +124,16 @@ fn a_disabled_item_in_a_toolbar_stays_focusable() {
 
     let html = body(&render(app));
     let items = tags_with(&html, "data-toolbar-item=");
-    assert_eq!(items.len(), 4, "{html}");
-    for item in &items[..3] {
+    assert_eq!(items.len(), 3, "{html}");
+    for item in &items {
         assert!(item.contains(r#"aria-disabled="true""#), "{item}");
         assert!(!item.contains("disabled=true"), "{item}");
     }
-    // The caller's explicit `false` still wins.
-    assert!(items[3].contains("disabled=true"), "{}", items[3]);
+    // The caller's explicit `false` still wins: out of the arrow order, but soft (todo 3838).
+    let gone = *tags_with(&html, "<button").last().unwrap();
+    assert!(!gone.contains("data-toolbar-item"), "{gone}");
+    assert!(gone.contains(r#"tabindex="-1""#), "{gone}");
+    assert!(gone.contains(r#"aria-disabled="true""#), "{gone}");
 }
 
 /// Todo 3092: the draft is the bar's item; the chips' x and the clear button are the field's.
@@ -177,7 +180,9 @@ fn a_button_outside_a_toolbar_is_untouched() {
 
     let html = body(&render(app));
     assert!(!html.contains("data-toolbar-item"), "{html}");
-    assert!(!html.contains("tabindex"), "{html}");
+    // Only the disabled icon's own `-1` (todo 3838).
+    assert_eq!(html.matches("tabindex").count(), 1, "{html}");
+    assert!(html.contains(r#"tabindex="-1""#), "{html}");
 }
 
 /// The first item gone, the next one becomes the tab stop.

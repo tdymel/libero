@@ -169,11 +169,11 @@ async fn the_ring_rises<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
 
 async fn disabled_defaults<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
     ensure!(
-        d.attr("#d1", "disabled").await?.is_some(),
+        d.attr("#d1", "aria-disabled").await?.as_deref() == Some("true"),
         "#d1 took the group's disabled"
     );
     ensure!(
-        d.attr("#d2", "disabled").await?.is_none(),
+        d.attr("#d2", "aria-disabled").await?.is_none(),
         "#d2's own `disabled: false` wins"
     );
     Ok(())

@@ -219,7 +219,7 @@ base_props! {
         selected: Option<bool>,
         #[props(default)]
         disabled: Option<bool>,
-        /// With `disabled`: stays in the Tab order, with `aria-disabled`.
+        /// With `disabled`: stays in the Tab order. Either way the button keeps a focus it has.
         #[props(default)]
         focusable_when_disabled: Option<bool>,
         /// Overlays a `Loader` and swallows clicks; stays focusable. Ignored in link mode.
@@ -283,6 +283,8 @@ pub fn Button(props: ButtonProps) -> Element {
             .focusable_when_disabled
             .or(group.focusable_when_disabled)
             .unwrap_or(item.is_some());
+    // An explicit `false` takes a toolbar item out of the arrow order too.
+    let item = item.filter(|_| !disabled || soft_disabled);
 
     if is_link && props.loading == Some(true) {
         warn("Button: `loading` is ignored on a link - an `<a>` has nothing to wait for.");
@@ -438,17 +440,18 @@ pub fn Button(props: ButtonProps) -> Element {
         label
     };
 
+    // No native `disabled`: it would drop a focused button's focus to the page (todo 3838).
+    let tabindex = match item {
+        Some(item) => Some(item.tabindex()),
+        None => (disabled && !soft_disabled).then_some("-1"),
+    };
     // `<button>` defaults to `submit`; a caller can still ask for it.
     boxed
         .event("onclick", handle_click)
-        .attr("disabled", disabled && !soft_disabled)
-        .attr("tabindex", item.map(ToolbarItem::tabindex))
+        .attr("tabindex", tabindex)
         .attr(TOOLBAR_ITEM, item.map(ToolbarItem::key))
         .attr("aria-busy", loading.then_some("true"))
-        .attr(
-            "aria-disabled",
-            (loading || soft_disabled).then_some("true"),
-        )
+        .attr("aria-disabled", (loading || disabled).then_some("true"))
         .attr_default("type", "button")
         .attr_default(
             "aria-pressed",

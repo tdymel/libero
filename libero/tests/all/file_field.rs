@@ -615,7 +615,9 @@ mod dispatched {
         let removes = tags_with(&html, r#"aria-label="Remove"#);
         assert_eq!(removes.len(), 2, "{removes:?}");
         assert!(
-            removes.iter().all(|x| x.contains_key("disabled")),
+            removes
+                .iter()
+                .all(|x| x.get("aria-disabled").is_some_and(|v| v == "true")),
             "{removes:?}"
         );
 

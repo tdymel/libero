@@ -47,7 +47,10 @@ fn an_item_without_to_is_a_button_and_a_disabled_one_is_disabled() {
 
     let attributes = attributes_of(&body(&render(app)), "button");
     assert_eq!(attributes["type"], "button");
-    assert_eq!(attributes["disabled"], "true");
+    // Todo 3838: soft, so a focused item keeps its focus.
+    assert!(!attributes.contains_key("disabled"), "{attributes:?}");
+    assert_eq!(attributes["aria-disabled"], "true");
+    assert_eq!(attributes["tabindex"], "-1");
 }
 
 #[test]

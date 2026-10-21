@@ -217,7 +217,7 @@ mod select_listbox {
         for name in ["Remove Cherry", "Remove Apple"] {
             let remove = tag_with(&html, &format!(r#"aria-label="{name}""#));
             assert_eq!(
-                remove.get("disabled").map(String::as_str),
+                remove.get("aria-disabled").map(String::as_str),
                 Some("true"),
                 "{remove:?}"
             );

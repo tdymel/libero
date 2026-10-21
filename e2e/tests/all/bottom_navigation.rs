@@ -195,6 +195,7 @@ fn disabled_items_are_skipped_and_dimmed() {
                 const opacity = e => parseFloat(getComputedStyle(e).opacity); \
                 return { href: link.hasAttribute('href'), tabindex: link.getAttribute('tabindex'), \
                     aria: link.getAttribute('aria-disabled'), native: button.disabled, \
+                    soft: button.getAttribute('aria-disabled') + button.getAttribute('tabindex'), \
                     dimmed: opacity(link) < 1 && opacity(button) < 1, \
                     enabled: opacity(document.querySelector('#link')) }; \
             })()",
@@ -203,7 +204,9 @@ fn disabled_items_are_skipped_and_dimmed() {
         assert_eq!(report["href"], false, "{report}");
         assert_eq!(report["tabindex"], "-1", "{report}");
         assert_eq!(report["aria"], "true", "{report}");
-        assert_eq!(report["native"], true, "{report}");
+        // Todo 3838: soft, so a focused button keeps its focus.
+        assert_eq!(report["native"], false, "{report}");
+        assert_eq!(report["soft"], "true-1", "{report}");
         assert_eq!(report["dimmed"], true, "{report}");
         assert_eq!(report["enabled"], 1.0, "{report}");
 

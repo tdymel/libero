@@ -268,7 +268,7 @@ base_props! {
         shortcut: Option<String>,
         #[props(default)]
         disabled: Option<bool>,
-        /// With `disabled`: keeps the button in the Tab order, as on `Button`.
+        /// With `disabled`: keeps the button in the Tab order, as on `Button`. Either way it keeps a focus it has.
         #[props(default)]
         focusable_when_disabled: Option<bool>,
         /// Toggle button: renders `aria-pressed`. `None` is a plain action.
@@ -372,6 +372,8 @@ fn action_icon(mut props: ActionIconProps) -> Element {
     let loading = props.loading.unwrap_or(false) && !is_link;
     // A toolbar keeps its disabled items in the arrow order.
     let soft_disabled = disabled && props.focusable_when_disabled.unwrap_or(item.is_some());
+    // An explicit `false` takes a toolbar item out of the arrow order too.
+    let item = item.filter(|_| !disabled || soft_disabled);
 
     if is_link && props.loading == Some(true) {
         warn("ActionIcon: `loading` is ignored on a link - an `<a>` has nothing to wait for.");
@@ -538,18 +540,19 @@ fn action_icon(mut props: ActionIconProps) -> Element {
         }
     };
 
+    // No native `disabled`, as on `Button`: it would drop a focused icon's focus.
+    let tabindex = match item {
+        Some(item) => Some(item.tabindex()),
+        None => (disabled && !soft_disabled).then_some("-1"),
+    };
     boxed
         .event("onclick", handle_click)
         .attr("aria-label", aria_label)
         .attr("aria-keyshortcuts", keyshortcuts)
-        .attr("disabled", disabled && !soft_disabled)
-        .attr("tabindex", item.map(ToolbarItem::tabindex))
+        .attr("tabindex", tabindex)
         .attr(TOOLBAR_ITEM, item.map(ToolbarItem::key))
         .attr("aria-busy", loading.then_some("true"))
-        .attr(
-            "aria-disabled",
-            (loading || soft_disabled).then_some("true"),
-        )
+        .attr("aria-disabled", (loading || disabled).then_some("true"))
         .attr_default("type", "button")
         .attr_default(
             "aria-pressed",
