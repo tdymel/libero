@@ -60,14 +60,15 @@ fn swatch_button() -> libero::sx::Sx {
     sx().flex("1 1 0")
         .padding("0")
         // An invisible 24px press target (WCAG 2.5.8) for a swatch the row squeezes below it;
-        // the fill rounds itself, so the button's clip is not needed.
+        // sideways it grows by at most half the row gap, so neighbouring pads never overlap.
         .position("relative")
         .overflow("visible")
         .selector(
             "&::before",
-            sx().content("\"\"")
-                .position("absolute")
-                .inset("min(0px, calc((100% - 24px) / 2))"),
+            sx().content("\"\"").position("absolute").inset(
+                "min(0px, calc((100% - 24px) / 2)) \
+                 max(calc(var(--lsx-spacing-xs) / -2), min(0px, calc((100% - 24px) / 2)))",
+            ),
         )
         .hover(sx().background("transparent"))
 }
