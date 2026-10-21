@@ -76,6 +76,7 @@ const BAR_VAR: &str = "--libero-video-bar";
 const CUES: &str = "::-webkit-media-text-track-container";
 /// Light tracks, as YouTube's: the theme's muted one sinks into the scrim.
 const LIGHT_TRACK: &str = "rgba(255, 255, 255, 0.5)";
+const LIGHT_FILL: &str = "#fff";
 
 /// A direct-child `part` of the player while its controls are faded out.
 fn when_faded(part: VideoPart) -> String {
@@ -157,6 +158,13 @@ static VIDEO_SX: StaticSx = StaticSx::new(|| {
                     sx().background("transparent"),
                 )
                 .selector("& [data-slot='segment']", light_track())
+                // The Slider's fill is in the text role, dark on a light page: white on the scrim.
+                .selector(
+                    "& [data-slot='bar'], & [data-slot='segment-fill']",
+                    sx().background(LIGHT_FILL)
+                        .media(FORCED_COLORS, sx().background("Highlight")),
+                )
+                .selector("& [data-slot='thumb']", sx().border_color(LIGHT_FILL))
                 // The theme's light state tint left the white text under 3:1 (todo 1388).
                 .selector(
                     "& button:is(:hover, :active, [aria-expanded='true']):not(:disabled)",
