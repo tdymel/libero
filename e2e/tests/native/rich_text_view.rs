@@ -3,9 +3,12 @@
 
 use dioxus::prelude::*;
 use e2e::native::mount;
-use libero::components::{
-    RichTextEditor,
-    rich_text::{BlockKind, Doc, Inline, Mark, Marks, RichTextView},
+use libero::{
+    components::{
+        RichTextEditor,
+        rich_text::{BlockKind, Doc, Inline, Mark, Marks, RichTextView},
+    },
+    sx::sx,
 };
 
 const MARKDOWN: &str = "## Release notes
@@ -52,7 +55,7 @@ fn a_view_lays_out_its_marks_in_running_text() {
     let page = mount(view);
     assert_eq!(
         page.laid_out_text("#doc p"),
-        "Fixed in v2, see main.rs and the guide."
+        "Fixed in v2, see \u{202f}main.rs\u{202f} and the guide."
     );
     for (selector, text) in [
         ("#doc strong", "v2"),
@@ -71,7 +74,10 @@ fn a_view_lays_out_its_marks_in_running_text() {
 #[test]
 fn a_view_keeps_the_spaces_at_the_edge_of_a_marked_run() {
     let page = mount(spaces);
-    assert_eq!(page.laid_out_text("#doc p"), "a bold then  code end");
+    assert_eq!(
+        page.laid_out_text("#doc p"),
+        "a bold then \u{202f} code \u{202f}end"
+    );
 }
 
 #[test]
@@ -89,6 +95,26 @@ fn a_view_paints_its_code_block_and_list() {
     let (_, list, ..) = page.rect("#doc ul");
     let (_, code, ..) = page.rect("#doc [data-code='view']");
     assert!(heading < list && list < code, "{heading} {list} {code}");
+}
+
+/// Todo 3877: a no-break space at each end gives inline code its side padding natively.
+#[test]
+fn inline_code_keeps_its_side_padding() {
+    fn app() -> Element {
+        let bare = sx().selector("& code::before, & code::after", sx().display("none"));
+        rsx! {
+            div { id: "spaced", width: "fit-content",
+                RichTextView { value: Doc::from_markdown("`main.rs`") }
+            }
+            div { id: "bare", width: "fit-content",
+                RichTextView { value: Doc::from_markdown("`main.rs`"), sx: bare }
+            }
+        }
+    }
+    let page = mount(app);
+    let gained = page.rect("#spaced").2 - page.rect("#bare").2;
+    // 0.25em of the code's 14px each side.
+    assert!((6.0..=8.0).contains(&gained), "{gained}");
 }
 
 fn tasks() -> Element {
@@ -133,7 +159,7 @@ fn the_editor_shows_its_document_through_the_view() {
     );
     assert_eq!(
         page.laid_out_text("#editor p"),
-        "Fixed in v2, see main.rs and the guide."
+        "Fixed in v2, see \u{202f}main.rs\u{202f} and the guide."
     );
     assert!(page.exists("#editor li"));
 }

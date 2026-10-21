@@ -50,7 +50,7 @@ fn Layout() -> Element {
 
 Both answer `false` on the first render and on a server render, then the real
 answer once the component is mounted. Where the platform cannot answer, as on
-native Blitz, they stay `false`. Passing a different query re-subscribes.
+a server render, they stay `false`. Passing a different query re-subscribes.
 
 ## API
 
@@ -63,7 +63,8 @@ pub fn use_is_mobile() -> ReadSignal<bool>
 |---|---|
 | Web | `matchMedia`, live. |
 | WebView (desktop, Android) | `matchMedia` over the page's script, after its first reply. |
-| Native Blitz, server render | `false`, always. |
+| Native Blitz | Its style engine, as its `@media` rules match: after mount, then each window resize, up to 500ms late. |
+| Server render | `false`, always. |
 
 Call both hooks unconditionally, in the same order every render.
 
@@ -91,5 +92,5 @@ burger.
 ### Limits
 
 - The first render answers `false` and the real answer lands after mount, so a
-  layout chosen by the hook flashes its default once. Native Blitz has no media
-  queries and always answers `false`.
+  layout chosen by the hook flashes its default once. Native Blitz reports no
+  pointer, so `(pointer: coarse)` answers `false` there.

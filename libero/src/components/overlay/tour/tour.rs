@@ -62,7 +62,8 @@ parts_enum! {
     }
 }
 
-// The popover layer, so a target inside a modal is covered too.
+// The popover layer, so a target inside a modal is covered too. Its boxes are `absolute`, the same
+// boxes under the fixed root: Blitz paints a nested `fixed` one at the root's level, under a `Header` (3875).
 static TOUR_SX: StaticSx = StaticSx::new(|| {
     let dim = format!("0 0 0 100vmax rgba(0, 0, 0, {})", OVERLAY_OPACITY.value());
     // On a `FocusTrap`, so `display` beats its `contents`.
@@ -73,12 +74,12 @@ static TOUR_SX: StaticSx = StaticSx::new(|| {
         .pointer_events("none")
         .selector(
             "& > [data-slot='mask']",
-            sx().position("fixed").inset("0").pointer_events("auto"),
+            sx().position("absolute").inset("0").pointer_events("auto"),
         )
         // A 100vmax spread covers the viewport from any hole; Blitz paints and hit-tests it (2210 probe).
         .selector(
             "& > [data-slot='highlight']",
-            sx().position("fixed")
+            sx().position("absolute")
                 .pointer_events("none")
                 .box_shadow(dim.clone()),
         )
@@ -106,7 +107,7 @@ const HOLE_GLIDE_FALLBACK_MS: u64 = 500;
 
 // No pointer events: presses beside the card reach the mask.
 static CENTRED_SX: StaticSx = StaticSx::new(|| {
-    sx().position("fixed")
+    sx().position("absolute")
         .inset("0")
         .display("flex")
         // `safe`: a card taller than the viewport starts at the top, not clipped at both ends.
@@ -926,7 +927,7 @@ fn TourCard(
 
     let positioned = use_box()
         .framework_sx(if centred { &CENTRED_SX } else { &PLACED_SX })
-        .style((!centred).then(|| popover.style()))
+        .style((!centred).then(|| popover.style_in_layer()))
         .prepare();
     let card_sx = sx()
         .width(format!("{max_width}px"))

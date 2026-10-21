@@ -25,7 +25,8 @@ fn a_highlighted_snippet_keeps_its_spaces() {
     assert!(page.exists("#line code span"), "highlighted");
     assert_eq!(
         page.laid_out_text("#line"),
-        "Bind it with let width: u32 = 320; before the first draw."
+        // The no-break spaces are the side spacers (todo 3877).
+        "Bind it with \u{202f}let width: u32 = 320;\u{202f} before the first draw."
     );
 }
 

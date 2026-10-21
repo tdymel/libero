@@ -124,7 +124,7 @@ fn native_narrow_window_shows_a_bottom_sheet() {
     assert!(height <= 844.0 * 0.7 + 1.0, "too tall: {height}");
 }
 
-/// Todo 3772: Blitz has no media query to ask, so the narrow parent row hears the window width.
+/// Todos 3772, 3878: natively the narrow query answers from the window width, through stylo.
 #[cfg(feature = "native")]
 #[test]
 fn native_narrow_window_reaches_the_parent_row_by_keyboard() {

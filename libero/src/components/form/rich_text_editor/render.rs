@@ -6,7 +6,7 @@ use dioxus::prelude::*;
 use super::model::{Attrs, Block, BlockKind, Content, Inline, Mark, Marks, NodeKey};
 use super::node_view::NodeViews;
 use crate::{
-    components::typography::CodeBlock,
+    components::typography::{CodeBlock, inline_side_spacers},
     sx::{Sx, sx},
     theme::{ANCHOR_COLOR, CODE_FONT_FAMILY, ColorCss, ColorShade},
 };
@@ -76,6 +76,7 @@ pub(crate) fn content_sx(base: Sx) -> Sx {
             sx().background("muted.2")
                 .border_radius("4px")
                 .padding("0 0.25em")
+                .and(inline_side_spacers("0.25em", "4px"))
                 .font_family(CODE_FONT_FAMILY.value())
                 .font_size("0.875em"),
         )

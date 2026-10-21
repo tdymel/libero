@@ -8,7 +8,7 @@ use crate::{
         layout::use_box,
     },
     platform::{paints_outer_inline_backgrounds, spaces_inline_boxes},
-    sx::{StaticSx, sx},
+    sx::{StaticSx, Sx, sx},
     theme::CODE_FONT_FAMILY,
 };
 
@@ -18,22 +18,47 @@ static CODE_INLINE_SX: StaticSx = StaticSx::new(|| {
         // Blitz fills a token's text from the token span alone.
         false => sx().selector("& > span", sx().background("inherit")),
     };
-    let short = match spaces_inline_boxes() {
-        true => sx().white_space("nowrap"),
-        // An unbroken span loses nothing as an inline-block, which keeps its side padding natively.
-        false => sx().white_space("nowrap").display("inline-block"),
-    };
     base.display("inline")
         .background("muted.2")
         .border_radius("4px")
         .padding("2px 6px")
+        .and(inline_side_spacers("6px", "4px"))
         .font_family(CODE_FONT_FAMILY.value())
         .font_size("0.875em")
         // An identifier has no break point; unbroken it runs out of a 320px column (WCAG 1.4.10).
         .with("overflow-wrap", "anywhere")
         // `anywhere` lowers min-content, so shrink-to-fit parents split short spans (todo 732).
-        .when("short", short)
+        .when("short", sx().white_space("nowrap"))
 });
+
+/// Natively an inline box's side padding takes no room (todo 3698): this drops it for a spacer
+/// `side` wide at each end, text that does, so the box still wraps across lines.
+pub(crate) fn inline_side_spacers(side: &str, radius: &str) -> Sx {
+    if spaces_inline_boxes() {
+        return sx();
+    }
+    // A no-break space, glued to the code beside it, 1ch wide in a monospace font; `/ ''` keeps it out
+    // of the text. An inline-block would stay behind at a line's end (3877).
+    let spacer = sx()
+        .content("'\\202f' / ''")
+        .letter_spacing(format!("calc({side} - 1ch)"))
+        .background("inherit");
+    sx().padding_left("0")
+        .padding_right("0")
+        .selector(
+            "&::before",
+            spacer
+                .clone()
+                .with("border-start-start-radius", radius)
+                .with("border-end-start-radius", radius),
+        )
+        .selector(
+            "&::after",
+            spacer
+                .with("border-start-end-radius", radius)
+                .with("border-end-end-radius", radius),
+        )
+}
 
 /// Up to this many characters a span stays on one line: ~170px, under a 320px column.
 const SHORT_CODE_CHARS: usize = 20;

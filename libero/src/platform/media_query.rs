@@ -10,8 +10,8 @@ pub trait MediaQueryApi {
 /// Dropping it stops the callbacks.
 pub trait MediaQuerySubscription {}
 
-/// The web's `matchMedia`, and a WebView's over eval; `None` on Blitz, which
-/// has no media query to ask, and on a server.
+/// The web's `matchMedia`, a WebView's over eval, and Blitz's stylo, re-asked on each
+/// window resize; `None` on a server.
 ///
 /// ```no_run
 /// if let Some(media) = libero::platform::media_query() {

@@ -98,15 +98,21 @@ impl PopoverHandle {
     /// Every declaration is emitted on every render: a renderer never removes
     /// one that stops being printed. The CSS width cap keeps it on a phone (todo 357).
     pub fn style(&self) -> String {
-        self.style_with(true)
+        self.style_with(true, "fixed")
     }
 
     /// [`style`](Self::style) without the width cap, for a box whose class carries it.
     pub(crate) fn style_uncapped(&self) -> String {
-        self.style_with(false)
+        self.style_with(false, "fixed")
     }
 
-    fn style_with(&self, capped: bool) -> String {
+    /// [`style`](Self::style) as `absolute`, the same box in a `fixed` viewport-wide layer:
+    /// Blitz paints a nested `fixed` box at the root's level, under a z-indexed `Header` (3875).
+    pub(crate) fn style_in_layer(&self) -> String {
+        self.style_with(true, "absolute")
+    }
+
+    fn style_with(&self, capped: bool, position: &str) -> String {
         let (x, y, visibility, available) = match *self.placed.read() {
             Some(placed) => (
                 placed.x,
@@ -135,7 +141,7 @@ impl PopoverHandle {
         };
 
         format!(
-            "position:fixed;left:{x}px;top:{y}px;width:{width};min-width:{min_width};{cap}visibility:{visibility};{}:{available};",
+            "position:{position};left:{x}px;top:{y}px;width:{width};min-width:{min_width};{cap}visibility:{visibility};{}:{available};",
             AVAILABLE_HEIGHT.name()
         )
     }

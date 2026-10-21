@@ -2,10 +2,12 @@
 //! so the platform moves it to its scroller's top edge (todo 907).
 
 use dioxus::prelude::*;
-use e2e::native::{Page, mount};
+use e2e::native::{Key, Page, mount};
 use libero::{
-    components::{Header, HeaderPosition, ScrollArea, Select, Table, column},
-    hooks::{ModalScope, use_modal},
+    components::{
+        Header, HeaderPosition, ScrollArea, Select, Table, TourOptions, TourStep, column, use_tour,
+    },
+    hooks::{LightboxItem, LightboxOptions, ModalScope, use_element, use_lightbox, use_modal},
     sx::sx,
 };
 
@@ -66,6 +68,80 @@ fn nested_fixed() -> Element {
 fn a_fixed_box_paints_in_its_parents_stacking_context() {
     let page = mount(nested_fixed);
     assert_ne!(page.painted_pixel(500, 30), "rgb(255, 0, 0)");
+}
+
+const RED: &str = "rgb(255, 0, 0)";
+
+/// A banner as tall as the viewport, so a centred card or a phone dialog lands on it.
+fn tall_banner() -> Element {
+    let target = use_element();
+    let tour = use_tour(TourOptions {
+        steps: vec![
+            TourStep::new("placed").target(target).title("Placed"),
+            TourStep::new("centred").title("Centred"),
+        ],
+        ..Default::default()
+    });
+    let lightbox = use_lightbox(LightboxOptions::default());
+    rsx! {
+        Header { id: "banner", sx: sx().background(RED).height("100vh"),
+            button { id: "tour", onmounted: target.mount(), onclick: move |_| tour.start(), "Tour" }
+            button {
+                id: "lightbox",
+                onclick: move |_| {
+                    lightbox.open_with(vec![LightboxItem::new("picture.png", "A picture")]);
+                },
+                "Lightbox"
+            }
+        }
+    }
+}
+
+/// Todo 3875: the tour's dim and its card, placed or centred, paint over a z-indexed `Header`.
+#[test]
+fn a_tour_dims_the_banner_and_its_card_covers_it() {
+    const CARD: &str = "[data-lsx-tour] [data-slot=card]";
+    let mut page = mount(tall_banner);
+    assert_eq!(page.painted_pixel(1000, 700), RED);
+    page.click("#tour");
+    for step in ["Placed", "Centred"] {
+        page.wait_for(|page| page.is_focused(CARD) && page.text(CARD).contains(step));
+        page.advance(1.0);
+        assert_ne!(
+            page.painted_pixel(1000, 700),
+            RED,
+            "{step}: {}",
+            page.tree()
+        );
+        let (x, y, width, height) = page.rect(CARD);
+        let (x, y) = ((x + width / 2.0) as u32, (y + height - 3.0) as u32);
+        // A light card's pixel, not the banner's red, dimmed or not.
+        let [_, green, ..] = page.painted_pixels(&[(x, y)])[0];
+        assert!(
+            green > 128,
+            "{step}: the card is under the banner: {}",
+            page.painted_pixel(x, y)
+        );
+        page.press(Key::Named(NamedKey::ArrowRight));
+    }
+}
+
+/// Todo 3876: on a phone the viewer's full-screen dialog covers a z-indexed `Header`.
+#[test]
+fn a_phone_lightbox_covers_the_banner() {
+    let mut page = mount(tall_banner);
+    page.resize(400, 700);
+    page.click("#lightbox");
+    page.wait_for(|page| page.exists("[role=dialog]"));
+    page.advance(1.0);
+    let (x, y, width, height) = page.rect("[role=dialog]");
+    assert_eq!((x, y, width, height), (0.0, 0.0, 400.0, 700.0));
+    let [_, green, ..] = page.painted_pixels(&[(390, 690)])[0];
+    assert!(
+        green > 128,
+        "the dialog is under the banner: {}",
+        page.painted_pixel(390, 690)
+    );
 }
 
 fn top(page: &Page, selector: &str) -> f64 {

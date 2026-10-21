@@ -599,12 +599,12 @@ pub(crate) fn color_scheme() -> Option<&'static dyn ColorSchemeApi> {
     return webview::color_scheme();
 }
 
-/// The web and a WebView answer media queries; Blitz and a server get `None`.
+/// The web, a WebView and Blitz (through stylo) answer media queries; a server gets `None`.
 pub(crate) fn media_query() -> Option<&'static dyn MediaQueryApi> {
     #[cfg(target_arch = "wasm32")]
     return web::media_query();
     #[cfg(all(not(target_arch = "wasm32"), feature = "native"))]
-    return None;
+    return blitz::media_query();
     #[cfg(all(not(target_arch = "wasm32"), not(feature = "native")))]
     return webview::media_query();
 }

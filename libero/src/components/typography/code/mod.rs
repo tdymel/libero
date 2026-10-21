@@ -5,6 +5,7 @@ mod language_catalog;
 mod languages;
 mod token_theme;
 
+pub(crate) use code::inline_side_spacers;
 pub use code::{Code, CodeProps};
 pub use code_block::{CodeBlock, CodeBlockPart, CodeBlockProps};
 pub use highlight::Language;

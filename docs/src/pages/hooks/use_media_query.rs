@@ -22,7 +22,7 @@ pub fn UseMediaQueryPage() -> Element {
                 ])
                 .example("A settings page that swaps its sidebar for a drawer on `use_media_query(\"(max-width: 48em)\")`: at 200% zoom the page narrows past the breakpoint, the drawer takes over, and every link stays reachable from its burger.")
                 .limits([
-                    "The first render answers `false` and the real answer lands after mount, so a layout chosen by the hook flashes its default once. Native Blitz has no media queries and always answers `false`.",
+                    "The first render answers `false` and the real answer lands after mount, so a layout chosen by the hook flashes its default once. Native Blitz reports no pointer, so `(pointer: coarse)` answers `false` there.",
                 ]),
             lead: rsx! {
                 Text {
@@ -49,7 +49,7 @@ pub fn UseMediaQueryPage() -> Element {
                     "Both answer "
                     Code { source: "false" }
                     " on the first render and on a server render, then the real answer once the component is mounted. "
-                    "Where the platform cannot answer, as on native Blitz, they stay "
+                    "Where the platform cannot answer, as on a server render, they stay "
                     Code { source: "false" }
                     ". Passing a different query re-subscribes."
                 }

@@ -35,6 +35,7 @@ fn safe_padding(side: &str) -> String {
 
 // On a phone the dialog is the whole screen, the stage taking the room left; it
 // scrolls when a long caption outgrows it (todo 1307). A double-click zooms, so it selects nothing (todo 917).
+// `absolute` over the modal's viewport-tall frame: Blitz paints a `fixed` one under a `Header` (3876).
 pub(super) static LIGHTBOX_DIALOG_SX: StaticSx = StaticSx::new(|| {
     sx().width("100%")
         .user_select("none")
@@ -42,7 +43,7 @@ pub(super) static LIGHTBOX_DIALOG_SX: StaticSx = StaticSx::new(|| {
         .padding("sm")
         .media(
             phone(),
-            sx().position("fixed")
+            sx().position("absolute")
                 .inset("0")
                 .max_width("none")
                 .margin("0")

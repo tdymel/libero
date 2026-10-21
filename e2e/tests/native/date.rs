@@ -9,7 +9,9 @@ use dioxus::prelude::*;
 use e2e::native::{Key, Modifiers, Page, mount};
 use libero::{
     chrono::{NaiveDate, NaiveDateTime, NaiveTime, TimeDelta},
-    components::{ChronoField, ChronoPicker, DateLevel, DateRange, TimeField, TimePicker},
+    components::{
+        ChronoField, ChronoPicker, DateLevel, DateRange, DateRangePicker, TimeField, TimePicker,
+    },
 };
 
 const INPUT: &str = "input[data-controlled]";
@@ -62,6 +64,30 @@ fn a_click_opens_the_date_dialog_and_leaves_focus_in_the_input() {
     page.click(INPUT);
     assert!(page.exists(DIALOG), "{}", page.tree());
     assert!(page.is_focused(INPUT), "{}", page.focus_owner());
+}
+
+fn range_picker() -> Element {
+    let mut range = use_signal(|| None::<DateRange<NaiveDate>>);
+    rsx! {
+        DateRangePicker { value: range(), today: day(2026, 3, 18), onchange: move |v| range.set(v) }
+    }
+}
+
+/// Todo 3878: under `sm` a native window shows one month, as the web does, and two past it.
+#[test]
+fn a_range_picker_shows_one_month_in_a_narrow_window() {
+    let mut page = mount(range_picker);
+    let months = |page: &mut Page, width: u32, count: usize| {
+        page.resize(width, 768);
+        assert!(
+            page.wait_for(|page| page.query_all("[role=grid]").len() == count),
+            "{} months at {width}px",
+            page.query_all("[role=grid]").len()
+        );
+    };
+    months(&mut page, 1024, 2);
+    months(&mut page, 400, 1);
+    months(&mut page, 1024, 2);
 }
 
 /// Buttons around it: a Tab from the input would otherwise enter the portaled

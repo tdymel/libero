@@ -3,7 +3,10 @@
 
 use dioxus::prelude::*;
 use e2e::native::mount;
-use libero::components::{Anchor, Badge, Code, Kbd, Mark, Text};
+use libero::{
+    components::{Anchor, Badge, Code, Kbd, Mark, Text},
+    sx::sx,
+};
 
 fn app() -> Element {
     rsx! {
@@ -21,7 +24,7 @@ fn app() -> Element {
     }
 }
 
-/// An inline-block (`Kbd`, `Badge`, a short `Code`) lays its text out apart, hence the gaps.
+/// An inline-block (`Kbd`, `Badge`) lays its text out apart, hence the gaps.
 #[test]
 fn inline_components_keep_the_spaces_around_them() {
     let mut page = mount(app);
@@ -30,7 +33,8 @@ fn inline_components_keep_the_spaces_around_them() {
         ("#mark", "Highlights a chunk of text."),
         ("#combo", "Press  +  to search."),
         ("#badge", "Status  today."),
-        ("#code", "Call  once."),
+        // The no-break spaces are `Code`'s side spacers natively (todo 3877).
+        ("#code", "Call \u{202f}run()\u{202f} once."),
         ("#anchor", "Read the guide first."),
         ("#nested", "A chunk with  inside here."),
     ] {
@@ -46,13 +50,36 @@ fn a_callers_edge_spaces_survive() {
     assert_eq!(page.laid_out_text("#edge"), "x spaced y");
 }
 
-/// Todo 3698: a short `Code` is an inline-block natively, so its side padding takes room.
+/// Todos 3698, 3877: natively a no-break space at each end of a `Code` stands in for its side
+/// padding, short or long, and a long one still wraps across lines.
 #[test]
-fn a_short_code_keeps_its_side_padding() {
+fn a_code_keeps_its_side_padding_and_a_long_one_wraps() {
+    const LONG: &str = "a_long_identifier_past_twenty";
+    fn app() -> Element {
+        let bare = sx().selector("&::before, &::after", sx().display("none"));
+        rsx! {
+            div { id: "short", width: "fit-content", Code { source: "run()" } }
+            div { id: "short-bare", width: "fit-content",
+                Code { source: "run()", sx: bare.clone() }
+            }
+            div { id: "long", width: "fit-content", Code { source: LONG } }
+            div { id: "long-bare", width: "fit-content", Code { source: LONG, sx: bare } }
+            div { id: "wrap", width: "120px", Code { source: "one two three four five six" } }
+        }
+    }
     let mut page = mount(app);
     page.settle();
-    assert_eq!(page.computed("#code code", "display"), "inline-block");
-    assert_eq!(page.computed("#code code", "padding-left"), "6px");
+    assert_eq!(page.computed("#short code", "padding-left"), "0px");
+    let width = |id: &str| page.rect(id).2;
+    for id in ["#short", "#long"] {
+        let gained = width(id) - width(&format!("{id}-bare"));
+        assert!((11.0..=13.0).contains(&gained), "{id}: {gained}");
+    }
+    let line = page.rect("#short").3;
+    assert!(
+        page.rect("#wrap").3 > 1.5 * line,
+        "a long code did not wrap"
+    );
 }
 
 /// Blitz adds no width for a plain inline element's horizontal margin or padding, so libero

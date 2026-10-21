@@ -7,8 +7,8 @@ use crate::platform::{MediaQuerySubscription, media_query};
 const MOBILE_QUERY: &str = "(max-width: 767px)";
 
 /// Whether a CSS media query matches, live. `false` on the first render and
-/// wherever the platform has no media queries (a server render, native Blitz),
-/// then the real answer once the component is mounted.
+/// wherever the platform has no media queries (a server render), then the real
+/// answer once the component is mounted.
 ///
 /// ```rust
 /// # use dioxus::prelude::*;
