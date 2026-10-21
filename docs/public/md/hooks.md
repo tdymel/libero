@@ -72,6 +72,7 @@ Accessibility. The rest are shown on the component or guide page they belong to.
 | `use_form` | Controls a Form: validity, check, submit and reset. | [Form](form.md) |
 | `use_form_context` | The handle of the Form it is called inside. | [Form](form.md) |
 | `use_combobox` | Keeps a Combobox's open state in your scope. | [Combobox](combobox.md) |
+| `use_cascader` | Keeps a CascaderDropdown's value and open state for a trigger of your own. | [Cascader](cascader.md) |
 | `use_rich_text_editor` | Drives a RichTextEditor from toolbar controls of your own. | [RichTextEditor](rich_text_editor.md) |
 | `use_modal` | Registers a modal and returns the handle that opens it. | [Modal](modal.md) |
 | `use_modal_close` | Closes the modal it is rendered in. | [Modal](modal.md) |

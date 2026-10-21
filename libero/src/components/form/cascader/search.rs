@@ -3,7 +3,7 @@ use dioxus::prelude::*;
 use crate::{
     components::{
         common::{HtmlTag, Part, inset_focus_ring_sx},
-        form::{ComboboxState, DropdownPart, PreparedField, with_drawn_placeholder},
+        form::{ComboboxState, DropdownPart, with_drawn_placeholder},
         layout::BoxStyle,
     },
     hooks::ElementHandle,
@@ -11,6 +11,8 @@ use crate::{
     sx::{StaticSx, sx},
     theme::{FOCUS_RING_WIDTH, ios_text_floor_sx},
 };
+
+use super::core::Naming;
 
 /// The search box above the rows, as on `Select`. Not a field control, so it carries its own chrome.
 pub(super) static CASCADER_SEARCH_SX: StaticSx = StaticSx::new(|| {
@@ -56,8 +58,7 @@ pub(super) fn search_header(
     descendant: Option<String>,
     placeholder: String,
     // The open box is the combobox, so it carries the field's label and captions.
-    field: &PreparedField,
-    required: bool,
+    names: &Naming,
 ) -> Element {
     let CascaderSearch {
         element,
@@ -82,10 +83,10 @@ pub(super) fn search_header(
         // Expanded only while a listbox is there to control.
         .attr("aria-expanded", controlled_id.is_some().to_string())
         .attr("aria-controls", controlled_id)
-        .attr("aria-labelledby", field.label_id())
-        .attr("aria-describedby", field.describedby())
-        .attr("aria-invalid", field.invalid().then_some("true"))
-        .attr("aria-required", required.then_some("true"))
+        .attr("aria-labelledby", names.label_id.clone())
+        .attr("aria-describedby", names.describedby.clone())
+        .attr("aria-invalid", names.invalid.then_some("true"))
+        .attr("aria-required", names.required.then_some("true"))
         .attr("aria-activedescendant", descendant)
         .event("oninput", move |event: FormEvent| {
             query.set(event.value());

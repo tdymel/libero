@@ -69,8 +69,8 @@ pub use autocomplete::{
 pub use caption::Caption;
 #[cfg(feature = "cascader")]
 pub use cascader::{
-    Cascader, CascaderFilterArgs, CascaderLayout, CascaderNodeArgs, CascaderOption, CascaderPart,
-    CascaderProps,
+    Cascader, CascaderDropdown, CascaderDropdownProps, CascaderFilterArgs, CascaderLayout,
+    CascaderNodeArgs, CascaderOption, CascaderPart, CascaderProps, CascaderState, use_cascader,
 };
 #[cfg(feature = "checkbox")]
 pub use checkbox::{Checkbox, CheckboxPart, CheckboxProps};

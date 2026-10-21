@@ -303,6 +303,11 @@ fn hooks() -> Vec<HookRow> {
             Route::ComboboxPage {},
         ),
         row(
+            "use_cascader",
+            "Keeps a CascaderDropdown's value and open state for a trigger of your own.",
+            Route::CascaderPage {},
+        ),
+        row(
             "use_rich_text_editor",
             "Drives a RichTextEditor from toolbar controls of your own.",
             Route::RichTextEditorPage {},

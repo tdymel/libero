@@ -78,20 +78,17 @@ fn a_narrow_screen_drills_into_one_column() {
     );
 }
 
-/// Below `sm` the dropdown is a bottom sheet; the inline position of the popover must lose.
+/// Below `sm` the dropdown is a bottom sheet; the popover's class placement, printed first, must lose.
 #[test]
 fn a_narrow_screen_makes_the_dropdown_a_bottom_sheet() {
     let css = Stylesheet::from(&*CASCADER_DROPDOWN_SX);
     let css = css.as_str();
-    let (_, narrow) = css
+    let (wide, narrow) = css
         .split_once("@media not all and (min-width: 48rem){")
         .unwrap_or_else(|| panic!("no narrow rule: {css}"));
+    assert!(wide.contains("left:var(--lsx-popover-x)"), "{wide}");
 
-    for declaration in [
-        "left:0 !important;",
-        "bottom:0 !important;",
-        "width:100% !important;",
-    ] {
+    for declaration in ["left:0;", "bottom:0;", "width:100%;"] {
         assert!(narrow.contains(declaration), "{declaration} in {narrow}");
     }
     // `vh` first for a browser without `dvh`, which skips the `@supports` block.
@@ -149,4 +146,70 @@ fn the_columns_stay_inside_the_viewport() {
         "{}",
         columns.as_str()
     );
+}
+
+/// `use_cascader` reads `data` and `value` fresh each render, not from its first call.
+#[test]
+fn the_headless_state_follows_data_and_value() {
+    use crate::{
+        LiberoProvider,
+        components::{CascaderDropdown, CascaderOption, use_cascader},
+    };
+    use dioxus::prelude::*;
+    use std::cell::RefCell;
+
+    thread_local! {
+        static SEEN: RefCell<Vec<(Vec<String>, Vec<String>)>> = const { RefCell::new(Vec::new()) };
+    }
+
+    #[allow(non_snake_case)]
+    fn Picker() -> Element {
+        let mut tick = use_signal(|| 0);
+        let ore = match tick() {
+            0 => "iron",
+            _ => "gold",
+        };
+        let mut ores = vec![CascaderOption::new("iron".to_string(), "Iron ore")];
+        if tick() > 0 {
+            ores.push(CascaderOption::new("gold".to_string(), "Gold ore"));
+        }
+        let state = use_cascader(
+            vec![CascaderOption::new("t1".to_string(), "Tier 1").children(ores)],
+            Some(ore.to_string()),
+            |_| {},
+        );
+        let names: Vec<String> = state
+            .a11y_attributes()
+            .iter()
+            .map(|attribute| attribute.name.to_string())
+            .collect();
+        SEEN.with_borrow_mut(|seen| seen.push((state.labels(), names)));
+        use_effect(move || {
+            if *tick.peek() == 0 {
+                tick.set(1);
+            }
+        });
+        rsx! {
+            CascaderDropdown { state: state.clone(),
+                button { "Ore" }
+            }
+        }
+    }
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider { Picker {} }
+        }
+    }
+
+    let mut dom = VirtualDom::new(app);
+    dom.rebuild_in_place();
+    dom.render_immediate(&mut dioxus::core::NoOpMutations);
+    let seen = SEEN.take();
+    let (first_labels, first_names) = &seen[0];
+    assert_eq!(first_labels, &["Tier 1", "Iron ore"]);
+    for name in ["id", "role", "aria-haspopup", "aria-expanded"] {
+        assert!(first_names.iter().any(|n| n == name), "{first_names:?}");
+    }
+    let (last_labels, _) = seen.last().unwrap();
+    assert_eq!(last_labels, &["Tier 1", "Gold ore"], "{seen:?}");
 }

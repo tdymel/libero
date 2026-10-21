@@ -47,7 +47,7 @@ pub(super) static CASCADER_TRIGGER_SX: StaticSx = StaticSx::new(|| {
 });
 
 /// Only one element is the combobox: while the search box is open, the trigger keeps just `aria-haspopup`.
-fn trigger_aria(
+pub(super) fn trigger_aria(
     searchable: bool,
     opened: bool,
     empty: bool,

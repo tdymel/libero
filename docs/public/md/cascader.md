@@ -98,6 +98,81 @@ Cascader {
 }
 ```
 
+### Any trigger
+
+`use_cascader` keeps the tree, the value and the open state in your scope, and
+`CascaderDropdown` drops the same cascade, keyboard included, from your own
+button. Spread `cascader.a11y_attributes()` on it. There is no hidden input and
+no `Form` binding. This ore picker shows the ore and its stock on a round
+button, and each row trails its own:
+
+```rust
+use dioxus::prelude::*;
+use libero::components::{
+    Button, CascaderDropdown, CascaderNodeArgs, CascaderOption, Icon, Text, use_cascader,
+};
+use libero::sx::sx;
+use pictogram_icons_lucide as lucide;
+
+fn ores() -> Vec<CascaderOption<String>> {
+    vec![
+        CascaderOption::new("tier-1", "Tier 1").children(vec![
+            CascaderOption::new("iron", "Iron ore"),
+            CascaderOption::new("copper", "Copper ore"),
+        ]),
+        CascaderOption::new("tier-2", "Tier 2")
+            .children(vec![CascaderOption::new("gold", "Gold ore")]),
+    ]
+}
+
+/// Have and need; a tier needs nothing.
+fn stock(value: &str) -> (u32, u32) {
+    match value {
+        "iron" => (3, 10),
+        "copper" => (12, 8),
+        "gold" => (0, 2),
+        _ => (0, 0),
+    }
+}
+
+#[component]
+fn OrePicker() -> Element {
+    let mut ore = use_signal(|| Some("copper".to_string()));
+    let cascader = use_cascader(ores(), ore(), move |next| ore.set(next));
+    let name = cascader.labels().last().cloned().unwrap_or("No ore".into());
+    let (have, need) = stock(ore().as_deref().unwrap_or_default());
+    rsx! {
+        CascaderDropdown {
+            state: cascader.clone(),
+            node: move |row: CascaderNodeArgs<String>| {
+                let (have, need) = stock(&row.value);
+                rsx! {
+                    // Fills the row, so the stock trails at its end.
+                    Text { component: "span", sx: sx().display("flex").justify_content("space-between").gap("md").width("100%").font_weight("inherit"),
+                        span { "{row.label}" }
+                        if need > 0 {
+                            Text { component: "span", size: "sm", color: "dimmed", "{have}/{need}" }
+                        }
+                    }
+                }
+            },
+            Button {
+                radius: "xl",
+                variant: "light",
+                icon: rsx! { Icon { size: "sm", color: "inherit", svg: lucide::pickaxe::outlined } },
+                // A combobox takes no name from its content.
+                attributes: [
+                    cascader.a11y_attributes(),
+                    vec![Attribute::new("aria-label", format!("Ore: {name}, {have} of {need}"), None, false)],
+                ]
+                .concat(),
+                "{name} {have}/{need}"
+            }
+        }
+    }
+}
+```
+
 ## Props
 
 ### `Cascader`
@@ -153,6 +228,49 @@ Like every component, it also takes the shared props `sx`, `class`, `style`,
 | `label` | `String` | - | The path's labels joined by `separator`, what the default filter matches. |
 | `path` | `Vec<T>` | - | The values from the root to the option. The last one is what this path commits. |
 
+### `use_cascader`
+
+| Prop | Type | Default | Description |
+|---|---|---|---|
+| `data` | `Vec<CascaderOption<T>>` | required | The tree, as on `Cascader`. Read again on every render. |
+| `value` | `Option<T>` | required | The selected option's value. Read again on every render, so pass your signal's current value. |
+| `onchange` | `FnMut(Option<T>)` | required | Called with the value to select next, or `None` when `allow_deselect` cleared it. There is no hidden input and no `Form` binding: you own the value. |
+
+### `CascaderState`
+
+| Prop | Type | Default | Description |
+|---|---|---|---|
+| `a11y_attributes()` | `Vec<Attribute>` | - | The trigger's `id`, `role="combobox"`, `aria-haspopup`, `aria-expanded`, and while open `aria-controls` and `aria-activedescendant`. Spread it on the button inside `CascaderDropdown`. |
+| `labels()` | `Vec<String>` | - | The selected option's labels, root first. Empty while nothing in `data` holds `value`. |
+| `selected_path()` | `Vec<T>` | - | The selected option's values, root first, as `labels()`. |
+| `value()` | `Option<T>` | - | The `value` passed in. |
+| `is_open()` | `bool` | - | Whether the list is open. |
+| `close()` | `()` | - | Closes the list. |
+| `id()` | `String` | - | The id the trigger and the list derive theirs from. |
+
+### `CascaderDropdown`
+
+| Prop | Type | Default | Description |
+|---|---|---|---|
+| `state` | `CascaderState<T>` | required | From `use_cascader`. |
+| `children` | `Element` | required | The trigger, a `button` carrying `state.a11y_attributes()`. It needs no click or key handler of its own: Enter and Space click it, and the dropdown takes the click and the keys. A debug build warns when the list opens and no element carries the trigger's id. |
+| `any_level` | `bool` | `false` | As on `Cascader`. |
+| `allow_deselect` | `bool` | `false` | As on `Cascader`. |
+| `layout` | `CascaderLayout` | `columns` | As on `Cascader`, the narrow drill-in included. |
+| `searchable` | `bool` | `false` | Puts a search box at the top of the list. Focus moves into it while the list is open, and back to the trigger when it closes. |
+| `filter` | `Callback<CascaderFilterArgs<T>, bool>` | - | As on `Cascader`. |
+| `separator` | `String` | `" / "` | Between labels in a `"paths"` row. |
+| `node` | `Callback<CascaderNodeArgs<T>, Element>` | `label` | Draws one row's content, such as a trailing stock count. |
+| `column_width` | `String` | `220px` | As on `Cascader`. |
+| `search_placeholder` | `String` | - | What the search box says while empty. |
+| `size` | `Size` | `md` | Row height and font size. |
+| `radius` | `ThemeAwareValue` | `sm` | The list's corner radius. |
+| `disabled` | `bool` | `false` | The trigger opens nothing, and an open list closes. Disable your button too. |
+
+It also takes the shared props `sx`, `class`, `style`, `states`, and any extra
+HTML attributes. They land on the dropdown box, and `parts` styles its
+`DropdownPart`s.
+
 ## Style API
 
 Style a part with the `parts` prop, or address it as `[data-slot='…']` in your
@@ -174,7 +292,7 @@ explains how parts work.
 ### Dropdown
 
 The dropdown is portaled out of the field, so its parts take the
-`dropdown_parts` prop. They match from the dropdown box at any depth.
+`dropdown_parts` prop, or `CascaderDropdown`'s `parts`. They match from the dropdown box at any depth.
 
 | Part | `data-slot` | Description |
 |---|---|---|
@@ -231,6 +349,9 @@ The dropdown is portaled out of the field, so its parts take the
 
 - Without a `label`, set `aria_label`. Otherwise screen readers announce an
   unnamed combobox.
+- With `CascaderDropdown`, spread `state.a11y_attributes()` on a `button` and
+  give it an `aria-label`: a combobox takes no name from its content. The
+  listboxes and the search box take their name from it.
 
 ### Example
 

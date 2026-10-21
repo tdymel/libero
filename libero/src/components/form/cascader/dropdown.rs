@@ -4,7 +4,7 @@ use dioxus::prelude::*;
 
 use crate::{
     components::{
-        common::{ComboboxState, HtmlTag, Input, Part, Parts, States},
+        common::{ClassList, ComboboxState, HtmlTag, Input, Part, Parts, States},
         form::{DropdownPart, combobox::COMBOBOX_DROPDOWN_SX},
         layout::{BoxStyle, use_box},
     },
@@ -13,7 +13,7 @@ use crate::{
         use_field_list_layer, use_popover_on,
     },
     platform::{ElementApi, SCROLL_MARGIN_BOTTOM_VAR},
-    sx::{StaticSx, sx},
+    sx::{StaticSx, Sx, sx},
     theme::Size,
 };
 
@@ -23,18 +23,18 @@ use super::{
     search::{CASCADER_SEARCH_SX, use_focus_search},
 };
 
-/// The dropdown. Narrow, a bottom sheet: full width at the screen's foot. `!important`
-/// beats the popover's inline position, which keeps measuring but no longer places.
+/// The dropdown. Narrow, a bottom sheet: full width at the screen's foot. Its rules
+/// override the popover's class placement, which keeps measuring but no longer places.
 pub(super) static CASCADER_DROPDOWN_SX: StaticSx = StaticSx::new(|| {
     COMBOBOX_DROPDOWN_SX.clone().media(
         narrow_query(),
-        sx().left("0 !important")
-            .right("0 !important")
-            .top("auto !important")
-            .bottom("0 !important")
-            .width("100% !important")
-            .min_width("0 !important")
-            .max_width("100% !important")
+        sx().left("0")
+            .right("0")
+            .top("auto")
+            .bottom("0")
+            .width("100%")
+            .min_width("0")
+            .max_width("100%")
             .max_height("70vh")
             .border_bottom_left_radius("0")
             .border_bottom_right_radius("0")
@@ -49,6 +49,7 @@ pub(super) fn dropdown_box(
     style: BoxStyle,
     floating: &ElementHandle,
     keys: Rc<CascaderKeys>,
+    attributes: Vec<Attribute>,
     content: Element,
 ) -> Element {
     style
@@ -60,7 +61,7 @@ pub(super) fn dropdown_box(
         // Portaled, so keys inside would bubble to `PortalOutlet`, not the trigger.
         .event("onkeydown", move |event: KeyboardEvent| keys.handle(event))
         .attr("data-slot", DropdownPart::Panel.slot())
-        .render(HtmlTag::Div, Vec::new(), content)
+        .render(HtmlTag::Div, attributes, content)
 }
 
 /// The bottom sheet may cover the field (WCAG 2.4.11): once placed over it, the trigger's
@@ -94,7 +95,7 @@ fn use_sheet_clearance(
                 return;
             };
             // A placed popover keeps its placed top and covers what a dropdown covers; only
-            // the sheet, moved by its `!important`, covers the field.
+            // the sheet, moved by its narrow rules, covers the field.
             if popover
                 .placed_top()
                 .is_none_or(|placed_top| (placed_top - sheet_top).abs() < 1.0)
@@ -125,6 +126,8 @@ fn use_sheet_clearance(
 
 pub(super) struct DropdownSetup<'a> {
     pub(super) state: ComboboxState,
+    /// What the popover hangs from: the field's wrapper, or a custom trigger.
+    pub(super) anchor: ElementHandle,
     /// The field's root, so the sheet clears its helper and error too.
     pub(super) field: Option<ElementHandle>,
     pub(super) opened: bool,
@@ -137,10 +140,12 @@ pub(super) struct DropdownSetup<'a> {
     pub(super) gap: f64,
     pub(super) padding: f64,
     pub(super) parts: &'a Input<Parts<DropdownPart>>,
+    /// `CascaderDropdown`'s own `class` and `sx`; the field styles its box by `dropdown_parts` only.
+    pub(super) class: Option<&'a Input<ClassList>>,
+    pub(super) sx: Option<&'a Input<Sx>>,
 }
 
 pub(super) struct Dropdown {
-    pub(super) anchor: ElementHandle,
     pub(super) popover: PopoverHandle,
     pub(super) search_box: BoxStyle,
     pub(super) wrapper: BoxStyle,
@@ -150,6 +155,7 @@ pub(super) struct Dropdown {
 pub(super) fn use_cascader_dropdown(setup: DropdownSetup) -> Dropdown {
     let DropdownSetup {
         state,
+        anchor,
         field,
         opened,
         searchable,
@@ -161,11 +167,12 @@ pub(super) fn use_cascader_dropdown(setup: DropdownSetup) -> Dropdown {
         gap,
         padding,
         parts,
+        class,
+        sx: own_sx,
     } = setup;
 
     // On the Escape stack while open, so a surrounding `HoverCard` leaves the press to it.
     use_field_list_layer(opened, use_callback(move |()| state.close()));
-    let anchor = use_element();
     let popover = use_popover_on(
         anchor,
         use_element(),
@@ -191,18 +198,24 @@ pub(super) fn use_cascader_dropdown(setup: DropdownSetup) -> Dropdown {
         .with("bordered", true)
         .with(layout.state_name(), true)
         .into();
-    let dropdown = use_box()
+    let mut dropdown = use_box()
         // `use_popover` caps it to the viewport; wide columns scroll inside instead of off-screen.
         .framework_sx(&CASCADER_DROPDOWN_SX)
         .parts(parts)
         .states(&dropdown_states)
-        .style(Some(popover.style()))
-        .prepare();
+        // Vars, not inline placement: `COMBOBOX_DROPDOWN_SX` places by class, so `sx` can move it.
+        .style(Some(popover.vars()));
+    if let Some(class) = class {
+        dropdown = dropdown.class(class);
+    }
+    if let Some(own_sx) = own_sx {
+        dropdown = dropdown.sx(own_sx);
+    }
+    let dropdown = dropdown.prepare();
 
     use_focus_search(opened, searchable, popover.placed(), search);
 
     Dropdown {
-        anchor,
         popover,
         search_box,
         wrapper,

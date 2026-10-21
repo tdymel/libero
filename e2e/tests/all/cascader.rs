@@ -152,6 +152,108 @@ e2e::scenario!(
     taps_walk_the_levels
 );
 
+const ICON_TRIGGER: &str = "button[role=combobox]";
+
+/// The icon trigger's `aria-activedescendant`, or `closed`.
+async fn icon_cursor<D: Driver>(d: &mut D) -> Result<String> {
+    if d.attr(ICON_TRIGGER, "aria-expanded").await?.as_deref() != Some("true") {
+        return Ok("closed".into());
+    }
+    Ok(d.attr(ICON_TRIGGER, "aria-activedescendant")
+        .await?
+        .unwrap_or_default())
+}
+
+async fn eventually_on<D: Driver>(d: &mut D, suffix: &str, what: &str) -> Result<()> {
+    eventually(d, what, async |d| {
+        Ok(icon_cursor(d).await?.ends_with(suffix))
+    })
+    .await
+}
+
+/// minmax-3895: a round icon button opens the headless cascade. The arrows walk Tier 1, then its
+/// ores; Enter commits and closes; Escape closes; focus stays on the trigger; rows trail their stock.
+pub async fn a_custom_trigger_walks_the_cascade<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    d.focus(ICON_TRIGGER).await?;
+    eventually_focused(d, ICON_TRIGGER, "focus on the icon button").await?;
+    d.press(keyboard::ARROW_DOWN).await?;
+    eventually_on(d, "-option-0-0", "ArrowDown opens on Tier 1").await?;
+    let controls = d
+        .attr(ICON_TRIGGER, "aria-controls")
+        .await?
+        .unwrap_or_default();
+    anyhow::ensure!(
+        d.exists(&format!("[role=listbox][id='{controls}']"))
+            .await?,
+        "aria-controls {controls:?} names no listbox"
+    );
+    d.press(keyboard::ARROW_RIGHT).await?;
+    eventually_on(d, "-option-1-0", "ArrowRight into Tier 1's ores").await?;
+    d.press(keyboard::ARROW_DOWN).await?;
+    eventually_on(d, "-option-1-1", "ArrowDown to Copper ore").await?;
+    eventually_text(
+        d,
+        "[role=option][id$='-option-1-1'] [data-stock]",
+        "12/8",
+        "Copper's trailing stock",
+    )
+    .await?;
+
+    d.press(keyboard::ENTER).await?;
+    eventually(d, "Enter commits Copper and closes", async |d| {
+        Ok(d.text("#picked").await? == "copper" && icon_cursor(d).await? == "closed")
+    })
+    .await?;
+    eventually_focused(d, ICON_TRIGGER, "focus kept on the trigger").await?;
+    let name = d.attr(ICON_TRIGGER, "aria-label").await?;
+    anyhow::ensure!(name.as_deref() == Some("Ore: Copper ore"), "name {name:?}");
+
+    // The button's own click opens it, on the committed path.
+    d.press(keyboard::ENTER).await?;
+    eventually_on(d, "-option-1-1", "Enter reopens on Copper").await?;
+    d.press(keyboard::ESCAPE).await?;
+    eventually(d, "Escape closes", async |d| {
+        Ok(icon_cursor(d).await? == "closed")
+    })
+    .await?;
+    eventually_focused(d, ICON_TRIGGER, "focus back on the trigger").await?;
+    anyhow::ensure!(
+        d.text("#picked").await? == "copper",
+        "Escape changed the value"
+    );
+    Ok(())
+}
+
+e2e::scenario!(
+    a_custom_cascader_trigger_walks_the_cascade,
+    "/cascader/trigger",
+    a_custom_trigger_walks_the_cascade
+);
+
+/// minmax-3895: clicks on the icon trigger and the rows pick, as on the field.
+pub async fn clicks_pick_through_a_custom_trigger<D: Driver>(
+    d: &mut D,
+    _route: &str,
+) -> Result<()> {
+    const TIER_2: &str = "[role=option][id$='-option-0-1']";
+    const GOLD: &str = "[role=option][id$='-option-1-0']";
+    d.click(ICON_TRIGGER).await?;
+    eventually(d, "the tiers", async |d| shown(d, TIER_2).await).await?;
+    d.click(TIER_2).await?;
+    eventually(d, "Tier 2's ores", async |d| shown(d, GOLD).await).await?;
+    d.click(GOLD).await?;
+    eventually(d, "Gold committed and closed", async |d| {
+        Ok(d.text("#picked").await? == "gold" && icon_cursor(d).await? == "closed")
+    })
+    .await
+}
+
+e2e::scenario!(
+    clicks_pick_through_a_custom_cascader_trigger,
+    "/cascader/trigger",
+    clicks_pick_through_a_custom_trigger
+);
+
 const ASIA: &str = "[role=option][id$='-option-0-1']";
 
 /// Todo 1132: a disabled row is dimmed and half transparent, with `aria-disabled` kept.

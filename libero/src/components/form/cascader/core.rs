@@ -4,33 +4,28 @@ use dioxus::prelude::*;
 
 use crate::{
     components::{
-        accessibility::VisuallyHidden,
         common::{
             HtmlTag, Input, Parts, ScaleOrCss, aria_label_of, input_from_str, names_itself,
             use_name_warning,
         },
         form::{
             Asks, ComboboxState, DropdownPart, PreparedField, PreparedFrame, clear_button,
-            combobox::nothing_found_row, field_parts_enum, field_props, use_combobox, use_field,
-            use_field_frame, use_refocus_on_close,
+            field_parts_enum, field_props, use_combobox, use_field, use_field_frame,
         },
         layout::{BoxStyle, use_box},
     },
-    hooks::{
-        ElementHandle, TYPEAHEAD_RESET, use_element, use_localization, use_theme, use_typeahead,
-    },
+    hooks::{ElementHandle, use_element, use_theme},
     str_enum::str_enum,
     theme::Size,
 };
 
+mod engine;
 mod list;
 
-use self::list::{CascaderList, ListSetup, use_cascader_list};
+pub(super) use self::engine::{CascaderConfig, Engine, EngineSetup, Naming, use_cascader_engine};
 use super::{
-    dropdown::{Dropdown, DropdownSetup, dropdown_box, use_cascader_dropdown},
     nodes::{FlatPath, flatten_paths, join_labels},
     option::CascaderNode,
-    search::{CascaderSearch, search_header},
     trigger::{CASCADER_TRIGGER_SX, Trigger, cascader_trigger, trigger_control},
 };
 
@@ -144,13 +139,11 @@ field_props! {
     }
 }
 
-/// The `T`-free engine under `Cascader`: index paths in and out.
+/// The `T`-free field under `Cascader`: index paths in and out.
 /// Focus stays on the trigger (or the open search box), so its blur closes the list.
 #[component]
 pub(crate) fn CascaderCore(props: CascaderCoreProps) -> Element {
     let theme = use_theme();
-    let words = use_localization();
-    let nothing_found = words.combobox.nothing_found;
     let size = props.size.copied_or(theme.cascader.size);
     let radius = ScaleOrCss::new(props.radius.as_ref(), theme.cascader.radius);
     let disabled = props.disabled.unwrap_or(false);
@@ -161,30 +154,8 @@ pub(crate) fn CascaderCore(props: CascaderCoreProps) -> Element {
     let state = use_combobox();
     let opened = state.is_open() && !disabled && !readonly;
     let searchable = props.searchable && !disabled;
-
-    // One index per level. `[2, 0]` highlights the third root's first child without expanding it.
-    let cursor = use_signal(Vec::<usize>::new);
-    let query = use_signal(String::new);
-    let search = use_element();
     let trigger_element = use_element();
-    let typed = use_typeahead(TYPEAHEAD_RESET);
-
-    let searching = searchable && opened && !query().is_empty();
-    let layout = match searching {
-        true => CascaderLayout::Paths,
-        false => props.layout,
-    };
-
-    // The `Paths` rows the query leaves. `Columns` ignores it; it costs one walk.
-    let visible: Rc<Vec<FlatPath>> = Rc::new(visible_paths(
-        &props.options.0,
-        props.any_level,
-        searching.then(|| query.read().clone()).as_deref(),
-        &props.separator,
-        props.filter.as_ref(),
-    ));
-
-    let blurred = use_refocus_on_close(opened, searchable, trigger_element, query);
+    let anchor = use_element();
 
     let CascaderField {
         field,
@@ -210,111 +181,64 @@ pub(crate) fn CascaderCore(props: CascaderCoreProps) -> Element {
             || names_itself(&props.attributes),
         "Cascader: searchable without `label` or `aria_label`, so the search box is named by its placeholder only.",
     );
-    let CascaderList {
+
+    let config = CascaderConfig {
+        options: props.options.0.clone(),
+        committed: props.committed.clone(),
+        onpick: props.onpick,
+        node: props.node.clone(),
+        filter: props.filter.clone(),
+        separator: props.separator.clone(),
+        any_level: props.any_level,
+        allow_deselect: props.allow_deselect,
+        layout: props.layout,
+        column_width: props.column_width.clone(),
+        search_placeholder: props.search_placeholder.clone(),
+    };
+    let Engine {
         keys,
         open,
-        body,
         controlled_id,
         descendant,
-        depth,
-    } = use_cascader_list(ListSetup {
-        props: &props,
-        field: &field,
+        empty,
+        wrapper,
+        status,
+    } = use_cascader_engine(EngineSetup {
+        config: &config,
+        names: Naming {
+            trigger_id: field.id().to_string(),
+            label_id: field.label_id(),
+            aria_label,
+            describedby: field.describedby(),
+            invalid: field.invalid(),
+            required,
+        },
         state,
-        cursor,
-        visible: &visible,
-        layout,
-        typed,
         trigger: trigger_element,
-        blurred,
+        anchor,
+        field: field.root(),
+        opened,
         searchable,
         inert: disabled || readonly,
         size,
         radius: radius.size,
-        aria_label: aria_label.clone(),
-    });
-
-    // ---- the dropdown -------------------------------------------------
-    let Dropdown {
-        anchor,
-        popover,
-        search_box,
-        wrapper,
-        dropdown,
-    } = use_cascader_dropdown(DropdownSetup {
-        state,
-        field: field.root(),
-        opened,
-        searchable,
-        search,
-        size,
-        radius: radius.size,
-        layout,
-        // A new column or a shorter match list reshapes the open box.
-        remeasure: (depth * 4096 + visible.len()) as u64,
-        gap: theme.popover.gap,
-        padding: theme.popover.padding,
         parts: &props.dropdown_parts,
+        class: None,
+        sx: None,
+        attributes: Vec::new(),
     });
 
-    // Drawn in the list's place and said by the status region below.
-    let nothing_found = (searching && visible.is_empty()).then_some(nothing_found);
-    // What a query left, said but not shown (WCAG 4.1.3, todo 2035).
-    let results =
-        (searching && !visible.is_empty()).then(|| (words.combobox.results)(visible.len()));
-    let body = match nothing_found {
-        Some(text) => nothing_found_row(text),
-        None => body,
-    };
-
-    let header = searchable.then(|| {
-        let search = CascaderSearch {
-            element: search,
-            query,
-            cursor,
-            state,
-            blurred,
-        };
-        // No listbox while nothing matches; a dangling id is invalid (todo 2291).
-        let controls = nothing_found.is_none().then(|| controlled_id.clone());
-        let placeholder = props.search_placeholder.clone().unwrap_or_default();
-        let name = aria_label.filter(|_| field.label_id().is_none());
-        search_header(
-            search_box.attr("aria-label", name),
-            search,
-            controls,
-            descendant.clone(),
-            placeholder,
-            &field,
-            required,
-        )
-    });
-
-    let dropdown_keys = keys.clone();
-    popover.show(opened.then(|| {
-        dropdown_box(
-            dropdown,
-            popover.floating(),
-            dropdown_keys,
-            rsx! {
-                {header}
-                {body}
-            },
-        )
-    }));
-
-    // ---- the trigger --------------------------------------------------
     let trigger = cascader_trigger(
         trigger_control(control, &field, searchable && opened),
         Trigger {
             element: trigger_element,
             state,
-            open: open.clone(),
+            open,
             keys,
             disabled,
             readonly,
             searchable,
-            empty: visible.is_empty(),
+            empty,
             chevron: clear.is_none(),
             display: props.display.clone(),
             placeholder: props.placeholder.clone(),
@@ -334,15 +258,7 @@ pub(crate) fn CascaderCore(props: CascaderCoreProps) -> Element {
                 .render(HtmlTag::Div, Vec::new(), frame.render(trigger))
         }
         {hidden}
-        // Always mounted: a region inserted with its text is not announced.
-        VisuallyHidden { role: "status",
-            if let Some(text) = nothing_found {
-                "{text}"
-            }
-            if let Some(text) = results {
-                "{text}"
-            }
-        }
+        {status}
     })
 }
 

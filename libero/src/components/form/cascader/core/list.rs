@@ -3,7 +3,7 @@ use std::rc::Rc;
 use dioxus::prelude::*;
 
 use crate::{
-    components::form::{ComboboxState, PreparedField},
+    components::form::ComboboxState,
     hooks::{ElementHandle, Typeahead, use_localization, use_theme},
     theme::Size,
 };
@@ -15,12 +15,15 @@ use super::super::{
     parent_row::{ParentRow, use_parent_row},
     rows::CascaderRows,
 };
-use super::{CascaderCoreProps, CascaderLayout, active_descendant, controlled_id};
+use super::{
+    CascaderLayout, active_descendant, controlled_id,
+    engine::{CascaderConfig, Naming},
+};
 
-/// What `use_cascader_list` reads from `CascaderCore`.
+/// What `use_cascader_list` reads from the engine.
 pub(super) struct ListSetup<'a> {
-    pub(super) props: &'a CascaderCoreProps,
-    pub(super) field: &'a PreparedField,
+    pub(super) config: &'a CascaderConfig,
+    pub(super) names: &'a Naming,
     pub(super) state: ComboboxState,
     pub(super) cursor: Signal<Vec<usize>>,
     pub(super) visible: &'a Rc<Vec<FlatPath>>,
@@ -33,7 +36,6 @@ pub(super) struct ListSetup<'a> {
     pub(super) inert: bool,
     pub(super) size: Size,
     pub(super) radius: Size,
-    pub(super) aria_label: Option<String>,
 }
 
 /// The keyboard, the rows and the drawn body of the open tree, with the ids the trigger points at.
@@ -49,8 +51,8 @@ pub(super) struct CascaderList {
 
 pub(super) fn use_cascader_list(setup: ListSetup) -> CascaderList {
     let ListSetup {
-        props,
-        field,
+        config,
+        names,
         state,
         cursor,
         visible,
@@ -62,12 +64,11 @@ pub(super) fn use_cascader_list(setup: ListSetup) -> CascaderList {
         inert,
         size,
         radius,
-        aria_label,
     } = setup;
     let theme = use_theme();
-    let nodes = props.options.0.clone();
-    let any_level = props.any_level;
-    let committed = props.committed.clone();
+    let nodes = config.options.clone();
+    let any_level = config.any_level;
+    let committed = config.committed.clone();
 
     let cursor_now = cursor.read().clone();
     // The cursor as a row of `visible`, the `Paths` keyboard's index.
@@ -83,7 +84,12 @@ pub(super) fn use_cascader_list(setup: ListSetup) -> CascaderList {
 
     // `Rc`: each is shared by several handlers and captures a non-`Copy` path.
     let open = open_handler(cursor, state, committed.clone(), parent_row);
-    let commit = commit_handler(state, props.onpick, committed.clone(), props.allow_deselect);
+    let commit = commit_handler(
+        state,
+        config.onpick,
+        committed.clone(),
+        config.allow_deselect,
+    );
 
     let keys = Rc::new(CascaderKeys {
         nodes: nodes.clone(),
@@ -99,15 +105,15 @@ pub(super) fn use_cascader_list(setup: ListSetup) -> CascaderList {
         any_level,
         layout,
         trigger,
-        trigger_id: field.id().to_string(),
+        trigger_id: names.trigger_id.clone(),
         blurred,
         parent_row,
     });
 
     let rows = CascaderRows {
         nodes,
-        node: props.node.clone(),
-        separator: props.separator.clone(),
+        node: config.node.clone(),
+        separator: config.separator.clone(),
         id: id.clone(),
         cursor,
         cursor_now: cursor_now.clone(),
@@ -127,9 +133,9 @@ pub(super) fn use_cascader_list(setup: ListSetup) -> CascaderList {
             visible: visible.clone(),
             path_row,
             listbox_id,
-            label_id: field.label_id(),
-            aria_label,
-            column_width: props.column_width.clone(),
+            label_id: names.label_id.clone(),
+            aria_label: names.aria_label.clone(),
+            column_width: config.column_width.clone(),
             max_height: theme.combobox.max_dropdown_height,
         },
     );

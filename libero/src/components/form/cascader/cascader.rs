@@ -191,37 +191,10 @@ pub fn Cascader<T: Options>(props: CascaderProps<T>) -> Element {
         }
     };
 
-    let node = props.node.map(|draw| {
-        let data = data.clone();
-        CascaderRender(Rc::new(move |row: CascaderRowArgs| {
-            match options_at(&data, &row.indices).last() {
-                Some(option) => draw.call(CascaderNodeArgs {
-                    value: option.value.clone(),
-                    label: option.label.clone(),
-                    level: row.indices.len().saturating_sub(1),
-                    expanded: row.expanded,
-                    selected: row.selected,
-                }),
-                None => rsx! {},
-            }
-        }))
-    });
-
-    let filter = props.filter.map(|filter| {
-        let data = data.clone();
-        CascaderMatch(Rc::new(
-            move |query: &str, indices: &[usize], label: String| {
-                filter.call(CascaderFilterArgs {
-                    query: query.to_string(),
-                    label,
-                    path: options_at(&data, indices)
-                        .iter()
-                        .map(|option| option.value.clone())
-                        .collect(),
-                })
-            },
-        ))
-    });
+    let node = props.node.map(|draw| erase_node(data.clone(), draw));
+    let filter = props
+        .filter
+        .map(|filter| erase_filter(data.clone(), filter));
 
     rsx! {
         CascaderCore {
@@ -263,4 +236,42 @@ pub fn Cascader<T: Options>(props: CascaderProps<T>) -> Element {
             attributes: props.attributes,
         }
     }
+}
+
+/// A caller's `node`, looked up by index path for the `T`-free engine.
+pub(super) fn erase_node<T: Options>(
+    data: Rc<Vec<CascaderOption<T>>>,
+    draw: Callback<CascaderNodeArgs<T>, Element>,
+) -> CascaderRender {
+    CascaderRender(Rc::new(move |row: CascaderRowArgs| {
+        match options_at(&data, &row.indices).last() {
+            Some(option) => draw.call(CascaderNodeArgs {
+                value: option.value.clone(),
+                label: option.label.clone(),
+                level: row.indices.len().saturating_sub(1),
+                expanded: row.expanded,
+                selected: row.selected,
+            }),
+            None => rsx! {},
+        }
+    }))
+}
+
+/// A caller's `filter`, erased as `erase_node`.
+pub(super) fn erase_filter<T: Options>(
+    data: Rc<Vec<CascaderOption<T>>>,
+    filter: Callback<CascaderFilterArgs<T>, bool>,
+) -> CascaderMatch {
+    CascaderMatch(Rc::new(
+        move |query: &str, indices: &[usize], label: String| {
+            filter.call(CascaderFilterArgs {
+                query: query.to_string(),
+                label,
+                path: options_at(&data, indices)
+                    .iter()
+                    .map(|option| option.value.clone())
+                    .collect(),
+            })
+        },
+    ))
 }

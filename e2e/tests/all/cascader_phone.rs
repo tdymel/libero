@@ -40,6 +40,63 @@ fn a_phone_drills_into_one_level_at_a_time() {
     });
 }
 
+/// minmax-3895: the drill-in under a custom trigger. Tier 1 shows only its ores under the back
+/// header; back returns; an ore commits and closes.
+async fn a_custom_trigger_drills_in<D: Driver>(d: &mut D) -> Result<()> {
+    const ICON: &str = "button[role=combobox]";
+    const TIER_1: &str = "[role=option][id$='-option-0-0']";
+    const COPPER: &str = "[role=option][id$='-option-1-1']";
+    const ROOTS: &str = "[data-slot=column]";
+    d.click(ICON).await?;
+    eventually(d, "the tiers", async |d| shown(d, TIER_1).await).await?;
+    d.click(TIER_1).await?;
+    eventually(d, "Tier 1's ores under the back header", async |d| {
+        // The roots' column hides; its rows keep their own `display`.
+        Ok(shown(d, COPPER).await? && shown(d, BACK).await? && !shown(d, ROOTS).await?)
+    })
+    .await?;
+    eventually_text(
+        d,
+        &format!("{BACK} [data-slot=title]"),
+        "Tier 1",
+        "the drill",
+    )
+    .await?;
+    d.click(BACK).await?;
+    eventually(d, "back to the tiers", async |d| shown(d, TIER_1).await).await?;
+    d.click(TIER_1).await?;
+    eventually(d, "Tier 1's ores again", async |d| shown(d, COPPER).await).await?;
+    d.click(COPPER).await?;
+    eventually(d, "Copper committed and closed", async |d| {
+        Ok(d.text("#picked").await? == "copper"
+            && d.attr(ICON, "aria-expanded").await?.as_deref() == Some("false"))
+    })
+    .await
+}
+
+#[test]
+fn a_phone_drills_in_under_a_custom_trigger() {
+    block_on(async {
+        let fixture = Fixture::open("/cascader/trigger", Viewport::Mobile)
+            .await
+            .unwrap();
+        let mut driver = e2e::driver::Web { fixture };
+        a_custom_trigger_drills_in(&mut driver).await.unwrap();
+        driver
+            .finish("a phone's custom cascader trigger")
+            .await
+            .unwrap();
+    });
+}
+
+#[cfg(feature = "native")]
+#[test]
+fn native_narrow_window_drills_in_under_a_custom_trigger() {
+    let mut driver = e2e::driver::Native::open("/cascader/trigger");
+    driver.page.resize(390, 844);
+    e2e::futures::executor::block_on(a_custom_trigger_drills_in(&mut driver)).unwrap();
+}
+
 /// Todos 1546 and 1658 (WCAG 2.4.11): opening scrolls a low field, helper and error
 /// included, above the sheet.
 #[test]

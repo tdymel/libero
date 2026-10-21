@@ -1,15 +1,19 @@
 use super::dropdown_parts::{CASCADER_DROPDOWN, list_dropdown_parts};
 use crate::components::{
-    Control, Demo, DemoValues, DocPage, FieldCopy, Wrap, a11y, field_controls, field_props, indent,
-    prop, props, readonly_prop, required_prop, status_prop,
+    Control, Demo, DemoValues, DocPage, DocSection, FieldCopy, Wrap, a11y, field_controls,
+    field_props, indent, prop, props, readonly_prop, required_prop, status_prop,
 };
 use dioxus::prelude::*;
 use libero::components::CascaderPart;
 use libero::use_theme;
 use libero::{
-    components::{Cascader, CascaderNodeArgs, CascaderOption, Code, Flex, Text},
+    components::{
+        Button, Cascader, CascaderDropdown, CascaderNodeArgs, CascaderOption, Code, CodeBlock,
+        Flex, Icon, Text, use_cascader,
+    },
     sx::sx,
 };
+use pictogram_icons_lucide as lucide;
 
 struct CategoryCopy;
 
@@ -130,6 +134,131 @@ fn categories() -> Vec<CascaderOption<String>> {
     ]
 }
 
+/// minmax's ore picker: a round button showing the ore and its stock opens the headless cascade.
+const ORE_PICKER: &str = r#"fn ores() -> Vec<CascaderOption<String>> {
+    vec![
+        CascaderOption::new("tier-1", "Tier 1").children(vec![
+            CascaderOption::new("iron", "Iron ore"),
+            CascaderOption::new("copper", "Copper ore"),
+        ]),
+        CascaderOption::new("tier-2", "Tier 2")
+            .children(vec![CascaderOption::new("gold", "Gold ore")]),
+    ]
+}
+
+/// Have and need; a tier needs nothing.
+fn stock(value: &str) -> (u32, u32) {
+    match value {
+        "iron" => (3, 10),
+        "copper" => (12, 8),
+        "gold" => (0, 2),
+        _ => (0, 0),
+    }
+}
+
+#[component]
+fn OrePicker() -> Element {
+    let mut ore = use_signal(|| Some("copper".to_string()));
+    let cascader = use_cascader(ores(), ore(), move |next| ore.set(next));
+    let name = cascader.labels().last().cloned().unwrap_or("No ore".into());
+    let (have, need) = stock(ore().as_deref().unwrap_or_default());
+    rsx! {
+        CascaderDropdown {
+            state: cascader.clone(),
+            node: move |row: CascaderNodeArgs<String>| {
+                let (have, need) = stock(&row.value);
+                rsx! {
+                    // Fills the row, so the stock trails at its end.
+                    Text { component: "span", sx: sx().display("flex").justify_content("space-between").gap("md").width("100%").font_weight("inherit"),
+                        span { "{row.label}" }
+                        if need > 0 {
+                            Text { component: "span", size: "sm", color: "dimmed", "{have}/{need}" }
+                        }
+                    }
+                }
+            },
+            Button {
+                radius: "xl",
+                variant: "light",
+                icon: rsx! { Icon { size: "sm", color: "inherit", svg: lucide::pickaxe::outlined } },
+                // A combobox takes no name from its content.
+                attributes: [
+                    cascader.a11y_attributes(),
+                    vec![Attribute::new("aria-label", format!("Ore: {name}, {have} of {need}"), None, false)],
+                ]
+                .concat(),
+                "{name} {have}/{need}"
+            }
+        }
+    }
+}"#;
+
+fn ores() -> Vec<CascaderOption<String>> {
+    vec![
+        CascaderOption::new("tier-1", "Tier 1").children(vec![
+            CascaderOption::new("iron", "Iron ore"),
+            CascaderOption::new("copper", "Copper ore"),
+        ]),
+        CascaderOption::new("tier-2", "Tier 2")
+            .children(vec![CascaderOption::new("gold", "Gold ore")]),
+    ]
+}
+
+/// Have and need; a tier needs nothing.
+fn stock(value: &str) -> (u32, u32) {
+    match value {
+        "iron" => (3, 10),
+        "copper" => (12, 8),
+        "gold" => (0, 2),
+        _ => (0, 0),
+    }
+}
+
+/// The headless section's example, as `ORE_PICKER` prints it.
+#[component]
+fn OrePicker() -> Element {
+    let mut ore = use_signal(|| Some("copper".to_string()));
+    let cascader = use_cascader(ores(), ore(), move |next| ore.set(next));
+    let name = cascader.labels().last().cloned().unwrap_or("No ore".into());
+    let (have, need) = stock(ore().as_deref().unwrap_or_default());
+    rsx! {
+        CascaderDropdown {
+            state: cascader.clone(),
+            node: move |row: CascaderNodeArgs<String>| {
+                let (have, need) = stock(&row.value);
+                rsx! {
+                    Text {
+                        component: "span",
+                        sx: sx()
+                            .display("flex")
+                            .justify_content("space-between")
+                            .gap("md")
+                            .width("100%")
+                            .font_weight("inherit"),
+                        span { "{row.label}" }
+                        if need > 0 {
+                            Text { component: "span", size: "sm", color: "dimmed", "{have}/{need}" }
+                        }
+                    }
+                }
+            },
+            Button {
+                radius: "xl",
+                variant: "light",
+                icon: rsx! {
+                    Icon { size: "sm", color: "inherit", svg: lucide::pickaxe::outlined }
+                },
+                attributes: [
+                    cascader.a11y_attributes(),
+                    vec![Attribute::new("aria-label", format!("Ore: {name}, {have} of {need}"), None, false)],
+                ]
+                .concat(),
+                "{name} {have}/{need}"
+            }
+        }
+    }
+}
+
 /// The tree, the value's declaration, and the value printed under the field.
 fn wrap_value(_: &DemoValues, code: &str) -> String {
     format!(
@@ -227,6 +356,43 @@ pub fn CascaderPage() -> Element {
                     prop("path", "Vec<T>").doc("The values from the root to the option. The last one is what this path commits."),
                 ])
                 .without_base_props(),
+                props("use_cascader", vec![
+                    prop("data", "Vec<CascaderOption<T>>").default("required")
+                        .doc("The tree, as on `Cascader`. Read again on every render."),
+                    prop("value", "Option<T>").default("required")
+                        .doc("The selected option's value. Read again on every render, so pass your signal's current value."),
+                    prop("onchange", "FnMut(Option<T>)").default("required")
+                        .doc("Called with the value to select next, or `None` when `allow_deselect` cleared it. There is no hidden input and no `Form` binding: you own the value."),
+                ])
+                .without_base_props(),
+                props("CascaderState", vec![
+                    prop("a11y_attributes()", "Vec<Attribute>")
+                        .doc("The trigger's `id`, `role=\"combobox\"`, `aria-haspopup`, `aria-expanded`, and while open `aria-controls` and `aria-activedescendant`. Spread it on the button inside `CascaderDropdown`."),
+                    prop("labels()", "Vec<String>").doc("The selected option's labels, root first. Empty while nothing in `data` holds `value`."),
+                    prop("selected_path()", "Vec<T>").doc("The selected option's values, root first, as `labels()`."),
+                    prop("value()", "Option<T>").doc("The `value` passed in."),
+                    prop("is_open()", "bool").doc("Whether the list is open."),
+                    prop("close()", "()").doc("Closes the list."),
+                    prop("id()", "String").doc("The id the trigger and the list derive theirs from."),
+                ])
+                .without_base_props(),
+                props("CascaderDropdown", vec![
+                    prop("state", "CascaderState<T>").default("required").doc("From `use_cascader`."),
+                    prop("children", "Element").default("required")
+                        .doc("The trigger, a `button` carrying `state.a11y_attributes()`. It needs no click or key handler of its own: Enter and Space click it, and the dropdown takes the click and the keys. A debug build warns when the list opens and no element carries the trigger's id."),
+                    prop("any_level", "bool").default("false").doc("As on `Cascader`."),
+                    prop("allow_deselect", "bool").default("false").doc("As on `Cascader`."),
+                    prop("layout", "CascaderLayout").default("columns").doc("As on `Cascader`, the narrow drill-in included."),
+                    prop("searchable", "bool").default("false").doc("Puts a search box at the top of the list. Focus moves into it while the list is open, and back to the trigger when it closes."),
+                    prop("filter", "Callback<CascaderFilterArgs<T>, bool>").doc("As on `Cascader`."),
+                    prop("separator", "String").default("\" / \"").doc("Between labels in a `\"paths\"` row."),
+                    prop("node", "Callback<CascaderNodeArgs<T>, Element>").default("label").doc("Draws one row's content, such as a trailing stock count."),
+                    prop("column_width", "String").default(theme.cascader.column_width).doc("As on `Cascader`."),
+                    prop("search_placeholder", "String").doc("What the search box says while empty."),
+                    prop("size", "Size").default(theme.cascader.size.as_str()).doc("Row height and font size."),
+                    prop("radius", "ThemeAwareValue").default(theme.cascader.radius.as_str()).doc("The list's corner radius."),
+                    prop("disabled", "bool").default("false").doc("The trigger opens nothing, and an open list closes. Disable your button too."),
+                ]),
             ],
             accessibility: a11y()
                 .key(["Down", "Up", "Right", "Enter", "Space"], "Closed: opens on the committed path, or with the cursor on the first enabled root (`Up`: the last).")
@@ -248,7 +414,10 @@ pub fn CascaderPage() -> Element {
                     "Android's Back button closes the dropdown as Escape does, rather than the app.",
                     clear_name!("Category"),
                 ])
-                .must(["Without a `label`, set `aria_label`. Otherwise screen readers announce an unnamed combobox."])
+                .must([
+                    "Without a `label`, set `aria_label`. Otherwise screen readers announce an unnamed combobox.",
+                    "With `CascaderDropdown`, spread `state.a11y_attributes()` on a `button` and give it an `aria-label`: a combobox takes no name from its content. The listboxes and the search box take their name from it.",
+                ])
                 .example("A category picker, `Cascader { label: \"Category\" }`: Down opens it, Right expands a branch, Left goes up a level, Enter on a leaf picks it and closes, and Escape closes without a change."),
             lead: rsx! {
                 Text {
@@ -328,6 +497,21 @@ pub fn CascaderPage() -> Element {
                         }
                     }
                 },
+            }
+
+            DocSection { title: "Any trigger",
+                Text {
+                    Code { source: "use_cascader" }
+                    " keeps the tree, the value and the open state in your scope, and "
+                    Code { source: "CascaderDropdown" }
+                    " drops the same cascade, keyboard included, from your own button. Spread "
+                    Code { source: "cascader.a11y_attributes()" }
+                    " on it. There is no hidden input and no "
+                    Code { source: "Form" }
+                    " binding. This ore picker shows the ore and its stock on a round button, and each row trails its own:"
+                }
+                Flex { align: "flex-start", OrePicker {} }
+                CodeBlock { source: ORE_PICKER, language: "rust" }
             }
         }
     }

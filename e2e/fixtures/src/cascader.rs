@@ -1,7 +1,11 @@
 //! `Cascader`.
 
 use dioxus::prelude::*;
-use libero::components::{Cascader, CascaderLayout, CascaderOption, FieldStatus, Flex, Text};
+use libero::components::{
+    ActionIcon, Cascader, CascaderDropdown, CascaderLayout, CascaderNodeArgs, CascaderOption,
+    FieldStatus, Flex, Text, use_cascader,
+};
+use pictogram_icons_lucide as lucide;
 
 use crate::Routes;
 
@@ -15,7 +19,68 @@ pub const ROUTES: Routes = &[
     }),
     ("/cascader/low", || rsx! { CascaderLowPage {} }),
     ("/cascader/outside", || rsx! { CascaderOutsidePage {} }),
+    ("/cascader/trigger", || rsx! { CascaderTriggerPage {} }),
 ];
+
+/// minmax's ore picker (3895): a round icon button opens the headless cascade; each row trails
+/// its `have/need` stock in `[data-stock]`. `#picked` shows the committed value.
+#[component]
+fn CascaderTriggerPage() -> Element {
+    let mut ore = use_signal(|| None::<String>);
+    let cascader = use_cascader(ores(), ore(), move |next| ore.set(next));
+    let name = cascader
+        .labels()
+        .last()
+        .cloned()
+        .unwrap_or_else(|| "none".to_string());
+
+    rsx! {
+        Flex { direction: "column", gap: "md", max_width: "320px",
+            input { id: "before", font_size: "16px", "aria-label": "Before" }
+            CascaderDropdown {
+                state: cascader.clone(),
+                node: move |row: CascaderNodeArgs<String>| {
+                    let (have, need) = stock(&row.value);
+                    rsx! {
+                        span { "{row.label}" }
+                        if let Some(need) = need {
+                            span { "data-stock": "", style: "margin-inline-start:auto;padding-inline-start:12px", "{have}/{need}" }
+                        }
+                    }
+                },
+                ActionIcon {
+                    attributes: cascader.a11y_attributes(),
+                    radius: "xl",
+                    aria_label: "Ore: {name}",
+                    icon: lucide::pickaxe::outlined,
+                }
+            }
+            Text { id: "picked", {ore().unwrap_or_default()} }
+        }
+    }
+}
+
+/// Tier 1 then its ores; Tier 2 has one.
+fn ores() -> Vec<CascaderOption<String>> {
+    vec![
+        CascaderOption::new("tier-1", "Tier 1").children(vec![
+            CascaderOption::new("iron", "Iron ore"),
+            CascaderOption::new("copper", "Copper ore"),
+        ]),
+        CascaderOption::new("tier-2", "Tier 2")
+            .children(vec![CascaderOption::new("gold", "Gold ore")]),
+    ]
+}
+
+/// Have and need per ore; a tier has none.
+fn stock(value: &str) -> (u32, Option<u32>) {
+    match value {
+        "iron" => (3, Some(10)),
+        "copper" => (12, Some(8)),
+        "gold" => (0, Some(2)),
+        _ => (0, None),
+    }
+}
 
 /// Searchable, with a field above it to click while the list is open below (1497)
 /// and one after it for Tab (2289).
