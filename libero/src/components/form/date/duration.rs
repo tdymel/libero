@@ -281,6 +281,9 @@ pub(super) struct DurationClockProps {
     max: Option<TimeDelta>,
     size: Input<Size>,
     focusable: bool,
+    /// Soft: `aria-disabled` columns, presses and keys swallowed, nothing posted.
+    #[props(default)]
+    disabled: bool,
     name: Option<String>,
     class: Input<ClassList>,
     sx: Input<Sx>,
@@ -325,7 +328,10 @@ pub(super) fn DurationClock(props: DurationClockProps) -> Element {
     let theme = use_theme();
     let names = &use_localization().date;
     let size = props.size.copied_or(theme.time_picker.size);
-    let (value, focusable) = (props.value, props.focusable);
+    // No native `disabled`, nor `inert`: either would drop a focused column's focus (todo 3881).
+    let in_disabled_group = use_fieldset_disabled();
+    let disabled = props.disabled || in_disabled_group;
+    let (value, focusable) = (props.value, props.focusable && !disabled);
     let (min, max) = bounds(props.min, props.max);
     let base = value.map_or(min, |value| value.clamp(min, max));
     let view = DurationView {
@@ -378,6 +384,7 @@ pub(super) fn DurationClock(props: DurationClockProps) -> Element {
                 wrap,
                 page,
                 focusable,
+                disabled,
                 onpick: pick,
                 ondone,
             }
@@ -460,29 +467,24 @@ pub(super) fn DurationClock(props: DurationClockProps) -> Element {
         .parts(&props.parts)
         .states(&states)
         .prepare();
-    // A disabled `Fieldset` renders no native `disabled`: post nothing, take no input (todo 3873).
-    let group_disabled = use_fieldset_disabled();
     let hidden = props.name.map(|name| {
         rsx! {
             input {
                 r#type: "hidden",
                 name,
                 value: value.map(|_| iso_duration(base)).unwrap_or_default(),
-                disabled: group_disabled,
+                disabled,
             }
         }
     });
-    root_box
-        .element(&root)
-        .attr("inert", group_disabled)
-        .render(
-            HtmlTag::Div,
-            props.attributes,
-            rsx! {
-                {body}
-                {hidden}
-            },
-        )
+    root_box.element(&root).render(
+        HtmlTag::Div,
+        props.attributes,
+        rsx! {
+            {body}
+            {hidden}
+        },
+    )
 }
 
 #[cfg(test)]

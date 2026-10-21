@@ -174,6 +174,20 @@ macro_rules! date_props {
                 /// input keeps focus. On by default.
                 #[props(default)]
                 focusable: Option<bool>,
+                /// Shows the value but takes no pick: every cell is `aria-disabled` and out of
+                /// the tab order, presses and keys do nothing, a focused cell keeps its focus,
+                /// and the hidden `name` input posts nothing. A disabled `Fieldset` sets it too.
+                ///
+                /// ```
+                /// # use dioxus::prelude::*;
+                /// # use libero::chrono::NaiveDate;
+                /// # use libero::components::DatePicker;
+                /// # fn app() -> Element {
+                /// rsx! { DatePicker { value: NaiveDate::from_ymd_opt(2026, 10, 21), name: "day", disabled: true } }
+                /// # }
+                /// ```
+                #[props(default)]
+                disabled: bool,
             }
         }
     };

@@ -1,6 +1,6 @@
 # Skipped e2e scenarios
 
-Scenarios: 625
+Scenarios: 626
 
 Generated from the `scenario!` skips in `e2e/tests/all` by `cargo test -p e2e --lib skips`; edit the skip, not this file. A reason starting `upstream:` waits on Dioxus, Blitz, wry or the engine (revisit on their update, todo 3362), a number names the todo that removes it.
 
@@ -30,6 +30,8 @@ The performance scenarios (units `perf`, `table_perf`) are no skips but run on r
 | `color_field::arrow_down_enters_the_colour_dialog_and_escape_returns` | android | 958: element identity on the WebView |
 | `color_field::arrow_down_enters_the_colour_dialog_and_escape_returns` | desktop | 958: element identity on the WebView |
 | `color_field::arrow_down_enters_the_colour_dialog_and_escape_returns` | ios | 958: element identity on the WebView |
+| `date::a_press_on_a_disabled_picker_focuses_it_and_picks_nothing` | ios | upstream: WebKit does not focus a clicked button |
+| `date::a_press_on_a_disabled_picker_focuses_it_and_picks_nothing` | macos desktop | upstream: WebKit does not focus a clicked button |
 | `drawer::a_backdrop_click_closes_a_drawer` | ios | upstream: WebKit does not focus a clicked button |
 | `drawer::a_backdrop_click_closes_a_drawer` | macos desktop | upstream: WebKit does not focus a clicked button |
 | `drawer::a_button_in_a_drawer_closes_it_and_focus_returns` | ios | upstream: WebKit does not focus a clicked button |

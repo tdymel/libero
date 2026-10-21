@@ -36,7 +36,9 @@ pub(in crate::platform::backend) fn Listener(children: Element) -> Element {
         let (kept, press) = (focus::press_kept_focus(), PRESS.get());
         let moving = press.filter(|_| !kept);
         let taken = press.is_some() || kept || activate::press_cancelled();
-        if taken && activate::takes_over(&event, &raw, HIT.get()) {
+        // A prevented click skips Blitz's focus move; the web moved it at the press (3883).
+        let prevented = !event.default_action_enabled();
+        if taken && (activate::takes_over(&event, &raw, HIT.get()) || prevented) {
             if let Some((before, target)) = moving {
                 activate::focus_pressed(before, target);
             }

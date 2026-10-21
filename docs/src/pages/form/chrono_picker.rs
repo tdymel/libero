@@ -58,6 +58,7 @@ pub fn ChronoPickerPage() -> Element {
                     prop("size", "Size").default(theme.chrono_picker.size.as_str()).doc("Cell, option and font size."),
                     prop("name", "String").doc("Posts the value as ISO 8601 in a hidden input of that name."),
                     prop("focusable", "bool").default("true").doc("`false` keeps the picker out of the tab order, for a picker inside a dropdown whose input keeps focus."),
+                    prop("disabled", "bool").default("false").doc("Shows the value but takes no pick: every cell is `aria-disabled` and out of the tab order, presses and keys do nothing, and a focused cell keeps its focus. The hidden `name` input posts nothing. A disabled `Fieldset` sets it too."),
                 ])
                 .parts("ChronoPickerPart", chrono_picker_parts()),
             ],
@@ -85,6 +86,7 @@ pub fn ChronoPickerPage() -> Element {
                     "The clock face is one tab stop. Each digital column is a spinbutton and a tab stop of its own.",
                     "The clock keys change the value at once and skip what `min` and `max` rule out. The wheel, a drag, or a press on the value above or below turns a digital column too.",
                     "A date-time shows the day and the time as tabs above the picker. Picking the day moves focus into the clock.",
+                    "A disabled picker keeps its cells as they are, marked `aria-disabled` and out of the tab order, so a focused cell keeps its focus. It takes no key, press, wheel or drag, and its hidden input posts nothing. A disabled `Fieldset` disables it the same way.",
                     "A date-time range has three tabs: the days, the start time and the end time. Each shows its value once picked, such as `12–14 Oct` or `09:00`, and moves on to the next when complete. The start and the end may be on different days.",
                 ])
                 .must([
@@ -157,6 +159,7 @@ pub fn ChronoPickerPage() -> Element {
                                 columns => vec![format!("columns: {columns}")],
                             }
                         }),
+                    Control::switch("disabled"),
                     Control::switch("allow_deselect").hidden_when(|values| values.str("value") != "date"),
                     Control::switch("exclude_weekends").hidden_when(|values| !has_days(values)).code(|_, values| {
                         match is_on(values, "exclude_weekends") {
@@ -212,6 +215,7 @@ fn ChronoPickerDemo(values: DemoValues) -> Element {
 
     let size = values.str("size");
     let variant = values.str("variant");
+    let disabled = is_on(&values, "disabled");
     let allow_deselect = is_on(&values, "allow_deselect");
     let exclude_date = is_on(&values, "exclude_weekends").then(|| Callback::new(is_weekend));
     let columns = values.str("columns").parse::<usize>().ok();
@@ -230,7 +234,7 @@ fn ChronoPickerDemo(values: DemoValues) -> Element {
             rsx! {
                 ChronoPicker {
                     value: month(), onchange: move |next| month.set(next), level: DateLevel::Month,
-                    min: min_day, max: max_day, today, size,
+                    min: min_day, max: max_day, today, size, disabled,
                 }
             },
             shown(month()),
@@ -239,7 +243,7 @@ fn ChronoPickerDemo(values: DemoValues) -> Element {
             rsx! {
                 ChronoPicker {
                     value: year(), onchange: move |next| year.set(next), level: DateLevel::Year,
-                    min: min_day, max: max_day, today, size,
+                    min: min_day, max: max_day, today, size, disabled,
                 }
             },
             shown(year()),
@@ -248,7 +252,7 @@ fn ChronoPickerDemo(values: DemoValues) -> Element {
             rsx! {
                 ChronoPicker {
                     value: time(), onchange: move |next| time.set(next),
-                    min: min_time, max: max_time, variant, with_seconds, step, twelve_hour, size,
+                    min: min_time, max: max_time, variant, with_seconds, step, twelve_hour, size, disabled,
                 }
             },
             shown(time()),
@@ -258,7 +262,7 @@ fn ChronoPickerDemo(values: DemoValues) -> Element {
                 ChronoPicker {
                     value: date_time(), onchange: move |next| date_time.set(next),
                     min: min_moment, max: max_moment, exclude_date, today, calendar, days,
-                    variant, with_seconds, step, twelve_hour, size,
+                    variant, with_seconds, step, twelve_hour, size, disabled,
                 }
             },
             shown(date_time()),
@@ -267,7 +271,7 @@ fn ChronoPickerDemo(values: DemoValues) -> Element {
             rsx! {
                 ChronoPicker {
                     value: date_range(), onchange: move |next| date_range.set(next),
-                    min: min_day, max: max_day, exclude_date, columns, today, size,
+                    min: min_day, max: max_day, exclude_date, columns, today, size, disabled,
                 }
             },
             shown(date_range()),
@@ -277,7 +281,7 @@ fn ChronoPickerDemo(values: DemoValues) -> Element {
                 ChronoPicker {
                     value: date_time_range(), onchange: move |next| date_time_range.set(next),
                     min: min_moment, max: max_moment, exclude_date, today,
-                    variant, with_seconds, step, twelve_hour, size,
+                    variant, with_seconds, step, twelve_hour, size, disabled,
                 }
             },
             shown(date_time_range()),
@@ -286,7 +290,7 @@ fn ChronoPickerDemo(values: DemoValues) -> Element {
             rsx! {
                 ChronoPicker {
                     value: date(), onchange: move |next| date.set(next),
-                    min: min_day, max: max_day, allow_deselect, exclude_date, columns, calendar, days, today, size,
+                    min: min_day, max: max_day, allow_deselect, exclude_date, columns, calendar, days, today, size, disabled,
                 }
             },
             shown(date()),

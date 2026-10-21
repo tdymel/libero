@@ -129,7 +129,7 @@ pub(super) fn short_time(
 }
 
 /// One tab: `name`, or the value after a hidden `name, `, so the visible text is in the name (2.5.3).
-fn step_tab(name: &'static str, value: Option<String>) -> TabSpec {
+fn step_tab(name: &'static str, value: Option<String>, disabled: bool) -> TabSpec {
     let content = match value {
         Some(value) => rsx! {
             VisuallyHidden { "{name}, " }
@@ -140,7 +140,7 @@ fn step_tab(name: &'static str, value: Option<String>) -> TabSpec {
     TabSpec {
         name: String::new(),
         content,
-        disabled: false,
+        disabled,
     }
 }
 
@@ -203,8 +203,6 @@ fn flow_root(
         .style(Some(FLOW_STYLE.to_string()))
         .prepare()
         .element(root)
-        // A disabled `Fieldset` renders no native `disabled`: the flow takes no input (todo 3873).
-        .attr("inert", use_fieldset_disabled())
         .event("onfocusin", move |_: FocusEvent| refresh_today.ask())
         .render(HtmlTag::Div, attributes, children)
 }
@@ -228,11 +226,9 @@ fn use_handoff() -> (ElementHandle, Signal<bool>) {
     (root, handoff)
 }
 
-/// A hidden input posting the value as ISO 8601, when the flow has a name. A hook.
-fn hidden(name: Option<String>, value: Option<impl FieldValue>) -> Element {
+/// A hidden input posting the value as ISO 8601, when the flow has a name; nothing when `disabled`.
+fn hidden(name: Option<String>, value: Option<impl FieldValue>, disabled: bool) -> Element {
     let value = value.map(FieldValue::iso).unwrap_or_default();
-    // A disabled `Fieldset` renders no native `disabled` (todo 3873).
-    let disabled = use_fieldset_disabled();
     rsx! {
         if let Some(name) = name {
             input { r#type: "hidden", name, value, disabled }
@@ -257,6 +253,8 @@ pub(super) struct DateTimeFlowProps {
     days: usize,
     focusable: bool,
     #[props(default)]
+    disabled: bool,
+    #[props(default)]
     name: Option<String>,
     #[props(default)]
     class: Input<ClassList>,
@@ -277,7 +275,10 @@ pub(super) fn DateTimeFlow(props: DateTimeFlowProps) -> Element {
     let mut part = use_signal(|| Part::Date);
     let (root, mut handoff) = use_handoff();
     let tabs_id = use_id();
-    let focusable = props.focusable;
+    // Soft, as its pickers: `inert` would drop a focused cell's focus (todo 3881).
+    let in_disabled_group = use_fieldset_disabled();
+    let disabled = props.disabled || in_disabled_group;
+    let focusable = props.focusable && !disabled;
     let (value, onpick) = (props.value, props.onpick);
     let (today, refresh_today) = use_today_with_refresh(props.today);
     // A time picked with no day and no clock waits here for the day pick.
@@ -298,7 +299,8 @@ pub(super) fn DateTimeFlow(props: DateTimeFlowProps) -> Element {
                 days: props.days,
                 today,
                 size,
-                focusable: props.focusable,
+                focusable,
+                disabled,
                 onchange: move |day: Option<NaiveDate>| {
                     if let Some(day) = day {
                         let time = time.unwrap_or(MIDNIGHT);
@@ -329,7 +331,8 @@ pub(super) fn DateTimeFlow(props: DateTimeFlowProps) -> Element {
                 min: min_time,
                 max: max_time,
                 size: Input::Value(size),
-                focusable: props.focusable,
+                focusable,
+                disabled,
                 name: None,
                 class: Input::default(),
                 sx: Input::default(),
@@ -343,8 +346,8 @@ pub(super) fn DateTimeFlow(props: DateTimeFlowProps) -> Element {
         part.set(if index == 0 { Part::Date } else { Part::Time });
     });
     let tabs = vec![
-        step_tab(names.date_label, None),
-        step_tab(names.time_label, None),
+        step_tab(names.date_label, None, disabled),
+        step_tab(names.time_label, None, disabled),
     ];
     let strip = step_tabs(
         tabs_id(),
@@ -353,7 +356,7 @@ pub(super) fn DateTimeFlow(props: DateTimeFlowProps) -> Element {
         (part() == Part::Time) as usize,
         onselect,
         size,
-        props.focusable,
+        focusable,
         picker,
     );
     flow_root(
@@ -365,7 +368,7 @@ pub(super) fn DateTimeFlow(props: DateTimeFlowProps) -> Element {
         (&root, refresh_today),
         rsx! {
             {strip}
-            {hidden(props.name, value)}
+            {hidden(props.name, value, disabled)}
         },
     )
 }
@@ -384,6 +387,8 @@ pub(super) struct DateTimeRangeFlowProps {
     step: Option<u8>,
     twelve_hour: bool,
     focusable: bool,
+    #[props(default)]
+    disabled: bool,
     #[props(default)]
     name: Option<String>,
     #[props(default)]
@@ -408,7 +413,9 @@ pub(super) fn DateTimeRangeFlow(props: DateTimeRangeFlowProps) -> Element {
     let mut step = use_signal(|| Step::Dates);
     let (root, mut handoff) = use_handoff();
     let tabs_id = use_id();
-    let focusable = props.focusable;
+    let in_disabled_group = use_fieldset_disabled();
+    let disabled = props.disabled || in_disabled_group;
+    let focusable = props.focusable && !disabled;
     let (value, onpick) = (props.value, props.onpick);
     let (today, refresh_today) = use_today_with_refresh(props.today);
     // Times picked before their day, as in `DateTimeFlow`.
@@ -458,7 +465,8 @@ pub(super) fn DateTimeRangeFlow(props: DateTimeRangeFlowProps) -> Element {
                 exclude_date: props.exclude_date,
                 today,
                 size,
-                focusable: props.focusable,
+                focusable,
+                    disabled,
                 onpick: onpick_day,
             }
         },
@@ -487,7 +495,8 @@ pub(super) fn DateTimeRangeFlow(props: DateTimeRangeFlowProps) -> Element {
                     min,
                     max,
                     size: Input::Value(size),
-                    focusable: props.focusable,
+                    focusable,
+                    disabled,
                     name: None,
                     class: Input::default(),
                     sx: Input::default(),
@@ -524,7 +533,8 @@ pub(super) fn DateTimeRangeFlow(props: DateTimeRangeFlowProps) -> Element {
                     min,
                     max,
                     size: Input::Value(size),
-                    focusable: props.focusable,
+                    focusable,
+                    disabled,
                     name: None,
                     class: Input::default(),
                     sx: Input::default(),
@@ -540,14 +550,20 @@ pub(super) fn DateTimeRangeFlow(props: DateTimeRangeFlowProps) -> Element {
     let days =
         value.map(|range| DateRange::new(range.start.date(), range.end.map(|end| end.date())));
     let tabs = vec![
-        step_tab(names.dates_label, days.map(|days| short_days(days, names))),
+        step_tab(
+            names.dates_label,
+            days.map(|days| short_days(days, names)),
+            disabled,
+        ),
         step_tab(
             names.start_time_label,
             start_time.map(|time| short_time(time, twelve, seconds, names)),
+            disabled,
         ),
         step_tab(
             names.end_time_label,
             end_time.map(|time| short_time(time, twelve, seconds, names)),
+            disabled,
         ),
     ];
     let selected = Step::ALL.iter().position(|at| *at == step()).unwrap_or(0);
@@ -558,7 +574,7 @@ pub(super) fn DateTimeRangeFlow(props: DateTimeRangeFlowProps) -> Element {
         selected,
         onselect,
         size,
-        props.focusable,
+        focusable,
         picker,
     );
     flow_root(
@@ -570,7 +586,7 @@ pub(super) fn DateTimeRangeFlow(props: DateTimeRangeFlowProps) -> Element {
         (&root, refresh_today),
         rsx! {
             {strip}
-            {hidden(props.name, value)}
+            {hidden(props.name, value, disabled)}
         },
     )
 }

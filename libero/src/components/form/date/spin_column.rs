@@ -161,6 +161,8 @@ pub(super) struct SpinColumnProps {
     /// The steps Page Up and Page Down take.
     pub page: usize,
     pub focusable: bool,
+    /// `aria-disabled`: keys, typing, wheel, drags and presses do nothing.
+    pub disabled: bool,
     /// Called with `column` and the picked index: one callback serves every column,
     /// so a pick leaves the others' props equal.
     pub onpick: Callback<(&'static str, usize)>,
@@ -182,6 +184,7 @@ pub(super) fn SpinColumn(props: SpinColumnProps) -> Element {
         wrap,
         page,
         focusable,
+        disabled,
         onpick,
         ondone,
     } = props;
@@ -204,7 +207,7 @@ pub(super) fn SpinColumn(props: SpinColumnProps) -> Element {
     };
     let options_for_keys = options.clone();
     let onkeydown = move |event: KeyboardEvent| {
-        if has_shortcut_modifier(&event) {
+        if disabled || has_shortcut_modifier(&event) {
             return;
         }
         let options = &options_for_keys;
@@ -259,6 +262,10 @@ pub(super) fn SpinColumn(props: SpinColumnProps) -> Element {
 
     let options_for_wheel = options.clone();
     let onwheel = move |event: Event<WheelData>| {
+        // Disabled, the wheel scrolls the page.
+        if disabled {
+            return;
+        }
         event.prevent_default();
         let travel = platform::wheel_travel_y(&event.data(), WHEEL_STEP, page as f64);
         let (total, delta) = wheel_steps(*wheel.peek(), travel);
@@ -325,7 +332,7 @@ pub(super) fn SpinColumn(props: SpinColumnProps) -> Element {
             span {
                 "data-slot": ChronoPickerPart::Neighbour.slot(),
                 "aria-hidden": "true",
-                onpointerdown: move |_| pressed.set((!text.is_empty()).then_some(delta)),
+                onpointerdown: move |_| pressed.set((!text.is_empty() && !disabled).then_some(delta)),
                 "{text}"
             }
         }
@@ -336,6 +343,7 @@ pub(super) fn SpinColumn(props: SpinColumnProps) -> Element {
             "data-column": column,
             role: "spinbutton",
             tabindex: if focusable { "0" } else { "-1" },
+            "aria-disabled": disabled.then_some("true"),
             "aria-label": label,
             "aria-valuenow": now,
             "aria-valuetext": now.is_some().then(|| valuetext.unwrap_or_else(|| text.to_string())),
@@ -345,7 +353,8 @@ pub(super) fn SpinColumn(props: SpinColumnProps) -> Element {
             onkeydown,
             onwheel,
             onblur: move |_| typing.set(String::new()),
-            onpointerdown: drag.onpointerdown,
+            // Disabled, no drag: its `prevent_default` would cancel the press's focus (3883).
+            onpointerdown: move |event| if !disabled { drag.onpointerdown.call(event) },
             onpointermove: drag.onpointermove,
             onpointerup: drag.onpointerup,
             onpointercancel: drag.onpointercancel,

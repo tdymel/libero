@@ -177,6 +177,12 @@ pub(in super::super) static TIME_PICKER_SX: StaticSx = StaticSx::new(|| {
             "& button:disabled",
             disabled_look_sx("not-allowed").hover(sx().background("transparent")),
         )
+        // A disabled picker (todo 3881): soft, so a focused column keeps its focus.
+        .selector("& [aria-disabled='true']", disabled_look_sx("not-allowed"))
+        .selector(
+            "& :is(button, [data-slot='spin'])[aria-disabled='true']:not([data-selected]):hover",
+            sx().background("transparent"),
+        )
         .selector("& button:focus-visible", focus_ring_sx())
         .selector("& [data-slot='face']:focus-visible", focus_ring_sx())
         // As in `Calendar`: a picked fill takes the ring inside. More specific than the ring above.

@@ -139,6 +139,7 @@ pub fn ChronoPicker<V: DateValue>(props: ChronoPickerProps<V>) -> Element {
         today: props.today,
         size: props.size,
         focusable: props.focusable.unwrap_or(true),
+        disabled: props.disabled,
         name: props.name,
         class: props.class,
         sx: props.sx,
@@ -253,6 +254,68 @@ mod tests {
             html.contains(r#"<div aria-live="polite" data-slot="title">2020 – 2029</div>"#),
             "{html}"
         );
+    }
+
+    /// Every control `aria-disabled` and out of the tab order, nothing `inert`, `posted`
+    /// hidden inputs all natively disabled.
+    fn assert_soft(html: &str, posted: usize) {
+        assert!(!html.contains("inert"), "{html}");
+        assert!(!html.contains(r#"tabindex="0""#), "{html}");
+        let tags = html
+            .split('<')
+            .skip(1)
+            .map(|tag| tag.split('>').next().unwrap_or_default());
+        for tag in tags {
+            let control = tag.starts_with("button")
+                || ["spinbutton", "slider", "tab"]
+                    .iter()
+                    .any(|role| tag.contains(&format!(r#"role="{role}""#)));
+            if control {
+                assert!(tag.contains(r#"aria-disabled="true""#), "{tag}");
+            }
+            if tag.starts_with("input") {
+                assert!(tag.contains("disabled"), "{tag}");
+            }
+        }
+        assert_eq!(html.matches(r#"type="hidden""#).count(), posted, "{html}");
+    }
+
+    /// Todo 3881: a disabled picker is soft and posts nothing; out-of-range cells stay natively disabled.
+    #[test]
+    fn a_disabled_picker_is_soft_and_posts_nothing() {
+        use super::super::{DateRange, DateRangePicker, YearPicker};
+        use chrono::{NaiveDateTime, TimeDelta};
+
+        let day = NaiveDate::from_ymd_opt(2026, 10, 21);
+        let time = NaiveTime::from_hms_opt(9, 30, 0);
+        let html = dioxus_ssr::render_element(rsx! {
+            crate::LiberoProvider {
+                DatePicker { value: day, name: "a", disabled: true }
+                DateRangePicker { name: "b", disabled: true }
+                MonthPicker { value: day, name: "c", disabled: true }
+                YearPicker { value: day, name: "d", disabled: true }
+                TimePicker { value: time, variant: "digital", name: "e", disabled: true }
+                TimePicker { value: time, variant: "analog", name: "f", disabled: true }
+                ChronoPicker::<TimeDelta> { name: "g", disabled: true }
+                ChronoPicker::<NaiveDateTime> { name: "h", disabled: true }
+                ChronoPicker::<DateRange<NaiveDateTime>> { name: "i", disabled: true }
+            }
+        });
+        assert_soft(&html, 9);
+    }
+
+    /// Todo 3881: a disabled `Fieldset` disables the picker as its own prop does.
+    #[test]
+    fn a_disabled_fieldset_disables_the_picker() {
+        let html = dioxus_ssr::render_element(rsx! {
+            crate::LiberoProvider {
+                crate::components::Fieldset::<()> { label: "When", disabled: true,
+                    DatePicker { value: NaiveDate::from_ymd_opt(2026, 10, 21), name: "a" }
+                    TimePicker { variant: "digital", name: "b" }
+                }
+            }
+        });
+        assert_soft(&html, 2);
     }
 
     /// Todo 2310: the analog readout's colons are not read between the buttons.

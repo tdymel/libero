@@ -119,15 +119,6 @@ fn live_controls(html: &str) -> Vec<String> {
     live
 }
 
-/// The inline pickers have no soft-disabled form yet: `inert` keeps them out of reach.
-const INERT: [&str; 5] = [
-    "DatePicker",
-    "DateRangePicker",
-    "MonthPicker",
-    "YearPicker",
-    "TimePicker",
-];
-
 #[test]
 fn a_disabled_fieldset_disables_every_control_inside_and_renders_no_native_disabled() {
     let mut failures = Vec::new();
@@ -139,11 +130,7 @@ fn a_disabled_fieldset_disables_every_control_inside_and_renders_no_native_disab
             fieldset.get("aria-disabled").map(String::as_str),
             Some("true")
         );
-        let mut live = live_controls(&html);
-        if INERT.contains(&name) {
-            assert!(html.contains(" inert="), "{name} is not inert: {html}");
-            live.retain(|control| !control.starts_with("<button>"));
-        }
+        let live = live_controls(&html);
         if !live.is_empty() {
             failures.push(format!("{name}:\n  {}", live.join("\n  ")));
         }

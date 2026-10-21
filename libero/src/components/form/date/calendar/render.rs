@@ -38,6 +38,7 @@ impl View {
             ..
         } = self;
         nav_targets.write()[usize::from(forward)] = target;
+        let disabled = disabled || self.disabled;
         rsx! {
             Nav { label, disabled, targets: nav_targets, forward, size, focusable, paged }
         }
@@ -56,6 +57,7 @@ impl View {
             max,
             mut paged,
             mut active,
+            disabled,
             ..
         } = self;
         let Strip {
@@ -80,8 +82,12 @@ impl View {
                         "data-selected": picked.then_some("true"),
                         "aria-label": format_date(day, (formats.date)(DateLevel::Day), names),
                         disabled: self.day_disabled(day).then_some(true),
+                        "aria-disabled": disabled.then_some("true"),
                         tabindex: self.tabindex(day == stop),
                         onclick: move |_| {
+                            if disabled {
+                                return;
+                            }
                             // Pinned, so the new value does not move the row.
                             paged.set(Some(start));
                             active.set(Some(day));
@@ -129,6 +135,7 @@ impl View {
             today,
             min,
             max,
+            disabled: off,
             ..
         } = self;
         let year = first.year();
@@ -160,8 +167,12 @@ impl View {
                         "aria-current": is_today.then_some("date"),
                         "aria-label": format_date(month, (formats.date)(DateLevel::Month), names),
                         disabled,
+                        "aria-disabled": off.then_some("true"),
                         tabindex: self.tabindex(month == cell_stop),
                         onclick: move |_| {
+                            if off {
+                                return;
+                            }
                             if lowest == DateLevel::Month {
                                 onpick.call(month);
                             } else {
@@ -184,8 +195,12 @@ impl View {
                     r#type: "button",
                     "data-slot": ChronoPickerPart::Title.slot(),
                     "aria-live": "polite",
+                    "aria-disabled": off.then_some("true"),
                     tabindex: self.tabindex(true),
                     onclick: move |_| {
+                        if off {
+                            return;
+                        }
                         level.set(DateLevel::Year);
                         // The decade's title is plain text, so focus goes to the year.
                         focus.to(Focus::Stop);
@@ -223,6 +238,7 @@ impl View {
             today,
             min,
             max,
+            disabled: off,
             ..
         } = self;
         let cell = move |offset: i32| {
@@ -254,8 +270,12 @@ impl View {
                         "data-today": is_today.then_some("true"),
                         "aria-current": is_today.then_some("date"),
                         disabled,
+                        "aria-disabled": off.then_some("true"),
                         tabindex: self.tabindex(year_start == cell_stop),
                         onclick: move |_| {
+                            if off {
+                                return;
+                            }
                             if lowest == DateLevel::Year {
                                 onpick.call(year_start);
                             } else {
@@ -315,6 +335,7 @@ pub(super) struct WeekProps {
     #[props(into)]
     exclude_date: DayRule,
     focusable: bool,
+    disabled: bool,
     awaits_end: bool,
     hover: Signal<Option<NaiveDate>>,
     active: Signal<Option<NaiveDate>>,
@@ -336,12 +357,15 @@ pub(super) fn Week(props: WeekProps) -> Element {
         max,
         exclude_date,
         focusable,
+        disabled,
         awaits_end,
         hover,
         active,
         paged,
         onpick,
     } = props;
+    // A disabled calendar previews no range either.
+    let awaits_end = awaits_end && !disabled;
     let allowed = day_allowed(min, max, exclude_date.0);
     let names = &use_localization().date;
     // APG: the full date, not only the number shown.
@@ -394,6 +418,7 @@ pub(super) fn Week(props: WeekProps) -> Element {
                         "aria-label": label(day),
                         // dioxus-native writes `disabled="false"`, which Blitz reads as disabled.
                         disabled: (!allowed(day)).then_some(true),
+                        "aria-disabled": disabled.then_some("true"),
                         tabindex: if focusable && !outside && tab_stop == Some(day) { "0" } else { "-1" },
                         onmouseenter: move |_| {
                             if awaits_end {
@@ -407,6 +432,9 @@ pub(super) fn Week(props: WeekProps) -> Element {
                             }
                         },
                         onclick: move |_| {
+                            if disabled {
+                                return;
+                            }
                             active.set(Some(day));
                             // A neighbour's day pages to its month.
                             if outside {

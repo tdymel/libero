@@ -75,6 +75,8 @@ pub(super) struct ClockView {
     pub(super) with_seconds: bool,
     pub(super) step: u8,
     pub(super) focusable: bool,
+    /// Every press, drag and key is swallowed; the controls say `aria-disabled`.
+    pub(super) disabled: bool,
     pub(super) hand: Signal<Hand>,
     pub(super) oncomplete: Option<Callback<()>>,
 }
@@ -123,6 +125,9 @@ impl ClockView {
     /// Emits `next` pulled inside `min` and `max`: an hour picked at 9 with
     /// `min` 09:30 keeps `base`'s minute only where it is allowed.
     pub(super) fn emit(self, next: NaiveTime) {
+        if self.disabled {
+            return;
+        }
         if let Some(onchange) = &self.onchange {
             onchange.call(Some(self.clamp(next)));
         }
@@ -191,6 +196,9 @@ impl ClockView {
 
     /// On to the next hand, or complete after the last.
     pub(super) fn advance(self) {
+        if self.disabled {
+            return;
+        }
         let mut hand = self.hand;
         match (self.after(hand()), self.oncomplete) {
             (Some(next), _) => hand.set(next),
@@ -219,7 +227,7 @@ impl ClockView {
     /// Page keys a quarter face, Home/End the first/last open value, Enter the next hand.
     pub(super) fn face_keydown(self, event: KeyboardEvent) {
         // Ctrl/Alt/Meta chords are the browser's.
-        if has_shortcut_modifier(&event) {
+        if self.disabled || has_shortcut_modifier(&event) {
             return;
         }
         let hand = self.hand;

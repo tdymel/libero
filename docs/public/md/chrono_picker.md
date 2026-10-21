@@ -79,6 +79,7 @@ uses and no turbofish.
 | `size` | `Size` | `md` | Cell, option and font size. |
 | `name` | `String` | - | Posts the value as ISO 8601 in a hidden input of that name. |
 | `focusable` | `bool` | `true` | `false` keeps the picker out of the tab order, for a picker inside a dropdown whose input keeps focus. |
+| `disabled` | `bool` | `false` | Shows the value but takes no pick: every cell is `aria-disabled` and out of the tab order, presses and keys do nothing, and a focused cell keeps its focus. The hidden `name` input posts nothing. A disabled `Fieldset` sets it too. |
 
 Props that only some value types use are ignored by the rest, with a warning in
 debug builds.
@@ -159,6 +160,10 @@ picker in it with the field's `dropdown_parts`.
   digital column too.
 - A date-time shows the day and the time as tabs above the picker. Picking the
   day moves focus into the clock.
+- A disabled picker keeps its cells as they are, marked `aria-disabled` and
+  out of the tab order, so a focused cell keeps its focus. It takes no key,
+  press, wheel or drag, and its hidden input posts nothing. A disabled
+  `Fieldset` disables it the same way.
 - A date-time range has three tabs: the days, the start time and the end time.
   Each shows its value once picked, such as `12–14 Oct` or `09:00`, and moves
   on to the next when complete. The start and the end may be on different

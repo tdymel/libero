@@ -69,6 +69,7 @@ pub fn TimePicker(props: TimePickerProps) -> Element {
         today: None,
         size: props.size,
         focusable: props.focusable.unwrap_or(true),
+        disabled: props.disabled,
         name: props.name,
         class: props.class,
         sx: props.sx,
@@ -91,6 +92,9 @@ pub(super) struct ClockProps {
     max: Option<NaiveTime>,
     size: Input<Size>,
     focusable: bool,
+    /// Soft: `aria-disabled` controls, presses and keys swallowed, nothing posted.
+    #[props(default)]
+    disabled: bool,
     name: Option<String>,
     class: Input<ClassList>,
     sx: Input<Sx>,
@@ -109,6 +113,9 @@ pub(super) fn Clock(props: ClockProps) -> Element {
     let size = props.size.copied_or(theme.time_picker.size);
     let value = props.value;
     let base = value.or(props.min).unwrap_or(MIDNIGHT);
+    // No native `disabled`, nor `inert`: either would drop a focused column's focus (todo 3881).
+    let in_disabled_group = use_fieldset_disabled();
+    let disabled = props.disabled || in_disabled_group;
 
     let hand = use_signal(|| Hand::Hour);
     let clock = ClockView {
@@ -122,7 +129,8 @@ pub(super) fn Clock(props: ClockProps) -> Element {
         twelve: props.twelve_hour,
         with_seconds: props.with_seconds,
         step: props.step.unwrap_or(theme.time_picker.step).clamp(1, 30),
-        focusable: props.focusable,
+        focusable: props.focusable && !disabled,
+        disabled,
         hand,
         oncomplete: props.oncomplete,
     };
@@ -174,29 +182,24 @@ pub(super) fn Clock(props: ClockProps) -> Element {
         .parts(&props.parts)
         .states(&states)
         .prepare();
-    // A disabled `Fieldset` renders no native `disabled`: post nothing, take no input (todo 3873).
-    let group_disabled = use_fieldset_disabled();
     let hidden = props.name.map(|name| {
         rsx! {
             input {
                 r#type: "hidden",
                 name,
                 value: value.map(|value| value.to_string()).unwrap_or_default(),
-                disabled: group_disabled,
+                disabled,
             }
         }
     });
-    root_box
-        .element(&root)
-        .attr("inert", group_disabled)
-        .render(
-            HtmlTag::Div,
-            props.attributes,
-            rsx! {
-                {body}
-                {hidden}
-            },
-        )
+    root_box.element(&root).render(
+        HtmlTag::Div,
+        props.attributes,
+        rsx! {
+            {body}
+            {hidden}
+        },
+    )
 }
 
 #[cfg(test)]

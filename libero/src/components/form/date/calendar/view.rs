@@ -64,6 +64,8 @@ pub(super) struct View {
     pub(super) exclude_date: Option<Callback<NaiveDate, bool>>,
     pub(super) size: Size,
     pub(super) focusable: bool,
+    /// Every press and key is swallowed; the cells say `aria-disabled`.
+    pub(super) disabled: bool,
 }
 
 impl View {
@@ -133,7 +135,7 @@ impl View {
     /// The day grid's keys, from `tab_stop` in weekday column `column`.
     pub(super) fn day_keydown(self, event: KeyboardEvent, tab_stop: NaiveDate, column: i64) {
         // Alt+ArrowLeft is Back, Ctrl+PageUp switches tabs: a chord is the browser's.
-        if has_shortcut_modifier(&event) {
+        if self.disabled || has_shortcut_modifier(&event) {
             return;
         }
         let years = if event.modifiers().shift() { 12 } else { 1 };
@@ -220,7 +222,7 @@ impl View {
 
     /// A step off the shown year or decade pages it.
     pub(super) fn cell_keydown(self, event: KeyboardEvent, cell_stop: NaiveDate) {
-        if has_shortcut_modifier(&event) {
+        if self.disabled || has_shortcut_modifier(&event) {
             return;
         }
         let level = (self.level)();
@@ -310,7 +312,7 @@ impl Strip {
     }
 
     pub(super) fn keydown(self, view: View, event: KeyboardEvent) {
-        if has_shortcut_modifier(&event) {
+        if view.disabled || has_shortcut_modifier(&event) {
             return;
         }
         let next = match logical_key(&event) {

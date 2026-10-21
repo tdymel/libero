@@ -27,6 +27,7 @@ impl ClockView {
             with_seconds,
             step,
             focusable,
+            disabled,
             ..
         } = self;
         // An empty column steps from `base`; a set one shows its value.
@@ -54,6 +55,7 @@ impl ClockView {
                     wrap: column != Column::Meridiem,
                     page,
                     focusable,
+                    disabled,
                     onpick: pick,
                     ondone,
                 }
@@ -207,10 +209,17 @@ impl ClockView {
             pm,
             twelve,
             with_seconds,
-            mut hand,
+            hand,
+            disabled,
             ..
         } = self;
         let tabindex = self.tabindex();
+        let aria_disabled = disabled.then_some("true");
+        let show = move |next: Hand| {
+            if !disabled {
+                { hand }.set(next);
+            }
+        };
         let marks = self.marks();
         let pointer = value.map(|value| {
             let (degrees, radius) = match hand() {
@@ -250,8 +259,9 @@ impl ClockView {
                     "aria-label": "{second_text} {names.seconds_label}",
                     "data-active": (hand() == Hand::Second).then_some("true"),
                     "aria-pressed": if hand() == Hand::Second { "true" } else { "false" },
+                    "aria-disabled": aria_disabled,
                     tabindex,
-                    onclick: move |_| hand.set(Hand::Second),
+                    onclick: move |_| show(Hand::Second),
                     "{second_text}"
                 }
             }
@@ -272,6 +282,7 @@ impl ClockView {
                     "data-active": (value.is_some() && !pm).then_some("true"),
                     "aria-pressed": if value.is_some() && !pm { "true" } else { "false" },
                     disabled: am_at.is_none().then_some(true),
+                    "aria-disabled": aria_disabled,
                     tabindex,
                     onclick: move |_| {
                         if let Some(next) = am_at {
@@ -285,6 +296,7 @@ impl ClockView {
                     "data-active": (value.is_some() && pm).then_some("true"),
                     "aria-pressed": if value.is_some() && pm { "true" } else { "false" },
                     disabled: pm_at.is_none().then_some(true),
+                    "aria-disabled": aria_disabled,
                     tabindex,
                     onclick: move |_| {
                         if let Some(next) = pm_at {
@@ -337,8 +349,9 @@ impl ClockView {
                     "aria-label": "{hour_text} {names.hours_label}",
                     "data-active": (hand() == Hand::Hour).then_some("true"),
                     "aria-pressed": if hand() == Hand::Hour { "true" } else { "false" },
+                    "aria-disabled": aria_disabled,
                     tabindex,
-                    onclick: move |_| hand.set(Hand::Hour),
+                    onclick: move |_| show(Hand::Hour),
                     "{hour_text}"
                 }
                 span { "aria-hidden": "true", ":" }
@@ -347,8 +360,9 @@ impl ClockView {
                     "aria-label": "{minute_text} {names.minutes_label}",
                     "data-active": (hand() == Hand::Minute).then_some("true"),
                     "aria-pressed": if hand() == Hand::Minute { "true" } else { "false" },
+                    "aria-disabled": aria_disabled,
                     tabindex,
-                    onclick: move |_| hand.set(Hand::Minute),
+                    onclick: move |_| show(Hand::Minute),
                     "{minute_text}"
                 }
                 {seconds}
@@ -358,6 +372,7 @@ impl ClockView {
                 "data-slot": ChronoPickerPart::Face.slot(),
                 role: "slider",
                 tabindex,
+                "aria-disabled": aria_disabled,
                 "aria-label": face_label,
                 "aria-valuetext": face_text,
                 "aria-valuenow": face_now,
@@ -365,7 +380,8 @@ impl ClockView {
                 "aria-valuemax": face_max,
                 onmounted: face.mount(),
                 onkeydown: move |event| self.face_keydown(event),
-                onpointerdown: drag.onpointerdown,
+                // Disabled, no drag: its `prevent_default` would cancel the press's focus (3883).
+                onpointerdown: move |event| if !self.disabled { drag.onpointerdown.call(event) },
                 onpointermove: drag.onpointermove,
                 onpointerup: drag.onpointerup,
                 onpointercancel: drag.onpointercancel,

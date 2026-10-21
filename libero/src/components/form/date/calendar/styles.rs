@@ -145,6 +145,15 @@ pub(super) static CALENDAR_SX: StaticSx = StaticSx::new(|| {
             "& :is([data-slot='day'], [data-slot='cell']):disabled",
             disabled_look_sx("not-allowed").hover(sx().background("transparent")),
         )
+        // A disabled picker (todo 3881): soft, so a focused day keeps its focus.
+        .selector(
+            "& :is([data-slot='day'], [data-slot='cell'], [data-slot='title'])[aria-disabled='true']",
+            disabled_look_sx("not-allowed"),
+        )
+        .selector(
+            "& [aria-disabled='true']:not([data-selected], [data-in-range]):hover",
+            sx().background("transparent"),
+        )
         .selector("& button:focus-visible", focus_ring_sx())
         // A picked cell's fill sets a ring colour meant for its inside: outside, a light ring vanishes.
         // More specific than the ring above.

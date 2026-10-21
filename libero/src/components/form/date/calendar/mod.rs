@@ -198,6 +198,9 @@ pub(super) struct CalendarProps {
     size: Size,
     #[props(default = true)]
     focusable: bool,
+    /// Soft: `aria-disabled` cells, presses and keys swallowed, nothing posted.
+    #[props(default)]
+    disabled: bool,
     /// A hidden input's name and value, so the calendar posts with a form.
     #[props(default)]
     hidden: Option<(String, String)>,
@@ -240,7 +243,10 @@ pub(super) fn Calendar(props: CalendarProps) -> Element {
     let columns = props.columns.max(1) as i64;
     let lowest = props.lowest;
     let (min, max, exclude_date) = (props.min, props.max, props.exclude_date.0);
-    let focusable = props.focusable;
+    // No native `disabled`, nor `inert`: either would drop a focused day's focus (todo 3881).
+    let in_disabled_group = use_fieldset_disabled();
+    let disabled = props.disabled || in_disabled_group;
+    let focusable = props.focusable && !disabled;
 
     let (today, refresh_today) = use_today_with_refresh(props.today);
     // A new `lowest` remounts the calendar (`DateValue::picker` keys it).
@@ -285,6 +291,7 @@ pub(super) fn Calendar(props: CalendarProps) -> Element {
         exclude_date,
         size: props.size,
         focusable,
+        disabled,
     };
     let shown = move |day: NaiveDate| (first..=last).contains(&first_of_month(day));
     let tab_stop = active()
@@ -328,7 +335,7 @@ pub(super) fn Calendar(props: CalendarProps) -> Element {
                 div { "data-slot": ChronoPickerPart::Header.slot(),
                     Nav {
                         label: names.previous_month,
-                        disabled: min.is_some_and(|min| add_days(first, -1) < min),
+                        disabled: disabled || min.is_some_and(|min| add_days(first, -1) < min),
                         targets: nav_targets,
                         forward: false,
                         size,
@@ -341,8 +348,12 @@ pub(super) fn Calendar(props: CalendarProps) -> Element {
                             r#type: "button",
                             "data-slot": ChronoPickerPart::Title.slot(),
                             "aria-live": "polite",
+                            "aria-disabled": disabled.then_some("true"),
                             tabindex: view.tabindex(true),
                             onclick: move |_| {
+                                if disabled {
+                                    return;
+                                }
                                 paged.set(Some(month));
                                 level.set(DateLevel::Month);
                                 focus.to(Focus::Title);
@@ -352,7 +363,7 @@ pub(super) fn Calendar(props: CalendarProps) -> Element {
                     }
                     Nav {
                         label: names.next_month,
-                        disabled: max.is_some_and(|max| add_months(last, 1) > max),
+                        disabled: disabled || max.is_some_and(|max| add_months(last, 1) > max),
                         targets: nav_targets,
                         forward: true,
                         size,
@@ -388,6 +399,7 @@ pub(super) fn Calendar(props: CalendarProps) -> Element {
                                     max,
                                     exclude_date,
                                     focusable,
+                                    disabled,
                                     awaits_end,
                                     hover,
                                     active,
@@ -416,11 +428,9 @@ pub(super) fn Calendar(props: CalendarProps) -> Element {
         .parts(&props.parts)
         .states(&states)
         .prepare();
-    // A disabled `Fieldset` renders no native `disabled`: post nothing, take no input (todo 3873).
-    let group_disabled = use_fieldset_disabled();
     let hidden = props.hidden.map(|(name, value)| {
         rsx! {
-            input { r#type: "hidden", name, value, disabled: group_disabled }
+            input { r#type: "hidden", name, value, disabled }
         }
     });
 
@@ -428,7 +438,6 @@ pub(super) fn Calendar(props: CalendarProps) -> Element {
     let onfocusin = move |_: FocusEvent| refresh_today.ask();
     root_box
         .element(&root)
-        .attr("inert", group_disabled)
         .event("onfocusin", onfocusin)
         .render(
             HtmlTag::Div,
