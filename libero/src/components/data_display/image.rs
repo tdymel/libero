@@ -11,7 +11,7 @@ use crate::{
         form::use_fieldset_disabled,
         layout::use_box,
     },
-    hooks::{LightboxItem, LightboxOptions, use_lightbox, use_localization, use_theme},
+    hooks::{use_localization, use_theme},
     localization::{ImageLabels, fill},
     platform,
     str_enum::str_enum,
@@ -19,6 +19,9 @@ use crate::{
     theme::{CssVar, IMAGE_RADIUS, ImageDefaults, SizeCss},
     utils::warn,
 };
+
+#[cfg(feature = "lightbox")]
+use crate::hooks::{LightboxItem, LightboxOptions, use_lightbox};
 
 pub use crate::theme::ImageFit;
 
@@ -155,6 +158,7 @@ base_props! {
         /// Marks the picture as decoration: `alt=""` and `role="presentation"`.
         #[props(default)]
         decorative: bool,
+        /// Opens the picture in a lightbox on a press; needs the `lightbox` feature.
         #[props(default)]
         zoomable: bool,
         /// The `<img>`'s `loading` attribute.
@@ -174,6 +178,13 @@ const IMG_ATTRIBUTES: [&str; 8] = [
     "referrerpolicy",
     "usemap",
 ];
+
+/// The warning for `zoomable` in a build without the lightbox (todo 3917).
+fn zoom_unavailable(zoomable: bool, lightbox: bool) -> Option<&'static str> {
+    (zoomable && !lightbox).then_some(
+        "Image: `zoomable` needs libero's `lightbox` feature - the picture renders unzoomable.",
+    )
+}
 
 fn zoom_label(alt: &str, labels: &ImageLabels) -> String {
     match alt.is_empty() {
@@ -238,8 +249,11 @@ pub fn Image(props: ImageProps) -> Element {
                  zoom button would nest a <button> in the <a>.",
             );
         }
+        if let Some(note) = zoom_unavailable(props.zoomable, cfg!(feature = "lightbox")) {
+            warn(note);
+        }
     });
-    let zoomable = props.zoomable && !in_link;
+    let zoomable = props.zoomable && !in_link && cfg!(feature = "lightbox");
 
     // An empty fallback is no fallback, on every platform.
     let fallback_own = props
@@ -318,45 +332,47 @@ pub fn Image(props: ImageProps) -> Element {
             props.loading.as_ref().map(|loading| loading.as_str()),
         );
 
-    if !zoomable {
-        return image
+    #[cfg(feature = "lightbox")]
+    if zoomable {
+        let zoomed_src = props
+            .zoomed_src
+            .as_deref()
+            .filter(|zoomed| !zoomed.is_empty())
+            .and_then(|zoomed| media_url(zoomed, "Image zoomed_src"))
+            .unwrap_or_else(|| src.clone());
+        let item = LightboxItem::new(zoomed_src, alt.clone().unwrap_or_default());
+        let (img_attributes, attributes): (Vec<_>, Vec<_>) = props
+            .attributes
+            .into_iter()
+            .partition(|attribute| IMG_ATTRIBUTES.contains(&attribute.name));
+        let image = image
             .attr("src", src)
-            .attr("alt", alt)
-            .attr("role", decorative_role)
-            .render(HtmlTag::Img, props.attributes, ());
-    }
-    let zoomed_src = props
-        .zoomed_src
-        .as_deref()
-        .filter(|zoomed| !zoomed.is_empty())
-        .and_then(|zoomed| media_url(zoomed, "Image zoomed_src"))
-        .unwrap_or_else(|| src.clone());
-    let item = LightboxItem::new(zoomed_src, alt.clone().unwrap_or_default());
-    let (img_attributes, attributes): (Vec<_>, Vec<_>) = props
-        .attributes
-        .into_iter()
-        .partition(|attribute| IMG_ATTRIBUTES.contains(&attribute.name));
-    let image = image
-        .attr("src", src)
-        .attr("alt", "")
-        .attr("role", "presentation")
-        .attr("data-slot", ImagePart::Image.slot())
-        .render(HtmlTag::Img, img_attributes, ());
+            .attr("alt", "")
+            .attr("role", "presentation")
+            .attr("data-slot", ImagePart::Image.slot())
+            .render(HtmlTag::Img, img_attributes, ());
 
-    rsx! {
-        ZoomButton {
-            item,
-            alt: alt.unwrap_or_default(),
-            variables: image_variables(props.radius.as_ref()),
-            class: props.class,
-            sx: parts_under_sx(&props.parts, props.sx),
-            states: props.states,
-            attributes,
-            {image}
-        }
+        return rsx! {
+            ZoomButton {
+                item,
+                alt: alt.unwrap_or_default(),
+                variables: image_variables(props.radius.as_ref()),
+                class: props.class,
+                sx: parts_under_sx(&props.parts, props.sx),
+                states: props.states,
+                attributes,
+                {image}
+            }
+        };
     }
+    image
+        .attr("src", src)
+        .attr("alt", alt)
+        .attr("role", decorative_role)
+        .render(HtmlTag::Img, props.attributes, ())
 }
 
+#[cfg(feature = "lightbox")]
 #[derive(Props, Clone, PartialEq)]
 struct ZoomButtonProps {
     item: LightboxItem,
@@ -371,6 +387,7 @@ struct ZoomButtonProps {
 
 /// A zoomable `Image`'s root, split out so only a zoomable one pays for
 /// `use_lightbox` and its modal registration.
+#[cfg(feature = "lightbox")]
 #[component]
 fn ZoomButton(props: ZoomButtonProps) -> Element {
     let zoom = use_lightbox(LightboxOptions {
@@ -444,6 +461,14 @@ mod tests {
     #[test]
     fn no_radius_emits_no_variable() {
         assert_eq!(image_variables(None).to_string(), "");
+    }
+
+    /// Todo 3917: `image` builds without `lightbox`, and then says why nothing zooms.
+    #[test]
+    fn zoomable_without_the_lightbox_feature_warns() {
+        assert!(zoom_unavailable(true, false).is_some_and(|note| note.contains("`lightbox`")));
+        assert_eq!(zoom_unavailable(true, true), None);
+        assert_eq!(zoom_unavailable(false, false), None);
     }
 
     use crate::utils::warnings_of;

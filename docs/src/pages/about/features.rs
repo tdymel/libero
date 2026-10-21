@@ -73,7 +73,10 @@ pub(crate) const FEATURES: &[Feature] = &[
         "charts-rs, about 240 KB brotli on the web.",
     ),
     feature("data-list", "data-display", "DataList", &[], true, &["/data-display/data-list"]),
-    feature("image", "data-display", "Image", &["lightbox"], true, &["/data-display/image"]),
+    costly(
+        feature("image", "data-display", "Image", &[], true, &["/data-display/image"]),
+        "Its zoomable prop needs lightbox on as well; without it the picture renders unzoomable.",
+    ),
     feature("image-list", "data-display", "ImageList", &["image"], true, &["/data-display/image-list"]),
     feature("indicator", "data-display", "Indicator", &[], true, &["/data-display/indicator"]),
     feature("kanban", "data-display", "Kanban", &["sortable", "menu"], false, &["/data-display/kanban"]),
@@ -85,8 +88,8 @@ pub(crate) const FEATURES: &[Feature] = &[
     ),
     feature("sortable", "data-display", "Sortable, use_sortable", &[], true, &["/data-display/sortable"]),
     costly(
-        feature("table", "data-display", "Table, column and the table toolbar buttons", &["badge", "progress-bar", "skeleton", "checkbox", "native-select", "select", "text-field", "pagination", "menu", "sortable", "date-time"], true, &["/data-display/table"]),
-        "The largest component: its filters and editors bring the date, select and text fields.",
+        feature("table", "data-display", "Table, column and the table toolbar buttons", &["badge", "progress-bar", "skeleton", "checkbox", "native-select", "select", "text-field", "pagination", "menu", "sortable"], true, &["/data-display/table"]),
+        "The largest component: its filters and editors bring the select and text fields. With date-time on, a date filter uses DateField.",
     ),
     feature("timeline", "data-display", "Timeline", &[], true, &["/data-display/timeline"]),
     feature("video", "data-display", "Video", &["slider", "menu"], false, &["/data-display/video"]),
@@ -101,7 +104,10 @@ pub(crate) const FEATURES: &[Feature] = &[
     feature("color", "form", "ColorField, ColorPicker, ColorSwatch, HueSlider, AlphaSlider", &["slider"], false, &["/form/color-field", "/form/color-picker"]),
     feature("combobox", "form", "Combobox, use_combobox", &[], true, &["/form/combobox"]),
     feature("date-time", "form", "ChronoField, ChronoPicker, DateField, DatePicker, TimeField, TimePicker and the other date and time fields and pickers", &["tabs"], true, &["/form/chrono-field", "/form/chrono-picker"]),
-    feature("file-field", "form", "FileField", &["chip", "image-cropper", "select"], true, &["/form/file-field"]),
+    costly(
+        feature("file-field", "form", "FileField", &["chip", "select"], true, &["/form/file-field"]),
+        "Its crop prop needs image-cropper on as well; without it the file passes uncropped.",
+    ),
     feature("image-cropper", "form", "ImageCropper", &["slider"], true, &["/form/image-cropper"]),
     feature("native-select", "form", "NativeSelect", &["combobox", "select"], true, &["/form/native-select"]),
     feature("number-field", "form", "NumberField", &[], true, &["/form/number-field"]),
@@ -451,6 +457,21 @@ pub fn FeaturesPage() -> Element {
                     "Off by default are the rare or heavy ones: charts, media players, the kanban board, "
                     "the rich text editor, QR codes and the brand-mark buttons among them. "
                     "A feature on by default may be there only because another default one turns it on."
+                }
+                Text {
+                    "Three components use another feature only when it is on, and work without it: "
+                    Code { source: "table" }
+                    "'s date filter picks from a DateField with "
+                    Code { source: "date-time" }
+                    " and from the native date input without; FileField's "
+                    Code { source: "crop" }
+                    " needs "
+                    Code { source: "image-cropper" }
+                    " and Image's "
+                    Code { source: "zoomable" }
+                    " needs "
+                    Code { source: "lightbox" }
+                    ", else a debug build warns and the file passes uncropped, the picture unzoomable."
                 }
                 Text {
                     "Cost is the wasm an app gains in a release build when it uses the feature's first component, over a bare Text and Button app of 2.7 MB (before wasm-bindgen). "

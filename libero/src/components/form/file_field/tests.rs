@@ -1,4 +1,13 @@
+use super::file_field::crop_unavailable;
 use super::rows::chip_cursor;
+
+/// Todo 3917: `file-field` builds without `image-cropper`, and then says why nothing crops.
+#[test]
+fn crop_without_the_image_cropper_feature_warns() {
+    assert!(crop_unavailable(true, false).is_some_and(|note| note.contains("`image-cropper`")));
+    assert_eq!(crop_unavailable(true, true), None);
+    assert_eq!(crop_unavailable(false, false), None);
+}
 
 #[test]
 fn the_cursor_clamps_to_the_chips_left() {

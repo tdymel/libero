@@ -9,6 +9,7 @@ use crate::{
 };
 
 use super::accept::{accepts, picker_accepts};
+#[cfg(feature = "image-cropper")]
 use super::crop::croppable;
 use super::files::{FileRejection, Files, RejectReason};
 use super::rows::FocusDebt;
@@ -24,6 +25,7 @@ pub(super) struct Taking {
     pub(super) multiple: bool,
     pub(super) editable: bool,
     /// Set with `crop`: a croppable pick waits here for the crop dialog.
+    #[cfg(feature = "image-cropper")]
     pub(super) crop: Option<Signal<Option<FileData>>>,
 }
 
@@ -49,6 +51,7 @@ pub(super) fn use_file_intake(taking: Taking) -> Intake {
         accept,
         multiple,
         editable,
+        #[cfg(feature = "image-cropper")]
         crop,
     } = taking;
 
@@ -73,11 +76,14 @@ pub(super) fn use_file_intake(taking: Taking) -> Intake {
                 onreject.call(rejected);
             }
         }
+        #[cfg(feature = "image-cropper")]
         if let Some(mut pending) = crop
             && let Some(file) = croppable(&kept)
         {
             pending.set(Some(file));
-        } else if !kept.is_empty() {
+            return;
+        }
+        if !kept.is_empty() {
             owed.set(Some(FocusDebt::Took));
             emit.call(kept);
         }

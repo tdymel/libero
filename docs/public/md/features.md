@@ -52,6 +52,12 @@ board, the rich text editor, QR codes and the brand-mark buttons among them. A
 feature on by default may be there only because another default one turns it
 on.
 
+Three components use another feature only when it is on, and work without it:
+`table`'s date filter picks from a DateField with `date-time` and from the
+native date input without; FileField's `crop` needs `image-cropper` and Image's
+`zoomable` needs `lightbox`, else a debug build warns and the file passes
+uncropped, the picture unzoomable.
+
 Cost is the wasm an app gains in a release build when it uses the feature's
 first component, over a bare Text and Button app of 2.7 MB (before
 wasm-bindgen). Rows share code, so they do not add up. A feature nobody uses
@@ -76,7 +82,7 @@ edit: no features 23 s and 3 s, `select` 25 s and 4 s, the defaults 59 s and
 | `carousel` | Carousel |  | on |  | +1.3 MB |
 | `charts` | LineChart, BarChart, PieChart and the other charts | skeleton | off | charts-rs, about 240 KB brotli on the web. | +1.6 MB |
 | `data-list` | DataList |  | on |  | +7 KB |
-| `image` | Image | lightbox | on |  | +2.0 MB |
+| `image` | Image |  | on | Its zoomable prop needs lightbox on as well; without it the picture renders unzoomable. | +2.0 MB |
 | `image-list` | ImageList | image | on |  | +130 KB |
 | `indicator` | Indicator |  | on |  | +10 KB |
 | `kanban` | Kanban | sortable, menu | off |  | +900 KB |
@@ -84,7 +90,7 @@ edit: no features 23 s and 3 s, `select` 25 s and 4 s, the defaults 59 s and
 | `marquee` | Marquee |  | off |  | +570 KB |
 | `qr-code` | QrCode |  | off | The fast_qr encoder. | +110 KB |
 | `sortable` | Sortable, use_sortable |  | on |  | +580 KB |
-| `table` | Table, column and the table toolbar buttons | badge, progress-bar, skeleton, checkbox, native-select, select, text-field, pagination, menu, sortable, date-time | on | The largest component: its filters and editors bring the date, select and text fields. | +6.5 MB |
+| `table` | Table, column and the table toolbar buttons | badge, progress-bar, skeleton, checkbox, native-select, select, text-field, pagination, menu, sortable | on | The largest component: its filters and editors bring the select and text fields. With date-time on, a date filter uses DateField. | +6.5 MB |
 | `timeline` | Timeline |  | on |  | +40 KB |
 | `video` | Video | slider, menu | off |  | +2.7 MB |
 | `circular-progress` | CircularProgress |  | on |  | +30 KB |
@@ -98,7 +104,7 @@ edit: no features 23 s and 3 s, `select` 25 s and 4 s, the defaults 59 s and
 | `color` | ColorField, ColorPicker, ColorSwatch, HueSlider, AlphaSlider | slider | off |  | +1.6 MB |
 | `combobox` | Combobox, use_combobox |  | on |  | +1.1 MB |
 | `date-time` | ChronoField, ChronoPicker, DateField, DatePicker, TimeField, TimePicker and the other date and time fields and pickers | tabs | on |  | +1.1 MB |
-| `file-field` | FileField | chip, image-cropper, select | on |  | +2.4 MB |
+| `file-field` | FileField | chip, select | on | Its crop prop needs image-cropper on as well; without it the file passes uncropped. | +2.4 MB |
 | `image-cropper` | ImageCropper | slider | on |  | +1.4 MB |
 | `native-select` | NativeSelect | combobox, select | on |  | +400 KB |
 | `number-field` | NumberField |  | on |  | +900 KB |

@@ -2,7 +2,7 @@
 
 Crate: `libero`
 Import: `use libero::components::{FileField, Files};`
-Feature: `file-field` (on by default, turns on `chip`, `image-cropper`, `select`; [features.md](features.md))
+Feature: `file-field` (on by default, turns on `chip`, `select`; [features.md](features.md))
 Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/form/file_field>
 Index: [index.md](index.md) lists every other page
 Description: Files picked from the system dialog or dropped on the control, as a one-line input or a drop surface.
@@ -118,7 +118,7 @@ fn Demo() -> Element {
 | `placeholder` | `String` | - | The `input` variant's Browse button text while nothing is picked. It is the dropzone's prompt when `children` is empty, which a `multiple` dropzone keeps after a pick. A dropzone with neither says the localization's `file_field.drop_file` or `drop_files`; the `input` variant shows nothing. |
 | `clearable` | `bool` | `true` | Shows an x that empties the field. `input` variant only: a dropzone's cards each have their own x. |
 | `loading` | `bool` | `false` | Shows a `Loader` while an upload runs and marks the field busy. It blocks nothing, `disabled` does that. |
-| `crop` | `CropOptions` | - | A single picked or dropped image opens in an `ImageCropper` dialog first, its box centred at 80% of the largest `aspect` allows: Apply hands `onchange` the cut file, Cancel drops it. A crop that fails keeps the dialog open on an error and hands over nothing. Under Blitz an AVIF passes through uncropped, and a WebP is cut lossless, so it can be larger than on the web. Ignored on a `multiple` field. |
+| `crop` | `CropOptions` | - | A single picked or dropped image opens in an `ImageCropper` dialog first, its box centred at 80% of the largest `aspect` allows: Apply hands `onchange` the cut file, Cancel drops it. A crop that fails keeps the dialog open on an error and hands over nothing. Under Blitz an AVIF passes through uncropped, and a WebP is cut lossless, so it can be larger than on the web. Ignored on a `multiple` field. Needs the `image-cropper` feature: without it the file passes uncropped, with a warning in a debug build. |
 | `oncrop` | `EventHandler<CropRect>` | - | The box picked in the crop dialog, before the cut file reaches `onchange`. |
 | `selection` | `Callback<SelectionArgs<FileData>, Element>` | `Chip`, or the file name | Draws one picked file, remove control included. `args.remove` removes it. Unset, a multiple `input` field draws a chip, a single one the file name, and a dropzone a card under its surface. |
 | `name` | `FieldName<Files>` | - | What the files post as. A removed file stops posting. A path such as `Claim::FIELDS.receipts()` also binds the files to the surrounding `Form`'s value when the field has no `onchange`. |

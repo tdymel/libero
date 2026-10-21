@@ -1,4 +1,5 @@
 mod accept;
+#[cfg(feature = "image-cropper")]
 mod crop;
 mod file_field;
 mod files;

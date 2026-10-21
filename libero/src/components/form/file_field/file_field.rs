@@ -26,6 +26,7 @@ use crate::{
 };
 
 use super::accept::accept_hint;
+#[cfg(feature = "image-cropper")]
 use super::crop::CropGate;
 use super::files::{FileRejection, Files};
 use super::intake::{Intake, Taking, use_file_intake, use_input_mirror};
@@ -103,7 +104,8 @@ field_props! {
         /// Crops a single picked PNG, JPEG, WebP, BMP or AVIF in a dialog before
         /// `onchange` gets it; an AVIF on Blitz passes through uncropped, and a
         /// WebP cut on Blitz is lossless, so larger. Cancel drops the pick; a
-        /// failed crop keeps the dialog open on an error. Ignored with `multiple`.
+        /// failed crop keeps the dialog open on an error. Ignored with `multiple`,
+        /// and without the `image-cropper` feature.
         #[props(default)]
         crop: Option<CropOptions>,
         /// The crop the dialog applied, before `onchange` gets the cut file.
@@ -173,6 +175,10 @@ pub fn FileField(props: FileFieldProps) -> Element {
     let dragging = use_local_state(|| false);
 
     let crop = props.crop.filter(|_| !multiple);
+    if let Some(note) = crop_unavailable(crop.is_some(), cfg!(feature = "image-cropper")) {
+        warn(note);
+    }
+    #[cfg(feature = "image-cropper")]
     let pending = use_signal(|| None::<FileData>);
 
     let cards = variant == FileFieldVariant::Dropzone;
@@ -192,6 +198,7 @@ pub fn FileField(props: FileFieldProps) -> Element {
         accept: props.accept.clone().unwrap_or_default(),
         multiple,
         editable,
+        #[cfg(feature = "image-cropper")]
         crop: crop.map(|_| pending),
     });
 
@@ -340,9 +347,12 @@ pub fn FileField(props: FileFieldProps) -> Element {
         attributes: props.attributes.clone(),
     };
 
+    #[cfg(feature = "image-cropper")]
     let gate = crop.map(|options| {
         rsx! { CropGate { pending, options, emit, owed, oncrop: props.oncrop } }
     });
+    #[cfg(not(feature = "image-cropper"))]
+    let gate: Option<Element> = None;
     let field = match variant {
         // A scope per variant: their hooks differ, so a `variant` switch must
         // remount rather than reuse the other's slots.
@@ -383,6 +393,13 @@ pub fn FileField(props: FileFieldProps) -> Element {
         Some(gate) => rsx! { {field} {gate} },
         None => field,
     }
+}
+
+/// The warning for `crop` in a build without the cropper (todo 3917).
+pub(super) fn crop_unavailable(crop: bool, cropper: bool) -> Option<&'static str> {
+    (crop && !cropper).then_some(
+        "FileField: `crop` needs libero's `image-cropper` feature - files pass uncropped.",
+    )
 }
 
 /// The removers: `remove_at` hands the keyboard focus on, `drop_at` leaves it.

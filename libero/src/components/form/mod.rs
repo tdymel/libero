@@ -22,7 +22,7 @@ mod fieldset;
 mod file_field;
 mod form;
 mod handle;
-#[cfg(feature = "image-cropper")]
+#[cfg(any(feature = "image-cropper", feature = "file-field"))]
 mod image_cropper;
 #[cfg(feature = "native-select")]
 mod native_select;
@@ -111,10 +111,10 @@ pub use file_field::{
 };
 pub use form::{Form, FormPart, FormProps, FormValue};
 pub use handle::{FormHandle, use_form, use_form_context};
+#[cfg(any(feature = "image-cropper", feature = "file-field"))]
+pub use image_cropper::{CropOptions, CropRect, CropShape, PixelRect};
 #[cfg(feature = "image-cropper")]
-pub use image_cropper::{
-    CropOptions, CropRect, CropShape, ImageCropper, ImageCropperPart, ImageCropperProps, PixelRect,
-};
+pub use image_cropper::{ImageCropper, ImageCropperPart, ImageCropperProps};
 #[cfg(feature = "native-select")]
 pub use native_select::{NativeSelect, NativeSelectProps};
 #[cfg(feature = "number-field")]

@@ -1,3 +1,6 @@
+#[cfg(feature = "date-time")]
+use crate::{components::form::DateField, platform::reads_dom_synchronously};
+#[cfg(feature = "date-time")]
 use chrono::NaiveDate;
 use dioxus::prelude::*;
 use pictogram_icons_lucide as lucide;
@@ -13,7 +16,7 @@ use crate::{
     components::{
         buttons::Button,
         common::{FOCUSABLE_SELECTOR, Glyph, HtmlTag, Options, attr},
-        form::{Checkbox, DateField, MultiSelect, NativeSelect, SelectionArgs, TextField},
+        form::{Checkbox, MultiSelect, NativeSelect, SelectionArgs, TextField},
         layout::{paper_sx, use_box},
     },
     context::IconSlot,
@@ -24,7 +27,7 @@ use crate::{
     localization::TableLabels,
     platform::{
         ElementApi, PlatformError, focus_first_of, focus_lands_in, focus_tab_from, is_tab,
-        page_task, reads_dom_synchronously, when_laid_out,
+        page_task, when_laid_out,
     },
     sx::{StaticSx, sx},
     theme::{Size, SizeCss, Z_INDEX_POPOVER},
@@ -423,6 +426,7 @@ pub(super) fn FilterValue(
             (filter.value.clone(), filter.value_to.clone())
         });
         let day = |end: bool, value: String, label: Option<String>, aria_label: Option<String>| {
+            #[cfg(feature = "date-time")]
             if reads_dom_synchronously() {
                 return rsx! {
                     DateField {
@@ -438,7 +442,8 @@ pub(super) fn FilterValue(
                     }
                 };
             }
-            // A WebView cannot count the portaled calendar inside the popover: its native date input then.
+            // A WebView cannot count the portaled calendar inside the popover, and `date-time` may be
+            // off: the native date input then.
             rsx! {
                 TextField {
                     label,
