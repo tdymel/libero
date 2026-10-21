@@ -2,7 +2,7 @@
 
 Crate: `libero`
 Import: `use libero::{components::{FloatingWindowOptions, WindowRect}, hooks::{use_floating_window, FloatingWindowHandle}};`
-Feature: `floating-window` (off by default, turns on `menu`; [features.md](features.md))
+Feature: `floating-window` (off by default, turns on `menu`, `action-icon`, `button`, `title`; [features.md](features.md))
 Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/overlay/use_floating_window.rs>
 Index: [index.md](index.md) lists every other page
 Description: A non-modal window over the page that drags, moves by keyboard and resizes from a corner, opened through a hook.

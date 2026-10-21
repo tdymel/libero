@@ -49,30 +49,33 @@ const fn costly(feature: Feature, cost: &'static str) -> Feature {
 /// Every component feature, by category, in `Cargo.toml`'s order.
 #[rustfmt::skip]
 pub(crate) const FEATURES: &[Feature] = &[
+    feature("action-icon", "buttons", "ActionIcon", &["button", "loader", "tooltip", "shortcut-help", "anchor"], false, &["/buttons/action-icon"]),
+    feature("button", "buttons", "Button", &["loader", "anchor"], false, &["/buttons/button"]),
     feature("button-group", "buttons", "ButtonGroup", &[], false, &["/buttons/button-group"]),
-    feature("copy", "buttons", "Copy", &[], false, &["/buttons/copy"]),
-    feature("direction-toggle", "buttons", "DirectionToggle", &[], false, &["/buttons/direction-toggle"]),
+    feature("copy", "buttons", "Copy", &["action-icon"], false, &["/buttons/copy"]),
+    feature("direction-toggle", "buttons", "DirectionToggle", &["action-icon"], false, &["/buttons/direction-toggle"]),
     costly(
-        feature("repository", "buttons", "Repository", &[], false, &["/buttons/repository"]),
+        feature("repository", "buttons", "Repository", &["action-icon"], false, &["/buttons/repository"]),
         "The Simple Icons brand marks (pictogram-icons-simple).",
     ),
-    feature("share", "buttons", "Share", &[], false, &["/buttons/share"]),
-    feature("theme-switcher", "buttons", "ThemeSwitcher", &["menu"], false, &["/buttons/theme-switcher"]),
+    feature("share", "buttons", "Share", &["action-icon", "icon", "button"], false, &["/buttons/share"]),
+    feature("theme-switcher", "buttons", "ThemeSwitcher", &["menu", "action-icon"], false, &["/buttons/theme-switcher"]),
     costly(
-        feature("tldr", "buttons", "Tldr", &["chip", "menu"], false, &["/buttons/tldr"]),
+        feature("tldr", "buttons", "Tldr", &["chip", "menu", "icon", "action-icon"], false, &["/buttons/tldr"]),
         "The Lobe Icons brand marks (pictogram-icons-lobe).",
     ),
     feature("toolbar", "buttons", "Toolbar, ToolbarGroup, ToolbarSeparator", &[], false, &["/buttons/toolbar"]),
     feature("accordion", "data-display", "Accordion", &[], false, &["/data-display/accordion"]),
-    feature("audio", "data-display", "Audio", &["slider", "menu"], false, &["/data-display/audio"]),
-    feature("avatar", "data-display", "Avatar, AvatarGroup", &[], false, &["/data-display/avatar"]),
+    feature("audio", "data-display", "Audio", &["slider", "menu", "button", "modal", "action-icon", "shortcut-help"], false, &["/data-display/audio"]),
+    feature("avatar", "data-display", "Avatar, AvatarGroup", &["tooltip"], false, &["/data-display/avatar"]),
     feature("badge", "data-display", "Badge", &[], false, &["/data-display/badge"]),
-    feature("carousel", "data-display", "Carousel", &[], false, &["/data-display/carousel"]),
+    feature("carousel", "data-display", "Carousel", &["action-icon"], false, &["/data-display/carousel"]),
     costly(
-        feature("charts", "data-display", "LineChart, BarChart, PieChart and the other charts", &["skeleton"], false, &["/data-display/chart"]),
+        feature("charts", "data-display", "LineChart, BarChart, PieChart and the other charts", &["skeleton", "mark"], false, &["/data-display/chart"]),
         "charts-rs, about 240 KB brotli on the web.",
     ),
     feature("data-list", "data-display", "DataList", &[], false, &["/data-display/data-list"]),
+    feature("icon", "data-display", "Icon", &[], false, &["/data-display/icon"]),
     costly(
         feature("image", "data-display", "Image", &[], false, &["/data-display/image"]),
         "Its zoomable prop needs lightbox on as well; without it the picture renders unzoomable.",
@@ -81,72 +84,90 @@ pub(crate) const FEATURES: &[Feature] = &[
     feature("indicator", "data-display", "Indicator", &[], false, &["/data-display/indicator"]),
     feature("kanban", "data-display", "Kanban", &["sortable", "menu"], false, &["/data-display/kanban"]),
     feature("list", "data-display", "List", &[], false, &["/data-display/list"]),
-    feature("marquee", "data-display", "Marquee", &[], false, &["/data-display/marquee"]),
+    feature("marquee", "data-display", "Marquee", &["action-icon"], false, &["/data-display/marquee"]),
     costly(
         feature("qr-code", "data-display", "QrCode", &[], false, &["/data-display/qr-code"]),
         "The fast_qr encoder.",
     ),
     feature("sortable", "data-display", "Sortable, use_sortable", &[], false, &["/data-display/sortable"]),
     costly(
-        feature("table", "data-display", "Table, column and the table toolbar buttons", &["badge", "progress-bar", "skeleton", "checkbox", "native-select", "select", "text-field", "pagination", "menu", "sortable"], false, &["/data-display/table"]),
+        feature("table", "data-display", "Table, column and the table toolbar buttons", &["badge", "progress-bar", "skeleton", "checkbox", "native-select", "select", "text-field", "pagination", "menu", "sortable", "icon", "action-icon", "button"], false, &["/data-display/table"]),
         "The largest component: its filters and editors bring the select and text fields. With date-time on, a date filter uses DateField.",
     ),
     feature("timeline", "data-display", "Timeline", &[], false, &["/data-display/timeline"]),
-    feature("video", "data-display", "Video", &["slider", "menu"], false, &["/data-display/video"]),
+    feature("video", "data-display", "Video", &["slider", "menu", "button", "modal", "action-icon", "shortcut-help"], false, &["/data-display/video"]),
+    feature("alert", "feedback", "Alert", &["action-icon"], false, &["/feedback/alert"]),
     feature("circular-progress", "feedback", "CircularProgress", &[], false, &["/feedback/circular-progress"]),
-    feature("notifications", "feedback", "Notifications, use_notifications", &[], false, &["/feedback/notifications"]),
+    feature("loader", "feedback", "Loader", &[], false, &["/feedback/loader"]),
+    feature("notifications", "feedback", "Notifications, use_notifications", &["alert", "button"], false, &["/feedback/notifications"]),
     feature("progress-bar", "feedback", "ProgressBar", &["slider"], false, &["/feedback/progress-bar"]),
     feature("skeleton", "feedback", "Skeleton", &[], false, &["/feedback/skeleton"]),
-    feature("autocomplete", "form", "Autocomplete", &["combobox"], false, &["/form/autocomplete"]),
-    feature("cascader", "form", "Cascader", &["combobox"], false, &["/form/cascader"]),
+    feature("autocomplete", "form", "Autocomplete", &["combobox", "action-icon"], false, &["/form/autocomplete"]),
+    feature("cascader", "form", "Cascader", &["combobox", "action-icon"], false, &["/form/cascader"]),
     feature("checkbox", "form", "Checkbox", &[], false, &["/form/checkbox"]),
-    feature("chip", "form", "Chip", &[], false, &["/form/chip"]),
-    feature("color", "form", "ColorField, ColorPicker, ColorSwatch, HueSlider, AlphaSlider", &["slider"], false, &["/form/color-field", "/form/color-picker"]),
-    feature("combobox", "form", "Combobox, use_combobox", &[], false, &["/form/combobox"]),
-    feature("date-time", "form", "ChronoField, ChronoPicker, DateField, DatePicker, TimeField, TimePicker and the other date and time fields and pickers", &["tabs"], false, &["/form/chrono-field", "/form/chrono-picker"]),
+    feature("chip", "form", "Chip", &["action-icon", "anchor"], false, &["/form/chip"]),
+    feature("color", "form", "ColorField, ColorPicker, ColorSwatch, HueSlider, AlphaSlider", &["slider", "action-icon"], false, &["/form/color-field", "/form/color-picker"]),
+    feature("combobox", "form", "Combobox, use_combobox", &["loader"], false, &["/form/combobox"]),
+    feature("date-time", "form", "ChronoField, ChronoPicker, DateField, DatePicker, TimeField, TimePicker and the other date and time fields and pickers", &["tabs", "action-icon"], false, &["/form/chrono-field", "/form/chrono-picker"]),
+    feature("fieldset", "form", "Fieldset", &["form-root"], false, &["/form/fieldset"]),
+    feature("form-root", "form", "Form, use_form", &["alert"], false, &["/form/form"]),
     costly(
-        feature("file-field", "form", "FileField", &["chip", "select"], false, &["/form/file-field"]),
+        feature("file-field", "form", "FileField", &["chip", "select", "alert", "modal", "action-icon", "button", "dialog", "loader"], false, &["/form/file-field"]),
         "Its crop prop needs image-cropper on as well; without it the file passes uncropped.",
     ),
-    feature("image-cropper", "form", "ImageCropper", &["slider"], false, &["/form/image-cropper"]),
+    feature("image-cropper", "form", "ImageCropper", &["slider", "action-icon"], false, &["/form/image-cropper"]),
     feature("native-select", "form", "NativeSelect", &["combobox", "select"], false, &["/form/native-select"]),
-    feature("number-field", "form", "NumberField", &[], false, &["/form/number-field"]),
-    feature("password-field", "form", "PasswordField", &["text-field"], false, &["/form/password-field"]),
+    feature("number-field", "form", "NumberField", &["action-icon"], false, &["/form/number-field"]),
+    feature("password-field", "form", "PasswordField", &["text-field", "action-icon"], false, &["/form/password-field"]),
     feature("phone-field", "form", "PhoneField", &["combobox"], false, &["/form/phone-field"]),
     feature("pin-field", "form", "PinField", &[], false, &["/form/pin-field"]),
     feature("radio", "form", "Radio", &[], false, &[]),
     feature("radio-group", "form", "RadioGroup", &["radio"], false, &["/form/radio-group"]),
     feature("rating", "form", "Rating", &[], false, &["/form/rating"]),
-    feature("rich-text-editor", "form", "RichTextEditor, RichTextView", &["toolbar", "text-field", "menu", "code"], false, &["/form/rich-text-editor"]),
-    feature("segmented-control", "form", "SegmentedControl", &[], false, &["/form/segmented-control"]),
-    feature("select", "form", "Select, MultiSelect", &["combobox", "chip"], false, &["/form/select", "/form/multi-select"]),
-    feature("slider", "form", "Slider, RangeSlider", &[], false, &["/form/slider", "/form/range-slider"]),
+    feature("rich-text-editor", "form", "RichTextEditor, RichTextView", &["toolbar", "text-field", "menu", "code", "mark", "modal", "action-icon", "button", "dialog", "shortcut-help", "text"], false, &["/form/rich-text-editor"]),
+    feature("segmented-control", "form", "SegmentedControl", &["button"], false, &["/form/segmented-control"]),
+    feature("select", "form", "Select, MultiSelect", &["combobox", "chip", "action-icon"], false, &["/form/select", "/form/multi-select"]),
+    feature("slider", "form", "Slider, RangeSlider", &["tooltip"], false, &["/form/slider", "/form/range-slider"]),
     feature("switch", "form", "Switch", &[], false, &["/form/switch"]),
-    feature("tags-field", "form", "TagsField", &["combobox", "chip", "select"], false, &["/form/tags-field"]),
+    feature("tags-field", "form", "TagsField", &["combobox", "chip", "select", "action-icon"], false, &["/form/tags-field"]),
     feature("text-field", "form", "TextField", &[], false, &["/form/text-field"]),
     feature("textarea", "form", "Textarea", &[], false, &["/form/textarea"]),
+    feature("anchor", "navigation", "Anchor", &[], false, &["/navigation/anchor"]),
     feature("bottom-navigation", "navigation", "BottomNavigation", &["nav-link"], false, &["/navigation/bottom-navigation"]),
-    feature("burger", "navigation", "Burger", &[], false, &["/navigation/burger"]),
+    feature("burger", "navigation", "Burger", &["action-icon"], false, &["/navigation/burger"]),
     feature("menubar", "navigation", "Menubar", &["menu"], false, &["/navigation/menubar"]),
-    feature("nav-link", "navigation", "NavLink", &["tree"], false, &["/navigation/nav-link"]),
-    feature("pagination", "navigation", "Pagination", &[], false, &["/navigation/pagination"]),
+    feature("nav-link", "navigation", "NavLink", &["tree", "anchor"], false, &["/navigation/nav-link"]),
+    feature("pagination", "navigation", "Pagination", &["action-icon"], false, &["/navigation/pagination"]),
     feature("stepper", "navigation", "Stepper", &[], false, &["/navigation/stepper"]),
     feature("tabs", "navigation", "Tabs", &[], false, &["/navigation/tabs"]),
-    feature("tree", "navigation", "Tree", &["list"], false, &["/navigation/tree"]),
-    feature("drawer", "overlay", "use_drawer", &[], false, &["/overlay/drawer"]),
-    feature("floating-window", "overlay", "use_floating_window", &["menu"], false, &["/overlay/floating-window"]),
-    feature("hover-card", "overlay", "HoverCard", &[], false, &["/overlay/hover-card"]),
-    feature("lightbox", "overlay", "use_lightbox", &["carousel"], false, &["/overlay/lightbox"]),
-    feature("menu", "overlay", "Menu, use_menu", &[], false, &["/overlay/menu"]),
-    feature("spotlight", "overlay", "use_spotlight", &["combobox"], false, &["/overlay/spotlight"]),
-    feature("tour", "overlay", "use_tour", &[], false, &["/overlay/tour"]),
+    feature("tree", "navigation", "Tree", &["list", "icon"], false, &["/navigation/tree"]),
+    feature("dialog", "overlay", "Dialog", &["action-icon", "title"], false, &["/overlay/dialog"]),
+    feature("drawer", "overlay", "use_drawer", &["dialog", "modal"], false, &["/overlay/drawer"]),
+    feature("floating-window", "overlay", "use_floating_window", &["menu", "action-icon", "button", "title"], false, &["/overlay/floating-window"]),
+    feature("hover-card", "overlay", "HoverCard", &["tooltip"], false, &["/overlay/hover-card"]),
+    feature("lightbox", "overlay", "use_lightbox", &["carousel", "modal", "action-icon", "dialog"], false, &["/overlay/lightbox"]),
+    feature("menu", "overlay", "Menu, use_menu", &["anchor", "kbd"], false, &["/overlay/menu"]),
+    feature("modal", "overlay", "Modal, use_modal", &["overlay-backdrop"], false, &["/overlay/modal"]),
+    feature("overlay-backdrop", "overlay", "Overlay", &[], false, &["/overlay/overlay"]),
+    feature("shortcut-help", "overlay", "ShortcutHelp", &["dialog", "kbd"], false, &["/overlay/shortcut-help"]),
+    feature("spotlight", "overlay", "use_spotlight", &["combobox", "dialog", "modal", "kbd", "loader"], false, &["/overlay/spotlight"]),
+    feature("tooltip", "overlay", "Tooltip", &[], false, &["/overlay/tooltip"]),
+    feature("tour", "overlay", "use_tour", &["dialog", "button"], false, &["/overlay/tour"]),
+    feature("blockquote", "typography", "Blockquote", &[], false, &["/typography/blockquote"]),
     feature("code", "typography", "Code, CodeBlock", &["copy"], false, &["/typography/code", "/typography/code-block"]),
+    feature("kbd", "typography", "Kbd", &[], false, &["/typography/kbd"]),
+    feature("mark", "typography", "Mark", &[], false, &["/typography/mark"]),
+    feature("text", "typography", "Text", &[], false, &["/typography/text"]),
+    feature("title", "typography", "Title", &["text"], false, &["/typography/title"]),
 ];
 
 /// The wasm a release build gains from an app that uses the feature's first component, over a bare
-/// `Text` and `Button` app (2.7 MB, before wasm-bindgen). Measured 2026-10-21, todo 3910.
+/// `Text` and `Button` app (2.7 MB, before wasm-bindgen); `base` is in that app. Measured 2026-10-21,
+/// todos 3910 and 3918.
 #[rustfmt::skip]
 const WASM_COST: &[(&str, &str)] = &[
+    ("action-icon", "+480 KB"),
+    ("button", "base"),
     ("button-group", "+20 KB"),
     ("copy", "+530 KB"),
     ("direction-toggle", "+500 KB"),
@@ -162,6 +183,7 @@ const WASM_COST: &[(&str, &str)] = &[
     ("carousel", "+1.3 MB"),
     ("charts", "+1.6 MB"),
     ("data-list", "+7 KB"),
+    ("icon", "+24 KB"),
     ("image", "+2.0 MB"),
     ("image-list", "+130 KB"),
     ("indicator", "+10 KB"),
@@ -173,7 +195,9 @@ const WASM_COST: &[(&str, &str)] = &[
     ("table", "+6.5 MB"),
     ("timeline", "+40 KB"),
     ("video", "+2.7 MB"),
+    ("alert", "+550 KB"),
     ("circular-progress", "+30 KB"),
+    ("loader", "base"),
     ("notifications", "+410 KB"),
     ("progress-bar", "+50 KB"),
     ("skeleton", "+8 KB"),
@@ -184,6 +208,8 @@ const WASM_COST: &[(&str, &str)] = &[
     ("color", "+1.6 MB"),
     ("combobox", "+1.1 MB"),
     ("date-time", "+1.1 MB"),
+    ("fieldset", "+210 KB"),
+    ("form-root", "+830 KB"),
     ("file-field", "+2.4 MB"),
     ("image-cropper", "+1.4 MB"),
     ("native-select", "+400 KB"),
@@ -202,6 +228,7 @@ const WASM_COST: &[(&str, &str)] = &[
     ("tags-field", "+1.7 MB"),
     ("text-field", "+310 KB"),
     ("textarea", "+390 KB"),
+    ("anchor", "+5 KB"),
     ("bottom-navigation", "+30 KB"),
     ("burger", "+500 KB"),
     ("menubar", "+870 KB"),
@@ -210,14 +237,24 @@ const WASM_COST: &[(&str, &str)] = &[
     ("stepper", "+410 KB"),
     ("tabs", "+210 KB"),
     ("tree", "+300 KB"),
+    ("dialog", "+590 KB"),
     ("drawer", "+880 KB"),
     ("floating-window", "+1.5 MB"),
     ("hover-card", "+570 KB"),
     ("lightbox", "+1.9 MB"),
     ("menu", "+800 KB"),
+    ("modal", "+180 KB"),
+    ("overlay-backdrop", "+9 KB"),
+    ("shortcut-help", "+660 KB"),
     ("spotlight", "+1.5 MB"),
+    ("tooltip", "+390 KB"),
     ("tour", "+1.1 MB"),
+    ("blockquote", "+23 KB"),
     ("code", "+120 KB"),
+    ("kbd", "+6 KB"),
+    ("mark", "+4 KB"),
+    ("text", "base"),
+    ("title", "+7 KB"),
 ];
 
 fn wasm_cost(name: &str) -> &'static str {
@@ -242,15 +279,8 @@ pub(crate) const CATEGORIES: [&str; 7] = [
 pub(crate) const ALWAYS: &[&str] = &[
     "/accessibility/focus-trap",
     "/accessibility/visually-hidden",
-    "/buttons/action-icon",
-    "/buttons/button",
-    "/data-display/icon",
     "/data-display/icon-provider",
     "/data-display/pictogram",
-    "/feedback/alert",
-    "/feedback/loader",
-    "/form/fieldset",
-    "/form/form",
     "/layout/aspect-ratio",
     "/layout/box",
     "/layout/center",
@@ -267,18 +297,7 @@ pub(crate) const ALWAYS: &[&str] = &[
     "/layout/sidebar",
     "/layout/splitter",
     "/layout/transition",
-    "/navigation/anchor",
-    "/overlay/dialog",
-    "/overlay/modal",
-    "/overlay/overlay",
     "/overlay/popover",
-    "/overlay/shortcut-help",
-    "/overlay/tooltip",
-    "/typography/blockquote",
-    "/typography/kbd",
-    "/typography/mark",
-    "/typography/text",
-    "/typography/title",
 ];
 
 /// What a page's feature line says.
@@ -373,11 +392,10 @@ const RECOMMENDED: &str = concat!(
 ] }"#
 );
 
-const ALWAYS_COMPILED: &str = "The hooks (bar use_drawer, use_floating_window, use_lightbox and the \
-    sortable hooks, which come with their component), the layout components (Box, Flex, Grid, Paper, ScrollArea, Header, Sidebar, \
-    Splitter and the rest), Text, Title, Kbd, Mark, Blockquote, Button, ActionIcon, Icon, Pictogram, \
-    Alert, Loader, Anchor, Dialog, Modal, Overlay, Tooltip, ShortcutHelp, use_popover, FocusTrap, \
-    VisuallyHidden, Form and Fieldset. Most components are built from them.";
+const ALWAYS_COMPILED: &str = "The hooks (bar use_modal, use_drawer, use_floating_window, use_lightbox \
+    and the sortable hooks, which come with their component), the layout components (Box, Flex, Grid, \
+    Paper, ScrollArea, Header, Sidebar, Splitter and the rest), Pictogram and the icon provider, \
+    use_popover, FocusTrap and VisuallyHidden. Every component is built from them.";
 
 #[component]
 pub fn FeaturesPage() -> Element {
@@ -400,8 +418,8 @@ pub fn FeaturesPage() -> Element {
             lead: rsx! {
                 Text {
                     "Each component sits behind a Cargo feature, so an app compiles only the components it uses. "
-                    "The default turns none on: libero alone gives the always-compiled core below. "
-                    "Add one feature per component, or all-components to try everything."
+                    "The default turns none on: libero alone compiles only the layout components and the shared pieces below. "
+                    "Add one feature per component, Text and Button included, or all-components to try everything."
                 }
             },
 
@@ -458,6 +476,13 @@ pub fn FeaturesPage() -> Element {
                     "Every component feature is off by default. Turning one on turns on the features in its Turns on column."
                 }
                 Text {
+                    "Two names differ from their component's, as the category took it: "
+                    Code { source: "form-root" }
+                    " is Form and use_form, "
+                    Code { source: "overlay-backdrop" }
+                    " is Overlay."
+                }
+                Text {
                     "Three components use another feature only when it is on, and work without it: "
                     Code { source: "table" }
                     "'s date filter picks from a DateField with "
@@ -473,7 +498,7 @@ pub fn FeaturesPage() -> Element {
                     ", else a debug build warns and the file passes uncropped, the picture unzoomable."
                 }
                 Text {
-                    "Cost is the wasm an app gains in a release build when it uses the feature's first component, over a bare Text and Button app of 2.7 MB (before wasm-bindgen). "
+                    "Cost is the wasm an app gains in a release build when it uses the feature's first component, over a bare Text and Button app of 2.7 MB (before wasm-bindgen); base marks what that app already has. "
                     "Rows share code, so they do not add up. A feature nobody uses costs build time, not wasm. "
                     "Debug build from a cold cache, then after a libero edit: no features 23 s and 3 s, "
                     Code { source: "select" }

@@ -2,7 +2,7 @@
 
 Crate: `libero`
 Import: `use libero::components::Kbd;`
-Feature: none, always compiled ([features.md](features.md))
+Feature: `kbd` (off by default; [features.md](features.md))
 Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/typography/kbd.rs>
 Index: [index.md](index.md) lists every other page
 Description: A single keyboard key, rendered as a real `<kbd>` and styled from the theme.

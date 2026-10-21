@@ -158,7 +158,7 @@ const FEATURES_EXAMPLE: &str = concat!(
 
 // snippet: ignore - shell commands, not Rust
 const INSTALL_COMMANDS: &str = "cargo add dioxus@=0.8.0-alpha.3
-cargo add libero";
+cargo add libero --features text";
 
 const QUICK_START_EXAMPLE: &str = r#"fn App() -> Element {
     rsx! {
@@ -189,7 +189,7 @@ const NATIVE_CARGO: &str = concat!(
 dioxus = { version = "=0.8.0-alpha.3", features = ["native"] }
 libero = { version = ""#,
     libero_version!(),
-    r#"", features = ["native"] }
+    r#"", features = ["native", "text"] }
 
 # Blitz is unusably slow unoptimised; this keeps your own crate debuggable.
 [profile.dev.package."*"]

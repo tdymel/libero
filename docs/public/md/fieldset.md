@@ -2,7 +2,7 @@
 
 Crate: `libero`
 Import: `use libero::components::{Fieldset, Fields, Rule};`
-Feature: none, always compiled ([features.md](features.md))
+Feature: `fieldset` (off by default, turns on `form-root`; [features.md](features.md))
 Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/form/fieldset.rs>
 Index: [index.md](index.md) lists every other page
 Description: Several fields that form one value under a `<legend>`, with rules over that value that land on the fields they name.

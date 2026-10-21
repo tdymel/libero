@@ -2,7 +2,7 @@
 
 Crate: `libero`
 Import: `use libero::components::{SummaryProvider, Tldr, summary_url};`
-Feature: `tldr` (off by default, turns on `chip`, `menu`; [features.md](features.md))
+Feature: `tldr` (off by default, turns on `chip`, `menu`, `icon`, `action-icon`; [features.md](features.md))
 Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/buttons/tldr.rs>
 Index: [index.md](index.md) - every other component's markdown page
 Description: A menu of links that ask an AI assistant (ChatGPT, Google AI, Claude, Perplexity or your own) to summarize a page.

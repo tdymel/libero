@@ -7,6 +7,7 @@ mod cascader;
 mod checkbox;
 #[cfg(feature = "chip")]
 mod chip;
+#[cfg(feature = "action-icon")]
 mod clear;
 #[cfg(feature = "color")]
 mod color;
@@ -17,9 +18,11 @@ mod date;
 mod dropdown_parts;
 mod field_props;
 mod field_status;
+#[cfg(feature = "fieldset")]
 mod fieldset;
 #[cfg(feature = "file-field")]
 mod file_field;
+#[cfg(feature = "form-root")]
 mod form;
 mod handle;
 #[cfg(any(feature = "image-cropper", feature = "file-field"))]
@@ -78,6 +81,7 @@ pub use checkbox::{Checkbox, CheckboxPart, CheckboxProps};
 pub(crate) use checkbox::{CheckboxLook, LightState, use_checkbox_look};
 #[cfg(feature = "chip")]
 pub use chip::{Chip, ChipPart, ChipProps};
+#[cfg(feature = "action-icon")]
 pub(crate) use clear::clear_button;
 #[cfg(feature = "color")]
 pub use color::{
@@ -104,11 +108,13 @@ pub use dropdown_parts::DropdownPart;
 pub use field_props::FieldPart;
 pub(crate) use field_props::{field_parts_enum, field_props};
 pub use field_status::FieldStatus;
+#[cfg(feature = "fieldset")]
 pub use fieldset::{Fieldset, FieldsetPart, FieldsetProps};
 #[cfg(feature = "file-field")]
 pub use file_field::{
     FileField, FileFieldPart, FileFieldProps, FileRejection, Files, RejectReason,
 };
+#[cfg(feature = "form-root")]
 pub use form::{Form, FormPart, FormProps, FormValue};
 pub use handle::{FormHandle, use_form, use_form_context};
 #[cfg(any(feature = "image-cropper", feature = "file-field"))]

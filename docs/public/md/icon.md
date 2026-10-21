@@ -2,7 +2,7 @@
 
 Crate: `libero`
 Import: `use libero::components::Icon;`
-Feature: none, always compiled ([features.md](features.md))
+Feature: `icon` (off by default; [features.md](features.md))
 Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/data_display/icon.rs>
 Index: [index.md](index.md) lists every other page
 Description: A sized, colored box around an svg, which takes the box's color through `currentColor`.

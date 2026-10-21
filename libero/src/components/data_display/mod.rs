@@ -12,6 +12,7 @@ mod carousel;
 mod chart;
 #[cfg(feature = "data-list")]
 mod data_list;
+#[cfg(feature = "icon")]
 mod icon;
 #[cfg(feature = "image")]
 mod image;
@@ -63,6 +64,7 @@ pub use chart::{
 };
 #[cfg(feature = "data-list")]
 pub use data_list::{DataList, DataListItem, DataListItemProps, DataListProps};
+#[cfg(feature = "icon")]
 pub use icon::{Icon, IconProps};
 #[cfg(feature = "image")]
 pub use image::{Image, ImageFit, ImageLoading, ImagePart, ImageProps};

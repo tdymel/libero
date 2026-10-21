@@ -2,7 +2,7 @@
 
 Crate: `libero`
 Import: `use libero::components::{MediaSource, MediaTrack, TrackKind, Video};`
-Feature: `video` (off by default, turns on `slider`, `menu`; [features.md](features.md))
+Feature: `video` (off by default, turns on `slider`, `menu`, `button`, `modal`, `action-icon`, `shortcut-help`; [features.md](features.md))
 Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/data_display/video.rs>
 Index: [index.md](index.md) lists every other page
 Description: A `<video>` with libero's own controls, captions and fullscreen, on the `use_media` hook.

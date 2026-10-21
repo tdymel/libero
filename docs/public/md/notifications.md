@@ -2,7 +2,7 @@
 
 Crate: `libero`
 Import: `use libero::components::{Notifications, NotificationData, NotificationOptions, SnackbarData, snackbar, use_notifications};`
-Feature: `notifications` (off by default; [features.md](features.md))
+Feature: `notifications` (off by default, turns on `alert`, `button`; [features.md](features.md))
 Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/feedback/notifications/notifications.rs>
 Index: [index.md](index.md) lists every other page
 Description: A hook plus a host: render `Notifications {}` once, and `use_notifications()` shows messages from anywhere, as an `Alert` or your own template over your data.

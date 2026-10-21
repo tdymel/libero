@@ -1,3 +1,4 @@
+#[cfg(feature = "anchor")]
 mod anchor;
 #[cfg(feature = "bottom-navigation")]
 mod bottom_navigation;
@@ -16,7 +17,9 @@ mod tabs;
 #[cfg(feature = "tree")]
 mod tree;
 
+#[cfg(feature = "anchor")]
 pub use anchor::{Anchor, AnchorPart, AnchorProps, AnchorUnderline};
+#[cfg(feature = "anchor")]
 pub(crate) use anchor::{NewTabHint, wants_new_tab_hint};
 #[cfg(feature = "bottom-navigation")]
 pub use bottom_navigation::{

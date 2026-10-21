@@ -153,6 +153,7 @@ pub use user_media::{
 // The overlay hooks render a component, so they live beside it (todo 178).
 // The layer rule (`tests/all/architecture.rs`) exempts only this `use`.
 // archunit: ignore components::overlay
+#[cfg(feature = "modal")]
 pub use crate::components::overlay::use_modal::{
     ModalHandle, ModalScope, Opening, OpeningFuture, use_modal, use_modal_close,
 };

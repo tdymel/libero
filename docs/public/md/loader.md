@@ -2,7 +2,7 @@
 
 Crate: `libero`
 Import: `use libero::components::Loader;`
-Feature: none, always compiled ([features.md](features.md))
+Feature: `loader` (off by default; [features.md](features.md))
 Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/feedback/loader.rs>
 Index: [index.md](index.md) lists every other page
 Description: An indeterminate busy indicator: a ring, bars or dots. It stays silent, so a status region says the wait. `Button`, `Combobox` and `FileField` show it.

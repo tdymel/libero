@@ -1,8 +1,10 @@
 // Components that report state back to the user.
 
+#[cfg(feature = "alert")]
 mod alert;
 #[cfg(feature = "circular-progress")]
 mod circular_progress;
+#[cfg(feature = "loader")]
 mod loader;
 #[cfg(feature = "notifications")]
 mod notifications;
@@ -13,9 +15,11 @@ mod progress_value;
 #[cfg(feature = "skeleton")]
 mod skeleton;
 
+#[cfg(feature = "alert")]
 pub use alert::{Alert, AlertPart, AlertProps};
 #[cfg(feature = "circular-progress")]
 pub use circular_progress::{CircularProgress, CircularProgressPart, CircularProgressProps};
+#[cfg(feature = "loader")]
 pub use loader::{Loader, LoaderProps, LoaderVariant};
 #[cfg(feature = "notifications")]
 pub use notifications::{

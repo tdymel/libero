@@ -2,7 +2,7 @@
 
 Crate: `libero`
 Import: `use libero::components::ThemeSwitcher;`
-Feature: `theme-switcher` (off by default, turns on `menu`; [features.md](features.md))
+Feature: `theme-switcher` (off by default, turns on `menu`, `action-icon`; [features.md](features.md))
 Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/buttons/theme_switcher.rs>
 Index: [index.md](index.md) lists every other page
 Description: An icon button that flips the colour scheme, optionally through the system's too, with an optional theme picker beside it.

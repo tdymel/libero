@@ -2,7 +2,7 @@
 
 Crate: `libero`
 Import: `use libero::components::{ColorPicker, ColorCode};`
-Feature: `color` (off by default, turns on `slider`; [features.md](features.md))
+Feature: `color` (off by default, turns on `slider`, `action-icon`; [features.md](features.md))
 Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/form/color>
 Index: [index.md](index.md) lists every other page
 Description: A saturation panel and a hue slider, with optional alpha and preset swatches, over one `ColorCode`. Also documents `HueSlider`, `AlphaSlider` and `ColorSwatch`.

@@ -2,7 +2,7 @@
 
 Crate: `libero`
 Import: `use libero::components::{SpotlightAction, SpotlightHandle, SpotlightOptions, spotlight_filter, use_spotlight};`
-Feature: `spotlight` (off by default, turns on `combobox`; [features.md](features.md))
+Feature: `spotlight` (off by default, turns on `combobox`, `dialog`, `modal`, `kbd`, `loader`; [features.md](features.md))
 Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/overlay/spotlight>
 Index: [index.md](index.md) lists every other page
 Description: A command palette. A modal search box over your actions, with groups, arrow-key highlight and a Ctrl/Cmd+K hotkey.

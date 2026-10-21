@@ -2,7 +2,7 @@
 
 Crate: `libero`
 Import: `use libero::components::ActionIcon;`
-Feature: none, always compiled ([features.md](features.md))
+Feature: `action-icon` (off by default, turns on `button`, `loader`, `tooltip`, `shortcut-help`, `anchor`; [features.md](features.md))
 Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/buttons/action_icon.rs>
 Index: [index.md](index.md) lists every other page
 Description: An icon-only button, rendered as a `button` or a link, with a required `aria_label`.

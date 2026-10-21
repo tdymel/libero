@@ -2,7 +2,7 @@
 
 Crate: `libero`
 Import: `use libero::components::Copy;`
-Feature: `copy` (off by default; [features.md](features.md))
+Feature: `copy` (off by default, turns on `action-icon`; [features.md](features.md))
 Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/buttons/copy.rs>
 Index: [index.md](index.md) lists every other page
 Description: An icon button that copies a value to the clipboard and confirms it with a check and a spoken "Copied".

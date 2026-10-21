@@ -2,7 +2,7 @@
 
 Crate: `libero`
 Import: `use libero::components::ImageCropper;`
-Feature: `image-cropper` (off by default, turns on `slider`; [features.md](features.md))
+Feature: `image-cropper` (off by default, turns on `slider`, `action-icon`; [features.md](features.md))
 Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/form/image_cropper>
 Index: [index.md](index.md) lists every other page
 Description: A box with handles over an image, picking the part to keep by drag or arrow keys, free or at a fixed aspect, with a rect or circle mask.
