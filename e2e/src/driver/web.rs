@@ -195,7 +195,7 @@ impl Driver for Web {
 
     async fn relaunch(&mut self) -> Result<()> {
         let page = &self.fixture.page;
-        page.reload().await?;
+        page.reload_bounded().await?;
         crate::wait::for_js_true(
             page,
             "document.querySelector('[data-fixture-ready]') !== null",

@@ -857,7 +857,7 @@ fn without_scroll_timelines_the_track_still_stays_put() {
         ))
         .await
         .unwrap();
-        page.reload().await.unwrap();
+        page.reload_bounded().await.unwrap();
         wait::for_js_true(
             page,
             "!CSS.supports('animation-timeline: scroll()') && !!document.querySelector('#bars-v')",
@@ -912,7 +912,7 @@ fn timelines_the_app_misses_never_grow_the_range() {
         ))
         .await
         .unwrap();
-        page.reload().await.unwrap();
+        page.reload_bounded().await.unwrap();
         wait::for_js_true(
             page,
             "!CSS.supports('animation-timeline: scroll()') && !!document.querySelector('#bars-v')",

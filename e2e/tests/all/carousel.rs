@@ -433,7 +433,7 @@ fn a_looping_strip_opens_on_its_first_slide() {
         ))
         .await
         .unwrap();
-        page.reload().await.unwrap();
+        page.reload_bounded().await.unwrap();
         wait::for_js_true(
             page,
             &format!(

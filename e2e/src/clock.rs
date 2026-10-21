@@ -100,7 +100,7 @@ pub async fn hold_from_load(page: &Page, delays: &[u32]) -> Result<()> {
         serde_json::to_string(delays)?
     ))
     .await?;
-    page.reload().await?;
+    page.reload_bounded().await?;
     Ok(())
 }
 
@@ -116,7 +116,7 @@ pub async fn pin_today(page: &Page, iso_date: &str) -> Result<()> {
         serde_json::to_string(iso_date)?
     ))
     .await?;
-    page.reload().await?;
+    page.reload_bounded().await?;
     Ok(())
 }
 

@@ -429,7 +429,7 @@ async fn open_full_width() -> Fixture {
     page.execute_bounded(SetDeviceMetricsOverrideParams::new(320, 800, 1.0, true))
         .await
         .unwrap();
-    page.reload().await.unwrap();
+    page.reload_bounded().await.unwrap();
     wait::for_visible(page, "#inner [role=tab]").await.unwrap();
     fixture
 }
@@ -506,7 +506,7 @@ fn a_selected_tab_scrolls_into_its_strip() {
             .await
             .unwrap();
         // Mounted at 320px: the reveal follows the value, not a later resize.
-        page.reload().await.unwrap();
+        page.reload_bounded().await.unwrap();
         wait::for_visible(page, "#late-button").await.unwrap();
         wait::for_js_true(
             page,

@@ -41,7 +41,7 @@ fn a_route_change_closes_the_drawer() {
         let path = "location.pathname";
 
         // Through the search.
-        page.find_element(BURGER)
+        page.find_element_bounded(BURGER)
             .await
             .unwrap()
             .click()
@@ -76,7 +76,7 @@ fn a_route_change_closes_the_drawer() {
             .unwrap();
 
         // Through the browser's back button.
-        page.find_element(BURGER)
+        page.find_element_bounded(BURGER)
             .await
             .unwrap()
             .click()
@@ -117,7 +117,7 @@ fn the_drawer_and_the_skip_link_move_focus() {
         .unwrap();
         let page = &fixture.page;
 
-        page.find_element(BURGER)
+        page.find_element_bounded(BURGER)
             .await
             .unwrap()
             .click()

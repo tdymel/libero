@@ -114,7 +114,7 @@ impl Front {
     pub async fn release(self) -> Result<()> {
         crate::browser::home()
             .await?
-            .bring_to_front()
+            .bring_to_front_bounded()
             .await
             .context("bring the home tab to front")?;
         Ok(())
@@ -140,7 +140,7 @@ pub async fn bring_to_front(page: &Page) -> Result<Front> {
             waited.as_secs_f64()
         ));
     }
-    page.bring_to_front()
+    page.bring_to_front_bounded()
         .await
         .context("bring the page to front")?;
     Ok(Front { _alone: alone })

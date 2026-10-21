@@ -200,7 +200,7 @@ async fn until(page: &Page, condition: &str, what: &str) -> Result<()> {
 /// One measured rep of `act`, from a quiet page to a quiet page.
 async fn rep<F: AsyncFnOnce() -> Result<()>>(page: &Page, act: F) -> Result<Rep> {
     // Headless Chromium runs no rAF in a tab that lost the front, and some acts take it.
-    page.bring_to_front().await?;
+    page.bring_to_front_bounded().await?;
     quiet(page).await?;
     page.evaluate_bounded("window.__dp.reset()").await?;
     let before = metrics(page).await?;
@@ -314,7 +314,7 @@ async fn ensure(page: &Page, path: &str) -> Result<()> {
 
 /// A full load of `path` from the current variant's server, recorder and nav set up again.
 async fn load(page: &Page, path: &str) -> Result<()> {
-    page.goto(format!("{}{path}", base())).await?;
+    page.goto_bounded(format!("{}{path}", base())).await?;
     until(
         page,
         "document.querySelector('#docs-main *') !== null",
@@ -1110,7 +1110,7 @@ fn survey() {
                 let page = tabs[i];
                 let v = &mut variants[i];
                 *BASE.lock().unwrap() = v.base.clone();
-                page.bring_to_front().await.unwrap();
+                page.bring_to_front_bounded().await.unwrap();
                 let started = Instant::now();
                 let load_before = load_average();
                 // Both tabs opened on A's server: B loads its own on the first round.

@@ -1023,7 +1023,7 @@ async fn pixel(page: &chromiumoxide::Page, x: f64, y: f64) -> Vec<u8> {
         .format(CaptureScreenshotFormat::Png)
         .clip(clip)
         .build();
-    page.screenshot(params).await.unwrap()
+    page.screenshot_bounded(params).await.unwrap()
 }
 
 /// Todo 1306: the caller of `use_modal` unmounting while open settles the

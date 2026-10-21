@@ -119,7 +119,7 @@ async fn pixel(page: &Page, x: f64, y: f64) -> Result<Vec<u8>> {
         .format(CaptureScreenshotFormat::Png)
         .clip(clip)
         .build();
-    Ok(page.screenshot(params).await?)
+    page.screenshot_bounded(params).await
 }
 
 /// Todo 1152: a `src` glyph is masked, so its hollow centre shows the page and its ring

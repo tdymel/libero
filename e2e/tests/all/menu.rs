@@ -340,7 +340,7 @@ fn items_arriving_in_an_open_menu_show_it_and_take_focus() {
             .await
             .unwrap();
         let outcome = async {
-            fixture.page.find_element(TRIGGER).await?.click().await?;
+            fixture.page.find_element_bounded(TRIGGER).await?.click().await?;
             wait::for_visible(&fixture.page, MENU).await?;
             wait::for_js_true(
                 &fixture.page,

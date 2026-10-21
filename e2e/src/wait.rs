@@ -5,13 +5,14 @@ use std::process::{Command, Output, Stdio};
 use std::time::{Duration, Instant};
 
 use anyhow::{Result, bail};
-use chromiumoxide::Page;
 use chromiumoxide::cdp::browser_protocol::page::{
-    AddScriptToEvaluateOnNewDocumentParams, ScriptIdentifier,
+    AddScriptToEvaluateOnNewDocumentParams, NavigateParams, ScriptIdentifier,
 };
 use chromiumoxide::cdp::js_protocol::runtime::EvaluateParams;
 use chromiumoxide::js::EvaluationResult;
+use chromiumoxide::page::ScreenshotParams;
 use chromiumoxide::types::{Command as CdpCommand, CommandResponse};
+use chromiumoxide::{Element, Page};
 
 /// Everything `pipe` yields, on a thread of its own.
 fn drain(pipe: Option<impl Read + Send + 'static>) -> std::thread::JoinHandle<Vec<u8>> {
@@ -132,6 +133,16 @@ pub trait PageBounded {
         &self,
         script: impl Into<AddScriptToEvaluateOnNewDocumentParams>,
     ) -> Result<ScriptIdentifier>;
+
+    async fn find_element_bounded(&self, selector: impl Into<String>) -> Result<Element>;
+
+    async fn goto_bounded(&self, params: impl Into<NavigateParams>) -> Result<()>;
+
+    async fn reload_bounded(&self) -> Result<()>;
+
+    async fn screenshot_bounded(&self, params: impl Into<ScreenshotParams>) -> Result<Vec<u8>>;
+
+    async fn bring_to_front_bounded(&self) -> Result<()>;
 }
 
 impl PageBounded for Page {
@@ -159,6 +170,33 @@ impl PageBounded for Page {
         let params: AddScriptToEvaluateOnNewDocumentParams = script.into();
         let what = format!("registering {}", excerpt(&params.source));
         bounded(&what, self.evaluate_on_new_document(params)).await
+    }
+
+    async fn find_element_bounded(&self, selector: impl Into<String>) -> Result<Element> {
+        let selector: String = selector.into();
+        bounded(&format!("finding {selector}"), self.find_element(&selector)).await
+    }
+
+    async fn goto_bounded(&self, params: impl Into<NavigateParams>) -> Result<()> {
+        let params: NavigateParams = params.into();
+        let what = format!("navigating to {}", params.url);
+        bounded(&what, self.goto(params)).await.map(|_| ())
+    }
+
+    async fn reload_bounded(&self) -> Result<()> {
+        bounded("reloading the page", self.reload())
+            .await
+            .map(|_| ())
+    }
+
+    async fn screenshot_bounded(&self, params: impl Into<ScreenshotParams>) -> Result<Vec<u8>> {
+        bounded("capturing a screenshot", self.screenshot(params)).await
+    }
+
+    async fn bring_to_front_bounded(&self) -> Result<()> {
+        bounded("bringing the page to front", self.bring_to_front())
+            .await
+            .map(|_| ())
     }
 }
 

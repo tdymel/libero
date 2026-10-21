@@ -110,7 +110,7 @@ fn a_kept_choice_wins_after_a_reload() {
         page.evaluate_on_new_document_bounded(shield_storage(Some("reduce")))
             .await
             .unwrap();
-        page.reload().await.unwrap();
+        page.reload_bounded().await.unwrap();
         wait_for(page, "reduce", "20px").await;
 
         click(page, "system").await;

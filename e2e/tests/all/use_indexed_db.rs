@@ -93,7 +93,7 @@ fn a_reload_keeps_the_value_and_the_load_flips() {
         reads(page, "#count", "2").await.unwrap();
         stored_is(page, "e2e-idb-reload-count", Some("2")).await;
 
-        page.reload().await.unwrap();
+        page.reload_bounded().await.unwrap();
         reads(page, "#loaded", "true").await.unwrap();
         reads(page, "#count", "2").await.unwrap();
         reads(page, "#twin", "2").await.unwrap();
@@ -217,7 +217,7 @@ fn blocked_indexed_db_reports_unavailable_and_keeps_the_value() {
             .unwrap();
         let page = &fixture.page;
         page.evaluate_on_new_document_bounded(BLOCK).await.unwrap();
-        page.reload().await.unwrap();
+        page.reload_bounded().await.unwrap();
         reads(page, "#loaded", "true").await.unwrap();
         reads(page, "#error", "Some(Unavailable)").await.unwrap();
         reads(page, "#count", "0").await.unwrap();

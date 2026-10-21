@@ -132,7 +132,7 @@ pub async fn fake_pointer(page: &Page) -> Result<()> {
     page.execute_bounded(AddScriptToEvaluateOnNewDocumentParams::new(FAKE))
         .await
         .context("install the fake pointer")?;
-    page.reload()
+    page.reload_bounded()
         .await
         .context("reload with the fake pointer")?;
     Ok(())
@@ -679,7 +679,7 @@ impl Fixture {
         // home tab came back to front (todos 2169, 2175).
         let capture = async {
             self.page
-                .screenshot(
+                .screenshot_bounded(
                     CaptureScreenshotParams::builder()
                         .format(CaptureScreenshotFormat::Png)
                         .capture_beyond_viewport(true)

@@ -116,7 +116,7 @@ fn a_reload_keeps_both_areas() {
         let local = raw(page, "localStorage", "e2e-storage-reload-local").await;
         assert_eq!(local.as_deref(), Some("1"));
 
-        page.reload().await.unwrap();
+        page.reload_bounded().await.unwrap();
         reads(page, "#local", "1").await.unwrap();
         reads(page, "#twin", "1").await.unwrap();
         reads(page, "#session", "1").await.unwrap();
@@ -183,7 +183,7 @@ fn a_read_after_mount_shows_bare_text() {
         page.evaluate_bounded("localStorage.setItem('e2e-storage-late', 'hello')")
             .await
             .unwrap();
-        page.reload().await.unwrap();
+        page.reload_bounded().await.unwrap();
         reads(page, "#late", "hello").await.unwrap();
         reads(page, "#late-loaded", "true").await.unwrap();
         reads(page, "#late-error", "None").await.unwrap();
@@ -223,7 +223,7 @@ fn bad_text_and_a_full_store_report_and_keep_the_value() {
         page.evaluate_bounded(format!("localStorage.setItem({KEY:?}, '{{bad')"))
             .await
             .unwrap();
-        page.reload().await.unwrap();
+        page.reload_bounded().await.unwrap();
         reads(page, "#error", "Some(Invalid)").await.unwrap();
         reads(page, "#local", "0").await.unwrap();
         reads(page, "#stored", "true").await.unwrap();

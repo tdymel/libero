@@ -298,7 +298,7 @@ fn a_shift_click_adds_a_sorted_column() {
         assert_eq!(count(page, "[data-sort-order]").await, 0.0);
 
         // The keyboard's way: Shift+Enter on a focused header adds it too.
-        page.find_element(STOCK)
+        page.find_element_bounded(STOCK)
             .await
             .unwrap()
             .focus()
@@ -338,7 +338,7 @@ fn a_cancelled_touch_does_not_make_the_next_key_press_add_a_column() {
         wait_text(page, "#sort", "Stock ascending").await;
         pointer::touch_down(page, NAME).await.unwrap();
         cancel_touch(page, NAME).await.unwrap();
-        page.find_element(NAME)
+        page.find_element_bounded(NAME)
             .await
             .unwrap()
             .focus()
