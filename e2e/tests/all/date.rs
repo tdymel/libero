@@ -189,6 +189,53 @@ fn stays_put(route: &str) {
     });
 }
 
+/// Todo 3886: a column and the face drag on touch (`touch-action: none`) only while enabled, so
+/// a touch on a disabled one scrolls the page.
+#[test]
+fn a_disabled_column_and_face_let_a_touch_scroll() {
+    block_on(async {
+        let fixture = Fixture::open("/date/disabled", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        wait::for_visible(page, "#moments").await.unwrap();
+        let touch = |control: &str| {
+            format!(
+                "(() => {{ const c = document.querySelector({control:?}); \
+                 return c.getAttribute('aria-disabled') === 'true' ? 'auto' : 'none'; }})() \
+                 === getComputedStyle(document.querySelector({control:?})).touchAction"
+            )
+        };
+        for round in 0..2 {
+            for control in [
+                "#time [data-column='Hours']",
+                "#duration [data-column='Hours']",
+                "#analog [data-slot='face']",
+            ] {
+                wait::for_js_true(page, &touch(control), &format!("{control} touch-action"))
+                    .await
+                    .unwrap();
+            }
+            if round == 0 {
+                let was = "document.querySelector(\"#time [data-column='Hours']\").getAttribute('aria-disabled') === 'true'";
+                let before: bool = page
+                    .evaluate_bounded(was)
+                    .await
+                    .unwrap()
+                    .into_value()
+                    .unwrap();
+                page.evaluate_bounded("document.querySelector('#flip').click()")
+                    .await
+                    .unwrap();
+                wait::for_js_true(page, &format!("({was}) !== {before}"), "the flip")
+                    .await
+                    .unwrap();
+            }
+        }
+        fixture.close().await.unwrap();
+    });
+}
+
 /// Todo 3881: a disabled `Fieldset` posts no picker value; only the field outside it is sent.
 #[test]
 fn a_disabled_fieldset_sends_no_picker_value() {

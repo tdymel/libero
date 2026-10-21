@@ -178,7 +178,11 @@ pub(in super::super) static TIME_PICKER_SX: StaticSx = StaticSx::new(|| {
             disabled_look_sx("not-allowed").hover(sx().background("transparent")),
         )
         // A disabled picker (todo 3881): soft, so a focused column keeps its focus.
-        .selector("& [aria-disabled='true']", disabled_look_sx("not-allowed"))
+        // No drag, so a touch scrolls the page again (3886).
+        .selector(
+            "& [aria-disabled='true']",
+            disabled_look_sx("not-allowed").touch_action("auto"),
+        )
         .selector(
             "& :is(button, [data-slot='spin'])[aria-disabled='true']:not([data-selected]):hover",
             sx().background("transparent"),

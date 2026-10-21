@@ -178,6 +178,7 @@ const EXTRA_FIXTURES: &[(&str, &[&str])] = &[
             "tags_field",
         ],
     ),
+    ("date", &["chrono_field"]),
     ("hit_area", &["table"]),
     ("image_cropper", &["file_field"]),
     ("negative", &["button", "modal", "tabs"]),
