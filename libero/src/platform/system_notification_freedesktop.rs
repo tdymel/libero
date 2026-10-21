@@ -56,9 +56,16 @@ struct Content {
 struct Routes {
     tags: HashMap<String, u32>,
     events: HashMap<u32, mpsc::UnboundedSender<NotificationEvent>>,
+    /// The notification server's unique bus name; only its signals count.
+    server: Option<String>,
 }
 
 impl Routes {
+    /// Whether a signal came from the server: any bus client could emit one with a guessed id.
+    fn is_from_server(&self, sender: Option<&str>) -> bool {
+        sender.is_some() && sender == self.server.as_deref()
+    }
+
     /// The id a same-tag notification had, so the server replaces it in place.
     fn replaces(&self, tag: Option<&str>) -> u32 {
         tag.and_then(|tag| self.tags.get(tag).copied()).unwrap_or(0)
@@ -106,20 +113,26 @@ fn run(commands: std_mpsc::Receiver<Command>) {
     if let Some(connection) = &connection {
         let clicks = routes.clone();
         let invoked = MatchRule::new_signal(INTERFACE, "ActionInvoked");
-        let _ = connection.add_match(invoked, move |(id, action): (u32, String), _, _| {
+        let _ = connection.add_match(invoked, move |(id, action): (u32, String), _, message| {
             let event = match action.as_str() {
                 "default" => Some(NotificationEvent::Click),
                 action => NotificationEvent::from_name(action),
             };
-            if let Some(event) = event {
-                clicks.borrow_mut().send(id, event);
+            let sender = message.sender().map(|sender| sender.to_string());
+            let mut clicks = clicks.borrow_mut();
+            if let Some(event) = event.filter(|_| clicks.is_from_server(sender.as_deref())) {
+                clicks.send(id, event);
             }
             true
         });
         let closes = routes.clone();
         let closed = MatchRule::new_signal(INTERFACE, "NotificationClosed");
-        let _ = connection.add_match(closed, move |(id, _reason): (u32, u32), _, _| {
-            closes.borrow_mut().send(id, NotificationEvent::Close);
+        let _ = connection.add_match(closed, move |(id, _reason): (u32, u32), _, message| {
+            let sender = message.sender().map(|sender| sender.to_string());
+            let mut closes = closes.borrow_mut();
+            if closes.is_from_server(sender.as_deref()) {
+                closes.send(id, NotificationEvent::Close);
+            }
             true
         });
     }
@@ -180,8 +193,10 @@ fn handle(connection: Option<&LocalConnection>, routes: &RefCell<Routes>, comman
             let id = shown
                 .map(|(id,)| id)
                 .map_err(|error| error_of(error.name()));
-            if let Ok(id) = id {
-                routes.borrow_mut().shown(id, notification.tag, events);
+            if let (Ok(id), Some(connection)) = (id, connection) {
+                let mut routes = routes.borrow_mut();
+                routes.server = server_name(connection);
+                routes.shown(id, notification.tag, events);
             }
             let _ = reply.send(id);
         }
@@ -191,6 +206,14 @@ fn handle(connection: Option<&LocalConnection>, routes: &RefCell<Routes>, comman
             }
         }
     }
+}
+
+/// The unique bus name that owns the notification service, the sender of its signals.
+fn server_name(connection: &LocalConnection) -> Option<String> {
+    let bus = connection.with_proxy("org.freedesktop.DBus", "/org/freedesktop/DBus", TIMEOUT);
+    let owner: Result<(String,), _> =
+        bus.method_call("org.freedesktop.DBus", "GetNameOwner", (DESTINATION,));
+    owner.ok().map(|(owner,)| owner)
 }
 
 /// `Notify`'s key and label pairs: `default` is the click, `action:<id>` a button.
@@ -318,6 +341,17 @@ mod tests {
         assert_eq!(receiver.try_recv().ok(), Some(NotificationEvent::Close));
         assert_eq!(routes.replaces(Some("build")), 0);
         assert!(routes.events.is_empty());
+    }
+
+    #[test]
+    fn only_the_servers_signals_count() {
+        let mut routes = Routes::default();
+        assert!(!routes.is_from_server(None));
+        assert!(!routes.is_from_server(Some(":1.5")));
+        routes.server = Some(":1.5".into());
+        assert!(routes.is_from_server(Some(":1.5")));
+        assert!(!routes.is_from_server(Some(":1.6")));
+        assert!(!routes.is_from_server(None));
     }
 
     #[test]

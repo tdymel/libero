@@ -8,8 +8,8 @@ use crate::{
         buttons::ActionIcon,
         common::{
             Glyph, HtmlTag, Input, Part, States, Variables, base_props, disabled_look_within_sx,
-            focus_ring_sx, has_shortcut_modifier, on_failed_after_mount, parts_enum, use_svg_probe,
-            variables,
+            focus_ring_sx, has_shortcut_modifier, media_url, on_failed_after_mount, parts_enum,
+            use_svg_probe, variables,
         },
         form::{Slider, SliderChangeEvent},
         layout::use_box,
@@ -345,7 +345,9 @@ static IMAGE_CROPPER_SX: StaticSx = StaticSx::new(|| {
 base_props! {
     parts(ImageCropperPart);
     pub struct ImageCropperProps {
-        /// The image: any URL, a `data:` URL included.
+        /// The image: any URL, a `data:` URL included. The browser fetches it with a plain GET
+        /// and the page's cookies, so a URL built from user data can act as a tracking beacon.
+        /// A `javascript:` or `vbscript:` URL loads nothing and warns in debug builds.
         #[props(into)]
         src: String,
         #[props(into)]
@@ -494,9 +496,11 @@ pub fn ImageCropper(props: ImageCropperProps) -> Element {
         });
     });
 
+    // A script URL loads no picture; `own_src` below is this, never `props.src`.
+    let own_src = media_url(&props.src, "ImageCropper `src`").unwrap_or_default();
     // A new picture or aspect starts over: a `src` still loading is fitted again on load.
     let mounted = use_hook(|| std::rc::Rc::new(std::cell::Cell::new(false)));
-    use_effect(use_reactive((&props.src, &aspect), move |_| {
+    use_effect(use_reactive((&own_src, &aspect), move |_| {
         if mounted.replace(true) {
             held.set(None);
             when_laid_out(move || measure.call(()));
@@ -505,7 +509,7 @@ pub fn ImageCropper(props: ImageCropperProps) -> Element {
 
     // A `src` that failed to load: no box over the alt text until another `src`.
     let mut failed = use_signal(|| false);
-    use_effect(use_reactive(&props.src, move |_| {
+    use_effect(use_reactive(&own_src, move |_| {
         if *failed.peek() {
             failed.set(false);
         }
@@ -523,8 +527,8 @@ pub fn ImageCropper(props: ImageCropperProps) -> Element {
         }
     });
     let mut mount_image = image.mount();
-    let mounted_src = props.src.clone();
-    let probe = use_svg_probe(&props.src);
+    let mounted_src = own_src.clone();
+    let probe = use_svg_probe(&own_src);
 
     // Blitz fires no `load`: measure once laid out as well.
     use_effect(move || {
@@ -940,7 +944,7 @@ pub fn ImageCropper(props: ImageCropperProps) -> Element {
             rsx! {
                 img {
                     "data-slot": ImageCropperPart::Image.slot(),
-                    src: props.src,
+                    src: own_src,
                     alt: props.alt,
                     draggable: "false",
                     onmounted: move |event: Event<MountedData>| {

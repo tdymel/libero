@@ -11,7 +11,8 @@ use crate::{
     components::{
         buttons::{ActionIcon, Button},
         common::{
-            Glyph, HtmlTag, Input, Part, Parts, base_props, media_url, parts_enum, use_name_warning,
+            Glyph, HtmlTag, Input, Part, Parts, base_props, is_script_url, media_url, parts_enum,
+            use_name_warning,
         },
         form::SliderTrack,
         layout::use_box,
@@ -206,7 +207,8 @@ pub(super) fn use_source_reload(media: MediaHandle, src: &str, sources: &[MediaS
 base_props! {
     parts(AudioPart);
     pub struct AudioProps {
-        /// The file's URL.
+        /// The file's URL, fetched with a plain GET and the page's cookies: a URL built
+        /// from user data can act as a tracking beacon. A script URL loads nothing.
         #[props(into)]
         src: String,
         /// The file in other formats, tried in order before `src`.
@@ -301,10 +303,14 @@ pub fn Audio(props: AudioProps) -> Element {
     attributes.extend(player.attributes());
 
     use_source_reload(media, &props.src, &props.sources);
-    // `preload: None` promises no fetch before a press, so it keeps the drawn bars.
+    // `preload: None` promises no fetch before a press, so it keeps the drawn bars. A script
+    // URL is not fetched; `media_sources` below warns about it.
     let decoded = use_waveform(
         &props.src,
-        props.preload != MediaPreload::None && !unsupported && decodable(media.duration()),
+        props.preload != MediaPreload::None
+            && !unsupported
+            && !is_script_url(&props.src)
+            && decodable(media.duration()),
     );
     let heights = decoded.unwrap_or_else(|| bar_heights(&props.src));
     let (src, sources) = media_sources(&props.src, &props.sources);

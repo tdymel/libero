@@ -85,7 +85,7 @@ so it plays only online.
 
 | Prop | Type | Default | Description |
 |---|---|---|---|
-| `src` | `String` | required | The file's URL. |
+| `src` | `String` | required | The file's URL. The player and the waveform fetch it with a plain GET and the page's cookies, so a URL built from user data can act as a tracking beacon. A `javascript:` or `vbscript:` URL loads nothing and warns in debug builds. |
 | `sources` | `Vec<MediaSource>` | `[]` | The file in other formats, `MediaSource::new(src, mime)`, tried in order before `src`. `src` stays the fallback and the download link. |
 | `label` | `String` | required | Names the player, e.g. the track's title. |
 | `media` | `Option<MediaHandle>` | `None` | A handle from `use_media()`, to drive or read the player from outside. |

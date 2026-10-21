@@ -68,11 +68,11 @@ pub fn PhoneFieldPage() -> Element {
                         .doc("The user picked another country, or typed another country's dial code. `oninput` fires at the same time with the number under the new dial code."),
                     prop("country_select", "bool")
                         .default(theme.phone_field.country_select.to_string())
-                        .doc("Shows the country picker. Off pins the country and shows its dial code as plain text."),
+                        .doc("Shows the country picker. Off pins the country and shows its dial code as plain text. A typed or pasted dial code of another country still wins over the pin, and the prefix changes."),
                     prop("country_label", "Callback<String, String>")
                         .doc("Overrides the name of a country. Unset, the name comes from the localization's `phone_field.country_names`, which ships in German, else English. It runs during render, so it can read a locale from context."),
                     prop("countries", "Vec<String>")
-                        .doc("Narrows the list to these ISO codes, in the order given."),
+                        .doc("Narrows the list to these ISO codes, in the order given. It limits the picker only: a typed or pasted dial code of a country outside it still switches the field to that country."),
                     prop("flag", "Callback<String, Element>")
                         .doc("Draws a flag beside a country, in the picker and in the list. The library ships none. Hide it from screen readers, since the country's name is already read."),
                     prop("validate", "Validators<String>")

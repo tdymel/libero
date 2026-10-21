@@ -57,7 +57,7 @@ picked image opens in a cropper first, and the field takes the cut file.
 
 | Prop | Type | Default | Description |
 |---|---|---|---|
-| `src` | `String` | required | The image: any URL, a `data:` URL included. |
+| `src` | `String` | required | The image: any URL, a `data:` URL included. The browser fetches it with a plain GET and the page's cookies, so a URL built from user data can act as a tracking beacon. A `javascript:` or `vbscript:` URL loads nothing and warns in debug builds. |
 | `alt` | `String` | required | Describes the image. |
 | `value` | `Option<CropRect>` | - | The box, in fractions of the image. Pair it with `onchange`. Unset starts centred at 80% of the largest box `aspect` allows, so it can move at once, and reports it once the image has loaded. A new `src` or `aspect` starts an unset box over. A set `value` stays as it is, so reset it yourself. |
 | `onchange` | `EventHandler<CropRect>` | - | Fires on every move of the box, by a drag, a key or a button under the image. Without it the cropper only shows, with no buttons. |

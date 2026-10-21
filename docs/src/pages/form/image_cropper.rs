@@ -42,7 +42,7 @@ pub fn ImageCropperPage() -> Element {
             properties: vec![
                 props("ImageCropper", vec![
                     prop("src", "String").default("required")
-                        .doc("The image: any URL, a `data:` URL included."),
+                        .doc("The image: any URL, a `data:` URL included. The browser fetches it with a plain GET and the page's cookies, so a URL built from user data can act as a tracking beacon. A `javascript:` or `vbscript:` URL loads nothing and warns in debug builds."),
                     prop("alt", "String").default("required").doc("Describes the image."),
                     prop("value", "Option<CropRect>")
                         .doc("The box, in fractions of the image. Pair it with `onchange`. Unset starts centred at 80% of the largest box `aspect` allows, so it can move at once, and reports it once the image has loaded. A new `src` or `aspect` starts an unset box over. A set `value` stays as it is, so reset it yourself."),

@@ -71,10 +71,17 @@ fn scheme_among(url: &str, blocked: &[&'static str]) -> Option<&'static str> {
     blocked.iter().copied().find(|blocked| *blocked == scheme)
 }
 
+const SCRIPT_SCHEMES: [&str; 2] = ["javascript", "vbscript"];
+
+/// Whether `url` is a `javascript:` or `vbscript:` one, which [`media_url`] drops.
+pub(crate) fn is_script_url(url: &str) -> bool {
+    scheme_among(url, &SCRIPT_SCHEMES).is_some()
+}
+
 /// `url` for a media element's `src`, `poster` or `<track>`, or `None` with a warning for a
 /// `javascript:` or `vbscript:` one. A `data:` file passes: media runs no script from it.
 pub(crate) fn media_url(url: &str, owner: &str) -> Option<String> {
-    let Some(scheme) = scheme_among(url, &["javascript", "vbscript"]) else {
+    let Some(scheme) = scheme_among(url, &SCRIPT_SCHEMES) else {
         return Some(url.to_string());
     };
     warn(&format!(
@@ -170,6 +177,14 @@ mod tests {
         ] {
             assert_eq!(media_url(url, "Video"), None, "{url:?}");
         }
+    }
+
+    #[test]
+    fn a_script_url_is_javascript_or_vbscript_only() {
+        assert!(is_script_url(" Java\tScript:alert(1)"));
+        assert!(is_script_url("vbscript:x"));
+        assert!(!is_script_url("data:audio/wav;base64,AAAA"));
+        assert!(!is_script_url("/a.ogg"));
     }
 
     #[test]

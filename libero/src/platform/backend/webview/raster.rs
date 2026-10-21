@@ -3,13 +3,16 @@ use serde_json::json;
 use super::{decode_base64, eval_with};
 
 /// The image at `src` fitted into a transparent `size` px square PNG, drawn by the page:
-/// only the WebView reaches wry's asset URLs, and it decodes SVG. `None` if it fails.
+/// only the WebView reaches wry's asset URLs, and it decodes SVG. `None` if it fails, or if
+/// `src` has a scheme other than http(s) and data: the load carries the WebView's cookies.
 #[cfg(target_os = "android")]
 pub(crate) fn square_png(src: &str, size: u32) -> impl Future<Output = Option<Vec<u8>>> + use<> {
     let script = eval_with(
         json!([src, size]),
         "const [src, size] = data;
         try {
+            const scheme = src.replace(/[\\t\\n\\r]/g, '').trim().match(/^([a-z][a-z0-9+.-]*):/i);
+            if (scheme && !['http', 'https', 'data'].includes(scheme[1].toLowerCase())) return null;
             const image = new Image();
             image.src = src;
             await Promise.race([image.decode(), new Promise((_, fail) => setTimeout(fail, 5000))]);

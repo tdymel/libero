@@ -23,10 +23,20 @@ const tell = (notification, name, action) => {
   });
 };
 
+// The payload is server data: only an http(s) URL is opened, anything else becomes `/`.
+const safeUrl = (url) => {
+  try {
+    const parsed = new URL(url, self.location.origin);
+    return /^https?:$/.test(parsed.protocol) ? parsed.href : '/';
+  } catch {
+    return '/';
+  }
+};
+
 // Focuses an open tab of the app, else opens one. A button press carries its `action`.
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
-  const url = event.notification.data?.url ?? '/';
+  const url = safeUrl(event.notification.data?.url ?? '/');
   const pressed = event.action
     ? tell(event.notification, 'action', event.action)
     : tell(event.notification, 'click');

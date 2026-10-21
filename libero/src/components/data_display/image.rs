@@ -132,6 +132,8 @@ parts_enum! {
 base_props! {
     parts(ImagePart);
     pub struct ImageProps {
+        /// Fetched with a plain GET and the page's cookies, as `fallback_src` is: a URL
+        /// built from user data can act as a tracking beacon.
         #[props(into)]
         src: String,
         #[props(default)]

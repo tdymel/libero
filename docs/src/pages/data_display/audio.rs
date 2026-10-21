@@ -24,7 +24,7 @@ pub fn AudioPage() -> Element {
             plays_media: true,
             properties: vec![
                 props("Audio", vec![
-                    prop("src", "String").default("required").doc("The file's URL."),
+                    prop("src", "String").default("required").doc("The file's URL. The player and the waveform fetch it with a plain GET and the page's cookies, so a URL built from user data can act as a tracking beacon. A `javascript:` or `vbscript:` URL loads nothing and warns in debug builds."),
                     prop("sources", "Vec<MediaSource>")
                         .default("[]")
                         .doc("The file in other formats, `MediaSource::new(src, mime)`, tried in order before `src`. `src` stays the fallback and the download link."),

@@ -63,9 +63,9 @@ under Germany becomes `"+4901711234567"`, which is not E.164. Say so in
 | `oninput` | `EventHandler<String>` | - | Fires on every keystroke with the E.164 the field should hold next, or an empty string once nothing is typed. |
 | `country` | `String` | `US` | The country the field starts on, ISO 3166-1 alpha-2. A pick wins over it until the prop changes. A `value` with another country's dial code wins over both. |
 | `oncountrychange` | `EventHandler<String>` | - | The user picked another country, or typed another country's dial code. `oninput` fires at the same time with the number under the new dial code. |
-| `country_select` | `bool` | `true` | Shows the country picker. Off pins the country and shows its dial code as plain text. |
+| `country_select` | `bool` | `true` | Shows the country picker. Off pins the country and shows its dial code as plain text. A typed or pasted dial code of another country still wins over the pin, and the prefix changes. |
 | `country_label` | `Callback<String, String>` | - | Overrides the name of a country. Unset, the name comes from the localization's `phone_field.country_names`, which ships in German, else English. It runs during render, so it can read a locale from context. |
-| `countries` | `Vec<String>` | - | Narrows the list to these ISO codes, in the order given. |
+| `countries` | `Vec<String>` | - | Narrows the list to these ISO codes, in the order given. It limits the picker only: a typed or pasted dial code of a country outside it still switches the field to that country. |
 | `flag` | `Callback<String, Element>` | - | Draws a flag beside a country, in the picker and in the list. The library ships none. Hide it from screen readers, since the country's name is already read. |
 | `validate` | `Validators<String>` | - | Rules over the E.164, shown once the field loses focus or its form is submitted. The field checks nothing on its own. |
 | `name` | `FieldName<String>` | - | What the field posts as, the E.164. A path such as `Signup::FIELDS.phone()` also binds the number to the surrounding `Form`'s value when the field has no `oninput`. |

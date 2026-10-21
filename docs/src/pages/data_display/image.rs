@@ -26,7 +26,7 @@ pub fn ImagePage() -> Element {
             markdown: "/md/image.md",
             properties: vec![
                 props("Image", vec![
-                    prop("src", "String").default("required").doc("The image source. A `javascript:` or `vbscript:` URL, here and in `fallback_src` and `zoomed_src`, renders no picture and warns in debug builds; `data:` and `blob:` pass."),
+                    prop("src", "String").default("required").doc("The image source. A `javascript:` or `vbscript:` URL, here and in `fallback_src` and `zoomed_src`, renders no picture and warns in debug builds; `data:` and `blob:` pass. The browser fetches `src` and `fallback_src` with a plain GET and the page's cookies, so a URL built from user data can act as a tracking beacon."),
                     prop("fallback_src", "Option<String>")
                         .default("None")
                         .doc("Shown in place of `src` once it fails to load."),

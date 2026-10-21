@@ -93,5 +93,6 @@ pub(crate) use variant_chrome::{
     variant_colors, variant_container_colors, variant_selected_sx,
 };
 pub(crate) use warnings::{
-    allowed_href, aria_label_of, is_empty_element, media_url, names_itself, use_name_warning,
+    allowed_href, aria_label_of, is_empty_element, is_script_url, media_url, names_itself,
+    use_name_warning,
 };

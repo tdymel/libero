@@ -154,13 +154,15 @@ field_props! {
         /// re-emits the value too.
         #[props(default)]
         oncountrychange: Option<EventHandler<String>>,
-        /// `false` pins the country and draws a static `+49` instead.
+        /// `false` pins the country and draws a static `+49` instead. A typed or
+        /// pasted dial code of another country still wins over the pin.
         #[props(default)]
         country_select: Option<bool>,
         /// Overrides the name a country is offered under, during render.
         #[props(default)]
         country_label: Option<Callback<String, String>>,
-        /// Narrows the list to these ISO codes, in the order given.
+        /// Narrows the list to these ISO codes, in the order given. A typed or pasted
+        /// dial code outside it still switches the field to that country.
         #[props(default)]
         countries: Option<Vec<String>>,
         /// Draws a flag beside a country; none ship. Keep it `aria-hidden`.
