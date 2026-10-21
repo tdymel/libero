@@ -137,6 +137,90 @@ pub(crate) const FEATURES: &[Feature] = &[
     feature("code", "typography", "Code, CodeBlock", &["copy"], true, &["/typography/code", "/typography/code-block"]),
 ];
 
+/// The wasm a release build gains from an app that uses the feature's first component, over a bare
+/// `Text` and `Button` app (2.7 MB, before wasm-bindgen). Measured 2026-10-21, todo 3910.
+#[rustfmt::skip]
+const WASM_COST: &[(&str, &str)] = &[
+    ("button-group", "+20 KB"),
+    ("copy", "+530 KB"),
+    ("direction-toggle", "+500 KB"),
+    ("repository", "+610 KB"),
+    ("share", "+590 KB"),
+    ("theme-switcher", "+1.2 MB"),
+    ("tldr", "+1.2 MB"),
+    ("toolbar", "+290 KB"),
+    ("accordion", "+290 KB"),
+    ("audio", "+2.1 MB"),
+    ("avatar", "+100 KB"),
+    ("badge", "+10 KB"),
+    ("carousel", "+1.3 MB"),
+    ("charts", "+1.6 MB"),
+    ("data-list", "+7 KB"),
+    ("image", "+2.0 MB"),
+    ("image-list", "+130 KB"),
+    ("indicator", "+10 KB"),
+    ("kanban", "+900 KB"),
+    ("list", "+10 KB"),
+    ("marquee", "+570 KB"),
+    ("qr-code", "+110 KB"),
+    ("sortable", "+580 KB"),
+    ("table", "+6.5 MB"),
+    ("timeline", "+40 KB"),
+    ("video", "+2.7 MB"),
+    ("circular-progress", "+30 KB"),
+    ("notifications", "+410 KB"),
+    ("progress-bar", "+50 KB"),
+    ("skeleton", "+8 KB"),
+    ("autocomplete", "+1.7 MB"),
+    ("cascader", "+1.5 MB"),
+    ("checkbox", "+280 KB"),
+    ("chip", "+210 KB"),
+    ("color", "+1.6 MB"),
+    ("combobox", "+1.1 MB"),
+    ("date-time", "+1.1 MB"),
+    ("file-field", "+2.4 MB"),
+    ("image-cropper", "+1.4 MB"),
+    ("native-select", "+400 KB"),
+    ("number-field", "+900 KB"),
+    ("password-field", "+760 KB"),
+    ("phone-field", "+1.5 MB"),
+    ("pin-field", "+310 KB"),
+    ("radio", "+230 KB"),
+    ("radio-group", "+330 KB"),
+    ("rating", "+380 KB"),
+    ("rich-text-editor", "+3.1 MB"),
+    ("segmented-control", "+340 KB"),
+    ("select", "+1.8 MB"),
+    ("slider", "+1.0 MB"),
+    ("switch", "+300 KB"),
+    ("tags-field", "+1.7 MB"),
+    ("text-field", "+310 KB"),
+    ("textarea", "+390 KB"),
+    ("bottom-navigation", "+30 KB"),
+    ("burger", "+500 KB"),
+    ("menubar", "+870 KB"),
+    ("nav-link", "+220 KB"),
+    ("pagination", "+560 KB"),
+    ("stepper", "+410 KB"),
+    ("tabs", "+210 KB"),
+    ("tree", "+300 KB"),
+    ("drawer", "+880 KB"),
+    ("floating-window", "+1.5 MB"),
+    ("hover-card", "+570 KB"),
+    ("lightbox", "+1.9 MB"),
+    ("menu", "+800 KB"),
+    ("spotlight", "+1.5 MB"),
+    ("tour", "+1.1 MB"),
+    ("code", "+120 KB"),
+];
+
+fn wasm_cost(name: &str) -> &'static str {
+    WASM_COST
+        .iter()
+        .find(|(feature, _)| *feature == name)
+        .map_or("", |(_, cost)| cost)
+}
+
 /// The category features, each turning on every component feature of its category.
 pub(crate) const CATEGORIES: [&str; 7] = [
     "buttons",
@@ -368,6 +452,15 @@ pub fn FeaturesPage() -> Element {
                     "the rich text editor, QR codes and the brand-mark buttons among them. "
                     "A feature on by default may be there only because another default one turns it on."
                 }
+                Text {
+                    "Cost is the wasm an app gains in a release build when it uses the feature's first component, over a bare Text and Button app of 2.7 MB (before wasm-bindgen). "
+                    "Rows share code, so they do not add up. A feature nobody uses costs build time, not wasm. "
+                    "Debug build from a cold cache, then after a libero edit: no features 23 s and 3 s, "
+                    Code { source: "select" }
+                    " 25 s and 4 s, the defaults 59 s and 13 s, "
+                    Code { source: "all-components" }
+                    " 105 s and 20 s."
+                }
                 Table {
                     aria_label: "Component features",
                     scroll: true,
@@ -379,7 +472,10 @@ pub fn FeaturesPage() -> Element {
                         column("Components").value(|row: &Feature| row.components),
                         column("Turns on").value(|row: &Feature| row.turns_on.join(", ")),
                         column("Default").value(|row: &Feature| if row.default { "on" } else { "off" }),
-                        column("Cost").value(|row: &Feature| row.cost),
+                        column("Adds").value(|row: &Feature| row.cost),
+                        column("Cost")
+                            .value(|row: &Feature| wasm_cost(row.name))
+                            .render(|row: &Feature| rsx! { Text { sx: sx().white_space("nowrap"), "{wasm_cost(row.name)}" } }),
                     ],
                 }
             }
@@ -419,6 +515,17 @@ mod tests {
             }
         }
         features
+    }
+
+    #[test]
+    fn every_feature_has_a_wasm_cost() {
+        let missing: Vec<_> = FEATURES
+            .iter()
+            .filter(|feature| wasm_cost(feature.name).is_empty())
+            .map(|feature| feature.name)
+            .collect();
+        assert!(missing.is_empty(), "no cost for {missing:?}");
+        assert_eq!(WASM_COST.len(), FEATURES.len());
     }
 
     /// The table here is libero's `Cargo.toml`: names, what each turns on, the default.

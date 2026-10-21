@@ -52,76 +52,83 @@ board, the rich text editor, QR codes and the brand-mark buttons among them. A
 feature on by default may be there only because another default one turns it
 on.
 
-| Feature | Components | Turns on | Default | Cost |
-|---|---|---|---|---|
-| `button-group` | ButtonGroup |  | on |  |
-| `copy` | Copy |  | on |  |
-| `direction-toggle` | DirectionToggle |  | on |  |
-| `repository` | Repository |  | off | The Simple Icons brand marks (pictogram-icons-simple). |
-| `share` | Share |  | on |  |
-| `theme-switcher` | ThemeSwitcher | menu | on |  |
-| `tldr` | Tldr | chip, menu | off | The Lobe Icons brand marks (pictogram-icons-lobe). |
-| `toolbar` | Toolbar, ToolbarGroup, ToolbarSeparator |  | on |  |
-| `accordion` | Accordion |  | on |  |
-| `audio` | Audio | slider, menu | off |  |
-| `avatar` | Avatar, AvatarGroup |  | on |  |
-| `badge` | Badge |  | on |  |
-| `carousel` | Carousel |  | on |  |
-| `charts` | LineChart, BarChart, PieChart and the other charts | skeleton | off | charts-rs, about 240 KB brotli on the web. |
-| `data-list` | DataList |  | on |  |
-| `image` | Image | lightbox | on |  |
-| `image-list` | ImageList | image | on |  |
-| `indicator` | Indicator |  | on |  |
-| `kanban` | Kanban | sortable, menu | off |  |
-| `list` | List |  | on |  |
-| `marquee` | Marquee |  | off |  |
-| `qr-code` | QrCode |  | off | The fast_qr encoder. |
-| `sortable` | Sortable, use_sortable |  | on |  |
-| `table` | Table, column and the table toolbar buttons | badge, progress-bar, skeleton, checkbox, native-select, select, text-field, pagination, menu, sortable, date-time | on | The largest component: its filters and editors bring the date, select and text fields. |
-| `timeline` | Timeline |  | on |  |
-| `video` | Video | slider, menu | off |  |
-| `circular-progress` | CircularProgress |  | on |  |
-| `notifications` | Notifications, use_notifications |  | on |  |
-| `progress-bar` | ProgressBar | slider | on |  |
-| `skeleton` | Skeleton |  | on |  |
-| `autocomplete` | Autocomplete | combobox | on |  |
-| `cascader` | Cascader | combobox | off |  |
-| `checkbox` | Checkbox |  | on |  |
-| `chip` | Chip |  | on |  |
-| `color` | ColorField, ColorPicker, ColorSwatch, HueSlider, AlphaSlider | slider | off |  |
-| `combobox` | Combobox, use_combobox |  | on |  |
-| `date-time` | ChronoField, ChronoPicker, DateField, DatePicker, TimeField, TimePicker and the other date and time fields and pickers | tabs | on |  |
-| `file-field` | FileField | chip, image-cropper, select | on |  |
-| `image-cropper` | ImageCropper | slider | on |  |
-| `native-select` | NativeSelect | combobox, select | on |  |
-| `number-field` | NumberField |  | on |  |
-| `password-field` | PasswordField | text-field | on |  |
-| `phone-field` | PhoneField | combobox | off |  |
-| `pin-field` | PinField |  | on |  |
-| `radio` | Radio |  | on |  |
-| `radio-group` | RadioGroup | radio | on |  |
-| `rating` | Rating |  | on |  |
-| `rich-text-editor` | RichTextEditor, RichTextView | toolbar, text-field, menu, code | off |  |
-| `segmented-control` | SegmentedControl |  | on |  |
-| `select` | Select, MultiSelect | combobox, chip | on |  |
-| `slider` | Slider, RangeSlider |  | on |  |
-| `switch` | Switch |  | on |  |
-| `tags-field` | TagsField | combobox, chip, select | on |  |
-| `text-field` | TextField |  | on |  |
-| `textarea` | Textarea |  | on |  |
-| `bottom-navigation` | BottomNavigation | nav-link | on |  |
-| `burger` | Burger |  | on |  |
-| `menubar` | Menubar | menu | on |  |
-| `nav-link` | NavLink | tree | on |  |
-| `pagination` | Pagination |  | on |  |
-| `stepper` | Stepper |  | on |  |
-| `tabs` | Tabs |  | on |  |
-| `tree` | Tree | list | on |  |
-| `drawer` | use_drawer |  | on |  |
-| `floating-window` | use_floating_window | menu | off |  |
-| `hover-card` | HoverCard |  | on |  |
-| `lightbox` | use_lightbox | carousel | on |  |
-| `menu` | Menu, use_menu |  | on |  |
-| `spotlight` | use_spotlight | combobox | off |  |
-| `tour` | use_tour |  | off |  |
-| `code` | Code, CodeBlock | copy | on |  |
+Cost is the wasm an app gains in a release build when it uses the feature's
+first component, over a bare Text and Button app of 2.7 MB (before
+wasm-bindgen). Rows share code, so they do not add up. A feature nobody uses
+costs build time, not wasm. Debug build from a cold cache, then after a libero
+edit: no features 23 s and 3 s, `select` 25 s and 4 s, the defaults 59 s and
+13 s, `all-components` 105 s and 20 s.
+
+| Feature | Components | Turns on | Default | Adds | Cost |
+|---|---|---|---|---|---|
+| `button-group` | ButtonGroup |  | on |  | +20 KB |
+| `copy` | Copy |  | on |  | +530 KB |
+| `direction-toggle` | DirectionToggle |  | on |  | +500 KB |
+| `repository` | Repository |  | off | The Simple Icons brand marks (pictogram-icons-simple). | +610 KB |
+| `share` | Share |  | on |  | +590 KB |
+| `theme-switcher` | ThemeSwitcher | menu | on |  | +1.2 MB |
+| `tldr` | Tldr | chip, menu | off | The Lobe Icons brand marks (pictogram-icons-lobe). | +1.2 MB |
+| `toolbar` | Toolbar, ToolbarGroup, ToolbarSeparator |  | on |  | +290 KB |
+| `accordion` | Accordion |  | on |  | +290 KB |
+| `audio` | Audio | slider, menu | off |  | +2.1 MB |
+| `avatar` | Avatar, AvatarGroup |  | on |  | +100 KB |
+| `badge` | Badge |  | on |  | +10 KB |
+| `carousel` | Carousel |  | on |  | +1.3 MB |
+| `charts` | LineChart, BarChart, PieChart and the other charts | skeleton | off | charts-rs, about 240 KB brotli on the web. | +1.6 MB |
+| `data-list` | DataList |  | on |  | +7 KB |
+| `image` | Image | lightbox | on |  | +2.0 MB |
+| `image-list` | ImageList | image | on |  | +130 KB |
+| `indicator` | Indicator |  | on |  | +10 KB |
+| `kanban` | Kanban | sortable, menu | off |  | +900 KB |
+| `list` | List |  | on |  | +10 KB |
+| `marquee` | Marquee |  | off |  | +570 KB |
+| `qr-code` | QrCode |  | off | The fast_qr encoder. | +110 KB |
+| `sortable` | Sortable, use_sortable |  | on |  | +580 KB |
+| `table` | Table, column and the table toolbar buttons | badge, progress-bar, skeleton, checkbox, native-select, select, text-field, pagination, menu, sortable, date-time | on | The largest component: its filters and editors bring the date, select and text fields. | +6.5 MB |
+| `timeline` | Timeline |  | on |  | +40 KB |
+| `video` | Video | slider, menu | off |  | +2.7 MB |
+| `circular-progress` | CircularProgress |  | on |  | +30 KB |
+| `notifications` | Notifications, use_notifications |  | on |  | +410 KB |
+| `progress-bar` | ProgressBar | slider | on |  | +50 KB |
+| `skeleton` | Skeleton |  | on |  | +8 KB |
+| `autocomplete` | Autocomplete | combobox | on |  | +1.7 MB |
+| `cascader` | Cascader | combobox | off |  | +1.5 MB |
+| `checkbox` | Checkbox |  | on |  | +280 KB |
+| `chip` | Chip |  | on |  | +210 KB |
+| `color` | ColorField, ColorPicker, ColorSwatch, HueSlider, AlphaSlider | slider | off |  | +1.6 MB |
+| `combobox` | Combobox, use_combobox |  | on |  | +1.1 MB |
+| `date-time` | ChronoField, ChronoPicker, DateField, DatePicker, TimeField, TimePicker and the other date and time fields and pickers | tabs | on |  | +1.1 MB |
+| `file-field` | FileField | chip, image-cropper, select | on |  | +2.4 MB |
+| `image-cropper` | ImageCropper | slider | on |  | +1.4 MB |
+| `native-select` | NativeSelect | combobox, select | on |  | +400 KB |
+| `number-field` | NumberField |  | on |  | +900 KB |
+| `password-field` | PasswordField | text-field | on |  | +760 KB |
+| `phone-field` | PhoneField | combobox | off |  | +1.5 MB |
+| `pin-field` | PinField |  | on |  | +310 KB |
+| `radio` | Radio |  | on |  | +230 KB |
+| `radio-group` | RadioGroup | radio | on |  | +330 KB |
+| `rating` | Rating |  | on |  | +380 KB |
+| `rich-text-editor` | RichTextEditor, RichTextView | toolbar, text-field, menu, code | off |  | +3.1 MB |
+| `segmented-control` | SegmentedControl |  | on |  | +340 KB |
+| `select` | Select, MultiSelect | combobox, chip | on |  | +1.8 MB |
+| `slider` | Slider, RangeSlider |  | on |  | +1.0 MB |
+| `switch` | Switch |  | on |  | +300 KB |
+| `tags-field` | TagsField | combobox, chip, select | on |  | +1.7 MB |
+| `text-field` | TextField |  | on |  | +310 KB |
+| `textarea` | Textarea |  | on |  | +390 KB |
+| `bottom-navigation` | BottomNavigation | nav-link | on |  | +30 KB |
+| `burger` | Burger |  | on |  | +500 KB |
+| `menubar` | Menubar | menu | on |  | +870 KB |
+| `nav-link` | NavLink | tree | on |  | +220 KB |
+| `pagination` | Pagination |  | on |  | +560 KB |
+| `stepper` | Stepper |  | on |  | +410 KB |
+| `tabs` | Tabs |  | on |  | +210 KB |
+| `tree` | Tree | list | on |  | +300 KB |
+| `drawer` | use_drawer |  | on |  | +880 KB |
+| `floating-window` | use_floating_window | menu | off |  | +1.5 MB |
+| `hover-card` | HoverCard |  | on |  | +570 KB |
+| `lightbox` | use_lightbox | carousel | on |  | +1.9 MB |
+| `menu` | Menu, use_menu |  | on |  | +800 KB |
+| `spotlight` | use_spotlight | combobox | off |  | +1.5 MB |
+| `tour` | use_tour |  | off |  | +1.1 MB |
+| `code` | Code, CodeBlock | copy | on |  | +120 KB |
