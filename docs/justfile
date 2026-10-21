@@ -33,6 +33,11 @@ _dx:
 start: _dx
     {{dx}} serve --platform web --debug-symbols=false --hotpatch
 
+# UI loop without hot-patching: a ~50 MB wasm instead of ~270 MB, full rebuild on save.
+# `wasm-dev` already drops debug info, so no extra profile (todo 3888).
+ui: _dx
+    {{dx}} serve --platform web --hot-patch false
+
 ffeat := "--features fullstack"
 
 # The same web app, server-rendered and hydrated. `dx` builds the client and
