@@ -6,7 +6,7 @@ use e2e::archetypes::Overlay;
 use e2e::browser::block_on;
 use e2e::driver::{Driver, Platform, eventually, eventually_focused, eventually_text};
 use e2e::suite::Step;
-use e2e::wait::PageBounded;
+use e2e::wait::{ElementBounded, PageBounded};
 use e2e::{
     Fixture, Suite, Viewport,
     passes::{keyboard, pointer},
@@ -340,7 +340,12 @@ fn items_arriving_in_an_open_menu_show_it_and_take_focus() {
             .await
             .unwrap();
         let outcome = async {
-            fixture.page.find_element_bounded(TRIGGER).await?.click().await?;
+            fixture
+                .page
+                .find_element_bounded(TRIGGER)
+                .await?
+                .click_bounded()
+                .await?;
             wait::for_visible(&fixture.page, MENU).await?;
             wait::for_js_true(
                 &fixture.page,

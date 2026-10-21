@@ -6,7 +6,7 @@ use chromiumoxide::Page;
 use e2e::browser::block_on;
 use e2e::driver::{Driver, Host, Platform, eventually, eventually_focused, eventually_text};
 use e2e::passes::{keyboard, pointer};
-use e2e::wait::PageBounded;
+use e2e::wait::{ElementBounded, PageBounded};
 use e2e::{Fixture, Suite, Viewport, ax, wait};
 
 const SORT: &str = "th[data-sortable] button";
@@ -301,7 +301,7 @@ fn a_shift_click_adds_a_sorted_column() {
         page.find_element_bounded(STOCK)
             .await
             .unwrap()
-            .focus()
+            .focus_bounded()
             .await
             .unwrap();
         keyboard::press_shift(page, keyboard::ENTER).await.unwrap();
@@ -341,7 +341,7 @@ fn a_cancelled_touch_does_not_make_the_next_key_press_add_a_column() {
         page.find_element_bounded(NAME)
             .await
             .unwrap()
-            .focus()
+            .focus_bounded()
             .await
             .unwrap();
         keyboard::press(page, keyboard::ENTER).await.unwrap();

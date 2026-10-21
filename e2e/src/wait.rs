@@ -200,6 +200,37 @@ impl PageBounded for Page {
     }
 }
 
+/// [`Element`]'s CDP calls under [`bounded`], named by their action.
+#[allow(async_fn_in_trait)]
+pub trait ElementBounded {
+    async fn click_bounded(&self) -> Result<&Self>;
+
+    async fn focus_bounded(&self) -> Result<&Self>;
+
+    async fn type_str_bounded(&self, input: impl AsRef<str>) -> Result<&Self>;
+
+    async fn scroll_into_view_bounded(&self) -> Result<&Self>;
+}
+
+impl ElementBounded for Element {
+    async fn click_bounded(&self) -> Result<&Self> {
+        bounded("clicking an element", self.click()).await
+    }
+
+    async fn focus_bounded(&self) -> Result<&Self> {
+        bounded("focusing an element", self.focus()).await
+    }
+
+    async fn type_str_bounded(&self, input: impl AsRef<str>) -> Result<&Self> {
+        let input = input.as_ref();
+        bounded(&format!("typing {}", excerpt(input)), self.type_str(input)).await
+    }
+
+    async fn scroll_into_view_bounded(&self) -> Result<&Self> {
+        bounded("scrolling an element into view", self.scroll_into_view()).await
+    }
+}
+
 /// The first 60 characters of `script`, enough to tell a step apart in a failure.
 fn excerpt(script: &str) -> String {
     let head: String = script.chars().take(60).collect();

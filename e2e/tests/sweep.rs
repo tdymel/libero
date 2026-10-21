@@ -6,7 +6,7 @@ use e2e::browser::block_on;
 use e2e::passes::contrast::COLOUR_JS;
 use e2e::passes::pointer::{self, Point};
 use e2e::passes::{contrast, keyboard};
-use e2e::wait::PageBounded;
+use e2e::wait::{ElementBounded, PageBounded};
 use e2e::{Fixture, Scheme, Viewport, wait};
 
 #[test]
@@ -44,7 +44,7 @@ fn a_route_change_closes_the_drawer() {
         page.find_element_bounded(BURGER)
             .await
             .unwrap()
-            .click()
+            .click_bounded()
             .await
             .unwrap();
         wait::for_js_true(page, &open, "the drawer to open")
@@ -79,7 +79,7 @@ fn a_route_change_closes_the_drawer() {
         page.find_element_bounded(BURGER)
             .await
             .unwrap()
-            .click()
+            .click_bounded()
             .await
             .unwrap();
         wait::for_js_true(page, &open, "the drawer to open again")
@@ -120,7 +120,7 @@ fn the_drawer_and_the_skip_link_move_focus() {
         page.find_element_bounded(BURGER)
             .await
             .unwrap()
-            .click()
+            .click_bounded()
             .await
             .unwrap();
         wait::for_js_true(
