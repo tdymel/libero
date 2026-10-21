@@ -93,6 +93,11 @@ fn hooks() -> Vec<HookRow> {
             Route::UseTimersPage {},
         ),
         row(
+            "use_countdown",
+            "The time left until an end, live, on one ticker every countdown shares.",
+            Route::UseCountdownPage {},
+        ),
+        row(
             "use_debounced_value",
             "A signal that follows another once it stops changing.",
             Route::UseDebouncePage {},

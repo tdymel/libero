@@ -2,14 +2,17 @@
 //! test moves time on with [`advance_to`], so a test waits on nothing real.
 
 use std::cell::RefCell;
+use std::ops::ControlFlow;
 use std::rc::Rc;
 use std::time::Duration;
 
 use crate::platform::{TimerApi, TimerSubscription};
 
+type Repeat = Rc<dyn Fn() -> ControlFlow<()>>;
+
 enum Callback {
     Once(Box<dyn FnOnce()>),
-    Every(Rc<dyn Fn()>, Duration),
+    Every(Repeat, Duration),
 }
 
 struct Pending {
@@ -46,8 +49,12 @@ pub(crate) fn install() -> Installed {
 }
 
 pub(super) fn active() -> Option<&'static dyn TimerApi> {
-    let installed = CLOCK.with(|clock| clock.borrow().is_some());
-    installed.then_some(&MANUAL as &'static dyn TimerApi)
+    installed().then_some(&MANUAL as &'static dyn TimerApi)
+}
+
+/// Whether this thread's timers run on the manual clock.
+pub(crate) fn installed() -> bool {
+    CLOCK.with(|clock| clock.borrow().is_some())
 }
 
 /// How long the clock has run.
@@ -57,6 +64,16 @@ pub(crate) fn now() -> Duration {
             .borrow()
             .as_ref()
             .map_or(Duration::ZERO, |clock| clock.now)
+    })
+}
+
+/// How many timers are set.
+pub(crate) fn pending() -> usize {
+    CLOCK.with(|clock| {
+        clock
+            .borrow()
+            .as_ref()
+            .map_or(0, |clock| clock.pending.len())
     })
 }
 
@@ -97,7 +114,9 @@ pub(crate) fn advance_to(time: Duration) {
                         });
                     }
                 });
-                callback();
+                if callback().is_break() {
+                    unschedule(entry.id);
+                }
             }
         }
     }
@@ -130,7 +149,11 @@ impl TimerApi for ManualTimer {
         schedule(delay, Callback::Once(callback))
     }
 
-    fn every(&self, interval: Duration, callback: Box<dyn Fn()>) -> Box<dyn TimerSubscription> {
+    fn every(
+        &self,
+        interval: Duration,
+        callback: Box<dyn Fn() -> ControlFlow<()>>,
+    ) -> Box<dyn TimerSubscription> {
         schedule(interval, Callback::Every(Rc::from(callback), interval))
     }
 }
@@ -143,12 +166,17 @@ impl TimerSubscription for Subscription {}
 
 impl Drop for Subscription {
     fn drop(&mut self) {
-        let removed = CLOCK.with(|clock| {
-            let mut clock = clock.try_borrow_mut().ok()?;
-            let clock = clock.as_mut()?;
-            let index = clock.pending.iter().position(|entry| entry.id == self.id)?;
-            Some(clock.pending.remove(index))
-        });
-        drop(removed);
+        unschedule(self.id);
     }
+}
+
+/// Drops the pending timer `id`, outside the clock's borrow: its callback may own a subscription.
+fn unschedule(id: u64) {
+    let removed = CLOCK.with(|clock| {
+        let mut clock = clock.try_borrow_mut().ok()?;
+        let clock = clock.as_mut()?;
+        let index = clock.pending.iter().position(|entry| entry.id == id)?;
+        Some(clock.pending.remove(index))
+    });
+    drop(removed);
 }

@@ -202,6 +202,7 @@ md_pages! {
     Tree => "tree",
     UseAccessibility => "use_accessibility",
     UseBack => "use_back",
+    UseCountdown => "use_countdown",
     UseDebounce => "use_debounce",
     UseDrag => "use_drag",
     UseElement => "use_element",

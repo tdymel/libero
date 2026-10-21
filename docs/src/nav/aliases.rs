@@ -276,6 +276,13 @@ fn label_aliases(label: &str) -> &'static [&'static str] {
             "service worker",
         ],
         "Timers" => &["use_timeout", "use_interval", "setTimeout", "setInterval"],
+        "Countdown" => &[
+            "use_countdown",
+            "format_duration",
+            "timer",
+            "time left",
+            "remaining",
+        ],
         "Debounce and throttle" => &[
             "use_debounced_value",
             "use_debounced_callback",

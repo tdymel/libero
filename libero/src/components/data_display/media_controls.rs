@@ -800,12 +800,7 @@ pub(super) fn MediaFallback(src: String, children: Element) -> Element {
 
 /// `m:ss`, or `h:mm:ss` from an hour.
 pub(super) fn clock(seconds: f64) -> String {
-    let total = seconds.max(0.0).floor() as u64;
-    let (hours, minutes, seconds) = (total / 3600, total / 60 % 60, total % 60);
-    match hours {
-        0 => format!("{minutes}:{seconds:02}"),
-        _ => format!("{hours}:{minutes:02}:{seconds:02}"),
-    }
+    crate::localization::clock(seconds.max(0.0).floor() as u64)
 }
 
 #[cfg(test)]

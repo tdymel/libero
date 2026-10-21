@@ -21,7 +21,7 @@ use crate::{
         layout::use_box,
     },
     hooks::{use_element, use_localization, use_theme},
-    localization::{DateLocale, fill},
+    localization::{DateLocale, ZeroIn, fill},
     platform::ElementApi,
     sx::Sx,
     theme::Size,
@@ -63,18 +63,8 @@ fn of(hours: i64, minutes: i64, seconds: i64) -> TimeDelta {
 /// `1 h 30 min`: the parts that are not zero, `0 min` for none.
 fn show_duration(span: TimeDelta, names: &DateLocale) -> String {
     let sign = if span < TimeDelta::zero() { "-" } else { "" };
-    let (hours, minutes, seconds) = parts(span.abs());
-    let mut shown = Vec::new();
-    if hours > 0 {
-        shown.push(format!("{hours} {}", names.hours_short));
-    }
-    if minutes > 0 || (hours == 0 && seconds == 0) {
-        shown.push(format!("{minutes} {}", names.minutes_short));
-    }
-    if seconds > 0 {
-        shown.push(format!("{seconds} {}", names.seconds_short));
-    }
-    format!("{sign}{}", shown.join(" "))
+    let seconds = span.abs().num_seconds().unsigned_abs();
+    format!("{sign}{}", names.short_duration(seconds, ZeroIn::Minutes))
 }
 
 /// Lower case, without the dots of an abbreviation (`Std.`).

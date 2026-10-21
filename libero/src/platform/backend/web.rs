@@ -1,4 +1,5 @@
 use std::cell::Cell;
+use std::ops::ControlFlow;
 use std::rc::Rc;
 use std::time::Duration;
 
@@ -1433,17 +1434,30 @@ impl TimerApi for WebTimer {
         })
     }
 
-    fn every(&self, interval: Duration, callback: Box<dyn Fn()>) -> Box<dyn TimerSubscription> {
-        let closure = Closure::<dyn FnMut()>::new(callback);
-        // An interval runs until cleared, so its id never goes stale.
-        let handle = Rc::new(Cell::new(web_sys::window().and_then(|window| {
+    fn every(
+        &self,
+        interval: Duration,
+        callback: Box<dyn Fn() -> ControlFlow<()>>,
+    ) -> Box<dyn TimerSubscription> {
+        // An interval runs until cleared, so its id never goes stale. A `Break` clears
+        // and forgets it; the closure lives on in the subscription, so none is dropped mid-call.
+        let handle: Rc<Cell<Option<i32>>> = Rc::new(Cell::new(None));
+        let stop = handle.clone();
+        let closure = Closure::<dyn FnMut()>::new(move || {
+            if callback().is_break()
+                && let Some((id, window)) = stop.take().zip(web_sys::window())
+            {
+                window.clear_interval_with_handle(id);
+            }
+        });
+        handle.set(web_sys::window().and_then(|window| {
             window
                 .set_interval_with_callback_and_timeout_and_arguments_0(
                     closure.as_ref().unchecked_ref(),
                     millis(interval),
                 )
                 .ok()
-        })));
+        }));
 
         Box::new(WebTimerSubscription {
             handle,

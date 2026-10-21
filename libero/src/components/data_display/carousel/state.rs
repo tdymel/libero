@@ -1,3 +1,4 @@
+use std::ops::ControlFlow;
 use std::time::Duration;
 
 use dioxus::prelude::*;
@@ -617,11 +618,12 @@ pub(super) fn use_carousel_state(setup: CarouselSetup) -> CarouselState {
                 if now && !reduced.replace(now) {
                     let mut paused = paused;
                     paused.set(true);
-                    return;
+                    return ControlFlow::Continue(());
                 }
                 reduced.set(now);
                 let mut ticks = ticks;
                 ticks += 1;
+                ControlFlow::Continue(())
             }),
         );
         subscription.set(Some(handle));

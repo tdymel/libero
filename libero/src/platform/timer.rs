@@ -1,3 +1,4 @@
+use std::ops::ControlFlow;
 use std::time::Duration;
 
 use super::backend;
@@ -12,9 +13,13 @@ pub trait TimerApi {
     /// subscription is dropped first.
     fn after(&self, delay: Duration, callback: Box<dyn FnOnce()>) -> Box<dyn TimerSubscription>;
 
-    /// Calls `callback` every `interval` until the returned subscription is
-    /// dropped.
-    fn every(&self, interval: Duration, callback: Box<dyn Fn()>) -> Box<dyn TimerSubscription>;
+    /// Calls `callback` every `interval` until it returns `Break` or the returned
+    /// subscription is dropped. A stopped subscription stays inert until dropped.
+    fn every(
+        &self,
+        interval: Duration,
+        callback: Box<dyn Fn() -> ControlFlow<()>>,
+    ) -> Box<dyn TimerSubscription>;
 }
 
 /// The timer: `setTimeout` on the web, a thread and a dioxus task elsewhere.
@@ -26,7 +31,8 @@ pub trait TimerApi {
 /// # fn app() -> Element {
 /// let _autoplay = use_hook(|| {
 ///     libero::platform::timer().map(|timer| {
-///         std::rc::Rc::new(timer.every(Duration::from_secs(5), Box::new(|| {})))
+///         let next_slide = || std::ops::ControlFlow::Continue(());
+///         std::rc::Rc::new(timer.every(Duration::from_secs(5), Box::new(next_slide)))
 ///     })
 /// });
 /// # rsx! {}
@@ -87,7 +93,30 @@ mod tests {
     fn repeating() -> Element {
         use_hook(|| {
             let api = timer().expect("a timer inside a VirtualDom");
-            keep(api.every(Duration::from_millis(10), Box::new(count_one_fire)));
+            keep(api.every(
+                Duration::from_millis(10),
+                Box::new(|| {
+                    count_one_fire();
+                    ControlFlow::Continue(())
+                }),
+            ));
+        });
+        rsx! {}
+    }
+
+    fn stopping_at_three() -> Element {
+        use_hook(|| {
+            let api = timer().expect("a timer inside a VirtualDom");
+            keep(api.every(
+                Duration::from_millis(10),
+                Box::new(|| {
+                    count_one_fire();
+                    match fires() {
+                        3 => ControlFlow::Break(()),
+                        _ => ControlFlow::Continue(()),
+                    }
+                }),
+            ));
         });
         rsx! {}
     }
@@ -155,5 +184,17 @@ mod tests {
         drop_subscription();
         settle(&mut dom, 10);
         assert_eq!(fires(), ticks, "a cancelled interval kept ticking");
+    }
+
+    #[test]
+    fn an_interval_stops_itself_from_its_callback() {
+        let mut dom = VirtualDom::new(stopping_at_three);
+        dom.rebuild_in_place();
+
+        drive(&mut dom, Duration::from_secs(2), || fires() >= 3);
+        settle(&mut dom, 30);
+        assert_eq!(fires(), 3, "a stopped interval kept ticking");
+
+        drop_subscription();
     }
 }

@@ -1,4 +1,5 @@
 use std::{
+    ops::ControlFlow,
     rc::{Rc, Weak},
     time::Duration,
 };
@@ -75,6 +76,7 @@ impl ColorSchemeApi for BlitzColorScheme {
                         if let Some(doc) = weak.upgrade() {
                             check_scheme(&doc);
                         }
+                        ControlFlow::Continue(())
                     }),
                 )
             });

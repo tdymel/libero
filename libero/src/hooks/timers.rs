@@ -1,6 +1,7 @@
 //! `use_timeout` and `use_interval` on the platform timer, plus [`Scheduled`],
 //! the one timer cell the debounce and throttle hooks share.
 
+use std::ops::ControlFlow;
 use std::time::Duration;
 
 use dioxus::prelude::*;
@@ -30,7 +31,13 @@ impl Scheduled {
     /// Fires every `ms`, cancelling a timer under way.
     pub(crate) fn every(&self, ms: u64) {
         let fired = self.fired;
-        self.replace(|timer| timer.every(Duration::from_millis(ms), Box::new(move || bump(fired))));
+        self.replace(|timer| {
+            let tick = move || {
+                bump(fired);
+                ControlFlow::Continue(())
+            };
+            timer.every(Duration::from_millis(ms), Box::new(tick))
+        });
     }
 
     pub(crate) fn cancel(&self) {

@@ -70,21 +70,22 @@ pub(super) fn Examples(
         let ticker = api.every(
             Duration::from_millis(300),
             std::boxed::Box::new(move || {
+                percent.set(percent.get() + 10.0);
+                uploads.update(
+                    id,
+                    Upload {
+                        file: "archive.zip",
+                        percent: percent.get(),
+                    },
+                );
                 if percent.get() < 100.0 {
-                    percent.set(percent.get() + 10.0);
-                    uploads.update(
-                        id,
-                        Upload {
-                            file: "archive.zip",
-                            percent: percent.get(),
-                        },
-                    );
-                } else {
-                    finished.set(true);
+                    return ControlFlow::Continue(());
                 }
+                finished.set(true);
+                ControlFlow::Break(())
             }),
         );
-        // A finished upload's ticker is dropped on the next click, not from its own callback.
+        // `Break` stopped a finished ticker; its handle is dropped on the next click.
         let mut tickers = tickers.borrow_mut();
         tickers.retain(|(done, _)| !done.get());
         tickers.push((done, ticker));

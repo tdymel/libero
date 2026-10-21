@@ -30,6 +30,7 @@ Accessibility. The rest are shown on the component or guide page they belong to.
 | `use_edge_swipe` | Opens a drawer by a swipe in from the screen's start edge. | [Swipe](use_swipe.md) |
 | `use_timeout` | Runs a callback once, a while after you start it. | [Timers](use_timers.md) |
 | `use_interval` | Runs a callback repeatedly, with start, stop and toggle. | [Timers](use_timers.md) |
+| `use_countdown` | The time left until an end, live, on one ticker every countdown shares. | [Countdown](use_countdown.md) |
 | `use_debounced_value` | A signal that follows another once it stops changing. | [Debounce and throttle](use_debounce.md) |
 | `use_debounced_callback` | A callback that runs after its last call, with the last argument. | [Debounce and throttle](use_debounce.md) |
 | `use_throttled_value` | A signal that follows another at most once per period. | [Debounce and throttle](use_debounce.md) |

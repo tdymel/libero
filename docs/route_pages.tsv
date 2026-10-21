@@ -21,6 +21,7 @@
 /hooks/use-long-press	Long press - Libero	Pointer handlers that call back once a press is held, without breaking a tap or a scroll.	/md/use_long_press.md	Hooks	/hooks
 /hooks/use-swipe	Swipe - Libero	Touch swipe handlers, and an edge swipe that opens a drawer without fighting Android's back gesture.	/md/use_swipe.md	Hooks	/hooks
 /hooks/use-timers	Timers - Libero	Runs a callback once or on a period, started and stopped from code, cancelled when the component unmounts.	/md/use_timers.md	Hooks	/hooks
+/hooks/use-countdown	Countdown - Libero	The time left until an end, live, on one ticker every countdown shares, and the duration as a clock, short units or spoken words in the active language.	/md/use_countdown.md	Hooks	/hooks
 /hooks/use-debounce	Debounce and throttle - Libero	Signals and callbacks that follow their source once it settles or at most once per period.	/md/use_debounce.md	Hooks	/hooks
 /hooks/use-history	History - Libero	Undo and redo over snapshots of a value, with rapid changes grouped into one step by time or size.	/md/use_history.md	Hooks	/hooks
 /hooks/use-hotkeys	Hotkeys - Libero	Runs a handler on a keyboard shortcut from anywhere in the page, skipping text entry unless asked, and stops when the component unmounts.	/md/use_hotkeys.md	Hooks	/hooks

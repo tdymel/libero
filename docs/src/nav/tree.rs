@@ -290,6 +290,7 @@ pub(super) fn nav_tree() -> Vec<TreeNode<NavEntry>> {
                 page(Route::UseLongPressPage {}, "Long press"),
                 page(Route::UseSwipePage {}, "Swipe"),
                 page(Route::UseTimersPage {}, "Timers"),
+                page(Route::UseCountdownPage {}, "Countdown"),
                 page(Route::UseDebouncePage {}, "Debounce and throttle"),
                 page(Route::UseHistoryPage {}, "History"),
                 page(Route::UseHotkeysPage {}, "Hotkeys"),

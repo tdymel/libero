@@ -6,6 +6,7 @@
 
 use std::{
     cell::{Cell, RefCell},
+    ops::ControlFlow,
     rc::{Rc, Weak},
     time::Duration,
 };
@@ -171,6 +172,7 @@ fn poll(doc: &Rc<Doc>) {
                     if let Some(doc) = weak.upgrade() {
                         check(&doc);
                     }
+                    ControlFlow::Continue(())
                 }),
             )
         });

@@ -180,6 +180,7 @@ each component you use, see [features.md](features.md).
 - [Long press](use_long_press.md): Pointer handlers that call back once a press is held, without breaking a tap or a scroll.
 - [Swipe](use_swipe.md): Touch swipe handlers, and an edge swipe that opens a drawer without fighting Android's back gesture.
 - [Timers](use_timers.md): Runs a callback once or on a period, started and stopped from code, cancelled when the component unmounts.
+- [Countdown](use_countdown.md): The time left until an end, live, on one ticker every countdown shares, and the duration as a clock, short units or spoken words in the active language.
 - [Debounce and throttle](use_debounce.md): Signals and callbacks that follow their source once it settles or at most once per period.
 - [History](use_history.md): Undo and redo over snapshots of a value, with rapid changes grouped into one step by time or size.
 - [Hotkeys](use_hotkeys.md): Runs a handler on a keyboard shortcut from anywhere in the page, skipping text entry unless asked, and stops when the component unmounts.

@@ -139,6 +139,8 @@ pub(crate) enum Route {
     UseSwipePage {},
     #[route("/hooks/use-timers")]
     UseTimersPage {},
+    #[route("/hooks/use-countdown")]
+    UseCountdownPage {},
     #[route("/hooks/use-debounce")]
     UseDebouncePage {},
     #[route("/hooks/use-history")]

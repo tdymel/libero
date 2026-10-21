@@ -1,9 +1,16 @@
+use std::time::{Duration, SystemTime, UNIX_EPOCH};
+
 use chrono::NaiveDate;
 
-/// The wall clock, for "today".
+/// The wall clock, for "today" and "now".
 pub trait ClockApi {
     /// The local calendar day.
     fn today(&self) -> NaiveDate;
+
+    /// The current time, also on wasm, where `SystemTime::now()` panics.
+    fn now(&self) -> SystemTime {
+        UNIX_EPOCH + Duration::from_millis(unix_millis())
+    }
 }
 
 #[cfg(target_arch = "wasm32")]
@@ -51,8 +58,10 @@ mod native {
 /// after mount, never while rendering: server and hydrating client may disagree.
 ///
 /// ```
+/// # use std::time::Duration;
 /// let today = libero::platform::clock().map(|clock| clock.today());
-/// # let _ = today;
+/// let in_90_s = libero::platform::clock().map(|clock| clock.now() + Duration::from_secs(90));
+/// # let _ = (today, in_90_s);
 /// ```
 pub fn clock() -> Option<&'static dyn ClockApi> {
     #[cfg(target_arch = "wasm32")]
@@ -82,5 +91,15 @@ mod tests {
         let today = clock().expect("a native clock").today();
         let utc = Utc::now().date_naive();
         assert!((today - utc).abs() <= TimeDelta::days(1), "{today} {utc}");
+    }
+
+    #[test]
+    fn now_is_the_system_time_to_the_millisecond() {
+        let before = std::time::SystemTime::now() - std::time::Duration::from_millis(1);
+        let now = clock().expect("a native clock").now();
+        assert!(
+            now >= before && now <= std::time::SystemTime::now(),
+            "{now:?}"
+        );
     }
 }
