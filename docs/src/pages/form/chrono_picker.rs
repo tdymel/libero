@@ -148,16 +148,14 @@ pub fn ChronoPickerPage() -> Element {
                             _ => vec![],
                         }
                     }),
-                    // A range defaults to two months, so `1` prints there.
-                    Control::toggle("columns", ["1", "2", "3"])
-                        .default("1")
+                    // `auto` leaves it unset: one month, or a range's one below `sm` and two above (todo 3896).
+                    Control::toggle("columns", ["auto", "1", "2", "3"])
+                        .labels(["Auto", "1", "2", "3"])
+                        .default("auto")
                         .hidden_when(|values| !matches!(values.str("value").as_str(), "date" | "date-range") || is_mini(values))
-                        .code(|_, values| {
-                            let default = if values.str("value") == "date-range" { "2" } else { "1" };
-                            match values.str("columns").as_str() {
-                                columns if columns == default => vec![],
-                                columns => vec![format!("columns: {columns}")],
-                            }
+                        .code(|_, values| match values.str("columns").as_str() {
+                            "auto" => vec![],
+                            columns => vec![format!("columns: {columns}")],
                         }),
                     Control::switch("disabled"),
                     Control::switch("allow_deselect").hidden_when(|values| values.str("value") != "date"),

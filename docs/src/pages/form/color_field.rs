@@ -128,6 +128,11 @@ pub fn ColorFieldPage() -> Element {
                     Code { source: "format" }
                     "."
                 }
+                Text {
+                    "On a phone the dropdown opens as a sheet at the foot of the screen, with a full-width panel, "
+                    "44px sliders and one row of swatches. Under a finger, a tap opens only the picker; "
+                    "the color's text box under it takes typing."
+                }
             },
             // snippet: item const SWATCHES: [&str; 7] = [""; 7];
             // snippet: let mut color = use_signal(|| ColorCode::hex(0x228be6));
@@ -152,7 +157,8 @@ pub fn ColorFieldPage() -> Element {
                         }),
                 ], field_controls::<BrandCopy>(), vec![
                     Control::switch("with_alpha"),
-                    Control::switch("swatches").code(|_, values| match is_on(values, "swatches") {
+                    // On by default: the phone sheet's swatch row shows without a switch (3923).
+                    Control::switch("swatches").default("true").code(|_, values| match is_on(values, "swatches") {
                         true => vec!["swatches: SWATCHES".to_string()],
                         false => vec![],
                     }),

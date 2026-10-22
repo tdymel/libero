@@ -7,6 +7,7 @@ use dioxus::prelude::*;
 use super::{
     DateRange,
     calendar::DateLevel,
+    flows::{short_day, short_days},
     format::{format_date, format_time},
     parse::{Unreadable, parse_at},
     parse_time::{parse_date_time, parse_time},
@@ -22,17 +23,24 @@ use crate::{
         },
         form::{
             Caption, ChronoDropdownPart, FIELD_CONTROL_SX, FieldName, FieldPart, FieldStatus,
-            FormScope, Validators, use_bound, use_field, use_field_frame,
+            FormScope, Validators,
+            keyboardless::{PickerInput, use_keyboardless},
+            phone_sheet::{
+                SheetSwipe, narrow_query, phone_sheet_sx, sheet_clearance_style,
+                use_sheet_clearance, use_sheet_room, use_sheet_swipe,
+            },
+            use_bound, use_field, use_field_frame,
         },
         layout::{paper_sx, use_box},
     },
     hooks::{
         POPOVER_AVAILABLE_HEIGHT, PopoverOptions, placement_sx, use_element, use_field_list_layer,
-        use_focus_within, use_form_owner, use_localization, use_popover_on, use_theme,
+        use_focus_within, use_form_owner, use_localization, use_media_query, use_popover_on,
+        use_theme,
     },
     localization::DateLocale,
-    platform::{ElementApi, is_tab, next_task, soft_keyboard_app},
-    sx::{StaticSx, Sx, ThemeAwareValue},
+    platform::{ElementApi, is_tab, next_task},
+    sx::{StaticSx, Sx, ThemeAwareValue, sx},
     theme::{Size, SizeCss, Z_INDEX_POPOVER},
 };
 
@@ -47,6 +55,23 @@ static PICKER_FIELD_DROPDOWN_SX: StaticSx = StaticSx::new(|| {
         // Never past the room on its side: it scrolls instead (WCAG 1.4.10).
         .max_height(POPOVER_AVAILABLE_HEIGHT.value_or("none"))
         .overflow_y("auto")
+        .selector(
+            "& > [data-slot='text-input']",
+            sx().margin_top(SizeCss::SPACING.value(Size::Sm)),
+        )
+        // Below `sm` the phone sheet, which a sticky header cannot cover (todo 3900).
+        .and(phone_sheet_sx())
+        .media(
+            narrow_query(),
+            // The clock face fills the sheet's width (3926); `div` outranks the picker's own rule.
+            sx().selector("& :has(> div[data-slot='face'])", sx().width("100%"))
+                .selector(
+                    "& div[data-slot='face']",
+                    sx().width("min(100%, 50dvh)")
+                        .height("auto")
+                        .with("aspect-ratio", "1"),
+                ),
+        )
 });
 
 /// Where Arrow Down in the input puts focus: the picker's tab stop, not the navigation above it.
@@ -68,6 +93,14 @@ pub struct Formats {
 pub trait FieldValue: Copy + PartialEq + 'static {
     /// The input's text.
     fn show(self, formats: &Formats) -> String;
+    /// A narrow field's text, where `show` would overflow it; `None` keeps `show`.
+    fn show_short(self, _: &Formats) -> Option<String> {
+        None
+    }
+    /// A range of these as a narrow field shows it.
+    fn show_short_range(_: DateRange<Self>, _: &Formats) -> Option<String> {
+        None
+    }
     /// Typed text back. `current` fills in whatever the text leaves out.
     fn read(
         text: &str,
@@ -95,6 +128,10 @@ pub trait FieldValue: Copy + PartialEq + 'static {
 impl FieldValue for NaiveDate {
     fn show(self, formats: &Formats) -> String {
         format_date(self, &formats.date, formats.names)
+    }
+
+    fn show_short_range(range: DateRange<Self>, formats: &Formats) -> Option<String> {
+        Some(short_days(range, formats.names))
     }
 
     fn read(
@@ -150,6 +187,24 @@ impl FieldValue for NaiveDateTime {
         )
     }
 
+    /// `14 Sep 09:00 – 16 Sep 17:00`, years only when they differ.
+    fn show_short_range(range: DateRange<Self>, formats: &Formats) -> Option<String> {
+        let years = range
+            .end
+            .is_some_and(|end| end.year() != range.start.year());
+        let moment = |at: Self| {
+            let day = short_day(at.date(), years, formats.names);
+            format!("{day} {}", at.time().show(formats))
+        };
+        Some(match range.end {
+            Some(end) if end.date() == range.start.date() => {
+                format!("{} – {}", moment(range.start), end.time().show(formats))
+            }
+            Some(end) => format!("{} – {}", moment(range.start), moment(end)),
+            None => format!("{} –", moment(range.start)),
+        })
+    }
+
     fn read(
         text: &str,
         formats: &Formats,
@@ -185,6 +240,10 @@ impl<T: FieldValue + Ord> FieldValue for DateRange<T> {
             ),
             None => self.start.show(formats),
         }
+    }
+
+    fn show_short(self, formats: &Formats) -> Option<String> {
+        T::show_short_range(self, formats)
     }
 
     fn read(
@@ -341,7 +400,23 @@ pub(super) fn use_picker_field<V: FieldValue>(
         (None, Some(setter)) => setter.set(next),
         (None, None) => {}
     };
-    let text =
+    // Below `sm` a range shows short while the input is not focused, so typed text never
+    // reads it back (todo 3904).
+    let narrow = use_media_query(&narrow_query());
+    let focused = use_signal(|| false);
+    let short = narrow() && !focused();
+    let text = draft().unwrap_or_else(|| {
+        value
+            .map(|value| {
+                short
+                    .then(|| value.show_short(&formats))
+                    .flatten()
+                    .unwrap_or_else(|| value.show(&formats))
+            })
+            .unwrap_or_default()
+    });
+    // The picker's own text input always shows the whole text.
+    let full_text =
         draft().unwrap_or_else(|| value.map(|value| value.show(&formats)).unwrap_or_default());
     // Says a refusal on Enter, where focus stays and the error line is not live.
     let announcer = use_announcer();
@@ -371,7 +446,8 @@ pub(super) fn use_picker_field<V: FieldValue>(
         }
     };
     let (commit_on_blur, mut commit_on_enter) = (commit.clone(), commit.clone());
-    let mut commit_on_enter_picker = commit;
+    let (mut commit_on_enter_picker, mut commit_in_picker) = (commit.clone(), commit.clone());
+    let mut commit_on_picker_blur = commit;
 
     // Refused text outranks the caller's status: the field cannot hold what it shows.
     let status: Input<FieldStatus> = match rejected() {
@@ -421,13 +497,24 @@ pub(super) fn use_picker_field<V: FieldValue>(
         PopoverOptions::new(theme.popover.gap, theme.popover.padding),
     );
     let floating = *popover.floating();
+    let room = use_sheet_room(floating, narrow() && popover.placed());
+    let clearance = use_sheet_clearance(
+        anchor,
+        field_box.root(),
+        popover,
+        showing,
+        theme.popover.gap,
+    );
     let dropdown_states: Input<States> = States::new().active("bordered").into();
     let dropdown_box = use_box()
         .framework_sx(&PICKER_FIELD_DROPDOWN_SX)
         .parts(field.dropdown_parts)
         .states(&dropdown_states)
-        .style(Some(popover.vars()))
+        .style(Some(format!("{}{room}", popover.vars())))
         .prepare();
+    let keyboardless = use_keyboardless();
+    let close = use_callback(move |()| open_to(false));
+    let SheetSwipe { strip, listeners } = use_sheet_swipe(close);
     // Waits for placement: the picker is not drawn until the box is measured.
     use_effect(move || {
         if !entering() || !popover.placed() {
@@ -441,7 +528,12 @@ pub(super) fn use_picker_field<V: FieldValue>(
 
     // After the next task focus has landed: closes unless it is in the input or dropdown.
     // Without a platform answer it counts as left.
+    let press = keyboardless.press();
     let settle = move || {
+        // A tap into the picker's text box stays: a WebView answers no `:focus` query (3905).
+        if press.taken() {
+            return;
+        }
         spawn(async move {
             next_task().await;
             let inside = anchor.query_selector(":focus").is_ok()
@@ -471,6 +563,10 @@ pub(super) fn use_picker_field<V: FieldValue>(
     let focus = use_focus_within(
         move || vec![anchor.mounted(), floating.mounted()],
         move |change| {
+            if change.element == 0 && *focused.peek() != change.within {
+                let mut focused = focused;
+                focused.set(change.within);
+            }
             if let (0, false) = (change.element, change.within) {
                 commit_on_blur.clone()();
             }
@@ -493,8 +589,8 @@ pub(super) fn use_picker_field<V: FieldValue>(
         .attr("readonly", readonly)
         .attr("required", required)
         .attr("autocomplete", "off")
-        // A phone app's keyboard would cover the picker, which is the input there (todo 1012).
-        .attr("inputmode", soft_keyboard_app().then_some("none"))
+        // A phone's keyboard would cover the picker, which is the input there (todos 1012, 3905).
+        .attr("inputmode", keyboardless.inputmode())
         // APG Date Picker Combobox: a textbox may not carry `aria-expanded`.
         .attr("role", "combobox")
         .attr("aria-haspopup", "dialog")
@@ -569,6 +665,34 @@ pub(super) fn use_picker_field<V: FieldValue>(
             open_to(false);
         }
     });
+    // Shares the field's draft: Enter commits and hands focus back, a blur commits (3905).
+    let picker_input = keyboardless.input(PickerInput {
+        field_id: field_box.id().to_string(),
+        labelled: !field.label.is_none(),
+        fallback_label: V::dialog_label(names),
+        value: full_text,
+        invalid: rejected().is_some(),
+        oninput: move |event: FormEvent| {
+            rejected.set(None);
+            announcer.clear();
+            draft.set(Some(event.value()));
+        },
+        onkeydown: move |event: KeyboardEvent| {
+            if event.key() != Key::Named(NamedKey::Enter) || event.is_composing() {
+                return;
+            }
+            match commit_in_picker() {
+                Some(error) => announcer.say(error),
+                None => {
+                    focus_input();
+                    open_to(false);
+                }
+            }
+        },
+        onblur: move |_: FocusEvent| {
+            commit_on_picker_blur();
+        },
+    });
     popover.show(showing.then(|| {
         dropdown_box
             .element(popover.floating())
@@ -608,18 +732,22 @@ pub(super) fn use_picker_field<V: FieldValue>(
             })
             .render(
                 HtmlTag::Div,
-                Vec::new(),
-                dropdown(DropdownArgs {
-                    value,
-                    today,
-                    size,
-                    pick,
-                }),
+                listeners,
+                rsx! {
+                    {strip}
+                    {dropdown(DropdownArgs {
+                        value,
+                        today,
+                        size,
+                        pick,
+                    })}
+                    {picker_input}
+                },
             )
     }));
 
     let control = rsx! {
-        div { onmounted: anchor.mount(),
+        div { onmounted: anchor.mount(), style: sheet_clearance_style(clearance),
             {frame.render(input)}
             {hidden}
             {announcer.render()}
@@ -656,6 +784,48 @@ mod tests {
         assert!(css.contains("box-shadow:var(--lsx-shadow-lg);"), "{css}");
         assert!(!css.contains("var(--lsx-paper-radius)"), "{css}");
         assert!(!css.contains("var(--lsx-paper-shadow)"), "{css}");
+    }
+
+    /// Below `sm` the dropdown is the phone sheet, and a clock face fills it (3900, 3926).
+    #[test]
+    fn the_dropdown_becomes_the_phone_sheet_below_sm() {
+        let css = Stylesheet::from(&*PICKER_FIELD_DROPDOWN_SX);
+        let css = css.as_str();
+        let narrow = css
+            .find(&format!("@media {}", narrow_query()))
+            .unwrap_or_else(|| panic!("no narrow block: {css}"));
+        assert!(
+            css[narrow..].contains("bottom:var(--lsx-sheet-foot, 0px)"),
+            "{css}"
+        );
+        assert!(css[narrow..].contains("div[data-slot='face']"), "{css}");
+    }
+
+    #[test]
+    fn a_narrow_range_shows_short() {
+        let formats = Formats {
+            date: "D. MMMM YYYY".to_string(),
+            time: "HH:mm".to_string(),
+            names: &DateLocale::ENGLISH,
+            range_separator: " – ",
+            level: DateLevel::Day,
+        };
+        let day = |month, day| NaiveDate::from_ymd_opt(2026, month, day).expect("a real day");
+        let at = |month, date, hour| day(month, date).and_hms_opt(hour, 0, 0).expect("a time");
+        let days = DateRange::new(day(9, 14), Some(day(9, 16)));
+        assert_eq!(days.show_short(&formats).as_deref(), Some("14–16 Sep"));
+        let moments = DateRange::new(at(9, 14, 9), Some(at(9, 16, 17)));
+        assert_eq!(
+            moments.show_short(&formats).as_deref(),
+            Some("14 Sep 09:00 – 16 Sep 17:00")
+        );
+        let one_day = DateRange::new(at(9, 14, 9), Some(at(9, 14, 17)));
+        assert_eq!(
+            one_day.show_short(&formats).as_deref(),
+            Some("14 Sep 09:00 – 17:00")
+        );
+        // A single value keeps its full text.
+        assert_eq!(day(9, 14).show_short(&formats), None);
     }
 
     fn wave_dash_formats() -> Formats {

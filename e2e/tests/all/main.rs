@@ -103,6 +103,7 @@ mod perf;
 mod phone_field;
 mod picker_dialog;
 mod picker_parts;
+mod picker_phone;
 mod pictogram;
 mod pie_chart;
 mod pin_field;

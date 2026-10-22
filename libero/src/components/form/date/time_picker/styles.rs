@@ -1,8 +1,8 @@
 use crate::{
     components::{
         common::{
-            Part, borderless_on_state_sx, disabled_look_sx, focus_ring_sx, inset_focus_ring_sx,
-            on_tint_color,
+            COARSE_POINTER, Part, borderless_on_state_sx, disabled_look_sx, focus_ring_sx,
+            inset_focus_ring_sx, on_tint_color,
         },
         form::ChronoPickerPart,
     },
@@ -74,7 +74,9 @@ pub(in super::super) static TIME_PICKER_SX: StaticSx = StaticSx::new(|| {
                 .align_items("center")
                 .min_height("max(1.25em, 24px)")
                 .color("text-dimmed")
-                .hover(sx().cursor("pointer")),
+                .hover(sx().cursor("pointer"))
+                // 44px under a finger (todo 3901).
+                .media(COARSE_POINTER, sx().min_height("44px")),
         )
         .selector("& [data-slot='spin']:focus-visible", focus_ring_sx())
         .selector(

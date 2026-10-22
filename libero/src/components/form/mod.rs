@@ -29,6 +29,8 @@ mod form_value;
 mod handle;
 #[cfg(any(feature = "image-cropper", feature = "file-field"))]
 mod image_cropper;
+#[cfg(any(feature = "color", feature = "date-time"))]
+mod keyboardless;
 #[cfg(feature = "native-select")]
 mod native_select;
 #[cfg(feature = "number-field")]
@@ -37,7 +39,7 @@ mod number_field;
 mod password_field;
 #[cfg(feature = "phone-field")]
 mod phone_field;
-#[cfg(feature = "combobox")]
+#[cfg(any(feature = "combobox", feature = "color", feature = "date-time"))]
 mod phone_sheet;
 #[cfg(feature = "pin-field")]
 mod pin_field;

@@ -11,8 +11,8 @@ use super::{
 use crate::{
     components::{
         common::{
-            Glyph, HtmlTag, Input, Part, States, Variables, base_props, input_from_str, parts_enum,
-            variables,
+            COARSE_POINTER, Glyph, HtmlTag, Input, Part, States, Variables, base_props,
+            input_from_str, parts_enum, variables,
         },
         form::SliderChangeEvent,
         layout::use_box,
@@ -70,7 +70,13 @@ static COLOR_PICKER_SX: StaticSx = StaticSx::new(|| {
                 .gap(format!("max({spacing}, calc(24px - {thumb}))"))
                 .padding_block(format!("max(0px, calc((24px - {thumb}) / 2 - {spacing}))"))
                 .flex("1 1 auto")
-                .min_width("0"),
+                .min_width("0")
+                // Under a finger the press is 44px tall (todo 3901), and so is the pitch.
+                .media(
+                    COARSE_POINTER,
+                    sx().gap(format!("max({spacing}, calc(44px - {thumb}))"))
+                        .padding_block(format!("max(0px, calc((44px - {thumb}) / 2 - {spacing}))")),
+                ),
         )
         // Painted from the root's vars, so a drag leaves the swatch's props
         // equal and it skips the redraw.

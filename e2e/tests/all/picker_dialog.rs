@@ -51,6 +51,57 @@ e2e::scenario!(
     a_tap_opens_only_the_calendar
 );
 
+/// Todo 3905: a tap on the picker's own text box focuses it natively, so the WebView raises
+/// its keyboard; lifting `inputmode` on the focused field, or a `focus()` from Rust, does not (3902).
+async fn the_picker_text_box_raises_the_keyboard<D: Driver>(d: &mut D, route: &str) -> Result<()> {
+    const TYPED: &str = "[role=dialog] [data-slot=text-input]";
+    let field = match route {
+        "/color-field" => "#color-field",
+        _ => "#date-range-field",
+    };
+    d.click(field).await?;
+    eventually(d, "the text box in the picker", async |d| {
+        d.exists(TYPED).await
+    })
+    .await?;
+    linger(d, 40).await;
+    ensure!(
+        !d.soft_keyboard_shown().await?,
+        "the field's tap raised the keyboard"
+    );
+    d.click(TYPED).await?;
+    eventually(
+        d,
+        "the text box focused, the picker still open",
+        async |d| Ok(d.is_focused(TYPED).await? && d.exists(DIALOG).await?),
+    )
+    .await?;
+    eventually(d, "the soft keyboard", async |d| {
+        d.soft_keyboard_shown().await
+    })
+    .await?;
+    // Back hides the keyboard first, so the next scenario starts without it.
+    d.press_back().await?;
+    eventually(d, "Back to hide the keyboard", async |d| {
+        Ok(!d.soft_keyboard_shown().await?)
+    })
+    .await
+}
+
+e2e::scenario!(
+    android_a_date_pickers_text_box_raises_the_keyboard,
+    "/date-range-field",
+    the_picker_text_box_raises_the_keyboard,
+    android_only("only a phone app keeps the field's keyboard down under a mouse")
+);
+
+e2e::scenario!(
+    android_a_color_pickers_text_box_raises_the_keyboard,
+    "/color-field",
+    the_picker_text_box_raises_the_keyboard,
+    android_only("only a phone app keeps the field's keyboard down under a mouse")
+);
+
 /// Android's Back closes the dropdown, keeps the value, and the app stays (1300).
 async fn back_closes<D: Driver>(d: &mut D, route: &str) -> Result<()> {
     let field = FIELDS

@@ -77,7 +77,7 @@ fn on_day(
 }
 
 /// A day as a tab shows it, `12 Oct`, with the year when `year`.
-fn short_day(day: NaiveDate, year: bool, names: &DateLocale) -> String {
+pub(super) fn short_day(day: NaiveDate, year: bool, names: &DateLocale) -> String {
     let month = names.months_short[day.month0() as usize];
     match year {
         true => format!("{} {month} {}", day.day(), day.year()),

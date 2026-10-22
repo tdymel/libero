@@ -224,11 +224,13 @@ pub fn ChronoFieldPage() -> Element {
                                 _ => vec![],
                             }
                         }),
-                        Control::toggle("columns", ["1", "2", "3"])
-                            .default("2")
+                        // `auto` leaves it unset: one month below `sm`, two above (todo 3896).
+                        Control::toggle("columns", ["auto", "1", "2", "3"])
+                            .labels(["Auto", "1", "2", "3"])
+                            .default("auto")
                             .hidden_when(|values| values.str("value") != "date-range")
                             .code(|_, values| match values.str("columns").as_str() {
-                                "2" => vec![],
+                                "auto" => vec![],
                                 columns => vec![format!("columns: {columns}")],
                             }),
                         Control::switch("exclude_weekends").hidden_when(|values| !has_days(values)).code(|_, values| {
@@ -311,6 +313,15 @@ pub fn ChronoFieldPage() -> Element {
                     Code { source: "format" }
                     ". Text the field cannot accept stays, and the error says why. The form "
                     "always gets ISO 8601."
+                }
+                Text {
+                    "On a phone the dropdown opens as a sheet at the foot of the screen. Under a finger, "
+                    "a tap opens only the picker and the keyboard stays down; the text box under the "
+                    "picker takes typing. Below "
+                    Code { source: "sm" }
+                    ", a range shows short, "
+                    Code { source: "14–16 Sep" }
+                    ", until the field takes focus."
                 }
             }
 

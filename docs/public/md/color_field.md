@@ -2,7 +2,7 @@
 
 Crate: `libero`
 Import: `use libero::components::{ColorField, ColorCode};`
-Feature: `color` (off by default, turns on `slider`, `action-icon`; [features.md](features.md))
+Feature: `color` (off by default, turns on `slider`, `action-icon`, `use-media-query`, `use-swipe`; [features.md](features.md))
 Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/form/color/color_field.rs>
 Index: [index.md](index.md) lists every other page
 Description: A text field holding a `ColorCode`, with a preview swatch, an eyedropper and a `ColorPicker` in a dropdown.
@@ -12,6 +12,10 @@ A text field holding a `ColorCode`, with a preview swatch, an eyedropper and a
 `ColorCode` parses, such as hex, `rgb()` or `hsl()`. It stays as typed while
 the field has focus, each parse sends the color, and on blur it shows `value`
 in `format`.
+
+On a phone the dropdown opens as a sheet at the foot of the screen, with a
+full-width panel, 44px sliders and one row of swatches. Under a finger, a tap
+opens only the picker; the color's text box under it takes typing.
 
 ## Usage
 

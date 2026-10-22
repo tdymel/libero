@@ -2,7 +2,7 @@
 
 Crate: `libero`
 Import: `use libero::{chrono::{NaiveDate, NaiveDateTime, NaiveTime, TimeDelta}, components::{ChronoField, DateRange}};`
-Feature: `date-time` (off by default, turns on `tabs`, `action-icon`, `use-drag`, `use-media-query`; [features.md](features.md))
+Feature: `date-time` (off by default, turns on `tabs`, `action-icon`, `use-drag`, `use-media-query`, `use-swipe`; [features.md](features.md))
 Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/form/date/chrono_field.rs>
 Index: [index.md](index.md) lists every other page
 Description: A text field for every date and time value, typed leniently, with the matching `ChronoPicker` in a dropdown.
@@ -101,6 +101,11 @@ one-digit days, month names as a unique prefix, and a missing year. Two-digit
 years are not read. Only the order of day, month and year follows `format`.
 Text the field cannot accept stays, and the error says why. The form always
 gets ISO 8601.
+
+On a phone the dropdown opens as a sheet at the foot of the screen. Under a
+finger, a tap opens only the picker and the keyboard stays down; the text box
+under the picker takes typing. Below `sm`, a range shows short, `14–16 Sep`,
+until the field takes focus.
 
 ## Localization
 

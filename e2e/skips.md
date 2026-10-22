@@ -1,6 +1,6 @@
 # Skipped e2e scenarios
 
-Scenarios: 632
+Scenarios: 634
 
 Generated from the `scenario!` skips in `e2e/tests/all` by `cargo test -p e2e --lib skips`; edit the skip, not this file. A reason starting `upstream:` waits on Dioxus, Blitz, wry or the engine (revisit on their update, todo 3362), a number names the todo that removes it.
 
@@ -207,6 +207,8 @@ The performance scenarios (units `perf`, `table_perf`) are no skips but run on r
 | `phone_field::the_country_list_fits_a_viewport_the_keyboard_shrank` | desktop | no soft keyboard, and wry's window is not resized here |
 | `phone_field::the_country_list_fits_a_viewport_the_keyboard_shrank` | ios | the simulator cannot shrink the viewport as a soft keyboard does |
 | `phone_field::the_country_list_fits_a_viewport_the_keyboard_shrank` | native | Blitz reports no window resize (todo 2129) |
+| `picker_dialog::android_a_color_pickers_text_box_raises_the_keyboard` | all but android | only a phone app keeps the field's keyboard down under a mouse |
+| `picker_dialog::android_a_date_pickers_text_box_raises_the_keyboard` | all but android | only a phone app keeps the field's keyboard down under a mouse |
 | `picker_dialog::android_back_closes_a_color_field` | all but android | 1275: no Back key off Android |
 | `picker_dialog::android_back_closes_a_date_field` | all but android | 1275: no Back key off Android |
 | `pin_field::a_digit_retyped_without_a_key_leaves_no_drifted_cell` | desktop | 1126: no text without a key (no IME path) under xdotool |

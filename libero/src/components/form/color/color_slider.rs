@@ -5,7 +5,10 @@ use dioxus::prelude::Attribute;
 
 use super::saturation::THUMB_RING;
 use crate::{
-    components::common::{Input, Part, Parts, attr, parts_enum, parts_under_sx, shadow_sx},
+    components::common::{
+        COARSE_POINTER, Input, Part, Parts, attr, coarse_hit_area_sx, parts_enum, parts_under_sx,
+        shadow_sx,
+    },
     sx::{StaticSx, Sx, sx},
     theme::{COLOR_PICKER_THUMB, ColorPickerDefaults, OWN_SHADOW, SLIDER_THUMB, SLIDER_TRACK},
 };
@@ -66,6 +69,13 @@ static COLOR_SLIDER_SX: StaticSx = StaticSx::new(|| {
         )
         .var(SLIDER_TRACK, COLOR_PICKER_THUMB.value())
         .var(SLIDER_THUMB, COLOR_PICKER_THUMB.value())
+        // A 44px tall press under a finger (todo 3901). The track stacks above it, so a press
+        // on a thumb still starts a drag rather than a jump.
+        .and(coarse_hit_area_sx("::after"))
+        .media(
+            COARSE_POINTER,
+            sx().selector(ColorSliderPart::Track.selector(), sx().z_index("1")),
+        )
 });
 
 #[cfg(test)]
@@ -86,6 +96,18 @@ mod tests {
                 ("thumb", "& > [data-slot='track'] > * > [data-slot='thumb']"),
             ]
         );
+    }
+
+    /// Todo 3901: a finger's press is 44px tall, and the track stays above it for a drag.
+    #[test]
+    fn a_coarse_pointer_grows_the_press_under_the_track() {
+        let css = crate::css::Stylesheet::from(&COLOR_SLIDER_SX);
+        let css = css.as_str();
+        let coarse = css
+            .find("@media (pointer: coarse)")
+            .unwrap_or_else(|| panic!("no coarse query: {css}"));
+        assert!(css[coarse..].contains("::after"), "{css}");
+        assert!(css[coarse..].contains("z-index:1"), "{css}");
     }
 
     #[test]

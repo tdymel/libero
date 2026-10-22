@@ -12,18 +12,25 @@ use crate::{
         },
         form::{
             ColorDropdownPart, FIELD_CONTROL_SX, FieldStatus, FormScope, SLOT_BUTTON_SX,
-            SliderChangeEvent, field_props, slot_icon_size, use_bound, use_field, use_field_frame,
+            SliderChangeEvent, field_props,
+            keyboardless::{PickerInput, use_keyboardless},
+            phone_sheet::{
+                SheetSwipe, narrow_query, phone_sheet_sx, sheet_clearance_style,
+                use_sheet_clearance, use_sheet_room, use_sheet_swipe,
+            },
+            slot_icon_size, use_bound, use_field, use_field_frame,
         },
         layout::{paper_sx, use_box},
     },
     context::IconSlot,
     hooks::{
         POPOVER_AVAILABLE_HEIGHT, PopoverOptions, placement_sx, use_element, use_field_list_layer,
-        use_focus_within, use_form_owner, use_localization, use_popover_on, use_theme,
+        use_focus_within, use_form_owner, use_localization, use_media_query, use_popover_on,
+        use_theme,
     },
     platform::{ElementApi, eye_dropper, is_tab, next_task},
     sx::{StaticSx, ThemeAwareValue, sx},
-    theme::{Size, SizeCss, Z_INDEX_POPOVER},
+    theme::{COLOR_PICKER_SPACING, SLIDER_THUMB, SLIDER_TRACK, Size, SizeCss, Z_INDEX_POPOVER},
 };
 
 static COLOR_FIELD_DROPDOWN_SX: StaticSx = StaticSx::new(|| {
@@ -37,6 +44,41 @@ static COLOR_FIELD_DROPDOWN_SX: StaticSx = StaticSx::new(|| {
         // Never past the room on its side: it scrolls instead (WCAG 1.4.10).
         .max_height(POPOVER_AVAILABLE_HEIGHT.value_or("none"))
         .overflow_y("auto")
+        .selector(
+            "& > [data-slot='text-input']",
+            sx().margin_top(SizeCss::SPACING.value(Size::Xs)),
+        )
+        // Below `sm` the phone sheet, its picker spread over the width (todos 3900, 3923).
+        .and(phone_sheet_sx())
+        .media(
+            narrow_query(),
+            sx().selector(
+                "& [data-slot='saturation']",
+                sx().height("clamp(160px, 50vw, 30dvh)"),
+            )
+            // 44px tracks need no overhang, so no wider pitch; `div` outranks the picker's rule.
+            .selector(
+                "& [data-slot='body'] > div[data-slot='sliders']",
+                sx().gap(COLOR_PICKER_SPACING.value()).padding_block("0"),
+            )
+            // On the track, below the slider root whose `sx` layer sets them.
+            .selector(
+                "& [data-slot='sliders'] [data-slot='track']",
+                sx().var(SLIDER_TRACK, "44px").var(SLIDER_THUMB, "44px"),
+            )
+            // One row of finger-sized presets that scrolls sideways; `div` outranks the picker's rule.
+            .selector(
+                "& div > [data-slot='swatches']",
+                sx().flex_wrap("nowrap")
+                    .overflow_x("auto")
+                    .max_width("none")
+                    .padding_block("2px"),
+            )
+            .selector(
+                "& [data-slot='swatches'] > [data-slot='swatch']",
+                sx().width("44px").height("44px").min_width("44px"),
+            ),
+        )
 });
 
 /// Where Arrow Down in the text input puts focus: the saturation area, or the
@@ -313,13 +355,19 @@ pub fn ColorField(props: ColorFieldProps) -> Element {
         PopoverOptions::new(theme.popover.gap, theme.popover.padding),
     );
     let floating = *popover.floating();
+    let narrow = use_media_query(&narrow_query());
+    let room = use_sheet_room(floating, narrow() && popover.placed());
+    let clearance = use_sheet_clearance(anchor, field.root(), popover, showing, theme.popover.gap);
     let dropdown_states: Input<States> = States::new().active("bordered").into();
     let dropdown = use_box()
         .framework_sx(&COLOR_FIELD_DROPDOWN_SX)
         .parts(&props.dropdown_parts)
         .states(&dropdown_states)
-        .style(Some(popover.vars()))
+        .style(Some(format!("{}{room}", popover.vars())))
         .prepare();
+    let keyboardless = use_keyboardless();
+    let close = use_callback(move |()| opened.set(false));
+    let SheetSwipe { strip, listeners } = use_sheet_swipe(close);
     // Waits for placement too: Arrow Down on a closed field opens it, and the
     // picker is not drawn until the box has been measured.
     use_effect(move || {
@@ -334,7 +382,12 @@ pub fn ColorField(props: ColorFieldProps) -> Element {
 
     // Waits a task for focus to land, then closes unless it stayed in the
     // input or the dropdown. No platform answer counts as left.
+    let press = keyboardless.press();
     let settle = move || {
+        // A tap into the picker's text box stays: a WebView answers no `:focus` query (3905).
+        if press.taken() {
+            return;
+        }
         spawn(async move {
             next_task().await;
             let inside = anchor.query_selector(":focus").is_ok()
@@ -400,6 +453,20 @@ pub fn ColorField(props: ColorFieldProps) -> Element {
     );
 
     let text = draft().unwrap_or_else(|| value.to_format(format));
+    let picker_text = text.clone();
+    // Each parse is sent; the text stays as typed until the blur.
+    let on_text = move |event: FormEvent| {
+        let text = event.value();
+        if let Ok(color) = text.parse::<ColorCode>() {
+            let mut type_in = type_in.clone();
+            type_in(color);
+        }
+        draft.set(Some(text));
+        if *rejected.peek() {
+            rejected.set(false);
+        }
+        announcer.clear();
+    };
     let dialog_id = format!("{}-dialog", field.id());
     let input = field
         .aria(control)
@@ -412,23 +479,17 @@ pub fn ColorField(props: ColorFieldProps) -> Element {
         .attr("readonly", disallow_input || readonly)
         .attr("autocomplete", "off")
         .attr("spellcheck", "false")
+        // A tap opens only the picker: a phone's keyboard would cover it (todo 3923).
+        .attr(
+            "inputmode",
+            has_dropdown.then(|| keyboardless.inputmode()).flatten(),
+        )
         // APG Date Picker Combobox: a textbox may not carry `aria-expanded`.
         .attr("role", has_dropdown.then_some("combobox"))
         .attr("aria-haspopup", has_dropdown.then_some("dialog"))
         .attr("aria-expanded", has_dropdown.then(|| showing.to_string()))
         .attr("aria-controls", showing.then(|| dialog_id.clone()))
-        .event("oninput", move |event: FormEvent| {
-            let text = event.value();
-            if let Ok(color) = text.parse::<ColorCode>() {
-                let mut type_in = type_in.clone();
-                type_in(color);
-            }
-            draft.set(Some(text));
-            if *rejected.peek() {
-                rejected.set(false);
-            }
-            announcer.clear();
-        })
+        .event("oninput", on_text.clone())
         .event("onfocus", focus.focusin(0))
         .event("onclick", move |_: MouseEvent| opened.set(true))
         .event("onblur", focus.focusout(0))
@@ -465,6 +526,38 @@ pub fn ColorField(props: ColorFieldProps) -> Element {
     // Portaled, so no `overflow: hidden` ancestor clips it. A cancelled
     // mousedown keeps focus on the text input.
     let picker_setter = bound.setter();
+    // The hex line under the picker, where a finger types (3923): Enter settles and hands
+    // focus back, a blur settles as the field's own does.
+    let text_input = (!disallow_input)
+        .then(|| {
+            keyboardless.input(PickerInput {
+                field_id: field.id().to_string(),
+                labelled: !props.label.is_none(),
+                fallback_label: labels.choose,
+                value: picker_text,
+                invalid: rejected() && draft.read().is_some(),
+                oninput: on_text,
+                onkeydown: move |event: KeyboardEvent| {
+                    if event.key() != Key::Named(NamedKey::Enter) || event.is_composing() {
+                        return;
+                    }
+                    if unparsable() {
+                        rejected.set(true);
+                        announcer.say(labels.invalid.to_string());
+                        return;
+                    }
+                    let mut settle_typed = settle_typed;
+                    settle_typed();
+                    focus_input();
+                    opened.set(false);
+                },
+                onblur: move |_: FocusEvent| {
+                    let mut blurred = blurred;
+                    blurred();
+                },
+            })
+        })
+        .flatten();
     popover.show(showing.then(|| {
         dropdown
             .element(popover.floating())
@@ -505,8 +598,9 @@ pub fn ColorField(props: ColorFieldProps) -> Element {
             })
             .render(
                 HtmlTag::Div,
-                Vec::new(),
+                listeners,
                 rsx! {
+                    {strip}
                     ColorPicker {
                         value,
                         format: Input::Value(format),
@@ -514,6 +608,7 @@ pub fn ColorField(props: ColorFieldProps) -> Element {
                         with_picker,
                         swatches: props.swatches.clone(),
                         swatches_per_row: props.swatches_per_row,
+                        full_width: narrow(),
                         size,
                         oninput: move |event: SliderChangeEvent<ColorCode>| {
                             draft.set(None);
@@ -538,6 +633,7 @@ pub fn ColorField(props: ColorFieldProps) -> Element {
                             }
                         },
                     }
+                    {text_input}
                 },
             )
     }));
@@ -555,7 +651,10 @@ pub fn ColorField(props: ColorFieldProps) -> Element {
     });
     let control = rsx! {
         // On the wrapper, not the input: focus can also leave from the eyedropper.
-        div { onmounted: anchor.mount(), onfocusout: move |_| settle(),
+        div {
+            onmounted: anchor.mount(),
+            onfocusout: move |_| settle(),
+            style: sheet_clearance_style(clearance),
             {frame.render(input)}
             {hidden}
             {announcer.render()}
