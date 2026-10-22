@@ -52,7 +52,7 @@ async fn until_faded<D: Driver>(d: &mut D, what: &str) -> Result<()> {
                  return JSON.stringify({ active: a && (a.tagName + '.' + a.className + ' ' + (a.getAttribute('aria-label') || '')), \
                  focusVisible: a && a.matches(':focus-visible'), controls: g.dataset.controls, \
                  fullscreen: !!document.fullscreenElement || !!document.webkitFullscreenElement, hasFocus: document.hasFocus(), \
-                 hover: g.matches(':hover'), paused: document.querySelector('#player video').paused }); })()",
+                 hover: g.matches(':hover'), paused: document.querySelector('#player video').paused, ev: (window.__ev || []).slice(-30) }); })()",
             )
             .await;
         anyhow::bail!("{error:#}; page: {seen:?}");
@@ -110,6 +110,11 @@ async fn fullscreen_controls_fade<D: Driver>(d: &mut D, _route: &str) -> Result<
         return Ok(());
     }
     hold_idle(d).await?;
+    d.evaluate(
+        "(() => { window.__ev = []; for (const t of ['pointerdown', 'pointerup', 'click', 'play', 'pause', 'focusin', 'fullscreenchange', 'webkitfullscreenchange']) \
+         document.addEventListener(t, (e) => window.__ev.push([Math.round(performance.now()), t, e.target.tagName + ' ' + ((e.target.getAttribute && (e.target.getAttribute('aria-label') || e.target.getAttribute('data-slot'))) || '')]), true); return 1; })()",
+    )
+    .await?;
     eventually(d, "the duration", async |d| {
         Ok(d.text("#player [data-slot=time]").await? == "0:00 / 0:15")
     })
