@@ -209,9 +209,11 @@ jobs:
       - uses: ./.github/actions/dx
       # The same pin as ci.yml's `e2e` job: the AX snapshots follow Chrome's tree.
       - id: chrome
-        uses: browser-actions/setup-chrome@v2
-        with:
-          chrome-version: 152.0.7977.82
+        run: |
+          v=152.0.7977.82
+          curl -fsSL -o "$RUNNER_TEMP/hs.zip" "https://storage.googleapis.com/chrome-for-testing-public/$v/mac-arm64/chrome-headless-shell-mac-arm64.zip"
+          unzip -q "$RUNNER_TEMP/hs.zip" -d "$RUNNER_TEMP/hs"
+          echo "chrome-path=$RUNNER_TEMP/hs/chrome-headless-shell-mac-arm64/chrome-headless-shell" >> "$GITHUB_OUTPUT"
       - run: '"${{ steps.chrome.outputs.chrome-path }}" --version'
       - run: |
           bash .github/scripts/stall_sample.sh "$RUNNER_TEMP/e2e-artifacts" &
