@@ -64,13 +64,16 @@ static PICKER_FIELD_DROPDOWN_SX: StaticSx = StaticSx::new(|| {
         .media(
             narrow_query(),
             // The clock face fills the sheet's width (3926); `div` outranks the picker's own rule.
-            sx().selector("& :has(> div[data-slot='face'])", sx().width("100%"))
-                .selector(
-                    "& div[data-slot='face']",
-                    sx().width("min(100%, 50dvh)")
-                        .height("auto")
-                        .with("aspect-ratio", "1"),
-                ),
+            // Sized off the screen, not its parent: a parent's width would need `:has()` (3954).
+            sx().selector(
+                "& div[data-slot='face']",
+                sx().width(format!(
+                    "min(calc(100vw - 2 * {}), 50dvh)",
+                    SizeCss::SPACING.value(Size::Sm)
+                ))
+                .height("auto")
+                .with("aspect-ratio", "1"),
+            ),
         )
 });
 
