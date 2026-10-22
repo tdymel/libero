@@ -238,8 +238,7 @@ e2e::scenario!(
 e2e::scenario!(
     mod_k_counts_each_press_once,
     "/use-hotkeys",
-    mod_k_runs_once_per_press,
-    macos_web: skip("3715: flaky: the page setup's focus emulation timed out after 60 s in the smoke run on the 3-core Mac runner, before the scenario ran")
+    mod_k_runs_once_per_press
 );
 e2e::scenario!(
     a_text_field_keeps_the_chord_unless_the_hotkey_includes_it,

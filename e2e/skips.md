@@ -218,10 +218,6 @@ The performance scenarios (units `perf`, `table_perf`) are no skips but run on r
 | `pin_field::the_rule_waits_for_focus_to_leave_the_cells` | desktop | 1564: a WebView cannot tell a move inside the field from a blur |
 | `pin_field::the_rule_waits_for_focus_to_leave_the_cells` | ios | 1564: a WebView cannot tell a move inside the field from a blur |
 | `pin_field::the_rule_waits_for_focus_to_leave_the_cells` | web | the_rule_waits_until_focus_leaves_the_cells checks it after two frames |
-| `planted::select_cancelling_a_ctrl_chord_fails_the_combobox_contract` | macos web | no chords are sent on macOS (3444) |
-| `planted::tabs_cancelling_a_meta_chord_fail_the_chord_check` | macos web | no chords are sent on macOS (3444) |
-| `planted::tabs_moving_a_task_after_a_ctrl_chord_fail_the_chord_check` | macos web | no chords are sent on macOS (3444) |
-| `planted::tabs_moving_on_a_ctrl_chord_fail_the_chord_check` | macos web | no chords are sent on macOS (3444) |
 | `platform_probe::the_platform_probe_records_each_engine` | native | Blitz runs no script |
 | `popover::a_field_dropdown_opened_inside_counts_as_inside` | android | 1425: no synchronous containment on the WebView |
 | `popover::a_field_dropdown_opened_inside_counts_as_inside` | desktop | 1425: no synchronous containment on the WebView |
@@ -404,7 +400,6 @@ The performance scenarios (units `perf`, `table_perf`) are no skips but run on r
 | `use_back::android_back_steps_down_below_a_menu` | all but android | 2003: no Back key off Android |
 | `use_back::android_back_steps_down_twice_without_a_tap` | all but android | 3322: no Back key off Android |
 | `use_back::android_back_walks_the_routes` | all but android | 3384: no Back key off Android |
-| `use_hotkeys::mod_k_counts_each_press_once` | macos web | 3715: flaky: the page setup's focus emulation timed out after 60 s in the smoke run on the 3-core Mac runner, before the scenario ran |
 | `use_local_storage::the_local_area_outlives_a_relaunch` | android | no relaunch in the Android driver; its store is the files directory |
 | `use_local_storage::the_local_area_outlives_a_relaunch` | desktop | a launch gets a fresh E2E_STORAGE_DIR, so a relaunch keeps nothing |
 | `use_local_storage::the_local_area_outlives_a_relaunch` | native | Blitz has no relaunch in the driver |

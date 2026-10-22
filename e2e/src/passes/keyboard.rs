@@ -315,12 +315,6 @@ pub async fn assert_chords_ignored_with(
     keys: &[Key],
     probe: &str,
 ) -> Result<()> {
-    // Chrome on a Mac sends no keyup for some chords, and the stall wedged the browser for every
-    // later page (3444); Linux and Windows check the same wasm.
-    if cfg!(target_os = "macos") {
-        crate::journal::note(&format!("macOS: skipped the chord check on {probe}"));
-        return Ok(());
-    }
     let read = format!("JSON.stringify({probe})");
     let before: String = page.evaluate_bounded(read.as_str()).await?.into_value()?;
     // Each chord's keyup records the probe after `clock::settle`'s two macrotasks, in the page

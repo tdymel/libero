@@ -791,7 +791,6 @@ fn tabs_with_a_dead_backward_arrow_fail_the_roving_contract() {
 
 /// `Tabs` that take Ctrl+ArrowRight as their own arrow: `assert_chords_ignored` sees the move.
 #[test]
-#[cfg_attr(target_os = "macos", ignore = "no chords are sent on macOS (3444)")]
 fn tabs_moving_on_a_ctrl_chord_fail_the_chord_check() {
     block_on(selftest::must_fail(
         "/tabs",
@@ -807,7 +806,6 @@ fn tabs_moving_on_a_ctrl_chord_fail_the_chord_check() {
 
 /// The same move a task after the key, as a dioxus render lands: the keyup's record still sees it (2066).
 #[test]
-#[cfg_attr(target_os = "macos", ignore = "no chords are sent on macOS (3444)")]
 fn tabs_moving_a_task_after_a_ctrl_chord_fail_the_chord_check() {
     block_on(selftest::must_fail(
         "/tabs",
@@ -823,7 +821,6 @@ fn tabs_moving_a_task_after_a_ctrl_chord_fail_the_chord_check() {
 
 /// `Tabs` that cancel Meta+End: nothing moves, but the browser loses its chord.
 #[test]
-#[cfg_attr(target_os = "macos", ignore = "no chords are sent on macOS (3444)")]
 fn tabs_cancelling_a_meta_chord_fail_the_chord_check() {
     block_on(selftest::must_fail(
         "/tabs",
@@ -903,7 +900,6 @@ fn select_with_a_dead_home_fails_the_combobox_contract() {
 
 /// `Select` that cancels Ctrl+ArrowDown (1717).
 #[test]
-#[cfg_attr(target_os = "macos", ignore = "no chords are sent on macOS (3444)")]
 fn select_cancelling_a_ctrl_chord_fails_the_combobox_contract() {
     block_on(selftest::must_fail(
         "/select",
