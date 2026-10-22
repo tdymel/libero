@@ -504,10 +504,12 @@ impl Suite {
         loop {
             let left = deadline.saturating_duration_since(std::time::Instant::now());
             let done = crate::clock::finish_animations(page, left).await?;
-            if done.finished == 0 && done.over.is_empty() {
+            // At the deadline `left` is zero, so an empty `over` means every one sat at its end
+            // (a slow Windows runner kept finishing such ones for 5 s, 3744).
+            if done.over.is_empty() && (done.finished == 0 || left.is_zero()) {
                 return Ok(());
             }
-            if std::time::Instant::now() >= deadline {
+            if std::time::Instant::now() >= deadline && !done.over.is_empty() {
                 anyhow::bail!(
                     "reaching the {:?} state: {:?} still running after {ANIMATION_BUDGET:?}. \
                      A state measured mid-animation is measured against a colour and a \

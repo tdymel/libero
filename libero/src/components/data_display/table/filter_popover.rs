@@ -22,7 +22,7 @@ use crate::{
     context::IconSlot,
     hooks::{
         Align, ElementHandle, POPOVER_AVAILABLE_HEIGHT, PopoverOptions, PressMarker, Side,
-        id_selector, use_debounced_callback, use_id, use_marked_popover, use_theme,
+        id_selector, placement_sx, use_debounced_callback, use_id, use_marked_popover, use_theme,
     },
     localization::TableLabels,
     platform::{
@@ -35,11 +35,13 @@ use crate::{
 
 pub(super) static FILTER_POPOVER_SX: StaticSx = StaticSx::new(|| {
     paper_sx()
+        .and(placement_sx(true))
         .z_index(Z_INDEX_POPOVER.value())
         .padding(SizeCss::SPACING.value(Size::Md))
         .display("flex")
         .flex_direction("column")
         .gap(SizeCss::SPACING.value(Size::Sm))
+        // Beats the placement's `auto`, which the inline style used to win with (3913).
         .min_width("14rem")
         // Never past the room on its side: it scrolls instead (WCAG 1.4.10, todo 1964).
         .max_height(POPOVER_AVAILABLE_HEIGHT.value_or("none"))
@@ -654,7 +656,7 @@ pub(super) fn FilterPopover(
             attr("tabindex", "-1"),
             attr("data-filter-popover", true),
         ];
-        attributes.push(attr("style", popover.style()));
+        attributes.push(attr("style", popover.vars()));
         attributes.extend(popover.floating_events());
         panel
             .element(&floating)
