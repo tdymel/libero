@@ -1033,3 +1033,42 @@ fn a_tall_spotlight_stays_reachable() {
         .await;
     });
 }
+
+#[test]
+fn stall_bisect() {
+    block_on(async {
+        let keys = std::env::var("STALL_KEYS").unwrap_or_default();
+        let fixture = Fixture::open("/spotlight", Viewport::Desktop).await.unwrap();
+        let page = &fixture.page;
+        open_by_keyboard(page).await;
+        keyboard::press(page, keyboard::ARROW_DOWN).await.unwrap();
+        for spec in keys.split(',').filter(|s| !s.is_empty()) {
+            let (mods, name) = spec.split_once('-').unwrap();
+            let key = match name {
+                "Down" => keyboard::ARROW_DOWN,
+                "Up" => keyboard::ARROW_UP,
+                "Left" => keyboard::ARROW_LEFT,
+                "Right" => keyboard::ARROW_RIGHT,
+                "Home" => keyboard::HOME,
+                "End" => keyboard::END,
+                other => panic!("key {other}"),
+            };
+            let mut bits = 0;
+            for m in mods.chars() {
+                bits |= match m {
+                    'S' => keyboard::SHIFT,
+                    'M' => keyboard::META,
+                    'A' => keyboard::ALT,
+                    'C' => keyboard::CTRL,
+                    _ => 0,
+                };
+            }
+            keyboard::press_with(page, key, bits).await.unwrap();
+        }
+        fixture.close().await.unwrap();
+        for _ in 0..3 {
+            let canary = Fixture::open("/spotlight", Viewport::Desktop).await.unwrap();
+            canary.close().await.unwrap();
+        }
+    });
+}
