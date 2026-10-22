@@ -152,7 +152,10 @@ impl Ios {
     /// A small field's focus zooms the page past a remount (3508): a viewport capped at scale 1
     /// brings it back, then the page's own viewport returns.
     fn unzoom(&mut self) -> Result<()> {
-        if !self.bridge.json::<bool>("(visualViewport?.scale ?? 1) > 1.001")? {
+        if !self
+            .bridge
+            .json::<bool>("(visualViewport?.scale ?? 1) > 1.001")?
+        {
             return Ok(());
         }
         self.bridge.run(
@@ -164,7 +167,9 @@ impl Ios {
         self.bridge
             .run("if (window.__e2eMeta) __e2eMeta.content = __e2eViewport")?;
         if let Err(error) = settled {
-            note(&format!("ios: the page stayed zoomed into the next scenario: {error:#}"));
+            note(&format!(
+                "ios: the page stayed zoomed into the next scenario: {error:#}"
+            ));
         }
         Ok(())
     }
