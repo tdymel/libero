@@ -150,8 +150,7 @@ e2e::scenario!(
 e2e::scenario!(
     in_fullscreen_the_controls_fade_and_come_back,
     "/video/long",
-    fullscreen_controls_fade,
-    ios: skip("the bar stays up in fullscreen while the clip plays to its end, cause unfound")
+    fullscreen_controls_fade
 );
 
 /// Fires the held idle timer once armed and waits for the fade.

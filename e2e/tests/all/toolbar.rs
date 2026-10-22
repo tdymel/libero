@@ -141,7 +141,7 @@ const SEGMENT: &str = "[role=radiogroup] input:focus";
 
 /// Home and End scroll the page in WKWebView; there Cmd+Left and Cmd+Right move the caret.
 async fn press_in_text<D: Driver>(d: &mut D, key: keyboard::Key) -> Result<()> {
-    if cfg!(target_os = "macos") && d.platform() == Platform::Desktop {
+    if cfg!(target_os = "macos") && matches!(d.platform(), Platform::Desktop | Platform::Ios) {
         match key.key {
             "Home" => return d.press_mod(keyboard::ARROW_LEFT).await,
             "End" => return d.press_mod(keyboard::ARROW_RIGHT).await,
@@ -306,8 +306,7 @@ e2e::scenario!(
 e2e::scenario!(
     fields_join_the_arrow_order,
     "/toolbar-fields",
-    fields_pass_arrows_on_at_their_ends,
-    ios: skip("3432: WKWebView: ArrowLeft at a caret's start keeps the field")
+    fields_pass_arrows_on_at_their_ends
 );
 e2e::scenario!(
     a_script_focus_moves_the_tab_stop,

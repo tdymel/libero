@@ -261,7 +261,7 @@ The performance scenarios (units `perf`, `table_perf`) are no skips but run on r
 | `shortcut_help::a_narrow_list_stacks_each_row` | native | 1224: Blitz drops `@container`, so the rows stay side by side |
 | `slider::a_drag_released_past_the_end_tracks_and_ends` | ios | a touch screen has no hover |
 | `slider_touch_keyboard::a_touch_held_on_the_thumb_leaves_no_bubble_after_the_release` | desktop | 1126: no touch input under Xvfb |
-| `splitter::a_double_click_collapses_pane_a_and_restores_it` | ios | 3702: the simulator lands even one batched double tap's touches 500 ms apart, no dblclick |
+| `splitter::a_double_click_collapses_pane_a_and_restores_it` | ios | 3702: the simulator holds a batched double tap's second touch 0.7-1.1 s, no dblclick |
 | `spotlight::a_hovered_row_is_tinted_and_does_not_move_the_highlight` | ios | a touch screen has no hover |
 | `stepper::a_clicked_continue_returns_focus_horizontally` | android | 958: element identity on the WebView |
 | `stepper::a_clicked_continue_returns_focus_horizontally` | desktop | 958: element identity on the WebView |
@@ -290,7 +290,7 @@ The performance scenarios (units `perf`, `table_perf`) are no skips but run on r
 | `table_grid::a_custom_editor_clears_the_error_by_changed` | android | 958: roving keys are inert in the emulator's WebView |
 | `table_grid::a_filtered_button_is_not_a_tab_stop` | native | Blitz reads no script |
 | `table_grid::a_second_tap_opens_the_editor` | desktop | no touch input in the desktop driver |
-| `table_grid::a_second_tap_opens_the_editor` | ios | 3416: the first tap's touch end reaches the page 2.4 s late, so WebKit raises no click on the cell |
+| `table_grid::a_second_tap_opens_the_editor` | ios | 3416: the first tap's touch end reaches the page 2 s late, so WebKit raises no click on the cell |
 | `table_grid::a_sort_follows_the_apps_language` | native | 3386: reads the page language by script, Blitz has none and no Intl.Collator |
 | `table_grid::a_windowed_grid_scrolls_to_the_focused_cell` | android | 958: roving keys are inert in the emulator's WebView |
 | `table_grid::a_yes_no_editor_is_a_checkbox_and_a_date_editor_names_its_form` | native | 3386: reads the editor's checked property by script, which Blitz has none of |
@@ -363,7 +363,6 @@ The performance scenarios (units `perf`, `table_perf`) are no skips but run on r
 | `tabs::tab_leaves_the_strip_from_a_focused_unselected_tab` | desktop | 958: element identity on the WebView |
 | `theme_defaults::an_unset_hover_card_align_follows_the_theme` | ios | a touch screen has no hover |
 | `theme_defaults::an_unset_hover_card_side_follows_the_theme` | ios | a touch screen has no hover |
-| `toolbar::fields_join_the_arrow_order` | ios | 3432: WKWebView: ArrowLeft at a caret's start keeps the field |
 | `tooltip::a_long_press_on_a_link_trigger_opens_no_link_menu` | desktop | 1126: no touch input under Xvfb |
 | `tooltip::a_long_press_on_a_link_trigger_opens_no_link_menu` | native | 3237: the native driver reads no script |
 | `tooltip::a_long_press_opens_it_on_touch` | desktop | 1126: no touch input under Xvfb |
@@ -420,7 +419,6 @@ The performance scenarios (units `perf`, `table_perf`) are no skips but run on r
 | `video::every_audio_source_failing_shows_the_error` | web | audio::every_source_failing_shows_the_error is the web's arm |
 | `video::every_video_source_failing_shows_the_error` | native | Blitz plays no media and shows the fallback |
 | `video::every_video_source_failing_shows_the_error` | web | video::every_source_failing_shows_the_error is the web's arm |
-| `video::fade::in_fullscreen_the_controls_fade_and_come_back` | ios | the bar stays up in fullscreen while the clip plays to its end, cause unfound |
 | `video::fullscreen::the_fullscreen_button_toggles` | ios | iOS's native video fullscreen does not leave on Escape |
 | `video::fullscreen::the_fullscreen_button_toggles` | macos desktop | upstream: Escape does not leave a WKWebView fullscreen |
 | `viewport_meta::a_small_field_keeps_the_page_scale` | native | Blitz has no visual viewport |
