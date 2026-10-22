@@ -2,7 +2,7 @@
 
 Crate: `libero`
 Import: `use libero::components::{Shortcut, ShortcutHelp};`
-Feature: `shortcut-help` (on by default, turns on `dialog`, `kbd`; [features.md](features.md))
+Feature: `shortcut-help` (off by default, turns on `dialog`, `kbd`, `use-element`, `use-hotkeys`; [features.md](features.md))
 Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/overlay/shortcut_help.rs>
 Index: [index.md](index.md) lists every other page
 Description: A dialog listing keyboard shortcuts, each chord in the platform's key names.

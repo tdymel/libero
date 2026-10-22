@@ -24,6 +24,7 @@ mod fieldset;
 mod file_field;
 #[cfg(feature = "form-root")]
 mod form;
+mod form_value;
 #[cfg(all(feature = "visually-hidden", feature = "use-icon", feature = "use-id"))]
 mod handle;
 #[cfg(any(feature = "image-cropper", feature = "file-field"))]
@@ -121,7 +122,8 @@ pub use file_field::{
     FileField, FileFieldPart, FileFieldProps, FileRejection, Files, RejectReason,
 };
 #[cfg(feature = "form-root")]
-pub use form::{Form, FormPart, FormProps, FormValue};
+pub use form::{Form, FormPart, FormProps};
+pub use form_value::FormValue;
 #[cfg(all(feature = "visually-hidden", feature = "use-icon", feature = "use-id"))]
 pub use handle::{FormHandle, use_form, use_form_context};
 #[cfg(any(feature = "image-cropper", feature = "file-field"))]

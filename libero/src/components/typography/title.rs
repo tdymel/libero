@@ -2,7 +2,7 @@ use dioxus::prelude::*;
 
 use crate::{
     components::{
-        common::{HtmlTag, Input, States, base_props},
+        common::{HtmlTag, Input, States, base_props, gradient_text_sx},
         layout::use_box,
     },
     hooks::{use_gradient_style, use_theme},
@@ -10,8 +10,6 @@ use crate::{
     theme::{Gradient, Size, TitleDefaults},
     utils::warn,
 };
-
-use super::text::gradient_text_sx;
 
 static TITLE_BASE_SX: StaticSx = StaticSx::new(|| {
     TitleDefaults::theme_vars()

@@ -8,11 +8,14 @@ mod combobox_aria;
 mod combobox_state;
 mod focus_ring;
 mod focusable;
+#[cfg(any(feature = "text", feature = "title"))]
+mod gradient_text;
 mod hit_area;
 #[cfg(feature = "use-icon")]
 mod icons;
 mod keys;
 mod logical_text;
+mod navigation_target;
 mod neighbour;
 mod number_value;
 mod option_list;
@@ -56,6 +59,8 @@ pub(crate) use focus_ring::{
     on_start_bar_sx, on_state_sx, ring_overlay, ring_overlay_sx, shadow_sx,
 };
 pub(crate) use focusable::FOCUSABLE_SELECTOR;
+#[cfg(any(feature = "text", feature = "title"))]
+pub(crate) use gradient_text::gradient_text_sx;
 pub(crate) use hit_area::{COARSE_POINTER, coarse_hit_area_sx, min_hit_area_sx};
 #[cfg(feature = "use-icon")]
 pub(crate) use icons::{Glyph, draw_svg};

@@ -2,7 +2,7 @@
 
 Crate: `libero`
 Import: `use libero::components::Title;`
-Feature: `title` (on by default, turns on `text`; [features.md](features.md))
+Feature: `title` (on by default, turns on `box`; [features.md](features.md))
 Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/typography/title.rs>
 Index: [index.md](index.md) lists every other page
 Description: A heading, `h1` through `h6`, whose visual size and semantic tag can be set apart.

@@ -7,8 +7,8 @@ use crate::{
             BUTTON_HOVER_VAR, BUTTON_ON_CONTAINER_VAR, BUTTON_ON_STATE_VAR, BUTTON_SELECTED_VAR,
             BUTTON_VARS, HtmlTag, Input, Part, ScaleOrCss, States, TOOLBAR_ITEM, ToolbarItem,
             Variant, base_color, base_props, contrast_color, disabled_look_sx, fill_color,
-            focus_ring_sx, input_from_str, interactive_variant_sx, label_color, literal_contrast,
-            parts_enum, text_color, use_button_group, use_toolbar_item, variables, variant_colors,
+            focus_ring_sx, interactive_variant_sx, label_color, literal_contrast, parts_enum,
+            text_color, use_button_group, use_toolbar_item, variables, variant_colors,
             variant_selected_sx,
         },
         feedback::Loader,
@@ -21,20 +21,6 @@ use crate::{
     theme::{BUTTON_HEIGHT, ButtonDefaults, Gradient, LOADER_SIZE, SURFACE_LABEL, Size, SizeCss},
     utils::warn,
 };
-
-input_from_str!(NavigationTarget);
-
-// Sealed: only `#[props(into)]` names it, through the impl below.
-#[doc(hidden)]
-#[allow(unnameable_types)]
-pub struct RouteMarker;
-
-// A typed `Route`, as on `Anchor`. `From<R: Routable>` would overlap the impls above.
-impl<R: Routable> dioxus::core::SuperFrom<R, RouteMarker> for Input<NavigationTarget> {
-    fn super_from(value: R) -> Self {
-        Input::Value(value.into())
-    }
-}
 
 static BUTTON_BASE_SX: StaticSx = StaticSx::new(|| {
     let base = ripple_sx(ButtonDefaults::theme_vars())

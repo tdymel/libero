@@ -1,5 +1,7 @@
 #[cfg(feature = "blockquote")]
 mod blockquote;
+#[cfg(all(feature = "kbd", feature = "use-hotkeys"))]
+mod chord;
 #[cfg(feature = "code")]
 mod code;
 #[cfg(feature = "kbd")]
@@ -13,6 +15,8 @@ mod title;
 
 #[cfg(feature = "blockquote")]
 pub use blockquote::{Blockquote, BlockquotePart, BlockquoteProps};
+#[cfg(all(feature = "kbd", feature = "use-hotkeys"))]
+pub(crate) use chord::{chord_kbd, chord_words};
 #[cfg(feature = "code")]
 pub(crate) use code::inline_side_spacers;
 #[cfg(feature = "code")]

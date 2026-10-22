@@ -1,6 +1,6 @@
 /	Libero - accessible, themeable components for Dioxus		/md/index.md		
 /about/getting-started	Getting started - Libero	Installing libero, wrapping an app in LiberoProvider, building for the web, natively, in a desktop WebView and for Android, and the feature flags.	/md/getting_started.md	About	/about/getting-started
-/about/features	Features - Libero	Each component behind its own Cargo feature: the recommended setup, the default, the category features and what each component feature turns on.	/md/features.md	About	/about/getting-started
+/about/features	Features - Libero	Every component and hook behind its own Cargo feature: the recommended setup, the default, the groups, what each feature turns on, and the other features.	/md/features.md	About	/about/getting-started
 /about/philosophy	Philosophy - Libero	The four principles behind libero in order of priority (developer experience, accessibility, batteries included, simple yet modern) and what we do about each.	/md/philosophy.md	About	/about/getting-started
 /about/styling	Styling - Libero	The sx styling builder every component takes: theme values, states, selectors, responsive, media and container queries, cascade layers and the parts Style API.	/md/styling.md	About	/about/getting-started
 /about/theming	Theming - Libero	How to customize a Libero theme and use it: colors, scales, per-component defaults, light and dark pairs, and reading the active theme.	/md/theming.md	About	/about/getting-started

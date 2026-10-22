@@ -7,7 +7,7 @@ use crate::{
         common::{FOCUSABLE_SELECTOR, HtmlTag, Input, Part, allowed_href, base_props, parts_enum},
         feedback::Alert,
         form::{
-            Binding, Source, Validators,
+            Binding, FormValue, Source, Validators,
             handle::{Control, FormHandle, Summary},
             issues_of,
             use_field::labelled_focus_selector,
@@ -20,11 +20,6 @@ use crate::{
     theme::FormDefaults,
     utils::warn,
 };
-
-/// What a `Form` or `Fieldset` can hold as its value.
-pub trait FormValue: Clone + PartialEq + Default + 'static {}
-
-impl<T: Clone + PartialEq + Default + 'static> FormValue for T {}
 
 /// The root binding a `Store` gives the fields, with its type erased.
 fn root_binding<V: FormValue>(value: Option<Store<V>>) -> Binding {

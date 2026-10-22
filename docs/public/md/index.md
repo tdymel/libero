@@ -16,7 +16,7 @@ each component you use, see [features.md](features.md).
 ## About
 
 - [Getting started](getting_started.md): Installing libero, wrapping an app in LiberoProvider, building for the web, natively, in a desktop WebView and for Android, and the feature flags.
-- [Features](features.md): Each component behind its own Cargo feature: the recommended setup, the default, the category features and what each component feature turns on.
+- [Features](features.md): Every component and hook behind its own Cargo feature: the recommended setup, the default, the groups, what each feature turns on, and the other features.
 - [Philosophy](philosophy.md): The four principles behind libero in order of priority (developer experience, accessibility, batteries included, simple yet modern) and what we do about each.
 - [Styling](styling.md): The `sx` styling builder every component takes: theme values, states, selectors, responsive, media and container queries, cascade layers and the `parts` Style API.
 - [Theming](theming.md): How to customize a Libero theme and use it: colors, scales, per-component defaults, light and dark pairs, and reading the active theme.

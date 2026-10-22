@@ -67,6 +67,35 @@ jobs:
       - run: cargo clippy -p libero --all-targets --features "$CODE_LANGS" -- -D warnings
       - run: cargo clippy -p e2e --features native --all-targets -- -D warnings
 
+  # Every component, layout and hook feature alone (3909), so a feature list that misses a
+  # dependency fails here. The dev-dependency's self-reference would turn them all on, hence
+  # `--no-dev-deps`. Platform and test-only features are left out. The `wasm` leg is the
+  # empty and the default build on wasm32. A shard takes ~5 min, all 186 runs ~15 min.
+  each-feature:
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1/4, 2/4, 3/4, 4/4, wasm]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v7
+      - uses: ./.github/actions/setup
+        with:
+          targets: wasm32-unknown-unknown
+          components: clippy
+          cache-key: each-feature
+      - if: matrix.shard != 'wasm'
+        uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-hack
+      - if: matrix.shard != 'wasm'
+        run: cargo hack clippy -p libero --each-feature --no-dev-deps --exclude-features native,desktop,held-clock,fake-file-dialog,fcm --exclude-all-features --keep-going --partition ${{ matrix.shard }} -- -D warnings
+      - if: matrix.shard == 'wasm'
+        run: cargo clippy -p libero --target wasm32-unknown-unknown --no-default-features -- -D warnings
+      - if: matrix.shard == 'wasm'
+        run: cargo clippy -p libero --target wasm32-unknown-unknown -- -D warnings
+
   wasm:
     runs-on: ubuntu-24.04
     timeout-minutes: 45
@@ -209,7 +238,7 @@ jobs:
   # The one required check: green only when every job above is.
   ci:
     if: always()
-    needs: [fmt, clippy, features, wasm, android, test, doc-tests, native, e2e]
+    needs: [fmt, clippy, features, each-feature, wasm, android, test, doc-tests, native, e2e]
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     steps:

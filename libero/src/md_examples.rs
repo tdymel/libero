@@ -30,7 +30,8 @@ macro_rules! md_pages {
 }
 
 /// The code the docs pages print, as `docs/src/snippets/generate.rs` writes it out.
-#[doc = include_str!("../tests/page_snippets.md")] // Missing? Run `cargo test -p docs page_snippets` first.
+#[cfg(all(feature = "all-components", feature = "all-hooks"))]
+#[doc =include_str!("../tests/page_snippets.md")] // Missing? Run `cargo test -p docs page_snippets` first.
 pub struct PageSnippets;
 
 /// [`PageSnippets`] of the pages marked `// page-snippets: charts`, which need the feature.

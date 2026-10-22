@@ -17,7 +17,8 @@ use crate::{
         form::use_fieldset_disabled,
         layout::{InternalAnchor, use_box},
         navigation::wants_new_tab_hint,
-        overlay::{Tooltip, chord_kbd, chord_words},
+        overlay::Tooltip,
+        typography::{chord_kbd, chord_words},
     },
     context::IconSlot,
     hooks::{

@@ -2,10 +2,7 @@ use std::{cell::Cell, rc::Rc};
 
 use dioxus::{dioxus_core::AttributeValue, prelude::*};
 
-use super::{
-    hover_intent::{TRIGGER_WRAPPER_SX, use_hover_intent},
-    tooltip::{LONG_PRESS, TOUCH_LINGER},
-};
+use super::hover_intent::{LONG_PRESS, TOUCH_LINGER, TRIGGER_WRAPPER_SX, use_hover_intent};
 use crate::{
     components::{
         accessibility::{focus_edge, focus_first_stop, tab_order, tab_stops},

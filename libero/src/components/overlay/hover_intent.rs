@@ -24,6 +24,11 @@ pub(super) static TRIGGER_WRAPPER_SX: StaticSx = StaticSx::new(|| {
     }
 });
 
+/// Milliseconds a touch must hold to open it, and it stays after the release (MUI's).
+/// `Tooltip` and `HoverCard` share the rule (2448).
+pub(super) const LONG_PRESS: u32 = 500;
+pub(super) const TOUCH_LINGER: u32 = 1500;
+
 /// Whether the pointer rests on a trigger, applied after the open and close
 /// delays. `Tooltip` and `HoverCard` share it.
 #[derive(Clone, Copy, PartialEq)]

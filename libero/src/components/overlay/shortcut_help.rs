@@ -8,10 +8,9 @@ use crate::{
         common::{HtmlTag, Input, base_props, inset_focus_ring_sx},
         layout::use_box,
         overlay::Dialog,
-        typography::Kbd,
+        typography::{chord_kbd, chord_words},
     },
-    hooks::{chord_keys, current_localization, use_css, use_element, use_resize_fallback},
-    localization::ShortcutHelpLabels,
+    hooks::{current_localization, use_css, use_element, use_resize_fallback},
     platform::{ElementApi, mod_is_meta},
     sx::{StaticSx, sx},
     utils::warn,
@@ -43,27 +42,6 @@ static SHORTCUT_SCROLL_SX: StaticSx = StaticSx::new(|| {
         .overflow_y("auto")
         .focus_visible(inset_focus_ring_sx("-2px"))
 });
-
-/// [`chord_keys`] with `Space`, `Meta` and the named keys in the localization's words.
-pub(crate) fn chord_words(
-    chord: &str,
-    apple: bool,
-    words: &ShortcutHelpLabels,
-) -> Option<Vec<String>> {
-    let keys = chord_keys(chord, apple, words)?;
-    Some(keys.iter().map(|key| words.key_word(key)).collect())
-}
-
-/// A chord's keys from [`chord_words`], one [`Kbd`] each, joined by " + ".
-pub(crate) fn chord_kbd(keys: Vec<String>) -> Element {
-    let last = keys.len().saturating_sub(1);
-    rsx! {
-        for (index, key) in keys.into_iter().enumerate() {
-            Kbd { "{key}" }
-            if index < last { " + " }
-        }
-    }
-}
 
 /// One row of a [`ShortcutHelp`]: a chord as [`Hotkey`](crate::hooks::Hotkey) takes it, and
 /// what it does.
@@ -194,7 +172,7 @@ mod tests {
     use std::sync::atomic::{AtomicUsize, Ordering};
 
     use super::*;
-    use crate::utils::take_warnings;
+    use crate::{localization::ShortcutHelpLabels, utils::take_warnings};
 
     static RENDERS: AtomicUsize = AtomicUsize::new(0);
 
@@ -241,19 +219,5 @@ mod tests {
 
         let title = ShortcutHelpLabels::ENGLISH.title;
         assert!(html.contains(&format!(">{title}</h2>")), "{html}");
-    }
-
-    /// Todo 2449: Space, Meta and the named keys follow the localization.
-    #[test]
-    fn a_chord_shows_the_localized_key_names() {
-        let words = ShortcutHelpLabels::GERMAN;
-        let keys = |chord| chord_words(chord, false, &words).unwrap();
-        assert_eq!(keys("space"), ["Leertaste"]);
-        assert_eq!(keys("meta+escape"), ["Meta", "Esc"]);
-        assert_eq!(keys("ctrl+ArrowUp"), ["Strg", "Pfeil nach oben"]);
-        // A key the table lacks keeps its `Key` name.
-        assert_eq!(keys("f10"), ["F10"]);
-        let english = chord_words("ctrl+ArrowUp", false, &ShortcutHelpLabels::ENGLISH);
-        assert_eq!(english.unwrap(), ["Ctrl", "ArrowUp"]);
     }
 }

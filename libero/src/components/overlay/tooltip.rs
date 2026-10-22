@@ -2,7 +2,9 @@ use std::{cell::Cell, rc::Rc};
 
 use dioxus::prelude::*;
 
-use super::hover_intent::{HoverIntent, TRIGGER_WRAPPER_SX, use_hover_intent};
+use super::hover_intent::{
+    HoverIntent, LONG_PRESS, TOUCH_LINGER, TRIGGER_WRAPPER_SX, use_hover_intent,
+};
 use crate::{
     CssLayer,
     components::{
@@ -33,11 +35,6 @@ const TOOLTIP_GAP_VAR: CssVar = CssVar::new("--lsx-tooltip-gap");
 
 /// The bubble's widest, unless the viewport is narrower.
 const MAX_WIDTH: &str = "20rem";
-
-/// Milliseconds a touch must hold to open it, and it stays after the release (MUI's).
-/// `HoverCard` shares the rule (2448).
-pub(super) const LONG_PRESS: u32 = 500;
-pub(super) const TOUCH_LINGER: u32 = 1500;
 
 /// Bridges `gap` on the landed side, so the pointer can reach the bubble (WCAG 1.4.13).
 fn bridge_sx(side: Side) -> Sx {

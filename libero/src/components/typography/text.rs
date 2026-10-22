@@ -2,13 +2,14 @@ use dioxus::prelude::*;
 
 use crate::{
     components::{
-        common::{HtmlTag, Input, States, base_color, base_props, text_color, variables},
+        common::{
+            HtmlTag, Input, States, base_color, base_props, gradient_text_sx, text_color, variables,
+        },
         layout::use_box,
     },
     hooks::{use_gradient_style, use_theme},
-    platform::clips_background_to_text,
-    sx::{StaticSx, Sx, ThemeAwareValue, sx},
-    theme::{CssVar, GRADIENT_FROM, Gradient, Size, TextDefaults, gradient_image},
+    sx::{StaticSx, ThemeAwareValue, sx},
+    theme::{CssVar, Gradient, Size, TextDefaults},
 };
 
 static TEXT_BASE_SX: StaticSx = StaticSx::new(|| {
@@ -23,23 +24,6 @@ static TEXT_BASE_SX: StaticSx = StaticSx::new(|| {
 });
 
 const TEXT_COLOR: CssVar = CssVar::new("--lsx-text-color");
-
-/// The gradient through the glyphs. Blitz paints the whole box, so there it is the first stop.
-pub(super) fn gradient_text_sx() -> Sx {
-    if !clips_background_to_text() {
-        return sx().color(GRADIENT_FROM.value());
-    }
-    sx().color("transparent")
-        .background_image(gradient_image(None))
-        .background_clip("text")
-        .with("-webkit-background-clip", "text")
-        // Print drops backgrounds by default, so the text would print blank; `exact` left a
-        // hairline round the clip in Chromium's PDF, hence solid in the first stop.
-        .media(
-            "print",
-            sx().color(GRADIENT_FROM.value()).background_image("none"),
-        )
-}
 
 base_props! {
     pub struct TextProps {

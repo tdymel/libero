@@ -57,8 +57,6 @@ pub(crate) use modal::Modal;
 pub use overlay::{Overlay, OverlayProps};
 #[cfg(feature = "shortcut-help")]
 pub use shortcut_help::{Shortcut, ShortcutHelp, ShortcutHelpProps};
-#[cfg(feature = "shortcut-help")]
-pub(crate) use shortcut_help::{chord_kbd, chord_words};
 #[cfg(feature = "spotlight")]
 pub use spotlight::{
     SpotlightAction, SpotlightHandle, SpotlightOptions, SpotlightPart, spotlight_filter,

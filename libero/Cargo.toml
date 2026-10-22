@@ -238,8 +238,7 @@ focus-trap = ["use-focus-return", "visually-hidden"]
 visually-hidden = ["box"]
 
 buttons = ["action-icon", "button", "button-group", "copy", "direction-toggle", "repository", "share", "theme-switcher", "tldr", "toolbar"]
-# `button` for its `to` prop's conversions, which live in button.rs.
-action-icon = ["button", "loader", "tooltip", "shortcut-help", "anchor", "paper", "pictogram", "use-hotkeys", "use-id"]
+action-icon = ["loader", "tooltip", "kbd", "anchor", "paper", "pictogram", "use-hotkeys", "use-id"]
 button = ["loader", "anchor"]
 button-group = ["box"]
 copy = ["action-icon", "use-clipboard"]
@@ -261,8 +260,8 @@ carousel = ["action-icon", "scroll-area"]
 # `LineChart` and its kin, drawn by charts-rs (+~240 KB brotli on the web).
 charts = ["skeleton", "mark", "dep:charts-rs", "focus-trap", "use-accessibility", "use-popover", "use-debounce", "use-id", "use-icon"]
 data-list = ["box"]
-# `zoomable` opens the lightbox only with `lightbox` on; else the picture renders unzoomable.
 icon = ["pictogram", "visually-hidden"]
+# `zoomable` opens the lightbox only with `lightbox` on; else the picture renders unzoomable.
 image = ["box"]
 image-list = ["image", "grid"]
 indicator = ["box"]
@@ -293,7 +292,7 @@ chip = ["action-icon", "anchor"]
 color = ["slider", "action-icon"]
 combobox = ["loader", "paper", "scroll-area", "use-id", "use-popover", "visually-hidden", "use-icon", "use-swipe", "use-media-query"]
 date-time = ["tabs", "action-icon", "use-drag", "use-media-query"]
-fieldset = ["form-root"]
+fieldset = ["box", "use-icon", "use-id", "visually-hidden"]
 # `Form`, `use_form` and `FormHandle`; `form` is the group of every form component.
 form-root = ["alert"]
 # `crop` opens its dialog only with `image-cropper` on; else the file passes uncropped.
@@ -331,14 +330,14 @@ overlay = ["dialog", "drawer", "floating-window", "hover-card", "lightbox", "men
 dialog = ["action-icon", "title"]
 drawer = ["dialog", "modal", "float", "use-swipe"]
 floating-window = ["menu", "action-icon", "button", "title", "float", "use-drag"]
-hover-card = ["tooltip", "focus-trap", "paper", "scroll-area"]
+hover-card = ["paper", "scroll-area", "use-popover", "use-timers"]
 lightbox = ["carousel", "modal", "action-icon", "dialog"]
 menu = ["anchor", "kbd", "divider", "paper", "use-popover", "use-timers"]
 # `Modal` and `use_modal`.
 modal = ["overlay-backdrop", "focus-trap", "use-back"]
 # The `Overlay` component; `overlay` is the group of every overlay component.
 overlay-backdrop = ["box"]
-shortcut-help = ["dialog", "kbd"]
+shortcut-help = ["dialog", "kbd", "use-element", "use-hotkeys"]
 spotlight = ["combobox", "dialog", "modal", "kbd", "loader"]
 tooltip = ["use-timers", "box", "use-popover"]
 tour = ["dialog", "button", "focus-trap", "use-accessibility", "use-local-storage", "use-back"]
@@ -399,4 +398,4 @@ code = ["copy"]
 kbd = ["box"]
 mark = ["box"]
 text = ["box"]
-title = ["text"]
+title = ["box"]
