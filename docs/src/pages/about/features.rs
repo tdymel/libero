@@ -131,7 +131,7 @@ pub(crate) const FEATURES: &[Feature] = &[
     feature("rating", "form", "Rating", &["use-icon", "visually-hidden", "use-id", "use-drag"], false, &["/form/rating"]),
     feature("rich-text-editor", "form", "RichTextEditor, RichTextView", &["toolbar", "text-field", "menu", "code", "mark", "modal", "action-icon", "button", "dialog", "shortcut-help", "text", "flex", "use-history"], false, &["/form/rich-text-editor"]),
     feature("segmented-control", "form", "SegmentedControl", &["button", "use-id"], false, &["/form/segmented-control"]),
-    feature("select", "form", "Select, MultiSelect", &["combobox", "chip", "action-icon"], true, &["/form/select", "/form/multi-select"]),
+    feature("select", "form", "Select, MultiSelect", &["combobox", "chip", "action-icon", "button"], true, &["/form/select", "/form/multi-select"]),
     feature("slider", "form", "Slider, RangeSlider", &["tooltip", "use-icon", "visually-hidden", "use-id", "use-drag"], false, &["/form/slider", "/form/range-slider"]),
     feature("switch", "form", "Switch", &["use-accessibility", "use-icon", "visually-hidden", "use-id"], true, &["/form/switch"]),
     feature("tags-field", "form", "TagsField", &["combobox", "chip", "select", "action-icon"], false, &["/form/tags-field"]),
