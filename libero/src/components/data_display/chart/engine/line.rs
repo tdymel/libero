@@ -125,24 +125,10 @@ pub(crate) fn draw_line(spec: &LineSpec) -> Option<Drawn> {
         })
         .collect();
     let mut chart = charts_rs::LineChart::new(series, spec.x.clone());
-    chart.width = spec.width;
-    chart.height = spec.height;
-    chart.background_color = InkColor::transparent();
-    chart.title.text = String::new();
-    chart.legend.show = Some(false);
-    // Its triggers are the marks we harvest; `sanitize` drops its tips.
-    chart.tooltip.show = true;
-    chart.animation = None;
+    style_chart!(chart, spec, unit_suffix(spec.unit.as_deref()));
     chart.series.stroke_width = spec.stroke_width;
     chart.series.fill = spec.area.is_some();
     chart.series.fill_opacity = spec.area;
-    chart.series.colors = spec.series.iter().map(|s| ink(s.color)).collect();
-    chart.grid.stroke_color = match spec.grid {
-        true => ink(spec.ink.grid),
-        false => InkColor::transparent(),
-    };
-    chart.x_axis.stroke_color = ink(spec.ink.axis);
-    chart.x_axis.font.color = ink(spec.ink.label);
     if !spec.x_numbers.is_empty() {
         chart.x_axis.kind = AxisType::Value;
         chart.x_axis.values = spec.x_numbers.clone();
@@ -161,16 +147,6 @@ pub(crate) fn draw_line(spec: &LineSpec) -> Option<Drawn> {
     } else {
         // Every label drawn, so `fit_x_labels` finds each.
         chart.x_axis.label_overflow = AxisLabelOverflow::Ellipsis;
-    }
-    let unit = |unit: &Option<String>| {
-        unit.as_deref()
-            .map(|unit| format!(" {unit}"))
-            .unwrap_or_default()
-    };
-    if let Some(y) = chart.y_axis_configs.first_mut() {
-        y.stroke_color = ink(spec.ink.axis);
-        y.font.color = ink(spec.ink.label);
-        y.formatter = Some(format!("{AXIS_MARK}{{c}}{}", unit(&spec.unit)));
     }
     if spec.series.iter().any(|series| series.extras.secondary) {
         second_axis(&mut chart.y_axis_configs, &spec.y2_unit);

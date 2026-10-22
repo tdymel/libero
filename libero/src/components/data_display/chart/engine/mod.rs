@@ -12,6 +12,32 @@ use crate::{
     theme::{BarLayout, ChartInk, Curve, HexColor, PieLabels, PointSymbol},
 };
 
+/// The renderer settings every axis chart shares: size, no own legend or title, our inks.
+macro_rules! style_chart {
+    ($chart:ident, $spec:ident, $unit:expr) => {
+        $chart.width = $spec.width;
+        $chart.height = $spec.height;
+        $chart.background_color = InkColor::transparent();
+        $chart.title.text = String::new();
+        $chart.legend.show = Some(false);
+        // Its triggers are the marks we harvest; `sanitize` drops its tips.
+        $chart.tooltip.show = true;
+        $chart.animation = None;
+        $chart.series.colors = $spec.series.iter().map(|s| ink(s.color)).collect();
+        $chart.grid.stroke_color = match $spec.grid {
+            true => ink($spec.ink.grid),
+            false => InkColor::transparent(),
+        };
+        $chart.x_axis.stroke_color = ink($spec.ink.axis);
+        $chart.x_axis.font.color = ink($spec.ink.label);
+        if let Some(y) = $chart.y_axis_configs.first_mut() {
+            y.stroke_color = ink($spec.ink.axis);
+            y.font.color = ink($spec.ink.label);
+            y.formatter = Some(format!("{AXIS_MARK}{{c}}{}", $unit));
+        }
+    };
+}
+
 mod axis;
 mod bar;
 mod candle;
