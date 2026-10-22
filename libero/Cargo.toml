@@ -291,7 +291,7 @@ cascader = ["combobox", "action-icon", "use-media-query"]
 checkbox = ["use-icon", "use-id", "visually-hidden"]
 chip = ["action-icon", "anchor"]
 color = ["slider", "action-icon"]
-combobox = ["loader", "paper", "scroll-area", "use-id", "use-popover", "visually-hidden", "use-icon"]
+combobox = ["loader", "paper", "scroll-area", "use-id", "use-popover", "visually-hidden", "use-icon", "use-swipe", "use-media-query"]
 date-time = ["tabs", "action-icon", "use-drag", "use-media-query"]
 fieldset = ["form-root"]
 # `Form`, `use_form` and `FormHandle`; `form` is the group of every form component.
