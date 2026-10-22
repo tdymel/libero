@@ -96,7 +96,8 @@ pub use color::{
 };
 #[cfg(feature = "combobox")]
 pub(crate) use combobox::{
-    CaretKeys, ComboboxCore, RowCache, VIRTUAL_ROWS, row_label, use_refocus_on_close, use_row_cache,
+    CaretKeys, ComboboxCore, RowCache, TouchHold, VIRTUAL_ROWS, row_label, use_refocus_on_close,
+    use_row_cache, use_touch_hold,
 };
 #[cfg(feature = "combobox")]
 pub use combobox::{

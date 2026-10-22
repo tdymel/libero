@@ -6,7 +6,7 @@ use pictogram_icons_lucide as lucide;
 use crate::{
     components::{
         common::{Glyph, HtmlTag, Part, attr},
-        form::{ComboboxState, PreparedField, field_control_sx},
+        form::{ComboboxState, PreparedField, TouchHold, field_control_sx},
         layout::BoxStyle,
     },
     context::IconSlot,
@@ -112,6 +112,11 @@ pub(super) struct Trigger {
     pub(super) disabled: bool,
     pub(super) readonly: bool,
     pub(super) searchable: bool,
+    /// Searchable only: a touch open keeps focus here.
+    pub(super) hold: Option<TouchHold>,
+    /// Held now, so still the combobox.
+    pub(super) held: bool,
+    pub(super) blurred: Signal<bool>,
     /// No option to list: open, the trigger must not claim an expanded popup.
     pub(super) empty: bool,
     /// Nothing to clear, so the trigger draws its chevron.
@@ -137,6 +142,9 @@ pub(super) fn cascader_trigger(
         disabled,
         readonly,
         searchable,
+        hold,
+        held,
+        mut blurred,
         empty,
         chevron,
         display,
@@ -145,7 +153,13 @@ pub(super) fn cascader_trigger(
         descendant,
     } = parts;
 
-    let mut attributes = trigger_aria(searchable, opened, empty, &controlled_id, descendant);
+    let mut attributes = trigger_aria(
+        searchable && !held,
+        opened,
+        empty,
+        &controlled_id,
+        descendant,
+    );
     attributes.extend(extra);
 
     let value_slot = value_slot(&display, placeholder.as_deref());
@@ -162,19 +176,37 @@ pub(super) fn cascader_trigger(
                 event.prevent_default();
             }
         })
+        .event("onpointerdown", move |event: PointerEvent| {
+            if let Some(hold) = hold {
+                hold.press(&event, state.is_open());
+            }
+        })
         .event("onclick", move |_: MouseEvent| {
             if !disabled && !readonly {
                 toggle(!state.is_open());
             }
         })
-        // While searchable, focus moves to the search box, whose blur closes instead.
+        // While searchable, focus moves to the search box, whose blur closes instead; unless a touch held it here.
         .event("onblur", move |event: FocusEvent| {
-            if !searchable && blur_counts(&event) {
-                state.close();
+            if !blur_counts(&event) {
+                return;
+            }
+            match hold {
+                None => state.close(),
+                Some(hold) if hold.closes_on_blur() => {
+                    blurred.set(true);
+                    state.close();
+                }
+                Some(_) => {}
             }
         })
         // Not on a frame wrapper: it would take the x's Enter and Space.
-        .event("onkeydown", move |event: KeyboardEvent| keys.handle(event))
+        .event("onkeydown", move |event: KeyboardEvent| {
+            if let Some(hold) = hold {
+                hold.key(state.is_open());
+            }
+            keys.handle(event)
+        })
         .render(
             HtmlTag::Div,
             attributes,

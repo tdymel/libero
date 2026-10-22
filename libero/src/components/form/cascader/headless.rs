@@ -12,7 +12,7 @@ use crate::{
         layout::use_box,
     },
     hooks::{use_element, use_theme},
-    platform::{SCROLL_MARGIN_BOTTOM_VAR, blur_counts, mounted_by_selector},
+    platform::{ElementApi, SCROLL_MARGIN_BOTTOM_VAR, blur_counts, mounted_by_selector},
     sx::{StaticSx, Sx, ThemeAwareValue, sx},
     theme::Size,
     utils::warn,
@@ -328,6 +328,9 @@ pub fn CascaderDropdown<T: Options>(props: CascaderDropdownProps<T>) -> Element 
         wrapper: _,
         clearance,
         status,
+        hold,
+        held,
+        mut blurred,
     } = use_cascader_engine(EngineSetup {
         config: &config,
         names: Naming {
@@ -355,7 +358,8 @@ pub fn CascaderDropdown<T: Options>(props: CascaderDropdownProps<T>) -> Element 
     });
 
     let snapshot = TriggerAria {
-        searchable,
+        // A held trigger is still the combobox.
+        searchable: searchable && !held,
         disabled,
         empty,
         controls: controlled_id,
@@ -385,8 +389,17 @@ pub fn CascaderDropdown<T: Options>(props: CascaderDropdownProps<T>) -> Element 
         {
             wrapper
                 // The trigger's click bubbles here; on a `button`, so do Enter and Space.
+                .event("onpointerdown", move |event: PointerEvent| {
+                    if searchable {
+                        hold.press(&event, combobox.is_open());
+                    }
+                })
                 .event("onclick", move |_: MouseEvent| {
                     if !disabled {
+                        // A tapped button may not take focus, and its blur closes a held list.
+                        if searchable && hold.holding() && !combobox.is_open() {
+                            let _ = trigger.focus();
+                        }
                         toggle(!combobox.is_open());
                     }
                 })
@@ -397,6 +410,9 @@ pub fn CascaderDropdown<T: Options>(props: CascaderDropdownProps<T>) -> Element 
                     }
                 })
                 .event("onkeydown", move |event: KeyboardEvent| {
+                    if searchable {
+                        hold.key(combobox.is_open());
+                    }
                     // A closed list opens on the trigger's own click, or it would toggle twice.
                     let activates = matches!(event.key(), Key::Named(NamedKey::Enter))
                         || matches!(event.key(), Key::Character(ref key) if key == " ");
@@ -405,9 +421,15 @@ pub fn CascaderDropdown<T: Options>(props: CascaderDropdownProps<T>) -> Element 
                     }
                     keys.handle(event);
                 })
-                // While searchable, focus moves to the search box, whose blur closes instead.
+                // While searchable, focus moves to the search box, whose blur closes instead; unless a touch held it here.
                 .event("onfocusout", move |event: FocusEvent| {
-                    if !searchable && blur_counts(&event) {
+                    if !blur_counts(&event) {
+                        return;
+                    }
+                    if !searchable {
+                        combobox.close();
+                    } else if hold.closes_on_blur() {
+                        blurred.set(true);
                         combobox.close();
                     }
                 })

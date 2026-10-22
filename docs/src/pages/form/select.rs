@@ -338,7 +338,10 @@ pub fn SelectPage() -> Element {
                     Code { source: "clearable" }
                     " lets the user go back to "
                     Code { source: "None" }
-                    "."
+                    ". Below the "
+                    Code { source: "sm" }
+                    " breakpoint the list opens as a sheet at the foot of the screen, and a "
+                    "touch leaves the keyboard down until the search box is tapped."
                 }
             },
             // snippet: let mut value = use_signal(|| None::<Fruit>);

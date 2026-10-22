@@ -10,7 +10,8 @@ Description: A country picker in front of a `tel` input, whose value is an E.164
 A country picker in front of a `tel` input. The picker holds the dial code, the
 input the national number, and the value is one E.164 string such as
 `"+12133734253"`. The field regroups the digits when it loses focus, for
-countries with a fixed number format.
+countries with a fixed number format. Below the `sm` breakpoint the country list
+opens as a sheet at the foot of the screen.
 
 ## Usage
 

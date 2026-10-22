@@ -10,4 +10,4 @@ pub(crate) use core::{COMBOBOX_DROPDOWN_SX, CaretKeys, ComboboxCore, nothing_fou
 pub(crate) use dropdown::VIRTUAL_ROWS;
 pub use option::{ComboboxOption, ComboboxOptionArgs, ComboboxOptionProps};
 pub(crate) use option::{RowCache, row_label, use_row_cache};
-pub(crate) use refocus::use_refocus_on_close;
+pub(crate) use refocus::{TouchHold, use_refocus_on_close, use_touch_hold};

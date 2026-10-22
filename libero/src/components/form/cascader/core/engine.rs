@@ -7,10 +7,10 @@ use crate::{
         accessibility::VisuallyHidden,
         common::{ClassList, Input, Parts},
         form::{
-            ComboboxState, DropdownPart,
+            ComboboxState, DropdownPart, TouchHold,
             combobox::nothing_found_row,
             phone_sheet::{SheetSwipe, use_sheet_swipe},
-            use_refocus_on_close,
+            use_refocus_on_close, use_touch_hold,
         },
         layout::BoxStyle,
     },
@@ -98,6 +98,12 @@ pub(in super::super) struct Engine {
     pub(in super::super) clearance: f64,
     /// The always-mounted region saying what a search left.
     pub(in super::super) status: Element,
+    /// A touch open: the trigger keeps focus until the search box's own tap (todo 3899).
+    pub(in super::super) hold: TouchHold,
+    /// Held now, so the trigger is still the combobox.
+    pub(in super::super) held: bool,
+    /// [`use_refocus_on_close`]'s blur mark, set by a held trigger's blur.
+    pub(in super::super) blurred: Signal<bool>,
 }
 
 /// The keyboard, the rows, the search box and the portaled dropdown, for any trigger.
@@ -145,6 +151,8 @@ pub(in super::super) fn use_cascader_engine(setup: EngineSetup) -> Engine {
     ));
 
     let blurred = use_refocus_on_close(opened, searchable, trigger, query);
+    let hold = use_touch_hold();
+    let held = searchable && opened && hold.held();
 
     let CascaderList {
         keys,
@@ -180,7 +188,8 @@ pub(in super::super) fn use_cascader_engine(setup: EngineSetup) -> Engine {
         anchor,
         field,
         opened,
-        searchable,
+        // Focused on open, unless a touch held the trigger.
+        searchable: searchable && !held,
         search,
         size,
         radius,
@@ -211,6 +220,8 @@ pub(in super::super) fn use_cascader_engine(setup: EngineSetup) -> Engine {
             cursor,
             state,
             blurred,
+            hold,
+            combobox: !held,
         };
         // No listbox while nothing matches; a dangling id is invalid (todo 2291).
         let controls = nothing_found.is_none().then(|| controlled_id.clone());
@@ -268,5 +279,8 @@ pub(in super::super) fn use_cascader_engine(setup: EngineSetup) -> Engine {
         wrapper,
         clearance,
         status,
+        hold,
+        held,
+        blurred,
     }
 }

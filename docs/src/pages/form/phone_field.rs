@@ -134,7 +134,9 @@ pub fn PhoneFieldPage() -> Element {
                     "the value is one E.164 string such as "
                     Code { source: "\"+12133734253\"" }
                     ". The field regroups the digits when it loses focus, for countries with a "
-                    "fixed number format."
+                    "fixed number format. Below the "
+                    Code { source: "sm" }
+                    " breakpoint the country list opens as a sheet at the foot of the screen."
                 }
             },
             // snippet: let mut phone = use_signal(String::new);

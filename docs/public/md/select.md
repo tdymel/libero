@@ -10,7 +10,9 @@ Description: A listbox over an enum with rows you can draw yourself, in the same
 A listbox over an enum, in the same frame as every other field. Unlike
 [NativeSelect](native_select.md), the rows are libero's own, so `option` can
 draw them with anything. In exchange there is no OS picker on phones. Pass
-`value` with `onchange`. `clearable` lets the user go back to `None`.
+`value` with `onchange`. `clearable` lets the user go back to `None`. Below the
+`sm` breakpoint the list opens as a sheet at the foot of the screen, and a touch
+leaves the keyboard down until the search box is tapped.
 
 ## Usage
 

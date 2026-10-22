@@ -12,8 +12,8 @@ use crate::{
         },
         form::{
             CaretKeys, ComboboxCore, ComboboxOption, DropdownPart, FIELD_CONTROL_SX, FormScope,
-            field_parts_enum, field_props, use_bound, use_field, use_field_frame,
-            with_drawn_placeholder,
+            TouchHold, field_parts_enum, field_props, use_bound, use_field, use_field_frame,
+            use_touch_hold, with_drawn_placeholder,
         },
         layout::{BoxStyle, use_box},
     },
@@ -23,7 +23,7 @@ use crate::{
         use_localization, use_theme,
     },
     localization::fill,
-    platform::{ElementApi, focus_tab_from, is_tab},
+    platform::{ElementApi, blur_counts, focus_tab_from, is_tab},
     sx::{StaticSx, Sx, sx},
     theme::{FOCUS_RING_WIDTH, Size, ios_text_floor_sx},
     utils::digits_of,
@@ -352,6 +352,9 @@ pub fn PhoneField(props: PhoneFieldProps) -> Element {
     let row_box = use_box().framework_sx(&ROW_SX).prepare();
 
     let opened = state.is_open() && !disabled && !readonly;
+    // Opened by a touch, the picker keeps focus until the search box's own tap (todo 3899).
+    let hold = use_touch_hold();
+    let held = opened && hold.held();
     // The list opens on the current country, like a native `<select>`: its row
     // in the sorted list, worked out on open only (todo 2718).
     let codes = props.countries.clone();
@@ -401,6 +404,9 @@ pub fn PhoneField(props: PhoneFieldProps) -> Element {
         .event("onmousedown", move |event: MouseEvent| {
             event.stop_propagation()
         })
+        // The tap that focuses it natively, raising the keyboard; the held picker's blur lets it.
+        .event("onpointerdown", move |_: PointerEvent| hold.search_press())
+        .event("onfocus", move |_: FocusEvent| hold.search_focus())
         // The list cancels `mousedown`, so only an outside click blurs this.
         .event("onblur", move |_: FocusEvent| state.close())
         // Portaled after the page: Tab moves on from the country button (todo 2289).
@@ -433,6 +439,7 @@ pub fn PhoneField(props: PhoneFieldProps) -> Element {
             flag,
             opened: !rows.is_empty(),
             home_row: home_row.clone(),
+            hold,
             disabled,
             readonly,
         },
@@ -453,6 +460,7 @@ pub fn PhoneField(props: PhoneFieldProps) -> Element {
             state,
             query,
             opened,
+            held,
             home_row,
             size,
             radius: radius.size,
@@ -686,6 +694,7 @@ struct PickerButton {
     opened: bool,
     /// The current country's row, which a click opens on.
     home_row: Rc<dyn Fn() -> Option<usize>>,
+    hold: TouchHold,
     disabled: bool,
     readonly: bool,
 }
@@ -701,6 +710,7 @@ fn phone_picker(picker_box: BoxStyle, button: PickerButton) -> Element {
         flag,
         opened,
         home_row,
+        hold,
         disabled,
         readonly,
     } = button;
@@ -737,12 +747,27 @@ fn phone_picker(picker_box: BoxStyle, button: PickerButton) -> Element {
         .event("onmousedown", move |event: MouseEvent| {
             event.prevent_default()
         })
+        .event("onpointerdown", move |event: PointerEvent| {
+            hold.press(&event, state.is_open())
+        })
+        .event("onkeydown", move |_: KeyboardEvent| {
+            hold.key(state.is_open())
+        })
         .event("onclick", move |_: MouseEvent| {
             if !disabled && !readonly {
                 if !state.is_open() {
                     state.set_active(home_row());
+                    // The `mousedown` cancel leaves it unfocused, and its blur closes a held list.
+                    if hold.holding() {
+                        let _ = element.focus();
+                    }
                 }
                 state.toggle();
+            }
+        })
+        .event("onblur", move |event: FocusEvent| {
+            if blur_counts(&event) && hold.closes_on_blur() {
+                state.close();
             }
         })
         .render(
@@ -768,6 +793,8 @@ struct Picker {
     state: ComboboxState,
     query: Signal<String>,
     opened: bool,
+    /// Opened by a touch: the search box waits for its own tap.
+    held: bool,
     home_row: Rc<dyn Fn() -> Option<usize>>,
     size: Size,
     radius: Size,
@@ -792,6 +819,7 @@ fn phone_leading(with_select: bool, parts: Picker, rows: Vec<Element>) -> Option
         state,
         mut query,
         opened,
+        held,
         home_row,
         size,
         radius,
@@ -832,7 +860,7 @@ fn phone_leading(with_select: bool, parts: Picker, rows: Vec<Element>) -> Option
                 disabled,
                 width: PopoverWidth::Min,
                 header: opened.then_some(search),
-                autofocus: search_element,
+                autofocus: (!held).then_some(search_element),
                 caret_keys: CaretKeys::Always,
                 labelled_by: Some(picker_id(state)),
                 parts: dropdown_parts,

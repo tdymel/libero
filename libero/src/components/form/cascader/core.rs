@@ -202,6 +202,9 @@ pub(crate) fn CascaderCore(props: CascaderCoreProps) -> Element {
         wrapper,
         clearance: _,
         status,
+        hold,
+        held,
+        blurred,
     } = use_cascader_engine(EngineSetup {
         config: &config,
         names: Naming {
@@ -228,7 +231,7 @@ pub(crate) fn CascaderCore(props: CascaderCoreProps) -> Element {
     });
 
     let trigger = cascader_trigger(
-        trigger_control(control, &field, searchable && opened),
+        trigger_control(control, &field, searchable && opened && !held),
         Trigger {
             element: trigger_element,
             state,
@@ -237,6 +240,9 @@ pub(crate) fn CascaderCore(props: CascaderCoreProps) -> Element {
             disabled,
             readonly,
             searchable,
+            hold: searchable.then_some(hold),
+            held,
+            blurred,
             empty,
             chevron: clear.is_none(),
             display: props.display.clone(),

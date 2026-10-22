@@ -9,7 +9,9 @@ Description: A listbox over an enum that holds any number of its options, drawn 
 
 A listbox over an enum that holds any number of its options, drawn as chips in
 the trigger. A pick toggles the row and the list stays open. Escape, a click
-elsewhere or the trigger close it. It works like [Select](select.md) otherwise.
+elsewhere or the trigger close it. Below the `sm` breakpoint the list opens as a
+sheet at the foot of the screen, closed by its Done button. It works like
+[Select](select.md) otherwise.
 
 ## Usage
 

@@ -13,9 +13,9 @@ use crate::{
         },
         form::{
             Asks, CaretKeys, ComboboxCore, ComboboxOption, DropdownPart, PreparedField, RowCache,
-            VIRTUAL_ROWS, clear_button, field_control_sx, field_parts_enum, field_props,
+            TouchHold, VIRTUAL_ROWS, clear_button, field_control_sx, field_parts_enum, field_props,
             use_chip_announcer, use_field, use_field_frame, use_refocus_on_close, use_row_cache,
-            with_drawn_placeholder,
+            use_touch_hold, with_drawn_placeholder,
         },
         layout::{BoxStyle, use_box},
     },
@@ -384,6 +384,9 @@ pub(crate) fn SelectCore(props: SelectCoreProps) -> Element {
     let state = props.state;
     let opened = state.is_open() && !disabled && !readonly;
     let searchable = props.searchable && !disabled;
+    // Opened by a touch, the trigger keeps focus until the search box's own tap (todo 3899).
+    let hold = use_touch_hold();
+    let held = searchable && opened && hold.held();
 
     // A native `<select>`'s buffer: "ber" finds Berlin, a lone "b" after a pause cycles.
     let typeahead = use_typeahead(TYPEAHEAD_RESET);
@@ -421,6 +424,7 @@ pub(crate) fn SelectCore(props: SelectCoreProps) -> Element {
         matches: props.matches,
         searchable,
         trigger: trigger_element,
+        hold: searchable.then_some(hold),
         disabled,
         readonly,
     };
@@ -494,6 +498,7 @@ pub(crate) fn SelectCore(props: SelectCoreProps) -> Element {
         (true, None) => Some(
             chevron_box
                 .event("onmousedown", |event: MouseEvent| event.prevent_default())
+                .event("onpointerdown", move |event: PointerEvent| open.press(&event))
                 .event("onclick", move |_: MouseEvent| open.toggle())
                 .render(HtmlTag::Span, Vec::new(), rsx! { Glyph { slot: IconSlot::ChevronDown, icon: lucide::chevron_down::outlined } }),
         ),
@@ -538,8 +543,8 @@ pub(crate) fn SelectCore(props: SelectCoreProps) -> Element {
     let aria = state.a11y_attributes_keyed(&rows.keys);
 
     let search_box = use_box().framework_sx(&SEARCH_SX).prepare();
-    // The caller's name follows the combobox role onto the open search box.
-    let searching = searchable && opened;
+    // The caller's name follows the combobox role onto the focused search box.
+    let searching = searchable && opened && !held;
     let (naming, attributes): (Vec<Attribute>, Vec<Attribute>) =
         props.attributes.iter().cloned().partition(|attribute| {
             searching && matches!(attribute.name, "aria-label" | "aria-labelledby")
@@ -556,9 +561,14 @@ pub(crate) fn SelectCore(props: SelectCoreProps) -> Element {
                     query,
                     blurred,
                     trigger: trigger_element,
+                    hold,
                 },
                 state,
-                aria.clone(),
+                // A held trigger is still the combobox.
+                match searching {
+                    true => aria.clone(),
+                    false => Vec::new(),
+                },
                 naming,
                 &field,
                 required,
@@ -615,8 +625,8 @@ pub(crate) fn SelectCore(props: SelectCoreProps) -> Element {
         typed,
         TriggerParts {
             element: trigger_element,
-            opened,
-            searchable,
+            searching,
+            blurred,
             multiple,
             chevron: !multiple && clear.is_none(),
             toolbar_item,
@@ -654,8 +664,8 @@ pub(crate) fn SelectCore(props: SelectCoreProps) -> Element {
                 .count() as u64,
             false => 0,
         },
-        // Focused once measured; earlier is a silent no-op.
-        autofocus: searchable.then_some(search),
+        // Focused once measured; earlier is a silent no-op. Never on a touch open.
+        autofocus: (searchable && !held).then_some(search),
         labelled_by: field.label_id(),
         aria_label: aria_label_of(&props.attributes),
         parts: props.dropdown_parts,
@@ -786,6 +796,8 @@ struct SelectOpen {
     matches: Option<Callback<String, Vec<bool>>>,
     searchable: bool,
     trigger: ElementHandle,
+    /// Searchable only.
+    hold: Option<TouchHold>,
     disabled: bool,
     readonly: bool,
 }
@@ -805,6 +817,13 @@ impl SelectOpen {
             self.state.set_active(Some(self.first_selected()));
         }
         self.state.set_open(next);
+    }
+
+    /// The opening press, on the trigger, chip slot or chevron.
+    fn press(self, event: &PointerEvent) {
+        if let Some(hold) = self.hold {
+            hold.press(event, self.state.is_open());
+        }
     }
 
     /// For the chip slot and chevron: focuses the trigger and toggles. State is read first,
@@ -878,9 +897,10 @@ struct TriggerKeys {
 
 struct TriggerParts {
     element: ElementHandle,
-    /// The list is open and usable.
-    opened: bool,
-    searchable: bool,
+    /// The open search box holds focus and the combobox role.
+    searching: bool,
+    /// [`use_refocus_on_close`]'s blur mark.
+    blurred: Signal<bool>,
     multiple: bool,
     /// A single select with nothing to clear draws its own chevron.
     chevron: bool,
@@ -901,8 +921,8 @@ fn select_trigger(
 ) -> Element {
     let TriggerParts {
         element,
-        opened,
-        searchable,
+        searching,
+        mut blurred,
         multiple,
         chevron,
         toolbar_item,
@@ -911,9 +931,9 @@ fn select_trigger(
     let open = keys.open;
     let state = open.state;
     let (disabled, readonly) = (open.disabled, open.readonly);
+    let searchable = open.searchable;
 
-    // Only one element is the combobox: with the search box open, the trigger keeps `aria-haspopup`.
-    let searching = searchable && opened;
+    // Only one element is the combobox: with the search box focused, the trigger keeps `aria-haspopup`.
     let mut attributes = match searching {
         true => vec![attr("aria-haspopup", "listbox")],
         false => aria,
@@ -941,6 +961,11 @@ fn select_trigger(
                 }
             }),
         )
+        // A multi-select's press bubbles to the slot around it.
+        .event(
+            "onpointerdown",
+            (!multiple).then_some(move |event: PointerEvent| open.press(&event)),
+        )
         // A multi-select's click bubbles to the slot around it, which owns it.
         .event("onclick", move |_: MouseEvent| {
             if let Some(item) = toolbar_item {
@@ -951,12 +976,23 @@ fn select_trigger(
             }
         })
         .event("onkeydown", move |event: KeyboardEvent| {
+            if let Some(hold) = open.hold {
+                hold.key(state.is_open());
+            }
             trigger_key(&event, &keys, &typed)
         })
-        // While searchable, focus moves to the search box, whose blur closes instead.
+        // While searchable, focus moves to the search box, whose blur closes instead; unless a touch held it here.
         .event("onblur", move |event: FocusEvent| {
-            if !searchable && blur_counts(&event) {
-                state.close();
+            if !blur_counts(&event) {
+                return;
+            }
+            match open.hold {
+                None => state.close(),
+                Some(hold) if hold.closes_on_blur() => {
+                    blurred.set(true);
+                    state.close();
+                }
+                Some(_) => {}
             }
         })
         .render(
@@ -1056,6 +1092,9 @@ fn select_control(
     match multiple {
         true => value_slot
             .event("onmousedown", |event: MouseEvent| event.prevent_default())
+            .event("onpointerdown", move |event: PointerEvent| {
+                open.press(&event)
+            })
             .event("onclick", move |_: MouseEvent| open.toggle())
             .render(
                 HtmlTag::Div,
@@ -1231,6 +1270,7 @@ struct SelectSearch {
     /// [`use_refocus_on_close`]'s blur mark.
     blurred: Signal<bool>,
     trigger: ElementHandle,
+    hold: TouchHold,
 }
 
 /// The open search box owns the combobox role and the trigger's a11y wiring, field label included.
@@ -1250,6 +1290,7 @@ fn select_search_box(
         mut query,
         mut blurred,
         trigger,
+        hold,
     } = search;
     let trigger_id = field.id().to_string();
     // A blank name names nothing, so it is not moved onto the box.
@@ -1295,6 +1336,9 @@ fn select_search_box(
         .event("onmousedown", move |event: MouseEvent| {
             event.stop_propagation()
         })
+        // The tap that focuses it natively, raising the keyboard; the held trigger's blur lets it.
+        .event("onpointerdown", move |_: PointerEvent| hold.search_press())
+        .event("onfocus", move |_: FocusEvent| hold.search_focus())
         // Closes while searchable; the rows cancel `mousedown`, so a click inside never blurs.
         .event("onblur", move |event: FocusEvent| {
             if blur_counts(&event) {

@@ -3,8 +3,8 @@
 
 use dioxus::prelude::*;
 use libero::components::{
-    Button, CascaderDropdown, CascaderOption, Flex, MultiSelect, PhoneField, Select, Text,
-    use_cascader,
+    Button, Cascader, CascaderDropdown, CascaderOption, Flex, MultiSelect, PhoneField, Select,
+    Text, use_cascader,
 };
 
 use crate::{Routes, common::Fruit};
@@ -20,6 +20,7 @@ fn SelectPhonePage() -> Element {
     let mut plain = use_signal(|| None::<Fruit>);
     let mut searched = use_signal(|| None::<Fruit>);
     let mut many = use_signal(|| vec![Fruit::Apple]);
+    let mut ore = use_signal(|| None::<String>);
 
     rsx! {
         Flex { direction: "column", gap: "md", padding: "md",
@@ -40,23 +41,35 @@ fn SelectPhonePage() -> Element {
             div { id: "phone",
                 PhoneField { label: "Phone", country: "DE" }
             }
+            div { id: "cascade",
+                Cascader {
+                    label: "Ore",
+                    searchable: true,
+                    data: ores(),
+                    value: ore(),
+                    onchange: move |next: Option<String>| ore.set(next),
+                }
+            }
             Text { id: "echo", "{plain:?} {searched:?} {many:?}" }
         }
     }
+}
+
+fn ores() -> Vec<CascaderOption<String>> {
+    vec![
+        CascaderOption::new("t1", "Tier 1").children(vec![
+            CascaderOption::new("iron", "Iron ore"),
+            CascaderOption::new("copper", "Copper ore"),
+        ]),
+        CascaderOption::new("t2", "Tier 2").children(vec![CascaderOption::new("gold", "Gold ore")]),
+    ]
 }
 
 /// A custom trigger at the screen's foot, which the sheet would cover (3914).
 #[component]
 fn LowTriggerPage() -> Element {
     let mut ore = use_signal(|| None::<String>);
-    let options = vec![
-        CascaderOption::new("t1", "Tier 1").children(vec![
-            CascaderOption::new("iron", "Iron ore"),
-            CascaderOption::new("copper", "Copper ore"),
-        ]),
-        CascaderOption::new("t2", "Tier 2").children(vec![CascaderOption::new("gold", "Gold ore")]),
-    ];
-    let cascader = use_cascader(options, ore(), move |next| ore.set(next));
+    let cascader = use_cascader(ores(), ore(), move |next| ore.set(next));
 
     rsx! {
         Flex { direction: "column", gap: "md", padding: "md",

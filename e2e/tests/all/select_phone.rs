@@ -1,5 +1,6 @@
 //! The list fields at 360px: `Select`, `MultiSelect` and `PhoneField` open the phone sheet
-//! (todos 3897, 3925), touch rows and targets (3898, 3901), and a low custom `Cascader` trigger clears the sheet (3914).
+//! (todos 3897, 3925), touch rows and targets (3898, 3901), no search focus on a touch open (3899),
+//! and a low custom `Cascader` trigger clears the sheet (3914).
 
 use anyhow::Result;
 use chromiumoxide::Page;
@@ -120,27 +121,86 @@ fn a_phone_multi_select_closes_on_done() {
     });
 }
 
-/// Todo 3925: the search box sits pinned atop the sheet's rows.
+const SEARCH: &str = "[data-slot=dropdown] [data-slot=search]";
+
+/// Todo 3899: a touch open leaves focus, and the combobox role, on the trigger in `field`,
+/// with the search box pinned atop the rows; its own tap focuses it and keeps the sheet.
+async fn touch_open_holds_the_trigger(field: &str, trigger: &str, roles: bool) -> Result<()> {
+    let fixture = phone("/select-phone").await;
+    let page = &fixture.page;
+    tap(page, &format!("{field} {trigger}")).await?;
+    sheet_shown(page).await?;
+    let held = format!(
+        "(() => {{ const box = document.querySelector({SEARCH:?}); \
+         const list = document.querySelector('[data-slot=dropdown] [role=listbox]'); \
+         const on = document.activeElement; \
+         return !!box && !!list && !!on.closest({field:?}) && on.matches({trigger:?}) \
+           && (!{roles} || (on.getAttribute('role') === 'combobox' && !box.hasAttribute('role'))) \
+           && box.getBoundingClientRect().bottom <= list.getBoundingClientRect().top; }})()"
+    );
+    wait::for_js_true(page, &held, "the trigger focused, the box above the rows").await?;
+    tap(page, SEARCH).await?;
+    let searching = format!(
+        "(() => {{ const box = document.querySelector({SEARCH:?}); \
+         return !!box && box === document.activeElement \
+           && (!{roles} || box.getAttribute('role') === 'combobox'); }})()"
+    );
+    wait::for_js_true(page, &searching, "the box focused by its tap").await?;
+    sheet_shown(page).await?;
+    fixture.console.assert_clean("a touch-opened search")?;
+    fixture.close().await
+}
+
 #[test]
-fn a_phone_sheet_pins_the_search_box_on_top() {
-    const SEARCH: &str = "[data-slot=dropdown] [data-slot=search]";
+fn a_touch_open_keeps_the_select_trigger_focused() {
+    block_on(touch_open_holds_the_trigger(
+        "#searched",
+        "[role=combobox]",
+        true,
+    ))
+    .unwrap();
+}
+
+#[test]
+fn a_touch_open_keeps_the_country_picker_focused() {
+    block_on(touch_open_holds_the_trigger(
+        "#phone",
+        "[id$='-picker']",
+        false,
+    ))
+    .unwrap();
+}
+
+#[test]
+fn a_touch_open_keeps_the_cascader_trigger_focused() {
+    block_on(touch_open_holds_the_trigger(
+        "#cascade",
+        "[role=combobox]",
+        true,
+    ))
+    .unwrap();
+}
+
+/// Todo 3899: the held trigger's blur closes the list.
+#[test]
+fn a_held_trigger_closes_on_blur() {
+    const TRIGGER: &str = "#searched [role=combobox]";
     block_on(async {
         let fixture = phone("/select-phone").await;
         let page = &fixture.page;
-        tap(page, "#searched [role=combobox]").await.unwrap();
+        tap(page, TRIGGER).await.unwrap();
         sheet_shown(page).await.unwrap();
-        let pinned = format!(
-            "(() => {{ const box = document.querySelector({SEARCH:?}); \
-             const list = document.querySelector('[data-slot=dropdown] [role=listbox]'); \
-             return !!box && box === document.activeElement \
-               && box.getBoundingClientRect().bottom <= list.getBoundingClientRect().top; }})()"
+        let blur = format!(
+            "(() => {{ const on = document.activeElement; \
+             if (!on.matches({TRIGGER:?})) return false; on.blur(); return true; }})()"
         );
-        wait::for_js_true(page, &pinned, "the box focused above the rows")
+        wait::for_js_true(page, &blur, "the held trigger blurred")
             .await
             .unwrap();
+        closed(page, TRIGGER).await.unwrap();
         fixture
             .console
-            .assert_clean("a phone's searchable sheet")
+            .assert_clean("a blurred held trigger")
             .unwrap();
         fixture.close().await.unwrap();
     });

@@ -3,7 +3,7 @@ use dioxus::prelude::*;
 use crate::{
     components::{
         common::{HtmlTag, Part, inset_focus_ring_sx},
-        form::{ComboboxState, DropdownPart, with_drawn_placeholder},
+        form::{ComboboxState, DropdownPart, TouchHold, with_drawn_placeholder},
         layout::BoxStyle,
     },
     hooks::ElementHandle,
@@ -48,6 +48,9 @@ pub(super) struct CascaderSearch {
     pub(super) cursor: Signal<Vec<usize>>,
     pub(super) state: ComboboxState,
     pub(super) blurred: Signal<bool>,
+    pub(super) hold: TouchHold,
+    /// Focused, so the combobox; a held trigger keeps the role.
+    pub(super) combobox: bool,
 }
 
 /// The search box at the top of an open, `searchable` list.
@@ -66,8 +69,14 @@ pub(super) fn search_header(
         mut cursor,
         state,
         mut blurred,
+        hold,
+        combobox,
     } = search;
     let drawn = placeholder.clone();
+    let (controlled_id, descendant) = match combobox {
+        true => (controlled_id, descendant),
+        false => (None, None),
+    };
     let input = style
         .element(&element)
         .attr_default("type", "text")
@@ -78,10 +87,13 @@ pub(super) fn search_header(
         // Ours is the list underneath; the browser's would cover it.
         .attr("autocomplete", "off")
         .attr("aria-autocomplete", "list")
-        .attr("role", "combobox")
-        .attr("aria-haspopup", "listbox")
+        .attr("role", combobox.then_some("combobox"))
+        .attr("aria-haspopup", combobox.then_some("listbox"))
         // Expanded only while a listbox is there to control.
-        .attr("aria-expanded", controlled_id.is_some().to_string())
+        .attr(
+            "aria-expanded",
+            combobox.then(|| controlled_id.is_some().to_string()),
+        )
         .attr("aria-controls", controlled_id)
         .attr("aria-labelledby", names.label_id.clone())
         .attr("aria-describedby", names.describedby.clone())
@@ -97,6 +109,9 @@ pub(super) fn search_header(
         .event("onmousedown", move |event: MouseEvent| {
             event.stop_propagation()
         })
+        // The tap that focuses it natively, raising the keyboard; the held trigger's blur lets it.
+        .event("onpointerdown", move |_: PointerEvent| hold.search_press())
+        .event("onfocus", move |_: FocusEvent| hold.search_focus())
         // Closes while searchable; the rows cancel `mousedown`, so a click inside never blurs.
         .event("onblur", move |event: FocusEvent| {
             if blur_counts(&event) {
