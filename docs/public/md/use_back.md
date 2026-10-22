@@ -2,6 +2,7 @@
 
 Crate: `libero`
 Import: `use libero::hooks::use_back;`
+Feature: `use-back` (on by default, turns on `use-popover`; [features.md](features.md))
 Source: <https://github.com/tdymel/libero/tree/main/libero/src/hooks/dismiss.rs>
 Index: [index.md](index.md) lists every other page
 Description: Runs a handler on Android's Back button instead of leaving the app, below any overlay opened later; does nothing elsewhere.

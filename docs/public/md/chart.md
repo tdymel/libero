@@ -2,7 +2,7 @@
 
 Crate: `libero`, feature `charts`
 Import: `use libero::components::{BarChart, Candle, CandlestickChart, ChartHandle, ChartRange, FunnelChart, HeatmapChart, LineChart, PieChart, RadarAxis, RadarChart, ScatterChart, ScatterSeries, Series, Slice, Trend, use_chart};`
-Feature: `charts` (off by default, turns on `skeleton`, `mark`; [features.md](features.md))
+Feature: `charts` (off by default, turns on `skeleton`, `mark`, `focus-trap`, `use-accessibility`, `use-popover`, `use-debounce`, `use-id`, `use-icon`; [features.md](features.md))
 Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/data_display/chart>
 Index: [index.md](index.md) lists every other page
 Description: Line, bar, pie, funnel, scatter, heatmap, candlestick and radar charts as SVG, with a tooltip, arrow keys, a toggle legend, and a summary for screen readers.

@@ -2,7 +2,7 @@
 
 Crate: `libero`
 Import: `use libero::components::NavLink;`
-Feature: `nav-link` (off by default, turns on `tree`, `anchor`; [features.md](features.md))
+Feature: `nav-link` (off by default, turns on `tree`, `anchor`, `collapse`, `use-id`; [features.md](features.md))
 Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/navigation/nav_link.rs>
 Index: [index.md](index.md) lists every other page
 Description: A navigation list item for a sidebar or nav bar, a link that marks the current page with `aria-current`.

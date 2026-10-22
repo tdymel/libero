@@ -2,6 +2,7 @@
 
 Crate: `libero`
 Import: `use libero::hooks::{MediaError, MediaHandle, use_media};`
+Feature: `use-media` (off by default, turns on `use-element`; [features.md](features.md))
 Source: <https://github.com/tdymel/libero/tree/main/libero/src/hooks/media.rs>
 Index: [index.md](index.md) lists every other page
 Description: Plays and reads an `<audio>` or `<video>` you render yourself, one signal per read; the engine behind `Audio` and `Video`.

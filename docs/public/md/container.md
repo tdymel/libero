@@ -2,7 +2,7 @@
 
 Crate: `libero`
 Import: `use libero::components::Container;`
-Feature: none, always compiled ([features.md](features.md))
+Feature: `container` (on by default, turns on `box`; [features.md](features.md))
 Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/layout/container.rs>
 Index: [index.md](index.md) lists every other page
 Description: Centers content and caps its width at a breakpoint.

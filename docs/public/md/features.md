@@ -2,158 +2,216 @@
 
 Crate: `libero`
 Index: [index.md](index.md) lists every other page
-Description: Each component behind its own Cargo feature: the recommended setup, the default, the category features and what each component feature turns on.
+Description: Every component and hook behind its own Cargo feature: the recommended setup, the default, the groups, what each feature turns on, and the other features.
 
-Each component sits behind a Cargo feature, so an app compiles only the
-components it uses. The default turns none on: libero alone compiles only the
-layout components and the shared pieces below. Add one feature per component,
-Text and Button included, or all-components to try everything.
+Every component and every hook sits behind its own Cargo feature. Turn on only
+what you use: the wasm gets smaller and the builds faster. An assistant that
+manages your Cargo.toml can keep the list exact.
 
 ## Recommended
 
-Turn `default-features` off and list the components you use, one feature each.
-A component's feature turns on the features it is built from, so `table` alone
-gives a working `Table`. The compiler names a missing one: a component behind
-an off feature is not in `libero::components`.
+Turn `default-features` off and list the components and hooks you use. A
+feature turns on the features it is built from, so `table` alone gives a
+working `Table`. The compiler names a missing one: an item behind an off
+feature is not in `libero`.
 
 ```toml
 libero = { version = "0.3", default-features = false, features = [
     "table",
     "select",
     "date-time",
+    "use-clipboard",
 ] }
 ```
 
-Assistants writing code with libero should do the same: start from
-`default-features = false` and add the feature of each component they use.
+## Default
 
-## Always compiled
+The default turns on the layout components, the common components and the
+common hooks: layout, text, title, anchor, kbd, mark, blockquote, button, action-icon, icon, alert, loader, tooltip, dialog, modal, form-root, fieldset, text-field, checkbox, switch, select, use-media-query, use-color-scheme, use-clipboard, use-debounce, use-timers, use-hotkeys, use-local-storage. With `default-features = false` and
+no features, libero compiles no component and no hook: only the provider,
+styling, theme and platform layer.
 
-The hooks (bar use_modal, use_drawer, use_floating_window, use_lightbox and the sortable hooks, which come with their component), the layout components (Box, Flex, Grid, Paper, ScrollArea, Header, Sidebar, Splitter and the rest), Pictogram and the icon provider, use_popover, FocusTrap and VisuallyHidden. Every component is built from them.
+## Groups
 
-## Categories
+A group feature turns on every feature of its group. `all-components` turns on
+every component group, `all-hooks` every hook.
 
-A category feature turns on every component feature of its category, the ones
-off by default too. `all-components` turns on every category.
-
-| Category | Turns on |
+| Group | Turns on |
 |---|---|
+| `accessibility` | focus-trap, visually-hidden |
 | `buttons` | action-icon, button, button-group, copy, direction-toggle, repository, share, theme-switcher, tldr, toolbar |
-| `data-display` | accordion, audio, avatar, badge, carousel, charts, data-list, icon, image, image-list, indicator, kanban, list, marquee, qr-code, sortable, table, timeline, video |
+| `data-display` | accordion, audio, avatar, badge, carousel, charts, data-list, icon, image, image-list, indicator, kanban, list, marquee, pictogram, qr-code, sortable, table, timeline, video |
 | `feedback` | alert, circular-progress, loader, notifications, progress-bar, skeleton |
 | `form` | autocomplete, cascader, checkbox, chip, color, combobox, date-time, fieldset, file-field, form-root, image-cropper, native-select, number-field, password-field, phone-field, pin-field, radio, radio-group, rating, rich-text-editor, segmented-control, select, slider, switch, tags-field, text-field, textarea |
+| `layout` | aspect-ratio, box, center, collapse, container, divider, flex, float, grid, header, paper, scroll-area, scroller, sidebar, splitter, transition |
 | `navigation` | anchor, burger, menubar, nav-link, navigation-bar, pagination, stepper, tabs, tree |
 | `overlay` | dialog, drawer, floating-window, hover-card, lightbox, menu, modal, overlay-backdrop, shortcut-help, spotlight, tooltip, tour |
 | `typography` | blockquote, code, kbd, mark, text, title |
+| `all-hooks` | use-accessibility, use-back, use-clipboard, use-color-scheme, use-countdown, use-debounce, use-direction, use-drag, use-element, use-focus-return, use-fullscreen, use-geolocation, use-history, use-hotkeys, use-icon, use-id, use-indexed-db, use-intersection, use-long-press, use-media, use-media-query, use-popover, use-push-subscription, use-share, use-local-storage, use-swipe, use-system-notification, use-timers, use-user-media |
 
 ## Components
 
-Every component feature is off by default. Turning one on turns on the features
-in its Turns on column.
+`form-root` is Form and use_form, `overlay-backdrop` is Overlay. `table`'s date
+filter, FileField's `crop` and Image's `zoomable` use another feature only when
+it is on (Notes).
 
-Two names differ from their component's, as the category took it: `form-root`
-is Form and use_form, `overlay-backdrop` is Overlay.
+| Feature | Components | Turns on | Default | Notes |
+|---|---|---|---|---|
+| `focus-trap` | FocusTrap | use-focus-return, visually-hidden | on |  |
+| `visually-hidden` | VisuallyHidden | box | on |  |
+| `action-icon` | ActionIcon | button, loader, tooltip, shortcut-help, anchor, paper, pictogram, use-hotkeys, use-id | on |  |
+| `button` | Button | loader, anchor | on |  |
+| `button-group` | ButtonGroup | box | off |  |
+| `copy` | Copy | action-icon, use-clipboard | off |  |
+| `direction-toggle` | DirectionToggle | action-icon, use-direction | off |  |
+| `repository` | Repository | action-icon, use-local-storage | off | The Simple Icons brand marks (pictogram-icons-simple). |
+| `share` | Share | action-icon, icon, button, use-share | off |  |
+| `theme-switcher` | ThemeSwitcher | menu, action-icon, use-color-scheme | off |  |
+| `tldr` | Tldr | chip, menu, icon, action-icon | off | The Lobe Icons brand marks (pictogram-icons-lobe). |
+| `toolbar` | Toolbar, ToolbarGroup, ToolbarSeparator | box, use-hotkeys | off |  |
+| `accordion` | Accordion | collapse, use-icon, use-id | off |  |
+| `audio` | Audio | slider, menu, button, modal, action-icon, shortcut-help, use-fullscreen, use-media | off |  |
+| `avatar` | Avatar, AvatarGroup | tooltip, use-icon, use-id, visually-hidden | off |  |
+| `badge` | Badge | box | off |  |
+| `carousel` | Carousel | action-icon, scroll-area | off |  |
+| `charts` | LineChart, BarChart, PieChart and the other charts | skeleton, mark, focus-trap, use-accessibility, use-popover, use-debounce, use-id, use-icon | off | charts-rs, about 240 KB brotli on the web. |
+| `data-list` | DataList | box | off |  |
+| `icon` | Icon | pictogram, visually-hidden | on |  |
+| `image` | Image | box | off | Its zoomable prop needs lightbox on as well; without it the picture renders unzoomable. |
+| `image-list` | ImageList | image, grid | off |  |
+| `indicator` | Indicator | box | off |  |
+| `kanban` | Kanban | sortable, menu, focus-trap | off |  |
+| `list` | List | box | off |  |
+| `marquee` | Marquee | action-icon | off |  |
+| `pictogram` | Pictogram | use-icon | on |  |
+| `qr-code` | QrCode | box | off | The fast_qr encoder. |
+| `sortable` | Sortable, use_sortable | use-drag, use-icon, use-id, use-media-query, use-timers, visually-hidden | off |  |
+| `table` | Table, column and the table toolbar buttons | badge, progress-bar, skeleton, checkbox, native-select, select, text-field, pagination, menu, sortable, icon, action-icon, button, collapse, use-debounce | off | The largest component: its filters and editors bring the select and text fields. With date-time on, a date filter uses DateField. |
+| `timeline` | Timeline | visually-hidden | off |  |
+| `video` | Video | slider, menu, button, modal, action-icon, shortcut-help, use-fullscreen, use-media | off |  |
+| `alert` | Alert | action-icon | on |  |
+| `circular-progress` | CircularProgress | box, use-accessibility | off |  |
+| `loader` | Loader | box | on |  |
+| `notifications` | Notifications, use_notifications | alert, button, float | off |  |
+| `progress-bar` | ProgressBar | slider | off |  |
+| `skeleton` | Skeleton | box | off |  |
+| `autocomplete` | Autocomplete | combobox, action-icon | off |  |
+| `cascader` | Cascader | combobox, action-icon, use-media-query | off |  |
+| `checkbox` | Checkbox | use-icon, use-id, visually-hidden | on |  |
+| `chip` | Chip | action-icon, anchor | on |  |
+| `color` | ColorField, ColorPicker, ColorSwatch, HueSlider, AlphaSlider | slider, action-icon | off |  |
+| `combobox` | Combobox, use_combobox | loader, paper, scroll-area, use-id, use-popover, visually-hidden, use-icon | on |  |
+| `date-time` | ChronoField, ChronoPicker, DateField, DatePicker, TimeField, TimePicker and the other date and time fields and pickers | tabs, action-icon, use-drag, use-media-query | off |  |
+| `fieldset` | Fieldset | form-root | on |  |
+| `file-field` | FileField | chip, select, alert, modal, action-icon, button, dialog, loader | off | Its crop prop needs image-cropper on as well; without it the file passes uncropped. |
+| `form-root` | Form, use_form | alert | on |  |
+| `image-cropper` | ImageCropper | slider, action-icon | off |  |
+| `native-select` | NativeSelect | combobox, select | off |  |
+| `number-field` | NumberField | action-icon | off |  |
+| `password-field` | PasswordField | text-field, action-icon | off |  |
+| `phone-field` | PhoneField | combobox | off |  |
+| `pin-field` | PinField | use-icon, visually-hidden, use-id | off |  |
+| `radio` | Radio | use-accessibility, use-icon, visually-hidden, use-id | off |  |
+| `radio-group` | RadioGroup | radio | off |  |
+| `rating` | Rating | use-icon, visually-hidden, use-id, use-drag | off |  |
+| `rich-text-editor` | RichTextEditor, RichTextView | toolbar, text-field, menu, code, mark, modal, action-icon, button, dialog, shortcut-help, text, flex, use-history | off |  |
+| `segmented-control` | SegmentedControl | button, use-id | off |  |
+| `select` | Select, MultiSelect | combobox, chip, action-icon | on |  |
+| `slider` | Slider, RangeSlider | tooltip, use-icon, visually-hidden, use-id, use-drag | off |  |
+| `switch` | Switch | use-accessibility, use-icon, visually-hidden, use-id | on |  |
+| `tags-field` | TagsField | combobox, chip, select, action-icon | off |  |
+| `text-field` | TextField | use-icon, visually-hidden, use-id | on |  |
+| `textarea` | Textarea | use-debounce, use-icon, visually-hidden, use-id | off |  |
+| `aspect-ratio` | AspectRatio | box | on |  |
+| `box` | Box | use-element | on |  |
+| `center` | Center | box | on |  |
+| `collapse` | Collapse | box, use-timers | on |  |
+| `container` | Container | box | on |  |
+| `divider` | Divider | use-id, use-icon, visually-hidden | on |  |
+| `flex` | Flex | box | on |  |
+| `float` | Float | box | on |  |
+| `grid` | Grid, GridItem, GridZone | box | on |  |
+| `header` | Header | paper, use-id, use-icon, visually-hidden | on |  |
+| `paper` | Paper | box | on |  |
+| `scroll-area` | ScrollArea, use_scroll_area | box, use-drag | on |  |
+| `scroller` | Scroller, use_scroller | scroll-area, use-icon, use-id, visually-hidden | on |  |
+| `sidebar` | Sidebar | scroll-area | on |  |
+| `splitter` | Splitter | use-drag, use-id, use-icon, visually-hidden | on |  |
+| `transition` | Transition | box, use-timers | on |  |
+| `anchor` | Anchor | use-icon, visually-hidden | on |  |
+| `burger` | Burger | action-icon | off |  |
+| `menubar` | Menubar | menu | off |  |
+| `nav-link` | NavLink | tree, anchor, collapse, use-id | off |  |
+| `navigation-bar` | NavigationBar | nav-link, float | off |  |
+| `pagination` | Pagination | action-icon | off |  |
+| `stepper` | Stepper | collapse, use-icon, use-id, visually-hidden | off |  |
+| `tabs` | Tabs | use-id, use-icon, visually-hidden | off |  |
+| `tree` | Tree | list, icon, use-popover | off |  |
+| `dialog` | Dialog | action-icon, title | on |  |
+| `drawer` | use_drawer | dialog, modal, float, use-swipe | off |  |
+| `floating-window` | use_floating_window | menu, action-icon, button, title, float, use-drag | off |  |
+| `hover-card` | HoverCard | tooltip, focus-trap, paper, scroll-area | off |  |
+| `lightbox` | use_lightbox | carousel, modal, action-icon, dialog | off |  |
+| `menu` | Menu, use_menu | anchor, kbd, divider, paper, use-popover, use-timers | off |  |
+| `modal` | Modal, use_modal | overlay-backdrop, focus-trap, use-back | on |  |
+| `overlay-backdrop` | Overlay | box | on |  |
+| `shortcut-help` | ShortcutHelp | dialog, kbd | on |  |
+| `spotlight` | use_spotlight | combobox, dialog, modal, kbd, loader | off |  |
+| `tooltip` | Tooltip | use-timers, box, use-popover | on |  |
+| `tour` | use_tour | dialog, button, focus-trap, use-accessibility, use-local-storage, use-back | off |  |
+| `blockquote` | Blockquote | box | on |  |
+| `code` | Code, CodeBlock | copy | off |  |
+| `kbd` | Kbd | box | on |  |
+| `mark` | Mark | box | on |  |
+| `text` | Text | box | on |  |
+| `title` | Title | text | on |  |
 
-Three components use another feature only when it is on, and work without it:
-`table`'s date filter picks from a DateField with `date-time` and from the
-native date input without; FileField's `crop` needs `image-cropper` and Image's
-`zoomable` needs `lightbox`, else a debug build warns and the file passes
-uncropped, the picture unzoomable.
+## Hooks
 
-Cost is the wasm an app gains in a release build when it uses the feature's
-first component, over a bare Text and Button app of 2.7 MB (before
-wasm-bindgen); base marks what that app already has. Rows share code, so they do not add up. A feature nobody uses
-costs build time, not wasm. Debug build from a cold cache, then after a libero
-edit: no features 23 s and 3 s, `select` 25 s and 4 s, the former default set of 62 features 59 s and 13 s, `all-components` 105 s and 20 s.
+One feature per hook module. The hooks of a component (use_modal, use_drawer,
+use_lightbox, use_sortable, ...) come with its feature.
 
-| Feature | Components | Turns on | Default | Adds | Cost |
-|---|---|---|---|---|---|
-| `action-icon` | ActionIcon | button, loader, tooltip, shortcut-help, anchor | off |  | +480 KB |
-| `button` | Button | loader, anchor | off |  | base |
-| `button-group` | ButtonGroup |  | off |  | +20 KB |
-| `copy` | Copy | action-icon | off |  | +530 KB |
-| `direction-toggle` | DirectionToggle | action-icon | off |  | +500 KB |
-| `repository` | Repository | action-icon | off | The Simple Icons brand marks (pictogram-icons-simple). | +610 KB |
-| `share` | Share | action-icon, icon, button | off |  | +590 KB |
-| `theme-switcher` | ThemeSwitcher | menu, action-icon | off |  | +1.2 MB |
-| `tldr` | Tldr | chip, menu, icon, action-icon | off | The Lobe Icons brand marks (pictogram-icons-lobe). | +1.2 MB |
-| `toolbar` | Toolbar, ToolbarGroup, ToolbarSeparator |  | off |  | +290 KB |
-| `accordion` | Accordion |  | off |  | +290 KB |
-| `audio` | Audio | slider, menu, button, modal, action-icon, shortcut-help | off |  | +2.1 MB |
-| `avatar` | Avatar, AvatarGroup | tooltip | off |  | +100 KB |
-| `badge` | Badge |  | off |  | +10 KB |
-| `carousel` | Carousel | action-icon | off |  | +1.3 MB |
-| `charts` | LineChart, BarChart, PieChart and the other charts | skeleton, mark | off | charts-rs, about 240 KB brotli on the web. | +1.6 MB |
-| `data-list` | DataList |  | off |  | +7 KB |
-| `icon` | Icon |  | off |  | +24 KB |
-| `image` | Image |  | off | Its zoomable prop needs lightbox on as well; without it the picture renders unzoomable. | +2.0 MB |
-| `image-list` | ImageList | image | off |  | +130 KB |
-| `indicator` | Indicator |  | off |  | +10 KB |
-| `kanban` | Kanban | sortable, menu | off |  | +900 KB |
-| `list` | List |  | off |  | +10 KB |
-| `marquee` | Marquee | action-icon | off |  | +570 KB |
-| `qr-code` | QrCode |  | off | The fast_qr encoder. | +110 KB |
-| `sortable` | Sortable, use_sortable |  | off |  | +580 KB |
-| `table` | Table, column and the table toolbar buttons | badge, progress-bar, skeleton, checkbox, native-select, select, text-field, pagination, menu, sortable, icon, action-icon, button | off | The largest component: its filters and editors bring the select and text fields. With date-time on, a date filter uses DateField. | +6.5 MB |
-| `timeline` | Timeline |  | off |  | +40 KB |
-| `video` | Video | slider, menu, button, modal, action-icon, shortcut-help | off |  | +2.7 MB |
-| `alert` | Alert | action-icon | off |  | +550 KB |
-| `circular-progress` | CircularProgress |  | off |  | +30 KB |
-| `loader` | Loader |  | off |  | base |
-| `notifications` | Notifications, use_notifications | alert, button | off |  | +410 KB |
-| `progress-bar` | ProgressBar | slider | off |  | +50 KB |
-| `skeleton` | Skeleton |  | off |  | +8 KB |
-| `autocomplete` | Autocomplete | combobox, action-icon | off |  | +1.7 MB |
-| `cascader` | Cascader | combobox, action-icon | off |  | +1.5 MB |
-| `checkbox` | Checkbox |  | off |  | +280 KB |
-| `chip` | Chip | action-icon, anchor | off |  | +210 KB |
-| `color` | ColorField, ColorPicker, ColorSwatch, HueSlider, AlphaSlider | slider, action-icon | off |  | +1.6 MB |
-| `combobox` | Combobox, use_combobox | loader | off |  | +1.1 MB |
-| `date-time` | ChronoField, ChronoPicker, DateField, DatePicker, TimeField, TimePicker and the other date and time fields and pickers | tabs, action-icon | off |  | +1.1 MB |
-| `fieldset` | Fieldset | form-root | off |  | +210 KB |
-| `form-root` | Form, use_form | alert | off |  | +830 KB |
-| `file-field` | FileField | chip, select, alert, modal, action-icon, button, dialog, loader | off | Its crop prop needs image-cropper on as well; without it the file passes uncropped. | +2.4 MB |
-| `image-cropper` | ImageCropper | slider, action-icon | off |  | +1.4 MB |
-| `native-select` | NativeSelect | combobox, select | off |  | +400 KB |
-| `number-field` | NumberField | action-icon | off |  | +900 KB |
-| `password-field` | PasswordField | text-field, action-icon | off |  | +760 KB |
-| `phone-field` | PhoneField | combobox | off |  | +1.5 MB |
-| `pin-field` | PinField |  | off |  | +310 KB |
-| `radio` | Radio |  | off |  | +230 KB |
-| `radio-group` | RadioGroup | radio | off |  | +330 KB |
-| `rating` | Rating |  | off |  | +380 KB |
-| `rich-text-editor` | RichTextEditor, RichTextView | toolbar, text-field, menu, code, mark, modal, action-icon, button, dialog, shortcut-help, text | off |  | +3.1 MB |
-| `segmented-control` | SegmentedControl | button | off |  | +340 KB |
-| `select` | Select, MultiSelect | combobox, chip, action-icon | off |  | +1.8 MB |
-| `slider` | Slider, RangeSlider | tooltip | off |  | +1.0 MB |
-| `switch` | Switch |  | off |  | +300 KB |
-| `tags-field` | TagsField | combobox, chip, select, action-icon | off |  | +1.7 MB |
-| `text-field` | TextField |  | off |  | +310 KB |
-| `textarea` | Textarea |  | off |  | +390 KB |
-| `anchor` | Anchor |  | off |  | +5 KB |
-| `burger` | Burger | action-icon | off |  | +500 KB |
-| `menubar` | Menubar | menu | off |  | +870 KB |
-| `nav-link` | NavLink | tree, anchor | off |  | +220 KB |
-| `navigation-bar` | NavigationBar | nav-link | off |  | +30 KB |
-| `pagination` | Pagination | action-icon | off |  | +560 KB |
-| `stepper` | Stepper |  | off |  | +410 KB |
-| `tabs` | Tabs |  | off |  | +210 KB |
-| `tree` | Tree | list, icon | off |  | +300 KB |
-| `dialog` | Dialog | action-icon, title | off |  | +590 KB |
-| `drawer` | use_drawer | dialog, modal | off |  | +880 KB |
-| `floating-window` | use_floating_window | menu, action-icon, button, title | off |  | +1.5 MB |
-| `hover-card` | HoverCard | tooltip | off |  | +570 KB |
-| `lightbox` | use_lightbox | carousel, modal, action-icon, dialog | off |  | +1.9 MB |
-| `menu` | Menu, use_menu | anchor, kbd | off |  | +800 KB |
-| `modal` | Modal, use_modal | overlay-backdrop | off |  | +180 KB |
-| `overlay-backdrop` | Overlay |  | off |  | +9 KB |
-| `shortcut-help` | ShortcutHelp | dialog, kbd | off |  | +660 KB |
-| `spotlight` | use_spotlight | combobox, dialog, modal, kbd, loader | off |  | +1.5 MB |
-| `tooltip` | Tooltip |  | off |  | +390 KB |
-| `tour` | use_tour | dialog, button | off |  | +1.1 MB |
-| `blockquote` | Blockquote |  | off |  | +23 KB |
-| `code` | Code, CodeBlock | copy | off |  | +120 KB |
-| `kbd` | Kbd |  | off |  | +6 KB |
-| `mark` | Mark |  | off |  | +4 KB |
-| `text` | Text |  | off |  | base |
-| `title` | Title | text | off |  | +7 KB |
+| Feature | Hooks | Turns on | Default | Notes |
+|---|---|---|---|---|
+| `use-accessibility` | use_accessibility |  | on |  |
+| `use-back` | use_back | use-popover | on |  |
+| `use-clipboard` | use_clipboard |  | on |  |
+| `use-color-scheme` | use_color_scheme |  | on |  |
+| `use-countdown` | use_countdown, format_duration |  | off |  |
+| `use-debounce` | use_debounced_value, use_debounced_callback, use_throttled_value, use_throttled_callback | use-timers | on |  |
+| `use-direction` | use_direction |  | off |  |
+| `use-drag` | use_drag | use-element | on |  |
+| `use-element` | use_element |  | on |  |
+| `use-focus-return` | use_focus_return | use-element | on |  |
+| `use-fullscreen` | use_fullscreen | use-back | off |  |
+| `use-geolocation` | use_geolocation |  | off |  |
+| `use-history` | use_history | use-timers | off |  |
+| `use-hotkeys` | use_hotkeys | use-popover | on |  |
+| `use-icon` | use_icon |  | on |  |
+| `use-id` | use_id |  | on |  |
+| `use-indexed-db` | use_indexed_db | use-local-storage | off |  |
+| `use-intersection` | use_intersection, use_in_viewport | use-element | off |  |
+| `use-long-press` | use_long_press | use-timers | off |  |
+| `use-media` | use_media | use-element | off |  |
+| `use-media-query` | use_media_query, use_is_mobile |  | on |  |
+| `use-popover` | use_popover | use-focus-return | on |  |
+| `use-push-subscription` | use_push_subscription |  | off |  |
+| `use-share` | use_share |  | off |  |
+| `use-local-storage` | use_local_storage, use_session_storage |  | on |  |
+| `use-swipe` | use_swipe, use_edge_swipe | use-direction, use-drag | off |  |
+| `use-system-notification` | use_system_notification |  | off |  |
+| `use-timers` | use_timeout, use_interval |  | on |  |
+| `use-user-media` | use_user_media, use_user_media_devices |  | off |  |
+
+## Other features
+
+| Feature | Does |
+|---|---|
+| `native` | Reaches elements through Blitz under dioxus-native: subtree queries, focus, the clipboard, file dialogs. |
+| `desktop` | The desktop WebView on Linux: system notifications over the session bus, the save dialog. |
+| `fcm` | use_fcm, Firebase Cloud Messaging on Android. Ships firebase-messaging into the app. |
+| `collation` | Table sorts text by the app's language off the web too, as the browser's Intl.Collator does. |
+| `full-polymorphism` | The 28 rarer HTML tags for a component's component prop (head, iframe, video, template, ...). |
+| `icons-bootstrap, icons-material, icons-phosphor, icons-tabler` | One pictogram set each for IconProvider. |
+| `code-lang-*` | One grammar each for Code and CodeBlock, from code-lang-bash to code-lang-yaml. |
+| `held-clock, fake-file-dialog` | Test harnesses only: a held timer clock and a scripted file dialog. Never in an app. |

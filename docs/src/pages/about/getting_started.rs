@@ -13,8 +13,8 @@ use libero::{
 
 const FEATURES: [(&str, &str); 10] = [
     (
-        "<component>, <category>",
-        "One feature per component, and one per category that turns on its components. None is on by default; see Features.",
+        "<component>, use-<hook>, <group>",
+        "One feature per component and per hook, and one per group that turns on its members. The default turns on the layout and the common components and hooks; see Features.",
     ),
     (
         "code-lang-<name>",

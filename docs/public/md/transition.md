@@ -2,7 +2,7 @@
 
 Crate: `libero`
 Import: `use libero::components::{Transition, TransitionKind};`
-Feature: none, always compiled ([features.md](features.md))
+Feature: `transition` (on by default, turns on `box`, `use-timers`; [features.md](features.md))
 Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/layout/transition.rs>
 Index: [index.md](index.md) lists every other page
 Description: Fades, slides or scales its children in on mount, and out when `open` turns false.

@@ -2,7 +2,7 @@
 
 Crate: `libero`
 Import: `use libero::components::ButtonGroup;`
-Feature: `button-group` (off by default; [features.md](features.md))
+Feature: `button-group` (off by default, turns on `box`; [features.md](features.md))
 Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/buttons/button_group.rs>
 Index: [index.md](index.md) lists every other page
 Description: Buttons and action icons side by side as one control, sharing seams and defaults.

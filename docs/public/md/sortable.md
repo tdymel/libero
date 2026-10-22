@@ -2,7 +2,7 @@
 
 Crate: `libero`
 Import: `use libero::{components::{Sortable, SortableItem}, hooks::SortableMove};`
-Feature: `sortable` (off by default; [features.md](features.md))
+Feature: `sortable` (off by default, turns on `use-drag`, `use-icon`, `use-id`, `use-media-query`, `use-timers`, `visually-hidden`; [features.md](features.md))
 Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/data_display/sortable>
 Index: [index.md](index.md) lists every other page
 Description: A list the user reorders by dragging a handle, by keyboard, or with move buttons. `use_sortable` and `use_sortable_item` do the same for your own markup.

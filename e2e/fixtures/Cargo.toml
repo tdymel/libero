@@ -11,7 +11,7 @@ dioxus = { version = "=0.8.0-alpha.3", default-features = true, features = ["rou
 # `/icon-provider`'s whole-set select (1133); `/line-chart` (3368), `/bar-chart` and `/pie-chart` (3335);
 # `/fcm` (3404); `/table-grid/collation` off the web (3420).
 # The code-lang features are the five libero no longer turns on by default (3917 D1).
-libero = { path = "../../libero", features = ["all-components", "code-lang-rust", "code-lang-bash", "code-lang-markdown", "code-lang-html", "code-lang-css", "icons-tabler", "fcm", "collation"] }
+libero = { path = "../../libero", features = ["all-components", "all-hooks", "code-lang-rust", "code-lang-bash", "code-lang-markdown", "code-lang-html", "code-lang-css", "icons-tabler", "fcm", "collation"] }
 pictogram-icons-lucide = "0.5"
 # The desktop driver's bridge (1126): socket thread to the eval loop.
 futures-channel = { version = "0.3", optional = true }

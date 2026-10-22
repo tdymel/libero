@@ -2,6 +2,7 @@
 
 Crate: `libero`
 Import: `use libero::hooks::{Geolocation, GeolocationError, GeolocationOptions, PermissionState, Position, use_geolocation};`
+Feature: `use-geolocation` (off by default; [features.md](features.md))
 Source: <https://github.com/tdymel/libero/tree/main/libero/src/hooks/geolocation.rs>
 Index: [index.md](index.md) lists every other page
 Description: The device's position, once or followed, with the location permission; never prompts on mount.

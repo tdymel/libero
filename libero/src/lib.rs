@@ -11,9 +11,9 @@
 // On Android, clippy flags `thread_local!` initializers that already are
 // `const { .. }` (7 false positives).
 #![cfg_attr(target_os = "android", allow(clippy::missing_const_for_thread_local))]
-// With components feature-gated off, the shared helpers only they use sit idle (todo 3887).
+// With components or hooks feature-gated off, the shared helpers only they use sit idle (todos 3887, 3922).
 #![cfg_attr(
-    not(feature = "all-components"),
+    not(all(feature = "all-components", feature = "all-hooks")),
     allow(dead_code, unused_imports, unused_macros, unnameable_types)
 )]
 
@@ -40,8 +40,9 @@ pub use chrono;
 pub(crate) use context::CssLayer;
 pub use context::{IconProvider, IconSet, IconSlot, LiberoContext, LiberoProvider};
 pub use css::Stylesheet;
+#[cfg(feature = "use-color-scheme")]
+pub use hooks::{ColorSchemeHandle, use_color_scheme};
 pub use hooks::{
-    ColorSchemeHandle, FormatsHandle, LocalizationHandle, ThemeSetHandle, use_color_scheme,
-    use_formats, use_formats_handle, use_localization, use_localization_handle, use_stylesheet,
-    use_theme, use_theme_set,
+    FormatsHandle, LocalizationHandle, ThemeSetHandle, use_formats, use_formats_handle,
+    use_localization, use_localization_handle, use_stylesheet, use_theme, use_theme_set,
 };

@@ -2,7 +2,7 @@
 
 Crate: `libero`
 Import: `use libero::components::Box;`
-Feature: none, always compiled ([features.md](features.md))
+Feature: `box` (on by default, turns on `use-element`; [features.md](features.md))
 Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/layout/box.rs>
 Index: [index.md](index.md) lists every other page
 Description: The primitive every other component is built on, rendered as any tag via `component` and styled through `sx`.

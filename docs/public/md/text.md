@@ -2,7 +2,7 @@
 
 Crate: `libero`
 Import: `use libero::components::Text;`
-Feature: `text` (off by default; [features.md](features.md))
+Feature: `text` (on by default, turns on `box`; [features.md](features.md))
 Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/typography/text.rs>
 Index: [index.md](index.md) lists every other page
 Description: Body copy, sized from the theme's text scale.

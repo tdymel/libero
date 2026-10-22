@@ -2,7 +2,7 @@
 
 Crate: `libero`
 Import: `use libero::components::VisuallyHidden;`
-Feature: none, always compiled ([features.md](features.md))
+Feature: `visually-hidden` (on by default, turns on `box`; [features.md](features.md))
 Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/accessibility/visually_hidden.rs>
 Index: [index.md](index.md) lists every other page
 Description: A `span` read by screen readers but hidden from sighted layout, for extra context on something vague on its own.

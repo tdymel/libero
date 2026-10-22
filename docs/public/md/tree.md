@@ -2,7 +2,7 @@
 
 Crate: `libero`
 Import: `use libero::components::{Tree, TreeItem, TreeItemContent, TreeLabel, TreeNode, TreeNodeRenderArgs};`
-Feature: `tree` (off by default, turns on `list`, `icon`; [features.md](features.md))
+Feature: `tree` (off by default, turns on `list`, `icon`, `use-popover`; [features.md](features.md))
 Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/navigation/tree>
 Index: [index.md](index.md) lists every other page
 Description: A data-driven, keyboard-navigable tree view over your own node type.

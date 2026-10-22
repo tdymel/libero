@@ -2,6 +2,7 @@
 
 Crate: `libero`
 Import: `use libero::hooks::{LongPress, LongPressOptions, use_long_press};`
+Feature: `use-long-press` (off by default, turns on `use-timers`; [features.md](features.md))
 Source: <https://github.com/tdymel/libero/tree/main/libero/src/hooks/long_press.rs>
 Index: [index.md](index.md) lists every other page
 Description: Pointer handlers that call back once a press is held, without breaking a tap or a scroll.

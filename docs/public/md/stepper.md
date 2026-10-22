@@ -2,7 +2,7 @@
 
 Crate: `libero`
 Import: `use libero::components::{Options, StepState, Stepper};`
-Feature: `stepper` (off by default; [features.md](features.md))
+Feature: `stepper` (off by default, turns on `collapse`, `use-icon`, `use-id`, `visually-hidden`; [features.md](features.md))
 Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/navigation/stepper>
 Index: [index.md](index.md) lists every other page
 Description: The stages of a process over an enum, horizontal or vertical, with the current step's content.

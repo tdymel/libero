@@ -6,6 +6,7 @@ mod drawer;
 mod floating_window;
 #[cfg(feature = "hover-card")]
 mod hover_card;
+#[cfg(feature = "use-timers")]
 mod hover_intent;
 #[cfg(feature = "menu")]
 mod menu;

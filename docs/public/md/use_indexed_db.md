@@ -2,6 +2,7 @@
 
 Crate: `libero`
 Import: `use libero::hooks::{StorageError, StoredAsync, use_indexed_db};`
+Feature: `use-indexed-db` (off by default, turns on `use-local-storage`; [features.md](features.md))
 Source: <https://github.com/tdymel/libero/tree/main/libero/src/hooks/indexed_db.rs>
 Index: [index.md](index.md) lists every other page
 Description: A larger value kept under a key in IndexedDB, loaded and saved without blocking the page; a file per key off the web.

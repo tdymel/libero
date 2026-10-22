@@ -2,7 +2,7 @@
 
 Crate: `libero`
 Import: `use libero::components::Sidebar;`
-Feature: none, always compiled ([features.md](features.md))
+Feature: `sidebar` (on by default, turns on `scroll-area`; [features.md](features.md))
 Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/layout/sidebar.rs>
 Index: [index.md](index.md) lists every other page
 Description: An in-flow panel on one edge of its parent that scrolls its own content, like a nav rail or an inspector.

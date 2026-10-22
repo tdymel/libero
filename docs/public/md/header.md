@@ -2,7 +2,7 @@
 
 Crate: `libero`
 Import: `use libero::components::Header;`
-Feature: none, always compiled ([features.md](features.md))
+Feature: `header` (on by default, turns on `paper`, `use-id`, `use-icon`, `visually-hidden`; [features.md](features.md))
 Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/layout/header.rs>
 Index: [index.md](index.md) lists every other page
 Description: The page's banner landmark, a sticky, static or fixed `header` bar for nav and actions.

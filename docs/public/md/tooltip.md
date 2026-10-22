@@ -2,7 +2,7 @@
 
 Crate: `libero`
 Import: `use libero::components::Tooltip;`
-Feature: `tooltip` (off by default; [features.md](features.md))
+Feature: `tooltip` (on by default, turns on `use-timers`, `box`, `use-popover`; [features.md](features.md))
 Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/overlay/tooltip.rs>
 Index: [index.md](index.md) lists every other page
 Description: A label that appears while its child is hovered or focused by keyboard, portaled so nothing clips it.

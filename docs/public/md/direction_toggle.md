@@ -2,7 +2,7 @@
 
 Crate: `libero`
 Import: `use libero::components::DirectionToggle;`
-Feature: `direction-toggle` (off by default, turns on `action-icon`; [features.md](features.md))
+Feature: `direction-toggle` (off by default, turns on `action-icon`, `use-direction`; [features.md](features.md))
 Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/buttons/direction_toggle.rs>
 Index: [index.md](index.md) - every other component's markdown page
 Description: An icon button that turns the app's text between left to right and right to left.

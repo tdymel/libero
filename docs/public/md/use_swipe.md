@@ -2,6 +2,7 @@
 
 Crate: `libero`
 Import: `use libero::hooks::{EdgeSwipeOptions, Swipe, SwipeDirection, SwipeEdge, SwipeEvent, SwipeOptions, edge_swipe_sx, use_edge_swipe, use_swipe};`
+Feature: `use-swipe` (off by default, turns on `use-direction`, `use-drag`; [features.md](features.md))
 Source: <https://github.com/tdymel/libero/tree/main/libero/src/hooks/swipe.rs>
 Index: [index.md](index.md) lists every other page
 Description: Touch swipe handlers, and an edge swipe that opens a drawer without fighting Android's back gesture.

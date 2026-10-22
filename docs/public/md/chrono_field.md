@@ -2,7 +2,7 @@
 
 Crate: `libero`
 Import: `use libero::{chrono::{NaiveDate, NaiveDateTime, NaiveTime, TimeDelta}, components::{ChronoField, DateRange}};`
-Feature: `date-time` (off by default, turns on `tabs`, `action-icon`; [features.md](features.md))
+Feature: `date-time` (off by default, turns on `tabs`, `action-icon`, `use-drag`, `use-media-query`; [features.md](features.md))
 Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/form/date/chrono_field.rs>
 Index: [index.md](index.md) lists every other page
 Description: A text field for every date and time value, typed leniently, with the matching `ChronoPicker` in a dropdown.

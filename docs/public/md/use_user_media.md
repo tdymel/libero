@@ -2,6 +2,7 @@
 
 Crate: `libero`
 Import: `use libero::hooks::{CameraFacing, MediaDevice, PermissionState, UserMedia, UserMediaDevices, UserMediaError, UserMediaOptions, use_user_media, use_user_media_devices};` and `use libero::utils::data_url;`
+Feature: `use-user-media` (off by default; [features.md](features.md))
 Source: <https://github.com/tdymel/libero/tree/main/libero/src/hooks/user_media.rs>
 Index: [index.md](index.md) lists every other page
 Description: The camera and microphone with a preview, a PNG snapshot, a chunked video or audio recording and a camera switch; never prompts on mount.

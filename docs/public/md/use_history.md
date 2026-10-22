@@ -2,6 +2,7 @@
 
 Crate: `libero`
 Import: `use libero::hooks::{HistoryHandle, UndoHistory, use_history};`
+Feature: `use-history` (off by default, turns on `use-timers`; [features.md](features.md))
 Source: <https://github.com/tdymel/libero/tree/main/libero/src/hooks/history/mod.rs>
 Index: [index.md](index.md) lists every other page
 Description: Undo and redo over snapshots of a value, with rapid changes grouped into one step by time or size.

@@ -2,6 +2,7 @@
 
 Crate: `libero`
 Import: `use libero::hooks::{use_debounced_callback, use_debounced_value, use_throttled_callback, use_throttled_value};`
+Feature: `use-debounce` (on by default, turns on `use-timers`; [features.md](features.md))
 Source: <https://github.com/tdymel/libero/tree/main/libero/src/hooks/debounce.rs>
 Index: [index.md](index.md) lists every other page
 Description: Signals and callbacks that follow their source once it settles or at most once per period.

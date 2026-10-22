@@ -64,12 +64,15 @@ copy of dioxus would not share libero's contexts:
 
 ```shell
 cargo add dioxus@=0.8.0-alpha.3
-cargo add libero --features text,button
+cargo add libero --features date-time,notifications
 ```
 
-Each component sits behind a Cargo feature and none is on by default: the
-taste above also needs `form-root`, `text-field`, `date-time`, `switch` and
-`notifications`, or `all-components` for everything.
+Each component and hook sits behind its own Cargo feature. The default turns on
+the layout components, the common components (Text, Button, TextField, Switch,
+Form, Dialog, ...) and the common hooks; the taste above adds `date-time` and
+`notifications`. Turn `default-features` off and list only what you use for a
+smaller wasm and faster builds, or `all-components` and `all-hooks` for
+everything.
 
 [Getting started](https://libero-ui.dev/about/getting-started) covers the
 setup, each platform and the feature flags.

@@ -2,6 +2,7 @@
 
 Crate: `libero`
 Import: `use libero::{hooks::{format_duration, use_countdown}, localization::DurationStyle};`
+Feature: `use-countdown` (off by default; [features.md](features.md))
 Source: <https://github.com/tdymel/libero/tree/main/libero/src/hooks/countdown.rs>
 Index: [index.md](index.md) lists every other page
 Description: The time left until an end, live, on one ticker every countdown shares, and the duration as a clock, short units or spoken words in the active language.

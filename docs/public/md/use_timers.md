@@ -2,6 +2,7 @@
 
 Crate: `libero`
 Import: `use libero::hooks::{IntervalHandle, TimeoutHandle, use_interval, use_timeout};`
+Feature: `use-timers` (on by default; [features.md](features.md))
 Source: <https://github.com/tdymel/libero/tree/main/libero/src/hooks/timers.rs>
 Index: [index.md](index.md) lists every other page
 Description: Runs a callback once or on a period, started and stopped from code, cancelled when the component unmounts.

@@ -2,7 +2,7 @@
 
 Crate: `libero`
 Import: `use libero::components::{ImageBar, ImageItem, ImageList};`
-Feature: `image-list` (off by default, turns on `image`; [features.md](features.md))
+Feature: `image-list` (off by default, turns on `image`, `grid`; [features.md](features.md))
 Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/data_display/image_list/image_list.rs>
 Index: [index.md](index.md) lists every other page
 Description: A gallery of pictures with optional caption bars, laid out on a `GridZone`, so `cols` counts the library's twelve tracks.

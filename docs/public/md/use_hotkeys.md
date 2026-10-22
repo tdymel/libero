@@ -2,6 +2,7 @@
 
 Crate: `libero`
 Import: `use libero::hooks::{Hotkey, use_hotkeys};`
+Feature: `use-hotkeys` (on by default, turns on `use-popover`; [features.md](features.md))
 Source: <https://github.com/tdymel/libero/tree/main/libero/src/hooks/hotkeys.rs>
 Index: [index.md](index.md) lists every other page
 Description: Runs a handler on a keyboard shortcut from anywhere in the page, skipping text entry unless asked, and stops when the component unmounts.

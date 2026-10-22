@@ -2,7 +2,7 @@
 
 Crate: `libero`
 Import: `use libero::components::Collapse;`
-Feature: none, always compiled ([features.md](features.md))
+Feature: `collapse` (on by default, turns on `box`, `use-timers`; [features.md](features.md))
 Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/layout/collapse.rs>
 Index: [index.md](index.md) lists every other page
 Description: Animates its children's height open and closed, and follows the content when its height changes.

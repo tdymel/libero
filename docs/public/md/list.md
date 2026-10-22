@@ -2,7 +2,7 @@
 
 Crate: `libero`
 Import: `use libero::components::{List, ListItem};`
-Feature: `list` (off by default; [features.md](features.md))
+Feature: `list` (off by default, turns on `box`; [features.md](features.md))
 Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/data_display/list>
 Index: [index.md](index.md) lists every other page
 Description: A `<ul>` of `<li>` items without the browser's list styling, with themed gaps and nested indent.

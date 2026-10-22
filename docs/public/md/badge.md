@@ -2,7 +2,7 @@
 
 Crate: `libero`
 Import: `use libero::components::Badge;`
-Feature: `badge` (off by default; [features.md](features.md))
+Feature: `badge` (off by default, turns on `box`; [features.md](features.md))
 Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/data_display/badge.rs>
 Index: [index.md](index.md) lists every other page
 Description: A short status label, one uppercase pill with no role and no interaction.

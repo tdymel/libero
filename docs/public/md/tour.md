@@ -2,7 +2,7 @@
 
 Crate: `libero`
 Import: `use libero::components::{MaskClick, TourOptions, TourStep, TourView, use_tour};`
-Feature: `tour` (off by default, turns on `dialog`, `button`; [features.md](features.md))
+Feature: `tour` (off by default, turns on `dialog`, `button`, `focus-trap`, `use-accessibility`, `use-local-storage`, `use-back`; [features.md](features.md))
 Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/overlay/tour>
 Index: [index.md](index.md) lists every other page
 Description: A guided tour. A hook that dims the page around one element per step and explains it in a card beside it.

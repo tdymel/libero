@@ -2,7 +2,7 @@
 
 Crate: `libero`
 Import: `use libero::components::{Kanban, KanbanCard, KanbanColumn, KanbanColumnMove, KanbanMove};`
-Feature: `kanban` (off by default, turns on `sortable`, `menu`; [features.md](features.md))
+Feature: `kanban` (off by default, turns on `sortable`, `menu`, `focus-trap`; [features.md](features.md))
 Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/data_display/kanban>
 Index: [index.md](index.md) lists every other page
 Description: A board of columns whose cards move by drag in a column or to another, by keyboard or move buttons in a column, and to another column by a Move to menu.

@@ -2,7 +2,7 @@
 
 Crate: `libero`
 Import: `use libero::components::{Form, Fields, Rule, use_form, use_form_context};`
-Feature: `form-root` (off by default, turns on `alert`; [features.md](features.md))
+Feature: `form-root` (on by default, turns on `alert`; [features.md](features.md))
 Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/form/form.rs>
 Index: [index.md](index.md) lists every other page
 Description: A `<form>` that validates on submit, with plain `Fn(&V) -> bool` rules, typed field paths from `#[derive(Fields)]` and a focused error summary.

@@ -1,5 +1,6 @@
 mod base_props;
 mod button_group_context;
+#[cfg(feature = "use-element")]
 mod closing_focus;
 mod color_variant;
 mod combobox_aria;
@@ -8,6 +9,7 @@ mod combobox_state;
 mod focus_ring;
 mod focusable;
 mod hit_area;
+#[cfg(feature = "use-icon")]
 mod icons;
 mod keys;
 mod logical_text;
@@ -20,6 +22,7 @@ mod parts;
 mod polymorphic;
 mod rail;
 mod responsive_sx;
+#[cfg(feature = "use-element")]
 mod reveal_inline;
 mod style_attributes;
 mod svg_fit;
@@ -36,6 +39,7 @@ pub(crate) use base_props::base_props;
 pub(crate) use button_group_context::{
     ButtonGroupContext, use_button_group, use_provide_button_group,
 };
+#[cfg(feature = "use-element")]
 pub(crate) use closing_focus::use_closing_focus;
 pub(crate) use color_variant::{
     base_color, base_color_or, contrast_color, contrast_shade_color, fill_color, hover_color,
@@ -53,6 +57,7 @@ pub(crate) use focus_ring::{
 };
 pub(crate) use focusable::FOCUSABLE_SELECTOR;
 pub(crate) use hit_area::{COARSE_POINTER, coarse_hit_area_sx, min_hit_area_sx};
+#[cfg(feature = "use-icon")]
 pub(crate) use icons::{Glyph, draw_svg};
 pub(crate) use keys::{NavigationChord, has_shortcut_modifier, is_alt_graph, navigation_chord};
 pub(crate) use logical_text::LogicalTextAlign;
@@ -74,6 +79,7 @@ pub use polymorphic::HtmlTag;
 pub(crate) use polymorphic::{IntoChildren, render_polymorphic, styling_attributes};
 pub(crate) use rail::{Rail, RailInset};
 pub(crate) use responsive_sx::{ScaleOrCss, as_length, css_px, responsive_sx, with_own};
+#[cfg(feature = "use-element")]
 pub(crate) use reveal_inline::reveal_inline;
 pub(crate) use style_attributes::{
     ABSENT, StyleAttributes, sx_source, use_style_attributes, with_parts,

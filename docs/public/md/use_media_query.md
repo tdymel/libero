@@ -2,6 +2,7 @@
 
 Crate: `libero`
 Import: `use libero::hooks::{use_is_mobile, use_media_query};`
+Feature: `use-media-query` (on by default; [features.md](features.md))
 Source: <https://github.com/tdymel/libero/tree/main/libero/src/hooks/media_query.rs>
 Index: [index.md](index.md) lists every other page
 Description: Whether a CSS media query or the 768px mobile breakpoint matches, live, with a documented default where nothing can measure.

@@ -2,6 +2,7 @@
 
 Crate: `libero`
 Import: `use libero::hooks::{InViewport, Intersection, IntersectionEntry, IntersectionOptions, use_in_viewport, use_intersection};`
+Feature: `use-intersection` (off by default, turns on `use-element`; [features.md](features.md))
 Source: <https://github.com/tdymel/libero/tree/main/libero/src/hooks/intersection.rs>
 Index: [index.md](index.md) lists every other page
 Description: Reports how much of an element is visible, with a root, margin and thresholds; polled on Blitz, never intersecting in a server render.

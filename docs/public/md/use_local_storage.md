@@ -2,6 +2,7 @@
 
 Crate: `libero`
 Import: `use libero::hooks::{StorageError, StorageFormat, StorageOptions, Stored, use_local_storage, use_local_storage_with, use_session_storage, use_session_storage_with};`
+Feature: `use-local-storage` (on by default; [features.md](features.md))
 Source: <https://github.com/tdymel/libero/tree/main/libero/src/hooks/storage.rs>
 Index: [index.md](index.md) lists every other page
 Description: A value kept under a key across reloads and app runs, or for the tab's session; a file per key off the web.

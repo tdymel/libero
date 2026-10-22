@@ -28,6 +28,7 @@ mod list;
 mod marquee;
 #[cfg(any(feature = "audio", feature = "video"))]
 mod media_controls;
+#[cfg(feature = "pictogram")]
 mod pictogram;
 #[cfg(feature = "qr-code")]
 mod qr_code;
@@ -83,6 +84,7 @@ pub use list::{List, ListItem, ListItemPart, ListItemProps, ListProps};
 pub use marquee::{Marquee, MarqueePart, MarqueeProps};
 #[cfg(any(feature = "audio", feature = "video"))]
 pub use media_controls::VolumePart;
+#[cfg(feature = "pictogram")]
 pub use pictogram::{Pictogram, PictogramProps, SvgData};
 #[cfg(feature = "qr-code")]
 pub use qr_code::{QrCode, QrCodeProps};

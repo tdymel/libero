@@ -2,7 +2,7 @@
 
 Crate: `libero`
 Import: `use libero::components::{Repository, RepoHost};`
-Feature: `repository` (off by default, turns on `action-icon`; [features.md](features.md))
+Feature: `repository` (off by default, turns on `action-icon`, `use-local-storage`; [features.md](features.md))
 Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/buttons/repository.rs>
 Index: [index.md](index.md) - every other component's markdown page
 Description: A link to a GitHub or GitLab repository with its star count beside the host's icon.

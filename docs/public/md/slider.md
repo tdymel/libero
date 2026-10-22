@@ -2,7 +2,7 @@
 
 Crate: `libero`
 Import: `use libero::components::{Slider, SliderChangeEvent, SliderMark, SliderValue};`
-Feature: `slider` (off by default, turns on `tooltip`; [features.md](features.md))
+Feature: `slider` (off by default, turns on `tooltip`, `use-icon`, `visually-hidden`, `use-id`, `use-drag`; [features.md](features.md))
 Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/form/slider>
 Index: [index.md](index.md) lists every other page
 Description: A value dragged along a track, continuous over `f64` or discrete over an ordered enum that derives `SliderValue`.

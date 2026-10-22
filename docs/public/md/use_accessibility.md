@@ -2,6 +2,7 @@
 
 Crate: `libero`
 Import: `use libero::hooks::use_accessibility;`
+Feature: `use-accessibility` (on by default; [features.md](features.md))
 Source: <https://github.com/tdymel/libero/tree/main/libero/src/hooks/accessibility.rs>
 Index: [index.md](index.md) lists every other page
 Description: Reads the reader's accessibility settings and lets an app force reduced motion.

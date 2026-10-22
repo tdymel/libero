@@ -2,7 +2,7 @@
 
 Crate: `libero`
 Import: `use libero::components::TextField;`
-Feature: `text-field` (off by default; [features.md](features.md))
+Feature: `text-field` (on by default, turns on `use-icon`, `visually-hidden`, `use-id`; [features.md](features.md))
 Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/form/text_field.rs>
 Index: [index.md](index.md) lists every other page
 Description: A single-line text field with a label, a description, helper text and a validation message.

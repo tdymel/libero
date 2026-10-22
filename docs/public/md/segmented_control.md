@@ -2,7 +2,7 @@
 
 Crate: `libero`
 Import: `use libero::components::{Options, SegmentedControl};`
-Feature: `segmented-control` (off by default, turns on `button`; [features.md](features.md))
+Feature: `segmented-control` (off by default, turns on `button`, `use-id`; [features.md](features.md))
 Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/form/segmented_control>
 Index: [index.md](index.md) lists every other page
 Description: A connected strip of segments over an enum, exactly one of them selected, with the field slots.

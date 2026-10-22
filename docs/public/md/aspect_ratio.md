@@ -2,7 +2,7 @@
 
 Crate: `libero`
 Import: `use libero::components::AspectRatio;`
-Feature: none, always compiled ([features.md](features.md))
+Feature: `aspect-ratio` (on by default, turns on `box`; [features.md](features.md))
 Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/layout/aspect_ratio.rs>
 Index: [index.md](index.md) lists every other page
 Description: Enforces a width-to-height ratio on its child, cropping it to fill the box.

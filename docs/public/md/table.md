@@ -2,7 +2,7 @@
 
 Crate: `libero`
 Import: `use libero::components::{Table, column};`
-Feature: `table` (off by default, turns on `badge`, `progress-bar`, `skeleton`, `checkbox`, `native-select`, `select`, `text-field`, `pagination`, `menu`, `sortable`, `icon`, `action-icon`, `button`; [features.md](features.md))
+Feature: `table` (off by default, turns on `badge`, `progress-bar`, `skeleton`, `checkbox`, `native-select`, `select`, `text-field`, `pagination`, `menu`, `sortable`, `icon`, `action-icon`, `button`, `collapse`, `use-debounce`; [features.md](features.md))
 Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/data_display/table>
 Index: [index.md](index.md) lists every other page
 Description: A sortable data table built from a row type and a list of column definitions.

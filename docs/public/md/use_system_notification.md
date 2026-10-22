@@ -2,6 +2,7 @@
 
 Crate: `libero`
 Import: `use libero::hooks::{NotificationAction, PermissionState, PushEndpoint, PushError, PushOptions, PushSubscription, SystemNotification, SystemNotificationError, SystemNotifier, use_push_subscription, use_system_notification};`
+Feature: `use-system-notification` (off by default; [features.md](features.md))
 Source: <https://github.com/tdymel/libero/tree/main/libero/src/hooks/system_notification.rs>
 Index: [index.md](index.md) lists every other page
 Description: Notifications the operating system draws and a web push subscription; never prompt on mount.

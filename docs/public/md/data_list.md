@@ -2,7 +2,7 @@
 
 Crate: `libero`
 Import: `use libero::components::{DataList, DataListItem};`
-Feature: `data-list` (off by default; [features.md](features.md))
+Feature: `data-list` (off by default, turns on `box`; [features.md](features.md))
 Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/data_display/data_list>
 Index: [index.md](index.md) lists every other page
 Description: A `<dl>` of term/description pairs, where one term can carry several descriptions.

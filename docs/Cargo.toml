@@ -9,8 +9,9 @@ edition = "2024"
 dioxus = { version = "=0.8.0-alpha.3", default-features = true, features = ["router"] }
 # Only what these pages actually highlight.
 libero = { path = "../libero", default-features = false, features = [
-    # Every component has a page.
+    # Every component and hook has a page.
     "all-components",
+    "all-hooks",
     "code-lang-rust",
     "code-lang-bash",
     "code-lang-css",

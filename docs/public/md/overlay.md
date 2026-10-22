@@ -2,7 +2,7 @@
 
 Crate: `libero`
 Import: `use libero::components::Overlay;`
-Feature: `overlay-backdrop` (off by default; [features.md](features.md))
+Feature: `overlay-backdrop` (on by default, turns on `box`; [features.md](features.md))
 Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/overlay/overlay.rs>
 Index: [index.md](index.md) lists every other page
 Description: A layer that dims and blurs the page behind it, with centred content. The backdrop behind a modal, or a loading screen.

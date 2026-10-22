@@ -2,6 +2,7 @@
 
 Crate: `libero`
 Import: `use libero::hooks::{FullscreenHandle, use_fullscreen};`
+Feature: `use-fullscreen` (off by default, turns on `use-back`; [features.md](features.md))
 Source: <https://github.com/tdymel/libero/tree/main/libero/src/hooks/fullscreen.rs>
 Index: [index.md](index.md) lists every other page
 Description: Puts one of your elements in fullscreen, natively or drawn as a fixed box where the platform refuses it; the engine behind `Video`'s fullscreen.

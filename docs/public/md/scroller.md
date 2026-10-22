@@ -2,7 +2,7 @@
 
 Crate: `libero`
 Import: `use libero::components::Scroller;`
-Feature: none, always compiled ([features.md](features.md))
+Feature: `scroller` (on by default, turns on `scroll-area`, `use-icon`, `use-id`, `visually-hidden`; [features.md](features.md))
 Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/layout/scroller.rs>
 Index: [index.md](index.md) lists every other page
 Description: A horizontal strip with a hidden scrollbar and a step control over each end, by default shown while there is more content that way.

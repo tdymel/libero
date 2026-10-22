@@ -2,7 +2,7 @@
 
 Crate: `libero`
 Import: `use libero::components::Anchor;`
-Feature: `anchor` (off by default; [features.md](features.md))
+Feature: `anchor` (on by default, turns on `use-icon`, `visually-hidden`; [features.md](features.md))
 Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/navigation/anchor.rs>
 Index: [index.md](index.md) lists every other page
 Description: A real link styled and sized like `Text`, router-aware through `to`.

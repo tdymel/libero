@@ -24,6 +24,7 @@ mod fieldset;
 mod file_field;
 #[cfg(feature = "form-root")]
 mod form;
+#[cfg(all(feature = "visually-hidden", feature = "use-icon", feature = "use-id"))]
 mod handle;
 #[cfg(any(feature = "image-cropper", feature = "file-field"))]
 mod image_cropper;
@@ -61,7 +62,9 @@ mod tags_field;
 mod text_field;
 #[cfg(feature = "textarea")]
 mod textarea;
+#[cfg(all(feature = "visually-hidden", feature = "use-icon", feature = "use-id"))]
 mod use_field;
+#[cfg(all(feature = "visually-hidden", feature = "use-icon", feature = "use-id"))]
 mod use_field_frame;
 mod validation;
 
@@ -116,6 +119,7 @@ pub use file_field::{
 };
 #[cfg(feature = "form-root")]
 pub use form::{Form, FormPart, FormProps, FormValue};
+#[cfg(all(feature = "visually-hidden", feature = "use-icon", feature = "use-id"))]
 pub use handle::{FormHandle, use_form, use_form_context};
 #[cfg(any(feature = "image-cropper", feature = "file-field"))]
 pub use image_cropper::{CropOptions, CropRect, CropShape, PixelRect};
@@ -165,7 +169,9 @@ pub use tags_field::{TagRejectReason, TagRejection, TagsField, TagsFieldPart, Ta
 pub use text_field::{TextField, TextFieldProps};
 #[cfg(feature = "textarea")]
 pub use textarea::{Textarea, TextareaPart, TextareaProps};
+#[cfg(all(feature = "visually-hidden", feature = "use-icon", feature = "use-id"))]
 pub(crate) use use_field::{Activation, Asks, PreparedField, Setter, use_bound, use_field};
+#[cfg(all(feature = "visually-hidden", feature = "use-icon", feature = "use-id"))]
 pub(crate) use use_field_frame::{
     FIELD_CONTROL_SX, LiveControl, LiveSlot, PreparedFrame, SLOT_BUTTON_SX, drag_over_sx,
     field_control_sx, slot_button_sx, slot_icon_size, use_field_frame, use_live_slot,

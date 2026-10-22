@@ -2,7 +2,7 @@
 
 Crate: `libero`
 Import: `use libero::components::{Accordion, AccordionOpen, OptionLabel, Options};`
-Feature: `accordion` (off by default; [features.md](features.md))
+Feature: `accordion` (off by default, turns on `collapse`, `use-icon`, `use-id`; [features.md](features.md))
 Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/data_display/accordion>
 Index: [index.md](index.md) lists every other page
 Description: Sections over an enum, each a heading whose button opens its panel, with one or many open.
