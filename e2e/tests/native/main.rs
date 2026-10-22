@@ -43,6 +43,7 @@ mod kanban;
 mod keyboard;
 mod lightbox;
 mod list;
+mod marquee;
 mod max_length;
 mod menu_link;
 mod menubar;

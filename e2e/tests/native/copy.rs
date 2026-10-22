@@ -46,3 +46,13 @@ fn a_click_elsewhere_resets_the_status() {
     let reset = page.wait_for(|page| page.text(STATUS).trim().is_empty());
     assert!(reset, "a click away kept {:?}", page.text(STATUS));
 }
+
+/// Blitz 0.3.0-beta.4 maps `aria-label` into the AX tree (todos 1173, 1501).
+#[test]
+fn the_button_is_named_in_the_ax_tree() {
+    let page = mount(app);
+    assert_eq!(
+        page.accessible(COPY),
+        ("Button".to_string(), "Copy".to_string())
+    );
+}

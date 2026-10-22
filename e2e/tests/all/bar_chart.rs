@@ -382,7 +382,7 @@ e2e::scenario!(
     a_click_on_a_bar_reports_it,
     "/bar-chart",
     clicks,
-    native: skip("a click on a chart mark keeps the vdom busy past 200 polls on Blitz")
+    native: skip("upstream: Blitz lays out no svg child, so a mark has no rect to click")
 );
 
 /// A legend button hides its series' bars; the last shown one stays.

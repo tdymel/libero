@@ -15,13 +15,13 @@ The performance scenarios (units `perf`, `table_perf`) are no skips but run on r
 | `accordion::the_arrows_move_focus_skip_the_disabled_and_never_toggle` | desktop | 958: element identity on the WebView |
 | `accordion::the_arrows_move_focus_skip_the_disabled_and_never_toggle` | ios | 958: element identity on the WebView |
 | `audio::the_bars_rise_with_the_decoded_tone` | native | Blitz has no Web Audio to decode with |
-| `bar_chart::a_click_on_a_bar_reports_it` | native | a click on a chart mark keeps the vdom busy past 200 polls on Blitz |
+| `bar_chart::a_click_on_a_bar_reports_it` | native | upstream: Blitz lays out no svg child, so a mark has no rect to click |
 | `bar_chart::a_pointer_on_a_line_s_point_picks_it` | native | a click on a line's point among bars picks nothing on Blitz |
 | `bar_chart::escape_closes_a_hovered_tooltip_without_focus` | android | a touch screen has no hover |
 | `bar_chart::escape_closes_a_hovered_tooltip_without_focus` | ios | a touch screen has no hover |
 | `bar_chart::hovering_shows_the_bar_s_tooltip_and_marker` | android | a touch screen has no hover |
 | `bar_chart::hovering_shows_the_bar_s_tooltip_and_marker` | ios | a touch screen has no hover |
-| `candlestick_chart::a_click_on_a_candle_reports_it` | native | a click on a chart mark keeps the vdom busy past 200 polls on Blitz |
+| `candlestick_chart::a_click_on_a_candle_reports_it` | native | upstream: Blitz lays out no svg child, so a mark has no rect to click |
 | `carousel_autoplay::tab_from_pause_within_the_carousel` | android | 2652 is the desktop WebView's arm |
 | `carousel_autoplay::tab_from_pause_within_the_carousel` | native | native::carousel has the Blitz arm |
 | `carousel_autoplay::tab_from_pause_within_the_carousel` | web | tab_from_pause_to_the_track_is_no_new_entry is the web's arm |
@@ -90,7 +90,7 @@ The performance scenarios (units `perf`, `table_perf`) are no skips but run on r
 | `focus_trap::tab_passes_over_a_stop_that_is_not_rendered` | android | 958: element identity on the WebView |
 | `focus_trap::tab_passes_over_a_stop_that_is_not_rendered` | desktop | 958: element identity on the WebView |
 | `focus_trap::tab_passes_over_a_stop_that_is_not_rendered` | ios | 958: element identity on the WebView |
-| `heatmap_chart::a_click_on_a_cell_reports_it` | native | a click on a chart mark keeps the vdom busy past 200 polls on Blitz |
+| `heatmap_chart::a_click_on_a_cell_reports_it` | native | upstream: Blitz lays out no svg child, so a mark has no rect to click |
 | `home::arrow_down_after_typing_enters_on_the_typed_day` | android | 958: element identity on the WebView |
 | `home::arrow_down_after_typing_enters_on_the_typed_day` | desktop | 958: element identity on the WebView |
 | `home::arrow_down_after_typing_enters_on_the_typed_day` | ios | 958: element identity on the WebView |
@@ -263,7 +263,6 @@ The performance scenarios (units `perf`, `table_perf`) are no skips but run on r
 | `share::android_shares_a_file_through_the_share_sheet` | all but android | 3351: the JNI share sheet is Android's |
 | `share::android_shares_the_link_through_the_share_sheet` | all but android | 3351: the JNI share sheet is Android's |
 | `share::android_shares_two_files_through_the_share_sheet` | all but android | 3361: ACTION_SEND_MULTIPLE is Android's |
-| `shortcut_help::a_list_that_grows_scrolls` | native | Blitz has no `:has()`, which fixes the scroll box's height |
 | `shortcut_help::a_narrow_list_stacks_each_row` | native | 1224: Blitz drops `@container`, so the rows stay side by side |
 | `slider::a_drag_released_past_the_end_tracks_and_ends` | ios | a touch screen has no hover |
 | `slider_touch_keyboard::a_touch_held_on_the_thumb_leaves_no_bubble_after_the_release` | desktop | 1126: no touch input under Xvfb |

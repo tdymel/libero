@@ -236,9 +236,8 @@ fn a_range_slider_is_a_group_of_two_sliders_in_the_ax_tree() {
     }
 }
 
-/// Blitz maps `role` only: no `aria-labelledby`, `aria-label` or `aria-value*`.
+/// Blitz 0.3.0-beta.4 maps `aria-labelledby` into the AX tree (todo 1173).
 #[test]
-#[ignore = "needs Blitz: aria-labelledby is not mapped into the AX tree"]
 fn the_label_names_the_range_slider_group_in_the_ax_tree() {
     let page = mount(range);
     assert_eq!(page.accessible("[role=group]").1, "Price");

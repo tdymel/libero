@@ -117,6 +117,5 @@ async fn a_list_that_grows_becomes_a_tab_stop<D: Driver>(d: &mut D, _route: &str
 e2e::scenario!(
     a_list_that_grows_scrolls,
     "/shortcut-help-grow",
-    a_list_that_grows_becomes_a_tab_stop,
-    native: skip("Blitz has no `:has()`, which fixes the scroll box's height")
+    a_list_that_grows_becomes_a_tab_stop
 );

@@ -1194,7 +1194,7 @@ impl Page {
     }
 
     /// The first match's role and name in Blitz's accessibility tree, the role as
-    /// accesskit's `Debug` name. Blitz names a node only by its own text children.
+    /// accesskit's `Debug` name: its `aria-label`/`aria-labelledby` label, else its text children.
     pub fn accessible(&self, selector: &str) -> (String, String) {
         let id = self.node(selector).as_u64();
         let tree = self.doc.inner.borrow().build_accessibility_tree();
@@ -1205,11 +1205,12 @@ impl Page {
                 .map(|(_, node)| node)
         };
         let node = find(id).unwrap_or_else(|| panic!("{selector:?} is not in the AX tree"));
-        let name = node
-            .labelled_by()
-            .iter()
-            .filter_map(|by| find(by.0).and_then(|text| text.value()))
-            .collect();
+        let name = node.label().map(str::to_string).unwrap_or_else(|| {
+            node.labelled_by()
+                .iter()
+                .filter_map(|by| find(by.0).and_then(|text| text.value()))
+                .collect()
+        });
         (format!("{:?}", node.role()), name)
     }
 

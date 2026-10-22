@@ -67,3 +67,12 @@ fn inline_content_in_a_padded_block_takes_its_hits() {
         assert!(page.hits(id), "{id} at {:?} takes no hit", page.rect(id));
     }
 }
+
+/// Blitz hits a `display: none` box at its 0x0 spot: a press at the window's corner hovered
+/// each remounted outlet div, whose redraw flushed again and kept the vdom busy.
+#[test]
+fn a_press_at_the_windows_corner_lets_the_page_settle() {
+    let mut page = mount(app);
+    page.click_at(0.0, 0.0);
+    assert!(page.hits("#margin"));
+}

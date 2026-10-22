@@ -58,6 +58,9 @@ pub(in crate::platform::backend) fn Outlet() -> Element {
             div {
                 key: "{flush}",
                 display: "none",
+                // Blitz hits a display:none box at its 0x0 spot: a pointer resting there flips
+                // the hover to each remounted div, whose redraw flushes again, forever.
+                visibility: "hidden",
                 onmounted: {
                     let doc = doc.clone();
                     move |event: MountedEvent| {
@@ -116,6 +119,7 @@ pub(in crate::platform::backend) fn SheetWatch(version: u64) -> Element {
             div {
                 key: "{key}",
                 display: "none",
+                visibility: "hidden",
                 onmounted: {
                     let state = state.clone();
                     move |event: MountedEvent| {

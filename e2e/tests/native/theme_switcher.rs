@@ -57,3 +57,12 @@ fn the_theme_picker_opens_inside_the_viewport() {
         page.rect(TRIGGER)
     );
 }
+
+/// The trigger's `aria-label` names it in Blitz's AX tree (todos 1173, 1501).
+#[test]
+fn the_trigger_is_named_in_the_ax_tree() {
+    let page = mount(app);
+    let (role, name) = page.accessible(TRIGGER);
+    assert_eq!(role, "Button");
+    assert!(!name.is_empty(), "an unnamed trigger:\n{}", page.tree());
+}
