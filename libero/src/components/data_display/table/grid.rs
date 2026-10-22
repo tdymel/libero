@@ -836,13 +836,12 @@ impl GridFocus {
         let window = rows.window.as_ref().map(|window| window.pitch);
         let row = window.is_none().then(|| {
             let row = match self.table.query_selector("tbody > tr") {
-                // A WebView's handle cannot query: the page finds the stop's table.
-                Err(PlatformError::Unsupported) => mounted_by_selector(&format!(
-                    "table:has([data-cell-stop='{}']) > tbody > tr",
-                    self.id.peek()
-                ))
-                .map(|data| element(&data))
-                .ok_or(PlatformError::NotFound),
+                // A WebView's handle cannot query: the page measures the stop, a row tall.
+                Err(PlatformError::Unsupported) => {
+                    mounted_by_selector(&format!("[data-cell-stop='{}']", self.id.peek()))
+                        .map(|data| element(&data))
+                        .ok_or(PlatformError::NotFound)
+                }
                 found => found,
             };
             row.map(|row| row.dimensions())
