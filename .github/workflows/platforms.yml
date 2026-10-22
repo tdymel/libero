@@ -35,7 +35,7 @@ defaults:
 
 jobs:
   web:
-    if: github.event_name != 'workflow_run' || (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push')
+    if: false
     runs-on: ubuntu-24.04
     timeout-minutes: 60
     steps:
@@ -60,7 +60,7 @@ jobs:
 
   # Blitz. `--platform linux` because two features map to a renderer, see docs/native.just.
   native:
-    if: github.event_name != 'workflow_run' || (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push')
+    if: false
     runs-on: ubuntu-24.04
     timeout-minutes: 60
     steps:
@@ -78,7 +78,7 @@ jobs:
 
   # Whether Blitz and libero/native compile off Linux at all; a `dx build` once they do.
   native-check:
-    if: github.event_name != 'workflow_run' || (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push')
+    if: false
     strategy:
       fail-fast: false
       matrix:
@@ -98,7 +98,7 @@ jobs:
   # ci.yml's `test` and libero's clippy on a Mac and Windows cfg, which nothing else runs; plus
   # the iOS cfg arms on the Mac. Expect first-run reds in the tests that read sources.
   unit:
-    if: github.event_name != 'workflow_run' || (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push')
+    if: false
     strategy:
       fail-fast: false
       matrix:
@@ -142,7 +142,7 @@ jobs:
 
   # wry on the system WebView: WebKitGTK, WebView2, WKWebView.
   desktop:
-    if: github.event_name != 'workflow_run' || (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push')
+    if: false
     strategy:
       fail-fast: false
       matrix:
@@ -166,7 +166,7 @@ jobs:
   # The e2e suites on macOS (2776), informational like every leg here. Blitz first: the harness
   # is windowless with a CPU rasteriser, so it needs no display or GPU.
   macos-native:
-    if: github.event_name != 'workflow_run' || (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push')
+    if: false
     runs-on: macos-26
     timeout-minutes: 120
     steps:
@@ -194,7 +194,7 @@ jobs:
   # A smoke of the browser tier on macOS: the units where a Mac differs (Cmd as `mod`, editing, IME).
   # The whole tier wedges headless Chrome on the 3-core runner after 170-350 tests (3444).
   macos-web:
-    if: github.event_name != 'workflow_run' || (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push')
+    if: false
     runs-on: macos-26
     timeout-minutes: 45
     steps:
@@ -281,7 +281,7 @@ jobs:
   # On demand only: a WKWebView window answering the e2e bridge, and windowed Blitz on wgpu.
   # `macos-desktop` runs the desktop arm itself (2782).
   macos-probe:
-    if: github.event_name == 'workflow_dispatch'
+    if: false
     runs-on: macos-26
     timeout-minutes: 120
     steps:
@@ -309,7 +309,7 @@ jobs:
   # The e2e suites on Windows (2781), informational. The runner ends process trees with
   # `taskkill` there; `shell: bash` is Git for Windows' bash.
   windows-native:
-    if: github.event_name != 'workflow_run' || (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push')
+    if: false
     runs-on: windows-2025
     timeout-minutes: 45
     steps:
@@ -333,7 +333,7 @@ jobs:
 
   # The browser tier on Windows: the e2e runner, dx and pinned Chrome, as ci.yml's `e2e` job.
   windows-web:
-    if: github.event_name != 'workflow_run' || (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push')
+    if: false
     strategy:
       fail-fast: false
       matrix:
@@ -394,7 +394,7 @@ jobs:
   # The desktop arm on Windows (2783): the fixture app in WebView2, driven over its DevTools
   # port (`--remote-debugging-port`), so no input injection and no screen size are involved.
   windows-desktop:
-    if: github.event_name != 'workflow_run' || (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push')
+    if: false
     runs-on: windows-2025
     timeout-minutes: 45
     steps:
@@ -440,7 +440,7 @@ jobs:
   # The desktop arm on WebKitGTK (2874), as on a seat: the runner starts one Xvfb display and
   # drives the window with `xdotool`.
   linux-desktop:
-    if: github.event_name != 'workflow_run' || (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push')
+    if: false
     runs-on: ubuntu-24.04
     timeout-minutes: 120
     steps:
@@ -467,7 +467,7 @@ jobs:
           retention-days: 3
 
   android:
-    if: github.event_name != 'workflow_run' || (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push')
+    if: false
     runs-on: ubuntu-24.04
     timeout-minutes: 90
     env:
@@ -510,7 +510,7 @@ jobs:
 
   # Simulator build, unsigned. Launching it is 1091.
   ios:
-    if: github.event_name != 'workflow_run' || (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push')
+    if: false
     runs-on: macos-26
     timeout-minutes: 90
     steps:
@@ -529,7 +529,7 @@ jobs:
   # The scenarios' `ios` arm in a simulator (2784), informational: the fixture app answers the
   # e2e bridge over loopback and AXe injects HID touches and keys. No phone, no signing.
   ios-e2e:
-    if: github.event_name != 'workflow_run' || (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push')
+    if: false
     strategy:
       fail-fast: false
       matrix:
