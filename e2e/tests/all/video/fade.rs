@@ -3,7 +3,7 @@
 
 use anyhow::Result;
 use e2e::browser::block_on;
-use e2e::driver::{Driver, Platform, eventually};
+use e2e::driver::{Driver, Host, Platform, eventually};
 use e2e::passes::{keyboard, pointer};
 use e2e::wait::PageBounded;
 use e2e::{Fixture, Viewport, clock, wait};
@@ -23,6 +23,21 @@ async fn hold_idle<D: Driver>(d: &mut D) -> Result<()> {
     Ok(())
 }
 
+/// A macOS window animates into fullscreen: wait until the bar's box held for 10 frames, else a click lands beside it.
+async fn rested<D: Driver>(d: &mut D) -> Result<()> {
+    if d.platform() != Platform::Desktop || Host::current() != Host::Macos {
+        return Ok(());
+    }
+    d.evaluate(&format!(
+        "(async () => {{ const box = () => JSON.stringify(document.querySelector('{BAR}').getBoundingClientRect()); \
+         let last = box(); let same = 0; \
+         while (same < 10) {{ await new Promise(requestAnimationFrame); const now = box(); \
+         same = now === last ? same + 1 : 0; last = now; }} return true; }})()"
+    ))
+    .await
+    .map(drop)
+}
+
 /// Fires the idle timer once it is armed and waits for the fade.
 async fn until_faded<D: Driver>(d: &mut D, what: &str) -> Result<()> {
     eventually(d, "the idle timer to arm", async |d| {
@@ -37,7 +52,7 @@ async fn until_faded<D: Driver>(d: &mut D, what: &str) -> Result<()> {
                  return JSON.stringify({ active: a && (a.tagName + '.' + a.className + ' ' + (a.getAttribute('aria-label') || '')), \
                  focusVisible: a && a.matches(':focus-visible'), controls: g.dataset.controls, \
                  fullscreen: !!document.fullscreenElement || !!document.webkitFullscreenElement, hasFocus: document.hasFocus(), \
-                 hover: g.matches(':hover') }); })()",
+                 hover: g.matches(':hover'), paused: document.querySelector('#player video').paused }); })()",
             )
             .await;
         anyhow::bail!("{error:#}; page: {seen:?}");
@@ -111,6 +126,7 @@ async fn fullscreen_controls_fade<D: Driver>(d: &mut D, _route: &str) -> Result<
         position == "absolute",
         "the controls are {position}, not overlaid"
     );
+    rested(d).await?;
     d.click(PLAY).await?;
     until_faded(d, "the controls to fade while playing").await?;
 
