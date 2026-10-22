@@ -27,16 +27,20 @@ pub struct ComboboxLabels {
     /// Announced when typed text leaves some options. A fn rather than a template,
     /// for a language's plural forms (WCAG 4.1.3).
     pub results: fn(usize) -> String,
+    /// `MultiSelect`'s button closing the phone sheet.
+    pub done: &'static str,
 }
 
 impl ComboboxLabels {
     pub const ENGLISH: Self = Self {
         nothing_found: "No results",
         results: english_results,
+        done: "Done",
     };
 
     pub const GERMAN: Self = Self {
         nothing_found: "Keine Ergebnisse",
         results: german_results,
+        done: "Fertig",
     };
 }

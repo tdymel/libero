@@ -461,6 +461,7 @@ pub fn PhoneField(props: PhoneFieldProps) -> Element {
             dial_id: dial_id.clone(),
             dropdown_parts: props.dropdown_parts,
             tabbed,
+            field: field.root(),
         },
         rows,
     );
@@ -775,6 +776,8 @@ struct Picker {
     dial_id: String,
     dropdown_parts: Input<Parts<DropdownPart>>,
     tabbed: CopyValue<bool>,
+    /// The field's root, which the phone sheet clears.
+    field: Option<ElementHandle>,
 }
 
 /// The frame's leading slot: the country picker with its list, or - with
@@ -797,6 +800,7 @@ fn phone_leading(with_select: bool, parts: Picker, rows: Vec<Element>) -> Option
         dial_id,
         dropdown_parts,
         mut tabbed,
+        field,
     } = parts;
 
     match with_select {
@@ -832,6 +836,8 @@ fn phone_leading(with_select: bool, parts: Picker, rows: Vec<Element>) -> Option
                 caret_keys: CaretKeys::Always,
                 labelled_by: Some(picker_id(state)),
                 parts: dropdown_parts,
+                sheet: true,
+                field,
                 {picker}
             }
         }),

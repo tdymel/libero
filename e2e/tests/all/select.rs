@@ -349,6 +349,26 @@ fn a_long_select_never_paints_its_top_rows_on_open() {
     });
 }
 
+/// Todo 3928: a windowed row's group description resolves even when its label slot is scrolled away.
+#[test]
+fn a_windowed_row_names_a_drawn_group() {
+    block_on(async {
+        let fixture = Fixture::open("/select/long", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        page.evaluate_bounded("document.querySelector('[role=combobox]').click()")
+            .await
+            .unwrap();
+        let js = "(() => { const rows = [...document.querySelectorAll('[role=option][aria-describedby]')]; \
+                  return rows.length > 0 && rows.every(r => !!document.getElementById(r.getAttribute('aria-describedby'))); })()";
+        wait::for_js_true(page, js, "every described row's group drawn")
+            .await
+            .unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
 /// Todo 1497: a click outside closes the search box's list and the focus stays
 /// where the click put it; only Escape, a pick or Clear refocus the trigger.
 pub async fn an_outside_click_keeps_its_focus<D: Driver>(d: &mut D, _route: &str) -> Result<()> {

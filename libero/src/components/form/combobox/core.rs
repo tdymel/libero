@@ -6,23 +6,33 @@ use crate::{
     components::{
         accessibility::VISUALLY_HIDDEN_FIXED_SX,
         common::{
-            ClassList, HtmlTag, Input, NavigationChord, Part, Parts, ScaleOrCss, States, Variables,
-            base_props, has_shortcut_modifier, navigation_chord, variables,
+            COARSE_POINTER, ClassList, HtmlTag, Input, NavigationChord, Part, Parts, ScaleOrCss,
+            States, Variables, base_props, has_shortcut_modifier, navigation_chord, variables,
         },
-        form::DropdownPart,
+        form::{
+            DropdownPart,
+            phone_sheet::{
+                SheetSwipe, narrow_query, phone_sheet_sx, sheet_clearance_style,
+                use_sheet_clearance, use_sheet_room, use_sheet_swipe,
+            },
+        },
         layout::{paper_sx, use_box},
     },
     hooks::{
         ElementHandle, POPOVER_AVAILABLE_HEIGHT, PopoverOptions, PopoverWidth, TYPEAHEAD_RESET,
         Typeahead, current_localization, placement_sx, typeahead_match, use_element,
-        use_field_list_layer, use_popover_on, use_theme, use_typeahead,
+        use_field_list_layer, use_media_query, use_popover_on, use_theme, use_typeahead,
     },
     platform::{ElementApi, is_tab},
     sx::{StaticSx, Sx, ThemeAwareValue, sx},
-    theme::{COMBOBOX_PADDING, Size, SizeCss, Z_INDEX_POPOVER},
+    theme::{COMBOBOX_PADDING, OWN_SHADOW, Size, SizeCss, Z_INDEX_POPOVER},
 };
 
-use super::{ComboboxState, dropdown::ComboboxDropdown, option::ComboboxContext};
+use super::{
+    ComboboxState,
+    dropdown::ComboboxDropdown,
+    option::{COARSE_ROW_HEIGHT, ComboboxContext},
+};
 
 // A `paper_sx()` surface, through `use_box` rather than `Paper` for the popover's handle and events.
 pub(crate) static COMBOBOX_DROPDOWN_SX: StaticSx = StaticSx::new(|| {
@@ -53,6 +63,34 @@ pub(crate) static COMBOBOX_DROPDOWN_SX: StaticSx = StaticSx::new(|| {
         .selector(
             "& [data-slot='nothing-found']",
             sx().padding("4px 8px").color("text-dimmed"),
+        )
+        // Opened by a press: the highlight is the keyboard's, so its ring waits for a key (todo 3898).
+        .when(
+            "pointer",
+            sx().selector(
+                "& [data-slot='option']",
+                sx().outline("none").box_shadow(OWN_SHADOW.value_or("none")),
+            ),
+        )
+});
+
+/// Below `sm`, the phone sheet: the rows fill it, and the footer shows.
+static COMBOBOX_SHEET_SX: StaticSx = StaticSx::new(|| {
+    COMBOBOX_DROPDOWN_SX
+        .clone()
+        // Before the sheet's own narrow block, which the one below merges into.
+        .selector("& > [data-slot='sheet-footer']", sx().display("none"))
+        .and(phone_sheet_sx())
+        .media(
+            narrow_query(),
+            sx().selector(
+                "& > [data-slot='listbox']",
+                sx().flex("1 1 auto").min_height("0").max_height("none"),
+            )
+            .selector(
+                "& > [data-slot='sheet-footer']",
+                sx().display("flex").flex_direction("column").flex("none"),
+            ),
         )
 });
 
@@ -134,6 +172,15 @@ base_props! {
         /// The likely widest rows' content: a windowed list draws them hidden, so `Min` fits rows not drawn.
         #[props(default)]
         widest: Vec<Element>,
+        /// Below `sm`, the phone sheet: for a list nobody types into, whose field the sheet may cover.
+        #[props(default)]
+        sheet: bool,
+        /// The field's root, so the sheet clears its helper and error too.
+        #[props(default)]
+        field: Option<ElementHandle>,
+        /// Below the rows and outside the scroll, drawn in the sheet only.
+        #[props(default)]
+        footer: Option<Element>,
         children: Element,
     }
 }
@@ -217,7 +264,15 @@ pub(crate) fn ComboboxCore(props: ComboboxCoreProps) -> Element {
         closed_row_keys: props.closed_row_keys,
         space_picks: props.space_picks,
     };
-    let onkeydown = move |event: KeyboardEvent| keys.handle(event);
+    // Pressed open, the highlight draws no keyboard ring until a key (todo 3898).
+    // Not a signal: read when the open redraws anyway, so a press costs no render (perf budgets).
+    let mut by_pointer = use_hook(|| CopyValue::new(false));
+    let onkeydown = move |event: KeyboardEvent| {
+        if *by_pointer.peek() {
+            by_pointer.set(false);
+        }
+        keys.handle(event)
+    };
     let disabled = props.disabled;
 
     let states: Input<States> = props
@@ -227,14 +282,24 @@ pub(crate) fn ComboboxCore(props: ComboboxCoreProps) -> Element {
         .with(radius.size.radius_state_name(), true)
         .with("bordered", true)
         .with("disabled", disabled)
+        .with("pointer", *by_pointer.peek())
         .into();
 
     // On the Escape stack while open, so a surrounding `HoverCard` leaves the press to it.
     let onopened = props.onopened;
-    use_field_list_layer(opened, use_callback(move |()| onopened.call(false)));
+    let onclose = use_callback(move |()| onopened.call(false));
+    use_field_list_layer(opened, onclose);
     let anchor = use_element();
-    // Unstyled: catches the keys and anchors the dropdown, so `sx` goes to the dropdown.
-    let wrapper = use_box().prepare();
+    let mut clearance = use_signal(|| 0.0);
+    use_effect(use_reactive!(|opened| {
+        if !opened && *clearance.peek() != 0.0 {
+            clearance.set(0.0);
+        }
+    }));
+    // Unstyled but for the sheet's clearance: catches the keys and anchors the dropdown, so `sx` goes to the dropdown.
+    let wrapper = use_box()
+        .style(props.sheet.then(|| sheet_clearance_style(clearance())))
+        .prepare();
     // A span, not `VisuallyHidden`: one scope fewer to re-render.
     let status_box = use_box().framework_sx(&VISUALLY_HIDDEN_FIXED_SX).prepare();
 
@@ -280,6 +345,12 @@ pub(crate) fn ComboboxCore(props: ComboboxCoreProps) -> Element {
                 aria_label: props.aria_label,
                 widest: props.widest,
                 context,
+                sheet: props.sheet,
+                field: props.field,
+                footer: props.footer,
+                clearance,
+                by_pointer,
+                onclose,
             }
         }
     });
@@ -288,6 +359,11 @@ pub(crate) fn ComboboxCore(props: ComboboxCoreProps) -> Element {
         .element(&anchor)
         // The trigger is the caller's, so keys are caught as they bubble. The dropdown has the same handler.
         .event("onkeydown", onkeydown)
+        .event("onpointerdown", move |_: PointerEvent| {
+            if !*by_pointer.peek() {
+                by_pointer.set(true);
+            }
+        })
         .render(
             HtmlTag::Div,
             Vec::new(),
@@ -337,6 +413,13 @@ struct ComboboxPopupProps {
     aria_label: Option<String>,
     widest: Vec<Element>,
     context: ComboboxContext,
+    sheet: bool,
+    field: Option<ElementHandle>,
+    footer: Option<Element>,
+    /// Written for `ComboboxCore`'s wrapper, which owns the trigger.
+    clearance: Signal<f64>,
+    by_pointer: CopyValue<bool>,
+    onclose: Callback<()>,
 }
 
 /// The open dropdown: the popover, its measuring and the portaled box.
@@ -358,15 +441,41 @@ fn ComboboxPopup(props: ComboboxPopupProps) -> Element {
             props.radius.custom_css(SizeCss::RADIUS),
         )
         .into();
+    // Off the sheet's width the room is never read: no measure, no redraw.
+    let narrow = use_media_query(&narrow_query());
+    let narrow = props.sheet && narrow();
+    let room = use_sheet_room(*popover.floating(), narrow && popover.placed());
     let dropdown = use_box()
-        .framework_sx(&COMBOBOX_DROPDOWN_SX)
+        .framework_sx(match props.sheet {
+            true => &COMBOBOX_SHEET_SX,
+            false => &COMBOBOX_DROPDOWN_SX,
+        })
         .class(&props.class)
         .sx(&props.sx)
         .parts(&props.parts)
         .states(&props.states)
         .variables(&radius_variables)
-        .style(Some(popover.vars()))
+        .style(Some(match props.sheet {
+            true => format!("{}{room}", popover.vars()),
+            false => popover.vars(),
+        }))
         .prepare();
+
+    let gap = theme.popover.gap;
+    let covered = use_sheet_clearance(props.anchor, props.field, popover, props.sheet, gap);
+    let mut clearance = props.clearance;
+    use_effect(use_reactive!(|covered| {
+        if *clearance.peek() != covered {
+            clearance.set(covered);
+        }
+    }));
+    // A windowed list pitches by the row's drawn height.
+    let coarse = use_media_query(COARSE_POINTER);
+    let row_height = theme.combobox.sizes.get((props.context.size)()).row_height;
+    let row_height = match coarse() {
+        true => row_height.max(COARSE_ROW_HEIGHT),
+        false => row_height,
+    };
 
     // Placed means measured and visible, the first moment focus can take.
     let autofocus = props.autofocus;
@@ -382,6 +491,17 @@ fn ComboboxPopup(props: ComboboxPopupProps) -> Element {
 
     let keys = props.keys;
     let context = props.context;
+    let mut by_pointer = props.by_pointer;
+    let footer = props.footer.filter(|_| narrow).map(|footer| {
+        rsx! {
+            div { "data-slot": "sheet-footer", {footer} }
+        }
+    });
+    let SheetSwipe { strip, listeners } = use_sheet_swipe(props.onclose);
+    let (strip, mut attributes) = (props.sheet.then_some(strip), props.attributes);
+    if props.sheet {
+        attributes.extend(listeners);
+    }
     // Portaled, so no `overflow: hidden` ancestor clips it and it can flip above the trigger.
     popover.show(Some(
         dropdown
@@ -391,13 +511,19 @@ fn ComboboxPopup(props: ComboboxPopupProps) -> Element {
                 event.prevent_default()
             })
             // Portaled, so keys bubble to `PortalOutlet`; this lets a search box inside answer the arrows.
-            .event("onkeydown", move |event: KeyboardEvent| keys.handle(event))
+            .event("onkeydown", move |event: KeyboardEvent| {
+                if *by_pointer.peek() {
+                    by_pointer.set(false);
+                }
+                keys.handle(event)
+            })
             .attr_default("data-slot", DropdownPart::Panel.slot())
             .attr("aria-busy", props.loading.then_some("true"))
             .render(
                 HtmlTag::Div,
-                props.attributes,
+                attributes,
                 rsx! {
+                    {strip}
                     ComboboxDropdown {
                         rows: props.rows,
                         row_keys: props.row_keys,
@@ -414,9 +540,10 @@ fn ComboboxPopup(props: ComboboxPopupProps) -> Element {
                         labelled_by: props.labelled_by,
                         aria_label: props.aria_label,
                         widest: props.widest,
-                        row_height: theme.combobox.sizes.get((context.size)()).row_height,
+                        row_height,
                         context,
                     }
+                    {footer}
                 },
             ),
     ));

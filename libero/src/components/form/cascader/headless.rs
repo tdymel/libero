@@ -12,8 +12,8 @@ use crate::{
         layout::use_box,
     },
     hooks::{use_element, use_theme},
-    platform::{blur_counts, mounted_by_selector},
-    sx::{StaticSx, ThemeAwareValue, sx},
+    platform::{SCROLL_MARGIN_BOTTOM_VAR, blur_counts, mounted_by_selector},
+    sx::{StaticSx, Sx, ThemeAwareValue, sx},
     theme::Size,
     utils::warn,
 };
@@ -326,6 +326,7 @@ pub fn CascaderDropdown<T: Options>(props: CascaderDropdownProps<T>) -> Element 
         descendant,
         empty,
         wrapper: _,
+        clearance,
         status,
     } = use_cascader_engine(EngineSetup {
         config: &config,
@@ -367,7 +368,18 @@ pub fn CascaderDropdown<T: Options>(props: CascaderDropdownProps<T>) -> Element 
         }
     }));
 
-    let wrapper = use_box().framework_sx(&CASCADER_WRAPPER_SX).prepare();
+    // The wrapper draws no box, so the sheet's clearance lands on the caller's trigger (todo 3914).
+    let clearance_sx: Input<Sx> = sx()
+        .selector(
+            format!("& {selector}"),
+            sx().with("scroll-margin-bottom", format!("{clearance}px"))
+                .with(SCROLL_MARGIN_BOTTOM_VAR, format!("{clearance}px")),
+        )
+        .into();
+    let wrapper = use_box()
+        .framework_sx(&CASCADER_WRAPPER_SX)
+        .sx(&clearance_sx)
+        .prepare();
     let toggle = open.clone();
     rsx! {
         {

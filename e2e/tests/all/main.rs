@@ -130,6 +130,7 @@ mod scroll_area;
 mod scroller;
 mod segmented_control;
 mod select;
+mod select_phone;
 mod settle;
 mod share;
 mod shortcut_help;

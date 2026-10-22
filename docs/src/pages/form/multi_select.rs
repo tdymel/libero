@@ -229,7 +229,7 @@ pub fn MultiSelectPage() -> Element {
                         .doc("Narrows or reorders the list. A runtime set goes here. A `Vec<T>` converts, an `OptionList<T>` adds named groups and disabled options, and a `Resource<Vec<T>>` adds the loader while it fetches."),
                     prop("option", "Callback<SelectOptionArgs<T>, Element>")
                         .default("T::label()")
-                        .doc("Draws one row's content. `selected` on the args is there for a checkmark. Hide a decorative glyph such as an emoji or the checkmark with `aria-hidden`, or a screen reader reads it with the label."),
+                        .doc("Draws one row's content. Unset, a selected row ends in a check mark; a custom row draws its own from `selected` on the args. Hide a decorative glyph such as an emoji or the checkmark with `aria-hidden`, or a screen reader reads it with the label."),
                     prop("selection", "Callback<SelectionArgs<T>, Element>")
                         .default("Chip with an x")
                         .doc("Draws one selected value in the trigger, remove control included. `remove` on the args drops that value; `disabled` and `readonly` say the field refuses it, so leave the remove control out then."),

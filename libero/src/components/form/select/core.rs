@@ -4,6 +4,7 @@ use pictogram_icons_lucide as lucide;
 use crate::{
     components::{
         accessibility::VisuallyHidden,
+        buttons::Button,
         common::{
             ComboboxState, Glyph, HtmlTag, Input, Part, Parts, ScaleOrCss, States, TOOLBAR_ITEM,
             ToolbarItem, aria_label_of, attr, focus_ring_sx, has_shortcut_modifier,
@@ -20,8 +21,8 @@ use crate::{
     },
     context::IconSlot,
     hooks::{
-        ElementHandle, PopoverWidth, TYPEAHEAD_RESET, Typeahead, id_selector, typeahead_match,
-        use_element, use_localization, use_theme, use_typeahead,
+        ElementHandle, PopoverWidth, TYPEAHEAD_RESET, Typeahead, current_localization, id_selector,
+        typeahead_match, use_element, use_localization, use_theme, use_typeahead,
     },
     platform::{
         ElementApi, PlatformError, blur_counts, focus_selector, focus_tab_from, is_tab, logical_key,
@@ -343,6 +344,9 @@ field_props! {
         /// Stays open on a pick, sets `aria-multiselectable`, lets the selection wrap.
         #[props(default)]
         multiple: bool,
+        /// A check mark after each selected row's content: a caller's `option` draws its own.
+        #[props(default)]
+        checks: bool,
         #[props(default)]
         searchable: bool,
         #[props(default)]
@@ -656,6 +660,7 @@ pub(crate) fn SelectCore(props: SelectCoreProps) -> Element {
         aria_label: aria_label_of(&props.attributes),
         parts: props.dropdown_parts,
         widest,
+        field: field.root(),
     });
 
     field.render(rsx! {
@@ -687,6 +692,8 @@ struct Listbox {
     aria_label: Option<String>,
     parts: Input<Parts<DropdownPart>>,
     widest: Vec<Element>,
+    /// The field's root, which the phone sheet clears.
+    field: Option<ElementHandle>,
 }
 
 fn select_listbox(list: Listbox) -> Element {
@@ -713,8 +720,20 @@ fn select_listbox(list: Listbox) -> Element {
         labelled_by,
         aria_label,
         widest,
+        field,
     } = list;
     let state = open.state;
+    // A pinned Done, as the sheet holds a multi-select open across picks (todo 3925).
+    let done = current_localization().combobox.done;
+    let footer = multiple.then(|| {
+        rsx! {
+            Button {
+                full_width: true,
+                onclick: move |_| open.open(false),
+                "{done}"
+            }
+        }
+    });
 
     rsx! {
         ComboboxCore {
@@ -750,6 +769,9 @@ fn select_listbox(list: Listbox) -> Element {
             aria_label,
             widest,
             parts,
+            sheet: true,
+            field,
+            footer,
             {control}
         }
     }
@@ -1074,6 +1096,7 @@ struct SelectRowInputs {
     label: Element,
     selected: bool,
     close_on_pick: bool,
+    check: bool,
     onpick: EventHandler<usize>,
     state: ComboboxState,
 }
@@ -1084,6 +1107,7 @@ fn select_row(index: usize, inputs: &SelectRowInputs) -> Element {
         label,
         selected,
         close_on_pick,
+        check,
         onpick,
         state,
     } = inputs.clone();
@@ -1100,6 +1124,12 @@ fn select_row(index: usize, inputs: &SelectRowInputs) -> Element {
                 }
             },
             {label}
+            // Hidden: `aria-selected` is what is read out (todo 3898).
+            if check && selected {
+                span { "data-slot": "check", "aria-hidden": "true",
+                    Glyph { slot: IconSlot::Check, icon: lucide::check::outlined }
+                }
+            }
         }
     }
 }
@@ -1177,6 +1207,7 @@ fn select_rows(
                 label: props.rows.get(index)?.clone(),
                 selected: picked.selected.get(index).copied().unwrap_or(false),
                 close_on_pick,
+                check: props.checks,
                 onpick,
                 state,
             };

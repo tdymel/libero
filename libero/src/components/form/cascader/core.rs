@@ -84,9 +84,7 @@ impl PartialEq for CascaderMatch {
 }
 
 /// Below the theme's `sm`, where two columns no longer fit a phone.
-pub(super) fn narrow_query() -> String {
-    format!("not all and (min-width: {})", Size::Sm.breakpoint_value())
-}
+pub(super) use crate::components::form::phone_sheet::narrow_query;
 
 field_parts_enum! {
     /// [`Cascader`](super::Cascader)'s inner parts, for its `parts` prop: a
@@ -202,6 +200,7 @@ pub(crate) fn CascaderCore(props: CascaderCoreProps) -> Element {
         descendant,
         empty,
         wrapper,
+        clearance: _,
         status,
     } = use_cascader_engine(EngineSetup {
         config: &config,

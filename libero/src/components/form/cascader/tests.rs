@@ -88,15 +88,20 @@ fn a_narrow_screen_makes_the_dropdown_a_bottom_sheet() {
         .unwrap_or_else(|| panic!("no narrow rule: {css}"));
     assert!(wide.contains("left:var(--lsx-popover-x)"), "{wide}");
 
-    for declaration in ["left:0;", "bottom:0;", "width:100%;"] {
+    // The foot rides above a browser keyboard (2173), else the screen's.
+    for declaration in [
+        "left:var(--lsx-sheet-left",
+        "right:var(--lsx-sheet-right",
+        "bottom:var(--lsx-sheet-foot",
+    ] {
         assert!(narrow.contains(declaration), "{declaration} in {narrow}");
     }
     // `vh` first for a browser without `dvh`, which skips the `@supports` block.
     let (plain, dynamic) = narrow
         .split_once("@supports (height: 1dvh){")
         .unwrap_or_else(|| panic!("no dvh override: {narrow}"));
-    assert!(plain.contains("max-height:70vh;"), "{plain}");
-    assert!(dynamic.contains("max-height:70dvh;"), "{dynamic}");
+    assert!(plain.contains("max-height:min(70vh,"), "{plain}");
+    assert!(dynamic.contains("max-height:min(70dvh,"), "{dynamic}");
 }
 
 /// A disabled row is dimmed text on top of `ComboboxOption`'s disabled look (todo 1132).

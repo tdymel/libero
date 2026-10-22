@@ -6,7 +6,12 @@ use crate::{
     components::{
         accessibility::VisuallyHidden,
         common::{ClassList, Input, Parts},
-        form::{ComboboxState, DropdownPart, combobox::nothing_found_row, use_refocus_on_close},
+        form::{
+            ComboboxState, DropdownPart,
+            combobox::nothing_found_row,
+            phone_sheet::{SheetSwipe, use_sheet_swipe},
+            use_refocus_on_close,
+        },
         layout::BoxStyle,
     },
     hooks::{
@@ -89,6 +94,8 @@ pub(in super::super) struct Engine {
     pub(in super::super) empty: bool,
     /// Carries the bottom sheet's clearance; the field wraps its frame in it.
     pub(in super::super) wrapper: BoxStyle,
+    /// The sheet's clearance in px, for a trigger the engine does not wrap.
+    pub(in super::super) clearance: f64,
     /// The always-mounted region saying what a search left.
     pub(in super::super) status: Element,
 }
@@ -167,6 +174,7 @@ pub(in super::super) fn use_cascader_engine(setup: EngineSetup) -> Engine {
         search_box,
         wrapper,
         dropdown,
+        clearance,
     } = use_cascader_dropdown(DropdownSetup {
         state,
         anchor,
@@ -221,6 +229,9 @@ pub(in super::super) fn use_cascader_engine(setup: EngineSetup) -> Engine {
         )
     });
 
+    let SheetSwipe { strip, listeners } = use_sheet_swipe(use_callback(move |()| state.close()));
+    let mut attributes = attributes;
+    attributes.extend(listeners);
     let dropdown_keys = keys.clone();
     popover.show(opened.then(|| {
         dropdown_box(
@@ -229,6 +240,7 @@ pub(in super::super) fn use_cascader_engine(setup: EngineSetup) -> Engine {
             dropdown_keys,
             attributes,
             rsx! {
+                {strip}
                 {header}
                 {body}
             },
@@ -254,6 +266,7 @@ pub(in super::super) fn use_cascader_engine(setup: EngineSetup) -> Engine {
         descendant,
         empty: visible.is_empty(),
         wrapper,
+        clearance,
         status,
     }
 }

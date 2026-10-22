@@ -5,14 +5,15 @@ use dioxus::prelude::*;
 use crate::{
     components::{
         common::{
-            HtmlTag, Input, Part, ROW_HOVER_TINT, ScaleOrCss, States, Variables, base_props,
-            disabled_look_sx, forced_on_sx, group_id, inset_focus_ring_sx, option_id, variables,
+            COARSE_POINTER, HtmlTag, Input, Part, ROW_HOVER_TINT, ScaleOrCss, States, Variables,
+            base_props, disabled_look_sx, forced_on_sx, group_id, inset_focus_ring_sx, option_id,
+            variables,
         },
         layout::use_box,
     },
     hooks::use_theme,
     sx::{StaticSx, ThemeAwareValue, sx},
-    theme::{ComboboxDefaults, Size, SizeCss},
+    theme::{COMBOBOX_ROW_HEIGHT, ComboboxDefaults, Size, SizeCss},
 };
 
 use crate::components::form::DropdownPart;
@@ -53,6 +54,9 @@ pub struct ComboboxOptionArgs<T> {
 
 const ACTIVE_RING_OFFSET: &str = "-2px";
 
+/// A row's least height under a coarse pointer; a windowed list pitches by it too.
+pub(super) const COARSE_ROW_HEIGHT: f64 = 48.0;
+
 static COMBOBOX_ROW_SX: StaticSx = StaticSx::new(|| {
     ComboboxDefaults::row_theme_vars()
         .display("flex")
@@ -68,6 +72,29 @@ static COMBOBOX_ROW_SX: StaticSx = StaticSx::new(|| {
             sx().min_width("0")
                 .overflow("hidden")
                 .text_overflow("ellipsis"),
+        )
+        // A multi-select's check mark, at the row's end.
+        .selector(
+            "& > [data-slot='check']",
+            sx().display("inline-flex")
+                .flex("none")
+                .width("1em")
+                .height("1em")
+                .with("margin-inline-start", "auto"),
+        )
+        .selector(
+            "& > [data-slot='check'] > svg",
+            sx().width("100%").height("100%"),
+        )
+        // M3's 48dp row under a finger (todo 3898); after the size rule, which it must beat.
+        .media(
+            COARSE_POINTER,
+            sx().per_size(|size| {
+                sx().min_height(format!(
+                    "max({COARSE_ROW_HEIGHT}px, {})",
+                    COMBOBOX_ROW_HEIGHT.value(size)
+                ))
+            }),
         )
         // Hover and the keyboard's row share the tint; only the active row takes the ring.
         // The pointer cursor only under hover: a bare one makes the row a Tab stop under Android's spatial navigation (3158).

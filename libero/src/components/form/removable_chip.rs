@@ -7,7 +7,7 @@ use crate::{
     components::{
         accessibility::VisuallyHidden,
         buttons::ActionIcon,
-        common::{Glyph, Input},
+        common::{Glyph, Input, coarse_hit_area_sx},
         form::Chip,
     },
     context::IconSlot,
@@ -56,6 +56,9 @@ static REMOVE_BUTTON_SX: StaticSx = StaticSx::new(|| {
             "&:hover",
             sx().background("color-mix(in srgb, currentColor 20%, transparent)"),
         )
+        // 44px under a finger (todo 3901); the chip is unclipped, so it reaches past the pill.
+        .position("relative")
+        .and(coarse_hit_area_sx("::before"))
 });
 
 /// A list field's chip: the label and an x that drops it, one size step down.

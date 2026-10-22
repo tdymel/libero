@@ -252,6 +252,7 @@ pub fn MultiSelect<T: Options>(props: MultiSelectProps<T>) -> Element {
             row_labels,
             loading: loading.then(|| common.loading.to_string()),
             multiple: true,
+            checks: props.option.is_none(),
             onpick,
             selection,
             value_labels,

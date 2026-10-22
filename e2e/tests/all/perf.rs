@@ -257,7 +257,8 @@ fn a_multi_select_pick_stays_in_budget() {
                 ("SelectCore", 1),
                 ("Chip", 1),
                 ("ActionIcon", 1),
-                ("Glyph", 1),
+                // The new chip's x, and the picked row's check mark (todo 3898).
+                ("Glyph", 2),
                 ("VisuallyHidden", 2),
                 ("ComboboxCore", 1),
                 ("ComboboxPopup", 2),

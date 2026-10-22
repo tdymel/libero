@@ -100,7 +100,6 @@ pub(super) fn ComboboxDropdown(
                 slots,
                 active,
                 active_slot,
-                id: id.clone(),
                 row_height,
             };
             (Vec::new(), Some(Rc::new(windowed)))
@@ -135,6 +134,15 @@ pub(super) fn ComboboxDropdown(
         (false, Some(windowed)) => {
             let (count, keep) = (windowed.slots.len(), windowed.active_slot);
             let keyed = windowed.clone();
+            // Drawn whatever the window shows, so a row's `aria-describedby` never dangles (todo 3928).
+            let names: Vec<(String, String)> = windowed
+                .slots
+                .iter()
+                .filter_map(|slot| match slot {
+                    Slot::Label { label, key } => Some((group_id(&id, *key), label.clone())),
+                    Slot::Row { .. } => None,
+                })
+                .collect();
             let list_sx = match landed() {
                 true => sx().max_height(max_height),
                 false => sx().max_height(max_height).opacity("0"),
@@ -156,6 +164,15 @@ pub(super) fn ComboboxDropdown(
                             style: "height: 0; overflow: hidden; visibility: hidden; pointer-events: none",
                             for row in widest {
                                 ComboboxOption { "role": "presentation", {row} }
+                            }
+                        }
+                    }
+                    if !names.is_empty() {
+                        div {
+                            "aria-hidden": "true",
+                            style: "height: 0; overflow: hidden; visibility: hidden; pointer-events: none",
+                            for (name_id , label) in names {
+                                div { key: "{name_id}", id: name_id, "{label}" }
                             }
                         }
                     }
@@ -291,7 +308,6 @@ struct Windowed {
     slots: Vec<Slot>,
     active: Option<usize>,
     active_slot: Option<usize>,
-    id: String,
     row_height: f64,
 }
 
@@ -305,10 +321,9 @@ impl Windowed {
 
     fn draw(&self, slot: usize) -> Element {
         match &self.slots[slot] {
-            // Hidden: the rows name their group by `aria-describedby`, which still reads it.
-            Slot::Label { label, key } => rsx! {
+            // Seen only: the rows' `aria-describedby` reads the always-drawn copy (todo 3928).
+            Slot::Label { label, .. } => rsx! {
                 div {
-                    id: group_id(&self.id, *key),
                     "aria-hidden": "true",
                     "data-slot": DropdownPart::GroupLabel.slot(),
                     style: "height: {self.row_height}px; box-sizing: border-box; display: flex; align-items: flex-end",

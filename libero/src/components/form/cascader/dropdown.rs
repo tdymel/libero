@@ -5,44 +5,32 @@ use dioxus::prelude::*;
 use crate::{
     components::{
         common::{ClassList, ComboboxState, HtmlTag, Input, Part, Parts, States},
-        form::{DropdownPart, combobox::COMBOBOX_DROPDOWN_SX},
+        form::{
+            DropdownPart,
+            combobox::COMBOBOX_DROPDOWN_SX,
+            phone_sheet::{
+                phone_sheet_sx, sheet_clearance_style, use_sheet_clearance, use_sheet_room,
+            },
+        },
         layout::{BoxStyle, use_box},
     },
     hooks::{
         ElementHandle, PopoverHandle, PopoverOptions, PopoverWidth, use_element,
         use_field_list_layer, use_popover_on,
     },
-    platform::{ElementApi, SCROLL_MARGIN_BOTTOM_VAR},
-    sx::{StaticSx, Sx, sx},
+    sx::{StaticSx, Sx},
     theme::Size,
 };
 
 use super::{
-    core::{CascaderLayout, narrow_query},
+    core::CascaderLayout,
     keys::CascaderKeys,
     search::{CASCADER_SEARCH_SX, use_focus_search},
 };
 
-/// The dropdown. Narrow, a bottom sheet: full width at the screen's foot. Its rules
-/// override the popover's class placement, which keeps measuring but no longer places.
-pub(super) static CASCADER_DROPDOWN_SX: StaticSx = StaticSx::new(|| {
-    COMBOBOX_DROPDOWN_SX.clone().media(
-        narrow_query(),
-        sx().left("0")
-            .right("0")
-            .top("auto")
-            .bottom("0")
-            .width("100%")
-            .min_width("0")
-            .max_width("100%")
-            .max_height("70vh")
-            .border_bottom_left_radius("0")
-            .border_bottom_right_radius("0")
-            .padding_bottom("calc(4px + env(safe-area-inset-bottom, 0px))")
-            // Tracks the visible viewport as a phone's URL bar slides in and out.
-            .supports("(height: 1dvh)", sx().max_height("70dvh")),
-    )
-});
+/// The dropdown; narrow, the shared phone sheet.
+pub(super) static CASCADER_DROPDOWN_SX: StaticSx =
+    StaticSx::new(|| COMBOBOX_DROPDOWN_SX.clone().and(phone_sheet_sx()));
 
 /// The open list's box, holding the search box and the rows.
 pub(super) fn dropdown_box(
@@ -62,66 +50,6 @@ pub(super) fn dropdown_box(
         .event("onkeydown", move |event: KeyboardEvent| keys.handle(event))
         .attr("data-slot", DropdownPart::Panel.slot())
         .render(HtmlTag::Div, attributes, content)
-}
-
-/// The bottom sheet may cover the field (WCAG 2.4.11): once placed over it, the trigger's
-/// `scroll-margin-bottom` clears the sheet plus the helper and error under the trigger.
-fn use_sheet_clearance(
-    anchor: ElementHandle,
-    field: Option<ElementHandle>,
-    popover: PopoverHandle,
-    opened: bool,
-    gap: f64,
-) -> f64 {
-    let mut clearance = use_signal(|| 0.0);
-    let placed = popover.placed();
-    let sheet = *popover.floating();
-    let mut live = use_signal(|| false);
-    use_effect(use_reactive!(|(opened, placed)| {
-        live.set(opened && placed);
-        if !(opened && placed) {
-            if *clearance.peek() != 0.0 {
-                clearance.set(0.0);
-            }
-            return;
-        }
-        spawn(async move {
-            let (Ok((_, top)), Ok(size), Ok((_, sheet_top)), Ok(sheet_size)) = (
-                anchor.client_offset().await,
-                anchor.dimensions().await,
-                sheet.client_offset().await,
-                sheet.dimensions().await,
-            ) else {
-                return;
-            };
-            // A placed popover keeps its placed top and covers what a dropdown covers; only
-            // the sheet, moved by its narrow rules, covers the field.
-            if popover
-                .placed_top()
-                .is_none_or(|placed_top| (placed_top - sheet_top).abs() < 1.0)
-            {
-                return;
-            }
-            let trigger_bottom = top + size.height;
-            let mut bottom = trigger_bottom;
-            if let Some(field) = field
-                && let (Ok((_, field_top)), Ok(field_size)) =
-                    (field.client_offset().await, field.dimensions().await)
-            {
-                bottom = bottom.max(field_top + field_size.height);
-            }
-            // The list may have closed during the measures above.
-            if *live.peek() && sheet_top < bottom && sheet_top + sheet_size.height > top {
-                clearance.set(sheet_size.height + gap + bottom - trigger_bottom);
-            }
-        });
-    }));
-    use_effect(move || {
-        if clearance() > 0.0 {
-            let _ = anchor.scroll_into_view(false);
-        }
-    });
-    clearance()
 }
 
 pub(super) struct DropdownSetup<'a> {
@@ -150,6 +78,7 @@ pub(super) struct Dropdown {
     pub(super) search_box: BoxStyle,
     pub(super) wrapper: BoxStyle,
     pub(super) dropdown: BoxStyle,
+    pub(super) clearance: f64,
 }
 
 pub(super) fn use_cascader_dropdown(setup: DropdownSetup) -> Dropdown {
@@ -184,13 +113,12 @@ pub(super) fn use_cascader_dropdown(setup: DropdownSetup) -> Dropdown {
     );
 
     let sheet_clearance = use_sheet_clearance(anchor, field, popover, opened, gap);
+    let room = use_sheet_room(*popover.floating(), opened && popover.placed());
 
     let search_box = use_box().framework_sx(&CASCADER_SEARCH_SX).prepare();
     let wrapper = use_box()
         // Always printed: a renderer never removes a declaration that stops being printed.
-        .style(Some(format!(
-            "scroll-margin-bottom:{sheet_clearance}px;{SCROLL_MARGIN_BOTTOM_VAR}:{sheet_clearance}px;"
-        )))
+        .style(Some(sheet_clearance_style(sheet_clearance)))
         .prepare();
     let dropdown_states: Input<States> = States::new()
         .with(size.state_name(), true)
@@ -204,7 +132,7 @@ pub(super) fn use_cascader_dropdown(setup: DropdownSetup) -> Dropdown {
         .parts(parts)
         .states(&dropdown_states)
         // Vars, not inline placement: `COMBOBOX_DROPDOWN_SX` places by class, so `sx` can move it.
-        .style(Some(popover.vars()));
+        .style(Some(format!("{}{room}", popover.vars())));
     if let Some(class) = class {
         dropdown = dropdown.class(class);
     }
@@ -220,5 +148,6 @@ pub(super) fn use_cascader_dropdown(setup: DropdownSetup) -> Dropdown {
         search_box,
         wrapper,
         dropdown,
+        clearance: sheet_clearance,
     }
 }

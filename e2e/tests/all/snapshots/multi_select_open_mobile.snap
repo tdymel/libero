@@ -23,4 +23,6 @@ listbox "Fruit" [multiselectable] [orientation=vertical]
     StaticText "Damson"
   option "Elderberry" [selected=false]
     StaticText "Elderberry"
+button "Done"
+  StaticText "Done"
 --> aria-controls [id="lsx-N-listbox"] (rendered above)
