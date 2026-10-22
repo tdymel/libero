@@ -289,7 +289,8 @@ e2e::scenario!(
     a_focused_windowed_row_clears_the_footer,
     "/table-groups/footer-window",
     a_focused_row_clears_the_footer,
-    android: skip("958: element identity on the WebView")
+    android: skip("958: element identity on the WebView"),
+    ios: skip("958: element identity on the WebView")
 );
 
 e2e::scenario!(

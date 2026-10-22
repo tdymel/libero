@@ -417,39 +417,6 @@ impl Ios {
         bail!("the page felt none of three taps at {x}, {y}, over {under}")
     }
 
-    /// Four raw touches in one AXe `batch` with no HID pacing between them (3702): how many of
-    /// its two clicks the page saw. Paced at 25 ms a send, the second touch was held 700 ms.
-    fn double_tap(&mut self, x: f64, y: f64) -> Result<u8> {
-        self.close_picker()?;
-        self.bridge.run(
-            "window.__double?.abort(); const ac = window.__double = new AbortController(); \
-             window.__clicks = 0; \
-             addEventListener('click', () => { __clicks++; }, { capture: true, signal: ac.signal });",
-        )?;
-        let (sx, sy) = self.screen(x, y);
-        let touch = |edge: &str| format!("touch -x {} -y {} --{edge}", point(sx), point(sy));
-        let (down, up) = (touch("down"), touch("up"));
-        let mut args = vec!["batch"];
-        for step in [&down, &up, &down, &up] {
-            args.extend(["--step", step.as_str()]);
-        }
-        self.mark(&format!("> double tap {x},{y}"))?;
-        self.inject_env(&args, &[("AXE_HID_STABILIZATION_MS", "0")])?;
-        // WebKit raises each click a moment after its lift.
-        let started = Instant::now();
-        let mut clicks = 0;
-        while started.elapsed() < Duration::from_secs(1) {
-            clicks = self.bridge.json::<u8>("__clicks")?;
-            if clicks >= 2 {
-                break;
-            }
-            std::thread::sleep(Duration::from_millis(25));
-        }
-        self.bridge.run("window.__double.abort()")?;
-        self.mark(&format!("  the double tap raised {clicks} clicks"))?;
-        Ok(clicks.min(2))
-    }
-
     /// A focused select may show iOS's picker, which takes the next tap and key (3700, 3701): an
     /// Escape closes it, swallowed at the window when no picker took it.
     fn close_picker(&mut self) -> Result<()> {
@@ -597,6 +564,26 @@ impl Ios {
         }
     }
 
+    /// `send`s `key` and returns once the page saw its keydown: AXe returns first, so a focus move
+    /// right after landed a chord's key on the next control. A key a native control takes is
+    /// waited for a moment only.
+    fn landed(&mut self, key: Key, send: impl FnOnce(&Self) -> Result<()>) -> Result<()> {
+        self.bridge.run(&format!(
+            "window.__keyWatch?.abort(); const ac = window.__keyWatch = new AbortController(); \
+             window.__keySeen = false; addEventListener('keydown', e => {{ \
+               if (e.code === {:?}) __keySeen = true; }}, {{ capture: true, signal: ac.signal }});",
+            key.code
+        ))?;
+        send(self)?;
+        let started = Instant::now();
+        while started.elapsed() < Duration::from_millis(1500)
+            && !self.bridge.json::<bool>("__keySeen")?
+        {
+            std::thread::sleep(Duration::from_millis(25));
+        }
+        self.bridge.run("window.__keyWatch.abort()")
+    }
+
     /// The injector with `args` against this simulator.
     fn inject(&self, args: &[&str]) -> Result<()> {
         self.inject_output(args).map(drop)
@@ -604,11 +591,6 @@ impl Ios {
 
     /// As [`Ios::inject`]; the tool's stdout.
     fn inject_output(&self, args: &[&str]) -> Result<String> {
-        self.inject_env(args, &[])
-    }
-
-    /// As [`Ios::inject_output`], with `env` set for the tool.
-    fn inject_env(&self, args: &[&str], env: &[(&str, &str)]) -> Result<String> {
         let tool = match self.input {
             Injector::Axe => "axe",
             Injector::Idb => "idb",
@@ -617,10 +599,7 @@ impl Ios {
         let mut tries = 0;
         loop {
             let out = traced(
-                Command::new(tool)
-                    .args(args)
-                    .args(["--udid", &self.udid])
-                    .envs(env.iter().copied()),
+                Command::new(tool).args(args).args(["--udid", &self.udid]),
                 &format!("{tool} {args:?}"),
             )?;
             if out.status.success() {
@@ -792,18 +771,12 @@ impl Driver for Ios {
         bail!("Ios: no hover on a touch screen")
     }
 
-    /// Both taps in one AXe `batch`, which may raise a `dblclick` (3702); a tap per click the
-    /// batch did not raise tops it up, so the grid's second tap still opens its editor.
+    /// Two taps, each a click; no `dblclick` (3702). One AXe `batch` of both held the second
+    /// touch 700 ms on CI (1.1 s with `AXE_HID_STABILIZATION_MS=0`) and WebKit sent it no click.
     async fn double_click(&mut self, selector: &str) -> Result<()> {
         let (x, y) = self.centre(selector)?;
-        let clicks = match self.input {
-            Injector::Axe => self.double_tap(x, y)?,
-            Injector::Idb => 0,
-        };
-        for _ in clicks..2 {
-            self.tap(x, y)?;
-        }
-        Ok(())
+        self.tap(x, y)?;
+        self.tap(x, y)
     }
 
     /// A point under the status bar moves just below it: the system takes taps there, so a
@@ -828,37 +801,41 @@ impl Driver for Ios {
     /// every control.
     async fn press(&mut self, key: Key) -> Result<()> {
         self.close_picker()?;
-        if key.code == "Tab" && self.input == Injector::Axe {
-            return self.chord(&[ALT], key);
-        }
-        match hid_usage(key)? {
-            (usage, false) => self.key(usage),
-            (_, true) => self.chord(&[SHIFT], key),
-        }
+        self.landed(key, |ios| {
+            if key.code == "Tab" && ios.input == Injector::Axe {
+                return ios.chord(&[ALT], key);
+            }
+            match hid_usage(key)? {
+                (usage, false) => ios.key(usage),
+                (_, true) => ios.chord(&[SHIFT], key),
+            }
+        })
     }
 
     async fn press_shift(&mut self, key: Key) -> Result<()> {
         self.close_picker()?;
-        if key.code == "Tab" && self.input == Injector::Axe {
-            return self.chord(&[ALT, SHIFT], key);
-        }
-        self.chord(&[SHIFT], key)
+        self.landed(key, |ios| {
+            if key.code == "Tab" && ios.input == Injector::Axe {
+                return ios.chord(&[ALT, SHIFT], key);
+            }
+            ios.chord(&[SHIFT], key)
+        })
     }
 
     async fn press_ctrl(&mut self, key: Key) -> Result<()> {
         self.close_picker()?;
-        self.chord(&[CTRL], key)
+        self.landed(key, |ios| ios.chord(&[CTRL], key))
     }
 
     /// Command, as on the Mac: libero reads `mod` as Meta on Apple platforms.
     async fn press_mod(&mut self, key: Key) -> Result<()> {
         self.close_picker()?;
-        self.chord(&[CMD], key)
+        self.landed(key, |ios| ios.chord(&[CMD], key))
     }
 
     async fn press_alt(&mut self, key: Key) -> Result<()> {
         self.close_picker()?;
-        self.chord(&[ALT], key)
+        self.landed(key, |ios| ios.chord(&[ALT], key))
     }
 
     /// One injector call per character, at about a typist's pace: one call for the lot

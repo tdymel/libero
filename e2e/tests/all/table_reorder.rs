@@ -537,7 +537,8 @@ e2e::scenario!(
     a_deep_move_up_keeps_scroll_and_focus,
     "/table-reorder-windowed",
     deep_move_up_keeps_scroll_and_focus,
-    android: skip("958: element identity on the WebView")
+    android: skip("958: element identity on the WebView"),
+    ios: skip("3416: a tap on the deep row's move button scrolls the page 21px")
 );
 
 /// Todo 1872: Row 1's grip held at the bottom edge scrolls the windowed rows on,

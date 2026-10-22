@@ -529,7 +529,8 @@ e2e::scenario!(
     a_second_tap_opens_the_editor,
     "/table-grid/editable",
     second_tap,
-    desktop: skip("no touch input in the desktop driver")
+    desktop: skip("no touch input in the desktop driver"),
+    ios: skip("3416: the first tap's touch end reaches the page 2 s late, so WebKit raises no click on the cell")
 );
 
 /// The editor opens with its text selected, so typing replaces it.
