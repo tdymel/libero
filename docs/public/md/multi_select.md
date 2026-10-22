@@ -2,7 +2,7 @@
 
 Crate: `libero`
 Import: `use libero::components::{MultiSelect, Options};`
-Feature: `select` (on by default, turns on `combobox`, `chip`, `action-icon`; [features.md](features.md))
+Feature: `select` (on by default, turns on `combobox`, `chip`, `action-icon`, `button`; [features.md](features.md))
 Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/form/select/multi_select.rs>
 Index: [index.md](index.md) lists every other page
 Description: A listbox over an enum that holds any number of its options, drawn as chips in the trigger.
