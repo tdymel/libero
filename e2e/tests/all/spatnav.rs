@@ -47,7 +47,7 @@ const ROUTES: &[&str] = &[
     "/menubar",
     "/menu",
     "/pagination",
-    "/bottom-navigation",
+    "/navigation-bar",
     "/scroller",
     "/carousel",
     "/sortable",

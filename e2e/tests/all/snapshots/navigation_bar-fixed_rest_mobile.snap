@@ -1,6 +1,6 @@
 ---
 source: e2e/src/suite.rs
-description: bottom_navigation-fixed at desktop (rest)
+description: navigation_bar-fixed at mobile (rest)
 expression: tree
 ---
 link "Link 0"

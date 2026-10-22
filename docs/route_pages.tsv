@@ -122,7 +122,7 @@
 /layout/sidebar	Sidebar - Libero	An in-flow panel on one edge of its parent that scrolls its own content, like a nav rail or an inspector.	/md/sidebar.md	Layout	/layout/box
 /layout/splitter	Splitter - Libero	Two panes split by a divider you can drag or move with the keyboard. Nest another Splitter in a pane for more than two.	/md/splitter.md	Layout	/layout/box
 /layout/transition	Transition - Libero	Fades, slides or scales its children in on mount, and out when open turns false.	/md/transition.md	Layout	/layout/box
-/navigation/bottom-navigation	BottomNavigation - Libero	A phone's bar of three to five top-level destinations, each an icon over a label, the current one marked with aria-current.	/md/bottom_navigation.md	Navigation	/navigation/anchor
+/navigation/navigation-bar	NavigationBar - Libero	A phone's bar of three to five top-level destinations, each an icon over a label, the current one marked with aria-current.	/md/navigation_bar.md	Navigation	/navigation/anchor
 /navigation/burger	Burger - Libero	Three bars that morph into an X, an ActionIcon with the ARIA a nav toggle needs.	/md/burger.md	Navigation	/navigation/anchor
 /navigation/anchor	Anchor - Libero	A real link styled and sized like Text, router-aware through to.	/md/anchor.md	Navigation	/navigation/anchor
 /navigation/nav-link	NavLink - Libero	A navigation list item for a sidebar or nav bar, a link that marks the current page with aria-current.	/md/nav_link.md	Navigation	/navigation/anchor

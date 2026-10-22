@@ -122,7 +122,7 @@ pub(super) fn theme_declarations(theme: &Theme) -> Vec<CssDeclaration> {
         toolbar: _,
         tour: _,
         nav_link: _,
-        bottom_navigation: _,
+        navigation_bar: _,
         loader,
         indicator,
         skeleton,

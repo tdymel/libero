@@ -134,7 +134,7 @@ fn label_aliases(label: &str) -> &'static [&'static str] {
         "ImageCropper" => &["crop", "cropper", "image crop", "avatar editor"],
         "Anchor" => &["link", "toc", "table of contents"],
         "NavLink" => &["nav item", "menu item", "link"],
-        "BottomNavigation" => &["tab bar", "navigation bar", "mobile nav"],
+        "NavigationBar" => &["tab bar", "bottom navigation", "mobile nav"],
         "Burger" => &["hamburger", "menu button", "nav toggle"],
         "Tabs" => &["tab list", "tabbed"],
         "Menubar" => &["menu bar"],

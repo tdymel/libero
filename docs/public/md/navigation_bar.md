@@ -1,14 +1,14 @@
-# BottomNavigation
+# NavigationBar
 
 Crate: `libero`
-Import: `use libero::components::{BottomNavigation, BottomNavigationItem};`
-Feature: `bottom-navigation` (off by default, turns on `nav-link`; [features.md](features.md))
-Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/navigation/bottom_navigation.rs>
+Import: `use libero::components::{NavigationBar, NavigationBarItem};`
+Feature: `navigation-bar` (off by default, turns on `nav-link`; [features.md](features.md))
+Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/navigation/navigation_bar.rs>
 Index: [index.md](index.md) lists every other page
 Description: A phone's bar of three to five top-level destinations, each an icon over a label, the current one marked with `aria-current`.
 
 A phone's bar of three to five top-level destinations. It is a `<nav>`
-landmark; each `BottomNavigationItem` is an icon over a label and its own Tab
+landmark; each `NavigationBarItem` is an icon over a label and its own Tab
 stop. The selected item gets `aria-current="page"` and a pill in a light tint
 of `color` behind its icon. Left unset, `selected` compares `to` with the
 current route.
@@ -20,14 +20,14 @@ selected.
 
 ```rust
 use dioxus::prelude::*;
-use libero::components::{BottomNavigation, BottomNavigationItem};
+use libero::components::{NavigationBar, NavigationBarItem};
 
 #[component]
 fn Demo() -> Element {
     rsx! {
-        BottomNavigation { "aria-label": "Main",
-            BottomNavigationItem { to: Route::Home {}, icon: rsx! { HomeIcon {} }, "Home" }
-            BottomNavigationItem { to: Route::Search {}, icon: rsx! { SearchIcon {} }, "Search" }
+        NavigationBar { "aria-label": "Main",
+            NavigationBarItem { to: Route::Home {}, icon: rsx! { HomeIcon {} }, "Home" }
+            NavigationBarItem { to: Route::Search {}, icon: rsx! { SearchIcon {} }, "Search" }
         }
     }
 }
@@ -52,17 +52,17 @@ sits over the icon; put its count in the item's `aria-label` too.
 
 ```rust
 use dioxus::prelude::*;
-use libero::components::{BottomNavigation, BottomNavigationItem, Indicator};
+use libero::components::{NavigationBar, NavigationBarItem, Indicator};
 
 #[component]
 fn Demo() -> Element {
     let mut tab = use_signal(|| 0);
     rsx! {
-        BottomNavigation { "aria-label": "Main", show_labels: "selected", color: "success",
-            BottomNavigationItem { selected: tab() == 0, onclick: move |_| tab.set(0),
+        NavigationBar { "aria-label": "Main", show_labels: "selected", color: "success",
+            NavigationBarItem { selected: tab() == 0, onclick: move |_| tab.set(0),
                 icon: rsx! { "⌂" }, "Home"
             }
-            BottomNavigationItem { selected: tab() == 1, onclick: move |_| tab.set(1),
+            NavigationBarItem { selected: tab() == 1, onclick: move |_| tab.set(1),
                 "aria-label": "Inbox, 3 unread",
                 icon: rsx! { "✉" },
                 badge: rsx! { Indicator { label: 3u32 } },
@@ -74,7 +74,7 @@ fn Demo() -> Element {
 ```
 
 `position: "fixed"` docks the bar to the viewport's bottom edge, clear of a
-phone's home indicator. Pad the page by `var(--lsx-bottom-navigation-height)`
+phone's home indicator. Pad the page by `var(--lsx-navigation-bar-height)`
 so its end is not hidden under the bar. The page needs
 `<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">`,
 or the browser reports no safe area. A native app docks it to its window
@@ -82,15 +82,15 @@ the same way.
 
 ```rust
 use dioxus::prelude::*;
-use libero::{components::{BottomNavigation, BottomNavigationItem, Box}, sx::sx};
+use libero::{components::{NavigationBar, NavigationBarItem, Box}, sx::sx};
 
 #[component]
 fn Demo() -> Element {
     rsx! {
-        Box { sx: sx().padding_bottom("var(--lsx-bottom-navigation-height)"), "Page" }
-        BottomNavigation { "aria-label": "Main", position: "fixed",
-            BottomNavigationItem { to: "/", icon: rsx! { "⌂" }, "Home" }
-            BottomNavigationItem { to: "/search", icon: rsx! { "⌕" }, "Search" }
+        Box { sx: sx().padding_bottom("var(--lsx-navigation-bar-height)"), "Page" }
+        NavigationBar { "aria-label": "Main", position: "fixed",
+            NavigationBarItem { to: "/", icon: rsx! { "⌂" }, "Home" }
+            NavigationBarItem { to: "/search", icon: rsx! { "⌕" }, "Search" }
         }
     }
 }
@@ -107,7 +107,7 @@ the same order.
 ```rust
 use dioxus::prelude::*;
 use libero::{
-    components::{BottomNavigation, BottomNavigationItem, Box},
+    components::{NavigationBar, NavigationBarItem, Box},
     hooks::use_media_query,
     sx::sx,
 };
@@ -116,10 +116,10 @@ use libero::{
 fn Demo() -> Element {
     let wide = use_media_query("(min-width: 48rem)");
     let nav = rsx! {
-        BottomNavigation { "aria-label": "Main", position: "sticky",
+        NavigationBar { "aria-label": "Main", position: "sticky",
             variant: if wide() { "rail" } else { "bar" },
-            BottomNavigationItem { to: "/", icon: rsx! { "⌂" }, "Home" }
-            BottomNavigationItem { to: "/search", icon: rsx! { "⌕" }, "Search" }
+            NavigationBarItem { to: "/", icon: rsx! { "⌂" }, "Home" }
+            NavigationBarItem { to: "/search", icon: rsx! { "⌕" }, "Search" }
         }
     };
 
@@ -140,19 +140,19 @@ fn Demo() -> Element {
 
 ## Props
 
-### BottomNavigation
+### NavigationBar
 
 | Prop | Type | Default | Description |
 |---|---|---|---|
-| `variant` | `BottomNavigationVariant` | `bar` | `"bar"`, a row along the bottom edge for a phone, or `"rail"`, an 88px column on the inline-start edge for a tablet or a desktop: the right edge in a right-to-left page. A rail spans the viewport's height and sticks to its top, or docks to the viewport with `position: "fixed"`, and publishes its measured width as `--lsx-navigation-rail-width` in place of the bar's height. Switch between them with `use_media_query`, as in the example. |
-| `position` | `BottomNavigationPosition` | `static` | `"static"` stays in the flow. `"sticky"` holds it at the bottom of its scroller, `"fixed"` at the viewport's; both publish the bar's measured height as `--lsx-bottom-navigation-height` and keep focus clear of the bar. A native app docks both the same way. |
+| `variant` | `NavigationBarVariant` | `bar` | `"bar"`, a row along the bottom edge for a phone, or `"rail"`, an 88px column on the inline-start edge for a tablet or a desktop: the right edge in a right-to-left page. A rail spans the viewport's height and sticks to its top, or docks to the viewport with `position: "fixed"`, and publishes its measured width as `--lsx-navigation-rail-width` in place of the bar's height. Switch between them with `use_media_query`, as in the example. |
+| `position` | `NavigationBarPosition` | `static` | `"static"` stays in the flow. `"sticky"` holds it at the bottom of its scroller, `"fixed"` at the viewport's; both publish the bar's measured height as `--lsx-navigation-bar-height` and keep focus clear of the bar. A native app docks both the same way. |
 | `show_labels` | `LabelVisibility` | `always` | `"always"`, `"selected"` (only the selected item's) or `"never"`. A hidden label still names its item. |
 | `color` | `ThemeAwareValue` | `primary` | Colours the selected item's pill. Only the color family counts: the pill is its lightest shade. |
 | `z_index` | `ThemeAwareValue` | the header's | Stacking order of a sticky or fixed bar. |
-| `parts` | `Parts<BottomNavigationPart>` | - | Styles for the inner parts in the Style API tab, under `sx`. |
-| `children` | `Element` | required | Three to five `BottomNavigationItem`s. |
+| `parts` | `Parts<NavigationBarPart>` | - | Styles for the inner parts in the Style API tab, under `sx`. |
+| `children` | `Element` | required | Three to five `NavigationBarItem`s. |
 
-### BottomNavigationItem
+### NavigationBarItem
 
 | Prop | Type | Default | Description |
 |---|---|---|---|
@@ -175,9 +175,9 @@ parts work.
 
 | Part | `data-slot` | Description |
 |---|---|---|
-| `BottomNavigationPart::Item` | `item` | Every item. |
-| `BottomNavigationPart::Icon` | `icon` | The pill holding an item's icon and badge. |
-| `BottomNavigationPart::Label` | `label` | An item's label. |
+| `NavigationBarPart::Item` | `item` | Every item. |
+| `NavigationBarPart::Icon` | `icon` | The pill holding an item's icon and badge. |
+| `NavigationBarPart::Label` | `label` | An item's label. |
 
 ## Accessibility
 
@@ -204,18 +204,18 @@ parts work.
   without one.
 - Put a badge's count in the item's `aria-label`, starting with the visible
   label: "Inbox, 3 unread".
-- With `position: "fixed"`, pad the page by `var(--lsx-bottom-navigation-height)`,
+- With `position: "fixed"`, pad the page by `var(--lsx-navigation-bar-height)`,
   or a fixed rail's inline-start by `var(--lsx-navigation-rail-width)`.
 - Switch to the rail with the same items in the same order, so the page keeps
   its landmarks and current item at every width.
 - A sticky bar closing a scrolling pane of its own: give the pane
-  `scroll-padding-bottom: var(--lsx-bottom-navigation-height)`, so a focused
+  `scroll-padding-bottom: var(--lsx-navigation-bar-height)`, so a focused
   element in it scrolls clear of the bar. In a native app set
   `--lsx-scroll-padding-bottom` to the same value beside it.
 
 ### Example
 
-An app bar, `BottomNavigation { "aria-label": "Main" }` with Home, Search and
+An app bar, `NavigationBar { "aria-label": "Main" }` with Home, Search and
 an Inbox item labelled `"aria-label": "Inbox, 3 unread"`: a screen reader
 lists the "Main" navigation, and the current item reads as the current page.
 
@@ -226,7 +226,7 @@ lists the "Main" navigation, and the current item reads as the current page.
 
 ## Theme defaults
 
-`BottomNavigationDefaults` on the theme.
+`NavigationBarDefaults` on the theme.
 
 | Field | Type | Description |
 |---|---|---|
@@ -236,10 +236,10 @@ lists the "Main" navigation, and the current item reads as the current page.
 
 | Variable | Description |
 |---|---|
-| `--lsx-bottom-navigation-height` | On `:root` while a sticky or fixed bar is mounted: its measured height, bottom safe area included. |
+| `--lsx-navigation-bar-height` | On `:root` while a sticky or fixed bar is mounted: its measured height, bottom safe area included. |
 | `--lsx-navigation-rail-width` | On `:root` while a rail is mounted: its measured width, inline-start safe area included. |
-| `--lsx-bottom-navigation-pill` | Background of the selected item's pill, the lightest shade of the color family. |
-| `--lsx-bottom-navigation-pill-color` | Icon colour on the pill, a darker shade of the color family that reaches 4.5:1 on it. |
+| `--lsx-navigation-bar-pill` | Background of the selected item's pill, the lightest shade of the color family. |
+| `--lsx-navigation-bar-pill-color` | Icon colour on the pill, a darker shade of the color family that reaches 4.5:1 on it. |
 
 ## Data attributes
 

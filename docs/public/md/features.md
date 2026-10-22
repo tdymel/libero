@@ -42,7 +42,7 @@ off by default too. `all-components` turns on every category.
 | `data-display` | accordion, audio, avatar, badge, carousel, charts, data-list, icon, image, image-list, indicator, kanban, list, marquee, qr-code, sortable, table, timeline, video |
 | `feedback` | alert, circular-progress, loader, notifications, progress-bar, skeleton |
 | `form` | autocomplete, cascader, checkbox, chip, color, combobox, date-time, fieldset, file-field, form-root, image-cropper, native-select, number-field, password-field, phone-field, pin-field, radio, radio-group, rating, rich-text-editor, segmented-control, select, slider, switch, tags-field, text-field, textarea |
-| `navigation` | anchor, bottom-navigation, burger, menubar, nav-link, pagination, stepper, tabs, tree |
+| `navigation` | anchor, burger, menubar, nav-link, navigation-bar, pagination, stepper, tabs, tree |
 | `overlay` | dialog, drawer, floating-window, hover-card, lightbox, menu, modal, overlay-backdrop, shortcut-help, spotlight, tooltip, tour |
 | `typography` | blockquote, code, kbd, mark, text, title |
 
@@ -131,10 +131,10 @@ edit: no features 23 s and 3 s, `select` 25 s and 4 s, the former default set of
 | `text-field` | TextField |  | off |  | +310 KB |
 | `textarea` | Textarea |  | off |  | +390 KB |
 | `anchor` | Anchor |  | off |  | +5 KB |
-| `bottom-navigation` | BottomNavigation | nav-link | off |  | +30 KB |
 | `burger` | Burger | action-icon | off |  | +500 KB |
 | `menubar` | Menubar | menu | off |  | +870 KB |
 | `nav-link` | NavLink | tree, anchor | off |  | +220 KB |
+| `navigation-bar` | NavigationBar | nav-link | off |  | +30 KB |
 | `pagination` | Pagination | action-icon | off |  | +560 KB |
 | `stepper` | Stepper |  | off |  | +410 KB |
 | `tabs` | Tabs |  | off |  | +210 KB |

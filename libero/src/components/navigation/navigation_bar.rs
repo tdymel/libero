@@ -29,24 +29,24 @@ use crate::{
 };
 
 str_enum! {
-    /// How a [`BottomNavigation`] stays on screen.
-    pub enum BottomNavigationPosition {
+    /// How a [`NavigationBar`] stays on screen.
+    pub enum NavigationBarPosition {
         /// In the flow, where it is rendered.
         #[default]
         Static = "static",
         /// Held at the bottom of its scroller while its parent is in view.
         Sticky = "sticky",
         /// Docked to the viewport's bottom edge; pad the page by
-        /// `var(--lsx-bottom-navigation-height)`.
+        /// `var(--lsx-navigation-bar-height)`.
         Fixed = "fixed",
     }
 }
 
-input_from_str!(BottomNavigationPosition);
+input_from_str!(NavigationBarPosition);
 
 str_enum! {
-    /// The shape of a [`BottomNavigation`].
-    pub enum BottomNavigationVariant {
+    /// The shape of a [`NavigationBar`].
+    pub enum NavigationBarVariant {
         /// A row along the bottom edge, for a phone.
         #[default]
         Bar = "bar",
@@ -57,7 +57,7 @@ str_enum! {
     }
 }
 
-input_from_str!(BottomNavigationVariant);
+input_from_str!(NavigationBarVariant);
 
 str_enum! {
     /// Which item labels show. A hidden label still names its item.
@@ -74,14 +74,14 @@ str_enum! {
 input_from_str!(LabelVisibility);
 
 /// The bar's height on `:root` while a sticky or fixed one is mounted.
-const BOTTOM_NAVIGATION_HEIGHT_VAR: CssVar = CssVar::new("--lsx-bottom-navigation-height");
+const NAVIGATION_BAR_HEIGHT_VAR: CssVar = CssVar::new("--lsx-navigation-bar-height");
 /// The rail's width on `:root` while one is mounted.
 const NAVIGATION_RAIL_WIDTH_VAR: CssVar = CssVar::new("--lsx-navigation-rail-width");
 /// The rail's width, its border included (M3).
 const RAIL_WIDTH: &str = "88px";
 
-const PILL_BACKGROUND_VAR: CssVar = CssVar::new("--lsx-bottom-navigation-pill");
-const PILL_COLOR_VAR: CssVar = CssVar::new("--lsx-bottom-navigation-pill-color");
+const PILL_BACKGROUND_VAR: CssVar = CssVar::new("--lsx-navigation-bar-pill");
+const PILL_COLOR_VAR: CssVar = CssVar::new("--lsx-navigation-bar-pill-color");
 
 /// An item's least height, past the 48px touch target.
 const ITEM_HEIGHT: &str = "56px";
@@ -89,9 +89,9 @@ const ITEM_HEIGHT: &str = "56px";
 const MAX_ITEMS: usize = 5;
 
 parts_enum! {
-    /// [`BottomNavigation`]'s inner parts, for its `parts` prop.
-    pub enum BottomNavigationPart {
-        /// Every [`BottomNavigationItem`].
+    /// [`NavigationBar`]'s inner parts, for its `parts` prop.
+    pub enum NavigationBarPart {
+        /// Every [`NavigationBarItem`].
         Item = "item" => "& [data-slot='item']",
         /// The pill holding an item's icon and badge.
         Icon = "icon" => "& [data-slot='item'] > [data-slot='icon']",
@@ -99,8 +99,8 @@ parts_enum! {
     }
 }
 
-static BOTTOM_NAVIGATION_SX: StaticSx = StaticSx::new(|| {
-    let label = BottomNavigationPart::Label.selector();
+static NAVIGATION_BAR_SX: StaticSx = StaticSx::new(|| {
+    let label = NavigationBarPart::Label.selector();
     sx().display("flex")
         .align_items("stretch")
         .width("100%")
@@ -114,16 +114,16 @@ static BOTTOM_NAVIGATION_SX: StaticSx = StaticSx::new(|| {
         .with("padding-left", safe_area_padding("0px", "left"))
         .with("padding-right", safe_area_padding("0px", "right"))
         .when(
-            BottomNavigationPosition::Sticky.state_name(),
+            NavigationBarPosition::Sticky.state_name(),
             sx().position("sticky").with("inset-block-end", "0"),
         )
         .when(
-            BottomNavigationPosition::Fixed.state_name(),
+            NavigationBarPosition::Fixed.state_name(),
             sx().position("fixed")
                 .with("inset-inline", "0")
                 .with("inset-block-end", "0"),
         )
-        .when(BottomNavigationVariant::Rail.state_name(), rail_sx())
+        .when(NavigationBarVariant::Rail.state_name(), rail_sx())
         .when(
             "rail-fixed",
             sx().position("fixed")
@@ -169,10 +169,10 @@ fn rail_sx() -> Sx {
         .with("padding-block-end", safe_area_padding("12px", "bottom"))
         .and(side("left", "right"))
         .rtl(side("right", "left"))
-        .selector(BottomNavigationPart::Item.selector(), sx().flex("0 0 auto"))
+        .selector(NavigationBarPart::Item.selector(), sx().flex("0 0 auto"))
 }
 
-static BOTTOM_NAVIGATION_ITEM_SX: StaticSx = StaticSx::new(|| {
+static NAVIGATION_BAR_ITEM_SX: StaticSx = StaticSx::new(|| {
     sx().position("relative")
         .flex("1 1 0")
         .min_width("0")
@@ -266,9 +266,9 @@ fn publish_css(measured: Option<f64>) -> String {
     };
     format!(
         ":root{{{}:{height};scroll-padding-bottom:{padding};{}:{padding};}}",
-        BOTTOM_NAVIGATION_HEIGHT_VAR.name(),
+        NAVIGATION_BAR_HEIGHT_VAR.name(),
         SCROLL_PADDING_VARS[2],
-        padding = BOTTOM_NAVIGATION_HEIGHT_VAR.value()
+        padding = NAVIGATION_BAR_HEIGHT_VAR.value()
     )
 }
 
@@ -293,7 +293,7 @@ impl ItemCount {
         self.count.set(self.count.get() + 1);
         if self.count.get() > MAX_ITEMS && !self.warned.replace(true) {
             warn(&format!(
-                "BottomNavigation: more than {MAX_ITEMS} items. Their labels get too \
+                "NavigationBar: more than {MAX_ITEMS} items. Their labels get too \
                  narrow to read; move the rest into a menu or a drawer."
             ));
         }
@@ -301,16 +301,16 @@ impl ItemCount {
 }
 
 base_props! {
-    parts(BottomNavigationPart);
-    pub struct BottomNavigationProps {
+    parts(NavigationBarPart);
+    pub struct NavigationBarProps {
         /// `static` (default), `sticky` or `fixed`; both of the latter publish
-        /// `--lsx-bottom-navigation-height` and pad focus clear of the bar.
+        /// `--lsx-navigation-bar-height` and pad focus clear of the bar.
         #[props(default, into)]
-        position: Input<BottomNavigationPosition>,
+        position: Input<NavigationBarPosition>,
         /// `bar` (default) along the bottom edge, or `rail`, a column on the inline-start
         /// edge that publishes `--lsx-navigation-rail-width`. Switch with `use_media_query`.
         #[props(default, into)]
-        variant: Input<BottomNavigationVariant>,
+        variant: Input<NavigationBarVariant>,
         /// `always` (default), `selected` or `never`.
         #[props(default, into)]
         show_labels: Input<LabelVisibility>,
@@ -319,7 +319,7 @@ base_props! {
         color: Input<ThemeAwareValue>,
         #[props(default, into)]
         z_index: Input<ThemeAwareValue>,
-        /// Three to five [`BottomNavigationItem`]s.
+        /// Three to five [`NavigationBarItem`]s.
         children: Element,
     }
 }
@@ -331,20 +331,20 @@ base_props! {
 ///
 /// ```
 /// # use dioxus::prelude::*;
-/// # use libero::components::{BottomNavigation, BottomNavigationItem};
+/// # use libero::components::{NavigationBar, NavigationBarItem};
 /// # fn app() -> Element {
 /// rsx! {
-///     BottomNavigation { "aria-label": "Main", position: "fixed",
-///         BottomNavigationItem { to: "/", icon: rsx! { "⌂" }, "Home" }
-///         BottomNavigationItem { to: "/search", icon: rsx! { "⌕" }, "Search" }
+///     NavigationBar { "aria-label": "Main", position: "fixed",
+///         NavigationBarItem { to: "/", icon: rsx! { "⌂" }, "Home" }
+///         NavigationBarItem { to: "/search", icon: rsx! { "⌕" }, "Search" }
 ///     }
 /// }
 /// # }
 /// ```
 ///
-/// Docs: <https://libero-ui.dev/navigation/bottom-navigation>
+/// Docs: <https://libero-ui.dev/navigation/navigation-bar>
 #[component]
-pub fn BottomNavigation(props: BottomNavigationProps) -> Element {
+pub fn NavigationBar(props: NavigationBarProps) -> Element {
     let theme = use_theme();
     let position = props.position.copied_or_default();
     let labels = props.show_labels.copied_or_default();
@@ -353,7 +353,7 @@ pub fn BottomNavigation(props: BottomNavigationProps) -> Element {
     let named = names_itself(&attributes);
     use_name_warning(
         named,
-        "BottomNavigation: no `aria-label` or `aria-labelledby`, so it is announced as just \"navigation\".",
+        "NavigationBar: no `aria-label` or `aria-labelledby`, so it is announced as just \"navigation\".",
     );
     if !named {
         attributes.retain(|attribute| !matches!(attribute.name, "aria-label" | "aria-labelledby"));
@@ -363,8 +363,8 @@ pub fn BottomNavigation(props: BottomNavigationProps) -> Element {
         use_context_provider(ItemCount::default);
     }
 
-    let rail = props.variant.copied_or_default() == BottomNavigationVariant::Rail;
-    let publishes = rail || position != BottomNavigationPosition::Static;
+    let rail = props.variant.copied_or_default() == NavigationBarVariant::Rail;
+    let publishes = rail || position != NavigationBarPosition::Static;
     // Measured, so a two-line label or larger text still clears the page.
     // Keyed by the variant: a switch must not publish the bar's height as the rail's width.
     let mut measured = use_signal(|| None::<(bool, f64)>);
@@ -390,24 +390,24 @@ pub fn BottomNavigation(props: BottomNavigationProps) -> Element {
     );
 
     let variables: Input<Variables> =
-        pill_variables(props.color.as_ref(), theme.bottom_navigation.color)
+        pill_variables(props.color.as_ref(), theme.navigation_bar.color)
             .with(Z_INDEX_HEADER.override_var(), props.z_index.resolve(None))
             .into();
     let states: Input<States> = props
         .states
         .unwrap_or_default()
         .with(position.state_name(), !rail)
-        .with(BottomNavigationVariant::Rail.state_name(), rail)
+        .with(NavigationBarVariant::Rail.state_name(), rail)
         .with(
             "rail-fixed",
-            rail && position == BottomNavigationPosition::Fixed,
+            rail && position == NavigationBarPosition::Fixed,
         )
         .with("labels-never", labels == LabelVisibility::Never)
         .with("labels-selected", labels == LabelVisibility::Selected)
         .into();
 
     use_box()
-        .framework_sx(&BOTTOM_NAVIGATION_SX)
+        .framework_sx(&NAVIGATION_BAR_SX)
         .class(&props.class)
         .sx(&props.sx)
         .parts(&props.parts)
@@ -419,7 +419,7 @@ pub fn BottomNavigation(props: BottomNavigationProps) -> Element {
 }
 
 base_props! {
-    pub struct BottomNavigationItemProps {
+    pub struct NavigationBarItemProps {
         /// A path, a URL or a typed route: the item is a link. Wins over `onclick`.
         #[props(default, into)]
         to: Input<NavigationTarget>,
@@ -442,16 +442,16 @@ base_props! {
     }
 }
 
-/// One destination of a [`BottomNavigation`]: an icon over a label, with
+/// One destination of a [`NavigationBar`]: an icon over a label, with
 /// `aria-current="page"` while selected.
 ///
 /// ```
 /// # use dioxus::prelude::*;
-/// # use libero::components::{BottomNavigation, BottomNavigationItem, Indicator};
+/// # use libero::components::{NavigationBar, NavigationBarItem, Indicator};
 /// # fn app() -> Element {
 /// rsx! {
-///     BottomNavigation { "aria-label": "Main",
-///         BottomNavigationItem { to: "/inbox", "aria-label": "Inbox, 3 unread",
+///     NavigationBar { "aria-label": "Main",
+///         NavigationBarItem { to: "/inbox", "aria-label": "Inbox, 3 unread",
 ///             icon: rsx! { "✉" },
 ///             badge: rsx! { Indicator { label: 3u32 } },
 ///             "Inbox"
@@ -461,9 +461,9 @@ base_props! {
 /// # }
 /// ```
 ///
-/// Docs: <https://libero-ui.dev/navigation/bottom-navigation>
+/// Docs: <https://libero-ui.dev/navigation/navigation-bar>
 #[component]
-pub fn BottomNavigationItem(props: BottomNavigationItemProps) -> Element {
+pub fn NavigationBarItem(props: NavigationBarItemProps) -> Element {
     if cfg!(debug_assertions) {
         let count = use_hook(|| {
             let count = try_consume_context::<ItemCount>();
@@ -480,19 +480,19 @@ pub fn BottomNavigationItem(props: BottomNavigationItemProps) -> Element {
         use_hook(|| {
             if props.to.as_ref().is_some() && props.onclick.is_some() {
                 warn(
-                    "BottomNavigationItem: both `to` and `onclick`; `to` wins and `onclick` is not called.",
+                    "NavigationBarItem: both `to` and `onclick`; `to` wins and `onclick` is not called.",
                 );
             }
         });
         // The icon span is aria-hidden, so the badge is only heard through the item's name.
         use_name_warning(
             props.badge.is_none() || names_itself(&props.attributes),
-            "BottomNavigationItem: `badge` without an `aria-label` or `aria-labelledby` carrying the count, so it is not announced.",
+            "NavigationBarItem: `badge` without an `aria-label` or `aria-labelledby` carrying the count, so it is not announced.",
         );
         // The icon is aria-hidden, so an item without a label or a spread name is announced as just "link" or "button".
         use_name_warning(
             !is_empty_element(&props.children) || names_itself(&props.attributes),
-            "BottomNavigationItem: no label and no `aria-label` or `aria-labelledby`, so it is announced as just \"link\" or \"button\".",
+            "NavigationBarItem: no label and no `aria-label` or `aria-labelledby`, so it is announced as just \"link\" or \"button\".",
         );
     }
 
@@ -513,7 +513,7 @@ pub fn BottomNavigationItem(props: BottomNavigationItemProps) -> Element {
         .into();
     let style_attributes = use_style_attributes(
         &props.class,
-        Some(&BOTTOM_NAVIGATION_ITEM_SX),
+        Some(&NAVIGATION_BAR_ITEM_SX),
         sx_source(&props.sx),
         &states,
         &Input::None,
@@ -585,7 +585,7 @@ mod tests {
     #[test]
     fn the_part_table_is_stable() {
         assert_eq!(
-            crate::components::common::part_table::<BottomNavigationPart>(),
+            crate::components::common::part_table::<NavigationBarPart>(),
             [
                 ("item", "& [data-slot='item']"),
                 ("icon", "& [data-slot='item'] > [data-slot='icon']"),
@@ -598,22 +598,22 @@ mod tests {
     fn a_docked_bar_publishes_its_height_with_the_safe_area() {
         assert_eq!(
             publish_css(None),
-            ":root{--lsx-bottom-navigation-height:calc(64px + env(safe-area-inset-bottom, 0px));\
-             scroll-padding-bottom:var(--lsx-bottom-navigation-height);\
-             --lsx-scroll-padding-bottom:var(--lsx-bottom-navigation-height);}"
+            ":root{--lsx-navigation-bar-height:calc(64px + env(safe-area-inset-bottom, 0px));\
+             scroll-padding-bottom:var(--lsx-navigation-bar-height);\
+             --lsx-scroll-padding-bottom:var(--lsx-navigation-bar-height);}"
         );
         assert_eq!(
             publish_css(Some(79.5)),
-            ":root{--lsx-bottom-navigation-height:79.5px;\
-             scroll-padding-bottom:var(--lsx-bottom-navigation-height);\
-             --lsx-scroll-padding-bottom:var(--lsx-bottom-navigation-height);}"
+            ":root{--lsx-navigation-bar-height:79.5px;\
+             scroll-padding-bottom:var(--lsx-navigation-bar-height);\
+             --lsx-scroll-padding-bottom:var(--lsx-navigation-bar-height);}"
         );
     }
 
     /// Todo 1942: the browser harness cannot emulate a notch, so the rule itself.
     #[test]
     fn the_bar_pads_the_side_safe_areas() {
-        let css = Stylesheet::from(&BOTTOM_NAVIGATION_SX);
+        let css = Stylesheet::from(&NAVIGATION_BAR_SX);
         for side in ["left", "right"] {
             assert!(
                 css.as_str().contains(&format!(
@@ -640,7 +640,7 @@ mod tests {
     /// Todo 3890: the rail pads the top, bottom and inline-start safe areas, mirrored in RTL.
     #[test]
     fn the_rail_pads_its_own_safe_areas() {
-        let css = Stylesheet::from(&BOTTOM_NAVIGATION_SX);
+        let css = Stylesheet::from(&NAVIGATION_BAR_SX);
         let css = css.as_str();
         for padding in [
             "padding-block-start:calc(12px + env(safe-area-inset-top, 0px))",

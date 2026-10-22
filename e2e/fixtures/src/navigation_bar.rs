@@ -1,20 +1,20 @@
-//! Five `BottomNavigationItem`s in a 320px column, a three-item RTL bar, and a
+//! Five `NavigationBarItem`s in a 320px column, a three-item RTL bar, and a
 //! fixed bar over a tall page with only the selected label shown, and a rail in
 //! either direction.
 
 use dioxus::prelude::*;
-use libero::components::{BottomNavigation, BottomNavigationItem, Indicator, Pictogram, SvgData};
+use libero::components::{NavigationBar, NavigationBarItem, Indicator, Pictogram, SvgData};
 use pictogram_icons_lucide as lucide;
 
 use crate::Routes;
 
 pub const ROUTES: Routes = &[
-    ("/bottom-navigation", || rsx! { BottomNavigationPage {} }),
-    ("/bottom-navigation/fixed", || rsx! { FixedPage {} }),
-    ("/bottom-navigation/scroller", || rsx! { ScrollerPage {} }),
-    ("/bottom-navigation/unselected", || rsx! { UnselectedPage {} }),
-    ("/bottom-navigation/rail", || rsx! { RailPage { dir: "ltr" } }),
-    ("/bottom-navigation/rail-rtl", || rsx! { RailPage { dir: "rtl" } }),
+    ("/navigation-bar", || rsx! { NavigationBarPage {} }),
+    ("/navigation-bar/fixed", || rsx! { FixedPage {} }),
+    ("/navigation-bar/scroller", || rsx! { ScrollerPage {} }),
+    ("/navigation-bar/unselected", || rsx! { UnselectedPage {} }),
+    ("/navigation-bar/rail", || rsx! { RailPage { dir: "ltr" } }),
+    ("/navigation-bar/rail-rtl", || rsx! { RailPage { dir: "rtl" } }),
 ];
 
 /// A rail beside a tall page, as a tablet layout (todo 3890).
@@ -23,9 +23,9 @@ fn RailPage(dir: &'static str) -> Element {
     let mut current = use_signal(|| 0usize);
     rsx! {
         div { id: "layout", dir, style: "display: flex;",
-            BottomNavigation { id: "rail", "aria-label": "Main", variant: "rail",
+            NavigationBar { id: "rail", "aria-label": "Main", variant: "rail",
                 for (index, (id, label, icon)) in ITEMS.into_iter().enumerate() {
-                    BottomNavigationItem {
+                    NavigationBarItem {
                         key: "{id}",
                         id: "rail-{id}",
                         selected: current() == index,
@@ -47,8 +47,8 @@ fn RailPage(dir: &'static str) -> Element {
 #[component]
 fn UnselectedPage() -> Element {
     rsx! {
-        BottomNavigation { "aria-label": "Links",
-            BottomNavigationItem { id: "not-current", to: "/bottom-navigation/unselected", selected: false,
+        NavigationBar { "aria-label": "Links",
+            NavigationBarItem { id: "not-current", to: "/navigation-bar/unselected", selected: false,
                 icon: rsx! { Pictogram { icon: lucide::house::outlined } },
                 "Same"
             }
@@ -56,7 +56,7 @@ fn UnselectedPage() -> Element {
     }
 }
 
-/// `/bottom-navigation/fixed`'s `#link-0..`, past any viewport's height.
+/// `/navigation-bar/fixed`'s `#link-0..`, past any viewport's height.
 const LINKS: usize = 30;
 
 const ITEMS: [(&str, &str, SvgData); 5] = [
@@ -71,9 +71,9 @@ const ITEMS: [(&str, &str, SvgData); 5] = [
 fn Bar(prefix: &'static str, count: usize, show_labels: &'static str) -> Element {
     let mut current = use_signal(|| 0usize);
     rsx! {
-        BottomNavigation { id: "{prefix}bar", "aria-label": "Main", show_labels,
+        NavigationBar { id: "{prefix}bar", "aria-label": "Main", show_labels,
             for (index, (id, label, icon)) in ITEMS.into_iter().take(count).enumerate() {
-                BottomNavigationItem {
+                NavigationBarItem {
                     key: "{id}",
                     id: "{prefix}{id}",
                     selected: current() == index,
@@ -89,7 +89,7 @@ fn Bar(prefix: &'static str, count: usize, show_labels: &'static str) -> Element
 }
 
 #[component]
-fn BottomNavigationPage() -> Element {
+fn NavigationBarPage() -> Element {
     let mut clicked = use_signal(|| false);
     rsx! {
         div { style: "display: flex; flex-direction: column; gap: 24px;",
@@ -101,16 +101,16 @@ fn BottomNavigationPage() -> Element {
                 Bar { prefix: "rtl-", count: 3, show_labels: "always" }
             }
             div { style: "max-width: 320px;",
-                BottomNavigation { "aria-label": "Links",
-                    BottomNavigationItem { id: "link", to: "/bottom-navigation", selected: true,
+                NavigationBar { "aria-label": "Links",
+                    NavigationBarItem { id: "link", to: "/navigation-bar", selected: true,
                         icon: rsx! { Pictogram { icon: lucide::house::outlined } },
                         "Here"
                     }
-                    BottomNavigationItem { id: "disabled", to: "/bottom-navigation/fixed", disabled: true,
+                    NavigationBarItem { id: "disabled", to: "/navigation-bar/fixed", disabled: true,
                         icon: rsx! { Pictogram { icon: lucide::user::outlined } },
                         "Away"
                     }
-                    BottomNavigationItem { id: "disabled-button", disabled: true,
+                    NavigationBarItem { id: "disabled-button", disabled: true,
                         onclick: move |_| clicked.set(true),
                         icon: rsx! { Pictogram { icon: lucide::bell::outlined } },
                         "Off"
@@ -128,13 +128,13 @@ fn BottomNavigationPage() -> Element {
 #[component]
 fn ScrollerPage() -> Element {
     rsx! {
-        div { id: "pane", style: "max-width: 320px; height: 300px; overflow-y: auto; scroll-padding-bottom: var(--lsx-bottom-navigation-height); --lsx-scroll-padding-bottom: var(--lsx-bottom-navigation-height);",
+        div { id: "pane", style: "max-width: 320px; height: 300px; overflow-y: auto; scroll-padding-bottom: var(--lsx-navigation-bar-height); --lsx-scroll-padding-bottom: var(--lsx-navigation-bar-height);",
             for index in 0..20 {
                 a { key: "{index}", id: "row-{index}", href: "#row-{index}", style: "display: block; padding: 12px;", "Row {index}" }
             }
-            BottomNavigation { id: "sticky", "aria-label": "Main", position: "sticky",
+            NavigationBar { id: "sticky", "aria-label": "Main", position: "sticky",
                 for (index, (id, label, icon)) in ITEMS.into_iter().take(3).enumerate() {
-                    BottomNavigationItem {
+                    NavigationBarItem {
                         key: "{id}",
                         id: "sticky-{id}",
                         selected: index == 0,
@@ -152,15 +152,15 @@ fn ScrollerPage() -> Element {
 fn FixedPage() -> Element {
     rsx! {
         // Links down past the fold: Tab reaches one in view but under the bar (todo 1827).
-        div { id: "page", style: "padding-bottom: var(--lsx-bottom-navigation-height);",
+        div { id: "page", style: "padding-bottom: var(--lsx-navigation-bar-height);",
             for index in 0..LINKS {
                 a { key: "{index}", id: "link-{index}", href: "#link-{index}", style: "display: block; padding: 12px;", "Link {index}" }
             }
             div { style: "height: 2000px", "Page" }
         }
-        BottomNavigation { id: "fixed", "aria-label": "Main", position: "fixed", show_labels: "selected",
+        NavigationBar { id: "fixed", "aria-label": "Main", position: "fixed", show_labels: "selected",
             for (index, (id, label, icon)) in ITEMS.into_iter().take(3).enumerate() {
-                BottomNavigationItem {
+                NavigationBarItem {
                     key: "{id}",
                     id: "fixed-{id}",
                     selected: index == 0,

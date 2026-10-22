@@ -86,7 +86,7 @@ md_pages! {
     Avatar => "avatar",
     Badge => "badge",
     Blockquote => "blockquote",
-    BottomNavigation => "bottom_navigation",
+    NavigationBar => "navigation_bar",
     Box => "box",
     Burger => "burger",
     Button => "button",

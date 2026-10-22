@@ -1,6 +1,6 @@
 ---
 source: e2e/src/suite.rs
-description: bottom_navigation-scroller at desktop (rest)
+description: navigation_bar-scroller at mobile (rest)
 expression: tree
 ---
 link "Row 0"

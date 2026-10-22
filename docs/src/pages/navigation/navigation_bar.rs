@@ -2,8 +2,8 @@ use crate::components::{Control, Demo, DemoValues, DocPage, Wrap, a11y, indent, 
 use dioxus::prelude::*;
 use libero::{
     components::{
-        BottomNavigation, BottomNavigationItem, BottomNavigationPart, Box, Code, Indicator,
-        Pictogram, SvgData, Text,
+        Box, Code, Indicator, NavigationBar, NavigationBarItem, NavigationBarPart, Pictogram,
+        SvgData, Text,
     },
     hooks::use_media_query,
     sx::sx,
@@ -24,7 +24,7 @@ const MARKED: usize = 2;
 /// The props from the controls go on the bar; the items are spliced in under them.
 fn wrap_bar(values: &DemoValues, code: &str) -> String {
     let body = code
-        .strip_prefix("BottomNavigation {")
+        .strip_prefix("NavigationBar {")
         .unwrap_or(code)
         .trim_end_matches('}');
     let body = match body.is_empty() {
@@ -53,12 +53,12 @@ fn wrap_bar(values: &DemoValues, code: &str) -> String {
             }
             lines.push(format!("{label:?}"));
             indent(&format!(
-                "BottomNavigationItem {{\n{}}}\n",
+                "NavigationBarItem {{\n{}}}\n",
                 indent(&lines.join("\n"))
             ))
         })
         .collect();
-    let bar = format!("BottomNavigation {{\n    \"aria-label\": \"Main\",{body}{items}}}");
+    let bar = format!("NavigationBar {{\n    \"aria-label\": \"Main\",{body}{items}}}");
     match values.str("variant").as_str() {
         RESPONSIVE => format!("let wide = use_media_query({WIDE_QUERY:?});\n\n{bar}"),
         _ => bar,
@@ -70,38 +70,38 @@ const RESPONSIVE: &str = "responsive";
 const WIDE_QUERY: &str = "(min-width: 48rem)";
 
 #[component]
-pub fn BottomNavigationPage() -> Element {
+pub fn NavigationBarPage() -> Element {
     let theme = use_theme();
     let mut current = use_signal(|| 0usize);
     let wide = use_media_query(WIDE_QUERY);
 
     rsx! {
         DocPage {
-            title: "BottomNavigation",
-            source: "libero/src/components/navigation/bottom_navigation.rs",
-            markdown: "/md/bottom_navigation.md",
+            title: "NavigationBar",
+            source: "libero/src/components/navigation/navigation_bar.rs",
+            markdown: "/md/navigation_bar.md",
             properties: vec![
-                props("BottomNavigation", vec![
-                    prop("variant", "BottomNavigationVariant")
+                props("NavigationBar", vec![
+                    prop("variant", "NavigationBarVariant")
                         .default("bar")
                         .doc("`\"bar\"`, a row along the bottom edge for a phone, or `\"rail\"`, an 88px column on the inline-start edge for a tablet or a desktop: the right edge in a right-to-left page. A rail spans the viewport's height and sticks to its top, or docks to the viewport with `position: \"fixed\"`, and publishes its measured width as `--lsx-navigation-rail-width` in place of the bar's height. Switch between them with `use_media_query`, as in the example."),
-                    prop("position", "BottomNavigationPosition")
+                    prop("position", "NavigationBarPosition")
                         .default("static")
-                        .doc("`\"static\"` stays in the flow. `\"sticky\"` holds it at the bottom of its scroller, `\"fixed\"` at the viewport's; both publish the bar's measured height as `--lsx-bottom-navigation-height` and keep focus clear of the bar. A native app docks both the same way."),
+                        .doc("`\"static\"` stays in the flow. `\"sticky\"` holds it at the bottom of its scroller, `\"fixed\"` at the viewport's; both publish the bar's measured height as `--lsx-navigation-bar-height` and keep focus clear of the bar. A native app docks both the same way."),
                     prop("show_labels", "LabelVisibility")
                         .default("always")
                         .doc("`\"always\"`, `\"selected\"` (only the selected item's) or `\"never\"`. A hidden label still names its item."),
                     prop("color", "ThemeAwareValue").default("primary").doc("Colours the selected item's pill. Only the color family counts: the pill is its lightest shade."),
                     prop("z_index", "ThemeAwareValue").default("the header's").doc("Stacking order of a sticky or fixed bar."),
-                    prop("parts", "Parts<BottomNavigationPart>").doc("Styles for the inner parts in the Style API tab, under `sx`."),
-                    prop("children", "Element").default("required").doc("Three to five `BottomNavigationItem`s."),
+                    prop("parts", "Parts<NavigationBarPart>").doc("Styles for the inner parts in the Style API tab, under `sx`."),
+                    prop("children", "Element").default("required").doc("Three to five `NavigationBarItem`s."),
                 ])
-                .parts("BottomNavigationPart", vec![
-                    (BottomNavigationPart::Item, "Every item."),
-                    (BottomNavigationPart::Icon, "The pill holding an item's icon and badge."),
-                    (BottomNavigationPart::Label, "An item's label."),
+                .parts("NavigationBarPart", vec![
+                    (NavigationBarPart::Item, "Every item."),
+                    (NavigationBarPart::Icon, "The pill holding an item's icon and badge."),
+                    (NavigationBarPart::Label, "An item's label."),
                 ]),
-                props("BottomNavigationItem", vec![
+                props("NavigationBarItem", vec![
                     prop("to", "NavigationTarget").doc("A path, a URL or a typed route: the item is a link. Wins over `onclick`."),
                     prop("onclick", "EventHandler<MouseEvent>").doc("Without `to`, the item is a button that calls this."),
                     prop("selected", "bool")
@@ -127,15 +127,15 @@ pub fn BottomNavigationPage() -> Element {
                 .must([
                     "Name the bar with an `aria-label`, such as \"Main\"; a debug build warns without one.",
                     "Put a badge's count in the item's `aria-label`, starting with the visible label: \"Inbox, 3 unread\".",
-                    "With `position: \"fixed\"`, pad the page by `var(--lsx-bottom-navigation-height)`, or a fixed rail's inline-start by `var(--lsx-navigation-rail-width)`.",
+                    "With `position: \"fixed\"`, pad the page by `var(--lsx-navigation-bar-height)`, or a fixed rail's inline-start by `var(--lsx-navigation-rail-width)`.",
                     "Switch to the rail with the same items in the same order, so the page keeps its landmarks and current item at every width.",
-                    "A sticky bar closing a scrolling pane of its own: give the pane `scroll-padding-bottom: var(--lsx-bottom-navigation-height)`, so a focused element in it scrolls clear of the bar.",
+                    "A sticky bar closing a scrolling pane of its own: give the pane `scroll-padding-bottom: var(--lsx-navigation-bar-height)`, so a focused element in it scrolls clear of the bar.",
                 ])
                 .limits([
                     "A native app has no line clamp: a long label wraps onto more lines and grows the bar.",
                     "A native app's focus scroll ignores that padding, so a link reached with Tab can sit under a sticky bar.",
                 ])
-                .example("An app bar, `BottomNavigation { \"aria-label\": \"Main\" }` with Home, Search and an Inbox item labelled `\"aria-label\": \"Inbox, 3 unread\"`: a screen reader lists the \"Main\" navigation, and the current item reads as the current page."),
+                .example("An app bar, `NavigationBar { \"aria-label\": \"Main\" }` with Home, Search and an Inbox item labelled `\"aria-label\": \"Inbox, 3 unread\"`: a screen reader lists the \"Main\" navigation, and the current item reads as the current page."),
             lead: rsx! {
                 Text {
                     "A phone's bar of three to five top-level destinations, a "
@@ -153,7 +153,7 @@ pub fn BottomNavigationPage() -> Element {
                 }
             },
             Demo {
-                component: "BottomNavigation",
+                component: "NavigationBar",
                 children_text: "",
                 controls: vec![
                     Control::toggle("variant", [RESPONSIVE, "bar", "rail"])
@@ -168,7 +168,7 @@ pub fn BottomNavigationPage() -> Element {
                         }),
                     Control::toggle("show_labels", ["always", "selected", "never"])
                         .labels(["Always", "Selected", "Never"]),
-                    Control::color("color").default(theme.bottom_navigation.color.as_str()),
+                    Control::color("color").default(theme.navigation_bar.color.as_str()),
                     Control::switch("badge").code(|_, _| vec![]),
                     Control::switch("disabled").code(|_, _| vec![]),
                 ],
@@ -201,14 +201,14 @@ pub fn BottomNavigationPage() -> Element {
                             if !rail {
                                 Box { sx: sx().padding("md").min_height("120px"), "{ITEMS[current()].0}" }
                             }
-                            BottomNavigation {
+                            NavigationBar {
                                 "aria-label": "Main",
                                 variant: if rail { "rail" } else { "bar" },
                                 sx: nav,
                                 show_labels: show_labels.as_str(),
                                 color,
                                 for (index, (label, _, _, icon)) in ITEMS.into_iter().enumerate() {
-                                    BottomNavigationItem {
+                                    NavigationBarItem {
                                         key: "{label}",
                                         selected: current() == index,
                                         onclick: move |_| current.set(index),

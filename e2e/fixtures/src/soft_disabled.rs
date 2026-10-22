@@ -3,7 +3,7 @@
 
 use dioxus::prelude::*;
 use libero::components::{
-    ActionIcon, BottomNavigation, BottomNavigationItem, Burger, Button, Chip, Fieldset, Flex,
+    ActionIcon, NavigationBar, NavigationBarItem, Burger, Button, Chip, Fieldset, Flex,
     NavLink, PasswordField,
 };
 
@@ -38,8 +38,8 @@ fn SoftDisabledPage(in_fieldset: bool) -> Element {
         div { id: "password",
             PasswordField { label: "Password", disabled }
         }
-        BottomNavigation { "aria-label": "Main",
-            BottomNavigationItem {
+        NavigationBar { "aria-label": "Main",
+            NavigationBarItem {
                 id: "item",
                 disabled,
                 onclick: move |_| clicks += 1,

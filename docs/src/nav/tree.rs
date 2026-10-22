@@ -182,7 +182,7 @@ pub(super) fn nav_tree() -> Vec<TreeNode<NavEntry>> {
             vec![
                 page(Route::AnchorPage {}, "Anchor"),
                 page(Route::NavLinkPage {}, "NavLink"),
-                page(Route::BottomNavigationPage {}, "BottomNavigation"),
+                page(Route::NavigationBarPage {}, "NavigationBar"),
                 page(Route::BurgerPage {}, "Burger"),
                 page(Route::TabsPage {}, "Tabs"),
                 page(Route::MenubarPage {}, "Menubar"),

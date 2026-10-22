@@ -192,7 +192,7 @@ dx build --platform ios
 ```
 
 dioxus's page has no `viewport-fit=cover`, so the safe-area insets read 0 and
-Header, BottomNavigation and Lightbox run under the notch and the home
+Header, NavigationBar and Lightbox run under the notch and the home
 indicator. It also sets `maximum-scale=1, user-scalable=no`, which blocks pinch
 zoom (WCAG 1.4.4); fields keep their text at 16px on iOS, so the page does not
 need it. Rewrite the viewport meta from the head:

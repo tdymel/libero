@@ -8,10 +8,10 @@ use libero::{
     LiberoProvider,
     chrono::NaiveDate,
     components::{
-        ActionIcon, Autocomplete, BottomNavigation, BottomNavigationItem, Button, Cascader,
-        CascaderOption, Checkbox, Chip, ColorCode, ColorField, ColorPicker, ColorSwatch, DateField,
-        DatePicker, DateRangeField, DateRangePicker, DateTimeField, Fieldset, FileField,
-        MonthPicker, MultiSelect, NativeSelect, NavLink, NumberField, Options, Pagination,
+        ActionIcon, Autocomplete, Button, Cascader, CascaderOption, Checkbox, Chip, ColorCode,
+        ColorField, ColorPicker, ColorSwatch, DateField, DatePicker, DateRangeField,
+        DateRangePicker, DateTimeField, Fieldset, FileField, MonthPicker, MultiSelect,
+        NativeSelect, NavLink, NavigationBar, NavigationBarItem, NumberField, Options, Pagination,
         PasswordField, PhoneField, PinField, Radio, RadioGroup, RangeSlider, Rating,
         SegmentedControl, Select, Slider, Switch, TagsField, TextField, Textarea, TimeField,
         TimePicker, YearPicker,
@@ -93,8 +93,8 @@ const CASES: [Case; 39] = disabled_group! {
     "Pagination" => { Pagination { total: 5, page: 2, aria_label: "Pages", onchange: |_| {} } },
     "Navigation" => {
         NavLink { to: "/", nested: rsx! { NavLink { to: "/b", "B" } }, "A" }
-        BottomNavigation { "aria-label": "Main",
-            BottomNavigationItem { onclick: |_| {}, icon: rsx! { "H" }, "Home" }
+        NavigationBar { "aria-label": "Main",
+            NavigationBarItem { onclick: |_| {}, icon: rsx! { "H" }, "Home" }
         }
     },
 };

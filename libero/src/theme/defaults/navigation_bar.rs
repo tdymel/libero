@@ -1,12 +1,12 @@
 use crate::theme::Color;
 
-/// Theme defaults for `BottomNavigation`, set on [`Theme`](crate::theme::Theme).
+/// Theme defaults for `NavigationBar`, set on [`Theme`](crate::theme::Theme).
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub struct BottomNavigationDefaults {
+pub struct NavigationBarDefaults {
     pub color: Color,
 }
 
-impl BottomNavigationDefaults {
+impl NavigationBarDefaults {
     pub const DEFAULT: Self = Self {
         color: Color::Primary,
     };

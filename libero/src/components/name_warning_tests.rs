@@ -7,10 +7,10 @@ use dioxus::prelude::*;
 use crate::{
     LiberoProvider,
     components::{
-        ActionIcon, AlphaSlider, Anchor, Audio, Avatar, BottomNavigation, BottomNavigationItem,
-        Button, ButtonGroup, Carousel, Checkbox, CircularProgress, ColorCode, ColorPicker,
-        ColorSwatch, Dialog, Drawer, Fieldset, FloatingWindowOptions, HoverCard, HueSlider,
-        Menubar, MenubarMenu, ProgressBar, QrCode, Radio, RadioGroup, RangeSlider, Rating,
+        ActionIcon, AlphaSlider, Anchor, Audio, Avatar, Button, ButtonGroup, Carousel, Checkbox,
+        CircularProgress, ColorCode, ColorPicker, ColorSwatch, Dialog, Drawer, Fieldset,
+        FloatingWindowOptions, HoverCard, HueSlider, Menubar, MenubarMenu, NavigationBar,
+        NavigationBarItem, ProgressBar, QrCode, Radio, RadioGroup, RangeSlider, Rating,
         RichTextEditor, ScrollArea, SegmentedControl, Slider, Splitter, SpotlightOptions, Switch,
         Table, Tabs, Toolbar, ToolbarGroup, TourOptions, TourStep, Video, column,
         rich_text::{NodeViewProps, NodeViews, use_rich_text_editor},
@@ -175,36 +175,36 @@ fn a_blank_menubar_name_warns() {
 
 /// The icon span is aria-hidden, so a badge is heard only through the item's name.
 #[test]
-fn a_bottom_navigation_badge_without_a_name_warns() {
-    let prefix = "BottomNavigationItem: `badge`";
+fn a_navigation_bar_badge_without_a_name_warns() {
+    let prefix = "NavigationBarItem: `badge`";
     assert!(warns(
-        || rsx! { LiberoProvider { BottomNavigation { "aria-label": "Main", BottomNavigationItem { icon: rsx! { "i" }, badge: rsx! { "3" }, "Inbox" } } } },
+        || rsx! { LiberoProvider { NavigationBar { "aria-label": "Main", NavigationBarItem { icon: rsx! { "i" }, badge: rsx! { "3" }, "Inbox" } } } },
         prefix
     ));
     assert!(!warns(
-        || rsx! { LiberoProvider { BottomNavigation { "aria-label": "Main", BottomNavigationItem { "aria-label": "Inbox, 3 unread", icon: rsx! { "i" }, badge: rsx! { "3" }, "Inbox" } } } },
+        || rsx! { LiberoProvider { NavigationBar { "aria-label": "Main", NavigationBarItem { "aria-label": "Inbox, 3 unread", icon: rsx! { "i" }, badge: rsx! { "3" }, "Inbox" } } } },
         prefix
     ));
     assert!(!warns(
-        || rsx! { LiberoProvider { BottomNavigation { "aria-label": "Main", BottomNavigationItem { icon: rsx! { "i" }, "Inbox" } } } },
+        || rsx! { LiberoProvider { NavigationBar { "aria-label": "Main", NavigationBarItem { icon: rsx! { "i" }, "Inbox" } } } },
         prefix
     ));
 }
 
 /// Todo 3854: an item whose only content is the aria-hidden icon is announced as just "link".
 #[test]
-fn an_unlabelled_bottom_navigation_item_warns() {
-    let prefix = "BottomNavigationItem: no label";
+fn an_unlabelled_navigation_bar_item_warns() {
+    let prefix = "NavigationBarItem: no label";
     assert!(warns(
-        || rsx! { LiberoProvider { BottomNavigation { "aria-label": "Main", BottomNavigationItem { to: "/inbox", icon: rsx! { "i" }, children: rsx! {} } } } },
+        || rsx! { LiberoProvider { NavigationBar { "aria-label": "Main", NavigationBarItem { to: "/inbox", icon: rsx! { "i" }, children: rsx! {} } } } },
         prefix
     ));
     assert!(!warns(
-        || rsx! { LiberoProvider { BottomNavigation { "aria-label": "Main", BottomNavigationItem { to: "/inbox", "aria-label": "Inbox", icon: rsx! { "i" }, children: rsx! {} } } } },
+        || rsx! { LiberoProvider { NavigationBar { "aria-label": "Main", NavigationBarItem { to: "/inbox", "aria-label": "Inbox", icon: rsx! { "i" }, children: rsx! {} } } } },
         prefix
     ));
     assert!(!warns(
-        || rsx! { LiberoProvider { BottomNavigation { "aria-label": "Main", BottomNavigationItem { to: "/inbox", icon: rsx! { "i" }, "Inbox" } } } },
+        || rsx! { LiberoProvider { NavigationBar { "aria-label": "Main", NavigationBarItem { to: "/inbox", icon: rsx! { "i" }, "Inbox" } } } },
         prefix
     ));
 }

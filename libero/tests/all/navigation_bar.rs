@@ -3,7 +3,7 @@ use crate::common::{attributes_of, body, render};
 use dioxus::prelude::*;
 use libero::{
     LiberoProvider,
-    components::{BottomNavigation, BottomNavigationItem},
+    components::{NavigationBar, NavigationBarItem},
 };
 
 #[test]
@@ -11,9 +11,9 @@ fn the_bar_is_a_named_nav_and_the_selected_link_is_the_current_page() {
     fn app() -> Element {
         rsx! {
             LiberoProvider {
-                BottomNavigation { "aria-label": "Main",
-                    BottomNavigationItem { to: "https://example.com/home", selected: true, icon: rsx! { "H" }, "Home" }
-                    BottomNavigationItem { to: "https://example.com/search", icon: rsx! { "S" }, "Search" }
+                NavigationBar { "aria-label": "Main",
+                    NavigationBarItem { to: "https://example.com/home", selected: true, icon: rsx! { "H" }, "Home" }
+                    NavigationBarItem { to: "https://example.com/search", icon: rsx! { "S" }, "Search" }
                 }
             }
         }
@@ -38,8 +38,8 @@ fn an_item_without_to_is_a_button_and_a_disabled_one_is_disabled() {
     fn app() -> Element {
         rsx! {
             LiberoProvider {
-                BottomNavigation { "aria-label": "Main",
-                    BottomNavigationItem { onclick: |_| {}, disabled: true, icon: rsx! { "H" }, "Home" }
+                NavigationBar { "aria-label": "Main",
+                    NavigationBarItem { onclick: |_| {}, disabled: true, icon: rsx! { "H" }, "Home" }
                 }
             }
         }
@@ -58,8 +58,8 @@ fn a_docked_bar_states_its_position_and_label_visibility() {
     fn app() -> Element {
         rsx! {
             LiberoProvider {
-                BottomNavigation { "aria-label": "Main", position: "fixed", show_labels: "selected",
-                    BottomNavigationItem { onclick: |_| {}, icon: rsx! { "H" }, "Home" }
+                NavigationBar { "aria-label": "Main", position: "fixed", show_labels: "selected",
+                    NavigationBarItem { onclick: |_| {}, icon: rsx! { "H" }, "Home" }
                 }
             }
         }
@@ -75,8 +75,8 @@ fn a_blank_name_is_not_put_on_the_nav() {
     fn app() -> Element {
         rsx! {
             LiberoProvider {
-                BottomNavigation { "aria-label": "  ",
-                    BottomNavigationItem { onclick: |_| {}, icon: rsx! { "H" }, "Home" }
+                NavigationBar { "aria-label": "  ",
+                    NavigationBarItem { onclick: |_| {}, icon: rsx! { "H" }, "Home" }
                 }
             }
         }

@@ -7,7 +7,6 @@ mod autocomplete;
 mod avatar;
 mod badge;
 mod blockquote;
-mod bottom_navigation;
 mod burger;
 mod button;
 mod carousel;
@@ -56,6 +55,7 @@ mod menu;
 mod menubar;
 mod native_select;
 mod nav_link;
+mod navigation_bar;
 mod notifications;
 mod number_field;
 mod overlay;
@@ -133,7 +133,6 @@ pub use blockquote::{
     BLOCKQUOTE_CITE_OPACITY, BLOCKQUOTE_COLOR, BLOCKQUOTE_PADDING_X, BLOCKQUOTE_PADDING_Y,
     BlockquoteDefaults, BlockquoteSizeLevel,
 };
-pub use bottom_navigation::BottomNavigationDefaults;
 pub use burger::{
     BURGER_COLOR, BURGER_LINE_SIZE, BURGER_SIZE, BURGER_SIZES, BURGER_TRANSITION_DURATION,
     BURGER_TRANSITION_TIMING, BurgerDefaults,
@@ -280,6 +279,7 @@ pub use menubar::{
 };
 pub use native_select::NativeSelectDefaults;
 pub use nav_link::NavLinkDefaults;
+pub use navigation_bar::NavigationBarDefaults;
 pub use notifications::{
     AutoClose, NOTIFICATION_GAP, NOTIFICATION_IN, NOTIFICATION_KEYFRAMES, NOTIFICATION_OFFSET,
     NOTIFICATION_OUT, NOTIFICATION_TRANSITION, NOTIFICATION_WIDTH, NotificationsDefaults,

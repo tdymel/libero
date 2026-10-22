@@ -1,4 +1,4 @@
-//! `BottomNavigation` (todo 1209): a `nav` of items, each its own Tab stop, the
+//! `NavigationBar` (todo 1209): a `nav` of items, each its own Tab stop, the
 //! selected one `aria-current`; 48px targets and no overflow at 320px; RTL;
 //! a fixed bar at the viewport's bottom that publishes its height; a rail
 //! (todo 3890) on the inline-start edge that publishes its width.
@@ -11,7 +11,7 @@ use e2e::{Fixture, Suite, Viewport, js, wait};
 
 #[test]
 fn it_meets_the_baseline() {
-    Suite::new("bottom_navigation", "/bottom-navigation")
+    Suite::new("navigation_bar", "/navigation-bar")
         .focusable("#home")
         .focusable("#search")
         .focusable("#link")
@@ -28,12 +28,12 @@ fn it_meets_the_baseline() {
 /// The fixed bar over its page, and the sticky one closing a pane (todo 1773).
 #[test]
 fn the_fixed_and_sticky_bars_meet_the_baseline() {
-    Suite::new("bottom_navigation-fixed", "/bottom-navigation/fixed")
+    Suite::new("navigation_bar-fixed", "/navigation-bar/fixed")
         .focusable("#fixed-home")
         .targets("#fixed [id^=fixed-]")
         .tab_budget(40)
         .run();
-    Suite::new("bottom_navigation-scroller", "/bottom-navigation/scroller")
+    Suite::new("navigation_bar-scroller", "/navigation-bar/scroller")
         .focusable("#sticky-home")
         .targets("#sticky [id^=sticky-]")
         .tab_budget(30)
@@ -46,7 +46,7 @@ fn the_fixed_and_sticky_bars_meet_the_baseline() {
 #[test]
 fn five_items_fit_320px_with_48px_targets() {
     block_on(async {
-        let fixture = Fixture::open("/bottom-navigation", Viewport::Mobile)
+        let fixture = Fixture::open("/navigation-bar", Viewport::Mobile)
             .await
             .unwrap();
         let page = &fixture.page;
@@ -82,7 +82,7 @@ fn five_items_fit_320px_with_48px_targets() {
 #[test]
 fn the_selected_pill_shows_in_forced_colours() {
     block_on(async {
-        let fixture = Fixture::open("/bottom-navigation", Viewport::Desktop)
+        let fixture = Fixture::open("/navigation-bar", Viewport::Desktop)
             .await
             .unwrap();
         let page = &fixture.page;
@@ -109,7 +109,7 @@ fn the_selected_pill_shows_in_forced_colours() {
 #[test]
 fn rtl_puts_the_first_item_at_the_right() {
     block_on(async {
-        let fixture = Fixture::open("/bottom-navigation", Viewport::Desktop)
+        let fixture = Fixture::open("/navigation-bar", Viewport::Desktop)
             .await
             .unwrap();
         let page = &fixture.page;
@@ -133,7 +133,7 @@ fn rtl_puts_the_first_item_at_the_right() {
 #[test]
 fn an_unselected_link_to_the_current_route_is_not_the_current_page() {
     block_on(async {
-        let fixture = Fixture::open("/bottom-navigation/unselected", Viewport::Desktop)
+        let fixture = Fixture::open("/navigation-bar/unselected", Viewport::Desktop)
             .await
             .unwrap();
         let page = &fixture.page;
@@ -155,7 +155,7 @@ fn an_unselected_link_to_the_current_route_is_not_the_current_page() {
 #[test]
 fn items_are_named_by_their_labels() {
     block_on(async {
-        let fixture = Fixture::open("/bottom-navigation", Viewport::Desktop)
+        let fixture = Fixture::open("/navigation-bar", Viewport::Desktop)
             .await
             .unwrap();
         let page = &fixture.page;
@@ -182,7 +182,7 @@ fn items_are_named_by_their_labels() {
 #[test]
 fn disabled_items_are_skipped_and_dimmed() {
     block_on(async {
-        let fixture = Fixture::open("/bottom-navigation", Viewport::Desktop)
+        let fixture = Fixture::open("/navigation-bar", Viewport::Desktop)
             .await
             .unwrap();
         let page = &fixture.page;
@@ -250,7 +250,7 @@ fn disabled_items_are_skipped_and_dimmed() {
 #[test]
 fn the_badge_sits_on_the_icons_top_end_corner() {
     block_on(async {
-        let fixture = Fixture::open("/bottom-navigation", Viewport::Mobile)
+        let fixture = Fixture::open("/navigation-bar", Viewport::Mobile)
             .await
             .unwrap();
         let page = &fixture.page;
@@ -294,7 +294,7 @@ fn the_badge_sits_on_the_icons_top_end_corner() {
 #[test]
 fn a_fixed_bar_docks_and_publishes_its_height() {
     block_on(async {
-        let fixture = Fixture::open("/bottom-navigation/fixed", Viewport::Mobile)
+        let fixture = Fixture::open("/navigation-bar/fixed", Viewport::Mobile)
             .await
             .unwrap();
         let page = &fixture.page;
@@ -302,7 +302,7 @@ fn a_fixed_bar_docks_and_publishes_its_height() {
         // The 64px fallback holds until the bar is measured.
         wait::for_js_true(
             page,
-            "getComputedStyle(document.documentElement).getPropertyValue('--lsx-bottom-navigation-height').trim().endsWith('px')",
+            "getComputedStyle(document.documentElement).getPropertyValue('--lsx-navigation-bar-height').trim().endsWith('px')",
             "the measured bar height",
         )
         .await
@@ -315,7 +315,7 @@ fn a_fixed_bar_docks_and_publishes_its_height() {
                 const root = getComputedStyle(document.documentElement); \
                 const label = document.querySelector('#fixed-search [data-slot=label]').getBoundingClientRect(); \
                 return { bottom: Math.round(bar.bottom), height: innerHeight, width: bar.width, \
-                    full: innerWidth, published: root.getPropertyValue('--lsx-bottom-navigation-height').trim(), \
+                    full: innerWidth, published: root.getPropertyValue('--lsx-navigation-bar-height').trim(), \
                     tall: bar.height, pad: parseFloat(getComputedStyle(document.querySelector('#page')).paddingBottom), \
                     padding: root.scrollPaddingBottom, hidden: label.width <= 1 }; \
             })()",
@@ -392,7 +392,7 @@ async fn items_take_the_keyboard_and_the_pointer<D: Driver>(d: &mut D, _route: &
 
 e2e::scenario!(
     items_take_the_keyboard_and_the_pointer_everywhere,
-    "/bottom-navigation",
+    "/navigation-bar",
     items_take_the_keyboard_and_the_pointer
 );
 
@@ -420,7 +420,7 @@ async fn a_sticky_bar_in_a_pane_leaves_the_focused_link_clear<D: Driver>(
 
 e2e::scenario!(
     a_sticky_bar_in_a_pane_clears_the_focused_link,
-    "/bottom-navigation/scroller",
+    "/navigation-bar/scroller",
     a_sticky_bar_in_a_pane_leaves_the_focused_link_clear
 );
 
@@ -448,7 +448,7 @@ async fn a_fixed_bar_leaves_the_focused_link_clear<D: Driver>(
 
 e2e::scenario!(
     a_fixed_bar_clears_the_focused_link,
-    "/bottom-navigation/fixed",
+    "/navigation-bar/fixed",
     a_fixed_bar_leaves_the_focused_link_clear
 );
 
@@ -483,13 +483,13 @@ async fn a_fixed_bar_docks<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
 
 e2e::scenario!(
     a_fixed_bar_docks_everywhere,
-    "/bottom-navigation/fixed",
+    "/navigation-bar/fixed",
     a_fixed_bar_docks
 );
 
 #[test]
 fn the_rail_meets_the_baseline() {
-    Suite::new("bottom_navigation-rail", "/bottom-navigation/rail")
+    Suite::new("navigation_bar-rail", "/navigation-bar/rail")
         .focusable("#rail-home")
         .targets("#rail [id^=rail-]")
         .tab_budget(20)
@@ -554,7 +554,7 @@ async fn a_rail_docks_at_the_inline_start<D: Driver>(d: &mut D, _route: &str) ->
 
 e2e::scenario!(
     a_rail_docks_at_the_inline_start_everywhere,
-    "/bottom-navigation/rail",
+    "/navigation-bar/rail",
     a_rail_docks_at_the_inline_start
 );
 
@@ -563,8 +563,8 @@ e2e::scenario!(
 fn the_rail_publishes_its_width_and_flips_in_rtl() {
     block_on(async {
         for (route, right) in [
-            ("/bottom-navigation/rail", false),
-            ("/bottom-navigation/rail-rtl", true),
+            ("/navigation-bar/rail", false),
+            ("/navigation-bar/rail-rtl", true),
         ] {
             let fixture = Fixture::open(route, Viewport::Desktop).await.unwrap();
             let page = &fixture.page;
@@ -584,7 +584,7 @@ fn the_rail_publishes_its_width_and_flips_in_rtl() {
                     const layout = document.querySelector('#layout').getBoundingClientRect(); \
                     const root = getComputedStyle(document.documentElement); \
                     return { left: rail.left - layout.left, right: Math.round(layout.right - rail.right), \
-                        height: root.getPropertyValue('--lsx-bottom-navigation-height').trim(), \
+                        height: root.getPropertyValue('--lsx-navigation-bar-height').trim(), \
                         current: document.querySelector('#rail-home').getAttribute('aria-current') }; \
                 })()",
             )
@@ -605,7 +605,7 @@ fn the_rail_publishes_its_width_and_flips_in_rtl() {
 #[test]
 fn the_rail_holds_200_percent_text_without_overflow() {
     block_on(async {
-        let fixture = Fixture::open("/bottom-navigation/rail", Viewport::Desktop)
+        let fixture = Fixture::open("/navigation-bar/rail", Viewport::Desktop)
             .await
             .unwrap();
         let page = &fixture.page;

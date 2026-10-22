@@ -37,13 +37,13 @@ const FIXED: [(&str, &str, &str); 8] = [
         "`opens_select_picker()` is a const",
     ),
     (
-        "src/components/navigation/bottom_navigation.rs",
-        "BottomNavigation",
+        "src/components/navigation/navigation_bar.rs",
+        "NavigationBar",
         "`cfg!(debug_assertions)`",
     ),
     (
-        "src/components/navigation/bottom_navigation.rs",
-        "BottomNavigationItem",
+        "src/components/navigation/navigation_bar.rs",
+        "NavigationBarItem",
         "`cfg!(debug_assertions)`",
     ),
     (

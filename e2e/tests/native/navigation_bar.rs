@@ -1,28 +1,28 @@
-//! A docked `BottomNavigation` natively (todo 1356): sticky and fixed hold
+//! A docked `NavigationBar` natively (todo 1356): sticky and fixed hold
 //! through the platform's sticky shim, `env()` falls back to 0px.
 
 use dioxus::prelude::*;
 use e2e::native::{Page, mount};
-use libero::components::{BottomNavigation, BottomNavigationItem};
+use libero::components::{NavigationBar, NavigationBarItem};
 
 fn items() -> Element {
     rsx! {
-        BottomNavigationItem { selected: true, onclick: |_| {}, icon: rsx! { "H" }, "Home" }
-        BottomNavigationItem { onclick: |_| {}, icon: rsx! { "S" }, "Search" }
+        NavigationBarItem { selected: true, onclick: |_| {}, icon: rsx! { "H" }, "Home" }
+        NavigationBarItem { onclick: |_| {}, icon: rsx! { "S" }, "Search" }
     }
 }
 
 fn sticky() -> Element {
     rsx! {
-        div { id: "content", height: "3000px", padding_bottom: "var(--lsx-bottom-navigation-height)", "Content" }
-        BottomNavigation { id: "bar", "aria-label": "Main", position: "sticky", {items()} }
+        div { id: "content", height: "3000px", padding_bottom: "var(--lsx-navigation-bar-height)", "Content" }
+        NavigationBar { id: "bar", "aria-label": "Main", position: "sticky", {items()} }
     }
 }
 
 fn fixed() -> Element {
     rsx! {
         div { id: "content", height: "3000px", "Content" }
-        BottomNavigation { id: "bar", "aria-label": "Main", position: "fixed", {items()} }
+        NavigationBar { id: "bar", "aria-label": "Main", position: "fixed", {items()} }
     }
 }
 
@@ -56,12 +56,12 @@ fn a_sticky_bar_holds_at_the_bottom_and_publishes_its_height() {
 fn crowded() -> Element {
     rsx! {
         div { width: "320px",
-            BottomNavigation { id: "bar", "aria-label": "Main",
-                BottomNavigationItem { id: "long", onclick: |_| {}, icon: rsx! { "N" },
+            NavigationBar { id: "bar", "aria-label": "Main",
+                NavigationBarItem { id: "long", onclick: |_| {}, icon: rsx! { "N" },
                     "Notifications and messages"
                 }
                 for label in ["Home", "Search", "Inbox", "Profile"] {
-                    BottomNavigationItem { key: "{label}", onclick: |_| {}, icon: rsx! { "i" }, "{label}" }
+                    NavigationBarItem { key: "{label}", onclick: |_| {}, icon: rsx! { "i" }, "{label}" }
                 }
             }
         }
@@ -75,13 +75,13 @@ fn pane() -> Element {
             width: "320px",
             height: "300px",
             overflow_y: "auto",
-            style: "--lsx-scroll-padding-bottom: var(--lsx-bottom-navigation-height);",
+            style: "--lsx-scroll-padding-bottom: var(--lsx-navigation-bar-height);",
             for index in 0..20 {
                 a { key: "{index}", id: "row-{index}", href: "#row-{index}", display: "block", padding: "12px", "Row {index}" }
             }
-            BottomNavigation { id: "sticky", "aria-label": "Main", position: "sticky",
-                BottomNavigationItem { selected: true, onclick: |_| {}, icon: rsx! { "H" }, "Home" }
-                BottomNavigationItem { onclick: |_| {}, icon: rsx! { "S" }, "Search" }
+            NavigationBar { id: "sticky", "aria-label": "Main", position: "sticky",
+                NavigationBarItem { selected: true, onclick: |_| {}, icon: rsx! { "H" }, "Home" }
+                NavigationBarItem { onclick: |_| {}, icon: rsx! { "S" }, "Search" }
             }
         }
     }

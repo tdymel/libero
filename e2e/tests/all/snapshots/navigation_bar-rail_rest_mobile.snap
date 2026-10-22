@@ -1,6 +1,6 @@
 ---
 source: e2e/src/suite.rs
-description: bottom_navigation-rail at desktop (rest)
+description: navigation_bar-rail at mobile (rest)
 expression: tree
 ---
 navigation "Main"

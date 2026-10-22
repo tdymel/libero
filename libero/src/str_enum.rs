@@ -141,9 +141,9 @@ pub(crate) use str_enum;
 mod tests {
 
     use crate::components::{
-        AnchorUnderline, BottomNavigationPosition, DrawerAnchor, FlexDirection, FlexWrap,
-        HeaderPosition, ImageFit, LabelPosition, LabelVisibility, Orientation, PinKind,
-        SidebarSide, Variant,
+        AnchorUnderline, DrawerAnchor, FlexDirection, FlexWrap, HeaderPosition, ImageFit,
+        LabelPosition, LabelVisibility, NavigationBarPosition, Orientation, PinKind, SidebarSide,
+        Variant,
     };
     use crate::theme::{
         BarLayout, ChoiceVariant, Curve, LegendPosition, LoaderVariant, PieLabels, Placement,
@@ -154,7 +154,7 @@ mod tests {
     macro_rules! for_every_str_enum {
         ($check:ident) => {
             $check!(AnchorUnderline);
-            $check!(BottomNavigationPosition);
+            $check!(NavigationBarPosition);
             $check!(BarLayout);
             $check!(Curve);
             $check!(LegendPosition);
