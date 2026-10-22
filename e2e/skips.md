@@ -267,7 +267,6 @@ The performance scenarios (units `perf`, `table_perf`) are no skips but run on r
 | `shortcut_help::a_narrow_list_stacks_each_row` | native | 1224: Blitz drops `@container`, so the rows stay side by side |
 | `slider::a_drag_released_past_the_end_tracks_and_ends` | ios | a touch screen has no hover |
 | `slider_touch_keyboard::a_touch_held_on_the_thumb_leaves_no_bubble_after_the_release` | desktop | 1126: no touch input under Xvfb |
-| `splitter::a_double_click_collapses_pane_a_and_restores_it` | ios | 3702: the simulator lands even one batched double tap's touches 500 ms apart, no dblclick |
 | `spotlight::a_hovered_row_is_tinted_and_does_not_move_the_highlight` | ios | a touch screen has no hover |
 | `stepper::a_clicked_continue_returns_focus_horizontally` | android | 958: element identity on the WebView |
 | `stepper::a_clicked_continue_returns_focus_horizontally` | desktop | 958: element identity on the WebView |
@@ -285,18 +284,15 @@ The performance scenarios (units `perf`, `table_perf`) are no skips but run on r
 | `table_column_filters::a_date_filter_narrows_a_table` | android | Chromium's typed date segments only |
 | `table_column_filters::a_date_filter_narrows_a_table` | ios | the WebView's native date input opens iOS's date wheel, which typed keys do not fill |
 | `table_column_filters::a_date_filter_narrows_a_table` | windows desktop | 3422: Shift+Tab never leaves the date input on WebView2 |
-| `table_column_filters::tab_past_either_end_of_a_column_filter_closes_it` | ios | 3416: focus stays on the body after a Tab or a tap |
 | `table_column_filters::the_filter_panel_edits_every_filter` | android | 958: element identity on the WebView |
 | `table_detail::an_animated_detail_slides_open_and_shut` | android | 958: element identity on the WebView |
 | `table_detail::pinned_toggles_push_the_checkboxes_past_them` | android | 3217: one web run guards the cascade |
 | `table_detail::pinned_toggles_push_the_checkboxes_past_them` | desktop | 3217: one web run guards the cascade |
 | `table_detail::the_keyboard_opens_a_detail_and_tabs_into_it` | android | 958: element identity on the WebView |
 | `table_filter::a_select_filter_narrows_a_table` | android | 958: element identity on the WebView |
-| `table_filter::a_select_filter_narrows_a_table` | ios | 958: element identity on the WebView |
 | `table_grid::a_custom_editor_clears_the_error_by_changed` | android | 958: roving keys are inert in the emulator's WebView |
 | `table_grid::a_filtered_button_is_not_a_tab_stop` | native | Blitz reads no script |
 | `table_grid::a_second_tap_opens_the_editor` | desktop | no touch input in the desktop driver |
-| `table_grid::a_second_tap_opens_the_editor` | ios | 3416: the first tap's touch end reaches the page 2.4 s late, so WebKit raises no click on the cell |
 | `table_grid::a_sort_follows_the_apps_language` | native | 3386: reads the page language by script, Blitz has none and no Intl.Collator |
 | `table_grid::a_windowed_grid_scrolls_to_the_focused_cell` | android | 958: roving keys are inert in the emulator's WebView |
 | `table_grid::a_yes_no_editor_is_a_checkbox_and_a_date_editor_names_its_form` | native | 3386: reads the editor's checked property by script, which Blitz has none of |
@@ -319,7 +315,6 @@ The performance scenarios (units `perf`, `table_perf`) are no skips but run on r
 | `table_grid::the_editor_opens_with_its_text_selected` | android | 958: roving keys are inert in the emulator's WebView |
 | `table_grid::the_header_cell_is_the_only_tab_stop` | android | 958: roving keys are inert in the emulator's WebView |
 | `table_groups::a_focused_windowed_row_clears_the_footer` | android | 958: element identity on the WebView |
-| `table_groups::a_focused_windowed_row_clears_the_footer` | ios | 958: element identity on the WebView |
 | `table_groups::a_footer_lines_up_under_its_columns_and_sticks` | android | 958: element identity on the WebView |
 | `table_groups::a_grouped_header_spans_its_columns_and_sticks` | android | 958: element identity on the WebView |
 | `table_groups::a_grouped_header_spans_its_columns_and_sticks` | native | Blitz scrolls on no key and sticks the last header row only: tests/native/table_groups.rs |
@@ -332,7 +327,6 @@ The performance scenarios (units `perf`, `table_perf`) are no skips but run on r
 | `table_pins::narrow_areas_release_their_pins_and_wide_ones_pin_again` | native | 1024px is wide enough for the pins |
 | `table_reorder::a_cancelled_grip_drag_moves_no_column` | native | Blitz reads no scripts |
 | `table_reorder::a_deep_move_up_keeps_scroll_and_focus` | android | 958: element identity on the WebView |
-| `table_reorder::a_deep_move_up_keeps_scroll_and_focus` | ios | 3416: a tap on the deep row's move button scrolls the page 21px |
 | `table_reorder::a_move_button_moves_its_row` | android | 958: element identity on the WebView |
 | `table_reorder::a_move_to_either_end_hands_the_focus_on` | android | 958: element identity on the WebView |
 | `table_reorder::a_pin_or_hide_from_the_menu_keeps_focus_on_a_menu_button` | android | 958: element identity on the WebView |
@@ -351,7 +345,6 @@ The performance scenarios (units `perf`, `table_perf`) are no skips but run on r
 | `table_scroll::a_focused_row_control_is_not_hidden_by_the_sticky_header` | android | 958: element identity on the WebView |
 | `table_scroll::a_plain_capped_table_scrolls_as_a_named_region` | android | 958: element identity on the WebView |
 | `table_scroll::a_tabbed_header_scrolls_into_its_region` | android | 958: element identity on the WebView |
-| `table_scroll::a_tabbed_header_scrolls_into_its_region` | ios | 958: element identity on the WebView |
 | `table_scroll::a_windowed_table_renders_the_rows_in_view` | ios | 3633: End reaches the page but scrolls no region, as in Safari |
 | `table_scroll::end_at_the_bottom_loads_more_rows` | ios | 3633: End reaches the page but scrolls no region, as in Safari |
 | `table_tree::a_tree_box_selects_its_descendants_and_mixes_its_ancestors` | ios | 3604: while the tapped box's input has focus, WebKit swallows a tap on the box above (no touchstart); a blur frees it |
@@ -369,7 +362,6 @@ The performance scenarios (units `perf`, `table_perf`) are no skips but run on r
 | `tabs::tab_leaves_the_strip_from_a_focused_unselected_tab` | desktop | 958: element identity on the WebView |
 | `theme_defaults::an_unset_hover_card_align_follows_the_theme` | ios | a touch screen has no hover |
 | `theme_defaults::an_unset_hover_card_side_follows_the_theme` | ios | a touch screen has no hover |
-| `toolbar::fields_join_the_arrow_order` | ios | 3432: WKWebView: ArrowLeft at a caret's start keeps the field |
 | `tooltip::a_long_press_on_a_link_trigger_opens_no_link_menu` | desktop | 1126: no touch input under Xvfb |
 | `tooltip::a_long_press_on_a_link_trigger_opens_no_link_menu` | native | 3237: the native driver reads no script |
 | `tooltip::a_long_press_opens_it_on_touch` | desktop | 1126: no touch input under Xvfb |
@@ -426,7 +418,6 @@ The performance scenarios (units `perf`, `table_perf`) are no skips but run on r
 | `video::every_audio_source_failing_shows_the_error` | web | audio::every_source_failing_shows_the_error is the web's arm |
 | `video::every_video_source_failing_shows_the_error` | native | Blitz plays no media and shows the fallback |
 | `video::every_video_source_failing_shows_the_error` | web | video::every_source_failing_shows_the_error is the web's arm |
-| `video::fade::in_fullscreen_the_controls_fade_and_come_back` | ios | the bar stays up in fullscreen while the clip plays to its end, cause unfound |
 | `video::fullscreen::the_fullscreen_button_toggles` | ios | iOS's native video fullscreen does not leave on Escape |
 | `video::fullscreen::the_fullscreen_button_toggles` | macos desktop | upstream: Escape does not leave a WKWebView fullscreen |
 | `viewport_meta::a_small_field_keeps_the_page_scale` | native | Blitz has no visual viewport |

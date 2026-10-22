@@ -153,8 +153,7 @@ async fn tab_leaves_the_filter<D: Driver>(d: &mut D, _route: &str) -> Result<()>
 e2e::scenario!(
     tab_past_either_end_of_a_column_filter_closes_it,
     "/table/column-filter",
-    tab_leaves_the_filter,
-    ios: skip("3416: focus stays on the body after a Tab or a tap")
+    tab_leaves_the_filter
 );
 
 /// Todo 3618: on a coarse pointer the filtered header's button takes presses in a 44px column.

@@ -91,8 +91,7 @@ e2e::scenario!(
 e2e::scenario!(
     a_double_click_collapses_pane_a_and_restores_it,
     "/splitter",
-    a_double_click_collapses,
-    ios: skip("3702: the simulator lands even one batched double tap's touches 500 ms apart, no dblclick")
+    a_double_click_collapses
 );
 e2e::scenario!(
     under_rtl_rightwards_shrinks_pane_a,

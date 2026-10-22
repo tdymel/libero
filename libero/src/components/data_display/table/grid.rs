@@ -18,8 +18,9 @@ use crate::{
     components::common::attr,
     hooks::{ElementHandle, listener, use_id, use_silent_focus_in, use_silent_focus_out_of},
     platform::{
-        ElementApi, PlatformError, arrow_target, focus_selector, focused_tag, infers_grid_cells,
-        key_taken, meta_held, next_task, rtl_target, silent_focus, typing_target, when_laid_out,
+        ElementApi, PlatformError, arrow_target, element, focus_selector, focused_tag,
+        infers_grid_cells, key_taken, meta_held, mounted_by_selector, next_task, rtl_target,
+        silent_focus, typing_target, when_laid_out,
     },
 };
 
@@ -834,9 +835,17 @@ impl GridFocus {
         let edges = rows.edges;
         let window = rows.window.as_ref().map(|window| window.pitch);
         let row = window.is_none().then(|| {
-            self.table
-                .query_selector("tbody > tr")
-                .map(|row| row.dimensions())
+            let row = match self.table.query_selector("tbody > tr") {
+                // A WebView's handle cannot query: the page finds the stop's table.
+                Err(PlatformError::Unsupported) => mounted_by_selector(&format!(
+                    "table:has([data-cell-stop='{}']) > tbody > tr",
+                    self.id.peek()
+                ))
+                .map(|data| element(&data))
+                .ok_or(PlatformError::NotFound),
+                found => found,
+            };
+            row.map(|row| row.dimensions())
         });
         async move {
             let Ok(view) = view.await else {

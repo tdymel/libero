@@ -141,11 +141,32 @@ impl Ios {
     fn mount(&mut self) -> Result<()> {
         self.bridge
             .run("document.activeElement?.blur(); scrollTo(0, 0); window.__e2eLog = []")?;
+        self.unzoom()?;
         let generation: u64 = self
             .bridge
             .json(&format!("window.__route({:?})", self.route))?;
         self.bridge
             .wait_for(&format!("[data-fixture-generation=\"{generation}\"]"))
+    }
+
+    /// A small field's focus zooms the page past a remount (3508): a viewport capped at scale 1
+    /// brings it back, then the page's own viewport returns.
+    fn unzoom(&mut self) -> Result<()> {
+        if !self.bridge.json::<bool>("(visualViewport?.scale ?? 1) > 1.001")? {
+            return Ok(());
+        }
+        self.bridge.run(
+            "window.__e2eMeta = document.querySelector('meta[name=viewport]'); \
+             if (__e2eMeta) { window.__e2eViewport = __e2eMeta.content; \
+             __e2eMeta.content += ', maximum-scale=1'; }",
+        )?;
+        let settled = self.bridge.wait_until("visualViewport.scale <= 1.001");
+        self.bridge
+            .run("if (window.__e2eMeta) __e2eMeta.content = __e2eViewport")?;
+        if let Err(error) = settled {
+            note(&format!("ios: the page stayed zoomed into the next scenario: {error:#}"));
+        }
+        Ok(())
     }
 
     fn launch(unit: &str) -> Result<Self> {
@@ -391,6 +412,39 @@ impl Ios {
         bail!("the page felt none of three taps at {x}, {y}, over {under}")
     }
 
+    /// Four raw touches in one AXe `batch` with no HID pacing between them (3702): how many of
+    /// its two clicks the page saw. Paced at 25 ms a send, the second touch was held 700 ms.
+    fn double_tap(&mut self, x: f64, y: f64) -> Result<u8> {
+        self.close_picker()?;
+        self.bridge.run(
+            "window.__double?.abort(); const ac = window.__double = new AbortController(); \
+             window.__clicks = 0; \
+             addEventListener('click', () => { __clicks++; }, { capture: true, signal: ac.signal });",
+        )?;
+        let (sx, sy) = self.screen(x, y);
+        let touch = |edge: &str| format!("touch -x {} -y {} --{edge}", point(sx), point(sy));
+        let (down, up) = (touch("down"), touch("up"));
+        let mut args = vec!["batch"];
+        for step in [&down, &up, &down, &up] {
+            args.extend(["--step", step.as_str()]);
+        }
+        self.mark(&format!("> double tap {x},{y}"))?;
+        self.inject_env(&args, &[("AXE_HID_STABILIZATION_MS", "0")])?;
+        // WebKit raises each click a moment after its lift.
+        let started = Instant::now();
+        let mut clicks = 0;
+        while started.elapsed() < Duration::from_secs(1) {
+            clicks = self.bridge.json::<u8>("__clicks")?;
+            if clicks >= 2 {
+                break;
+            }
+            std::thread::sleep(Duration::from_millis(25));
+        }
+        self.bridge.run("window.__double.abort()")?;
+        self.mark(&format!("  the double tap raised {clicks} clicks"))?;
+        Ok(clicks.min(2))
+    }
+
     /// A focused select may show iOS's picker, which takes the next tap and key (3700, 3701): an
     /// Escape closes it, swallowed at the window when no picker took it.
     fn close_picker(&mut self) -> Result<()> {
@@ -545,6 +599,11 @@ impl Ios {
 
     /// As [`Ios::inject`]; the tool's stdout.
     fn inject_output(&self, args: &[&str]) -> Result<String> {
+        self.inject_env(args, &[])
+    }
+
+    /// As [`Ios::inject_output`], with `env` set for the tool.
+    fn inject_env(&self, args: &[&str], env: &[(&str, &str)]) -> Result<String> {
         let tool = match self.input {
             Injector::Axe => "axe",
             Injector::Idb => "idb",
@@ -553,7 +612,10 @@ impl Ios {
         let mut tries = 0;
         loop {
             let out = traced(
-                Command::new(tool).args(args).args(["--udid", &self.udid]),
+                Command::new(tool)
+                    .args(args)
+                    .args(["--udid", &self.udid])
+                    .envs(env.iter().copied()),
                 &format!("{tool} {args:?}"),
             )?;
             if out.status.success() {
@@ -725,12 +787,18 @@ impl Driver for Ios {
         bail!("Ios: no hover on a touch screen")
     }
 
-    /// Two taps, each a click; no `dblclick` (3702). One AXe `batch` of both held the second
-    /// touch 700 ms on CI and WebKit sent it no click, so the grid opened no editor.
+    /// Both taps in one AXe `batch`, which may raise a `dblclick` (3702); a tap per click the
+    /// batch did not raise tops it up, so the grid's second tap still opens its editor.
     async fn double_click(&mut self, selector: &str) -> Result<()> {
         let (x, y) = self.centre(selector)?;
-        self.tap(x, y)?;
-        self.tap(x, y)
+        let clicks = match self.input {
+            Injector::Axe => self.double_tap(x, y)?,
+            Injector::Idb => 0,
+        };
+        for _ in clicks..2 {
+            self.tap(x, y)?;
+        }
+        Ok(())
     }
 
     /// A point under the status bar moves just below it: the system takes taps there, so a

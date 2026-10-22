@@ -4,8 +4,9 @@ use std::cell::RefCell;
 
 use dioxus::prelude::*;
 
-use crate::hooks::polling_tests::{flush, settle};
+use crate::hooks::polling_tests::{elapse, flush, settle};
 use crate::hooks::{HistoryHandle, UndoHistory, use_history};
+use crate::platform::manual_timer;
 
 thread_local! {
     static HANDLE: RefCell<Option<HistoryHandle<String>>> = const { RefCell::new(None) };
@@ -57,12 +58,15 @@ fn typing_without_a_pause_undoes_as_one_step() {
     assert!(dom.in_runtime(|| handle().can_redo()));
 }
 
+/// On the manual clock: a sleep thread each, the pause could wake after `settle`'s sentinel on
+/// a loaded runner (3743).
 #[test]
 fn a_pause_closes_the_group() {
+    let _clock = manual_timer::install();
     let mut dom = started();
     type_into(&mut dom, "a");
     type_into(&mut dom, "ab");
-    settle(&mut dom, PAUSE_MS);
+    elapse(&mut dom, PAUSE_MS);
     type_into(&mut dom, "abc");
 
     dom.in_runtime(|| handle().undo());
