@@ -30,7 +30,19 @@ async fn until_faded<D: Driver>(d: &mut D, what: &str) -> Result<()> {
     })
     .await?;
     d.fire_timers(IDLE_MS).await?;
-    eventually(d, what, faded).await
+    if let Err(error) = eventually(d, what, faded).await {
+        let seen = d
+            .evaluate(
+                "(() => { const a = document.activeElement; const g = document.querySelector('#player [role=group]'); \
+                 return JSON.stringify({ active: a && (a.tagName + '.' + a.className + ' ' + (a.getAttribute('aria-label') || '')), \
+                 focusVisible: a && a.matches(':focus-visible'), controls: g.dataset.controls, \
+                 fullscreen: !!document.fullscreenElement || !!document.webkitFullscreenElement, hasFocus: document.hasFocus(), \
+                 hover: g.matches(':hover') }); })()",
+            )
+            .await;
+        anyhow::bail!("{error:#}; page: {seen:?}");
+    }
+    Ok(())
 }
 
 /// The controls stay shown past every pending idle timer and the frame after it.
