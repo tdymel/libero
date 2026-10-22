@@ -15,11 +15,12 @@ use crate::{
     theme::Size,
 };
 
+use super::super::flows::short_day;
 use super::styles::NAV_SX;
 use super::view::{Strip, View};
 use super::{
-    DateLevel, DayRule, Focus, Selection, add_days, add_months, date_formatter, day_allowed,
-    first_of_month, format_date,
+    DateLevel, DayRule, Focus, SCROLL_MONTHS, Selection, add_days, add_months, date_formatter,
+    day_allowed, first_of_month, format_date,
 };
 
 impl View {
@@ -41,6 +42,96 @@ impl View {
         let disabled = disabled || self.disabled;
         rsx! {
             Nav { label, disabled, targets: nav_targets, forward, size, focusable, paged }
+        }
+    }
+
+    /// Todo 3903: the range's months scrolling in one column under a readout of its ends, a
+    /// button at either end adding a year. A field's sheet adds Save under it.
+    pub(super) fn scroll_view(
+        self,
+        grids: Vec<Element>,
+        onmouseleave: impl FnMut(MouseEvent) + 'static,
+        more: Signal<i64>,
+    ) -> Element {
+        let View {
+            names,
+            formats,
+            selection,
+            mut paged,
+            first,
+            last,
+            min,
+            max,
+            ..
+        } = self;
+        let mut more = more;
+        let [start, end] = selection.picks();
+        let years = start
+            .zip(end)
+            .is_some_and(|(start, end)| start.year() != end.year());
+        let end_text = |day: Option<NaiveDate>, unset: &'static str| match day {
+            Some(day) => (short_day(day, years, names), false),
+            None => (unset.to_string(), true),
+        };
+        let (start_text, start_unset) = end_text(start, names.start_date_label);
+        let (end_text, end_unset) = end_text(end, names.end_date_label);
+        let earlier = move |_| {
+            paged.set(Some(add_months(first, -SCROLL_MONTHS)));
+            more += SCROLL_MONTHS;
+        };
+        rsx! {
+            div { "data-slot": "readout", "aria-live": "polite",
+                span { "data-unset": start_unset.then_some("true"), "{start_text}" }
+                span { aria_hidden: "true", "–" }
+                span { "data-unset": end_unset.then_some("true"), "{end_text}" }
+            }
+            div { "data-slot": "scroller",
+                div { "data-slot": "more",
+                    {self.more_button(names.previous_year, min.is_some_and(|min| first <= first_of_month(min)), false, earlier)}
+                }
+                div {
+                    "data-slot": ChronoPickerPart::Months.slot(),
+                    "data-scroll": "true",
+                    onmouseleave,
+                    for (month, grid) in (0..).map(|index| add_months(first, index)).zip(grids) {
+                        div { key: "{month}",
+                            div { "data-slot": "month-title", aria_hidden: "true",
+                                {format_date(month, formats.month_heading, names)}
+                            }
+                            {grid}
+                        }
+                    }
+                }
+                div { "data-slot": "more",
+                    {self.more_button(names.next_year, max.is_some_and(|max| last >= first_of_month(max)), true, move |_| more += SCROLL_MONTHS)}
+                }
+            }
+        }
+    }
+
+    /// A scrolling calendar's button that adds a year of months at its end.
+    fn more_button(
+        self,
+        label: &'static str,
+        blocked: bool,
+        forward: bool,
+        onclick: impl FnMut(MouseEvent) + 'static,
+    ) -> Element {
+        rsx! {
+            ActionIcon {
+                aria_label: label,
+                variant: Input::Value(Variant::Standard),
+                size: ThemeAwareValue::Size(nav_size(self.size)),
+                tabindex: if self.focusable { "0" } else { "-1" },
+                disabled: blocked || self.disabled,
+                focusable_when_disabled: true,
+                onclick,
+                if forward {
+                    Glyph { slot: IconSlot::ChevronDown, icon: lucide::chevron_down::outlined }
+                } else {
+                    Glyph { slot: IconSlot::ChevronUp, icon: lucide::chevron_up::outlined }
+                }
+            }
         }
     }
 

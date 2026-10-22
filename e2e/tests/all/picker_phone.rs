@@ -1,5 +1,6 @@
 //! The picker fields at 360px: the phone sheet (todo 3900), a finger's keyboardless tap and the
-//! picker's own text box (3905, 3923), the clock face (3926), 44px targets (3901), short ranges (3904).
+//! picker's own text box (3905, 3923), the clock face (3926), 44px targets (3901), short ranges (3904),
+//! the scrolling range (3903) and the swiped month (3924).
 
 use anyhow::Result;
 use chromiumoxide::Page;
@@ -190,6 +191,124 @@ fn a_phone_spreads_the_color_picker_over_the_sheet() {
             .console
             .assert_clean("a phone's color sheet")
             .unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
+fn day(date: &str) -> String {
+    format!("{SHEET} [data-slot=day][data-date='{date}']:not([data-outside])")
+}
+
+/// Todo 3903: a range scrolls its months between its readout and Save, its text box in view;
+/// picks stay open until Save.
+/// Todo 3901: its days are 44px to a finger.
+#[test]
+fn a_phone_range_scrolls_its_months_and_saves() {
+    block_on(async {
+        let fixture = phone().await;
+        let page = &fixture.page;
+        let field = input("stay");
+        tap(page, &field).await.unwrap();
+        sheet_shown(page).await.unwrap();
+        let readout = format!("document.querySelector('{SHEET} [data-slot=readout]')");
+        let js = format!(
+            "(() => {{ const r = {readout}; if (!r) return false; \
+             const grids = document.querySelectorAll('{SHEET} [data-slot=months][data-scroll] [role=grid]'); \
+             const days = [...document.querySelectorAll('{SHEET} [data-slot=day]')]; \
+             const box = document.querySelector('{SHEET} [data-slot=scroller]'); \
+             const typed = document.querySelector({TYPED:?}).getBoundingClientRect(); \
+             return box.scrollHeight > box.clientHeight && typed.bottom <= innerHeight \
+               && r.getBoundingClientRect().top >= 0 && r.textContent === '14 Sep–16 Sep' \
+               && grids.length === 12 && grids[0].getAttribute('aria-label') === 'September 2026' \
+               && days.every(d => d.getBoundingClientRect().width >= 43.5) \
+               && !document.querySelector('{SHEET} [data-slot=nav]'); }})()"
+        );
+        wait::for_js_true(
+            page,
+            &js,
+            "twelve months from September, 44px days, the readout",
+        )
+        .await
+        .unwrap();
+        tap(page, &day("2026-09-20")).await.unwrap();
+        let started = format!("{readout}.textContent === '20 Sep–End date'");
+        wait::for_js_true(page, &started, "a start, the end unset")
+            .await
+            .unwrap();
+        // Scrolls the end into view first: CDP taps at the element's centre on screen.
+        page.evaluate(format!(
+            "document.querySelector(\"{}\").scrollIntoView({{block: 'center'}})",
+            day("2026-10-02")
+        ))
+        .await
+        .unwrap();
+        tap(page, &day("2026-10-02")).await.unwrap();
+        let picked = format!(
+            "{readout} && {readout}.textContent === '20 Sep–2 Oct' \
+             && document.querySelector('#echo').textContent.includes('2026-10-02')"
+        );
+        wait::for_js_true(page, &picked, "both ends, the sheet still open")
+            .await
+            .unwrap();
+        tap(page, &format!("{SHEET} [data-slot=save] button"))
+            .await
+            .unwrap();
+        let saved = format!("!document.querySelector({SHEET:?})");
+        wait::for_js_true(page, &saved, "Save closed the sheet")
+            .await
+            .unwrap();
+        fixture
+            .console
+            .assert_clean("a phone's scrolling range")
+            .unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
+/// Todo 3924: a sideways swipe over a day's month pages it; the title opens the month grid.
+#[test]
+fn a_swipe_pages_the_day_sheet() {
+    block_on(async {
+        let fixture = phone().await;
+        let page = &fixture.page;
+        tap(page, &input("due")).await.unwrap();
+        sheet_shown(page).await.unwrap();
+        let title = |month: &str| {
+            format!(
+                "document.querySelector('{SHEET} [data-slot=title]')?.textContent === '{month}'"
+            )
+        };
+        wait::for_js_true(page, &title("September 2026"), "September")
+            .await
+            .unwrap();
+        let months = format!("{SHEET} [data-slot=months]");
+        let at = pointer::centre_of(page, &months).await.unwrap();
+        let by = |dx: f64| pointer::Point {
+            x: at.x + dx,
+            y: at.y,
+        };
+        pointer::touch_drag(page, by(60.0), by(-60.0), 6)
+            .await
+            .unwrap();
+        wait::for_js_true(page, &title("October 2026"), "a swipe left, October")
+            .await
+            .unwrap();
+        pointer::touch_drag(page, by(-60.0), by(60.0), 6)
+            .await
+            .unwrap();
+        wait::for_js_true(page, &title("September 2026"), "a swipe right, September")
+            .await
+            .unwrap();
+        tap(page, &format!("{SHEET} [data-slot=title]"))
+            .await
+            .unwrap();
+        let grid = format!(
+            "document.querySelectorAll('{SHEET} [data-slot=cells] [data-slot=cell]').length === 12"
+        );
+        wait::for_js_true(page, &grid, "the month grid")
+            .await
+            .unwrap();
+        fixture.console.assert_clean("a swiped day sheet").unwrap();
         fixture.close().await.unwrap();
     });
 }

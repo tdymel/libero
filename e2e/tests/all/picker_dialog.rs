@@ -323,13 +323,13 @@ async fn dialog_contract(page: &Page, input: &str) -> Result<()> {
     Ok(())
 }
 
-/// Todo 1552: under the `sm` breakpoint the range dropdown shows one month and fits a
-/// 320px page; above it, two months side by side (1.4.10).
+/// Todo 1552: under the `sm` breakpoint the range dropdown fits a 320px page, its months in
+/// one scrolling column (3903); above it, two months side by side (1.4.10).
 #[test]
 fn a_date_range_field_opens_one_month_on_a_narrow_page() {
     block_on(async {
         let route = "/date-range-field";
-        for (narrow, months) in [(true, 1), (false, 2)] {
+        for (narrow, months) in [(true, 12), (false, 2)] {
             let viewport = if narrow {
                 Viewport::Mobile
             } else {

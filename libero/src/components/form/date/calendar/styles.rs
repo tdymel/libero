@@ -1,14 +1,17 @@
 use crate::{
     components::{
-        common::{Part, disabled_look_sx, focus_ring_sx, inset_focus_ring_sx},
+        common::{COARSE_POINTER, Part, disabled_look_sx, focus_ring_sx, inset_focus_ring_sx},
         form::ChronoPickerPart,
     },
     sx::{FORCED_COLORS, StaticSx, sx},
-    theme::{CHRONO_DAY, CHRONO_FONT_SIZE, ChronoPickerDefaults, Size, SizeCss},
+    theme::{CHRONO_DAY, CHRONO_FONT_SIZE, ChronoPickerDefaults, CssVar, Size, SizeCss},
 };
 
+/// The size's day, at least 44px to a finger (todo 3901), unless seven would overflow the screen.
+const CALENDAR_DAY: CssVar = CssVar::new("--lsx-calendar-day");
+
 pub(super) static CALENDAR_SX: StaticSx = StaticSx::new(|| {
-    let day = CHRONO_DAY.value();
+    let day = CALENDAR_DAY.value();
     let button = sx()
         .display("flex")
         .align_items("center")
@@ -27,6 +30,17 @@ pub(super) static CALENDAR_SX: StaticSx = StaticSx::new(|| {
         .cursor("pointer")
         .hover(sx().background("muted.1"));
     ChronoPickerDefaults::theme_vars()
+        .var(CALENDAR_DAY, CHRONO_DAY.value())
+        .media(
+            COARSE_POINTER,
+            sx().var(
+                CALENDAR_DAY,
+                format!(
+                    "min(max(44px, {}), calc((100vw - 24px) / 7))",
+                    CHRONO_DAY.value()
+                ),
+            ),
+        )
         .display("inline-flex")
         .flex_direction("column")
         .gap("4px")
@@ -52,6 +66,51 @@ pub(super) static CALENDAR_SX: StaticSx = StaticSx::new(|| {
         .selector(
             "& > [data-slot='months']",
             sx().display("flex").gap("16px").align_items("flex-start"),
+        )
+        // Below `sm` a range scrolls its months under the readout (todo 3903).
+        // A sheet's flex column shrinks it; inline, the months stop at 60% of the screen.
+        .selector(
+            "&[data-state~='scroll']",
+            sx().display("flex").width("100%").min_height("0"),
+        )
+        .selector(
+            "& > [data-slot='scroller']",
+            sx().flex("1 1 auto")
+                .min_height("0")
+                .max_height("60vh")
+                .overflow_y("auto")
+                .supports("(height: 1dvh)", sx().max_height("60dvh")),
+        )
+        .selector(
+            "& > [data-slot='readout']",
+            sx().display("flex")
+                .align_items("center")
+                .justify_content("center")
+                .gap("8px")
+                .min_height(day.clone())
+                .font_weight("600"),
+        )
+        .selector(
+            "& > [data-slot='readout'] > [data-unset]",
+            sx().color("text-dimmed").font_weight("400"),
+        )
+        .selector(
+            "& [data-slot='months'][data-scroll]",
+            sx().display("flex")
+                .flex_direction("column")
+                .align_items("center")
+                .gap("16px"),
+        )
+        .selector(
+            "& [data-slot='month-title']",
+            sx().display("flex")
+                .align_items("center")
+                .height(day.clone())
+                .font_weight("600"),
+        )
+        .selector(
+            "& [data-slot='more']",
+            sx().display("flex").justify_content("center"),
         )
         .selector(
             ChronoPickerPart::Weekday.selector(),

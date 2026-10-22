@@ -12,7 +12,8 @@ use super::{
 };
 use crate::{
     components::common::Input,
-    hooks::{use_formats, use_localization, use_theme},
+    components::form::phone_sheet::narrow_query,
+    hooks::{use_formats, use_localization, use_media_query, use_theme},
     localization::fill,
     theme::{CalendarVariant, TimePickerVariant},
 };
@@ -171,6 +172,7 @@ pub(super) fn chrono_field<V: DateValue>(
         range_separator: conventions.range_separator,
         level,
     };
+    let narrow = use_media_query(&narrow_query());
     // Only a day level passes the props a month or year dropdown drops.
     let day = level == DateLevel::Day;
     let bounds = formats.clone();
@@ -182,7 +184,9 @@ pub(super) fn chrono_field<V: DateValue>(
                 .accepts(&picker)
                 .map_err(|refusal| value.refusal(refusal, picker.min, picker.max, &bounds))
         },
-        move |next| close && V::closes(next),
+        // The scrolling range leaves the closing to its Save (todo 3903).
+        move |next| close && !V::scrolls(&picker, *narrow.peek()) && V::closes(next),
+        V::scrolls(&picker, narrow()),
         // Only the props `V` reads, so the picker has nothing to warn about.
         move |args: DropdownArgs<V>| {
             rsx! {

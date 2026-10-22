@@ -20,7 +20,10 @@ use crate::{
         form::use_fieldset_disabled,
         layout::use_box,
     },
-    hooks::{ElementHandle, use_element, use_formats, use_localization},
+    hooks::{
+        ElementHandle, SwipeDirection, SwipeEvent, SwipeOptions, use_element, use_formats,
+        use_localization, use_swipe,
+    },
     platform::ElementApi,
     sx::Sx,
     theme::{CalendarVariant, Size},
@@ -179,6 +182,10 @@ pub(super) struct CalendarProps {
     /// Months side by side at the day level.
     #[props(default = 1)]
     columns: usize,
+    /// Months in one scrolling column under a readout of the range's ends, for a phone (todo 3903).
+    /// Day level, range selection only.
+    #[props(default)]
+    scroll: bool,
     /// The level a pick lands on; the levels above only navigate.
     #[props(default = DateLevel::Day)]
     lowest: DateLevel,
@@ -216,6 +223,9 @@ pub(super) struct CalendarProps {
     attributes: Vec<Attribute>,
 }
 
+/// The months a scrolling calendar starts with; a button at either end adds a year.
+const SCROLL_MONTHS: i64 = 12;
+
 /// A selector to focus inside `root` after the next render. A level change replaces
 /// the heading and cells, which would leave focus on `body`.
 pub(super) fn use_focus_after_render(root: ElementHandle) -> Signal<Option<String>> {
@@ -240,8 +250,14 @@ pub(super) fn Calendar(props: CalendarProps) -> Element {
     let formats = use_formats();
     let selection = props.selection;
     let onpick = props.onpick;
-    let columns = props.columns.max(1) as i64;
     let lowest = props.lowest;
+    let scroll = props.scroll && lowest == DateLevel::Day && props.variant != CalendarVariant::Mini;
+    // Months added at either end of a scrolling calendar.
+    let more = use_signal(|| 0i64);
+    let columns = match scroll {
+        true => SCROLL_MONTHS + more(),
+        false => props.columns.max(1) as i64,
+    };
     let (min, max, exclude_date) = (props.min, props.max, props.exclude_date.0);
     // No native `disabled`, nor `inert`: either would drop a focused day's focus (todo 3881).
     let in_disabled_group = use_fieldset_disabled();
@@ -262,6 +278,32 @@ pub(super) fn Calendar(props: CalendarProps) -> Element {
     };
     // The day under the mouse while a range waits for its end.
     let mut hover = use_signal(|| None::<NaiveDate>);
+    // Todo 3924: a sideways swipe over the days pages a month, as the arrow buttons.
+    let swipe = use_swipe(
+        use_callback(move |event: SwipeEvent| {
+            let forward = match event.direction {
+                SwipeDirection::Left => !root.is_rtl(),
+                SwipeDirection::Right => root.is_rtl(),
+                _ => return,
+            };
+            let first = first_of_month(
+                paged
+                    .peek()
+                    .or(selection.anchor())
+                    .or(today)
+                    .unwrap_or(FALLBACK_MONTH),
+            );
+            let blocked = match forward {
+                true => max.is_some_and(|max| add_months(first, columns) > max),
+                false => min.is_some_and(|min| add_days(first, -1) < min),
+            };
+            let target = add_months(first, if forward { 1 } else { -1 });
+            if !disabled && !blocked {
+                paged.set(Some(target));
+            }
+        }),
+        SwipeOptions::default(),
+    );
 
     let first = first_of_month(
         paged()
@@ -313,10 +355,14 @@ pub(super) fn Calendar(props: CalendarProps) -> Element {
     // Read only while a range waits, so a plain picker never re-renders on mouse movement.
     let hovered = if awaits_end { hover() } else { None };
 
-    // The first day of each of a month's six weeks.
+    // The first day of each of a month's six weeks; a scrolling column draws only its own.
     let weeks = move |month: NaiveDate| {
         let start = add_days(month, -column(month));
-        (0..6).map(move |week| (week, add_days(start, week * 7)))
+        let count = match scroll {
+            true => (column(month) + (add_months(month, 1) - month).num_days() + 6) / 7,
+            false => 6,
+        };
+        (0..count).map(move |week| (week, add_days(start, week * 7)))
     };
     let in_week = |day: Option<NaiveDate>, first: NaiveDate| {
         day.filter(|day| (first..=add_days(first, 6)).contains(day))
@@ -331,85 +377,102 @@ pub(super) fn Calendar(props: CalendarProps) -> Element {
             nav_targets.set([add_months(first, -1), add_months(first, 1)]);
             let months = (0..columns).map(|index| (index, add_months(first, index)));
             // Inline, see `Week`. Keyed by column, so paging diffs the grid in place.
-            rsx! {
-                div { "data-slot": ChronoPickerPart::Header.slot(),
-                    Nav {
-                        label: names.previous_month,
-                        disabled: disabled || min.is_some_and(|min| add_days(first, -1) < min),
-                        targets: nav_targets,
-                        forward: false,
-                        size,
-                        focusable,
-                        paged,
-                    }
-                    for (index, month) in months.clone() {
-                        button {
-                            key: "{index}",
-                            r#type: "button",
-                            "data-slot": ChronoPickerPart::Title.slot(),
-                            "aria-live": "polite",
-                            "aria-disabled": disabled.then_some("true"),
-                            tabindex: view.tabindex(true),
-                            onclick: move |_| {
-                                if disabled {
-                                    return;
-                                }
-                                paged.set(Some(month));
-                                level.set(DateLevel::Month);
-                                focus.to(Focus::Title);
-                            },
-                            {format_date(month, formats.month_heading, names)}
-                        }
-                    }
-                    Nav {
-                        label: names.next_month,
-                        disabled: disabled || max.is_some_and(|max| add_months(last, 1) > max),
-                        targets: nav_targets,
-                        forward: true,
-                        size,
-                        focusable,
-                        paged,
-                    }
-                }
-                div {
-                    "data-slot": ChronoPickerPart::Months.slot(),
-                    onmouseleave: move |_| {
-                        if awaits_end {
-                            hover.set(None);
-                        }
-                    },
-                    for (index, month) in months {
-                        div {
-                            key: "{index}",
-                            role: "grid",
-                            "aria-label": format_date(month, formats.month_heading, names),
-                            onkeydown,
-                            Weekdays { first_weekday }
-                            for (week, first) in weeks(month) {
-                                Week {
-                                    key: "{week}",
-                                    first,
-                                    month,
-                                    blanks: columns > 1,
-                                    selection: selection.clip(hovered, first, add_days(first, 6)),
-                                    value: selection.clip(None, first, add_days(first, 6)),
-                                    today: in_week(today, first),
-                                    tab_stop: in_week(Some(tab_stop), first),
-                                    min,
-                                    max,
-                                    exclude_date,
-                                    focusable,
-                                    disabled,
-                                    awaits_end,
-                                    hover,
-                                    active,
-                                    paged,
-                                    onpick,
-                                }
+            let grid = move |index: i64, month: NaiveDate| {
+                rsx! {
+                    div {
+                        key: "{index}",
+                        role: "grid",
+                        "aria-label": format_date(month, formats.month_heading, names),
+                        onkeydown,
+                        Weekdays { first_weekday }
+                        for (week, first) in weeks(month) {
+                            Week {
+                                key: "{week}",
+                                first,
+                                month,
+                                blanks: columns > 1,
+                                selection: selection.clip(hovered, first, add_days(first, 6)),
+                                value: selection.clip(None, first, add_days(first, 6)),
+                                today: in_week(today, first),
+                                tab_stop: in_week(Some(tab_stop), first),
+                                min,
+                                max,
+                                exclude_date,
+                                focusable,
+                                disabled,
+                                awaits_end,
+                                hover,
+                                active,
+                                paged,
+                                onpick,
                             }
                         }
                     }
                 }
+            };
+            let onmouseleave = move |_| {
+                if awaits_end {
+                    hover.set(None);
+                }
+            };
+            match scroll {
+                true => view.scroll_view(
+                    months.map(|(index, month)| grid(index, month)).collect(),
+                    onmouseleave,
+                    more,
+                ),
+                false => rsx! {
+                    div { "data-slot": ChronoPickerPart::Header.slot(),
+                        Nav {
+                            label: names.previous_month,
+                            disabled: disabled || min.is_some_and(|min| add_days(first, -1) < min),
+                            targets: nav_targets,
+                            forward: false,
+                            size,
+                            focusable,
+                            paged,
+                        }
+                        for (index, month) in months.clone() {
+                            button {
+                                key: "{index}",
+                                r#type: "button",
+                                "data-slot": ChronoPickerPart::Title.slot(),
+                                "aria-live": "polite",
+                                "aria-disabled": disabled.then_some("true"),
+                                tabindex: view.tabindex(true),
+                                onclick: move |_| {
+                                    if disabled {
+                                        return;
+                                    }
+                                    paged.set(Some(month));
+                                    level.set(DateLevel::Month);
+                                    focus.to(Focus::Title);
+                                },
+                                {format_date(month, formats.month_heading, names)}
+                            }
+                        }
+                        Nav {
+                            label: names.next_month,
+                            disabled: disabled || max.is_some_and(|max| add_months(last, 1) > max),
+                            targets: nav_targets,
+                            forward: true,
+                            size,
+                            focusable,
+                            paged,
+                        }
+                    }
+                    div {
+                        "data-slot": ChronoPickerPart::Months.slot(),
+                        // Sideways moves are the swipe's; the page keeps vertical panning and zoom.
+                        style: "touch-action: pan-y pinch-zoom",
+                        onmouseleave,
+                        onpointerdown: move |event| swipe.onpointerdown.call(event),
+                        onpointermove: move |event| swipe.onpointermove.call(event),
+                        onpointerup: move |event| swipe.onpointerup.call(event),
+                        onpointercancel: move |event| swipe.onpointercancel.call(event),
+                        {months.map(|(index, month)| grid(index, month))}
+                    }
+                },
             }
         }
         DateLevel::Month => view.month_view(cell_stop),
@@ -420,6 +483,7 @@ pub(super) fn Calendar(props: CalendarProps) -> Element {
         .states
         .unwrap_or_default()
         .with(props.size.state_name(), true)
+        .with("scroll", scroll)
         .into();
     let root_box = use_box()
         .framework_sx(&CALENDAR_SX)

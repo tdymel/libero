@@ -17,6 +17,7 @@ use super::{
 use crate::{
     components::{
         accessibility::use_announcer,
+        buttons::Button,
         common::{
             ClassList, FOCUSABLE_SELECTOR, HtmlTag, Input, NavigationChord, Part, Parts,
             ScaleOrCss, States, navigation_chord,
@@ -56,24 +57,33 @@ static PICKER_FIELD_DROPDOWN_SX: StaticSx = StaticSx::new(|| {
         .max_height(POPOVER_AVAILABLE_HEIGHT.value_or("none"))
         .overflow_y("auto")
         .selector(
-            "& > [data-slot='text-input']",
+            "& > :is([data-slot='text-input'], [data-slot='save'])",
             sx().margin_top(SizeCss::SPACING.value(Size::Sm)),
         )
         // Below `sm` the phone sheet, which a sticky header cannot cover (todo 3900).
         .and(phone_sheet_sx())
         .media(
             narrow_query(),
-            // The clock face fills the sheet's width (3926); `div` outranks the picker's own rule.
-            // Sized off the screen, not its parent: a parent's width would need `:has()` (3954).
-            sx().selector(
-                "& div[data-slot='face']",
-                sx().width(format!(
-                    "min(calc(100vw - 2 * {}), 50dvh)",
-                    SizeCss::SPACING.value(Size::Sm)
-                ))
-                .height("auto")
-                .with("aspect-ratio", "1"),
-            ),
+            // One centred column: a digital clock sat left on a wide phone. The swipe strip and
+            // text box span it; a range's months shrink and scroll between them (3903).
+            sx().display("flex")
+                .flex_direction("column")
+                .align_items("center")
+                .selector(
+                    "& > :is([data-slot='sheet-handle'], [data-slot='text-input'], [data-slot='save'])",
+                    sx().align_self("stretch"),
+                )
+                // The clock face fills the sheet's width (3926); `div` outranks the picker's own rule.
+                // Sized off the screen, not its parent: a parent's width would need `:has()` (3954).
+                .selector(
+                    "& div[data-slot='face']",
+                    sx().width(format!(
+                        "min(calc(100vw - 2 * {}), 50dvh)",
+                        SizeCss::SPACING.value(Size::Sm)
+                    ))
+                    .height("auto")
+                    .with("aspect-ratio", "1"),
+                ),
         )
 });
 
@@ -353,6 +363,8 @@ pub(super) fn use_picker_field<V: FieldValue>(
     formats: Formats,
     accepts: impl Fn(V) -> Result<(), String> + Clone + 'static,
     closes: impl Fn(Option<V>) -> bool + 'static,
+    // The picker leaves the closing to a Save under it (3903).
+    saves: bool,
     dropdown: impl FnOnce(DropdownArgs<V>) -> Element,
 ) -> Element {
     let theme = use_theme();
@@ -668,6 +680,23 @@ pub(super) fn use_picker_field<V: FieldValue>(
             open_to(false);
         }
     });
+    // Closes as Escape does, the picks already committed (3903).
+    let save = saves.then(|| {
+        rsx! {
+            div { "data-slot": "save",
+                Button {
+                    full_width: true,
+                    onclick: move |_| {
+                        if floating.query_selector(":focus").is_ok() {
+                            focus_input();
+                        }
+                        open_to(false);
+                    },
+                    {names.save}
+                }
+            }
+        }
+    });
     // Shares the field's draft: Enter commits and hands focus back, a blur commits (3905).
     let picker_input = keyboardless.input(PickerInput {
         field_id: field_box.id().to_string(),
@@ -744,6 +773,7 @@ pub(super) fn use_picker_field<V: FieldValue>(
                         size,
                         pick,
                     })}
+                    {save}
                     {picker_input}
                 },
             )

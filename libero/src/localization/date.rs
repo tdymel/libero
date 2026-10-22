@@ -69,6 +69,10 @@ pub struct DateLocale {
     pub end_time_label: &'static str,
     /// Names the strip of those steps.
     pub range_steps_label: &'static str,
+    /// A phone's range readout shows these for an end not picked yet; `save` closes its sheet.
+    pub start_date_label: &'static str,
+    pub end_date_label: &'static str,
+    pub save: &'static str,
     /// Names a `TimePicker`'s columns.
     pub hours_label: &'static str,
     pub minutes_label: &'static str,
@@ -185,6 +189,9 @@ impl DateLocale {
         start_time_label: "Start time",
         end_time_label: "End time",
         range_steps_label: "Dates and times",
+        start_date_label: "Start date",
+        end_date_label: "End date",
+        save: "Save",
         hours_label: "Hours",
         minutes_label: "Minutes",
         seconds_label: "Seconds",
@@ -253,6 +260,9 @@ impl DateLocale {
         start_time_label: "Startzeit",
         end_time_label: "Endzeit",
         range_steps_label: "Zeitraum und Uhrzeiten",
+        start_date_label: "Startdatum",
+        end_date_label: "Enddatum",
+        save: "Speichern",
         hours_label: "Stunden",
         minutes_label: "Minuten",
         seconds_label: "Sekunden",

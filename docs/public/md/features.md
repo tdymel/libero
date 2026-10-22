@@ -101,7 +101,7 @@ it is on (Notes).
 | `chip` | Chip | action-icon, anchor | on |  |
 | `color` | ColorField, ColorPicker, ColorSwatch, HueSlider, AlphaSlider | slider, action-icon, use-media-query, use-swipe | off |  |
 | `combobox` | Combobox, use_combobox | loader, paper, scroll-area, use-id, use-popover, visually-hidden, use-icon, use-swipe, use-media-query | on |  |
-| `date-time` | ChronoField, ChronoPicker, DateField, DatePicker, TimeField, TimePicker and the other date and time fields and pickers | tabs, action-icon, use-drag, use-media-query, use-swipe | off |  |
+| `date-time` | ChronoField, ChronoPicker, DateField, DatePicker, TimeField, TimePicker and the other date and time fields and pickers | tabs, action-icon, button, use-drag, use-media-query, use-swipe | off |  |
 | `fieldset` | Fieldset | form-root | on |  |
 | `file-field` | FileField | chip, select, alert, modal, action-icon, button, dialog, loader | off | Its crop prop needs image-cropper on as well; without it the file passes uncropped. |
 | `form-root` | Form, use_form | alert | on |  |

@@ -73,7 +73,8 @@ fn range_picker() -> Element {
     }
 }
 
-/// Todo 3878: under `sm` a native window shows one month, as the web does, and two past it.
+/// Todo 3878: under `sm` a native window scrolls its months in one column, as the web does
+/// (3903), and shows two side by side past it.
 #[test]
 fn a_range_picker_shows_one_month_in_a_narrow_window() {
     let mut page = mount(range_picker);
@@ -86,7 +87,7 @@ fn a_range_picker_shows_one_month_in_a_narrow_window() {
         );
     };
     months(&mut page, 1024, 2);
-    months(&mut page, 400, 1);
+    months(&mut page, 400, 12);
     months(&mut page, 1024, 2);
 }
 

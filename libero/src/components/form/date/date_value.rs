@@ -13,7 +13,10 @@ use super::{
     time_picker::Clock,
 };
 use crate::{
-    components::common::{ClassList, Input, Parts, States},
+    components::{
+        common::{ClassList, Input, Parts, States},
+        form::phone_sheet::narrow_query,
+    },
     hooks::{use_media_query, use_theme},
     sx::Sx,
     theme::{CalendarVariant, Size, TimePickerVariant},
@@ -158,6 +161,15 @@ pub(super) trait Sealed: FieldValue {
 
     /// Whether a pick leaves nothing more to pick, so a field may close its dropdown.
     fn closes(value: Option<Self>) -> bool;
+
+    /// Whether the picker scrolls its months, below `sm` (todo 3903): a field then
+    /// leaves the closing to the sheet's Save.
+    fn scrolls(_: &PickerOptions<<Self as DateValue>::Bound>, _narrow: bool) -> bool
+    where
+        Self: DateValue,
+    {
+        false
+    }
 
     /// Draws the picker for this value type. Calls hooks: never behind a condition.
     fn picker(args: PickerArgs<Self>) -> Element
@@ -525,6 +537,10 @@ impl Sealed for DateRange<NaiveDate> {
         value.is_some_and(|range| range.end.is_some())
     }
 
+    fn scrolls(options: &PickerOptions<NaiveDate>, narrow: bool) -> bool {
+        narrow && options.columns.is_none()
+    }
+
     fn picker(args: PickerArgs<Self>) -> Element {
         let (value, onchange, options) = (args.value, args.onchange, args.options);
         let size = args.size.copied_or(use_theme().chrono_picker.size);
@@ -534,16 +550,14 @@ impl Sealed for DateRange<NaiveDate> {
                 onchange.call(Some(DateRange::pick(value, day)));
             }
         });
-        // Two months are ~520px: under `sm` one, as the Cascader's single column (1.4.10).
-        let narrow = use_media_query(&format!(
-            "not all and (min-width: {})",
-            Size::Sm.breakpoint_value()
-        ));
+        // Two months are ~520px: under `sm` one scrolling column (1.4.10, todo 3903).
+        let narrow = use_media_query(&narrow_query());
         rsx! {
             Calendar {
                 selection: Selection::Range(value),
                 onpick,
-                columns: options.columns.unwrap_or(if narrow() { 1 } else { 2 }),
+                columns: options.columns.unwrap_or(2),
+                scroll: Self::scrolls(&options, narrow()),
                 lowest: DateLevel::Day,
                 min: options.min,
                 max: options.max,
