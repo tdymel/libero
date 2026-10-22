@@ -214,6 +214,7 @@ jobs:
           chrome-version: 152.0.7977.82
       - run: '"${{ steps.chrome.outputs.chrome-path }}" --version'
       - run: |
+          bash .github/scripts/stall_sample.sh "$RUNNER_TEMP/e2e-artifacts" &
           units=$(python3 .github/scripts/shard.py smoke)
           echo "units: $units"
           # shellcheck disable=SC2086
