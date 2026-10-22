@@ -113,9 +113,4 @@ async fn clicks<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
     reads(d, "#clicked", "Tue 0 5", "a click on Tue at 9 am").await
 }
 
-e2e::scenario!(
-    a_click_on_a_cell_reports_it,
-    "/heatmap-chart",
-    clicks,
-    native: skip("upstream: Blitz lays out no svg child, so a mark has no rect to click")
-);
+e2e::scenario!(a_click_on_a_cell_reports_it, "/heatmap-chart", clicks);

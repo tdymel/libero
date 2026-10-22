@@ -54,6 +54,7 @@ use warnings::SignalWarnings;
 
 use crate::frames::FrameStats;
 
+mod svg;
 mod warnings;
 
 pub use blitz_traits::shell::ColorScheme;
@@ -306,7 +307,10 @@ fn css_color(color: peniko::Color) -> String {
 /// `client_rect` in `platform/backend/blitz.rs` does the same walk.
 /// libero's Blitz `client_rect`: transforms followed, a table row its cells' union.
 fn client_rect(doc: &BaseDocument, id: NodeId) -> Option<(f64, f64, f64, f64)> {
-    if let Some(rect) = boxless_rect(doc, id).or_else(|| transformed_rect(doc, id)) {
+    if let Some(rect) = svg::mark_rect(doc, id)
+        .or_else(|| boxless_rect(doc, id))
+        .or_else(|| transformed_rect(doc, id))
+    {
         return Some(rect);
     }
     let rect = doc.get_client_bounding_rect(id)?;

@@ -611,10 +611,12 @@ fn the_rail_holds_200_percent_text_without_overflow() {
         let page = &fixture.page;
         wait::for_visible(page, "#rail-home").await.unwrap();
 
+        // A wide font: the clamped label's ellipsis hung past its box on Windows (3927).
         let report = js::<serde_json::Value>(
             page,
             "(() => { \
                 document.documentElement.style.fontSize = '200%'; \
+                document.head.insertAdjacentHTML('beforeend', \"<style>* { font-family: Verdana, sans-serif !important }</style>\"); \
                 const rail = document.querySelector('#rail'); \
                 const labels = [...rail.querySelectorAll('[data-slot=label]')]; \
                 return { width: rail.getBoundingClientRect().width, \

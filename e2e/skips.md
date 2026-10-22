@@ -15,13 +15,10 @@ The performance scenarios (units `perf`, `table_perf`) are no skips but run on r
 | `accordion::the_arrows_move_focus_skip_the_disabled_and_never_toggle` | desktop | 958: element identity on the WebView |
 | `accordion::the_arrows_move_focus_skip_the_disabled_and_never_toggle` | ios | 958: element identity on the WebView |
 | `audio::the_bars_rise_with_the_decoded_tone` | native | Blitz has no Web Audio to decode with |
-| `bar_chart::a_click_on_a_bar_reports_it` | native | upstream: Blitz lays out no svg child, so a mark has no rect to click |
-| `bar_chart::a_pointer_on_a_line_s_point_picks_it` | native | a click on a line's point among bars picks nothing on Blitz |
 | `bar_chart::escape_closes_a_hovered_tooltip_without_focus` | android | a touch screen has no hover |
 | `bar_chart::escape_closes_a_hovered_tooltip_without_focus` | ios | a touch screen has no hover |
 | `bar_chart::hovering_shows_the_bar_s_tooltip_and_marker` | android | a touch screen has no hover |
 | `bar_chart::hovering_shows_the_bar_s_tooltip_and_marker` | ios | a touch screen has no hover |
-| `candlestick_chart::a_click_on_a_candle_reports_it` | native | upstream: Blitz lays out no svg child, so a mark has no rect to click |
 | `carousel_autoplay::tab_from_pause_within_the_carousel` | android | 2652 is the desktop WebView's arm |
 | `carousel_autoplay::tab_from_pause_within_the_carousel` | native | native::carousel has the Blitz arm |
 | `carousel_autoplay::tab_from_pause_within_the_carousel` | web | tab_from_pause_to_the_track_is_no_new_entry is the web's arm |
@@ -90,7 +87,6 @@ The performance scenarios (units `perf`, `table_perf`) are no skips but run on r
 | `focus_trap::tab_passes_over_a_stop_that_is_not_rendered` | android | 958: element identity on the WebView |
 | `focus_trap::tab_passes_over_a_stop_that_is_not_rendered` | desktop | 958: element identity on the WebView |
 | `focus_trap::tab_passes_over_a_stop_that_is_not_rendered` | ios | 958: element identity on the WebView |
-| `heatmap_chart::a_click_on_a_cell_reports_it` | native | upstream: Blitz lays out no svg child, so a mark has no rect to click |
 | `home::arrow_down_after_typing_enters_on_the_typed_day` | android | 958: element identity on the WebView |
 | `home::arrow_down_after_typing_enters_on_the_typed_day` | desktop | 958: element identity on the WebView |
 | `home::arrow_down_after_typing_enters_on_the_typed_day` | ios | 958: element identity on the WebView |
@@ -154,7 +150,6 @@ The performance scenarios (units `perf`, `table_perf`) are no skips but run on r
 | `line_chart::a_vertical_swipe_over_the_plot_scrolls_the_page` | web | a mouse drag scrolls nothing |
 | `line_chart::hovering_shows_the_point_s_tooltip_and_marker` | android | a touch screen has no hover |
 | `line_chart::hovering_shows_the_point_s_tooltip_and_marker` | ios | a touch screen has no hover |
-| `line_chart::hovering_shows_the_point_s_tooltip_and_marker` | native | the crosshair reads a 0x0 rect on Blitz |
 | `line_chart::the_chart_exports_as_svg_and_png` | native | the PNG export never lands on Blitz |
 | `line_chart::the_tooltip_keeps_its_height_from_point_to_point` | native | Blitz has no script reads |
 | `menu::a_click_outside_closes_it_and_leaves_focus_where_it_went` | ios | upstream: WebKit does not focus a clicked button |

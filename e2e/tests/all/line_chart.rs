@@ -57,7 +57,6 @@ e2e::scenario!(
     "/line-chart",
     hovers,
     android: skip("a touch screen has no hover"),
-    native: skip("the crosshair reads a 0x0 rect on Blitz"),
     ios: skip("a touch screen has no hover")
 );
 

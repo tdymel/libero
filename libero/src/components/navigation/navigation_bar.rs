@@ -149,6 +149,13 @@ fn rail_sx() -> Sx {
             .with(format!("padding-{left}"), safe_area_padding("0px", left))
             .with(format!("padding-{right}"), "0")
     };
+    // A clamped label's ellipsis hangs past its last line: room inside the box, or it is cut.
+    let label = match clamps_lines() {
+        true => sx()
+            .box_sizing("border-box")
+            .with("padding-inline", "0.35em"),
+        false => sx(),
+    };
     sx().position("sticky")
         .with("inset-block-start", "0")
         .align_self("flex-start")
@@ -170,6 +177,7 @@ fn rail_sx() -> Sx {
         .and(side("left", "right"))
         .rtl(side("right", "left"))
         .selector(NavigationBarPart::Item.selector(), sx().flex("0 0 auto"))
+        .selector(NavigationBarPart::Label.selector(), label)
 }
 
 static NAVIGATION_BAR_ITEM_SX: StaticSx = StaticSx::new(|| {

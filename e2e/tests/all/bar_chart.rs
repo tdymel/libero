@@ -378,12 +378,7 @@ async fn clicks<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
     reads(d, "#clicked", "2025 Q1 120", "a click on Q1").await
 }
 
-e2e::scenario!(
-    a_click_on_a_bar_reports_it,
-    "/bar-chart",
-    clicks,
-    native: skip("upstream: Blitz lays out no svg child, so a mark has no rect to click")
-);
+e2e::scenario!(a_click_on_a_bar_reports_it, "/bar-chart", clicks);
 
 /// A legend button hides its series' bars; the last shown one stays.
 async fn legend<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
@@ -474,8 +469,7 @@ async fn line_point<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
 e2e::scenario!(
     a_pointer_on_a_line_s_point_picks_it,
     "/bar-chart/line",
-    line_point,
-    native: skip("a click on a line's point among bars picks nothing on Blitz")
+    line_point
 );
 
 const PLUS: keyboard::Key = keyboard::Key {

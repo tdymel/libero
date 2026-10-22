@@ -134,9 +134,4 @@ e2e::scenario!(
     zooms
 );
 
-e2e::scenario!(
-    a_click_on_a_candle_reports_it,
-    "/candlestick-chart",
-    clicks,
-    native: skip("upstream: Blitz lays out no svg child, so a mark has no rect to click")
-);
+e2e::scenario!(a_click_on_a_candle_reports_it, "/candlestick-chart", clicks);
