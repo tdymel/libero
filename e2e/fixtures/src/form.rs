@@ -51,9 +51,20 @@ impl Iban {
     }
 }
 
+#[derive(Clone, PartialEq, Debug)]
+struct Share(f64);
+
+fn share(percent: f64) -> Result<Share, NotAnIban> {
+    match (0.0..=100.0).contains(&percent) {
+        true => Ok(Share(percent)),
+        false => Err(NotAnIban),
+    }
+}
+
 #[derive(Clone, PartialEq, Default, Fields)]
 struct Payout {
     iban: Option<Iban>,
+    share: Option<Share>,
 }
 
 /// Concept domain-values: `#iban` maps text to an `Iban`. Typed text stays as typed until a
@@ -63,9 +74,10 @@ fn DomainPage() -> Element {
     let payout = use_store(Payout::default);
     let mut submits = use_signal(|| 0u32);
     let stored = payout.read().iban.as_ref().map_or("none".to_string(), |iban| iban.0.clone());
+    let shared = payout.read().share.as_ref().map_or("none".to_string(), |share| share.0.to_string());
     rsx! {
         Flex { direction: "column", gap: "md", max_width: "320px",
-            span { "data-submits": "{submits}", "data-stored": "{stored}" }
+            span { "data-submits": "{submits}", "data-stored": "{stored}", "data-share": "{shared}" }
             Form {
                 value: payout,
                 onsubmit: move |_| submits += 1,
@@ -74,6 +86,11 @@ fn DomainPage() -> Element {
                     label: "IBAN",
                     required: true,
                     name: Payout::FIELDS.iban().map(Iban::text, Iban::new),
+                }
+                NumberField::<f64> {
+                    id: "share",
+                    label: "Share",
+                    name: Payout::FIELDS.share().map(|share: &Share| share.0, share),
                 }
                 Button { r#type: "submit", "Send" }
             }

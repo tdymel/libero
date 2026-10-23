@@ -642,3 +642,51 @@ fn a_mapped_field_keeps_its_typed_text_until_a_blur() {
         fixture.close().await.unwrap();
     });
 }
+
+/// Concept domain-values, fix 1, on a field with its own text buffer: a `NumberField` mapped to a
+/// share keeps "150" as typed while the share it cannot be resets the value.
+#[test]
+fn a_mapped_number_field_keeps_invalid_text() {
+    block_on(async {
+        let fixture = Fixture::open("/form/domain", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        let share = "input[name=share]";
+        let value_is = |text: &str| format!("document.querySelector({share:?}).value === {text:?}");
+        let stored_is = |text: &str| {
+            format!("document.querySelector('[data-share]').dataset.share === {text:?}")
+        };
+
+        pointer::click(page, share).await.unwrap();
+        keyboard::type_text(page, "15").await.unwrap();
+        wait::for_js_true(page, &stored_is("15"), "the parsed share")
+            .await
+            .unwrap();
+        keyboard::type_text(page, "0").await.unwrap();
+        wait::for_js_true(page, &stored_is("none"), "150 to empty the value")
+            .await
+            .unwrap();
+        wait::for_js_true(page, &value_is("150"), "the text as typed")
+            .await
+            .unwrap();
+
+        keyboard::press(page, keyboard::TAB).await.unwrap();
+        wait::for_js_true(page, &value_is("150"), "the invalid text to outlive a blur")
+            .await
+            .unwrap();
+        wait::for_js_true(
+            page,
+            "document.body.textContent.includes('Not an IBAN.')",
+            "the parse error",
+        )
+        .await
+        .unwrap();
+
+        fixture
+            .console
+            .assert_clean("typing into a mapped number field")
+            .unwrap();
+        fixture.close().await.unwrap();
+    });
+}
