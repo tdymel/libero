@@ -16,7 +16,7 @@ working `Table`. The compiler names a missing one: an item behind an off
 feature is not in `libero`.
 
 ```toml
-libero = { version = "0.3", default-features = false, features = [
+libero = { version = "0.4", default-features = false, features = [
     "table",
     "select",
     "date-field",

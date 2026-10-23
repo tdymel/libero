@@ -17,7 +17,7 @@ Behind the `fcm` cargo feature, off by default: it adds firebase-messaging and
 libero's `LiberoFcmService` to every Android APK of the app.
 
 ```toml
-libero = { version = "0.3", features = ["fcm"] }
+libero = { version = "0.4", features = ["fcm"] }
 ```
 
 ## Usage

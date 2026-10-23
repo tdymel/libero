@@ -10,7 +10,7 @@ macro_rules! github_owner {
 // A macro, so `concat!` builds the Cargo.toml snippets from it.
 macro_rules! libero_version {
     () => {
-        "0.3"
+        "0.4"
     };
 }
 pub(crate) use libero_version;
