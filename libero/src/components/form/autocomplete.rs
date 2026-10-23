@@ -147,6 +147,7 @@ pub fn Autocomplete<T: Options>(props: AutocompleteProps<T>) -> Element {
         props.open_on_focus && !disabled && !readonly,
         input_element,
         use_callback(move |()| state.open()),
+        None,
     );
     let row_cache = use_row_cache();
 

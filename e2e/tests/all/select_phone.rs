@@ -121,6 +121,30 @@ fn a_phone_multi_select_closes_on_done() {
     });
 }
 
+/// Todo 3982: with `open_on_focus`, closing the sheet with Done does not reopen it.
+#[test]
+fn an_open_on_focus_sheet_stays_closed_after_done() {
+    const TRIGGER: &str = "[role=combobox]";
+    block_on(async {
+        let fixture = phone("/select-phone/open-on-focus").await;
+        let page = &fixture.page;
+        tap(page, TRIGGER).await.unwrap();
+        sheet_shown(page).await.unwrap();
+        tap(page, &format!("{SHEET} [data-slot=sheet-footer] button"))
+            .await
+            .unwrap();
+        closed(page, TRIGGER).await.unwrap();
+        // Past the effects after the close: a late reopen would land by now.
+        crate::settle::painted(page).await.unwrap();
+        closed(page, TRIGGER).await.unwrap();
+        fixture
+            .console
+            .assert_clean("an open_on_focus sheet closed by Done")
+            .unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
 const SEARCH: &str = "[data-slot=dropdown] [data-slot=search]";
 
 /// Todo 3899: a touch open leaves focus, and the combobox role, on the trigger in `field`,

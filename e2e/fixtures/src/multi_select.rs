@@ -19,7 +19,30 @@ pub const ROUTES: Routes = &[
     ),
     ("/multi-select/echo", || rsx! { MultiSelectEchoPage {} }),
     ("/multi-select/chips", || rsx! { MultiSelectChipsPage {} }),
+    (
+        "/multi-select/open-on-focus",
+        || rsx! { MultiSelectOpenOnFocusPage {} },
+    ),
 ];
+
+/// Three chips held and `open_on_focus`: focus coming back from a chip or a sheet stays closed (todo 3982).
+#[component]
+fn MultiSelectOpenOnFocusPage() -> Element {
+    let mut value = use_signal(|| vec![Fruit::Apple, Fruit::Banana, Fruit::Cherry]);
+
+    rsx! {
+        Flex { direction: "column", gap: "md", max_width: "320px",
+            button { id: "before", "Before" }
+            MultiSelect {
+                label: "Fruit",
+                open_on_focus: true,
+                value: value(),
+                onchange: move |next| value.set(next),
+            }
+            Text { id: "echo", "{value:?}" }
+        }
+    }
+}
 
 /// Three chips held, for the keyboard's walk over them (todo 2976).
 #[component]

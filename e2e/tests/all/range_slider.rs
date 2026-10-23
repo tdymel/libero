@@ -7,6 +7,8 @@ use e2e::passes::{keyboard, pointer};
 use e2e::wait::PageBounded;
 use e2e::{Fixture, Suite, Viewport, wait};
 
+use crate::slider::BUBBLE;
+
 const UPPER: &str = "document.querySelectorAll('[role=slider]')[1]";
 const READOUT: &str = "document.querySelector('#price-readout').textContent";
 const LOWER_THUMB: &str = "[role=slider][aria-valuenow=\"20\"]";
@@ -255,6 +257,29 @@ e2e::scenario!(
     a_tap_on_an_upright_range_moves_the_nearest_thumb,
     "/range-slider/vertical",
     vertical_tap
+);
+
+/// Todo 3981: an upright thumb's bubble opens beside it, not over the track above it.
+async fn vertical_bubble_beside<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    d.hover(LEVEL).await?;
+    eventually(d, "the bubble to sit right of the thumb", async |d| {
+        if !d.exists(BUBBLE).await? {
+            return Ok(false);
+        }
+        let (thumb, bubble) = (d.rect(LEVEL).await?, d.rect(BUBBLE).await?);
+        let centre = bubble.y + bubble.height / 2.0;
+        Ok(bubble.x >= thumb.x + thumb.width - 1.0
+            && centre >= thumb.y
+            && centre <= thumb.y + thumb.height)
+    })
+    .await
+}
+
+e2e::scenario!(
+    an_upright_thumbs_bubble_opens_beside_it,
+    "/range-slider/vertical",
+    vertical_bubble_beside,
+    ios: skip("a touch screen has no hover")
 );
 
 /// Todo 483: the label, which names both thumbs, focuses the first.

@@ -339,6 +339,27 @@ e2e::scenario!(
     native: skip("3406: Blitz hands a removed chip's focus to a container div, parked with native")
 );
 
+/// Todo 3982: with `open_on_focus`, focus walking from a chip back to the trigger leaves the list closed.
+async fn a_chip_hands_focus_back_closed<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    eventually_text(d, "#echo", "[Apple, Banana, Cherry]", "mounting").await?;
+    d.focus(TRIGGER).await?;
+    crate::select::expanded(d, TRIGGER, true, "the focus to open the list").await?;
+    d.press(keyboard::ESCAPE).await?;
+    crate::select::stays_closed(d, TRIGGER, "Escape to close the list").await?;
+    d.press(keyboard::ARROW_LEFT).await?;
+    eventually_focused(d, &chip_x("Cherry"), "ArrowLeft to the last chip").await?;
+    d.press(keyboard::ARROW_RIGHT).await?;
+    eventually_focused(d, TRIGGER, "ArrowRight back to the trigger").await?;
+    crate::select::stays_closed(d, TRIGGER, "the chip's hand back to leave it closed").await
+}
+
+e2e::scenario!(
+    an_open_on_focus_multi_select_stays_closed_when_a_chip_hands_focus_back,
+    "/multi-select/open-on-focus",
+    a_chip_hands_focus_back_closed,
+    native: skip("3982: parked with the chip walk above (3406)")
+);
+
 /// A refused first row: the trigger names the row the list lights (1271).
 #[test]
 fn the_trigger_skips_a_refused_first_row() {

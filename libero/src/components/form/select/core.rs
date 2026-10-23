@@ -160,6 +160,8 @@ pub(crate) struct ChipHandles {
     cursor: Signal<Option<usize>>,
     slot: ElementHandle,
     trigger: ElementHandle,
+    /// A chip handed focus to the trigger, which `open_on_focus` must not read as a visit.
+    to_trigger: CopyValue<bool>,
 }
 
 pub(crate) fn use_chip_handles() -> ChipHandles {
@@ -167,6 +169,7 @@ pub(crate) fn use_chip_handles() -> ChipHandles {
         cursor: use_signal(|| None),
         slot: use_element(),
         trigger: use_element(),
+        to_trigger: use_hook(|| CopyValue::new(false)),
     }
 }
 
@@ -187,7 +190,7 @@ impl ChipFocus {
     /// Focuses the chip's x (its wrapper if it has none), the trigger for `None`.
     pub(crate) fn focus(&self, index: Option<usize>) {
         let Some(index) = index else {
-            let _ = self.handles.trigger.focus();
+            self.focus_trigger();
             return;
         };
         let chip = id_selector(&self.id(index));
@@ -206,8 +209,14 @@ impl ChipFocus {
         };
         // A chip that is gone leaves the trigger, not the page.
         if focused.is_err() {
-            let _ = self.handles.trigger.focus();
+            self.focus_trigger();
         }
+    }
+
+    fn focus_trigger(&self) {
+        let mut to_trigger = self.handles.to_trigger;
+        to_trigger.set(true);
+        let _ = self.handles.trigger.focus();
     }
 
     pub(crate) fn entered(&self, index: usize) {
@@ -437,6 +446,7 @@ pub(crate) fn SelectCore(props: SelectCoreProps) -> Element {
         props.open_on_focus && !disabled && !readonly,
         trigger_element,
         use_callback(move |()| open.open(true)),
+        Some(chip_handles.to_trigger),
     );
     focus_open.rendered(opened, searchable && !*blurred.peek());
     // On the Escape stack while open, as `ComboboxCore`: a Tour around leaves the press to it (todo 2674).

@@ -12,7 +12,28 @@ use crate::{Routes, common::Fruit};
 pub const ROUTES: Routes = &[
     ("/select-phone", || rsx! { SelectPhonePage {} }),
     ("/select-phone/low-trigger", || rsx! { LowTriggerPage {} }),
+    (
+        "/select-phone/open-on-focus",
+        || rsx! { OpenOnFocusPage {} },
+    ),
 ];
+
+/// An `open_on_focus` multi-select: closing its sheet must not reopen it (3982).
+#[component]
+fn OpenOnFocusPage() -> Element {
+    let mut many = use_signal(|| vec![Fruit::Apple]);
+
+    rsx! {
+        Flex { direction: "column", gap: "md", padding: "md",
+            MultiSelect {
+                label: "Many",
+                open_on_focus: true,
+                value: many(),
+                onchange: move |next| many.set(next),
+            }
+        }
+    }
+}
 
 /// One of each list field, values echoed.
 #[component]

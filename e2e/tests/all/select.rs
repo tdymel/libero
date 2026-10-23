@@ -36,7 +36,7 @@ pub async fn expanded<D: Driver>(d: &mut D, trigger: &str, open: bool, what: &st
 }
 
 /// A closed list that a focus came back to stays closed past another round trip.
-async fn stays_closed<D: Driver>(d: &mut D, trigger: &str, what: &str) -> Result<()> {
+pub async fn stays_closed<D: Driver>(d: &mut D, trigger: &str, what: &str) -> Result<()> {
     expanded(d, trigger, false, what).await?;
     d.text("body").await?;
     let now = d.attr(trigger, "aria-expanded").await?;

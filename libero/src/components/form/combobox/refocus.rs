@@ -117,6 +117,8 @@ pub(crate) struct FocusOpen {
     pressed: CopyValue<bool>,
     returning: CopyValue<bool>,
     was_open: CopyValue<bool>,
+    /// Set by a chip handing focus to the trigger: that focus opens nothing.
+    from_chip: Option<CopyValue<bool>>,
 }
 
 /// Blitz's Tab fires no `focus`/`blur`, so the silent moves on `element` count too.
@@ -124,10 +126,12 @@ pub(crate) fn use_focus_open(
     enabled: bool,
     element: ElementHandle,
     open: Callback<()>,
+    from_chip: Option<CopyValue<bool>>,
 ) -> FocusOpen {
     let focus_open = FocusOpen {
         enabled,
         open,
+        from_chip,
         focused: use_hook(|| CopyValue::new(false)),
         pressed: use_hook(|| CopyValue::new(false)),
         returning: use_hook(|| CopyValue::new(false)),
@@ -165,7 +169,10 @@ impl FocusOpen {
             return;
         }
         let returned = std::mem::take(&mut *returning.write());
-        if self.enabled && !returned && !*self.pressed.peek() {
+        let from_chip = self
+            .from_chip
+            .is_some_and(|mut flag| std::mem::take(&mut *flag.write()));
+        if self.enabled && !returned && !from_chip && !*self.pressed.peek() {
             self.open.call(());
         }
     }
@@ -174,5 +181,8 @@ impl FocusOpen {
         let (mut focused, mut pressed) = (self.focused, self.pressed);
         focused.set(false);
         pressed.set(false);
+        if let Some(mut from_chip) = self.from_chip {
+            from_chip.set(false);
+        }
     }
 }

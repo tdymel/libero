@@ -390,6 +390,7 @@ async fn recent_colors_follow_each_pick<D: Driver>(d: &mut D, _route: &str) -> R
     const INPUT: &str = "input[data-controlled]";
     const RECENT: &str =
         "[data-recent][role=group][aria-label='Recent colors'] > [data-slot=swatches]";
+    const CAPTION: &str = "[role=dialog] > [data-slot=recent-label]";
     async fn pick_and_close<D: Driver>(d: &mut D, swatch: &str) -> Result<()> {
         d.click(INPUT).await?;
         eventually(d, "a click to open the dialog", async |d| {
@@ -414,7 +415,11 @@ async fn recent_colors_follow_each_pick<D: Driver>(d: &mut D, _route: &str) -> R
                 }
             }
             let past = format!("{RECENT} > :nth-child({})", order.len() + 1);
-            Ok(!d.exists(&past).await?)
+            if d.exists(&past).await? {
+                return Ok(false);
+            }
+            // Todo 4033: the row carries a visible caption.
+            Ok(d.exists(CAPTION).await? && d.text(CAPTION).await? == "Recent colors")
         })
         .await?;
         d.press(keyboard::ESCAPE).await?;

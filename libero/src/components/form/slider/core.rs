@@ -25,7 +25,7 @@ use crate::{
     sx::{FORCED_COLORS, StaticSx, Sx, ThemeAwareValue, sx},
     theme::NamedColorCss,
     theme::{
-        Color, ColorShade, ColorValue, CssVar, OWN_SHADOW, SLIDER_THUMB, SLIDER_TRACK, Size,
+        Color, ColorShade, ColorValue, CssVar, OWN_SHADOW, SLIDER_THUMB, SLIDER_TRACK, Side, Size,
         SliderDefaults,
     },
     utils::warn,
@@ -395,6 +395,7 @@ fn SliderHoverPreview(
             anchor: track.at(fraction(value, min, max)),
             size,
             gap: Size::Sm,
+            side: track.vertical.then_some(Side::End),
             id: None,
             rtl: track.rtl,
             shown: true,
@@ -1816,6 +1817,7 @@ fn SliderThumbs(props: SliderThumbsProps) -> Element {
                     anchor: track.at(fraction(thumb_value, min, max)),
                     size,
                     gap,
+                    side: vertical.then_some(Side::End),
                     id: if shown { bubble_id.clone() } else { None },
                     rtl: track.rtl,
                     shown,
@@ -1834,6 +1836,7 @@ fn SliderThumbs(props: SliderThumbsProps) -> Element {
                     label: rsx! { {bubble_text} },
                     size,
                     gap,
+                    side: vertical.then_some(Side::End),
                     open,
                     label_id,
                     // No bridge: it would take the thumb's presses, and Blitz

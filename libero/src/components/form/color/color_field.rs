@@ -30,7 +30,10 @@ use crate::{
     },
     platform::{ElementApi, eye_dropper, is_tab, next_task},
     sx::{StaticSx, ThemeAwareValue, sx},
-    theme::{COLOR_PICKER_SPACING, SLIDER_THUMB, SLIDER_TRACK, Size, SizeCss, Z_INDEX_POPOVER},
+    theme::{
+        COLOR_PICKER_SPACING, FIELD_LABEL_FONT_SIZE, SLIDER_THUMB, SLIDER_TRACK, Size, SizeCss,
+        Z_INDEX_POPOVER,
+    },
 };
 
 static COLOR_FIELD_DROPDOWN_SX: StaticSx = StaticSx::new(|| {
@@ -49,8 +52,12 @@ static COLOR_FIELD_DROPDOWN_SX: StaticSx = StaticSx::new(|| {
             sx().margin_top(SizeCss::SPACING.value(Size::Xs)),
         )
         .selector(
-            "& > [data-recent]",
+            "& > [data-slot='recent-label']",
             sx().margin_top(SizeCss::SPACING.value(Size::Sm)),
+        )
+        .selector(
+            "& > [data-recent]",
+            sx().margin_top(SizeCss::SPACING.value(Size::Xs)),
         )
         // Below `sm` the phone sheet, its picker spread over the width (todos 3900, 3923).
         .and(phone_sheet_sx())
@@ -646,6 +653,12 @@ pub fn ColorField(props: ColorFieldProps) -> Element {
     // A palette-only picker, so the row sizes and wraps as the presets do.
     let recent_row = (!recents.read().is_empty()).then(|| {
         rsx! {
+            span {
+                "data-slot": "recent-label",
+                "aria-hidden": "true",
+                style: "font-size: {FIELD_LABEL_FONT_SIZE.value(size)}",
+                "{labels.recent}"
+            }
             ColorPicker {
                 value,
                 with_alpha,

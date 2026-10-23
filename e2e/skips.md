@@ -204,6 +204,7 @@ The performance scenarios (units `perf`, `table_perf`) are no skips but run on r
 | `modal::the_trap_follows_positive_tabindex` | android | 958: element identity on the WebView |
 | `modal::the_trap_follows_positive_tabindex` | desktop | 958: element identity on the WebView |
 | `modal::the_trap_follows_positive_tabindex` | ios | 958: element identity on the WebView |
+| `multi_select::an_open_on_focus_multi_select_stays_closed_when_a_chip_hands_focus_back` | native | 3982: parked with the chip walk above (3406) |
 | `multi_select::the_chips_take_the_focus_and_remove` | native | 3406: Blitz hands a removed chip's focus to a container div, parked with native |
 | `native_select::the_arrows_step_a_focused_native_select` | desktop | WebKitGTK opens the picker on an arrow |
 | `native_select::the_arrows_step_a_focused_native_select` | ios | WKWebView opens the picker on an arrow |
@@ -241,6 +242,7 @@ The performance scenarios (units `perf`, `table_perf`) are no skips but run on r
 | `radar_chart::hovering_picks_the_nearest_point` | android | a touch screen has no hover |
 | `radar_chart::hovering_picks_the_nearest_point` | ios | a touch screen has no hover |
 | `radar_chart::the_legend_hides_and_shows_a_series` | native | Blitz has no script reads |
+| `range_slider::an_upright_thumbs_bubble_opens_beside_it` | ios | a touch screen has no hover |
 | `rating::a_key_press_over_a_hover_draws_the_new_value` | android | a touch screen has no hover |
 | `rating::a_key_press_over_a_hover_draws_the_new_value` | ios | a touch screen has no hover |
 | `rating::hovering_previews_without_changing_the_value` | android | a touch screen has no hover |

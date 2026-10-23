@@ -364,13 +364,15 @@ pub(crate) fn TooltipPinned(
     anchor: Rect,
     size: Size,
     gap: Size,
+    /// Unset, the theme's side.
+    side: Option<Side>,
     id: Option<String>,
     rtl: bool,
     shown: bool,
 ) -> Element {
     let theme = use_theme();
     let options = PopoverOptions::new(theme.spacing.get(gap).into(), theme.popover.padding)
-        .side(theme.tooltip.side)
+        .side(side.unwrap_or(theme.tooltip.side))
         .align(Align::Center);
     let floating = use_element();
     let slot = use_portal_slot();
