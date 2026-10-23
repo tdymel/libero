@@ -17,6 +17,8 @@ pub struct ColorLabels {
     pub eye_dropper: &'static str,
     /// `ColorField`'s error while its typed text is no color.
     pub invalid: &'static str,
+    /// Names `ColorField`'s row of recently picked colors.
+    pub recent: &'static str,
 }
 
 impl ColorLabels {
@@ -30,6 +32,7 @@ impl ColorLabels {
         choose: "Choose color",
         eye_dropper: "Pick a color from the screen",
         invalid: "Not a valid color",
+        recent: "Recent colors",
     };
 
     pub const GERMAN: Self = Self {
@@ -42,5 +45,6 @@ impl ColorLabels {
         choose: "Farbe wählen",
         eye_dropper: "Farbe vom Bildschirm aufnehmen",
         invalid: "Keine gültige Farbe",
+        recent: "Zuletzt verwendete Farben",
     };
 }

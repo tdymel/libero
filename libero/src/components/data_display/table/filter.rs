@@ -45,6 +45,8 @@ pub(super) fn QuickFilter(
             span { id: label_id, hidden: true, "{text}" }
         }
         TextField {
+            // Not the caller's form data: a surrounding Fieldset's `required` skips it (4018).
+            required: false,
             r#type: "search",
             label: labels.search,
             size,

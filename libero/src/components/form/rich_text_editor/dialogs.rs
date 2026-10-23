@@ -49,6 +49,8 @@ pub(crate) fn LinkDialog(args: LinkArgs, onchoose: EventHandler<LinkChoice>) -> 
                 },
                 Flex { direction: "column", gap: "md",
                     TextField {
+                        // Not the caller's form data: a surrounding Fieldset's `required` skips it (4018).
+                        required: false,
                         label: words.link_url,
                         r#type: "url",
                         "data-autofocus": "",

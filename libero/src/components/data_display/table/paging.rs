@@ -192,6 +192,8 @@ pub(super) fn TablePager(props: TablePagerProps) -> Element {
         rsx! {
             if !props.page_sizes.is_empty() {
                 Select {
+                    // Not the caller's form data: a surrounding Fieldset's `required` skips it (4018).
+                    required: false,
                     label: labels.rows_per_page,
                     options: props.page_sizes.iter().map(|&size| PageSize(size)).collect::<Vec<_>>(),
                     value: Some(PageSize(page_size)),

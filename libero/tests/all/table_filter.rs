@@ -7,7 +7,10 @@ use crate::table_fixture::{Item, head};
 use dioxus::prelude::*;
 use libero::{
     LiberoProvider,
-    components::{Column, ColumnFilter, FilterOperator, SortDirection, Table, TableSort, column},
+    components::{
+        Column, ColumnFilter, Fieldset, FilterOperator, SortDirection, Table, TableSort, TextField,
+        column,
+    },
 };
 
 #[test]
@@ -242,6 +245,34 @@ fn filter_sort_and_page_compose_and_select_all_covers_the_kept_rows() {
     assert!(body.contains("Lyon") && !body.contains("Paris"), "{body}");
     assert!(body.contains("1–1 of 2"), "{body}");
     assert!(!body.contains("aria-checked=\"mixed\""), "{body}");
+}
+
+#[test]
+fn a_required_fieldset_leaves_the_tables_own_controls_optional() {
+    let html = render(|| {
+        rsx! {
+            LiberoProvider {
+                Fieldset::<()> { label: "Order", required: true,
+                    TextField { label: "Note" }
+                    Table {
+                        aria_label: "Cities",
+                        data: cities(),
+                        columns: city_columns(),
+                        show_quick_filter: true,
+                        default_page_size: 1usize,
+                        page_sizes: vec![1usize, 2],
+                        selectable: true,
+                    }
+                }
+            }
+        }
+    });
+    let body = body(&html);
+    // The caller's field alone: the search box and rows-per-page stay optional (4018).
+    assert!(body.contains("Rows per page"), "{body}");
+    assert_eq!(body.matches("aria-required=\"true\"").count(), 1, "{body}");
+    assert_eq!(body.matches("required=true").count(), 1, "{body}");
+    assert_eq!(body.matches("data-slot=\"required\"").count(), 1, "{body}");
 }
 
 #[derive(Clone, PartialEq)]

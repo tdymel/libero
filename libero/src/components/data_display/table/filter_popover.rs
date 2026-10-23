@@ -338,6 +338,8 @@ pub(super) fn FilterValue(
                     style: "display: flex; flex-direction: column; gap: 0.25rem;",
                     for option in options.iter().cloned() {
                         Checkbox {
+                            // Not the caller's form data: a surrounding Fieldset's `required` skips it (4018).
+                            required: false,
                             key: "{option.value}",
                             label: option.label.clone(),
                             size,
@@ -376,6 +378,7 @@ pub(super) fn FilterValue(
             .cloned();
         return rsx! {
             NativeSelect {
+                required: false,
                 label,
                 aria_label,
                 size,
@@ -411,6 +414,7 @@ pub(super) fn FilterValue(
         let value = choices[picked].clone();
         return rsx! {
             NativeSelect {
+                required: false,
                 label,
                 aria_label,
                 size,
@@ -432,6 +436,7 @@ pub(super) fn FilterValue(
             if reads_dom_synchronously() {
                 return rsx! {
                     DateField {
+                        required: false,
                         label,
                         aria_label,
                         size,
@@ -448,6 +453,7 @@ pub(super) fn FilterValue(
             // off: the native date input then.
             rsx! {
                 TextField {
+                    required: false,
                     label,
                     aria_label,
                     size,
@@ -477,6 +483,7 @@ pub(super) fn FilterValue(
         .unwrap_or_default();
     rsx! {
         TextField {
+            required: false,
             label,
             aria_label,
             size,
@@ -701,6 +708,7 @@ pub(super) fn FilterPopover(
                 rsx! {
                     if kind != FilterKind::Boolean {
                         NativeSelect {
+                            required: false,
                             label: labels.operator,
                             size,
                             value: picked,

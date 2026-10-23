@@ -9,6 +9,7 @@ pub const ROUTES: Routes = &[
     ("/color-field/alpha", || rsx! { ColorFieldPage {} }),
     ("/color-field/swatches", || rsx! { SwatchesFieldPage {} }),
     ("/color-field/keep-text", || rsx! { KeepTextFieldPage {} }),
+    ("/color-field/recent", || rsx! { RecentFieldPage {} }),
 ];
 
 const SWATCHES: [&str; 3] = ["#fa5252", "#40c057", "#228be6"];
@@ -81,6 +82,25 @@ fn KeepTextFieldPage() -> Element {
             Button { id: "after", "After" }
             Text { id: "readout", "{color().to_hex()}" }
             Text { id: "ends", {ends().join(" ")} }
+        }
+    }
+}
+
+/// Remembers the last two colors picked (3951).
+#[component]
+fn RecentFieldPage() -> Element {
+    let mut color = use_signal(|| "#1c7ed6".parse::<ColorCode>().unwrap());
+
+    rsx! {
+        Flex { direction: "column", gap: "md", max_width: "320px",
+            ColorField {
+                label: "Accent",
+                swatches: SWATCHES,
+                recent_colors: 2usize,
+                value: color(),
+                oninput: move |event: SliderChangeEvent<ColorCode>| color.set(event.value()),
+            }
+            Text { id: "readout", "{color().to_hex()}" }
         }
     }
 }

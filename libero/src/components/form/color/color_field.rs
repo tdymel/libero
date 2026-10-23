@@ -48,6 +48,10 @@ static COLOR_FIELD_DROPDOWN_SX: StaticSx = StaticSx::new(|| {
             "& > [data-slot='text-input']",
             sx().margin_top(SizeCss::SPACING.value(Size::Xs)),
         )
+        .selector(
+            "& > [data-recent]",
+            sx().margin_top(SizeCss::SPACING.value(Size::Sm)),
+        )
         // Below `sm` the phone sheet, its picker spread over the width (todos 3900, 3923).
         .and(phone_sheet_sx())
         .media(
@@ -114,6 +118,20 @@ field_props! {
         /// Caps how many swatches share a row in the dropdown.
         #[props(default)]
         swatches_per_row: Option<usize>,
+        /// Keeps up to this many recently picked colors, newest first, in a row under
+        /// the swatches. In memory, lost on unmount: persist them through `swatches`.
+        ///
+        /// ```no_run
+        /// # use dioxus::prelude::*;
+        /// # use libero::components::{ColorCode, ColorField};
+        /// # fn app() -> Element {
+        /// # let color = use_signal(ColorCode::default);
+        /// # rsx! {
+        /// ColorField { label: "Accent", value: color(), recent_colors: 6 }
+        /// # } }
+        /// ```
+        #[props(default)]
+        recent_colors: Option<usize>,
         /// `false` leaves only the swatches, and no dropdown without them.
         #[props(default)]
         with_picker: Option<bool>,
@@ -183,6 +201,23 @@ pub fn ColorField(props: ColorFieldProps) -> Element {
         false => ColorFormat::Hex,
     });
     let with_picker = props.with_picker.unwrap_or(true);
+    let recent_cap = props.recent_colors.unwrap_or(0);
+    let recents = use_signal(Vec::<ColorCode>::new);
+    // Newest first, once each: a repeat moves to the front (todo 3951).
+    let remember = move |color: ColorCode| {
+        if recent_cap == 0 {
+            return;
+        }
+        let color = match with_alpha {
+            true => color,
+            false => color.opaque(),
+        };
+        let mut recents = recents;
+        let mut list = recents.write();
+        list.retain(|kept| kept.to_rgba() != color.to_rgba());
+        list.insert(0, color);
+        list.truncate(recent_cap);
+    };
     let bound = use_bound(&props.name, props.oninput.is_some());
     let disabled = bound.disabled(props.disabled);
     // Like the other dropdown fields: the text takes the native `readonly`,
@@ -310,6 +345,7 @@ pub fn ColorField(props: ColorFieldProps) -> Element {
                             draft.set(None);
                             unsettled.set(None);
                             emit(color.with_alpha(preview.alpha()));
+                            remember(color.with_alpha(preview.alpha()));
                         }
                     });
                 },
@@ -348,6 +384,18 @@ pub fn ColorField(props: ColorFieldProps) -> Element {
         }
     }));
     let showing = opened() && has_dropdown && !readonly;
+    // The color the dropdown opened on; a different one at its close is remembered.
+    let mut opened_on = use_signal(|| Option::<ColorCode>::None);
+    use_effect(use_reactive!(|showing, preview| match showing {
+        true if opened_on.peek().is_none() => opened_on.set(Some(preview)),
+        false if opened_on.peek().is_some() => {
+            let start = opened_on.take();
+            if start.is_some_and(|start| start.to_rgba() != preview.to_rgba()) {
+                remember(preview);
+            }
+        }
+        _ => {}
+    }));
     let popover = use_popover_on(
         anchor,
         use_element(),
@@ -425,7 +473,17 @@ pub fn ColorField(props: ColorFieldProps) -> Element {
             .as_ref()
             .is_some_and(|text| text.parse::<ColorCode>().is_err())
     };
+    // Text typed with the dropdown shut is remembered as it settles; an open one, at its close.
+    let remember_typed = move || {
+        if showing {
+            return;
+        }
+        if let Some(Ok(color)) = draft.peek().as_ref().map(|text| text.parse::<ColorCode>()) {
+            remember(color);
+        }
+    };
     let blurred = move || {
+        remember_typed();
         let mut settle_typed = settle_typed;
         settle_typed();
         let unparsable = unparsable();
@@ -506,6 +564,7 @@ pub fn ColorField(props: ColorFieldProps) -> Element {
                 announcer.say(labels.invalid.to_string());
             }
             Key::Named(NamedKey::Enter) => {
+                remember_typed();
                 let mut settle_typed = settle_typed;
                 settle_typed();
             }
@@ -562,6 +621,47 @@ pub fn ColorField(props: ColorFieldProps) -> Element {
             })
         })
         .flatten();
+    let picked = use_callback(move |event: SliderChangeEvent<ColorCode>| {
+        draft.set(None);
+        unsettled.set(None);
+        match (&oninput, &picker_setter) {
+            (Some(oninput), _) => oninput.call(event),
+            (None, Some(setter)) => {
+                if let SliderChangeEvent::Change(color) = event {
+                    setter.set(color);
+                }
+            }
+            (None, None) => {}
+        }
+    });
+    let swatch_clicked = use_callback(move |_: ColorCode| {
+        if close_on_swatch_click {
+            // The focused swatch is about to go; focus goes back first.
+            if floating.query_selector(":focus").is_ok() {
+                focus_input();
+            }
+            opened.set(false);
+        }
+    });
+    // A palette-only picker, so the row sizes and wraps as the presets do.
+    let recent_row = (!recents.read().is_empty()).then(|| {
+        rsx! {
+            ColorPicker {
+                value,
+                with_alpha,
+                with_picker: false,
+                swatches: Swatches::from(recents()),
+                swatches_per_row: props.swatches_per_row,
+                full_width: narrow(),
+                size,
+                oninput: picked,
+                onswatchclick: swatch_clicked,
+                role: "group",
+                aria_label: labels.recent,
+                "data-recent": true,
+            }
+        }
+    });
     popover.show(showing.then(|| {
         dropdown
             .element(popover.floating())
@@ -614,29 +714,10 @@ pub fn ColorField(props: ColorFieldProps) -> Element {
                         swatches_per_row: props.swatches_per_row,
                         full_width: narrow(),
                         size,
-                        oninput: move |event: SliderChangeEvent<ColorCode>| {
-                            draft.set(None);
-                            unsettled.set(None);
-                            match (&oninput, &picker_setter) {
-                                (Some(oninput), _) => oninput.call(event),
-                                (None, Some(setter)) => {
-                                    if let SliderChangeEvent::Change(color) = event {
-                                        setter.set(color);
-                                    }
-                                }
-                                (None, None) => {}
-                            }
-                        },
-                        onswatchclick: move |_| {
-                            if close_on_swatch_click {
-                                // The focused swatch is about to go; focus goes back first.
-                                if floating.query_selector(":focus").is_ok() {
-                                    focus_input();
-                                }
-                                opened.set(false);
-                            }
-                        },
+                        oninput: picked,
+                        onswatchclick: swatch_clicked,
                     }
+                    {recent_row}
                     {text_input}
                 },
             )

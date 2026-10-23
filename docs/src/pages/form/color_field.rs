@@ -50,6 +50,8 @@ pub fn ColorFieldPage() -> Element {
                         .doc("Shows the alpha slider in the dropdown. Without it a translucent color arrives opaque."),
                     prop("swatches", "Swatches").doc("Preset colors in the dropdown. Takes `ColorCode`s or CSS strings."),
                     prop("swatches_per_row", "usize").doc("Caps how many swatches share a row. Unset, they wrap to fill the width."),
+                    prop("recent_colors", "usize")
+                        .doc("Keeps up to this many recently picked colors, newest first and each once, in a row under the swatches. A color counts when the dropdown closes on a new one, the eyedropper picks it, or typed text settles. They live in the field and are gone on unmount; to keep them, pass them back as `swatches`. Unset or `0`, no row."),
                     prop("with_picker", "bool")
                         .default("true")
                         .doc("`false` leaves only the swatches in the dropdown, and no dropdown without them."),
@@ -102,6 +104,7 @@ pub fn ColorFieldPage() -> Element {
                 .handles([
                     "Focus alone does not open the dropdown, so tabbing through the form changes nothing. A click opens it and stays in the text, so typing works at once.",
                     "A swatch that closes the dropdown moves focus back to the text.",
+                    "The recent colors are a group named by the localization's `color.recent`, its swatches buttons like the presets.",
                     "Focus leaving both the text and the dropdown closes it.",
                     "Leaving text that does not parse announces the localization's `color.invalid`, whether `fix_on_blur` reverts it or keeps it. It is said once, so a blur after Enter does not repeat it.",
                     "A mouse click in the dropdown leaves focus in the text.",
@@ -162,6 +165,11 @@ pub fn ColorFieldPage() -> Element {
                         true => vec!["swatches: SWATCHES".to_string()],
                         false => vec![],
                     }),
+                    // On by default, so a pick shows the row without a switch.
+                    Control::switch("recent_colors").default("true").code(|_, values| match is_on(values, "recent_colors") {
+                        true => vec!["recent_colors: 6".to_string()],
+                        false => vec![],
+                    }),
                     Control::switch("with_picker").default("true").code(|_, values| {
                         match is_on(values, "with_picker") {
                             true => vec![],
@@ -220,6 +228,7 @@ fn ColorFieldDemo(values: DemoValues) -> Element {
                 format: values.str("format"),
                 with_alpha: is_on(&values, "with_alpha"),
                 swatches,
+                recent_colors: is_on(&values, "recent_colors").then_some(6),
                 with_picker: is_on(&values, "with_picker"),
                 with_preview: is_on(&values, "with_preview"),
                 with_eye_dropper: is_on(&values, "with_eye_dropper"),

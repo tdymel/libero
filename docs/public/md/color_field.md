@@ -51,6 +51,7 @@ fn Demo() -> Element {
 | `with_alpha` | `bool` | `false` | Shows the alpha slider in the dropdown. Without it a translucent color arrives opaque. |
 | `swatches` | `Swatches` | - | Preset colors in the dropdown. Takes `ColorCode`s or CSS strings. |
 | `swatches_per_row` | `usize` | - | Caps how many swatches share a row. Unset, they wrap to fill the width. |
+| `recent_colors` | `usize` | - | Keeps up to this many recently picked colors, newest first and each once, in a row under the swatches. A color counts when the dropdown closes on a new one, the eyedropper picks it, or typed text settles. They live in the field and are gone on unmount; to keep them, pass them back as `swatches`. Unset or `0`, no row. |
 | `with_picker` | `bool` | `true` | `false` leaves only the swatches in the dropdown, and no dropdown without them. |
 | `with_preview` | `bool` | `true` | Shows the color as a swatch in the leading slot. |
 | `with_eye_dropper` | `bool` | `true` | Adds a button in the trailing slot that picks a color off the screen. Shown only where the browser supports it, Chromium today. |
@@ -127,6 +128,7 @@ The dropdown is portaled out of the field, so its parts take the
 - Focus alone does not open the dropdown, so tabbing through the form changes
   nothing. A click opens it and stays in the text, so typing works at once.
 - A swatch that closes the dropdown moves focus back to the text.
+- The recent colors are a group named by the localization's `color.recent`, its swatches buttons like the presets.
 - Focus leaving both the text and the dropdown closes it.
 - Leaving text that does not parse announces the localization's
   `color.invalid`, whether `fix_on_blur` reverts it or keeps it. It is said

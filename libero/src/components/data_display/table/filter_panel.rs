@@ -284,6 +284,8 @@ pub(super) fn FilterPanel(
             rsx! {
                 div { key: "{line}", "data-filter-line": "{line}",
                     NativeSelect {
+                        // Not the caller's form data: a surrounding Fieldset's `required` skips it (4018).
+                        required: false,
                         aria_label: (labels.filter_line_column)(&header),
                         size,
                         value: picked,
@@ -298,6 +300,7 @@ pub(super) fn FilterPanel(
                     }
                     if kind != FilterKind::Boolean {
                         NativeSelect {
+                            required: false,
                             aria_label: (labels.filter_line_operator)(&header),
                             size,
                             value: operator,
@@ -437,6 +440,7 @@ pub(super) fn FilterPanel(
                 rsx! {
                     if joins {
                         NativeSelect {
+                            required: false,
                             label: labels.logic,
                             size,
                             value: logic_picked,

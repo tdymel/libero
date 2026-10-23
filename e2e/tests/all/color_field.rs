@@ -1,7 +1,7 @@
 //! `ColorField`'s dropdown between two buttons (449). `/color-field/keep-text` has
 //! `fix_on_blur: false` and no dropdown.
 
-use anyhow::Result;
+use anyhow::{Result, bail};
 use e2e::browser::block_on;
 use e2e::driver::{Driver, eventually, eventually_focused};
 use e2e::passes::keyboard;
@@ -379,6 +379,79 @@ e2e::scenario!(
     arrow_down_enters_the_colour_dialog_and_escape_returns,
     "/color-field/alpha",
     arrow_down_enters_and_escape_returns,
+    android: skip("958: element identity on the WebView"),
+    desktop: skip("958: element identity on the WebView"),
+    ios: skip("958: element identity on the WebView")
+);
+
+/// Todo 3951: a color the dropdown closes on goes to the front of the recent row,
+/// once each, capped at `recent_colors`.
+async fn recent_colors_follow_each_pick<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    const INPUT: &str = "input[data-controlled]";
+    const RECENT: &str =
+        "[data-recent][role=group][aria-label='Recent colors'] > [data-slot=swatches]";
+    async fn pick_and_close<D: Driver>(d: &mut D, swatch: &str) -> Result<()> {
+        d.click(INPUT).await?;
+        eventually(d, "a click to open the dialog", async |d| {
+            d.exists("[role=dialog]").await
+        })
+        .await?;
+        d.click(swatch).await?;
+        d.press(keyboard::ESCAPE).await?;
+        eventually(d, "Escape to close the dialog", async |d| {
+            Ok(!d.exists("[role=dialog]").await?)
+        })
+        .await
+    }
+    async fn expect_recent<D: Driver>(d: &mut D, order: &[&str]) -> Result<()> {
+        d.click(INPUT).await?;
+        let what = format!("the recent row to read {order:?}");
+        eventually(d, &what, async |d| {
+            for (index, hex) in order.iter().enumerate() {
+                let nth = format!("{RECENT} > :nth-child({})[aria-label='{hex}']", index + 1);
+                if !d.exists(&nth).await? {
+                    return Ok(false);
+                }
+            }
+            let past = format!("{RECENT} > :nth-child({})", order.len() + 1);
+            Ok(!d.exists(&past).await?)
+        })
+        .await?;
+        d.press(keyboard::ESCAPE).await?;
+        eventually(d, "Escape to close the dialog", async |d| {
+            Ok(!d.exists("[role=dialog]").await?)
+        })
+        .await
+    }
+    // The presets come first in the document, so a bare swatch selector hits them.
+    let preset = |hex: &str| format!("[role=dialog] [data-slot=swatch][aria-label='{hex}']");
+    d.click(INPUT).await?;
+    eventually(d, "a click to open the dialog", async |d| {
+        d.exists("[role=dialog]").await
+    })
+    .await?;
+    if d.exists("[data-recent]").await? {
+        bail!("no recent row before a pick");
+    }
+    d.press(keyboard::ESCAPE).await?;
+    eventually(d, "Escape to close the dialog", async |d| {
+        Ok(!d.exists("[role=dialog]").await?)
+    })
+    .await?;
+    pick_and_close(d, &preset("#fa5252")).await?;
+    expect_recent(d, &["#fa5252"]).await?;
+    pick_and_close(d, &preset("#40c057")).await?;
+    pick_and_close(d, &preset("#228be6")).await?;
+    expect_recent(d, &["#228be6", "#40c057"]).await?;
+    // A recent pick moves to the front rather than repeating.
+    pick_and_close(d, &format!("{RECENT} > [aria-label='#40c057']")).await?;
+    expect_recent(d, &["#40c057", "#228be6"]).await
+}
+
+e2e::scenario!(
+    recent_colors_follow_each_pick_in_the_colour_dialog,
+    "/color-field/recent",
+    recent_colors_follow_each_pick,
     android: skip("958: element identity on the WebView"),
     desktop: skip("958: element identity on the WebView"),
     ios: skip("958: element identity on the WebView")
