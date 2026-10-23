@@ -20,11 +20,28 @@ static TRIGGER: &str = r#"Button {
     "Actions"
 }"#;
 
-/// A disabled menu disables its trigger too, so the trigger looks it.
+static DOCKED: &str = r#"sx: sx()
+    .width("var(--lsx-popover-anchor-width)")
+    .max_width("none")
+    .margin_top("var(--lsx-popover-gap)")
+    .box_shadow("none")"#;
+
+/// A disabled menu disables its trigger too, so the trigger looks it. A docked
+/// one fills the row it sits on.
 fn trigger_code(values: &DemoValues) -> String {
+    let mut trigger = TRIGGER.to_string();
+    if values.str("docked") == "true" {
+        trigger = trigger
+            .replace("\"outlined\"", "\"light\"")
+            .replace("    attributes:", "    radius: \"0\",\n    attributes:")
+            .replace(
+                "    \"Actions\"",
+                "    sx: sx().width(\"100%\").height(\"52px\"),\n    \"Actions\"",
+            );
+    }
     match values.str("disabled").as_str() {
-        "true" => TRIGGER.replace("    attributes:", "    disabled: true,\n    attributes:"),
-        _ => TRIGGER.to_string(),
+        "true" => trigger.replace("    attributes:", "    disabled: true,\n    attributes:"),
+        _ => trigger,
     }
 }
 
@@ -180,6 +197,11 @@ pub fn MenuPage() -> Element {
                     Control::switch("close_on_select").default(theme.menu.close_on_select.to_string()),
                     Control::switch("loop_focus").default(theme.menu.loop_focus.to_string()),
                     Control::switch("disabled"),
+                    // Docks the menu on the trigger's edge, as wide as the trigger; best with side `top`.
+                    Control::switch("docked").code(|_, values| match values.str("docked").as_str() {
+                        "true" => vec![DOCKED.to_string()],
+                        _ => vec![],
+                    }),
                 ],
                 render: move |values: DemoValues| rsx! {
                     MenuDemo {
@@ -190,6 +212,7 @@ pub fn MenuPage() -> Element {
                         close_on_select: values.str("close_on_select") == "true",
                         loop_focus: values.str("loop_focus") == "true",
                         disabled: values.str("disabled") == "true",
+                        docked: values.str("docked") == "true",
                     }
                 },
             }

@@ -1,6 +1,6 @@
 use crate::components::{
-    Child, Control, Demo, DemoValues, DocPage, Wrap, a11y, gradient_controls, gradient_value, prop,
-    props,
+    Child, Control, Demo, DemoValues, DocPage, UNSET, Wrap, a11y, gradient_controls,
+    gradient_value, prop, props,
 };
 use dioxus::prelude::*;
 use libero::{
@@ -19,7 +19,7 @@ fn terms(values: &DemoValues) -> Vec<String> {
 }
 
 fn highlighting(values: &DemoValues) -> bool {
-    values.str("highlight") == "true"
+    values.str("terms") != UNSET
 }
 
 /// `Highlight` takes the generated props plus its text, and has no child.
@@ -108,11 +108,14 @@ pub fn MarkPage() -> Element {
                 wrap: Wrap(wrap),
                 child: Child(child),
                 controls: vec![
-                    // Swaps the preview and the code for `Highlight`, which takes the same color and gradient.
-                    Control::switch("highlight").code(|_, _| vec![]),
-                    Control::select("terms", ["rust", "rust, dioxus", "component"])
-                        .hidden_when(|values| !highlighting(values))
+                    // Any terms turn the `Mark` into a `Highlight` over a text, which takes the same color and gradient.
+                    Control::toggle("terms", [UNSET, "rust", "rust, dioxus", "component"])
+                        .labels(["Unset", "Rust", "Rust, Dioxus", "Component"])
+                        .default(UNSET)
                         .code(|_, values| {
+                            if !highlighting(values) {
+                                return vec![];
+                            }
                             let terms: Vec<String> = terms(values)
                                 .iter()
                                 .map(|term| format!("{term:?}.to_string()"))

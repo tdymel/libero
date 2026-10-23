@@ -17,14 +17,21 @@ fn no_gradient(values: &DemoValues) -> bool {
 }
 
 fn is_cut(values: &DemoValues) -> bool {
-    values.str("truncate") != UNSET || values.str("line_clamp") != UNSET
+    values.str("cut") != UNSET
 }
 
-/// `truncate` and the `sx` that narrows the preview to it.
+/// The `cut` choice is a `truncate` side or a `line_clamp` count.
+fn clamp(values: &DemoValues) -> Option<u32> {
+    values.str("cut").parse().ok()
+}
+
+/// `truncate` or `line_clamp`, and the `sx` that narrows the preview to it.
 fn cut_code(values: &DemoValues) -> Vec<String> {
     let mut lines = Vec::new();
-    if let value @ ("end" | "start") = values.str("truncate").as_str() {
-        lines.push(format!("truncate: {value:?}"));
+    match values.str("cut").as_str() {
+        UNSET => {}
+        value @ ("end" | "start") => lines.push(format!("truncate: {value:?}")),
+        lines_count => lines.push(format!("line_clamp: {lines_count}")),
     }
     if is_cut(values) {
         lines.push(format!("sx: sx().max_width({CUT_WIDTH:?})"));
@@ -109,27 +116,21 @@ pub fn TextPage() -> Element {
                     gradient_to,
                     gradient_deg,
                     // On, so the ellipsis shows without another switch.
-                    Control::toggle("truncate", [UNSET, "end", "start"])
-                        .labels(["Unset", "End", "Start"])
+                    // `truncate` cuts one line at its end or start, `line_clamp` after 2 or 3 lines.
+                    Control::toggle("cut", [UNSET, "end", "start", "2", "3"])
+                        .labels(["Unset", "End", "Start", "2 lines", "3 lines"])
                         .default("end")
                         .code(|_, values| cut_code(values)),
-                    Control::toggle("line_clamp", [UNSET, "1", "2", "3"])
-                        .labels(["Unset", "1", "2", "3"])
-                        .default(UNSET)
-                        .code(|_, values| match values.str("line_clamp").as_str() {
-                            UNSET => vec![],
-                            lines => vec![format!("line_clamp: {lines}")],
-                        }),
                 ],
                 render: move |values: DemoValues| rsx! {
                     Text {
                         size: values.str("size"),
                         component: values.str("component"),
-                        truncate: match values.str("truncate").as_str() {
-                            UNSET => Input::None,
-                            end => Input::from(end),
+                        truncate: match values.str("cut").as_str() {
+                            side @ ("end" | "start") => Input::from(side),
+                            _ => Input::None,
                         },
-                        line_clamp: values.str("line_clamp").parse::<u32>().ok(),
+                        line_clamp: clamp(&values),
                         sx: is_cut(&values).then(|| sx().max_width(CUT_WIDTH)),
                         color: match values.str("color").as_str() {
                             UNSET => Input::None,

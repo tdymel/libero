@@ -1,9 +1,6 @@
 use pictogram_icons_lucide as lucide;
 use std::collections::HashSet;
 
-mod lazy;
-use lazy::LazyFiles;
-
 use crate::components::{
     Control, Demo, DemoFile, DemoValues, DocPage, Wrap, a11y, indent, or_unset, prop, props,
 };
@@ -13,6 +10,7 @@ use libero::{
         Button, Code, Flex, SvgData, Text, Tree, TreeItem, TreeLabel, TreeNode, TreeNodeRenderArgs,
         TreePart,
     },
+    hooks::use_timeout,
     sx::sx,
     use_theme,
 };
@@ -113,15 +111,35 @@ fn file_icon(entry: &FileEntry, expanded: Option<bool>) -> SvgData {
 /// The page's own source: the printed parts are cut from its live demo.
 const FILE: DemoFile = DemoFile(include_str!("tree.rs"));
 
-/// The lazy-loading variant: a folder's children arrive after a short wait.
-const LAZY: DemoFile = DemoFile(include_str!("tree/lazy.rs"));
+/// A branch whose children have not arrived holds a disabled "Loading…" row,
+/// which keeps it a branch.
+fn lazy_file_tree(loaded: &HashSet<String>) -> Vec<TreeNode<FileEntry>> {
+    fn hold(node: TreeNode<FileEntry>, loaded: &HashSet<String>) -> TreeNode<FileEntry> {
+        let children = match (node.children.is_empty(), loaded.contains(&node.id)) {
+            (true, _) => Vec::new(),
+            (false, true) => node.children.into_iter().map(|c| hold(c, loaded)).collect(),
+            (false, false) => {
+                let entry = FileEntry {
+                    name: "Loading…",
+                    kind: FileKind::Rust,
+                };
+                vec![TreeNode::new(format!("{}/loading", node.id), entry).disabled(true)]
+            }
+        };
+        TreeNode::new(node.id, node.data).children(children)
+    }
+    file_tree()
+        .into_iter()
+        .map(|node| hold(node, loaded))
+        .collect()
+}
 
 fn lazy(values: &DemoValues) -> bool {
     values.str("lazy_loading") == "true"
 }
 
-/// The data, the controlled expansion and the row renderer are the demo's
-/// fixture, not controls, but the code block has to print them.
+/// The tree's identity, the controlled `current` and the row renderer are the
+/// demo's fixture, not controls, but the code block has to print them.
 fn fixed() -> Vec<String> {
     let (wiring, render) = (FILE.section("wiring"), FILE.section("render"));
     let lines = wiring.lines().chain([render.as_str()]);
@@ -131,17 +149,42 @@ fn fixed() -> Vec<String> {
 }
 
 /// The expansion is the page's state, not `Tree`'s, so the buttons and the
-/// readout are part of the example.
+/// readout are part of the example. Lazy loading swaps the buttons for its
+/// fetch state.
 fn wrap_selection(values: &DemoValues, code: &str) -> String {
-    if lazy(values) {
-        return format!("{}\n\nrsx! {{ LazyFiles {{}} }}", LAZY.full());
-    }
-    format!(
+    let (buttons, status) = match lazy(values) {
+        true => (
+            String::new(),
+            format!("{}\n{}", FILE.section("status"), FILE.section("loading")),
+        ),
+        false => (FILE.section("buttons"), FILE.section("status")),
+    };
+    let flex = format!(
         "Flex {{\n    direction: \"column\",\n    gap: \"sm\",\n    sx: sx().width(\"100%\").max_width(\"320px\"),\n{}{}    // Always mounted, so a screen reader hears the text it gains.\n{}}}",
-        indent(&FILE.section("buttons")),
+        indent(&buttons),
         indent(code),
-        indent(&FILE.section("status"))
-    )
+        indent(&status)
+    );
+    match lazy(values) {
+        true => format!("{}\n\nrsx! {{\n{}}}", FILE.section("lazy"), indent(&flex)),
+        false => flex,
+    }
+}
+
+/// The data, the expansion and its handler, for either way of loading.
+fn loading_code(_: &Control, values: &DemoValues) -> Vec<String> {
+    match lazy(values) {
+        true => vec![
+            "data: lazy_file_tree(&loaded())".to_string(),
+            "expanded: lazy_expanded()".to_string(),
+            "onexpandedchange: on_lazy_expand".to_string(),
+        ],
+        false => vec![
+            "data: file_tree()".to_string(),
+            "expanded: expanded()".to_string(),
+            "onexpandedchange: move |next| expanded.set(next)".to_string(),
+        ],
+    }
 }
 
 /// Every branch of `file_tree()`.
@@ -180,6 +223,28 @@ pub fn TreePage() -> Element {
     let mut expanded = use_signal(folders);
     let mut picked = use_signal(|| HashSet::from(["src/lib.rs".to_string()]));
     let mut checks = use_signal(|| HashSet::from(["src/components/list.rs".to_string()]));
+    // demo-code: lazy start
+    let mut lazy_expanded = use_signal(HashSet::<String>::new);
+    let mut loaded = use_signal(HashSet::<String>::new);
+    let mut pending = use_signal(HashSet::<String>::new);
+    // Stands in for a fetch: whatever opened meanwhile arrives at once.
+    let fetch = use_timeout(
+        move || {
+            let arrived = pending.take();
+            loaded.write().extend(arrived);
+        },
+        800,
+    );
+    let mut on_lazy_expand = move |next: HashSet<String>| {
+        let opened = next.iter().filter(|id| !loaded.read().contains(*id));
+        let opened: Vec<String> = opened.cloned().collect();
+        if !opened.is_empty() {
+            pending.write().extend(opened);
+            fetch.start();
+        }
+        lazy_expanded.set(next);
+    };
+    // demo-code: lazy end
 
     rsx! {
         DocPage {
@@ -319,6 +384,7 @@ pub fn TreePage() -> Element {
             // snippet: item impl TreeLabel for FileEntry { fn tree_label(&self) -> String { self.name.to_string() } }
             // snippet: item fn file_tree() -> Vec<TreeNode<FileEntry>> { Vec::new() }
             // snippet: item fn file_icon(_: &FileEntry, _: Option<bool>) -> libero::components::SvgData { pictogram_icons_lucide::file::outlined }
+            // snippet: item fn lazy_file_tree(_: &HashSet<String>) -> Vec<TreeNode<FileEntry>> { Vec::new() }
             // snippet: item use std::collections::HashSet;
             // snippet: item fn folders() -> HashSet<String> { HashSet::new() }
             // snippet: let mut current = use_signal(|| None::<String>);
@@ -330,44 +396,46 @@ pub fn TreePage() -> Element {
                 children_text: "",
                 fixed: fixed(),
                 controls: vec![
-                    Control::switch("guides").hidden_when(lazy),
+                    Control::switch("guides"),
                     Control::sizes("size")
-                        .default(theme.tree.size.as_str())
-                        .hidden_when(lazy),
+                        .default(theme.tree.size.as_str()),
                     Control::toggle("selection", ["none", "single", "multiple"])
                         .default("multiple")
-                        .code(selection_code)
-                        .hidden_when(lazy),
+                        .code(selection_code),
                     Control::switch("checkboxes")
                         .default("true")
-                        .code(checkbox_code)
-                        .hidden_when(lazy),
-                    Control::switch("check_strictly").hidden_when(|values: &DemoValues| {
-                        lazy(values) || values.str("checkboxes") != "true"
-                    }),
-                    Control::switch("lazy_loading"),
+                        .code(checkbox_code),
+                    Control::switch("check_strictly")
+                        .hidden_when(|values: &DemoValues| values.str("checkboxes") != "true"),
+                    // Branches fetch their children on opening; prints the data and expansion either way.
+                    Control::switch("lazy_loading").code(loading_code),
                 ],
-                render: move |values: DemoValues| if lazy(&values) { rsx! { LazyFiles {} } } else { rsx! {
+                render: move |values: DemoValues| { let lazy_on = lazy(&values); rsx! {
                     Flex {
                         direction: "column",
                         gap: "sm",
                         // Pinned, so the selection readout does not reflow the
                         // preview under the pointer.
                         sx: sx().width("100%").max_width("320px"),
-                        // demo-code: buttons start
-                        Flex { direction: "row", gap: "xs",
-                            Button { size: "xs", onclick: move |_| expanded.set(folders()), "Expand all" }
-                            Button { size: "xs", onclick: move |_| expanded.set(HashSet::new()), "Collapse all" }
+                        if !lazy_on {
+                            // demo-code: buttons start
+                            Flex { direction: "row", gap: "xs",
+                                Button { size: "xs", onclick: move |_| expanded.set(folders()), "Expand all" }
+                                Button { size: "xs", onclick: move |_| expanded.set(HashSet::new()), "Collapse all" }
+                            }
+                            // demo-code: buttons end
                         }
-                        // demo-code: buttons end
                         Tree {
                             // demo-code: wiring start
                             aria_label: "Project files",
-                            data: file_tree(),
-                            expanded: expanded(),
-                            onexpandedchange: move |next| expanded.set(next),
                             current: current(),
                             // demo-code: wiring end
+                            data: if lazy_on { lazy_file_tree(&loaded.read()) } else { file_tree() },
+                            expanded: if lazy_on { lazy_expanded() } else { expanded() },
+                            onexpandedchange: move |next| match lazy_on {
+                                true => on_lazy_expand(next),
+                                false => expanded.set(next),
+                            },
                             guides: values.str("guides") == "true",
                             size: or_unset(values.str("size")),
                             selected: (values.str("selection") != "none").then(|| picked.read().clone()),
@@ -397,6 +465,15 @@ pub fn TreePage() -> Element {
                             }
                         }
                         // demo-code: status end
+                        if lazy_on {
+                            // demo-code: loading start
+                            Text { role: "status", size: "sm",
+                                if !pending.read().is_empty() {
+                                    "Loading…"
+                                }
+                            }
+                            // demo-code: loading end
+                        }
                     }
                 } },
                 wrap: Wrap(wrap_selection),

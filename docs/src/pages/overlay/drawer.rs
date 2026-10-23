@@ -1,7 +1,7 @@
 use crate::components::{Control, Demo, DemoValues, DocPage, Wrap, a11y, indent, prop, props};
 use dioxus::prelude::*;
 use libero::{
-    components::{Button, Code, Flex, Text},
+    components::{Button, Code, Flex, Options, Tabs, Text},
     hooks::{DrawerOptions, ModalScope, use_drawer},
     sx::sx,
     use_theme,
@@ -18,26 +18,80 @@ const CONTENT: &str = r#"Flex {
     Button { variant: "outlined", onclick: move |_| s.close(), "Close" }
 }"#;
 
+/// The enum is the tab strip, so the tabs variant has to print it. `static`: the
+/// snippet scan compiles these in the Demo's output, not alone.
+static SETTING_ENUM: &str = r#"#[derive(Clone, PartialEq, Options)]
+enum Setting {
+    General,
+    Account,
+    Billing,
+    Privacy,
+    Security,
+    Alerts,
+    Language,
+    Advanced,
+}
+
+"#;
+
+/// A vertical strip taller than its box, opened on its last tab so the strip
+/// scrolls that tab into view.
+static TABS_CONTENT: &str = r#"Flex {
+    direction: "column",
+    gap: "md",
+    sx: sx().padding("16px"),
+    Tabs {
+        aria_label: "Settings",
+        placement: "start",
+        sx: sx().selector("& > [role=\"tablist\"]", sx().max_height("8rem")),
+        value: setting(),
+        onchange: move |next| setting.set(next),
+        panel: |setting: Setting| rsx! { Text { "{setting.label()}" } },
+    }
+    Button { variant: "outlined", onclick: move |_| s.close(), "Close" }
+}"#;
+
+#[derive(Clone, PartialEq, Options)]
+enum Setting {
+    General,
+    Account,
+    Billing,
+    Privacy,
+    Security,
+    Alerts,
+    Language,
+    Advanced,
+}
+
 /// A drawer is a hook, so the options and the trigger belong in the example.
 /// The generated props are rebuilt here as the struct literal they are.
 fn wrap_hook(values: &DemoValues, _: &str) -> String {
-    let handle = match values.str("handle").as_str() {
-        "true" => "\n        handle: true,",
-        _ => "",
+    let handle = match values.str("handle") == "true" && values.str("anchor") == "bottom" {
+        true => "\n        handle: true,",
+        false => "",
     };
     let close_button = match values.str("close_button").as_str() {
         "true" => "\n        close_button: true,",
         _ => "",
     };
+    let tabs = values.str("tabs") == "true";
+    let (items, state, content) = match tabs {
+        true => (
+            SETTING_ENUM,
+            "let mut setting = use_signal(|| Setting::Advanced);\n\n",
+            TABS_CONTENT,
+        ),
+        false => ("", "", CONTENT),
+    };
     format!(
-        "let nav = use_drawer(\n    \
+        "{items}{state}let nav = use_drawer(\n    \
              DrawerOptions {{\n        \
                  anchor: {:?}.into(),\n        \
                  size: {:?}.into(),\n        \
                  title: Some(\"Temporary drawer\".into()),{}{}\n        \
                  ..Default::default()\n    \
              }},\n    \
-             |s: ModalScope<()>| rsx! {{\n{}    }},\n);\n\n\
+             move |s: ModalScope<()>| rsx! {{\n{}    }},\n);\n\n\
          rsx! {{\n    \
              Button {{ variant: \"outlined\", onclick: move |_| {{ nav.open(); }}, \"Open drawer\" }}\n\
          }}",
@@ -45,14 +99,21 @@ fn wrap_hook(values: &DemoValues, _: &str) -> String {
         values.str("size"),
         close_button,
         handle,
-        indent(&indent(CONTENT)),
+        indent(&indent(content)),
     )
 }
 
 /// The hook needs a scope of its own: `Demo` calls its `render` closure from
 /// its own, where a hook would be invisible to the next reader.
 #[component]
-fn DrawerDemo(anchor: String, size: String, handle: bool, close_button: bool) -> Element {
+fn DrawerDemo(
+    anchor: String,
+    size: String,
+    handle: bool,
+    close_button: bool,
+    tabs: bool,
+) -> Element {
+    let mut setting = use_signal(|| Setting::Advanced);
     let nav = use_drawer(
         DrawerOptions {
             anchor: anchor.into(),
@@ -62,13 +123,24 @@ fn DrawerDemo(anchor: String, size: String, handle: bool, close_button: bool) ->
             handle,
             ..Default::default()
         },
-        |s: ModalScope<()>| {
+        move |s: ModalScope<()>| {
             rsx! {
                 Flex {
                     direction: "column",
                     gap: "md",
                     sx: sx().padding("16px"),
-                    Text { "Closes on Escape or a backdrop click." }
+                    if tabs {
+                        Tabs {
+                            aria_label: "Settings",
+                            placement: "start",
+                            sx: sx().selector("& > [role=\"tablist\"]", sx().max_height("8rem")),
+                            value: setting(),
+                            onchange: move |next| setting.set(next),
+                            panel: |setting: Setting| rsx! { Text { "{setting.label()}" } },
+                        }
+                    } else {
+                        Text { "Closes on Escape or a backdrop click." }
+                    }
                     Button { variant: "outlined", onclick: move |_| s.close(), "Close" }
                 }
             }
@@ -149,8 +221,10 @@ pub fn DrawerPage() -> Element {
                     Control::slider("size", ["xs", "sm", "md", "lg", "xl", "xxl", "24rem"]).default(theme.drawer.size.as_str()),
                     // On by default, so the header button shows on the first open; printed while on.
                     Control::switch("close_button").default("true").code(|_, _| vec![]),
-                    // Drawn only docked bottom.
-                    Control::switch("handle"),
+                    // Drawn only docked bottom, where a touch swipe down from it closes the panel.
+                    Control::switch("handle").hidden_when(|values| values.str("anchor") != "bottom"),
+                    // A short vertical Tabs strip that scrolls its last tab into view on open.
+                    Control::switch("tabs").code(|_, _| vec![]),
                 ],
                 render: move |values: DemoValues| rsx! {
                     DrawerDemo {
@@ -158,6 +232,7 @@ pub fn DrawerPage() -> Element {
                         size: values.str("size"),
                         handle: values.str("handle") == "true",
                         close_button: values.str("close_button") == "true",
+                        tabs: values.str("tabs") == "true",
                     }
                 },
                 wrap: Wrap(wrap_hook),
