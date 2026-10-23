@@ -79,7 +79,6 @@ fn theme_enum_looks(component: &str) -> Vec<(&'static str, String)> {
         "Sidebar" => sidebar: size;
         "Skeleton" => skeleton: radius;
         "Slider", "RangeSlider" => slider: size color;
-        "Splitter" => splitter: size;
         "Stepper" => stepper: size label_position;
         "Switch" => switch: variant size radius color;
         "Table" => table: size;

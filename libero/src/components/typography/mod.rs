@@ -4,6 +4,8 @@ mod blockquote;
 mod chord;
 #[cfg(feature = "code")]
 mod code;
+#[cfg(feature = "mark")]
+mod highlight;
 #[cfg(feature = "kbd")]
 mod kbd;
 #[cfg(feature = "mark")]
@@ -21,6 +23,8 @@ pub(crate) use chord::{chord_kbd, chord_words};
 pub(crate) use code::inline_side_spacers;
 #[cfg(feature = "code")]
 pub use code::{Code, CodeBlock, CodeBlockPart, CodeBlockProps, CodeProps, Language};
+#[cfg(feature = "mark")]
+pub use highlight::{Highlight, HighlightProps};
 #[cfg(feature = "kbd")]
 pub use kbd::{Kbd, KbdProps};
 #[cfg(feature = "mark")]

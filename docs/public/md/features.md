@@ -163,7 +163,7 @@ it is on (Notes).
 | `blockquote` | Blockquote | box | on |  |
 | `code` | Code, CodeBlock | copy | off |  |
 | `kbd` | Kbd | box | on |  |
-| `mark` | Mark | box | on |  |
+| `mark` | Mark, Highlight | box | on |  |
 | `text` | Text | box | on |  |
 | `title` | Title | text | on |  |
 

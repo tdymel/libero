@@ -171,6 +171,46 @@ fn Demo() -> Element {
 }
 ```
 
+## Lazy loading
+
+A node without children is a leaf, which cannot open. To load a branch's
+children when it opens, give it one disabled placeholder row, such as
+"Loading…", and swap in the children once they arrive. `onexpandedchange` says
+when the branch opens. A focused placeholder hands focus to the first loaded
+row.
+
+```rust
+use std::collections::HashSet;
+
+use dioxus::prelude::*;
+use libero::components::{Tree, TreeNode};
+
+#[component]
+fn LazyFiles() -> Element {
+    let mut expanded = use_signal(HashSet::<String>::new);
+    let mut files = use_signal(|| None::<Vec<String>>);
+    let children = match files() {
+        Some(files) => files.into_iter().map(|file| TreeNode::new(format!("src/{file}"), file)).collect(),
+        None => vec![TreeNode::new("src/loading", "Loading…".to_string()).disabled(true)],
+    };
+
+    rsx! {
+        Tree {
+            aria_label: "Files",
+            data: vec![TreeNode::new("src", "src".to_string()).children(children)],
+            expanded: expanded(),
+            onexpandedchange: move |next: HashSet<String>| {
+                if next.contains("src") && files.peek().is_none() {
+                    // Your fetch goes here.
+                    spawn(async move { files.set(Some(vec!["lib.rs".to_string(), "main.rs".to_string()])) });
+                }
+                expanded.set(next);
+            },
+        }
+    }
+}
+```
+
 ## Props
 
 ### `Tree<T>`
@@ -205,7 +245,7 @@ Like every component, `Tree` also takes the shared props `sx`, `class`, `style`,
 |---|---|---|---|
 | `id` | `String` | required | The node's unique id. |
 | `data` | `T` | required | Your data for this node. |
-| `children` | `Vec<TreeNode<T>>` | - | Nested nodes. Without any, the node is a leaf. |
+| `children` | `Vec<TreeNode<T>>` | - | Nested nodes. Without any, the node is a leaf, so a branch whose children load later holds a disabled placeholder row until then. |
 | `disabled` | `bool` | `false` | The arrow keys still reach it, but it does not activate, expand, collapse, select or check. Its descendants are disabled too. |
 
 ### `TreeNodeRenderArgs<T>`

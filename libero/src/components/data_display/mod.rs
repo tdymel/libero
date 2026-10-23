@@ -79,7 +79,9 @@ pub use kanban::{
     KanbanColumnPart, KanbanColumnProps, KanbanMove, KanbanProps,
 };
 #[cfg(feature = "list")]
-pub use list::{List, ListItem, ListItemPart, ListItemProps, ListProps};
+pub use list::{
+    List, ListItem, ListItemPart, ListItemProps, ListProps, ListSubheader, ListSubheaderProps,
+};
 #[cfg(feature = "marquee")]
 pub use marquee::{Marquee, MarqueePart, MarqueeProps};
 #[cfg(any(feature = "audio", feature = "video"))]

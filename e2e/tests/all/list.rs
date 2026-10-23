@@ -66,3 +66,34 @@ fn a_nested_list_is_indented_by_its_parent_list_only() {
         fixture.close().await.unwrap();
     });
 }
+
+/// A `ListSubheader` is no numbered item: a block flush with the ordered list's start edge,
+/// while its items keep the number gutter.
+#[test]
+fn a_subheader_sits_outside_the_number_gutter() {
+    block_on(async {
+        let fixture = Fixture::open("/list/subheader", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        wait::for_visible(page, "#subheader").await.unwrap();
+        let read: Vec<String> = page
+            .evaluate_bounded(
+                "(() => { const [list, head, item] = ['#ordered', '#subheader', '#first'] \
+                   .map(id => document.querySelector(id)); \
+                 const left = e => Math.round(e.getBoundingClientRect().left); \
+                 return [getComputedStyle(head).display, String(left(head) === left(list)), \
+                         String(left(item) > left(list))]; })()",
+            )
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        assert_eq!(read, ["block", "true", "true"]);
+        fixture
+            .console
+            .assert_clean("the subheader fixture")
+            .unwrap();
+        fixture.close().await.unwrap();
+    });
+}

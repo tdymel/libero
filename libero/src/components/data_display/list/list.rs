@@ -26,6 +26,10 @@ static LIST_BASE_SX: StaticSx = StaticSx::new(|| {
                 .selector(
                     "& > [data-state~='with-icon']",
                     sx().margin_inline_start("-2em"),
+                )
+                .selector(
+                    "& > [data-state~='subheader']",
+                    sx().margin_inline_start("-2em"),
                 ),
         )
 });

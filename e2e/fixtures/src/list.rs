@@ -2,11 +2,24 @@
 //! item, and a raw `ul` inside an item.
 
 use dioxus::prelude::*;
-use libero::components::{List, ListItem};
+use libero::components::{List, ListItem, ListSubheader};
 
 use crate::Routes;
 
-pub const ROUTES: Routes = &[("/list", || rsx! { ListPage {} })];
+pub const ROUTES: Routes = &[
+    ("/list", || rsx! { ListPage {} }),
+    // A subheader in an ordered list sits outside the number gutter.
+    (
+        "/list/subheader",
+        || rsx! {
+            List { id: "ordered", ordered: true,
+                ListSubheader { id: "subheader", "Steps" }
+                ListItem { id: "first", "Install" }
+                ListItem { "Configure" }
+            }
+        },
+    ),
+];
 
 #[component]
 fn ListPage() -> Element {

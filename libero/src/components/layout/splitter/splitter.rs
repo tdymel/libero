@@ -92,8 +92,13 @@ base_props! {
         /// Divider line axis: `"vertical"` (default, side by side) or `"horizontal"` (stacked).
         #[props(default, into)]
         orientation: Input<Orientation>,
-        /// Initial % of pane A; uncontrolled afterwards.
+        /// Initial % of pane A; uncontrolled afterwards. Ignored when `size` is set.
+        #[props(default = 50.0)]
         initial_size: f64,
+        /// % of pane A; set, the splitter is controlled: a drag, key or double-click
+        /// only reports through `onresize`, and the panes follow this.
+        #[props(default)]
+        size: Option<f64>,
         /// % floor applied to both panes, capped at 50.
         #[props(default, into)]
         min_size: Input<f64>,
@@ -162,11 +167,15 @@ pub fn Splitter(props: SplitterProps) -> Element {
 
     // A NaN survives `clamp` and would write `--lsx-splitter-a:NaN%`.
     let initial_size = finite_or(
-        props.initial_size,
+        props.size.unwrap_or(props.initial_size),
         50.0,
-        "Splitter: `initial_size` must be a finite number.",
+        "Splitter: `initial_size` and `size` must be finite numbers.",
     );
     let mut a = use_signal(|| initial_size.clamp(min_size, 100.0 - min_size));
+    // Controlled: the caller's size wins over any move it did not store.
+    if props.size.is_some() && *a.peek() != initial_size {
+        a.set(initial_size);
+    }
     // A `min_size` raised after mount pulls pane A up to the new floor.
     let bounded = move || a().clamp(min_size, 100.0 - min_size);
     // Measured at pointerdown, to turn the drag's px delta into a percentage.

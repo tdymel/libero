@@ -1,7 +1,7 @@
 # List
 
 Crate: `libero`
-Import: `use libero::components::{List, ListItem};`
+Import: `use libero::components::{List, ListItem, ListSubheader};`
 Feature: `list` (off by default, turns on `box`; [features.md](features.md))
 Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/data_display/list>
 Index: [index.md](index.md) lists every other page
@@ -17,12 +17,13 @@ room for its numbers. On an inner `List`, `size` changes only the gap.
 
 ```rust
 use dioxus::prelude::*;
-use libero::components::{List, ListItem};
+use libero::components::{List, ListItem, ListSubheader};
 
 #[component]
 fn Demo() -> Element {
     rsx! {
         List { size: "md",
+            ListSubheader { "Getting started" }
             ListItem { "First item" }
             ListItem { "Second item" }
             ListItem {
@@ -63,6 +64,21 @@ An `icon` on the list marks every item. A `ListItem`'s own `icon` replaces it
 for that item. A nested list does not take its parent's icon. In an ordered
 list an icon replaces its item's number and the gutter beside it.
 
+## Subheaders
+
+A `ListSubheader` is a dimmed caption item that opens a run of items. A screen
+reader reads it as one more item; for groups it names, nest one `List` per
+group, each with an `aria-label`.
+
+```rust,ignore
+List {
+    ListSubheader { "Fruit" }
+    ListItem { "Apple" }
+    ListSubheader { "Vegetables" }
+    ListItem { "Carrot" }
+}
+```
+
 ## Ordered lists
 
 ```rust,ignore
@@ -91,7 +107,13 @@ List { ordered: true,
 | `parts` | `Parts<ListItemPart>` | - | Styles for the inner parts in the Style API tab, under `sx`. |
 | `children` | `Element` | required | The item's content. Keep the list's font size: the icon gutter is in `em` of the list, so a `font_size` on one item misaligns its icon. |
 
-Like every component, both also take the shared props `sx`, `class`, `style`,
+### ListSubheader
+
+| Prop | Type | Default | Description |
+|---|---|---|---|
+| `children` | `Element` | required | The caption. An ordered list does not number it. |
+
+Like every component, all three also take the shared props `sx`, `class`, `style`,
 `states`, and any extra HTML attributes.
 
 ## Style API
@@ -113,10 +135,12 @@ parts work.
 
 ### You must
 
-- Keep a `List`'s children to `ListItem`s. A stray element between them breaks
-  the list and its item count for a screen reader.
+- Keep a `List`'s children to `ListItem`s and `ListSubheader`s. A stray element
+  between them breaks the list and its item count for a screen reader.
 - When an icon carries meaning, such as done or missing, say it in the item's
   text too.
+- A `ListSubheader` is read as one more item. For groups a screen reader names,
+  nest one `List` per group, each with an `aria-label`.
 
 ### Example
 

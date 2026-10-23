@@ -71,12 +71,39 @@ first. A drag sends `Start`, then `Change`, then `End`. A key press or
 double-click sends `Change` then `End`, so saving the layout on `End` catches
 every resize.
 
+Set `size` to hold pane A's size yourself: the panes follow it, and a drag, key
+or double-click only reports through `onresize`. Here the caller snaps every
+move to 10%.
+
+```rust
+use dioxus::prelude::*;
+use libero::{components::{Box, Splitter, SplitterResizeEvent}, sx::sx};
+
+#[component]
+fn Snapping() -> Element {
+    let mut size = use_signal(|| 30.0);
+    rsx! {
+        Box {
+            sx: sx().height("160px").width("100%").max_width("320px").border("1px solid var(--lsx-muted-3)"),
+            Splitter {
+                size: size(),
+                aria_label: "Resize panes",
+                onresize: move |event: SplitterResizeEvent| if let SplitterResizeEvent::Change(a, _) = event { size.set((a / 10.0).round() * 10.0) },
+                panel_a: rsx! { Box { sx: sx().height("100%").padding("md").background("primary.1"), "A {size:.0}%" } },
+                panel_b: rsx! { Box { sx: sx().height("100%").padding("md").background("secondary.1"), "B" } },
+            }
+        }
+    }
+}
+```
+
 ## Props
 
 | Prop | Type | Default | Description |
 |---|---|---|---|
 | `orientation` | `Orientation` | `vertical` | The divider's axis. `vertical` puts the panes side by side, `horizontal` stacks them. |
-| `initial_size` | `f64` | required | Pane A's starting size in percent, kept within `min_size`. After that the divider owns the size, and `onresize` reports it. |
+| `initial_size` | `f64` | `50` | Pane A's starting size in percent, kept within `min_size`. After that the divider owns the size, and `onresize` reports it. Ignored when `size` is set. |
+| `size` | `Option<f64>` | `None` | Pane A's size in percent, kept within `min_size`. Set, the splitter is controlled: a drag, key or double-click only reports through `onresize`, and the panes follow `size`. |
 | `min_size` | `f64` | `10` | The smallest size of either pane in percent, at most 50. |
 | `divider_size` | `Size` | `sm` | Thickness of the divider line. |
 | `divider_color` | `ThemeAwareValue` | - | The divider's color. Unset it is `muted.6`, 3:1 on the page and `Paper`. |

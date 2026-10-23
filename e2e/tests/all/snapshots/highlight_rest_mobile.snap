@@ -1,0 +1,18 @@
+---
+source: e2e/src/suite.rs
+description: highlight at mobile (rest)
+expression: tree
+---
+paragraph
+  mark
+    StaticText "Rust"
+  StaticText "for"
+  mark
+    StaticText "rust"
+  StaticText ","
+  mark
+    StaticText "RUST"
+  StaticText "in"
+  mark
+    StaticText "dioxus"
+  StaticText "apps"

@@ -14,7 +14,49 @@ pub const ROUTES: Routes = &[
     ("/splitter/rtl", || rsx! { RtlPage {} }),
     ("/splitter/scroll", || rsx! { ScrollPage {} }),
     ("/splitter/content", || rsx! { ContentPage {} }),
+    ("/splitter/controlled", || rsx! { ControlledPage {} }),
 ];
+
+/// Todo 3986: `#snapping` stores each move rounded to 10%, `#set-70` sets it from outside;
+/// `#fixed` ignores its moves, and `#fixed-changes` counts the ones it was told of.
+#[component]
+fn ControlledPage() -> Element {
+    let mut size = use_signal(|| 30.0);
+    let mut changes = use_signal(|| 0);
+    let pane = |label: &'static str| rsx! { Text { "{label}" } };
+    rsx! {
+        Flex { direction: "column", gap: "md", max_width: "320px",
+            Button { id: "set-70", onclick: move |_| size.set(70.0), "Set 70" }
+            div { id: "snapping", style: "height: 120px",
+                Splitter {
+                    size: size(),
+                    aria_label: "Resize snapping panes",
+                    onresize: move |event: SplitterResizeEvent| {
+                        if let SplitterResizeEvent::Change(a, _) = event {
+                            size.set((a / 10.0).round() * 10.0);
+                        }
+                    },
+                    panel_a: pane("A"),
+                    panel_b: pane("B"),
+                }
+            }
+            output { id: "fixed-changes", "data-changes": "{changes}" }
+            div { id: "fixed", style: "height: 120px",
+                Splitter {
+                    size: 30.0,
+                    aria_label: "Resize fixed panes",
+                    onresize: move |event: SplitterResizeEvent| {
+                        if let SplitterResizeEvent::Change(..) = event {
+                            changes += 1;
+                        }
+                    },
+                    panel_a: pane("A"),
+                    panel_b: pane("B"),
+                }
+            }
+        }
+    }
+}
 
 /// Pane A overflows, and a button sits flush to each edge of both panes (todo 2407):
 /// the panes' own scroll (1581), forced colours, and the gutter over pane edges.

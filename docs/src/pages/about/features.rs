@@ -181,7 +181,7 @@ pub(crate) const FEATURES: &[Feature] = &[
     feature("blockquote", "typography", "Blockquote", &["box"], true, &["/typography/blockquote"]),
     feature("code", "typography", "Code, CodeBlock", &["copy"], false, &["/typography/code", "/typography/code-block"]),
     feature("kbd", "typography", "Kbd", &["box"], true, &["/typography/kbd"]),
-    feature("mark", "typography", "Mark", &["box"], true, &["/typography/mark"]),
+    feature("mark", "typography", "Mark, Highlight", &["box"], true, &["/typography/mark"]),
     feature("text", "typography", "Text", &["box"], true, &["/typography/text"]),
     feature("title", "typography", "Title", &["box"], true, &["/typography/title"]),
     feature("use-accessibility", "all-hooks", "use_accessibility", &[], true, &["/accessibility/use-accessibility"]),

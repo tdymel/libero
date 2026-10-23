@@ -445,6 +445,48 @@ fn removing_the_focused_row_keeps_focus_in_the_tree() {
     });
 }
 
+/// Todo 3989: a lazy branch is a placeholder child grown on `onexpandedchange`. Opening asks
+/// once, and the focused placeholder hands focus to the first loaded row.
+#[test]
+fn a_placeholder_branch_loads_its_children_on_open() {
+    block_on(async {
+        let fixture = Fixture::open("/tree/lazy", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        keyboard::tab_to(page, ROW, 5).await.unwrap();
+        keyboard::press(page, keyboard::ARROW_RIGHT).await.unwrap();
+        wait::for_js_true(
+            page,
+            "document.querySelector(\"[data-tree-id='src']\").getAttribute('aria-expanded') === 'true' \
+             && document.querySelector('#requests').dataset.requests === '1'",
+            "ArrowRight to open src and ask for its children once",
+        )
+        .await
+        .unwrap();
+        keyboard::press(page, keyboard::ARROW_DOWN).await.unwrap();
+        focus::wait_for_focus(page, "[data-tree-id='src/loading']", "ArrowDown")
+            .await
+            .unwrap();
+        page.evaluate_bounded("document.querySelector('#load').click()")
+            .await
+            .unwrap();
+        focus::wait_for_focus(page, "[data-tree-id='src/lib.rs']", "the load")
+            .await
+            .unwrap();
+        keyboard::press(page, keyboard::ARROW_DOWN).await.unwrap();
+        focus::wait_for_focus(
+            page,
+            "[data-tree-id='src/main.rs']",
+            "ArrowDown after the load",
+        )
+        .await
+        .unwrap();
+        fixture.console.assert_clean("loading a branch").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
 async fn expanded_of<D: Driver>(d: &mut D, tree: &str, id: &str) -> Result<Option<String>> {
     d.attr(&format!("#{tree} [data-tree-id='{id}']"), "aria-expanded")
         .await

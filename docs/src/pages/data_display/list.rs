@@ -5,7 +5,7 @@ use libero::components::Pictogram;
 use pictogram_icons_lucide as lucide;
 
 use dioxus::prelude::*;
-use libero::components::{Code, Icon, List, ListItem, ListItemPart, Text};
+use libero::components::{Code, Icon, List, ListItem, ListItemPart, ListSubheader, Text};
 use libero::use_theme;
 
 /// The page's own source: the printed parts are cut from its live demo.
@@ -49,12 +49,18 @@ pub fn ListPage() -> Element {
                     (ListItemPart::Icon, "The icon wrapper, with an icon only."),
                     (ListItemPart::Body, "The content beside the icon, with an icon only."),
                 ]),
+                props("ListSubheader", vec![
+                    prop("children", "Element")
+                        .default("required")
+                        .doc("The caption. An ordered list does not number it."),
+                ]),
             ],
             accessibility: a11y()
                 .handles(["Icons are hidden from screen readers."])
                 .must([
-                    "Keep a `List`'s children to `ListItem`s. A stray element between them breaks the list and its item count for a screen reader.",
+                    "Keep a `List`'s children to `ListItem`s and `ListSubheader`s. A stray element between them breaks the list and its item count for a screen reader.",
                     "When an icon carries meaning, such as done or missing, say it in the item's text too.",
+                    "A `ListSubheader` is read as one more item. For groups a screen reader names, nest one `List` per group, each with an `aria-label`.",
                 ])
                 .example("A checklist of `ListItem`s with check icons: a screen reader says the item count and reads each item's text. The item says \"done\" in words, since the icon is not read."),
             lead: rsx! {
@@ -67,7 +73,9 @@ pub fn ListPage() -> Element {
                     "its own content. Set "
                     Code { source: "size" }
                     " on the outer list only, since the parent sets a nested list's indent. "
-                    "A nested ordered list keeps a fixed 2em, room for its numbers."
+                    "A nested ordered list keeps a fixed 2em, room for its numbers. A "
+                    Code { source: "ListSubheader" }
+                    " captions the items after it."
                 }
             },
             Demo {
@@ -93,6 +101,7 @@ pub fn ListPage() -> Element {
                             Icon { variant: "standard", color: "primary", size: "sm", Pictogram { icon: lucide::check::outlined } }
                         }),
                         // demo-code: children start
+                        ListSubheader { "Getting started" }
                         ListItem { "First item" }
                         ListItem { "Second item" }
                         ListItem {

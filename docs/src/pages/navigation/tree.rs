@@ -1,6 +1,9 @@
 use pictogram_icons_lucide as lucide;
 use std::collections::HashSet;
 
+mod lazy;
+use lazy::LazyFiles;
+
 use crate::components::{
     Control, Demo, DemoFile, DemoValues, DocPage, DocSection, Wrap, a11y, indent, or_unset, prop,
     props,
@@ -224,7 +227,7 @@ pub fn TreePage() -> Element {
                 props("TreeNode<T>", vec![
                     prop("id", "String").default("required").doc("The node's unique id."),
                     prop("data", "T").default("required").doc("Your data for this node."),
-                    prop("children", "Vec<TreeNode<T>>").doc("Nested nodes. Without any, the node is a leaf."),
+                    prop("children", "Vec<TreeNode<T>>").doc("Nested nodes. Without any, the node is a leaf, so a branch whose children load later holds a disabled placeholder row until then."),
                     prop("disabled", "bool").default("false").doc("The arrow keys still reach it, but it does not activate, expand, collapse, select or check. Its descendants are disabled too."),
                 ]).without_base_props(),
                 props("TreeNodeRenderArgs<T>", vec![
@@ -297,7 +300,10 @@ pub fn TreePage() -> Element {
                     Code { source: "expanded" }
                     " paired with "
                     Code { source: "onexpandedchange" }
-                    ", as here."
+                    ", as here. To load a branch's children when it opens, give it a disabled "
+                    "placeholder row and swap in the children from "
+                    Code { source: "onexpandedchange" }
+                    ", as the second demo does."
                 }
             },
             // snippet: item #[derive(Clone, PartialEq)] struct FileEntry { name: &'static str }
@@ -380,6 +386,15 @@ pub fn TreePage() -> Element {
                     }
                 },
                 wrap: Wrap(wrap_selection),
+            }
+
+            Demo {
+                component: "LazyFiles",
+                title: "Lazy loading",
+                children_text: "",
+                controls: Vec::new(),
+                render: move |_: DemoValues| rsx! { LazyFiles {} },
+                file: DemoFile(include_str!("tree/lazy.rs")),
             }
 
             DocSection {

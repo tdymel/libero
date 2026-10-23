@@ -3,9 +3,19 @@ use crate::components::{
 };
 use dioxus::prelude::*;
 use libero::{
-    components::{Code, Input, Mark, Text},
+    components::{Code, Highlight, Input, Mark, Text},
     use_theme,
 };
+
+const HIGHLIGHT_TEXT: &str = "Rust components for Dioxus, written in Rust";
+
+fn terms(values: &DemoValues) -> Vec<String> {
+    values
+        .str("terms")
+        .split(", ")
+        .map(str::to_string)
+        .collect()
+}
 
 fn no_gradient(values: &DemoValues) -> bool {
     values.str("gradient") != "true"
@@ -28,6 +38,18 @@ pub fn MarkPage() -> Element {
                 prop("gradient", "Gradient")
                     .doc("Fills the highlight with a gradient from `color` to a second stop, as `(\"info\", 90)` or `Gradient::default().to(\"info\").deg(90)`; `Gradient::default()` is the theme's. The text turns black or white, whichever reads on both stops and the span between; the contrast of a literal CSS stop is yours to check. Solid in its first stop where a renderer drops the image; in forced colors, the system highlight colors."),
                 prop("children", "Element").default("required").doc("The highlighted content."),
+            ]),
+            props("Highlight", vec![
+                prop("text", "String")
+                    .default("required")
+                    .doc("The plain text searched, in a `<span>`."),
+                prop("terms", "Vec<String>")
+                    .default("[]")
+                    .doc("Every match of any term, whatever its case, is a `Mark`. Where terms overlap, the longest wins; touching matches join into one. Blank terms match nothing."),
+                prop("color", "ThemeAwareValue")
+                    .default("warning, tinted")
+                    .doc("Each match's `color`, as on `Mark`."),
+                prop("gradient", "Gradient").doc("Each match's `gradient`, as on `Mark`."),
             ])],
             accessibility: a11y()
                 .handles([
@@ -51,7 +73,9 @@ pub fn MarkPage() -> Element {
                     Code { source: "<mark>" }
                     ", tinted with a light shade of the theme's "
                     Code { source: "warning" }
-                    " color by default. The text color follows the tint, so it stays readable."
+                    " color by default. The text color follows the tint, so it stays readable. "
+                    Code { source: "Highlight" }
+                    " marks every match of its search terms in a text."
                 }
             },
             Demo {
@@ -81,6 +105,33 @@ pub fn MarkPage() -> Element {
                         },
                         gradient: (values.str("gradient") == "true").then(|| gradient_value(&values)),
                         "this chunk"
+                    }
+                },
+            }
+            Demo {
+                component: "Highlight",
+                title: "Highlight",
+                children_text: "",
+                fixed: vec![format!("text: {HIGHLIGHT_TEXT:?}")],
+                controls: vec![
+                    Control::select("terms", ["rust", "rust, dioxus", "component"]).code(|_, values| {
+                        let terms: Vec<String> = terms(values)
+                            .iter()
+                            .map(|term| format!("{term:?}.to_string()"))
+                            .collect();
+                        vec![format!("terms: vec![{}]", terms.join(", "))]
+                    }),
+                    Control::color("color")
+                        .default(theme.mark.color.as_str()),
+                ],
+                render: move |values: DemoValues| rsx! {
+                    Highlight {
+                        text: HIGHLIGHT_TEXT,
+                        terms: terms(&values),
+                        color: match values.str("color") {
+                            color if color == theme.mark.color.as_str() => Input::None,
+                            color => Input::from(color),
+                        },
                     }
                 },
             }

@@ -3,7 +3,7 @@ use crate::components::{
 };
 use dioxus::prelude::*;
 use libero::{
-    components::{Box, Code, Input, Splitter, Text},
+    components::{Box, Code, Input, Splitter, SplitterResizeEvent, Text},
     sx::sx,
 };
 
@@ -79,6 +79,66 @@ fn panel_b(values: &DemoValues) -> Element {
     }
 }
 
+/// `onresize` stores every move, or snaps it to 10%, which the panes then follow.
+/// Printed whole: `size` exists only in the printed body, so no `const` snippet holds it.
+fn controlled_code(_control: &Control, values: &DemoValues) -> Vec<String> {
+    let stored = match values.str("snap") == "true" {
+        true => "(a / 10.0).round() * 10.0",
+        false => "a",
+    };
+    vec![
+        format!(
+            "onresize: move |event: SplitterResizeEvent| if let SplitterResizeEvent::Change(a, _) = event {{ size.set({stored}) }}"
+        ),
+        "panel_a: rsx! { Box { sx: sx().height(\"100%\").padding(\"md\").background(\"primary.1\"), \"A {size:.0}%\" } }"
+            .to_string(),
+        PANEL_B.to_string(),
+    ]
+}
+
+fn wrap_controlled(values: &DemoValues, code: &str) -> String {
+    format!(
+        "let mut size = use_signal(|| 30.0);\n\n{}",
+        wrap_splitter(values, code)
+    )
+}
+
+/// Pane A's size lives here; with `snap` the caller stores it rounded to 10%.
+#[component]
+fn ControlledSplitter(snap: bool) -> Element {
+    let mut size = use_signal(|| 30.0);
+    rsx! {
+        Box {
+            sx: sx()
+                .height("160px")
+                .width("100%")
+                .max_width("320px")
+                .border("1px solid var(--lsx-muted-3)"),
+            Splitter {
+                size: size(),
+                aria_label: "Resize panes",
+                onresize: move |event: SplitterResizeEvent| {
+                    if let SplitterResizeEvent::Change(a, _) = event {
+                        size.set(if snap { (a / 10.0).round() * 10.0 } else { a });
+                    }
+                },
+                panel_a: rsx! {
+                    Box {
+                        sx: sx().height("100%").padding("md").background("primary.1"),
+                        "A {size:.0}%"
+                    }
+                },
+                panel_b: rsx! {
+                    Box {
+                        sx: sx().height("100%").padding("md").background("secondary.1"),
+                        "B"
+                    }
+                },
+            }
+        }
+    }
+}
+
 fn percent(value: String) -> f64 {
     value.parse().unwrap_or(0.0)
 }
@@ -94,8 +154,11 @@ pub fn SplitterPage() -> Element {
                 prop("orientation", "Orientation")
                     .default("vertical")
                     .doc("The divider's axis. `vertical` puts the panes side by side, `horizontal` stacks them."),
-                prop("initial_size", "f64").default("required")
-                    .doc("Pane A's starting size in percent, kept within `min_size`. After that the divider owns the size, and `onresize` reports it."),
+                prop("initial_size", "f64").default("50")
+                    .doc("Pane A's starting size in percent, kept within `min_size`. After that the divider owns the size, and `onresize` reports it. Ignored when `size` is set."),
+                prop("size", "Option<f64>")
+                    .default("None")
+                    .doc("Pane A's size in percent, kept within `min_size`. Set, the splitter is controlled: a drag, key or double-click only reports through `onresize`, and the panes follow `size`."),
                 prop("min_size", "f64").default("10").doc("The smallest size of either pane in percent, at most 50."),
                 prop("divider_size", "Size").default("sm").doc("Thickness of the divider line."),
                 prop("divider_color", "ThemeAwareValue")
@@ -136,7 +199,11 @@ pub fn SplitterPage() -> Element {
                     "another "
                     Code { source: "Splitter" }
                     " in a pane for more than two. It fills its parent, so give the parent "
-                    "a size."
+                    "a size. Set "
+                    Code { source: "size" }
+                    " to hold pane A's size yourself, stored from "
+                    Code { source: "onresize" }
+                    "."
                 }
             },
             Demo {
@@ -192,6 +259,20 @@ pub fn SplitterPage() -> Element {
                     }
                 },
                 wrap: Wrap(wrap_splitter),
+            }
+            Demo {
+                component: "Splitter",
+                title: "Controlled",
+                children_text: "",
+                fixed: vec![
+                    "size: size()".to_string(),
+                    r#"aria_label: "Resize panes""#.to_string(),
+                ],
+                controls: vec![Control::switch("snap").code(controlled_code)],
+                render: move |values: DemoValues| rsx! {
+                    ControlledSplitter { snap: values.str("snap") == "true" }
+                },
+                wrap: Wrap(wrap_controlled),
             }
         }
     }

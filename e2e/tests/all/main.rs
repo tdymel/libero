@@ -64,6 +64,7 @@ mod gradient;
 mod grid_zone;
 mod header;
 mod heatmap_chart;
+mod highlight;
 mod hit_area;
 mod home;
 mod hover_card;

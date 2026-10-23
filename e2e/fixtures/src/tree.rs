@@ -78,7 +78,44 @@ pub const ROUTES: Routes = &[
     ),
     ("/tree/multiple", || rsx! { MultipleTreePage {} }),
     ("/tree/checkboxes", || rsx! { CheckboxTreePage {} }),
+    ("/tree/lazy", || rsx! { LazyTreePage {} }),
 ];
+
+/// Todo 3989: `src` holds a disabled placeholder until `#load` swaps in its children;
+/// `#requests` counts the loads its first opening asked for.
+#[component]
+fn LazyTreePage() -> Element {
+    let mut expanded = use_signal(HashSet::<String>::new);
+    let mut requests = use_signal(|| 0);
+    let mut loaded = use_signal(|| false);
+    let children = match loaded() {
+        true => vec![
+            TreeNode::new("src/lib.rs", "lib.rs"),
+            TreeNode::new("src/main.rs", "main.rs"),
+        ],
+        false => vec![TreeNode::new("src/loading", "Loading…").disabled(true)],
+    };
+    let data = vec![
+        TreeNode::new("src", "src").children(children),
+        TreeNode::new("README.md", "README.md"),
+    ];
+
+    rsx! {
+        output { id: "requests", "data-requests": "{requests}" }
+        button { id: "load", onclick: move |_| loaded.set(true), "Load" }
+        Tree {
+            aria_label: "Files",
+            data,
+            expanded: expanded(),
+            onexpandedchange: move |next: HashSet<String>| {
+                if !loaded() && next.contains("src") && !expanded.peek().contains("src") {
+                    requests += 1;
+                }
+                expanded.set(next);
+            },
+        }
+    }
+}
 
 /// Multiple selection, held by the page; `#selected` echoes the picked ids, sorted and comma-joined.
 #[component]

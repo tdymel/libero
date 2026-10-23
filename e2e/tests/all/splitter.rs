@@ -518,3 +518,51 @@ fn pane_a_scrollbar_is_not_under_the_hit_area() {
         fixture.close().await.unwrap();
     });
 }
+
+async fn now<D: Driver>(d: &mut D, divider: &str) -> Result<String> {
+    d.attr(divider, "aria-valuenow")
+        .await?
+        .context("no aria-valuenow")
+}
+
+/// Todo 3986: a controlled divider shows the caller's size: snapped to 10%, set from outside,
+/// or held while the caller ignores the moves it is told of.
+async fn a_controlled_divider_follows_its_caller<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    const SNAPPING: &str = "#snapping [role=separator]";
+    const FIXED: &str = "#fixed [role=separator]";
+    d.focus(SNAPPING).await?;
+    d.press_shift(keyboard::ARROW_RIGHT).await?;
+    eventually(d, "Shift+ArrowRight to store 40", async |d| {
+        Ok(now(d, SNAPPING).await? == "40")
+    })
+    .await?;
+    d.press(keyboard::ARROW_RIGHT).await?;
+    d.press_shift(keyboard::ARROW_RIGHT).await?;
+    eventually(d, "41 to snap back, then 50", async |d| {
+        Ok(now(d, SNAPPING).await? == "50")
+    })
+    .await?;
+    d.click("#set-70").await?;
+    eventually(d, "the caller to set 70", async |d| {
+        Ok(now(d, SNAPPING).await? == "70")
+    })
+    .await?;
+
+    d.focus(FIXED).await?;
+    d.press(keyboard::ARROW_RIGHT).await?;
+    eventually(d, "the move to be reported", async |d| {
+        Ok(d.attr("#fixed-changes", "data-changes").await?.as_deref() == Some("1"))
+    })
+    .await?;
+    ensure!(
+        now(d, FIXED).await? == "30",
+        "an ignored move resized the panes"
+    );
+    Ok(())
+}
+
+e2e::scenario!(
+    a_controlled_splitter_follows_its_caller,
+    "/splitter/controlled",
+    a_controlled_divider_follows_its_caller
+);

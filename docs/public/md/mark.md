@@ -1,7 +1,7 @@
 # Mark
 
 Crate: `libero`
-Import: `use libero::components::Mark;`
+Import: `use libero::components::{Highlight, Mark};`
 Feature: `mark` (on by default, turns on `box`; [features.md](features.md))
 Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/typography/mark.rs>
 Index: [index.md](index.md) lists every other page
@@ -9,7 +9,7 @@ Description: A `mark` element that highlights text with a light tint of a theme 
 
 Highlights a chunk of text in a real `<mark>`, tinted with a light shade of the
 theme's `warning` color by default. The text color follows the tint, so it
-stays readable.
+stays readable. `Highlight` marks every match of its search terms in a text.
 
 ## Usage
 
@@ -29,7 +29,26 @@ fn Demo() -> Element {
 }
 ```
 
+Every match of some terms:
+
+```rust
+use dioxus::prelude::*;
+use libero::components::Highlight;
+
+#[component]
+fn SearchResult() -> Element {
+    rsx! {
+        Highlight {
+            text: "Rust components for Dioxus, written in Rust",
+            terms: vec!["rust".to_string()],
+        }
+    }
+}
+```
+
 ## Props
+
+### Mark
 
 | Prop | Type | Default | Description |
 |---|---|---|---|
@@ -37,7 +56,16 @@ fn Demo() -> Element {
 | `gradient` | `Gradient` | - | Fills the highlight with a gradient from `color` to a second stop, as `("info", 90)` or `Gradient::default().to("info").deg(90)`; `Gradient::default()` is the theme's. The text turns black or white, whichever reads on both stops and the span between; the contrast of a literal CSS stop is yours to check. Solid in its first stop where a renderer drops the image; in forced colors, the system highlight colors. |
 | `children` | `Element` | required | The highlighted content. |
 
-Like every component, `Mark` also takes the shared props `sx`, `class`, `style`,
+### Highlight
+
+| Prop | Type | Default | Description |
+|---|---|---|---|
+| `text` | `String` | required | The plain text searched, in a `<span>`. |
+| `terms` | `Vec<String>` | `[]` | Every match of any term, whatever its case, is a `Mark`. Where terms overlap, the longest wins; touching matches join into one. Blank terms match nothing. |
+| `color` | `ThemeAwareValue` | `warning`, tinted | Each match's `color`, as on `Mark`. |
+| `gradient` | `Gradient` | - | Each match's `gradient`, as on `Mark`. |
+
+Like every component, both also take the shared props `sx`, `class`, `style`,
 `states`, and any extra HTML attributes.
 
 ## Accessibility
