@@ -24,7 +24,26 @@ pub const ROUTES: Routes = &[
     ("/hover-card-link", || rsx! { LinkTriggerPage {} }),
     ("/hover-card-url", || rsx! { LongWordPage { link: false } }),
     ("/hover-card-url-link", || rsx! { LongWordPage { link: true } }),
+    ("/hover-card-arrow", || rsx! { ArrowPage {} }),
 ];
+
+/// 3977: an arrowed card forced open 20px under its trigger.
+#[component]
+fn ArrowPage() -> Element {
+    rsx! {
+        div { style: "padding: 40px 0 0 200px;",
+            HoverCard {
+                aria_label: "Ada Lovelace",
+                side: Side::Bottom,
+                gap: "20px",
+                arrow: true,
+                open: true,
+                content: rsx! { Text { "Wrote the first algorithm meant for a machine." } },
+                Button { id: "trigger", variant: "outlined", "Ada Lovelace" }
+            }
+        }
+    }
+}
 
 /// A link as the trigger, whose long press opens the browser's link menu (todo 2750).
 #[component]

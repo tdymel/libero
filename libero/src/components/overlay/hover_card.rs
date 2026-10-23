@@ -2,12 +2,15 @@ use std::{cell::Cell, rc::Rc};
 
 use dioxus::{dioxus_core::AttributeValue, prelude::*};
 
-use super::hover_intent::{LONG_PRESS, TOUCH_LINGER, TRIGGER_WRAPPER_SX, use_hover_intent};
+use super::{
+    hover_intent::{LONG_PRESS, TOUCH_LINGER, TRIGGER_WRAPPER_SX, use_hover_intent},
+    popover_arrow::{PopoverArrow, arrow_reach, arrow_sx},
+};
 use crate::{
     components::{
         accessibility::{focus_edge, focus_first_stop, tab_order, tab_stops},
         common::{
-            FOCUSABLE_SELECTOR, HtmlTag, Input, ScaleOrCss, States, Variables, base_props,
+            FOCUSABLE_SELECTOR, HtmlTag, Input, ScaleOrCss, States, Variables, base_props, css_px,
             input_from_str, inset_focus_ring_sx, variables,
         },
         layout::{paper_sx, scroll_on_key, use_box},
@@ -19,7 +22,8 @@ use crate::{
     },
     platform::{ElementApi, PlatformError, is_tab, next_task, scrolls_on_keys},
     sx::{StaticSx, ThemeAwareValue, sx},
-    theme::{Size, SizeCss, Z_INDEX_POPOVER},
+    theme::{PAPER_BACKGROUND, PAPER_BORDER_COLOR, Size, SizeCss, Z_INDEX_POPOVER},
+    utils::warn,
 };
 
 input_from_str!(Align);
@@ -51,6 +55,21 @@ static HOVER_CARD_SX: StaticSx = StaticSx::new(|| {
         .selector("& > [tabindex]:focus-visible", inset_focus_ring_sx("-2px"))
 });
 
+/// The arrow square's side, in px.
+const ARROW_SIZE: f64 = 10.0;
+
+// A sibling before the card, which scrolls and would clip it. Its border and shadow edge
+// the half the card leaves showing, as the card's shadow edges the card.
+static HOVER_CARD_ARROW_SX: StaticSx = StaticSx::new(|| {
+    arrow_sx()
+        .position("fixed")
+        .z_index(Z_INDEX_POPOVER.value())
+        .box_sizing("border-box")
+        .background(PAPER_BACKGROUND.value())
+        .border(format!("1px solid {}", PAPER_BORDER_COLOR.value()))
+        .box_shadow(SizeCss::SHADOW.value(Size::Xs))
+});
+
 /// Holds the Tab bridges: dioxus calls one listener per event name per element,
 /// and the wrapper and card carry `use_dismiss`'s `onkeydown`.
 const CONTENTS: &str = "display: contents";
@@ -64,6 +83,14 @@ base_props! {
         side: Input<Side>,
         #[props(default, into)]
         align: Input<Align>,
+        /// Distance to the trigger: a size word or a `px` or `rem` length, as `gap: "12px"`.
+        /// Unset, or other CSS, the theme's popover gap.
+        #[props(default, into)]
+        gap: Input<ThemeAwareValue>,
+        /// Draws an arrow from the card to the trigger's centre, in the theme's paper background.
+        /// `gap` then runs from its tip.
+        #[props(default)]
+        arrow: bool,
         /// Milliseconds the pointer must rest before the card opens.
         #[props(default)]
         open_delay: Option<u32>,
@@ -116,6 +143,24 @@ pub fn HoverCard(props: HoverCardProps) -> Element {
     let disabled = props.disabled.unwrap_or(false);
     let open = !disabled && props.open.unwrap_or(hovered.get() || focused());
 
+    let gap = match props.gap.as_ref() {
+        None => theme.popover.gap,
+        Some(value) => {
+            let gap = ScaleOrCss::new(Some(value), Size::Md);
+            match gap.custom_css(SizeCss::SPACING) {
+                None => theme.spacing.get(gap.size).into(),
+                Some(css) => css_px(&css).map_or_else(
+                    || {
+                        warn(&format!(
+                            "HoverCard: gap `{css}` is not a px or rem length, so the card is placed by the theme's gap."
+                        ));
+                        theme.popover.gap
+                    },
+                    f64::from,
+                ),
+            }
+        }
+    };
     let anchor = use_element();
     let popover = use_popover_on(
         anchor,
@@ -124,7 +169,14 @@ pub fn HoverCard(props: HoverCardProps) -> Element {
         PopoverOptions {
             side: props.side.copied_or(defaults.side),
             align: props.align.copied_or(defaults.align),
-            ..PopoverOptions::new(theme.popover.gap, theme.popover.padding)
+            ..PopoverOptions::new(
+                gap + if props.arrow {
+                    arrow_reach(ARROW_SIZE)
+                } else {
+                    0.0
+                },
+                theme.popover.padding,
+            )
         },
     );
     let floating = *popover.floating();
@@ -313,7 +365,13 @@ pub fn HoverCard(props: HoverCardProps) -> Element {
         });
         attributes.extend(dismiss.floating_events());
         attributes.extend(owner_link(&anchor));
-        card.element(&floating)
+        let arrow = props.arrow.then(|| {
+            rsx! {
+                PopoverArrow { sx: &HOVER_CARD_ARROW_SX, point: popover.arrow(false), size: ARROW_SIZE }
+            }
+        });
+        let card = card
+            .element(&floating)
             .attr("role", "dialog")
             .attr("data-closing", hovered.closing())
             .event("onmouseenter", move |_: MouseEvent| hovered.hover(true, 0))
@@ -343,7 +401,11 @@ pub fn HoverCard(props: HoverCardProps) -> Element {
                         {props.content}
                     }
                 },
-            )
+            );
+        rsx! {
+            {arrow}
+            {card}
+        }
     }));
 
     let (enter, leave_touch, press_touch, menu_touch) =

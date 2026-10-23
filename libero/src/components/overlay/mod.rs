@@ -14,6 +14,8 @@ mod menu;
 mod modal;
 #[cfg(feature = "overlay-backdrop")]
 mod overlay;
+#[cfg(any(feature = "tooltip", feature = "hover-card"))]
+mod popover_arrow;
 #[cfg(feature = "shortcut-help")]
 mod shortcut_help;
 #[cfg(feature = "spotlight")]
@@ -34,7 +36,7 @@ pub(crate) mod lightbox;
 pub(crate) mod use_modal;
 
 #[cfg(feature = "dialog")]
-pub use dialog::{Dialog, DialogPart, DialogProps};
+pub use dialog::{Dialog, DialogFullScreen, DialogPart, DialogProps};
 #[cfg(feature = "drawer")]
 pub(crate) use drawer::Drawer;
 #[cfg(feature = "drawer")]

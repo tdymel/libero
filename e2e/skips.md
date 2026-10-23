@@ -1,6 +1,6 @@
 # Skipped e2e scenarios
 
-Scenarios: 651
+Scenarios: 655
 
 Generated from the `scenario!` skips in `e2e/tests/all` by `cargo test -p e2e --lib skips`; edit the skip, not this file. A reason starting `upstream:` waits on Dioxus, Blitz, wry or the engine (revisit on their update, todo 3362), a number names the todo that removes it.
 
@@ -33,6 +33,8 @@ The performance scenarios (units `perf`, `table_perf`) are no skips but run on r
 | `drawer::a_backdrop_click_closes_a_drawer` | macos desktop | upstream: WebKit does not focus a clicked button |
 | `drawer::a_button_in_a_drawer_closes_it_and_focus_returns` | ios | upstream: WebKit does not focus a clicked button |
 | `drawer::a_button_in_a_drawer_closes_it_and_focus_returns` | macos desktop | upstream: WebKit does not focus a clicked button |
+| `drawer::a_drawer_header_close_button_closes_it` | ios | upstream: WebKit does not focus a clicked button |
+| `drawer::a_drawer_header_close_button_closes_it` | macos desktop | upstream: WebKit does not focus a clicked button |
 | `drawer::a_drawer_moves_focus_in_and_traps_tab` | android | 959: Tab leaves the drawer for the body on the WebView |
 | `drawer::a_drawer_moves_focus_in_and_traps_tab` | desktop | 959: Shift+Tab from the first control leaves the drawer on the WebView |
 | `drawer::a_drawer_moves_focus_in_and_traps_tab` | ios | 959: Shift+Tab from the first control leaves the drawer on the WebView |

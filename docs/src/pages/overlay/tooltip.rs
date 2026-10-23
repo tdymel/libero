@@ -43,6 +43,9 @@ pub fn TooltipPage() -> Element {
                 prop("gap", "ThemeAwareValue")
                     .default(theme.tooltip.gap.as_str())
                     .doc("Distance to the trigger, or a `px` or `rem` length, e.g. `gap: \"6px\"`. The pointer can cross it without closing the bubble. Other CSS places the bubble by the theme's gap."),
+                prop("arrow", "bool")
+                    .default("false")
+                    .doc("Draws an arrow from the bubble to the trigger's centre, in the bubble's background. It stays on the trigger when the bubble shifts to fit the viewport, and `gap` runs from its tip."),
                 prop("size", "Size").default(theme.tooltip.size.as_str()).doc("Font size of the bubble."),
                 prop("z_index", "ThemeAwareValue")
                     .default("the popover layer")
@@ -99,6 +102,13 @@ pub fn TooltipPage() -> Element {
                     Control::toggle("side", ["top", "end", "bottom", "start"])
                         .capitalised()
                         .default(theme.tooltip.side.as_str()),
+                    // On by default, so the arrow shows on the first hover; printed while on.
+                    Control::switch("arrow").default("true").code(|_, values| {
+                        match values.str("arrow").as_str() {
+                            "true" => vec!["arrow: true".to_string()],
+                            _ => vec![],
+                        }
+                    }),
                     Control::sizes("size").default(theme.tooltip.size.as_str()),
                     // `0` is plain CSS, next to the size scale.
                     Control::slider("gap", ["0", "xs", "sm", "md", "lg", "xl", "xxl"]).default(theme.tooltip.gap.as_str()),
@@ -129,6 +139,7 @@ pub fn TooltipPage() -> Element {
                             label: rsx! { "Saves the current draft" },
                             label_id: "draft-tip",
                             side: values.str("side"),
+                            arrow: values.str("arrow") == "true",
                             size: values.str("size"),
                             gap: values.str("gap"),
                             open_delay: delay_of(&values.str("open_delay")),

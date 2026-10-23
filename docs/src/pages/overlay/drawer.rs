@@ -25,12 +25,16 @@ fn wrap_hook(values: &DemoValues, _: &str) -> String {
         "true" => "\n        handle: true,",
         _ => "",
     };
+    let close_button = match values.str("close_button").as_str() {
+        "true" => "\n        close_button: true,",
+        _ => "",
+    };
     format!(
         "let nav = use_drawer(\n    \
              DrawerOptions {{\n        \
                  anchor: {:?}.into(),\n        \
                  size: {:?}.into(),\n        \
-                 title: Some(\"Temporary drawer\".into()),{}\n        \
+                 title: Some(\"Temporary drawer\".into()),{}{}\n        \
                  ..Default::default()\n    \
              }},\n    \
              |s: ModalScope<()>| rsx! {{\n{}    }},\n);\n\n\
@@ -39,6 +43,7 @@ fn wrap_hook(values: &DemoValues, _: &str) -> String {
          }}",
         values.str("anchor"),
         values.str("size"),
+        close_button,
         handle,
         indent(&indent(CONTENT)),
     )
@@ -47,12 +52,13 @@ fn wrap_hook(values: &DemoValues, _: &str) -> String {
 /// The hook needs a scope of its own: `Demo` calls its `render` closure from
 /// its own, where a hook would be invisible to the next reader.
 #[component]
-fn DrawerDemo(anchor: String, size: String, handle: bool) -> Element {
+fn DrawerDemo(anchor: String, size: String, handle: bool, close_button: bool) -> Element {
     let nav = use_drawer(
         DrawerOptions {
             anchor: anchor.into(),
             size: size.into(),
             title: Some("Temporary drawer".into()),
+            close_button,
             handle,
             ..Default::default()
         },
@@ -98,6 +104,7 @@ pub fn DrawerPage() -> Element {
                     prop("sx", "Input<Sx>").doc("Styles the panel. The content is yours to style; a bottom drawer's swipe strip is `& > [data-slot='handle']`."),
                     prop("ondismiss", "Option<Callback<Dismiss, bool>>").doc("Whether Escape, the backdrop, Back or a swipe may close it; `false` keeps it open, e.g. over an unsaved draft. Unset, all close."),
                     prop("handle", "bool").default("false").doc("Docked bottom, a touch swipe down from the panel's top padding closes it; `true` draws a grab bar there. Other anchors ignore it."),
+                    prop("close_button", "bool").default("false").doc("Draws a close button in the header, beside `title`. As a `Dialog`'s, it closes without asking `ondismiss`."),
                 ]).without_base_props(),
             ],
             accessibility: a11y()
@@ -112,7 +119,7 @@ pub fn DrawerPage() -> Element {
                 ])
                 .must([
                     "Set `DrawerOptions::title` or `aria_label`, since the panel is a dialog with no name of its own.",
-                    "Give its content a way to close it: it has no header close button.",
+                    "Give it a visible way to close: `close_button: true`, or a button in the content.",
                 ])
                 .example("A filters drawer, `DrawerOptions { aria_label: Some(\"Filters\".into()), .. }`: focus moves into the panel, Tab stays inside it, and Escape or the panel's own Done button closes it and returns focus to the trigger.")
                 .limits([
@@ -140,6 +147,8 @@ pub fn DrawerPage() -> Element {
                         .labels(["Start", "End", "Top", "Bottom"]),
                     // `24rem` is plain CSS, next to the size scale.
                     Control::slider("size", ["xs", "sm", "md", "lg", "xl", "xxl", "24rem"]).default(theme.drawer.size.as_str()),
+                    // On by default, so the header button shows on the first open; printed while on.
+                    Control::switch("close_button").default("true").code(|_, _| vec![]),
                     // Drawn only docked bottom.
                     Control::switch("handle"),
                 ],
@@ -148,6 +157,7 @@ pub fn DrawerPage() -> Element {
                         anchor: values.str("anchor"),
                         size: values.str("size"),
                         handle: values.str("handle") == "true",
+                        close_button: values.str("close_button") == "true",
                     }
                 },
                 wrap: Wrap(wrap_hook),

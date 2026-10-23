@@ -5,15 +5,16 @@ use crate::{
     components::{
         buttons::ActionIcon,
         common::{
-            Glyph, HtmlTag, Input, Part, Variables, attr, base_props, names_itself, parts_enum,
-            use_name_warning, variables,
+            Glyph, HtmlTag, Input, Part, States, Variables, attr, base_props, input_from_str,
+            names_itself, parts_enum, use_name_warning, variables,
         },
         layout::{Box, paper_sx, use_box},
         typography::Title,
     },
     context::{Dismiss, IconSlot, ModalContext},
     hooks::{current_localization, use_id, use_theme},
-    sx::{StaticSx, ThemeAwareValue, sx},
+    str_enum::str_enum,
+    sx::{StaticSx, Sx, ThemeAwareValue, sx},
     theme::{CssVar, DIALOG_DEFAULT_SIZE, DIALOG_SIZE, PAPER_RADIUS, Size, SizeCss},
     utils::warn,
 };
@@ -32,7 +33,37 @@ static DIALOG_BASE_SX: StaticSx = StaticSx::new(|| {
         .padding("lg")
         .border_radius(DIALOG_RADIUS_VAR.value_or(PAPER_RADIUS.value()))
         .box_shadow(SizeCss::SHADOW.value(Size::Xl))
+        .when("full-screen-always", full_screen_sx())
+        .media(
+            format!("not all and (min-width: {})", Size::Sm.breakpoint_value()),
+            sx().when("full-screen-phone", full_screen_sx()),
+        )
 });
+
+/// Edge to edge over `Modal`'s frame: its negative margins cancel the frame's `md`
+/// padding, and `stretch` and `flex-grow` fill it. Plain CSS, so no centred first frame.
+fn full_screen_sx() -> Sx {
+    sx().margin(format!("calc(-1 * {})", SizeCss::SPACING.value(Size::Md)))
+        .align_self("stretch")
+        .flex_grow("1")
+        .max_width("none")
+        .border_radius("0")
+        .box_shadow("none")
+}
+
+str_enum! {
+    /// When a [`Dialog`] in a modal fills the screen instead of centring.
+    pub enum DialogFullScreen {
+        /// Centred at every width.
+        #[default]
+        Never = "never",
+        /// Below the `sm` breakpoint, where a centred dialog leaves slivers of page.
+        Phone = "phone",
+        Always = "always",
+    }
+}
+
+input_from_str!(DialogFullScreen);
 
 static DIALOG_HEADER_SX: StaticSx = StaticSx::new(|| {
     sx().display("flex")
@@ -113,6 +144,10 @@ base_props! {
         /// Unset, `theme.dialog.size`.
         #[props(default, into)]
         size: Input<ThemeAwareValue>,
+        /// Inside a modal, fills the screen edge to edge instead of centring: `"phone"`
+        /// below the `sm` breakpoint, `"always"` at every width. Unset, centred.
+        #[props(default, into)]
+        full_screen: Input<DialogFullScreen>,
         /// Layered onto Dialog's own - e.g. `Drawer`'s anchor/size vars.
         #[props(default, into)]
         variables: Input<Variables>,
@@ -223,6 +258,20 @@ pub fn Dialog(props: DialogProps) -> Element {
     let variables: Input<Variables> = dialog_variables(&props, use_theme().dialog.radius)
         .merge(props.variables.unwrap_or_default())
         .into();
+    // Outside a modal there is no frame to fill.
+    let full_screen = match is_modal {
+        true => props.full_screen.copied_or_default(),
+        false => DialogFullScreen::Never,
+    };
+    let states: Input<States> = props
+        .states
+        .unwrap_or_default()
+        .with("full-screen-phone", full_screen == DialogFullScreen::Phone)
+        .with(
+            "full-screen-always",
+            full_screen == DialogFullScreen::Always,
+        )
+        .into();
 
     // Pushed after the caller's, to win a duplicate name.
     let mut attributes = props.attributes;
@@ -262,7 +311,7 @@ pub fn Dialog(props: DialogProps) -> Element {
         .class(&props.class)
         .sx(&props.sx)
         .parts(&props.parts)
-        .states(&props.states)
+        .states(&states)
         .variables(&variables)
         .prepare()
         .render(HtmlTag::Div, attributes, children)
@@ -365,6 +414,39 @@ mod tests {
 
         assert!(!html.contains("aria-label=\" \""), "{html}");
         assert!(html.contains("aria-label=\"Close\""), "{html}");
+    }
+
+    /// 3978: `full_screen` marks a dialog in a modal only; outside one there is no frame to fill.
+    #[test]
+    fn full_screen_applies_inside_a_modal() {
+        #[component]
+        fn InModal() -> Element {
+            use_context_provider(|| ModalContext {
+                onclose: Some(Callback::new(|()| {})),
+                dismiss_guard: None,
+            });
+            rsx! {
+                Dialog { title: "Inside", full_screen: "phone", "one" }
+            }
+        }
+        fn app() -> Element {
+            rsx! {
+                crate::LiberoProvider {
+                    InModal {}
+                    Dialog { title: "Outside", full_screen: "always", "two" }
+                }
+            }
+        }
+        let mut dom = VirtualDom::new(app);
+        dom.rebuild_in_place();
+        let html = dioxus_ssr::render(&dom);
+
+        assert_eq!(
+            html.matches("data-state=\"full-screen").count(),
+            1,
+            "{html}"
+        );
+        assert!(html.contains("data-state=\"full-screen-phone\""), "{html}");
     }
 
     /// Todo 2564: a spread `alertdialog` survives, any other role gives way.

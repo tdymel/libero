@@ -113,6 +113,7 @@ behave the same. See [Modal](modal.md).
 | `sx` | `Input<Sx>` | - | Styles the panel. The content is yours to style; a bottom drawer's swipe strip is `& > [data-slot='handle']`. |
 | `ondismiss` | `Option<Callback<Dismiss, bool>>` | - | Whether Escape, the backdrop, Back or a swipe may close it; `false` keeps it open, e.g. over an unsaved draft. Unset, all close. |
 | `handle` | `bool` | `false` | Docked bottom, a touch swipe down from the panel's top padding closes it; `true` draws a grab bar there. Other anchors ignore it. |
+| `close_button` | `bool` | `false` | Draws a close button in the header, beside `title`. As a `Dialog`'s, it closes without asking `ondismiss`. |
 
 ## Accessibility
 
@@ -140,7 +141,7 @@ behave the same. See [Modal](modal.md).
 
 - Set `DrawerOptions::title` or `aria_label`, since the panel is a dialog with
   no name of its own.
-- Give its content a way to close it: it has no header close button.
+- Give it a visible way to close: `close_button: true`, or a button in the content.
 
 ### Example
 

@@ -23,7 +23,30 @@ pub const ROUTES: Routes = &[
     ("/modal/paper", || rsx! { PaperModalPage {} }),
     ("/modal/paper-static", || rsx! { StaticPaperModalPage {} }),
     ("/modal/tabindex", || rsx! { TabindexModalPage {} }),
+    ("/modal/full-screen", || rsx! { FullScreenModalPage {} }),
 ];
+
+/// 3978: a `full_screen: "phone"` dialog, edge to edge below `sm`, centred above.
+#[component]
+fn FullScreenModalPage() -> Element {
+    let dialog = use_modal(|s: ModalScope<()>| {
+        rsx! {
+            Dialog { title: "Filters", full_screen: "phone",
+                Button { id: "done", onclick: move |_| s.close(), "Done" }
+            }
+        }
+    });
+
+    rsx! {
+        Button {
+            id: "open-modal",
+            onclick: move |_| {
+                dialog.open();
+            },
+            "Open filters"
+        }
+    }
+}
 
 /// Content whose DOM order is not its Tab order: `tabindex` 2, 1 and none (2720).
 #[component]

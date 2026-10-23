@@ -22,6 +22,27 @@ pub(crate) struct Placed {
     pub(crate) available_height: f64,
     /// Kept hidden: the box takes its capped height first, to be measured again.
     pub(crate) provisional: bool,
+    /// Where an arrow on the box's near edge points at the anchor's centre.
+    pub(crate) arrow: ArrowPoint,
+}
+
+/// A point on the box's edge facing the anchor, in viewport coordinates, kept
+/// [`ARROW_INSET`] off the box's corners.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub(crate) struct ArrowPoint {
+    pub(crate) x: f64,
+    pub(crate) y: f64,
+}
+
+/// How far an arrow's centre stays from the box's ends, clear of a rounded corner.
+const ARROW_INSET: f64 = 12.0;
+
+/// `centre` held on the box spanning `start..start + size`, off its corners.
+fn arrow_across(centre: f64, start: f64, size: f64) -> f64 {
+    match size > 2.0 * ARROW_INSET {
+        true => centre.clamp(start + ARROW_INSET, start + size - ARROW_INSET),
+        false => start + size / 2.0,
+    }
 }
 
 /// A physical edge of the anchor: `Side::Start`/`End` resolved against the
@@ -150,12 +171,33 @@ pub(crate) fn place(
         Edge::Left | Edge::Right => viewport.height - 2.0 * options.padding,
     };
 
+    let (centre_x, centre_y) = (
+        anchor.x + anchor.width / 2.0,
+        anchor.y + anchor.height / 2.0,
+    );
+    let (arrow_x, arrow_y) = match Edge::of(side, rtl) {
+        Edge::Top => (
+            arrow_across(centre_x, x, floating.width),
+            y + floating.height,
+        ),
+        Edge::Bottom => (arrow_across(centre_x, x, floating.width), y),
+        Edge::Left => (
+            x + floating.width,
+            arrow_across(centre_y, y, floating.height),
+        ),
+        Edge::Right => (x, arrow_across(centre_y, y, floating.height)),
+    };
+
     Placed {
         x,
         y,
         placement: Placement { side, align },
         available_height: available_height.max(0.0),
         provisional: false,
+        arrow: ArrowPoint {
+            x: arrow_x,
+            y: arrow_y,
+        },
     }
 }
 
@@ -225,6 +267,43 @@ mod tests {
             beside.available_height, 784.0,
             "the viewport less both paddings"
         );
+    }
+
+    /// 3977: the arrow points at the anchor's centre, also on a box shifted into the viewport.
+    #[test]
+    fn the_arrow_points_at_the_anchor_centre() {
+        let under = place(
+            anchor_at(100.0, 100.0),
+            dropdown(),
+            viewport(),
+            &options().align(Align::Start),
+            false,
+        );
+        assert_eq!(under.arrow, ArrowPoint { x: 200.0, y: 144.0 });
+        // Flipped above and shifted off the left edge: the arrow stays inset from the corner.
+        let shifted = place(
+            anchor_at(-150.0, 600.0),
+            dropdown(),
+            viewport(),
+            &options(),
+            false,
+        );
+        assert_eq!(
+            shifted.arrow,
+            ArrowPoint {
+                x: 8.0 + ARROW_INSET,
+                y: 596.0
+            }
+        );
+        // RTL `End` is the left: the arrow sits on the box's right edge, at the anchor's middle.
+        let beside = place(
+            anchor_at(400.0, 100.0),
+            dropdown(),
+            viewport(),
+            &options().side(Side::End),
+            true,
+        );
+        assert_eq!(beside.arrow, ArrowPoint { x: 396.0, y: 120.0 });
     }
 
     #[test]

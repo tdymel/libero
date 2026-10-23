@@ -703,3 +703,39 @@ fn a_custom_px_gap_places_the_bubble_that_far_off() {
         fixture.close().await.unwrap();
     });
 }
+
+/// 3977: the arrow sits on the bubble's top edge over the trigger's centre, though the
+/// bubble shifted off the left edge, and takes the bubble's background.
+async fn the_arrow_points_at_the_trigger<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    const ARROW: &str = "#save-tip [data-slot=arrow]";
+    eventually(d, "the arrowed bubble to be placed", async |d| {
+        Ok(d.exists(ARROW).await? && d.style(BUBBLE, "visibility").await? == "visible")
+    })
+    .await?;
+    let (t, b, a) = (
+        d.rect(TRIGGER).await?,
+        d.rect(BUBBLE).await?,
+        d.rect(ARROW).await?,
+    );
+    let (trigger_x, arrow_x) = (t.x + t.width / 2.0, a.x + a.width / 2.0);
+    ensure!(
+        (b.x + b.width / 2.0 - trigger_x).abs() > 8.0,
+        "the bubble {b:?} did not shift off the trigger {t:?}"
+    );
+    ensure!(
+        (arrow_x - trigger_x).abs() <= 1.5 && (a.y + a.height / 2.0 - b.y).abs() <= 1.5,
+        "arrow {a:?}, bubble {b:?}, trigger {t:?}"
+    );
+    let (arrow, bubble) = (
+        d.style(ARROW, "background-color").await?,
+        d.style(BUBBLE, "background-color").await?,
+    );
+    ensure!(arrow == bubble, "arrow {arrow}, bubble {bubble}");
+    Ok(())
+}
+
+e2e::scenario!(
+    an_arrow_points_at_the_trigger,
+    "/tooltip-arrow",
+    the_arrow_points_at_the_trigger
+);

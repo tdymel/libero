@@ -48,7 +48,7 @@ fn wrap_hook_call(values: &DemoValues, _generated: &str) -> String {
                  Dialog {{\n            \
                      title: \"Unsaved changes\",\n            \
                      size: \"{}\",\n            \
-                     Flex {{\n                \
+                     {}Flex {{\n                \
                          direction: \"column\",\n                \
                          gap: \"md\",\n                \
                          Text {{ \"{{document}} has changes you have not saved.\" }}\n                \
@@ -85,6 +85,10 @@ fn wrap_hook_call(values: &DemoValues, _generated: &str) -> String {
              }}\n\
          }}",
         values.str("size"),
+        match values.str("full_screen").as_str() {
+            "never" => String::new(),
+            full_screen => format!("full_screen: \"{full_screen}\",\n            "),
+        },
         indent(&indent(&button)),
     )
 }
@@ -106,7 +110,7 @@ fn describe(result: Option<SaveChoice>) -> &'static str {
 /// The hook call lives here rather than in `Demo`'s render closure: a hook
 /// there would land in `Demo`'s own hook slots.
 #[component]
-fn ModalDemo(size: String, awaited: bool) -> Element {
+fn ModalDemo(size: String, full_screen: String, awaited: bool) -> Element {
     let prompt = use_modal(move |s: ModalScope<String, SaveChoice>| {
         let document = s.args();
 
@@ -114,6 +118,7 @@ fn ModalDemo(size: String, awaited: bool) -> Element {
             Dialog {
                 title: "Unsaved changes",
                 size: size.clone(),
+                full_screen: full_screen.clone(),
                 Flex {
                     direction: "column",
                     gap: "md",
@@ -255,6 +260,10 @@ pub fn ModalPage() -> Element {
                 children_text: "",
                 controls: vec![
                     Control::sizes("size").default("md"),
+                    // `phone` by default: centred here, edge to edge on a phone.
+                    Control::toggle("full_screen", ["never", "phone", "always"])
+                        .capitalised()
+                        .default("phone"),
                     // An `Opening` is also a future, for an answer that gates
                     // work which is already async.
                     Control::switch("await"),
@@ -262,6 +271,7 @@ pub fn ModalPage() -> Element {
                 render: move |values: DemoValues| rsx! {
                     ModalDemo {
                         size: values.str("size"),
+                        full_screen: values.str("full_screen"),
                         awaited: values.str("await") == "true",
                     }
                 },

@@ -51,6 +51,7 @@ fn Demo() -> Element {
 | `close_label` | `String` | `"Close"` | The close button's accessible name, such as "Close cart". Unset, the localization's `common.close`. |
 | `radius` | `ThemeAwareValue` | `md` | Corner radius from the radius scale, or any CSS, e.g. `radius: "0"`. |
 | `size` | `ThemeAwareValue` | `md` | Caps the width from the dialog scale. `md` is 510px. |
+| `full_screen` | `DialogFullScreen` | `never` | Inside a modal, fills the screen edge to edge with square corners instead of centring: `"phone"` below the `sm` breakpoint, where a centred dialog leaves slivers of page, `"always"` at every width. Outside a modal it does nothing. The Modal page's demo shows it. |
 | `variables` | `Variables` | - | CSS variables layered onto the dialog's own, as `Drawer` does. |
 | `parts` | `Parts<DialogPart>` | - | Styles for the inner parts in the Style API tab, under `sx`: `Parts::new().part(DialogPart::Title, sx().font_size("lg"))`. |
 | `children` | `Element` | required | The dialog's content. |

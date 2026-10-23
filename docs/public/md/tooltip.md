@@ -59,6 +59,7 @@ fn Demo() -> Element {
 | `label` | `Element` | required | The bubble's content. |
 | `side` | `Side` | `top` | The preferred side of the trigger. The bubble flips when that side has no room. `Start`/`End` are logical: `Start` is the left under `dir="ltr"`, the right under `rtl`. |
 | `gap` | `ThemeAwareValue` | `xs` | Distance to the trigger, or a `px` or `rem` length, e.g. `gap: "6px"`. The pointer can cross it without closing the bubble. Other CSS places the bubble by the theme's gap. |
+| `arrow` | `bool` | `false` | Draws an arrow from the bubble to the trigger's centre, in the bubble's background. It stays on the trigger when the bubble shifts to fit the viewport, and `gap` runs from its tip. |
 | `size` | `Size` | `lg` | Font size of the bubble. |
 | `z_index` | `ThemeAwareValue` | the popover layer | Overrides the stacking level, for a bubble hidden by another overlay. |
 | `open_delay` | `u32` | `0` | Milliseconds the pointer must rest before the bubble appears. |

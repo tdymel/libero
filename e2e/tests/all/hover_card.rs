@@ -962,3 +962,35 @@ fn the_start_side_and_align_follow_the_direction() {
         }
     });
 }
+
+/// 3977: the arrow stands on the card's top edge over the trigger's centre, and `gap`
+/// runs from its tip: 20px, plus half the 10px square's diagonal to the card.
+async fn the_arrow_and_gap<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    const CARD: &str = "[role=dialog]";
+    const ARROW: &str = "[data-slot=arrow]";
+    shown(d, CARD, true, "forcing it open").await?;
+    eventually(d, "the arrow", async |d| d.exists(ARROW).await).await?;
+    let (t, c, a) = (
+        d.rect("#trigger").await?,
+        d.rect(CARD).await?,
+        d.rect(ARROW).await?,
+    );
+    let gap = c.y - 10.0 * std::f64::consts::FRAC_1_SQRT_2 - (t.y + t.height);
+    ensure!(
+        (gap - 20.0).abs() <= 1.0,
+        "the arrow's tip sits {gap}px off, not 20px"
+    );
+    ensure!(
+        (a.x + a.width / 2.0 - (t.x + t.width / 2.0)).abs() <= 1.5
+            && (a.y + a.height / 2.0 - c.y).abs() <= 1.5
+            && a.y < c.y,
+        "arrow {a:?}, card {c:?}, trigger {t:?}"
+    );
+    Ok(())
+}
+
+e2e::scenario!(
+    an_arrow_and_a_gap_place_the_card,
+    "/hover-card-arrow",
+    the_arrow_and_gap
+);

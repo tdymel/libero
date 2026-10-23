@@ -15,7 +15,26 @@ pub const ROUTES: Routes = &[
     ("/tooltip-toggle", || rsx! { TooltipTogglePage {} }),
     ("/tooltip-gap", || rsx! { TooltipGapPage {} }),
     ("/tooltip-link", || rsx! { TooltipLinkPage {} }),
+    ("/tooltip-arrow", || rsx! { TooltipArrowPage {} }),
 ];
+
+/// 3977: an arrowed bubble forced open on a trigger at the left edge, so the bubble
+/// shifts right while the arrow stays on the trigger.
+#[component]
+fn TooltipArrowPage() -> Element {
+    rsx! {
+        div { style: "padding: 40px 0 0 4px;",
+            Tooltip {
+                label: rsx! { "Saves the current draft to the server" },
+                label_id: "save-tip",
+                side: "bottom",
+                arrow: true,
+                open: true,
+                Button { id: "save", "aria-describedby": "save-tip", "Save" }
+            }
+        }
+    }
+}
 
 /// A link as the trigger, whose long press opens the browser's link menu (todo 3237).
 #[component]

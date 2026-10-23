@@ -470,3 +470,24 @@ fn it_honours_the_overlay_contract() {
         .await;
     });
 }
+
+/// 3979: the header close button closes and returns focus, without asking `ondismiss`.
+async fn header_close_closes<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    modal::open(d, TRIGGER).await?;
+    d.click("[role=dialog] [data-slot=close]").await?;
+    modal::closed_with_focus_on(d, TRIGGER, "the drawer's header close").await?;
+    let reasons = d.text("#reasons").await?;
+    ensure!(
+        reasons.is_empty(),
+        "the close button asked ondismiss: {reasons}"
+    );
+    Ok(())
+}
+
+e2e::scenario!(
+    a_drawer_header_close_button_closes_it,
+    "/drawer/close-button",
+    header_close_closes,
+    macos: skip("upstream: WebKit does not focus a clicked button"),
+    ios: skip("upstream: WebKit does not focus a clicked button")
+);

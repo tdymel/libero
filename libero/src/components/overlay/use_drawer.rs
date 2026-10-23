@@ -32,6 +32,9 @@ pub struct DrawerOptions {
     /// Docked bottom, a touch swipe down from the panel's top padding closes it;
     /// `true` draws a grab bar there. Other anchors ignore it.
     pub handle: bool,
+    /// Draws a close button in the header, beside `title`. As `Dialog`'s, it closes
+    /// without asking `ondismiss`.
+    pub close_button: bool,
 }
 
 /// A drawer is [`use_modal`] with a docked panel around the content: same
@@ -77,6 +80,7 @@ where
                 sx: options.sx.clone(),
                 ondismiss: options.ondismiss,
                 handle: options.handle,
+                close_button: options.close_button,
                 {content}
             }
         }

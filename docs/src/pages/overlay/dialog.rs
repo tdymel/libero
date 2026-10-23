@@ -84,6 +84,9 @@ pub fn DialogPage() -> Element {
                     prop("size", "ThemeAwareValue")
                         .default(theme.dialog.size.as_str())
                         .doc("Caps the width from the dialog scale. `md` is 510px."),
+                    prop("full_screen", "DialogFullScreen")
+                        .default("never")
+                        .doc("Inside a modal, fills the screen edge to edge with square corners instead of centring: `\"phone\"` below the `sm` breakpoint, where a centred dialog leaves slivers of page, `\"always\"` at every width. Outside a modal it does nothing. The Modal page's demo shows it."),
                     prop("variables", "Variables")
                         .doc("CSS variables layered onto the dialog's own, as `Drawer` does."),
                     prop("parts", "Parts<DialogPart>")

@@ -19,7 +19,31 @@ pub const ROUTES: Routes = &[
     ("/drawer/long-title", || rsx! { LongTitleDrawerPage {} }),
     ("/drawer/titled", || rsx! { TitledDrawerPage {} }),
     ("/drawer/bottom-swipe", || rsx! { BottomSwipeDrawerPage {} }),
+    ("/drawer/close-button", || rsx! { CloseButtonDrawerPage {} }),
 ];
+
+/// 3979: a header close button, which closes even though `ondismiss` refuses every reason.
+#[component]
+fn CloseButtonDrawerPage() -> Element {
+    let mut reasons = use_signal(Vec::<String>::new);
+    let nav = use_drawer(
+        DrawerOptions {
+            title: Some("Filters".into()),
+            close_button: true,
+            ondismiss: Some(Callback::new(move |reason: Dismiss| {
+                reasons.push(format!("{reason:?}"));
+                false
+            })),
+            ..Default::default()
+        },
+        |_: ModalScope<()>| rsx! { div { id: "drawer-body", "Filters" } },
+    );
+
+    rsx! {
+        Button { id: "open-drawer", onclick: move |_| { nav.open(); }, "Open filters" }
+        div { id: "reasons", {reasons.read().join(",")} }
+    }
+}
 
 /// Todo 3590: a swipe down from the bottom drawer's top padding closes it, and says so.
 #[component]

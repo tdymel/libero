@@ -2,8 +2,9 @@ use std::{cell::Cell, rc::Rc};
 
 use dioxus::prelude::*;
 
-use super::hover_intent::{
-    HoverIntent, LONG_PRESS, TOUCH_LINGER, TRIGGER_WRAPPER_SX, use_hover_intent,
+use super::{
+    hover_intent::{HoverIntent, LONG_PRESS, TOUCH_LINGER, TRIGGER_WRAPPER_SX, use_hover_intent},
+    popover_arrow::{PopoverArrow, arrow_reach, arrow_sx},
 };
 use crate::{
     CssLayer,
@@ -79,6 +80,17 @@ static TOOLTIP_BUBBLE_SX: StaticSx = StaticSx::new(|| {
     })
 });
 
+/// The arrow square's side, in px.
+const ARROW_SIZE: f64 = 8.0;
+
+// In the bubble, which never scrolls: it takes a caller's `background`, and `-1` keeps it under the label.
+static TOOLTIP_ARROW_SX: StaticSx = StaticSx::new(|| {
+    arrow_sx()
+        .position("absolute")
+        .z_index("-1")
+        .background("inherit")
+});
+
 /// `flex: none`: a 0x0 point would shrink it to its longest word.
 static TOOLTIP_PINNED_SX: StaticSx = StaticSx::new(|| {
     bubble_sx()
@@ -146,6 +158,10 @@ base_props! {
         /// No bubble; the wrapper stays, so enabling or disabling does not remount the trigger.
         #[props(default)]
         disabled: Option<bool>,
+        /// Draws an arrow from the bubble to the trigger's centre, in the bubble's background.
+        /// `gap` then runs from its tip.
+        #[props(default)]
+        arrow: bool,
         /// The bubble's `id`, for the trigger's `aria-describedby`.
         #[props(default, into)]
         label_id: Option<String>,
@@ -453,7 +469,12 @@ fn TooltipBubble(
             "Tooltip: gap `{css}` is not a px or rem length, so the bubble is placed by the theme's gap."
         ));
     }
-    let offset = measured.map_or(theme.spacing.get(gap.size).into(), f64::from);
+    let reach = if tooltip.arrow {
+        arrow_reach(ARROW_SIZE)
+    } else {
+        0.0
+    };
+    let offset = measured.map_or(theme.spacing.get(gap.size).into(), f64::from) + reach;
     let close_delay = tooltip.close_delay.unwrap_or(theme.tooltip.close_delay);
     let padding = theme.popover.padding;
 
@@ -479,7 +500,10 @@ fn TooltipBubble(
     let variables: Input<crate::components::common::Variables> = variables()
         .with(
             TOOLTIP_GAP_VAR,
-            measured.map_or(SizeCss::SPACING.value(gap.size), |px| format!("{px}px")),
+            match (measured, tooltip.arrow) {
+                (None, false) => SizeCss::SPACING.value(gap.size),
+                _ => format!("{offset}px"),
+            },
         )
         .with(
             Z_INDEX_POPOVER.override_var(),
@@ -500,6 +524,11 @@ fn TooltipBubble(
 
     let mut attributes = tooltip.attributes.clone();
     attributes.extend(dismiss.floating_events());
+    let arrow = tooltip.arrow.then(|| {
+        rsx! {
+            PopoverArrow { sx: &TOOLTIP_ARROW_SX, point: popover.arrow(true), size: ARROW_SIZE }
+        }
+    });
     popover.show(Some(
         bubble
             .element(&floating)
@@ -510,7 +539,14 @@ fn TooltipBubble(
             .event("onmouseleave", move |_: MouseEvent| {
                 hover.hover(false, close_delay)
             })
-            .render(HtmlTag::Span, attributes, tooltip.label.clone()),
+            .render(
+                HtmlTag::Span,
+                attributes,
+                rsx! {
+                    {tooltip.label.clone()}
+                    {arrow}
+                },
+            ),
     ));
 
     rsx! {}

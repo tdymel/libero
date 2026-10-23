@@ -51,6 +51,12 @@ pub fn HoverCardPage() -> Element {
                 prop("align", "Align")
                     .default(theme.hover_card.align.as_str())
                     .doc("Where the card lines up along that side."),
+                prop("gap", "ThemeAwareValue")
+                    .default(format!("{}px", theme.popover.gap))
+                    .doc("Distance to the trigger, from the arrow's tip with `arrow`: a size word, or a `px` or `rem` length, e.g. `gap: \"12px\"`. Other CSS places the card by the theme's popover gap."),
+                prop("arrow", "bool")
+                    .default("false")
+                    .doc("Draws an arrow from the card to the trigger's centre, in the theme's paper background. It stays on the trigger when the card shifts to fit the viewport, and `gap` runs from its tip."),
                 prop("open_delay", "u32")
                     .default(theme.hover_card.open_delay.to_string())
                     .doc("Milliseconds the pointer must rest on the trigger before the card opens."),
@@ -78,7 +84,7 @@ pub fn HoverCardPage() -> Element {
                     "Focusing the trigger opens the card. A click does not keep it open.",
                     "A card of text taller than the room beside the trigger is a tab stop, so Tab enters it and the arrow keys scroll it. A card with a link or button is not: the controls take the focus.",
                     "A trigger with nothing focusable and an unnamed card both warn in the console, in debug builds only.",
-                    "On touch, a tap is no hover: a long press opens the card, as a `Tooltip`. It closes a moment after the release unless a tap lands in it, and then a tap elsewhere closes it. The card has no arrow.",
+                    "On touch, a tap is no hover: a long press opens the card, as a `Tooltip`. It closes a moment after the release unless a tap lands in it, and then a tap elsewhere closes it.",
                 ])
                 .must([
                     "Keep it to extras the trigger's own target already offers: a screen reader does not announce a hover card, a preview for sighted users. Content a user needs goes in a popover (`use_popover`) that a click opens.",
@@ -113,6 +119,19 @@ pub fn HoverCardPage() -> Element {
                 controls: vec![
                     Control::side(["top", "end", "bottom", "start"]),
                     Control::align(),
+                    // On by default, so the arrow shows on the first hover; printed while on.
+                    Control::switch("arrow").default("true").code(|_, values| {
+                        match values.str("arrow").as_str() {
+                            "true" => vec!["arrow: true".to_string()],
+                            _ => vec![],
+                        }
+                    }),
+                    Control::slider("gap", ["auto", "xs", "sm", "md", "lg", "xl"]).code(
+                        |_, values| match values.str("gap").as_str() {
+                            "auto" => vec![],
+                            gap => vec![format!("gap: {gap:?}")],
+                        },
+                    ),
                     Control::delay("open_delay", ["auto", "200", "500", "1000"]),
                     Control::delay("close_delay", ["auto", "0", "300", "1000"]),
                     Control::toggle("open", ["auto", "false", "true"])
@@ -129,6 +148,11 @@ pub fn HoverCardPage() -> Element {
                     HoverCard {
                         side: side_of(&values.str("side")),
                         align: align_of(&values.str("align")),
+                        arrow: values.str("arrow") == "true",
+                        gap: match values.str("gap").as_str() {
+                            "auto" => None,
+                            gap => Some(gap.to_string()),
+                        },
                         open_delay: delay_of(&values.str("open_delay")),
                         close_delay: delay_of(&values.str("close_delay")),
                         open: match values.str("open").as_str() {

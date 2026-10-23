@@ -8,7 +8,7 @@ mod place;
 use dioxus::prelude::*;
 
 pub use options::{Align, Placement, PopoverOptions, PopoverWidth, Side};
-pub(crate) use place::{Placed, Rect};
+pub(crate) use place::{ArrowPoint, Placed, Rect};
 
 use std::{cell::Cell, rc::Rc};
 
@@ -125,6 +125,22 @@ impl PopoverHandle {
             .as_ref()
             .map(|placed| placed.placement)
             .unwrap_or_default()
+    }
+
+    /// Where an arrow points at the anchor from the box's edge, once placed: in the
+    /// viewport, or with `in_box` from the box's top left corner.
+    pub(crate) fn arrow(&self, in_box: bool) -> Option<ArrowPoint> {
+        self.placed
+            .read()
+            .as_ref()
+            .filter(|placed| !placed.provisional)
+            .map(|placed| match in_box {
+                true => ArrowPoint {
+                    x: placed.arrow.x - placed.x,
+                    y: placed.arrow.y - placed.y,
+                },
+                false => placed.arrow,
+            })
     }
 
     /// The box's `style`: `position: fixed` in viewport coordinates, and

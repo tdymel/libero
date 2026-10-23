@@ -129,6 +129,9 @@ base_props! {
         /// Docked bottom: draws a grab bar in the swipe strip.
         #[props(default)]
         handle: bool,
+        /// A header close button, which closes without asking `ondismiss`.
+        #[props(default)]
+        close_button: bool,
         children: Element,
     }
 }
@@ -191,8 +194,8 @@ pub(crate) fn Drawer(props: DrawerProps) -> Element {
             z_index: props.z_index.clone(),
             sx: float_sx,
             Dialog {
-                // A drawer's own content owns its dismissal.
-                close_button: false,
+                // Off unless asked: the content may draw its own close.
+                close_button: props.close_button,
                 aria_label: props.aria_label.clone(),
                 title: props.title.clone(),
                 ondismiss: props.ondismiss,
@@ -201,7 +204,7 @@ pub(crate) fn Drawer(props: DrawerProps) -> Element {
                 states,
                 variables: if bottom { variables } else { Variables::new() },
                 attributes,
-                // Touch only, beside Back, Escape and the content's own close (WCAG 2.5.1).
+                // Touch only, beside Back, Escape and a close button (WCAG 2.5.1).
                 if bottom {
                     div {
                         class: strip_class,

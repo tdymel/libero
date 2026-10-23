@@ -1079,3 +1079,57 @@ fn it_honours_the_overlay_contract() {
         .await;
     });
 }
+
+/// 3978: `full_screen: "phone"` fills the screen below the `sm` breakpoint (768px) and
+/// stays centred above it.
+async fn full_screen_on_a_phone<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    open(d, TRIGGER).await?;
+    let (vw, vh) = d.viewport().await?;
+    eventually(d, "the dialog's layout", async |d| {
+        let r = d.rect(DIALOG).await?;
+        Ok(match vw < 768.0 {
+            true => {
+                r.x.abs() <= 1.0
+                    && r.y.abs() <= 1.0
+                    && (r.width - vw).abs() <= 1.0
+                    && (r.height - vh).abs() <= 1.0
+            }
+            false => r.x > 16.0 && r.x + r.width < vw - 16.0,
+        })
+    })
+    .await
+}
+
+e2e::scenario!(
+    a_full_screen_dialog_centres_above_a_phone,
+    "/modal/full-screen",
+    full_screen_on_a_phone
+);
+
+/// 3978: at a phone's width, the dialog covers the viewport edge to edge.
+#[test]
+fn a_full_screen_dialog_fills_a_phone() {
+    block_on(async {
+        let fixture = Fixture::open("/modal/full-screen", Viewport::Mobile)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        keyboard::tab_to(page, TRIGGER, 5).await.unwrap();
+        keyboard::press(page, keyboard::ENTER).await.unwrap();
+        wait::for_visible(page, DIALOG).await.unwrap();
+        wait::for_js_true(
+            page,
+            "(() => { const r = document.querySelector('[role=dialog]').getBoundingClientRect(); \
+             return Math.abs(r.left) <= 1 && Math.abs(r.top) <= 1 \
+               && Math.abs(r.width - innerWidth) <= 1 && Math.abs(r.height - innerHeight) <= 1; })()",
+            "the dialog to fill the phone",
+        )
+        .await
+        .unwrap();
+        fixture
+            .console
+            .assert_clean("a full-screen dialog")
+            .unwrap();
+        fixture.close().await.unwrap();
+    });
+}
