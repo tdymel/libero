@@ -3,10 +3,33 @@ use crate::components::{
 };
 use dioxus::prelude::*;
 use libero::components::{Code, Input, Text};
+use libero::sx::sx;
 use libero::use_theme;
+
+/// Long enough to fill three lines of `CUT_WIDTH`.
+const TEXT: &str = "The quick brown fox jumps over the lazy dog. Pack my box with five dozen liquor jugs. How vexingly quick daft zebras jump!";
+
+/// Narrow enough that `TEXT` needs a cut.
+const CUT_WIDTH: &str = "16rem";
 
 fn no_gradient(values: &DemoValues) -> bool {
     values.str("gradient") != "true"
+}
+
+fn is_cut(values: &DemoValues) -> bool {
+    values.str("truncate") != UNSET || values.str("line_clamp") != UNSET
+}
+
+/// `truncate` and the `sx` that narrows the preview to it.
+fn cut_code(values: &DemoValues) -> Vec<String> {
+    let mut lines = Vec::new();
+    if let value @ ("end" | "start") = values.str("truncate").as_str() {
+        lines.push(format!("truncate: {value:?}"));
+    }
+    if is_cut(values) {
+        lines.push(format!("sx: sx().max_width({CUT_WIDTH:?})"));
+    }
+    lines
 }
 
 #[component]
@@ -29,21 +52,30 @@ pub fn TextPage() -> Element {
                     .doc("The text color: a theme color name in its text shade, or any CSS color. Unset, the text inherits. Under a gradient, its first stop."),
                 prop("gradient", "Gradient")
                     .doc("Paints the glyphs with a gradient from `color` to a second stop, as `(\"info\", 90)` or `Gradient::default().to(\"info\").deg(90)`; `Gradient::default()` is the theme's. Keep it to large display text: the contrast of a literal CSS stop is yours to check, and a debug build warns when a hex stop reads under 4.5:1 on the page background. Solid in its first stop in print and in native windows, the system text colour in forced colours."),
+                prop("truncate", "Truncate")
+                    .doc("Cuts the text on one line with an ellipsis at its `end` or `start`. The element becomes a block, so a `span` truncates too. Set a `title` if the cut text matters; the full text stays in the accessible name. `line_clamp` wins when both are set."),
+                prop("line_clamp", "u32")
+                    .doc("Cuts the text after this many lines with an ellipsis. Over `truncate`; `0` is off. On Blitz there is no line clamp: the text is cut at that many lines, without the ellipsis."),
                 prop("children", "Element").default("required").doc("The text."),
             ])],
             accessibility: a11y()
                 .handles([
                     "A large size is only styling, so it never makes a heading.",
                     "A long word breaks inside the text rather than overflowing a narrow column.",
+                    "A cut text is still whole in the DOM, so a screen reader reads all of it.",
                 ])
                 .must([
                     "Use `component: \"span\"` for text inside a sentence.",
                     "For a heading, use `Title`.",
                     "Check the contrast of a literal CSS `color` on its background, 4.5:1 for body text: a theme color name takes its text shade, a literal is used as given.",
                     "Keep `gradient` to large display text and check the contrast of a literal CSS stop. A debug build warns when a hex stop reads under 4.5:1 on the page background.",
+                    "Pass a text that may be cut as `title` too, so sighted users can read it on hover, or show it in full elsewhere.",
                 ])
                 .example("A price in a sentence, `Text { component: \"span\", size: \"lg\", \"$12\" }`: it stays part of the sentence, and its large size does not make it a heading.")
-                .limits(["`component` keeps the body-text look, so `a`, `strong`, `del` and the like lose their underline, weight or line. For a link, use `Anchor`."]),
+                .limits([
+                    "`component` keeps the body-text look, so `a`, `strong`, `del` and the like lose their underline, weight or line. For a link, use `Anchor`.",
+                    "On Blitz, `line_clamp` cuts the text at its last line without an ellipsis.",
+                ]),
             lead: rsx! {
                 Text {
                     "Body copy in a "
@@ -57,7 +89,7 @@ pub fn TextPage() -> Element {
             },
             Demo {
                 component: "Text",
-                children_text: "The quick brown fox jumps over the lazy dog.",
+                children_text: TEXT,
                 controls: vec![
                     Control::sizes("size")
                         .default(theme.text.size.as_str()),
@@ -76,17 +108,35 @@ pub fn TextPage() -> Element {
                     }),
                     gradient_to,
                     gradient_deg,
+                    // On, so the ellipsis shows without another switch.
+                    Control::toggle("truncate", [UNSET, "end", "start"])
+                        .labels(["Unset", "End", "Start"])
+                        .default("end")
+                        .code(|_, values| cut_code(values)),
+                    Control::toggle("line_clamp", [UNSET, "1", "2", "3"])
+                        .labels(["Unset", "1", "2", "3"])
+                        .default(UNSET)
+                        .code(|_, values| match values.str("line_clamp").as_str() {
+                            UNSET => vec![],
+                            lines => vec![format!("line_clamp: {lines}")],
+                        }),
                 ],
                 render: move |values: DemoValues| rsx! {
                     Text {
                         size: values.str("size"),
                         component: values.str("component"),
+                        truncate: match values.str("truncate").as_str() {
+                            UNSET => Input::None,
+                            end => Input::from(end),
+                        },
+                        line_clamp: values.str("line_clamp").parse::<u32>().ok(),
+                        sx: is_cut(&values).then(|| sx().max_width(CUT_WIDTH)),
                         color: match values.str("color").as_str() {
                             UNSET => Input::None,
                             color => Input::from(color),
                         },
                         gradient: (values.str("gradient") == "true").then(|| gradient_value(&values)),
-                        "The quick brown fox jumps over the lazy dog."
+                        {TEXT}
                     }
                 },
             }

@@ -3,8 +3,12 @@ use crate::components::{
     not_gradient_variant, prop, props,
 };
 use dioxus::prelude::*;
-use libero::components::{Button, ButtonPart, Code, Flex, Input, Text};
+use libero::components::{Button, ButtonPart, Code, Flex, Input, Pictogram, Text};
 use libero::use_theme;
+use pictogram_icons_lucide as lucide;
+
+const TRAILING_ICON: &str =
+    "trailing_icon: rsx! { Pictogram { icon: lucide::chevron_right::outlined } }";
 
 fn is_link(values: &DemoValues) -> bool {
     values.str("link") == "true"
@@ -62,6 +66,8 @@ pub fn ButtonPage() -> Element {
                     .doc("With `target: \"_blank\"`, draws a small external icon after the label. Unset, the theme's `anchor.new_tab_icon`, which is off."),
                 prop("icon", "Element")
                     .doc("Drawn before the label. It never shrinks."),
+                prop("trailing_icon", "Element")
+                    .doc("Drawn after the label, as a chevron or an arrow. It never shrinks, and on a link it comes before the new-tab icon."),
                 prop("parts", "Parts<ButtonPart>")
                     .doc("Styles for the inner parts in the Style API tab, under `sx`."),
                 prop("children", "Element")
@@ -70,6 +76,7 @@ pub fn ButtonPage() -> Element {
             ]).extends("button")
             .parts("ButtonPart", vec![
                 (ButtonPart::Icon, "The `icon` wrapper."),
+                (ButtonPart::TrailingIcon, "The `trailing_icon` wrapper."),
             ])],
             accessibility: a11y()
                 .handles([
@@ -115,6 +122,13 @@ pub fn ButtonPage() -> Element {
                     Control::slider("radius", ["0", "xs", "sm", "md", "lg", "xl", "xxl"])
                         .default(theme.button.radius.as_str()),
                     Control::switch("full_width"),
+                    // On, so the icon shows without another switch.
+                    Control::switch("trailing_icon").default("true").code(|_, values| {
+                        match values.str("trailing_icon").as_str() {
+                            "true" => vec![TRAILING_ICON.to_string()],
+                            _ => vec![],
+                        }
+                    }),
                     // Off is still a toggle (`aria-pressed="false"`); unset
                     // is a plain action.
                     Control::toggle("selected", ["unset", "false", "true"])
@@ -183,6 +197,8 @@ pub fn ButtonPage() -> Element {
                             },
                             target: (values.str("link") == "true").then(|| "_blank".to_string()),
                             new_tab_icon: (values.str("new_tab_icon") == "true").then_some(true),
+                            trailing_icon: (values.str("trailing_icon") == "true")
+                                .then(|| rsx! { Pictogram { icon: lucide::chevron_right::outlined } }),
                             "Save changes"
                         }
                         // A new-tab link beside it that opts into the icon, shown without the `link` switch.
@@ -208,7 +224,9 @@ pub fn ButtonPage() -> Element {
                     Code { source: "Button" }
                     " shows a label, with an optional "
                     Code { source: "icon" }
-                    " before it. "
+                    " before it and "
+                    Code { source: "trailing_icon" }
+                    " after it. "
                     Code { source: "ActionIcon" }
                     " is the same button reduced to a square icon: it requires an "
                     Code { source: "aria_label" }

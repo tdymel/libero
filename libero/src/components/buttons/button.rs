@@ -42,7 +42,8 @@ static BUTTON_BASE_SX: StaticSx = StaticSx::new(|| {
         // One line, never wider than its container (WCAG 1.4.10). No ellipsis: it would wrap the children.
         .max_width("100%")
         .min_width("0")
-        .selector(ButtonPart::Icon.selector(), button_icon_sx());
+        .selector(ButtonPart::Icon.selector(), button_icon_sx(true))
+        .selector(ButtonPart::TrailingIcon.selector(), button_icon_sx(false));
 
     Variant::ALL
         .iter()
@@ -88,16 +89,21 @@ fn zoom_height_sx() -> Sx {
     })
 }
 
-/// Before the children, never shrinking, as on `Chip`.
-fn button_icon_sx() -> Sx {
-    sx().display("inline-flex")
+/// Beside the children, never shrinking, as on `Chip`: `leading` is before them.
+fn button_icon_sx(leading: bool) -> Sx {
+    let gap = SizeCss::SPACING.value(Size::Xs);
+    let base = sx()
+        .display("inline-flex")
         .align_items("center")
-        .flex("0 0 auto")
-        .margin_right(SizeCss::SPACING.value(Size::Xs))
-        .rtl(
-            sx().margin_right("0")
-                .margin_left(SizeCss::SPACING.value(Size::Xs)),
-        )
+        .flex("0 0 auto");
+    match leading {
+        true => base
+            .margin_right(gap.clone())
+            .rtl(sx().margin_right("0").margin_left(gap)),
+        false => base
+            .margin_left(gap.clone())
+            .rtl(sx().margin_left("0").margin_right(gap)),
+    }
 }
 
 /// Children stay at `opacity: 0` under the loader: they keep the accessible name and the width.
@@ -177,6 +183,8 @@ parts_enum! {
     pub enum ButtonPart {
         /// The `icon` wrapper; under `loading` it sits in the hidden label's wrapper.
         Icon = "button-icon" => "& > [data-slot='button-icon'], & > span > [data-slot='button-icon']",
+        /// The `trailing_icon` wrapper, placed as `Icon` is.
+        TrailingIcon = "button-trailing-icon" => "& > [data-slot='button-trailing-icon'], & > span > [data-slot='button-trailing-icon']",
     }
 }
 
@@ -228,6 +236,9 @@ base_props! {
         /// Drawn before the label.
         #[props(default)]
         icon: Option<Element>,
+        /// Drawn after the label, as a chevron or an arrow.
+        #[props(default)]
+        trailing_icon: Option<Element>,
         /// The label, on one line; a long one is cut at the edge.
         children: Element,
     }
@@ -379,6 +390,9 @@ pub fn Button(props: ButtonProps) -> Element {
             span { "data-slot": ButtonPart::Icon.slot(), {icon} }
         }
         {props.children}
+        if let Some(icon) = props.trailing_icon {
+            span { "data-slot": ButtonPart::TrailingIcon.slot(), {icon} }
+        }
     };
 
     // Link mode: no `onclick`, no ripple.
@@ -460,10 +474,16 @@ mod tests {
     fn the_part_table_is_stable() {
         assert_eq!(
             part_table::<ButtonPart>(),
-            [(
-                "button-icon",
-                "& > [data-slot='button-icon'], & > span > [data-slot='button-icon']"
-            )]
+            [
+                (
+                    "button-icon",
+                    "& > [data-slot='button-icon'], & > span > [data-slot='button-icon']"
+                ),
+                (
+                    "button-trailing-icon",
+                    "& > [data-slot='button-trailing-icon'], & > span > [data-slot='button-trailing-icon']"
+                )
+            ]
         );
     }
 

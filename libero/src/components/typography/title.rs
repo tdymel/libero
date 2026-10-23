@@ -2,17 +2,20 @@ use dioxus::prelude::*;
 
 use crate::{
     components::{
-        common::{HtmlTag, Input, States, base_props, gradient_text_sx},
+        common::{
+            Cut, HtmlTag, Input, States, Truncate, base_props, gradient_text_sx, truncate_sx,
+        },
         layout::use_box,
     },
     hooks::{use_gradient_style, use_theme},
     sx::StaticSx,
-    theme::{Gradient, Size, TitleDefaults},
+    theme::{Gradient, Size, TITLE_LINE_HEIGHT, TitleDefaults},
     utils::warn,
 };
 
 static TITLE_BASE_SX: StaticSx = StaticSx::new(|| {
     TitleDefaults::theme_vars()
+        .and(truncate_sx(TITLE_LINE_HEIGHT))
         .margin("0")
         // A long word at `xxl` is wider than a 320px column (WCAG 1.4.10).
         .overflow_wrap("break-word")
@@ -55,6 +58,14 @@ base_props! {
         /// a [`Gradient`]. A literal stop's contrast is the caller's to check.
         #[props(default, into)]
         gradient: Option<Gradient>,
+        /// Cuts a title on one line with an ellipsis at its `end` or `start`.
+        /// `line_clamp` wins when both are set.
+        #[props(default, into)]
+        truncate: Input<Truncate>,
+        /// Cuts the title after this many lines with an ellipsis; over `truncate`, and `0`
+        /// is off. Blitz has no line clamp: it cuts at the line height, without an ellipsis.
+        #[props(default)]
+        line_clamp: Option<u32>,
         children: Element,
     }
 }
@@ -83,12 +94,24 @@ pub fn Title(props: TitleProps) -> Element {
         true,
     );
 
-    let states: Input<States> = props
-        .states
-        .unwrap_or_default()
-        .with(chosen_size.state_name(), true)
-        .with("gradient", props.gradient.is_some())
+    let cut = Cut::of(&props.truncate, props.line_clamp);
+    let states: Input<States> = cut
+        .states()
+        .into_iter()
+        .fold(
+            props
+                .states
+                .unwrap_or_default()
+                .with(chosen_size.state_name(), true)
+                .with("gradient", props.gradient.is_some()),
+            |states, (state, on)| states.with(state, on),
+        )
         .into();
+    let lines = cut.variables();
+    let children = match cut.is_start() {
+        true => rsx! { bdi { {props.children} } },
+        false => props.children,
+    };
 
     let component = props
         .component
@@ -103,9 +126,10 @@ pub fn Title(props: TitleProps) -> Element {
         .class(&props.class)
         .sx(&props.sx)
         .states(&states)
+        .variables(&lines)
         .style(style)
         .prepare()
-        .render(component, props.attributes, props.children)
+        .render(component, props.attributes, children)
 }
 
 #[cfg(test)]

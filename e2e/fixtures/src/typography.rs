@@ -16,7 +16,31 @@ pub const ROUTES: Routes = &[
     ("/typography", || rsx! { TypographyPage {} }),
     ("/typography/quotes", || rsx! { QuotesPage {} }),
     ("/typography/paper", || rsx! { PaperTitlePage {} }),
+    ("/typography/truncate", || rsx! { TruncatePage {} }),
 ];
+
+const SENTENCE: &str = "The quick brown fox jumps over the lazy dog and keeps running";
+
+/// Todo 3966: a 200px column of Text and Title cut at the end, at the start and after two
+/// lines, each beside a one-line twin to measure a line by.
+#[component]
+fn TruncatePage() -> Element {
+    rsx! {
+        Flex { direction: "column", gap: "md", max_width: "200px",
+            Text { id: "text-one", "Short" }
+            Text { id: "text-plain", "{SENTENCE}" }
+            Text { id: "text-end", truncate: "end", "{SENTENCE}" }
+            Text { id: "text-start", truncate: "start", "{SENTENCE}" }
+            Text { id: "text-clamp", line_clamp: 2, "{SENTENCE}" }
+            Text { id: "text-clamp-wins", truncate: "start", line_clamp: 2, "{SENTENCE}" }
+            Text { id: "text-clamp-off", line_clamp: 0, "{SENTENCE}" }
+            Title { id: "title-one", size: "md", "Short" }
+            Title { id: "title-plain", size: "md", "{SENTENCE}" }
+            Title { id: "title-end", size: "md", truncate: "end", "{SENTENCE}" }
+            Title { id: "title-clamp", size: "md", line_clamp: 2, "{SENTENCE}" }
+        }
+    }
+}
 
 const COLORS: &[&str] = &[
     "primary",

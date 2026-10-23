@@ -6,7 +6,7 @@ use libero::components::{Code, Text};
 use libero::use_theme;
 
 mod demo;
-use demo::{StaffTable, TaskTable, TeamTable};
+use demo::{StaffTable, StickyTable, TaskTable, TeamTable};
 
 /// The live table and its data, printed from its text by `wrap_data`.
 const FILE: DemoFile = DemoFile(include_str!("table/demo.rs"));
@@ -89,6 +89,17 @@ const SELECT_FIXED: [&str; 6] = [
         .value(|s: &Staff| s.role.clone())
         .format(|s: &Staff| role_label(&s.role).to_string())
         .options([("owner", "Owner"), ("admin", "Admin"), ("viewer", "Viewer")]),
+]"#,
+];
+
+const STICKY_FIXED: [&str; 4] = [
+    r#"caption: "Team members""#,
+    "data: people",
+    "row_key: |p: &Person| p.name.clone()",
+    r#"columns: vec![
+    column("Name").value(|p: &Person| p.name.clone()).row_header(),
+    column("Role").value(|p: &Person| p.role.clone()),
+    column("Joined").value(|p: &Person| p.joined),
 ]"#,
 ];
 
@@ -202,6 +213,9 @@ const SCROLL_WIDTH: &str = "1400px";
 /// Shorter than the header and two rows, so `max_height` has something to scroll.
 const MAX_HEIGHT: &str = "100px";
 
+/// The docs page has no fixed header over its scroll area.
+const STICKY_OFFSET: &str = "0";
+
 /// Name, the outermost start column, needs no `width`; nor does Bonus at the end.
 // snippet: item #[derive(Clone, PartialEq)] struct Person { name: String, role: String, bonus: Option<f64> }
 // snippet: let people: Vec<Person> = Vec::new();
@@ -305,6 +319,7 @@ pub fn TablePage() -> Element {
                     prop("csv_formula_guard", "bool").default("true").doc("Gives a `TableExportButton` cell that starts with `=`, `+`, `-`, `@`, Tab or CR, a plain number aside, a leading `'`, so a spreadsheet reads it as text, not a formula (CSV injection, OWASP), as `table_csv` does. `false` exports every cell as it is, as `table_csv_raw` does."),
                     prop("scroll", "bool").default("false").doc("Wraps the table in a `ScrollArea` that scrolls sideways. `class`, `sx` and `attributes` stay on the table."),
                     prop("max_height", "Option<String>").default("None").doc("Caps the table's height, any CSS length. The rows scroll in a `ScrollArea`, both ways, under a header that stays put, with the scrollbar beside the rows only. The `caption` sits above the scrolled box. The header takes the page surface's colour: on another background, set it with `sx().selector(\"& thead th\", ..)`."),
+                    prop("sticky_header", "Option<String>").default("None").doc("Keeps the header in view while the page, or the scrolling container around the table, scrolls past the rows: this far below its top edge, a CSS length, say `\"0\"` or a fixed app header's height. It sticks to the nearest ancestor with an `overflow` other than `visible`, even one that only scrolls sideways. The footer and a `toolbar` do not stick. A focus scroll leaves the focused cell clear of the header. No effect with `max_height`, whose header stays put already, or with `scroll` and pinned columns, whose scroll area holds the header instead of the page; a debug build warns."),
                     prop("virtual_row_height", "Option<f64>").default("None").doc("With `max_height`, renders only the rows in view plus a few beyond each edge, so ten thousand rows scroll like fifty. Every body row is clipped to this height in px: one line per cell, longer text ends in an ellipsis. The table then lays out fixed, columns without a `width` sharing the rest evenly. A row holding focus stays rendered while it scrolls away. With `onrowreorder` a keyboard move scrolls to its slot, and a row dragged to the top or bottom edge scrolls the rows on. Ignored with `row_detail`, which renders every row; a debug build warns."),
                     prop("onbottomreached", "EventHandler<()>").default("None").doc("With `max_height`, called when the rows scroll to their bottom, by wheel, drag or End: append the next batch to `data`. Called again at the new bottom once rows were added. Not called while `loading` is set, so set it during a fetch to ask once. Without `max_height` it never fires; a debug build warns."),
                     prop("sort", "Option<Vec<TableSort>>").default("None").doc("The sorted columns, empty for source order. Set, the sort is controlled: pair it with `onsortchange`. Without `multi_sort`, one column sorts, the first entry naming a sortable header."),
@@ -472,6 +487,7 @@ pub fn TablePage() -> Element {
                     "With `cell_focus`, the table is a `role=\"grid\"` and one header or body cell is its tab stop, `tabindex=\"0\"`, the rest `-1`, so Tab passes the grid in one step. A header cell's sort, menu and filtered buttons, and its resize grip with `column_menu`, are `tabindex=\"-1\"` too: the cell is the one stop and its keys do their work. Up and Down pass by the `header_filters` row, text fields reached by Tab, whose arrows move the caret, and by group rows, whose toggles are stops of their own. Cells, column and row headers keep their roles; in a `virtual_row_height` table the focused cell's row stays rendered. The grid is `aria-readonly` without an editable column, `aria-multiselectable` with `selectable`.",
                     "With `parent_key`, the table is a `role=\"treegrid\"`: each body row carries `aria-level`, `aria-posinset`, `aria-setsize`, and `aria-expanded` when it has children or `row_has_children` says it will, `aria-busy` while open before they load, and one row is the tab stop, the first until focus moves. The row toggles are no Tab stops, as Left and Right do their work, and stay in the reading order. A collapse or filter that hides the focused row moves the stop, and the focus, to its nearest shown parent. With `cell_focus` its cells are stops too and the first header cell is the first.",
                     "In a grid with an editable column, the other cells are `aria-readonly`. The editor is a text field named \"Edit\" plus the column and the row's name, \"Edit Bonus, Ana\", a number column's with a decimal keypad and a `bool` column's a checkbox, mixed while an `Option<bool>` is empty. A value that does not parse or validate marks it `aria-invalid`, shows the `validate` message (or \"Not a valid value\") under it, linked by `aria-describedby`, and announces it once; typing clears it. A custom `editor` gets the message as `EditCtx::error` and clears it with `EditCtx::changed`. On a touch screen, which has no Escape, a Cancel edit button sits beside it.",
+                    "With `sticky_header`, a focus scroll stops below the header, so a focused cell is never hidden under it (WCAG 2.4.11).",
                 ])
                 .must([
                     "Name every table: `caption` shows a title, `aria_labelledby` points at a heading already on the page, `aria_label` names it without text.",
@@ -486,6 +502,7 @@ pub fn TablePage() -> Element {
                     "On Blitz, once a `max_height` table's rows scroll, a click on a header's sort or menu button misses: Blitz hit-tests the header where it sat before the scroll. Tab to the button and press Enter instead.",
                     "On Blitz, the same holds for a pinned column's cells once the table scrolls sideways. In a right-to-left page Blitz cannot scroll a wide table at all (todo 707), so pinning shows no effect there.",
                     "On Blitz, a `max_height` table's scrollbar is the native one and runs past the header too.",
+                    "On Blitz, a `sticky_header` holds against the window and a `ScrollArea` as on the web, but whether a focus scroll leaves the focused cell clear of it is not checked: Blitz reports no `scroll-margin-top` back.",
                     "On Blitz, a `max_height` table with column groups keeps only its last header row in place; the group rows scroll away with the rows. The same holds for the `header_filters` row.",
                     "On Blitz, a row's handle does not drag: Blitz paints no moved table row. The keyboard and the move buttons reorder there.",
                     "On Blitz, a header has no drag grip: columns reorder from the column menu there.",
@@ -619,6 +636,36 @@ pub fn TablePage() -> Element {
                 render: move |values: DemoValues| rsx! {
                     TeamTable { values }
                 },
+            }
+
+            DocSection {
+                title: "Sticky header",
+                Text {
+                    Code { source: "sticky_header" }
+                    " keeps the header in view while the page scrolls past the rows, this far "
+                    "below the top edge of the scrolling area: a CSS length, so a fixed app "
+                    "header's height keeps it clear. Scroll this page to see it."
+                }
+                // snippet: item use libero::chrono::NaiveDate;
+                // snippet: item #[derive(Clone, PartialEq)] struct Person { name: String, role: String, joined: NaiveDate }
+                // snippet: let people: Vec<Person> = Vec::new();
+                Demo {
+                    component: "Table",
+                    title: "Sticky header",
+                    wide_preview: true,
+                    page_scroll: true,
+                    children_text: "",
+                    fixed: STICKY_FIXED.map(str::to_string).to_vec(),
+                    controls: vec![
+                        Control::switch("sticky_header").default("true").code(|_, values| match values.str("sticky_header") == "true" {
+                            true => vec![format!("sticky_header: {STICKY_OFFSET:?}")],
+                            false => vec![],
+                        }),
+                    ],
+                    render: move |values: DemoValues| rsx! {
+                        StickyTable { values }
+                    },
+                }
             }
 
             DocSection {

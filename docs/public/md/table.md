@@ -953,6 +953,7 @@ fn Demo() -> Element {
 | `csv_formula_guard` | `bool` | `true` | Gives a `TableExportButton` cell that starts with `=`, `+`, `-`, `@`, Tab or CR, a plain number aside, a leading `'`, so a spreadsheet reads it as text, not a formula (CSV injection, OWASP), as `table_csv` does. `false` exports every cell as it is, as `table_csv_raw` does. |
 | `scroll` | `bool` | `false` | Wraps the table in a `ScrollArea` that scrolls sideways. `class`, `sx` and `attributes` stay on the table. |
 | `max_height` | `Option<String>` | `None` | Caps the table's height, any CSS length. The rows scroll in a `ScrollArea`, both ways, under a header that stays put, with the scrollbar beside the rows only. The `caption` sits above the scrolled box. The header takes the page surface's colour: on another background, set it with `sx().selector("& thead th", ..)`. |
+| `sticky_header` | `Option<String>` | `None` | Keeps the header in view while the page, or the scrolling container around the table, scrolls past the rows: this far below its top edge, a CSS length, say `"0"` or a fixed app header's height. It sticks to the nearest ancestor with an `overflow` other than `visible`, even one that only scrolls sideways. The footer and a `toolbar` do not stick. A focus scroll leaves the focused cell clear of the header. No effect with `max_height`, whose header stays put already, or with `scroll` and pinned columns, whose scroll area holds the header instead of the page; a debug build warns. |
 | `virtual_row_height` | `Option<f64>` | `None` | With `max_height`, renders only the rows in view plus a few beyond each edge, so ten thousand rows scroll like fifty. Every body row is clipped to this height in px: one line per cell, longer text ends in an ellipsis. The table then lays out fixed, columns without a `width` sharing the rest evenly. A row holding focus stays rendered while it scrolls away. With `onrowreorder` a keyboard move scrolls to its slot, and a row dragged to the top or bottom edge scrolls the rows on. Ignored with `row_detail`, which renders every row; a debug build warns. |
 | `onbottomreached` | `EventHandler<()>` | `None` | With `max_height`, called when the rows scroll to their bottom, by wheel, drag or End: append the next batch to `data`. Called again at the new bottom once rows were added. Not called while `loading` is set, so set it during a fetch to ask once. Without `max_height` it never fires; a debug build warns. |
 | `sort` | `Option<Vec<TableSort>>` | `None` | The sorted columns, empty for source order. Set, the sort is controlled: pair it with `onsortchange`. Without `multi_sort`, one column sorts, the first entry naming a sortable header. |
@@ -1206,6 +1207,8 @@ Like every component, `Table` also takes the shared props `sx`, `class`,
   "Not a valid value") under it, linked by `aria-describedby`, and announces it
   once; typing clears it. A custom `editor` gets the message as `EditCtx::error` and clears it with `EditCtx::changed`.
   On a touch screen, which has no Escape, a Cancel edit button sits beside it.
+- With `sticky_header`, a focus scroll stops below the header, so a focused cell
+  is never hidden under it (WCAG 2.4.11).
 
 ### You must
 
@@ -1237,6 +1240,9 @@ each cell of that row, and names the row's toggle "Details for Cherry".
   (todo 707), so pinning shows no effect there.
 - On Blitz, a `max_height` table's scrollbar is the native one and runs past
   the header too.
+- On Blitz, a `sticky_header` holds against the window and a `ScrollArea` as on
+  the web, but whether a focus scroll leaves the focused cell clear of it is not
+  checked: Blitz reports no `scroll-margin-top` back.
 - On Blitz, a `max_height` table with column groups keeps only its last header
   row in place; the group rows scroll away with the rows. The same holds for
   the `header_filters` row.

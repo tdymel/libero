@@ -39,6 +39,12 @@ button "Blue"
 button "Save"
   image
   StaticText "Save"
+button "Next"
+  StaticText "Next"
+  image
+button "Next" [busy=1] [disabled]
+  StaticText "Next"
+  image
 button "Bold" [pressed=false]
   StaticText "Bold"
 button "Bold" [pressed]

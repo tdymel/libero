@@ -13,6 +13,8 @@ mod typography;
 
 pub use accessibility::*;
 pub use buttons::*;
+#[cfg(any(feature = "text", feature = "title"))]
+pub use common::Truncate;
 pub use common::{
     ClassList, HtmlTag, Input, NumberValue, OptionItem, OptionLabel, OptionList, OptionSource,
     Options, Orientation, Part, Parts, States, StaticParts, Variables, Variant, class_list, states,

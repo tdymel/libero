@@ -10,7 +10,8 @@ use std::time::Duration;
 use dioxus::prelude::*;
 use libero::chrono::NaiveDate;
 use libero::components::{
-    ColumnDefaults, ColumnFilter, PinnedColumns, SortDirection, States, Table, TableSort, column,
+    ColumnDefaults, ColumnFilter, PinnedColumns, ScrollArea, SortDirection, States, Table,
+    TableSort, column,
 };
 use libero::platform::{TimerSubscription, timer};
 use libero::sx::sx;
@@ -35,6 +36,14 @@ pub const ROUTES: Routes = &[
         || rsx! { StickyTablePage { interactive: false } },
     ),
     ("/table/sticky-select", || rsx! { StickySelectPage {} }),
+    (
+        "/table/page-sticky",
+        || rsx! { PageStickyTablePage { boxed: false } },
+    ),
+    (
+        "/table/area-sticky",
+        || rsx! { PageStickyTablePage { boxed: true } },
+    ),
     ("/table/filter", || rsx! { FilterTablePage {} }),
     ("/table/column-filter", || rsx! { ColumnFilterTablePage {} }),
     ("/table/date-filter", || rsx! { DateFilterTablePage {} }),
@@ -501,6 +510,38 @@ fn StickyTablePage(interactive: bool) -> Element {
             data,
             columns,
         }
+    }
+}
+
+/// Forty fruits below a 300px banner, their header kept 40px under the top of the page, or
+/// with `boxed` of a 400px `#area` that scrolls them instead.
+#[component]
+fn PageStickyTablePage(boxed: bool) -> Element {
+    let data: Vec<Fruit> = (1..=40)
+        .map(|stock| Fruit {
+            name: ["Apple", "Banana", "Cherry", "Date"][stock as usize % 4],
+            stock,
+        })
+        .collect();
+    let table = rsx! {
+        div { id: "banner", height: "300px", "Banner" }
+        Table {
+            caption: "Fruit stock",
+            sticky_header: "40px",
+            selectable: true,
+            row_key: |fruit: &Fruit| fruit.stock.to_string(),
+            data,
+            columns: vec![
+                column("Name").value(|fruit: &Fruit| fruit.name.to_string()),
+                column("Stock").value(|fruit: &Fruit| fruit.stock).row_header(),
+            ],
+        }
+    };
+    match boxed {
+        true => rsx! {
+            ScrollArea { id: "area", sx: sx().height("400px"), {table} }
+        },
+        false => table,
     }
 }
 

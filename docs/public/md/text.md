@@ -32,6 +32,8 @@ fn Demo() -> Element {
 | `component` | `HtmlTag` | `p` | The element to render. |
 | `color` | `ThemeAwareValue` | - | The text color: a theme color name in its text shade, or any CSS color. Unset, the text inherits. Under a gradient, its first stop. |
 | `gradient` | `Gradient` | - | Paints the glyphs with a gradient from `color` to a second stop, as `("info", 90)` or `Gradient::default().to("info").deg(90)`; `Gradient::default()` is the theme's. Keep it to large display text: the contrast of a literal CSS stop is yours to check, and a debug build warns when a hex stop reads under 4.5:1 on the page background. Solid in its first stop in print and in native windows, the system text colour in forced colours. |
+| `truncate` | `Truncate` | - | Cuts the text on one line with an ellipsis at its `end` or `start`. The element becomes a block, so a `span` truncates too. Set a `title` if the cut text matters; the full text stays in the accessible name. `line_clamp` wins when both are set. |
+| `line_clamp` | `u32` | - | Cuts the text after this many lines with an ellipsis. Over `truncate`; `0` is off. On Blitz there is no line clamp: the text is cut at that many lines, without the ellipsis. |
 | `children` | `Element` | required | The text. |
 
 Like every component, `Text` also takes the shared props `sx`, `class`,
@@ -43,6 +45,7 @@ Like every component, `Text` also takes the shared props `sx`, `class`,
 
 - A large size is only styling, so it never makes a heading.
 - A long word breaks inside the text rather than overflowing a narrow column.
+- A cut text is still whole in the DOM, so a screen reader reads all of it.
 
 ### You must
 
@@ -53,6 +56,8 @@ Like every component, `Text` also takes the shared props `sx`, `class`,
 - Keep `gradient` to large display text and check the contrast of a literal CSS
   stop. A debug build warns when a hex stop reads under 4.5:1 on the page
   background.
+- Pass a text that may be cut as `title` too, so sighted users can read it on
+  hover, or show it in full elsewhere.
 
 ### Example
 
@@ -63,6 +68,7 @@ stays part of the sentence, and its large size does not make it a heading.
 
 - `component` keeps the body-text look, so `a`, `strong`, `del` and the like
   lose their underline, weight or line. For a link, use [`Anchor`](anchor.md).
+- On Blitz, `line_clamp` cuts the text at its last line without an ellipsis.
 
 ## Theme defaults
 
@@ -91,3 +97,5 @@ State tokens on the root's `data-state`, space separated.
 | Token | Condition |
 |---|---|
 | `size-<size>` | The `size` in effect. |
+| `truncate-end` / `truncate-start` | The `truncate` in effect, without a `line_clamp`. |
+| `line-clamp` | `line_clamp` is above 0. |

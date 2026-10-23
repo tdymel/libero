@@ -26,6 +26,17 @@ pub(super) fn warn_misuse<T: Clone + PartialEq + 'static>(props: &TableProps<T>)
             "Table: `onbottomreached` without `max_height` never fires: the page scrolls, not the table.",
         );
     }
+    if props.sticky_header.is_some() && props.max_height.is_some() {
+        warn(
+            "Table: `sticky_header` with `max_height` does nothing: that header stays put already.",
+        );
+    }
+    if props.sticky_header.is_some() && props.scroll && props.max_height.is_none() {
+        warn(
+            "Table: `sticky_header` with `scroll` does nothing: the scroll area holds the \
+             header, so it cannot stick to the page.",
+        );
+    }
     if props.virtual_row_height.is_some() && props.row_detail.is_set() {
         warn(
             "Table: `virtual_row_height` with `row_detail` renders every row: a detail \
@@ -170,6 +181,15 @@ mod tests {
         assert!(says(&table!(onbottomreached: |()| {}), what));
         let capped = table!(onbottomreached: |()| {}, max_height: "20rem");
         assert!(!says(&capped, what), "{capped:?}");
+    }
+
+    #[test]
+    fn a_page_sticky_header_in_a_box_warns() {
+        let what = "`sticky_header` with";
+        assert!(says(&table!(sticky_header: "0", max_height: "20rem"), what));
+        assert!(says(&table!(sticky_header: "0", scroll: true), what));
+        let page = table!(sticky_header: "0");
+        assert!(!says(&page, what), "{page:?}");
     }
 
     #[test]

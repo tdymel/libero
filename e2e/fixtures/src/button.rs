@@ -107,6 +107,19 @@ fn ButtonPage() -> Element {
                 } },
                 span { id: "with-icon-text", "Save" }
             }
+            // Todo 3961: an icon after the label, also under `loading`.
+            Button { id: "with-trailing",
+                trailing_icon: rsx! { svg { id: "with-trailing-glyph", width: "16", height: "16", view_box: "0 0 24 24",
+                    circle { cx: "12", cy: "12", r: "8" }
+                } },
+                span { id: "with-trailing-text", "Next" }
+            }
+            Button { id: "trailing-busy", loading: true,
+                trailing_icon: rsx! { svg { id: "trailing-busy-glyph", width: "16", height: "16", view_box: "0 0 24 24",
+                    circle { cx: "12", cy: "12", r: "8" }
+                } },
+                "Next"
+            }
             for variant in ["filled", "tonal", "elevated", "outlined", "standard"] {
                 Flex { gap: "sm",
                     Button { id: "off-{variant}", variant, selected: false, "Bold" }

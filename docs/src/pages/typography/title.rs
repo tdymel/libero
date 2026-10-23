@@ -1,12 +1,35 @@
 use crate::components::{
-    Control, Demo, DemoValues, DocPage, a11y, gradient_controls, gradient_value, prop, props,
+    Control, Demo, DemoValues, DocPage, UNSET, a11y, gradient_controls, gradient_value, prop, props,
 };
 use dioxus::prelude::*;
 use libero::components::{Code, HtmlTag, Input, Text, Title};
+use libero::sx::sx;
 use libero::use_theme;
+
+/// Long enough to fill three lines of `CUT_WIDTH` at the default size.
+const TEXT: &str = "The quick brown fox jumps over the lazy dog and keeps running";
+
+/// Narrow enough that `TEXT` needs a cut.
+const CUT_WIDTH: &str = "20rem";
 
 fn no_gradient(values: &DemoValues) -> bool {
     values.str("gradient") != "true"
+}
+
+fn is_cut(values: &DemoValues) -> bool {
+    values.str("truncate") != UNSET || values.str("line_clamp") != UNSET
+}
+
+/// `truncate` and the `sx` that narrows the preview to it.
+fn cut_code(values: &DemoValues) -> Vec<String> {
+    let mut lines = Vec::new();
+    if let value @ ("end" | "start") = values.str("truncate").as_str() {
+        lines.push(format!("truncate: {value:?}"));
+    }
+    if is_cut(values) {
+        lines.push(format!("sx: sx().max_width({CUT_WIDTH:?})"));
+    }
+    lines
 }
 
 #[component]
@@ -27,16 +50,25 @@ pub fn TitlePage() -> Element {
                     .doc("The heading tag. The size's look stays. A debug build warns for a tag other than `h1` to `h6`."),
                 prop("gradient", "Gradient")
                     .doc("Paints the glyphs with a gradient from the theme's first stop to a second, as `(\"info\", 90)` or `Gradient::default().to(\"info\").deg(90)`; `Gradient::default()` is the theme's. The contrast of a literal CSS stop is yours to check, and a debug build warns when a hex stop reads under 4.5:1 on the page background. Solid in its first stop in print and in native windows, the system text color in forced colors."),
+                prop("truncate", "Truncate")
+                    .doc("Cuts the title on one line with an ellipsis at its `end` or `start`. `line_clamp` wins when both are set."),
+                prop("line_clamp", "u32")
+                    .doc("Cuts the title after this many lines with an ellipsis. Over `truncate`; `0` is off. On Blitz there is no line clamp: the title is cut at that many lines, without the ellipsis."),
                 prop("children", "Element").default("required").doc("The heading text."),
             ])],
             accessibility: a11y()
-                .handles(["`size` picks the heading tag, `xxl` as `h1` down to `xs` as `h6`, unless `component` is set."])
+                .handles([
+                    "`size` picks the heading tag, `xxl` as `h1` down to `xs` as `h6`, unless `component` is set.",
+                    "A cut heading is still whole in the DOM, so a screen reader and the outline read all of it.",
+                ])
                 .must([
+                    "Pass a heading that may be cut as `title` too, so sighted users can read it on hover.",
                     "Keep one `h1` per page and skip no levels.",
                     "A `lg` heading in a section under the page's `h1` needs `component: \"h2\"`, or the document jumps from `h1` to `h3`.",
                     "Check the contrast of a literal CSS stop in `gradient`. A debug build warns when a hex stop reads under 4.5:1 on the page background.",
                 ])
-                .example("A section heading under the page's `h1`, `Title { size: \"lg\", component: \"h2\", \"Pricing\" }`: a screen reader lists \"Pricing\" as a level 2 heading, whatever its size."),
+                .example("A section heading under the page's `h1`, `Title { size: \"lg\", component: \"h2\", \"Pricing\" }`: a screen reader lists \"Pricing\" as a level 2 heading, whatever its size.")
+                .limits(["On Blitz, `line_clamp` cuts the title at its last line without an ellipsis."]),
             lead: rsx! {
                 Text {
                     "A heading, "
@@ -64,7 +96,7 @@ pub fn TitlePage() -> Element {
             },
             Demo {
                     component: "Title",
-                    children_text: "The quick brown fox",
+                    children_text: TEXT,
                     controls: vec![
                         Control::sizes("size")
                             .default(theme.title.size.as_str()),
@@ -83,17 +115,35 @@ pub fn TitlePage() -> Element {
                         }),
                         gradient_to,
                         gradient_deg,
+                        // On, so the ellipsis shows without another switch.
+                        Control::toggle("truncate", [UNSET, "end", "start"])
+                            .labels(["Unset", "End", "Start"])
+                            .default("end")
+                            .code(|_, values| cut_code(values)),
+                        Control::toggle("line_clamp", [UNSET, "1", "2", "3"])
+                            .labels(["Unset", "1", "2", "3"])
+                            .default(UNSET)
+                            .code(|_, values| match values.str("line_clamp").as_str() {
+                                UNSET => vec![],
+                                lines => vec![format!("line_clamp: {lines}")],
+                            }),
                     ],
                     render: move |values: DemoValues| rsx! {
                         Title {
                             size: values.str("size"),
+                            truncate: match values.str("truncate").as_str() {
+                                UNSET => Input::None,
+                                end => Input::from(end),
+                            },
+                            line_clamp: values.str("line_clamp").parse::<u32>().ok(),
+                            sx: is_cut(&values).then(|| sx().max_width(CUT_WIDTH)),
                             component: match values.str("component").as_str() {
                                 // The default follows `size`, so leave the prop unset.
                                 "auto" => Input::None,
                                 tag => Input::Value(HtmlTag::from(tag)),
                             },
                             gradient: (values.str("gradient") == "true").then(|| gradient_value(&values)),
-                            "The quick brown fox"
+                            {TEXT}
                         }
                 },
             }

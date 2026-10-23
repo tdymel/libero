@@ -1,6 +1,6 @@
 use super::{
-    MAX_HEIGHT, SCROLL_WIDTH, WINDOW_HEIGHT, WINDOW_HIDES, edits, from_server, no_rows, reorders,
-    resizes, windowed,
+    MAX_HEIGHT, SCROLL_WIDTH, STICKY_OFFSET, WINDOW_HEIGHT, WINDOW_HIDES, edits, from_server,
+    no_rows, reorders, resizes, windowed,
 };
 use crate::components::DemoValues;
 use dioxus::prelude::*;
@@ -125,6 +125,25 @@ fn fetch(from: usize) -> Vec<Person> {
     (1..=10_000).skip(from).take(BATCH).map(member).collect()
 }
 // demo-code: server end
+
+/// Thirty rows under a header that follows the page's scroll.
+#[component]
+pub fn StickyTable(values: DemoValues) -> Element {
+    let offset = (values.str("sticky_header") == "true").then(|| STICKY_OFFSET.to_string());
+    rsx! {
+        Table {
+            caption: "Team members",
+            sticky_header: offset,
+            data: (1..=30).map(member).collect::<Vec<_>>(),
+            row_key: |p: &Person| p.name.clone(),
+            columns: vec![
+                column("Name").value(|p: &Person| p.name.clone()).row_header(),
+                column("Role").value(|p: &Person| p.role.clone()),
+                column("Joined").value(|p: &Person| p.joined),
+            ],
+        }
+    }
+}
 
 #[derive(Clone, PartialEq)]
 struct Staff {

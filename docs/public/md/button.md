@@ -34,10 +34,10 @@ fn Demo() -> Element {
 
 ## Labels and icons
 
-A `Button` shows a label, with an optional `icon` before it. `ActionIcon` is the
-same button reduced to a square icon: it requires an `aria_label`, keeps a 24px
-target and defaults to no background. A `Button` with no text would be a wide
-pill without an accessible name.
+A `Button` shows a label, with an optional `icon` before it and `trailing_icon`
+after it. `ActionIcon` is the same button reduced to a square icon: it requires
+an `aria_label`, keeps a 24px target and defaults to no background. A `Button`
+with no text would be a wide pill without an accessible name.
 
 ## Props
 
@@ -59,6 +59,7 @@ pill without an accessible name.
 | `new_tab_hint` | `bool` | `true` | With `target: "_blank"`, the hidden "(opens in a new tab)". `false` drops it and the icon. |
 | `new_tab_icon` | `bool` | `false` | With `target: "_blank"`, draws a small external icon after the label. Unset, the theme's `anchor.new_tab_icon`, which is off. |
 | `icon` | `Element` | - | Drawn before the label. It never shrinks. |
+| `trailing_icon` | `Element` | - | Drawn after the label, as a chevron or an arrow. It never shrinks, and on a link it comes before the new-tab icon. |
 | `parts` | `Parts<ButtonPart>` | - | Styles for the inner parts in the Style API tab, under `sx`. |
 | `children` | `Element` | required | The label, on one line. A long one is cut at the edge. |
 
@@ -75,6 +76,7 @@ parts work.
 | Part | `data-slot` | Description |
 |---|---|---|
 | `ButtonPart::Icon` | `button-icon` | The `icon` wrapper. |
+| `ButtonPart::TrailingIcon` | `button-trailing-icon` | The `trailing_icon` wrapper. |
 
 ## Accessibility
 

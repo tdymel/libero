@@ -3,17 +3,19 @@ use dioxus::prelude::*;
 use crate::{
     components::{
         common::{
-            HtmlTag, Input, States, base_color, base_props, gradient_text_sx, text_color, variables,
+            Cut, HtmlTag, Input, States, Truncate, base_color, base_props, gradient_text_sx,
+            text_color, truncate_sx, variables,
         },
         layout::use_box,
     },
     hooks::{use_gradient_style, use_theme},
     sx::{StaticSx, ThemeAwareValue, sx},
-    theme::{CssVar, Gradient, Size, TextDefaults},
+    theme::{CssVar, Gradient, Size, TEXT_LINE_HEIGHT, TextDefaults},
 };
 
 static TEXT_BASE_SX: StaticSx = StaticSx::new(|| {
     TextDefaults::theme_vars()
+        .and(truncate_sx(TEXT_LINE_HEIGHT))
         .margin("0")
         .padding("0")
         .text_decoration("none")
@@ -40,6 +42,14 @@ base_props! {
         /// [`Gradient`]. A literal stop's contrast is the caller's to check.
         #[props(default, into)]
         gradient: Option<Gradient>,
+        /// Cuts a text on one line with an ellipsis at its `end` or `start`. The element
+        /// becomes a block, so a `span` truncates too. `line_clamp` wins when both are set.
+        #[props(default, into)]
+        truncate: Input<Truncate>,
+        /// Cuts the text after this many lines with an ellipsis; over `truncate`, and `0`
+        /// is off. Blitz has no line clamp: it cuts at the line height, without an ellipsis.
+        #[props(default)]
+        line_clamp: Option<u32>,
         children: Element,
     }
 }
@@ -75,24 +85,37 @@ pub fn Text(props: TextProps) -> Element {
     let colored = plain.is_some();
     let style = gradient.or_else(|| colored.then(|| variables().with(TEXT_COLOR, plain).render()));
 
-    let states: Input<States> = props
-        .states
-        .unwrap_or_default()
-        .with(chosen_size.state_name(), true)
-        .with("colored", colored)
-        .with("gradient", props.gradient.is_some())
+    let cut = Cut::of(&props.truncate, props.line_clamp);
+    let states: Input<States> = cut
+        .states()
+        .into_iter()
+        .fold(
+            props
+                .states
+                .unwrap_or_default()
+                .with(chosen_size.state_name(), true)
+                .with("colored", colored)
+                .with("gradient", props.gradient.is_some()),
+            |states, (state, on)| states.with(state, on),
+        )
         .into();
+    let lines = cut.variables();
+    let children = match cut.is_start() {
+        true => rsx! { bdi { {props.children} } },
+        false => props.children,
+    };
 
     use_box()
         .framework_sx(&TEXT_BASE_SX)
         .class(&props.class)
         .sx(&props.sx)
         .states(&states)
+        .variables(&lines)
         .style(style)
         .prepare()
         .render(
             props.component.copied_or(HtmlTag::P),
             props.attributes,
-            props.children,
+            children,
         )
 }

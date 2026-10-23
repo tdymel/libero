@@ -94,6 +94,28 @@ fn row_ring_cell_sx(sides: Sides) -> Sx {
 /// Where the header filters row sticks on Blitz: the column headers' height.
 const FILTERS_TOP_VAR: CssVar = CssVar::new("--lsx-table-filters-top");
 
+/// How far below the viewport's top a `sticky_header` sticks; unset, a capped table's 0.
+const STICKY_TOP_VAR: CssVar = CssVar::new("--lsx-table-sticky-top");
+
+/// The sticky header's height, which a focus scroll in the page leaves clear.
+const HEAD_HEIGHT_VAR: CssVar = CssVar::new("--lsx-table-head-height");
+
+fn sticky_top() -> String {
+    format!("var({}, 0px)", STICKY_TOP_VAR.name())
+}
+
+/// A bare `0` is no length inside a `calc()`.
+fn sticky_length(offset: &str) -> String {
+    match offset.trim() {
+        "0" => "0px".to_string(),
+        offset => offset.to_string(),
+    }
+}
+
+/// The body's focusable parts, which a page scroll to focus would leave under the sticky header.
+const PAGE_FOCUS_TARGETS: &str = "& tbody tr, & tbody td, & tbody th, \
+     & tbody :is(a[href], button, input, select, textarea, [tabindex])";
+
 static TABLE_SX: StaticSx = StaticSx::new(|| {
     let vars = TableDefaults::theme_vars();
     match widens_sized_tables() {
@@ -640,7 +662,7 @@ static TABLE_SX: StaticSx = StaticSx::new(|| {
         sx().selector(
             "& thead th:not([data-group])",
             sx().position("sticky")
-                .top("0")
+                .top(sticky_top())
                 .z_index("1")
                 .background(NamedColorCss::SURFACE.value()),
         ),
@@ -648,20 +670,42 @@ static TABLE_SX: StaticSx = StaticSx::new(|| {
     // Several header rows can't all stick at the top: the `thead` does.
     .when(
         "sticky-head",
-        sx().selector("& thead", sx().position("sticky").top("0").z_index("1"))
-            .selector(
-                "& thead th, & thead td",
-                sx().background(NamedColorCss::SURFACE.value()),
-            ),
+        sx().selector(
+            "& thead",
+            sx().position("sticky").top(sticky_top()).z_index("1"),
+        )
+        .selector(
+            "& thead th, & thead td",
+            sx().background(NamedColorCss::SURFACE.value()),
+        ),
     )
     .when(
         "sticky-filters",
         sx().selector(
             "& thead tr[data-filters] > td",
             sx().position("sticky")
-                .top(FILTERS_TOP_VAR.value())
+                .top(format!(
+                    "calc({} + {})",
+                    sticky_top(),
+                    FILTERS_TOP_VAR.value()
+                ))
                 .z_index("1")
                 .background(NamedColorCss::SURFACE.value()),
+        ),
+    )
+    // A focus scroll in the page stops below the header, not under it (WCAG 2.4.11).
+    .when(
+        "sticky-page",
+        sx().selector(
+            PAGE_FOCUS_TARGETS,
+            sx().with(
+                "scroll-margin-top",
+                format!(
+                    "calc({} + var({}, 0px))",
+                    sticky_top(),
+                    HEAD_HEIGHT_VAR.name()
+                ),
+            ),
         ),
     )
     // On each `td`, like the header's `th`: the rows scroll under it.
@@ -955,6 +999,13 @@ pub struct TableProps<T: Clone + PartialEq + 'static> {
     /// axes) under a header that stays put.
     #[props(default, into)]
     max_height: Option<String>,
+    /// Keeps the header in view while the page, or the scrolling container around the table,
+    /// scrolls past the rows, this far below its top edge: a CSS length, say `"0"` or a fixed
+    /// app header's height. It sticks to the nearest ancestor with an `overflow` other than
+    /// `visible`, even one that only scrolls sideways. No effect with `max_height`, whose header already stays put, or with
+    /// `scroll`, whose area holds it instead of the page; a debug build warns.
+    #[props(default, into)]
+    sticky_header: Option<String>,
     /// With `max_height`, renders only the rows in view, each clipped to this
     /// height in px with one line per cell, group rows too. Off with `row_detail`.
     #[props(default)]
@@ -1345,11 +1396,19 @@ pub fn Table<T: Clone + PartialEq + 'static>(mut props: TableProps<T>) -> Elemen
         onfilter,
     };
     let bounded = props.max_height.is_some();
-    let (head_element, mut head) = use_edge_height(bounded);
+    // Under the page's scroll the header sticks too, if no box holds it.
+    let page_sticky = props.sticky_header.is_some() && !bounded && !props.scroll;
+    let sticks = bounded || page_sticky;
+    let sticky_offset = props
+        .sticky_header
+        .as_deref()
+        .filter(|_| page_sticky)
+        .map(sticky_length);
+    let (head_element, mut head) = use_edge_height(sticks);
     let (foot_element, mut foot) = use_edge_height(bounded);
     let lift = use_signal(|| None::<(usize, usize)>);
     // Blitz sticks each column header, not the `thead`: the filters row sticks under them by hand (todo 1402).
-    let sticky_filters = bounded && props.header_filters && !sticks_table_heads();
+    let sticky_filters = sticks && props.header_filters && !sticks_table_heads();
     let head_cell = use_element();
     let mut head_cell_height = use_signal(|| 0.0);
     use_resize_fallback(head_cell, move |event| {
@@ -1872,12 +1931,13 @@ pub fn Table<T: Clone + PartialEq + 'static>(mut props: TableProps<T>) -> Elemen
         .with("row-click", props.onrowclick.is_some())
         .with(
             "sticky-header",
-            bounded && !(head_rows > 1 && sticks_table_heads()),
+            sticks && !(head_rows > 1 && sticks_table_heads()),
         )
         .with(
             "sticky-head",
-            bounded && head_rows > 1 && sticks_table_heads(),
+            sticks && head_rows > 1 && sticks_table_heads(),
         )
+        .with("sticky-page", page_sticky)
         // Under group rows, which scroll away there, it would leave their gap. Unmeasured, it would stick at 0.
         .with(
             "sticky-filters",
@@ -1928,6 +1988,11 @@ pub fn Table<T: Clone + PartialEq + 'static>(mut props: TableProps<T>) -> Elemen
             FILTERS_TOP_VAR,
             sticky_filters.then(|| format!("{}px", head_cell_height())),
         )
+        .with(STICKY_TOP_VAR, sticky_offset)
+        .with(
+            HEAD_HEIGHT_VAR,
+            page_sticky.then(|| format!("{}px", head())),
+        )
         .into();
     let table = use_box()
         .framework_sx(&TABLE_SX)
@@ -1970,7 +2035,7 @@ pub fn Table<T: Clone + PartialEq + 'static>(mut props: TableProps<T>) -> Elemen
                 head_probe: sticky_filters.then_some(head_cell),
                 resize,
                 drag: drags.then_some(column_drag),
-                on_head_height: bounded.then(|| EventHandler::new(move |height| head.set(height))),
+                on_head_height: sticks.then(|| EventHandler::new(move |height| head.set(height))),
                 thead: head_element,
                 pin_edge,
                 pin_width,

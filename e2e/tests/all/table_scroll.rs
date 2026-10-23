@@ -1,7 +1,7 @@
 //! `Table` scrolling: the sticky header, focus that scrolls the rows, and windowed or infinite rows.
 
 use super::table::AREA;
-use anyhow::{Result, bail};
+use anyhow::{Result, bail, ensure};
 use e2e::browser::block_on;
 use e2e::driver::{Driver, Platform, eventually, eventually_focused, eventually_text};
 use e2e::passes::{keyboard, pointer};
@@ -714,4 +714,60 @@ e2e::scenario!(
     "/table/sticky-select",
     a_focused_row_stays_below_the_header,
     android: skip("958: element identity on the WebView")
+);
+
+/// Todo 3968: `sticky_header` holds the header at its offset while the page, or the `#area`
+/// around the table, scrolls past the rows, and a focus scroll leaves a row clear of it.
+async fn the_header_holds_at_its_offset_under_the_scroll<D: Driver>(
+    d: &mut D,
+    route: &str,
+) -> Result<()> {
+    const OFFSET: f64 = 40.0;
+    let boxed = route.ends_with("area-sticky");
+    let origin = match boxed {
+        true => d.rect("#area").await?.y,
+        false => 0.0,
+    };
+    let at_rest = d.rect("thead th").await?.y - origin;
+    ensure!(
+        at_rest > 200.0,
+        "the header starts below the banner: {at_rest}"
+    );
+    match boxed {
+        true => d.scroll_to("#area", 0.0, 900.0).await?,
+        false => d.scroll_by(900.0).await?,
+    }
+    eventually(d, "the header held at its offset", async |d| {
+        Ok((d.rect("thead th").await?.y - origin - OFFSET).abs() <= 1.0)
+    })
+    .await?;
+    let header = d.rect("thead th").await?;
+    let row = d.rect("tbody tr:nth-child(30)").await?;
+    ensure!(
+        row.y + row.height <= header.y || row.y >= header.y + header.height - 1.0,
+        "a row paints under the header: {row:?} vs {header:?}"
+    );
+    // Blitz reads no `scroll-margin-top` back.
+    if !matches!(d.platform(), Platform::Native) {
+        let margin = d.style("tbody tr", "scroll-margin-top").await?;
+        let margin: f64 = margin.trim_end_matches("px").parse()?;
+        ensure!(
+            (margin - (OFFSET + header.height)).abs() <= 1.0,
+            "scroll margin {margin} is not the offset plus the header's {}",
+            header.height
+        );
+    }
+    Ok(())
+}
+
+e2e::scenario!(
+    a_page_sticky_header_holds_at_its_offset,
+    "/table/page-sticky",
+    the_header_holds_at_its_offset_under_the_scroll
+);
+
+e2e::scenario!(
+    a_sticky_header_holds_at_its_offset_in_a_scroll_area,
+    "/table/area-sticky",
+    the_header_holds_at_its_offset_under_the_scroll
 );

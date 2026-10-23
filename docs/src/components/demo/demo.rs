@@ -562,6 +562,9 @@ pub fn Demo(
     /// that needs the card's whole width - a table, a player, a notification host.
     #[props(default)]
     wide_preview: bool,
+    /// Leaves the preview no scroll box of its own, so a sticky header sticks to the page's scroll.
+    #[props(default)]
+    page_scroll: bool,
     /// The demo's own source, printed above the call: `DemoFile(include_str!("x_demo.rs"))`.
     file: Option<DemoFile>,
     /// Tells the code blocks apart when a page has several demos of one component.
@@ -608,6 +611,11 @@ pub fn Demo(
         true => code.source(&current),
         false => code.shown_source(&current),
     };
+    // `clip` rounds the corners without a scroll box, which a sticky header would stick to.
+    let (card_overflow, preview_overflow) = match page_scroll {
+        true => ("clip", "visible"),
+        false => ("hidden", "auto"),
+    };
     rsx! {
         Box {
             sx: sx()
@@ -615,7 +623,7 @@ pub fn Demo(
                 .border_radius("6px")
                 // Keeps the code block's own square corners inside the card's
                 // rounded ones.
-                .overflow("hidden")
+                .overflow(card_overflow)
                 // The panel wraps on the card's width, not the viewport's (they differ by the nav).
                 .container(DEMO_CARD),
             Flex {
@@ -633,7 +641,7 @@ pub fn Demo(
                         // A preview wider than the card scrolls rather than
                         // being cut off; `safe` keeps its start reachable.
                         .justify_content("safe center")
-                        .overflow_x("auto"),
+                        .overflow_x(preview_overflow),
                     {render.call(DemoValues(current.0.clone(), Some(values)))}
                 }
                 // No props, no panel - the preview and the code block are

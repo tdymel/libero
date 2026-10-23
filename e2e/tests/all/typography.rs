@@ -1,9 +1,64 @@
 //! `Text`, `Title`, `Blockquote`, `Mark` and inline `Code`: contrast in both
 //! schemes, and text that reflows in a 320px column.
 
+use anyhow::{Result, ensure};
 use e2e::browser::block_on;
+use e2e::driver::Driver;
 use e2e::wait::PageBounded;
 use e2e::{Fixture, Suite, Viewport, ax, wait};
+
+/// Todo 3966: `truncate` keeps the text on one line, `line_clamp` cuts it after its lines and
+/// wins over `truncate`, `0` is off, and `start` reads right to left.
+async fn truncate_cuts_to_lines<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    for (one, plain, one_line, clamped) in [
+        ("#text-one", "#text-plain", "#text-end", "#text-clamp"),
+        ("#title-one", "#title-plain", "#title-end", "#title-clamp"),
+    ] {
+        let line = d.rect(one).await?.height;
+        let whole = d.rect(plain).await?.height;
+        ensure!(
+            whole > line * 2.5,
+            "{plain} fits in {whole}, a line is {line}"
+        );
+        let end = d.rect(one_line).await?.height;
+        ensure!(
+            (end - line).abs() <= 1.0,
+            "{one_line} is {end} tall, a line is {line}"
+        );
+        let clamp = d.rect(clamped).await?.height;
+        ensure!(
+            (clamp - 2.0 * line).abs() <= 2.0,
+            "{clamped} is {clamp} tall, two lines are {}",
+            2.0 * line
+        );
+    }
+    let line = d.rect("#text-one").await?.height;
+    let start = d.rect("#text-start").await?.height;
+    ensure!(
+        (start - line).abs() <= 1.0,
+        "#text-start is {start} tall, a line is {line}"
+    );
+    let direction = d.style("#text-start", "direction").await?;
+    ensure!(direction == "rtl", "a start cut reads {direction}");
+    let wins = d.rect("#text-clamp-wins").await?.height;
+    ensure!(
+        (wins - 2.0 * line).abs() <= 2.0,
+        "line_clamp lost to truncate: {wins}"
+    );
+    let off = d.rect("#text-clamp-off").await?.height;
+    let whole = d.rect("#text-plain").await?.height;
+    ensure!(
+        (off - whole).abs() <= 1.0,
+        "line_clamp 0 cut the text: {off} of {whole}"
+    );
+    Ok(())
+}
+
+e2e::scenario!(
+    truncate_and_line_clamp_cut_text_and_titles,
+    "/typography/truncate",
+    truncate_cuts_to_lines
+);
 
 /// Todos 2542, 2590: a key's size is `rem`, so at a 32px root it doubles with the
 /// sentence; in `px` it stayed put.

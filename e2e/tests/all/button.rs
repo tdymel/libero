@@ -358,6 +358,41 @@ e2e::scenario!(
     element_children_layout
 );
 
+/// Todo 3961: `trailing_icon` sits after the label with a gap, centred on it, and stays
+/// there, the same size, while the button loads.
+async fn trailing_icon_layout<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    let glyph = d.rect("#with-trailing-glyph").await?;
+    let label = d.rect("#with-trailing-text").await?;
+    let gap = glyph.x - (label.x + label.width);
+    ensure!(
+        glyph.width >= 15.0 && gap >= 2.0,
+        "icon squeezed or touching: {glyph:?}, gap {gap}"
+    );
+    let (mid, text_mid) = (glyph.y + glyph.height / 2.0, label.y + label.height / 2.0);
+    ensure!(
+        (mid - text_mid).abs() <= 2.0,
+        "icon off the text centre: {mid} vs {text_mid}"
+    );
+
+    let busy = d.rect("#trailing-busy-glyph").await?;
+    ensure!(
+        busy.width >= 15.0,
+        "the loading button's icon is squeezed: {busy:?}"
+    );
+    let button = d.rect("#trailing-busy").await?;
+    ensure!(
+        busy.x + busy.width <= button.x + button.width,
+        "the loading button's icon is cut off: {busy:?} in {button:?}"
+    );
+    Ok(())
+}
+
+e2e::scenario!(
+    a_trailing_icon_follows_the_label,
+    "/button",
+    trailing_icon_layout
+);
+
 /// The label against the background as painted, `null` while either is
 /// translucent (the resting unfilled variants, or a transition under way).
 fn pair(selector: &str) -> String {

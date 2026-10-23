@@ -140,6 +140,7 @@ pub(crate) use str_enum;
 #[cfg(test)]
 mod tests {
 
+    use crate::components::Truncate;
     use crate::components::{
         AnchorUnderline, DrawerAnchor, FlexDirection, FlexWrap, HeaderPosition, ImageFit,
         LabelPosition, LabelVisibility, NavigationBarPosition, Orientation, PinKind, SidebarSide,
@@ -177,6 +178,7 @@ mod tests {
             $check!(ScrollbarSize);
             $check!(ScrollbarVisibility);
             $check!(SidebarSide);
+            $check!(Truncate);
         };
     }
 
