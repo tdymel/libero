@@ -88,7 +88,10 @@ pub fn MenubarPage() -> Element {
                     Code { source: "Menu" }
                     " with the same items. The bar keeps one menu open at most and is a single "
                     "tab stop. Click a trigger to open its menu. While one is open, hovering "
-                    "another trigger switches to it. For page navigation, use links."
+                    "another trigger switches to it. Use it in an app such as an editor. For "
+                    "page navigation, use links. For one set of actions, use a single "
+                    Code { source: "Menu" }
+                    "."
                 }
             },
             Demo {

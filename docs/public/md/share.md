@@ -38,47 +38,6 @@ fn Demo() -> Element {
 }
 ```
 
-A share control of your own, with a file:
-
-```rust
-use dioxus::prelude::*;
-use libero::hooks::use_share;
-use libero::platform::{ShareData, ShareFile};
-
-#[component]
-fn ShareReport(csv: String) -> Element {
-    let mut share = use_share();
-    let status = if share.copied() { "Copied" } else if share.failed() { "Share failed" } else { "" };
-    rsx! {
-        button {
-            onclick: move |_| share.share(ShareData {
-                title: Some("Report".into()),
-                files: vec![ShareFile {
-                    name: "report.csv".into(),
-                    mime: "text/csv".into(),
-                    bytes: csv.clone().into_bytes(),
-                }],
-                ..ShareData::default()
-            }),
-            "Share report"
-        }
-        span { role: "status", "{status}" }
-    }
-}
-```
-
-## Platforms
-
-| Target | Share sheet | Without it |
-|---|---|---|
-| Web | `navigator.share`, files where `canShare` takes them | copies the link |
-| Desktop and iOS WebView | `navigator.share` where the engine has it | copies the link |
-| Android | the system share sheet, files by name from the app's cache (kept a day) | none needed |
-| Blitz (`native`) | none | copies the link |
-
-`ShareOutcome::Cancelled` also covers a sheet with no target to pick: the
-browser reports both the same way.
-
 ## Props
 
 | Prop | Type | Default | Description |
@@ -86,7 +45,7 @@ browser reports both the same way.
 | `title` | `String` | - | A title, used as the subject where the target has one. |
 | `text` | `String` | - | A message. |
 | `url` | `String` | - | The link. Where no share sheet exists, a press copies it, else `text`, else `title`. |
-| `files` | `Vec<ShareFile>` | - | Files (name, MIME type, bytes), shared where the target takes them. Elsewhere the title, text and link still go. |
+| `files` | `Vec<ShareFile>` | - | Files (name, MIME type, bytes), shared where the target takes them: on the web where `canShare` takes them, on Android by name from the app's cache (kept a day). Elsewhere the title, text and link still go. |
 | `variant` | `Variant` | - | Visual style, as on `ActionIcon` or `Button`. Icon-only with `color` also unset, the button draws no chrome of its own. |
 | `color` | `ThemeAwareValue` | - | Accent color. A theme color name or any CSS color. |
 | `size` | `ThemeAwareValue` | `md` | Button size. With `children`, only a size word applies. |
@@ -94,7 +53,7 @@ browser reports both the same way.
 | `aria_label` | `String` | - | The button's name, such as "Share this article". Unset, the name is the localization's `share`, or the `children` text. |
 | `label` | `String` | - | Describes what a press shares, read after the name, such as "Link to this page". |
 | `disabled` | `bool` | `false` | Disables and dims the button. |
-| `onshare` | `EventHandler<ShareOutcome>` | - | Called with the outcome once the share settled: `Shared`, `Copied`, `Cancelled`, `Unsupported` or `Failed(reason)`. |
+| `onshare` | `EventHandler<ShareOutcome>` | - | Called with the outcome once the share settled: `Shared`, `Copied`, `Cancelled`, `Unsupported` or `Failed(reason)`. `Cancelled` also covers a sheet with no target to pick: the browser reports both the same way. Android opens the system share sheet. |
 | `children` | `Element` | - | A visible label: renders a `Button` with the share glyph instead of an icon-only button. |
 
 Like every component, `Share` also takes the shared props `sx`, `class`,

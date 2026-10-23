@@ -341,7 +341,7 @@ pub fn SpotlightPage() -> Element {
                     prop("shortcut", "Option<char>").default("Some('k')").doc("Ctrl (Cmd on a Mac) plus this key toggles the palette. `None` for no hotkey. Web only. A key the browser already uses, such as L, T or W, warns in a debug build. Elsewhere, open the palette from a button. Two palettes on one page should not share a key."),
                     prop("highlight_first_on_query", "bool").default("true").doc("Highlights the first row after every keystroke, so Enter runs it. Off, Enter does nothing until the arrows pick a row."),
                     prop("loading", "bool").default("false").doc("The results are still coming. A loader replaces the rows, and a screen reader hears \"Searching\"."),
-                    prop("onquery", "Callback<String>").doc("Called with the query on every keystroke. Set `loading` and start the search here, cancelling the previous one: a newer query supersedes it."),
+                    prop("onquery", "Callback<String>").doc("Called with the query on every keystroke. Set `loading` and start the search here, cancelling the previous one first: a newer query supersedes it, and a slow answer to an older one would overwrite the newer rows. Return the results from `actions` out of a signal."),
                     prop("sx", "Sx").doc("Styles the dialog box."),
                     prop("parts", "Parts<SpotlightPart>").doc("Styles for the inner parts in the Style API tab, under `sx`."),
                 ])
@@ -401,7 +401,7 @@ pub fn SpotlightPage() -> Element {
                     Code { source: "Copy" }
                     " handle, like "
                     Code { source: "use_modal" }
-                    ". "
+                    ", so call it in a component that outlives every trigger. "
                     Code { source: "actions" }
                     " is called with the query and returns the rows, so a fixed list and "
                     "search results are the same prop. "

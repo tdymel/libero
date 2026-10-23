@@ -35,37 +35,6 @@ fn Demo() -> Element {
 }
 ```
 
-`placement` names the vertical half first: `top-start`, `top-center`, `top-end`,
-`center-start`, `center-center`, `center-end`, `bottom-start`, `bottom-center`,
-`bottom-end`. An offset of `"md"` shifts right or down, `"-md"` left or up.
-
-```rust
-use dioxus::prelude::*;
-use libero::{components::{Box, Float}, sx::sx};
-
-#[component]
-fn Demo() -> Element {
-    rsx! {
-        Box {
-            sx: sx().position("relative").width("160px").height("120px").background("primary.1"),
-            Float {
-                placement: "top-end",
-                offset_x: "sm",
-                offset_y: "-sm",
-                Box { sx: sx().padding("4px 8px").background("primary"), "Badge" }
-            }
-        }
-    }
-}
-```
-
-With `fixed: true` the float anchors to the viewport and stays put while the
-page scrolls, for an action bar or a notification stack. `placement` and the
-offsets work the same. It stays below overlays and modals.
-
-An ancestor with a `transform`, `filter`, `contain` or `container-type` still
-captures a fixed float, which then scrolls and clips with it.
-
 ## Props
 
 | Prop | Type | Default | Description |
@@ -74,7 +43,7 @@ captures a fixed float, which then scrolls and clips with it.
 | `offset_x` | `ThemeAwareValue` | `0px` | Shift to the right, a spacing step or a CSS length. A negative step like `"-md"` shifts left. |
 | `offset_y` | `ThemeAwareValue` | `0px` | Shift down, a spacing step or a CSS length. A negative step shifts up. |
 | `z_index` | `ThemeAwareValue` | `1` | Stacking order. The default sits below a sticky `Header`; raise it to go over one. |
-| `fixed` | `bool` | `false` | Anchors to the viewport instead of the parent, so it stays put while the page scrolls. An ancestor with a `transform`, `filter`, `contain` or `container-type` still captures it. |
+| `fixed` | `bool` | `false` | Anchors to the viewport instead of the parent, so it stays put while the page scrolls. An ancestor with a `transform`, `filter`, `contain` or `container-type` still captures it. It stays below overlays and modals. |
 | `children` | `Element` | required | The anchored content. |
 
 Like every component, `Float` also takes the shared props `sx`, `class`,

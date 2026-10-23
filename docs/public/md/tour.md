@@ -73,90 +73,6 @@ fn Demo() -> Element {
 }
 ```
 
-Spread `handle.attributes()` on each target: a WebView finds the element by it.
-A `target_selector` is looked up in the document when its step shows; a WebView
-cannot look one up and shows that card in the middle.
-Call `use_tour` in a component that outlives every target, and `tour.start()`
-from a handler, so focus returns to the trigger. A tour never opens on mount.
-
-`TourHandle` is `Copy`: `start()`, `next()`, `prev()`, `go_to(index)`,
-`close()` (ends early, `onclose`), `finish()` (ends as done, `onfinish`),
-`is_open()`, `index()` and `total()`, and with a `storage_key`, `seen()` and
-`forget()`.
-
-### Your own card
-
-`card` draws the card's inside from a `TourView`: the step, its `progress`
-text, and `next()`, `prev()`, `go_to(index)`, `close()` and `finish()`. The
-tour keeps the hole, the placement, the name, the focus and the keys. The box
-around it has no surface, so draw one.
-
-```rust
-use dioxus::prelude::*;
-use libero::{
-    components::{Button, Flex, Paper, Text, Title, TourOptions, TourStep, TourView, use_tour},
-    hooks::use_element,
-    sx::sx,
-};
-
-#[component]
-fn Demo() -> Element {
-    let filters = use_element();
-    let card = use_callback(|view: TourView| {
-        let title = view.step.title.clone().unwrap_or_default();
-        let (skip, next) = (view.clone(), view.clone());
-        rsx! {
-            Paper {
-                shadow: "md",
-                sx: sx().padding("md"),
-                Text { size: "xs", "{view.progress}" }
-                Title { size: "sm", component: "h2", "{title}" }
-                Flex {
-                    direction: "row",
-                    gap: "xs",
-                    justify: "flex-end",
-                    Button { variant: "text", size: "sm", onclick: move |_| skip.close(), "Not now" }
-                    Button { size: "sm", onclick: move |_| next.next(), "Next" }
-                }
-            }
-        }
-    });
-    let tour = use_tour(TourOptions {
-        steps: vec![TourStep::new("filters").target(filters).title("Filters")],
-        card: Some(card),
-        ..Default::default()
-    });
-
-    rsx! {
-        Button { variant: "outlined", onmounted: filters.mount(), "Filters" }
-        Button { onclick: move |_| tour.start(), "Show me around" }
-    }
-}
-```
-
-### Controlled
-
-`current: Some(index)` makes the step shown yours: the buttons, keys and
-handle calls only call `onchange`, and the tour shows the step you pass back.
-
-```rust,ignore
-let mut step = use_signal(|| 0usize);
-let tour = use_tour(TourOptions {
-    steps,
-    current: Some(step()),
-    onchange: Some(use_callback(move |index| step.set(index))),
-    ..Default::default()
-});
-```
-
-### Show it once
-
-`storage_key` keeps in local storage that the tour was finished or closed
-early. `tour.seen()` reads it, reactively, and `tour.forget()` drops it, for a
-"show the tour again" setting. `start()` still starts: offer the tour while
-`!tour.seen()`. Without a key, `onfinish` and `onclose` say it was seen; keep
-that where your app keeps its settings.
-
 ## API
 
 ### `use_tour`
@@ -171,7 +87,7 @@ pub fn use_tour(options: TourOptions) -> TourHandle
 
 | Field | Type | Default | Description |
 |---|---|---|---|
-| `steps` | `Vec<TourStep>` | required | The stops, in order. A step without a `target` shows its card in the middle of the screen. |
+| `steps` | `Vec<TourStep>` | required | The stops, in order. A step without a `target` shows its card in the middle of the screen. Call `use_tour` in a component that outlives every target, and `tour.start()` from a handler, so focus returns to the trigger; a tour never opens on mount. The `Copy` handle also has `next()`, `prev()`, `go_to(index)`, `close()` (ends early, `onclose`), `finish()` (ends as done, `onfinish`), `is_open()`, `index()` and `total()`. |
 | `current` | `Option<usize>` | - | Makes the step shown controlled: the buttons, keys and handle calls only call `onchange`. |
 | `onchange` | `Option<Callback<usize>>` | - | Called with the step a button, key or handle call asks for. |
 | `onfinish` | `Option<Callback<()>>` | - | Called once when Next is pressed on the last step. |
@@ -188,8 +104,8 @@ pub fn use_tour(options: TourOptions) -> TourHandle
 | Method | Type | Default | Description |
 |---|---|---|---|
 | `new(key)` | `impl Into<String>` | required | Tells the steps apart. The card is drawn afresh when it changes. |
-| `target` | `ElementHandle` | - | The element the hole goes around, from `use_element()`, mounted with `onmounted: handle.mount()`. |
-| `target_selector` | `impl Into<String>` | - | A CSS selector for the target, as `"#search"`, looked up in the document when the step shows: for a target in another component. `target` wins. |
+| `target` | `ElementHandle` | - | The element the hole goes around, from `use_element()`, mounted with `onmounted: handle.mount()`. Spread `handle.attributes()` on it too: a WebView finds the element by them. |
+| `target_selector` | `impl Into<String>` | - | A CSS selector for the target, as `"#search"`, looked up in the document when the step shows: for a target in another component. `target` wins. A WebView cannot look one up and shows that card in the middle. |
 | `interactive` | `bool` | `false` | Lets presses through the hole to the target, and puts the target in the Tab order beside the card. |
 | `title` | `impl Into<String>` | - | The card's heading and, unless the tour has an `aria_label`, its name. |
 | `description` | `impl Into<String>` | - | The card's text. |

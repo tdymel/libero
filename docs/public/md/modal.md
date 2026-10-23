@@ -83,41 +83,6 @@ fn Demo() -> Element {
 }
 ```
 
-Content in the render closure captures the `ModalScope`. A component outside
-the closure closes the modal with `use_modal_close()`:
-
-```rust
-use dioxus::prelude::*;
-use libero::{components::Button, hooks::use_modal_close};
-
-#[component]
-fn CancelButton() -> Element {
-    let close = use_modal_close();
-
-    rsx! {
-        Button { variant: "text", onclick: move |_| close.call(()), "Cancel" }
-    }
-}
-```
-
-`ModalContext` tells a component whether it is in a modal at all:
-
-```rust
-use dioxus::prelude::*;
-use libero::{components::Button, context::ModalContext};
-
-#[component]
-fn CloseIfModal() -> Element {
-    let Some(modal) = try_use_context::<ModalContext>().filter(ModalContext::is_modal) else {
-        return rsx! {};
-    };
-
-    rsx! {
-        Button { variant: "text", onclick: move |_| modal.close(), "Close" }
-    }
-}
-```
-
 ## API
 
 ### `use_modal`

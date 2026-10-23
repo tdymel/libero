@@ -48,42 +48,6 @@ fn Demo() -> Element {
 }
 ```
 
-`anchor` picks the edge, `start`, `end`, `top` or `bottom`. `size` is the
-width on a start or end edge and the height on a top or bottom one. The other
-axis is always full. Both are read on every render, so an anchor in a signal
-moves an open drawer. `start` and `end` follow the text direction: `start` is
-the right edge under `dir="rtl"`.
-
-Docked bottom, the panel follows a touch swipe down from its top padding. Let
-go far enough and, once `ondismiss` allows `Dismiss::Swipe`, it slides off and
-closes; a short swipe springs back. Under reduced motion it closes at once.
-`handle: true` draws a grab bar there.
-
-A drawer takes per-opening data and returns a result like any modal. See
-[Modal](modal.md) for `open_with`, `Opening`, `onresult` and `.await`.
-
-```rust,ignore
-let details = use_drawer(
-    DrawerOptions {
-        anchor: "end".into(),
-        aria_label: Some("Order details".into()),
-        ..Default::default()
-    },
-    |s: ModalScope<Order, bool>| {
-        let order = s.args();
-
-        rsx! {
-            Title { size: "lg", "Order {order.id}" }
-            Button { onclick: move |_| s.resolve(true), "Mark shipped" }
-        }
-    },
-);
-
-if details.open_with(order).await == Some(true) {
-    refresh().await;
-}
-```
-
 ## API
 
 ### `use_drawer`
@@ -105,14 +69,14 @@ behave the same. See [Modal](modal.md).
 
 | Field | Type | Default | Description |
 |---|---|---|---|
-| `anchor` | `Input<DrawerAnchor>` | `start` | The edge the panel docks to. `start` is the right edge under `dir="rtl"`. |
+| `anchor` | `Input<DrawerAnchor>` | `start` | The edge the panel docks to. `start` is the right edge under `dir="rtl"`. It is read on every render, so an anchor in a signal moves an open drawer. |
 | `size` | `Input<ThemeAwareValue>` | `md` | Width when docked start or end, height when docked top or bottom: a size word or any CSS, e.g. `size: "24rem".into()`. |
 | `z_index` | `Input<ThemeAwareValue>` | - | Stacking order of the panel. |
 | `aria_label` | `Option<String>` | - | Names the panel, which is a dialog. With neither this nor `title`, it warns in a debug build. |
 | `title` | `Option<String>` | - | A visible heading at the top of the panel that names it. |
 | `sx` | `Input<Sx>` | - | Styles the panel. The content is yours to style; a bottom drawer's swipe strip is `& > [data-slot='handle']`. |
 | `ondismiss` | `Option<Callback<Dismiss, bool>>` | - | Whether Escape, the backdrop, Back, a swipe or the header close button may close it; `false` keeps it open, e.g. over an unsaved draft. Unset, all close. |
-| `handle` | `bool` | `false` | Docked bottom, a touch swipe down from the panel's top padding closes it; `true` draws a grab bar there. Other anchors ignore it. |
+| `handle` | `bool` | `false` | Docked bottom, a touch swipe down from the panel's top padding closes it; `true` draws a grab bar there. Other anchors ignore it. Let go far enough and, once `ondismiss` allows `Dismiss::Swipe`, it slides off and closes; a short swipe springs back. Under reduced motion it closes at once. |
 | `close_button` | `bool` | `false` | Draws a close button in the header, beside `title`. As a `Dialog`'s, it asks `ondismiss` with `Dismiss::CloseButton`. |
 
 ## Accessibility

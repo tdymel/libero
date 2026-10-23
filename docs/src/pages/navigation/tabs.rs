@@ -92,17 +92,17 @@ pub fn TabsPage() -> Element {
             properties: vec![
                 props("Tabs", vec![
                     prop("value", "T").default("required").doc("The selected tab. Pair it with `onchange`."),
-                    prop("onchange", "EventHandler<T>").doc("Called with the tab that should become selected."),
-                    prop("panel", "Callback<T, Element>").doc("The body of the selected tab. Only the selected panel is built."),
+                    prop("onchange", "EventHandler<T>").doc("Called with the tab that should become selected. Without it the selection never changes, and `Tabs` warns."),
+                    prop("panel", "Callback<T, Element>").doc("The body of the selected tab. Only the selected panel is built. Without it nothing shows below the strip, and `Tabs` warns."),
                     prop("options", "OptionSource<T>").default("T::options()").doc("The tabs to show. A `Vec<T>` converts, and an `OptionList<T>` can disable single tabs. Groups draw flattened. A source still loading draws no tabs."),
                     prop("option_label", "Callback<T, OptionLabel>")
                         .default("T::label()")
-                        .doc("Overrides a tab's label. Runs during render, so it can read a locale."),
+                        .doc("Overrides a tab's label. Runs during render, so the strip follows a locale signal. `OptionLabel::rich` draws a tab as rsx, such as an icon, and takes a text name for screen readers."),
                     prop("size", "Size").default(theme.tabs.size.as_str()).doc("Tab strip size. On a touch screen a tab is at least 44px tall, so `xs` and `sm` tabs draw taller there."),
                     prop("color", "ThemeAwareValue").default(theme.tabs.color.as_str()).doc("Indicator and selected-label color."),
                     prop("full_width", "bool").default("false").doc("Tabs grow to fill the row, never below their label. A crowded strip still scrolls. Not themed."),
                     prop("activation", "TabsActivation").default(theme.tabs.activation.as_str()).doc("`Automatic` selects as the arrows move. `Manual` moves only the focus, and Enter or Space selects. Use it for slow panels."),
-                    prop("placement", "TabsPlacement").default("top").doc("Vertical tabs: `start` or `end` put the strip in a column beside the panel, moved by Up and Down."),
+                    prop("placement", "TabsPlacement").default("top").doc("Vertical tabs: `start` or `end` put the strip in a column beside the panel, moved by Up and Down. `start` is the inline start side (left in left-to-right text), `end` the inline end side. The tablist has `aria-orientation=\"vertical\"`, and the selected tab's indicator sits on the edge facing the panel."),
                     prop("panel_focusable", "bool").default("true").doc("Whether the selected panel is a tab stop, as the APG asks when it holds no focusable content. Turn it off for a panel with its own controls. Not themed."),
                     prop("parts", "Parts<TabsPart>")
                         .doc("Styles for the inner parts in the Style API tab, under `sx`."),

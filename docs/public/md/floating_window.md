@@ -10,7 +10,9 @@ Description: A non-modal window over the page that drags, moves by keyboard and 
 A non-modal window over the page, with a title bar that drags, an optional
 resize corner, a menu that moves and resizes it without a drag, and a close
 button. `use_floating_window` returns a `Copy` handle that opens and closes it.
-There is no overlay or focus trap, so the page stays usable. A drag re-renders
+Call it under `LiberoProvider`, in a component that outlives every trigger: the
+window is portaled from there and sits on the viewport. There is no overlay or
+focus trap, so the page stays usable. A drag re-renders
 the whole window, so keep its body shallow.
 
 ## Usage
@@ -41,25 +43,6 @@ fn Demo() -> Element {
 
     rsx! { Button { onclick: move |_| inspector.toggle(), "Inspector" } }
 }
-```
-
-Call the hook under `LiberoProvider`, in a component that outlives every
-trigger. The window is portaled from there and sits on the viewport.
-
-One callback can report the geometry for both events.
-
-```rust,ignore
-let mut last = use_signal(|| None::<WindowRect>);
-let report = use_callback(move |rect: WindowRect| last.set(Some(rect)));
-let inspector = use_floating_window(
-    FloatingWindowOptions {
-        title: Some("Inspector".into()),
-        onmove: Some(report),
-        onresize: Some(report),
-        ..Default::default()
-    },
-    |window| rsx! { Button { onclick: move |_| window.close(), "Done" } },
-);
 ```
 
 ## API

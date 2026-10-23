@@ -1,4 +1,4 @@
-use crate::components::{Demo, DemoFile, DemoValues, DocPage, DocSection};
+use crate::components::{Demo, DemoFile, DemoValues, DocPage};
 use dioxus::prelude::*;
 use libero::components::{Code, Text};
 
@@ -29,17 +29,6 @@ pub fn UseAccessibilityPage() -> Element {
                 controls: Vec::new(),
                 render: move |_: DemoValues| rsx! { Settings {} },
                 file: DemoFile(include_str!("use_accessibility/demo.rs")),
-            }
-
-            DocSection {
-                title: "Forced settings",
-                Text {
-                    "A forced reduced motion reaches libero's own CSS and motion on every "
-                    "platform. A "
-                    Code { source: "<style>" }
-                    " the app adds itself still follows the system. The other settings are "
-                    "read-only."
-                }
             }
         }
     }

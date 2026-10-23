@@ -9,8 +9,9 @@ Description: An icon button that turns the app's text between left to right and 
 
 An icon button that turns the app's text between left to right and right to
 left. It sets the document's `dir`, so every component and every overlay turns
-with it, and libero's local storage keeps the choice for the next visit.
-The arrow shows where the next press goes.
+with it, and the web keeps the choice for the next visit. The arrow shows where
+the next press goes. It needs no state of its own; build your own control on
+`use_direction()`, and set the start direction with `LiberoProvider { direction }`.
 
 ## Usage
 
@@ -25,13 +26,6 @@ fn Demo() -> Element {
     }
 }
 ```
-
-## Your own control
-
-Place it and you are done: it needs no state of its own. For your own control,
-build on `use_direction()`; the start direction is `LiberoProvider { direction }`,
-and a kept choice wins over it. The button names come from the
-[localization](localization.md).
 
 ## Props
 

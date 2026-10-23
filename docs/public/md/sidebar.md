@@ -50,47 +50,12 @@ fn Demo() -> Element {
 }
 ```
 
-The same panel at the end, after its sibling, with a wider `size`.
-
-```rust
-use dioxus::prelude::*;
-use libero::{
-    components::{Flex, Sidebar, Text},
-    sx::sx,
-};
-
-#[component]
-fn Demo() -> Element {
-    rsx! {
-        Flex {
-            direction: "row",
-            align: "stretch",
-            wrap: false,
-            sx: sx().height("120px").width("100%").border("1px solid").border_color("muted.3"),
-            Flex {
-                direction: "column",
-                sx: sx().flex("1").padding("12px"),
-                Text { "Rest of the layout" }
-            }
-            Sidebar {
-                side: "end",
-                size: "lg",
-                Text { "Navigation" }
-            }
-        }
-    }
-}
-```
-
-With `side: "top"` or `"bottom"`, `size` is a height, so the parent needs
-`direction: "column"`.
-
 ## Props
 
 | Prop | Type | Default | Description |
 |---|---|---|---|
 | `side` | `SidebarSide` | `start` | The side the panel sits on, with its border on the edge facing the content, and whether `size` is a width or a height. `start` is the right side under `dir="rtl"`. It does not move the panel, so put it at the matching end of the DOM. |
-| `size` | `ThemeAwareValue` | `md` | The panel's width, or its height on a `top` or `bottom` side. A start or end panel takes half its parent's width at most, a top or bottom one half its height, when the parent's height is set. A size word or any CSS, e.g. `size: "18rem"`. |
+| `size` | `ThemeAwareValue` | `md` | The panel's width, or its height on a `top` or `bottom` side. A start or end panel takes half its parent's width at most, a top or bottom one half its height, when the parent's height is set. A size word or any CSS, e.g. `size: "18rem"`. With a top or bottom side the parent needs `direction: "column"`. |
 | `component` | `HtmlTag` | `aside` | The element to render, such as `nav` for a navigation panel. |
 | `children` | `Element` | required | The panel's content, scrolled by an inner `ScrollArea`. |
 | `parts` | `Parts<SidebarPart>` | - | Styles for the inner parts in the Style API tab, under `sx`. |

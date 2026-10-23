@@ -31,32 +31,11 @@ fn Demo() -> Element {
 }
 ```
 
-A vertical rule stretches to the row's height, so its parent must be a flex
-row. In a block parent it is 0px high and does not show.
-
-```rust
-use dioxus::prelude::*;
-use libero::components::{Box, Divider, Text};
-use libero::sx::sx;
-
-#[component]
-fn Demo() -> Element {
-    rsx! {
-        Box {
-            sx: sx().display("flex").align_items("center").justify_content("center").height("64px"),
-            Text { "Left" }
-            Divider { orientation: "vertical", spacing: "md" }
-            Text { "Right" }
-        }
-    }
-}
-```
-
 ## Props
 
 | Prop | Type | Default | Description |
 |---|---|---|---|
-| `orientation` | `Orientation` | `horizontal` | The direction of the rule. A vertical rule needs a flex row parent. |
+| `orientation` | `Orientation` | `horizontal` | The direction of the rule. A vertical rule stretches to its row's height, so it needs a flex row parent; in a block parent it is 0px high and does not show. |
 | `size` | `Size` | `xs` | Line thickness. |
 | `label_position` | `LabelPosition` | `center` | Where the label sits along the rule: `center`, `start` or `end`. |
 | `spacing` | `ThemeAwareValue` | `none` | Margin on both sides of the rule, a spacing step or a CSS length. |

@@ -185,7 +185,7 @@ pub fn TourPage() -> Element {
                 props("TourOptions", vec![
                     prop("steps", "Vec<TourStep>")
                         .default("required")
-                        .doc("The stops, in order. A step without a `target` shows its card in the middle of the screen."),
+                        .doc("The stops, in order. A step without a `target` shows its card in the middle of the screen. Call `use_tour` in a component that outlives every target, and `tour.start()` from a handler, so focus returns to the trigger; a tour never opens on mount. The `Copy` handle also has `next()`, `prev()`, `go_to(index)`, `close()` (ends early, `onclose`), `finish()` (ends as done, `onfinish`), `is_open()`, `index()` and `total()`."),
                     prop("current", "Option<usize>")
                         .doc("Makes the step shown controlled: the buttons, keys and handle calls only call `onchange`."),
                     prop("onchange", "Callback<usize>")
@@ -228,9 +228,9 @@ pub fn TourPage() -> Element {
                     prop("new(key)", "String")
                         .doc("Tells the steps apart. The card is drawn afresh when it changes."),
                     prop("target", "ElementHandle")
-                        .doc("The element the hole goes around, from `use_element()`, mounted with `onmounted: handle.mount()`."),
+                        .doc("The element the hole goes around, from `use_element()`, mounted with `onmounted: handle.mount()`. Spread `handle.attributes()` on it too: a WebView finds the element by them."),
                     prop("target_selector", "String")
-                        .doc("A CSS selector for the target, as `\"#search\"`, looked up in the document when the step shows: for a target in another component. `target` wins."),
+                        .doc("A CSS selector for the target, as `\"#search\"`, looked up in the document when the step shows: for a target in another component. `target` wins. A WebView cannot look one up and shows that card in the middle."),
                     prop("interactive", "bool")
                         .default("false")
                         .doc("Lets presses through the hole to the target, and puts the target in the Tab order beside the card."),

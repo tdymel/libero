@@ -58,7 +58,7 @@ pub fn SharePage() -> Element {
                 prop("url", "String")
                     .doc("The link. Where no share sheet exists, a press copies it, else `text`, else `title`."),
                 prop("files", "Vec<ShareFile>")
-                    .doc("Files (name, MIME type, bytes), shared where the target takes them. Elsewhere the title, text and link still go."),
+                    .doc("Files (name, MIME type, bytes), shared where the target takes them: on the web where `canShare` takes them, on Android by name from the app's cache (kept a day). Elsewhere the title, text and link still go."),
                 prop("variant", "Variant")
                     .doc("Visual style, as on `ActionIcon` or `Button`. Icon-only with `color` also unset, the button draws no chrome of its own."),
                 prop("color", "ThemeAwareValue")
@@ -77,7 +77,7 @@ pub fn SharePage() -> Element {
                     .default("false")
                     .doc("Disables and dims the button."),
                 prop("onshare", "EventHandler<ShareOutcome>")
-                    .doc("Called with the outcome once the share settled: `Shared`, `Copied`, `Cancelled`, `Unsupported` or `Failed(reason)`."),
+                    .doc("Called with the outcome once the share settled: `Shared`, `Copied`, `Cancelled`, `Unsupported` or `Failed(reason)`. `Cancelled` also covers a sheet with no target to pick: the browser reports both the same way. Android opens the system share sheet."),
                 prop("children", "Element")
                     .doc("A visible label: renders a `Button` with the share glyph instead of an icon-only button."),
             ])],

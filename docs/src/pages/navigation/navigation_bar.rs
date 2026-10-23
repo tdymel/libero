@@ -84,10 +84,10 @@ pub fn NavigationBarPage() -> Element {
                 props("NavigationBar", vec![
                     prop("variant", "NavigationBarVariant")
                         .default("bar")
-                        .doc("`\"bar\"`, a row along the bottom edge for a phone, or `\"rail\"`, an 88px column on the inline-start edge for a tablet or a desktop: the right edge in a right-to-left page. A rail spans the viewport's height and sticks to its top, or docks to the viewport with `position: \"fixed\"`, and publishes its measured width as `--lsx-navigation-rail-width` in place of the bar's height. Switch between them with `use_media_query`, as in the example."),
+                        .doc("`\"bar\"`, a row along the bottom edge for a phone, or `\"rail\"`, an 88px column on the inline-start edge for a tablet or a desktop: the right edge in a right-to-left page. A rail spans the viewport's height and sticks to its top, or docks to the viewport with `position: \"fixed\"`, and publishes its measured width as `--lsx-navigation-rail-width` in place of the bar's height. Switch between them with `use_media_query`, which answers in a native app too, and keep the same items in the same order."),
                     prop("position", "NavigationBarPosition")
                         .default("static")
-                        .doc("`\"static\"` stays in the flow. `\"sticky\"` holds it at the bottom of its scroller, `\"fixed\"` at the viewport's; both publish the bar's measured height as `--lsx-navigation-bar-height` and keep focus clear of the bar. A native app docks both the same way."),
+                        .doc("`\"static\"` stays in the flow. `\"sticky\"` holds it at the bottom of its scroller, `\"fixed\"` at the viewport's; both publish the bar's measured height as `--lsx-navigation-bar-height` and keep focus clear of the bar. Pad the page's end by `var(--lsx-navigation-bar-height)`. `\"fixed\"` clears a phone's home indicator, and needs `viewport-fit=cover` in the page's viewport meta, or the browser reports no safe area. A native app docks both the same way."),
                     prop("show_labels", "LabelVisibility")
                         .default("always")
                         .doc("`\"always\"`, `\"selected\"` (only the selected item's) or `\"never\"`. A hidden label still names its item."),
@@ -108,7 +108,7 @@ pub fn NavigationBarPage() -> Element {
                         .default("follows the route")
                         .doc("Unset, it compares `to` with the current route. Set it for `onclick` items."),
                     prop("icon", "Element").default("required").doc("Drawn in the pill above the label, hidden from screen readers."),
-                    prop("badge", "Element").doc("A count or dot over the icon, such as an `Indicator`."),
+                    prop("badge", "Element").doc("A count or dot over the icon, such as an `Indicator`. Put its count in the item's `aria-label` too."),
                     prop("disabled", "bool").default("false").doc("Dims the item and takes it out of the Tab order."),
                     prop("children", "Element").default("required").doc("The label."),
                 ]),

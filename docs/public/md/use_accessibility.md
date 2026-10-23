@@ -22,9 +22,20 @@ use libero::{
     hooks::use_accessibility,
 };
 
+/// The forced setting is kept across visits, so leaving the page hands the site back to the
+/// system if the demo forced it.
 #[component]
-fn Settings() -> Element {
+pub fn Settings() -> Element {
     let accessibility = use_accessibility();
+    let mut forced = use_hook(|| CopyValue::new(false));
+    use_drop({
+        let accessibility = accessibility.clone();
+        move || {
+            if forced() {
+                accessibility.set_reduced_motion(None);
+            }
+        }
+    });
 
     rsx! {
         Flex { direction: "column", gap: "sm",
@@ -33,7 +44,10 @@ fn Settings() -> Element {
                 checked: accessibility.reduced_motion(),
                 onchange: {
                     let accessibility = accessibility.clone();
-                    move |on: bool| accessibility.set_reduced_motion(Some(on))
+                    move |on: bool| {
+                        forced.set(true);
+                        accessibility.set_reduced_motion(Some(on));
+                    }
                 },
             }
             Button {
@@ -54,21 +68,6 @@ fn Settings() -> Element {
 }
 ```
 
-In a browser and Android's WebView the settings are the page's media queries.
-Natively they come from the desktop portal on Linux (`org.freedesktop.appearance`,
-GNOME's and older KDE's own keys as a fallback); other native platforms report no preference.
-
-A forced reduced motion is kept across restarts under `lsx-reduced-motion`: in a
-browser's `localStorage`, and in a file on Android, the desktop WebView and native
-where `libero::platform::set_storage_dir` (or libero's `desktop` or `native`
-feature) gives local storage a directory. Elsewhere it lasts for the session.
-
-## Forced settings
-
-A forced reduced motion reaches libero's own CSS and motion on every platform.
-A `<style>` the app adds itself still follows the system. The other settings
-are read-only.
-
 ## API
 
 ```rust,ignore
@@ -77,11 +76,11 @@ pub fn use_accessibility() -> AccessibilityHandle
 
 | Method | Returns | Description |
 |---|---|---|
-| `get()` | `AccessibilityPreferences` | All four at once: `reduced_motion` (forced or the system's), `forced_colors`, `contrast`, `reduced_transparency`. |
+| `get()` | `AccessibilityPreferences` | All four at once: `reduced_motion` (forced or the system's), `forced_colors`, `contrast`, `reduced_transparency`. The system's settings are the page's media queries in a browser and Android's WebView; natively they come from the Linux desktop portal (`org.freedesktop.appearance`, GNOME's and older KDE's own keys as a fallback), and other native platforms report no preference. |
 | `reduced_motion()` | `bool` | Whether motion is reduced: the forced answer, else the system's. |
-| `set_reduced_motion(reduced: Option<bool>)` | `()` | Forces reduced motion on or off, kept where the platform can; `None` follows the system again. |
-| `forced_colors()` | `bool` | Whether the system forces its own colors. |
-| `contrast()` | `Contrast` | `Contrast::NoPreference`, `More` or `Less`. |
-| `reduced_transparency()` | `bool` | Whether the system asks for less transparency. |
+| `set_reduced_motion(reduced: Option<bool>)` | `()` | Forces reduced motion on or off; `None` follows the system again. It reaches libero's own CSS and motion on every platform, but a `<style>` the app adds itself still follows the system. Kept across restarts under `lsx-reduced-motion`: in a browser's `localStorage`, and in a file on Android, the desktop WebView and native where `libero::platform::set_storage_dir` (or libero's `desktop` or `native` feature) gives local storage a directory. Elsewhere it lasts for the session. |
+| `forced_colors()` | `bool` | Whether the system forces its own colors. Read-only: only reduced motion can be forced. |
+| `contrast()` | `Contrast` | `Contrast::NoPreference`, `More` or `Less`. Read-only. |
+| `reduced_transparency()` | `bool` | Whether the system asks for less transparency. Read-only. |
 
 Every getter is reactive. `Clone`, not `Copy`: clone it into each handler.

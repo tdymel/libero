@@ -29,39 +29,12 @@ fn Demo() -> Element {
 }
 ```
 
-## Your own providers and prompt
-
-`SummaryProvider::defaults()` is a plain `Vec`: filter it to drop a provider,
-push one to add it. A provider is a name, an address the encoded prompt is
-appended to, and an optional mark drawn in the text colour. `{url}` in `prompt`
-is filled with `url`; `summary_url` builds one link on its own.
-
-```rust
-use dioxus::prelude::*;
-use libero::components::{SummaryProvider, Tldr};
-
-#[component]
-fn Demo() -> Element {
-    let mut providers = SummaryProvider::defaults();
-    providers.retain(|provider| provider.name != "Google AI");
-    providers.push(SummaryProvider::new("Mistral", "https://chat.mistral.ai/chat?q="));
-    rsx! {
-        Tldr {
-            url: "https://example.com/guide",
-            providers,
-            // Doubled braces: rsx would fill a bare `{url}` itself.
-            prompt: "Summarize {{url}} in five bullet points.",
-        }
-    }
-}
-```
-
 ## Props
 
 | Prop | Type | Default | Description |
 |---|---|---|---|
 | `url` | `String` | required | The page's absolute address, e.g. its markdown mirror. The assistant is asked to read it. |
-| `providers` | `Vec<SummaryProvider>` | `SummaryProvider::defaults()` | The menu's links, in order: ChatGPT, Google AI, Claude and Perplexity. Filter the vec to drop one, push a `SummaryProvider` to add one. |
+| `providers` | `Vec<SummaryProvider>` | `SummaryProvider::defaults()` | The menu's links, in order: ChatGPT, Google AI, Claude and Perplexity. Filter the vec to drop one, push a `SummaryProvider` to add one. A provider is a name, an address the encoded prompt is appended to, and an optional mark drawn in the text colour; `summary_url` builds one link on its own. |
 | `prompt` | `String` | - | What the assistant is asked. `{url}` is filled with `url`; in an `rsx!` string literal write `{{url}}`. Unset, `TldrLabels::prompt` from the localization. |
 | `label` | `String` | - | The trigger's text. Unset, `TldrLabels::label` ("TLDR"). |
 | `icon_only` | `bool` | `false` | Draws only the sparkles, named by `aria_label`. |

@@ -33,25 +33,6 @@ fn Demo() -> Element {
 }
 ```
 
-Style the bubble through `sx`.
-
-```rust
-use dioxus::prelude::*;
-use libero::{components::{Button, Tooltip}, sx::sx};
-
-#[component]
-fn Demo() -> Element {
-    rsx! {
-        Tooltip {
-            label: rsx! { "Saves the current draft" },
-            label_id: "draft-tip",
-            sx: sx().background("primary.6").white_space("normal").max_width("12rem"),
-            Button { variant: "outlined", aria_describedby: "draft-tip", "Save" }
-        }
-    }
-}
-```
-
 ## Props
 
 | Prop | Type | Default | Description |

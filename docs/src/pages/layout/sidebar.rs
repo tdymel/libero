@@ -49,7 +49,7 @@ pub fn SidebarPage() -> Element {
                 prop("side", "SidebarSide")
                     .default("start")
                     .doc("The side the panel sits on, with its border on the edge facing the content, and whether `size` is a width or a height. `start` is the right side under `dir=\"rtl\"`. It does not move the panel, so put it at the matching end of the DOM."),
-                prop("size", "ThemeAwareValue").default(theme.sidebar.size.as_str()).doc("The panel's width, or its height on a `top` or `bottom` side. A start or end panel takes half its parent's width at most, a top or bottom one half its height, when the parent's height is set. A size word or any CSS, e.g. `size: \"18rem\"`."),
+                prop("size", "ThemeAwareValue").default(theme.sidebar.size.as_str()).doc("The panel's width, or its height on a `top` or `bottom` side. A start or end panel takes half its parent's width at most, a top or bottom one half its height, when the parent's height is set. A size word or any CSS, e.g. `size: \"18rem\"`. With a top or bottom side the parent needs `direction: \"column\"`."),
                 prop("component", "HtmlTag").default("aside").doc("The element to render, such as `nav` for a navigation panel."),
                 prop("children", "Element").doc("The panel's content, scrolled by an inner `ScrollArea`."),
                 prop("parts", "Parts<SidebarPart>")

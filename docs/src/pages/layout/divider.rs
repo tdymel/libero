@@ -40,7 +40,7 @@ pub fn DividerPage() -> Element {
             properties: vec![props("Divider", vec![
                 prop("orientation", "Orientation")
                     .default("horizontal")
-                    .doc("The direction of the rule. A vertical rule needs a flex row parent."),
+                    .doc("The direction of the rule. A vertical rule stretches to its row's height, so it needs a flex row parent; in a block parent it is 0px high and does not show."),
                 prop("size", "Size").default(theme.divider.size.as_str()).doc("Line thickness."),
                 prop("label_position", "LabelPosition")
                     .default(theme.divider.label_position.as_str())

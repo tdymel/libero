@@ -82,7 +82,7 @@ pub fn ActionIconPage() -> Element {
                     .default(if theme.anchor.new_tab_icon { "true" } else { "false" })
                     .doc("With the hint, a small icon in the corner for sighted users. Unset, the theme's `anchor.new_tab_icon`, which is off."),
                 prop("icon", "SvgData")
-                    .doc("The glyph, drawn as a `Pictogram`: `pictogram_icons_lucide::x::outlined`. Wins over `children`."),
+                    .doc("The glyph, drawn as a `Pictogram`: `pictogram_icons_lucide::x::outlined`. Wins over `children`, and a debug build warns when both are set."),
                 prop("children", "Element").doc("The icon, when it is not `SvgData`: your own svg, or any element."),
             ])],
             accessibility: a11y()

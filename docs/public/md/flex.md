@@ -36,60 +36,6 @@ fn Demo() -> Element {
 }
 ```
 
-`direction` picks the axis, and the other props follow it.
-
-```rust
-use dioxus::prelude::*;
-use libero::{
-    components::{Box, Flex},
-    sx::sx,
-};
-
-#[component]
-fn Demo() -> Element {
-    rsx! {
-        Flex {
-            direction: "row",
-            gap: "lg",
-            justify: "space-between",
-            align: "center",
-            wrap: "wrap",
-            sx: sx().width("400px").height("200px").padding("8px").background("muted.1"),
-            Box { sx: sx().padding("8px 16px").background("primary.1"), "One" }
-            Box { sx: sx().padding("8px 16px").background("primary.1"), "Two" }
-            Box { sx: sx().padding("8px 16px").background("primary.1"), "Three" }
-        }
-    }
-}
-```
-
-One gap per breakpoint, or any CSS next to the size scale. Breakpoints follow
-the window, not the parent element.
-
-```rust,ignore
-Flex {
-    // `xs` on a phone, `xl` from `md` (62rem).
-    gap: responsive(Size::Xs).md(Size::Xl),
-    // Or one size, gap: "sm", or plain CSS, gap: "0".
-    Box { "One" }
-    Box { "Two" }
-}
-```
-
-`direction` also takes one value per breakpoint. Each breakpoint brings that
-axis's theme defaults for align, justify, gap and wrap, but an explicit `gap`
-stays.
-
-```rust,ignore
-Flex {
-    // A column on a phone, a row from `md` (62rem).
-    direction: responsive(FlexDirection::Column).md(FlexDirection::Row),
-    gap: "sm",
-    Box { "One" }
-    Box { "Two" }
-}
-```
-
 ## Props
 
 | Prop | Type | Default | Description |

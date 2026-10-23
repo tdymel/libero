@@ -32,56 +32,11 @@ fn Demo() -> Element {
 }
 ```
 
-## Labels and icons
-
-A `Button` shows a label, with an optional `icon` before it and `trailing_icon`
-after it. `ActionIcon` is the same button reduced to a square icon: it requires
-an `aria_label`, keeps a 24px target and defaults to no background. A `Button`
-with no text would be a wide pill without an accessible name.
-
-On a full-width button, `justify: "space-between"` parts the `icon`, the label
-and the `trailing_icon` to the edges, as in a menu row; `start` and `end` pack
-them to one side.
-
-```rust
-use dioxus::prelude::*;
-use libero::components::Button;
-
-#[component]
-fn Row() -> Element {
-    rsx! {
-        Button { full_width: true, justify: "space-between", "Account" }
-    }
-}
-```
-
-## Neutral outlined
-
-A secondary action next to a filled primary one, such as "Cancel" beside "Save",
-is `color: "neutral"` with `variant: "outlined"`: a quiet border and label that
-leave the primary colour to the main action. `"ink"` draws it in the page's
-text colour instead.
-
-```rust
-use dioxus::prelude::*;
-use libero::components::{Button, Flex};
-
-#[component]
-fn Actions() -> Element {
-    rsx! {
-        Flex { direction: "row", gap: "sm",
-            Button { "Save" }
-            Button { color: "neutral", variant: "outlined", "Cancel" }
-        }
-    }
-}
-```
-
 ## Props
 
 | Prop | Type | Default | Description |
 |---|---|---|---|
-| `color` | `ThemeAwareValue` | `primary` | Accent color. A theme color name or any CSS color. Under a gradient, its first stop. Unset, a `standard` or `outlined` button on a gradient `Paper`, a coloured or gradient `Header`, a filled, tonal or gradient `Alert` or a `Mark` takes that surface's text color. |
+| `color` | `ThemeAwareValue` | `primary` | Accent color. A theme color name or any CSS color. Under a gradient, its first stop. Unset, a `standard` or `outlined` button on a gradient `Paper`, a coloured or gradient `Header`, a filled, tonal or gradient `Alert` or a `Mark` takes that surface's text color. A secondary action beside a filled primary one, such as "Cancel" beside "Save", is `color: "neutral"` with `variant: "outlined"`; `"ink"` draws it in the page's text colour instead. |
 | `variant` | `Variant` | `filled` | Visual style, from most to least emphasis: `filled`, `tonal`, `elevated`, `outlined`, `standard`. `gradient` fills it from `color` into the theme's second stop. |
 | `gradient` | `Gradient` | - | With `variant: "gradient"`: the second stop and the angle, as `("info", 90)` or `Gradient::default().to("info").deg(90)`. The first stop is `color`. A literal CSS stop's label contrast is yours to check. Ignored by the other variants. |
 | `radius` | `ThemeAwareValue` | `md` | Corner radius, independent of `size`, or any CSS, e.g. `radius: "0"`. |

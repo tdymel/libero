@@ -273,12 +273,12 @@ pub fn TreePage() -> Element {
                         .doc("Row gap and per-level indent together, from `List`'s scale. Set them apart through `sx`."),
                     prop("guides", "bool")
                         .default("false")
-                        .doc("Draws a line down each open branch, under its chevron, and marks the `current` row's part of it. Theme default `TreeDefaults::guides`."),
+                        .doc("Draws a line down each open branch, under its chevron, and marks the `current` row's part of it. The lines use logical properties, so they move to the right under `dir=\"rtl\"`. Theme default `TreeDefaults::guides`."),
                     prop("aria_label", "String").default("required").doc("The tree's accessible name."),
                     prop("data", "Vec<TreeNode<T>>").default("required").doc("The nodes, over your own data type."),
                     prop("render_node", "Callback<TreeNodeRenderArgs<T>, Element>")
                         .default("default_tree_render")
-                        .doc("Each visible row's content. A custom one can still call the default for some rows. `TreeItemContent` is the standard row and `TreeItem` a plain label. A row that links somewhere is a `NavLink` with `args.tabindex`."),
+                        .doc("Each visible row's content. A custom one can still call the default for some rows. `TreeItemContent` is the standard row and `TreeItem` a plain label the row names and Enter clicks. Both take `icon` and `trailing_icon` as `SvgData`, and only they draw the `checked` checkbox. A row that links somewhere is a `NavLink` with `args.tabindex`."),
                     prop("default_expanded", "HashSet<String>").doc("The ids expanded at first. Read once, and ignored when `expanded` is set."),
                     prop("expanded", "HashSet<String>").doc(
                         "The expanded ids, controlled. The tree follows it and asks for every change through `onexpandedchange`. Unset, the tree keeps its own.",
@@ -297,7 +297,7 @@ pub fn TreePage() -> Element {
                     prop("onselectedchange", "EventHandler<HashSet<String>>")
                         .doc("Called with the whole new set of selected ids. Store it when `selected` is set."),
                     prop("checked", "HashSet<String>").doc(
-                        "The checked ids, controlled: set, every row draws a checkbox and carries `aria-checked`. Space or a click on the box toggles it. Store it with `oncheckedchange`.",
+                        "The checked ids, controlled: set, every row draws a checkbox and carries `aria-checked`. Space or a click on the box toggles it, and so does a click on a leaf row while `selected` is unset. Store it with `oncheckedchange`.",
                     ),
                     prop("check_strictly", "bool").default("false").doc(
                         "With `checked`, each row checks alone. Unset, checking a branch checks its enabled descendants, and a branch reads `mixed` while only some are checked.",
@@ -316,7 +316,7 @@ pub fn TreePage() -> Element {
                 props("TreeNode<T>", vec![
                     prop("id", "String").default("required").doc("The node's unique id."),
                     prop("data", "T").default("required").doc("Your data for this node."),
-                    prop("children", "Vec<TreeNode<T>>").doc("Nested nodes. Without any, the node is a leaf, so a branch whose children load later holds a disabled placeholder row until then."),
+                    prop("children", "Vec<TreeNode<T>>").doc("Nested nodes. Without any, the node is a leaf, so a branch whose children load later holds a disabled placeholder row, such as \"Loading…\", until then. `onexpandedchange` says when the branch opens, and a focused placeholder hands focus to the first loaded row."),
                     prop("disabled", "bool").default("false").doc("The arrow keys still reach it, but it does not activate, expand, collapse, select or check. Its descendants are disabled too."),
                 ]).without_base_props(),
                 props("TreeNodeRenderArgs<T>", vec![

@@ -30,27 +30,6 @@ fn Demo() -> Element {
 }
 ```
 
-A typed route in `to` navigates through the router.
-
-```rust
-use dioxus::prelude::*;
-use libero::components::Anchor;
-
-#[component]
-fn Demo() -> Element {
-    rsx! {
-        Anchor { to: Route::GettingStarted {}, "Back to Getting Started" }
-    }
-}
-#
-# #[derive(Clone, PartialEq, Routable)]
-# enum Route {
-#     #[route("/0")]
-#     GettingStarted {},
-# }
-# #[component] fn GettingStarted() -> Element { rsx! {} }
-```
-
 ## Props
 
 | Prop | Type | Default | Description |

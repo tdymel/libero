@@ -55,22 +55,16 @@ fn Demo() -> Element {
 # fn address_valid() -> bool { true }
 ```
 
-## Step states
-
-Steps before `value` are completed, the rest pending. `state` overrides single
-steps and is the only way to mark one `StepState::Error`. An error changes the
-marker, not which step is current.
-
 ## Props
 
 | Prop | Type | Default | Description |
 |---|---|---|---|
-| `value` | `Option<T>` | required | The current step. `None` means every step is finished. |
+| `value` | `Option<T>` | required | The current step. Steps before it are completed, the rest pending. `None` means every step is finished. |
 | `panel` | `Callback<T, Element>` | - | A step's body. Horizontal shows it below the strip, vertical under its own step. A closed step's content is not mounted. |
 | `options` | `Vec<T>` | `T::options()` | The steps to show, in order. |
 | `option_label` | `Callback<T, OptionLabel>` | `T::label()` | Overrides a step's label. `OptionLabel::rich` draws it as rsx and keeps a text name. |
 | `option_description` | `Callback<T, String>` | - | A second line under a step's label. An empty string prints none. |
-| `state` | `Callback<T, Option<StepState>>` | derived | Overrides a step's state. `None` keeps the derived one. The only way to mark a step `Error`. |
+| `state` | `Callback<T, Option<StepState>>` | derived | Overrides a step's state. `None` keeps the derived one. The only way to mark a step `Error`, which changes the marker, not which step is current. |
 | `onstepclick` | `EventHandler<T>` | - | Called with the picked step. Without it the steps are plain text with no tab stops of their own; a scrolling strip with no clickable step is one tab stop itself. |
 | `allow_next_steps` | `bool` | `false` | With `onstepclick`, lets steps not reached yet be picked too. |
 | `orientation` | `Orientation` | `horizontal` | `vertical` puts each step's content under the step itself. |

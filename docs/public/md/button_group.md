@@ -40,12 +40,6 @@ fn Demo() -> Element {
 # #[component] fn UnderlineIcon() -> Element { rsx! {} }
 ```
 
-## Shared defaults
-
-`variant`, `color`, `size`, `radius`, `disabled` and `focusable_when_disabled` set the default of every
-button inside; a button's own prop wins. This site's header groups its
-repository link, direction toggle and theme switcher, and on a phone the search.
-
 ## Props
 
 | Prop | Type | Default | Description |

@@ -51,20 +51,6 @@ fn Demo() -> Element {
 }
 ```
 
-The page's own banner:
-
-```rust
-use dioxus::prelude::*;
-use libero::components::Header;
-
-#[component]
-fn Demo() -> Element {
-    rsx! {
-        Header { publish_height: true, "Libero" }
-    }
-}
-```
-
 ## Props
 
 | Prop | Type | Default | Description |

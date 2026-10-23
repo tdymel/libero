@@ -16,7 +16,7 @@ pub fn CopyPage() -> Element {
             markdown: "/md/copy.md",
             properties: vec![props("Copy", vec![
                 prop("value", "String").default("required")
-                    .doc("The text a press writes to the clipboard. On the web the browser allows it only over HTTPS or on localhost, inside a user action; natively it needs the `native` feature. A control of your own builds on `use_clipboard()`."),
+                    .doc("The text a press writes to the clipboard. On the web the browser allows it only over HTTPS or on localhost, inside a user action; natively it needs the `native` feature. A control of your own builds on `use_clipboard()`: `copy(text)` starts the write, `copied()` or `failed()` rises once the platform answers, and `reset()` clears both. Say the result in a status region that is already mounted."),
                 prop("variant", "Variant")
                     .doc("Visual style, as on `ActionIcon`. With `color` also unset, the button draws no chrome of its own."),
                 prop("color", "ThemeAwareValue")

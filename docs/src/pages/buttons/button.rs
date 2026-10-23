@@ -34,7 +34,7 @@ pub fn ButtonPage() -> Element {
             properties: vec![props("Button", vec![
                 prop("color", "ThemeAwareValue")
                     .default("primary")
-                    .doc("Accent color. A theme color name or any CSS color. Under a gradient, its first stop. Unset, a `standard` or `outlined` button on a gradient `Paper`, a coloured or gradient `Header`, a filled, tonal or gradient `Alert` or a `Mark` takes that surface's text color."),
+                    .doc("Accent color. A theme color name or any CSS color. Under a gradient, its first stop. Unset, a `standard` or `outlined` button on a gradient `Paper`, a coloured or gradient `Header`, a filled, tonal or gradient `Alert` or a `Mark` takes that surface's text color. A secondary action beside a filled primary one, such as \"Cancel\" beside \"Save\", is `color: \"neutral\"` with `variant: \"outlined\"`; `\"ink\"` draws it in the page's text colour instead."),
                 prop("variant", "Variant")
                     .default(theme.button.variant.as_str())
                     .doc("Visual style, from most to least emphasis: `filled`, `tonal`, `elevated`, `outlined`, `standard`. `gradient` fills it from `color` into the theme's second stop."),

@@ -26,54 +26,6 @@ fn Demo() -> Element {
 }
 ```
 
-Rendered conditionally, closed by a backdrop click or by the Cancel button, which
-a keyboard reaches.
-
-```rust
-use dioxus::prelude::*;
-use libero::components::{Button, Overlay, Text};
-
-#[component]
-fn Demo() -> Element {
-    let mut busy = use_signal(|| false);
-
-    rsx! {
-        Button { onclick: move |_| busy.set(true), "Load" }
-        if busy() {
-            Overlay { blur: "4px", onclick: move |_| busy.set(false),
-                Text { "Loading..." }
-                Button { onclick: move |_| busy.set(false), "Cancel" }
-            }
-        }
-    }
-}
-```
-
-## One box loading
-
-`LoadingOverlay` dims its children under a `Loader` while `loading`, makes them
-`inert` and its box `aria-busy`, and says "Loading" once. Its feature is
-`loading-overlay`, off by default.
-
-```rust
-use dioxus::prelude::*;
-use libero::components::{Button, LoadingOverlay, Paper, Text};
-
-#[component]
-fn Demo() -> Element {
-    let saving = use_signal(|| true);
-
-    rsx! {
-        LoadingOverlay { loading: saving(),
-            Paper {
-                Text { "Ada Lovelace" }
-                Button { "Edit profile" }
-            }
-        }
-    }
-}
-```
-
 ## Props
 
 | Prop | Type | Default | Description |
@@ -89,7 +41,7 @@ fn Demo() -> Element {
 
 | Prop | Type | Default | Description |
 |---|---|---|---|
-| `loading` | `bool` | `false` | Covers the children with a dim and a `Loader`, makes them `inert` and the box `aria-busy`, and says "Loading" once. |
+| `loading` | `bool` | `false` | Covers the children with a dim and a `Loader`, makes them `inert` and the box `aria-busy`, and says "Loading" once. Its feature is `loading-overlay`, off by default. |
 | `children` | `Element` | required | The content that loads. `sx`, `class` and extra attributes land on the box around it. |
 
 Like every component, `Overlay` and `LoadingOverlay` also take the shared props

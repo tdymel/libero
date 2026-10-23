@@ -31,33 +31,6 @@ fn Demo() -> Element {
 }
 ```
 
-`component` swaps the tag, and that tag's attributes come with it.
-
-```rust
-use dioxus::prelude::*;
-use libero::components::Box;
-use libero::sx::sx;
-
-#[component]
-fn Demo() -> Element {
-    rsx! {
-        Box {
-            component: "a",
-            href: "https://dioxuslabs.com",
-            target: "_blank",
-            sx: sx().padding("16px").background("muted.1").border_radius("md"),
-            "Styled entirely via sx"
-        }
-    }
-}
-```
-
-`component` takes any of the 111 HTML5 element names. 83 of them render on
-default features. The other 28 (document metadata, embedded and media content,
-`template`, `slot`, bidi and ruby) need the `full-polymorphism` feature and
-render as a `div` without it. See
-[getting_started.md](getting_started.md#feature-flags).
-
 ## Props
 
 | Prop | Type | Default | Description |

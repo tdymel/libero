@@ -34,13 +34,6 @@ fn Demo() -> Element {
 }
 ```
 
-`radius` and `shadow` take a step on the shared scales or any CSS, like a
-`2px` corner or no shadow.
-
-```rust,ignore
-Paper { shadow: "none", sx: sx().padding("lg"), "Flat" }
-```
-
 ## Props
 
 | Prop | Type | Default | Description |

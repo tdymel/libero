@@ -319,7 +319,10 @@ pub fn FloatingWindowPage() -> Element {
                     Code { source: "use_floating_window" }
                     " returns a "
                     Code { source: "Copy" }
-                    " handle that opens and closes it. There is no overlay or focus trap, so "
+                    " handle that opens and closes it. Call it under "
+                    Code { source: "LiberoProvider" }
+                    ", in a component that outlives every trigger: the window is portaled "
+                    "from there and sits on the viewport. There is no overlay or focus trap, so "
                     "the page stays usable. A drag re-renders the whole window, so keep its "
                     "body shallow."
                 }

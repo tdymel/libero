@@ -11,7 +11,8 @@ Need icons? [pictogram](https://github.com/tdymel/pictogram) ships lucide, Table
 
 An icon-only button for actions like copy, close or delete. It renders a
 `<button>`, or a link when `to` is set. `aria_label` is required, because the
-icon gives a screen reader nothing to read.
+icon gives a screen reader nothing to read. Once the button carries a visible
+label, use a `Button` with its `icon` prop instead.
 
 With neither `variant` nor `color` set, it has no background of its own and
 takes the surrounding text color.
@@ -38,16 +39,6 @@ fn Demo() -> Element {
 # #[component] fn CheckmarkIcon() -> Element { rsx! {} }
 ```
 
-With both `icon` and `children` set, `icon` wins and a debug build warns.
-
-## When to use it
-
-Use it when the icon is the whole control: a square button that lines up with a
-`Button` of the same size, and cannot be built without an accessible name. Once
-the button carries a visible label, use a `Button` with its `icon` prop instead.
-A `Button` with an icon and no text is a wide pill and has no name unless you add
-`aria-label` yourself.
-
 ## Props
 
 | Prop | Type | Default | Description |
@@ -72,7 +63,7 @@ A `Button` with an icon and no text is a wide pill and has no name unless you ad
 | `target` | `String` | - | The link's `target` attribute. |
 | `new_tab_hint` | `bool` | `true` | With `target: "_blank"`, "(opens in a new tab)" in the accessible name and the tooltip. `false` drops it and the icon. |
 | `new_tab_icon` | `bool` | `false` | With the hint, a small icon in the corner for sighted users. Unset, the theme's `anchor.new_tab_icon`, which is off. |
-| `icon` | `SvgData` | - | The glyph, drawn as a `Pictogram`: `pictogram_icons_lucide::x::outlined`. Wins over `children`. |
+| `icon` | `SvgData` | - | The glyph, drawn as a `Pictogram`: `pictogram_icons_lucide::x::outlined`. Wins over `children`, and a debug build warns when both are set. |
 | `children` | `Element` | - | The icon, when it is not `SvgData`: your own svg, or any element. |
 
 Like every component, `ActionIcon` also takes the shared props `sx`, `class`,

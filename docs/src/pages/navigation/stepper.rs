@@ -91,7 +91,7 @@ pub fn StepperPage() -> Element {
             markdown: "/md/stepper.md",
             properties: vec![
                 props("Stepper", vec![
-                    prop("value", "Option<T>").default("required").doc("The current step. `None` means every step is finished."),
+                    prop("value", "Option<T>").default("required").doc("The current step. Steps before it are completed, the rest pending. `None` means every step is finished."),
                     prop("panel", "Callback<T, Element>").doc("A step's body. Horizontal shows it below the strip, vertical under its own step. A closed step's content is not mounted."),
                     prop("options", "Vec<T>").default("T::options()").doc("The steps to show, in order."),
                     prop("option_label", "Callback<T, OptionLabel>")
@@ -100,7 +100,7 @@ pub fn StepperPage() -> Element {
                     prop("option_description", "Callback<T, String>").doc("A second line under a step's label. An empty string prints none."),
                     prop("state", "Callback<T, Option<StepState>>")
                         .default("derived")
-                        .doc("Overrides a step's state. `None` keeps the derived one. The only way to mark a step `Error`."),
+                        .doc("Overrides a step's state. `None` keeps the derived one. The only way to mark a step `Error`, which changes the marker, not which step is current."),
                     prop("onstepclick", "EventHandler<T>").doc("Called with the picked step. Without it the steps are plain text with no tab stops of their own; a scrolling strip with no clickable step is one tab stop itself."),
                     prop("allow_next_steps", "bool").default("false").doc("With `onstepclick`, lets steps not reached yet be picked too."),
                     prop("orientation", "Orientation").default("horizontal").doc("`vertical` puts each step's content under the step itself."),

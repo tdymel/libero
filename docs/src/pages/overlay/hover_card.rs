@@ -47,7 +47,7 @@ pub fn HoverCardPage() -> Element {
                     .doc("The trigger. It must hold a link or a button, since focus is the keyboard's only way to open the card."),
                 prop("side", "Side")
                     .default(theme.hover_card.side.as_str())
-                    .doc("Which side of the trigger the card opens on. It flips when that side has no room. `Start`/`End` are logical: `Start` is the left under `dir=\"ltr\"`, the right under `rtl`."),
+                    .doc("Which side of the trigger the card opens on. It flips when that side has no room. `Start`/`End` are logical: `Start` is the left under `dir=\"ltr\"`, the right under `rtl`. Takes the popover's enums, `libero::hooks::{Side, Align}`, such as `side: Side::Top`."),
                 prop("align", "Align")
                     .default(theme.hover_card.align.as_str())
                     .doc("Where the card lines up along that side."),

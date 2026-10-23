@@ -26,24 +26,6 @@ fn Demo() -> Element {
 }
 ```
 
-## Following the system
-
-With `with_system`, following the system is a step of its own. A press goes
-from following the system, to the scheme the system is not showing, to the one
-it is, and back, so under a light system the order is system, dark, light. The
-icon for that step is a half-filled disc.
-
-While it follows the system, a change of the OS setting applies at once. A
-picked scheme stays until the next press. For your own control, such as a menu
-of all three choices, build on `use_color_scheme()`: it reads the setting and
-what it resolves to, and `set`, `toggle` and `cycle` change it.
-
-## Theme sets
-
-With `themes` set, a second button beside it opens a menu of theme sets. This
-site's header uses `ThemeSwitcher { themes: ThemeSet::CATALOGUE }`. The
-button names come from the [localization](localization.md).
-
 ## Props
 
 | Prop | Type | Default | Description |
@@ -53,7 +35,7 @@ button names come from the [localization](localization.md).
 | `size` | `ThemeAwareValue` | `md` | Button size. The icon takes 55% of it. |
 | `radius` | `ThemeAwareValue` | `sm` | Corner radius, independent of `size`. |
 | `themes` | `&'static [&'static ThemeSet]` | - | Adds the theme picker, a second button that opens a menu of these sets. `class`, `sx` and extra attributes then land on the group around both. |
-| `with_system` | `bool` | `false` | Adds following the system to the cycle, as a step of its own with a half-filled disc: system, the scheme the system is not showing, the one it is, and back. Following, an OS change applies at once; a picked scheme stays until the next press. Off, a press flips between light and dark, and flipping to the system's own scheme follows the system again. For your own control, build on `use_color_scheme()`. |
+| `with_system` | `bool` | `false` | Adds following the system to the cycle, as a step of its own with a half-filled disc: system, the scheme the system is not showing, the one it is, and back. Following, an OS change applies at once; a picked scheme stays until the next press. Off, a press flips between light and dark, and flipping to the system's own scheme follows the system again. For your own control, such as a menu of all three choices, build on `use_color_scheme()`: it reads the setting and what it resolves to, and `set`, `toggle` and `cycle` change it. |
 | `label` | `Callback<ColorSchemeSetting, String>` | - | Replaces the three built-in button names. Gets the scheme a press shows next, always `Light` or `Dark` without `with_system` (even when the press stores `System`), and returns what the press does. |
 | `disabled` | `bool` | `false` | Disables and dims the button. |
 | `parts` | `Parts<ThemeSwitcherPart>` | - | Styles for the inner parts in the Style API tab, under `sx`. `Toggle`, `Picker` and `Chevron` exist with `themes` only. |

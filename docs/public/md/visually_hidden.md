@@ -35,20 +35,6 @@ fn Demo() -> Element {
 }
 ```
 
-The same rules as an `sx`, for an element libero renders itself:
-
-```rust
-use dioxus::prelude::*;
-use libero::components::{Text, visually_hidden_sx};
-
-#[component]
-fn Demo() -> Element {
-    rsx! {
-        Text { sx: visually_hidden_sx(), "Prices include VAT" }
-    }
-}
-```
-
 ## Props
 
 | Prop | Type | Default | Description |

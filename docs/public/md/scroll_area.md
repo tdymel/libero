@@ -73,35 +73,6 @@ fn Demo() -> Element {
 }
 ```
 
-With virtualize on, the rows come from `Virtualize`:
-
-```rust
-use dioxus::prelude::*;
-use libero::components::{List, ListItem, ScrollArea, Virtualize};
-
-#[component]
-fn Rows() -> Element {
-    let rows = use_signal(|| (0..50_000).map(|i| format!("Row {i}")).collect::<Vec<_>>());
-
-    rsx! {
-        ScrollArea {
-            List {
-                Virtualize {
-                    count: rows.read().len(),
-                    item: move |index: usize| rsx! {
-                        ListItem {
-                            aria_setsize: rows.read().len(),
-                            aria_posinset: index + 1,
-                            "{rows.read()[index]}"
-                        }
-                    },
-                }
-            }
-        }
-    }
-}
-```
-
 ## Props
 
 | Prop | Type | Default | Description |
@@ -179,7 +150,7 @@ parts work.
 - Use `scrollbars: "none"` only where something else scrolls: it puts the
   clipped content out of reach.
 - Give each `Virtualize` row `aria_setsize: count` and `aria_posinset: index + 1`,
-  as the virtualize example does: only the rows in view exist, so a screen
+  as the demo with virtualize on does: only the rows in view exist, so a screen
   reader cannot count the rest. For a table row, `aria-rowcount` and
   `aria-rowindex`.
 - Pass `focusable: true` when the content holds only controls hidden by CSS

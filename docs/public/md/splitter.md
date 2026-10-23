@@ -36,67 +36,6 @@ fn Demo() -> Element {
 }
 ```
 
-For more than two panes, put a `Splitter` in another's pane, split the other way.
-
-```rust
-use dioxus::prelude::*;
-use libero::{components::{Box, Splitter}, sx::sx};
-
-#[component]
-fn Demo() -> Element {
-    rsx! {
-        Box {
-            sx: sx().height("160px").width("100%").max_width("320px").border("1px solid var(--lsx-muted-3)"),
-            Splitter {
-                initial_size: 50.0,
-                aria_label: "Resize panes",
-                panel_a: rsx! { Box { sx: sx().height("100%").padding("md").background("primary.1"), "A" } },
-                panel_b: rsx! {
-                    Splitter {
-                        orientation: "horizontal",
-                        initial_size: 65.0,
-                        aria_label: "Resize pane B",
-                        panel_a: rsx! { Box { sx: sx().height("100%").padding("md").background("secondary.1"), "B" } },
-                        panel_b: rsx! { Box { sx: sx().height("100%").padding("md").background("info.1"), "C" } },
-                    }
-                },
-            }
-        }
-    }
-}
-```
-
-`onresize` sends a `SplitterResizeEvent` with both panes' sizes in percent, A
-first. A drag sends `Start`, then `Change`, then `End`. A key press or
-double-click sends `Change` then `End`, so saving the layout on `End` catches
-every resize.
-
-Set `size` to hold pane A's size yourself: the panes follow it, and a drag, key
-or double-click only reports through `onresize`. Here the caller snaps every
-move to 10%.
-
-```rust
-use dioxus::prelude::*;
-use libero::{components::{Box, Splitter, SplitterResizeEvent}, sx::sx};
-
-#[component]
-fn Snapping() -> Element {
-    let mut size = use_signal(|| 30.0);
-    rsx! {
-        Box {
-            sx: sx().height("160px").width("100%").max_width("320px").border("1px solid var(--lsx-muted-3)"),
-            Splitter {
-                size: size(),
-                aria_label: "Resize panes",
-                onresize: move |event: SplitterResizeEvent| if let SplitterResizeEvent::Change(a, _) = event { size.set((a / 10.0).round() * 10.0) },
-                panel_a: rsx! { Box { sx: sx().height("100%").padding("md").background("primary.1"), "A {size:.0}%" } },
-                panel_b: rsx! { Box { sx: sx().height("100%").padding("md").background("secondary.1"), "B" } },
-            }
-        }
-    }
-}
-```
-
 ## Props
 
 | Prop | Type | Default | Description |
@@ -107,10 +46,10 @@ fn Snapping() -> Element {
 | `min_size` | `f64` | `10` | The smallest size of either pane in percent, at most 50. |
 | `divider_size` | `Size` | `sm` | Thickness of the divider line. |
 | `divider_color` | `ThemeAwareValue` | - | The divider's color. Unset it is `muted.6`, 3:1 on the page and `Paper`. |
-| `onresize` | `EventHandler<SplitterResizeEvent>` | - | Fires as the divider moves, with both panes' sizes in percent. A key press or double-click sends `Change` then `End`. |
+| `onresize` | `EventHandler<SplitterResizeEvent>` | - | Fires as the divider moves, with both panes' sizes in percent, A first. A drag sends `Start`, `Change`, then `End`; a key press or double-click sends `Change` then `End`, so saving the layout on `End` catches every resize. |
 | `aria_label` | `String` | - | Names the divider after the pane it resizes. A debug build warns without it. |
 | `panel_a` | `Element` | required | The start or top pane. |
-| `panel_b` | `Element` | required | The end or bottom pane. |
+| `panel_b` | `Element` | required | The end or bottom pane. For more than two panes, put a `Splitter` in a pane, split the other way. |
 
 Like every component, `Splitter` also takes the shared props `sx`, `class`,
 `states`, and any extra HTML attributes.

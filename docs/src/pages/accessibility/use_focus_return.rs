@@ -1,4 +1,4 @@
-use crate::components::{Demo, DemoFile, DemoValues, DocPage, DocSection, a11y};
+use crate::components::{Demo, DemoFile, DemoValues, DocPage, a11y};
 use dioxus::prelude::*;
 use libero::components::{Code, Text};
 
@@ -26,7 +26,14 @@ pub fn UseFocusReturnPage() -> Element {
                     " puts focus back where it came from once a panel or popup closes. "
                     "Without it, focus inside a closing panel drops to the document body "
                     "and a keyboard user loses their place. The overlays in libero do "
-                    "this already; use the hook for a panel of your own."
+                    "this already; use the hook for a panel of your own. Call "
+                    Code { source: "remember_active()" }
+                    " in the handler that opens, on every open, and "
+                    Code { source: "restore()" }
+                    " wherever it closes. A webview, unlike the web and Blitz, has no "
+                    "focused element to read, so name the trigger with "
+                    Code { source: "remember(event)" }
+                    " there."
                 }
             },
 
@@ -36,40 +43,6 @@ pub fn UseFocusReturnPage() -> Element {
                 controls: Vec::new(),
                 render: move |_: DemoValues| rsx! { Filters {} },
                 file: DemoFile(include_str!("use_focus_return/demo.rs")),
-            }
-
-            DocSection {
-                title: "Web and native",
-                Text {
-                    Code { source: "remember_active()" }
-                    " reads the focused element from the document, which the web and Blitz "
-                    "have and a webview does not. There it remembers nothing, so name the "
-                    "trigger with "
-                    Code { source: "remember(event)" }
-                    " instead."
-                }
-            }
-
-            DocSection {
-                title: "Arming and restoring",
-                Text {
-                    "Call "
-                    Code { source: "remember_active()" }
-                    " in the handler that opens, and "
-                    Code { source: "restore()" }
-                    " wherever it closes. "
-                    Code { source: "restore()" }
-                    " consumes what "
-                    Code { source: "remember_active()" }
-                    " saved, so arm it on every open. "
-                    Code { source: "remember(event)" }
-                    " on a trigger's "
-                    Code { source: "onmounted" }
-                    " names an element instead, which stays armed. "
-                    Code { source: "fallback(handle)" }
-                    " names where focus goes if the trigger is gone by then, such as the "
-                    "list a deleted row lived in."
-                }
             }
         }
     }

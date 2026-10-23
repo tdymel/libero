@@ -8,7 +8,8 @@ Index: [index.md](index.md) lists every other page
 Description: A command palette. A modal search box over your actions, with groups, arrow-key highlight and a Ctrl/Cmd+K hotkey.
 
 A command palette, a modal search box over a list of actions. `use_spotlight`
-returns a `Copy` handle, like `use_modal`. `actions` is called with the query
+returns a `Copy` handle, like `use_modal`, so call it in a component that
+outlives every trigger. `actions` is called with the query
 and returns the rows, so a fixed list and search results are the same prop.
 `spotlight_filter` covers the common case. Label hits come first, exact and
 prefix matches before matches inside a word, so "table" puts Table above
@@ -49,58 +50,6 @@ fn Demo() -> Element {
 }
 ```
 
-Call the hook in a component that outlives every trigger, as with `use_modal`.
-
-A flat list with icons and custom texts.
-
-```rust,ignore
-let files: Vec<SpotlightAction> = ["src", "src/main.rs", "Cargo.toml"]
-    .into_iter()
-    .map(|path| SpotlightAction::new(path).icon(rsx! { FileIcon {} }))
-    .collect();
-let spotlight = use_spotlight(SpotlightOptions {
-    actions: Some(Callback::new(move |query: String| spotlight_filter(&query, &files))),
-    placeholder: Some("Go to file...".into()),
-    nothing_found: Some(rsx! { "No file by that name." }),
-    shortcut: Some('p'),
-    ..Default::default()
-});
-```
-
-For results from a server, return a signal's contents from `actions`, start the
-search from `onquery` and set `loading` until it answers. Cancel the previous
-search first, or a slow answer to an older query overwrites the newer rows.
-
-```rust,ignore
-let mut results = use_signal(Vec::<SpotlightAction>::new);
-let mut loading = use_signal(|| false);
-let mut search_task = use_signal(|| None::<dioxus::core::Task>);
-let spotlight = use_spotlight(SpotlightOptions {
-    actions: Some(Callback::new(move |query: String| match query.trim().is_empty() {
-        true => vec![],
-        false => results(),
-    })),
-    loading: loading(),
-    onquery: Some(Callback::new(move |query: String| {
-        loading.set(true);
-        if let Some(older) = search_task.write().take() {
-            older.cancel();
-        }
-        search_task.set(Some(spawn(async move {
-            results.set(search_on_server(&query).await);
-            loading.set(false);
-        })));
-    })),
-    ..Default::default()
-});
-```
-
-## Groups and shortcuts
-
-Rows with a `group` are drawn under its header, groups in the order they first
-appear. A `shortcut` on an action is a hint, drawn as one `Kbd` per key, and
-never bound.
-
 ## API
 
 ```rust,ignore
@@ -122,7 +71,7 @@ pub fn spotlight_filter(query: &str, actions: &[SpotlightAction]) -> Vec<Spotlig
 | `shortcut` | `Option<char>` | `Some('k')` | Ctrl (Cmd on a Mac) plus this key toggles the palette. `None` for no hotkey. Web only. A key the browser already uses, such as L, T or W, warns in a debug build. Elsewhere, open the palette from a button. Two palettes on one page should not share a key. |
 | `highlight_first_on_query` | `bool` | `true` | Highlights the first row after every keystroke, so Enter runs it. Off, Enter does nothing until the arrows pick a row. |
 | `loading` | `bool` | `false` | The results are still coming. A loader replaces the rows, and a screen reader hears "Searching". |
-| `onquery` | `Callback<String>` | - | Called with the query on every keystroke. Set `loading` and start the search here, cancelling the previous one: a newer query supersedes it. |
+| `onquery` | `Callback<String>` | - | Called with the query on every keystroke. Set `loading` and start the search here, cancelling the previous one first: a newer query supersedes it, and a slow answer to an older one would overwrite the newer rows. Return the results from `actions` out of a signal. |
 | `sx` | `Sx` | - | Styles the dialog box. |
 | `parts` | `Parts<SpotlightPart>` | - | Styles for the inner parts in the Style API tab, under `sx`. |
 

@@ -181,11 +181,11 @@ pub fn SplitterPage() -> Element {
                 prop("divider_color", "ThemeAwareValue")
                     .doc("The divider's color. Unset it is `muted.6`, 3:1 on the page and `Paper`."),
                 prop("onresize", "EventHandler<SplitterResizeEvent>")
-                    .doc("Fires as the divider moves, with both panes' sizes in percent. A key press or double-click sends `Change` then `End`."),
+                    .doc("Fires as the divider moves, with both panes' sizes in percent, A first. A drag sends `Start`, `Change`, then `End`; a key press or double-click sends `Change` then `End`, so saving the layout on `End` catches every resize."),
                 prop("aria_label", "String")
                     .doc("Names the divider after the pane it resizes. A debug build warns without it."),
                 prop("panel_a", "Element").default("required").doc("The start or top pane."),
-                prop("panel_b", "Element").default("required").doc("The end or bottom pane."),
+                prop("panel_b", "Element").default("required").doc("The end or bottom pane. For more than two panes, put a `Splitter` in a pane, split the other way."),
             ])],
             accessibility: a11y()
                 .key(["Tab"], "Focuses the divider, a tab stop.")

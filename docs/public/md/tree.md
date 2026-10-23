@@ -105,112 +105,6 @@ fn Demo() -> Element {
 }
 ```
 
-The expansion, the buttons and the selection readout are the example's own
-state, not part of `Tree`.
-
-## Rows
-
-`render_node` decides what a row does, and gets the row's live `expanded`
-state. `TreeItemContent` is the standard row: the chevron, an `icon`, the label
-and a `trailing_icon`, icons as `SvgData` (see [`Pictogram`](pictogram.md)). The
-default row is one. `TreeItem` lays a row out the same way as a plain label the
-row names and Enter clicks (a button outside a `Tree`). A row that links
-somewhere is a [`NavLink`](nav_link.md) with `args.tabindex`. The checkbox of
-`checked` is drawn only by `TreeItemContent` and `TreeItem`, so a custom row
-without them has none.
-`default_tree_render(args)` draws the default row, so a custom `render_node`
-can fall back to it.
-
-## Guides
-
-`guides` draws a line down each open branch, under its chevron, and marks the
-`current` row's part of it, as this site's sidebar does. The lines use logical
-properties, so they move to the right under `dir="rtl"`.
-
-`Tree` renders through [`List`](list.md). `size` sets the row gap and the
-per-level indent together. Set them apart through `sx`.
-
-## Selection and checkboxes
-
-`selected` makes the rows selectable, each with `aria-selected`. A click picks
-a row: it toggles one, and replaces the rest unless `multiple` is set, where
-Shift+click adds the visible rows from the last one picked. Like `expanded`,
-the set is yours: the tree asks through `onselectedchange`. `checked` puts a
-checkbox on each row, with `aria-checked`. Space or a click on the box toggles
-it, and so does a click on a leaf row while `selected` is unset. Unless
-`check_strictly` is set, checking a branch checks its enabled descendants, and
-the branch reads `mixed` while only some of them are checked. Disabled nodes
-are never selected or checked. The demo above uses both.
-
-```rust
-use std::collections::HashSet;
-
-use dioxus::prelude::*;
-use libero::components::{Tree, TreeNode};
-
-#[component]
-fn Demo() -> Element {
-    let mut picked = use_signal(|| HashSet::from(["src/lib.rs".to_string()]));
-    let mut checked = use_signal(HashSet::<String>::new);
-
-    rsx! {
-        Tree {
-            aria_label: "Project files",
-            data: vec![
-                TreeNode::new("src", "src").children(vec![TreeNode::new("src/lib.rs", "lib.rs")]),
-                TreeNode::new("README.md", "README.md"),
-            ],
-            default_expanded: HashSet::from(["src".to_string()]),
-            selected: picked(),
-            multiple: true,
-            onselectedchange: move |next| picked.set(next),
-            checked: checked(),
-            oncheckedchange: move |next| checked.set(next),
-        }
-    }
-}
-```
-
-## Lazy loading
-
-A node without children is a leaf, which cannot open. To load a branch's
-children when it opens, give it one disabled placeholder row, such as
-"Loading…", and swap in the children once they arrive. `onexpandedchange` says
-when the branch opens. A focused placeholder hands focus to the first loaded
-row.
-
-```rust
-use std::collections::HashSet;
-
-use dioxus::prelude::*;
-use libero::components::{Tree, TreeNode};
-
-#[component]
-fn LazyFiles() -> Element {
-    let mut expanded = use_signal(HashSet::<String>::new);
-    let mut files = use_signal(|| None::<Vec<String>>);
-    let children = match files() {
-        Some(files) => files.into_iter().map(|file| TreeNode::new(format!("src/{file}"), file)).collect(),
-        None => vec![TreeNode::new("src/loading", "Loading…".to_string()).disabled(true)],
-    };
-
-    rsx! {
-        Tree {
-            aria_label: "Files",
-            data: vec![TreeNode::new("src", "src".to_string()).children(children)],
-            expanded: expanded(),
-            onexpandedchange: move |next: HashSet<String>| {
-                if next.contains("src") && files.peek().is_none() {
-                    // Your fetch goes here.
-                    spawn(async move { files.set(Some(vec!["lib.rs".to_string(), "main.rs".to_string()])) });
-                }
-                expanded.set(next);
-            },
-        }
-    }
-}
-```
-
 ## Props
 
 ### `Tree<T>`
@@ -218,10 +112,10 @@ fn LazyFiles() -> Element {
 | Prop | Type | Default | Description |
 |---|---|---|---|
 | `size` | `Size` | `md` | Row gap and per-level indent together, from `List`'s scale. Set them apart through `sx`. |
-| `guides` | `bool` | `false` | Draws a line down each open branch, under its chevron, and marks the `current` row's part of it. Theme default `TreeDefaults::guides`. |
+| `guides` | `bool` | `false` | Draws a line down each open branch, under its chevron, and marks the `current` row's part of it. The lines use logical properties, so they move to the right under `dir="rtl"`. Theme default `TreeDefaults::guides`. |
 | `aria_label` | `String` | required | The tree's accessible name. |
 | `data` | `Vec<TreeNode<T>>` | required | The nodes, over your own data type. |
-| `render_node` | `Callback<TreeNodeRenderArgs<T>, Element>` | `default_tree_render` | Each visible row's content. A custom one can still call the default for some rows. `TreeItemContent` is the standard row and `TreeItem` a plain label. A row that links somewhere is a `NavLink` with `args.tabindex`. |
+| `render_node` | `Callback<TreeNodeRenderArgs<T>, Element>` | `default_tree_render` | Each visible row's content. A custom one can still call the default for some rows. `TreeItemContent` is the standard row and `TreeItem` a plain label the row names and Enter clicks. Both take `icon` and `trailing_icon` as `SvgData`, and only they draw the `checked` checkbox. A row that links somewhere is a `NavLink` with `args.tabindex`. |
 | `default_expanded` | `HashSet<String>` | - | The ids expanded at first. Read once, and ignored when `expanded` is set. |
 | `expanded` | `HashSet<String>` | - | The expanded ids, controlled. The tree follows it and asks for every change through `onexpandedchange`. Unset, the tree keeps its own. |
 | `current` | `String` | - | The id of the node the user is on, such as a nav's current page. Tab into the tree lands on it, or on its collapsed branch. Its row carries `aria-current` and, unless a `guides` line marks it, NavLink's tint and start bar. A row that renders a `NavLink` draws both, so pair one with `guides`. |
@@ -229,7 +123,7 @@ fn LazyFiles() -> Element {
 | `selected` | `HashSet<String>` | - | The selected ids, controlled: set, the rows are selectable and carry `aria-selected`. A click or Space picks a row. Store it with `onselectedchange`. |
 | `multiple` | `bool` | `false` | With `selected`, any number of rows: a click or Space toggles one, and Shift extends a range. Sets `aria-multiselectable` on the root. |
 | `onselectedchange` | `EventHandler<HashSet<String>>` | - | Called with the whole new set of selected ids. Store it when `selected` is set. |
-| `checked` | `HashSet<String>` | - | The checked ids, controlled: set, every row draws a checkbox and carries `aria-checked`. Space or a click on the box toggles it. Store it with `oncheckedchange`. |
+| `checked` | `HashSet<String>` | - | The checked ids, controlled: set, every row draws a checkbox and carries `aria-checked`. Space or a click on the box toggles it, and so does a click on a leaf row while `selected` is unset. Store it with `oncheckedchange`. |
 | `check_strictly` | `bool` | `false` | With `checked`, each row checks alone. Unset, checking a branch checks its enabled descendants, and a branch reads `mixed` while only some are checked. |
 | `oncheckedchange` | `EventHandler<HashSet<String>>` | - | Called with the whole new set of checked ids. Store it when `checked` is set. Unset `check_strictly`, the set holds every fully checked node. |
 | `parts` | `Parts<TreePart>` | - | Styles for the inner parts in the Style API tab, under `sx`. |
@@ -245,7 +139,7 @@ Like every component, `Tree` also takes the shared props `sx`, `class`, `style`,
 |---|---|---|---|
 | `id` | `String` | required | The node's unique id. |
 | `data` | `T` | required | Your data for this node. |
-| `children` | `Vec<TreeNode<T>>` | - | Nested nodes. Without any, the node is a leaf, so a branch whose children load later holds a disabled placeholder row until then. |
+| `children` | `Vec<TreeNode<T>>` | - | Nested nodes. Without any, the node is a leaf, so a branch whose children load later holds a disabled placeholder row, such as "Loading…", until then. `onexpandedchange` says when the branch opens, and a focused placeholder hands focus to the first loaded row. |
 | `disabled` | `bool` | `false` | The arrow keys still reach it, but it does not activate, expand, collapse, select or check. Its descendants are disabled too. |
 
 ### `TreeNodeRenderArgs<T>`

@@ -46,128 +46,6 @@ fn Demo() -> Element {
 }
 ```
 
-You own `value`, and `onchange` asks for the next tab. Without `onchange` the
-selection never changes, and without `panel` nothing shows below the strip.
-`Tabs` warns about both.
-
-`option_label` renames the whole strip during render.
-
-```rust
-use dioxus::prelude::*;
-use libero::components::{OptionLabel, Options, Tabs};
-
-#[derive(Clone, PartialEq, Options)]
-enum Section {
-    Account,
-    Admin,
-    Billing,
-}
-
-#[component]
-fn Demo() -> Element {
-    let mut section = use_signal(|| Section::Account);
-
-    rsx! {
-        Tabs {
-            aria_label: "Settings",
-            value: section(),
-            onchange: move |next| section.set(next),
-            option_label: |section: Section| -> OptionLabel {
-                match section {
-                    Section::Account => "Konto".into(),
-                    Section::Admin => "Verwaltung".into(),
-                    Section::Billing => "Rechnung".into(),
-                }
-            },
-            panel: |section: Section| match section {
-                Section::Account => rsx! { "Konto" },
-                Section::Admin => rsx! { "Verwaltung" },
-                Section::Billing => rsx! { "Rechnung" },
-            },
-        }
-    }
-}
-```
-
-`OptionLabel::rich` draws a tab as rsx and names it separately.
-
-```rust
-use dioxus::prelude::*;
-use libero::components::{Icon, OptionLabel, Options, Tabs};
-
-#[derive(Clone, PartialEq, Options)]
-enum Section {
-    Account,
-    Admin,
-    Billing,
-}
-
-#[component]
-fn Demo() -> Element {
-    let mut section = use_signal(|| Section::Account);
-
-    rsx! {
-        Tabs {
-            aria_label: "Settings",
-            value: section(),
-            onchange: move |next| section.set(next),
-            option_label: |section: Section| OptionLabel::rich(
-                section.label(),
-                rsx! {
-                    Icon { variant: "standard", size: "sm", FileIcon {} }
-                    "{section.label()}"
-                },
-            ),
-            panel: |section: Section| rsx! { "{section.label()}" },
-        }
-    }
-}
-#
-# #[component] fn FileIcon() -> Element { rsx! {} }
-```
-
-`FileIcon` is your own icon component. Any `svg` works, and `Icon` sizes it.
-
-## Labels
-
-`option_label` renames tabs during render, so the strip follows a locale
-signal. `OptionLabel::rich` draws a tab as rsx, such as an icon, and takes a
-text name for screen readers.
-
-## Vertical tabs
-
-`placement: TabsPlacement::Start` puts the strip in a column beside the panel,
-moved by Up and Down. `Start` is the inline start side (left in left-to-right
-text), `End` the inline end side. The tablist has `aria-orientation="vertical"`,
-and the selected tab's indicator sits on the edge facing the panel.
-
-```rust
-use dioxus::prelude::*;
-use libero::components::{Options, Tabs, TabsPlacement};
-
-#[derive(Clone, PartialEq, Options)]
-enum Section {
-    Account,
-    Billing,
-    Admin,
-}
-
-#[component]
-fn Demo() -> Element {
-    let mut section = use_signal(|| Section::Account);
-
-    rsx! {
-        Tabs {
-            aria_label: "Settings",
-            placement: TabsPlacement::Start,
-            value: section(),
-            onchange: move |next| section.set(next),
-            panel: |section: Section| rsx! { "{section.label()}" },
-        }
-    }
-}
-```
-
 ## Props
 
 ### Tabs
@@ -175,15 +53,15 @@ fn Demo() -> Element {
 | Prop | Type | Default | Description |
 |---|---|---|---|
 | `value` | `T` | required | The selected tab. Pair it with `onchange`. |
-| `onchange` | `EventHandler<T>` | - | Called with the tab that should become selected. |
-| `panel` | `Callback<T, Element>` | - | The body of the selected tab. Only the selected panel is built. |
+| `onchange` | `EventHandler<T>` | - | Called with the tab that should become selected. Without it the selection never changes, and `Tabs` warns. |
+| `panel` | `Callback<T, Element>` | - | The body of the selected tab. Only the selected panel is built. Without it nothing shows below the strip, and `Tabs` warns. |
 | `options` | `OptionSource<T>` | `T::options()` | The tabs to show. A `Vec<T>` converts, and an `OptionList<T>` can disable single tabs. Groups draw flattened. A source still loading draws no tabs. |
-| `option_label` | `Callback<T, OptionLabel>` | `T::label()` | Overrides a tab's label. Runs during render, so it can read a locale. |
+| `option_label` | `Callback<T, OptionLabel>` | `T::label()` | Overrides a tab's label. Runs during render, so the strip follows a locale signal. `OptionLabel::rich` draws a tab as rsx, such as an icon, and takes a text name for screen readers. |
 | `size` | `Size` | `md` | Tab strip size. On a touch screen a tab is at least 44px tall, so `xs` and `sm` tabs draw taller there. |
 | `color` | `ThemeAwareValue` | `primary` | Indicator and selected-label color. |
 | `full_width` | `bool` | `false` | Tabs grow to fill the row, never below their label. A crowded strip still scrolls. Not themed. |
 | `activation` | `TabsActivation` | `automatic` | `Automatic` selects as the arrows move. `Manual` moves only the focus, and Enter or Space selects. Use it for slow panels. |
-| `placement` | `TabsPlacement` | `top` | Vertical tabs: `start` or `end` put the strip in a column beside the panel, moved by Up and Down. |
+| `placement` | `TabsPlacement` | `top` | Vertical tabs: `start` or `end` put the strip in a column beside the panel, moved by Up and Down. `start` is the inline start side (left in left-to-right text), `end` the inline end side. The tablist has `aria-orientation="vertical"`, and the selected tab's indicator sits on the edge facing the panel. |
 | `panel_focusable` | `bool` | `true` | Whether the selected panel is a tab stop, as the APG asks when it holds no focusable content. Turn it off for a panel with its own controls. Not themed. |
 | `parts` | `Parts<TabsPart>` | - | Styles for the inner parts in the Style API tab, under `sx`. |
 

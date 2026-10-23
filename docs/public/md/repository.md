@@ -8,7 +8,10 @@ Index: [index.md](index.md) - every other component's markdown page
 Description: A link to a GitHub or GitLab repository with its star count beside the host's icon.
 
 A link to a repository with its star count beside the host's icon. It opens in a
-new tab.
+new tab. The count comes from the host's public API at mount and is kept for the
+session. Until it arrives, when it is 0, or when the host does not answer, the
+icon stands alone. Native builds fetch through dioxus-native's `net` feature, on
+by default.
 
 ## Usage
 
@@ -24,21 +27,6 @@ fn Demo() -> Element {
     }
 }
 ```
-
-## Star count
-
-Give it the repository's name; it asks the host's public API at mount and keeps
-the count for the session (the web's `sessionStorage`, memory elsewhere). A
-count older than 10 minutes shows while it is fetched again. Until the count
-arrives, when it is 0, or when the host does not answer, the
-icon stands alone. This site's header uses `Repository { repo: "tdymel/libero" }`.
-The button's name comes from the [localization](localization.md).
-
-## Native builds
-
-Native builds fetch through dioxus-native's network provider, which needs its
-`net` feature. `net` is on by default, so only an app that turns dioxus-native's
-default features off has to add it back.
 
 ## Props
 

@@ -21,7 +21,7 @@ pub fn TldrPage() -> Element {
                     .doc("The page's absolute address, e.g. its markdown mirror. The assistant is asked to read it."),
                 prop("providers", "Vec<SummaryProvider>")
                     .default("SummaryProvider::defaults()")
-                    .doc("The menu's links, in order: ChatGPT, Google AI, Claude and Perplexity. Filter the vec to drop one, push a `SummaryProvider` to add one."),
+                    .doc("The menu's links, in order: ChatGPT, Google AI, Claude and Perplexity. Filter the vec to drop one, push a `SummaryProvider` to add one. A provider is a name, an address the encoded prompt is appended to, and an optional mark drawn in the text colour; `summary_url` builds one link on its own."),
                 prop("prompt", "String")
                     .doc("What the assistant is asked. `{url}` is filled with `url`; in an `rsx!` string literal write `{{url}}`. Unset, `TldrLabels::prompt` from the localization."),
                 prop("label", "String")

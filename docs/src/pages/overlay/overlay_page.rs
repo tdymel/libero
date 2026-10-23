@@ -46,7 +46,7 @@ pub fn OverlayPage() -> Element {
                     prop("children", "Element").doc("Content centred on the overlay, such as a loading spinner."),
                 ]),
                 props("LoadingOverlay", vec![
-                    prop("loading", "bool").default("false").doc("Covers the children with a dim and a `Loader`, makes them `inert` and the box `aria-busy`, and says \"Loading\" once."),
+                    prop("loading", "bool").default("false").doc("Covers the children with a dim and a `Loader`, makes them `inert` and the box `aria-busy`, and says \"Loading\" once. Its feature is `loading-overlay`, off by default."),
                     prop("children", "Element").default("required").doc("The content that loads. `sx`, `class` and extra attributes land on the box around it."),
                 ]),
             ],
