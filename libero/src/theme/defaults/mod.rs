@@ -139,6 +139,7 @@ pub use burger::{
 };
 pub use button::{
     BUTTON_FONT_SIZE, BUTTON_HEIGHT, BUTTON_PADDING_X, ButtonDefaults, ButtonSizeLevel,
+    LoadingPosition,
 };
 pub use carousel::{
     CAROUSEL_CONTROL_BACKGROUND, CAROUSEL_CONTROL_COLOR, CAROUSEL_CONTROL_HOVER_BACKGROUND,

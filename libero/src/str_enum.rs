@@ -147,8 +147,8 @@ mod tests {
         Variant,
     };
     use crate::theme::{
-        BarLayout, ChoiceVariant, Curve, LegendPosition, LoaderVariant, PieLabels, Placement,
-        QrRobustness, ScrollAxis, ScrollbarSize, ScrollbarVisibility,
+        BarLayout, ChoiceVariant, Curve, LegendPosition, LoaderVariant, LoadingPosition, PieLabels,
+        Placement, QrRobustness, ScrollAxis, ScrollbarSize, ScrollbarVisibility,
     };
 
     /// Add every new `str_enum!` here - the checks below iterate this list.
@@ -170,6 +170,7 @@ mod tests {
             $check!(ImageFit);
             $check!(LabelPosition);
             $check!(LoaderVariant);
+            $check!(LoadingPosition);
             $check!(Orientation);
             $check!(PinKind);
             $check!(Placement);

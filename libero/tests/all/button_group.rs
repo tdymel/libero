@@ -184,3 +184,143 @@ fn the_css_joins_the_seams_on_logical_sides() {
         assert!(html.contains(rule), "{rule}");
     }
 }
+
+/// Todo 3998: `value` makes the valued buttons toggles, pressed through the real events.
+mod toggles {
+    use crate::common::{body, nth_attributes};
+    use crate::dispatch::*;
+
+    use std::collections::HashSet;
+
+    use dioxus::prelude::*;
+    use libero::{
+        LiberoProvider,
+        components::{ActionIcon, Button, ButtonGroup},
+    };
+
+    #[derive(Clone)]
+    struct Setup {
+        controlled: bool,
+        multiple: bool,
+        initial: &'static [&'static str],
+    }
+
+    fn app(setup: Setup) -> Element {
+        let mut selected = use_signal(|| {
+            setup
+                .initial
+                .iter()
+                .map(ToString::to_string)
+                .collect::<HashSet<_>>()
+        });
+        rsx! {
+            LiberoProvider {
+                ButtonGroup {
+                    "aria-label": "Style",
+                    value: setup.controlled.then(|| selected.cloned()),
+                    multiple: setup.multiple,
+                    onchange: move |next| selected.set(next),
+                    Button { value: "a", "A" }
+                    Button { value: "b", "B" }
+                    ActionIcon { value: "c", aria_label: "C", "C" }
+                    Button { "Plain" }
+                }
+            }
+        }
+    }
+
+    fn page(controlled: bool, multiple: bool, initial: &'static [&'static str]) -> Page {
+        let mut page = Page::build_with_props(
+            app,
+            Setup {
+                controlled,
+                multiple,
+                initial,
+            },
+        );
+        page.render();
+        page
+    }
+
+    /// Each button's `aria-pressed`, in order; `-` where it has none.
+    fn pressed(page: &Page) -> Vec<String> {
+        let html = body(&dioxus_ssr::render(&page.dom));
+        (0..4)
+            .map(|n| {
+                nth_attributes(&html, "button", n)
+                    .remove("aria-pressed")
+                    .unwrap_or_else(|| "-".into())
+            })
+            .collect()
+    }
+
+    fn press(page: &mut Page, value: &str) {
+        let button = page.rec.element("click", "value", value);
+        page.click(button);
+    }
+
+    #[test]
+    fn a_value_makes_the_valued_buttons_toggles() {
+        let page = page(true, false, &["b"]);
+
+        assert_eq!(pressed(&page), ["false", "true", "false", "-"]);
+    }
+
+    #[test]
+    fn without_a_value_the_group_stays_plain() {
+        let mut page = page(false, false, &["b"]);
+        press(&mut page, "a");
+
+        assert_eq!(pressed(&page), ["-", "-", "-", "-"]);
+    }
+
+    #[test]
+    fn a_single_group_swaps_the_pressed_button_and_a_second_press_releases_it() {
+        let mut page = page(true, false, &["b"]);
+
+        press(&mut page, "a");
+        assert_eq!(pressed(&page), ["true", "false", "false", "-"]);
+        press(&mut page, "c");
+        assert_eq!(pressed(&page), ["false", "false", "true", "-"]);
+        press(&mut page, "c");
+        assert_eq!(pressed(&page), ["false", "false", "false", "-"]);
+    }
+
+    #[test]
+    fn a_multiple_group_presses_and_releases_each_button_alone() {
+        let mut page = page(true, true, &["b"]);
+
+        press(&mut page, "a");
+        press(&mut page, "c");
+        assert_eq!(pressed(&page), ["true", "true", "true", "-"]);
+        press(&mut page, "b");
+        assert_eq!(pressed(&page), ["true", "false", "true", "-"]);
+    }
+
+    fn own_selected() -> Element {
+        let mut selected = use_signal(|| HashSet::from(["b".to_string()]));
+        rsx! {
+            LiberoProvider {
+                ButtonGroup {
+                    "aria-label": "Style",
+                    value: selected(),
+                    onchange: move |next| selected.set(next),
+                    Button { value: "a", selected: false, "A" }
+                    Button { value: "b", "B" }
+                }
+            }
+        }
+    }
+
+    /// A button's own `selected` is not the group's to toggle, and the others stay as they were.
+    #[test]
+    fn a_buttons_own_selected_wins_and_the_group_does_not_toggle_it() {
+        let mut page = Page::mount(own_selected);
+        let button = page.rec.element("click", "value", "a");
+        page.click(button);
+
+        let html = body(&dioxus_ssr::render(&page.dom));
+        assert_eq!(nth_attributes(&html, "button", 0)["aria-pressed"], "false");
+        assert_eq!(nth_attributes(&html, "button", 1)["aria-pressed"], "true");
+    }
+}

@@ -5,12 +5,14 @@ use dioxus::prelude::*;
 use libero::components::Pictogram;
 use libero::components::{ActionIcon, Button, ButtonGroup, Code, Input, Text};
 use pictogram_icons_lucide as lucide;
+use std::collections::HashSet;
 
 /// The page's own source: the printed parts are cut from its live demo.
 const FILE: DemoFile = DemoFile(include_str!("button_group.rs"));
 
 #[component]
 pub fn ButtonGroupPage() -> Element {
+    let mut selected = use_signal(|| HashSet::from(["bold".to_string()]));
     rsx! {
         DocPage {
             title: "ButtonGroup",
@@ -32,6 +34,13 @@ pub fn ButtonGroupPage() -> Element {
                     .doc("Disables every button inside that does not set `disabled` itself, and takes it out of the Tab order unless `focusable_when_disabled` says otherwise."),
                 prop("focusable_when_disabled", "bool")
                     .doc("Default `focusable_when_disabled` of the buttons inside: a disabled one stays a Tab stop."),
+                prop("value", "HashSet<String>")
+                    .doc("The `value`s of the pressed buttons, strictly controlled. Set, every `Button` and `ActionIcon` with a `value` is a toggle with `aria-pressed`, unless it sets `selected` itself. Unset, a plain group."),
+                prop("multiple", "bool")
+                    .default("false")
+                    .doc("With `value`: any number of buttons pressed. Off, pressing one releases the other, and pressing the pressed one releases it."),
+                prop("onchange", "EventHandler<HashSet<String>>")
+                    .doc("Asks for the next set of pressed `value`s. Without it the selection can never change."),
                 prop("children", "Element")
                     .default("required")
                     .doc("`Button`s, `ActionIcon`s, and components built on them, such as `ThemeSwitcher`."),
@@ -40,6 +49,7 @@ pub fn ButtonGroupPage() -> Element {
                 .handles([
                     "The root is a `role=\"group\"`, so a screen reader announces the buttons as one set.",
                     "Each button stays its own Tab stop, and the focused one's ring is drawn above its neighbours.",
+                    "With `value`, a button with a `value` is a toggle button: `aria-pressed` says whether it is pressed, and Space and Enter toggle it.",
                 ])
                 .must(["Name the group with `aria-label`, or `aria-labelledby` on a visible heading."])
                 .example("Zoom out, Reset and Zoom in in a `ButtonGroup` with `\"aria-label\": \"Zoom\"`: a screen reader reads the three buttons as the \"Zoom\" group, and Tab stops on each one.")
@@ -55,11 +65,12 @@ pub fn ButtonGroupPage() -> Element {
                     "so the ends swap under right-to-left text."
                 }
             },
+            // snippet: let mut selected = use_signal(|| std::collections::HashSet::from(["bold".to_string()]));
             Demo {
                 component: "ButtonGroup",
                 children_text: "",
                 children_code: FILE.section("children"),
-                fixed: vec!["\"aria-label\": \"Edit\"".to_string()],
+                fixed: vec!["\"aria-label\": \"Text style\"".to_string()],
                 controls: vec![
                     Control::toggle("orientation", ["horizontal", "vertical"])
                         .labels(["Horizontal", "Vertical"])
@@ -77,11 +88,30 @@ pub fn ButtonGroupPage() -> Element {
                         .default("sm"),
                     Control::switch("disabled"),
                     Control::switch("focusable_when_disabled"),
+                    // On, so the pressed look shows without another switch.
+                    Control::toggle("selection", ["off", "single", "multiple"])
+                        .labels(["Off", "Single", "Multiple"])
+                        .default("single")
+                        .code(|_, values| match values.str("selection").as_str() {
+                            "off" => vec![],
+                            "single" => vec![
+                                "value: selected()".to_string(),
+                                "onchange: move |next| selected.set(next)".to_string(),
+                            ],
+                            _ => vec![
+                                "value: selected()".to_string(),
+                                "multiple: true".to_string(),
+                                "onchange: move |next| selected.set(next)".to_string(),
+                            ],
+                        }),
                 ],
                 render: move |values: DemoValues| rsx! {
                     ButtonGroup {
-                        "aria-label": "Edit",
+                        "aria-label": "Text style",
                         orientation: values.str("orientation"),
+                        value: (values.str("selection") != "off").then(|| selected.cloned()),
+                        multiple: values.str("selection") == "multiple",
+                        onchange: move |next| selected.set(next),
                         variant: values.str("variant"),
                         color: match values.str("color").as_str() {
                             "primary" => Input::None,
@@ -92,9 +122,13 @@ pub fn ButtonGroupPage() -> Element {
                         disabled: values.str("disabled") == "true",
                         focusable_when_disabled: values.str("focusable_when_disabled") == "true",
                         // demo-code: children start
-                        Button { "Undo" }
-                        Button { "Redo" }
-                        ActionIcon { aria_label: "Confirm", Pictogram { icon: lucide::check::outlined } }
+                        Button { value: "bold", "Bold" }
+                        Button { value: "italic", "Italic" }
+                        ActionIcon {
+                            value: "underline",
+                            aria_label: "Underline",
+                            Pictogram { icon: lucide::underline::outlined }
+                        }
                         // demo-code: children end
                     }
                 },

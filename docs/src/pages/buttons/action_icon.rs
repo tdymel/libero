@@ -3,14 +3,22 @@ use crate::components::{
     gradient_value, not_gradient_variant, prop, props,
 };
 use dioxus::prelude::*;
-use libero::components::{ActionIcon, Code, Input, Text};
+use libero::components::{ActionIcon, Code, Input, Loader, Text};
 use libero::use_theme;
 
 /// The `shortcut` switch's chord, shown in the tooltip and as `aria-keyshortcuts`.
 const SHORTCUT: &str = "mod+enter";
 
+const CUSTOM_LOADER: &str =
+    "loader: rsx! { Loader { variant: \"dots\", size: \"xs\", color: \"currentColor\" } }";
+
 fn is_link(values: &DemoValues) -> bool {
     values.str("link") == "true"
+}
+
+fn custom_loader(values: &DemoValues) -> Option<Element> {
+    (values.str("custom_loader") == "true")
+        .then(|| rsx! { Loader { variant: "dots", size: "xs", color: "currentColor" } })
 }
 
 #[component]
@@ -54,6 +62,13 @@ pub fn ActionIconPage() -> Element {
                 prop("loading", "bool")
                     .default("false")
                     .doc("Shows a `Loader` over the icon and ignores clicks. The button stays focusable and sets `aria-busy`; announce the progress in your own status region. Ignored on a link."),
+                prop("loader", "Element")
+                    .doc("Drawn in place of the `Loader` while `loading`. Size it yourself, e.g. `Loader { size: \"xs\" }`."),
+                prop("ripple", "bool")
+                    .default("true")
+                    .doc("The press ripple. `false` drops it. Reduced motion drops it anyway."),
+                prop("value", "String")
+                    .doc("Its key in the enclosing `ButtonGroup`'s `value`. With that set, the button is a toggle and a press asks the group to select it; its own `selected` wins. Also the `<button>`'s `value` attribute."),
                 prop("onclick", "EventHandler<MouseEvent>")
                     .doc("Click handler. Not called on a link."),
                 prop("to", "NavigationTarget")
@@ -143,6 +158,19 @@ pub fn ActionIconPage() -> Element {
                         .hidden_when(|values| values.str("disabled") != "true"),
                     // An `<a>` has nothing to wait for: ignored, with a warning.
                     Control::switch("loading").hidden_when(is_link),
+                    // On, so the second button below, which always loads, shows it without `loading`.
+                    Control::switch("custom_loader").default("true").hidden_when(is_link).code(|_, values| {
+                        match values.str("custom_loader").as_str() {
+                            "true" => vec![CUSTOM_LOADER.to_string()],
+                            _ => vec![],
+                        }
+                    }),
+                    Control::switch("ripple").default("true").code(|_, values| {
+                        match values.str("ripple").as_str() {
+                            "false" => vec!["ripple: false".to_string()],
+                            _ => vec![],
+                        }
+                    }),
                     // `to` and `target` together, since the preview's link
                     // must not navigate the docs away.
                     Control::switch("link").code(|_, values| match values.str("link").as_str() {
@@ -180,6 +208,8 @@ pub fn ActionIconPage() -> Element {
                         disabled: values.str("disabled") == "true",
                         focusable_when_disabled: values.str("focusable_when_disabled") == "true",
                         loading: values.str("loading") == "true" && !is_link(&values),
+                        loader: custom_loader(&values),
+                        ripple: values.str("ripple") != "false",
                         to: match values.str("link").as_str() {
                             "true" => Input::from("https://dioxuslabs.com"),
                             _ => Input::None,
@@ -188,6 +218,23 @@ pub fn ActionIconPage() -> Element {
                         new_tab_icon: (values.str("new_tab_icon") == "true").then_some(true),
                         aria_label: "Confirm",
                         icon: pictogram_icons_lucide::check::outlined,
+                    }
+                    // Always loading, so the loader shows without the `loading` switch.
+                    if !is_link(&values) {
+                        ActionIcon {
+                            variant: values.str("variant"),
+                            gradient: gradient_value(&values),
+                            color: match values.str("color").as_str() {
+                                "primary" => Input::None,
+                                color => Input::from(color),
+                            },
+                            size: values.str("size"),
+                            radius: values.str("radius"),
+                            loading: true,
+                            loader: custom_loader(&values),
+                            aria_label: "Saving",
+                            icon: pictogram_icons_lucide::save::outlined,
+                        }
                     }
                     // A new-tab link beside it that opts into the corner icon, shown without the `link` switch.
                     if !is_link(&values) {

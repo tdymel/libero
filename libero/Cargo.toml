@@ -241,7 +241,7 @@ buttons = ["action-icon", "button", "button-group", "copy", "direction-toggle", 
 action-icon = ["loader", "tooltip", "kbd", "anchor", "paper", "pictogram", "use-hotkeys", "use-id"]
 button = ["loader", "anchor"]
 button-group = ["box"]
-copy = ["action-icon", "use-clipboard"]
+copy = ["action-icon", "use-clipboard", "use-timers"]
 direction-toggle = ["action-icon", "use-direction"]
 # Pulls in the simple-icons brand marks.
 repository = ["action-icon", "dep:pictogram-icons-simple", "use-local-storage"]

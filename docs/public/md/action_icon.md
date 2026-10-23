@@ -64,6 +64,9 @@ A `Button` with an icon and no text is a wide pill and has no name unless you ad
 | `disabled` | `bool` | `false` | Disables and dims the button: `aria-disabled` rather than `disabled`, so a focused button keeps its focus. It leaves the Tab order and ignores presses. |
 | `focusable_when_disabled` | `bool` | `false` | With `disabled`: keeps the button in the Tab order. |
 | `loading` | `bool` | `false` | Shows a `Loader` over the icon and ignores clicks. The button stays focusable and sets `aria-busy`; announce the progress in your own status region. Ignored on a link. |
+| `loader` | `Element` | - | Drawn in place of the `Loader` while `loading`. Size it yourself, e.g. `Loader { size: "xs" }`. |
+| `ripple` | `bool` | `true` | The press ripple. `false` drops it. Reduced motion drops it anyway. |
+| `value` | `String` | - | Its key in the enclosing `ButtonGroup`'s `value`. With that set, the button is a toggle and a press asks the group to select it; its own `selected` wins. Also the `<button>`'s `value` attribute. |
 | `onclick` | `EventHandler<MouseEvent>` | - | Click handler. Not called on a link. |
 | `to` | `NavigationTarget` | - | Renders a link instead of a `<button>`. |
 | `target` | `String` | - | The link's `target` attribute. |

@@ -25,6 +25,9 @@ input_from_str!(AnchorUnderline);
 fn underline_sx(underline: AnchorUnderline) -> Sx {
     match underline {
         AnchorUnderline::Always => sx().text_decoration("underline"),
+        AnchorUnderline::NotHover => sx()
+            .text_decoration("underline")
+            .hover(sx().text_decoration("none")),
         AnchorUnderline::Never => sx().text_decoration("none"),
         AnchorUnderline::Hover => sx()
             .text_decoration("none")

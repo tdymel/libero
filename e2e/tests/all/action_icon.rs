@@ -1,7 +1,9 @@
 //! `ActionIcon`: an icon-only `<button>`, named by its required `aria_label`,
 //! as a toggle, busy and disabled.
 
+use anyhow::{Result, ensure};
 use e2e::browser::block_on;
+use e2e::driver::{Driver, eventually};
 use e2e::passes::{focus, keyboard, pointer};
 use e2e::wait::PageBounded;
 use e2e::{Fixture, Suite, Viewport, wait};
@@ -218,6 +220,46 @@ fn a_link_icon_is_a_link_enabled_or_disabled() {
         fixture.close().await.unwrap();
     });
 }
+
+/// Todo 3993: a custom `loader` sits centred over the hidden glyph.
+async fn a_custom_loader_covers_the_glyph<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    crate::button::assert_centred(d, "#loader", "#custom").await?;
+    ensure!(
+        d.style("#custom [data-slot=glyph]", "opacity").await? == "0",
+        "the glyph shows through the loader"
+    );
+    ensure!(
+        d.attr("#custom", "aria-busy").await?.as_deref() == Some("true"),
+        "a busy icon is not marked busy"
+    );
+    Ok(())
+}
+
+/// Todo 3994: the press draws its ripple unless `ripple: false`, which still clicks.
+async fn ripple_false_draws_no_ripple<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    d.click("#still").await?;
+    d.click("#rippled").await?;
+    eventually(d, "the default icon to ripple", async |d| {
+        d.exists("#rippled [data-ripple]").await
+    })
+    .await?;
+    ensure!(
+        !d.exists("#still [data-ripple]").await?,
+        "ripple: false drew a ripple"
+    );
+    Ok(())
+}
+
+e2e::scenario!(
+    a_custom_loader_replaces_the_icon_spinner,
+    "/action-icon/loader",
+    a_custom_loader_covers_the_glyph
+);
+e2e::scenario!(
+    ripple_false_leaves_an_icon_without_a_ripple,
+    "/action-icon/loader",
+    ripple_false_draws_no_ripple
+);
 
 /// `[the icon's colour, its parent's]`.
 const PLAIN_COLORS: &str = "(() => {

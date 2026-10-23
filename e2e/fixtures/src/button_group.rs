@@ -1,8 +1,10 @@
-//! `ButtonGroup`: bordered and borderless rows, a column, wrapped items, RTL.
+//! `ButtonGroup`: bordered and borderless rows, a column, wrapped items, RTL, and toggles.
+
+use std::collections::HashSet;
 
 use dioxus::prelude::*;
 use libero::components::{
-    ActionIcon, Button, ButtonGroup, Copy, DirectionToggle, Flex, ThemeSwitcher,
+    ActionIcon, Button, ButtonGroup, Copy, DirectionToggle, Flex, Text, ThemeSwitcher,
 };
 use libero::theme::ThemeSet;
 
@@ -15,7 +17,47 @@ pub const ROUTES: Routes = &[
             div { dir: "rtl", ButtonGroupPage {} }
         }
     }),
+    ("/button-group/toggle", || rsx! { ButtonGroupToggle {} }),
 ];
+
+fn sorted(set: &HashSet<String>) -> String {
+    let mut values: Vec<_> = set.iter().map(String::as_str).collect();
+    values.sort_unstable();
+    values.join(",")
+}
+
+/// Todo 3998: an exclusive and a multiple group, both controlled, with what they hold in `#status`.
+#[component]
+fn ButtonGroupToggle() -> Element {
+    let mut single = use_signal(|| HashSet::from(["bold".to_string()]));
+    let mut multiple = use_signal(HashSet::new);
+
+    rsx! {
+        Flex { direction: "column", gap: "md", align: "start",
+            ButtonGroup {
+                id: "single",
+                "aria-label": "Single",
+                variant: "outlined",
+                value: single(),
+                onchange: move |next| single.set(next),
+                Button { id: "s-bold", value: "bold", "Bold" }
+                Button { id: "s-italic", value: "italic", "Italic" }
+                ActionIcon { id: "s-under", value: "underline", aria_label: "Underline", "U" }
+            }
+            ButtonGroup {
+                id: "multiple",
+                "aria-label": "Multiple",
+                variant: "outlined",
+                value: multiple(),
+                multiple: true,
+                onchange: move |next| multiple.set(next),
+                Button { id: "m-bold", value: "bold", "Bold" }
+                Button { id: "m-italic", value: "italic", "Italic" }
+            }
+            Text { id: "status", "single={sorted(&single())} multiple={sorted(&multiple())}" }
+        }
+    }
+}
 
 #[component]
 fn ButtonGroupPage() -> Element {

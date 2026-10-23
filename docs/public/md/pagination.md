@@ -51,6 +51,7 @@ fn Demo() -> Element {
 | `radius` | `ThemeAwareValue` | `sm` | Corner radius, independent of `size`, or any CSS, e.g. `radius: "0"`. |
 | `color` | `ThemeAwareValue` | `primary` | Fill of the current page. A theme color gives its text the matching `-contrast` shade, a literal color black or white. |
 | `disabled` | `bool` | `false` | Disables every control. |
+| `with_pages` | `bool` | `true` | Shows the page numbers and ellipses. `false` leaves the arrows, for a "Page 3 of 10" of your own between them. |
 | `with_controls` | `bool` | `true` | Shows the previous and next controls. |
 | `with_edges` | `bool` | `false` | Shows the first and last controls. |
 | `label` | `Callback<PaginationLabel, String>` | - | Overrides every accessible name. Runs during render, so it can read a locale. |

@@ -26,7 +26,7 @@ pub use action_icon::{ActionIcon, ActionIconProps};
 #[cfg(feature = "button")]
 pub(crate) use button::button_variables;
 #[cfg(feature = "button")]
-pub use button::{Button, ButtonPart, ButtonProps};
+pub use button::{Button, ButtonPart, ButtonProps, LoadingPosition};
 #[cfg(feature = "button-group")]
 pub use button_group::{ButtonGroup, ButtonGroupProps};
 #[cfg(feature = "copy")]

@@ -1,7 +1,22 @@
 use crate::css::{CssDeclaration, ToCssDeclarations};
+use crate::str_enum::str_enum;
 use crate::sx::{Sx, sx};
 
 use crate::theme::{Size, SizeCss, Sizes, Variant};
+
+str_enum! {
+    /// Where a loading `Button` draws its loader.
+    #[state_prefix = "loading-at"]
+    pub enum LoadingPosition {
+        /// Over the hidden label.
+        #[default]
+        Center = "center",
+        /// Where `icon` sits, beside the label.
+        Start = "start",
+        /// Where `trailing_icon` sits, beside the label.
+        End = "end",
+    }
+}
 
 pub const BUTTON_FONT_SIZE: SizeCss = SizeCss::new("--lsx-button-font-size-");
 pub const BUTTON_HEIGHT: SizeCss = SizeCss::new("--lsx-button-height-");

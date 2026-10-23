@@ -76,6 +76,38 @@ fn routed_links_register_no_onmounted() {
     assert_eq!(mounted_listeners(routed), mounted_listeners(empty));
 }
 
+/// Todo 3996: `not-hover` underlines at rest and drops the line under the pointer.
+#[test]
+fn a_not_hover_anchor_is_underlined_at_rest_and_bare_under_the_pointer() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider {
+                Anchor { to: "https://example.com", underline: "not-hover", "Example" }
+            }
+        }
+    }
+
+    let html = render(app);
+    let state = attributes_of(&html, "a")["data-state"].clone();
+    let state = state
+        .split(' ')
+        .find(|token| token.contains("not-hover"))
+        .unwrap_or_else(|| panic!("no not-hover state in {state}"));
+    let selector = format!(r#"[data-state~="{state}"]"#);
+    let rest = &html[html.find(&selector).expect("the not-hover rule")..];
+
+    assert!(
+        rest.starts_with(&format!("{selector}{{text-decoration:underline")),
+        "{}",
+        &rest[..120]
+    );
+    assert!(
+        rest.contains(&format!("{selector}:hover{{text-decoration:none")),
+        "{}",
+        &rest[..240]
+    );
+}
+
 #[test]
 fn an_external_anchor_renders_a_plain_link() {
     fn app() -> Element {

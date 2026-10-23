@@ -21,7 +21,22 @@ pub const ROUTES: Routes = &[
         "/pagination/rejecting",
         || rsx! { PaginationRejectingPage {} },
     ),
+    ("/pagination/arrows", || rsx! { PaginationArrowsPage {} }),
 ];
+
+/// Todo 3997: only the arrows, and the caller's own "Page 3 of 10" in the page's place.
+#[component]
+fn PaginationArrowsPage() -> Element {
+    let mut page = use_signal(|| 3u32);
+    rsx! {
+        Flex { direction: "column", gap: "md",
+            Pagination { id: "arrows", total: 10, page: page(), aria_label: "Arrows",
+                with_pages: false, with_edges: true, onchange: move |next| page.set(next),
+            }
+            span { id: "where", "Page {page} of 10" }
+        }
+    }
+}
 
 /// `onchange` ignores the pagination; only `#jump` moves the page (todo 1589).
 #[component]

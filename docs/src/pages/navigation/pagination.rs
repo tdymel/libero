@@ -1,7 +1,7 @@
 use crate::components::{Control, Demo, DemoValues, DocPage, a11y, prop, props};
 use dioxus::prelude::*;
 use libero::{
-    components::{Code, Pagination, PaginationPart, Text},
+    components::{Code, Flex, Pagination, PaginationPart, Text},
     use_theme,
 };
 
@@ -44,6 +44,7 @@ pub fn PaginationPage() -> Element {
                 prop("color", "ThemeAwareValue").default(theme.pagination.color.as_str())
                     .doc("Fill of the current page. A theme color gives its text the matching `-contrast` shade, a literal color black or white."),
                 prop("disabled", "bool").default("false").doc("Disables every control."),
+                prop("with_pages", "bool").default("true").doc("Shows the page numbers and ellipses. `false` leaves the arrows, for a \"Page 3 of 10\" of your own between them."),
                 prop("with_controls", "bool").default("true").doc("Shows the previous and next controls."),
                 prop("with_edges", "bool").default("false").doc("Shows the first and last controls."),
                 prop("label", "Callback<PaginationLabel, String>")
@@ -109,26 +110,41 @@ pub fn PaginationPage() -> Element {
                     Control::sizes("size").default(theme.pagination.size.as_str()),
                     Control::sizes("radius").default(theme.pagination.radius.as_str()),
                     Control::color("color").default(theme.pagination.color.as_str()),
+                    // Off, so the preview shows the arrows with a "Page 3 of 10" of its own;
+                    // the component's own default is on.
+                    Control::switch("with_pages").default("false").code(|_, values| {
+                        match values.str("with_pages").as_str() {
+                            "false" => vec!["with_pages: false".to_string()],
+                            _ => vec![],
+                        }
+                    }),
                     Control::switch("with_controls").default("true"),
                     Control::switch("with_edges"),
                     Control::switch("disabled"),
                 ],
                 render: move |values: DemoValues| {
                     let total = values.str("total").parse::<u32>().unwrap_or(10);
+                    let with_pages = values.str("with_pages") == "true";
                     rsx! {
-                        Pagination {
-                            total,
-                            page: page(),
-                            onchange: move |next| page.set(next),
-                            aria_label: "Demo pages",
-                            siblings: values.str("siblings").parse::<u8>().unwrap_or(1),
-                            boundaries: values.str("boundaries").parse::<u8>().unwrap_or(1),
-                            size: values.str("size"),
-                            radius: values.str("radius"),
-                            color: values.str("color"),
-                            with_controls: values.str("with_controls") == "true",
-                            with_edges: values.str("with_edges") == "true",
-                            disabled: (values.str("disabled") == "true").then_some(true),
+                        Flex { direction: "row", align: "center", gap: "md",
+                            Pagination {
+                                total,
+                                page: page(),
+                                onchange: move |next| page.set(next),
+                                aria_label: "Demo pages",
+                                siblings: values.str("siblings").parse::<u8>().unwrap_or(1),
+                                boundaries: values.str("boundaries").parse::<u8>().unwrap_or(1),
+                                size: values.str("size"),
+                                radius: values.str("radius"),
+                                color: values.str("color"),
+                                with_pages,
+                                with_controls: values.str("with_controls") == "true",
+                                with_edges: values.str("with_edges") == "true",
+                                disabled: (values.str("disabled") == "true").then_some(true),
+                            }
+                            if !with_pages {
+                                Text { "Page {page().min(total.max(1))} of {total}" }
+                            }
                         }
                     }
                 },

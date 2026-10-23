@@ -8,7 +8,7 @@ use crate::{
         common::{Glyph, Input, Variant, base_props},
     },
     context::IconSlot,
-    hooks::{listener, use_clipboard, use_id, use_localization, use_silent_focus_out},
+    hooks::{listener, use_clipboard, use_id, use_localization, use_silent_focus_out, use_timeout},
     sx::ThemeAwareValue,
 };
 
@@ -34,6 +34,9 @@ base_props! {
         label: Option<String>,
         #[props(default)]
         disabled: Option<bool>,
+        /// Milliseconds after a press before the check mark resets. Unset, it resets on leave or blur only.
+        #[props(default)]
+        timeout: Option<u32>,
     }
 }
 
@@ -57,6 +60,14 @@ pub fn Copy(props: CopyProps) -> Element {
         let mut clipboard = clipboard;
         clipboard.reset();
     });
+    let reset = use_timeout(
+        move || {
+            let mut clipboard = clipboard;
+            clipboard.reset();
+        },
+        u64::from(props.timeout.unwrap_or(0)),
+    );
+    let timed = props.timeout.is_some();
     let value = props.value.clone();
     let label_id = use_id();
     let described = props.label.as_ref().map(|_| label_id());
@@ -87,6 +98,9 @@ pub fn Copy(props: CopyProps) -> Element {
                 onclick: move |_| {
                     clipboard.reset();
                     clipboard.copy(value.clone());
+                    if timed {
+                        reset.start();
+                    }
                 },
                 onmouseleave: move |_| clipboard.reset(),
                 // A keyboard or touch user never leaves with a mouse.

@@ -5,7 +5,21 @@ use libero::components::{Copy, Flex, Text};
 
 use crate::Routes;
 
-pub const ROUTES: Routes = &[("/copy", || rsx! { CopyPage {} })];
+pub const ROUTES: Routes = &[
+    ("/copy", || rsx! { CopyPage {} }),
+    ("/copy/timeout", || rsx! { CopyTimeout {} }),
+];
+
+/// Todo 3995: one that resets itself after a second and one that waits for the pointer or focus to leave.
+#[component]
+fn CopyTimeout() -> Element {
+    rsx! {
+        Flex { direction: "row", gap: "md", align: "center",
+            span { id: "plain", Copy { value: "plain" } }
+            span { id: "timed", Copy { value: "timed", timeout: 1000 } }
+        }
+    }
+}
 
 #[component]
 fn CopyPage() -> Element {

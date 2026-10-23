@@ -4,7 +4,7 @@
 use anyhow::Result;
 use chromiumoxide::Page;
 use e2e::browser::block_on;
-use e2e::driver::{Driver, eventually, eventually_focused};
+use e2e::driver::{Driver, eventually, eventually_focused, eventually_text};
 use e2e::passes::{keyboard, pointer};
 use e2e::wait::PageBounded;
 use e2e::{Fixture, Suite, Viewport, wait};
@@ -141,6 +141,43 @@ async fn a_disabling_arrow_hands_focus_on<D: Driver>(d: &mut D, route: &str) -> 
     eventually_focused(d, CURRENT, "clicking last").await
 }
 
+/// Todo 3997: with no page buttons the arrows still step and disable at the ends, and the
+/// pressed one keeps focus since there is no current page to hand it to.
+async fn arrows_alone_step_the_page<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    anyhow::ensure!(
+        !d.exists("#arrows [aria-current]").await?,
+        "a page button is drawn"
+    );
+    anyhow::ensure!(
+        d.text("#where").await? == "Page 3 of 10",
+        "the start: {}",
+        d.text("#where").await?
+    );
+    d.click("#arrows [aria-label=\"Go to next page\"]").await?;
+    eventually_text(d, "#where", "Page 4 of 10", "Next").await?;
+
+    d.click("#arrows [aria-label=\"Go to last page\"]").await?;
+    eventually_text(d, "#where", "Page 10 of 10", "Last").await?;
+    anyhow::ensure!(
+        d.attr("#arrows [aria-label=\"Go to next page\"]", "aria-disabled")
+            .await?
+            .as_deref()
+            == Some("true"),
+        "next at page 10"
+    );
+    eventually_focused(
+        d,
+        "#arrows [aria-label=\"Go to last page\"]",
+        "clicking last",
+    )
+    .await
+}
+
+e2e::scenario!(
+    pagination_arrows_alone_step_the_page,
+    "/pagination/arrows",
+    arrows_alone_step_the_page
+);
 e2e::scenario!(
     a_disabling_arrow_hands_focus_to_the_current_page,
     "/pagination",

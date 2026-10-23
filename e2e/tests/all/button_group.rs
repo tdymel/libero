@@ -4,7 +4,7 @@
 
 use anyhow::{Result, ensure};
 use e2e::Suite;
-use e2e::driver::{Driver, Rect, eventually_focused};
+use e2e::driver::{Driver, Rect, eventually, eventually_focused, eventually_text};
 use e2e::passes::keyboard;
 
 const TOP_LEFT: &str = "border-top-left-radius";
@@ -222,6 +222,148 @@ async fn copy_ends_the_group<D: Driver>(d: &mut D, route: &str) -> Result<()> {
     Ok(())
 }
 
+async fn pressed<D: Driver>(d: &mut D, selector: &str) -> Result<String> {
+    Ok(d.attr(selector, "aria-pressed")
+        .await?
+        .unwrap_or_else(|| "none".into()))
+}
+
+async fn expect_pressed<D: Driver>(
+    d: &mut D,
+    expected: &[(&str, &str)],
+    after: &str,
+) -> Result<()> {
+    eventually(d, after, async |d| {
+        for (selector, state) in expected {
+            if pressed(d, selector).await? != *state {
+                return Ok(false);
+            }
+        }
+        Ok(true)
+    })
+    .await
+}
+
+/// Todo 3998: the valued buttons are toggles; an exclusive group swaps the pressed one and a
+/// second press releases it.
+async fn an_exclusive_group_toggles<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    expect_pressed(
+        d,
+        &[
+            ("#s-bold", "true"),
+            ("#s-italic", "false"),
+            ("#s-under", "false"),
+        ],
+        "the controlled value to press Bold",
+    )
+    .await?;
+    eventually_text(d, "#status", "single=bold multiple=", "the start").await?;
+
+    d.click("#s-italic").await?;
+    expect_pressed(
+        d,
+        &[
+            ("#s-bold", "false"),
+            ("#s-italic", "true"),
+            ("#s-under", "false"),
+        ],
+        "a click on Italic to swap",
+    )
+    .await?;
+    eventually_text(d, "#status", "single=italic multiple=", "the swap").await?;
+
+    d.click("#s-under").await?;
+    expect_pressed(
+        d,
+        &[("#s-italic", "false"), ("#s-under", "true")],
+        "an icon to join",
+    )
+    .await?;
+
+    d.click("#s-under").await?;
+    expect_pressed(d, &[("#s-under", "false")], "a second press to release").await?;
+    eventually_text(d, "#status", "single= multiple=", "the release").await
+}
+
+/// Todo 3998: a multiple group presses and releases each button on its own.
+async fn a_multiple_group_toggles_each_button<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    expect_pressed(
+        d,
+        &[("#m-bold", "false"), ("#m-italic", "false")],
+        "the start",
+    )
+    .await?;
+
+    d.click("#m-bold").await?;
+    d.click("#m-italic").await?;
+    expect_pressed(
+        d,
+        &[("#m-bold", "true"), ("#m-italic", "true")],
+        "both to press",
+    )
+    .await?;
+    eventually_text(
+        d,
+        "#status",
+        "single=bold multiple=bold,italic",
+        "both pressed",
+    )
+    .await?;
+
+    d.click("#m-bold").await?;
+    expect_pressed(
+        d,
+        &[("#m-bold", "false"), ("#m-italic", "true")],
+        "Bold to release",
+    )
+    .await?;
+    ensure!(
+        pressed(d, "#s-bold").await? == "true",
+        "the other group changed with it"
+    );
+    Ok(())
+}
+
+/// Todo 3998: Space and Enter toggle, and each toggle is its own Tab stop (no roving focus).
+async fn the_keys_toggle_and_each_button_is_a_tab_stop<D: Driver>(
+    d: &mut D,
+    _route: &str,
+) -> Result<()> {
+    d.focus("#s-bold").await?;
+    d.press(keyboard::TAB).await?;
+    eventually_focused(d, "#s-italic", "Tab").await?;
+    d.press(keyboard::SPACE).await?;
+    expect_pressed(
+        d,
+        &[("#s-italic", "true"), ("#s-bold", "false")],
+        "Space on Italic",
+    )
+    .await?;
+    d.press(keyboard::ENTER).await?;
+    expect_pressed(d, &[("#s-italic", "false")], "Enter on Italic").await?;
+    ensure!(
+        d.is_focused("#s-italic").await?,
+        "a toggle moved the focus off the button"
+    );
+    d.press(keyboard::TAB).await?;
+    eventually_focused(d, "#s-under", "Tab").await
+}
+
+e2e::scenario!(
+    an_exclusive_button_group_swaps_and_releases,
+    "/button-group/toggle",
+    an_exclusive_group_toggles
+);
+e2e::scenario!(
+    a_multiple_button_group_toggles_each_button_alone,
+    "/button-group/toggle",
+    a_multiple_group_toggles_each_button
+);
+e2e::scenario!(
+    space_and_enter_toggle_a_button_in_its_own_tab_stop,
+    "/button-group/toggle",
+    the_keys_toggle_and_each_button_is_a_tab_stop
+);
 e2e::scenario!(
     copy_ends_a_group_round,
     "/button-group",

@@ -13,7 +13,59 @@ pub const ROUTES: Routes = &[
     ("/button/landing", || rsx! { ButtonLanding {} }),
     ("/button/sizes", || rsx! { ButtonSizes {} }),
     ("/button/soft-disabled", || rsx! { ButtonSoftDisabled {} }),
+    ("/button/loading", || rsx! { ButtonLoading {} }),
 ];
+
+fn dot(id: &str) -> Element {
+    rsx! {
+        svg { id, width: "16", height: "16", view_box: "0 0 24 24",
+            circle { cx: "12", cy: "12", r: "8" }
+        }
+    }
+}
+
+/// Todos 3993, 3994: busy buttons with the loader at the start, at the end and of the caller's
+/// own, and a pair told apart by `ripple`.
+#[component]
+fn ButtonLoading() -> Element {
+    rsx! {
+        Flex { direction: "column", gap: "md", align: "flex-start",
+            Button {
+                id: "start",
+                loading: true,
+                loading_position: "start",
+                icon: dot("start-glyph"),
+                span { id: "start-text", "Saving" }
+            }
+            Button {
+                id: "end",
+                loading: true,
+                loading_position: "end",
+                trailing_icon: dot("end-glyph"),
+                span { id: "end-text", "Saving" }
+            }
+            Button {
+                id: "custom",
+                loading: true,
+                loader: rsx! {
+                    span { id: "loader", display: "block", width: "10px", height: "10px", background: "currentColor" }
+                },
+                "Saving"
+            }
+            Button {
+                id: "custom-end",
+                loading: true,
+                loading_position: "end",
+                loader: rsx! { span { id: "end-loader", display: "block", width: "10px", height: "10px", background: "currentColor" } },
+                span { id: "custom-end-text", "Saving" }
+            }
+            Flex { gap: "md",
+                Button { id: "still", ripple: false, "Still" }
+                Button { id: "rippled", "Rippled" }
+            }
+        }
+    }
+}
 
 /// Todo 2810: a disabled button that keeps its Tab stop, so its ring can fade with it.
 #[component]

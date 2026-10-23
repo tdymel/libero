@@ -170,10 +170,17 @@ fn loading_sx() -> Sx {
         )
         .selector(
             "& > [data-slot='spinner']",
-            sx().position("absolute").inset("0").margin("auto").var(
-                LOADER_SIZE,
-                format!("calc({} * 0.6)", ACTION_ICON_SIZE.overridable()),
-            ),
+            // Centred in flex too, for a custom loader that fills the box.
+            sx().position("absolute")
+                .inset("0")
+                .margin("auto")
+                .display("inline-flex")
+                .align_items("center")
+                .justify_content("center")
+                .var(
+                    LOADER_SIZE,
+                    format!("calc({} * 0.6)", ACTION_ICON_SIZE.overridable()),
+                ),
         )
 }
 
@@ -224,16 +231,19 @@ fn action_icon_variables(
 }
 
 /// The enclosing `ButtonGroup`'s defaults, where the caller left a prop unset.
-fn fill_from_group(props: &mut ActionIconProps, group: ButtonGroupContext) {
+fn fill_from_group(props: &mut ActionIconProps, group: &ButtonGroupContext) {
     fn fill<T>(prop: &mut Input<T>, group: Option<T>) {
         if let (Input::None, Some(value)) = (&*prop, group) {
             *prop = Input::Value(value);
         }
     }
     fill(&mut props.size, group.size.map(ThemeAwareValue::Size));
-    fill(&mut props.radius, group.radius);
+    fill(&mut props.radius, group.radius.clone());
     fill(&mut props.variant, group.variant);
-    fill(&mut props.color, group.color);
+    fill(&mut props.color, group.color.clone());
+    props.selected = props
+        .selected
+        .or_else(|| group.pressed(props.value.as_deref()));
     props.disabled = props.disabled.or(group.disabled);
     props.focusable_when_disabled = props
         .focusable_when_disabled
@@ -277,6 +287,15 @@ base_props! {
         /// Sets only `aria-busy`: announce the progress in your own `role="status"` region.
         #[props(default)]
         loading: Option<bool>,
+        /// Drawn in place of the `Loader` while `loading`. Size it yourself.
+        #[props(default)]
+        loader: Option<Element>,
+        /// The press ripple. `false` drops it.
+        #[props(default = true)]
+        ripple: bool,
+        /// Its key in the enclosing `ButtonGroup`'s `value`, which makes it a toggle.
+        #[props(default, into)]
+        value: Option<String>,
         // `Option`, not a bare `EventHandler`: see `Button`.
         #[props(default)]
         onclick: Option<EventHandler<MouseEvent>>,
@@ -329,7 +348,7 @@ pub fn ActionIcon(props: ActionIconProps) -> Element {
         .as_deref()
         .and_then(|chord| chord_words(chord, apple, &current_localization().shortcut_help));
     let mut label = props.aria_label.clone();
-    if !label.trim().is_empty() && opens_new_tab(&props, group) {
+    if !label.trim().is_empty() && opens_new_tab(&props, &group) {
         label = format!("{label} {}", current_localization().anchor.new_tab);
     }
     let open_delay = try_consume_context::<TooltipOpenDelay>().map(|delay| delay.0);
@@ -349,7 +368,7 @@ pub fn ActionIcon(props: ActionIconProps) -> Element {
 }
 
 /// A live `_blank` link that says so: not a disabled one, which drops its `href`.
-fn opens_new_tab(props: &ActionIconProps, group: ButtonGroupContext) -> bool {
+fn opens_new_tab(props: &ActionIconProps, group: &ButtonGroupContext) -> bool {
     let disabled = props.disabled.or(group.disabled).unwrap_or(false);
     props.to.as_ref().is_some()
         && !disabled
@@ -362,7 +381,8 @@ fn action_icon(mut props: ActionIconProps) -> Element {
         .as_deref()
         .and_then(|chord| aria_keyshortcuts(chord, mod_is_meta()));
     let group = use_button_group();
-    fill_from_group(&mut props, group);
+    let own_selected = props.selected.is_some();
+    fill_from_group(&mut props, &group);
     let item = use_toolbar_item();
     let is_link = props.to.as_ref().is_some();
     // A disabled `Fieldset` reaches no link, as a native one (todo 3873).
@@ -444,6 +464,8 @@ fn action_icon(mut props: ActionIconProps) -> Element {
     }
     .into();
 
+    // `value` is also the `<button>`'s own attribute, which the prop shadows.
+    let native_value = props.value.clone();
     let handle_click = move |event: Event<MouseData>| {
         if let Some(item) = item {
             item.take_stop();
@@ -454,9 +476,15 @@ fn action_icon(mut props: ActionIconProps) -> Element {
             event.prevent_default();
             return;
         }
-        ripple.press(&event);
+        if props.ripple {
+            ripple.press(&event);
+        }
         if let Some(onclick) = &props.onclick {
             onclick.call(event);
+        }
+        // A button with its own `selected` is not the group's to toggle.
+        if let (false, Some(value)) = (own_selected, &props.value) {
+            group.toggle(value);
         }
     };
 
@@ -528,7 +556,11 @@ fn action_icon(mut props: ActionIconProps) -> Element {
     let children = if loading {
         rsx! {
             span { "data-slot": "glyph", {glyph} }
-            Loader { "data-slot": "spinner", color: "currentColor" }
+            if let Some(loader) = props.loader {
+                span { "data-slot": "spinner", {loader} }
+            } else {
+                Loader { "data-slot": "spinner", color: "currentColor" }
+            }
         }
     } else {
         glyph
@@ -554,6 +586,7 @@ fn action_icon(mut props: ActionIconProps) -> Element {
         .attr(TOOLBAR_ITEM, item.map(ToolbarItem::key))
         .attr("aria-busy", loading.then_some("true"))
         .attr("aria-disabled", (loading || disabled).then_some("true"))
+        .attr("value", native_value)
         .attr_default("type", "button")
         .attr_default(
             "aria-pressed",
@@ -585,6 +618,9 @@ mod tests {
             focusable_when_disabled: None,
             selected: None,
             loading: None,
+            loader: None,
+            ripple: true,
+            value: None,
             onclick: None,
             to: Input::None,
             target: None,

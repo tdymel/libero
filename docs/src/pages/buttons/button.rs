@@ -3,15 +3,23 @@ use crate::components::{
     not_gradient_variant, prop, props,
 };
 use dioxus::prelude::*;
-use libero::components::{Button, ButtonPart, Code, Flex, Input, Pictogram, Text};
+use libero::components::{Button, ButtonPart, Code, Flex, Input, Loader, Pictogram, Text};
 use libero::use_theme;
 use pictogram_icons_lucide as lucide;
 
 const TRAILING_ICON: &str =
     "trailing_icon: rsx! { Pictogram { icon: lucide::chevron_right::outlined } }";
 
+const CUSTOM_LOADER: &str =
+    "loader: rsx! { Loader { variant: \"dots\", size: \"xs\", color: \"currentColor\" } }";
+
 fn is_link(values: &DemoValues) -> bool {
     values.str("link") == "true"
+}
+
+fn custom_loader(values: &DemoValues) -> Option<Element> {
+    (values.str("custom_loader") == "true")
+        .then(|| rsx! { Loader { variant: "dots", size: "xs", color: "currentColor" } })
 }
 
 #[component]
@@ -52,6 +60,16 @@ pub fn ButtonPage() -> Element {
                 prop("loading", "bool")
                     .default("false")
                     .doc("Shows a `Loader` over the label and ignores clicks. The button stays focusable and keeps its width, and sets `aria-busy`; announce the progress in your own status region. Ignored on a link."),
+                prop("loader", "Element")
+                    .doc("Drawn in place of the `Loader` while `loading`. Size it yourself, e.g. `Loader { size: \"xs\" }`."),
+                prop("loading_position", "LoadingPosition")
+                    .default("center")
+                    .doc("Where the loader sits: `center` over the hidden label, or `start` and `end` in the place of `icon` and `trailing_icon`, with the label still visible."),
+                prop("ripple", "bool")
+                    .default("true")
+                    .doc("The press ripple. `false` drops it, for a dense toolbar or a theme without one. Reduced motion drops it anyway."),
+                prop("value", "String")
+                    .doc("Its key in the enclosing `ButtonGroup`'s `value`. With that set, the button is a toggle and a press asks the group to select it; its own `selected` wins. Also the `<button>`'s `value` attribute."),
                 prop("onclick", "EventHandler<MouseEvent>")
                     .doc("Click handler. Not called on a link."),
                 prop("to", "NavigationTarget")
@@ -145,6 +163,28 @@ pub fn ButtonPage() -> Element {
                         .hidden_when(|values| values.str("disabled") != "true"),
                     // An `<a>` has nothing to wait for: ignored, with a warning.
                     Control::switch("loading").hidden_when(is_link),
+                    // On and at the start, so the second button below, which always loads,
+                    // shows both without another switch.
+                    Control::toggle("loading_position", ["center", "start", "end"])
+                        .labels(["Center", "Start", "End"])
+                        .default("start")
+                        .hidden_when(is_link)
+                        .code(|_, values| match values.str("loading_position").as_str() {
+                            "center" => vec![],
+                            value => vec![format!("loading_position: {value:?}")],
+                        }),
+                    Control::switch("custom_loader").default("true").hidden_when(is_link).code(|_, values| {
+                        match values.str("custom_loader").as_str() {
+                            "true" => vec![CUSTOM_LOADER.to_string()],
+                            _ => vec![],
+                        }
+                    }),
+                    Control::switch("ripple").default("true").code(|_, values| {
+                        match values.str("ripple").as_str() {
+                            "false" => vec!["ripple: false".to_string()],
+                            _ => vec![],
+                        }
+                    }),
                     // `to` and `target` together, since the preview's link
                     // must not navigate the docs away.
                     Control::switch("link").code(|_, values| match values.str("link").as_str() {
@@ -190,6 +230,9 @@ pub fn ButtonPage() -> Element {
                             disabled: values.str("disabled") == "true",
                             focusable_when_disabled: values.str("focusable_when_disabled") == "true",
                             loading: values.str("loading") == "true" && !is_link(&values),
+                            loading_position: values.str("loading_position"),
+                            loader: custom_loader(&values),
+                            ripple: values.str("ripple") != "false",
                             r#type: values.str("type"),
                             to: match values.str("link").as_str() {
                                 "true" => Input::from("https://dioxuslabs.com"),
@@ -200,6 +243,19 @@ pub fn ButtonPage() -> Element {
                             trailing_icon: (values.str("trailing_icon") == "true")
                                 .then(|| rsx! { Pictogram { icon: lucide::chevron_right::outlined } }),
                             "Save changes"
+                        }
+                        // Always loading, so the position and the loader show without the `loading` switch.
+                        if !is_link(&values) {
+                            Button {
+                                variant: values.str("variant"),
+                                color: values.str("color"),
+                                size: values.str("size"),
+                                loading: true,
+                                loading_position: values.str("loading_position"),
+                                loader: custom_loader(&values),
+                                icon: rsx! { Pictogram { icon: lucide::save::outlined } },
+                                "Saving"
+                            }
                         }
                         // A new-tab link beside it that opts into the icon, shown without the `link` switch.
                         if !is_link(&values) {

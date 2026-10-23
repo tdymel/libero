@@ -1,7 +1,9 @@
 //! `Button`'s `loading` state: the label stays, the loader is silent, and the
 //! button stays focusable.
 
-use crate::common::{attributes_of, body, classes_of, has_rule_for, render, rules_for};
+use crate::common::{
+    attributes_of, body, classes_of, has_rule_for, nth_attributes, render, rules_for,
+};
 
 use std::collections::BTreeSet;
 
@@ -73,6 +75,137 @@ fn not_loading_renders_the_children_bare() {
     assert!(!attributes.contains_key("aria-busy"), "{attributes:?}");
     assert!(!attributes.contains_key("aria-disabled"), "{attributes:?}");
     assert!(!html.contains("<span"), "{html}");
+}
+
+/// Todo 3993: at the start the loader takes the icon's slot and the label is no longer
+/// dimmed under an overlay, so it is not wrapped.
+#[test]
+fn a_start_loader_replaces_the_icon_and_leaves_the_label_bare() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider {
+                Button {
+                    loading: true,
+                    loading_position: "start",
+                    icon: rsx! { svg { id: "glyph" } },
+                    "Save"
+                }
+            }
+        }
+    }
+
+    let html = body(&render(app));
+    let state = &attributes_of(&html, "button")["data-state"];
+
+    assert!(tokens(state).contains("loading"), "{state}");
+    assert!(!tokens(state).contains("loading-overlay"), "{state}");
+    assert!(!html.contains(r#"id="glyph""#), "the icon stayed: {html}");
+    assert!(html.contains(r#"<span data-slot="button-icon">"#), "{html}");
+    assert!(html.contains("Save</button>"), "{html}");
+    assert!(!html.contains("<span>Save"), "{html}");
+}
+
+/// Todo 3993: at the end it takes the trailing icon's.
+#[test]
+fn an_end_loader_replaces_the_trailing_icon() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider {
+                Button {
+                    loading: true,
+                    loading_position: "end",
+                    trailing_icon: rsx! { svg { id: "glyph" } },
+                    "Next"
+                }
+            }
+        }
+    }
+
+    let html = body(&render(app));
+
+    assert!(!html.contains(r#"id="glyph""#), "the icon stayed: {html}");
+    assert!(
+        html.contains(r#"Next<span data-slot="button-trailing-icon">"#),
+        "{html}"
+    );
+    assert_eq!(attributes_of(&html, "button")["aria-busy"], "true");
+}
+
+/// Todo 3993: the custom loader stands in for the spinner, in the overlay by default
+/// and in the slot at the start or end.
+#[test]
+fn a_custom_loader_replaces_the_spinner_in_every_position() {
+    fn centered() -> Element {
+        rsx! {
+            LiberoProvider {
+                Button { loading: true, loader: rsx! { i { id: "mine" } }, "Save" }
+            }
+        }
+    }
+    fn at_end() -> Element {
+        rsx! {
+            LiberoProvider {
+                Button {
+                    loading: true,
+                    loading_position: "end",
+                    loader: rsx! { i { id: "mine" } },
+                    "Save"
+                }
+            }
+        }
+    }
+
+    let html = body(&render(centered));
+    assert!(
+        html.contains(r#"<span>Save</span><span><i id="mine"></i></span></button>"#),
+        "{html}"
+    );
+    assert!(tokens(&attributes_of(&html, "button")["data-state"]).contains("loading-overlay"));
+
+    let html = body(&render(at_end));
+    assert!(
+        html.contains(
+            r#"Save<span data-slot="button-trailing-icon"><i id="mine"></i></span></button>"#
+        ),
+        "{html}"
+    );
+}
+
+/// Todo 3993: a position without `loading` changes nothing.
+#[test]
+fn a_loading_position_alone_renders_the_children_bare() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider { Button { loading_position: "start", "Save" } }
+        }
+    }
+
+    let html = body(&render(app));
+
+    assert!(html.contains(">Save</button>"), "{html}");
+    assert!(!attributes_of(&html, "button").contains_key("aria-busy"));
+}
+
+/// Todo 3998: the prop `value` is also the `<button>`'s own attribute, so it still reaches the DOM.
+#[test]
+fn a_buttons_value_is_forwarded_to_the_native_attribute() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider {
+                Button { value: "bold", "Bold" }
+                Button { "Plain" }
+            }
+        }
+    }
+
+    let html = body(&render(app));
+
+    assert_eq!(nth_attributes(&html, "button", 0)["value"], "bold");
+    assert!(!nth_attributes(&html, "button", 1).contains_key("value"));
+    assert!(
+        !nth_attributes(&html, "button", 0).contains_key("aria-pressed"),
+        "a button outside a selecting group is not a toggle"
+    );
 }
 
 /// Todo 662: the children are the button's own flex items, never wrapped, so
@@ -322,6 +455,7 @@ fn a_button_still_takes_a_navigation_target_or_a_path() {
 /// Events dispatched the way a renderer does, through [`crate::dispatch`].
 mod dispatched {
 
+    use crate::common::body;
     use crate::dispatch::*;
 
     use dioxus::prelude::*;
@@ -334,5 +468,31 @@ mod dispatched {
     #[test]
     fn clicking_a_button_runs_its_ripple() {
         assert_ripple_alternates(button_app);
+    }
+
+    /// Todo 3994: `ripple: false` still clicks, but draws nothing.
+    #[test]
+    fn a_button_without_ripple_runs_no_ripple_and_still_clicks() {
+        fn app() -> Element {
+            let mut clicks = use_signal(|| 0u32);
+            rsx! {
+                LiberoProvider {
+                    Button { ripple: false, onclick: move |_| clicks += 1, "{clicks}" }
+                }
+            }
+        }
+
+        let mut page = Page::mount(app);
+        let button = page.rec.click.expect("registered no click listener");
+        page.click(button);
+        page.click(button);
+
+        let html = dioxus_ssr::render(&page.dom);
+        assert!(
+            !data_state(&html).contains("ripple"),
+            "{}",
+            data_state(&html)
+        );
+        assert!(body(&html).contains(">2</button>"), "{html}");
     }
 }

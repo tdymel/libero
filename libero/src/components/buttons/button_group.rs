@@ -1,3 +1,5 @@
+use std::collections::HashSet;
+
 use dioxus::prelude::*;
 
 use crate::{
@@ -10,6 +12,7 @@ use crate::{
     },
     sx::{StaticSx, Sx, ThemeAwareValue, sx},
     theme::{ColorCss, ColorShade, Size},
+    utils::warn,
 };
 
 /// A control inside an item: the item itself, or one it wraps (`Repository`'s span, `ThemeSwitcher`'s pair).
@@ -151,6 +154,16 @@ base_props! {
         /// Default `focusable_when_disabled` of the buttons inside: a disabled one stays a Tab stop.
         #[props(default)]
         focusable_when_disabled: Option<bool>,
+        /// The `value`s of the pressed buttons, strictly controlled. Set, a button with a `value` is a toggle
+        /// (`aria-pressed`), unless it sets `selected` itself. Unset, a plain group.
+        #[props(default)]
+        value: Option<HashSet<String>>,
+        /// With `value`: any number of buttons pressed. Off, pressing one releases the other.
+        #[props(default)]
+        multiple: bool,
+        /// Asks for the next pressed set. Without it the selection can never change.
+        #[props(default)]
+        onchange: Option<EventHandler<HashSet<String>>>,
         /// `Button`s, `ActionIcon`s, and components built on them.
         children: Element,
     }
@@ -176,6 +189,27 @@ base_props! {
 /// # }
 /// ```
 ///
+/// With `value` its buttons toggle: one at a time, or any number with `multiple`.
+///
+/// ```rust
+/// # use std::collections::HashSet;
+/// # use dioxus::prelude::*;
+/// # use libero::components::{Button, ButtonGroup};
+/// # fn app() -> Element {
+/// let mut pressed = use_signal(|| HashSet::from(["bold".to_string()]));
+/// rsx! {
+///     ButtonGroup {
+///         "aria-label": "Text style",
+///         multiple: true,
+///         value: pressed(),
+///         onchange: move |next| pressed.set(next),
+///         Button { value: "bold", "Bold" }
+///         Button { value: "italic", "Italic" }
+///     }
+/// }
+/// # }
+/// ```
+///
 /// Docs: <https://libero-ui.dev/buttons/button-group>
 #[component]
 pub fn ButtonGroup(props: ButtonGroupProps) -> Element {
@@ -191,7 +225,13 @@ pub fn ButtonGroup(props: ButtonGroupProps) -> Element {
         color: props.color.as_ref().cloned(),
         disabled: props.disabled,
         focusable_when_disabled: props.focusable_when_disabled,
+        value: props.value.clone(),
+        multiple: props.multiple,
+        onchange: props.onchange,
     });
+    if props.value.is_some() && props.onchange.is_none() {
+        warn("ButtonGroup: without `onchange` the selection can never change.");
+    }
 
     let states: Input<States> = props
         .states

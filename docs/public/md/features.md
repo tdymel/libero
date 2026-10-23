@@ -62,7 +62,7 @@ it is on (Notes).
 | `action-icon` | ActionIcon | button, loader, tooltip, shortcut-help, anchor, paper, pictogram, use-hotkeys, use-id | on |  |
 | `button` | Button | loader, anchor | on |  |
 | `button-group` | ButtonGroup | box | off |  |
-| `copy` | Copy | action-icon, use-clipboard | off |  |
+| `copy` | Copy | action-icon, use-clipboard, use-timers | off |  |
 | `direction-toggle` | DirectionToggle | action-icon, use-direction | off |  |
 | `repository` | Repository | action-icon, use-local-storage | off | The Simple Icons brand marks (pictogram-icons-simple). |
 | `share` | Share | action-icon, icon, button, use-share | off |  |

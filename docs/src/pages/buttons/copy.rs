@@ -35,11 +35,13 @@ pub fn CopyPage() -> Element {
                 prop("disabled", "bool")
                     .default("false")
                     .doc("Disables and dims the button."),
+                prop("timeout", "u32")
+                    .doc("Milliseconds after a press before the check mark and the status reset. Unset, they reset when the pointer or the focus leaves."),
             ])],
             accessibility: a11y()
                 .handles([
                     "An always-mounted `role=\"status\"` region says \"Copied\", or that the copy failed, once the platform answers. A second copy announces again.",
-                    "The icon and the status reset when the pointer or the focus leaves.",
+                    "The icon and the status reset when the pointer or the focus leaves, and after `timeout` when it is set.",
                     "Unset, `aria_label` is the localization's `copy`. The words are `CopyLabels`.",
                     "`label` becomes the button's description through a hidden element, so the name stays short: \"Copy, Add libero to your project\".",
                 ])
@@ -81,6 +83,14 @@ pub fn CopyPage() -> Element {
                         _ => vec![],
                     }),
                     Control::switch("disabled"),
+                    // On, so the check resets itself without another switch.
+                    Control::toggle("timeout", ["unset", "1000", "2000"])
+                        .labels(["Unset", "1 s", "2 s"])
+                        .default("2000")
+                        .code(|_, values| match values.str("timeout").as_str() {
+                            "unset" => vec![],
+                            value => vec![format!("timeout: {value}")],
+                        }),
                 ],
                 render: move |values: DemoValues| rsx! {
                     Copy {
@@ -95,6 +105,7 @@ pub fn CopyPage() -> Element {
                         radius: values.str("radius"),
                         label: (values.str("label") == "true").then(|| LABEL.to_string()),
                         disabled: values.str("disabled") == "true",
+                        timeout: values.str("timeout").parse::<u32>().ok(),
                     }
                 },
             }

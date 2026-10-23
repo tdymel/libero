@@ -2,7 +2,7 @@
 
 Crate: `libero`
 Import: `use libero::components::Copy;`
-Feature: `copy` (off by default, turns on `action-icon`, `use-clipboard`; [features.md](features.md))
+Feature: `copy` (off by default, turns on `action-icon`, `use-clipboard`, `use-timers`; [features.md](features.md))
 Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/buttons/copy.rs>
 Index: [index.md](index.md) lists every other page
 Description: An icon button that copies a value to the clipboard and confirms it with a check and a spoken "Copied".
@@ -50,6 +50,7 @@ natively it needs the `native` feature.
 | `aria_label` | `String` | `"Copy"` | The button's name, such as "Copy link". Unset, the localization's. |
 | `label` | `String` | - | Describes what a press copies, read after the name, such as "Add libero to your project". |
 | `disabled` | `bool` | `false` | Disables and dims the button. |
+| `timeout` | `u32` | - | Milliseconds after a press before the check mark and the status reset. Unset, they reset when the pointer or the focus leaves. |
 
 Like every component, `Copy` also takes the shared props `sx`, `class`,
 `style`, `states`, and any extra HTML attributes. They land on the button.
@@ -63,7 +64,8 @@ The words are `CopyLabels` in the [localization](localization.md): `copy`
 
 - An always-mounted `role="status"` region says "Copied", or that the copy
   failed, once the platform answers. A second copy announces again.
-- The icon and the status reset when the pointer or the focus leaves.
+- The icon and the status reset when the pointer or the focus leaves, and after
+  `timeout` when it is set.
 - Unset, `aria_label` is the localization's `copy`. The words are
   `CopyLabels`.
 - `label` becomes the button's description through a hidden element, so the

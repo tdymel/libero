@@ -106,6 +106,50 @@ fn a_press_is_announced_and_leaving_resets_it() {
     });
 }
 
+/// Todo 3995: `timeout` resets the check and the status with focus and the pointer still on the
+/// button, and a `Copy` without it keeps both until they leave.
+#[test]
+fn a_timeout_resets_the_status_while_focus_stays() {
+    block_on(async {
+        let fixture = Fixture::open("/copy/timeout", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+
+        keyboard::tab_to(page, "#plain button", 5).await.unwrap();
+        keyboard::press(page, keyboard::ENTER).await.unwrap();
+        wait::for_js_true(page, &status_is("plain", "Copied"), "the plain copy")
+            .await
+            .unwrap();
+
+        // A scripted click moves neither focus nor the pointer off the plain one.
+        page.evaluate_bounded("document.querySelector('#timed button').click()")
+            .await
+            .unwrap();
+        wait::for_js_true(page, &status_is("timed", "Copied"), "the timed copy")
+            .await
+            .unwrap();
+        wait::for_js_true(
+            page,
+            &status_is("timed", ""),
+            "the timeout to reset the status",
+        )
+        .await
+        .unwrap();
+
+        assert!(
+            page.evaluate_bounded(status_is("plain", "Copied"))
+                .await
+                .unwrap()
+                .into_value::<bool>()
+                .unwrap(),
+            "the untimed copy reset without anything leaving"
+        );
+        fixture.console.assert_clean("a timed copy").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
 /// Todo 2824: with no `navigator.clipboard` (a non-secure origin) a press announces the failure.
 #[test]
 fn a_missing_clipboard_announces_the_failure() {

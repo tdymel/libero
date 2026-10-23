@@ -177,6 +177,63 @@ mod dispatched {
         assert_ripple_alternates(action_icon_app);
     }
 
+    /// Todo 3994: `ripple: false` still clicks, but draws nothing.
+    #[test]
+    fn an_action_icon_without_ripple_runs_no_ripple_and_still_clicks() {
+        fn app() -> Element {
+            let mut clicks = use_signal(|| 0u32);
+            rsx! {
+                LiberoProvider {
+                    ActionIcon {
+                        aria_label: "Click",
+                        ripple: false,
+                        onclick: move |_| clicks += 1,
+                        "{clicks}"
+                    }
+                }
+            }
+        }
+
+        let mut page = Page::mount(app);
+        let icon = page.rec.click.expect("registered no click listener");
+        page.click(icon);
+        page.click(icon);
+
+        let html = dioxus_ssr::render(&page.dom);
+        assert!(!body(&html).contains("data-ripple"), "{html}");
+        assert!(
+            !data_state(&html).contains("ripple"),
+            "{}",
+            data_state(&html)
+        );
+        assert!(body(&html).contains(">2</button>"), "{html}");
+    }
+
+    /// Todo 3993: a custom `loader` replaces the spinner, in the same slot.
+    #[test]
+    fn a_loading_action_icon_shows_its_custom_loader() {
+        fn app() -> Element {
+            rsx! {
+                LiberoProvider {
+                    ActionIcon {
+                        aria_label: "Save",
+                        loading: true,
+                        loader: rsx! { i { id: "mine" } },
+                        "S"
+                    }
+                }
+            }
+        }
+
+        let html = body(&dioxus_ssr::render(&{
+            let mut dom = VirtualDom::new(app);
+            dom.rebuild_in_place();
+            dom
+        }));
+        assert!(html.contains(r#"<i id="mine"></i>"#), "{html}");
+        assert!(html.contains(r#"data-slot="spinner""#), "{html}");
+    }
+
     fn busy_action_icon() -> Element {
         rsx! {
             LiberoProvider {

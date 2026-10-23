@@ -6,7 +6,30 @@ use libero::components::{ActionIcon, Flex, SvgData, Text};
 
 use crate::Routes;
 
-pub const ROUTES: Routes = &[("/action-icon", || rsx! { ActionIconPage {} })];
+pub const ROUTES: Routes = &[
+    ("/action-icon", || rsx! { ActionIconPage {} }),
+    ("/action-icon/loader", || rsx! { ActionIconLoader {} }),
+];
+
+/// Todos 3993, 3994: a busy icon with a loader of its own, and a pair told apart by `ripple`.
+#[component]
+fn ActionIconLoader() -> Element {
+    rsx! {
+        Flex { direction: "row", gap: "md", align: "center",
+            ActionIcon {
+                id: "custom",
+                aria_label: "Saving",
+                loading: true,
+                loader: rsx! {
+                    span { id: "loader", display: "block", width: "10px", height: "10px", background: "currentColor" }
+                },
+                {glyph()}
+            }
+            ActionIcon { id: "still", aria_label: "Still", ripple: false, {glyph()} }
+            ActionIcon { id: "rippled", aria_label: "Rippled", {glyph()} }
+        }
+    }
+}
 
 fn glyph() -> Element {
     rsx! {

@@ -37,7 +37,7 @@ pub fn AnchorPage() -> Element {
                     .doc("With the hint, draws a small external icon after the text. Unset, the theme's `anchor.new_tab_icon`, which is off. `Button`, `ActionIcon`, `Chip`, `NavLink`, `Repository` and `MenuItem` take it too."),
                 prop("underline", "AnchorUnderline")
                     .default("hover")
-                    .doc("When the underline draws, `always`, `hover` or `never`."),
+                    .doc("When the underline draws: `always`, `hover` (only under the pointer), `not-hover` (at rest, gone under the pointer) or `never`."),
                 prop("children", "Element").default("required").doc("The link's content."),
                 prop("parts", "Parts<AnchorPart>")
                     .doc("Styles for the inner parts in the Style API tab, under `sx`."),
@@ -106,8 +106,13 @@ pub fn AnchorPage() -> Element {
                                 _ => vec!["new_tab_icon: true".to_string()],
                             }
                         }),
-                    Control::toggle("underline", ["hover", "always", "never"])
-                        .labels(["Hover", "Always", "Never"]),
+                    // `not-hover` first, so the preview shows it; the component's own default is `hover`.
+                    Control::toggle("underline", ["not-hover", "hover", "always", "never"])
+                        .labels(["At rest", "Hover", "Always", "Never"])
+                        .code(|_, values| match values.str("underline").as_str() {
+                            "hover" => vec![],
+                            value => vec![format!("underline: {value:?}")],
+                        }),
                     Control::sizes("size")
                         .default(theme.anchor.size.as_str()),
                 ],

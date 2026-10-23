@@ -37,6 +37,31 @@ fn it_is_a_named_landmark_around_a_list() {
     assert!(html.contains("<li"), "expected list items: {html}");
 }
 
+/// Todo 3997: `with_pages: false` leaves the arrows, and no page is current.
+#[test]
+fn without_pages_only_the_arrows_remain() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider {
+                Pagination {
+                    total: 10,
+                    page: 4,
+                    with_pages: false,
+                    with_edges: true,
+                    aria_label: "Pages",
+                    onchange: |_| {},
+                }
+            }
+        }
+    }
+
+    let html = markup(app);
+    assert_eq!(html.matches("<button").count(), 4, "{html}");
+    assert!(!html.contains("aria-current"), "{html}");
+    assert!(!html.contains(r#"aria-label="Page 4""#), "{html}");
+    assert!(html.contains(r#"aria-label="Go to next page""#), "{html}");
+}
+
 /// The current page has no "go to" name. `aria-current` already says "current", so repeating "go to"
 /// on the page the reader is on would be a lie.
 #[test]

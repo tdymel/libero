@@ -3,7 +3,7 @@
 
 use anyhow::{Result, ensure};
 use e2e::browser::block_on;
-use e2e::driver::Driver;
+use e2e::driver::{Driver, eventually};
 use e2e::passes::contrast::COLOUR_JS;
 use e2e::passes::{keyboard, pointer};
 use e2e::wait::PageBounded;
@@ -12,6 +12,122 @@ use e2e::{Fixture, Suite, Viewport, wait};
 const PLAIN: &str = "#plain";
 const BUSY: &str = "#busy";
 const LINK: &str = "#to-landing";
+
+/// `inner`'s centre sits on `outer`'s.
+pub async fn assert_centred<D: Driver>(d: &mut D, inner: &str, outer: &str) -> Result<()> {
+    let (inner_rect, outer_rect) = (d.rect(inner).await?, d.rect(outer).await?);
+    let (dx, dy) = (
+        (inner_rect.x + inner_rect.width / 2.0) - (outer_rect.x + outer_rect.width / 2.0),
+        (inner_rect.y + inner_rect.height / 2.0) - (outer_rect.y + outer_rect.height / 2.0),
+    );
+    ensure!(
+        dx.abs() < 1.5 && dy.abs() < 1.5,
+        "{inner} is off {outer}'s centre by ({dx}, {dy}): {inner_rect:?} in {outer_rect:?}"
+    );
+    Ok(())
+}
+
+/// Todo 3993: at the start the loader takes the icon's place and the label stays in full view.
+async fn a_start_loader_leads_the_label<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    ensure!(
+        !d.exists("#start-glyph").await?,
+        "the icon stayed beside the loader"
+    );
+    ensure!(
+        d.attr("#start", "aria-busy").await?.as_deref() == Some("true"),
+        "a busy button is not marked busy"
+    );
+    ensure!(
+        d.style("#start-text", "opacity").await? == "1",
+        "the label is dimmed under an inline loader"
+    );
+    let (slot, text) = (
+        d.rect("#start [data-slot=button-icon]").await?,
+        d.rect("#start-text").await?,
+    );
+    ensure!(
+        slot.width > 0.0 && slot.x + slot.width <= text.x + 1.0,
+        "the loader does not lead the label: {slot:?} {text:?}"
+    );
+    Ok(())
+}
+
+/// Todo 3993: at the end it takes the trailing icon's place.
+async fn an_end_loader_trails_the_label<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    ensure!(
+        !d.exists("#end-glyph").await?,
+        "the icon stayed beside the loader"
+    );
+    ensure!(
+        d.style("#end-text", "opacity").await? == "1",
+        "the label is dimmed under an inline loader"
+    );
+    let (slot, text) = (
+        d.rect("#end [data-slot=button-trailing-icon]").await?,
+        d.rect("#end-text").await?,
+    );
+    ensure!(
+        slot.width > 0.0 && slot.x + 1.0 >= text.x + text.width,
+        "the loader does not trail the label: {slot:?} {text:?}"
+    );
+    Ok(())
+}
+
+/// Todo 3993: a custom loader replaces the spinner, centred over the hidden label by default
+/// and in the slot at the end.
+async fn a_custom_loader_replaces_the_spinner<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    assert_centred(d, "#loader", "#custom").await?;
+    ensure!(
+        d.style("#custom > span:first-child", "opacity").await? == "0",
+        "the label shows through the centred loader"
+    );
+    let (loader, text) = (
+        d.rect("#end-loader").await?,
+        d.rect("#custom-end-text").await?,
+    );
+    ensure!(
+        loader.x + 1.0 >= text.x + text.width
+            && d.style("#custom-end-text", "opacity").await? == "1",
+        "the end loader is not after a full-view label: {loader:?} {text:?}"
+    );
+    Ok(())
+}
+
+/// Todo 3994: a press draws its ripple unless `ripple: false`, which still clicks.
+async fn ripple_false_draws_no_ripple<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    d.click("#still").await?;
+    d.click("#rippled").await?;
+    eventually(d, "the default button to ripple", async |d| {
+        Ok(d.attr("#rippled", "data-state")
+            .await?
+            .is_some_and(|state| state.contains("ripple")))
+    })
+    .await?;
+    let still = d.attr("#still", "data-state").await?.unwrap_or_default();
+    ensure!(!still.contains("ripple"), "ripple: false drew one: {still}");
+    Ok(())
+}
+
+e2e::scenario!(
+    a_start_loader_takes_the_icon_s_place,
+    "/button/loading",
+    a_start_loader_leads_the_label
+);
+e2e::scenario!(
+    an_end_loader_takes_the_trailing_icon_s_place,
+    "/button/loading",
+    an_end_loader_trails_the_label
+);
+e2e::scenario!(
+    a_custom_loader_replaces_the_buttons_spinner,
+    "/button/loading",
+    a_custom_loader_replaces_the_spinner
+);
+e2e::scenario!(
+    ripple_false_leaves_a_button_without_a_ripple,
+    "/button/loading",
+    ripple_false_draws_no_ripple
+);
 
 /// Todo 2338 (1.4.4): at 200% text every size's line fits the button and the
 /// segment, which clip their overflow; at 100% the steps keep their heights.

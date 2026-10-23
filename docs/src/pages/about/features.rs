@@ -56,7 +56,7 @@ pub(crate) const FEATURES: &[Feature] = &[
     feature("action-icon", "buttons", "ActionIcon", &["loader", "tooltip", "kbd", "anchor", "paper", "pictogram", "use-hotkeys", "use-id"], true, &["/buttons/action-icon"]),
     feature("button", "buttons", "Button", &["loader", "anchor"], true, &["/buttons/button"]),
     feature("button-group", "buttons", "ButtonGroup", &["box"], false, &["/buttons/button-group"]),
-    feature("copy", "buttons", "Copy", &["action-icon", "use-clipboard"], false, &["/buttons/copy"]),
+    feature("copy", "buttons", "Copy", &["action-icon", "use-clipboard", "use-timers"], false, &["/buttons/copy"]),
     feature("direction-toggle", "buttons", "DirectionToggle", &["action-icon", "use-direction"], false, &["/buttons/direction-toggle"]),
     noted(
         feature("repository", "buttons", "Repository", &["action-icon", "use-local-storage"], false, &["/buttons/repository"]),

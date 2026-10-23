@@ -14,6 +14,8 @@ str_enum! {
         Always = "always",
         #[default]
         Hover = "hover",
+        /// Underlined at rest, bare under the pointer.
+        NotHover = "not-hover",
         Never = "never",
     }
 }

@@ -50,6 +50,9 @@ repository link, direction toggle and theme switcher, and on a phone the search.
 | `radius` | `ThemeAwareValue` | - | The group's outer corners, or any CSS, e.g. `radius: "0"`. The corners between two buttons are always square. |
 | `disabled` | `bool` | - | Disables every button inside that does not set `disabled` itself, and takes it out of the Tab order unless `focusable_when_disabled` says otherwise. |
 | `focusable_when_disabled` | `bool` | - | Default `focusable_when_disabled` of the buttons inside: a disabled one stays a Tab stop. |
+| `value` | `HashSet<String>` | - | The `value`s of the pressed buttons, strictly controlled. Set, every `Button` and `ActionIcon` with a `value` is a toggle with `aria-pressed`, unless it sets `selected` itself. Unset, a plain group. |
+| `multiple` | `bool` | `false` | With `value`: any number of buttons pressed. Off, pressing one releases the other, and pressing the pressed one releases it. |
+| `onchange` | `EventHandler<HashSet<String>>` | - | Asks for the next set of pressed `value`s. Without it the selection can never change. |
 | `children` | `Element` | `required` | `Button`s, `ActionIcon`s, and components built on them, such as `ThemeSwitcher`. |
 
 Like every component, `ButtonGroup` also takes the shared props `sx`,
@@ -63,6 +66,8 @@ Like every component, `ButtonGroup` also takes the shared props `sx`,
   one set.
 - Each button stays its own Tab stop, and the focused one's ring is drawn above
   its neighbours.
+- With `value`, a button with a `value` is a toggle button: `aria-pressed` says
+  whether it is pressed, and Space and Enter toggle it.
 
 ### You must
 

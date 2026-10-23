@@ -30,6 +30,7 @@ fn every_str_enum_input_takes_its_own_value() {
     converts::<ImageLoading>();
     converts::<LabelPosition>();
     converts::<LoaderVariant>();
+    converts::<LoadingPosition>();
     converts::<Orientation>();
     converts::<PinKind>();
     converts::<Placement>();

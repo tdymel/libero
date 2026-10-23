@@ -145,6 +145,9 @@ base_props! {
         /// Disables every control at once, as `aria-disabled`: focus stays where it is.
         #[props(default)]
         disabled: Option<bool>,
+        /// The page numbers. On by default; `false` leaves the arrows, for a "Page 3 of 10" of your own.
+        #[props(default)]
+        with_pages: Option<bool>,
         /// Previous and next. On by default.
         #[props(default)]
         with_controls: Option<bool>,
@@ -191,6 +194,7 @@ pub fn Pagination(props: PaginationProps) -> Element {
     // A disabled `Fieldset` renders no native `disabled` (todo 3873).
     let group_disabled = use_fieldset_disabled();
     let disabled = props.disabled.unwrap_or(false) || group_disabled;
+    let with_pages = props.with_pages.unwrap_or(true);
     let with_controls = props.with_controls.unwrap_or(true);
     let with_edges = props.with_edges.unwrap_or(false);
 
@@ -327,6 +331,7 @@ pub fn Pagination(props: PaginationProps) -> Element {
     // Keyed by value: an index key would re-label the focused button as the range shifts.
     let items: Vec<(String, PaginationItem)> = pagination_range(total, page, siblings, boundaries)
         .into_iter()
+        .filter(|_| with_pages)
         .enumerate()
         .map(|(index, item)| {
             let key = match item {

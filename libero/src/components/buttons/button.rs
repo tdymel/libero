@@ -7,8 +7,8 @@ use crate::{
             BUTTON_HOVER_VAR, BUTTON_ON_CONTAINER_VAR, BUTTON_ON_STATE_VAR, BUTTON_SELECTED_VAR,
             BUTTON_VARS, HtmlTag, Input, Part, ScaleOrCss, States, TOOLBAR_ITEM, ToolbarItem,
             Variant, base_color, base_props, contrast_color, disabled_look_sx, fill_color,
-            focus_ring_sx, interactive_variant_sx, label_color, literal_contrast, parts_enum,
-            text_color, use_button_group, use_toolbar_item, variables, variant_colors,
+            focus_ring_sx, input_from_str, interactive_variant_sx, label_color, literal_contrast,
+            parts_enum, text_color, use_button_group, use_toolbar_item, variables, variant_colors,
             variant_selected_sx,
         },
         feedback::Loader,
@@ -21,6 +21,10 @@ use crate::{
     theme::{BUTTON_HEIGHT, ButtonDefaults, Gradient, LOADER_SIZE, SURFACE_LABEL, Size, SizeCss},
     utils::warn,
 };
+
+pub use crate::theme::LoadingPosition;
+
+input_from_str!(LoadingPosition);
 
 static BUTTON_BASE_SX: StaticSx = StaticSx::new(|| {
     let base = ripple_sx(ButtonDefaults::theme_vars())
@@ -72,7 +76,8 @@ static BUTTON_BASE_SX: StaticSx = StaticSx::new(|| {
         // No `pointer-events: none`: the variant's `:hover` skips it already.
         .when("disabled", disabled_look_sx("not-allowed"))
         .when("full-width", sx().width("100%"))
-        .when("loading", loading_sx())
+        .when("loading", sx().cursor("progress"))
+        .when("loading-overlay", loading_overlay_sx())
         .and(zoom_height_sx())
         .focus_visible(focus_ring_sx())
 });
@@ -108,9 +113,8 @@ fn button_icon_sx(leading: bool) -> Sx {
 
 /// Children stay at `opacity: 0` under the loader: they keep the accessible name and the width.
 /// One rule per size, since the button publishes no unsuffixed height.
-fn loading_sx() -> Sx {
+fn loading_overlay_sx() -> Sx {
     let base = sx()
-        .cursor("progress")
         .selector(
             "& > span:first-child",
             sx().display("inline-flex")
@@ -121,7 +125,13 @@ fn loading_sx() -> Sx {
         )
         .selector(
             "& > span:last-child",
-            sx().position("absolute").inset("0").margin("auto"),
+            // Centred in flex too, for a custom loader that fills the box.
+            sx().position("absolute")
+                .inset("0")
+                .margin("auto")
+                .display("inline-flex")
+                .align_items("center")
+                .justify_content("center"),
         );
 
     Size::ALL.into_iter().fold(base, |base, size| {
@@ -219,6 +229,19 @@ base_props! {
         /// Sets only `aria-busy`: announce the progress in your own `role="status"` region.
         #[props(default)]
         loading: Option<bool>,
+        /// Drawn in place of the `Loader` while `loading`. Size it yourself.
+        #[props(default)]
+        loader: Option<Element>,
+        /// Where the loader sits. `start` and `end` take the place of `icon` and `trailing_icon`
+        /// and leave the label visible. Unset, `center`: over the hidden label.
+        #[props(default, into)]
+        loading_position: Input<LoadingPosition>,
+        /// The press ripple. `false` drops it.
+        #[props(default = true)]
+        ripple: bool,
+        /// Its key in the enclosing `ButtonGroup`'s `value`, which makes it a toggle.
+        #[props(default, into)]
+        value: Option<String>,
         // `Option`: a defaulted `EventHandler` allocates on every render (~300 ns).
         #[props(default)]
         onclick: Option<EventHandler<MouseEvent>>,
@@ -272,9 +295,14 @@ pub fn Button(props: ButtonProps) -> Element {
     let in_disabled_group = use_fieldset_disabled() && !is_link;
     let disabled = props.disabled.or(group.disabled).unwrap_or(false) || in_disabled_group;
     let full_width = props.full_width.unwrap_or(false);
-    let selectable = props.selected.is_some();
-    let selected = props.selected.unwrap_or(false);
+    let pressed = props
+        .selected
+        .or_else(|| group.pressed(props.value.as_deref()));
+    let selectable = pressed.is_some();
+    let selected = pressed.unwrap_or(false);
     let loading = props.loading.unwrap_or(false) && !is_link;
+    let position = props.loading_position.copied_or(LoadingPosition::Center);
+    let inline_loader = loading && position != LoadingPosition::Center;
     // A toolbar keeps its disabled items in the arrow order.
     let soft_disabled = disabled
         && props
@@ -334,10 +362,11 @@ pub fn Button(props: ButtonProps) -> Element {
     let style = Some(style).filter(|style| !style.is_empty());
 
     // One allocation; `.with()` scans and may regrow per state. Caller states merge.
-    let mut own = Vec::with_capacity(8);
+    let mut own = Vec::with_capacity(9);
     own.extend([
         ("disabled", disabled),
         ("loading", loading),
+        ("loading-overlay", loading && !inline_loader),
         ("full-width", full_width),
         ("checked", selected),
         (variant.state_name(), true),
@@ -358,6 +387,8 @@ pub fn Button(props: ButtonProps) -> Element {
         None => States::from(own).into(),
     };
 
+    // `value` is also the `<button>`'s own attribute, which the prop shadows.
+    let native_value = props.value.clone();
     let handle_click = move |event: Event<MouseData>| {
         if let Some(item) = item {
             item.take_stop();
@@ -368,9 +399,15 @@ pub fn Button(props: ButtonProps) -> Element {
             event.prevent_default();
             return;
         }
-        ripple.press(&event);
+        if props.ripple {
+            ripple.press(&event);
+        }
         if let Some(onclick) = &props.onclick {
             onclick.call(event);
+        }
+        // A button with its own `selected` is not the group's to toggle.
+        if let (None, Some(value)) = (props.selected, &props.value) {
+            group.toggle(value);
         }
     };
 
@@ -384,13 +421,36 @@ pub fn Button(props: ButtonProps) -> Element {
         .style(style)
         .prepare();
 
+    // A custom loader sits in a `span`, which the overlay rule positions as it does the `Loader`.
+    let spinner = loading.then(|| match (props.loader, inline_loader) {
+        (Some(loader), false) => rsx! {
+            span { {loader} }
+        },
+        (Some(loader), true) => loader,
+        (None, false) => rsx! {
+            Loader { size, color: "currentColor" }
+        },
+        (None, true) => rsx! {
+            Loader {
+                size,
+                color: "currentColor",
+                sx: sx().var(LOADER_SIZE, format!("calc({} / 2)", BUTTON_HEIGHT.value(size))),
+            }
+        },
+    });
+    let (leading, trailing) = match (spinner.as_ref().filter(|_| inline_loader), position) {
+        (Some(spinner), LoadingPosition::Start) => (Some(spinner.clone()), props.trailing_icon),
+        (Some(spinner), _) => (props.icon, Some(spinner.clone())),
+        (None, _) => (props.icon, props.trailing_icon),
+    };
+
     let label = rsx! {
-        if let Some(icon) = props.icon {
+        if let Some(icon) = leading {
             // Not `icon`: an `Alert`'s own slot is, and a button sits in one.
             span { "data-slot": ButtonPart::Icon.slot(), {icon} }
         }
         {props.children}
-        if let Some(icon) = props.trailing_icon {
+        if let Some(icon) = trailing {
             span { "data-slot": ButtonPart::TrailingIcon.slot(), {icon} }
         }
     };
@@ -432,10 +492,10 @@ pub fn Button(props: ButtonProps) -> Element {
         );
     }
 
-    let children = if loading {
+    let children = if let (Some(spinner), false) = (spinner, inline_loader) {
         rsx! {
             span { {label} }
-            Loader { size, color: "currentColor" }
+            {spinner}
         }
     } else {
         label
@@ -453,6 +513,7 @@ pub fn Button(props: ButtonProps) -> Element {
         .attr(TOOLBAR_ITEM, item.map(ToolbarItem::key))
         .attr("aria-busy", loading.then_some("true"))
         .attr("aria-disabled", (loading || disabled).then_some("true"))
+        .attr("value", native_value)
         .attr_default("type", "button")
         .attr_default(
             "aria-pressed",
