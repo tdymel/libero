@@ -153,7 +153,7 @@ fn rail_sx() -> Sx {
     let label = match clamps_lines() {
         true => sx()
             .box_sizing("border-box")
-            .with("padding-inline", "0.35em"),
+            .with("padding-inline", "calc(0.35em + 2px)"),
         false => sx(),
     };
     sx().position("sticky")
@@ -190,7 +190,7 @@ static NAVIGATION_BAR_ITEM_SX: StaticSx = StaticSx::new(|| {
         .align_items("center")
         .justify_content("center")
         .gap("4px")
-        .padding("6px 2px")
+        .padding("6px 0")
         .margin("0")
         .border("0")
         .background("transparent")
@@ -222,6 +222,7 @@ static NAVIGATION_BAR_ITEM_SX: StaticSx = StaticSx::new(|| {
         // Blitz has no line clamp: a two-line height cap cuts it without the ellipsis.
         .selector("& > [data-slot='label']", {
             let label = sx()
+                .box_sizing("border-box")
                 .max_width("100%")
                 .font_size(TEXT_FONT_SIZE.value(Size::Xs))
                 .line_height("1.25")
@@ -229,11 +230,16 @@ static NAVIGATION_BAR_ITEM_SX: StaticSx = StaticSx::new(|| {
                 .with("overflow-wrap", "anywhere")
                 .overflow("hidden");
             match clamps_lines() {
+                // Padding inside the box keeps the clamped ellipsis from hanging past it (3943).
                 true => label
+                    .with("padding-inline", "max(2px, 0.2em)")
                     .display("-webkit-box")
                     .with("-webkit-box-orient", "vertical")
                     .with("-webkit-line-clamp", "2"),
-                false => label.display("block").max_height("2.5em"),
+                false => label
+                    .with("padding-inline", "2px")
+                    .display("block")
+                    .max_height("2.5em"),
             }
         })
         .when(

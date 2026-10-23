@@ -600,6 +600,37 @@ fn the_rail_publishes_its_width_and_flips_in_rtl() {
     });
 }
 
+/// 1.4.4: at 200% text in a wide font the bar's clamped labels keep their ellipsis in their box.
+#[test]
+fn the_bar_holds_200_percent_text_without_a_hanging_ellipsis() {
+    block_on(async {
+        let fixture = Fixture::open("/navigation-bar", Viewport::Mobile)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        wait::for_visible(page, "#long").await.unwrap();
+
+        let report = js::<serde_json::Value>(
+            page,
+            "(() => { \
+                document.documentElement.style.fontSize = '200%'; \
+                document.head.insertAdjacentHTML('beforeend', \"<style>* { font-family: Verdana, sans-serif !important }</style>\"); \
+                const bar = document.querySelector('#bar'); \
+                const labels = [...bar.querySelectorAll('[data-slot=label]')]; \
+                return { overflow: bar.scrollWidth > bar.clientWidth, \
+                    wide: labels.filter(l => l.scrollWidth > l.clientWidth + 1).map(l => l.textContent), \
+                    grew: parseFloat(getComputedStyle(labels[0]).fontSize) >= 24 }; \
+            })()",
+        )
+        .await;
+        assert_eq!(report["overflow"], false, "{report}");
+        assert_eq!(report["wide"], serde_json::json!([]), "{report}");
+        assert_eq!(report["grew"], true, "{report}");
+
+        fixture.close().await.unwrap();
+    });
+}
+
 /// 1.4.4: at 200% text the rail keeps its width, its labels wrap inside it and
 /// nothing overflows sideways.
 #[test]
