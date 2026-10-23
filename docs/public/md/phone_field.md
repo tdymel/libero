@@ -11,7 +11,9 @@ A country picker in front of a `tel` input. The picker holds the dial code, the
 input the national number, and the value is one E.164 string such as
 `"+12133734253"`. The field regroups the digits when it loses focus, for
 countries with a fixed number format. Below the `sm` breakpoint the country list
-opens as a sheet at the foot of the screen.
+opens as a sheet at the foot of the screen. It does not validate the number or
+strip a trunk prefix (`0171 1234567` under Germany posts `"+4901711234567"`), so
+add a rule through `validate`.
 
 ## Usage
 
@@ -19,39 +21,24 @@ opens as a sheet at the foot of the screen.
 use dioxus::prelude::*;
 use libero::components::PhoneField;
 
-// Two regional indicator symbols make the flag emoji of an ISO code.
-fn flag_emoji(iso: &str) -> String {
-    iso.bytes()
-        .filter(u8::is_ascii_alphabetic)
-        .filter_map(|letter| char::from_u32(0x1F1E6 + u32::from(letter.to_ascii_uppercase() - b'A')))
-        .collect()
-}
-
 #[component]
 fn Demo() -> Element {
     let mut phone = use_signal(String::new);
 
     rsx! {
         PhoneField {
-            label: "Mobile",
-            country: "DE",
-            countries: vec!["DE".to_string(), "FR".to_string(), "IT".to_string()],
-            flag: move |iso: String| rsx! {
-                span { "aria-hidden": "true", "{flag_emoji(&iso)}" }
-            },
             value: phone(),
             oninput: move |next| phone.set(next),
+            country: "DE",
+            label: "Mobile",
+            flag: move |iso: String| rsx! { Flag { iso } },
         }
     }
 }
+#
+# #[component]
+# fn Flag(iso: String) -> Element { rsx! {} }
 ```
-
-## Validation
-
-The field ships the country list but no number validation, so add a rule through
-`validate`. It does not strip a national trunk prefix: `0171 1234567` typed
-under Germany becomes `"+4901711234567"`, which is not E.164. Say so in
-`helper`, or add a rule that refuses a leading 0.
 
 ## Props
 

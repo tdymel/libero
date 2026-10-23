@@ -9,9 +9,10 @@ Description: A box with handles over an image, picking the part to keep by drag 
 
 A box with handles over an image, picking the part to keep. Drag the box, a
 handle or the image around the box, pinch with two fingers, or use the arrow
-keys on the box and its corners. `value` is a
-`CropRect` in fractions of the image, so it fits any resolution; `to_pixels`
-turns it into pixels.
+keys on the box and its corners. `value` is a `CropRect` in fractions of the
+image, so it fits any resolution; `to_pixels` turns it into pixels. It only
+picks the box. To cut the picture, give a `FileField` a `crop`: a picked image
+opens in a cropper first, and the field takes the cut file.
 
 ## Usage
 
@@ -25,32 +26,16 @@ fn Demo() -> Element {
 
     rsx! {
         ImageCropper {
-            src: "/photo.jpg",
-            alt: "Holiday photo",
-            aspect: 1.0,
+            src: SAMPLE_IMAGE,
+            alt: "A sample landscape",
             value: crop(),
             onchange: move |rect| crop.set(Some(rect)),
         }
     }
 }
+#
+# const SAMPLE_IMAGE: &str = "/sample_image.png";
 ```
-
-An avatar picker: a square box with a round mask, cropped on pick and scaled
-to at most 512 px:
-
-```rust,ignore
-FileField {
-    accept: "image/*",
-    crop: CropOptions { aspect: Some(1.0), shape: CropShape::Circle, max_size: Some(512) },
-    value: avatar(),
-    onchange: move |files| avatar.set(files),
-}
-```
-
-## Cutting the picture
-
-It only picks the box. To cut the picture, give a `FileField` a `crop`: a
-picked image opens in a cropper first, and the field takes the cut file.
 
 ## Props
 

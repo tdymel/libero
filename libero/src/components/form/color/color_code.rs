@@ -10,6 +10,25 @@ use crate::theme::{ColorFormat, HexColor};
 ///
 /// Parses from any CSS hex, rgb or hsl form (`"#228be6".parse()`); writes back
 /// with [`to_hex`](Self::to_hex), [`to_rgba`](Self::to_rgba) and the rest.
+///
+/// ```rust
+/// use libero::components::{ColorCode, ColorFormat};
+///
+/// # fn main() -> Result<(), libero::components::ParseColorError> {
+/// let color: ColorCode = "#228be6".parse()?;
+///
+/// assert_eq!(color.to_hex(), "#228be6");
+/// assert_eq!(color.to_hexa(), "#228be6ff");
+/// assert_eq!(color.to_rgb(), "rgb(34, 139, 230)");
+/// assert_eq!(color.to_rgba(), "rgba(34, 139, 230, 1)");
+/// assert_eq!(color.to_hsl(), "hsl(208, 80%, 52%)");
+/// assert_eq!(color.to_hsla(), "hsla(208, 80%, 52%, 1)");
+/// assert_eq!(color.to_format(ColorFormat::Rgba), color.to_rgba());
+/// color.to_rgba_channels(); // (34, 139, 230, 1.0)
+/// color.to_hsla_channels(); // (208.0, 0.8, 0.52, 1.0)
+/// # Ok(())
+/// # }
+/// ```
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct ColorCode {
     /// Degrees, `0.0..360.0`.

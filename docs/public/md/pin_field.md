@@ -10,7 +10,8 @@ Description: A pin, one character per cell, with auto-advance, paste spreading a
 A pin, one character per cell. Typing fills a cell and moves to the next,
 Backspace clears and steps back, and the arrows move without changing anything.
 A code pasted into any cell spreads across the rest, and characters the field
-does not take are dropped, so `"4 2-1 3"` lands as `4213`.
+does not take are dropped, so `"4 2-1 3"` lands as `4213`. Extra HTML attributes
+land on the group, not on a cell.
 
 ## Usage
 
@@ -20,28 +21,13 @@ use libero::components::PinField;
 
 #[component]
 fn Demo() -> Element {
-    let mut code = use_signal(String::new);
-
     rsx! {
         PinField {
             label: "Verification code",
-            description: "Sent to your phone.",
-            length: 6,
-            separator: rsx! { "-" },
-            value: code(),
-            oninput: move |next| code.set(next),
-            oncomplete: move |code: String| submit(code),
         }
     }
 }
-#
-# fn submit(_code: String) {}
 ```
-
-## Completion and attributes
-
-`oncomplete` fires the moment the last cell fills, which is usually where you
-submit the code. Extra HTML attributes land on the group, not on a cell.
 
 ## Props
 

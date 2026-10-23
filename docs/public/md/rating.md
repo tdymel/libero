@@ -23,47 +23,12 @@ fn Demo() -> Element {
 
     rsx! {
         Rating {
-            label: "Your rating",
             fractions: 2,
             value: stars(),
             onchange: move |value| stars.set(value),
+            label: "Your rating",
         }
     }
-}
-```
-
-An average that only shows, with no tab stop. Screen readers hear the label
-and the value, "Average 4.3 of 5":
-
-```rust,ignore
-Rating { label: "Average", value: 4.3, focusable: false }
-```
-
-`clearable` resets the rating to 0 when the current value is picked again.
-
-## Other symbols
-
-`icon` draws another symbol on one rating, empty as an outline and filled
-solid:
-
-```rust,ignore
-Rating {
-    aria_label: "Love it",
-    icon: pictogram_icons_lucide::heart::outlined,
-    color: "error",
-    clearable: true,
-    value: hearts(),
-    onchange: move |value| hearts.set(value),
-}
-```
-
-For every rating in a subtree, swap `IconSlot::Star` in an `IconProvider`; an
-`icon` prop still wins:
-
-```rust,ignore
-IconProvider {
-    icons: IconSet::new().with(IconSlot::Star, pictogram_icons_lucide::heart::outlined),
-    Rating { label: "Love it", color: "error", value: 3.5, fractions: 2, focusable: false }
 }
 ```
 
@@ -79,7 +44,7 @@ IconProvider {
 | `count` | `u8` | `5` | Number of stars. The row never wraps: a 320px screen with a 16px page margin holds 12 at `xs` and `sm`, 10 at `md`, 8 at `lg`, 7 at `xl` and 6 at `xxl`. |
 | `fractions` | `u8` | `1` | Steps per star: `1` picks whole stars, `2` halves. Each step is a hit zone of its own. |
 | `clearable` | `bool` | `false` | Picking the current value again resets it to 0, and Home or the arrows can go below the first step. Without it, the first step is the lowest a user can pick. |
-| `icon` | `SvgData` | `IconSlot::Star` | The symbol, drawn empty and filled in `currentColor`. A stroked glyph turns solid when filled; a solid one only changes colour. |
+| `icon` | `SvgData` | `IconSlot::Star` | The symbol, drawn empty and filled in `currentColor`. A stroked glyph turns solid when filled; a solid one only changes colour. Unset, `IconSlot::Star` of the nearest `IconProvider`, so one swap restyles a subtree. |
 | `color` | `ThemeAwareValue` | `warning` | The filled stars' colour; `theme.rating.color` when unset. Empty stars are `muted`. |
 | `size` | `Size` | `md` | Star size and the gap between stars. |
 | `format` | `Callback<f64, String>` | - | What a screen reader says for the value. Runs during render, so it can translate. The localization's `rating.value` ("3.5 of 5") when unset. |

@@ -9,7 +9,9 @@ Description: A group of radios over an enum, exactly one selected, with one tab 
 
 A group of radios over an enum, exactly one of them selected. The group is the
 field. It holds the question's label and captions, makes the options exclusive
-and gives the whole set one tab stop.
+and gives the whole set one tab stop. Use a `Radio` on its own only to lay a
+group out by hand. Then the shared `name`, the tab order and the group's name
+are yours to set.
 
 ## Usage
 
@@ -31,42 +33,13 @@ fn Demo() -> Element {
 
     rsx! {
         RadioGroup {
-            label: "Plan",
-            helper: "You can change it later.",
             value: plan(),
             onchange: move |next| plan.set(Some(next)),
+            label: "Plan",
         }
     }
 }
 ```
-
-The options are `T::options()` unless `options` narrows them, and `onchange`
-hands back the value itself. `value: None` selects nothing. The first option
-then holds the tab stop.
-
-`variant: "card"` draws every option as a bordered surface you can click
-anywhere. Give each one a line with `option_description`:
-
-```rust,ignore
-RadioGroup {
-    variant: "card",
-    orientation: "horizontal",
-    label: "Plan",
-    value: plan(),
-    onchange: move |next| plan.set(Some(next)),
-    option_description: move |plan: Plan| match plan {
-        Plan::Free => "Three projects, community support.",
-        Plan::Pro => "Unlimited projects, email support.",
-        Plan::Team => "Five seats and shared billing.",
-    }
-    .to_string(),
-}
-```
-
-## A Radio on its own
-
-Use a `Radio` on its own only to lay a group out by hand. Then the shared
-`name`, the tab order and the group's name are yours to set.
 
 ## Props
 

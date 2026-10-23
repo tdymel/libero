@@ -174,7 +174,7 @@ pub fn RichTextEditorPage() -> Element {
                         .doc("From `use_rich_text_editor()`: runs commands from your own toolbar (`run`) and reads the state reactively (`is_active`, `block_kind`, `list_kind`, `in_quote`, `can_undo`, `can_redo`, `is_empty`, `plain_text`). `clear()` empties the editor and keeps focus in it (undo starts over), `focus()` puts the caret back. One handle drives one editor."),
                     prop("nodes", "NodeViews")
                         .default("NodeViews::new()")
-                        .doc("Your component per custom node name, e.g. a mention. It gets `NodeViewProps { name, attrs, children }` and renders `children` exactly once. Built-ins (`paragraph`, `heading`, `quote`, `list`, `list_item`, `rule`) take a view under their name too; `code_block` stays fixed."),
+                        .doc("Your component per custom node name, e.g. a mention. It gets `NodeViewProps { name, attrs, children }` and renders `children` exactly once. Built-ins (`paragraph`, `heading` with `level`, `quote`, `list` with `ordered` and `start`, `list_item`, `rule`) take a view under their name too; `code_block` stays fixed."),
                     prop("registry", "NodeRegistry")
                         .doc("Your node types. Copy and cut write your nodes through their `to_markdown`, and a debug build warns about a `nodes` name that is not registered, such as a typo."),
                     prop("intercept", "Callback<EditorInput, bool>")
@@ -285,6 +285,7 @@ pub fn RichTextEditorPage() -> Element {
                     "On Blitz (native) the document is shown read-only, through `RichTextView`.",
                     "Copy and cut write the selection as Markdown, as plain text and as `text/markdown`: a quote as `>`, a code block fenced with its language, lists, headings, rules, marks and links as written. Custom nodes write through their `NodeSpec::markdown` (pass `registry`). Cut is one undo step.",
                     "Paste reads Markdown back into formatted blocks; custom nodes stay text. Text from elsewhere is read the same way, one paragraph per line. In a code block it is pasted as is. A pasted web address alone links the selection, or becomes a link at the caret.",
+                    "A typed `http`, `https` or `mailto` address followed by a space or Enter becomes a link, a closing full stop or comma left outside, and undo brings the text back; `[text](address)` links the text. Other schemes stay text, as does a `www.` address without a scheme.",
                     "Drag and drop of text is ignored. A replacement with no word to replace (no target range, collapsed caret) is ignored too.",
                     "Headings render as `h1` to `h6` as stored, so a `RichTextView` in a comment list adds them to the page's heading outline; give it a `heading_offset` to lower them below the page's own.",
                     "`spellcheck` is off by default: Chromium shows no squiggles for text the editor writes. Firefox and Safari are not verified.",
@@ -387,7 +388,25 @@ fn rich_lead() -> Element {
             Code { source: "Doc::from_markdown" }
             " convert it; the types live in "
             Code { source: "libero::components::rich_text" }
-            "."
+            ". Typing "
+            Code { source: "# " }
+            " starts a heading, "
+            Code { source: "- " }
+            " a list, "
+            Code { source: "1. " }
+            " a numbered list, "
+            Code { source: "> " }
+            " a quote, "
+            Code { source: "---" }
+            " and a space a rule, and three backticks a code block. Closing "
+            Code { source: "**bold**" }
+            ", "
+            Code { source: "*italic*" }
+            ", "
+            Code { source: "~~strike~~" }
+            " or "
+            Code { source: "`code`" }
+            " marks the span."
         }
     }
 }

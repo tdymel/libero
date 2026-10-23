@@ -40,7 +40,7 @@ pub fn RatingPage() -> Element {
                     .doc("Picking the current value again resets it to 0, and Home or the arrows can go below the first step. Without it, the first step is the lowest a user can pick."),
                 prop("icon", "SvgData")
                     .default("IconSlot::Star")
-                    .doc("The symbol, drawn empty and filled in `currentColor`. A stroked glyph turns solid when filled; a solid one only changes colour."),
+                    .doc("The symbol, drawn empty and filled in `currentColor`. A stroked glyph turns solid when filled; a solid one only changes colour. Unset, `IconSlot::Star` of the nearest `IconProvider`, so one swap restyles a subtree."),
                 prop("color", "ThemeAwareValue")
                     .default(theme.rating.color.as_str())
                     .doc("The filled stars' colour; `theme.rating.color` when unset. Empty stars are `muted`."),

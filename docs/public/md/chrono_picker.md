@@ -10,51 +10,29 @@ Description: One picker for every date and time value, from days, months and yea
 One picker for every date and time value. The value's type picks what it draws.
 `NaiveDate` a month of days, `NaiveTime` a clock, `NaiveDateTime` the day and
 then the time, a `DateRange` of either a start and an end, and a `TimeDelta` a
-duration, one column per part.
+duration, one column per part. Names come from the localization's `DateLocale`,
+the first weekday from the provider's `Formats`. `DatePicker`, `MonthPicker`,
+`YearPicker`, `TimePicker` and `DateRangePicker` take one value type and need no
+turbofish.
 
 ## Usage
 
 ```rust
 use dioxus::prelude::*;
-use libero::{chrono::NaiveDate, components::{DateLevel, ChronoPicker}};
+use libero::{chrono::NaiveDate, components::ChronoPicker};
 
 #[component]
 fn Demo() -> Element {
-    let mut day = use_signal(|| NaiveDate::from_ymd_opt(2026, 9, 14));
-    let mut month = use_signal(|| None::<NaiveDate>);
+    let mut date = use_signal(|| None::<NaiveDate>);
 
     rsx! {
         ChronoPicker {
-            value: day(),
-            onchange: move |next| day.set(next),
-            min: NaiveDate::from_ymd_opt(2026, 9, 5),
-            name: "arrival",
-        }
-        ChronoPicker {
-            value: month(),
-            onchange: move |next| month.set(next),
-            level: DateLevel::Month,
+            value: date() /* Option<NaiveDate> */,
+            onchange: move |next| date.set(next),
         }
     }
 }
 ```
-
-As with `ChronoField`, a typed `value` alone does not name `V`. A handler that
-stores into a typed signal does, and so does a turbofish such as
-`ChronoPicker::<NaiveTime> { name: "at" }`.
-
-The picker keeps the month it shows as its own state. It opens on `value`'s
-month, else today's. Today comes from the platform clock after mount on the
-web. A server render and native builds mark no day unless `today` is set.
-
-## Start month and language
-
-It opens on the value's month, else today's. Names come from the localization's
-`DateLocale`, and the first weekday and heading format from the provider's
-`Formats`. As on [ChronoField](chrono_field.md), a typed handler or a turbofish
-names the value type. For one value type there are `DatePicker`, `MonthPicker`,
-`YearPicker`, `TimePicker` and `DateRangePicker`, with only the props that type
-uses and no turbofish.
 
 ## Props
 
@@ -62,7 +40,7 @@ uses and no turbofish.
 
 | Prop | Type | Default | Description |
 |---|---|---|---|
-| `value` | `Option<V>` | - | The picked value. Its type picks what the picker draws. Pair it with `onchange`. |
+| `value` | `Option<V>` | - | The picked value. Its type picks what the picker draws, and the picker opens on its month, else today's. Pair it with `onchange`: a typed `value` alone does not name `V`, so store into a typed signal or use a turbofish. |
 | `onchange` | `EventHandler<Option<V>>` | - | Called with the value to hold next. |
 | `level` | `DateLevel` | `Day` | Picks a `NaiveDate` as a day, a month (its first day) or a year (its January 1). Ignored for other values. |
 | `min` | `V::Bound` | - | The earliest value that can be picked. For a range, the earliest end. |

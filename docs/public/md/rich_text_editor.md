@@ -7,333 +7,34 @@ Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/form/r
 Index: [index.md](index.md) lists every other page
 Description: A rich text field over a `Doc`: headings, lists, quotes, code blocks and marks, with undo, shortcuts and Markdown typing.
 
-A rich text field over a `Doc`: paragraphs, headings, lists, quotes, code
-blocks and marks, with undo, the usual shortcuts and Markdown typing
-shortcuts. `Doc::to_markdown` and `Doc::from_markdown` convert it; the types
-live in `libero::components::rich_text`.
+A rich text field over a `Doc`: paragraphs, headings, lists, quotes, code blocks
+and marks, with undo, the usual shortcuts and Markdown typing shortcuts.
+`Doc::to_markdown` and `Doc::from_markdown` convert it; the types live in
+`libero::components::rich_text`. Typing `# ` starts a heading, `- ` a list,
+`1. ` a numbered list, `> ` a quote, `---` and a space a rule, and three
+backticks a code block. Closing `**bold**`, `*italic*`, `~~strike~~` or
+`` `code` `` marks the span.
 
 ## Usage
 
 ```rust
 use dioxus::prelude::*;
-use libero::components::{RichTextEditor, rich_text::Doc};
+use libero::components::{RichTextEditor, rich_text};
 
 #[component]
 fn Demo() -> Element {
-    let mut doc = use_signal(|| Doc::from_markdown("## Release notes"));
+    let mut doc = use_signal(|| rich_text::Doc::from_markdown("## Release notes"));
 
     rsx! {
         RichTextEditor {
-            label: "Notes",
-            placeholder: "Start writing",
             value: doc(),
             onchange: move |next| doc.set(next),
-        }
-        pre { {doc.read().to_markdown()} }
-    }
-}
-```
-
-Typing `# ` at the start of a paragraph makes a heading (`## ` to `###### `
-for the smaller ones), `- ` or `* ` a bulleted list, `1. ` a numbered list,
-`> ` a quote, `[ ] ` or `[x] ` at the start of a list item a task, `---` and a space a rule, and three backticks and a space (or
-Enter) a code block; a name after the backticks, as in ```` ```rust ````, sets
-its language. Closing `` `code` ``, `**bold**`, `*italic*` or `~~strike~~` turns the
-span into that mark. Code blocks take none of these.
-
-Your own toolbar: `use_rich_text_editor()` gives a handle; pass it as
-`handle`, run commands with `run` and read the state reactively.
-
-```rust
-use dioxus::prelude::*;
-use libero::components::{
-    Button, RichTextEditor,
-    rich_text::{Builtin, MarkKind, use_rich_text_editor},
-};
-
-#[component]
-fn Comment() -> Element {
-    let editor = use_rich_text_editor();
-    rsx! {
-        Button {
-            aria_pressed: editor.is_active(MarkKind::Bold),
-            onclick: move |_| { editor.run(Builtin::Bold); },
-            "Bold"
-        }
-        RichTextEditor { label: "Comment", toolbar: false, handle: editor }
-    }
-}
-```
-
-Your own nodes: register a node type in a `NodeRegistry` for the document,
-then draw it with `NodeViews`. A view gets `NodeViewProps { name, attrs,
-children }`; a node with content renders `children` exactly once and marks
-its own markup around it `contenteditable: "false"`. Pass the registry as
-`registry` too, so a debug build catches a misspelled view name.
-
-```rust
-use dioxus::prelude::*;
-use libero::components::rich_text::{NodeViewProps, NodeViews, RichTextEditor};
-
-#[component]
-fn Mention(props: NodeViewProps) -> Element {
-    let user = props.attrs.get("user").and_then(|user| user.as_str()).unwrap_or("?");
-    rsx! { span { "@{user}" } }
-}
-
-#[component]
-fn Message() -> Element {
-    rsx! {
-        RichTextEditor { label: "Message", nodes: NodeViews::new().with("mention", Mention) }
-    }
-}
-```
-
-Built-in blocks draw through `NodeViews` too, under these names. Without a
-view they keep the editor's own look.
-
-| Name | `attrs` | `children` |
-|---|---|---|
-| `paragraph` | - | The text line, a `p` that holds the caret. |
-| `heading` | `level` (1 to 6) | The text line, an `h1` to `h6` that holds the caret. |
-| `quote` | - | The quoted blocks. |
-| `list` | `ordered` (bool), `start` (number) | The items, `li` elements unless `list_item` has a view. |
-| `list_item` | - | The item's blocks. |
-| `rule` | - | Nothing: the view is a non-editable island. |
-| `code_block` | - | Not overridable: it switches between source and `CodeBlock` itself. |
-
-Mentions: type `@` and a name. `intercept` sees each key press (before the
-keymap) and typed text first and takes it over by returning `true`, so the
-list gets the arrow keys, Enter and Escape while it is open. `overlay` floats
-at the caret: under its line, above it near the window's bottom edge. The
-handle's `with_state` reads the text before the caret and `edit` swaps the
-typed `@name` for a mention node as one undo step. `tools` adds your own
-toolbar button, here one that types the `@`. The list's rows are
-`ComboboxOption`s, which draw the highlight without a `Combobox` around them. A command can insert a node too:
-Mod+Shift+2 runs `mention`, which inserts the registry's default user.
-
-```rust
-use dioxus::prelude::*;
-use libero::components::rich_text::{
-    Attrs, Chord, Commands, EditorInput, EditorState, Keymap, NodeRegistry, NodeSpec,
-    NodeViewProps, NodeViews, Position, RichTextTool, Selection, use_rich_text_editor,
-};
-use libero::components::{ComboboxOption, Paper, RichTextEditor};
-use libero::sx::sx;
-
-#[component]
-fn Mention(props: NodeViewProps) -> Element {
-    let user = props.attrs.get("user").and_then(|user| user.as_str()).unwrap_or("?");
-    rsx! { b { "@{user}" } }
-}
-
-fn registry() -> NodeRegistry {
-    let mut registry = NodeRegistry::default();
-    registry.register(NodeSpec::inline("mention").attr("user", "ada")).unwrap();
-    registry
-}
-
-const PEOPLE: [&str; 4] = ["ada", "alan", "grace", "linus"];
-
-/// The word after an `@` that starts a word, up to the caret.
-fn mention_query(state: &EditorState) -> Option<String> {
-    let before = state.text_before_caret();
-    let (head, query) = before.rsplit_once('@')?;
-    let starts = head.is_empty() || head.ends_with(char::is_whitespace);
-    (starts && query.chars().all(char::is_alphanumeric)).then(|| query.to_string())
-}
-
-/// Replaces `@query` before the caret with a mention of `user`.
-fn insert_mention(state: &mut EditorState, user: &str) -> bool {
-    let Some(query) = mention_query(state) else {
-        return false;
-    };
-    let at = state.caret();
-    let from = Position::new(at.block, at.offset - query.chars().count() - 1);
-    let mut attrs = Attrs::new();
-    attrs.insert("user".into(), user.into());
-    let Some(mention) = registry().new_inline("mention", attrs) else {
-        return false;
-    };
-    state.select(Selection::range(from, at));
-    state.insert_inline(mention) && state.insert_text(" ")
-}
-
-#[component]
-fn MentionEditor() -> Element {
-    let editor = use_rich_text_editor();
-    let mut active = use_signal(|| 0usize);
-    let mut dismissed = use_signal(|| None::<String>);
-    let commands = use_hook(|| {
-        let mut commands = Commands::default();
-        commands.register("at", |state| state.insert_text("@"));
-        commands.register("mention", |state| {
-            let mention = registry().new_inline("mention", Attrs::new());
-            mention.is_some_and(|mention| state.insert_inline(mention))
-        });
-        commands
-    });
-    let keymap = use_hook(|| {
-        let mut keymap = Keymap::default();
-        keymap.bind(Chord::parse("Mod+Shift+2").unwrap(), "mention");
-        keymap
-    });
-    let query = editor.with_state(mention_query).flatten();
-    let people: Vec<&'static str> = match &query {
-        Some(query) if dismissed.read().as_ref() != Some(query) => PEOPLE
-            .into_iter()
-            .filter(|user| user.starts_with(&query.to_lowercase()))
-            .collect(),
-        _ => Vec::new(),
-    };
-    let current = active() % people.len().max(1);
-    let picked = people.get(current).copied();
-    let count = people.len();
-    let pick = move |user: &'static str| {
-        editor.edit(move |state| insert_mention(state, user));
-        let mut active = active;
-        active.set(0);
-    };
-    // The list takes the arrows, Enter and Escape while it is open; the rest types.
-    let intercept = move |input: EditorInput| -> bool {
-        let Some(user) = picked else {
-            return false;
-        };
-        match input.key() {
-            Some("ArrowDown") => active.set((current + 1) % count),
-            Some("ArrowUp") => active.set((current + count - 1) % count),
-            Some("Enter" | "Tab") => pick(user),
-            Some("Escape") => dismissed.set(query.clone()),
-            _ => return false,
-        }
-        true
-    };
-    let overlay = (!people.is_empty()).then(|| rsx! {
-        Paper { shadow: "md", bordered: true, role: "listbox", "aria-label": "People",
-            sx: sx().padding("xs").min_width("10rem"),
-            for (index, user) in people.iter().copied().enumerate() {
-                ComboboxOption { id: "mention-{user}", active: index == current,
-                    onpick: move |_| pick(user),
-                    "@{user}"
-                }
-            }
-        }
-    });
-    rsx! {
-        RichTextEditor {
-            label: "Message",
-            placeholder: "Type @ to mention someone",
-            handle: editor,
-            commands,
-            keymap,
-            tools: vec![RichTextTool::new("at", "Mention someone", rsx! { "@" })],
-            nodes: NodeViews::new().with("mention", Mention),
-            registry: registry(),
-            intercept,
-            overlay,
-            active_descendant: picked.map(|user| format!("mention-{user}")),
-            overlay_results: count,
+            label: "Notes",
+            placeholder: "Start writing",
         }
     }
 }
 ```
-
-On Android a soft keyboard reports most keys as `Unidentified` and composes
-its text, so `intercept` sees Enter but rarely the typed text; `with_state`
-still sees every word once it is composed, which is what the example reads.
-
-## Chat and comment boxes
-
-`onsubmit` sends the document when `submit_on` is pressed: Enter, with
-Shift+Enter breaking the line, or Mod+Enter. `max_length` caps the plain text
-and the handle's `clear` empties the box after the send. Enter keeps its usual
-job in a code block, in an empty box and while an `overlay` takes it. On a
-phone the Enter key reads "send"; text the keyboard is still composing is in
-the document when it is sent, and `max_length` cuts it only once the word is
-committed. The demo's onsubmit control sends by emptying the document, and its
-max_length switch caps the text at 1000 characters.
-
-```rust
-use dioxus::prelude::*;
-use libero::components::RichTextEditor;
-use libero::components::rich_text::{Doc, use_rich_text_editor};
-
-#[component]
-fn MessageBox() -> Element {
-    let editor = use_rich_text_editor();
-    let mut messages = use_signal(Vec::<String>::new);
-
-    rsx! {
-        RichTextEditor {
-            label: "Message",
-            toolbar: false,
-            handle: editor,
-            max_length: 280,
-            onsubmit: move |doc: Doc| {
-                messages.write().push(doc.to_markdown());
-                editor.clear();
-            },
-        }
-    }
-}
-```
-
-## Code blocks
-
-A code block shows its source with fences while the caret is in it; the
-language button on its opening fence, the toolbar's language menu or
-`Ctrl+Shift+L` change its language.
-
-## Task lists
-
-Type `[ ] ` and a space at the start of a list item, press `Ctrl+Shift+9`
-or the toolbar's Task list button for a task. Click its box, or press `Ctrl+Alt+Enter` in the item, to check it;
-each toggle is one undo step. Markdown writes and reads tasks as `- [ ]` and
-`- [x]`.
-
-## Links
-
-A web address (`http`, `https` or `mailto`) followed by a space or Enter
-becomes a link; a full stop or comma that ends the sentence stays outside it,
-and undo brings the plain text back. Typing `[text](address)` links the text.
-Pasting only an address links the selected text, or inserts the address as a
-link. Other schemes stay text, as does a `www.` address without a scheme.
-
-## Showing a document
-
-`RichTextView` shows a stored `Doc` read-only, without an editor's state,
-script or history: a message or comment list mounts one per entry. It draws the
-same blocks, marks and code blocks, takes the same `nodes`, and is what the
-editor shows on a renderer without an editable surface (Blitz). The demo's
-readonly switch shows the same look in the editor.
-
-```rust
-use dioxus::prelude::*;
-use libero::components::rich_text::{Doc, RichTextView};
-
-#[component]
-fn Comment(body: Doc) -> Element {
-    rsx! { RichTextView { value: body } }
-}
-```
-
-## Mentions
-
-The mentions switch adds an @ list at the caret, built from `intercept`,
-`overlay` and a custom node. Type `@` and a name, or press the @ button.
-While the list is open, `intercept` gives it the arrow keys, Enter and
-Escape; the handle's `edit` swaps the typed `@name` for a mention node, drawn
-by your own component, in one undo step. `Ctrl+Shift+2` runs a node command
-that inserts `@ada`.
-
-## Custom commands and keymaps
-
-The commands switch registers a `shout` command: select a word and press
-`Ctrl+Shift+1` (Cmd on a Mac) to upper-case it, one undo step. The keymap
-switch binds `Ctrl+Shift+H` to a heading and unbinds the rule, so
-`Ctrl+Shift+Enter` no longer adds one. `Ctrl+/` lists the live keymap.
-Without the toolbar, the keymap or your own buttons through a handle drive
-the editor.
 
 ## Accessibility
 
@@ -456,6 +157,10 @@ the Bold button reads as pressed.
   Text from elsewhere is read the same way, one paragraph per line. In a code
   block it is pasted as is. A pasted web address alone links the selection, or
   becomes a link at the caret.
+- A typed `http`, `https` or `mailto` address followed by a space or Enter
+  becomes a link, a closing full stop or comma left outside, and undo brings
+  the text back; `[text](address)` links the text. Other schemes stay text, as
+  does a `www.` address without a scheme.
 - Drag and drop of text is ignored. A replacement with no word to replace (no
   target range, collapsed caret) is ignored too.
 - Headings render as `h1` to `h6` as stored, so a `RichTextView` in a comment
@@ -483,7 +188,7 @@ the Bold button reads as pressed.
 | `keymap` | `Keymap` | `Keymap::default()` | Which chords run which commands. `Mod` is Cmd on Apple platforms and Ctrl elsewhere. |
 | `commands` | `Commands` | `Commands::default()` | What the keymap and the toolbar run. Register your own command under a name and bind a chord to it. |
 | `handle` | `RichTextHandle` | - | From `use_rich_text_editor()`: runs commands from your own toolbar (`run`) and reads the state reactively (`is_active`, `block_kind`, `list_kind`, `in_quote`, `can_undo`, `can_redo`, `is_empty`, `plain_text`). `clear()` empties the editor and keeps focus in it (undo starts over), `focus()` puts the caret back. One handle drives one editor. |
-| `nodes` | `NodeViews` | `NodeViews::new()` | Your component per custom node name, e.g. a mention. It gets `NodeViewProps { name, attrs, children }` and renders `children` exactly once. Built-ins (`paragraph`, `heading`, `quote`, `list`, `list_item`, `rule`) take a view under their name too; `code_block` stays fixed. |
+| `nodes` | `NodeViews` | `NodeViews::new()` | Your component per custom node name, e.g. a mention. It gets `NodeViewProps { name, attrs, children }` and renders `children` exactly once. Built-ins (`paragraph`, `heading` with `level`, `quote`, `list` with `ordered` and `start`, `list_item`, `rule`) take a view under their name too; `code_block` stays fixed. |
 | `registry` | `NodeRegistry` | - | Your node types. Copy and cut write your nodes through their `to_markdown`, and a debug build warns about a `nodes` name that is not registered, such as a typo. |
 | `intercept` | `Callback<EditorInput, bool>` | - | Sees each key press (`EditorInput::Key`, before the keymap) and typed text (`EditorInput::Text`) first; return `true` to take it over, and the editor does nothing with it. Android soft keyboards report most keys as `Unidentified` and compose their text, which never arrives as `Text`; Enter still arrives as a key. Read typed text through the handle's `with_state` instead. |
 | `overlay` | `Element` | - | Floats at the caret while `Some`, such as a mention list: under the caret's line, above it near the window's bottom edge, mirrored in right-to-left text. It renders in the page's portal, so a parent's `overflow` does not clip it and it does not inherit the editor's CSS context. Focus stays in the text; pressing the overlay does not take it. |

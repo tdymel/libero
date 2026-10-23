@@ -36,6 +36,25 @@ pub enum CropShape {
 }
 
 /// How a `FileField` with `crop` crops a picked image.
+///
+/// An avatar picker: a square box with a round mask, scaled to at most 512 px.
+///
+/// ```rust
+/// # use dioxus::prelude::*;
+/// # use libero::components::{CropOptions, CropShape, FileField, Files};
+/// # fn app() -> Element {
+/// let mut avatar = use_signal(Files::default);
+/// rsx! {
+///     FileField {
+///         label: "Avatar",
+///         accept: "image/*",
+///         crop: CropOptions { aspect: Some(1.0), shape: CropShape::Circle, max_size: Some(512), ..Default::default() },
+///         value: avatar(),
+///         onchange: move |files: Files| avatar.set(files),
+///     }
+/// }
+/// # }
+/// ```
 #[derive(Clone, Copy, Debug, Default, PartialEq)]
 pub struct CropOptions {
     /// Locks the crop's width over height: `1.0` is square.

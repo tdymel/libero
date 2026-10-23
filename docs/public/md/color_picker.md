@@ -9,55 +9,35 @@ Description: A saturation panel and a hue slider, with optional alpha and preset
 
 A saturation panel and a hue slider, with an optional alpha slider and preset
 swatches. The value is a `ColorCode`, which parses from hex, `rgb()` or `hsl()`
-and converts back to any of them.
+and converts back to any of them. `ColorCode::hex(0x228be6)` and its siblings
+build one, and a theme `HexColor` converts into one. It prints as `#rrggbb`, or
+`#rrggbbaa` when translucent, which a `style` accepts.
 
 ## Usage
 
 ```rust
 use dioxus::prelude::*;
-use libero::components::{ColorCode, ColorPicker, SliderChangeEvent, Swatches};
+use libero::components::{ColorCode, ColorPicker, Flex, SliderChangeEvent, Text};
+use libero::sx::sx;
 
 #[component]
 fn Demo() -> Element {
     let mut color = use_signal(|| ColorCode::hex(0x228be6));
 
     rsx! {
-        ColorPicker {
-            value: color(),
-            oninput: move |event: SliderChangeEvent<ColorCode>| color.set(event.value()),
-            with_alpha: true,
-            swatches: Swatches::labelled([("#fa5252", "Red"), ("#228be6", "Blue"), ("#40c057", "Green")]),
+        Flex {
+            direction: "column",
+            gap: "sm",
+            sx: sx().width("100%"),
+            ColorPicker {
+                value: color(),
+                oninput: move |event: SliderChangeEvent<ColorCode>| color.set(event.value()),
+            }
+            Text { size: "sm", "{color().to_hexa()} · {color().to_rgba()} · {color().to_hsla()}" }
         }
     }
 }
 ```
-
-Parsing and printing a `ColorCode`:
-
-```rust
-use libero::components::{ColorCode, ColorFormat};
-
-# fn main() -> Result<(), libero::components::ParseColorError> {
-let color: ColorCode = "#228be6".parse()?;
-
-assert_eq!(color.to_hex(), "#228be6");
-assert_eq!(color.to_hexa(), "#228be6ff");
-assert_eq!(color.to_rgb(), "rgb(34, 139, 230)");
-assert_eq!(color.to_rgba(), "rgba(34, 139, 230, 1)");
-assert_eq!(color.to_hsl(), "hsl(208, 80%, 52%)");
-assert_eq!(color.to_hsla(), "hsla(208, 80%, 52%, 1)");
-assert_eq!(color.to_format(ColorFormat::Rgba), color.to_rgba());
-color.to_rgba_channels(); // (34, 139, 230, 1.0)
-color.to_hsla_channels(); // (208.0, 0.8, 0.52, 1.0)
-# Ok(())
-# }
-```
-
-## Building a value
-
-`ColorCode::hex(0x228be6)` and its siblings build one, and a theme `HexColor`
-converts into one. It prints as `#rrggbb`, or `#rrggbbaa` when translucent,
-which a `style` accepts.
 
 ## Props
 
