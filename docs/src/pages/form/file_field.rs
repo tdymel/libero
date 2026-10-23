@@ -46,7 +46,6 @@ const PROMPT: &str = "Drop files here, or click to pick";
 #[component]
 pub fn FileFieldPage() -> Element {
     let theme = use_theme();
-    let mut limited = use_signal(Files::default);
     rsx! {
         DocPage {
             title: "FileField",
@@ -211,6 +210,11 @@ pub fn FileFieldPage() -> Element {
                         ],
                         false => vec![],
                     }),
+                    // Files past a limit go to `onreject`, listed under the field.
+                    Control::switch("limits").code(|_, values| match is_on(values, "limits") {
+                        true => vec!["max_files: 3".to_string(), "max_size: 5_000_000".to_string()],
+                        false => vec![],
+                    }),
                     // A dropzone has no clear button, so the switch goes with it.
                     Control::switch("clearable")
                         .default("true")
@@ -227,35 +231,6 @@ pub fn FileFieldPage() -> Element {
                 ]].concat(),
                 render: move |values: DemoValues| rsx! {
                     FileFieldDemo { values }
-                },
-            }
-            // snippet: let mut limited = use_signal(Files::default);
-            Demo {
-                component: "FileField",
-                title: "Limits",
-                children_text: "",
-                fixed: vec![
-                    "label: \"Attachments\"".to_string(),
-                    "variant: \"dropzone\"".to_string(),
-                    "multiple: true".to_string(),
-                    "max_files: 3".to_string(),
-                    "max_size: 5_000_000".to_string(),
-                    "helper: \"Up to 3 files, 5 MB each.\"".to_string(),
-                    "value: limited()".to_string(),
-                    "onchange: move |picked: Files| limited.set(picked)".to_string(),
-                ],
-                controls: vec![],
-                render: move |_values: DemoValues| rsx! {
-                    FileField {
-                        label: "Attachments",
-                        variant: "dropzone",
-                        multiple: true,
-                        max_files: 3,
-                        max_size: 5_000_000,
-                        helper: "Up to 3 files, 5 MB each.",
-                        value: limited(),
-                        onchange: move |picked: Files| limited.set(picked),
-                    }
                 },
             }
         }
@@ -286,6 +261,8 @@ fn FileFieldDemo(values: DemoValues) -> Element {
                 crop: is_on(&values, "crop")
                     .then(|| CropOptions { aspect: Some(1.0), ..Default::default() }),
                 clearable: is_on(&values, "clearable"),
+                max_files: is_on(&values, "limits").then_some(3),
+                max_size: is_on(&values, "limits").then_some(5_000_000),
                 placeholder: "No file picked",
                 value: files(),
                 label: field.label,

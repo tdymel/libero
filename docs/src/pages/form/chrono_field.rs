@@ -6,7 +6,7 @@ use super::date_common::{
 };
 use super::dropdown_parts::chrono_dropdown_parts;
 use crate::components::{
-    Control, Demo, DemoValues, DocPage, DocSection, Wrap, a11y, prop, props, readonly_prop,
+    Control, Demo, DemoValues, DocPage, Wrap, a11y, prop, props, readonly_prop,
 };
 use dioxus::prelude::*;
 use libero::chrono::{NaiveDate, NaiveDateTime, NaiveTime, TimeDelta};
@@ -77,16 +77,16 @@ pub fn ChronoFieldPage() -> Element {
                 props("ChronoField<V: DateValue>", vec![
                     prop("size", "Size").default(theme.chrono_field.size.as_str()).doc("Control height, font size and the dropdown's picker."),
                     prop("radius", "ThemeAwareValue").default(theme.chrono_field.radius.as_str()).doc("Corner radius of the frame. Or any CSS, e.g. `radius: \"0\"`."),
-                    prop("value", "Option<V>").doc("The value. `None` is the empty field. Its type picks the dropdown. Pair it with `onchange`."),
+                    prop("value", "Option<V>").doc("The value. `None` is the empty field. Its type picks the dropdown. Pair it with `onchange`. A `TimeDelta` shows as `1 h 30 min` in the `DateLocale`'s units and is typed so, or as `1h30`, `1:30` or minutes; a fraction such as `1.5 h` is refused, not rounded. Below `sm`, a range shows short, `14–16 Sep`, until the field takes focus."),
                     prop("onchange", "EventHandler<Option<V>>")
                         .doc("Called on every pick, and when typed text is committed on blur or Enter. Emptied text commits `None`."),
                     prop("level", "DateLevel").default("Day").doc("Types and picks a `NaiveDate` as a day, a month (its first day) or a year (its January 1), typed as `September 2026` or `2026`. Ignored for other values."),
                     prop("format", "String")
                         .default("(Formats::date)(level)")
-                        .doc("How the text shows the value, in dayjs tokens. The default is `MMMM D, YYYY` in American formats, `D. MMMM YYYY` in German, and `MMMM YYYY` or `YYYY` in both for a month or a year. Typing only has to match the order of day, month and year."),
+                        .doc("How the text shows the value, in dayjs tokens. The default is `MMMM D, YYYY` in American formats, `D. MMMM YYYY` in German, and `MMMM YYYY` or `YYYY` in both for a month or a year. Typed text is read leniently on blur or Enter: any separator, one-digit days, a month name's unique prefix and a missing year, but no two-digit year. Only the order of day, month and year has to match. Text the field cannot accept stays, with the error saying why. Names, labels and errors come from the provider's `Localization`, the first weekday and the 12- or 24-hour clock from its `Formats`."),
                     prop("time_format", "String").default("Formats::time").doc("How the text shows a time. `h:mm A` in American formats, `HH:mm` in German."),
                     prop("min", "V::Bound").doc("The earliest value accepted. For a range, the earliest end. A duration's is 0 when unset."),
-                    prop("max", "V::Bound").doc("The latest value accepted. For a range, the latest end. A duration's is 99 h 59 min 59 s when unset."),
+                    prop("max", "V::Bound").doc("The latest value accepted. For a range, the latest end. A duration's is 99 h 59 min 59 s when unset, and never past 999 h 59 min 59 s."),
                     prop("exclude_date", "Callback<NaiveDate, bool>").doc("Days that are not accepted, on top of `min` and `max`. Ignored for a time, a month and a year."),
                     prop("today", "NaiveDate").doc("The day marked as today, and the year used when typed text has none. Unset, the platform clock answers after mount."),
                     prop("variant", "TimePickerVariant").default(theme.time_picker.variant.as_str()).doc("A digital clock, `HH:MM` with a column to turn per part, or a clock face, for values with a time."),
@@ -142,6 +142,8 @@ pub fn ChronoFieldPage() -> Element {
                     "Focus leaving both the text and the dropdown closes it.",
                     "A mouse click in the dropdown leaves focus in the text.",
                     "Android's Back button closes the dropdown rather than the app. Focus in the dropdown goes back to the text.",
+                    "On a phone the dropdown opens as a sheet at the foot of the screen. A tap opens only the picker and the keyboard stays down; the text box under the picker takes typing.",
+                    "A duration's columns read each value with its unit, such as \"2 hours\".",
                 ])
                 .must(["Without a `label`, set `aria_label`. Otherwise screen readers announce an unnamed combobox."])
                 .example("A delivery date, `ChronoField { label: \"Delivery date\", .. }`: type the date at once, click to open the calendar with the caret staying in the text, or press Down to open it and pick a day with the arrows."),
@@ -163,7 +165,17 @@ pub fn ChronoFieldPage() -> Element {
                     Code { source: "chrono" }
                     "'s, re-exported as "
                     Code { source: "libero::chrono" }
-                    "."
+                    ". "
+                    Code { source: "DateField" }
+                    ", "
+                    Code { source: "TimeField" }
+                    ", "
+                    Code { source: "DateTimeField" }
+                    ", "
+                    Code { source: "DateRangeField" }
+                    " and "
+                    Code { source: "DateTimeRangeField" }
+                    " take one value type and need no turbofish."
                 }
             },
             // snippet: item use chrono::{Datelike, NaiveDate, NaiveDateTime, NaiveTime, TimeDelta};
@@ -264,111 +276,6 @@ pub fn ChronoFieldPage() -> Element {
                 render: move |values: DemoValues| rsx! {
                     ChronoFieldDemo { values }
                 },
-            }
-            DocSection {
-                title: "Duration",
-                Text {
-                    "A "
-                    Code { source: "TimeDelta" }
-                    " field holds a span of time rather than a moment. It shows "
-                    Code { source: "1 h 30 min" }
-                    ", with the units from "
-                    Code { source: "DateLocale" }
-                    ", and posts ISO 8601, "
-                    Code { source: "PT1H30M" }
-                    ". Typing reads "
-                    Code { source: "1 h 30 min" }
-                    ", "
-                    Code { source: "1h30" }
-                    ", "
-                    Code { source: "1:30" }
-                    " or a bare number of minutes. A fraction such as "
-                    Code { source: "1.5 h" }
-                    " or "
-                    Code { source: "1,5 h" }
-                    " is refused as unreadable, not rounded."
-                }
-                Text {
-                    "The dropdown has a column each for the hours, the minutes at "
-                    Code { source: "step" }
-                    " and, with "
-                    Code { source: "with_seconds" }
-                    ", the seconds. The minutes and seconds wrap round without carrying into the next column. "
-                    "The value runs from "
-                    Code { source: "min" }
-                    ", 0 by default, to "
-                    Code { source: "max" }
-                    ", 99 h 59 min 59 s by default, and never past 999 h 59 min 59 s. The hours column ends at "
-                    Code { source: "max" }
-                    "."
-                }
-                Text {
-                    "A duration has its own errors: "
-                    Code { source: "Must be at least 15 min" }
-                    " names the bound it missed, and "
-                    Code { source: "Not a valid duration" }
-                    " is text it cannot read. A screen reader hears each column's value with its unit, "
-                    Code { source: "2 hours" }
-                    "."
-                }
-            }
-
-            DocSection {
-                title: "Typing",
-                Text {
-                    "Typed text is read on blur or Enter, and leniently. Any separator works, "
-                    "as do one-digit days, month names as a unique prefix, and a missing year. "
-                    "Two-digit years are not read. Only the order of day, month and year follows "
-                    Code { source: "format" }
-                    ". Text the field cannot accept stays, and the error says why. The form "
-                    "always gets ISO 8601."
-                }
-                Text {
-                    "On a phone the dropdown opens as a sheet at the foot of the screen. Under a finger, "
-                    "a tap opens only the picker and the keyboard stays down; the text box under the "
-                    "picker takes typing. Below "
-                    Code { source: "sm" }
-                    ", a range shows short, "
-                    Code { source: "14–16 Sep" }
-                    ", until the field takes focus."
-                }
-            }
-
-            DocSection {
-                title: "Localization",
-                Text {
-                    "The language of names, labels and errors comes from the provider's "
-                    Code { source: "Localization" }
-                    ". The patterns, first weekday and 12- or 24-hour clock come from its "
-                    Code { source: "Formats" }
-                    ", "
-                    Code { source: "Formats::AMERICAN" }
-                    " by default or "
-                    Code { source: "Formats::GERMAN" }
-                    ". This site uses English with German formats."
-                }
-            }
-
-            DocSection {
-                title: "The value's type",
-                Text {
-                    "A typed "
-                    Code { source: "value" }
-                    " alone does not name the type. A handler that stores into a typed signal "
-                    "does, or a turbofish such as "
-                    Code { source: "ChronoField::<NaiveTime> {{ .. }}" }
-                    ". For one value type there are "
-                    Code { source: "DateField" }
-                    ", "
-                    Code { source: "TimeField" }
-                    ", "
-                    Code { source: "DateTimeField" }
-                    ", "
-                    Code { source: "DateRangeField" }
-                    " and "
-                    Code { source: "DateTimeRangeField" }
-                    ", with only the props that type uses and no turbofish."
-                }
             }
         }
     }

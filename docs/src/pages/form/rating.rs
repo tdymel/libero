@@ -1,9 +1,7 @@
-use crate::components::{
-    Control, Demo, DemoValues, DocPage, DocSection, a11y, prop, props, status_prop,
-};
+use crate::components::{Control, Demo, DemoValues, DocPage, a11y, prop, props, status_prop};
 use dioxus::prelude::*;
 use libero::components::RatingPart;
-use libero::components::{Code, CodeBlock, Rating, Text};
+use libero::components::{Code, Rating, Text};
 use libero::use_theme;
 use pictogram_icons_lucide as lucide;
 
@@ -15,11 +13,6 @@ fn values_for(values: &DemoValues) -> Vec<String> {
         .map(|step| (f64::from(step) / f64::from(fractions)).to_string())
         .collect()
 }
-
-const HEART_EXAMPLE: &str = r#"IconProvider {
-    icons: IconSet::new().with(IconSlot::Star, lucide::heart::outlined),
-    Rating { label: "Love it", color: "error", value: 3.5, fractions: 2, focusable: false }
-}"#;
 
 #[component]
 pub fn RatingPage() -> Element {
@@ -199,22 +192,6 @@ pub fn RatingPage() -> Element {
                         focusable: (values.str("focusable") != "true").then_some(false),
                     }
                 },
-            }
-
-            DocSection {
-                title: "Other symbols",
-                Text {
-                    Code { source: "icon" }
-                    " draws another symbol on one rating (the demo's Heart). For every rating in a subtree, "
-                    "swap "
-                    Code { source: "IconSlot::Star" }
-                    " in an "
-                    Code { source: "IconProvider" }
-                    "; an "
-                    Code { source: "icon" }
-                    " prop still wins:"
-                }
-                CodeBlock { source: HEART_EXAMPLE, language: "rust" }
             }
         }
     }

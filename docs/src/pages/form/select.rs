@@ -229,7 +229,6 @@ fn fruit_selection(fruit: Fruit) -> Element {
 pub fn SelectPage() -> Element {
     let theme = use_theme();
     let mut value = use_signal(|| Some(Fruit::Banana));
-    let mut focus_pick = use_signal(|| None::<Fruit>);
 
     rsx! {
         DocPage {
@@ -443,34 +442,6 @@ pub fn SelectPage() -> Element {
                         onchange: move |next| value.set(next),
                     }
                 }
-                },
-            }
-            // snippet: let mut focus_pick = use_signal(|| None::<Fruit>);
-            Demo {
-                component: "Select",
-                title: "Open on focus",
-                children_text: "",
-                wrap: Wrap(|_: &DemoValues, source: &str| format!("{FRUIT_ENUM}{source}")),
-                fixed: vec![
-                    "label: \"Fruit\"".to_string(),
-                    "placeholder: \"Pick a fruit\"".to_string(),
-                    "value: focus_pick()".to_string(),
-                    "onchange: move |next| focus_pick.set(next)".to_string(),
-                ],
-                controls: vec![Control::switch("open_on_focus").default("true").code(|_, values| {
-                    match values.str("open_on_focus").as_str() {
-                        "true" => vec!["open_on_focus: true".to_string()],
-                        _ => vec![],
-                    }
-                })],
-                render: move |values: DemoValues| rsx! {
-                    Select {
-                        label: "Fruit",
-                        placeholder: "Pick a fruit",
-                        open_on_focus: values.str("open_on_focus") == "true",
-                        value: focus_pick(),
-                        onchange: move |next| focus_pick.set(next),
-                    }
                 },
             }
         }

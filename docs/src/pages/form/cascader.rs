@@ -1,15 +1,15 @@
 use super::dropdown_parts::{CASCADER_DROPDOWN, list_dropdown_parts};
 use crate::components::{
-    Control, Demo, DemoValues, DocPage, DocSection, FieldCopy, Wrap, a11y, field_controls,
-    field_props, indent, prop, props, readonly_prop, required_prop, status_prop,
+    Control, Demo, DemoValues, DocPage, FieldCopy, Wrap, a11y, field_controls, field_props, indent,
+    prop, props, readonly_prop, required_prop, status_prop,
 };
 use dioxus::prelude::*;
 use libero::components::CascaderPart;
 use libero::use_theme;
 use libero::{
     components::{
-        Button, Cascader, CascaderDropdown, CascaderNodeArgs, CascaderOption, Code, CodeBlock,
-        Flex, Icon, Text, use_cascader,
+        Button, Cascader, CascaderDropdown, CascaderNodeArgs, CascaderOption, Code, Flex, Icon,
+        Text, use_cascader,
     },
     sx::sx,
 };
@@ -214,7 +214,7 @@ fn stock(value: &str) -> (u32, u32) {
     }
 }
 
-/// The headless section's example, as `ORE_PICKER` prints it.
+/// The `CascaderDropdown` state, as `ORE_PICKER` prints it.
 #[component]
 fn OrePicker() -> Element {
     let mut ore = use_signal(|| Some("copper".to_string()));
@@ -259,8 +259,15 @@ fn OrePicker() -> Element {
     }
 }
 
+fn dropdown(values: &DemoValues) -> bool {
+    values.str("component") == "dropdown"
+}
+
 /// The tree, the value's declaration, and the value printed under the field.
-fn wrap_value(_: &DemoValues, code: &str) -> String {
+fn wrap_value(values: &DemoValues, code: &str) -> String {
+    if dropdown(values) {
+        return format!("{ORE_PICKER}\n\nOrePicker {{}}");
+    }
     format!(
         "{DATA_CODE}\n\n{CHOSEN}\n\nFlex {{\n    direction: \"column\",\n    gap: \"sm\",\n    align: \"flex-start\",\n{}    Text {{ size: \"sm\", \"value: {{chosen():?}}\" }}\n}}",
         indent(code)
@@ -427,7 +434,14 @@ pub fn CascaderPage() -> Element {
                     Code { source: "T" }
                     " a "
                     Code { source: "Select" }
-                    " could hold. The cascader finds the path to it and shows the path in the trigger."
+                    " could hold. The cascader finds the path to it and shows the path in the trigger. "
+                    Code { source: "CascaderDropdown" }
+                    " with "
+                    Code { source: "use_cascader" }
+                    " drops the same cascade, keyboard included, from your own button, with no "
+                    "hidden input and no "
+                    Code { source: "Form" }
+                    " binding."
                 }
             },
             Demo {
@@ -440,6 +454,12 @@ pub fn CascaderPage() -> Element {
                     "onchange: move |next: Option<String>| chosen.set(next)".to_string(),
                 ],
                 controls: [vec![
+                    // Not a prop: the field, or the headless dropdown on a button of your own.
+                    Control::toggle("component", ["cascader", "dropdown"])
+                        .labels(["Cascader", "CascaderDropdown"])
+                        .default("cascader")
+                        .code(|_, _| vec![]),
+                ], [vec![
                     Control::sizes("size").default(theme.cascader.size.as_str()),
                     // `0` is plain CSS, next to the size scale.
                     Control::slider("radius", ["0", "xs", "sm", "md", "lg", "xl", "xxl"]).default(theme.cascader.radius.as_str()),
@@ -464,9 +484,12 @@ pub fn CascaderPage() -> Element {
                     Control::switch("clearable"),
                     Control::switch("required"),
                     Control::switch("disabled"),
-                ]].concat(),
+                ]].concat().into_iter().map(|control| control.hidden_when(dropdown)).collect()].concat(),
                 wrap: Wrap(wrap_value),
                 render: move |values: DemoValues| {
+                    if dropdown(&values) {
+                        return rsx! { Flex { align: "flex-start", OrePicker {} } };
+                    }
                     let field = field_props::<CategoryCopy>(&values);
                     rsx! {
                         Flex { direction: "column", gap: "sm", align: "flex-start",
@@ -497,21 +520,6 @@ pub fn CascaderPage() -> Element {
                         }
                     }
                 },
-            }
-
-            DocSection { title: "Any trigger",
-                Text {
-                    Code { source: "use_cascader" }
-                    " keeps the tree, the value and the open state in your scope, and "
-                    Code { source: "CascaderDropdown" }
-                    " drops the same cascade, keyboard included, from your own button. Spread "
-                    Code { source: "cascader.a11y_attributes()" }
-                    " on it. There is no hidden input and no "
-                    Code { source: "Form" }
-                    " binding. This ore picker shows the ore and its stock on a round button, and each row trails its own:"
-                }
-                Flex { align: "flex-start", OrePicker {} }
-                CodeBlock { source: ORE_PICKER, language: "rust" }
             }
         }
     }

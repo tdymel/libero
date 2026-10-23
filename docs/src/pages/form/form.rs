@@ -1,5 +1,6 @@
+use crate::Route;
 use crate::components::{
-    Control, Demo, DemoFile, DemoValues, DocPage, DocSection, Remount, Wrap, a11y, indent, prop,
+    Control, Demo, DemoFile, DemoValues, DocPage, Remount, SectionLink, Wrap, a11y, indent, prop,
     props,
 };
 use dioxus::prelude::*;
@@ -188,7 +189,11 @@ pub fn FormPage() -> Element {
                     Code { source: "<form novalidate>" }
                     " that holds the whole value in one store, runs rules across its fields and "
                     "validates on submit. The Form getting started page shows how fields, "
-                    "fieldsets, rules and paths fit together."
+                    "fieldsets, rules and paths fit together, what a "
+                    SectionLink { to: Route::FormGettingStartedPage {}, section: "submit", "submit" }
+                    " shows and blocks, and how "
+                    SectionLink { to: Route::FormGettingStartedPage {}, section: "conditional-fields", "conditional fields" }
+                    " drop their rules."
                 }
             },
             // snippet: ignore - builds on Getting Started's `EmailField` and `NewPasswordFieldset`
@@ -216,43 +221,6 @@ pub fn FormPage() -> Element {
                         }
                     }
                 },
-            }
-
-            DocSection {
-                title: "Submit",
-                Text {
-                    "A submit shows every status. With an error, it is cancelled, and a summary of "
-                    "every problem appears above the fields and takes focus. Warnings never block. "
-                    "A "
-                    Code { source: "required" }
-                    " field left empty is an error too, \"Fill in this field.\", or \"Check this box.\", "
-                    "\"Select an item in the list.\" and \"Select one of these options.\" for a box, a select or a group of options ("
-                    Code { source: "Localization::form" }
-                    "), unless a rule of its own says more; a disabled or read-only one never blocks. "
-                    "That error shows only once the form was submitted, so tabbing through an empty "
-                    "required field paints nothing; after that it follows the value like any rule. "
-                    "A field's own rules show once it loses focus. "
-                    "The summary keeps the problems of that submit. A line leaves once it is fixed, "
-                    "and new ones wait for the next submit. A server's answer is a field's "
-                    Code { source: "status" }
-                    ": an error one set after a valid submit, in "
-                    Code { source: "onsubmit" }
-                    " or once a request returns, shows the summary, which takes focus and is "
-                    "announced, as a blocked submit's would."
-                }
-            }
-
-            DocSection {
-                title: "Conditional fields",
-                Text {
-                    "A field shown only for some values is a plain "
-                    Code { source: "if" }
-                    " around it, as the company switch shows. Its rules leave with it, so a "
-                    "hidden field never blocks a submit, and neither does a rule whose "
-                    Code { source: ".on(..)" }
-                    " names only hidden fields. Its value stays in the store, and a rule on the "
-                    "whole form that names no field still runs, so check the condition there too."
-                }
             }
         }
     }

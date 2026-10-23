@@ -128,13 +128,13 @@ and `DateTimeRangeField`, with only the props that type uses and no turbofish.
 |---|---|---|---|
 | `size` | `Size` | `md` | Control height, font size and the dropdown's picker. |
 | `radius` | `ThemeAwareValue` | `sm` | Corner radius of the frame. Or any CSS, e.g. `radius: "0"`. |
-| `value` | `Option<V>` | - | The value. `None` is the empty field. Its type picks the dropdown. Pair it with `onchange`. |
+| `value` | `Option<V>` | - | The value. `None` is the empty field. Its type picks the dropdown. Pair it with `onchange`. A `TimeDelta` shows as `1 h 30 min` in the `DateLocale`'s units and is typed so, or as `1h30`, `1:30` or minutes; a fraction such as `1.5 h` is refused, not rounded. Below `sm`, a range shows short, `14–16 Sep`, until the field takes focus. |
 | `onchange` | `EventHandler<Option<V>>` | - | Called on every pick, and when typed text is committed on blur or Enter. Emptied text commits `None`. |
 | `level` | `DateLevel` | `Day` | Types and picks a `NaiveDate` as a day, a month (its first day) or a year (its January 1), typed as `September 2026` or `2026`. Ignored for other values. |
-| `format` | `String` | `(Formats::date)(level)` | How the text shows the value, in dayjs tokens. The default is `MMMM D, YYYY` in American formats, `D. MMMM YYYY` in German, and `MMMM YYYY` or `YYYY` in both for a month or a year. Typing only has to match the order of day, month and year. |
+| `format` | `String` | `(Formats::date)(level)` | How the text shows the value, in dayjs tokens. The default is `MMMM D, YYYY` in American formats, `D. MMMM YYYY` in German, and `MMMM YYYY` or `YYYY` in both for a month or a year. Typed text is read leniently on blur or Enter: any separator, one-digit days, a month name's unique prefix and a missing year, but no two-digit year. Only the order of day, month and year has to match. Text the field cannot accept stays, with the error saying why. Names, labels and errors come from the provider's `Localization`, the first weekday and the 12- or 24-hour clock from its `Formats`. |
 | `time_format` | `String` | `Formats::time` | How the text shows a time. `h:mm A` in American formats, `HH:mm` in German. |
 | `min` | `V::Bound` | - | The earliest value accepted. For a range, the earliest end. A duration's is 0 when unset. |
-| `max` | `V::Bound` | - | The latest value accepted. For a range, the latest end. A duration's is 99 h 59 min 59 s when unset. |
+| `max` | `V::Bound` | - | The latest value accepted. For a range, the latest end. A duration's is 99 h 59 min 59 s when unset, and never past 999 h 59 min 59 s. |
 | `exclude_date` | `Callback<NaiveDate, bool>` | - | Days that are not accepted, on top of `min` and `max`. Ignored for a time, a month and a year. |
 | `today` | `NaiveDate` | - | The day marked as today, and the year used when typed text has none. Unset, the platform clock answers after mount. |
 | `variant` | `TimePickerVariant` | `analog` | A digital clock, `HH:MM` with a column to turn per part, or a clock face, for values with a time. |
@@ -244,6 +244,10 @@ The dropdown is portaled out of the field, so its parts take the
 - A mouse click in the dropdown leaves focus in the text.
 - Android's Back button closes the dropdown rather than the app. Focus in the
   dropdown goes back to the text.
+- On a phone the dropdown opens as a sheet at the foot of the screen. A tap
+  opens only the picker and the keyboard stays down; the text box under the
+  picker takes typing.
+- A duration's columns read each value with its unit, such as "2 hours".
 
 ### Example
 

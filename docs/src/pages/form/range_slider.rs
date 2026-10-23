@@ -111,7 +111,6 @@ pub fn RangeSliderPage() -> Element {
     let mut quality = use_signal(|| (Quality::Low, Quality::High));
     let mut last = use_signal(|| SliderChangeEvent::Change((20.0, 80.0)));
     let mut last_quality = use_signal(|| SliderChangeEvent::Change((Quality::Low, Quality::High)));
-    let mut band = use_signal(|| (30.0, 70.0));
 
     rsx! {
         DocPage {
@@ -243,6 +242,13 @@ pub fn RangeSliderPage() -> Element {
                         .code(mode_code),
                     Control::sizes("size").default(theme.slider.size.as_str()),
                     Control::color("color").default(theme.slider.color.as_str()),
+                    Control::toggle("orientation", ["horizontal", "vertical"])
+                        .labels(["Horizontal", "Vertical"])
+                        .default("horizontal")
+                        .code(|_, values| match values.str("orientation").as_str() {
+                            "vertical" => vec!["orientation: \"vertical\"".to_string()],
+                            _ => vec![],
+                        }),
                     Control::slider("min", Quality::ALL)
                         .options_from(min_options)
                         .code(bound_code)
@@ -294,6 +300,7 @@ pub fn RangeSliderPage() -> Element {
                                     value: quality(),
                                     size: values.str("size"),
                                     color: values.str("color"),
+                                    orientation: values.str("orientation"),
                                     min: quality_of(&values, "min"),
                                     max: quality_of(&values, "max"),
                                     min_range: values.str("min_range").parse::<usize>().unwrap_or(0),
@@ -327,6 +334,7 @@ pub fn RangeSliderPage() -> Element {
                                     value: price(),
                                     size: values.str("size"),
                                     color: values.str("color"),
+                                    orientation: values.str("orientation"),
                                     min: number(&values, "min_value"),
                                     max: number(&values, "max_value"),
                                     step: number(&values, "step_value"),
@@ -352,36 +360,6 @@ pub fn RangeSliderPage() -> Element {
                     }
                 },
                 wrap: Wrap(wrap_readout),
-            }
-            // snippet: let mut band = use_signal(|| (30.0, 70.0));
-            Demo {
-                component: "RangeSlider",
-                title: "Vertical",
-                children_text: "",
-                fixed: vec![
-                    "label: \"Band\"".to_string(),
-                    "value: band()".to_string(),
-                    "oninput: move |event: SliderChangeEvent<(f64, f64)>| band.set(event.value())".to_string(),
-                ],
-                controls: vec![
-                    Control::toggle("orientation", ["horizontal", "vertical"])
-                        .labels(["Horizontal", "Vertical"])
-                        .default("vertical")
-                        .code(|_, values| match values.str("orientation").as_str() {
-                            "vertical" => vec!["orientation: \"vertical\"".to_string()],
-                            _ => vec![],
-                        }),
-                ],
-                render: move |values: DemoValues| rsx! {
-                    Flex { direction: "column", sx: sx().width("100%"),
-                        RangeSlider {
-                            label: "Band",
-                            value: band(),
-                            orientation: values.str("orientation"),
-                            oninput: move |event: SliderChangeEvent<(f64, f64)>| band.set(event.value()),
-                        }
-                    }
-                },
             }
         }
     }

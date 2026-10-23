@@ -199,14 +199,10 @@ fn topping_selection(words: &'static Localization, s: SelectionArgs<Topping>) ->
 /// The printed twin of the page's `value` signal below.
 const VALUE_SIGNAL: &str = "let mut value = use_signal(|| vec![Topping::Cheese, Topping::Olives]);";
 
-/// The printed twin of the "Open on focus" demo's `picks` signal below.
-const PICKS_SIGNAL: &str = "let mut picks = use_signal(Vec::<Topping>::new);";
-
 #[component]
 pub fn MultiSelectPage() -> Element {
     let theme = use_theme();
     let mut value = use_signal(|| vec![Topping::Cheese, Topping::Olives]);
-    let mut picks = use_signal(Vec::<Topping>::new);
     let words = use_localization();
 
     rsx! {
@@ -430,35 +426,6 @@ pub fn MultiSelectPage() -> Element {
                         value: value(),
                         onchange: move |next| value.set(next),
                     }
-                    }
-                },
-            }
-            Demo {
-                component: "MultiSelect",
-                title: "Open on focus",
-                children_text: "",
-                wrap: Wrap(|_: &DemoValues, source: &str| {
-                    format!("{}\n\n{PICKS_SIGNAL}\n\n{source}", FILE.section("topping"))
-                }),
-                fixed: vec![
-                    "label: \"Toppings\"".to_string(),
-                    "placeholder: \"Pick toppings\"".to_string(),
-                    "value: picks()".to_string(),
-                    "onchange: move |next| picks.set(next)".to_string(),
-                ],
-                controls: vec![Control::switch("open_on_focus").default("true").code(|_, values| {
-                    match values.str("open_on_focus").as_str() {
-                        "true" => vec!["open_on_focus: true".to_string()],
-                        _ => vec![],
-                    }
-                })],
-                render: move |values: DemoValues| rsx! {
-                    MultiSelect {
-                        label: "Toppings",
-                        placeholder: "Pick toppings",
-                        open_on_focus: values.str("open_on_focus") == "true",
-                        value: picks(),
-                        onchange: move |next| picks.set(next),
                     }
                 },
             }

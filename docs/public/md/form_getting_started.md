@@ -282,3 +282,48 @@ Form {
 A field with a handler of its own is controlled by that handler, as outside a
 form. A plain string `name` only posts. A path rooted at a different type than
 the form's value warns in debug builds and leaves the field unbound.
+
+## Conditional fields
+
+A field shown only for some values is a plain `if` around it, as the company
+switch on the Form page shows. Its rules leave with it, so a hidden field never
+blocks a submit, and neither does a rule whose `.on(..)` names only hidden
+fields. Its value stays in the store, and a rule on the whole form that names no
+field still runs, so check the condition there too.
+
+```rust
+# use dioxus::prelude::*;
+# use libero::components::{Checkbox, Fields, Form, Rule, TextField, not_empty};
+# #[derive(Clone, PartialEq, Default, Fields)]
+# struct Signup { company: bool, company_name: String }
+# #[component]
+# fn CompanyFields() -> Element {
+#     let signup = use_store(Signup::default);
+#     rsx! { Form { value: signup,
+Checkbox { label: "Sign up as a company", name: Signup::FIELDS.company() }
+// Rendered only while ticked, so its rules leave with it.
+if signup.read().company {
+    TextField {
+        label: "Company name",
+        name: Signup::FIELDS.company_name(),
+        validate: not_empty.error("Enter the company name."),
+    }
+}
+# } } }
+```
+
+## Submit
+
+A submit shows every status. With an error, it is cancelled, and a summary of
+every problem appears above the fields and takes focus. Warnings never block.
+A `required` field left empty is an error too, "Fill in this field.", or
+"Check this box.", "Select an item in the list." and "Select one of these
+options." for a box, a select or a group of options (`Localization::form`), unless a rule of its own says more; a disabled or
+read-only one never blocks. That error shows only once the form was submitted,
+so tabbing through an empty required field paints nothing; after that it
+follows the value like any rule. A field's own rules show once it loses focus.
+The summary keeps the problems of that submit. A line leaves once it is fixed,
+and new ones wait for the next submit. A server's answer is a field's `status`:
+an error one set after a valid submit, in `onsubmit` or once a request returns,
+shows the summary, which takes focus and is announced, as a blocked submit's
+would.

@@ -87,13 +87,16 @@ impl NumberValue for Cents {
     }
 }
 
+fn percent(values: &DemoValues) -> bool {
+    values.str("type") == "f64" && values.str("affix") == "percent"
+}
+
 #[component]
 pub fn NumberFieldPage() -> Element {
     let theme = use_theme();
     let mut quantity = use_signal(|| Some(4i32));
     let mut weight = use_signal(|| Some(1.5f64));
     let mut price = use_signal(|| Some(Cents(1234)));
-    let mut amount = use_signal(|| Some(1_234_567.5f64));
     let mut total = use_signal(|| Some(1_250.5f64));
     let mut share = use_signal(|| Some(12.5f64));
 
@@ -236,6 +239,8 @@ pub fn NumberFieldPage() -> Element {
             },
             // snippet: let mut quantity = use_signal(|| Some(4i32));
             // snippet: let mut weight = use_signal(|| Some(1.5f64));
+            // snippet: let mut total = use_signal(|| Some(1_250.5f64));
+            // snippet: let mut share = use_signal(|| Some(12.5f64));
             Demo {
                 component: "NumberField",
                 children_text: "",
@@ -254,11 +259,21 @@ pub fn NumberFieldPage() -> Element {
                         .default("i32")
                         .labels(["i32", "f64", "Cents (custom)"])
                         .code(|_, values| match values.str("type").as_str() {
-                            "f64" => vec![
-                                "step: 0.5".to_string(),
-                                "value: weight()".to_string(),
-                                "onchange: move |next| weight.set(next)".to_string(),
-                            ],
+                            "f64" => match values.str("affix").as_str() {
+                                "currency" => vec![
+                                    "value: total()".to_string(),
+                                    "onchange: move |next| total.set(next)".to_string(),
+                                ],
+                                "percent" => vec![
+                                    "value: share()".to_string(),
+                                    "onchange: move |next| share.set(next)".to_string(),
+                                ],
+                                _ => vec![
+                                    "step: 0.5".to_string(),
+                                    "value: weight()".to_string(),
+                                    "onchange: move |next| weight.set(next)".to_string(),
+                                ],
+                            },
                             "cents" => vec![
                                 "value: price()".to_string(),
                                 "onchange: move |next| price.set(next)".to_string(),
@@ -267,6 +282,26 @@ pub fn NumberFieldPage() -> Element {
                                 "value: quantity()".to_string(),
                                 "onchange: move |next| quantity.set(next)".to_string(),
                             ],
+                        }),
+                    // A float shown as money or a share: an affix, fixed decimals.
+                    Control::toggle("affix", ["none", "currency", "percent"])
+                        .default("none")
+                        .labels(["None", "Currency", "Percent"])
+                        .hidden_when(|values| values.str("type") != "f64")
+                        .code(|_, values| match values.str("affix").as_str() {
+                            "currency" => vec![
+                                "leading: rsx! { \"$\" }".to_string(),
+                                "describe_leading: true".to_string(),
+                                "decimals: Decimals::Exactly(2)".to_string(),
+                            ],
+                            "percent" => vec![
+                                "trailing: rsx! { \"%\" }".to_string(),
+                                "describe_trailing: true".to_string(),
+                                "decimals: Decimals::AtMost(1)".to_string(),
+                                "min: 0.0".to_string(),
+                                "max: 100.0".to_string(),
+                            ],
+                            _ => vec![],
                         }),
                     Control::sizes("size")
                         .default(theme.number_field.size.as_str()),
@@ -293,8 +328,13 @@ pub fn NumberFieldPage() -> Element {
                             ],
                             _ => vec![],
                         }),
-                    Control::switch("range").code(|_, values| {
+                    Control::switch("group_digits"),
+                    // A percent has its own bounds.
+                    Control::switch("range").hidden_when(percent).code(|_, values| {
                         match (values.str("range").as_str(), values.str("type").as_str()) {
+                            ("true", "f64") if values.str("affix") == "currency" => {
+                                vec!["min: 0.0".to_string(), "max: 10_000.0".to_string()]
+                            }
                             ("true", "f64") => {
                                 vec!["min: 0.0".to_string(), "max: 10.0".to_string()]
                             }
@@ -322,12 +362,39 @@ pub fn NumberFieldPage() -> Element {
                     let named = values.str("increment_label") == "true";
                     let increment_label = named.then(|| "Add one".to_string());
                     let decrement_label = named.then(|| "Remove one".to_string());
+                    let group_digits = values.str("group_digits") == "true";
 
                     match values.str("type").as_str() {
+                        "f64" if values.str("affix") == "currency" => rsx! {
+                            NumberField {
+                                size, radius, label, aria_label, description, helper, status,
+                                required, disabled, steppers, increment_label, decrement_label, group_digits,
+                                leading: rsx! { "$" },
+                                describe_leading: true,
+                                decimals: Decimals::Exactly(2),
+                                min: ranged.then_some(0.0f64),
+                                max: ranged.then_some(10_000.0f64),
+                                value: total(),
+                                onchange: move |next| total.set(next),
+                            }
+                        },
+                        "f64" if percent(&values) => rsx! {
+                            NumberField {
+                                size, radius, label, aria_label, description, helper, status,
+                                required, disabled, steppers, increment_label, decrement_label, group_digits,
+                                trailing: rsx! { "%" },
+                                describe_trailing: true,
+                                decimals: Decimals::AtMost(1),
+                                min: 0.0,
+                                max: 100.0,
+                                value: share(),
+                                onchange: move |next| share.set(next),
+                            }
+                        },
                         "f64" => rsx! {
                             NumberField {
                                 size, radius, label, aria_label, description, helper, status,
-                                required, disabled, steppers, increment_label, decrement_label,
+                                required, disabled, steppers, increment_label, decrement_label, group_digits,
                                 step: 0.5f64,
                                 min: ranged.then_some(0.0f64),
                                 max: ranged.then_some(10.0f64),
@@ -338,7 +405,7 @@ pub fn NumberFieldPage() -> Element {
                         "cents" => rsx! {
                             NumberField {
                                 size, radius, label, aria_label, description, helper, status,
-                                required, disabled, steppers, increment_label, decrement_label,
+                                required, disabled, steppers, increment_label, decrement_label, group_digits,
                                 min: ranged.then_some(Cents(0)),
                                 max: ranged.then_some(Cents(10_000)),
                                 value: price(),
@@ -348,7 +415,7 @@ pub fn NumberFieldPage() -> Element {
                         _ => rsx! {
                             NumberField {
                                 size, radius, label, aria_label, description, helper, status,
-                                required, disabled, steppers, increment_label, decrement_label,
+                                required, disabled, steppers, increment_label, decrement_label, group_digits,
                                 min: ranged.then_some(1i32),
                                 max: ranged.then_some(99i32),
                                 value: quantity(),
@@ -356,89 +423,6 @@ pub fn NumberFieldPage() -> Element {
                             }
                         },
                     }
-                },
-            }
-            // snippet: let mut amount = use_signal(|| Some(1_234_567.5f64));
-            Demo {
-                component: "NumberField",
-                title: "Grouped digits",
-                children_text: "",
-                fixed: vec![
-                    "label: \"Amount\"".to_string(),
-                    "value: amount()".to_string(),
-                    "onchange: move |next| amount.set(next)".to_string(),
-                ],
-                controls: vec![Control::switch("group_digits").default("true").code(|_, values| {
-                    match values.str("group_digits").as_str() {
-                        "true" => vec!["group_digits: true".to_string()],
-                        _ => vec![],
-                    }
-                })],
-                render: move |values: DemoValues| rsx! {
-                    NumberField {
-                        label: "Amount",
-                        group_digits: values.str("group_digits") == "true",
-                        value: amount(),
-                        onchange: move |next| amount.set(next),
-                    }
-                },
-            }
-            // snippet: let mut total = use_signal(|| Some(1_250.5f64));
-            // snippet: let mut share = use_signal(|| Some(12.5f64));
-            Demo {
-                component: "NumberField",
-                title: "Currency and percent",
-                children_text: "",
-                controls: vec![
-                    Control::toggle("format", ["currency", "percent"])
-                        .default("currency")
-                        .labels(["Currency", "Percent"])
-                        .code(|_, values| match values.str("format").as_str() {
-                            "percent" => vec![
-                                "label: \"Discount\"".to_string(),
-                                "trailing: rsx! { \"%\" }".to_string(),
-                                "describe_trailing: true".to_string(),
-                                "decimals: Decimals::AtMost(1)".to_string(),
-                                "min: 0.0".to_string(),
-                                "max: 100.0".to_string(),
-                                "value: share()".to_string(),
-                                "onchange: move |next| share.set(next)".to_string(),
-                            ],
-                            _ => vec![
-                                "label: \"Total\"".to_string(),
-                                "leading: rsx! { \"$\" }".to_string(),
-                                "describe_leading: true".to_string(),
-                                "decimals: Decimals::Exactly(2)".to_string(),
-                                "group_digits: true".to_string(),
-                                "value: total()".to_string(),
-                                "onchange: move |next| total.set(next)".to_string(),
-                            ],
-                        }),
-                ],
-                render: move |values: DemoValues| match values.str("format").as_str() {
-                    "percent" => rsx! {
-                        NumberField {
-                            label: "Discount",
-                            trailing: rsx! { "%" },
-                            describe_trailing: true,
-                            decimals: Decimals::AtMost(1),
-                            min: 0.0,
-                            max: 100.0,
-                            value: share(),
-                            onchange: move |next| share.set(next),
-                        }
-                    },
-                    _ => rsx! {
-                        NumberField {
-                            label: "Total",
-                            leading: rsx! { "$" },
-                            describe_leading: true,
-                            decimals: Decimals::Exactly(2),
-                            group_digits: true,
-                            value: total(),
-                            onchange: move |next| total.set(next),
-                        }
-                    },
                 },
             }
         }

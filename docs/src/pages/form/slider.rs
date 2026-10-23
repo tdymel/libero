@@ -8,15 +8,14 @@ use dioxus::prelude::*;
 use libero::components::{SliderPart, SliderValue};
 use libero::{
     components::{
-        Code, FieldStatus, Flex, Slider, SliderChangeEvent, SliderMark, SliderSegment, SliderTrack,
-        Text,
+        Code, FieldStatus, Flex, Slider, SliderChangeEvent, SliderSegment, SliderTrack, Text,
     },
     sx::sx,
     use_theme,
 };
 
 const MIN_VALUES: [&str; 4] = ["auto", "0.5", "10.0", "50.0"];
-const MAX_VALUES: [&str; 4] = ["auto", "3.0", "50.0", "200.0"];
+const MAX_VALUES: [&str; 5] = ["auto", "3.0", "50.0", "200.0", "1000000.0"];
 /// The `bars` switch's heights: a voice message's waveform, as `Audio` draws it.
 const WAVEFORM: [f64; 24] = [
     0.3, 0.5, 0.8, 0.6, 0.4, 0.7, 1.0, 0.8, 0.5, 0.3, 0.6, 0.9, 0.7, 0.4, 0.5, 0.8, 0.6, 0.3, 0.4,
@@ -177,8 +176,6 @@ pub fn SliderPage() -> Element {
     let mut quality = use_signal(|| Quality::Medium);
     let mut last = use_signal(|| SliderChangeEvent::Change(40.0));
     let mut last_quality = use_signal(|| SliderChangeEvent::Change(Quality::Medium));
-    let mut budget = use_signal(|| 250_000.0);
-    let mut level = use_signal(|| 60.0);
 
     rsx! {
         DocPage {
@@ -318,6 +315,13 @@ pub fn SliderPage() -> Element {
                         .code(mode_code),
                     Control::sizes("size").default(theme.slider.size.as_str()),
                     Control::color("color").default(theme.slider.color.as_str()),
+                    Control::toggle("orientation", ["horizontal", "vertical"])
+                        .labels(["Horizontal", "Vertical"])
+                        .default("horizontal")
+                        .code(|_, values| match values.str("orientation").as_str() {
+                            "vertical" => vec!["orientation: \"vertical\"".to_string()],
+                            _ => vec![],
+                        }),
                     Control::slider("min", Quality::ALL)
                         .options_from(min_options)
                         .code(bound_code)
@@ -356,6 +360,8 @@ pub fn SliderPage() -> Element {
                     Control::switch("marks").code(marks_code),
                     Control::switch("segments").default("true").code(segments_code),
                     Control::switch("format").code(format_code),
+                    // Separators show from 1,000 up, so pick the largest `max_value`.
+                    Control::switch("group_digits").hidden_when(discrete),
                     Control::switch("preview_on_hover").default("true").code(|_, values| {
                         match is_on(values, "preview_on_hover") {
                             true => vec!["preview_on_hover: true".to_string()],
@@ -396,6 +402,7 @@ pub fn SliderPage() -> Element {
                                     value: quality(),
                                     size: values.str("size"),
                                     color: values.str("color"),
+                                    orientation: values.str("orientation"),
                                     min: quality_of(&values, "min"),
                                     max: quality_of(&values, "max"),
                                     step: values.str("step").parse::<usize>().unwrap_or(1),
@@ -442,12 +449,14 @@ pub fn SliderPage() -> Element {
                                     value: volume(),
                                     size: values.str("size"),
                                     color: values.str("color"),
+                                    orientation: values.str("orientation"),
                                     min: number(&values, "min_value"),
                                     max: number(&values, "max_value"),
                                     step: number(&values, "step_value"),
                                     marks: continuous_marks(&values),
                                     segments: continuous_segments(&values),
                                     track: track(&values),
+                                    group_digits: is_on(&values, "group_digits"),
                                     format: is_on(&values, "format")
                                         .then(|| Callback::new(|value: f64| format!("{value}%"))),
                                     label: is_on(&values, "label")
@@ -480,77 +489,6 @@ pub fn SliderPage() -> Element {
                 },
                 wrap: Wrap(wrap_readout),
             }
-            // snippet: let mut budget = use_signal(|| 250_000.0);
-            Demo {
-                component: "Slider",
-                title: "Grouped digits",
-                children_text: "",
-                fixed: vec![
-                    "aria_label: \"Budget\"".to_string(),
-                    "value: budget()".to_string(),
-                    "min: 0.0".to_string(),
-                    "max: 1_000_000.0".to_string(),
-                    "step: 1_000.0".to_string(),
-                    "preview_on_hover: true".to_string(),
-                    "oninput: move |event: SliderChangeEvent| budget.set(event.value())".to_string(),
-                ],
-                controls: vec![Control::switch("group_digits").default("true").code(|_, values| {
-                    match is_on(values, "group_digits") {
-                        true => vec!["group_digits: true".to_string()],
-                        false => vec![],
-                    }
-                })],
-                render: move |values: DemoValues| rsx! {
-                    Flex { direction: "column", sx: sx().width("100%"),
-                        Slider {
-                            aria_label: "Budget",
-                            value: budget(),
-                            min: 0.0,
-                            max: 1_000_000.0,
-                            step: 1_000.0,
-                            group_digits: is_on(&values, "group_digits"),
-                            preview_on_hover: true,
-                            oninput: move |event: SliderChangeEvent| budget.set(event.value()),
-                        }
-                    }
-                },
-            }
-            // snippet: let mut level = use_signal(|| 60.0);
-            Demo {
-                component: "Slider",
-                title: "Vertical",
-                children_text: "",
-                fixed: vec![
-                    "label: \"Level\"".to_string(),
-                    "value: level()".to_string(),
-                    "marks: vec![SliderMark::labeled(0.0, \"0 dB\"), SliderMark::labeled(50.0, \"50\"), SliderMark::labeled(100.0, \"100\")]".to_string(),
-                    "oninput: move |event: SliderChangeEvent| level.set(event.value())".to_string(),
-                ],
-                controls: vec![
-                    Control::toggle("orientation", ["horizontal", "vertical"])
-                        .labels(["Horizontal", "Vertical"])
-                        .default("vertical")
-                        .code(|_, values| match values.str("orientation").as_str() {
-                            "vertical" => vec!["orientation: \"vertical\"".to_string()],
-                            _ => vec![],
-                        }),
-                ],
-                render: move |values: DemoValues| rsx! {
-                    Flex { direction: "column", sx: sx().width("100%"),
-                        Slider {
-                            label: "Level",
-                            value: level(),
-                            orientation: values.str("orientation"),
-                            marks: vec![
-                                SliderMark::labeled(0.0, "0 dB"),
-                                SliderMark::labeled(50.0, "50"),
-                                SliderMark::labeled(100.0, "100"),
-                            ],
-                            oninput: move |event: SliderChangeEvent| level.set(event.value()),
-                        }
-                    }
-                },
-            }
         }
     }
 }
@@ -571,6 +509,9 @@ mod tests {
         assert_eq!(min_options(&values), ["low", "medium"]);
         assert_eq!(max_options(&values), ["high", "ultra"]);
         assert_eq!(min_value_options(&values), ["auto", "0.5", "10.0"]);
-        assert_eq!(max_value_options(&values), ["auto", "50.0", "200.0"]);
+        assert_eq!(
+            max_value_options(&values),
+            ["auto", "50.0", "200.0", "1000000.0"]
+        );
     }
 }

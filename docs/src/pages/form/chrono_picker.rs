@@ -4,12 +4,10 @@ use super::date_common::{
     shared_controls, shown, step_of, time_limits, today_of, twelve_hour_of, with_seconds_of,
 };
 use super::dropdown_parts::chrono_picker_parts;
-use crate::components::{Control, Demo, DemoValues, DocPage, DocSection, a11y, prop, props};
+use crate::components::{Control, Demo, DemoValues, DocPage, a11y, prop, props};
 use dioxus::prelude::*;
 use libero::chrono::{NaiveDate, NaiveDateTime, NaiveTime};
-use libero::components::{
-    ChronoPicker, Code, DateLevel, DatePicker, DatePreset, DateRange, Flex, Text,
-};
+use libero::components::{ChronoPicker, Code, DateLevel, DateRange, Flex, Text};
 
 const KINDS: [&str; 7] = [
     "date",
@@ -117,7 +115,21 @@ pub fn ChronoPickerPage() -> Element {
                     Code { source: "DateRange" }
                     " of either a start and an end, and a "
                     Code { source: "TimeDelta" }
-                    " a duration, one column per part."
+                    " a duration, one column per part. Names come from the localization's "
+                    Code { source: "DateLocale" }
+                    ", the first weekday from the provider's "
+                    Code { source: "Formats" }
+                    ". "
+                    Code { source: "DatePicker" }
+                    ", "
+                    Code { source: "MonthPicker" }
+                    ", "
+                    Code { source: "YearPicker" }
+                    ", "
+                    Code { source: "TimePicker" }
+                    " and "
+                    Code { source: "DateRangePicker" }
+                    " take one value type and need no turbofish."
                 }
             },
             // snippet: item use chrono::{Datelike, NaiveDate, NaiveDateTime, NaiveTime};
@@ -181,67 +193,7 @@ pub fn ChronoPickerPage() -> Element {
                     ChronoPickerDemo { values }
                 },
             }
-
-            DocSection {
-                title: "Presets and week numbers",
-                Text {
-                    Code { source: "presets" }
-                    " puts buttons beside the calendar that pick a value in one press and show its month. "
-                    Code { source: "week_numbers" }
-                    " heads each week with its ISO number. Weekends are tinted; "
-                    Code { source: "weekend_days" }
-                    " names other days."
-                }
-                PresetsExample {}
-            }
-
-            DocSection {
-                title: "Start month and language",
-                Text {
-                    "It opens on the value's month, else today's. Names come from the "
-                    "localization's "
-                    Code { source: "DateLocale" }
-                    ", and the first weekday and heading format from the provider's "
-                    Code { source: "Formats" }
-                    ". As on "
-                    Code { source: "ChronoField" }
-                    ", a typed handler or a turbofish names the value type. For one value type "
-                    "there are "
-                    Code { source: "DatePicker" }
-                    ", "
-                    Code { source: "MonthPicker" }
-                    ", "
-                    Code { source: "YearPicker" }
-                    ", "
-                    Code { source: "TimePicker" }
-                    " and "
-                    Code { source: "DateRangePicker" }
-                    ", with only the props that type uses and no turbofish."
-                }
-            }
         }
-    }
-}
-
-#[component]
-fn PresetsExample() -> Element {
-    let mut date = use_signal(|| day(14));
-    let presets = vec![
-        DatePreset::new(
-            "Start of month",
-            NaiveDate::from_ymd_opt(2026, 9, 1).expect("a day"),
-        ),
-        DatePreset::new(
-            "End of month",
-            NaiveDate::from_ymd_opt(2026, 9, 30).expect("a day"),
-        ),
-        DatePreset::new(
-            "Next month",
-            NaiveDate::from_ymd_opt(2026, 10, 1).expect("a day"),
-        ),
-    ];
-    rsx! {
-        DatePicker { value: date(), onchange: move |next| date.set(next), presets, week_numbers: true }
     }
 }
 

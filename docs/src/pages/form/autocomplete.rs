@@ -83,7 +83,6 @@ fn starts_with(f: AutocompleteFilterArgs<String>) -> bool {
 pub fn AutocompletePage() -> Element {
     let mut value = use_signal(String::new);
     let mut picked = use_signal(|| None::<&'static str>);
-    let mut town = use_signal(String::new);
     let theme = use_theme();
 
     rsx! {
@@ -305,38 +304,6 @@ pub fn AutocompletePage() -> Element {
                         oninput: move |next| value.set(next),
                     }
                 }
-                },
-            }
-            // snippet: let mut town = use_signal(String::new);
-            Demo {
-                component: "Autocomplete",
-                title: "Open on focus",
-                children_text: "",
-                wrap: Wrap(|_values: &DemoValues, source: &str| {
-                    format!("{}\n\n{source}", FILE.section("cities"))
-                }),
-                fixed: vec![
-                    "label: \"City\"".to_string(),
-                    "options: cities()".to_string(),
-                    "value: town()".to_string(),
-                    "oninput: move |next| town.set(next)".to_string(),
-                    "placeholder: \"Start typing\"".to_string(),
-                ],
-                controls: vec![Control::switch("open_on_focus").default("true").code(|_, values| {
-                    match values.str("open_on_focus").as_str() {
-                        "true" => vec!["open_on_focus: true".to_string()],
-                        _ => vec![],
-                    }
-                })],
-                render: move |values: DemoValues| rsx! {
-                    Autocomplete {
-                        label: "City",
-                        placeholder: "Start typing",
-                        open_on_focus: values.str("open_on_focus") == "true",
-                        options: cities(),
-                        value: town(),
-                        oninput: move |next| town.set(next),
-                    }
                 },
             }
         }

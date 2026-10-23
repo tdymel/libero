@@ -1,6 +1,6 @@
 use super::dropdown_parts::{PHONE_DROPDOWN, list_dropdown_parts};
 use crate::components::{
-    Control, Demo, DemoValues, DocPage, DocSection, FieldCopy, a11y, disabled_prop, field_controls,
+    Control, Demo, DemoValues, DocPage, FieldCopy, a11y, disabled_prop, field_controls,
     field_props, prop, props, readonly_prop, status_prop,
 };
 use dioxus::prelude::*;
@@ -136,7 +136,14 @@ pub fn PhoneFieldPage() -> Element {
                     ". The field regroups the digits when it loses focus, for countries with a "
                     "fixed number format. Below the "
                     Code { source: "sm" }
-                    " breakpoint the country list opens as a sheet at the foot of the screen."
+                    " breakpoint the country list opens as a sheet at the foot of the screen. "
+                    "It does not validate the number or strip a trunk prefix ("
+                    Code { source: "0171 1234567" }
+                    " under Germany posts "
+                    Code { source: "\"+4901711234567\"" }
+                    "), so add a rule through "
+                    Code { source: "validate" }
+                    "."
                 }
             },
             // snippet: let mut phone = use_signal(String::new);
@@ -212,22 +219,6 @@ pub fn PhoneFieldPage() -> Element {
                         }
                     }
                 },
-            }
-
-            DocSection {
-                title: "Validation",
-                Text {
-                    "The field ships the country list but no number validation, so "
-                    "add a rule through "
-                    Code { source: "validate" }
-                    ". It does not strip a national trunk prefix: "
-                    Code { source: "0171 1234567" }
-                    " typed under Germany becomes "
-                    Code { source: "\"+4901711234567\"" }
-                    ", which is not E.164. Say so in "
-                    Code { source: "helper" }
-                    ", or add a rule that refuses a leading 0."
-                }
             }
         }
     }
