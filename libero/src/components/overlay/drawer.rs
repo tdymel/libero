@@ -70,6 +70,14 @@ static DRAWER_HANDLE_SX: StaticSx = StaticSx::new(|| {
         .padding_top("inherit")
         .box_sizing("content-box")
         .touch_action("none")
+        // A pressed look also makes Chromium's touch adjustment keep a finger on the strip,
+        // not snap it to a header button below (3971).
+        .selector("&:active", sx().cursor("grabbing"))
+        .selector(
+            "&:active > *",
+            sx().background(ColorValue::Shade(Color::Muted, ColorShade::S8).value())
+                .media(FORCED_COLORS, sx().background("CanvasText")),
+        )
 });
 
 static DRAWER_HANDLE_BAR_SX: StaticSx = StaticSx::new(|| {

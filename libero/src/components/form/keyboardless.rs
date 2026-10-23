@@ -6,11 +6,96 @@ use dioxus::prelude::*;
 use crate::{
     CssLayer,
     components::common::{COARSE_POINTER, focus_ring_sx},
-    hooks::{use_css, use_media_query},
-    platform::soft_keyboard_app,
+    hooks::{ElementHandle, id_selector, use_css, use_media_query},
+    platform::{
+        ElementApi, PlatformError, focus_selector, next_task, page_task, soft_keyboard_app,
+    },
     sx::{StaticSx, sx},
     theme::{Size, SizeCss},
 };
+
+/// Where focus is in a picker field's input (0) and dropdown (1). A WebView answers no
+/// `:focus` query and focuses nothing below a handle: the pair's own focus events and the
+/// page's ids stand in there (todo 3952).
+#[derive(Clone, Copy)]
+pub(crate) struct PickerFocus {
+    anchor: ElementHandle,
+    floating: ElementHandle,
+    held: CopyValue<[bool; 2]>,
+    input_id: CopyValue<String>,
+}
+
+/// `input_id` is the field input's id.
+pub(crate) fn use_picker_focus(
+    anchor: ElementHandle,
+    floating: ElementHandle,
+    input_id: &str,
+) -> PickerFocus {
+    PickerFocus {
+        anchor,
+        floating,
+        held: use_hook(|| CopyValue::new([false; 2])),
+        input_id: use_hook(|| CopyValue::new(input_id.to_string())),
+    }
+}
+
+impl PickerFocus {
+    /// A focus change of element `element`, from the pair's `use_focus_within`.
+    pub(crate) fn track(self, element: usize, within: bool) {
+        let mut held = self.held;
+        if let Some(slot) = held.write().get_mut(element) {
+            *slot = within;
+        }
+    }
+
+    /// Whether the dropdown holds focus.
+    pub(crate) fn in_dropdown(self) -> bool {
+        match self.floating.query_selector(":focus") {
+            Ok(_) => true,
+            Err(PlatformError::Unsupported) => self.held.peek()[1],
+            Err(_) => false,
+        }
+    }
+
+    /// Once focus has landed: whether it is in the input or the dropdown.
+    pub(crate) async fn settled_inside(self) -> bool {
+        next_task().await;
+        match (
+            self.anchor.query_selector(":focus"),
+            self.floating.query_selector(":focus"),
+        ) {
+            (Ok(_), _) | (_, Ok(_)) => true,
+            (Err(PlatformError::Unsupported), _) => {
+                // Past the `focusin` that follows the `focusout`.
+                page_task().await;
+                self.held.peek().contains(&true)
+            }
+            _ => false,
+        }
+    }
+
+    /// Focuses the dropdown's first match of `selector`; the dropdown's id is `dropdown_id`.
+    pub(crate) fn enter(self, dropdown_id: &str, selector: &str) {
+        let focused = self
+            .floating
+            .query_selector(selector)
+            .and_then(|element| element.focus());
+        if let Err(PlatformError::Unsupported) = focused {
+            let _ = focus_selector(&format!("{} :is({selector})", id_selector(dropdown_id)));
+        }
+    }
+
+    /// Focuses the field's input.
+    pub(crate) fn focus_input(self) {
+        let focused = self
+            .anchor
+            .query_selector("input[data-controlled]")
+            .and_then(|input| input.focus());
+        if let Err(PlatformError::Unsupported) = focused {
+            let _ = focus_selector(&id_selector(&self.input_id.peek()));
+        }
+    }
+}
 
 /// A field's text box, one row of the sheet. 16px text: a phone browser zooms in on less.
 static PICKER_INPUT_SX: StaticSx = StaticSx::new(|| {

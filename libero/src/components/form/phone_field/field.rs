@@ -406,6 +406,9 @@ pub fn PhoneField(props: PhoneFieldProps) -> Element {
         })
         // The tap that focuses it natively, raising the keyboard; the held picker's blur lets it.
         .event("onpointerdown", move |_: PointerEvent| hold.search_press())
+        .event("onpointercancel", move |_: PointerEvent| {
+            hold.search_cancel()
+        })
         .event("onfocus", move |_: FocusEvent| hold.search_focus())
         // The list cancels `mousedown`, so only an outside click blurs this.
         .event("onblur", move |_: FocusEvent| state.close())

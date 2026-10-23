@@ -27,11 +27,7 @@ e2e::scenario!(
 /// Todo 2289: Tab from the portaled country search moves on from the country
 /// button, to the number, not to the document's end.
 async fn tab_from_the_search_reaches_the_number<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
-    d.click(PICKER).await?;
-    eventually(d, "the search box to take focus", async |d| {
-        d.is_focused(SEARCH).await
-    })
-    .await?;
+    crate::select::tap_into_search(d, PICKER).await?;
     d.press(keyboard::TAB).await?;
     eventually(d, "Tab to land on the number, the list closed", async |d| {
         Ok(d.is_focused(TEL).await? && !d.exists(SEARCH).await?)
@@ -49,17 +45,19 @@ e2e::scenario!(
 /// list was placed; the list moves or shrinks into what is left, and a covered picker
 /// scrolls back into view. The web shrinks it by hand to `room` px below the picker's top.
 async fn list_fits_the_shrunk_viewport<D: Driver>(d: &mut D, room: f64) -> Result<()> {
-    d.click(PICKER).await?;
-    eventually(d, "the country list to open", async |d| {
-        d.exists("[role=listbox]").await
-    })
-    .await?;
     if d.platform() == Platform::Android {
+        // A phone's sheet: its search box's own tap raises the keyboard (3899).
+        crate::select::tap_into_search(d, PICKER).await?;
         eventually(d, "the soft keyboard to show", async |d| {
             d.soft_keyboard_shown().await
         })
         .await?;
     } else {
+        d.click(PICKER).await?;
+        eventually(d, "the country list to open", async |d| {
+            d.exists("[role=listbox]").await
+        })
+        .await?;
         let (width, _) = d.viewport().await?;
         let picker = d.rect(PICKER).await?;
         d.resize_viewport(width, picker.y + room).await?;

@@ -84,6 +84,12 @@ impl TouchHold {
         into_search.set(true);
     }
 
+    /// The search box's `pointercancel`: the press became a scroll and focuses nothing (todo 3949).
+    pub(crate) fn search_cancel(self) {
+        let mut into_search = self.into_search;
+        into_search.set(false);
+    }
+
     /// The search box's `focus`: it is the combobox from here.
     pub(crate) fn search_focus(self) {
         let mut into_search = self.into_search;

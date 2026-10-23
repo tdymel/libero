@@ -102,6 +102,46 @@ e2e::scenario!(
     android_only("only a phone app keeps the field's keyboard down under a mouse")
 );
 
+/// Todo 3952: a hardware Arrow Down enters the picker in a WebView too, and the input's blur,
+/// which no `:focus` query can place there, leaves it open.
+async fn arrow_down_enters_and_stays<D: Driver>(d: &mut D, route: &str) -> Result<()> {
+    let field = FIELDS
+        .iter()
+        .find(|(path, _)| *path == route)
+        .map(|(_, field)| *field)
+        .unwrap_or("#chrono-field");
+    d.focus(field).await?;
+    d.press(keyboard::ARROW_DOWN).await?;
+    let entered = format!("document.querySelector({DIALOG:?})?.contains(document.activeElement)");
+    eventually(d, "Arrow Down to move focus into the picker", async |d| {
+        Ok(d.evaluate(&entered).await? == serde_json::Value::Bool(true))
+    })
+    .await?;
+    d.flush().await?;
+    ensure!(
+        d.exists(DIALOG).await? && d.attr(field, "aria-expanded").await?.as_deref() == Some("true"),
+        "the picker closed once focus entered it"
+    );
+    d.press(keyboard::ESCAPE).await?;
+    eventually(d, "Escape to close and return to the field", async |d| {
+        Ok(!d.exists(DIALOG).await? && d.is_focused(field).await?)
+    })
+    .await
+}
+
+e2e::scenario!(
+    android_arrow_down_enters_a_date_picker,
+    "/chrono-field",
+    arrow_down_enters_and_stays,
+    android_only("the web's `:focus` answer is covered by the dialog contract")
+);
+e2e::scenario!(
+    android_arrow_down_enters_a_color_picker,
+    "/color-field",
+    arrow_down_enters_and_stays,
+    android_only("the web's `:focus` answer is covered by the dialog contract")
+);
+
 /// Android's Back closes the dropdown, keeps the value, and the app stays (1300).
 async fn back_closes<D: Driver>(d: &mut D, route: &str) -> Result<()> {
     let field = FIELDS

@@ -15,6 +15,43 @@ const LISTBOX: &str = "[role=listbox]";
 const STATUS: &str = "[role=status]";
 const OPTION_COUNT: usize = 6;
 
+/// Todo 3902: the tap's keyboard shrinks the WebView, and the field and its suggestions
+/// stay above it.
+async fn suggestions_above_the_keyboard<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    let (_, tall) = d.viewport().await?;
+    d.click(TRIGGER).await?;
+    eventually(d, "the soft keyboard", async |d| {
+        d.soft_keyboard_shown().await
+    })
+    .await?;
+    let above = format!(
+        "(() => {{ const list = document.querySelector({LISTBOX:?}); \
+         const field = document.querySelector({TRIGGER:?}); \
+         if (!list || getComputedStyle(list.closest('[data-slot=dropdown]') || list).visibility !== 'visible' \
+           || innerHeight > {tall} - 100) return false; \
+         const l = list.getBoundingClientRect(), f = field.getBoundingClientRect(); \
+         return f.top >= 0 && f.bottom <= innerHeight && l.top >= 0 && l.bottom <= innerHeight + 0.5; }})()"
+    );
+    eventually(
+        d,
+        "the field and suggestions above the keyboard",
+        async |d| Ok(d.evaluate(&above).await? == serde_json::Value::Bool(true)),
+    )
+    .await?;
+    d.press_back().await?;
+    eventually(d, "Back to hide the keyboard", async |d| {
+        Ok(!d.soft_keyboard_shown().await?)
+    })
+    .await
+}
+
+e2e::scenario!(
+    android_suggestions_sit_above_the_keyboard,
+    "/autocomplete/open-on-focus",
+    suggestions_above_the_keyboard,
+    android_only("only Android reports and resizes for a soft keyboard")
+);
+
 /// Todo 3964: Tab and a press open the suggestions; Escape leaves them closed.
 async fn open_on_focus<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
     use crate::select::expanded;

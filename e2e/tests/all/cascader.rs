@@ -20,14 +20,18 @@ const CURSOR: &str = "(() => { const t = document.querySelector('[role=combobox]
      const label = row && row.querySelector('[data-slot=label]'); \
      return `${label && label.textContent}|${document.querySelectorAll('[role=listbox]').length}|${row && row.getAttribute('aria-selected')}`; })()";
 
-/// Todo 1014: a tap opening a searchable dropdown lands focus in its search
-/// box, and on a phone raises the keyboard.
+/// Todo 1014: a tap opening a searchable dropdown lands focus in its search box, and on a
+/// phone raises the keyboard; there the sheet's box takes a tap of its own first (3899).
 pub async fn a_tap_focuses_the_search<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
-    d.click(TRIGGER).await?;
-    eventually_focused(d, SEARCH, "a tap on the trigger").await?;
+    crate::select::tap_into_search(d, TRIGGER).await?;
     if d.platform() == Platform::Android {
         eventually(d, "the soft keyboard", async |d| {
             d.soft_keyboard_shown().await
+        })
+        .await?;
+        d.press_back().await?;
+        eventually(d, "Back to hide the keyboard", async |d| {
+            Ok(!d.soft_keyboard_shown().await?)
         })
         .await?;
     }

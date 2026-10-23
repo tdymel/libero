@@ -2,10 +2,11 @@
 //! picker's own text box (3905, 3923), the clock face (3926), 44px targets (3901), short ranges (3904),
 //! the scrolling range (3903) and the swiped month (3924).
 
-use anyhow::Result;
+use anyhow::{Result, ensure};
 use chromiumoxide::Page;
 use chromiumoxide::cdp::browser_protocol::emulation::SetDeviceMetricsOverrideParams;
 use e2e::browser::block_on;
+use e2e::driver::{Driver, eventually};
 use e2e::passes::{keyboard, pointer};
 use e2e::wait::PageBounded;
 use e2e::{Fixture, Viewport, wait};
@@ -457,7 +458,6 @@ fn a_desktop_keeps_the_popover_and_the_keyboard() {
             .await
             .unwrap();
         let mut d = e2e::driver::Web { fixture };
-        use e2e::driver::Driver;
         let field = input("stay");
         d.click(&field).await.unwrap();
         let js = format!(
@@ -473,3 +473,103 @@ fn a_desktop_keeps_the_popover_and_the_keyboard() {
         d.finish("a desktop picker field").await.unwrap();
     });
 }
+
+/// Records the `sheet`'s `translateY` per frame, the finger's lift and the sheet's removal.
+fn slide_probe(sheet: &str) -> String {
+    format!(
+        "(() => {{ const slide = window.slide = {{ frames: [], up: null, gone: null, events: [] }}; \
+         addEventListener('pointerup', () => {{ slide.up ??= performance.now(); }}, {{ capture: true }}); \
+         const box = e => {{ const r = e?.getBoundingClientRect(); return r && [r.x, r.y, r.width, r.height].map(Math.round); }}; \
+         slide.strip = box(document.querySelector({sheet:?} + ' [data-slot=sheet-handle]')); \
+         slide.title = box(document.querySelector({sheet:?} + ' [data-slot=title]')); \
+         for (const type of ['pointerdown', 'pointercancel']) \
+           addEventListener(type, e => slide.events.push(`${{type}}@${{e.target.dataset?.slot ?? e.target.tagName}}(${{Math.round(e.clientX)}},${{Math.round(e.clientY)}})`), {{ capture: true }}); \
+         const tick = () => {{ const s = document.querySelector({sheet:?}); \
+           if (!s) {{ slide.gone = performance.now(); return; }} \
+           slide.frames.push([performance.now(), new DOMMatrix(getComputedStyle(s).transform).m42]); \
+           requestAnimationFrame(tick); }}; \
+         requestAnimationFrame(tick); }})()"
+    )
+}
+
+/// Todo 3971: a finger's swipe down the middle of `sheet`'s strip moves the sheet with
+/// it, slides it on past the lift and removes it about `SWIPE_SLIDE_MS` (200ms) after (3957).
+async fn swipe_slides_off<D: Driver>(d: &mut D, trigger: &str, sheet: &str) -> Result<()> {
+    d.click(trigger).await?;
+    eventually(d, "the sheet", async |d| {
+        Ok(d.exists(sheet).await? && d.style(sheet, "visibility").await? == "visible")
+    })
+    .await?;
+    d.evaluate(&slide_probe(sheet)).await?;
+    // Not `drag`: its scroll into view moves the sheet's own scroller under the strip.
+    let strip = d.rect(&format!("{sheet} [data-slot=sheet-handle]")).await?;
+    d.drag_at(
+        strip.x + strip.width / 2.0,
+        strip.y + strip.height / 2.0,
+        0.0,
+        150.0,
+    )
+    .await?;
+    let gone = eventually(d, "the swiped sheet gone", async |d| {
+        Ok(d.evaluate("window.slide.gone !== null").await? == serde_json::Value::Bool(true))
+    })
+    .await;
+    let slide = d.evaluate("JSON.stringify(window.slide)").await?;
+    let slide: serde_json::Value = serde_json::from_str(slide.as_str().unwrap_or("{}"))?;
+    let frames: Vec<(f64, f64)> = serde_json::from_value(slide["frames"].clone())?;
+    let up = slide["up"].as_f64();
+    let followed = frames
+        .iter()
+        .any(|&(t, y)| up.is_none_or(|up| t < up) && y > 20.0);
+    // Further down than the finger left it: the slide drew at least one frame.
+    let left_at = frames
+        .iter()
+        .filter(|&&(t, _)| up.is_some_and(|up| t <= up))
+        .map(|&(_, y)| y)
+        .next_back()
+        .unwrap_or(0.0);
+    let past = frames
+        .iter()
+        .any(|&(t, y)| up.is_some_and(|up| t > up) && y > left_at + 5.0);
+    let after = slide["gone"].as_f64().zip(up).map(|(gone, up)| gone - up);
+    // The last frames before the lift and all after it, as (ms from the lift, px down).
+    let trace: Vec<(i64, i64)> = frames
+        .iter()
+        .filter(|&&(t, _)| up.is_none_or(|up| t > up - 100.0))
+        .map(|&(t, y)| ((t - up.unwrap_or(0.0)) as i64, y as i64))
+        .collect();
+    let report = format!(
+        "followed {followed}, slid past the lift {past}, closed {after:?}ms after it; strip {}, \
+         title {}, events {}, frames {trace:?}",
+        slide["strip"], slide["title"], slide["events"]
+    );
+    gone.map_err(|error| anyhow::anyhow!("{error}: {report}"))?;
+    ensure!(
+        followed && past && after.is_some_and(|after| (150.0..=700.0).contains(&after)),
+        "{report}"
+    );
+    Ok(())
+}
+
+async fn a_date_sheet_slides_off<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    swipe_slides_off(d, &input("due"), SHEET).await
+}
+
+async fn a_select_sheet_slides_off<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    swipe_slides_off(d, "#plain [role=combobox]", "[data-slot=dropdown]").await
+}
+
+e2e::scenario!(
+    android_a_swipe_slides_a_date_sheet_off,
+    "/picker-phone",
+    a_date_sheet_slides_off,
+    android_only("a phone's finger; the web's is a_swipe_down_slides_the_sheet_away")
+);
+e2e::scenario!(
+    android_a_swipe_slides_a_select_sheet_off,
+    "/select-phone",
+    a_select_sheet_slides_off,
+    android_only(
+        "a phone's finger; the web's is select_phone::a_swipe_down_on_the_grabber_closes_the_sheet"
+    )
+);

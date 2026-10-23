@@ -6,6 +6,7 @@ use anyhow::Result;
 use chromiumoxide::Page;
 use chromiumoxide::cdp::browser_protocol::emulation::SetDeviceMetricsOverrideParams;
 use e2e::browser::block_on;
+use e2e::driver::{Driver, eventually};
 use e2e::passes::{keyboard, pointer};
 use e2e::wait::PageBounded;
 use e2e::{Fixture, Viewport, wait};
@@ -205,6 +206,106 @@ fn a_touch_open_keeps_the_cascader_trigger_focused() {
     .unwrap();
 }
 
+/// Todo 3949: a press on the search box that turns into a scroll leaves no mark, so the
+/// held trigger's next blur still closes the list.
+#[test]
+fn a_cancelled_search_press_keeps_the_blur_closing() {
+    const TRIGGER: &str = "#searched [role=combobox]";
+    block_on(async {
+        let fixture = phone("/select-phone").await;
+        let page = &fixture.page;
+        tap(page, TRIGGER).await.unwrap();
+        sheet_shown(page).await.unwrap();
+        // A press, then the cancel a browser sends when it turns into a scroll; CDP has no touch cancel.
+        let press = format!(
+            "(() => {{ const box = document.querySelector({SEARCH:?}); \
+             for (const type of ['pointerdown', 'pointercancel']) \
+               box.dispatchEvent(new PointerEvent(type, {{ bubbles: true, pointerType: 'touch', isPrimary: true }})); \
+             return true; }})()"
+        );
+        wait::for_js_true(page, &press, "a cancelled press on the search box")
+            .await
+            .unwrap();
+        crate::settle::painted(page).await.unwrap();
+        let blur = format!(
+            "(() => {{ const on = document.activeElement; \
+             if (!on.matches({TRIGGER:?})) return false; on.blur(); return true; }})()"
+        );
+        wait::for_js_true(page, &blur, "the held trigger blurred")
+            .await
+            .unwrap();
+        closed(page, TRIGGER).await.unwrap();
+        fixture
+            .console
+            .assert_clean("a cancelled search press")
+            .unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
+/// Todos 3902, 3940: the keyboard the search box's tap raises shrinks the WebView, and the sheet
+/// sits flush above it with the box and a row in view.
+async fn sheet_above_the_keyboard<D: Driver>(d: &mut D, field: &str) -> Result<()> {
+    let (_, tall) = d.viewport().await?;
+    d.click(&format!("{field} [role=combobox]")).await?;
+    eventually(d, "the sheet", async |d| d.exists(SEARCH).await).await?;
+    d.click(SEARCH).await?;
+    eventually(d, "the soft keyboard", async |d| {
+        d.soft_keyboard_shown().await
+    })
+    .await?;
+    let flush = format!(
+        "(() => {{ const s = document.querySelector({SHEET:?}); \
+         const box = s && s.querySelector('[data-slot=search]'); \
+         const row = s && s.querySelector('[role=option]'); \
+         if (!box || !row || document.activeElement !== box || innerHeight > {tall} - 100) return false; \
+         const r = s.getBoundingClientRect(), b = box.getBoundingClientRect(), o = row.getBoundingClientRect(); \
+         return Math.abs(r.bottom - innerHeight) < 1 && r.top >= 0 && b.top >= r.top \
+           && o.top > 0 && o.bottom <= innerHeight; }})()"
+    );
+    let shown = eventually(d, "the sheet flush above the keyboard", async |d| {
+        Ok(d.evaluate(&flush).await? == serde_json::Value::Bool(true))
+    })
+    .await;
+    if let Err(error) = shown {
+        let state = d
+            .evaluate(&format!(
+                "JSON.stringify({{ inner: innerHeight, visual: visualViewport.height, \
+                 sheet: document.querySelector({SHEET:?})?.getBoundingClientRect(), \
+                 box: document.querySelector({SEARCH:?})?.getBoundingClientRect() }})"
+            ))
+            .await?;
+        anyhow::bail!("{error}: {state} (before the keyboard {tall})");
+    }
+    // Back hides the keyboard first, so the next scenario starts without it.
+    d.press_back().await?;
+    eventually(d, "Back to hide the keyboard", async |d| {
+        Ok(!d.soft_keyboard_shown().await?)
+    })
+    .await
+}
+
+async fn select_sheet_above_the_keyboard<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    sheet_above_the_keyboard(d, "#searched").await
+}
+
+async fn cascader_sheet_above_the_keyboard<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    sheet_above_the_keyboard(d, "#cascade").await
+}
+
+e2e::scenario!(
+    android_a_searchable_select_sheet_sits_above_the_keyboard,
+    "/select-phone",
+    select_sheet_above_the_keyboard,
+    android_only("only Android reports and resizes for a soft keyboard")
+);
+e2e::scenario!(
+    android_a_cascader_sheet_sits_above_the_keyboard,
+    "/select-phone",
+    cascader_sheet_above_the_keyboard,
+    android_only("only Android reports and resizes for a soft keyboard")
+);
+
 /// Todo 3899: the held trigger's blur closes the list.
 #[test]
 fn a_held_trigger_closes_on_blur() {
@@ -319,7 +420,6 @@ fn a_desktop_keeps_the_popover() {
             .await
             .unwrap();
         let mut d = e2e::driver::Web { fixture };
-        use e2e::driver::Driver;
         d.click("#plain [role=combobox]").await.unwrap();
         let js = format!(
             "(() => {{ const s = document.querySelector({SHEET:?}); \

@@ -20,7 +20,7 @@ use crate::{
         form::{
             Caption, ChronoDropdownPart, FIELD_CONTROL_SX, FieldName, FieldPart, FieldStatus,
             FormScope, Validators,
-            keyboardless::{PickerInput, use_keyboardless},
+            keyboardless::{PickerInput, use_keyboardless, use_picker_focus},
             phone_sheet::{
                 SheetSwipe, narrow_query, phone_sheet_sx, sheet_clearance_style,
                 use_sheet_clearance, use_sheet_room, use_sheet_swipe,
@@ -34,7 +34,7 @@ use crate::{
         use_focus_within, use_form_owner, use_localization, use_media_query, use_popover_on,
         use_theme,
     },
-    platform::{ElementApi, is_tab, next_task},
+    platform::{ElementApi, is_tab},
     sx::{StaticSx, Sx, ThemeAwareValue, sx},
     theme::{Size, SizeCss, Z_INDEX_POPOVER},
 };
@@ -325,44 +325,37 @@ pub(super) fn use_picker_field<V: FieldValue>(
         .style(Some(format!("{}{room}{drag}", popover.vars())))
         .prepare();
     let keyboardless = use_keyboardless();
+    let picker_focus = use_picker_focus(anchor, floating, field_box.id());
+    let dialog_id = format!("{}-dialog", field_box.id());
+    let entry_id = dialog_id.clone();
     // Waits for placement: the picker is not drawn until the box is measured.
     use_effect(move || {
         if !entering() || !popover.placed() {
             return;
         }
         entering.set(false);
-        let _ = floating
-            .query_selector(DROPDOWN_ENTRY)
-            .and_then(|element| element.focus());
+        picker_focus.enter(&entry_id, DROPDOWN_ENTRY);
     });
 
     // After the next task focus has landed: closes unless it is in the input or dropdown.
-    // Without a platform answer it counts as left.
     let press = keyboardless.press();
     let settle = move || {
-        // A tap into the picker's text box stays: a WebView answers no `:focus` query (3905).
+        // A tap into the picker's text box stays, the blur's `focusin` aside (3905).
         if press.taken() {
             return;
         }
         spawn(async move {
-            next_task().await;
-            let inside = anchor.query_selector(":focus").is_ok()
-                || floating.query_selector(":focus").is_ok();
-            if !inside {
+            if !picker_focus.settled_inside().await {
                 open_to(false);
             }
         });
     };
-    let focus_input = move || {
-        let _ = anchor
-            .query_selector("input[data-controlled]")
-            .and_then(|input| input.focus());
-    };
+    let focus_input = move || picker_focus.focus_input();
     // On the Escape stack exactly while the handler below takes Escape, so a `HoverCard` leaves it.
     use_field_list_layer(
         opened() && !readonly,
         use_callback(move |()| {
-            if floating.query_selector(":focus").is_ok() {
+            if picker_focus.in_dropdown() {
                 focus_input();
             }
             open_to(false);
@@ -373,6 +366,7 @@ pub(super) fn use_picker_field<V: FieldValue>(
     let focus = use_focus_within(
         move || vec![anchor.mounted(), floating.mounted()],
         move |change| {
+            picker_focus.track(change.element, change.within);
             if change.element == 0 && *focused.peek() != change.within {
                 let mut focused = focused;
                 focused.set(change.within);
@@ -388,7 +382,6 @@ pub(super) fn use_picker_field<V: FieldValue>(
         },
     );
 
-    let dialog_id = format!("{}-dialog", field_box.id());
     let input = field_box
         .aria(control)
         .attr_default("type", "text")
@@ -469,7 +462,7 @@ pub(super) fn use_picker_field<V: FieldValue>(
         emit(next);
         if closes(next) {
             // The focused cell is about to go; focus goes back first.
-            if floating.query_selector(":focus").is_ok() {
+            if picker_focus.in_dropdown() {
                 focus_input();
             }
             open_to(false);
@@ -482,7 +475,7 @@ pub(super) fn use_picker_field<V: FieldValue>(
                 Button {
                     full_width: true,
                     onclick: move |_| {
-                        if floating.query_selector(":focus").is_ok() {
+                        if picker_focus.in_dropdown() {
                             focus_input();
                         }
                         open_to(false);
@@ -530,6 +523,7 @@ pub(super) fn use_picker_field<V: FieldValue>(
             .event("onmousedown", move |event: MouseEvent| {
                 event.prevent_default()
             })
+            .event("onfocusin", focus.focusin(1))
             .event("onfocusout", focus.focusout(1))
             .event("onkeydown", move |event: KeyboardEvent| match event.key() {
                 Key::Named(NamedKey::Escape) => {

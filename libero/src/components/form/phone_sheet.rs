@@ -65,6 +65,14 @@ pub(crate) fn phone_sheet_sx() -> Sx {
                     .border_radius("999px")
                     .background(ColorValue::Shade(Color::Muted, ColorShade::S6).value())
                     .media(FORCED_COLORS, sx().background("CanvasText")),
+            )
+            // A pressed look also makes Chromium's touch adjustment keep a finger on the strip,
+            // not snap it to a button below (3971).
+            .selector(format!("{SHEET_HANDLE}:active"), sx().cursor("grabbing"))
+            .selector(
+                format!("{SHEET_HANDLE}:active::before"),
+                sx().background(ColorValue::Shade(Color::Muted, ColorShade::S8).value())
+                    .media(FORCED_COLORS, sx().background("CanvasText")),
             ),
     )
 }

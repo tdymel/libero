@@ -35,6 +35,21 @@ pub async fn expanded<D: Driver>(d: &mut D, trigger: &str, open: bool, what: &st
     .await
 }
 
+/// A tap on `trigger` that lands focus in the search box: a phone's touch open holds the
+/// trigger, so the box takes its own tap there (todo 3899).
+pub async fn tap_into_search<D: Driver>(d: &mut D, trigger: &str) -> Result<()> {
+    const BOX: &str = "[data-slot=dropdown] [data-slot=search]";
+    d.click(trigger).await?;
+    if d.platform() == Platform::Android {
+        eventually(d, "the sheet's search box", async |d| d.exists(BOX).await).await?;
+        d.click(BOX).await?;
+    }
+    eventually(d, "the search box to take focus", async |d| {
+        d.is_focused(SEARCH).await
+    })
+    .await
+}
+
 /// A closed list that a focus came back to stays closed past another round trip.
 pub async fn stays_closed<D: Driver>(d: &mut D, trigger: &str, what: &str) -> Result<()> {
     expanded(d, trigger, false, what).await?;
@@ -457,11 +472,7 @@ fn a_windowed_row_names_a_drawn_group() {
 /// where the click put it; only Escape, a pick or Clear refocus the trigger.
 pub async fn an_outside_click_keeps_its_focus<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
     const OUTSIDE: &str = "#outside";
-    d.click(TRIGGER).await?;
-    eventually(d, "the search box to take focus", async |d| {
-        d.is_focused(SEARCH).await
-    })
-    .await?;
+    tap_into_search(d, TRIGGER).await?;
     d.click(OUTSIDE).await?;
     let closed = eventually(d, "the list to close on the clicked field", async |d| {
         Ok(
@@ -534,11 +545,7 @@ e2e::scenario!(
 /// Todo 2294: a click on the trigger of an open, searchable list closes it, and
 /// it stays closed.
 pub async fn a_trigger_click_closes_the_search<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
-    d.click(TRIGGER).await?;
-    eventually(d, "the search box to take focus", async |d| {
-        d.is_focused(SEARCH).await
-    })
-    .await?;
+    tap_into_search(d, TRIGGER).await?;
     d.click(BARE_TRIGGER).await?;
     eventually(
         d,

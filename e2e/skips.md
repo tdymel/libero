@@ -1,6 +1,6 @@
 # Skipped e2e scenarios
 
-Scenarios: 686
+Scenarios: 693
 
 Generated from the `scenario!` skips in `e2e/tests/all` by `cargo test -p e2e --lib skips`; edit the skip, not this file. A reason starting `upstream:` waits on Dioxus, Blitz, wry or the engine (revisit on their update, todo 3362), a number names the todo that removes it.
 
@@ -15,6 +15,7 @@ The performance scenarios (units `perf`, `table_perf`) are no skips but run on r
 | `accordion::the_arrows_move_focus_skip_the_disabled_and_never_toggle` | desktop | 958: element identity on the WebView |
 | `accordion::the_arrows_move_focus_skip_the_disabled_and_never_toggle` | ios | 958: element identity on the WebView |
 | `audio::the_bars_rise_with_the_decoded_tone` | native | Blitz has no Web Audio to decode with |
+| `autocomplete::android_suggestions_sit_above_the_keyboard` | all but android | only Android reports and resizes for a soft keyboard |
 | `bar_chart::escape_closes_a_hovered_tooltip_without_focus` | android | a touch screen has no hover |
 | `bar_chart::escape_closes_a_hovered_tooltip_without_focus` | ios | a touch screen has no hover |
 | `bar_chart::hovering_shows_the_bar_s_tooltip_and_marker` | android | a touch screen has no hover |
@@ -224,8 +225,12 @@ The performance scenarios (units `perf`, `table_perf`) are no skips but run on r
 | `phone_field::the_country_list_fits_a_viewport_the_keyboard_shrank` | native | Blitz reports no window resize (todo 2129) |
 | `picker_dialog::android_a_color_pickers_text_box_raises_the_keyboard` | all but android | only a phone app keeps the field's keyboard down under a mouse |
 | `picker_dialog::android_a_date_pickers_text_box_raises_the_keyboard` | all but android | only a phone app keeps the field's keyboard down under a mouse |
+| `picker_dialog::android_arrow_down_enters_a_color_picker` | all but android | the web's `:focus` answer is covered by the dialog contract |
+| `picker_dialog::android_arrow_down_enters_a_date_picker` | all but android | the web's `:focus` answer is covered by the dialog contract |
 | `picker_dialog::android_back_closes_a_color_field` | all but android | 1275: no Back key off Android |
 | `picker_dialog::android_back_closes_a_date_field` | all but android | 1275: no Back key off Android |
+| `picker_phone::android_a_swipe_slides_a_date_sheet_off` | all but android | a phone's finger; the web's is a_swipe_down_slides_the_sheet_away |
+| `picker_phone::android_a_swipe_slides_a_select_sheet_off` | all but android | a phone's finger; the web's is select_phone::a_swipe_down_on_the_grabber_closes_the_sheet |
 | `pin_field::a_digit_retyped_without_a_key_leaves_no_drifted_cell` | desktop | 1126: no text without a key (no IME path) under xdotool |
 | `pin_field::a_digit_retyped_without_a_key_leaves_no_drifted_cell` | ios | 3416: no text without a key through AXe |
 | `pin_field::a_digit_retyped_without_a_key_leaves_no_drifted_cell` | native | no text without a key on Blitz |
@@ -269,6 +274,8 @@ The performance scenarios (units `perf`, `table_perf`) are no skips but run on r
 | `select::a_hovered_select_option_tints_like_the_keyboard_s_row` | ios | a touch screen has no hover |
 | `select::a_tall_select_below_fits_the_room` | windows desktop | 3421: END scrolls by the listbox height from before the popup shrank |
 | `select::android_back_closes_a_select` | all but android | 1275: no Back key off Android |
+| `select_phone::android_a_cascader_sheet_sits_above_the_keyboard` | all but android | only Android reports and resizes for a soft keyboard |
+| `select_phone::android_a_searchable_select_sheet_sits_above_the_keyboard` | all but android | only Android reports and resizes for a soft keyboard |
 | `share::android_shares_a_file_through_the_share_sheet` | all but android | 3351: the JNI share sheet is Android's |
 | `share::android_shares_the_link_through_the_share_sheet` | all but android | 3351: the JNI share sheet is Android's |
 | `share::android_shares_two_files_through_the_share_sheet` | all but android | 3361: ACTION_SEND_MULTIPLE is Android's |

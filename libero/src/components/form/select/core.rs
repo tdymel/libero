@@ -1380,6 +1380,9 @@ fn select_search_box(
         })
         // The tap that focuses it natively, raising the keyboard; the held trigger's blur lets it.
         .event("onpointerdown", move |_: PointerEvent| hold.search_press())
+        .event("onpointercancel", move |_: PointerEvent| {
+            hold.search_cancel()
+        })
         .event("onfocus", move |_: FocusEvent| hold.search_focus())
         // Closes while searchable; the rows cancel `mousedown`, so a click inside never blurs.
         .event("onblur", move |event: FocusEvent| {

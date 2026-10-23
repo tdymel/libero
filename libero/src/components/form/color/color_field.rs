@@ -13,7 +13,7 @@ use crate::{
         form::{
             ColorDropdownPart, FIELD_CONTROL_SX, FieldStatus, FormScope, SLOT_BUTTON_SX,
             SliderChangeEvent, field_props,
-            keyboardless::{PickerInput, use_keyboardless},
+            keyboardless::{PickerInput, use_keyboardless, use_picker_focus},
             phone_sheet::{
                 SheetSwipe, narrow_query, phone_sheet_sx, sheet_clearance_style,
                 use_sheet_clearance, use_sheet_room, use_sheet_swipe,
@@ -28,7 +28,7 @@ use crate::{
         use_focus_within, use_form_owner, use_localization, use_media_query, use_popover_on,
         use_theme,
     },
-    platform::{ElementApi, eye_dropper, is_tab, next_task},
+    platform::{ElementApi, eye_dropper, is_tab},
     sx::{StaticSx, ThemeAwareValue, sx},
     theme::{
         COLOR_PICKER_SPACING, FIELD_LABEL_FONT_SIZE, SLIDER_THUMB, SLIDER_TRACK, Size, SizeCss,
@@ -427,6 +427,9 @@ pub fn ColorField(props: ColorFieldProps) -> Element {
         .style(Some(format!("{}{room}{drag}", popover.vars())))
         .prepare();
     let keyboardless = use_keyboardless();
+    let picker_focus = use_picker_focus(anchor, floating, field.id());
+    let dialog_id = format!("{}-dialog", field.id());
+    let entry_id = dialog_id.clone();
     // Waits for placement too: Arrow Down on a closed field opens it, and the
     // picker is not drawn until the box has been measured.
     use_effect(move || {
@@ -434,39 +437,29 @@ pub fn ColorField(props: ColorFieldProps) -> Element {
             return;
         }
         entering.set(false);
-        let _ = floating
-            .query_selector(DROPDOWN_ENTRY)
-            .and_then(|element| element.focus());
+        picker_focus.enter(&entry_id, DROPDOWN_ENTRY);
     });
 
-    // Waits a task for focus to land, then closes unless it stayed in the
-    // input or the dropdown. No platform answer counts as left.
+    // Waits for focus to land, then closes unless it stayed in the input or the dropdown.
     let press = keyboardless.press();
     let settle = move || {
-        // A tap into the picker's text box stays: a WebView answers no `:focus` query (3905).
+        // A tap into the picker's text box stays, the blur's `focusin` aside (3905).
         if press.taken() {
             return;
         }
         spawn(async move {
-            next_task().await;
-            let inside = anchor.query_selector(":focus").is_ok()
-                || floating.query_selector(":focus").is_ok();
-            if !inside {
+            if !picker_focus.settled_inside().await {
                 opened.set(false);
             }
         });
     };
-    let focus_input = move || {
-        let _ = anchor
-            .query_selector("input[data-controlled]")
-            .and_then(|input| input.focus());
-    };
+    let focus_input = move || picker_focus.focus_input();
     // On the Escape stack exactly while the key handler below would take
     // Escape, so a `HoverCard` around this field leaves the press to it.
     use_field_list_layer(
         showing,
         use_callback(move |()| {
-            if floating.query_selector(":focus").is_ok() {
+            if picker_focus.in_dropdown() {
                 focus_input();
             }
             opened.set(false);
@@ -508,6 +501,7 @@ pub fn ColorField(props: ColorFieldProps) -> Element {
     let focus = use_focus_within(
         move || vec![anchor.mounted(), floating.mounted()],
         move |change| {
+            picker_focus.track(change.element, change.within);
             let mut opened = opened;
             if let (0, false) = (change.element, change.within) {
                 let mut blurred = blurred;
@@ -536,7 +530,6 @@ pub fn ColorField(props: ColorFieldProps) -> Element {
         }
         announcer.clear();
     };
-    let dialog_id = format!("{}-dialog", field.id());
     let input = field
         .aria(control)
         .attr_default("type", "text")
@@ -644,7 +637,7 @@ pub fn ColorField(props: ColorFieldProps) -> Element {
     let swatch_clicked = use_callback(move |_: ColorCode| {
         if close_on_swatch_click {
             // The focused swatch is about to go; focus goes back first.
-            if floating.query_selector(":focus").is_ok() {
+            if picker_focus.in_dropdown() {
                 focus_input();
             }
             opened.set(false);
@@ -685,6 +678,7 @@ pub fn ColorField(props: ColorFieldProps) -> Element {
             .event("onmousedown", move |event: MouseEvent| {
                 event.prevent_default()
             })
+            .event("onfocusin", focus.focusin(1))
             .event("onfocusout", focus.focusout(1))
             .event("onkeydown", move |event: KeyboardEvent| match event.key() {
                 Key::Named(NamedKey::Escape) => {
