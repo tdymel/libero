@@ -2,7 +2,7 @@
 
 Crate: `libero`
 Import: `use libero::{chrono::{NaiveDate, NaiveTime}, components::{DateLevel, ChronoPicker, DateRange}};`
-Feature: `date-time` (off by default, turns on `tabs`, `action-icon`, `button`, `use-drag`, `use-media-query`, `use-swipe`; [features.md](features.md))
+Feature: `date-time` (off by default, turns on `tabs`, `action-icon`, `button`, `use-drag`, `use-media-query`, `use-swipe`, `use-timers`; [features.md](features.md))
 Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/form/date/chrono_picker.rs>
 Index: [index.md](index.md) lists every other page
 Description: One picker for every date and time value, from days, months and years to times, date-times and ranges of them.
@@ -69,7 +69,7 @@ uses and no turbofish.
 | `max` | `V::Bound` | - | The latest value that can be picked. For a range, the latest end. |
 | `exclude_date` | `Callback<NaiveDate, bool>` | - | Days that cannot be picked, on top of `min` and `max`. |
 | `allow_deselect` | `bool` | `false` | Clicking the picked day again clears it. Only for a day. |
-| `columns` | `usize` | `1, or 2 for a range above sm` | Months side by side, for a day or a range of days. Unset, a range below `sm` shows its months in one scrolling column under its ends. |
+| `columns` | `usize` | `1, or 2 for a range above sm` | Months side by side, for a day or a range of days; below `sm` only as many as fit, at least one. Unset, a range below `sm` shows its months in one scrolling column under its ends. |
 | `calendar` | `CalendarVariant` | `full` | A month of days, or `mini`, one row of days with buttons that page it. For a day or a date-time. |
 | `days` | `usize` | `7` | Days in the mini calendar's row. |
 | `variant` | `TimePickerVariant` | `analog` | A digital clock, `HH:MM` with a column to turn per part, or a clock face, for values with a time. |

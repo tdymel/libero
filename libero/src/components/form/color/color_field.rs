@@ -358,16 +358,20 @@ pub fn ColorField(props: ColorFieldProps) -> Element {
     let narrow = use_media_query(&narrow_query());
     let room = use_sheet_room(floating, narrow() && popover.placed());
     let clearance = use_sheet_clearance(anchor, field.root(), popover, showing, theme.popover.gap);
+    let close = use_callback(move |()| opened.set(false));
+    let SheetSwipe {
+        strip,
+        listeners,
+        style: drag,
+    } = use_sheet_swipe(floating, close);
     let dropdown_states: Input<States> = States::new().active("bordered").into();
     let dropdown = use_box()
         .framework_sx(&COLOR_FIELD_DROPDOWN_SX)
         .parts(&props.dropdown_parts)
         .states(&dropdown_states)
-        .style(Some(format!("{}{room}", popover.vars())))
+        .style(Some(format!("{}{room}{drag}", popover.vars())))
         .prepare();
     let keyboardless = use_keyboardless();
-    let close = use_callback(move |()| opened.set(false));
-    let SheetSwipe { strip, listeners } = use_sheet_swipe(close);
     // Waits for placement too: Arrow Down on a closed field opens it, and the
     // picker is not drawn until the box has been measured.
     use_effect(move || {

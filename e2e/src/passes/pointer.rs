@@ -148,6 +148,12 @@ pub async fn touch_up(page: &Page, at: Point) -> Result<()> {
     touch_at(page, DispatchTouchEventType::TouchEnd, at).await
 }
 
+/// Moves a held [`touch_down`] to `to`, still held.
+pub async fn touch_move(page: &Page, to: Point) -> Result<()> {
+    use chromiumoxide::cdp::browser_protocol::input::DispatchTouchEventType;
+    touch_at(page, DispatchTouchEventType::TouchMove, to).await
+}
+
 async fn touch_at(
     page: &Page,
     kind: chromiumoxide::cdp::browser_protocol::input::DispatchTouchEventType,

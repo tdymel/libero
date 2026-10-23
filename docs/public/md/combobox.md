@@ -2,7 +2,7 @@
 
 Crate: `libero`
 Import: `use libero::components::{Combobox, ComboboxOption, ComboboxOptionArgs, use_combobox};`
-Feature: `combobox` (on by default, turns on `loader`, `paper`, `scroll-area`, `use-id`, `use-popover`, `visually-hidden`, `use-icon`, `use-swipe`, `use-media-query`; [features.md](features.md))
+Feature: `combobox` (on by default, turns on `loader`, `paper`, `scroll-area`, `use-id`, `use-popover`, `visually-hidden`, `use-icon`, `use-swipe`, `use-media-query`, `use-timers`; [features.md](features.md))
 Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/form/combobox>
 Index: [index.md](index.md) lists every other page
 Description: A listbox that hangs off a trigger you supply, holding no state of its own.

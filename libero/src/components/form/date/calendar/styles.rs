@@ -7,6 +7,9 @@ use crate::{
     theme::{CHRONO_DAY, CHRONO_FONT_SIZE, ChronoPickerDefaults, CssVar, Size, SizeCss},
 };
 
+/// Between months side by side, in px.
+pub(super) const MONTHS_GAP: f64 = 16.0;
+
 /// The size's day, at least 44px to a finger (todo 3901), unless seven would overflow the screen.
 const CALENDAR_DAY: CssVar = CssVar::new("--lsx-calendar-day");
 
@@ -65,8 +68,12 @@ pub(super) static CALENDAR_SX: StaticSx = StaticSx::new(|| {
         )
         .selector(
             "& > [data-slot='months']",
-            sx().display("flex").gap("16px").align_items("flex-start"),
+            sx().display("flex")
+                .gap(format!("{MONTHS_GAP}px"))
+                .align_items("flex-start"),
         )
+        // Drawn only to measure how many months fit (todo 3958); opacity keeps focus.
+        .selector("&[data-state~='measuring']", sx().opacity("0"))
         // Below `sm` a range scrolls its months under the readout (todo 3903).
         // A sheet's flex column shrinks it; inline, the months stop at 60% of the screen.
         .selector(

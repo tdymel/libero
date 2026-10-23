@@ -520,16 +520,20 @@ pub(super) fn use_picker_field<V: FieldValue>(
         showing,
         theme.popover.gap,
     );
+    let close = use_callback(move |()| open_to(false));
+    let SheetSwipe {
+        strip,
+        listeners,
+        style: drag,
+    } = use_sheet_swipe(floating, close);
     let dropdown_states: Input<States> = States::new().active("bordered").into();
     let dropdown_box = use_box()
         .framework_sx(&PICKER_FIELD_DROPDOWN_SX)
         .parts(field.dropdown_parts)
         .states(&dropdown_states)
-        .style(Some(format!("{}{room}", popover.vars())))
+        .style(Some(format!("{}{room}{drag}", popover.vars())))
         .prepare();
     let keyboardless = use_keyboardless();
-    let close = use_callback(move |()| open_to(false));
-    let SheetSwipe { strip, listeners } = use_sheet_swipe(close);
     // Waits for placement: the picker is not drawn until the box is measured.
     use_effect(move || {
         if !entering() || !popover.placed() {

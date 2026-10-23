@@ -445,6 +445,11 @@ fn ComboboxPopup(props: ComboboxPopupProps) -> Element {
     let narrow = use_media_query(&narrow_query());
     let narrow = props.sheet && narrow();
     let room = use_sheet_room(*popover.floating(), narrow && popover.placed());
+    let SheetSwipe {
+        strip,
+        listeners,
+        style: drag,
+    } = use_sheet_swipe(*popover.floating(), props.onclose);
     let dropdown = use_box()
         .framework_sx(match props.sheet {
             true => &COMBOBOX_SHEET_SX,
@@ -456,7 +461,7 @@ fn ComboboxPopup(props: ComboboxPopupProps) -> Element {
         .states(&props.states)
         .variables(&radius_variables)
         .style(Some(match props.sheet {
-            true => format!("{}{room}", popover.vars()),
+            true => format!("{}{room}{drag}", popover.vars()),
             false => popover.vars(),
         }))
         .prepare();
@@ -497,7 +502,6 @@ fn ComboboxPopup(props: ComboboxPopupProps) -> Element {
             div { "data-slot": "sheet-footer", {footer} }
         }
     });
-    let SheetSwipe { strip, listeners } = use_sheet_swipe(props.onclose);
     let (strip, mut attributes) = (props.sheet.then_some(strip), props.attributes);
     if props.sheet {
         attributes.extend(listeners);

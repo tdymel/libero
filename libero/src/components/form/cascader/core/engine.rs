@@ -7,10 +7,8 @@ use crate::{
         accessibility::VisuallyHidden,
         common::{ClassList, Input, Parts},
         form::{
-            ComboboxState, DropdownPart, TouchHold,
-            combobox::nothing_found_row,
-            phone_sheet::{SheetSwipe, use_sheet_swipe},
-            use_refocus_on_close, use_touch_hold,
+            ComboboxState, DropdownPart, TouchHold, combobox::nothing_found_row,
+            phone_sheet::SheetSwipe, use_refocus_on_close, use_touch_hold,
         },
         layout::BoxStyle,
     },
@@ -183,6 +181,9 @@ pub(in super::super) fn use_cascader_engine(setup: EngineSetup) -> Engine {
         wrapper,
         dropdown,
         clearance,
+        swipe: SheetSwipe {
+            strip, listeners, ..
+        },
     } = use_cascader_dropdown(DropdownSetup {
         state,
         anchor,
@@ -240,7 +241,6 @@ pub(in super::super) fn use_cascader_engine(setup: EngineSetup) -> Engine {
         )
     });
 
-    let SheetSwipe { strip, listeners } = use_sheet_swipe(use_callback(move |()| state.close()));
     let mut attributes = attributes;
     attributes.extend(listeners);
     let dropdown_keys = keys.clone();

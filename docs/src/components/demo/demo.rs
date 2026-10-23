@@ -624,10 +624,10 @@ pub fn Demo(
                 align: "stretch",
                 sx: sx().border_bottom(border()),
                 Box {
-                    sx: sx()
+                    // A phone's narrow card keeps 8px: a coarse pointer's 308px calendar fits at 360px (3955).
+                    sx: card_query(sx().padding("8px"), 400, sx().padding("24px"))
                         .flex("1")
                         .min_width("240px")
-                        .padding("24px")
                         .display("flex")
                         .align_items("center")
                         // A preview wider than the card scrolls rather than

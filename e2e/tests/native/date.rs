@@ -66,6 +66,64 @@ fn a_click_opens_the_date_dialog_and_leaves_focus_in_the_input() {
     assert!(page.is_focused(INPUT), "{}", page.focus_owner());
 }
 
+/// The sheet's painted `translateY`, 0 for none.
+fn sheet_shift(page: &Page) -> f64 {
+    page.painted_transform(DIALOG)
+        .map_or(0.0, |affine| affine[5])
+}
+
+/// Todo 3957: a short swipe down the sheet's strip springs back; a long one slides the
+/// sheet off as Blitz animates it, then the timer closes it (Blitz fires no `transitionend`).
+#[test]
+fn a_swiped_sheet_slides_off_then_closes() {
+    const STRIP: &str = "[data-slot=sheet-handle]";
+    let mut page = mount(chrono_field);
+    page.resize(360, 640);
+    page.click(INPUT);
+    assert!(page.wait_for(|page| page.exists(STRIP)), "{}", page.tree());
+    let (left, top, width, height) = page.rect(STRIP);
+    let (x, y) = ((left + width / 2.0) as f32, (top + height / 2.0) as f32);
+    page.swipe_from(x, y, 0.0, 20.0);
+    page.advance(1.0);
+    assert!(page.exists(DIALOG), "a short swipe closed the sheet");
+    assert!(
+        sheet_shift(&page).abs() < 1.0,
+        "not sprung back: {}",
+        sheet_shift(&page)
+    );
+    page.swipe_from(x, y, 0.0, 120.0);
+    page.advance(0.1);
+    let midway = sheet_shift(&page);
+    assert!(midway > 1.0, "the sheet did not slide: {midway}");
+    assert!(
+        page.wait_for(|page| !page.exists(DIALOG)),
+        "the slid sheet never closed"
+    );
+}
+
+/// Todo 3958: an explicit `columns: 2` shows the months that fit below `sm`, both past it.
+#[test]
+fn explicit_columns_fit_a_narrow_window() {
+    fn pair() -> Element {
+        let mut range = use_signal(|| None::<DateRange<NaiveDate>>);
+        rsx! {
+            DateRangePicker { value: range(), today: day(2026, 3, 18), columns: 2usize, onchange: move |v| range.set(v) }
+        }
+    }
+    let mut page = mount(pair);
+    let months = |page: &mut Page, width: u32, count: usize| {
+        page.resize(width, 768);
+        assert!(
+            page.wait_for(|page| page.query_all("[role=grid]").len() == count),
+            "{} months at {width}px",
+            page.query_all("[role=grid]").len()
+        );
+    };
+    months(&mut page, 1024, 2);
+    months(&mut page, 360, 1);
+    months(&mut page, 1024, 2);
+}
+
 fn range_picker() -> Element {
     let mut range = use_signal(|| None::<DateRange<NaiveDate>>);
     rsx! {

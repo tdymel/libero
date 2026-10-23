@@ -9,7 +9,8 @@ use crate::{
             DropdownPart,
             combobox::COMBOBOX_DROPDOWN_SX,
             phone_sheet::{
-                phone_sheet_sx, sheet_clearance_style, use_sheet_clearance, use_sheet_room,
+                SheetSwipe, phone_sheet_sx, sheet_clearance_style, use_sheet_clearance,
+                use_sheet_room, use_sheet_swipe,
             },
         },
         layout::{BoxStyle, use_box},
@@ -79,6 +80,8 @@ pub(super) struct Dropdown {
     pub(super) wrapper: BoxStyle,
     pub(super) dropdown: BoxStyle,
     pub(super) clearance: f64,
+    /// The sheet's swipe strip and the box's listeners; its style is in `dropdown`.
+    pub(super) swipe: SheetSwipe,
 }
 
 pub(super) fn use_cascader_dropdown(setup: DropdownSetup) -> Dropdown {
@@ -114,6 +117,7 @@ pub(super) fn use_cascader_dropdown(setup: DropdownSetup) -> Dropdown {
 
     let sheet_clearance = use_sheet_clearance(anchor, field, popover, opened, gap);
     let room = use_sheet_room(*popover.floating(), opened && popover.placed());
+    let swipe = use_sheet_swipe(*popover.floating(), use_callback(move |()| state.close()));
 
     let search_box = use_box().framework_sx(&CASCADER_SEARCH_SX).prepare();
     let wrapper = use_box()
@@ -132,7 +136,7 @@ pub(super) fn use_cascader_dropdown(setup: DropdownSetup) -> Dropdown {
         .parts(parts)
         .states(&dropdown_states)
         // Vars, not inline placement: `COMBOBOX_DROPDOWN_SX` places by class, so `sx` can move it.
-        .style(Some(format!("{}{room}", popover.vars())));
+        .style(Some(format!("{}{room}{}", popover.vars(), swipe.style)));
     if let Some(class) = class {
         dropdown = dropdown.class(class);
     }
@@ -149,5 +153,6 @@ pub(super) fn use_cascader_dropdown(setup: DropdownSetup) -> Dropdown {
         wrapper,
         dropdown,
         clearance: sheet_clearance,
+        swipe,
     }
 }

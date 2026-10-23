@@ -1,3 +1,4 @@
+mod fit;
 mod render;
 mod styles;
 #[cfg(test)]
@@ -17,12 +18,12 @@ use super::{
 use crate::{
     components::{
         common::{ClassList, HtmlTag, Input, Part, Parts, States},
-        form::use_fieldset_disabled,
+        form::{phone_sheet::narrow_query, use_fieldset_disabled},
         layout::use_box,
     },
     hooks::{
         ElementHandle, SwipeDirection, SwipeEvent, SwipeOptions, use_element, use_formats,
-        use_localization, use_swipe,
+        use_localization, use_media_query, use_swipe,
     },
     platform::ElementApi,
     sx::Sx,
@@ -30,6 +31,7 @@ use crate::{
 };
 
 use self::{
+    fit::use_month_fit,
     render::{Nav, Week, Weekdays},
     styles::CALENDAR_SX,
     view::{FocusRequest, Strip, View},
@@ -254,9 +256,23 @@ pub(super) fn Calendar(props: CalendarProps) -> Element {
     let scroll = props.scroll && lowest == DateLevel::Day && props.variant != CalendarVariant::Mini;
     // Months added at either end of a scrolling calendar.
     let more = use_signal(|| 0i64);
+    let root = use_element();
+    // A new `lowest` remounts the calendar (`DateValue::picker` keys it).
+    let mut level = use_signal(|| lowest);
+    // Below `sm`, side by side only the months that fit (todo 3958).
+    let narrow = use_media_query(&narrow_query());
+    let fit = use_month_fit(
+        root,
+        props.columns.max(1) as i64,
+        narrow()
+            && !scroll
+            && props.columns > 1
+            && props.variant != CalendarVariant::Mini
+            && level() == DateLevel::Day,
+    );
     let columns = match scroll {
         true => SCROLL_MONTHS + more(),
-        false => props.columns.max(1) as i64,
+        false => fit.columns,
     };
     let (min, max, exclude_date) = (props.min, props.max, props.exclude_date.0);
     // No native `disabled`, nor `inert`: either would drop a focused day's focus (todo 3881).
@@ -265,12 +281,9 @@ pub(super) fn Calendar(props: CalendarProps) -> Element {
     let focusable = props.focusable && !disabled;
 
     let (today, refresh_today) = use_today_with_refresh(props.today);
-    // A new `lowest` remounts the calendar (`DateValue::picker` keys it).
-    let mut level = use_signal(|| lowest);
     let mut paged = use_signal(|| None::<NaiveDate>);
     let active = use_signal(|| None::<NaiveDate>);
     let mut nav_targets = use_hook(|| CopyValue::new([FALLBACK_MONTH; 2]));
-    let root = use_element();
     let focus = FocusRequest {
         root,
         request: use_focus_after_render(root),
@@ -484,6 +497,7 @@ pub(super) fn Calendar(props: CalendarProps) -> Element {
         .unwrap_or_default()
         .with(props.size.state_name(), true)
         .with("scroll", scroll)
+        .with("measuring", fit.measuring)
         .into();
     let root_box = use_box()
         .framework_sx(&CALENDAR_SX)

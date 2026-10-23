@@ -111,9 +111,9 @@ pub(crate) const FEATURES: &[Feature] = &[
     feature("cascader", "form", "Cascader", &["combobox", "action-icon", "use-media-query"], false, &["/form/cascader"]),
     feature("checkbox", "form", "Checkbox", &["use-icon", "use-id", "visually-hidden"], true, &["/form/checkbox"]),
     feature("chip", "form", "Chip", &["action-icon", "anchor"], true, &["/form/chip"]),
-    feature("color", "form", "ColorField, ColorPicker, ColorSwatch, HueSlider, AlphaSlider", &["slider", "action-icon", "use-media-query", "use-swipe"], false, &["/form/color-field", "/form/color-picker"]),
-    feature("combobox", "form", "Combobox, use_combobox", &["loader", "paper", "scroll-area", "use-id", "use-popover", "visually-hidden", "use-icon", "use-swipe", "use-media-query"], true, &["/form/combobox"]),
-    feature("date-time", "form", "ChronoField, ChronoPicker, DateField, DatePicker, TimeField, TimePicker and the other date and time fields and pickers", &["tabs", "action-icon", "button", "use-drag", "use-media-query", "use-swipe"], false, &["/form/chrono-field", "/form/chrono-picker"]),
+    feature("color", "form", "ColorField, ColorPicker, ColorSwatch, HueSlider, AlphaSlider", &["slider", "action-icon", "use-media-query", "use-swipe", "use-timers"], false, &["/form/color-field", "/form/color-picker"]),
+    feature("combobox", "form", "Combobox, use_combobox", &["loader", "paper", "scroll-area", "use-id", "use-popover", "visually-hidden", "use-icon", "use-swipe", "use-media-query", "use-timers"], true, &["/form/combobox"]),
+    feature("date-time", "form", "ChronoField, ChronoPicker, DateField, DatePicker, TimeField, TimePicker and the other date and time fields and pickers", &["tabs", "action-icon", "button", "use-drag", "use-media-query", "use-swipe", "use-timers"], false, &["/form/chrono-field", "/form/chrono-picker"]),
     feature("fieldset", "form", "Fieldset", &["box", "use-icon", "use-id", "visually-hidden"], true, &["/form/fieldset"]),
     noted(
         feature("file-field", "form", "FileField", &["chip", "select", "alert", "modal", "action-icon", "button", "dialog", "loader"], false, &["/form/file-field"]),

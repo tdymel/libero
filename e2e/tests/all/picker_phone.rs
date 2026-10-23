@@ -313,6 +313,142 @@ fn a_swipe_pages_the_day_sheet() {
     });
 }
 
+/// The sheet's `translateY`, `null` once it is gone.
+fn sheet_shift() -> String {
+    format!(
+        "(() => {{ const s = document.querySelector({SHEET:?}); \
+         return s ? new DOMMatrix(getComputedStyle(s).transform).m42 : null; }})()"
+    )
+}
+
+/// Records in `window.slid` whether the sheet was ever sent off the screen.
+fn slide_watch() -> String {
+    format!(
+        "window.slid = false; new MutationObserver(() => {{ \
+         const s = document.querySelector({SHEET:?}); \
+         if (s && s.style.getPropertyValue('--lsx-swipe-drag').startsWith('calc')) window.slid = true; \
+         }}).observe(document.body, {{ subtree: true, attributes: true, attributeFilter: ['style'] }})"
+    )
+}
+
+/// Todo 3957: the sheet follows a finger down its strip, springs back from a short swipe and
+/// slides off from a long one.
+#[test]
+fn a_swipe_down_slides_the_sheet_away() {
+    block_on(async {
+        let fixture = phone().await;
+        let page = &fixture.page;
+        let strip = format!("{SHEET} [data-slot=sheet-handle]");
+        let shifted = |by: f64| format!("Math.abs({}  - {by}) < 1", sheet_shift());
+        tap(page, &input("due")).await.unwrap();
+        sheet_shown(page).await.unwrap();
+        let at = pointer::touch_down(page, &strip).await.unwrap();
+        let down = |dy: f64| pointer::Point {
+            x: at.x,
+            y: at.y + dy,
+        };
+        pointer::touch_move(page, down(10.0)).await.unwrap();
+        pointer::touch_move(page, down(30.0)).await.unwrap();
+        wait::for_js_true(
+            page,
+            &shifted(30.0),
+            "the sheet 30px down, under the finger",
+        )
+        .await
+        .unwrap();
+        pointer::touch_up(page, down(30.0)).await.unwrap();
+        wait::for_js_true(page, &shifted(0.0), "a short swipe sprung back")
+            .await
+            .unwrap();
+        page.evaluate(slide_watch()).await.unwrap();
+        pointer::touch_drag(page, at, down(120.0), 2).await.unwrap();
+        let gone = format!("!document.querySelector({SHEET:?}) && window.slid");
+        wait::for_js_true(
+            page,
+            &gone,
+            "a long swipe slid the sheet off, then closed it",
+        )
+        .await
+        .unwrap();
+        fixture.console.assert_clean("a swiped-away sheet").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
+/// Todo 3957: with reduced motion a long swipe closes the sheet without sliding.
+#[test]
+fn reduced_motion_closes_a_swiped_sheet_at_once() {
+    block_on(async {
+        let fixture = phone().await;
+        let page = &fixture.page;
+        e2e::browser::emulate_media(page, e2e::browser::Scheme::Light, Some(true))
+            .await
+            .unwrap();
+        e2e::passes::motion::assert_reduced_motion_matches(page)
+            .await
+            .unwrap();
+        tap(page, &input("due")).await.unwrap();
+        sheet_shown(page).await.unwrap();
+        page.evaluate(slide_watch()).await.unwrap();
+        let at = pointer::centre_of(page, &format!("{SHEET} [data-slot=sheet-handle]"))
+            .await
+            .unwrap();
+        let to = pointer::Point {
+            x: at.x,
+            y: at.y + 120.0,
+        };
+        pointer::touch_drag(page, at, to, 2).await.unwrap();
+        let closed = format!("!document.querySelector({SHEET:?}) && !window.slid");
+        wait::for_js_true(page, &closed, "closed without a slide")
+            .await
+            .unwrap();
+        fixture
+            .console
+            .assert_clean("a reduced-motion swiped sheet")
+            .unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
+/// Todo 3958: an explicit `columns: 2` range at 360px pages one month, no sideways scroll.
+#[test]
+fn a_phone_cuts_explicit_columns_to_the_months_that_fit() {
+    block_on(async {
+        let fixture = phone().await;
+        let page = &fixture.page;
+        tap(page, &input("pair")).await.unwrap();
+        sheet_shown(page).await.unwrap();
+        let js = format!(
+            "(() => {{ const s = document.querySelector({SHEET:?}); \
+             const grids = s.querySelectorAll('[data-slot=months] > [role=grid]'); \
+             const root = grids[0]?.closest('[data-state]'); \
+             return grids.length === 1 && !s.querySelector('[data-scroll]') \
+               && s.querySelectorAll('[data-slot=nav]').length === 2 \
+               && !root.matches('[data-state~=measuring]') && getComputedStyle(root).opacity === '1' \
+               && s.scrollWidth <= s.clientWidth \
+               && grids[0].getAttribute('aria-label') === 'September 2026'; }})()"
+        );
+        wait::for_js_true(page, &js, "one paged month, nothing sideways")
+            .await
+            .unwrap();
+        tap(page, &format!("{SHEET} [data-slot=nav]:last-of-type"))
+            .await
+            .unwrap();
+        let paged = format!(
+            "document.querySelector('{SHEET} [data-slot=months] > [role=grid]')\
+             ?.getAttribute('aria-label') === 'October 2026'"
+        );
+        wait::for_js_true(page, &paged, "the next month, one at a time")
+            .await
+            .unwrap();
+        fixture
+            .console
+            .assert_clean("a phone's explicit columns")
+            .unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
 /// Above `sm`, with a mouse: a popover under the field, typed in directly, no text box of its own.
 #[test]
 fn a_desktop_keeps_the_popover_and_the_keyboard() {

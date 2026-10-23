@@ -2,7 +2,7 @@
 
 Crate: `libero`
 Import: `use libero::{chrono::{NaiveDate, NaiveDateTime, NaiveTime, TimeDelta}, components::{ChronoField, DateRange}};`
-Feature: `date-time` (off by default, turns on `tabs`, `action-icon`, `button`, `use-drag`, `use-media-query`, `use-swipe`; [features.md](features.md))
+Feature: `date-time` (off by default, turns on `tabs`, `action-icon`, `button`, `use-drag`, `use-media-query`, `use-swipe`, `use-timers`; [features.md](features.md))
 Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/form/date/chrono_field.rs>
 Index: [index.md](index.md) lists every other page
 Description: A text field for every date and time value, typed leniently, with the matching `ChronoPicker` in a dropdown.
@@ -143,7 +143,7 @@ and `DateTimeRangeField`, with only the props that type uses and no turbofish.
 | `twelve_hour` | `bool` | - | A 12-hour clock with AM and PM. Defaults to whether the time format is one. |
 | `calendar` | `CalendarVariant` | `full` | A month of days, or `mini`, one row of days with buttons that page it. For a day or a date-time. |
 | `days` | `usize` | `7` | Days in the mini calendar's row. |
-| `columns` | `usize` | `1, or 2 for a range above sm` | Months side by side. Unset, a range below `sm` shows its months in one scrolling column, with its ends on top and a Save button. |
+| `columns` | `usize` | `1, or 2 for a range above sm` | Months side by side; below `sm` only as many as fit, at least one. Unset, a range below `sm` shows its months in one scrolling column, with its ends on top and a Save button. |
 | `close_on_change` | `bool` | `true` | Picking a day, or a range's second end, closes the dropdown. A range's scrolling months below `sm` close on Save instead. |
 | `name` | `FieldName<Option<V>>` | - | What the field posts as, the value in ISO 8601 whatever the text shows. A path also binds it to the surrounding `Form`'s value when it has no `onchange`. |
 | `validate` | `Validators<Option<V>>` | - | Rules over the value, shown once the field loses focus or its form is submitted. |
