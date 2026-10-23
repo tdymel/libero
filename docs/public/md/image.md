@@ -13,8 +13,6 @@ an optional click-to-zoom overlay. `fit` maps straight onto `object-fit`;
 
 ## Usage
 
-`fallback_src` loads only once `src` fails, so a working `src` never fetches it.
-
 ```rust
 use dioxus::prelude::*;
 use libero::{components::Image, sx::sx};
@@ -32,37 +30,12 @@ fn Demo() -> Element {
 }
 ```
 
-`zoomable` makes the image a button that opens it in a single-picture
-[Lightbox](lightbox.md), where it can be zoomed and panned. `zoomed_src` gives
-the overlay a larger source when the inline one is a thumbnail. Inside a linked
-[ImageItem](image_list.md) the link wins and `zoomable` is ignored, with a
-warning in a debug build.
-
-```rust
-use dioxus::prelude::*;
-use libero::{components::Image, sx::sx};
-
-#[component]
-fn Demo() -> Element {
-    rsx! {
-        Image {
-            src: "/landscape-thumb.png",
-            zoomed_src: "/landscape-full.png",
-            alt: "A stylised landscape",
-            radius: "md",
-            zoomable: true,
-            sx: sx().width("160px").height("160px"),
-        }
-    }
-}
-```
-
 ## Props
 
 | Prop | Type | Default | Description |
 |---|---|---|---|
 | `src` | `String` | required | The image source. A `javascript:` or `vbscript:` URL, here and in `fallback_src` and `zoomed_src`, renders no picture and warns in debug builds; `data:` and `blob:` pass. The browser fetches `src` and `fallback_src` with a plain GET and the page's cookies, so a URL built from user data can act as a tracking beacon. |
-| `fallback_src` | `Option<String>` | `None` | Shown in place of `src` once it fails to load. |
+| `fallback_src` | `Option<String>` | `None` | Shown in place of `src` once it fails to load. A working `src` never fetches it. |
 | `zoomed_src` | `Option<String>` | `None` | A larger source for the zoom overlay. Falls back to `src`. |
 | `fit` | `ImageFit` | `cover` | Maps onto `object-fit`. |
 | `radius` | `ThemeAwareValue` | `0` | Corner radius, a step on the radius scale, or any CSS, e.g. `radius: "0"`. |

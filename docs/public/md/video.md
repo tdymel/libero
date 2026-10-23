@@ -47,39 +47,6 @@ fn Demo() -> Element {
 }
 ```
 
-A captions or subtitles track enables the captions button: it shows the
-default one, else the first. Two or more make it a menu of Off and each track.
-Without one the button stays, disabled. Pass a `use_media()` handle to `Video { media }` to drive
-the player from outside.
-
-## Formats
-
-A browser plays the first `sources` entry whose type it supports, then `src`.
-WebM first and an MP4 as `src` reach every browser, Safari included.
-
-```rust
-use dioxus::prelude::*;
-use libero::components::{MediaSource, Video};
-
-#[component]
-fn Demo() -> Element {
-    rsx! {
-        Video {
-            src: "/launch.mp4",
-            sources: vec![MediaSource::new("/launch.webm", "video/webm")],
-            label: "Launch day",
-        }
-    }
-}
-```
-
-## The demo video
-
-"Big Buck Bunny", (c) 2008 Blender Foundation, <https://peach.blender.org>,
-under CC BY 3.0, streamed from Wikimedia Commons, so it plays only online. Its
-English and German tracks are one placeholder caption each, not the film's
-sound.
-
 ## Props
 
 | Prop | Type | Default | Description |
@@ -89,7 +56,7 @@ sound.
 | `label` | `String` | required | Names the player, e.g. the video's title. |
 | `poster` | `Option<String>` | `None` | A picture shown until playing starts. |
 | `aspect_ratio` | `Option<String>` | `16 / 9` | The picture's CSS `aspect-ratio`, which the box holds before the file loads, poster or not. A portrait clip wants `"9 / 16"`; `"auto"` follows the file, and the box jumps as it loads. A picture of another shape is letterboxed. |
-| `tracks` | `Vec<MediaTrack>` | `[]` | WebVTT files: `src`, `kind` (`Captions`, `Subtitles`, `Descriptions`, `Chapters`), `srclang`, `label`, `default`. A captions or subtitles track enables the captions button; two or more make it a menu of them. A `Chapters` track (the `default` one, else the first) is fetched and read for the chapters when `chapters` is empty. |
+| `tracks` | `Vec<MediaTrack>` | `[]` | WebVTT files: `src`, `kind` (`Captions`, `Subtitles`, `Descriptions`, `Chapters`), `srclang`, `label`, `default`. A captions or subtitles track enables the captions button, which shows the `default` one, else the first; two or more make it a menu of Off and each track. Without one the button stays, disabled. A `Chapters` track (the `default` one, else the first) is fetched and read for the chapters when `chapters` is empty. |
 | `chapters` | `Vec<Chapter>` | `[]` | `Chapter::new(start_seconds, title)`: splits the seek track into segments with gaps, names the chapter in the slider's value, shows the current one beside the time and adds a chapters menu. Wins over a `Chapters` track. |
 | `media` | `Option<MediaHandle>` | `None` | A handle from `use_media()`, to drive or read the player from outside. |
 | `autoplay` | `bool` | `false` | Starts on load. Browsers refuse it with sound: pair it with `muted`; a debug build warns otherwise. |

@@ -16,7 +16,7 @@ pub fn KanbanPage() -> Element {
                 props("Kanban", vec![
                     prop("onmove", "EventHandler<KanbanMove>")
                         .default("required")
-                        .doc("Fires when a card changed place: on a drop, a move button or a Move to entry. Apply it to your data with `KanbanMove::apply`; until then the board keeps its old order."),
+                        .doc("Fires when a card changed place: on a drop, a move button or a Move to entry. Apply it to your data with `KanbanMove::apply`; until then the board keeps its old order. A drag to another column lands the card where it was let go; the Move to menu lands it at that column's end. Key each column and card by its data, not its index."),
                     prop("oncolumnmove", "Option<EventHandler<KanbanColumnMove>>")
                         .default("None")
                         .doc("Fires when a column changed place, by a drag or the keys of its header's reorder handle, or by its move buttons. Set, each column header shows them. Apply it with `KanbanColumnMove::apply` to the column names and to the cards, so the `index` of each column follows; until then the board keeps its old order."),

@@ -33,35 +33,6 @@ fn Demo() -> Element {
 }
 ```
 
-A bare number works. Omit `value`, or pass `value: None`, for the spinning ring.
-
-```rust,ignore
-CircularProgress { aria_label: "Connecting", value: None }
-```
-
-A step count reads better than a percentage: say it in `aria_valuetext`.
-
-```rust
-use dioxus::prelude::*;
-use libero::components::CircularProgress;
-
-#[component]
-fn Demo() -> Element {
-    let sent = use_signal(|| 3.0);
-
-    rsx! {
-        CircularProgress {
-            aria_label: "Files sent",
-            value: sent(),
-            max: 8.0,
-            size: "xl",
-            aria_valuetext: format!("{sent} of 8 files"),
-            "{sent}/8"
-        }
-    }
-}
-```
-
 ## Props
 
 | Prop | Type | Default | Description |

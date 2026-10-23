@@ -43,38 +43,13 @@ fn Demo() -> Element {
 }
 ```
 
-Key each column and card by its data, not its index. A drag to another column
-lands the card where it was let go; the Move to menu lands it at that column's
-end.
-
-### Column reorder
-
-Set `oncolumnmove` and each column header gets a reorder handle and, with
-`move_buttons`, two move buttons. Keep the column order as data next to the
-cards and apply each `KanbanColumnMove` to both:
-
-```rust,ignore
-let mut names = use_signal(|| vec!["To do", "Doing", "Done"]);
-// in the Kanban:
-oncolumnmove: move |step: KanbanColumnMove| {
-    step.apply(&mut names.write());
-    step.apply(&mut cards.write());
-},
-```
-
-## Cards
-
-The cards are your content: the board draws no card look. The docs demo builds
-Jira-style issue cards from `Text`, `Badge`, `Icon` and `Avatar`, with a count
-in each column's `header`.
-
 ## Props
 
 ### Kanban
 
 | Prop | Type | Default | Description |
 |---|---|---|---|
-| `onmove` | `EventHandler<KanbanMove>` | required | Fires when a card changed place: on a drop, a move button or a Move to entry. Apply it to your data with `KanbanMove::apply`; until then the board keeps its old order. |
+| `onmove` | `EventHandler<KanbanMove>` | required | Fires when a card changed place: on a drop, a move button or a Move to entry. Apply it to your data with `KanbanMove::apply`; until then the board keeps its old order. A drag to another column lands the card where it was let go; the Move to menu lands it at that column's end. Key each column and card by its data, not its index. |
 | `oncolumnmove` | `Option<EventHandler<KanbanColumnMove>>` | `None` | Fires when a column changed place, by a drag or the keys of its header's reorder handle, or by its move buttons. Set, each column header shows them. Apply it with `KanbanColumnMove::apply` to the column names and to the cards, so the `index` of each column follows; until then the board keeps its old order. |
 | `move_buttons` | `bool` | `true` | Each card's two buttons that move it one slot in its column without dragging (WCAG 2.5.7), and with `oncolumnmove` each column's two that move it one place on the board. Off, only a drag, the handle's keys and the cards' Move to menu move anything: columns have no pointer way but dragging (WCAG 2.5.7). |
 | `children` | `Element` | required | The `KanbanColumn`s. |

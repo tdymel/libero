@@ -30,28 +30,6 @@ fn Demo() -> Element {
 }
 ```
 
-With every prop set:
-
-```rust
-use dioxus::prelude::*;
-use libero::components::Blockquote;
-
-#[component]
-fn Demo() -> Element {
-    rsx! {
-        Blockquote {
-            size: "lg",
-            color: "info",
-            radius: "md",
-            attribution: rsx! { "Albert Einstein" },
-            work: "Letter to his son Eduard",
-            cite_url: "https://example.org/letters/1930-02-05",
-            "Life is like riding a bicycle. To keep your balance, you must keep moving."
-        }
-    }
-}
-```
-
 ## Props
 
 | Prop | Type | Default | Description |

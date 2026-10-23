@@ -32,50 +32,6 @@ fn Demo() -> Element {
 }
 ```
 
-A vertical marquee needs a height, or it is as tall as all its copies.
-
-```rust
-use dioxus::prelude::*;
-use libero::{components::{Chip, Marquee}, sx::sx};
-
-#[component]
-fn Demo() -> Element {
-    rsx! {
-        Marquee { orientation: "vertical", sx: sx().height("160px"),
-            Chip { "Rust" }
-            Chip { "Dioxus" }
-        }
-    }
-}
-```
-
-The page's own control, with the built-in toggle turned off.
-
-```rust
-use dioxus::prelude::*;
-use libero::components::{Button, Chip, Marquee};
-
-#[component]
-fn Demo() -> Element {
-    let mut paused = use_signal(|| false);
-    rsx! {
-        Button { selected: paused(), onclick: move |_| paused.toggle(), "Pause the ticker" }
-        Marquee {
-            pause_control: false,
-            paused: paused(),
-            onpausechange: move |next| paused.set(next),
-            Chip { "Rust" }
-            Chip { "Dioxus" }
-        }
-    }
-}
-```
-
-## Reduced motion
-
-Under `prefers-reduced-motion: reduce` it does not move. It shows one copy in a
-strip the reader scrolls, without the fade or the toggle.
-
 ## Props
 
 | Prop | Type | Default | Description |

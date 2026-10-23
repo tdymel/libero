@@ -16,57 +16,12 @@ is not an overlay. `Form`'s error summary is an `Alert` with `color: "error"`
 
 ```rust
 use dioxus::prelude::*;
-use libero::components::Alert;
-
-#[component]
-fn Demo() -> Element {
-    rsx! {
-        Alert { title: "Card expiring",
-            "Your card ends 09/26. Update it before the next invoice."
-        }
-    }
-}
-```
-
-With `onclose` set, a close button shows. The alert does not hide itself, so
-unmount it:
-
-```rust
-use dioxus::prelude::*;
-use libero::components::Alert;
-
-#[component]
-fn Demo() -> Element {
-    let mut dismissed = use_signal(|| false);
-
-    rsx! {
-        if !dismissed() {
-            Alert {
-                color: "warning",
-                title: "Card expiring",
-                icon: rsx! { WarningGlyph {} },
-                onclose: move |_| dismissed.set(true),
-                "Your card ends 09/26. Update it before the next invoice."
-            }
-        }
-    }
-}
-#
-# #[component] fn WarningGlyph() -> Element { rsx! {} }
-```
-
-With `actions`, buttons sit beside the message, before the close button. A
-`standard` `Button` in `currentColor` reads on every variant:
-
-```rust
-use dioxus::prelude::*;
 use libero::components::{Alert, Button};
 
 #[component]
 fn Demo() -> Element {
     rsx! {
         Alert {
-            color: "warning",
             title: "Card expiring",
             actions: rsx! {
                 Button { variant: "standard", color: "currentColor", size: "xs", "Update card" }

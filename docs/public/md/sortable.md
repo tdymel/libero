@@ -33,105 +33,6 @@ fn Demo() -> Element {
 }
 ```
 
-Key each item by its data, not its index. A reorder then moves the item's node,
-and the handle keeps the focus.
-
-## The hooks
-
-`use_sortable(SortableOptions)` returns a `SortableHandle`: the list's
-`element`, three pointer handlers for the element holding the items, and
-`announcement`, the last lift, move, drop or cancel in words for a
-`role="status"` region. Call `use_sortable_item(index)` in each item's own
-component below it. Its `SortableItemHandle` has the item's `element`, the
-grab `handle` with its `onpointerdown`, `onkeydown` and `onblur`, and
-`style()`, the `transform` that moves the item while a drag is on and the
-slide into its slot after a drop. `earlier`/`onearlier` and `later`/`onlater`
-wire your move buttons, `first` and `last` say when to disable them.
-`dragging` and `sorting` say whether this item, or any, is dragged. A hook
-item is named by position ("Item 2") in the announcements, unless you call
-`use_labelled_sortable_item(index, Some(name))` instead: it names the item as
-your grab handle does. `instructions` is the
-localized key help for the grab handle: render it in a hidden element with an
-id of yours and point the handle's `aria-describedby` at that id. Where you
-show the move buttons on a touch screen, use `touch_instructions` instead: a
-tap lifts nothing, so it points to the buttons.
-
-```rust
-use dioxus::prelude::*;
-use libero::{
-    components::{Box, Orientation, VisuallyHidden},
-    hooks::{SortableMove, SortableOptions, use_labelled_sortable_item, use_sortable},
-};
-
-#[component]
-fn Demo() -> Element {
-    let mut fruit = use_signal(|| vec!["Apple", "Pear", "Plum"]);
-    let list = use_sortable(SortableOptions {
-        orientation: Orientation::Vertical,
-        onreorder: Callback::new(move |step: SortableMove| step.apply(&mut fruit.write())),
-    });
-
-    rsx! {
-        Box {
-            role: "list",
-            onmounted: list.element.mount(),
-            onpointermove: move |event| list.onpointermove.call(event),
-            onpointerup: move |event| list.onpointerup.call(event),
-            onpointercancel: move |event| list.onpointercancel.call(event),
-            for (index, name) in fruit().into_iter().enumerate() {
-                Fruit { key: "{name}", index, name }
-            }
-        }
-        VisuallyHidden { role: "status", {list.announcement} }
-    }
-}
-
-#[component]
-fn Fruit(index: usize, name: &'static str) -> Element {
-    let item = use_labelled_sortable_item(index, Some(name.to_string()));
-    rsx! {
-        Box {
-            role: "listitem",
-            onmounted: item.element.mount(),
-            style: item.style(),
-            div { id: "help-{name}", hidden: true, {item.instructions} }
-            button {
-                onmounted: item.handle.mount(),
-                aria_describedby: "help-{name}",
-                onpointerdown: move |event| item.onpointerdown.call(event),
-                onkeydown: move |event| item.onkeydown.call(event),
-                onblur: move |event| item.onblur.call(event),
-                style: "touch-action: none",
-                "Reorder {name}"
-            }
-            button {
-                onmounted: item.earlier.mount(),
-                aria_label: "Move {name} up",
-                onclick: move |event| item.onearlier.call(event),
-                disabled: (item.first)(),
-                "Up"
-            }
-            button {
-                onmounted: item.later.mount(),
-                aria_label: "Move {name} down",
-                onclick: move |event| item.onlater.call(event),
-                disabled: (item.last)(),
-                "Down"
-            }
-        }
-    }
-}
-```
-
-## Your own markup
-
-For your own markup, `use_sortable` gives the list's handlers and
-`use_sortable_item(index)` each item's handle, element, move buttons and
-`style()`. The component is those two hooks plus a grip button, two move
-buttons and a status region. `style()` is empty while an item sits in its slot
-and has never moved, and `transform: none` once it has, so an idle item gets no
-stacking context or fixed-position containing block from it.
-
 ## Props
 
 ### Sortable
@@ -141,13 +42,13 @@ stacking context or fixed-position containing block from it.
 | `orientation` | `Orientation` | `vertical` | `vertical` stacks the items, `horizontal` puts them in a row. |
 | `onreorder` | `EventHandler<SortableMove>` | required | Fires on drop, or on a move button, when an item changed place. Apply the move to your data with `SortableMove::apply`; until then the list keeps its old order. |
 | `move_buttons` | `bool` | `true` | Each item's two buttons that move it one slot without dragging (WCAG 2.5.7). Off, only a drag and the handle's keys reorder: the pointer has no way but dragging (WCAG 2.5.7), so offer one yourself. |
-| `children` | `Element` | required | The `SortableItem`s. For your own markup, `use_sortable` gives the list's handlers and `use_sortable_item(index)` each item's handle, element, move buttons, `style()`, `instructions` (the key help for the grab handle's description) and `touch_instructions` (for a touch screen showing the move buttons). The component is those two hooks plus a grip button, two move buttons and a status region. |
+| `children` | `Element` | required | The `SortableItem`s. For your own markup, `use_sortable` gives the list's handlers and `use_sortable_item(index)` each item's handle, element, move buttons, `style()`, `instructions` (the key help for the grab handle's description) and `touch_instructions` (for a touch screen showing the move buttons). The component is those two hooks plus a grip button, two move buttons and a status region. `use_sortable(SortableOptions)` also gives `announcement`, the last lift, move, drop or cancel in words for a `role="status"` region. `style()` is empty while an item sits in its slot and has never moved, and `transform: none` once it has, so an idle item gets no stacking context. `use_labelled_sortable_item(index, Some(name))` names the item as your grab handle does. |
 
 ### SortableItem
 
 | Prop | Type | Default | Description |
 |---|---|---|---|
-| `index` | `usize` | required | The item's current position. The items run exactly 0 to n - 1: a gap stops every drag and lift, a repeat warns and some items never move, so number a filtered view or a page from 0. Key the item by its data, not by this. |
+| `index` | `usize` | required | The item's current position. The items run exactly 0 to n - 1: a gap stops every drag and lift, a repeat warns and some items never move, so number a filtered view or a page from 0. Key the item by its data, not by this: a reorder then moves the item's node, and the handle keeps the focus. |
 | `label` | `Option<String>` | - | Names the item in its controls and the announcements. Unset, the handle reads the item's content ("Reorder Apple"), and the move buttons `SortableLabels::item` with its current position, the announcements with the position it was lifted from. |
 | `parts` | `Parts<SortableItemPart>` | - | Styles for the inner parts in the Style API tab, under `sx`. |
 | `children` | `Element` | required | The item's content, between the handle and the move buttons. |

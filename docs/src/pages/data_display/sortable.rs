@@ -23,12 +23,12 @@ pub fn SortablePage() -> Element {
                     prop("move_buttons", "bool")
                         .default("true")
                         .doc("Each item's two buttons that move it one slot without dragging (WCAG 2.5.7). Off, only a drag and the handle's keys reorder: the pointer has no way but dragging (WCAG 2.5.7), so offer one yourself."),
-                    prop("children", "Element").default("required").doc("The `SortableItem`s. For your own markup, `use_sortable` gives the list's handlers and `use_sortable_item(index)` each item's handle, element, move buttons, `style()`, `instructions` (the key help for the grab handle's description) and `touch_instructions` (for a touch screen showing the move buttons). The component is those two hooks plus a grip button, two move buttons and a status region."),
+                    prop("children", "Element").default("required").doc("The `SortableItem`s. For your own markup, `use_sortable` gives the list's handlers and `use_sortable_item(index)` each item's handle, element, move buttons, `style()`, `instructions` (the key help for the grab handle's description) and `touch_instructions` (for a touch screen showing the move buttons). The component is those two hooks plus a grip button, two move buttons and a status region. `use_sortable(SortableOptions)` also gives `announcement`, the last lift, move, drop or cancel in words for a `role=\"status\"` region. `style()` is empty while an item sits in its slot and has never moved, and `transform: none` once it has, so an idle item gets no stacking context. `use_labelled_sortable_item(index, Some(name))` names the item as your grab handle does."),
                 ]),
                 props("SortableItem", vec![
                     prop("index", "usize")
                         .default("required")
-                        .doc("The item's current position. The items run exactly 0 to n - 1: a gap stops every drag and lift, a repeat warns and some items never move, so number a filtered view or a page from 0. Key the item by its data, not by this."),
+                        .doc("The item's current position. The items run exactly 0 to n - 1: a gap stops every drag and lift, a repeat warns and some items never move, so number a filtered view or a page from 0. Key the item by its data, not by this: a reorder then moves the item's node, and the handle keeps the focus."),
                     prop("label", "Option<String>")
                         .doc("Names the item in its controls and the announcements. Unset, the handle reads the item's content (\"Reorder Apple\"), and the move buttons `SortableLabels::item` with its current position, the announcements with the position it was lifted from."),
                     prop("parts", "Parts<SortableItemPart>")

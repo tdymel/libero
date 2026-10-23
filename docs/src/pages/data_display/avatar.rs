@@ -132,7 +132,7 @@ pub fn AvatarPage() -> Element {
                 props("AvatarGroup", vec![
                     prop("people", "Vec<AvatarSpec>")
                         .default("required")
-                        .doc("The members. The first is drawn on top."),
+                        .doc("The members, as data rather than children so the group can count them. The first is drawn on top."),
                     prop("max", "Option<usize>")
                         .default("None")
                         .doc("How many circles in total, the `+N` chip included, so the chip always stands for at least two people."),

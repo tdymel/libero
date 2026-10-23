@@ -266,10 +266,23 @@ pub fn NotificationsPage() -> Element {
                 ]),
                 props("SnackbarData", vec![
                     prop("message", "String").doc("The text. Empty draws none."),
-                    prop("action", "Option<SnackbarAction>").doc("One button, such as Undo. Pressing it runs the handler, then closes the snackbar. `SnackbarData::new(message).action(label, handler)` builds both. Show it with `AutoClose::Never`, as a keyboard reader needs `F8` to reach the action."),
+                    prop("action", "Option<SnackbarAction>").doc("One button, such as Undo. Pressing it runs the handler, then closes the snackbar. `SnackbarData::new(message).action(label, handler)` builds both. Show it with `AutoClose::Never`, as a keyboard reader needs `F8` to reach the action. The handler is an `FnMut()` kept in an `Rc` and runs in the notification's scope, so it writes state that outlives the component: a signal from a context provided near the root."),
+                ]),
+                props("NotificationData", vec![
+                    prop("title", "Option<String>").doc("The `Alert`'s title and accessible name."),
+                    prop("message", "String").doc("The message. Empty renders no message slot. `From<&str>` and `From<String>` fill it."),
+                    prop("color", "Input<ThemeAwareValue>").doc("The `Alert`'s color. Unset is the theme's."),
+                    prop("variant", "Input<Variant>").doc("The `Alert`'s variant. Unset is the theme's."),
+                    prop("icon", "Option<Element>").doc("An icon. The host draws it later, so it must not carry event handlers."),
+                ]),
+                props("NotificationScope", vec![
+                    prop("args()", "T").doc("The data it was shown with, or last updated to. Needs `T: Clone`."),
+                    prop("close()", "()").doc("Starts its exit."),
+                    prop("closable()", "bool").doc("Whether to draw a close button (`NotificationOptions::closable`)."),
+                    prop("id()", "NotificationId").doc("Its id. The scope is `Copy`, so several handlers in one template can each hold it."),
                 ]),
                 props("NotificationHandle", vec![
-                    prop("show(args)", "NotificationId").doc("Shows one with the host's options. `use_notifications_with(template)` takes your own data type and a template `fn`, not a capturing closure, so everything it draws travels in the data; `snackbar` is one ready made."),
+                    prop("show(args)", "NotificationId").doc("Shows one with the host's options. `use_notifications_with(template)` takes your own data type and a template `fn`, not a capturing closure, so everything it draws travels in the data; `snackbar` is one ready made. The host keeps the list item, the live region, the timers and the hover pause; a template may call hooks, as long as it calls the same ones every time."),
                     prop("show_with(args, options)", "NotificationId").doc("Shows one with its own options."),
                     prop("update(id, args)", "()").doc("Redraws that one notification with new data."),
                     prop("hide(id)", "()").doc("Fades it out, then removes it. One still queued is removed at once."),
@@ -297,7 +310,8 @@ pub fn NotificationsPage() -> Element {
                     " once near the root. "
                     Code { source: "use_notifications()" }
                     " then returns a handle that shows notifications from anywhere, and each "
-                    "one outlives the component that raised it."
+                    "one outlives the component that raised it. A second host would draw every "
+                    "notification twice, and without one nothing is drawn."
                 }
             },
             // snippet: item #[derive(Clone, PartialEq, Routable)] enum Route { #[route("/")] Home {} }

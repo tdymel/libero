@@ -23,65 +23,6 @@ fn Demo() -> Element {
 }
 ```
 
-`use_media()` drives the same engine for a layout of your own. Spread its
-`attributes()` and `mount()` on a bare `<audio>` or `<video>`, then call
-`play()`, `pause()`, `toggle()`, `seek(seconds)`, `set_volume(0.0..=1.0)`,
-`set_muted(bool)` and `set_rate(f64)`. Each read is its own signal, so a time
-tick re-renders only what shows the time: `paused()`, `ended()`,
-`current_time()`, `duration()`, `volume()`, `muted()`, `rate()`, `buffering()`,
-`error()` and `is_supported()`.
-
-```rust
-use dioxus::prelude::*;
-use libero::hooks::use_media;
-
-#[component]
-fn Demo() -> Element {
-    let media = use_media();
-    rsx! {
-        audio { src: "/podcast.mp3", onmounted: media.mount(), ..media.attributes() }
-        button {
-            onclick: move |_| media.toggle(),
-            if media.paused() { "Play" } else { "Pause" }
-        }
-    }
-}
-```
-
-Pass the handle to `Audio { media }` to drive the built-in player from outside.
-
-## Your own layout
-
-[`use_media()`](use_media.md) drives the same engine for a layout of your own:
-spread its `attributes()` and `mount()` on a bare element and read `paused()`,
-`current_time()` and friends.
-
-## Formats
-
-A browser plays the first `sources` entry whose type it supports, then `src`.
-An Ogg first and an MP3 as `src` reach every browser, Safari included.
-
-```rust
-use dioxus::prelude::*;
-use libero::components::{Audio, MediaSource};
-
-#[component]
-fn Demo() -> Element {
-    rsx! {
-        Audio {
-            src: "/message.mp3",
-            sources: vec![MediaSource::new("/message.ogg", "audio/ogg")],
-            label: "Voice message",
-        }
-    }
-}
-```
-
-## The demo audio
-
-The demo plays "Wikipedia guitar solo" (CC0), streamed from Wikimedia Commons,
-so it plays only online.
-
 ## Props
 
 | Prop | Type | Default | Description |

@@ -30,57 +30,6 @@ fn Demo() -> Element {
 }
 ```
 
-`header`, `copyable` and `line_numbers` are on by default. `max_lines` caps the
-height and `highlight_lines` emphasizes lines:
-
-```rust
-use dioxus::prelude::*;
-use libero::components::CodeBlock;
-
-const RUST_EXAMPLE: &str = r#"fn shout(word: &str) -> String {
-    // Rust
-    format!("{}!", word.to_uppercase())
-}"#;
-
-#[component]
-fn Demo() -> Element {
-    rsx! {
-        CodeBlock {
-            source: RUST_EXAMPLE,
-            language: "rust",
-            header: false,
-            line_numbers: false,
-            highlight_lines: "2,3",
-            max_lines: 3,
-        }
-    }
-}
-```
-
-`diff: true` marks changed lines. A leading `+` or `-` colors the row. The copy
-button yields the new side only: unmarked and `+` lines without their marker,
-`-` lines left out, so it still yields compilable code. Other
-lines take no prefix: it is not a unified diff, so paste the changed code, not a
-patch.
-
-```rust
-use dioxus::prelude::*;
-use libero::components::CodeBlock;
-
-const RUST_DIFF: &str = r#"fn shout(word: &str) -> String {
-    // Rust
--    format!("{}", word)
-+    format!("{}!", word.to_uppercase())
-}"#;
-
-#[component]
-fn Demo() -> Element {
-    rsx! {
-        CodeBlock { source: RUST_DIFF, language: "rust", diff: true }
-    }
-}
-```
-
 ## Props
 
 | Prop | Type | Default | Description |

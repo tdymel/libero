@@ -22,7 +22,7 @@ use libero::components::{List, ListItem, ListSubheader};
 #[component]
 fn Demo() -> Element {
     rsx! {
-        List { size: "md",
+        List {
             ListSubheader { "Getting started" }
             ListItem { "First item" }
             ListItem { "Second item" }
@@ -35,56 +35,6 @@ fn Demo() -> Element {
             }
         }
     }
-}
-```
-
-With icons:
-
-```rust
-use dioxus::prelude::*;
-use libero::components::{Icon, List, ListItem};
-
-#[component]
-fn Checklist() -> Element {
-    rsx! {
-        List { icon: rsx! { Icon { variant: "standard", color: "primary", size: "sm", "✓" } },
-            ListItem { "Tests pass" }
-            ListItem { "Docs updated" }
-            ListItem { icon: rsx! { Icon { variant: "standard", color: "error", size: "sm", "✗" } },
-                "Changelog missing"
-            }
-        }
-    }
-}
-```
-
-## Icons
-
-An `icon` on the list marks every item. A `ListItem`'s own `icon` replaces it
-for that item. A nested list does not take its parent's icon. In an ordered
-list an icon replaces its item's number and the gutter beside it.
-
-## Subheaders
-
-A `ListSubheader` is a dimmed caption item that opens a run of items. A screen
-reader reads it as one more item; for groups it names, nest one `List` per
-group, each with an `aria-label`.
-
-```rust,ignore
-List {
-    ListSubheader { "Fruit" }
-    ListItem { "Apple" }
-    ListSubheader { "Vegetables" }
-    ListItem { "Carrot" }
-}
-```
-
-## Ordered lists
-
-```rust,ignore
-List { ordered: true,
-    ListItem { "Install" }
-    ListItem { "Configure" }
 }
 ```
 

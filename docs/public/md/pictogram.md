@@ -18,63 +18,15 @@ glyph's own.
 
 ```rust
 use dioxus::prelude::*;
-use libero::components::{Pictogram, SvgData};
-
-const LOGO: SvgData = SvgData::new(
-    r#"<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/></svg>"#,
-);
+use libero::components::Pictogram;
 
 #[component]
 fn Demo() -> Element {
     rsx! {
         Pictogram { icon: pictogram_icons_lucide::house::outlined, width: "32px", height: "32px" }
-        Pictogram { icon: LOGO, width: "32px", height: "32px", aria_label: "Acme" }
-        h2 { id: "logo-title", "Acme" }
-        Pictogram { icon: LOGO, width: "32px", height: "32px", "aria-labelledby": "logo-title" }
     }
 }
 ```
-
-`aria_label` names the glyph; any other aria attribute goes by its name in
-quotes, as `"aria-labelledby"` above.
-
-Attributes merge by name, a later one replacing an earlier one:
-
-1. the defaults: `aria-hidden="true"` (or `role="img"` once named), and
-   `fill="currentColor"` when the glyph sets no `fill`;
-2. the glyph's own root attributes (lucide's `stroke`, `stroke-width`, ...);
-3. yours.
-
-`stroke_width: "3"` replaces the glyph's attribute. `width`, `height`, `fill`,
-`stroke` and the other svg props are svg attributes, which the stylesheet
-beats: inside `Icon` or `ActionIcon` the host's CSS still sizes the glyph.
-
-## Icon catalogue
-
-The page's Icons tab (`#icons`) lists every icon of all 14 pictogram sets, one set
-and variant at a time, 120 per page, with the set's license, upstream version and
-repository. The docs build writes each set and variant from the crates' `index`
-feature (`pictogram::LIBRARIES`) as a JSON file, which the page fetches when you
-pick it. Search by words of the name (`arrow left`); hovering an icon shows the
-path of its const, e.g. `pictogram_icons_lucide::arrow_left::outlined`. Lobe's
-colour variants are left out: they hard-code their fills.
-
-## Colours
-
-Not every glyph is `currentColor`: the color variants of
-`pictogram-icons-lobe` and some phosphor glyphs hard-code their fills, so they
-ignore the text color and dark mode. Lobe's gradient glyphs carry fixed
-ids: two copies on one page share them.
-
-## Versions
-
-`SvgData` is pictogram's `Svg` type, so every icon of a pictogram icon crate
-passes straight in: `pictogram_icons_lucide::house::outlined`. For your own
-glyph, `SvgData::new(include_str!("logo.svg"))` splits the file at compile time.
-
-Take icon crates from pictogram's 0.5 line, the one libero builds on. A crate
-of another minor, such as 0.4, brings a second `SvgData` type: its icons fail
-with a type mismatch that does not name the version.
 
 ## Props
 
@@ -82,7 +34,7 @@ with a type mismatch that does not name the version.
 |---|---|---|---|
 | `icon` | `SvgData` | required | The glyph: a const from a pictogram icon crate, or `SvgData::new(include_str!("x.svg"))`. Take icon crates from pictogram's 0.5 line, the one libero builds on: another minor, such as 0.4, brings a second `SvgData` type, and its icons fail with a type mismatch that does not name the version. |
 | `aria_label` | `Option<String>` | `None` | Names the glyph: `role="img"` instead of `aria-hidden`. Leave unset next to a text label. |
-| `attributes` | `Vec<Attribute>` | - | Any svg attribute, winning over the glyph's own: `width`, `height`, `stroke_width`, `class`. Others by name in quotes, as `"aria-labelledby": "logo-title"`. |
+| `attributes` | `Vec<Attribute>` | - | Any svg attribute, winning over the glyph's own: `width`, `height`, `stroke_width`, `class`. Others by name in quotes, as `"aria-labelledby": "logo-title"`. Attributes merge by name, a later one replacing an earlier: the defaults (`aria-hidden="true"`, or `role="img"` once named, and `fill="currentColor"` when the glyph sets no `fill`), the glyph's own root attributes, then yours. They are svg attributes, which the stylesheet beats: inside `Icon` or `ActionIcon` the host's CSS still sizes the glyph. |
 
 ## Accessibility
 

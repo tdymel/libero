@@ -23,30 +23,11 @@ fn Demo() -> Element {
     rsx! {
         Box {
             sx: sx().position("relative").display("inline-flex"),
-            Avatar { name: "Ada Lovelace", alt: "Ada Lovelace, 128 unread", size: "lg" }
+            Avatar { name: "Ada Lovelace", alt: "Ada Lovelace, online", size: "lg" }
             Float {
                 placement: "top-end",
-                Indicator { label: 128, with_border: true }
+                Indicator {}
             }
-        }
-    }
-}
-```
-
-`label: 128` renders `99+`. The theme caps counts at 99, and `max` moves the
-cap. `99` itself renders `99`. On a round avatar the corner lies outside the
-circle, so the dot sits on the edge. `Float`'s `offset_x` and `offset_y` move
-it.
-
-```rust
-use dioxus::prelude::*;
-use libero::components::Indicator;
-
-#[component]
-fn Demo(unread: u32) -> Element {
-    rsx! {
-        if unread > 0 {
-            Indicator { label: unread, max: 9, color: "primary", processing: true }
         }
     }
 }
@@ -57,7 +38,7 @@ fn Demo(unread: u32) -> Element {
 | Prop | Type | Default | Description |
 |---|---|---|---|
 | `label` | `Option<u32>` | `None` | The count. `None` is the bare dot. A number, so `max` can cap it. |
-| `max` | `Option<u32>` | `99` | Above it, the label renders as `{max}+`. Falls back to the theme's cap. |
+| `max` | `Option<u32>` | `99` | Above it, the label renders as `{max}+`, so `128` shows `99+` at the theme's cap of 99, while `99` itself renders `99`. Falls back to the theme's cap. |
 | `size` | `Size` | `md` | The dot's diameter, and the height of a labelled one, from 6px to 22px. |
 | `color` | `ThemeAwareValue` | `error` | The fill, a theme color name or a CSS color. A theme or hex color also sets a label color that reads on it; any other CSS color gets `contrast-color()`. |
 | `radius` | `ThemeAwareValue` | `xxl` | A step on the indicator's own radius scale, `1px` to `6px`, or any CSS, e.g. `radius: "0"`. The default `xxl` is round at every size. |

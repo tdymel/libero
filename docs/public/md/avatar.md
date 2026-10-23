@@ -22,54 +22,10 @@ use libero::components::Avatar;
 #[component]
 fn Demo() -> Element {
     rsx! {
-        // `initials` show only if the picture fails to load.
-        Avatar { name: "Ada Lovelace", src: "/ada.png", initials: "AL" }
-        // Beside the person's own name, so decorative.
-        Avatar { name: "Radia Perlman", alt: "", initials: "RP" }
+        Avatar { name: "Ada Lovelace", src: "/ada.png" }
     }
 }
 ```
-
-`AvatarGroup` takes its members as data rather than children, so it can count
-them. `max` counts circles, the chip included.
-
-```rust
-use dioxus::prelude::*;
-use libero::components::{AvatarGroup, AvatarSpec};
-
-#[component]
-fn Demo() -> Element {
-    rsx! {
-        AvatarGroup {
-            max: 4,
-            people: vec![
-                AvatarSpec {
-                    name: "Ada Lovelace".into(),
-                    src: Some("/ada.png".into()),
-                    ..Default::default()
-                },
-                AvatarSpec {
-                    name: "Grace Hopper".into(),
-                    initials: Some("GH".into()),
-                    ..Default::default()
-                },
-                AvatarSpec {
-                    name: "Katherine Johnson".into(),
-                    initials: Some("KJ".into()),
-                    color: Some("secondary".into()),
-                    ..Default::default()
-                },
-                AvatarSpec::from("Radia Perlman"),
-                AvatarSpec::from("Barbara Liskov"),
-                AvatarSpec::from("Margaret Hamilton"),
-            ],
-        }
-    }
-}
-```
-
-That renders three avatars and a `+3` chip labelled "3 more: Radia Perlman,
-Barbara Liskov, Margaret Hamilton".
 
 ## Props
 
@@ -92,7 +48,7 @@ Barbara Liskov, Margaret Hamilton".
 
 | Prop | Type | Default | Description |
 |---|---|---|---|
-| `people` | `Vec<AvatarSpec>` | required | The members. The first is drawn on top. |
+| `people` | `Vec<AvatarSpec>` | required | The members, as data rather than children so the group can count them. The first is drawn on top. |
 | `max` | `Option<usize>` | `None` | How many circles in total, the `+N` chip included, so the chip always stands for at least two people. |
 | `spacing` | `ThemeAwareValue` | `sm` | How far each circle overlaps the one before it, or any CSS, e.g. `spacing: "0"`. |
 | `size` | `Size` | `md` | For every member and the chip. |

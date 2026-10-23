@@ -29,39 +29,6 @@ fn Demo() -> Element {
 }
 ```
 
-A bare number works as `value`. Omit it, or pass `value: None`, for the
-indeterminate bar.
-
-```rust,ignore
-ProgressBar { aria_label: "Connecting", value: None }
-```
-
-`segments` splits the track into stretches with gaps, one per stage, and fills
-them up to the value. The label of the stretch the value is in follows the
-percentage a screen reader reads, as "60%, Send"; `aria_valuetext` replaces both.
-
-```rust
-use dioxus::prelude::*;
-use libero::components::{ProgressBar, ProgressBarSegment};
-
-#[component]
-fn Demo() -> Element {
-    let uploaded = use_signal(|| 40.0);
-
-    rsx! {
-        ProgressBar {
-            aria_label: "Upload",
-            value: uploaded(),
-            aria_valuetext: format!("{}%, sending", uploaded()),
-            segments: vec![
-                ProgressBarSegment::labeled(25.0, "Send"),
-                ProgressBarSegment::labeled(75.0, "Verify"),
-            ],
-        }
-    }
-}
-```
-
 ## Props
 
 | Prop | Type | Default | Description |

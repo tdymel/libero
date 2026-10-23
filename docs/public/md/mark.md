@@ -29,23 +29,6 @@ fn Demo() -> Element {
 }
 ```
 
-Every match of some terms:
-
-```rust
-use dioxus::prelude::*;
-use libero::components::Highlight;
-
-#[component]
-fn SearchResult() -> Element {
-    rsx! {
-        Highlight {
-            text: "Rust components for Dioxus, written in Rust",
-            terms: vec!["rust".to_string()],
-        }
-    }
-}
-```
-
 ## Props
 
 ### Mark

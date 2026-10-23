@@ -58,18 +58,6 @@ Like every component, `Title` also takes the shared props `sx`, `class`, `style`
 - Check the contrast of a literal CSS stop in `gradient`. A debug build warns
   when a hex stop reads under 4.5:1 on the page background.
 
-```rust
-use dioxus::prelude::*;
-use libero::components::Title;
-
-#[component]
-fn Demo() -> Element {
-    rsx! {
-        Title { size: "lg", component: "h2", "The quick brown fox" }
-    }
-}
-```
-
 ### Example
 
 A section heading under the page's `h1`, `Title { size: "lg", component: "h2",

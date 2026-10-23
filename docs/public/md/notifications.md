@@ -9,7 +9,8 @@ Description: A hook plus a host: render `Notifications {}` once, and `use_notifi
 
 A hook and a host. Render `Notifications {}` once near the root.
 `use_notifications()` then returns a handle that shows notifications from
-anywhere, and each one outlives the component that raised it.
+anywhere, and each one outlives the component that raised it. A second host
+would draw every notification twice, and without one nothing is drawn.
 
 ## Usage
 
@@ -67,101 +68,22 @@ fn SaveButton() -> Element {
 # #[component] fn Home() -> Element { rsx! {} }
 ```
 
-Render the host once. A second one would draw every notification twice.
-Without a host, `show` queues notifications that nobody draws.
+## Props
 
-A contained host serves the handles created below it:
+### `Notifications`
 
-```rust,ignore
-Notifications { contained: true, placement: "top-end",
-    SaveButton {} // its `use_notifications()` shows them in this box
-}
-```
+The host.
 
-Your own template draws the content. The host keeps the list item, the live
-region, the timers and the hover pause. The template may call hooks, as long as
-it calls the same ones every time.
-
-```rust,ignore
-#[derive(Clone, PartialEq)]
-struct Upload {
-    file: &'static str,
-    percent: f64,
-}
-
-fn upload_notification(s: NotificationScope<Upload>) -> Element {
-    let upload = s.args();
-    rsx! {
-        Paper { shadow: "md", sx: sx().padding("md"),
-            Text { "Uploading {upload.file}" }
-            ProgressBar { value: upload.percent, "aria-label": "{upload.file}" }
-            ActionIcon { aria_label: "Dismiss", onclick: move |_| s.close(), DismissIcon {} }
-        }
-    }
-}
-
-let uploads = use_notifications_with(upload_notification);
-let id = uploads.show_with(
-    Upload { file: "archive.zip", percent: 0.0 },
-    NotificationOptions { auto_close: Some(AutoClose::Never), ..Default::default() },
-);
-uploads.update(id, Upload { file: "archive.zip", percent: 40.0 });
-```
-
-## Snackbar
-
-`snackbar` is a ready made template: a message and at most one action, such as
-Undo. Pressing the action runs your handler, then closes the snackbar. Show it
-with `AutoClose::Never`, as a keyboard reader needs `F8` to reach the action.
-The handler runs in the notification's scope, not the component's, so it
-writes state that outlives the component: a signal from a context provided
-near the root, not a `use_signal` of the component.
-
-```rust
-use dioxus::prelude::*;
-use libero::{
-    components::{Button, NotificationOptions, SnackbarData, snackbar, use_notifications_with},
-    theme::AutoClose,
-};
-
-#[component]
-fn ArchiveButton() -> Element {
-    let snacks = use_notifications_with(snackbar);
-    // Provided near the root with `use_context_provider(|| Signal::new(true))`.
-    let mut archived = use_context::<Signal<bool>>();
-
-    rsx! {
-        Button {
-            onclick: move |_| {
-                archived.set(true);
-                snacks.show_with(
-                    SnackbarData::new("Message archived.")
-                        .action("Undo", move || archived.set(false)),
-                    NotificationOptions {
-                        auto_close: Some(AutoClose::Never),
-                        ..Default::default()
-                    },
-                );
-            },
-            "Archive"
-        }
-    }
-}
-```
-
-## Your own data
-
-`use_notifications_with` takes your own data type and a template to draw it.
-The template is a `fn`, not a capturing closure, so everything it draws travels
-in the data. `update(id, data)` redraws one notification in place. `snackbar`
-is such a template, ready made.
-
-## Stacks and timers
-
-Each stack shows up to `limit` at once, and the rest wait. Hovering or focusing
-one pauses every timer, and each starts over when you leave; `pause_scope:
-NotificationPause::Hovered` pauses only that one. A `contained` host
-draws its stacks in its own box and keeps a queue for the handles below it.
+| Prop | Type | Default | Description |
+|---|---|---|---|
+| `placement` | `Placement` | `bottom-end` | The stack a notification joins unless it names its own. |
+| `limit` | `usize` | `5` | How many show at once per stack. The rest wait. |
+| `auto_close` | `AutoClose` | `After(6000)` | When a notification closes, unless it says otherwise. |
+| `contained` | `bool` | `false` | Draws the stacks in this host's own box and gives the handles below it their own queue. Read once, at mount. |
+| `hotkey` | `Key` | `F8` | Focuses the newest notification from anywhere, pressed without Ctrl, Alt, Meta or Shift. |
+| `z_index` | `ThemeAwareValue` | the notification layer | The stacks' stacking order, for notifications hidden by another layer. |
+| `pause_scope` | `NotificationPause` | `All` | Which timers hover or focus on a notification pauses: `All` of the host's, or only the `Hovered` one. A paused timer starts over when the pointer and focus leave. |
+| `children` | `Element` | - | Rendered inside a contained host. |
 
 ## API
 
@@ -216,7 +138,7 @@ The data of the `snackbar` template.
 | Field | Type | Description |
 |---|---|---|
 | `message` | `String` | The text. Empty draws none. |
-| `action` | `Option<SnackbarAction>` | One button, such as Undo. Pressing it runs the handler, then closes the snackbar. |
+| `action` | `Option<SnackbarAction>` | One button, such as Undo. Pressing it runs the handler, then closes the snackbar. Show it with `AutoClose::Never`, as a keyboard reader needs `F8` to reach the action. The handler is an `FnMut()` kept in an `Rc` and runs in the notification's scope, so it writes state that outlives the component: a signal from a context provided near the root. |
 
 `SnackbarData::new(message).action(label, handler)` builds both. `From<&str>`
 and `From<String>` fill `message`. The handler is an `FnMut()`, kept in an
@@ -230,23 +152,6 @@ and `From<String>` fill `message`. The handler is an `FnMut()`, kept in an
 | `auto_close` | `Option<AutoClose>` | `None` | When it closes. `None` is the host's. |
 | `closable` | `bool` | `true` | Whether the template draws a close button. Off, keep a timer or an action that closes it: Escape does not, and `F8` only focuses it. |
 | `live` | `NotificationLive` | `Polite` | `Polite` or `Assertive`, how it is announced. |
-
-## Props
-
-### `Notifications`
-
-The host.
-
-| Prop | Type | Default | Description |
-|---|---|---|---|
-| `placement` | `Placement` | `bottom-end` | The stack a notification joins unless it names its own. |
-| `limit` | `usize` | `5` | How many show at once per stack. The rest wait. |
-| `auto_close` | `AutoClose` | `After(6000)` | When a notification closes, unless it says otherwise. |
-| `contained` | `bool` | `false` | Draws the stacks in this host's own box and gives the handles below it their own queue. Read once, at mount. |
-| `hotkey` | `Key` | `F8` | Focuses the newest notification from anywhere, pressed without Ctrl, Alt, Meta or Shift. |
-| `z_index` | `ThemeAwareValue` | the notification layer | The stacks' stacking order, for notifications hidden by another layer. |
-| `pause_scope` | `NotificationPause` | `All` | Which timers hover or focus on a notification pauses: `All` of the host's, or only the `Hovered` one. A paused timer starts over when the pointer and focus leave. |
-| `children` | `Element` | - | Rendered inside a contained host. |
 
 ## Accessibility
 

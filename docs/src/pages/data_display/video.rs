@@ -59,7 +59,7 @@ pub fn VideoPage() -> Element {
                         .doc("The picture's CSS `aspect-ratio`, which the box holds before the file loads, poster or not. A portrait clip wants `\"9 / 16\"`; `\"auto\"` follows the file, and the box jumps as it loads. A picture of another shape is letterboxed."),
                     prop("tracks", "Vec<MediaTrack>")
                         .default("[]")
-                        .doc("WebVTT files: `src`, `kind` (`Captions`, `Subtitles`, `Descriptions`, `Chapters`), `srclang`, `label`, `default`. A captions or subtitles track enables the captions button; two or more make it a menu of them. A `Chapters` track (the `default` one, else the first) is fetched and read for the chapters when `chapters` is empty."),
+                        .doc("WebVTT files: `src`, `kind` (`Captions`, `Subtitles`, `Descriptions`, `Chapters`), `srclang`, `label`, `default`. A captions or subtitles track enables the captions button, which shows the `default` one, else the first; two or more make it a menu of Off and each track. Without one the button stays, disabled. A `Chapters` track (the `default` one, else the first) is fetched and read for the chapters when `chapters` is empty."),
                     prop("chapters", "Vec<Chapter>")
                         .default("[]")
                         .doc("`Chapter::new(start_seconds, title)`: splits the seek track into segments with gaps, names the chapter in the slider's value, shows the current one beside the time and adds a chapters menu. Wins over a `Chapters` track."),

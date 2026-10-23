@@ -22,7 +22,7 @@ fn Demo() -> Element {
     rsx! {
         // Beside its own text, the text says the wait.
         Flex { direction: "row", align: "center", gap: "sm",
-            Loader { variant: "bars", size: "lg", color: "secondary" }
+            Loader {}
             Text { "Uploading…" }
         }
     }
@@ -55,50 +55,6 @@ Like every component, `Loader` also takes the shared props `sx`, `class`,
   text in a `role="status"` region outside it.
 - Mount that status region up front and fill it only while loading, or a
   screen reader may skip it.
-
-Beside its own text:
-
-```rust
-use dioxus::prelude::*;
-use libero::components::{Flex, Loader, Text};
-
-#[component]
-fn Demo() -> Element {
-    rsx! {
-        Flex { direction: "row", align: "center", gap: "sm",
-            Loader { variant: "dots", size: "sm" }
-            Text { "Uploading…" }
-        }
-    }
-}
-```
-
-As the only content of a region:
-
-```rust
-use dioxus::prelude::*;
-use libero::components::{Box, Loader, VisuallyHidden};
-
-#[component]
-fn Results() -> Element {
-    let results = use_resource(search);
-    let loading = results.read().is_none();
-
-    rsx! {
-        Box {
-            "aria-busy": loading,
-            match &*results.read() {
-                None => rsx! { Loader {} },
-                Some(rows) => rsx! { ResultList { rows: rows.clone() } },
-            }
-        }
-        VisuallyHidden { role: "status", if loading { "Loading results" } }
-    }
-}
-#
-# async fn search() -> Vec<String> { Vec::new() }
-# #[component] fn ResultList(rows: Vec<String>) -> Element { rsx! {} }
-```
 
 ### Example
 

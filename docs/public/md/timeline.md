@@ -38,66 +38,6 @@ fn Demo() -> Element {
 }
 ```
 
-`active` is controlled. Bind it to whatever knows how far along the process
-is. An index past the end clamps to the last event, so "step 7 of 4" means
-finished.
-
-```rust
-use dioxus::prelude::*;
-use libero::components::{Button, Flex, Text, Timeline, TimelineEvent};
-
-#[component]
-fn Demo() -> Element {
-    let mut step = use_signal(|| 1usize);
-
-    rsx! {
-        Flex {
-            direction: "column",
-            align: "flex-start",
-            gap: "md",
-            Timeline {
-                active: step(),
-                items: vec![
-                    TimelineEvent::new("Ordered").content(rsx! { Text { "Payment captured" } }),
-                    TimelineEvent::new("Packed").content(rsx! { Text { "Two parcels" } }),
-                    TimelineEvent::new("Shipped").content(rsx! { Text { "DHL, tracked" } }),
-                    TimelineEvent::new("Delivered").content(rsx! { Text { "Signed for" } }),
-                ],
-            }
-            Button { onclick: move |_| step += 1, "Next" }
-        }
-    }
-}
-```
-
-A bullet draws active for `0..=active`, and the connector below an event for
-`0..active`. So the rail between completed events is filled, and the span below
-the current one is not.
-
-`.color(..)` gives one event its own accent, and `.line(..)` styles the
-connector below it:
-
-```rust
-use dioxus::prelude::*;
-use libero::components::{Text, Timeline, TimelineEvent, TimelineLine};
-
-#[component]
-fn Demo() -> Element {
-    rsx! {
-        Timeline {
-            active: 3,
-            items: vec![
-                TimelineEvent::new("Deployed").content(rsx! { Text { "v2.4.0" } }),
-                TimelineEvent::new("Health check failed")
-                    .color("error")
-                    .line(TimelineLine::Dashed),
-                TimelineEvent::new("Rolled back").color("error"),
-            ],
-        }
-    }
-}
-```
-
 ## Props
 
 | Prop | Type | Default | Description |

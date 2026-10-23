@@ -564,7 +564,7 @@ pub fn ChartPage() -> Element {
             properties: vec![
                 props("LineChart", vec![
                     prop("x", "XValues").default("required").doc("The x axis, one value per point: labels, one evenly spaced slot each, or numbers, each point at its value."),
-                    prop("series", "Vec<Series>").default("required").doc("The lines, each with one value per x value. `None` is a gap."),
+                    prop("series", "Vec<Series>").default("required").doc("The lines, each with one value per x value. `None`, `NaN` and infinity are gaps. `.color(..)` (a theme color or hex) sets a colour, else the palette by place; `.unit(..)` gives its own unit in the tooltip and summary, while a unit every series shares labels the y axis; `.symbol(PointSymbol::Square)` draws points as that shape, a cue beside colour; `.errors([(low, high), ..])` draws a see-through band, which a stacked chart reads in the tooltip alone; `.mark_line(MarkLine::average())` draws a dashed line labelled on the chart, also `min()`, `max()`, `value(150.0)` and `.label(..)`; `.mark_point(MarkPoint::Max)` pins the highest value, `Min` the lowest; `.secondary_axis()` measures a line on its own scale at the right."),
                     prop("title", "Option<String>").doc("Shown above the chart, and its accessible name."),
                     prop("description", "Option<String>").doc("A sentence under the title: what to read from the chart."),
                     prop("curve", "Curve").default(theme.chart.curve.as_str()).doc("`linear`, `smooth` or `step`."),
@@ -597,7 +597,7 @@ pub fn ChartPage() -> Element {
                 ]),
                 props("BarChart", vec![
                     prop("x", "XValues").default("required").doc("The categories, one per bar or group of bars."),
-                    prop("series", "Vec<Series>").default("required").doc("The bars' series, each with one value per x value. `None` leaves no bar. Upright, a `.kind(SeriesKind::Line)` one is drawn as a line over the bars."),
+                    prop("series", "Vec<Series>").default("required").doc("The bars' series, each with one value per x value. `None` leaves no bar. `.colors([..])` colours bars one by one, `.negative_color(..)` those below 0, and `.errors([(low, high), ..])` draws error bars, written after the value in the tooltip. A stack rounds only its topmost positive and lowest negative segment. Upright, a `.kind(SeriesKind::Line)` one is drawn as a line over the bars."),
                     prop("title", "Option<String>").doc("Shown above the chart, and its accessible name."),
                     prop("description", "Option<String>").doc("A sentence under the title: what to read from the chart."),
                     prop("layout", "BarLayout").default(theme.chart.bar_layout.as_str()).doc("`grouped` side by side, `stacked`, or `percent`: stacked to 100%."),

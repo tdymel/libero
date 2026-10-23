@@ -148,7 +148,7 @@ pub fn IconProviderPage() -> Element {
                 props("IconProvider", vec![
                     prop("icons", "IconSet")
                         .default("required")
-                        .doc("The slots to swap: `IconSet::new().with(IconSlot::Close, icon)` for one, or a whole set from its constructor, such as `IconSet::material_rounded()`, after turning on its libero feature (`icons-material`, `icons-tabler`, `icons-bootstrap` or `icons-phosphor`); only the set you call is compiled in. An empty slot keeps the outer provider's glyph, then libero's lucide default. Brand marks are no slots: they name a service."),
+                        .doc("The slots to swap: `IconSet::new().with(IconSlot::Close, icon)` for one, or a whole set from its constructor, such as `IconSet::material_rounded()`, after turning on its libero feature (`icons-material`, `icons-tabler`, `icons-bootstrap` or `icons-phosphor`); only the set you call is compiled in. An empty slot keeps the outer provider's glyph, then libero's lucide default. Brand marks are no slots: they name a service. `IconSet::lucide_outlined()` resets a subtree. Bootstrap and Phosphor have no text direction glyph, so `TextDirectionLtr` and `TextDirectionRtl` keep lucide. A component keeps its own tweaks on a swapped glyph, such as `Checkbox`'s `stroke-width=\"3\"`. `use_icon(slot, default)` reads a slot in your own component."),
                 ]),
             ],
             accessibility: a11y()

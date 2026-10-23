@@ -41,7 +41,7 @@ pub fn CarouselPage() -> Element {
                         .doc("Fires once a scroll settles, and on every control, key, indicator and autoplay step. Safe to write straight back into `index`. An `index` out of reach is clamped and reported here."),
                     prop("per_view", "f64")
                         .default(theme.carousel.per_view.to_string())
-                        .doc("Slides visible at once. A fraction lets the next one peek in."),
+                        .doc("Slides visible at once. A fraction lets the next one peek in. The strip runs out of scroll before the slides, so six slides three-up stop at index 3."),
                     prop("gap", "ThemeAwareValue").default(theme.carousel.gap.as_str()).doc("Between slides, or any CSS, e.g. `gap: \"0\"`."),
                     prop("align", "CarouselAlign")
                         .default(theme.carousel.align.as_str())
@@ -69,7 +69,7 @@ pub fn CarouselPage() -> Element {
                         .doc("Advances on a timer, with a pause button first in Tab order. Hover pauses it, and focus stops it until the button is pressed. Under `prefers-reduced-motion: reduce` it opens paused. Without `loop` it stops on the last slide and presses Pause; Play there starts over from the first."),
                     prop("r#loop", "bool")
                         .default("false")
-                        .doc("Wraps around at both ends through cloned slides, which repeat a slide's DOM: give interactive slide content no `id` or form `name`."),
+                        .doc("Wraps around at both ends through cloned slides, which repeat a slide's DOM: give interactive slide content no `id` or form `name`. The strip can show the end and the start at once, and the status then reads \"Slides 6 to 2 of 6, wrapping around\"."),
                     prop("autoplay_delay", "u32")
                         .default(theme.carousel.autoplay_delay.to_string())
                         .doc("Milliseconds between advances."),
@@ -94,7 +94,7 @@ pub fn CarouselPage() -> Element {
                 .key(["Home", "End"], "Goes to the first or last slide.")
                 .handles([
                     "The carousel is a region named by `aria_label`, and each slide is a group a screen reader calls a slide. Slides out of view leave the Tab and reading order.",
-                    "After each move a hidden status says which slide shows, out of how many. It stays quiet while autoplay rotates (WCAG 2.2.2).",
+                    "After each move a hidden status says which slide shows, out of how many (\"Slides 1–3 of 6\", counting a slide at least half in view). It stays quiet while autoplay rotates (WCAG 2.2.2).",
                     "Previous and Next are buttons. The indicators are one Tab stop with the current one marked, and focus follows the slide on them.",
                     "A carousel whose slides all fit, without `loop`, drops the status, the dots and the track's Tab stop: none of them has a place to go.",
                     "With `autoplay`, focus inside the carousel stops it until the pause button is pressed. Hover only pauses it.",

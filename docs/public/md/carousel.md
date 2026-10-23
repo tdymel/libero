@@ -22,9 +22,13 @@ use libero::{
 
 #[component]
 fn Demo() -> Element {
+    let mut index = use_signal(|| 2);
+
     rsx! {
         Carousel {
             aria_label: "Product photos",
+            index: index(),
+            onindexchange: move |next| index.set(next),
             slides: (1..=6)
                 .map(|n| rsx! {
                     Box {
@@ -40,74 +44,11 @@ fn Demo() -> Element {
                     }
                 })
                 .collect(),
-            per_view: 3.0,
+            per_view: 1.5,
             indicators: true,
         }
     }
 }
-```
-
-With `per_view` above 1 the strip runs out of scroll before it runs out of
-slides. Six slides three-up stop at index 3, not 5. The indicators follow, with
-four dots rather than six, each named by the first slide it shows. The live
-region names the slides in view, "Slides 1–3 of 6", counting a slide at least
-half in view. When every slide fits and the strip does not `loop`, there is
-nothing to move to: no status, no dots, and the track is not a tab stop, and
-both buttons are inactive. With no slides there is no status, no dots and no
-buttons, and the empty track is not a tab stop.
-
-`align` moves that window too. Six slides three-up reach indices 0-3 aligned to
-the start, 1-4 centred and 2-5 aligned to the end. An `index` outside the
-window is pulled into it, so a centred three-up carousel asked for slide 0
-reports slide 1. Where a slide visibly rests shows best with a fractional
-`per_view`. At a whole number the alignments often rest on the same offset.
-
-A looping strip can show the end and the start at once. Six slides three-up,
-aligned to the start and resting on slide 6, show slides 6, 1 and 2. The status
-then reads "Slides 6 to 2 of 6, wrapping around".
-
-A vertical carousel needs a `height`:
-
-```rust,ignore
-Carousel {
-    aria_label: "Product photos",
-    orientation: "vertical",
-    height: "300px",
-    slides: slides(),
-}
-```
-
-A controlled slide:
-
-```rust
-use dioxus::prelude::*;
-use libero::components::{Carousel, Image, Text};
-
-#[component]
-fn Demo(photos: Vec<Photo>) -> Element {
-    let mut slide = use_signal(|| 0usize);
-
-    rsx! {
-        Carousel {
-            aria_label: "Product photos",
-            index: slide(),
-            onindexchange: move |index| slide.set(index),
-            slides: photos.iter().map(|photo| rsx! {
-                Image { src: "{photo.url}", alt: "{photo.alt}", fit: "cover" }
-            }).collect(),
-        }
-        Text { "Showing {slide() + 1} of {photos.len()}" }
-    }
-}
-#
-# #[derive(Clone, PartialEq)]
-# struct Photo { url: String, alt: String }
-```
-
-Autoplay:
-
-```rust,ignore
-Carousel { aria_label: "Offers", autoplay: true, autoplay_delay: 6000, slides: slides() }
 ```
 
 ## Props
@@ -118,7 +59,7 @@ Carousel { aria_label: "Offers", autoplay: true, autoplay_delay: 6000, slides: s
 | `slide_label` | `Callback<usize, String>` | `{n} of {m}` | Each slide's accessible name. |
 | `index` | `Option<usize>` | `None`, uncontrolled | The current slide. Set it and the carousel follows. |
 | `onindexchange` | `EventHandler<usize>` | `None` | Fires once a scroll settles, and on every control, key, indicator and autoplay step. Safe to write straight back into `index`. An `index` out of reach is clamped and reported here. |
-| `per_view` | `f64` | `1` | Slides visible at once. A fraction lets the next one peek in. |
+| `per_view` | `f64` | `1` | Slides visible at once. A fraction lets the next one peek in. The strip runs out of scroll before the slides, so six slides three-up stop at index 3. |
 | `gap` | `ThemeAwareValue` | `md` | Between slides, or any CSS, e.g. `gap: "0"`. |
 | `align` | `CarouselAlign` | `center` | Where a snapped slide comes to rest, `start`, `center` or `end`. Shows best with a fractional `per_view`. Above `per_view` 1 it also moves which slides the strip can reach. |
 | `orientation` | `Orientation` | `horizontal` | Scroll axis. |
@@ -129,7 +70,7 @@ Carousel { aria_label: "Offers", autoplay: true, autoplay_delay: 6000, slides: s
 | `draggable` | `bool` | `false` | Drag to scroll with a mouse. Touch swipes without it. On Blitz and the WebView a drag stops once the pointer leaves the track. With `controls` and `indicators` both off a drag is the only pointer way to move (WCAG 2.5.7), and a debug build warns. |
 | `autoplay` | `bool` | `false` | Advances on a timer, with a pause button first in Tab order. Hover pauses it, and focus stops it until the button is pressed. Under `prefers-reduced-motion: reduce` it opens paused. Without `loop` it stops on the last slide and presses Pause; Play there starts over from the first. |
 | `autoplay_delay` | `u32` | `4000` | Milliseconds between advances. |
-| `r#loop` | `bool` | `false` | Wraps around at both ends through cloned slides, which repeat a slide's DOM: give interactive slide content no `id` or form `name`. |
+| `r#loop` | `bool` | `false` | Wraps around at both ends through cloned slides, which repeat a slide's DOM: give interactive slide content no `id` or form `name`. The strip can show the end and the start at once, and the status then reads "Slides 6 to 2 of 6, wrapping around". |
 | `parts` | `Parts<CarouselPart>` | - | Styles for the inner parts in the Style API tab, under `sx`. |
 
 Like every component, `Carousel` also takes the shared props `sx`, `class`,
@@ -168,8 +109,8 @@ explains how parts work.
 - The carousel is a region named by `aria_label`, and each slide is a group a
   screen reader calls a slide. Slides out of view leave the Tab and reading
   order.
-- After each move a hidden status says which slide shows, out of how many. It
-  stays quiet while autoplay rotates (WCAG 2.2.2).
+- After each move a hidden status says which slide shows, out of how many ("Slides 1–3
+  of 6", counting a slide at least half in view). It stays quiet while autoplay rotates (WCAG 2.2.2).
 - Previous and Next are buttons. The indicators are one Tab stop with the
   current one marked, and focus follows the slide on them.
 - A carousel whose slides all fit, without `loop`, drops the status, the dots

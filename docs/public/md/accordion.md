@@ -45,12 +45,6 @@ fn Demo() -> Element {
 }
 ```
 
-## Open sections
-
-`open` is controlled, and its variant is the mode. `AccordionOpen::One` holds at
-most one section, so opening another closes the first. `AccordionOpen::Many`
-toggles each on its own. `onchange` hands back the whole new set.
-
 ## Props
 
 | Prop | Type | Default | Description |
