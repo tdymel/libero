@@ -12,6 +12,8 @@ pub(super) fn compilable(snippet: &Snippet, page: &[Snippet]) -> Result<String, 
         let body = body.trim_end();
         for chunk in chunks(body) {
             let _ = match shape(chunk) {
+                // A page-level `item` marker may repeat a line the printed code already has.
+                Shape::Items if format!("\n{items}").contains(&format!("\n{chunk}\n")) => Ok(()),
                 Shape::Items => writeln!(items, "{chunk}"),
                 Shape::Statements => writeln!(statements, "{chunk}"),
                 // On a line of its own: the chunk may end in a `//` comment.
