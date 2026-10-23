@@ -94,14 +94,14 @@ Flex {
 
 | Prop | Type | Default | Description |
 |---|---|---|---|
-| `direction` | `Responsive<FlexDirection>` | `column` | Lays the children out in a row or a column, or one per breakpoint, `direction: responsive(FlexDirection::Column).md(FlexDirection::Row)`. Each breakpoint takes that axis's theme defaults; an explicit `gap` stays. |
+| `direction` | `Responsive<FlexDirection>` | `column` | Lays the children out in a row or a column, or one per breakpoint, `direction: responsive(FlexDirection::Column).md(FlexDirection::Row)`. Each breakpoint takes that axis's theme defaults; an explicit `gap` stays. `row-reverse` and `column-reverse` draw the children backwards without moving them in the reading or Tab order. |
 | `align` | `ThemeAwareValue` | `stretch` in a column, `center` in a row | Cross-axis alignment. |
 | `justify` | `ThemeAwareValue` | `flex-start` | Main-axis alignment. |
 | `gap` | `Responsive<ThemeAwareValue>` | `md` | Space between children: a size, any CSS such as `"0"`, or one per breakpoint, `gap: responsive(Size::Xs).md(Size::Xl)`. Breakpoints follow the window, not the parent. |
 | `wrap` | `FlexWrap` | `nowrap` in a column, `wrap` in a row | Whether children wrap onto new lines. Also takes a `bool`. |
 | `children` | `Element` | required | The flex's children. |
 
-`FlexDirection` is `row` or `column`, `FlexWrap` is `wrap` or `nowrap`. A row
+`FlexDirection` is `row`, `column`, `row-reverse` or `column-reverse`, `FlexWrap` is `wrap` or `nowrap`. A row
 wraps by default so it reflows on a narrow screen. `wrap: false` turns that off.
 
 Like every component, `Flex` also takes the shared props `sx`, `class`, `style`,
@@ -111,12 +111,15 @@ Like every component, `Flex` also takes the shared props `sx`, `class`, `style`,
 
 ### Libero handles
 
-- `Flex` adds no roles and has no reverse direction, so tab and reading order
+- `Flex` adds no roles, and with `row` or `column` the tab and reading order
   match what is seen.
 - A row wraps by default, so it reflows on a narrow screen.
 
 ### You must
 
+- Avoid `row-reverse` and `column-reverse` for anything read or tabbed through:
+  the screen shows the children backwards while a screen reader and Tab keep the
+  source order (WCAG 1.3.2, 2.4.3). Reorder the children in the code instead.
 - Add `role` and `aria-label` when the children form a group, such as
   `role: "group"` around related buttons.
 - `Flex` always renders a `div`: for a list or a nav, use `Box` with
@@ -162,5 +165,6 @@ State tokens on the root's `data-state`, space separated.
 
 | Token | Condition |
 |---|---|
-| `row` | `direction` is `row` below every breakpoint. Without it, a column. |
+| `row` | `direction` is `row` or `row-reverse` below every breakpoint. Without it, a column. |
+| `row-reverse` / `column-reverse` | `direction` is that value below every breakpoint. |
 | `size-<size>` | The `gap` below every breakpoint, when it is a size. |

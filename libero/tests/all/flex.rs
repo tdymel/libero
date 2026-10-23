@@ -153,6 +153,29 @@ fn a_responsive_direction_turns_at_its_breakpoint() {
     );
 }
 
+/// A reverse row keeps the row axis defaults and only flips the direction.
+#[test]
+fn a_reverse_direction_flips_its_axis() {
+    fn row() -> Element {
+        rsx! {
+            LiberoProvider { Flex { direction: "row-reverse", span { "a" } } }
+        }
+    }
+    fn column() -> Element {
+        rsx! {
+            LiberoProvider { Flex { direction: FlexDirection::ColumnReverse, span { "a" } } }
+        }
+    }
+
+    let html = render(row);
+    assert!(has_state(&body(&html), "row"), "{html}");
+    assert!(has_state(&body(&html), "row-reverse"), "{html}");
+
+    let html = render(column);
+    assert!(!has_state(&body(&html), "row"), "{html}");
+    assert!(has_state(&body(&html), "column-reverse"), "{html}");
+}
+
 #[test]
 fn a_responsive_direction_without_a_gap_takes_the_axis_spacing() {
     fn app() -> Element {

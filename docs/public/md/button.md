@@ -39,6 +39,44 @@ after it. `ActionIcon` is the same button reduced to a square icon: it requires
 an `aria_label`, keeps a 24px target and defaults to no background. A `Button`
 with no text would be a wide pill without an accessible name.
 
+On a full-width button, `justify: "space-between"` parts the `icon`, the label
+and the `trailing_icon` to the edges, as in a menu row; `start` and `end` pack
+them to one side.
+
+```rust
+use dioxus::prelude::*;
+use libero::components::Button;
+
+#[component]
+fn Row() -> Element {
+    rsx! {
+        Button { full_width: true, justify: "space-between", "Account" }
+    }
+}
+```
+
+## Neutral outlined
+
+A secondary action next to a filled primary one, such as "Cancel" beside "Save",
+is `color: "neutral"` with `variant: "outlined"`: a quiet border and label that
+leave the primary colour to the main action. `"ink"` draws it in the page's
+text colour instead.
+
+```rust
+use dioxus::prelude::*;
+use libero::components::{Button, Flex};
+
+#[component]
+fn Actions() -> Element {
+    rsx! {
+        Flex { direction: "row", gap: "sm",
+            Button { "Save" }
+            Button { color: "neutral", variant: "outlined", "Cancel" }
+        }
+    }
+}
+```
+
 ## Props
 
 | Prop | Type | Default | Description |
@@ -49,6 +87,7 @@ with no text would be a wide pill without an accessible name.
 | `radius` | `ThemeAwareValue` | `md` | Corner radius, independent of `size`, or any CSS, e.g. `radius: "0"`. |
 | `size` | `Size` | `md` | Height, padding and font size. |
 | `full_width` | `bool` | `false` | Stretches the button to fill its container. |
+| `justify` | `ThemeAwareValue` | `center` | Where the icons and the label sit along the button, as `justify-content`: `start`, `end`, `space-between` or any CSS. It shows on a `full_width` button or one given a width. Unset, they are centred, and an overlong label is cut at its end. |
 | `selected` | `bool` | - | Makes it a toggle button with the selected look. Leave it unset for a plain action. |
 | `disabled` | `bool` | `false` | Disables and dims the button: `aria-disabled` rather than `disabled`, so a focused button keeps its focus. It leaves the Tab order and ignores presses. |
 | `focusable_when_disabled` | `bool` | `false` | With `disabled`: keeps the button in the Tab order. |
@@ -58,7 +97,7 @@ with no text would be a wide pill without an accessible name.
 | `ripple` | `bool` | `true` | The press ripple. `false` drops it, for a dense toolbar or a theme without one. Reduced motion drops it anyway. |
 | `value` | `String` | - | Its key in the enclosing `ButtonGroup`'s `value`. With that set, the button is a toggle and a press asks the group to select it; its own `selected` wins. Also the `<button>`'s `value` attribute. |
 | `onclick` | `EventHandler<MouseEvent>` | - | Click handler. Not called on a link. |
-| `to` | `NavigationTarget` | - | Renders a link instead of a `<button>`. Takes a path, a URL or a typed route (`Route::Foo {}`). |
+| `to` | `NavigationTarget` | - | Renders a link instead of a `<button>`. Takes a path, a URL or a typed route (`Route::Foo {}`), or an `Option` of one: `None` is a plain button. |
 | `target` | `String` | - | The link's `target` attribute. `"_blank"` adds a hidden "(opens in a new tab)". |
 | `new_tab_hint` | `bool` | `true` | With `target: "_blank"`, the hidden "(opens in a new tab)". `false` drops it and the icon. |
 | `new_tab_icon` | `bool` | `false` | With `target: "_blank"`, draws a small external icon after the label. Unset, the theme's `anchor.new_tab_icon`, which is off. |
@@ -140,6 +179,7 @@ title shows it on hover.
 | `--lsx-button-font-size-<size>` | `font-size` for that size step. |
 | `--lsx-button-height-<size>` | `height` for that size step. |
 | `--lsx-button-padding-x-<size>` | Horizontal padding for that size step. |
+| `--lsx-button-justify` | `justify-content`, set by the `justify` prop. |
 | `--lsx-button-color` | Accent color of the current variant. |
 | `--lsx-button-contrast` | Text color on top of that accent. |
 | `--lsx-button-hover` | Accent color while hovered. |

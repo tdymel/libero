@@ -43,13 +43,28 @@ fn gap(values: &DemoValues) -> Responsive<ThemeAwareValue> {
 
 fn controls() -> Vec<Control> {
     vec![
-        Control::toggle("direction", ["column", "row", "responsive"])
-            .labels(["Column", "Row", "Row from md"])
-            .code(|_, values| match values.str("direction").as_str() {
-                "column" => vec![],
-                "responsive" => vec![RESPONSIVE_DIRECTION_CODE.to_string()],
-                direction => vec![format!("direction: \"{direction}\"")],
-            }),
+        Control::toggle(
+            "direction",
+            [
+                "column",
+                "row",
+                "column-reverse",
+                "row-reverse",
+                "responsive",
+            ],
+        )
+        .labels([
+            "Column",
+            "Row",
+            "Column reverse",
+            "Row reverse",
+            "Row from md",
+        ])
+        .code(|_, values| match values.str("direction").as_str() {
+            "column" => vec![],
+            "responsive" => vec![RESPONSIVE_DIRECTION_CODE.to_string()],
+            direction => vec![format!("direction: \"{direction}\"")],
+        }),
         // `0` is plain CSS, next to the size scale.
         Control::slider("gap", ["0", "xs", "sm", "md", "lg", "xl", "xxl"])
             .default("md")
@@ -97,7 +112,7 @@ pub fn FlexPage() -> Element {
             properties: vec![props("Flex", vec![
                 prop("direction", "Responsive<FlexDirection>")
                     .default("column")
-                    .doc("Lays the children out in a row or a column, or one per breakpoint, `direction: responsive(FlexDirection::Column).md(FlexDirection::Row)`. Each breakpoint takes that axis's theme defaults; an explicit `gap` stays."),
+                    .doc("Lays the children out in a row or a column, or one per breakpoint, `direction: responsive(FlexDirection::Column).md(FlexDirection::Row)`. Each breakpoint takes that axis's theme defaults; an explicit `gap` stays. `row-reverse` and `column-reverse` draw the children backwards without moving them in the reading or Tab order."),
                 prop("align", "ThemeAwareValue")
                     .default("stretch in a column, center in a row")
                     .doc("Cross-axis alignment."),
@@ -114,10 +129,11 @@ pub fn FlexPage() -> Element {
             ])],
             accessibility: a11y()
                 .handles([
-                    "`Flex` adds no roles and has no reverse direction, so tab and reading order match what is seen.",
+                    "`Flex` adds no roles, and with `row` or `column` the tab and reading order match what is seen.",
                     "A row wraps by default, so it reflows on a narrow screen.",
                 ])
                 .must([
+                    "Avoid `row-reverse` and `column-reverse` for anything read or tabbed through: the screen shows the children backwards while a screen reader and Tab keep the source order (WCAG 1.3.2, 2.4.3). Reorder the children in the code instead.",
                     "Add `role` and `aria-label` when the children form a group, such as `role: \"group\"` around related buttons.",
                     "`Flex` always renders a `div`: for a list or a nav, use `Box` with `component: \"ul\"` or `\"nav\"`.",
                 ])

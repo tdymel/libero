@@ -452,6 +452,74 @@ fn a_button_still_takes_a_navigation_target_or_a_path() {
     }
 }
 
+/// An optional target is a link when set and a plain `<button>` when `None`.
+#[test]
+fn an_optional_target_is_a_link_or_a_plain_button() {
+    fn route() -> Element {
+        rsx! {
+            LiberoProvider { Button { to: Some(Route::Settings {}), "Settings" } }
+        }
+    }
+    fn path() -> Element {
+        rsx! {
+            LiberoProvider { Button { to: Some("/settings"), "Settings" } }
+        }
+    }
+    fn owned() -> Element {
+        rsx! {
+            LiberoProvider { Button { to: Some("/settings".to_string()), "Settings" } }
+        }
+    }
+    fn no_route() -> Element {
+        rsx! {
+            LiberoProvider { Button { to: None::<Route>, "Settings" } }
+        }
+    }
+    fn no_path() -> Element {
+        rsx! {
+            LiberoProvider { Button { to: None::<&str>, "Settings" } }
+        }
+    }
+
+    for app in [route, path, owned] {
+        assert_eq!(attributes_of(&body(&render(app)), "a")["href"], "/settings");
+    }
+    for app in [no_route, no_path] {
+        let html = body(&render(app));
+        assert!(!html.contains("<a"), "{html}");
+        assert!(html.contains("<button"), "{html}");
+    }
+}
+
+/// `justify` reaches the base rule through a per-button variable.
+#[test]
+fn justify_is_set_as_a_variable_on_the_button() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider { Button { justify: "space-between", "Menu" } }
+        }
+    }
+    fn unset() -> Element {
+        rsx! {
+            LiberoProvider { Button { "Menu" } }
+        }
+    }
+
+    let set = attributes_of(&body(&render(app)), "button");
+    let plain = attributes_of(&body(&render(unset)), "button");
+
+    assert!(
+        set["style"].contains("--lsx-button-justify:space-between"),
+        "{set:?}"
+    );
+    assert!(
+        !plain
+            .get("style")
+            .is_some_and(|style| style.contains("--lsx-button-justify")),
+        "{plain:?}"
+    );
+}
+
 /// Events dispatched the way a renderer does, through [`crate::dispatch`].
 mod dispatched {
 

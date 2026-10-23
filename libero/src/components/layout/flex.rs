@@ -22,6 +22,18 @@ str_enum! {
         Row = "row",
         #[default]
         Column = "column",
+        /// A row drawn right to left. Only the look changes: reading order, Tab order and
+        /// a screen reader's order stay the source order (WCAG 1.3.2, 2.4.3).
+        RowReverse = "row-reverse",
+        /// A column drawn bottom to top, with the same catch as `RowReverse`.
+        ColumnReverse = "column-reverse",
+    }
+}
+
+impl FlexDirection {
+    /// Whether the main axis runs along a row, which takes the row axis defaults.
+    pub fn is_row(self) -> bool {
+        matches!(self, Self::Row | Self::RowReverse)
     }
 }
 
@@ -110,7 +122,10 @@ static FLEX_BASE_SX: StaticSx = StaticSx::new(|| {
         .var(FLEX_WRAP_VAR, "initial")
         .and(FlexDefaults::default_sx(false))
         .and(sx().focus_visible(focus_ring_sx()))
-        .when("row", FlexDefaults::default_sx(true));
+        .when("row", FlexDefaults::default_sx(true))
+        // After `row`, which sets the plain direction.
+        .when("row-reverse", sx().flex_direction("row-reverse"))
+        .when("column-reverse", sx().flex_direction("column-reverse"));
 
     Size::ALL.into_iter().fold(base, |base, size| {
         base.when(size.state_name(), sx().gap(SizeCss::SPACING.value(size)))
@@ -141,12 +156,21 @@ base_props! {
         gap: Input<Responsive<ThemeAwareValue>>,
         /// `column` by default, or one per breakpoint,
         /// `direction: responsive(FlexDirection::Column).md(FlexDirection::Row)`.
+        /// `row-reverse` and `column-reverse` reorder the look only, not the reading or Tab order.
         #[props(default, into)]
         direction: Input<Responsive<FlexDirection>>,
         /// `true` or `FlexWrap::Wrap` wraps.
         #[props(default, into)]
         wrap: Input<FlexWrap>,
         children: Element,
+    }
+}
+
+fn axis_sx(direction: FlexDirection) -> Sx {
+    let axis = FlexDefaults::default_sx(direction.is_row());
+    match direction {
+        FlexDirection::Row | FlexDirection::Column => axis,
+        reverse => axis.flex_direction(reverse.as_str()),
     }
 }
 
@@ -163,7 +187,7 @@ fn layout_sx(
             return own.clone();
         }
         let axes = turns.into_iter().fold(sx(), |base, (size, turn)| {
-            base.breakpoint(size, FlexDefaults::default_sx(turn == FlexDirection::Row))
+            base.breakpoint(size, axis_sx(turn))
         });
         return with_own(Some(axes), own);
     };
@@ -176,9 +200,7 @@ fn layout_sx(
     let axes = Size::ALL.into_iter().fold(base, |base, size| {
         let rule = match turns.iter().find(|(at, _)| *at == size) {
             // The axis defaults carry the theme's spacing: the explicit gap goes back on top.
-            Some((_, turn)) => {
-                FlexDefaults::default_sx(*turn == FlexDirection::Row).gap(gap.at(size))
-            }
+            Some((_, turn)) => axis_sx(*turn).gap(gap.at(size)),
             None => match gap.breakpoints().find(|(at, _)| *at == size) {
                 Some((_, value)) => sx().gap(value),
                 None => return base,
@@ -216,7 +238,9 @@ pub fn Flex(props: FlexProps) -> Element {
     let mut states = props
         .states
         .unwrap_or_default()
-        .with("row", direction == FlexDirection::Row);
+        .with("row", direction.is_row())
+        .with("row-reverse", direction == FlexDirection::RowReverse)
+        .with("column-reverse", direction == FlexDirection::ColumnReverse);
     if let Some(ThemeAwareValue::Size(gap)) = props.gap.as_ref().map(Responsive::base_ref) {
         states = states.with(gap.state_name(), true);
     }

@@ -18,7 +18,9 @@ use crate::{
     },
     hooks::{ripple_sx, use_cache, use_gradient_style, use_ripple, use_theme},
     sx::{StaticSx, Sx, ThemeAwareValue, sx},
-    theme::{BUTTON_HEIGHT, ButtonDefaults, Gradient, LOADER_SIZE, SURFACE_LABEL, Size, SizeCss},
+    theme::{
+        BUTTON_HEIGHT, ButtonDefaults, CssVar, Gradient, LOADER_SIZE, SURFACE_LABEL, Size, SizeCss,
+    },
     utils::warn,
 };
 
@@ -26,12 +28,15 @@ pub use crate::theme::LoadingPosition;
 
 input_from_str!(LoadingPosition);
 
+// Set in the element's `style` by the `justify` prop, else the centred default.
+const BUTTON_JUSTIFY_VAR: CssVar = CssVar::new("--lsx-button-justify");
+
 static BUTTON_BASE_SX: StaticSx = StaticSx::new(|| {
     let base = ripple_sx(ButtonDefaults::theme_vars())
         .display("inline-flex")
         .align_items("center")
         // `safe`: an overlong label is cut at its end, not at both (todo 1493).
-        .justify_content("safe center")
+        .justify_content(BUTTON_JUSTIFY_VAR.value_or("safe center"))
         .border_style("solid")
         .border_width("1px")
         .font_weight("600")
@@ -217,6 +222,10 @@ base_props! {
         size: Input<Size>,
         #[props(default)]
         full_width: Option<bool>,
+        /// `justify-content` of the icons and the label, as `justify: "space-between"` on a
+        /// `full_width` button. Unset, they are centred.
+        #[props(default, into)]
+        justify: Input<ThemeAwareValue>,
         /// Toggle button: renders `aria-pressed`. `None` is a plain action.
         #[props(default)]
         selected: Option<bool>,
@@ -353,6 +362,13 @@ pub fn Button(props: ButtonProps) -> Element {
     };
     let style = match radius.custom_css(SizeCss::RADIUS) {
         Some(radius) => format!("{style}{}:{radius};", SizeCss::RADIUS.override_var().name()),
+        None => style,
+    };
+    let style = match props.justify.resolve(None) {
+        Some(justify) => format!(
+            "{style}{}",
+            variables().with(BUTTON_JUSTIFY_VAR, Some(justify)).render()
+        ),
         None => style,
     };
     let style = match showing.as_ref() {

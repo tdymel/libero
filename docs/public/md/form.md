@@ -173,6 +173,84 @@ an error one set after a valid submit, in `onsubmit` or once a request returns,
 shows the summary, which takes focus and is announced, as a blocked submit's
 would.
 
+## Sticky action bar
+
+A long form keeps its buttons in view with a `Flex` that sticks to the bottom of
+the scrolling area. It is the last child of the `Form`, so its submit button still
+submits, and a surface background keeps the fields from showing through. Give it
+a `z_index` above the fields. The bar keeps its place in the DOM, so Tab still
+reaches it after the fields. It needs a scrolling ancestor, such as the page or
+a `Paper` with a fixed height.
+
+```rust
+# use dioxus::prelude::*;
+# use libero::components::{Button, Fields, Flex, Form, TextField};
+# use libero::sx::sx;
+# #[derive(Clone, PartialEq, Default, Fields)]
+# struct Order { email: String }
+# #[component]
+# fn Checkout() -> Element {
+#     let order = use_store(Order::default);
+#     rsx! {
+Form { value: order, onsubmit: move |_| {},
+    TextField { label: "Email", name: Order::FIELDS.email(), required: true }
+    // ... more fields
+    Flex {
+        direction: "row",
+        gap: "sm",
+        justify: "flex-end",
+        sx: sx()
+            .position("sticky")
+            .bottom("0")
+            .z_index("1")
+            .padding("0.75em 0")
+            .background("surface")
+            .border_top("1px solid"),
+        Button { variant: "outlined", color: "neutral", "Cancel" }
+        Button { r#type: "submit", "Place order" }
+    }
+}
+# } }
+```
+
+The same bar suits a `Stepper`: put it in the `panel`, with Back and Continue in
+place of Cancel and the submit button, so every step has its buttons in the same
+place. Disable Back on the first step instead of leaving it out.
+
+```rust
+# use dioxus::prelude::*;
+# use libero::components::{Button, Flex, Options, Stepper};
+# use libero::sx::sx;
+# #[derive(Clone, PartialEq, Options)]
+# enum Stage { Account, Review }
+# #[component]
+# fn Wizard() -> Element {
+#     let mut stage = use_signal(|| Some(Stage::Account));
+#     rsx! {
+Stepper {
+    value: stage(),
+    aria_label: "Order steps",
+    panel: move |s: Stage| rsx! {
+        // ... the step's fields
+        Flex {
+            direction: "row",
+            gap: "sm",
+            justify: "space-between",
+            sx: sx().position("sticky").bottom("0").z_index("1").padding("0.75em 0").background("surface"),
+            Button {
+                variant: "outlined",
+                color: "neutral",
+                disabled: s == Stage::Account,
+                onclick: move |_| stage.set(Some(Stage::Account)),
+                "Back"
+            }
+            Button { onclick: move |_| stage.set(Some(Stage::Review)), "Continue" }
+        }
+    },
+}
+# } }
+```
+
 ## Props
 
 ### `Form`

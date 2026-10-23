@@ -49,6 +49,9 @@ pub fn ButtonPage() -> Element {
                 prop("full_width", "bool")
                     .default("false")
                     .doc("Stretches the button to fill its container."),
+                prop("justify", "ThemeAwareValue")
+                    .default("center")
+                    .doc("Where the icons and the label sit along the button, as `justify-content`: `start`, `end`, `space-between` or any CSS. It shows on a `full_width` button or one given a width. Unset, they are centred, and an overlong label is cut at its end."),
                 prop("selected", "bool")
                     .doc("Makes it a toggle button with the selected look. Leave it unset for a plain action."),
                 prop("disabled", "bool")
@@ -73,7 +76,7 @@ pub fn ButtonPage() -> Element {
                 prop("onclick", "EventHandler<MouseEvent>")
                     .doc("Click handler. Not called on a link."),
                 prop("to", "NavigationTarget")
-                    .doc("Renders a link instead of a `<button>`. Takes a path, a URL or a typed route (`Route::Foo {}`)."),
+                    .doc("Renders a link instead of a `<button>`. Takes a path, a URL or a typed route (`Route::Foo {}`), or an `Option` of one: `None` is a plain button."),
                 prop("target", "String")
                     .doc("The link's `target` attribute. `\"_blank\"` adds a hidden \"(opens in a new tab)\"."),
                 prop("new_tab_hint", "bool")
@@ -140,6 +143,14 @@ pub fn ButtonPage() -> Element {
                     Control::slider("radius", ["0", "xs", "sm", "md", "lg", "xl", "xxl"])
                         .default(theme.button.radius.as_str()),
                     Control::switch("full_width"),
+                    // The first stop is the unset look, so it prints nothing.
+                    Control::toggle("justify", ["center", "start", "end", "space-between"])
+                        .labels(["Center", "Start", "End", "Space between"])
+                        .default("center")
+                        .code(|_, values| match values.str("justify").as_str() {
+                            "center" => vec![],
+                            value => vec![format!("justify: {value:?}")],
+                        }),
                     // On, so the icon shows without another switch.
                     Control::switch("trailing_icon").default("true").code(|_, values| {
                         match values.str("trailing_icon").as_str() {
@@ -221,6 +232,10 @@ pub fn ButtonPage() -> Element {
                             size: values.str("size"),
                             radius: values.str("radius"),
                             full_width: values.str("full_width") == "true",
+                            justify: match values.str("justify").as_str() {
+                                "center" => Input::None,
+                                value => Input::from(value),
+                            },
                             selected: match values.str("selected").as_str() {
                                 _ if is_link(&values) => None,
                                 "true" => Some(true),
@@ -256,6 +271,23 @@ pub fn ButtonPage() -> Element {
                                 icon: rsx! { Pictogram { icon: lucide::save::outlined } },
                                 "Saving"
                             }
+                        }
+                        // A full-width row with `justify`, shown without a switch.
+                        if !is_link(&values) {
+                            Button {
+                                variant: values.str("variant"),
+                                color: values.str("color"),
+                                size: values.str("size"),
+                                full_width: true,
+                                justify: "space-between",
+                                icon: rsx! { Pictogram { icon: lucide::user::outlined, width: "1.25em", height: "1.25em" } },
+                                trailing_icon: rsx! { Pictogram { icon: lucide::chevron_right::outlined, width: "1.25em", height: "1.25em" } },
+                                "Account"
+                            }
+                        }
+                        // The secondary action beside a filled one, shown without a switch.
+                        if !is_link(&values) {
+                            Button { color: "neutral", variant: "outlined", size: values.str("size"), "Cancel" }
                         }
                         // A new-tab link beside it that opts into the icon, shown without the `link` switch.
                         if !is_link(&values) {
