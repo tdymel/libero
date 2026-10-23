@@ -2,12 +2,12 @@ use dioxus::prelude::*;
 
 use crate::{
     hooks::{
-        DragMove, DragOptions, DragPoint, ElementHandle, PopoverHandle, SwipeOptions, listener,
-        use_drag_cancel, use_scheduled, use_subscription_slot,
+        ElementHandle, PopoverHandle, SWIPE_BEYOND, SwipeClose, swipe_close_sx,
+        use_subscription_slot, use_swipe_close,
     },
     platform::{
         ElementApi, SCROLL_MARGIN_BOTTOM_VAR, ScrollSubscription, document, on_viewport_resize,
-        prefers_reduced_motion, visible_band,
+        visible_band,
     },
     sx::{FORCED_COLORS, Sx, sx},
     theme::{Color, ColorShade, ColorValue, CssVar, Size},
@@ -84,8 +84,8 @@ pub(crate) fn use_sheet_swipe(capture: ElementHandle, onclose: Callback<()>) -> 
     let SwipeClose {
         onpointerdown,
         listeners,
-        style,
-    } = use_swipe_close(capture, onclose);
+        variables,
+    } = use_swipe_close(capture, None, onclose);
     let strip = rsx! {
         div {
             "data-slot": "sheet-handle",
@@ -96,131 +96,7 @@ pub(crate) fn use_sheet_swipe(capture: ElementHandle, onclose: Callback<()>) -> 
     SheetSwipe {
         strip,
         listeners,
-        style,
-    }
-}
-
-/// How far a swiped box is dragged down, how long it eases there, and how far past its own
-/// height it slides to leave the screen.
-const SWIPE_DRAG: CssVar = CssVar::new("--lsx-swipe-drag");
-const SWIPE_EASE: CssVar = CssVar::new("--lsx-swipe-ease");
-const SWIPE_BEYOND: CssVar = CssVar::new("--lsx-swipe-beyond");
-/// How long a swiped box slides off or springs back, in ms.
-const SWIPE_SLIDE_MS: u64 = 200;
-
-/// The `transform` and `transition` that move a box by [`use_swipe_close`]'s style.
-pub(crate) fn swipe_close_sx() -> Sx {
-    sx().transform(format!("translateY({})", SWIPE_DRAG.value_or("0px")))
-        .transition(format!("transform {} ease-out", SWIPE_EASE.value_or("0ms")))
-}
-
-/// Where a swiped box is.
-#[derive(Clone, Copy, Debug, PartialEq)]
-pub(crate) enum SwipeDrag {
-    /// At rest, or springing back to it.
-    Rest,
-    /// Under the finger, this many px down.
-    Follow(f64),
-    /// Sliding off the screen, then closing.
-    Off,
-}
-
-impl SwipeDrag {
-    /// The drag and ease vars; always printed, as a renderer keeps a dropped declaration.
-    pub(crate) fn style(self, reduced_motion: bool) -> String {
-        let ease = match (self, reduced_motion) {
-            (SwipeDrag::Follow(_), _) | (_, true) => 0,
-            _ => SWIPE_SLIDE_MS,
-        };
-        let drag = match self {
-            SwipeDrag::Rest => "0px".to_string(),
-            SwipeDrag::Follow(dy) => format!("{dy}px"),
-            SwipeDrag::Off => format!("calc(100% + {})", SWIPE_BEYOND.value_or("0px")),
-        };
-        format!(
-            "{}:{drag};{}:{ease}ms;",
-            SWIPE_DRAG.name(),
-            SWIPE_EASE.name()
-        )
-    }
-}
-
-/// Whether a release `dy` down and `dx` across swipes the box away: as far as a swipe, mostly down.
-pub(crate) fn swiped_off(dx: f64, dy: f64) -> bool {
-    dy >= SwipeOptions::default().distance && dy > dx.abs()
-}
-
-/// What [`use_swipe_close`] hands out: the strip's press handler, the swiped box's
-/// listeners, and the vars for its `style`.
-pub(crate) struct SwipeClose {
-    pub(crate) onpointerdown: Callback<PointerEvent>,
-    pub(crate) listeners: Vec<Attribute>,
-    pub(crate) style: String,
-}
-
-/// A touch drag down from a strip moves the `capture` box along; let go far enough, it slides
-/// off and `onclose` runs, else it springs back (3957). Give the box [`swipe_close_sx`].
-pub(crate) fn use_swipe_close(capture: ElementHandle, onclose: Callback<()>) -> SwipeClose {
-    let mut drag = use_signal(|| SwipeDrag::Rest);
-    let mut last = use_hook(|| CopyValue::new(DragPoint { x: 0.0, y: 0.0 }));
-    // Blitz fires no `transitionend`: a timer closes once the slide is over.
-    let slid = use_scheduled(move |_| {
-        drag.set(SwipeDrag::Rest);
-        onclose.call(());
-    });
-    let drags = use_drag_cancel(
-        DragOptions {
-            capture,
-            onstart: use_callback(move |_| last.set(DragPoint { x: 0.0, y: 0.0 })),
-            onmove: use_callback(move |step: DragMove| {
-                let delta = step.delta();
-                last.set(delta);
-                let next = SwipeDrag::Follow(delta.y.max(0.0));
-                if *drag.peek() != next {
-                    drag.set(next);
-                }
-            }),
-            onend: use_callback(move |()| {
-                let delta = *last.peek();
-                if !swiped_off(delta.x, delta.y) {
-                    drag.set(SwipeDrag::Rest);
-                } else if prefers_reduced_motion() {
-                    drag.set(SwipeDrag::Rest);
-                    onclose.call(());
-                } else {
-                    drag.set(SwipeDrag::Off);
-                    slid.after(SWIPE_SLIDE_MS);
-                }
-            }),
-        },
-        use_callback(move |()| drag.set(SwipeDrag::Rest)),
-    );
-    let dragging = drags.dragging;
-    let listeners = vec![
-        listener("onpointermove", move |event: PointerEvent| {
-            // Blitz pans the scrolling box unless the move is prevented.
-            if *dragging.peek() {
-                event.prevent_default();
-            }
-            drags.onpointermove.call(event);
-        }),
-        listener("onpointerup", move |event: PointerEvent| {
-            drags.onpointerup.call(event)
-        }),
-        listener("onpointercancel", move |event: PointerEvent| {
-            drags.onpointercancel.call(event)
-        }),
-    ];
-    // Touch and pen only: a mouse has Escape and the field's own close (WCAG 2.5.1).
-    let onpointerdown = use_callback(move |event: PointerEvent| {
-        if event.is_primary() && event.pointer_type() != "mouse" {
-            drags.onpointerdown.call(event);
-        }
-    });
-    SwipeClose {
-        onpointerdown,
-        listeners,
-        style: drag().style(prefers_reduced_motion()),
+        style: variables.render(),
     }
 }
 
@@ -363,35 +239,4 @@ pub(crate) fn use_sheet_clearance(
         }
     });
     clearance()
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn a_long_swipe_down_slides_the_box_off() {
-        assert!(swiped_off(0.0, 48.0));
-        assert!(!swiped_off(0.0, 47.0));
-        assert!(!swiped_off(60.0, 50.0));
-        assert!(!swiped_off(0.0, -80.0));
-    }
-
-    #[test]
-    fn the_box_eases_off_the_finger_only_without_reduced_motion() {
-        assert_eq!(
-            SwipeDrag::Follow(12.0).style(false),
-            "--lsx-swipe-drag:12px;--lsx-swipe-ease:0ms;"
-        );
-        assert_eq!(
-            SwipeDrag::Rest.style(false),
-            "--lsx-swipe-drag:0px;--lsx-swipe-ease:200ms;"
-        );
-        assert!(SwipeDrag::Off.style(false).contains("calc(100% + "));
-        assert!(
-            SwipeDrag::Off
-                .style(true)
-                .ends_with("--lsx-swipe-ease:0ms;")
-        );
-    }
 }

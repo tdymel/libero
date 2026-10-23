@@ -6,7 +6,8 @@ use crate::{
         common::{
             COARSE_POINTER, ClassList, HtmlTag, Input, Part, States, Variables, coarse_hit_area_sx,
             focus_ring_sx, focused_disabled_sx, has_shortcut_modifier, inset_focus_ring_sx,
-            names_itself, neighbour, reveal_inline, text_color, use_name_warning, variables,
+            names_itself, neighbour, reveal_block, reveal_inline, text_color, use_name_warning,
+            variables,
         },
         layout::use_box,
     },
@@ -374,10 +375,13 @@ fn TabStrip(
 
     // A selected tab past the overflowing strip's edge scrolls into view, also a late `value`.
     let reveal_root = root.clone();
-    use_effect(use_reactive!(|(selected,)| {
+    use_effect(use_reactive!(|(selected, vertical)| {
         if let Some(index) = selected {
             let tab = id_selector(&format!("{reveal_root}-tab-{index}"));
-            when_laid_out(move || reveal_inline(list_element, &tab));
+            when_laid_out(move || match vertical {
+                true => reveal_block(list_element, &tab),
+                false => reveal_inline(list_element, &tab),
+            });
         }
     }));
 

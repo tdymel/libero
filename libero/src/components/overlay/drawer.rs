@@ -7,9 +7,11 @@ use crate::{
         overlay::Dialog,
     },
     context::{Dismiss, ModalContext},
-    hooks::{SwipeDirection, SwipeEvent, SwipeOptions, listener, use_css, use_swipe, use_theme},
+    hooks::{
+        SwipeClose, listener, swipe_close_sx, use_css, use_element, use_swipe_close, use_theme,
+    },
     str_enum::str_enum,
-    sx::{FORCED_COLORS, StaticSx, ThemeAwareValue, sx},
+    sx::{FORCED_COLORS, StaticSx, ThemeAwareValue, Variables, sx},
     theme::{Color, ColorShade, ColorValue, DRAWER_SIZE, Size},
 };
 
@@ -32,10 +34,13 @@ static DRAWER_SX: StaticSx = StaticSx::new(|| {
         .when("anchor-end", sx().height("100%"))
         // Taller than the viewport, its far edge would sit above the scroll origin (3002).
         .when("anchor-top", sx().width("100%").max_height("100dvh"))
-        // Relative: the swipe strip lies over its top padding.
+        // Relative: the swipe strip lies over its top padding. Follows a swipe down (3970).
         .when(
             "anchor-bottom",
-            sx().width("100%").max_height("100dvh").position("relative"),
+            sx().width("100%")
+                .max_height("100dvh")
+                .position("relative")
+                .and(swipe_close_sx()),
         )
         // A drawer opened from inside one must not inherit its custom size.
         .var(DRAWER_SIZE.override_var(), "initial");
@@ -154,36 +159,28 @@ pub(crate) fn Drawer(props: DrawerProps) -> Element {
     let class = props.class.clone().unwrap_or_default().with(drawer_class);
     let (placement, float_sx) = drawer_float_placement(anchor);
     let modal = try_use_context::<ModalContext>();
-    let swipe = use_swipe(
-        use_callback(move |event: SwipeEvent| {
-            if let Some(modal) = modal
-                && event.direction == SwipeDirection::Down
-            {
-                modal.dismiss(Dismiss::Swipe);
+    // The panel follows the finger from the strip and slides off, as the phone sheet's.
+    let panel = use_element();
+    let SwipeClose {
+        onpointerdown,
+        listeners,
+        variables,
+    } = use_swipe_close(
+        panel,
+        Some(use_callback(move |()| {
+            modal.is_some_and(|modal| modal.may_dismiss(Dismiss::Swipe))
+        })),
+        use_callback(move |()| {
+            if let Some(modal) = modal {
+                modal.close();
             }
         }),
-        SwipeOptions::default(),
     );
-    // A press starts on the strip, its moves are heard on the panel: Blitz sends them
-    // to the node under the finger, with no implicit touch capture.
-    let mut held = use_hook(|| CopyValue::new(None::<i32>));
     let mut attributes = props.attributes.clone();
-    if anchor == DrawerAnchor::Bottom {
-        attributes.push(listener("onpointermove", move |event: PointerEvent| {
-            // Blitz pans the scrolling panel unless the move is prevented.
-            if *held.peek() == Some(event.pointer_id()) {
-                event.prevent_default();
-            }
-            swipe.onpointermove.call(event);
-        }));
-        let end = move |event: PointerEvent| {
-            if *held.peek() == Some(event.pointer_id()) {
-                held.set(None);
-            }
-            swipe.onpointerup.call(event);
-        };
-        attributes.push(listener("onpointerup", end));
-        attributes.push(listener("onpointercancel", end));
+    let bottom = anchor == DrawerAnchor::Bottom;
+    if bottom {
+        attributes.push(listener("onmounted", panel.mount()));
+        attributes.extend(listeners);
     }
     let strip_class = use_css(Some(&DRAWER_HANDLE_SX), crate::CssLayer::Framework);
     let bar_class = use_css(Some(&DRAWER_HANDLE_BAR_SX), crate::CssLayer::Framework);
@@ -202,18 +199,15 @@ pub(crate) fn Drawer(props: DrawerProps) -> Element {
                 class,
                 sx,
                 states,
+                variables: if bottom { variables } else { Variables::new() },
                 attributes,
                 // Touch only, beside Back, Escape and the content's own close (WCAG 2.5.1).
-                if anchor == DrawerAnchor::Bottom {
+                if bottom {
                     div {
                         class: strip_class,
                         "data-slot": "handle",
                         aria_hidden: "true",
-                        onpointerdown: move |event: PointerEvent| {
-                            let touch = event.is_primary() && event.pointer_type() != "mouse";
-                            held.set(touch.then(|| event.pointer_id()));
-                            swipe.onpointerdown.call(event);
-                        },
+                        onpointerdown: move |event| onpointerdown.call(event),
                         if props.handle {
                             span { class: bar_class }
                         }

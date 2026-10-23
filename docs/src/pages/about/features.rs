@@ -167,7 +167,7 @@ pub(crate) const FEATURES: &[Feature] = &[
     feature("tabs", "navigation", "Tabs", &["use-id", "use-icon", "visually-hidden"], false, &["/navigation/tabs"]),
     feature("tree", "navigation", "Tree", &["list", "icon", "use-popover", "checkbox"], false, &["/navigation/tree"]),
     feature("dialog", "overlay", "Dialog", &["action-icon", "title"], true, &["/overlay/dialog"]),
-    feature("drawer", "overlay", "use_drawer", &["dialog", "modal", "float", "use-swipe"], false, &["/overlay/drawer"]),
+    feature("drawer", "overlay", "use_drawer", &["dialog", "modal", "float", "use-swipe", "use-timers"], false, &["/overlay/drawer"]),
     feature("floating-window", "overlay", "use_floating_window", &["menu", "action-icon", "button", "title", "float", "use-drag"], false, &["/overlay/floating-window"]),
     feature("hover-card", "overlay", "HoverCard", &["paper", "scroll-area", "use-popover", "use-timers"], false, &["/overlay/hover-card"]),
     feature("lightbox", "overlay", "use_lightbox", &["carousel", "modal", "action-icon", "dialog"], false, &["/overlay/lightbox"]),

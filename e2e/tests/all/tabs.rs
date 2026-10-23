@@ -531,6 +531,42 @@ fn a_selected_tab_scrolls_into_its_strip() {
     });
 }
 
+/// Todo 3976: a vertical strip shorter than its tabs scrolls its selected tab into view,
+/// selected from the start and from outside the strip later, without scrolling the page.
+#[test]
+fn a_selected_tab_scrolls_into_its_vertical_strip() {
+    block_on(async {
+        let fixture = Fixture::open("/tabs-late-vertical", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        let shown = |root: &str| {
+            format!(
+                "(() => {{ const list = document.querySelector('{root} > [role=tablist]'); \
+                 const box = list.getBoundingClientRect(); \
+                 const tab = document.querySelector('{root} {SELECTED}').getBoundingClientRect(); \
+                 return list.scrollTop > 0 && tab.top >= box.top - 1 && tab.bottom <= box.bottom + 1; }})()"
+            )
+        };
+        wait::for_js_true(page, &shown("#initial"), "the initial last tab in view")
+            .await
+            .unwrap();
+        pointer::click(page, "#late-button").await.unwrap();
+        wait::for_js_true(page, &shown("#late"), "the late last tab in view")
+            .await
+            .unwrap();
+        let page_scroll: f64 = page
+            .evaluate_bounded("window.scrollY")
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        assert_eq!(page_scroll, 0.0, "the page scrolled");
+        fixture.console.assert_clean("late vertical tabs").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
 /// Todo 501: the caller's name reaches the tablist, by label and by heading.
 #[test]
 fn the_tablist_takes_the_callers_name() {

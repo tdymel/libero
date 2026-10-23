@@ -95,11 +95,15 @@ impl ModalContext {
 
     /// Closes the modal unless the inner `Dialog`'s `ondismiss` refuses `reason`.
     pub(crate) fn dismiss(&self, reason: Dismiss) {
-        let guard = self.dismiss_guard.and_then(|guard| *guard.peek());
-        if guard.is_some_and(|guard| !guard.call(reason)) {
-            return;
+        if self.may_dismiss(reason) {
+            self.close();
         }
-        self.close();
+    }
+
+    /// Whether the inner `Dialog`'s `ondismiss` lets `reason` close the modal.
+    pub(crate) fn may_dismiss(&self, reason: Dismiss) -> bool {
+        let guard = self.dismiss_guard.and_then(|guard| *guard.peek());
+        guard.is_none_or(|guard| guard.call(reason))
     }
 }
 

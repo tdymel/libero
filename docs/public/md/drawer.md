@@ -2,7 +2,7 @@
 
 Crate: `libero`
 Import: `use libero::hooks::{DrawerOptions, ModalScope, use_drawer};`
-Feature: `drawer` (off by default, turns on `dialog`, `modal`, `float`, `use-swipe`; [features.md](features.md))
+Feature: `drawer` (off by default, turns on `dialog`, `modal`, `float`, `use-swipe`, `use-timers`; [features.md](features.md))
 Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/overlay/use_drawer.rs>
 Index: [index.md](index.md) lists every other page
 Description: A dimmed, focus-trapped panel docked to one edge, `use_modal` with the docking around it.
@@ -54,8 +54,10 @@ axis is always full. Both are read on every render, so an anchor in a signal
 moves an open drawer. `start` and `end` follow the text direction: `start` is
 the right edge under `dir="rtl"`.
 
-Docked bottom, a touch swipe down from the panel's top padding closes it, after
-`ondismiss` hears `Dismiss::Swipe`. `handle: true` draws a grab bar there.
+Docked bottom, the panel follows a touch swipe down from its top padding. Let
+go far enough and, once `ondismiss` allows `Dismiss::Swipe`, it slides off and
+closes; a short swipe springs back. Under reduced motion it closes at once.
+`handle: true` draws a grab bar there.
 
 A drawer takes per-opening data and returns a result like any modal. See
 [Modal](modal.md) for `open_with`, `Opening`, `onresult` and `.await`.

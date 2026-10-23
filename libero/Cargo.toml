@@ -333,7 +333,7 @@ tree = ["list", "icon", "use-popover", "checkbox"]
 
 overlay = ["dialog", "drawer", "floating-window", "hover-card", "lightbox", "menu", "modal", "overlay-backdrop", "shortcut-help", "spotlight", "tooltip", "tour"]
 dialog = ["action-icon", "title"]
-drawer = ["dialog", "modal", "float", "use-swipe"]
+drawer = ["dialog", "modal", "float", "use-swipe", "use-timers"]
 floating-window = ["menu", "action-icon", "button", "title", "float", "use-drag"]
 hover-card = ["paper", "scroll-area", "use-popover", "use-timers"]
 lightbox = ["carousel", "modal", "action-icon", "dialog"]

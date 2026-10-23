@@ -149,7 +149,7 @@ it is on (Notes).
 | `tabs` | Tabs | use-id, use-icon, visually-hidden | off |  |
 | `tree` | Tree | list, icon, use-popover, checkbox | off |  |
 | `dialog` | Dialog | action-icon, title | on |  |
-| `drawer` | use_drawer | dialog, modal, float, use-swipe | off |  |
+| `drawer` | use_drawer | dialog, modal, float, use-swipe, use-timers | off |  |
 | `floating-window` | use_floating_window | menu, action-icon, button, title, float, use-drag | off |  |
 | `hover-card` | HoverCard | tooltip, focus-trap, paper, scroll-area | off |  |
 | `lightbox` | use_lightbox | carousel, modal, action-icon, dialog | off |  |

@@ -2,6 +2,7 @@
 
 use dioxus::prelude::*;
 use libero::components::{Flex, OptionList, Options, Tabs, TabsActivation, Text};
+use libero::sx::sx;
 
 use crate::Routes;
 
@@ -17,6 +18,7 @@ pub const ROUTES: Routes = &[
     ("/tabs-named", || rsx! { TabsNamedPage {} }),
     ("/tabs-manual", || rsx! { TabsManualPage {} }),
     ("/tabs-late", || rsx! { TabsLatePage {} }),
+    ("/tabs-late-vertical", || rsx! { TabsLateVerticalPage {} }),
     ("/tabs-lone", || rsx! { TabsLonePage {} }),
     ("/tabs-sm", || rsx! { TabsSmPage {} }),
     ("/tabs-vertical", || rsx! { TabsVerticalPage {} }),
@@ -212,6 +214,40 @@ fn TabsLatePage() -> Element {
             Tabs {
                 id: "late",
                 aria_label: "Late",
+                value: late(),
+                onchange: move |next| late.set(next),
+                panel: |t: Crowded| rsx! { Text { "panel for {t.label()}" } },
+            }
+        }
+    }
+}
+
+/// Todo 3976: a vertical strip shorter than its tabs, the last selected from the start and later.
+#[component]
+fn TabsLateVerticalPage() -> Element {
+    let mut late = use_signal(|| Crowded::Overview);
+    let short = || sx().selector("& > [role=tablist]", sx().max_height("80px"));
+
+    rsx! {
+        Flex { direction: "column", gap: "md",
+            Tabs {
+                id: "initial",
+                aria_label: "Initial",
+                placement: "start",
+                sx: short(),
+                value: Crowded::Integrations,
+                onchange: |_| {},
+                panel: |t: Crowded| rsx! { Text { "panel for {t.label()}" } },
+            }
+            button { id: "late-button", r#type: "button",
+                onclick: move |_| late.set(Crowded::Integrations),
+                "Integrations"
+            }
+            Tabs {
+                id: "late",
+                aria_label: "Late",
+                placement: "start",
+                sx: short(),
                 value: late(),
                 onchange: move |next| late.set(next),
                 panel: |t: Crowded| rsx! { Text { "panel for {t.label()}" } },

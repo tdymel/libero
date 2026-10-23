@@ -81,6 +81,8 @@ mod stylesheet;
 mod subscription_slot;
 #[cfg(feature = "use-swipe")]
 mod swipe;
+#[cfg(all(feature = "use-swipe", feature = "use-timers"))]
+mod swipe_close;
 #[cfg(feature = "use-system-notification")]
 mod system_notification;
 mod theme;
@@ -211,6 +213,8 @@ pub use swipe::{
     EdgeSwipeOptions, Swipe, SwipeDirection, SwipeEdge, SwipeEvent, SwipeOptions, edge_swipe_sx,
     use_edge_swipe, use_swipe,
 };
+#[cfg(all(feature = "use-swipe", feature = "use-timers"))]
+pub(crate) use swipe_close::{SWIPE_BEYOND, SwipeClose, swipe_close_sx, use_swipe_close};
 #[cfg(feature = "use-system-notification")]
 pub use system_notification::{SystemNotifier, use_system_notification};
 pub use theme::{ThemeSetHandle, use_theme, use_theme_set};

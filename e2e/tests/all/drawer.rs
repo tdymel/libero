@@ -153,6 +153,111 @@ e2e::scenario!(
     desktop: skip("1126: no touch input under Xvfb")
 );
 
+/// The panel's `translateY`, `null` once it is gone.
+const PANEL_SHIFT: &str = "(() => { const d = document.querySelector('[role=dialog]'); \
+     return d ? new DOMMatrix(getComputedStyle(d).transform).m42 : null; })()";
+
+/// Records in `window.slid` whether the panel was ever sent off the screen.
+const SLIDE_WATCH: &str = "window.slid = false; new MutationObserver(() => { \
+     const d = document.querySelector('[role=dialog]'); \
+     if (d && d.style.getPropertyValue('--lsx-swipe-drag').startsWith('calc')) window.slid = true; \
+     }).observe(document.body, { subtree: true, attributes: true, attributeFilter: ['style'] })";
+
+async fn open_bottom_swipe(page: &chromiumoxide::Page) -> Result<e2e::passes::pointer::Point> {
+    use e2e::passes::pointer;
+    let at = pointer::touch_down(page, TRIGGER).await?;
+    pointer::touch_up(page, at).await?;
+    e2e::wait::for_visible(page, "[data-slot=handle]").await?;
+    pointer::centre_of(page, "[data-slot=handle]").await
+}
+
+/// Todo 3970: the bottom drawer follows a finger down its strip, springs back from a short
+/// swipe and slides off from a long one, as the phone sheet.
+#[test]
+fn a_swiped_bottom_drawer_follows_the_finger_and_slides_off() {
+    use e2e::passes::pointer::{self, Point};
+    block_on(async {
+        let fixture = Fixture::open("/drawer/bottom-swipe", Viewport::Mobile)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        let at = open_bottom_swipe(page).await.unwrap();
+        let down = |dy: f64| Point {
+            x: at.x,
+            y: at.y + dy,
+        };
+        let shifted = |by: f64| format!("Math.abs({PANEL_SHIFT} - {by}) < 1");
+        pointer::touch_down(page, "[data-slot=handle]")
+            .await
+            .unwrap();
+        pointer::touch_move(page, down(10.0)).await.unwrap();
+        pointer::touch_move(page, down(30.0)).await.unwrap();
+        e2e::wait::for_js_true(
+            page,
+            &shifted(30.0),
+            "the panel 30px down, under the finger",
+        )
+        .await
+        .unwrap();
+        pointer::touch_up(page, down(30.0)).await.unwrap();
+        e2e::wait::for_js_true(page, &shifted(0.0), "a short swipe sprung back")
+            .await
+            .unwrap();
+        page.evaluate(SLIDE_WATCH).await.unwrap();
+        pointer::touch_drag(page, at, down(120.0), 2).await.unwrap();
+        e2e::wait::for_js_true(
+            page,
+            "!document.querySelector('[role=dialog]') && window.slid \
+             && document.getElementById('reasons').textContent === 'Swipe'",
+            "a long swipe slid the panel off, then closed it",
+        )
+        .await
+        .unwrap();
+        fixture
+            .console
+            .assert_clean("a swiped-away drawer")
+            .unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
+/// Todo 3970: with reduced motion a long swipe closes the bottom drawer without sliding.
+#[test]
+fn reduced_motion_closes_a_swiped_drawer_at_once() {
+    use e2e::passes::pointer::{self, Point};
+    block_on(async {
+        let fixture = Fixture::open("/drawer/bottom-swipe", Viewport::Mobile)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        e2e::browser::emulate_media(page, e2e::browser::Scheme::Light, Some(true))
+            .await
+            .unwrap();
+        e2e::passes::motion::assert_reduced_motion_matches(page)
+            .await
+            .unwrap();
+        let at = open_bottom_swipe(page).await.unwrap();
+        page.evaluate(SLIDE_WATCH).await.unwrap();
+        let to = Point {
+            x: at.x,
+            y: at.y + 120.0,
+        };
+        pointer::touch_drag(page, at, to, 2).await.unwrap();
+        e2e::wait::for_js_true(
+            page,
+            "!document.querySelector('[role=dialog]') && !window.slid",
+            "closed without a slide",
+        )
+        .await
+        .unwrap();
+        fixture
+            .console
+            .assert_clean("a reduced-motion swiped drawer")
+            .unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
 /// Android's Back closes the drawer, and the app stays (1289).
 async fn back_closes<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
     archetypes::back_closes(d, TRIGGER, async |d| d.exists(DIALOG).await).await
