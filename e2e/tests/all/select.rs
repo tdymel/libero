@@ -282,6 +282,10 @@ async fn highlighted<D: Driver>(d: &mut D, after: &str, text: &str) -> Result<St
 /// Whether `row` is drawn reading `text`, in one read: a window redraw between an
 /// `exists` and a `text` removed the row under the second on Android (todo 4043).
 async fn drawn_text_is<D: Driver>(d: &mut D, row: &str, text: &str) -> Result<bool> {
+    // Blitz reads no script, and its reads are of the settled page.
+    if d.platform() == Platform::Native {
+        return Ok(d.exists(row).await? && d.text(row).await? == text);
+    }
     let read = d
         .evaluate(&format!(
             "document.querySelector({row:?})?.textContent ?? null"
@@ -302,7 +306,13 @@ async fn in_view<D: Driver>(d: &mut D, row: &str, after: &str) -> Result<()> {
         d,
         &format!("{after}: {row} inside the listbox"),
         async |d| {
-            let read: Option<[f64; 4]> = serde_json::from_value(d.evaluate(&boxes).await?)?;
+            // Blitz reads no script, and its reads are of the settled page.
+            let read: Option<[f64; 4]> = if d.platform() == Platform::Native {
+                let (row, list) = (d.rect(row).await?, d.rect(LISTBOX).await?);
+                Some([row.y, row.height, list.y, list.height])
+            } else {
+                serde_json::from_value(d.evaluate(&boxes).await?)?
+            };
             seen = read;
             Ok(read.is_some_and(|[y, height, list_y, list_height]| {
                 y >= list_y - 1.0 && y + height <= list_y + list_height + 1.0

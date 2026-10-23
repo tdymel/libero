@@ -198,12 +198,14 @@ async fn tab_leaves_at_the_edges<D: Driver>(d: &mut D, route: &str) -> Result<()
 e2e::scenario!(
     tab_leaves_a_date_picker_at_its_edges,
     "/chrono-field/tab-out",
-    tab_leaves_at_the_edges
+    tab_leaves_at_the_edges,
+    native: skip("Blitz reads no script; the WebView walk this guards is 4042's")
 );
 e2e::scenario!(
     tab_leaves_a_color_picker_at_its_edges,
     "/color-field/tab-out",
-    tab_leaves_at_the_edges
+    tab_leaves_at_the_edges,
+    native: skip("Blitz reads no script; the WebView walk this guards is 4042's")
 );
 
 /// Android's Back closes the dropdown, keeps the value, and the app stays (1300).

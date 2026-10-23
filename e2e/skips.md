@@ -229,6 +229,8 @@ The performance scenarios (units `perf`, `table_perf`) are no skips but run on r
 | `picker_dialog::android_arrow_down_enters_a_date_picker` | all but android | the web's `:focus` answer is covered by the dialog contract |
 | `picker_dialog::android_back_closes_a_color_field` | all but android | 1275: no Back key off Android |
 | `picker_dialog::android_back_closes_a_date_field` | all but android | 1275: no Back key off Android |
+| `picker_dialog::tab_leaves_a_color_picker_at_its_edges` | native | Blitz reads no script; the WebView walk this guards is 4042's |
+| `picker_dialog::tab_leaves_a_date_picker_at_its_edges` | native | Blitz reads no script; the WebView walk this guards is 4042's |
 | `picker_phone::android_a_swipe_slides_a_date_sheet_off` | all but android | a phone's finger; the web's is a_swipe_down_slides_the_sheet_away |
 | `picker_phone::android_a_swipe_slides_a_select_sheet_off` | all but android | a phone's finger; the web's is select_phone::a_swipe_down_on_the_grabber_closes_the_sheet |
 | `pin_field::a_digit_retyped_without_a_key_leaves_no_drifted_cell` | desktop | 1126: no text without a key (no IME path) under xdotool |
