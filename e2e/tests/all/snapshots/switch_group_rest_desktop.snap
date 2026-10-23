@@ -1,0 +1,13 @@
+---
+source: e2e/src/suite.rs
+description: switch_group at desktop (rest)
+expression: tree
+---
+LabelText
+  StaticText "Alerts"
+group "Alerts"
+  switch "Email" [checked=false]
+  switch "Push" [checked]
+  switch "Sms" [checked=false]
+paragraph
+  StaticText "Push"

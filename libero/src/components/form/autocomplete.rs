@@ -125,7 +125,7 @@ pub fn Autocomplete<T: Options>(props: AutocompleteProps<T>) -> Element {
     let nothing_found = localization.combobox.nothing_found;
     let size = props.size.copied_or(theme.autocomplete.size);
     let radius = ScaleOrCss::new(props.radius.as_ref(), theme.autocomplete.radius);
-    let required = props.required.unwrap_or(false);
+    let required = crate::components::form::fieldset_required(props.required);
     let prefiltered = props.prefiltered.unwrap_or(false);
 
     let bound = use_bound(&props.name, props.oninput.is_some());

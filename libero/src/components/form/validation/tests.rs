@@ -641,6 +641,50 @@ fn a_disabled_fieldset_disables_its_fields_and_nested_groups_and_follows_a_toggl
     assert_eq!(disabled_parts(&after), parts.map(|part| (part, true)));
 }
 
+/// Todo 3992: a required group requires its fields, nested groups too; an own `false` opts out.
+#[test]
+fn a_required_fieldset_requires_its_fields_unless_one_says_otherwise_and_follows_a_toggle() {
+    fn app() -> Element {
+        let required = use_signal(|| false);
+        expose(required);
+        rsx! {
+            LiberoProvider {
+                Fieldset::<()> {
+                    required: required(),
+                    TextField { label: "Outer", oninput: move |_| {} }
+                    TextField { label: "Optional", required: false, oninput: move |_| {} }
+                    Fieldset::<()> {
+                        TextField { label: "Inner", oninput: move |_| {} }
+                    }
+                }
+            }
+        }
+    }
+
+    let required_inputs = |html: &str| -> Vec<bool> {
+        html.split("<input")
+            .skip(1)
+            .map(|tag| {
+                let tag = &tag[..tag.find('>').unwrap_or(tag.len())];
+                attribute(tag.trim_start(), "required") == Some("true")
+            })
+            .collect()
+    };
+    let (mut dom, before) = mount(app);
+    assert_eq!(required_inputs(&before), [false, false, false]);
+    assert!(!before.contains("data-slot=\"required\""), "{before}");
+
+    let mut required = exposed::<Signal<bool>>(&dom);
+    dom.in_runtime(|| required.set(true));
+    let after = settle(&mut dom);
+    assert_eq!(required_inputs(&after), [true, false, true]);
+    assert_eq!(
+        after.matches("data-slot=\"required\"").count(),
+        2,
+        "{after}"
+    );
+}
+
 /// Each fieldset, input and `data-state` element of a fieldset's markup, in
 /// document order, and whether it says disabled (`aria-disabled` on a fieldset).
 fn disabled_parts(html: &str) -> Vec<(&str, bool)> {

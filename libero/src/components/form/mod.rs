@@ -3,6 +3,8 @@ mod autocomplete;
 mod caption;
 #[cfg(feature = "cascader")]
 mod cascader;
+#[cfg(any(feature = "checkbox-group", feature = "switch-group"))]
+mod check_group;
 #[cfg(feature = "checkbox")]
 mod checkbox;
 #[cfg(feature = "chip")]
@@ -83,6 +85,10 @@ pub use cascader::{
     Cascader, CascaderDropdown, CascaderDropdownProps, CascaderFilterArgs, CascaderLayout,
     CascaderNodeArgs, CascaderOption, CascaderPart, CascaderProps, CascaderState, use_cascader,
 };
+#[cfg(feature = "checkbox-group")]
+pub use check_group::{CheckboxGroup, CheckboxGroupPart, CheckboxGroupProps};
+#[cfg(feature = "switch-group")]
+pub use check_group::{SwitchGroup, SwitchGroupPart, SwitchGroupProps};
 #[cfg(feature = "checkbox")]
 pub use checkbox::{Checkbox, CheckboxPart, CheckboxProps};
 #[cfg(feature = "checkbox")]
@@ -185,8 +191,8 @@ pub(crate) use use_field_frame::{
     with_drawn_placeholder,
 };
 pub(crate) use validation::{
-    Binding, Disabled, FieldEntry, FormScope, Source, SummaryItem, issues_of,
-    join as validation_join, use_fieldset_disabled, worst,
+    Binding, Disabled, FieldEntry, FormScope, Required, Source, SummaryItem, fieldset_required,
+    issues_of, join as validation_join, use_fieldset_disabled, worst,
 };
 pub use validation::{
     FieldName, FieldPath, Fields, IsEmpty, Rule, Step, StepKey, Validator, Validators, is_email,

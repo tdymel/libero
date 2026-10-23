@@ -286,7 +286,7 @@ pub fn RichTextEditor(props: RichTextEditorProps) -> Element {
     let theme = use_theme();
     let size = props.size.copied_or(theme.textarea.size);
     let radius = ScaleOrCss::new(props.radius.as_ref(), theme.textarea.radius);
-    let required = props.required.unwrap_or(false);
+    let required = crate::components::form::fieldset_required(props.required);
 
     let bound = use_bound(&props.name, props.onchange.is_some());
     let disabled = bound.disabled(props.disabled);

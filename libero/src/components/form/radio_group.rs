@@ -138,7 +138,7 @@ pub fn RadioGroup<T: Options>(props: RadioGroupProps<T>) -> Element {
     let root = use_element();
 
     let size = props.size.copied_or(theme.radio.size);
-    let required = props.required.unwrap_or(false);
+    let required = crate::components::form::fieldset_required(props.required);
     let horizontal = props.orientation.copied_or_default() == Orientation::Horizontal;
 
     let bound = use_bound(&props.name, props.onchange.is_some());
@@ -403,6 +403,8 @@ fn GroupRadio(props: GroupRadioProps) -> Element {
             checked,
             disabled,
             readonly,
+            // The group carries `required`; a `Fieldset`'s would star every option.
+            required: false,
             tabindex: if tab_stop { "0" } else { "-1" },
             onselect: move |_| pick.call(index),
             "data-radio-index": "{index}",

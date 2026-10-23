@@ -175,9 +175,10 @@ mod tests {
     use crate::components::{
         common::Part,
         form::{
-            CascaderPart, CheckboxPart, ChipPart, FieldPart, FieldsetPart, FileFieldPart,
-            PhoneFieldPart, RadioGroupPart, RadioPart, RatingPart, SegmentedControlPart,
-            SelectPart, SliderPart, SwitchPart, TagsFieldPart, TextareaPart,
+            CascaderPart, CheckboxGroupPart, CheckboxPart, ChipPart, FieldPart, FieldsetPart,
+            FileFieldPart, PhoneFieldPart, RadioGroupPart, RadioPart, RatingPart,
+            SegmentedControlPart, SelectPart, SliderPart, SwitchGroupPart, SwitchPart,
+            TagsFieldPart, TextareaPart,
         },
     };
 
@@ -222,6 +223,11 @@ mod tests {
             caption(&["frame", "control", "browse", "chip", "trailing", "card"])
         );
         assert_eq!(table::<CheckboxPart>(), caption(&["control", "box"]));
+        assert_eq!(table::<CheckboxGroupPart>(), caption(&["control", "box"]));
+        assert_eq!(
+            table::<SwitchGroupPart>(),
+            caption(&["control", "track", "thumb"])
+        );
         assert_eq!(table::<RadioPart>(), caption(&["control", "circle", "dot"]));
         assert_eq!(
             table::<RadioGroupPart>(),
@@ -274,6 +280,8 @@ mod tests {
         assert_well_formed::<TagsFieldPart>();
         assert_well_formed::<FileFieldPart>();
         assert_well_formed::<CheckboxPart>();
+        assert_well_formed::<CheckboxGroupPart>();
+        assert_well_formed::<SwitchGroupPart>();
         assert_well_formed::<RadioPart>();
         assert_well_formed::<RadioGroupPart>();
         assert_well_formed::<SwitchPart>();

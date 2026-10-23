@@ -382,7 +382,7 @@ pub(crate) fn SelectCore(props: SelectCoreProps) -> Element {
     let disabled = props.disabled.unwrap_or(false);
     // Read-only stays focusable and posting, but never opens; chip keys and clear go too.
     let readonly = props.readonly.unwrap_or(false);
-    let required = props.required.unwrap_or(false);
+    let required = crate::components::form::fieldset_required(props.required);
 
     let state = props.state;
     let opened = state.is_open() && !disabled && !readonly;

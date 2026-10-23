@@ -169,7 +169,7 @@ pub fn ColorField(props: ColorFieldProps) -> Element {
     let defaults = &theme.color_field;
     let size = props.size.copied_or(defaults.size);
     let radius = ScaleOrCss::new(props.radius.as_ref(), defaults.radius);
-    let required = props.required.unwrap_or(false);
+    let required = crate::components::form::fieldset_required(props.required);
     let with_alpha = props.with_alpha.unwrap_or(false);
     let with_preview = props.with_preview.unwrap_or(defaults.with_preview);
     let with_eye_dropper = props.with_eye_dropper.unwrap_or(defaults.with_eye_dropper);

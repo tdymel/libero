@@ -42,7 +42,7 @@ every component group, `all-hooks` every hook.
 | `buttons` | action-icon, button, button-group, copy, direction-toggle, repository, share, theme-switcher, tldr, toolbar |
 | `data-display` | accordion, audio, avatar, badge, carousel, charts, data-list, icon, image, image-list, indicator, kanban, list, marquee, pictogram, qr-code, sortable, table, timeline, video |
 | `feedback` | alert, circular-progress, loader, notifications, progress-bar, skeleton |
-| `form` | autocomplete, cascader, checkbox, chip, color, combobox, date-field, date-picker, fieldset, file-field, form-root, image-cropper, native-select, number-field, password-field, phone-field, pin-field, radio, radio-group, rating, rich-text-editor, segmented-control, select, slider, switch, tags-field, text-field, textarea |
+| `form` | autocomplete, cascader, checkbox, checkbox-group, chip, color, combobox, date-field, date-picker, fieldset, file-field, form-root, image-cropper, native-select, number-field, password-field, phone-field, pin-field, radio, radio-group, rating, rich-text-editor, segmented-control, select, slider, switch, switch-group, tags-field, text-field, textarea |
 | `layout` | aspect-ratio, box, center, collapse, container, divider, flex, float, grid, header, paper, scroll-area, scroller, sidebar, splitter, transition |
 | `navigation` | anchor, burger, menubar, nav-link, navigation-bar, pagination, stepper, tabs, tree |
 | `overlay` | dialog, drawer, floating-window, hover-card, lightbox, menu, modal, overlay-backdrop, shortcut-help, spotlight, tooltip, tour |
@@ -98,6 +98,7 @@ it is on (Notes).
 | `autocomplete` | Autocomplete | combobox, action-icon | off |  |
 | `cascader` | Cascader | combobox, action-icon, use-media-query | off |  |
 | `checkbox` | Checkbox | use-icon, use-id, visually-hidden | on |  |
+| `checkbox-group` | CheckboxGroup | checkbox | off |  |
 | `chip` | Chip | action-icon, anchor | on |  |
 | `color` | ColorField, ColorPicker, ColorSwatch, HueSlider, AlphaSlider | slider, action-icon, use-media-query, use-swipe, use-timers | off |  |
 | `combobox` | Combobox, use_combobox | loader, paper, scroll-area, use-id, use-popover, visually-hidden, use-icon, use-swipe, use-media-query, use-timers | on |  |
@@ -120,6 +121,7 @@ it is on (Notes).
 | `select` | Select, MultiSelect | combobox, chip, action-icon | on |  |
 | `slider` | Slider, RangeSlider | tooltip, use-icon, visually-hidden, use-id, use-drag | off |  |
 | `switch` | Switch | use-accessibility, use-icon, visually-hidden, use-id | on |  |
+| `switch-group` | SwitchGroup | switch | off |  |
 | `tags-field` | TagsField | combobox, chip, select, action-icon | off |  |
 | `text-field` | TextField | use-icon, visually-hidden, use-id | on |  |
 | `textarea` | Textarea | use-debounce, use-icon, visually-hidden, use-id | off |  |

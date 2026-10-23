@@ -84,6 +84,8 @@ field_props! {
 
 /// Two thumbs on one track that never cross, on [`Slider`](super::Slider)'s engine.
 ///
+/// A thumb dragged or stepped past the other stops on it (`min_range` short); the two never swap.
+///
 /// ```rust
 /// # use dioxus::prelude::*;
 /// # use libero::components::{RangeSlider, SliderChangeEvent};
@@ -156,7 +158,7 @@ pub fn RangeSlider<V: SliderValue>(props: RangeSliderProps<V>) -> Element {
         }
     });
 
-    let required = props.required.unwrap_or(false);
+    let required = crate::components::form::fieldset_required(props.required);
 
     // The thumbs carry `role="slider"`, and `for` names only a labelable
     // element - so the field hands its ids over rather than applying them.

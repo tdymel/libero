@@ -78,6 +78,7 @@
 /form/getting-started	Form getting started - Libero	How to build libero forms, with specialized fields, composed parts, validators at each layer, typed paths from #[derive(Fields)] and binding.	/md/form_getting_started.md	Form	/form/getting-started
 /form/autocomplete	Autocomplete - Libero	A text field that offers completions from any Options type, while the value stays a String.	/md/autocomplete.md	Form	/form/getting-started
 /form/checkbox	Checkbox - Libero	A checkbox with its label beside the box, the field slots under both, and an indeterminate state.	/md/checkbox.md	Form	/form/getting-started
+/form/checkbox-group	CheckboxGroup - Libero	A group of checkboxes over an enum, any number of them checked, each box its own tab stop, the question as the group's name and an optional cap.	/md/checkbox_group.md	Form	/form/getting-started
 /form/chip	Chip - Libero	A compact token: a tag, a filter, a small action or a link.	/md/chip.md	Form	/form/getting-started
 /form/color-field	ColorField - Libero	A text field holding a ColorCode, with a preview swatch, an eyedropper and a ColorPicker in a dropdown.	/md/color_field.md	Form	/form/getting-started
 /form/color-picker	ColorPicker - Libero	A saturation panel and a hue slider, with optional alpha and preset swatches, over one ColorCode. Also documents HueSlider, AlphaSlider and ColorSwatch.	/md/color_picker.md	Form	/form/getting-started
@@ -103,6 +104,7 @@
 /form/select	Select - Libero	A listbox over an enum with rows you can draw yourself, in the same field frame as every other input.	/md/select.md	Form	/form/getting-started
 /form/slider	Slider - Libero	A value dragged along a track, continuous over f64 or discrete over an ordered enum that derives SliderValue.	/md/slider.md	Form	/form/getting-started
 /form/switch	Switch - Libero	An on/off toggle drawn as a track and thumb, announced as a switch, with the field slots.	/md/switch.md	Form	/form/getting-started
+/form/switch-group	SwitchGroup - Libero	A group of switches over an enum, any number of them on, each switch its own tab stop, the question as the group's name and an optional cap.	/md/switch_group.md	Form	/form/getting-started
 /form/tags-field	TagsField - Libero	A field whose value is a Vec<String> of typed tags, drawn as chips around the input.	/md/tags_field.md	Form	/form/getting-started
 /form/text-field	TextField - Libero	A single-line text field with a label, a description, helper text and a validation message.	/md/text_field.md	Form	/form/getting-started
 /form/textarea	Textarea - Libero	A multi-line text field, sized by rows and resizable by the user.	/md/textarea.md	Form	/form/getting-started

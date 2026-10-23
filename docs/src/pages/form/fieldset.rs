@@ -69,6 +69,9 @@ fn fieldset_code(values: &DemoValues, _: &str) -> String {
         "error" => props.push_str("\n            status: \"We cannot deliver to this address.\","),
         _ => {}
     }
+    if values.str("required") == "true" {
+        props.push_str("\n            required: true,");
+    }
     if values.str("disabled") == "true" {
         props.push_str("\n            disabled: true,");
     }
@@ -109,6 +112,9 @@ pub fn FieldsetPage() -> Element {
                 prop("disabled", "bool")
                     .default("false")
                     .doc("Disables every Libero control inside, nested fieldsets included. A field's own `disabled: false` cannot re-enable it. A raw `<input>` or `<button>` keeps its own `disabled`."),
+                prop("required", "bool")
+                    .doc("Marks every field inside required, nested fieldsets included: each gets its asterisk and `aria-required`, and inside a `Form` an empty one fails the submit. A field's own `required: false` keeps it optional.")
+                    .default("false"),
                 prop("children", "Element").default("required").doc("The fields."),
             ])
             .parts("FieldsetPart", vec![
@@ -121,6 +127,7 @@ pub fn FieldsetPage() -> Element {
                 .handles([
                     "A native `<fieldset>`, named by its `<legend>`, the `label`.",
                     "`description`, `helper` and the group's status join its `aria-describedby`.",
+                    "`required` reaches every field inside, which then marks its own label and sets `aria-required`. The legend carries no asterisk, so a field set back to optional reads as one.",
                     "`disabled` reaches every Libero control inside, nested fieldsets included. Inputs disable natively, so a submit leaves them out; buttons soft-disable, so a focused one keeps its focus.",
                 ])
                 .must(["Give the group a `label`, so screen readers announce what its fields are for."])
@@ -160,12 +167,14 @@ pub fn FieldsetPage() -> Element {
                         .code(silent),
                     Control::switch("description").code(silent),
                     Control::switch("helper").code(silent),
+                    Control::switch("required").code(silent),
                     Control::switch("disabled").code(silent),
                 ],
                 render: move |values: DemoValues| rsx! {
                     AddressFieldset {
                         description: values.str("description") == "true",
                         helper: values.str("helper") == "true",
+                        required: values.str("required") == "true",
                         disabled: values.str("disabled") == "true",
                         status: values.str("status"),
                     }
@@ -176,7 +185,13 @@ pub fn FieldsetPage() -> Element {
 }
 
 #[component]
-fn AddressFieldset(description: bool, helper: bool, disabled: bool, status: String) -> Element {
+fn AddressFieldset(
+    description: bool,
+    helper: bool,
+    required: bool,
+    disabled: bool,
+    status: String,
+) -> Element {
     let address = use_store(Address::default);
 
     rsx! {
@@ -191,6 +206,7 @@ fn AddressFieldset(description: bool, helper: bool, disabled: bool, status: Stri
                 "error" => Input::Value(FieldStatus::Error("We cannot deliver to this address.".to_string())),
                 _ => Input::None,
             },
+            required,
             disabled,
             value: address,
             validate: [

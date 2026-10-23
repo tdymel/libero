@@ -147,7 +147,7 @@ pub(crate) fn CascaderCore(props: CascaderCoreProps) -> Element {
     let disabled = props.disabled.unwrap_or(false);
     // As `SelectCore`: read-only stays focusable and posting, but never opens.
     let readonly = props.readonly.unwrap_or(false);
-    let required = props.required.unwrap_or(false);
+    let required = crate::components::form::fieldset_required(props.required);
 
     let state = use_combobox();
     let opened = state.is_open() && !disabled && !readonly;
@@ -328,7 +328,7 @@ fn use_cascader_field(
         .status(&props.status)
         .rules(props.rules.clone())
         .name(props.name.as_deref())
-        .required(props.required.unwrap_or(false))
+        .required(crate::components::form::fieldset_required(props.required))
         .empty(empty)
         .asks(Asks::Select)
         .readonly(readonly)

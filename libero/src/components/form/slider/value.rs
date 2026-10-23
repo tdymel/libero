@@ -343,6 +343,29 @@ mod tests {
         );
     }
 
+    /// Todo 3992: MUI's `disableSwap` is the only behaviour - a thumb dragged past the other stops on it.
+    #[test]
+    fn a_thumb_dragged_past_the_other_stops_on_it_and_never_swaps() {
+        let value = SliderCoreValue::Range {
+            from: 20.0,
+            to: 80.0,
+        };
+        let met = SliderCoreValue::Range {
+            from: 80.0,
+            to: 80.0,
+        };
+        assert_eq!(value.moved(0, 95.0, 0.0, 100.0, 1.0, 0.0), met);
+        assert_eq!(
+            value.moved(1, 5.0, 0.0, 100.0, 1.0, 0.0),
+            SliderCoreValue::Range {
+                from: 20.0,
+                to: 20.0
+            }
+        );
+        // Still the lower thumb past the meeting point: it holds, the upper one stays.
+        assert_eq!(met.moved(0, 99.0, 0.0, 100.0, 1.0, 0.0), met);
+    }
+
     #[test]
     fn a_min_range_keeps_the_thumbs_apart() {
         let value = SliderCoreValue::Range {

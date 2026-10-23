@@ -77,8 +77,10 @@ each component you use, see [features.md](features.md).
 - [NativeSelect](native_select.md): A styled native `<select>` over an enum, with the field slots.
 - [Combobox](combobox.md): A listbox that hangs off a trigger you supply, holding no state of its own.
 - [Checkbox](checkbox.md): A checkbox with its label beside the box, the field slots under both, and an indeterminate state.
+- [CheckboxGroup](checkbox_group.md): A group of checkboxes over an enum, any number of them checked, each box its own tab stop, the question as the group's name and an optional cap.
 - [Chip](chip.md): A compact token: a tag, a filter, a small action or a link.
 - [Switch](switch.md): An on/off toggle drawn as a track and thumb, announced as a switch, with the field slots.
+- [SwitchGroup](switch_group.md): A group of switches over an enum, any number of them on, each switch its own tab stop, the question as the group's name and an optional cap.
 - [RadioGroup](radio_group.md): A group of radios over an enum, exactly one selected, with one tab stop, arrow-key selection and the question as the group's name.
 - [SegmentedControl](segmented_control.md): A connected strip of segments over an enum, exactly one of them selected, with the field slots.
 - [Slider](slider.md): A value dragged along a track, continuous over `f64` or discrete over an ordered enum that derives `SliderValue`.

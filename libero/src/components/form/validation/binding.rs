@@ -124,6 +124,15 @@ impl Binding {
 #[derive(Clone, Copy)]
 pub(crate) struct Disabled(pub Signal<bool>);
 
+/// A required `Fieldset`'s state for the fields inside; a field's own `required` wins.
+#[derive(Clone, Copy)]
+pub(crate) struct Required(pub Signal<bool>);
+
+/// A field's own `required`, else the nearest enclosing `Fieldset`'s. No hook: callable anywhere.
+pub(crate) fn fieldset_required(own: Option<bool>) -> bool {
+    own.unwrap_or_else(|| try_consume_context::<Required>().is_some_and(|Required(group)| group()))
+}
+
 /// Whether an enclosing `Fieldset` is disabled. A hook, for a control that is no field.
 pub(crate) fn use_fieldset_disabled() -> bool {
     use_hook(try_consume_context::<Disabled>).is_some_and(|Disabled(group)| group())

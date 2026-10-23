@@ -160,7 +160,7 @@ pub fn FileField(props: FileFieldProps) -> Element {
     let radius = ScaleOrCss::new(props.radius.as_ref(), theme.file_field.radius);
     let variant = props.variant.copied_or(theme.file_field.variant);
     let clearable = props.clearable.unwrap_or(theme.file_field.clearable);
-    let required = props.required.unwrap_or(false);
+    let required = crate::components::form::fieldset_required(props.required);
     let multiple = props.multiple;
     let loading = props.loading.unwrap_or(false);
     let bound = use_bound(&props.name, props.onchange.is_some());
@@ -488,7 +488,10 @@ fn file_input(
         .attr("name", name)
         .attr("disabled", !interactive)
         // The native half of `required`: a form's own validation reads it.
-        .attr("required", props.required.unwrap_or(false))
+        .attr(
+            "required",
+            crate::components::form::fieldset_required(props.required),
+        )
         // It is the Browse button that is focusable and named; this is plumbing.
         .attr("tabindex", "-1")
         .attr("aria-hidden", "true")

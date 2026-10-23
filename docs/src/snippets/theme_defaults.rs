@@ -36,7 +36,7 @@ fn theme_enum_looks(component: &str) -> Vec<(&'static str, String)> {
         "Burger" => burger: size;
         "Button" => button: variant size radius;
         "Cascader" => cascader: size radius;
-        "Checkbox" => checkbox: variant size radius color;
+        "Checkbox", "CheckboxGroup" => checkbox: variant size radius color;
         "Chip" => chip: variant size radius color;
         "ChronoField" => chrono_field: size radius;
         "ChronoPicker" => chrono_picker: size;
@@ -80,7 +80,7 @@ fn theme_enum_looks(component: &str) -> Vec<(&'static str, String)> {
         "Skeleton" => skeleton: radius;
         "Slider", "RangeSlider" => slider: size color;
         "Stepper" => stepper: size label_position;
-        "Switch" => switch: variant size radius color;
+        "Switch", "SwitchGroup" => switch: variant size radius color;
         "Table" => table: size;
         "Tabs" => tabs: size color activation;
         "TagsField" => tags_field: size radius;

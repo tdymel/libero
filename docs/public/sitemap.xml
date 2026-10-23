@@ -54,8 +54,10 @@
   <url><loc>https://libero-ui.dev/form/native-select</loc></url>
   <url><loc>https://libero-ui.dev/form/combobox</loc></url>
   <url><loc>https://libero-ui.dev/form/checkbox</loc></url>
+  <url><loc>https://libero-ui.dev/form/checkbox-group</loc></url>
   <url><loc>https://libero-ui.dev/form/chip</loc></url>
   <url><loc>https://libero-ui.dev/form/switch</loc></url>
+  <url><loc>https://libero-ui.dev/form/switch-group</loc></url>
   <url><loc>https://libero-ui.dev/form/radio-group</loc></url>
   <url><loc>https://libero-ui.dev/form/segmented-control</loc></url>
   <url><loc>https://libero-ui.dev/form/slider</loc></url>

@@ -160,7 +160,7 @@ pub fn Slider<V: SliderValue>(props: SliderProps<V>) -> Element {
         }
     });
 
-    let required = props.required.unwrap_or(false);
+    let required = crate::components::form::fieldset_required(props.required);
     let required_word = use_localization().slider.required;
 
     // The thumb carries `role="slider"`, and `for` names only a labelable

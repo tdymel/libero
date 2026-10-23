@@ -194,7 +194,7 @@ pub fn Switch(props: SwitchProps) -> Element {
 
     let size = props.size.copied_or(theme.switch.size);
     let radius = ScaleOrCss::new(props.radius.as_ref(), theme.switch.radius);
-    let required = props.required.unwrap_or(false);
+    let required = crate::components::form::fieldset_required(props.required);
     let bound = use_bound(&props.name, props.onchange.is_some());
     let disabled = bound.disabled(props.disabled);
     let checked = bound

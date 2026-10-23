@@ -219,16 +219,18 @@ fn required_props_read_required() {
 /// the theme, in the table and in the demo controls, not as a literal that drifts from it.
 #[test]
 fn form_pages_read_theme_defaults() {
-    const PAGES: [&str; 9] = [
+    const PAGES: [&str; 11] = [
         "text_field",
         "textarea",
         "checkbox",
+        "checkbox_group",
         "radio_group",
         "tags_field",
         "autocomplete",
         "native_select",
         "phone_field",
         "switch",
+        "switch_group",
     ];
     const LITERALS: [&str; 6] = [
         r#"prop("size","Size").default(""#,

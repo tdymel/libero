@@ -163,7 +163,7 @@ pub(super) fn use_picker_field<V: FieldValue>(
     let defaults = &theme.chrono_field;
     let size = field.size.copied_or(defaults.size);
     let radius = ScaleOrCss::new(field.radius.as_ref(), defaults.radius);
-    let required = field.required.unwrap_or(false);
+    let required = crate::components::form::fieldset_required(field.required);
     let bound = use_bound(field.name, field.onchange.is_some());
     let disabled = bound.disabled(field.disabled);
     // Readonly: native on the text; the dropdown refuses to open, leaving focus and posting alone.

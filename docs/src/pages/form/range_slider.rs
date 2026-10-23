@@ -223,8 +223,8 @@ pub fn RangeSliderPage() -> Element {
                     "Two thumbs on one track, for a span instead of a point. It takes the same "
                     "values as "
                     Code { source: "Slider" }
-                    ", as a pair in track order. The thumbs never cross, and each stops at the "
-                    "other or "
+                    ", as a pair in track order. The thumbs never cross or swap: a thumb dragged "
+                    "past the other stops on it, or "
                     Code { source: "min_range" }
                     " short of it."
                 }

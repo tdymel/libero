@@ -207,7 +207,7 @@ pub fn PhoneField(props: PhoneFieldProps) -> Element {
     let theme = use_theme();
     let size = props.size.copied_or(theme.phone_field.size);
     let radius = ScaleOrCss::new(props.radius.as_ref(), theme.phone_field.radius);
-    let required = props.required.unwrap_or(false);
+    let required = crate::components::form::fieldset_required(props.required);
 
     let bound = use_bound(&props.name, props.oninput.is_some());
     let disabled = bound.disabled(props.disabled);

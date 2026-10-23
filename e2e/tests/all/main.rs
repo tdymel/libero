@@ -23,6 +23,7 @@ mod carousel_slide_keys;
 mod cascader;
 mod cascader_phone;
 mod chart;
+mod check_group;
 mod checkbox;
 mod chip;
 mod chrono_field;

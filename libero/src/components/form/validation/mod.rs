@@ -7,7 +7,9 @@ mod validator;
 #[cfg(test)]
 mod tests;
 
-pub(crate) use binding::{Binding, Disabled, Source, use_fieldset_disabled};
+pub(crate) use binding::{
+    Binding, Disabled, Required, Source, fieldset_required, use_fieldset_disabled,
+};
 pub use catalog::{IsEmpty, is_email, max, max_length, min, min_length, not_empty};
 pub(crate) use context::{FieldEntry, FormScope, SummaryItem, issues_of};
 pub use libero_macros::Fields;

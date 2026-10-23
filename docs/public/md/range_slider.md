@@ -8,8 +8,8 @@ Index: [index.md](index.md) lists every other page
 Description: Two thumbs on one track, for a span instead of a point, over the same values as `Slider`.
 
 Two thumbs on one track, for a span instead of a point. It takes the same
-values as [Slider](slider.md), as a pair in track order. The thumbs never cross,
-and each stops at the other or `min_range` short of it.
+values as [Slider](slider.md), as a pair in track order. The thumbs never cross
+or swap: a thumb dragged past the other stops on it, or `min_range` short of it.
 
 ## Usage
 

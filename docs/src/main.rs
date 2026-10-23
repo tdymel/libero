@@ -261,6 +261,8 @@ pub(crate) enum Route {
     AutocompletePage {},
     #[route("/form/checkbox")]
     CheckboxPage {},
+    #[route("/form/checkbox-group")]
+    CheckboxGroupPage {},
     #[route("/form/chip")]
     ChipPage {},
     #[route("/form/color-field")]
@@ -311,6 +313,8 @@ pub(crate) enum Route {
     SliderPage {},
     #[route("/form/switch")]
     SwitchPage {},
+    #[route("/form/switch-group")]
+    SwitchGroupPage {},
     #[route("/form/tags-field")]
     TagsFieldPage {},
     #[route("/form/text-field")]

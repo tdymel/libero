@@ -127,7 +127,7 @@ pub fn PinField(props: PinFieldProps) -> Element {
         .copied_or(theme.pin_field.length)
         .clamp(1, MAX_LENGTH);
     let readonly = props.readonly.unwrap_or(false);
-    let required = props.required.unwrap_or(false);
+    let required = crate::components::form::fieldset_required(props.required);
     let mask = props.mask.unwrap_or(false);
 
     let bound = use_bound(&props.name, props.oninput.is_some());

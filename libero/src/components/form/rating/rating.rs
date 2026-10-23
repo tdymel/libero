@@ -302,7 +302,7 @@ pub fn Rating(props: RatingProps) -> Element {
         .status(&props.status)
         .rules(props.validate.check(&value))
         .bound(&bound)
-        .required(props.required.unwrap_or(false))
+        .required(crate::components::form::fieldset_required(props.required))
         .empty(value <= 0.0)
         .readonly(readonly)
         .required_in_name(words.rating.required)

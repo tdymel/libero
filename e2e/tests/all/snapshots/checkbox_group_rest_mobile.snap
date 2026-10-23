@@ -1,0 +1,15 @@
+---
+source: e2e/src/suite.rs
+description: checkbox_group at mobile (rest)
+expression: tree
+---
+LabelText
+  StaticText "Toppings"
+StaticText "Two at most."
+group "Toppings"
+  description "Two at most."
+  checkbox "Cheese" [checked=false]
+  checkbox "Olives" [checked=false]
+  checkbox "Basil" [checked=false]
+  checkbox "Chili" [checked=false]
+paragraph

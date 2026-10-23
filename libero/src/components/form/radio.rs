@@ -166,7 +166,7 @@ pub fn Radio(props: RadioProps) -> Element {
     // A disabled `Fieldset` disables the input, but not the circle and label that pick it.
     let group = try_use_context::<Disabled>();
     let disabled = props.disabled.unwrap_or(false) || group.is_some_and(|Disabled(group)| group());
-    let required = props.required.unwrap_or(false);
+    let required = crate::components::form::fieldset_required(props.required);
     let checked = props.checked.unwrap_or(false);
     // HTML's `readonly` does not apply to a radio, so the activation is refused
     // here. ARIA has no `aria-readonly` on `radio` either: the radiogroup says it.

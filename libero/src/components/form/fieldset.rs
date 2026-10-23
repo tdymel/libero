@@ -7,7 +7,7 @@ use crate::{
         common::{HtmlTag, Input, Part, base_props, names_itself, parts_enum, use_name_warning},
         form::{
             Binding, Caption, Disabled, FieldEntry, FieldName, FieldStatus, FormScope, FormValue,
-            Source, Validators, issues_of,
+            Required, Source, Validators, issues_of,
             use_field::{caption_content, join_ids, slot_node, status_node},
             worst,
         },
@@ -109,6 +109,10 @@ base_props! {
         /// or `<button>` keeps its own `disabled`: the group renders no native one.
         #[props(default)]
         disabled: Option<bool>,
+        /// Marks every field inside required, nested groups too; a field's own `required` wins,
+        /// so `required: false` keeps one optional.
+        #[props(default)]
+        required: Option<bool>,
         children: Element,
     }
 }
@@ -187,6 +191,15 @@ pub fn Fieldset<V: FormValue>(props: FieldsetProps<V>) -> Element {
         props.disabled.unwrap_or(false) || parent_disabled.is_some_and(|Disabled(parent)| parent());
     if *own_disabled.0.peek() != disabled {
         own_disabled.0.set(disabled);
+    }
+    let parent_required = use_hook(try_consume_context::<Required>);
+    let mut own_required = use_hook(|| Required(Signal::new(false)));
+    use_context_provider(|| own_required);
+    let required = props
+        .required
+        .unwrap_or_else(|| parent_required.is_some_and(|Required(parent)| parent()));
+    if *own_required.0.peek() != required {
+        own_required.0.set(required);
     }
 
     // With no value there is nothing to judge: a rule run over `V::default()`
