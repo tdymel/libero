@@ -1,6 +1,8 @@
-use std::{any::Any, borrow::Cow, fmt, marker::PhantomData};
+use std::{any::Any, borrow::Cow, fmt, marker::PhantomData, rc::Rc};
 
 use dioxus::dioxus_core::{AttributeValue, IntoAttributeValue};
+
+use super::adapter::Adapt;
 
 /// One type-erased field access, emitted by `#[derive(Fields)]` and [`path!`](crate::path).
 #[doc(hidden)]
@@ -141,14 +143,39 @@ impl<Root, T> IntoAttributeValue for FieldPath<Root, T> {
 }
 
 /// A field's `name`, typed by its value. A [`FieldPath`] also binds it inside
-/// a `Form`; a plain string only posts. The root is checked at render.
+/// a `Form`; a plain string only posts. The root is checked at render. A
+/// path's `.map(..)` or `.parsed()` binds it to a domain type instead.
 pub struct FieldName<T> {
     path: Cow<'static, str>,
     steps: Option<Cow<'static, [Step]>>,
+    /// Converts between the value the field edits and the domain type stored.
+    adapter: Option<Rc<dyn Adapt<T>>>,
     _type: PhantomData<fn() -> T>,
 }
 
 impl<T> FieldName<T> {
+    pub(crate) fn from_parts(
+        path: Cow<'static, str>,
+        steps: Option<Cow<'static, [Step]>>,
+        adapter: Option<Rc<dyn Adapt<T>>>,
+    ) -> Self {
+        Self {
+            path,
+            steps,
+            adapter,
+            _type: PhantomData,
+        }
+    }
+
+    pub(crate) fn into_parts(self) -> (Cow<'static, str>, Option<Cow<'static, [Step]>>) {
+        (self.path, self.steps)
+    }
+
+    /// The domain type's conversions, for a mapped name.
+    pub(crate) fn adapter(&self) -> Option<&Rc<dyn Adapt<T>>> {
+        self.adapter.as_ref()
+    }
+
     pub fn as_str(&self) -> &str {
         &self.path
     }
@@ -168,6 +195,7 @@ impl<T> Default for FieldName<T> {
         Self {
             path: Cow::Borrowed(""),
             steps: None,
+            adapter: None,
             _type: PhantomData,
         }
     }
@@ -178,15 +206,23 @@ impl<T> Clone for FieldName<T> {
         Self {
             path: self.path.clone(),
             steps: self.steps.clone(),
+            adapter: self.adapter.clone(),
             _type: PhantomData,
         }
     }
 }
 
-/// By spelling: two names that post the same are the same name.
-impl<T> PartialEq for FieldName<T> {
+/// By spelling: two names that post the same are the same name. Mapped ones
+/// also match by their conversions' types and rules.
+impl<T: 'static> PartialEq for FieldName<T> {
     fn eq(&self, other: &Self) -> bool {
-        self.path == other.path && self.steps.is_some() == other.steps.is_some()
+        self.path == other.path
+            && self.steps.is_some() == other.steps.is_some()
+            && match (&self.adapter, &other.adapter) {
+                (None, None) => true,
+                (Some(a), Some(b)) => a.same(b.as_any()),
+                _ => false,
+            }
     }
 }
 
@@ -210,6 +246,7 @@ impl<Root, T> From<FieldPath<Root, T>> for FieldName<T> {
         Self {
             steps: bindable.then_some(path.steps),
             path: path.path,
+            adapter: None,
             _type: PhantomData,
         }
     }
@@ -226,6 +263,7 @@ impl<T> From<String> for FieldName<T> {
         Self {
             path: Cow::Owned(path),
             steps: None,
+            adapter: None,
             _type: PhantomData,
         }
     }

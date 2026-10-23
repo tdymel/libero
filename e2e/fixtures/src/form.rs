@@ -5,7 +5,7 @@ use dioxus::prelude::*;
 use libero::chrono::NaiveDate;
 use libero::components::{
     Autocomplete, Button, Cascader, CascaderOption, Checkbox, Chip, ColorCode, ColorField,
-    DateField, DatePicker, DateRangePicker, DateTimeField, FieldStatus, Fields, Fieldset, FileField, Files, Flex, Form,
+    DateField, DatePicker, DateRangePicker, DateTimeField, FieldError, FieldStatus, Fields, Fieldset, FileField, Files, Flex, Form,
     MonthPicker, MultiSelect, NativeSelect, NumberField, Options, PasswordField, PhoneField, PinField, Radio,
     RadioGroup, RangeSlider, Rating, Rule, SegmentedControl, Select, Slider, SliderChangeEvent,
     Switch, TagsField, Text, TextField, Textarea, TimeField, TimePicker, YearPicker, min_length, not_empty, use_form,
@@ -22,7 +22,64 @@ pub const ROUTES: Routes = &[
     ("/form/fieldset-submit", || rsx! { DisabledFieldsetSubmitPage {} }),
     ("/form/server", || rsx! { ServerStatusPage { at_once: false } }),
     ("/form/server-sync", || rsx! { ServerStatusPage { at_once: true } }),
+    ("/form/domain", || rsx! { DomainPage {} }),
 ];
+
+#[derive(Clone, PartialEq, Debug)]
+struct Iban(String);
+
+struct NotAnIban;
+
+impl FieldError for NotAnIban {
+    fn message(&self, _: &libero::localization::Localization) -> String {
+        "Not an IBAN.".into()
+    }
+}
+
+impl Iban {
+    fn new(text: String) -> Result<Iban, NotAnIban> {
+        let text: String = text.split_whitespace().collect::<String>().to_uppercase();
+        match text.len() == 22 && text.chars().take(2).all(|c| c.is_ascii_alphabetic()) {
+            true => Ok(Iban(text)),
+            false => Err(NotAnIban),
+        }
+    }
+
+    fn text(&self) -> String {
+        let chars: Vec<char> = self.0.chars().collect();
+        chars.chunks(4).map(|chunk| chunk.iter().collect::<String>()).collect::<Vec<_>>().join(" ")
+    }
+}
+
+#[derive(Clone, PartialEq, Default, Fields)]
+struct Payout {
+    iban: Option<Iban>,
+}
+
+/// Concept domain-values: `#iban` maps text to an `Iban`. Typed text stays as typed until a
+/// blur; invalid text stays, resets the value and blocks the submit.
+#[component]
+fn DomainPage() -> Element {
+    let payout = use_store(Payout::default);
+    let mut submits = use_signal(|| 0u32);
+    let stored = payout.read().iban.as_ref().map_or("none".to_string(), |iban| iban.0.clone());
+    rsx! {
+        Flex { direction: "column", gap: "md", max_width: "320px",
+            span { "data-submits": "{submits}", "data-stored": "{stored}" }
+            Form {
+                value: payout,
+                onsubmit: move |_| submits += 1,
+                TextField {
+                    id: "iban",
+                    label: "IBAN",
+                    required: true,
+                    name: Payout::FIELDS.iban().map(Iban::text, Iban::new),
+                }
+                Button { r#type: "submit", "Send" }
+            }
+        }
+    }
+}
 
 /// Todo 2573: a server's status after a valid submit, set in `onsubmit` (`at_once`) or
 /// later by `#answer`, shows the summary; `#code`'s rule, broken after the submit, does not.

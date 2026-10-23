@@ -148,7 +148,9 @@ pub fn Form<V: FormValue>(props: FormProps<V>) -> Element {
     // every keystroke.
     let warned_blank = use_hook(|| Rc::new(Cell::new(false)));
     let issues = match (props.validate.is_empty(), props.value) {
-        (false, Some(value)) => issues_of(&props.validate, &value.read(), "", &warned_blank),
+        (false, Some(value)) => {
+            issues_of(&props.validate, &value.read(), "", &warned_blank, &scope)
+        }
         _ => Vec::new(),
     };
     scope.raise(key, issues);

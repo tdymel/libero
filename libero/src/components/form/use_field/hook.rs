@@ -5,7 +5,10 @@ use dioxus::{
     prelude::*,
 };
 
-use crate::components::form::{Binding, Disabled, FieldName, FieldStatus, FormScope, Validators};
+use crate::components::form::{
+    Adapt, Binding, Disabled, Draft, FieldName, FieldStatus, FormScope, Parse, Validators, locale,
+    word,
+};
 
 /// What a field keeps across renders for validation and binding. `touched`
 /// re-renders its owner by hand; nothing else reads it.
@@ -47,13 +50,66 @@ pub(crate) fn use_bound<T: Clone + 'static>(name: &FieldName<T>, controlled: boo
     let full = (!name.is_empty())
         .then(|| crate::components::form::validation_join(hook.binding.prefix(), name.as_str()));
     let active = !controlled && name.steps().is_some() && hook.binding.is_bound();
+    let mapped = active
+        .then(|| name.adapter().zip(name.steps()))
+        .flatten()
+        .and_then(|(adapter, steps)| read_mapped(&hook, &**adapter, steps, full.as_deref()));
     Bound {
         name: active.then(|| name.clone()),
         hook,
         full,
         entered,
         owns: !controlled && !active,
+        mapped,
     }
+}
+
+/// A mapped field's text and state: its draft while the store still holds
+/// what the draft wrote, else the stored value's own text.
+fn read_mapped<T: Clone + 'static>(
+    hook: &FieldHook,
+    adapter: &dyn Adapt<T>,
+    steps: &[crate::components::form::Step],
+    full: Option<&str>,
+) -> Option<Mapped<T>> {
+    let scope = hook.form.map(|(scope, _)| scope).zip(full);
+    hook.binding
+        .with_slot(steps, |slot| {
+            let draft = scope.and_then(|(scope, full)| scope.draft(full));
+            let current = draft
+                .as_ref()
+                .filter(|draft| adapter.holds(slot, &*draft.wrote))
+                .and_then(|draft| {
+                    Some((draft.text.downcast_ref::<T>()?.clone(), draft.parse.clone()))
+                });
+            if let (None, Some(_), Some((mut scope, full))) = (&current, &draft, scope) {
+                // Set from elsewhere - a reset, code, a load: the stored value speaks again.
+                scope.drop_draft(full);
+            }
+            let (shown, parse) = match current {
+                Some(current) => current,
+                None => (adapter.read(slot)?, adapter.state(slot)),
+            };
+            let status = match &parse {
+                Parse::Invalid(error) => Some(FieldStatus::Error(word(&**error))),
+                Parse::Valid => adapter.check(slot, locale()),
+                Parse::Empty => None,
+            };
+            Some(Mapped {
+                shown,
+                parse,
+                status,
+            })
+        })
+        .flatten()
+}
+
+/// What a mapped field shows and where its text stands.
+pub(crate) struct Mapped<T> {
+    shown: T,
+    pub(super) parse: Parse,
+    /// The parse error, else the `.rules` over the domain value.
+    pub(crate) status: Option<FieldStatus>,
 }
 
 pub(crate) struct Bound<T> {
@@ -65,6 +121,8 @@ pub(crate) struct Bound<T> {
     pub(super) entered: Signal<Option<T>>,
     /// Whether `entered` is a value source: not with a handler or a binding.
     pub(super) owns: bool,
+    /// For a name mapped to a domain type.
+    pub(crate) mapped: Option<Mapped<T>>,
 }
 
 impl<T> Bound<T> {
@@ -88,6 +146,9 @@ impl<T: Clone + 'static> Bound<T> {
     /// The field's value inside the form's value, when bound. Subscribes the
     /// field to the form's value.
     pub fn value(&self) -> Option<T> {
+        if let Some(mapped) = &self.mapped {
+            return Some(mapped.shown.clone());
+        }
         let name = self.name.as_ref()?;
         let value = self.hook.binding.with(name.steps()?, T::clone);
         if value.is_none() && !self.hook.warned.replace(true) {
@@ -104,6 +165,7 @@ impl<T: Clone + 'static> Bound<T> {
         self.name.clone().map(|name| Setter {
             hook: self.hook.clone(),
             name,
+            full: self.full.clone(),
         })
     }
 
@@ -145,6 +207,9 @@ impl<T: Clone + 'static> Bound<T> {
         if !required || self.hook.form.is_none() {
             return false;
         }
+        if let Some(mapped) = &self.mapped {
+            return mapped.parse == Parse::Empty;
+        }
         match shown().or_else(|| self.entered()) {
             Some(value) => empty(&value),
             None => self.owns,
@@ -168,6 +233,7 @@ impl<T: Clone + 'static> Bound<T> {
 pub(crate) struct Setter<T> {
     hook: Rc<FieldHook>,
     name: FieldName<T>,
+    full: Option<String>,
 }
 
 impl<T> Clone for Setter<T> {
@@ -175,15 +241,31 @@ impl<T> Clone for Setter<T> {
         Self {
             hook: self.hook.clone(),
             name: self.name.clone(),
+            full: self.full.clone(),
         }
     }
 }
 
-impl<T: 'static> Setter<T> {
+impl<T: Clone + 'static> Setter<T> {
     pub fn set(&self, next: T) {
-        self.hook
+        let steps = self.name.steps().unwrap_or_default();
+        let Some(adapter) = self.name.adapter() else {
+            self.hook.binding.set(steps, next);
+            return;
+        };
+        // Parsed into the store; the text itself is kept as typed.
+        let written = self
+            .hook
             .binding
-            .set(self.name.steps().unwrap_or_default(), next);
+            .set_slot(steps, |slot| adapter.write(slot, next.clone()))
+            .flatten();
+        if let (Some((parse, wrote)), Some((mut scope, _)), Some(full)) =
+            (written, self.hook.form, &self.full)
+        {
+            scope.set_parse(full, parse.clone());
+            let text = Rc::new(next);
+            scope.keep_draft(full, Draft { text, wrote, parse });
+        }
     }
 }
 

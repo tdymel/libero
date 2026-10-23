@@ -5,9 +5,11 @@ use crate::components::{
 };
 use dioxus::prelude::*;
 use libero::components::{
-    Button, Checkbox, Code, FieldName, Fields, Fieldset, Flex, Form, FormPart, PasswordField, Rule,
-    Text, TextField, Validators, is_email, min_length, not_empty, use_form, use_form_context,
+    Button, Checkbox, Code, FieldError, FieldName, Fields, Fieldset, Flex, Form, FormPart,
+    PasswordField, Rule, Text, TextField, Validators, checked, is_email, min_length, not_empty,
+    use_form, use_form_context,
 };
+use libero::localization::Localization;
 
 #[derive(Clone, PartialEq, Default, Fields)]
 pub struct NewPassword {
@@ -19,6 +21,7 @@ pub struct NewPassword {
 pub struct Signup {
     pub name: String,
     pub email: String,
+    pub age: Option<Age>,
     #[fields(nested)]
     pub password: NewPassword,
     pub company: bool,
@@ -27,14 +30,16 @@ pub struct Signup {
 }
 
 // snippet: ignore - builds on Getting Started's `EmailField` and `NewPasswordFieldset`
-// snippet: mirrors SignupForm, Signup
+// snippet: mirrors SignupForm, Signup, Age, AgeError
 const FORM_CODE: &str = r#"use dioxus::prelude::*;
-use libero::components::{Button, Checkbox, Fields, Form, Rule, Text, TextField, not_empty};__IMPORTS__
+use libero::components::{Button, Checkbox, FieldError, Fields, Form, Rule, Text, TextField, checked, not_empty};
+use libero::localization::Localization;__IMPORTS__
 
 #[derive(Clone, PartialEq, Default, Fields)]
 struct Signup {
     name: String,
     email: String,
+    age: Option<Age>,
     #[fields(nested)]
     password: NewPassword,__COMPANY_FIELDS__
     terms: bool,
@@ -109,6 +114,7 @@ fn form_code(values: &DemoValues, _: &str) -> String {
             "__BUTTONS__",
             &nest(if handle { "handle_buttons" } else { "submit" }),
         );
+    let code = format!("{code}\n\n{}", FILE.section("age"));
     match handle {
         true => format!("{code}\n\n{}", FILE.section("check_button")),
         false => code,
@@ -131,7 +137,7 @@ pub fn FormPage() -> Element {
                     prop("value", "Store<V>")
                         .doc("The whole form's value. `validate` checks it, and fields named by a path read and write it. `V` is inferred from it. A form with no `value` and no rules needs `Form::<()>`."),
                     prop("validate", "Validators<V>")
-                        .doc("Rules over `value`, one or an array. A rule with `.on(..)` shows its status on each field it names."),
+                        .doc("Rules over `value`, one or an array. A rule with `.on(..)` shows its status on each field it names, and runs only while each of them holds a parsed value or is empty and optional."),
                     prop("onsubmit", "EventHandler<FormEvent>")
                         .doc("Fires on a submit with no errors. Without an `action`, the browser's own submit is cancelled. A `javascript:`, `data:` or `vbscript:` `action` is dropped with a debug warning, so it counts as none."),
                     prop("summary_title", "String")
@@ -167,6 +173,20 @@ pub fn FormPage() -> Element {
                         .doc("Rules over the field's own value, one or an array. Shown once the field loses focus or its form is submitted."),
                     prop("name", "FieldName<T>")
                         .doc("What the field posts as, and how rules address it. A path from `#[derive(Fields)]` also binds the field to the form's value, unless the field has a handler of its own. `T` is the field's value type."),
+                ]).without_base_props(),
+                props("Domain values", vec![
+                    prop(".map(format, parse)", "Mapped<T, W, E>")
+                        .doc("On a path to `Option<T>`: binds a field that edits `W` (text, a date, an option) to the domain type `T`. `format` shows a stored `T`, `parse` reads `W` back and never sees an empty one (blank text, `None`, `[]`); text reaches it untrimmed. An `Err` shows its words, resets the value to `None` and blocks the submit, while the text stays, also across an unmount. A focused field keeps the text as typed: `format` runs on blur and when the value changes elsewhere. `T` must be `Clone + PartialEq`; wrap it in `Rc` otherwise."),
+                    prop(".parsed()", "Mapped<T, String, T::Err>")
+                        .doc("`.map` through `T`'s `Display` and `FromStr`, for a text field."),
+                    prop(".message(fn)", "fn(&E, &Localization) -> String")
+                        .doc("Words every error of type `E` on the field, the parse error and `checked` rules alike. Needed when `E` has no `FieldError`, such as a domain crate's error: without it the name does not compile."),
+                    prop(".rules(..)", "Validator<T> or Checked<T, E>")
+                        .doc("Rules over `T`, run only on a parsed value. The field's own `validate` runs first, over `W`, before the parse; the first error wins. Adds to earlier calls, so a mixed list is two calls."),
+                    prop("checked(f)", "Checked<V, E>")
+                        .doc("A rule from `Fn(&V) -> Result<(), E>`: the field shows `E`'s words. `.warning()` shows it as a warning, `.message(fn)` words an `E` with no `FieldError`. Fits any `validate` too."),
+                    prop("impl FieldError", "trait")
+                        .doc("`fn message(&self, &Localization) -> String`: an error's words in the active language, worded again on a switch. Implemented for `Fn(&Localization) -> String`, `String` and `&'static str`; there is no `Display` fallback."),
                 ]).without_base_props(),
             ],
             accessibility: a11y()
@@ -255,6 +275,8 @@ fn SignupForm(summary_title: bool, handle: bool, company: bool) -> Element {
             // A specialized field and a composed part, built in Getting started.
             EmailField { label: "Email", name: Signup::FIELDS.email(), validate: not_empty.error("Enter your email.") }
             NewPasswordFieldset { path: Signup::FIELDS.password() }
+            // The text parses into an `Age`; a rule on the age runs only once it did.
+            TextField { label: "Age", name: Signup::FIELDS.age().parsed().rules([checked(Age::adult)]) }
             // demo-code: fields end
             if company {
                 // demo-code: company start
@@ -300,6 +322,54 @@ fn SignupForm(summary_title: bool, handle: bool, company: bool) -> Element {
     }
 }
 
+// demo-code: age start
+/// A domain type: text that parses is an age, and its errors carry their own words.
+#[derive(Clone, PartialEq)]
+pub struct Age(u8);
+
+pub enum AgeError {
+    NotANumber,
+    TooYoung,
+}
+
+impl FieldError for AgeError {
+    fn message(&self, locale: &Localization) -> String {
+        match (self, locale.lang) {
+            (AgeError::NotANumber, "de") => "Gib dein Alter in Jahren ein.".into(),
+            (AgeError::NotANumber, _) => "Enter your age in years.".into(),
+            (AgeError::TooYoung, "de") => "Du musst mindestens 16 sein.".into(),
+            (AgeError::TooYoung, _) => "You must be 16 or older.".into(),
+        }
+    }
+}
+
+impl std::str::FromStr for Age {
+    type Err = AgeError;
+
+    fn from_str(text: &str) -> Result<Age, AgeError> {
+        text.trim()
+            .parse()
+            .map(Age)
+            .map_err(|_| AgeError::NotANumber)
+    }
+}
+
+impl std::fmt::Display for Age {
+    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(formatter, "{}", self.0)
+    }
+}
+
+impl Age {
+    fn adult(&self) -> Result<(), AgeError> {
+        match self.0 >= 16 {
+            true => Ok(()),
+            false => Err(AgeError::TooYoung),
+        }
+    }
+}
+// demo-code: age end
+
 // demo-code: check_button start
 /// Anything inside a form reaches its handle without a prop.
 #[component]
@@ -326,13 +396,7 @@ fn EmailField(
     #[props(default, into)] name: FieldName<String>,
     #[props(default, into)] validate: Validators<String>,
 ) -> Element {
-    let rules: Vec<_> = validate
-        .iter()
-        .cloned()
-        .chain(std::iter::once(
-            is_email.error("That is not an email address."),
-        ))
-        .collect();
+    let rules = validate.with(is_email.error("That is not an email address."));
     rsx! {
         TextField { r#type: "email", autocomplete: "email", label, name, validate: rules, placeholder: "you@example.com" }
     }

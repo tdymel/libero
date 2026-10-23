@@ -2,25 +2,63 @@ use std::any::TypeId;
 use std::rc::Rc;
 
 use super::catalog::IsEmpty;
-use crate::components::form::{FieldPath, FieldStatus};
+use crate::{
+    components::form::{FieldError, FieldPath, FieldStatus},
+    localization::Localization,
+};
+
+/// What a rule's check yields: nothing, or the error to word.
+pub(crate) type Check<V> = dyn Fn(&V) -> Result<(), Rc<dyn FieldError>>;
 
 /// A rule plus what to show when it fails. Built from any `Fn(&V) -> bool`
-/// through [`Rule::error`] or [`Rule::warn`].
+/// through [`Rule::error`] or [`Rule::warn`], or from a [`checked`](super::checked) rule.
 pub struct Validator<V: 'static> {
-    check: Rc<dyn Fn(&V) -> bool>,
-    /// The rule's type when it captures nothing: two such rules of one type
-    /// behave the same, so they compare equal.
-    stateless: Option<TypeId>,
+    check: Rc<Check<V>>,
+    /// The rule's type, and its `.message` words' type, when they capture
+    /// nothing: two such rules of one type behave the same, so they compare equal.
+    stateless: Option<(TypeId, TypeId)>,
+    /// A `bool` rule's fixed status; a `checked` rule's is blank, by kind.
     status: FieldStatus,
     on: Vec<String>,
 }
 
 impl<V: 'static> Validator<V> {
-    /// `Valid` when the rule holds, else this validator's warning or error.
+    /// `Valid` when the rule holds, else this validator's warning or error,
+    /// worded for the active language.
     pub fn validate(&self, value: &V) -> FieldStatus {
-        match (self.check)(value) {
-            true => FieldStatus::Valid,
-            false => self.status.clone(),
+        match self.failure(value) {
+            None => FieldStatus::Valid,
+            Some(error) => self.worded(error.message(locale())),
+        }
+    }
+
+    /// A rule from its check: what [`checked`](super::checked) builds.
+    pub(crate) fn from_check(
+        check: Rc<Check<V>>,
+        stateless: Option<(TypeId, TypeId)>,
+        warning: bool,
+    ) -> Self {
+        Self {
+            check,
+            stateless,
+            status: match warning {
+                true => FieldStatus::Warning(String::new()),
+                false => FieldStatus::Error(String::new()),
+            },
+            on: Vec::new(),
+        }
+    }
+
+    /// The error the rule failed with, unworded.
+    pub(crate) fn failure(&self, value: &V) -> Option<Rc<dyn FieldError>> {
+        (self.check)(value).err()
+    }
+
+    /// `message` as this rule's kind: a warning or an error.
+    pub(crate) fn worded(&self, message: String) -> FieldStatus {
+        match self.status {
+            FieldStatus::Warning(_) => FieldStatus::Warning(message),
+            _ => FieldStatus::Error(message),
         }
     }
 
@@ -35,6 +73,19 @@ impl<V: 'static> Validator<V> {
     pub fn targets(&self) -> &[String] {
         &self.on
     }
+}
+
+/// The active language, or English outside a running app (a unit test).
+pub(crate) fn locale() -> &'static Localization {
+    use dioxus::prelude::*;
+    let in_scope = dioxus::core::Runtime::try_current()
+        .is_some_and(|runtime| runtime.try_current_scope_id().is_some());
+    in_scope
+        .then(try_consume_context::<crate::context::LiberoContext>)
+        .flatten()
+        .map_or(&Localization::ENGLISH, |context| {
+            *context.localization.read()
+        })
 }
 
 impl<V: 'static> Clone for Validator<V> {
@@ -93,9 +144,13 @@ fn validator<V: 'static, F: Fn(&V) -> bool + 'static>(
     rule: F,
     status: FieldStatus,
 ) -> Validator<V> {
+    let text: Rc<dyn FieldError> = Rc::new(status.message().unwrap_or_default().to_string());
     Validator {
-        check: Rc::new(rule),
-        stateless: (size_of::<F>() == 0).then(TypeId::of::<F>),
+        check: Rc::new(move |value: &V| match rule(value) {
+            true => Ok(()),
+            false => Err(text.clone()),
+        }),
+        stateless: (size_of::<F>() == 0).then(|| (TypeId::of::<F>(), TypeId::of::<()>())),
         status,
         on: Vec::new(),
     }

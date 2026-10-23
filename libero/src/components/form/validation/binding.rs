@@ -86,13 +86,17 @@ impl Binding {
     /// Runs `reader` on the value at `steps`, when it is a `T`. `None` when
     /// nothing is bound or the path does not fit. Subscribes the caller.
     pub fn with<T: 'static, R>(&self, steps: &[Step], reader: impl FnOnce(&T) -> R) -> Option<R> {
+        self.with_slot(steps, |slot| slot.downcast_ref::<T>().map(reader))
+            .flatten()
+    }
+
+    /// [`with`](Self::with), on the value at `steps` whatever its type.
+    pub fn with_slot<R>(&self, steps: &[Step], reader: impl FnOnce(&dyn Any) -> R) -> Option<R> {
         let source = self.source.as_ref()?;
         let mut reader = Some(reader);
         let mut result = None;
         source.read_value([&self.steps, steps], &mut |root| {
-            let value = resolve(root, &self.steps)
-                .and_then(|scope| resolve(scope, steps))
-                .and_then(|value| value.downcast_ref::<T>());
+            let value = resolve(root, &self.steps).and_then(|scope| resolve(scope, steps));
             if let (Some(value), Some(reader)) = (value, reader.take()) {
                 result = Some(reader(value));
             }
@@ -103,19 +107,25 @@ impl Binding {
     /// Puts `next` at `steps`. `false` when nothing is bound or the path does
     /// not fit.
     pub fn set<T: 'static>(&self, steps: &[Step], next: T) -> bool {
-        let Some(source) = self.source.as_ref() else {
-            return false;
-        };
-        let mut next = Some(next);
+        self.set_slot(steps, |slot| {
+            slot.downcast_mut::<T>().map(|slot| *slot = next)
+        })
+        .flatten()
+        .is_some()
+    }
+
+    /// [`set`](Self::set), through `writer` on the value at `steps` whatever its type.
+    pub fn set_slot<R>(&self, steps: &[Step], writer: impl FnOnce(&mut dyn Any) -> R) -> Option<R> {
+        let source = self.source.as_ref()?;
+        let mut writer = Some(writer);
+        let mut result = None;
         source.write_value([&self.steps, steps], &mut |root| {
-            let slot = resolve_mut(root, &self.steps)
-                .and_then(|scope| resolve_mut(scope, steps))
-                .and_then(|value| value.downcast_mut::<T>());
-            if let (Some(slot), Some(next)) = (slot, next.take()) {
-                *slot = next;
+            let slot = resolve_mut(root, &self.steps).and_then(|scope| resolve_mut(scope, steps));
+            if let (Some(slot), Some(writer)) = (slot, writer.take()) {
+                result = Some(writer(slot));
             }
         });
-        next.is_none()
+        result
     }
 }
 

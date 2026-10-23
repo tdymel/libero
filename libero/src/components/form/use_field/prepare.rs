@@ -10,7 +10,7 @@ use super::{
 use crate::{
     components::{
         common::{Input, Part, States, Variables, variables},
-        form::{Caption, FieldEntry, FieldPart, FieldStatus, worst},
+        form::{Caption, FieldEntry, FieldPart, FieldStatus, Parse, worst},
         layout::use_box,
     },
     hooks::{ElementHandle, use_localization, use_root_id, use_silent_focus_out},
@@ -47,11 +47,24 @@ impl FieldBuilder<'_> {
             .and_then(Input::as_ref)
             .cloned()
             .unwrap_or_default();
+        let validated = self.rules.is_some() || self.mapped.is_some();
+        let is_mapped = self.mapped.is_some();
+        let known = is_mapped || self.parse.is_some();
+        let (mapped, mapped_parse) = self.mapped.unwrap_or((None, Parse::Valid));
+        let parse = match self.parse {
+            Some(Parse::Invalid(error)) => Parse::Invalid(error),
+            Some(own) if !is_mapped => own,
+            _ => mapped_parse,
+        };
+        // Text that does not parse is no empty field: it says why, not "Fill in this field.".
+        let empty = match known {
+            true => parse == Parse::Empty,
+            false => self.empty,
+        };
         // `required` is a rule at submit inside a form; the field's own rules speak first.
-        let missing =
-            self.required && self.empty && !self.disabled && !self.readonly && scope.is_some();
-        let validated = self.rules.is_some();
-        let own_rules = self.rules.unwrap_or_default();
+        let missing = self.required && empty && !self.disabled && !self.readonly && scope.is_some();
+        // The rules over what the field edits speak before the parse and the domain's rules.
+        let own_rules = first_failing(self.rules, mapped).unwrap_or_default();
         let rules = match missing {
             true => worst(own_rules.clone(), FieldStatus::Error(required_text.into())),
             false => own_rules.clone(),
@@ -84,6 +97,8 @@ impl FieldBuilder<'_> {
                     name: name.clone(),
                     status: worst(explicit.clone(), rules.clone()),
                     explicit_error: explicit.is_error(),
+                    parse,
+                    required: self.required,
                     owner: hook.owner,
                 },
             );
@@ -168,11 +183,15 @@ impl FieldBuilder<'_> {
         let touch = {
             let hook = hook.clone();
             move || {
-                if !hook.touched.replace(true) {
+                let settled = match (scope, &name) {
+                    (Some(mut scope), Some(name)) => {
+                        scope.touch(name);
+                        scope.settle_draft(name)
+                    }
+                    _ => false,
+                };
+                if !hook.touched.replace(true) || settled {
                     Runtime::current().needs_update(hook.owner);
-                }
-                if let (Some(mut scope), Some(name)) = (scope, &name) {
-                    scope.touch(name);
                 }
             }
         };
@@ -230,6 +249,16 @@ impl FieldBuilder<'_> {
             wrapper,
             root,
         }
+    }
+}
+
+/// The first error of the two, else the first warning; `None` when neither speaks.
+fn first_failing(first: Option<FieldStatus>, second: Option<FieldStatus>) -> Option<FieldStatus> {
+    match (first, second) {
+        (Some(first), _) if first.is_error() => Some(first),
+        (_, Some(second)) if second.is_error() => Some(second),
+        (Some(first), _) if first.is_warning() => Some(first),
+        (first, second) => second.or(first),
     }
 }
 

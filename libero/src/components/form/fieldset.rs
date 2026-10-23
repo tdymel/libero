@@ -236,7 +236,7 @@ pub fn Fieldset<V: FormValue>(props: FieldsetProps<V>) -> Element {
         true => Vec::new(),
         false => binding
             .with::<V, _>(&[], |value| {
-                issues_of(&props.validate, value, prefix, &warned_blank)
+                issues_of(&props.validate, value, prefix, &warned_blank, &scope)
             })
             .unwrap_or_default(),
     };
@@ -262,6 +262,8 @@ pub fn Fieldset<V: FormValue>(props: FieldsetProps<V>) -> Element {
             name: None,
             explicit_error: explicit.is_error(),
             status: explicit,
+            parse: crate::components::form::Parse::Valid,
+            required: false,
             owner: current_scope_id(),
         },
     );

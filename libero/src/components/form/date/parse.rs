@@ -13,6 +13,13 @@ use crate::{localization::DateLocale, utils::fold_digits};
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct Unreadable;
 
+/// "Enter a valid date.", in the active language.
+impl crate::components::form::FieldError for Unreadable {
+    fn message(&self, locale: &crate::localization::Localization) -> String {
+        locale.date.invalid_date.to_string()
+    }
+}
+
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 enum Part {
     Year,

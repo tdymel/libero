@@ -1,6 +1,8 @@
 use std::{
+    any::Any,
     cell::Cell,
-    collections::{BTreeMap, BTreeSet},
+    collections::{BTreeMap, BTreeSet, HashMap},
+    rc::Rc,
 };
 
 use dioxus::{
@@ -9,7 +11,7 @@ use dioxus::{
 };
 
 use crate::{
-    components::form::{FieldStatus, Validators, worst},
+    components::form::{FieldError, FieldStatus, Parse, Validators, worst},
     utils::warn,
 };
 
@@ -30,6 +32,14 @@ pub(crate) struct FormScope {
     /// Bumped by every reset, native reset button included.
     resets: Signal<u32>,
     next_key: Signal<usize>,
+    /// What mapped fields were typed, by full name: kept apart from the fields,
+    /// so invalid text outlives an unmounted field.
+    drafts: Signal<HashMap<String, Draft>, UnsyncStorage>,
+    /// Text a field reading its own (a date) refused, by full name.
+    typed: Signal<HashMap<String, Typed>, UnsyncStorage>,
+    /// Paths a composite rule names that no field had registered when it was due:
+    /// the form judges it again once one does.
+    waiting: Signal<BTreeSet<String>, UnsyncStorage>,
     /// The scope that created the signals above. Cleanup runs inside it, or dioxus
     /// warns of a copy value used outside its owner.
     owner: ScopeId,
@@ -43,6 +53,22 @@ pub(crate) struct Issue {
     pub status: FieldStatus,
 }
 
+/// A mapped field's typed text, shown in place of the stored value's while
+/// that value is still what the text wrote.
+#[derive(Clone)]
+pub(crate) struct Draft {
+    pub text: Rc<dyn Any>,
+    pub wrote: Rc<dyn Any>,
+    pub parse: Parse,
+}
+
+/// Typed text a date field could not take, and why.
+#[derive(Clone)]
+pub(crate) struct Typed {
+    pub text: String,
+    pub error: Rc<dyn FieldError>,
+}
+
 /// A registered field as the summary needs it.
 #[derive(Clone, Debug, PartialEq)]
 pub(crate) struct FieldEntry {
@@ -54,6 +80,9 @@ pub(crate) struct FieldEntry {
     pub status: FieldStatus,
     /// The explicit `status` alone is an error: a server's answer, which the summary follows (2573).
     pub explicit_error: bool,
+    /// Whether a mapped field's text is a domain value; `Valid` for any other field.
+    pub parse: Parse,
+    pub required: bool,
     /// The field's scope, which a reset re-renders.
     pub owner: ScopeId,
 }
@@ -77,6 +106,9 @@ impl FormScope {
             settled: Signal::new(0),
             resets: Signal::new(0),
             next_key: Signal::new(0),
+            drafts: Signal::new_maybe_sync(HashMap::new()),
+            typed: Signal::new_maybe_sync(HashMap::new()),
+            waiting: Signal::new_maybe_sync(BTreeSet::new()),
             owner: current_scope_id(),
         }
     }
@@ -142,9 +174,62 @@ impl FormScope {
             self.submitted.set(false);
         }
         *self.generation.write_unchecked() += 1;
+        if !self.drafts.peek().is_empty() {
+            self.drafts.write_unchecked().clear();
+        }
+        if !self.typed.peek().is_empty() {
+            self.typed.write_unchecked().clear();
+        }
         let runtime = Runtime::current();
         for field in self.fields.peek().values() {
             runtime.needs_update(field.owner);
+        }
+    }
+
+    /// The draft typed under `name`. Not reactive: the store write that comes
+    /// with every draft re-renders the field.
+    pub fn draft(&self, name: &str) -> Option<Draft> {
+        self.drafts.peek().get(name).cloned()
+    }
+
+    pub fn keep_draft(&mut self, name: &str, draft: Draft) {
+        self.drafts
+            .write_unchecked()
+            .insert(name.to_string(), draft);
+    }
+
+    pub fn drop_draft(&mut self, name: &str) {
+        if self.drafts.peek().contains_key(name) {
+            self.drafts.write_unchecked().remove(name);
+        }
+    }
+
+    /// On blur: a draft that parsed (or is blank) gives way to the stored
+    /// value's own text; invalid text stays. Whether one went.
+    pub fn settle_draft(&mut self, name: &str) -> bool {
+        let settles = self
+            .drafts
+            .peek()
+            .get(name)
+            .is_some_and(|draft| !draft.parse.is_invalid());
+        if settles {
+            self.drafts.write_unchecked().remove(name);
+        }
+        settles
+    }
+
+    /// Refused text kept under `name`, for a remount.
+    pub fn typed(&self, name: &str) -> Option<Typed> {
+        self.typed.peek().get(name).cloned()
+    }
+
+    pub fn keep_typed(&mut self, name: &str, typed: Typed) {
+        self.typed.write_unchecked().insert(name.to_string(), typed);
+    }
+
+    pub fn drop_typed(&mut self, name: &str) {
+        if self.typed.peek().contains_key(name) {
+            self.typed.write_unchecked().remove(name);
         }
     }
 
@@ -225,9 +310,68 @@ impl FormScope {
     /// Kept in a signal nobody subscribes to during render: only the submit
     /// handler reads it, so a field updating its entry re-renders nothing.
     pub fn register(&mut self, key: usize, entry: FieldEntry) {
-        if self.fields.peek().get(&key) != Some(&entry) {
+        let previous = self.fields.peek().get(&key).cloned();
+        if previous.as_ref() != Some(&entry) {
+            // The form judged its composite rules on the old state, or without this field.
+            let waited = entry.name.as_ref().is_some_and(|name| {
+                self.waiting.peek().contains(name) && self.waiting.write_unchecked().remove(name)
+            });
+            let changed = previous.is_some_and(|previous| !previous.parse.same_kind(&entry.parse));
+            if waited || changed {
+                Runtime::current().needs_update(self.owner);
+            }
             self.fields.write_unchecked().insert(key, entry);
         }
+    }
+
+    /// A mapped field's parse state as the user typed, ahead of its render: the
+    /// form re-judges its composite rules with the store write that comes with it.
+    pub fn set_parse(&mut self, name: &str, parse: Parse) {
+        let mut fields = self.fields.write_unchecked();
+        let named = fields
+            .values_mut()
+            .filter(|field| field.name.as_deref() == Some(name));
+        for field in named {
+            field.parse = parse.clone();
+        }
+    }
+
+    /// Whether a composite rule naming `paths` may run: each field it names holds a
+    /// domain value, or nothing and is optional. An invalid field never gets a second,
+    /// misleading error, and a rule never sees a required field's missing value.
+    /// A rule none of whose paths a field carries yet waits for one.
+    pub fn ready(&self, paths: &[String]) -> bool {
+        let fields = self.fields.peek();
+        let missing: Vec<&String> = paths
+            .iter()
+            .filter(|path| {
+                !fields
+                    .values()
+                    .any(|field| field.name.as_deref() == Some(path.as_str()))
+            })
+            .collect();
+        let none = !paths.is_empty() && missing.len() == paths.len();
+        let waiting = self.waiting;
+        for path in missing {
+            if !waiting.peek().contains(path) {
+                waiting.write_unchecked().insert(path.clone());
+            }
+        }
+        if none {
+            return false;
+        }
+        fields.values().all(|field| {
+            let named = field
+                .name
+                .as_deref()
+                .is_some_and(|name| paths.iter().any(|path| path == name));
+            !named
+                || match field.parse {
+                    Parse::Valid => true,
+                    Parse::Empty => !field.required,
+                    Parse::Invalid(_) => false,
+                }
+        })
     }
 
     /// Tolerates a form already gone. Forgets the touched name unless another
@@ -399,16 +543,26 @@ fn in_owner(owner: ScopeId, cleanup: impl FnOnce()) {
 }
 
 /// The issues a set of composite rules raises over `value`, every path put
-/// under `prefix`. A blank message warns in debug once per `warned`.
+/// under `prefix`. A rule whose fields are not [`ready`](FormScope::ready) is
+/// not run. A blank message warns in debug once per `warned`.
 pub(crate) fn issues_of<V>(
     rules: &Validators<V>,
     value: &V,
     prefix: &str,
     warned: &Cell<bool>,
+    scope: &FormScope,
 ) -> Vec<Issue> {
     rules
         .iter()
         .filter_map(|rule| {
+            let paths: Vec<String> = rule
+                .targets()
+                .iter()
+                .map(|path| super::path::join(prefix, path))
+                .collect();
+            if !scope.ready(&paths) {
+                return None;
+            }
             let status = rule.validate(value);
             let blank = status.message().is_some_and(|text| text.trim().is_empty());
             if blank && !warned.replace(true) {
@@ -417,14 +571,7 @@ pub(crate) fn issues_of<V>(
                      to read. Give it a text, or use `FieldStatus::Valid`.",
                 );
             }
-            (!status.is_valid()).then(|| Issue {
-                paths: rule
-                    .targets()
-                    .iter()
-                    .map(|path| super::path::join(prefix, path))
-                    .collect(),
-                status,
-            })
+            (!status.is_valid()).then_some(Issue { paths, status })
         })
         .collect()
 }

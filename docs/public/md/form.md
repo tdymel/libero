@@ -16,12 +16,14 @@ rules and paths fit together.
 
 ```rust
 use dioxus::prelude::*;
-use libero::components::{Button, Checkbox, Fields, Form, Rule, Text, TextField, not_empty};
+use libero::components::{Button, Checkbox, FieldError, Fields, Form, Rule, Text, TextField, checked, not_empty};
+use libero::localization::Localization;
 
 #[derive(Clone, PartialEq, Default, Fields)]
 struct Signup {
     name: String,
     email: String,
+    age: Option<Age>,
     #[fields(nested)]
     password: NewPassword,
     terms: bool,
@@ -45,6 +47,8 @@ fn SignupForm() -> Element {
             // A specialized field and a composed part, built in Getting started.
             EmailField { label: "Email", name: Signup::FIELDS.email(), validate: not_empty.error("Enter your email.") }
             NewPasswordFieldset { path: Signup::FIELDS.password() }
+            // The text parses into an `Age`; a rule on the age runs only once it did.
+            TextField { label: "Age", name: Signup::FIELDS.age().parsed().rules([checked(Age::adult)]) }
             Checkbox {
                 label: "I accept the terms",
                 name: Signup::FIELDS.terms(),
@@ -55,6 +59,49 @@ fn SignupForm() -> Element {
             Text { role: "status",
                 if sent() { "Account created." }
             }
+        }
+    }
+}
+
+/// A domain type: text that parses is an age, and its errors carry their own words.
+#[derive(Clone, PartialEq)]
+pub struct Age(u8);
+
+pub enum AgeError {
+    NotANumber,
+    TooYoung,
+}
+
+impl FieldError for AgeError {
+    fn message(&self, locale: &Localization) -> String {
+        match (self, locale.lang) {
+            (AgeError::NotANumber, "de") => "Gib dein Alter in Jahren ein.".into(),
+            (AgeError::NotANumber, _) => "Enter your age in years.".into(),
+            (AgeError::TooYoung, "de") => "Du musst mindestens 16 sein.".into(),
+            (AgeError::TooYoung, _) => "You must be 16 or older.".into(),
+        }
+    }
+}
+
+impl std::str::FromStr for Age {
+    type Err = AgeError;
+
+    fn from_str(text: &str) -> Result<Age, AgeError> {
+        text.trim().parse().map(Age).map_err(|_| AgeError::NotANumber)
+    }
+}
+
+impl std::fmt::Display for Age {
+    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(formatter, "{}", self.0)
+    }
+}
+
+impl Age {
+    fn adult(&self) -> Result<(), AgeError> {
+        match self.0 >= 16 {
+            true => Ok(()),
+            false => Err(AgeError::TooYoung),
         }
     }
 }
@@ -198,7 +245,7 @@ Stepper {
 | Prop | Type | Default | Description |
 |---|---|---|---|
 | `value` | `Store<V>` | - | The whole form's value. `validate` checks it, and fields named by a path read and write it. `V` is inferred from it. A form with no `value` and no rules needs `Form::<()>`. |
-| `validate` | `Validators<V>` | - | Rules over `value`, one or an array. A rule with `.on(..)` shows its status on each field it names. |
+| `validate` | `Validators<V>` | - | Rules over `value`, one or an array. A rule with `.on(..)` shows its status on each field it names, and runs only while each of them holds a parsed value or is empty and optional. |
 | `onsubmit` | `EventHandler<FormEvent>` | - | Fires on a submit with no errors. Without an `action`, the browser's own submit is cancelled. A `javascript:`, `data:` or `vbscript:` `action` is dropped with a debug warning, so it counts as none. |
 | `summary_title` | `String` | - | A heading over the error summary. |
 | `form` | `FormHandle` | - | Controls the form from outside, made with `use_form()`. Taken once, on mount. Without it the form makes its own, which `use_form_context()` returns inside the form. |
@@ -225,6 +272,17 @@ any extra HTML attributes.
 | `required` | `bool` | `false` | Marks the label. Inside a `Form`, an empty field fails the submit with `form.required` unless its own rules fail first: `form.required_check` for an unchecked `Checkbox` or `Switch`, `form.required_select` for a select, `form.required_option` for a `RadioGroup` or `SegmentedControl`. A read-only field never fails it. A slider and a `ColorField` always hold a value, and a lone `Radio` leaves it to its `RadioGroup`. A field with a handler but no `value` or binding counts as filled: pass its `value` or a `name` path. |
 | `validate` | `Validators<T>` | - | Rules over the field's own value, one or an array. Shown once the field loses focus or its form is submitted. |
 | `name` | `FieldName<T>` | - | What the field posts as, and how rules address it. A path from `#[derive(Fields)]` also binds the field to the form's value, unless the field has a handler of its own. `T` is the field's value type. |
+
+### Domain values
+
+| Method | Type | Description |
+|---|---|---|
+| `.map(format, parse)` | `Mapped<T, W, E>` | On a path to `Option<T>`: binds a field that edits `W` (text, a date, an option) to the domain type `T`. `format` shows a stored `T`, `parse` reads `W` back and never sees an empty one (blank text, `None`, `[]`); text reaches it untrimmed. An `Err` shows its words, resets the value to `None` and blocks the submit, while the text stays, also across an unmount. A focused field keeps the text as typed: `format` runs on blur and when the value changes elsewhere. `T` must be `Clone + PartialEq`; wrap it in `Rc` otherwise. |
+| `.parsed()` | `Mapped<T, String, T::Err>` | `.map` through `T`'s `Display` and `FromStr`, for a text field. |
+| `.message(fn)` | `fn(&E, &Localization) -> String` | Words every error of type `E` on the field, the parse error and `checked` rules alike. Needed when `E` has no `FieldError`, such as a domain crate's error: without it the name does not compile. |
+| `.rules(..)` | `Validator<T> or Checked<T, E>` | Rules over `T`, run only on a parsed value. The field's own `validate` runs first, over `W`, before the parse; the first error wins. Adds to earlier calls, so a mixed list is two calls. |
+| `checked(f)` | `Checked<V, E>` | A rule from `Fn(&V) -> Result<(), E>`: the field shows `E`'s words. `.warning()` shows it as a warning, `.message(fn)` words an `E` with no `FieldError`. Fits any `validate` too. |
+| `impl FieldError` | `trait` | `fn message(&self, &Localization) -> String`: an error's words in the active language, worded again on a switch. Implemented for `Fn(&Localization) -> String`, `String` and `&'static str`; there is no `Display` fallback. |
 
 ## Style API
 

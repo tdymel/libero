@@ -558,3 +558,87 @@ fn a_disabled_fieldset_sends_no_field_value() {
         fixture.close().await.unwrap();
     });
 }
+
+/// Concept domain-values, fix 1: a mapped field keeps the text as typed, the store holding the
+/// parsed value, until a blur reformats it; invalid text stays, empties the value and blocks.
+#[test]
+fn a_mapped_field_keeps_its_typed_text_until_a_blur() {
+    block_on(async {
+        let fixture = Fixture::open("/form/domain", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        let iban = "input[name=iban]";
+        let value_is = |text: &str| format!("document.querySelector({iban:?}).value === {text:?}");
+        let stored_is = |text: &str| {
+            format!("document.querySelector('[data-stored]').dataset.stored === {text:?}")
+        };
+
+        pointer::click(page, iban).await.unwrap();
+        keyboard::type_text(page, "de89370400440532013000")
+            .await
+            .unwrap();
+        wait::for_js_true(
+            page,
+            &stored_is("DE89370400440532013000"),
+            "the parsed value",
+        )
+        .await
+        .unwrap();
+        wait::for_js_true(
+            page,
+            &value_is("de89370400440532013000"),
+            "the text as typed",
+        )
+        .await
+        .unwrap();
+
+        keyboard::press(page, keyboard::TAB).await.unwrap();
+        wait::for_js_true(
+            page,
+            &value_is("DE89 3704 0044 0532 0130 00"),
+            "the blur to reformat",
+        )
+        .await
+        .unwrap();
+
+        pointer::click(page, iban).await.unwrap();
+        keyboard::press(page, keyboard::END).await.unwrap();
+        for _ in 0..5 {
+            keyboard::press(page, keyboard::BACKSPACE).await.unwrap();
+        }
+        wait::for_js_true(page, &stored_is("none"), "invalid text to empty the value")
+            .await
+            .unwrap();
+        wait::for_js_true(
+            page,
+            &value_is("DE89 3704 0044 0532 01"),
+            "the invalid text to stay",
+        )
+        .await
+        .unwrap();
+
+        click_button(page, "Send").await.unwrap();
+        wait::for_js_true(
+            page,
+            "document.body.textContent.includes('Not an IBAN.')",
+            "the parse error",
+        )
+        .await
+        .unwrap();
+        submits(page, 0).await.unwrap();
+        wait::for_js_true(
+            page,
+            &value_is("DE89 3704 0044 0532 01"),
+            "the text to outlive the submit",
+        )
+        .await
+        .unwrap();
+
+        fixture
+            .console
+            .assert_clean("typing into a mapped field")
+            .unwrap();
+        fixture.close().await.unwrap();
+    });
+}

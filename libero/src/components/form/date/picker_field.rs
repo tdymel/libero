@@ -1,6 +1,8 @@
 //! The engine every date and time field shares: a text input read on blur or Enter,
 //! a dropdown holding a picker, and a hidden input posting ISO 8601.
 
+use std::rc::Rc;
+
 use chrono::NaiveDate;
 use dioxus::prelude::*;
 
@@ -18,14 +20,14 @@ use crate::{
             navigation_chord,
         },
         form::{
-            Caption, ChronoDropdownPart, FIELD_CONTROL_SX, FieldName, FieldPart, FieldStatus,
-            FormScope, Validators,
+            Caption, ChronoDropdownPart, FIELD_CONTROL_SX, FieldError, FieldName, FieldPart,
+            FieldStatus, FormScope, Parse, Typed, Validators,
             keyboardless::{PickerInput, use_keyboardless, use_picker_focus},
             phone_sheet::{
                 SheetSwipe, narrow_query, phone_sheet_sx, sheet_clearance_style,
                 use_sheet_clearance, use_sheet_room, use_sheet_swipe,
             },
-            use_bound, use_field, use_field_frame,
+            use_bound, use_field, use_field_frame, word,
         },
         layout::{paper_sx, use_box},
     },
@@ -34,6 +36,7 @@ use crate::{
         use_focus_within, use_form_owner, use_localization, use_media_query, use_popover_on,
         use_theme,
     },
+    localization::Localization,
     platform::is_tab,
     sx::{StaticSx, Sx, ThemeAwareValue, sx},
     theme::{Size, SizeCss, Z_INDEX_POPOVER},
@@ -182,19 +185,28 @@ pub(super) fn use_picker_field<V: FieldValue>(
             opened.set(next);
         }
     };
+    // Text the form kept refused for this path, from before an unmount.
+    let scope = try_use_context::<FormScope>();
+    let kept = use_hook(|| {
+        let full = bound.name()?;
+        scope?.typed(full).filter(|_| value.is_none())
+    });
     // The text as typed, until it is committed. `None` shows `value`.
-    let mut draft = use_signal(|| Option::<String>::None);
-    // Why the last commit was refused; cleared by the next keystroke.
-    let mut rejected = use_signal(|| Option::<String>::None);
+    let mut draft = use_signal(|| kept.as_ref().map(|typed| typed.text.clone()));
+    // Why the last commit was refused, worded at render; cleared by the next keystroke.
+    let mut rejected = use_signal(|| kept.map(|typed| typed.error));
     // Arrow Down asked for focus in the picker, once the dropdown is drawn.
     let mut entering = use_signal(|| false);
     let anchor = use_element();
     // A form reset drops the typed text and its refusal; a raw `<form>` is heard off the DOM.
-    let scope = try_use_context::<FormScope>();
     let owner = use_form_owner(anchor, scope.is_none());
     let resets = scope.map_or(0, |form| form.resets()) + owner().unwrap_or(0);
+    // Not on mount, which may restore text the form kept.
+    let seen = use_hook(|| Rc::new(std::cell::Cell::new(resets)));
     use_effect(use_reactive!(|resets| {
-        let _ = resets;
+        if seen.replace(resets) == resets {
+            return;
+        }
         if draft.peek().is_some() {
             draft.set(None);
         }
@@ -205,6 +217,22 @@ pub(super) fn use_picker_field<V: FieldValue>(
 
     let onchange = field.onchange;
     let setter = bound.setter();
+    // Refused text resets a bound value, as a mapped field's does; the form keeps the text.
+    let full = bound.name().map(str::to_string);
+    let keep = {
+        let full = full.clone();
+        let bound = setter.is_some() && onchange.is_none();
+        move |typed: Option<Typed>| {
+            let (Some(mut scope), Some(full)) = (scope, &full) else {
+                return;
+            };
+            match typed {
+                Some(typed) if bound => scope.keep_typed(full, typed),
+                _ => scope.drop_typed(full),
+            }
+        }
+    };
+    let resets_value = setter.is_some() && onchange.is_none();
     let emit = move |next: Option<V>| match (&onchange, &setter) {
         (Some(onchange), _) => onchange.call(next),
         (None, Some(setter)) => setter.set(next),
@@ -233,24 +261,35 @@ pub(super) fn use_picker_field<V: FieldValue>(
     // Returns the error when the text was refused.
     let commit = {
         let emit = emit.clone();
+        let keep = keep.clone();
         move || {
             let text = draft.peek().clone()?;
             if text.trim().is_empty() {
                 draft.set(None);
+                keep(None);
                 emit(None);
                 return None;
             }
-            let read = V::read(&text, &formats, value, today)
-                .map_err(|_| V::unreadable(names).to_string());
-            match read.and_then(|next| accepts(next).map(|()| next)) {
+            let read = V::read(&text, &formats, value, today).map_err(|_| {
+                Rc::new(|locale: &Localization| V::unreadable(&locale.date).to_string())
+                    as Rc<dyn FieldError>
+            });
+            let refused = |error: String| Rc::new(error) as Rc<dyn FieldError>;
+            match read.and_then(|next| accepts(next).map(|()| next).map_err(refused)) {
                 Ok(next) => {
                     draft.set(None);
+                    keep(None);
                     emit(Some(next));
                     None
                 }
                 Err(error) => {
+                    let said = word(&*error);
                     rejected.set(Some(error.clone()));
-                    Some(error)
+                    keep(Some(Typed { text, error }));
+                    if resets_value && value.is_some() {
+                        emit(None);
+                    }
+                    Some(said)
                 }
             }
         }
@@ -261,8 +300,13 @@ pub(super) fn use_picker_field<V: FieldValue>(
 
     // Refused text outranks the caller's status: the field cannot hold what it shows.
     let status: Input<FieldStatus> = match rejected() {
-        Some(error) => Input::Value(FieldStatus::Error(error)),
+        Some(error) => Input::Value(FieldStatus::Error(word(&*error))),
         None => field.status.clone(),
+    };
+    let parse = match (rejected(), value.is_some_and(|value| value.is_complete())) {
+        (Some(error), _) => Parse::Invalid(error),
+        (None, true) => Parse::Valid,
+        (None, false) => Parse::Empty,
     };
     let field_box = use_field()
         .label(field.label)
@@ -275,6 +319,7 @@ pub(super) fn use_picker_field<V: FieldValue>(
                 .check(&value.filter(|value| value.is_complete())),
         )
         .bound(&bound)
+        .parse(parse)
         .required(required)
         .empty(!value.is_some_and(|value| value.is_complete()))
         .readonly(readonly)
@@ -466,6 +511,7 @@ pub(super) fn use_picker_field<V: FieldValue>(
     let pick = use_callback(move |next: Option<V>| {
         draft.set(None);
         rejected.set(None);
+        keep(None);
         emit(next);
         if closes(next) {
             // The focused cell is about to go; focus goes back first.

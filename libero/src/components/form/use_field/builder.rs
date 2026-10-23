@@ -9,7 +9,7 @@ use super::{
 use crate::{
     components::{
         common::{ClassList, Input, Part, Parts, ScaleOrCss, States, parts_source},
-        form::{Caption, FieldStatus},
+        form::{Caption, FieldStatus, Parse},
     },
     hooks::{ElementHandle, SxSource},
     localization::FormLabels,
@@ -29,6 +29,10 @@ pub(crate) struct FieldBuilder<'a> {
     pub(super) helper: Option<&'a Caption>,
     pub(super) status: Option<&'a Input<FieldStatus>>,
     pub(super) rules: Option<FieldStatus>,
+    /// A mapped field's parse error or domain rules, and its parse state.
+    pub(super) mapped: Option<(Option<FieldStatus>, Parse)>,
+    /// A field's own parse state, for one that reads typed text itself (a date).
+    pub(super) parse: Option<Parse>,
     pub(super) name: Option<&'a str>,
     pub(super) aria_label: Option<&'a str>,
     pub(super) hook: Option<Rc<FieldHook>>,
@@ -63,6 +67,8 @@ impl Default for FieldBuilder<'_> {
             helper: None,
             status: None,
             rules: None,
+            mapped: None,
+            parse: None,
             name: None,
             aria_label: None,
             hook: None,
@@ -168,6 +174,18 @@ impl<'a> FieldBuilder<'a> {
     pub fn bound<T>(mut self, bound: &'a Bound<T>) -> Self {
         self.name = bound.name();
         self.hook = Some(bound.hook.clone());
+        self.mapped = bound
+            .mapped
+            .as_ref()
+            .map(|mapped| (mapped.status.clone(), mapped.parse.clone()));
+        self
+    }
+
+    /// Where the field's typed text stands, for one that reads it itself: refused text is
+    /// `Invalid`, which holds back composite rules naming the field.
+    #[inline]
+    pub fn parse(mut self, parse: Parse) -> Self {
+        self.parse = Some(parse);
         self
     }
 
