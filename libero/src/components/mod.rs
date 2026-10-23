@@ -16,9 +16,9 @@ pub use buttons::*;
 #[cfg(any(feature = "text", feature = "title"))]
 pub use common::Truncate;
 pub use common::{
-    ClassList, HtmlTag, Input, NumberValue, OptionItem, OptionLabel, OptionList, OptionSource,
-    Options, Orientation, Part, Parts, States, StaticParts, Variables, Variant, class_list, states,
-    variables,
+    Choice, Choices, ClassList, HtmlTag, Input, NumberValue, OptionItem, OptionLabel, OptionList,
+    OptionSource, Options, Orientation, Part, Parts, States, StaticParts, Variables, Variant,
+    class_list, states, variables,
 };
 pub use data_display::*;
 pub use feedback::*;

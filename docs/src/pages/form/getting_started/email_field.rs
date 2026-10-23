@@ -12,11 +12,7 @@ pub fn EmailField(
 ) -> Element {
     // The caller's rules go first, so a missing email shows before a malformed
     // one. Then the rule that makes this an email field.
-    let rules: Vec<_> = validate
-        .iter()
-        .cloned()
-        .chain(std::iter::once(is_email.error("That is not an email address.")))
-        .collect();
+    let rules = validate.with(is_email.error("That is not an email address."));
     rsx! {
         TextField { r#type: "email", autocomplete: "email", label, name, validate: rules, placeholder: "you@example.com" }
     }

@@ -1,6 +1,7 @@
 use std::any::TypeId;
 use std::rc::Rc;
 
+use super::catalog::IsEmpty;
 use crate::components::form::{FieldPath, FieldStatus};
 
 /// A rule plus what to show when it fails. Built from any `Fn(&V) -> bool`
@@ -67,6 +68,23 @@ pub trait Rule<V: 'static>: Fn(&V) -> bool + Sized + 'static {
     fn or(self, other: impl Rule<V>) -> impl Rule<V> {
         move |value: &V| self(value) || other(value)
     }
+
+    /// Holds for an empty value, so an optional field checks only what was typed.
+    /// Opt-in: `not_empty` and every other rule still see the empty value.
+    ///
+    /// ```no_run
+    /// use libero::components::{Rule, Validators, is_email};
+    ///
+    /// // An optional email: blank passes, `tom@` does not.
+    /// let rules: Validators<String> = is_email.when_present().error("Not an email").into();
+    /// # let _ = rules;
+    /// ```
+    fn when_present(self) -> impl Rule<V>
+    where
+        V: IsEmpty,
+    {
+        move |value: &V| value.is_empty_value() || self(value)
+    }
 }
 
 impl<V: 'static, F: Fn(&V) -> bool + 'static> Rule<V> for F {}
@@ -93,6 +111,43 @@ impl<V: 'static> Validators<V> {
 
     pub fn iter(&self) -> impl Iterator<Item = &Validator<V>> {
         self.0.iter()
+    }
+
+    /// Adds `rule` after the ones already held, so a wrapper component can add its
+    /// own rule to the caller's.
+    ///
+    /// ```no_run
+    /// # use dioxus::prelude::*;
+    /// use libero::components::{Rule, TextField, Validators, max_length};
+    ///
+    /// #[component]
+    /// fn ShortNote(value: String, validate: Validators<String>) -> Element {
+    ///     rsx! {
+    ///         TextField {
+    ///             label: "Note",
+    ///             value,
+    ///             validate: validate.with(max_length(80).error("At most 80 characters")),
+    ///         }
+    ///     }
+    /// }
+    /// ```
+    pub fn with(mut self, rule: Validator<V>) -> Self {
+        self.0.push(rule);
+        self
+    }
+
+    /// Adds every rule in `rules`, in order, after the ones already held.
+    ///
+    /// ```no_run
+    /// use libero::components::{Rule, Validators, is_email, not_empty};
+    ///
+    /// let base: Validators<String> = not_empty.error("Required").into();
+    /// let email = base.extend([is_email.error("Not an email")]);
+    /// # let _ = email;
+    /// ```
+    pub fn extend(mut self, rules: impl IntoIterator<Item = Validator<V>>) -> Self {
+        self.0.extend(rules);
+        self
     }
 
     /// What a field hands `use_field`: `None` without rules, so a field with
@@ -241,6 +296,46 @@ mod tests {
         assert!(rules() != [not_admin.error("Other")].into());
         assert!(rules() != [(|v: &String| v.is_empty()).error("Taken")].into());
         assert!(capturing != capturing.clone());
+    }
+
+    /// A wrapper's added rule keeps the stateless match, so its field still memoizes.
+    #[test]
+    fn with_and_extend_append_and_keep_stateless_equality() {
+        let base = || -> Validators<String> { not_admin.error("Taken").into() };
+        let short = || (|v: &String| v.len() > 2).warn("Short");
+
+        let with = base().with(short());
+        let extended = Validators::default().extend([not_admin.error("Taken"), short()]);
+        assert!(with == base().with(short()));
+        assert!(with == extended);
+        assert!(with != base());
+        assert_eq!(
+            with.validate(&"ab".into()),
+            FieldStatus::Warning("Short".into())
+        );
+
+        let min = 3;
+        let capturing = base().with((move |v: &String| v.len() > min).error("Short"));
+        assert!(capturing != capturing.clone());
+    }
+
+    #[test]
+    fn when_present_passes_empty_and_checks_the_rest() {
+        let rules: Validators<String> = (|v: &String| v.contains('@'))
+            .when_present()
+            .error("Not an email")
+            .into();
+
+        assert!(rules.validate(&"".into()).is_valid());
+        assert!(rules.validate(&"  ".into()).is_valid());
+        assert!(rules.validate(&"tom@libero".into()).is_valid());
+        assert!(rules.validate(&"tom".into()).is_error());
+        assert!(
+            crate::components::form::not_empty
+                .error("Required")
+                .validate(&String::new())
+                .is_error()
+        );
     }
 
     #[test]

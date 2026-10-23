@@ -15,7 +15,7 @@ use super::{
 use crate::{
     components::{
         buttons::Button,
-        common::{FOCUSABLE_SELECTOR, Glyph, HtmlTag, Options, attr},
+        common::{Choice, FOCUSABLE_SELECTOR, Glyph, HtmlTag, Options, attr},
         form::{Checkbox, MultiSelect, NativeSelect, SelectionArgs, TextField},
         layout::{paper_sx, use_box},
     },
@@ -47,24 +47,6 @@ pub(super) static FILTER_POPOVER_SX: StaticSx = StaticSx::new(|| {
         .max_height(POPOVER_AVAILABLE_HEIGHT.value_or("none"))
         .overflow_y("auto")
 });
-
-/// A pick in a filter's `NativeSelect`: its value, its label and a unique key.
-#[derive(Clone, PartialEq)]
-pub(super) struct Choice<V: Clone + PartialEq + 'static> {
-    pub value: V,
-    pub key: &'static str,
-    pub label: &'static str,
-}
-
-impl<V: Clone + PartialEq + 'static> Options for Choice<V> {
-    fn label(&self) -> String {
-        self.label.to_string()
-    }
-
-    fn value(&self) -> String {
-        self.key.to_string()
-    }
-}
 
 impl Options for SelectOption {
     fn label(&self) -> String {
@@ -107,10 +89,12 @@ pub(super) fn operator_choices(
 ) -> (Vec<Choice<FilterOperator>>, Option<Choice<FilterOperator>>) {
     let choices: Vec<Choice<FilterOperator>> = FilterOperator::of(kind)
         .iter()
-        .map(|&operator| Choice {
-            value: operator,
-            key: operator_key(operator),
-            label: (labels.operator_name)(operator),
+        .map(|&operator| {
+            Choice::text(
+                operator,
+                operator_key(operator),
+                (labels.operator_name)(operator),
+            )
         })
         .collect();
     let picked = choices
@@ -390,21 +374,9 @@ pub(super) fn FilterValue(
     }
     if kind == FilterKind::Boolean {
         let choices = vec![
-            Choice {
-                value: None,
-                key: "any",
-                label: labels.any,
-            },
-            Choice {
-                value: Some(true),
-                key: "true",
-                label: labels.yes,
-            },
-            Choice {
-                value: Some(false),
-                key: "false",
-                label: labels.no,
-            },
+            Choice::text(None, "any", labels.any),
+            Choice::text(Some(true), "true", labels.yes),
+            Choice::text(Some(false), "false", labels.no),
         ];
         let picked = match current.map(|filter| filter.value.as_str()) {
             Some("true") => 1,

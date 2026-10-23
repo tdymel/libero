@@ -44,7 +44,9 @@ is_email                         // a shape check, one @ and a dotted domain
 
 rule.error("..")                 // an error blocks a submit
 rule.warn("..")                  // a warning never does
-rule.and(other) / rule.or(other) // compose before the message"#;
+rule.and(other) / rule.or(other) // compose before the message
+rule.when_present()              // an empty value passes, for an optional field
+validate.with(v) / .extend([..]) // add rules after the caller's"#;
 
 // snippet: ignore - a list of paths, two of them wrong on purpose
 const PATHS_CODE: &str = r#"#[derive(Clone, PartialEq, Default, Fields)]
@@ -209,6 +211,20 @@ pub fn FormGettingStartedPage() -> Element {
                 CodeBlock { source: RULES_CODE, language: "rust" }
                 Text { "The built-in rules cover the common cases, over the value types they make sense for." }
                 CodeBlock { source: CATALOG_CODE, language: "rust" }
+                Text {
+                    Code { source: "rule.when_present()" }
+                    " lets an empty value pass, so an optional field checks only what was typed: "
+                    Code { source: "is_email.when_present().error(\"..\")" }
+                    ". It is opt-in, and "
+                    Code { source: "not_empty" }
+                    " and every other rule still see the empty value. A specialized field adds its "
+                    "own rules to the caller's with "
+                    Code { source: "validate.with(..)" }
+                    " or "
+                    Code { source: "validate.extend([..])" }
+                    ". Rules that capture nothing still compare equal, so the field does not "
+                    "re-render for them."
+                }
                 Text {
                     "Every layer takes "
                     Code { source: "validate" }

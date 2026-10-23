@@ -7,9 +7,10 @@ use dioxus::prelude::*;
 use libero::components::SelectPart;
 use libero::use_theme;
 use libero::{
+    choices,
     components::{
-        Code, Flex, OptionItem, OptionList, Options, Select, SelectFilterArgs, SelectOptionArgs,
-        Text,
+        Choices, Code, Flex, OptionItem, OptionList, Options, Select, SelectFilterArgs,
+        SelectOptionArgs, Text,
     },
     sx::sx,
 };
@@ -128,6 +129,43 @@ const GROUPED_UNAVAILABLE: &str = r#"options: OptionList::grouped()
     ])
     .group("Tropical", [Fruit::Banana, Fruit::Mango, Fruit::Passion])"#;
 
+/// Printed in place of `FRUIT_ENUM` while `choices` is on: an enum from another crate.
+// snippet: ignore - its states hold a `Choice<Fruit>`, which the Demo's one `let` marker types as `Fruit`; `choices!` compiles in libero's doc-tests
+const FOREIGN_FRUIT: &str = r#"use libero::{choices, components::Choices};
+
+// From a domain crate, so no `Options` derive.
+#[derive(Clone, Copy, PartialEq)]
+enum Fruit {
+    Apple,
+    Banana,
+    Cherry,
+    Mango,
+    Passion,
+}
+
+// Without a `_` arm, a new variant fails the build here.
+fn fruit_label(fruit: &Fruit) -> String {
+    match fruit {
+        Fruit::Apple => "Apple",
+        Fruit::Banana => "Banana",
+        Fruit::Cherry => "Cherry",
+        Fruit::Mango => "Mango",
+        Fruit::Passion => "Passion fruit",
+    }
+    .into()
+}
+
+// In display order. The keys are what a form posts; a missing variant fails the build.
+static FRUITS: Choices<Fruit> = choices!(Fruit, fruit_label, {
+    Apple => "apple",
+    Banana => "banana",
+    Cherry => "cherry",
+    Mango => "mango",
+    Passion => "passion",
+});
+
+"#;
+
 #[derive(Clone, Copy, PartialEq, Options)]
 enum Fruit {
     Apple,
@@ -160,14 +198,38 @@ impl Fruit {
     }
 }
 
+fn fruit_label(fruit: &Fruit) -> String {
+    match fruit {
+        Fruit::Apple => "Apple",
+        Fruit::Banana => "Banana",
+        Fruit::Cherry => "Cherry",
+        Fruit::Mango => "Mango",
+        Fruit::Passion => "Passion fruit",
+    }
+    .into()
+}
+
+static FRUITS: Choices<Fruit> = choices!(Fruit, fruit_label, {
+    Apple => "apple",
+    Banana => "banana",
+    Cherry => "cherry",
+    Mango => "mango",
+    Passion => "passion",
+});
+
+/// The list as `Choice<Fruit>`s; the rows and groups below are for the derived enum only.
+fn foreign(values: &DemoValues) -> bool {
+    values.str("choices") == "true"
+}
+
 fn custom(values: &DemoValues) -> bool {
-    values.str("custom") == "true"
+    values.str("custom") == "true" && !foreign(values)
 }
 
 /// Needs `searchable` too: `filter` does nothing without a search box, and its value outlives
 /// the hidden control.
 fn filtering(values: &DemoValues) -> bool {
-    values.str("filter") == "true" && values.str("searchable") == "true"
+    values.str("filter") == "true" && values.str("searchable") == "true" && !foreign(values)
 }
 
 /// Matches the note as well as the label: "thumb" finds Mango.
@@ -229,6 +291,7 @@ fn fruit_selection(fruit: Fruit) -> Element {
 pub fn SelectPage() -> Element {
     let theme = use_theme();
     let mut value = use_signal(|| Some(Fruit::Banana));
+    let mut picked = use_signal(|| FRUITS.choice(&Fruit::Banana));
 
     rsx! {
         DocPage {
@@ -251,7 +314,7 @@ pub fn SelectPage() -> Element {
                         .doc("Rules over the selection, shown once the select loses focus or its form is submitted."),
                     prop("options", "OptionSource<T>")
                         .default("T::options()")
-                        .doc("Narrows or reorders the list. A runtime set, such as `String`s or records from a server, goes here. A `Vec<T>` converts, an `OptionList<T>` adds named groups and disabled options, and a `Resource<Vec<T>>` adds the loader while it fetches. A failed fetch is an empty list, so show your own error beside the field. Order is kept, so a group label used again after another group draws its heading again."),
+                        .doc("Narrows or reorders the list. A runtime set, such as `String`s or records from a server, goes here. An enum from another crate takes a `Choices` list built by `choices!`, with `T` a `Choice<Fruit>` that derefs to the `Fruit`. A `Vec<T>` converts, an `OptionList<T>` adds named groups and disabled options, and a `Resource<Vec<T>>` adds the loader while it fetches. A failed fetch is an empty list, so show your own error beside the field. Order is kept, so a group label used again after another group draws its heading again."),
                     prop("option", "Callback<SelectOptionArgs<T>, Element>")
                         .default("T::label()")
                         .doc("Draws one row's content. The highlight, selection and click stay the component's. Hide a decorative glyph such as an emoji with `aria-hidden`, or a screen reader reads it before the label."),
@@ -356,11 +419,12 @@ pub fn SelectPage() -> Element {
                 component: "Select",
                 children_text: "",
                 // `filter` and the custom rows share helpers, printed for either switch.
-                wrap: Wrap(|values: &DemoValues, source: &str| match custom(values)
-                    || filtering(values)
-                {
-                    true => format!("{FRUIT_ENUM}{FRUIT_IMPL}{source}"),
-                    false => format!("{FRUIT_ENUM}{source}"),
+                wrap: Wrap(|values: &DemoValues, source: &str| {
+                    match (foreign(values), custom(values) || filtering(values)) {
+                        (true, _) => format!("{FOREIGN_FRUIT}{source}"),
+                        (false, true) => format!("{FRUIT_ENUM}{FRUIT_IMPL}{source}"),
+                        (false, false) => format!("{FRUIT_ENUM}{source}"),
+                    }
                 }),
                 fixed: vec![
                     "sx: sx().width(\"280px\").max_width(\"100%\")".to_string(),
@@ -375,7 +439,7 @@ pub fn SelectPage() -> Element {
                 ], field_controls::<FruitCopy>(), vec![
                     // Draws the rows and the trigger through `option` and
                     // `selection` - what `NativeSelect` cannot do at all.
-                    Control::switch("custom").code(|_, values| match custom(values) {
+                    Control::switch("custom").hidden_when(foreign).code(|_, values| match custom(values) {
                         true => vec![CUSTOM_OPTION.to_string(), CUSTOM_SELECTION.to_string()],
                         false => vec![],
                     }),
@@ -397,13 +461,16 @@ pub fn SelectPage() -> Element {
                     // Off the table entirely without a search box: `filter`
                     // narrows what the box finds, so alone it does nothing.
                     Control::switch("filter")
-                        .hidden_when(|values| values.str("searchable") != "true")
+                        .hidden_when(|values| values.str("searchable") != "true" || foreign(values))
                         .code(|_, values| match filtering(values) {
                             true => vec![CUSTOM_FILTER.to_string()],
                             false => vec![],
                         }),
                     // Named runs, drawn as `role="group"` with a heading each.
-                    Control::switch("grouped").code(|_, values| {
+                    Control::switch("grouped").hidden_when(foreign).code(|_, values| {
+                        if foreign(values) {
+                            return vec![];
+                        }
                         match (values.str("grouped").as_str(), values.str("unavailable").as_str()) {
                             ("true", "true") => vec![GROUPED_UNAVAILABLE.to_string()],
                             ("true", _) => vec![GROUPED.to_string()],
@@ -413,6 +480,14 @@ pub fn SelectPage() -> Element {
                     }),
                     // Prints through `grouped` above: the two share the one `options` prop.
                     Control::switch("unavailable").code(|_, _| vec![]),
+                    // A foreign enum's list, from `choices!`; `unavailable` disables through it.
+                    Control::switch("choices").code(|_, values| {
+                        match (foreign(values), values.str("unavailable") == "true") {
+                            (true, true) => vec!["options: FRUITS.list().disabling(|fruit| **fruit == Fruit::Cherry)".to_string()],
+                            (true, false) => vec!["options: FRUITS.list()".to_string()],
+                            _ => vec![],
+                        }
+                    }),
                     Control::switch("clearable"),
                     Control::switch("required"),
                     Control::switch("disabled"),
@@ -420,6 +495,32 @@ pub fn SelectPage() -> Element {
                 ]].concat(),
                 render: move |values: DemoValues| {
                     let field = field_props::<FruitCopy>(&values);
+                    if foreign(&values) {
+                        let out_of_season = values.str("unavailable") == "true";
+                        return rsx! {
+                            Select {
+                                sx: sx().width("280px").max_width("100%"),
+                                size: values.str("size"),
+                                radius: values.str("radius"),
+                                label: field.label,
+                                aria_label: field.aria_label,
+                                description: field.description,
+                                helper: field.helper,
+                                status: field.status,
+                                options: FRUITS.list().disabling(|fruit| out_of_season && **fruit == Fruit::Cherry),
+                                searchable: (values.str("searchable") == "true").then_some(true),
+                                open_on_focus: values.str("open_on_focus") == "true",
+                                search_placeholder: "Search fruit",
+                                clearable: (values.str("clearable") == "true").then_some(true),
+                                required: (values.str("required") == "true").then_some(true),
+                                disabled: (values.str("disabled") == "true").then_some(true),
+                                readonly: (values.str("readonly") == "true").then_some(true),
+                                placeholder: "Pick a fruit",
+                                value: picked(),
+                                onchange: move |next| picked.set(next),
+                            }
+                        };
+                    }
                     rsx! {
                     Select {
                         sx: sx().width("280px").max_width("100%"),

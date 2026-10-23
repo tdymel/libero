@@ -6,13 +6,13 @@ use pictogram_icons_lucide as lucide;
 use super::{
     cell_value::FilterKind,
     column_filter::{ColumnFilter, FilterLogic, FilterOperator, SelectOption},
-    filter_popover::{Choice, FILTER_POPOVER_SX, FilterTarget, FilterValue, operator_choices},
+    filter_popover::{FILTER_POPOVER_SX, FilterTarget, FilterValue, operator_choices},
     use_table::StateSlice,
 };
 use crate::{
     components::{
         buttons::{ActionIcon, Button},
-        common::{FOCUSABLE_SELECTOR, Glyph, HtmlTag, Options, attr},
+        common::{Choice, FOCUSABLE_SELECTOR, Glyph, HtmlTag, Options, attr},
         data_display::{Badge, Icon},
         form::NativeSelect,
         layout::use_box,
@@ -385,11 +385,7 @@ pub(super) fn FilterPanel(
     let logic_choices: Vec<Choice<FilterLogic>> =
         [(FilterLogic::And, "and"), (FilterLogic::Or, "or")]
             .into_iter()
-            .map(|(value, key)| Choice {
-                value,
-                key,
-                label: (labels.logic_name)(value),
-            })
+            .map(|(value, key)| Choice::text(value, key, (labels.logic_name)(value)))
             .collect();
     let current_logic = logic.read();
     let logic_picked = logic_choices

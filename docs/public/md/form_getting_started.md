@@ -49,11 +49,7 @@ fn EmailField(
 ) -> Element {
     // The caller's rules go first, so a missing email shows before a malformed
     // one. Then the rule that makes this an email field.
-    let rules: Vec<_> = validate
-        .iter()
-        .cloned()
-        .chain(std::iter::once(is_email.error("That is not an email address.")))
-        .collect();
+    let rules = validate.with(is_email.error("That is not an email address."));
     rsx! {
         TextField { r#type: "email", autocomplete: "email", label, name, validate: rules, placeholder: "you@example.com" }
     }
@@ -202,6 +198,13 @@ sense for.
 | `min_length(n)` / `max_length(n)` | `String` | at least / at most `n` characters, not bytes |
 | `min(x)` / `max(x)` | any `PartialOrd` | bounds included |
 | `is_email` | `String` | one `@`, something before it and a dotted domain after it |
+
+`rule.when_present()` lets an empty value pass, so an optional field checks
+only what was typed: `is_email.when_present().error("..")`. It is opt-in, and
+`not_empty` and every other rule still see the empty value. A specialized
+field adds its own rules to the caller's with `validate.with(..)` or
+`validate.extend([..])`. Rules that capture nothing still compare equal, so the
+field does not re-render for them.
 
 Every layer takes `validate`, one validator or an array, typed over the value
 that layer can see.

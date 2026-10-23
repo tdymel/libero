@@ -1,5 +1,6 @@
 mod base_props;
 mod button_group_context;
+mod choices;
 #[cfg(feature = "use-element")]
 mod closing_focus;
 mod color_variant;
@@ -44,6 +45,7 @@ pub(crate) use base_props::base_props;
 pub(crate) use button_group_context::{
     ButtonGroupContext, use_button_group, use_provide_button_group,
 };
+pub use choices::{Choice, Choices};
 #[cfg(feature = "use-element")]
 pub(crate) use closing_focus::use_closing_focus;
 pub(crate) use color_variant::{
