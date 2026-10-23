@@ -66,36 +66,6 @@ fn SwipePad() -> Element {
 }
 ```
 
-An edge swipe that opens a navigation drawer, next to the burger that stays:
-
-```rust
-use dioxus::prelude::*;
-use libero::{
-    components::Box,
-    hooks::{EdgeSwipeOptions, edge_swipe_sx, use_edge_swipe},
-};
-
-#[component]
-fn Page(open: Signal<bool>, children: Element) -> Element {
-    let mut open = open;
-    let swipe = use_edge_swipe(
-        Callback::new(move |()| open.set(true)),
-        EdgeSwipeOptions::default(),
-    );
-
-    rsx! {
-        Box {
-            sx: edge_swipe_sx(),
-            onpointerdown: move |event| swipe.onpointerdown.call(event),
-            onpointermove: move |event| swipe.onpointermove.call(event),
-            onpointerup: move |event| swipe.onpointerup.call(event),
-            onpointercancel: move |event| swipe.onpointercancel.call(event),
-            {children}
-        }
-    }
-}
-```
-
 ## API
 
 ```rust,ignore

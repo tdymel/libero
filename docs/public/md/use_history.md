@@ -73,23 +73,6 @@ fn UndoableNote() -> Element {
 }
 ```
 
-Without the hook, for a model that has no dioxus in it:
-
-```rust
-use libero::hooks::UndoHistory;
-
-let mut history = UndoHistory::new(0).with_cap(20);
-history.merge(1);
-history.merge(2);
-history.seal();
-history.push(3);
-
-history.undo();
-assert_eq!(**history.present(), 2);
-history.undo();
-assert_eq!(**history.present(), 0);
-```
-
 ## Accessibility
 
 ### Libero handles
