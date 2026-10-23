@@ -161,7 +161,7 @@ pub(crate) const FEATURES: &[Feature] = &[
     feature("pagination", "navigation", "Pagination", &["action-icon"], false, &["/navigation/pagination"]),
     feature("stepper", "navigation", "Stepper", &["collapse", "use-icon", "use-id", "visually-hidden"], false, &["/navigation/stepper"]),
     feature("tabs", "navigation", "Tabs", &["use-id", "use-icon", "visually-hidden"], false, &["/navigation/tabs"]),
-    feature("tree", "navigation", "Tree", &["list", "icon", "use-popover"], false, &["/navigation/tree"]),
+    feature("tree", "navigation", "Tree", &["list", "icon", "use-popover", "checkbox"], false, &["/navigation/tree"]),
     feature("dialog", "overlay", "Dialog", &["action-icon", "title"], true, &["/overlay/dialog"]),
     feature("drawer", "overlay", "use_drawer", &["dialog", "modal", "float", "use-swipe"], false, &["/overlay/drawer"]),
     feature("floating-window", "overlay", "use_floating_window", &["menu", "action-icon", "button", "title", "float", "use-drag"], false, &["/overlay/floating-window"]),
