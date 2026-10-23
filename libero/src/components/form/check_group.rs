@@ -387,12 +387,14 @@ fn check_group<T: Options, P: Part>(kind: Kind, props: Group<T, P>) -> Element {
         }
     });
 
-    // A disabled group posts nothing, as a disabled checkbox.
+    // A disabled group posts nothing, as a disabled checkbox. Keyed, as its option siblings.
     let hidden = bound.name().filter(|_| !disabled).map(|name| {
         let posted: Vec<String> = held.iter().map(Options::value).collect();
         rsx! {
-            for value in posted {
-                input { r#type: "hidden", name, value }
+            Fragment { key: "hidden-{name}",
+                for value in posted {
+                    input { r#type: "hidden", name, value }
+                }
             }
         }
     });
@@ -532,5 +534,32 @@ mod tests {
         });
         assert_eq!(page.matches("name=\"alerts\"").count(), 1, "{page}");
         assert!(page.contains("value=\"B\""), "{page}");
+    }
+
+    /// Todo 4046: a tick on a named group re-diffs the keyed options next to the hidden inputs.
+    #[test]
+    fn ticking_a_named_group_posts_the_new_value() {
+        let mut dom = VirtualDom::new(|| {
+            let mut value = use_context_provider(|| Signal::new(vec!["B".to_string()]));
+            rsx! {
+                crate::LiberoProvider {
+                    CheckboxGroup::<String> {
+                        label: "Pick",
+                        name: "pick",
+                        options: options(),
+                        value: value(),
+                        onchange: move |next| value.set(next),
+                    }
+                }
+            }
+        });
+        dom.rebuild_in_place();
+        dom.in_scope(ScopeId::APP, || {
+            consume_context::<Signal<Vec<String>>>().set(vec!["A".to_string(), "B".to_string()])
+        });
+        dom.render_immediate(&mut dioxus::dioxus_core::NoOpMutations);
+        let page = dioxus_ssr::render(&dom);
+        assert_eq!(page.matches("name=\"pick\"").count(), 2, "{page}");
+        assert!(page.contains("value=\"A\""), "{page}");
     }
 }
