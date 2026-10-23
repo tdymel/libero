@@ -10,7 +10,7 @@ accessibility, and configurability.
 
 ## Installation
 
-Libero 0.2 pins Dioxus `=0.8.0-alpha.3`, so add that exact version: a second
+The current Libero pins Dioxus `=0.8.0-alpha.3`, so add that exact version: a second
 copy of dioxus would not share libero's contexts.
 
 ```shell

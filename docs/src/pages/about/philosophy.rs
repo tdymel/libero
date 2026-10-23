@@ -2,8 +2,7 @@ use crate::components::DocPage;
 use dioxus::prelude::*;
 use libero::{
     components::{
-        Alert, Anchor, Badge, Code, Divider, Flex, Icon, List, ListItem, Paper, Pictogram, Text,
-        Title,
+        Alert, Anchor, Badge, Divider, Flex, Icon, List, ListItem, Paper, Pictogram, Text, Title,
     },
     sx::sx,
     theme::Size,
@@ -85,13 +84,7 @@ pub fn PhilosophyPage() -> Element {
                     why: "Your app should look like your app. The plain default gets you started. \
                           When you want your own look, you change it in your own code.",
                     ListItem {"Aim for a default that fits most apps as it is." }
-                    ListItem {
-                        "Change the look in Rust, right where you use the component. For example, "
-                        Code { source: "sx: sx().border_radius(\"xl\")" }
-                        " on a "
-                        Code { source: "Button" }
-                        " rounds its corners."
-                    }
+                    ListItem {"Change the look in Rust, right where you use the component." }
                     ListItem {"Offer light and dark from the start." }
                     ListItem {"Let your styles win when yours and ours set the same thing." }
                 }

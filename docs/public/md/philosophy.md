@@ -61,8 +61,7 @@ A clean look that stays out of the way.
 What we do:
 
 - Aim for a default that fits most apps as it is.
-- Change the look in Rust, right where you use the component. For example,
-  `sx: sx().border_radius("xl")` on a `Button` rounds its corners.
+- Change the look in Rust, right where you use the component.
 - Offer light and dark from the start.
 - Let your styles win when yours and ours set the same thing.
 

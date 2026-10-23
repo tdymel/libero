@@ -158,7 +158,7 @@ const FEATURES_EXAMPLE: &str = concat!(
 
 // snippet: ignore - shell commands, not Rust
 const INSTALL_COMMANDS: &str = "cargo add dioxus@=0.8.0-alpha.3
-cargo add libero --features text";
+cargo add libero";
 
 const QUICK_START_EXAMPLE: &str = r#"fn App() -> Element {
     rsx! {
@@ -276,7 +276,7 @@ pub fn GettingStarted() -> Element {
                 title: "Installation",
                 Alert { title: "Dioxus 0.8 alpha",
                     Text {
-                        "Libero 0.2 pins Dioxus "
+                        "The current Libero pins Dioxus "
                         Code { source: "=0.8.0-alpha.3" }
                         ", so add that exact version: a second copy of dioxus would not share libero's contexts."
                     }

@@ -13,24 +13,31 @@ ends swap under right-to-left text.
 
 ## Usage
 
-`CheckmarkIcon` stands for any component of yours that renders an `svg`.
+`UnderlineIcon` stands for any component of yours that renders an `svg`. Drop
+`multiple: true` for a group where pressing one button releases the other.
 
 ```rust
 use dioxus::prelude::*;
 use libero::components::{ActionIcon, Button, ButtonGroup};
+use std::collections::HashSet;
 
 #[component]
 fn Demo() -> Element {
+    let mut selected = use_signal(|| HashSet::from(["bold".to_string()]));
     rsx! {
-        ButtonGroup { "aria-label": "Edit",
-            Button { "Undo" }
-            Button { "Redo" }
-            ActionIcon { aria_label: "Confirm", CheckmarkIcon {} }
+        ButtonGroup {
+            "aria-label": "Text style",
+            value: selected(),
+            multiple: true,
+            onchange: move |next| selected.set(next),
+            Button { value: "bold", "Bold" }
+            Button { value: "italic", "Italic" }
+            ActionIcon { value: "underline", aria_label: "Underline", UnderlineIcon {} }
         }
     }
 }
 #
-# #[component] fn CheckmarkIcon() -> Element { rsx! {} }
+# #[component] fn UnderlineIcon() -> Element { rsx! {} }
 ```
 
 ## Shared defaults
