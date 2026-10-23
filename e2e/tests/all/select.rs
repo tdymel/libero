@@ -26,6 +26,90 @@ async fn picked<D: Driver>(d: &mut D, expected: &str, after: &str) -> Result<()>
     .await
 }
 
+/// Whether the combobox at `trigger` reads `aria-expanded` as `open`.
+pub async fn expanded<D: Driver>(d: &mut D, trigger: &str, open: bool, what: &str) -> Result<()> {
+    let want = if open { "true" } else { "false" };
+    eventually(d, what, async |d| {
+        Ok(d.attr(trigger, "aria-expanded").await?.as_deref() == Some(want))
+    })
+    .await
+}
+
+/// A closed list that a focus came back to stays closed past another round trip.
+async fn stays_closed<D: Driver>(d: &mut D, trigger: &str, what: &str) -> Result<()> {
+    expanded(d, trigger, false, what).await?;
+    d.text("body").await?;
+    let now = d.attr(trigger, "aria-expanded").await?;
+    anyhow::ensure!(
+        now.as_deref() == Some("false"),
+        "{what}: reopened ({now:?})"
+    );
+    Ok(())
+}
+
+/// Todo 3964: Tab opens the list; Escape and a pick leave it closed; Tab back opens it again.
+async fn tab_opens<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    d.focus("#before").await?;
+    d.press(keyboard::TAB).await?;
+    expanded(d, TRIGGER, true, "Tab to open the list").await?;
+    d.press(keyboard::ESCAPE).await?;
+    stays_closed(d, TRIGGER, "Escape to close it for good").await?;
+    d.press(keyboard::ARROW_DOWN).await?;
+    expanded(d, TRIGGER, true, "ArrowDown to reopen it").await?;
+    d.press(keyboard::ARROW_DOWN).await?;
+    d.press(keyboard::ENTER).await?;
+    picked(d, "Some(Banana)", "Enter on the second row").await?;
+    stays_closed(d, TRIGGER, "the pick to close it for good").await?;
+    d.press(keyboard::TAB).await?;
+    d.press_shift(keyboard::TAB).await?;
+    expanded(d, TRIGGER, true, "Shift+Tab back to open it").await
+}
+
+/// Todo 3964: the press that focuses the trigger opens the list once, not open then shut.
+async fn a_press_opens_once<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    d.click(TRIGGER).await?;
+    expanded(d, TRIGGER, true, "a click to open the list").await?;
+    d.text("body").await?;
+    let now = d.attr(TRIGGER, "aria-expanded").await?;
+    anyhow::ensure!(
+        now.as_deref() == Some("true"),
+        "the list shut again ({now:?})"
+    );
+    Ok(())
+}
+
+/// Todo 3964: Escape in the search box hands focus back to the trigger, which stays closed.
+async fn search_returns_closed<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    d.focus("#before").await?;
+    d.press(keyboard::TAB).await?;
+    eventually(d, "Tab to open into the search box", async |d| {
+        d.is_focused(SEARCH).await
+    })
+    .await?;
+    d.press(keyboard::ESCAPE).await?;
+    eventually(d, "Escape to refocus the trigger", async |d| {
+        Ok(!d.exists(SEARCH).await? && d.is_focused(TRIGGER).await?)
+    })
+    .await?;
+    stays_closed(d, TRIGGER, "the refocus to leave it closed").await
+}
+
+e2e::scenario!(
+    open_on_focus_opens_on_tab_only,
+    "/select/open-on-focus",
+    tab_opens
+);
+e2e::scenario!(
+    open_on_focus_opens_once_on_a_press,
+    "/select/open-on-focus",
+    a_press_opens_once
+);
+e2e::scenario!(
+    open_on_focus_stays_closed_after_the_search_box,
+    "/select/open-on-focus/searchable",
+    search_returns_closed
+);
+
 async fn a_click_picks<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
     d.click(TRIGGER).await?;
     eventually(d, "the listbox", async |d| d.exists(LISTBOX).await).await?;

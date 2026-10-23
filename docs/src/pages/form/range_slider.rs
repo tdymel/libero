@@ -111,6 +111,7 @@ pub fn RangeSliderPage() -> Element {
     let mut quality = use_signal(|| (Quality::Low, Quality::High));
     let mut last = use_signal(|| SliderChangeEvent::Change((20.0, 80.0)));
     let mut last_quality = use_signal(|| SliderChangeEvent::Change((Quality::Low, Quality::High)));
+    let mut band = use_signal(|| (30.0, 70.0));
 
     rsx! {
         DocPage {
@@ -177,6 +178,9 @@ pub fn RangeSliderPage() -> Element {
                     prop("preview_on_hover", "bool")
                         .default("false")
                         .doc("Shows a bubble over the value a hovering mouse or pen points at, before a press moves the nearer thumb there. Escape hides it until the pointer leaves the slider. Touch has no hover, so it never shows there. The bubble follows the pointer and goes when it leaves the slider, so it is not hoverable (WCAG 1.4.13)."),
+                    prop("orientation", "Orientation")
+                        .default("horizontal")
+                        .doc("`vertical` runs the track bottom to top, `12rem` tall unless `sx` sets a `height`, with the mark captions beside it. A touch anywhere on it drags the nearer thumb, since no swipe scrolls past an upright track."),
                 ])
                 .parts("SliderPart", vec![
                     (SliderPart::Label, "The label above the control."),
@@ -198,7 +202,7 @@ pub fn RangeSliderPage() -> Element {
                 .without_base_props(),
             ],
             accessibility: a11y()
-                .key(["Left", "Right", "Up", "Down"], "Move the focused thumb `theme.slider.step` steps, one by default. Right to left, ArrowLeft raises the value instead.")
+                .key(["Left", "Right", "Up", "Down"], "Move the focused thumb `theme.slider.step` steps, one by default; Up and Right raise it, on a vertical range too. Right to left, ArrowLeft raises the value instead.")
                 .key(["Shift+Arrow", "PageUp", "PageDown"], "Move the focused thumb `theme.slider.big_step` steps, ten by default.")
                 .key(["Home", "End"], "Move the focused thumb to the end, stopping at the other thumb.")
                 .key(["Escape"], "With `preview_on_hover`, hides the hover bubble until the pointer leaves the slider.")
@@ -348,6 +352,36 @@ pub fn RangeSliderPage() -> Element {
                     }
                 },
                 wrap: Wrap(wrap_readout),
+            }
+            // snippet: let mut band = use_signal(|| (30.0, 70.0));
+            Demo {
+                component: "RangeSlider",
+                title: "Vertical",
+                children_text: "",
+                fixed: vec![
+                    "label: \"Band\"".to_string(),
+                    "value: band()".to_string(),
+                    "oninput: move |event: SliderChangeEvent<(f64, f64)>| band.set(event.value())".to_string(),
+                ],
+                controls: vec![
+                    Control::toggle("orientation", ["horizontal", "vertical"])
+                        .labels(["Horizontal", "Vertical"])
+                        .default("vertical")
+                        .code(|_, values| match values.str("orientation").as_str() {
+                            "vertical" => vec!["orientation: \"vertical\"".to_string()],
+                            _ => vec![],
+                        }),
+                ],
+                render: move |values: DemoValues| rsx! {
+                    Flex { direction: "column", sx: sx().width("100%"),
+                        RangeSlider {
+                            label: "Band",
+                            value: band(),
+                            orientation: values.str("orientation"),
+                            oninput: move |event: SliderChangeEvent<(f64, f64)>| band.set(event.value()),
+                        }
+                    }
+                },
             }
         }
     }

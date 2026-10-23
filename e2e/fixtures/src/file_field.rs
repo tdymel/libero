@@ -17,7 +17,38 @@ pub const ROUTES: Routes = &[
     ("/file-field/reject", || rsx! { FileRejectPage {} }),
     ("/file-field/reset", || rsx! { FileResetPage {} }),
     ("/file-field/single", || rsx! { FileSinglePage {} }),
+    ("/file-field/limits", || rsx! { FileLimitsPage {} }),
 ];
+
+/// A `multiple` field keeping two files of at most 5 bytes; `#rejected` reads what
+/// `onreject` got, as `Reason:name`.
+#[component]
+fn FileLimitsPage() -> Element {
+    let mut files = use_signal(Files::default);
+    let mut rejected = use_signal(String::new);
+
+    rsx! {
+        Flex { direction: "column", gap: "md", max_width: "360px",
+            FileField {
+                id: "limits",
+                label: "Limits",
+                multiple: true,
+                max_files: 2,
+                max_size: 5,
+                value: files(),
+                onchange: move |next: Files| files.set(next),
+                onreject: move |refused: Vec<FileRejection>| {
+                    let named: Vec<String> = refused
+                        .iter()
+                        .map(|rejection| format!("{:?}:{}", rejection.reason, rejection.file.name()))
+                        .collect();
+                    rejected.set(named.join(" "));
+                },
+            }
+            p { id: "rejected", "{rejected}" }
+        }
+    }
+}
 
 /// Todos 2581, 2582: a single-file dropzone with an error that the button turns read-only
 /// once the unit has dropped its file in.

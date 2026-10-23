@@ -1,7 +1,7 @@
 //! `NumberField` with its steppers, and one field per state its docs page shows.
 
 use dioxus::prelude::*;
-use libero::components::{Button, Flex, Form, NumberField, Text, use_form};
+use libero::components::{Button, Decimals, Flex, Form, NumberField, Text, use_form};
 
 use crate::Routes;
 
@@ -11,7 +11,30 @@ pub const ROUTES: Routes = &[
     ("/number-field/reset", || rsx! { NumberFieldResetPage {} }),
     ("/number-field/rtl", || rsx! { NumberFieldRtlPage {} }),
     ("/number-field/grouped", || rsx! { NumberFieldGroupedPage {} }),
+    ("/number-field/decimals", || rsx! { NumberFieldDecimalsPage {} }),
 ];
+
+/// Two places, a `$` before the field and described by it; `#readout` shows the value as `{:?}`.
+#[component]
+fn NumberFieldDecimalsPage() -> Element {
+    let mut price = use_signal(|| Some(0.2f64));
+    rsx! {
+        Flex { direction: "column", gap: "md", max_width: "320px",
+            NumberField {
+                id: "price",
+                label: "Price",
+                decimals: Decimals::Exactly(2),
+                leading: rsx! { "$" },
+                describe_leading: true,
+                steppers: true,
+                step: 0.1,
+                value: price(),
+                onchange: move |next| price.set(next),
+            }
+            Text { id: "readout", {format!("{:?}", price())} }
+        }
+    }
+}
 
 /// Todo 3390: `group_digits` groups the number until the field takes the focus.
 #[component]

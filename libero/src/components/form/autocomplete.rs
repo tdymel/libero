@@ -7,7 +7,8 @@ use crate::{
         },
         form::{
             CaretKeys, ComboboxCore, ComboboxOption, DropdownPart, FIELD_CONTROL_SX, clear_button,
-            field_props, row_label, use_bound, use_field, use_field_frame, use_row_cache,
+            field_props, row_label, use_bound, use_field, use_field_frame, use_focus_open,
+            use_row_cache,
         },
         layout::use_box,
     },
@@ -69,6 +70,10 @@ field_props! {
         /// Shows an x that empties the field while it holds text.
         #[props(default)]
         clearable: Option<bool>,
+        /// Opens the suggestions when the field takes focus, by Tab or a press; not when
+        /// focus stays after a pick or Escape.
+        #[props(default)]
+        open_on_focus: bool,
         /// Shown in place of the list when typed text matches nothing. Announced as
         /// `combobox.nothing_found` either way.
         #[props(default)]
@@ -138,6 +143,11 @@ pub fn Autocomplete<T: Options>(props: AutocompleteProps<T>) -> Element {
 
     let state = use_combobox();
     let input_element = use_element();
+    let focus_open = use_focus_open(
+        props.open_on_focus && !disabled && !readonly,
+        input_element,
+        use_callback(move |()| state.open()),
+    );
     let row_cache = use_row_cache();
 
     // Trimmed: a phone keyboard's trailing space must not hide "Paris" (todo 2415).
@@ -310,7 +320,11 @@ pub fn Autocomplete<T: Options>(props: AutocompleteProps<T>) -> Element {
             state.set_active(None);
             state.open();
         })
-        .event("onblur", move |_: FocusEvent| state.close())
+        .event("onfocus", move |_: FocusEvent| focus_open.focus())
+        .event("onblur", move |_: FocusEvent| {
+            focus_open.blur();
+            state.close()
+        })
         .element(&input_element)
         .render(HtmlTag::Input, attributes, ());
 

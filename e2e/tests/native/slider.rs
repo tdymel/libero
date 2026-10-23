@@ -242,3 +242,48 @@ fn the_label_names_the_range_slider_group_in_the_ax_tree() {
     let page = mount(range);
     assert_eq!(page.accessible("[role=group]").1, "Price");
 }
+
+fn upright() -> Element {
+    let mut value = use_signal(|| 50.0);
+    rsx! {
+        Slider {
+            aria_label: "Level",
+            orientation: "vertical",
+            value: Some(value()),
+            oninput: move |event: SliderChangeEvent<f64>| value.set(event.value()),
+            sx: sx().height("200px"),
+        }
+    }
+}
+
+fn now(page: &mut e2e::native::Page) -> f64 {
+    page.attr(THUMB, "aria-valuenow")
+        .and_then(|v| v.parse().ok())
+        .unwrap_or_default()
+}
+
+/// Todo 3963: under Blitz's pointer an upright thumb follows a drag up, and ArrowUp raises it.
+#[test]
+fn an_upright_thumb_follows_the_pointer_up() {
+    let mut page = mount(upright);
+    let (x, y, w, h) = page.rect(THUMB);
+    let (cx, cy) = ((x + w / 2.0) as f32, (y + h / 2.0) as f32);
+    page.press_at(cx, cy);
+    for step in 1..=4u8 {
+        page.move_to(cx, cy - 10.0 * f32::from(step));
+    }
+    page.release_at(cx, cy - 40.0);
+    let (_, thumb_y, _, thumb_h) = page.rect(THUMB);
+    let value = now(&mut page);
+    assert!(value > 55.0, "value {value}\n{}", page.tree());
+    assert!(
+        (thumb_y + thumb_h / 2.0 - f64::from(cy - 40.0)).abs() <= 12.0,
+        "thumb centre {}, pointer {}\n{}",
+        thumb_y + thumb_h / 2.0,
+        cy - 40.0,
+        page.tree()
+    );
+    page.focus(THUMB);
+    page.press(Key::Named(NamedKey::ArrowUp));
+    assert_eq!(now(&mut page), value + 1.0, "{}", page.tree());
+}

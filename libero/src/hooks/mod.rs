@@ -126,7 +126,7 @@ pub use drag::{Drag, DragMove, DragOptions, DragPoint, DragStart, drag_handle_sx
 #[cfg(feature = "use-drag")]
 pub(crate) use drag::{
     edge_scroll_step, sideways_drag_sx, use_distance_drag, use_distance_drag_cancel,
-    use_drag_cancel, use_drag_with, use_early_measure, use_sideways_drag,
+    use_drag_cancel, use_drag_with, use_early_measure, use_sideways_drag, use_sideways_drag_if,
 };
 #[cfg(feature = "use-element")]
 pub use element::{ElementHandle, use_element};

@@ -6,7 +6,7 @@ use super::slider_value::{SliderChangeEvent, SliderMark, SliderStep, SliderValue
 use super::value::SliderCoreValue;
 use crate::{
     components::{
-        common::Input,
+        common::{Input, Orientation},
         form::{FieldStatus, field_props, use_bound, use_field},
     },
     hooks::{use_localization, use_theme},
@@ -67,6 +67,10 @@ field_props! {
         /// Fires per pair; `Start`/`End` bracket a drag.
         #[props(default)]
         oninput: Option<EventHandler<SliderChangeEvent<(V, V)>>>,
+        /// `vertical` runs the track bottom to top, `12rem` tall unless the `sx` says;
+        /// marks caption at its side. A vertical track is a line, never bars or segments.
+        #[props(default, into)]
+        orientation: Input<Orientation>,
         /// Rules over the pair, shown on blur or submit.
         #[props(default, into)]
         validate: crate::components::form::Validators<(V, V)>,
@@ -241,6 +245,7 @@ pub fn RangeSlider<V: SliderValue>(props: RangeSliderProps<V>) -> Element {
             oninput: (props.oninput.is_some() || bound.is_bound()).then_some(emit),
             group_digits: props.group_digits,
             preview_on_hover: props.preview_on_hover,
+            vertical: props.orientation.copied_or(Orientation::Horizontal) == Orientation::Vertical,
         }
     };
 

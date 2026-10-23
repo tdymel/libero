@@ -199,10 +199,14 @@ fn topping_selection(words: &'static Localization, s: SelectionArgs<Topping>) ->
 /// The printed twin of the page's `value` signal below.
 const VALUE_SIGNAL: &str = "let mut value = use_signal(|| vec![Topping::Cheese, Topping::Olives]);";
 
+/// The printed twin of the "Open on focus" demo's `picks` signal below.
+const PICKS_SIGNAL: &str = "let mut picks = use_signal(Vec::<Topping>::new);";
+
 #[component]
 pub fn MultiSelectPage() -> Element {
     let theme = use_theme();
     let mut value = use_signal(|| vec![Topping::Cheese, Topping::Olives]);
+    let mut picks = use_signal(Vec::<Topping>::new);
     let words = use_localization();
 
     rsx! {
@@ -240,6 +244,9 @@ pub fn MultiSelectPage() -> Element {
                     prop("searchable", "bool")
                         .default("false")
                         .doc("Puts a search box at the top of the list. The query survives a pick and is cleared when the list closes."),
+                    prop("open_on_focus", "bool")
+                        .default("false")
+                        .doc("Opens the list when the field takes focus, by Tab or a press. Focus coming back after a pick or Escape leaves it closed."),
                     prop("filter", "Callback<SelectFilterArgs<T>, bool>")
                         .default("contains")
                         .doc("Narrows the options while searching. Defaults to a case-insensitive `contains` over `Options::label`."),
@@ -363,6 +370,10 @@ pub fn MultiSelectPage() -> Element {
                             _ => vec![],
                         }
                     }),
+                    Control::switch("open_on_focus").code(|_, values| match values.str("open_on_focus").as_str() {
+                        "true" => vec!["open_on_focus: true".to_string()],
+                        _ => vec![],
+                    }),
                     // Off the table entirely without a search box: `filter`
                     // narrows what the box finds, so alone it does nothing.
                     Control::switch("filter")
@@ -409,6 +420,7 @@ pub fn MultiSelectPage() -> Element {
                         selection: custom(&values)
                             .then(|| Callback::new(move |s| topping_selection(words, s))),
                         searchable: (values.str("searchable") == "true").then_some(true),
+                        open_on_focus: values.str("open_on_focus") == "true",
                         search_placeholder: "Search toppings",
                         filter: filtering(&values).then(|| Callback::new(topping_filter)),
                         clearable: (values.str("clearable") == "true").then_some(true),
@@ -418,6 +430,35 @@ pub fn MultiSelectPage() -> Element {
                         value: value(),
                         onchange: move |next| value.set(next),
                     }
+                    }
+                },
+            }
+            Demo {
+                component: "MultiSelect",
+                title: "Open on focus",
+                children_text: "",
+                wrap: Wrap(|_: &DemoValues, source: &str| {
+                    format!("{}\n\n{PICKS_SIGNAL}\n\n{source}", FILE.section("topping"))
+                }),
+                fixed: vec![
+                    "label: \"Toppings\"".to_string(),
+                    "placeholder: \"Pick toppings\"".to_string(),
+                    "value: picks()".to_string(),
+                    "onchange: move |next| picks.set(next)".to_string(),
+                ],
+                controls: vec![Control::switch("open_on_focus").default("true").code(|_, values| {
+                    match values.str("open_on_focus").as_str() {
+                        "true" => vec!["open_on_focus: true".to_string()],
+                        _ => vec![],
+                    }
+                })],
+                render: move |values: DemoValues| rsx! {
+                    MultiSelect {
+                        label: "Toppings",
+                        placeholder: "Pick toppings",
+                        open_on_focus: values.str("open_on_focus") == "true",
+                        value: picks(),
+                        onchange: move |next| picks.set(next),
                     }
                 },
             }

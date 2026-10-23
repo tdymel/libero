@@ -99,8 +99,8 @@ pub use color::{
 };
 #[cfg(feature = "combobox")]
 pub(crate) use combobox::{
-    CaretKeys, ComboboxCore, RowCache, TouchHold, VIRTUAL_ROWS, row_label, use_refocus_on_close,
-    use_row_cache, use_touch_hold,
+    CaretKeys, ComboboxCore, FocusOpen, RowCache, TouchHold, VIRTUAL_ROWS, row_label,
+    use_focus_open, use_refocus_on_close, use_row_cache, use_touch_hold,
 };
 #[cfg(feature = "combobox")]
 pub use combobox::{
@@ -135,7 +135,7 @@ pub use image_cropper::{ImageCropper, ImageCropperPart, ImageCropperProps};
 #[cfg(feature = "native-select")]
 pub use native_select::{NativeSelect, NativeSelectProps};
 #[cfg(feature = "number-field")]
-pub use number_field::{NumberField, NumberFieldProps};
+pub use number_field::{Decimals, NumberField, NumberFieldProps};
 #[cfg(feature = "password-field")]
 pub use password_field::{PasswordField, PasswordFieldProps};
 #[cfg(feature = "phone-field")]

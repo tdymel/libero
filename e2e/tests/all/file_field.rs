@@ -1032,3 +1032,64 @@ fn a_refused_drop_is_announced() {
         fixture.close().await.unwrap();
     });
 }
+
+/// The live region of the first field on the page.
+const LIVE_REGION: &str = "[data-fixture-ready] [role=status]";
+
+/// `max_files: 2`: a pick of three small files keeps the first two and refuses the third as
+/// `TooMany`, which is said aloud.
+async fn a_pick_over_max_files_keeps_the_first_two<D: Driver>(
+    d: &mut D,
+    _route: &str,
+) -> Result<()> {
+    d.choose_files(
+        "#limits",
+        &[("a.txt", "one"), ("b.txt", "two"), ("c.txt", "six")],
+    )
+    .await?;
+    eventually_text(d, "#rejected", "TooMany:c.txt", "the third file refused").await?;
+    eventually(d, "the first two kept", async |d| {
+        let frame = d.text(FRAME).await?;
+        Ok(frame.contains("a.txt") && frame.contains("b.txt") && !frame.contains("c.txt"))
+    })
+    .await?;
+    eventually(d, "the refusal announced", async |d| {
+        Ok(d.text(LIVE_REGION).await?.contains("c.txt"))
+    })
+    .await
+}
+
+e2e::scenario!(
+    a_pick_over_max_files_keeps_the_first_two_and_refuses_the_rest,
+    "/file-field/limits",
+    a_pick_over_max_files_keeps_the_first_two,
+    native: skip("rfd opens the desktop portal's dialog, which no driver answers"),
+    desktop: skip("1126: the GTK file chooser is not driven"),
+    ios: skip("3194: the simulator's picker opens but is not driven; see browse_opens_the_ios_picker"),
+    android: skip("Android's chooser answers one file per pick, and this pick has three")
+);
+
+/// `max_size: 5`: a file of more than five bytes is refused as `TooLarge`, and the live
+/// region says it is "larger than" the limit.
+async fn a_file_over_max_size_is_refused<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    d.choose_files("#limits", &[("big.txt", "more than five bytes")])
+        .await?;
+    eventually_text(d, "#rejected", "TooLarge:big.txt", "the large file refused").await?;
+    eventually(d, "the refusal announced as larger", async |d| {
+        Ok(d.text(LIVE_REGION).await?.contains("larger than"))
+    })
+    .await?;
+    eventually(d, "no chip for the large file", async |d| {
+        Ok(!d.text(FRAME).await?.contains("big.txt"))
+    })
+    .await
+}
+
+e2e::scenario!(
+    a_file_over_max_size_is_refused_as_too_large,
+    "/file-field/limits",
+    a_file_over_max_size_is_refused,
+    native: skip("rfd opens the desktop portal's dialog, which no driver answers"),
+    desktop: skip("1126: the GTK file chooser is not driven"),
+    ios: skip("3194: the simulator's picker opens but is not driven; see browse_opens_the_ios_picker")
+);

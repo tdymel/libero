@@ -40,6 +40,11 @@ pub struct FileFieldLabels {
     pub rejected_type: &'static str,
     /// Said when a single-file field gets more than one; `{names}` lists the rest.
     pub rejected_many: &'static str,
+    /// Said when a `multiple` field gets more than `max_files`; `{max}` is the limit,
+    /// `{names}` lists the rest.
+    pub rejected_max: &'static str,
+    /// Said when a file is larger than `max_size`; `{max}` is the limit as a size.
+    pub rejected_large: &'static str,
 }
 
 /// `FileFieldLabels::ENGLISH.any_of`. A named fn, so every copy compares equal.
@@ -69,6 +74,8 @@ impl FileFieldLabels {
         crop_image: "Picture to crop: {name}",
         rejected_type: "Not added, not an accepted file type: {names}",
         rejected_many: "Not added, the field takes one file: {names}",
+        rejected_max: "Not added, the field takes at most {max} files: {names}",
+        rejected_large: "Not added, larger than {max}: {names}",
     };
 
     pub const GERMAN: Self = Self {
@@ -81,5 +88,7 @@ impl FileFieldLabels {
         crop_image: "Zu beschneidendes Bild: {name}",
         rejected_type: "Nicht hinzugefügt, kein erlaubter Dateityp: {names}",
         rejected_many: "Nicht hinzugefügt, das Feld nimmt nur eine Datei: {names}",
+        rejected_max: "Nicht hinzugefügt, das Feld nimmt höchstens {max} Dateien: {names}",
+        rejected_large: "Nicht hinzugefügt, größer als {max}: {names}",
     };
 }

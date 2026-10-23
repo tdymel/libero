@@ -3,15 +3,15 @@ use dioxus::prelude::*;
 
 use crate::{
     components::form::{FormScope, Setter},
-    hooks::{ElementHandle, current_localization, use_form_owner},
-    localization::{FileFieldLabels, fill},
+    hooks::{ElementHandle, current_formats, current_localization, use_form_owner},
+    localization::{FileFieldLabels, Formats, fill},
     platform::{ElementApi, next_task},
 };
 
 use super::accept::{accepts, picker_accepts};
 #[cfg(feature = "image-cropper")]
 use super::crop::croppable;
-use super::files::{FileRejection, Files, RejectReason};
+use super::files::{FileRejection, Files, RejectReason, format_size};
 use super::rows::FocusDebt;
 
 /// What the two paths that add files, pick and drop, need.
@@ -22,7 +22,7 @@ pub(super) struct Taking {
     /// What the chip announcer says of the last refusal, numbered per refusal.
     pub(super) refused: Signal<Option<(u64, String)>>,
     pub(super) accept: String,
-    pub(super) multiple: bool,
+    pub(super) limits: Limits,
     pub(super) editable: bool,
     /// Set with `crop`: a croppable pick waits here for the crop dialog.
     #[cfg(feature = "image-cropper")]
@@ -49,7 +49,7 @@ pub(super) fn use_file_intake(taking: Taking) -> Intake {
         onreject,
         mut refused,
         accept,
-        multiple,
+        limits,
         editable,
         #[cfg(feature = "image-cropper")]
         crop,
@@ -67,9 +67,10 @@ pub(super) fn use_file_intake(taking: Taking) -> Intake {
         if !editable {
             return;
         }
-        let (kept, rejected) = keep_accepted(files, &accept, multiple, picked);
+        let (kept, rejected) = keep_accepted(files, &accept, limits, picked);
         if !rejected.is_empty() {
-            let note = rejection_note(&rejected, &current_localization().file_field);
+            let words = &current_localization().file_field;
+            let note = rejection_note(&rejected, limits, words, current_formats());
             let count = refused.peek().as_ref().map_or(0, |(count, _)| *count);
             refused.set(Some((count + 1, note)));
             if let Some(onreject) = &onreject {
@@ -99,12 +100,30 @@ pub(super) fn use_file_intake(taking: Taking) -> Intake {
     }
 }
 
-/// The files a pick or a drop leaves after `accept` and `multiple`, and the
+/// How many files a pick or a drop may leave, and how large each.
+#[derive(Clone, Copy, Debug, Default, PartialEq)]
+pub(super) struct Limits {
+    pub(super) multiple: bool,
+    pub(super) max_files: Option<usize>,
+    pub(super) max_size: Option<u64>,
+}
+
+impl Limits {
+    /// One without `multiple`, else `max_files`.
+    fn count(&self) -> Option<usize> {
+        match self.multiple {
+            true => self.max_files,
+            false => Some(1),
+        }
+    }
+}
+
+/// The files a pick or a drop leaves after `accept` and the limits, and the
 /// rest. A drop skips the picker's own `accept`, so it is applied here.
 fn keep_accepted(
     files: Vec<FileData>,
     accept: &str,
-    multiple: bool,
+    limits: Limits,
     picked: bool,
 ) -> (Files, Vec<FileRejection>) {
     let check = match picked {
@@ -115,7 +134,9 @@ fn keep_accepted(
     for file in files {
         let reason = if !check(accept, &file.name(), file.content_type().as_deref()) {
             Some(RejectReason::Type)
-        } else if !multiple && !kept.is_empty() {
+        } else if limits.max_size.is_some_and(|max| file.size() > max) {
+            Some(RejectReason::TooLarge)
+        } else if limits.count().is_some_and(|max| kept.len() >= max) {
             Some(RejectReason::TooMany)
         } else {
             None
@@ -129,7 +150,12 @@ fn keep_accepted(
 }
 
 /// One sentence per reason, naming the refused files.
-fn rejection_note(rejected: &[FileRejection], words: &FileFieldLabels) -> String {
+fn rejection_note(
+    rejected: &[FileRejection],
+    limits: Limits,
+    words: &FileFieldLabels,
+    formats: &Formats,
+) -> String {
     let names = |reason: RejectReason| {
         rejected
             .iter()
@@ -138,14 +164,23 @@ fn rejection_note(rejected: &[FileRejection], words: &FileFieldLabels) -> String
             .collect::<Vec<_>>()
             .join(", ")
     };
+    let (many, max_files) = match limits.count() {
+        Some(max) if max > 1 => (words.rejected_max, max.to_string()),
+        _ => (words.rejected_many, String::new()),
+    };
+    let max_size = limits
+        .max_size
+        .map(|max| format_size(max, words, formats))
+        .unwrap_or_default();
     [
-        (RejectReason::Type, words.rejected_type),
-        (RejectReason::TooMany, words.rejected_many),
+        (RejectReason::Type, words.rejected_type, String::new()),
+        (RejectReason::TooLarge, words.rejected_large, max_size),
+        (RejectReason::TooMany, many, max_files),
     ]
     .into_iter()
-    .map(|(reason, template)| (names(reason), template))
-    .filter(|(names, _)| !names.is_empty())
-    .map(|(names, template)| fill(template, &[("names", &names)]))
+    .map(|(reason, template, max)| (names(reason), template, max))
+    .filter(|(names, _, _)| !names.is_empty())
+    .map(|(names, template, max)| fill(template, &[("names", &names), ("max", &max)]))
     .collect::<Vec<_>>()
     .join(" ")
 }

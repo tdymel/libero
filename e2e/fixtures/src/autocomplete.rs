@@ -8,6 +8,10 @@ use crate::Routes;
 pub const ROUTES: Routes = &[
     ("/autocomplete", || rsx! { AutocompletePage {} }),
     ("/autocomplete/echo", || rsx! { AutocompleteEchoPage {} }),
+    (
+        "/autocomplete/open-on-focus",
+        || rsx! { AutocompleteOpenOnFocusPage {} },
+    ),
     ("/autocomplete/fetch", || rsx! { AutocompleteFetchPage {} }),
     ("/autocomplete/odd", || rsx! { AutocompleteOddPage {} }),
     ("/autocomplete/none", || rsx! { AutocompleteNonePage {} }),
@@ -16,6 +20,26 @@ pub const ROUTES: Routes = &[
         || rsx! { AutocompleteAriaOnlyPage {} },
     ),
 ];
+
+/// Todo 3964: a Tab or a press opens the suggestions; Escape keeps them closed.
+#[component]
+fn AutocompleteOpenOnFocusPage() -> Element {
+    let mut value = use_signal(String::new);
+
+    rsx! {
+        Flex { direction: "column", gap: "md", max_width: "320px",
+            button { id: "before", "Before" }
+            Autocomplete {
+                label: "City",
+                open_on_focus: true,
+                options: CITIES.iter().map(|c| c.to_string()).collect::<Vec<_>>(),
+                value: value(),
+                oninput: move |next| value.set(next),
+            }
+            button { id: "after", "After" }
+        }
+    }
+}
 
 /// No `label`: the caller's `aria-label` is the only name the open list can take (3108).
 #[component]

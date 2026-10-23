@@ -545,3 +545,88 @@ e2e::scenario!(
     "/number-field/rtl",
     a_negative_number_reads_left_to_right
 );
+
+const PRICE: &str = "#price";
+
+/// `Decimals::Exactly(2)` pads the resting `0.2` to `0.20`.
+async fn decimals_pad_at_rest<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    eventually(d, "0.20 at rest", async |d| {
+        Ok(d.value(PRICE).await? == "0.20")
+    })
+    .await
+}
+
+e2e::scenario!(
+    decimals_pad_the_resting_value,
+    "/number-field/decimals",
+    decimals_pad_at_rest
+);
+
+/// A stepper press or ArrowUp from 0.2 holds 0.3 and 0.4 exactly, with no float drift.
+async fn a_step_keeps_two_places<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    d.click(PLUS).await?;
+    eventually_text(d, "#readout", "Some(0.3)", "one stepper press").await?;
+    eventually(d, "0.30 shown", async |d| {
+        Ok(d.value(PRICE).await? == "0.30")
+    })
+    .await?;
+    d.click(SPIN).await?;
+    d.press(keyboard::ARROW_UP).await?;
+    eventually_text(d, "#readout", "Some(0.4)", "ArrowUp").await?;
+    eventually(d, "0.40 shown", async |d| {
+        Ok(d.value(PRICE).await? == "0.40")
+    })
+    .await
+}
+
+e2e::scenario!(
+    a_step_keeps_the_decimal_places,
+    "/number-field/decimals",
+    a_step_keeps_two_places
+);
+
+/// Digits typed past the places are cut as they arrive: `1.239` stays `1.23`.
+async fn typing_past_the_places_is_cut<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    d.click(SPIN).await?;
+    d.press(keyboard::END).await?;
+    for _ in 0..6 {
+        d.press(keyboard::BACKSPACE).await?;
+    }
+    d.type_text("1.239").await?;
+    if let Err(error) = eventually(d, "1.23 in the field", async |d| {
+        Ok(d.value(PRICE).await? == "1.23")
+    })
+    .await
+    {
+        let shown = d.value(PRICE).await?;
+        let readout = d.text("#readout").await?;
+        anyhow::bail!("{error:#}: the field reads {shown:?}, the readout {readout:?}");
+    }
+    Ok(())
+}
+
+e2e::scenario!(
+    typing_past_the_places_is_cut_off,
+    "/number-field/decimals",
+    typing_past_the_places_is_cut
+);
+
+/// The leading `$` is text that describes the field: its id is in `aria-describedby`.
+async fn the_leading_slot_describes_the_field<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    let described = d.attr(PRICE, "aria-describedby").await?.unwrap_or_default();
+    let mut texts = Vec::new();
+    for id in described.split_whitespace() {
+        texts.push(d.text(&format!("[id={id:?}]")).await?);
+    }
+    anyhow::ensure!(
+        texts.iter().any(|text| text.trim() == "$"),
+        "aria-describedby {described:?} reads {texts:?}, not the $"
+    );
+    Ok(())
+}
+
+e2e::scenario!(
+    the_leading_slot_describes_the_field_by_id,
+    "/number-field/decimals",
+    the_leading_slot_describes_the_field
+);

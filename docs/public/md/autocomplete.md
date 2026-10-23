@@ -92,6 +92,31 @@ Autocomplete {
 }
 ```
 
+`open_on_focus` opens the list when the field takes focus, by Tab or a press.
+Focus coming back after a pick or Escape leaves it closed:
+
+```rust
+use dioxus::prelude::*;
+use libero::components::Autocomplete;
+
+#[component]
+fn Demo() -> Element {
+    let mut town = use_signal(String::new);
+    let cities = vec!["Amsterdam".to_string(), "Berlin".to_string(), "Bern".to_string()];
+
+    rsx! {
+        Autocomplete {
+            label: "City",
+            placeholder: "Start typing",
+            open_on_focus: true,
+            options: cities,
+            value: town(),
+            oninput: move |next| town.set(next),
+        }
+    }
+}
+```
+
 ## Props
 
 ### `Autocomplete`
@@ -111,6 +136,7 @@ Autocomplete {
 | `prefiltered` | `bool` | `false` | `options` arrives already narrowed, such as a list fetched per keystroke. Skips filtering, so `filter` never runs. |
 | `placeholder` | `String` | - | Shown while the field is empty. |
 | `clearable` | `bool` | `false` | Shows an x at the end of the frame that empties the field. |
+| `open_on_focus` | `bool` | `false` | Opens the list when the field takes focus, by Tab or a press. Focus coming back after a pick or Escape leaves it closed. |
 | `empty` | `Element` | - | Shown in place of the list when typed text matches nothing. Screen readers hear the localization's `combobox.nothing_found` either way, so change that string to match. |
 | `loading_label` | `String` | `common.loading` | What screen readers hear while `options` is pending. |
 | `leading` | `Element` | - | Inside the frame, before the control, such as a search icon. |

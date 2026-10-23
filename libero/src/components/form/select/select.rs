@@ -79,6 +79,10 @@ field_props! {
         /// Puts a search box at the top of the list.
         #[props(default)]
         searchable: Option<bool>,
+        /// Opens the list when the field takes focus, by Tab or a press; not when focus
+        /// comes back to it after a pick or Escape.
+        #[props(default)]
+        open_on_focus: bool,
         /// Narrows the options while searching. Defaults to a case-insensitive `contains` over the label.
         #[props(default)]
         filter: Option<Callback<SelectFilterArgs<T>, bool>>,
@@ -215,6 +219,7 @@ pub fn Select<T: Options>(props: SelectProps<T>) -> Element {
             rules: props.validate.check(&current),
             clearable: props.clearable.unwrap_or(false),
             searchable,
+            open_on_focus: props.open_on_focus,
             search_placeholder: props.search_placeholder,
             matches,
             onclear,

@@ -1,6 +1,9 @@
 use dioxus::prelude::*;
 
-use crate::{hooks::ElementHandle, platform::ElementApi};
+use crate::{
+    hooks::{ElementHandle, use_silent_focus_in, use_silent_focus_out_of},
+    platform::ElementApi,
+};
 
 /// Closing a searchable list clears its query and refocuses the trigger, unless the
 /// search box's blur closed it: focus went elsewhere then (todo 1497).
@@ -100,5 +103,76 @@ impl TouchHold {
         if *held.peek() != next {
             held.set(next);
         }
+    }
+}
+
+/// `open_on_focus`: a focus opens the list, but not one a press brings, whose click
+/// toggles, nor the refocus after a close.
+#[derive(Clone, Copy)]
+pub(crate) struct FocusOpen {
+    enabled: bool,
+    open: Callback<()>,
+    /// Deduplicates a platform that fires both `focus` and a silent move.
+    focused: CopyValue<bool>,
+    pressed: CopyValue<bool>,
+    returning: CopyValue<bool>,
+    was_open: CopyValue<bool>,
+}
+
+/// Blitz's Tab fires no `focus`/`blur`, so the silent moves on `element` count too.
+pub(crate) fn use_focus_open(
+    enabled: bool,
+    element: ElementHandle,
+    open: Callback<()>,
+) -> FocusOpen {
+    let focus_open = FocusOpen {
+        enabled,
+        open,
+        focused: use_hook(|| CopyValue::new(false)),
+        pressed: use_hook(|| CopyValue::new(false)),
+        returning: use_hook(|| CopyValue::new(false)),
+        was_open: use_hook(|| CopyValue::new(false)),
+    };
+    use_silent_focus_in(element, move || focus_open.focus());
+    use_silent_focus_out_of(element, move || focus_open.blur());
+    focus_open
+}
+
+impl FocusOpen {
+    /// Called during render, before the effect that refocuses the trigger: `refocuses`
+    /// says the close hands focus back to it.
+    pub(crate) fn rendered(self, opened: bool, refocuses: bool) {
+        let (mut was_open, mut returning) = (self.was_open, self.returning);
+        if std::mem::replace(&mut *was_open.write(), opened) && !opened && refocuses {
+            returning.set(true);
+        }
+    }
+
+    /// A pointer press on the control: its click opens or closes.
+    pub(crate) fn press(self) {
+        let mut pressed = self.pressed;
+        pressed.set(true);
+    }
+
+    pub(crate) fn click(self) {
+        let mut pressed = self.pressed;
+        pressed.set(false);
+    }
+
+    pub(crate) fn focus(self) {
+        let (mut focused, mut returning) = (self.focused, self.returning);
+        if std::mem::replace(&mut *focused.write(), true) {
+            return;
+        }
+        let returned = std::mem::take(&mut *returning.write());
+        if self.enabled && !returned && !*self.pressed.peek() {
+            self.open.call(());
+        }
+    }
+
+    pub(crate) fn blur(self) {
+        let (mut focused, mut pressed) = (self.focused, self.pressed);
+        focused.set(false);
+        pressed.set(false);
     }
 }

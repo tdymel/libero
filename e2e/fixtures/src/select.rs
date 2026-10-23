@@ -15,6 +15,11 @@ pub const ROUTES: Routes = &[
         || rsx! { SelectRefusedFirstPage {} },
     ),
     ("/select", || rsx! { SelectPage {} }),
+    ("/select/open-on-focus", || rsx! { SelectOpenOnFocusPage { searchable: false } }),
+    (
+        "/select/open-on-focus/searchable",
+        || rsx! { SelectOpenOnFocusPage { searchable: true } },
+    ),
     ("/select/field", || rsx! { SelectFieldPage {} }),
     ("/select/readonly", || rsx! { SelectReadonlyPage {} }),
     ("/select/unlabelled", || rsx! { SelectUnlabelledPage {} }),
@@ -229,6 +234,29 @@ fn SelectUnlabelledPage() -> Element {
                 value: value(),
                 onchange: move |next| value.set(next),
             }
+        }
+    }
+}
+
+/// Todo 3964: a Tab or a press opens the list once; focus coming back after a pick or
+/// Escape leaves it closed.
+#[component]
+fn SelectOpenOnFocusPage(searchable: bool) -> Element {
+    let mut fruit = use_signal(|| None::<Fruit>);
+
+    rsx! {
+        Flex { direction: "column", gap: "md", max_width: "320px",
+            button { id: "before", "Before" }
+            Select {
+                label: "Fruit",
+                placeholder: "Pick a fruit",
+                open_on_focus: true,
+                searchable,
+                value: fruit(),
+                onchange: move |next| fruit.set(next),
+            }
+            button { id: "after", "After" }
+            Text { id: "picked", "{fruit():?}" }
         }
     }
 }

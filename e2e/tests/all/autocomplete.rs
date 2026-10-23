@@ -15,6 +15,26 @@ const LISTBOX: &str = "[role=listbox]";
 const STATUS: &str = "[role=status]";
 const OPTION_COUNT: usize = 6;
 
+/// Todo 3964: Tab and a press open the suggestions; Escape leaves them closed.
+async fn open_on_focus<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    use crate::select::expanded;
+    d.focus("#before").await?;
+    d.press(keyboard::TAB).await?;
+    expanded(d, TRIGGER, true, "Tab to open the suggestions").await?;
+    d.press(keyboard::ESCAPE).await?;
+    expanded(d, TRIGGER, false, "Escape to close them").await?;
+    d.press(keyboard::TAB).await?;
+    eventually(d, "Tab out", async |d| d.is_focused("#after").await).await?;
+    d.click(TRIGGER).await?;
+    expanded(d, TRIGGER, true, "a click to open them").await
+}
+
+e2e::scenario!(
+    open_on_focus_opens_the_suggestions,
+    "/autocomplete/open-on-focus",
+    open_on_focus
+);
+
 /// Contrast, focus rings, the accessibility tree and a clean console, at both viewports.
 #[test]
 fn it_meets_the_baseline() {

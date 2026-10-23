@@ -11,8 +11,8 @@ use crate::{
             ToolbarItem, navigation_chord, use_no_toolbar, use_toolbar_item,
         },
         form::{
-            FormScope, LiveControl, field_control_sx, field_props, slot_button_sx, slot_icon_size,
-            use_bound, use_field, use_field_frame,
+            FormScope, LiveControl, LiveSlot, field_control_sx, field_props, slot_button_sx,
+            slot_icon_size, use_bound, use_field, use_field_frame, use_live_slot,
         },
         layout::use_box,
     },
@@ -104,6 +104,22 @@ field_props! {
         /// A WebView cannot read or set the caret: focusing the field may send it to the end.
         #[props(default)]
         group_digits: bool,
+        /// How many digits the fraction keeps: typed ones past it are cut, a step or a
+        /// caller's value is rounded. `f32` and `f64` only.
+        #[props(default)]
+        decimals: Option<Decimals>,
+        /// Inside the frame, before the control: a currency sign.
+        #[props(default, into)]
+        leading: Option<Element>,
+        /// Inside the frame, after the control and before the steppers: a unit or `%`.
+        #[props(default, into)]
+        trailing: Option<Element>,
+        /// `leading` is text that describes the value (`aria-describedby`).
+        #[props(default)]
+        describe_leading: bool,
+        /// `trailing` is text that describes the value, e.g. a unit.
+        #[props(default)]
+        describe_trailing: bool,
         /// Names the raising stepper. Defaults to `number_field.increase`.
         #[props(default, into)]
         increment_label: Option<String>,
@@ -130,6 +146,38 @@ field_props! {
 /// # }
 /// ```
 ///
+/// A price and a share, the sign and `%` outside the typed text:
+///
+/// ```rust
+/// # use dioxus::prelude::*;
+/// # use libero::components::{Decimals, NumberField};
+/// # fn app() -> Element {
+/// let mut price = use_signal(|| Some(12.5));
+/// let mut share = use_signal(|| Some(40.0));
+/// rsx! {
+///     NumberField {
+///         label: "Price",
+///         value: price(),
+///         onchange: move |next| price.set(next),
+///         leading: rsx! { "$" },
+///         describe_leading: true,
+///         decimals: Decimals::Exactly(2),
+///         group_digits: true,
+///     }
+///     NumberField {
+///         label: "Share",
+///         value: share(),
+///         onchange: move |next| share.set(next),
+///         trailing: rsx! { "%" },
+///         describe_trailing: true,
+///         decimals: Decimals::AtMost(1),
+///         min: 0.0,
+///         max: 100.0,
+///     }
+/// }
+/// # }
+/// ```
+///
 /// Docs: <https://libero-ui.dev/form/number-field>
 #[component]
 pub fn NumberField<T: NumberValue>(props: NumberFieldProps<T>) -> Element {
@@ -139,16 +187,77 @@ pub fn NumberField<T: NumberValue>(props: NumberFieldProps<T>) -> Element {
     if *live.peek() != value {
         live.set(value);
     }
-    rsx! { NumberFieldShell::<T> { live, field: props } }
+    let leading = use_live_slot(props.leading.take());
+    let trailing = use_live_slot(props.trailing.take());
+    rsx! { NumberFieldShell::<T> { live, leading, trailing, field: props } }
 }
 
-/// Everything but the number, so a step skips it and redraws the control.
+/// How many digits a [`NumberField`]'s fraction keeps.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Decimals {
+    /// Up to this many: `12.5` stays `12.5`.
+    AtMost(u8),
+    /// Always this many, padded while not typing: `12.5` shows `12.50`.
+    Exactly(u8),
+}
+
+impl Decimals {
+    fn places(self) -> usize {
+        match self {
+            Self::AtMost(places) | Self::Exactly(places) => places.into(),
+        }
+    }
+
+    /// Rust's text of a number (`12.345`) rounded to these places; other text stays.
+    fn write(self, text: &str) -> String {
+        let Ok(number) = text.parse::<f64>() else {
+            return text.to_string();
+        };
+        let fixed = format!("{number:.*}", self.places());
+        match self {
+            Self::Exactly(_) => fixed,
+            Self::AtMost(_) if fixed.contains('.') => fixed
+                .trim_end_matches('0')
+                .trim_end_matches('.')
+                .to_string(),
+            Self::AtMost(_) => fixed,
+        }
+    }
+
+    /// Typed text cut after these places, where it has more; `mark` is the decimal mark.
+    fn cut(self, text: &str, mark: &str) -> Option<String> {
+        let (at, mark) = match text.find(mark) {
+            Some(at) => (at, mark),
+            None => (text.find('.')?, "."),
+        };
+        let (whole, fraction) = (&text[..at], &text[at + mark.len()..]);
+        let digits = fraction
+            .chars()
+            .take_while(|c| ascii_digit(*c).is_some())
+            .count();
+        let places = self.places();
+        (digits > places).then(|| {
+            let kept: String = fraction.chars().take(places).collect();
+            let rest: String = fraction.chars().skip(digits).collect();
+            match places {
+                0 => format!("{whole}{rest}"),
+                _ => format!("{whole}{mark}{kept}{rest}"),
+            }
+        })
+    }
+}
+
+/// Everything but the number and the slots' content, so a step skips it and redraws the control.
 #[component]
 fn NumberFieldShell<T: NumberValue>(
     live: Signal<Option<T>>,
+    leading: Option<Signal<Option<Element>>>,
+    trailing: Option<Signal<Option<Element>>>,
     field: NumberFieldProps<T>,
 ) -> Element {
     let props = field;
+    let leading = leading.map(|content| rsx! { LiveSlot { content } });
+    let caller_trailing = trailing.map(|content| rsx! { LiveSlot { content } });
     let theme = use_theme();
 
     let size = props.size.copied_or(theme.number_field.size);
@@ -194,6 +303,15 @@ fn NumberFieldShell<T: NumberValue>(
     let formats = use_formats();
     let separator = Separators::of::<T>(formats);
     let grouped = props.group_digits && built_in::<T>();
+    let decimals = props.decimals.filter(|_| float::<T>());
+    if props.decimals.is_some() && decimals.is_none() {
+        warn("NumberField: `decimals` takes `f32` or `f64` only.");
+    }
+    // Rounded through the text, so `0.1 + 0.2` publishes `0.3`.
+    let rounded = move |value: T| match decimals {
+        Some(decimals) => T::parse(&decimals.write(&value.format())).unwrap_or(value),
+        None => value,
+    };
     let mut focused = use_signal(|| false);
     // Blitz's Tab and libero's `focus()` fire no `focusin`/`focusout`.
     let focus = move |now: bool| {
@@ -207,7 +325,7 @@ fn NumberFieldShell<T: NumberValue>(
     let kind = use_hook(Keypad::<T>::of);
 
     let publish = move |next: Option<T>| {
-        let next = next.map(|next| next.clamp_between(min, max));
+        let next = next.map(|next| rounded(next.clamp_between(min, max)));
         match (&onchange, &setter) {
             (Some(onchange), _) => onchange.call(next),
             (None, Some(setter)) => setter.set(next),
@@ -273,9 +391,16 @@ fn NumberFieldShell<T: NumberValue>(
         .parts(&props.parts)
         .states(&props.states)
         .attributes(&props.attributes)
+        .text_slots(
+            props.describe_leading && leading.is_some(),
+            props.describe_trailing && caller_trailing.is_some(),
+        )
         .prepare();
 
-    let trailing = props.steppers.then(|| {
+    // The steppers sit last. The id goes on the caller's part alone, so their names
+    // do not describe the input.
+    let [leading_id, trailing_id] = field.slot_ids();
+    let steppers = props.steppers.then(|| {
         rsx! {
             Steppers {
                 size,
@@ -286,8 +411,20 @@ fn NumberFieldShell<T: NumberValue>(
             }
         }
     });
+    let trailing = (caller_trailing.is_some() || steppers.is_some()).then(|| {
+        let caller = match (caller_trailing, trailing_id) {
+            (Some(caller), Some(id)) => rsx! { span { id, {caller} } },
+            (caller, _) => caller.unwrap_or_else(|| rsx! {}),
+        };
+        rsx! {
+            {caller}
+            {steppers}
+        }
+    });
     let frame = use_field_frame()
+        .leading(&leading)
         .trailing(&trailing)
+        .ids([leading_id, None])
         .states(field.states())
         .placeholder(props.placeholder.as_deref())
         .prepare();
@@ -318,7 +455,15 @@ fn NumberFieldShell<T: NumberValue>(
         .attr(TOOLBAR_ITEM, item.map(ToolbarItem::key))
         .attr("tabindex", item.map(ToolbarItem::tabindex))
         .event("oninput", move |event: FormEvent| {
-            let text = event.value();
+            let mut text = event.value();
+            // Written back at once, as a native field drops a char past `maxlength`: a cut that
+            // equals the last render diffs to nothing.
+            if let Some(cut) =
+                decimals.and_then(|decimals| decimals.cut(&text, separator.decimal.unwrap_or(".")))
+            {
+                let _ = anchor.set_value(&cut);
+                text = cut;
+            }
             let publish = publish.clone();
             let mut held = current();
             // Out of range waits for the commit: clamping the "2" of "25"
@@ -397,10 +542,16 @@ fn NumberFieldShell<T: NumberValue>(
         let display = match &*buffer.read() {
             Some(edit) if edit.shows(current, separator) => edit.text.clone(),
             _ => current
-                .map(|value| match (grouped && !focused(), separator.decimal) {
-                    (true, _) => formats.write_number(&value.format()),
-                    (false, Some(decimal)) => value.format().replacen('.', decimal, 1),
-                    (false, None) => value.format(),
+                .map(|value| {
+                    let text = match decimals {
+                        Some(decimals) => decimals.write(&value.format()),
+                        None => value.format(),
+                    };
+                    match (grouped && !focused(), separator.decimal) {
+                        (true, _) => formats.write_number(&text),
+                        (false, Some(decimal)) => text.replacen('.', decimal, 1),
+                        (false, None) => text,
+                    }
                 })
                 .unwrap_or_default(),
         };
@@ -438,10 +589,14 @@ struct Separators {
     group: Option<&'static str>,
 }
 
+/// `f32` or `f64`, whose fraction a field may round.
+fn float<T: 'static>() -> bool {
+    TypeId::of::<T>() == TypeId::of::<f64>() || TypeId::of::<T>() == TypeId::of::<f32>()
+}
+
 impl Separators {
     fn of<T: 'static>(formats: &Formats) -> Self {
-        let float =
-            TypeId::of::<T>() == TypeId::of::<f64>() || TypeId::of::<T>() == TypeId::of::<f32>();
+        let float = float::<T>();
         let group = formats.group_separator;
         Self {
             decimal: (float && formats.decimal_separator != ".")
@@ -736,6 +891,60 @@ mod tests {
         });
         assert!(grouped.contains("value=\"12.500,5\""), "{grouped}");
         assert!(grouped.contains("value=\"2026\""), "{grouped}");
+    }
+
+    /// Todo 3962: `decimals` rounds Rust's text and pads it only when exact.
+    #[test]
+    fn decimals_round_and_pad() {
+        use super::Decimals::{AtMost, Exactly};
+        assert_eq!(Exactly(2).write("12.5"), "12.50");
+        assert_eq!(Exactly(2).write("0.30000000000000004"), "0.30");
+        assert_eq!(AtMost(2).write("0.30000000000000004"), "0.3");
+        assert_eq!(AtMost(2).write("12"), "12");
+        assert_eq!(AtMost(0).write("12.6"), "13");
+        assert_eq!(Exactly(0).write("12.4"), "12");
+    }
+
+    /// Todo 3962: typed digits past `decimals` are cut, in either mark.
+    #[test]
+    fn decimals_cut_typed_digits() {
+        use super::Decimals::{AtMost, Exactly};
+        assert_eq!(Exactly(2).cut("12.345", "."), Some("12.34".into()));
+        assert_eq!(Exactly(2).cut("12,345", ","), Some("12,34".into()));
+        assert_eq!(Exactly(2).cut("12.345", ","), Some("12.34".into()));
+        assert_eq!(AtMost(2).cut("12.34", "."), None);
+        assert_eq!(AtMost(2).cut("12", "."), None);
+        assert_eq!(AtMost(0).cut("12.", "."), None);
+        assert_eq!(AtMost(0).cut("12.5", "."), Some("12".into()));
+    }
+
+    /// Todo 3962: the caller's slots draw, and `Exactly` pads the shown number.
+    #[test]
+    fn slots_and_exact_decimals_render() {
+        use super::{Decimals, NumberField};
+        use crate::LiberoProvider;
+        use dioxus::prelude::*;
+
+        let mut dom = VirtualDom::new(|| {
+            rsx! {
+                LiberoProvider {
+                    NumberField::<f64> {
+                        label: "Price",
+                        value: Some(12.5),
+                        decimals: Decimals::Exactly(2),
+                        leading: rsx! { "$" },
+                        describe_leading: true,
+                        trailing: rsx! { "USD" },
+                        onchange: |_| {},
+                    }
+                }
+            }
+        });
+        dom.rebuild_in_place();
+        let html = dioxus_ssr::render(&dom);
+        assert!(html.contains("value=\"12.50\""), "{html}");
+        assert!(html.contains("$") && html.contains("USD"), "{html}");
+        assert!(html.contains("aria-describedby"), "{html}");
     }
 
     /// Todo 2414: these typed digits never parsed and reverted on blur.

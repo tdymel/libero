@@ -97,3 +97,38 @@ fn a_native_select_keeps_its_option_label() {
     page.click("[role=combobox]");
     assert_eq!(page.text("[role=option]"), "Apple!", "{}", page.tree());
 }
+
+fn open_on_focus() -> Element {
+    let mut value = use_signal(|| None::<Fruit>);
+    rsx! {
+        button { id: "before", "Before" }
+        Select {
+            label: "Fruit",
+            open_on_focus: true,
+            value: value(),
+            onchange: move |next| value.set(next),
+        }
+    }
+}
+
+/// Todo 3964: Blitz's Tab fires no `focus`, and still opens the list; Escape keeps it shut.
+#[test]
+fn a_tab_opens_an_open_on_focus_select() {
+    let mut page = mount(open_on_focus);
+    page.focus("#before");
+    page.press(Key::Named(NamedKey::Tab));
+    assert!(
+        page.wait_for(
+            |page| page.attr("[role=combobox]", "aria-expanded").as_deref() == Some("true")
+        ),
+        "Tab left the list shut\n{}",
+        page.tree()
+    );
+    page.press(Key::Named(NamedKey::Escape));
+    assert_eq!(
+        page.attr("[role=combobox]", "aria-expanded").as_deref(),
+        Some("false"),
+        "{}",
+        page.tree()
+    );
+}

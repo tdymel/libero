@@ -124,6 +124,39 @@ MultiSelect {
 }
 ```
 
+`open_on_focus` opens the list when the field takes focus, by Tab or a press.
+Focus coming back after a pick or Escape leaves it closed:
+
+```rust
+use dioxus::prelude::*;
+use libero::components::{MultiSelect, Options};
+
+#[derive(Clone, Copy, PartialEq, Options)]
+enum Topping {
+    Cheese,
+    Mushrooms,
+    Olives,
+    Onions,
+    Peppers,
+    Pineapple,
+}
+
+#[component]
+fn Demo() -> Element {
+    let mut picks = use_signal(Vec::<Topping>::new);
+
+    rsx! {
+        MultiSelect {
+            label: "Toppings",
+            placeholder: "Pick toppings",
+            open_on_focus: true,
+            value: picks(),
+            onchange: move |next| picks.set(next),
+        }
+    }
+}
+```
+
 ## Props
 
 ### `MultiSelect`
@@ -142,6 +175,7 @@ MultiSelect {
 | `placeholder` | `String` | - | Shown while `value` is empty. |
 | `clearable` | `bool` | `false` | Shows an x in place of the chevron that empties the selection. |
 | `searchable` | `bool` | `false` | Puts a search box at the top of the list. The query survives a pick and is cleared when the list closes. |
+| `open_on_focus` | `bool` | `false` | Opens the list when the field takes focus, by Tab or a press. Focus coming back after a pick or Escape leaves it closed. |
 | `filter` | `Callback<SelectFilterArgs<T>, bool>` | `contains` | Narrows the options while searching. Defaults to a case-insensitive `contains` over `Options::label`. |
 | `search_placeholder` | `String` | - | What the empty search box says. |
 | `label` | `Caption` | - | The caption above the control, and the select's name. |

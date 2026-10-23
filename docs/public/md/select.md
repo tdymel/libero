@@ -104,6 +104,39 @@ Each group is a `role="group"` named by its heading. Your order is kept, so a
 group label used again after another group draws its heading again. A disabled
 option is read out, and the arrows, typeahead and clicks skip it.
 
+`open_on_focus` opens the list when the field takes focus, by Tab or a press.
+Focus coming back after a pick or Escape leaves it closed:
+
+```rust
+use dioxus::prelude::*;
+use libero::components::{Options, Select};
+
+#[derive(Clone, Copy, PartialEq, Options)]
+enum Fruit {
+    Apple,
+    Banana,
+    Cherry,
+    Mango,
+    #[option(label = "Passion fruit")]
+    Passion,
+}
+
+#[component]
+fn Demo() -> Element {
+    let mut focus_pick = use_signal(|| None::<Fruit>);
+
+    rsx! {
+        Select {
+            label: "Fruit",
+            placeholder: "Pick a fruit",
+            open_on_focus: true,
+            value: focus_pick(),
+            onchange: move |next| focus_pick.set(next),
+        }
+    }
+}
+```
+
 ## Props
 
 ### `Select`
@@ -122,6 +155,7 @@ option is read out, and the arrows, typeahead and clicks skip it.
 | `placeholder` | `String` | - | Shown while no option matches `value`. |
 | `clearable` | `bool` | `false` | Shows an x in place of the chevron while something is selected. The only way `onchange` gets `None`. |
 | `searchable` | `bool` | `false` | Puts a search box at the top of the list. The query is cleared when the list closes. |
+| `open_on_focus` | `bool` | `false` | Opens the list when the field takes focus, by Tab or a press. Focus coming back after a pick or Escape leaves it closed. |
 | `filter` | `Callback<SelectFilterArgs<T>, bool>` | `contains` | Narrows the options while searching. Defaults to a case-insensitive `contains` over `Options::label`. |
 | `search_placeholder` | `String` | - | What the empty search box says. |
 | `label` | `Caption` | - | The caption above the control, and the select's name. |

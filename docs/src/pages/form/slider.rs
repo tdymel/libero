@@ -8,7 +8,8 @@ use dioxus::prelude::*;
 use libero::components::{SliderPart, SliderValue};
 use libero::{
     components::{
-        Code, FieldStatus, Flex, Slider, SliderChangeEvent, SliderSegment, SliderTrack, Text,
+        Code, FieldStatus, Flex, Slider, SliderChangeEvent, SliderMark, SliderSegment, SliderTrack,
+        Text,
     },
     sx::sx,
     use_theme,
@@ -177,6 +178,7 @@ pub fn SliderPage() -> Element {
     let mut last = use_signal(|| SliderChangeEvent::Change(40.0));
     let mut last_quality = use_signal(|| SliderChangeEvent::Change(Quality::Medium));
     let mut budget = use_signal(|| 250_000.0);
+    let mut level = use_signal(|| 60.0);
 
     rsx! {
         DocPage {
@@ -243,6 +245,9 @@ pub fn SliderPage() -> Element {
                     prop("preview_on_hover", "bool")
                         .default("false")
                         .doc("Shows a bubble over the value a hovering mouse or pen points at, before a press picks it. Escape hides it until the pointer leaves the slider. Touch has no hover, so it never shows there. The bubble follows the pointer and goes when it leaves the slider, so it is not hoverable (WCAG 1.4.13)."),
+                    prop("orientation", "Orientation")
+                        .default("horizontal")
+                        .doc("`vertical` runs the track bottom to top, `12rem` tall unless `sx` sets a `height`, with the mark captions beside it. A touch anywhere on it drags, since no swipe scrolls past an upright track. A vertical track is a line: `bars` and `segments` are dropped."),
                 ])
                 .parts("SliderPart", vec![
                     (SliderPart::Label, "The label above the control."),
@@ -273,7 +278,7 @@ pub fn SliderPage() -> Element {
                 .without_base_props(),
             ],
             accessibility: a11y()
-                .key(["Left", "Right", "Up", "Down"], "Move `theme.slider.step` steps, one by default. With `step: 0.0` a step is 1% of the range. Right to left, ArrowLeft raises the value instead.")
+                .key(["Left", "Right", "Up", "Down"], "Move `theme.slider.step` steps, one by default; Up and Right raise the value, on a vertical slider too. With `step: 0.0` a step is 1% of the range. Right to left, ArrowLeft raises the value instead.")
                 .key(["Shift+Arrow", "PageUp", "PageDown"], "Move `theme.slider.big_step` steps, ten by default.")
                 .key(["Home", "End"], "Jump to the ends.")
                 .key(["Escape"], "With `preview_on_hover`, hides the hover bubble until the pointer leaves the slider.")
@@ -506,6 +511,42 @@ pub fn SliderPage() -> Element {
                             group_digits: is_on(&values, "group_digits"),
                             preview_on_hover: true,
                             oninput: move |event: SliderChangeEvent| budget.set(event.value()),
+                        }
+                    }
+                },
+            }
+            // snippet: let mut level = use_signal(|| 60.0);
+            Demo {
+                component: "Slider",
+                title: "Vertical",
+                children_text: "",
+                fixed: vec![
+                    "label: \"Level\"".to_string(),
+                    "value: level()".to_string(),
+                    "marks: vec![SliderMark::labeled(0.0, \"0 dB\"), SliderMark::labeled(50.0, \"50\"), SliderMark::labeled(100.0, \"100\")]".to_string(),
+                    "oninput: move |event: SliderChangeEvent| level.set(event.value())".to_string(),
+                ],
+                controls: vec![
+                    Control::toggle("orientation", ["horizontal", "vertical"])
+                        .labels(["Horizontal", "Vertical"])
+                        .default("vertical")
+                        .code(|_, values| match values.str("orientation").as_str() {
+                            "vertical" => vec!["orientation: \"vertical\"".to_string()],
+                            _ => vec![],
+                        }),
+                ],
+                render: move |values: DemoValues| rsx! {
+                    Flex { direction: "column", sx: sx().width("100%"),
+                        Slider {
+                            label: "Level",
+                            value: level(),
+                            orientation: values.str("orientation"),
+                            marks: vec![
+                                SliderMark::labeled(0.0, "0 dB"),
+                                SliderMark::labeled(50.0, "50"),
+                                SliderMark::labeled(100.0, "100"),
+                            ],
+                            oninput: move |event: SliderChangeEvent| level.set(event.value()),
                         }
                     }
                 },

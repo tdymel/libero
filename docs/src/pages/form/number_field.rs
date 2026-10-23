@@ -4,7 +4,7 @@ use crate::components::{
 };
 use dioxus::prelude::*;
 use libero::components::FieldPart;
-use libero::components::{Code, NumberField, NumberValue, Text};
+use libero::components::{Code, Decimals, NumberField, NumberValue, Text};
 use libero::use_theme;
 
 struct QuantityCopy;
@@ -94,6 +94,8 @@ pub fn NumberFieldPage() -> Element {
     let mut weight = use_signal(|| Some(1.5f64));
     let mut price = use_signal(|| Some(Cents(1234)));
     let mut amount = use_signal(|| Some(1_234_567.5f64));
+    let mut total = use_signal(|| Some(1_250.5f64));
+    let mut share = use_signal(|| Some(12.5f64));
 
     rsx! {
         DocPage {
@@ -129,6 +131,18 @@ pub fn NumberFieldPage() -> Element {
                     prop("group_digits", "bool")
                         .default("false")
                         .doc("Writes the thousands grouped in the provider's `Formats`, `1,234,567.5` or `1.234.567,5`, while the field is not focused; typing sees the bare number. Built-in number types only. Grouped text typed or pasted parses either way. A WebView (desktop, Android) cannot read or set the caret, so focusing the field may send it to the end of the text."),
+                    prop("decimals", "Decimals")
+                        .doc("How many digits the fraction keeps. `Decimals::AtMost(2)` cuts a third typed digit and rounds a step or a caller's value, so `0.1 + 0.2` arrives as `0.3`; `Decimals::Exactly(2)` also pads the shown number, `12.50`, while nothing is being typed. `f32` and `f64` only."),
+                    prop("leading", "Element")
+                        .doc("Inside the frame, before the control: a currency sign such as `$`. Outside the typed text, so typing and parsing stay plain."),
+                    prop("trailing", "Element")
+                        .doc("Inside the frame, after the control and before the steppers: a unit, `%` or `€`."),
+                    prop("describe_leading", "bool")
+                        .default("false")
+                        .doc("`leading` is text that describes the value, so the field's `aria-describedby` points at it."),
+                    prop("describe_trailing", "bool")
+                        .default("false")
+                        .doc("`trailing` is text that describes the value, e.g. a unit."),
                     prop("increment_label", "String")
                         .default("number_field.increase")
                         .doc("Names the plus button, such as \"Add a guest\". Unset, the localization's `number_field.increase`, \"Increase\" in English."),
@@ -153,8 +167,9 @@ pub fn NumberFieldPage() -> Element {
                     (FieldPart::Required, "The required asterisk, in the label."),
                     (FieldPart::Description, "The caption between the label and the control."),
                     (FieldPart::Frame, "The bordered box around the control."),
+                    (FieldPart::Leading, "The slot before the control: a currency sign."),
                     (FieldPart::Control, "The element the label names."),
-                    (FieldPart::Trailing, "The slot after the control: a chevron, a toggle."),
+                    (FieldPart::Trailing, "The slot after the control: a unit and the steppers."),
                     (FieldPart::Helper, "The caption under the control."),
                     (FieldPart::Status, "The validation message."),
                 ]).extends("input"),
@@ -366,6 +381,64 @@ pub fn NumberFieldPage() -> Element {
                         value: amount(),
                         onchange: move |next| amount.set(next),
                     }
+                },
+            }
+            // snippet: let mut total = use_signal(|| Some(1_250.5f64));
+            // snippet: let mut share = use_signal(|| Some(12.5f64));
+            Demo {
+                component: "NumberField",
+                title: "Currency and percent",
+                children_text: "",
+                controls: vec![
+                    Control::toggle("format", ["currency", "percent"])
+                        .default("currency")
+                        .labels(["Currency", "Percent"])
+                        .code(|_, values| match values.str("format").as_str() {
+                            "percent" => vec![
+                                "label: \"Discount\"".to_string(),
+                                "trailing: rsx! { \"%\" }".to_string(),
+                                "describe_trailing: true".to_string(),
+                                "decimals: Decimals::AtMost(1)".to_string(),
+                                "min: 0.0".to_string(),
+                                "max: 100.0".to_string(),
+                                "value: share()".to_string(),
+                                "onchange: move |next| share.set(next)".to_string(),
+                            ],
+                            _ => vec![
+                                "label: \"Total\"".to_string(),
+                                "leading: rsx! { \"$\" }".to_string(),
+                                "describe_leading: true".to_string(),
+                                "decimals: Decimals::Exactly(2)".to_string(),
+                                "group_digits: true".to_string(),
+                                "value: total()".to_string(),
+                                "onchange: move |next| total.set(next)".to_string(),
+                            ],
+                        }),
+                ],
+                render: move |values: DemoValues| match values.str("format").as_str() {
+                    "percent" => rsx! {
+                        NumberField {
+                            label: "Discount",
+                            trailing: rsx! { "%" },
+                            describe_trailing: true,
+                            decimals: Decimals::AtMost(1),
+                            min: 0.0,
+                            max: 100.0,
+                            value: share(),
+                            onchange: move |next| share.set(next),
+                        }
+                    },
+                    _ => rsx! {
+                        NumberField {
+                            label: "Total",
+                            leading: rsx! { "$" },
+                            describe_leading: true,
+                            decimals: Decimals::Exactly(2),
+                            group_digits: true,
+                            value: total(),
+                            onchange: move |next| total.set(next),
+                        }
+                    },
                 },
             }
         }

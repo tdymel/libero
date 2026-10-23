@@ -1,6 +1,6 @@
 # Skipped e2e scenarios
 
-Scenarios: 638
+Scenarios: 651
 
 Generated from the `scenario!` skips in `e2e/tests/all` by `cargo test -p e2e --lib skips`; edit the skip, not this file. A reason starting `upstream:` waits on Dioxus, Blitz, wry or the engine (revisit on their update, todo 3362), a number names the todo that removes it.
 
@@ -46,6 +46,13 @@ The performance scenarios (units `perf`, `table_perf`) are no skips but run on r
 | `fcm::android_firebase_answers_a_register` | all but android | 3404: the Kotlin service is Android's |
 | `fcm::android_the_service_events_reach_the_handle` | all but android | 3404: the Kotlin service is Android's |
 | `field_frame::a_long_word_wraps_inside_the_field` | native | Blitz has no script reads |
+| `file_field::a_file_over_max_size_is_refused_as_too_large` | desktop | 1126: the GTK file chooser is not driven |
+| `file_field::a_file_over_max_size_is_refused_as_too_large` | ios | 3194: the simulator's picker opens but is not driven; see browse_opens_the_ios_picker |
+| `file_field::a_file_over_max_size_is_refused_as_too_large` | native | rfd opens the desktop portal's dialog, which no driver answers |
+| `file_field::a_pick_over_max_files_keeps_the_first_two_and_refuses_the_rest` | android | Android's chooser answers one file per pick, and this pick has three |
+| `file_field::a_pick_over_max_files_keeps_the_first_two_and_refuses_the_rest` | desktop | 1126: the GTK file chooser is not driven |
+| `file_field::a_pick_over_max_files_keeps_the_first_two_and_refuses_the_rest` | ios | 3194: the simulator's picker opens but is not driven; see browse_opens_the_ios_picker |
+| `file_field::a_pick_over_max_files_keeps_the_first_two_and_refuses_the_rest` | native | rfd opens the desktop portal's dialog, which no driver answers |
 | `file_field::browse_opens_the_ios_picker` | all but ios | the system picker's text is read on iOS only |
 | `file_field::browse_picks_a_file_and_rust_reads_it` | desktop | 1126: the GTK file chooser is not driven |
 | `file_field::browse_picks_a_file_and_rust_reads_it` | ios | 3194: the simulator's picker opens but is not driven; see browse_opens_the_ios_picker |

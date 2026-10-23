@@ -229,6 +229,7 @@ fn fruit_selection(fruit: Fruit) -> Element {
 pub fn SelectPage() -> Element {
     let theme = use_theme();
     let mut value = use_signal(|| Some(Fruit::Banana));
+    let mut focus_pick = use_signal(|| None::<Fruit>);
 
     rsx! {
         DocPage {
@@ -265,6 +266,9 @@ pub fn SelectPage() -> Element {
                     prop("searchable", "bool")
                         .default("false")
                         .doc("Puts a search box at the top of the list. The query is cleared when the list closes."),
+                    prop("open_on_focus", "bool")
+                        .default("false")
+                        .doc("Opens the list when the field takes focus, by Tab or a press. Focus coming back after a pick or Escape leaves it closed."),
                     prop("filter", "Callback<SelectFilterArgs<T>, bool>")
                         .default("contains")
                         .doc("Narrows the options while searching. Defaults to a case-insensitive `contains` over `Options::label`."),
@@ -383,6 +387,10 @@ pub fn SelectPage() -> Element {
                             _ => vec![],
                         }
                     }),
+                    Control::switch("open_on_focus").code(|_, values| match values.str("open_on_focus").as_str() {
+                        "true" => vec!["open_on_focus: true".to_string()],
+                        _ => vec![],
+                    }),
                     // Off the table entirely without a search box: `filter`
                     // narrows what the box finds, so alone it does nothing.
                     Control::switch("filter")
@@ -423,6 +431,7 @@ pub fn SelectPage() -> Element {
                         option: custom(&values).then(|| Callback::new(fruit_row)),
                         selection: custom(&values).then(|| Callback::new(fruit_selection)),
                         searchable: (values.str("searchable") == "true").then_some(true),
+                        open_on_focus: values.str("open_on_focus") == "true",
                         search_placeholder: "Search fruit",
                         filter: filtering(&values).then(|| Callback::new(fruit_filter)),
                         clearable: (values.str("clearable") == "true").then_some(true),
@@ -434,6 +443,34 @@ pub fn SelectPage() -> Element {
                         onchange: move |next| value.set(next),
                     }
                 }
+                },
+            }
+            // snippet: let mut focus_pick = use_signal(|| None::<Fruit>);
+            Demo {
+                component: "Select",
+                title: "Open on focus",
+                children_text: "",
+                wrap: Wrap(|_: &DemoValues, source: &str| format!("{FRUIT_ENUM}{source}")),
+                fixed: vec![
+                    "label: \"Fruit\"".to_string(),
+                    "placeholder: \"Pick a fruit\"".to_string(),
+                    "value: focus_pick()".to_string(),
+                    "onchange: move |next| focus_pick.set(next)".to_string(),
+                ],
+                controls: vec![Control::switch("open_on_focus").default("true").code(|_, values| {
+                    match values.str("open_on_focus").as_str() {
+                        "true" => vec!["open_on_focus: true".to_string()],
+                        _ => vec![],
+                    }
+                })],
+                render: move |values: DemoValues| rsx! {
+                    Select {
+                        label: "Fruit",
+                        placeholder: "Pick a fruit",
+                        open_on_focus: values.str("open_on_focus") == "true",
+                        value: focus_pick(),
+                        onchange: move |next| focus_pick.set(next),
+                    }
                 },
             }
         }

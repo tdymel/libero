@@ -159,6 +159,104 @@ e2e::scenario!(
     a_drag_moves_the_grabbed
 );
 
+/// The first thumb on the page is the single slider's.
+const LEVEL: &str = "[role=slider]";
+const BAND_UPPER: &str = "[role=slider][aria-valuenow=\"80\"]";
+
+async fn reads_at<D: Driver>(
+    d: &mut D,
+    readout: &str,
+    what: &str,
+    check: impl Fn(&str) -> bool,
+) -> Result<()> {
+    eventually(d, what, async |d| Ok(check(&d.text(readout).await?))).await
+}
+
+/// Todo 3963: an upright thumb says so, and ArrowUp raises it as ArrowRight does.
+async fn vertical_keys<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    let orientation = d.attr(LEVEL, "aria-orientation").await?;
+    anyhow::ensure!(
+        orientation.as_deref() == Some("vertical"),
+        "{orientation:?}"
+    );
+    d.focus(LEVEL).await?;
+    d.press(keyboard::ARROW_UP).await?;
+    reads_at(
+        d,
+        "#level-readout",
+        "ArrowUp to raise the level to 51",
+        |r| r == "51",
+    )
+    .await?;
+    d.press(keyboard::ARROW_DOWN).await?;
+    d.press(keyboard::ARROW_DOWN).await?;
+    reads_at(
+        d,
+        "#level-readout",
+        "ArrowDown twice to drop it to 49",
+        |r| r == "49",
+    )
+    .await
+}
+
+/// Todo 3963: an upward drag raises an upright thumb, a downward one lowers it.
+async fn vertical_drags<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    d.drag(LEVEL, 0.0, -40.0).await?;
+    reads_at(
+        d,
+        "#level-readout",
+        "an upward drag to raise the level",
+        |r| r.parse::<f64>().is_ok_and(|level| level > 55.0),
+    )
+    .await?;
+    d.drag(BAND_UPPER, 0.0, 40.0).await?;
+    reads_at(
+        d,
+        "#band-readout",
+        "a downward drag to lower the upper thumb only",
+        |r| {
+            r.split_once('-').is_some_and(|(low, high)| {
+                low == "20" && high.parse::<f64>().is_ok_and(|v| v < 75.0)
+            })
+        },
+    )
+    .await
+}
+
+/// Todo 3963: a tap near the bottom of an upright range moves the lower thumb there.
+async fn vertical_tap<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    let low = d.rect("[role=group] [role=slider]").await?;
+    let (x, y) = (low.x + low.width / 2.0, low.y + low.height / 2.0);
+    d.click_at(x, y + 20.0).await?;
+    reads_at(
+        d,
+        "#band-readout",
+        "a tap below the lower thumb to lower it",
+        |r| {
+            r.split_once('-').is_some_and(|(low, high)| {
+                high == "80" && low.parse::<f64>().is_ok_and(|v| v < 20.0)
+            })
+        },
+    )
+    .await
+}
+
+e2e::scenario!(
+    an_upright_slider_steps_by_the_arrows,
+    "/range-slider/vertical",
+    vertical_keys
+);
+e2e::scenario!(
+    an_upright_slider_drags_along_its_axis,
+    "/range-slider/vertical",
+    vertical_drags
+);
+e2e::scenario!(
+    a_tap_on_an_upright_range_moves_the_nearest_thumb,
+    "/range-slider/vertical",
+    vertical_tap
+);
+
 /// Todo 483: the label, which names both thumbs, focuses the first.
 #[test]
 fn a_click_on_the_label_focuses_the_lower_thumb() {

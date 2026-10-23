@@ -46,6 +46,7 @@ const PROMPT: &str = "Drop files here, or click to pick";
 #[component]
 pub fn FileFieldPage() -> Element {
     let theme = use_theme();
+    let mut limited = use_signal(Files::default);
     rsx! {
         DocPage {
             title: "FileField",
@@ -59,6 +60,10 @@ pub fn FileFieldPage() -> Element {
                     prop("multiple", "bool")
                         .default("false")
                         .doc("Lets the user pick and drop several files, each drawn as a chip. A single-file field shows the file name, and a new pick replaces it."),
+                    prop("max_files", "Option<usize>")
+                        .doc("With `multiple`, the most files a pick or a drop keeps; the rest are refused with `RejectReason::TooMany` and said aloud."),
+                    prop("max_size", "Option<u64>")
+                        .doc("The largest file in bytes a pick or a drop keeps; a larger one is refused with `RejectReason::TooLarge` and said aloud, the limit written as a size, \"5.0 MB\"."),
                     prop("variant", "FileFieldVariant")
                         .default(theme.file_field.variant.as_str())
                         .doc("`input` is one line in the field frame. `dropzone` is a tall surface to drop onto or click, with the files as cards below it. A single-file dropzone hides its surface while it holds a file."),
@@ -86,7 +91,7 @@ pub fn FileFieldPage() -> Element {
                     prop("onchange", "EventHandler<Files>")
                         .doc("Fires with the files the field should hold next, after a pick, a drop, a removal or a clear. A pick or a drop hands over only the files it brought, so on a `multiple` field it replaces the earlier ones, as a native file input does. A removal or a clear hands over what is left."),
                     prop("onreject", "EventHandler<Vec<FileRejection>>")
-                        .doc("Fires with the files a pick or a drop brought that the field refused: a type `accept` excludes, or every file past the first on a field without `multiple`. Each `FileRejection` holds the `file` and a `reason`, `RejectReason::Type` or `TooMany`. The field already announces the refusal politely, in the localization's `file_field.rejected_type` and `rejected_many`. Use it to show the refusal on screen, for example in `status`."),
+                        .doc("Fires with the files a pick or a drop brought that the field refused: a type `accept` excludes, a file past `max_files` or past the first on a field without `multiple`, or a file larger than `max_size`. Each `FileRejection` holds the `file` and a `reason`, `RejectReason::Type`, `TooMany` or `TooLarge`. The field already announces the refusal politely, in the localization's `file_field.rejected_type`, `rejected_many`, `rejected_max` and `rejected_large`. Use it to show the refusal on screen, for example in `status`."),
                     prop("validate", "Validators<Files>")
                         .doc("Rules over the files, shown once the field loses focus or its form is submitted."),
                     prop("children", "Element")
@@ -124,7 +129,7 @@ pub fn FileFieldPage() -> Element {
                 .without_base_props(),
                 props("FileRejection", vec![
                     prop("file", "FileData").doc("The refused file."),
-                    prop("reason", "RejectReason").doc("`Type`: `accept` excludes it. `TooMany`: it came after the first on a field without `multiple`."),
+                    prop("reason", "RejectReason").doc("`Type`: `accept` excludes it. `TooMany`: it came past `max_files`, or past the first on a field without `multiple`. `TooLarge`: it is larger than `max_size`."),
                 ])
                 .without_base_props(),
                 props("Files", vec![
@@ -160,7 +165,11 @@ pub fn FileFieldPage() -> Element {
                     Code { source: "Files" }
                     ", so a single-file field and a "
                     Code { source: "multiple" }
-                    " one read the same. Checks such as a size limit go in "
+                    " one read the same. "
+                    Code { source: "max_size" }
+                    " and "
+                    Code { source: "max_files" }
+                    " refuse files past a limit; other checks go in "
                     Code { source: "onchange" }
                     ", where the files are already in hand. Under Blitz the field opens the "
                     "system file dialog."
@@ -218,6 +227,35 @@ pub fn FileFieldPage() -> Element {
                 ]].concat(),
                 render: move |values: DemoValues| rsx! {
                     FileFieldDemo { values }
+                },
+            }
+            // snippet: let mut limited = use_signal(Files::default);
+            Demo {
+                component: "FileField",
+                title: "Limits",
+                children_text: "",
+                fixed: vec![
+                    "label: \"Attachments\"".to_string(),
+                    "variant: \"dropzone\"".to_string(),
+                    "multiple: true".to_string(),
+                    "max_files: 3".to_string(),
+                    "max_size: 5_000_000".to_string(),
+                    "helper: \"Up to 3 files, 5 MB each.\"".to_string(),
+                    "value: limited()".to_string(),
+                    "onchange: move |picked: Files| limited.set(picked)".to_string(),
+                ],
+                controls: vec![],
+                render: move |_values: DemoValues| rsx! {
+                    FileField {
+                        label: "Attachments",
+                        variant: "dropzone",
+                        multiple: true,
+                        max_files: 3,
+                        max_size: 5_000_000,
+                        helper: "Up to 3 files, 5 MB each.",
+                        value: limited(),
+                        onchange: move |picked: Files| limited.set(picked),
+                    }
                 },
             }
         }

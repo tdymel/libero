@@ -83,6 +83,7 @@ fn starts_with(f: AutocompleteFilterArgs<String>) -> bool {
 pub fn AutocompletePage() -> Element {
     let mut value = use_signal(String::new);
     let mut picked = use_signal(|| None::<&'static str>);
+    let mut town = use_signal(String::new);
     let theme = use_theme();
 
     rsx! {
@@ -125,6 +126,9 @@ pub fn AutocompletePage() -> Element {
                     prop("clearable", "bool")
                         .default("false")
                         .doc("Shows an x at the end of the frame that empties the field."),
+                    prop("open_on_focus", "bool")
+                        .default("false")
+                        .doc("Opens the list when the field takes focus, by Tab or a press. Focus coming back after a pick or Escape leaves it closed."),
                     prop("empty", "Element")
                         .doc("Shown in place of the list when typed text matches nothing. Screen readers hear the localization's `combobox.nothing_found` either way, so change that string to match."),
                     prop("loading_label", "String")
@@ -258,6 +262,10 @@ pub fn AutocompletePage() -> Element {
                         _ => vec![],
                     }),
                     Control::switch("clearable"),
+                    Control::switch("open_on_focus").code(|_, values| match values.str("open_on_focus").as_str() {
+                        "true" => vec!["open_on_focus: true".to_string()],
+                        _ => vec![],
+                    }),
                     Control::switch("required"),
                     Control::switch("disabled"),
                 ]].concat(),
@@ -288,6 +296,7 @@ pub fn AutocompletePage() -> Element {
                         empty: (values.str("empty") == "true")
                             .then(|| rsx! { Text { "No city by that name." } }),
                         clearable: (values.str("clearable") == "true").then_some(true),
+                        open_on_focus: values.str("open_on_focus") == "true",
                         required: (values.str("required") == "true").then_some(true),
                         disabled: (values.str("disabled") == "true").then_some(true),
                         placeholder: "Start typing",
@@ -296,6 +305,38 @@ pub fn AutocompletePage() -> Element {
                         oninput: move |next| value.set(next),
                     }
                 }
+                },
+            }
+            // snippet: let mut town = use_signal(String::new);
+            Demo {
+                component: "Autocomplete",
+                title: "Open on focus",
+                children_text: "",
+                wrap: Wrap(|_values: &DemoValues, source: &str| {
+                    format!("{}\n\n{source}", FILE.section("cities"))
+                }),
+                fixed: vec![
+                    "label: \"City\"".to_string(),
+                    "options: cities()".to_string(),
+                    "value: town()".to_string(),
+                    "oninput: move |next| town.set(next)".to_string(),
+                    "placeholder: \"Start typing\"".to_string(),
+                ],
+                controls: vec![Control::switch("open_on_focus").default("true").code(|_, values| {
+                    match values.str("open_on_focus").as_str() {
+                        "true" => vec!["open_on_focus: true".to_string()],
+                        _ => vec![],
+                    }
+                })],
+                render: move |values: DemoValues| rsx! {
+                    Autocomplete {
+                        label: "City",
+                        placeholder: "Start typing",
+                        open_on_focus: values.str("open_on_focus") == "true",
+                        options: cities(),
+                        value: town(),
+                        oninput: move |next| town.set(next),
+                    }
                 },
             }
         }

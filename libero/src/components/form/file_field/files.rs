@@ -57,8 +57,10 @@ pub struct FileRejection {
 pub enum RejectReason {
     /// Not a type `accept` lists.
     Type,
-    /// Past the first on a field without `multiple`.
+    /// Past `max_files`, or past the first on a field without `multiple`.
     TooMany,
+    /// Larger than `max_size`.
+    TooLarge,
 }
 
 /// A file's size for a human: powers of 1000, one decimal past a kilobyte,

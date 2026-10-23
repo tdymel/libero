@@ -6,7 +6,7 @@ use super::slider_value::{SliderChangeEvent, SliderMark, SliderSegment, SliderVa
 use super::value::SliderCoreValue;
 use crate::{
     components::{
-        common::Input,
+        common::{Input, Orientation},
         form::{FieldStatus, field_props, use_bound, use_field},
     },
     hooks::{use_localization, use_theme},
@@ -62,6 +62,10 @@ field_props! {
         /// Rules over the value, shown on blur or submit.
         #[props(default, into)]
         validate: crate::components::form::Validators<V>,
+        /// `vertical` runs the track bottom to top, `12rem` tall unless the `sx` says;
+        /// marks caption at its side. A vertical track is a line, never bars or segments.
+        #[props(default, into)]
+        orientation: Input<Orientation>,
         #[props(default)]
         track: SliderTrack,
         /// A bubble over the value a hovering mouse or pen points at, before a press
@@ -241,6 +245,7 @@ pub fn Slider<V: SliderValue>(props: SliderProps<V>) -> Element {
             },
             group_digits: props.group_digits,
             preview_on_hover: props.preview_on_hover,
+            vertical: props.orientation.copied_or(Orientation::Horizontal) == Orientation::Vertical,
         }
     };
 

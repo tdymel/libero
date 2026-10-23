@@ -12,10 +12,10 @@ use crate::{
             use_toolbar_item,
         },
         form::{
-            Asks, CaretKeys, ComboboxCore, ComboboxOption, DropdownPart, PreparedField, RowCache,
-            TouchHold, VIRTUAL_ROWS, clear_button, field_control_sx, field_parts_enum, field_props,
-            use_chip_announcer, use_field, use_field_frame, use_refocus_on_close, use_row_cache,
-            use_touch_hold, with_drawn_placeholder,
+            Asks, CaretKeys, ComboboxCore, ComboboxOption, DropdownPart, FocusOpen, PreparedField,
+            RowCache, TouchHold, VIRTUAL_ROWS, clear_button, field_control_sx, field_parts_enum,
+            field_props, use_chip_announcer, use_field, use_field_frame, use_focus_open,
+            use_refocus_on_close, use_row_cache, use_touch_hold, with_drawn_placeholder,
         },
         layout::{BoxStyle, use_box},
     },
@@ -349,6 +349,9 @@ field_props! {
         checks: bool,
         #[props(default)]
         searchable: bool,
+        /// Opens the list when the trigger takes focus.
+        #[props(default)]
+        open_on_focus: bool,
         #[props(default)]
         search_placeholder: Option<String>,
         /// One hidden input per `form_values` entry: the trigger is a `div` and can't post.
@@ -430,6 +433,12 @@ pub(crate) fn SelectCore(props: SelectCoreProps) -> Element {
     };
 
     let blurred = use_refocus_on_close(opened, searchable, trigger_element, query);
+    let focus_open = use_focus_open(
+        props.open_on_focus && !disabled && !readonly,
+        trigger_element,
+        use_callback(move |()| open.open(true)),
+    );
+    focus_open.rendered(opened, searchable && !*blurred.peek());
     // On the Escape stack while open, as `ComboboxCore`: a Tour around leaves the press to it (todo 2674).
     crate::hooks::use_field_list_layer(opened, use_callback(move |()| open.open(false)));
 
@@ -498,8 +507,14 @@ pub(crate) fn SelectCore(props: SelectCoreProps) -> Element {
         (true, None) => Some(
             chevron_box
                 .event("onmousedown", |event: MouseEvent| event.prevent_default())
-                .event("onpointerdown", move |event: PointerEvent| open.press(&event))
-                .event("onclick", move |_: MouseEvent| open.toggle())
+                .event("onpointerdown", move |event: PointerEvent| {
+                    focus_open.press();
+                    open.press(&event)
+                })
+                .event("onclick", move |_: MouseEvent| {
+                    open.toggle();
+                    focus_open.click();
+                })
                 .render(HtmlTag::Span, Vec::new(), rsx! { Glyph { slot: IconSlot::ChevronDown, icon: lucide::chevron_down::outlined } }),
         ),
         _ => clear.clone(),
@@ -627,6 +642,7 @@ pub(crate) fn SelectCore(props: SelectCoreProps) -> Element {
             element: trigger_element,
             searching,
             blurred,
+            focus_open,
             multiple,
             chevron: !multiple && clear.is_none(),
             toolbar_item,
@@ -639,6 +655,7 @@ pub(crate) fn SelectCore(props: SelectCoreProps) -> Element {
         multiple,
         value_slot.element(&chips_element),
         open,
+        focus_open,
         chips,
         trigger,
     );
@@ -901,6 +918,7 @@ struct TriggerParts {
     searching: bool,
     /// [`use_refocus_on_close`]'s blur mark.
     blurred: Signal<bool>,
+    focus_open: FocusOpen,
     multiple: bool,
     /// A single select with nothing to clear draws its own chevron.
     chevron: bool,
@@ -923,6 +941,7 @@ fn select_trigger(
         element,
         searching,
         mut blurred,
+        focus_open,
         multiple,
         chevron,
         toolbar_item,
@@ -964,7 +983,10 @@ fn select_trigger(
         // A multi-select's press bubbles to the slot around it.
         .event(
             "onpointerdown",
-            (!multiple).then_some(move |event: PointerEvent| open.press(&event)),
+            (!multiple).then_some(move |event: PointerEvent| {
+                focus_open.press();
+                open.press(&event)
+            }),
         )
         // A multi-select's click bubbles to the slot around it, which owns it.
         .event("onclick", move |_: MouseEvent| {
@@ -974,7 +996,11 @@ fn select_trigger(
             if !multiple && !disabled && !readonly {
                 open.open(!state.is_open());
             }
+            if !multiple {
+                focus_open.click();
+            }
         })
+        .event("onfocus", move |_: FocusEvent| focus_open.focus())
         .event("onkeydown", move |event: KeyboardEvent| {
             if let Some(hold) = open.hold {
                 hold.key(state.is_open());
@@ -983,6 +1009,7 @@ fn select_trigger(
         })
         // While searchable, focus moves to the search box, whose blur closes instead; unless a touch held it here.
         .event("onblur", move |event: FocusEvent| {
+            focus_open.blur();
             if !blur_counts(&event) {
                 return;
             }
@@ -1086,6 +1113,7 @@ fn select_control(
     multiple: bool,
     value_slot: BoxStyle,
     open: SelectOpen,
+    focus_open: FocusOpen,
     chips: Option<Element>,
     trigger: Element,
 ) -> Element {
@@ -1093,9 +1121,13 @@ fn select_control(
         true => value_slot
             .event("onmousedown", |event: MouseEvent| event.prevent_default())
             .event("onpointerdown", move |event: PointerEvent| {
+                focus_open.press();
                 open.press(&event)
             })
-            .event("onclick", move |_: MouseEvent| open.toggle())
+            .event("onclick", move |_: MouseEvent| {
+                open.toggle();
+                focus_open.click();
+            })
             .render(
                 HtmlTag::Div,
                 Vec::new(),

@@ -29,7 +29,7 @@ use super::accept::accept_hint;
 #[cfg(feature = "image-cropper")]
 use super::crop::CropGate;
 use super::files::{FileRejection, Files};
-use super::intake::{Intake, Taking, use_file_intake, use_input_mirror};
+use super::intake::{Intake, Limits, Taking, use_file_intake, use_input_mirror};
 use super::rows::{ChipKeys, FileRows, FocusDebt, use_chip_cursor, use_focus_debt};
 use super::styles::{FILE_CARD_LIST_SX, FILE_CARD_SX, FILE_CHIP_SX, FILE_INPUT_SX};
 use super::surface::{
@@ -68,6 +68,12 @@ field_props! {
         /// Takes more than one file; otherwise the field keeps the first.
         #[props(default)]
         multiple: bool,
+        /// With `multiple`, the most files a pick or a drop keeps; the rest are refused.
+        #[props(default)]
+        max_files: Option<usize>,
+        /// The largest file, in bytes, a pick or a drop keeps; a larger one is refused.
+        #[props(default)]
+        max_size: Option<u64>,
         /// The `accept` attribute (`.pdf`, `image/*`, ...), applied to drops too.
         #[props(default, into)]
         accept: Option<String>,
@@ -97,8 +103,8 @@ field_props! {
         /// Fires with the next files: a pick, a drop, a removal or a clear.
         #[props(default)]
         onchange: Option<EventHandler<Files>>,
-        /// Fires with the files a pick or a drop held that `accept` or a missing
-        /// `multiple` refused. The field also says which, politely.
+        /// Fires with the files a pick or a drop held that `accept`, `max_size`,
+        /// `max_files` or a missing `multiple` refused. The field also says which, politely.
         #[props(default)]
         onreject: Option<EventHandler<Vec<FileRejection>>>,
         /// Crops a single picked PNG, JPEG, WebP, BMP or AVIF in a dialog before
@@ -196,7 +202,11 @@ pub fn FileField(props: FileFieldProps) -> Element {
         onreject: props.onreject,
         refused,
         accept: props.accept.clone().unwrap_or_default(),
-        multiple,
+        limits: Limits {
+            multiple,
+            max_files: props.max_files,
+            max_size: props.max_size,
+        },
         editable,
         #[cfg(feature = "image-cropper")]
         crop: crop.map(|_| pending),

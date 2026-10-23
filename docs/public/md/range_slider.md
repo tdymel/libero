@@ -135,6 +135,27 @@ fn Demo() -> Element {
 form.getAll("price") // ["20", "80"]
 ```
 
+`orientation: "vertical"` stands the track upright, bottom to top:
+
+```rust
+use dioxus::prelude::*;
+use libero::components::{RangeSlider, SliderChangeEvent};
+
+#[component]
+fn Demo() -> Element {
+    let mut band = use_signal(|| (30.0, 70.0));
+
+    rsx! {
+        RangeSlider {
+            label: "Band",
+            orientation: "vertical",
+            value: band(),
+            oninput: move |event: SliderChangeEvent<(f64, f64)>| band.set(event.value()),
+        }
+    }
+}
+```
+
 ## Props
 
 ### `RangeSlider`
@@ -158,6 +179,7 @@ form.getAll("price") // ["20", "80"]
 | `name` | `FieldName<(V, V)>` | - | Posts the pair as two hidden inputs of that name, in track order. A discrete slider, whose type lists `options()`, posts the options' indices, not the options. A path such as `Settings::FIELDS.price()` also binds the pair to the surrounding `Form`'s value when there is no `oninput`. |
 | `validate` | `Validators<(V, V)>` | - | Rules over the pair, shown once the slider loses focus or its form is submitted. |
 | `preview_on_hover` | `bool` | `false` | Shows a bubble over the value a hovering mouse or pen points at, before a press moves the nearer thumb there. Escape hides it until the pointer leaves the slider. Touch has no hover, so it never shows there. The bubble follows the pointer and goes when it leaves the slider, so it is not hoverable (WCAG 1.4.13). |
+| `orientation` | `Orientation` | `horizontal` | `vertical` runs the track bottom to top, `12rem` tall unless `sx` sets a `height`, with the mark captions beside it. A touch anywhere on it drags the nearer thumb, since no swipe scrolls past an upright track. |
 | `label` | `Caption` | - | The caption above the track. Both thumbs' names start with it. |
 | `description` | `Caption` | - | Between the label and the track. What the range means. |
 | `helper` | `Caption` | - | Under the track, below the mark captions. |

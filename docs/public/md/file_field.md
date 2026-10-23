@@ -9,9 +9,9 @@ Description: Files picked from the system dialog or dropped on the control, as a
 
 Files picked from the system dialog or dropped on the control. It shows
 `value` and asks for the next files through `onchange`. Both carry a `Files`,
-so a single-file field and a `multiple` one read the same. Checks such as a
-size limit go in `onchange`, where the files are already in hand. Under Blitz
-the field opens the system file dialog.
+so a single-file field and a `multiple` one read the same. `max_size` and
+`max_files` refuse files past a limit; other checks go in `onchange`, where the
+files are already in hand. Under Blitz the field opens the system file dialog.
 
 ## Usage
 
@@ -104,6 +104,33 @@ fn Demo() -> Element {
 }
 ```
 
+`max_files` keeps at most three files per pick or drop, and `max_size` refuses
+any file over 5 MB. The field announces the refused files and hands them to
+`onreject`:
+
+```rust
+use dioxus::prelude::*;
+use libero::components::{FileField, Files};
+
+#[component]
+fn Demo() -> Element {
+    let mut files = use_signal(Files::default);
+
+    rsx! {
+        FileField {
+            label: "Attachments",
+            variant: "dropzone",
+            multiple: true,
+            max_files: 3,
+            max_size: 5_000_000,
+            helper: "Up to 3 files, 5 MB each.",
+            value: files(),
+            onchange: move |picked: Files| files.set(picked),
+        }
+    }
+}
+```
+
 ## Props
 
 ### `FileField`
@@ -112,6 +139,8 @@ fn Demo() -> Element {
 |---|---|---|---|
 | `value` | `Files` | empty | Strictly controlled. Pair it with `onchange`. Takes a `FileData`, an `Option<FileData>` or a `Vec<FileData>`. |
 | `multiple` | `bool` | `false` | Lets the user pick and drop several files, each drawn as a chip. A single-file field shows the file name, and a new pick replaces it. |
+| `max_files` | `Option<usize>` | - | With `multiple`, the most files a pick or a drop keeps; the rest are refused with `RejectReason::TooMany` and said aloud. |
+| `max_size` | `Option<u64>` | - | The largest file in bytes a pick or a drop keeps; a larger one is refused with `RejectReason::TooLarge` and said aloud, the limit written as a size, "5.0 MB". |
 | `variant` | `FileFieldVariant` | `input` | `input` is one line in the field frame. `dropzone` is a tall surface to drop onto or click, with the files as cards below it. A single-file dropzone hides its surface while it holds a file. |
 | `accept` | `String` | - | The file types to take, such as `.pdf`, `image/png`, `image/*` or a comma-separated list. It applies to the picker and to a drop: a file of another type is refused, and the field says so. A dropzone also shows them as a hint under its prompt. |
 | `capture` | `String` | - | Asks a phone for a fresh capture, `user` or `environment`. |
@@ -123,7 +152,7 @@ fn Demo() -> Element {
 | `selection` | `Callback<SelectionArgs<FileData>, Element>` | `Chip`, or the file name | Draws one picked file, remove control included. `args.remove` removes it. Unset, a multiple `input` field draws a chip, a single one the file name, and a dropzone a card under its surface. |
 | `name` | `FieldName<Files>` | - | What the files post as. A removed file stops posting. A path such as `Claim::FIELDS.receipts()` also binds the files to the surrounding `Form`'s value when the field has no `onchange`. |
 | `onchange` | `EventHandler<Files>` | - | Fires with the files the field should hold next, after a pick, a drop, a removal or a clear. A pick or a drop hands over only the files it brought, so on a `multiple` field it replaces the earlier ones, as a native file input does. A removal or a clear hands over what is left. |
-| `onreject` | `EventHandler<Vec<FileRejection>>` | - | Fires with the files a pick or a drop brought that the field refused: a type `accept` excludes, or every file past the first on a field without `multiple`. Each `FileRejection` holds the `file` and a `reason`, `RejectReason::Type` or `TooMany`. The field already announces the refusal politely, in the localization's `file_field.rejected_type` and `rejected_many`. Use it to show the refusal on screen, for example in `status`. |
+| `onreject` | `EventHandler<Vec<FileRejection>>` | - | Fires with the files a pick or a drop brought that the field refused: a type `accept` excludes, a file past `max_files` or past the first on a field without `multiple`, or a file larger than `max_size`. Each `FileRejection` holds the `file` and a `reason`, `RejectReason::Type`, `TooMany` or `TooLarge`. The field already announces the refusal politely, in the localization's `file_field.rejected_type`, `rejected_many`, `rejected_max` and `rejected_large`. Use it to show the refusal on screen, for example in `status`. |
 | `validate` | `Validators<Files>` | - | Rules over the files, shown once the field loses focus or its form is submitted. |
 | `children` | `Element` | - | The dropzone's prompt. The `input` variant shows `placeholder` instead. |
 | `size` | `Size` | `md` | Control height, font size and the chips' size. |
@@ -153,7 +182,7 @@ Like every component, `FileField` also takes the shared props `sx`, `class`,
 | Prop | Type | Default | Description |
 |---|---|---|---|
 | `file` | `FileData` | - | The refused file. |
-| `reason` | `RejectReason` | - | `Type`: `accept` excludes it. `TooMany`: it came after the first on a field without `multiple`. |
+| `reason` | `RejectReason` | - | `Type`: `accept` excludes it. `TooMany`: it came past `max_files`, or past the first on a field without `multiple`. `TooLarge`: it is larger than `max_size`. |
 
 ### `Files`
 

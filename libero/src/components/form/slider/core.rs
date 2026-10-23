@@ -16,9 +16,9 @@ use crate::{
         overlay::{PressFocus, Tooltip, TooltipPinned},
     },
     hooks::{
-        DragMove, DragOptions, DragStart, ElementHandle, LocalState, Rect, sideways_drag_sx,
-        use_css, use_element, use_escape_dismiss, use_formats, use_id, use_local_state,
-        use_localization, use_sideways_drag, use_theme,
+        DragMove, DragOptions, DragPoint, DragStart, ElementHandle, LocalState, Rect,
+        sideways_drag_sx, use_css, use_element, use_escape_dismiss, use_formats, use_id,
+        use_local_state, use_localization, use_sideways_drag_if, use_theme,
     },
     localization::{Formats, fill},
     platform::{Dimensions, ElementApi, logical_key, next_task},
@@ -130,6 +130,27 @@ static SLIDER_ROOT_SX: StaticSx = StaticSx::new(|| {
                 format!("& > [data-slot='{}']", SliderPart::Track.slot()),
                 sx().background("transparent"),
             ),
+        )
+        // A column, as tall as the sx says; captions sit beside the track, not under it.
+        .when(
+            "vertical",
+            sx().flex_direction("column")
+                .align_items("flex-start")
+                .height("12rem")
+                .padding_bottom("0")
+                // A vertical swipe is the drag, not a scroll.
+                .touch_action("none")
+                .selector(
+                    format!("& > [data-slot='{}']", SliderPart::Track.slot()),
+                    sx().width(SLIDER_TRACK.value())
+                        .height("auto")
+                        // Centred under the thumb, which is wider than the track.
+                        .margin_inline(format!(
+                            "calc(({} - {}) / 2)",
+                            SLIDER_THUMB.value(),
+                            SLIDER_TRACK.value()
+                        )),
+                ),
         )
         // White ring and dark halo read on any track color. The shadow only
         // unfocused, or it outranks the thumb's `:focus-visible` ring.
@@ -466,14 +487,12 @@ static SLIDER_THUMB_SX: StaticSx = StaticSx::new(|| {
         )
 });
 
-static SLIDER_MARK_SX: StaticSx = StaticSx::new(|| {
+/// A mark's dot, placed by the orientation's own sx.
+fn mark_dot_sx() -> Sx {
     // Sized against the thumb, not the track: a 2px track leaves a dot too
     // small to see, and it has to read against the thumb beside it.
     let dot = format!("calc({} / 3)", SLIDER_THUMB.value());
     sx().position("absolute")
-        .top("50%")
-        .left(along_track(SLIDER_MARK_AT))
-        .transform("translate(-50%, -50%)")
         .width(dot.clone())
         .height(dot)
         .border_radius("50%")
@@ -492,6 +511,13 @@ static SLIDER_MARK_SX: StaticSx = StaticSx::new(|| {
             "filled",
             sx().background("surface").border_color("transparent"),
         )
+}
+
+static SLIDER_MARK_SX: StaticSx = StaticSx::new(|| {
+    mark_dot_sx()
+        .top("50%")
+        .left(along_track(SLIDER_MARK_AT))
+        .transform("translate(-50%, -50%)")
         .rtl(
             sx().left("auto")
                 .right(along_track(SLIDER_MARK_AT))
@@ -521,6 +547,62 @@ static SLIDER_MARK_LABEL_SX: StaticSx = StaticSx::new(|| {
                     SLIDER_MARK_AT.value_or("0")
                 )),
         )
+});
+
+/// The vertical track's bar, filled from the bottom; no RTL flip.
+static SLIDER_BAR_VERTICAL_SX: StaticSx = StaticSx::new(|| {
+    sx().position("absolute")
+        .left("0")
+        .right("0")
+        .bottom("0")
+        .height(along_track(SLIDER_FILLED))
+        .background(SLIDER_COLOR.value())
+        .border_radius("inherit")
+        .media(FORCED_COLORS, sx().background("Highlight"))
+});
+
+static SLIDER_RANGE_BAR_VERTICAL_SX: StaticSx = StaticSx::new(|| {
+    sx().position("absolute")
+        .left("0")
+        .right("0")
+        .bottom(along_track(SLIDER_FILLED_FROM))
+        .height(format!(
+            "calc({} * (100% - {}))",
+            SLIDER_FILLED_SPAN.value_or("0"),
+            SLIDER_THUMB.value()
+        ))
+        .background(SLIDER_COLOR.value())
+        .border_radius("inherit")
+        .media(FORCED_COLORS, sx().background("Highlight"))
+});
+
+static SLIDER_THUMB_ANCHOR_VERTICAL_SX: StaticSx = StaticSx::new(|| {
+    sx().position("absolute")
+        .left("50%")
+        .bottom(along_track(SLIDER_THUMB_AT))
+        .margin(format!("calc({} / -2)", SLIDER_THUMB.value()))
+        .display("flex")
+});
+
+static SLIDER_MARK_VERTICAL_SX: StaticSx = StaticSx::new(|| {
+    mark_dot_sx()
+        .bottom(along_track(SLIDER_MARK_AT))
+        .left("50%")
+        .transform("translate(-50%, 50%)")
+});
+
+/// Beside the track at the inline end, edge-aligned at the ends as the horizontal captions.
+static SLIDER_MARK_LABEL_VERTICAL_SX: StaticSx = StaticSx::new(|| {
+    sx().position("absolute")
+        .left(SLIDER_THUMB.value())
+        .bottom(along_track(SLIDER_MARK_AT))
+        .transform(format!(
+            "translateY(calc({} * 100%))",
+            SLIDER_MARK_AT.value_or("0")
+        ))
+        .color("muted.7")
+        .white_space("nowrap")
+        .rtl(sx().left("auto").right(SLIDER_THUMB.value()))
 });
 
 /// On the bar, not the root: the root's scope skips a value move.
@@ -612,6 +694,9 @@ pub(in crate::components::form) struct SliderCoreProps {
     /// A bubble over the value a hovering mouse or pen points at.
     #[props(default)]
     preview_on_hover: bool,
+    /// The track runs bottom to top; bars and segments draw a line instead.
+    #[props(default)]
+    vertical: bool,
 }
 
 /// What a value move changes. Only the thumbs' scope reads it, so the rest of
@@ -655,7 +740,7 @@ pub(in crate::components::form) fn SliderCore(props: SliderCoreProps) -> Element
 #[derive(Clone, Copy, Default)]
 struct Starting {
     measuring: bool,
-    /// The last move's client x.
+    /// The last move's client coordinate along the track.
     moved_to: Option<f64>,
     released: bool,
 }
@@ -664,34 +749,96 @@ struct Starting {
 /// placed from the value, not from a measuring round trip per move (1065).
 #[derive(Clone, Copy, PartialEq)]
 struct ThumbTrack {
-    /// The left edge of a thumb at the track's left end.
+    /// The start edge of a thumb at the track's left or top end.
     left: f64,
     travel: f64,
+    /// The thumb's edge across the track: its top, or its left on a vertical one.
     top: f64,
     thumb: Dimensions,
     rtl: bool,
+    vertical: bool,
     /// From the press till the new measure: the bubble stays mounted, hidden (2188).
     stale: bool,
 }
 
 impl ThumbTrack {
+    /// A vertical track's minimum is at the bottom, whatever the direction.
+    fn flipped(&self) -> bool {
+        self.rtl || self.vertical
+    }
+
+    /// The thumb's length along the track.
+    fn thumb_along(&self) -> f64 {
+        match self.vertical {
+            true => self.thumb.height,
+            false => self.thumb.width,
+        }
+    }
+
     fn at(&self, fraction: f64) -> Rect {
-        let along = if self.rtl { 1.0 - fraction } else { fraction };
+        let along = if self.flipped() {
+            1.0 - fraction
+        } else {
+            fraction
+        };
+        let (x, y) = match self.vertical {
+            false => (self.left + along * self.travel, self.top),
+            true => (self.top, self.left + along * self.travel),
+        };
         Rect {
-            x: self.left + along * self.travel,
-            y: self.top,
+            x,
+            y,
             width: self.thumb.width,
             height: self.thumb.height,
         }
     }
 
-    /// The fraction of the range under a pointer at `client_x`, as the drag maps it.
-    fn fraction_at(&self, client_x: f64) -> Option<f64> {
+    /// Whether a pointer at `client` along the track is over the thumb at `fraction`.
+    fn covers(&self, fraction: f64, client: f64) -> bool {
+        let at = self.at(fraction);
+        let start = if self.vertical { at.y } else { at.x };
+        start <= client && client <= start + self.thumb_along()
+    }
+
+    /// The fraction of the range under a pointer at `client` along the track, as the drag maps it.
+    fn fraction_at(&self, client: f64) -> Option<f64> {
         if self.travel <= 0.0 {
             return None;
         }
-        let along = ((client_x - self.left - self.thumb.width / 2.0) / self.travel).clamp(0.0, 1.0);
-        Some(if self.rtl { 1.0 - along } else { along })
+        let along = ((client - self.left - self.thumb_along() / 2.0) / self.travel).clamp(0.0, 1.0);
+        Some(if self.flipped() { 1.0 - along } else { along })
+    }
+}
+
+/// A pointer's client coordinate along the track.
+fn along(point: DragPoint, vertical: bool) -> f64 {
+    match vertical {
+        true => point.y,
+        false => point.x,
+    }
+}
+
+/// The geometry a bubble is placed from, off the track's and a thumb's size and offset.
+fn track_geometry(
+    track: Dimensions,
+    (track_left, track_top): (f64, f64),
+    thumb: Dimensions,
+    (thumb_left, thumb_top): (f64, f64),
+    rtl: bool,
+    vertical: bool,
+) -> ThumbTrack {
+    let (left, travel, top) = match vertical {
+        true => (track_top, track.height - thumb.height, thumb_left),
+        false => (track_left, track.width - thumb.width, thumb_top),
+    };
+    ThumbTrack {
+        left,
+        travel,
+        top,
+        thumb,
+        rtl,
+        vertical,
+        stale: false,
     }
 }
 
@@ -724,14 +871,14 @@ struct Elements {
     thumbs: [ElementHandle; 2],
 }
 
-/// The track's geometry, measured off the track at pointerdown, when layout is
-/// known settled.
+/// The track's geometry along its axis, measured off the track at pointerdown,
+/// when layout is known settled.
 #[derive(Clone)]
 struct Measured {
     left: LocalState<f64>,
     width: LocalState<f64>,
     thumb: LocalState<f64>,
-    /// Under RTL the minimum is at the right edge.
+    /// Under RTL, or vertical, the minimum is at the far edge.
     rtl: LocalState<bool>,
 }
 
@@ -748,7 +895,7 @@ fn use_measured() -> Measured {
 #[derive(Clone, Copy)]
 struct Steps {
     emit: Callback<SliderChangeEvent<SliderCoreValue>>,
-    /// The value under a client x, unsnapped; `moved` applies the grid.
+    /// The value under a client coordinate along the track, unsnapped; `moved` applies the grid.
     position_at: Callback<f64, Option<f64>>,
     grab: Callback<(f64, f64), usize>,
     slide: Callback<f64>,
@@ -781,7 +928,7 @@ fn use_steps(
     });
     let measured = measured.clone();
     // A `Callback`: `LocalState` is not `Copy`.
-    let position_at = use_callback(move |client_x: f64| {
+    let position_at = use_callback(move |client: f64| {
         let thumb = measured.thumb.get();
         // The thumb's centre only travels between the two half-thumb
         // insets, so the pointer has to be mapped over that span too.
@@ -789,7 +936,7 @@ fn use_steps(
         if travel <= 0.0 {
             return None;
         }
-        let along = (client_x - measured.left.get() - thumb / 2.0) / travel;
+        let along = (client - measured.left.get() - thumb / 2.0) / travel;
         let along = if measured.rtl.get() {
             1.0 - along
         } else {
@@ -856,9 +1003,10 @@ struct Hover {
     /// Counts resets, so a measure that lands after one is dropped.
     resets: CopyValue<u32>,
     refresh: Callback<()>,
+    vertical: bool,
 }
 
-fn use_hover(live: Signal<Live>, grid: Grid, elements: Elements) -> Hover {
+fn use_hover(live: Signal<Live>, grid: Grid, elements: Elements, vertical: bool) -> Hover {
     let Grid { min, max, step, .. } = grid;
     let mut hovered = use_signal(|| None::<(f64, ThumbTrack)>);
     let muted = use_hook(|| CopyValue::new(false));
@@ -882,7 +1030,7 @@ fn use_hover(live: Signal<Live>, grid: Grid, elements: Elements) -> Hover {
             );
             let rtl = elements.root.is_rtl();
             measuring.set(Some(Box::pin(async move {
-                let (Ok(track), Ok((left, _)), Ok(thumb), Ok((_, top))) = (
+                let (Ok(track), Ok(track_at), Ok(thumb), Ok(thumb_at)) = (
                     track_size.await,
                     track_offset.await,
                     thumb_size.await,
@@ -890,14 +1038,9 @@ fn use_hover(live: Signal<Live>, grid: Grid, elements: Elements) -> Hover {
                 ) else {
                     return None;
                 };
-                Some(ThumbTrack {
-                    left,
-                    travel: track.width - thumb.width,
-                    top,
-                    thumb,
-                    rtl,
-                    stale: false,
-                })
+                Some(track_geometry(
+                    track, track_at, thumb, thumb_at, rtl, vertical,
+                ))
             })));
         }
         if std::mem::replace(&mut *busy.write(), true) {
@@ -920,10 +1063,11 @@ fn use_hover(live: Signal<Live>, grid: Grid, elements: Elements) -> Hover {
                 let geometry = track.peek().filter(|_| !*muted.peek());
                 let shown = geometry.zip(*x.peek()).and_then(|(track, x)| {
                     // Over a thumb its own bubble shows the value.
-                    let on_thumb = live.peek().value.thumbs().any(|thumb| {
-                        let at = track.at(fraction(thumb, min, max));
-                        at.x <= x && x <= at.x + at.width
-                    });
+                    let on_thumb = live
+                        .peek()
+                        .value
+                        .thumbs()
+                        .any(|thumb| track.covers(fraction(thumb, min, max), x));
                     let value = SliderCoreValue::Single(min + track.fraction_at(x)? * (max - min))
                         .snapped(min, max, step)
                         .thumb(0);
@@ -944,6 +1088,7 @@ fn use_hover(live: Signal<Live>, grid: Grid, elements: Elements) -> Hover {
         measuring,
         resets,
         refresh,
+        vertical,
     }
 }
 
@@ -980,7 +1125,8 @@ impl Hover {
             return;
         }
         let mut x = self.x;
-        x.set(Some(event.data().client_coordinates().x));
+        let client = event.data().client_coordinates();
+        x.set(Some(if self.vertical { client.y } else { client.x }));
         self.refresh.call(());
     }
 }
@@ -996,6 +1142,7 @@ struct DragContext {
     thumb_track: Signal<Option<ThumbTrack>>,
     starting: CopyValue<Starting>,
     press_focus: PressFocus,
+    vertical: bool,
 }
 
 impl DragContext {
@@ -1030,8 +1177,8 @@ impl DragContext {
             ..Starting::default()
         });
         let elements = self.elements;
-        let rtl = elements.root.is_rtl();
-        self.measured.rtl.set(rtl);
+        let (rtl, vertical) = (elements.root.is_rtl(), self.vertical);
+        self.measured.rtl.set(rtl || vertical);
         let mut thumb_track = self.thumb_track;
         let track = *thumb_track.peek();
         if let Some(track) = track.filter(|track| !track.stale) {
@@ -1051,34 +1198,35 @@ impl DragContext {
         let thumb_offset = elements.thumbs[0].client_offset();
         let ctx = self.clone();
         spawn(async move {
-            let (Ok(dimensions), Ok((left, _))) = (track_size.await, track_offset.await) else {
+            let (Ok(dimensions), Ok(track_at)) = (track_size.await, track_offset.await) else {
                 ctx.abandon(event);
                 return;
             };
-            if dimensions.width <= 0.0 {
+            let (start, length) = match vertical {
+                true => (track_at.1, dimensions.height),
+                false => (track_at.0, dimensions.width),
+            };
+            if length <= 0.0 {
                 ctx.abandon(event);
                 return;
             }
 
-            ctx.measured.left.set(left);
-            ctx.measured.width.set(dimensions.width);
+            ctx.measured.left.set(start);
+            ctx.measured.width.set(length);
             let thumb = thumb_size.await;
-            ctx.measured
-                .thumb
-                .set(thumb.as_ref().map_or(0.0, |size| size.width));
-            if let (Ok(thumb), Ok((_, top))) = (thumb, thumb_offset.await) {
-                thumb_track.set(Some(ThumbTrack {
-                    left,
-                    travel: dimensions.width - thumb.width,
-                    top,
-                    thumb,
-                    rtl,
-                    stale: false,
-                }));
+            ctx.measured.thumb.set(
+                thumb
+                    .as_ref()
+                    .map_or(0.0, |size| if vertical { size.height } else { size.width }),
+            );
+            if let (Ok(thumb), Ok(thumb_at)) = (thumb, thumb_offset.await) {
+                thumb_track.set(Some(track_geometry(
+                    dimensions, track_at, thumb, thumb_at, rtl, vertical,
+                )));
             }
 
             let steps = ctx.steps;
-            match steps.position_at.call(event.client.x) {
+            match steps.position_at.call(along(event.client, vertical)) {
                 Some(raw) => {
                     let heading = ctx
                         .starting
@@ -1117,12 +1265,16 @@ impl DragContext {
         if waiting.measuring {
             let mut starting = self.starting;
             starting.set(Starting {
-                moved_to: Some(event.client.x),
+                moved_to: Some(along(event.client, self.vertical)),
                 ..waiting
             });
             return;
         }
-        if let Some(raw) = self.steps.position_at.call(event.client.x) {
+        if let Some(raw) = self
+            .steps
+            .position_at
+            .call(along(event.client, self.vertical))
+        {
             self.steps.slide.call(raw);
         }
     }
@@ -1230,6 +1382,11 @@ fn SliderBody(live: Signal<Live>, core: SliderCoreProps) -> Element {
     // read-only one is still reached, read and posted.
     let editable = interactive && !props.readonly;
     let focusable = props.focusable;
+    let vertical = props.vertical;
+    if vertical && (props.bars.is_some() || !props.segments.is_empty()) {
+        warn("Slider: a vertical track draws a line; `bars` and `segments` are dropped.");
+    }
+    let bars = props.bars.clone().filter(|_| !vertical);
 
     if props.oninput.is_none() && !disabled {
         warn("Slider: `value` without `oninput` can never change.");
@@ -1249,7 +1406,7 @@ fn SliderBody(live: Signal<Live>, core: SliderCoreProps) -> Element {
     // The hover preview's value and geometry, measured at the first move over the slider.
     let previews = props.preview_on_hover
         || try_use_context::<HoverPreview>().is_some() && !props.segments.is_empty();
-    let hover = use_hover(live, grid, elements);
+    let hover = use_hover(live, grid, elements, vertical);
 
     // Moves and a release that arrive before the measuring task has grabbed
     // (a sideways touch starts mid-move) wait for the `Start`.
@@ -1267,6 +1424,7 @@ fn SliderBody(live: Signal<Live>, core: SliderCoreProps) -> Element {
         thumb_track,
         starting,
         press_focus,
+        vertical,
     };
     let (on_start, on_move, on_end) = (ctx.clone(), ctx.clone(), ctx);
     let options = DragOptions {
@@ -1275,7 +1433,11 @@ fn SliderBody(live: Signal<Live>, core: SliderCoreProps) -> Element {
         onmove: Callback::new(move |event: DragMove| on_move.drag_move(event)),
         onend: Callback::new(move |_| on_end.drag_end()),
     };
-    let drag = use_sideways_drag(options, Callback::new(move |()| *on_thumb.peek()));
+    let drag = use_sideways_drag_if(
+        options,
+        Callback::new(move |()| *on_thumb.peek()),
+        !vertical,
+    );
     let onpointerdown = use_callback(move |event: Event<PointerData>| {
         drag.onpointerdown.call(event);
         on_thumb.set(false);
@@ -1313,7 +1475,10 @@ fn SliderBody(live: Signal<Live>, core: SliderCoreProps) -> Element {
 
     let marks = visible_marks(&props.marks, min, max);
     let marks_labeled = marks.iter().any(|mark| mark.label.is_some());
-    let (segments, dropped) = track_segments(&props.segments, min, max);
+    let (segments, dropped) = match vertical {
+        true => (Vec::new(), false),
+        false => track_segments(&props.segments, min, max),
+    };
     if dropped {
         warn("Slider: a segment starting outside `min..max`, or at another's start, is dropped.");
     }
@@ -1329,7 +1494,8 @@ fn SliderBody(live: Signal<Live>, core: SliderCoreProps) -> Element {
         .with("readonly", props.readonly)
         .with("marks-labeled", marks_labeled)
         .with("plain", props.plain)
-        .with("bars", props.bars.is_some())
+        .with("bars", bars.is_some())
+        .with("vertical", vertical)
         .with("segments", !segments.is_empty())
         .into();
 
@@ -1405,7 +1571,8 @@ fn SliderBody(live: Signal<Live>, core: SliderCoreProps) -> Element {
                         invalid: props.invalid,
                         readonly: props.readonly,
                         plain: props.plain,
-                        bars: props.bars,
+                        bars,
+                        vertical,
                         segments,
                         segment_text,
                         group_digits: props.group_digits,
@@ -1446,6 +1613,7 @@ struct SliderThumbsProps {
     readonly: bool,
     plain: bool,
     bars: Option<Vec<f64>>,
+    vertical: bool,
     segments: Vec<TrackSegment>,
     segment_text: &'static str,
     group_digits: bool,
@@ -1482,16 +1650,31 @@ fn SliderThumbs(props: SliderThumbsProps) -> Element {
     let Live { value, thumb_fill } = live();
     let bar = value.bar(min, max);
 
+    let vertical = props.vertical;
     let bar_class = use_css(
-        Some(match value {
-            SliderCoreValue::Single(_) => &SLIDER_BAR_SX,
-            SliderCoreValue::Range { .. } => &SLIDER_RANGE_BAR_SX,
+        Some(match (value, vertical) {
+            (SliderCoreValue::Single(_), false) => &SLIDER_BAR_SX,
+            (SliderCoreValue::Range { .. }, false) => &SLIDER_RANGE_BAR_SX,
+            (SliderCoreValue::Single(_), true) => &SLIDER_BAR_VERTICAL_SX,
+            (SliderCoreValue::Range { .. }, true) => &SLIDER_RANGE_BAR_VERTICAL_SX,
         }),
         CssLayer::Framework,
     );
-    let mark_class = use_css(Some(&SLIDER_MARK_SX), CssLayer::Framework);
-    let mark_label_class = use_css(Some(&SLIDER_MARK_LABEL_SX), CssLayer::Framework);
-    let anchor_class = use_css(Some(&SLIDER_THUMB_ANCHOR_SX), CssLayer::Framework);
+    let (mark_sx, mark_label_sx, anchor_sx) = match vertical {
+        false => (
+            &SLIDER_MARK_SX,
+            &SLIDER_MARK_LABEL_SX,
+            &SLIDER_THUMB_ANCHOR_SX,
+        ),
+        true => (
+            &SLIDER_MARK_VERTICAL_SX,
+            &SLIDER_MARK_LABEL_VERTICAL_SX,
+            &SLIDER_THUMB_ANCHOR_VERTICAL_SX,
+        ),
+    };
+    let mark_class = use_css(Some(mark_sx), CssLayer::Framework);
+    let mark_label_class = use_css(Some(mark_label_sx), CssLayer::Framework);
+    let anchor_class = use_css(Some(anchor_sx), CssLayer::Framework);
     // One prepared style, cloned per thumb: the two are identical, and a
     // second `use_box` would be a second hook for nothing.
     let thumb_style = use_box().framework_sx(&SLIDER_THUMB_SX).prepare();
@@ -1577,7 +1760,10 @@ fn SliderThumbs(props: SliderThumbsProps) -> Element {
                     "-1"
                 },
             )
-            .attr("aria-orientation", "horizontal")
+            .attr(
+                "aria-orientation",
+                if vertical { "vertical" } else { "horizontal" },
+            )
             .attr("aria-valuemin", thumb_min)
             .attr("aria-valuemax", thumb_max)
             .attr("aria-valuenow", thumb_value)
@@ -1866,6 +2052,32 @@ mod tests {
         assert_eq!(filled_bars(0.5, 0), 0);
     }
 
+    /// Todo 3963: an upright track's minimum is at the bottom, and the bubble rides its y.
+    #[test]
+    fn an_upright_track_maps_from_the_bottom() {
+        let thumb = Dimensions {
+            width: 20.0,
+            height: 20.0,
+        };
+        let track = super::track_geometry(
+            Dimensions {
+                width: 4.0,
+                height: 220.0,
+            },
+            (50.0, 100.0),
+            thumb,
+            (42.0, 0.0),
+            false,
+            true,
+        );
+        assert_eq!(track.fraction_at(110.0), Some(1.0), "the top end");
+        assert_eq!(track.fraction_at(310.0), Some(0.0), "the bottom end");
+        assert_eq!(track.fraction_at(160.0), Some(0.75));
+        let at = track.at(0.75);
+        assert_eq!((at.x, at.y), (42.0, 150.0));
+        assert!(track.covers(0.75, 160.0) && !track.covers(0.75, 200.0));
+    }
+
     /// Todo 2166: the hover preview maps the pointer over the thumb's travel, as a drag does.
     #[test]
     fn a_pointer_maps_to_the_fraction_under_it() {
@@ -1878,6 +2090,7 @@ mod tests {
                 height: 20.0,
             },
             rtl,
+            vertical: false,
             stale: false,
         };
         assert_eq!(track(false).fraction_at(110.0), Some(0.0));

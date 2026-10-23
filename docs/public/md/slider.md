@@ -187,6 +187,32 @@ fn Demo() -> Element {
 }
 ```
 
+`orientation: "vertical"` stands the track upright, bottom to top:
+
+```rust
+use dioxus::prelude::*;
+use libero::components::{Slider, SliderChangeEvent, SliderMark};
+
+#[component]
+fn Demo() -> Element {
+    let mut level = use_signal(|| 60.0);
+
+    rsx! {
+        Slider {
+            label: "Level",
+            orientation: "vertical",
+            value: level(),
+            marks: vec![
+                SliderMark::labeled(0.0, "0 dB"),
+                SliderMark::labeled(50.0, "50"),
+                SliderMark::labeled(100.0, "100"),
+            ],
+            oninput: move |event: SliderChangeEvent| level.set(event.value()),
+        }
+    }
+}
+```
+
 ## Props
 
 ### `Slider`
@@ -216,6 +242,7 @@ fn Demo() -> Element {
 | `readonly` | `bool` | `false` | Focusable and posted with the form, but not editable. `disabled` drops the slider from the tab order and the post instead. |
 | `track` | `SliderTrack` | `Line` | How the track is drawn. `SliderTrack::Bars(heights)` draws a row of rounded bars, each as tall as its fraction (0 to 1) of a taller track, like `Audio`'s waveform; the bars up to the value fill in `color`. |
 | `preview_on_hover` | `bool` | `false` | Shows a bubble over the value a hovering mouse or pen points at, before a press picks it. Escape hides it until the pointer leaves the slider. Touch has no hover, so it never shows there. The bubble follows the pointer and goes when it leaves the slider, so it is not hoverable (WCAG 1.4.13). |
+| `orientation` | `Orientation` | `horizontal` | `vertical` runs the track bottom to top, `12rem` tall unless `sx` sets a `height`, with the mark captions beside it. A touch anywhere on it drags, since no swipe scrolls past an upright track. A vertical track is a line: `bars` and `segments` are dropped. |
 
 ### `SliderSegment`
 

@@ -175,6 +175,20 @@ pub(crate) fn use_sideways_drag(options: DragOptions, grabs: Callback<(), bool>)
     use_drag_inner(options, Activation::Sideways, Some(grabs), None)
 }
 
+/// [`use_sideways_drag`] while `sideways`, else a drag from the press: for a
+/// slider that may stand upright, where no swipe scrolls past it.
+pub(crate) fn use_sideways_drag_if(
+    options: DragOptions,
+    grabs: Callback<(), bool>,
+    sideways: bool,
+) -> Drag {
+    let activation = match sideways {
+        true => Activation::Sideways,
+        false => Activation::Press,
+    };
+    use_drag_inner(options, activation, Some(grabs), None)
+}
+
 /// `touch-action: pan-y` for a [`use_sideways_drag`] control: the browser
 /// keeps a vertical swipe and cancels the pointer.
 pub(crate) fn sideways_drag_sx() -> Sx {
