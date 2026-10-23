@@ -7,6 +7,7 @@ use chrono::{NaiveDate, NaiveDateTime, NaiveTime};
 use super::{
     DateRange,
     chrono_field::{FieldOptions, chrono_field},
+    date_value::DayGrid,
     format::{Token, WeekdayWidth, tokens, uses_twelve_hours},
     picker_field::picker_field,
     props::date_props,
@@ -113,7 +114,7 @@ fn token_text(token: &Token) -> String {
 }
 
 date_props! {
-    field DateFieldProps(NaiveDate, NaiveDate): format, limits, exclude_date, today, calendar, close_on_change
+    field DateFieldProps(NaiveDate, NaiveDate): format, limits, exclude_date, today, calendar, grid, presets, open_to, close_on_change
 }
 
 /// A text field holding a day, with a `DatePicker` in a dropdown.
@@ -139,9 +140,17 @@ pub fn DateField(props: DateFieldProps) -> Element {
         close_on_change: props.close_on_change,
         calendar: props.calendar.clone(),
         days: props.days,
+        grid: DayGrid::new(
+            props.week_numbers,
+            props.weekend_days.as_deref(),
+            props.hide_weekdays,
+            props.hide_outside_days,
+        ),
+        open_to: props.open_to,
         ..FieldOptions::default()
     };
-    chrono_field::<NaiveDate>(picker_field!(props, props.today), options)
+    let presets = props.presets.clone();
+    chrono_field::<NaiveDate>(picker_field!(props, props.today), options, presets)
 }
 
 date_props! {
@@ -170,14 +179,16 @@ pub fn TimeField(props: TimeFieldProps) -> Element {
         variant: props.variant.clone(),
         with_seconds: props.with_seconds,
         step: props.step,
+        hour_step: props.hour_step,
+        second_step: props.second_step,
         twelve_hour: props.twelve_hour,
         ..FieldOptions::default()
     };
-    chrono_field::<NaiveTime>(picker_field!(props, None), options)
+    chrono_field::<NaiveTime>(picker_field!(props, None), options, Vec::new())
 }
 
 date_props! {
-    field DateTimeFieldProps(NaiveDateTime, NaiveDateTime): format, time_format, limits, exclude_date, today, clock, calendar
+    field DateTimeFieldProps(NaiveDateTime, NaiveDateTime): format, time_format, limits, exclude_date, today, clock, calendar, grid
 }
 
 /// A text field holding a day and a time; the dropdown picks the day, then the time.
@@ -204,16 +215,24 @@ pub fn DateTimeField(props: DateTimeFieldProps) -> Element {
         variant: props.variant.clone(),
         with_seconds: props.with_seconds,
         step: props.step,
+        hour_step: props.hour_step,
+        second_step: props.second_step,
         twelve_hour: props.twelve_hour,
         calendar: props.calendar.clone(),
         days: props.days,
+        grid: DayGrid::new(
+            props.week_numbers,
+            props.weekend_days.as_deref(),
+            props.hide_weekdays,
+            props.hide_outside_days,
+        ),
         ..FieldOptions::default()
     };
-    chrono_field::<NaiveDateTime>(picker_field!(props, props.today), options)
+    chrono_field::<NaiveDateTime>(picker_field!(props, props.today), options, Vec::new())
 }
 
 date_props! {
-    field DateRangeFieldProps(DateRange<NaiveDate>, NaiveDate): format, limits, exclude_date, today, columns, close_on_change
+    field DateRangeFieldProps(DateRange<NaiveDate>, NaiveDate): format, limits, exclude_date, today, columns, grid, presets, close_on_change
 }
 
 /// A text field holding a range of days, with two months in a dropdown, one under `sm`.
@@ -238,13 +257,20 @@ pub fn DateRangeField(props: DateRangeFieldProps) -> Element {
         exclude_date: props.exclude_date,
         columns: props.columns,
         close_on_change: props.close_on_change,
+        grid: DayGrid::new(
+            props.week_numbers,
+            props.weekend_days.as_deref(),
+            props.hide_weekdays,
+            props.hide_outside_days,
+        ),
         ..FieldOptions::default()
     };
-    chrono_field::<DateRange<NaiveDate>>(picker_field!(props, props.today), options)
+    let presets = props.presets.clone();
+    chrono_field::<DateRange<NaiveDate>>(picker_field!(props, props.today), options, presets)
 }
 
 date_props! {
-    field DateTimeRangeFieldProps(DateRange<NaiveDateTime>, NaiveDateTime): format, time_format, limits, exclude_date, today, clock
+    field DateTimeRangeFieldProps(DateRange<NaiveDateTime>, NaiveDateTime): format, time_format, limits, exclude_date, today, clock, grid
 }
 
 /// A text field holding a range of moments; the dropdown picks each end's day, then time.
@@ -271,10 +297,18 @@ pub fn DateTimeRangeField(props: DateTimeRangeFieldProps) -> Element {
         variant: props.variant.clone(),
         with_seconds: props.with_seconds,
         step: props.step,
+        hour_step: props.hour_step,
+        second_step: props.second_step,
         twelve_hour: props.twelve_hour,
+        grid: DayGrid::new(
+            props.week_numbers,
+            props.weekend_days.as_deref(),
+            props.hide_weekdays,
+            props.hide_outside_days,
+        ),
         ..FieldOptions::default()
     };
-    chrono_field::<DateRange<NaiveDateTime>>(picker_field!(props, props.today), options)
+    chrono_field::<DateRange<NaiveDateTime>>(picker_field!(props, props.today), options, Vec::new())
 }
 
 #[cfg(test)]

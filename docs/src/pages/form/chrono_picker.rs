@@ -1,12 +1,15 @@
 use super::date_common::{
-    calendar_controls, day_limits, has_days, has_time, is_mini, is_on, is_weekend, moment_limits,
-    shared_controls, shown, step_of, time_limits, today_of, twelve_hour_of,
+    calendar_controls, day_limits, day_presets, grid_controls, has_days, has_time, hour_step_of,
+    is_mini, is_on, is_weekend, moment_limits, open_to_of, range_presets, second_step_of,
+    shared_controls, shown, step_of, time_limits, today_of, twelve_hour_of, with_seconds_of,
 };
 use super::dropdown_parts::chrono_picker_parts;
 use crate::components::{Control, Demo, DemoValues, DocPage, DocSection, a11y, prop, props};
 use dioxus::prelude::*;
 use libero::chrono::{NaiveDate, NaiveDateTime, NaiveTime};
-use libero::components::{ChronoPicker, Code, DateLevel, DateRange, Flex, Text};
+use libero::components::{
+    ChronoPicker, Code, DateLevel, DatePicker, DatePreset, DateRange, Flex, Text,
+};
 
 const KINDS: [&str; 7] = [
     "date",
@@ -52,7 +55,15 @@ pub fn ChronoPickerPage() -> Element {
                     prop("days", "usize").default(theme.chrono_picker.days.to_string()).doc("Days in the mini calendar's row."),
                     prop("variant", "TimePickerVariant").default(theme.time_picker.variant.as_str()).doc("A digital clock, `HH:MM` with a column to turn per part, or a clock face, for values with a time."),
                     prop("with_seconds", "bool").default("false").doc("Seconds: a column on the digital clock, a button and hand on the clock face."),
-                    prop("step", "u8").default(theme.time_picker.step.to_string()).doc("Minutes between the offered minutes."),
+                    prop("step", "u8").default(theme.time_picker.step.to_string()).doc("The minute step: minutes between the offered minutes."),
+                    prop("hour_step", "u8").default("1").doc("Hours between the offered hours, counted from midnight. The clock face disables the hours between."),
+                    prop("second_step", "u8").default("1").doc("Seconds between the offered seconds, with `with_seconds`."),
+                    prop("open_to", "DateLevel").default("level").doc("The view a `NaiveDate` picker first shows, as `DateLevel::Year` to start from the years. A level below `level` shows `level`."),
+                    prop("presets", "Vec<DatePreset<V>>").doc("Values offered as buttons beside the calendar, above it on a phone. Pressing one picks it and shows its month. For a day or a range of days."),
+                    prop("week_numbers", "bool").default("false").doc("An ISO week number before each week of days, a row header. Not in the mini calendar."),
+                    prop("weekend_days", "Vec<Weekday>").default("Saturday, Sunday").doc("The days marked `data-weekend` and tinted in the error colour."),
+                    prop("hide_weekdays", "bool").default("false").doc("Hides the weekday names over the days. Screen readers still get them as column headers."),
+                    prop("hide_outside_days", "bool").default("false").doc("Blanks instead of the neighbouring months' days."),
                     prop("twelve_hour", "bool").default("formats").doc("A 12-hour clock with AM and PM. Defaults to whether `Formats::time` is one."),
                     prop("today", "NaiveDate").doc("The day marked as today. Unset, the platform clock answers after mount on the web. Elsewhere no day is marked."),
                     prop("size", "Size").default(theme.chrono_picker.size.as_str()).doc("Cell, option and font size."),
@@ -165,10 +176,23 @@ pub fn ChronoPickerPage() -> Element {
                             false => vec![],
                         }
                     }),
-                ], calendar_controls(), shared_controls()].concat(),
+                ], calendar_controls(), grid_controls(), shared_controls()].concat(),
                 render: move |values: DemoValues| rsx! {
                     ChronoPickerDemo { values }
                 },
+            }
+
+            DocSection {
+                title: "Presets and week numbers",
+                Text {
+                    Code { source: "presets" }
+                    " puts buttons beside the calendar that pick a value in one press and show its month. "
+                    Code { source: "week_numbers" }
+                    " heads each week with its ISO number. Weekends are tinted; "
+                    Code { source: "weekend_days" }
+                    " names other days."
+                }
+                PresetsExample {}
             }
 
             DocSection {
@@ -199,6 +223,28 @@ pub fn ChronoPickerPage() -> Element {
     }
 }
 
+#[component]
+fn PresetsExample() -> Element {
+    let mut date = use_signal(|| day(14));
+    let presets = vec![
+        DatePreset::new(
+            "Start of month",
+            NaiveDate::from_ymd_opt(2026, 9, 1).expect("a day"),
+        ),
+        DatePreset::new(
+            "End of month",
+            NaiveDate::from_ymd_opt(2026, 9, 30).expect("a day"),
+        ),
+        DatePreset::new(
+            "Next month",
+            NaiveDate::from_ymd_opt(2026, 10, 1).expect("a day"),
+        ),
+    ];
+    rsx! {
+        DatePicker { value: date(), onchange: move |next| date.set(next), presets, week_numbers: true }
+    }
+}
+
 /// One signal per value type, so switching types keeps what was picked.
 #[component]
 fn ChronoPickerDemo(values: DemoValues) -> Element {
@@ -220,7 +266,15 @@ fn ChronoPickerDemo(values: DemoValues) -> Element {
     let calendar = values.str("calendar");
     let days = values.str("days").parse::<usize>().ok();
     let step = step_of(&values);
-    let with_seconds = is_on(&values, "with_seconds");
+    let with_seconds = with_seconds_of(&values);
+    let (hour_step, second_step) = (hour_step_of(&values), second_step_of(&values));
+    let on = |name: &str| is_on(&values, name).then_some(true);
+    let (week_numbers, hide_weekdays, hide_outside_days) = (
+        on("week_numbers"),
+        on("hide_weekdays"),
+        on("hide_outside_days"),
+    );
+    let open_to = open_to_of(&values);
     let twelve_hour = twelve_hour_of(&values);
     let today = today_of(&values);
     let (min_day, max_day) = day_limits(&values);
@@ -232,7 +286,7 @@ fn ChronoPickerDemo(values: DemoValues) -> Element {
             rsx! {
                 ChronoPicker {
                     value: month(), onchange: move |next| month.set(next), level: DateLevel::Month,
-                    min: min_day, max: max_day, today, size, disabled,
+                    min: min_day, max: max_day, open_to, today, size, disabled,
                 }
             },
             shown(month()),
@@ -250,7 +304,7 @@ fn ChronoPickerDemo(values: DemoValues) -> Element {
             rsx! {
                 ChronoPicker {
                     value: time(), onchange: move |next| time.set(next),
-                    min: min_time, max: max_time, variant, with_seconds, step, twelve_hour, size, disabled,
+                    min: min_time, max: max_time, variant, with_seconds, step, hour_step, second_step, twelve_hour, size, disabled,
                 }
             },
             shown(time()),
@@ -260,7 +314,8 @@ fn ChronoPickerDemo(values: DemoValues) -> Element {
                 ChronoPicker {
                     value: date_time(), onchange: move |next| date_time.set(next),
                     min: min_moment, max: max_moment, exclude_date, today, calendar, days,
-                    variant, with_seconds, step, twelve_hour, size, disabled,
+                    week_numbers, hide_weekdays, hide_outside_days,
+                    variant, with_seconds, step, hour_step, second_step, twelve_hour, size, disabled,
                 }
             },
             shown(date_time()),
@@ -270,6 +325,7 @@ fn ChronoPickerDemo(values: DemoValues) -> Element {
                 ChronoPicker {
                     value: date_range(), onchange: move |next| date_range.set(next),
                     min: min_day, max: max_day, exclude_date, columns, today, size, disabled,
+                    week_numbers, hide_weekdays, hide_outside_days, presets: range_presets(&values),
                 }
             },
             shown(date_range()),
@@ -279,7 +335,8 @@ fn ChronoPickerDemo(values: DemoValues) -> Element {
                 ChronoPicker {
                     value: date_time_range(), onchange: move |next| date_time_range.set(next),
                     min: min_moment, max: max_moment, exclude_date, today,
-                    variant, with_seconds, step, twelve_hour, size, disabled,
+                    week_numbers, hide_weekdays, hide_outside_days,
+                    variant, with_seconds, step, hour_step, second_step, twelve_hour, size, disabled,
                 }
             },
             shown(date_time_range()),
@@ -289,6 +346,7 @@ fn ChronoPickerDemo(values: DemoValues) -> Element {
                 ChronoPicker {
                     value: date(), onchange: move |next| date.set(next),
                     min: min_day, max: max_day, allow_deselect, exclude_date, columns, calendar, days, today, size, disabled,
+                    week_numbers, hide_weekdays, hide_outside_days, open_to, presets: day_presets(&values),
                 }
             },
             shown(date()),

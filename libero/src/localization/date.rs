@@ -42,6 +42,8 @@ pub struct DateLocale {
     /// Names the button that pages a mini calendar's days back.
     pub previous_days: &'static str,
     pub next_days: &'static str,
+    /// Heads a calendar's week number column, and leads each number's name: `Week 12`.
+    pub week: &'static str,
     /// The error a date field shows for text it cannot read.
     pub invalid_date: &'static str,
     /// The error for a value before `min`, with no `max`: `{min}` in the field's format.
@@ -174,6 +176,7 @@ impl DateLocale {
         next_decade: "Next decade",
         previous_days: "Previous days",
         next_days: "Next days",
+        week: "Week",
         invalid_date: "Not a valid date",
         on_or_after: "Must be on or after {min}",
         on_or_before: "Must be on or before {max}",
@@ -244,6 +247,7 @@ impl DateLocale {
         next_decade: "Nächstes Jahrzehnt",
         previous_days: "Vorherige Tage",
         next_days: "Nächste Tage",
+        week: "Woche",
         invalid_date: "Kein gültiges Datum",
         // "Frühestens" and "spätestens" fit a day and a time alike.
         on_or_after: "Frühestens {min}",

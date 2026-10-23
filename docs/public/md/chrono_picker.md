@@ -74,7 +74,15 @@ uses and no turbofish.
 | `days` | `usize` | `7` | Days in the mini calendar's row. |
 | `variant` | `TimePickerVariant` | `analog` | A digital clock, `HH:MM` with a column to turn per part, or a clock face, for values with a time. |
 | `with_seconds` | `bool` | `false` | Seconds: a column on the digital clock, a button and hand on the clock face. |
-| `step` | `u8` | `5` | Minutes between the offered minutes. |
+| `step` | `u8` | `5` | The minute step: minutes between the offered minutes. |
+| `hour_step` | `u8` | `1` | Hours between the offered hours, counted from midnight. The clock face disables the hours between. |
+| `second_step` | `u8` | `1` | Seconds between the offered seconds, with `with_seconds`. |
+| `open_to` | `DateLevel` | `level` | The view a `NaiveDate` picker first shows, as `DateLevel::Year` to start from the years. A level below `level` shows `level`. |
+| `presets` | `Vec<DatePreset<V>>` | - | Values offered as buttons beside the calendar, above it on a phone. Pressing one picks it and shows its month. For a day or a range of days. |
+| `week_numbers` | `bool` | `false` | An ISO week number before each week of days, a row header. Not in the mini calendar. |
+| `weekend_days` | `Vec<Weekday>` | `Saturday, Sunday` | The days marked `data-weekend` and tinted in the error colour. |
+| `hide_weekdays` | `bool` | `false` | Hides the weekday names over the days. Screen readers still get them as column headers. |
+| `hide_outside_days` | `bool` | `false` | Blanks instead of the neighbouring months' days. |
 | `twelve_hour` | `bool` | `formats` | A 12-hour clock with AM and PM. Defaults to whether `Formats::time` is one. |
 | `today` | `NaiveDate` | - | The day marked as today. Unset, the platform clock answers after mount on the web. Elsewhere no day is marked. |
 | `size` | `Size` | `md` | Cell, option and font size. |
@@ -121,6 +129,9 @@ picker in it with the field's `dropdown_parts`.
 | `ChronoPickerPart::Ticks` | `ticks` | Analog clock: the ring of ticks for steps finer than the marks. |
 | `ChronoPickerPart::Hand` | `hand` | Analog clock: the hand. |
 | `ChronoPickerPart::Pivot` | `pivot` | Analog clock: the dot the hand turns on. |
+| `ChronoPickerPart::Presets` | `presets` | Calendar with `presets`: the column of preset buttons, a row on a phone. |
+| `ChronoPickerPart::Preset` | `preset` | Calendar with `presets`: a preset button. |
+| `ChronoPickerPart::WeekNumber` | `week-number` | Days with `week_numbers`: a week's number, and the empty cell over them. |
 
 ## Accessibility
 

@@ -1,7 +1,7 @@
 use dioxus::prelude::*;
 use pictogram_icons_lucide as lucide;
 
-use chrono::{Datelike, NaiveDate};
+use chrono::{Datelike, NaiveDate, Weekday};
 
 use crate::{
     components::{
@@ -15,7 +15,7 @@ use crate::{
     theme::Size,
 };
 
-use super::super::flows::short_day;
+use super::super::{date_value::DayGrid, flows::short_day};
 use super::styles::NAV_SX;
 use super::view::{Strip, View};
 use super::{
@@ -415,6 +415,7 @@ pub(super) struct WeekProps {
     month: NaiveDate,
     /// Side by side, a neighbour's days would appear twice: draw blanks.
     blanks: bool,
+    grid: DayGrid,
     /// Clipped to the week.
     selection: Selection,
     /// `selection` without the preview: what `aria-selected` says.
@@ -440,6 +441,7 @@ pub(super) fn Week(props: WeekProps) -> Element {
         first,
         month,
         blanks,
+        grid,
         selection,
         value,
         today,
@@ -476,6 +478,12 @@ pub(super) fn Week(props: WeekProps) -> Element {
         ),
         false => (0, 0),
     };
+    // ISO weeks run Monday to Sunday: the row's Thursday is in the week most of its days are.
+    let thursday =
+        (Weekday::Thu.num_days_from_sunday() + 7 - first.weekday().num_days_from_sunday()) % 7;
+    let week_number = grid
+        .week_numbers
+        .then(|| day(i64::from(thursday)).iso_week().week());
     let cell = move |offset: i64| {
         let day = day(offset);
         let (picked, in_range) = selection.marks(day, None);
@@ -489,6 +497,14 @@ pub(super) fn Week(props: WeekProps) -> Element {
     // Keyed by column, so paging diffs the days in place.
     rsx! {
         div { role: "row",
+            if let Some(number) = week_number {
+                div {
+                    role: "rowheader",
+                    "data-slot": ChronoPickerPart::WeekNumber.slot(),
+                    "aria-label": "{names.week} {number}",
+                    "{number}"
+                }
+            }
             for offset in 0..lead {
                 div { key: "{offset}", role: "gridcell", "data-slot": ChronoPickerPart::Blank.slot() }
             }
@@ -502,6 +518,7 @@ pub(super) fn Week(props: WeekProps) -> Element {
                         "data-slot": ChronoPickerPart::Day.slot(),
                         "data-date": "{day}",
                         "data-outside": outside.then_some("true"),
+                        "data-weekend": grid.is_weekend(day).then_some("true"),
                         "data-today": (today == Some(day)).then_some("true"),
                         "aria-current": (today == Some(day)).then_some("date"),
                         "data-selected": picked.then_some("true"),
@@ -544,12 +561,20 @@ pub(super) fn Week(props: WeekProps) -> Element {
     }
 }
 
-/// The weekday names over a month, own scope so it skips every re-render.
+/// The weekday names over a month, own scope so it skips every re-render. `hidden` keeps
+/// them for screen readers only.
 #[component]
-pub(super) fn Weekdays(first_weekday: usize) -> Element {
+pub(super) fn Weekdays(first_weekday: usize, week_numbers: bool, hidden: bool) -> Element {
     let names = &use_localization().date;
     rsx! {
-        div { role: "row",
+        div { role: "row", "data-hidden": hidden.then_some("true"),
+            if week_numbers {
+                div {
+                    role: "columnheader",
+                    "data-slot": ChronoPickerPart::WeekNumber.slot(),
+                    "aria-label": names.week,
+                }
+            }
             for index in 0..7 {
                 div {
                     key: "{index}",

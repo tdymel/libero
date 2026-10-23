@@ -2,7 +2,7 @@ use dioxus::prelude::*;
 
 use super::{
     calendar::DateLevel,
-    date_value::{DateValue, PickerArgs, PickerOptions, use_ignored_props_warning},
+    date_value::{DateValue, DayGrid, PickerArgs, PickerOptions, use_ignored_props_warning},
     format::uses_twelve_hours,
     props::date_props,
 };
@@ -63,11 +63,17 @@ parts_enum! {
         Hand = "hand" => "& [data-slot='hand']",
         /// Analog clock: the dot the hand turns on.
         Pivot = "pivot" => "& [data-slot='pivot']",
+        /// Calendar with `presets`: the column of preset buttons, a row on a phone.
+        Presets = "presets" => "& [data-slot='presets']",
+        /// Calendar with `presets`: a preset button.
+        Preset = "preset" => "& [data-slot='preset']",
+        /// Days with `week_numbers`: a week's number, and the empty cell over them.
+        WeekNumber = "week-number" => "& [data-slot='week-number']",
     }
 }
 
 date_props! {
-    picker ChronoPickerProps<V: DateValue>(V, V::Bound): limits, exclude_date, allow_deselect, columns, level, calendar, today, clock
+    picker ChronoPickerProps<V: DateValue>(V, V::Bound): limits, exclude_date, allow_deselect, columns, level, open_to, calendar, grid, presets, today, clock
 }
 
 /// One picker for every date and time value; the value's type picks what it draws.
@@ -98,13 +104,21 @@ pub fn ChronoPicker<V: DateValue>(props: ChronoPickerProps<V>) -> Element {
             ("allow_deselect", props.allow_deselect.is_some()),
             ("columns", props.columns.is_some()),
             ("level", props.level.is_some()),
+            ("open_to", props.open_to.is_some()),
             ("calendar", props.calendar.as_ref().is_some()),
             ("days", props.days.is_some()),
             ("today", props.today.is_some()),
             ("variant", props.variant.as_ref().is_some()),
             ("with_seconds", props.with_seconds.is_some()),
             ("step", props.step.is_some()),
+            ("hour_step", props.hour_step.is_some()),
+            ("second_step", props.second_step.is_some()),
             ("twelve_hour", props.twelve_hour.is_some()),
+            ("week_numbers", props.week_numbers.is_some()),
+            ("weekend_days", props.weekend_days.is_some()),
+            ("hide_weekdays", props.hide_weekdays.is_some()),
+            ("hide_outside_days", props.hide_outside_days.is_some()),
+            ("presets", !props.presets.is_empty()),
         ],
         match level {
             DateLevel::Day => &[],
@@ -114,6 +128,11 @@ pub fn ChronoPicker<V: DateValue>(props: ChronoPickerProps<V>) -> Element {
                 "columns",
                 "calendar",
                 "days",
+                "week_numbers",
+                "weekend_days",
+                "hide_weekdays",
+                "hide_outside_days",
+                "presets",
             ],
         },
     );
@@ -127,15 +146,25 @@ pub fn ChronoPicker<V: DateValue>(props: ChronoPickerProps<V>) -> Element {
             allow_deselect: props.allow_deselect.unwrap_or(false),
             columns: props.columns,
             level,
+            open_to: props.open_to,
             variant: props.variant.copied_or(theme.time_picker.variant),
             with_seconds: props.with_seconds.unwrap_or(false),
             step: props.step,
+            hour_step: props.hour_step,
+            second_step: props.second_step,
             twelve_hour: props
                 .twelve_hour
                 .unwrap_or_else(|| uses_twelve_hours(time_format)),
             calendar: props.calendar.copied_or(theme.chrono_picker.calendar),
             days: props.days.unwrap_or(theme.chrono_picker.days),
+            grid: DayGrid::new(
+                props.week_numbers,
+                props.weekend_days.as_deref(),
+                props.hide_weekdays,
+                props.hide_outside_days,
+            ),
         },
+        presets: props.presets,
         today: props.today,
         size: props.size,
         focusable: props.focusable.unwrap_or(true),
@@ -193,6 +222,9 @@ mod tests {
                 "ticks",
                 "hand",
                 "pivot",
+                "presets",
+                "preset",
+                "week-number",
             ]
         );
         for part in ChronoPickerPart::ALL {
@@ -210,6 +242,10 @@ mod tests {
             crate::LiberoProvider {
                 DatePicker { value: NaiveDate::from_ymd_opt(2026, 9, 14), columns: 2 }
                 DatePicker { value: NaiveDate::from_ymd_opt(2026, 9, 14), calendar: "mini" }
+                DatePicker {
+                    week_numbers: true,
+                    presets: vec![super::super::DatePreset::new("Day", NaiveDate::from_ymd_opt(2026, 9, 1).unwrap())],
+                }
                 MonthPicker {}
                 TimePicker { value: NaiveTime::from_hms_opt(9, 30, 0), variant: "digital" }
                 TimePicker { value: NaiveTime::from_hms_opt(9, 30, 0), variant: "analog" }
@@ -224,6 +260,89 @@ mod tests {
                 "{part:?} not drawn"
             );
         }
+    }
+
+    fn january(body: Element) -> String {
+        dioxus_ssr::render_element(rsx! {
+            crate::LiberoProvider { {body} }
+        })
+    }
+
+    /// Todo 4003: a week's number is its Thursday's ISO week, whatever day the week starts on.
+    #[test]
+    fn week_numbers_head_each_week() {
+        let html = january(rsx! {
+            DatePicker { value: NaiveDate::from_ymd_opt(2026, 1, 15), week_numbers: true }
+        });
+        assert!(
+            html.contains(r#"role="rowheader" data-slot="week-number" aria-label="Week 1""#),
+            "{html}"
+        );
+        assert!(html.contains(r#"aria-label="Week 2""#));
+        assert!(html.contains(r#"role="columnheader" data-slot="week-number" aria-label="Week""#));
+    }
+
+    /// Todo 4003: Saturday and Sunday by default, or the days given.
+    #[test]
+    fn weekend_days_are_marked() {
+        let value = NaiveDate::from_ymd_opt(2026, 1, 15);
+        let weekend = |html: String| html.matches(r#"data-weekend="true""#).count();
+        assert_eq!(weekend(january(rsx! { DatePicker { value } })), 12);
+        assert_eq!(
+            weekend(january(
+                rsx! { DatePicker { value, weekend_days: vec![chrono::Weekday::Fri] } }
+            )),
+            6
+        );
+    }
+
+    /// Todo 4003: hidden outside days leave blanks; hidden weekday names stay in the grid.
+    #[test]
+    fn outside_days_and_weekday_names_can_hide() {
+        let html = january(rsx! {
+            DatePicker { value: NaiveDate::from_ymd_opt(2026, 1, 15), hide_outside_days: true, hide_weekdays: true }
+        });
+        assert!(!html.contains(r#"data-outside="true""#));
+        assert!(html.contains(r#"data-slot="blank""#));
+        assert!(html.contains(r#"role="row" data-hidden="true""#));
+        assert!(html.contains(r#"data-slot="weekday""#));
+    }
+
+    /// Todo 4003: `open_to` picks the first view; one below `level` is ignored.
+    #[test]
+    fn open_to_picks_the_first_view() {
+        let years = january(rsx! { DatePicker { open_to: DateLevel::Year } });
+        assert!(years.contains(r#"data-slot="cell""#) && !years.contains(r#"data-slot="day""#));
+        let months = january(rsx! { MonthPicker { open_to: DateLevel::Day } });
+        assert!(months.contains(r#"data-slot="cell""#) && !months.contains(r#"data-slot="day""#));
+    }
+
+    /// Todo 3988: a preset equal to the value is pressed; one outside the limits is disabled.
+    #[test]
+    fn presets_say_which_one_is_picked() {
+        let day = |d| NaiveDate::from_ymd_opt(2026, 1, d).unwrap();
+        let html = january(rsx! {
+            DatePicker {
+                value: Some(day(15)),
+                min: day(10),
+                presets: vec![
+                    super::super::DatePreset::new("Picked", day(15)),
+                    super::super::DatePreset::new("Other", day(20)),
+                    super::super::DatePreset::new("Early", day(1)),
+                ],
+            }
+        });
+        let preset = |label: &str| {
+            let tag = html.split(&format!(">{label}<")).next().unwrap_or_default();
+            tag.rsplit("<button").next().unwrap_or_default().to_string()
+        };
+        assert!(
+            preset("Picked").contains(r#"aria-pressed="true""#),
+            "{html}"
+        );
+        assert!(preset("Other").contains(r#"aria-pressed="false""#));
+        assert!(preset("Early").contains("disabled"));
+        assert!(!preset("Other").contains("disabled"));
     }
 
     /// Todos 2307, 2308: a gridcell wraps each month and year button; the decade title is text.

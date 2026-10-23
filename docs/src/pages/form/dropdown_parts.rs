@@ -86,6 +86,18 @@ pub(super) fn chrono_picker_parts() -> Vec<(ChronoPickerPart, &'static str)> {
             ChronoPickerPart::Pivot,
             "Analog clock: the dot the hand turns on.",
         ),
+        (
+            ChronoPickerPart::Presets,
+            "Calendar with `presets`: the column of preset buttons, a row on a phone.",
+        ),
+        (
+            ChronoPickerPart::Preset,
+            "Calendar with `presets`: a preset button.",
+        ),
+        (
+            ChronoPickerPart::WeekNumber,
+            "Days with `week_numbers`: a week's number, and the empty cell over them.",
+        ),
     ]
 }
 

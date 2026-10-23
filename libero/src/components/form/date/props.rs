@@ -69,10 +69,16 @@ macro_rules! date_props {
             /// Seconds in the text and on the clock.
             #[props(default)]
             with_seconds: Option<bool>,
-            /// Minutes between the offered minutes. Defaults to the theme's
-            /// `TimePickerDefaults::step`, 5.
+            /// The minute step: minutes between the offered minutes. Defaults to the
+            /// theme's `TimePickerDefaults::step`, 5.
             #[props(default)]
             step: Option<u8>,
+            /// Hours between the offered hours, counted from midnight. 1 by default.
+            #[props(default)]
+            hour_step: Option<u8>,
+            /// Seconds between the offered seconds, with `with_seconds`. 1 by default.
+            #[props(default)]
+            second_step: Option<u8>,
             /// A 12-hour clock with AM and PM. Defaults to whether the time
             /// format is one.
             #[props(default)]
@@ -90,6 +96,38 @@ macro_rules! date_props {
             /// `ChronoPickerDefaults::days`.
             #[props(default)]
             days: Option<usize>,
+        ] $($rest)*);
+    };
+    (@munch $kind:ident $head:tt $types:tt [$($acc:tt)*] grid $($rest:ident)*) => {
+        $crate::components::form::date::props::date_props!(@munch $kind $head $types [$($acc)*
+            /// An ISO week number before each week of days. Ignored by the mini calendar.
+            #[props(default)]
+            week_numbers: Option<bool>,
+            /// The days marked `data-weekend` and tinted. Saturday and Sunday by default.
+            #[props(default)]
+            weekend_days: Option<Vec<::chrono::Weekday>>,
+            /// Hides the weekday names over the days; screen readers still get them.
+            #[props(default)]
+            hide_weekdays: Option<bool>,
+            /// Blanks instead of the neighbouring months' days.
+            #[props(default)]
+            hide_outside_days: Option<bool>,
+        ] $($rest)*);
+    };
+    (@munch $kind:ident $head:tt ($v:ty, $b:ty) [$($acc:tt)*] presets $($rest:ident)*) => {
+        $crate::components::form::date::props::date_props!(@munch $kind $head ($v, $b) [$($acc)*
+            /// Values offered as buttons beside the calendar, above it on a phone. Pressing
+            /// one picks it; see [`DatePreset`](crate::components::DatePreset).
+            #[props(default)]
+            presets: Vec<$crate::components::form::date::DatePreset<$v>>,
+        ] $($rest)*);
+    };
+    (@munch $kind:ident $head:tt $types:tt [$($acc:tt)*] open_to $($rest:ident)*) => {
+        $crate::components::form::date::props::date_props!(@munch $kind $head $types [$($acc)*
+            /// The level the calendar first shows, as `DateLevel::Year` to start from the
+            /// years. One below `level` shows `level`.
+            #[props(default)]
+            open_to: Option<$crate::components::form::date::DateLevel>,
         ] $($rest)*);
     };
     (@munch $kind:ident $head:tt $types:tt [$($acc:tt)*] columns $($rest:ident)*) => {

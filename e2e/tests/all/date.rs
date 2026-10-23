@@ -314,3 +314,97 @@ e2e::scenario!(
     macos: skip("upstream: WebKit does not focus a clicked button"),
     ios: skip("upstream: WebKit does not focus a clicked button")
 );
+
+/// `/date/extras`: a picker's value as its readout's `data-value` says it.
+async fn value_is<D: Driver>(d: &mut D, id: &str, value: &str, what: &str) -> Result<()> {
+    let readout = format!("#{id}-value");
+    eventually(d, what, async |d| {
+        Ok(d.attr(&readout, "data-value").await?.as_deref() == Some(value))
+    })
+    .await
+}
+
+const NEXT_MONTH: &str = "#presets [data-slot='preset']:nth-child(2)";
+
+/// Todo 3988: a preset picks its day, pages to its month and is pressed. Todo 4003: every week
+/// is headed by its ISO number, October 1 2026 being in week 40.
+async fn presets_and_week_numbers<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    eventually(d, "week 40 heads October", async |d| {
+        Ok(d.text("#presets [role='rowheader']").await?.trim() == "40")
+    })
+    .await?;
+    d.click(NEXT_MONTH).await?;
+    value_is(d, "presets", "2026-11-01", "the preset's day").await?;
+    eventually(d, "the preset pressed, November shown", async |d| {
+        Ok(
+            d.attr(NEXT_MONTH, "aria-pressed").await?.as_deref() == Some("true")
+                && d.exists("#presets [data-date='2026-11-30']:not([data-outside])")
+                    .await?,
+        )
+    })
+    .await
+}
+
+e2e::scenario!(
+    a_preset_picks_its_day_and_weeks_show_their_numbers,
+    "/date/extras",
+    presets_and_week_numbers
+);
+
+/// Todo 3988: in a field's dropdown a preset commits its day and closes, like a picked day.
+async fn field_preset<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    d.click("#field input[data-controlled]").await?;
+    let preset = "[role='dialog'] [data-slot='preset']";
+    eventually(d, "the dropdown's presets", async |d| {
+        d.exists(preset).await
+    })
+    .await?;
+    d.click(preset).await?;
+    value_is(d, "field", "2026-10-01", "the preset's day").await?;
+    eventually(d, "the dropdown closed", async |d| {
+        Ok(!d.exists("[role='dialog']").await?)
+    })
+    .await
+}
+
+e2e::scenario!(
+    a_field_preset_commits_and_closes,
+    "/date/extras",
+    field_preset
+);
+
+/// Todo 4003: `open_to: Year` opens on the years; a year, then a month, lead down to its days.
+async fn open_to_years<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    let year = "#year-first [data-slot='cell'][data-date='2027-01-01']";
+    eventually(d, "the years", async |d| d.exists(year).await).await?;
+    ensure!(
+        !d.exists("#year-first [data-slot='day']").await?,
+        "days before a year is picked"
+    );
+    d.click(year).await?;
+    let month = "#year-first [data-slot='cell'][data-date='2027-03-01']";
+    eventually(d, "the months of 2027", async |d| d.exists(month).await).await?;
+    d.click(month).await?;
+    let day = "#year-first [data-slot='day'][data-date='2027-03-15']";
+    eventually(d, "the days of March", async |d| d.exists(day).await).await?;
+    d.click(day).await?;
+    value_is(d, "year-first", "2027-03-15", "the picked day").await
+}
+
+e2e::scenario!(open_to_starts_from_the_years, "/date/extras", open_to_years);
+
+/// Todo 4003: the hours step by `hour_step`, the seconds by `second_step`, both from zero.
+async fn time_steps<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    d.focus("#steps [data-column='Hours']").await?;
+    d.press(keyboard::ARROW_UP).await?;
+    value_is(d, "steps", "16:00:30", "two hours on").await?;
+    d.focus("#steps [data-column='Seconds']").await?;
+    d.press(keyboard::ARROW_UP).await?;
+    value_is(d, "steps", "16:00:45", "onto the next quarter minute").await
+}
+
+e2e::scenario!(
+    the_hour_and_second_steps_turn_their_columns,
+    "/date/extras",
+    time_steps
+);

@@ -7,13 +7,13 @@ use chrono::NaiveDate;
 use super::{
     DateRange,
     calendar::DateLevel,
-    date_value::{PickerArgs, PickerOptions, Sealed},
+    date_value::{DayGrid, PickerArgs, PickerOptions, Sealed},
     props::date_props,
 };
 use crate::{components::common::Input, hooks::use_theme};
 
 date_props! {
-    picker DatePickerProps(NaiveDate, NaiveDate): limits, exclude_date, allow_deselect, columns, calendar, today
+    picker DatePickerProps(NaiveDate, NaiveDate): limits, exclude_date, allow_deselect, columns, open_to, calendar, grid, presets, today
 }
 
 /// A month of days to pick one from; `ChronoPicker` for a `NaiveDate`.
@@ -43,8 +43,16 @@ pub fn DatePicker(props: DatePickerProps) -> Element {
             columns: props.columns,
             calendar: props.calendar.copied_or(theme.chrono_picker.calendar),
             days: props.days.unwrap_or(theme.chrono_picker.days),
+            open_to: props.open_to,
+            grid: DayGrid::new(
+                props.week_numbers,
+                props.weekend_days.as_deref(),
+                props.hide_weekdays,
+                props.hide_outside_days,
+            ),
             ..PickerOptions::default()
         },
+        presets: props.presets,
         today: props.today,
         size: props.size,
         focusable: props.focusable.unwrap_or(true),
@@ -59,7 +67,7 @@ pub fn DatePicker(props: DatePickerProps) -> Element {
 }
 
 date_props! {
-    picker DateRangePickerProps(DateRange<NaiveDate>, NaiveDate): limits, exclude_date, columns, today
+    picker DateRangePickerProps(DateRange<NaiveDate>, NaiveDate): limits, exclude_date, columns, grid, presets, today
 }
 
 /// Two months side by side to pick a start and an end from; below `sm` one scrolling column,
@@ -86,8 +94,15 @@ pub fn DateRangePicker(props: DateRangePickerProps) -> Element {
             max: props.max,
             exclude_date: props.exclude_date,
             columns: props.columns,
+            grid: DayGrid::new(
+                props.week_numbers,
+                props.weekend_days.as_deref(),
+                props.hide_weekdays,
+                props.hide_outside_days,
+            ),
             ..PickerOptions::default()
         },
+        presets: props.presets,
         today: props.today,
         size: props.size,
         focusable: props.focusable.unwrap_or(true),
@@ -102,7 +117,7 @@ pub fn DateRangePicker(props: DateRangePickerProps) -> Element {
 }
 
 date_props! {
-    picker MonthPickerProps(NaiveDate, NaiveDate): limits, today
+    picker MonthPickerProps(NaiveDate, NaiveDate): limits, open_to, today
 }
 
 /// The months of a year to pick one from, held as the month's first day.
@@ -127,8 +142,10 @@ pub fn MonthPicker(props: MonthPickerProps) -> Element {
             min: props.min,
             max: props.max,
             level: DateLevel::Month,
+            open_to: props.open_to,
             ..PickerOptions::default()
         },
+        presets: Vec::new(),
         today: props.today,
         size: props.size,
         focusable: props.focusable.unwrap_or(true),
@@ -170,6 +187,7 @@ pub fn YearPicker(props: YearPickerProps) -> Element {
             level: DateLevel::Year,
             ..PickerOptions::default()
         },
+        presets: Vec::new(),
         today: props.today,
         size: props.size,
         focusable: props.focusable.unwrap_or(true),

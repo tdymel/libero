@@ -74,6 +74,8 @@ pub(super) struct ClockView {
     pub(super) twelve: bool,
     pub(super) with_seconds: bool,
     pub(super) step: u8,
+    pub(super) hour_step: u8,
+    pub(super) second_step: u8,
     pub(super) focusable: bool,
     /// Every press, drag and key is swallowed; the controls say `aria-disabled`.
     pub(super) disabled: bool,
@@ -143,12 +145,24 @@ impl ClockView {
         }
     }
 
-    /// The minutes a step of `hand` moves: an hour's are its own.
+    /// The units a step of `hand` moves.
     pub(super) fn step_of(self, hand: Hand) -> u32 {
-        match hand {
-            Hand::Minute => u32::from(self.step),
-            _ => 1,
-        }
+        u32::from(match hand {
+            Hand::Hour => self.hour_step,
+            Hand::Minute => self.step,
+            Hand::Second => self.second_step,
+        })
+    }
+
+    /// Whether `hour` is on the hour step, counted from midnight.
+    pub(super) fn on_hour_step(self, hour: u32) -> bool {
+        hour.is_multiple_of(u32::from(self.hour_step))
+    }
+
+    /// The indices of the hours column the hour step offers.
+    pub(super) fn hour_indices(self) -> impl Iterator<Item = usize> {
+        (0..if self.twelve { 12 } else { 24 })
+            .filter(move |index| self.on_hour_step(self.hour_of(self.hour_label(*index))))
     }
 
     /// The time a point on the face picks: `turn` clockwise from 12 in `0..1`, `reach`
@@ -160,7 +174,7 @@ impl ClockView {
             Hand::Hour => {
                 let inner = !self.twelve && reach < (OUTER_RING + INNER_RING) / 2.0;
                 let hour = self.hour_at((turn * 12.0).round() as u32 % 12, inner);
-                self.within(at(hour, 0, 0), at(hour, 59, 59))
+                (self.on_hour_step(hour) && self.within(at(hour, 0, 0), at(hour, 59, 59)))
                     .then(|| at(hour, minute, second))
             }
             Hand::Minute | Hand::Second => {
@@ -212,9 +226,12 @@ impl ClockView {
         let base = self.base;
         let (hour, minute, second) = (base.hour(), base.minute(), base.second());
         let next = match column {
-            Column::Hours => at(self.hour_of(self.hour_label(index)), minute, second),
+            Column::Hours => match self.hour_indices().nth(index) {
+                Some(index) => at(self.hour_of(self.hour_label(index)), minute, second),
+                None => return,
+            },
             Column::Minutes => at(hour, index as u32 * u32::from(self.step), second),
-            Column::Seconds => at(hour, minute, index as u32),
+            Column::Seconds => at(hour, minute, index as u32 * u32::from(self.second_step)),
             Column::Meridiem => match self.half(index == 1) {
                 Some(next) => next,
                 None => return,
@@ -283,7 +300,7 @@ impl ClockView {
     pub(super) fn open(self, time: NaiveTime) -> bool {
         let (hand, hour, minute) = (self.hand, time.hour(), time.minute());
         match hand() {
-            Hand::Hour => self.within(at(hour, 0, 0), at(hour, 59, 59)),
+            Hand::Hour => self.on_hour_step(hour) && self.within(at(hour, 0, 0), at(hour, 59, 59)),
             Hand::Minute => self.within(at(hour, minute, 0), at(hour, minute, 59)),
             Hand::Second => self.within(time, time),
         }

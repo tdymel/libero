@@ -67,10 +67,55 @@ pub(super) static CALENDAR_SX: StaticSx = StaticSx::new(|| {
             sx().cursor("default").hover(sx().background("transparent")),
         )
         .selector(
-            "& > [data-slot='months']",
+            "& > [data-slot='months'], & > [data-slot='panel'] > [data-slot='months']",
             sx().display("flex")
                 .gap(format!("{MONTHS_GAP}px"))
                 .align_items("flex-start"),
+        )
+        // Presets above the views on a phone, beside them from `sm` up.
+        .selector(
+            "& > [data-slot='panel']",
+            sx().display("flex")
+                .flex_direction("column")
+                .gap("4px")
+                .min_width("0")
+                .min_height("0"),
+        )
+        .selector(
+            "&[data-state~='presets']",
+            sx().gap("8px").media(
+                format!("(min-width: {})", Size::Sm.breakpoint_value()),
+                sx().flex_direction("row").align_items("flex-start").gap("12px"),
+            ),
+        )
+        .selector(
+            "&[data-state~='scroll'] > [data-slot='panel']",
+            sx().flex("1 1 auto"),
+        )
+        .selector(
+            ChronoPickerPart::Presets.selector(),
+            sx().display("flex")
+                .flex_wrap("wrap")
+                .gap("4px")
+                .media(
+                    format!("(min-width: {})", Size::Sm.breakpoint_value()),
+                    sx().flex_direction("column").flex_wrap("nowrap"),
+                ),
+        )
+        .selector(
+            ChronoPickerPart::Preset.selector(),
+            button
+                .clone()
+                .justify_content("flex-start")
+                .min_height(day.clone())
+                .padding("0 10px")
+                .white_space("nowrap"),
+        )
+        .selector(
+            "& [data-slot='preset'][aria-pressed='true']",
+            sx().background("primary.1")
+                .color("primary-contrast.1")
+                .hover(sx().background("primary.2")),
         )
         // Drawn only to measure how many months fit (todo 3958); opacity keeps focus.
         .selector("&[data-state~='measuring']", sx().opacity("0"))
@@ -81,7 +126,7 @@ pub(super) static CALENDAR_SX: StaticSx = StaticSx::new(|| {
             sx().display("flex").width("100%").min_height("0"),
         )
         .selector(
-            "& > [data-slot='scroller']",
+            "& > [data-slot='scroller'], & > [data-slot='panel'] > [data-slot='scroller']",
             sx().flex("1 1 auto")
                 .min_height("0")
                 .max_height("60vh")
@@ -89,7 +134,7 @@ pub(super) static CALENDAR_SX: StaticSx = StaticSx::new(|| {
                 .supports("(height: 1dvh)", sx().max_height("60dvh")),
         )
         .selector(
-            "& > [data-slot='readout']",
+            "& > [data-slot='readout'], & > [data-slot='panel'] > [data-slot='readout']",
             sx().display("flex")
                 .align_items("center")
                 .justify_content("center")
@@ -98,7 +143,7 @@ pub(super) static CALENDAR_SX: StaticSx = StaticSx::new(|| {
                 .font_weight("600"),
         )
         .selector(
-            "& > [data-slot='readout'] > [data-unset]",
+            "& [data-slot='readout'] > [data-unset]",
             sx().color("text-dimmed").font_weight("400"),
         )
         .selector(
@@ -132,6 +177,29 @@ pub(super) static CALENDAR_SX: StaticSx = StaticSx::new(|| {
             "& [role='grid']",
             sx().display("grid")
                 .grid_template_columns(format!("repeat(7, {day})")),
+        )
+        .selector(
+            "& [role='grid'][data-week-numbers]",
+            sx().grid_template_columns(format!("calc(0.75 * {day}) repeat(7, {day})")),
+        )
+        .selector(
+            ChronoPickerPart::WeekNumber.selector(),
+            sx().display("flex")
+                .align_items("center")
+                .justify_content("center")
+                .height(day.clone())
+                .font_size("0.75em")
+                .color("text-dimmed"),
+        )
+        // `hide_weekdays`: out of sight, still the grid's column headers.
+        .selector(
+            "& [role='row'][data-hidden] > *",
+            sx().position("absolute")
+                .width("1px")
+                .height("1px")
+                .overflow("hidden")
+                .clip_path("inset(50%)")
+                .white_space("nowrap"),
         )
         // Rows exist for assistive technology; the grid lays out the cells.
         .selector("& [role='row']", sx().display("contents"))
@@ -191,6 +259,10 @@ pub(super) static CALENDAR_SX: StaticSx = StaticSx::new(|| {
             button.width("100%").height(format!("calc(1.25 * {day})")),
         )
         .selector("& [data-outside]", sx().color("text-dimmed"))
+        .selector(
+            "& [data-weekend]:not([data-outside], [data-selected], [data-in-range], :disabled, [aria-disabled='true'])",
+            sx().color("error.7"),
+        )
         .selector("& [data-today]", sx().border_color("primary.6"))
         .selector(
             "& [data-in-range]",

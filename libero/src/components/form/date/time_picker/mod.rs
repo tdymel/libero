@@ -65,11 +65,14 @@ pub fn TimePicker(props: TimePickerProps) -> Element {
             variant: props.variant.copied_or(theme.time_picker.variant),
             with_seconds: props.with_seconds.unwrap_or(false),
             step: props.step,
+            hour_step: props.hour_step,
+            second_step: props.second_step,
             twelve_hour: props
                 .twelve_hour
                 .unwrap_or_else(|| uses_twelve_hours(time_format)),
             ..PickerOptions::default()
         },
+        presets: Vec::new(),
         today: None,
         size: props.size,
         focusable: props.focusable.unwrap_or(true),
@@ -91,6 +94,10 @@ pub(super) struct ClockProps {
     variant: TimePickerVariant,
     with_seconds: bool,
     step: Option<u8>,
+    #[props(default)]
+    hour_step: Option<u8>,
+    #[props(default)]
+    second_step: Option<u8>,
     twelve_hour: bool,
     min: Option<NaiveTime>,
     max: Option<NaiveTime>,
@@ -133,6 +140,8 @@ pub(super) fn Clock(props: ClockProps) -> Element {
         twelve: props.twelve_hour,
         with_seconds: props.with_seconds,
         step: props.step.unwrap_or(theme.time_picker.step).clamp(1, 30),
+        hour_step: props.hour_step.unwrap_or(1).clamp(1, 12),
+        second_step: props.second_step.unwrap_or(1).clamp(1, 30),
         focusable: props.focusable && !disabled,
         disabled,
         hand,
@@ -225,5 +234,36 @@ mod tests {
             face.contains(r#"aria-valuetext="No time selected""#),
             "{face}"
         );
+    }
+
+    /// Todo 4003: each column offers only its own step's values.
+    #[test]
+    fn the_hour_and_second_steps_space_their_columns() {
+        let html = dioxus_ssr::render_element(rsx! {
+            crate::LiberoProvider {
+                TimePicker {
+                    value: NaiveTime::from_hms_opt(14, 0, 30),
+                    variant: "digital",
+                    twelve_hour: false,
+                    with_seconds: true,
+                    hour_step: 2,
+                    second_step: 15,
+                }
+            }
+        });
+        let neighbours = |column: &str| -> Vec<String> {
+            let spin = html
+                .split(&format!(r#"data-column="{column}""#))
+                .nth(1)
+                .expect("the column");
+            spin.split(r#"data-slot="neighbour""#)
+                .skip(1)
+                .take(2)
+                .map(|span| span.split('>').nth(1).unwrap_or_default())
+                .map(|text| text.split('<').next().unwrap_or_default().to_string())
+                .collect()
+        };
+        assert_eq!(neighbours("Hours"), ["12", "16"]);
+        assert_eq!(neighbours("Seconds"), ["15", "45"]);
     }
 }

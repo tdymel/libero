@@ -139,7 +139,15 @@ and `DateTimeRangeField`, with only the props that type uses and no turbofish.
 | `today` | `NaiveDate` | - | The day marked as today, and the year used when typed text has none. Unset, the platform clock answers after mount. |
 | `variant` | `TimePickerVariant` | `analog` | A digital clock, `HH:MM` with a column to turn per part, or a clock face, for values with a time. |
 | `with_seconds` | `bool` | `false` | Seconds in the text and on the clock, or a duration's seconds column. |
-| `step` | `u8` | `5` | Minutes between the offered minutes, on a clock or a duration's minutes column. |
+| `step` | `u8` | `5` | The minute step: minutes between the offered minutes, on a clock or a duration's minutes column. |
+| `hour_step` | `u8` | `1` | Hours between the clock's offered hours, counted from midnight. |
+| `second_step` | `u8` | `1` | Seconds between the clock's offered seconds, with `with_seconds`. |
+| `open_to` | `DateLevel` | `level` | The view a `NaiveDate` dropdown first shows, as `DateLevel::Year` to start from the years. A level below `level` shows `level`. |
+| `presets` | `Vec<DatePreset<V>>` | - | Values offered as buttons beside the dropdown's calendar, above it on a phone. Pressing one commits it and closes like a picked day. For a day or a range of days. |
+| `week_numbers` | `bool` | `false` | An ISO week number before each week of days in the dropdown. Not in the mini calendar. |
+| `weekend_days` | `Vec<Weekday>` | `Saturday, Sunday` | The days marked `data-weekend` and tinted in the error colour. |
+| `hide_weekdays` | `bool` | `false` | Hides the weekday names over the days. Screen readers still get them as column headers. |
+| `hide_outside_days` | `bool` | `false` | Blanks instead of the neighbouring months' days. |
 | `twelve_hour` | `bool` | - | A 12-hour clock with AM and PM. Defaults to whether the time format is one. |
 | `calendar` | `CalendarVariant` | `full` | A month of days, or `mini`, one row of days with buttons that page it. For a day or a date-time. |
 | `days` | `usize` | `7` | Days in the mini calendar's row. |
@@ -212,6 +220,9 @@ The dropdown is portaled out of the field, so its parts take the
 | `ChronoDropdownPart::Ticks` | `ticks` | Analog clock: the ring of ticks for steps finer than the marks. |
 | `ChronoDropdownPart::Hand` | `hand` | Analog clock: the hand. |
 | `ChronoDropdownPart::Pivot` | `pivot` | Analog clock: the dot the hand turns on. |
+| `ChronoDropdownPart::Presets` | `presets` | Calendar with `presets`: the column of preset buttons, a row on a phone. |
+| `ChronoDropdownPart::Preset` | `preset` | Calendar with `presets`: a preset button. |
+| `ChronoDropdownPart::WeekNumber` | `week-number` | Days with `week_numbers`: a week's number, and the empty cell over them. |
 
 ## Accessibility
 

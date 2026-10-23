@@ -2,9 +2,9 @@ use chrono::NaiveDate;
 use dioxus::prelude::*;
 
 use super::{
-    ChronoPicker,
+    ChronoPicker, DatePreset,
     calendar::DateLevel,
-    date_value::{DateValue, PickerOptions, use_ignored_props_warning, used},
+    date_value::{DateValue, DayGrid, PickerOptions, use_ignored_props_warning, used},
     field_value::{Formats, Refusal},
     fields::time_format,
     format::uses_twelve_hours,
@@ -20,7 +20,7 @@ use crate::{
 };
 
 date_props! {
-    field ChronoFieldProps<V: DateValue>(V, V::Bound): format, time_format, limits, exclude_date, today, clock, calendar, columns, close_on_change, level
+    field ChronoFieldProps<V: DateValue>(V, V::Bound): format, time_format, limits, exclude_date, today, clock, calendar, grid, presets, columns, close_on_change, level, open_to
 }
 
 /// One text field for every date and time value, with its [`ChronoPicker`] in a dropdown.
@@ -61,16 +61,34 @@ pub fn ChronoField<V: DateValue>(props: ChronoFieldProps<V>) -> Element {
             ("variant", props.variant.as_ref().is_some()),
             ("with_seconds", props.with_seconds.is_some()),
             ("step", props.step.is_some()),
+            ("hour_step", props.hour_step.is_some()),
+            ("second_step", props.second_step.is_some()),
             ("twelve_hour", props.twelve_hour.is_some()),
+            ("week_numbers", props.week_numbers.is_some()),
+            ("weekend_days", props.weekend_days.is_some()),
+            ("hide_weekdays", props.hide_weekdays.is_some()),
+            ("hide_outside_days", props.hide_outside_days.is_some()),
+            ("presets", !props.presets.is_empty()),
             ("calendar", props.calendar.as_ref().is_some()),
             ("days", props.days.is_some()),
             ("columns", props.columns.is_some()),
             ("close_on_change", props.close_on_change.is_some()),
             ("level", props.level.is_some()),
+            ("open_to", props.open_to.is_some()),
         ],
         match level {
             DateLevel::Day => &[],
-            _ => &["exclude_date", "columns", "calendar", "days"],
+            _ => &[
+                "exclude_date",
+                "columns",
+                "calendar",
+                "days",
+                "week_numbers",
+                "weekend_days",
+                "hide_weekdays",
+                "hide_outside_days",
+                "presets",
+            ],
         },
     );
     let options = FieldOptions {
@@ -83,13 +101,23 @@ pub fn ChronoField<V: DateValue>(props: ChronoFieldProps<V>) -> Element {
         variant: props.variant.clone(),
         with_seconds: props.with_seconds,
         step: props.step,
+        hour_step: props.hour_step,
+        second_step: props.second_step,
         twelve_hour: props.twelve_hour,
         close_on_change: props.close_on_change,
         calendar: props.calendar.clone(),
         days: props.days,
+        grid: DayGrid::new(
+            props.week_numbers,
+            props.weekend_days.as_deref(),
+            props.hide_weekdays,
+            props.hide_outside_days,
+        ),
         level,
+        open_to: props.open_to,
     };
-    chrono_field(picker_field!(props, props.today), options)
+    let presets = props.presets.clone();
+    chrono_field(picker_field!(props, props.today), options, presets)
 }
 
 /// A field's type-specific props. A typed field fills what its value type uses.
@@ -103,11 +131,15 @@ pub(super) struct FieldOptions<B: 'static> {
     pub variant: Input<TimePickerVariant>,
     pub with_seconds: Option<bool>,
     pub step: Option<u8>,
+    pub hour_step: Option<u8>,
+    pub second_step: Option<u8>,
     pub twelve_hour: Option<bool>,
     pub close_on_change: Option<bool>,
     pub calendar: Input<CalendarVariant>,
     pub days: Option<usize>,
+    pub grid: DayGrid,
     pub level: DateLevel,
+    pub open_to: Option<DateLevel>,
 }
 
 impl<B> Default for FieldOptions<B> {
@@ -122,11 +154,15 @@ impl<B> Default for FieldOptions<B> {
             variant: Input::None,
             with_seconds: None,
             step: None,
+            hour_step: None,
+            second_step: None,
             twelve_hour: None,
             close_on_change: None,
             calendar: Input::None,
             days: None,
+            grid: DayGrid::default(),
             level: DateLevel::Day,
+            open_to: None,
         }
     }
 }
@@ -135,6 +171,7 @@ impl<B> Default for FieldOptions<B> {
 pub(super) fn chrono_field<V: DateValue>(
     field: PickerField<'_, V>,
     options: FieldOptions<V::Bound>,
+    presets: Vec<DatePreset<V>>,
 ) -> Element {
     let theme = use_theme();
     let names = &use_localization().date;
@@ -152,14 +189,18 @@ pub(super) fn chrono_field<V: DateValue>(
         allow_deselect: false,
         columns: options.columns,
         level,
+        open_to: options.open_to,
         variant: options.variant.copied_or(theme.time_picker.variant),
         with_seconds,
         step: options.step,
+        hour_step: options.hour_step,
+        second_step: options.second_step,
         twelve_hour: options
             .twelve_hour
             .unwrap_or_else(|| uses_twelve_hours(&time)),
         calendar: options.calendar.copied_or(theme.chrono_picker.calendar),
         days: options.days.unwrap_or(theme.chrono_picker.days),
+        grid: options.grid,
     };
     let close = options
         .close_on_change
@@ -199,14 +240,22 @@ pub(super) fn chrono_field<V: DateValue>(
                     exclude_date: used::<V, _>("exclude_date", picker.exclude_date).flatten().filter(|_| day),
                     columns: used::<V, _>("columns", picker.columns).flatten().filter(|_| day),
                     level: used::<V, _>("level", level),
+                    open_to: used::<V, _>("open_to", picker.open_to).flatten(),
                     today: used::<V, _>("today", args.today).flatten(),
                     size: args.size,
                     variant: used::<V, _>("variant", picker.variant).map_or(Input::None, Input::Value),
                     with_seconds: used::<V, _>("with_seconds", picker.with_seconds),
                     step: used::<V, _>("step", picker.step).flatten(),
+                    hour_step: used::<V, _>("hour_step", picker.hour_step).flatten(),
+                    second_step: used::<V, _>("second_step", picker.second_step).flatten(),
                     twelve_hour: used::<V, _>("twelve_hour", picker.twelve_hour),
                     calendar: used::<V, _>("calendar", picker.calendar).filter(|_| day).map_or(Input::None, Input::Value),
                     days: used::<V, _>("days", picker.days).filter(|_| day),
+                    week_numbers: used::<V, _>("week_numbers", picker.grid.week_numbers).filter(|_| day),
+                    weekend_days: used::<V, _>("weekend_days", picker.grid.weekend_days()).filter(|_| day),
+                    hide_weekdays: used::<V, _>("hide_weekdays", picker.grid.hide_weekdays).filter(|_| day),
+                    hide_outside_days: used::<V, _>("hide_outside_days", picker.grid.hide_outside_days).filter(|_| day),
+                    presets: used::<V, _>("presets", presets.clone()).filter(|_| day).unwrap_or_default(),
                 }
             }
         },

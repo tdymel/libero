@@ -1,13 +1,13 @@
 //! One trait over every date and time value; the value's type picks what is drawn.
 
-use chrono::{Datelike, NaiveDate, NaiveDateTime, NaiveTime, TimeDelta};
+use chrono::{Datelike, NaiveDate, NaiveDateTime, NaiveTime, TimeDelta, Weekday};
 use dioxus::prelude::*;
 
 #[cfg(feature = "date-field")]
 use super::field_value::SealedField;
 use super::{
-    ChronoPickerPart, DateRange,
-    calendar::{Calendar, DateLevel, Selection, first_of_month},
+    ChronoPickerPart, DatePreset, DateRange,
+    calendar::{Calendar, CalendarPreset, DateLevel, Selection, first_of_month},
     duration::DurationClock,
     flows::{DateTimeFlow, DateTimeRangeFlow},
     time_picker::Clock,
@@ -23,6 +23,84 @@ use crate::{
     utils::warn,
 };
 
+/// How a month of days is drawn: the `grid` prop group, resolved.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct DayGrid {
+    pub week_numbers: bool,
+    /// Bit `n` marks the weekday `n` days from Sunday.
+    pub weekend: u8,
+    pub hide_weekdays: bool,
+    pub hide_outside_days: bool,
+}
+
+impl Default for DayGrid {
+    fn default() -> Self {
+        Self::new(None, None, None, None)
+    }
+}
+
+impl DayGrid {
+    pub(super) fn new(
+        week_numbers: Option<bool>,
+        weekend_days: Option<&[Weekday]>,
+        hide_weekdays: Option<bool>,
+        hide_outside_days: Option<bool>,
+    ) -> Self {
+        let weekend = weekend_days
+            .unwrap_or(&[Weekday::Sat, Weekday::Sun])
+            .iter()
+            .fold(0, |mask, day| mask | 1 << day.num_days_from_sunday());
+        Self {
+            week_numbers: week_numbers.unwrap_or(false),
+            weekend,
+            hide_weekdays: hide_weekdays.unwrap_or(false),
+            hide_outside_days: hide_outside_days.unwrap_or(false),
+        }
+    }
+
+    pub(super) fn is_weekend(self, day: NaiveDate) -> bool {
+        self.weekend & (1 << day.weekday().num_days_from_sunday()) != 0
+    }
+
+    pub(super) fn weekend_days(self) -> Vec<Weekday> {
+        [
+            Weekday::Sun,
+            Weekday::Mon,
+            Weekday::Tue,
+            Weekday::Wed,
+            Weekday::Thu,
+            Weekday::Fri,
+            Weekday::Sat,
+        ]
+        .into_iter()
+        .filter(|day| self.weekend & (1 << day.num_days_from_sunday()) != 0)
+        .collect()
+    }
+}
+
+/// The calendar's preset buttons for `presets`, and the handler that picks one by index.
+/// Calls a hook: one identity across renders, so a re-render from above skips the calendar.
+fn use_calendar_presets<V: DateValue>(
+    presets: &[DatePreset<V>],
+    selection: impl Fn(V) -> Selection,
+    onchange: Option<EventHandler<Option<V>>>,
+) -> (Vec<CalendarPreset>, EventHandler<usize>) {
+    let values: Vec<V> = presets.iter().map(|preset| preset.value).collect();
+    let buttons = presets
+        .iter()
+        .map(|preset| CalendarPreset {
+            label: preset.label.clone(),
+            selection: selection(preset.value),
+        })
+        .collect();
+    let onpreset = use_callback(move |index: usize| {
+        if let (Some(onchange), Some(value)) = (onchange, values.get(index)) {
+            onchange.call(Some(*value));
+        }
+    });
+    (buttons, onpreset)
+}
+
 /// Everything a picker takes besides the value, resolved. Each value type reads its part.
 #[derive(Clone, Copy)]
 pub struct PickerOptions<B: 'static> {
@@ -32,12 +110,16 @@ pub struct PickerOptions<B: 'static> {
     pub allow_deselect: bool,
     pub columns: Option<usize>,
     pub level: DateLevel,
+    pub open_to: Option<DateLevel>,
     pub variant: TimePickerVariant,
     pub with_seconds: bool,
     pub step: Option<u8>,
+    pub hour_step: Option<u8>,
+    pub second_step: Option<u8>,
     pub twelve_hour: bool,
     pub calendar: CalendarVariant,
     pub days: usize,
+    pub grid: DayGrid,
 }
 
 impl<B> Default for PickerOptions<B> {
@@ -49,12 +131,16 @@ impl<B> Default for PickerOptions<B> {
             allow_deselect: false,
             columns: None,
             level: DateLevel::Day,
+            open_to: None,
             variant: TimePickerVariant::default(),
             with_seconds: false,
             step: None,
+            hour_step: None,
+            second_step: None,
             twelve_hour: false,
             calendar: CalendarVariant::Full,
             days: 7,
+            grid: DayGrid::default(),
         }
     }
 }
@@ -64,6 +150,7 @@ pub struct PickerArgs<V: DateValue> {
     pub value: Option<V>,
     pub onchange: Option<EventHandler<Option<V>>>,
     pub options: PickerOptions<V::Bound>,
+    pub presets: Vec<DatePreset<V>>,
     pub today: Option<NaiveDate>,
     pub size: Input<Size>,
     pub focusable: bool,
@@ -163,6 +250,9 @@ macro_rules! date_time_flow {
                 variant: $args.options.variant,
                 with_seconds: $args.options.with_seconds,
                 step: $args.options.step,
+                hour_step: $args.options.hour_step,
+                second_step: $args.options.second_step,
+                grid: $args.options.grid,
                 twelve_hour: $args.options.twelve_hour,
                 focusable: $args.focusable,
                 disabled: $args.disabled,
@@ -203,12 +293,20 @@ impl Sealed for NaiveDate {
         "close_on_change",
         "level",
         "allow_deselect",
+        "week_numbers",
+        "weekend_days",
+        "hide_weekdays",
+        "hide_outside_days",
+        "open_to",
+        "presets",
     ];
 
     fn picker(args: PickerArgs<Self>) -> Element {
         let PickerArgs {
             onchange, options, ..
         } = args;
+        let (presets, onpreset) =
+            use_calendar_presets(&args.presets, |day| Selection::Single(Some(day)), onchange);
         let level = options.level;
         let size = args.size.copied_or(use_theme().chrono_picker.size);
         // A month is held as its first day, a year as its January 1.
@@ -246,6 +344,10 @@ impl Sealed for NaiveDate {
                         _ => 1,
                     },
                     lowest: level,
+                    open_to: options.open_to,
+                    grid: options.grid,
+                    presets: presets.clone(),
+                    onpreset,
                     min: options.min,
                     max: options.max,
                     exclude_date: match level {
@@ -278,6 +380,8 @@ impl Sealed for NaiveTime {
         "variant",
         "with_seconds",
         "step",
+        "hour_step",
+        "second_step",
         "twelve_hour",
     ];
 
@@ -290,6 +394,8 @@ impl Sealed for NaiveTime {
                 variant: options.variant,
                 with_seconds: options.with_seconds,
                 step: options.step,
+                hour_step: options.hour_step,
+                second_step: options.second_step,
                 twelve_hour: options.twelve_hour,
                 min: options.min,
                 max: options.max,
@@ -349,10 +455,16 @@ impl Sealed for NaiveDateTime {
         "exclude_date",
         "calendar",
         "days",
+        "week_numbers",
+        "weekend_days",
+        "hide_weekdays",
+        "hide_outside_days",
         "time_format",
         "variant",
         "with_seconds",
         "step",
+        "hour_step",
+        "second_step",
         "twelve_hour",
     ];
 
@@ -375,6 +487,11 @@ impl Sealed for DateRange<NaiveDate> {
         "exclude_date",
         "columns",
         "close_on_change",
+        "week_numbers",
+        "weekend_days",
+        "hide_weekdays",
+        "hide_outside_days",
+        "presets",
     ];
 
     fn scrolls(options: &PickerOptions<NaiveDate>, narrow: bool) -> bool {
@@ -383,6 +500,11 @@ impl Sealed for DateRange<NaiveDate> {
 
     fn picker(args: PickerArgs<Self>) -> Element {
         let (value, onchange, options) = (args.value, args.onchange, args.options);
+        let (presets, onpreset) = use_calendar_presets(
+            &args.presets,
+            |range| Selection::Range(Some(range)),
+            onchange,
+        );
         let size = args.size.copied_or(use_theme().chrono_picker.size);
         // One identity across renders, as for a single day.
         let onpick = use_callback(move |day: NaiveDate| {
@@ -399,6 +521,9 @@ impl Sealed for DateRange<NaiveDate> {
                 columns: options.columns.unwrap_or(2),
                 scroll: Self::scrolls(&options, narrow()),
                 lowest: DateLevel::Day,
+                grid: options.grid,
+                presets,
+                onpreset,
                 min: options.min,
                 max: options.max,
                 exclude_date: options.exclude_date,
@@ -426,10 +551,16 @@ impl Sealed for DateRange<NaiveDateTime> {
         "format",
         "today",
         "exclude_date",
+        "week_numbers",
+        "weekend_days",
+        "hide_weekdays",
+        "hide_outside_days",
         "time_format",
         "variant",
         "with_seconds",
         "step",
+        "hour_step",
+        "second_step",
         "twelve_hour",
     ];
 

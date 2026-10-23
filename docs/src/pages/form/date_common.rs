@@ -3,7 +3,7 @@
 
 use crate::components::{Control, DemoValues};
 use libero::chrono::{Datelike, NaiveDate, NaiveDateTime, NaiveTime, TimeDelta};
-use libero::components::FieldStatus;
+use libero::components::{DateLevel, DatePreset, DateRange, FieldStatus};
 
 pub fn is_on(values: &DemoValues, name: &str) -> bool {
     values.str(name) == "true"
@@ -131,6 +131,101 @@ pub fn calendar_controls() -> Vec<Control> {
     ]
 }
 
+/// Whether the demo draws months of days, so the `grid` props apply.
+pub fn has_grid(values: &DemoValues) -> bool {
+    has_days(values) && !is_mini(values)
+}
+
+/// Whether the demoed value type takes `presets`: a day or a range of days.
+pub fn has_presets(values: &DemoValues) -> bool {
+    matches!(values.str("value").as_str(), "date" | "date-range")
+}
+
+/// The month grid's switches, `presets` and `open_to`.
+pub fn grid_controls() -> Vec<Control> {
+    vec![
+        Control::switch("week_numbers").hidden_when(|values| !has_grid(values)),
+        Control::switch("hide_weekdays").hidden_when(|values| !has_grid(values)),
+        Control::switch("hide_outside_days").hidden_when(|values| !has_grid(values)),
+        Control::switch("presets")
+            .hidden_when(|values| !has_presets(values))
+            .code(|_, values| match is_on(values, "presets") {
+                true => vec![presets_code(values)],
+                false => vec![],
+            }),
+        Control::toggle("open_to", ["auto", "month", "year"])
+            .labels(["Auto", "Month", "Year"])
+            .default("auto")
+            .hidden_when(|values| !matches!(values.str("value").as_str(), "date" | "month"))
+            .code(|_, values| match values.str("open_to").as_str() {
+                "month" => vec!["open_to: DateLevel::Month".to_string()],
+                "year" => vec!["open_to: DateLevel::Year".to_string()],
+                _ => vec![],
+            }),
+    ]
+}
+
+pub fn open_to_of(values: &DemoValues) -> Option<DateLevel> {
+    match values.str("open_to").as_str() {
+        "month" => Some(DateLevel::Month),
+        "year" => Some(DateLevel::Year),
+        _ => None,
+    }
+}
+
+/// Three days, or three ranges, to pick in one press.
+pub fn day_presets(values: &DemoValues) -> Vec<DatePreset<NaiveDate>> {
+    let day = |month, day| NaiveDate::from_ymd_opt(2026, month, day).expect("a day");
+    match is_on(values, "presets") {
+        true => vec![
+            DatePreset::new("Start of month", day(9, 1)),
+            DatePreset::new("End of month", day(9, 30)),
+            DatePreset::new("Next month", day(10, 1)),
+        ],
+        false => Vec::new(),
+    }
+}
+
+pub fn range_presets(values: &DemoValues) -> Vec<DatePreset<DateRange<NaiveDate>>> {
+    let day = |month, day| NaiveDate::from_ymd_opt(2026, month, day).expect("a day");
+    let range = |label, start, end| DatePreset::new(label, DateRange::new(start, Some(end)));
+    match is_on(values, "presets") {
+        true => vec![
+            range("First week", day(9, 1), day(9, 7)),
+            range("Second half", day(9, 15), day(9, 30)),
+            range("October", day(10, 1), day(10, 31)),
+        ],
+        false => Vec::new(),
+    }
+}
+
+fn presets_code(values: &DemoValues) -> String {
+    let day = |month, day| format!("NaiveDate::from_ymd_opt(2026, {month}, {day}).unwrap()");
+    let presets = match values.str("value").as_str() {
+        "date-range" => [
+            ("First week", (9, 1), (9, 7)),
+            ("Second half", (9, 15), (9, 30)),
+            ("October", (10, 1), (10, 31)),
+        ]
+        .map(|(label, start, end)| {
+            format!(
+                "DatePreset::new({label:?}, DateRange::new({}, Some({})))",
+                day(start.0, start.1),
+                day(end.0, end.1)
+            )
+        })
+        .to_vec(),
+        _ => [
+            ("Start of month", (9, 1)),
+            ("End of month", (9, 30)),
+            ("Next month", (10, 1)),
+        ]
+        .map(|(label, at)| format!("DatePreset::new({label:?}, {})", day(at.0, at.1)))
+        .to_vec(),
+    };
+    format!("presets: vec![{}]", presets.join(", "))
+}
+
 /// The controls both demos have beyond their own: the limits, the clock's
 /// minute step and hour cycle, a fixed today and a posted name.
 pub fn shared_controls() -> Vec<Control> {
@@ -141,6 +236,25 @@ pub fn shared_controls() -> Vec<Control> {
             .code(|_, values| match values.str("step").as_str() {
                 "5" => vec![],
                 step => vec![format!("step: {step}")],
+            }),
+        Control::toggle("hour_step", ["1", "2", "3"])
+            .default("1")
+            .hidden_when(|values| !has_time(values))
+            .code(|_, values| match values.str("hour_step").as_str() {
+                "1" => vec![],
+                step => vec![format!("hour_step: {step}")],
+            }),
+        // A second step turns the seconds on, so it shows on its own.
+        Control::toggle("second_step", ["1", "5", "15"])
+            .default("1")
+            .hidden_when(|values| !has_time(values))
+            .code(|_, values| match values.str("second_step").as_str() {
+                "1" => vec![],
+                step if is_on(values, "with_seconds") => vec![format!("second_step: {step}")],
+                step => vec![
+                    format!("second_step: {step}"),
+                    "with_seconds: true".to_string(),
+                ],
             }),
         Control::switch("min_max").code(|_, values| match is_on(values, "min_max") {
             true => limits_code(values),
@@ -160,6 +274,23 @@ pub fn shared_controls() -> Vec<Control> {
 
 pub fn step_of(values: &DemoValues) -> Option<u8> {
     values.str("step").parse().ok()
+}
+
+pub fn hour_step_of(values: &DemoValues) -> Option<u8> {
+    values.str("hour_step").parse().ok()
+}
+
+pub fn second_step_of(values: &DemoValues) -> Option<u8> {
+    values.str("second_step").parse().ok()
+}
+
+/// `with_seconds`, also on for a second step.
+pub fn with_seconds_of(values: &DemoValues) -> bool {
+    is_on(values, "with_seconds")
+        || values
+            .str("second_step")
+            .parse()
+            .is_ok_and(|step: u8| step > 1)
 }
 
 /// `None` leaves the hour cycle to the theme or the time format.

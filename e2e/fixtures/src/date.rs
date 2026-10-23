@@ -1,11 +1,12 @@
 //! Disabled date and time pickers (todo 3881). `#flip` toggles them all, by their own
 //! `disabled` or, on `/date/disabled-fieldset`, by a `Fieldset` around them; `#changes` counts picks.
+//! `/date/extras`: presets, week numbers, `open_to` and per-unit time steps (3988, 4003).
 
 use dioxus::prelude::*;
 use libero::chrono::{NaiveDate, NaiveDateTime, NaiveTime, TimeDelta};
 use libero::components::{
-    ChronoPicker, DatePicker, DateRange, DateRangePicker, Fieldset, Flex, MonthPicker, TextField,
-    TimePicker, YearPicker,
+    ChronoPicker, DateField, DateLevel, DatePicker, DatePreset, DateRange, DateRangePicker,
+    Fieldset, Flex, MonthPicker, TextField, TimePicker, YearPicker,
 };
 
 use crate::Routes;
@@ -14,6 +15,7 @@ pub const ROUTES: Routes = &[
     ("/date/disabled", || rsx! { DisabledPickersPage { in_fieldset: false } }),
     ("/date/disabled-fieldset", || rsx! { DisabledPickersPage { in_fieldset: true } }),
     ("/date/fieldset-submit", || rsx! { FieldsetSubmitPage {} }),
+    ("/date/extras", || rsx! { ExtrasPage {} }),
 ];
 
 const DAY: Option<NaiveDate> = NaiveDate::from_ymd_opt(2026, 10, 21);
@@ -109,6 +111,66 @@ fn FieldsetSubmitPage() -> Element {
             }
             TextField { label: "Outside", name: "outside", value: "x" }
             button { id: "submit", r#type: "submit", "Send" }
+        }
+    }
+}
+
+/// Each picker writes its value into the `data-value` of the readout after it.
+#[component]
+fn ExtrasPage() -> Element {
+    let mut presets = use_signal(|| DAY);
+    let mut field = use_signal(|| None::<NaiveDate>);
+    let mut year_first = use_signal(|| None::<NaiveDate>);
+    let mut time = use_signal(|| NaiveTime::from_hms_opt(14, 0, 30));
+    let day = |month, day| NaiveDate::from_ymd_opt(2026, month, day).expect("a day");
+    let offered = vec![
+        DatePreset::new("Start of month", day(10, 1)),
+        DatePreset::new("Next month", day(11, 1)),
+    ];
+    let shown = |value: Option<String>| value.unwrap_or_default();
+    rsx! {
+        Flex { direction: "column", gap: "md", align: "start",
+            div { id: "presets",
+                DatePicker {
+                    value: presets(),
+                    today: DAY,
+                    presets: offered.clone(),
+                    week_numbers: true,
+                    onchange: move |next| presets.set(next),
+                }
+                span { id: "presets-value", "data-value": shown(presets().map(|v| v.to_string())) }
+            }
+            div { id: "field",
+                DateField {
+                    label: "Due",
+                    value: field(),
+                    today: DAY,
+                    presets: offered,
+                    onchange: move |next| field.set(next),
+                }
+                span { id: "field-value", "data-value": shown(field().map(|v| v.to_string())) }
+            }
+            div { id: "year-first",
+                DatePicker {
+                    value: year_first(),
+                    today: DAY,
+                    open_to: DateLevel::Year,
+                    onchange: move |next| year_first.set(next),
+                }
+                span { id: "year-first-value", "data-value": shown(year_first().map(|v| v.to_string())) }
+            }
+            div { id: "steps",
+                TimePicker {
+                    value: time(),
+                    variant: "digital",
+                    twelve_hour: false,
+                    with_seconds: true,
+                    hour_step: 2,
+                    second_step: 15,
+                    onchange: move |next| time.set(next),
+                }
+                span { id: "steps-value", "data-value": shown(time().map(|v| v.to_string())) }
+            }
         }
     }
 }

@@ -20,6 +20,7 @@ mod parse;
 mod parse_time;
 #[cfg(feature = "date-field")]
 mod picker_field;
+mod presets;
 mod props;
 mod range;
 mod spin_column;
@@ -55,5 +56,6 @@ pub use pickers::{
     DatePicker, DatePickerProps, DateRangePicker, DateRangePickerProps, MonthPicker,
     MonthPickerProps, YearPicker, YearPickerProps,
 };
+pub use presets::DatePreset;
 pub use range::{DateRange, ParseRangeError};
 pub use time_picker::{TimePicker, TimePickerProps};

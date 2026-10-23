@@ -1,7 +1,8 @@
 use super::date_common::{
-    calendar_controls, captions_of, day_limits, duration_limits, field_controls, has_days,
-    has_time, is_on, is_weekend, moment_limits, shared_controls, shown, status_of, step_of,
-    text_of, time_limits, today_of, twelve_hour_of,
+    calendar_controls, captions_of, day_limits, day_presets, duration_limits, field_controls,
+    grid_controls, has_days, has_time, hour_step_of, is_on, is_weekend, moment_limits, open_to_of,
+    range_presets, second_step_of, shared_controls, shown, status_of, step_of, text_of,
+    time_limits, today_of, twelve_hour_of, with_seconds_of,
 };
 use super::dropdown_parts::chrono_dropdown_parts;
 use crate::components::{
@@ -90,7 +91,15 @@ pub fn ChronoFieldPage() -> Element {
                     prop("today", "NaiveDate").doc("The day marked as today, and the year used when typed text has none. Unset, the platform clock answers after mount."),
                     prop("variant", "TimePickerVariant").default(theme.time_picker.variant.as_str()).doc("A digital clock, `HH:MM` with a column to turn per part, or a clock face, for values with a time."),
                     prop("with_seconds", "bool").default("false").doc("Seconds in the text and on the clock, or a duration's seconds column."),
-                    prop("step", "u8").default(theme.time_picker.step.to_string()).doc("Minutes between the offered minutes, on a clock or a duration's minutes column."),
+                    prop("step", "u8").default(theme.time_picker.step.to_string()).doc("The minute step: minutes between the offered minutes, on a clock or a duration's minutes column."),
+                    prop("hour_step", "u8").default("1").doc("Hours between the clock's offered hours, counted from midnight."),
+                    prop("second_step", "u8").default("1").doc("Seconds between the clock's offered seconds, with `with_seconds`."),
+                    prop("open_to", "DateLevel").default("level").doc("The view a `NaiveDate` dropdown first shows, as `DateLevel::Year` to start from the years. A level below `level` shows `level`."),
+                    prop("presets", "Vec<DatePreset<V>>").doc("Values offered as buttons beside the dropdown's calendar, above it on a phone. Pressing one commits it and closes like a picked day. For a day or a range of days."),
+                    prop("week_numbers", "bool").default("false").doc("An ISO week number before each week of days in the dropdown. Not in the mini calendar."),
+                    prop("weekend_days", "Vec<Weekday>").default("Saturday, Sunday").doc("The days marked `data-weekend` and tinted in the error colour."),
+                    prop("hide_weekdays", "bool").default("false").doc("Hides the weekday names over the days. Screen readers still get them as column headers."),
+                    prop("hide_outside_days", "bool").default("false").doc("Blanks instead of the neighbouring months' days."),
                     prop("twelve_hour", "bool").doc("A 12-hour clock with AM and PM. Defaults to whether the time format is one."),
                     prop("calendar", "CalendarVariant").default(theme.chrono_picker.calendar.as_str()).doc("A month of days, or `mini`, one row of days with buttons that page it. For a day or a date-time."),
                     prop("days", "usize").default(theme.chrono_picker.days.to_string()).doc("Days in the mini calendar's row."),
@@ -250,7 +259,7 @@ pub fn ChronoFieldPage() -> Element {
                             false => vec![],
                         }),
                     ];
-                    [controls, calendar_controls(), shared_controls(), field_controls()].concat()
+                    [controls, calendar_controls(), grid_controls(), shared_controls(), field_controls()].concat()
                 },
                 render: move |values: DemoValues| rsx! {
                     ChronoFieldDemo { values }
@@ -405,7 +414,15 @@ fn ChronoFieldDemo(values: DemoValues) -> Element {
     let calendar = values.str("calendar");
     let days = values.str("days").parse::<usize>().ok();
     let step = step_of(&values);
-    let with_seconds = is_on(&values, "with_seconds");
+    let with_seconds = with_seconds_of(&values);
+    let (hour_step, second_step) = (hour_step_of(&values), second_step_of(&values));
+    let on = |name: &str| is_on(&values, name).then_some(true);
+    let (week_numbers, hide_weekdays, hide_outside_days) = (
+        on("week_numbers"),
+        on("hide_weekdays"),
+        on("hide_outside_days"),
+    );
+    let open_to = open_to_of(&values);
     let twelve_hour = twelve_hour_of(&values);
     let today = today_of(&values);
     let validate = is_on(&values, "validate");
@@ -419,7 +436,7 @@ fn ChronoFieldDemo(values: DemoValues) -> Element {
             rsx! {
                 ChronoField {
                     value: month(), onchange: move |next| month.set(next), level: DateLevel::Month,
-                    min: min_day, max: max_day, today, close_on_change,
+                    min: min_day, max: max_day, today, close_on_change, open_to,
                     validate: rules(validate),
                     size, radius, label, aria_label, description, helper, placeholder, status, required, disabled,
                 }
@@ -441,7 +458,7 @@ fn ChronoFieldDemo(values: DemoValues) -> Element {
             rsx! {
                 ChronoField {
                     value: time(), onchange: move |next| time.set(next),
-                    min: min_time, max: max_time, time_format, variant, with_seconds, step, twelve_hour,
+                    min: min_time, max: max_time, time_format, variant, with_seconds, step, hour_step, second_step, twelve_hour,
                     validate: rules(validate),
                     size, radius, label, aria_label, description, helper, placeholder, status, required, disabled,
                 }
@@ -453,7 +470,8 @@ fn ChronoFieldDemo(values: DemoValues) -> Element {
                 ChronoField {
                     value: date_time(), onchange: move |next| date_time.set(next),
                     min: min_moment, max: max_moment, format, time_format, variant, exclude_date, today,
-                    with_seconds, step, twelve_hour, close_on_change, calendar, days,
+                    with_seconds, step, hour_step, second_step, twelve_hour, close_on_change, calendar, days,
+                    week_numbers, hide_weekdays, hide_outside_days,
                     validate: rules(validate),
                     size, radius, label, aria_label, description, helper, placeholder, status, required, disabled,
                 }
@@ -465,6 +483,7 @@ fn ChronoFieldDemo(values: DemoValues) -> Element {
                 ChronoField {
                     value: date_range(), onchange: move |next| date_range.set(next),
                     min: min_day, max: max_day, format, exclude_date, columns, today, close_on_change,
+                    week_numbers, hide_weekdays, hide_outside_days, presets: range_presets(&values),
                     validate: rules(validate),
                     size, radius, label, aria_label, description, helper, placeholder, status, required, disabled,
                 }
@@ -476,7 +495,8 @@ fn ChronoFieldDemo(values: DemoValues) -> Element {
                 ChronoField {
                     value: date_time_range(), onchange: move |next| date_time_range.set(next),
                     min: min_moment, max: max_moment, format, time_format, variant, exclude_date, today,
-                    with_seconds, step, twelve_hour, close_on_change,
+                    with_seconds, step, hour_step, second_step, twelve_hour, close_on_change,
+                    week_numbers, hide_weekdays, hide_outside_days,
                     validate: rules(validate),
                     size, radius, label, aria_label, description, helper, placeholder, status, required, disabled,
                 }
@@ -499,6 +519,7 @@ fn ChronoFieldDemo(values: DemoValues) -> Element {
                 ChronoField {
                     value: date(), onchange: move |next| date.set(next),
                     min: min_day, max: max_day, format, exclude_date, today, close_on_change, calendar, days,
+                    week_numbers, hide_weekdays, hide_outside_days, open_to, presets: day_presets(&values),
                     validate: rules(validate),
                     size, radius, label, aria_label, description, helper, placeholder, status, required, disabled,
                 }

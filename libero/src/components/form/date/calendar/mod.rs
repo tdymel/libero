@@ -11,6 +11,7 @@ use chrono::{Datelike, Days, Months, NaiveDate};
 
 use super::{
     ChronoPickerPart, DateRange,
+    date_value::DayGrid,
     format::{date_formatter, format_date},
     today::use_today_with_refresh,
 };
@@ -188,6 +189,13 @@ impl From<Option<Callback<NaiveDate, bool>>> for DayRule {
     }
 }
 
+/// A preset button: its text, and what pressing it picks.
+#[derive(Clone, Debug, PartialEq)]
+pub(super) struct CalendarPreset {
+    pub(super) label: String,
+    pub(super) selection: Selection,
+}
+
 #[derive(Props, Clone, PartialEq)]
 pub(super) struct CalendarProps {
     selection: Selection,
@@ -203,6 +211,17 @@ pub(super) struct CalendarProps {
     /// The level a pick lands on; the levels above only navigate.
     #[props(default = DateLevel::Day)]
     lowest: DateLevel,
+    /// The level shown first; one below `lowest` shows `lowest`.
+    #[props(default)]
+    open_to: Option<DateLevel>,
+    /// Week numbers, weekend marks, hidden weekday names or outside days.
+    #[props(default)]
+    grid: DayGrid,
+    /// Buttons before the views, each picking its selection through `onpreset`.
+    #[props(default)]
+    presets: Vec<CalendarPreset>,
+    #[props(default)]
+    onpreset: Option<EventHandler<usize>>,
     /// A month grid, or one row of `days` days. Only at the day level.
     #[props(default)]
     variant: CalendarVariant,
@@ -270,7 +289,7 @@ pub(super) fn Calendar(props: CalendarProps) -> Element {
     let more = use_signal(|| 0i64);
     let root = use_element();
     // A new `lowest` remounts the calendar (`DateValue::picker` keys it).
-    let mut level = use_signal(|| lowest);
+    let mut level = use_signal(|| props.open_to.map_or(lowest, |open_to| open_to.max(lowest)));
     // Below `sm`, side by side only the months that fit (todo 3958).
     let narrow = use_media_query(&narrow_query());
     let fit = use_month_fit(
@@ -393,6 +412,7 @@ pub(super) fn Calendar(props: CalendarProps) -> Element {
         day.filter(|day| (first..=add_days(first, 6)).contains(day))
     };
     let size = props.size;
+    let grid = props.grid;
 
     let body = match level() {
         _ if props.variant == CalendarVariant::Mini => {
@@ -408,14 +428,16 @@ pub(super) fn Calendar(props: CalendarProps) -> Element {
                         key: "{index}",
                         role: "grid",
                         "aria-label": format_date(month, formats.month_heading, names),
+                        "data-week-numbers": grid.week_numbers.then_some("true"),
                         onkeydown,
-                        Weekdays { first_weekday }
+                        Weekdays { first_weekday, week_numbers: grid.week_numbers, hidden: grid.hide_weekdays }
                         for (week, first) in weeks(month) {
                             Week {
                                 key: "{week}",
                                 first,
                                 month,
-                                blanks: columns > 1,
+                                blanks: columns > 1 || grid.hide_outside_days,
+                                grid,
                                 selection: selection.clip(hovered, first, add_days(first, 6)),
                                 value: selection.clip(None, first, add_days(first, 6)),
                                 today: in_week(today, first),
@@ -504,12 +526,60 @@ pub(super) fn Calendar(props: CalendarProps) -> Element {
         DateLevel::Year => view.year_view(cell_stop),
     };
 
+    // Presets sit before the views, in a column beside them; the views go in a panel.
+    let has_presets = !props.presets.is_empty();
+    let allowed = day_allowed(min, max, exclude_date);
+    let onpreset = props.onpreset;
+    let presets = has_presets.then(|| {
+        rsx! {
+            div { "data-slot": ChronoPickerPart::Presets.slot(),
+                for (index, preset) in props.presets.iter().enumerate() {
+                    {
+                        let anchor = preset.selection.anchor();
+                        let open = preset.selection.picks().into_iter().flatten().all(allowed);
+                        rsx! {
+                            button {
+                                key: "{index}",
+                                r#type: "button",
+                                "data-slot": ChronoPickerPart::Preset.slot(),
+                                "aria-pressed": if preset.selection == selection { "true" } else { "false" },
+                                disabled: (!open).then_some(true),
+                                "aria-disabled": disabled.then_some("true"),
+                                tabindex: view.tabindex(true),
+                                onclick: move |_| {
+                                    if disabled {
+                                        return;
+                                    }
+                                    if let Some(anchor) = anchor {
+                                        paged.set(Some(first_of_month(anchor)));
+                                        level.set(lowest);
+                                    }
+                                    if let Some(onpreset) = onpreset {
+                                        onpreset.call(index);
+                                    }
+                                },
+                                "{preset.label}"
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    });
+    let body = match has_presets {
+        true => rsx! {
+            div { "data-slot": "panel", {body} }
+        },
+        false => body,
+    };
+
     let states: Input<States> = props
         .states
         .unwrap_or_default()
         .with(props.size.state_name(), true)
         .with("scroll", scroll)
         .with("measuring", fit.measuring)
+        .with("presets", has_presets)
         .into();
     let root_box = use_box()
         .framework_sx(&CALENDAR_SX)
@@ -533,6 +603,7 @@ pub(super) fn Calendar(props: CalendarProps) -> Element {
             HtmlTag::Div,
             props.attributes,
             rsx! {
+                {presets}
                 {body}
                 {hidden}
             },

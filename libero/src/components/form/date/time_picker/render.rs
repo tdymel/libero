@@ -26,6 +26,7 @@ impl ClockView {
             twelve,
             with_seconds,
             step,
+            second_step,
             focusable,
             disabled,
             ..
@@ -61,8 +62,10 @@ impl ClockView {
                 }
             }
         };
-        let hours = (0..if twelve { 12 } else { 24 })
-            .map(|index| {
+        let hour_indices: Vec<usize> = self.hour_indices().collect();
+        let hours = hour_indices
+            .iter()
+            .map(|&index| {
                 let label = self.hour_label(index);
                 let hour = self.hour_of(label);
                 SpinOption {
@@ -73,6 +76,15 @@ impl ClockView {
             .collect();
         let hour_index = (base.hour() % if twelve { 12 } else { 24 }) as usize;
         let hour_text = TWO_DIGITS[self.hour_label(hour_index) as usize];
+        // Off the hour step, just past the offered hour below it (or the last, around midnight).
+        let hours_below = hour_indices
+            .iter()
+            .filter(|index| **index <= hour_index)
+            .count();
+        let hours_at = match hour_indices.get(hours_below.wrapping_sub(1)) {
+            Some(&index) => place(hours_below - 1, index == hour_index),
+            None => place(hour_indices.len().saturating_sub(1), false),
+        };
         let minutes = (0..60u32)
             .step_by(step as usize)
             .map(|minute| SpinOption {
@@ -85,6 +97,7 @@ impl ClockView {
         let minutes_at = place((minute / step) as usize, minute % step == 0);
         let seconds = with_seconds.then(|| {
             let options = (0..60u32)
+                .step_by(second_step as usize)
                 .map(|second| {
                     let time = at(base.hour(), base.minute(), second);
                     SpinOption {
@@ -94,9 +107,13 @@ impl ClockView {
                 })
                 .collect();
             let second = base.second() as usize;
+            let seconds_at = place(
+                second / second_step as usize,
+                second.is_multiple_of(second_step as usize),
+            );
             rsx! {
                 span { "data-slot": ChronoPickerPart::Separator.slot(), "aria-hidden": "true", ":" }
-                {column(Column::Seconds, names.seconds_label.to_string(), options, place(second, true), TWO_DIGITS[second], Some((names.seconds_value)(second as u32)), 15)}
+                {column(Column::Seconds, names.seconds_label.to_string(), options, seconds_at, TWO_DIGITS[second], Some((names.seconds_value)(second as u32)), (15 / second_step as usize).max(1))}
             }
         });
         let meridiem = twelve.then(|| {
@@ -126,7 +143,7 @@ impl ClockView {
         let minutes_page = (15 / step).max(1) as usize;
         rsx! {
             div { "data-slot": ChronoPickerPart::Columns.slot(),
-                {column(Column::Hours, names.hours_label.to_string(), hours, place(hour_index, true), hour_text, None, 3)}
+                {column(Column::Hours, names.hours_label.to_string(), hours, hours_at, hour_text, None, 3)}
                 span { "data-slot": ChronoPickerPart::Separator.slot(), "aria-hidden": "true", ":" }
                 {column(Column::Minutes, names.minutes_label.to_string(), minutes, minutes_at, TWO_DIGITS[minute as usize], Some((names.minutes_value)(minute)), minutes_page)}
                 {seconds}
@@ -155,7 +172,8 @@ impl ClockView {
                         inner: false,
                         label: TWO_DIGITS[label as usize].trim_start_matches('0'),
                         selected: value.is_some_and(|value| value.hour() == hour),
-                        disabled: !self.within(at(hour, 0, 0), at(hour, 59, 59)),
+                        disabled: !self.on_hour_step(hour)
+                            || !self.within(at(hour, 0, 0), at(hour, 59, 59)),
                     }
                 });
                 // A 24-hour face rings 13 to 00 inside 1 to 12.
@@ -166,7 +184,8 @@ impl ClockView {
                         inner: true,
                         label: TWO_DIGITS[hour as usize],
                         selected: value.is_some_and(|value| value.hour() == hour),
-                        disabled: !self.within(at(hour, 0, 0), at(hour, 59, 59)),
+                        disabled: !self.on_hour_step(hour)
+                            || !self.within(at(hour, 0, 0), at(hour, 59, 59)),
                     }
                 });
                 outer.chain(inner).collect()
@@ -194,7 +213,8 @@ impl ClockView {
                         inner: false,
                         label: TWO_DIGITS[second as usize],
                         selected: value.is_some_and(|value| value.second() == second),
-                        disabled: !self.within(time, time),
+                        disabled: !second.is_multiple_of(u32::from(self.second_step))
+                            || !self.within(time, time),
                     }
                 })
                 .collect(),

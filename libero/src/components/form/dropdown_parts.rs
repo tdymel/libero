@@ -101,6 +101,7 @@ picker_dropdown_parts! {
     pub enum ChronoDropdownPart: ChronoPickerPart {
         Header, Nav, Title, Months, Weekday, Day, Month, Blank, Cells, Cell, Strip,
         Columns, Spin, Value, Neighbour, Separator, Unit, Readout, Face, Mark, Ticks, Hand, Pivot,
+        Presets, Preset, WeekNumber,
     }
 }
 
