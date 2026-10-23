@@ -747,6 +747,14 @@ async fn the_header_holds_at_its_offset_under_the_scroll<D: Driver>(
         row.y + row.height <= header.y || row.y >= header.y + header.height - 1.0,
         "a row paints under the header: {row:?} vs {header:?}"
     );
+    // Row 10 scrolled away above: its focus scroll stops below the header (todo 3972).
+    d.focus("tbody tr:nth-child(10) input").await?;
+    // Chrome centres the focused control; Blitz moves it to the nearest edge, the header's.
+    eventually(d, "the focused row control below the header", async |d| {
+        let header = d.rect("thead th").await?;
+        Ok(d.rect("input:focus").await?.y >= header.y + header.height - 1.0)
+    })
+    .await?;
     // Blitz reads no `scroll-margin-top` back.
     if !matches!(d.platform(), Platform::Native) {
         let margin = d.style("tbody tr", "scroll-margin-top").await?;

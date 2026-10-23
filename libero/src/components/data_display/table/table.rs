@@ -22,7 +22,10 @@ use crate::{
         use_debounced_callback, use_element, use_formats, use_id, use_localization,
         use_resize_fallback, use_theme,
     },
-    platform::{ElementApi, spaces_inline_boxes, sticks_table_heads, widens_sized_tables},
+    platform::{
+        ElementApi, SCROLL_MARGIN_BOTTOM_VAR, SCROLL_MARGIN_VAR, spaces_inline_boxes,
+        sticks_table_heads, widens_sized_tables,
+    },
     sx::{StaticSx, Sx, sx},
     theme::{
         CHECKBOX_BOX_SIZE, CssVar, NamedColorCss, Size, TABLE_GROUP, TABLE_PAD_X, TableDefaults,
@@ -696,17 +699,17 @@ static TABLE_SX: StaticSx = StaticSx::new(|| {
     // A focus scroll in the page stops below the header, not under it (WCAG 2.4.11).
     .when(
         "sticky-page",
-        sx().selector(
-            PAGE_FOCUS_TARGETS,
-            sx().with(
-                "scroll-margin-top",
-                format!(
-                    "calc({} + var({}, 0px))",
-                    sticky_top(),
-                    HEAD_HEIGHT_VAR.name()
-                ),
-            ),
-        ),
+        sx().selector(PAGE_FOCUS_TARGETS, {
+            let clearance = format!(
+                "calc({} + var({}, 0px))",
+                sticky_top(),
+                HEAD_HEIGHT_VAR.name()
+            );
+            // Blitz's focus scroll reads the custom property on every side: zero below.
+            sx().with("scroll-margin-top", clearance.clone())
+                .with(SCROLL_MARGIN_VAR, clearance)
+                .with(SCROLL_MARGIN_BOTTOM_VAR, "0px")
+        }),
     )
     // On each `td`, like the header's `th`: the rows scroll under it.
     .when(

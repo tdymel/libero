@@ -59,7 +59,7 @@ base_props! {
         #[props(default, into)]
         gradient: Option<Gradient>,
         /// Cuts a title on one line with an ellipsis at its `end` or `start`.
-        /// `line_clamp` wins when both are set.
+        /// `line_clamp` wins when both are set. Blitz paints no ellipsis: it clips the text at the cut end.
         #[props(default, into)]
         truncate: Input<Truncate>,
         /// Cuts the title after this many lines with an ellipsis; over `truncate`, and `0`

@@ -1189,6 +1189,29 @@ impl Page {
             .unwrap_or_else(|| panic!("no text painted in {selector:?}"))
     }
 
+    /// Every glyph Blitz paints on the first match's line box, clipped or not: its id and page x,
+    /// left to right.
+    pub fn painted_glyphs(&self, selector: &str) -> Vec<(u32, f64)> {
+        let (_, top, _, height) = self.rect(selector);
+        let mut glyphs: Vec<(u32, f64)> = self
+            .scene()
+            .commands
+            .iter()
+            .filter_map(|command| match command {
+                RenderCommand::GlyphRun(GlyphRunCommand {
+                    transform, glyphs, ..
+                }) => Some(glyphs.iter().filter_map(move |glyph| {
+                    let at = *transform * kurbo::Point::new(glyph.x as f64, glyph.y as f64 - 1.0);
+                    (at.y >= top && at.y <= top + height).then_some((glyph.id, at.x))
+                })),
+                _ => None,
+            })
+            .flatten()
+            .collect();
+        glyphs.sort_by(|a, b| a.1.total_cmp(&b.1));
+        glyphs
+    }
+
     /// `<tag #id [attr=value ...]>` of a node, for assertion messages.
     pub fn describe(&self, id: NodeId) -> String {
         let doc = self.doc.inner.borrow();

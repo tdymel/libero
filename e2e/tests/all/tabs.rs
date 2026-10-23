@@ -696,75 +696,56 @@ fn a_vertical_tablist_announces_its_orientation() {
 }
 
 /// Up and Down move focus and selection between vertical tabs, and back.
-#[test]
-fn up_and_down_move_between_vertical_tabs() {
-    block_on(async {
-        let fixture = Fixture::open("/tabs-vertical", Viewport::Desktop)
-            .await
-            .unwrap();
-        let page = &fixture.page;
-        reset_tab_position(page).await.unwrap();
-        keyboard::press(page, keyboard::TAB).await.unwrap();
-        until_focus_and_selection(&fixture, "0:0", "Tab to focus the first tab").await;
-        keyboard::press(page, keyboard::ARROW_DOWN).await.unwrap();
-        until_focus_and_selection(&fixture, "1:1", "after ArrowDown").await;
-        keyboard::press(page, keyboard::ARROW_UP).await.unwrap();
-        until_focus_and_selection(&fixture, "0:0", "after ArrowUp").await;
-
-        fixture.console.assert_clean("vertical tab keys").unwrap();
-        fixture.close().await.unwrap();
-    });
+async fn up_and_down_move<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    selected_is(d, "Account", "load").await?;
+    d.focus(SELECTED).await?;
+    step(d, keyboard::ARROW_DOWN, "Billing").await?;
+    step(d, keyboard::ARROW_UP, "Account").await
 }
 
 /// On a vertical strip Left and Right do nothing. ArrowRight is pressed first, then
 /// ArrowDown: had ArrowRight moved, ArrowDown would land on the third tab.
-#[test]
-fn left_and_right_do_nothing_on_a_vertical_strip() {
-    block_on(async {
-        let fixture = Fixture::open("/tabs-vertical", Viewport::Desktop)
-            .await
-            .unwrap();
-        let page = &fixture.page;
-        reset_tab_position(page).await.unwrap();
-        keyboard::press(page, keyboard::TAB).await.unwrap();
-        until_focus_and_selection(&fixture, "0:0", "Tab to focus the first tab").await;
-        keyboard::press(page, keyboard::ARROW_RIGHT).await.unwrap();
-        keyboard::press(page, keyboard::ARROW_DOWN).await.unwrap();
-        until_focus_and_selection(&fixture, "1:1", "after ArrowRight then ArrowDown").await;
-
-        fixture.console.assert_clean("vertical tab arrows").unwrap();
-        fixture.close().await.unwrap();
-    });
+async fn left_and_right_do_nothing<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    selected_is(d, "Account", "load").await?;
+    d.focus(SELECTED).await?;
+    d.press(keyboard::ARROW_RIGHT).await?;
+    step(d, keyboard::ARROW_DOWN, "Billing").await
 }
 
 /// Vertical tabs sit in a column beside the panel, one tab under the other.
-#[test]
-fn vertical_tabs_stack_beside_the_panel() {
-    block_on(async {
-        let fixture = Fixture::open("/tabs-vertical", Viewport::Desktop)
-            .await
-            .unwrap();
-        let page = &fixture.page;
-        wait::for_js_true(
-            page,
-            "(() => { const list = document.querySelector('[role=tablist]').getBoundingClientRect(); \
-             const panel = document.querySelector('[role=tabpanel]').getBoundingClientRect(); \
-             return list.right <= panel.left + 1; })()",
-            "the tablist to sit left of the panel",
-        )
-        .await
-        .unwrap();
-        wait::for_js_true(
-            page,
-            "(() => { const [first, second] = [...document.querySelectorAll('[role=tab]')] \
-             .map(t => t.getBoundingClientRect()); \
-             return second.top >= first.bottom - 1; })()",
-            "the second tab below the first",
-        )
-        .await
-        .unwrap();
-
-        fixture.console.assert_clean("vertical tab layout").unwrap();
-        fixture.close().await.unwrap();
-    });
+async fn stack_beside_the_panel<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    eventually(d, "the tablist left of the panel", async |d| {
+        let (list, panel) = (
+            d.rect("[role=tablist]").await?,
+            d.rect("[role=tabpanel]").await?,
+        );
+        Ok(list.x + list.width <= panel.x + 1.0)
+    })
+    .await?;
+    eventually(d, "the second tab below the first", async |d| {
+        let first = d.rect("[role=tablist] > [role=tab]:nth-child(1)").await?;
+        let second = d.rect("[role=tablist] > [role=tab]:nth-child(2)").await?;
+        Ok(second.y >= first.y + first.height - 1.0)
+    })
+    .await
 }
+
+e2e::scenario!(
+    up_and_down_move_between_vertical_tabs,
+    "/tabs-vertical",
+    up_and_down_move,
+    android: skip("958: element identity on the WebView"),
+    desktop: skip("958: element identity on the WebView")
+);
+e2e::scenario!(
+    left_and_right_do_nothing_on_a_vertical_strip,
+    "/tabs-vertical",
+    left_and_right_do_nothing,
+    android: skip("958: element identity on the WebView"),
+    desktop: skip("958: element identity on the WebView")
+);
+e2e::scenario!(
+    vertical_tabs_stack_beside_the_panel,
+    "/tabs-vertical",
+    stack_beside_the_panel
+);

@@ -44,6 +44,7 @@ base_props! {
         gradient: Option<Gradient>,
         /// Cuts a text on one line with an ellipsis at its `end` or `start`. The element
         /// becomes a block, so a `span` truncates too. `line_clamp` wins when both are set.
+        /// Blitz paints no ellipsis: it clips the text at the cut end.
         #[props(default, into)]
         truncate: Input<Truncate>,
         /// Cuts the text after this many lines with an ellipsis; over `truncate`, and `0`
