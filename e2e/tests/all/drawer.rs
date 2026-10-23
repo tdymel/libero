@@ -471,23 +471,32 @@ fn it_honours_the_overlay_contract() {
     });
 }
 
-/// 3979: the header close button closes and returns focus, without asking `ondismiss`.
-async fn header_close_closes<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+/// 4005: the header close button asks `ondismiss` with `CloseButton`: a refusal keeps the
+/// drawer open, an allowance closes it and returns focus.
+async fn header_close_asks<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    const CLOSE: &str = "[role=dialog] [data-slot=close]";
     modal::open(d, TRIGGER).await?;
-    d.click("[role=dialog] [data-slot=close]").await?;
+    d.click(CLOSE).await?;
+    eventually(d, "ondismiss to hear the close button", async |d| {
+        Ok(d.text("#reasons").await? == "CloseButton")
+    })
+    .await?;
+    ensure!(d.exists(DIALOG).await?, "a refused close button closed it");
+    d.click("#allow").await?;
+    d.click(CLOSE).await?;
     modal::closed_with_focus_on(d, TRIGGER, "the drawer's header close").await?;
     let reasons = d.text("#reasons").await?;
     ensure!(
-        reasons.is_empty(),
-        "the close button asked ondismiss: {reasons}"
+        reasons == "CloseButton,CloseButton",
+        "ondismiss heard {reasons}"
     );
     Ok(())
 }
 
 e2e::scenario!(
-    a_drawer_header_close_button_closes_it,
+    a_drawer_header_close_button_asks_ondismiss,
     "/drawer/close-button",
-    header_close_closes,
+    header_close_asks,
     macos: skip("upstream: WebKit does not focus a clicked button"),
     ios: skip("upstream: WebKit does not focus a clicked button")
 );

@@ -129,7 +129,7 @@ base_props! {
         /// Docked bottom: draws a grab bar in the swipe strip.
         #[props(default)]
         handle: bool,
-        /// A header close button, which closes without asking `ondismiss`.
+        /// A header close button, which asks `ondismiss` with `Dismiss::CloseButton`.
         #[props(default)]
         close_button: bool,
         children: Element,

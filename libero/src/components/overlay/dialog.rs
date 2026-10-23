@@ -129,9 +129,9 @@ base_props! {
         /// The close button outside a modal; inside one it closes the modal.
         #[props(default)]
         onclose: Option<EventHandler<()>>,
-        /// Inside a modal: whether Escape, the backdrop, Back or a bottom drawer's swipe may
-        /// close it; `false` keeps it open. Unset, all close, but an `alertdialog` ignores the backdrop.
-        /// The header close button is not asked.
+        /// Inside a modal: whether Escape, the backdrop, Back, a bottom drawer's swipe or the
+        /// header close button (`Dismiss::CloseButton`) may close it; `false` keeps it open.
+        /// Unset, all close, but an `alertdialog` ignores the backdrop.
         #[props(default)]
         ondismiss: Option<Callback<Dismiss, bool>>,
         /// The close button's accessible name, e.g. "Close cart".
@@ -172,8 +172,8 @@ base_props! {
 /// ```
 ///
 /// A confirmation is an `alertdialog`, described by its message; the backdrop
-/// does not close it. `ondismiss` keeps a form with unsaved input open, but
-/// the header close button is not asked:
+/// does not close it. `ondismiss` keeps a form with unsaved input open, the
+/// header close button included:
 ///
 /// ```no_run
 /// # use dioxus::prelude::*;
@@ -226,7 +226,7 @@ pub fn Dialog(props: DialogProps) -> Element {
     // Stable for the memoized header; swaps in this render's `onclose`.
     let onclose = props.onclose;
     let close = use_callback(move |()| match (modal, &onclose) {
-        (Some(modal), _) => modal.close(),
+        (Some(modal), _) => modal.dismiss(Dismiss::CloseButton),
         (None, Some(onclose)) => onclose.call(()),
         (None, None) => {}
     });

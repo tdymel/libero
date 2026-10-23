@@ -260,6 +260,22 @@ impl Sx {
         &self.entries
     }
 
+    /// The last top-level value declared for any of `properties`, as CSS. Nested
+    /// blocks and per-breakpoint values are skipped.
+    pub(crate) fn declared_css(&self, properties: &[Property]) -> Option<String> {
+        self.entries.iter().rev().find_map(|entry| match entry {
+            SxEntry::Declaration {
+                property: key @ SxPropertyKey::Known(property),
+                value,
+            } if properties.contains(property)
+                && !matches!(value, ThemeAwareValue::BreakpointValue(_)) =>
+            {
+                Some(super::stylesheet::to_css_value(key, value))
+            }
+            _ => None,
+        })
+    }
+
     /// Hash of the entries, not the derived `Hash::hash`.
     pub(crate) fn content_hash(&self) -> u64 {
         let mut hasher = DefaultHasher::new();

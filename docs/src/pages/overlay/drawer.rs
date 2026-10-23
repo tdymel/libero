@@ -174,9 +174,9 @@ pub fn DrawerPage() -> Element {
                     prop("aria_label", "Option<String>").doc("Names the panel, which is a dialog. With neither this nor `title`, it warns in a debug build."),
                     prop("title", "Option<String>").doc("A visible heading at the top of the panel that names it."),
                     prop("sx", "Input<Sx>").doc("Styles the panel. The content is yours to style; a bottom drawer's swipe strip is `& > [data-slot='handle']`."),
-                    prop("ondismiss", "Option<Callback<Dismiss, bool>>").doc("Whether Escape, the backdrop, Back or a swipe may close it; `false` keeps it open, e.g. over an unsaved draft. Unset, all close."),
+                    prop("ondismiss", "Option<Callback<Dismiss, bool>>").doc("Whether Escape, the backdrop, Back, a swipe or the header close button may close it; `false` keeps it open, e.g. over an unsaved draft. Unset, all close."),
                     prop("handle", "bool").default("false").doc("Docked bottom, a touch swipe down from the panel's top padding closes it; `true` draws a grab bar there. Other anchors ignore it."),
-                    prop("close_button", "bool").default("false").doc("Draws a close button in the header, beside `title`. As a `Dialog`'s, it closes without asking `ondismiss`."),
+                    prop("close_button", "bool").default("false").doc("Draws a close button in the header, beside `title`. As a `Dialog`'s, it asks `ondismiss` with `Dismiss::CloseButton`."),
                 ]).without_base_props(),
             ],
             accessibility: a11y()

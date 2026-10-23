@@ -111,9 +111,9 @@ behave the same. See [Modal](modal.md).
 | `aria_label` | `Option<String>` | - | Names the panel, which is a dialog. With neither this nor `title`, it warns in a debug build. |
 | `title` | `Option<String>` | - | A visible heading at the top of the panel that names it. |
 | `sx` | `Input<Sx>` | - | Styles the panel. The content is yours to style; a bottom drawer's swipe strip is `& > [data-slot='handle']`. |
-| `ondismiss` | `Option<Callback<Dismiss, bool>>` | - | Whether Escape, the backdrop, Back or a swipe may close it; `false` keeps it open, e.g. over an unsaved draft. Unset, all close. |
+| `ondismiss` | `Option<Callback<Dismiss, bool>>` | - | Whether Escape, the backdrop, Back, a swipe or the header close button may close it; `false` keeps it open, e.g. over an unsaved draft. Unset, all close. |
 | `handle` | `bool` | `false` | Docked bottom, a touch swipe down from the panel's top padding closes it; `true` draws a grab bar there. Other anchors ignore it. |
-| `close_button` | `bool` | `false` | Draws a close button in the header, beside `title`. As a `Dialog`'s, it closes without asking `ondismiss`. |
+| `close_button` | `bool` | `false` | Draws a close button in the header, beside `title`. As a `Dialog`'s, it asks `ondismiss` with `Dismiss::CloseButton`. |
 
 ## Accessibility
 

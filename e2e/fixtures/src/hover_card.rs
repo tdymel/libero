@@ -3,6 +3,7 @@
 use dioxus::prelude::*;
 use libero::components::{Button, ColorCode, ColorField, Flex, HoverCard, Select, Text};
 use libero::hooks::Side;
+use libero::{sx::sx, theme::Size};
 
 use crate::{Routes, common::Fruit};
 
@@ -25,7 +26,27 @@ pub const ROUTES: Routes = &[
     ("/hover-card-url", || rsx! { LongWordPage { link: false } }),
     ("/hover-card-url-link", || rsx! { LongWordPage { link: true } }),
     ("/hover-card-arrow", || rsx! { ArrowPage {} }),
+    ("/hover-card-arrow-styled", || rsx! { StyledArrowPage {} }),
 ];
+
+/// 4004: the arrow takes the caller's `sx` background and the `shadow` size.
+#[component]
+fn StyledArrowPage() -> Element {
+    rsx! {
+        div { style: "padding: 40px 0 0 200px;",
+            HoverCard {
+                aria_label: "Ada Lovelace",
+                side: Side::Bottom,
+                arrow: true,
+                open: true,
+                shadow: Size::Xl,
+                sx: sx().background("rgb(250, 235, 200)"),
+                content: rsx! { Text { "Wrote the first algorithm meant for a machine." } },
+                Button { id: "trigger", variant: "outlined", "Ada Lovelace" }
+            }
+        }
+    }
+}
 
 /// 3977: an arrowed card forced open 20px under its trigger.
 #[component]

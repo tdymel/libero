@@ -703,6 +703,30 @@ fn use_press_outside(listen: bool, handle: DismissHandle) {
     }));
 }
 
+/// Calls `away` on a press outside `marker`'s elements while `listen`, where [`press`]
+/// answers: for a box that decides its own closing from the press (`HoverCard`, 4020).
+pub(crate) fn use_press_away(listen: bool, marker: PressMarker, away: Callback<()>) {
+    let listening = use_subscription_slot::<dyn PressSubscription>();
+    use_effect(use_reactive!(|(listen,)| {
+        if !listen {
+            listening.clear();
+            return;
+        }
+        if listening.is_some() {
+            return;
+        }
+        let Some(api) = press() else {
+            return;
+        };
+        let subscription = api.on_press(Box::new(move |markers| {
+            if !markers.contains(&marker.id) {
+                away.call(());
+            }
+        }));
+        listening.set(Some(subscription));
+    }));
+}
+
 /// Whether the document can be listened to, decided once at render time. Safe:
 /// it needs no mounted element, and SSR serialises no listeners.
 fn use_global_escape() -> bool {

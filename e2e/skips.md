@@ -1,6 +1,6 @@
 # Skipped e2e scenarios
 
-Scenarios: 679
+Scenarios: 681
 
 Generated from the `scenario!` skips in `e2e/tests/all` by `cargo test -p e2e --lib skips`; edit the skip, not this file. A reason starting `upstream:` waits on Dioxus, Blitz, wry or the engine (revisit on their update, todo 3362), a number names the todo that removes it.
 
@@ -36,8 +36,8 @@ The performance scenarios (units `perf`, `table_perf`) are no skips but run on r
 | `drawer::a_backdrop_click_closes_a_drawer` | macos desktop | upstream: WebKit does not focus a clicked button |
 | `drawer::a_button_in_a_drawer_closes_it_and_focus_returns` | ios | upstream: WebKit does not focus a clicked button |
 | `drawer::a_button_in_a_drawer_closes_it_and_focus_returns` | macos desktop | upstream: WebKit does not focus a clicked button |
-| `drawer::a_drawer_header_close_button_closes_it` | ios | upstream: WebKit does not focus a clicked button |
-| `drawer::a_drawer_header_close_button_closes_it` | macos desktop | upstream: WebKit does not focus a clicked button |
+| `drawer::a_drawer_header_close_button_asks_ondismiss` | ios | upstream: WebKit does not focus a clicked button |
+| `drawer::a_drawer_header_close_button_asks_ondismiss` | macos desktop | upstream: WebKit does not focus a clicked button |
 | `drawer::a_drawer_moves_focus_in_and_traps_tab` | android | 959: Tab leaves the drawer for the body on the WebView |
 | `drawer::a_drawer_moves_focus_in_and_traps_tab` | desktop | 959: Shift+Tab from the first control leaves the drawer on the WebView |
 | `drawer::a_drawer_moves_focus_in_and_traps_tab` | ios | 959: Shift+Tab from the first control leaves the drawer on the WebView |
@@ -109,6 +109,8 @@ The performance scenarios (units `perf`, `table_perf`) are no skips but run on r
 | `hover_card::a_scrolling_text_card_takes_a_tab_stop_that_scrolls_it` | desktop | 958: the Tab bridge reads the card's focusables inside a handler |
 | `hover_card::a_scrolling_text_card_takes_a_tab_stop_that_scrolls_it` | ios | 958: the Tab bridge reads the card's focusables inside a handler |
 | `hover_card::a_tap_outside_closes_a_long_press_card` | desktop | 1126: no touch input under Xvfb |
+| `hover_card::a_webview_press_outside_closes_a_touch_card` | native | focus tells a press outside apart there; no press listener |
+| `hover_card::a_webview_press_outside_closes_a_touch_card` | web | focus tells a press outside apart there; no press listener |
 | `hover_card::escape_closes_a_pointer_opened_card_with_focus_elsewhere` | ios | a touch screen has no hover |
 | `hover_card::escape_closes_a_select_list_in_the_card_before_the_card` | ios | a touch screen has no hover |
 | `hover_card::escape_on_the_trigger_closes_a_pointer_opened_card` | ios | a touch screen has no hover |

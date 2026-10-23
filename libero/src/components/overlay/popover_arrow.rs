@@ -27,6 +27,9 @@ pub(crate) fn PopoverArrow(
     point: Option<ArrowPoint>,
     /// The square's side, in px.
     size: f64,
+    /// Declarations appended to the inline style, beating `sx`.
+    #[props(default)]
+    style: String,
 ) -> Element {
     let class = use_css(Some(sx), CssLayer::Framework);
     let Some(point) = point else {
@@ -34,7 +37,7 @@ pub(crate) fn PopoverArrow(
     };
     let half = size / 2.0;
     let style = format!(
-        "left:{}px;top:{}px;width:{size}px;height:{size}px;",
+        "left:{}px;top:{}px;width:{size}px;height:{size}px;{style}",
         point.x - half,
         point.y - half
     );

@@ -231,7 +231,7 @@ fn property_declarations(property: &SxPropertyKey, value: &ThemeAwareValue) -> V
     declarations
 }
 
-fn to_css_value(property: &SxPropertyKey, value: &ThemeAwareValue) -> String {
+pub(super) fn to_css_value(property: &SxPropertyKey, value: &ThemeAwareValue) -> String {
     let (scale, role) = match property {
         SxPropertyKey::Known(property) => (property.size_scale(), property.color_role()),
         // Unknown target: the writing component picks the role when it computes the value.

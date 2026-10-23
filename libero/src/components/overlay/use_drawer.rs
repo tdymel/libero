@@ -26,14 +26,14 @@ pub struct DrawerOptions {
     /// Styles the panel. Its content is yours; a bottom drawer's swipe strip is
     /// `& > [data-slot='handle']`.
     pub sx: Input<Sx>,
-    /// Whether Escape, the backdrop, Back or a swipe may close it; `false` keeps it
-    /// open. Unset, all close. As [`Dialog`](crate::components::Dialog)'s.
+    /// Whether Escape, the backdrop, Back, a swipe or the header close button may close it;
+    /// `false` keeps it open. Unset, all close. As [`Dialog`](crate::components::Dialog)'s.
     pub ondismiss: Option<Callback<Dismiss, bool>>,
     /// Docked bottom, a touch swipe down from the panel's top padding closes it;
     /// `true` draws a grab bar there. Other anchors ignore it.
     pub handle: bool,
-    /// Draws a close button in the header, beside `title`. As `Dialog`'s, it closes
-    /// without asking `ondismiss`.
+    /// Draws a close button in the header, beside `title`. As `Dialog`'s, it asks
+    /// `ondismiss` with `Dismiss::CloseButton`.
     pub close_button: bool,
 }
 

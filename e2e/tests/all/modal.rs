@@ -271,16 +271,19 @@ e2e::scenario!(
     ios: skip("upstream: WebKit does not focus a clicked button")
 );
 
-/// Todo 2563: `ondismiss` hears each dismissal and keeps a draft open; with the
-/// draft gone, Escape closes.
+/// Todo 2563, 4005: `ondismiss` hears each dismissal, the header close button too, and keeps
+/// a draft open; with the draft gone, Escape closes.
 async fn a_draft_vetoes_dismissal<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
     open(d, "#open-draft").await?;
     d.click("#dirty").await?;
     d.press(keyboard::ESCAPE).await?;
     d.click_at(4.0, 4.0).await?;
-    eventually(d, "Escape and the backdrop to be refused", async |d| {
-        Ok(d.text("#reasons").await? == "Escape,Backdrop")
-    })
+    d.click("[role=dialog] [data-slot=close]").await?;
+    eventually(
+        d,
+        "Escape, the backdrop and the close button to be refused",
+        async |d| Ok(d.text("#reasons").await? == "Escape,Backdrop,CloseButton"),
+    )
     .await?;
     ensure!(
         d.exists(DIALOG).await?,

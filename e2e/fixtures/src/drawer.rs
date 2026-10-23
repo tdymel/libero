@@ -22,21 +22,26 @@ pub const ROUTES: Routes = &[
     ("/drawer/close-button", || rsx! { CloseButtonDrawerPage {} }),
 ];
 
-/// 3979: a header close button, which closes even though `ondismiss` refuses every reason.
+/// 4005: a header close button asks `ondismiss` with `CloseButton`, which refuses until allowed.
 #[component]
 fn CloseButtonDrawerPage() -> Element {
     let mut reasons = use_signal(Vec::<String>::new);
+    let mut allow = use_signal(|| false);
     let nav = use_drawer(
         DrawerOptions {
             title: Some("Filters".into()),
             close_button: true,
             ondismiss: Some(Callback::new(move |reason: Dismiss| {
                 reasons.push(format!("{reason:?}"));
-                false
+                allow()
             })),
             ..Default::default()
         },
-        |_: ModalScope<()>| rsx! { div { id: "drawer-body", "Filters" } },
+        move |_: ModalScope<()>| {
+            rsx! {
+                Button { id: "allow", onclick: move |_| allow.set(true), "Allow closing" }
+            }
+        },
     );
 
     rsx! {

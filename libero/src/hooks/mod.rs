@@ -121,7 +121,8 @@ pub use dismiss::use_back;
 #[cfg(feature = "use-popover")]
 pub(crate) use dismiss::{
     DismissHandle, DismissOptions, PressMarker, claim_back_entry, escape_closes, listener,
-    use_dismiss, use_dismiss_layer, use_escape_dismiss, use_field_list_layer, use_press_marker,
+    use_dismiss, use_dismiss_layer, use_escape_dismiss, use_field_list_layer, use_press_away,
+    use_press_marker,
 };
 #[cfg(feature = "use-drag")]
 pub use drag::{Drag, DragMove, DragOptions, DragPoint, DragStart, drag_handle_sx, use_drag};

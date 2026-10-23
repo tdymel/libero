@@ -69,6 +69,8 @@ pub enum Dismiss {
     Back,
     /// A downward touch swipe on a bottom drawer's top edge.
     Swipe,
+    /// The header close button of a `Dialog` or `Drawer`.
+    CloseButton,
 }
 
 impl ModalContext {

@@ -18,10 +18,10 @@ use crate::{
     hooks::{
         Align, DismissOptions, ElementHandle, POPOVER_AVAILABLE_HEIGHT, PopoverOptions, Side,
         owner_link, placement_sx, use_dismiss, use_element, use_focus_within, use_popover_on,
-        use_resize_fallback, use_theme,
+        use_press_away, use_press_marker, use_resize_fallback, use_theme,
     },
     platform::{ElementApi, PlatformError, is_tab, next_task, scrolls_on_keys},
-    sx::{StaticSx, ThemeAwareValue, sx},
+    sx::{Property, StaticSx, ThemeAwareValue, sx},
     theme::{PAPER_BACKGROUND, PAPER_BORDER_COLOR, Size, SizeCss, Z_INDEX_POPOVER},
     utils::warn,
 };
@@ -59,7 +59,7 @@ static HOVER_CARD_SX: StaticSx = StaticSx::new(|| {
 const ARROW_SIZE: f64 = 10.0;
 
 // A sibling before the card, which scrolls and would clip it. Its border and shadow edge
-// the half the card leaves showing, as the card's shadow edges the card.
+// the half the card leaves showing. The fill and shadow are inline, from the card's.
 static HOVER_CARD_ARROW_SX: StaticSx = StaticSx::new(|| {
     arrow_sx()
         .position("fixed")
@@ -67,7 +67,6 @@ static HOVER_CARD_ARROW_SX: StaticSx = StaticSx::new(|| {
         .box_sizing("border-box")
         .background(PAPER_BACKGROUND.value())
         .border(format!("1px solid {}", PAPER_BORDER_COLOR.value()))
-        .box_shadow(SizeCss::SHADOW.value(Size::Xs))
 });
 
 /// Holds the Tab bridges: dioxus calls one listener per event name per element,
@@ -258,6 +257,20 @@ pub fn HoverCard(props: HoverCardProps) -> Element {
         }
     };
 
+    // A WebView tap leaves focus on the trigger, so a press outside closes a touch-opened card (4020).
+    let marker = use_press_marker();
+    let away = use_callback({
+        let touch_open = touch_open.clone();
+        move |()| {
+            if touch_open.get() {
+                let mut focused = focused;
+                hovered.set(false);
+                focused.set(false);
+            }
+        }
+    });
+    use_press_away(open, marker, away);
+
     // Focus leaving is decided a task later: a `focusin` in between bumps this,
     // meaning focus only moved between trigger and card.
     let moves = use_signal(|| 0u64);
@@ -407,9 +420,26 @@ pub fn HoverCard(props: HoverCardProps) -> Element {
         });
         attributes.extend(dismiss.floating_events());
         attributes.extend(owner_link(&anchor));
+        attributes.extend(marker.attribute());
         let arrow = props.arrow.then(|| {
+            // The arrow is no child of the card, so it reads the caller's `sx` fill and shadow.
+            let caller = props.sx.as_ref();
+            let shadow = caller
+                .and_then(|sx| sx.declared_css(&[Property::BoxShadow]))
+                .unwrap_or_else(|| SizeCss::SHADOW.value(props.shadow.copied_or(defaults.shadow)));
+            let mut style = format!("box-shadow:{shadow};");
+            if let Some(fill) = caller
+                .and_then(|sx| sx.declared_css(&[Property::Background, Property::BackgroundColor]))
+            {
+                style.push_str(&format!("background:{fill};"));
+            }
             rsx! {
-                PopoverArrow { sx: &HOVER_CARD_ARROW_SX, point: popover.arrow(false), size: ARROW_SIZE }
+                PopoverArrow {
+                    sx: &HOVER_CARD_ARROW_SX,
+                    point: popover.arrow(false),
+                    size: ARROW_SIZE,
+                    style,
+                }
             }
         });
         let card = card
@@ -483,7 +513,12 @@ pub fn HoverCard(props: HoverCardProps) -> Element {
         })
         .render(
             HtmlTag::Span,
-            [dismiss.anchor_events(), anchor.attributes()].concat(),
+            [
+                dismiss.anchor_events(),
+                anchor.attributes(),
+                marker.attribute().into_iter().collect(),
+            ]
+            .concat(),
             rsx! {
                 span {
                     style: CONTENTS,

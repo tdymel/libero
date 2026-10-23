@@ -280,6 +280,27 @@ e2e::scenario!(
     an_outside_tap_closes,
     desktop: skip("1126: no touch input under Xvfb")
 );
+/// Todo 4020: where a tap leaves focus on the trigger (a WebView), a press outside closes a
+/// touch-opened card at once. Scripted pointer events: they move no focus, as a tap does not.
+async fn a_webview_press_outside_closes<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    const PRESS: &str = "((selector) => document.querySelector(selector).dispatchEvent(\
+        new PointerEvent('pointerdown', { bubbles: true, pointerType: 'touch' })))";
+    d.evaluate(&format!("{PRESS}('{TRIGGER}')")).await?;
+    shown(d, CARD, true, "a long press").await?;
+    d.evaluate(&format!("{PRESS}('{CARD_FIRST}')")).await?;
+    d.settle().await?;
+    ensure!(d.exists(CARD).await?, "a press in the card closed it");
+    d.evaluate(&format!("{PRESS}('{BEFORE}')")).await?;
+    shown(d, CARD, false, "a press outside").await
+}
+
+e2e::scenario!(
+    a_webview_press_outside_closes_a_touch_card,
+    "/hover-card",
+    a_webview_press_outside_closes,
+    web: skip("focus tells a press outside apart there; no press listener"),
+    native: skip("focus tells a press outside apart there; no press listener")
+);
 /// Todo 2750: the long press that opens the card leaves the browser's link menu shut, which
 /// would cover the card.
 async fn long_press_keeps_the_link_menu_shut<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
@@ -1039,4 +1060,37 @@ e2e::scenario!(
     an_arrow_and_a_gap_place_the_card,
     "/hover-card-arrow",
     the_arrow_and_gap
+);
+
+/// 4004: the arrow wears the card's background (a caller `sx` here) and its shadow size.
+async fn the_arrow_follows_the_card<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    const CARD: &str = "[role=dialog]";
+    const ARROW: &str = "[data-slot=arrow]";
+    shown(d, CARD, true, "forcing it open").await?;
+    eventually(d, "the arrow", async |d| d.exists(ARROW).await).await?;
+    let fill = d.style(CARD, "background-color").await?;
+    ensure!(
+        fill == "rgb(250, 235, 200)",
+        "the card's background is {fill}"
+    );
+    let arrow_fill = d.style(ARROW, "background-color").await?;
+    ensure!(
+        arrow_fill == fill,
+        "the arrow's fill is {arrow_fill}, not {fill}"
+    );
+    let (shadow, arrow_shadow) = (
+        d.style(CARD, "box-shadow").await?,
+        d.style(ARROW, "box-shadow").await?,
+    );
+    ensure!(
+        shadow != "none" && arrow_shadow == shadow,
+        "the arrow's shadow is {arrow_shadow}, the card's {shadow}"
+    );
+    Ok(())
+}
+
+e2e::scenario!(
+    the_arrow_follows_the_cards_background_and_shadow,
+    "/hover-card-arrow-styled",
+    the_arrow_follows_the_card
 );
