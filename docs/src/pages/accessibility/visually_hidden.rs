@@ -45,7 +45,14 @@ pub fn VisuallyHiddenPage() -> Element {
                     "is vague on its own. The preview shows \"Read more\", and a screen reader "
                     "reads \"Read more about focus management\". With "
                     Code { source: "focusable" }
-                    " on it is a skip link. Tab into the preview and it shows itself."
+                    " on it is a skip link. Tab into the preview and it shows itself. "
+                    "To hide a component's own element or one of its parts the same way, pass "
+                    Code { source: "visually_hidden_sx()" }
+                    " to its "
+                    Code { source: "sx" }
+                    " or a "
+                    Code { source: "parts" }
+                    " entry."
                 }
             },
             Demo {

@@ -4,7 +4,7 @@ use pictogram_icons_lucide as lucide;
 use super::crop::{CropRect, CropShape, Grip};
 use crate::{
     components::{
-        accessibility::visually_hidden_sx,
+        accessibility::visually_hidden_absolute_sx,
         buttons::ActionIcon,
         common::{
             Glyph, HtmlTag, Input, Part, States, Variables, base_props, disabled_look_within_sx,
@@ -314,7 +314,7 @@ static IMAGE_CROPPER_SX: StaticSx = StaticSx::new(|| {
             sx().selector(
                 "& > [data-slot='controls']:not(:focus-within), & > [data-slot='zoom']:not(:focus-within)",
                 // The bar's own `min-width: 100%` would outgrow the 1px.
-                visually_hidden_sx().min_width("0"),
+                visually_hidden_absolute_sx().min_width("0"),
             ),
         )
         .when(

@@ -12,7 +12,7 @@ use dioxus::prelude::*;
 use libero::chrono::{NaiveDate, NaiveDateTime, NaiveTime, TimeDelta};
 use libero::components::FieldPart;
 use libero::components::{
-    ChronoField, Code, DateLevel, DateRange, Flex, Rule, Text, Validators, not_empty,
+    ChronoField, Code, DateLevel, DateRange, Flex, Icon, Rule, Text, Validators, not_empty,
 };
 use libero::{LiberoProvider, use_formats_handle, use_localization_handle};
 
@@ -108,6 +108,8 @@ pub fn ChronoFieldPage() -> Element {
                     prop("name", "FieldName<Option<V>>").doc("What the field posts as, the value in ISO 8601 whatever the text shows. A path also binds it to the surrounding `Form`'s value when it has no `onchange`."),
                     prop("validate", "Validators<Option<V>>").doc("Rules over the value, shown once the field loses focus or its form is submitted."),
                     prop("placeholder", "String").doc("Shown while the text is empty."),
+                    prop("leading", "Element").doc("Inside the frame, before the text, such as a decorative icon. An `Icon` without `size` takes one from the field's `size`."),
+                    prop("trailing", "Element").doc("Inside the frame, after the text, such as a decorative icon or a unit. Not read with the input."),
                     prop("label", "Caption").doc("The caption above the control, and the field's name."),
                     prop("description", "Caption").doc("Between the label and the control. What to enter."),
                     prop("helper", "Caption").doc("Under the control. Formatting rules, or what the entry changes."),
@@ -124,6 +126,7 @@ pub fn ChronoFieldPage() -> Element {
                     (FieldPart::Required, "The required asterisk, in the label."),
                     (FieldPart::Description, "The caption between the label and the control."),
                     (FieldPart::Frame, "The bordered box around the control."),
+                    (FieldPart::Leading, "The slot before the control: an icon, a prefix."),
                     (FieldPart::Control, "The element the label names."),
                     (FieldPart::Trailing, "The slot after the control: a chevron, a toggle."),
                     (FieldPart::Helper, "The caption under the control."),
@@ -270,6 +273,11 @@ pub fn ChronoFieldPage() -> Element {
                             true => vec![r#"validate: not_empty.error("Pick a value.")"#.to_string()],
                             false => vec![],
                         }),
+                        // On by default, so the slot shows at first sight; the field sizes the icon.
+                        Control::switch("leading").default("true").code(|_, values| match is_on(values, "leading") {
+                            true => vec![r#"leading: rsx! { Icon { variant: "standard", svg: pictogram_icons_lucide::calendar::outlined } }"#.to_string()],
+                            false => vec![],
+                        }),
                     ];
                     [controls, calendar_controls(), grid_controls(), shared_controls(), field_controls()].concat()
                 },
@@ -333,6 +341,11 @@ fn ChronoFieldDemo(values: DemoValues) -> Element {
     let twelve_hour = twelve_hour_of(&values);
     let today = today_of(&values);
     let validate = is_on(&values, "validate");
+    let leading = is_on(&values, "leading").then(|| {
+        rsx! {
+            Icon { variant: "standard", svg: pictogram_icons_lucide::calendar::outlined }
+        }
+    });
     let (min_day, max_day) = day_limits(&values);
     let (min_time, max_time) = time_limits(&values);
     let (min_moment, max_moment) = moment_limits(&values);
@@ -345,7 +358,7 @@ fn ChronoFieldDemo(values: DemoValues) -> Element {
                     value: month(), onchange: move |next| month.set(next), level: DateLevel::Month,
                     min: min_day, max: max_day, today, close_on_change, open_to,
                     validate: rules(validate),
-                    size, radius, label, aria_label, description, helper, placeholder, status, required, disabled,
+                    size, radius, label, aria_label, description, helper, placeholder, status, required, disabled, leading,
                 }
             },
             shown(month()),
@@ -356,7 +369,7 @@ fn ChronoFieldDemo(values: DemoValues) -> Element {
                     value: year(), onchange: move |next| year.set(next), level: DateLevel::Year,
                     min: min_day, max: max_day, today, close_on_change,
                     validate: rules(validate),
-                    size, radius, label, aria_label, description, helper, placeholder, status, required, disabled,
+                    size, radius, label, aria_label, description, helper, placeholder, status, required, disabled, leading,
                 }
             },
             shown(year()),
@@ -367,7 +380,7 @@ fn ChronoFieldDemo(values: DemoValues) -> Element {
                     value: time(), onchange: move |next| time.set(next),
                     min: min_time, max: max_time, time_format, variant, with_seconds, step, hour_step, second_step, twelve_hour,
                     validate: rules(validate),
-                    size, radius, label, aria_label, description, helper, placeholder, status, required, disabled,
+                    size, radius, label, aria_label, description, helper, placeholder, status, required, disabled, leading,
                 }
             },
             shown(time()),
@@ -380,7 +393,7 @@ fn ChronoFieldDemo(values: DemoValues) -> Element {
                     with_seconds, step, hour_step, second_step, twelve_hour, close_on_change, calendar, days,
                     week_numbers, hide_weekdays, hide_outside_days,
                     validate: rules(validate),
-                    size, radius, label, aria_label, description, helper, placeholder, status, required, disabled,
+                    size, radius, label, aria_label, description, helper, placeholder, status, required, disabled, leading,
                 }
             },
             shown(date_time()),
@@ -392,7 +405,7 @@ fn ChronoFieldDemo(values: DemoValues) -> Element {
                     min: min_day, max: max_day, format, exclude_date, columns, today, close_on_change,
                     week_numbers, hide_weekdays, hide_outside_days, presets: range_presets(&values),
                     validate: rules(validate),
-                    size, radius, label, aria_label, description, helper, placeholder, status, required, disabled,
+                    size, radius, label, aria_label, description, helper, placeholder, status, required, disabled, leading,
                 }
             },
             shown(date_range()),
@@ -405,7 +418,7 @@ fn ChronoFieldDemo(values: DemoValues) -> Element {
                     with_seconds, step, hour_step, second_step, twelve_hour, close_on_change,
                     week_numbers, hide_weekdays, hide_outside_days,
                     validate: rules(validate),
-                    size, radius, label, aria_label, description, helper, placeholder, status, required, disabled,
+                    size, radius, label, aria_label, description, helper, placeholder, status, required, disabled, leading,
                 }
             },
             shown(date_time_range()),
@@ -416,7 +429,7 @@ fn ChronoFieldDemo(values: DemoValues) -> Element {
                     value: duration(), onchange: move |next| duration.set(next),
                     min: min_duration, max: max_duration, with_seconds, step,
                     validate: rules(validate),
-                    size, radius, label, aria_label, description, helper, placeholder, status, required, disabled,
+                    size, radius, label, aria_label, description, helper, placeholder, status, required, disabled, leading,
                 }
             },
             shown(duration()),
@@ -428,7 +441,7 @@ fn ChronoFieldDemo(values: DemoValues) -> Element {
                     min: min_day, max: max_day, format, exclude_date, today, close_on_change, calendar, days,
                     week_numbers, hide_weekdays, hide_outside_days, open_to, presets: day_presets(&values),
                     validate: rules(validate),
-                    size, radius, label, aria_label, description, helper, placeholder, status, required, disabled,
+                    size, radius, label, aria_label, description, helper, placeholder, status, required, disabled, leading,
                 }
             },
             shown(date()),

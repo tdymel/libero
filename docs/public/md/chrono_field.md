@@ -56,6 +56,28 @@ fn Demo() -> Element {
 }
 ```
 
+A decorative icon in the `leading` slot; an `Icon` without `size` takes one from
+the field's size:
+
+```rust
+use dioxus::prelude::*;
+use libero::{chrono::NaiveDate, components::{ChronoField, Icon}};
+
+#[component]
+fn Demo() -> Element {
+    let mut birthday = use_signal(|| None::<NaiveDate>);
+
+    rsx! {
+        ChronoField {
+            label: "Birthday",
+            value: birthday(),
+            onchange: move |next| birthday.set(next),
+            leading: rsx! { Icon { variant: "standard", svg: pictogram_icons_lucide::calendar::outlined } },
+        }
+    }
+}
+```
+
 ## Duration
 
 A `TimeDelta` field holds a span of time rather than a moment. It shows
@@ -156,6 +178,8 @@ and `DateTimeRangeField`, with only the props that type uses and no turbofish.
 | `name` | `FieldName<Option<V>>` | - | What the field posts as, the value in ISO 8601 whatever the text shows. A path also binds it to the surrounding `Form`'s value when it has no `onchange`. |
 | `validate` | `Validators<Option<V>>` | - | Rules over the value, shown once the field loses focus or its form is submitted. |
 | `placeholder` | `String` | - | Shown while the text is empty. |
+| `leading` | `Element` | - | Inside the frame, before the text, such as a decorative icon. An `Icon` without `size` takes one from the field's `size`. |
+| `trailing` | `Element` | - | Inside the frame, after the text, such as a decorative icon or a unit. Not read with the input. |
 | `label` | `Caption` | - | The caption above the control, and the field's name. |
 | `description` | `Caption` | - | Between the label and the control. What to enter. |
 | `helper` | `Caption` | - | Under the control. Formatting rules, or what the entry changes. |
@@ -184,6 +208,7 @@ explains how parts work.
 | `FieldPart::Required` | `required` | The required asterisk, in the label. |
 | `FieldPart::Description` | `description` | The caption between the label and the control. |
 | `FieldPart::Frame` | `frame` | The bordered box around the control. |
+| `FieldPart::Leading` | `leading` | The slot before the control: an icon, a prefix. |
 | `FieldPart::Control` | `control` | The element the label names. |
 | `FieldPart::Trailing` | `trailing` | The slot after the control: a chevron, a toggle. |
 | `FieldPart::Helper` | `helper` | The caption under the control. |

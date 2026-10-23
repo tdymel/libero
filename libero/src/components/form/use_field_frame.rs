@@ -17,8 +17,8 @@ use crate::{
     },
     sx::{StaticSx, Sx, sx},
     theme::{
-        ACTION_ICON_GLYPH, ACTION_ICON_SIZE, ColorCss, ColorShade, FieldDefaults, PaperDefaults,
-        Size, SizeCss,
+        ACTION_ICON_GLYPH, ACTION_ICON_SIZE, ColorCss, ColorShade, FieldDefaults,
+        ICON_DEFAULT_SIZE, ICON_SIZE, PaperDefaults, Size, SizeCss,
     },
 };
 
@@ -71,6 +71,13 @@ static FIELD_FRAME_SX: StaticSx = StaticSx::new(|| {
                 // A slot holds text as often as an icon: dimmed text, not a grey (todo 240).
                 .color("text-dimmed"),
         )
+        // An unsized `Icon` in a slot takes the slot button's step, so it grows no frame (4052).
+        .per_size(|size| {
+            sx().selector(
+                "& > :is([data-slot='leading'], [data-slot='trailing'])",
+                sx().var(ICON_DEFAULT_SIZE, ICON_SIZE.value(slot_icon_size(size))),
+            )
+        })
         // A placeholder cell takes the control's place.
         .selector(
             format!("& > [{PLACEHOLDER_CELL_ATTR}]"),
@@ -502,5 +509,21 @@ mod tests {
 
         assert!(css.contains("--lsx-radius-override:inherit"), "{css}");
         assert!(!css.contains("--lsx-radius-override:initial"), "{css}");
+    }
+
+    /// Todo 4052: an unsized slot `Icon` follows the field size, a step per two field steps.
+    #[test]
+    fn a_slot_sizes_an_unsized_icon_from_the_field() {
+        let css = crate::css::Stylesheet::from(&FIELD_FRAME_SX);
+        let css = css.as_str();
+
+        assert!(
+            css.contains("--lsx-icon-size:var(--lsx-icon-size-sm)"),
+            "{css}"
+        );
+        assert!(
+            css.contains("--lsx-icon-size:var(--lsx-icon-size-xs)"),
+            "{css}"
+        );
     }
 }

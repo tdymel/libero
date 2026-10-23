@@ -14,7 +14,7 @@ use super::{
 };
 use crate::{
     components::{
-        accessibility::{use_announcer, visually_hidden_sx},
+        accessibility::{use_announcer, visually_hidden_absolute_sx},
         common::{
             ClassList, HtmlTag, Input, Part, Parts, States, Variables, names_itself, variables,
         },
@@ -183,7 +183,7 @@ static CHART_BASE_SX: StaticSx = StaticSx::new(|| {
                 .justify_content("center")
                 .color("text-dimmed"),
         )
-        .selector("& > [data-chart-summary]", visually_hidden_sx())
+        .selector("& > [data-chart-summary]", visually_hidden_absolute_sx())
         // At the top and the start the legend comes first in the DOM too, so Tab meets it as
         // drawn; `row` puts the first at the start edge in either direction.
         .when(

@@ -15,7 +15,8 @@ pub use focus_trap::{FocusTrap, FocusTrapInitialFocus, FocusTrapProps};
 pub(crate) use tab_stops::{focus_edge, focus_first_stop, tab_order, tab_stops};
 #[cfg(feature = "visually-hidden")]
 pub(crate) use visually_hidden::{
-    VISUALLY_HIDDEN_FIXED_SX, VISUALLY_HIDDEN_SX, hidden_input_centred_sx, visually_hidden_sx,
+    VISUALLY_HIDDEN_FIXED_SX, VISUALLY_HIDDEN_SX, hidden_input_centred_sx,
+    visually_hidden_absolute_sx,
 };
 #[cfg(feature = "visually-hidden")]
-pub use visually_hidden::{VisuallyHidden, VisuallyHiddenProps};
+pub use visually_hidden::{VisuallyHidden, VisuallyHiddenProps, visually_hidden_sx};

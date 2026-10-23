@@ -92,6 +92,8 @@ pub(super) struct PickerField<'a, V: 'static> {
     pub name: &'a FieldName<Option<V>>,
     pub today: Option<NaiveDate>,
     pub placeholder: Option<String>,
+    pub leading: Option<Element>,
+    pub trailing: Option<Element>,
     pub label: &'a Caption,
     pub description: &'a Caption,
     pub helper: &'a Caption,
@@ -128,6 +130,8 @@ macro_rules! picker_field {
             name: &$props.name,
             today: $today,
             placeholder: $props.placeholder.clone(),
+            leading: $props.leading.clone(),
+            trailing: $props.trailing.clone(),
             label: &$props.label,
             description: &$props.description,
             helper: &$props.helper,
@@ -285,6 +289,8 @@ pub(super) fn use_picker_field<V: FieldValue>(
         .prepare();
 
     let frame = use_field_frame()
+        .leading(&field.leading)
+        .trailing(&field.trailing)
         .states(field_box.states())
         .placeholder(field.placeholder.as_deref())
         .prepare();

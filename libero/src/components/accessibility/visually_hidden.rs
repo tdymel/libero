@@ -11,10 +11,10 @@ use crate::{
 
 /// The sr-only recipe, `absolute`, for hidden inputs in a `relative` label:
 /// Tab then scrolls the label into view; `fixed` did not (todo 63).
-pub(crate) static VISUALLY_HIDDEN_SX: StaticSx = StaticSx::new(visually_hidden_sx);
+pub(crate) static VISUALLY_HIDDEN_SX: StaticSx = StaticSx::new(visually_hidden_absolute_sx);
 
 /// [`VISUALLY_HIDDEN_SX`]'s recipe, for a selector inside another sheet.
-pub(crate) fn visually_hidden_sx() -> Sx {
+pub(crate) fn visually_hidden_absolute_sx() -> Sx {
     sx().position("absolute")
         .width("1px")
         .height("1px")
@@ -37,8 +37,23 @@ pub(crate) fn hidden_input_centred_sx() -> Sx {
 /// The same recipe, `fixed`, for a box with no positioned host: an absolute one
 /// would add to the page's scrollable overflow. Blitz hit-tests a clipped box's
 /// overflowing text, so a status took the press on a control under it.
-pub(crate) static VISUALLY_HIDDEN_FIXED_SX: StaticSx =
-    StaticSx::new(|| fixed_recipe().pointer_events("none"));
+pub(crate) static VISUALLY_HIDDEN_FIXED_SX: StaticSx = StaticSx::new(visually_hidden_sx);
+
+/// [`VisuallyHidden`]'s recipe for an `sx` or `parts` entry: assistive technology only.
+/// `fixed`, so it adds no scrollable overflow.
+///
+/// ```rust
+/// # use dioxus::prelude::*;
+/// # use libero::components::{Text, visually_hidden_sx};
+/// # fn app() -> Element {
+/// rsx! {
+///     Text { sx: visually_hidden_sx(), "Prices include VAT" }
+/// }
+/// # }
+/// ```
+pub fn visually_hidden_sx() -> Sx {
+    fixed_recipe().pointer_events("none")
+}
 
 /// The fixed recipe, undone while focus is inside, for a skip link, on the float layer
 /// above a sticky `Header` (2.4.11). Never the default, or a hidden native input would pop out.

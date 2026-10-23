@@ -183,6 +183,12 @@ macro_rules! date_props {
                 name: $crate::components::form::FieldName<Option<$v>>,
                 #[props(default, into)]
                 placeholder: Option<String>,
+                /// Inside the frame, before the text, such as a decorative icon.
+                #[props(default)]
+                leading: Option<Element>,
+                /// Inside the frame, after the text, such as a decorative icon or a unit.
+                #[props(default)]
+                trailing: Option<Element>,
                 /// Styles the portaled dropdown and the picker in it.
                 #[props(default, into)]
                 dropdown_parts: $crate::components::common::Input<

@@ -8,7 +8,9 @@ Index: [index.md](index.md) lists every other page
 Description: A `span` read by screen readers but hidden from sighted layout, for extra context on something vague on its own.
 
 Content for screen readers only, such as extra context for a link that is
-vague on its own. With `focusable` on it is a skip link.
+vague on its own. With `focusable` on it is a skip link. To hide a
+component's own element or one of its parts the same way, pass
+`visually_hidden_sx()` to its `sx` or a `parts` entry.
 
 ## Usage
 
@@ -29,6 +31,20 @@ fn Demo() -> Element {
                 VisuallyHidden { " about focus management" }
             }
         }
+    }
+}
+```
+
+The same rules as an `sx`, for an element libero renders itself:
+
+```rust
+use dioxus::prelude::*;
+use libero::components::{Text, visually_hidden_sx};
+
+#[component]
+fn Demo() -> Element {
+    rsx! {
+        Text { sx: visually_hidden_sx(), "Prices include VAT" }
     }
 }
 ```

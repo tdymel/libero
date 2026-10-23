@@ -6,7 +6,7 @@ use super::nav_link::{nav_link_color, route_matches};
 use crate::{
     CssLayer,
     components::{
-        accessibility::visually_hidden_sx,
+        accessibility::visually_hidden_absolute_sx,
         common::{
             HtmlTag, Input, Part, States, Variables, attr, base_props, disabled_look_sx,
             forced_on_sx, input_from_str, inset_focus_ring_sx, is_empty_element, names_itself,
@@ -131,12 +131,15 @@ static NAVIGATION_BAR_SX: StaticSx = StaticSx::new(|| {
                 .with("inset-inline-start", "0")
                 .height("auto"),
         )
-        .when("labels-never", sx().selector(label, visually_hidden_sx()))
+        .when(
+            "labels-never",
+            sx().selector(label, visually_hidden_absolute_sx()),
+        )
         .when(
             "labels-selected",
             sx().selector(
                 "& [data-slot='item']:not([data-state~=\"selected\"]) > [data-slot='label']",
-                visually_hidden_sx(),
+                visually_hidden_absolute_sx(),
             ),
         )
 });

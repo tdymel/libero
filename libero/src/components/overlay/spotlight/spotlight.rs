@@ -2,7 +2,7 @@ use dioxus::prelude::*;
 
 use crate::{
     components::{
-        accessibility::{VisuallyHidden, visually_hidden_sx},
+        accessibility::{VisuallyHidden, visually_hidden_absolute_sx},
         common::{
             ComboboxState, Input, Part, Parts, ROW_HOVER_TINT, inset_focus_ring_sx,
             navigation_chord, parts_enum, recast_parts, use_combobox, use_name_warning,
@@ -148,7 +148,7 @@ static SPOTLIGHT_BODY_SX: StaticSx = StaticSx::new(|| {
         // (todo 2379). A spoken count alone takes no room.
         .selector(
             "& [role=\"status\"]:not([data-shown])",
-            visually_hidden_sx(),
+            visually_hidden_absolute_sx(),
         )
 });
 
