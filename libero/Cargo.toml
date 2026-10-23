@@ -271,7 +271,7 @@ marquee = ["action-icon"]
 pictogram = ["use-icon"]
 qr-code = ["dep:fast_qr", "box"]
 sortable = ["use-drag", "use-icon", "use-id", "use-media-query", "use-timers", "visually-hidden"]
-# With `date-time` on, a date filter picks from a `DateField`; else from the native date input.
+# With `date-field` on, a date filter picks from a `DateField`; else from the native date input.
 table = ["badge", "progress-bar", "skeleton", "checkbox", "native-select", "select", "text-field", "pagination", "menu", "sortable", "icon", "action-icon", "button", "collapse", "use-debounce"]
 timeline = ["visually-hidden"]
 video = ["slider", "menu", "button", "modal", "action-icon", "shortcut-help", "use-fullscreen", "use-media"]
@@ -284,14 +284,19 @@ notifications = ["alert", "button", "float"]
 progress-bar = ["slider"]
 skeleton = ["box"]
 
-form = ["autocomplete", "cascader", "checkbox", "chip", "color", "combobox", "date-time", "fieldset", "file-field", "form-root", "image-cropper", "native-select", "number-field", "password-field", "phone-field", "pin-field", "radio", "radio-group", "rating", "rich-text-editor", "segmented-control", "select", "slider", "switch", "tags-field", "text-field", "textarea"]
+form = ["autocomplete", "cascader", "checkbox", "chip", "color", "combobox", "date-field", "date-picker", "fieldset", "file-field", "form-root", "image-cropper", "native-select", "number-field", "password-field", "phone-field", "pin-field", "radio", "radio-group", "rating", "rich-text-editor", "segmented-control", "select", "slider", "switch", "tags-field", "text-field", "textarea"]
 autocomplete = ["combobox", "action-icon"]
 cascader = ["combobox", "action-icon", "use-media-query"]
 checkbox = ["use-icon", "use-id", "visually-hidden"]
 chip = ["action-icon", "anchor"]
 color = ["slider", "action-icon", "use-media-query", "use-swipe", "use-timers"]
 combobox = ["loader", "paper", "scroll-area", "use-id", "use-popover", "visually-hidden", "use-icon", "use-swipe", "use-media-query", "use-timers"]
-date-time = ["tabs", "action-icon", "button", "use-drag", "use-media-query", "use-swipe", "use-timers"]
+# The pickers alone: `ChronoPicker`, `DatePicker`, `TimePicker` and kin, without text parsing.
+date-picker = ["tabs", "action-icon", "use-drag", "use-media-query", "use-swipe", "use-timers"]
+# The fields: a text input over the picker in a dropdown; turns on `date-picker`.
+date-field = ["date-picker", "button"]
+# Every date and time picker and field.
+date-time = ["date-picker", "date-field"]
 fieldset = ["box", "use-icon", "use-id", "visually-hidden"]
 # `Form`, `use_form` and `FormHandle`; `form` is the group of every form component.
 form-root = ["alert"]

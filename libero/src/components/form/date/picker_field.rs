@@ -1,17 +1,12 @@
 //! The engine every date and time field shares: a text input read on blur or Enter,
 //! a dropdown holding a picker, and a hidden input posting ISO 8601.
 
-use chrono::{Datelike, NaiveDate, NaiveDateTime, NaiveTime};
+use chrono::NaiveDate;
 use dioxus::prelude::*;
 
 use super::{
-    DateRange,
-    calendar::DateLevel,
-    flows::{short_day, short_days},
-    format::{format_date, format_time},
-    parse::{Unreadable, parse_at},
-    parse_time::{parse_date_time, parse_time},
-    range::{iso_date_time, split_range},
+    field_value::{FieldValue, Formats},
+    range::Iso,
     today::use_today_on_open,
 };
 use crate::{
@@ -39,7 +34,6 @@ use crate::{
         use_focus_within, use_form_owner, use_localization, use_media_query, use_popover_on,
         use_theme,
     },
-    localization::DateLocale,
     platform::{ElementApi, is_tab, next_task},
     sx::{StaticSx, Sx, ThemeAwareValue, sx},
     theme::{Size, SizeCss, Z_INDEX_POPOVER},
@@ -89,209 +83,6 @@ static PICKER_FIELD_DROPDOWN_SX: StaticSx = StaticSx::new(|| {
 
 /// Where Arrow Down in the input puts focus: the picker's tab stop, not the navigation above it.
 const DROPDOWN_ENTRY: &str = ":is([data-slot='months'], [data-slot='cells'], [data-slot='columns']) [tabindex='0'], [data-slot='face'][tabindex='0']";
-
-/// The formats a field shows its value in, and reads typed text against.
-#[derive(Clone)]
-pub struct Formats {
-    pub date: String,
-    pub time: String,
-    pub names: &'static DateLocale,
-    /// Between a range's two ends, from `localization::Formats`.
-    pub range_separator: &'static str,
-    /// What a `NaiveDate` stands for: typed text reads as its first day.
-    pub level: DateLevel,
-}
-
-/// A value a date or time field can hold.
-pub trait FieldValue: Copy + PartialEq + 'static {
-    /// The input's text.
-    fn show(self, formats: &Formats) -> String;
-    /// A narrow field's text, where `show` would overflow it; `None` keeps `show`.
-    fn show_short(self, _: &Formats) -> Option<String> {
-        None
-    }
-    /// A range of these as a narrow field shows it.
-    fn show_short_range(_: DateRange<Self>, _: &Formats) -> Option<String> {
-        None
-    }
-    /// Typed text back. `current` fills in whatever the text leaves out.
-    fn read(
-        text: &str,
-        formats: &Formats,
-        current: Option<Self>,
-        today: Option<NaiveDate>,
-    ) -> Result<Self, Unreadable>;
-    /// What the hidden input posts: ISO 8601.
-    fn iso(self) -> String;
-    /// Whether the value counts as one: a range still missing its end posts nothing and
-    /// fails a `required` rule.
-    fn is_complete(self) -> bool {
-        true
-    }
-    /// Names the dropdown's dialog.
-    fn dialog_label(names: &DateLocale) -> &'static str {
-        names.date_label
-    }
-    /// The error for text `read` cannot read.
-    fn unreadable(names: &DateLocale) -> &'static str {
-        names.invalid_date
-    }
-}
-
-impl FieldValue for NaiveDate {
-    fn show(self, formats: &Formats) -> String {
-        format_date(self, &formats.date, formats.names)
-    }
-
-    fn show_short_range(range: DateRange<Self>, formats: &Formats) -> Option<String> {
-        Some(short_days(range, formats.names))
-    }
-
-    fn read(
-        text: &str,
-        formats: &Formats,
-        current: Option<Self>,
-        today: Option<NaiveDate>,
-    ) -> Result<Self, Unreadable> {
-        let fallback_year = today.or(current).map(|day| day.year());
-        parse_at(
-            text,
-            &formats.date,
-            formats.names,
-            fallback_year,
-            formats.level,
-        )
-    }
-
-    fn iso(self) -> String {
-        self.to_string()
-    }
-}
-
-impl FieldValue for NaiveTime {
-    fn show(self, formats: &Formats) -> String {
-        format_time(self, &formats.time, formats.names)
-    }
-
-    fn read(
-        text: &str,
-        formats: &Formats,
-        _: Option<Self>,
-        _: Option<NaiveDate>,
-    ) -> Result<Self, Unreadable> {
-        parse_time(text, &formats.time, formats.names)
-    }
-
-    fn iso(self) -> String {
-        self.to_string()
-    }
-
-    fn dialog_label(names: &DateLocale) -> &'static str {
-        names.time_label
-    }
-}
-
-impl FieldValue for NaiveDateTime {
-    fn show(self, formats: &Formats) -> String {
-        format!(
-            "{} {}",
-            self.date().show(formats),
-            self.time().show(formats)
-        )
-    }
-
-    /// `14 Sep 09:00 – 16 Sep 17:00`, years only when they differ.
-    fn show_short_range(range: DateRange<Self>, formats: &Formats) -> Option<String> {
-        let years = range
-            .end
-            .is_some_and(|end| end.year() != range.start.year());
-        let moment = |at: Self| {
-            let day = short_day(at.date(), years, formats.names);
-            format!("{day} {}", at.time().show(formats))
-        };
-        Some(match range.end {
-            Some(end) if end.date() == range.start.date() => {
-                format!("{} – {}", moment(range.start), end.time().show(formats))
-            }
-            Some(end) => format!("{} – {}", moment(range.start), moment(end)),
-            None => format!("{} –", moment(range.start)),
-        })
-    }
-
-    fn read(
-        text: &str,
-        formats: &Formats,
-        current: Option<Self>,
-        today: Option<NaiveDate>,
-    ) -> Result<Self, Unreadable> {
-        let fallback_year = today
-            .or(current.map(|value| value.date()))
-            .map(|day| day.year());
-        parse_date_time(
-            text,
-            &formats.date,
-            &formats.time,
-            formats.names,
-            fallback_year,
-            current.map(|value| value.time()),
-        )
-    }
-
-    fn iso(self) -> String {
-        iso_date_time(self)
-    }
-}
-
-impl<T: FieldValue + Ord> FieldValue for DateRange<T> {
-    fn show(self, formats: &Formats) -> String {
-        match self.end {
-            Some(end) => format!(
-                "{}{}{}",
-                self.start.show(formats),
-                formats.range_separator,
-                end.show(formats)
-            ),
-            None => self.start.show(formats),
-        }
-    }
-
-    fn show_short(self, formats: &Formats) -> Option<String> {
-        T::show_short_range(self, formats)
-    }
-
-    fn read(
-        text: &str,
-        formats: &Formats,
-        current: Option<Self>,
-        today: Option<NaiveDate>,
-    ) -> Result<Self, Unreadable> {
-        let (start, end) = split_range(text, formats.range_separator);
-        let start = T::read(start, formats, current.map(|range| range.start), today)?;
-        let end = end
-            .map(|end| {
-                let current_end = current.and_then(|range| range.end).or(Some(start));
-                T::read(end, formats, current_end, today)
-            })
-            .transpose()?;
-        Ok(DateRange::new(start, end).ordered())
-    }
-
-    fn iso(self) -> String {
-        format!(
-            "{}/{}",
-            self.start.iso(),
-            self.end.map(T::iso).unwrap_or_default()
-        )
-    }
-
-    fn is_complete(self) -> bool {
-        self.end.is_some()
-    }
-
-    fn dialog_label(names: &DateLocale) -> &'static str {
-        T::dialog_label(names)
-    }
-}
 
 /// Everything a field hands the engine from its `field_props!`.
 pub(super) struct PickerField<'a, V: 'static> {
@@ -663,7 +454,7 @@ pub(super) fn use_picker_field<V: FieldValue>(
                 disabled,
                 value: value
                     .filter(|value| value.is_complete())
-                    .map(FieldValue::iso)
+                    .map(Iso::iso)
                     .unwrap_or_default(),
             }
         }
@@ -836,96 +627,5 @@ mod tests {
             "{css}"
         );
         assert!(css[narrow..].contains("div[data-slot='face']"), "{css}");
-    }
-
-    #[test]
-    fn a_narrow_range_shows_short() {
-        let formats = Formats {
-            date: "D. MMMM YYYY".to_string(),
-            time: "HH:mm".to_string(),
-            names: &DateLocale::ENGLISH,
-            range_separator: " – ",
-            level: DateLevel::Day,
-        };
-        let day = |month, day| NaiveDate::from_ymd_opt(2026, month, day).expect("a real day");
-        let at = |month, date, hour| day(month, date).and_hms_opt(hour, 0, 0).expect("a time");
-        let days = DateRange::new(day(9, 14), Some(day(9, 16)));
-        assert_eq!(days.show_short(&formats).as_deref(), Some("14–16 Sep"));
-        let moments = DateRange::new(at(9, 14, 9), Some(at(9, 16, 17)));
-        assert_eq!(
-            moments.show_short(&formats).as_deref(),
-            Some("14 Sep 09:00 – 16 Sep 17:00")
-        );
-        let one_day = DateRange::new(at(9, 14, 9), Some(at(9, 14, 17)));
-        assert_eq!(
-            one_day.show_short(&formats).as_deref(),
-            Some("14 Sep 09:00 – 17:00")
-        );
-        // A single value keeps its full text.
-        assert_eq!(day(9, 14).show_short(&formats), None);
-    }
-
-    fn wave_dash_formats() -> Formats {
-        Formats {
-            date: "YYYY年M月D日".to_string(),
-            time: crate::localization::Formats::AMERICAN.time.to_string(),
-            names: &DateLocale::ENGLISH,
-            range_separator: " ～ ",
-            level: DateLevel::Day,
-        }
-    }
-
-    #[test]
-    fn ranges_read_back_what_they_show_with_the_theme_separator() {
-        let formats = wave_dash_formats();
-        let day = |day| NaiveDate::from_ymd_opt(2026, 9, day).expect("a real day");
-        let range = DateRange::new(day(1), Some(day(5)));
-        let text = range.show(&formats);
-        assert_eq!(text, "2026年9月1日 ～ 2026年9月5日");
-        assert_eq!(DateRange::read(&text, &formats, None, None), Ok(range));
-
-        let moments = DateRange::new(
-            day(1).and_hms_opt(9, 0, 0).expect("a real time"),
-            Some(day(5).and_hms_opt(17, 30, 0).expect("a real time")),
-        );
-        let text = moments.show(&formats);
-        assert_eq!(DateRange::read(&text, &formats, None, None), Ok(moments));
-    }
-
-    #[test]
-    fn months_and_years_read_back_what_they_show() {
-        let names = &DateLocale::ENGLISH;
-        let american = crate::localization::Formats::AMERICAN;
-        let at = |date: &str, level| Formats {
-            date: date.to_string(),
-            time: american.time.to_string(),
-            names,
-            range_separator: american.range_separator,
-            level,
-        };
-        let day = |month, day| NaiveDate::from_ymd_opt(2026, month, day).expect("a real day");
-        let month = at((american.date)(DateLevel::Month), DateLevel::Month);
-        assert_eq!(day(9, 1).show(&month), "September 2026");
-        for text in ["September 2026", "sep 2026", "9/2026", "09.2026"] {
-            assert_eq!(
-                NaiveDate::read(text, &month, None, None),
-                Ok(day(9, 1)),
-                "{text}"
-            );
-        }
-        // Typed text lands on the month's first day.
-        let text = day(9, 25).show(&month);
-        assert_eq!(NaiveDate::read(&text, &month, None, None), Ok(day(9, 1)));
-
-        let year = at((american.date)(DateLevel::Year), DateLevel::Year);
-        assert_eq!(day(9, 25).show(&year), "2026");
-        assert_eq!(NaiveDate::read("2026", &year, None, None), Ok(day(1, 1)));
-
-        let japanese = at("YYYY年M月", DateLevel::Month);
-        assert_eq!(day(9, 1).show(&japanese), "2026年9月");
-        assert_eq!(
-            NaiveDate::read("2026年9月", &japanese, None, None),
-            Ok(day(9, 1))
-        );
     }
 }

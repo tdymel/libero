@@ -10,7 +10,6 @@ use super::{
     ChronoPickerPart,
     date_value::{PickerArgs, PickerOptions, Sealed},
     format::uses_twelve_hours,
-    parse_time::MIDNIGHT,
     props::date_props,
     spin_column::{SpinAt, SpinColumn, SpinOption},
 };
@@ -30,6 +29,11 @@ pub(super) use self::styles::TIME_PICKER_SX;
 use self::view::{ClockView, Column, Hand, use_face_drag};
 
 input_from_str!(TimePickerVariant);
+
+pub(super) const MIDNIGHT: NaiveTime = match NaiveTime::from_hms_opt(0, 0, 0) {
+    Some(midnight) => midnight,
+    None => unreachable!(),
+};
 
 date_props! {
     picker TimePickerProps(NaiveTime, NaiveTime): clock, limits

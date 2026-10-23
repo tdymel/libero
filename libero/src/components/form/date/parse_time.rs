@@ -6,13 +6,9 @@ use chrono::{NaiveDateTime, NaiveTime};
 use super::{
     format::{Token, tokens},
     parse::{Piece, Unreadable, literal_words, parse_date, pieces},
+    time_picker::MIDNIGHT,
 };
 use crate::{localization::DateLocale, utils::fold_digits};
-
-pub(super) const MIDNIGHT: NaiveTime = match NaiveTime::from_hms_opt(0, 0, 0) {
-    Some(midnight) => midnight,
-    None => unreachable!(),
-};
 
 /// Reads `13:05`, `13.05.30`, `9 30`, `930`, `93015`; an am/pm word or prefix makes it 12-hour.
 /// A word `format` writes as literal text is skipped: `h` in `HH[ h ]mm`.

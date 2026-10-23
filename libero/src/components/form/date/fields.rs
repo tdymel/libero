@@ -13,19 +13,6 @@ use super::{
 };
 use crate::components::common::Input;
 
-/// Whether a day passes `min`, `max` and `exclude_date`.
-pub(super) fn day_allowed(
-    min: Option<NaiveDate>,
-    max: Option<NaiveDate>,
-    exclude_date: Option<Callback<NaiveDate, bool>>,
-) -> impl Fn(NaiveDate) -> bool + Copy + 'static {
-    move |day| {
-        !(min.is_some_and(|min| day < min)
-            || max.is_some_and(|max| day > max)
-            || exclude_date.is_some_and(|exclude| exclude.call(day)))
-    }
-}
-
 /// The theme's time format adjusted for `with_seconds` and `twelve_hour`.
 /// Separators, padding and text stay.
 pub(super) fn time_format(theme: &str, twelve_hour: Option<bool>, with_seconds: bool) -> String {

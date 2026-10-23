@@ -97,7 +97,7 @@ pub(crate) const FEATURES: &[Feature] = &[
     feature("sortable", "data-display", "Sortable, use_sortable", &["use-drag", "use-icon", "use-id", "use-media-query", "use-timers", "visually-hidden"], false, &["/data-display/sortable"]),
     noted(
         feature("table", "data-display", "Table, column and the table toolbar buttons", &["badge", "progress-bar", "skeleton", "checkbox", "native-select", "select", "text-field", "pagination", "menu", "sortable", "icon", "action-icon", "button", "collapse", "use-debounce"], false, &["/data-display/table"]),
-        "The largest component: its filters and editors bring the select and text fields. With date-time on, a date filter uses DateField.",
+        "The largest component: its filters and editors bring the select and text fields. With date-field on, a date filter uses DateField.",
     ),
     feature("timeline", "data-display", "Timeline", &["visually-hidden"], false, &["/data-display/timeline"]),
     feature("video", "data-display", "Video", &["slider", "menu", "button", "modal", "action-icon", "shortcut-help", "use-fullscreen", "use-media"], false, &["/data-display/video"]),
@@ -113,7 +113,11 @@ pub(crate) const FEATURES: &[Feature] = &[
     feature("chip", "form", "Chip", &["action-icon", "anchor"], true, &["/form/chip"]),
     feature("color", "form", "ColorField, ColorPicker, ColorSwatch, HueSlider, AlphaSlider", &["slider", "action-icon", "use-media-query", "use-swipe", "use-timers"], false, &["/form/color-field", "/form/color-picker"]),
     feature("combobox", "form", "Combobox, use_combobox", &["loader", "paper", "scroll-area", "use-id", "use-popover", "visually-hidden", "use-icon", "use-swipe", "use-media-query", "use-timers"], true, &["/form/combobox"]),
-    feature("date-time", "form", "ChronoField, ChronoPicker, DateField, DatePicker, TimeField, TimePicker and the other date and time fields and pickers", &["tabs", "action-icon", "button", "use-drag", "use-media-query", "use-swipe", "use-timers"], false, &["/form/chrono-field", "/form/chrono-picker"]),
+    feature("date-picker", "form", "ChronoPicker, DatePicker, DateRangePicker, MonthPicker, YearPicker, TimePicker, DateRange", &["tabs", "action-icon", "use-drag", "use-media-query", "use-swipe", "use-timers"], false, &["/form/chrono-picker"]),
+    noted(
+        feature("date-field", "form", "ChronoField, DateField, DateRangeField, DateTimeField, DateTimeRangeField, TimeField", &["date-picker", "button"], false, &["/form/chrono-field"]),
+        "The typed text's formatting and parsing. date-time turns on both date features.",
+    ),
     feature("fieldset", "form", "Fieldset", &["box", "use-icon", "use-id", "visually-hidden"], true, &["/form/fieldset"]),
     noted(
         feature("file-field", "form", "FileField", &["chip", "select", "alert", "modal", "action-icon", "button", "dialog", "loader"], false, &["/form/file-field"]),
@@ -331,7 +335,7 @@ const RECOMMENDED: &str = concat!(
     r#"", default-features = false, features = [
     "table",
     "select",
-    "date-time",
+    "date-field",
     "use-clipboard",
 ] }"#
 );

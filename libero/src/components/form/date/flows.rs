@@ -6,9 +6,8 @@ use dioxus::prelude::*;
 use super::{
     ChronoPickerPart, DatePicker, DateRange,
     calendar::{Calendar, Selection},
-    parse_time::MIDNIGHT,
-    picker_field::FieldValue,
-    time_picker::Clock,
+    range::Iso,
+    time_picker::{Clock, MIDNIGHT},
     today::{TodayRefresh, use_today_with_refresh},
 };
 use crate::{
@@ -228,8 +227,8 @@ fn use_handoff() -> (ElementHandle, Signal<bool>) {
 }
 
 /// A hidden input posting the value as ISO 8601, when the flow has a name; nothing when `disabled`.
-fn hidden(name: Option<String>, value: Option<impl FieldValue>, disabled: bool) -> Element {
-    let value = value.map(FieldValue::iso).unwrap_or_default();
+fn hidden(name: Option<String>, value: Option<impl Iso>, disabled: bool) -> Element {
+    let value = value.map(Iso::iso).unwrap_or_default();
     rsx! {
         if let Some(name) = name {
             input { r#type: "hidden", name, value, disabled }

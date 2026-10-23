@@ -5,7 +5,7 @@ use std::{
     str::FromStr,
 };
 
-use chrono::{NaiveDate, NaiveDateTime};
+use chrono::{NaiveDate, NaiveDateTime, NaiveTime};
 
 /// Two days or two `NaiveDateTime`s, the start picked first. `end: None` is a range still being picked: `onchange` emits it,
 /// but a field posts nothing for it and its validators see no value.
@@ -48,6 +48,39 @@ impl<T: Copy + Ord> DateRange<T> {
 /// A moment in ISO 8601, `2026-09-14T13:05:00`. `chrono`'s `Display` writes a space for the `T`.
 pub(super) fn iso_date_time(value: NaiveDateTime) -> String {
     format!("{}T{}", value.date(), value.time())
+}
+
+/// A value as a hidden input posts it: ISO 8601.
+pub(super) trait Iso: Copy {
+    fn iso(self) -> String;
+}
+
+impl Iso for NaiveDate {
+    fn iso(self) -> String {
+        self.to_string()
+    }
+}
+
+impl Iso for NaiveTime {
+    fn iso(self) -> String {
+        self.to_string()
+    }
+}
+
+impl Iso for NaiveDateTime {
+    fn iso(self) -> String {
+        iso_date_time(self)
+    }
+}
+
+impl<T: Iso> Iso for DateRange<T> {
+    fn iso(self) -> String {
+        format!(
+            "{}/{}",
+            self.start.iso(),
+            self.end.map(T::iso).unwrap_or_default()
+        )
+    }
 }
 
 fn write_interval(f: &mut fmt::Formatter<'_>, start: String, end: Option<String>) -> fmt::Result {

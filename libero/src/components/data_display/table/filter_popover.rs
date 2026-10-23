@@ -1,6 +1,6 @@
-#[cfg(feature = "date-time")]
+#[cfg(feature = "date-field")]
 use crate::{components::form::DateField, platform::reads_dom_synchronously};
-#[cfg(feature = "date-time")]
+#[cfg(feature = "date-field")]
 use chrono::NaiveDate;
 use dioxus::prelude::*;
 use pictogram_icons_lucide as lucide;
@@ -428,7 +428,7 @@ pub(super) fn FilterValue(
             (filter.value.clone(), filter.value_to.clone())
         });
         let day = |end: bool, value: String, label: Option<String>, aria_label: Option<String>| {
-            #[cfg(feature = "date-time")]
+            #[cfg(feature = "date-field")]
             if reads_dom_synchronously() {
                 return rsx! {
                     DateField {
@@ -444,7 +444,7 @@ pub(super) fn FilterValue(
                     }
                 };
             }
-            // A WebView cannot count the portaled calendar inside the popover, and `date-time` may be
+            // A WebView cannot count the portaled calendar inside the popover, and `date-field` may be
             // off: the native date input then.
             rsx! {
                 TextField {

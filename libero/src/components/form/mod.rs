@@ -13,7 +13,7 @@ mod clear;
 mod color;
 #[cfg(feature = "combobox")]
 mod combobox;
-#[cfg(feature = "date-time")]
+#[cfg(feature = "date-picker")]
 mod date;
 mod dropdown_parts;
 mod field_props;
@@ -29,7 +29,7 @@ mod form_value;
 mod handle;
 #[cfg(any(feature = "image-cropper", feature = "file-field"))]
 mod image_cropper;
-#[cfg(any(feature = "color", feature = "date-time"))]
+#[cfg(any(feature = "color", feature = "date-field"))]
 mod keyboardless;
 #[cfg(feature = "native-select")]
 mod native_select;
@@ -39,7 +39,7 @@ mod number_field;
 mod password_field;
 #[cfg(feature = "phone-field")]
 mod phone_field;
-#[cfg(any(feature = "combobox", feature = "color", feature = "date-time"))]
+#[cfg(any(feature = "combobox", feature = "color", feature = "date-picker"))]
 mod phone_sheet;
 #[cfg(feature = "pin-field")]
 mod pin_field;
@@ -107,9 +107,9 @@ pub use combobox::{
     Combobox, ComboboxOption, ComboboxOptionArgs, ComboboxOptionProps, ComboboxProps,
     ComboboxState, use_combobox,
 };
-#[cfg(feature = "date-time")]
+#[cfg(feature = "date-picker")]
 pub use date::*;
-#[cfg(feature = "date-time")]
+#[cfg(feature = "date-field")]
 pub use dropdown_parts::ChronoDropdownPart;
 #[cfg(feature = "color")]
 pub use dropdown_parts::ColorDropdownPart;

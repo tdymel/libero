@@ -3,13 +3,13 @@
 use chrono::{Datelike, NaiveDate, NaiveDateTime, NaiveTime, TimeDelta};
 use dioxus::prelude::*;
 
+#[cfg(feature = "date-field")]
+use super::field_value::SealedField;
 use super::{
     ChronoPickerPart, DateRange,
     calendar::{Calendar, DateLevel, Selection, first_of_month},
-    chrono_field::refusal_message,
-    duration::{DurationClock, bounds, duration_refusal},
+    duration::DurationClock,
     flows::{DateTimeFlow, DateTimeRangeFlow},
-    picker_field::{FieldValue, Formats},
     time_picker::Clock,
 };
 use crate::{
@@ -88,79 +88,17 @@ pub trait DateValue: Sealed {
     type Bound: Copy + PartialOrd + 'static;
 }
 
-/// Which rule a typed value broke, so the field can say which.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub(super) enum Refusal {
-    /// Before `min` or after `max`.
-    OutOfRange,
-    /// On a day `exclude_date` refuses.
-    Excluded,
-}
+/// Without `date-field`, a value owes the fields nothing.
+#[cfg(not(feature = "date-field"))]
+pub(super) trait SealedField: Copy + PartialEq + 'static {}
 
-/// `Err(OutOfRange)` for a value outside `min` and `max`.
-fn within<T: PartialOrd>(value: T, min: Option<T>, max: Option<T>) -> Result<(), Refusal> {
-    match min.is_some_and(|min| value < min) || max.is_some_and(|max| value > max) {
-        true => Err(Refusal::OutOfRange),
-        false => Ok(()),
-    }
-}
-
-/// `Err(Excluded)` for a day `exclude_date` refuses.
-fn available(
-    day: NaiveDate,
-    exclude_date: Option<Callback<NaiveDate, bool>>,
-) -> Result<(), Refusal> {
-    match exclude_date.is_some_and(|exclude| exclude.call(day)) {
-        true => Err(Refusal::Excluded),
-        false => Ok(()),
-    }
-}
+#[cfg(not(feature = "date-field"))]
+impl<T: Copy + PartialEq + 'static> SealedField for T {}
 
 /// The part of [`DateValue`] only libero calls.
-pub(super) trait Sealed: FieldValue {
+pub(super) trait Sealed: SealedField {
     /// The type-dependent props this value type reads; debug builds warn about the others.
     const USES: &'static [&'static str];
-
-    /// Whether a typed or picked value passes `min`, `max` and `exclude_date`.
-    fn accepts(self, options: &PickerOptions<<Self as DateValue>::Bound>) -> Result<(), Refusal>
-    where
-        Self: DateValue;
-
-    /// `min` and `max` with the value type's defaults, for an error that names them.
-    fn limits(
-        min: Option<<Self as DateValue>::Bound>,
-        max: Option<<Self as DateValue>::Bound>,
-    ) -> (
-        Option<<Self as DateValue>::Bound>,
-        Option<<Self as DateValue>::Bound>,
-    )
-    where
-        Self: DateValue,
-    {
-        (min, max)
-    }
-
-    /// A bound as the field shows it, for an error that names it.
-    fn show_bound(bound: <Self as DateValue>::Bound, formats: &Formats) -> String
-    where
-        Self: DateValue;
-
-    /// The error for a value `accepts` refused, naming the bounds it set.
-    fn refusal(
-        self,
-        refusal: Refusal,
-        min: Option<<Self as DateValue>::Bound>,
-        max: Option<<Self as DateValue>::Bound>,
-        formats: &Formats,
-    ) -> String
-    where
-        Self: DateValue,
-    {
-        refusal_message::<Self>(refusal, min, max, formats)
-    }
-
-    /// Whether a pick leaves nothing more to pick, so a field may close its dropdown.
-    fn closes(value: Option<Self>) -> bool;
 
     /// Whether the picker scrolls its months, below `sm` (todo 3903): a field then
     /// leaves the closing to the sheet's Save.
@@ -267,30 +205,6 @@ impl Sealed for NaiveDate {
         "allow_deselect",
     ];
 
-    fn accepts(self, options: &PickerOptions<NaiveDate>) -> Result<(), Refusal> {
-        let (min, max) = (options.min, options.max);
-        // As the picker's grid: a month or year that `min` and `max` reach.
-        match options.level {
-            DateLevel::Day => {
-                within(self, min, max).and_then(|()| available(self, options.exclude_date))
-            }
-            DateLevel::Month => within(first_of_month(self), min.map(first_of_month), max),
-            DateLevel::Year => within(
-                self.year(),
-                min.map(|min| min.year()),
-                max.map(|max| max.year()),
-            ),
-        }
-    }
-
-    fn show_bound(bound: NaiveDate, formats: &Formats) -> String {
-        bound.show(formats)
-    }
-
-    fn closes(_: Option<Self>) -> bool {
-        true
-    }
-
     fn picker(args: PickerArgs<Self>) -> Element {
         let PickerArgs {
             onchange, options, ..
@@ -367,18 +281,6 @@ impl Sealed for NaiveTime {
         "twelve_hour",
     ];
 
-    fn accepts(self, options: &PickerOptions<NaiveTime>) -> Result<(), Refusal> {
-        within(self, options.min, options.max)
-    }
-
-    fn show_bound(bound: NaiveTime, formats: &Formats) -> String {
-        bound.show(formats)
-    }
-
-    fn closes(_: Option<Self>) -> bool {
-        false
-    }
-
     fn picker(args: PickerArgs<Self>) -> Element {
         let options = args.options;
         rsx! {
@@ -411,37 +313,6 @@ impl DateValue for TimeDelta {
 
 impl Sealed for TimeDelta {
     const USES: &'static [&'static str] = &["with_seconds", "step"];
-
-    fn limits(
-        min: Option<TimeDelta>,
-        max: Option<TimeDelta>,
-    ) -> (Option<TimeDelta>, Option<TimeDelta>) {
-        let (min, max) = bounds(min, max);
-        (Some(min), Some(max))
-    }
-
-    fn accepts(self, options: &PickerOptions<TimeDelta>) -> Result<(), Refusal> {
-        let (min, max) = Self::limits(options.min, options.max);
-        within(self, min, max)
-    }
-
-    fn show_bound(bound: TimeDelta, formats: &Formats) -> String {
-        bound.show(formats)
-    }
-
-    fn refusal(
-        self,
-        _: Refusal,
-        min: Option<TimeDelta>,
-        max: Option<TimeDelta>,
-        formats: &Formats,
-    ) -> String {
-        duration_refusal(self, min, max, formats)
-    }
-
-    fn closes(_: Option<Self>) -> bool {
-        false
-    }
 
     fn picker(args: PickerArgs<Self>) -> Element {
         let options = args.options;
@@ -485,19 +356,6 @@ impl Sealed for NaiveDateTime {
         "twelve_hour",
     ];
 
-    fn accepts(self, options: &PickerOptions<NaiveDateTime>) -> Result<(), Refusal> {
-        within(self, options.min, options.max)
-            .and_then(|()| available(self.date(), options.exclude_date))
-    }
-
-    fn show_bound(bound: NaiveDateTime, formats: &Formats) -> String {
-        bound.show(formats)
-    }
-
-    fn closes(_: Option<Self>) -> bool {
-        false
-    }
-
     fn picker(args: PickerArgs<Self>) -> Element {
         date_time_flow!(DateTimeFlow, args, {
             calendar: args.options.calendar,
@@ -518,24 +376,6 @@ impl Sealed for DateRange<NaiveDate> {
         "columns",
         "close_on_change",
     ];
-
-    fn accepts(self, options: &PickerOptions<NaiveDate>) -> Result<(), Refusal> {
-        // A range picks days whatever `level` says.
-        let options = PickerOptions {
-            level: DateLevel::Day,
-            ..*options
-        };
-        self.start.accepts(&options)?;
-        self.end.map_or(Ok(()), |end| end.accepts(&options))
-    }
-
-    fn show_bound(bound: NaiveDate, formats: &Formats) -> String {
-        bound.show(formats)
-    }
-
-    fn closes(value: Option<Self>) -> bool {
-        value.is_some_and(|range| range.end.is_some())
-    }
 
     fn scrolls(options: &PickerOptions<NaiveDate>, narrow: bool) -> bool {
         narrow && options.columns.is_none()
@@ -592,19 +432,6 @@ impl Sealed for DateRange<NaiveDateTime> {
         "step",
         "twelve_hour",
     ];
-
-    fn accepts(self, options: &PickerOptions<NaiveDateTime>) -> Result<(), Refusal> {
-        self.start.accepts(options)?;
-        self.end.map_or(Ok(()), |end| end.accepts(options))
-    }
-
-    fn show_bound(bound: NaiveDateTime, formats: &Formats) -> String {
-        bound.show(formats)
-    }
-
-    fn closes(_: Option<Self>) -> bool {
-        false
-    }
 
     fn picker(args: PickerArgs<Self>) -> Element {
         date_time_flow!(DateTimeRangeFlow, args, {})

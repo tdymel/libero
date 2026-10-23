@@ -1,4 +1,4 @@
-#[cfg(feature = "date-time")]
+#[cfg(feature = "date-field")]
 use super::ChronoPickerPart;
 #[cfg(feature = "color")]
 use super::ColorPickerPart;
@@ -40,7 +40,7 @@ parts_enum! {
 }
 
 /// A picker's selector, rebased from the picker's root onto the dropdown box that holds it.
-#[cfg(any(feature = "date-time", feature = "color"))]
+#[cfg(any(feature = "date-field", feature = "color"))]
 fn under_picker(selector: &str) -> String {
     selector
         .split(", ")
@@ -94,7 +94,7 @@ macro_rules! picker_dropdown_parts {
     };
 }
 
-#[cfg(feature = "date-time")]
+#[cfg(feature = "date-field")]
 picker_dropdown_parts! {
     /// The inner parts of a date or time field's dropdown, for its `dropdown_parts`
     /// prop: the box, then the [`ChronoPicker`](super::ChronoPicker)'s parts.
@@ -161,7 +161,7 @@ mod tests {
         }
     }
 
-    #[cfg(all(feature = "date-time", feature = "color"))]
+    #[cfg(all(feature = "date-field", feature = "color"))]
     #[test]
     fn the_picker_dropdowns_mirror_their_pickers() {
         assert_mirrors::<ChronoDropdownPart, ChronoPickerPart>();
@@ -179,7 +179,7 @@ mod tests {
         assert!(!css.contains(" {color"), "{css}");
     }
 
-    #[cfg(all(feature = "date-time", feature = "color"))]
+    #[cfg(all(feature = "date-field", feature = "color"))]
     #[test]
     fn a_picker_selector_steps_through_the_box_on_every_alternative() {
         assert_eq!(

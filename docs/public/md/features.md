@@ -19,7 +19,7 @@ feature is not in `libero`.
 libero = { version = "0.3", default-features = false, features = [
     "table",
     "select",
-    "date-time",
+    "date-field",
     "use-clipboard",
 ] }
 ```
@@ -42,7 +42,7 @@ every component group, `all-hooks` every hook.
 | `buttons` | action-icon, button, button-group, copy, direction-toggle, repository, share, theme-switcher, tldr, toolbar |
 | `data-display` | accordion, audio, avatar, badge, carousel, charts, data-list, icon, image, image-list, indicator, kanban, list, marquee, pictogram, qr-code, sortable, table, timeline, video |
 | `feedback` | alert, circular-progress, loader, notifications, progress-bar, skeleton |
-| `form` | autocomplete, cascader, checkbox, chip, color, combobox, date-time, fieldset, file-field, form-root, image-cropper, native-select, number-field, password-field, phone-field, pin-field, radio, radio-group, rating, rich-text-editor, segmented-control, select, slider, switch, tags-field, text-field, textarea |
+| `form` | autocomplete, cascader, checkbox, chip, color, combobox, date-field, date-picker, fieldset, file-field, form-root, image-cropper, native-select, number-field, password-field, phone-field, pin-field, radio, radio-group, rating, rich-text-editor, segmented-control, select, slider, switch, tags-field, text-field, textarea |
 | `layout` | aspect-ratio, box, center, collapse, container, divider, flex, float, grid, header, paper, scroll-area, scroller, sidebar, splitter, transition |
 | `navigation` | anchor, burger, menubar, nav-link, navigation-bar, pagination, stepper, tabs, tree |
 | `overlay` | dialog, drawer, floating-window, hover-card, lightbox, menu, modal, overlay-backdrop, shortcut-help, spotlight, tooltip, tour |
@@ -86,7 +86,7 @@ it is on (Notes).
 | `pictogram` | Pictogram | use-icon | on |  |
 | `qr-code` | QrCode | box | off | The fast_qr encoder. |
 | `sortable` | Sortable, use_sortable | use-drag, use-icon, use-id, use-media-query, use-timers, visually-hidden | off |  |
-| `table` | Table, column and the table toolbar buttons | badge, progress-bar, skeleton, checkbox, native-select, select, text-field, pagination, menu, sortable, icon, action-icon, button, collapse, use-debounce | off | The largest component: its filters and editors bring the select and text fields. With date-time on, a date filter uses DateField. |
+| `table` | Table, column and the table toolbar buttons | badge, progress-bar, skeleton, checkbox, native-select, select, text-field, pagination, menu, sortable, icon, action-icon, button, collapse, use-debounce | off | The largest component: its filters and editors bring the select and text fields. With date-field on, a date filter uses DateField. |
 | `timeline` | Timeline | visually-hidden | off |  |
 | `video` | Video | slider, menu, button, modal, action-icon, shortcut-help, use-fullscreen, use-media | off |  |
 | `alert` | Alert | action-icon | on |  |
@@ -101,7 +101,8 @@ it is on (Notes).
 | `chip` | Chip | action-icon, anchor | on |  |
 | `color` | ColorField, ColorPicker, ColorSwatch, HueSlider, AlphaSlider | slider, action-icon, use-media-query, use-swipe, use-timers | off |  |
 | `combobox` | Combobox, use_combobox | loader, paper, scroll-area, use-id, use-popover, visually-hidden, use-icon, use-swipe, use-media-query, use-timers | on |  |
-| `date-time` | ChronoField, ChronoPicker, DateField, DatePicker, TimeField, TimePicker and the other date and time fields and pickers | tabs, action-icon, button, use-drag, use-media-query, use-swipe, use-timers | off |  |
+| `date-picker` | ChronoPicker, DatePicker, DateRangePicker, MonthPicker, YearPicker, TimePicker, DateRange | tabs, action-icon, use-drag, use-media-query, use-swipe, use-timers | off |  |
+| `date-field` | ChronoField, DateField, DateRangeField, DateTimeField, DateTimeRangeField, TimeField | date-picker, button | off | The typed text's formatting and parsing. date-time turns on both date features. |
 | `fieldset` | Fieldset | form-root | on |  |
 | `file-field` | FileField | chip, select, alert, modal, action-icon, button, dialog, loader | off | Its crop prop needs image-cropper on as well; without it the file passes uncropped. |
 | `form-root` | Form, use_form | alert | on |  |
@@ -146,7 +147,7 @@ it is on (Notes).
 | `pagination` | Pagination | action-icon | off |  |
 | `stepper` | Stepper | collapse, use-icon, use-id, visually-hidden | off |  |
 | `tabs` | Tabs | use-id, use-icon, visually-hidden | off |  |
-| `tree` | Tree | list, icon, use-popover | off |  |
+| `tree` | Tree | list, icon, use-popover, checkbox | off |  |
 | `dialog` | Dialog | action-icon, title | on |  |
 | `drawer` | use_drawer | dialog, modal, float, use-swipe | off |  |
 | `floating-window` | use_floating_window | menu, action-icon, button, title, float, use-drag | off |  |

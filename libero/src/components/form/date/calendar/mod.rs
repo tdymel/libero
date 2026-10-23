@@ -11,7 +11,6 @@ use chrono::{Datelike, Days, Months, NaiveDate};
 
 use super::{
     ChronoPickerPart, DateRange,
-    fields::day_allowed,
     format::{date_formatter, format_date},
     today::use_today_with_refresh,
 };
@@ -47,6 +46,19 @@ const FALLBACK_MONTH: NaiveDate = match NaiveDate::from_ymd_opt(1970, 1, 1) {
 
 pub(super) fn first_of_month(day: NaiveDate) -> NaiveDate {
     day.with_day(1).expect("every month has a first day")
+}
+
+/// Whether a day passes `min`, `max` and `exclude_date`.
+fn day_allowed(
+    min: Option<NaiveDate>,
+    max: Option<NaiveDate>,
+    exclude_date: Option<Callback<NaiveDate, bool>>,
+) -> impl Fn(NaiveDate) -> bool + Copy + 'static {
+    move |day| {
+        !(min.is_some_and(|min| day < min)
+            || max.is_some_and(|max| day > max)
+            || exclude_date.is_some_and(|exclude| exclude.call(day)))
+    }
 }
 
 /// Stops at `chrono`'s first and last day rather than failing.
