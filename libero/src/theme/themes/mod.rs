@@ -74,32 +74,32 @@ pub use vague::{VAGUE_DARK, VAGUE_LIGHT};
 use super::ThemeSet;
 
 impl ThemeSet {
-    /// Every shipped set in picker order, ours first. The only reference to the
+    /// Every shipped set in picker order: ours first, then by popularity. The only reference to the
     /// ported themes, so an app that never touches it does not pay for them.
     ///
     /// Docs: <https://libero-ui.dev/about/theming>
     pub const CATALOGUE: &'static [&'static ThemeSet] = &[
         &ThemeSet::DEFAULT,
+        &ThemeSet::DRACULA,
+        &ThemeSet::CATPPUCCIN,
+        &ThemeSet::ONE,
+        &ThemeSet::NORD,
+        &ThemeSet::GRUVBOX,
+        &ThemeSet::GRUVBOX_SOFT,
+        &ThemeSet::GRUVBOX_CLASSIC,
+        &ThemeSet::GITHUB,
         &ThemeSet::AYU,
         &ThemeSet::AYU_MIRAGE,
-        &ThemeSet::CATPPUCCIN,
-        &ThemeSet::DRACULA,
-        &ThemeSet::EF_NIGHT,
+        &ThemeSet::ROSE_PINE,
         &ThemeSet::EVERFOREST,
-        &ThemeSet::FLEXOKI,
-        &ThemeSet::GITHUB,
-        &ThemeSet::GRUVBOX,
-        &ThemeSet::GRUVBOX_CLASSIC,
-        &ThemeSet::GRUVBOX_SOFT,
         &ThemeSet::KANAGAWA,
         &ThemeSet::KANAGAWA_DRAGON,
-        &ThemeSet::KETTEK16,
-        &ThemeSet::NORD,
-        &ThemeSet::ONE,
-        &ThemeSet::OSMIUM,
-        &ThemeSet::ROSE_PINE,
         &ThemeSet::SHADCN,
+        &ThemeSet::FLEXOKI,
+        &ThemeSet::EF_NIGHT,
         &ThemeSet::VAGUE,
+        &ThemeSet::OSMIUM,
+        &ThemeSet::KETTEK16,
     ];
 
     /// The [`CATALOGUE`](Self::CATALOGUE) set labelled `name` (case-sensitive), or `None`.
