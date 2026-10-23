@@ -1,11 +1,8 @@
-use crate::components::{
-    Control, Demo, DemoValues, DocPage, DocSection, Remount, a11y, prop, props,
-};
+use crate::components::{Control, Demo, DemoValues, DocPage, Remount, a11y, prop, props};
 use dioxus::prelude::*;
 use libero::{
     components::{
-        Anchor, Chapter, Code, CodeBlock, Input, MediaTrack, Text, TrackKind, Video, VideoPart,
-        VolumePart,
+        Anchor, Chapter, Code, Input, MediaTrack, Text, TrackKind, Video, VideoPart, VolumePart,
     },
     theme::Size,
 };
@@ -37,12 +34,6 @@ fn chapters() -> Vec<Chapter> {
     ]
 }
 
-const FORMATS: &str = r#"Video {
-    src: "/launch.mp4",
-    sources: vec![MediaSource::new("/launch.webm", "video/webm")],
-    label: "Launch day",
-}"#;
-
 #[component]
 pub fn VideoPage() -> Element {
     rsx! {
@@ -56,7 +47,7 @@ pub fn VideoPage() -> Element {
                     prop("src", "String").default("required").doc("The file's URL."),
                     prop("sources", "Vec<MediaSource>")
                         .default("[]")
-                        .doc("The file in other formats, `MediaSource::new(src, mime)`, tried in order before `src`. `src` stays the fallback and the download link."),
+                        .doc("The file in other formats, `MediaSource::new(src, mime)`, tried in order before `src`, which stays the fallback and the download link. WebM first and an MP4 as `src` reach every browser, Safari included."),
                     prop("label", "String")
                         .default("required")
                         .doc("Names the player, e.g. the video's title."),
@@ -157,7 +148,9 @@ pub fn VideoPage() -> Element {
                     Code { source: "<video>" }
                     " with libero's own controls: play, seek, time, mute, volume, speed, captions and fullscreen, in a bar over the picture as YouTube's, in the theme's look on every platform that plays media. "
                     Code { source: "use_media()" }
-                    " drives the same engine for a layout of your own."
+                    " drives the same engine for a layout of your own. The demo plays \"Big Buck Bunny\", (c) 2008 Blender Foundation, "
+                    Anchor { to: "https://peach.blender.org", target: "_blank", "peach.blender.org" }
+                    ", CC BY 3.0, streamed from Wikimedia Commons, so only online."
                 }
             },
             Demo {
@@ -218,30 +211,6 @@ pub fn VideoPage() -> Element {
                         }
                     }
                 },
-            }
-
-            DocSection {
-                title: "Formats",
-                Text {
-                    "A browser plays the first "
-                    Code { source: "sources" }
-                    " entry whose type it supports, then "
-                    Code { source: "src" }
-                    ". WebM first and an MP4 as "
-                    Code { source: "src" }
-                    " reach every browser, Safari included."
-                }
-                CodeBlock { source: FORMATS, language: "rust" }
-            }
-
-            DocSection {
-                title: "The demo video",
-                Text {
-                    "\"Big Buck Bunny\", (c) 2008 Blender Foundation, "
-                    Anchor { to: "https://peach.blender.org", target: "_blank", "peach.blender.org" }
-                    ", under CC BY 3.0, streamed from Wikimedia Commons, so it plays only online. "
-                    "Its English and German tracks are one placeholder caption each, not the film's sound."
-                }
             }
         }
     }

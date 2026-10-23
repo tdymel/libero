@@ -141,7 +141,7 @@ stacking context or fixed-position containing block from it.
 | `orientation` | `Orientation` | `vertical` | `vertical` stacks the items, `horizontal` puts them in a row. |
 | `onreorder` | `EventHandler<SortableMove>` | required | Fires on drop, or on a move button, when an item changed place. Apply the move to your data with `SortableMove::apply`; until then the list keeps its old order. |
 | `move_buttons` | `bool` | `true` | Each item's two buttons that move it one slot without dragging (WCAG 2.5.7). Off, only a drag and the handle's keys reorder: the pointer has no way but dragging (WCAG 2.5.7), so offer one yourself. |
-| `children` | `Element` | required | The `SortableItem`s. |
+| `children` | `Element` | required | The `SortableItem`s. For your own markup, `use_sortable` gives the list's handlers and `use_sortable_item(index)` each item's handle, element, move buttons, `style()`, `instructions` (the key help for the grab handle's description) and `touch_instructions` (for a touch screen showing the move buttons). The component is those two hooks plus a grip button, two move buttons and a status region. |
 
 ### SortableItem
 

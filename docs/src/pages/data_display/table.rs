@@ -1,12 +1,12 @@
 use crate::components::{
-    Control, Demo, DemoFile, DemoValues, DocPage, DocSection, Wrap, a11y, prop, props,
+    Control, Demo, DemoFile, DemoValues, DocPage, PageScroll, Wrap, a11y, prop, props,
 };
 use dioxus::prelude::*;
 use libero::components::{Code, Text};
 use libero::use_theme;
 
 mod demo;
-use demo::{StaffTable, StickyTable, TaskTable, TeamTable};
+use demo::TeamTable;
 
 /// The live table and its data, printed from its text by `wrap_data`.
 const FILE: DemoFile = DemoFile(include_str!("table/demo.rs"));
@@ -76,54 +76,6 @@ const GROUPED_COLUMNS: &str = r#"columns: vec![
         .sortable()
         .group("Membership"),
 ]"#;
-
-const SELECT_FIXED: [&str; 6] = [
-    r#"caption: "Staff""#,
-    "data: staff",
-    r#"row_key: |s: &Staff| s.name.clone()"#,
-    "header_filters: true",
-    r#"default_column_filters: vec![ColumnFilter::any_of("Role", ["owner", "admin"])]"#,
-    r#"columns: vec![
-    column("Name").value(|s: &Staff| s.name.clone()).row_header(),
-    column("Role")
-        .value(|s: &Staff| s.role.clone())
-        .format(|s: &Staff| role_label(&s.role).to_string())
-        .options([("owner", "Owner"), ("admin", "Admin"), ("viewer", "Viewer")]),
-]"#,
-];
-
-const STICKY_FIXED: [&str; 4] = [
-    r#"caption: "Team members""#,
-    "data: people",
-    "row_key: |p: &Person| p.name.clone()",
-    r#"columns: vec![
-    column("Name").value(|p: &Person| p.name.clone()).row_header(),
-    column("Role").value(|p: &Person| p.role.clone()),
-    column("Joined").value(|p: &Person| p.joined),
-]"#,
-];
-
-const TREE_FIXED: [&str; 11] = [
-    r#"caption: "Tasks""#,
-    "data: tasks",
-    r#"row_key: |t: &Task| t.id.clone()"#,
-    r#"parent_key: |t: &Task| t.parent.clone()"#,
-    "default_node_expansion: 2",
-    r#"row_has_children: |t: &Task| t.id == "retro""#,
-    r#"onexpandednodeschange: move |open: Vec<String>| {
-    if open.iter().any(|key| key == "retro") {
-        loaded.set(true);
-    }
-}"#,
-    "selectable: true",
-    r#"default_selection: vec!["wire".to_string()]"#,
-    "show_quick_filter: true",
-    r#"columns: vec![
-    column("Task").value(|t: &Task| t.name.clone()).sortable().row_header(),
-    column("Owner").value(|t: &Task| t.owner.clone()).sortable(),
-    column("Days").value(|t: &Task| t.days).sortable(),
-]"#,
-];
 
 /// The rows are the fixture, and the snippet only compiles with them, so the
 /// code block carries the struct and the data above the `Table` itself.
@@ -244,9 +196,37 @@ fn no_rows(values: &DemoValues) -> bool {
     values.str("empty") == "true" && !windowed(values)
 }
 
+/// Rows nested under their `manager`.
+fn tree(values: &DemoValues) -> bool {
+    values.str("tree_rows") == "true"
+}
+
+/// The switches a tree hides: it replaces the grouping and shows no detail or reordering.
+const TREE_HIDES: [&str; 3] = ["row_detail", "row_grouping", "reorder_rows"];
+
+// snippet: item #[derive(Clone, PartialEq)] struct Person { name: String, manager: Option<String> }
+// snippet: in Table { caption: "Team members", data: Vec::<Person>::new(), columns: vec![], row_key: |p: &Person| p.name.clone(), .. }
+const TREE: &str = r#"parent_key: |p: &Person| p.manager.clone(),
+default_node_expansion: 2"#;
+
+/// A sticky header needs the page to scroll, so not under a table that scrolls itself.
+fn scrolls_itself(values: &DemoValues) -> bool {
+    ["scroll", "pinned", "max_height"]
+        .iter()
+        .any(|name| values.str(name) == "true")
+        || windowed(values)
+}
+
+/// The columns a sticky table leaves out, as the page cannot scroll it sideways.
+pub const STICKY_HIDDEN: [&str; 3] = ["Review", "Active", "Bonus"];
+
+fn sticks(values: &DemoValues) -> bool {
+    values.str("sticky_header") == "true" && !scrolls_itself(values)
+}
+
 /// The server's batches have no signal of the demo's own to reorder.
 fn reorders(values: &DemoValues) -> bool {
-    values.str("reorder_rows") == "true" && !from_server(values)
+    values.str("reorder_rows") == "true" && !from_server(values) && !tree(values)
 }
 
 // snippet: item #[derive(Clone, PartialEq)] struct Person { name: String }
@@ -529,6 +509,7 @@ pub fn TablePage() -> Element {
                 component: "Table",
                 children_text: "",
                 wide_preview: true,
+                page_scroll: PageScroll(sticks),
                 fixed: vec![
                     r#"caption: "Team members""#.to_string(),
                     "row_key: |p: &Person| p.name.clone()".to_string(),
@@ -563,6 +544,14 @@ pub fn TablePage() -> Element {
                         ],
                         false => vec![],
                     }).hidden_when(|values| !windowed(values)),
+                    // The page, not the preview, scrolls past the rows, so the table cannot scroll sideways: fewer columns.
+                    Control::switch("sticky_header").code(|_, values| match sticks(values) {
+                        true => vec![
+                            format!("sticky_header: {STICKY_OFFSET:?}"),
+                            r#"default_hidden_columns: vec!["Review".into(), "Active".into(), "Bonus".into()]"#.to_string(),
+                        ],
+                        false => vec![],
+                    }).hidden_when(scrolls_itself),
                     Control::switch("pinned").code(|_, values| match values.str("pinned") == "true" {
                         true if values.str("scroll") != "true" => vec![
                             PINNED.to_string(),
@@ -581,7 +570,7 @@ pub fn TablePage() -> Element {
                     Control::switch("row_detail").code(|_, values| match values.str("row_detail") == "true" {
                         true => vec![DETAIL.to_string()],
                         false => vec![],
-                    }).hidden_when(windowed),
+                    }).hidden_when(|values| windowed(values) || tree(values)),
                     Control::switch("show_quick_filter"),
                     // On, so the toolbar pieces and Export show without another switch.
                     Control::switch("toolbar").default("true").code(|_, values| match (values.str("toolbar") == "true", values.str("filter_panel") == "true") {
@@ -608,11 +597,16 @@ pub fn TablePage() -> Element {
                     Control::switch("row_grouping").default("true").code(|_, values| match values.str("row_grouping") == "true" {
                         true => vec![GROUPING.to_string()],
                         false => vec![],
+                    }).hidden_when(tree),
+                    // A tree replaces the grouping and does not reorder; the rows nest under their `manager`.
+                    Control::switch("tree_rows").code(|_, values| match tree(values) {
+                        true => vec![TREE.to_string()],
+                        false => vec![],
                     }),
                     Control::switch("reorder_rows").code(|_, values| match reorders(values) {
                         true => vec![REORDER.to_string()],
                         false => vec![],
-                    }).hidden_when(from_server),
+                    }).hidden_when(|values| from_server(values) || tree(values)),
                     // On, so a double click edits a Bonus cell without another switch.
                     Control::switch("editable").default("true").code(|_, values| match edits(values) {
                         true => vec![EDIT.to_string()],
@@ -636,120 +630,6 @@ pub fn TablePage() -> Element {
                 render: move |values: DemoValues| rsx! {
                     TeamTable { values }
                 },
-            }
-
-            DocSection {
-                title: "Sticky header",
-                Text {
-                    Code { source: "sticky_header" }
-                    " keeps the header in view while the page scrolls past the rows, this far "
-                    "below the top edge of the scrolling area: a CSS length, so a fixed app "
-                    "header's height keeps it clear. Scroll this page to see it."
-                }
-                // snippet: item use libero::chrono::NaiveDate;
-                // snippet: item #[derive(Clone, PartialEq)] struct Person { name: String, role: String, joined: NaiveDate }
-                // snippet: let people: Vec<Person> = Vec::new();
-                Demo {
-                    component: "Table",
-                    title: "Sticky header",
-                    wide_preview: true,
-                    page_scroll: true,
-                    children_text: "",
-                    fixed: STICKY_FIXED.map(str::to_string).to_vec(),
-                    controls: vec![
-                        Control::switch("sticky_header").default("true").code(|_, values| match values.str("sticky_header") == "true" {
-                            true => vec![format!("sticky_header: {STICKY_OFFSET:?}")],
-                            false => vec![],
-                        }),
-                    ],
-                    render: move |values: DemoValues| rsx! {
-                        StickyTable { values }
-                    },
-                }
-            }
-
-            DocSection {
-                title: "Select columns",
-                Text {
-                    Code { source: ".options(..)" }
-                    " makes a column's filter pick among values, each with a label: a "
-                    Code { source: "(value, label)" }
-                    " pair, or a bare string for both. The values match the cell's raw text, "
-                    "before "
-                    Code { source: ".format(..)" }
-                    ", and are what a "
-                    Code { source: "ColumnFilter" }
-                    " holds, so stored codes shown as names still filter. With "
-                    Code { source: "header_filters" }
-                    ", Is any of is one field showing the first label and a count."
-                }
-                // snippet: item #[derive(Clone, PartialEq)] struct Staff { name: String, role: String }
-                // snippet: item fn role_label(role: &str) -> &'static str { "" }
-                // snippet: let staff: Vec<Staff> = Vec::new();
-                Demo {
-                    component: "Table",
-                    title: "Select column",
-                    wide_preview: true,
-                    children_text: "",
-                    fixed: SELECT_FIXED.map(str::to_string).to_vec(),
-                    controls: Vec::new(),
-                    render: move |_: DemoValues| rsx! { StaffTable {} },
-                }
-            }
-
-            DocSection {
-                title: "Tree rows",
-                Text {
-                    Code { source: "parent_key" }
-                    " names each row's parent by its "
-                    Code { source: "row_key" }
-                    ": the rows nest under their parents, each level in the sort, and a row whose "
-                    "parent is missing shows as a root. A toggle in the first column opens a row; "
-                    Code { source: "default_node_expansion" }
-                    " opens the first levels once. A filter keeps the matches' parents, open. A tree "
-                    "replaces "
-                    Code { source: "row_grouping" }
-                    " and windows with "
-                    Code { source: "virtual_row_height" }
-                    " as a flat table does."
-                }
-                Text {
-                    "With "
-                    Code { source: "selectable" }
-                    ", a row's box selects the row and its descendants; a parent's box fills once all "
-                    "of them are selected and shows mixed with some, as Website relaunch and Design do "
-                    "here. To load children on demand, "
-                    Code { source: "row_has_children" }
-                    " gives a row a toggle before any child is in "
-                    Code { source: "data" }
-                    ": opening it asks through "
-                    Code { source: "onexpandednodeschange" }
-                    ", and the row reads as busy until you append its children, as Retrospective does, "
-                    "or answer "
-                    Code { source: "false" }
-                    " for a row that turns out to have none."
-                }
-                Text {
-                    "The tree is a "
-                    Code { source: "treegrid" }
-                    " whose rows are its stops: Right opens a closed row and steps into an open one, "
-                    "Left closes an open row or steps out to its parent, and Up, Down, Home, End and "
-                    "the page keys move between the rows. With "
-                    Code { source: "cell_focus" }
-                    ", Right on an open row goes on to its first cell and Left on a first cell back to the row."
-                }
-                // snippet: item #[derive(Clone, PartialEq)] struct Task { id: String, parent: Option<String>, name: String, owner: String, days: u32 }
-                // snippet: let tasks: Vec<Task> = Vec::new();
-                // snippet: let mut loaded = use_signal(|| false);
-                Demo {
-                    component: "Table",
-                    title: "Tree rows",
-                    wide_preview: true,
-                    children_text: "",
-                    fixed: TREE_FIXED.map(str::to_string).to_vec(),
-                    controls: Vec::new(),
-                    render: move |_: DemoValues| rsx! { TaskTable {} },
-                }
             }
         }
     }

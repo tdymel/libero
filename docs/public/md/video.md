@@ -85,7 +85,7 @@ sound.
 | Prop | Type | Default | Description |
 |---|---|---|---|
 | `src` | `String` | required | The file's URL. |
-| `sources` | `Vec<MediaSource>` | `[]` | The file in other formats, `MediaSource::new(src, mime)`, tried in order before `src`. `src` stays the fallback and the download link. |
+| `sources` | `Vec<MediaSource>` | `[]` | The file in other formats, `MediaSource::new(src, mime)`, tried in order before `src`, which stays the fallback and the download link. WebM first and an MP4 as `src` reach every browser, Safari included. |
 | `label` | `String` | required | Names the player, e.g. the video's title. |
 | `poster` | `Option<String>` | `None` | A picture shown until playing starts. |
 | `aspect_ratio` | `Option<String>` | `16 / 9` | The picture's CSS `aspect-ratio`, which the box holds before the file loads, poster or not. A portrait clip wants `"9 / 16"`; `"auto"` follows the file, and the box jumps as it loads. A picture of another shape is letterboxed. |

@@ -1,6 +1,4 @@
-use crate::components::{
-    Control, Demo, DemoFile, DemoValues, DocPage, DocSection, Wrap, a11y, prop, props,
-};
+use crate::components::{Control, Demo, DemoFile, DemoValues, DocPage, Wrap, a11y, prop, props};
 use libero::components::Pictogram;
 use pictogram_icons_lucide as lucide;
 
@@ -231,20 +229,6 @@ pub fn AccordionPage() -> Element {
                         }
                     }
                 },
-            }
-
-            DocSection {
-                title: "Open sections",
-                Text {
-                    Code { source: "open" }
-                    " is controlled, and its variant is the mode. "
-                    Code { source: "AccordionOpen::One" }
-                    " holds at most one section, so opening another closes the first. "
-                    Code { source: "AccordionOpen::Many" }
-                    " toggles each on its own. "
-                    Code { source: "onchange" }
-                    " hands back the whole new set."
-                }
             }
         }
     }

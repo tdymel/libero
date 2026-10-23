@@ -1,6 +1,4 @@
-use crate::components::{
-    Control, Demo, DemoFile, DemoValues, DocPage, DocSection, a11y, prop, props,
-};
+use crate::components::{Control, Demo, DemoFile, DemoValues, DocPage, a11y, prop, props};
 use dioxus::prelude::*;
 use libero::components::{Code, Orientation, SortableItemPart, Text};
 
@@ -25,7 +23,7 @@ pub fn SortablePage() -> Element {
                     prop("move_buttons", "bool")
                         .default("true")
                         .doc("Each item's two buttons that move it one slot without dragging (WCAG 2.5.7). Off, only a drag and the handle's keys reorder: the pointer has no way but dragging (WCAG 2.5.7), so offer one yourself."),
-                    prop("children", "Element").default("required").doc("The `SortableItem`s."),
+                    prop("children", "Element").default("required").doc("The `SortableItem`s. For your own markup, `use_sortable` gives the list's handlers and `use_sortable_item(index)` each item's handle, element, move buttons, `style()`, `instructions` (the key help for the grab handle's description) and `touch_instructions` (for a touch screen showing the move buttons). The component is those two hooks plus a grip button, two move buttons and a status region."),
                 ]),
                 props("SortableItem", vec![
                     prop("index", "usize")
@@ -98,26 +96,6 @@ pub fn SortablePage() -> Element {
                     }
                 },
                 file: DemoFile(include_str!("sortable/demo.rs")),
-            }
-
-            DocSection {
-                title: "Your own markup",
-                Text {
-                    "For your own markup, "
-                    Code { source: "use_sortable" }
-                    " gives the list's handlers and "
-                    Code { source: "use_sortable_item(index)" }
-                    " each item's handle, element, move buttons and "
-                    Code { source: "style()" }
-                    ", and "
-                    Code { source: "instructions" }
-                    ", the key help to render as the grab handle's description, and "
-                    Code { source: "touch_instructions" }
-                    " for a touch screen showing the move buttons. The component is those two hooks plus a grip button, two move buttons and a status region. "
-                    "The announcements name a hook item by position, \"Item 2\", unless you call "
-                    Code { source: "use_labelled_sortable_item(index, Some(name))" }
-                    " to name it as your handle does."
-                }
             }
         }
     }

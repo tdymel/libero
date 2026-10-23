@@ -96,7 +96,7 @@ List { ordered: true,
 |---|---|---|---|
 | `size` | `Size` | `md` | Item gap and nested-list indent, together. A nested ordered list keeps the fixed `2em` its numbers need. |
 | `ordered` | `bool` | `false` | An `ol` with visible numbers, for items whose order matters. |
-| `icon` | `Option<Element>` | `None` | Shown at the start of every item, beside its first line. Hidden from screen readers. |
+| `icon` | `Option<Element>` | `None` | Shown at the start of every item, beside its first line. Hidden from screen readers. A nested list does not take its parent's icon. In an ordered list an icon replaces its item's number and the gutter beside it. |
 | `children` | `Element` | required | The list's items. |
 
 ### ListItem

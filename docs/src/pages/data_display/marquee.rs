@@ -1,6 +1,4 @@
-use crate::components::{
-    Control, Demo, DemoValues, DocPage, DocSection, Wrap, a11y, indent, prop, props,
-};
+use crate::components::{Control, Demo, DemoValues, DocPage, Wrap, a11y, indent, prop, props};
 use dioxus::prelude::*;
 use libero::{
     components::{Anchor, Button, Chip, Code, Flex, Marquee, MarqueePart, Text},
@@ -182,6 +180,7 @@ pub fn MarqueePage() -> Element {
                     "Every copy after the first is `aria-hidden` and `inert`, so the content is read and tabbed through once.",
                     "The pause toggle meets WCAG 2.2.2, which asks for a way to stop motion that runs longer than five seconds. It is named \"Pause\", and `aria-pressed` says whether it is paused.",
                     "While focus is on the content the toggle turns transparent, so it never covers a focused link.",
+                    "Under `prefers-reduced-motion: reduce` it does not move: one copy shows in a strip the reader scrolls, without the fade or the toggle.",
                 ])
                 .must([
                     "Put interactive children in the content knowing they work only in the first copy.",
@@ -241,17 +240,6 @@ pub fn MarqueePage() -> Element {
                 render: move |values: DemoValues| rsx! {
                     MarqueePreview { values }
                 },
-            }
-
-            DocSection {
-                title: "Reduced motion",
-                Text {
-                    "Under "
-                    Code { source: "prefers-reduced-motion: reduce" }
-                    " it does not move. It shows one copy in a strip the reader scrolls, "
-                    "without the fade or the toggle. To see it, switch the setting in your "
-                    "system or your browser's dev tools."
-                }
             }
         }
     }

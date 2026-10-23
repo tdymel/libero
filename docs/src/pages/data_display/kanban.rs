@@ -1,6 +1,4 @@
-use crate::components::{
-    Control, Demo, DemoFile, DemoValues, DocPage, DocSection, a11y, prop, props,
-};
+use crate::components::{Control, Demo, DemoFile, DemoValues, DocPage, a11y, prop, props};
 use dioxus::prelude::*;
 use libero::components::{Code, KanbanCardPart, KanbanColumnPart, Text};
 
@@ -57,7 +55,7 @@ pub fn KanbanPage() -> Element {
                         .doc("Names the card in its controls and the announcements. Unset, the handle reads the card's content, and the other controls and announcements `SortableLabels::item` with its position."),
                     prop("parts", "Parts<KanbanCardPart>")
                         .doc("Styles for the inner parts in the Style API tab, under `sx`."),
-                    prop("children", "Element").default("required").doc("The card's content, between the handle and the move buttons."),
+                    prop("children", "Element").default("required").doc("The card's content, between the handle and the move buttons. The board draws no card look: the demo builds issue cards from Text, Badge, Icon and Avatar."),
                 ])
                 .parts("KanbanCardPart", vec![
                     (KanbanCardPart::Handle, "The drag handle."),
@@ -130,14 +128,6 @@ pub fn KanbanPage() -> Element {
                     }
                 },
                 wide_preview: true,
-            }
-
-            DocSection {
-                title: "Cards",
-                Text {
-                    "The cards are your content: the board draws no card look. The demo builds Jira-style "
-                    "issue cards from Text, Badge, Icon and Avatar."
-                }
             }
         }
     }

@@ -1,6 +1,4 @@
-use crate::components::{
-    Control, Demo, DemoFile, DemoValues, DocPage, DocSection, a11y, prop, props,
-};
+use crate::components::{Control, Demo, DemoFile, DemoValues, DocPage, a11y, prop, props};
 use libero::components::Pictogram;
 use pictogram_icons_lucide as lucide;
 
@@ -32,7 +30,7 @@ pub fn ListPage() -> Element {
                         .doc("An `ol` with visible numbers, for items whose order matters."),
                     prop("icon", "Option<Element>")
                         .default("None")
-                        .doc("Shown at the start of every item, beside its first line. Hidden from screen readers."),
+                        .doc("Shown at the start of every item, beside its first line. Hidden from screen readers. A nested list does not take its parent's icon. In an ordered list an icon replaces its item's number and the gutter beside it."),
                     prop("children", "Element").default("required").doc("The list's items."),
                 ]),
                 props("ListItem", vec![
@@ -114,20 +112,6 @@ pub fn ListPage() -> Element {
                         // demo-code: children end
                     }
                 },
-            }
-
-            DocSection {
-                title: "Icons",
-                Text {
-                    "An "
-                    Code { source: "icon" }
-                    " on the list marks every item. A "
-                    Code { source: "ListItem" }
-                    "'s own "
-                    Code { source: "icon" }
-                    " replaces it for that item. A nested list does not take its parent's icon. "
-                    "In an ordered list an icon replaces its item's number and the gutter beside it."
-                }
             }
         }
     }

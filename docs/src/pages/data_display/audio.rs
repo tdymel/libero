@@ -1,18 +1,10 @@
 use super::video::volume_parts;
-use crate::components::{
-    Control, Demo, DemoValues, DocPage, DocSection, Remount, a11y, prop, props,
-};
+use crate::components::{Control, Demo, DemoValues, DocPage, Remount, a11y, prop, props};
 use dioxus::prelude::*;
 use libero::{
-    components::{Audio, AudioPart, Code, CodeBlock, Input, Text},
+    components::{Audio, AudioPart, Code, Input, Text},
     theme::Size,
 };
-
-const FORMATS: &str = r#"Audio {
-    src: "/message.mp3",
-    sources: vec![MediaSource::new("/message.ogg", "audio/ogg")],
-    label: "Voice message",
-}"#;
 
 #[component]
 pub fn AudioPage() -> Element {
@@ -27,13 +19,13 @@ pub fn AudioPage() -> Element {
                     prop("src", "String").default("required").doc("The file's URL. The player and the waveform fetch it with a plain GET and the page's cookies, so a URL built from user data can act as a tracking beacon. A `javascript:` or `vbscript:` URL loads nothing and warns in debug builds."),
                     prop("sources", "Vec<MediaSource>")
                         .default("[]")
-                        .doc("The file in other formats, `MediaSource::new(src, mime)`, tried in order before `src`. `src` stays the fallback and the download link."),
+                        .doc("The file in other formats, `MediaSource::new(src, mime)`, tried in order before `src`, which stays the fallback and the download link. An Ogg first and an MP3 as `src` reach every browser, Safari included."),
                     prop("label", "String")
                         .default("required")
                         .doc("Names the player, e.g. the track's title."),
                     prop("media", "Option<MediaHandle>")
                         .default("None")
-                        .doc("A handle from `use_media()`, to drive or read the player from outside."),
+                        .doc("A handle from `use_media()`, to drive or read the player from outside. For a layout of your own, spread its `attributes()` and `mount()` on a bare element and read `paused()`, `current_time()` and friends."),
                     prop("autoplay", "bool")
                         .default("false")
                         .doc("Starts on load. Browsers refuse it with sound: pair it with `muted`; a debug build warns otherwise."),
@@ -129,44 +121,6 @@ pub fn AudioPage() -> Element {
                         }
                     }
                 },
-            }
-
-            DocSection {
-                title: "Your own layout",
-                Text {
-                    Code { source: "use_media()" }
-                    " drives the same engine for a layout of your own: spread its "
-                    Code { source: "attributes()" }
-                    " and "
-                    Code { source: "mount()" }
-                    " on a bare element and read "
-                    Code { source: "paused()" }
-                    ", "
-                    Code { source: "current_time()" }
-                    " and friends."
-                }
-            }
-
-            DocSection {
-                title: "Formats",
-                Text {
-                    "A browser plays the first "
-                    Code { source: "sources" }
-                    " entry whose type it supports, then "
-                    Code { source: "src" }
-                    ". An Ogg first and an MP3 as "
-                    Code { source: "src" }
-                    " reach every browser, Safari included."
-                }
-                CodeBlock { source: FORMATS, language: "rust" }
-            }
-
-            DocSection {
-                title: "The demo audio",
-                Text {
-                    "The demo plays \"Wikipedia guitar solo\" (CC0), streamed from Wikimedia "
-                    "Commons, so it plays only online."
-                }
             }
         }
     }

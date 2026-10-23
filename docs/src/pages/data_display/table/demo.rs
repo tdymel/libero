@@ -1,6 +1,6 @@
 use super::{
-    MAX_HEIGHT, SCROLL_WIDTH, STICKY_OFFSET, WINDOW_HEIGHT, WINDOW_HIDES, edits, from_server,
-    no_rows, reorders, resizes, windowed,
+    MAX_HEIGHT, SCROLL_WIDTH, STICKY_HIDDEN, STICKY_OFFSET, TREE_HIDES, WINDOW_HEIGHT,
+    WINDOW_HIDES, edits, from_server, no_rows, reorders, resizes, sticks, tree, windowed,
 };
 use crate::components::DemoValues;
 use dioxus::prelude::*;
@@ -10,8 +10,8 @@ use std::time::Duration;
 
 use libero::chrono::{NaiveDate, TimeDelta};
 use libero::components::{
-    Aggregate, Button, Chip, Column, ColumnFilter, ColumnWidths, PinnedColumns, RowFn, RowUpdate,
-    Table, TableColumnsButton, TableDensityButton, TableExportButton, TableFilterButton, column,
+    Aggregate, Button, Chip, Column, ColumnWidths, PinnedColumns, RowFn, RowUpdate, Table,
+    TableColumnsButton, TableDensityButton, TableExportButton, TableFilterButton, column,
 };
 use libero::hooks::SortableMove;
 use libero::platform::{TimerSubscription, save_file, timer};
@@ -27,6 +27,7 @@ struct Person {
     review: Option<NaiveDate>,
     active: bool,
     bonus: Option<f64>,
+    manager: Option<String>,
 }
 
 fn day(year: i32, month: u32, day: u32) -> NaiveDate {
@@ -36,15 +37,18 @@ fn day(year: i32, month: u32, day: u32) -> NaiveDate {
 
 // demo-code: team start
 /// Six rows, so the date filters have dates on both sides to keep and drop.
+/// `manager` names the row's parent for the tree rows.
 fn team() -> Vec<Person> {
-    let person = |name: &str, role: &str, joined, review, active, bonus| Person {
-        name: name.into(),
-        role: role.into(),
-        joined,
-        review,
-        active,
-        bonus,
-    };
+    let person =
+        |name: &str, role: &str, joined, review, active, bonus, manager: Option<&str>| Person {
+            name: name.into(),
+            role: role.into(),
+            joined,
+            review,
+            active,
+            bonus,
+            manager: manager.map(str::to_string),
+        };
     vec![
         person(
             "Ada Lovelace",
@@ -53,6 +57,7 @@ fn team() -> Vec<Person> {
             Some(day(2025, 1, 15)),
             true,
             Some(12.5),
+            None,
         ),
         person(
             "Grace Hopper",
@@ -61,8 +66,17 @@ fn team() -> Vec<Person> {
             Some(day(2024, 11, 2)),
             true,
             Some(8.0),
+            Some("Ada Lovelace"),
         ),
-        person("Alan Turing", "Viewer", day(2023, 2, 1), None, false, None),
+        person(
+            "Alan Turing",
+            "Viewer",
+            day(2023, 2, 1),
+            None,
+            false,
+            None,
+            Some("Grace Hopper"),
+        ),
         person(
             "Katherine Johnson",
             "Admin",
@@ -70,6 +84,7 @@ fn team() -> Vec<Person> {
             Some(day(2025, 4, 30)),
             true,
             Some(6.5),
+            Some("Ada Lovelace"),
         ),
         person(
             "Edsger Dijkstra",
@@ -78,6 +93,7 @@ fn team() -> Vec<Person> {
             None,
             false,
             Some(2.0),
+            Some("Katherine Johnson"),
         ),
         person(
             "Barbara Liskov",
@@ -86,6 +102,7 @@ fn team() -> Vec<Person> {
             Some(day(2024, 9, 9)),
             true,
             Some(10.0),
+            None,
         ),
     ]
 }
@@ -104,6 +121,7 @@ fn member(n: u32) -> Person {
             .then(|| day(2025, 1, 1) + TimeDelta::days(i64::from(n % 365))),
         active: !n.is_multiple_of(5),
         bonus: (!n.is_multiple_of(4)).then(|| f64::from(n % 150) / 10.0),
+        manager: (n > 1).then(|| format!("Person {}", n / 2)),
     }
 }
 // demo-code: member end
@@ -125,150 +143,6 @@ fn fetch(from: usize) -> Vec<Person> {
     (1..=10_000).skip(from).take(BATCH).map(member).collect()
 }
 // demo-code: server end
-
-/// Thirty rows under a header that follows the page's scroll.
-#[component]
-pub fn StickyTable(values: DemoValues) -> Element {
-    let offset = (values.str("sticky_header") == "true").then(|| STICKY_OFFSET.to_string());
-    rsx! {
-        Table {
-            caption: "Team members",
-            sticky_header: offset,
-            data: (1..=30).map(member).collect::<Vec<_>>(),
-            row_key: |p: &Person| p.name.clone(),
-            columns: vec![
-                column("Name").value(|p: &Person| p.name.clone()).row_header(),
-                column("Role").value(|p: &Person| p.role.clone()),
-                column("Joined").value(|p: &Person| p.joined),
-            ],
-        }
-    }
-}
-
-#[derive(Clone, PartialEq)]
-struct Staff {
-    name: String,
-    role: String,
-}
-
-fn staff() -> Vec<Staff> {
-    [
-        ("Ada", "owner"),
-        ("Bo", "admin"),
-        ("Cy", "viewer"),
-        ("Di", "admin"),
-        ("Ed", "viewer"),
-    ]
-    .map(|(name, role)| Staff {
-        name: name.to_string(),
-        role: role.to_string(),
-    })
-    .to_vec()
-}
-
-fn role_label(role: &str) -> &'static str {
-    match role {
-        "owner" => "Owner",
-        "admin" => "Admin",
-        _ => "Viewer",
-    }
-}
-
-/// The select column example: stored role codes, shown as names, filtered by the codes.
-#[component]
-pub fn StaffTable() -> Element {
-    rsx! {
-        Table {
-            caption: "Staff",
-            data: staff(),
-            row_key: |s: &Staff| s.name.clone(),
-            header_filters: true,
-            default_column_filters: vec![ColumnFilter::any_of("Role", ["owner", "admin"])],
-            columns: vec![
-                column("Name").value(|s: &Staff| s.name.clone()).row_header(),
-                column("Role")
-                    .value(|s: &Staff| s.role.clone())
-                    .format(|s: &Staff| role_label(&s.role).to_string())
-                    .options([("owner", "Owner"), ("admin", "Admin"), ("viewer", "Viewer")]),
-            ],
-        }
-    }
-}
-
-#[derive(Clone, PartialEq)]
-struct Task {
-    id: String,
-    parent: Option<String>,
-    name: String,
-    owner: String,
-    days: u32,
-}
-
-fn tasks() -> Vec<Task> {
-    [
-        ("site", "", "Website relaunch", "Ada", 0),
-        ("design", "site", "Design", "Bo", 0),
-        ("wire", "design", "Wireframes", "Bo", 3),
-        ("visual", "design", "Visual design", "Cy", 5),
-        ("build", "site", "Build", "Di", 0),
-        ("front", "build", "Frontend", "Di", 8),
-        ("back", "build", "Backend", "Ed", 6),
-        ("launch", "site", "Launch", "Ada", 1),
-        ("retro", "", "Retrospective", "Cy", 0),
-    ]
-    .map(task)
-    .to_vec()
-}
-
-fn task((id, parent, name, owner, days): (&str, &str, &str, &str, u32)) -> Task {
-    Task {
-        id: id.to_string(),
-        parent: (!parent.is_empty()).then(|| parent.to_string()),
-        name: name.to_string(),
-        owner: owner.to_string(),
-        days,
-    }
-}
-
-/// The tree example: tasks under their parent task, two levels open, one row's
-/// children loaded when it first opens, one subtree partly selected.
-#[component]
-pub fn TaskTable() -> Element {
-    let mut loaded = use_signal(|| false);
-    let mut rows = tasks();
-    if loaded() {
-        rows.extend(
-            [
-                ("notes", "retro", "Notes", "Cy", 1),
-                ("follow", "retro", "Follow-ups", "Ed", 2),
-            ]
-            .map(task),
-        );
-    }
-    rsx! {
-        Table {
-            caption: "Tasks",
-            data: rows,
-            row_key: |t: &Task| t.id.clone(),
-            parent_key: |t: &Task| t.parent.clone(),
-            default_node_expansion: 2,
-            row_has_children: |t: &Task| t.id == "retro",
-            onexpandednodeschange: move |open: Vec<String>| {
-                if open.iter().any(|key| key == "retro") {
-                    loaded.set(true);
-                }
-            },
-            selectable: true,
-            default_selection: vec!["wire".to_string()],
-            show_quick_filter: true,
-            columns: vec![
-                column("Task").value(|t: &Task| t.name.clone()).sortable().row_header(),
-                column("Owner").value(|t: &Task| t.owner.clone()).sortable(),
-                column("Days").value(|t: &Task| t.days).sortable(),
-            ],
-        }
-    }
-}
 
 fn team_columns(grouped: bool, editable: bool) -> Vec<Column<Person>> {
     let group = |column: Column<Person>| match grouped {
@@ -360,19 +234,22 @@ pub fn TeamTable(values: DemoValues) -> Element {
     let windowed = windowed(&values);
     let server = from_server(&values);
     // A switch the windowed table hides counts as off, `loading` too while the server sets it.
+    let tree = tree(&values);
     let on = |name: &str| {
         values.str(name) == "true"
             && !(windowed && WINDOW_HIDES.contains(&name))
+            && !(tree && TREE_HIDES.contains(&name))
             && !(server && name == "loading")
     };
     // Pins need the scroll area to hold against.
     let scrolls = on("scroll") || on("pinned");
     // Keyed in a loop, as a root's own key never remounts: pages, pins and grouping seed once.
     let remount = format!(
-        "{}-{}-{}-{windowed}-{server}",
+        "{}-{}-{}-{windowed}-{server}-{tree}-{}",
         values.str("paginate"),
         values.str("pinned"),
-        on("row_grouping")
+        on("row_grouping"),
+        sticks(&values)
     );
     rsx! {
         for remount in [remount] {
@@ -391,6 +268,16 @@ pub fn TeamTable(values: DemoValues) -> Element {
                     false => on("max_height").then(|| MAX_HEIGHT.to_string()),
                 },
                 virtual_row_height: windowed.then_some(40.0),
+                sticky_header: sticks(&values).then(|| STICKY_OFFSET.to_string()),
+                default_hidden_columns: match sticks(&values) {
+                    true => STICKY_HIDDEN.map(String::from).to_vec(),
+                    false => Vec::new(),
+                },
+                parent_key: match tree {
+                    true => (|p: &Person| p.manager.clone()).into(),
+                    false => RowFn::default(),
+                },
+                default_node_expansion: 2,
                 default_pinned_columns: match on("pinned") {
                     true => PinnedColumns::default().start(["Name"]).end(["Bonus"]),
                     false => PinnedColumns::default(),

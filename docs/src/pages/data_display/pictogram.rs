@@ -1,6 +1,5 @@
 use crate::components::{
-    Control, Demo, DemoValues, DocPage, DocSection, ExtraTab, IconCatalogue, PictogramNote, a11y,
-    prop, props,
+    Control, Demo, DemoValues, DocPage, ExtraTab, IconCatalogue, PictogramNote, a11y, prop, props,
 };
 use dioxus::prelude::*;
 use libero::components::{Code, Pictogram, SvgData, Text};
@@ -38,7 +37,7 @@ pub fn PictogramPage() -> Element {
                 props("Pictogram", vec![
                     prop("icon", "SvgData")
                         .default("required")
-                        .doc("The glyph: a const from a pictogram icon crate, or `SvgData::new(include_str!(\"x.svg\"))`."),
+                        .doc("The glyph: a const from a pictogram icon crate, or `SvgData::new(include_str!(\"x.svg\"))`. Take icon crates from pictogram's 0.5 line, the one libero builds on: another minor, such as 0.4, brings a second `SvgData` type, and its icons fail with a type mismatch that does not name the version."),
                     prop("aria_label", "Option<String>")
                         .default("None")
                         .doc("Names the glyph: `role=\"img\"` instead of `aria-hidden`. Leave unset next to a text label."),
@@ -56,7 +55,10 @@ pub fn PictogramPage() -> Element {
                     "Name a pictogram that means something on its own with `aria_label`. One next to a text label stays hidden.",
                     "For a clickable glyph, use `ActionIcon { icon }`.",
                 ])
-                .example("A status column with no text, `Pictogram { icon: .., aria_label: \"Synced\" }`: a screen reader reads an image named \"Synced\". The same glyph next to the word \"Synced\" stays hidden."),
+                .example("A status column with no text, `Pictogram { icon: .., aria_label: \"Synced\" }`: a screen reader reads an image named \"Synced\". The same glyph next to the word \"Synced\" stays hidden.")
+                .limits([
+                    "Not every glyph is `currentColor`: the color variants of `pictogram-icons-lobe` and some phosphor glyphs hard-code their fills, so they ignore the text color and dark mode. Lobe's gradient glyphs carry fixed ids: two copies on one page share them.",
+                ]),
             extra_tab: ExtraTab {
                 label: "Icons",
                 id: "icons",
@@ -118,26 +120,6 @@ pub fn PictogramPage() -> Element {
                         aria_label: (values.str("aria_label") == "true").then(|| icon_name(&values.str("icon"))),
                     }
                 },
-            }
-
-            DocSection {
-                title: "Colours",
-                Text {
-                    "Not every glyph is "
-                    Code { source: "currentColor" }
-                    ": the color variants of "
-                    Code { source: "pictogram-icons-lobe" }
-                    " and some phosphor glyphs hard-code their fills, so they ignore the text color and dark mode. Lobe's gradient glyphs carry fixed ids: two copies on one page share them."
-                }
-            }
-
-            DocSection {
-                title: "Versions",
-                Text {
-                    "Take icon crates from pictogram's 0.5 line, the one libero builds on. A crate of another minor, such as 0.4, brings a second "
-                    Code { source: "SvgData" }
-                    " type: its icons fail with a type mismatch that does not name the version."
-                }
             }
         }
     }

@@ -1,8 +1,6 @@
 use std::{cell::Cell, ops::ControlFlow, rc::Rc, time::Duration};
 
-use crate::components::{
-    Control, Demo, DemoFile, DemoValues, DocPage, DocSection, Wrap, a11y, prop, props,
-};
+use crate::components::{Control, Demo, DemoFile, DemoValues, DocPage, Wrap, a11y, prop, props};
 
 use dioxus::prelude::*;
 use libero::{
@@ -268,10 +266,10 @@ pub fn NotificationsPage() -> Element {
                 ]),
                 props("SnackbarData", vec![
                     prop("message", "String").doc("The text. Empty draws none."),
-                    prop("action", "Option<SnackbarAction>").doc("One button, such as Undo. Pressing it runs the handler, then closes the snackbar. `SnackbarData::new(message).action(label, handler)` builds both."),
+                    prop("action", "Option<SnackbarAction>").doc("One button, such as Undo. Pressing it runs the handler, then closes the snackbar. `SnackbarData::new(message).action(label, handler)` builds both. Show it with `AutoClose::Never`, as a keyboard reader needs `F8` to reach the action."),
                 ]),
                 props("NotificationHandle", vec![
-                    prop("show(args)", "NotificationId").doc("Shows one with the host's options."),
+                    prop("show(args)", "NotificationId").doc("Shows one with the host's options. `use_notifications_with(template)` takes your own data type and a template `fn`, not a capturing closure, so everything it draws travels in the data; `snackbar` is one ready made."),
                     prop("show_with(args, options)", "NotificationId").doc("Shows one with its own options."),
                     prop("update(id, args)", "()").doc("Redraws that one notification with new data."),
                     prop("hide(id)", "()").doc("Fades it out, then removes it. One still queued is removed at once."),
@@ -413,41 +411,6 @@ pub fn NotificationsPage() -> Element {
                 },
                 wrap: Wrap(wrap_demo),
                 wide_preview: true,
-            }
-
-            DocSection {
-                title: "Your own data",
-                Text {
-                    Code { source: "use_notifications_with" }
-                    " takes your own data type and a template to draw it. The template is a "
-                    Code { source: "fn" }
-                    ", not a capturing closure, so everything it draws travels in the data. "
-                    Code { source: "update(id, data)" }
-                    " redraws one notification in place. "
-                    Code { source: "snackbar" }
-                    " is such a template, ready made: "
-                    Code { source: "use_notifications_with(snackbar)" }
-                    " shows a message with one action, such as Undo. Show it with "
-                    Code { source: "AutoClose::Never" }
-                    ", as a keyboard reader needs "
-                    Code { source: "F8" }
-                    " to reach the action."
-                }
-            }
-
-            DocSection {
-                title: "Stacks and timers",
-                Text {
-                    "Each stack shows up to "
-                    Code { source: "limit" }
-                    " at once, and the rest wait. Hovering or focusing one pauses every "
-                    "timer, and each starts over when you leave; "
-                    Code { source: "pause_scope: NotificationPause::Hovered" }
-                    " pauses only that one. A "
-                    Code { source: "contained" }
-                    " host draws its stacks in its own box and keeps a queue for the handles "
-                    "below it."
-                }
             }
         }
     }

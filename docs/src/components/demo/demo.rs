@@ -207,6 +207,17 @@ impl PartialEq for Child {
     }
 }
 
+/// Whether the preview leaves the page to scroll for these values. A page-level constant, so two
+/// are always equal.
+#[derive(Clone, Copy)]
+pub struct PageScroll(pub fn(&DemoValues) -> bool);
+
+impl PartialEq for PageScroll {
+    fn eq(&self, _: &Self) -> bool {
+        true
+    }
+}
+
 /// `"auto"` is how a control says "leave it to the theme" - a control can
 /// never produce *no* value.
 pub fn or_unset<T>(value: String) -> Input<T>
@@ -562,9 +573,9 @@ pub fn Demo(
     /// that needs the card's whole width - a table, a player, a notification host.
     #[props(default)]
     wide_preview: bool,
-    /// Leaves the preview no scroll box of its own, so a sticky header sticks to the page's scroll.
-    #[props(default)]
-    page_scroll: bool,
+    /// Leaves the preview no scroll box of its own while it answers `true`, so a sticky header
+    /// sticks to the page's scroll.
+    page_scroll: Option<PageScroll>,
     /// The demo's own source, printed above the call: `DemoFile(include_str!("x_demo.rs"))`.
     file: Option<DemoFile>,
     /// Tells the code blocks apart when a page has several demos of one component.
@@ -612,10 +623,11 @@ pub fn Demo(
         false => code.shown_source(&current),
     };
     // `clip` rounds the corners without a scroll box, which a sticky header would stick to.
-    let (card_overflow, preview_overflow) = match page_scroll {
-        true => ("clip", "visible"),
-        false => ("hidden", "auto"),
-    };
+    let (card_overflow, preview_overflow) =
+        match page_scroll.is_some_and(|PageScroll(scrolls)| scrolls(&current)) {
+            true => ("clip", "visible"),
+            false => ("hidden", "auto"),
+        };
     rsx! {
         Box {
             sx: sx()

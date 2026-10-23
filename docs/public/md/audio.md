@@ -87,9 +87,9 @@ so it plays only online.
 | Prop | Type | Default | Description |
 |---|---|---|---|
 | `src` | `String` | required | The file's URL. The player and the waveform fetch it with a plain GET and the page's cookies, so a URL built from user data can act as a tracking beacon. A `javascript:` or `vbscript:` URL loads nothing and warns in debug builds. |
-| `sources` | `Vec<MediaSource>` | `[]` | The file in other formats, `MediaSource::new(src, mime)`, tried in order before `src`. `src` stays the fallback and the download link. |
+| `sources` | `Vec<MediaSource>` | `[]` | The file in other formats, `MediaSource::new(src, mime)`, tried in order before `src`, which stays the fallback and the download link. An Ogg first and an MP3 as `src` reach every browser, Safari included. |
 | `label` | `String` | required | Names the player, e.g. the track's title. |
-| `media` | `Option<MediaHandle>` | `None` | A handle from `use_media()`, to drive or read the player from outside. |
+| `media` | `Option<MediaHandle>` | `None` | A handle from `use_media()`, to drive or read the player from outside. For a layout of your own, spread its `attributes()` and `mount()` on a bare element and read `paused()`, `current_time()` and friends. |
 | `autoplay` | `bool` | `false` | Starts on load. Browsers refuse it with sound: pair it with `muted`; a debug build warns otherwise. |
 | `muted` | `bool` | `false` | Starts muted. |
 | `looping` | `bool` | `false` | Starts again at the end. |

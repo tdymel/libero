@@ -867,41 +867,13 @@ pub fn ChartPage() -> Element {
                     Code { source: "CandlestickChart" }
                     " and "
                     Code { source: "RadarChart" }
-                    ", each drawn as an SVG that fills its width, with a tooltip, the arrow keys, a legend that hides and shows, and a summary for screen readers. Needs the "
+                    ", each drawn as an SVG that fills its width, with a tooltip, the arrow keys, a legend that hides and shows, and a summary for screen readers. Lines, bars and candlesticks zoom and pan with "
+                    Code { source: "zoom" }
+                    "; every chart exports as SVG or PNG through a "
+                    Code { source: "use_chart()" }
+                    " handle. Needs the "
                     Code { source: "charts" }
                     " feature. Web and Android."
-                }
-                Text {
-                    "Lines and bars take one or more "
-                    Code { source: "Series" }
-                    " over a shared x axis; a pie takes "
-                    Code { source: "Slice" }
-                    "s, each a name and a value, and a funnel takes them as its stages, top to bottom; a heatmap takes a grid of values, a row per name in "
-                    Code { source: "y" }
-                    ". A line of another size or unit goes on a right y axis with "
-                    Code { source: ".secondary_axis()" }
-                    "; in an upright bar chart, a series is drawn as a line over the bars with "
-                    Code { source: ".kind(SeriesKind::Line)" }
-                    ". A scatter takes "
-                    Code { source: "ScatterSeries" }
-                    " of x and y pairs, bubbles with a size as a third value, and fits a "
-                    Code { source: "trend" }
-                    " line through each. A candlestick chart takes a "
-                    Code { source: "Candle" }
-                    " per period, its open, high, low and close. A radar takes "
-                    Code { source: "RadarAxis" }
-                    " spokes and one "
-                    Code { source: "Series" }
-                    " value per spoke."
-                }
-                Text {
-                    "Lines, bars and candlesticks zoom and pan their x axis with "
-                    Code { source: "zoom" }
-                    " and brush a range for "
-                    Code { source: "onrange" }
-                    ". Every chart exports as SVG or PNG through a "
-                    Code { source: "use_chart()" }
-                    " handle, which also resets a zoom and says whether the chart is zoomed; the chart draws no buttons, render your own."
                 }
             },
             Demo {

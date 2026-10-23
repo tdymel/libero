@@ -1,6 +1,6 @@
 use crate::Route;
 use crate::components::{
-    Control, Demo, DemoValues, DocPage, DocSection, PictogramNote, Wrap, a11y, prop, props,
+    Control, Demo, DemoValues, DocPage, PictogramNote, Wrap, a11y, prop, props,
 };
 use dioxus::prelude::*;
 use libero::{
@@ -148,7 +148,7 @@ pub fn IconProviderPage() -> Element {
                 props("IconProvider", vec![
                     prop("icons", "IconSet")
                         .default("required")
-                        .doc("The slots to swap. An empty slot keeps the outer provider's glyph, then libero's lucide default."),
+                        .doc("The slots to swap: `IconSet::new().with(IconSlot::Close, icon)` for one, or a whole set from its constructor, such as `IconSet::material_rounded()`, after turning on its libero feature (`icons-material`, `icons-tabler`, `icons-bootstrap` or `icons-phosphor`); only the set you call is compiled in. An empty slot keeps the outer provider's glyph, then libero's lucide default. Brand marks are no slots: they name a service."),
                 ]),
             ],
             accessibility: a11y()
@@ -188,25 +188,6 @@ pub fn IconProviderPage() -> Element {
                 render: move |values: DemoValues| rsx! {
                     IconProvider { icons: demo_icons(&values), Inputs {} }
                 },
-            }
-
-            DocSection {
-                title: "Sets",
-                Text {
-                    "One slot: "
-                    Code { source: "IconSet::new().with(IconSlot::Close, icon)" }
-                    ". A whole set: turn on its libero feature ("
-                    Code { source: "icons-material" }
-                    ", "
-                    Code { source: "icons-tabler" }
-                    ", "
-                    Code { source: "icons-bootstrap" }
-                    ", "
-                    Code { source: "icons-phosphor" }
-                    ") and start from its constructor, such as "
-                    Code { source: "IconSet::material_rounded()" }
-                    ". Only the set you call is compiled into your app. Brand marks are no slots: they name a service."
-                }
             }
         }
     }

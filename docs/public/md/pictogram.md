@@ -80,7 +80,7 @@ with a type mismatch that does not name the version.
 
 | Prop | Type | Default | Description |
 |---|---|---|---|
-| `icon` | `SvgData` | required | The glyph: a const from a pictogram icon crate, or `SvgData::new(include_str!("x.svg"))`. |
+| `icon` | `SvgData` | required | The glyph: a const from a pictogram icon crate, or `SvgData::new(include_str!("x.svg"))`. Take icon crates from pictogram's 0.5 line, the one libero builds on: another minor, such as 0.4, brings a second `SvgData` type, and its icons fail with a type mismatch that does not name the version. |
 | `aria_label` | `Option<String>` | `None` | Names the glyph: `role="img"` instead of `aria-hidden`. Leave unset next to a text label. |
 | `attributes` | `Vec<Attribute>` | - | Any svg attribute, winning over the glyph's own: `width`, `height`, `stroke_width`, `class`. Others by name in quotes, as `"aria-labelledby": "logo-title"`. |
 

@@ -214,25 +214,11 @@ pub fn SkeletonPage() -> Element {
             }
 
             DocSection {
-                title: "Showing through",
-                Text {
-                    "A descendant that sets "
-                    Code { source: "visibility: visible" }
-                    " on itself shows through, so avoid one under a visible skeleton."
-                }
-            }
-
-            DocSection {
                 title: "Grace period",
                 Text {
-                    "A fetch that answers in 50 ms should not flash a placeholder. Keep the "
-                    "region transparent until a grace period ends, and end it with "
+                    "A fast fetch should not flash a placeholder: keep the region transparent until a "
                     Code { source: "timer()" }
-                    ". Use "
-                    Code { source: "opacity" }
-                    " for that, since "
-                    Code { source: "visibility" }
-                    " would not hide the grey."
+                    " ends a grace period."
                 }
                 CodeBlock { source: GRACE_EXAMPLE, language: "rust" }
             }

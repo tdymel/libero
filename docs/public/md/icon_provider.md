@@ -152,7 +152,7 @@ solid, a solid one only changes colour.
 
 | Prop | Type | Default | Description |
 |---|---|---|---|
-| `icons` | `IconSet` | required | The slots to swap. An empty slot keeps the outer provider's glyph, then libero's lucide default. |
+| `icons` | `IconSet` | required | The slots to swap: `IconSet::new().with(IconSlot::Close, icon)` for one, or a whole set from its constructor, such as `IconSet::material_rounded()`, after turning on its libero feature (`icons-material`, `icons-tabler`, `icons-bootstrap` or `icons-phosphor`); only the set you call is compiled in. An empty slot keeps the outer provider's glyph, then libero's lucide default. Brand marks are no slots: they name a service. |
 
 ## Accessibility
 
