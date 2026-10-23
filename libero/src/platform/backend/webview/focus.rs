@@ -115,27 +115,67 @@ pub(crate) fn click_selector(selector: &str) -> Result<(), PlatformError> {
     Ok(())
 }
 
-/// The tab stop next to `selector`'s match (the focused element for ""): positive `tabindex`
-/// ascending, then 0 in DOM order (2720). With none that way, the match keeps focus.
+/// The page's tab stops, `kept` ones always: positive `tabindex` ascending, then 0 in DOM order (2720).
+const TAB_ORDER: &str = "const tabOrder = (...kept) => {
+        const candidates = document.querySelectorAll('a[href], area[href], button, input, \
+            select, textarea, summary, iframe, [tabindex], \
+            [contenteditable]:not([contenteditable=\"false\"])');
+        const stops = [...candidates].filter((el) => kept.includes(el) || (el.tabIndex >= 0
+            && !el.disabled && !el.closest('[inert]') && el.type !== 'hidden'
+            && el.getClientRects().length > 0 && getComputedStyle(el).visibility !== 'hidden'));
+        const rank = (el) => (el.tabIndex > 0 ? el.tabIndex : Infinity);
+        return stops.map((el, i) => [el, i])
+            .sort(([a, i], [b, j]) => rank(a) - rank(b) || i - j)
+            .map(([el]) => el);
+    };";
+
+/// The tab stop next to `selector`'s match (the focused element for ""). With none that
+/// way, the match keeps focus.
 const FOCUS_TAB_FROM: &str = "const [selector, backwards] = data;
     const from = selector ? document.querySelector(selector) : document.activeElement;
     if (!from) return;
-    const candidates = document.querySelectorAll('a[href], area[href], button, input, select, \
-        textarea, summary, iframe, [tabindex], [contenteditable]:not([contenteditable=\"false\"])');
-    const stops = [...candidates].filter((el) => el === from || (el.tabIndex >= 0
-        && !el.disabled && !el.closest('[inert]') && el.type !== 'hidden'
-        && el.getClientRects().length > 0 && getComputedStyle(el).visibility !== 'hidden'));
-    const rank = (el) => (el.tabIndex > 0 ? el.tabIndex : Infinity);
-    const order = stops.map((el, i) => [el, i])
-        .sort(([a, i], [b, j]) => rank(a) - rank(b) || i - j)
-        .map(([el]) => el);
+    const order = tabOrder(from);
     (order[order.indexOf(from) + (backwards ? -1 : 1)] ?? from).focus();";
 
 pub(crate) fn focus_tab_from(selector: &str, backwards: bool) -> Result<(), PlatformError> {
     if !runs_scripts() {
         return Err(PlatformError::Unsupported);
     }
-    eval_with(json!([selector, backwards]), FOCUS_TAB_FROM);
+    eval_with(
+        json!([selector, backwards]),
+        &format!("{TAB_ORDER}{FOCUS_TAB_FROM}"),
+    );
+    Ok(())
+}
+
+/// Tab inside `root`'s match; past its first stop focus goes to `exit`'s match, past its
+/// last to the stop after `exit` outside `root`, as for a box portaled after the page.
+const FOCUS_TAB_WITHIN: &str = "const [root, exit, backwards] = data;
+    const box = document.querySelector(root);
+    const out = document.querySelector(exit);
+    const from = document.activeElement;
+    if (!box || !out) return;
+    const order = tabOrder(from, out);
+    const inside = order.filter((el) => box.contains(el));
+    const at = inside.indexOf(from);
+    const next = at < 0 ? null : inside[at + (backwards ? -1 : 1)];
+    if (next) return next.focus();
+    if (backwards) return out.focus();
+    const page = order.filter((el) => !box.contains(el));
+    (page[page.indexOf(out) + 1] ?? out).focus();";
+
+pub(crate) fn focus_tab_within(
+    root: &str,
+    exit: &str,
+    backwards: bool,
+) -> Result<(), PlatformError> {
+    if !runs_scripts() {
+        return Err(PlatformError::Unsupported);
+    }
+    eval_with(
+        json!([root, exit, backwards]),
+        &format!("{TAB_ORDER}{FOCUS_TAB_WITHIN}"),
+    );
     Ok(())
 }
 

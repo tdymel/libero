@@ -272,22 +272,41 @@ async fn highlighted<D: Driver>(d: &mut D, after: &str, text: &str) -> Result<St
                 return Ok(false);
             };
             row = format!("#{id}");
-            Ok(d.exists(&row).await? && d.text(&row).await? == text)
+            drawn_text_is(d, &row, text).await
         },
     )
     .await?;
     Ok(row)
 }
 
+/// Whether `row` is drawn reading `text`, in one read: a window redraw between an
+/// `exists` and a `text` removed the row under the second on Android (todo 4043).
+async fn drawn_text_is<D: Driver>(d: &mut D, row: &str, text: &str) -> Result<bool> {
+    let read = d
+        .evaluate(&format!(
+            "document.querySelector({row:?})?.textContent ?? null"
+        ))
+        .await?;
+    Ok(read.as_str() == Some(text))
+}
+
 async fn in_view<D: Driver>(d: &mut D, row: &str, after: &str) -> Result<()> {
+    // One read, as in `drawn_text_is`: a redraw may take the row between two.
+    let boxes = format!(
+        "(() => {{ const [r, l] = [{row:?}, {LISTBOX:?}].map((s) => \
+         document.querySelector(s)?.getBoundingClientRect()); \
+         return r && l ? [r.y, r.height, l.y, l.height] : null; }})()"
+    );
     let mut seen = None;
     let settled = eventually(
         d,
         &format!("{after}: {row} inside the listbox"),
         async |d| {
-            let (row, list) = (d.rect(row).await?, d.rect(LISTBOX).await?);
-            seen = Some((row.y, row.height, list.y, list.height));
-            Ok(row.y >= list.y - 1.0 && row.y + row.height <= list.y + list.height + 1.0)
+            let read: Option<[f64; 4]> = serde_json::from_value(d.evaluate(&boxes).await?)?;
+            seen = read;
+            Ok(read.is_some_and(|[y, height, list_y, list_height]| {
+                y >= list_y - 1.0 && y + height <= list_y + list_height + 1.0
+            }))
         },
     )
     .await;
@@ -389,7 +408,7 @@ async fn highlighted_row<D: Driver>(d: &mut D, text: &str) -> Result<String> {
             return Ok(false);
         };
         row = format!("#{id}");
-        Ok(d.exists(&row).await? && d.text(&row).await? == text)
+        drawn_text_is(d, &row, text).await
     })
     .await?;
     Ok(row)

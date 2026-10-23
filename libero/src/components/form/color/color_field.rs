@@ -7,8 +7,8 @@ use crate::{
         accessibility::use_announcer,
         buttons::ActionIcon,
         common::{
-            FOCUSABLE_SELECTOR, Glyph, HtmlTag, Input, NavigationChord, Part, Parts, ScaleOrCss,
-            States, navigation_chord,
+            Glyph, HtmlTag, Input, NavigationChord, Part, Parts, ScaleOrCss, States,
+            navigation_chord,
         },
         form::{
             ColorDropdownPart, FIELD_CONTROL_SX, FieldStatus, FormScope, SLOT_BUTTON_SX,
@@ -28,7 +28,7 @@ use crate::{
         use_focus_within, use_form_owner, use_localization, use_media_query, use_popover_on,
         use_theme,
     },
-    platform::{ElementApi, eye_dropper, is_tab},
+    platform::{eye_dropper, is_tab},
     sx::{StaticSx, ThemeAwareValue, sx},
     theme::{
         COLOR_PICKER_SPACING, FIELD_LABEL_FONT_SIZE, SLIDER_THUMB, SLIDER_TRACK, Size, SizeCss,
@@ -430,6 +430,7 @@ pub fn ColorField(props: ColorFieldProps) -> Element {
     let picker_focus = use_picker_focus(anchor, floating, field.id());
     let dialog_id = format!("{}-dialog", field.id());
     let entry_id = dialog_id.clone();
+    let tab_id = dialog_id.clone();
     // Waits for placement too: Arrow Down on a closed field opens it, and the
     // picker is not drawn until the box has been measured.
     use_effect(move || {
@@ -686,25 +687,7 @@ pub fn ColorField(props: ColorFieldProps) -> Element {
                     focus_input();
                     opened.set(false);
                 }
-                // Portaled after the page: Tab past either end goes back
-                // through the text input, then on as from the field.
-                _ if is_tab(&event) => {
-                    let Ok(stops) = floating.query_selector_all(FOCUSABLE_SELECTOR) else {
-                        return;
-                    };
-                    let backwards = event.modifiers().shift();
-                    let edge = if backwards {
-                        stops.first()
-                    } else {
-                        stops.last()
-                    };
-                    if edge.is_some_and(|stop| stop.is_focused()) {
-                        if backwards {
-                            event.prevent_default();
-                        }
-                        focus_input();
-                    }
-                }
+                _ if is_tab(&event) => picker_focus.tab(&tab_id, &event),
                 _ => {}
             })
             .render(

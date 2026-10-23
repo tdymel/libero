@@ -897,6 +897,21 @@ pub(crate) fn focus_tab_from(selector: &str, backwards: bool) -> Result<(), supe
     };
 }
 
+/// Only a WebView - see [`focus_tab_within`](crate::platform::focus_tab_within).
+pub(crate) fn focus_tab_within(
+    root: &str,
+    exit: &str,
+    backwards: bool,
+) -> Result<(), super::PlatformError> {
+    #[cfg(all(not(target_arch = "wasm32"), not(feature = "native")))]
+    return webview::focus_tab_within(root, exit, backwards);
+    #[cfg(any(target_arch = "wasm32", feature = "native"))]
+    return {
+        let _ = (root, exit, backwards);
+        Err(super::PlatformError::Unsupported)
+    };
+}
+
 /// See [`mounted_by_selector`](crate::platform::mounted_by_selector).
 pub(crate) fn mounted_by_selector(selector: &str) -> Option<Rc<MountedData>> {
     #[cfg(target_arch = "wasm32")]

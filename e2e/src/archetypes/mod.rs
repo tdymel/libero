@@ -9,7 +9,7 @@ mod roving;
 mod second_drag;
 mod tree_walk;
 
-pub use back::back_closes;
+pub use back::{back_closes, back_held};
 pub use combobox::Combobox;
 pub use overlay::Overlay;
 pub use radio_set::RadioSet;

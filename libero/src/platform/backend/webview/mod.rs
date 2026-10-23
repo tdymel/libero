@@ -62,8 +62,8 @@ pub(crate) use file_dialog::{file_dialog, image_crop};
 use focus::focus_page;
 pub(super) use focus::{
     arrow_target, caret_edges, click_selector, focus_among, focus_closest_of_focused,
-    focus_first_of, focus_kept, focus_lands_in, focus_selector, focus_tab_from, focused_attribute,
-    focused_tag, keep_focused, rtl_target, typing_target, watch_focus,
+    focus_first_of, focus_kept, focus_lands_in, focus_selector, focus_tab_from, focus_tab_within,
+    focused_attribute, focused_tag, keep_focused, rtl_target, typing_target, watch_focus,
 };
 pub(crate) use geolocation::geolocation;
 pub(super) use guards::{

@@ -15,11 +15,21 @@ pub async fn back_closes<D: Driver>(
 ) -> Result<()> {
     d.click(trigger).await?;
     eventually(d, "the layer to open", async |d| open(d).await).await?;
+    back_held(d).await?;
     d.press_back().await?;
     eventually(d, "Back to close the layer", async |d| Ok(!open(d).await?)).await?;
     d.click(trigger).await?;
     eventually(d, "the app to stay and open it again", async |d| {
         open(d).await
+    })
+    .await
+}
+
+/// Waits for the page's Back entry: the layer draws before its entry is pushed, and a
+/// Back in between leaves the app (todo 4043).
+pub async fn back_held<D: Driver>(d: &mut D) -> Result<()> {
+    eventually(d, "the layer's Back entry", async |d| {
+        Ok(d.evaluate("history.state?.lsxBack === true").await? == serde_json::Value::Bool(true))
     })
     .await
 }

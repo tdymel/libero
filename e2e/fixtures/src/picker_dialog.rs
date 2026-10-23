@@ -15,7 +15,37 @@ pub const ROUTES: Routes = &[
     ("/color-field", || rsx! { ColorFieldPage {} }),
     ("/chrono-field", || rsx! { ChronoFieldPage {} }),
     ("/date-range-field", || rsx! { DateRangeFieldPage {} }),
+    ("/color-field/tab-out", || rsx! { ColorTabOutPage {} }),
+    ("/chrono-field/tab-out", || rsx! { ChronoTabOutPage {} }),
 ];
+
+/// A control after the field, for Tab past the dropdown's last stop (todo 4042).
+#[component]
+fn ColorTabOutPage() -> Element {
+    rsx! {
+        Flex { direction: "column", gap: "md", max_width: "320px",
+            ColorField { id: "color-field", label: "Accent", swatches: vec!["#fa5252", "#40c057"] }
+            button { id: "after", "After" }
+        }
+    }
+}
+
+#[component]
+fn ChronoTabOutPage() -> Element {
+    let mut day = use_signal(|| NaiveDate::from_ymd_opt(2026, 9, 25));
+
+    rsx! {
+        Flex { direction: "column", gap: "md", max_width: "320px",
+            ChronoField {
+                id: "chrono-field",
+                label: "Arrival",
+                value: day(),
+                onchange: move |next| day.set(next),
+            }
+            button { id: "after", "After" }
+        }
+    }
+}
 
 /// A range separator none of the built-in fallbacks match.
 static WAVE_DASH: Formats = Formats {

@@ -4,6 +4,7 @@
 use anyhow::{Result, bail, ensure};
 use chromiumoxide::Page;
 use chromiumoxide::cdp::browser_protocol::emulation::SetDeviceMetricsOverrideParams;
+use e2e::archetypes::back_held;
 use e2e::browser::block_on;
 use e2e::driver::{Driver, Platform, eventually, linger};
 use e2e::passes::{focus, keyboard};
@@ -142,6 +143,69 @@ e2e::scenario!(
     android_only("the web's `:focus` answer is covered by the dialog contract")
 );
 
+/// Todo 4042: Tab walks the dropdown and leaves it past its last stop for a page control,
+/// Shift+Tab past its first for the field; a WebView queries no stops for the edges.
+async fn tab_leaves_at_the_edges<D: Driver>(d: &mut D, route: &str) -> Result<()> {
+    // A fresh mark per focused element, so each press waits for its own move.
+    const MARK: &str = "(() => { const el = document.activeElement; \
+        el.dataset.e2eTab ??= String(Math.random()); \
+        return [el.dataset.e2eTab, !!el.closest('[role=dialog]'), el.id, \
+        el === document.body]; })()";
+    let field = match route {
+        "/color-field/tab-out" => "#color-field",
+        _ => "#chrono-field",
+    };
+    for backwards in [false, true] {
+        d.focus(field).await?;
+        d.press(keyboard::ARROW_DOWN).await?;
+        let entered =
+            format!("document.querySelector({DIALOG:?})?.contains(document.activeElement)");
+        eventually(d, "Arrow Down to move focus into the picker", async |d| {
+            Ok(d.evaluate(&entered).await? == serde_json::Value::Bool(true))
+        })
+        .await?;
+        let mut left = None;
+        for _ in 0..40 {
+            let before = d.evaluate(MARK).await?;
+            match backwards {
+                true => d.press_shift(keyboard::TAB).await?,
+                false => d.press(keyboard::TAB).await?,
+            }
+            let mut now = before.clone();
+            eventually(d, "Tab to move focus", async |d| {
+                now = d.evaluate(MARK).await?;
+                Ok(now[0] != before[0])
+            })
+            .await?;
+            if now[1] == serde_json::Value::Bool(false) {
+                left = Some(now);
+                break;
+            }
+        }
+        let Some(left) = left else {
+            bail!("40 Tabs (backwards: {backwards}) never left the picker");
+        };
+        // Forward lands on the stop after the field: the colour's own button, else `#after`.
+        let on_field = format!("#{}", left[2].as_str().unwrap_or_default()) == field;
+        ensure!(
+            on_field == backwards && left[3] == serde_json::Value::Bool(false),
+            "Tab (backwards: {backwards}) past the edge landed on {left:?}"
+        );
+    }
+    Ok(())
+}
+
+e2e::scenario!(
+    tab_leaves_a_date_picker_at_its_edges,
+    "/chrono-field/tab-out",
+    tab_leaves_at_the_edges
+);
+e2e::scenario!(
+    tab_leaves_a_color_picker_at_its_edges,
+    "/color-field/tab-out",
+    tab_leaves_at_the_edges
+);
+
 /// Android's Back closes the dropdown, keeps the value, and the app stays (1300).
 async fn back_closes<D: Driver>(d: &mut D, route: &str) -> Result<()> {
     let field = FIELDS
@@ -152,6 +216,7 @@ async fn back_closes<D: Driver>(d: &mut D, route: &str) -> Result<()> {
     let before = d.value(field).await?;
     d.click(field).await?;
     eventually(d, "the dropdown", async |d| d.exists(DIALOG).await).await?;
+    back_held(d).await?;
     // The colour's text input raises the keyboard; Android's first Back only hides it.
     if d.attr(field, "inputmode").await?.as_deref() != Some("none") {
         eventually(d, "the soft keyboard", async |d| {

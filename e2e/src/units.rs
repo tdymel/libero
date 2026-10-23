@@ -182,6 +182,7 @@ const EXTRA_FIXTURES: &[(&str, &[&str])] = &[
     ("hit_area", &["table"]),
     ("image_cropper", &["file_field"]),
     ("negative", &["button", "modal", "tabs"]),
+    ("picker_phone", &["select_phone"]),
     (
         "planted",
         &[

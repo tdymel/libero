@@ -5,10 +5,11 @@ use dioxus::prelude::*;
 
 use crate::{
     CssLayer,
-    components::common::{COARSE_POINTER, focus_ring_sx},
+    components::common::{COARSE_POINTER, FOCUSABLE_SELECTOR, focus_ring_sx},
     hooks::{ElementHandle, id_selector, use_css, use_media_query},
     platform::{
-        ElementApi, PlatformError, focus_selector, next_task, page_task, soft_keyboard_app,
+        ElementApi, PlatformError, focus_selector, focus_tab_within, next_task, page_task,
+        soft_keyboard_app,
     },
     sx::{StaticSx, sx},
     theme::{Size, SizeCss},
@@ -93,6 +94,35 @@ impl PickerFocus {
             .and_then(|input| input.focus());
         if let Err(PlatformError::Unsupported) = focused {
             let _ = focus_selector(&id_selector(&self.input_id.peek()));
+        }
+    }
+
+    /// Tab in the dropdown `dropdown_id`, portaled after the page: past either end it goes
+    /// back through the input, then on as from the field.
+    pub(crate) fn tab(self, dropdown_id: &str, event: &KeyboardEvent) {
+        let backwards = event.modifiers().shift();
+        let stops = match self.floating.query_selector_all(FOCUSABLE_SELECTOR) {
+            Ok(stops) => stops,
+            // A WebView's own Tab move lands before a `focus()`: the page walks it (4042).
+            Err(PlatformError::Unsupported) => {
+                let input = id_selector(&self.input_id.peek());
+                if focus_tab_within(&id_selector(dropdown_id), &input, backwards).is_ok() {
+                    event.prevent_default();
+                }
+                return;
+            }
+            Err(_) => return,
+        };
+        let edge = if backwards {
+            stops.first()
+        } else {
+            stops.last()
+        };
+        if edge.is_some_and(|stop| stop.is_focused()) {
+            if backwards {
+                event.prevent_default();
+            }
+            self.focus_input();
         }
     }
 }

@@ -63,6 +63,16 @@ pub(crate) fn focus_tab_from(selector: &str, backwards: bool) -> Result<(), Plat
     backend::focus_tab_from(selector, backwards)
 }
 
+/// Moves Tab among the stops inside `root`'s match and out past its ends through `exit`'s,
+/// for a WebView, where Tab's own move lands before a handler's `focus()`. `Unsupported` elsewhere.
+pub(crate) fn focus_tab_within(
+    root: &str,
+    exit: &str,
+    backwards: bool,
+) -> Result<(), PlatformError> {
+    backend::focus_tab_within(root, exit, backwards)
+}
+
 /// The document's first match of `selector`, backed as a mounted element is. A WebView's
 /// looks the match up again on every call; `None` on a server.
 pub(crate) fn mounted_by_selector(selector: &str) -> Option<Rc<MountedData>> {

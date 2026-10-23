@@ -14,8 +14,8 @@ use crate::{
         accessibility::use_announcer,
         buttons::Button,
         common::{
-            ClassList, FOCUSABLE_SELECTOR, HtmlTag, Input, NavigationChord, Part, Parts,
-            ScaleOrCss, States, navigation_chord,
+            ClassList, HtmlTag, Input, NavigationChord, Part, Parts, ScaleOrCss, States,
+            navigation_chord,
         },
         form::{
             Caption, ChronoDropdownPart, FIELD_CONTROL_SX, FieldName, FieldPart, FieldStatus,
@@ -34,7 +34,7 @@ use crate::{
         use_focus_within, use_form_owner, use_localization, use_media_query, use_popover_on,
         use_theme,
     },
-    platform::{ElementApi, is_tab},
+    platform::is_tab,
     sx::{StaticSx, Sx, ThemeAwareValue, sx},
     theme::{Size, SizeCss, Z_INDEX_POPOVER},
 };
@@ -328,6 +328,7 @@ pub(super) fn use_picker_field<V: FieldValue>(
     let picker_focus = use_picker_focus(anchor, floating, field_box.id());
     let dialog_id = format!("{}-dialog", field_box.id());
     let entry_id = dialog_id.clone();
+    let tab_id = dialog_id.clone();
     // Waits for placement: the picker is not drawn until the box is measured.
     use_effect(move || {
         if !entering() || !popover.placed() {
@@ -531,24 +532,7 @@ pub(super) fn use_picker_field<V: FieldValue>(
                     focus_input();
                     open_to(false);
                 }
-                // Portaled after the page: Tab past either end goes back via the input.
-                _ if is_tab(&event) => {
-                    let Ok(stops) = floating.query_selector_all(FOCUSABLE_SELECTOR) else {
-                        return;
-                    };
-                    let backwards = event.modifiers().shift();
-                    let edge = if backwards {
-                        stops.first()
-                    } else {
-                        stops.last()
-                    };
-                    if edge.is_some_and(|stop| stop.is_focused()) {
-                        if backwards {
-                            event.prevent_default();
-                        }
-                        focus_input();
-                    }
-                }
+                _ if is_tab(&event) => picker_focus.tab(&tab_id, &event),
                 _ => {}
             })
             .render(
