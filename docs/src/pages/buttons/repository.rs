@@ -1,4 +1,4 @@
-use crate::components::{Control, Demo, DemoValues, DocPage, DocSection, a11y, prop, props};
+use crate::components::{Control, Demo, DemoValues, DocPage, a11y, prop, props};
 use dioxus::prelude::*;
 use libero::components::{Code, Input, RepoHost, Repository, RepositoryPart, Text};
 use libero::use_theme;
@@ -55,7 +55,12 @@ pub fn RepositoryPage() -> Element {
             lead: rsx! {
                 Text {
                     "A link to a repository with its star count beside the host's icon. "
-                    "It opens in a new tab."
+                    "It opens in a new tab. The count comes from the host's public API at "
+                    "mount and is kept for the session. Until it arrives, when it is 0, or "
+                    "when the host does not answer, the icon stands alone. Native builds "
+                    "fetch through dioxus-native's "
+                    Code { source: "net" }
+                    " feature, on by default."
                 }
             },
             Demo {
@@ -108,31 +113,6 @@ pub fn RepositoryPage() -> Element {
                         }
                     }
                 },
-            }
-
-            DocSection {
-                title: "Star count",
-                Text {
-                    "Give it the repository's name; it asks the host's public API at mount "
-                    "and keeps the count for the session. A count older than 10 minutes shows "
-                    "while it is fetched again. Until the count arrives, "
-                    "when it is 0, or when the host does not answer, the icon stands alone. "
-                    "This site's header uses "
-                    Code { source: "Repository {{ repo: \"tdymel/libero\" }}" }
-                    "."
-                }
-            }
-
-            DocSection {
-                title: "Native builds",
-                Text {
-                    "Native builds fetch through dioxus-native's network provider, which needs its "
-                    Code { source: "net" }
-                    " feature. "
-                    Code { source: "net" }
-                    " is on by default, so only an app that turns dioxus-native's default "
-                    "features off has to add it back; without it the icon stands alone."
-                }
             }
         }
     }

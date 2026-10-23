@@ -1,9 +1,7 @@
-use crate::components::{
-    Control, Demo, DemoFile, DemoValues, DocPage, DocSection, a11y, prop, props,
-};
+use crate::components::{Control, Demo, DemoFile, DemoValues, DocPage, a11y, prop, props};
 use dioxus::prelude::*;
 use libero::components::Pictogram;
-use libero::components::{ActionIcon, Button, ButtonGroup, Code, Input, Text};
+use libero::components::{ActionIcon, Button, ButtonGroup, Input, Text};
 use pictogram_icons_lucide as lucide;
 use std::collections::HashSet;
 
@@ -23,7 +21,7 @@ pub fn ButtonGroupPage() -> Element {
                     .default("horizontal")
                     .doc("`\"vertical\"` stacks the buttons, each as wide as the widest."),
                 prop("variant", "Variant")
-                    .doc("Default `variant` of the buttons inside. Between two buttons without a visible border of their own (every variant but `outlined`), the group draws a thin divider."),
+                    .doc("Default `variant` of the buttons inside; a button's own prop wins, as for `color`, `size`, `radius`, `disabled` and `focusable_when_disabled`. Between two buttons without a visible border of their own (every variant but `outlined`), the group draws a thin divider."),
                 prop("color", "ThemeAwareValue")
                     .doc("Default `color` of the buttons inside."),
                 prop("size", "Size")
@@ -132,25 +130,6 @@ pub fn ButtonGroupPage() -> Element {
                         // demo-code: children end
                     }
                 },
-            }
-
-            DocSection {
-                title: "Shared defaults",
-                Text {
-                    Code { source: "variant" }
-                    ", "
-                    Code { source: "color" }
-                    ", "
-                    Code { source: "size" }
-                    ", "
-                    Code { source: "radius" }
-                    ", "
-                    Code { source: "disabled" }
-                    " and "
-                    Code { source: "focusable_when_disabled" }
-                    " set the default of every button inside; a button's own prop wins. "
-                    "This site's header groups its repository link, direction toggle and theme switcher, and on a phone the search."
-                }
             }
         }
     }

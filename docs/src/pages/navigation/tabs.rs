@@ -1,4 +1,4 @@
-use crate::components::{Control, Demo, DemoValues, DocPage, DocSection, Wrap, a11y, prop, props};
+use crate::components::{Control, Demo, DemoValues, DocPage, Wrap, a11y, prop, props};
 use libero::components::Pictogram;
 use pictogram_icons_lucide as lucide;
 
@@ -82,7 +82,6 @@ fn rich(section: Section) -> OptionLabel {
 #[component]
 pub fn TabsPage() -> Element {
     let mut section = use_signal(|| Section::Account);
-    let mut vertical = use_signal(|| Section::Account);
     let theme = use_theme();
 
     rsx! {
@@ -142,7 +141,11 @@ pub fn TabsPage() -> Element {
                     " lists and names the tabs. "
                     Code { source: "panel" }
                     " matches on the same enum, so a missing tab does not compile. Only the "
-                    "selected panel is built."
+                    "selected panel is built. "
+                    Code { source: "option_label" }
+                    " renames tabs during render, so the strip follows a locale signal, and "
+                    Code { source: "OptionLabel::rich" }
+                    " draws a tab as rsx, such as an icon."
                 }
             },
             // snippet: let mut section = use_signal(|| Section::Account);
@@ -217,46 +220,6 @@ pub fn TabsPage() -> Element {
                         },
                     }
                 },
-            }
-
-            // snippet: let mut vertical = use_signal(|| Section::Account);
-            Demo {
-                component: "Tabs",
-                children_text: "",
-                title: "vertical tabs".to_string(),
-                wrap: Wrap(|_: &DemoValues, source: &str| format!("{SECTION_ENUM}{source}")),
-                fixed: vec![
-                    "aria_label: \"Settings\"".to_string(),
-                    "placement: \"start\"".to_string(),
-                    "value: vertical()".to_string(),
-                    "onchange: move |next| vertical.set(next)".to_string(),
-                    "panel: |section: Section| match section {\n    Section::Account => rsx! { \"Account settings\" },\n    Section::Admin => rsx! { \"Admin area\" },\n    Section::Billing => rsx! { \"Billing details\" },\n}".to_string(),
-                ],
-                controls: vec![],
-                render: move |_: DemoValues| rsx! {
-                    Tabs {
-                        aria_label: "Settings",
-                        placement: "start",
-                        value: vertical(),
-                        onchange: move |next| vertical.set(next),
-                        panel: |section: Section| match section {
-                            Section::Account => rsx! { "Account settings" },
-                            Section::Admin => rsx! { "Admin area" },
-                            Section::Billing => rsx! { "Billing details" },
-                        },
-                    }
-                },
-            }
-
-            DocSection {
-                title: "Labels",
-                Text {
-                    Code { source: "option_label" }
-                    " renames tabs during render, so the strip follows a locale signal. "
-                    Code { source: "OptionLabel::rich" }
-                    " draws a tab as rsx, such as an icon, and takes a text name for screen "
-                    "readers."
-                }
             }
         }
     }

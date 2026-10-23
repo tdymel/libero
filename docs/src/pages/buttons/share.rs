@@ -108,22 +108,8 @@ pub fn SharePage() -> Element {
                 Text {
                     "For a share control of your own, build on "
                     Code { source: "use_share()" }
-                    ": "
-                    Code { source: "share(ShareData)" }
-                    " opens the sheet (call it in the press handler: the browser allows it "
-                    "only inside a user action), "
-                    Code { source: "outcome()" }
-                    ", "
-                    Code { source: "shared()" }
-                    ", "
-                    Code { source: "copied()" }
-                    " and "
-                    Code { source: "failed()" }
-                    " follow once it settled, "
-                    Code { source: "pending()" }
-                    " says one is still open (a press meanwhile is ignored), and "
-                    Code { source: "reset()" }
-                    " clears them. "
+                    ", called in the press handler: the browser allows it only inside a "
+                    "user action. "
                     Code { source: "libero::platform::share" }
                     " is the same without the copy fallback."
                 }

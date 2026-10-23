@@ -221,7 +221,7 @@ fn LazyFiles() -> Element {
 | `guides` | `bool` | `false` | Draws a line down each open branch, under its chevron, and marks the `current` row's part of it. Theme default `TreeDefaults::guides`. |
 | `aria_label` | `String` | required | The tree's accessible name. |
 | `data` | `Vec<TreeNode<T>>` | required | The nodes, over your own data type. |
-| `render_node` | `Callback<TreeNodeRenderArgs<T>, Element>` | `default_tree_render` | Each visible row's content. A custom one can still call the default for some rows. |
+| `render_node` | `Callback<TreeNodeRenderArgs<T>, Element>` | `default_tree_render` | Each visible row's content. A custom one can still call the default for some rows. `TreeItemContent` is the standard row and `TreeItem` a plain label. A row that links somewhere is a `NavLink` with `args.tabindex`. |
 | `default_expanded` | `HashSet<String>` | - | The ids expanded at first. Read once, and ignored when `expanded` is set. |
 | `expanded` | `HashSet<String>` | - | The expanded ids, controlled. The tree follows it and asks for every change through `onexpandedchange`. Unset, the tree keeps its own. |
 | `current` | `String` | - | The id of the node the user is on, such as a nav's current page. Tab into the tree lands on it, or on its collapsed branch. Its row carries `aria-current` and, unless a `guides` line marks it, NavLink's tint and start bar. A row that renders a `NavLink` draws both, so pair one with `guides`. |

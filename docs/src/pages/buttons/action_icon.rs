@@ -1,6 +1,6 @@
 use crate::components::{
-    Control, Demo, DemoValues, DocPage, DocSection, PictogramNote, a11y, gradient_controls,
-    gradient_value, not_gradient_variant, prop, props,
+    Control, Demo, DemoValues, DocPage, PictogramNote, a11y, gradient_controls, gradient_value,
+    not_gradient_variant, prop, props,
 };
 use dioxus::prelude::*;
 use libero::components::{ActionIcon, Code, Input, Loader, Text};
@@ -108,7 +108,12 @@ pub fn ActionIconPage() -> Element {
                     Code { source: "to" }
                     " is set. "
                     Code { source: "aria_label" }
-                    " is required, because the icon gives a screen reader nothing to read."
+                    " is required, because the icon gives a screen reader nothing to read. Once "
+                    "the button carries a visible label, use a "
+                    Code { source: "Button" }
+                    " with its "
+                    Code { source: "icon" }
+                    " prop instead."
                 }
                 Text {
                     "With neither "
@@ -257,24 +262,6 @@ pub fn ActionIconPage() -> Element {
                         }
                     }
                 },
-            }
-
-            DocSection {
-                title: "When to use it",
-                Text {
-                    "Use it when the icon is the whole control: a square button that lines up with a "
-                    Code { source: "Button" }
-                    " of the same size, and cannot be built without an accessible name. Once the button "
-                    "carries a visible label, use a "
-                    Code { source: "Button" }
-                    " with its "
-                    Code { source: "icon" }
-                    " prop instead. A "
-                    Code { source: "Button" }
-                    " with an icon and no text is a wide pill and has no name unless you add "
-                    Code { source: "aria-label" }
-                    " yourself."
-                }
             }
         }
     }

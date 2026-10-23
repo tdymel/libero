@@ -1,4 +1,4 @@
-use crate::components::{Control, Demo, DemoValues, DocPage, DocSection, a11y, prop, props};
+use crate::components::{Control, Demo, DemoValues, DocPage, a11y, prop, props};
 use dioxus::prelude::*;
 use libero::components::{Code, Copy, Input, Text};
 use libero::use_theme;
@@ -16,7 +16,7 @@ pub fn CopyPage() -> Element {
             markdown: "/md/copy.md",
             properties: vec![props("Copy", vec![
                 prop("value", "String").default("required")
-                    .doc("The text a press writes to the clipboard."),
+                    .doc("The text a press writes to the clipboard. On the web the browser allows it only over HTTPS or on localhost, inside a user action; natively it needs the `native` feature. A control of your own builds on `use_clipboard()`."),
                 prop("variant", "Variant")
                     .doc("Visual style, as on `ActionIcon`. With `color` also unset, the button draws no chrome of its own."),
                 prop("color", "ThemeAwareValue")
@@ -108,29 +108,6 @@ pub fn CopyPage() -> Element {
                         timeout: values.str("timeout").parse::<u32>().ok(),
                     }
                 },
-            }
-
-            DocSection {
-                title: "Label and custom controls",
-                Text {
-                    "Name it after what it copies with "
-                    Code { source: "aria_label" }
-                    ", such as \"Copy link\". For a copy control of your own, build on "
-                    Code { source: "use_clipboard()" }
-                    ": "
-                    Code { source: "copy(text)" }
-                    " starts the write, "
-                    Code { source: "copied()" }
-                    " or "
-                    Code { source: "failed()" }
-                    " rises once the platform answers, and "
-                    Code { source: "reset()" }
-                    " clears both. Say the result in a status region that is already "
-                    "mounted. On the web the browser allows the write only over HTTPS or on "
-                    "localhost, inside a user action; natively it needs the "
-                    Code { source: "native" }
-                    " feature."
-                }
             }
         }
     }

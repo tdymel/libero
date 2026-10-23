@@ -1,5 +1,6 @@
 use crate::components::{
-    Control, Demo, DemoValues, DocPage, a11y, gradient_controls, gradient_value, prop, props,
+    Child, Control, Demo, DemoValues, DocPage, Wrap, a11y, gradient_controls, gradient_value, prop,
+    props,
 };
 use dioxus::prelude::*;
 use libero::{
@@ -15,6 +16,29 @@ fn terms(values: &DemoValues) -> Vec<String> {
         .split(", ")
         .map(str::to_string)
         .collect()
+}
+
+fn highlighting(values: &DemoValues) -> bool {
+    values.str("highlight") == "true"
+}
+
+/// `Highlight` takes the generated props plus its text, and has no child.
+fn wrap(values: &DemoValues, source: &str) -> String {
+    match highlighting(values) {
+        true => source.replacen(
+            "Mark {\n",
+            &format!("Highlight {{\n    text: {HIGHLIGHT_TEXT:?},\n"),
+            1,
+        ),
+        false => source.to_string(),
+    }
+}
+
+fn child(values: &DemoValues) -> String {
+    match highlighting(values) {
+        true => String::new(),
+        false => "this chunk".to_string(),
+    }
 }
 
 fn no_gradient(values: &DemoValues) -> bool {
@@ -81,7 +105,20 @@ pub fn MarkPage() -> Element {
             Demo {
                 component: "Mark",
                 children_text: "this chunk",
+                wrap: Wrap(wrap),
+                child: Child(child),
                 controls: vec![
+                    // Swaps the preview and the code for `Highlight`, which takes the same color and gradient.
+                    Control::switch("highlight").code(|_, _| vec![]),
+                    Control::select("terms", ["rust", "rust, dioxus", "component"])
+                        .hidden_when(|values| !highlighting(values))
+                        .code(|_, values| {
+                            let terms: Vec<String> = terms(values)
+                                .iter()
+                                .map(|term| format!("{term:?}.to_string()"))
+                                .collect();
+                            vec![format!("terms: vec![{}]", terms.join(", "))]
+                        }),
                     Control::color("color")
                         .default(theme.mark.color.as_str()),
                     // The theme's own second stop and angle print as `Gradient::default()`.
@@ -96,42 +133,20 @@ pub fn MarkPage() -> Element {
                     gradient_to,
                     gradient_deg,
                 ],
-                render: move |values: DemoValues| rsx! {
-                    Mark {
-                        // The default prints no `color`, so a gradient starts at the theme's stop.
-                        color: match values.str("color") {
-                            color if color == theme.mark.color.as_str() => Input::None,
-                            color => Input::from(color),
-                        },
-                        gradient: (values.str("gradient") == "true").then(|| gradient_value(&values)),
-                        "this chunk"
-                    }
-                },
-            }
-            Demo {
-                component: "Highlight",
-                title: "Highlight",
-                children_text: "",
-                fixed: vec![format!("text: {HIGHLIGHT_TEXT:?}")],
-                controls: vec![
-                    Control::select("terms", ["rust", "rust, dioxus", "component"]).code(|_, values| {
-                        let terms: Vec<String> = terms(values)
-                            .iter()
-                            .map(|term| format!("{term:?}.to_string()"))
-                            .collect();
-                        vec![format!("terms: vec![{}]", terms.join(", "))]
-                    }),
-                    Control::color("color")
-                        .default(theme.mark.color.as_str()),
-                ],
-                render: move |values: DemoValues| rsx! {
-                    Highlight {
-                        text: HIGHLIGHT_TEXT,
-                        terms: terms(&values),
-                        color: match values.str("color") {
-                            color if color == theme.mark.color.as_str() => Input::None,
-                            color => Input::from(color),
-                        },
+                render: move |values: DemoValues| {
+                    // The default prints no `color`, so a gradient starts at the theme's stop.
+                    let color = match values.str("color") {
+                        color if color == theme.mark.color.as_str() => Input::None,
+                        color => Input::from(color),
+                    };
+                    let gradient =
+                        (values.str("gradient") == "true").then(|| gradient_value(&values));
+                    if highlighting(&values) {
+                        rsx! {
+                            Highlight { text: HIGHLIGHT_TEXT, terms: terms(&values), color, gradient }
+                        }
+                    } else {
+                        rsx! { Mark { color, gradient, "this chunk" } }
                     }
                 },
             }

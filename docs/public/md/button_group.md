@@ -51,7 +51,7 @@ repository link, direction toggle and theme switcher, and on a phone the search.
 | Prop | Type | Default | Description |
 |---|---|---|---|
 | `orientation` | `Orientation` | `horizontal` | `"vertical"` stacks the buttons, each as wide as the widest. |
-| `variant` | `Variant` | - | Default `variant` of the buttons inside. Between two buttons without a visible border of their own (every variant but `outlined`), the group draws a thin divider. |
+| `variant` | `Variant` | - | Default `variant` of the buttons inside; a button's own prop wins, as for `color`, `size`, `radius`, `disabled` and `focusable_when_disabled`. Between two buttons without a visible border of their own (every variant but `outlined`), the group draws a thin divider. |
 | `color` | `ThemeAwareValue` | - | Default `color` of the buttons inside. |
 | `size` | `Size` | - | Default `size` of the buttons inside. |
 | `radius` | `ThemeAwareValue` | - | The group's outer corners, or any CSS, e.g. `radius: "0"`. The corners between two buttons are always square. |

@@ -5,8 +5,7 @@ mod lazy;
 use lazy::LazyFiles;
 
 use crate::components::{
-    Control, Demo, DemoFile, DemoValues, DocPage, DocSection, Wrap, a11y, indent, or_unset, prop,
-    props,
+    Control, Demo, DemoFile, DemoValues, DocPage, Wrap, a11y, indent, or_unset, prop, props,
 };
 use dioxus::prelude::*;
 use libero::{
@@ -114,6 +113,13 @@ fn file_icon(entry: &FileEntry, expanded: Option<bool>) -> SvgData {
 /// The page's own source: the printed parts are cut from its live demo.
 const FILE: DemoFile = DemoFile(include_str!("tree.rs"));
 
+/// The lazy-loading variant: a folder's children arrive after a short wait.
+const LAZY: DemoFile = DemoFile(include_str!("tree/lazy.rs"));
+
+fn lazy(values: &DemoValues) -> bool {
+    values.str("lazy_loading") == "true"
+}
+
 /// The data, the controlled expansion and the row renderer are the demo's
 /// fixture, not controls, but the code block has to print them.
 fn fixed() -> Vec<String> {
@@ -126,7 +132,10 @@ fn fixed() -> Vec<String> {
 
 /// The expansion is the page's state, not `Tree`'s, so the buttons and the
 /// readout are part of the example.
-fn wrap_selection(_: &DemoValues, code: &str) -> String {
+fn wrap_selection(values: &DemoValues, code: &str) -> String {
+    if lazy(values) {
+        return format!("{}\n\nrsx! {{ LazyFiles {{}} }}", LAZY.full());
+    }
     format!(
         "Flex {{\n    direction: \"column\",\n    gap: \"sm\",\n    sx: sx().width(\"100%\").max_width(\"320px\"),\n{}{}    // Always mounted, so a screen reader hears the text it gains.\n{}}}",
         indent(&FILE.section("buttons")),
@@ -189,7 +198,7 @@ pub fn TreePage() -> Element {
                     prop("data", "Vec<TreeNode<T>>").default("required").doc("The nodes, over your own data type."),
                     prop("render_node", "Callback<TreeNodeRenderArgs<T>, Element>")
                         .default("default_tree_render")
-                        .doc("Each visible row's content. A custom one can still call the default for some rows."),
+                        .doc("Each visible row's content. A custom one can still call the default for some rows. `TreeItemContent` is the standard row and `TreeItem` a plain label. A row that links somewhere is a `NavLink` with `args.tabindex`."),
                     prop("default_expanded", "HashSet<String>").doc("The ids expanded at first. Read once, and ignored when `expanded` is set."),
                     prop("expanded", "HashSet<String>").doc(
                         "The expanded ids, controlled. The tree follows it and asks for every change through `onexpandedchange`. Unset, the tree keeps its own.",
@@ -303,7 +312,7 @@ pub fn TreePage() -> Element {
                     ", as here. To load a branch's children when it opens, give it a disabled "
                     "placeholder row and swap in the children from "
                     Code { source: "onexpandedchange" }
-                    ", as the second demo does."
+                    ", as the lazy loading switch shows."
                 }
             },
             // snippet: item #[derive(Clone, PartialEq)] struct FileEntry { name: &'static str }
@@ -321,19 +330,24 @@ pub fn TreePage() -> Element {
                 children_text: "",
                 fixed: fixed(),
                 controls: vec![
-                    Control::switch("guides"),
+                    Control::switch("guides").hidden_when(lazy),
                     Control::sizes("size")
-                        .default(theme.tree.size.as_str()),
+                        .default(theme.tree.size.as_str())
+                        .hidden_when(lazy),
                     Control::toggle("selection", ["none", "single", "multiple"])
                         .default("multiple")
-                        .code(selection_code),
+                        .code(selection_code)
+                        .hidden_when(lazy),
                     Control::switch("checkboxes")
                         .default("true")
-                        .code(checkbox_code),
-                    Control::switch("check_strictly")
-                        .hidden_when(|values: &DemoValues| values.str("checkboxes") != "true"),
+                        .code(checkbox_code)
+                        .hidden_when(lazy),
+                    Control::switch("check_strictly").hidden_when(|values: &DemoValues| {
+                        lazy(values) || values.str("checkboxes") != "true"
+                    }),
+                    Control::switch("lazy_loading"),
                 ],
-                render: move |values: DemoValues| rsx! {
+                render: move |values: DemoValues| if lazy(&values) { rsx! { LazyFiles {} } } else { rsx! {
                     Flex {
                         direction: "column",
                         gap: "sm",
@@ -384,55 +398,8 @@ pub fn TreePage() -> Element {
                         }
                         // demo-code: status end
                     }
-                },
+                } },
                 wrap: Wrap(wrap_selection),
-            }
-
-            Demo {
-                component: "LazyFiles",
-                title: "Lazy loading",
-                children_text: "",
-                controls: Vec::new(),
-                render: move |_: DemoValues| rsx! { LazyFiles {} },
-                file: DemoFile(include_str!("tree/lazy.rs")),
-            }
-
-            DocSection {
-                title: "Rows",
-                Text {
-                    Code { source: "render_node" }
-                    " decides what a row does. "
-                    Code { source: "TreeItemContent" }
-                    " is the standard row: the chevron, an "
-                    Code { source: "icon" }
-                    ", the label and a "
-                    Code { source: "trailing_icon" }
-                    ". The default row is one. "
-                    Code { source: "TreeItem" }
-                    " lays a row out the same way as a plain label the row names and Enter clicks (a button outside a "
-                    Code { source: "Tree" }
-                    "). A row that links somewhere is a "
-                    Code { source: "NavLink" }
-                    " with "
-                    Code { source: "args.tabindex" }
-                    ", as in this site's sidebar. The checkbox of "
-                    Code { source: "checked" }
-                    " is drawn only by "
-                    Code { source: "TreeItemContent" }
-                    " and "
-                    Code { source: "TreeItem" }
-                    ", so a custom row without them has none."
-                }
-            }
-
-            DocSection {
-                title: "Guides",
-                Text {
-                    Code { source: "guides" }
-                    " draws a line down each open branch and marks the "
-                    Code { source: "current" }
-                    " row's part of it, as this site's sidebar does. Pick a file below to see it."
-                }
             }
         }
     }

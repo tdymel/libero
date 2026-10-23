@@ -1,4 +1,4 @@
-use crate::components::{Control, Demo, DemoValues, DocPage, DocSection, Wrap, a11y, prop, props};
+use crate::components::{Control, Demo, DemoValues, DocPage, Wrap, a11y, prop, props};
 use dioxus::prelude::*;
 use libero::components::{
     Button, Code, Flex, Input, Options, StepState, Stepper, StepperPart, Text,
@@ -140,7 +140,10 @@ pub fn StepperPage() -> Element {
                     " matches on the same enum, so a step without a body does not compile. You "
                     "own "
                     Code { source: "value" }
-                    " and move it on, usually from a button inside the step."
+                    " and move it on, usually from a button inside the step. Steps before it are "
+                    "completed; "
+                    Code { source: "state" }
+                    " overrides single steps and is the only way to mark one an error."
                 }
             },
             Demo {
@@ -255,19 +258,6 @@ pub fn StepperPage() -> Element {
                         }
                     }
                 },
-            }
-
-            DocSection {
-                title: "Step states",
-                Text {
-                    "Steps before "
-                    Code { source: "value" }
-                    " are completed, the rest pending. "
-                    Code { source: "state" }
-                    " overrides single steps and is the only way to mark one "
-                    Code { source: "StepState::Error" }
-                    ". An error changes the marker, not which step is current."
-                }
             }
         }
     }

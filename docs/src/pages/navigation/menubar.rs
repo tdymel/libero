@@ -1,5 +1,5 @@
 use crate::components::{
-    Control, Demo, DemoFile, DemoValues, DocPage, DocSection, Wrap, a11y, indent, prop, props,
+    Control, Demo, DemoFile, DemoValues, DocPage, Wrap, a11y, indent, prop, props,
 };
 use dioxus::prelude::*;
 use libero::components::{Code, MenubarPart, Text};
@@ -88,7 +88,7 @@ pub fn MenubarPage() -> Element {
                     Code { source: "Menu" }
                     " with the same items. The bar keeps one menu open at most and is a single "
                     "tab stop. Click a trigger to open its menu. While one is open, hovering "
-                    "another trigger switches to it."
+                    "another trigger switches to it. For page navigation, use links."
                 }
             },
             Demo {
@@ -112,16 +112,6 @@ pub fn MenubarPage() -> Element {
                         loop_focus: values.str("loop_focus") == "true",
                     }
                 },
-            }
-
-            DocSection {
-                title: "When to use it",
-                Text {
-                    "Use it in an app such as an editor. For page navigation, use links. For "
-                    "one set of actions, use a single "
-                    Code { source: "Menu" }
-                    "."
-                }
             }
         }
     }

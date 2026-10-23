@@ -42,7 +42,7 @@ natively it needs the `native` feature.
 
 | Prop | Type | Default | Description |
 |---|---|---|---|
-| `value` | `String` | required | The text a press writes to the clipboard. |
+| `value` | `String` | required | The text a press writes to the clipboard. On the web the browser allows it only over HTTPS or on localhost, inside a user action; natively it needs the `native` feature. A control of your own builds on `use_clipboard()`. |
 | `variant` | `Variant` | - | Visual style, as on `ActionIcon`. With `color` also unset, the button draws no chrome of its own. |
 | `color` | `ThemeAwareValue` | - | Accent color. A theme color name or any CSS color. |
 | `size` | `ThemeAwareValue` | `md` | Button size. |
