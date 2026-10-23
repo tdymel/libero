@@ -1,4 +1,4 @@
-use crate::components::{Demo, DemoFile, DemoValues, DocPage, DocSection, a11y};
+use crate::components::{Demo, DemoFile, DemoValues, DocPage, a11y};
 use dioxus::prelude::*;
 use libero::components::{Code, Text};
 
@@ -22,7 +22,8 @@ pub fn UseTimersPage() -> Element {
                 ])
                 .example("A quiz countdown on `use_interval`: a Pause button stops it, and a status line says \"One minute left\" once, rather than every second.")
                 .limits([
-                    "A tick that lands while the component is still rendering the previous one is skipped, so a callback that counts should read a clock, not add one per tick, if the count must stay exact.",
+                    "A tick that lands while the component is still rendering the previous one is skipped, so a callback that counts should read a clock, not add one per tick, if the count must stay exact. Use the `web-time` crate's `Instant`: `std::time::Instant` panics on wasm.",
+                    "A server render never fires a timer. Natively every interval tick costs a thread, so keep the period to a second or more.",
                 ]),
             lead: rsx! {
                 Text {
@@ -61,30 +62,6 @@ pub fn UseTimersPage() -> Element {
                 controls: Vec::new(),
                 render: move |_: DemoValues| rsx! { Stopwatch {} },
                 file: DemoFile(include_str!("use_timers/demo.rs")),
-            }
-
-            DocSection {
-                title: "Where it runs",
-                Text {
-                    "One timer serves the web, Blitz and a webview. The callback runs in "
-                    "your component's scope, so it may write signals, spawn or read "
-                    "elements. A server render never fires it. Natively every interval "
-                    "tick costs a thread, so keep the period to a second or more."
-                }
-            }
-
-            DocSection {
-                title: "The stopwatch",
-                Text {
-                    "The stopwatch above reads a clock, not the count of ticks, so a late tick "
-                    "loses no time. The clock is the "
-                    Code { source: "web-time" }
-                    " crate's "
-                    Code { source: "Instant" }
-                    ": "
-                    Code { source: "std::time::Instant" }
-                    " panics on wasm."
-                }
             }
         }
     }

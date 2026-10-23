@@ -10,7 +10,11 @@ Description: Touch swipe handlers, and an edge swipe that opens a drawer without
 `use_swipe(on_swipe, options) -> Swipe` calls `on_swipe` once a touch or pen
 moves `options.distance` px (48) along one axis, more than along the other. It
 fires during the move, once per press, with the `direction`, the start point and
-the delta.
+the delta. Spread the pointer callbacks onto one element with a `touch-action`:
+`none`, or `pan-y` for sideways swipes on a scrolling page.
+`use_edge_swipe(on_swipe, options)` is built on it: an inward swipe from a band
+near the start edge opens your drawer. Spread `edge_swipe_sx()` on a box
+covering the page.
 
 ## Usage
 
@@ -91,26 +95,6 @@ fn Page(open: Signal<bool>, children: Element) -> Element {
     }
 }
 ```
-
-## Wiring
-
-Spread `onpointerdown`, `onpointermove`, `onpointerup` and `onpointercancel`
-onto one element, and give it a `touch-action`: `none` for all four directions,
-`pan-y` for sideways swipes on a page that scrolls.
-
-## Edge swipes
-
-`use_edge_swipe(on_swipe, options) -> Swipe` is built on it: an inward swipe that
-starts in a band near the start edge (the right edge under RTL) opens your
-drawer. The band begins `inset` px (44) in, past Android 16's system back zone
-at its highest sensitivity, and is `width` px (48) wide, so it needs no gesture
-exclusion.
-Spread it with `edge_swipe_sx()` on a box covering the page: no strip lies over
-the content. A swipe from the band that goes inward, more sideways than up or
-down, also starts on a code block or another inner scroller: the hook keeps that
-box from scrolling sideways for the press. These docs open their navigation this
-way on a phone, and the drawer follows the finger: past a third of its width or
-on a flick it opens.
 
 ## API
 

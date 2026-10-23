@@ -1,4 +1,4 @@
-use crate::components::{Demo, DemoFile, DemoValues, DocPage, DocSection, a11y};
+use crate::components::{Demo, DemoFile, DemoValues, DocPage, a11y};
 use dioxus::prelude::*;
 use libero::components::{Code, Text};
 
@@ -49,7 +49,11 @@ pub fn UseLongPressPage() -> Element {
                     Code { source: "oncontextmenu" }
                     " and "
                     Code { source: "onclick" }
-                    "."
+                    ". Read "
+                    Code { source: "pressing" }
+                    " for a hold cue, and give the element "
+                    Code { source: "user-select: none" }
+                    " so holding does not select text."
                 }
             },
 
@@ -59,26 +63,6 @@ pub fn UseLongPressPage() -> Element {
                 controls: Vec::new(),
                 render: move |_: DemoValues| rsx! { HoldToCount {} },
                 file: DemoFile(include_str!("use_long_press/demo.rs")),
-            }
-
-            DocSection {
-                title: "Hold cue",
-                Text {
-                    "Read "
-                    Code { source: "pressing" }
-                    ", a signal that is true while a press is held and not yet fired, for a hold cue."
-                }
-            }
-
-            DocSection {
-                title: "Text selection",
-                Text {
-                    "Give the element "
-                    Code { source: "user-select: none" }
-                    " and "
-                    Code { source: "-webkit-touch-callout: none" }
-                    " so holding does not select text. It runs on the web, Blitz and a WebView, on one timer."
-                }
             }
         }
     }

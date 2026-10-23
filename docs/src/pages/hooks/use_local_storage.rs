@@ -26,6 +26,8 @@ pub fn UseLocalStoragePage() -> Element {
                 .example("A comment box keeps its draft: after a reload the text is back, a \"Discard draft\" button forgets it, and a status line says \"Draft not saved\" once when the store is full.")
                 .limits([
                     "A kept value lives in one browser or app install: another device starts from the default.",
+                    "Off the web a value is a file per key in the app's data directory; any other build keeps values in memory until you call `libero::platform::set_storage_dir(path)`, and other windows and processes read a value at their mount.",
+                    "Values are stored as JSON, so a `String` is kept with its quotes. `lsx-` keys are libero's own, read at start: change the colour scheme live through `use_color_scheme`. Pass a fast source such as a slider through `use_debounced_value` first.",
                 ]),
             lead: rsx! {
                 Text {
@@ -47,44 +49,14 @@ pub fn UseLocalStoragePage() -> Element {
                     " write through; every handle of the same type on a key shows the same value."
                 }
                 Text {
-                    "Web: "
-                    Code { source: "localStorage" }
-                    " and "
-                    Code { source: "sessionStorage" }
-                    "; another tab's write arrives live. Blitz (the "
-                    Code { source: "native" }
-                    " feature), a desktop app with the "
-                    Code { source: "desktop" }
-                    " feature and Android: a file per key in the app's data directory, session values in memory per window. Any other build, such as a server, liveview or a desktop app without the feature, keeps values in memory until you call "
-                    Code { source: "libero::platform::set_storage_dir(path)" }
-                    ". Off the web, other windows and processes read a value at their mount."
-                }
-                Text {
-                    "Values are stored as JSON, so a "
-                    Code { source: "String" }
-                    " is kept with its quotes. Keys are used verbatim; "
-                    Code { source: "lsx-" }
-                    " keys are libero's own. Each write hits the store (a file off the web), so pass a fast source such as a slider through "
-                    Code { source: "use_debounced_value" }
-                    " first."
-                }
-                Text {
                     Code { source: "use_local_storage_with(key, default, options)" }
-                    " and "
-                    Code { source: "use_session_storage_with" }
-                    " take "
+                    " takes "
                     Code { source: "StorageOptions" }
-                    ". The value is read at the first render; in a hydrating fullstack app set "
+                    ": in a hydrating fullstack app set "
                     Code { source: "read_after_mount: true" }
-                    ", so the server render and the client's first render both show the default until "
-                    Code { source: "is_loaded()" }
-                    ". "
+                    ", and "
                     Code { source: "format: StorageFormat::Text" }
-                    " keeps bare text, as libero's own "
-                    Code { source: "lsx-" }
-                    " keys and page scripts do. Libero reads those keys at start: change the colour scheme live through "
-                    Code { source: "use_color_scheme" }
-                    "."
+                    " keeps bare text."
                 }
             },
 

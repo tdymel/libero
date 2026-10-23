@@ -9,7 +9,7 @@ Description: Registers a stylesheet of your own above every libero layer and ret
 `use_stylesheet(sheet) -> Option<String>` registers a stylesheet of your own on
 the `lsx-user-custom` layer, above every other libero layer. Give it an `sx`
 and it returns the class to put on your element. [Styling](styling.md)
-explains the layers.
+explains the layers. Raw CSS as a `&str` works too and returns `None`.
 
 ## Usage
 
@@ -26,11 +26,6 @@ fn Callout(children: Element) -> Element {
     }
 }
 ```
-
-## Raw CSS
-
-Raw CSS as a `&str` or a `String` works too. It has no single selector, so it
-returns `None`. Components that register the same sheet share one copy of it.
 
 ## Accessibility
 

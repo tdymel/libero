@@ -10,7 +10,7 @@ Description: Whether a CSS media query or the 768px mobile breakpoint matches, l
 `use_media_query(query: &str) -> ReadSignal<bool>` answers whether a CSS media
 query matches, and keeps answering as the viewport or the reader's settings
 change. `use_is_mobile() -> ReadSignal<bool>` is `(max-width: 767px)`: the 768px
-breakpoint.
+breakpoint. Passing a different query re-subscribes.
 
 ## Usage
 
@@ -46,12 +46,6 @@ fn Layout() -> Element {
     }
 }
 ```
-
-## First render
-
-Both answer `false` on the first render and on a server render, then the real
-answer once the component is mounted. Where the platform cannot answer, as on
-a server render, they stay `false`. Passing a different query re-subscribes.
 
 ## API
 

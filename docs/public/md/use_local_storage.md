@@ -13,21 +13,9 @@ run. Read `get()`, `is_stored()` and `error()`; all are reactive. `set(value)`,
 `update(change)` and `remove()` write through; every handle of the same type on
 a key shows the same value.
 
-Web: `localStorage` and `sessionStorage`; another tab's write arrives live.
-Blitz (the `native` feature), a desktop app with the `desktop` feature and
-Android: a file per key in the app's data directory, session values in memory
-per window. Any other build, such as a server, liveview or a desktop app
-without the feature, keeps values in memory until you call
-`libero::platform::set_storage_dir(path)`. Off the web, other windows and
-processes read a value at their mount.
-
-Values are stored as JSON, so a `String` is kept with its quotes. Keys are used
-verbatim; `lsx-` keys are libero's own. The value is read at the first render;
-in a hydrating fullstack app pass `StorageOptions { read_after_mount: true, .. }`
-to `use_local_storage_with` or `use_session_storage_with`, so the server render
-and the client's first render both show the default. Each write hits the store
-(a file off the web), so pass a fast source such as a slider through
-`use_debounced_value` first.
+`use_local_storage_with(key, default, options)` takes `StorageOptions`: in a
+hydrating fullstack app set `read_after_mount: true`, and
+`format: StorageFormat::Text` keeps bare text.
 
 ## Usage
 
@@ -185,3 +173,11 @@ the store is full.
 
 - A kept value lives in one browser or app install: another device starts from
   the default.
+- Off the web a value is a file per key in the app's data directory; any other
+  build keeps values in memory until you call
+  `libero::platform::set_storage_dir(path)`, and other windows and processes
+  read a value at their mount.
+- Values are stored as JSON, so a `String` is kept with its quotes. `lsx-` keys
+  are libero's own, read at start: change the colour scheme live through
+  `use_color_scheme`. Pass a fast source such as a slider through
+  `use_debounced_value` first.

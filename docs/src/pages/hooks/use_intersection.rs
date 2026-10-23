@@ -1,4 +1,4 @@
-use crate::components::{Demo, DemoFile, DemoValues, DocPage, DocSection, a11y};
+use crate::components::{Demo, DemoFile, DemoValues, DocPage, a11y};
 use dioxus::prelude::*;
 use libero::components::{Code, Text};
 
@@ -29,7 +29,27 @@ pub fn UseIntersectionPage() -> Element {
                     Code { source: "use_intersection(options) -> Intersection" }
                     " watches one element with the browser's "
                     Code { source: "IntersectionObserver" }
-                    ", polled on Blitz."
+                    ", polled on Blitz. Give "
+                    Code { source: "on_mounted" }
+                    " to the element's "
+                    Code { source: "onmounted" }
+                    ", spread its "
+                    Code { source: "attributes" }
+                    " on it and read "
+                    Code { source: "entry" }
+                    ". The options name a "
+                    Code { source: "root" }
+                    ", a "
+                    Code { source: "root_margin" }
+                    ", the "
+                    Code { source: "thresholds" }
+                    " and "
+                    Code { source: "once" }
+                    ". "
+                    Code { source: "use_in_viewport() -> InViewport" }
+                    " is the same with the defaults, with "
+                    Code { source: "visible" }
+                    " as a bool."
                 }
             },
 
@@ -39,51 +59,6 @@ pub fn UseIntersectionPage() -> Element {
                 controls: Vec::new(),
                 render: move |_: DemoValues| rsx! { Reveal {} },
                 file: DemoFile(include_str!("use_intersection/demo.rs")),
-            }
-
-            DocSection {
-                title: "Wiring and options",
-                Text {
-                    "Give "
-                    Code { source: "on_mounted" }
-                    " to the element's "
-                    Code { source: "onmounted" }
-                    ", spread its "
-                    Code { source: "attributes" }
-                    " on it (a WebView finds the element by them) and read "
-                    Code { source: "entry" }
-                    ", a signal of "
-                    Code { source: "Option<IntersectionEntry>" }
-                    " with "
-                    Code { source: "is_intersecting" }
-                    " and the visible "
-                    Code { source: "ratio" }
-                    ". The options name a "
-                    Code { source: "root" }
-                    " element (the viewport by default), a "
-                    Code { source: "root_margin" }
-                    ", the "
-                    Code { source: "thresholds" }
-                    " at which the entry updates, and "
-                    Code { source: "once" }
-                    ", which stops observing after the first sighting."
-                }
-            }
-
-            DocSection {
-                title: "In the viewport",
-                Text {
-                    Code { source: "use_in_viewport() -> InViewport" }
-                    " is the same with the defaults, with "
-                    Code { source: "visible" }
-                    " as a bool. Where nothing can observe (a server render) "
-                    Code { source: "entry" }
-                    " stays "
-                    Code { source: "None" }
-                    " and the bool is "
-                    Code { source: "false" }
-                    "."
-                }
             }
         }
     }

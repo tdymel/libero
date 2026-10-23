@@ -1,6 +1,6 @@
 use super::KeepSite;
 use crate::Route;
-use crate::components::{Demo, DemoFile, DemoValues, DocPage, DocSection, a11y};
+use crate::components::{Demo, DemoFile, DemoValues, DocPage, a11y};
 use dioxus::prelude::*;
 use libero::components::{Anchor, Code, Text};
 
@@ -40,16 +40,6 @@ pub fn UseThemeSetPage() -> Element {
                     KeepSite { ThemePicker {} }
                 },
                 file: DemoFile(include_str!("use_theme_set/demo.rs")),
-            }
-
-            DocSection {
-                title: "Swapping",
-                Text {
-                    "A swap rebuilds the stylesheet, because the sheet carries the set's "
-                    "pair. The color scheme setting survives it, so a reader who pinned "
-                    "dark stays in dark. The buttons below switch this site, which gets "
-                    "its own set back when you leave the page."
-                }
             }
         }
     }

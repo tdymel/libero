@@ -9,7 +9,10 @@ Description: The camera and microphone with a preview, a PNG snapshot, a chunked
 
 `use_user_media(options) -> UserMedia` opens the camera and microphone.
 `start()` asks and opens them, `stop()` closes them. Spread `attributes()` on
-your own `video` to show the stream.
+your own `video` to show the stream. `snapshot()` takes a PNG into `photo()`;
+`record()` and `finish()` fill `recorded()`. `use_user_media_devices()` lists
+`cameras()` and `microphones()`, and `switch_camera(id)` reopens the stream on
+another.
 
 ## Usage
 
@@ -142,39 +145,6 @@ pub fn CaptureBooth(camera: bool, #[props(default)] microphone: bool) -> Element
 }
 ```
 
-## Photos and recordings
-
-`snapshot()` takes a PNG into `photo()`; `record()` and `finish()` fill
-`recorded()`, both a `FileData` like a picked file. Options apply on the next
-`start()`. `camera_permission()` and `microphone_permission()` read the
-permission state, kept current where the platform reports changes.
-
-## Devices
-
-`use_user_media_devices()` lists `cameras()` and `microphones()`; labels and
-ids fill in once a start is granted. `switch_camera(id)` reopens a live stream
-on another camera, `camera_id()` names the live one, and the `facing` option
-picks a phone's front or back. `libero::utils::data_url(&file)` turns a photo
-or clip into a `src`. Switch the camera off for an audio-only recording. A
-recording crosses a WebView's IPC in 1 s chunks and is dropped past
-`max_bytes` (50 MB by default) with `TooLarge`; in a browser it stays in the
-page until you read it.
-
-## Platforms
-
-Web: a secure context (HTTPS or localhost). Android: declare
-`[permissions] camera` and `microphone` in Dioxus.toml, plus
-`"android.permission.MODIFY_AUDIO_SETTINGS"` under `[android.permissions]`:
-without it every microphone request is denied. The system asks on the first
-start. Windows: WebView2 counts dioxus's page as insecure and has no capture
-API until the app marks the page secure (Getting started, Desktop); the page then
-reports a secure context and a start answers `NotFound` on CI's runner, which has
-no camera; capture itself is untested. macOS's WebView answers a start the same
-way (`Constraint`), capture untested. iOS's WebView opens and stops a capture in
-the simulator; a device is untested.
-Blitz and a server render have no capture API: `is_supported()` stays false and a start fails with `Unsupported`. Screen
-capture and speaker choice are not covered.
-
 ## API
 
 ```rust,ignore
@@ -281,3 +251,11 @@ and Stop camera turns the light off.
   answers no permission request there.
 - macOS's WebView grants every page itself; the system's camera prompt is the
   only consent gate, so ask in your own UI first.
+- Web needs a secure context (HTTPS or localhost). Android needs
+  `[permissions] camera` and `microphone` in Dioxus.toml, plus
+  `android.permission.MODIFY_AUDIO_SETTINGS` under `[android.permissions]`, or
+  every microphone request is denied. Windows' WebView2 counts dioxus's page as
+  insecure and has no capture API until the app marks it secure.
+- Blitz and a server render have no capture API: `is_supported()` stays false
+  and a start fails with `Unsupported`. A recording is dropped past `max_bytes`
+  (50 MB) with `TooLarge`. Screen capture and speaker choice are not covered.

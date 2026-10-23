@@ -8,7 +8,11 @@ Index: [index.md](index.md) lists every other page
 Description: Reports how much of an element is visible, with a root, margin and thresholds; polled on Blitz, never intersecting in a server render.
 
 `use_intersection(options) -> Intersection` watches one element with the
-browser's `IntersectionObserver`, polled on Blitz.
+browser's `IntersectionObserver`, polled on Blitz. Give `on_mounted` to the
+element's `onmounted`, spread its `attributes` on it and read `entry`. The
+options name a `root`, a `root_margin`, the `thresholds` and `once`.
+`use_in_viewport() -> InViewport` is the same with the defaults, with `visible`
+as a bool.
 
 ## Usage
 
@@ -44,21 +48,6 @@ fn Reveal() -> Element {
     }
 }
 ```
-
-## Wiring and options
-
-Give `on_mounted` to the element's `onmounted`, spread its `attributes` on it (a
-WebView finds the element by them) and read `entry`, a signal of
-`Option<IntersectionEntry>` with `is_intersecting` and the visible `ratio`. The
-options name a `root` element (the viewport by default), a `root_margin`, the
-`thresholds` at which the entry updates, and `once`, which stops observing after
-the first sighting.
-
-## In the viewport
-
-`use_in_viewport() -> InViewport` is the same with the defaults, with
-`visible` as a bool. Where nothing can observe (a server render) `entry` stays
-`None` and the bool is `false`.
 
 ## API
 

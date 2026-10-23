@@ -1,4 +1,4 @@
-use crate::components::{Demo, DemoFile, DemoValues, DocPage, DocSection, a11y};
+use crate::components::{Demo, DemoFile, DemoValues, DocPage, a11y};
 use dioxus::prelude::*;
 use libero::components::{Code, Text};
 
@@ -36,7 +36,17 @@ pub fn UseSwipePage() -> Element {
                     Code { source: "options.distance" }
                     " px (48) along one axis, more than along the other. It fires during the move, once per press, with the "
                     Code { source: "direction" }
-                    ", the start point and the delta."
+                    ", the start point and the delta. Spread the pointer callbacks onto one element with a "
+                    Code { source: "touch-action" }
+                    ": "
+                    Code { source: "none" }
+                    ", or "
+                    Code { source: "pan-y" }
+                    " for sideways swipes on a scrolling page. "
+                    Code { source: "use_edge_swipe(on_swipe, options)" }
+                    " is built on it: an inward swipe from a band near the start edge opens your drawer. Spread "
+                    Code { source: "edge_swipe_sx()" }
+                    " on a box covering the page."
                 }
             },
 
@@ -46,41 +56,6 @@ pub fn UseSwipePage() -> Element {
                 controls: Vec::new(),
                 render: move |_: DemoValues| rsx! { SwipePad {} },
                 file: DemoFile(include_str!("use_swipe/demo.rs")),
-            }
-
-            DocSection {
-                title: "Wiring",
-                Text {
-                    "Spread "
-                    Code { source: "onpointerdown" }
-                    ", "
-                    Code { source: "onpointermove" }
-                    ", "
-                    Code { source: "onpointerup" }
-                    " and "
-                    Code { source: "onpointercancel" }
-                    " onto one element, and give it a "
-                    Code { source: "touch-action" }
-                    ": "
-                    Code { source: "none" }
-                    " for all four directions, "
-                    Code { source: "pan-y" }
-                    " for sideways swipes on a page that scrolls."
-                }
-            }
-
-            DocSection {
-                title: "Edge swipes",
-                Text {
-                    Code { source: "use_edge_swipe(on_swipe, options) -> Swipe" }
-                    " is built on it: an inward swipe that starts in a band near the start edge (the right edge under RTL) opens your drawer. The band begins "
-                    Code { source: "inset" }
-                    " px (44) in, past Android 16's system back zone at its highest sensitivity, and is "
-                    Code { source: "width" }
-                    " px (48) wide, so it needs no gesture exclusion. Spread it with "
-                    Code { source: "edge_swipe_sx()" }
-                    " on a box covering the page: no strip lies over the content. A swipe from the band that goes inward, more sideways than up or down, also starts on a code block or another inner scroller: the hook keeps that box from scrolling sideways for the press. These docs open their navigation this way on a phone, and the drawer follows the finger: past a third of its width or on a flick it opens."
-                }
             }
         }
     }

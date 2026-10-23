@@ -82,19 +82,6 @@ fn Stopwatch() -> Element {
 }
 ```
 
-## Where it runs
-
-One timer serves the web, Blitz and a webview. The callback runs in your
-component's scope, so it may write signals, spawn or read elements. A server
-render never fires it. Natively every interval tick costs a thread, so keep the
-period to a second or more.
-
-## The stopwatch
-
-The stopwatch above reads a clock, not the count of ticks, so a late tick loses
-no time. The clock is the `web-time` crate's `Instant`: `std::time::Instant`
-panics on wasm.
-
 ## API
 
 ```rust,ignore
@@ -140,4 +127,7 @@ says "One minute left" once, rather than every second.
 
 - A tick that lands while the component is still rendering the previous one is
   skipped, so a callback that counts should read a clock, not add one per tick,
-  if the count must stay exact.
+  if the count must stay exact. Use the `web-time` crate's `Instant`:
+  `std::time::Instant` panics on wasm.
+- A server render never fires a timer. Natively every interval tick costs a
+  thread, so keep the period to a second or more.

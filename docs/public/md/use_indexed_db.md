@@ -9,30 +9,12 @@ Description: A larger value kept under a key in IndexedDB, loaded and saved with
 
 `use_indexed_db(key, default) -> StoredAsync<T>` keeps a value across reloads
 and app runs like `use_local_storage`, but loads and saves without blocking the
-page. Pick it over `use_local_storage` for values of more than a few kilobytes,
-such as a document, a draft or a list of rows: `localStorage` reads and writes
-on the main thread and holds about 5 MB, IndexedDB holds far more. For a small
-setting read at the first render, `use_local_storage` shows the stored value at
-once.
+page. Pick it for values of more than a few kilobytes, such as a document or a
+list of rows: `localStorage` blocks the main thread and holds about 5 MB.
 
-The value arrives after the first render. Until `is_loaded()` is true, `get()`
-shows the default. A `set`, `update` or `remove` before the load lands wins and
-the stored value is dropped. Writes show at once and are saved afterwards;
-`error()` reports a save that failed. `get()`, `is_stored()`, `is_loaded()` and
-`error()` are reactive, and every handle of the same type on a key shows the
-same value.
-
-Web: one IndexedDB database, `libero`, with one store. A write or remove in one
-tab shows in the origin's other tabs at once. Blitz (the `native` feature), a
-desktop app with the `desktop` feature and Android: a file per key in the app's
-data directory, next to `use_local_storage`'s. Any other build keeps values in
-memory until you call `libero::platform::set_storage_dir(path)`. Blocked
-IndexedDB, as in some private modes, reports `Unavailable` and the value lasts
-the session.
-
-Values are stored as JSON, so a `String` is kept with its quotes; binary data is
-not supported. Keys are used verbatim. Each write hits the store, so pass a fast
-source such as a slider through `use_debounced_value` first.
+The value arrives after the first render: until `is_loaded()` is true, `get()`
+shows the default. A write before the load lands wins. `error()` reports a save
+that failed.
 
 ## Usage
 
@@ -138,3 +120,13 @@ notes" button clears it.
 
 - A kept value lives in one browser or app install: another device starts from
   the default.
+- Web: one IndexedDB database, `libero`, with one store; a write in one tab
+  shows in the origin's other tabs at once. Blitz, a desktop app with the
+  `desktop` feature and Android keep a file per key in the app's data
+  directory. Any other build keeps values in memory until you call
+  `libero::platform::set_storage_dir(path)`.
+- Blocked IndexedDB, as in some private modes, reports `Unavailable` and the
+  value lasts the session.
+- Values are stored as JSON, so a `String` is kept with its quotes; binary data
+  is not supported. Pass a fast source such as a slider through
+  `use_debounced_value` first.

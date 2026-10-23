@@ -64,17 +64,6 @@ fn ShareLocation() -> Element {
 }
 ```
 
-## Platforms
-
-Web: a secure context (HTTPS or localhost). Android: declare
-`[permissions] location` in Dioxus.toml; the system asks on the first request.
-Windows: WebView2 counts dioxus's page as insecure and denies every request
-unless the app marks it secure (Getting started, Desktop). iOS's WebView asks
-once per origin and then locates in the simulator, a device is untested; a
-request in macOS's WebView ends in `Denied` on CI's runner, a fix is untested.
-Blitz and a server render have no Geolocation API:
-`is_supported()` stays false and a request fails with `Unsupported`.
-
 ## API
 
 ```rust,ignore
@@ -164,3 +153,8 @@ instead.
   and libero cannot open its settings.
 - The Linux desktop WebView (WebKitGTK) denies every request, because wry
   answers no permission request there.
+- Web needs a secure context (HTTPS or localhost). Android needs
+  `[permissions] location` in Dioxus.toml. Windows' WebView2 counts dioxus's page
+  as insecure and denies every request unless the app marks it secure.
+- Blitz and a server render have no Geolocation API: `is_supported()` stays
+  false and a request fails with `Unsupported`.

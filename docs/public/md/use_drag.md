@@ -10,7 +10,9 @@ Description: Pointer plumbing for a drag. Capture, a start point, deltas against
 `use_drag(options: DragOptions) -> Drag` is the pointer plumbing for a drag. It
 captures the pointer, keeps the start point and reports each move as a delta
 against it. Release and cancel end the same way. It knows no axes and no units,
-so convert the delta yourself.
+so convert the delta yourself. `onpointerdown` goes on the grab handle, the
+other handlers on the `capture` element. Give the handle `drag_handle_sx()`, or
+a touch scrolls the page instead.
 
 ## Usage
 
@@ -75,21 +77,6 @@ fn Knob() -> Element {
 }
 ```
 
-## Web and native
-
-The hook cancels the press's default, so on the web it focuses the pressed tab
-stop itself. Natively, or to focus something else, focus it in `onstart`. Blitz
-and a webview have no pointer capture; Blitz follows the pointer instead, and in
-a webview the drag stops once the pointer leaves the capture element.
-
-## The handlers
-
-The returned `Drag` holds four handlers and a `dragging` signal. `onpointerdown`
-goes on the grab handle, the other three on the `capture` element, which owns
-the geometry. Measure in `onstart`, and call its `cancel` to refuse the drag.
-Give the handle `drag_handle_sx()`, or a touch scrolls the page and the handle
-never moves.
-
 ## API
 
 ```rust,ignore
@@ -128,3 +115,11 @@ coordinates. `drag_handle_sx()` sets `touch-action: none`.
 
 A volume knob dragged with `use_drag`: the knob is also a focusable slider
 named "Volume", so a keyboard user turns it with the arrows, Home and End.
+
+### Limits
+
+- The hook cancels the press's default, so natively, or to focus something other
+  than the pressed tab stop, focus it in `onstart`.
+- Blitz and a webview have no pointer capture: Blitz follows the pointer
+  instead, and in a webview the drag stops once the pointer leaves the capture
+  element.

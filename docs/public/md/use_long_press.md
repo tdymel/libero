@@ -11,7 +11,8 @@ Description: Pointer handlers that call back once a press is held, without break
 a pointer stays down for `options.ms` (400 by default). It moves no more than
 `move_tolerance` px (10) in that time. Spread the returned callbacks onto one
 element: `onpointerdown`, `onpointermove`, `onpointerup`, `onpointerleave`,
-`onpointercancel`, `oncontextmenu` and `onclick`.
+`onpointercancel`, `oncontextmenu` and `onclick`. Read `pressing` for a hold
+cue, and give the element `user-select: none` so holding does not select text.
 
 ## Usage
 
@@ -58,17 +59,6 @@ fn HoldToCount() -> Element {
     }
 }
 ```
-
-## Hold cue
-
-Read `pressing`, a signal that is true while a press is held and not yet fired,
-for a hold cue.
-
-## Text selection
-
-Give the element `user-select: none` and `-webkit-touch-callout: none` so
-holding does not select text. It runs on the web, Blitz and a WebView, on one
-timer.
 
 ## API
 

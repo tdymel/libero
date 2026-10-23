@@ -9,7 +9,11 @@ Description: Runs a handler on a keyboard shortcut from anywhere in the page, sk
 
 `use_hotkeys(bindings)` runs a handler when its chord is pressed anywhere in the
 document, even with focus on the page body or in a portal. Each binding is
-`Hotkey::new(chord, handler)`.
+`Hotkey::new(chord, handler)`. A chord joins modifiers (`ctrl`, `alt`, `shift`,
+`meta`, `mod`) and a key with `+`, such as `mod+shift+k`; `mod` is Cmd on Apple
+platforms and Ctrl elsewhere. Presses in text entry are skipped unless the
+binding calls `.include_editable(true)`; `.when(guard)` and `.within(element)`
+narrow it further. A hotkey lives as long as the component that calls the hook.
 
 ## Usage
 
@@ -47,34 +51,6 @@ fn Shortcuts() -> Element {
     }
 }
 ```
-
-## Chords
-
-A chord is modifiers and a key joined by `+`: `ctrl`, `alt`, `shift`, `meta` (or
-`cmd`) and `mod`, then a character or a key name such as `f8`, `escape` or
-`space`. `mod` is Cmd on Apple platforms and Ctrl elsewhere. Modifiers match
-exactly, so `mod+k` ignores `mod+shift+k`.
-
-## Text entry and guards
-
-Presses in text entry are skipped unless the binding calls
-`.include_editable(true)`. `.when(guard)` lets a press through only while the
-guard answers `true`. `.within(element)` lets it through only with focus on or
-inside an element from `use_element`. A libero popup opened inside it, such as a
-`Menu`, a `Select` list or a `HoverCard`, counts as inside, as does a
-`use_popover` box with its `anchor_events()` and `floating_events()` spread;
-call it again to add your own portaled box. Spread `..element.attributes()` on
-it, so a WebView finds it. A press a binding takes has its default action prevented; one it turns
-away keeps it. Native Blitz hears presses that bubble out of the app, and a
-server render binds nothing.
-
-## Lifetime
-
-A hotkey lives as long as the component that calls the hook: it is bound when
-the component mounts and removed when it unmounts, such as when a route change
-drops the page. A hook in a layout or the app root stays bound across
-navigation. Each call listens on its own, so two components with the same chord
-both run.
 
 ## API
 
@@ -134,3 +110,5 @@ the chord, and the tooltip tells everyone else it exists.
 ### Limits
 
 - A WebView prevents a chord's default action only from the second press of it.
+- Native Blitz hears presses that bubble out of the app, and a server render
+  binds nothing.

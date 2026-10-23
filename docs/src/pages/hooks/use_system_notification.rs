@@ -1,4 +1,4 @@
-use crate::components::{Demo, DemoFile, DemoValues, DocPage, DocSection, a11y};
+use crate::components::{Demo, DemoFile, DemoValues, DocPage, a11y};
 use dioxus::prelude::*;
 use libero::components::{Code, Text};
 
@@ -34,6 +34,8 @@ pub fn UseSystemNotificationPage() -> Element {
                     "Where only a service worker may show notifications (Chrome on Android), on_click runs only if the app's worker posts the click back, as the sample sw.js does.",
                     "A click after the page closed runs nothing in the page: only a worker can open a tab then.",
                     "A desktop WebView raises its window on a click only with libero's desktop feature; without it, window.focus() may not.",
+                    "Web needs a secure context (HTTPS or localhost); WebView2 counts dioxus's page as insecure and denies it until the app marks the page secure. Android needs `notifications = { description = \"..\" }` under `[permissions]` in Dioxus.toml.",
+                    "iOS's WebView, Blitz on macOS and Windows, and a server render have no notifications: `is_supported()` stays false and calls fail with `Unsupported`. Push is web only; sending, VAPID signing, FCM and APNs stay on your server.",
                 ]),
             lead: rsx! {
                 Text {
@@ -58,7 +60,11 @@ pub fn UseSystemNotificationPage() -> Element {
                     Code { source: "is_pending()" }
                     " and "
                     Code { source: "is_supported()" }
-                    "; all are reactive."
+                    "; all are reactive. "
+                    Code { source: "use_push_subscription(PushOptions)" }
+                    " registers your service worker and subscribes with your server's VAPID public key; its "
+                    Code { source: "endpoint()" }
+                    " is what your server pushes to."
                 }
             },
 
@@ -69,57 +75,6 @@ pub fn UseSystemNotificationPage() -> Element {
                 controls: Vec::new(),
                 render: move |_: DemoValues| rsx! { Notify {} },
                 file: DemoFile(include_str!("use_system_notification/demo.rs")),
-            }
-
-            DocSection {
-                title: "Push",
-                Text {
-                    Code { source: "use_push_subscription(PushOptions) -> PushSubscription" }
-                    " registers your service worker and subscribes with your server's VAPID public key. "
-                    Code { source: "endpoint()" }
-                    " is the "
-                    Code { source: "PushEndpoint" }
-                    " your server stores and pushes to; the worker shows what arrives. Sending, VAPID signing, FCM and APNs stay on your server. The demo's key is a throwaway public key: no private key exists anywhere in the repo, so nothing ever pushes to it. A sample worker is "
-                    Code { source: "docs/public/sw.js" }
-                    ". Push on Android is Firebase Cloud Messaging in the app itself, with no libero code: the markdown version of this page has a recipe."
-                }
-            }
-
-            DocSection {
-                title: "Platforms",
-                Text {
-                    "Web: a secure context (HTTPS or localhost). Desktop WebView on Linux: with libero's "
-                    Code { source: "desktop" }
-                    " feature, the desktop's notification server over D-Bus, as for Blitz; without it WebKitGTK denies every request. macOS and Windows WebViews go through the page's "
-                    Code { source: "Notification" }
-                    ", which reads "
-                    Code { source: "Prompt" }
-                    " on CI's runner, and a request or a show there reads "
-                    Code { source: "Denied" }
-                    " because no prompt is answered, so a shown notification is untested; WebView2 counts dioxus's page as insecure and denies it until the app marks the page secure (Getting started, Desktop). iOS's WebView defines no "
-                    Code { source: "Notification" }
-                    ": "
-                    Code { source: "is_supported()" }
-                    " stays false and calls fail with "
-                    Code { source: "Unsupported" }
-                    ". Push is web only. A click focuses the page's window, then runs "
-                    Code { source: "on_click" }
-                    "; behind a service worker only if the worker posts it back, as the sample worker does. Android: the system's notifications over JNI, after "
-                    Code { source: "notifications = { description = \"..\" }" }
-                    " under "
-                    Code { source: "[permissions]" }
-                    " in the app's "
-                    Code { source: "Dioxus.toml" }
-                    "; a tap reopens the app and runs "
-                    Code { source: "on_click" }
-                    ". The status bar icon is a drawable named "
-                    Code { source: "libero_notification" }
-                    " in the app's resources, a white shape on transparent; without it the launcher icon shows. Actions are untested on macOS and Windows. Blitz on Linux: the desktop's notification server over D-Bus, no permission to ask. Blitz on macOS and Windows, and a server render: "
-                    Code { source: "is_supported()" }
-                    " stays false and calls fail with "
-                    Code { source: "Unsupported" }
-                    "."
-                }
             }
         }
     }

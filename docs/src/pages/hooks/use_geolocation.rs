@@ -1,4 +1,4 @@
-use crate::components::{Demo, DemoFile, DemoValues, DocPage, DocSection, a11y};
+use crate::components::{Demo, DemoFile, DemoValues, DocPage, a11y};
 use dioxus::prelude::*;
 use libero::components::{Code, Text};
 
@@ -29,6 +29,8 @@ pub fn UseGeolocationPage() -> Element {
                 .limits([
                     "A denial is usually permanent for the site: the browser does not ask again, and libero cannot open its settings.",
                     "The Linux desktop WebView (WebKitGTK) denies every request, because wry answers no permission request there.",
+                    "Web needs a secure context (HTTPS or localhost). Android needs `[permissions] location` in Dioxus.toml. Windows' WebView2 counts dioxus's page as insecure and denies every request unless the app marks it secure.",
+                    "Blitz and a server render have no Geolocation API: `is_supported()` stays false and a request fails with `Unsupported`.",
                 ]),
             lead: rsx! {
                 Text {
@@ -65,21 +67,6 @@ pub fn UseGeolocationPage() -> Element {
                 controls: Vec::new(),
                 render: move |_: DemoValues| rsx! { ShareLocation {} },
                 file: DemoFile(include_str!("use_geolocation/demo.rs")),
-            }
-
-            DocSection {
-                title: "Platforms",
-                Text {
-                    "Web: a secure context (HTTPS or localhost). Android: declare "
-                    Code { source: "[permissions] location" }
-                    " in Dioxus.toml; the system asks on the first request. Windows: WebView2 counts dioxus's page as insecure and denies every request unless the app marks it secure (Getting started, Desktop). iOS's WebView asks once per origin and then locates in the simulator, a device is untested; a request in macOS's WebView ends in "
-                    Code { source: "Denied" }
-                    " on CI's runner, a fix is untested. Blitz and a server render have no Geolocation API: "
-                    Code { source: "is_supported()" }
-                    " stays false and a request fails with "
-                    Code { source: "Unsupported" }
-                    "."
-                }
             }
         }
     }

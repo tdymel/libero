@@ -13,7 +13,9 @@ operating system draws, outside the page; the in-app toasts are
 `show(SystemNotification)` shows one, `close(tag)` closes it; its `actions`
 are buttons whose id comes back in `on_action`. Read
 `permission()`, `error()`, `is_pending()` and `is_supported()`; all are
-reactive.
+reactive. `use_push_subscription(PushOptions)` registers your service worker and
+subscribes with your server's VAPID public key; its `endpoint()` is what your
+server pushes to.
 
 ## Usage
 
@@ -100,38 +102,6 @@ fn Notify() -> Element {
     }
 }
 ```
-
-## Push
-
-`use_push_subscription(PushOptions) -> PushSubscription` registers your
-service worker and subscribes with your server's VAPID public key.
-`endpoint()` is the `PushEndpoint` your server stores and pushes to; the
-worker shows what arrives. Sending, VAPID signing, FCM and APNs stay on your
-server. The demo's key is a throwaway public key: no private key exists
-anywhere in the repo, so nothing ever pushes to it. A sample worker is
-`docs/public/sw.js`. Push on Android is Firebase Cloud Messaging in the app
-itself, with no libero code: see the recipe below.
-
-## Platforms
-
-Web: a secure context (HTTPS or localhost). Desktop WebView on Linux: with
-libero's `desktop` feature, the desktop's notification server over D-Bus, as
-for Blitz; without it WebKitGTK denies every request. macOS and Windows
-WebViews go through the page's `Notification`, which reads `Prompt` on CI's
-runner, and a request or a show there reads `Denied` because no prompt is
-answered, so a shown notification is untested; WebView2 counts dioxus's page as insecure and
-denies it until the app marks the page secure (Getting started, Desktop). iOS's
-WebView defines no `Notification`: `is_supported()` stays false and calls fail
-with `Unsupported`. Push is web only.
-Android: the system's notifications over JNI, after
-`notifications = { description = ".." }` under `[permissions]` in the app's
-`Dioxus.toml`; a tap reopens the app and runs `on_click`. The status bar icon
-is a drawable named `libero_notification` in the app's resources, a white
-shape on transparent; without it the launcher icon shows. Actions are untested
-on macOS and Windows. Blitz on Linux: the
-desktop's notification server over D-Bus, no permission to ask. Blitz on macOS
-and Windows, and a server render: `is_supported()` stays false and calls fail
-with `Unsupported`.
 
 ## API
 
@@ -389,3 +359,10 @@ in the page says the same.
   open a tab then.
 - A desktop WebView raises its window on a click only with libero's `desktop`
   feature; without it, `window.focus()` may not.
+- Web needs a secure context (HTTPS or localhost); WebView2 counts dioxus's page
+  as insecure and denies it until the app marks the page secure. Android needs
+  `notifications = { description = ".." }` under `[permissions]` in Dioxus.toml.
+- iOS's WebView, Blitz on macOS and Windows, and a server render have no
+  notifications: `is_supported()` stays false and calls fail with
+  `Unsupported`. Push is web only; sending, VAPID signing, FCM and APNs stay on
+  your server.

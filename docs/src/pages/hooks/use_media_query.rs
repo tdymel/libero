@@ -1,4 +1,4 @@
-use crate::components::{Demo, DemoFile, DemoValues, DocPage, DocSection, a11y};
+use crate::components::{Demo, DemoFile, DemoValues, DocPage, a11y};
 use dioxus::prelude::*;
 use libero::components::{Code, Text};
 
@@ -31,7 +31,7 @@ pub fn UseMediaQueryPage() -> Element {
                     Code { source: "use_is_mobile() -> ReadSignal<bool>" }
                     " is "
                     Code { source: "(max-width: 767px)" }
-                    ": the 768px breakpoint."
+                    ": the 768px breakpoint. Passing a different query re-subscribes."
                 }
             },
 
@@ -41,18 +41,6 @@ pub fn UseMediaQueryPage() -> Element {
                 controls: Vec::new(),
                 render: move |_: DemoValues| rsx! { Layout {} },
                 file: DemoFile(include_str!("use_media_query/demo.rs")),
-            }
-
-            DocSection {
-                title: "First render",
-                Text {
-                    "Both answer "
-                    Code { source: "false" }
-                    " on the first render and on a server render, then the real answer once the component is mounted. "
-                    "Where the platform cannot answer, as on a server render, they stay "
-                    Code { source: "false" }
-                    ". Passing a different query re-subscribes."
-                }
             }
         }
     }

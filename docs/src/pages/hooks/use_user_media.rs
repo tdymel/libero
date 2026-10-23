@@ -1,4 +1,4 @@
-use crate::components::{Control, Demo, DemoFile, DemoValues, DocPage, DocSection, Remount, a11y};
+use crate::components::{Control, Demo, DemoFile, DemoValues, DocPage, Remount, a11y};
 use dioxus::prelude::*;
 use libero::components::{Code, Text};
 
@@ -30,7 +30,10 @@ pub fn UseUserMediaPage() -> Element {
                 .limits([
                     "A denial is usually permanent for the site: the browser does not ask again, and libero cannot open its settings.",
                     "The Linux desktop WebView (WebKitGTK) denies every request, because wry answers no permission request there.",
-                    "macOS's WebView grants every page itself; the system's camera prompt is the only consent gate, so ask in your own UI first.",                ]),
+                    "macOS's WebView grants every page itself; the system's camera prompt is the only consent gate, so ask in your own UI first.",
+                    "Web needs a secure context (HTTPS or localhost). Android needs `[permissions] camera` and `microphone` in Dioxus.toml, plus `android.permission.MODIFY_AUDIO_SETTINGS` under `[android.permissions]`, or every microphone request is denied. Windows' WebView2 counts dioxus's page as insecure and has no capture API until the app marks it secure.",
+                    "Blitz and a server render have no capture API: `is_supported()` stays false and a start fails with `Unsupported`. A recording is dropped past `max_bytes` (50 MB) with `TooLarge`. Screen capture and speaker choice are not covered.",
+                ]),
             lead: rsx! {
                 Text {
                     Code { source: "use_user_media(options) -> UserMedia" }
@@ -42,7 +45,25 @@ pub fn UseUserMediaPage() -> Element {
                     Code { source: "attributes()" }
                     " on your own "
                     Code { source: "video" }
-                    " to show the stream."
+                    " to show the stream. "
+                    Code { source: "snapshot()" }
+                    " takes a PNG into "
+                    Code { source: "photo()" }
+                    "; "
+                    Code { source: "record()" }
+                    " and "
+                    Code { source: "finish()" }
+                    " fill "
+                    Code { source: "recorded()" }
+                    ". "
+                    Code { source: "use_user_media_devices()" }
+                    " lists "
+                    Code { source: "cameras()" }
+                    " and "
+                    Code { source: "microphones()" }
+                    ", and "
+                    Code { source: "switch_camera(id)" }
+                    " reopens the stream on another."
                 }
             },
 
@@ -69,81 +90,6 @@ pub fn UseUserMediaPage() -> Element {
                         }
                     }
                 },
-            }
-
-            DocSection {
-                title: "Photos and recordings",
-                Text {
-                    Code { source: "snapshot()" }
-                    " takes a PNG into "
-                    Code { source: "photo()" }
-                    "; "
-                    Code { source: "record()" }
-                    " and "
-                    Code { source: "finish()" }
-                    " fill "
-                    Code { source: "recorded()" }
-                    ", both a "
-                    Code { source: "FileData" }
-                    " like a picked file. Options apply on the next "
-                    Code { source: "start()" }
-                    ". "
-                    Code { source: "camera_permission()" }
-                    " and "
-                    Code { source: "microphone_permission()" }
-                    " read the permission state, kept current where the platform reports changes."
-                }
-            }
-
-            DocSection {
-                title: "Devices",
-                Text {
-                    Code { source: "use_user_media_devices()" }
-                    " lists "
-                    Code { source: "cameras()" }
-                    " and "
-                    Code { source: "microphones()" }
-                    ", kept current as devices come and go, and "
-                    Code { source: "refresh()" }
-                    " lists them again; labels and ids fill in once a start is granted. "
-                    Code { source: "switch_camera(id)" }
-                    " reopens a live stream on another camera, "
-                    Code { source: "camera_id()" }
-                    " names the live one, and the "
-                    Code { source: "facing" }
-                    " option picks a phone's front or back. "
-                    Code { source: "libero::utils::data_url(&file)" }
-                    " turns a photo or clip into a "
-                    Code { source: "src" }
-                    ". Switch the camera off for an audio-only recording. A recording crosses a WebView's IPC in 1 s chunks and is dropped past "
-                    Code { source: "max_bytes" }
-                    " (50 MB by default) with "
-                    Code { source: "TooLarge" }
-                    "; in a browser it stays in the page until you read it."
-                }
-            }
-
-            DocSection {
-                title: "Platforms",
-                Text {
-                    "Web: a secure context (HTTPS or localhost). Android: declare "
-                    Code { source: "[permissions] camera" }
-                    " and "
-                    Code { source: "microphone" }
-                    " in Dioxus.toml, plus "
-                    Code { source: "\"android.permission.MODIFY_AUDIO_SETTINGS\"" }
-                    " under "
-                    Code { source: "[android.permissions]" }
-                    ": without it every microphone request is denied. The system asks on the first start. Windows: WebView2 counts dioxus's page as insecure and has no capture API until the app marks the page secure (Getting started, Desktop); the page then reports a secure context and a start answers "
-                    Code { source: "NotFound" }
-                    " on CI's runner, which has no camera; capture itself is untested. macOS's WebView answers a start the same way ("
-                    Code { source: "Constraint" }
-                    "), capture untested. iOS's WebView opens and stops a capture in the simulator; a device is untested. Blitz and a server render have no capture API: "
-                    Code { source: "is_supported()" }
-                    " stays false and a start fails with "
-                    Code { source: "Unsupported" }
-                    ". Screen capture and speaker choice are not covered."
-                }
             }
         }
     }

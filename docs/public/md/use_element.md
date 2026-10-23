@@ -10,7 +10,9 @@ Description: A handle to one of your component's own elements, to focus, scroll 
 `use_element() -> ElementHandle` is a handle to one of your component's own
 elements, and the only way to reach an element at all. Mount it with
 `onmounted: handle.mount()`. The handle is `Copy` and implements `ElementApi`,
-so it focuses, scrolls and measures the same way on every renderer.
+so it focuses, scrolls and measures the same way on every renderer. Commands
+such as `focus()` return at once, reads such as `dimensions()` are futures. The
+full method list is on [Platform](platform.md).
 
 ## Usage
 
@@ -54,24 +56,6 @@ fn Measure() -> Element {
 }
 ```
 
-## Commands and reads
-
-Commands such as `focus()` return at once. Reads such as `dimensions()` are
-futures. Start one in the handler and await it in a `spawn`. Until the element
-mounts, every call answers `PlatformError::Unsupported`. `is_mounted()` is
-reactive, so an effect that reads it runs again once the element is there. The
-full method list is on [Platform](platform.md).
-
-## Renderers
-
-The handle picks the richest backing the renderer offers: the DOM element on the
-web, a Blitz node natively (the `native` feature), and dioxus's portable mounted
-data in a webview. A webview still measures, scrolls and focuses, but
-`query_selector` answers `Unsupported` there, and `is_focused()` always answers
-`false`. Where a webview has to find the element, as `use_intersection`'s
-`root`, spread `..handle.attributes()` on it; on the web and Blitz they are
-empty.
-
 ## Accessibility
 
 ### Libero handles
@@ -93,6 +77,12 @@ empty.
 A "Measure" button that reads its card's size through the handle: the result
 goes into a status region, so a screen reader hears "320 by 180" without focus
 moving.
+
+### Limits
+
+- Until the element mounts, every call answers `PlatformError::Unsupported`.
+- A webview answers `query_selector` with `Unsupported` and `is_focused()` with
+  `false`; spread `..handle.attributes()` where it has to find the element.
 
 ## API
 
