@@ -29,16 +29,12 @@ fn Demo() -> Element {
 }
 ```
 
-`robustness` takes `low`, `medium`, `quartile` or `high`. A higher level
-survives more damage but makes a denser code, so a printed sticker wants a high
-level and a screen does not.
-
 ## Props
 
 | Prop | Type | Default | Description |
 |---|---|---|---|
 | `data` | `String` | required | The payload encoded into the code. |
-| `robustness` | `QrRobustness` | `medium` | How much damage the code survives. Higher levels make a denser code. |
+| `robustness` | `QrRobustness` | `medium` | How much damage the code survives. `low`, `medium`, `quartile` or `high`. Higher levels make a denser code, so a printed sticker wants a high level and a screen does not. |
 | `aria_label` | `String` | required | The code's accessible name. Say where it leads. |
 
 Like every component, `QrCode` also takes the shared props `sx`, `class`,

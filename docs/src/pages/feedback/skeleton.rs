@@ -107,7 +107,7 @@ pub fn SkeletonPage() -> Element {
                     .default("true")
                     .doc("Hides the children behind the placeholder, or draws the standalone shape. `false` shows the children."),
                 prop("height", "ThemeAwareValue")
-                    .doc("A CSS length. Unset, the children's height."),
+                    .doc("A CSS length. Unset, the children's height. A standalone shape needs one, or it is zero pixels tall."),
                 prop("width", "ThemeAwareValue")
                     .default("100%")
                     .doc("A CSS length. Ignored with `circle`."),

@@ -26,7 +26,7 @@ pub fn IconPage() -> Element {
                     prop("component", "HtmlTag").default("span").doc("Element to render as."),
                     prop("variant", "Variant")
                         .default(theme.icon.variant.as_str())
-                        .doc("The look, shared with `Button`. An icon is not interactive, so it has no hover state."),
+                        .doc("The look, shared with `Button`. An icon is not interactive, so it has no hover state. With `standard`, which draws no container, the svg fills the box; every other variant insets it to 60%, and `--lsx-icon-glyph` in `sx` picks another share."),
                     prop("gradient", "Gradient")
                         .doc("With `variant: \"gradient\"`: the second stop and the angle, as `(\"info\", 90)` or `Gradient::default().to(\"info\").deg(90)`. The first stop is `color`. Ignored by the other variants."),
                     prop("color", "ThemeAwareValue")
@@ -41,7 +41,7 @@ pub fn IconPage() -> Element {
                     prop("src", "String")
                         .doc("An image URL drawn as the glyph, in the icon's color, instead of `children`. Only its shape is used: its own colors are ignored. A `javascript:` or `vbscript:` URL draws nothing and warns in debug builds."),
                     prop("svg", "SvgData")
-                        .doc("A glyph drawn as a `Pictogram`, such as `pictogram_icons_lucide::check::outlined`, instead of `children`. `src` wins over it."),
+                        .doc("A glyph drawn as a `Pictogram`, such as `pictogram_icons_lucide::check::outlined`, or `SvgData::new(include_str!(\"logo.svg\"))` for your own, instead of `children`. `src` wins over it."),
                     prop("children", "Element").doc("The svg. Not needed with `src` or `svg`."),
                 ]),
             ],

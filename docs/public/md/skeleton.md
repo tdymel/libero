@@ -36,29 +36,11 @@ fn Profile(name: Option<String>) -> Element {
 }
 ```
 
-Standalone shapes:
+## Grace period
 
-```rust
-use dioxus::prelude::*;
-use libero::components::{Flex, Skeleton};
-
-#[component]
-fn Placeholder() -> Element {
-    rsx! {
-        Flex { direction: "row", gap: "md", align: "center",
-            Skeleton { circle: true, height: "40px" }
-            Flex { gap: "xs",
-                Skeleton { height: "12px", width: "180px" }
-                Skeleton { height: "12px", width: "120px" }
-            }
-        }
-    }
-}
-```
-
-A standalone shape needs a `height`, or it is zero pixels tall.
-
-With a grace period before the placeholder shows:
+A fetch that answers in 50 ms should not flash a placeholder. Keep the region
+transparent until a grace period ends, and end it with `timer()`. Use `opacity`
+for that, since `visibility` would not hide the grey.
 
 ```rust
 use std::time::Duration;
@@ -99,23 +81,12 @@ fn Card() -> Element {
 # #[component] fn ProfileCard(profile: Profile) -> Element { rsx! {} }
 ```
 
-## Showing through
-
-A descendant that sets `visibility: visible` on itself shows through, so avoid
-one under a visible skeleton.
-
-## Grace period
-
-A fetch that answers in 50 ms should not flash a placeholder. Keep the region
-transparent until a grace period ends, and end it with `timer()`. Use `opacity`
-for that, since `visibility` would not hide the grey.
-
 ## Props
 
 | Prop | Type | Default | Description |
 |---|---|---|---|
 | `visible` | `bool` | `true` | Hides the children behind the placeholder, or draws the standalone shape. `false` shows the children. |
-| `height` | `ThemeAwareValue` | - | A CSS length. Unset, the children's height. |
+| `height` | `ThemeAwareValue` | - | A CSS length. Unset, the children's height. A standalone shape needs one, or it is zero pixels tall. |
 | `width` | `ThemeAwareValue` | `100%` | A CSS length. Ignored with `circle`. |
 | `circle` | `bool` | `false` | A circle as wide as `height`. Without `height`, as wide as the children. |
 | `radius` | `ThemeAwareValue` | `sm` | Corner radius, or any CSS, e.g. `radius: "0"`. Ignored with `circle`. |

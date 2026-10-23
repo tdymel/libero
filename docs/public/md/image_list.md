@@ -46,59 +46,6 @@ fn Demo(photos: Vec<Photo>) -> Element {
 # struct Photo { url: String, alt: String, title: String, author: String }
 ```
 
-Every prop set:
-
-```rust,ignore
-ImageList {
-    cols: 3,
-    variant: "masonry",
-    gap: "sm",
-    radius: "md",
-    // Ignored by `masonry`, where a cell takes its picture's height.
-    ratio: 4.0 / 3.0,
-    items: photos,
-}
-```
-
-A bar at the top, or without its scrim:
-
-```rust,ignore
-ImageBar::new(rsx! {
-    Box { sx: sx().flex("1 1 auto").min_width("0"), "Breakfast" }
-    // A `<button>` inherits no color, and an overlay bar's color comes from
-    // the scrim.
-    ActionIcon { variant: "standard", sx: sx().color("inherit"), /* .. */ }
-})
-.position(BarPosition::Top)
-.scrim(false)
-```
-
-A cell's size, set per item:
-
-```rust,ignore
-ImageItem::new(rsx! { Image { src, alt, fit: "cover" } })
-    .span(GridSpan::Half) // width, in twelfths
-    .rows(2)              // height, in rows, `quilted` only
-```
-
-A linked cell:
-
-```rust,ignore
-ImageItem::new(rsx! { Image { src, alt: "Breakfast", fit: "cover" } })
-    .bar(ImageBar::new(caption))
-    .to(Route::Photo { id })
-```
-
-One column count per breakpoint:
-
-```rust,ignore
-ImageList {
-    // One column on a phone, two from `sm` (48rem), four from `md` (62rem).
-    cols: responsive(1).sm(2).md(4),
-    items: photos,
-}
-```
-
 ## Props
 
 ### `ImageList`

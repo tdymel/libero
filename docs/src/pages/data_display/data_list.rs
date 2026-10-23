@@ -20,7 +20,7 @@ pub fn DataListPage() -> Element {
                 props("DataList", vec![
                     prop("orientation", "Orientation")
                         .default("vertical")
-                        .doc("`horizontal` puts each description beside its term, `vertical` below it."),
+                        .doc("`horizontal` puts each description beside its term, `vertical` below it. Horizontal makes the `<dl>` a two-column grid, terms in the first column and every description in the second."),
                     prop("gap", "Responsive<ThemeAwareValue>")
                         .default(theme.data_list.size.as_str())
                         .doc("Gap between rows, or any CSS, e.g. `gap: \"0\"`, per breakpoint too. In a vertical list a description sits half that gap under its term. In a horizontal list the gap is also the space between the term and description columns."),

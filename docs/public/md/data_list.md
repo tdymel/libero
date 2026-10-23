@@ -38,16 +38,13 @@ fn Demo() -> Element {
 }
 ```
 
-`orientation: "horizontal"` makes the `<dl>` a two-column grid, with terms in
-the first column and every description in the second.
-
 ## Props
 
 ### DataList
 
 | Prop | Type | Default | Description |
 |---|---|---|---|
-| `orientation` | `Orientation` | `vertical` | `horizontal` puts each description beside its term, `vertical` below it. |
+| `orientation` | `Orientation` | `vertical` | `horizontal` puts each description beside its term, `vertical` below it. Horizontal makes the `<dl>` a two-column grid, terms in the first column and every description in the second. |
 | `gap` | `Responsive<ThemeAwareValue>` | `md` | Gap between rows, or any CSS, e.g. `gap: "0"`, per breakpoint too. In a vertical list a description sits half that gap under its term. In a horizontal list the gap is also the space between the term and description columns. |
 | `children` | `Element` | required | `DataListItem`s, or any `dt` and `dd` content. |
 

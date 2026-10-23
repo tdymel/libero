@@ -22,7 +22,7 @@ pub fn QrCodePage() -> Element {
                     prop("data", "String").default("required").doc("The payload encoded into the code."),
                     prop("robustness", "QrRobustness")
                         .default(theme.qr_code.robustness.as_str())
-                        .doc("How much damage the code survives. Higher levels make a denser code."),
+                        .doc("How much damage the code survives. `low`, `medium`, `quartile` or `high`. Higher levels make a denser code, so a printed sticker wants a high level and a screen does not."),
                     prop("aria_label", "String")
                         .default("required")
                         .doc("The code's accessible name. Say where it leads."),

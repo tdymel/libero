@@ -35,26 +35,18 @@ fn Demo() -> Element {
 }
 ```
 
-`svg` draws a [`Pictogram`](pictogram.md): any icon of a pictogram icon crate,
-or `SvgData::new(include_str!("logo.svg"))` for one of yours. `src` wins over
-`svg`, and `svg` over `children`.
-
-With `standard`, which draws no container, the svg fills the box. Every other
-variant insets it to 60% of the box, clear of the container's edges. Set
-`--lsx-icon-glyph` in `sx` to pick another share.
-
 ## Props
 
 | Prop | Type | Default | Description |
 |---|---|---|---|
 | `component` | `HtmlTag` | `span` | Element to render as. |
-| `variant` | `Variant` | `filled` | The look, shared with `Button`. An icon is not interactive, so it has no hover state. |
+| `variant` | `Variant` | `filled` | The look, shared with `Button`. An icon is not interactive, so it has no hover state. With `standard`, which draws no container, the svg fills the box; every other variant insets it to 60%, and `--lsx-icon-glyph` in `sx` picks another share. |
 | `color` | `ThemeAwareValue` | `primary` | The CSS color, which an svg drawn in `currentColor` inherits. Under `filled` a theme color also tints the background. Under a gradient, its first stop. |
 | `gradient` | `Gradient` | - | With `variant: "gradient"`: the second stop and the angle, as `("info", 90)` or `Gradient::default().to("info").deg(90)`. The first stop is `color`. Ignored by the other variants. |
 | `size` | `ThemeAwareValue` | `md` | Width and height. |
 | `radius` | `ThemeAwareValue` | `sm` | Corner radius. |
 | `src` | `String` | - | An image URL drawn as the glyph, in the icon's color, instead of `children`. Only its shape is used: its own colors are ignored. A `javascript:` or `vbscript:` URL draws nothing and warns in debug builds. |
-| `svg` | `SvgData` | - | A glyph drawn as a `Pictogram`, such as `pictogram_icons_lucide::check::outlined`, instead of `children`. `src` wins over it. |
+| `svg` | `SvgData` | - | A glyph drawn as a `Pictogram`, such as `pictogram_icons_lucide::check::outlined`, or `SvgData::new(include_str!("logo.svg"))` for your own, instead of `children`. `src` wins over it. |
 | `children` | `Element` | - | The svg. Not needed with `src` or `svg`. |
 
 Like every component, `Icon` also takes the shared props `sx`, `class`,
