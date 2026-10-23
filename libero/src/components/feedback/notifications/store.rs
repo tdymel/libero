@@ -6,7 +6,7 @@ use std::{
 
 use dioxus::{core::Runtime, prelude::*};
 
-use super::data::{Entry, NotificationId};
+use super::data::{Entry, NotificationId, NotificationPause};
 use crate::{
     components::common::FOCUSABLE_SELECTOR,
     platform::{self, ElementApi},
@@ -19,7 +19,7 @@ pub(super) static NEXT_ID: AtomicU64 = AtomicU64::new(0);
 #[derive(Clone, Copy, PartialEq)]
 pub(super) struct NotificationStore {
     pub(super) entries: Signal<Vec<Entry>>,
-    /// Hover or focus on any notification pauses every timer.
+    /// Hover or focus pauses timers, as the host's `pause_scope` says.
     pub(super) hovered: Signal<Option<NotificationId>>,
     pub(super) focused: Signal<Option<NotificationId>>,
     /// Each stack's ids in document order, as the host last drew them.
@@ -77,8 +77,13 @@ impl NotificationStore {
         (self.owner != ScopeId::ROOT).then(|| format!("[data-notifications-host=\"{}\"]", self.id))
     }
 
-    pub(super) fn paused(&self) -> bool {
-        self.hovered.read().is_some() || self.focused.read().is_some()
+    /// Whether `id`'s timer waits: on any hover or focus, or only on its own.
+    pub(super) fn paused(&self, id: NotificationId, scope: NotificationPause) -> bool {
+        let (hovered, focused) = (*self.hovered.read(), *self.focused.read());
+        match scope {
+            NotificationPause::All => hovered.is_some() || focused.is_some(),
+            NotificationPause::Hovered => hovered == Some(id) || focused == Some(id),
+        }
     }
 
     /// Starts the exit of one that is showing, and drops one that is queued.

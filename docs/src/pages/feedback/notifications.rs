@@ -8,7 +8,7 @@ use dioxus::prelude::*;
 use libero::{
     components::{
         Box, Button, Code, Flex, Input, NotificationData, NotificationLive, NotificationOptions,
-        Notifications, SnackbarData, Text, Variant, snackbar, use_notifications,
+        NotificationPause, Notifications, SnackbarData, Text, Variant, snackbar, use_notifications,
         use_notifications_with,
     },
     platform::{TimerSubscription, timer},
@@ -251,6 +251,12 @@ pub fn NotificationsPage() -> Element {
                     prop("hotkey", "Key")
                         .default("F8")
                         .doc("Focuses the newest notification from anywhere, pressed without Ctrl, Alt, Meta or Shift."),
+                    prop("z_index", "ThemeAwareValue")
+                        .default("the notification layer")
+                        .doc("The stacks' stacking order, for notifications hidden by another layer."),
+                    prop("pause_scope", "NotificationPause")
+                        .default("All")
+                        .doc("Which timers hover or focus on a notification pauses: `All` of the host's, or only the `Hovered` one. A paused timer starts over when the pointer and focus leave."),
                     prop("children", "Element")
                         .doc("Rendered inside a contained host."),
                 ]),
@@ -361,6 +367,14 @@ pub fn NotificationsPage() -> Element {
                         .default("true")
                         .hidden_when(|values| !closable_shown(values)),
                     Control::switch("contained"),
+                    Control::toggle("pause_scope", ["all", "hovered"])
+                        .labels(["All", "Hovered"])
+                        .default("all")
+                        .hidden_when(|values| values.str("contained") != "true")
+                        .code(|_, values| match values.str("pause_scope").as_str() {
+                            "hovered" => vec!["pause_scope: NotificationPause::Hovered".to_string()],
+                            _ => vec![],
+                        }),
                 ],
                 render: move |values: DemoValues| {
                     let contained = values.str("contained") == "true";
@@ -385,6 +399,10 @@ pub fn NotificationsPage() -> Element {
                                     placement: values.str("placement"),
                                     limit: values.str("limit").parse::<usize>().ok(),
                                     auto_close: auto_close_of(&values.str("auto_close")),
+                                    pause_scope: match values.str("pause_scope").as_str() {
+                                        "hovered" => NotificationPause::Hovered,
+                                        _ => NotificationPause::All,
+                                    },
                                     {examples}
                                 }
                             } else {
@@ -423,7 +441,9 @@ pub fn NotificationsPage() -> Element {
                     "Each stack shows up to "
                     Code { source: "limit" }
                     " at once, and the rest wait. Hovering or focusing one pauses every "
-                    "timer, and each starts over when you leave. A "
+                    "timer, and each starts over when you leave; "
+                    Code { source: "pause_scope: NotificationPause::Hovered" }
+                    " pauses only that one. A "
                     Code { source: "contained" }
                     " host draws its stacks in its own box and keeps a queue for the handles "
                     "below it."

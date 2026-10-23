@@ -1,6 +1,6 @@
 # Skipped e2e scenarios
 
-Scenarios: 664
+Scenarios: 667
 
 Generated from the `scenario!` skips in `e2e/tests/all` by `cargo test -p e2e --lib skips`; edit the skip, not this file. A reason starting `upstream:` waits on Dioxus, Blitz, wry or the engine (revisit on their update, todo 3362), a number names the todo that removes it.
 
@@ -105,6 +105,7 @@ The performance scenarios (units `perf`, `table_perf`) are no skips but run on r
 | `hover_card::a_scrolling_text_card_takes_a_tab_stop_that_scrolls_it` | android | 958: the Tab bridge reads the card's focusables inside a handler |
 | `hover_card::a_scrolling_text_card_takes_a_tab_stop_that_scrolls_it` | desktop | 958: the Tab bridge reads the card's focusables inside a handler |
 | `hover_card::a_scrolling_text_card_takes_a_tab_stop_that_scrolls_it` | ios | 958: the Tab bridge reads the card's focusables inside a handler |
+| `hover_card::a_tap_outside_closes_a_long_press_card` | desktop | 1126: no touch input under Xvfb |
 | `hover_card::escape_closes_a_pointer_opened_card_with_focus_elsewhere` | ios | a touch screen has no hover |
 | `hover_card::escape_closes_a_select_list_in_the_card_before_the_card` | ios | a touch screen has no hover |
 | `hover_card::escape_on_the_trigger_closes_a_pointer_opened_card` | ios | a touch screen has no hover |
@@ -383,6 +384,7 @@ The performance scenarios (units `perf`, `table_perf`) are no skips but run on r
 | `tooltip::the_pointer_can_rest_on_the_bubble` | android | 996: no hover on touch; a long press opens it instead |
 | `tooltip::the_pointer_can_rest_on_the_bubble` | ios | a touch screen has no hover |
 | `tooltip::the_pointer_can_rest_on_the_bubble` | web | 1760: hover_shows_the_bubble_and_the_pointer_can_cross_the_gap rests on it |
+| `tooltip::the_touch_delays_set_the_long_press_and_the_linger` | desktop | 1126: no touch input under Xvfb |
 | `tour::android_back_ends_a_tour` | all but android | 1275: no Back key off Android |
 | `tour::arrow_right_on_the_last_step_does_not_finish_the_tour` | ios | upstream: WebKit does not focus a clicked button |
 | `tour::arrow_right_on_the_last_step_does_not_finish_the_tour` | macos desktop | upstream: WebKit does not focus a clicked button |

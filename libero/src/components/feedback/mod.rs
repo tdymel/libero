@@ -24,8 +24,8 @@ pub use loader::{Loader, LoaderProps, LoaderVariant};
 #[cfg(feature = "notifications")]
 pub use notifications::{
     NotificationData, NotificationHandle, NotificationId, NotificationLive, NotificationOptions,
-    NotificationScope, Notifications, NotificationsProps, SnackbarAction, SnackbarData, snackbar,
-    use_notifications, use_notifications_with,
+    NotificationPause, NotificationScope, Notifications, NotificationsProps, SnackbarAction,
+    SnackbarData, snackbar, use_notifications, use_notifications_with,
 };
 #[cfg(feature = "progress-bar")]
 pub use progress_bar::{ProgressBar, ProgressBarPart, ProgressBarProps, ProgressBarSegment};

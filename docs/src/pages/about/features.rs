@@ -176,6 +176,8 @@ pub(crate) const FEATURES: &[Feature] = &[
     feature("menu", "overlay", "Menu, use_menu", &["anchor", "kbd", "divider", "paper", "use-popover", "use-timers"], false, &["/overlay/menu"]),
     feature("modal", "overlay", "Modal, use_modal", &["overlay-backdrop", "focus-trap", "use-back"], true, &["/overlay/modal"]),
     feature("overlay-backdrop", "overlay", "Overlay", &["box"], true, &["/overlay/overlay"]),
+    // After `overlay-backdrop`: the page's feature line names the first that lists it.
+    feature("loading-overlay", "overlay", "LoadingOverlay", &["overlay-backdrop", "loader", "visually-hidden"], false, &["/overlay/overlay"]),
     feature("shortcut-help", "overlay", "ShortcutHelp", &["dialog", "kbd", "use-element", "use-hotkeys"], false, &["/overlay/shortcut-help"]),
     feature("spotlight", "overlay", "use_spotlight", &["combobox", "dialog", "modal", "kbd", "loader"], false, &["/overlay/spotlight"]),
     feature("tooltip", "overlay", "Tooltip", &["use-timers", "box", "use-popover"], true, &["/overlay/tooltip"]),

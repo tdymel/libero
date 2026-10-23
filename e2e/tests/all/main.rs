@@ -99,6 +99,7 @@ mod negative;
 mod nested_provider;
 mod notifications;
 mod number_field;
+mod overlay;
 mod pagination;
 mod paper;
 mod perf;

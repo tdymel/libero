@@ -7,7 +7,9 @@ mod snackbar;
 mod stack;
 mod store;
 
-pub use data::{NotificationData, NotificationId, NotificationLive, NotificationOptions};
+pub use data::{
+    NotificationData, NotificationId, NotificationLive, NotificationOptions, NotificationPause,
+};
 pub use handle::{
     NotificationHandle, NotificationScope, use_notifications, use_notifications_with,
 };

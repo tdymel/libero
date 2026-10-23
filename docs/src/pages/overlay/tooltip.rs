@@ -56,6 +56,12 @@ pub fn TooltipPage() -> Element {
                 prop("close_delay", "u32")
                     .default(theme.tooltip.close_delay.to_string())
                     .doc("Milliseconds the bubble stays after the pointer leaves. While it counts down, the bubble carries `data-closing`."),
+                prop("touch_open_delay", "u32")
+                    .default("500")
+                    .doc("Milliseconds a touch must hold the trigger before the bubble appears. A shorter tap shows nothing."),
+                prop("touch_close_delay", "u32")
+                    .default("1500")
+                    .doc("Milliseconds the bubble stays after the touch lifts."),
                 prop("open", "bool")
                     .default("unset")
                     .doc("Forces the bubble open or closed. Unset, hover and focus decide. A bubble forced open ignores Escape."),
@@ -72,7 +78,7 @@ pub fn TooltipPage() -> Element {
                 .key(["Escape"], "Hides the bubble until the pointer or focus comes back.")
                 .handles([
                     "Keyboard focus anywhere inside `Tooltip` shows the bubble, a click does not.",
-                    "On touch, a tap shows nothing: a 500 ms hold shows the bubble, and it stays 1.5 s after the release.",
+                    "On touch, a tap shows nothing: a 500 ms hold shows the bubble, and it stays 1.5 s after the release. `touch_open_delay` and `touch_close_delay` change both times.",
                 ])
                 .must([
                     "Give the bubble an id with `label_id` and point your trigger's `aria-describedby` at it, so a screen reader reads the label. The demo's Save button does.",
@@ -114,6 +120,8 @@ pub fn TooltipPage() -> Element {
                     Control::slider("gap", ["0", "xs", "sm", "md", "lg", "xl", "xxl"]).default(theme.tooltip.gap.as_str()),
                     Control::delay("open_delay", ["auto", "200", "500", "1000"]),
                     Control::delay("close_delay", ["auto", "200", "500", "1000"]),
+                    Control::delay("touch_open_delay", ["auto", "0", "250", "1000"]),
+                    Control::delay("touch_close_delay", ["auto", "500", "3000", "5000"]),
                     // `Some(false)` pins it shut, which hover cannot override.
                     Control::toggle("open", ["auto", "false", "true"])
                         .labels(["Auto", "Off", "On"])
@@ -144,6 +152,8 @@ pub fn TooltipPage() -> Element {
                             gap: values.str("gap"),
                             open_delay: delay_of(&values.str("open_delay")),
                             close_delay: delay_of(&values.str("close_delay")),
+                            touch_open_delay: delay_of(&values.str("touch_open_delay")),
+                            touch_close_delay: delay_of(&values.str("touch_close_delay")),
                             open: match values.str("open").as_str() {
                                 "auto" => None,
                                 open => Some(open == "true"),

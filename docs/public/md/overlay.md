@@ -9,7 +9,8 @@ Description: A layer that dims and blurs the page behind it, with centred conten
 
 Dims and blurs whatever is behind it. A [modal](modal.md) renders one behind its
 content. There is no `open` prop, so render it conditionally. Its children are
-centred, which makes it a loading screen as well as a backdrop.
+centred, which makes it a loading screen as well as a backdrop. `contained`
+keeps it inside a box, and `LoadingOverlay` shows one box loading.
 
 ## Usage
 
@@ -48,11 +49,30 @@ fn Demo() -> Element {
 }
 ```
 
-## Inside a box
+## One box loading
 
-It covers the viewport. To keep it inside a box of your own, give that box a
-`position` and a `z-index`, and the overlay `position: absolute`. Without the
-`z-index`, the overlay still stacks against the whole page.
+`LoadingOverlay` dims its children under a `Loader` while `loading`, makes them
+`inert` and its box `aria-busy`, and says "Loading" once. Its feature is
+`loading-overlay`, off by default.
+
+```rust
+use dioxus::prelude::*;
+use libero::components::{Button, LoadingOverlay, Paper, Text};
+
+#[component]
+fn Demo() -> Element {
+    let saving = use_signal(|| true);
+
+    rsx! {
+        LoadingOverlay { loading: saving(),
+            Paper {
+                Text { "Ada Lovelace" }
+                Button { "Edit profile" }
+            }
+        }
+    }
+}
+```
 
 ## Props
 
@@ -61,13 +81,27 @@ It covers the viewport. To keep it inside a box of your own, give that box a
 | `z_index` | `ThemeAwareValue` | `300` | Stacking order of the layer. |
 | `opacity` | `ThemeAwareValue` | `0.6` | How dark the dim is. |
 | `blur` | `ThemeAwareValue` | `none` | How much the content behind is blurred. A bare number becomes `px`. |
+| `contained` | `bool` | `false` | Covers its nearest positioned ancestor instead of the viewport. Give that box `position: relative` and a `z-index`, or the layer still stacks against the whole page. |
 | `onclick` | `EventHandler<MouseEvent>` | - | Called on a click anywhere on the overlay, such as a backdrop click. |
 | `children` | `Element` | - | Content centred on the overlay, such as a loading spinner. |
 
-Like every component, `Overlay` also takes the shared props `sx`, `class`,
-`style`, `states`, and any extra HTML attributes.
+### `LoadingOverlay`
+
+| Prop | Type | Default | Description |
+|---|---|---|---|
+| `loading` | `bool` | `false` | Covers the children with a dim and a `Loader`, makes them `inert` and the box `aria-busy`, and says "Loading" once. |
+| `children` | `Element` | required | The content that loads. `sx`, `class` and extra attributes land on the box around it. |
+
+Like every component, `Overlay` and `LoadingOverlay` also take the shared props
+`sx`, `class`, `style`, `states`, and any extra HTML attributes.
 
 ## Accessibility
+
+### Libero handles
+
+- `LoadingOverlay` marks its box `aria-busy` and its children `inert` while
+  loading, so Tab and a screen reader skip the covered content, and a status
+  region outside the box says "Loading".
 
 ### You must
 
@@ -76,12 +110,15 @@ Like every component, `Overlay` also takes the shared props `sx`, `class`,
   page from a screen reader.
 - Give an overlay you close on a click a keyboard close as well, such as a
   `Button` inside it: a backdrop click alone leaves keyboard users no way out.
+- Move focus out of a `LoadingOverlay`'s children before it starts loading, or
+  keep it for loads the user did not start there: focus inside `inert` content
+  drops to the page.
 
 ### Example
 
-A loading screen, `Overlay` over a form while it saves: it only dims the page,
-so Tab and a screen reader still reach the form. For a modal backdrop, open a
-`Dialog` with `use_modal` instead.
+A profile card saving, `LoadingOverlay { loading: saving(), .. }` around it:
+the card dims under a spinner, Tab skips its buttons, and a screen reader hears
+"Loading" once.
 
 ## Theme defaults
 
@@ -101,4 +138,4 @@ the theme's `z_index` scale.
 
 ## Data attributes
 
-None of its own. The `states` prop renders as `data-state`.
+`LoadingOverlay`'s overlay carries `data-slot="overlay"`. Otherwise none of their own. The `states` prop renders as `data-state`.

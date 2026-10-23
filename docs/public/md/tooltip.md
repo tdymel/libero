@@ -64,6 +64,8 @@ fn Demo() -> Element {
 | `z_index` | `ThemeAwareValue` | the popover layer | Overrides the stacking level, for a bubble hidden by another overlay. |
 | `open_delay` | `u32` | `0` | Milliseconds the pointer must rest before the bubble appears. |
 | `close_delay` | `u32` | `0` | Milliseconds the bubble stays after the pointer leaves. While it counts down, the bubble carries `data-closing`. |
+| `touch_open_delay` | `u32` | `500` | Milliseconds a touch must hold the trigger before the bubble appears. A shorter tap shows nothing. |
+| `touch_close_delay` | `u32` | `1500` | Milliseconds the bubble stays after the touch lifts. |
 | `open` | `bool` | unset | Forces the bubble open or closed. Unset, hover and focus decide. A bubble forced open ignores Escape. |
 | `disabled` | `bool` | `false` | No bubble. The trigger keeps its wrapper, so enabling or disabling does not remount it or drop its focus. |
 | `label_id` | `String` | - | The bubble's `id`, for the trigger's `aria-describedby`. It exists while the bubble is closed, too, except while `disabled`: then nothing describes the trigger. |
@@ -86,7 +88,8 @@ Like every component, `Tooltip` also takes the shared props `sx`, `class`,
 
 - Keyboard focus anywhere inside `Tooltip` shows the bubble, a click does not.
 - On touch, a tap shows nothing: a 500 ms hold shows the bubble, and it stays
-  1.5 s after the release.
+  1.5 s after the release. `touch_open_delay` and `touch_close_delay` change
+  both times.
 
 ### You must
 

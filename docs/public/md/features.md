@@ -45,7 +45,7 @@ every component group, `all-hooks` every hook.
 | `form` | autocomplete, cascader, checkbox, checkbox-group, chip, color, combobox, date-field, date-picker, fieldset, file-field, form-root, image-cropper, native-select, number-field, password-field, phone-field, pin-field, radio, radio-group, rating, rich-text-editor, segmented-control, select, slider, switch, switch-group, tags-field, text-field, textarea |
 | `layout` | aspect-ratio, box, center, collapse, container, divider, flex, float, grid, header, paper, scroll-area, scroller, sidebar, splitter, transition |
 | `navigation` | anchor, burger, menubar, nav-link, navigation-bar, pagination, stepper, tabs, tree |
-| `overlay` | dialog, drawer, floating-window, hover-card, lightbox, menu, modal, overlay-backdrop, shortcut-help, spotlight, tooltip, tour |
+| `overlay` | dialog, drawer, floating-window, hover-card, lightbox, loading-overlay, menu, modal, overlay-backdrop, shortcut-help, spotlight, tooltip, tour |
 | `typography` | blockquote, code, kbd, mark, text, title |
 | `all-hooks` | use-accessibility, use-back, use-clipboard, use-color-scheme, use-countdown, use-debounce, use-direction, use-drag, use-element, use-focus-return, use-fullscreen, use-geolocation, use-history, use-hotkeys, use-icon, use-id, use-indexed-db, use-intersection, use-long-press, use-media, use-media-query, use-popover, use-push-subscription, use-share, use-local-storage, use-swipe, use-system-notification, use-timers, use-user-media |
 
@@ -158,6 +158,7 @@ it is on (Notes).
 | `menu` | Menu, use_menu | anchor, kbd, divider, paper, use-popover, use-timers | off |  |
 | `modal` | Modal, use_modal | overlay-backdrop, focus-trap, use-back | on |  |
 | `overlay-backdrop` | Overlay | box | on |  |
+| `loading-overlay` | LoadingOverlay | overlay-backdrop, loader, visually-hidden | off |  |
 | `shortcut-help` | ShortcutHelp | dialog, kbd | on |  |
 | `spotlight` | use_spotlight | combobox, dialog, modal, kbd, loader | off |  |
 | `tooltip` | Tooltip | use-timers, box, use-popover | on |  |

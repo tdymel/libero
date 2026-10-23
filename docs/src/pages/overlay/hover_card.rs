@@ -84,7 +84,8 @@ pub fn HoverCardPage() -> Element {
                     "Focusing the trigger opens the card. A click does not keep it open.",
                     "A card of text taller than the room beside the trigger is a tab stop, so Tab enters it and the arrow keys scroll it. A card with a link or button is not: the controls take the focus.",
                     "A trigger with nothing focusable and an unnamed card both warn in the console, in debug builds only.",
-                    "On touch, a tap is no hover: a long press opens the card, as a `Tooltip`. It closes a moment after the release unless a tap lands in it, and then a tap elsewhere closes it.",
+                    "On touch, a tap is no hover: a long press opens the card, as a `Tooltip`. It closes a moment after the release unless a tap lands in it, and a tap elsewhere closes it at once.",
+                    "A press outside the trigger and the card closes it, whether hover, focus or a long press opened it. Escape closes it too.",
                 ])
                 .must([
                     "Keep it to extras the trigger's own target already offers: a screen reader does not announce a hover card, a preview for sighted users. Content a user needs goes in a popover (`use_popover`) that a click opens.",

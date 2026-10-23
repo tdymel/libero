@@ -2,7 +2,7 @@ use dioxus::prelude::*;
 
 use crate::{
     components::{
-        common::{HtmlTag, Input, Variables, base_props, variables},
+        common::{HtmlTag, Input, States, Variables, base_props, variables},
         layout::use_box,
     },
     sx::{StaticSx, ThemeAwareValue, sx},
@@ -18,7 +18,10 @@ static OVERLAY_BASE_SX: StaticSx = StaticSx::new(|| {
         .z_index(Z_INDEX_OVERLAY.overridable())
         .background(format!("rgba(0, 0, 0, {})", OVERLAY_OPACITY.overridable()))
         .backdrop_filter(OVERLAY_BLUR.overridable())
+        .when(CONTAINED_STATE, sx().position("absolute"))
 });
+
+const CONTAINED_STATE: &str = "contained";
 
 base_props! {
     pub struct OverlayProps {
@@ -30,6 +33,10 @@ base_props! {
         /// Backdrop blur; a bare number is `px`.
         #[props(default, into)]
         blur: Input<ThemeAwareValue>,
+        /// Covers its nearest positioned ancestor, not the viewport. Give that box
+        /// `position: relative` and a `z-index`, or the layer stacks against the page.
+        #[props(default)]
+        contained: bool,
         #[props(default)]
         onclick: Option<EventHandler<MouseEvent>>,
         children: Option<Element>,
@@ -45,7 +52,8 @@ fn px_value(value: &ThemeAwareValue) -> Option<String> {
 }
 
 /// Dims and blurs what's behind it. Render it conditionally: there is no `open`.
-/// A click is no keyboard close, so give a closable one a button inside.
+/// A click is no keyboard close, so give a closable one a button inside. To show one
+/// box loading, use `LoadingOverlay`.
 ///
 /// ```
 /// # use dioxus::prelude::*;
@@ -76,12 +84,17 @@ pub fn Overlay(props: OverlayProps) -> Element {
                 .map(|blur| format!("blur({blur})")),
         )
         .into();
+    let states: Input<States> = props
+        .states
+        .unwrap_or_default()
+        .with(CONTAINED_STATE, props.contained)
+        .into();
 
     use_box()
         .framework_sx(&OVERLAY_BASE_SX)
         .class(&props.class)
         .sx(&props.sx)
-        .states(&props.states)
+        .states(&states)
         .variables(&variables)
         .prepare()
         .event("onclick", props.onclick)

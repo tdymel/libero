@@ -221,18 +221,58 @@ pub fn HoverCard(props: HoverCardProps) -> Element {
     // The last press on the trigger was a touch, until the pointer leaves: as `Tooltip`,
     // a tap is no hover and a long press opens (2448).
     let touch = use_hook(|| Rc::new(Cell::new(false)));
+    // A long press opened it and focused the trigger, so an outside tap, which blurs,
+    // closes it: a touch has no pointer to leave (todo 4002).
+    let touch_open = use_hook(|| Rc::new(Cell::new(false)));
+    // A tap on the card's own text blurs too, and must not close it.
+    let card_press = use_hook(|| Rc::new(Cell::new(false)));
+    let (pressed_by_touch, opened_by_touch, ours) =
+        (touch.clone(), touch_open.clone(), returning.clone());
+    use_effect(use_reactive!(|(open,)| {
+        let (touch, touch_open) = (&pressed_by_touch, &opened_by_touch);
+        if !open {
+            touch_open.set(false);
+            return;
+        }
+        if !touch.get() || touch_open.replace(true) {
+            return;
+        }
+        if anchor.query_selector(":focus").is_err()
+            && let Ok(trigger) = anchor.query_selector(FOCUSABLE_SELECTOR)
+        {
+            // Ours, as Escape's return: it must not hold the card open as keyboard focus.
+            ours.set(true);
+            if trigger.focus().is_err() {
+                ours.set(false);
+            }
+        }
+    }));
+    let left = {
+        let (touch_open, card_press) = (touch_open.clone(), card_press.clone());
+        move || {
+            let mut focused = focused;
+            focused.set(false);
+            if touch_open.get() && !card_press.replace(false) {
+                hovered.set(false);
+            }
+        }
+    };
 
     // Focus leaving is decided a task later: a `focusin` in between bumps this,
     // meaning focus only moved between trigger and card.
     let moves = use_signal(|| 0u64);
-    let focus_left = move || {
-        let seen = *moves.peek();
-        spawn(async move {
-            next_task().await;
-            if *moves.peek() == seen {
-                focused.set(false);
-            }
-        });
+    let focus_left = {
+        let left = left.clone();
+        move || {
+            let seen = *moves.peek();
+            let left = left.clone();
+            spawn(async move {
+                next_task().await;
+                if *moves.peek() == seen {
+                    left();
+                }
+            });
+        }
     };
     // A card of text that scrolls is a tab stop, so the keyboard can read it (todo 2445).
     let text_stop_handle = use_element();
@@ -242,6 +282,7 @@ pub fn HoverCard(props: HoverCardProps) -> Element {
     // Element 0 is the trigger, 1 the card.
     let focus = use_focus_within(move || vec![anchor.mounted(), floating.mounted()], {
         let (pressed, returning) = (pressed.clone(), returning.clone());
+        let card_press = card_press.clone();
         move |change| {
             let (mut focused, mut moves) = (focused, moves);
             match (change.element, change.within) {
@@ -258,6 +299,7 @@ pub fn HoverCard(props: HoverCardProps) -> Element {
                 }
                 (element, true) => {
                     moves += 1;
+                    card_press.set(false);
                     // A press on the text stop is the pointer's: hover alone holds the card.
                     let pressed_stop = text_stop && change.focus_visible() == Some(false);
                     if element != 1 || !pressed_stop {
@@ -270,7 +312,7 @@ pub fn HoverCard(props: HoverCardProps) -> Element {
                     }
                     match change.in_group {
                         Some(true) => {}
-                        Some(false) => focused.set(false),
+                        Some(false) => left(),
                         None => focus_left(),
                     }
                 }
@@ -375,6 +417,10 @@ pub fn HoverCard(props: HoverCardProps) -> Element {
             .attr("role", "dialog")
             .attr("data-closing", hovered.closing())
             .event("onmouseenter", move |_: MouseEvent| hovered.hover(true, 0))
+            .event("onpointerdown", {
+                let card_press = card_press.clone();
+                move |_: PointerEvent| card_press.set(true)
+            })
             .event("onmouseleave", move |_: MouseEvent| {
                 hovered.hover(false, close_delay)
             })

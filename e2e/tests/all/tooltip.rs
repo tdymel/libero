@@ -179,6 +179,36 @@ e2e::scenario!(
     long_press_opens,
     desktop: skip("1126: no touch input under Xvfb")
 );
+/// Todo 4001: `touch_open_delay` and `touch_close_delay` replace the long press and the linger.
+async fn touch_delays_apply<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    const OPEN_MS: u32 = 321;
+    const LINGER: u32 = 2345;
+    ensure!(
+        d.hold_timers(&[OPEN_MS, LINGER]).await?,
+        "the driver holds no timers"
+    );
+    d.touch_down(TRIGGER).await?;
+    eventually(d, "a held touch to arm its own open delay", async |d| {
+        Ok(d.armed(OPEN_MS).await? == 1)
+    })
+    .await?;
+    d.fire_timers(OPEN_MS).await?;
+    is_open(d, true, "the touch open delay").await?;
+    d.touch_up(TRIGGER).await?;
+    eventually(d, "the release to arm its own close delay", async |d| {
+        Ok(d.armed(LINGER).await? == 1)
+    })
+    .await?;
+    d.fire_timers(LINGER).await?;
+    is_open(d, false, "the touch close delay").await
+}
+
+e2e::scenario!(
+    the_touch_delays_set_the_long_press_and_the_linger,
+    "/tooltip-touch",
+    touch_delays_apply,
+    desktop: skip("1126: no touch input under Xvfb")
+);
 /// Todo 3237: the long press that opens the bubble leaves the browser's link menu shut.
 async fn long_press_keeps_the_link_menu_shut<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
     // The browsers' own long press fires `contextmenu` where the driver's touch does not.

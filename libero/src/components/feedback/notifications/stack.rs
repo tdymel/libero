@@ -7,9 +7,7 @@ use crate::{
         layout::{Box, Float},
     },
     sx::{StaticSx, sx},
-    theme::{
-        NOTIFICATION_GAP, NOTIFICATION_OFFSET, NOTIFICATION_WIDTH, Placement, Z_INDEX_NOTIFICATION,
-    },
+    theme::{NOTIFICATION_GAP, NOTIFICATION_OFFSET, NOTIFICATION_WIDTH, Placement},
 };
 
 /// One stack. It lets the pointer through: only its notifications take clicks.
@@ -46,6 +44,7 @@ static LIST_SX: StaticSx = StaticSx::new(|| {
 pub(super) struct StackProps {
     placement: Placement,
     fixed: bool,
+    z_index: String,
     assertive: Vec<ItemProps>,
     polite: Vec<ItemProps>,
 }
@@ -61,7 +60,7 @@ pub(super) fn NotificationStack(props: StackProps) -> Element {
             placement: Input::Value(placement),
             offset_x: edge_offset(placement, Axis::Horizontal),
             offset_y: edge_offset(placement, Axis::Vertical),
-            z_index: Z_INDEX_NOTIFICATION.value(),
+            z_index: props.z_index,
             sx: &STACK_SX,
             for (live, items) in regions {
                 Box {
@@ -85,6 +84,7 @@ pub(super) fn NotificationStack(props: StackProps) -> Element {
                                     leaving: item.leaving,
                                     exit_ms: item.exit_ms,
                                     live: item.live,
+                                    pause_scope: item.pause_scope,
                                 }
                             }
                         }

@@ -84,8 +84,10 @@ Like every component, `HoverCard` also takes the shared props `sx`, `class`,
 - A trigger with nothing focusable and an unnamed card both warn in the
   console, in debug builds only.
 - On touch, a tap is no hover: a long press opens the card, as a `Tooltip`. It
-  closes a moment after the release unless a tap lands in it, and then a tap
-  elsewhere closes it.
+  closes a moment after the release unless a tap lands in it, and a tap
+  elsewhere closes it at once.
+- A press outside the trigger and the card closes it, whether hover, focus or a
+  long press opened it. Escape closes it too.
 
 ### You must
 

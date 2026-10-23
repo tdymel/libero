@@ -159,7 +159,8 @@ is such a template, ready made.
 ## Stacks and timers
 
 Each stack shows up to `limit` at once, and the rest wait. Hovering or focusing
-one pauses every timer, and each starts over when you leave. A `contained` host
+one pauses every timer, and each starts over when you leave; `pause_scope:
+NotificationPause::Hovered` pauses only that one. A `contained` host
 draws its stacks in its own box and keeps a queue for the handles below it.
 
 ## API
@@ -243,6 +244,8 @@ The host.
 | `auto_close` | `AutoClose` | `After(6000)` | When a notification closes, unless it says otherwise. |
 | `contained` | `bool` | `false` | Draws the stacks in this host's own box and gives the handles below it their own queue. Read once, at mount. |
 | `hotkey` | `Key` | `F8` | Focuses the newest notification from anywhere, pressed without Ctrl, Alt, Meta or Shift. |
+| `z_index` | `ThemeAwareValue` | the notification layer | The stacks' stacking order, for notifications hidden by another layer. |
+| `pause_scope` | `NotificationPause` | `All` | Which timers hover or focus on a notification pauses: `All` of the host's, or only the `Hovered` one. A paused timer starts over when the pointer and focus leave. |
 | `children` | `Element` | - | Rendered inside a contained host. |
 
 ## Accessibility

@@ -4,7 +4,7 @@ use dioxus::prelude::*;
 use libero::{
     components::{
         Button, Flex, Input, NotificationData, NotificationLive, NotificationOptions,
-        NotificationScope, Notifications, Paper, SnackbarData, Text, snackbar, use_notifications,
+        NotificationPause, NotificationScope, Notifications, Paper, SnackbarData, Text, snackbar, use_notifications,
         use_notifications_with,
     },
     theme::{AutoClose, Placement},
@@ -31,7 +31,38 @@ pub const ROUTES: Routes = &[
         "/notifications-snackbar",
         || rsx! { NotificationsSnackbarPage {} },
     ),
+    (
+        "/notifications-pause-hovered",
+        || rsx! { NotificationsPauseHoveredPage {} },
+    ),
 ];
+
+/// A host that pauses only the hovered notification, on its own layer (todo 4000).
+/// `#notify-timed` shows two that close after [`TIMED_AUTO_CLOSE_MS`].
+#[component]
+fn NotificationsPauseHoveredPage() -> Element {
+    let notify = use_notifications();
+
+    rsx! {
+        Notifications { pause_scope: NotificationPause::Hovered, z_index: 1234 }
+        Button {
+            id: "notify-timed",
+            onclick: move |_| {
+                for message in ["First draft saved", "Second draft saved"] {
+                    notify
+                        .show_with(
+                            message,
+                            NotificationOptions {
+                                auto_close: Some(AutoClose::After(TIMED_AUTO_CLOSE_MS)),
+                                ..Default::default()
+                            },
+                        );
+                }
+            },
+            "Notify twice"
+        }
+    }
+}
 
 /// A snackbar whose Undo counts its presses in `#undone`. It stays until closed.
 #[component]

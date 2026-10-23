@@ -234,6 +234,52 @@ e2e::scenario!(
     long_press_opens,
     desktop: skip("1126: no touch input under Xvfb")
 );
+/// Todo 4002: a tap outside closes a long-press card at once, not after the linger; a tap on
+/// a control in the card keeps it.
+async fn an_outside_tap_closes<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    /// `Tooltip`'s linger after the release, which `HoverCard` shares.
+    const LINGER_MS: u32 = 1500;
+    d.touch_down(TRIGGER).await?;
+    shown(d, CARD, true, "a long press").await?;
+    ensure!(
+        d.hold_timers(&[LINGER_MS]).await?,
+        "the driver holds no timers"
+    );
+    d.touch_up(TRIGGER).await?;
+    eventually(d, "the release to arm the linger", async |d| {
+        Ok(d.armed(LINGER_MS).await? == 1)
+    })
+    .await?;
+    d.touch_down(CARD_FIRST).await?;
+    d.touch_up(CARD_FIRST).await?;
+    d.settle().await?;
+    ensure!(d.exists(CARD).await?, "a tap in the card closed it");
+    // Above the trigger: the card opens below it, over `#after`.
+    d.touch_down(BEFORE).await?;
+    d.touch_up(BEFORE).await?;
+    shown(d, CARD, false, "a tap outside").await
+}
+
+/// Todo 4002: a press on nothing outside closes a card the keyboard opened.
+async fn an_outside_press_closes<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    d.focus(BEFORE).await?;
+    d.press(keyboard::TAB).await?;
+    shown(d, CARD, true, "Tab to the trigger").await?;
+    d.click_at(AWAY.x, AWAY.y).await?;
+    shown(d, CARD, false, "a press outside").await
+}
+
+e2e::scenario!(
+    a_press_outside_closes_a_keyboard_card,
+    "/hover-card",
+    an_outside_press_closes
+);
+e2e::scenario!(
+    a_tap_outside_closes_a_long_press_card,
+    "/hover-card",
+    an_outside_tap_closes,
+    desktop: skip("1126: no touch input under Xvfb")
+);
 /// Todo 2750: the long press that opens the card leaves the browser's link menu shut, which
 /// would cover the card.
 async fn long_press_keeps_the_link_menu_shut<D: Driver>(d: &mut D, _route: &str) -> Result<()> {

@@ -152,6 +152,12 @@ base_props! {
         open_delay: Option<u32>,
         #[props(default)]
         close_delay: Option<u32>,
+        /// Milliseconds a touch must hold before the bubble appears. Unset, 500.
+        #[props(default)]
+        touch_open_delay: Option<u32>,
+        /// Milliseconds the bubble stays after a touch lifts. Unset, 1500.
+        #[props(default)]
+        touch_close_delay: Option<u32>,
         /// Forces the bubble open or closed; `None` leaves it to hover and focus.
         #[props(default)]
         open: Option<bool>,
@@ -266,6 +272,8 @@ pub fn Tooltip(props: TooltipProps) -> Element {
 
     let open_delay = props.open_delay.unwrap_or(theme.tooltip.open_delay);
     let close_delay = props.close_delay.unwrap_or(theme.tooltip.close_delay);
+    let touch_open_delay = props.touch_open_delay.unwrap_or(LONG_PRESS);
+    let touch_close_delay = props.touch_close_delay.unwrap_or(TOUCH_LINGER);
     // Disabled keeps the wrapper and its listeners, so the trigger is not remounted.
     let open = !disabled && props.open.unwrap_or(hover.get() || focused());
     let dismissible = props.open.is_none();
@@ -311,7 +319,7 @@ pub fn Tooltip(props: TooltipProps) -> Element {
             let is_touch = event.data().pointer_type() == "touch";
             press_touch.set(is_touch);
             if is_touch && !owned && !disabled {
-                hover.hover(true, LONG_PRESS);
+                hover.hover(true, touch_open_delay);
             }
         })
         // The long press opens the bubble: a link's menu would cover it (3237).
@@ -323,12 +331,12 @@ pub fn Tooltip(props: TooltipProps) -> Element {
         // Released before the long press: nothing. After: it lingers, then closes.
         .event("onpointerup", move |event: PointerEvent| {
             if event.data().pointer_type() == "touch" && !owned {
-                hover.hover(false, TOUCH_LINGER);
+                hover.hover(false, touch_close_delay);
             }
         })
         .event("onpointercancel", move |event: PointerEvent| {
             if event.data().pointer_type() == "touch" && !owned {
-                hover.hover(false, TOUCH_LINGER);
+                hover.hover(false, touch_close_delay);
             }
         })
         .event("onfocusin", focus.focusin(0))

@@ -8,6 +8,8 @@ mod floating_window;
 mod hover_card;
 #[cfg(feature = "use-timers")]
 mod hover_intent;
+#[cfg(feature = "loading-overlay")]
+mod loading_overlay;
 #[cfg(feature = "menu")]
 mod menu;
 #[cfg(feature = "modal")]
@@ -49,6 +51,8 @@ pub use floating_window::{FloatingWindowOptions, FloatingWindowPart, WindowRect}
 pub use hover_card::{HoverCard, HoverCardProps};
 #[cfg(feature = "lightbox")]
 pub use lightbox::LightboxPart;
+#[cfg(feature = "loading-overlay")]
+pub use loading_overlay::{LoadingOverlay, LoadingOverlayProps};
 #[cfg(feature = "menu")]
 pub(crate) use menu::MenuFocus;
 #[cfg(feature = "menu")]

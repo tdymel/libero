@@ -16,7 +16,25 @@ pub const ROUTES: Routes = &[
     ("/tooltip-gap", || rsx! { TooltipGapPage {} }),
     ("/tooltip-link", || rsx! { TooltipLinkPage {} }),
     ("/tooltip-arrow", || rsx! { TooltipArrowPage {} }),
+    ("/tooltip-touch", || rsx! { TooltipTouchPage {} }),
 ];
+
+/// Touch delays nothing else schedules, so a held clock takes exactly them (todo 4001).
+#[component]
+fn TooltipTouchPage() -> Element {
+    rsx! {
+        div { margin_left: "200px", padding_top: "40px",
+            Tooltip {
+                label: rsx! { "Saves the current draft" },
+                label_id: "save-tip",
+                side: "bottom",
+                touch_open_delay: 321,
+                touch_close_delay: 2345,
+                Button { id: "save", "aria-describedby": "save-tip", "Save" }
+            }
+        }
+    }
+}
 
 /// 3977: an arrowed bubble forced open on a trigger at the left edge, so the bubble
 /// shifts right while the arrow stays on the trigger.

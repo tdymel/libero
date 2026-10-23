@@ -224,6 +224,50 @@ fn a_timed_notification_appears_is_announced_once_and_closes_itself() {
     });
 }
 
+/// Todo 4000: `pause_scope: Hovered` pauses only the notification under the pointer or holding
+/// focus, and `z_index` sets the stacks' layer.
+#[test]
+fn a_hovered_scope_pauses_only_that_notification() {
+    const FIRST: &str = "[aria-live] li:first-child";
+
+    block_on(async {
+        let fixture = Fixture::open("/notifications-pause-hovered", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        e2e::clock::hold(page, &[AUTO_CLOSE_MS]).await.unwrap();
+        let armed = async |count: usize, what: &str| {
+            e2e::clock::until_armed(page, AUTO_CLOSE_MS, count, what)
+                .await
+                .unwrap();
+        };
+
+        pointer::click(page, TIMED_TRIGGER).await.unwrap();
+        wait::for_visible(page, FIRST).await.unwrap();
+        armed(2, "both auto-closes to arm").await;
+        let layer: String = js(
+            page,
+            "getComputedStyle(document.querySelector('[aria-live]').parentElement).zIndex",
+        )
+        .await;
+        assert_eq!(layer, "1234", "the host's z_index on its stack");
+
+        pointer::hover(page, FIRST).await.unwrap();
+        armed(1, "the pointer to pause the hovered one only").await;
+        pointer::hover(page, TIMED_TRIGGER).await.unwrap();
+        armed(2, "the pointer leaving to resume it").await;
+
+        keyboard::tab_to(page, CLOSE, 5).await.unwrap();
+        armed(1, "focus to pause the focused one only").await;
+
+        fixture
+            .console
+            .assert_clean("pausing the hovered notification")
+            .unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
 /// WCAG 2.2.1: a timed notification under the pointer or holding focus is paused (no auto-close
 /// armed) and gets its full time back on leaving; one removed under the pointer, which never
 /// sees `mouseleave`, leaves the store unpaused (todo 1767).

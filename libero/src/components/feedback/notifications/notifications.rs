@@ -1,7 +1,7 @@
 use dioxus::{core::current_scope_id, prelude::*};
 
 use super::{
-    data::NotificationLive,
+    data::{NotificationLive, NotificationPause},
     hotkey::use_hotkey,
     item::{DrawRef, ItemProps},
     stack::NotificationStack,
@@ -11,8 +11,8 @@ use crate::{
     components::{common::Input, layout::Box},
     hooks::{use_localization, use_portal_slot, use_theme},
     localization::fill,
-    sx::{StaticSx, sx},
-    theme::{AutoClose, Placement},
+    sx::{StaticSx, ThemeAwareValue, sx},
+    theme::{AutoClose, Placement, Z_INDEX_NOTIFICATION},
 };
 
 /// A contained host's box: the stacks' positioned ancestor.
@@ -57,6 +57,12 @@ pub fn Notifications(
     /// `n` needs an app setting to turn it off or remap it (WCAG 2.1.4).
     #[props(default = Key::Named(NamedKey::F8))]
     hotkey: Key,
+    /// The stacks' stacking order. Unset, the theme's notification layer.
+    #[props(default, into)]
+    z_index: Input<ThemeAwareValue>,
+    /// Which timers hover or focus on a notification pauses.
+    #[props(default)]
+    pause_scope: NotificationPause,
     /// Rendered inside a contained host, before its stacks.
     #[props(default)]
     children: Option<Element>,
@@ -83,6 +89,9 @@ pub fn Notifications(
     let limit = limit.unwrap_or(theme.notifications.limit);
     let auto_close = auto_close.unwrap_or(theme.notifications.auto_close);
     let exit_ms = theme.notifications.transition_duration;
+    let z_index = z_index
+        .resolve(None)
+        .unwrap_or_else(|| Z_INDEX_NOTIFICATION.value());
 
     let entries = store.entries.read();
     // Every placement, always: a live region must exist before content is added,
@@ -108,6 +117,7 @@ pub fn Notifications(
                 leaving: entry.leaving,
                 exit_ms,
                 live: entry.live,
+                pause_scope,
             })
             .collect::<Vec<_>>();
         let (assertive, polite): (Vec<_>, Vec<_>) = items
@@ -126,6 +136,7 @@ pub fn Notifications(
                 key: "{placement.as_str()}",
                 placement,
                 fixed: !contained,
+                z_index: z_index.clone(),
                 assertive,
                 polite,
             }

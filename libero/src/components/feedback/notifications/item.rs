@@ -3,7 +3,7 @@ use std::{cell::RefCell, rc::Rc, time::Duration};
 use dioxus::prelude::*;
 
 use super::{
-    data::{Draw, NotificationId, NotificationLive},
+    data::{Draw, NotificationId, NotificationLive, NotificationPause},
     store::NotificationStore,
 };
 use crate::{
@@ -61,6 +61,7 @@ pub(super) struct ItemProps {
     pub(super) leaving: bool,
     pub(super) exit_ms: u32,
     pub(super) live: NotificationLive,
+    pub(super) pause_scope: NotificationPause,
 }
 
 /// The last focusable before the contained host `host` selects, `item` being
@@ -89,10 +90,13 @@ pub(super) fn NotificationItem(props: ItemProps) -> Element {
     let leaving = props.leaving;
     let auto_close = props.auto_close;
     let exit_ms = props.exit_ms;
+    let pause_scope = props.pause_scope;
+    // A memo: hover on another notification must not restart a timer it leaves running.
+    let paused = use_memo(use_reactive!(|(pause_scope,)| store.paused(id, pause_scope)));
     let armed = subscription.clone();
     use_effect(use_reactive!(|(leaving, auto_close, exit_ms)| {
         // Read in the effect, not the render: a pause re-arms timers without a redraw.
-        let paused = store.paused();
+        let paused = paused();
         let mut armed = armed.borrow_mut();
         *armed = None;
 

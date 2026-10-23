@@ -23,6 +23,17 @@ pub enum NotificationLive {
     Assertive,
 }
 
+/// Which timers hover or focus on a notification pauses. A paused timer starts over
+/// when the pointer and focus leave.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub enum NotificationPause {
+    /// Every timer of the host.
+    #[default]
+    All,
+    /// Only the notification under the pointer or holding focus.
+    Hovered,
+}
+
 /// Per notification. Every field defaults to the host's answer.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct NotificationOptions {
