@@ -16,7 +16,7 @@ from pathlib import Path
 ALL = Path(__file__).resolve().parents[2] / "e2e/tests/all"
 # Performance scenarios never run in a shard (todo 3454); `E2E_PERF=1` brings them back.
 PERF = {"perf", "table_perf"}
-# Editing, IME, pickers and Cmd chords: the whole tier wedges headless Chrome on the 3-core macOS runner.
+# Editing, IME, pickers and Cmd chords: the whole tier still has Mac reds (3636).
 SMOKE = [
     "chrono_field", "editor_ime_probe", "rich_text_editor_input", "select", "shortcut_help",
     "spotlight", "tags_field", "text_field", "theme_switcher", "use_hotkeys",

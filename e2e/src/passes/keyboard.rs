@@ -315,14 +315,14 @@ pub async fn assert_chords_ignored_with(
     keys: &[Key],
     probe: &str,
 ) -> Result<()> {
-    // Chrome on a Mac sends no keyup for some chords, and the stall wedged the browser for every
-    // later page (3444); Linux and Windows check the same wasm.
-    if cfg!(target_os = "macos") {
-        crate::journal::note(&format!("macOS: skipped the chord check on {probe}"));
-        return Ok(());
-    }
     let read = format!("JSON.stringify({probe})");
     let before: String = page.evaluate_bounded(read.as_str()).await?.into_value()?;
+    // Chrome on a Mac drops the keyup of a Cmd chord (3688), so there the keydown records.
+    let record_on = if cfg!(target_os = "macos") {
+        "keydown"
+    } else {
+        "keyup"
+    };
     // Each chord's keyup records the probe after `clock::settle`'s two macrotasks, in the page
     // (todo 2066): past its handlers and renders; a reaction on a timer is not waited for (1631).
     page.evaluate_bounded(format!(
@@ -330,7 +330,7 @@ pub async fn assert_chords_ignored_with(
          if (!window.__chordListener) {{ window.__chordListener = true; \
          window.addEventListener('keydown', e => {{ \
          if ((e.ctrlKey || e.altKey || e.metaKey) && e.defaultPrevented) window.__chordCancelled.push(e.key); }}); \
-         window.addEventListener('keyup', e => {{ if (e.ctrlKey || e.altKey || e.metaKey) \
+         window.addEventListener('{record_on}', e => {{ if (e.ctrlKey || e.altKey || e.metaKey) \
          setTimeout(() => setTimeout(() => {{ let after; \
          try {{ after = window.__chordProbe(); }} catch (error) {{ after = 'a throw: ' + error; }} \
          window.__chordRecords.push([after, window.__chordCancelled.splice(0)]); \

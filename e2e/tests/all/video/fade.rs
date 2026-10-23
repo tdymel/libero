@@ -3,7 +3,7 @@
 
 use anyhow::Result;
 use e2e::browser::block_on;
-use e2e::driver::{Driver, Platform, eventually};
+use e2e::driver::{Driver, Host, Platform, eventually};
 use e2e::passes::{keyboard, pointer};
 use e2e::wait::PageBounded;
 use e2e::{Fixture, Viewport, clock, wait};
@@ -21,6 +21,23 @@ async fn hold_idle<D: Driver>(d: &mut D) -> Result<()> {
         d.platform()
     );
     Ok(())
+}
+
+/// A macOS fullscreen window grows by its hidden title bar a moment later (3717), moving the
+/// bar onto where a click aimed: wait until the viewport fills the screen.
+async fn rested<D: Driver>(d: &mut D) -> Result<()> {
+    if d.platform() != Platform::Desktop || Host::current() != Host::Macos {
+        return Ok(());
+    }
+    eventually(d, "the fullscreen viewport to fill the screen", async |d| {
+        Ok(
+            d.evaluate("innerWidth === screen.width && innerHeight === screen.height")
+                .await?
+                .as_bool()
+                == Some(true),
+        )
+    })
+    .await
 }
 
 /// Fires the idle timer once it is armed and waits for the fade.
@@ -99,6 +116,7 @@ async fn fullscreen_controls_fade<D: Driver>(d: &mut D, _route: &str) -> Result<
         position == "absolute",
         "the controls are {position}, not overlaid"
     );
+    rested(d).await?;
     d.click(PLAY).await?;
     until_faded(d, "the controls to fade while playing").await?;
 

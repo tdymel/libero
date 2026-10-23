@@ -192,7 +192,7 @@ jobs:
         run: python3 .github/scripts/ci_annotate.py "$RUNNER_TEMP"/{build,native,all}.log
 
   # A smoke of the browser tier on macOS: the units where a Mac differs (Cmd as `mod`, editing, IME).
-  # The whole tier wedges headless Chrome on the 3-core runner after 170-350 tests (3444).
+  # On the headless shell the whole tier runs in 22 min but has 31 Mac reds yet (3636).
   macos-web:
     if: github.event_name != 'workflow_run' || (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push')
     runs-on: macos-26
@@ -207,11 +207,10 @@ jobs:
           cache-key: platforms-ios-e2e
           save-cache: false
       - uses: ./.github/actions/dx
-      # The same pin as ci.yml's `e2e` job: the AX snapshots follow Chrome's tree.
+      # The same pin as ci.yml's `e2e` job: the AX snapshots follow Chrome's tree. The headless
+      # shell, as full Chrome's AppKit key-equivalent loop stalls CDP on the runner (3636).
       - id: chrome
-        uses: browser-actions/setup-chrome@v2
-        with:
-          chrome-version: 152.0.7977.82
+        run: bash .github/scripts/headless_shell.sh 152.0.7977.82
       - run: '"${{ steps.chrome.outputs.chrome-path }}" --version'
       - run: |
           units=$(python3 .github/scripts/shard.py smoke)

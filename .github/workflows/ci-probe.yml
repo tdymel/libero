@@ -111,11 +111,15 @@ jobs:
       - if: env.TIER == 'web' || env.TIER == 'ios'
         uses: ./.github/actions/dx
       # The same pin as ci.yml's `e2e` job: the AX snapshots follow Chrome's tree.
-      - if: env.TIER == 'web'
+      - if: env.TIER == 'web' && runner.os != 'macOS'
         id: chrome
         uses: browser-actions/setup-chrome@v2
         with:
           chrome-version: 152.0.7977.82
+      # As platforms.yml's `macos-web`: the headless shell (3636).
+      - if: env.TIER == 'web' && runner.os == 'macOS'
+        id: shell
+        run: bash .github/scripts/headless_shell.sh 152.0.7977.82
       # Ubuntu 24.04 blocks the unprivileged user namespaces Chrome's sandbox needs.
       - if: runner.os == 'Linux' && env.TIER == 'web'
         run: sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
@@ -202,7 +206,7 @@ jobs:
               cargo run -p e2e -- ios $filters 2>&1 | tee "$logs/e2e.log" ;;
           esac
         env:
-          CHROME: ${{ steps.chrome.outputs.chrome-path }}
+          CHROME: ${{ steps.chrome.outputs.chrome-path || steps.shell.outputs.chrome-path }}
           E2E_DESKTOP_DEADLINE: 1500
       - if: failure() || cancelled()
         run: $PY .github/scripts/ci_annotate.py "$RUNNER_TEMP"/probe/{build,unit,native,all,e2e}.log
