@@ -198,7 +198,7 @@ pub fn MenuPage() -> Element {
                     Control::switch("loop_focus").default(theme.menu.loop_focus.to_string()),
                     Control::switch("disabled"),
                     // Docks the menu on the trigger's edge, as wide as the trigger; best with side `top`.
-                    Control::switch("docked").code(|_, values| match values.str("docked").as_str() {
+                    Control::switch("docked").default("true").code(|_, values| match values.str("docked").as_str() {
                         "true" => vec![DOCKED.to_string()],
                         _ => vec![],
                     }),

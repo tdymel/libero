@@ -216,6 +216,21 @@ fn checkbox_code(_: &Control, values: &DemoValues) -> Vec<String> {
     }
 }
 
+/// Mounted while lazy loading is on; switching it off forgets what was fetched.
+#[component]
+fn LazyReset(
+    loaded: Signal<HashSet<String>>,
+    expanded: Signal<HashSet<String>>,
+    pending: Signal<HashSet<String>>,
+) -> Element {
+    use_drop(move || {
+        loaded.set(HashSet::new());
+        expanded.set(HashSet::new());
+        pending.set(HashSet::new());
+    });
+    rsx! {}
+}
+
 #[component]
 pub fn TreePage() -> Element {
     let theme = use_theme();
@@ -417,6 +432,9 @@ pub fn TreePage() -> Element {
                         // Pinned, so the selection readout does not reflow the
                         // preview under the pointer.
                         sx: sx().width("100%").max_width("320px"),
+                        if lazy_on {
+                            LazyReset { loaded, expanded: lazy_expanded, pending }
+                        }
                         if !lazy_on {
                             // demo-code: buttons start
                             Flex { direction: "row", gap: "xs",

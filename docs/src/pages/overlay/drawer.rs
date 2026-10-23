@@ -224,7 +224,7 @@ pub fn DrawerPage() -> Element {
                     // Drawn only docked bottom, where a touch swipe down from it closes the panel.
                     Control::switch("handle").hidden_when(|values| values.str("anchor") != "bottom"),
                     // A short vertical Tabs strip that scrolls its last tab into view on open.
-                    Control::switch("tabs").code(|_, _| vec![]),
+                    Control::switch("tabs").default("true").code(|_, _| vec![]),
                 ],
                 render: move |values: DemoValues| rsx! {
                     DrawerDemo {
