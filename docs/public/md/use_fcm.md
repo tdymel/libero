@@ -14,7 +14,9 @@ and the messages that arrive while it runs. The app's server sends them.
 unsupported.
 
 Behind the `fcm` cargo feature, off by default: it adds firebase-messaging and
-libero's `LiberoFcmService` to every Android APK of the app.
+libero's `LiberoFcmService` to every Android APK of the app. The demo uses
+placeholder options, so Android shows Firebase's refusal and the web says
+`Unsupported`.
 
 ```toml
 libero = { version = "0.4", features = ["fcm"] }
@@ -53,9 +55,6 @@ fn FcmDemo() -> Element {
     }
 }
 ```
-
-The docs demo uses placeholder options: Android shows Firebase's refusal and
-the web says `Unsupported`.
 
 ## API
 

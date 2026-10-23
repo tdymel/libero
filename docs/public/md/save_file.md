@@ -42,9 +42,6 @@ fn SaveDemo() -> Element {
 }
 ```
 
-`TableExportButton`'s `onexport` hands over the CSV to save the same way; see
-[Table](table.md).
-
 ## API
 
 ```rust,ignore
@@ -65,6 +62,9 @@ pub enum SaveOutcome {
 | Android (WebView) | The share sheet; `Shared`. UTF-8 text up to about 500 KB goes inline with `name` as its title, anything else as a file in Downloads from Android 10 on, `Failed` before. |
 | Liveview, fullstack | The browser downloads it through the page. |
 | Server render, no page | `Failed("not supported on this platform")`. |
+
+`TableExportButton`'s `onexport` hands over the CSV to save the same way; see
+[Table](table.md).
 
 ## Accessibility
 
