@@ -76,7 +76,59 @@ pub const ROUTES: Routes = &[
         "/tree/guides/rtl",
         || rsx! { div { dir: "rtl", GuidesTreePage {} } },
     ),
+    ("/tree/multiple", || rsx! { MultipleTreePage {} }),
+    ("/tree/checkboxes", || rsx! { CheckboxTreePage {} }),
 ];
+
+/// Multiple selection, held by the page; `#selected` echoes the picked ids, sorted and comma-joined.
+#[component]
+fn MultipleTreePage() -> Element {
+    let data = vec![
+        TreeNode::new("a", "a").children(vec![
+            TreeNode::new("a1", "a1"),
+            TreeNode::new("a2", "a2"),
+        ]),
+        TreeNode::new("b", "b").children(vec![TreeNode::new("b1", "b1")]),
+    ];
+    let mut selected = use_signal(HashSet::<String>::new);
+    let echo = {
+        let mut ids: Vec<String> = selected().into_iter().collect();
+        ids.sort();
+        ids.join(",")
+    };
+
+    rsx! {
+        output { id: "selected", "{echo}" }
+        Tree {
+            aria_label: "Files",
+            data,
+            default_expanded: HashSet::from(["a".to_string()]),
+            selected: selected(),
+            multiple: true,
+            onselectedchange: move |next| selected.set(next),
+        }
+    }
+}
+
+/// Checkboxes, non-strict: branch `a` holds `a1` and `a2`.
+#[component]
+fn CheckboxTreePage() -> Element {
+    let data = vec![TreeNode::new("a", "a").children(vec![
+        TreeNode::new("a1", "a1"),
+        TreeNode::new("a2", "a2"),
+    ])];
+    let mut checked = use_signal(HashSet::<String>::new);
+
+    rsx! {
+        Tree {
+            aria_label: "Files",
+            data,
+            default_expanded: HashSet::from(["a".to_string()]),
+            checked: checked(),
+            oncheckedchange: move |next| checked.set(next),
+        }
+    }
+}
 
 /// Todos 1135/1136: guides with `src/lib.rs` current, standard items with an icon
 /// before the label and one at the end.

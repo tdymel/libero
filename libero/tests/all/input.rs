@@ -42,6 +42,7 @@ fn every_str_enum_input_takes_its_own_value() {
     converts::<SidebarSide>();
     converts::<StepLabelPosition>();
     converts::<TabsActivation>();
+    converts::<TabsPlacement>();
     converts::<TimePickerVariant>();
     converts::<TimelineAlign>();
     converts::<Variant>();

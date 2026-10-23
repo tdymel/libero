@@ -87,6 +87,27 @@ fn Demo() -> Element {
 }
 ```
 
+`leading` draws before the label, such as an icon, and `trailing` at the inline
+end, such as a count `Badge`, pushed to the end of the row. Both are part of the
+link's name.
+
+```rust
+use dioxus::prelude::*;
+use libero::components::{Badge, Icon, NavLink};
+
+#[component]
+fn Demo() -> Element {
+    rsx! {
+        NavLink {
+            to: "/inbox",
+            leading: rsx! { Icon { size: "sm", svg: pictogram_icons_lucide::bookmark::outlined } },
+            trailing: rsx! { Badge { variant: "tonal", size: "sm", circle: true, "3" } },
+            "Inbox"
+        }
+    }
+}
+```
+
 ## Props
 
 | Prop | Type | Default | Description |
@@ -100,6 +121,8 @@ fn Demo() -> Element {
 | `disabled` | `bool` | `false` | Dims the link and stops navigation. |
 | `scroll_into_view` | `bool` | `false` | Scrolls the link into view when it becomes active. It scrolls the nearest scrollable ancestor, else the page, so use it in a sidebar. |
 | `description` | `String` | - | A dimmed line under the label, read as the link's description. |
+| `leading` | `Element` | - | Before the label, such as an icon. Part of the link's name, so keep an icon `aria-hidden`. |
+| `trailing` | `Element` | - | At the inline end, such as a count `Badge`, before the new-tab icon. Part of the link's name, read after the label. |
 | `nested` | `Element` | - | Child `NavLink`s, shown under this one by a toggle button beside it. The link itself still goes to `to`. |
 | `opened` | `bool` | - | Whether `nested` shows. Setting it makes it controlled, so pair it with `onchange`. |
 | `default_opened` | `bool` | `false` | Whether `nested` shows at first, when `opened` is unset. |
@@ -122,6 +145,8 @@ parts work.
 | `NavLinkPart::Label` | `label` | The link's content, with `description` only. |
 | `NavLinkPart::Description` | `description` | The dimmed line under the label. |
 | `NavLinkPart::NewTab` | `new-tab` | The new-tab icon after the label, with `target: "_blank"` and `new_tab_icon` only. |
+| `NavLinkPart::Leading` | `leading` | The `leading` section before the label. |
+| `NavLinkPart::Trailing` | `trailing` | The `trailing` section at the inline end. |
 
 ## Accessibility
 
@@ -129,6 +154,9 @@ parts work.
 
 - `description` is read as the link's description, not its name, so "Docs"
   stays "Docs" in a links list.
+- `leading` and `trailing` are part of the link's name: "Inbox 3" reads the
+  label, then the count. An `Icon` in `leading` is hidden, and any other icon
+  there needs `aria-hidden`.
 - With `nested`, a disclosure button follows the link with its own tab stop.
   It carries `aria-expanded` and `aria-controls`, and its name is the
   localized "Show links" plus the link's name ("Show links Docs").

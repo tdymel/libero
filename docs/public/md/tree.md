@@ -110,12 +110,14 @@ state, not part of `Tree`.
 
 ## Rows
 
-`Tree` has no selection. `render_node` decides what a row does, and gets the
-row's live `expanded` state. `TreeItemContent` is the standard row: the
-chevron, an `icon`, the label and a `trailing_icon`, icons as `SvgData` (see
-[`Pictogram`](pictogram.md)). The default row is one. `TreeItem` lays a row out
-the same way as a plain label the row names and Enter clicks (a button outside a `Tree`). A row that
-links somewhere is a [`NavLink`](nav_link.md) with `args.tabindex`.
+`render_node` decides what a row does, and gets the row's live `expanded`
+state. `TreeItemContent` is the standard row: the chevron, an `icon`, the label
+and a `trailing_icon`, icons as `SvgData` (see [`Pictogram`](pictogram.md)). The
+default row is one. `TreeItem` lays a row out the same way as a plain label the
+row names and Enter clicks (a button outside a `Tree`). A row that links
+somewhere is a [`NavLink`](nav_link.md) with `args.tabindex`. The checkbox of
+`checked` is drawn only by `TreeItemContent` and `TreeItem`, so a custom row
+without them has none.
 `default_tree_render(args)` draws the default row, so a custom `render_node`
 can fall back to it.
 
@@ -127,6 +129,47 @@ properties, so they move to the right under `dir="rtl"`.
 
 `Tree` renders through [`List`](list.md). `size` sets the row gap and the
 per-level indent together. Set them apart through `sx`.
+
+## Selection and checkboxes
+
+`selected` makes the rows selectable, each with `aria-selected`. A click picks
+a row: it toggles one, and replaces the rest unless `multiple` is set, where
+Shift+click adds the visible rows from the last one picked. Like `expanded`,
+the set is yours: the tree asks through `onselectedchange`. `checked` puts a
+checkbox on each row, with `aria-checked`. Space or a click on the box toggles
+it, and so does a click on a leaf row while `selected` is unset. Unless
+`check_strictly` is set, checking a branch checks its enabled descendants, and
+the branch reads `mixed` while only some of them are checked. Disabled nodes
+are never selected or checked. The demo above uses both.
+
+```rust
+use std::collections::HashSet;
+
+use dioxus::prelude::*;
+use libero::components::{Tree, TreeNode};
+
+#[component]
+fn Demo() -> Element {
+    let mut picked = use_signal(|| HashSet::from(["src/lib.rs".to_string()]));
+    let mut checked = use_signal(HashSet::<String>::new);
+
+    rsx! {
+        Tree {
+            aria_label: "Project files",
+            data: vec![
+                TreeNode::new("src", "src").children(vec![TreeNode::new("src/lib.rs", "lib.rs")]),
+                TreeNode::new("README.md", "README.md"),
+            ],
+            default_expanded: HashSet::from(["src".to_string()]),
+            selected: picked(),
+            multiple: true,
+            onselectedchange: move |next| picked.set(next),
+            checked: checked(),
+            oncheckedchange: move |next| checked.set(next),
+        }
+    }
+}
+```
 
 ## Props
 
@@ -143,6 +186,12 @@ per-level indent together. Set them apart through `sx`.
 | `expanded` | `HashSet<String>` | - | The expanded ids, controlled. The tree follows it and asks for every change through `onexpandedchange`. Unset, the tree keeps its own. |
 | `current` | `String` | - | The id of the node the user is on, such as a nav's current page. Tab into the tree lands on it, or on its collapsed branch. Its row carries `aria-current` and, unless a `guides` line marks it, NavLink's tint and start bar. A row that renders a `NavLink` draws both, so pair one with `guides`. |
 | `onexpandedchange` | `EventHandler<HashSet<String>>` | - | Called with the whole new set of expanded ids. Store it when `expanded` is set; without `expanded` it only notifies. |
+| `selected` | `HashSet<String>` | - | The selected ids, controlled: set, the rows are selectable and carry `aria-selected`. A click or Space picks a row. Store it with `onselectedchange`. |
+| `multiple` | `bool` | `false` | With `selected`, any number of rows: a click or Space toggles one, and Shift extends a range. Sets `aria-multiselectable` on the root. |
+| `onselectedchange` | `EventHandler<HashSet<String>>` | - | Called with the whole new set of selected ids. Store it when `selected` is set. |
+| `checked` | `HashSet<String>` | - | The checked ids, controlled: set, every row draws a checkbox and carries `aria-checked`. Space or a click on the box toggles it. Store it with `oncheckedchange`. |
+| `check_strictly` | `bool` | `false` | With `checked`, each row checks alone. Unset, checking a branch checks its enabled descendants, and a branch reads `mixed` while only some are checked. |
+| `oncheckedchange` | `EventHandler<HashSet<String>>` | - | Called with the whole new set of checked ids. Store it when `checked` is set. Unset `check_strictly`, the set holds every fully checked node. |
 | `parts` | `Parts<TreePart>` | - | Styles for the inner parts in the Style API tab, under `sx`. |
 
 Like every component, `Tree` also takes the shared props `sx`, `class`, `style`,
@@ -157,7 +206,7 @@ Like every component, `Tree` also takes the shared props `sx`, `class`, `style`,
 | `id` | `String` | required | The node's unique id. |
 | `data` | `T` | required | Your data for this node. |
 | `children` | `Vec<TreeNode<T>>` | - | Nested nodes. Without any, the node is a leaf. |
-| `disabled` | `bool` | `false` | The arrow keys still reach it, but it does not activate, expand or collapse. Its descendants are disabled too. |
+| `disabled` | `bool` | `false` | The arrow keys still reach it, but it does not activate, expand, collapse, select or check. Its descendants are disabled too. |
 
 ### `TreeNodeRenderArgs<T>`
 
@@ -169,6 +218,9 @@ Like every component, `Tree` also takes the shared props `sx`, `class`, `style`,
 | `disabled` | `bool` | Whether the node or an ancestor is disabled. |
 | `tabindex` | `&'static str` | Put it on any link or button in the row, or it adds a tab stop the arrow keys never reach. |
 | `depth` | `usize` | 0 at the top level, for custom indentation. |
+| `selected` | `bool` | In `Tree`'s `selected`. Always `false` without it. |
+| `checked` | `Option<bool>` | With `checked`, the row's check; `None` without checkboxes. `TreeItemContent` and `TreeItem` draw the box themselves. |
+| `indeterminate` | `bool` | Some of a branch's rows are checked, not all; `checked` is then `Some(false)`. |
 
 ### `TreeItemContent`
 
@@ -217,14 +269,25 @@ parts work.
 | `Up` or `Down` | Moves between visible rows. |
 | `Left` or `Right` | Collapses and expands, or jumps to the parent and first child. |
 | `Home` or `End` | Jumps to the first or last row. |
-| `Enter` or `Space` | Opens or closes a branch, or clicks a leaf's link, button or `TreeItem`. |
+| `Enter` | Opens or closes a branch, or clicks a leaf's link, button or `TreeItem`. In a single `selected` tree, a leaf is selected too. |
+| `Space` | Opens or closes a branch, or clicks a leaf's link, button or `TreeItem`. With `selected` or `checked`, toggles the row's selection or check instead. |
 | `*` | Opens every closed sibling of the row. |
+| `Shift+Space` | With `selected` and `multiple`, adds the range from the last row picked to this one. Not with `checked`. |
+| `Shift+Up` or `Shift+Down` | With `selected` and `multiple`, moves focus and toggles the row it lands on. |
+| `Ctrl+A` (`Cmd+A` on a Mac) | With `selected` and `multiple`, selects every enabled node, collapsed ones too. Clears them when all are selected. |
+| `Ctrl+Shift+Home` or `Ctrl+Shift+End` | With `selected` and `multiple`, selects from this row to the first or last visible row, and moves focus there. |
 
 ### Libero handles
 
 - Typing jumps to the next row whose `tree_label` matches.
 - The arrow keys reach a disabled node, but typing skips it and nothing
   activates, expands or collapses it.
+- With `selected`, every row carries `aria-selected`, `true` or `false`. The
+  root is `aria-multiselectable` with `multiple`.
+- With `checked`, every row carries `aria-checked`: `true`, `false`, or `mixed`
+  for a branch with only some enabled rows checked (not with `check_strictly`).
+- A disabled node is never selected or checked, by keys, clicks or a branch's
+  cascade.
 - `TreeItem` takes `args.tabindex` for you.
 
 ### You must
@@ -276,5 +339,6 @@ offset.
 | `disabled` | On a row whose node is disabled. |
 | `guides` | On every row of a tree with `guides`. |
 | `guide-current` | On the content of a nested `current` row in a tree with `guides`. |
+| `selected` | On the content of a row that is selected. |
 
 The root also carries whatever `data-state` tokens `List` sets for its `size`.

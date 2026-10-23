@@ -1,12 +1,20 @@
 use crate::components::{Control, Demo, DemoValues, DocPage, Wrap, a11y, indent, prop, props};
 use dioxus::prelude::*;
 use libero::{
-    components::{Code, Flex, NavLink, NavLinkPart, Text},
+    components::{Badge, Code, Flex, Icon, NavLink, NavLinkPart, Text},
     sx::sx,
     use_theme,
 };
+use pictogram_icons_lucide as lucide;
 
 const DESCRIPTION: &str = "Where to start";
+
+// snippet: in NavLink { to: "/docs", .. }
+const LEADING_CODE: &str =
+    r#"leading: rsx! { Icon { size: "sm", svg: pictogram_icons_lucide::bookmark::outlined } }"#;
+// snippet: in NavLink { to: "/docs", .. }
+const TRAILING_CODE: &str =
+    r#"trailing: rsx! { Badge { variant: "tonal", size: "sm", circle: true, "3" } }"#;
 
 const NESTED_CODE: &str = "nested: rsx! {
     NavLink { to: Route::NavLinkPage {}, active: false, \"Install\" }
@@ -62,6 +70,8 @@ pub fn NavLinkPage() -> Element {
                     .default("false")
                     .doc("Scrolls the link into view when it becomes active. It scrolls the nearest scrollable ancestor, else the page, so use it in a sidebar."),
                 prop("description", "String").doc("A dimmed line under the label, read as the link's description."),
+                prop("leading", "Element").doc("Before the label, such as an icon. Part of the link's name, so keep an icon `aria-hidden`."),
+                prop("trailing", "Element").doc("At the inline end, such as a count `Badge`, before the new-tab icon. Part of the link's name, read after the label."),
                 prop("nested", "Element").doc("Child `NavLink`s, shown under this one by a toggle button beside it. The link itself still goes to `to`."),
                 prop("opened", "bool").doc("Whether `nested` shows. Setting it makes it controlled, so pair it with `onchange`."),
                 prop("default_opened", "bool").default("false").doc("Whether `nested` shows at first, when `opened` is unset."),
@@ -74,10 +84,13 @@ pub fn NavLinkPage() -> Element {
                 (NavLinkPart::Label, "The link's content, with `description` only."),
                 (NavLinkPart::Description, "The dimmed line under the label."),
                 (NavLinkPart::NewTab, "The new-tab icon after the label, with `target: \"_blank\"` and `new_tab_icon` only."),
+                (NavLinkPart::Leading, "The `leading` section before the label."),
+                (NavLinkPart::Trailing, "The `trailing` section at the inline end."),
             ])],
             accessibility: a11y()
                 .handles([
                     "`description` is read as the link's description, not its name, so \"Docs\" stays \"Docs\" in a links list.",
+                    "`leading` and `trailing` are part of the link's name: \"Inbox 3\" reads the label, then the count. An `Icon` in `leading` is hidden, and any other icon there needs `aria-hidden`.",
                     "With `nested`, a disclosure button follows the link with its own tab stop. It carries `aria-expanded` and `aria-controls`, and its name is the localized \"Show links\" plus the link's name (\"Show links Docs\").",
                     "Enter or Space on the disclosure button toggles the panel, and the link still navigates.",
                     "A `target: \"_blank\"` link reads a hidden \"(opens in a new tab)\". `new_tab_icon: true` also draws a small external icon. `new_tab_hint: false` drops both.",
@@ -124,6 +137,10 @@ pub fn NavLinkPage() -> Element {
                         "true" => vec![format!("description: {DESCRIPTION:?}")],
                         _ => vec![],
                     }),
+                    Control::switch("sections").default("true").code(|_, values| match values.str("sections").as_str() {
+                        "true" => vec![LEADING_CODE.to_string(), TRAILING_CODE.to_string()],
+                        _ => vec![],
+                    }),
                     Control::switch("nested").code(|_, values| match values.str("nested").as_str() {
                         "true" => vec![NESTED_CODE.to_string()],
                         _ => vec![],
@@ -137,6 +154,9 @@ pub fn NavLinkPage() -> Element {
                     let color = values.str("color");
                     let disabled = (values.str("disabled") == "true").then_some(true);
                     let description = (values.str("description") == "true").then(|| DESCRIPTION.to_string());
+                    let sections = values.str("sections") == "true";
+                    let leading = || sections.then(|| rsx! { Icon { size: "sm", svg: lucide::bookmark::outlined } });
+                    let trailing = || sections.then(|| rsx! { Badge { variant: "tonal", size: "sm", circle: true, "3" } });
                     let nested = || {
                         (values.str("nested") == "true").then(|| rsx! {
                             NavLink { to: crate::Route::NavLinkPage {}, active: false, "Install" }
@@ -154,6 +174,8 @@ pub fn NavLinkPage() -> Element {
                                 color: color.clone(),
                                 disabled,
                                 description: description.clone(),
+                                leading: leading(),
+                                trailing: trailing(),
                                 nested: nested(),
                                 "Getting Started"
                             }
@@ -163,6 +185,8 @@ pub fn NavLinkPage() -> Element {
                                 color,
                                 disabled,
                                 description,
+                                leading: leading(),
+                                trailing: trailing(),
                                 nested: nested(),
                                 "NavLink"
                             }

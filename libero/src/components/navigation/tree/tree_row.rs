@@ -23,7 +23,7 @@ use crate::{
 };
 
 use super::{
-    tree::{Expansion, FocusedRow, TreePart},
+    tree::{Check, Expansion, FocusedRow, Pick, TreeMarks, TreePart},
     tree_node::{ErasedRenderNode, TreeNodeErased, TreeNodeRenderArgsErased},
 };
 
@@ -40,7 +40,13 @@ pub(super) struct TreeRowState {
     pub expanded: Option<bool>,
     /// The row draws the current look itself, so a `NavLink` in it skips its own (todo 2037).
     pub current_look: bool,
+    /// `None` without `Tree`'s `checked`.
+    pub checked: Option<Check>,
 }
+
+/// Toggles the row's check, for the box `TreeItemContent` draws.
+#[derive(Clone, Copy)]
+pub(super) struct TreeRowToggle(pub Callback<()>);
 
 /// Whether the enclosing tree row already draws the current look; outside a tree, `false`.
 pub(crate) fn row_draws_current() -> bool {
@@ -151,7 +157,20 @@ static TREE_ROW_CONTENT_SX: StaticSx = StaticSx::new(|| {
         // NavLink's active look where no guide marks the current row (todo 1571); a
         // NavLink in it skips its own through `row_draws_current` (todo 2037).
         .when("current", current_look_sx().hover(current_look_sx()))
+        // The tint alone is under 3:1, so an inset line marks the row (1.4.11).
+        .when("selected", selected_look_sx().hover(selected_look_sx()))
 });
+
+fn selected_look_sx() -> crate::sx::Sx {
+    let line = on_tint_color(&ThemeAwareValue::ColorValue(ColorValue::Shade(
+        Color::Primary,
+        ColorShade::S6,
+    )))
+    .unwrap_or_default();
+    sx().background("primary.1")
+        .box_shadow(format!("inset 0 0 0 1px {line}"))
+        .and(forced_on_sx())
+}
 
 fn current_look_sx() -> crate::sx::Sx {
     let bar = on_tint_color(&ThemeAwareValue::ColorValue(ColorValue::Shade(
@@ -212,6 +231,23 @@ pub(super) fn TreeRow(props: TreeRowProps) -> Element {
     // The `<li>` is the roving tab stop; `render_node`'s content is always "-1".
     let li_tabindex = if is_roving_active { "0" } else { "-1" };
 
+    let marks = use_context::<TreeMarks>();
+    let mark_id = node.id.clone();
+    let is_selected = use_memo(move || {
+        let selected = marks.selected.read();
+        selected
+            .as_ref()
+            .map(|selected| selected.contains(&mark_id))
+    });
+    let mark_id = node.id.clone();
+    let checked = use_memo(move || {
+        let checks = marks.checks.read();
+        checks
+            .as_ref()
+            .map(|checks| checks.get(&mark_id).copied().unwrap_or(Check::Off))
+    });
+    let (is_selected, checked) = (is_selected(), checked());
+
     let is_current = props.current.as_deref().is_some_and(<[usize]>::is_empty);
     // A top-level row has no guide to mark.
     let guide_current = props.guides && is_current && props.depth > 0;
@@ -221,12 +257,20 @@ pub(super) fn TreeRow(props: TreeRowProps) -> Element {
         disabled,
         expanded: is_expanded,
         current_look,
+        checked,
     };
     let mut row_context = use_context_provider(|| Signal::new(state));
     if *row_context.peek() != state {
         row_context.set(state);
     }
     use_context_provider(|| TreeRowContext(row_context));
+    let toggle_id = node.id.clone();
+    let toggle_check = use_callback(move |()| {
+        if !disabled {
+            marks.check.call(toggle_id.clone());
+        }
+    });
+    use_context_provider(|| TreeRowToggle(toggle_check));
 
     // No chevron column here: that's `default_tree_render`'s.
     let content = props.render_node.call(TreeNodeRenderArgsErased {
@@ -236,6 +280,9 @@ pub(super) fn TreeRow(props: TreeRowProps) -> Element {
         disabled,
         tabindex: "-1",
         depth: props.depth,
+        selected: is_selected == Some(true),
+        checked: checked.map(|check| check == Check::On),
+        indeterminate: checked == Some(Check::Mixed),
     });
 
     let mut active_id = props.active_id;
@@ -262,11 +309,21 @@ pub(super) fn TreeRow(props: TreeRowProps) -> Element {
         }
     };
 
-    let onclick = move |_: Event<MouseData>| {
+    // A selectable row picks; else a checkable leaf checks. A branch still opens.
+    let onclick = move |event: Event<MouseData>| {
         if disabled {
             return;
         }
         active_id.set(Some(id.clone()));
+        if is_selected.is_some() {
+            let pick = match event.modifiers().shift() {
+                true => Pick::Range,
+                false => Pick::Toggle,
+            };
+            marks.pick.call((id.clone(), pick));
+        } else if checked.is_some() && !has_children {
+            marks.check.call(id.clone());
+        }
         if has_children {
             expansion.toggle(&id);
         }
@@ -285,6 +342,7 @@ pub(super) fn TreeRow(props: TreeRowProps) -> Element {
     let content_states = states()
         .with("guide-current", guide_current)
         .with("current", current_look)
+        .with("selected", is_selected == Some(true))
         .into();
     // On the inner div, a sibling of the children `List`, so a child's click
     // never toggles the parent.
@@ -333,9 +391,17 @@ pub(super) fn TreeRow(props: TreeRowProps) -> Element {
     row.attr("role", "treeitem")
         .attr("data-slot", TreePart::Row.slot())
         .attr("data-tree-id", node.id.to_string())
-        // No selection model: without an explicit "false" Chrome announces the
-        // tab-stop row as selected. `current` speaks through `aria-current`.
-        .attr("aria-selected", "false")
+        // Without an explicit "false" Chrome announces the tab-stop row as
+        // selected. `current` speaks through `aria-current`.
+        .attr(
+            "aria-selected",
+            if is_selected == Some(true) {
+                "true"
+            } else {
+                "false"
+            },
+        )
+        .attr("aria-checked", checked.map(Check::aria))
         .attr("aria-current", is_current.then_some("true"))
         .attr("aria-expanded", is_expanded.map(|value| value.to_string()))
         .attr("aria-disabled", disabled.then_some("true"))

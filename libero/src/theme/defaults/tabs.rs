@@ -40,6 +40,20 @@ str_enum! {
     }
 }
 
+str_enum! {
+    /// Where the tab strip sits. `start` and `end` make vertical tabs, a column beside the panel.
+    #[state_prefix = "placement"]
+    pub enum TabsPlacement {
+        /// A row above the panel.
+        #[default]
+        Top = "top",
+        /// A column on the inline start side (left in LTR).
+        Start = "start",
+        /// A column on the inline end side.
+        End = "end",
+    }
+}
+
 /// Theme defaults for `Tabs`, set on [`Theme`](crate::theme::Theme).
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct TabsDefaults {

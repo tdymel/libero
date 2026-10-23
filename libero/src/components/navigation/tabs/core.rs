@@ -15,7 +15,7 @@ use crate::{
     sx::{FORCED_COLORS, StaticSx, ThemeAwareValue, sx},
     theme::{
         CssVar, Size, SizeCss, TABS_BORDER_COLOR, TABS_GAP, TABS_HOVER, TABS_LINE, TABS_PAD_X,
-        TABS_PAD_Y, TabsDefaults,
+        TABS_PAD_Y, TabsDefaults, TabsPlacement,
     },
 };
 
@@ -109,7 +109,75 @@ static TABS_SX: StaticSx = StaticSx::new(|| {
                 sx().flex("1 0 auto"),
             ),
         )
+        .when("vertical", vertical_sx())
+        // The strip's line and the selected tab's indicator face the panel.
+        .when(
+            TabsPlacement::Start.state_name(),
+            vertical_side_sx("inline-end", "-1px", "1px"),
+        )
+        .when(
+            TabsPlacement::End.state_name(),
+            vertical_side_sx("inline-start", "1px", "-1px").flex_direction("row-reverse"),
+        )
 });
+
+/// The strip as a column beside the panel; direct paths, so nested tabs keep their own.
+fn vertical_sx() -> crate::sx::Sx {
+    sx().display("flex")
+        .align_items("flex-start")
+        .selector(
+            "& > [role=\"tablist\"]",
+            sx().flex_direction("column")
+                .flex_shrink("0")
+                .overflow_x("visible")
+                .overflow_y("auto")
+                .max_width("50%"),
+        )
+        .selector(
+            "& > [role=\"tablist\"] > [role=\"tab\"]",
+            sx().border_bottom("0")
+                .justify_content("flex-start")
+                .text_align("start"),
+        )
+        .selector(
+            "& > [role=\"tabpanel\"]",
+            sx().flex("1 1 0").min_width("0").padding_top("0"),
+        )
+}
+
+/// One vertical side: the strip's inset line (physical, flipped in RTL), the tabs'
+/// indicator on `edge`, and the panel's gap on the far side.
+fn vertical_side_sx(edge: &str, ltr: &str, rtl: &str) -> crate::sx::Sx {
+    let line = |x: &str| format!("inset {x} 0 0 {}", TABS_BORDER_COLOR.value());
+    let tab = "& > [role=\"tablist\"] > [role=\"tab\"]";
+    let border = format!("border-{edge}");
+    let panel_gap = match edge {
+        "inline-end" => "padding-inline-start",
+        _ => "padding-inline-end",
+    };
+    sx().selector("& > [role=\"tablist\"]", sx().box_shadow(line(ltr)))
+        .rtl(sx().selector("& > [role=\"tablist\"]", sx().box_shadow(line(rtl))))
+        .selector(
+            tab,
+            sx().with(&border, format!("{} solid transparent", TABS_LINE.value())),
+        )
+        .selector(
+            format!("{tab}[aria-selected=\"true\"]"),
+            sx().with(format!("{border}-color"), TABS_COLOR.value()),
+        )
+        .media(
+            FORCED_COLORS,
+            sx().selector(tab, sx().with(format!("{border}-color"), "Canvas"))
+                .selector(
+                    format!("{tab}[aria-selected=\"true\"]"),
+                    sx().with(format!("{border}-color"), "Highlight"),
+                ),
+        )
+        .selector(
+            "& > [role=\"tabpanel\"]",
+            sx().with(panel_gap, SizeCss::SPACING.value(Size::Md)),
+        )
+}
 
 /// One tab, with `T` already gone: `content` is the rendered label and `name`
 /// the accessible one, or empty for the content's own.
@@ -128,6 +196,8 @@ pub(crate) struct TabsView {
     pub onselect: Callback<usize>,
     pub color: ThemeAwareValue,
     pub full_width: bool,
+    /// `start` or `end` make a vertical strip, moved by Up and Down.
+    pub placement: TabsPlacement,
     /// Arrows move the focus only; the tab's own click (Enter, Space) selects.
     pub manual: bool,
     /// `false` keeps the tabs out of the tab order, for a picker in a dropdown.
@@ -150,6 +220,7 @@ pub(crate) fn render_tabs(view: TabsView, root: String) -> Element {
         onselect,
         color,
         full_width,
+        placement,
         manual,
         focusable,
         panel_stop,
@@ -161,11 +232,14 @@ pub(crate) fn render_tabs(view: TabsView, root: String) -> Element {
     } = view;
 
     let root_element = use_element();
+    let vertical = placement != TabsPlacement::Top;
 
     let states: Input<States> = states
         .unwrap_or_default()
         .with(size.state_name(), true)
         .with("full-width", full_width)
+        .with("vertical", vertical)
+        .with(placement.state_name(), vertical)
         .into();
     // The text role, shared by the selected label and its underline.
     let variables: Input<Variables> = variables().with(TABS_COLOR, text_color(&color)).into();
@@ -200,6 +274,7 @@ pub(crate) fn render_tabs(view: TabsView, root: String) -> Element {
                     selected,
                     onselect,
                     manual,
+                    vertical,
                     focusable,
                     root: root.clone(),
                     root_element,
@@ -226,6 +301,7 @@ fn TabStrip(
     selected: Option<usize>,
     onselect: Callback<usize>,
     manual: bool,
+    vertical: bool,
     focusable: bool,
     root: String,
     root_element: ElementHandle,
@@ -262,9 +338,14 @@ fn TabStrip(
         if has_shortcut_modifier(&event) || neighbour(&disabled, at, 1) == Some(at) {
             return;
         }
+        // APG: Up and Down on a vertical strip, Left and Right on a horizontal one.
+        let (forward, back) = match vertical {
+            true => (NamedKey::ArrowDown, NamedKey::ArrowUp),
+            false => (NamedKey::ArrowRight, NamedKey::ArrowLeft),
+        };
         let next = match logical_key(&event) {
-            Key::Named(NamedKey::ArrowRight) => neighbour(&disabled, at, 1),
-            Key::Named(NamedKey::ArrowLeft) => neighbour(&disabled, at, -1),
+            Key::Named(key) if key == forward => neighbour(&disabled, at, 1),
+            Key::Named(key) if key == back => neighbour(&disabled, at, -1),
             Key::Named(NamedKey::Home) => disabled.iter().position(|off| !off),
             Key::Named(NamedKey::End) => disabled.iter().rposition(|off| !off),
             _ => return,
@@ -304,7 +385,7 @@ fn TabStrip(
         div {
             id: "{root}-tablist",
             role: "tablist",
-            "aria-orientation": "horizontal",
+            "aria-orientation": if vertical { "vertical" } else { "horizontal" },
             "data-slot": TabsPart::List.slot(),
             onmounted: list_element.mount(),
             onfocusout: focus.focusout(0),

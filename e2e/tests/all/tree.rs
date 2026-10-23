@@ -702,3 +702,134 @@ fn home_and_end_at_the_ends_leave_the_page_to_scroll() {
         fixture.close().await.unwrap();
     });
 }
+
+const A: keyboard::Key = keyboard::Key {
+    key: "a",
+    code: "KeyA",
+    vk: 65,
+    text: None,
+};
+
+/// `aria-checked` on each id, as one condition: every one reads `state`.
+fn checked_as(ids: &[&str], state: &str) -> String {
+    ids.iter()
+        .map(|id| {
+            format!("document.querySelector(\"[data-tree-id='{id}']\").getAttribute('aria-checked') === '{state}'")
+        })
+        .collect::<Vec<_>>()
+        .join(" && ")
+}
+
+/// Multiple `selected`: Space picks a row, Shift+Down picks the row it lands on, and Ctrl+A
+/// picks every enabled node, the collapsed `b1` too.
+#[test]
+fn space_shift_arrows_and_ctrl_a_select_rows() {
+    block_on(async {
+        let fixture = Fixture::open("/tree/multiple", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        keyboard::tab_to(page, ROW, 5).await.unwrap();
+        wait::for_js_true(
+            page,
+            "document.querySelector('[role=tree]').getAttribute('aria-multiselectable') === 'true'",
+            "the root to be aria-multiselectable",
+        )
+        .await
+        .unwrap();
+        keyboard::press(page, keyboard::SPACE).await.unwrap();
+        wait::for_js_true(
+            page,
+            "document.querySelector(\"[data-tree-id='a']\").getAttribute('aria-selected') === 'true'",
+            "Space to select a",
+        )
+        .await
+        .unwrap();
+        keyboard::press_with(page, keyboard::ARROW_DOWN, keyboard::SHIFT)
+            .await
+            .unwrap();
+        wait::for_js_true(
+            page,
+            "document.activeElement?.dataset.treeId === 'a1' && document.activeElement.getAttribute('aria-selected') === 'true'",
+            "Shift+Down to move to a1 and select it",
+        )
+        .await
+        .unwrap();
+        keyboard::press_with(page, A, keyboard::MOD).await.unwrap();
+        wait::for_js_true(
+            page,
+            "document.querySelector('#selected').textContent === 'a,a1,a2,b,b1'",
+            "Ctrl+A to select every enabled node",
+        )
+        .await
+        .unwrap();
+        fixture
+            .console
+            .assert_clean("selecting rows by keys")
+            .unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
+/// Non-strict `checked`: a leaf's box makes branch `a` mixed, both leaves make it true, and Space
+/// on `a` unchecks all three.
+#[test]
+fn checkbox_clicks_cascade_through_a_branch() {
+    block_on(async {
+        let fixture = Fixture::open("/tree/checkboxes", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        wait::for_js_true(
+            page,
+            &checked_as(&["a", "a1", "a2"], "false"),
+            "every row to start unchecked",
+        )
+        .await
+        .unwrap();
+        pointer::click(page, "[data-tree-id='a1'] [data-slot=control]")
+            .await
+            .unwrap();
+        wait::for_js_true(
+            page,
+            &format!(
+                "{} && {}",
+                checked_as(&["a1"], "true"),
+                checked_as(&["a"], "mixed")
+            ),
+            "a1's box to check a1 and make a mixed",
+        )
+        .await
+        .unwrap();
+        pointer::click(page, "[data-tree-id='a2'] [data-slot=control]")
+            .await
+            .unwrap();
+        wait::for_js_true(
+            page,
+            &checked_as(&["a", "a1", "a2"], "true"),
+            "a2's box to make a true",
+        )
+        .await
+        .unwrap();
+        page.evaluate_bounded("document.querySelector(\"[data-tree-id='a']\").focus()")
+            .await
+            .unwrap();
+        wait::for_js_true(
+            page,
+            "document.activeElement?.dataset.treeId === 'a'",
+            "focus on the branch a",
+        )
+        .await
+        .unwrap();
+        keyboard::press(page, keyboard::SPACE).await.unwrap();
+        wait::for_js_true(
+            page,
+            &checked_as(&["a", "a1", "a2"], "false"),
+            "Space on a to uncheck all three",
+        )
+        .await
+        .unwrap();
+        fixture.console.assert_clean("checking by boxes").unwrap();
+        fixture.close().await.unwrap();
+    });
+}

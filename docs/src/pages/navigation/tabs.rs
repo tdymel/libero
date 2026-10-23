@@ -82,6 +82,7 @@ fn rich(section: Section) -> OptionLabel {
 #[component]
 pub fn TabsPage() -> Element {
     let mut section = use_signal(|| Section::Account);
+    let mut vertical = use_signal(|| Section::Account);
     let theme = use_theme();
 
     rsx! {
@@ -102,6 +103,7 @@ pub fn TabsPage() -> Element {
                     prop("color", "ThemeAwareValue").default(theme.tabs.color.as_str()).doc("Indicator and selected-label color."),
                     prop("full_width", "bool").default("false").doc("Tabs grow to fill the row, never below their label. A crowded strip still scrolls. Not themed."),
                     prop("activation", "TabsActivation").default(theme.tabs.activation.as_str()).doc("`Automatic` selects as the arrows move. `Manual` moves only the focus, and Enter or Space selects. Use it for slow panels."),
+                    prop("placement", "TabsPlacement").default("top").doc("Vertical tabs: `start` or `end` put the strip in a column beside the panel, moved by Up and Down."),
                     prop("panel_focusable", "bool").default("true").doc("Whether the selected panel is a tab stop, as the APG asks when it holds no focusable content. Turn it off for a panel with its own controls. Not themed."),
                     prop("parts", "Parts<TabsPart>")
                         .doc("Styles for the inner parts in the Style API tab, under `sx`."),
@@ -119,12 +121,13 @@ pub fn TabsPage() -> Element {
             ],
             accessibility: a11y()
                 .key(["Tab"], "Enters the strip at the selected tab, the only one in the tab order.")
-                .key(["Left", "Right"], "Moves to the previous or next tab, skipping disabled ones. With `Automatic` activation it selects the tab too; `Manual` moves only the focus.")
+                .key(["Left", "Right"], "On a horizontal strip, moves to the previous or next tab, skipping disabled ones. With `Automatic` activation it selects the tab too; `Manual` moves only the focus. On a vertical strip they do nothing.")
+                .key(["Up", "Down"], "On a vertical strip (`placement: start` or `end`), moves to the previous or next tab, with the same activation rule. On a horizontal strip they scroll the page.")
                 .key(["Home", "End"], "Jumps to the first or last tab. With `Automatic` activation it selects the tab too; `Manual` moves only the focus.")
                 .key(["Enter", "Space"], "With `activation: TabsActivation::Manual`, where the arrows move only the focus: selects the focused tab.")
                 .handles([
                     "Only the selected tab is in the tab order. The selected panel is a tab stop too, so content that cannot take focus stays reachable by keyboard; `panel_focusable: false` drops it for a panel that holds focusable content.",
-                    "`aria_label` and `aria_labelledby` land on the tablist, not the root.",
+                    "`aria_label` and `aria_labelledby` land on the tablist, not the root. A vertical tablist has `aria-orientation=\"vertical\"`.",
                     "In a strip too wide for its box, the selected tab scrolls into view, also when `value` changes from outside.",
                 ])
                 .must([
@@ -169,6 +172,9 @@ pub fn TabsPage() -> Element {
                     Control::toggle("activation", ["automatic", "manual"])
                         .labels(["Automatic", "Manual"])
                         .default(theme.tabs.activation.as_str()),
+                    Control::toggle("placement", ["top", "start", "end"])
+                        .labels(["Top", "Start", "End"])
+                        .default("top"),
                     Control::switch("full_width"),
                     Control::switch("panel_focusable").default("true"),
                     // The flag lives inside `options`, so the switch stands
@@ -196,6 +202,7 @@ pub fn TabsPage() -> Element {
                         full_width: values.str("full_width") == "true",
                         panel_focusable: values.str("panel_focusable") != "false",
                         activation: values.str("activation"),
+                        placement: values.str("placement"),
                         option_label: match values.str("labels").as_str() {
                             "renamed" => Some(Callback::new(renamed)),
                             "rich" => Some(Callback::new(rich)),
@@ -203,6 +210,35 @@ pub fn TabsPage() -> Element {
                         },
                         value: section(),
                         onchange: move |next| section.set(next),
+                        panel: |section: Section| match section {
+                            Section::Account => rsx! { "Account settings" },
+                            Section::Admin => rsx! { "Admin area" },
+                            Section::Billing => rsx! { "Billing details" },
+                        },
+                    }
+                },
+            }
+
+            // snippet: let mut vertical = use_signal(|| Section::Account);
+            Demo {
+                component: "Tabs",
+                children_text: "",
+                title: "vertical tabs".to_string(),
+                wrap: Wrap(|_: &DemoValues, source: &str| format!("{SECTION_ENUM}{source}")),
+                fixed: vec![
+                    "aria_label: \"Settings\"".to_string(),
+                    "placement: \"start\"".to_string(),
+                    "value: vertical()".to_string(),
+                    "onchange: move |next| vertical.set(next)".to_string(),
+                    "panel: |section: Section| match section {\n    Section::Account => rsx! { \"Account settings\" },\n    Section::Admin => rsx! { \"Admin area\" },\n    Section::Billing => rsx! { \"Billing details\" },\n}".to_string(),
+                ],
+                controls: vec![],
+                render: move |_: DemoValues| rsx! {
+                    Tabs {
+                        aria_label: "Settings",
+                        placement: "start",
+                        value: vertical(),
+                        onchange: move |next| vertical.set(next),
                         panel: |section: Section| match section {
                             Section::Account => rsx! { "Account settings" },
                             Section::Admin => rsx! { "Admin area" },

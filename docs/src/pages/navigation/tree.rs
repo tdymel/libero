@@ -121,8 +121,8 @@ fn fixed() -> Vec<String> {
         .collect()
 }
 
-/// The expansion and the selection are the page's state, not `Tree`'s, so the
-/// buttons and the readout are part of the example.
+/// The expansion is the page's state, not `Tree`'s, so the buttons and the
+/// readout are part of the example.
 fn wrap_selection(_: &DemoValues, code: &str) -> String {
     format!(
         "Flex {{\n    direction: \"column\",\n    gap: \"sm\",\n    sx: sx().width(\"100%\").max_width(\"320px\"),\n{}{}    // Always mounted, so a screen reader hears the text it gains.\n{}}}",
@@ -137,11 +137,37 @@ fn folders() -> HashSet<String> {
     HashSet::from(["src", "src/components"].map(str::to_string))
 }
 
+/// The selection props the code prints: `selected` with its handler, and `multiple` for the multi mode.
+fn selection_code(_: &Control, values: &DemoValues) -> Vec<String> {
+    let mut props = Vec::new();
+    if values.str("selection") != "none" {
+        props.push("selected: picked()".to_string());
+        props.push("onselectedchange: move |next| picked.set(next)".to_string());
+    }
+    if values.str("selection") == "multiple" {
+        props.push("multiple: true".to_string());
+    }
+    props
+}
+
+/// `checked` with its handler, printed only while the checkboxes are on.
+fn checkbox_code(_: &Control, values: &DemoValues) -> Vec<String> {
+    match values.str("checkboxes") == "true" {
+        true => vec![
+            "checked: checks()".to_string(),
+            "oncheckedchange: move |next| checks.set(next)".to_string(),
+        ],
+        false => vec![],
+    }
+}
+
 #[component]
 pub fn TreePage() -> Element {
     let theme = use_theme();
-    let mut selected = use_signal(|| None::<String>);
+    let mut current = use_signal(|| None::<String>);
     let mut expanded = use_signal(folders);
+    let mut picked = use_signal(|| HashSet::from(["src/lib.rs".to_string()]));
+    let mut checks = use_signal(|| HashSet::from(["src/components/list.rs".to_string()]));
 
     rsx! {
         DocPage {
@@ -170,6 +196,23 @@ pub fn TreePage() -> Element {
                     ),
                     prop("onexpandedchange", "EventHandler<HashSet<String>>")
                         .doc("Called with the whole new set of expanded ids. Store it when `expanded` is set; without `expanded` it only notifies."),
+                    prop("selected", "HashSet<String>").doc(
+                        "The selected ids, controlled: set, the rows are selectable and carry `aria-selected`. A click or Space picks a row. Store it with `onselectedchange`.",
+                    ),
+                    prop("multiple", "bool").default("false").doc(
+                        "With `selected`, any number of rows: a click or Space toggles one, and Shift extends a range. Sets `aria-multiselectable` on the root.",
+                    ),
+                    prop("onselectedchange", "EventHandler<HashSet<String>>")
+                        .doc("Called with the whole new set of selected ids. Store it when `selected` is set."),
+                    prop("checked", "HashSet<String>").doc(
+                        "The checked ids, controlled: set, every row draws a checkbox and carries `aria-checked`. Space or a click on the box toggles it. Store it with `oncheckedchange`.",
+                    ),
+                    prop("check_strictly", "bool").default("false").doc(
+                        "With `checked`, each row checks alone. Unset, checking a branch checks its enabled descendants, and a branch reads `mixed` while only some are checked.",
+                    ),
+                    prop("oncheckedchange", "EventHandler<HashSet<String>>").doc(
+                        "Called with the whole new set of checked ids. Store it when `checked` is set. Unset `check_strictly`, the set holds every fully checked node.",
+                    ),
                     prop("parts", "Parts<TreePart>")
                         .doc("Styles for the inner parts in the Style API tab, under `sx`."),
                 ])
@@ -182,7 +225,7 @@ pub fn TreePage() -> Element {
                     prop("id", "String").default("required").doc("The node's unique id."),
                     prop("data", "T").default("required").doc("Your data for this node."),
                     prop("children", "Vec<TreeNode<T>>").doc("Nested nodes. Without any, the node is a leaf."),
-                    prop("disabled", "bool").default("false").doc("The arrow keys still reach it, but it does not activate, expand or collapse. Its descendants are disabled too."),
+                    prop("disabled", "bool").default("false").doc("The arrow keys still reach it, but it does not activate, expand, collapse, select or check. Its descendants are disabled too."),
                 ]).without_base_props(),
                 props("TreeNodeRenderArgs<T>", vec![
                     prop("id", "String").doc("The node's id."),
@@ -192,6 +235,9 @@ pub fn TreePage() -> Element {
                     prop("tabindex", "&'static str")
                         .doc("Put it on any link or button in the row, or it adds a tab stop the arrow keys never reach."),
                     prop("depth", "usize").doc("0 at the top level, for custom indentation."),
+                    prop("selected", "bool").doc("In `Tree`'s `selected`. Always `false` without it."),
+                    prop("checked", "Option<bool>").doc("With `checked`, the row's check; `None` without checkboxes. `TreeItemContent` and `TreeItem` draw the box themselves."),
+                    prop("indeterminate", "bool").doc("Some of a branch's rows are checked, not all; `checked` is then `Some(false)`."),
                 ]).without_base_props(),
                 props("TreeItemContent", vec![
                     prop("icon", "SvgData").doc("Drawn after the chevron, before the label."),
@@ -212,11 +258,19 @@ pub fn TreePage() -> Element {
                 .key(["Up", "Down"], "Moves between visible rows.")
                 .key(["Left", "Right"], "Collapses and expands, or jumps to the parent and first child.")
                 .key(["Home", "End"], "Jumps to the first or last row.")
-                .key(["Enter", "Space"], "Opens or closes a branch, or clicks a leaf's link, button or `TreeItem`.")
+                .key(["Enter"], "Opens or closes a branch, or clicks a leaf's link, button or `TreeItem`. In a single `selected` tree, a leaf is selected too.")
+                .key(["Space"], "Opens or closes a branch, or clicks a leaf's link, button or `TreeItem`. With `selected` or `checked`, toggles the row's selection or check instead.")
                 .key(["*"], "Opens every closed sibling of the row.")
+                .key(["Shift+Space"], "With `selected` and `multiple`, adds the range from the last row picked to this one. Not with `checked`.")
+                .key(["Shift+Up", "Shift+Down"], "With `selected` and `multiple`, moves focus and toggles the row it lands on.")
+                .key(["Ctrl+A"], "With `selected` and `multiple`, selects every enabled node, collapsed ones too. Clears them when all are selected. Cmd+A on a Mac.")
+                .key(["Ctrl+Shift+Home", "Ctrl+Shift+End"], "With `selected` and `multiple`, selects from this row to the first or last visible row, and moves focus there.")
                 .handles([
                     "Typing jumps to the next row whose `tree_label` matches.",
                     "The arrow keys reach a disabled node, but typing skips it and nothing activates, expands or collapses it.",
+                    "With `selected`, every row carries `aria-selected`, `true` or `false`. The root is `aria-multiselectable` with `multiple`.",
+                    "With `checked`, every row carries `aria-checked`: `true`, `false`, or `mixed` for a branch with only some enabled rows checked (not with `check_strictly`).",
+                    "A disabled node is never selected or checked, by keys, clicks or a branch's cascade.",
                     "`TreeItem` takes `args.tabindex` for you.",
                     "A `NavLink` in a disabled row is disabled with it and goes nowhere, unless it sets `disabled: false`.",
                 ])
@@ -252,8 +306,10 @@ pub fn TreePage() -> Element {
             // snippet: item fn file_icon(_: &FileEntry, _: Option<bool>) -> libero::components::SvgData { pictogram_icons_lucide::file::outlined }
             // snippet: item use std::collections::HashSet;
             // snippet: item fn folders() -> HashSet<String> { HashSet::new() }
-            // snippet: let mut selected = use_signal(|| None::<String>);
+            // snippet: let mut current = use_signal(|| None::<String>);
             // snippet: let mut expanded = use_signal(folders);
+            // snippet: let mut picked = use_signal(|| HashSet::from(["src/lib.rs".to_string()]));
+            // snippet: let mut checks = use_signal(|| HashSet::from(["src/components/list.rs".to_string()]));
             Demo {
                 component: "Tree",
                 children_text: "",
@@ -262,6 +318,14 @@ pub fn TreePage() -> Element {
                     Control::switch("guides"),
                     Control::sizes("size")
                         .default(theme.tree.size.as_str()),
+                    Control::toggle("selection", ["none", "single", "multiple"])
+                        .default("multiple")
+                        .code(selection_code),
+                    Control::switch("checkboxes")
+                        .default("true")
+                        .code(checkbox_code),
+                    Control::switch("check_strictly")
+                        .hidden_when(|values: &DemoValues| values.str("checkboxes") != "true"),
                 ],
                 render: move |values: DemoValues| rsx! {
                     Flex {
@@ -282,16 +346,22 @@ pub fn TreePage() -> Element {
                             data: file_tree(),
                             expanded: expanded(),
                             onexpandedchange: move |next| expanded.set(next),
-                            current: selected(),
+                            current: current(),
                             // demo-code: wiring end
                             guides: values.str("guides") == "true",
                             size: or_unset(values.str("size")),
+                            selected: (values.str("selection") != "none").then(|| picked.read().clone()),
+                            multiple: values.str("selection") == "multiple",
+                            onselectedchange: move |next| picked.set(next),
+                            checked: (values.str("checkboxes") == "true").then(|| checks.read().clone()),
+                            oncheckedchange: move |next| checks.set(next),
+                            check_strictly: values.str("check_strictly") == "true",
                             // demo-code: render start
                             render_node: move |args: TreeNodeRenderArgs<FileEntry>| {
                                 let id = args.id.clone();
                                 rsx! {
                                     TreeItem {
-                                        onclick: move |_| selected.set(Some(id.clone())),
+                                        onclick: move |_| current.set(Some(id.clone())),
                                         icon: file_icon(&args.data, args.expanded),
                                         "{args.data.name}"
                                     }
@@ -301,9 +371,9 @@ pub fn TreePage() -> Element {
                         }
                         // demo-code: status start
                         Text { role: "status",
-                            if let Some(selected) = selected() {
-                                "Selected: "
-                                Code { source: "{selected}" }
+                            if let Some(current) = current() {
+                                "Current: "
+                                Code { source: "{current}" }
                             }
                         }
                         // demo-code: status end
@@ -315,8 +385,6 @@ pub fn TreePage() -> Element {
             DocSection {
                 title: "Rows",
                 Text {
-                    Code { source: "Tree" }
-                    " has no selection. "
                     Code { source: "render_node" }
                     " decides what a row does. "
                     Code { source: "TreeItemContent" }
@@ -332,7 +400,13 @@ pub fn TreePage() -> Element {
                     Code { source: "NavLink" }
                     " with "
                     Code { source: "args.tabindex" }
-                    ", as in this site's sidebar."
+                    ", as in this site's sidebar. The checkbox of "
+                    Code { source: "checked" }
+                    " is drawn only by "
+                    Code { source: "TreeItemContent" }
+                    " and "
+                    Code { source: "TreeItem" }
+                    ", so a custom row without them has none."
                 }
             }
 

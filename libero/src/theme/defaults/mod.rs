@@ -360,7 +360,7 @@ pub use table::{
 pub use tabs::{
     TABS_BORDER_COLOR, TABS_FONT_SIZE, TABS_GAP, TABS_HOVER, TABS_ICON_GAP, TABS_INDICATOR,
     TABS_LINE, TABS_PAD_X, TABS_PAD_Y, TABS_PADDING_X, TABS_PADDING_Y, TabsActivation,
-    TabsDefaults, TabsSizeLevel,
+    TabsDefaults, TabsPlacement, TabsSizeLevel,
 };
 pub use tags_field::TagsFieldDefaults;
 pub use text::{

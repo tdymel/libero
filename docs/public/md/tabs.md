@@ -134,6 +134,40 @@ fn Demo() -> Element {
 signal. `OptionLabel::rich` draws a tab as rsx, such as an icon, and takes a
 text name for screen readers.
 
+## Vertical tabs
+
+`placement: TabsPlacement::Start` puts the strip in a column beside the panel,
+moved by Up and Down. `Start` is the inline start side (left in left-to-right
+text), `End` the inline end side. The tablist has `aria-orientation="vertical"`,
+and the selected tab's indicator sits on the edge facing the panel.
+
+```rust
+use dioxus::prelude::*;
+use libero::components::{Options, Tabs, TabsPlacement};
+
+#[derive(Clone, PartialEq, Options)]
+enum Section {
+    Account,
+    Billing,
+    Admin,
+}
+
+#[component]
+fn Demo() -> Element {
+    let mut section = use_signal(|| Section::Account);
+
+    rsx! {
+        Tabs {
+            aria_label: "Settings",
+            placement: TabsPlacement::Start,
+            value: section(),
+            onchange: move |next| section.set(next),
+            panel: |section: Section| rsx! { "{section.label()}" },
+        }
+    }
+}
+```
+
 ## Props
 
 ### Tabs
@@ -149,6 +183,7 @@ text name for screen readers.
 | `color` | `ThemeAwareValue` | `primary` | Indicator and selected-label color. |
 | `full_width` | `bool` | `false` | Tabs grow to fill the row, never below their label. A crowded strip still scrolls. Not themed. |
 | `activation` | `TabsActivation` | `automatic` | `Automatic` selects as the arrows move. `Manual` moves only the focus, and Enter or Space selects. Use it for slow panels. |
+| `placement` | `TabsPlacement` | `top` | Vertical tabs: `start` or `end` put the strip in a column beside the panel, moved by Up and Down. |
 | `panel_focusable` | `bool` | `true` | Whether the selected panel is a tab stop, as the APG asks when it holds no focusable content. Turn it off for a panel with its own controls. Not themed. |
 | `parts` | `Parts<TabsPart>` | - | Styles for the inner parts in the Style API tab, under `sx`. |
 
@@ -184,7 +219,8 @@ explains how parts work.
 | Key | Action |
 |---|---|
 | `Tab` | Enters the strip at the selected tab, the only one in the tab order. |
-| `Left` or `Right` | Moves to the previous or next tab, skipping disabled ones. With `Automatic` activation it selects the tab too; `Manual` moves only the focus. |
+| `Left` or `Right` | On a horizontal strip, moves to the previous or next tab, skipping disabled ones. With `Automatic` activation it selects the tab too; `Manual` moves only the focus. On a vertical strip they do nothing. |
+| `Up` or `Down` | On a vertical strip (`placement: start` or `end`), moves to the previous or next tab, with the same activation rule. On a horizontal strip they scroll the page. |
 | `Home` or `End` | Jumps to the first or last tab. With `Automatic` activation it selects the tab too; `Manual` moves only the focus. |
 | `Enter` or `Space` | With `activation: TabsActivation::Manual`, where the arrows move only the focus: selects the focused tab. |
 
@@ -193,7 +229,8 @@ explains how parts work.
 - Only the selected tab is in the tab order. The selected panel is a tab stop
   too, so content that cannot take focus stays reachable by keyboard;
   `panel_focusable: false` drops it for a panel that holds focusable content.
-- `aria_label` and `aria_labelledby` land on the tablist, not the root.
+- `aria_label` and `aria_labelledby` land on the tablist, not the root. A
+  vertical tablist has `aria-orientation="vertical"`.
 - In a strip too wide for its box, the selected tab scrolls into view, also
   when `value` changes from outside.
 
@@ -248,6 +285,9 @@ State tokens on the root's `data-state`, space separated.
 |---|---|
 | `size-<size>` | The `size` in effect. |
 | `full-width` | `full_width` is set. |
+| `vertical` | `placement` is `start` or `end`: the strip is a column beside the panel. |
+| `placement-start` | `placement` is `start`. |
+| `placement-end` | `placement` is `end`. |
 
 The tabs carry no `data-state`. Style them through `[aria-selected="true"]`
 and `[aria-disabled="true"]`.

@@ -1,4 +1,8 @@
-use std::{cell::RefCell, collections::HashSet, rc::Rc};
+use std::{
+    cell::RefCell,
+    collections::{HashMap, HashSet},
+    rc::Rc,
+};
 
 use dioxus::prelude::*;
 
@@ -8,7 +12,7 @@ use crate::{
             Input, base_props, css_string, has_shortcut_modifier, parts_enum, parts_under_sx,
         },
         data_display::List,
-        form::Disabled,
+        form::{CheckboxLook, Disabled, use_checkbox_look},
     },
     hooks::{
         ElementHandle, TYPEAHEAD_RESET, listener, typeahead_match, use_element, use_theme,
@@ -16,7 +20,7 @@ use crate::{
     },
     platform::{
         ElementApi, OBSERVE_ATTR, PlatformError, click_selector, focus_closest_of_focused,
-        focus_selector, logical_key, when_free,
+        focus_selector, logical_key, meta_held, when_free,
     },
     theme::Size,
     utils::warn,
@@ -242,6 +246,181 @@ fn expand_siblings(order: &[VisibleNode], node: &VisibleNode, expansion: Expansi
     expansion.set(next);
 }
 
+/// A row's checkbox, as `aria-checked` reads it.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(super) enum Check {
+    On,
+    Off,
+    Mixed,
+}
+
+impl Check {
+    pub fn aria(self) -> &'static str {
+        match self {
+            Check::On => "true",
+            Check::Off => "false",
+            Check::Mixed => "mixed",
+        }
+    }
+}
+
+/// Every node's check. Unless `strict`, a checked node checks its enabled rows below, and a
+/// branch reads its enabled children: all on is on, all off is off, else mixed.
+fn check_states(
+    nodes: &[TreeNodeErased],
+    checked: &HashSet<String>,
+    strict: bool,
+    off: bool,
+) -> HashMap<String, Check> {
+    fn walk(
+        node: &TreeNodeErased,
+        checked: &HashSet<String>,
+        strict: bool,
+        (inherited, disabled_above): (bool, bool),
+        out: &mut HashMap<String, Check>,
+    ) -> Check {
+        let disabled = disabled_above || node.disabled;
+        let own = checked.contains(&node.id) || (inherited && !disabled);
+        let (mut on, mut off) = (false, false);
+        for child in node.children.iter() {
+            let state = walk(child, checked, strict, (own && !strict, disabled), out);
+            if !(disabled || child.disabled) {
+                on |= state != Check::Off;
+                off |= state != Check::On;
+            }
+        }
+        let state = match (strict, on, off) {
+            (false, true, true) => Check::Mixed,
+            (false, true, false) => Check::On,
+            (false, false, true) => Check::Off,
+            _ if own => Check::On,
+            _ => Check::Off,
+        };
+        out.insert(node.id.clone(), state);
+        state
+    }
+    let mut out = HashMap::new();
+    for node in nodes {
+        walk(node, checked, strict, (false, off), &mut out);
+    }
+    out
+}
+
+fn find_node<'a>(nodes: &'a [TreeNodeErased], id: &str) -> Option<&'a TreeNodeErased> {
+    nodes.iter().find_map(|node| match node.id == id {
+        true => Some(node),
+        false => find_node(&node.children, id),
+    })
+}
+
+/// `checked` after a click or Space on `id`. Unless `strict`, every fully checked node.
+fn toggled_checks(
+    nodes: &[TreeNodeErased],
+    checked: &HashSet<String>,
+    strict: bool,
+    off: bool,
+    id: &str,
+) -> HashSet<String> {
+    let mut next = checked.clone();
+    if strict {
+        if !next.remove(id) {
+            next.insert(id.to_string());
+        }
+        return next;
+    }
+    let states = check_states(nodes, checked, false, off);
+    let on = |states: &HashMap<String, Check>| -> HashSet<String> {
+        states
+            .iter()
+            .filter(|(_, state)| **state == Check::On)
+            .map(|(id, _)| id.clone())
+            .collect()
+    };
+    let want = states.get(id) != Some(&Check::On);
+    next = on(&states);
+    // A checked ancestor would check `id`'s rows again; the recount restores it.
+    for ancestor in path_to(nodes, id).unwrap_or_default().iter().rev().skip(1) {
+        next.remove(*ancestor);
+    }
+    fn set(node: &TreeNodeErased, want: bool, next: &mut HashSet<String>) {
+        match want {
+            true => next.insert(node.id.clone()),
+            false => next.remove(&node.id),
+        };
+        for child in node.children.iter().filter(|child| !child.disabled) {
+            set(child, want, next);
+        }
+    }
+    if let Some(node) = find_node(nodes, id) {
+        set(node, want, &mut next);
+    }
+    on(&check_states(nodes, &next, false, off))
+}
+
+/// How a click or key picks a row in a `multiple` tree; a single one always replaces.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(super) enum Pick {
+    Toggle,
+    /// The enabled visible rows from the anchor to the row, added.
+    Range,
+}
+
+fn picked(
+    selected: &HashSet<String>,
+    multiple: bool,
+    order: &[VisibleNode],
+    anchor: Option<&str>,
+    id: &str,
+    pick: Pick,
+) -> HashSet<String> {
+    if !multiple {
+        return HashSet::from([id.to_string()]);
+    }
+    let at = |id: &str| order.iter().position(|node| node.id == id);
+    match (pick, anchor.and_then(at), at(id)) {
+        (Pick::Range, Some(from), Some(to)) => {
+            let mut next = selected.clone();
+            next.extend(enabled_between(order, from, to));
+            next
+        }
+        _ => {
+            let mut next = selected.clone();
+            if !next.remove(id) {
+                next.insert(id.to_string());
+            }
+            next
+        }
+    }
+}
+
+fn enabled_between(order: &[VisibleNode], from: usize, to: usize) -> Vec<String> {
+    order[from.min(to)..=from.max(to)]
+        .iter()
+        .filter(|node| !node.disabled)
+        .map(|node| node.id.to_string())
+        .collect()
+}
+
+/// Every enabled node, collapsed ones included: Ctrl+A's set.
+fn enabled_ids(nodes: &[TreeNodeErased], off: bool, out: &mut Vec<String>) {
+    for node in nodes.iter().filter(|node| !(off || node.disabled)) {
+        out.push(node.id.clone());
+        enabled_ids(&node.children, off, out);
+    }
+}
+
+/// The selection and checks, which each row reads through a memo of its own.
+#[derive(Clone, Copy)]
+pub(super) struct TreeMarks {
+    /// `None` without `Tree`'s `selected`.
+    pub selected: Signal<Option<HashSet<String>>>,
+    /// `None` without `Tree`'s `checked`.
+    pub checks: Signal<Option<HashMap<String, Check>>>,
+    pub pick: Callback<(String, Pick)>,
+    pub check: Callback<String>,
+    pub look: Signal<Option<CheckboxLook>>,
+}
+
 /// The row whose `<li>` holds focus, kept from the rows' focus events for a
 /// WebView, whose handles cannot query (5).
 #[derive(Clone, Copy)]
@@ -368,6 +547,27 @@ base_props! {
         /// The whole new set of open ids.
         #[props(default)]
         onexpandedchange: Option<EventHandler<HashSet<String>>>,
+        /// The selected rows' ids, strictly controlled: set, the rows are selectable
+        /// (`aria-selected`). A click or Space picks a row.
+        #[props(default)]
+        selected: Option<HashSet<String>>,
+        /// With `selected`, any number of rows: a click or Space toggles one, Shift extends.
+        #[props(default)]
+        multiple: bool,
+        /// The whole new set of selected ids.
+        #[props(default)]
+        onselectedchange: Option<EventHandler<HashSet<String>>>,
+        /// The checked rows' ids, strictly controlled: set, every row draws a checkbox
+        /// (`aria-checked`). Space or a click on the box toggles it.
+        #[props(default)]
+        checked: Option<HashSet<String>>,
+        /// With `checked`, each row checks alone. Unset, a branch checks its enabled rows
+        /// and reads mixed when only some are, and `oncheckedchange` gets every fully checked node.
+        #[props(default)]
+        check_strictly: bool,
+        /// The whole new set of checked ids.
+        #[props(default)]
+        oncheckedchange: Option<EventHandler<HashSet<String>>>,
     }
 }
 
@@ -425,6 +625,9 @@ pub fn Tree<T: TreeValue>(props: TreeProps<T>) -> Element {
             disabled: args.disabled,
             tabindex: args.tabindex,
             depth: args.depth,
+            selected: args.selected,
+            checked: args.checked,
+            indeterminate: args.indeterminate,
         })
     });
 
@@ -443,6 +646,12 @@ pub fn Tree<T: TreeValue>(props: TreeProps<T>) -> Element {
             expanded: props.expanded,
             current: props.current,
             onexpandedchange: props.onexpandedchange,
+            selected: props.selected,
+            multiple: props.multiple,
+            onselectedchange: props.onselectedchange,
+            checked: props.checked,
+            check_strictly: props.check_strictly,
+            oncheckedchange: props.oncheckedchange,
         }
     }
 }
@@ -478,7 +687,92 @@ base_props! {
         current: Option<String>,
         #[props(default)]
         onexpandedchange: Option<EventHandler<HashSet<String>>>,
+        #[props(default)]
+        selected: Option<HashSet<String>>,
+        #[props(default)]
+        multiple: bool,
+        #[props(default)]
+        onselectedchange: Option<EventHandler<HashSet<String>>>,
+        #[props(default)]
+        checked: Option<HashSet<String>>,
+        #[props(default)]
+        check_strictly: bool,
+        #[props(default)]
+        oncheckedchange: Option<EventHandler<HashSet<String>>>,
     }
+}
+
+/// The rows' [`TreeMarks`]: the controlled sets mirrored into signals, guarded so an
+/// unchanged set wakes no row, and the callbacks that ask for a new one.
+fn use_marks(
+    props: &TreeCoreProps,
+    open: Signal<HashSet<String>>,
+    off: bool,
+    size: Size,
+) -> TreeMarks {
+    if props.selected.is_some() && props.onselectedchange.is_none() {
+        warn("Tree: a controlled `selected` without `onselectedchange` never changes.");
+    }
+    if props.checked.is_some() && props.oncheckedchange.is_none() {
+        warn("Tree: a controlled `checked` without `oncheckedchange` never changes.");
+    }
+    let checks_now = props
+        .checked
+        .as_ref()
+        .map(|checked| check_states(&props.data, checked, props.check_strictly, off));
+    let mut selected = use_signal(|| props.selected.clone());
+    if *selected.peek() != props.selected {
+        selected.set(props.selected.clone());
+    }
+    let mut checks = use_signal(|| checks_now.clone());
+    if *checks.peek() != checks_now {
+        checks.set(checks_now);
+    }
+    let look_now = use_checkbox_look(size, props.checked.is_some());
+    let mut look = use_signal(|| look_now.clone());
+    if *look.peek() != look_now {
+        look.set(look_now);
+    }
+
+    let mut anchor = use_hook(|| CopyValue::new(None::<String>));
+    let (data, current, multiple) = (props.data.clone(), props.selected.clone(), props.multiple);
+    let onchange = props.onselectedchange;
+    let pick = use_callback(move |(id, pick): (String, Pick)| {
+        let (Some(current), Some(onchange)) = (&current, &onchange) else {
+            return;
+        };
+        let order = visible_order(&data, &open.read(), off);
+        let next = picked(
+            current,
+            multiple,
+            &order,
+            anchor.peek().as_deref(),
+            &id,
+            pick,
+        );
+        if pick == Pick::Toggle || anchor.peek().is_none() {
+            anchor.set(Some(id));
+        }
+        onchange.call(next);
+    });
+    let (data, checked, strict) = (
+        props.data.clone(),
+        props.checked.clone(),
+        props.check_strictly,
+    );
+    let onchange = props.oncheckedchange;
+    let check = use_callback(move |id: String| {
+        if let (Some(checked), Some(onchange)) = (&checked, &onchange) {
+            onchange.call(toggled_checks(&data, checked, strict, off, &id));
+        }
+    });
+    use_context_provider(|| TreeMarks {
+        selected,
+        checks,
+        pick,
+        check,
+        look,
+    })
 }
 
 /// The real `Tree`, non-generic so it compiles once.
@@ -521,6 +815,10 @@ fn TreeCore(props: TreeCoreProps) -> Element {
     // A disabled `Fieldset` cannot reach a span row the way it does a button.
     let group_disabled = try_use_context::<Disabled>().is_some_and(|Disabled(group)| group());
     let order = visible_order(&props.data, &expanded.read(), group_disabled);
+    let marks = use_marks(&props, expansion.open, group_disabled, size);
+    let selectable = props.selected.is_some();
+    let checkable = props.checked.is_some();
+    let multiple = selectable && props.multiple;
     let visible = |id: &String| order.iter().any(|node| node.id == id);
     // So a removed row hands the tab stop to the row taking its place.
     let mut last_index = use_hook(|| CopyValue::new(0_usize));
@@ -589,6 +887,8 @@ fn TreeCore(props: TreeCoreProps) -> Element {
     let resolved_active_for_keydown = resolved_active.clone();
 
     let typeahead = use_typeahead(TYPEAHEAD_RESET);
+    let selected_for_keydown = props.selected.clone();
+    let onselectedchange = props.onselectedchange;
 
     let onkeydown = move |event: Event<KeyboardData>| {
         let Some(current) = resolved_active_for_keydown.clone() else {
@@ -608,6 +908,59 @@ fn TreeCore(props: TreeCoreProps) -> Element {
             if let Some(target) = target {
                 active_id_for_keydown.set(Some(target.clone()));
                 dom.focus(&target);
+            }
+        };
+        let modifiers = event.data().modifiers();
+        let shift = modifiers.shift();
+
+        // APG's multi-select chords, ahead of the browser's below.
+        if multiple && (modifiers.ctrl() || meta_held(modifiers)) && !modifiers.alt() {
+            let index = order
+                .iter()
+                .position(|node| node.id == current)
+                .unwrap_or(0);
+            let last = order.len() - 1;
+            let chord = match logical_key(&event) {
+                Key::Named(NamedKey::Home) if shift => {
+                    Some((Some(0), enabled_between(&order, 0, index)))
+                }
+                Key::Named(NamedKey::End) if shift => {
+                    Some((Some(last), enabled_between(&order, index, last)))
+                }
+                Key::Character(ref c) if !shift && c.eq_ignore_ascii_case("a") => {
+                    let mut all = Vec::new();
+                    enabled_ids(&data_for_keydown, group_disabled, &mut all);
+                    Some((None, all))
+                }
+                _ => None,
+            };
+            if let (Some((to, ids)), Some(selected)) = (chord, &selected_for_keydown) {
+                event.prevent_default();
+                let mut next = selected.clone();
+                // Ctrl+A on a fully selected tree clears it (APG's option).
+                if to.is_none() && ids.iter().all(|id| next.contains(id)) {
+                    ids.iter().for_each(|id| {
+                        next.remove(id);
+                    });
+                } else {
+                    next.extend(ids);
+                }
+                if let Some(onchange) = &onselectedchange {
+                    onchange.call(next);
+                }
+                go_to(to.map(|to| order[to].id.to_string()));
+                return;
+            }
+        }
+        // Shift+Up or Down toggles the row it lands on.
+        let extend = |target: &Option<String>| {
+            let enabled = |id: &String| order.iter().any(|node| node.id == id && !node.disabled);
+            if let Some(target) = target
+                .as_ref()
+                .filter(|_| shift && multiple)
+                .filter(|id| enabled(id))
+            {
+                marks.pick.call((target.clone(), Pick::Toggle));
             }
         };
 
@@ -644,11 +997,15 @@ fn TreeCore(props: TreeCoreProps) -> Element {
             Key::Named(NamedKey::End) if at(order.last()) => {}
             Key::Named(NamedKey::ArrowDown) => {
                 event.prevent_default();
-                go_to(sibling_id(&order, &current, 1));
+                let target = sibling_id(&order, &current, 1);
+                extend(&target);
+                go_to(target);
             }
             Key::Named(NamedKey::ArrowUp) => {
                 event.prevent_default();
-                go_to(sibling_id(&order, &current, -1));
+                let target = sibling_id(&order, &current, -1);
+                extend(&target);
+                go_to(target);
             }
             Key::Named(NamedKey::Home) => {
                 event.prevent_default();
@@ -678,6 +1035,10 @@ fn TreeCore(props: TreeCoreProps) -> Element {
                     if node.has_children {
                         expansion.toggle(&current);
                     } else {
+                        // A single selection picks the leaf it activates.
+                        if selectable && !multiple {
+                            marks.pick.call((current.clone(), Pick::Toggle));
+                        }
                         dom.click(&current);
                     }
                 }
@@ -697,7 +1058,12 @@ fn TreeCore(props: TreeCoreProps) -> Element {
             Key::Character(ref c) if c == " " => {
                 if !node.disabled {
                     event.prevent_default();
-                    if node.has_children {
+                    if checkable {
+                        marks.check.call(current.clone());
+                    } else if selectable {
+                        let pick = if shift { Pick::Range } else { Pick::Toggle };
+                        marks.pick.call((current.clone(), pick));
+                    } else if node.has_children {
                         expansion.toggle(&current);
                     } else {
                         dom.click(&current);
@@ -751,6 +1117,7 @@ fn TreeCore(props: TreeCoreProps) -> Element {
             size,
             "role": "tree",
             "aria-label": Some(props.aria_label).filter(|label| !label.trim().is_empty()),
+            "aria-multiselectable": multiple.then_some("true"),
             onkeydown,
             onclick,
             attributes: [
@@ -1037,5 +1404,132 @@ mod tests {
     #[test]
     fn an_unknown_current_row_matches_nothing() {
         assert_eq!(typeahead_target(&order(), "zzz", "s"), None);
+    }
+
+    fn ids(list: &[&str]) -> HashSet<String> {
+        list.iter().map(|id| id.to_string()).collect()
+    }
+
+    /// `a` holds `a1`, `a2` and a disabled `a3`; `b` is a leaf.
+    fn checkable() -> Vec<TreeNodeErased> {
+        erase_nodes::<String>(&[
+            TreeNode::new("a", "a".to_string()).children(vec![
+                TreeNode::new("a1", "a1".to_string()),
+                TreeNode::new("a2", "a2".to_string()),
+                TreeNode::new("a3", "a3".to_string()).disabled(true),
+            ]),
+            TreeNode::new("b", "b".to_string()),
+        ])
+    }
+
+    #[test]
+    fn a_branch_reads_its_enabled_children() {
+        let nodes = checkable();
+        let states = check_states(&nodes, &ids(&["a1"]), false, false);
+        assert_eq!(states["a"], Check::Mixed);
+        // The disabled `a3` does not count against a full branch.
+        let states = check_states(&nodes, &ids(&["a1", "a2"]), false, false);
+        assert_eq!(states["a"], Check::On);
+        assert_eq!(states["a3"], Check::Off);
+        // A checked branch checks its enabled rows, not the disabled one.
+        let states = check_states(&nodes, &ids(&["a"]), false, false);
+        assert_eq!((states["a1"], states["a3"]), (Check::On, Check::Off));
+    }
+
+    #[test]
+    fn strict_checks_stand_alone() {
+        let states = check_states(&checkable(), &ids(&["a"]), true, false);
+        assert_eq!((states["a"], states["a1"]), (Check::On, Check::Off));
+        assert_eq!(
+            toggled_checks(&checkable(), &ids(&["a"]), true, false, "a1"),
+            ids(&["a", "a1"])
+        );
+    }
+
+    #[test]
+    fn checking_a_branch_checks_its_enabled_rows_and_the_last_leaf_its_branch() {
+        let nodes = checkable();
+        assert_eq!(
+            toggled_checks(&nodes, &ids(&[]), false, false, "a"),
+            ids(&["a", "a1", "a2"])
+        );
+        assert_eq!(
+            toggled_checks(&nodes, &ids(&["a1"]), false, false, "a2"),
+            ids(&["a", "a1", "a2"])
+        );
+        // A mixed branch checks fully; unchecking a leaf unchecks the branch.
+        assert_eq!(
+            toggled_checks(&nodes, &ids(&["a1"]), false, false, "a"),
+            ids(&["a", "a1", "a2"])
+        );
+        assert_eq!(
+            toggled_checks(&nodes, &ids(&["a", "a1", "a2"]), false, false, "a1"),
+            ids(&["a2"])
+        );
+    }
+
+    #[test]
+    fn a_pick_replaces_a_single_selection_and_toggles_or_extends_a_multiple_one() {
+        let order = order();
+        assert_eq!(
+            picked(&ids(&["a"]), false, &order, None, "b", Pick::Toggle),
+            ids(&["b"])
+        );
+        assert_eq!(
+            picked(&ids(&["a"]), true, &order, None, "b", Pick::Toggle),
+            ids(&["a", "b"])
+        );
+        assert_eq!(
+            picked(&ids(&["a", "b"]), true, &order, None, "b", Pick::Toggle),
+            ids(&["a"])
+        );
+        // The disabled `c` stays out of a range.
+        assert_eq!(
+            picked(&ids(&["a"]), true, &order, Some("a"), "d", Pick::Range),
+            ids(&["a", "b", "d"])
+        );
+    }
+
+    #[test]
+    fn select_all_reaches_collapsed_rows_but_not_disabled_ones() {
+        let mut all = Vec::new();
+        enabled_ids(&checkable(), false, &mut all);
+        assert_eq!(all, ["a", "a1", "a2", "b"]);
+        let mut none = Vec::new();
+        enabled_ids(&checkable(), true, &mut none);
+        assert!(none.is_empty());
+    }
+
+    #[test]
+    fn rows_carry_their_selection_and_check() {
+        fn app() -> Element {
+            let data = vec![TreeNode::new("a", "a".to_string()).children(vec![
+                TreeNode::new("a1", "a1".to_string()),
+                TreeNode::new("a2", "a2".to_string()),
+            ])];
+            rsx! {
+                crate::LiberoProvider {
+                    Tree {
+                        aria_label: "Files",
+                        data,
+                        default_expanded: HashSet::from(["a".to_string()]),
+                        selected: HashSet::from(["a1".to_string()]),
+                        multiple: true,
+                        onselectedchange: |_| {},
+                        checked: HashSet::from(["a2".to_string()]),
+                        oncheckedchange: |_| {},
+                    }
+                }
+            }
+        }
+        let mut dom = VirtualDom::new(app);
+        dom.rebuild_in_place();
+        let html = dioxus_ssr::render(&dom);
+        assert!(html.contains(r#"aria-multiselectable="true""#), "{html}");
+        assert_eq!(html.matches(r#"aria-selected="true""#).count(), 1, "{html}");
+        assert_eq!(html.matches(r#"aria-checked="mixed""#).count(), 1, "{html}");
+        assert_eq!(html.matches(r#"aria-checked="true""#).count(), 1, "{html}");
+        assert_eq!(html.matches(r#"aria-checked="false""#).count(), 1, "{html}");
+        assert_eq!(html.matches(r#"data-slot="box""#).count(), 3, "{html}");
     }
 }

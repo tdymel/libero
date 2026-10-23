@@ -108,6 +108,9 @@ pub(super) struct TreeNodeRenderArgsErased {
     pub disabled: bool,
     pub tabindex: &'static str,
     pub depth: usize,
+    pub selected: bool,
+    pub checked: Option<bool>,
+    pub indeterminate: bool,
 }
 
 /// Lets `TreeRowProps` derive `Clone`/`PartialEq` without `T`. Always equal, so
@@ -131,8 +134,7 @@ impl PartialEq for ErasedRenderNode {
     }
 }
 
-/// Passed to `render_node` per visible row: the data plus live state. No
-/// "selected": a link knows its own.
+/// Passed to `render_node` per visible row: the data plus live state.
 #[derive(Clone, PartialEq)]
 pub struct TreeNodeRenderArgs<T> {
     pub id: String,
@@ -145,6 +147,13 @@ pub struct TreeNodeRenderArgs<T> {
     pub tabindex: &'static str,
     /// 0 at top level, for a `render_node` that indents on its own.
     pub depth: usize,
+    /// In `Tree`'s `selected`; always `false` without it.
+    pub selected: bool,
+    /// With `Tree`'s `checked`, the row's check; `None` without checkboxes.
+    /// [`TreeItemContent`] draws the box itself.
+    pub checked: Option<bool>,
+    /// Some of the branch's rows are checked, not all; `checked` is then `Some(false)`.
+    pub indeterminate: bool,
 }
 
 /// `render_node`'s default: a [`TreeItemContent`] of `tree_label()`, so a chevron

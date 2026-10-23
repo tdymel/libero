@@ -8,11 +8,12 @@ use crate::{
     },
     hooks::{use_root_id, use_theme},
     sx::{Sx, ThemeAwareValue},
-    theme::{Size, TabsActivation},
+    theme::{Size, TabsActivation, TabsPlacement},
     utils::warn,
 };
 
 input_from_str!(TabsActivation);
+input_from_str!(TabsPlacement);
 
 parts_enum! {
     /// [`Tabs`]' inner parts, for its `parts` prop. Direct paths, so tabs in a panel keep their own.
@@ -52,6 +53,10 @@ pub struct TabsProps<T: Options> {
     /// Tabs grow to fill the row, never below their label; a crowded strip still scrolls.
     #[props(default)]
     full_width: Option<bool>,
+    /// Vertical tabs: `start` or `end` put the strip in a column beside the panel,
+    /// moved by Up and Down. `top` (default) is the row above it.
+    #[props(default, into)]
+    placement: Input<TabsPlacement>,
     /// `manual`: arrows move the focus, Enter or Space selects.
     #[props(default, into)]
     activation: Input<TabsActivation>,
@@ -160,6 +165,7 @@ pub fn Tabs<T: Options>(props: TabsProps<T>) -> Element {
             onselect: pick,
             color: base_color(Some(&color)),
             full_width: props.full_width.unwrap_or(false),
+            placement: props.placement.copied_or(TabsPlacement::Top),
             manual: props.activation.copied_or(theme.tabs.activation) == TabsActivation::Manual,
             focusable: true,
             panel_stop: props.panel_focusable,

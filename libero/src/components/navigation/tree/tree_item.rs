@@ -5,7 +5,7 @@ use crate::{
     components::{
         common::{Glyph, HtmlTag, Input, LogicalTextAlign, States, base_props},
         data_display::{Icon, SvgData},
-        form::use_fieldset_disabled,
+        form::{LightState, use_fieldset_disabled},
         layout::{Box, use_box},
     },
     context::IconSlot,
@@ -13,7 +13,10 @@ use crate::{
     theme::{ICON_SIZE, Size, TREE_CHEVRON_DURATION},
 };
 
-use super::tree_row::TreeRowContext;
+use super::{
+    tree::{Check, TreeMarks},
+    tree_row::{TreeRowContext, TreeRowToggle},
+};
 
 /// The chevron's turn and the label's stretch, for both standard rows.
 fn item_parts_sx(base: Sx) -> Sx {
@@ -89,9 +92,31 @@ fn row_expanded(row: Option<TreeRowContext>) -> Option<Option<bool>> {
     row.map(|row| row.0.read().expanded)
 }
 
-/// Chevron or spacer, icon, label, trailing icon and trailing element, as siblings.
+/// The row's checkbox, with `Tree`'s `checked` only. `aria-hidden`: the treeitem carries `aria-checked`.
+fn use_check_mark(row: Option<TreeRowContext>) -> Option<Element> {
+    let marks = use_hook(try_consume_context::<TreeMarks>);
+    let toggle = use_hook(try_consume_context::<TreeRowToggle>);
+    let state = *row?.0.read();
+    let checked = state.checked?;
+    let look = marks?.look;
+    let look = look.read();
+    let TreeRowToggle(toggle) = toggle?;
+    let state = LightState {
+        checked: checked == Check::On,
+        indeterminate: checked == Check::Mixed,
+        disabled: state.disabled,
+    };
+    // The box alone: the row's own click would open a branch too.
+    Some(look.as_ref()?.render_mark(state, move |event: MouseEvent| {
+        event.stop_propagation();
+        toggle.call(());
+    }))
+}
+
+/// Chevron or spacer, check box, icon, label, trailing icon and trailing element, as siblings.
 fn item_parts(
     expanded: Option<Option<bool>>,
+    mark: Option<Element>,
     icon: Option<SvgData>,
     trailing_icon: Option<SvgData>,
     trailing: Option<Element>,
@@ -117,6 +142,7 @@ fn item_parts(
 
     rsx! {
         {leading}
+        {mark}
         if let Some(icon) = icon {
             Icon { variant: "standard", size: "sm", color: "muted.6", "data-tree-icon": true, svg: icon }
         }
@@ -176,8 +202,10 @@ base_props! {
 #[component]
 pub fn TreeItemContent(props: TreeItemContentProps) -> Element {
     let row = use_hook(try_consume_context::<TreeRowContext>);
+    let mark = use_check_mark(row);
     let parts = item_parts(
         row_expanded(row),
+        mark,
         props.icon,
         props.trailing_icon,
         props.trailing,
@@ -248,8 +276,10 @@ pub fn TreeItem(props: TreeItemProps) -> Element {
         }
         None => (if group_disabled { "-1" } else { "0" }, group_disabled),
     };
+    let mark = use_check_mark(row);
     let parts = item_parts(
         row_expanded(row),
+        mark,
         props.icon,
         props.trailing_icon,
         props.trailing,

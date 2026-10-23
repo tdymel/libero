@@ -41,7 +41,7 @@ pub use stepper::{StepLabelPosition, StepState, Stepper, StepperPart, StepperPro
 #[cfg(feature = "tabs")]
 pub(crate) use tabs::{TabSpec, TabsView, render_tabs};
 #[cfg(feature = "tabs")]
-pub use tabs::{Tabs, TabsActivation, TabsPart, TabsProps};
+pub use tabs::{Tabs, TabsActivation, TabsPart, TabsPlacement, TabsProps};
 #[cfg(feature = "tree")]
 pub use tree::{
     Tree, TreeItem, TreeItemContent, TreeItemContentProps, TreeItemProps, TreeLabel, TreeNode,

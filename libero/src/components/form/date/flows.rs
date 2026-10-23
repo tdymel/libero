@@ -23,7 +23,7 @@ use crate::{
     localization::DateLocale,
     platform::ElementApi,
     sx::Sx,
-    theme::{Size, TimePickerVariant},
+    theme::{Size, TabsPlacement, TimePickerVariant},
 };
 
 /// The tabs and the picker under them share this column.
@@ -166,6 +166,7 @@ fn step_tabs(
             onselect,
             color: base_color(None),
             full_width: true,
+            placement: TabsPlacement::Top,
             manual: false,
             focusable,
             // The picker's first control takes focus.

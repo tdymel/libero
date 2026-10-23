@@ -118,6 +118,22 @@ static NAV_LINK_BASE_SX: StaticSx = StaticSx::new(|| {
             sx().font_size(TEXT_FONT_SIZE.value(Size::Xs))
                 .color("text-dimmed"),
         )
+        .selector(
+            NavLinkPart::Leading.selector(),
+            sx().display("inline-flex")
+                .align_items("center")
+                .flex_shrink("0")
+                .margin_inline_end("8px"),
+        )
+        // Pushed to the inline end, so counts line up down a sidebar.
+        .selector(
+            NavLinkPart::Trailing.selector(),
+            sx().display("inline-flex")
+                .align_items("center")
+                .flex_shrink("0")
+                .margin_inline_start("auto")
+                .padding_inline_start("8px"),
+        )
 });
 
 /// The link and its toggle in one row, the nested links indented under it.
@@ -165,8 +181,8 @@ static NAV_GROUP_SX: StaticSx = StaticSx::new(|| {
 });
 
 parts_enum! {
-    /// [`NavLink`]'s inner parts, for its `parts` prop. All but `NewTab` only with a
-    /// `description`. The toggle and the nested links sit beside the link, out of reach.
+    /// [`NavLink`]'s inner parts, for its `parts` prop. `Body`, `Label` and `Description`
+    /// only with a `description`. The toggle and the nested links sit beside the link, out of reach.
     pub enum NavLinkPart {
         /// The column holding the label and the description.
         Body = "body" => "& > [data-slot='body']",
@@ -175,6 +191,10 @@ parts_enum! {
         Description = "description" => "& > [data-slot='body'] > [data-slot='description']",
         /// The new-tab icon after the label, with `target: "_blank"` only.
         NewTab = "new-tab" => "& > [data-slot='new-tab']",
+        /// The `leading` section before the label.
+        Leading = "leading" => "& > [data-slot='leading']",
+        /// The `trailing` section at the inline end.
+        Trailing = "trailing" => "& > [data-slot='trailing']",
     }
 }
 
@@ -205,6 +225,12 @@ base_props! {
         /// A dimmed line under the label, read as the link's description.
         #[props(default, into)]
         description: Option<String>,
+        /// Before the label, such as an icon. Part of the link's name, so keep an icon `aria-hidden`.
+        #[props(default)]
+        leading: Option<Element>,
+        /// At the inline end, such as a count badge; read after the label.
+        #[props(default)]
+        trailing: Option<Element>,
         /// Child `NavLink`s, shown by a toggle beside this one.
         #[props(default)]
         nested: Option<Element>,
@@ -330,7 +356,13 @@ pub fn NavLink(props: NavLinkProps) -> Element {
     // A disabled link opens nothing.
     let hint = !disabled && wants_new_tab_hint(props.target.as_deref(), props.new_tab_hint);
     let body = rsx! {
+        if let Some(leading) = props.leading {
+            span { "data-slot": NavLinkPart::Leading.slot(), {leading} }
+        }
         {body}
+        if let Some(trailing) = props.trailing {
+            span { "data-slot": NavLinkPart::Trailing.slot(), {trailing} }
+        }
         if hint {
             NewTabHint { icon: props.new_tab_icon }
         }
@@ -473,6 +505,8 @@ mod tests {
                     "& > [data-slot='body'] > [data-slot='description']"
                 ),
                 ("new-tab", "& > [data-slot='new-tab']"),
+                ("leading", "& > [data-slot='leading']"),
+                ("trailing", "& > [data-slot='trailing']"),
             ]
         );
     }

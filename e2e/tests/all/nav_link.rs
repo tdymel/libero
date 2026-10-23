@@ -139,6 +139,60 @@ fn the_focus_ring_is_not_clipped_by_the_sidebar() {
     });
 }
 
+/// Both sections sit inside the `<a>`. The count ends at the padding's edge and
+/// the icon sits before the label's text.
+const SECTION_RECTS: &str = "(() => { \
+    const link = document.querySelector('#sections'); \
+    const lead = link.querySelector(':scope > [data-slot=leading]'); \
+    const trail = link.querySelector(':scope > [data-slot=trailing]'); \
+    const range = document.createRange(); \
+    range.setStartAfter(lead); \
+    range.setEndBefore(trail); \
+    return [ \
+        link.tagName === 'A' && lead.parentElement === link && trail.parentElement === link, \
+        link.getBoundingClientRect().right, \
+        trail.getBoundingClientRect().right, \
+        lead.getBoundingClientRect().right, \
+        range.getBoundingClientRect().left, \
+    ]; \
+})()";
+
+#[test]
+fn a_nav_link_draws_its_leading_and_trailing_sections() {
+    block_on(async {
+        let fixture = Fixture::open("/nav-link/sections", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+
+        wait::for_js_true(
+            page,
+            "!!document.querySelector('#sections > [data-slot=trailing]')",
+            "the trailing section to render",
+        )
+        .await
+        .unwrap();
+        let (inside, link_right, trail_right, lead_right, label_left): (bool, f64, f64, f64, f64) =
+            e2e::js(page, SECTION_RECTS).await;
+
+        assert!(inside, "both sections are direct children of the <a>");
+        assert!(
+            (trail_right - (link_right - 12.0)).abs() <= 2.0,
+            "the trailing count ends at the link's padding: {trail_right} vs {link_right} - 12"
+        );
+        assert!(
+            lead_right < label_left,
+            "the leading icon sits before the label: icon ends at {lead_right}, label at {label_left}"
+        );
+
+        fixture
+            .console
+            .assert_clean("a nav link with sections")
+            .unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
 #[test]
 fn it_meets_the_baseline() {
     Suite::new("nav_link", "/nav-link/states")

@@ -324,7 +324,7 @@ navigation-bar = ["nav-link", "float"]
 pagination = ["action-icon"]
 stepper = ["collapse", "use-icon", "use-id", "visually-hidden"]
 tabs = ["use-id", "use-icon", "visually-hidden"]
-tree = ["list", "icon", "use-popover"]
+tree = ["list", "icon", "use-popover", "checkbox"]
 
 overlay = ["dialog", "drawer", "floating-window", "hover-card", "lightbox", "menu", "modal", "overlay-backdrop", "shortcut-help", "spotlight", "tooltip", "tour"]
 dialog = ["action-icon", "title"]

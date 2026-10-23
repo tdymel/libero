@@ -638,3 +638,97 @@ fn home_and_end_at_the_ends_leave_the_page_to_scroll() {
         fixture.close().await.unwrap();
     });
 }
+
+/// A vertical strip names its orientation, so a screen reader announces the column.
+#[test]
+fn a_vertical_tablist_announces_its_orientation() {
+    block_on(async {
+        let fixture = Fixture::open("/tabs-vertical", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        wait::for_js_true(
+            page,
+            "document.querySelector('[role=tablist]').getAttribute('aria-orientation') === 'vertical'",
+            "aria-orientation to read vertical",
+        )
+        .await
+        .unwrap();
+        fixture.console.assert_clean("a vertical strip").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
+/// Up and Down move focus and selection between vertical tabs, and back.
+#[test]
+fn up_and_down_move_between_vertical_tabs() {
+    block_on(async {
+        let fixture = Fixture::open("/tabs-vertical", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        reset_tab_position(page).await.unwrap();
+        keyboard::press(page, keyboard::TAB).await.unwrap();
+        until_focus_and_selection(&fixture, "0:0", "Tab to focus the first tab").await;
+        keyboard::press(page, keyboard::ARROW_DOWN).await.unwrap();
+        until_focus_and_selection(&fixture, "1:1", "after ArrowDown").await;
+        keyboard::press(page, keyboard::ARROW_UP).await.unwrap();
+        until_focus_and_selection(&fixture, "0:0", "after ArrowUp").await;
+
+        fixture.console.assert_clean("vertical tab keys").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
+/// On a vertical strip Left and Right do nothing. ArrowRight is pressed first, then
+/// ArrowDown: had ArrowRight moved, ArrowDown would land on the third tab.
+#[test]
+fn left_and_right_do_nothing_on_a_vertical_strip() {
+    block_on(async {
+        let fixture = Fixture::open("/tabs-vertical", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        reset_tab_position(page).await.unwrap();
+        keyboard::press(page, keyboard::TAB).await.unwrap();
+        until_focus_and_selection(&fixture, "0:0", "Tab to focus the first tab").await;
+        keyboard::press(page, keyboard::ARROW_RIGHT).await.unwrap();
+        keyboard::press(page, keyboard::ARROW_DOWN).await.unwrap();
+        until_focus_and_selection(&fixture, "1:1", "after ArrowRight then ArrowDown").await;
+
+        fixture.console.assert_clean("vertical tab arrows").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
+/// Vertical tabs sit in a column beside the panel, one tab under the other.
+#[test]
+fn vertical_tabs_stack_beside_the_panel() {
+    block_on(async {
+        let fixture = Fixture::open("/tabs-vertical", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        wait::for_js_true(
+            page,
+            "(() => { const list = document.querySelector('[role=tablist]').getBoundingClientRect(); \
+             const panel = document.querySelector('[role=tabpanel]').getBoundingClientRect(); \
+             return list.right <= panel.left + 1; })()",
+            "the tablist to sit left of the panel",
+        )
+        .await
+        .unwrap();
+        wait::for_js_true(
+            page,
+            "(() => { const [first, second] = [...document.querySelectorAll('[role=tab]')] \
+             .map(t => t.getBoundingClientRect()); \
+             return second.top >= first.bottom - 1; })()",
+            "the second tab below the first",
+        )
+        .await
+        .unwrap();
+
+        fixture.console.assert_clean("vertical tab layout").unwrap();
+        fixture.close().await.unwrap();
+    });
+}

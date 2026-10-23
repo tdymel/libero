@@ -19,7 +19,24 @@ pub const ROUTES: Routes = &[
     ("/tabs-late", || rsx! { TabsLatePage {} }),
     ("/tabs-lone", || rsx! { TabsLonePage {} }),
     ("/tabs-sm", || rsx! { TabsSmPage {} }),
+    ("/tabs-vertical", || rsx! { TabsVerticalPage {} }),
 ];
+
+/// Vertical tabs: a column on the start side, moved by Up and Down.
+#[component]
+fn TabsVerticalPage() -> Element {
+    let mut section = use_signal(|| Section::Account);
+
+    rsx! {
+        Tabs {
+            aria_label: "Settings",
+            placement: "start",
+            value: section(),
+            onchange: move |next| section.set(next),
+            panel: |s: Section| rsx! { Text { "panel for {s.label()}" } },
+        }
+    }
+}
 
 /// Todo 3596: the smallest tabs, whose strip clips a coarse hit area grown outside them.
 #[component]

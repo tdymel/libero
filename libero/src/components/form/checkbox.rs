@@ -555,6 +555,42 @@ impl CheckboxLook {
         self.render_box(None, Rc::new(focus), state, aria_label, onchange)
     }
 
+    /// The box alone, `aria-hidden` and no input, for a widget that carries `aria-checked` itself.
+    pub fn render_mark(
+        &self,
+        state: LightState,
+        onclick: impl FnMut(MouseEvent) + 'static,
+    ) -> Element {
+        let (control, mark) = self.control_and_mark(state);
+        control
+            .attr("data-slot", CheckboxPart::Control.slot())
+            .attr("aria-hidden", "true")
+            .event("onclick", onclick)
+            .render(
+                HtmlTag::Span,
+                Vec::new(),
+                rsx! {
+                    span { class: self.box_class.clone(), "data-slot": CheckboxPart::Box.slot(), {mark} }
+                },
+            )
+    }
+
+    /// The control's look for `state` and the box's mark.
+    fn control_and_mark(&self, state: LightState) -> (BoxStyle, Element) {
+        let control = match (state.disabled, state.indeterminate, state.checked) {
+            (true, ..) => &self.disabled,
+            (_, true, _) => &self.mixed,
+            (_, _, true) => &self.on,
+            _ => &self.off,
+        };
+        let icon = match state.indeterminate {
+            true => &self.dash,
+            false => &self.check,
+        };
+        let mark = draw_svg(icon, vec![Attribute::new("stroke-width", "3", None, false)]);
+        (control.clone(), mark)
+    }
+
     fn render_box(
         &self,
         element: Option<ElementHandle>,
@@ -588,17 +624,7 @@ impl CheckboxLook {
             .attr("disabled", disabled)
             .attr("aria-label", aria_label)
             .render(HtmlTag::Input, Vec::new(), ());
-        let control = match (disabled, indeterminate, checked) {
-            (true, ..) => &self.disabled,
-            (_, true, _) => &self.mixed,
-            (_, _, true) => &self.on,
-            _ => &self.off,
-        };
-        let icon = match indeterminate {
-            true => &self.dash,
-            false => &self.check,
-        };
-        let mark = draw_svg(icon, vec![Attribute::new("stroke-width", "3", None, false)]);
+        let (control, mark) = self.control_and_mark(state);
         // On the control, so its 24px hit area counts as well as the box. The input's
         // click, cancelled on the way up, is taken by the input.
         let press = move |event: MouseEvent| {
@@ -619,7 +645,6 @@ impl CheckboxLook {
             }
         };
         control
-            .clone()
             .attr("data-slot", CheckboxPart::Control.slot())
             .event("onclick", press)
             .render(HtmlTag::Span, Vec::new(), vec![input, box_node])

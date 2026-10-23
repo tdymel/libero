@@ -1,8 +1,9 @@
 //! An active `NavLink` with `scroll_into_view`, below the fold of its sidebar,
-//! and a page of every `NavLink`, `Anchor` and `Burger` state.
+//! and a page of every `NavLink`, `Anchor` and `Burger` state, plus a `leading`/`trailing` link.
 
 use dioxus::prelude::*;
-use libero::components::{Anchor, Burger, Flex, NavLink, Paper, Text};
+use libero::components::{Anchor, Badge, Burger, Flex, Icon, NavLink, Paper, Text};
+use pictogram_icons_lucide as lucide;
 
 use crate::Routes;
 
@@ -10,7 +11,24 @@ pub const ROUTES: Routes = &[
     ("/nav-link", || rsx! { NavLinkPage {} }),
     ("/nav-link/states", || rsx! { NavStatesPage {} }),
     ("/nav-link/blocked", || rsx! { BlockedPage {} }),
+    ("/nav-link/sections", || rsx! { NavSectionsPage {} }),
 ];
+
+/// A link with both sections, at the width a sidebar gives it.
+#[component]
+fn NavSectionsPage() -> Element {
+    rsx! {
+        Flex { direction: "column", max_width: "240px",
+            NavLink {
+                id: "sections",
+                to: "/nav-link/sections",
+                leading: rsx! { Icon { size: "sm", svg: lucide::bookmark::outlined } },
+                trailing: rsx! { Badge { variant: "tonal", size: "sm", circle: true, "3" } },
+                "Inbox"
+            }
+        }
+    }
+}
 
 /// Links whose target would run script on click, and one ordinary link.
 #[component]
