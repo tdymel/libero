@@ -16,27 +16,33 @@ yours.
 
 ```rust
 use dioxus::prelude::*;
-use libero::components::{
-    Button, Combobox, ComboboxOption, ComboboxOptionArgs, Options, use_combobox,
-};
+use libero::components::{Button, Combobox, ComboboxOption, ComboboxOptionArgs, Options, Text, use_combobox};
+use libero::sx::sx;
 
 #[derive(Clone, Copy, PartialEq, Options)]
 enum Fruit {
     Apple,
     Banana,
     Cherry,
+    #[option(label = "Dragon fruit")]
+    Dragon,
+    Elderberry,
+    Mango,
+    Grape,
 }
 
 #[component]
 fn Demo() -> Element {
     let fruit = use_combobox();
     let mut picked = use_signal(|| None::<Fruit>);
+    // A `combobox` role takes no name from its content, so the label names it.
+    let label = format!("{}-label", fruit.id());
 
     rsx! {
         Combobox {
             state: fruit,
             options: Fruit::options().to_vec(),
-            // A button has no text to type in: Space and Tab pick, as in a `Select`.
+            labelled_by: label.clone(),
             select_only: true,
             option_label: move |fruit: Fruit| fruit.label(),
             selected_index: picked().and_then(|fruit| Fruit::options().iter().position(|f| *f == fruit)),
@@ -50,164 +56,21 @@ fn Demo() -> Element {
                     "{o.value.label()}"
                 }
             },
+            Text { id: "{label}", size: "sm", "Fruit" }
             Button {
                 variant: "outlined",
-                attributes: fruit.a11y_attributes(),
+                sx: sx().width("280px").max_width("100%"),
+                attributes: [
+                    fruit.a11y_attributes(),
+                    vec![Attribute::new("aria-labelledby", label, None, false)],
+                ]
+                .concat(),
                 onclick: move |_| fruit.toggle(),
                 onblur: move |_| fruit.close(),
                 match picked() {
                     Some(fruit) => rsx! { "{fruit.label()}" },
                     None => rsx! { "Pick a fruit" },
                 }
-            }
-        }
-    }
-}
-```
-
-A suggestion list filters the options by the trigger's text, marks no row as
-selected, and carries a hidden input for a plain form post:
-
-```rust
-use dioxus::prelude::*;
-use libero::components::{
-    Combobox, ComboboxOption, ComboboxOptionArgs, Options, TextField, use_combobox,
-};
-
-#[derive(Clone, Copy, PartialEq, Options)]
-enum Fruit {
-    Apple,
-    Banana,
-    Cherry,
-}
-
-#[component]
-fn Demo() -> Element {
-    let suggestions = use_combobox();
-    let mut text = use_signal(String::new);
-
-    let matches: Vec<Fruit> = Fruit::options()
-        .iter()
-        .copied()
-        .filter(|fruit| fruit.label().to_lowercase().contains(&text().to_lowercase()))
-        .collect();
-    let field = format!("{}-field", suggestions.id());
-
-    rsx! {
-        Combobox {
-            state: suggestions,
-            options: matches,
-            labelled_by: format!("{field}-label"),
-            option: move |o: ComboboxOptionArgs<Fruit>| rsx! {
-                ComboboxOption {
-                    onpick: move |_| {
-                        text.set(o.value.label());
-                        suggestions.close();
-                    },
-                    "{o.value.label()}"
-                }
-            },
-            TextField {
-                id: field,
-                label: "Fruit",
-                placeholder: "Type a fruit",
-                value: text(),
-                attributes: suggestions.a11y_attributes(),
-                // An editable trigger that filters a list says so (APG, todo 2905).
-                "aria-autocomplete": "list",
-                onblur: move |_| suggestions.close(),
-                oninput: move |next| {
-                    text.set(next);
-                    suggestions.open();
-                },
-            }
-            input { r#type: "hidden", name: "fruit", value: "{text()}" }
-        }
-    }
-}
-```
-
-A search you drive yourself passes `None` while it runs, which shows the
-loader instead of `empty`. A `use_resource` passed to `options` does the same.
-
-```rust
-use std::time::Duration;
-
-use dioxus::prelude::*;
-use libero::{
-    components::{
-        Combobox, ComboboxOption, ComboboxOptionArgs, OptionList, Options, Text, TextField,
-        use_combobox,
-    },
-    platform::{TimerSubscription, timer},
-};
-
-#[derive(Clone, Copy, PartialEq, Options)]
-enum Fruit {
-    Apple,
-    Banana,
-    Cherry,
-}
-
-/// How long the fake search takes.
-const LATENCY: Duration = Duration::from_millis(700);
-
-/// The fruit whose label contains `query`, case-insensitively and ignoring surrounding space.
-fn matching(query: &str) -> Vec<Fruit> {
-    let query = query.trim().to_lowercase();
-    Fruit::options()
-        .iter()
-        .copied()
-        .filter(|fruit| fruit.label().to_lowercase().contains(&query))
-        .collect()
-}
-
-#[component]
-fn Demo() -> Element {
-    let suggestions = use_combobox();
-    let mut text = use_signal(String::new);
-    // `None` is the search in flight.
-    let mut results = use_signal(|| Some(Vec::<Fruit>::new()));
-    // Replacing the pending answer drops it, so a slow answer never overwrites a newer one.
-    let mut pending = use_signal(|| None::<Box<dyn TimerSubscription>>);
-    use_drop(move || pending.set(None));
-    let field = format!("{}-field", suggestions.id());
-
-    rsx! {
-        Combobox {
-            state: suggestions,
-            options: results().map(OptionList::from),
-            labelled_by: format!("{field}-label"),
-            loading_label: "Searching fruit",
-            empty_label: "No fruit matches",
-            empty: rsx! { Text { size: "sm", "No fruit matches" } },
-            option: move |o: ComboboxOptionArgs<Fruit>| rsx! {
-                ComboboxOption {
-                    onpick: move |_| {
-                        text.set(o.value.label());
-                        suggestions.close();
-                    },
-                    "{o.value.label()}"
-                }
-            },
-            TextField {
-                id: field,
-                label: "Fruit",
-                placeholder: "Type a fruit",
-                value: text(),
-                attributes: suggestions.a11y_attributes(),
-                // An editable trigger that filters a list says so (APG, todo 2905).
-                "aria-autocomplete": "list",
-                onblur: move |_| suggestions.close(),
-                oninput: move |next: String| {
-                    text.set(next.clone());
-                    suggestions.open();
-                    results.set(None);
-                    let answer = timer().map(|timer| {
-                        timer.after(LATENCY, Box::new(move || results.set(Some(matching(&next)))))
-                    });
-                    pending.set(answer);
-                },
             }
         }
     }
@@ -221,7 +84,7 @@ fn Demo() -> Element {
 | Prop | Type | Default | Description |
 |---|---|---|---|
 | `state` | `ComboboxState` | required | From `use_combobox()`. The open state, the highlighted row and the id the aria wiring uses. One state drives one combobox. |
-| `options` | `OptionSource<T>` | required | The options to list, already filtered. A `Vec<T>` converts, an `OptionList<T>` adds named groups and disabled options, and a `Resource<Vec<T>>` adds the loader while it fetches. `None::<OptionList<T>>` is pending, for a fetch you drive yourself. `option` runs for every option, and from 200 only the rows in view are drawn, so cap a very large list here. A failed fetch is an empty list, so show your own error beside the field. |
+| `options` | `OptionSource<T>` | required | The options to list, already filtered: for a suggestion list, by the trigger's text. A `Vec<T>` converts, an `OptionList<T>` adds named groups and disabled options, and a `Resource<Vec<T>>` adds the loader while it fetches. `None::<OptionList<T>>` is pending, for a fetch you drive yourself. `option` runs for every option, and from 200 only the rows in view are drawn, so cap a very large list here. A failed fetch is an empty list, so show your own error beside the field. |
 | `option` | `Callback<ComboboxOptionArgs<T>, Element>` | required | Draws one row, usually a `ComboboxOption`. |
 | `children` | `Element` | required | The trigger, and anything that belongs with it, such as a hidden input. |
 | `empty` | `Element` | - | Shown in place of the list when `options` is empty. |

@@ -97,7 +97,7 @@ pub fn SegmentedControlPage() -> Element {
                         .doc("Narrows or reorders the strip. A runtime set of `String`s goes here. A `Vec<T>` converts, and an `OptionList<T>` can disable single segments. Named groups are drawn flat, without headings."),
                     prop("option_label", "Callback<T, OptionLabel>")
                         .default("T::label()")
-                        .doc("Renames a segment, or draws it with `OptionLabel::rich`. Runs during render, so it can read a locale from context."),
+                        .doc("Renames a segment, or draws it with `OptionLabel::rich`. Runs during render, so it can read a locale from context. `#[option(label = \"..\")]` renames one at the type."),
                     prop("orientation", "Orientation")
                         .default("horizontal")
                         .doc("A row or a column."),
@@ -146,7 +146,7 @@ pub fn SegmentedControlPage() -> Element {
                 props("OptionLabel", vec![
                     prop("name", "String").doc("The segment's accessible name, and its text when there is no `content`."),
                     prop("content", "Element")
-                        .doc("Drawn in place of the name, such as an icon and text. `name` still names the segment for screen readers."),
+                        .doc("Drawn in place of the name, such as an icon and text. `name` still names the segment for screen readers. A segment is a `<label>`, so phrasing content only: an `Icon` works, a `Flex` does not."),
                 ]),
             ],
             accessibility: a11y()

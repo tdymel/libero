@@ -64,6 +64,35 @@ impl<T> OptionList<T> {
     }
 
     /// An empty list to hang [`group`](Self::group) calls off.
+    ///
+    /// ```rust
+    /// # use dioxus::prelude::*;
+    /// use libero::components::{NativeSelect, OptionItem, OptionList, Options};
+    ///
+    /// #[derive(Clone, Copy, PartialEq, Options)]
+    /// enum Fruit {
+    ///     Apple,
+    ///     Pear,
+    ///     Cherry,
+    ///     Plum,
+    /// }
+    ///
+    /// # fn app() -> Element {
+    /// let mut fruit = use_signal(|| None::<Fruit>);
+    /// rsx! {
+    ///     // A group draws as an `<optgroup>`, a disabled item as `<option disabled>`.
+    ///     NativeSelect {
+    ///         label: "Fruit",
+    ///         placeholder: "Pick a fruit",
+    ///         value: fruit(),
+    ///         options: OptionList::grouped()
+    ///             .group("Pome", [Fruit::Apple, Fruit::Pear])
+    ///             .group("Stone", [OptionItem::new(Fruit::Cherry).disabled(true), Fruit::Plum.into()]),
+    ///         onchange: move |next| fruit.set(Some(next)),
+    ///     }
+    /// }
+    /// # }
+    /// ```
     pub fn grouped() -> Self {
         Self::default()
     }

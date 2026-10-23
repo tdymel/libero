@@ -32,36 +32,12 @@ fn Demo() -> Element {
 
     rsx! {
         SwitchGroup {
-            label: "Alerts",
-            helper: "Text messages cost extra with your carrier.",
             value: alerts(),
             onchange: move |next| alerts.set(next),
+            max_checked: 2,
+            label: "Alerts",
         }
     }
-}
-```
-
-The options are `T::options()` unless `options` narrows them, and `onchange`
-hands back the whole selection in option order. `max_checked: 2` caps how many
-are on: at the cap the off switches disable.
-
-`variant: "card"` draws every option as a bordered surface you can click
-anywhere. Give each one a line with `option_description`:
-
-```rust,ignore
-SwitchGroup {
-    variant: "card",
-    label: "Alerts",
-    max_checked: 2,
-    value: alerts(),
-    onchange: move |next| alerts.set(next),
-    option_description: move |alert: Alert| match alert {
-        Alert::Email => "Each message to your inbox, as it lands.",
-        Alert::Push => "A banner on your phone or desktop.",
-        Alert::Sms => "Short texts, for the urgent ones only.",
-        Alert::Digest => "One summary each morning.",
-    }
-    .to_string(),
 }
 ```
 

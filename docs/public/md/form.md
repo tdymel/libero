@@ -69,66 +69,6 @@ fn SignupForm() -> Element {
 # fn NewPasswordFieldset(#[props(into)] path: FieldName<NewPassword>) -> Element { rsx! {} }
 ```
 
-`use_form()` makes a handle to pass as `form`. Inside a form,
-`use_form_context()` returns the same handle.
-
-```rust
-use dioxus::prelude::*;
-use libero::components::{
-    Button, Checkbox, Fields, Flex, Form, Rule, Text, not_empty, use_form, use_form_context,
-};
-
-// Builds on Getting started's `EmailField`.
-#[derive(Clone, PartialEq, Default, Fields)]
-struct Terms {
-    email: String,
-    accepted: bool,
-}
-
-#[component]
-fn TermsForm() -> Element {
-    let terms = use_store(Terms::default);
-    let form = use_form();
-
-    rsx! {
-        Form {
-            form,
-            value: terms,
-            EmailField { label: "Email", name: Terms::FIELDS.email(), validate: not_empty.error("Enter your email.") }
-            Checkbox { label: "I accept the terms", name: Terms::FIELDS.accepted(), validate: not_empty.error("Accept the terms to continue.") }
-            Text { role: "status", if form.is_valid() { "Ready to send." } else { "Not ready yet." } }
-            Flex { gap: "sm",
-                Button { r#type: "submit", "Send" }
-                CheckButton {}
-                Button { variant: "outlined", onclick: move |_| form.reset(), "Clear" }
-            }
-        }
-    }
-}
-
-/// Anything inside a form reaches its handle without a prop.
-#[component]
-fn CheckButton() -> Element {
-    let form = use_form_context();
-    rsx! {
-        Button {
-            variant: "tonal",
-            onclick: move |_| {
-                if let Some(form) = form {
-                    form.validate();
-                }
-            },
-            "Check"
-        }
-    }
-}
-#
-# use libero::components::{FieldName, Validators};
-# #[component]
-# fn EmailField(#[props(into)] label: String, #[props(default, into)] name: FieldName<String>,
-#     #[props(default, into)] validate: Validators<String>) -> Element { rsx! {} }
-```
-
 ## Conditional fields
 
 A field shown only for some values is a plain `if` around it. Its rules leave

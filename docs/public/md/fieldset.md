@@ -65,23 +65,6 @@ fn AddressFieldset() -> Element {
 }
 ```
 
-Inside a `Form`, the group takes a `path`. Field names and rule paths inside
-are relative to it.
-
-```rust,ignore
-Form {
-    value: order,
-    Fieldset {
-        label: "Delivery address",
-        path: Order::FIELDS.address(),               // the group's value is order.address
-        validate: (|a: &Address| a.city.is_empty() || !a.zip.is_empty())
-            .error("A city needs its zip code.")
-            .on([Address::FIELDS.zip()]),            // rules are rooted at Address
-        TextField { label: "Zip code", name: Address::FIELDS.zip() }  // posts "address.zip"
-    }
-}
-```
-
 ## Props
 
 ### `Fieldset`
@@ -94,7 +77,7 @@ Form {
 | `status` | `FieldStatus` | `Valid` | The group's own status, under the fields. A bare `&str` is an error; an empty one or `None` is `Valid`. In a `Form`, an error makes the group one field in error: it blocks the submit and has its own summary line, named by the legend, which focuses the group's first control. |
 | `value` | `Store<V>` | - | The group's own value, for a fieldset outside a `Form`. A fieldset with no `value`, `path` or rules needs `Fieldset::<()>` so Rust can infer its type. |
 | `validate` | `Validators<V>` | - | Rules over the group's value, one or an array. A rule with `.on(..)` shows on the fields it names. One without shows under the fields once any field in the group was touched. |
-| `path` | `FieldName<V>` | - | Where the group sits inside a `Form`'s value, such as `Order::FIELDS.address()`. The names of the fields inside and the paths in `validate` are relative to it. |
+| `path` | `FieldName<V>` | - | Where the group sits inside a `Form`'s value, such as `Order::FIELDS.address()`. The names of the fields inside and the paths in `validate` are relative to it. A field inside posts its full path, such as `address.zip`. |
 | `disabled` | `bool` | `false` | Disables every Libero control inside, nested fieldsets included. A field's own `disabled: false` cannot re-enable it. A raw `<input>` or `<button>` keeps its own `disabled`. |
 | `required` | `bool` | `false` | Marks every field inside required, nested fieldsets included: each gets its asterisk and `aria-required`, and inside a `Form` an empty one fails the submit. A field's own `required: false` keeps it optional. |
 | `children` | `Element` | required | The fields. |

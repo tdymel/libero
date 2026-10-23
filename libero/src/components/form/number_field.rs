@@ -193,6 +193,35 @@ pub fn NumberField<T: NumberValue>(props: NumberFieldProps<T>) -> Element {
 }
 
 /// How many digits a [`NumberField`]'s fraction keeps.
+///
+/// ```rust
+/// # use dioxus::prelude::*;
+/// # use libero::components::{Decimals, NumberField};
+/// # fn app() -> Element {
+/// let mut total = use_signal(|| Some(1_250.5f64));
+/// let mut share = use_signal(|| Some(12.5f64));
+/// rsx! {
+///     // Shows `1,250.50` while not typing.
+///     NumberField {
+///         label: "Total",
+///         leading: rsx! { "$" },
+///         decimals: Decimals::Exactly(2),
+///         group_digits: true,
+///         value: total(),
+///         onchange: move |next| total.set(next),
+///     }
+///     NumberField {
+///         label: "Discount",
+///         trailing: rsx! { "%" },
+///         decimals: Decimals::AtMost(1),
+///         min: 0.0,
+///         max: 100.0,
+///         value: share(),
+///         onchange: move |next| share.set(next),
+///     }
+/// }
+/// # }
+/// ```
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Decimals {
     /// Up to this many: `12.5` stays `12.5`.

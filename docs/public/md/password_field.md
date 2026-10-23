@@ -19,23 +19,14 @@ use libero::components::PasswordField;
 
 #[component]
 fn Demo() -> Element {
-    let mut secret = use_signal(String::new);
-    let mut repeat = use_signal(String::new);
+    let mut value = use_signal(String::new);
 
     rsx! {
         PasswordField {
+            autocomplete: "current-password",
+            value: value(),
+            oninput: move |next| value.set(next),
             label: "Password",
-            helper: "At least 8 characters.",
-            autocomplete: "new-password",
-            value: secret(),
-            oninput: move |next| secret.set(next),
-        }
-        PasswordField {
-            label: "Repeat password",
-            reveal_button: false,
-            autocomplete: "new-password",
-            value: repeat(),
-            oninput: move |next| repeat.set(next),
         }
     }
 }

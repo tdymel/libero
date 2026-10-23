@@ -18,118 +18,7 @@ sheet at the foot of the screen, closed by its Done button. It works like
 ```rust
 use dioxus::prelude::*;
 use libero::components::{MultiSelect, Options};
-
-#[derive(Clone, Copy, PartialEq, Options)]
-enum Topping {
-    Cheese,
-    Mushrooms,
-    Olives,
-}
-
-#[component]
-fn Demo() -> Element {
-    let mut value = use_signal(|| vec![Topping::Cheese]);
-
-    rsx! {
-        MultiSelect {
-            label: "Toppings",
-            placeholder: "Pick toppings",
-            value: value(),
-            onchange: move |next| value.set(next),
-        }
-    }
-}
-```
-
-`onchange` hands over the whole next selection.
-
-`selection` draws one selected value and replaces the default chip, remove
-control included, so a custom chip wires `s.remove` itself. `option` works as on
-`Select`, and its `selected` flag is there for a checkmark. The emoji and the
-checkmark are decoration, hidden from screen readers so the row reads as its
-label alone:
-
-```rust,ignore
-MultiSelect {
-    value: value(),
-    onchange: move |next| value.set(next),
-    option: move |o: SelectOptionArgs<Topping>| rsx! {
-        Text { component: "span", size: "lg", "aria-hidden": "true", "{o.value.emoji()}" }
-        Text { component: "span", sx: sx().flex("1 1 auto"), "{o.value.label()}" }
-        if o.selected {
-            Text { component: "span", "aria-hidden": "true", "✓" }
-        }
-    },
-    selection: move |s: SelectionArgs<Topping>| rsx! {
-        // Unclipped, so the x's 24px hit area reaches past the pill.
-        Chip { size: "xs", variant: "outlined", sx: sx().overflow("visible"),
-            // After the label, so a long label never clips the x.
-            trailing: rsx! {
-                // A disabled or read-only field's chip has no remove control.
-                if !s.disabled && !s.readonly {
-                    span { onmousedown: move |event| event.prevent_default(),
-                        onclick: move |event| event.stop_propagation(),
-                        ActionIcon {
-                            // `words` is `use_localization()`, read in the component.
-                            aria_label: fill(words.common.remove, &[("label", &s.value.label())]),
-                            size: "xs",
-                            // A `<button>` takes the UA's `buttontext`, not the chip's
-                            // colour, so the cross needs this or it stays black.
-                            sx: sx().color("inherit"),
-                            tabindex: "-1",
-                            onclick: move |_| s.remove.call(()),
-                            "x"
-                        }
-                    }
-                }
-            },
-            span { "aria-hidden": "true", "{s.value.emoji()} " }
-            "{s.value.label()}"
-        }
-    },
-}
-```
-
-The two handlers around the `ActionIcon` keep the trigger's focus and stop the
-click from opening the list. A custom chip needs both. The default chips sit one
-size step below the field's own size.
-
-`name` posts one entry per selected option, each its `Options::value()`, such as
-`fruits=Apple&fruits=Pear`. That is what a native `<select multiple>` sends. A
-disabled field posts nothing.
-
-Groups and disabled options come through `options`, as an `OptionList<T>`:
-
-```rust,ignore
-OptionList::grouped()
-    .group("Vegetables", [Topping::Mushrooms, Topping::Olives].map(OptionItem::new))
-    .group("Fruit", [OptionItem::new(Topping::Pineapple).disabled(true)])
-```
-
-`searchable` puts a search box at the top of the list, and `filter` replaces its
-default test. The query survives a pick, so you can tick several matches of one
-search. It is cleared when the list closes.
-
-```rust,ignore
-MultiSelect {
-    searchable: true,
-    search_placeholder: "Search toppings",
-    value: value(),
-    onchange: move |next| value.set(next),
-    filter: move |f: SelectFilterArgs<Topping>| {
-        let query = f.query.to_lowercase();
-        f.value.label().to_lowercase().contains(&query)
-            || f.value.note().to_lowercase().contains(&query)
-    },
-}
-```
-
-`open_on_focus` opens the list when the field takes focus, by Tab or a press.
-Focus coming back after a pick or Escape leaves it closed:
-
-```rust
-use dioxus::prelude::*;
-use libero::components::{MultiSelect, Options};
+use libero::sx::sx;
 
 #[derive(Clone, Copy, PartialEq, Options)]
 enum Topping {
@@ -143,15 +32,15 @@ enum Topping {
 
 #[component]
 fn Demo() -> Element {
-    let mut picks = use_signal(Vec::<Topping>::new);
+    let mut value = use_signal(|| vec![Topping::Cheese, Topping::Olives]);
 
     rsx! {
         MultiSelect {
-            label: "Toppings",
+            sx: sx().width("280px").max_width("100%"),
+            value: value(),
+            onchange: move |next| value.set(next),
             placeholder: "Pick toppings",
-            open_on_focus: true,
-            value: picks(),
-            onchange: move |next| picks.set(next),
+            label: "Toppings",
         }
     }
 }
@@ -167,11 +56,11 @@ fn Demo() -> Element {
 | `radius` | `ThemeAwareValue` | `sm` | Corner radius of the frame and the list. Or any CSS, e.g. `radius: "0"`. |
 | `value` | `Vec<T>` | - | The selection, in the order it was picked. Pair it with `onchange`. Empty shows `placeholder`. |
 | `onchange` | `EventHandler<Vec<T>>` | - | Called with the whole next selection. |
-| `name` | `FieldName<Vec<T>>` | - | Posts each selected option's `Options::value()` under this name. A path such as `Order::FIELDS.toppings()` also binds it to the surrounding `Form`'s value when it has no `onchange`. |
+| `name` | `FieldName<Vec<T>>` | - | Posts each selected option's `Options::value()` under this name, as a native `<select multiple>` does. A path such as `Order::FIELDS.toppings()` also binds it to the surrounding `Form`'s value when it has no `onchange`. |
 | `validate` | `Validators<Vec<T>>` | - | Rules over the selection, shown once the select loses focus or its form is submitted. |
 | `options` | `OptionSource<T>` | `T::options()` | Narrows or reorders the list. A runtime set goes here. A `Vec<T>` converts, an `OptionList<T>` adds named groups and disabled options, and a `Resource<Vec<T>>` adds the loader while it fetches. |
 | `option` | `Callback<SelectOptionArgs<T>, Element>` | `T::label()` | Draws one row's content. Unset, a selected row ends in a check mark; a custom row draws its own from `selected` on the args. Hide a decorative glyph such as an emoji or the checkmark with `aria-hidden`, or a screen reader reads it with the label. |
-| `selection` | `Callback<SelectionArgs<T>, Element>` | `Chip` with an x | Draws one selected value in the trigger, remove control included. `remove` on the args drops that value; `disabled` and `readonly` say the field refuses it, so leave the remove control out then. |
+| `selection` | `Callback<SelectionArgs<T>, Element>` | `Chip` with an x | Draws one selected value in the trigger, remove control included. `remove` on the args drops that value; `disabled` and `readonly` say the field refuses it, so leave the remove control out then. A custom remove control stops `mousedown` from taking focus and `click` from opening the list. |
 | `placeholder` | `String` | - | Shown while `value` is empty. |
 | `clearable` | `bool` | `false` | Shows an x in place of the chevron that empties the selection. |
 | `searchable` | `bool` | `false` | Puts a search box at the top of the list. The query survives a pick and is cleared when the list closes. |
@@ -183,7 +72,7 @@ fn Demo() -> Element {
 | `helper` | `Caption` | - | Under the control. Constraints, or what the choice changes. |
 | `status` | `FieldStatus` | `Valid` | Validation state, under the helper. A bare `&str` is an error; an empty one or `None` is `Valid`. |
 | `required` | `bool` | `false` | Sets `aria-required` and marks the label; a field without a visible `label` shows no mark. Inside a `Form`, an empty one fails the submit. |
-| `disabled` | `bool` | `false` | Takes the trigger out of the tab order and dims the field. |
+| `disabled` | `bool` | `false` | Takes the trigger out of the tab order, dims the field and posts nothing. |
 | `readonly` | `bool` | `false` | Focusable and posted with the form, but not editable. `disabled` drops the select from the tab order and the post instead. |
 | `dropdown_parts` | `Parts<DropdownPart>` | - | Styles the portaled dropdown and its inner parts. |
 

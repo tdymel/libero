@@ -19,17 +19,14 @@ use libero::components::Textarea;
 
 #[component]
 fn Demo() -> Element {
-    let mut bio = use_signal(String::new);
+    let mut value = use_signal(String::new);
 
     rsx! {
         Textarea {
-            label: "Bio",
+            value: value(),
+            oninput: move |next| value.set(next),
+            label: "Notes",
             placeholder: "Start typing",
-            rows: 5,
-            counter: true,
-            maxlength: 200,
-            value: bio(),
-            oninput: move |next| bio.set(next),
         }
     }
 }

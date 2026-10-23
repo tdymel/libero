@@ -21,108 +21,7 @@ use libero::components::Chip;
 #[component]
 fn Demo() -> Element {
     rsx! {
-        Chip { color: "primary", variant: "filled", size: "md", radius: "xl", "rust" }
-    }
-}
-```
-
-For a selectable chip, pass `checked` with `onchange`. A debug build warns when
-one comes without the other.
-
-```rust
-use dioxus::prelude::*;
-use libero::components::{Chip, Flex};
-
-#[component]
-fn Demo() -> Element {
-    let mut selected = use_signal(|| vec!["rust".to_string()]);
-
-    rsx! {
-        Flex { direction: "row", gap: "md",
-            for language in ["rust", "css", "html"] {
-                Chip {
-                    key: "{language}",
-                    checked: selected().iter().any(|s| s == language),
-                    onchange: move |next: bool| {
-                        selected.with_mut(|selected| {
-                            if next {
-                                selected.push(language.to_string());
-                            } else {
-                                selected.retain(|s| s != language);
-                            }
-                        });
-                    },
-                    "{language}"
-                }
-            }
-        }
-    }
-}
-```
-
-A `name` alone also makes the chip a checkbox. Give each chip of a filter row
-the same `name` and its own `value`, and the row posts one entry per selected
-chip, such as `tags=rust&tags=css`. A chip with no `value` posts `name=on`.
-
-```rust
-use dioxus::prelude::*;
-use libero::components::{Chip, Flex};
-
-#[component]
-fn Demo() -> Element {
-    rsx! {
-        Flex { direction: "row", gap: "md",
-            for language in ["rust", "css", "html"] {
-                Chip { key: "{language}", name: "tags", value: "{language}", "{language}" }
-            }
-        }
-    }
-}
-```
-
-`onclick` makes the chip a button, `to` a router-aware link that wins over
-`onclick`. Neither combines with `onchange`.
-
-```rust
-use dioxus::prelude::*;
-use libero::components::{Chip, Flex};
-
-#[component]
-fn Demo() -> Element {
-    let mut clicks = use_signal(|| 0);
-
-    rsx! {
-        Flex { direction: "row", gap: "md",
-            Chip { onclick: move |_| clicks += 1, "Clicked {clicks}x" }
-            Chip { to: "https://dioxuslabs.com", target: "_blank", "Dioxus" }
-        }
-    }
-}
-```
-
-An icon goes in `icon`, before the label, and a remove button in `trailing`,
-after it. Neither shrinks. A long label is cut at the chip's edge. For an
-ellipsis, give the text a span of its own:
-
-```rust
-use dioxus::prelude::*;
-use libero::components::Chip;
-
-#[component]
-fn Demo() -> Element {
-    rsx! {
-        Chip {
-            icon: rsx! {
-                svg { width: "14", height: "14", view_box: "0 0 24 24", fill: "currentColor",
-                    circle { cx: "12", cy: "12", r: "6" }
-                }
-            },
-            style: "max-width: 160px",
-            span {
-                style: "min-width: 0; overflow: hidden; text-overflow: ellipsis",
-                "Versandkostenberechnungsgrundlage"
-            }
-        }
+        Chip { "rust" }
     }
 }
 ```
@@ -135,13 +34,13 @@ fn Demo() -> Element {
 | `variant` | `Variant` | `filled` | The unselected look. A checked chip is always a tonal container, with a check before its label. |
 | `size` | `Size` | `md` | Height, padding and font size. |
 | `radius` | `ThemeAwareValue` | `xl` | Corner radius, or any CSS, e.g. `radius: "0"`. |
-| `checked` | `bool` | - | Whether it is selected. Pair it with `onchange`. Left out, a chip with a `name` keeps its own state, or the form's when that name binds it. |
+| `checked` | `bool` | - | Whether it is selected. Pair it with `onchange`. Left out, a chip with a `name` keeps its own state, or the form's when that name binds it. A debug build warns when one comes without the other. |
 | `disabled` | `bool` | `false` | Disables and dims the chip. |
 | `readonly` | `bool` | `false` | A selectable chip stays focusable and posted with the form, but clicks and Space no longer toggle it. |
 | `onchange` | `EventHandler<bool>` | - | Called with the value `checked` should take next. Makes the chip a checkbox. |
 | `name` | `FieldName<bool>` | - | Makes the chip a checkbox that posts under this name. A path such as `Filters::FIELDS.open()` also binds it to the surrounding `Form`'s value when it has no `onchange`. |
 | `value` | `String` | `on` | What the chip posts under its `name` when checked, so a row of filter chips can share one name. |
-| `onclick` | `EventHandler<MouseEvent>` | - | A plain action. Makes the chip a `<button>`; with `checked` it is a toggle button and says `aria-pressed`. |
+| `onclick` | `EventHandler<MouseEvent>` | - | A plain action. Makes the chip a `<button>`; with `checked` it is a toggle button and says `aria-pressed`. Not with `onchange`, which ignores it and `to`. |
 | `to` | `NavigationTarget` | - | Makes the chip a router-aware link. Wins over `onclick`. |
 | `target` | `String` | - | Link target, such as `_blank`. Only with `to`. `"_blank"` adds a hidden "(opens in a new tab)". |
 | `new_tab_hint` | `bool` | `true` | `false` drops the hidden text a `"_blank"` target adds, and the icon. |

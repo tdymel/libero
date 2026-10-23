@@ -44,7 +44,7 @@ pub fn CheckboxPage() -> Element {
                         .doc("Whether it is checked. Pair it with `onchange`. Left out, the box keeps its own state, or the form's when `name` binds it."),
                     prop("indeterminate", "bool")
                         .default("false")
-                        .doc("Draws a dash and reads as mixed. It wins over `checked`, and toggling from it gives `true`."),
+                        .doc("Draws a dash and reads as mixed. It wins over `checked`, and toggling from it gives `true`. Use it on a parent whose children are partly checked."),
                     prop("onchange", "EventHandler<bool>")
                         .doc("Called with the value `checked` should take next."),
                     prop("name", "FieldName<bool>")

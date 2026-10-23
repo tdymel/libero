@@ -23,16 +23,21 @@ opens only the picker; the color's text box under it takes typing.
 use dioxus::prelude::*;
 use libero::components::{ColorCode, ColorField, SliderChangeEvent};
 
+const SWATCHES: [&str; 7] = [
+    "#2e2e2e", "#fa5252", "#be4bdb", "#228be6", "#12b886", "#fab005", "#fd7e14",
+];
+
 #[component]
 fn Demo() -> Element {
     let mut color = use_signal(|| ColorCode::hex(0x228be6));
 
     rsx! {
         ColorField {
-            label: "Brand color",
-            swatches: ["#2e2e2e", "#fa5252", "#228be6", "#12b886"],
             value: color(),
             oninput: move |event: SliderChangeEvent<ColorCode>| color.set(event.value()),
+            label: "Brand color",
+            swatches: SWATCHES,
+            recent_colors: 6,
         }
     }
 }

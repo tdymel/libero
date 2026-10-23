@@ -289,7 +289,7 @@ pub fn CascaderPage() -> Element {
                     prop("size", "Size").default(theme.cascader.size.as_str()).doc("Height, padding and font size of the frame and its rows."),
                     prop("radius", "ThemeAwareValue").default(theme.cascader.radius.as_str()).doc("Corner radius of the frame and the list. Any CSS, e.g. `radius: \"0\"`, rounds the frame; the list keeps the theme's step."),
                     prop("data", "Vec<CascaderOption<T>>").default("required")
-                        .doc("The tree, built with `CascaderOption::new(value, label)`, `.children(..)` and `.disabled(..)`. `T` is any `Options` type. Values must be unique across the whole tree."),
+                        .doc("The tree, built with `CascaderOption::new(value, label)`, `.children(..)` and `.disabled(..)`. `T` is any `Options` type. Values must be unique across the whole tree. A disabled option disables its whole branch, and `new` takes anything `Into<T>`, so a `&str` for a `String` tree."),
                     prop("value", "Option<T>")
                         .doc("The selected option's value. Pair it with `onchange`. The cascader finds the path to it in `data`, and a value no option holds selects nothing there: the trigger shows its `Options::label()` and the form still posts it, as `Select` does."),
                     prop("onchange", "EventHandler<Option<T>>")
@@ -315,7 +315,7 @@ pub fn CascaderPage() -> Element {
                         .doc("Replaces the joined labels in the trigger. Gets the labels from root to option, and returns a `String` so the trigger can still cut it off with an ellipsis."),
                     prop("node", "Callback<CascaderNodeArgs<T>, Element>")
                         .default("label")
-                        .doc("Draws one row's content. The highlight, chevron and click stay the component's."),
+                        .doc("Draws one row's content. The highlight, chevron and click stay the component's. In `\"paths\"` it runs once per level, with `separator` between."),
                     prop("column_width", "String")
                         .default(theme.cascader.column_width)
                         .doc("Width and minimum width of one column. A trigger wider than the open columns shares the rest among them. `\"max-content\"` fits the longest row. On a narrow screen, the minimum width of the one level shown."),

@@ -126,7 +126,7 @@ pub fn ComboboxPage() -> Element {
                     prop("state", "ComboboxState").default("required")
                         .doc("From `use_combobox()`. The open state, the highlighted row and the id the aria wiring uses. One state drives one combobox."),
                     prop("options", "OptionSource<T>").default("required")
-                        .doc("The options to list, already filtered. A `Vec<T>` converts, an `OptionList<T>` adds named groups and disabled options, and a `Resource<Vec<T>>` adds the loader while it fetches. `None::<OptionList<T>>` is pending, for a fetch you drive yourself. `option` runs for every option, and from 200 only the rows in view are drawn, so cap a very large list here. A failed fetch is an empty list, so show your own error beside the field."),
+                        .doc("The options to list, already filtered: for a suggestion list, by the trigger's text. A `Vec<T>` converts, an `OptionList<T>` adds named groups and disabled options, and a `Resource<Vec<T>>` adds the loader while it fetches. `None::<OptionList<T>>` is pending, for a fetch you drive yourself. `option` runs for every option, and from 200 only the rows in view are drawn, so cap a very large list here. A failed fetch is an empty list, so show your own error beside the field."),
                     prop("option", "Callback<ComboboxOptionArgs<T>, Element>").default("required")
                         .doc("Draws one row, usually a `ComboboxOption`."),
                     prop("children", "Element")

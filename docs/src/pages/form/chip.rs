@@ -24,7 +24,7 @@ pub fn ChipPage() -> Element {
                     .default(theme.chip.radius.as_str())
                     .doc("Corner radius, or any CSS, e.g. `radius: \"0\"`."),
                 prop("checked", "bool")
-                    .doc("Whether it is selected. Pair it with `onchange`. Left out, a chip with a `name` keeps its own state, or the form's when that name binds it."),
+                    .doc("Whether it is selected. Pair it with `onchange`. Left out, a chip with a `name` keeps its own state, or the form's when that name binds it. A debug build warns when one comes without the other."),
                 disabled_prop("chip"),
                 prop("readonly", "bool")
                     .default("false")
@@ -37,7 +37,7 @@ pub fn ChipPage() -> Element {
                     .default("on")
                     .doc("What the chip posts under its `name` when checked, so a row of filter chips can share one name."),
                 prop("onclick", "EventHandler<MouseEvent>")
-                    .doc("A plain action. Makes the chip a `<button>`; with `checked` it is a toggle button and says `aria-pressed`."),
+                    .doc("A plain action. Makes the chip a `<button>`; with `checked` it is a toggle button and says `aria-pressed`. Not with `onchange`, which ignores it and `to`."),
                 prop("to", "NavigationTarget")
                     .doc("Makes the chip a router-aware link. Wins over `onclick`."),
                 prop("target", "String")

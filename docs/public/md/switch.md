@@ -20,29 +20,15 @@ use libero::components::Switch;
 
 #[component]
 fn Demo() -> Element {
-    let mut notifications = use_signal(|| false);
+    let mut enabled = use_signal(|| false);
 
     rsx! {
         Switch {
             label: "Notifications",
-            description: "About once a month.",
-            checked: notifications(),
-            onchange: move |next| notifications.set(next),
+            checked: enabled(),
+            onchange: move |next| enabled.set(next),
         }
     }
-}
-```
-
-`variant: "card"` draws the whole field as a bordered surface you can click
-anywhere. Pair it with a `description`:
-
-```rust,ignore
-Switch {
-    variant: "card",
-    label: "Wi-Fi",
-    description: "Joins known networks on its own.",
-    checked: wifi(),
-    onchange: move |next| wifi.set(next),
 }
 ```
 

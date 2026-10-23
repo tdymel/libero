@@ -139,7 +139,7 @@ pub fn NumberFieldPage() -> Element {
                     prop("leading", "Element")
                         .doc("Inside the frame, before the control: a currency sign such as `$`. Outside the typed text, so typing and parsing stay plain."),
                     prop("trailing", "Element")
-                        .doc("Inside the frame, after the control and before the steppers: a unit, `%` or `€`."),
+                        .doc("Inside the frame, after the control and before the steppers: a unit, `%` or `€`. Outside the typed text."),
                     prop("describe_leading", "bool")
                         .default("false")
                         .doc("`leading` is text that describes the value, so the field's `aria-describedby` points at it."),

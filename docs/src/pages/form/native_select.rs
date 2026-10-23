@@ -63,7 +63,7 @@ pub fn NativeSelectPage() -> Element {
                         .default(theme.native_select.radius.as_str())
                         .doc("Corner radius. Or any CSS, e.g. `radius: \"0\"`."),
                     prop("value", "Option<T>")
-                        .doc("The selected option. Pair it with `onchange`. `None` shows `placeholder` and selects nothing."),
+                        .doc("The selected option. Pair it with `onchange`. `None` shows `placeholder` and selects nothing. The selected option is found with `PartialEq`, so compare identity, not content."),
                     prop("onchange", "EventHandler<T>")
                         .doc("Called with the option to select next. Never for the placeholder, which cannot be picked."),
                     prop("name", "FieldName<Option<T>>")
@@ -72,10 +72,10 @@ pub fn NativeSelectPage() -> Element {
                         .doc("Rules over the selection, shown once the select loses focus or its form is submitted."),
                     prop("options", "OptionSource<T>")
                         .default("T::options()")
-                        .doc("Narrows or reorders the list. A runtime set, such as `String`s or records from a server, goes here. A `Vec<T>` converts, and an `OptionList` adds disabled options and named groups. A pending source draws no options."),
+                        .doc("Narrows or reorders the list. A runtime set, such as `String`s or records from a server, goes here. A `Vec<T>` converts, and an `OptionList` adds disabled options and named groups. A pending source draws no options. Any type with `Options` works, only `label` is required. Each option posts `Options::value`, which defaults to `label`, so no two may share one; a derived enum posts the variant's name."),
                     prop("option_label", "Callback<T, String>")
                         .default("T::label()")
-                        .doc("Renames an option. Returns a `String`, since an `<option>` holds only text."),
+                        .doc("Renames an option. Returns a `String`, since an `<option>` holds only text. Runs during render."),
                     prop("placeholder", "String")
                         .doc("Shown while no option matches `value`, as a first entry that cannot be picked."),
                     prop("label", "Caption")

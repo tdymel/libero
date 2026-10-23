@@ -9,165 +9,62 @@ Description: A field that picks one option from a tree, one level at a time, and
 
 Picks one option from a tree, one level at a time. The value is that option's
 `value`, any `T` a [Select](select.md) could hold. The cascader finds the path
-to it, shows the path in the trigger and opens the columns on it.
+to it and shows the path in the trigger. `CascaderDropdown` with `use_cascader`
+drops the same cascade, keyboard included, from your own button, with no hidden
+input and no `Form` binding.
 
 ## Usage
 
 ```rust
 use dioxus::prelude::*;
 use libero::components::{Cascader, CascaderOption, Flex, Text};
+use libero::sx::sx;
 
 fn categories() -> Vec<CascaderOption<String>> {
     vec![
         CascaderOption::new("food", "Food").children(vec![
             CascaderOption::new("fruit", "Fruit").children(vec![
                 CascaderOption::new("apple", "Apple"),
-                CascaderOption::new("pear", "Pear").disabled(true),
+                CascaderOption::new("pear", "Pear"),
+                CascaderOption::new("quince", "Quince").disabled(true),
             ]),
-            CascaderOption::new("veg", "Veg").children(vec![CascaderOption::new("leek", "Leek")]),
+            CascaderOption::new("veg", "Veg").children(vec![
+                CascaderOption::new("leek", "Leek"),
+                CascaderOption::new("kale", "Kale"),
+            ]),
         ]),
-        CascaderOption::new("drink", "Drink").children(vec![CascaderOption::new("tea", "Tea")]),
+        CascaderOption::new("drink", "Drink").children(vec![
+            CascaderOption::new("hot", "Hot").children(vec![
+                CascaderOption::new("tea", "Tea"),
+                CascaderOption::new("coffee", "Coffee"),
+            ]),
+            CascaderOption::new("cold", "Cold")
+                .children(vec![CascaderOption::new("juice", "Juice")]),
+        ]),
+        CascaderOption::new("household", "Household")
+            .disabled(true)
+            .children(vec![CascaderOption::new("soap", "Soap")]),
     ]
 }
 
 #[component]
 fn Demo() -> Element {
-    // The value is one option's value; the path to it is the cascader's to find.
     let mut chosen = use_signal(|| Some("tea".to_string()));
 
     rsx! {
-        Flex { direction: "column", gap: "sm", align: "flex-start",
+        Flex {
+            direction: "column",
+            gap: "sm",
+            align: "flex-start",
             Cascader {
-                label: "Category",
-                placeholder: "Pick a category",
+                sx: sx().width("100%").max_width("320px"),
                 data: categories(),
-                searchable: true,
                 value: chosen(),
                 onchange: move |next: Option<String>| chosen.set(next),
+                label: "Category",
+                placeholder: "Pick a category",
             }
-            // The trigger shows `Drink / Tea`; this prints `value: Some("tea")`.
             Text { size: "sm", "value: {chosen():?}" }
-        }
-    }
-}
-```
-
-`value` is the selected option's value, and `onchange` hands back the next
-one. `None` is the cleared selection, from the `clearable` x or from
-`allow_deselect`.
-
-`CascaderOption::new(value, label)` takes `impl Into<T>`, so a
-`CascaderOption<String>` takes a `&str`. Add `.children(vec![..])` and
-`.disabled(true)`. A disabled option disables everything under it, and the
-arrows skip it.
-
-Values must be unique across the whole tree, not just among siblings. The
-cascader finds its value by searching the tree with `==`, and a value no option
-holds selects nothing and warns. The hidden input posts `Options::value()`.
-
-`node` draws a row's content from `CascaderNodeArgs`: its `level` (0 for a
-root), whether it is `expanded` and whether it is `selected`. The highlight,
-chevron and click stay the component's. In `"paths"` it draws each level of the
-path. The icon and the check are decoration, hidden from screen readers:
-
-```rust,ignore
-Cascader {
-    data: categories(),
-    value: chosen(),
-    onchange: move |next: Option<String>| chosen.set(next),
-    node: move |n: CascaderNodeArgs<String>| {
-        let icon = match n.value.as_str() {
-            "food" => "🍽️",
-            "drink" => "🥤",
-            _ => "🧽",
-        };
-        rsx! {
-            if n.level == 0 {
-                span { "aria-hidden": "true", "{icon} " }
-            }
-            Text {
-                component: "span",
-                sx: sx().font_weight(if n.expanded { "600" } else { "inherit" }),
-                "{n.label}"
-            }
-            if n.selected {
-                span { "aria-hidden": "true", " ✓" }
-            }
-        }
-    },
-}
-```
-
-### Any trigger
-
-`use_cascader` keeps the tree, the value and the open state in your scope, and
-`CascaderDropdown` drops the same cascade, keyboard included, from your own
-button. Spread `cascader.a11y_attributes()` on it. There is no hidden input and
-no `Form` binding. This ore picker shows the ore and its stock on a round
-button, and each row trails its own:
-
-```rust
-use dioxus::prelude::*;
-use libero::components::{
-    Button, CascaderDropdown, CascaderNodeArgs, CascaderOption, Icon, Text, use_cascader,
-};
-use libero::sx::sx;
-use pictogram_icons_lucide as lucide;
-
-fn ores() -> Vec<CascaderOption<String>> {
-    vec![
-        CascaderOption::new("tier-1", "Tier 1").children(vec![
-            CascaderOption::new("iron", "Iron ore"),
-            CascaderOption::new("copper", "Copper ore"),
-        ]),
-        CascaderOption::new("tier-2", "Tier 2")
-            .children(vec![CascaderOption::new("gold", "Gold ore")]),
-    ]
-}
-
-/// Have and need; a tier needs nothing.
-fn stock(value: &str) -> (u32, u32) {
-    match value {
-        "iron" => (3, 10),
-        "copper" => (12, 8),
-        "gold" => (0, 2),
-        _ => (0, 0),
-    }
-}
-
-#[component]
-fn OrePicker() -> Element {
-    let mut ore = use_signal(|| Some("copper".to_string()));
-    let cascader = use_cascader(ores(), ore(), move |next| ore.set(next));
-    let name = cascader.labels().last().cloned().unwrap_or("No ore".into());
-    let (have, need) = stock(ore().as_deref().unwrap_or_default());
-    rsx! {
-        CascaderDropdown {
-            state: cascader.clone(),
-            node: move |row: CascaderNodeArgs<String>| {
-                let (have, need) = stock(&row.value);
-                rsx! {
-                    // Fills the row, so the stock trails at its end.
-                    Text { component: "span", sx: sx().display("flex").justify_content("space-between").gap("md").width("100%").font_weight("inherit"),
-                        span { "{row.label}" }
-                        if need > 0 {
-                            Text { component: "span", size: "sm", color: "dimmed", "{have}/{need}" }
-                        }
-                    }
-                }
-            },
-            Button {
-                radius: "xl",
-                variant: "light",
-                icon: rsx! { Icon { size: "sm", color: "inherit", svg: lucide::pickaxe::outlined } },
-                // A combobox takes no name from its content.
-                attributes: [
-                    cascader.a11y_attributes(),
-                    vec![Attribute::new("aria-label", format!("Ore: {name}, {have} of {need}"), None, false)],
-                ]
-                .concat(),
-                "{name} {have}/{need}"
-            }
         }
     }
 }
@@ -181,7 +78,7 @@ fn OrePicker() -> Element {
 |---|---|---|---|
 | `size` | `Size` | `md` | Height, padding and font size of the frame and its rows. |
 | `radius` | `ThemeAwareValue` | `sm` | Corner radius of the frame and the list. Any CSS, e.g. `radius: "0"`, rounds the frame; the list keeps the theme's step. |
-| `data` | `Vec<CascaderOption<T>>` | required | The tree, built with `CascaderOption::new(value, label)`, `.children(..)` and `.disabled(..)`. `T` is any `Options` type. Values must be unique across the whole tree. |
+| `data` | `Vec<CascaderOption<T>>` | required | The tree, built with `CascaderOption::new(value, label)`, `.children(..)` and `.disabled(..)`. `T` is any `Options` type. Values must be unique across the whole tree. A disabled option disables its whole branch, and `new` takes anything `Into<T>`, so a `&str` for a `String` tree. |
 | `value` | `Option<T>` | - | The selected option's value. Pair it with `onchange`. The cascader finds the path to it in `data`, and a value no option holds selects nothing there: the trigger shows its `Options::label()` and the form still posts it, as `Select` does. |
 | `onchange` | `EventHandler<Option<T>>` | - | Called with the value to select next, or `None` when the selection was cleared. |
 | `any_level` | `bool` | `false` | Lets a branch be picked as well as expanded, as its own value. Off, only a leaf commits. |
@@ -191,7 +88,7 @@ fn OrePicker() -> Element {
 | `filter` | `Callback<CascaderFilterArgs<T>, bool>` | - | Narrows the paths while searching. Defaults to a case-insensitive `contains` over the joined path. |
 | `separator` | `String` | `" / "` | Between labels, in the trigger and in a `"paths"` row. |
 | `format_value` | `Callback<Vec<String>, String>` | - | Replaces the joined labels in the trigger. Gets the labels from root to option, and returns a `String` so the trigger can still cut it off with an ellipsis. |
-| `node` | `Callback<CascaderNodeArgs<T>, Element>` | `label` | Draws one row's content. The highlight, chevron and click stay the component's. |
+| `node` | `Callback<CascaderNodeArgs<T>, Element>` | `label` | Draws one row's content. The highlight, chevron and click stay the component's. In `"paths"` it runs once per level, with `separator` between. |
 | `column_width` | `String` | `220px` | Width and minimum width of one column. A trigger wider than the open columns shares the rest among them. `"max-content"` fits the longest row. On a narrow screen, the minimum width of the one level shown. |
 | `name` | `FieldName<Option<T>>` | - | Posts the selected value's `Options::value()` in a hidden input of that name. A path such as `Listing::FIELDS.category()` also binds the selection to the surrounding `Form`'s value when there is no `onchange`. |
 | `validate` | `Validators<Option<T>>` | - | Rules over the selected value, shown once the field loses focus or its form is submitted. |

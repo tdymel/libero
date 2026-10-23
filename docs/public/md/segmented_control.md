@@ -22,6 +22,7 @@ use libero::components::{Options, SegmentedControl};
 enum Alignment {
     Left,
     Center,
+    #[option(label = "Right edge")]
     Right,
 }
 
@@ -33,117 +34,7 @@ fn Demo() -> Element {
         SegmentedControl {
             value: alignment(),
             onchange: move |next| alignment.set(next),
-        }
-    }
-}
-```
-
-`#[option(label = "..")]` renames a segment at the type. `option_label` renames
-it during render, which is what a translated strip needs.
-
-`OptionLabel::rich` draws a segment as rsx and names it separately, since a
-screen reader reads only the name. A segment is a `<label>`, so its content must
-be phrasing content. An [Icon](icon.md) is a `span` and works, a
-[Flex](flex.md) is a `div` and does not.
-
-```rust
-use dioxus::prelude::*;
-use libero::components::{Icon, OptionLabel, Options, SegmentedControl};
-
-#[derive(Clone, Copy, PartialEq, Options)]
-enum Alignment {
-    Left,
-    Center,
-    Right,
-}
-
-#[component]
-fn Demo() -> Element {
-    let mut alignment = use_signal(|| Alignment::Center);
-
-    rsx! {
-        SegmentedControl {
-            value: alignment(),
-            onchange: move |next| alignment.set(next),
-            option_label: |alignment: Alignment| OptionLabel::rich(
-                alignment.label(),
-                rsx! {
-                    Icon {
-                        variant: "standard",
-                        size: "sm",
-                        match alignment {
-                            Alignment::Left => rsx! { AlignLeftIcon {} },
-                            Alignment::Center => rsx! { AlignCenterIcon {} },
-                            Alignment::Right => rsx! { AlignRightIcon {} },
-                        }
-                    }
-                    "{alignment.label()}"
-                },
-            ),
-        }
-    }
-}
-#
-# #[component] fn AlignLeftIcon() -> Element { rsx! {} }
-# #[component] fn AlignCenterIcon() -> Element { rsx! {} }
-# #[component] fn AlignRightIcon() -> Element { rsx! {} }
-```
-
-The `Align*Icon`s are your own icon components. `Icon` sizes and colors them.
-
-A runtime set passes its segments in `options`, since `String` lists none of
-its own:
-
-```rust
-use dioxus::prelude::*;
-use libero::components::SegmentedControl;
-
-#[component]
-fn Demo(options: Vec<String>) -> Element {
-    let mut selected = use_signal(|| options[0].clone());
-
-    rsx! {
-        SegmentedControl {
-            value: selected(),
-            options: options.clone(),
-            onchange: move |next| selected.set(next),
-        }
-    }
-}
-```
-
-Bound to a [Form](form.md) through a path, it needs neither `value` nor
-`onchange`. The selection is read from the form's value and written back:
-
-```rust
-use dioxus::prelude::*;
-use libero::components::{Fields, Form, Options, SegmentedControl};
-
-#[derive(Clone, Copy, PartialEq, Default, Options)]
-enum Density {
-    Compact,
-    #[default]
-    Cosy,
-    Roomy,
-}
-
-#[derive(Clone, PartialEq, Default, Fields)]
-struct Layout {
-    density: Density,
-}
-
-#[component]
-fn Demo() -> Element {
-    let layout = use_store(Layout::default);
-
-    rsx! {
-        Form {
-            value: layout,
-            SegmentedControl {
-                name: Layout::FIELDS.density(),
-                label: "Density",
-                helper: "Applies to every table.",
-            }
+            label: "Alignment",
         }
     }
 }
@@ -160,7 +51,7 @@ fn Demo() -> Element {
 | `name` | `FieldName<T>` | - | What the control posts as. A path such as `Settings::FIELDS.align()` also binds it to the surrounding `Form`'s value when it has no `onchange`. |
 | `validate` | `Validators<T>` | - | Rules over the selection, shown once the control loses focus or its form is submitted. |
 | `options` | `OptionSource<T>` | `T::options()` | Narrows or reorders the strip. A runtime set of `String`s goes here. A `Vec<T>` converts, and an `OptionList<T>` can disable single segments. Named groups are drawn flat, without headings. |
-| `option_label` | `Callback<T, OptionLabel>` | `T::label()` | Renames a segment, or draws it with `OptionLabel::rich`. Runs during render, so it can read a locale from context. |
+| `option_label` | `Callback<T, OptionLabel>` | `T::label()` | Renames a segment, or draws it with `OptionLabel::rich`. Runs during render, so it can read a locale from context. `#[option(label = "..")]` renames one at the type. |
 | `orientation` | `Orientation` | `horizontal` | A row or a column. |
 | `variant` | `Variant` | `filled` | The unselected look, shared by every segment: `filled`, `tonal`, `elevated`, `outlined`, `standard`, or `gradient`, which takes the theme's gradient. |
 | `color` | `ThemeAwareValue` | `primary` | Accent color. A theme color name or any CSS color; `theme.segmented_control.color` when unset. |
@@ -182,7 +73,7 @@ fn Demo() -> Element {
 | Field | Type | Default | Description |
 |---|---|---|---|
 | `name` | `String` | required | The segment's accessible name, and its text when there is no `content`. |
-| `content` | `Element` | - | Drawn in place of the name, such as an icon and text. `name` still names the segment for screen readers. |
+| `content` | `Element` | - | Drawn in place of the name, such as an icon and text. `name` still names the segment for screen readers. A segment is a `<label>`, so phrasing content only: an `Icon` works, a `Flex` does not. |
 
 `OptionLabel` is a value, not a component, so it takes no shared props. A bare
 string converts (`"Konto".into()`). [Tabs](tabs.md) uses it too.

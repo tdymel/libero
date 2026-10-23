@@ -21,6 +21,33 @@ impl SliderStep for usize {
 
 /// A value a `Slider` renders and emits. A discrete type lists its `options`
 /// (`#[derive(SliderValue)]`); a continuous one overrides `position`/`at`.
+///
+/// ```rust
+/// # use dioxus::prelude::*;
+/// use libero::components::{Slider, SliderChangeEvent, SliderValue};
+///
+/// #[derive(Clone, Copy, Debug, PartialEq, SliderValue)]
+/// enum Quality {
+///     Low,
+///     Medium,
+///     High,
+///     #[slider(label = "Max")]
+///     Ultra,
+/// }
+///
+/// # fn app() -> Element {
+/// let mut quality = use_signal(|| Quality::Medium);
+/// rsx! {
+///     Slider {
+///         aria_label: "Quality",
+///         value: quality(),
+///         min: Quality::Low,
+///         max: Quality::Ultra,
+///         oninput: move |event: SliderChangeEvent<Quality>| quality.set(event.value()),
+///     }
+/// }
+/// # }
+/// ```
 pub trait SliderValue: Clone + PartialEq + 'static {
     type Step: SliderStep;
 
@@ -76,6 +103,27 @@ impl SliderValue for f64 {
 
 /// A tick on the track, with an optional caption under it. A discrete
 /// `Slider` derives one per option; an explicit `marks` replaces that.
+///
+/// ```rust
+/// # use dioxus::prelude::*;
+/// # use libero::components::{Slider, SliderChangeEvent, SliderMark};
+/// # fn app() -> Element {
+/// let mut volume = use_signal(|| 40.0);
+/// rsx! {
+///     Slider {
+///         aria_label: "Volume",
+///         value: volume(),
+///         marks: vec![
+///             SliderMark::labeled(0.0, "0"),
+///             SliderMark::new(50.0),
+///             SliderMark::labeled(100.0, "100"),
+///         ],
+///         format: Callback::new(|value: f64| format!("{value}%")),
+///         oninput: move |event: SliderChangeEvent| volume.set(event.value()),
+///     }
+/// }
+/// # }
+/// ```
 #[derive(Clone, Debug, PartialEq)]
 pub struct SliderMark<V = f64> {
     pub value: V,
@@ -103,6 +151,26 @@ impl From<f64> for SliderMark {
 
 /// A stretch of a segmented track, from `start` to the next segment's start
 /// or `max`. A labeled one names the values inside it, as a video's chapter.
+///
+/// ```rust
+/// # use dioxus::prelude::*;
+/// # use libero::components::{Slider, SliderChangeEvent, SliderSegment};
+/// # fn app() -> Element {
+/// let mut volume = use_signal(|| 40.0);
+/// rsx! {
+///     // The bubble and `aria-valuetext` read "75, Loud".
+///     Slider {
+///         aria_label: "Volume",
+///         value: volume(),
+///         segments: vec![
+///             SliderSegment::labeled(0.0, "Comfortable"),
+///             SliderSegment::labeled(70.0, "Loud"),
+///         ],
+///         oninput: move |event: SliderChangeEvent| volume.set(event.value()),
+///     }
+/// }
+/// # }
+/// ```
 #[derive(Clone, Debug, PartialEq)]
 pub struct SliderSegment<V = f64> {
     pub start: V,

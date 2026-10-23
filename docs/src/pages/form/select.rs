@@ -242,16 +242,16 @@ pub fn SelectPage() -> Element {
                         .default(theme.select.radius.as_str())
                         .doc("Corner radius of the frame and the list. Or any CSS, e.g. `radius: \"0\"`."),
                     prop("value", "Option<T>")
-                        .doc("The selected option. Pair it with `onchange`. `None`, or a value no option matches, shows `placeholder`."),
+                        .doc("The selected option. Pair it with `onchange`. `None`, or a value no option matches, shows `placeholder`. A bare `None` names no `T`: write `None::<T>`."),
                     prop("onchange", "EventHandler<Option<T>>")
                         .doc("Called with the option to select next, or `None` from the clear button."),
                     prop("name", "FieldName<Option<T>>")
-                        .doc("Posts the selected option's `Options::value()` under this name. A path such as `Order::FIELDS.plan()` also binds it to the surrounding `Form`'s value when it has no `onchange`."),
+                        .doc("Posts the selected option's `Options::value()` under this name: for a derived enum the variant's name, never the label. A path such as `Order::FIELDS.plan()` also binds it to the surrounding `Form`'s value when it has no `onchange`."),
                     prop("validate", "Validators<Option<T>>")
                         .doc("Rules over the selection, shown once the select loses focus or its form is submitted."),
                     prop("options", "OptionSource<T>")
                         .default("T::options()")
-                        .doc("Narrows or reorders the list. A runtime set, such as `String`s or records from a server, goes here. A `Vec<T>` converts, an `OptionList<T>` adds named groups and disabled options, and a `Resource<Vec<T>>` adds the loader while it fetches. A failed fetch is an empty list, so show your own error beside the field."),
+                        .doc("Narrows or reorders the list. A runtime set, such as `String`s or records from a server, goes here. A `Vec<T>` converts, an `OptionList<T>` adds named groups and disabled options, and a `Resource<Vec<T>>` adds the loader while it fetches. A failed fetch is an empty list, so show your own error beside the field. Order is kept, so a group label used again after another group draws its heading again."),
                     prop("option", "Callback<SelectOptionArgs<T>, Element>")
                         .default("T::label()")
                         .doc("Draws one row's content. The highlight, selection and click stay the component's. Hide a decorative glyph such as an emoji with `aria-hidden`, or a screen reader reads it before the label."),
@@ -270,7 +270,7 @@ pub fn SelectPage() -> Element {
                         .doc("Opens the list when the field takes focus, by Tab or a press. Focus coming back after a pick or Escape leaves it closed."),
                     prop("filter", "Callback<SelectFilterArgs<T>, bool>")
                         .default("contains")
-                        .doc("Narrows the options while searching. Defaults to a case-insensitive `contains` over `Options::label`."),
+                        .doc("Narrows the options while searching. Defaults to a case-insensitive `contains` over `Options::label`. It replaces that test, so a search can match a synonym or a code."),
                     prop("search_placeholder", "String")
                         .doc("What the empty search box says."),
                     prop("label", "Caption")
@@ -279,7 +279,7 @@ pub fn SelectPage() -> Element {
                     prop("helper", "Caption").doc("Under the control. Constraints, or what the choice changes."),
                     status_prop(),
                     required_prop().also("Inside a `Form`, an empty one fails the submit."),
-                    prop("disabled", "bool").default("false").doc("Takes the trigger out of the tab order and dims the field."),
+                    prop("disabled", "bool").default("false").doc("Takes the trigger out of the tab order, dims the field and posts nothing."),
                     readonly_prop("select"),
                     prop("dropdown_parts", "Parts<DropdownPart>").doc("Styles the portaled dropdown and its inner parts."),
                 ])
@@ -322,6 +322,7 @@ pub fn SelectPage() -> Element {
                     "With `searchable` the search box takes over typing and holds the focus while the list is open.",
                     "Android's Back button closes the list as Escape does, rather than the app.",
                     "From 200 rows the list draws only the rows in view. The highlighted row stays drawn for `aria-activedescendant`, each row carries `aria-posinset` and `aria-setsize` over the whole list, and a grouped row is described by its heading.",
+                    "Each group is a `role=\"group\"` named by its heading.",
                     clear_name!("Fruit"),
                 ])
                 .must(["Without a `label`, set `aria_label`. Otherwise screen readers announce an unnamed combobox."])
@@ -344,7 +345,10 @@ pub fn SelectPage() -> Element {
                     ". Below the "
                     Code { source: "sm" }
                     " breakpoint the list opens as a sheet at the foot of the screen, and a "
-                    "touch leaves the keyboard down until the search box is tapped."
+                    "touch leaves the keyboard down until the search box is tapped. For free "
+                    "text, use "
+                    Code { source: "Autocomplete" }
+                    "."
                 }
             },
             // snippet: let mut value = use_signal(|| None::<Fruit>);

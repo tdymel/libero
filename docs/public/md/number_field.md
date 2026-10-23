@@ -21,140 +21,14 @@ use libero::components::NumberField;
 
 #[component]
 fn Demo() -> Element {
-    let mut quantity = use_signal(|| Some(1i32));
+    let mut quantity = use_signal(|| Some(4i32));
 
     rsx! {
         NumberField {
-            label: "Quantity",
-            helper: "Up to 99 per order.",
-            steppers: true,
-            min: 1,
-            max: 99,
             value: quantity(),
             onchange: move |next| quantity.set(next),
-        }
-    }
-}
-```
-
-A custom type, here whole cents shown with a decimal point:
-
-```rust
-use dioxus::prelude::*;
-use libero::components::{NumberField, NumberValue};
-use std::fmt;
-
-#[derive(Clone, Copy, PartialEq, PartialOrd)]
-struct Cents(i64);
-
-impl std::ops::Add for Cents {
-    type Output = Self;
-    fn add(self, other: Self) -> Self {
-        Cents(self.0.saturating_add(other.0))
-    }
-}
-
-impl std::ops::Sub for Cents {
-    type Output = Self;
-    fn sub(self, other: Self) -> Self {
-        Cents(self.0.saturating_sub(other.0))
-    }
-}
-
-impl std::str::FromStr for Cents {
-    type Err = &'static str;
-    fn from_str(text: &str) -> Result<Self, Self::Err> {
-        let number = text.parse::<f64>().map_err(|_| "not a number")?;
-        // `f64` parses "nan" and "inf" too.
-        if !number.is_finite() {
-            return Err("not a finite number");
-        }
-        Ok(Cents((number * 100.0).round() as i64))
-    }
-}
-
-impl fmt::Display for Cents {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let sign = if self.0 < 0 { "-" } else { "" };
-        let cents = self.0.unsigned_abs();
-        write!(f, "{sign}{}.{:02}", cents / 100, cents % 100)
-    }
-}
-
-impl NumberValue for Cents {
-    fn default_step() -> Self {
-        Cents(50)
-    }
-}
-
-#[component]
-fn Demo() -> Element {
-    let mut price = use_signal(|| None::<Cents>);
-
-    rsx! {
-        NumberField {
-            label: "Price",
-            placeholder: "0.00",
-            value: price(),
-            onchange: move |next| price.set(next),
-        }
-    }
-}
-```
-
-`group_digits` writes `1,234,567.5` (`1.234.567,5` under `Formats::GERMAN`)
-while the field is not focused:
-
-```rust
-use dioxus::prelude::*;
-use libero::components::NumberField;
-
-#[component]
-fn Demo() -> Element {
-    let mut amount = use_signal(|| Some(1_234_567.5f64));
-
-    rsx! {
-        NumberField {
-            label: "Amount",
-            group_digits: true,
-            value: amount(),
-            onchange: move |next| amount.set(next),
-        }
-    }
-}
-```
-
-A price and a discount, the sign and `%` outside the typed text. `decimals`
-keeps the fraction, `Exactly(2)` padding `1,250.50` while not typing:
-
-```rust
-use dioxus::prelude::*;
-use libero::components::{Decimals, NumberField};
-
-#[component]
-fn Demo() -> Element {
-    let mut total = use_signal(|| Some(1_250.5f64));
-    let mut share = use_signal(|| Some(12.5f64));
-
-    rsx! {
-        NumberField {
-            label: "Total",
-            leading: rsx! { "$" },
-            describe_leading: true,
-            decimals: Decimals::Exactly(2),
-            group_digits: true,
-            value: total(),
-            onchange: move |next| total.set(next),
-        }
-        NumberField {
-            label: "Discount",
-            trailing: rsx! { "%" },
-            describe_trailing: true,
-            decimals: Decimals::AtMost(1),
-            min: 0.0,
-            max: 100.0,
-            value: share(),
-            onchange: move |next| share.set(next),
+            label: "Quantity",
+            steppers: true,
         }
     }
 }
@@ -180,7 +54,7 @@ fn Demo() -> Element {
 | `group_digits` | `bool` | `false` | Writes the thousands grouped in the provider's `Formats`, `1,234,567.5` or `1.234.567,5`, while the field is not focused; typing sees the bare number. Built-in number types only. Grouped text typed or pasted parses either way. A WebView (desktop, Android) cannot read or set the caret, so focusing the field may send it to the end of the text. |
 | `decimals` | `Decimals` | - | How many digits the fraction keeps. `Decimals::AtMost(2)` cuts a third typed digit and rounds a step or a caller's value, so `0.1 + 0.2` arrives as `0.3`; `Decimals::Exactly(2)` also pads the shown number, `12.50`, while nothing is being typed. `f32` and `f64` only. |
 | `leading` | `Element` | - | Inside the frame, before the control: a currency sign such as `$`. Outside the typed text, so typing and parsing stay plain. |
-| `trailing` | `Element` | - | Inside the frame, after the control and before the steppers: a unit, `%` or `€`. |
+| `trailing` | `Element` | - | Inside the frame, after the control and before the steppers: a unit, `%` or `€`. Outside the typed text. |
 | `describe_leading` | `bool` | `false` | `leading` is text that describes the value, so the field's `aria-describedby` points at it. |
 | `describe_trailing` | `bool` | `false` | `trailing` is text that describes the value, e.g. a unit. |
 | `increment_label` | `String` | `number_field.increase` | Names the plus button, such as "Add a guest". Unset, the localization's `number_field.increase`, "Increase" in English. |

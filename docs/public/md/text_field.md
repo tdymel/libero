@@ -20,26 +20,14 @@ use libero::components::{FieldStatus, TextField};
 
 #[component]
 fn Demo() -> Element {
-    let mut handle = use_signal(String::new);
+    let mut value = use_signal(String::new);
 
     rsx! {
         TextField {
+            value: value(),
+            oninput: move |next| value.set(next),
             label: "Username",
-            description: "How other people see you.",
-            helper: "Letters, numbers and underscores.",
-            status: if handle().contains(' ') {
-                FieldStatus::Error("No spaces.".to_string())
-            } else {
-                FieldStatus::Valid
-            },
-            required: true,
             placeholder: "ada",
-            leading: rsx! { "@" },
-            trailing: rsx! { "{handle().chars().count()}/20" },
-            maxlength: 20,
-            describe_trailing: true,
-            value: handle(),
-            oninput: move |next| handle.set(next),
         }
     }
 }

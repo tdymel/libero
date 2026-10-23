@@ -126,7 +126,7 @@ pub fn RangeSliderPage() -> Element {
                     prop("value", "Option<(V, V)>")
                         .doc("The two ends, in track order. Pair it with `oninput`, or bind it with a path `name` inside a `Form`."),
                     prop("oninput", "EventHandler<SliderChangeEvent<(V, V)>>")
-                        .doc("Fires per value while dragging. `Start` and `End` bracket a drag, `Change` carries each new pair. A key press sends `Change`, then `End`."),
+                        .doc("Fires per value while dragging. `Start` and `End` bracket a drag, `Change` carries each new pair. A key press sends `Change`, then `End`, so saving on `End` catches keyboard edits too."),
                     prop("min", "V")
                         .default("first option, or 0.0")
                         .doc("Lower bound of the track, in the value's own type."),
@@ -138,7 +138,7 @@ pub fn RangeSliderPage() -> Element {
                         .doc("How far one step goes from `min`. A count of options on a discrete scale, a value on a continuous one, so 0 to 1 has two stops unless you pass a smaller one. Also sets how many decimals a value keeps; `0.0` is continuous and keeps a thousandth of the range."),
                     prop("min_range", "V::Step")
                         .default("0")
-                        .doc("The smallest gap the thumbs keep, in the unit of `step`. At 0 they may meet, and they never cross."),
+                        .doc("The smallest gap the thumbs keep, in the unit of `step`. At 0 they may meet, and they never cross. It rounds up to whole steps: `step: 10, min_range: 3` keeps a full step."),
                     prop("format", "Callback<V, String>")
                         .default("bare value, or SliderValue::label")
                         .doc("Text of the bubbles and each thumb's `aria-valuetext`. On a discrete scale it also names the marks, so this is where a translation goes."),

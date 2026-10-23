@@ -108,7 +108,7 @@ pub fn FieldsetPage() -> Element {
                 prop("validate", "Validators<V>")
                     .doc("Rules over the group's value, one or an array. A rule with `.on(..)` shows on the fields it names. One without shows under the fields once any field in the group was touched."),
                 prop("path", "FieldName<V>")
-                    .doc("Where the group sits inside a `Form`'s value, such as `Order::FIELDS.address()`. The names of the fields inside and the paths in `validate` are relative to it."),
+                    .doc("Where the group sits inside a `Form`'s value, such as `Order::FIELDS.address()`. The names of the fields inside and the paths in `validate` are relative to it. A field inside posts its full path, such as `address.zip`."),
                 prop("disabled", "bool")
                     .default("false")
                     .doc("Disables every Libero control inside, nested fieldsets included. A field's own `disabled: false` cannot re-enable it. A raw `<input>` or `<button>` keeps its own `disabled`."),

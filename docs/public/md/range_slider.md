@@ -13,10 +13,6 @@ or swap: a thumb dragged past the other stops on it, or `min_range` short of it.
 
 ## Usage
 
-`oninput` carries a `SliderChangeEvent<(V, V)>`. `Start` and `End` bracket one
-drag, and `Change` carries every pair in between. A key press sends `Change`,
-then `End`, so saving on `End` catches keyboard edits too.
-
 ```rust
 use dioxus::prelude::*;
 use libero::components::{Flex, RangeSlider, SliderChangeEvent, Text};
@@ -28,129 +24,17 @@ fn Demo() -> Element {
     let mut last = use_signal(|| SliderChangeEvent::Change((20.0, 80.0)));
 
     rsx! {
-        Flex { direction: "column", gap: "sm", sx: sx().width("100%"),
+        Flex {
+            direction: "column",
+            gap: "sm",
+            sx: sx().width("100%"),
             RangeSlider {
-                aria_label: "Price",
-                label: "Price",
                 value: price(),
-                oninput: move |event: SliderChangeEvent<(f64, f64)>| {
-                    price.set(event.value());
-                    last.set(event)
-                },
+                oninput: move |event: SliderChangeEvent<(f64, f64)>| { price.set(event.value()); last.set(event) },
+                label: "Price",
+                preview_on_hover: true,
             }
             Text { size: "sm", "value: {price():?} - last event: {last():?}" }
-        }
-    }
-}
-```
-
-`min_range` is the smallest gap the thumbs keep. The dragged thumb stops that far
-short of the other instead of pushing it. It uses the unit of `step`, and at the
-default 0 the thumbs may meet. The gap rounds up to whole steps, so
-`step: 10, min_range: 3` keeps them a full step apart.
-
-```rust
-use dioxus::prelude::*;
-use libero::components::{RangeSlider, SliderChangeEvent};
-
-#[component]
-fn Demo() -> Element {
-    let mut price = use_signal(|| (20.0, 80.0));
-
-    rsx! {
-        RangeSlider {
-            label: "Price",
-            value: price(),
-            min: 0.0,
-            max: 200.0,
-            step: 5.0,
-            min_range: 25.0,
-            oninput: move |event: SliderChangeEvent<(f64, f64)>| price.set(event.value()),
-        }
-    }
-}
-```
-
-An ordered enum that derives `SliderValue` makes the range discrete, as on a
-`Slider`. `min` and `max` are written as variants, and `step` and `min_range`
-count options.
-
-```rust
-use dioxus::prelude::*;
-use libero::components::{RangeSlider, SliderChangeEvent, SliderValue};
-
-#[derive(Clone, Copy, Debug, PartialEq, SliderValue)]
-enum Quality {
-    Low,
-    Medium,
-    High,
-    #[slider(label = "Max")]
-    Ultra,
-}
-
-#[component]
-fn Demo() -> Element {
-    let mut quality = use_signal(|| (Quality::Low, Quality::High));
-
-    rsx! {
-        RangeSlider {
-            label: "Quality",
-            value: quality(),
-            min_range: 1usize,
-            oninput: move |event: SliderChangeEvent<(Quality, Quality)>| {
-                quality.set(event.value())
-            },
-        }
-    }
-}
-```
-
-`marks` and `format` work as on a `Slider`, and one `format` covers both
-bubbles. The bar fills between the thumbs.
-
-`name` posts the pair as two hidden inputs under one name, in track order.
-
-```rust
-use dioxus::prelude::*;
-use libero::components::{RangeSlider, SliderChangeEvent};
-
-#[component]
-fn Demo() -> Element {
-    let mut price = use_signal(|| (20.0, 80.0));
-
-    rsx! {
-        form {
-            RangeSlider {
-                label: "Price",
-                name: "price",
-                value: price(),
-                oninput: move |event: SliderChangeEvent<(f64, f64)>| price.set(event.value()),
-            }
-        }
-    }
-}
-```
-
-```js
-form.getAll("price") // ["20", "80"]
-```
-
-`orientation: "vertical"` stands the track upright, bottom to top:
-
-```rust
-use dioxus::prelude::*;
-use libero::components::{RangeSlider, SliderChangeEvent};
-
-#[component]
-fn Demo() -> Element {
-    let mut band = use_signal(|| (30.0, 70.0));
-
-    rsx! {
-        RangeSlider {
-            label: "Band",
-            orientation: "vertical",
-            value: band(),
-            oninput: move |event: SliderChangeEvent<(f64, f64)>| band.set(event.value()),
         }
     }
 }
@@ -165,11 +49,11 @@ fn Demo() -> Element {
 | `size` | `Size` | `md` | Track, thumb and font size. |
 | `color` | `ThemeAwareValue` | `primary` | Accent color. A theme color name or any CSS color. A theme color name paints its text shade, darker on a light page so the fill stands out. |
 | `value` | `Option<(V, V)>` | - | The two ends, in track order. Pair it with `oninput`, or bind it with a path `name` inside a `Form`. |
-| `oninput` | `EventHandler<SliderChangeEvent<(V, V)>>` | - | Fires per value while dragging. `Start` and `End` bracket a drag, `Change` carries each new pair. A key press sends `Change`, then `End`. |
+| `oninput` | `EventHandler<SliderChangeEvent<(V, V)>>` | - | Fires per value while dragging. `Start` and `End` bracket a drag, `Change` carries each new pair. A key press sends `Change`, then `End`, so saving on `End` catches keyboard edits too. |
 | `min` | `V` | `first option, or 0.0` | Lower bound of the track, in the value's own type. |
 | `max` | `V` | `last option, or 100.0` | Upper bound of the track, in the value's own type. Off the `step` grid, the track ends at the last step below it, as on a native range input: 0 to 100 by 30 ends at 90. |
 | `step` | `V::Step` | `one option, or 1.0` | How far one step goes from `min`. A count of options on a discrete scale, a value on a continuous one, so 0 to 1 has two stops unless you pass a smaller one. Also sets how many decimals a value keeps; `0.0` is continuous and keeps a thousandth of the range. |
-| `min_range` | `V::Step` | `0` | The smallest gap the thumbs keep, in the unit of `step`. At 0 they may meet, and they never cross. |
+| `min_range` | `V::Step` | `0` | The smallest gap the thumbs keep, in the unit of `step`. At 0 they may meet, and they never cross. It rounds up to whole steps: `step: 10, min_range: 3` keeps a full step. |
 | `format` | `Callback<V, String>` | `bare value, or SliderValue::label` | Text of the bubbles and each thumb's `aria-valuetext`. On a discrete scale it also names the marks, so this is where a translation goes. |
 | `group_digits` | `bool` | `false` | Writes the bubbles' bare numbers grouped in thousands in the provider's `Formats`, `12,500` or `12.500`. A `format` writes its own text, so it replaces this. |
 | `marks` | `Vec<SliderMark<V>>` | `one per option, discretely` | Ticks on the track. A labeled one gets a caption below it. Replaces the marks a discrete scale draws itself. Past about six options the derived captions touch on a phone, so pass your own `marks`, or a `step` that skips options. |

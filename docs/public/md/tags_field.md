@@ -22,6 +22,7 @@ list of addresses, and the saved entries then cover the suggestions.
 ```rust
 use dioxus::prelude::*;
 use libero::components::{FieldStatus, TagRejectReason, TagRejection, TagsField};
+use libero::sx::sx;
 
 /// The on-screen message for a rejected tag.
 fn why(rejection: TagRejection) -> String {
@@ -40,26 +41,17 @@ fn Demo() -> Element {
 
     rsx! {
         TagsField {
-            label: "Topics",
-            description: "Comma or Enter adds one.",
-            placeholder: "Add a topic",
-            max_tags: 5,
-            suggestions: vec!["rust".into(), "dioxus".into(), "wasm".into(), "css".into()],
-            tag_rules: |tag: String| tag.chars().count() >= 3,
+            sx: sx().width("100%").max_width("320px"),
+            value: topics(),
+            onchange: move |next| { refused.set(None); topics.set(next) },
             onreject: move |rejection: TagRejection| refused.set(Some(why(rejection))),
             status: refused().map(FieldStatus::Error).unwrap_or(FieldStatus::Valid),
-            value: topics(),
-            onchange: move |next| {
-                refused.set(None);
-                topics.set(next)
-            },
+            label: "Topics",
+            placeholder: "Add a topic",
         }
     }
 }
 ```
-
-The field tells screen readers why it refused a tag, but shows nothing. The
-`status` above shows the reason on screen until the list next changes.
 
 ## Props
 

@@ -12,104 +12,15 @@ A listbox over an enum, in the same frame as every other field. Unlike
 draw them with anything. In exchange there is no OS picker on phones. Pass
 `value` with `onchange`. `clearable` lets the user go back to `None`. Below the
 `sm` breakpoint the list opens as a sheet at the foot of the screen, and a touch
-leaves the keyboard down until the search box is tapped.
+leaves the keyboard down until the search box is tapped. For free text, use
+`Autocomplete`.
 
 ## Usage
 
 ```rust
 use dioxus::prelude::*;
 use libero::components::{Options, Select};
-
-#[derive(Clone, Copy, PartialEq, Options)]
-enum Fruit {
-    Apple,
-    Banana,
-    Cherry,
-}
-
-#[component]
-fn Demo() -> Element {
-    let mut value = use_signal(|| Some(Fruit::Banana));
-
-    rsx! {
-        Select {
-            label: "Fruit",
-            placeholder: "Pick a fruit",
-            clearable: true,
-            value: value(),
-            onchange: move |next| value.set(next),
-        }
-    }
-}
-```
-
-`onchange` hands over `Option<T>`, `Some` for a pick and `None` for the clear
-button. `value: None` leaves nothing to infer `T` from, so write `None::<Fruit>`
-and annotate the handler.
-
-`option` draws a row's content. The highlight, selection and click stay the
-component's. `selection` draws the value in the trigger and takes the bare `T`.
-The emoji is decoration, hidden from screen readers so the row reads as its
-label alone:
-
-```rust,ignore
-Select {
-    value: value(),
-    onchange: move |next| value.set(next),
-    option: move |o: SelectOptionArgs<Fruit>| rsx! {
-        Text { span { "aria-hidden": "true", "{o.value.emoji()} " } "{o.value.label()}" }
-    },
-    selection: move |fruit: Fruit| rsx! { span { "aria-hidden": "true", "{fruit.emoji()} " } "{fruit.label()}" },
-}
-```
-
-`searchable` puts a search box at the top of the list. It narrows
-case-insensitively on `Options::label`, and `filter` replaces that test, so a
-search can match a synonym or a code:
-
-```rust,ignore
-Select {
-    searchable: true,
-    search_placeholder: "Search fruit",
-    value: value(),
-    onchange: move |next| value.set(next),
-    filter: move |f: SelectFilterArgs<Fruit>| {
-        let query = f.query.to_lowercase();
-        f.value.label().to_lowercase().contains(&query)
-            || f.value.note().to_lowercase().contains(&query)
-    },
-}
-```
-
-The query is cleared when the list closes. To complete free text rather than
-choose from a set, use [Autocomplete](autocomplete.md).
-
-`name` posts the selected option's `Options::value()` with a plain `<form>`.
-For a derived enum that is the variant's name, never the label. A disabled
-select posts nothing.
-
-```rust,ignore
-Select { label: "Fruit", name: "fruit", value: fruit(), onchange: move |next| fruit.set(next) }
-```
-
-Groups and disabled options come through `options`, as an `OptionList<T>`:
-
-```rust,ignore
-OptionList::grouped()
-    .group("Orchard", [Fruit::Apple.into(), OptionItem::new(Fruit::Cherry).disabled(true)])
-    .group("Tropical", [Fruit::Banana, Fruit::Mango].map(OptionItem::new))
-```
-
-Each group is a `role="group"` named by its heading. Your order is kept, so a
-group label used again after another group draws its heading again. A disabled
-option is read out, and the arrows, typeahead and clicks skip it.
-
-`open_on_focus` opens the list when the field takes focus, by Tab or a press.
-Focus coming back after a pick or Escape leaves it closed:
-
-```rust
-use dioxus::prelude::*;
-use libero::components::{Options, Select};
+use libero::sx::sx;
 
 #[derive(Clone, Copy, PartialEq, Options)]
 enum Fruit {
@@ -123,15 +34,15 @@ enum Fruit {
 
 #[component]
 fn Demo() -> Element {
-    let mut focus_pick = use_signal(|| None::<Fruit>);
+    let mut value = use_signal(|| None::<Fruit>);
 
     rsx! {
         Select {
-            label: "Fruit",
+            sx: sx().width("280px").max_width("100%"),
+            value: value(),
+            onchange: move |next| value.set(next),
             placeholder: "Pick a fruit",
-            open_on_focus: true,
-            value: focus_pick(),
-            onchange: move |next| focus_pick.set(next),
+            label: "Fruit",
         }
     }
 }
@@ -145,25 +56,25 @@ fn Demo() -> Element {
 |---|---|---|---|
 | `size` | `Size` | `md` | Height, padding and font size of the field and its rows. |
 | `radius` | `ThemeAwareValue` | `sm` | Corner radius of the frame and the list. Or any CSS, e.g. `radius: "0"`. |
-| `value` | `Option<T>` | - | The selected option. Pair it with `onchange`. `None`, or a value no option matches, shows `placeholder`. |
+| `value` | `Option<T>` | - | The selected option. Pair it with `onchange`. `None`, or a value no option matches, shows `placeholder`. A bare `None` names no `T`: write `None::<T>`. |
 | `onchange` | `EventHandler<Option<T>>` | - | Called with the option to select next, or `None` from the clear button. |
-| `name` | `FieldName<Option<T>>` | - | Posts the selected option's `Options::value()` under this name. A path such as `Order::FIELDS.plan()` also binds it to the surrounding `Form`'s value when it has no `onchange`. |
+| `name` | `FieldName<Option<T>>` | - | Posts the selected option's `Options::value()` under this name: for a derived enum the variant's name, never the label. A path such as `Order::FIELDS.plan()` also binds it to the surrounding `Form`'s value when it has no `onchange`. |
 | `validate` | `Validators<Option<T>>` | - | Rules over the selection, shown once the select loses focus or its form is submitted. |
-| `options` | `OptionSource<T>` | `T::options()` | Narrows or reorders the list. A runtime set, such as `String`s or records from a server, goes here. A `Vec<T>` converts, an `OptionList<T>` adds named groups and disabled options, and a `Resource<Vec<T>>` adds the loader while it fetches. A failed fetch is an empty list, so show your own error beside the field. |
+| `options` | `OptionSource<T>` | `T::options()` | Narrows or reorders the list. A runtime set, such as `String`s or records from a server, goes here. A `Vec<T>` converts, an `OptionList<T>` adds named groups and disabled options, and a `Resource<Vec<T>>` adds the loader while it fetches. A failed fetch is an empty list, so show your own error beside the field. Order is kept, so a group label used again after another group draws its heading again. |
 | `option` | `Callback<SelectOptionArgs<T>, Element>` | `T::label()` | Draws one row's content. The highlight, selection and click stay the component's. Hide a decorative glyph such as an emoji with `aria-hidden`, or a screen reader reads it before the label. |
 | `selection` | `Callback<T, Element>` | `T::label()` | Draws the selected value inside the trigger. |
 | `placeholder` | `String` | - | Shown while no option matches `value`. |
 | `clearable` | `bool` | `false` | Shows an x in place of the chevron while something is selected. The only way `onchange` gets `None`. |
 | `searchable` | `bool` | `false` | Puts a search box at the top of the list. The query is cleared when the list closes. |
 | `open_on_focus` | `bool` | `false` | Opens the list when the field takes focus, by Tab or a press. Focus coming back after a pick or Escape leaves it closed. |
-| `filter` | `Callback<SelectFilterArgs<T>, bool>` | `contains` | Narrows the options while searching. Defaults to a case-insensitive `contains` over `Options::label`. |
+| `filter` | `Callback<SelectFilterArgs<T>, bool>` | `contains` | Narrows the options while searching. Defaults to a case-insensitive `contains` over `Options::label`. It replaces that test, so a search can match a synonym or a code. |
 | `search_placeholder` | `String` | - | What the empty search box says. |
 | `label` | `Caption` | - | The caption above the control, and the select's name. |
 | `description` | `Caption` | - | Between the label and the control. What to pick. |
 | `helper` | `Caption` | - | Under the control. Constraints, or what the choice changes. |
 | `status` | `FieldStatus` | `Valid` | Validation state, under the helper. A bare `&str` is an error; an empty one or `None` is `Valid`. |
 | `required` | `bool` | `false` | Sets `aria-required` and marks the label; a field without a visible `label` shows no mark. Inside a `Form`, an empty one fails the submit. |
-| `disabled` | `bool` | `false` | Takes the trigger out of the tab order and dims the field. |
+| `disabled` | `bool` | `false` | Takes the trigger out of the tab order, dims the field and posts nothing. |
 | `readonly` | `bool` | `false` | Focusable and posted with the form, but not editable. `disabled` drops the select from the tab order and the post instead. |
 | `dropdown_parts` | `Parts<DropdownPart>` | - | Styles the portaled dropdown and its inner parts. |
 
@@ -245,6 +156,7 @@ The dropdown is portaled out of the field, so its parts take the
   drawn for `aria-activedescendant`, each row carries `aria-posinset` and
   `aria-setsize` over the whole list, and a grouped row is described by its
   heading.
+- Each group is a `role="group"` named by its heading.
 - The clear button is named by the field's `label`, "Clear Fruit" in the
   example, so two clear buttons on one form tell apart. Without a `label` it is
   "Clear" alone.

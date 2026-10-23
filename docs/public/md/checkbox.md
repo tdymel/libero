@@ -20,40 +20,15 @@ use libero::components::Checkbox;
 
 #[component]
 fn Demo() -> Element {
-    let mut accepted = use_signal(|| false);
+    let mut ticked = use_signal(|| true);
 
     rsx! {
         Checkbox {
             label: "Accept the terms",
-            description: "The licence and the privacy policy.",
-            checked: accepted(),
-            onchange: move |next| accepted.set(next),
+            checked: ticked(),
+            onchange: move |next| ticked.set(next),
         }
     }
-}
-```
-
-`indeterminate` marks the parent of a partly checked group:
-
-```rust,ignore
-Checkbox {
-    label: "All channels",
-    checked: mail() && sms(),
-    indeterminate: (mail() != sms()).then_some(true),
-    onchange: move |next| { mail.set(next); sms.set(next); },
-}
-```
-
-`variant: "card"` draws the whole field as a bordered surface you can click
-anywhere. Pair it with a `description`:
-
-```rust,ignore
-Checkbox {
-    variant: "card",
-    label: "Priority support",
-    description: "Answers within four hours, around the clock.",
-    checked: support(),
-    onchange: move |next| support.set(next),
 }
 ```
 
@@ -67,7 +42,7 @@ Checkbox {
 | `size` | `Size` | `md` | Size of the box, the label and the captions. |
 | `radius` | `ThemeAwareValue` | `sm` | Corner radius of the box. Or any CSS, e.g. `radius: "0"`. |
 | `checked` | `bool` | - | Whether it is checked. Pair it with `onchange`. Left out, the box keeps its own state, or the form's when `name` binds it. |
-| `indeterminate` | `bool` | `false` | Draws a dash and reads as mixed. It wins over `checked`, and toggling from it gives `true`. |
+| `indeterminate` | `bool` | `false` | Draws a dash and reads as mixed. It wins over `checked`, and toggling from it gives `true`. Use it on a parent whose children are partly checked. |
 | `onchange` | `EventHandler<bool>` | - | Called with the value `checked` should take next. |
 | `name` | `FieldName<bool>` | - | What the checkbox posts as. A path such as `Signup::FIELDS.terms()` also binds it to the surrounding `Form`'s value when it has no `onchange`. |
 | `validate` | `Validators<bool>` | - | Rules over `checked`, shown once the checkbox loses focus or its form is submitted. |

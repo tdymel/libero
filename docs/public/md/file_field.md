@@ -21,111 +21,14 @@ use libero::components::{FileField, Files};
 
 #[component]
 fn Demo() -> Element {
-    let mut avatar = use_signal(Files::default);
+    let mut files = use_signal(Files::default);
 
     rsx! {
         FileField {
-            label: "Avatar",
-            accept: "image/*",
             placeholder: "No file picked",
-            value: avatar(),
-            onchange: move |picked: Files| avatar.set(picked),
-        }
-    }
-}
-```
-
-A `multiple` field takes several files per pick or drop. A new pick replaces the
-earlier files, as on a native file input, and a removal hands over the rest, so
-the handler stores what it gets:
-
-```rust
-use dioxus::prelude::*;
-use libero::components::{FileField, Files};
-
-#[component]
-fn Demo() -> Element {
-    let mut files = use_signal(Files::default);
-
-    rsx! {
-        FileField {
-            label: "Attachments",
-            variant: "dropzone",
-            multiple: true,
             value: files(),
-            onchange: move |picked: Files| files.set(picked),
-            "Drop files here, or click to pick"
-        }
-    }
-}
-```
-
-`crop` cuts a picked image before the field takes it, here to a square of at
-most 512 px. [ImageCropper](image_cropper.md) explains the dialog's cropper:
-
-```rust,ignore
-FileField {
-    label: "Avatar",
-    accept: "image/*",
-    crop: CropOptions { aspect: Some(1.0), max_size: Some(512), ..Default::default() },
-    value: avatar(),
-    onchange: move |picked: Files| avatar.set(picked),
-}
-```
-
-A refused file, one `accept` excludes or a second on a single-file field, is
-announced by the field and handed to `onreject`, here to show it on screen:
-
-```rust
-use dioxus::prelude::*;
-use libero::components::{FileField, FileRejection, Files};
-
-#[component]
-fn Demo() -> Element {
-    let mut avatar = use_signal(Files::default);
-    let mut refused = use_signal(String::new);
-
-    rsx! {
-        FileField {
-            label: "Avatar",
-            accept: "image/*",
-            status: refused(),
-            value: avatar(),
-            onchange: move |picked: Files| {
-                refused.set(String::new());
-                avatar.set(picked);
-            },
-            onreject: move |rejected: Vec<FileRejection>| {
-                let names: Vec<String> = rejected.iter().map(|r| r.file.name()).collect();
-                refused.set(format!("Not added: {}", names.join(", ")));
-            },
-        }
-    }
-}
-```
-
-`max_files` keeps at most three files per pick or drop, and `max_size` refuses
-any file over 5 MB. The field announces the refused files and hands them to
-`onreject`:
-
-```rust
-use dioxus::prelude::*;
-use libero::components::{FileField, Files};
-
-#[component]
-fn Demo() -> Element {
-    let mut files = use_signal(Files::default);
-
-    rsx! {
-        FileField {
-            label: "Attachments",
-            variant: "dropzone",
-            multiple: true,
-            max_files: 3,
-            max_size: 5_000_000,
-            helper: "Up to 3 files, 5 MB each.",
-            value: files(),
-            onchange: move |picked: Files| files.set(picked),
+            onchange: move |picked| files.set(picked),
+            label: "Attachment",
         }
     }
 }
@@ -147,7 +50,7 @@ fn Demo() -> Element {
 | `placeholder` | `String` | - | The `input` variant's Browse button text while nothing is picked. It is the dropzone's prompt when `children` is empty, which a `multiple` dropzone keeps after a pick. A dropzone with neither says the localization's `file_field.drop_file` or `drop_files`; the `input` variant shows nothing. |
 | `clearable` | `bool` | `true` | Shows an x that empties the field. `input` variant only: a dropzone's cards each have their own x. |
 | `loading` | `bool` | `false` | Shows a `Loader` while an upload runs and marks the field busy. It blocks nothing, `disabled` does that. |
-| `crop` | `CropOptions` | - | A single picked or dropped image opens in an `ImageCropper` dialog first, its box centred at 80% of the largest `aspect` allows: Apply hands `onchange` the cut file, Cancel drops it. A crop that fails keeps the dialog open on an error and hands over nothing. Under Blitz an AVIF passes through uncropped, and a WebP is cut lossless, so it can be larger than on the web. Ignored on a `multiple` field. Needs the `image-cropper` feature: without it the file passes uncropped, with a warning in a debug build. |
+| `crop` | `CropOptions` | - | A single picked or dropped image opens in an `ImageCropper` dialog first, its box centred at 80% of the largest `aspect` allows: Apply hands `onchange` the cut file, Cancel drops it. A crop that fails keeps the dialog open on an error and hands over nothing. Under Blitz an AVIF passes through uncropped, and a WebP is cut lossless, so it can be larger than on the web. Ignored on a `multiple` field. `CropOptions` sets `aspect`, `shape`, `pan` and `max_size`, as on `ImageCropper`. Needs the `image-cropper` feature: without it the file passes uncropped, with a warning in a debug build. |
 | `oncrop` | `EventHandler<CropRect>` | - | The box picked in the crop dialog, before the cut file reaches `onchange`. |
 | `selection` | `Callback<SelectionArgs<FileData>, Element>` | `Chip`, or the file name | Draws one picked file, remove control included. `args.remove` removes it. Unset, a multiple `input` field draws a chip, a single one the file name, and a dropzone a card under its surface. |
 | `name` | `FieldName<Files>` | - | What the files post as. A removed file stops posting. A path such as `Claim::FIELDS.receipts()` also binds the files to the surrounding `Form`'s value when the field has no `onchange`. |

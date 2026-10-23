@@ -10,47 +10,13 @@ Description: A value dragged along a track, continuous over `f64` or discrete ov
 A value you drag along a track. It slides over any `SliderValue`. An `f64`
 gives a continuous range. An ordered enum that derives it makes the slider
 discrete, and the range, steps, marks and captions come from its options.
+`#[slider(label = "..")]` renames a variant's caption.
 
 ## Usage
 
-`oninput` carries a `SliderChangeEvent`. `Start` and `End` bracket one drag,
-and `Change` carries every value in between. A key press sends `Change`, then
-`End`, so saving on `End` catches keyboard edits too.
-
 ```rust
 use dioxus::prelude::*;
-use libero::components::{Flex, Slider, SliderChangeEvent, Text};
-use libero::sx::sx;
-
-#[component]
-fn Demo() -> Element {
-    let mut volume = use_signal(|| 40.0);
-    let mut last = use_signal(|| SliderChangeEvent::Change(40.0));
-
-    rsx! {
-        Flex { direction: "column", gap: "sm", sx: sx().width("100%"),
-            Slider {
-                aria_label: "Volume",
-                value: volume(),
-                oninput: move |event: SliderChangeEvent| {
-                    volume.set(event.value());
-                    last.set(event)
-                },
-            }
-            Text { size: "sm", "value: {volume()} - last event: {last():?}" }
-        }
-    }
-}
-```
-
-Derive `SliderValue` on an ordered enum for a discrete slider. The range, the
-steps and one mark per option come from the variants, and
-`#[slider(label = "..")]` renames one. `min` and `max` are written as variants,
-and `step` counts options.
-
-```rust
-use dioxus::prelude::*;
-use libero::components::{Flex, Slider, SliderChangeEvent, SliderValue, Text};
+use libero::components::{Flex, Slider, SliderChangeEvent, SliderSegment, SliderValue, Text};
 use libero::sx::sx;
 
 #[derive(Clone, Copy, Debug, PartialEq, SliderValue)]
@@ -61,153 +27,37 @@ enum Quality {
     #[slider(label = "Max")]
     Ultra,
 }
+fn event_text<V>(event: SliderChangeEvent<V>, text: impl Fn(V) -> String) -> String {
+    match event {
+        SliderChangeEvent::Start(value) => format!("Start({})", text(value)),
+        SliderChangeEvent::Change(value) => format!("Change({})", text(value)),
+        SliderChangeEvent::End(value) => format!("End({})", text(value)),
+    }
+}
 
 #[component]
 fn Demo() -> Element {
     let mut quality = use_signal(|| Quality::Medium);
-    let mut last = use_signal(|| SliderChangeEvent::Change(Quality::Medium));
+    let mut last_quality = use_signal(|| SliderChangeEvent::Change(Quality::Medium));
 
     rsx! {
-        Flex { direction: "column", gap: "sm", sx: sx().width("100%"),
+        Flex {
+            direction: "column",
+            gap: "sm",
+            sx: sx().width("100%"),
             Slider {
                 aria_label: "Quality",
                 value: quality(),
-                min: Quality::Low,
-                max: Quality::Ultra,
-                oninput: move |event: SliderChangeEvent<Quality>| {
-                    quality.set(event.value());
-                    last.set(event)
-                },
+                oninput: move |event: SliderChangeEvent<Quality>| { quality.set(event.value()); last_quality.set(event) },
+                segments: vec![SliderSegment::labeled(Quality::Low, "Free"), SliderSegment::labeled(Quality::High, "Paid")],
+                preview_on_hover: true,
+                label: "Quality",
             }
-            Text { size: "sm", "value: {quality():?} - last event: {last():?}" }
-        }
-    }
-}
-```
-
-`track: SliderTrack::Bars(heights)` draws the track as a row of bars, as
-`Audio`'s seek track: each bar as tall as its fraction of the track, the bars
-up to the value filled.
-
-```rust
-use dioxus::prelude::*;
-use libero::components::{Slider, SliderChangeEvent, SliderTrack};
-
-#[component]
-fn Demo() -> Element {
-    let mut position = use_signal(|| 40.0);
-
-    rsx! {
-        Slider {
-            aria_label: "Position",
-            value: position(),
-            track: SliderTrack::Bars(vec![0.3, 0.6, 1.0, 0.7, 0.4, 0.8, 0.5, 0.2]),
-            oninput: move |event: SliderChangeEvent| position.set(event.value()),
-        }
-    }
-}
-```
-
-`marks` puts ticks on the track, and a labeled one gets a caption below it. On
-a discrete slider they replace the one mark per option. `format` sets the text
-of the bubble and the thumb's `aria-valuetext`.
-
-```rust
-use dioxus::prelude::*;
-use libero::components::{Slider, SliderChangeEvent, SliderMark};
-
-#[component]
-fn Demo() -> Element {
-    let mut volume = use_signal(|| 40.0);
-
-    rsx! {
-        Slider {
-            aria_label: "Volume",
-            value: volume(),
-            marks: vec![
-                SliderMark::labeled(0.0, "0"),
-                SliderMark::new(50.0),
-                SliderMark::labeled(100.0, "100"),
-            ],
-            format: Callback::new(|value: f64| format!("{value}%")),
-            oninput: move |event: SliderChangeEvent| volume.set(event.value()),
-        }
-    }
-}
-```
-
-`group_digits` writes the bubble's bare number grouped in thousands in the
-provider's `Formats`: `1,000,000`, or `1.000.000` under `Formats::GERMAN`.
-
-```rust
-use dioxus::prelude::*;
-use libero::components::{Slider, SliderChangeEvent};
-
-#[component]
-fn Demo() -> Element {
-    let mut budget = use_signal(|| 250_000.0);
-
-    rsx! {
-        Slider {
-            aria_label: "Budget",
-            value: budget(),
-            min: 0.0,
-            max: 1_000_000.0,
-            step: 1_000.0,
-            group_digits: true,
-            oninput: move |event: SliderChangeEvent| budget.set(event.value()),
-        }
-    }
-}
-```
-
-`segments` splits the line track into stretches with gaps, as a video's
-chapters. A labeled one joins the value in the bubble and `aria-valuetext`:
-"75, Loud".
-
-```rust
-use dioxus::prelude::*;
-use libero::components::{Slider, SliderChangeEvent, SliderSegment};
-
-#[component]
-fn Demo() -> Element {
-    let mut volume = use_signal(|| 40.0);
-
-    rsx! {
-        Slider {
-            aria_label: "Volume",
-            value: volume(),
-            segments: vec![
-                SliderSegment::labeled(0.0, "Comfortable"),
-                SliderSegment::labeled(70.0, "Loud"),
-            ],
-            oninput: move |event: SliderChangeEvent| volume.set(event.value()),
-        }
-    }
-}
-```
-
-`orientation: "vertical"` stands the track upright, bottom to top:
-
-```rust
-use dioxus::prelude::*;
-use libero::components::{Slider, SliderChangeEvent, SliderMark};
-
-#[component]
-fn Demo() -> Element {
-    let mut level = use_signal(|| 60.0);
-
-    rsx! {
-        Slider {
-            label: "Level",
-            orientation: "vertical",
-            value: level(),
-            marks: vec![
-                SliderMark::labeled(0.0, "0 dB"),
-                SliderMark::labeled(50.0, "50"),
-                SliderMark::labeled(100.0, "100"),
-            ],
-            oninput: move |event: SliderChangeEvent| level.set(event.value()),
+            Text {
+                size: "sm",
+                "value: {quality().label()} - last event: "
+                {event_text(last_quality(), |quality| quality.label())}
+            }
         }
     }
 }
@@ -222,7 +72,7 @@ fn Demo() -> Element {
 | `size` | `Size` | `md` | Track, thumb and font size. |
 | `color` | `ThemeAwareValue` | `primary` | Accent color. A theme color name or any CSS color. A theme color name paints its text shade, darker on a light page so the fill stands out. |
 | `value` | `Option<V>` | - | The value. Pair it with `oninput`, or bind it with a path `name` inside a `Form`. |
-| `oninput` | `EventHandler<SliderChangeEvent<V>>` | - | Fires per value while dragging. `Start` and `End` bracket a drag, `Change` carries each new value. A key press sends `Change`, then `End`. |
+| `oninput` | `EventHandler<SliderChangeEvent<V>>` | - | Fires per value while dragging. `Start` and `End` bracket a drag, `Change` carries each new value. A key press sends `Change`, then `End`, so saving on `End` catches keyboard edits too. |
 | `min` | `V` | `first option, or 0.0` | Lower bound, in the value's own type. |
 | `max` | `V` | `last option, or 100.0` | Upper bound, in the value's own type. Off the `step` grid, the track ends at the last step below it, as on a native range input: 0 to 100 by 30 ends at 90. |
 | `step` | `V::Step` | `one option, or 1.0` | How far one step goes from `min`. A count of options on a discrete scale, a value on a continuous one, so 0 to 1 has two stops unless you pass a smaller one. Also sets how many decimals a value keeps; `0.0` is continuous and keeps a thousandth of the range. |

@@ -6,6 +6,37 @@ use dioxus::prelude::*;
 ///
 /// `PartialEq` is identity: a type whose fields change must compare its id alone,
 /// or the selection vanishes.
+///
+/// ```rust
+/// # use dioxus::prelude::*;
+/// use libero::components::{NativeSelect, Options};
+///
+/// #[derive(Clone, PartialEq)]
+/// struct Order {
+///     id: u32,
+///     customer: String,
+/// }
+///
+/// impl Options for Order {
+///     fn label(&self) -> String {
+///         format!("#{} - {}", self.id, self.customer)
+///     }
+/// }
+///
+/// #[component]
+/// fn OrderPicker(orders: Vec<Order>) -> Element {
+///     let mut selected = use_signal(|| None::<Order>);
+///     rsx! {
+///         NativeSelect {
+///             label: "Order",
+///             placeholder: "Pick an order",
+///             value: selected(),
+///             options: orders.clone(),
+///             onchange: move |order| selected.set(Some(order)),
+///         }
+///     }
+/// }
+/// ```
 pub trait Options: Clone + PartialEq + 'static {
     /// Every choice, in order. None by default: a runtime set comes through the component's prop.
     fn options() -> &'static [Self]
@@ -40,7 +71,48 @@ pub struct OptionLabel {
 }
 
 impl OptionLabel {
-    /// Drawn `content` with a plain-text accessible `name`.
+    /// Drawn `content` with a plain-text accessible `name`. In a segment, a `<label>`,
+    /// keep `content` to phrasing content: an `Icon` works, a `Flex` does not.
+    ///
+    /// ```rust
+    /// # use dioxus::prelude::*;
+    /// use libero::components::{Icon, OptionLabel, Options, SegmentedControl};
+    ///
+    /// #[derive(Clone, Copy, PartialEq, Options)]
+    /// enum Alignment {
+    ///     Left,
+    ///     Center,
+    ///     Right,
+    /// }
+    ///
+    /// # fn app() -> Element {
+    /// let mut alignment = use_signal(|| Alignment::Center);
+    /// rsx! {
+    ///     SegmentedControl {
+    ///         value: alignment(),
+    ///         onchange: move |next| alignment.set(next),
+    ///         option_label: |alignment: Alignment| OptionLabel::rich(
+    ///             alignment.label(),
+    ///             rsx! {
+    ///                 Icon {
+    ///                     variant: "standard",
+    ///                     size: "sm",
+    ///                     match alignment {
+    ///                         Alignment::Left => rsx! { AlignLeftIcon {} },
+    ///                         Alignment::Center => rsx! { AlignCenterIcon {} },
+    ///                         Alignment::Right => rsx! { AlignRightIcon {} },
+    ///                     }
+    ///                 }
+    ///                 "{alignment.label()}"
+    ///             },
+    ///         ),
+    ///     }
+    /// }
+    /// # }
+    /// # #[component] fn AlignLeftIcon() -> Element { rsx! {} }
+    /// # #[component] fn AlignCenterIcon() -> Element { rsx! {} }
+    /// # #[component] fn AlignRightIcon() -> Element { rsx! {} }
+    /// ```
     pub fn rich(name: impl Into<String>, content: Element) -> Self {
         Self {
             name: name.into(),

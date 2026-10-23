@@ -17,62 +17,18 @@ as `libero::chrono`.
 
 ```rust
 use dioxus::prelude::*;
-use libero::{chrono::NaiveDate, components::ChronoField};
-
-#[component]
-fn Demo() -> Element {
-    let mut day = use_signal(|| None::<NaiveDate>);
-
-    rsx! {
-        ChronoField {
-            label: "Arrival",
-            value: day(),
-            onchange: move |next| day.set(next),
-            format: "DD.MM.YYYY",
-            name: "arrival",
-        }
-    }
-}
-```
-
-A month field:
-
-```rust
-use dioxus::prelude::*;
-use libero::{chrono::NaiveDate, components::{ChronoField, DateLevel}};
-
-#[component]
-fn Demo() -> Element {
-    let mut month = use_signal(|| None::<NaiveDate>);
-
-    rsx! {
-        ChronoField {
-            label: "Billing month",
-            level: DateLevel::Month,
-            value: month(),
-            onchange: move |next| month.set(next),
-        }
-    }
-}
-```
-
-A decorative icon in the `leading` slot; an `Icon` without `size` takes one from
-the field's size:
-
-```rust
-use dioxus::prelude::*;
 use libero::{chrono::NaiveDate, components::{ChronoField, Icon}};
 
 #[component]
 fn Demo() -> Element {
-    let mut birthday = use_signal(|| None::<NaiveDate>);
+    let mut date = use_signal(|| None::<NaiveDate>);
 
     rsx! {
         ChronoField {
-            label: "Birthday",
-            value: birthday(),
-            onchange: move |next| birthday.set(next),
+            value: date() /* Option<NaiveDate> */,
+            onchange: move |next| date.set(next),
             leading: rsx! { Icon { variant: "standard", svg: pictogram_icons_lucide::calendar::outlined } },
+            label: "When",
         }
     }
 }

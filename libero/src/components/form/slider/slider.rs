@@ -77,6 +77,22 @@ field_props! {
 }
 
 /// How a [`Slider`]'s track is drawn.
+///
+/// ```rust
+/// # use dioxus::prelude::*;
+/// # use libero::components::{Slider, SliderChangeEvent, SliderTrack};
+/// # fn app() -> Element {
+/// let mut position = use_signal(|| 40.0);
+/// rsx! {
+///     Slider {
+///         aria_label: "Position",
+///         value: position(),
+///         track: SliderTrack::Bars(vec![0.3, 0.6, 1.0, 0.7, 0.4, 0.8, 0.5, 0.2]),
+///         oninput: move |event: SliderChangeEvent| position.set(event.value()),
+///     }
+/// }
+/// # }
+/// ```
 #[derive(Clone, Debug, Default, PartialEq)]
 pub enum SliderTrack {
     /// A thin rail, filled up to the value.

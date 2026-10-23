@@ -109,7 +109,7 @@ pub fn AutocompletePage() -> Element {
                         .doc("Rules over the text, shown once the field loses focus or its form is submitted."),
                     prop("options", "OptionSource<T>")
                         .default("[]")
-                        .doc("The suggestions to offer. `T` is inferred from it. A `Vec<T>` converts, and so does a `Resource<Vec<T>>` or an `Option<OptionList<T>>` that is `None` while you fetch: a pending list shows the loader and says `loading_label`, never \"No results\" for an answer that has not arrived. Groups and disabled options of an `OptionList` are not drawn."),
+                        .doc("The suggestions to offer. `T` is inferred from it. A `Vec<T>` converts, and so does a `Resource<Vec<T>>` or an `Option<OptionList<T>>` that is `None` while you fetch: a pending list shows the loader and says `loading_label`, never \"No results\" for an answer that has not arrived. Groups and disabled options of an `OptionList` are not drawn. `String` is an `Options`, so a `Vec<String>` works as is."),
                     prop("option", "Callback<AutocompleteOptionArgs<T>, Element>")
                         .default("T::label()")
                         .doc("Draws one row's content. The highlight and click stay the component's."),

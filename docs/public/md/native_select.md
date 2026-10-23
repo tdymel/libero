@@ -16,7 +16,7 @@ yet.
 
 ```rust
 use dioxus::prelude::*;
-use libero::components::{Options, NativeSelect};
+use libero::components::{NativeSelect, Options};
 
 #[derive(Clone, Copy, PartialEq, Options)]
 enum FontSize {
@@ -35,128 +35,9 @@ fn Demo() -> Element {
 
     rsx! {
         NativeSelect {
-            label: "Size",
             value: value(),
             onchange: move |next| value.set(Some(next)),
-        }
-    }
-}
-```
-
-While no option matches `value`, the `placeholder` shows as the selected entry. It
-cannot be picked again once a real value is:
-
-```rust
-use dioxus::prelude::*;
-use libero::components::{Options, NativeSelect};
-
-#[derive(Clone, Copy, PartialEq, Options)]
-enum FontSize {
-    Small,
-    Medium,
-    Large,
-}
-
-#[component]
-fn Demo() -> Element {
-    let mut size = use_signal(|| None::<FontSize>);
-
-    rsx! {
-        NativeSelect {
             label: "Size",
-            placeholder: "Pick a size",
-            value: size(),
-            onchange: move |next| size.set(Some(next)),
-        }
-    }
-}
-```
-
-A runtime set, such as `String`s or records from a server, goes in `options`.
-Any type can be an option by implementing `Options`. `label` is the only
-required method. `value` is what each `<option>` posts and defaults to `label`,
-so no two options may share one. For an enum the derive posts the variant's
-name.
-
-```rust
-use dioxus::prelude::*;
-use libero::components::{Options, NativeSelect};
-
-#[derive(Clone, PartialEq)]
-struct Order {
-    id: OrderId,
-    customer: String,
-}
-
-impl Options for Order {
-    fn label(&self) -> String {
-        format!("#{} - {}", self.id, self.customer)
-    }
-}
-
-#[component]
-fn Demo(orders: Vec<Order>) -> Element {
-    let mut selected = use_signal(|| None::<Order>);
-
-    rsx! {
-        NativeSelect {
-            label: "Order",
-            placeholder: "Pick an order",
-            value: selected(),
-            options: orders.clone(),
-            onchange: move |order| selected.set(Some(order)),
-        }
-    }
-}
-#
-# type OrderId = u32;
-```
-
-`onchange` hands back the `Order`. The select finds the selected option with
-`PartialEq`, so make it compare identity, not content. An `Order` that derives
-`PartialEq` over every field loses its selection when one of them changes.
-
-Labels that need data the value lacks go through `option_label`, which runs
-during render:
-
-```rust,ignore
-NativeSelect {
-    value: selected(),
-    options: order_ids(),
-    option_label: move |id: OrderId| orders.read().title_of(id),
-    onchange: move |id| selected.set(Some(id)),
-}
-```
-
-`options` also takes an `OptionList`, as on [Select](select.md). A disabled
-`OptionItem` renders as `<option disabled>`, and a named group as an
-`<optgroup>`:
-
-```rust
-use dioxus::prelude::*;
-use libero::components::{NativeSelect, OptionItem, OptionList, Options};
-
-#[derive(Clone, Copy, PartialEq, Options)]
-enum Fruit {
-    Apple,
-    Pear,
-    Cherry,
-    Plum,
-}
-
-#[component]
-fn Demo() -> Element {
-    let mut fruit = use_signal(|| None::<Fruit>);
-
-    rsx! {
-        NativeSelect {
-            label: "Fruit",
-            placeholder: "Pick a fruit",
-            value: fruit(),
-            options: OptionList::grouped()
-                .group("Pome", [Fruit::Apple, Fruit::Pear])
-                .group("Stone", [OptionItem::new(Fruit::Cherry).disabled(true), Fruit::Plum.into()]),
-            onchange: move |next| fruit.set(Some(next)),
         }
     }
 }
@@ -170,12 +51,12 @@ fn Demo() -> Element {
 |---|---|---|---|
 | `size` | `Size` | `md` | Height, padding and font size. |
 | `radius` | `ThemeAwareValue` | `sm` | Corner radius. Or any CSS, e.g. `radius: "0"`. |
-| `value` | `Option<T>` | - | The selected option. Pair it with `onchange`. `None` shows `placeholder` and selects nothing. |
+| `value` | `Option<T>` | - | The selected option. Pair it with `onchange`. `None` shows `placeholder` and selects nothing. The selected option is found with `PartialEq`, so compare identity, not content. |
 | `onchange` | `EventHandler<T>` | - | Called with the option to select next. Never for the placeholder, which cannot be picked. |
 | `name` | `FieldName<Option<T>>` | - | What the select posts as. A path such as `Order::FIELDS.size()` also binds it to the surrounding `Form`'s value when it has no `onchange`. |
 | `validate` | `Validators<Option<T>>` | - | Rules over the selection, shown once the select loses focus or its form is submitted. |
-| `options` | `OptionSource<T>` | `T::options()` | Narrows or reorders the list. A runtime set, such as `String`s or records from a server, goes here. A `Vec<T>` converts, and an `OptionList` adds disabled options and named groups. A pending source draws no options. |
-| `option_label` | `Callback<T, String>` | `T::label()` | Renames an option. Returns a `String`, since an `<option>` holds only text. |
+| `options` | `OptionSource<T>` | `T::options()` | Narrows or reorders the list. A runtime set, such as `String`s or records from a server, goes here. A `Vec<T>` converts, and an `OptionList` adds disabled options and named groups. A pending source draws no options. Any type with `Options` works, only `label` is required. Each option posts `Options::value`, which defaults to `label`, so no two may share one; a derived enum posts the variant's name. |
+| `option_label` | `Callback<T, String>` | `T::label()` | Renames an option. Returns a `String`, since an `<option>` holds only text. Runs during render. |
 | `placeholder` | `String` | - | Shown while no option matches `value`, as a first entry that cannot be picked. |
 | `label` | `Caption` | - | The caption above the control, and the select's name. A string or an `Element`. |
 | `description` | `Caption` | - | Between the label and the control. What to pick. |

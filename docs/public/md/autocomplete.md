@@ -20,98 +20,32 @@ city, and the saved entries then cover the list.
 ```rust
 use dioxus::prelude::*;
 use libero::components::Autocomplete;
+use libero::sx::sx;
+
+const CITIES: [(&str, &str); 6] = [
+    ("Amsterdam", "Netherlands"),
+    ("Antwerp", "Belgium"),
+    ("Berlin", "Germany"),
+    ("Bern", "Switzerland"),
+    ("Copenhagen", "Denmark"),
+    ("Cologne", "Germany"),
+];
+fn cities() -> Vec<String> {
+    CITIES.iter().map(|(city, _)| city.to_string()).collect()
+}
 
 #[component]
 fn Demo() -> Element {
-    let mut city = use_signal(String::new);
-    let cities = vec!["Amsterdam".to_string(), "Berlin".to_string()];
+    let mut value = use_signal(String::new);
 
     rsx! {
         Autocomplete {
-            label: "City",
+            sx: sx().width("280px").max_width("100%"),
+            options: cities(),
+            value: value(),
+            oninput: move |next| value.set(next),
             placeholder: "Start typing",
-            options: cities,
-            value: city(),
-            oninput: move |next| city.set(next),
-        }
-    }
-}
-```
-
-`String` implements `Options`, so a list of strings works as is. `T` is
-inferred from `options`.
-
-The component narrows `options` case-insensitively on `Options::label`,
-ignoring spaces around the typed text.
-`filter` replaces the test, and `prefiltered` turns filtering off for a list
-that is already narrowed:
-
-```rust,ignore
-// Prefix instead of contains.
-Autocomplete {
-    options: cities,
-    value: city(),
-    oninput: move |next| city.set(next),
-    filter: move |f: AutocompleteFilterArgs<String>| {
-        f.value.to_lowercase().starts_with(&f.query.to_lowercase())
-    },
-}
-
-// A list fetched per keystroke: a `Resource` says "Loading" until it answers.
-Autocomplete {
-    options: results(),
-    prefiltered: true,
-    value: query(),
-    oninput: move |next| query.set(next),
-}
-```
-
-`option` draws a row's content. `onpick` fires after `oninput` with the whole
-value, which is how you reach the id behind the label:
-
-```rust,ignore
-Autocomplete {
-    options: airports(),
-    value: text(),
-    oninput: move |next| text.set(next),
-    option: move |o: AutocompleteOptionArgs<Airport>| rsx! {
-        Text { "{o.value.code()} - {o.value.city()}" }
-    },
-    onpick: move |airport: Airport| selected.set(Some(airport.id())),
-}
-```
-
-`empty` is shown in place of the list when nothing matches:
-
-```rust,ignore
-Autocomplete {
-    options: cities,
-    value: city(),
-    oninput: move |next| city.set(next),
-    empty: rsx! { Text { "No city by that name." } },
-}
-```
-
-`open_on_focus` opens the list when the field takes focus, by Tab or a press.
-Focus coming back after a pick or Escape leaves it closed:
-
-```rust
-use dioxus::prelude::*;
-use libero::components::Autocomplete;
-
-#[component]
-fn Demo() -> Element {
-    let mut town = use_signal(String::new);
-    let cities = vec!["Amsterdam".to_string(), "Berlin".to_string(), "Bern".to_string()];
-
-    rsx! {
-        Autocomplete {
             label: "City",
-            placeholder: "Start typing",
-            open_on_focus: true,
-            options: cities,
-            value: town(),
-            oninput: move |next| town.set(next),
         }
     }
 }
@@ -129,7 +63,7 @@ fn Demo() -> Element {
 | `oninput` | `EventHandler<String>` | - | Fires per keystroke, and again with the label when a suggestion is picked or the field is cleared. |
 | `name` | `FieldName<String>` | - | What the field posts as. A path such as `Signup::FIELDS.city()` also binds it to the surrounding `Form`'s value when it has no `oninput`. |
 | `validate` | `Validators<String>` | - | Rules over the text, shown once the field loses focus or its form is submitted. |
-| `options` | `OptionSource<T>` | `[]` | The suggestions to offer. `T` is inferred from it. A `Vec<T>` converts, and so does a `Resource<Vec<T>>` or an `Option<OptionList<T>>` that is `None` while you fetch: a pending list shows the loader and says `loading_label`, never "No results" for an answer that has not arrived. Groups and disabled options of an `OptionList` are not drawn. |
+| `options` | `OptionSource<T>` | `[]` | The suggestions to offer. `T` is inferred from it. A `Vec<T>` converts, and so does a `Resource<Vec<T>>` or an `Option<OptionList<T>>` that is `None` while you fetch: a pending list shows the loader and says `loading_label`, never "No results" for an answer that has not arrived. Groups and disabled options of an `OptionList` are not drawn. `String` is an `Options`, so a `Vec<String>` works as is. |
 | `option` | `Callback<AutocompleteOptionArgs<T>, Element>` | `T::label()` | Draws one row's content. The highlight and click stay the component's. |
 | `onpick` | `EventHandler<T>` | - | A suggestion was accepted, with the whole value behind the text. Fires after `oninput`. |
 | `filter` | `Callback<AutocompleteFilterArgs<T>, bool>` | `contains` | Narrows `options`. Defaults to a case-insensitive `contains` over the label, ignoring spaces around the text. |

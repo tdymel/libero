@@ -32,37 +32,12 @@ fn Demo() -> Element {
 
     rsx! {
         CheckboxGroup {
-            label: "Toppings",
-            helper: "More cost extra at the counter.",
             value: toppings(),
             onchange: move |next| toppings.set(next),
+            max_checked: 2,
+            label: "Toppings",
         }
     }
-}
-```
-
-The options are `T::options()` unless `options` narrows them, and `onchange`
-hands back the whole selection in option order. `max_checked: 2` caps how many
-are checked: at the cap the unchecked options disable.
-
-`variant: "card"` draws every option as a bordered surface you can click
-anywhere. Give each one a line with `option_description`:
-
-```rust,ignore
-CheckboxGroup {
-    variant: "card",
-    orientation: "horizontal",
-    label: "Toppings",
-    max_checked: 2,
-    value: toppings(),
-    onchange: move |next| toppings.set(next),
-    option_description: move |topping: Topping| match topping {
-        Topping::Cheese => "Aged, grated over the top.",
-        Topping::Olives => "Black, pitted.",
-        Topping::Basil => "Fresh leaves, added last.",
-        Topping::Chili => "Hot, on the side.",
-    }
-    .to_string(),
 }
 ```
 

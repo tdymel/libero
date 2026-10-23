@@ -221,7 +221,7 @@ pub fn MultiSelectPage() -> Element {
                     prop("onchange", "EventHandler<Vec<T>>")
                         .doc("Called with the whole next selection."),
                     prop("name", "FieldName<Vec<T>>")
-                        .doc("Posts each selected option's `Options::value()` under this name. A path such as `Order::FIELDS.toppings()` also binds it to the surrounding `Form`'s value when it has no `onchange`."),
+                        .doc("Posts each selected option's `Options::value()` under this name, as a native `<select multiple>` does. A path such as `Order::FIELDS.toppings()` also binds it to the surrounding `Form`'s value when it has no `onchange`."),
                     prop("validate", "Validators<Vec<T>>")
                         .doc("Rules over the selection, shown once the select loses focus or its form is submitted."),
                     prop("options", "OptionSource<T>")
@@ -232,7 +232,7 @@ pub fn MultiSelectPage() -> Element {
                         .doc("Draws one row's content. Unset, a selected row ends in a check mark; a custom row draws its own from `selected` on the args. Hide a decorative glyph such as an emoji or the checkmark with `aria-hidden`, or a screen reader reads it with the label."),
                     prop("selection", "Callback<SelectionArgs<T>, Element>")
                         .default("Chip with an x")
-                        .doc("Draws one selected value in the trigger, remove control included. `remove` on the args drops that value; `disabled` and `readonly` say the field refuses it, so leave the remove control out then."),
+                        .doc("Draws one selected value in the trigger, remove control included. `remove` on the args drops that value; `disabled` and `readonly` say the field refuses it, so leave the remove control out then. A custom remove control stops `mousedown` from taking focus and `click` from opening the list."),
                     prop("placeholder", "String").doc("Shown while `value` is empty."),
                     prop("clearable", "bool")
                         .default("false")
@@ -254,7 +254,7 @@ pub fn MultiSelectPage() -> Element {
                     prop("helper", "Caption").doc("Under the control. Constraints, or what the choice changes."),
                     status_prop(),
                     required_prop().also("Inside a `Form`, an empty one fails the submit."),
-                    prop("disabled", "bool").default("false").doc("Takes the trigger out of the tab order and dims the field."),
+                    prop("disabled", "bool").default("false").doc("Takes the trigger out of the tab order, dims the field and posts nothing."),
                     readonly_prop("select"),
                     prop("dropdown_parts", "Parts<DropdownPart>").doc("Styles the portaled dropdown and its inner parts."),
                 ])

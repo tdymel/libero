@@ -6,6 +6,69 @@ use std::str::FromStr;
 
 /// A value a `NumberField` can hold. Every primitive number implements it; a custom
 /// type needs only [`NumberValue::default_step`] on top of `FromStr` and `Display`.
+///
+/// Whole cents shown with a decimal point:
+///
+/// ```rust
+/// # use dioxus::prelude::*;
+/// use libero::components::{NumberField, NumberValue};
+/// use std::fmt;
+///
+/// #[derive(Clone, Copy, PartialEq, PartialOrd)]
+/// struct Cents(i64);
+///
+/// impl std::ops::Add for Cents {
+///     type Output = Self;
+///     fn add(self, other: Self) -> Self {
+///         Cents(self.0.saturating_add(other.0))
+///     }
+/// }
+///
+/// impl std::ops::Sub for Cents {
+///     type Output = Self;
+///     fn sub(self, other: Self) -> Self {
+///         Cents(self.0.saturating_sub(other.0))
+///     }
+/// }
+///
+/// impl std::str::FromStr for Cents {
+///     type Err = &'static str;
+///     fn from_str(text: &str) -> Result<Self, Self::Err> {
+///         let number = text.parse::<f64>().map_err(|_| "not a number")?;
+///         // `f64` parses "nan" and "inf" too.
+///         if !number.is_finite() {
+///             return Err("not a finite number");
+///         }
+///         Ok(Cents((number * 100.0).round() as i64))
+///     }
+/// }
+///
+/// impl fmt::Display for Cents {
+///     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+///         let sign = if self.0 < 0 { "-" } else { "" };
+///         let cents = self.0.unsigned_abs();
+///         write!(f, "{sign}{}.{:02}", cents / 100, cents % 100)
+///     }
+/// }
+///
+/// impl NumberValue for Cents {
+///     fn default_step() -> Self {
+///         Cents(50)
+///     }
+/// }
+///
+/// # fn app() -> Element {
+/// let mut price = use_signal(|| None::<Cents>);
+/// rsx! {
+///     NumberField {
+///         label: "Price",
+///         placeholder: "0.00",
+///         value: price(),
+///         onchange: move |next| price.set(next),
+///     }
+/// }
+/// # }
+/// ```
 pub trait NumberValue:
     Copy + PartialOrd + Add<Output = Self> + Sub<Output = Self> + FromStr + Display + 'static
 {

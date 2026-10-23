@@ -190,7 +190,7 @@ pub fn SliderPage() -> Element {
                         .doc("Accent color. A theme color name or any CSS color. A theme color name paints its text shade, darker on a light page so the fill stands out."),
                     prop("value", "Option<V>").doc("The value. Pair it with `oninput`, or bind it with a path `name` inside a `Form`."),
                     prop("oninput", "EventHandler<SliderChangeEvent<V>>")
-                        .doc("Fires per value while dragging. `Start` and `End` bracket a drag, `Change` carries each new value. A key press sends `Change`, then `End`."),
+                        .doc("Fires per value while dragging. `Start` and `End` bracket a drag, `Change` carries each new value. A key press sends `Change`, then `End`, so saving on `End` catches keyboard edits too."),
                     prop("min", "V")
                         .default("first option, or 0.0")
                         .doc("Lower bound, in the value's own type."),
@@ -297,7 +297,9 @@ pub fn SliderPage() -> Element {
                     Code { source: "f64" }
                     " gives a continuous range. An ordered enum that derives it makes the "
                     "slider discrete, and the range, steps, marks and captions come from its "
-                    "options."
+                    "options. "
+                    Code { source: "#[slider(label = \"..\")]" }
+                    " renames a variant's caption."
                 }
             },
             // snippet: let mut volume = use_signal(|| 40.0);
