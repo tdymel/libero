@@ -59,12 +59,6 @@ fn Demo() -> Element {
 }
 ```
 
-## Edges
-
-`onedgechange` reports whether the strip rests against an end, printed under the
-strip. With `controls: "never"`, move the strip from your own buttons through a
-`use_scroller()` handle.
-
 ## Props
 
 | Prop | Type | Default | Description |

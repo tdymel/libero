@@ -29,7 +29,7 @@ pub fn AspectRatioPage() -> Element {
                 prop("ratio", "f32")
                     .default("1.0")
                     .doc("Width-to-height ratio, e.g. `16.0 / 9.0`."),
-                prop("children", "Element").doc("The child to crop, filling the box."),
+                prop("children", "Element").doc("The child to crop, filling the box. An `a`, `picture` or `span` child becomes a block; give any other inline child `display: block`, and a `picture`'s inner `img` the full size. The size and `object-fit` reach the direct child only: an image inside a wrapper needs `width: 100%`, `height: 100%` and `object-fit: cover` itself. Other children, such as text, are not clipped: at larger text they run past the box or grow it."),
             ])],
             accessibility: a11y()
                 .handles(["A focused child keeps its focus ring: it is drawn inside the clip."])
@@ -46,33 +46,10 @@ pub fn AspectRatioPage() -> Element {
                     Code { source: "ratio" }
                     " as a division, like "
                     Code { source: "16.0 / 9.0" }
-                    ". The box has no size of its own, so give it a width. The child "
-                    "fills it and the overflow is clipped: an image or a video is cropped "
-                    "with "
+                    ". The box has no size of its own, so give it a width. An image or a "
+                    "video is cropped with "
                     Code { source: "object-fit: cover" }
-                    ", not stretched, and an "
-                    Code { source: "a" }
-                    ", "
-                    Code { source: "picture" }
-                    " or "
-                    Code { source: "span" }
-                    " child becomes a block. Give any other inline child "
-                    Code { source: "display: block" }
-                    ", and a "
-                    Code { source: "picture" }
-                    "'s inner "
-                    Code { source: "img" }
-                    " the full size. The size and "
-                    Code { source: "object-fit" }
-                    " reach the direct child only: an image inside a wrapper is not cropped "
-                    "unless it gets "
-                    Code { source: "width: 100%" }
-                    ", "
-                    Code { source: "height: 100%" }
-                    " and "
-                    Code { source: "object-fit: cover" }
-                    " itself. Any other child, such as text, is not clipped: at larger "
-                    "text runs past the box or grows it instead of losing lines."
+                    ", not stretched."
                 }
             },
             Demo {

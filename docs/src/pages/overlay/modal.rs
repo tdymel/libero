@@ -1,6 +1,4 @@
-use crate::components::{
-    Control, Demo, DemoValues, DocPage, DocSection, Wrap, a11y, indent, prop, props,
-};
+use crate::components::{Control, Demo, DemoValues, DocPage, Wrap, a11y, indent, prop, props};
 use dioxus::prelude::*;
 use libero::{
     components::{Button, Code, Dialog, Flex, Text},
@@ -189,7 +187,7 @@ pub fn ModalPage() -> Element {
                 props("use_modal", vec![
                     prop("render", "impl FnMut(ModalScope<S, R>) -> Element")
                         .default("required")
-                        .doc("Builds the content, usually a `Dialog`, while the modal is open. Other content, a `Paper` or a plain box, takes clicks the same; only the backdrop around it closes. Style it there: the `Dialog`'s own `sx` and `parts` reach it in the portal. Returns a `ModalHandle<S, R>`. `R` defaults to `()`, for a modal that answers nothing. Call it under `LiberoProvider`, in a component that outlives every trigger. The modal unmounts with that component, and its opening settles as dismissed."),
+                        .doc("Builds the content, usually a `Dialog`, while the modal is open. Other content, a `Paper` or a plain box, takes clicks the same; only the backdrop around it closes. Style it there: the `Dialog`'s own `sx` and `parts` reach it in the portal. Returns a `ModalHandle<S, R>`, which is `Copy`: a trigger elsewhere in the tree can take it as a prop or from context. `R` defaults to `()`, for a modal that answers nothing; otherwise make it the dialog's own enum, not a `bool`. Escape, a backdrop click and Android's Back first ask the `Dialog`'s `ondismiss`: return `false` to keep a form with unsaved input open. Call it under `LiberoProvider`, in a component that outlives every trigger. The modal unmounts with that component, and its opening settles as dismissed."),
                 ]).without_base_props(),
                 props("ModalHandle<S, R>", vec![
                     prop("open_with", "fn(impl Into<S>) -> Opening<R>")
@@ -276,41 +274,6 @@ pub fn ModalPage() -> Element {
                     }
                 },
                 wrap: Wrap(wrap_hook_call),
-            }
-
-            DocSection {
-                title: "Answers and triggers",
-                Text {
-                    "Make the answer the dialog's own enum, not a "
-                    Code { source: "bool" }
-                    ". The handle is "
-                    Code { source: "Copy" }
-                    ", so a trigger elsewhere in the tree can take it as a prop or from "
-                    "context. A "
-                    Code { source: "Dialog" }
-                    " inside closes the modal from its own close button."
-                }
-            }
-
-            DocSection {
-                title: "Keeping it open",
-                Text {
-                    "Escape, a backdrop click and Android's Back first ask the "
-                    Code { source: "Dialog" }
-                    "'s "
-                    Code { source: "ondismiss" }
-                    ", with a "
-                    Code { source: "Dismiss" }
-                    " reason. Return "
-                    Code { source: "false" }
-                    " to keep a form with unsaved input open: "
-                    Code { source: "ondismiss: move |_| draft.read().is_empty()" }
-                    ". A confirmation that needs an answer is "
-                    Code { source: "role: \"alertdialog\"" }
-                    ", which the backdrop does not close; describe it with "
-                    Code { source: "aria_describedby" }
-                    " pointing at its message."
-                }
             }
         }
     }

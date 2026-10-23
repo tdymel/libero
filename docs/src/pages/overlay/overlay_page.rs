@@ -1,4 +1,4 @@
-use crate::components::{Control, Demo, DemoValues, DocPage, a11y, prop, props};
+use crate::components::{Control, Demo, DemoValues, DocPage, Wrap, a11y, indent, prop, props};
 use dioxus::prelude::*;
 use libero::{
     components::{Box, Button, Code, Input, LoadingOverlay, Overlay, Paper, Text},
@@ -12,6 +12,22 @@ const CARD: &str = r#"Paper { sx: sx().padding("16px"),
     Text { "Ada Lovelace" }
     Button { "Edit profile" }
 }"#;
+
+fn is_loading(values: &DemoValues) -> bool {
+    values.str("mode") == "loading"
+}
+
+/// The `LoadingOverlay` card replaces the generated `Overlay` code.
+fn wrap_mode(values: &DemoValues, source: &str) -> String {
+    match is_loading(values) {
+        true => format!(
+            "LoadingOverlay {{\n    loading: {},\n{}}}",
+            values.str("loading"),
+            indent(CARD)
+        ),
+        false => source.to_string(),
+    }
+}
 
 #[component]
 pub fn OverlayPage() -> Element {
@@ -63,47 +79,49 @@ pub fn OverlayPage() -> Element {
                 children_code: LOADING.to_string(),
                 fixed: vec!["contained: true".to_string()],
                 controls: vec![
-                    Control::slider("opacity", ["0.2", "0.4", "0.6", "0.8"]).default("0.6"),
-                    Control::slider("blur", ["auto", "2px", "4px", "8px"]),
+                    // Not a prop: swaps the dimmed box for the `LoadingOverlay` card.
+                    Control::toggle("mode", ["overlay", "loading"])
+                        .labels(["Overlay", "LoadingOverlay"])
+                        .code(|_, _| vec![]),
+                    Control::slider("opacity", ["0.2", "0.4", "0.6", "0.8"])
+                        .default("0.6")
+                        .hidden_when(is_loading),
+                    Control::slider("blur", ["auto", "2px", "4px", "8px"]).hidden_when(is_loading),
+                    Control::switch("loading")
+                        .default("true")
+                        .code(|_, _| vec![])
+                        .hidden_when(|values| !is_loading(values)),
                 ],
-                render: move |values: DemoValues| rsx! {
-                    Box {
-                        sx: sx()
-                            .position("relative")
-                            .z_index("0")
-                            .height("160px")
-                            .width("100%")
-                            .background("muted.2"),
-                        Text { sx: sx().padding("16px"), "Content behind the overlay" }
-                        Overlay {
-                            contained: true,
-                            opacity: values.str("opacity"),
-                            blur: match values.str("blur").as_str() {
-                                "auto" => Input::None,
-                                blur => Input::from(blur),
-                            },
-                            Paper { role: "status", sx: sx().padding("8px 16px"), "Loading..." }
+                wrap: Wrap(wrap_mode),
+                render: move |values: DemoValues| match is_loading(&values) {
+                    true => rsx! {
+                        LoadingOverlay { loading: values.str("loading") == "true",
+                            Paper { sx: sx().padding("16px"),
+                                Text { "Ada Lovelace" }
+                                Button { "Edit profile" }
+                            }
                         }
-                    }
-                },
-            }
-            Demo {
-                component: "LoadingOverlay",
-                title: "One box loading",
-                children_text: "",
-                children_code: CARD.to_string(),
-                controls: vec![
-                    Control::switch("loading").default("true").code(|_, values| {
-                        vec![format!("loading: {}", values.str("loading"))]
-                    }),
-                ],
-                render: move |values: DemoValues| rsx! {
-                    LoadingOverlay { loading: values.str("loading") == "true",
-                        Paper { sx: sx().padding("16px"),
-                            Text { "Ada Lovelace" }
-                            Button { "Edit profile" }
+                    },
+                    false => rsx! {
+                        Box {
+                            sx: sx()
+                                .position("relative")
+                                .z_index("0")
+                                .height("160px")
+                                .width("100%")
+                                .background("muted.2"),
+                            Text { sx: sx().padding("16px"), "Content behind the overlay" }
+                            Overlay {
+                                contained: true,
+                                opacity: values.str("opacity"),
+                                blur: match values.str("blur").as_str() {
+                                    "auto" => Input::None,
+                                    blur => Input::from(blur),
+                                },
+                                Paper { role: "status", sx: sx().padding("8px 16px"), "Loading..." }
+                            }
                         }
-                    }
+                    },
                 },
             }
         }

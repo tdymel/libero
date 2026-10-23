@@ -103,49 +103,6 @@ fn Demo() -> Element {
 }
 ```
 
-## Focus after placed, never after mount
-
-```rust,ignore
-// Wrong: the box is mounted but not measured, so it is still
-// `visibility: hidden`. `focus()` answers Ok(()) and nothing moves.
-use_effect(move || {
-    if opened() {
-        let _ = first_item.focus();
-    }
-});
-
-// Right: wait for the measurement.
-use_effect(move || {
-    if !opened() || !popover.placed() {
-        return;
-    }
-    let _ = first_item.focus();
-});
-```
-
-## Context across the portal
-
-```rust,ignore
-// The box renders at the portal outlet, at the document root, so it
-// inherits none of the context around the call site. Re-provide what
-// the content needs, inside the content itself.
-popover.show(opened().then(|| rsx! {
-    MenuProvider { context: menu, {items} }
-}));
-
-// A signal a callback outside every scope writes has to outlive the
-// scope that made it, and be dropped by hand.
-let tick = use_hook(|| Signal::new_in_scope(0u64, ScopeId::ROOT));
-use_drop(move || tick.manually_drop());
-```
-
-## What it cannot do
-
-Only the web tells the box when the page scrolls. Elsewhere an open popover
-drifts. No backend tracks a resize, so use `remeasure`. A press outside needs
-to know where focus is. The web and Blitz can tell, a WebView cannot, so there
-only Escape and your own handlers close the box.
-
 ## PopoverOptions
 
 `PopoverOptions::new(gap, padding)` takes the theme's values, so it is not
@@ -170,19 +127,13 @@ only Escape and your own handlers close the box.
 | Method | Type | Description |
 |---|---|---|
 | `floating()` | `&ElementHandle` | Mount it on the box. Nothing is placed until it is attached. |
-| `placed()` | `bool` | Whether the box has been measured. `false` on the render that opens it. |
+| `placed()` | `bool` | Whether the box has been measured. `false` on the render that opens it. Focus a control in the box only once it is `true`: before that the box is `visibility: hidden`, and `focus()` answers `Ok(())` and moves nothing. |
 | `placement()` | `Placement` | The side and align the box landed on, after flipping. |
 | `style()` | `String` | The box's `style`, with its position and width. |
-| `show(content)` | `Option<Element>` | Renders the box. `None` removes it. |
+| `show(content)` | `Option<Element>` | Renders the box, and owns no open state: `None` removes a closed one. The box renders at the portal outlet, at the document root, so it inherits none of the context around the call site: re-provide what the content needs inside it. Popovers nest: anchor the inner one to a row in the outer box, and the one shown later paints on top. |
 | `on_dismiss(f)` | `impl FnMut()` | What Escape and a press outside call, with `dismiss` on. Call it on every render. |
 | `anchor_events()` | `Vec<Attribute>` | Spread on the trigger: `dismiss`, and on a WebView the link `Hotkey::within` follows into the box. |
 | `floating_events()` | `Vec<Attribute>` | Spread on the box, as `anchor_events()` on the trigger; the WebView link needs both. |
-
-## Open state and nesting
-
-It owns no open state. Pass `show(None)` to take a closed box away. Popovers
-nest. Anchor the inner one to a row in the outer box, and the one shown later
-paints on top.
 
 ## Accessibility
 

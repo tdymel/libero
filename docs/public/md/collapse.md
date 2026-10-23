@@ -64,12 +64,6 @@ fn Demo() -> Element {
 }
 ```
 
-## Focus
-
-Focus inside a closing panel does not return to the trigger on its own. Use
-[`use_focus_return`](use_focus_return.md), with `remember_active()` on every
-open and `restore()` where the panel closes from inside.
-
 ## Props
 
 | Prop | Type | Default | Description |

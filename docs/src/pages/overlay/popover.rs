@@ -1,10 +1,9 @@
 use crate::components::{
-    Control, Demo, DemoValues, DocPage, DocSection, Wrap, a11y, align_of, indent, prop, props,
-    side_of,
+    Control, Demo, DemoValues, DocPage, Wrap, a11y, align_of, indent, prop, props, side_of,
 };
 use dioxus::prelude::*;
 use libero::{
-    components::{Box, Button, Code, CodeBlock, Kbd, Text},
+    components::{Box, Button, Code, Text},
     hooks::{PopoverOptions, PopoverWidth, use_element, use_id, use_popover},
     platform::ElementApi,
     sx::sx,
@@ -12,36 +11,6 @@ use libero::{
 };
 
 const GAPS: [&str; 4] = ["0", "4", "8", "16"];
-
-// snippet: ignore - pieces of a component built on `use_popover`
-const FOCUS_AFTER_PLACED: &str = r#"// Wrong: the box is mounted but not measured, so it is still
-// `visibility: hidden`. `focus()` answers Ok(()) and nothing moves.
-use_effect(move || {
-    if opened() {
-        let _ = first_item.focus();
-    }
-});
-
-// Right: wait for the measurement.
-use_effect(move || {
-    if !opened() || !popover.placed() {
-        return;
-    }
-    let _ = first_item.focus();
-});"#;
-
-// snippet: ignore - pieces of a component built on `use_popover`
-const CONTEXT_ACROSS_THE_PORTAL: &str = r#"// The box renders at the portal outlet, at the document root, so it
-// inherits none of the context around the call site. Re-provide what
-// the content needs, inside the content itself.
-popover.show(opened().then(|| rsx! {
-    MenuProvider { context: menu, {items} }
-}));
-
-// A signal a callback outside every scope writes has to outlive the
-// scope that made it, and be dropped by hand.
-let tick = use_hook(|| Signal::new_in_scope(0u64, ScopeId::ROOT));
-use_drop(move || tick.manually_drop());"#;
 
 fn width_of(value: &str) -> PopoverWidth {
     match value {
@@ -244,13 +213,13 @@ pub fn PopoverPage() -> Element {
                     prop("floating()", "&ElementHandle")
                         .doc("Mount it on the box. Nothing is placed until it is attached."),
                     prop("placed()", "bool")
-                        .doc("Whether the box has been measured. `false` on the render that opens it."),
+                        .doc("Whether the box has been measured. `false` on the render that opens it. Focus a control in the box only once it is `true`: before that the box is `visibility: hidden`, and `focus()` answers `Ok(())` and moves nothing."),
                     prop("placement()", "Placement")
                         .doc("The side and align the box landed on, after flipping."),
                     prop("style()", "String")
                         .doc("The box's `style`, with its position and width."),
                     prop("show(content)", "Option<Element>")
-                        .doc("Renders the box. `None` removes it."),
+                        .doc("Renders the box, and owns no open state: `None` removes a closed one. The box renders at the portal outlet, at the document root, so it inherits none of the context around the call site: re-provide what the content needs inside it. Popovers nest: anchor the inner one to a row in the outer box, and the one shown later paints on top."),
                     prop("on_dismiss(f)", "impl FnMut()")
                         .doc("What Escape and a press outside call, with `dismiss` on. Call it on every render."),
                     prop("anchor_events()", "Vec<Attribute>")
@@ -275,6 +244,8 @@ pub fn PopoverPage() -> Element {
                     "If you animate the close, give the closing box `visibility: hidden` or `inert`. Until it unmounts, it is still tabbable and still announced.",
                 ])
                 .limits([
+                    "Only the web tells the box when the page scrolls: elsewhere an open popover drifts. No backend tracks a resize, so use `remeasure`.",
+                    "A press outside needs to know where focus is. The web and Blitz can tell, a WebView cannot, so there only Escape and your own handlers close the box.",
                     "Safari does not focus a button on click, so there a press outside a box opened by pointer does not close it.",
                     "On Android, a box opened without a tap (on mount or from a timer) may let Back close the app.",
                 ])
@@ -316,39 +287,6 @@ pub fn PopoverPage() -> Element {
                     }
                 },
                 wrap: Wrap(wrap_hook_call),
-            }
-
-            DocSection {
-                title: "Focus after placed, never after mount",
-                CodeBlock { source: FOCUS_AFTER_PLACED, language: "rust" }
-            }
-
-            DocSection {
-                title: "Context across the portal",
-                CodeBlock { source: CONTEXT_ACROSS_THE_PORTAL, language: "rust" }
-            }
-
-            DocSection {
-                title: "What it cannot do",
-                Text {
-                    "Only the web tells the box when the page scrolls. Elsewhere an open "
-                    "popover drifts. No backend tracks a resize, so use "
-                    Code { source: "remeasure" }
-                    ". A press outside needs to know where focus is. The web and Blitz can "
-                    "tell, a WebView cannot, so there only "
-                    Kbd { "Esc" }
-                    " and your own handlers close the box."
-                }
-            }
-
-            DocSection {
-                title: "Open state and nesting",
-                Text {
-                    "It owns no open state. Pass "
-                    Code { source: "show(None)" }
-                    " to take a closed box away. Popovers nest. Anchor the inner one to a row "
-                    "in the outer box, and the one shown later paints on top."
-                }
             }
         }
     }

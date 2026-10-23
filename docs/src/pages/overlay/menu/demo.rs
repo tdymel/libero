@@ -1,43 +1,6 @@
 use crate::components::{align_of, side_of};
 use dioxus::prelude::*;
 use libero::components::{Button, Flex, Menu, MenuEntry, MenuItem, Text, use_menu};
-use libero::{hooks::Side, sx::sx};
-
-/// `DOCKED`'s code, live: the menu folds open from the row it sits on.
-#[component]
-pub fn DockedMenuDemo() -> Element {
-    let queue = use_menu();
-    let slots = vec![
-        MenuItem::new("Iron sword, 2m 10s left")
-            .onselect(|_| {})
-            .into(),
-        MenuItem::new("Copper ring, queued").onselect(|_| {}).into(),
-        MenuItem::new("Free slot").onselect(|_| {}).into(),
-    ];
-
-    rsx! {
-        div { id: "docked-demo",
-            Menu {
-                state: queue,
-                items: slots,
-                side: Side::Top,
-                radius: "0",
-                sx: sx()
-                    .width("var(--lsx-popover-anchor-width)")
-                    .max_width("none")
-                    .margin_top("var(--lsx-popover-gap)")
-                    .box_shadow("none"),
-                Button {
-                    variant: "light",
-                    radius: "0",
-                    attributes: queue.a11y_attributes(),
-                    sx: sx().width("100%").height("52px"),
-                    "Queue: Iron sword, 2m 10s left"
-                }
-            }
-        }
-    }
-}
 
 /// The whole example from the code block, as a component: the hooks live here
 /// rather than in `Demo`'s render closure, whose hook slots they would land in.

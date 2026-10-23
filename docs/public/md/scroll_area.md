@@ -102,17 +102,6 @@ fn Rows() -> Element {
 }
 ```
 
-## Virtualize
-
-`Virtualize` renders only the rows in view out of 50,000. It draws no element of
-its own and needs a `ScrollArea` above it, one per area. Without one, or as the
-second, it warns and renders every row.
-
-A fast fling can outrun the rows, so the area paints grey skeleton bars where
-rows are still missing. The rendered rows sit on the page surface, or on a
-`Paper`'s inside one, to hide the bars. In a container of another colour, set
-`SCROLL_AREA_COVER` on it to that colour, or its rows show a surface-coloured band.
-
 ## Props
 
 | Prop | Type | Default | Description |
@@ -141,10 +130,10 @@ rows are still missing. The rendered rows sit on the page surface, or on a
 
 | Prop | Type | Default | Description |
 |---|---|---|---|
-| `count` | `usize` | required | Rows in the whole list, not only the rendered ones. |
+| `count` | `usize` | required | Rows in the whole list, not only the rendered ones. `Virtualize` draws no element of its own and needs a `ScrollArea` above it, one per area: without one, or as the second, it warns and renders every row. |
 | `item` | `Callback<usize, Element>` | required | Renders one row. Called only for the rows in view. |
 | `item_size` | `f64` | measured | A row's height plus the gap below it, in px. Unset, it is measured from the first rows, and again when the area's width changes. Every row must have the same height. |
-| `overscan` | `usize` | `4` | Rows rendered beyond each edge, so a fast scroll has something to show. |
+| `overscan` | `usize` | `4` | Rows rendered beyond each edge, so a fast scroll has something to show. A fling can still outrun the rows: the area then paints grey skeleton bars, hidden by rows on the page surface or a `Paper`'s inside. In a container of another colour, set `SCROLL_AREA_COVER` on it to that colour. |
 | `keep_rendered` | `usize` | none | An index rendered even out of view, e.g. the row holding focus, so scrolling it away keeps the focus. |
 | `item_key` | `Callback<usize, String>` | the index | A row's identity, such as its data's id. A row's state (focus, typed text, open details) follows its key, so set it when rows can be sorted, inserted or removed. |
 

@@ -146,12 +146,6 @@ fn Demo() -> Element {
 #     StaticGridTemplate::new(|template| template.row(|row| row.cell(SpanArea::Row)));
 ```
 
-## Dense
-
-`dense` fills gaps by moving items out of DOM order, but Tab still follows the
-DOM. Skip it where the reading order matters. `masonry` alone keeps the order,
-since each item starts no higher than the one before it.
-
 ## Props
 
 ### Grid

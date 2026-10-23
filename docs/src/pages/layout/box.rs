@@ -1,4 +1,4 @@
-use crate::components::{Control, Demo, DemoValues, DocPage, DocSection, a11y, prop, props};
+use crate::components::{Control, Demo, DemoValues, DocPage, a11y, prop, props};
 use dioxus::prelude::*;
 use libero::{
     components::{Box, Code, Text},
@@ -54,7 +54,11 @@ pub fn BoxPage() -> Element {
                 .example("A clickable tile with a short text label, `Box { component: \"button\", r#type: \"button\", \"Archive\" }`: Tab reaches it and Enter or Space press it, which a clickable `div` would not allow. A `button` takes phrasing content only and its name is everything inside it, so keep a card with a heading, paragraphs or other controls out of one."),
             lead: rsx! {
                 Text {
-                    "The primitive every other component is built on. "
+                    "The primitive every other component is built on. Markup that needs neither "
+                    Code { source: "sx" }
+                    " nor "
+                    Code { source: "states" }
+                    " stays a plain Dioxus element. "
                     Code { source: "component" }
                     " picks the tag, and attributes like "
                     Code { source: "href" }
@@ -97,21 +101,6 @@ pub fn BoxPage() -> Element {
                         }
                     }
                 },
-            }
-
-            DocSection {
-                title: "When to use it",
-                Text {
-                    "Reach for "
-                    Code { source: "Box" }
-                    " when an element needs "
-                    Code { source: "sx" }
-                    " or "
-                    Code { source: "states" }
-                    ", or when the tag is decided at runtime: it renders any tag via "
-                    Code { source: "component" }
-                    ". Markup that needs neither stays a plain Dioxus element."
-                }
             }
         }
     }

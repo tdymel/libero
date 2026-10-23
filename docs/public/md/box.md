@@ -58,12 +58,6 @@ default features. The other 28 (document metadata, embedded and media content,
 render as a `div` without it. See
 [getting_started.md](getting_started.md#feature-flags).
 
-## When to use it
-
-Reach for `Box` when an element needs `sx` or `states`, or when the tag is
-decided at runtime: it renders any tag via `component`. Markup that needs
-neither stays a plain Dioxus element.
-
 ## Props
 
 | Prop | Type | Default | Description |

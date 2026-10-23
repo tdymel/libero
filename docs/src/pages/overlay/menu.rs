@@ -1,42 +1,14 @@
 use crate::components::{
-    Child, Control, Demo, DemoFile, DemoValues, DocPage, DocSection, Wrap, a11y, indent, prop,
-    props,
+    Child, Control, Demo, DemoFile, DemoValues, DocPage, Wrap, a11y, indent, prop, props,
 };
 use dioxus::prelude::*;
 use libero::{
-    components::{Code, CodeBlock, Kbd, MenuPart, Text},
+    components::{Code, MenuPart, Text},
     use_theme,
 };
 
 mod demo;
-use demo::{DockedMenuDemo, MenuDemo};
-
-/// minmax 3892: `sx` alone docks the menu on its trigger's top edge, as wide as the trigger.
-const DOCKED: &str = r#"let queue = use_menu();
-let slots = vec![
-    MenuItem::new("Iron sword, 2m 10s left").onselect(|_| {}).into(),
-    MenuItem::new("Copper ring, queued").onselect(|_| {}).into(),
-    MenuItem::new("Free slot").onselect(|_| {}).into(),
-];
-
-Menu {
-    state: queue,
-    items: slots,
-    side: Side::Top,
-    radius: "0",
-    sx: sx()
-        .width("var(--lsx-popover-anchor-width)")
-        .max_width("none")
-        .margin_top("var(--lsx-popover-gap)")
-        .box_shadow("none"),
-    Button {
-        variant: "light",
-        radius: "0",
-        attributes: queue.a11y_attributes(),
-        sx: sx().width("100%").height("52px"),
-        "Queue: Iron sword, 2m 10s left"
-    }
-}"#;
+use demo::MenuDemo;
 
 /// The live demo; its state, pick handler and items print above the `rsx!`.
 const FILE: DemoFile = DemoFile(include_str!("menu/demo.rs"));
@@ -126,9 +98,9 @@ pub fn MenuPage() -> Element {
                     prop("onselect", "FnMut(())")
                         .doc("Runs when the item is chosen by a click, Enter or Space."),
                     prop("submenu", "Vec<MenuEntry>")
-                        .doc("Opens a second menu beside the item instead. An item runs a command or opens a submenu, and the later call wins."),
+                        .doc("Opens a second menu beside the item instead, on Right, a click, or when the pointer rests on the item for 150ms. Moving to a sibling waits as long, so the pointer can cross one on its way in. An item runs a command or opens a submenu, and the later call wins."),
                     prop("href", "String")
-                        .doc("Makes the item a link: an `<a>` that opens the URL in a new tab, so middle-click and the context menu work. Replaces `onselect` and `submenu`. A disabled link has no `href`. The label ends in a hidden \"(opens in a new tab)\", as on `Anchor`."),
+                        .doc("Makes the item a link: an `<a>` that opens the URL in a new tab, so middle-click and the context menu work. Space activates it like Enter. Replaces `onselect` and `submenu`. A disabled link has no `href`. The label ends in a hidden \"(opens in a new tab)\", as on `Anchor`."),
                     prop("new_tab_hint", "bool")
                         .default("true")
                         .doc("With `href`: `false` drops the hidden hint and the new-tab icon."),
@@ -185,7 +157,11 @@ pub fn MenuPage() -> Element {
                     Code { source: "menu.a11y_attributes()" }
                     ". The menu is portaled, so no "
                     Code { source: "overflow: hidden" }
-                    " ancestor clips it."
+                    " ancestor clips it. Its position and width are class rules, so "
+                    Code { source: "sx" }
+                    " can dock it: "
+                    Code { source: "var(--lsx-popover-anchor-width)" }
+                    " is the trigger's width."
                 }
             },
             Demo {
@@ -216,49 +192,6 @@ pub fn MenuPage() -> Element {
                         disabled: values.str("disabled") == "true",
                     }
                 },
-            }
-
-            DocSection {
-                title: "Submenus",
-                Text {
-                    "A submenu opens beside its item on "
-                    Kbd { "→" }
-                    ", a click, or when the pointer rests on the item for 150ms. Moving to a "
-                    "sibling waits as long, so the pointer can cross one on its way into the "
-                    "submenu."
-                }
-            }
-
-            DocSection {
-                title: "Links",
-                Text {
-                    "An item can be a link: "
-                    Code { source: "MenuItem::new(\"Docs\").href(url)" }
-                    " renders an "
-                    Code { source: "<a>" }
-                    " that opens "
-                    Code { source: "url" }
-                    " in a new tab. Space activates it like Enter."
-                }
-            }
-
-            DocSection {
-                title: "Docked",
-                Text {
-                    "The menu's position and width are class rules, so "
-                    Code { source: "sx" }
-                    " moves and sizes it without "
-                    Code { source: "!important" }
-                    ". "
-                    Code { source: "var(--lsx-popover-anchor-width)" }
-                    " is the trigger's width, and "
-                    Code { source: "var(--lsx-popover-gap)" }
-                    " the space between them. The trigger fills the box it sits in, as "
-                    Code { source: "Menu" }
-                    " adds no box around it."
-                }
-                DockedMenuDemo {}
-                CodeBlock { source: DOCKED, language: "rust" }
             }
         }
     }

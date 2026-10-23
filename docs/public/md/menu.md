@@ -68,61 +68,6 @@ fn Demo() -> Element {
 }
 ```
 
-## Submenus
-
-A submenu opens beside its item on ArrowRight, a click, or when the pointer
-rests on the item for 150ms. Moving to a sibling waits as long, so the pointer
-can cross one on its way into the submenu.
-
-## Links
-
-An item can be a link: `MenuItem::new("Docs").href(url)` renders an `<a>` that
-opens `url` in a new tab. Space activates it like Enter.
-
-## Docked
-
-The menu's position and width are class rules, so `sx` moves and sizes it
-without `!important`. `var(--lsx-popover-anchor-width)` is the trigger's
-width, and `var(--lsx-popover-gap)` the space between them. The trigger fills
-the box it sits in, as `Menu` adds no box around it.
-
-```rust
-use dioxus::prelude::*;
-use libero::components::{Button, Menu, MenuItem, use_menu};
-use libero::{hooks::Side, sx::sx};
-
-#[component]
-fn Docked() -> Element {
-    let queue = use_menu();
-    let slots = vec![
-        MenuItem::new("Iron sword, 2m 10s left").onselect(|_| {}).into(),
-        MenuItem::new("Copper ring, queued").onselect(|_| {}).into(),
-        MenuItem::new("Free slot").onselect(|_| {}).into(),
-    ];
-
-    rsx! {
-        Menu {
-            state: queue,
-            items: slots,
-            side: Side::Top,
-            radius: "0",
-            sx: sx()
-                .width("var(--lsx-popover-anchor-width)")
-                .max_width("none")
-                .margin_top("var(--lsx-popover-gap)")
-                .box_shadow("none"),
-            Button {
-                variant: "light",
-                radius: "0",
-                attributes: queue.a11y_attributes(),
-                sx: sx().width("100%").height("52px"),
-                "Queue: Iron sword, 2m 10s left"
-            }
-        }
-    }
-}
-```
-
 ## Props
 
 | Prop | Type | Default | Description |
@@ -150,8 +95,8 @@ also on every submenu.
 |---|---|---|---|
 | `new(label)` | `String` | required | The visible text, the accessible name, and what typeahead matches. |
 | `onselect` | `FnMut(())` | - | Runs when the item is chosen by a click, Enter or Space. |
-| `submenu` | `Vec<MenuEntry>` | - | Opens a second menu beside the item instead. An item runs a command or opens a submenu, and the later call wins. |
-| `href` | `String` | - | Makes the item a link: an `<a>` that opens the URL in a new tab, so middle-click and the context menu work. Replaces `onselect` and `submenu`. A disabled link has no `href`. The label ends in a hidden "(opens in a new tab)", as on `Anchor`. |
+| `submenu` | `Vec<MenuEntry>` | - | Opens a second menu beside the item instead, on Right, a click, or when the pointer rests on the item for 150ms. Moving to a sibling waits as long, so the pointer can cross one on its way in. An item runs a command or opens a submenu, and the later call wins. |
+| `href` | `String` | - | Makes the item a link: an `<a>` that opens the URL in a new tab, so middle-click and the context menu work. Space activates it like Enter. Replaces `onselect` and `submenu`. A disabled link has no `href`. The label ends in a hidden "(opens in a new tab)", as on `Anchor`. |
 | `new_tab_hint` | `bool` | `true` | With `href`: `false` drops the hidden hint and the new-tab icon. |
 | `new_tab_icon` | `bool` | `false` | With `href`: draws the new-tab icon after the label. Unset, the theme's `anchor.new_tab_icon`, which is off. |
 | `keep_open` | `()` | - | Choosing the item leaves the menu open, and focus stays on it, whatever the menu's `close_on_select` says. `close_on_select(bool)` overrides it either way. |

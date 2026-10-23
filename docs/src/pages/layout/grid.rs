@@ -1,4 +1,4 @@
-use crate::components::{Control, Demo, DemoValues, DocPage, DocSection, Wrap, a11y, prop, props};
+use crate::components::{Control, Demo, DemoValues, DocPage, Wrap, a11y, prop, props};
 use dioxus::prelude::*;
 use libero::{
     components::{
@@ -288,18 +288,6 @@ pub fn GridPage() -> Element {
                         }
                     },
                 },
-            }
-
-            DocSection {
-                title: "Dense",
-                Text {
-                    Code { source: "dense" }
-                    " fills gaps by moving items out of DOM order, but Tab still follows "
-                    "the DOM. Skip it where the reading order matters. "
-                    Code { source: "masonry" }
-                    " alone keeps the order, since each item starts no higher than the one "
-                    "before it."
-                }
             }
         }
     }

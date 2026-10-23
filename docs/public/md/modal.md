@@ -118,20 +118,6 @@ fn CloseIfModal() -> Element {
 }
 ```
 
-## Answers and triggers
-
-Make the answer the dialog's own enum, not a `bool`. The handle is `Copy`, so a
-trigger elsewhere in the tree can take it as a prop or from context. A
-[`Dialog`](dialog.md) inside closes the modal from its own close button.
-
-## Keeping it open
-
-Escape, a backdrop click and Android's Back first ask the `Dialog`'s
-`ondismiss`, with a `Dismiss` reason. Return `false` to keep a form with unsaved
-input open: `ondismiss: move |_| draft.read().is_empty()`. A confirmation that
-needs an answer is `role: "alertdialog"`, which the backdrop does not close;
-describe it with `aria_describedby` pointing at its message.
-
 ## API
 
 ### `use_modal`
@@ -144,7 +130,7 @@ pub fn use_modal<S: Clone + 'static, R: Clone + 'static>(
 
 | Argument | Type | Default | Description |
 |---|---|---|---|
-| `render` | `impl FnMut(ModalScope<S, R>) -> Element` | required | Builds the content, usually a `Dialog`, while the modal is open. Other content, a `Paper` or a plain box, takes clicks the same; only the backdrop around it closes. Style it there: the `Dialog`'s own `sx` and `parts` reach it in the portal. Returns a `ModalHandle<S, R>`. `R` defaults to `()`, for a modal that answers nothing. Call it under `LiberoProvider`, in a component that outlives every trigger. The modal unmounts with that component, and its opening settles as dismissed. |
+| `render` | `impl FnMut(ModalScope<S, R>) -> Element` | required | Builds the content, usually a `Dialog`, while the modal is open. Other content, a `Paper` or a plain box, takes clicks the same; only the backdrop around it closes. Style it there: the `Dialog`'s own `sx` and `parts` reach it in the portal. Returns a `ModalHandle<S, R>`, which is `Copy`: a trigger elsewhere in the tree can take it as a prop or from context. `R` defaults to `()`, for a modal that answers nothing; otherwise make it the dialog's own enum, not a `bool`. Escape, a backdrop click and Android's Back first ask the `Dialog`'s `ondismiss`: return `false` to keep a form with unsaved input open. Call it under `LiberoProvider`, in a component that outlives every trigger. The modal unmounts with that component, and its opening settles as dismissed. |
 
 ### `ModalHandle<S, R = ()>`
 

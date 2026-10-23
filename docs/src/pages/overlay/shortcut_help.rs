@@ -1,4 +1,4 @@
-use crate::components::{Demo, DemoValues, DocPage, DocSection, a11y, prop, props};
+use crate::components::{Demo, DemoValues, DocPage, a11y, prop, props};
 use dioxus::prelude::*;
 use libero::components::{Code, Kbd, Shortcut, ShortcutHelp, Text};
 
@@ -55,7 +55,14 @@ pub fn ShortcutHelpPage() -> Element {
                     Code { source: "use_modal" }
                     ", often from a "
                     Code { source: "shift+?" }
-                    " hotkey; here it is shown inline."
+                    " hotkey; here it is shown inline. It belongs to the app, one dialog for the "
+                    "screen the reader is on: "
+                    Code { source: "RichTextEditor" }
+                    ", "
+                    Code { source: "Video" }
+                    " and "
+                    Code { source: "Audio" }
+                    " open their own."
                 }
             },
             Demo {
@@ -74,33 +81,6 @@ pub fn ShortcutHelpPage() -> Element {
                         ],
                     }
                 },
-            }
-
-            DocSection {
-                title: "Where it belongs",
-                Text {
-                    "It belongs to the app: one dialog for the shortcuts of the screen the reader is on. "
-                    Code { source: "RichTextEditor" }
-                    " opens its own from "
-                    Kbd { "Ctrl" }
-                    " + "
-                    Kbd { "/" }
-                    ". "
-                    Code { source: "Video" }
-                    " and "
-                    Code { source: "Audio" }
-                    " open their own from "
-                    Kbd { "Shift" }
-                    " + "
-                    Kbd { "?" }
-                    " with focus in the player. "
-                    Code { source: "Kanban" }
-                    ", "
-                    Code { source: "Sortable" }
-                    " and "
-                    Code { source: "Table" }
-                    " have no shortcuts: their drag handles describe their keys to screen readers."
-                }
             }
         }
     }

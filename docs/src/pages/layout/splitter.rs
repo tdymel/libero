@@ -9,6 +9,8 @@ use libero::{
 
 // snippet: in Splitter { initial_size: 50.0, aria_label: "Resize panes", panel_b: rsx! {}, .. }
 const PANEL_A: &str = r#"panel_a: rsx! { Box { sx: sx().height("100%").padding("md").background("primary.1"), "A" } }"#;
+// snippet: ignore - `size` exists only in the printed body
+const SIZED_PANEL_A: &str = r#"panel_a: rsx! { Box { sx: sx().height("100%").padding("md").background("primary.1"), "A {size:.0}%" } }"#;
 // snippet: in Splitter { initial_size: 50.0, aria_label: "Resize panes", panel_a: rsx! {}, .. }
 const PANEL_B: &str = r#"panel_b: rsx! { Box { sx: sx().height("100%").padding("md").background("secondary.1"), "B" } }"#;
 
@@ -25,12 +27,19 @@ const NESTED_PANEL_B: &str = r#"panel_b: rsx! {
         }
     }"#;
 
+fn is_controlled(values: &DemoValues) -> bool {
+    values.str("controlled") == "true"
+}
+
 /// Both panes hang off the `composed` switch, so they are printed by it
-/// rather than held fixed.
+/// rather than held fixed. Controlled, pane A shows the size it is held at.
 fn panels_code(_control: &Control, values: &DemoValues) -> Vec<String> {
     let nested = values.str("composed") == "true";
     vec![
-        PANEL_A.to_string(),
+        match is_controlled(values) {
+            true => SIZED_PANEL_A.to_string(),
+            false => PANEL_A.to_string(),
+        },
         match nested {
             true => NESTED_PANEL_B.to_string(),
             false => PANEL_B.to_string(),
@@ -39,11 +48,15 @@ fn panels_code(_control: &Control, values: &DemoValues) -> Vec<String> {
 }
 
 /// A splitter fills its container, so the preview has to give it one. The code
-/// block prints that wrapper.
-fn wrap_splitter(_values: &DemoValues, code: &str) -> String {
+/// block prints that wrapper, and the signal a controlled splitter reads.
+fn wrap_splitter(values: &DemoValues, code: &str) -> String {
     let indented = indent(code);
+    let size = match is_controlled(values) {
+        true => "let mut size = use_signal(|| 30.0);\n\n",
+        false => "",
+    };
     format!(
-        "Box {{\n    sx: sx().height(\"160px\").width(\"100%\").max_width(\"320px\").border(\"1px solid var(--lsx-muted-3)\"),\n{indented}}}"
+        "{size}Box {{\n    sx: sx().height(\"160px\").width(\"100%\").max_width(\"320px\").border(\"1px solid var(--lsx-muted-3)\"),\n{indented}}}"
     )
 }
 
@@ -79,34 +92,35 @@ fn panel_b(values: &DemoValues) -> Element {
     }
 }
 
-/// `onresize` stores every move, or snaps it to 10%, which the panes then follow.
-/// Printed whole: `size` exists only in the printed body, so no `const` snippet holds it.
-fn controlled_code(_control: &Control, values: &DemoValues) -> Vec<String> {
+/// `initial_size`, or the controlled pair: `onresize` stores every move, or snaps it to 10%,
+/// which the panes then follow. Printed whole: `size` exists only in the printed body.
+fn size_code(_control: &Control, values: &DemoValues) -> Vec<String> {
+    if !is_controlled(values) {
+        return vec!["initial_size: 50.0".to_string()];
+    }
     let stored = match values.str("snap") == "true" {
         true => "(a / 10.0).round() * 10.0",
         false => "a",
     };
     vec![
+        "size: size()".to_string(),
         format!(
             "onresize: move |event: SplitterResizeEvent| if let SplitterResizeEvent::Change(a, _) = event {{ size.set({stored}) }}"
         ),
-        "panel_a: rsx! { Box { sx: sx().height(\"100%\").padding(\"md\").background(\"primary.1\"), \"A {size:.0}%\" } }"
-            .to_string(),
-        PANEL_B.to_string(),
     ]
 }
 
-fn wrap_controlled(values: &DemoValues, code: &str) -> String {
-    format!(
-        "let mut size = use_signal(|| 30.0);\n\n{}",
-        wrap_splitter(values, code)
-    )
-}
-
-/// Pane A's size lives here; with `snap` the caller stores it rounded to 10%.
+/// Pane A's size lives here when `controlled`; with `snap` it is stored rounded to 10%.
 #[component]
-fn ControlledSplitter(snap: bool) -> Element {
+fn SplitterDemo(values: DemoValues) -> Element {
     let mut size = use_signal(|| 30.0);
+    let controlled = is_controlled(&values);
+    let snap = values.str("snap") == "true";
+    let label = match controlled {
+        true => format!("A {:.0}%", size()),
+        false => "A".to_string(),
+    };
+
     rsx! {
         Box {
             sx: sx()
@@ -115,25 +129,28 @@ fn ControlledSplitter(snap: bool) -> Element {
                 .max_width("320px")
                 .border("1px solid var(--lsx-muted-3)"),
             Splitter {
-                size: size(),
+                orientation: values.str("orientation"),
+                initial_size: 50.0,
+                size: controlled.then_some(size()),
                 aria_label: "Resize panes",
+                min_size: percent(values.str("min_size")),
+                divider_size: or_unset(values.str("divider_size")),
+                divider_color: match values.str("divider_color").as_str() {
+                    "muted" => Input::None,
+                    color => Input::from(color),
+                },
                 onresize: move |event: SplitterResizeEvent| {
-                    if let SplitterResizeEvent::Change(a, _) = event {
+                    if let (true, SplitterResizeEvent::Change(a, _)) = (controlled, event) {
                         size.set(if snap { (a / 10.0).round() * 10.0 } else { a });
                     }
                 },
                 panel_a: rsx! {
                     Box {
                         sx: sx().height("100%").padding("md").background("primary.1"),
-                        "A {size:.0}%"
+                        "{label}"
                     }
                 },
-                panel_b: rsx! {
-                    Box {
-                        sx: sx().height("100%").padding("md").background("secondary.1"),
-                        "B"
-                    }
-                },
+                panel_b: panel_b(&values),
             }
         }
     }
@@ -210,10 +227,7 @@ pub fn SplitterPage() -> Element {
                 component: "Splitter",
                 children_text: "",
                 // Required, and not something a control varies.
-                fixed: vec![
-                    "initial_size: 50.0".to_string(),
-                    r#"aria_label: "Resize panes""#.to_string(),
-                ],
+                fixed: vec![r#"aria_label: "Resize panes""#.to_string()],
                 controls: vec![
                     Control::toggle("orientation", ["horizontal", "vertical"])
                         .labels(["Horizontal", "Vertical"])
@@ -224,55 +238,18 @@ pub fn SplitterPage() -> Element {
                     // A bare `grey` is what an unset `divider_color`
                     // falls back to, so that swatch prints nothing.
                     Control::color("divider_color").default("muted"),
+                    // Holds pane A's size in a signal instead of `initial_size`.
+                    Control::switch("controlled").code(size_code),
+                    // Not a prop: how the caller stores the size, printed by `controlled`.
+                    Control::switch("snap")
+                        .code(|_, _| vec![])
+                        .hidden_when(|values| !is_controlled(values)),
                     // Last, so the panes print below the props they
                     // configure.
                     Control::switch("composed").code(panels_code),
                 ],
-                render: move |values: DemoValues| rsx! {
-                    Box {
-                        sx: sx()
-                            .height("160px")
-                            .width("100%")
-                            .max_width("320px")
-                            .border("1px solid var(--lsx-muted-3)"),
-                        Splitter {
-                            orientation: values.str("orientation"),
-                            initial_size: 50.0,
-                            aria_label: "Resize panes",
-                            min_size: percent(values.str("min_size")),
-                            divider_size: or_unset(values.str("divider_size")),
-                            divider_color: match values.str("divider_color").as_str() {
-                                "muted" => Input::None,
-                                color => Input::from(color),
-                            },
-                            panel_a: rsx! {
-                                Box {
-                                    sx: sx()
-                                        .height("100%")
-                                        .padding("md")
-                                        .background("primary.1"),
-                                    "A"
-                                }
-                            },
-                            panel_b: panel_b(&values),
-                        }
-                    }
-                },
+                render: move |values: DemoValues| rsx! { SplitterDemo { values } },
                 wrap: Wrap(wrap_splitter),
-            }
-            Demo {
-                component: "Splitter",
-                title: "Controlled",
-                children_text: "",
-                fixed: vec![
-                    "size: size()".to_string(),
-                    r#"aria_label: "Resize panes""#.to_string(),
-                ],
-                controls: vec![Control::switch("snap").code(controlled_code)],
-                render: move |values: DemoValues| rsx! {
-                    ControlledSplitter { snap: values.str("snap") == "true" }
-                },
-                wrap: Wrap(wrap_controlled),
             }
         }
     }

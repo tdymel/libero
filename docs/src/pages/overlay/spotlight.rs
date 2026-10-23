@@ -1,5 +1,5 @@
 use crate::components::{
-    Control, Demo, DemoFile, DemoValues, DocPage, DocSection, Wrap, a11y, indent, prop, props,
+    Control, Demo, DemoFile, DemoValues, DocPage, Wrap, a11y, indent, prop, props,
 };
 use libero::components::Pictogram;
 use pictogram_icons_lucide as lucide;
@@ -436,17 +436,6 @@ pub fn SpotlightPage() -> Element {
                     }
                 },
                 wrap: Wrap(wrap_example),
-            }
-
-            DocSection {
-                title: "The demo's hotkey",
-                Text {
-                    "The hotkey here is J or P, because this site's search owns "
-                    Kbd { "Ctrl" }
-                    " + "
-                    Kbd { "K" }
-                    "."
-                }
             }
         }
     }

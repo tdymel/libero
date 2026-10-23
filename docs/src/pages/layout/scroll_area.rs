@@ -1,6 +1,5 @@
 use crate::components::{
-    Child, Control, Demo, DemoFile, DemoValues, DocPage, DocSection, UNSET, Wrap, a11y, indent,
-    prop, props,
+    Child, Control, Demo, DemoFile, DemoValues, DocPage, UNSET, Wrap, a11y, indent, prop, props,
 };
 use dioxus::prelude::*;
 use libero::{
@@ -92,14 +91,14 @@ pub fn ScrollAreaPage() -> Element {
                 (ScrollAreaPart::Thumb, "The thumb inside a track."),
             ]), props("Virtualize", vec![
                 prop("count", "usize").default("required")
-                    .doc("Rows in the whole list, not only the rendered ones."),
+                    .doc("Rows in the whole list, not only the rendered ones. `Virtualize` draws no element of its own and needs a `ScrollArea` above it, one per area: without one, or as the second, it warns and renders every row."),
                 prop("item", "Callback<usize, Element>").default("required")
                     .doc("Renders one row. Called only for the rows in view."),
                 prop("item_size", "f64")
                     .doc("A row's height plus the gap below it, in px. Unset, it is measured from the first rows, and again when the area's width changes. Every row must have the same height."),
                 prop("overscan", "usize")
                     .default(theme.scroll_area.overscan.to_string())
-                    .doc("Rows rendered beyond each edge, so a fast scroll has something to show."),
+                    .doc("Rows rendered beyond each edge, so a fast scroll has something to show. A fling can still outrun the rows: the area then paints grey skeleton bars, hidden by rows on the page surface or a `Paper`'s inside. In a container of another colour, set `SCROLL_AREA_COVER` on it to that colour."),
                 prop("keep_rendered", "usize")
                     .doc("An index rendered even out of view, e.g. the row holding focus, so scrolling it away keeps the focus."),
                 prop("item_key", "Callback<usize, String>")
@@ -248,28 +247,6 @@ pub fn ScrollAreaPage() -> Element {
                     }
                 },
                 wrap: Wrap(wrap_frame),
-            }
-
-            DocSection {
-                title: "Virtualize",
-                Text {
-                    "With virtualize on, "
-                    Code { source: "Virtualize" }
-                    " renders only the rows in view out of 50,000. It draws no element of "
-                    "its own and needs a "
-                    Code { source: "ScrollArea" }
-                    " above it, one per area. Without one, or as the second, it warns and "
-                    "renders every row."
-                }
-                Text {
-                    "A fast fling can outrun the rows, so the area paints grey skeleton bars "
-                    "where rows are still missing. The rendered rows sit on the page surface, "
-                    "or on a "
-                    Code { source: "Paper" }
-                    "'s inside one, to hide the bars. In a container of another colour, set "
-                    Code { source: "SCROLL_AREA_COVER" }
-                    " on it to that colour, or its rows show a surface-coloured band."
-                }
             }
         }
     }

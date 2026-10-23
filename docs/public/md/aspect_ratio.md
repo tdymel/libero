@@ -46,7 +46,7 @@ fn Demo() -> Element {
 | Prop | Type | Default | Description |
 |---|---|---|---|
 | `ratio` | `f32` | `1.0` | Width-to-height ratio, e.g. `16.0 / 9.0`. |
-| `children` | `Element` | required | The child to crop, filling the box. |
+| `children` | `Element` | required | The child to crop, filling the box. An `a`, `picture` or `span` child becomes a block; give any other inline child `display: block`, and a `picture`'s inner `img` the full size. The size and `object-fit` reach the direct child only: an image inside a wrapper needs `width: 100%`, `height: 100%` and `object-fit: cover` itself. Other children, such as text, are not clipped: at larger text they run past the box or grow it. |
 
 Like every component, `AspectRatio` also takes the shared props `sx`, `class`,
 `style`, `states`, and any extra HTML attributes.
