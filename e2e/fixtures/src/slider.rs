@@ -22,7 +22,37 @@ pub const ROUTES: Routes = &[
     ("/slider/preview", || rsx! { SliderPreviewPage {} }),
     ("/slider/grouped", || rsx! { SliderGroupedPage {} }),
     ("/slider/preview-resize", || rsx! { SliderPreviewResizePage {} }),
+    ("/slider/preview-vertical", || rsx! { SliderPreviewVerticalPage {} }),
 ];
+
+/// Todo 4038: 200px upright tracks at 0 and 0..10 that preview the value under a hovering mouse.
+#[component]
+fn SliderPreviewVerticalPage() -> Element {
+    let mut value = use_signal(|| 0.0f64);
+    let mut range = use_signal(|| (0.0f64, 10.0f64));
+    rsx! {
+        Flex { direction: "row", gap: "xl", padding: "md",
+            Slider {
+                id: "single",
+                label: "Volume",
+                orientation: "vertical",
+                sx: sx().height("200px"),
+                value: value(),
+                preview_on_hover: true,
+                oninput: move |e: SliderChangeEvent<f64>| value.set(e.value()),
+            }
+            RangeSlider {
+                id: "range",
+                label: "Price",
+                orientation: "vertical",
+                sx: sx().height("200px"),
+                value: range(),
+                preview_on_hover: true,
+                oninput: move |e: SliderChangeEvent<(f64, f64)>| range.set(e.value()),
+            }
+        }
+    }
+}
 
 /// Todo 3799: a hover-preview track in a 400px box that a test narrows while the pointer stays.
 #[component]

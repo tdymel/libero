@@ -356,8 +356,7 @@ async fn a_chip_hands_focus_back_closed<D: Driver>(d: &mut D, _route: &str) -> R
 e2e::scenario!(
     an_open_on_focus_multi_select_stays_closed_when_a_chip_hands_focus_back,
     "/multi-select/open-on-focus",
-    a_chip_hands_focus_back_closed,
-    native: skip("3982: parked with the chip walk above (3406)")
+    a_chip_hands_focus_back_closed
 );
 
 /// A refused first row: the trigger names the row the list lights (1271).

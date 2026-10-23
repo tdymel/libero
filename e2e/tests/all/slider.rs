@@ -1031,6 +1031,61 @@ fn the_hover_preview_follows_a_resized_track() {
     });
 }
 
+/// Todo 4038: an upright track's hover bubble opens right of the thumb column, level with the
+/// pointed value, not over the track above it.
+#[test]
+fn an_upright_hover_preview_opens_beside_the_pointed_value() {
+    block_on(async {
+        let fixture = Fixture::open("/slider/preview-vertical", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        let outcome = async {
+            for id in ["single", "range"] {
+                // Value 0 sits at the bottom: the pointer for 75 is a quarter of the travel down from the top.
+                let point: pointer::Point = page
+                    .evaluate_bounded(format!(
+                        "(() => {{ const t = document.querySelector('#{id} [data-slot=track]').getBoundingClientRect();
+                         const h = document.querySelector('#{id} [role=slider]').getBoundingClientRect().height;
+                         return {{ x: t.x + t.width / 2, y: t.y + h / 2 + 0.25 * (t.height - h) }}; }})()"
+                    ))
+                    .await?
+                    .into_value()?;
+                pointer::move_to(page, point).await?;
+                wait::for_js_true(
+                    page,
+                    &preview_js("75"),
+                    &format!("#{id}: the preview of 75"),
+                )
+                .await?;
+                let beside: bool = page
+                    .evaluate_bounded(format!(
+                        "(() => {{ const thumb = document.querySelector('#{id} [role=slider]').getBoundingClientRect();
+                         const bubble = [...document.querySelectorAll('[role=tooltip]')]
+                             .find((e) => e.textContent === '75').getBoundingClientRect();
+                         const centre = bubble.y + bubble.height / 2;
+                         return bubble.x >= thumb.x + thumb.width - 1
+                             && Math.abs(centre - {y}) <= thumb.height / 2 + 1; }})()",
+                        y = point.y
+                    ))
+                    .await?
+                    .into_value()?;
+                ensure!(
+                    beside,
+                    "#{id}: the bubble is not right of the thumb column, level with the pointer"
+                );
+                pointer::move_to(page, pointer::Point { x: 2.0, y: 2.0 }).await?;
+            }
+            Ok::<_, anyhow::Error>(())
+        }
+        .await;
+        let console = fixture.console.assert_clean("the upright hover preview");
+        fixture.close().await.unwrap();
+        outcome.unwrap();
+        console.unwrap();
+    });
+}
+
 /// Todo 2212: `preview_on_hover` shows the value under a hovering mouse on a Slider and a
 /// RangeSlider; Escape hides it until the pointer leaves (WCAG 1.4.13).
 #[test]

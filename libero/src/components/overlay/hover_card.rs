@@ -86,7 +86,8 @@ base_props! {
         /// Unset, or other CSS, the theme's popover gap.
         #[props(default, into)]
         gap: Input<ThemeAwareValue>,
-        /// Draws an arrow from the card to the trigger's centre, in the theme's paper background.
+        /// Draws an arrow from the card to the trigger's centre, in the theme's paper background,
+        /// or in `sx`'s own `background` and `box_shadow`; a `class` or `when` state is not followed.
         /// `gap` then runs from its tip.
         #[props(default)]
         arrow: bool,

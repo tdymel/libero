@@ -219,9 +219,9 @@ Android only.
 |---|---|---|
 | iOS (WKWebView) | The simulator build, and the e2e suite in an iPhone simulator, with taps and keys injected through AXe. | 147: 120 because the simulator's tap, drag or Tab did not drive the page, 20 because a touch screen has no hover or wheel. |
 | macOS desktop (WKWebView) | The desktop build, and the e2e suite in a WKWebView window, with the app sending its own NSEvents. | 132: 89 shared with every desktop WebView (the Tab bridge, element identity, touch input) and 43 only here, mostly WebKit not focusing a clicked button and WKWebView misreading list clicks, a fixed bar and wheel scrolls. |
-| macOS native (Blitz) | The Blitz build, and the e2e suite on a windowless CPU renderer. | 59: 57 shared with Blitz on Linux (charts, right-to-left scrolling, media), a panic on a windowed table and a doubled Backspace. |
+| macOS native (Blitz) | The Blitz build, and the e2e suite on a windowless CPU renderer. | 58: 56 shared with Blitz on Linux (charts, right-to-left scrolling, media), a panic on a windowed table and a doubled Backspace. |
 | Windows desktop (WebView2) | The desktop build, and the e2e suite in a WebView2 window, driven over its DevTools port. | 95: 89 shared with every desktop WebView and 6 only here (End in a tall listbox, Shift+Tab out of a date input, an early drop's focus, a picture's asset path). |
-| Windows native (Blitz) | The Blitz build, and the e2e suite on a windowless CPU renderer. | 58: 57 shared with Blitz on Linux and a panic on a windowed table. |
+| Windows native (Blitz) | The Blitz build, and the e2e suite on a windowless CPU renderer. | 57: 56 shared with Blitz on Linux and a panic on a windowed table. |
 
 No real device has run libero: iOS is a simulator, macOS and Windows are hosted
 runners. On all three, no system permission prompt is answered except the iOS

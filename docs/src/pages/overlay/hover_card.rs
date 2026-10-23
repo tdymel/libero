@@ -56,7 +56,7 @@ pub fn HoverCardPage() -> Element {
                     .doc("Distance to the trigger, from the arrow's tip with `arrow`: a size word, or a `px` or `rem` length, e.g. `gap: \"12px\"`. Other CSS places the card by the theme's popover gap."),
                 prop("arrow", "bool")
                     .default("false")
-                    .doc("Draws an arrow from the card to the trigger's centre, in the theme's paper background. It stays on the trigger when the card shifts to fit the viewport, and `gap` runs from its tip."),
+                    .doc("Draws an arrow from the card to the trigger's centre, in the theme's paper background, or in `sx`'s own `background` and `box_shadow`. It stays on the trigger when the card shifts to fit the viewport, and `gap` runs from its tip."),
                 prop("open_delay", "u32")
                     .default(theme.hover_card.open_delay.to_string())
                     .doc("Milliseconds the pointer must rest on the trigger before the card opens."),
@@ -95,6 +95,7 @@ pub fn HoverCardPage() -> Element {
                 .limits([
                     "On desktop and mobile, Escape works only while focus is on the trigger or in the card, so a card the pointer opened cannot be dismissed from the keyboard there (WCAG 1.4.13).",
                     "On the desktop WebView and Android, Tab on the trigger does not move into the card, so its links and buttons take a pointer or a tap there.",
+                    "The arrow takes the fill and shadow of `sx`'s own `background` and `box_shadow` only. A `class` or a `when` state that recolours the card leaves the arrow in the theme's paper background.",
                 ])
                 .example("A user's name as a link, with a `HoverCard { aria_label: \"Ada Lovelace\", .. }` showing an avatar and bio: focusing the link opens the card, and the profile page the link leads to holds the same facts for a screen reader."),
             lead: rsx! {

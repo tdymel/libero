@@ -204,7 +204,6 @@ The performance scenarios (units `perf`, `table_perf`) are no skips but run on r
 | `modal::the_trap_follows_positive_tabindex` | android | 958: element identity on the WebView |
 | `modal::the_trap_follows_positive_tabindex` | desktop | 958: element identity on the WebView |
 | `modal::the_trap_follows_positive_tabindex` | ios | 958: element identity on the WebView |
-| `multi_select::an_open_on_focus_multi_select_stays_closed_when_a_chip_hands_focus_back` | native | 3982: parked with the chip walk above (3406) |
 | `multi_select::the_chips_take_the_focus_and_remove` | native | 3406: Blitz hands a removed chip's focus to a container div, parked with native |
 | `native_select::the_arrows_step_a_focused_native_select` | desktop | WebKitGTK opens the picker on an arrow |
 | `native_select::the_arrows_step_a_focused_native_select` | ios | WKWebView opens the picker on an arrow |
