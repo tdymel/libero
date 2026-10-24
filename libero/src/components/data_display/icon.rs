@@ -36,14 +36,19 @@ pub(crate) const ICON_VARS: VariantVars<'static> = VariantVars {
 };
 
 static ICON_BASE_SX: StaticSx = StaticSx::new(|| {
+    // In a field slot the box grows by the pad on every side and the block margin takes it back:
+    // the glyph keeps its size and the container fills the slot button's box (4120).
+    let pad = ICON_SLOT_PAD.value_or("0px");
+    let side = format!("calc({} + 2 * {pad})", ICON_DEFAULT_SIZE.overridable());
     let base = sx()
         .display("inline-flex")
         .align_items("center")
         .justify_content("center")
         .flex_shrink("0")
-        .width(ICON_DEFAULT_SIZE.overridable())
-        .height(ICON_DEFAULT_SIZE.overridable())
-        .with("margin-inline", ICON_SLOT_PAD.value_or("0"))
+        .width(side.clone())
+        .height(side)
+        .with("padding", pad.clone())
+        .with("margin-block", format!("calc(-1 * {pad})"))
         .border_radius(ICON_RADIUS_VAR.value_or(ICON_DEFAULT_RADIUS.value()))
         .selector(
             "& svg",
@@ -115,7 +120,10 @@ fn icon_variables(props: &IconProps, variant: Variant) -> Variables {
             props.size.resolve(Some(ICON_SIZE)),
         )
         // A sized icon keeps its own box in a slot.
-        .with(ICON_SLOT_PAD, props.size.as_ref().map(|_| "0".to_string()))
+        .with(
+            ICON_SLOT_PAD,
+            props.size.as_ref().map(|_| "0px".to_string()),
+        )
         .with(ICON_RADIUS_VAR, props.radius.resolve(Some(SizeCss::RADIUS)))
 }
 

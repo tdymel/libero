@@ -45,6 +45,20 @@ fn SlotIconsPage() -> Element {
                     }
                 }
             }
+            for (size, step) in [("xs", "xs"), ("md", "sm"), ("xl", "md")] {
+                div { "data-filled": "{size}",
+                    TextField { label: "Filled icon", size, trailing: rsx! { Icon { svg: MAIL } } }
+                    TextField {
+                        label: "Filled button",
+                        size,
+                        trailing: rsx! {
+                            ActionIcon { aria_label: "Mail", size: step, variant: "filled",
+                                svg { view_box: "0 0 24 24", rect { x: "3", y: "5", width: "18", height: "14" } }
+                            }
+                        },
+                    }
+                }
+            }
         }
     }
 }

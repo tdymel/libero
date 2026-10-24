@@ -309,6 +309,46 @@ fn an_unsized_slot_icon_shares_the_slot_buttons_column() {
     });
 }
 
+/// Todo 4120: a filled `Icon` in a slot draws its container at the box of a filled
+/// `ActionIcon`, in the same place (the frame height is the test above's).
+#[test]
+fn a_filled_slot_icon_has_the_box_of_a_filled_action_icon() {
+    const MEASURE: &str = "[...document.querySelectorAll('[data-filled]')].map(c => \
+        [c.dataset.filled, ...[...c.querySelectorAll('[data-frame]')].flatMap(frame => { \
+            const f = frame.getBoundingClientRect(); \
+            const b = frame.querySelector('[data-slot=trailing]').firstElementChild.getBoundingClientRect(); \
+            return [b.width, b.height, f.right - b.right, (b.top + b.bottom - f.top - f.bottom) / 2]; \
+        })])";
+    block_on(async {
+        let fixture = Fixture::open("/text-field/slot-icons", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        wait::for_visible(page, "[data-filled='md'] [data-slot=icon]")
+            .await
+            .unwrap();
+        let cases: Vec<(String, Vec<f64>)> = page
+            .evaluate_bounded(&format!("{MEASURE}.map(([name, ...rest]) => [name, rest])"))
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        assert_eq!(cases.len(), 3, "{cases:?}");
+        for (name, m) in cases {
+            let (icon, button) = m.split_at(4);
+            for (what, a, b) in [
+                ("width", icon[0], button[0]),
+                ("height", icon[1], button[1]),
+                ("right inset", icon[2], button[2]),
+                ("offset from the frame's middle", icon[3], button[3]),
+            ] {
+                assert!((a - b).abs() < 0.5, "{name}: {what} {a} vs {b}: {m:?}");
+            }
+        }
+        fixture.close().await.unwrap();
+    });
+}
+
 /// Todo 2438: a field's input and the dropdown search boxes take the page's
 /// typeface and letter spacing, which a UA sheet resets on `<input>`.
 #[test]

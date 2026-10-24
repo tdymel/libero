@@ -6,7 +6,7 @@ use dioxus::CapturedError;
 use dioxus::html::{FileData, NativeFileData, bytes::Bytes};
 use dioxus::prelude::*;
 use e2e::native::{Key, mount};
-use libero::components::{CropOptions, CropRect, FileField, Files};
+use libero::components::{CropOptions, CropRect, FileField, FileTriggerArgs, Files};
 use libero::platform::fake_file_dialog;
 
 struct FakeFile(&'static str);
@@ -75,6 +75,46 @@ fn cards() -> Element {
             value: files(),
             onchange: move |next| files.set(next),
         }
+    }
+}
+
+fn trigger_button(t: FileTriggerArgs) -> Element {
+    rsx! {
+        button { r#type: "button", onclick: move |_| t.open.call(()), ..t.attributes, "Choose a portrait" }
+    }
+}
+
+fn triggers() -> Element {
+    rsx! {
+        div { id: "plain", style: "width:360px",
+            FileField { label: "Plain", trigger: trigger_button }
+        }
+        div { id: "centred", style: "width:360px",
+            FileField {
+                label: "Centred",
+                sx: libero::sx::sx().align_items("center"),
+                trigger: trigger_button,
+            }
+        }
+    }
+}
+
+/// Todo 4119: Blitz has no `fit-content`, so its stylesheet pins the trigger's box at the
+/// start, whatever the field's `align-items`; it never stretches over the field.
+#[test]
+fn a_trigger_sits_at_the_start_at_its_own_width() {
+    let page = mount(triggers);
+    for id in ["plain", "centred"] {
+        let (x, _, width, _) = page.rect(&format!("#{id} [data-slot=trigger]"));
+        let (field_x, _, field_width, _) = page.rect(&format!("#{id}"));
+        assert!(
+            (x - field_x).abs() < 1.0,
+            "{id}: {x} not at the field's start {field_x}"
+        );
+        assert!(
+            width < field_width / 2.0,
+            "{id}: {width} of the field's {field_width}"
+        );
     }
 }
 
