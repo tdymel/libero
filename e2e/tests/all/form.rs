@@ -1224,3 +1224,65 @@ fn a_color_field_takes_text_written_before_mount() {
         "#color", "#fa5252", "color", "#fa5252",
     ));
 }
+
+/// Todo 4087: an async rule shows its field busy after a blur, then its answer; a submit
+/// ends the debounce, waits for the answer and sends once the address is free.
+#[test]
+fn an_async_rule_answers_on_the_field_and_holds_the_submit() {
+    block_on(async {
+        let fixture = Fixture::open("/form/async-rule", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        let data = |key: &str, value: &str| {
+            format!("document.querySelector('[data-{key}]').dataset.{key} === {value:?}")
+        };
+        let busy = |value: &str| {
+            format!("document.querySelector('#email').getAttribute('aria-busy') === {value}")
+        };
+
+        pointer::click(page, "#email").await.unwrap();
+        keyboard::type_text(page, "me@libero.dev").await.unwrap();
+        keyboard::press(page, keyboard::TAB).await.unwrap();
+        wait::for_js_true(page, &busy("'true'"), "the field busy after the blur")
+            .await
+            .unwrap();
+        wait::for_js_true(page, &data("asked", "1"), "one request after the pause")
+            .await
+            .unwrap();
+        click_button(page, "Taken").await.unwrap();
+        wait::for_js_true(
+            page,
+            "document.querySelector('[data-slot=status]')?.textContent.includes('This address is taken.')",
+            "the answer on the field",
+        )
+        .await
+        .unwrap();
+        wait::for_js_true(page, &busy("null"), "the field no longer busy")
+            .await
+            .unwrap();
+
+        pointer::click(page, "#email").await.unwrap();
+        keyboard::type_text(page, "m").await.unwrap();
+        click_button(page, "Sign up").await.unwrap();
+        wait::for_js_true(page, &data("submitting", "true"), "the submit waiting")
+            .await
+            .unwrap();
+        wait::for_js_true(page, &data("asked", "2"), "the submit asking at once")
+            .await
+            .unwrap();
+        wait::for_js_true(page, &data("sent", "0"), "nothing sent while it asks")
+            .await
+            .unwrap();
+        click_button(page, "Free").await.unwrap();
+        wait::for_js_true(page, &data("sent", "1"), "sent once the address is free")
+            .await
+            .unwrap();
+        wait::for_js_true(page, &data("submitting", "false"), "the form idle")
+            .await
+            .unwrap();
+
+        fixture.console.assert_clean("an async rule").unwrap();
+        fixture.close().await.unwrap();
+    });
+}

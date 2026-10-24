@@ -10,13 +10,16 @@ pub enum FieldStatus {
     Valid,
     Warning(String),
     Error(String),
+    /// An async rule is still checking the value: `aria-busy`, no message. Blocks nothing,
+    /// but a `Form`'s submit waits for the answer.
+    Pending,
 }
 
 impl FieldStatus {
-    /// The message carried by the status, if any. `Valid` never has one.
+    /// The message carried by the status, if any. `Valid` and `Pending` never have one.
     pub fn message(&self) -> Option<&str> {
         match self {
-            Self::Valid => None,
+            Self::Valid | Self::Pending => None,
             Self::Warning(message) | Self::Error(message) => Some(message),
         }
     }
@@ -34,12 +37,17 @@ impl FieldStatus {
         matches!(self, Self::Error(_))
     }
 
+    pub fn is_pending(&self) -> bool {
+        matches!(self, Self::Pending)
+    }
+
     /// The `data-state` name for the status; `None` for `Valid`.
     pub fn state(&self) -> Option<&'static str> {
         match self {
             Self::Valid => None,
             Self::Warning(_) => Some("warning"),
             Self::Error(_) => Some("error"),
+            Self::Pending => Some("pending"),
         }
     }
 }
@@ -126,6 +134,10 @@ mod tests {
         assert_eq!(error.message(), Some("too short"));
         assert_eq!(error.state(), Some("error"));
         assert!(error.is_error());
+
+        assert_eq!(FieldStatus::Pending.message(), None);
+        assert_eq!(FieldStatus::Pending.state(), Some("pending"));
+        assert!(FieldStatus::Pending.is_pending());
     }
 
     #[test]

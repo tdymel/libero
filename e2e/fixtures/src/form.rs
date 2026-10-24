@@ -8,7 +8,7 @@ use libero::components::{
     DateField, DatePicker, DateRangePicker, DateTimeField, FieldError, FieldStatus, Fields, Fieldset, FileField, Files, Flex, Form,
     FormErrors, MonthPicker, MultiSelect, NativeSelect, NumberField, Options, PasswordField, PhoneField, PinField, Radio,
     RadioGroup, RangeSlider, Rating, RequiredValue, Rule, SegmentedControl, Select, Slider, SliderChangeEvent,
-    Submit, SummaryMode, Switch, TagsField, Text, TextField, Textarea, TimeField, TimePicker, YearPicker, min_length, not_empty, use_form,
+    Submit, SummaryMode, Switch, TagsField, Text, TextField, Textarea, TimeField, TimePicker, YearPicker, checked_async, min_length, not_empty, use_form,
 };
 
 use crate::Routes;
@@ -29,7 +29,90 @@ pub const ROUTES: Routes = &[
     ("/form/prefill-more", || rsx! { PrefillMorePage {} }),
     ("/form/async", || rsx! { AsyncSignInPage {} }),
     ("/form/secret", || rsx! { SecretPage {} }),
+    ("/form/async-rule", || rsx! { AsyncRulePage {} }),
 ];
+
+#[derive(Clone, PartialEq, Default, Fields)]
+struct Mailbox {
+    email: Option<String>,
+}
+
+enum EmailError {
+    Invalid,
+    Taken,
+}
+
+fn signup_email(text: String) -> Result<String, EmailError> {
+    match text.contains('@') {
+        true => Ok(text),
+        false => Err(EmailError::Invalid),
+    }
+}
+
+fn email_words(error: &EmailError, _: &libero::localization::Localization) -> String {
+    match error {
+        EmailError::Invalid => "Not an email address.".into(),
+        EmailError::Taken => "This address is taken.".into(),
+    }
+}
+
+/// The latest address the rule asked about, which the page's buttons answer.
+#[derive(Clone, Default)]
+struct Lookup {
+    taken: std::rc::Rc<std::cell::RefCell<Option<bool>>>,
+    waker: std::rc::Rc<std::cell::RefCell<Option<std::task::Waker>>>,
+}
+
+impl Lookup {
+    fn answer(&self, taken: bool) {
+        *self.taken.borrow_mut() = Some(taken);
+        if let Some(waker) = self.waker.borrow_mut().take() {
+            waker.wake();
+        }
+    }
+
+    async fn ask(self) -> Result<(), EmailError> {
+        self.taken.borrow_mut().take();
+        std::future::poll_fn(move |context| match self.taken.borrow_mut().take() {
+            Some(true) => std::task::Poll::Ready(Err(EmailError::Taken)),
+            Some(false) => std::task::Poll::Ready(Ok(())),
+            None => {
+                *self.waker.borrow_mut() = Some(context.waker().clone());
+                std::task::Poll::Pending
+            }
+        })
+        .await
+    }
+}
+
+/// Todo 4087: an async rule the buttons answer; a submit waits for it.
+#[component]
+fn AsyncRulePage() -> Element {
+    let signup = use_store(Mailbox::default);
+    let form = use_form();
+    let lookup = use_hook(Lookup::default);
+    let asked = use_signal(|| 0u32);
+    let mut sent = use_signal(|| 0u32);
+    let (free, taken) = (lookup.clone(), lookup.clone());
+    let rule = checked_async(move |_: String| {
+        let mut asked = asked;
+        asked += 1;
+        lookup.clone().ask()
+    })
+    .debounce(100);
+    rsx! {
+        Flex { direction: "column", gap: "md", max_width: "320px",
+            span { "data-asked": "{asked}", "data-sent": "{sent}", "data-submitting": "{form.is_submitting()}" }
+            Form { form, value: signup, onsubmit: move |_| sent += 1,
+                TextField { id: "email", label: "Email", required: true,
+                    name: Mailbox::FIELDS.email().map(String::clone, signup_email).message(email_words).rules([rule]) }
+                Button { r#type: "submit", loading: form.is_submitting(), "Sign up" }
+            }
+            Button { onclick: move |_| free.answer(false), "Free" }
+            Button { onclick: move |_| taken.answer(true), "Taken" }
+        }
+    }
+}
 
 /// A secret with neither `Clone` nor `PartialEq`.
 struct Secret(String);

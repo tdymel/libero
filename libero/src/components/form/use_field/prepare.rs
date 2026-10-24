@@ -252,6 +252,7 @@ impl FieldBuilder<'_> {
             text_slots: self.text_slots,
             describedby,
             invalid: matches!(status, Some(FieldStatus::Error(_))),
+            busy: matches!(status, Some(FieldStatus::Pending)),
             required: self.required,
             inline: self.inline,
             activation,

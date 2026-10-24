@@ -216,7 +216,7 @@ impl<V: 'static> Validators<V> {
         let mut warning = None;
         for validator in &self.0 {
             match validator.validate(value) {
-                FieldStatus::Valid => {}
+                FieldStatus::Valid | FieldStatus::Pending => {}
                 error @ FieldStatus::Error(_) => return error,
                 found @ FieldStatus::Warning(_) => {
                     warning.get_or_insert(found);
@@ -271,12 +271,13 @@ impl<V: 'static> From<Validator<V>> for Validators<V> {
     }
 }
 
-/// Error beats warning beats valid; a tie keeps `first`.
+/// Error beats warning beats pending beats valid; a tie keeps `first`.
 pub(crate) fn worst(first: FieldStatus, second: FieldStatus) -> FieldStatus {
     let rank = |status: &FieldStatus| match status {
         FieldStatus::Valid => 0,
-        FieldStatus::Warning(_) => 1,
-        FieldStatus::Error(_) => 2,
+        FieldStatus::Pending => 1,
+        FieldStatus::Warning(_) => 2,
+        FieldStatus::Error(_) => 3,
     };
     match rank(&second) > rank(&first) {
         true => second,

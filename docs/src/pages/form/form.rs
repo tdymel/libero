@@ -70,6 +70,10 @@ const FILE: DemoFile = DemoFile(include_str!("form.rs"));
 mod sign_in;
 use sign_in::SignInForm;
 const SIGN_IN_CODE: DemoFile = DemoFile(include_str!("form/sign_in.rs"));
+#[rustfmt::skip]
+mod email_check;
+use email_check::EmailCheckForm;
+const EMAIL_CHECK_CODE: DemoFile = DemoFile(include_str!("form/email_check.rs"));
 
 const UPGRADE_CODE: &str = r#"use dioxus::prelude::*;
 use libero::components::Form;
@@ -188,7 +192,7 @@ pub fn FormPage() -> Element {
                 ]),
                 props("FormHandle", vec![
                     prop("validate()", "bool")
-                        .doc("Checks like a submit without calling `onsubmit`. Every status shows, and with an error the summary appears and takes focus. `true` when nothing is an error."),
+                        .doc("Checks like a submit without calling `onsubmit`. Every status shows, and with an error the summary appears and takes focus. `true` when nothing is an error; a field an async rule is still checking counts as no error."),
                     prop("submit()", "Result<(), PlatformError>")
                         .doc("Submits as the submit button would. `Unsupported` once the form is gone."),
                     prop("reset()", "()")
@@ -196,7 +200,7 @@ pub fn FormPage() -> Element {
                     prop("is_valid()", "bool")
                         .doc("Whether nothing is an error, shown or not. It follows changes, so it can drive other UI."),
                     prop("is_submitting()", "bool")
-                        .doc("Whether an async handler (`Submit::parse_async`, `Submit::task`) is running. It follows changes, so it can set a submit button's `loading`. Meanwhile a submit is ignored and the form has `aria-busy=\"true\"`."),
+                        .doc("Whether an async handler (`Submit::parse_async`, `Submit::task`) is running, or a submit waits for a `checked_async` rule's answer. It follows changes, so it can set a submit button's `loading`. Meanwhile a submit is ignored and the form has `aria-busy=\"true\"`."),
                     prop("clear_summary()", "()")
                         .doc("Hides the summary and resets nothing."),
                     prop("set_errors(errors)", "FormErrors")
@@ -225,11 +229,15 @@ pub fn FormPage() -> Element {
                     prop(".parsed()", "Mapped<T, String, T::Err>")
                         .doc("`.map` through `T`'s `Display` and `FromStr`, for a text field."),
                     prop(".message(fn)", "fn(&E, &Localization) -> String")
-                        .doc("Words every error of type `E` on the field, the parse error and `checked` rules alike. Needed when `E` has no `FieldError`, such as a domain crate's error: without it the name does not compile."),
-                    prop(".rules(..)", "Validator<T> or Checked<T, E>")
+                        .doc("Words every error of type `E` on the field, the parse error, `checked` and `checked_async` rules alike. Needed when `E` has no `FieldError`, such as a domain crate's error: without it the name does not compile."),
+                    prop(".rules(..)", "Validator<T>, Checked<T, E> or CheckedAsync<T, E>")
                         .doc("Rules over `T`, run only on a parsed value. The field's own `validate` runs first, over `W`, before the parse; the first error wins. Adds to earlier calls, so a mixed list is two calls."),
                     prop("checked(f)", "Checked<V, E>")
                         .doc("A rule from `Fn(&V) -> Result<(), E>`: the field shows `E`'s words. `.warning()` shows it as a warning, `.message(fn)` words an `E` with no `FieldError`. Fits any `validate` too."),
+                    prop("checked_async(f)", "CheckedAsync<V, E>")
+                        .doc("An async rule from `Fn(V) -> impl Future<Output = Result<(), E>>`, such as a request, for `.rules` only. It runs once the value parsed and the other rules found no error, after `.debounce(ms)` (300 by default); an answer for an older value is dropped, and the last answer is kept for its value. Meanwhile the field is `FieldStatus::Pending`, and a submit asks at once and waits for the answer. `.warning()` shows a failure as a warning, which a submit does not wait for; `.message(fn)` words an `E` that is not the field's error type."),
+                    prop("pending", "FieldStatus::Pending")
+                        .doc("An async rule is still checking: `aria-busy=\"true\"` on the control and `data-state` `pending`, no message, blocks nothing. It ranks below a warning and above `Valid`. A reset drops the check and its answer."),
                     prop("impl FieldError", "trait")
                         .doc("`fn message(&self, &Localization) -> String`: an error's words in the active language, worded again on a switch. Implemented for `Fn(&Localization) -> String`, `String` and `&'static str`; there is no `Display` fallback."),
                     prop(".at(path, error)", "FormErrors")
@@ -326,6 +334,43 @@ pub fn FormPage() -> Element {
                 SignInForm {}
                 CodeBlock { source: SIGN_IN_CODE.shown(), language: "rust" }
             }
+            DocSection { id: "async-rules", title: "Async rules",
+                Text {
+                    Code { source: "checked_async(f)" }
+                    " asks a server whether a parsed value is fine, such as a free email address. "
+                    "It runs once the text parsed and the other rules found no error, 300 ms after "
+                    "the last keystroke unless "
+                    Code { source: ".debounce(ms)" }
+                    " says otherwise. Meanwhile the field is "
+                    Code { source: "FieldStatus::Pending" }
+                    ": its control has "
+                    Code { source: "aria-busy=\"true\"" }
+                    " and "
+                    Code { source: "data-state" }
+                    " "
+                    Code { source: "pending" }
+                    " once it showed its rules, after a blur or a submit, which "
+                    Code { source: "sx().when(\"pending\", ..)" }
+                    " styles. An answer for an older value is "
+                    "dropped. A submit asks at once, waits with "
+                    Code { source: "is_submitting()" }
+                    " set, and then sends or shows the answer. The rule takes the field's "
+                    Code { source: ".message" }
+                    " words, or its own "
+                    Code { source: ".message(fn)" }
+                    ". A plain "
+                    Code { source: "String" }
+                    " field gets one through "
+                    Code { source: ".map" }
+                    " or "
+                    Code { source: ".parsed()" }
+                    ". Type "
+                    Code { source: "taken@example.com" }
+                    ", then any other address."
+                }
+                EmailCheckForm {}
+                CodeBlock { source: EMAIL_CHECK_CODE.shown(), language: "rust" }
+            }
             DocSection { id: "upgrading", title: "Upgrading",
                 Text {
                     Code { source: "onsubmit" }
@@ -340,7 +385,15 @@ pub fn FormPage() -> Element {
                     Code { source: "FormLabels" }
                     " gains fields in minor releases, such as "
                     Code { source: "error_count" }
-                    ", so build yours from a built-in set rather than listing every field."
+                    ", so build yours from a built-in set rather than listing every field. "
+                    Code { source: "FieldStatus" }
+                    " gained "
+                    Code { source: "Pending" }
+                    ": a "
+                    Code { source: "match" }
+                    " over it needs that arm, or a "
+                    Code { source: "_" }
+                    " one."
                 }
                 CodeBlock { source: UPGRADE_CODE, language: "rust" }
             }

@@ -1,4 +1,7 @@
-use std::{cell::Cell, rc::Rc};
+use std::{
+    cell::{Cell, OnceCell},
+    rc::Rc,
+};
 
 use dioxus::{
     core::{ScopeId, current_scope_id},
@@ -6,8 +9,8 @@ use dioxus::{
 };
 
 use crate::components::form::{
-    Adapt, Binding, Disabled, Draft, FieldName, FieldStatus, FormScope, Parse, Validators, locale,
-    word,
+    Adapt, Binding, Checking, Disabled, Draft, FieldName, FieldStatus, FormScope, Parse,
+    Validators, locale, word, worst,
 };
 
 /// What a field keeps across renders for validation and binding. `touched`
@@ -24,9 +27,16 @@ pub(crate) struct FieldHook {
     pub(super) form: Option<(FormScope, usize)>,
     pub(super) binding: Binding,
     pub(super) disabled: Option<Disabled>,
+    /// A mapped name's async rules, made on the first render that has some.
+    checking: OnceCell<Rc<Checking>>,
 }
 
 impl FieldHook {
+    fn checking(&self) -> &Rc<Checking> {
+        self.checking
+            .get_or_init(|| Checking::new(self.owner, self.form))
+    }
+
     pub(super) fn new() -> Rc<Self> {
         let form = try_consume_context::<FormScope>().map(|mut scope| (scope, scope.key()));
         Rc::new(Self {
@@ -38,6 +48,7 @@ impl FieldHook {
             form,
             binding: try_consume_context::<Binding>().unwrap_or_default(),
             disabled: try_consume_context::<Disabled>(),
+            checking: OnceCell::new(),
         })
     }
 }
@@ -94,6 +105,22 @@ fn read_mapped<T: Clone + 'static>(
                 Parse::Invalid(error) => Some(FieldStatus::Error(word(&**error))),
                 Parse::Valid => adapter.check(slot, locale()),
                 Parse::Empty => None,
+            };
+            // The async rules ask only about a value the other rules let through.
+            let asks = parse == Parse::Valid && !status.as_ref().is_some_and(FieldStatus::is_error);
+            let status = match (adapter.checks(), asks) {
+                (false, _) => status,
+                (true, true) => {
+                    let answer = adapter.check_async(slot, hook.checking(), locale());
+                    match (status, answer) {
+                        (Some(status), Some(answer)) => Some(worst(status, answer)),
+                        (status, answer) => status.or(answer),
+                    }
+                }
+                (true, false) => {
+                    hook.checking().idle();
+                    status
+                }
             };
             Some(Mapped {
                 shown,
@@ -294,6 +321,9 @@ impl<T: Clone + 'static> Setter<T> {
 
 impl Drop for FieldHook {
     fn drop(&mut self) {
+        if let Some(checking) = self.checking.get() {
+            checking.release();
+        }
         if let Some((mut scope, key)) = self.form {
             scope.unregister(key);
         }

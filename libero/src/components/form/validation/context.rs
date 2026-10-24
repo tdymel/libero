@@ -10,6 +10,7 @@ use dioxus::{
     prelude::*,
 };
 
+use super::checked_async::Checking;
 use crate::{
     components::form::{FieldError, FieldStatus, Parse, Validators, word, worst},
     utils::warn,
@@ -43,6 +44,8 @@ pub(crate) struct FormScope {
     /// Errors set from code (`set_errors`, a `parse` step) by full name; each
     /// shows as that field's explicit status until it is edited.
     errors: Signal<SetErrors, UnsyncStorage>,
+    /// Fields' async rules by field key; a submit waits for them.
+    checks: Signal<BTreeMap<usize, Rc<Checking>>, UnsyncStorage>,
     /// The scope that created the signals above. Cleanup runs inside it, or dioxus
     /// warns of a copy value used outside its owner.
     owner: ScopeId,
@@ -115,6 +118,7 @@ impl FormScope {
             typed: Signal::new_maybe_sync(HashMap::new()),
             waiting: Signal::new_maybe_sync(BTreeSet::new()),
             errors: Signal::new_maybe_sync(Vec::new()),
+            checks: Signal::new_maybe_sync(BTreeMap::new()),
             owner: current_scope_id(),
         }
     }
@@ -187,6 +191,9 @@ impl FormScope {
             self.typed.write_unchecked().clear();
         }
         self.clear_errors();
+        for check in self.checks.peek().values() {
+            check.forget();
+        }
         let runtime = Runtime::current();
         for field in self.fields.peek().values() {
             runtime.needs_update(field.owner);
@@ -359,6 +366,46 @@ impl FormScope {
         }
     }
 
+    pub fn add_check(&mut self, key: usize, checking: Rc<Checking>) {
+        self.checks.write_unchecked().insert(key, checking);
+    }
+
+    /// An async rule answered: the field's entry takes it ahead of the field's render, so a
+    /// waiting submit judges it.
+    pub fn answer(&mut self, key: usize, answer: &FieldStatus) {
+        if let Some(entry) = self.fields.write_unchecked().get_mut(&key) {
+            let known = match entry.status {
+                FieldStatus::Pending => FieldStatus::Valid,
+                ref status => status.clone(),
+            };
+            entry.status = worst(known, answer.clone());
+        }
+    }
+
+    /// Whether an async rule that may end in an error is asking about a field's value.
+    pub fn checking(&self) -> bool {
+        self.checks.peek().values().any(|check| check.blocking())
+    }
+
+    /// Ready once every async rule asking now has answered; their debounces end at once.
+    pub fn answered(&self) -> impl Future<Output = ()> + 'static {
+        let checks: Vec<Rc<Checking>> = self
+            .checks
+            .peek()
+            .values()
+            .filter(|check| check.blocking())
+            .cloned()
+            .collect();
+        for check in &checks {
+            check.hurry();
+        }
+        async move {
+            for check in checks {
+                check.wait().await;
+            }
+        }
+    }
+
     /// A mapped field's parse state as the user typed, ahead of its render: the
     /// form re-judges its composite rules with the store write that comes with it.
     pub fn set_parse(&mut self, name: &str, parse: Parse) {
@@ -413,8 +460,15 @@ impl FormScope {
     /// field carries it, so a remount waits for its own blur.
     pub fn unregister(&mut self, key: usize) {
         let fields = self.fields;
+        let checks = self.checks;
         let mut touched = self.touched;
         in_owner(self.owner, || {
+            if checks
+                .try_peek()
+                .is_ok_and(|checks| checks.contains_key(&key))
+            {
+                checks.write_unchecked().remove(&key);
+            }
             let present = fields
                 .try_peek()
                 .is_ok_and(|fields| fields.contains_key(&key));

@@ -197,12 +197,12 @@ pub(crate) use use_field_frame::{
     with_drawn_placeholder,
 };
 pub(crate) use validation::{
-    Adapt, Binding, Disabled, Draft, FieldEntry, FormScope, Parse, Required, Source, SummaryItem,
-    Typed, fieldset_required, issues_of, join as validation_join, locale, use_fieldset_disabled,
-    word, worst,
+    Adapt, Binding, Checking, Disabled, Draft, FieldEntry, FormScope, Parse, Required, Source,
+    SummaryItem, Typed, fieldset_required, issues_of, join as validation_join, locale,
+    use_fieldset_disabled, word, worst,
 };
 pub use validation::{
-    Checked, FieldError, FieldName, FieldPath, Fields, FormErrors, IsEmpty, Mapped, MappedRule,
-    RequiredValue, Rule, Speak, Step, StepKey, Unworded, Validator, Validators, Wire, Words,
-    checked, is_email, max, max_length, min, min_length, not_empty,
+    Checked, CheckedAsync, FieldError, FieldName, FieldPath, Fields, FormErrors, IsEmpty, Mapped,
+    MappedRule, RequiredValue, Rule, Speak, Step, StepKey, Unworded, Validator, Validators, Wire,
+    Words, checked, checked_async, is_email, max, max_length, min, min_length, not_empty,
 };

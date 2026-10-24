@@ -2,12 +2,15 @@ mod adapter;
 mod binding;
 mod catalog;
 mod checked;
+mod checked_async;
 mod context;
 mod field_error;
 mod form_errors;
 mod path;
 mod validator;
 
+#[cfg(test)]
+mod async_rule_tests;
 #[cfg(test)]
 mod domain_tests;
 #[cfg(test)]
@@ -26,6 +29,8 @@ pub(crate) use binding::{
 };
 pub use catalog::{IsEmpty, is_email, max, max_length, min, min_length, not_empty};
 pub use checked::{Checked, checked};
+pub(crate) use checked_async::Checking;
+pub use checked_async::{CheckedAsync, checked_async};
 pub(crate) use context::{Draft, FieldEntry, FormScope, SummaryItem, Typed, issues_of};
 pub use field_error::FieldError;
 pub(crate) use field_error::{Parse, word};

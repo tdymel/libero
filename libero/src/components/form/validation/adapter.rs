@@ -4,6 +4,7 @@ use std::{
 
 use super::{
     checked::Checked,
+    checked_async::{AsyncRule, CheckedAsync, Checking},
     field_error::{FieldError, Parse, Worded, WordsFn},
     path::{FieldName, FieldPath, Step},
     validator::Validator,
@@ -184,11 +185,18 @@ impl<V: Clone + PartialEq + 'static> Same for Choices<V> {
 }
 
 /// One of a mapped field's `.rules`: a rule with its own words, or a
-/// [`checked`](super::checked) rule failing with the field's error type,
-/// which the field's words cover.
+/// [`checked`](super::checked) or [`checked_async`](super::checked_async) rule failing
+/// with the field's error type, which the field's words cover.
 pub enum MappedRule<T: 'static, E: 'static> {
     Worded(Validator<T>),
     Checked(Checked<T, E>),
+    Async(CheckedAsync<T, E>),
+}
+
+impl<T: 'static, E: 'static> From<CheckedAsync<T, E>> for MappedRule<T, E> {
+    fn from(rule: CheckedAsync<T, E>) -> Self {
+        Self::Async(rule)
+    }
 }
 
 impl<T: 'static, E: 'static> From<Validator<T>> for MappedRule<T, E> {
@@ -479,19 +487,21 @@ where
         .zip(mapped.words.key())
         .map(|((format, parse), words)| [format, parse, words]);
     let words = mapped.words.words();
-    let rules: Vec<Validator<T>> = mapped
-        .rules
-        .into_iter()
-        .map(|rule| match rule {
-            MappedRule::Worded(rule) => rule,
-            MappedRule::Checked(rule) => rule.worded(words.clone(), mapped.words.key()),
-        })
-        .collect();
+    let mut rules: Vec<Validator<T>> = Vec::new();
+    let mut checks: Vec<AsyncRule<T>> = Vec::new();
+    for rule in mapped.rules {
+        match rule {
+            MappedRule::Worded(rule) => rules.push(rule),
+            MappedRule::Checked(rule) => rules.push(rule.worded(words.clone(), mapped.words.key())),
+            MappedRule::Async(rule) => checks.push(rule.worded(words.clone(), mapped.words.key())),
+        }
+    }
     let adapter: Rc<dyn Adapt<W>> = Rc::new(Adapter {
         format: mapped.format,
         parse: mapped.parse,
         words,
         rules: rules.into(),
+        checks: checks.into(),
         key,
         slot: mapped.slot,
         data: mapped.data,
@@ -516,6 +526,15 @@ pub(crate) trait Adapt<W>: 'static {
     fn state(&self, slot: &dyn Any) -> Parse;
     /// The `.rules` over the stored value, when there is one.
     fn check(&self, slot: &dyn Any, locale: &Localization) -> Option<FieldStatus>;
+    /// Whether any `.rules` are async.
+    fn checks(&self) -> bool;
+    /// The async `.rules`' answer for the stored value, `Pending` until it comes.
+    fn check_async(
+        &self,
+        slot: &dyn Any,
+        checking: &Rc<Checking>,
+        locale: &'static Localization,
+    ) -> Option<FieldStatus>;
     fn same(&self, other: &dyn Any) -> bool;
     fn as_any(&self) -> &dyn Any;
 }
@@ -525,6 +544,7 @@ struct Adapter<W, T: 'static, I: 'static, E: 'static> {
     parse: Rc<dyn Fn(I) -> Result<T, E>>,
     words: Rc<WordsFn<E>>,
     rules: Validators<T>,
+    checks: Rc<[AsyncRule<T>]>,
     key: Option<[TypeId; 3]>,
     slot: Slot<T>,
     data: Option<Rc<dyn Same>>,
@@ -600,6 +620,20 @@ where
         Some(warning.unwrap_or_default())
     }
 
+    fn checks(&self) -> bool {
+        !self.checks.is_empty()
+    }
+
+    fn check_async(
+        &self,
+        slot: &dyn Any,
+        checking: &Rc<Checking>,
+        locale: &'static Localization,
+    ) -> Option<FieldStatus> {
+        let value = (self.slot.get)(slot)??;
+        Some(checking.check(value, &self.checks, locale))
+    }
+
     /// By the types of `format`, `parse` and the words when none captures
     /// anything, and by the rules: a `.map(..)` rebuilt per render is equal.
     fn same(&self, other: &dyn Any) -> bool {
@@ -607,6 +641,7 @@ where
             self.key.is_some()
                 && self.key == other.key
                 && self.rules == other.rules
+                && self.checks == other.checks
                 && match (&self.data, &other.data) {
                     (None, None) => true,
                     (Some(a), Some(b)) => a.same(&**b),

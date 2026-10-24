@@ -18,6 +18,8 @@ pub(crate) struct PreparedField {
     pub(super) text_slots: [bool; 2],
     pub(super) describedby: Option<String>,
     pub(super) invalid: bool,
+    /// An async rule is still asking.
+    pub(super) busy: bool,
     pub(super) required: bool,
     pub(super) inline: bool,
     pub(super) labelled_by: bool,
@@ -96,6 +98,7 @@ impl PreparedField {
             .attr("id", self.id.clone())
             .attr("aria-describedby", self.describedby.clone())
             .attr("aria-invalid", self.invalid.then_some("true"))
+            .attr("aria-busy", self.busy.then_some("true"))
             .attr("aria-required", self.required.then_some("true"));
         match &self.activation {
             Some(activation) => activation.wire(control),

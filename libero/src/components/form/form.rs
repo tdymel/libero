@@ -206,6 +206,19 @@ pub fn Form<V: FormValue>(props: FormProps<V>) -> Element {
             event.prevent_default();
             return;
         }
+        // An async rule still asking: shown as pending, its answer awaited, then submitted afresh.
+        if scope.checking() {
+            event.prevent_default();
+            scope.submit();
+            submitting.set(true);
+            let answered = scope.answered();
+            spawn(async move {
+                answered.await;
+                submitting.set(false);
+                let _ = handle.submit();
+            });
+            return;
+        }
         scope.settle();
         // Errors set from code answered the last submit; this one is judged afresh.
         scope.clear_errors();

@@ -56,7 +56,7 @@ mod media;
 mod media_query;
 mod permission;
 #[cfg(all(test, not(target_arch = "wasm32")))]
-mod polling_tests;
+pub(crate) mod polling_tests;
 #[cfg(feature = "use-popover")]
 mod popover;
 mod portal;

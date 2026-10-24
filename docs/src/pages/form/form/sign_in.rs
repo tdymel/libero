@@ -85,7 +85,7 @@ async fn sign_in(sent: &Credentials) -> bool {
     sent.password.0 == "secret"
 }
 
-async fn delay(duration: Duration) {
+pub(super) async fn delay(duration: Duration) {
     let Some(timer) = libero::platform::timer() else {
         return;
     };
