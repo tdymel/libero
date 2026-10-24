@@ -12,7 +12,7 @@ use crate::{
         },
         layout::use_box,
     },
-    hooks::{Align, Side, id_selector, use_element, use_press_marker, use_theme},
+    hooks::{Align, Side, id_selector, use_element, use_theme},
     platform::mounted_by_selector,
     sx::{StaticSx, ThemeAwareValue, sx},
     theme::Size,
@@ -141,7 +141,7 @@ pub fn Menu(props: MenuProps) -> Element {
     }));
 
     let onclose = use_callback(move |()| state.close());
-    let marker = use_press_marker();
+    let marker = state.marker();
     let wrapper_attributes: Vec<Attribute> = open
         .then(|| marker.attribute())
         .flatten()

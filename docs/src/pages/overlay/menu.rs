@@ -20,11 +20,14 @@ static TRIGGER: &str = r#"Button {
     "Actions"
 }"#;
 
-static DOCKED: &str = r#"sx: sx()
-    .width("var(--lsx-popover-anchor-width)")
-    .max_width("none")
-    .margin_top("var(--lsx-popover-gap)")
-    .box_shadow("none")"#;
+// From `sm` up: below it the menu is a sheet, and a docked width would shrink it to the trigger.
+static DOCKED: &str = r#"sx: sx().breakpoint(
+    Size::Sm,
+    sx().width("var(--lsx-popover-anchor-width)")
+        .max_width("none")
+        .margin_top("var(--lsx-popover-gap)")
+        .box_shadow("none"),
+)"#;
 
 /// A disabled menu disables its trigger too, so the trigger looks it. A docked
 /// one fills the row it sits on.
@@ -181,7 +184,11 @@ pub fn MenuPage() -> Element {
                     Code { source: "sx" }
                     " can dock it: "
                     Code { source: "var(--lsx-popover-anchor-width)" }
-                    " is the trigger's width."
+                    " is the trigger's width. Set it from the "
+                    Code { source: "sm" }
+                    " breakpoint up with "
+                    Code { source: "sx().breakpoint(Size::Sm, ..)" }
+                    ": below it the menu is a full-width sheet."
                 }
             },
             Demo {

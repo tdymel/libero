@@ -35,6 +35,17 @@ pub(crate) struct PressMarker {
 }
 
 impl PressMarker {
+    /// Not a hook, for state made outside one (`MenuState::new`); call it once per owner.
+    pub(crate) fn new() -> Self {
+        let mut next = layer_stack().next;
+        let id = *next.peek();
+        next.set(id + 1);
+        Self {
+            id,
+            live: press().is_some(),
+        }
+    }
+
     /// Spread on every element a press inside counts for. `None` where unused.
     pub(crate) fn attribute(&self) -> Option<Attribute> {
         self.live.then(|| {
@@ -51,16 +62,7 @@ impl PressMarker {
 /// A marker for a box, made where the trigger renders when that is not the
 /// box's scope (`Menu`'s wrapper). Pass it in [`DismissOptions::marker`].
 pub(crate) fn use_press_marker() -> PressMarker {
-    let stack = use_hook(layer_stack);
-    use_hook(move || {
-        let mut next = stack.next;
-        let id = *next.peek();
-        next.set(id + 1);
-        PressMarker {
-            id,
-            live: press().is_some(),
-        }
-    })
+    use_hook(PressMarker::new)
 }
 
 /// One open dismissible layer, identified only by when it opened.

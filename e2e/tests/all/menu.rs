@@ -1264,3 +1264,45 @@ fn a_file_field_trigger_opens_a_menu_named_by_the_field() {
         fixture.close().await.unwrap();
     });
 }
+
+/// Todo 4121: a docked menu is trigger-wide from `sm` up, but a full-width sheet below it.
+#[test]
+fn a_docked_menu_is_still_a_full_width_sheet_below_sm() {
+    block_on(async {
+        let fixture = phone("/menu-phone-docked").await;
+        let page = &fixture.page;
+        tap(page, TRIGGER).await.unwrap();
+        sheets_shown(page, 1).await.unwrap();
+        fixture
+            .console
+            .assert_clean("a docked phone sheet")
+            .unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
+/// Todo 4122: a press on a trigger beside its `Menu` is the toggle, so a second one closes it
+/// instead of the outside press closing it for the click to reopen.
+async fn a_second_press_on_a_sibling_trigger_closes<D: Driver>(
+    d: &mut D,
+    _route: &str,
+) -> Result<()> {
+    d.click("#tools").await?;
+    sibling_expanded(d, true).await?;
+    d.click("#tools").await?;
+    sibling_expanded(d, false).await
+}
+
+async fn sibling_expanded<D: Driver>(d: &mut D, open: bool) -> Result<()> {
+    eventually(d, "the sibling trigger's state", async |d| {
+        let now = d.attr("#tools", "aria-expanded").await?;
+        Ok((now.as_deref() == Some("true")) == open)
+    })
+    .await
+}
+
+e2e::scenario!(
+    a_second_press_on_a_sibling_trigger_closes_its_menu,
+    "/menu-file",
+    a_second_press_on_a_sibling_trigger_closes
+);

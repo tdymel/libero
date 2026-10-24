@@ -1,7 +1,7 @@
 use crate::components::{align_of, side_of};
 use dioxus::prelude::*;
 use libero::components::{Button, Flex, Menu, MenuEntry, MenuItem, Text, use_menu};
-use libero::sx::sx;
+use libero::{sx::sx, theme::Size};
 
 /// The whole example from the code block, as a component: the hooks live here
 /// rather than in `Demo`'s render closure, whose hook slots they would land in.
@@ -102,11 +102,13 @@ pub fn MenuDemo(
                 loop_focus,
                 disabled,
                 sx: docked.then(|| {
-                    sx()
-                        .width("var(--lsx-popover-anchor-width)")
-                        .max_width("none")
-                        .margin_top("var(--lsx-popover-gap)")
-                        .box_shadow("none")
+                    sx().breakpoint(
+                        Size::Sm,
+                        sx().width("var(--lsx-popover-anchor-width)")
+                            .max_width("none")
+                            .margin_top("var(--lsx-popover-gap)")
+                            .box_shadow("none"),
+                    )
                 }),
                 Button {
                     variant: if docked { "light" } else { "outlined" },

@@ -7,7 +7,7 @@ use libero::components::{
 };
 use libero::hooks::Side;
 use libero::sx::sx;
-use libero::theme::MENU_MAX_HEIGHT;
+use libero::theme::{MENU_MAX_HEIGHT, Size};
 
 use crate::Routes;
 
@@ -30,6 +30,7 @@ pub const ROUTES: Routes = &[
     ("/menu-fill", || rsx! { MenuFillPage {} }),
     ("/menu-docked", || rsx! { MenuDockedPage {} }),
     ("/menu-phone", || rsx! { MenuPhonePage {} }),
+    ("/menu-phone-docked", || rsx! { MenuPhoneDockedPage {} }),
     ("/menu-file", || rsx! { MenuFilePage {} }),
 ];
 
@@ -74,6 +75,31 @@ fn MenuPhonePage() -> Element {
             }
             Text { id: "last", "{last}" }
             button { id: "outside", r#type: "button", "Elsewhere" }
+        }
+    }
+}
+
+/// Todo 4121: the docs demo's docked menu, trigger-wide from `sm` up and a sheet below it.
+#[component]
+fn MenuPhoneDockedPage() -> Element {
+    let menu = use_menu();
+
+    rsx! {
+        Flex { direction: "column", gap: "md", padding: "16px",
+            Menu {
+                state: menu,
+                items: vec![MenuItem::new("Rename").onselect(|_| {}).into()],
+                sx: sx()
+                    .breakpoint(
+                        Size::Sm,
+                        sx()
+                            .width("var(--lsx-popover-anchor-width)")
+                            .max_width("none")
+                            .margin_top("var(--lsx-popover-gap)")
+                            .box_shadow("none"),
+                    ),
+                Button { variant: "outlined", attributes: menu.a11y_attributes(), "Actions" }
+            }
         }
     }
 }

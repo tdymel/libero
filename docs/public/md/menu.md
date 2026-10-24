@@ -178,7 +178,9 @@ the per-size `sizes`, `submenu_delay` (150ms), and the defaults of
 Per size: `--lsx-menu-font-size-{size}`, `--lsx-menu-item-height-{size}`,
 `--lsx-menu-padding-x-{size}` and `--lsx-menu-label-font-size-{size}`. Also
 `--lsx-menu-max-height`. On the open menu, for its `sx`:
-`--lsx-popover-anchor-width`, the trigger's width.
+`--lsx-popover-anchor-width`, the trigger's width. Set a docked width from the
+`sm` breakpoint up with `sx().breakpoint(Size::Sm, ..)`: below it the menu is a
+full-width sheet.
 
 ## Data attributes
 

@@ -1,6 +1,9 @@
 use dioxus::{core::AttributeValue, prelude::*};
 
-use crate::{components::common::attr, hooks::use_id};
+use crate::{
+    components::common::attr,
+    hooks::{PressMarker, use_id, use_press_marker},
+};
 
 /// Which item takes focus when the menu opens. APG's menu button: ArrowUp on
 /// the trigger opens on the last item, everything else on the first.
@@ -23,6 +26,8 @@ pub struct MenuState {
     /// The trigger's own id, adopted by `a11y_attributes_on`. Written in the caller's
     /// render and read by the `Menu` in the same pass, so not reactive.
     adopted: CopyValue<Option<(String, Option<String>)>>,
+    /// On the wrapper and on a trigger beside the `Menu`: a press on either is the toggle.
+    marker: PressMarker,
 }
 
 /// One `Menu`'s state.
@@ -35,6 +40,7 @@ pub fn use_menu() -> MenuState {
         request: use_signal(|| (0, MenuFocus::First)),
         empty: use_signal(|| false),
         adopted: use_hook(|| CopyValue::new(None)),
+        marker: use_press_marker(),
     }
 }
 
@@ -48,6 +54,7 @@ impl MenuState {
             request: Signal::new((0, MenuFocus::First)),
             empty: Signal::new(false),
             adopted: CopyValue::new(None),
+            marker: PressMarker::new(),
         }
     }
 
@@ -194,8 +201,13 @@ impl MenuState {
         // Only while open, when the menu is in the document.
         if opened {
             attributes.push(attr("aria-controls", menu_id(&self.id())));
+            attributes.extend(self.marker.attribute());
         }
         attributes
+    }
+
+    pub(super) fn marker(&self) -> PressMarker {
+        self.marker
     }
 }
 
