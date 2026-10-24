@@ -203,17 +203,19 @@ async fn the_menu_moves_a_card_across<D: Driver>(d: &mut D, _route: &str) -> Res
     Ok(())
 }
 
+/// The menu row at `index` by its id, which a phone sheet's grab strip does not shift.
+fn row(index: usize) -> String {
+    format!("[role=menuitem][id$=\"-item-{index}\"]")
+}
+
 async fn the_own_column_is_disabled<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
     d.click("#Delta [data-slot=move-to]").await?;
     eventually_focused(d, "[role=menuitem]", "a click on the trigger").await?;
     ensure!(
-        d.exists("[role=menuitem]:nth-child(3)").await?
-            && !d.exists("[role=menuitem]:nth-child(4)").await?,
+        d.exists(&row(2)).await? && !d.exists(&row(3)).await?,
         "not one menu item per column"
     );
-    let doing = d
-        .attr("[role=menuitem]:nth-child(2)", "aria-disabled")
-        .await?;
+    let doing = d.attr(&row(1), "aria-disabled").await?;
     ensure!(
         doing.as_deref() == Some("true"),
         "the card's own column is enabled: {doing:?}"
@@ -225,7 +227,7 @@ async fn the_own_column_is_disabled<D: Driver>(d: &mut D, _route: &str) -> Resul
     // K11-01: a card in the first column opens on the next column, not its disabled own.
     d.focus("#Alpha [data-slot=move-to]").await?;
     d.press(keyboard::ENTER).await?;
-    eventually_focused(d, "[role=menuitem]:nth-child(2)", "Enter on the trigger").await?;
+    eventually_focused(d, &row(1), "Enter on the trigger").await?;
     d.press(keyboard::ESCAPE).await?;
     eventually_focused(d, "#Alpha [data-slot=move-to]", "Escape").await?;
     Ok(())
