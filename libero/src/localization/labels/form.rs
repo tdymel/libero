@@ -1,4 +1,15 @@
-/// What a `Form` says about its fields.
+/// What a `Form` says about its fields. Fields can be added in a minor release, so fill the
+/// rest from a built-in set rather than listing every field.
+///
+/// ```
+/// use libero::localization::FormLabels;
+///
+/// static LABELS: FormLabels = FormLabels {
+///     required: "This one is needed.",
+///     ..FormLabels::ENGLISH
+/// };
+/// assert_eq!(LABELS.required_check, FormLabels::ENGLISH.required_check);
+/// ```
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 #[allow(
     unpredictable_function_pointer_comparisons,

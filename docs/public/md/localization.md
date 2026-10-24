@@ -99,6 +99,9 @@ static WORDS: Localization = Localization {
 };
 ```
 
+A group can gain fields in a minor release, so end each one with
+`..Group::ENGLISH` or `..Group::GERMAN` rather than listing every field.
+
 The groups live in `libero::localization`, each with an `ENGLISH` and a `GERMAN`
 const: `CommonLabels`, `DateLocale`, `PaginationLabels`, `AvatarLabels`,
 `BurgerLabels`, `AnchorLabels`, `PinFieldLabels`, `ThemeSwitcherLabels`,

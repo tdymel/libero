@@ -71,6 +71,26 @@ mod sign_in;
 use sign_in::SignInForm;
 const SIGN_IN_CODE: DemoFile = DemoFile(include_str!("form/sign_in.rs"));
 
+const UPGRADE_CODE: &str = r#"use dioxus::prelude::*;
+use libero::components::Form;
+use libero::localization::{FormLabels, Localization};
+
+/// Written for the old `onsubmit`, and still forwarding it.
+#[component]
+fn AppForm(onsubmit: Option<EventHandler<FormEvent>>, children: Element) -> Element {
+    rsx! {
+        Form::<()> { onsubmit, {children} }
+    }
+}
+
+static WORDS: Localization = Localization {
+    form: FormLabels {
+        required: "This one is needed.",
+        ..FormLabels::ENGLISH
+    },
+    ..Localization::ENGLISH
+};"#;
+
 /// A section of the live form at the depth `FORM_CODE` splices it in.
 fn nest(name: &str) -> String {
     indent(&indent(&indent(&FILE.section(name))))
@@ -149,7 +169,7 @@ pub fn FormPage() -> Element {
                     prop("validate", "Validators<V>")
                         .doc("Rules over `value`, one or an array. A rule with `.on(..)` shows its status on each field it names, and runs only while each of them holds a parsed value or is empty and optional."),
                     prop("onsubmit", "Submit<V>")
-                        .doc("Fires on a submit with no errors: a closure over the `FormEvent`, `Submit::parse(parse, handler)`, or the async `Submit::parse_async(parse, handler)` and `Submit::task(handler)`. Without an `action`, the browser's own submit is cancelled. A `javascript:`, `data:` or `vbscript:` `action` is dropped with a debug warning, so it counts as none."),
+                        .doc("Fires on a submit with no errors: a closure over the `FormEvent` or an `EventHandler<FormEvent>`, optional too, `Submit::parse(parse, handler)`, or the async `Submit::parse_async(parse, handler)` and `Submit::task(handler)`. Without an `action`, the browser's own submit is cancelled. A `javascript:`, `data:` or `vbscript:` `action` is dropped with a debug warning, so it counts as none."),
                     prop("summary_title", "String")
                         .doc("A heading over the error summary."),
                     prop("summary", "SummaryMode")
@@ -291,13 +311,38 @@ pub fn FormPage() -> Element {
                     " is an error on no field, such as wrong credentials. With "
                     Code { source: "summary: SummaryMode::Hidden" }
                     " a blocked submit focuses the first invalid field instead of a summary, and "
-                    "a screen reader hears how many errors there are. Sign in empty, then with any "
-                    "email and a wrong password, then with "
+                    "a screen reader hears how many errors there are. The password is a type with no "
+                    Code { source: "Clone" }
+                    " or "
+                    Code { source: "PartialEq" }
+                    ", held as "
+                    Code { source: "Option<ByAddress<Password>>" }
+                    " and bound with "
+                    Code { source: ".map" }
+                    ". Sign in empty, then with any email and a wrong password, then with "
                     Code { source: "secret" }
                     "."
                 }
                 SignInForm {}
                 CodeBlock { source: SIGN_IN_CODE.shown(), language: "rust" }
+            }
+            DocSection { id: "upgrading", title: "Upgrading",
+                Text {
+                    Code { source: "onsubmit" }
+                    " was an "
+                    Code { source: "Option<EventHandler<FormEvent>>" }
+                    " before it became "
+                    Code { source: "Submit<V>" }
+                    ". A closure still fits, and so does a handler a wrapper forwards, "
+                    "with or without the "
+                    Code { source: "Option" }
+                    ". "
+                    Code { source: "FormLabels" }
+                    " gains fields in minor releases, such as "
+                    Code { source: "error_count" }
+                    ", so build yours from a built-in set rather than listing every field."
+                }
+                CodeBlock { source: UPGRADE_CODE, language: "rust" }
             }
         }
     }

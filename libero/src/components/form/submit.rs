@@ -5,7 +5,7 @@ use dioxus::prelude::*;
 use crate::components::form::FormErrors;
 
 /// What a [`Form`](crate::components::Form) does with a submit its fields let through: a
-/// closure over the [`FormEvent`], or [`Submit::parse`], which builds a command from the
+/// closure over the [`FormEvent`] or an `Option<EventHandler<FormEvent>>`, or [`Submit::parse`], which builds a command from the
 /// value first. [`Submit::parse_async`] and [`Submit::task`] take async handlers.
 pub struct Submit<V: 'static> {
     run: Option<Callback<(FormEvent, V), Result<(), Outcome>>>,
@@ -160,6 +160,20 @@ impl<V: 'static, F: FnMut(FormEvent) + 'static> From<F> for Submit<V> {
     }
 }
 
+/// The handler `onsubmit` took before `Submit`, so a wrapper forwarding one keeps compiling.
+impl<V: 'static> From<EventHandler<FormEvent>> for Submit<V> {
+    fn from(handler: EventHandler<FormEvent>) -> Self {
+        Self::from(move |event: FormEvent| handler.call(event))
+    }
+}
+
+/// `None` submits with no handler, as an unset `onsubmit` does.
+impl<V: 'static> From<Option<EventHandler<FormEvent>>> for Submit<V> {
+    fn from(handler: Option<EventHandler<FormEvent>>) -> Self {
+        handler.map(Self::from).unwrap_or_default()
+    }
+}
+
 impl<V: 'static> Default for Submit<V> {
     fn default() -> Self {
         Self { run: None }
@@ -177,5 +191,38 @@ impl<V: 'static> Copy for Submit<V> {}
 impl<V: 'static> PartialEq for Submit<V> {
     fn eq(&self, other: &Self) -> bool {
         self.run == other.run
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::cell::Cell;
+
+    use super::*;
+    use crate::{components::form::Form, platform::submit_event};
+
+    thread_local! {
+        static FIRED: Cell<u32> = const { Cell::new(0) };
+    }
+
+    /// A wrapper written against the old `Option<EventHandler<FormEvent>>` prop.
+    #[component]
+    fn Wrapper(onsubmit: Option<EventHandler<FormEvent>>) -> Element {
+        let set: Submit<()> = onsubmit.into();
+        assert_eq!(set.is_some(), onsubmit.is_some());
+        assert!(set.run(submit_event(None), ()).is_ok());
+        rsx! { Form::<()> { onsubmit } }
+    }
+
+    #[test]
+    fn an_old_event_handler_still_forwards_and_fires() {
+        let mut dom = VirtualDom::new(|| {
+            rsx! {
+                Wrapper {}
+                Wrapper { onsubmit: |_| FIRED.with(|fired| fired.set(fired.get() + 1)) }
+            }
+        });
+        dom.rebuild_in_place();
+        assert_eq!(FIRED.with(Cell::get), 1);
     }
 }

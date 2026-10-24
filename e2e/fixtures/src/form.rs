@@ -4,7 +4,7 @@
 use dioxus::prelude::*;
 use libero::chrono::NaiveDate;
 use libero::components::{
-    Autocomplete, Button, Cascader, CascaderOption, Checkbox, Chip, ColorCode, ColorField,
+    Autocomplete, Button, ByAddress, Cascader, CascaderOption, Checkbox, Chip, ColorCode, ColorField,
     DateField, DatePicker, DateRangePicker, DateTimeField, FieldError, FieldStatus, Fields, Fieldset, FileField, Files, Flex, Form,
     FormErrors, MonthPicker, MultiSelect, NativeSelect, NumberField, Options, PasswordField, PhoneField, PinField, Radio,
     RadioGroup, RangeSlider, Rating, RequiredValue, Rule, SegmentedControl, Select, Slider, SliderChangeEvent,
@@ -27,7 +27,42 @@ pub const ROUTES: Routes = &[
     ("/form/login", || rsx! { LoginPage {} }),
     ("/form/prefill", || rsx! { PrefillPage {} }),
     ("/form/async", || rsx! { AsyncSignInPage {} }),
+    ("/form/secret", || rsx! { SecretPage {} }),
 ];
+
+/// A secret with neither `Clone` nor `PartialEq`.
+struct Secret(String);
+
+#[derive(Clone, PartialEq, Default, Fields)]
+struct Vault {
+    password: Option<ByAddress<Secret>>,
+}
+
+fn secret(text: String) -> Result<ByAddress<Secret>, std::convert::Infallible> {
+    Ok(ByAddress::new(Secret(text)))
+}
+
+fn vault_secret(vault: &Vault) -> Result<ByAddress<Secret>, FormErrors> {
+    vault.password.clone().required(Vault::FIELDS.password())
+}
+
+/// Todo 4106: a password mapped to a secret held by address, as the docs' sign-in does.
+#[component]
+fn SecretPage() -> Element {
+    let vault = use_store(Vault::default);
+    let mut sent = use_signal(String::new);
+    rsx! {
+        Flex { direction: "column", gap: "md", max_width: "320px",
+            span { id: "sent", "data-sent": "{sent}" }
+            Form { value: vault,
+                onsubmit: Submit::parse(vault_secret, move |secret: ByAddress<Secret>| sent.set(secret.0.clone())),
+                PasswordField { id: "pass", label: "Password", required: true,
+                    name: Vault::FIELDS.password().map(|secret: &ByAddress<Secret>| secret.0.clone(), secret) }
+                Button { id: "send", r#type: "submit", "Unlock" }
+            }
+        }
+    }
+}
 
 #[derive(Clone, PartialEq, Default, Fields)]
 struct SignIn {

@@ -8,22 +8,37 @@ use std::{
 
 // demo-code: start
 use libero::components::{
-    Button, Fields, Form, FormErrors, PasswordField, Submit, SummaryMode, Text, TextField, use_form,
+    Button, ByAddress, Fields, Form, FormErrors, PasswordField, RequiredValue, Submit, SummaryMode,
+    Text, TextField, use_form,
 };
+use std::convert::Infallible;
+
+/// A secret: no `Clone` and no `PartialEq`, so it is never copied by accident.
+struct Password(String);
 
 #[derive(Clone, PartialEq, Default, Fields)]
 struct Login {
     email: String,
-    password: String,
+    // `ByAddress` makes the secret fit for a form value.
+    password: Option<ByAddress<Password>>,
+}
+
+fn password_text(password: &ByAddress<Password>) -> String {
+    password.0.clone()
+}
+
+fn password(text: String) -> Result<ByAddress<Password>, Infallible> {
+    Ok(ByAddress::new(Password(text)))
 }
 
 struct Credentials {
     email: String,
-    password: String,
+    password: ByAddress<Password>,
 }
 
 fn credentials(login: &Login) -> Result<Credentials, FormErrors> {
-    Ok(Credentials { email: login.email.clone(), password: login.password.clone() })
+    let password = login.password.clone().required(Login::FIELDS.password())?;
+    Ok(Credentials { email: login.email.clone(), password })
 }
 
 #[component]
@@ -49,7 +64,12 @@ pub fn SignInForm() -> Element {
                 Ok(())
             }),
             TextField { label: "Email", r#type: "email", autocomplete: "username", name: Login::FIELDS.email(), required: true }
-            PasswordField { label: "Password", autocomplete: "current-password", name: Login::FIELDS.password(), required: true }
+            PasswordField {
+                label: "Password",
+                autocomplete: "current-password",
+                name: Login::FIELDS.password().map(password_text, password),
+                required: true,
+            }
             Button { r#type: "submit", loading: form.is_submitting(), "Sign in" }
             Text { role: "status",
                 if !signed_in().is_empty() { "Signed in as {signed_in}." }
@@ -62,7 +82,7 @@ pub fn SignInForm() -> Element {
 /// Stands in for a server: a second's wait, then only `secret` passes.
 async fn sign_in(sent: &Credentials) -> bool {
     delay(Duration::from_secs(1)).await;
-    sent.password == "secret"
+    sent.password.0 == "secret"
 }
 
 async fn delay(duration: Duration) {

@@ -184,27 +184,43 @@ request. `form.is_submitting()` is `true` until it ends, so the button shows
 like `set_errors`, and `FormErrors::form(..)` is an error on no field, such as
 wrong credentials. With `summary: SummaryMode::Hidden` a blocked submit focuses
 the first invalid field instead of a summary, and a screen reader hears how
-many errors there are.
+many errors there are. The password is a type with no `Clone` or `PartialEq`,
+held as `Option<ByAddress<Password>>` and bound with `.map`.
 
 ```rust
 use dioxus::prelude::*;
 use libero::components::{
-    Button, Fields, Form, FormErrors, PasswordField, Submit, SummaryMode, Text, TextField, use_form,
+    Button, ByAddress, Fields, Form, FormErrors, PasswordField, RequiredValue, Submit, SummaryMode,
+    Text, TextField, use_form,
 };
+use std::convert::Infallible;
+
+/// A secret: no `Clone` and no `PartialEq`, so it is never copied by accident.
+struct Password(String);
 
 #[derive(Clone, PartialEq, Default, Fields)]
 struct Login {
     email: String,
-    password: String,
+    // `ByAddress` makes the secret fit for a form value.
+    password: Option<ByAddress<Password>>,
+}
+
+fn password_text(password: &ByAddress<Password>) -> String {
+    password.0.clone()
+}
+
+fn password(text: String) -> Result<ByAddress<Password>, Infallible> {
+    Ok(ByAddress::new(Password(text)))
 }
 
 struct Credentials {
     email: String,
-    password: String,
+    password: ByAddress<Password>,
 }
 
 fn credentials(login: &Login) -> Result<Credentials, FormErrors> {
-    Ok(Credentials { email: login.email.clone(), password: login.password.clone() })
+    let password = login.password.clone().required(Login::FIELDS.password())?;
+    Ok(Credentials { email: login.email.clone(), password })
 }
 
 #[component]
@@ -230,7 +246,12 @@ fn SignInForm() -> Element {
                 Ok(())
             }),
             TextField { label: "Email", r#type: "email", autocomplete: "username", name: Login::FIELDS.email(), required: true }
-            PasswordField { label: "Password", autocomplete: "current-password", name: Login::FIELDS.password(), required: true }
+            PasswordField {
+                label: "Password",
+                autocomplete: "current-password",
+                name: Login::FIELDS.password().map(password_text, password),
+                required: true,
+            }
             Button { r#type: "submit", loading: form.is_submitting(), "Sign in" }
             Text { role: "status",
                 if !signed_in().is_empty() { "Signed in as {signed_in}." }
@@ -239,13 +260,43 @@ fn SignInForm() -> Element {
     }
 }
 #
-# async fn sign_in(sent: &Credentials) -> bool { sent.password == "secret" }
+# async fn sign_in(sent: &Credentials) -> bool { sent.password.0 == "secret" }
 ```
 
 `Submit::task(handler)` is the same over the `FormEvent`, without a `parse`
 step. A type with neither `Clone` nor `PartialEq`, such as a password type,
 fits a form value as `ByAddress<T>`: clones share it and two compare equal only
 when they are the same one.
+
+## Upgrading
+
+`onsubmit` was an `Option<EventHandler<FormEvent>>` before it became
+`Submit<V>`. A closure still fits, and so does a handler a wrapper forwards,
+with or without the `Option`. `FormLabels` gains fields in minor releases, such
+as `error_count`, so build yours from a built-in set rather than listing every
+field.
+
+```rust
+use dioxus::prelude::*;
+use libero::components::Form;
+use libero::localization::{FormLabels, Localization};
+
+/// Written for the old `onsubmit`, and still forwarding it.
+#[component]
+fn AppForm(onsubmit: Option<EventHandler<FormEvent>>, children: Element) -> Element {
+    rsx! {
+        Form::<()> { onsubmit, {children} }
+    }
+}
+
+static WORDS: Localization = Localization {
+    form: FormLabels {
+        required: "This one is needed.",
+        ..FormLabels::ENGLISH
+    },
+    ..Localization::ENGLISH
+};
+```
 
 ## Sticky action bar
 
@@ -333,7 +384,7 @@ Stepper {
 |---|---|---|---|
 | `value` | `Store<V>` | - | The whole form's value. `validate` checks it, and fields named by a path read and write it. `V` is inferred from it. A form with no `value` and no rules needs `Form::<()>`. |
 | `validate` | `Validators<V>` | - | Rules over `value`, one or an array. A rule with `.on(..)` shows its status on each field it names, and runs only while each of them holds a parsed value or is empty and optional. |
-| `onsubmit` | `Submit<V>` | - | Fires on a submit with no errors: a closure over the `FormEvent`, `Submit::parse(parse, handler)`, or the async `Submit::parse_async(parse, handler)` and `Submit::task(handler)`. Without an `action`, the browser's own submit is cancelled. A `javascript:`, `data:` or `vbscript:` `action` is dropped with a debug warning, so it counts as none. |
+| `onsubmit` | `Submit<V>` | - | Fires on a submit with no errors: a closure over the `FormEvent` or an `EventHandler<FormEvent>`, optional too, `Submit::parse(parse, handler)`, or the async `Submit::parse_async(parse, handler)` and `Submit::task(handler)`. Without an `action`, the browser's own submit is cancelled. A `javascript:`, `data:` or `vbscript:` `action` is dropped with a debug warning, so it counts as none. |
 | `summary_title` | `String` | - | A heading over the error summary. |
 | `summary` | `SummaryMode` | `Visible` | `Visible`: a blocked submit or `set_errors` shows a summary of every error above the fields and focuses it. `Hidden`: no summary list; focus goes to the first field that shows its error, and a visually hidden status says how many errors there are (`form.error_count`). Errors no field shows, from `FormErrors::form` or a form rule without `.on(..)`, still show in the summary, which then takes focus when no field does. |
 | `form` | `FormHandle` | - | Controls the form from outside, made with `use_form()`. Taken once, on mount. Without it the form makes its own, which `use_form_context()` returns inside the form. |

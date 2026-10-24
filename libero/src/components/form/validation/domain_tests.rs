@@ -11,8 +11,8 @@ use dioxus::{
 use crate::{
     LiberoProvider,
     components::form::{
-        DateField, FieldError, FieldName, FieldPath, Form, FormHandle, FormScope, Rule, TextField,
-        Typed, checked, use_bound, use_form,
+        ByAddress, DateField, FieldError, FieldName, FieldPath, Form, FormHandle, FormScope, Rule,
+        TextField, Typed, checked, use_bound, use_form,
     },
     localization::Localization,
     use_localization_handle,
@@ -555,4 +555,62 @@ fn every_wire_typed_field_shows_a_mapped_value() {
         r#"value="Bonn""#,
         "checked=true"
     ]));
+}
+
+/// A secret with neither `Clone` nor `PartialEq`.
+struct Secret(String);
+
+#[derive(Clone, PartialEq, Default)]
+struct Login {
+    password: Option<ByAddress<Secret>>,
+}
+
+fn password_name() -> FieldName<String> {
+    crate::path!(Login => password)
+        .map(
+            |secret: &ByAddress<Secret>| secret.0.clone(),
+            |text: String| Ok::<_, Blank>(Secret(text).into()),
+        )
+        .into()
+}
+
+#[component]
+fn SecretTypist() -> Element {
+    let emit = use_bound(&password_name(), false)
+        .emit(None)
+        .expect("a bound field");
+    expose(Typist(Rc::new(emit)));
+    rsx! {}
+}
+
+#[component]
+fn SignIn() -> Element {
+    let login = use_store(|| Login {
+        password: Some(Secret("hunter2".into()).into()),
+    });
+    expose(login);
+    rsx! {
+        Form { value: login,
+            SecretTypist {}
+            crate::components::form::PasswordField { label: "Password", name: password_name() }
+        }
+    }
+}
+
+#[test]
+fn a_password_maps_to_a_secret_held_by_address() {
+    let mut dom = VirtualDom::new(|| rsx! { LiberoProvider { SignIn {} } });
+    dom.rebuild_in_place();
+    assert!(settle(&mut dom).contains(r#"value="hunter2""#));
+
+    type_text(&mut dom, "swordfish");
+    let login = exposed::<Store<Login>>(&dom);
+    let typed = dom.in_runtime(|| {
+        login
+            .peek()
+            .password
+            .as_ref()
+            .map(|secret| secret.0.clone())
+    });
+    assert_eq!(typed.as_deref(), Some("swordfish"));
 }

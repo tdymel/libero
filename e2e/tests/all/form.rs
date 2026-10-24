@@ -1033,6 +1033,33 @@ fn a_saved_login_autofill_fills_the_bound_fields() {
     });
 }
 
+/// Todo 4106: a password mapped to `Option<ByAddress<T>>` stores what is typed and submits it.
+#[test]
+fn a_password_mapped_to_a_secret_submits_it() {
+    block_on(async {
+        let fixture = Fixture::open("/form/secret", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        pointer::click(page, "input[name=password]").await.unwrap();
+        keyboard::type_text(page, "hunter2").await.unwrap();
+        pointer::click(page, "#send").await.unwrap();
+        wait::for_js_true(
+            page,
+            "document.querySelector('#sent').dataset.sent === 'hunter2'",
+            "the secret the submit parsed",
+        )
+        .await
+        .unwrap();
+
+        fixture
+            .console
+            .assert_clean("a mapped secret password")
+            .unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
 /// Todo 4094: text the browser wrote before a field mounted - an autofill into server-rendered
 /// HTML ahead of hydration, no event heard - is taken on mount by every text-like field.
 #[test]

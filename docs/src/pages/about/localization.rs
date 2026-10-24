@@ -184,6 +184,13 @@ pub fn LocalizationPage() -> Element {
                     ", so each language puts it where its grammar wants it."
                 }
                 CodeBlock { source: OVERRIDE_LOCALIZATION, language: "rust" }
+                Text {
+                    "A group can gain fields in a minor release, so end each one with "
+                    Code { source: "..Group::ENGLISH" }
+                    " or "
+                    Code { source: "..Group::GERMAN" }
+                    " rather than listing every field."
+                }
             }
 
             DocSection {
