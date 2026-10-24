@@ -68,6 +68,12 @@ fn Demo() -> Element {
 | `disabled` | `bool` | `false` | Disables every segment and dims the captions. |
 | `readonly` | `bool` | `false` | Focusable and posted with the form, but not editable. `disabled` drops the control from the tab order and the post instead. |
 
+### Domain enums
+
+| Method | Type | Description |
+|---|---|---|
+| `.choices(&X)` | `Mapped<V, Choice<V>, Infallible>` | On a path to `Option<V>`: binds `name` to a domain enum through a `Choices<V>` list. Pass `X.list()` as `options` too. While the value holds `None`, the control writes the list's default (else its first entry) into it once, so the value holds what the strip shows; again after a reset. |
+
 ### OptionLabel
 
 | Field | Type | Default | Description |

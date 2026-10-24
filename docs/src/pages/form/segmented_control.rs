@@ -143,6 +143,10 @@ pub fn SegmentedControlPage() -> Element {
                     (SegmentedControlPart::Helper, "The caption under the control."),
                     (SegmentedControlPart::Status, "The validation message."),
                 ]),
+                props("Domain enums", vec![
+                    prop(".choices(&X)", "Mapped<V, Choice<V>, Infallible>")
+                        .doc("On a path to `Option<V>`: binds `name` to a domain enum through a `Choices<V>` list. Pass `X.list()` as `options` too. While the value holds `None`, the control writes the list's default (else its first entry) into it once, so the value holds what the strip shows; again after a reset."),
+                ]).without_base_props(),
                 props("OptionLabel", vec![
                     prop("name", "String").doc("The segment's accessible name, and its text when there is no `content`."),
                     prop("content", "Element")

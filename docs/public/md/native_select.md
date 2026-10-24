@@ -68,6 +68,12 @@ fn Demo() -> Element {
 Like every component, it also takes the shared props `sx`, `class`, `style`,
 `states`, and any extra HTML attributes.
 
+### Domain enums
+
+| Method | Type | Description |
+|---|---|---|
+| `.choices(&X)` | `Mapped<V, Choice<V>, Infallible>` | On a path to `Option<V>`: binds `name` to a domain enum through a `Choices<V>` list, so the form's value holds `V` and the field edits `Choice<V>`. Pass `X.list()` as `options` too. A stored value the list no longer holds shows the placeholder. |
+
 ## Style API
 
 Style a part with the `parts` prop, or address it as `[data-slot='…']` in your

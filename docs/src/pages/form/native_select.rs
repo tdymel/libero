@@ -97,6 +97,10 @@ pub fn NativeSelectPage() -> Element {
                     (FieldPart::Helper, "The caption under the control."),
                     (FieldPart::Status, "The validation message."),
                 ]),
+                props("Domain enums", vec![
+                    prop(".choices(&X)", "Mapped<V, Choice<V>, Infallible>")
+                        .doc("On a path to `Option<V>`: binds `name` to a domain enum through a `Choices<V>` list, so the form's value holds `V` and the field edits `Choice<V>`. Pass `X.list()` as `options` too. A stored value the list no longer holds shows the placeholder."),
+                ]).without_base_props(),
             ],
             accessibility: a11y()
                 .handles(["Your own `aria-describedby` ids come first, before the captions."])

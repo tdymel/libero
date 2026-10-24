@@ -266,6 +266,7 @@ pub fn MultiSelect<T: Options>(props: MultiSelectProps<T>) -> Element {
             placeholder: props.placeholder,
             name: bound.name().map(str::to_string),
             rules,
+            mapped: bound.mapped_state(),
             clearable: props.clearable.unwrap_or(false),
             searchable,
             open_on_focus: props.open_on_focus,

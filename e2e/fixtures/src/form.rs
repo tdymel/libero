@@ -6,9 +6,9 @@ use libero::chrono::NaiveDate;
 use libero::components::{
     Autocomplete, Button, Cascader, CascaderOption, Checkbox, Chip, ColorCode, ColorField,
     DateField, DatePicker, DateRangePicker, DateTimeField, FieldError, FieldStatus, Fields, Fieldset, FileField, Files, Flex, Form,
-    MonthPicker, MultiSelect, NativeSelect, NumberField, Options, PasswordField, PhoneField, PinField, Radio,
-    RadioGroup, RangeSlider, Rating, Rule, SegmentedControl, Select, Slider, SliderChangeEvent,
-    Switch, TagsField, Text, TextField, Textarea, TimeField, TimePicker, YearPicker, min_length, not_empty, use_form,
+    FormErrors, MonthPicker, MultiSelect, NativeSelect, NumberField, Options, PasswordField, PhoneField, PinField, Radio,
+    RadioGroup, RangeSlider, Rating, RequiredValue, Rule, SegmentedControl, Select, Slider, SliderChangeEvent,
+    Submit, Switch, TagsField, Text, TextField, Textarea, TimeField, TimePicker, YearPicker, min_length, not_empty, use_form,
 };
 
 use crate::Routes;
@@ -23,7 +23,40 @@ pub const ROUTES: Routes = &[
     ("/form/server", || rsx! { ServerStatusPage { at_once: false } }),
     ("/form/server-sync", || rsx! { ServerStatusPage { at_once: true } }),
     ("/form/domain", || rsx! { DomainPage {} }),
+    ("/form/command", || rsx! { CommandPage {} }),
 ];
+
+/// What `CommandPage` sends: a German IBAN only, refused after the field's own parse.
+fn payout_command(payout: &Payout) -> Result<String, FormErrors> {
+    let iban = payout.iban.required(Payout::FIELDS.iban())?;
+    match iban.0.starts_with("GB") {
+        true => Err(FormErrors::new().at(Payout::FIELDS.iban(), "Use a German account.")),
+        false => Ok(iban.0),
+    }
+}
+
+/// Todo 4084: `Submit::parse` refuses a parsed IBAN onto its field; an edit clears it.
+#[component]
+fn CommandPage() -> Element {
+    let payout = use_store(Payout::default);
+    let mut sent = use_signal(String::new);
+    rsx! {
+        Flex { direction: "column", gap: "md", max_width: "320px",
+            span { "data-sent": "{sent}" }
+            Form {
+                value: payout,
+                onsubmit: Submit::parse(payout_command, move |iban: String| sent.set(iban)),
+                TextField {
+                    id: "iban",
+                    label: "IBAN",
+                    required: true,
+                    name: Payout::FIELDS.iban().map(Iban::text, Iban::new),
+                }
+                Button { r#type: "submit", "Send" }
+            }
+        }
+    }
+}
 
 #[derive(Clone, PartialEq, Debug)]
 struct Iban(String);

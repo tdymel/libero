@@ -140,6 +140,10 @@ pub fn RadioGroupPage() -> Element {
                     (RadioGroupPart::Helper, "The caption under the control."),
                     (RadioGroupPart::Status, "The validation message."),
                 ]),
+                props("Domain enums", vec![
+                    prop(".choices(&X)", "Mapped<V, Choice<V>, Infallible>")
+                        .doc("On a path to `Option<V>`: binds `name` to a domain enum through a `Choices<V>` list, so the form's value holds `V` and the field edits `Choice<V>`. Pass `X.list()` as `options` too. A stored value the list no longer holds shows the placeholder."),
+                ]).without_base_props(),
                 props("Radio", vec![
                     prop("checked", "bool")
                         .doc("Whether it is selected. Pair it with `onselect`."),

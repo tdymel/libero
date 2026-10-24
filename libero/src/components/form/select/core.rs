@@ -368,6 +368,9 @@ field_props! {
         name: Option<String>,
         #[props(default)]
         rules: Option<crate::components::form::FieldStatus>,
+        /// A name mapped to a domain type: its status and parse state, which judge emptiness.
+        #[props(default)]
+        mapped: Option<crate::components::form::MappedState>,
         /// Plain text per row for typeahead; empty turns it off. Not `matches`: that
         /// is the caller's filter, typeahead is prefix-from-current-with-wrap.
         #[props(default)]
@@ -459,6 +462,7 @@ pub(crate) fn SelectCore(props: SelectCoreProps) -> Element {
         .helper(&props.helper)
         .status(&props.status)
         .rules(props.rules.clone())
+        .mapped(props.mapped.clone())
         .name(props.name.as_deref())
         .required(required)
         .empty(empty)

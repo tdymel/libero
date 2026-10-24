@@ -140,6 +140,26 @@ impl<T> Bound<T> {
     pub fn is_bound(&self) -> bool {
         self.name.is_some()
     }
+
+    /// A mapped name's parse error or domain rules, and its parse state.
+    pub fn mapped_state(&self) -> Option<super::builder::MappedState> {
+        self.mapped
+            .as_ref()
+            .map(|mapped| (mapped.status.clone(), mapped.parse.clone()))
+    }
+
+    /// What an edit calls: drops an error set from code on the field's name.
+    pub fn edited(&self) -> impl Fn() + Clone + 'static {
+        let form = self.hook.form.map(|(scope, _)| scope);
+        let full = self.full.clone();
+        move || clear_set_error(form, full.as_deref())
+    }
+}
+
+fn clear_set_error(form: Option<FormScope>, full: Option<&str>) {
+    if let (Some(mut scope), Some(full)) = (form, full) {
+        scope.clear_error(full);
+    }
 }
 
 impl<T: Clone + 'static> Bound<T> {
@@ -177,11 +197,13 @@ impl<T: Clone + 'static> Bound<T> {
         if handler.is_none() && setter.is_none() && entered.is_none() {
             return None;
         }
+        let edited = self.edited();
         Some(move |next: T| {
             // Copied out, so the closure stays an `Fn`.
             if let Some(mut entered) = entered {
                 entered.set(Some(next.clone()));
             }
+            edited();
             match (&handler, &setter) {
                 (Some(handler), _) => handler.call(next),
                 (None, Some(setter)) => setter.set(next),
@@ -248,6 +270,7 @@ impl<T> Clone for Setter<T> {
 
 impl<T: Clone + 'static> Setter<T> {
     pub fn set(&self, next: T) {
+        clear_set_error(self.hook.form.map(|(scope, _)| scope), self.full.as_deref());
         let steps = self.name.steps().unwrap_or_default();
         let Some(adapter) = self.name.adapter() else {
             self.hook.binding.set(steps, next);

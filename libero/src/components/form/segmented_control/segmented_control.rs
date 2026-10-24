@@ -10,7 +10,7 @@ use crate::{
             Input, OptionLabel, OptionSource, Options, Orientation, ScaleOrCss, Variant,
             base_color_or, names_itself, use_name_warning, use_toolbar_item,
         },
-        form::{Asks, field_props, use_bound, use_field, use_form_context},
+        form::{Asks, Bound, Parse, field_props, use_bound, use_field, use_form_context},
     },
     hooks::{use_cache, use_element, use_form_owner, use_theme},
     sx::ThemeAwareValue,
@@ -101,6 +101,7 @@ pub fn SegmentedControl<T: Options>(props: SegmentedControlProps<T>) -> Element 
     // A toolbar keeps a disabled item focusable, in its arrow order: read-only instead.
     let soft_disabled = disabled && toolbar_item.is_some();
     let current = bound.value().or_else(|| props.value.clone());
+    fill_empty_store(&bound, current.as_ref());
     let in_form = use_form_context().is_some();
     // A raw `<form>` around the strip counts too (todo 660).
     let owner = use_form_owner(element, !in_form);
@@ -239,4 +240,25 @@ pub fn SegmentedControl<T: Options>(props: SegmentedControlProps<T>) -> Element 
     );
 
     field.render(control)
+}
+
+/// A `.choices` name shows the list's fallback while its store holds `None`; the fallback is
+/// written there once per `None` (again after a reset), so the store holds what the strip shows.
+fn fill_empty_store<T: Options>(bound: &Bound<T>, shown: Option<&T>) {
+    let mut filled = use_hook(|| CopyValue::new(false));
+    let empty = bound
+        .mapped_state()
+        .is_some_and(|(_, parse)| parse == Parse::Empty);
+    if !empty {
+        if *filled.peek() {
+            filled.set(false);
+        }
+        return;
+    }
+    let done = *filled.peek();
+    if let (false, Some(setter), Some(shown)) = (done, bound.setter(), shown) {
+        filled.set(true);
+        let shown = shown.clone();
+        spawn(async move { setter.set(shown) });
+    }
 }

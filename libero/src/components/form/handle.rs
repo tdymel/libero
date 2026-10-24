@@ -6,7 +6,7 @@ use dioxus::{
 };
 
 use crate::{
-    components::form::{FormScope, SummaryItem},
+    components::form::{FormErrors, FormScope, SummaryItem},
     hooks::ElementHandle,
     platform::{self, ElementApi, PlatformError},
 };
@@ -115,6 +115,46 @@ impl FormHandle {
     /// disable a button.
     pub fn is_valid(&self) -> bool {
         !self.scope.has_errors_tracked()
+    }
+
+    /// Shows each error on the field with its path, as an explicit `status` would, lists them
+    /// in the summary and focuses it. Replaces the errors set before; a field's error clears
+    /// on its next edit, all of them on the next submit or reset.
+    ///
+    /// ```no_run
+    /// # use dioxus::prelude::*;
+    /// use libero::components::{Fields, Form, FormErrors, TextField, use_form};
+    ///
+    /// #[derive(Clone, PartialEq, Default, Fields)]
+    /// struct Signup { email: String }
+    ///
+    /// # fn app() -> Element {
+    /// let signup = use_store(Signup::default);
+    /// let form = use_form();
+    /// rsx! {
+    ///     Form { form, value: signup,
+    ///         onsubmit: move |_| {
+    ///             // The server said no.
+    ///             form.set_errors(FormErrors::new().at(Signup::FIELDS.email(), "This address is taken."));
+    ///         },
+    ///         TextField { label: "Email", name: Signup::FIELDS.email() }
+    ///     }
+    /// }
+    /// # }
+    /// ```
+    pub fn set_errors(&self, errors: FormErrors) {
+        let mut scope = self.scope;
+        scope.set_errors(errors.into_entries());
+        if let Some(control) = self.control() {
+            let summary = scope.summary();
+            control.summary.set(summary);
+        }
+    }
+
+    /// Drops the errors [`set_errors`](Self::set_errors) set.
+    pub fn clear_errors(&self) {
+        let mut scope = self.scope;
+        scope.clear_errors();
     }
 
     /// Hides the error summary. Resets nothing.

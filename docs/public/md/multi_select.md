@@ -79,6 +79,12 @@ fn Demo() -> Element {
 Like every component, it also takes the shared props `sx`, `class`, `style`,
 `states`, and any extra HTML attributes. The attributes land on the trigger.
 
+### Domain enums
+
+| Method | Type | Description |
+|---|---|---|
+| `.choices(&X)` | `Mapped<Vec<V>, Vec<Choice<V>>, Infallible>` | On a path to `Vec<V>`: binds `name` to a domain enum through a `Choices<V>` list, so the form's value holds `Vec<V>` and the field edits `Vec<Choice<V>>`. Pass `X.list()` as `options` too. `.rules(..)` after it run over `Vec<V>`. |
+
 ### `SelectOptionArgs`
 
 | Prop | Type | Default | Description |

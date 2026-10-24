@@ -690,3 +690,77 @@ fn a_mapped_number_field_keeps_invalid_text() {
         fixture.close().await.unwrap();
     });
 }
+
+/// Todo 4084: `Submit::parse` runs after the field's own parse; its error lands on the field and
+/// in the summary, nothing is sent, and the next edit clears the error.
+#[test]
+fn a_submit_blocked_by_parse_shows_the_error_on_its_field() {
+    block_on(async {
+        let fixture = Fixture::open("/form/command", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        let iban = "input[name=iban]";
+        let sent_is =
+            |text: &str| format!("document.querySelector('[data-sent]').dataset.sent === {text:?}");
+        let shows = |text: &str| format!("document.body.textContent.includes({text:?})");
+
+        pointer::click(page, iban).await.unwrap();
+        keyboard::type_text(page, "GB29NWBK60161331926819")
+            .await
+            .unwrap();
+        click_button(page, "Send").await.unwrap();
+        wait::for_js_true(
+            page,
+            &shows("Use a German account."),
+            "the parse step's error",
+        )
+        .await
+        .unwrap();
+        wait::for_js_true(
+            page,
+            "document.querySelector('[data-slot=summary]')?.textContent.includes('IBAN: Use a German account.')",
+            "the summary line",
+        )
+        .await
+        .unwrap();
+        wait::for_js_true(
+            page,
+            &format!("document.querySelector({iban:?}).getAttribute('aria-invalid') === 'true'"),
+            "the field marked invalid",
+        )
+        .await
+        .unwrap();
+        wait::for_js_true(page, &sent_is(""), "nothing sent")
+            .await
+            .unwrap();
+
+        pointer::click(page, iban).await.unwrap();
+        keyboard::press(page, keyboard::END).await.unwrap();
+        keyboard::press(page, keyboard::BACKSPACE).await.unwrap();
+        wait::for_js_true(
+            page,
+            "!document.body.textContent.includes('Use a German account.')",
+            "the edit to clear the error",
+        )
+        .await
+        .unwrap();
+
+        for _ in 0..30 {
+            keyboard::press(page, keyboard::BACKSPACE).await.unwrap();
+        }
+        keyboard::type_text(page, "DE89370400440532013000")
+            .await
+            .unwrap();
+        click_button(page, "Send").await.unwrap();
+        wait::for_js_true(page, &sent_is("DE89370400440532013000"), "the command")
+            .await
+            .unwrap();
+
+        fixture
+            .console
+            .assert_clean("a submit blocked by parse")
+            .unwrap();
+        fixture.close().await.unwrap();
+    });
+}

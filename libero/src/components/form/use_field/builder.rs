@@ -23,14 +23,16 @@ pub(crate) fn use_field<'a>() -> FieldBuilder<'a> {
     FieldBuilder::default()
 }
 
+/// A mapped field's parse error or domain rules, and its parse state.
+pub(crate) type MappedState = (Option<FieldStatus>, Parse);
+
 pub(crate) struct FieldBuilder<'a> {
     pub(super) label: Option<&'a Caption>,
     pub(super) description: Option<&'a Caption>,
     pub(super) helper: Option<&'a Caption>,
     pub(super) status: Option<&'a Input<FieldStatus>>,
     pub(super) rules: Option<FieldStatus>,
-    /// A mapped field's parse error or domain rules, and its parse state.
-    pub(super) mapped: Option<(Option<FieldStatus>, Parse)>,
+    pub(super) mapped: Option<MappedState>,
     /// A field's own parse state, for one that reads typed text itself (a date).
     pub(super) parse: Option<Parse>,
     pub(super) name: Option<&'a str>,
@@ -174,10 +176,15 @@ impl<'a> FieldBuilder<'a> {
     pub fn bound<T>(mut self, bound: &'a Bound<T>) -> Self {
         self.name = bound.name();
         self.hook = Some(bound.hook.clone());
-        self.mapped = bound
-            .mapped
-            .as_ref()
-            .map(|mapped| (mapped.status.clone(), mapped.parse.clone()));
+        self.mapped = bound.mapped_state();
+        self
+    }
+
+    /// [`bound`](Self::bound)'s mapped state alone, for an engine a field hands it to
+    /// across a component (`SelectCore`).
+    #[inline]
+    pub fn mapped(mut self, mapped: Option<MappedState>) -> Self {
+        self.mapped = mapped;
         self
     }
 

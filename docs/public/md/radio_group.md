@@ -66,6 +66,12 @@ fn Demo() -> Element {
 | `disabled` | `bool` | `false` | Disables every option and dims the group. |
 | `readonly` | `bool` | `false` | Focusable and posted with the form, but not editable. `disabled` drops the group from the tab order and the post instead. Chromium does not announce read-only on a group, so say it in the label or description where it matters. |
 
+### Domain enums
+
+| Method | Type | Description |
+|---|---|---|
+| `.choices(&X)` | `Mapped<V, Choice<V>, Infallible>` | On a path to `Option<V>`: binds `name` to a domain enum through a `Choices<V>` list, so the form's value holds `V` and the field edits `Choice<V>`. Pass `X.list()` as `options` too. A stored value the list no longer holds shows the placeholder. |
+
 ### `Radio`
 
 | Prop | Type | Default | Description |

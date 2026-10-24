@@ -217,6 +217,7 @@ pub fn Select<T: Options>(props: SelectProps<T>) -> Element {
             placeholder: props.placeholder,
             name: bound.name().map(str::to_string),
             rules: props.validate.check(&current),
+            mapped: bound.mapped_state(),
             clearable: props.clearable.unwrap_or(false),
             searchable,
             open_on_focus: props.open_on_focus,

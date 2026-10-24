@@ -287,6 +287,31 @@ impl<V: Clone + PartialEq + 'static> Choices<V> {
             label: Label::Fn(self.label),
         })
     }
+
+    /// [`choice`](Self::choice), or one with no key for a value the list no longer holds:
+    /// it matches no option, so the field shows its placeholder, and the value is kept.
+    pub(crate) fn choice_or_unlisted(&self, value: &V) -> Choice<V> {
+        self.choice(value).unwrap_or_else(|| Choice {
+            value: value.clone(),
+            key: Cow::Borrowed(""),
+            label: Label::Fn(self.label),
+        })
+    }
+
+    /// What a single pick shows while nothing is stored: the default, else the first entry.
+    pub(crate) fn fallback(&self) -> Option<Choice<V>> {
+        match &self.default {
+            Some(value) => Some(self.choice_or_unlisted(value)),
+            None => self.choices().into_iter().next(),
+        }
+    }
+
+    /// The same entries, label and default: a list rebuilt per render is the same list.
+    pub(crate) fn same(&self, other: &Self) -> bool {
+        self.entries == other.entries
+            && std::ptr::fn_addr_eq(self.label, other.label)
+            && self.default == other.default
+    }
 }
 
 // `&Cow`, not `&str`: a const fn can't deref a `Cow`, only match it.

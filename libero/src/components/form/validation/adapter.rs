@@ -1,5 +1,5 @@
 use std::{
-    any::Any, any::TypeId, borrow::Cow, fmt::Display, marker::PhantomData, rc::Rc, str::FromStr,
+    any::Any, any::TypeId, borrow::Cow, convert::Infallible, fmt::Display, rc::Rc, str::FromStr,
 };
 
 use super::{
@@ -9,7 +9,10 @@ use super::{
     validator::Validator,
 };
 use crate::{
-    components::form::{FieldStatus, Validators},
+    components::{
+        common::{Choice, Choices},
+        form::{FieldStatus, Validators},
+    },
     localization::Localization,
 };
 
@@ -103,6 +106,81 @@ pub struct Mapped<T: 'static, I: 'static, E: 'static, S = Unworded> {
     rules: Vec<MappedRule<T, E>>,
     /// The types of `format` and `parse` when both capture nothing.
     key: Option<(TypeId, TypeId)>,
+    slot: Slot<T>,
+    /// What a single pick shows while nothing is stored.
+    fallback: Option<I>,
+    /// What `format` and `parse` capture, compared in place of nothing captured.
+    data: Option<Rc<dyn Same>>,
+}
+
+/// Where a mapped field's domain value sits in the form's value, and when it holds none.
+pub(crate) struct Slot<T: 'static> {
+    get: for<'a> fn(&'a dyn Any) -> Option<Option<&'a T>>,
+    put: fn(&mut dyn Any, Option<T>) -> bool,
+}
+
+impl<T: 'static> Clone for Slot<T> {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+
+impl<T: 'static> Copy for Slot<T> {}
+
+impl<T: 'static> Slot<T> {
+    /// An `Option<T>`, `None` when empty.
+    fn option() -> Self {
+        fn get<T: 'static>(slot: &dyn Any) -> Option<Option<&T>> {
+            slot.downcast_ref::<Option<T>>().map(Option::as_ref)
+        }
+        fn put<T: 'static>(slot: &mut dyn Any, value: Option<T>) -> bool {
+            slot.downcast_mut::<Option<T>>()
+                .map(|slot| *slot = value)
+                .is_some()
+        }
+        Self {
+            get: get::<T>,
+            put: put::<T>,
+        }
+    }
+}
+
+impl<X: 'static> Slot<Vec<X>> {
+    /// A list, empty when it holds nothing.
+    fn list() -> Self {
+        fn get<X: 'static>(slot: &dyn Any) -> Option<Option<&Vec<X>>> {
+            slot.downcast_ref::<Vec<X>>()
+                .map(|list| (!list.is_empty()).then_some(list))
+        }
+        fn put<X: 'static>(slot: &mut dyn Any, value: Option<Vec<X>>) -> bool {
+            slot.downcast_mut::<Vec<X>>()
+                .map(|slot| *slot = value.unwrap_or_default())
+                .is_some()
+        }
+        Self {
+            get: get::<X>,
+            put: put::<X>,
+        }
+    }
+}
+
+/// Equality for data a mapping captures.
+pub(crate) trait Same: 'static {
+    fn same(&self, other: &dyn Same) -> bool;
+    fn as_any(&self) -> &dyn Any;
+}
+
+impl<V: Clone + PartialEq + 'static> Same for Choices<V> {
+    fn same(&self, other: &dyn Same) -> bool {
+        other
+            .as_any()
+            .downcast_ref::<Self>()
+            .is_some_and(|other| Choices::same(self, other))
+    }
+
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
 }
 
 /// One of a mapped field's `.rules`: a rule with its own words, or a
@@ -182,7 +260,60 @@ impl<R, T: 'static> FieldPath<R, Option<T>> {
             words: Unworded,
             rules: Vec::new(),
             key,
+            slot: Slot::option(),
+            fallback: None,
+            data: None,
         }
+    }
+
+    /// Binds a single-pick field (`Select`, `NativeSelect`, `RadioGroup`,
+    /// `SegmentedControl`) to the domain value `T` through `choices`; pass
+    /// `choices.list()` as its `options`. A `SegmentedControl` shows the
+    /// list's default, else its first entry, while nothing is stored.
+    ///
+    /// ```no_run
+    /// # use dioxus::prelude::*;
+    /// use libero::{choices, components::{Choices, Fields, Form, Select}};
+    ///
+    /// #[derive(Clone, Copy, PartialEq)]
+    /// enum Country { De, At }
+    ///
+    /// fn country_label(country: &Country) -> String {
+    ///     match country {
+    ///         Country::De => "Germany",
+    ///         Country::At => "Austria",
+    ///     }
+    ///     .into()
+    /// }
+    ///
+    /// static COUNTRIES: Choices<Country> = choices!(Country, country_label, { De => "de", At => "at" });
+    ///
+    /// #[derive(Clone, PartialEq, Default, Fields)]
+    /// struct Address { country: Option<Country> }
+    ///
+    /// # fn app() -> Element {
+    /// let address = use_store(Address::default);
+    /// rsx! {
+    ///     Form { value: address,
+    ///         Select { label: "Country", required: true,
+    ///             options: COUNTRIES.list(),
+    ///             name: Address::FIELDS.country().choices(&COUNTRIES) }
+    ///     }
+    /// }
+    /// # }
+    /// ```
+    pub fn choices(self, choices: &Choices<T>) -> Mapped<T, Choice<T>, Infallible>
+    where
+        T: Clone + PartialEq,
+    {
+        let shown = choices.clone();
+        let fallback = choices.fallback();
+        let mut mapped = self.map(
+            move |value: &T| shown.choice_or_unlisted(value),
+            |choice: Choice<T>| Ok(choice.value),
+        );
+        mapped.choose(choices.clone(), fallback);
+        mapped
     }
 
     /// [`map`](Self::map) through `T`'s [`Display`] and [`FromStr`], for a
@@ -193,6 +324,79 @@ impl<R, T: 'static> FieldPath<R, Option<T>> {
         T::Err: 'static,
     {
         self.map(T::to_string, |text: String| text.parse::<T>())
+    }
+}
+
+impl<R, X: Clone + PartialEq + 'static> FieldPath<R, Vec<X>> {
+    /// Binds a multi-pick field (`MultiSelect`, `CheckboxGroup`) to the domain
+    /// values `X` through `choices`; pass `choices.list()` as its `options`.
+    /// `.rules` then run over `Vec<X>`.
+    ///
+    /// ```no_run
+    /// # use dioxus::prelude::*;
+    /// use libero::{choices, components::{CheckboxGroup, Choices, Fields, Form}};
+    ///
+    /// #[derive(Clone, Copy, PartialEq)]
+    /// enum Topic { News, Offers }
+    ///
+    /// fn topic_label(topic: &Topic) -> String {
+    ///     match topic {
+    ///         Topic::News => "News",
+    ///         Topic::Offers => "Offers",
+    ///     }
+    ///     .into()
+    /// }
+    ///
+    /// static TOPICS: Choices<Topic> = choices!(Topic, topic_label, { News => "news", Offers => "offers" });
+    ///
+    /// #[derive(Clone, PartialEq, Default, Fields)]
+    /// struct Mailing { topics: Vec<Topic> }
+    ///
+    /// # fn app() -> Element {
+    /// let mailing = use_store(Mailing::default);
+    /// rsx! {
+    ///     Form { value: mailing,
+    ///         CheckboxGroup { label: "Topics",
+    ///             options: TOPICS.list(),
+    ///             name: Mailing::FIELDS.topics().choices(&TOPICS) }
+    ///     }
+    /// }
+    /// # }
+    /// ```
+    pub fn choices(self, choices: &Choices<X>) -> Mapped<Vec<X>, Vec<Choice<X>>, Infallible> {
+        let shown = choices.clone();
+        let (path, steps) = FieldName::<Vec<X>>::from(self).into_parts();
+        let format = move |values: &Vec<X>| {
+            values
+                .iter()
+                .map(|value| shown.choice_or_unlisted(value))
+                .collect()
+        };
+        let parse =
+            |picked: Vec<Choice<X>>| Ok(picked.into_iter().map(|choice| choice.value).collect());
+        let mut mapped = Mapped {
+            path,
+            steps,
+            format: Rc::new(format),
+            parse: Rc::new(parse),
+            words: Unworded,
+            rules: Vec::new(),
+            key: None,
+            slot: Slot::list(),
+            fallback: None,
+            data: None,
+        };
+        mapped.choose(choices.clone(), None);
+        mapped
+    }
+}
+
+impl<T: 'static, I: 'static, E: 'static, S> Mapped<T, I, E, S> {
+    /// A mapping through `choices`: equal while the list is.
+    fn choose<V: Clone + PartialEq + 'static>(&mut self, choices: Choices<V>, fallback: Option<I>) {
+        self.key = Some((TypeId::of::<Choices<V>>(), TypeId::of::<Choice<V>>()));
+        self.data = Some(Rc::new(choices));
+        self.fallback = fallback;
     }
 }
 
@@ -214,6 +418,9 @@ impl<T: 'static, I: 'static, E: 'static> Mapped<T, I, E, Unworded> {
             },
             rules: self.rules,
             key: self.key,
+            slot: self.slot,
+            fallback: self.fallback,
+            data: self.data,
         }
     }
 }
@@ -237,29 +444,62 @@ where
     S: Speak<E>,
 {
     fn from(mapped: Mapped<T, I, E, S>) -> Self {
-        let key = mapped
-            .key
-            .zip(mapped.words.key())
-            .map(|((format, parse), words)| [format, parse, words]);
-        let words = mapped.words.words();
-        let rules: Vec<Validator<T>> = mapped
-            .rules
-            .into_iter()
-            .map(|rule| match rule {
-                MappedRule::Worded(rule) => rule,
-                MappedRule::Checked(rule) => rule.worded(words.clone(), mapped.words.key()),
-            })
-            .collect();
-        let adapter: Rc<dyn Adapt<W>> = Rc::new(Adapter {
-            format: mapped.format,
-            parse: mapped.parse,
-            words,
-            rules: rules.into(),
-            key,
-            _wire: PhantomData::<fn() -> W>,
-        });
-        FieldName::from_parts(mapped.path, mapped.steps, Some(adapter))
+        erase(mapped, W::into_inner, W::from_inner, Some(W::default()))
     }
+}
+
+/// A `SegmentedControl` always shows a pick: the stored one, else the list's fallback.
+impl<V, E, S> From<Mapped<V, Choice<V>, E, S>> for FieldName<Choice<V>>
+where
+    V: Clone + PartialEq + 'static,
+    E: 'static,
+    S: Speak<E>,
+{
+    fn from(mapped: Mapped<V, Choice<V>, E, S>) -> Self {
+        let fallback = mapped.fallback.clone();
+        erase(mapped, Some, |choice| choice, fallback)
+    }
+}
+
+fn erase<W, T, I, E, S>(
+    mapped: Mapped<T, I, E, S>,
+    unwrap: fn(W) -> Option<I>,
+    wrap: fn(I) -> W,
+    empty: Option<W>,
+) -> FieldName<W>
+where
+    W: Clone + 'static,
+    T: Clone + PartialEq + 'static,
+    I: 'static,
+    E: 'static,
+    S: Speak<E>,
+{
+    let key = mapped
+        .key
+        .zip(mapped.words.key())
+        .map(|((format, parse), words)| [format, parse, words]);
+    let words = mapped.words.words();
+    let rules: Vec<Validator<T>> = mapped
+        .rules
+        .into_iter()
+        .map(|rule| match rule {
+            MappedRule::Worded(rule) => rule,
+            MappedRule::Checked(rule) => rule.worded(words.clone(), mapped.words.key()),
+        })
+        .collect();
+    let adapter: Rc<dyn Adapt<W>> = Rc::new(Adapter {
+        format: mapped.format,
+        parse: mapped.parse,
+        words,
+        rules: rules.into(),
+        key,
+        slot: mapped.slot,
+        data: mapped.data,
+        unwrap,
+        wrap,
+        empty,
+    });
+    FieldName::from_parts(mapped.path, mapped.steps, Some(adapter))
 }
 
 /// A mapped field's conversions, erased to what the field edits.
@@ -286,28 +526,31 @@ struct Adapter<W, T: 'static, I: 'static, E: 'static> {
     words: Rc<WordsFn<E>>,
     rules: Validators<T>,
     key: Option<[TypeId; 3]>,
-    _wire: PhantomData<fn() -> W>,
+    slot: Slot<T>,
+    data: Option<Rc<dyn Same>>,
+    /// What the field edits, to `parse`'s input: `None` when empty.
+    unwrap: fn(W) -> Option<I>,
+    wrap: fn(I) -> W,
+    /// What the field shows while nothing is stored.
+    empty: Option<W>,
 }
 
 impl<W, T, I, E> Adapt<W> for Adapter<W, T, I, E>
 where
-    W: Wire<Inner = I>,
+    W: Clone + 'static,
     T: Clone + PartialEq + 'static,
     I: 'static,
     E: 'static,
 {
     fn read(&self, slot: &dyn Any) -> Option<W> {
-        let value = slot.downcast_ref::<Option<T>>()?;
-        Some(
-            value
-                .as_ref()
-                .map_or_else(W::default, |value| W::from_inner((self.format)(value))),
-        )
+        match (self.slot.get)(slot)? {
+            Some(value) => Some((self.wrap)((self.format)(value))),
+            None => self.empty.clone(),
+        }
     }
 
     fn write(&self, slot: &mut dyn Any, wire: W) -> Option<(Parse, Rc<dyn Any>)> {
-        let slot = slot.downcast_mut::<Option<T>>()?;
-        let (next, parse) = match wire.into_inner().map(|inner| (self.parse)(inner)) {
+        let (next, parse) = match (self.unwrap)(wire).map(|inner| (self.parse)(inner)) {
             None => (None, Parse::Empty),
             Some(Ok(value)) => (Some(value), Parse::Valid),
             Some(Err(error)) => {
@@ -318,25 +561,27 @@ where
                 (None, Parse::Invalid(error))
             }
         };
-        *slot = next.clone();
+        if !(self.slot.put)(slot, next.clone()) {
+            return None;
+        }
         Some((parse, Rc::new(next)))
     }
 
     fn holds(&self, slot: &dyn Any, wrote: &dyn Any) -> bool {
-        slot.downcast_ref::<Option<T>>()
+        (self.slot.get)(slot)
             .zip(wrote.downcast_ref::<Option<T>>())
-            .is_some_and(|(slot, wrote)| slot == wrote)
+            .is_some_and(|(slot, wrote)| slot == wrote.as_ref())
     }
 
     fn state(&self, slot: &dyn Any) -> Parse {
-        match slot.downcast_ref::<Option<T>>() {
+        match (self.slot.get)(slot) {
             Some(Some(_)) => Parse::Valid,
             _ => Parse::Empty,
         }
     }
 
     fn check(&self, slot: &dyn Any, locale: &Localization) -> Option<FieldStatus> {
-        let value = slot.downcast_ref::<Option<T>>()?.as_ref()?;
+        let value = (self.slot.get)(slot)??;
         if self.rules.is_empty() {
             return None;
         }
@@ -359,7 +604,14 @@ where
     /// anything, and by the rules: a `.map(..)` rebuilt per render is equal.
     fn same(&self, other: &dyn Any) -> bool {
         other.downcast_ref::<Self>().is_some_and(|other| {
-            self.key.is_some() && self.key == other.key && self.rules == other.rules
+            self.key.is_some()
+                && self.key == other.key
+                && self.rules == other.rules
+                && match (&self.data, &other.data) {
+                    (None, None) => true,
+                    (Some(a), Some(b)) => a.same(&**b),
+                    _ => false,
+                }
         })
     }
 

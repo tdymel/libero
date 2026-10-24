@@ -310,6 +310,14 @@ pub fn ColorField(props: ColorFieldProps) -> Element {
         .rules(props.validate.check(&value))
         .bound(&bound)
         .required(required)
+        // A color is always held: only text cleared to blank leaves the field empty.
+        .empty(
+            draft
+                .read()
+                .as_deref()
+                .is_some_and(|text| text.trim().is_empty()),
+        )
+        .readonly(readonly)
         .disabled(disabled)
         .size(size)
         .radius(radius.clone())

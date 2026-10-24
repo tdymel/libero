@@ -147,6 +147,10 @@ pub fn CheckboxGroupPage() -> Element {
                     (CheckboxGroupPart::Helper, "The caption under the control."),
                     (CheckboxGroupPart::Status, "The validation message."),
                 ]),
+                props("Domain enums", vec![
+                    prop(".choices(&X)", "Mapped<Vec<V>, Vec<Choice<V>>, Infallible>")
+                        .doc("On a path to `Vec<V>`: binds `name` to a domain enum through a `Choices<V>` list, so the form's value holds `Vec<V>` and the field edits `Vec<Choice<V>>`. Pass `X.list()` as `options` too. `.rules(..)` after it run over `Vec<V>`."),
+                ]).without_base_props(),
             ],
             accessibility: a11y()
                 .key(["Tab"], "Moves to the next option that is not disabled: every box is its own tab stop.")

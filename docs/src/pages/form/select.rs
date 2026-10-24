@@ -358,6 +358,10 @@ pub fn SelectPage() -> Element {
                     (SelectPart::Status, "The validation message."),
                 ])
                 .dropdown_parts("DropdownPart", list_dropdown_parts(SELECT_DROPDOWN)),
+                props("Domain enums", vec![
+                    prop(".choices(&X)", "Mapped<V, Choice<V>, Infallible>")
+                        .doc("On a path to `Option<V>`: binds `name` to a domain enum through a `Choices<V>` list, so the form's value holds `V` and the field edits `Choice<V>`. Pass `X.list()` as `options` too. A stored value the list no longer holds shows the placeholder."),
+                ]).without_base_props(),
                 props("SelectOptionArgs", vec![
                     prop("value", "T").doc("The option this row draws."),
                     prop("index", "usize").doc("The row's position among the rows drawn."),

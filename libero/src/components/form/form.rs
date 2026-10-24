@@ -7,7 +7,7 @@ use crate::{
         common::{FOCUSABLE_SELECTOR, HtmlTag, Input, Part, allowed_href, base_props, parts_enum},
         feedback::Alert,
         form::{
-            Binding, FormValue, Source, Validators,
+            Binding, FormValue, Source, Submit, Validators,
             handle::{Control, FormHandle, Summary},
             issues_of,
             use_field::labelled_focus_selector,
@@ -71,9 +71,11 @@ base_props! {
         /// Composite rules over `value`; `.on(..)` shows one on the named fields.
         #[props(default, into)]
         validate: Validators<V>,
-        /// Fires on a submit nothing blocks. Without an `action` the native submit is cancelled.
-        #[props(default)]
-        onsubmit: Option<EventHandler<FormEvent>>,
+        /// Fires on a submit nothing blocks: a closure over the event, or [`Submit::parse`],
+        /// which builds a command from `value` first. Without an `action` the native submit is
+        /// cancelled.
+        #[props(default, into)]
+        onsubmit: Submit<V>,
         /// A heading over the error summary.
         #[props(default, into)]
         summary_title: Option<String>,
@@ -169,6 +171,8 @@ pub fn Form<V: FormValue>(props: FormProps<V>) -> Element {
     let mut awaiting = use_signal(|| None::<u32>);
     let submit = use_callback(move |event: FormEvent| {
         scope.settle();
+        // Errors set from code answered the last submit; this one is judged afresh.
+        scope.clear_errors();
         if !handle.validate() {
             awaiting.set(None);
             event.prevent_default();
@@ -179,8 +183,17 @@ pub fn Form<V: FormValue>(props: FormProps<V>) -> Element {
         if !posts {
             event.prevent_default();
         }
-        if let Some(onsubmit) = onsubmit {
-            onsubmit.call(event);
+        if !onsubmit.is_some() {
+            return;
+        }
+        let value = (*store.peek())
+            .map(|value| value.peek().clone())
+            .unwrap_or_default();
+        if let Err(errors) = onsubmit.run(event.clone(), value) {
+            // `set_errors` shows the summary itself.
+            awaiting.set(None);
+            event.prevent_default();
+            handle.set_errors(errors);
         }
     });
 

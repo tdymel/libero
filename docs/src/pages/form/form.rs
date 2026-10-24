@@ -5,9 +5,9 @@ use crate::components::{
 };
 use dioxus::prelude::*;
 use libero::components::{
-    Button, Checkbox, Code, FieldError, FieldName, Fields, Fieldset, Flex, Form, FormPart,
-    PasswordField, Rule, Text, TextField, Validators, checked, is_email, min_length, not_empty,
-    use_form, use_form_context,
+    Button, Checkbox, Code, FieldError, FieldName, Fields, Fieldset, Flex, Form, FormErrors,
+    FormPart, PasswordField, Rule, Submit, Text, TextField, Validators, checked, is_email,
+    min_length, not_empty, use_form, use_form_context,
 };
 use libero::localization::Localization;
 
@@ -32,7 +32,7 @@ pub struct Signup {
 // snippet: ignore - builds on Getting Started's `EmailField` and `NewPasswordFieldset`
 // snippet: mirrors SignupForm, Signup, Age, AgeError
 const FORM_CODE: &str = r#"use dioxus::prelude::*;
-use libero::components::{Button, Checkbox, FieldError, Fields, Form, Rule, Text, TextField, checked, not_empty};
+use libero::components::{Button, Checkbox, FieldError, Fields, Form, FormErrors, Rule, Submit, Text, TextField, checked, not_empty};
 use libero::localization::Localization;__IMPORTS__
 
 #[derive(Clone, PartialEq, Default, Fields)]
@@ -53,7 +53,7 @@ __STATE____HANDLE__
         Form {__FORM__
             value: signup,
 __RULE____SUMMARY__
-            onsubmit: move |_| sent.set(true),
+            onsubmit: Submit::parse(new_account, move |account: NewAccount| sent.set(account.email)),
 __FIELDS____COMPANY__
 __TERMS__
 __BUTTONS__
@@ -114,7 +114,11 @@ fn form_code(values: &DemoValues, _: &str) -> String {
             "__BUTTONS__",
             &nest(if handle { "handle_buttons" } else { "submit" }),
         );
-    let code = format!("{code}\n\n{}", FILE.section("age"));
+    let code = format!(
+        "{code}\n\n{}\n\n{}",
+        FILE.section("parse"),
+        FILE.section("age")
+    );
     match handle {
         true => format!("{code}\n\n{}", FILE.section("check_button")),
         false => code,
@@ -138,8 +142,8 @@ pub fn FormPage() -> Element {
                         .doc("The whole form's value. `validate` checks it, and fields named by a path read and write it. `V` is inferred from it. A form with no `value` and no rules needs `Form::<()>`."),
                     prop("validate", "Validators<V>")
                         .doc("Rules over `value`, one or an array. A rule with `.on(..)` shows its status on each field it names, and runs only while each of them holds a parsed value or is empty and optional."),
-                    prop("onsubmit", "EventHandler<FormEvent>")
-                        .doc("Fires on a submit with no errors. Without an `action`, the browser's own submit is cancelled. A `javascript:`, `data:` or `vbscript:` `action` is dropped with a debug warning, so it counts as none."),
+                    prop("onsubmit", "Submit<V>")
+                        .doc("Fires on a submit with no errors: a closure over the `FormEvent`, or `Submit::parse(parse, handler)`. Without an `action`, the browser's own submit is cancelled. A `javascript:`, `data:` or `vbscript:` `action` is dropped with a debug warning, so it counts as none."),
                     prop("summary_title", "String")
                         .doc("A heading over the error summary."),
                     prop("form", "FormHandle")
@@ -164,6 +168,10 @@ pub fn FormPage() -> Element {
                         .doc("Whether nothing is an error, shown or not. It follows changes, so it can drive other UI."),
                     prop("clear_summary()", "()")
                         .doc("Hides the summary and resets nothing."),
+                    prop("set_errors(errors)", "FormErrors")
+                        .doc("Shows each error on the field with its path, as an error `status` would, lists it in the summary and focuses the summary: a server's answer. Replaces the errors set before. A field's error clears when it is edited, all of them on the next submit or reset. An error on a path no field carries gets an unlinked summary line."),
+                    prop("clear_errors()", "()")
+                        .doc("Drops the errors `set_errors` set."),
                 ]).without_base_props(),
                 props("Every field", vec![
                     prop("required", "bool")
@@ -175,6 +183,8 @@ pub fn FormPage() -> Element {
                         .doc("What the field posts as, and how rules address it. A path from `#[derive(Fields)]` also binds the field to the form's value, unless the field has a handler of its own. `T` is the field's value type."),
                 ]).without_base_props(),
                 props("Domain values", vec![
+                    prop("parse(parse, handler)", "Submit<V>")
+                        .doc("`Submit::parse(parse, handler)`, for `onsubmit`: after the field rules pass, `parse: Fn(&V) -> Result<C, FormErrors>` builds a command from `value` and `handler` gets it. An `Err` puts each error on its field and in the summary, as `set_errors` does, and `handler` doesn't run. Hold checks in `validate` for live feedback; `parse` builds the command and reports what only the submit can tell."),
                     prop(".map(format, parse)", "Mapped<T, W, E>")
                         .doc("On a path to `Option<T>`: binds a field that edits `W` (text, a date, an option) to the domain type `T`. `format` shows a stored `T`, `parse` reads `W` back and never sees an empty one (blank text, `None`, `[]`); text reaches it untrimmed. An `Err` shows its words, resets the value to `None` and blocks the submit, while the text stays, also across an unmount. A focused field keeps the text as typed: `format` runs on blur and when the value changes elsewhere. `T` must be `Clone + PartialEq`; wrap it in `Rc` otherwise."),
                     prop(".parsed()", "Mapped<T, String, T::Err>")
@@ -187,6 +197,10 @@ pub fn FormPage() -> Element {
                         .doc("A rule from `Fn(&V) -> Result<(), E>`: the field shows `E`'s words. `.warning()` shows it as a warning, `.message(fn)` words an `E` with no `FieldError`. Fits any `validate` too."),
                     prop("impl FieldError", "trait")
                         .doc("`fn message(&self, &Localization) -> String`: an error's words in the active language, worded again on a switch. Implemented for `Fn(&Localization) -> String`, `String` and `&'static str`; there is no `Display` fallback."),
+                    prop(".at(path, error)", "FormErrors")
+                        .doc("Errors by field path for `set_errors` and `parse`: `FormErrors::new().at(path, error)` with a `FieldError`, or `.at_with(path, error, fn)` worded by a `fn(&E, &Localization) -> String`. `path` is a `FieldPath`, a `FieldName` or its spelling."),
+                    prop(".required(path)", "Result<T, FormErrors>")
+                        .doc("On an `Option<T>`, with `RequiredValue` in scope: the value, else an error on `path` worded as an empty `required` field. Turns a missing value into a `FormErrors` entry with `?` instead of an `unwrap()`."),
                 ]).without_base_props(),
             ],
             accessibility: a11y()
@@ -250,7 +264,7 @@ pub fn FormPage() -> Element {
 fn SignupForm(summary_title: bool, handle: bool, company: bool) -> Element {
     // demo-code: state start
     let signup = use_store(Signup::default);
-    let mut sent = use_signal(|| false);
+    let mut sent = use_signal(String::new);
     // demo-code: state end
     // Always made, so the hook order holds; the form only gets it while the
     // switch is on.
@@ -268,7 +282,7 @@ fn SignupForm(summary_title: bool, handle: bool, company: bool) -> Element {
                 .on([Signup::FIELDS.password().value()]),
             // demo-code: rule end
             summary_title: summary_title.then(|| "Please fix these first:".to_string()),
-            onsubmit: move |_| sent.set(true),
+            onsubmit: Submit::parse(new_account, move |account: NewAccount| sent.set(account.email)),
             // demo-code: fields start
             // `required` alone blocks an empty submit with "Fill in this field.".
             TextField { label: "Name", name: Signup::FIELDS.name(), required: true }
@@ -315,12 +329,30 @@ fn SignupForm(summary_title: bool, handle: bool, company: bool) -> Element {
             // demo-code: status start
             // Mounted before the submit, so a screen reader hears the text it gains.
             Text { role: "status",
-                if sent() { "Account created." }
+                if !sent().is_empty() { "Account created for {sent}." }
             }
             // demo-code: status end
         }
     }
 }
+
+// demo-code: parse start
+/// What the form hands over: built from the value once every field passed.
+pub struct NewAccount {
+    pub email: String,
+}
+
+/// Reports what only the whole submit can tell; try `taken@example.com`.
+fn new_account(signup: &Signup) -> Result<NewAccount, FormErrors> {
+    if signup.email == "taken@example.com" {
+        let taken = FormErrors::new().at(Signup::FIELDS.email(), "This address is taken.");
+        return Err(taken);
+    }
+    Ok(NewAccount {
+        email: signup.email.clone(),
+    })
+}
+// demo-code: parse end
 
 // demo-code: age start
 /// A domain type: text that parses is an age, and its errors carry their own words.

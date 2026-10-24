@@ -46,6 +46,13 @@ impl FieldError for &'static str {
     }
 }
 
+/// The error of a mapping that can't fail, such as `.choices(..)`.
+impl FieldError for std::convert::Infallible {
+    fn message(&self, _: &Localization) -> String {
+        match *self {}
+    }
+}
+
 /// What a `.message(fn)` holds: an error's words in a language.
 pub(crate) type WordsFn<E> = dyn Fn(&E, &Localization) -> String;
 

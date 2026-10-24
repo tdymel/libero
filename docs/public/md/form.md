@@ -16,7 +16,7 @@ rules and paths fit together.
 
 ```rust
 use dioxus::prelude::*;
-use libero::components::{Button, Checkbox, FieldError, Fields, Form, Rule, Text, TextField, checked, not_empty};
+use libero::components::{Button, Checkbox, FieldError, Fields, Form, FormErrors, Rule, Submit, Text, TextField, checked, not_empty};
 use libero::localization::Localization;
 
 #[derive(Clone, PartialEq, Default, Fields)]
@@ -32,7 +32,7 @@ struct Signup {
 #[component]
 fn SignupForm() -> Element {
     let signup = use_store(Signup::default);
-    let mut sent = use_signal(|| false);
+    let mut sent = use_signal(String::new);
 
     rsx! {
         Form {
@@ -41,7 +41,7 @@ fn SignupForm() -> Element {
             validate: (|s: &Signup| s.email.is_empty() || !s.password.value.contains(&s.email))
                 .warn("Your password contains your email address.")
                 .on([Signup::FIELDS.password().value()]),
-            onsubmit: move |_| sent.set(true),
+            onsubmit: Submit::parse(new_account, move |account: NewAccount| sent.set(account.email)),
             // `required` alone blocks an empty submit with "Fill in this field.".
             TextField { label: "Name", name: Signup::FIELDS.name(), required: true }
             // A specialized field and a composed part, built in Getting started.
@@ -57,10 +57,26 @@ fn SignupForm() -> Element {
             Button { r#type: "submit", "Create account" }
             // Mounted before the submit, so a screen reader hears the text it gains.
             Text { role: "status",
-                if sent() { "Account created." }
+                if !sent().is_empty() { "Account created for {sent}." }
             }
         }
     }
+}
+
+/// What the form hands over: built from the value once every field passed.
+pub struct NewAccount {
+    pub email: String,
+}
+
+/// Reports what only the whole submit can tell; try `taken@example.com`.
+fn new_account(signup: &Signup) -> Result<NewAccount, FormErrors> {
+    if signup.email == "taken@example.com" {
+        let taken = FormErrors::new().at(Signup::FIELDS.email(), "This address is taken.");
+        return Err(taken);
+    }
+    Ok(NewAccount {
+        email: signup.email.clone(),
+    })
 }
 
 /// A domain type: text that parses is an age, and its errors carry their own words.
@@ -246,7 +262,7 @@ Stepper {
 |---|---|---|---|
 | `value` | `Store<V>` | - | The whole form's value. `validate` checks it, and fields named by a path read and write it. `V` is inferred from it. A form with no `value` and no rules needs `Form::<()>`. |
 | `validate` | `Validators<V>` | - | Rules over `value`, one or an array. A rule with `.on(..)` shows its status on each field it names, and runs only while each of them holds a parsed value or is empty and optional. |
-| `onsubmit` | `EventHandler<FormEvent>` | - | Fires on a submit with no errors. Without an `action`, the browser's own submit is cancelled. A `javascript:`, `data:` or `vbscript:` `action` is dropped with a debug warning, so it counts as none. |
+| `onsubmit` | `Submit<V>` | - | Fires on a submit with no errors: a closure over the `FormEvent`, or `Submit::parse(parse, handler)`. Without an `action`, the browser's own submit is cancelled. A `javascript:`, `data:` or `vbscript:` `action` is dropped with a debug warning, so it counts as none. |
 | `summary_title` | `String` | - | A heading over the error summary. |
 | `form` | `FormHandle` | - | Controls the form from outside, made with `use_form()`. Taken once, on mount. Without it the form makes its own, which `use_form_context()` returns inside the form. |
 | `children` | `Element` | required | The fields, fieldsets and buttons. |
@@ -264,6 +280,8 @@ any extra HTML attributes.
 | `reset()` | `()` | Puts the value back to `V::default()` and clears touched fields, the submit and the summary; a `type="reset"` button clears those too. A field with its own `value` and handler keeps what it shows. On the desktop WebView it cannot clear a control that is not bound to the value. Under Blitz it clears unbound text fields, not checkboxes or selects. |
 | `is_valid()` | `bool` | Whether nothing is an error, shown or not. It follows changes, so it can drive other UI. |
 | `clear_summary()` | `()` | Hides the summary and resets nothing. |
+| `set_errors(errors)` | `FormErrors` | Shows each error on the field with its path, as an error `status` would, lists it in the summary and focuses the summary: a server's answer. Replaces the errors set before. A field's error clears when it is edited, all of them on the next submit or reset. An error on a path no field carries gets an unlinked summary line. |
+| `clear_errors()` | `()` | Drops the errors `set_errors` set. |
 
 ### Every field
 
@@ -277,12 +295,15 @@ any extra HTML attributes.
 
 | Method | Type | Description |
 |---|---|---|
+| `parse(parse, handler)` | `Submit<V>` | `Submit::parse(parse, handler)`, for `onsubmit`: after the field rules pass, `parse: Fn(&V) -> Result<C, FormErrors>` builds a command from `value` and `handler` gets it. An `Err` puts each error on its field and in the summary, as `set_errors` does, and `handler` doesn't run. Hold checks in `validate` for live feedback; `parse` builds the command and reports what only the submit can tell. |
 | `.map(format, parse)` | `Mapped<T, W, E>` | On a path to `Option<T>`: binds a field that edits `W` (text, a date, an option) to the domain type `T`. `format` shows a stored `T`, `parse` reads `W` back and never sees an empty one (blank text, `None`, `[]`); text reaches it untrimmed. An `Err` shows its words, resets the value to `None` and blocks the submit, while the text stays, also across an unmount. A focused field keeps the text as typed: `format` runs on blur and when the value changes elsewhere. `T` must be `Clone + PartialEq`; wrap it in `Rc` otherwise. |
 | `.parsed()` | `Mapped<T, String, T::Err>` | `.map` through `T`'s `Display` and `FromStr`, for a text field. |
 | `.message(fn)` | `fn(&E, &Localization) -> String` | Words every error of type `E` on the field, the parse error and `checked` rules alike. Needed when `E` has no `FieldError`, such as a domain crate's error: without it the name does not compile. |
 | `.rules(..)` | `Validator<T> or Checked<T, E>` | Rules over `T`, run only on a parsed value. The field's own `validate` runs first, over `W`, before the parse; the first error wins. Adds to earlier calls, so a mixed list is two calls. |
 | `checked(f)` | `Checked<V, E>` | A rule from `Fn(&V) -> Result<(), E>`: the field shows `E`'s words. `.warning()` shows it as a warning, `.message(fn)` words an `E` with no `FieldError`. Fits any `validate` too. |
 | `impl FieldError` | `trait` | `fn message(&self, &Localization) -> String`: an error's words in the active language, worded again on a switch. Implemented for `Fn(&Localization) -> String`, `String` and `&'static str`; there is no `Display` fallback. |
+| `.at(path, error)` | `FormErrors` | Errors by field path for `set_errors` and `parse`: `FormErrors::new().at(path, error)` with a `FieldError`, or `.at_with(path, error, fn)` worded by a `fn(&E, &Localization) -> String`. `path` is a `FieldPath`, a `FieldName` or its spelling. |
+| `.required(path)` | `Result<T, FormErrors>` | On an `Option<T>`, with `RequiredValue` in scope: the value, else an error on `path` worded as an empty `required` field. Turns a missing value into a `FormErrors` entry with `?` instead of an `unwrap()`. |
 
 ## Style API
 

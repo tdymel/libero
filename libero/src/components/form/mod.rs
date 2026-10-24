@@ -61,6 +61,8 @@ mod segmented_control;
 mod select;
 #[cfg(feature = "slider")]
 mod slider;
+#[cfg(feature = "form-root")]
+mod submit;
 #[cfg(feature = "switch")]
 mod switch;
 #[cfg(feature = "tags-field")]
@@ -174,6 +176,8 @@ pub use slider::{
     RangeSlider, RangeSliderProps, Slider, SliderChangeEvent, SliderMark, SliderPart, SliderProps,
     SliderSegment, SliderStep, SliderTrack, SliderValue,
 };
+#[cfg(feature = "form-root")]
+pub use submit::Submit;
 #[cfg(feature = "switch")]
 pub use switch::{Switch, SwitchPart, SwitchProps};
 #[cfg(feature = "tags-field")]
@@ -183,7 +187,9 @@ pub use text_field::{TextField, TextFieldProps};
 #[cfg(feature = "textarea")]
 pub use textarea::{Textarea, TextareaPart, TextareaProps};
 #[cfg(all(feature = "visually-hidden", feature = "use-icon", feature = "use-id"))]
-pub(crate) use use_field::{Activation, Asks, PreparedField, Setter, use_bound, use_field};
+pub(crate) use use_field::{
+    Activation, Asks, Bound, MappedState, PreparedField, Setter, use_bound, use_field,
+};
 #[cfg(all(feature = "visually-hidden", feature = "use-icon", feature = "use-id"))]
 pub(crate) use use_field_frame::{
     FIELD_CONTROL_SX, LiveControl, LiveSlot, PreparedFrame, SLOT_BUTTON_SX, drag_over_sx,
@@ -196,7 +202,7 @@ pub(crate) use validation::{
     word, worst,
 };
 pub use validation::{
-    Checked, FieldError, FieldName, FieldPath, Fields, IsEmpty, Mapped, MappedRule, Rule, Speak,
-    Step, StepKey, Unworded, Validator, Validators, Wire, Words, checked, is_email, max,
-    max_length, min, min_length, not_empty,
+    Checked, FieldError, FieldName, FieldPath, Fields, FormErrors, IsEmpty, Mapped, MappedRule,
+    RequiredValue, Rule, Speak, Step, StepKey, Unworded, Validator, Validators, Wire, Words,
+    checked, is_email, max, max_length, min, min_length, not_empty,
 };

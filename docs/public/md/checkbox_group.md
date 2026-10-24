@@ -67,6 +67,12 @@ fn Demo() -> Element {
 | `disabled` | `bool` | `false` | Disables every option and dims the group. |
 | `readonly` | `bool` | `false` | Focusable and posted with the form, but not editable. `disabled` drops the group from the tab order and the post instead. |
 
+### Domain enums
+
+| Method | Type | Description |
+|---|---|---|
+| `.choices(&X)` | `Mapped<Vec<V>, Vec<Choice<V>>, Infallible>` | On a path to `Vec<V>`: binds `name` to a domain enum through a `Choices<V>` list, so the form's value holds `Vec<V>` and the field edits `Vec<Choice<V>>`. Pass `X.list()` as `options` too. `.rules(..)` after it run over `Vec<V>`. |
+
 ## Style API
 
 Style a part with the `parts` prop, or address it as `[data-slot='…']` in your

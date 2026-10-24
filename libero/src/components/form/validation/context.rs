@@ -11,7 +11,7 @@ use dioxus::{
 };
 
 use crate::{
-    components::form::{FieldError, FieldStatus, Parse, Validators, worst},
+    components::form::{FieldError, FieldStatus, Parse, Validators, word, worst},
     utils::warn,
 };
 
@@ -40,6 +40,9 @@ pub(crate) struct FormScope {
     /// Paths a composite rule names that no field had registered when it was due:
     /// the form judges it again once one does.
     waiting: Signal<BTreeSet<String>, UnsyncStorage>,
+    /// Errors set from code (`set_errors`, a `parse` step) by full name; each
+    /// shows as that field's explicit status until it is edited.
+    errors: Signal<SetErrors, UnsyncStorage>,
     /// The scope that created the signals above. Cleanup runs inside it, or dioxus
     /// warns of a copy value used outside its owner.
     owner: ScopeId,
@@ -109,6 +112,7 @@ impl FormScope {
             drafts: Signal::new_maybe_sync(HashMap::new()),
             typed: Signal::new_maybe_sync(HashMap::new()),
             waiting: Signal::new_maybe_sync(BTreeSet::new()),
+            errors: Signal::new_maybe_sync(Vec::new()),
             owner: current_scope_id(),
         }
     }
@@ -180,6 +184,7 @@ impl FormScope {
         if !self.typed.peek().is_empty() {
             self.typed.write_unchecked().clear();
         }
+        self.clear_errors();
         let runtime = Runtime::current();
         for field in self.fields.peek().values() {
             runtime.needs_update(field.owner);
@@ -231,6 +236,34 @@ impl FormScope {
         if self.typed.peek().contains_key(name) {
             self.typed.write_unchecked().remove(name);
         }
+    }
+
+    /// Replaces the errors set from code. Kept apart from the entries, which the summary and
+    /// the submit check join them to, so neither waits for the fields to re-render.
+    pub fn set_errors(&mut self, errors: Vec<(String, Rc<dyn FieldError>)>) {
+        self.errors.set(errors);
+    }
+
+    pub fn clear_errors(&mut self) {
+        if !self.errors.peek().is_empty() {
+            self.errors.write().clear();
+        }
+    }
+
+    /// Drops the errors set on `name`: the field was edited.
+    pub fn clear_error(&mut self, name: &str) {
+        if self.errors.peek().iter().any(|(path, _)| path == name) {
+            self.errors.write().retain(|(path, _)| path != name);
+        }
+    }
+
+    /// The first error set on `name`, worded. Reactive.
+    pub fn error_at(&self, name: &str) -> Option<String> {
+        self.errors
+            .read()
+            .iter()
+            .find(|(path, _)| path == name)
+            .map(|(_, error)| word(&**error))
     }
 
     pub fn touch(&mut self, name: &str) {
@@ -410,21 +443,32 @@ impl FormScope {
     /// Whether anything blocks a submit: an error on a field, or an error
     /// raised by a composite rule. Warnings never block.
     pub fn has_errors(&self) -> bool {
-        errors_in(&self.fields.peek(), &self.issues.peek())
+        errors_in(
+            &self.fields.peek(),
+            &self.issues.peek(),
+            &self.errors.peek(),
+        )
     }
 
     /// [`has_errors`](Self::has_errors), but subscribing the caller to every
     /// field's status and every composite issue.
     pub fn has_errors_tracked(&self) -> bool {
-        errors_in(&self.fields.read(), &self.issues.read())
+        errors_in(
+            &self.fields.read(),
+            &self.issues.read(),
+            &self.errors.read(),
+        )
     }
 
-    /// Whether a field's explicit `status` is an error, subscribing the caller to every field.
+    /// Whether a field's explicit `status` is an error, or an error was set from code,
+    /// subscribing the caller to every field.
     pub fn explicit_error_tracked(&self) -> bool {
-        self.fields
-            .read()
-            .values()
-            .any(|field| field.explicit_error)
+        !self.errors.read().is_empty()
+            || self
+                .fields
+                .read()
+                .values()
+                .any(|field| field.explicit_error)
     }
 
     /// One line per field error, in registration order, then one per
@@ -438,10 +482,12 @@ impl FormScope {
                 .find(|field| field.name.as_deref() == Some(name))
         };
 
+        let errors = self.errors.peek();
         let mut items: Vec<SummaryItem> = fields
             .values()
             .filter_map(|field| {
-                let message = field.status.is_error().then(|| field.status.message())??;
+                let status = joined(field, &errors);
+                let message = status.is_error().then(|| status.message())??;
                 Some(SummaryItem {
                     message: match &field.label {
                         Some(label) => format!("{label}: {message}"),
@@ -451,6 +497,16 @@ impl FormScope {
                 })
             })
             .collect();
+        // An error set on a path no field carries still has its line, linked to nothing.
+        items.extend(
+            errors
+                .iter()
+                .filter(|(path, _)| named(path).is_none())
+                .map(|(_, error)| SummaryItem {
+                    message: word(&**error),
+                    target: None,
+                }),
+        );
 
         for (key, issues) in self.issues.peek().iter() {
             for issue in issues {
@@ -515,8 +571,26 @@ impl FormScope {
     }
 }
 
-fn errors_in(fields: &BTreeMap<usize, FieldEntry>, issues: &BTreeMap<usize, Vec<Issue>>) -> bool {
-    fields.values().any(|field| field.status.is_error())
+type SetErrors = Vec<(String, Rc<dyn FieldError>)>;
+
+/// A field's own status with an error set from code on its name.
+fn joined(field: &FieldEntry, errors: &SetErrors) -> FieldStatus {
+    let set = errors
+        .iter()
+        .find(|(path, _)| field.name.as_deref() == Some(path.as_str()));
+    match set {
+        Some((_, error)) => worst(field.status.clone(), FieldStatus::Error(word(&**error))),
+        None => field.status.clone(),
+    }
+}
+
+fn errors_in(
+    fields: &BTreeMap<usize, FieldEntry>,
+    issues: &BTreeMap<usize, Vec<Issue>>,
+    errors: &SetErrors,
+) -> bool {
+    !errors.is_empty()
+        || fields.values().any(|field| field.status.is_error())
         || issues
             .values()
             .flatten()
