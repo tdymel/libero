@@ -151,6 +151,7 @@ mod splitter;
 mod spotlight;
 mod stepper;
 mod style_rules;
+mod suspense_style;
 mod switch;
 mod table;
 mod table_column_filters;

@@ -62,6 +62,15 @@ fn layered_css(layer: CssLayer, stylesheet: &Stylesheet) -> String {
     format!("@layer {}{{{}}}", layer.css_name(), stylesheet.as_str())
 }
 
+/// [`layered_css`]'s inner sheet back.
+fn unlayered(layer: CssLayer, css: &str) -> &str {
+    css.strip_prefix("@layer ")
+        .and_then(|css| css.strip_prefix(layer.css_name()))
+        .and_then(|css| css.strip_prefix('{'))
+        .and_then(|css| css.strip_suffix('}'))
+        .unwrap_or(css)
+}
+
 /// `css`'s top-level rules, each with its braces; quoted braces don't count.
 fn top_level_rules(css: &str) -> impl Iterator<Item = &str> {
     let mut depth = 0usize;
@@ -212,14 +221,14 @@ struct Sheets {
 impl Sheets {
     /// Puts a class-scoped sheet's rules at the end of its layer's block, see [`block_rules`].
     /// Global sheets stay `<style>`s.
-    fn insert(&mut self, key: StylesheetKey, stylesheet: &Stylesheet) -> bool {
+    fn insert(&mut self, key: StylesheetKey, css: &str, scoped: bool) -> bool {
         let Some(blocks) = &self.blocks else {
             return false;
         };
-        if key.rank != SheetRank::Component || stylesheet.class_name().is_none() {
+        if key.rank != SheetRank::Component || !scoped {
             return false;
         }
-        let Some(rules) = block_rules(stylesheet.as_str(), self.nests, &self.answers) else {
+        let Some(rules) = block_rules(css, self.nests, &self.answers) else {
             return false;
         };
         let order = &mut self.inserted[key.layer.index()];
@@ -295,7 +304,8 @@ impl StylesheetRegistry {
         let registry = &mut *registry;
 
         if !registry.by_key.contains_key(&key) {
-            let inserted = registry.insert(key, &stylesheet);
+            let scoped = stylesheet.class_name().is_some();
+            let inserted = registry.insert(key, stylesheet.as_str(), scoped);
             registry.outlet_changed |= !inserted;
             registry.by_key.insert(
                 key,
@@ -311,7 +321,7 @@ impl StylesheetRegistry {
                     css: Rc::from(layered_css(layer, &stylesheet)),
                     ref_count: 0,
                     retired_at: 0,
-                    retainable: stylesheet.class_name().is_some(),
+                    retainable: scoped,
                     inserted,
                 },
             );
@@ -387,11 +397,28 @@ impl StylesheetRegistry {
 
     /// Sends later plain class-scoped sheets into `blocks`, one per [`CssLayer`]; the
     /// sheets registered so far keep their `<style>`, as a hydrating client must.
+    /// Blocks remounted empty (a suspense up to the root recreates the app's nodes,
+    /// todo 4124) get the inserted sheets again; one that no longer goes in gets its `<style>`.
     pub(crate) fn attach(&self, blocks: Box<dyn StyleRulesApi>) {
         let mut sheets = self.inner.borrow_mut();
+        let sheets = &mut *sheets;
         sheets.nests = blocks.nests();
         sheets.blocks = Some(blocks);
         sheets.answers = current_a11y_answers();
+
+        let previous = std::mem::take(&mut sheets.inserted);
+        for (key, _) in previous.into_iter().flatten() {
+            let Some(entry) = sheets.by_key.get(&key) else {
+                continue;
+            };
+            let css = entry.css.clone();
+            let inner = unlayered(key.layer, &css);
+            let inserted = sheets.insert(key, inner, entry.retainable);
+            if let Some(entry) = sheets.by_key.get_mut(&key) {
+                entry.inserted = inserted;
+            }
+            sheets.outlet_changed |= !inserted;
+        }
     }
 
     /// New accessibility answers: an inserted sheet whose queries they rewrite goes back to
@@ -695,6 +722,52 @@ mod tests {
             stylesheet.as_str()
         );
         assert!(!registry.take_outlet_change(), "the outlet has nothing new");
+    }
+
+    /// A suspense up to the root recreates the outlet's blocks empty (todo 4124).
+    #[test]
+    fn remounted_blocks_get_the_inserted_sheets_again_in_order() {
+        let (registry, old) = attached();
+        let first = Stylesheet::from(&sx().padding("lg"));
+        let second = Stylesheet::from(&sx().color("red"));
+        registry.acquire(first.clone(), CssLayer::UserStatic, SheetRank::Component);
+        registry.acquire(second.clone(), CssLayer::UserStatic, SheetRank::Component);
+
+        let new = FakeRules {
+            nests: true,
+            ..FakeRules::default()
+        };
+        registry.attach(Box::new(new.clone()));
+
+        assert_eq!(
+            block(&new, CssLayer::UserStatic),
+            block(&old, CssLayer::UserStatic)
+        );
+        assert!(!registry.take_outlet_change());
+        let key = registry.acquire(first, CssLayer::UserStatic, SheetRank::Component);
+        registry.release(key);
+        registry.inner.borrow_mut().remove(&key);
+        assert_eq!(block(&new, CssLayer::UserStatic).concat(), second.as_str());
+    }
+
+    /// A sheet the new blocks reject goes back to its `<style>`.
+    #[test]
+    fn a_sheet_remounted_blocks_reject_gets_its_style() {
+        let (registry, _) = attached();
+        registry.acquire(
+            Stylesheet::from(&sx().padding("lg")),
+            CssLayer::UserStatic,
+            SheetRank::Component,
+        );
+
+        registry.attach(Box::new(FakeRules {
+            reject: Some("padding"),
+            nests: true,
+            ..FakeRules::default()
+        }));
+
+        assert_eq!(registry.stylesheets(SheetRank::Component).len(), 1);
+        assert!(registry.take_outlet_change());
     }
 
     /// Sheets registered before the blocks mounted keep the `<style>` the server rendered.

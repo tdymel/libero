@@ -96,9 +96,13 @@ pub(super) fn StyleOutlet() -> Element {
                 dangerous_inner_html: CssLayer::blocks_css(),
                 onmounted: {
                     let registry = registry.clone();
+                    let mut version = context.stylesheet_registry_version;
                     move |event: MountedEvent| {
                         if let Some(rules) = platform::style_rules(&event.data()) {
                             registry.attach(rules);
+                            if registry.take_outlet_change() {
+                                version += 1;
+                            }
                         }
                     }
                 },
