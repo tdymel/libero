@@ -110,6 +110,9 @@ pub fn FlexPage() -> Element {
             source: "libero/src/components/layout/flex.rs",
             markdown: "/md/flex.md",
             properties: vec![props("Flex", vec![
+                prop("component", "HtmlTag")
+                    .default("div")
+                    .doc("The element to render, as `component: HtmlTag::Ul` for a list of `li` children or `HtmlTag::Nav`."),
                 prop("direction", "Responsive<FlexDirection>")
                     .default("column")
                     .doc("Lays the children out in a row or a column, or one per breakpoint, `direction: responsive(FlexDirection::Column).md(FlexDirection::Row)`. Each breakpoint takes that axis's theme defaults; an explicit `gap` stays. `row-reverse` and `column-reverse` draw the children backwards without moving them in the reading or Tab order."),
@@ -135,7 +138,7 @@ pub fn FlexPage() -> Element {
                 .must([
                     "Avoid `row-reverse` and `column-reverse` for anything read or tabbed through: the screen shows the children backwards while a screen reader and Tab keep the source order (WCAG 1.3.2, 2.4.3). Reorder the children in the code instead.",
                     "Add `role` and `aria-label` when the children form a group, such as `role: \"group\"` around related buttons.",
-                    "`Flex` always renders a `div`: for a list or a nav, use `Box` with `component: \"ul\"` or `\"nav\"`.",
+                    "Give a list or a nav its element with `component`, as `HtmlTag::Ul` with `li` children or `HtmlTag::Nav`: a `div` tells a screen reader nothing.",
                 ])
                 .example("Save and Cancel in a `Flex` with `role: \"group\"` and `\"aria-label\": \"Form actions\"`: a screen reader reads both as one group, in the order they are shown."),
             lead: rsx! {

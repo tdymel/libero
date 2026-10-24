@@ -43,6 +43,7 @@ fn Demo() -> Element {
 | `size` | `Size` | `md` | Height, padding and font size. |
 | `full_width` | `bool` | `false` | Stretches the button to fill its container. |
 | `justify` | `ThemeAwareValue` | `center` | Where the icons and the label sit along the button, as `justify-content`: `start`, `end`, `space-between` or any CSS. It shows on a `full_width` button or one given a width. Unset, they are centred, and an overlong label is cut at its end. |
+| `gap` | `ThemeAwareValue` | `xs` | Space between the icons and the label: a size word or any CSS, as `gap: "0"`. It faces the label under `dir="rtl"` too. |
 | `selected` | `bool` | - | Makes it a toggle button with the selected look. Leave it unset for a plain action. |
 | `disabled` | `bool` | `false` | Disables and dims the button: `aria-disabled` rather than `disabled`, so a focused button keeps its focus. It leaves the Tab order and ignores presses. |
 | `focusable_when_disabled` | `bool` | `false` | With `disabled`: keeps the button in the Tab order. |
@@ -135,6 +136,7 @@ title shows it on hover.
 | `--lsx-button-height-<size>` | `height` for that size step. |
 | `--lsx-button-padding-x-<size>` | Horizontal padding for that size step. |
 | `--lsx-button-justify` | `justify-content`, set by the `justify` prop. |
+| `--lsx-button-gap` | Space between the icons and the label, set by the `gap` prop. |
 | `--lsx-button-color` | Accent color of the current variant. |
 | `--lsx-button-contrast` | Text color on top of that accent. |
 | `--lsx-button-hover` | Accent color while hovered. |

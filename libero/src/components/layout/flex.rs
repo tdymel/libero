@@ -144,6 +144,9 @@ fn flex_variables(props: &FlexProps) -> Variables {
 
 base_props! {
     pub struct FlexProps {
+        /// Which element to render as - `div` by default, as `component: HtmlTag::Ul` for a list.
+        #[props(default, into)]
+        component: Input<HtmlTag>,
         /// `align-items`.
         #[props(default, into)]
         align: Input<ThemeAwareValue>,
@@ -254,7 +257,11 @@ pub fn Flex(props: FlexProps) -> Element {
         .states(&states)
         .variables(&variables)
         .prepare()
-        .render(HtmlTag::Div, props.attributes, props.children)
+        .render(
+            props.component.copied_or_default(),
+            props.attributes,
+            props.children,
+        )
 }
 
 #[cfg(test)]
@@ -263,6 +270,7 @@ mod variables_tests {
 
     fn flex_props(wrap: Input<FlexWrap>, align: Input<ThemeAwareValue>) -> FlexProps {
         FlexProps {
+            component: Input::None,
             class: Default::default(),
             sx: Default::default(),
             states: Input::None,

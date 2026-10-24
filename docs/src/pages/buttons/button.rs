@@ -7,8 +7,7 @@ use libero::components::{Button, ButtonPart, Code, Flex, Input, Loader, Pictogra
 use libero::use_theme;
 use pictogram_icons_lucide as lucide;
 
-const TRAILING_ICON: &str =
-    "trailing_icon: rsx! { Pictogram { icon: lucide::chevron_right::outlined } }";
+const TRAILING_ICON: &str = "trailing_icon: rsx! { Pictogram { icon: lucide::chevron_right::outlined, width: \"1.25em\", height: \"1.25em\" } }";
 
 const CUSTOM_LOADER: &str =
     "loader: rsx! { Loader { variant: \"dots\", size: \"xs\", color: \"currentColor\" } }";
@@ -52,6 +51,9 @@ pub fn ButtonPage() -> Element {
                 prop("justify", "ThemeAwareValue")
                     .default("center")
                     .doc("Where the icons and the label sit along the button, as `justify-content`: `start`, `end`, `space-between` or any CSS. It shows on a `full_width` button or one given a width. Unset, they are centred, and an overlong label is cut at its end."),
+                prop("gap", "ThemeAwareValue")
+                    .default("xs")
+                    .doc("Space between the icons and the label: a size word or any CSS, as `gap: \"0\"`. It faces the label under `dir=\"rtl\"` too."),
                 prop("selected", "bool")
                     .doc("Makes it a toggle button with the selected look. Leave it unset for a plain action."),
                 prop("disabled", "bool")
@@ -151,6 +153,8 @@ pub fn ButtonPage() -> Element {
                             "center" => vec![],
                             value => vec![format!("justify: {value:?}")],
                         }),
+                    // `0` is plain CSS; the trailing icon below shows it without another switch.
+                    Control::slider("gap", ["0", "xs", "sm", "md", "lg", "xl"]).default("xs"),
                     // On, so the icon shows without another switch.
                     Control::switch("trailing_icon").default("true").code(|_, values| {
                         match values.str("trailing_icon").as_str() {
@@ -247,6 +251,7 @@ pub fn ButtonPage() -> Element {
                             loading: values.str("loading") == "true" && !is_link(&values),
                             loading_position: values.str("loading_position"),
                             loader: custom_loader(&values),
+                            gap: values.str("gap"),
                             ripple: values.str("ripple") != "false",
                             r#type: values.str("type"),
                             to: match values.str("link").as_str() {
@@ -256,7 +261,7 @@ pub fn ButtonPage() -> Element {
                             target: (values.str("link") == "true").then(|| "_blank".to_string()),
                             new_tab_icon: (values.str("new_tab_icon") == "true").then_some(true),
                             trailing_icon: (values.str("trailing_icon") == "true")
-                                .then(|| rsx! { Pictogram { icon: lucide::chevron_right::outlined } }),
+                                .then(|| rsx! { Pictogram { icon: lucide::chevron_right::outlined, width: "1.25em", height: "1.25em" } }),
                             "Save changes"
                         }
                         // Always loading, so the position and the loader show without the `loading` switch.

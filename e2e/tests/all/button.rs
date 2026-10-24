@@ -108,6 +108,35 @@ async fn ripple_false_draws_no_ripple<D: Driver>(d: &mut D, _route: &str) -> Res
     Ok(())
 }
 
+/// Todo 4103: `gap` spaces both icons from the label, on the label's side under `dir="rtl"` too.
+async fn gap_spaces_the_icons_from_the_label<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    for (id, want) in [("ltr", 24.0), ("rtl", 24.0), ("zero", 0.0)] {
+        let lead = d.rect(&format!("#{id}-lead")).await?;
+        let text = d.rect(&format!("#{id}-text")).await?;
+        let trail = d.rect(&format!("#{id}-trail")).await?;
+        let (before, after) = match id {
+            "rtl" => (
+                lead.x - (text.x + text.width),
+                text.x - (trail.x + trail.width),
+            ),
+            _ => (
+                text.x - (lead.x + lead.width),
+                trail.x - (text.x + text.width),
+            ),
+        };
+        ensure!(
+            (before - want).abs() <= 1.0 && (after - want).abs() <= 1.0,
+            "{id}: gaps {before} and {after}, want {want}"
+        );
+    }
+    Ok(())
+}
+
+e2e::scenario!(
+    gap_spaces_a_buttons_icons_in_either_direction,
+    "/button/gap",
+    gap_spaces_the_icons_from_the_label
+);
 e2e::scenario!(
     a_start_loader_takes_the_icon_s_place,
     "/button/loading",

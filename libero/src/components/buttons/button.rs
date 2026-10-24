@@ -30,6 +30,8 @@ input_from_str!(LoadingPosition);
 
 // Set in the element's `style` by the `justify` prop, else the centred default.
 const BUTTON_JUSTIFY_VAR: CssVar = CssVar::new("--lsx-button-justify");
+// Set in the element's `style` by the `gap` prop, else the theme's `xs` spacing.
+const BUTTON_GAP_VAR: CssVar = CssVar::new("--lsx-button-gap");
 
 static BUTTON_BASE_SX: StaticSx = StaticSx::new(|| {
     let base = ripple_sx(ButtonDefaults::theme_vars())
@@ -100,19 +102,16 @@ fn zoom_height_sx() -> Sx {
 }
 
 /// Beside the children, never shrinking, as on `Chip`: `leading` is before them.
+/// Logical margins, so the gap faces the label under `dir="rtl"` too.
 fn button_icon_sx(leading: bool) -> Sx {
-    let gap = SizeCss::SPACING.value(Size::Xs);
+    let gap = BUTTON_GAP_VAR.value_or(SizeCss::SPACING.value(Size::Xs));
     let base = sx()
         .display("inline-flex")
         .align_items("center")
         .flex("0 0 auto");
     match leading {
-        true => base
-            .margin_right(gap.clone())
-            .rtl(sx().margin_right("0").margin_left(gap)),
-        false => base
-            .margin_left(gap.clone())
-            .rtl(sx().margin_left("0").margin_right(gap)),
+        true => base.margin_inline_end(gap),
+        false => base.margin_inline_start(gap),
     }
 }
 
@@ -226,6 +225,10 @@ base_props! {
         /// `full_width` button. Unset, they are centred.
         #[props(default, into)]
         justify: Input<ThemeAwareValue>,
+        /// Space between the icons and the label: a size word or any CSS, as `gap: "0"`.
+        /// Unset, the theme's `xs` spacing.
+        #[props(default, into)]
+        gap: Input<ThemeAwareValue>,
         /// Toggle button: renders `aria-pressed`. `None` is a plain action.
         #[props(default)]
         selected: Option<bool>,
@@ -368,6 +371,13 @@ pub fn Button(props: ButtonProps) -> Element {
         Some(justify) => format!(
             "{style}{}",
             variables().with(BUTTON_JUSTIFY_VAR, Some(justify)).render()
+        ),
+        None => style,
+    };
+    let style = match props.gap.resolve(Some(SizeCss::SPACING)) {
+        Some(gap) => format!(
+            "{style}{}",
+            variables().with(BUTTON_GAP_VAR, Some(gap)).render()
         ),
         None => style,
     };

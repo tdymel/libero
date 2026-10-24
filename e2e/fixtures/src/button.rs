@@ -14,12 +14,33 @@ pub const ROUTES: Routes = &[
     ("/button/sizes", || rsx! { ButtonSizes {} }),
     ("/button/soft-disabled", || rsx! { ButtonSoftDisabled {} }),
     ("/button/loading", || rsx! { ButtonLoading {} }),
+    ("/button/gap", || rsx! { ButtonGap {} }),
 ];
 
 fn dot(id: &str) -> Element {
     rsx! {
         svg { id, width: "16", height: "16", view_box: "0 0 24 24",
             circle { cx: "12", cy: "12", r: "8" }
+        }
+    }
+}
+
+/// Todo 4103: `gap` between both icons and the label, left to right, right to left and none.
+#[component]
+fn ButtonGap() -> Element {
+    rsx! {
+        Flex { direction: "column", gap: "md", align: "flex-start",
+            for (id, dir, gap) in [("ltr", "ltr", "24px"), ("rtl", "rtl", "24px"), ("zero", "ltr", "0")] {
+                div { key: "{id}", dir,
+                    Button {
+                        id,
+                        gap,
+                        icon: dot(&format!("{id}-lead")),
+                        trailing_icon: dot(&format!("{id}-trail")),
+                        span { id: "{id}-text", "Next" }
+                    }
+                }
+            }
         }
     }
 }

@@ -8,7 +8,11 @@ use crate::common::{
 use std::collections::BTreeSet;
 
 use dioxus::prelude::*;
-use libero::{LiberoProvider, components::Button, theme::Color};
+use libero::{
+    LiberoProvider,
+    components::Button,
+    theme::{Color, Size, SizeCss},
+};
 
 /// Busy, not disabled: native `disabled` would drop focus mid-wait, so the
 /// button says `aria-busy` + `aria-disabled` and stays in the tab order. The
@@ -492,6 +496,32 @@ fn an_optional_target_is_a_link_or_a_plain_button() {
 }
 
 /// `justify` reaches the base rule through a per-button variable.
+#[test]
+fn gap_is_set_as_a_spacing_variable_on_the_button() {
+    fn sized() -> Element {
+        rsx! {
+            LiberoProvider { Button { gap: "lg", "Menu" } }
+        }
+    }
+    fn css() -> Element {
+        rsx! {
+            LiberoProvider { Button { gap: "0", "Menu" } }
+        }
+    }
+
+    let sized = attributes_of(&body(&render(sized)), "button");
+    let css = attributes_of(&body(&render(css)), "button");
+
+    assert!(
+        sized["style"].contains(&format!(
+            "--lsx-button-gap:{}",
+            SizeCss::SPACING.value(Size::Lg)
+        )),
+        "{sized:?}"
+    );
+    assert!(css["style"].contains("--lsx-button-gap:0"), "{css:?}");
+}
+
 #[test]
 fn justify_is_set_as_a_variable_on_the_button() {
     fn app() -> Element {

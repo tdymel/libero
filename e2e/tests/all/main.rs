@@ -52,6 +52,7 @@ mod field_parts;
 mod field_props;
 mod field_value;
 mod file_field;
+mod flex;
 mod floating_window;
 mod floating_window_resize;
 mod flows;

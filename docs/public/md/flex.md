@@ -40,6 +40,7 @@ fn Demo() -> Element {
 
 | Prop | Type | Default | Description |
 |---|---|---|---|
+| `component` | `HtmlTag` | `div` | The element to render, as `component: HtmlTag::Ul` for a list of `li` children or `HtmlTag::Nav`. |
 | `direction` | `Responsive<FlexDirection>` | `column` | Lays the children out in a row or a column, or one per breakpoint, `direction: responsive(FlexDirection::Column).md(FlexDirection::Row)`. Each breakpoint takes that axis's theme defaults; an explicit `gap` stays. `row-reverse` and `column-reverse` draw the children backwards without moving them in the reading or Tab order. |
 | `align` | `ThemeAwareValue` | `stretch` in a column, `center` in a row | Cross-axis alignment. |
 | `justify` | `ThemeAwareValue` | `flex-start` | Main-axis alignment. |
@@ -68,8 +69,8 @@ Like every component, `Flex` also takes the shared props `sx`, `class`, `style`,
   source order (WCAG 1.3.2, 2.4.3). Reorder the children in the code instead.
 - Add `role` and `aria-label` when the children form a group, such as
   `role: "group"` around related buttons.
-- `Flex` always renders a `div`: for a list or a nav, use `Box` with
-  `component: "ul"` or `"nav"`.
+- Give a list or a nav its element with `component`, as `HtmlTag::Ul` with `li`
+  children or `HtmlTag::Nav`: a `div` tells a screen reader nothing.
 
 ### Example
 
