@@ -3,7 +3,8 @@
 
 use dioxus::prelude::*;
 use e2e::native::{Page, mount};
-use libero::components::{NavigationBar, NavigationBarItem};
+use libero::components::{NavigationBar, NavigationBarItem, NavigationBarVariant};
+use libero::theme::responsive;
 
 fn items() -> Element {
     rsx! {
@@ -115,17 +116,17 @@ fn a_long_label_stops_at_two_lines() {
     assert!(height <= 2.0 * line + 1.0, "the label is {height}px tall");
 }
 
-fn responsive() -> Element {
+fn per_breakpoint() -> Element {
     rsx! {
         div { id: "content", height: "3000px", "Content" }
-        NavigationBar { id: "bar", "aria-label": "Main", variant: "responsive", {items()} }
+        NavigationBar { id: "bar", "aria-label": "Main", variant: responsive(NavigationBarVariant::Bar).sm(NavigationBarVariant::Rail), {items()} }
     }
 }
 
 /// Todo 4127: Blitz answers the media query itself, so the first layout has the window's shape.
 #[test]
 fn a_responsive_bar_has_the_windows_shape_from_the_first_layout() {
-    let page = mount(responsive);
+    let page = mount(per_breakpoint);
     let width = page.window_size().0 as f64;
     let (_, _, bar, height) = page.rect("#bar");
     match width >= 768.0 {

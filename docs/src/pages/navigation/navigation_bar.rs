@@ -2,11 +2,11 @@ use crate::components::{Control, Demo, DemoValues, DocPage, Wrap, a11y, indent, 
 use dioxus::prelude::*;
 use libero::{
     components::{
-        Box, Code, Indicator, NavigationBar, NavigationBarItem, NavigationBarPart, Pictogram,
-        SvgData, Text,
+        Box, Code, Indicator, NavigationBar, NavigationBarItem, NavigationBarPart,
+        NavigationBarVariant, Pictogram, SvgData, Text,
     },
     sx::{Sx, sx},
-    theme::Size,
+    theme::{Size, responsive},
     use_theme,
 };
 use pictogram_icons_lucide as lucide;
@@ -63,6 +63,8 @@ fn wrap_bar(values: &DemoValues, code: &str) -> String {
 
 /// The demo's default: a bar on a phone, a rail from the `sm` breakpoint up.
 const RESPONSIVE: &str = "responsive";
+const RESPONSIVE_CODE: &str =
+    "responsive(NavigationBarVariant::Bar).sm(NavigationBarVariant::Rail)";
 
 /// A tablet-like frame for a rail, which spans its height, or a phone-width one for a bar.
 fn frame_sx(rail: bool) -> Sx {
@@ -91,9 +93,9 @@ pub fn NavigationBarPage() -> Element {
             markdown: "/md/navigation_bar.md",
             properties: vec![
                 props("NavigationBar", vec![
-                    prop("variant", "NavigationBarVariant")
+                    prop("variant", "Responsive<NavigationBarVariant>")
                         .default("bar")
-                        .doc("`\"bar\"`, a row along the bottom edge for a phone, or `\"rail\"`, an 88px column on the inline-start edge for a tablet or a desktop: the right edge in a right-to-left page. A rail spans the viewport's height and sticks to its top, or docks to the viewport with `position: \"fixed\"`, and publishes its measured width as `--lsx-navigation-rail-width` in place of the bar's height. `\"responsive\"` is a bar below the theme's `sm` breakpoint and a rail from it up, switched by a CSS media query, so the first paint is right without a script; it publishes the bar's height or the rail's width, whichever shows. Keep the same items in the same order at every width."),
+                        .doc("`\"bar\"`, a row along the bottom edge for a phone, or `\"rail\"`, an 88px column on the inline-start edge for a tablet or a desktop: the right edge in a right-to-left page. A rail spans the viewport's height and sticks to its top, or docks to the viewport with `position: \"fixed\"`, and publishes its measured width as `--lsx-navigation-rail-width` in place of the bar's height. Set one per breakpoint, as `responsive(NavigationBarVariant::Bar).sm(NavigationBarVariant::Rail)` for a bar on a phone and a rail from the theme's `sm` up: each switch is a CSS media query, so server-rendered HTML and the first paint are right without a script. `position` applies to the shape in effect at each width, and each publishes its own variable there. Keep the same items in the same order at every width."),
                     prop("position", "NavigationBarPosition")
                         .default("static")
                         .doc("`\"static\"` stays in the flow. `\"sticky\"` holds it at the bottom of its scroller, `\"fixed\"` at the viewport's; both publish the bar's measured height as `--lsx-navigation-bar-height` and keep focus clear of the bar. Pad the page's end by `var(--lsx-navigation-bar-height)`. `\"fixed\"` clears a phone's home indicator, and needs `viewport-fit=cover` in the page's viewport meta, or the browser reports no safe area. A native app docks both the same way."),
@@ -169,7 +171,7 @@ pub fn NavigationBarPage() -> Element {
                         .labels(["Responsive", "Bar", "Rail"])
                         .default(RESPONSIVE)
                         .code(|_, values| match values.str("variant").as_str() {
-                            RESPONSIVE => vec!["variant: \"responsive\"".to_string()],
+                            RESPONSIVE => vec![format!("variant: {RESPONSIVE_CODE}")],
                             "rail" => vec!["variant: \"rail\"".to_string()],
                             _ => vec![],
                         }),
@@ -206,7 +208,10 @@ pub fn NavigationBarPage() -> Element {
                         Box { sx: frame,
                             NavigationBar {
                                 "aria-label": "Main",
-                                variant: variant.as_str(),
+                                variant: match variant.as_str() {
+                                    RESPONSIVE => responsive(NavigationBarVariant::Bar).sm(NavigationBarVariant::Rail),
+                                    shape => NavigationBarVariant::from(shape).into(),
+                                },
                                 sx: nav,
                                 show_labels: show_labels.as_str(),
                                 color,

@@ -22,7 +22,7 @@ use crate::{
     str_enum::str_enum,
     sx::{StaticSx, Sx, ThemeAwareValue, sx},
     theme::{
-        Color, ColorShade, ColorValue, CssVar, PAPER_BACKGROUND, Size, TEXT_FONT_SIZE,
+        Color, ColorShade, ColorValue, CssVar, PAPER_BACKGROUND, Responsive, Size, TEXT_FONT_SIZE,
         Z_INDEX_HEADER,
     },
     utils::warn,
@@ -54,13 +54,41 @@ str_enum! {
         /// Sticky, or docked to the viewport with `position: "fixed"`; pad the page by
         /// `var(--lsx-navigation-rail-width)`.
         Rail = "rail",
-        /// A bar below the theme's `sm` breakpoint and a rail from it up, switched by a
-        /// CSS media query: the first paint is right without a script.
-        Responsive = "responsive",
     }
 }
 
 input_from_str!(NavigationBarVariant);
+
+/// One shape, or one per breakpoint: `variant: responsive(NavigationBarVariant::Bar).sm(NavigationBarVariant::Rail)`.
+impl From<&str> for Input<Responsive<NavigationBarVariant>> {
+    fn from(value: &str) -> Self {
+        Self::Value(Responsive::new(value.into()))
+    }
+}
+
+impl From<String> for Input<Responsive<NavigationBarVariant>> {
+    fn from(value: String) -> Self {
+        value.as_str().into()
+    }
+}
+
+impl From<NavigationBarVariant> for Input<Responsive<NavigationBarVariant>> {
+    fn from(value: NavigationBarVariant) -> Self {
+        Self::Value(Responsive::new(value))
+    }
+}
+
+impl From<Option<NavigationBarVariant>> for Input<Responsive<NavigationBarVariant>> {
+    fn from(value: Option<NavigationBarVariant>) -> Self {
+        value.map_or(Self::None, Into::into)
+    }
+}
+
+impl From<Responsive<NavigationBarVariant>> for Input<Responsive<NavigationBarVariant>> {
+    fn from(value: Responsive<NavigationBarVariant>) -> Self {
+        Self::Value(value)
+    }
+}
 
 str_enum! {
     /// Which item labels show. A hidden label still names its item.
@@ -120,17 +148,6 @@ static NAVIGATION_BAR_SX: StaticSx = StaticSx::new(|| {
         .when(NavigationBarPosition::Fixed.state_name(), fixed_bar_sx())
         .when(NavigationBarVariant::Rail.state_name(), rail_sx())
         .when("rail-fixed", fixed_rail_sx())
-        // `responsive`: the bar's position below `sm`, the rail from it up.
-        .media(
-            narrow_query(),
-            sx().when("responsive-sticky", sticky_bar_sx())
-                .when("responsive-fixed", fixed_bar_sx()),
-        )
-        .media(
-            wide_query(),
-            sx().when(NavigationBarVariant::Responsive.state_name(), rail_sx())
-                .when("responsive-fixed", fixed_rail_sx()),
-        )
         .when(
             "labels-never",
             sx().selector(label, visually_hidden_absolute_sx()),
@@ -144,13 +161,51 @@ static NAVIGATION_BAR_SX: StaticSx = StaticSx::new(|| {
         )
 });
 
-/// From the theme's `sm` up, where a `responsive` bar is a rail.
-fn wide_query() -> String {
-    format!("(min-width: {})", Size::Sm.breakpoint_value())
+/// Each run of one shape across the breakpoints, with the media query that bounds it.
+fn layout_runs(variant: &Responsive<NavigationBarVariant>) -> Vec<(String, NavigationBarVariant)> {
+    let mut runs = vec![(None, variant.base())];
+    for (size, value) in variant.breakpoints() {
+        if runs.last().is_some_and(|(_, last)| *last != value) {
+            runs.push((Some(size), value));
+        }
+    }
+    let ends: Vec<_> = runs
+        .iter()
+        .skip(1)
+        .map(|(from, _)| *from)
+        .chain([None])
+        .collect();
+    runs.into_iter()
+        .zip(ends)
+        .map(|((from, value), until)| (range_query(from, until), value))
+        .collect()
 }
 
-fn narrow_query() -> String {
-    format!("not all and {}", wide_query())
+/// From `from`'s breakpoint to just under `until`'s; `max-width` is inclusive, so 0.02px under.
+fn range_query(from: Option<Size>, until: Option<Size>) -> String {
+    let rem = |size: Size| {
+        let value = size.breakpoint_value().trim_end_matches("rem");
+        value.parse::<f64>().unwrap_or_default()
+    };
+    let from = from.map(|size| format!("(min-width: {})", size.breakpoint_value()));
+    let until = until.map(|size| format!("(max-width: {}rem)", rem(size) - 0.00125));
+    from.into_iter()
+        .chain(until)
+        .collect::<Vec<_>>()
+        .join(" and ")
+}
+
+/// One shape with its position, as the states select it for a plain `variant`.
+fn shape_sx(variant: NavigationBarVariant, position: NavigationBarPosition) -> Sx {
+    match (variant, position) {
+        (NavigationBarVariant::Rail, NavigationBarPosition::Fixed) => {
+            rail_sx().and(fixed_rail_sx())
+        }
+        (NavigationBarVariant::Rail, _) => rail_sx(),
+        (NavigationBarVariant::Bar, NavigationBarPosition::Sticky) => sticky_bar_sx(),
+        (NavigationBarVariant::Bar, NavigationBarPosition::Fixed) => fixed_bar_sx(),
+        (NavigationBarVariant::Bar, NavigationBarPosition::Static) => sx(),
+    }
 }
 
 fn sticky_bar_sx() -> Sx {
@@ -326,13 +381,23 @@ fn publish_rail_css(measured: Option<f64>) -> String {
     format!(":root{{{}:{width};}}", NAVIGATION_RAIL_WIDTH_VAR.name())
 }
 
-/// A `responsive` bar's extents, each under the query that shows it; a static bar has no height.
-fn publish_responsive_css(docked: bool, bar: Option<f64>, rail: Option<f64>) -> String {
-    let bar = match docked {
-        true => format!("@media {}{{{}}}", narrow_query(), publish_css(bar)),
-        false => String::new(),
-    };
-    format!("{bar}@media {}{{{}}}", wide_query(), publish_rail_css(rail))
+/// Each run's extent under its query: the rail's width, a docked bar's height.
+fn publish_runs_css(
+    runs: &[(String, NavigationBarVariant)],
+    docked: bool,
+    bar: Option<f64>,
+    rail: Option<f64>,
+) -> String {
+    runs.iter()
+        .filter_map(|(query, variant)| {
+            let css = match variant {
+                NavigationBarVariant::Rail => publish_rail_css(rail),
+                NavigationBarVariant::Bar if docked => publish_css(bar),
+                NavigationBarVariant::Bar => return None,
+            };
+            Some(format!("@media {query}{{{css}}}"))
+        })
+        .collect()
 }
 
 /// Counts mounted items, to warn once past [`MAX_ITEMS`].
@@ -362,10 +427,10 @@ base_props! {
         #[props(default, into)]
         position: Input<NavigationBarPosition>,
         /// `bar` (default) along the bottom edge, or `rail`, a column on the inline-start
-        /// edge that publishes `--lsx-navigation-rail-width`, or `responsive`, a bar below
-        /// the theme's `sm` breakpoint and a rail from it up, switched in CSS.
+        /// edge that publishes `--lsx-navigation-rail-width`. One per breakpoint, as
+        /// `responsive(NavigationBarVariant::Bar).sm(NavigationBarVariant::Rail)`, switches in CSS.
         #[props(default, into)]
-        variant: Input<NavigationBarVariant>,
+        variant: Input<Responsive<NavigationBarVariant>>,
         /// `always` (default), `selected` or `never`.
         #[props(default, into)]
         show_labels: Input<LabelVisibility>,
@@ -383,7 +448,7 @@ base_props! {
 /// Each item is its own Tab stop. Name it with an `aria-label`. It pads the
 /// bottom, left and right safe-area insets, for a `viewport-fit=cover` page.
 /// From a tablet up, `variant: "rail"` turns it into a column on the inline-start edge;
-/// `variant: "responsive"` switches between the two at the `sm` breakpoint, without a script.
+/// a `variant` per breakpoint switches between the two with a media query, without a script.
 ///
 /// ```
 /// # use dioxus::prelude::*;
@@ -419,24 +484,37 @@ pub fn NavigationBar(props: NavigationBarProps) -> Element {
         use_context_provider(ItemCount::default);
     }
 
-    let variant = props.variant.copied_or_default();
-    let rail = variant == NavigationBarVariant::Rail;
-    let responsive = variant == NavigationBarVariant::Responsive;
+    let variant = props
+        .variant
+        .as_ref()
+        .copied()
+        .unwrap_or_else(|| Responsive::new(NavigationBarVariant::Bar));
+    let runs = layout_runs(&variant);
+    // One shape throughout goes through the states; several through media queries.
+    let plain = (runs.len() == 1).then_some(variant.base());
+    let rail = plain == Some(NavigationBarVariant::Rail);
+    let any_rail = runs
+        .iter()
+        .any(|(_, shape)| *shape == NavigationBarVariant::Rail);
     let docked = position != NavigationBarPosition::Static;
-    let publishes = rail || responsive || docked;
+    let publishes = any_rail || docked;
     // Measured, so a two-line label or larger text still clears the page.
     // Keyed by the shape: a switch must not publish the bar's height as the rail's width.
     let mut measured = use_signal(|| None::<(bool, f64)>);
     let onresize = publishes.then_some(move |event: Event<ResizeData>| {
         if let Ok(size) = event.get_border_box_size() {
-            // A responsive one's shape is the media query's: a rail is taller than wide, a bar never.
-            let as_rail = rail || (responsive && size.height > size.width);
+            // Switched by a query, the shape shows in the box: a rail is taller than wide, a bar never.
+            let as_rail = match plain {
+                Some(shape) => shape == NavigationBarVariant::Rail,
+                None => size.height > size.width,
+            };
             let extent = Some((as_rail, if as_rail { size.width } else { size.height }));
             if *measured.peek() != extent {
                 measured.set(extent);
             }
         }
     });
+    let switched = plain.is_none().then(|| runs.clone());
     use_css(
         publishes.then(|| {
             let extent_of = |of: bool| {
@@ -444,15 +522,28 @@ pub fn NavigationBar(props: NavigationBarProps) -> Element {
                     .filter(|(of_rail, _)| *of_rail == of)
                     .map(|(_, extent)| extent)
             };
-            let css = match (responsive, rail) {
-                (true, _) => publish_responsive_css(docked, extent_of(false), extent_of(true)),
-                (false, true) => publish_rail_css(extent_of(true)),
-                (false, false) => publish_css(extent_of(false)),
+            let css = match (&switched, rail) {
+                (Some(runs), _) => {
+                    publish_runs_css(runs, docked, extent_of(false), extent_of(true))
+                }
+                (None, true) => publish_rail_css(extent_of(true)),
+                (None, false) => publish_css(extent_of(false)),
             };
             Stylesheet::from(css.as_str())
         }),
         CssLayer::Framework,
     );
+    // Breakpoints go in the user layer, or the framework base rule wins; before `props.sx`, so it still overrides.
+    let sx: Input<Sx> = match &switched {
+        None => props.sx.clone(),
+        Some(runs) => runs
+            .iter()
+            .fold(sx(), |sx, (query, shape)| {
+                sx.media(query.clone(), shape_sx(*shape, position))
+            })
+            .and(props.sx.clone().unwrap_or_default())
+            .into(),
+    };
 
     let variables: Input<Variables> =
         pill_variables(props.color.as_ref(), theme.navigation_bar.color)
@@ -461,19 +552,14 @@ pub fn NavigationBar(props: NavigationBarProps) -> Element {
     let states: Input<States> = props
         .states
         .unwrap_or_default()
-        .with(position.state_name(), variant == NavigationBarVariant::Bar)
+        .with(
+            position.state_name(),
+            plain == Some(NavigationBarVariant::Bar),
+        )
         .with(NavigationBarVariant::Rail.state_name(), rail)
         .with(
             "rail-fixed",
             rail && position == NavigationBarPosition::Fixed,
-        )
-        .with(NavigationBarVariant::Responsive.state_name(), responsive)
-        .with(
-            match position {
-                NavigationBarPosition::Fixed => "responsive-fixed",
-                _ => "responsive-sticky",
-            },
-            responsive && docked,
         )
         .with("labels-never", labels == LabelVisibility::Never)
         .with("labels-selected", labels == LabelVisibility::Selected)
@@ -482,7 +568,7 @@ pub fn NavigationBar(props: NavigationBarProps) -> Element {
     use_box()
         .framework_sx(&NAVIGATION_BAR_SX)
         .class(&props.class)
-        .sx(&props.sx)
+        .sx(&sx)
         .parts(&props.parts)
         .states(&states)
         .variables(&variables)
@@ -710,35 +796,63 @@ mod tests {
         );
     }
 
-    /// Todo 4127: a responsive bar publishes each extent under the query that shows it.
+    /// Todo 4127: one run per shape, each bounded just under the next one's breakpoint.
     #[test]
-    fn a_responsive_bar_publishes_each_extent_under_its_query() {
-        let css = publish_responsive_css(true, Some(70.0), None);
-        let wide = css.find(&format!("@media {}", wide_query())).expect(&css);
-        let narrow = css.find(&format!("@media {}", narrow_query())).expect(&css);
-        assert!(
-            css[narrow..wide].contains("--lsx-navigation-bar-height:70px"),
-            "{css}"
+    fn a_variant_per_breakpoint_runs_between_queries() {
+        use NavigationBarVariant::{Bar, Rail};
+        let runs = layout_runs(&crate::theme::responsive(Bar).sm(Rail).md(Rail).xl(Bar));
+        assert_eq!(
+            runs,
+            [
+                ("(max-width: 47.99875rem)".to_string(), Bar),
+                (
+                    "(min-width: 48rem) and (max-width: 87.99875rem)".to_string(),
+                    Rail
+                ),
+                ("(min-width: 88rem)".to_string(), Bar),
+            ]
         );
-        assert!(
-            css[wide..].contains("--lsx-navigation-rail-width:88px"),
-            "{css}"
-        );
-        let css = publish_responsive_css(false, None, Some(96.0));
-        assert!(!css.contains("--lsx-navigation-bar-height"), "{css}");
-        assert!(css.contains("--lsx-navigation-rail-width:96px"), "{css}");
+        assert_eq!(layout_runs(&Responsive::new(Rail).sm(Rail)).len(), 1);
     }
 
-    /// Todo 4127: the rail rules sit under the wide query, so the first paint needs no script.
+    /// Todo 4127: each run publishes its own extent under its query; a static bar none.
     #[test]
-    fn a_responsive_bar_is_a_rail_only_from_sm_up() {
-        let css = Stylesheet::from(&NAVIGATION_BAR_SX);
+    fn each_run_publishes_its_extent_under_its_query() {
+        use NavigationBarVariant::{Bar, Rail};
+        let runs = layout_runs(&crate::theme::responsive(Bar).sm(Rail));
+        let css = publish_runs_css(&runs, true, Some(70.0), None);
+        assert_eq!(
+            css,
+            "@media (max-width: 47.99875rem){:root{--lsx-navigation-bar-height:70px;\
+             scroll-padding-bottom:var(--lsx-navigation-bar-height);\
+             --lsx-scroll-padding-bottom:var(--lsx-navigation-bar-height);}}\
+             @media (min-width: 48rem){:root{--lsx-navigation-rail-width:88px;}}"
+        );
+        let css = publish_runs_css(&runs, false, None, Some(96.0));
+        assert_eq!(
+            css,
+            "@media (min-width: 48rem){:root{--lsx-navigation-rail-width:96px;}}"
+        );
+    }
+
+    /// Todo 4127: a fixed rail run is docked and stretched under its query.
+    #[test]
+    fn a_rail_run_carries_its_rules_under_its_query() {
+        let runs = layout_runs(
+            &crate::theme::responsive(NavigationBarVariant::Bar).sm(NavigationBarVariant::Rail),
+        );
+        let sx = runs.iter().fold(sx(), |sx, (query, shape)| {
+            sx.media(
+                query.clone(),
+                shape_sx(*shape, NavigationBarPosition::Fixed),
+            )
+        });
+        let css = Stylesheet::from(&sx);
         let css = css.as_str();
-        let wide = css.find(&format!("@media {}", wide_query())).expect(css);
-        assert!(css[wide..].contains("responsive"), "{css}");
-        assert!(css[wide..].contains("height:100dvh"), "{css}");
-        let narrow = css.find(&format!("@media {}", narrow_query())).expect(css);
-        assert!(css[narrow..].contains("responsive-fixed"), "{css}");
+        let wide = css.find("@media (min-width: 48rem)").expect(css);
+        assert!(css[wide..].contains("position:fixed;"), "{css}");
+        assert!(css[wide..].contains("align-self:stretch;"), "{css}");
+        assert!(css[..wide].contains("inset-inline:0;"), "{css}");
     }
 
     /// Todo 3890: the rail pads the top, bottom and inline-start safe areas, mirrored in RTL.

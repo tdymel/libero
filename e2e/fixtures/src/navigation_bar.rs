@@ -1,9 +1,12 @@
 //! Five `NavigationBarItem`s in a 320px column, a three-item RTL bar, and a
 //! fixed bar over a tall page with only the selected label shown, and a rail in
-//! either direction, and a fixed responsive one that is a bar or a rail by CSS alone.
+//! either direction, and a fixed one that is a bar or a rail per breakpoint, by CSS alone.
 
 use dioxus::prelude::*;
-use libero::components::{NavigationBar, NavigationBarItem, Indicator, Pictogram, SvgData};
+use libero::components::{
+    Indicator, NavigationBar, NavigationBarItem, NavigationBarVariant, Pictogram, SvgData,
+};
+use libero::theme::responsive;
 use pictogram_icons_lucide as lucide;
 
 use crate::Routes;
@@ -18,14 +21,14 @@ pub const ROUTES: Routes = &[
     ("/navigation-bar/responsive", || rsx! { ResponsivePage {} }),
 ];
 
-/// A fixed `responsive` bar: a bar on a phone, a rail from `sm` up (todo 4127).
+/// A fixed bar on a phone, a rail from `sm` up (todo 4127).
 #[component]
 fn ResponsivePage() -> Element {
     rsx! {
         div { id: "content", style: "padding-inline-start: var(--lsx-navigation-rail-width, 0px); padding-bottom: var(--lsx-navigation-bar-height, 0px);",
             div { style: "height: 2000px", "Page" }
         }
-        NavigationBar { id: "responsive", "aria-label": "Main", variant: "responsive", position: "fixed",
+        NavigationBar { id: "responsive", "aria-label": "Main", variant: responsive(NavigationBarVariant::Bar).sm(NavigationBarVariant::Rail), position: "fixed",
             for (index, (id, label, icon)) in ITEMS.into_iter().take(3).enumerate() {
                 NavigationBarItem {
                     key: "{id}",

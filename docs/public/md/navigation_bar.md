@@ -51,7 +51,7 @@ fn Demo() -> Element {
 
 | Prop | Type | Default | Description |
 |---|---|---|---|
-| `variant` | `NavigationBarVariant` | `bar` | `"bar"`, a row along the bottom edge for a phone, or `"rail"`, an 88px column on the inline-start edge for a tablet or a desktop: the right edge in a right-to-left page. A rail spans the viewport's height and sticks to its top, or docks to the viewport with `position: "fixed"`, and publishes its measured width as `--lsx-navigation-rail-width` in place of the bar's height. `"responsive"` is a bar below the theme's `sm` breakpoint and a rail from it up, switched by a CSS media query, so the first paint is right without a script; it publishes the bar's height or the rail's width, whichever shows. Keep the same items in the same order at every width. |
+| `variant` | `Responsive<NavigationBarVariant>` | `bar` | `"bar"`, a row along the bottom edge for a phone, or `"rail"`, an 88px column on the inline-start edge for a tablet or a desktop: the right edge in a right-to-left page. A rail spans the viewport's height and sticks to its top, or docks to the viewport with `position: "fixed"`, and publishes its measured width as `--lsx-navigation-rail-width` in place of the bar's height. Set one per breakpoint, as `responsive(NavigationBarVariant::Bar).sm(NavigationBarVariant::Rail)` for a bar on a phone and a rail from the theme's `sm` up: each switch is a CSS media query, so server-rendered HTML and the first paint are right without a script. `position` applies to the shape in effect at each width, and each publishes its own variable there. Keep the same items in the same order at every width. |
 | `position` | `NavigationBarPosition` | `static` | `"static"` stays in the flow. `"sticky"` holds it at the bottom of its scroller, `"fixed"` at the viewport's; both publish the bar's measured height as `--lsx-navigation-bar-height` and keep focus clear of the bar. Pad the page's end by `var(--lsx-navigation-bar-height)`. `"fixed"` clears a phone's home indicator, and needs `viewport-fit=cover` in the page's viewport meta, or the browser reports no safe area. A native app docks both the same way. |
 | `show_labels` | `LabelVisibility` | `always` | `"always"`, `"selected"` (only the selected item's) or `"never"`. A hidden label still names its item. |
 | `color` | `ThemeAwareValue` | `primary` | Colours the selected item's pill. Only the color family counts: the pill is its lightest shade. |
@@ -143,8 +143,8 @@ lists the "Main" navigation, and the current item reads as the current page.
 
 | Variable | Description |
 |---|---|
-| `--lsx-navigation-bar-height` | On `:root` while a sticky or fixed bar is mounted, a responsive one only below `sm`: its measured height, bottom safe area included. |
-| `--lsx-navigation-rail-width` | On `:root` while a rail is mounted, a responsive one only from `sm` up: its measured width, inline-start safe area included. |
+| `--lsx-navigation-bar-height` | On `:root` while a sticky or fixed bar is mounted, under each width where a bar shows: its measured height, bottom safe area included. |
+| `--lsx-navigation-rail-width` | On `:root` while a rail is mounted, under each width where a rail shows: its measured width, inline-start safe area included. |
 | `--lsx-navigation-bar-pill` | Background of the selected item's pill, the lightest shade of the color family. |
 | `--lsx-navigation-bar-pill-color` | Icon colour on the pill, a darker shade of the color family that reaches 4.5:1 on it. |
 
@@ -155,10 +155,8 @@ State tokens on the bar's `data-state`.
 | Token | Condition |
 |---|---|
 | `static`, `sticky`, `fixed` | The bar's `position`. |
-| `rail` | `variant: "rail"`. |
+| `rail` | `variant: "rail"`. A `variant` per breakpoint sets none of these position and shape tokens. |
 | `rail-fixed` | A rail with `position: "fixed"`. |
-| `responsive` | `variant: "responsive"`. |
-| `responsive-sticky`, `responsive-fixed` | A responsive bar's `position`, in place of `sticky` and `fixed`. |
 | `labels-selected`, `labels-never` | `show_labels` is set to it. |
 
 State tokens on an item's `data-state`.
