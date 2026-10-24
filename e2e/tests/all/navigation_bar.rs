@@ -1,12 +1,14 @@
 //! `NavigationBar` (todo 1209): a `nav` of items, each its own Tab stop, the
 //! selected one `aria-current`; 48px targets and no overflow at 320px; RTL;
 //! a fixed bar at the viewport's bottom that publishes its height; a rail
-//! (todo 3890) on the inline-start edge that publishes its width.
+//! (todo 3890) on the inline-start edge that publishes its width; a responsive
+//! one that is either from its first frame (todo 4127).
 
 use anyhow::Result;
 use e2e::browser::block_on;
 use e2e::driver::{Driver, eventually, eventually_focused};
 use e2e::passes::keyboard;
+use e2e::wait::PageBounded;
 use e2e::{Fixture, Suite, Viewport, js, wait};
 
 #[test]
@@ -558,6 +560,30 @@ e2e::scenario!(
     a_rail_docks_at_the_inline_start
 );
 
+/// Todo 4127: a responsive bar takes the shape its media query picks, on every platform.
+async fn a_responsive_bar_follows_the_breakpoint<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    let shaped = eventually(d, "the shape the viewport's width picks", async |d| {
+        let (width, height) = d.viewport().await?;
+        let nav = d.rect("#responsive").await?;
+        Ok(match width >= 768.0 {
+            true => (nav.width - 88.0).abs() < 1.0 && (nav.height - height).abs() < 1.0,
+            false => (nav.width - width).abs() < 1.0 && nav.height < 120.0,
+        })
+    })
+    .await;
+    if shaped.is_err() {
+        let (viewport, nav) = (d.viewport().await?, d.rect("#responsive").await?);
+        anyhow::bail!("{:?}: {nav:?} in {viewport:?}", d.platform());
+    }
+    Ok(())
+}
+
+e2e::scenario!(
+    a_responsive_bar_follows_the_breakpoint_everywhere,
+    "/navigation-bar/responsive",
+    a_responsive_bar_follows_the_breakpoint
+);
+
 /// The rail publishes its width, not the bar's height, and RTL puts it on the right.
 #[test]
 fn the_rail_publishes_its_width_and_flips_in_rtl() {
@@ -595,6 +621,81 @@ fn the_rail_publishes_its_width_and_flips_in_rtl() {
             }
             assert_eq!(report["height"], "", "{route}: {report}");
             assert_eq!(report["current"], "page", "{route}: {report}");
+            fixture.close().await.unwrap();
+        }
+    });
+}
+
+/// Todo 4127: a responsive bar is a rail on a desktop and a bar on a phone from its
+/// first frame, a CSS media query and no script deciding; each publishes its own extent.
+#[test]
+fn a_responsive_bar_has_its_shape_from_the_first_frame() {
+    block_on(async {
+        for viewport in Viewport::ALL {
+            let fixture = Fixture::open("/navigation-bar/responsive", viewport)
+                .await
+                .unwrap();
+            let page = &fixture.page;
+            // The first frame drawn with the bar in it, sampled before any later script runs.
+            page.evaluate_on_new_document_bounded(
+                "window.__navFirst = null; \
+                 requestAnimationFrame(function sample() { \
+                 const nav = document.querySelector('#responsive'); \
+                 if (nav) { const r = nav.getBoundingClientRect(); \
+                 window.__navFirst = { width: r.width, height: r.height, \
+                 direction: getComputedStyle(nav).flexDirection }; } \
+                 else requestAnimationFrame(sample); });"
+                    .to_string(),
+            )
+            .await
+            .unwrap();
+            page.reload_bounded().await.unwrap();
+            wait::for_js_true(page, "window.__navFirst !== null", "the bar's first frame")
+                .await
+                .unwrap();
+            let (rail, var) = match viewport {
+                Viewport::Desktop => (true, "--lsx-navigation-rail-width"),
+                Viewport::Mobile => (false, "--lsx-navigation-bar-height"),
+            };
+            let first = js::<serde_json::Value>(page, "window.__navFirst").await;
+            let (width, height) = viewport.size();
+            match rail {
+                true => {
+                    assert_eq!(first["direction"], "column", "{viewport:?}: {first}");
+                    // A fixed rail spans the viewport's height, not its items'.
+                    assert!(
+                        (first["width"].as_f64().unwrap() - 88.0).abs() < 1.0
+                            && (first["height"].as_f64().unwrap() - height as f64).abs() < 1.0,
+                        "{viewport:?}: {first}"
+                    );
+                }
+                false => {
+                    assert_eq!(first["direction"], "row", "{viewport:?}: {first}");
+                    assert!(
+                        (first["width"].as_f64().unwrap() - width as f64).abs() < 1.0,
+                        "{viewport:?}: {first}"
+                    );
+                }
+            }
+            wait::for_js_true(
+                page,
+                &format!("getComputedStyle(document.documentElement).getPropertyValue('{var}').trim() !== ''"),
+                "the published extent",
+            )
+            .await
+            .unwrap();
+            let other = match rail {
+                true => "--lsx-navigation-bar-height",
+                false => "--lsx-navigation-rail-width",
+            };
+            let unset: String = js(
+                page,
+                &format!(
+                    "getComputedStyle(document.documentElement).getPropertyValue('{other}').trim()"
+                ),
+            )
+            .await;
+            assert_eq!(unset, "", "{viewport:?}: {other} published");
             fixture.close().await.unwrap();
         }
     });

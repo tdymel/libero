@@ -1,6 +1,6 @@
 //! Five `NavigationBarItem`s in a 320px column, a three-item RTL bar, and a
 //! fixed bar over a tall page with only the selected label shown, and a rail in
-//! either direction.
+//! either direction, and a fixed responsive one that is a bar or a rail by CSS alone.
 
 use dioxus::prelude::*;
 use libero::components::{NavigationBar, NavigationBarItem, Indicator, Pictogram, SvgData};
@@ -15,7 +15,30 @@ pub const ROUTES: Routes = &[
     ("/navigation-bar/unselected", || rsx! { UnselectedPage {} }),
     ("/navigation-bar/rail", || rsx! { RailPage { dir: "ltr" } }),
     ("/navigation-bar/rail-rtl", || rsx! { RailPage { dir: "rtl" } }),
+    ("/navigation-bar/responsive", || rsx! { ResponsivePage {} }),
 ];
+
+/// A fixed `responsive` bar: a bar on a phone, a rail from `sm` up (todo 4127).
+#[component]
+fn ResponsivePage() -> Element {
+    rsx! {
+        div { id: "content", style: "padding-inline-start: var(--lsx-navigation-rail-width, 0px); padding-bottom: var(--lsx-navigation-bar-height, 0px);",
+            div { style: "height: 2000px", "Page" }
+        }
+        NavigationBar { id: "responsive", "aria-label": "Main", variant: "responsive", position: "fixed",
+            for (index, (id, label, icon)) in ITEMS.into_iter().take(3).enumerate() {
+                NavigationBarItem {
+                    key: "{id}",
+                    id: "responsive-{id}",
+                    selected: index == 0,
+                    onclick: |_| {},
+                    icon: rsx! { Pictogram { icon } },
+                    "{label}"
+                }
+            }
+        }
+    }
+}
 
 /// A rail beside a tall page, as a tablet layout (todo 3890).
 #[component]

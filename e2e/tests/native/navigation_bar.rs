@@ -115,6 +115,32 @@ fn a_long_label_stops_at_two_lines() {
     assert!(height <= 2.0 * line + 1.0, "the label is {height}px tall");
 }
 
+fn responsive() -> Element {
+    rsx! {
+        div { id: "content", height: "3000px", "Content" }
+        NavigationBar { id: "bar", "aria-label": "Main", variant: "responsive", {items()} }
+    }
+}
+
+/// Todo 4127: Blitz answers the media query itself, so the first layout has the window's shape.
+#[test]
+fn a_responsive_bar_has_the_windows_shape_from_the_first_layout() {
+    let page = mount(responsive);
+    let width = page.window_size().0 as f64;
+    let (_, _, bar, height) = page.rect("#bar");
+    match width >= 768.0 {
+        true => assert!(
+            (bar - 88.0).abs() < 1.0,
+            "{width}: a {bar}px rail, {}",
+            page.tree()
+        ),
+        false => assert!(
+            height < 120.0 && (bar - width).abs() < 1.0,
+            "{width}: a {bar}x{height} bar"
+        ),
+    }
+}
+
 /// Blitz lays `fixed` out as `absolute`, at the document's end: the shim docks
 /// it to the window, through a scroll too (todo 1409).
 #[test]

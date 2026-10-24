@@ -5,8 +5,8 @@ use libero::{
         Box, Code, Indicator, NavigationBar, NavigationBarItem, NavigationBarPart, Pictogram,
         SvgData, Text,
     },
-    hooks::use_media_query,
-    sx::sx,
+    sx::{Sx, sx},
+    theme::Size,
     use_theme,
 };
 use pictogram_icons_lucide as lucide;
@@ -58,22 +58,31 @@ fn wrap_bar(values: &DemoValues, code: &str) -> String {
             ))
         })
         .collect();
-    let bar = format!("NavigationBar {{\n    \"aria-label\": \"Main\",{body}{items}}}");
-    match values.str("variant").as_str() {
-        RESPONSIVE => format!("let wide = use_media_query({WIDE_QUERY:?});\n\n{bar}"),
-        _ => bar,
-    }
+    format!("NavigationBar {{\n    \"aria-label\": \"Main\",{body}{items}}}")
 }
 
 /// The demo's default: a bar on a phone, a rail from the `sm` breakpoint up.
 const RESPONSIVE: &str = "responsive";
-const WIDE_QUERY: &str = "(min-width: 48rem)";
+
+/// A tablet-like frame for a rail, which spans its height, or a phone-width one for a bar.
+fn frame_sx(rail: bool) -> Sx {
+    match rail {
+        true => sx()
+            .display("flex")
+            .flex_direction("row")
+            .width("480px")
+            .height("360px"),
+        false => sx()
+            .display("flex")
+            .flex_direction("column-reverse")
+            .width("360px"),
+    }
+}
 
 #[component]
 pub fn NavigationBarPage() -> Element {
     let theme = use_theme();
     let mut current = use_signal(|| 0usize);
-    let wide = use_media_query(WIDE_QUERY);
 
     rsx! {
         DocPage {
@@ -84,7 +93,7 @@ pub fn NavigationBarPage() -> Element {
                 props("NavigationBar", vec![
                     prop("variant", "NavigationBarVariant")
                         .default("bar")
-                        .doc("`\"bar\"`, a row along the bottom edge for a phone, or `\"rail\"`, an 88px column on the inline-start edge for a tablet or a desktop: the right edge in a right-to-left page. A rail spans the viewport's height and sticks to its top, or docks to the viewport with `position: \"fixed\"`, and publishes its measured width as `--lsx-navigation-rail-width` in place of the bar's height. Switch between them with `use_media_query`, which answers in a native app too, and keep the same items in the same order."),
+                        .doc("`\"bar\"`, a row along the bottom edge for a phone, or `\"rail\"`, an 88px column on the inline-start edge for a tablet or a desktop: the right edge in a right-to-left page. A rail spans the viewport's height and sticks to its top, or docks to the viewport with `position: \"fixed\"`, and publishes its measured width as `--lsx-navigation-rail-width` in place of the bar's height. `\"responsive\"` is a bar below the theme's `sm` breakpoint and a rail from it up, switched by a CSS media query, so the first paint is right without a script; it publishes the bar's height or the rail's width, whichever shows. Keep the same items in the same order at every width."),
                     prop("position", "NavigationBarPosition")
                         .default("static")
                         .doc("`\"static\"` stays in the flow. `\"sticky\"` holds it at the bottom of its scroller, `\"fixed\"` at the viewport's; both publish the bar's measured height as `--lsx-navigation-bar-height` and keep focus clear of the bar. Pad the page's end by `var(--lsx-navigation-bar-height)`. `\"fixed\"` clears a phone's home indicator, and needs `viewport-fit=cover` in the page's viewport meta, or the browser reports no safe area. A native app docks both the same way."),
@@ -160,9 +169,7 @@ pub fn NavigationBarPage() -> Element {
                         .labels(["Responsive", "Bar", "Rail"])
                         .default(RESPONSIVE)
                         .code(|_, values| match values.str("variant").as_str() {
-                            RESPONSIVE => vec![
-                                "variant: if wide() { \"rail\" } else { \"bar\" }".to_string(),
-                            ],
+                            RESPONSIVE => vec!["variant: \"responsive\"".to_string()],
                             "rail" => vec!["variant: \"rail\"".to_string()],
                             _ => vec![],
                         }),
@@ -177,33 +184,29 @@ pub fn NavigationBarPage() -> Element {
                     let color = values.str("color");
                     let badge = values.str("badge") == "true";
                     let disabled = values.str("disabled") == "true";
-                    let rail = match values.str("variant").as_str() {
-                        RESPONSIVE => wide(),
-                        variant => variant == "rail",
+                    let variant = values.str("variant");
+                    let wide = format!("(min-width: {})", Size::Sm.breakpoint_value());
+                    // The frame follows the bar's own query, so neither waits for a script.
+                    let (frame, nav) = match variant.as_str() {
+                        RESPONSIVE => (
+                            frame_sx(false).media(wide.clone(), frame_sx(true)),
+                            sx().media(wide, sx().height("100%")),
+                        ),
+                        "rail" => (frame_sx(true), sx().height("100%")),
+                        _ => (frame_sx(false), sx()),
                     };
-                    let frame = sx()
+                    let frame = frame
                         .max_width("100%")
                         .border("1px solid")
                         .border_color("muted.4")
                         .border_radius("md")
                         .overflow("hidden");
-                    // A tablet-like frame: the rail spans its height, not the viewport's.
-                    let (frame, nav) = match rail {
-                        true => (
-                            frame.display("flex").width("480px").height("360px"),
-                            sx().height("100%"),
-                        ),
-                        false => (frame.width("360px"), sx()),
-                    };
                     rsx! {
-                        // A phone-width frame: a fixed bar would leave the page.
+                        // A frame, not the viewport: a fixed bar would leave the page.
                         Box { sx: frame,
-                            if !rail {
-                                Box { sx: sx().padding("md").min_height("120px"), "{ITEMS[current()].0}" }
-                            }
                             NavigationBar {
                                 "aria-label": "Main",
-                                variant: if rail { "rail" } else { "bar" },
+                                variant: variant.as_str(),
                                 sx: nav,
                                 show_labels: show_labels.as_str(),
                                 color,
@@ -220,9 +223,7 @@ pub fn NavigationBarPage() -> Element {
                                     }
                                 }
                             }
-                            if rail {
-                                Box { sx: sx().padding("md").flex("1"), "{ITEMS[current()].0}" }
-                            }
+                            Box { sx: sx().padding("md").flex("1").min_height("120px"), "{ITEMS[current()].0}" }
                         }
                     }
                 },
