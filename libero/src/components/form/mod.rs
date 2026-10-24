@@ -132,8 +132,8 @@ pub use file_field::{
     FileField, FileFieldPart, FileFieldProps, FileRejection, Files, RejectReason,
 };
 #[cfg(feature = "form-root")]
-pub use form::{Form, FormPart, FormProps};
-pub use form_value::FormValue;
+pub use form::{Form, FormPart, FormProps, SummaryMode};
+pub use form_value::{ByAddress, FormValue};
 #[cfg(all(feature = "visually-hidden", feature = "use-icon", feature = "use-id"))]
 pub use handle::{FormHandle, use_form, use_form_context};
 #[cfg(any(feature = "image-cropper", feature = "file-field"))]

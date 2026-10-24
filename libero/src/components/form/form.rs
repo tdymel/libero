@@ -4,17 +4,19 @@ use dioxus::{dioxus_core::AttributeValue, prelude::*};
 
 use crate::{
     components::{
+        accessibility::VisuallyHidden,
         common::{FOCUSABLE_SELECTOR, HtmlTag, Input, Part, allowed_href, base_props, parts_enum},
         feedback::Alert,
         form::{
             Binding, FormValue, Source, Submit, Validators,
             handle::{Control, FormHandle, Summary},
             issues_of,
+            submit::Outcome,
             use_field::labelled_focus_selector,
         },
         layout::{Box, use_box},
     },
-    hooks::use_element,
+    hooks::{use_element, use_localization},
     platform::{self, ElementApi},
     sx::{StaticSx, sx},
     theme::FormDefaults,
@@ -60,6 +62,30 @@ parts_enum! {
     }
 }
 
+/// How a [`Form`] points at its errors after a blocked submit or
+/// [`set_errors`](FormHandle::set_errors).
+///
+/// ```rust
+/// # use dioxus::prelude::*;
+/// # use libero::components::{Form, SummaryMode};
+/// # fn app() -> Element {
+/// rsx! {
+///     // The fields show their errors; focus goes to the first one.
+///     Form::<()> { summary: SummaryMode::Hidden }
+/// }
+/// # }
+/// ```
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub enum SummaryMode {
+    /// A summary above the fields lists every error, linked to its field, and takes focus.
+    #[default]
+    Visible,
+    /// No list: focus goes to the first invalid field and a screen reader hears how many errors
+    /// there are. Errors on no field, such as [`FormErrors::form`](crate::components::FormErrors::form),
+    /// still show above the fields.
+    Hidden,
+}
+
 base_props! {
     extends(form);
     parts(FormPart);
@@ -79,6 +105,10 @@ base_props! {
         /// A heading over the error summary.
         #[props(default, into)]
         summary_title: Option<String>,
+        /// Whether a blocked submit shows and focuses the error summary, or focuses the first
+        /// invalid field.
+        #[props(default)]
+        summary: SummaryMode,
         /// Controls the form from outside, made with `use_form()`. Taken once: a swapped
         /// handle is ignored with a warning, so `key` the `Form` to use another.
         #[props(default)]
@@ -169,7 +199,13 @@ pub fn Form<V: FormValue>(props: FormProps<V>) -> Element {
     let onsubmit = props.onsubmit;
     // Set by a valid submit to the reset count then: a server status after it rebuilds the summary.
     let mut awaiting = use_signal(|| None::<u32>);
+    let mut submitting = handle.submitting;
     let submit = use_callback(move |event: FormEvent| {
+        // One async handler at a time: a second submit meanwhile does nothing.
+        if *submitting.peek() {
+            event.prevent_default();
+            return;
+        }
         scope.settle();
         // Errors set from code answered the last submit; this one is judged afresh.
         scope.clear_errors();
@@ -189,11 +225,26 @@ pub fn Form<V: FormValue>(props: FormProps<V>) -> Element {
         let value = (*store.peek())
             .map(|value| value.peek().clone())
             .unwrap_or_default();
-        if let Err(errors) = onsubmit.run(event.clone(), value) {
-            // `set_errors` shows the summary itself.
-            awaiting.set(None);
-            event.prevent_default();
-            handle.set_errors(errors);
+        match onsubmit.run(event.clone(), value) {
+            Ok(()) => {}
+            Err(Outcome::Refused(errors)) => {
+                // `set_errors` shows the summary itself.
+                awaiting.set(None);
+                event.prevent_default();
+                handle.set_errors(errors);
+            }
+            Err(Outcome::Running(task)) => {
+                submitting.set(true);
+                // In the form's scope, so the task ends with the form.
+                spawn(async move {
+                    let result = task.await;
+                    submitting.set(false);
+                    if let Err(errors) = result {
+                        awaiting.set(None);
+                        handle.set_errors(errors);
+                    }
+                });
+            }
         }
     });
 
@@ -212,9 +263,26 @@ pub fn Form<V: FormValue>(props: FormProps<V>) -> Element {
         summary
     });
     use_drop(move || handle.detach());
-    use_effect(move || {
-        if focus_requests() > 0 {
-            let _ = summary_element.focus();
+    let mut mode = use_hook(|| CopyValue::new(props.summary));
+    if *mode.peek() != props.summary {
+        mode.set(props.summary);
+    }
+    use_effect({
+        let summary = summary.clone();
+        move || {
+            if focus_requests() == 0 {
+                return;
+            }
+            // Hidden, the first field showing its error takes focus; the alert only without one.
+            let field = (*mode.peek() == SummaryMode::Hidden)
+                .then(|| summary.first_inline())
+                .flatten();
+            let _ = match field {
+                Some(id) => form_element
+                    .query_selector(&field_target(&id))
+                    .and_then(|field| field.focus()),
+                None => summary_element.focus(),
+            };
         }
     });
     // A field's explicit error after a valid submit shows the summary once, as a blocked
@@ -249,7 +317,21 @@ pub fn Form<V: FormValue>(props: FormProps<V>) -> Element {
     let (submit_click, implicit_submit) =
         platform::submit_listeners(move || form_element.mounted(), request).unzip();
 
-    let items = summary.visible(&scope);
+    let mut items = summary.visible(&scope);
+    let hidden = props.summary == SummaryMode::Hidden;
+    // Counted before the lines the fields show leave the list.
+    let count = items.len();
+    if hidden {
+        items.retain(|item| !item.inline);
+    }
+    let words = use_localization();
+    let announcer = hidden.then(|| {
+        rsx! {
+            VisuallyHidden { role: "status",
+                if count > 0 { {(words.form.error_count)(count)} }
+            }
+        }
+    });
     let summary_node = (!items.is_empty()).then(|| {
         rsx! {
             Alert {
@@ -268,13 +350,7 @@ pub fn Form<V: FormValue>(props: FormProps<V>) -> Element {
                         li {
                             match &item.target {
                                 Some(id) => {
-                                    // A group has no control with the id: its tab stop is named by the label.
-                                    // A `Fieldset`'s line goes to its first tab stop.
-                                    let at = crate::hooks::id_selector(id);
-                                    let target = format!(
-                                        "{at}:not(fieldset), {at} {FOCUSABLE_SELECTOR}:not([type=\"hidden\"]), {}",
-                                        labelled_focus_selector(&format!("{id}-label"))
-                                    );
+                                    let target = field_target(id);
                                     rsx! {
                                         a {
                                             href: "#{id}",
@@ -303,7 +379,7 @@ pub fn Form<V: FormValue>(props: FormProps<V>) -> Element {
     let summary_key = "summary";
     let children = vec![
         rsx! {
-            Fragment { key: "{summary_key}", {summary_node.unwrap_or_else(VNode::empty)} }
+            Fragment { key: "{summary_key}", {announcer}, {summary_node} }
         },
         rsx! {
             Fragment { key: "{record.peek()}", {props.children} }
@@ -319,6 +395,7 @@ pub fn Form<V: FormValue>(props: FormProps<V>) -> Element {
         .prepare()
         .element(&form_element)
         .attr("novalidate", true)
+        .attr("aria-busy", if submitting() { "true" } else { "false" })
         .event("onsubmit", move |event: FormEvent| submit.call(event))
         // A native reset button also takes the form back to pristine: nothing
         // touched, no summary, as `FormHandle::reset`.
@@ -332,6 +409,17 @@ pub fn Form<V: FormValue>(props: FormProps<V>) -> Element {
         .event("onclick", submit_click)
         .event("onkeydown", implicit_submit)
         .render(HtmlTag::Form, attributes, children)
+}
+
+/// The tab stop of the field with `id`, for a summary line or the focus a hidden summary moves.
+/// A group has no control with the id: its tab stop is named by the label. A `Fieldset`'s goes
+/// to its first tab stop.
+fn field_target(id: &str) -> String {
+    let at = crate::hooks::id_selector(id);
+    format!(
+        "{at}:not(fieldset), {at} {FOCUSABLE_SELECTOR}:not([type=\"hidden\"]), {}",
+        labelled_focus_selector(&format!("{id}-label"))
+    )
 }
 
 /// `attributes` without a text `action` whose scheme would run script on submit.

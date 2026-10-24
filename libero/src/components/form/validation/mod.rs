@@ -11,6 +11,8 @@ mod validator;
 #[cfg(test)]
 mod domain_tests;
 #[cfg(test)]
+mod submit_async_tests;
+#[cfg(test)]
 mod submit_tests;
 #[cfg(test)]
 mod sweep_tests;

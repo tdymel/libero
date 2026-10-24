@@ -1,13 +1,13 @@
 use crate::Route;
 use crate::components::{
-    Control, Demo, DemoFile, DemoValues, DocPage, Remount, SectionLink, Wrap, a11y, indent, prop,
-    props,
+    Control, Demo, DemoFile, DemoValues, DocPage, DocSection, Remount, SectionLink, Wrap, a11y,
+    indent, prop, props,
 };
 use dioxus::prelude::*;
 use libero::components::{
-    Button, Checkbox, Code, FieldError, FieldName, Fields, Fieldset, Flex, Form, FormErrors,
-    FormPart, PasswordField, Rule, Submit, Text, TextField, Validators, checked, is_email,
-    min_length, not_empty, use_form, use_form_context,
+    Button, Checkbox, Code, CodeBlock, FieldError, FieldName, Fields, Fieldset, Flex, Form,
+    FormErrors, FormPart, PasswordField, Rule, Submit, Text, TextField, Validators, checked,
+    is_email, min_length, not_empty, use_form, use_form_context,
 };
 use libero::localization::Localization;
 
@@ -64,6 +64,12 @@ __STATUS__
 
 /// The page's own source: the printed parts are cut from its live demo.
 const FILE: DemoFile = DemoFile(include_str!("form.rs"));
+
+// Prints from its `demo-code: start` marker, below the imports it compiles with.
+#[rustfmt::skip]
+mod sign_in;
+use sign_in::SignInForm;
+const SIGN_IN_CODE: DemoFile = DemoFile(include_str!("form/sign_in.rs"));
 
 /// A section of the live form at the depth `FORM_CODE` splices it in.
 fn nest(name: &str) -> String {
@@ -143,9 +149,12 @@ pub fn FormPage() -> Element {
                     prop("validate", "Validators<V>")
                         .doc("Rules over `value`, one or an array. A rule with `.on(..)` shows its status on each field it names, and runs only while each of them holds a parsed value or is empty and optional."),
                     prop("onsubmit", "Submit<V>")
-                        .doc("Fires on a submit with no errors: a closure over the `FormEvent`, or `Submit::parse(parse, handler)`. Without an `action`, the browser's own submit is cancelled. A `javascript:`, `data:` or `vbscript:` `action` is dropped with a debug warning, so it counts as none."),
+                        .doc("Fires on a submit with no errors: a closure over the `FormEvent`, `Submit::parse(parse, handler)`, or the async `Submit::parse_async(parse, handler)` and `Submit::task(handler)`. Without an `action`, the browser's own submit is cancelled. A `javascript:`, `data:` or `vbscript:` `action` is dropped with a debug warning, so it counts as none."),
                     prop("summary_title", "String")
                         .doc("A heading over the error summary."),
+                    prop("summary", "SummaryMode")
+                        .default("Visible")
+                        .doc("`Visible`: a blocked submit or `set_errors` shows a summary of every error above the fields and focuses it. `Hidden`: no summary list; focus goes to the first field that shows its error, and a visually hidden status says how many errors there are (`form.error_count`). Errors no field shows, from `FormErrors::form` or a form rule without `.on(..)`, still show in the summary, which then takes focus when no field does."),
                     prop("form", "FormHandle")
                         .doc("Controls the form from outside, made with `use_form()`. Taken once, on mount. Without it the form makes its own, which `use_form_context()` returns inside the form."),
                     prop("children", "Element")
@@ -166,10 +175,12 @@ pub fn FormPage() -> Element {
                         .doc("Puts the value back to `V::default()` and clears touched fields, the submit and the summary; a `type=\"reset\"` button clears those too. A field with its own `value` and handler keeps what it shows. On the desktop WebView it cannot clear a control that is not bound to the value. Under Blitz it clears unbound text fields, not checkboxes or selects."),
                     prop("is_valid()", "bool")
                         .doc("Whether nothing is an error, shown or not. It follows changes, so it can drive other UI."),
+                    prop("is_submitting()", "bool")
+                        .doc("Whether an async handler (`Submit::parse_async`, `Submit::task`) is running. It follows changes, so it can set a submit button's `loading`. Meanwhile a submit is ignored and the form has `aria-busy=\"true\"`."),
                     prop("clear_summary()", "()")
                         .doc("Hides the summary and resets nothing."),
                     prop("set_errors(errors)", "FormErrors")
-                        .doc("Shows each error on the field with its path, as an error `status` would, lists it in the summary and focuses the summary: a server's answer. Replaces the errors set before. A field's error clears when it is edited, all of them on the next submit or reset. An error on a path no field carries gets an unlinked summary line."),
+                        .doc("Shows each error on the field with its path, as an error `status` would, lists it in the summary and focuses the summary: a server's answer. Replaces the errors set before. A field's error clears when it is edited, all of them on the next submit or reset. An error on a path no field carries, or from `FormErrors::form`, gets an unlinked summary line."),
                     prop("clear_errors()", "()")
                         .doc("Drops the errors `set_errors` set."),
                 ]).without_base_props(),
@@ -185,8 +196,12 @@ pub fn FormPage() -> Element {
                 props("Domain values", vec![
                     prop("parse(parse, handler)", "Submit<V>")
                         .doc("`Submit::parse(parse, handler)`, for `onsubmit`: after the field rules pass, `parse: Fn(&V) -> Result<C, FormErrors>` builds a command from `value` and `handler` gets it. An `Err` puts each error on its field and in the summary, as `set_errors` does, and `handler` doesn't run. Hold checks in `validate` for live feedback; `parse` builds the command and reports what only the submit can tell."),
+                    prop("parse_async(parse, handler)", "Submit<V>")
+                        .doc("`Submit::parse` with an async `handler: FnMut(C) -> impl Future<Output = Result<(), FormErrors>>`, such as a request. It runs in the form's scope and ends with it. While it runs, `is_submitting()` is `true` and a submit is ignored; an `Err` lands as `set_errors` does. `Submit::task(handler)` is the same over the `FormEvent`, without `parse`."),
                     prop(".map(format, parse)", "Mapped<T, W, E>")
-                        .doc("On a path to `Option<T>`: binds a field that edits `W` (text, a date, an option) to the domain type `T`. `format` shows a stored `T`, `parse` reads `W` back and never sees an empty one (blank text, `None`, `[]`); text reaches it untrimmed. An `Err` shows its words, resets the value to `None` and blocks the submit, while the text stays, also across an unmount. A focused field keeps the text as typed: `format` runs on blur and when the value changes elsewhere. `T` must be `Clone + PartialEq`; wrap it in `Rc` otherwise."),
+                        .doc("On a path to `Option<T>`: binds a field that edits `W` (text, a date, an option) to the domain type `T`. `format` shows a stored `T`, `parse` reads `W` back and never sees an empty one (blank text, `None`, `[]`); text reaches it untrimmed. An `Err` shows its words, resets the value to `None` and blocks the submit, while the text stays, also across an unmount. A focused field keeps the text as typed: `format` runs on blur and when the value changes elsewhere. `T` must be `Clone + PartialEq`. `Rc<T>` is no way out: it compares only when `T: PartialEq`. Wrap a type with neither, such as a secret, in `ByAddress<T>`."),
+                    prop(".map(.., ByAddress::new)", "ByAddress<T>")
+                        .doc("Makes a `T` with no `Clone` or `PartialEq`, such as a password type, fit for a form value: clones share it, two compare equal only when they are the same one, and it derefs to `T`. A field holds `Option<ByAddress<T>>`, and its `.map` parse wraps the value with `ByAddress::new`."),
                     prop(".parsed()", "Mapped<T, String, T::Err>")
                         .doc("`.map` through `T`'s `Display` and `FromStr`, for a text field."),
                     prop(".message(fn)", "fn(&E, &Localization) -> String")
@@ -198,7 +213,7 @@ pub fn FormPage() -> Element {
                     prop("impl FieldError", "trait")
                         .doc("`fn message(&self, &Localization) -> String`: an error's words in the active language, worded again on a switch. Implemented for `Fn(&Localization) -> String`, `String` and `&'static str`; there is no `Display` fallback."),
                     prop(".at(path, error)", "FormErrors")
-                        .doc("Errors by field path for `set_errors` and `parse`: `FormErrors::new().at(path, error)` with a `FieldError`, or `.at_with(path, error, fn)` worded by a `fn(&E, &Localization) -> String`. `path` is a `FieldPath`, a `FieldName` or its spelling."),
+                        .doc("Errors by field path for `set_errors` and `parse`: `FormErrors::new().at(path, error)` with a `FieldError`, or `.at_with(path, error, fn)` worded by a `fn(&E, &Localization) -> String`. `path` is a `FieldPath`, a `FieldName` or its spelling. `.form(error)` is an error on the whole form, such as wrong credentials: an unlinked summary line, shown with `SummaryMode::Hidden` too, cleared by the next submit, a reset or `clear_errors`, not by an edit."),
                     prop(".required(path)", "Result<T, FormErrors>")
                         .doc("On an `Option<T>`, with `RequiredValue` in scope: the value, else an error on `path` worded as an empty `required` field. Turns a missing value into a `FormErrors` entry with `?` instead of an `unwrap()`."),
                 ]).without_base_props(),
@@ -255,6 +270,34 @@ pub fn FormPage() -> Element {
                         }
                     }
                 },
+            }
+            DocSection { id: "async-submit", title: "Async submit",
+                Text {
+                    Code { source: "Submit::parse_async(parse, handler)" }
+                    " runs an async "
+                    Code { source: "handler" }
+                    ", such as a request. "
+                    Code { source: "form.is_submitting()" }
+                    " is "
+                    Code { source: "true" }
+                    " until it ends, so the button shows "
+                    Code { source: "loading" }
+                    ", and a second submit meanwhile is ignored. An "
+                    Code { source: "Err" }
+                    " it returns lands like "
+                    Code { source: "set_errors" }
+                    ", and "
+                    Code { source: "FormErrors::form(..)" }
+                    " is an error on no field, such as wrong credentials. With "
+                    Code { source: "summary: SummaryMode::Hidden" }
+                    " a blocked submit focuses the first invalid field instead of a summary, and "
+                    "a screen reader hears how many errors there are. Sign in empty, then with any "
+                    "email and a wrong password, then with "
+                    Code { source: "secret" }
+                    "."
+                }
+                SignInForm {}
+                CodeBlock { source: SIGN_IN_CODE.shown(), language: "rust" }
             }
         }
     }

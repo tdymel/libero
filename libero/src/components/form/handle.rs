@@ -20,6 +20,8 @@ pub struct FormHandle {
     pub(crate) element: ElementHandle,
     /// Bumped when the summary appears; the form's effect focuses it.
     pub(crate) focus_requests: Signal<u32>,
+    /// While an async submit handler runs.
+    pub(crate) submitting: Signal<bool>,
     /// Filled in when the form mounts.
     control: CopyValue<Option<Control>>,
 }
@@ -40,6 +42,7 @@ impl FormHandle {
             scope: FormScope::new(),
             element: ElementHandle::new(),
             focus_requests: Signal::new(0),
+            submitting: Signal::new(false),
             control: CopyValue::new(None),
         }
     }
@@ -52,9 +55,14 @@ impl FormHandle {
     /// Called on the form's drop, as the scope that owns the handle.
     pub(crate) fn detach(&self) {
         let mut slot = self.control;
+        let mut submitting = self.submitting;
         self.scope.in_owner(|| {
             if slot.try_peek().is_ok_and(|control| control.is_some()) {
                 slot.set(None);
+            }
+            // The running handler went with the form.
+            if submitting.try_peek().is_ok_and(|running| *running) {
+                submitting.set(false);
             }
         });
     }
@@ -115,6 +123,13 @@ impl FormHandle {
     /// disable a button.
     pub fn is_valid(&self) -> bool {
         !self.scope.has_errors_tracked()
+    }
+
+    /// Whether an async submit handler ([`Submit::parse_async`](crate::components::Submit::parse_async),
+    /// [`Submit::task`](crate::components::Submit::task)) is running. Reactive, so it can set a
+    /// button's `loading`; a submit meanwhile is ignored.
+    pub fn is_submitting(&self) -> bool {
+        (self.submitting)()
     }
 
     /// Shows each error on the field with its path, as an explicit `status` would, lists them
@@ -193,6 +208,15 @@ impl Summary {
             let mut focus_requests = self.focus_requests;
             focus_requests += 1;
         }
+    }
+
+    /// The first field that shows its line's message itself.
+    pub fn first_inline(&self) -> Option<String> {
+        self.items
+            .borrow()
+            .iter()
+            .filter(|item| item.inline)
+            .find_map(|item| item.target.clone())
     }
 
     /// The lines still failing. Subscribes to statuses only while there are lines.

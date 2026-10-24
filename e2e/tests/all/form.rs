@@ -358,7 +358,7 @@ async fn click_button(page: &Page, text: &str) -> Result<()> {
         "[...document.querySelectorAll('button')].find(b => b.textContent.trim() === {text:?}).setAttribute('data-e2e', {text:?})"
     ))
     .await?;
-    pointer::click(page, &format!("button[data-e2e={text}]")).await
+    pointer::click(page, &format!("button[data-e2e={text:?}]")).await
 }
 
 /// The field is invalid and shows its message, or neither.
@@ -874,6 +874,117 @@ fn a_submit_blocked_by_parse_shows_the_error_on_its_field() {
             .console
             .assert_clean("a submit blocked by parse")
             .unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
+/// Todo 4099: a hidden summary shows no list, focuses the first invalid field and counts the
+/// errors in a status.
+#[test]
+fn a_hidden_summary_focuses_the_first_invalid_field() {
+    block_on(async {
+        let fixture = Fixture::open("/form/async", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+
+        click_button(page, "Sign in").await.unwrap();
+        wait::for_js_true(
+            page,
+            "document.activeElement?.id === 'email'",
+            "focus on the first invalid field",
+        )
+        .await
+        .unwrap();
+        wait::for_js_true(
+            page,
+            "[...document.querySelectorAll('[role=status]')].some(s => s.textContent.includes('2 errors in the form.'))",
+            "the error count",
+        )
+        .await
+        .unwrap();
+        let summary = page
+            .evaluate("document.querySelector('[data-slot=summary]') === null")
+            .await
+            .unwrap()
+            .into_value::<bool>()
+            .unwrap();
+        assert!(summary, "a hidden summary rendered its list");
+        wait::for_js_true(
+            page,
+            "document.querySelector('[data-calls]').dataset.calls === '0'",
+            "nothing sent",
+        )
+        .await
+        .unwrap();
+
+        fixture.console.assert_clean("a hidden summary").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
+/// Todos 4097, 4100: an async submit marks the form busy, ignores a second submit, and its
+/// form-wide error shows above the fields in a hidden-summary form and takes focus.
+#[test]
+fn an_async_submit_is_busy_until_it_answers() {
+    block_on(async {
+        let fixture = Fixture::open("/form/async", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        let data = |key: &str, value: &str| {
+            format!("document.querySelector('[data-{key}]').dataset.{key} === {value:?}")
+        };
+
+        pointer::click(page, "#email").await.unwrap();
+        keyboard::type_text(page, "me@libero.dev").await.unwrap();
+        pointer::click(page, "#code").await.unwrap();
+        keyboard::type_text(page, "1234").await.unwrap();
+        click_button(page, "Sign in").await.unwrap();
+        wait::for_js_true(page, &data("submitting", "true"), "the form submitting")
+            .await
+            .unwrap();
+        wait::for_js_true(
+            page,
+            "document.querySelector('form').getAttribute('aria-busy') === 'true'",
+            "the form busy",
+        )
+        .await
+        .unwrap();
+
+        // Enter in a field submits again: ignored while the first runs.
+        pointer::click(page, "#code").await.unwrap();
+        keyboard::press(page, keyboard::ENTER).await.unwrap();
+        click_button(page, "Refuse").await.unwrap();
+        wait::for_js_true(page, &data("submitting", "false"), "the request answered")
+            .await
+            .unwrap();
+        wait::for_js_true(page, &data("calls", "1"), "one request only")
+            .await
+            .unwrap();
+        wait::for_js_true(
+            page,
+            "document.querySelector('[data-slot=summary]')?.textContent.includes('Wrong code.')",
+            "the form-wide error above the fields",
+        )
+        .await
+        .unwrap();
+        wait::for_js_true(
+            page,
+            "document.activeElement?.dataset.slot === 'summary'",
+            "focus on the alert, as no field is at fault",
+        )
+        .await
+        .unwrap();
+        wait::for_js_true(
+            page,
+            "document.querySelector('form').getAttribute('aria-busy') === 'false'",
+            "the form idle",
+        )
+        .await
+        .unwrap();
+
+        fixture.console.assert_clean("an async submit").unwrap();
         fixture.close().await.unwrap();
     });
 }

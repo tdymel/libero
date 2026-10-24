@@ -91,14 +91,18 @@ mod address_fieldset;
 #[rustfmt::skip]
 mod email_field;
 #[rustfmt::skip]
+mod iban_field;
+#[rustfmt::skip]
 mod order_form;
 use address_fieldset::{Address, AddressFieldset};
 use email_field::EmailField;
+use iban_field::PayoutForm;
 use order_form::OrderForm;
 
 const SPECIALIZE_CODE: DemoFile = DemoFile(include_str!("getting_started/email_field.rs"));
 const COMPOSE_CODE: DemoFile = DemoFile(include_str!("getting_started/address_fieldset.rs"));
 const FORM_CODE: DemoFile = DemoFile(include_str!("getting_started/order_form.rs"));
+const DOMAIN_FIELD_CODE: DemoFile = DemoFile(include_str!("getting_started/iban_field.rs"));
 
 #[component]
 pub fn FormGettingStartedPage() -> Element {
@@ -180,6 +184,32 @@ pub fn FormGettingStartedPage() -> Element {
                 CodeBlock { source: COMPOSE_CODE.shown(), language: "rust" }
                 Text { "The form then arranges the parts and adds the rules only the whole value can decide." }
                 CodeBlock { source: FORM_CODE.shown(), language: "rust" }
+            }
+            DocSection { id: "domain-field-wrapper", title: "Domain field wrapper",
+                Text {
+                    "A field for a domain type, such as an "
+                    Code { source: "Iban" }
+                    " from your own crate, edits text and maps it with "
+                    Code { source: ".map(format, parse)" }
+                    " on a path to "
+                    Code { source: "Option<Iban>" }
+                    ". There are two ways to wrap it. Either the caller maps and the wrapper takes "
+                    Code { source: "#[props(into)] name: FieldName<String>" }
+                    ", so it fits any binding, or the wrapper is generic over the form's value "
+                    Code { source: "R" }
+                    ", takes a "
+                    Code { source: "FieldPath<R, Option<Iban>>" }
+                    " and maps inside, so no caller repeats the parse. Type something short, then "
+                    "a valid IBAN, and save."
+                }
+                div { style: "max-width: 360px;", PayoutForm {} }
+                CodeBlock { source: DOMAIN_FIELD_CODE.shown(), language: "rust" }
+                Text {
+                    "The first fits a field bound in several ways, the second a type mapped the "
+                    "same way everywhere. The domain type must be "
+                    Code { source: "Clone + PartialEq" }
+                    ", as every form value is."
+                }
             }
             DocSection { title: "Validators",
                 Text {

@@ -96,6 +96,8 @@ pub(crate) struct SummaryItem {
     pub message: String,
     /// The id of the field to jump to, if the line concerns one.
     pub target: Option<String>,
+    /// The field or group shows the message too; a hidden summary leaves the line out.
+    pub inline: bool,
 }
 
 impl FormScope {
@@ -494,6 +496,7 @@ impl FormScope {
                         None => message.to_string(),
                     },
                     target: Some(field.id.clone()),
+                    inline: true,
                 })
             })
             .collect();
@@ -505,6 +508,7 @@ impl FormScope {
                 .map(|(_, error)| SummaryItem {
                     message: word(&**error),
                     target: None,
+                    inline: false,
                 }),
         );
 
@@ -526,10 +530,12 @@ impl FormScope {
                                 None => message.clone(),
                             },
                             target: Some(group.id.clone()),
+                            inline: true,
                         },
                         None => SummaryItem {
                             message: message.clone(),
                             target: fields.values().next().map(|field| field.id.clone()),
+                            inline: false,
                         },
                     }
                 } else {
@@ -539,6 +545,7 @@ impl FormScope {
                             Some(label) => format!("{label}: {message}"),
                             None => message.clone(),
                         },
+                        inline: target.is_some(),
                         target: target.map(|field| field.id.clone()),
                     }
                 };

@@ -3,6 +3,9 @@ use std::{fmt, rc::Rc};
 use super::field_error::{FieldError, Worded};
 use crate::localization::Localization;
 
+/// The path of an error on the whole form, a name no field carries.
+pub(crate) const WHOLE_FORM: &str = "\0form";
+
 /// Errors by field path, from a form's `parse` step or a server's answer. Each
 /// lands on the field with that `name` and in the error summary.
 ///
@@ -46,6 +49,19 @@ impl FormErrors {
     ) -> Self {
         let words = Rc::new(message);
         self.at(path, Worded { error, words })
+    }
+
+    /// `error` on the whole form, such as wrong credentials: a summary line linked to no field,
+    /// shown with [`SummaryMode::Hidden`](crate::components::SummaryMode) too.
+    ///
+    /// ```
+    /// use libero::components::FormErrors;
+    ///
+    /// let errors = FormErrors::new().form("Wrong email or password.");
+    /// assert!(!errors.is_empty());
+    /// ```
+    pub fn form(self, error: impl FieldError) -> Self {
+        self.at(WHOLE_FORM, error)
     }
 
     pub fn is_empty(&self) -> bool {

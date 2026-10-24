@@ -1,12 +1,22 @@
+use std::{future::Future, pin::Pin};
+
 use dioxus::prelude::*;
 
 use crate::components::form::FormErrors;
 
 /// What a [`Form`](crate::components::Form) does with a submit its fields let through: a
 /// closure over the [`FormEvent`], or [`Submit::parse`], which builds a command from the
-/// value first.
+/// value first. [`Submit::parse_async`] and [`Submit::task`] take async handlers.
 pub struct Submit<V: 'static> {
-    run: Option<Callback<(FormEvent, V), Result<(), FormErrors>>>,
+    run: Option<Callback<(FormEvent, V), Result<(), Outcome>>>,
+}
+
+/// What a submit handler left to do.
+pub(crate) enum Outcome {
+    /// `parse` refused the value.
+    Refused(FormErrors),
+    /// An async handler, for the form to spawn.
+    Running(Pin<Box<dyn Future<Output = Result<(), FormErrors>>>>),
 }
 
 impl<V: 'static> Submit<V> {
@@ -50,14 +60,85 @@ impl<V: 'static> Submit<V> {
         mut handler: impl FnMut(C) + 'static,
     ) -> Self {
         let run = Callback::new(move |(_, value): (FormEvent, V)| {
-            handler(parse(&value)?);
+            handler(parse(&value).map_err(Outcome::Refused)?);
             Ok(())
         });
         Self { run: Some(run) }
     }
 
-    /// Runs on a submit nothing blocked. `Err` when `parse` refused the value.
-    pub(crate) fn run(&self, event: FormEvent, value: V) -> Result<(), FormErrors> {
+    /// [`parse`](Self::parse) with an async `handler`, such as a request. While it runs,
+    /// [`is_submitting`](crate::components::FormHandle::is_submitting) is `true` and a submit is
+    /// ignored; an `Err` it returns lands as [`set_errors`](crate::components::FormHandle::set_errors) does.
+    ///
+    /// ```no_run
+    /// # use dioxus::prelude::*;
+    /// use libero::components::{Button, Fields, Form, FormErrors, Submit, TextField, use_form};
+    ///
+    /// #[derive(Clone, PartialEq, Default, Fields)]
+    /// struct Login { email: String }
+    /// struct SignIn { email: String }
+    ///
+    /// fn sign_in(login: &Login) -> Result<SignIn, FormErrors> {
+    ///     Ok(SignIn { email: login.email.clone() })
+    /// }
+    /// # async fn request(_: SignIn) -> Result<(), ()> { Ok(()) }
+    ///
+    /// # fn app() -> Element {
+    /// let login = use_store(Login::default);
+    /// let form = use_form();
+    /// rsx! {
+    ///     Form { form, value: login,
+    ///         onsubmit: Submit::parse_async(sign_in, |command: SignIn| async move {
+    ///             request(command).await.map_err(|_| FormErrors::new().form("Wrong email or password."))
+    ///         }),
+    ///         TextField { label: "Email", name: Login::FIELDS.email() }
+    ///         Button { r#type: "submit", loading: form.is_submitting(), "Sign in" }
+    ///     }
+    /// }
+    /// # }
+    /// ```
+    pub fn parse_async<C: 'static, F>(
+        parse: impl Fn(&V) -> Result<C, FormErrors> + 'static,
+        mut handler: impl FnMut(C) -> F + 'static,
+    ) -> Self
+    where
+        F: Future<Output = Result<(), FormErrors>> + 'static,
+    {
+        let run = Callback::new(move |(_, value): (FormEvent, V)| {
+            let command = parse(&value).map_err(Outcome::Refused)?;
+            Err(Outcome::Running(Box::pin(handler(command))))
+        });
+        Self { run: Some(run) }
+    }
+
+    /// An async `handler` over the [`FormEvent`], as [`parse_async`](Self::parse_async) runs it.
+    ///
+    /// ```no_run
+    /// # use dioxus::prelude::*;
+    /// use libero::components::{Form, Submit};
+    /// # async fn save() {}
+    ///
+    /// # fn app() -> Element {
+    /// rsx! {
+    ///     Form::<()> { onsubmit: Submit::task(|_| async move {
+    ///         save().await;
+    ///         Ok(())
+    ///     }) }
+    /// }
+    /// # }
+    /// ```
+    pub fn task<F>(mut handler: impl FnMut(FormEvent) -> F + 'static) -> Self
+    where
+        F: Future<Output = Result<(), FormErrors>> + 'static,
+    {
+        let run = Callback::new(move |(event, _): (FormEvent, V)| {
+            Err(Outcome::Running(Box::pin(handler(event))))
+        });
+        Self { run: Some(run) }
+    }
+
+    /// Runs on a submit nothing blocked. `Ok` when the handler is done.
+    pub(crate) fn run(&self, event: FormEvent, value: V) -> Result<(), Outcome> {
         match self.run {
             Some(run) => run.call((event, value)),
             None => Ok(()),

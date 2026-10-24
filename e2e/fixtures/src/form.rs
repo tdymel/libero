@@ -8,7 +8,7 @@ use libero::components::{
     DateField, DatePicker, DateRangePicker, DateTimeField, FieldError, FieldStatus, Fields, Fieldset, FileField, Files, Flex, Form,
     FormErrors, MonthPicker, MultiSelect, NativeSelect, NumberField, Options, PasswordField, PhoneField, PinField, Radio,
     RadioGroup, RangeSlider, Rating, RequiredValue, Rule, SegmentedControl, Select, Slider, SliderChangeEvent,
-    Submit, Switch, TagsField, Text, TextField, Textarea, TimeField, TimePicker, YearPicker, min_length, not_empty, use_form,
+    Submit, SummaryMode, Switch, TagsField, Text, TextField, Textarea, TimeField, TimePicker, YearPicker, min_length, not_empty, use_form,
 };
 
 use crate::Routes;
@@ -26,7 +26,68 @@ pub const ROUTES: Routes = &[
     ("/form/command", || rsx! { CommandPage {} }),
     ("/form/login", || rsx! { LoginPage {} }),
     ("/form/prefill", || rsx! { PrefillPage {} }),
+    ("/form/async", || rsx! { AsyncSignInPage {} }),
 ];
+
+#[derive(Clone, PartialEq, Default, Fields)]
+struct SignIn {
+    email: String,
+    code: String,
+}
+
+/// A request the page's buttons answer.
+#[derive(Clone, Default)]
+struct Pending {
+    answer: std::rc::Rc<std::cell::RefCell<Option<Result<(), FormErrors>>>>,
+    waker: std::rc::Rc<std::cell::RefCell<Option<std::task::Waker>>>,
+}
+
+impl Pending {
+    fn answer(&self, result: Result<(), FormErrors>) {
+        *self.answer.borrow_mut() = Some(result);
+        if let Some(waker) = self.waker.borrow_mut().take() {
+            waker.wake();
+        }
+    }
+
+    async fn wait(self) -> Result<(), FormErrors> {
+        std::future::poll_fn(move |context| match self.answer.borrow_mut().take() {
+            Some(result) => std::task::Poll::Ready(result),
+            None => {
+                *self.waker.borrow_mut() = Some(context.waker().clone());
+                std::task::Poll::Pending
+            }
+        })
+        .await
+    }
+}
+
+/// Todos 4097, 4099, 4100: an async submit the buttons answer, behind a hidden summary.
+#[component]
+fn AsyncSignInPage() -> Element {
+    let sign_in = use_store(SignIn::default);
+    let form = use_form();
+    let pending = use_hook(Pending::default);
+    let mut calls = use_signal(|| 0u32);
+    let request = pending.clone();
+    let (accept, refuse) = (pending.clone(), pending);
+    rsx! {
+        Flex { direction: "column", gap: "md", max_width: "320px",
+            span { "data-calls": "{calls}", "data-submitting": "{form.is_submitting()}" }
+            Form { form, value: sign_in, summary: SummaryMode::Hidden,
+                onsubmit: Submit::task(move |_| {
+                    calls += 1;
+                    request.clone().wait()
+                }),
+                TextField { id: "email", label: "Email", required: true, name: SignIn::FIELDS.email() }
+                TextField { id: "code", label: "Code", required: true, name: SignIn::FIELDS.code() }
+                Button { r#type: "submit", loading: form.is_submitting(), "Sign in" }
+            }
+            Button { onclick: move |_| accept.answer(Ok(())), "Accept" }
+            Button { onclick: move |_| refuse.answer(Err(FormErrors::new().form("Wrong code."))), "Refuse" }
+        }
+    }
+}
 
 /// What `CommandPage` sends: a German IBAN only, refused after the field's own parse.
 fn payout_command(payout: &Payout) -> Result<String, FormErrors> {

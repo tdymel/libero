@@ -176,6 +176,77 @@ an error one set after a valid submit, in `onsubmit` or once a request returns,
 shows the summary, which takes focus and is announced, as a blocked submit's
 would.
 
+## Async submit
+
+`Submit::parse_async(parse, handler)` runs an async `handler`, such as a
+request. `form.is_submitting()` is `true` until it ends, so the button shows
+`loading`, and a second submit meanwhile is ignored. An `Err` it returns lands
+like `set_errors`, and `FormErrors::form(..)` is an error on no field, such as
+wrong credentials. With `summary: SummaryMode::Hidden` a blocked submit focuses
+the first invalid field instead of a summary, and a screen reader hears how
+many errors there are.
+
+```rust
+use dioxus::prelude::*;
+use libero::components::{
+    Button, Fields, Form, FormErrors, PasswordField, Submit, SummaryMode, Text, TextField, use_form,
+};
+
+#[derive(Clone, PartialEq, Default, Fields)]
+struct Login {
+    email: String,
+    password: String,
+}
+
+struct Credentials {
+    email: String,
+    password: String,
+}
+
+fn credentials(login: &Login) -> Result<Credentials, FormErrors> {
+    Ok(Credentials { email: login.email.clone(), password: login.password.clone() })
+}
+
+#[component]
+fn SignInForm() -> Element {
+    let login = use_store(Login::default);
+    let form = use_form();
+    let mut signed_in = use_signal(String::new);
+
+    rsx! {
+        Form {
+            sx: libero::sx::sx().width("100%").max_width("320px"),
+            form,
+            value: login,
+            // Each field shows its own error, and focus goes to the first one.
+            summary: SummaryMode::Hidden,
+            // While the request runs, the form ignores another submit.
+            onsubmit: Submit::parse_async(credentials, move |sent: Credentials| async move {
+                if !sign_in(&sent).await {
+                    // No field is at fault, so the error shows above the fields.
+                    return Err(FormErrors::new().form("Wrong email or password."));
+                }
+                signed_in.set(sent.email);
+                Ok(())
+            }),
+            TextField { label: "Email", r#type: "email", autocomplete: "username", name: Login::FIELDS.email(), required: true }
+            PasswordField { label: "Password", autocomplete: "current-password", name: Login::FIELDS.password(), required: true }
+            Button { r#type: "submit", loading: form.is_submitting(), "Sign in" }
+            Text { role: "status",
+                if !signed_in().is_empty() { "Signed in as {signed_in}." }
+            }
+        }
+    }
+}
+#
+# async fn sign_in(sent: &Credentials) -> bool { sent.password == "secret" }
+```
+
+`Submit::task(handler)` is the same over the `FormEvent`, without a `parse`
+step. A type with neither `Clone` nor `PartialEq`, such as a password type,
+fits a form value as `ByAddress<T>`: clones share it and two compare equal only
+when they are the same one.
+
 ## Sticky action bar
 
 A long form keeps its buttons in view with a `Flex` that sticks to the bottom of
@@ -262,8 +333,9 @@ Stepper {
 |---|---|---|---|
 | `value` | `Store<V>` | - | The whole form's value. `validate` checks it, and fields named by a path read and write it. `V` is inferred from it. A form with no `value` and no rules needs `Form::<()>`. |
 | `validate` | `Validators<V>` | - | Rules over `value`, one or an array. A rule with `.on(..)` shows its status on each field it names, and runs only while each of them holds a parsed value or is empty and optional. |
-| `onsubmit` | `Submit<V>` | - | Fires on a submit with no errors: a closure over the `FormEvent`, or `Submit::parse(parse, handler)`. Without an `action`, the browser's own submit is cancelled. A `javascript:`, `data:` or `vbscript:` `action` is dropped with a debug warning, so it counts as none. |
+| `onsubmit` | `Submit<V>` | - | Fires on a submit with no errors: a closure over the `FormEvent`, `Submit::parse(parse, handler)`, or the async `Submit::parse_async(parse, handler)` and `Submit::task(handler)`. Without an `action`, the browser's own submit is cancelled. A `javascript:`, `data:` or `vbscript:` `action` is dropped with a debug warning, so it counts as none. |
 | `summary_title` | `String` | - | A heading over the error summary. |
+| `summary` | `SummaryMode` | `Visible` | `Visible`: a blocked submit or `set_errors` shows a summary of every error above the fields and focuses it. `Hidden`: no summary list; focus goes to the first field that shows its error, and a visually hidden status says how many errors there are (`form.error_count`). Errors no field shows, from `FormErrors::form` or a form rule without `.on(..)`, still show in the summary, which then takes focus when no field does. |
 | `form` | `FormHandle` | - | Controls the form from outside, made with `use_form()`. Taken once, on mount. Without it the form makes its own, which `use_form_context()` returns inside the form. |
 | `children` | `Element` | required | The fields, fieldsets and buttons. |
 
@@ -279,8 +351,9 @@ any extra HTML attributes.
 | `submit()` | `Result<(), PlatformError>` | Submits as the submit button would. `Unsupported` once the form is gone. |
 | `reset()` | `()` | Puts the value back to `V::default()` and clears touched fields, the submit and the summary; a `type="reset"` button clears those too. A field with its own `value` and handler keeps what it shows. On the desktop WebView it cannot clear a control that is not bound to the value. Under Blitz it clears unbound text fields, not checkboxes or selects. |
 | `is_valid()` | `bool` | Whether nothing is an error, shown or not. It follows changes, so it can drive other UI. |
+| `is_submitting()` | `bool` | Whether an async handler (`Submit::parse_async`, `Submit::task`) is running. It follows changes, so it can set a submit button's `loading`. Meanwhile a submit is ignored and the form has `aria-busy="true"`. |
 | `clear_summary()` | `()` | Hides the summary and resets nothing. |
-| `set_errors(errors)` | `FormErrors` | Shows each error on the field with its path, as an error `status` would, lists it in the summary and focuses the summary: a server's answer. Replaces the errors set before. A field's error clears when it is edited, all of them on the next submit or reset. An error on a path no field carries gets an unlinked summary line. |
+| `set_errors(errors)` | `FormErrors` | Shows each error on the field with its path, as an error `status` would, lists it in the summary and focuses the summary: a server's answer. Replaces the errors set before. A field's error clears when it is edited, all of them on the next submit or reset. An error on a path no field carries, or from `FormErrors::form`, gets an unlinked summary line. |
 | `clear_errors()` | `()` | Drops the errors `set_errors` set. |
 
 ### Every field
@@ -296,13 +369,15 @@ any extra HTML attributes.
 | Method | Type | Description |
 |---|---|---|
 | `parse(parse, handler)` | `Submit<V>` | `Submit::parse(parse, handler)`, for `onsubmit`: after the field rules pass, `parse: Fn(&V) -> Result<C, FormErrors>` builds a command from `value` and `handler` gets it. An `Err` puts each error on its field and in the summary, as `set_errors` does, and `handler` doesn't run. Hold checks in `validate` for live feedback; `parse` builds the command and reports what only the submit can tell. |
-| `.map(format, parse)` | `Mapped<T, W, E>` | On a path to `Option<T>`: binds a field that edits `W` (text, a date, an option) to the domain type `T`. `format` shows a stored `T`, `parse` reads `W` back and never sees an empty one (blank text, `None`, `[]`); text reaches it untrimmed. An `Err` shows its words, resets the value to `None` and blocks the submit, while the text stays, also across an unmount. A focused field keeps the text as typed: `format` runs on blur and when the value changes elsewhere. `T` must be `Clone + PartialEq`; wrap it in `Rc` otherwise. |
+| `parse_async(parse, handler)` | `Submit<V>` | `Submit::parse` with an async `handler: FnMut(C) -> impl Future<Output = Result<(), FormErrors>>`, such as a request. It runs in the form's scope and ends with it. While it runs, `is_submitting()` is `true` and a submit is ignored; an `Err` lands as `set_errors` does. `Submit::task(handler)` is the same over the `FormEvent`, without `parse`. |
+| `.map(format, parse)` | `Mapped<T, W, E>` | On a path to `Option<T>`: binds a field that edits `W` (text, a date, an option) to the domain type `T`. `format` shows a stored `T`, `parse` reads `W` back and never sees an empty one (blank text, `None`, `[]`); text reaches it untrimmed. An `Err` shows its words, resets the value to `None` and blocks the submit, while the text stays, also across an unmount. A focused field keeps the text as typed: `format` runs on blur and when the value changes elsewhere. `T` must be `Clone + PartialEq`. `Rc<T>` is no way out: it compares only when `T: PartialEq`. Wrap a type with neither, such as a secret, in `ByAddress<T>`. |
+| `.map(.., ByAddress::new)` | `ByAddress<T>` | Makes a `T` with no `Clone` or `PartialEq`, such as a password type, fit for a form value: clones share it, two compare equal only when they are the same one, and it derefs to `T`. A field holds `Option<ByAddress<T>>`, and its `.map` parse wraps the value with `ByAddress::new`. |
 | `.parsed()` | `Mapped<T, String, T::Err>` | `.map` through `T`'s `Display` and `FromStr`, for a text field. |
 | `.message(fn)` | `fn(&E, &Localization) -> String` | Words every error of type `E` on the field, the parse error and `checked` rules alike. Needed when `E` has no `FieldError`, such as a domain crate's error: without it the name does not compile. |
 | `.rules(..)` | `Validator<T> or Checked<T, E>` | Rules over `T`, run only on a parsed value. The field's own `validate` runs first, over `W`, before the parse; the first error wins. Adds to earlier calls, so a mixed list is two calls. |
 | `checked(f)` | `Checked<V, E>` | A rule from `Fn(&V) -> Result<(), E>`: the field shows `E`'s words. `.warning()` shows it as a warning, `.message(fn)` words an `E` with no `FieldError`. Fits any `validate` too. |
 | `impl FieldError` | `trait` | `fn message(&self, &Localization) -> String`: an error's words in the active language, worded again on a switch. Implemented for `Fn(&Localization) -> String`, `String` and `&'static str`; there is no `Display` fallback. |
-| `.at(path, error)` | `FormErrors` | Errors by field path for `set_errors` and `parse`: `FormErrors::new().at(path, error)` with a `FieldError`, or `.at_with(path, error, fn)` worded by a `fn(&E, &Localization) -> String`. `path` is a `FieldPath`, a `FieldName` or its spelling. |
+| `.at(path, error)` | `FormErrors` | Errors by field path for `set_errors` and `parse`: `FormErrors::new().at(path, error)` with a `FieldError`, or `.at_with(path, error, fn)` worded by a `fn(&E, &Localization) -> String`. `path` is a `FieldPath`, a `FieldName` or its spelling. `.form(error)` is an error on the whole form, such as wrong credentials: an unlinked summary line, shown with `SummaryMode::Hidden` too, cleared by the next submit, a reset or `clear_errors`, not by an edit. |
 | `.required(path)` | `Result<T, FormErrors>` | On an `Option<T>`, with `RequiredValue` in scope: the value, else an error on `path` worded as an empty `required` field. Turns a missing value into a `FormErrors` entry with `?` instead of an `unwrap()`. |
 
 ## Style API

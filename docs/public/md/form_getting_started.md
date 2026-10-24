@@ -155,6 +155,102 @@ fn OrderForm() -> Element {
 # fn AddressFieldset(#[props(into)] label: String, #[props(into)] path: FieldName<Address>) -> Element { rsx! {} }
 ```
 
+## Domain field wrapper
+
+A field for a domain type, such as an `Iban` from your own crate, edits text
+and maps it with `.map(format, parse)` on a path to `Option<Iban>`. There are
+two ways to wrap it. Either the caller maps and the wrapper takes
+`#[props(into)] name: FieldName<String>`, so it fits any binding, or the
+wrapper is generic over the form's value `R`, takes a
+`FieldPath<R, Option<Iban>>` and maps inside, so no caller repeats the parse.
+
+```rust
+use dioxus::prelude::*;
+use libero::components::{Button, FieldName, FieldPath, Fields, Form, Text, TextField};
+use libero::localization::Localization;
+use std::fmt;
+
+/// A domain type from your own crate, which knows nothing about libero.
+#[derive(Clone, PartialEq)]
+struct Iban(String);
+
+enum IbanError {
+    TooShort,
+    BadCountry,
+}
+
+impl Iban {
+    fn parse(text: String) -> Result<Iban, IbanError> {
+        let compact = text.split_whitespace().collect::<String>().to_uppercase();
+        if compact.chars().count() < 15 {
+            return Err(IbanError::TooShort);
+        }
+        match compact.chars().take(2).all(|c| c.is_ascii_alphabetic()) {
+            true => Ok(Iban(compact)),
+            false => Err(IbanError::BadCountry),
+        }
+    }
+}
+
+impl fmt::Display for Iban {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str(&self.0)
+    }
+}
+
+fn iban_message(error: &IbanError, _: &Localization) -> String {
+    match error {
+        IbanError::TooShort => "An IBAN has at least 15 characters.".into(),
+        IbanError::BadCountry => "An IBAN starts with a country code, such as DE.".into(),
+    }
+}
+
+/// (a) The caller maps: the wrapper edits text and takes any name that converts.
+#[component]
+fn IbanField(#[props(into)] label: String, #[props(into)] name: FieldName<String>) -> Element {
+    rsx! {
+        TextField { label, name, autocomplete: "off", placeholder: "DE89 3704 0044 0532 0130 00" }
+    }
+}
+
+/// (b) The wrapper maps: it takes a path to `Option<Iban>` in any form value `R`.
+#[component]
+fn IbanPathField<R: 'static>(#[props(into)] label: String, path: FieldPath<R, Option<Iban>>) -> Element {
+    let name = path.map(Iban::to_string, Iban::parse).message(iban_message);
+    rsx! {
+        TextField { label, name, autocomplete: "off", placeholder: "DE89 3704 0044 0532 0130 00" }
+    }
+}
+
+#[derive(Clone, PartialEq, Default, Fields)]
+struct Payout {
+    account: Option<Iban>,
+    refunds: Option<Iban>,
+}
+
+#[component]
+fn PayoutForm() -> Element {
+    let payout = use_store(Payout::default);
+    rsx! {
+        Form { value: payout,
+            IbanField {
+                label: "Payout account",
+                name: Payout::FIELDS.account().map(Iban::to_string, Iban::parse).message(iban_message),
+            }
+            IbanPathField { label: "Refund account", path: Payout::FIELDS.refunds() }
+            Button { r#type: "submit", "Save" }
+            Text { role: "status",
+                if let Some(account) = payout().account { "Payouts go to {account}." }
+            }
+        }
+    }
+}
+```
+
+The first fits a field bound in several ways, the second a type mapped the
+same way everywhere. The domain type must be `Clone + PartialEq`, as every
+form value is.
+
 ## Validators
 
 A rule is any function from a value to a `bool`, `true` when the value is
