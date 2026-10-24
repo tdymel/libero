@@ -9,11 +9,11 @@ use crate::{
         },
         form::{
             FIELD_CONTROL_SX, LiveControl, LiveSlot, field_props, use_bound, use_field,
-            use_field_frame, use_live_slot,
+            use_field_frame, use_live_slot, use_prefill,
         },
         layout::use_box,
     },
-    hooks::use_theme,
+    hooks::{use_element, use_theme},
     platform::fit_max_length,
 };
 
@@ -159,8 +159,16 @@ fn TextFieldShell(
         .prepare();
 
     let oninput = bound.emit(props.oninput);
+    let element = use_element();
+    use_prefill(
+        element,
+        bound_value.clone().or_else(|| live.peek().clone()),
+        oninput.clone(),
+        disabled || readonly,
+    );
     let input = field
         .aria(control)
+        .element(&element)
         .attr_default("type", "text")
         .attr("name", bound.name().map(str::to_string))
         .attr("placeholder", props.placeholder)

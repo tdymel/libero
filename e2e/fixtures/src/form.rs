@@ -24,6 +24,8 @@ pub const ROUTES: Routes = &[
     ("/form/server-sync", || rsx! { ServerStatusPage { at_once: true } }),
     ("/form/domain", || rsx! { DomainPage {} }),
     ("/form/command", || rsx! { CommandPage {} }),
+    ("/form/login", || rsx! { LoginPage {} }),
+    ("/form/prefill", || rsx! { PrefillPage {} }),
 ];
 
 /// What `CommandPage` sends: a German IBAN only, refused after the field's own parse.
@@ -530,6 +532,79 @@ fn SummaryPage() -> Element {
                 validate: not_empty.error("Accept the terms to continue."),
             }
             Button { r#type: "submit", "Create account" }
+        }
+    }
+}
+
+#[derive(Clone, PartialEq, Default, Fields)]
+struct Login {
+    username: String,
+    password: String,
+}
+
+/// Todo 4094: a browser's saved-login autofill writes both inputs; the form must see the text.
+#[component]
+fn LoginPage() -> Element {
+    let login = use_store(Login::default);
+    let mut submits = use_signal(|| 0u32);
+    let user = login.read().username.clone();
+    let pass = login.read().password.clone();
+    rsx! {
+        Flex { direction: "column", gap: "md", max_width: "320px",
+            span { id: "stored", "data-submits": "{submits}", "data-user": "{user}", "data-pass": "{pass}" }
+            Form {
+                value: login,
+                onsubmit: move |_| submits += 1,
+                TextField { id: "user", label: "Username", required: true, autocomplete: "username", name: Login::FIELDS.username() }
+                PasswordField { id: "pass", label: "Password", required: true, autocomplete: "current-password", name: Login::FIELDS.password() }
+                Button { id: "send", r#type: "submit", "Log in" }
+            }
+        }
+    }
+}
+
+#[derive(Clone, PartialEq, Default, Fields)]
+struct Prefill {
+    user: String,
+    pass: String,
+    note: String,
+    count: Option<u32>,
+    phone: String,
+}
+
+/// Todo 4094: `#show` mounts text-like fields into which the browser already wrote, as an
+/// autofill into server-rendered HTML before hydration; the form must take that text.
+#[component]
+fn PrefillPage() -> Element {
+    let value = use_store(Prefill::default);
+    let mut shown = use_signal(|| false);
+    let mut submits = use_signal(|| 0u32);
+    let stored = value.read().clone();
+    let count = stored.count.map_or("none".to_string(), |count| count.to_string());
+    rsx! {
+        Flex { direction: "column", gap: "md", max_width: "320px",
+            span {
+                id: "stored",
+                "data-submits": "{submits}",
+                "data-user": "{stored.user}",
+                "data-pass": "{stored.pass}",
+                "data-note": "{stored.note}",
+                "data-count": "{count}",
+                "data-phone": "{stored.phone}",
+            }
+            Button { id: "show", onclick: move |_| shown.set(true), "Show" }
+            if shown() {
+                Form {
+                    value,
+                    onsubmit: move |_| submits += 1,
+                    TextField { label: "Username", required: true, name: Prefill::FIELDS.user() }
+                    PasswordField { label: "Password", required: true, name: Prefill::FIELDS.pass() }
+                    Textarea { label: "Note", required: true, name: Prefill::FIELDS.note() }
+                    NumberField::<u32> { label: "Count", required: true, name: Prefill::FIELDS.count() }
+                    PhoneField { label: "Phone", required: true, country: "DE", name: Prefill::FIELDS.phone() }
+                    Button { id: "send", r#type: "submit", "Send" }
+                }
+            }
         }
     }
 }

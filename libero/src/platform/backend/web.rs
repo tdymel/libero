@@ -135,6 +135,16 @@ pub(super) fn is_rtl(mounted: &Rc<MountedData>) -> bool {
 }
 
 /// An `<img>` that finished with no picture.
+pub(super) fn input_value(mounted: &Rc<MountedData>) -> Option<String> {
+    let element = mounted.downcast::<web_sys::Element>()?;
+    if let Some(input) = element.dyn_ref::<web_sys::HtmlInputElement>() {
+        return Some(input.value());
+    }
+    element
+        .dyn_ref::<web_sys::HtmlTextAreaElement>()
+        .map(web_sys::HtmlTextAreaElement::value)
+}
+
 pub(super) fn load_failed(mounted: &Rc<MountedData>) -> bool {
     mounted
         .downcast::<web_sys::Element>()

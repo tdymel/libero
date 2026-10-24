@@ -13,7 +13,7 @@ use crate::{
         form::{
             CaretKeys, ComboboxCore, ComboboxOption, DropdownPart, FIELD_CONTROL_SX, FormScope,
             TouchHold, field_parts_enum, field_props, use_bound, use_field, use_field_frame,
-            use_touch_hold, with_drawn_placeholder,
+            use_prefill, use_touch_hold, with_drawn_placeholder,
         },
         layout::{BoxStyle, use_box},
     },
@@ -503,23 +503,26 @@ pub fn PhoneField(props: PhoneFieldProps) -> Element {
         .attr("aria-invalid", field.invalid().then_some("true"))
         .attr("aria-required", required.then_some("true"));
 
-    let input = phone_input(
-        control,
-        Entry {
-            display,
-            text,
-            country,
-            picked,
-            dial_moved,
-            oncountrychange,
-            placeholder: props.placeholder,
-            disabled,
-            readonly,
-            required,
-        },
-        emit.clone(),
-        props.attributes,
+    let entry = Entry {
+        display,
+        text,
+        country,
+        picked,
+        dial_moved,
+        oncountrychange,
+        placeholder: props.placeholder,
+        disabled,
+        readonly,
+        required,
+    };
+    let on_text = entry.writer(emit.clone());
+    use_prefill(
+        anchor,
+        Some(entry.display.clone()),
+        Some(on_text.clone()),
+        disabled || readonly,
     );
+    let input = phone_input(control, entry, on_text, props.attributes);
 
     let hidden = phone_hidden(bound.name().map(str::to_string), &e164, disabled);
     let country_set = dial_moved().map(|to| fill(names.country_set, &[("name", &name_of(to))]));
@@ -902,28 +905,64 @@ struct Entry {
     required: bool,
 }
 
+impl Entry {
+    /// What new national text does, typed or filled in by the browser.
+    fn writer<F: Fn(String) + Clone + 'static>(
+        &self,
+        emit: Option<F>,
+    ) -> impl Fn(String) + Clone + use<F> {
+        let (text, picked, dial_moved) = (self.text, self.picked, self.dial_moved);
+        let (country, oncountrychange) = (self.country, self.oncountrychange);
+        move |raw: String| {
+            let (mut text, mut picked, mut dial_moved) = (text, picked, dial_moved);
+            // A number with its own dial code moves the picker and keeps only
+            // the national part, or the code would post twice (todo 1562).
+            let Some((next, national)) = dialled(&raw, country) else {
+                if let Some(emit) = &emit {
+                    emit(countries::value_of(country, &raw));
+                }
+                text.set(raw);
+                return;
+            };
+            if next.iso != country.iso {
+                picked.set(next);
+                dial_moved.set(Some(next));
+                if let Some(oncountrychange) = &oncountrychange {
+                    oncountrychange.call(next.iso.to_string());
+                }
+            }
+            if let Some(emit) = &emit {
+                emit(countries::to_e164(next, &national));
+            }
+            // A bare dial code stays on screen until the next character.
+            let shown = match national.is_empty() {
+                true => raw,
+                false => countries::group(next, &national).unwrap_or(national),
+            };
+            text.set(shown);
+        }
+    }
+}
+
 /// The national number. The E.164 posts from the hidden input beside it; this
 /// one only ever holds the text.
-fn phone_input<F: Fn(String) + Clone + 'static>(
+fn phone_input(
     control: BoxStyle,
     entry: Entry,
-    emit: Option<F>,
+    on_text: impl Fn(String) + 'static,
     attributes: Vec<Attribute>,
 ) -> Element {
     let Entry {
         display,
         mut text,
         country,
-        mut picked,
-        mut dial_moved,
-        oncountrychange,
         placeholder,
         disabled,
         readonly,
         required,
+        ..
     } = entry;
 
-    let input_emit = emit;
     let blur_country = country;
     control
         .attr_default("type", "tel")
@@ -940,34 +979,7 @@ fn phone_input<F: Fn(String) + Clone + 'static>(
         .attr("disabled", disabled)
         .attr("readonly", readonly)
         .attr("required", required)
-        .event("oninput", move |event: FormEvent| {
-            let raw = event.value();
-            // A number with its own dial code moves the picker and keeps only
-            // the national part, or the code would post twice (todo 1562).
-            let Some((next, national)) = dialled(&raw, country) else {
-                if let Some(emit) = &input_emit {
-                    emit(countries::value_of(country, &raw));
-                }
-                text.set(raw);
-                return;
-            };
-            if next.iso != country.iso {
-                picked.set(next);
-                dial_moved.set(Some(next));
-                if let Some(oncountrychange) = &oncountrychange {
-                    oncountrychange.call(next.iso.to_string());
-                }
-            }
-            if let Some(emit) = &input_emit {
-                emit(countries::to_e164(next, &national));
-            }
-            // A bare dial code stays on screen until the next character.
-            let shown = match national.is_empty() {
-                true => raw,
-                false => countries::group(next, &national).unwrap_or(national),
-            };
-            text.set(shown);
-        })
+        .event("oninput", move |event: FormEvent| on_text(event.value()))
         // Grouped on blur: regrouping per keystroke moves the caret, and
         // `ElementApi` cannot put it back.
         .event("onblur", move |_: FocusEvent| {

@@ -8,7 +8,7 @@ use crate::{
         common::{HtmlTag, Input, Part, ScaleOrCss},
         form::{
             FormScope, field_control_sx, field_parts_enum, field_props, use_bound, use_field,
-            use_field_frame,
+            use_field_frame, use_prefill,
         },
         layout::use_box,
     },
@@ -191,7 +191,7 @@ pub fn Textarea(props: TextareaProps) -> Element {
         scope.is_none() && limit.is_some() && value.is_none(),
     );
     let resets = scope.map_or(0, |form| form.resets()) + owner().unwrap_or(0);
-    let mut typed = use_signal(|| (0u32, None::<usize>));
+    let typed = use_signal(|| (0u32, None::<usize>));
     let counter_class = use_css(Some(&COUNTER_SX), CssLayer::Framework);
     let words = use_localization().textarea;
     let count = limit.map(|max| {
@@ -247,13 +247,21 @@ pub fn Textarea(props: TextareaProps) -> Element {
 
     let emit = bound.emit(props.oninput);
     let track = emit.is_some() || limit.is_some();
-    let oninput = track.then_some(move |event: FormEvent| {
-        let text = fit_max_length(event.value());
+    let oninput = track.then_some(move |text: String| {
+        let mut typed = typed;
         typed.set((resets, Some(length(&text))));
         if let Some(emit) = &emit {
             emit(text);
         }
     });
+    use_prefill(
+        element,
+        value.clone(),
+        oninput.clone(),
+        disabled || readonly,
+    );
+    let oninput =
+        oninput.map(|oninput| move |event: FormEvent| oninput(fit_max_length(event.value())));
     let textarea = field
         .aria(control)
         .element(&element)

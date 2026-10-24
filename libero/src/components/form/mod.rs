@@ -188,7 +188,7 @@ pub use text_field::{TextField, TextFieldProps};
 pub use textarea::{Textarea, TextareaPart, TextareaProps};
 #[cfg(all(feature = "visually-hidden", feature = "use-icon", feature = "use-id"))]
 pub(crate) use use_field::{
-    Activation, Asks, Bound, MappedState, PreparedField, Setter, use_bound, use_field,
+    Activation, Asks, Bound, MappedState, PreparedField, Setter, use_bound, use_field, use_prefill,
 };
 #[cfg(all(feature = "visually-hidden", feature = "use-icon", feature = "use-id"))]
 pub(crate) use use_field_frame::{

@@ -12,7 +12,7 @@ use crate::{
         },
         form::{
             FormScope, LiveControl, LiveSlot, field_control_sx, field_props, slot_button_sx,
-            slot_icon_size, use_bound, use_field, use_field_frame, use_live_slot,
+            slot_icon_size, use_bound, use_field, use_field_frame, use_live_slot, use_prefill,
         },
         layout::use_box,
     },
@@ -463,6 +463,42 @@ fn NumberFieldShell<T: NumberValue>(
         .focus_ring(false)
         .prepare();
 
+    let on_text = move |mut text: String| {
+        let mut buffer = buffer;
+        // Written back at once, as a native field drops a char past `maxlength`: a cut that
+        // equals the last render diffs to nothing.
+        if let Some(cut) =
+            decimals.and_then(|decimals| decimals.cut(&text, separator.decimal.unwrap_or(".")))
+        {
+            let _ = anchor.set_value(&cut);
+            text = cut;
+        }
+        let publish = publish.clone();
+        let mut held = current();
+        // Out of range waits for the commit: clamping the "2" of "25"
+        // against a floor of 10 would make 25 untypable.
+        if text.trim().is_empty() {
+            held = None;
+            publish(None);
+        } else if let Some(parsed) = parse::<T>(&text, separator)
+            && parsed.clamp_between(min, max) == parsed
+        {
+            held = Some(parsed);
+            publish(held);
+        }
+        buffer.set(Some(Edit { text, held }));
+    };
+    let prefilled = on_text.clone();
+    use_prefill(
+        anchor,
+        None,
+        Some(move |text: String| {
+            if parse::<T>(&text, separator) != current() {
+                prefilled(text);
+            }
+        }),
+        disabled || readonly,
+    );
     let input = field
         .aria(control)
         .element(&anchor)
@@ -483,31 +519,7 @@ fn NumberFieldShell<T: NumberValue>(
         .attr("required", required)
         .attr(TOOLBAR_ITEM, item.map(ToolbarItem::key))
         .attr("tabindex", item.map(ToolbarItem::tabindex))
-        .event("oninput", move |event: FormEvent| {
-            let mut text = event.value();
-            // Written back at once, as a native field drops a char past `maxlength`: a cut that
-            // equals the last render diffs to nothing.
-            if let Some(cut) =
-                decimals.and_then(|decimals| decimals.cut(&text, separator.decimal.unwrap_or(".")))
-            {
-                let _ = anchor.set_value(&cut);
-                text = cut;
-            }
-            let publish = publish.clone();
-            let mut held = current();
-            // Out of range waits for the commit: clamping the "2" of "25"
-            // against a floor of 10 would make 25 untypable.
-            if text.trim().is_empty() {
-                held = None;
-                publish(None);
-            } else if let Some(parsed) = parse::<T>(&text, separator)
-                && parsed.clamp_between(min, max) == parsed
-            {
-                held = Some(parsed);
-                publish(held);
-            }
-            buffer.set(Some(Edit { text, held }));
-        })
+        .event("oninput", move |event: FormEvent| on_text(event.value()))
         // Fires when the field is left or Enter commits an edit. Dropping the
         // buffer redraws the canonical text, which also rewrites the DOM.
         .event("onchange", move |event: FormEvent| {

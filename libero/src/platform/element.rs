@@ -125,6 +125,11 @@ pub(crate) fn focus_kept(token: u64) {
     backend::focus_kept(token);
 }
 
+/// The live text of `mounted`, an `<input>` or `<textarea>`. Web only, else `None`.
+pub(crate) fn input_value(mounted: &Rc<MountedData>) -> Option<String> {
+    backend::input_value(mounted)
+}
+
 /// Whether `mounted`, an `<img>`, already finished with no picture: a server-rendered one
 /// fails before hydration attaches `onerror`. Web only, else `false`.
 pub(crate) fn load_failed(mounted: &Rc<MountedData>) -> bool {

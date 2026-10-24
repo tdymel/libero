@@ -304,6 +304,17 @@ pub(crate) fn on_form_reset(
     return None;
 }
 
+/// Only the web: a browser can fill a server-rendered input before hydration listens.
+pub(crate) fn input_value(mounted: &Rc<MountedData>) -> Option<String> {
+    #[cfg(target_arch = "wasm32")]
+    return web::input_value(mounted);
+    #[cfg(not(target_arch = "wasm32"))]
+    return {
+        let _ = mounted;
+        None
+    };
+}
+
 /// Only the web: a server-rendered picture can fail before hydration attaches `onerror`.
 pub(crate) fn load_failed(mounted: &Rc<MountedData>) -> bool {
     #[cfg(target_arch = "wasm32")]

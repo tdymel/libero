@@ -877,3 +877,121 @@ fn a_submit_blocked_by_parse_shows_the_error_on_its_field() {
         fixture.close().await.unwrap();
     });
 }
+
+/// Todo 4094: a saved-login autofill, as Firefox fills it after load (value, then bubbling
+/// `beforeinput`, `input` and `change`), reaches the bound store and the required check.
+#[test]
+fn a_saved_login_autofill_fills_the_bound_fields() {
+    block_on(async {
+        let fixture = Fixture::open("/form/login", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        page.evaluate_bounded(
+            "(() => {
+                for (const [name, text] of [['username', 'alice'], ['password', 's3cret']]) {
+                    const input = document.querySelector(`input[name=${name}]`);
+                    input.dispatchEvent(new InputEvent('beforeinput', { bubbles: true }));
+                    input.value = text;
+                    input.dispatchEvent(new InputEvent('input', { bubbles: true }));
+                    input.dispatchEvent(new Event('change', { bubbles: true }));
+                }
+            })()"
+                .to_string(),
+        )
+        .await
+        .unwrap();
+        let stored = "document.querySelector('#stored').dataset";
+        wait::for_js_true(
+            page,
+            &format!("{stored}.user === 'alice' && {stored}.pass === 's3cret'"),
+            "the autofilled login in the store",
+        )
+        .await
+        .unwrap();
+        pointer::click(page, "#send").await.unwrap();
+        wait::for_js_true(page, &format!("{stored}.submits === '1'"), "the submit")
+            .await
+            .unwrap();
+
+        fixture
+            .console
+            .assert_clean("a saved-login autofill")
+            .unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
+/// Todo 4094: text the browser wrote before a field mounted - an autofill into server-rendered
+/// HTML ahead of hydration, no event heard - is taken on mount by every text-like field.
+#[test]
+fn text_written_before_mount_reaches_the_form() {
+    block_on(async {
+        let fixture = Fixture::open("/form/prefill", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        // Filled in the insertion call itself: a `MutationObserver` runs after the mount handlers.
+        page.evaluate_bounded(
+            "(() => {
+                const fills = { user: 'alice', pass: 's3cret', note: 'hello', count: '7', phone: '30 1234567' };
+                const fill = () => {
+                    for (const [name, text] of Object.entries(fills)) {
+                        const control = name === 'phone'
+                            ? document.querySelector('input[type=tel]')
+                            : document.querySelector(`[name=${name}]`);
+                        if (control && !control.dataset.filled) {
+                            control.dataset.filled = '1';
+                            control.value = text;
+                        }
+                    }
+                };
+                const inserts = [
+                    [Node.prototype, ['appendChild', 'insertBefore', 'replaceChild']],
+                    [Element.prototype, ['after', 'before', 'replaceWith', 'append', 'prepend']],
+                ];
+                for (const [proto, names] of inserts) {
+                    for (const name of names) {
+                        const original = proto[name];
+                        proto[name] = function (...args) {
+                            const out = original.apply(this, args);
+                            fill();
+                            return out;
+                        };
+                    }
+                }
+            })()"
+                .to_string(),
+        )
+        .await
+        .unwrap();
+        pointer::click(page, "#show").await.unwrap();
+        let stored = "document.querySelector('#stored').dataset";
+        let fills = [
+            ("user", "alice"),
+            ("pass", "s3cret"),
+            ("note", "hello"),
+            ("count", "7"),
+            ("phone", "+49301234567"),
+        ];
+        for (key, text) in fills {
+            wait::for_js_true(
+                page,
+                &format!("{stored}.{key} === {text:?}"),
+                &format!("the prefilled {key} in the store"),
+            )
+            .await
+            .unwrap();
+        }
+        click_button(page, "Send").await.unwrap();
+        wait::for_js_true(page, &format!("{stored}.submits === '1'"), "the submit")
+            .await
+            .unwrap();
+
+        fixture
+            .console
+            .assert_clean("text written before mount")
+            .unwrap();
+        fixture.close().await.unwrap();
+    });
+}
