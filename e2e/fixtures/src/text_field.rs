@@ -3,7 +3,7 @@
 
 use dioxus::prelude::*;
 use libero::components::{
-    Fieldset, Flex, Form, Icon, PasswordField, Rule, SvgData, Text, TextField, Textarea, not_empty,
+    ActionIcon, Fieldset, Flex, Form, Icon, PasswordField, Rule, SvgData, Text, TextField, Textarea, not_empty,
 };
 
 use crate::Routes;
@@ -27,11 +27,21 @@ fn SlotIconsPage() -> Element {
     rsx! {
         Flex { direction: "column", gap: "md", max_width: "320px",
             for dir in ["ltr", "rtl"] {
-                for size in ["xs", "md", "xl"] {
+                for (size, step) in [("xs", "xs"), ("md", "sm"), ("xl", "md")] {
                     div { dir, "data-case": "{dir}-{size}",
-                        TextField { label: "Email", r#type: "email", size, trailing: rsx! { Icon { svg: MAIL } } }
+                        TextField { label: "Email", r#type: "email", size, trailing: rsx! { Icon { svg: MAIL, variant: "standard" } } }
                         PasswordField { label: "Password", size }
                         TextField { label: "Sized", size, trailing: rsx! { Icon { svg: MAIL, size: "lg" } } }
+                        TextField { label: "Leading icon", size, leading: rsx! { Icon { svg: MAIL, variant: "standard" } } }
+                        TextField {
+                            label: "Leading button",
+                            size,
+                            leading: rsx! {
+                                ActionIcon { aria_label: "Search", size: step,
+                                    svg { view_box: "0 0 24 24", rect { x: "3", y: "5", width: "18", height: "14" } }
+                                }
+                            },
+                        }
                     }
                 }
             }

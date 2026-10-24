@@ -72,7 +72,7 @@ static FIELD_FRAME_SX: StaticSx = StaticSx::new(|| {
                 .color("text-dimmed"),
         )
         // An unsized `Icon` in a slot takes the slot button's step, so it grows no frame (4052).
-        // In the trailing slot it also fills the button's box, so both share a column (4113).
+        // It also fills the button's box, so both share a column (4113).
         .per_size(|size| {
             let step = slot_icon_size(size);
             sx().selector(
@@ -80,7 +80,7 @@ static FIELD_FRAME_SX: StaticSx = StaticSx::new(|| {
                 sx().var(ICON_DEFAULT_SIZE, ICON_SIZE.value(step)),
             )
             .selector(
-                "& > [data-slot='trailing'] > [data-slot='icon']",
+                "& > :is([data-slot='leading'], [data-slot='trailing']) > [data-slot='icon']",
                 sx().var(
                     ICON_SLOT_PAD,
                     format!(
@@ -540,15 +540,15 @@ mod tests {
         );
     }
 
-    /// Todo 4113: a trailing slot pads an unsized `Icon` out to the slot button's box.
+    /// Todo 4113: a slot pads an unsized `Icon` out to the slot button's box.
     #[test]
-    fn the_trailing_slot_pads_an_unsized_icon_to_the_button_box() {
+    fn a_slot_pads_an_unsized_icon_to_the_button_box() {
         let css = crate::css::Stylesheet::from(&FIELD_FRAME_SX);
         let css = css.as_str();
 
         assert!(
             css.contains(
-                "> [data-slot='trailing'] > [data-slot='icon']{--lsx-icon-slot-pad:calc((var(--lsx-button-height-xs) - var(--lsx-icon-size-xs)) / 2)"
+                "> :is([data-slot='leading'], [data-slot='trailing']) > [data-slot='icon']{--lsx-icon-slot-pad:calc((var(--lsx-button-height-xs) - var(--lsx-icon-size-xs)) / 2)"
             ),
             "{css}"
         );

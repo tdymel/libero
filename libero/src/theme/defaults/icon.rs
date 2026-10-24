@@ -4,7 +4,7 @@ use crate::theme::{CssVar, Size, SizeCss, Sizes, Variant};
 pub const ICON_SIZE: SizeCss = SizeCss::new("--lsx-icon-size-");
 /// The size an icon takes with no `size`; the prop writes `ICON_SIZE`'s override over it.
 pub(crate) const ICON_DEFAULT_SIZE: CssVar = CssVar::new("--lsx-icon-size");
-/// Set by a field's trailing slot on an unsized icon: the margin that fills the slot button's box.
+/// Set by a field's slot on an unsized icon: the margin that fills the slot button's box.
 pub(crate) const ICON_SLOT_PAD: CssVar = CssVar::new("--lsx-icon-slot-pad");
 pub(crate) const ICON_DEFAULT_RADIUS: CssVar = CssVar::new("--lsx-icon-radius-default");
 

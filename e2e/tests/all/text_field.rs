@@ -258,17 +258,19 @@ async fn revealed(page: &Page, kind: &str, pressed: &str) -> Result<()> {
     .await
 }
 
-/// Todo 4113: an unsized trailing `Icon` fills the reveal button's box, so the two share a
-/// column at every field size and direction; a sized one keeps its own box.
+/// Todo 4113: an unsized `Icon` in a slot fills a slot button's box, so the two share a
+/// column and a right edge at every field size and direction; a sized one keeps its own box.
 #[test]
-fn a_trailing_icon_shares_the_reveal_buttons_column() {
+fn an_unsized_slot_icon_shares_the_slot_buttons_column() {
     const MEASURE: &str = "[...document.querySelectorAll('[data-case]')].map(c => { \
         const rect = e => e.getBoundingClientRect(); \
         const rtl = c.dir === 'rtl'; \
         return [...c.querySelectorAll('[data-frame]')].map(frame => { \
-            const f = rect(frame), s = frame.querySelector('[data-slot=trailing]'), r = rect(s); \
-            const end = rtl ? r.left - f.left + r.width / 2 : f.right - r.right + r.width / 2; \
-            return [c.dataset.case, r.width, end, f.height, rect(s.firstElementChild).width]; \
+            const f = rect(frame), s = frame.querySelector('[data-slot=leading], [data-slot=trailing]'); \
+            const g = rect(s.querySelector('svg')); \
+            const atRight = (s.dataset.slot === 'trailing') !== rtl; \
+            const edge = atRight ? f.right - g.right : g.left - f.left; \
+            return [c.dataset.case, rect(s).width, edge, f.height, rect(s.firstElementChild).width]; \
         }); \
     })";
     block_on(async {
@@ -279,7 +281,7 @@ fn a_trailing_icon_shares_the_reveal_buttons_column() {
         wait::for_visible(page, "[data-case='ltr-md'] [data-slot=icon]")
             .await
             .unwrap();
-        // Case, slot width, glyph centre from the end, frame height, first child's width.
+        // Case, slot width, the glyph's outer edge from the frame's, frame height, first child's width.
         type Measure = (String, f64, f64, f64, f64);
         let cases: Vec<Vec<Measure>> = page
             .evaluate_bounded(MEASURE)
@@ -289,17 +291,19 @@ fn a_trailing_icon_shares_the_reveal_buttons_column() {
             .unwrap();
         assert_eq!(cases.len(), 6, "{cases:?}");
         for case in cases {
-            let [icon, button, sized] = case.as_slice() else {
-                panic!("three fields a case: {case:?}");
+            let [icon, button, sized, lead_icon, lead_button] = case.as_slice() else {
+                panic!("five fields a case: {case:?}");
             };
             let name = &icon.0;
             let same = |a: f64, b: f64, what: &str| {
-                assert!((a - b).abs() < 0.5, "{name}: {what} {a} vs {b}");
+                assert!((a - b).abs() < 0.5, "{name}: {what} {a} vs {b}: {case:?}");
             };
-            same(icon.1, button.1, "slot width");
-            same(icon.2, button.2, "glyph centre from the end");
+            same(icon.1, button.1, "trailing slot width");
+            same(icon.2, button.2, "trailing glyph edge");
             same(icon.3, button.3, "frame height");
             same(sized.1, sized.4, "sized icon against its slot");
+            same(lead_icon.1, lead_button.1, "leading slot width");
+            same(lead_icon.2, lead_button.2, "leading glyph edge");
         }
         fixture.close().await.unwrap();
     });
