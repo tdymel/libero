@@ -50,6 +50,7 @@ fn Demo() -> Element {
         MenuItem::new("Share")
             .submenu(vec![MenuItem::new("Email").onselect(pick("Email")).into()])
             .into(),
+        MenuItem::new("Delete").color("error").onselect(pick("Delete")).into(),
     ];
 
     rsx! {
@@ -107,6 +108,7 @@ also on every submenu.
 | `checkbox` | `bool` | - | Makes the item an on/off setting, with a check while `true`. Flip it in `onselect`. An item is `radio` or `checkbox`, and the later call wins. |
 | `disabled` | `bool` | `false` | Stays in the arrow-key order but cannot be chosen, and typeahead skips it. |
 | `description` | `String` | - | Read after the label through `aria-describedby`, never shown. Say why a `disabled` item cannot be chosen. |
+| `color` | `ThemeAwareValue` | - | Colours the label and `leading`, such as `"error"` for a destructive command. A palette colour takes its readable text shade. The trailing content, shortcut and check keep the menu's colour. |
 
 ## Style API
 
@@ -145,7 +147,8 @@ explains how parts work.
 
 - Typing jumps to an item, "s" to the next one starting with S and "sav" to
   Save. A pause of half a second starts over.
-- `menu.a11y_attributes()` wires your trigger.
+- `menu.a11y_attributes()` wires your trigger. `menu.a11y_attributes_on(attributes)` wires a trigger that already has an `id`, such as a `FileField` trigger's: the menu keeps that id and takes the trigger's name.
+- Below the `sm` breakpoint the menu opens as a sheet at the foot of the screen, with the same items. A swipe down from its top, a press outside, Escape and Back close it. A submenu opens as a second sheet over it and closes alone.
 - Android's Back button closes the menu as Escape does, rather than the app.
 
 ### You must

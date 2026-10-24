@@ -71,6 +71,46 @@ fn Photo() -> Element {
 }
 ```
 
+The same button can open a `Menu` instead. `menu.a11y_attributes_on(t.attributes)`
+keeps the field's `id`, so the menu is named by the field's label, and an item
+opens the picker through `t.open`.
+
+```rust
+use dioxus::prelude::*;
+use libero::components::{FileField, FileTriggerArgs, Files, Menu, MenuItem, use_menu};
+
+#[component]
+fn Photo() -> Element {
+    let mut photo = use_signal(Files::default);
+    let menu = use_menu();
+
+    rsx! {
+        FileField {
+            label: "Photo",
+            accept: "image/*",
+            value: photo(),
+            onchange: move |files| photo.set(files),
+            trigger: move |t: FileTriggerArgs| {
+                let open = t.open;
+                rsx! {
+                    Menu {
+                        state: menu,
+                        items: vec![
+                            MenuItem::new("Upload a picture").onselect(move |_| open.call(())).into(),
+                            MenuItem::new("Remove")
+                                .color("error")
+                                .onselect(move |_| photo.set(Files::default()))
+                                .into(),
+                        ],
+                        button { r#type: "button", ..menu.a11y_attributes_on(t.attributes), "Photo" }
+                    }
+                }
+            },
+        }
+    }
+}
+```
+
 ## Props
 
 ### `FileField`

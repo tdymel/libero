@@ -1037,3 +1037,230 @@ fn home_and_end_at_the_ends_leave_the_page_to_scroll() {
         fixture.close().await.unwrap();
     });
 }
+
+/// The menu at 360px wide, below `sm` (todo 4110).
+async fn phone(route: &str) -> Fixture {
+    use chromiumoxide::cdp::browser_protocol::emulation::SetDeviceMetricsOverrideParams;
+    let fixture = Fixture::open(route, Viewport::Mobile).await.unwrap();
+    fixture
+        .page
+        .execute_bounded(SetDeviceMetricsOverrideParams::new(360, 780, 1.0, true))
+        .await
+        .unwrap();
+    fixture
+}
+
+async fn tap(page: &chromiumoxide::Page, selector: &str) -> Result<()> {
+    let at = pointer::touch_down(page, selector).await?;
+    pointer::touch_up(page, at).await
+}
+
+/// `count` menu levels open, the last one placed edge to edge on the screen's foot.
+async fn sheets_shown(page: &chromiumoxide::Page, count: usize) -> Result<()> {
+    let js = format!(
+        "(() => {{ const all = [...document.querySelectorAll('[role=menu]')]; \
+         if (all.length !== {count}) return false; const s = all[all.length - 1]; \
+         if (getComputedStyle(s).visibility !== 'visible') return false; \
+         const r = s.getBoundingClientRect(); \
+         return Math.abs(r.left) < 1 && Math.abs(r.width - innerWidth) < 1 \
+           && Math.abs(r.bottom - innerHeight) < 1; }})()"
+    );
+    wait::for_js_true(
+        page,
+        &js,
+        &format!("{count} sheet(s), the top one at the foot"),
+    )
+    .await
+}
+
+const MENU_GONE: &str = "!document.querySelector('[role=menu]')";
+
+/// Todos 4110, 4112: the same rows as a sheet; Escape, an outside press and a swipe close it,
+/// and a red item paints its label and icon alike.
+#[test]
+fn below_sm_the_menu_is_a_sheet_that_closes_every_way() {
+    block_on(async {
+        let fixture = phone("/menu-phone").await;
+        let page = &fixture.page;
+        tap(page, TRIGGER).await.unwrap();
+        sheets_shown(page, 1).await.unwrap();
+        let colours = "(() => { const row = n => [...document.querySelectorAll('[role=menuitem]')] \
+             .find(r => r.textContent.trim() === n); \
+             const c = (r, s) => getComputedStyle(r.querySelector(`[data-slot=${s}]`)).color; \
+             const del = row('Delete'), ren = row('Rename'); \
+             return c(del, 'label') === c(del, 'leading') && c(del, 'label') !== c(ren, 'label') \
+               && getComputedStyle(del.querySelector('[data-slot=leading] circle')).fill === c(del, 'label'); })()";
+        wait::for_js_true(page, colours, "Delete's label and icon in its own colour")
+            .await
+            .unwrap();
+
+        keyboard::press(page, keyboard::ESCAPE).await.unwrap();
+        wait::for_js_true(
+            page,
+            &format!("{MENU_GONE} && document.activeElement.matches({TRIGGER:?})"),
+            "Escape closed the sheet, focus on the trigger",
+        )
+        .await
+        .unwrap();
+
+        tap(page, TRIGGER).await.unwrap();
+        sheets_shown(page, 1).await.unwrap();
+        tap(page, "#outside").await.unwrap();
+        wait::for_js_true(page, MENU_GONE, "an outside tap closed the sheet")
+            .await
+            .unwrap();
+
+        tap(page, TRIGGER).await.unwrap();
+        sheets_shown(page, 1).await.unwrap();
+        let at = pointer::centre_of(page, "[role=menu] > [data-slot=sheet-handle]")
+            .await
+            .unwrap();
+        let to = pointer::Point {
+            x: at.x,
+            y: at.y + 200.0,
+        };
+        pointer::touch_drag(page, at, to, 4).await.unwrap();
+        wait::for_js_true(
+            page,
+            &format!("{MENU_GONE} && document.querySelector('#last').textContent === ''"),
+            "a swipe down closed the sheet and chose nothing",
+        )
+        .await
+        .unwrap();
+        fixture.console.assert_clean("the phone sheet").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
+/// Todo 4110: Back closes the phone's sheet, not the app.
+async fn back_closes_the_sheet<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    d.click(TRIGGER).await?;
+    eventually(d, "the sheet to open", async |d| d.exists(MENU).await).await?;
+    d.press_back().await?;
+    eventually(d, "Back to close the sheet", async |d| {
+        Ok(!d.exists(MENU).await? && d.exists(TRIGGER).await?)
+    })
+    .await
+}
+
+e2e::scenario!(
+    android_back_closes_the_sheet,
+    "/menu-phone",
+    back_closes_the_sheet,
+    android_only("4110: no Back key off Android")
+);
+
+/// Todo 4111: a menu item's click is a user gesture, so `args.open` opens the real picker.
+async fn a_menu_item_opens_the_picker<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    d.click("button[aria-haspopup=menu]:not(#tools)").await?;
+    eventually(d, "the menu to open", async |d| d.exists(MENU).await).await?;
+    d.choose_files("[role=menuitem]", &[("me.png", "a face")])
+        .await?;
+    eventually_text(d, "#picked", "me.png", "the picked photo").await
+}
+
+e2e::scenario!(
+    a_menu_item_opens_the_file_picker,
+    "/menu-file",
+    a_menu_item_opens_the_picker,
+    native: skip("rfd opens the desktop portal's dialog, which no driver answers"),
+    desktop: skip("1126: the GTK file chooser is not driven"),
+    ios: skip("3194: the simulator's picker opens but is not driven")
+);
+
+/// Todo 4110: a submenu stacks a second sheet; Escape closes it alone, focus on its item.
+#[test]
+fn below_sm_a_submenu_stacks_and_closes_alone() {
+    block_on(async {
+        let fixture = phone("/menu-phone").await;
+        let page = &fixture.page;
+        tap(page, TRIGGER).await.unwrap();
+        sheets_shown(page, 1).await.unwrap();
+        tap(page, "[role=menuitem][aria-haspopup=menu]")
+            .await
+            .unwrap();
+        sheets_shown(page, 2).await.unwrap();
+        keyboard::press(page, keyboard::ESCAPE).await.unwrap();
+        wait::for_js_true(
+            page,
+            "document.querySelectorAll('[role=menu]').length === 1 \
+             && document.activeElement.matches('[role=menuitem][aria-haspopup=menu]')",
+            "only the submenu closed, focus on Share",
+        )
+        .await
+        .unwrap();
+        fixture.console.assert_clean("a stacked sheet").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
+/// Todo 4111: a `FileField` trigger keeps the field's id, names the menu by the field's
+/// label, and an item reaches `args.open`; a trigger beside its `Menu` keeps its own id too.
+#[test]
+fn a_file_field_trigger_opens_a_menu_named_by_the_field() {
+    block_on(async {
+        let fixture = Fixture::open("/menu-file", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        let field_trigger = "button[aria-haspopup=menu]:not(#tools)";
+        let single_id = format!(
+            "(() => {{ const b = document.querySelector({field_trigger:?}); \
+             return !!b.id && !b.id.endsWith('-trigger') \
+               && document.querySelectorAll('#' + CSS.escape(b.id)).length === 1; }})()"
+        );
+        wait::for_js_true(page, &single_id, "the field's own id, once")
+            .await
+            .unwrap();
+        page.find_element(field_trigger)
+            .await
+            .unwrap()
+            .click()
+            .await
+            .unwrap();
+        wait::for_visible(page, MENU).await.unwrap();
+        let labelled = format!(
+            "(() => {{ const b = document.querySelector({field_trigger:?}); \
+             return document.querySelector('[role=menu]').getAttribute('aria-labelledby') \
+               === (b.getAttribute('aria-labelledby') || b.id); }})()"
+        );
+        wait::for_js_true(page, &labelled, "the menu labelled as the field's trigger")
+            .await
+            .unwrap();
+        let name = |tree: String| tree.split('"').nth(1).unwrap_or_default().to_string();
+        let menu_name = name(e2e::ax::snapshot(page, MENU).await.unwrap());
+        let trigger_name = name(e2e::ax::snapshot(page, field_trigger).await.unwrap());
+        assert!(menu_name.contains("Photo"), "the menu's name: {menu_name}");
+        assert_eq!(menu_name, trigger_name, "the menu named as its trigger");
+        page.find_element("[role=menuitem]")
+            .await
+            .unwrap()
+            .click()
+            .await
+            .unwrap();
+        wait::for_js_true(
+            page,
+            &format!("{MENU_GONE} && document.querySelector('#opened').textContent === '1'"),
+            "Upload ran `args.open` and closed the menu",
+        )
+        .await
+        .unwrap();
+
+        page.find_element("#tools")
+            .await
+            .unwrap()
+            .click()
+            .await
+            .unwrap();
+        wait::for_js_true(
+            page,
+            "document.querySelector('[role=menu]')?.getAttribute('aria-labelledby') === 'tools' \
+             && document.querySelectorAll('#tools').length === 1",
+            "the sibling trigger's own id labels its menu",
+        )
+        .await
+        .unwrap();
+        fixture.console.assert_clean("a shared trigger id").unwrap();
+        fixture.close().await.unwrap();
+    });
+}

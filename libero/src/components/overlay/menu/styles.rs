@@ -2,13 +2,15 @@ use super::menu::MenuPart;
 use crate::{
     components::{
         common::{LogicalTextAlign, Part, ROW_HOVER_TINT, disabled_look_sx, inset_focus_ring_sx},
+        form::phone_sheet::phone_sheet_sx,
         layout::paper_sx,
     },
     hooks::{POPOVER_AVAILABLE_HEIGHT, placement_sx},
     sx::{StaticSx, sx},
     theme::{
-        MENU_ITEM_FONT, MENU_ITEM_MIN_HEIGHT, MENU_ITEM_PAD_X, MENU_ITEM_RADIUS, MENU_LABEL_FONT,
-        MENU_MAX_HEIGHT, MENU_PADDING, MenuDefaults, Size, SizeCss, Z_INDEX_POPOVER,
+        CssVar, MENU_ITEM_FONT, MENU_ITEM_MIN_HEIGHT, MENU_ITEM_PAD_X, MENU_ITEM_RADIUS,
+        MENU_LABEL_FONT, MENU_MAX_HEIGHT, MENU_PADDING, MenuDefaults, Size, SizeCss,
+        Z_INDEX_POPOVER,
     },
 };
 
@@ -96,6 +98,11 @@ pub(super) static MENU_SX: StaticSx = StaticSx::new(|| {
             "& [data-slot='item'] > :is([data-slot='leading'], [data-slot='trailing'], [data-slot='shortcut'])",
             sx().display("inline-flex").align_items("center"),
         )
+        // `MenuItem::color`; the trailing slot, shortcut and check stay neutral.
+        .selector(
+            "& [data-slot='item'][data-colored] > :is([data-slot='label'], [data-slot='leading'])",
+            sx().color(ITEM_COLOR.value()),
+        )
         .selector(
             glyphs,
             sx().display("inline-flex")
@@ -109,4 +116,9 @@ pub(super) static MENU_SX: StaticSx = StaticSx::new(|| {
             format!("{} svg", MenuPart::Chevron.selector()),
             sx().transform("scaleX(-1)"),
         ))
+        // Below `sm`, every level is the pickers' sheet; a submenu stacks on its parent.
+        .and(phone_sheet_sx())
 });
+
+/// A coloured row's colour, for its label and leading slot.
+pub(super) const ITEM_COLOR: CssVar = CssVar::new("--lsx-menu-item-color");

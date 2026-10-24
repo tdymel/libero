@@ -79,7 +79,10 @@ pub fn MenuDemo(
             .onselect(move |_| hidden.toggle())
             .into(),
         MenuEntry::Separator,
-        MenuItem::new("Delete").onselect(pick("Delete")).into(),
+        MenuItem::new("Delete")
+            .color("error")
+            .onselect(pick("Delete"))
+            .into(),
     ];
     // demo-code: preamble end
 

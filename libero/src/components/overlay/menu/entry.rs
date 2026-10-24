@@ -1,6 +1,10 @@
 use dioxus::prelude::*;
 
-use crate::{localization::MenuLabels, utils::warn};
+use crate::{
+    localization::MenuLabels,
+    sx::{ColorRole, ThemeAwareValue},
+    utils::warn,
+};
 
 /// One line of a [`Menu`](super::Menu), in order.
 #[derive(Clone, PartialEq)]
@@ -62,6 +66,7 @@ pub struct MenuItem {
     pub(super) close_on_select: Option<bool>,
     pub(super) new_tab_hint: bool,
     pub(super) new_tab_icon: Option<bool>,
+    pub(super) color: Option<ThemeAwareValue>,
 }
 
 /// A checkable item's kind and state: one choice of several, or a toggle.
@@ -107,6 +112,7 @@ impl MenuItem {
             close_on_select: None,
             new_tab_hint: true,
             new_tab_icon: None,
+            color: None,
         }
     }
 
@@ -152,6 +158,20 @@ impl MenuItem {
     /// Drawn before the label, e.g. an icon.
     pub fn leading(mut self, leading: Element) -> Self {
         self.leading = Some(leading);
+        self
+    }
+
+    /// Colours the label and [`leading`](Self::leading), e.g. `"error"` for a destructive
+    /// command. A palette colour takes its readable text shade.
+    ///
+    /// ```no_run
+    /// # use libero::components::MenuItem;
+    /// # let _ =
+    /// MenuItem::new("Delete").color("error")
+    /// # ;
+    /// ```
+    pub fn color(mut self, color: impl Into<ThemeAwareValue>) -> Self {
+        self.color = Some(color.into());
         self
     }
 
@@ -247,6 +267,14 @@ impl MenuItem {
             && self.description == other.description
             && self.leading == other.leading
             && self.trailing == other.trailing
+            && self.color == other.color
+    }
+
+    /// The `color` as CSS, in the text role.
+    pub(super) fn color_css(&self) -> Option<String> {
+        self.color
+            .as_ref()
+            .and_then(|color| color.in_color_role(ColorRole::Text).resolve(None))
     }
 
     pub(super) fn onselect_callback(&self) -> Option<Callback<()>> {

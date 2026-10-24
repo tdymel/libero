@@ -3,7 +3,7 @@ use dioxus::prelude::*;
 use super::{
     entry::MenuEntry,
     level::{MenuLevel, Parents},
-    state::{MenuFocus, MenuState, menu_id, trigger_id},
+    state::{MenuFocus, MenuState, menu_id},
 };
 use crate::{
     components::{
@@ -112,7 +112,8 @@ pub fn Menu(props: MenuProps) -> Element {
     let opened = state.is_open();
     // Found, not `onmounted`: on a WebView each is a blocking round trip, one per row menu (todo 2749).
     let wrapper_selector = format!("[data-menu-wrapper={}]", css_string(&id));
-    let trigger_selector = id_selector(&trigger_id(&id));
+    let labelledby = state.labelledby();
+    let trigger_selector = id_selector(&state.trigger_element_id());
     let first_child = format!("{wrapper_selector} > *");
     use_effect(use_reactive!(|wrapper_selector| {
         wrapper.point_at(mounted_by_selector(&wrapper_selector));
@@ -188,7 +189,7 @@ pub fn Menu(props: MenuProps) -> Element {
             // skips its parent's renders. Its submenu levels unmount meanwhile.
             items: if open { props.items } else { Vec::new() },
             id: menu_id(&id),
-            labelledby: trigger_id(&id),
+            labelledby,
             anchor: trigger,
             floating,
             root: owner,

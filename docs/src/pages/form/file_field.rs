@@ -6,7 +6,7 @@ use dioxus::prelude::*;
 use libero::components::FileFieldPart;
 use libero::components::{
     Avatar, Button, Code, CodeBlock, CropOptions, FileField, FileRejection, FileTriggerArgs, Files,
-    Flex, Text,
+    Flex, Menu, MenuItem, Text, use_menu,
 };
 use libero::use_theme;
 
@@ -302,6 +302,19 @@ pub fn FileFieldPage() -> Element {
                 }
                 AvatarTriggerDemo {}
                 CodeBlock { source: AVATAR_CODE, language: "rust" }
+                Text {
+                    "The same button can open a "
+                    Code { source: "Menu" }
+                    " instead. "
+                    Code { source: "menu.a11y_attributes_on(t.attributes)" }
+                    " keeps the field's "
+                    Code { source: "id" }
+                    ", so the menu is named by the field's label, and an item opens the picker through "
+                    Code { source: "t.open" }
+                    "."
+                }
+                AvatarMenuDemo {}
+                CodeBlock { source: AVATAR_MENU_CODE, language: "rust" }
             }
         }
     }
@@ -348,6 +361,80 @@ fn AvatarTriggerDemo() -> Element {
                     Avatar {
                         name: t.files.one().map_or("No photo".to_string(), |file| file.name()),
                         size: "xl",
+                    }
+                }
+            },
+        }
+    }
+}
+
+// snippet: let mut photo = use_signal(Files::default);
+// snippet: let menu = use_menu();
+const AVATAR_MENU_CODE: &str = r#"FileField {
+    label: "Photo",
+    accept: "image/*",
+    value: photo(),
+    onchange: move |picked| photo.set(picked),
+    trigger: move |t: FileTriggerArgs| {
+        let open = t.open;
+        rsx! {
+            Menu {
+                state: menu,
+                items: vec![
+                    MenuItem::new("Upload a picture").onselect(move |_| open.call(())).into(),
+                    MenuItem::new("Remove")
+                        .color("error")
+                        .disabled(t.files.one().is_none())
+                        .onselect(move |_| photo.set(Files::default()))
+                        .into(),
+                ],
+                button {
+                    r#type: "button",
+                    style: "padding: 0; border: 0; background: none; border-radius: 50%; cursor: pointer",
+                    ..menu.a11y_attributes_on(t.attributes),
+                    Avatar {
+                        name: t.files.one().map_or("No photo".to_string(), |file| file.name()),
+                        size: "xl",
+                    }
+                }
+            }
+        }
+    },
+}"#;
+
+/// `AVATAR_MENU_CODE`, live (todo 4111).
+#[component]
+fn AvatarMenuDemo() -> Element {
+    let mut photo = use_signal(Files::default);
+    let menu = use_menu();
+    rsx! {
+        FileField {
+            label: "Photo",
+            accept: "image/*",
+            value: photo(),
+            onchange: move |picked| photo.set(picked),
+            trigger: move |t: FileTriggerArgs| {
+                let open = t.open;
+                rsx! {
+                    Menu {
+                        state: menu,
+                        items: vec![
+                            MenuItem::new("Upload a picture").onselect(move |_| open.call(())).into(),
+                            MenuItem::new("Remove")
+                                .color("error")
+                                .disabled(t.files.one().is_none())
+                                .onselect(move |_| photo.set(Files::default()))
+                                .into(),
+                        ],
+                        button {
+                            r#type: "button",
+                            style: "padding: 0; border: 0; background: none; border-radius: 50%; cursor: pointer",
+                            ..menu.a11y_attributes_on(t.attributes),
+                            Avatar {
+                                name: t.files.one().map_or("No photo".to_string(), |file| file.name()),
+                                size: "xl",
+                            }
+                        }
                     }
                 }
             },

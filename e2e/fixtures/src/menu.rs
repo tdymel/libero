@@ -2,7 +2,8 @@
 
 use dioxus::prelude::*;
 use libero::components::{
-    Button, Flex, Menu, MenuEntry, MenuItem, MenuPart, Parts, Text, use_menu,
+    Button, FileField, FileTriggerArgs, Files, Flex, Menu, MenuEntry, MenuItem, MenuPart, Parts,
+    Text, use_menu,
 };
 use libero::hooks::Side;
 use libero::sx::sx;
@@ -28,7 +29,102 @@ pub const ROUTES: Routes = &[
     ),
     ("/menu-fill", || rsx! { MenuFillPage {} }),
     ("/menu-docked", || rsx! { MenuDockedPage {} }),
+    ("/menu-phone", || rsx! { MenuPhonePage {} }),
+    ("/menu-file", || rsx! { MenuFilePage {} }),
 ];
+
+/// A dot in `currentColor`, so it takes its slot's colour.
+fn dot() -> Element {
+    rsx! {
+        svg { width: "16", height: "16", view_box: "0 0 16 16",
+            circle { cx: "8", cy: "8", r: "6", fill: "currentColor" }
+        }
+    }
+}
+
+/// Todos 4110, 4112: leading icons, a red item and a submenu, a phone sheet below `sm`.
+#[component]
+fn MenuPhonePage() -> Element {
+    let menu = use_menu();
+    let mut last = use_signal(String::new);
+    let pick = move |name: &'static str| move |_| last.set(name.to_string());
+    let items = vec![
+        MenuItem::new("Rename")
+            .leading(dot())
+            .onselect(pick("Rename"))
+            .into(),
+        MenuItem::new("Share")
+            .leading(dot())
+            .submenu(vec![MenuItem::new("Email").onselect(pick("Email")).into()])
+            .into(),
+        MenuEntry::Separator,
+        MenuItem::new("Delete")
+            .leading(dot())
+            .color("error")
+            .onselect(pick("Delete"))
+            .into(),
+    ];
+
+    rsx! {
+        Flex { direction: "column", gap: "md", padding: "16px",
+            Menu {
+                state: menu,
+                items,
+                Button { variant: "outlined", attributes: menu.a11y_attributes(), "Actions" }
+            }
+            Text { id: "last", "{last}" }
+            button { id: "outside", r#type: "button", "Elsewhere" }
+        }
+    }
+}
+
+/// Todo 4111: a `FileField` trigger opens a menu under the field's id; a second
+/// trigger sits beside its `Menu` with its own id.
+#[component]
+fn MenuFilePage() -> Element {
+    let mut photo = use_signal(Files::default);
+    let mut opened = use_signal(|| 0);
+    let menu = use_menu();
+    let beside = use_menu();
+
+    rsx! {
+        Flex { direction: "column", gap: "md", padding: "16px",
+            FileField {
+                label: "Photo",
+                value: photo(),
+                onchange: move |files| photo.set(files),
+                trigger: move |t: FileTriggerArgs| {
+                    let open = t.open;
+                    rsx! {
+                        Menu {
+                            state: menu,
+                            items: vec![
+                                MenuItem::new("Change photo")
+                                    .onselect(move |_| {
+                                        opened += 1;
+                                        open.call(());
+                                    })
+                                    .into(),
+                            ],
+                            Button { attributes: menu.a11y_attributes_on(t.attributes), "Change" }
+                        }
+                    }
+                },
+            }
+            Text { id: "opened", "{opened}" }
+            Text { id: "picked", {photo().one().map(|file| file.name()).unwrap_or_default()} }
+            Button {
+                attributes: beside.a11y_attributes_on(vec![Attribute::new("id", "tools", None, false)]),
+                onclick: move |_| beside.toggle(),
+                "Tools"
+            }
+            Menu {
+                state: beside,
+                items: vec![MenuItem::new("Ruler").onselect(|_| {}).into()],
+            }
+        }
+    }
+}
 
 /// minmax 3893: a round trigger at 100% of a sized box fills it, and the menu anchors on it.
 #[component]

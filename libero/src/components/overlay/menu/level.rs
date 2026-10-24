@@ -14,6 +14,7 @@ use super::{
 use crate::{
     components::{
         common::{HtmlTag, Input, Part, Parts, ScaleOrCss, States, Variables, variables},
+        form::phone_sheet::{use_sheet_room, use_sheet_swipe},
         layout::{Divider, use_box},
     },
     hooks::{
@@ -137,6 +138,9 @@ pub(super) fn MenuLevel(props: MenuLevelProps) -> Element {
             ..Default::default()
         },
     );
+    // Swiped away, a submenu sheet hands focus to its item, the root to the trigger.
+    let swipe = use_sheet_swipe(floating, use_callback(move |()| dismiss.dismiss()));
+    let room = use_sheet_room(floating, open && placed);
     // Portaled beside its parents, so focus here would read as leaving them.
     // The guards unregister on drop.
     let parents = props.parents.0.clone();
@@ -290,12 +294,18 @@ pub(super) fn MenuLevel(props: MenuLevelProps) -> Element {
         .parts(&props.parts)
         .states(&states)
         .variables(&radius_variables)
-        .style(open.then(|| popover.vars()))
+        .style(open.then(|| format!("{}{room}{}", popover.vars(), swipe.style)))
         .prepare();
 
     popover.show(rows.map(|rows| {
         let mut attributes = props.attributes.clone();
         attributes.extend(dismiss.floating_events());
+        attributes.extend(swipe.listeners);
+        let strip = swipe.strip;
+        let content = rsx! {
+            {strip}
+            {rows.into_iter()}
+        };
         let onpointerenter = props.onpointerenter;
         menu.element(&floating)
             .attr("id", level_id.clone())
@@ -312,7 +322,7 @@ pub(super) fn MenuLevel(props: MenuLevelProps) -> Element {
             .event("onkeydown", move |event: KeyboardEvent| {
                 level.box_keydown(event)
             })
-            .render(HtmlTag::Div, attributes, rows)
+            .render(HtmlTag::Div, attributes, content)
     }));
 
     let parents = {

@@ -1,6 +1,6 @@
 # Skipped e2e scenarios
 
-Scenarios: 698
+Scenarios: 700
 
 Generated from the `scenario!` skips in `e2e/tests/all` by `cargo test -p e2e --lib skips`; edit the skip, not this file. A reason starting `upstream:` waits on Dioxus, Blitz, wry or the engine (revisit on their update, todo 3362), a number names the todo that removes it.
 
@@ -173,8 +173,12 @@ The performance scenarios (units `perf`, `table_perf`) are no skips but run on r
 | `line_chart::the_tooltip_keeps_its_height_from_point_to_point` | native | Blitz has no script reads |
 | `menu::a_click_outside_closes_it_and_leaves_focus_where_it_went` | ios | upstream: WebKit does not focus a clicked button |
 | `menu::a_click_outside_closes_it_and_leaves_focus_where_it_went` | macos desktop | upstream: WebKit does not focus a clicked button |
+| `menu::a_menu_item_opens_the_file_picker` | desktop | 1126: the GTK file chooser is not driven |
+| `menu::a_menu_item_opens_the_file_picker` | ios | 3194: the simulator's picker opens but is not driven |
+| `menu::a_menu_item_opens_the_file_picker` | native | rfd opens the desktop portal's dialog, which no driver answers |
 | `menu::a_tall_menu_above_fits_the_room` | windows desktop | 3421: END scrolls by the listbox height from before the popup shrank |
 | `menu::a_tall_menu_below_fits_the_room` | windows desktop | 3421: END scrolls by the listbox height from before the popup shrank |
+| `menu::android_back_closes_the_sheet` | all but android | 4110: no Back key off Android |
 | `menubar::hovering_another_trigger_switches_the_open_menu` | ios | a touch screen has no hover |
 | `menubar::the_arrows_rove_along_the_bar_and_wrap` | android | 958: element identity on the WebView |
 | `menubar::the_arrows_rove_along_the_bar_and_wrap` | desktop | 958: element identity on the WebView |

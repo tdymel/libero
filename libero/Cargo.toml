@@ -339,7 +339,7 @@ drawer = ["dialog", "modal", "float", "use-swipe", "use-timers"]
 floating-window = ["menu", "action-icon", "button", "title", "float", "use-drag"]
 hover-card = ["paper", "scroll-area", "use-popover", "use-timers"]
 lightbox = ["carousel", "modal", "action-icon", "dialog"]
-menu = ["anchor", "kbd", "divider", "paper", "use-popover", "use-timers"]
+menu = ["anchor", "kbd", "divider", "paper", "use-popover", "use-swipe", "use-timers"]
 # `Modal` and `use_modal`.
 modal = ["overlay-backdrop", "focus-trap", "use-back"]
 # The `Overlay` component; `overlay` is the group of every overlay component.

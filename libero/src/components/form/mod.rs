@@ -41,8 +41,13 @@ mod number_field;
 mod password_field;
 #[cfg(feature = "phone-field")]
 mod phone_field;
-#[cfg(any(feature = "combobox", feature = "color", feature = "date-picker"))]
-mod phone_sheet;
+#[cfg(any(
+    feature = "combobox",
+    feature = "color",
+    feature = "date-picker",
+    feature = "menu"
+))]
+pub(crate) mod phone_sheet;
 #[cfg(feature = "pin-field")]
 mod pin_field;
 #[cfg(feature = "radio")]

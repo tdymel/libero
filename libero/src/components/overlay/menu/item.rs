@@ -8,6 +8,7 @@ use super::{
     hover::HoverDelay,
     keyboard::Level,
     menu::MenuPart,
+    styles::ITEM_COLOR,
 };
 use crate::{
     components::{
@@ -176,6 +177,9 @@ pub(super) fn MenuRow(props: MenuRowProps) -> Element {
         })
         .into_iter()
         .collect();
+    let color = item
+        .color_css()
+        .map(|color| format!("{}:{color};", ITEM_COLOR.name()));
     let role = check.map_or("menuitem", Check::role);
     let tabindex = if tabbable { "0" } else { "-1" };
 
@@ -194,6 +198,8 @@ pub(super) fn MenuRow(props: MenuRowProps) -> Element {
                 "data-menu-index": "{index}",
                 "aria-disabled": disabled.then_some("true"),
                 "aria-describedby": described_by,
+                "data-colored": color.is_some().then_some("true"),
+                style: color,
                 onclick,
                 onkeydown,
                 onmouseenter,
@@ -218,6 +224,8 @@ pub(super) fn MenuRow(props: MenuRowProps) -> Element {
             "aria-expanded": has_submenu.then(|| is_expanded.to_string()),
             "aria-controls": is_expanded.then_some(child_id),
             "aria-describedby": described_by,
+            "data-colored": color.is_some().then_some("true"),
+            style: color,
             onclick,
             onkeydown,
             onmouseenter,
