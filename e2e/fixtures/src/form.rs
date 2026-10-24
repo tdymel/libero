@@ -94,23 +94,42 @@ fn share(percent: f64) -> Result<Share, NotAnIban> {
     }
 }
 
+/// An E.164 number with at least ten digits, dial code included.
+#[derive(Clone, PartialEq, Debug)]
+struct Phone(String);
+
+impl Phone {
+    fn new(e164: String) -> Result<Phone, NotAnIban> {
+        match e164.chars().filter(char::is_ascii_digit).count() >= 10 {
+            true => Ok(Phone(e164)),
+            false => Err(NotAnIban),
+        }
+    }
+
+    fn text(&self) -> String {
+        self.0.clone()
+    }
+}
+
 #[derive(Clone, PartialEq, Default, Fields)]
 struct Payout {
     iban: Option<Iban>,
     share: Option<Share>,
+    phone: Option<Phone>,
 }
 
-/// Concept domain-values: `#iban` maps text to an `Iban`. Typed text stays as typed until a
-/// blur; invalid text stays, resets the value and blocks the submit.
+/// Concept domain-values: `#iban` maps text to an `Iban`, the share and phone their own buffers'
+/// values. Typed text stays as typed until a blur; invalid text stays, resets the value and blocks the submit.
 #[component]
 fn DomainPage() -> Element {
     let payout = use_store(Payout::default);
     let mut submits = use_signal(|| 0u32);
     let stored = payout.read().iban.as_ref().map_or("none".to_string(), |iban| iban.0.clone());
     let shared = payout.read().share.as_ref().map_or("none".to_string(), |share| share.0.to_string());
+    let phoned = payout.read().phone.as_ref().map_or("none".to_string(), |phone| phone.0.clone());
     rsx! {
         Flex { direction: "column", gap: "md", max_width: "320px",
-            span { "data-submits": "{submits}", "data-stored": "{stored}", "data-share": "{shared}" }
+            span { "data-submits": "{submits}", "data-stored": "{stored}", "data-share": "{shared}", "data-phone": "{phoned}" }
             Form {
                 value: payout,
                 onsubmit: move |_| submits += 1,
@@ -124,6 +143,11 @@ fn DomainPage() -> Element {
                     id: "share",
                     label: "Share",
                     name: Payout::FIELDS.share().map(|share: &Share| share.0, share),
+                }
+                PhoneField {
+                    label: "Phone",
+                    country: "DE",
+                    name: Payout::FIELDS.phone().map(Phone::text, Phone::new),
                 }
                 Button { r#type: "submit", "Send" }
             }
@@ -174,10 +198,12 @@ fn ServerStatusPage(at_once: bool) -> Element {
 }
 
 /// Todo 2572: `required` alone, no rules, blocks an empty submit; `#fill` fills all three.
-/// Todo 2655: the empty, read-only `#note` never blocks.
+/// Todo 2655: the empty, read-only `#note` never blocks. Todo 4091: `#colour` blocks once its
+/// text is cleared and kept.
 #[component]
 fn RequiredPage() -> Element {
     let mut name = use_signal(String::new);
+    let mut colour = use_signal(|| ColorCode::rgba(34, 139, 230, 1.0));
     let mut plan = use_signal(|| None::<Plan>);
     let mut tier = use_signal(|| None::<Plan>);
     let mut submits = use_signal(|| 0u32);
@@ -190,6 +216,14 @@ fn RequiredPage() -> Element {
                 NativeSelect { id: "plan", label: "Plan", placeholder: "Pick one", required: true, value: plan(), onchange: move |next| plan.set(Some(next)) }
                 Select { id: "tier", label: "Tier", placeholder: "Pick one", required: true, value: tier(), onchange: move |next| tier.set(next) }
                 TextField { id: "note", label: "Note", required: true, readonly: true, value: "" }
+                ColorField {
+                    id: "colour",
+                    label: "Colour",
+                    required: true,
+                    fix_on_blur: false,
+                    value: colour(),
+                    oninput: move |event: SliderChangeEvent<ColorCode>| colour.set(event.value()),
+                }
                 Button { id: "send", r#type: "submit", "Send" }
             }
             Button {

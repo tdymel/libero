@@ -159,7 +159,7 @@ pub(super) use picker_field;
 pub(super) fn use_picker_field<V: FieldValue>(
     field: PickerField<'_, V>,
     formats: Formats,
-    accepts: impl Fn(V) -> Result<(), String> + Clone + 'static,
+    accepts: impl Fn(V) -> Result<(), Rc<dyn FieldError>> + Clone + 'static,
     closes: impl Fn(Option<V>) -> bool + 'static,
     // The picker leaves the closing to a Save under it (3903).
     saves: bool,
@@ -274,8 +274,7 @@ pub(super) fn use_picker_field<V: FieldValue>(
                 Rc::new(|locale: &Localization| V::unreadable(&locale.date).to_string())
                     as Rc<dyn FieldError>
             });
-            let refused = |error: String| Rc::new(error) as Rc<dyn FieldError>;
-            match read.and_then(|next| accepts(next).map(|()| next).map_err(refused)) {
+            match read.and_then(|next| accepts(next).map(|()| next)) {
                 Ok(next) => {
                     draft.set(None);
                     keep(None);

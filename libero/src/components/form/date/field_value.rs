@@ -1,5 +1,7 @@
 //! What a field asks of its value beyond the picker: text both ways and the limits' errors.
 
+use std::rc::Rc;
+
 use chrono::{Datelike, NaiveDate, NaiveDateTime, NaiveTime};
 use dioxus::prelude::*;
 
@@ -14,7 +16,10 @@ use super::{
     parse_time::{parse_date_time, parse_time},
     range::{Iso, split_range},
 };
-use crate::localization::DateLocale;
+use crate::{
+    components::form::FieldError,
+    localization::{DateLocale, Localization},
+};
 
 /// The formats a field shows its value in, and reads typed text against.
 #[derive(Clone)]
@@ -218,6 +223,14 @@ pub(super) fn within<T: PartialOrd>(
     }
 }
 
+fn date_time_bound(bound: NaiveDateTime, formats: &Formats, names: &DateLocale) -> String {
+    format!(
+        "{} {}",
+        format_date(bound.date(), &formats.date, names),
+        format_time(bound.time(), &formats.time, names)
+    )
+}
+
 /// `Err(Excluded)` for a day `exclude_date` refuses.
 fn available(
     day: NaiveDate,
@@ -250,23 +263,30 @@ pub(super) trait SealedField: FieldValue {
         (min, max)
     }
 
-    /// A bound as the field shows it, for an error that names it.
-    fn show_bound(bound: <Self as DateValue>::Bound, formats: &Formats) -> String
+    /// A bound as the field shows it in `names`' language, for an error that names it.
+    fn show_bound(
+        bound: <Self as DateValue>::Bound,
+        formats: &Formats,
+        names: &DateLocale,
+    ) -> String
     where
         Self: DateValue;
 
-    /// The error for a value `accepts` refused, naming the bounds it set.
+    /// The error for a value `accepts` refused, naming the bounds it set; worded at render.
     fn refusal(
         self,
         refusal: Refusal,
         min: Option<<Self as DateValue>::Bound>,
         max: Option<<Self as DateValue>::Bound>,
         formats: &Formats,
-    ) -> String
+    ) -> Rc<dyn FieldError>
     where
         Self: DateValue,
     {
-        refusal_message::<Self>(refusal, min, max, formats)
+        let formats = formats.clone();
+        Rc::new(move |locale: &Localization| {
+            refusal_message::<Self>(refusal, min, max, &formats, &locale.date)
+        })
     }
 
     /// Whether a pick leaves nothing more to pick, so a field may close its dropdown.
@@ -290,8 +310,8 @@ impl SealedField for NaiveDate {
         }
     }
 
-    fn show_bound(bound: NaiveDate, formats: &Formats) -> String {
-        bound.show(formats)
+    fn show_bound(bound: NaiveDate, formats: &Formats, names: &DateLocale) -> String {
+        format_date(bound, &formats.date, names)
     }
 
     fn closes(_: Option<Self>) -> bool {
@@ -304,8 +324,8 @@ impl SealedField for NaiveTime {
         within(self, options.min, options.max)
     }
 
-    fn show_bound(bound: NaiveTime, formats: &Formats) -> String {
-        bound.show(formats)
+    fn show_bound(bound: NaiveTime, formats: &Formats, names: &DateLocale) -> String {
+        format_time(bound, &formats.time, names)
     }
 
     fn closes(_: Option<Self>) -> bool {
@@ -319,8 +339,8 @@ impl SealedField for NaiveDateTime {
             .and_then(|()| available(self.date(), options.exclude_date))
     }
 
-    fn show_bound(bound: NaiveDateTime, formats: &Formats) -> String {
-        bound.show(formats)
+    fn show_bound(bound: NaiveDateTime, formats: &Formats, names: &DateLocale) -> String {
+        date_time_bound(bound, formats, names)
     }
 
     fn closes(_: Option<Self>) -> bool {
@@ -339,8 +359,8 @@ impl SealedField for DateRange<NaiveDate> {
         self.end.map_or(Ok(()), |end| end.accepts(&options))
     }
 
-    fn show_bound(bound: NaiveDate, formats: &Formats) -> String {
-        bound.show(formats)
+    fn show_bound(bound: NaiveDate, formats: &Formats, names: &DateLocale) -> String {
+        format_date(bound, &formats.date, names)
     }
 
     fn closes(value: Option<Self>) -> bool {
@@ -354,8 +374,8 @@ impl SealedField for DateRange<NaiveDateTime> {
         self.end.map_or(Ok(()), |end| end.accepts(options))
     }
 
-    fn show_bound(bound: NaiveDateTime, formats: &Formats) -> String {
-        bound.show(formats)
+    fn show_bound(bound: NaiveDateTime, formats: &Formats, names: &DateLocale) -> String {
+        date_time_bound(bound, formats, names)
     }
 
     fn closes(_: Option<Self>) -> bool {

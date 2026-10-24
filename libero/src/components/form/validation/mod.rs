@@ -13,6 +13,8 @@ mod domain_tests;
 #[cfg(test)]
 mod submit_tests;
 #[cfg(test)]
+mod sweep_tests;
+#[cfg(test)]
 mod tests;
 
 pub(crate) use adapter::Adapt;

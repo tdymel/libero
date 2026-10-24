@@ -428,6 +428,56 @@ e2e::scenario!(
     required_blocks_an_empty_submit
 );
 
+/// Todo 4091: a `ColorField` always holds a color, so `required` fails only on text cleared and
+/// kept (`fix_on_blur: false`); the cleared field blocks the submit and names itself.
+async fn a_cleared_color_blocks_the_submit<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    d.click("#fill").await?;
+    d.click("#colour").await?;
+    d.press(keyboard::END).await?;
+    for _ in 0..10 {
+        d.press(keyboard::BACKSPACE).await?;
+    }
+    eventually(d, "the colour text cleared", async |d| {
+        Ok(d.value("#colour").await?.is_empty())
+    })
+    .await?;
+    // The click opened the dropdown over `#send`.
+    d.press(keyboard::ESCAPE).await?;
+    eventually(d, "the colour dropdown to close", async |d| {
+        Ok(d.attr("#colour", "aria-expanded").await?.as_deref() == Some("false"))
+    })
+    .await?;
+    // Blurred first: the refusal line it draws moves `#send` under a pointer mid-click.
+    d.press(keyboard::TAB).await?;
+    eventually(d, "the cleared colour marked invalid", async |d| {
+        Ok(d.attr("#colour", "aria-invalid").await?.as_deref() == Some("true"))
+    })
+    .await?;
+    d.click("#send").await?;
+    eventually(d, "the submit to land", async |d| {
+        Ok(d.exists(SUMMARY).await? || d.text("#submits").await? != "0")
+    })
+    .await?;
+    ensure!(
+        d.text("#submits").await? == "0",
+        "onsubmit ran with the colour cleared to {:?}, aria-invalid {:?}",
+        d.value("#colour").await?,
+        d.attr("#colour", "aria-invalid").await?
+    );
+    let summary = d.text(SUMMARY).await?;
+    ensure!(
+        summary.contains("Colour"),
+        "no Colour line in the summary: {summary}"
+    );
+    Ok(())
+}
+
+e2e::scenario!(
+    a_cleared_required_color_blocks_the_submit,
+    "/form/required",
+    a_cleared_color_blocks_the_submit
+);
+
 /// Todo 2573: a status set in `onsubmit` after a valid submit shows the summary and focuses it.
 async fn a_status_in_onsubmit_shows_the_summary<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
     d.click("#send").await?;
@@ -686,6 +736,69 @@ fn a_mapped_number_field_keeps_invalid_text() {
         fixture
             .console
             .assert_clean("typing into a mapped number field")
+            .unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
+/// Todo 4090: a `PhoneField` mapped to a phone keeps the digits as typed, short of a number or
+/// not; only the E.164 reaches the value, reset while the number is too short.
+#[test]
+fn a_mapped_phone_field_keeps_typed_text() {
+    block_on(async {
+        let fixture = Fixture::open("/form/domain", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        let tel = "input[type=tel]";
+        let value_is = |text: &str| format!("document.querySelector({tel:?}).value === {text:?}");
+        let stored_is = |text: &str| {
+            format!("document.querySelector('[data-phone]').dataset.phone === {text:?}")
+        };
+
+        pointer::click(page, tel).await.unwrap();
+        keyboard::type_text(page, "301234567").await.unwrap();
+        wait::for_js_true(page, &stored_is("+49301234567"), "the parsed number")
+            .await
+            .unwrap();
+        wait::for_js_true(
+            page,
+            &value_is("301234567"),
+            "the text as typed, not regrouped",
+        )
+        .await
+        .unwrap();
+
+        for _ in 0..3 {
+            keyboard::press(page, keyboard::BACKSPACE).await.unwrap();
+        }
+        wait::for_js_true(
+            page,
+            &stored_is("none"),
+            "a short number to empty the value",
+        )
+        .await
+        .unwrap();
+        wait::for_js_true(page, &value_is("301234"), "the short text to stay")
+            .await
+            .unwrap();
+
+        keyboard::type_text(page, "567").await.unwrap();
+        wait::for_js_true(page, &stored_is("+49301234567"), "the number again")
+            .await
+            .unwrap();
+        keyboard::press(page, keyboard::TAB).await.unwrap();
+        wait::for_js_true(
+            page,
+            &stored_is("+49301234567"),
+            "the number to outlive a blur",
+        )
+        .await
+        .unwrap();
+
+        fixture
+            .console
+            .assert_clean("typing into a mapped phone field")
             .unwrap();
         fixture.close().await.unwrap();
     });

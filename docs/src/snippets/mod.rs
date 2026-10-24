@@ -9,6 +9,8 @@
 //! - `// snippet: item <item>` - one more item, e.g. a stand-in icon component.
 //! - `// snippet: let <statement>` - one more statement in the body.
 //! - `// snippet: in <rsx>` - the rsx the snippet goes into, at `..`.
+//! - `// snippet: when <control>=<option> <directive>` - above a `Demo {`: the directive only in
+//!   the states that set that control so, for a switch that changes a type (`let`, `item`).
 
 mod compile;
 mod drift;

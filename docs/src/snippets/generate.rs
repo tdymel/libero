@@ -127,7 +127,8 @@ fn page_snippets_are_current() {
                     continue;
                 }
                 Ok(Some(why)) => {
-                    ignore(out, &heading, &why, &sources.join("\n\n"));
+                    let bodies: Vec<&str> = sources.iter().map(|(_, body)| body.as_str()).collect();
+                    ignore(out, &heading, &why, &bodies.join("\n\n"));
                     continue;
                 }
                 Ok(None) => {}
@@ -141,7 +142,7 @@ fn page_snippets_are_current() {
                 .collect();
             let mut block = String::new();
             let mut skipped = String::new();
-            for (state, body) in sources.into_iter().enumerate() {
+            for (state, (values, body)) in sources.into_iter().enumerate() {
                 if let Some((by, why)) = ignored_consts
                     .iter()
                     .find(|(s, _)| body.contains(s.body.trim()))
@@ -155,7 +156,11 @@ fn page_snippets_are_current() {
                     continue;
                 }
                 // One `Demo` prints different code per state, so a stand-in
-                // goes only into the states that name it.
+                // goes only into the states that name it, or that its `when` picks.
+                let markers: Vec<String> = markers
+                    .iter()
+                    .filter_map(|marker| for_state(marker, &values))
+                    .collect();
                 let mut kept: Vec<&String> = Vec::new();
                 loop {
                     let named = |name: &str| {

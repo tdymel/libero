@@ -130,7 +130,6 @@ const GROUPED_UNAVAILABLE: &str = r#"options: OptionList::grouped()
     .group("Tropical", [Fruit::Banana, Fruit::Mango, Fruit::Passion])"#;
 
 /// Printed in place of `FRUIT_ENUM` while `choices` is on: an enum from another crate.
-// snippet: ignore - its states hold a `Choice<Fruit>`, which the Demo's one `let` marker types as `Fruit`; `choices!` compiles in libero's doc-tests
 const FOREIGN_FRUIT: &str = r#"use libero::{choices, components::Choices};
 
 // From a domain crate, so no `Options` derive.
@@ -418,7 +417,8 @@ pub fn SelectPage() -> Element {
                     "."
                 }
             },
-            // snippet: let mut value = use_signal(|| None::<Fruit>);
+            // snippet: when choices=false let mut value = use_signal(|| None::<Fruit>);
+            // snippet: when choices=true let mut value = use_signal(|| None::<Choice<Fruit>>);
             Demo {
                 component: "Select",
                 children_text: "",

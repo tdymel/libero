@@ -1,5 +1,7 @@
 //! `TimeDelta` as a field's text: shown as `1 h 30 min`, read back from that or `1:30`.
 
+use std::rc::Rc;
+
 use chrono::{NaiveDate, TimeDelta};
 
 use super::{
@@ -9,7 +11,8 @@ use super::{
     parse::Unreadable,
 };
 use crate::{
-    localization::{DateLocale, ZeroIn, fill},
+    components::form::FieldError,
+    localization::{DateLocale, Localization, ZeroIn, fill},
     utils::fold_digits,
 };
 
@@ -156,16 +159,17 @@ fn duration_refusal(
     span: TimeDelta,
     min: Option<TimeDelta>,
     max: Option<TimeDelta>,
-    formats: &Formats,
+    names: &DateLocale,
 ) -> String {
-    let names = formats.names;
     match (min, max) {
-        (Some(min), _) if span < min => {
-            fill(names.duration_at_least, &[("min", &min.show(formats))])
-        }
-        (_, Some(max)) if span > max => {
-            fill(names.duration_at_most, &[("max", &max.show(formats))])
-        }
+        (Some(min), _) if span < min => fill(
+            names.duration_at_least,
+            &[("min", &show_duration(min, names))],
+        ),
+        (_, Some(max)) if span > max => fill(
+            names.duration_at_most,
+            &[("max", &show_duration(max, names))],
+        ),
         _ => names.invalid_duration.to_string(),
     }
 }
@@ -207,8 +211,8 @@ impl SealedField for TimeDelta {
         within(self, min, max)
     }
 
-    fn show_bound(bound: TimeDelta, formats: &Formats) -> String {
-        bound.show(formats)
+    fn show_bound(bound: TimeDelta, _: &Formats, names: &DateLocale) -> String {
+        show_duration(bound, names)
     }
 
     fn refusal(
@@ -216,9 +220,9 @@ impl SealedField for TimeDelta {
         _: Refusal,
         min: Option<TimeDelta>,
         max: Option<TimeDelta>,
-        formats: &Formats,
-    ) -> String {
-        duration_refusal(self, min, max, formats)
+        _: &Formats,
+    ) -> Rc<dyn FieldError> {
+        Rc::new(move |locale: &Localization| duration_refusal(self, min, max, &locale.date))
     }
 
     fn closes(_: Option<Self>) -> bool {
@@ -295,23 +299,30 @@ mod tests {
         assert_eq!(read("\u{0661}:\u{0663}\u{0660}"), Some(of(1, 30, 0)));
     }
 
-    /// Todo 855: a duration's own words, naming the bound it missed.
+    /// Todo 855: a duration's own words, naming the bound it missed; todo 4092: worded per language.
     #[test]
     fn a_refusal_names_the_bound_it_missed() {
-        let formats = |names| Formats {
+        let formats = Formats {
             date: String::new(),
             time: String::new(),
-            names,
+            names: EN,
             range_separator: " - ",
             level: super::super::DateLevel::Day,
         };
         let (min, max) = bounds(Some(of(0, 15, 0)), None);
-        let refused = |span, names| duration_refusal(span, Some(min), Some(max), &formats(names));
-        assert_eq!(refused(of(0, 5, 0), EN), "Must be at least 15 min");
+        let refused = |span: TimeDelta, locale: &Localization| {
+            span.refusal(Refusal::OutOfRange, Some(min), Some(max), &formats)
+                .message(locale)
+        };
+        let english = &Localization::ENGLISH;
+        assert_eq!(refused(of(0, 5, 0), english), "Must be at least 15 min");
         assert_eq!(
-            refused(of(120, 0, 0), EN),
+            refused(of(120, 0, 0), english),
             "Must be at most 99 h 59 min 59 s"
         );
-        assert_eq!(refused(of(0, 5, 0), DE), "Mindestens 15 Min.");
+        assert_eq!(
+            refused(of(0, 5, 0), &Localization::GERMAN),
+            "Mindestens 15 Min."
+        );
     }
 }

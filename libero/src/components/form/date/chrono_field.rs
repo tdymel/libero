@@ -15,7 +15,7 @@ use crate::{
     components::common::Input,
     components::form::phone_sheet::narrow_query,
     hooks::{use_formats, use_localization, use_media_query, use_theme},
-    localization::fill,
+    localization::{DateLocale, fill},
     theme::{CalendarVariant, TimePickerVariant},
 };
 
@@ -263,15 +263,15 @@ pub(super) fn chrono_field<V: DateValue>(
 }
 
 /// The error for a value the field refuses, naming the bounds it set in the
-/// field's own format.
+/// field's own format, in `names`' language.
 pub(super) fn refusal_message<V: DateValue>(
     refusal: Refusal,
     min: Option<V::Bound>,
     max: Option<V::Bound>,
     formats: &Formats,
+    names: &DateLocale,
 ) -> String {
-    let names = formats.names;
-    let show = |bound| V::show_bound(bound, formats);
+    let show = |bound| V::show_bound(bound, formats, names);
     let (min, max) = (min.map(show), max.map(show));
     match (refusal, min, max) {
         (Refusal::Excluded, ..) => names.unavailable.to_string(),
@@ -287,14 +287,14 @@ mod tests {
     use chrono::{Datelike, NaiveDate, NaiveTime};
     use dioxus::prelude::*;
 
-    use super::{Formats, PickerOptions, refusal_message};
+    use super::{DateLocale, Formats, PickerOptions, Refusal, refusal_message};
     use crate::{
         LiberoProvider,
         components::{
             common::Input,
             form::date::{ChronoField, ChronoPicker, DateLevel, field_value::SealedField},
         },
-        localization::DateLocale,
+        localization::Localization,
         theme::CalendarVariant,
         utils::warnings_of,
     };
@@ -389,9 +389,9 @@ mod tests {
                 level,
                 ..PickerOptions::default()
             };
-            value
-                .accepts(&options)
-                .map_err(|refusal| refusal_message::<NaiveDate>(refusal, min, max, &at(level)))
+            value.accepts(&options).map_err(|refusal| {
+                refusal_message::<NaiveDate>(refusal, min, max, &at(level), &DateLocale::ENGLISH)
+            })
         };
         let mut dom = VirtualDom::new(|| rsx! {});
         dom.rebuild_in_place();
@@ -425,6 +425,26 @@ mod tests {
                 Err("Must be on or after March 2026".into())
             );
         });
+        // Todo 4092: the error words itself at render, so a language switch re-words it.
+        let error = day(1).refusal(
+            Refusal::OutOfRange,
+            Some(day(5)),
+            None,
+            &at(DateLevel::Month),
+        );
+        let german = refusal_message::<NaiveDate>(
+            Refusal::OutOfRange,
+            Some(day(5)),
+            None,
+            &at(DateLevel::Month),
+            &DateLocale::GERMAN,
+        );
+        assert_eq!(
+            error.message(&Localization::ENGLISH),
+            "Must be on or after March 2026"
+        );
+        assert_eq!(error.message(&Localization::GERMAN), german);
+        assert_ne!(german, "Must be on or after March 2026");
     }
 
     #[test]

@@ -106,6 +106,17 @@ pub(super) fn markers(lines: &[&str], index: usize) -> Vec<String> {
         .collect()
 }
 
+/// A `when <control>=<option> <marker>` marker's own marker in a `Demo` state that sets the
+/// control so, none in another state; any other marker as it is.
+pub(super) fn for_state(marker: &str, values: &DemoValues) -> Option<String> {
+    let Some(rest) = marker.strip_prefix("when ") else {
+        return Some(marker.to_string());
+    };
+    let (condition, marker) = rest.split_once(' ')?;
+    let (control, option) = condition.split_once('=')?;
+    (values.str(control) == option).then(|| marker.to_string())
+}
+
 /// Every `const NAME: &str = r#"..."#;` in one file, with the `// snippet:`
 /// lines in the comment block right above it.
 pub(super) fn snippets(source: &str) -> Vec<Snippet> {

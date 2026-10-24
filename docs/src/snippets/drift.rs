@@ -2,9 +2,10 @@
 
 use super::*;
 
-/// The code block in the defaults, then in as few states as show every control option once.
-/// A control the defaults hide is revealed by also moving the control that shows it.
-pub(super) fn demo_sources(code: &DemoCode) -> Vec<String> {
+/// The code block in the defaults, then in as few states as show every control option once,
+/// each with the first state that prints it. A control the defaults hide is revealed by also
+/// moving the control that shows it.
+pub(super) fn demo_sources(code: &DemoCode) -> Vec<(DemoValues, String)> {
     let base = DemoValues::defaults(&code.controls);
     let hidden = |state: &DemoValues, name: &str| {
         code.controls
@@ -54,11 +55,11 @@ pub(super) fn demo_sources(code: &DemoCode) -> Vec<String> {
         }
         states.push(state);
     }
-    let mut sources: Vec<String> = Vec::new();
-    for state in &states {
-        let source = code.source(state);
-        if !sources.contains(&source) {
-            sources.push(source);
+    let mut sources: Vec<(DemoValues, String)> = Vec::new();
+    for state in states {
+        let source = code.source(&state);
+        if !sources.iter().any(|(_, seen)| *seen == source) {
+            sources.push((state, source));
         }
     }
     sources
