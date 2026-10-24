@@ -22,7 +22,9 @@ use crate::{
 use super::file_field::{FileFieldPart, FileTriggerArgs};
 use super::files::Files;
 use super::rows::{ChipKeys, StandIn, card_list, chip_list};
-use super::styles::{FILE_BROWSE_SX, FILE_CONTROL_SX, FILE_DROPZONE_BROWSE_SX, FILE_DROPZONE_SX};
+use super::styles::{
+    FILE_BROWSE_SX, FILE_CONTROL_SX, FILE_DROPZONE_BROWSE_SX, FILE_DROPZONE_SX, FILE_TRIGGER_SX,
+};
 
 /// What both variants draw: a labelled group with the chips and a Browse
 /// button. A click opens the picker; a drop takes the files.
@@ -393,6 +395,16 @@ fn required_note(required_id: &str, required: bool) -> Option<Element> {
     required.then(|| rsx! { span { id: "{required_id}", hidden: true, "{label}" } })
 }
 
+/// The `trigger`'s box, its own `Part`.
+#[component]
+fn TriggerBox(children: Element) -> Element {
+    use_box()
+        .framework_sx(&FILE_TRIGGER_SX)
+        .prepare()
+        .attr("data-slot", FileFieldPart::Trigger.slot())
+        .render(HtmlTag::Div, Vec::new(), children)
+}
+
 /// With `trigger`: the app's control in place of the surface. The input stays,
 /// since it posts and opens the picker.
 pub(super) fn file_trigger_variant(
@@ -426,9 +438,8 @@ pub(super) fn file_trigger_variant(
     .flatten()
     .chain(attributes)
     .collect();
-    // At its own width, as an avatar or a button is: the field's column would stretch it (todo 4109).
     field.render(rsx! {
-        div { style: "align-self:flex-start;max-width:100%", {draw.call(args)} }
+        TriggerBox { {draw.call(args)} }
         {required_note(&required_id, required)}
         {input}
         {announcer}

@@ -212,6 +212,41 @@ fn a_trigger_keeps_its_own_width() {
     });
 }
 
+/// Todo 4115: the trigger's box follows the field's `align-items` instead of pinning the start.
+#[test]
+fn a_trigger_follows_the_fields_alignment() {
+    block_on(async {
+        let fixture = Fixture::open("/file-field/trigger", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        wait::for_visible(page, "#centred").await.unwrap();
+        let [offset, width, boxes]: [f64; 3] = page
+            .evaluate_bounded(
+                "(() => {
+                    const trigger = document.querySelector('#centred').getBoundingClientRect();
+                    const field = document.querySelector('#centred').closest('[data-slot=trigger]')
+                        .parentElement.getBoundingClientRect();
+                    const parts = document.querySelectorAll('[data-slot=trigger]').length;
+                    return [(trigger.left + trigger.right) / 2 - (field.left + field.right) / 2,
+                            trigger.width / field.width, parts];
+                })()",
+            )
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        assert!(offset.abs() < 1.0, "centred in its field: {offset}px off");
+        assert!(width < 0.5, "still at its own width: {width} of the field");
+        assert_eq!(boxes, 3.0, "each trigger sits in a `trigger` part");
+        fixture
+            .console
+            .assert_clean("file trigger alignment")
+            .unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
 /// What WebKit's picker for a bare `<input type=file>` offers on an iPhone, by recall: the
 /// page's own Browse button names none of them.
 const IOS_PICKER: [&str; 3] = ["Photo Library", "Choose File", "Take Photo"];

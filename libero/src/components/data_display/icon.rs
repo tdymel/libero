@@ -12,7 +12,9 @@ use crate::{
     },
     hooks::{use_cache, use_gradient_style, use_theme},
     sx::{FORCED_COLORS, StaticSx, ThemeAwareValue, sx},
-    theme::{CssVar, Gradient, ICON_DEFAULT_RADIUS, ICON_DEFAULT_SIZE, ICON_SIZE, SizeCss},
+    theme::{
+        CssVar, Gradient, ICON_DEFAULT_RADIUS, ICON_DEFAULT_SIZE, ICON_SIZE, ICON_SLOT_PAD, SizeCss,
+    },
 };
 
 pub(crate) const ICON_COLOR_VAR: CssVar = CssVar::new("--lsx-icon-color");
@@ -41,6 +43,7 @@ static ICON_BASE_SX: StaticSx = StaticSx::new(|| {
         .flex_shrink("0")
         .width(ICON_DEFAULT_SIZE.overridable())
         .height(ICON_DEFAULT_SIZE.overridable())
+        .with("margin-inline", ICON_SLOT_PAD.value_or("0"))
         .border_radius(ICON_RADIUS_VAR.value_or(ICON_DEFAULT_RADIUS.value()))
         .selector(
             "& svg",
@@ -111,6 +114,8 @@ fn icon_variables(props: &IconProps, variant: Variant) -> Variables {
             ICON_SIZE.override_var(),
             props.size.resolve(Some(ICON_SIZE)),
         )
+        // A sized icon keeps its own box in a slot.
+        .with(ICON_SLOT_PAD, props.size.as_ref().map(|_| "0".to_string()))
         .with(ICON_RADIUS_VAR, props.radius.resolve(Some(SizeCss::RADIUS)))
 }
 
@@ -220,6 +225,7 @@ pub fn Icon(props: IconProps) -> Element {
         .states(&states)
         .style(style)
         .prepare()
+        .attr_default("data-slot", Some("icon"))
         .attr_default("role", (named && !interactive).then_some("img"))
         .attr_default("aria-hidden", hideable.then_some("true"))
         .render(component, props.attributes, children)

@@ -3,6 +3,7 @@ use crate::{
         common::{LogicalTextAlign, focus_ring_sx, ring_overlay_sx},
         form::{drag_over_sx, field_control_sx},
     },
+    platform::draws_placeholders,
     sx::{StaticSx, sx},
     theme::{
         FILE_FIELD_DROPZONE_HEIGHT, FILE_FIELD_PADDING, FILE_FIELD_RADIUS, FileFieldDefaults,
@@ -61,6 +62,16 @@ pub(super) static FILE_CONTROL_SX: StaticSx = StaticSx::new(|| {
             ),
         )
         .when("disabled", sx().cursor("not-allowed"))
+});
+
+/// The app's `trigger` at its own width, as an avatar or a button is: `fit-content` lets the
+/// field's `align-items` place it; Blitz lacks that, so it starts at the start (4109, 4115).
+pub(super) static FILE_TRIGGER_SX: StaticSx = StaticSx::new(|| {
+    let base = sx().width("fit-content").max_width("100%");
+    match draws_placeholders() {
+        true => base,
+        false => base.align_self("flex-start"),
+    }
 });
 
 /// The `Input` variant's Browse button: the rest of the line, showing the

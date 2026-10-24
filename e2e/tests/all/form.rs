@@ -1051,6 +1051,14 @@ fn a_password_mapped_to_a_secret_submits_it() {
         )
         .await
         .unwrap();
+        // Todo 4114: `try_unwrap` gives the holder back while the form's store keeps a clone.
+        wait::for_js_true(
+            page,
+            "document.querySelector('#sent').dataset.shared === 'shared'",
+            "try_unwrap refusing a shared secret",
+        )
+        .await
+        .unwrap();
 
         fixture
             .console

@@ -6,6 +6,7 @@ use chromiumoxide::Page;
 use e2e::browser::block_on;
 use e2e::driver::{Driver, eventually, eventually_focused, eventually_text};
 use e2e::passes::{contrast, focus, keyboard};
+use e2e::wait::PageBounded;
 use e2e::{Fixture, Suite, Viewport, ax, wait};
 
 async fn typing_reaches_the_value<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
@@ -255,6 +256,53 @@ async fn revealed(page: &Page, kind: &str, pressed: &str) -> Result<()> {
         &format!("type={kind} with the focus on the toggle, aria-pressed={pressed}"),
     )
     .await
+}
+
+/// Todo 4113: an unsized trailing `Icon` fills the reveal button's box, so the two share a
+/// column at every field size and direction; a sized one keeps its own box.
+#[test]
+fn a_trailing_icon_shares_the_reveal_buttons_column() {
+    const MEASURE: &str = "[...document.querySelectorAll('[data-case]')].map(c => { \
+        const rect = e => e.getBoundingClientRect(); \
+        const rtl = c.dir === 'rtl'; \
+        return [...c.querySelectorAll('[data-frame]')].map(frame => { \
+            const f = rect(frame), s = frame.querySelector('[data-slot=trailing]'), r = rect(s); \
+            const end = rtl ? r.left - f.left + r.width / 2 : f.right - r.right + r.width / 2; \
+            return [c.dataset.case, r.width, end, f.height, rect(s.firstElementChild).width]; \
+        }); \
+    })";
+    block_on(async {
+        let fixture = Fixture::open("/text-field/slot-icons", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        wait::for_visible(page, "[data-case='ltr-md'] [data-slot=icon]")
+            .await
+            .unwrap();
+        // Case, slot width, glyph centre from the end, frame height, first child's width.
+        type Measure = (String, f64, f64, f64, f64);
+        let cases: Vec<Vec<Measure>> = page
+            .evaluate_bounded(MEASURE)
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        assert_eq!(cases.len(), 6, "{cases:?}");
+        for case in cases {
+            let [icon, button, sized] = case.as_slice() else {
+                panic!("three fields a case: {case:?}");
+            };
+            let name = &icon.0;
+            let same = |a: f64, b: f64, what: &str| {
+                assert!((a - b).abs() < 0.5, "{name}: {what} {a} vs {b}");
+            };
+            same(icon.1, button.1, "slot width");
+            same(icon.2, button.2, "glyph centre from the end");
+            same(icon.3, button.3, "frame height");
+            same(sized.1, sized.4, "sized icon against its slot");
+        }
+        fixture.close().await.unwrap();
+    });
 }
 
 /// Todo 2438: a field's input and the dropdown search boxes take the page's

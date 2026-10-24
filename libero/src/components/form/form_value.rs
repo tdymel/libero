@@ -28,6 +28,12 @@ impl<T> ByAddress<T> {
     pub fn new(value: T) -> Self {
         Self(Rc::new(value))
     }
+
+    /// The value back when `this` is its only holder, or `this` while a clone is alive.
+    /// Associated, as `Rc::try_unwrap` is: a method would hide behind the value's own.
+    pub fn try_unwrap(this: Self) -> Result<T, Self> {
+        Rc::try_unwrap(this.0).map_err(Self)
+    }
 }
 
 impl<T> Deref for ByAddress<T> {
@@ -65,5 +71,34 @@ impl<T: Default> Default for ByAddress<T> {
 impl<T: fmt::Debug> fmt::Debug for ByAddress<T> {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         self.0.fmt(formatter)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    struct Secret(&'static str);
+
+    /// Todo 4114: the value comes back once no clone holds it.
+    #[test]
+    fn try_unwrap_returns_the_value_when_unshared() {
+        let secret = ByAddress::new(Secret("hunter2"));
+        let Ok(Secret(text)) = ByAddress::try_unwrap(secret) else {
+            panic!("an unshared value unwraps");
+        };
+        assert_eq!(text, "hunter2");
+    }
+
+    #[test]
+    fn try_unwrap_hands_the_holder_back_while_a_clone_lives() {
+        let secret = ByAddress::new(Secret("hunter2"));
+        let clone = secret.clone();
+        let Err(secret) = ByAddress::try_unwrap(secret) else {
+            panic!("a shared value stays held");
+        };
+        assert!(secret == clone);
+        drop(clone);
+        assert!(ByAddress::try_unwrap(secret).is_ok());
     }
 }

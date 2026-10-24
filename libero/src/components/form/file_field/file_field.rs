@@ -56,6 +56,8 @@ field_parts_enum! {
         Trailing = "trailing" => "& > [data-slot='frame'] > [data-slot='trailing']",
         /// One picked file's card under the surface, `Dropzone` variant.
         Card = "card" => "& > [role='list'] > [data-slot='card']",
+        /// The box round the app's `trigger`, at its content's width.
+        Trigger = "trigger" => "& > [data-slot='trigger']",
     }
 }
 

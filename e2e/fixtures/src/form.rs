@@ -135,11 +135,24 @@ fn vault_secret(vault: &Vault) -> Result<ByAddress<Secret>, FormErrors> {
 fn SecretPage() -> Element {
     let vault = use_store(Vault::default);
     let mut sent = use_signal(String::new);
+    let mut shared = use_signal(String::new);
     rsx! {
         Flex { direction: "column", gap: "md", max_width: "320px",
-            span { id: "sent", "data-sent": "{sent}" }
+            span { id: "sent", "data-sent": "{sent}", "data-shared": "{shared}" }
             Form { value: vault,
-                onsubmit: Submit::parse(vault_secret, move |secret: ByAddress<Secret>| sent.set(secret.0.clone())),
+                onsubmit: Submit::parse(vault_secret, move |secret: ByAddress<Secret>| {
+                    // The form's store still holds the secret, so it is not handed over (4114).
+                    let secret = match ByAddress::try_unwrap(secret) {
+                        Ok(Secret(text)) => {
+                            shared.set("unwrapped".into());
+                            sent.set(text);
+                            return;
+                        }
+                        Err(secret) => secret,
+                    };
+                    shared.set("shared".into());
+                    sent.set(secret.0.clone());
+                }),
                 PasswordField { id: "pass", label: "Password", required: true,
                     name: Vault::FIELDS.password().map(|secret: &ByAddress<Secret>| secret.0.clone(), secret) }
                 Button { id: "send", r#type: "submit", "Unlock" }

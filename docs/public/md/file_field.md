@@ -39,7 +39,9 @@ fn Demo() -> Element {
 `trigger` draws the app's own control, an avatar or a button, in place of the
 Browse surface. Spread `args.attributes` onto it (a libero `Button` takes them
 as `attributes`) and call `args.open` inside its click. It keeps its own width,
-so an avatar stays round.
+so an avatar stays round. It sits at the start of the field and follows the
+field's `align-items`: `sx: sx().align_items("center")` centres it, and
+`FileFieldPart::Trigger` styles its box.
 
 ```rust
 use dioxus::prelude::*;
@@ -158,6 +160,7 @@ explains how parts work.
 | `FileFieldPart::Chip` | `chip` | One picked file's chip, `Input` variant. |
 | `FileFieldPart::Trailing` | `trailing` | The loader and the clear button, `Input` variant. |
 | `FileFieldPart::Card` | `card` | One picked file's card under the surface, `Dropzone` variant. |
+| `FileFieldPart::Trigger` | `trigger` | The box round the app's `trigger`, at its content's width. |
 | `FileFieldPart::Helper` | `helper` | The caption under the control. |
 | `FileFieldPart::Status` | `status` | The validation message. |
 

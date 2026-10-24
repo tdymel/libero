@@ -3,7 +3,7 @@
 
 use dioxus::prelude::*;
 use libero::components::{
-    Fieldset, Flex, Form, PasswordField, Rule, Text, TextField, Textarea, not_empty,
+    Fieldset, Flex, Form, Icon, PasswordField, Rule, SvgData, Text, TextField, Textarea, not_empty,
 };
 
 use crate::Routes;
@@ -14,7 +14,30 @@ pub const ROUTES: Routes = &[
     ("/text-field/echo", || rsx! { TextFieldEchoPage {} }),
     ("/text-field/upper", || rsx! { TextFieldUpperPage {} }),
     ("/text-field/password-echo", || rsx! { PasswordEchoPage {} }),
+    ("/text-field/slot-icons", || rsx! { SlotIconsPage {} }),
 ];
+
+const MAIL: SvgData = SvgData::new(
+    r#"<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="5" width="18" height="14" rx="2"/></svg>"#,
+);
+
+/// Todo 4113: a trailing `Icon` beside the reveal button, per field size, in both directions.
+#[component]
+fn SlotIconsPage() -> Element {
+    rsx! {
+        Flex { direction: "column", gap: "md", max_width: "320px",
+            for dir in ["ltr", "rtl"] {
+                for size in ["xs", "md", "xl"] {
+                    div { dir, "data-case": "{dir}-{size}",
+                        TextField { label: "Email", r#type: "email", size, trailing: rsx! { Icon { svg: MAIL } } }
+                        PasswordField { label: "Password", size }
+                        TextField { label: "Sized", size, trailing: rsx! { Icon { svg: MAIL, size: "lg" } } }
+                    }
+                }
+            }
+        }
+    }
+}
 
 /// The typed value echoed in `#echo`, for the shared web/native scenarios.
 #[component]

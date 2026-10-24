@@ -242,7 +242,7 @@ pub use grid::{
 pub(crate) use header::HEADER_DEFAULT_HEIGHT;
 pub use header::{HEADER_HEIGHT, HEADER_HEIGHT_VAR, HeaderDefaults};
 pub use hover_card::HoverCardDefaults;
-pub(crate) use icon::{ICON_DEFAULT_RADIUS, ICON_DEFAULT_SIZE};
+pub(crate) use icon::{ICON_DEFAULT_RADIUS, ICON_DEFAULT_SIZE, ICON_SLOT_PAD};
 pub use icon::{ICON_SIZE, IconDefaults};
 pub use image::{IMAGE_RADIUS, ImageDefaults, ImageFit};
 pub use image_list::{

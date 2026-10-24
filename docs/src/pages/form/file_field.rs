@@ -151,6 +151,7 @@ pub fn FileFieldPage() -> Element {
                     (FileFieldPart::Chip, "One picked file's chip, `Input` variant."),
                     (FileFieldPart::Trailing, "The loader and the clear button, `Input` variant."),
                     (FileFieldPart::Card, "One picked file's card under the surface, `Dropzone` variant."),
+                    (FileFieldPart::Trigger, "The box round the app's `trigger`, at its content's width."),
                     (FileFieldPart::Helper, "The caption under the control."),
                     (FileFieldPart::Status, "The validation message."),
                 ]),
@@ -290,7 +291,14 @@ pub fn FileFieldPage() -> Element {
                     Code { source: "trigger" }
                     " keeps its own width, so an avatar stays round. The button carries "
                     Code { source: "args.attributes" }
-                    " and opens the picker in its click; the label and helper stay the field's."
+                    " and opens the picker in its click; the label and helper stay the field's. "
+                    "It starts at the start of the field and follows the field's "
+                    Code { source: "align-items" }
+                    ", so "
+                    Code { source: "sx: sx().align_items(\"center\")" }
+                    " centres it; "
+                    Code { source: "FileFieldPart::Trigger" }
+                    " styles its box."
                 }
                 AvatarTriggerDemo {}
                 CodeBlock { source: AVATAR_CODE, language: "rust" }

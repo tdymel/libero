@@ -220,7 +220,9 @@ mod tests {
         assert_eq!(table::<TagsFieldPart>(), framed(&["tag"]));
         assert_eq!(
             table::<FileFieldPart>(),
-            caption(&["frame", "control", "browse", "chip", "trailing", "card"])
+            caption(&[
+                "frame", "control", "browse", "chip", "trailing", "card", "trigger"
+            ])
         );
         assert_eq!(table::<CheckboxPart>(), caption(&["control", "box"]));
         assert_eq!(table::<CheckboxGroupPart>(), caption(&["control", "box"]));

@@ -28,6 +28,7 @@ pub const ROUTES: Routes = &[
 fn FileTriggerPage() -> Element {
     let mut portrait = use_signal(Files::default);
     let mut locked = use_signal(Files::default);
+    let mut centred = use_signal(Files::default);
     let trigger = |t: FileTriggerArgs| {
         let name = t.files.one().map_or("Choose a portrait".to_string(), |file| file.name());
         rsx! {
@@ -58,6 +59,14 @@ fn FileTriggerPage() -> Element {
                 readonly: true,
                 value: locked(),
                 onchange: move |next: Files| locked.set(next),
+                trigger,
+            }
+            FileField {
+                id: "centred",
+                label: "Centred",
+                sx: libero::sx::sx().align_items("center"),
+                value: centred(),
+                onchange: move |next: Files| centred.set(next),
                 trigger,
             }
         }
