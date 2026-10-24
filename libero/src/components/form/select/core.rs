@@ -520,6 +520,8 @@ pub(crate) fn SelectCore(props: SelectCoreProps) -> Element {
     let trailing = match (multiple, &clear) {
         (true, None) => Some(
             chevron_box
+                // The frame centres it in the slot button's column (4129).
+                .attr("data-chevron", true)
                 .event("onmousedown", |event: MouseEvent| event.prevent_default())
                 .event("onpointerdown", move |event: PointerEvent| {
                     focus_open.press();

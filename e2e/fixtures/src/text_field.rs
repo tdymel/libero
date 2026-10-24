@@ -5,12 +5,12 @@ use dioxus::prelude::*;
 use libero::{
     chrono::NaiveDate,
     components::{
-        ActionIcon, ChronoField, Fieldset, Flex, Form, Icon, Options, PasswordField, Rule, Select, SvgData, Text,
-        TextField, Textarea, not_empty,
+        ActionIcon, ChronoField, Fieldset, Flex, Form, Icon, MultiSelect, Options, PasswordField, Rule, Select,
+        SvgData, Text, TextField, Textarea, not_empty,
     },
 };
 
-use crate::Routes;
+use crate::{Routes, common::Fruit};
 
 pub const ROUTES: Routes = &[
     ("/text-field", || rsx! { TextFieldPage {} }),
@@ -20,6 +20,7 @@ pub const ROUTES: Routes = &[
     ("/text-field/password-echo", || rsx! { PasswordEchoPage {} }),
     ("/text-field/slot-icons", || rsx! { SlotIconsPage {} }),
     ("/text-field/field-icons", || rsx! { FieldIconsPage {} }),
+    ("/text-field/trailing-align", || rsx! { TrailingAlignPage {} }),
 ];
 
 const MAIL: SvgData = SvgData::new(
@@ -88,6 +89,23 @@ fn FieldIconsPage() -> Element {
                         trailing: rsx! { Icon { svg: MAIL, variant: "standard" } },
                     }
                     Select { label: "Gender", size, value: Gender::Unspecified, onchange: move |_| {} }
+                }
+            }
+        }
+    }
+}
+
+/// Todo 4129: a text field's trailing icon, a select's and a multi select's chevron, per field size.
+#[component]
+fn TrailingAlignPage() -> Element {
+    rsx! {
+        Flex { direction: "column", gap: "md", max_width: "320px",
+            for size in ["xs", "md", "xl"] {
+                div { "data-trail": "{size}",
+                    TextField { label: "Name", size, value: "ada", trailing: rsx! { Icon { svg: MAIL } } }
+                    Select { label: "Gender", size, value: Gender::Unspecified, onchange: move |_| {} }
+                    MultiSelect::<Fruit> { label: "Fruit", size, placeholder: "Pick fruit", value: vec![], onchange: move |_| {} }
+                    MultiSelect { label: "Fruit", size, value: vec![Fruit::Cherry], onchange: move |_| {} }
                 }
             }
         }

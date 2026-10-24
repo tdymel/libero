@@ -87,12 +87,15 @@ static FIELD_FRAME_SX: StaticSx = StaticSx::new(|| {
             )
             .selector(
                 "& > :is([data-slot='leading'], [data-slot='trailing']) > [data-slot='icon']",
-                sx().var(ICON_SLOT_PAD, pad.clone()),
+                sx().var(ICON_SLOT_PAD, pad),
             )
-            // A `Select`'s own chevron keeps the column a slot icon's glyph sits in (4126).
+            // A `Select`'s and a `MultiSelect`'s 1em chevron centres in that column too (4126, 4129).
             .selector(
-                "& > [data-slot='control'] > svg",
-                sx().with("margin-inline-end", pad),
+                "& > [data-slot='control'] > svg, & > [data-slot='trailing'] > [data-chevron] > svg",
+                sx().with(
+                    "margin-inline-end",
+                    format!("calc(({} - 1em) / 2)", BUTTON_HEIGHT.value(step)),
+                ),
             )
         })
         // The `Form`'s `pending_loader`, laid out as a slot.
@@ -597,6 +600,25 @@ mod tests {
             css.contains(
                 "> :is([data-slot='leading'], [data-slot='trailing']) > [data-slot='icon']{--lsx-icon-slot-pad:calc((var(--lsx-button-height-xs) - var(--lsx-icon-size-xs)) / 2)"
             ),
+            "{css}"
+        );
+    }
+
+    /// Todo 4129: a `Select`'s and a `MultiSelect`'s chevron centre in the slot button's column.
+    #[test]
+    fn a_chevron_centres_in_the_button_column() {
+        let css = crate::css::Stylesheet::from(&FIELD_FRAME_SX);
+        let css = css.as_str();
+        let rule = "{margin-inline-end:calc((var(--lsx-button-height-xs) - 1em) / 2)";
+
+        assert!(
+            css.contains(&format!(
+                "[data-state~=\"size-xs\"] > [data-slot='trailing'] > [data-chevron] > svg{rule}"
+            )),
+            "{css}"
+        );
+        assert!(
+            css.contains("[data-state~=\"size-xs\"] > [data-slot='control'] > svg, "),
             "{css}"
         );
     }

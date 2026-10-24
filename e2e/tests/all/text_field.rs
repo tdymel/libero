@@ -349,38 +349,74 @@ fn a_filled_slot_icon_has_the_box_of_a_filled_action_icon() {
     });
 }
 
-/// Todo 4126: a text field's, a date field's and a select's trailing glyph share one right
-/// inset and sit on the middle of the control, where the text is.
-async fn trailing_glyphs_align(page: &Page) -> Result<()> {
-    const MEASURE: &str = "[...document.querySelectorAll('[data-align]')].map(c => \
-        [c.dataset.align, [...c.querySelectorAll('[data-frame]')].flatMap(frame => { \
+/// Todos 4126, 4129: the trailing glyphs of the fields in each `[attr]` group, one per `kinds`,
+/// share one centre column and sit on the middle of the control, where the text is.
+async fn trailing_glyphs_align(page: &Page, attr: &str, kinds: &[&str]) -> Result<()> {
+    let measure = format!(
+        "[...document.querySelectorAll('[{attr}]')].map(c => \
+        [c.getAttribute('{attr}'), [...c.querySelectorAll('[data-frame]')].map(frame => {{ \
             const f = frame.getBoundingClientRect(); \
             const t = frame.querySelector('[data-slot=control]').getBoundingClientRect(); \
             const g = frame.querySelector('[data-slot=trailing] svg, [data-slot=control] > svg').getBoundingClientRect(); \
-            return [f.right - g.right, (g.top + g.bottom - t.top - t.bottom) / 2]; \
-        })])";
-    wait::for_visible(page, "[data-align='md'] [data-slot=icon]").await?;
-    let cases: Vec<(String, Vec<f64>)> = page.evaluate_bounded(MEASURE).await?.into_value()?;
+            return [f.right - (g.left + g.right) / 2, (g.top + g.bottom - t.top - t.bottom) / 2]; \
+        }})])"
+    );
+    wait::for_visible(page, &format!("[{attr}='md'] [data-slot=icon]")).await?;
+    let cases: Vec<(String, Vec<(f64, f64)>)> =
+        page.evaluate_bounded(&measure).await?.into_value()?;
     ensure!(cases.len() == 3, "{cases:?}");
     for (name, m) in cases {
-        ensure!(m.len() == 6, "{name}: text, date, select: {m:?}");
-        let (text_inset, date_inset, select_inset) = (m[0], m[2], m[4]);
-        ensure!(
-            (text_inset - date_inset).abs() < 0.5,
-            "{name}: date inset: {m:?}"
-        );
-        ensure!(
-            (text_inset - select_inset).abs() < 0.5,
-            "{name}: select inset: {m:?}"
-        );
-        for (what, offset) in [("text", m[1]), ("date", m[3]), ("select", m[5])] {
+        ensure!(m.len() == kinds.len(), "{name}: {kinds:?}: {m:?}");
+        for (kind, (column, offset)) in kinds.iter().zip(&m) {
+            ensure!(
+                (column - m[0].0).abs() < 0.5,
+                "{name}: {kind} glyph centre {column} from the right, not {}: {m:?}",
+                m[0].0
+            );
             ensure!(
                 offset.abs() < 0.5,
-                "{name}: {what} glyph off the middle by {offset}: {m:?}"
+                "{name}: {kind} glyph off the middle by {offset}: {m:?}"
             );
         }
     }
     Ok(())
+}
+
+const ALIGN_KINDS: &[&str] = &["text", "date", "select"];
+const TRAIL_KINDS: &[&str] = &["text", "select", "multi select", "multi select with a chip"];
+
+mod trailing_glyphs_of_text_select_and_multi_select_fields_align {
+    use e2e::{Fixture, Viewport, browser::block_on};
+
+    #[test]
+    fn web() {
+        block_on(async {
+            let fixture = Fixture::open("/text-field/trailing-align", Viewport::Desktop)
+                .await
+                .unwrap();
+            super::trailing_glyphs_align(&fixture.page, "data-trail", super::TRAIL_KINDS)
+                .await
+                .unwrap();
+            fixture.close().await.unwrap();
+        });
+    }
+
+    #[cfg(feature = "android")]
+    #[test]
+    fn android() {
+        e2e::android::block_on(async {
+            let driver = e2e::driver::Android::open("/text-field/trailing-align")
+                .await
+                .unwrap();
+            super::trailing_glyphs_align(driver.page(), "data-trail", super::TRAIL_KINDS)
+                .await
+                .unwrap();
+            driver
+                .finish("trailing_glyphs_of_text_select_and_multi_select_fields_align")
+                .await
+                .unwrap();
+        });
+    }
 }
 
 mod trailing_glyphs_of_text_date_and_select_fields_align {
@@ -392,7 +428,9 @@ mod trailing_glyphs_of_text_date_and_select_fields_align {
             let fixture = Fixture::open("/text-field/field-icons", Viewport::Desktop)
                 .await
                 .unwrap();
-            super::trailing_glyphs_align(&fixture.page).await.unwrap();
+            super::trailing_glyphs_align(&fixture.page, "data-align", super::ALIGN_KINDS)
+                .await
+                .unwrap();
             fixture.close().await.unwrap();
         });
     }
@@ -404,7 +442,9 @@ mod trailing_glyphs_of_text_date_and_select_fields_align {
             let driver = e2e::driver::Android::open("/text-field/field-icons")
                 .await
                 .unwrap();
-            super::trailing_glyphs_align(driver.page()).await.unwrap();
+            super::trailing_glyphs_align(driver.page(), "data-align", super::ALIGN_KINDS)
+                .await
+                .unwrap();
             driver
                 .finish("trailing_glyphs_of_text_date_and_select_fields_align")
                 .await
