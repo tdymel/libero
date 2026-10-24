@@ -1,7 +1,7 @@
 //! `TextField`, `PasswordField` and `Textarea`: what assistive technology hears
 //! of the label, the captions and the status, and the reveal toggle.
 
-use anyhow::Result;
+use anyhow::{Result, ensure};
 use chromiumoxide::Page;
 use e2e::browser::block_on;
 use e2e::driver::{Driver, eventually, eventually_focused, eventually_text};
@@ -350,50 +350,67 @@ fn a_filled_slot_icon_has_the_box_of_a_filled_action_icon() {
 }
 
 /// Todo 4126: a text field's, a date field's and a select's trailing glyph share one right
-/// inset and sit on the frame's middle, where the text is.
-#[test]
-fn trailing_glyphs_of_text_date_and_select_fields_align() {
+/// inset and sit on the middle of the control, where the text is.
+async fn trailing_glyphs_align(page: &Page) -> Result<()> {
     const MEASURE: &str = "[...document.querySelectorAll('[data-align]')].map(c => \
-        [c.dataset.align, ...[...c.querySelectorAll('[data-frame]')].flatMap(frame => { \
+        [c.dataset.align, [...c.querySelectorAll('[data-frame]')].flatMap(frame => { \
             const f = frame.getBoundingClientRect(); \
+            const t = frame.querySelector('[data-slot=control]').getBoundingClientRect(); \
             const g = frame.querySelector('[data-slot=trailing] svg, [data-slot=control] > svg').getBoundingClientRect(); \
-            return [f.right - g.right, (g.top + g.bottom - f.top - f.bottom) / 2]; \
+            return [f.right - g.right, (g.top + g.bottom - t.top - t.bottom) / 2]; \
         })])";
-    block_on(async {
-        let fixture = Fixture::open("/text-field/field-icons", Viewport::Desktop)
-            .await
-            .unwrap();
-        let page = &fixture.page;
-        wait::for_visible(page, "[data-align='md'] [data-slot=icon]")
-            .await
-            .unwrap();
-        let cases: Vec<(String, Vec<f64>)> = page
-            .evaluate_bounded(&format!("{MEASURE}.map(([name, ...rest]) => [name, rest])"))
-            .await
-            .unwrap()
-            .into_value()
-            .unwrap();
-        assert_eq!(cases.len(), 3, "{cases:?}");
-        for (name, m) in cases {
-            assert_eq!(m.len(), 6, "{name}: text, date, select: {m:?}");
-            let (text_inset, date_inset, select_inset) = (m[0], m[2], m[4]);
-            assert!(
-                (text_inset - date_inset).abs() < 0.5,
-                "{name}: date inset: {m:?}"
+    wait::for_visible(page, "[data-align='md'] [data-slot=icon]").await?;
+    let cases: Vec<(String, Vec<f64>)> = page.evaluate_bounded(MEASURE).await?.into_value()?;
+    ensure!(cases.len() == 3, "{cases:?}");
+    for (name, m) in cases {
+        ensure!(m.len() == 6, "{name}: text, date, select: {m:?}");
+        let (text_inset, date_inset, select_inset) = (m[0], m[2], m[4]);
+        ensure!(
+            (text_inset - date_inset).abs() < 0.5,
+            "{name}: date inset: {m:?}"
+        );
+        ensure!(
+            (text_inset - select_inset).abs() < 0.5,
+            "{name}: select inset: {m:?}"
+        );
+        for (what, offset) in [("text", m[1]), ("date", m[3]), ("select", m[5])] {
+            ensure!(
+                offset.abs() < 0.5,
+                "{name}: {what} glyph off the middle by {offset}: {m:?}"
             );
-            assert!(
-                (text_inset - select_inset).abs() < 0.5,
-                "{name}: select inset: {m:?}"
-            );
-            for (what, offset) in [("text", m[1]), ("date", m[3]), ("select", m[5])] {
-                assert!(
-                    offset.abs() < 0.5,
-                    "{name}: {what} glyph off the middle by {offset}: {m:?}"
-                );
-            }
         }
-        fixture.close().await.unwrap();
-    });
+    }
+    Ok(())
+}
+
+mod trailing_glyphs_of_text_date_and_select_fields_align {
+    use e2e::{Fixture, Viewport, browser::block_on};
+
+    #[test]
+    fn web() {
+        block_on(async {
+            let fixture = Fixture::open("/text-field/field-icons", Viewport::Desktop)
+                .await
+                .unwrap();
+            super::trailing_glyphs_align(&fixture.page).await.unwrap();
+            fixture.close().await.unwrap();
+        });
+    }
+
+    #[cfg(feature = "android")]
+    #[test]
+    fn android() {
+        e2e::android::block_on(async {
+            let driver = e2e::driver::Android::open("/text-field/field-icons")
+                .await
+                .unwrap();
+            super::trailing_glyphs_align(driver.page()).await.unwrap();
+            driver
+                .finish("trailing_glyphs_of_text_date_and_select_fields_align")
+                .await
+                .unwrap();
+        });
+    }
 }
 
 /// Todo 2438: a field's input and the dropdown search boxes take the page's
