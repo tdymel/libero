@@ -4,7 +4,9 @@ use crate::components::{
 };
 use dioxus::prelude::*;
 use libero::components::FileFieldPart;
-use libero::components::{Code, CropOptions, FileField, FileRejection, Files, Flex, Text};
+use libero::components::{
+    Button, Code, CropOptions, FileField, FileRejection, FileTriggerArgs, Files, Flex, Text,
+};
 use libero::use_theme;
 
 struct AttachmentCopy;
@@ -42,6 +44,36 @@ fn prompt(values: &DemoValues) -> String {
 }
 
 const PROMPT: &str = "Drop files here, or click to pick";
+
+// snippet: let mut files = use_signal(Files::default);
+// snippet: in FileField { label: "Attachment", value: files(), onchange: move |picked| files.set(picked), .. }
+const TRIGGER_CODE: &str = r#"trigger: move |t: FileTriggerArgs| rsx! {
+    Button {
+        variant: "outline",
+        disabled: t.disabled,
+        onclick: move |_| t.open.call(()),
+        attributes: t.attributes,
+        "Choose a file"
+    }
+}"#;
+
+/// The demo's trigger: an outline `Button` naming the held file.
+fn trigger(t: FileTriggerArgs) -> Element {
+    let text = match t.files.len() {
+        0 => "Choose a file".to_string(),
+        1 => t.files[0].name(),
+        n => format!("{n} files"),
+    };
+    rsx! {
+        Button {
+            variant: "outline",
+            disabled: t.disabled,
+            onclick: move |_| t.open.call(()),
+            attributes: t.attributes,
+            "{text}"
+        }
+    }
+}
 
 #[component]
 pub fn FileFieldPage() -> Element {
@@ -85,6 +117,8 @@ pub fn FileFieldPage() -> Element {
                     prop("selection","Callback<SelectionArgs<FileData>, Element>")
                         .default("Chip, file name or card")
                         .doc("Draws one picked file, remove control included. `args.remove` removes it. Unset, a multiple `input` field draws a chip, a single one the file name, and a dropzone a card under its surface."),
+                    prop("trigger", "Callback<FileTriggerArgs, Element>")
+                        .doc("Draws the app's own control, an avatar or a button, in place of the Browse surface: no chips, cards, clear x or drop target. The field keeps its label, helper, error, `name`, `accept`, `max_size`, `capture` and `crop`. Make it a focusable `button`, spread `args.attributes` onto it, and call `args.open` from its click: a browser opens no picker outside a user gesture."),
                     prop("name", "FieldName<Files>")
                         .doc("What the files post as. A removed file stops posting. A path such as `Claim::FIELDS.receipts()` also binds the files to the surrounding `Form`'s value when the field has no `onchange`."),
                     prop("onchange", "EventHandler<Files>")
@@ -126,6 +160,14 @@ pub fn FileFieldPage() -> Element {
                     prop("readonly", "bool").doc("The field is read-only: `remove` does nothing, so draw no remove control."),
                 ])
                 .without_base_props(),
+                props("FileTriggerArgs", vec![
+                    prop("open", "Callback<()>").doc("Opens the system picker. Call it inside the trigger's click."),
+                    prop("files", "Files").doc("What the field holds, to draw an avatar or a name."),
+                    prop("disabled", "bool").doc("The field is disabled or read-only: `open` does nothing."),
+                    prop("loading", "bool").doc("The field's `loading`."),
+                    prop("attributes", "Vec<Attribute>").doc("The field's id, its names, `aria-invalid`, `aria-busy` and the field's own attributes. Spread them onto the trigger."),
+                ])
+                .without_base_props(),
                 props("FileRejection", vec![
                     prop("file", "FileData").doc("The refused file."),
                     prop("reason", "RejectReason").doc("`Type`: `accept` excludes it. `TooMany`: it came past `max_files`, or past the first on a field without `multiple`. `TooLarge`: it is larger than `max_size`."),
@@ -152,7 +194,10 @@ pub fn FileFieldPage() -> Element {
                     "In the `dropzone` variant each card's remove button is its own tab stop.",
                     "A `readonly` field refuses a drop or a Browse press without a message: Browse says `aria-disabled` and no file is added.",
                 ])
-                .must(["Without a `label`, pass `aria_label`, which names the group and the Browse button."])
+                .must([
+                    "Without a `label`, pass `aria_label`, which names the group and the Browse button.",
+                    "A `trigger` is a focusable `button` carrying `args.attributes`, and calls `args.open` inside its click.",
+                ])
                 .example("An attachment field, `FileField { label: \"Attachment\" }`: a group named \"Attachment\". Browse is its tab stop: Enter opens the picker and Backspace removes the picked file."),
             lead: rsx! {
                 Text {
@@ -225,6 +270,11 @@ pub fn FileFieldPage() -> Element {
                                 false => vec!["clearable: false".to_string()],
                             }
                         }),
+                    // The app's own button in place of the surface (todo 4104).
+                    Control::switch("trigger").code(|_, values| match is_on(values, "trigger") {
+                        true => vec![TRIGGER_CODE.to_string()],
+                        false => vec![],
+                    }),
                     Control::switch("required"),
                     Control::switch("disabled"),
                     Control::switch("loading"),
@@ -273,6 +323,7 @@ fn FileFieldDemo(values: DemoValues) -> Element {
                 required: is_on(&values, "required").then_some(true),
                 disabled: is_on(&values, "disabled").then_some(true),
                 loading: is_on(&values, "loading").then_some(true),
+                trigger: is_on(&values, "trigger").then_some(Callback::new(trigger)),
                 onchange: move |picked: Files| files.set(picked),
                 onreject: move |rejected: Vec<FileRejection>| {
                     refused.set(

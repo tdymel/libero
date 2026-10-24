@@ -129,7 +129,7 @@ pub use field_status::FieldStatus;
 pub use fieldset::{Fieldset, FieldsetPart, FieldsetProps};
 #[cfg(feature = "file-field")]
 pub use file_field::{
-    FileField, FileFieldPart, FileFieldProps, FileRejection, Files, RejectReason,
+    FileField, FileFieldPart, FileFieldProps, FileRejection, FileTriggerArgs, Files, RejectReason,
 };
 #[cfg(feature = "form-root")]
 pub use form::{Form, FormPart, FormProps, SummaryMode};

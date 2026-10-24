@@ -83,13 +83,14 @@ pub(super) static FILE_BROWSE_SX: StaticSx = StaticSx::new(|| {
                 .text_overflow("ellipsis")
                 .white_space("nowrap"),
         )
-        // The picker cue once chips fill the line; 3:1 on the field (WCAG 1.4.11).
+        // The picker cue once chips fill the line, at the end beside the clear x;
+        // 3:1 on the field (WCAG 1.4.11).
         .selector(
             "& > svg",
             sx().flex("none")
                 .width("1.25em")
                 .height("1.25em")
-                .margin_inline("auto")
+                .margin_inline_start("auto")
                 .color("muted.6"),
         )
         .selector("&:disabled", sx().cursor("not-allowed"))

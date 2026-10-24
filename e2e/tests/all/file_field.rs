@@ -91,6 +91,95 @@ e2e::scenario!(
     ios: skip("3194: the simulator's picker opens but is not driven; see browse_opens_the_ios_picker")
 );
 
+/// Todo 4104: the app's trigger opens the chooser and draws the picked file's name.
+async fn trigger_picks<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    d.choose_files("#portrait", &[("me.txt", "a portrait")])
+        .await?;
+    eventually_text(d, "#portrait", "me.txt", "the trigger names the pick").await
+}
+
+e2e::scenario!(
+    a_trigger_opens_the_chooser_and_takes_the_pick,
+    "/file-field/trigger",
+    trigger_picks,
+    native: skip("rfd opens the desktop portal's dialog, which no driver answers"),
+    desktop: skip("1126: the GTK file chooser is not driven"),
+    ios: skip("3194: the simulator's picker opens but is not driven")
+);
+
+/// Todo 4104: the trigger carries the field's id and names, replaces the surface, and a
+/// read-only field's trigger opens nothing.
+#[test]
+fn a_trigger_carries_the_field_and_a_read_only_one_opens_nothing() {
+    block_on(async {
+        let fixture = Fixture::open("/file-field/trigger", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        wait::for_visible(page, "#portrait").await.unwrap();
+        let read = |js: String| async move {
+            page.evaluate_bounded(js)
+                .await
+                .unwrap()
+                .into_value::<String>()
+                .unwrap()
+        };
+        // The texts behind an id-list attribute, joined.
+        let names = |attr: &str| {
+            format!(
+                "(document.querySelector('#portrait').getAttribute('{attr}') || '').split(' ')\
+                 .map(id => document.getElementById(id)?.textContent.trim()).join('|')"
+            )
+        };
+        let named = read(names("aria-labelledby")).await;
+        assert!(
+            named.starts_with("Portrait") && named.ends_with("|Choose a portrait"),
+            "the label, then the trigger's own text: {named}"
+        );
+        let described = read(names("aria-describedby")).await;
+        assert!(
+            described.contains("Square photos look best."),
+            "{described}"
+        );
+        assert!(
+            described.split('|').count() >= 2,
+            "the required word: {described}"
+        );
+        let surface: bool = page
+            .evaluate_bounded("document.querySelector('[data-slot=browse], [role=group]') === null")
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        assert!(surface, "the trigger replaces the Browse surface");
+
+        // Each opening by the field that owns the input, the dialog kept shut.
+        page.evaluate_bounded(
+            "window.__by = []; document.addEventListener('click', e => { \
+             if (e.target.matches('input[type=file]')) { e.preventDefault(); \
+             window.__by.push(e.target.parentElement.querySelector('button').id); } }, true)",
+        )
+        .await
+        .unwrap();
+        pointer::click(page, "#locked").await.unwrap();
+        pointer::click(page, "#portrait").await.unwrap();
+        wait::for_js_true(
+            page,
+            "window.__by.includes('portrait')",
+            "the editable trigger opens",
+        )
+        .await
+        .unwrap();
+        assert_eq!(
+            read("window.__by.join(' ')".into()).await,
+            "portrait",
+            "only the editable trigger opens"
+        );
+        fixture.console.assert_clean("file trigger").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
 /// What WebKit's picker for a bare `<input type=file>` offers on an iPhone, by recall: the
 /// page's own Browse button names none of them.
 const IOS_PICKER: [&str; 3] = ["Photo Library", "Choose File", "Take Photo"];
@@ -361,6 +450,20 @@ fn a_held_field_keeps_a_picker_cue() {
         )
         .await
         .unwrap();
+        // Todo 4105: at the button's end, beside the clear x, not mid-field.
+        let gap: f64 = page
+            .evaluate_bounded(format!(
+                "document.querySelector({CONTROL:?}).getBoundingClientRect().right \
+                 - {cue}.getBoundingClientRect().right"
+            ))
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        assert!(
+            gap.abs() <= 1.0,
+            "the glyph ends {gap}px before the Browse button"
+        );
         fixture.console.assert_clean("picker cue").unwrap();
         fixture.close().await.unwrap();
     });

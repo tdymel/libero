@@ -1,6 +1,6 @@
 # Skipped e2e scenarios
 
-Scenarios: 697
+Scenarios: 698
 
 Generated from the `scenario!` skips in `e2e/tests/all` by `cargo test -p e2e --lib skips`; edit the skip, not this file. A reason starting `upstream:` waits on Dioxus, Blitz, wry or the engine (revisit on their update, todo 3362), a number names the todo that removes it.
 
@@ -59,6 +59,9 @@ The performance scenarios (units `perf`, `table_perf`) are no skips but run on r
 | `file_field::a_pick_over_max_files_keeps_the_first_two_and_refuses_the_rest` | desktop | 1126: the GTK file chooser is not driven |
 | `file_field::a_pick_over_max_files_keeps_the_first_two_and_refuses_the_rest` | ios | 3194: the simulator's picker opens but is not driven; see browse_opens_the_ios_picker |
 | `file_field::a_pick_over_max_files_keeps_the_first_two_and_refuses_the_rest` | native | rfd opens the desktop portal's dialog, which no driver answers |
+| `file_field::a_trigger_opens_the_chooser_and_takes_the_pick` | desktop | 1126: the GTK file chooser is not driven |
+| `file_field::a_trigger_opens_the_chooser_and_takes_the_pick` | ios | 3194: the simulator's picker opens but is not driven |
+| `file_field::a_trigger_opens_the_chooser_and_takes_the_pick` | native | rfd opens the desktop portal's dialog, which no driver answers |
 | `file_field::browse_opens_the_ios_picker` | all but ios | the system picker's text is read on iOS only |
 | `file_field::browse_picks_a_file_and_rust_reads_it` | desktop | 1126: the GTK file chooser is not driven |
 | `file_field::browse_picks_a_file_and_rust_reads_it` | ios | 3194: the simulator's picker opens but is not driven; see browse_opens_the_ios_picker |

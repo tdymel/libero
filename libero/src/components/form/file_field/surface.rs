@@ -19,7 +19,7 @@ use crate::{
     theme::Size,
 };
 
-use super::file_field::FileFieldPart;
+use super::file_field::{FileFieldPart, FileTriggerArgs};
 use super::files::Files;
 use super::rows::{ChipKeys, StandIn, card_list, chip_list};
 use super::styles::{FILE_BROWSE_SX, FILE_CONTROL_SX, FILE_DROPZONE_BROWSE_SX, FILE_DROPZONE_SX};
@@ -100,18 +100,8 @@ impl Surface {
             attributes,
         } = self;
         let required_id = format!("{id}-required");
-        // Neither a group nor a button may carry `aria-required`.
-        let required_label = current_localization().file_field.required;
-        // The label, then the button's own text: "Receipt, Browse files".
-        let named = labelledby.as_ref().map(|label| format!("{label} {id}"));
-        let described = [
-            required.then_some(required_id.as_str()),
-            describedby.as_deref(),
-        ]
-        .into_iter()
-        .flatten()
-        .collect::<Vec<_>>()
-        .join(" ");
+        let named = named(labelledby.as_deref(), &id);
+        let described = described(&id, required, describedby.as_deref());
         // Without a label the caller's `aria_label` names the group as well as Browse.
         let group_name = attributes
             .iter()
@@ -146,10 +136,7 @@ impl Surface {
             .attr("tabindex", "0")
             .attr("data-slot", FileFieldPart::Browse.slot())
             .attr("aria-labelledby", named)
-            .attr(
-                "aria-describedby",
-                (!described.is_empty()).then_some(described),
-            )
+            .attr("aria-describedby", described)
             .attr("aria-invalid", invalid.then_some("true"))
             // Read-only stays a tab stop that refuses; disabled leaves the order.
             .attr(
@@ -205,9 +192,7 @@ impl Surface {
                     {chips}
                     {button}
                     {ring_overlay()}
-                    if required {
-                        span { id: required_id, hidden: true, "{required_label}" }
-                    }
+                    {required_note(&required_id, required)}
                     {after}
                 },
             )
@@ -381,6 +366,69 @@ pub(super) fn file_dropzone_variant(
     field.render(rsx! {
         {drop_target}
         {card_list}
+        {input}
+        {announcer}
+    })
+}
+
+/// The label, then the control's own text: "Receipt, Browse files".
+fn named(labelledby: Option<&str>, id: &str) -> Option<String> {
+    labelledby.map(|label| format!("{label} {id}"))
+}
+
+/// The required note's id, then the field's own descriptions.
+fn described(id: &str, required: bool, describedby: Option<&str>) -> Option<String> {
+    let required_id = format!("{id}-required");
+    let ids = [required.then_some(required_id.as_str()), describedby]
+        .into_iter()
+        .flatten()
+        .collect::<Vec<_>>()
+        .join(" ");
+    (!ids.is_empty()).then_some(ids)
+}
+
+/// Neither a group nor a button may carry `aria-required`, so a hidden word says it.
+fn required_note(required_id: &str, required: bool) -> Option<Element> {
+    let label = current_localization().file_field.required;
+    required.then(|| rsx! { span { id: "{required_id}", hidden: true, "{label}" } })
+}
+
+/// With `trigger`: the app's control in place of the surface. The input stays,
+/// since it posts and opens the picker.
+pub(super) fn file_trigger_variant(
+    field: PreparedField,
+    control: Surface,
+    draw: Callback<FileTriggerArgs, Element>,
+    mut args: FileTriggerArgs,
+    input: Element,
+    announcer: Element,
+) -> Element {
+    let Surface {
+        id,
+        labelledby,
+        describedby,
+        invalid,
+        required,
+        loading,
+        attributes,
+        ..
+    } = control;
+    let required_id = format!("{id}-required");
+    let attribute = |name: &'static str, value: String| Attribute::new(name, value, None, false);
+    args.attributes = [
+        named(labelledby.as_deref(), &id).map(|v| attribute("aria-labelledby", v)),
+        described(&id, required, describedby.as_deref()).map(|v| attribute("aria-describedby", v)),
+        invalid.then(|| attribute("aria-invalid", "true".into())),
+        loading.then(|| attribute("aria-busy", "true".into())),
+        Some(attribute("id", id)),
+    ]
+    .into_iter()
+    .flatten()
+    .chain(attributes)
+    .collect();
+    field.render(rsx! {
+        {draw.call(args)}
+        {required_note(&required_id, required)}
         {input}
         {announcer}
     })

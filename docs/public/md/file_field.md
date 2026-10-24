@@ -1,7 +1,7 @@
 # FileField
 
 Crate: `libero`
-Import: `use libero::components::{FileField, Files};`
+Import: `use libero::components::{FileField, FileTriggerArgs, Files};`
 Feature: `file-field` (off by default, turns on `chip`, `select`, `alert`, `modal`, `action-icon`, `button`, `dialog`, `loader`; [features.md](features.md))
 Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/form/file_field>
 Index: [index.md](index.md) lists every other page
@@ -34,6 +34,40 @@ fn Demo() -> Element {
 }
 ```
 
+### Your own trigger
+
+`trigger` draws the app's own control, an avatar or a button, in place of the
+Browse surface. Spread `args.attributes` onto it (a libero `Button` takes them
+as `attributes`) and call `args.open` inside its click.
+
+```rust
+use dioxus::prelude::*;
+use libero::components::{FileField, FileTriggerArgs, Files};
+
+#[component]
+fn Photo() -> Element {
+    let mut photo = use_signal(Files::default);
+
+    rsx! {
+        FileField {
+            label: "Photo",
+            accept: "image/*",
+            value: photo(),
+            onchange: move |files| photo.set(files),
+            trigger: move |t: FileTriggerArgs| rsx! {
+                button {
+                    r#type: "button",
+                    disabled: t.disabled,
+                    onclick: move |_| t.open.call(()),
+                    ..t.attributes,
+                    "Change photo"
+                }
+            },
+        }
+    }
+}
+```
+
 ## Props
 
 ### `FileField`
@@ -53,6 +87,7 @@ fn Demo() -> Element {
 | `crop` | `CropOptions` | - | A single picked or dropped image opens in an `ImageCropper` dialog first, its box centred at 80% of the largest `aspect` allows: Apply hands `onchange` the cut file, Cancel drops it. A crop that fails keeps the dialog open on an error and hands over nothing. Under Blitz an AVIF passes through uncropped, and a WebP is cut lossless, so it can be larger than on the web. Ignored on a `multiple` field. `CropOptions` sets `aspect`, `shape`, `pan` and `max_size`, as on `ImageCropper`. Needs the `image-cropper` feature: without it the file passes uncropped, with a warning in a debug build. |
 | `oncrop` | `EventHandler<CropRect>` | - | The box picked in the crop dialog, before the cut file reaches `onchange`. |
 | `selection` | `Callback<SelectionArgs<FileData>, Element>` | `Chip`, or the file name | Draws one picked file, remove control included. `args.remove` removes it. Unset, a multiple `input` field draws a chip, a single one the file name, and a dropzone a card under its surface. |
+| `trigger` | `Callback<FileTriggerArgs, Element>` | - | Draws the app's own control, an avatar or a button, in place of the Browse surface: no chips, cards, clear x or drop target. The field keeps its label, helper, error, `name`, `accept`, `max_size`, `capture` and `crop`. Make it a focusable `button`, spread `args.attributes` onto it, and call `args.open` from its click: a browser opens no picker outside a user gesture. |
 | `name` | `FieldName<Files>` | - | What the files post as. A removed file stops posting. A path such as `Claim::FIELDS.receipts()` also binds the files to the surrounding `Form`'s value when the field has no `onchange`. |
 | `onchange` | `EventHandler<Files>` | - | Fires with the files the field should hold next, after a pick, a drop, a removal or a clear. A pick or a drop hands over only the files it brought, so on a `multiple` field it replaces the earlier ones, as a native file input does. A removal or a clear hands over what is left. |
 | `onreject` | `EventHandler<Vec<FileRejection>>` | - | Fires with the files a pick or a drop brought that the field refused: a type `accept` excludes, a file past `max_files` or past the first on a field without `multiple`, or a file larger than `max_size`. Each `FileRejection` holds the `file` and a `reason`, `RejectReason::Type`, `TooMany` or `TooLarge`. The field already announces the refusal politely, in the localization's `file_field.rejected_type`, `rejected_many`, `rejected_max` and `rejected_large`. Use it to show the refusal on screen, for example in `status`. |
@@ -79,6 +114,16 @@ Like every component, `FileField` also takes the shared props `sx`, `class`,
 | `remove` | `Callback<()>` | - | Drops this file from the value. |
 | `disabled` | `bool` | - | The field is disabled: `remove` does nothing, so draw no remove control. |
 | `readonly` | `bool` | - | The field is read-only: `remove` does nothing, so draw no remove control. |
+
+### `FileTriggerArgs`
+
+| Prop | Type | Default | Description |
+|---|---|---|---|
+| `open` | `Callback<()>` | - | Opens the system picker. Call it inside the trigger's click. |
+| `files` | `Files` | - | What the field holds, to draw an avatar or a name. |
+| `disabled` | `bool` | - | The field is disabled or read-only: `open` does nothing. |
+| `loading` | `bool` | - | The field's `loading`. |
+| `attributes` | `Vec<Attribute>` | - | The field's id, its names, `aria-invalid`, `aria-busy` and the field's own attributes. Spread them onto the trigger. |
 
 ### `FileRejection`
 
@@ -143,6 +188,7 @@ explains how parts work.
 ### You must
 
 - Without a `label`, pass `aria_label`, which names the group and the Browse button.
+- A `trigger` is a focusable `button` carrying `args.attributes`, and calls `args.open` inside its click.
 
 ### Example
 

@@ -33,7 +33,8 @@ use super::intake::{Intake, Limits, Taking, use_file_intake, use_input_mirror};
 use super::rows::{ChipKeys, FileRows, FocusDebt, use_chip_cursor, use_focus_debt};
 use super::styles::{FILE_CARD_LIST_SX, FILE_CARD_SX, FILE_CHIP_SX, FILE_INPUT_SX};
 use super::surface::{
-    Cards, Chips, Surface, file_dropzone_variant, file_input_variant, trailing_slot,
+    Cards, Chips, Surface, file_dropzone_variant, file_input_variant, file_trigger_variant,
+    trailing_slot,
 };
 
 input_from_str!(FileFieldVariant);
@@ -96,6 +97,11 @@ field_props! {
         /// Draws one picked file, remove control included (`args.remove`).
         #[props(default)]
         selection: Option<Callback<SelectionArgs<FileData>, Element>>,
+        /// Draws the app's own control in place of the variant's surface: no
+        /// chips, cards, clear x or drop target. Make it a focusable `button`
+        /// and call `args.open` from its click.
+        #[props(default)]
+        trigger: Option<Callback<FileTriggerArgs, Element>>,
         /// What the files post as, kept equal to `value`. A path also binds it
         /// to the surrounding `Form`.
         #[props(default, into)]
@@ -124,6 +130,48 @@ field_props! {
         #[props(default)]
         children: Element,
     }
+}
+
+/// What `FileField`'s `trigger` callback gets to draw its control with.
+///
+/// ```rust
+/// # use dioxus::prelude::*;
+/// # use libero::components::{FileField, FileTriggerArgs, Files};
+/// # fn app() -> Element {
+/// let mut photo = use_signal(Files::default);
+/// rsx! {
+///     FileField {
+///         label: "Photo",
+///         accept: "image/*",
+///         value: photo(),
+///         onchange: move |files| photo.set(files),
+///         trigger: move |t: FileTriggerArgs| rsx! {
+///             button {
+///                 r#type: "button",
+///                 disabled: t.disabled,
+///                 onclick: move |_| t.open.call(()),
+///                 ..t.attributes,
+///                 "Change photo"
+///             }
+///         },
+///     }
+/// }
+/// # }
+/// ```
+#[derive(Clone, PartialEq)]
+pub struct FileTriggerArgs {
+    /// Opens the system picker. Call it inside the click: a browser opens no
+    /// picker outside a user gesture.
+    pub open: Callback<()>,
+    /// What the field holds, to draw an avatar or a name.
+    pub files: Files,
+    /// The field is disabled or read-only: `open` does nothing.
+    pub disabled: bool,
+    pub loading: bool,
+    /// `id`, `aria-labelledby`, `aria-describedby`, `aria-invalid`, `aria-busy`
+    /// and the field's own `attributes`: spread them onto the trigger, or hand
+    /// them to a libero `Button` as `attributes`.
+    pub attributes: Vec<Attribute>,
 }
 
 /// Files picked from the system dialog or dropped on the control.
@@ -215,6 +263,12 @@ pub fn FileField(props: FileFieldProps) -> Element {
     use_input_mirror(input_element, value.clone());
 
     let open = use_picker(&props, input_element, pick);
+    // The trigger's click is the user gesture, so this opens at once.
+    let trigger_open = use_callback(move |()| {
+        if editable {
+            open.call(());
+        }
+    });
 
     let field_sx = full_width(&props.sx);
 
@@ -363,10 +417,24 @@ pub fn FileField(props: FileFieldProps) -> Element {
     });
     #[cfg(not(feature = "image-cropper"))]
     let gate: Option<Element> = None;
-    let field = match variant {
+    let field = match (props.trigger, variant) {
+        (Some(draw), _) => file_trigger_variant(
+            field,
+            control,
+            draw,
+            FileTriggerArgs {
+                open: trigger_open,
+                files: value.clone(),
+                disabled: !editable,
+                loading,
+                attributes: Vec::new(),
+            },
+            input,
+            announcer,
+        ),
         // A scope per variant: their hooks differ, so a `variant` switch must
         // remount rather than reuse the other's slots.
-        FileFieldVariant::Input => file_input_variant(
+        (None, FileFieldVariant::Input) => file_input_variant(
             field,
             control,
             states,
@@ -379,7 +447,7 @@ pub fn FileField(props: FileFieldProps) -> Element {
             input,
             announcer,
         ),
-        FileFieldVariant::Dropzone => file_dropzone_variant(
+        (None, FileFieldVariant::Dropzone) => file_dropzone_variant(
             field,
             control,
             states,

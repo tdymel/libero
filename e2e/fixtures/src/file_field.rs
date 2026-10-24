@@ -2,7 +2,8 @@
 
 use dioxus::prelude::*;
 use libero::components::{
-    Button, CropOptions, CropRect, FileField, FileRejection, Files, Flex, Form, use_form,
+    Button, CropOptions, CropRect, FileField, FileRejection, FileTriggerArgs, Files, Flex, Form,
+    use_form,
 };
 
 use crate::Routes;
@@ -18,7 +19,50 @@ pub const ROUTES: Routes = &[
     ("/file-field/reset", || rsx! { FileResetPage {} }),
     ("/file-field/single", || rsx! { FileSinglePage {} }),
     ("/file-field/limits", || rsx! { FileLimitsPage {} }),
+    ("/file-field/trigger", || rsx! { FileTriggerPage {} }),
 ];
+
+/// Todo 4104: the app's own button opens the picker. `#portrait` is required with a
+/// helper; `#locked` is read-only and draws `aria-disabled` instead of `disabled`.
+#[component]
+fn FileTriggerPage() -> Element {
+    let mut portrait = use_signal(Files::default);
+    let mut locked = use_signal(Files::default);
+    let trigger = |t: FileTriggerArgs| {
+        let name = t.files.one().map_or("Choose a portrait".to_string(), |file| file.name());
+        rsx! {
+            button {
+                r#type: "button",
+                "aria-disabled": t.disabled.then_some("true"),
+                onclick: move |_| t.open.call(()),
+                ..t.attributes,
+                "{name}"
+            }
+        }
+    };
+
+    rsx! {
+        Flex { direction: "column", gap: "md", max_width: "360px",
+            FileField {
+                id: "portrait",
+                label: "Portrait",
+                helper: "Square photos look best.",
+                required: true,
+                value: portrait(),
+                onchange: move |next: Files| portrait.set(next),
+                trigger,
+            }
+            FileField {
+                id: "locked",
+                label: "Locked",
+                readonly: true,
+                value: locked(),
+                onchange: move |next: Files| locked.set(next),
+                trigger,
+            }
+        }
+    }
+}
 
 /// A `multiple` field keeping two files of at most 5 bytes; `#rejected` reads what
 /// `onreject` got, as `Reason:name`.
