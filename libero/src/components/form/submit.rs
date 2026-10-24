@@ -37,7 +37,10 @@ impl<V: 'static> Submit<V> {
     ///         onsubmit: Submit::parse(place_order, move |command: PlaceOrder| {
     ///             let _ = command.amount;
     ///         }),
-    ///         TextField { label: "Amount", name: Order::FIELDS.amount().parsed() }
+    ///         TextField {
+    ///             label: "Amount",
+    ///             name: Order::FIELDS.amount().parsed().message(|_, _| "Enter a whole number.".into()),
+    ///         }
     ///     }
     /// }
     /// # }
