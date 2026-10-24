@@ -1294,3 +1294,59 @@ fn an_async_rule_answers_on_the_field_and_holds_the_submit() {
         fixture.close().await.unwrap();
     });
 }
+
+/// Todo 4116: with `pending_loader` a pending field draws a loader in its frame, at the frame's
+/// own height, and drops it with the answer.
+#[test]
+fn a_pending_field_draws_its_loader_inside_the_frame() {
+    block_on(async {
+        let fixture = Fixture::open("/form/async-rule-loader", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        page.evaluate_bounded(
+            "window.frameHeight = document.querySelector('[data-slot=frame]').getBoundingClientRect().height",
+        )
+        .await
+        .unwrap();
+
+        pointer::click(page, "#email").await.unwrap();
+        keyboard::type_text(page, "me@libero.dev").await.unwrap();
+        keyboard::press(page, keyboard::TAB).await.unwrap();
+        wait::for_js_true(
+            page,
+            "(() => { const loader = document.querySelector('[data-slot=frame] > [data-pending] > [aria-hidden]'); \
+             return !!loader && loader.getBoundingClientRect().width > 0; })()",
+            "the loader drawn while the rule asks",
+        )
+        .await
+        .unwrap();
+        wait::for_js_true(
+            page,
+            "document.querySelector('[data-slot=frame]').getBoundingClientRect().height === window.frameHeight",
+            "the frame at its own height beside the loader",
+        )
+        .await
+        .unwrap();
+        // An answer before the request would be dropped by it.
+        wait::for_js_true(
+            page,
+            "document.querySelector('[data-asked]').dataset.asked === '1'",
+            "the request after the pause",
+        )
+        .await
+        .unwrap();
+
+        click_button(page, "Free").await.unwrap();
+        wait::for_js_true(
+            page,
+            "!document.querySelector('[data-pending]')",
+            "the loader gone with the answer",
+        )
+        .await
+        .unwrap();
+
+        fixture.console.assert_clean("a pending loader").unwrap();
+        fixture.close().await.unwrap();
+    });
+}

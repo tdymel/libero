@@ -8,7 +8,8 @@ use crate::{
             HtmlTag, Input, Part, States, disabled_look_within_sx, focus_ring_sx, ring_overlay,
             ring_overlay_sx,
         },
-        form::FieldPart,
+        feedback::Loader,
+        form::{FieldPart, FormScope},
         layout::{BoxStyle, use_box},
     },
     platform::{
@@ -18,7 +19,7 @@ use crate::{
     sx::{StaticSx, Sx, sx},
     theme::{
         ACTION_ICON_GLYPH, ACTION_ICON_SIZE, BUTTON_HEIGHT, ColorCss, ColorShade, FieldDefaults,
-        ICON_DEFAULT_SIZE, ICON_SIZE, ICON_SLOT_PAD, PaperDefaults, Size, SizeCss,
+        ICON_DEFAULT_SIZE, ICON_SIZE, ICON_SLOT_PAD, LOADER_SIZE, PaperDefaults, Size, SizeCss,
     },
 };
 
@@ -91,6 +92,11 @@ static FIELD_FRAME_SX: StaticSx = StaticSx::new(|| {
                 ),
             )
         })
+        // The `Form`'s `pending_loader`, laid out as a slot.
+        .selector(
+            format!("& > [{PENDING_ATTR}]"),
+            sx().display("flex").align_items("center").flex("0 0 auto"),
+        )
         // A placeholder cell takes the control's place.
         .selector(
             format!("& > [{PLACEHOLDER_CELL_ATTR}]"),
@@ -149,6 +155,9 @@ static PLACEHOLDER_CELL_SX: StaticSx = StaticSx::new(|| {
                 .overflow_wrap("break-word"),
         )
 });
+
+/// Marks the loader a pending field draws (todo 4116).
+const PENDING_ATTR: &str = "data-pending";
 
 /// A press on the frame's padding is a press on its control (todo 462).
 const FRAME: &str = "[data-frame]";
@@ -214,6 +223,7 @@ pub(crate) struct FieldFrameBuilder<'a> {
     ids: [Option<String>; 2],
     placeholder: Option<Option<&'a str>>,
     multiline: bool,
+    cell: bool,
 }
 
 impl<'a> FieldFrameBuilder<'a> {
@@ -229,6 +239,13 @@ impl<'a> FieldFrameBuilder<'a> {
     #[inline]
     pub fn multiline(mut self) -> Self {
         self.multiline = true;
+        self
+    }
+
+    /// The frame is one of a field's cells (`PinField`): it draws no pending loader.
+    #[inline]
+    pub fn cell(mut self) -> Self {
+        self.cell = true;
         self
     }
 
@@ -344,7 +361,12 @@ impl<'a> FieldFrameBuilder<'a> {
         }
 
         let [leading_id, trailing_id] = self.ids;
+        let states = self.states.and_then(Input::as_ref);
+        let loading = !self.cell
+            && states.is_some_and(|states| states.iter().any(|state| state == ("pending", true)))
+            && try_consume_context::<FormScope>().is_some_and(|scope| scope.pending_loader());
         PreparedFrame {
+            pending: loading.then(|| pending_loader(states)),
             frame,
             leading: self
                 .leading
@@ -370,12 +392,13 @@ pub(crate) struct PreparedFrame {
     /// `Some` where the frame draws the placeholder: its text, if any.
     placeholder: Option<Option<String>>,
     multiline: bool,
+    pending: Option<Element>,
     trailing: Option<Element>,
 }
 
 impl PreparedFrame {
     pub fn render(self, control: Element) -> Element {
-        let mut children = Vec::with_capacity(4);
+        let mut children = Vec::with_capacity(5);
         children.extend(self.leading);
         children.push(match self.placeholder {
             Some(text) => rsx! {
@@ -388,6 +411,7 @@ impl PreparedFrame {
             },
             None => control,
         });
+        children.extend(self.pending);
         children.extend(self.trailing);
         children.push(ring_overlay());
 
@@ -481,6 +505,26 @@ fn PlaceholderCell(
             {control}
         },
     )
+}
+
+/// The loader at a slot icon's size, so the frame keeps its height. Silent: the control is `aria-busy`.
+fn pending_loader(states: Option<&States>) -> Element {
+    let size = Size::ALL
+        .into_iter()
+        .find(|size| {
+            states.is_some_and(|states| {
+                states
+                    .iter()
+                    .any(|state| state == (size.state_name(), true))
+            })
+        })
+        .unwrap_or(Size::Md);
+    let edge = ICON_SIZE.value(slot_icon_size(size));
+    rsx! {
+        span { "data-pending": true,
+            Loader { sx: sx().var(LOADER_SIZE, edge) }
+        }
+    }
 }
 
 /// No ring overlay in a slot: a button there draws its own ring, around

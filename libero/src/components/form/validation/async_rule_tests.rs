@@ -132,6 +132,8 @@ struct Setup {
     warning: bool,
     /// The rule fails with its own error type and words.
     foreign: bool,
+    /// The `Form`'s `pending_loader`.
+    loader: bool,
 }
 
 #[derive(Clone, Default)]
@@ -172,7 +174,7 @@ fn SignupForm(setup: Setup) -> Element {
         (false, false) => mapped.rules([checked_async(move |text: String| server.ask(text))]),
     };
     rsx! {
-        Form { form, value: signup,
+        Form { form, value: signup, pending_loader: setup.loader,
             onsubmit: move |_| sent.0.set(sent.0.get() + 1),
             if shown() {
                 TextField { label: "Email", name: mapped }
@@ -386,4 +388,85 @@ fn an_unmount_ends_the_request() {
     settle(&mut dom);
     assert!(server.dropped(0), "the request outlived the field");
     assert!(!checking(&dom));
+}
+
+/// Todo 4117: going back to an earlier value takes its answer without asking again.
+#[test]
+fn an_earlier_value_takes_its_kept_answer() {
+    let _clock = manual_timer::install();
+    let mut dom = mount();
+    let server = exposed::<Server>(&dom);
+    type_text(&mut dom, "a@x");
+    elapse(&mut dom, 300);
+    server.answer(0, Err(EmailError::Taken));
+    settle(&mut dom);
+    type_text(&mut dom, "b@x");
+    elapse(&mut dom, 300);
+    server.answer(1, Ok(()));
+    settle(&mut dom);
+    assert!(!has_errors(&dom));
+
+    type_text(&mut dom, "a@x");
+    assert!(!checking(&dom), "the earlier value is asked again");
+    assert!(has_errors(&dom), "the earlier value lost its answer");
+    type_text(&mut dom, "b@x");
+    elapse(&mut dom, 300);
+    assert!(!has_errors(&dom));
+    assert_eq!(server.asked(), ["a@x", "b@x"]);
+}
+
+/// Todo 4117: a reset forgets every kept answer, not only the last.
+#[test]
+fn a_reset_forgets_the_kept_answers() {
+    let _clock = manual_timer::install();
+    let mut dom = mount();
+    let server = exposed::<Server>(&dom);
+    let form = exposed::<FormHandle>(&dom);
+    for (index, text) in ["a@x", "b@x"].into_iter().enumerate() {
+        type_text(&mut dom, text);
+        elapse(&mut dom, 300);
+        server.answer(index, Ok(()));
+        settle(&mut dom);
+    }
+    dom.in_runtime(|| form.reset());
+    settle(&mut dom);
+
+    type_text(&mut dom, "a@x");
+    elapse(&mut dom, 300);
+    assert_eq!(
+        server.asked(),
+        ["a@x", "b@x", "a@x"],
+        "the reset kept an answer"
+    );
+}
+
+/// Todo 4116: the loader shows only while the revealed status is pending, and only opted in.
+#[test]
+fn the_pending_loader_shows_only_while_the_rule_asks() {
+    let _clock = manual_timer::install();
+    let mut dom = mount_with(Setup {
+        loader: true,
+        ..Setup::default()
+    });
+    let server = exposed::<Server>(&dom);
+    let html = type_text(&mut dom, "a@x");
+    assert!(
+        !html.contains("data-pending=true"),
+        "shown before a blur or submit: {html}"
+    );
+    let html = submit(&mut dom);
+    assert_eq!(html.matches("data-pending=true").count(), 1, "{html}");
+    server.answer(0, Ok(()));
+    let html = settle(&mut dom);
+    assert!(!html.contains("data-pending=true"), "{html}");
+}
+
+#[test]
+fn no_pending_loader_by_default() {
+    let _clock = manual_timer::install();
+    let mut dom = mount();
+    type_text(&mut dom, "a@x");
+    let html = submit(&mut dom);
+    assert!(html.contains(r#"aria-busy="true""#), "{html}");
+    assert!(!html.contains("data-pending=true"), "{html}");
 }

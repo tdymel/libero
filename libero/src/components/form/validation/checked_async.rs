@@ -23,6 +23,9 @@ use crate::{
 /// How long [`checked_async`] waits after the last edit before it asks, in ms.
 const DEBOUNCE_MS: u64 = 300;
 
+/// How many values' answers a field keeps; the oldest goes first.
+const KEPT_ANSWERS: usize = 8;
+
 /// An async rule over a mapped field's domain value, built by [`checked_async`].
 pub struct CheckedAsync<V: 'static, E: 'static> {
     rule: Ask<V, E>,
@@ -45,7 +48,8 @@ type RunFn<V> = dyn Fn(V) -> Pin<Box<dyn Future<Output = Option<Rc<dyn FieldErro
 /// A rule that asks elsewhere - a server - whether a parsed value is fine, for a mapped field's
 /// `.rules`. It runs once the value parsed and the other rules found no error, 300 ms after the
 /// last edit ([`debounce`](CheckedAsync::debounce)); meanwhile the field is [`FieldStatus::Pending`] and a submit waits for
-/// the answer. An answer for a value no longer there is dropped. The error takes the field's
+/// the answer. An answer for a value no longer there is dropped; one for an earlier value is
+/// kept, so going back to it asks no more (until a reset). The error takes the field's
 /// words, as a [`checked`](super::checked) rule's does, or its own [`message`](CheckedAsync::message).
 ///
 /// ```no_run
@@ -194,6 +198,8 @@ pub(crate) struct Checking {
     asked: RefCell<Option<Rc<dyn Any>>>,
     /// `None` while the rules run.
     answer: RefCell<Option<FieldStatus>>,
+    /// Earlier values' answers, newest last, at most [`KEPT_ANSWERS`].
+    answers: RefCell<Vec<(Rc<dyn Any>, FieldStatus)>>,
     /// Bumped by an answer; read in render, so an answer re-renders the field.
     answered: Signal<u32>,
     /// Counts the runs, so an answer from an older one is dropped.
@@ -213,6 +219,7 @@ impl Checking {
         let checking = Rc::new(Self {
             asked: RefCell::new(None),
             answer: RefCell::new(None),
+            answers: RefCell::new(Vec::new()),
             answered: Signal::new_in_scope(0, owner),
             run: Cell::new(0),
             task: Cell::new(None),
@@ -242,9 +249,29 @@ impl Checking {
             .and_then(|asked| asked.downcast_ref::<V>())
             .is_some_and(|asked| asked == value);
         if !same {
-            self.start(value.clone(), rules.to_vec(), locale);
+            match self.kept(value) {
+                Some(answer) => self.recall(value.clone(), answer),
+                None => self.start(value.clone(), rules.to_vec(), locale),
+            }
         }
         self.answer.borrow().clone().unwrap_or(FieldStatus::Pending)
+    }
+
+    fn kept<V: PartialEq + 'static>(&self, value: &V) -> Option<FieldStatus> {
+        self.answers
+            .borrow()
+            .iter()
+            .find(|(asked, _)| asked.downcast_ref::<V>() == Some(value))
+            .map(|(_, answer)| answer.clone())
+    }
+
+    /// Takes a kept answer for `value` without asking.
+    fn recall<V: 'static>(&self, value: V, answer: FieldStatus) {
+        self.stop();
+        self.run.set(self.run.get().wrapping_add(1));
+        *self.asked.borrow_mut() = Some(Rc::new(value));
+        *self.answer.borrow_mut() = Some(answer);
+        self.wake();
     }
 
     fn start<V: Clone + 'static>(
@@ -292,6 +319,13 @@ impl Checking {
         if let Some((mut scope, key)) = self.form {
             scope.answer(key, &status);
         }
+        if let Some(asked) = self.asked.borrow().clone() {
+            let mut answers = self.answers.borrow_mut();
+            if answers.len() == KEPT_ANSWERS {
+                answers.remove(0);
+            }
+            answers.push((asked, status.clone()));
+        }
         *self.answer.borrow_mut() = Some(status);
         let mut answered = self.answered;
         answered += 1;
@@ -321,6 +355,7 @@ impl Checking {
     pub(crate) fn forget(&self) {
         self.stop();
         self.asked.borrow_mut().take();
+        self.answers.borrow_mut().clear();
         self.wake();
     }
 

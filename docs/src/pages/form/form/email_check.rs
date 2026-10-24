@@ -44,12 +44,14 @@ pub fn EmailCheckForm() -> Element {
             value: signup,
             // A submit waits for the check, then sends or shows its answer.
             onsubmit: move |_| sent.set(signup.read().email.clone().unwrap_or_default()),
+            // A loader in the field while the server checks, once the field showed its rules.
+            pending_loader: true,
             TextField {
                 label: "Email",
                 autocomplete: "email",
                 required: true,
-                // Dimmed while the server checks, once the field showed its rules.
-                sx: libero::sx::sx().when("pending", libero::sx::sx().opacity("0.6").cursor("progress")),
+                // `data-state` `pending` while the server checks.
+                sx: libero::sx::sx().when("pending", libero::sx::sx().cursor("progress")),
                 // Asked 400 ms after the last keystroke, once the address parsed.
                 name: Signup::FIELDS.email().map(String::clone, email).message(email_message)
                     .rules([checked_async(email_free).debounce(400)]),

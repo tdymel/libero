@@ -109,6 +109,10 @@ base_props! {
         /// invalid field.
         #[props(default)]
         summary: SummaryMode,
+        /// Draws a `Loader` in a framed field while an async rule checks its value, once the
+        /// field shows that (after a blur or a submit). Off by default; `aria-busy` is set either way.
+        #[props(default)]
+        pending_loader: bool,
         /// Controls the form from outside, made with `use_form()`. Taken once: a swapped
         /// handle is ignored with a warning, so `key` the `Form` to use another.
         #[props(default)]
@@ -156,6 +160,7 @@ pub fn Form<V: FormValue>(props: FormProps<V>) -> Element {
     use_context_provider(|| handle);
     let key = use_hook(|| scope.key());
     use_drop(move || scope.withdraw(key));
+    scope.set_pending_loader(props.pending_loader);
     // A field binds on mount, so a different `Store` remounts the fields. `Store`
     // equality is identity, so a write is not a swap.
     let mut store = use_hook(|| CopyValue::new(props.value));

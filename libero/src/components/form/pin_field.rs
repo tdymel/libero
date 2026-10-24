@@ -179,7 +179,7 @@ pub fn PinField(props: PinFieldProps) -> Element {
 
     // One prepared frame and control, cloned per cell: neither carries an id,
     // so no hook runs again.
-    let frame = use_field_frame().states(&states).prepare();
+    let frame = use_field_frame().states(&states).cell().prepare();
     let control = use_box()
         .framework_sx(&FIELD_CONTROL_SX)
         .focus_ring(false)

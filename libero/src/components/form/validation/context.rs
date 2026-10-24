@@ -46,6 +46,8 @@ pub(crate) struct FormScope {
     errors: Signal<SetErrors, UnsyncStorage>,
     /// Fields' async rules by field key; a submit waits for them.
     checks: Signal<BTreeMap<usize, Rc<Checking>>, UnsyncStorage>,
+    /// The `Form`'s `pending_loader`: framed fields draw a loader while an async rule asks.
+    pending_loader: Signal<bool>,
     /// The scope that created the signals above. Cleanup runs inside it, or dioxus
     /// warns of a copy value used outside its owner.
     owner: ScopeId,
@@ -119,6 +121,7 @@ impl FormScope {
             waiting: Signal::new_maybe_sync(BTreeSet::new()),
             errors: Signal::new_maybe_sync(Vec::new()),
             checks: Signal::new_maybe_sync(BTreeMap::new()),
+            pending_loader: Signal::new(false),
             owner: current_scope_id(),
         }
     }
@@ -127,6 +130,17 @@ impl FormScope {
         let key = *self.next_key.peek();
         *self.next_key.write_unchecked() = key + 1;
         key
+    }
+
+    /// Reactive, so a changed `Form` prop redraws the fields.
+    pub fn pending_loader(&self) -> bool {
+        (self.pending_loader)()
+    }
+
+    pub fn set_pending_loader(&mut self, shown: bool) {
+        if *self.pending_loader.peek() != shown {
+            self.pending_loader.set(shown);
+        }
     }
 
     /// Reactive: every field re-renders on the first submit.

@@ -323,12 +323,14 @@ pub fn EmailCheckForm() -> Element {
             value: signup,
             // A submit waits for the check, then sends or shows its answer.
             onsubmit: move |_| sent.set(signup.read().email.clone().unwrap_or_default()),
+            // A loader in the field while the server checks, once the field showed its rules.
+            pending_loader: true,
             TextField {
                 label: "Email",
                 autocomplete: "email",
                 required: true,
-                // Dimmed while the server checks, once the field showed its rules.
-                sx: libero::sx::sx().when("pending", libero::sx::sx().opacity("0.6").cursor("progress")),
+                // `data-state` `pending` while the server checks.
+                sx: libero::sx::sx().when("pending", libero::sx::sx().cursor("progress")),
                 // Asked 400 ms after the last keystroke, once the address parsed.
                 name: Signup::FIELDS.email().map(String::clone, email).message(email_message)
                     .rules([checked_async(email_free).debounce(400)]),
@@ -466,6 +468,7 @@ Stepper {
 | `onsubmit` | `Submit<V>` | - | Fires on a submit with no errors: a closure over the `FormEvent` or an `EventHandler<FormEvent>`, optional too, `Submit::parse(parse, handler)`, or the async `Submit::parse_async(parse, handler)` and `Submit::task(handler)`. Without an `action`, the browser's own submit is cancelled. A `javascript:`, `data:` or `vbscript:` `action` is dropped with a debug warning, so it counts as none. |
 | `summary_title` | `String` | - | A heading over the error summary. |
 | `summary` | `SummaryMode` | `Visible` | `Visible`: a blocked submit or `set_errors` shows a summary of every error above the fields and focuses it. `Hidden`: no summary list; focus goes to the first field that shows its error, and a visually hidden status says how many errors there are (`form.error_count`). Errors no field shows, from `FormErrors::form` or a form rule without `.on(..)`, still show in the summary, which then takes focus when no field does. |
+| `pending_loader` | `bool` | `false` | Draws a silent `Loader` at the end of a framed field's box while a `checked_async` rule checks its value, once the field shows its rules (after a blur or a submit). The box keeps its height; the control is `aria-busy="true"` either way. Not in a `PinField`'s cells. |
 | `form` | `FormHandle` | - | Controls the form from outside, made with `use_form()`. Taken once, on mount. Without it the form makes its own, which `use_form_context()` returns inside the form. |
 | `children` | `Element` | required | The fields, fieldsets and buttons. |
 
@@ -506,7 +509,7 @@ any extra HTML attributes.
 | `.message(fn)` | `fn(&E, &Localization) -> String` | Words every error of type `E` on the field, the parse error, `checked` and `checked_async` rules alike. Needed when `E` has no `FieldError`, such as a domain crate's error: without it the name does not compile. |
 | `.rules(..)` | `Validator<T>, Checked<T, E> or CheckedAsync<T, E>` | Rules over `T`, run only on a parsed value. The field's own `validate` runs first, over `W`, before the parse; the first error wins. Adds to earlier calls, so a mixed list is two calls. |
 | `checked(f)` | `Checked<V, E>` | A rule from `Fn(&V) -> Result<(), E>`: the field shows `E`'s words. `.warning()` shows it as a warning, `.message(fn)` words an `E` with no `FieldError`. Fits any `validate` too. |
-| `checked_async(f)` | `CheckedAsync<V, E>` | An async rule from `Fn(V) -> impl Future<Output = Result<(), E>>`, such as a request, for `.rules` only. It runs once the value parsed and the other rules found no error, after `.debounce(ms)` (300 by default); an answer for an older value is dropped, and the last answer is kept for its value. Meanwhile the field is `FieldStatus::Pending`, and a submit asks at once and waits for the answer. `.warning()` shows a failure as a warning, which a submit does not wait for; `.message(fn)` words an `E` that is not the field's error type. |
+| `checked_async(f)` | `CheckedAsync<V, E>` | An async rule from `Fn(V) -> impl Future<Output = Result<(), E>>`, such as a request, for `.rules` only. It runs once the value parsed and the other rules found no error, after `.debounce(ms)` (300 by default); an answer for an older value is dropped. The answers for the last 8 values are kept, so going back to one asks again only after a reset. Meanwhile the field is `FieldStatus::Pending`, and a submit asks at once and waits for the answer. `.warning()` shows a failure as a warning, which a submit does not wait for; `.message(fn)` words an `E` that is not the field's error type. |
 | `pending` | `FieldStatus::Pending` | An async rule is still checking: `aria-busy="true"` on the control and `data-state` `pending`, no message, blocks nothing. It ranks below a warning and above `Valid`. A reset drops the check and its answer. |
 | `impl FieldError` | `trait` | `fn message(&self, &Localization) -> String`: an error's words in the active language, worded again on a switch. Implemented for `Fn(&Localization) -> String`, `String` and `&'static str`; there is no `Display` fallback. |
 | `.at(path, error)` | `FormErrors` | Errors by field path for `set_errors` and `parse`: `FormErrors::new().at(path, error)` with a `FieldError`, or `.at_with(path, error, fn)` worded by a `fn(&E, &Localization) -> String`. `path` is a `FieldPath`, a `FieldName` or its spelling. `.form(error)` is an error on the whole form, such as wrong credentials: an unlinked summary line, shown with `SummaryMode::Hidden` too, cleared by the next submit, a reset or `clear_errors`, not by an edit. |

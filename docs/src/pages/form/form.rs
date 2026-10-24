@@ -179,6 +179,9 @@ pub fn FormPage() -> Element {
                     prop("summary", "SummaryMode")
                         .default("Visible")
                         .doc("`Visible`: a blocked submit or `set_errors` shows a summary of every error above the fields and focuses it. `Hidden`: no summary list; focus goes to the first field that shows its error, and a visually hidden status says how many errors there are (`form.error_count`). Errors no field shows, from `FormErrors::form` or a form rule without `.on(..)`, still show in the summary, which then takes focus when no field does."),
+                    prop("pending_loader", "bool")
+                        .default("false")
+                        .doc("Draws a silent `Loader` at the end of a framed field's box while a `checked_async` rule checks its value, once the field shows its rules (after a blur or a submit). The box keeps its height; the control is `aria-busy=\"true\"` either way. Not in a `PinField`'s cells."),
                     prop("form", "FormHandle")
                         .doc("Controls the form from outside, made with `use_form()`. Taken once, on mount. Without it the form makes its own, which `use_form_context()` returns inside the form."),
                     prop("children", "Element")
@@ -235,7 +238,7 @@ pub fn FormPage() -> Element {
                     prop("checked(f)", "Checked<V, E>")
                         .doc("A rule from `Fn(&V) -> Result<(), E>`: the field shows `E`'s words. `.warning()` shows it as a warning, `.message(fn)` words an `E` with no `FieldError`. Fits any `validate` too."),
                     prop("checked_async(f)", "CheckedAsync<V, E>")
-                        .doc("An async rule from `Fn(V) -> impl Future<Output = Result<(), E>>`, such as a request, for `.rules` only. It runs once the value parsed and the other rules found no error, after `.debounce(ms)` (300 by default); an answer for an older value is dropped, and the last answer is kept for its value. Meanwhile the field is `FieldStatus::Pending`, and a submit asks at once and waits for the answer. `.warning()` shows a failure as a warning, which a submit does not wait for; `.message(fn)` words an `E` that is not the field's error type."),
+                        .doc("An async rule from `Fn(V) -> impl Future<Output = Result<(), E>>`, such as a request, for `.rules` only. It runs once the value parsed and the other rules found no error, after `.debounce(ms)` (300 by default); an answer for an older value is dropped. The answers for the last 8 values are kept, so going back to one asks again only after a reset. Meanwhile the field is `FieldStatus::Pending`, and a submit asks at once and waits for the answer. `.warning()` shows a failure as a warning, which a submit does not wait for; `.message(fn)` words an `E` that is not the field's error type."),
                     prop("pending", "FieldStatus::Pending")
                         .doc("An async rule is still checking: `aria-busy=\"true\"` on the control and `data-state` `pending`, no message, blocks nothing. It ranks below a warning and above `Valid`. A reset drops the check and its answer."),
                     prop("impl FieldError", "trait")

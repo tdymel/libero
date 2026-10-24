@@ -29,7 +29,8 @@ pub const ROUTES: Routes = &[
     ("/form/prefill-more", || rsx! { PrefillMorePage {} }),
     ("/form/async", || rsx! { AsyncSignInPage {} }),
     ("/form/secret", || rsx! { SecretPage {} }),
-    ("/form/async-rule", || rsx! { AsyncRulePage {} }),
+    ("/form/async-rule", || rsx! { AsyncRulePage { loader: false } }),
+    ("/form/async-rule-loader", || rsx! { AsyncRulePage { loader: true } }),
 ];
 
 #[derive(Clone, PartialEq, Default, Fields)]
@@ -85,9 +86,9 @@ impl Lookup {
     }
 }
 
-/// Todo 4087: an async rule the buttons answer; a submit waits for it.
+/// Todo 4087: an async rule the buttons answer; a submit waits for it. `loader`: todo 4116.
 #[component]
-fn AsyncRulePage() -> Element {
+fn AsyncRulePage(loader: bool) -> Element {
     let signup = use_store(Mailbox::default);
     let form = use_form();
     let lookup = use_hook(Lookup::default);
@@ -103,7 +104,7 @@ fn AsyncRulePage() -> Element {
     rsx! {
         Flex { direction: "column", gap: "md", max_width: "320px",
             span { "data-asked": "{asked}", "data-sent": "{sent}", "data-submitting": "{form.is_submitting()}" }
-            Form { form, value: signup, onsubmit: move |_| sent += 1,
+            Form { form, value: signup, pending_loader: loader, onsubmit: move |_| sent += 1,
                 TextField { id: "email", label: "Email", required: true,
                     name: Mailbox::FIELDS.email().map(String::clone, signup_email).message(email_words).rules([rule]) }
                 Button { r#type: "submit", loading: form.is_submitting(), "Sign up" }
