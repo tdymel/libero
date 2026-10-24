@@ -2,8 +2,12 @@
 //! the reveal toggle. One field per `data-case`.
 
 use dioxus::prelude::*;
-use libero::components::{
-    ActionIcon, Fieldset, Flex, Form, Icon, PasswordField, Rule, SvgData, Text, TextField, Textarea, not_empty,
+use libero::{
+    chrono::NaiveDate,
+    components::{
+        ActionIcon, ChronoField, Fieldset, Flex, Form, Icon, Options, PasswordField, Rule, Select, SvgData, Text,
+        TextField, Textarea, not_empty,
+    },
 };
 
 use crate::Routes;
@@ -15,6 +19,7 @@ pub const ROUTES: Routes = &[
     ("/text-field/upper", || rsx! { TextFieldUpperPage {} }),
     ("/text-field/password-echo", || rsx! { PasswordEchoPage {} }),
     ("/text-field/slot-icons", || rsx! { SlotIconsPage {} }),
+    ("/text-field/field-icons", || rsx! { FieldIconsPage {} }),
 ];
 
 const MAIL: SvgData = SvgData::new(
@@ -57,6 +62,32 @@ fn SlotIconsPage() -> Element {
                             }
                         },
                     }
+                }
+            }
+        }
+    }
+}
+
+#[derive(Clone, PartialEq, Options)]
+enum Gender {
+    Unspecified,
+    Other,
+}
+
+/// Todo 4126: the trailing icon of a text field, a date field and a select, per field size.
+#[component]
+fn FieldIconsPage() -> Element {
+    rsx! {
+        Flex { direction: "column", gap: "md", max_width: "320px",
+            for size in ["xs", "md", "xl"] {
+                div { "data-align": "{size}",
+                    TextField { label: "Name", size, trailing: rsx! { Icon { svg: MAIL, variant: "standard" } } }
+                    ChronoField::<NaiveDate> {
+                        label: "Birthday",
+                        size,
+                        trailing: rsx! { Icon { svg: MAIL, variant: "standard" } },
+                    }
+                    Select { label: "Gender", size, value: Gender::Unspecified, onchange: move |_| {} }
                 }
             }
         }

@@ -349,6 +349,53 @@ fn a_filled_slot_icon_has_the_box_of_a_filled_action_icon() {
     });
 }
 
+/// Todo 4126: a text field's, a date field's and a select's trailing glyph share one right
+/// inset and sit on the frame's middle, where the text is.
+#[test]
+fn trailing_glyphs_of_text_date_and_select_fields_align() {
+    const MEASURE: &str = "[...document.querySelectorAll('[data-align]')].map(c => \
+        [c.dataset.align, ...[...c.querySelectorAll('[data-frame]')].flatMap(frame => { \
+            const f = frame.getBoundingClientRect(); \
+            const g = frame.querySelector('[data-slot=trailing] svg, [data-slot=control] > svg').getBoundingClientRect(); \
+            return [f.right - g.right, (g.top + g.bottom - f.top - f.bottom) / 2]; \
+        })])";
+    block_on(async {
+        let fixture = Fixture::open("/text-field/field-icons", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        wait::for_visible(page, "[data-align='md'] [data-slot=icon]")
+            .await
+            .unwrap();
+        let cases: Vec<(String, Vec<f64>)> = page
+            .evaluate_bounded(&format!("{MEASURE}.map(([name, ...rest]) => [name, rest])"))
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        assert_eq!(cases.len(), 3, "{cases:?}");
+        for (name, m) in cases {
+            assert_eq!(m.len(), 6, "{name}: text, date, select: {m:?}");
+            let (text_inset, date_inset, select_inset) = (m[0], m[2], m[4]);
+            assert!(
+                (text_inset - date_inset).abs() < 0.5,
+                "{name}: date inset: {m:?}"
+            );
+            assert!(
+                (text_inset - select_inset).abs() < 0.5,
+                "{name}: select inset: {m:?}"
+            );
+            for (what, offset) in [("text", m[1]), ("date", m[3]), ("select", m[5])] {
+                assert!(
+                    offset.abs() < 0.5,
+                    "{name}: {what} glyph off the middle by {offset}: {m:?}"
+                );
+            }
+        }
+        fixture.close().await.unwrap();
+    });
+}
+
 /// Todo 2438: a field's input and the dropdown search boxes take the page's
 /// typeface and letter spacing, which a UA sheet resets on `<input>`.
 #[test]

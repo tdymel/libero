@@ -76,20 +76,23 @@ static FIELD_FRAME_SX: StaticSx = StaticSx::new(|| {
         // It also fills the button's box, so both share a column (4113).
         .per_size(|size| {
             let step = slot_icon_size(size);
+            let pad = format!(
+                "calc(({} - {}) / 2)",
+                BUTTON_HEIGHT.value(step),
+                ICON_SIZE.value(step)
+            );
             sx().selector(
                 "& > :is([data-slot='leading'], [data-slot='trailing'])",
                 sx().var(ICON_DEFAULT_SIZE, ICON_SIZE.value(step)),
             )
             .selector(
                 "& > :is([data-slot='leading'], [data-slot='trailing']) > [data-slot='icon']",
-                sx().var(
-                    ICON_SLOT_PAD,
-                    format!(
-                        "calc(({} - {}) / 2)",
-                        BUTTON_HEIGHT.value(step),
-                        ICON_SIZE.value(step)
-                    ),
-                ),
+                sx().var(ICON_SLOT_PAD, pad.clone()),
+            )
+            // A `Select`'s own chevron keeps the column a slot icon's glyph sits in (4126).
+            .selector(
+                "& > [data-slot='control'] > svg",
+                sx().with("margin-inline-end", pad),
             )
         })
         // The `Form`'s `pending_loader`, laid out as a slot.
