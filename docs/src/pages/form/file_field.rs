@@ -1,11 +1,12 @@
 use crate::components::{
-    Child, Control, Demo, DemoValues, DocPage, FieldCopy, a11y, field_controls, field_props, prop,
-    props, readonly_prop, status_prop,
+    Child, Control, Demo, DemoValues, DocPage, DocSection, FieldCopy, a11y, field_controls,
+    field_props, prop, props, readonly_prop, status_prop,
 };
 use dioxus::prelude::*;
 use libero::components::FileFieldPart;
 use libero::components::{
-    Button, Code, CropOptions, FileField, FileRejection, FileTriggerArgs, Files, Flex, Text,
+    Avatar, Button, Code, CodeBlock, CropOptions, FileField, FileRejection, FileTriggerArgs, Files,
+    Flex, Text,
 };
 use libero::use_theme;
 
@@ -118,7 +119,7 @@ pub fn FileFieldPage() -> Element {
                         .default("Chip, file name or card")
                         .doc("Draws one picked file, remove control included. `args.remove` removes it. Unset, a multiple `input` field draws a chip, a single one the file name, and a dropzone a card under its surface."),
                     prop("trigger", "Callback<FileTriggerArgs, Element>")
-                        .doc("Draws the app's own control, an avatar or a button, in place of the Browse surface: no chips, cards, clear x or drop target. The field keeps its label, helper, error, `name`, `accept`, `max_size`, `capture` and `crop`. Make it a focusable `button`, spread `args.attributes` onto it, and call `args.open` from its click: a browser opens no picker outside a user gesture."),
+                        .doc("Draws the app's own control, an avatar or a button, in place of the Browse surface, at its own width: no chips, cards, clear x or drop target. The field keeps its label, helper, error, `name`, `accept`, `max_size`, `capture` and `crop`. Make it a focusable `button`, spread `args.attributes` onto it, and call `args.open` from its click: a browser opens no picker outside a user gesture."),
                     prop("name", "FieldName<Files>")
                         .doc("What the files post as. A removed file stops posting. A path such as `Claim::FIELDS.receipts()` also binds the files to the surrounding `Form`'s value when the field has no `onchange`."),
                     prop("onchange", "EventHandler<Files>")
@@ -283,6 +284,65 @@ pub fn FileFieldPage() -> Element {
                     FileFieldDemo { values }
                 },
             }
+            DocSection { id: "avatar-trigger", title: "Avatar trigger",
+                Text {
+                    "A "
+                    Code { source: "trigger" }
+                    " keeps its own width, so an avatar stays round. The button carries "
+                    Code { source: "args.attributes" }
+                    " and opens the picker in its click; the label and helper stay the field's."
+                }
+                AvatarTriggerDemo {}
+                CodeBlock { source: AVATAR_CODE, language: "rust" }
+            }
+        }
+    }
+}
+
+// snippet: let mut photo = use_signal(Files::default);
+const AVATAR_CODE: &str = r#"FileField {
+    label: "Photo",
+    helper: "Click the avatar to pick a picture.",
+    accept: "image/*",
+    value: photo(),
+    onchange: move |picked| photo.set(picked),
+    trigger: move |t: FileTriggerArgs| rsx! {
+        button {
+            r#type: "button",
+            style: "padding: 0; border: 0; background: none; border-radius: 50%; cursor: pointer",
+            onclick: move |_| t.open.call(()),
+            ..t.attributes,
+            Avatar {
+                name: t.files.one().map_or("No photo".to_string(), |file| file.name()),
+                size: "xl",
+            }
+        }
+    },
+}"#;
+
+/// `AVATAR_CODE`, live.
+#[component]
+fn AvatarTriggerDemo() -> Element {
+    let mut photo = use_signal(Files::default);
+    rsx! {
+        FileField {
+            label: "Photo",
+            helper: "Click the avatar to pick a picture.",
+            accept: "image/*",
+            value: photo(),
+            onchange: move |picked| photo.set(picked),
+            trigger: move |t: FileTriggerArgs| rsx! {
+                button {
+                    r#type: "button",
+                    style: "padding: 0; border: 0; background: none; border-radius: 50%; cursor: pointer",
+                    onclick: move |_| t.open.call(()),
+                    ..t.attributes,
+                    Avatar {
+                        name: t.files.one().map_or("No photo".to_string(), |file| file.name()),
+                        size: "xl",
+                    }
+                }
+            },
         }
     }
 }

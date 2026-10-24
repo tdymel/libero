@@ -180,6 +180,38 @@ fn a_trigger_carries_the_field_and_a_read_only_one_opens_nothing() {
     });
 }
 
+/// Todo 4109: the trigger keeps its own width, start-aligned, instead of the field's column.
+#[test]
+fn a_trigger_keeps_its_own_width() {
+    block_on(async {
+        let fixture = Fixture::open("/file-field/trigger", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        wait::for_visible(page, "#portrait").await.unwrap();
+        let [trigger, field, start]: [f64; 3] = page
+            .evaluate_bounded(
+                "(() => {
+                    const trigger = document.querySelector('#portrait').getBoundingClientRect();
+                    const field = document.querySelector('input[type=file]').parentElement
+                        .getBoundingClientRect();
+                    return [trigger.width, field.width, trigger.left - field.left];
+                })()",
+            )
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        assert!(
+            trigger < field / 2.0,
+            "the trigger at its own width: {trigger}px of {field}px"
+        );
+        assert!(start.abs() < 1.0, "at the field's start: {start}px off");
+        fixture.console.assert_clean("file trigger width").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
 /// What WebKit's picker for a bare `<input type=file>` offers on an iPhone, by recall: the
 /// page's own Browse button names none of them.
 const IOS_PICKER: [&str; 3] = ["Photo Library", "Choose File", "Take Photo"];

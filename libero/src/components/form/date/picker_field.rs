@@ -27,7 +27,7 @@ use crate::{
                 SheetSwipe, narrow_query, phone_sheet_sx, sheet_clearance_style,
                 use_sheet_clearance, use_sheet_room, use_sheet_swipe,
             },
-            use_bound, use_field, use_field_frame, word,
+            use_bound, use_field, use_field_frame, use_prefill, word,
         },
         layout::{paper_sx, use_box},
     },
@@ -295,6 +295,7 @@ pub(super) fn use_picker_field<V: FieldValue>(
     };
     let (commit_on_blur, mut commit_on_enter) = (commit.clone(), commit.clone());
     let (mut commit_on_enter_picker, mut commit_in_picker) = (commit.clone(), commit.clone());
+    let commit_on_prefill = commit.clone();
     let mut commit_on_picker_blur = commit;
 
     // Refused text outranks the caller's status: the field cannot hold what it shows.
@@ -433,8 +434,21 @@ pub(super) fn use_picker_field<V: FieldValue>(
         },
     );
 
+    // Committed as a blur would: no focus came first to leave.
+    let input_element = use_element();
+    use_prefill(
+        input_element,
+        Some(text.clone()),
+        Some(move |raw: String| {
+            let mut draft = draft;
+            draft.set(Some(raw));
+            let _ = commit_on_prefill.clone()();
+        }),
+        disabled || readonly,
+    );
     let input = field_box
         .aria(control)
+        .element(&input_element)
         .attr_default("type", "text")
         .attr("value", text)
         .attr("data-controlled", true)

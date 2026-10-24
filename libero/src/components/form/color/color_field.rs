@@ -18,7 +18,7 @@ use crate::{
                 SheetSwipe, narrow_query, phone_sheet_sx, sheet_clearance_style,
                 use_sheet_clearance, use_sheet_room, use_sheet_swipe,
             },
-            slot_icon_size, use_bound, use_field, use_field_frame,
+            slot_icon_size, use_bound, use_field, use_field_frame, use_prefill,
         },
         layout::{paper_sx, use_box},
     },
@@ -526,6 +526,7 @@ pub fn ColorField(props: ColorFieldProps) -> Element {
 
     let text = draft().unwrap_or_else(|| value.to_format(format));
     let picker_text = text.clone();
+    let prefill_type_in = type_in.clone();
     // Each parse is sent; the text stays as typed until the blur.
     let on_text = move |event: FormEvent| {
         let text = event.value();
@@ -539,8 +540,26 @@ pub fn ColorField(props: ColorFieldProps) -> Element {
         }
         announcer.clear();
     };
+    // Typed and left, as a blur would settle it: no focus came first.
+    let input_element = use_element();
+    use_prefill(
+        input_element,
+        Some(text.clone()),
+        Some(move |text: String| {
+            if let Ok(color) = text.parse::<ColorCode>() {
+                let mut type_in = prefill_type_in.clone();
+                type_in(color);
+            }
+            let mut draft = draft;
+            draft.set(Some(text));
+            let mut blurred = blurred;
+            blurred();
+        }),
+        disabled || readonly || disallow_input,
+    );
     let input = field
         .aria(control)
+        .element(&input_element)
         .attr_default("type", "text")
         .attr("value", text)
         .attr("data-controlled", true)

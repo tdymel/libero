@@ -13,7 +13,7 @@ use crate::{
         },
         form::{
             FIELD_CONTROL_SX, FieldPart, PreparedFrame, field_props, use_bound, use_field,
-            use_field_frame,
+            use_field_frame, use_prefill,
         },
         layout::{BoxStyle, use_box},
     },
@@ -438,6 +438,21 @@ impl PinEdit {
         self.show(index, next[index]);
     }
 
+    /// A one-time code the browser wrote into the first cell before it mounted: spread
+    /// from there, without moving the focus.
+    fn prefilled(&self, raw: String) {
+        let accepted: Vec<char> = raw
+            .chars()
+            .map(fold_digit)
+            .filter(|c| self.kind.accepts(*c))
+            .collect();
+        let next = match accepted.is_empty() {
+            true => self.cells.clone(),
+            false => self.spread(0, accepted).0,
+        };
+        self.show(0, next[0]);
+    }
+
     /// A paste, read from the clipboard rather than the cell: over a selected
     /// character the cell's text cannot tell what was old (todo 2440).
     fn pasted(&self, index: usize, event: ClipboardEvent) {
@@ -699,6 +714,13 @@ fn PinCell(
     if let Some(slot) = editor.0.borrow().handles.borrow_mut().get_mut(index) {
         *slot = Some(handle);
     }
+    let prefilled = editor.clone();
+    use_prefill(
+        handle,
+        Some(cell.map(String::from).unwrap_or_default()),
+        (index == 0).then_some(move |raw: String| prefilled.current().prefilled(raw)),
+        disabled || readonly,
+    );
     let typed = editor.clone();
     let pasted = editor.clone();
     let released = editor.clone();

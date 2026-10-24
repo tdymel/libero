@@ -26,6 +26,7 @@ pub const ROUTES: Routes = &[
     ("/form/command", || rsx! { CommandPage {} }),
     ("/form/login", || rsx! { LoginPage {} }),
     ("/form/prefill", || rsx! { PrefillPage {} }),
+    ("/form/prefill-more", || rsx! { PrefillMorePage {} }),
     ("/form/async", || rsx! { AsyncSignInPage {} }),
     ("/form/secret", || rsx! { SecretPage {} }),
 ];
@@ -699,6 +700,67 @@ fn PrefillPage() -> Element {
                     NumberField::<u32> { label: "Count", required: true, name: Prefill::FIELDS.count() }
                     PhoneField { label: "Phone", required: true, country: "DE", name: Prefill::FIELDS.phone() }
                     Button { id: "send", r#type: "submit", "Send" }
+                }
+            }
+        }
+    }
+}
+
+#[derive(Clone, PartialEq, Fields)]
+struct PrefillMore {
+    city: String,
+    tags: Vec<String>,
+    pin: String,
+    due: Option<NaiveDate>,
+    color: ColorCode,
+}
+
+impl Default for PrefillMore {
+    fn default() -> Self {
+        Self {
+            city: String::new(),
+            tags: Vec::new(),
+            pin: String::new(),
+            due: None,
+            color: ColorCode::rgba(0, 0, 0, 1.0),
+        }
+    }
+}
+
+/// Todo 4096: as `PrefillPage`, for the fields whose input is text on the way to another value.
+#[component]
+fn PrefillMorePage() -> Element {
+    let value = use_store(PrefillMore::default);
+    let mut shown = use_signal(|| false);
+    let stored = value.read().clone();
+    let due = stored.due.map_or("none".to_string(), |due| due.to_string());
+    let tags = stored.tags.join("|");
+    let color = stored.color.to_hex();
+    rsx! {
+        Flex { direction: "column", gap: "md", max_width: "320px",
+            span {
+                id: "stored",
+                "data-city": "{stored.city}",
+                "data-tags": "{tags}",
+                "data-pin": "{stored.pin}",
+                "data-due": "{due}",
+                "data-color": "{color}",
+            }
+            Button { id: "show", onclick: move |_| shown.set(true), "Show" }
+            if shown() {
+                Form {
+                    value,
+                    onsubmit: move |_| {},
+                    Autocomplete::<String> {
+                        id: "city",
+                        label: "City",
+                        options: vec!["Berlin".to_string(), "Paris".to_string()],
+                        name: PrefillMore::FIELDS.city(),
+                    }
+                    TagsField { id: "tags", label: "Tags", name: PrefillMore::FIELDS.tags() }
+                    PinField { id: "pin", label: "Code", length: 4usize, name: PrefillMore::FIELDS.pin() }
+                    DateField { id: "due", label: "Due", format: "YYYY-MM-DD", name: PrefillMore::FIELDS.due() }
+                    ColorField { id: "color", label: "Colour", name: PrefillMore::FIELDS.color() }
                 }
             }
         }

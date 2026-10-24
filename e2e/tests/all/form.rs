@@ -1133,3 +1133,94 @@ fn text_written_before_mount_reaches_the_form() {
         fixture.close().await.unwrap();
     });
 }
+
+/// Todo 4096: `text` written into `control` in the insertion call that mounts it, as above,
+/// reaches the store, read off `#stored`'s `key`.
+async fn prefill_reaches_the_form(control: &str, text: &str, key: &str, stored: &str) {
+    let fixture = Fixture::open("/form/prefill-more", Viewport::Desktop)
+        .await
+        .unwrap();
+    let page = &fixture.page;
+    page.evaluate_bounded(format!(
+        "(() => {{
+            const fill = () => {{
+                const control = document.querySelector({control:?});
+                if (control && !control.dataset.filled) {{
+                    control.dataset.filled = '1';
+                    control.value = {text:?};
+                }}
+            }};
+            const inserts = [
+                [Node.prototype, ['appendChild', 'insertBefore', 'replaceChild']],
+                [Element.prototype, ['after', 'before', 'replaceWith', 'append', 'prepend']],
+            ];
+            for (const [proto, names] of inserts) {{
+                for (const name of names) {{
+                    const original = proto[name];
+                    proto[name] = function (...args) {{
+                        const out = original.apply(this, args);
+                        fill();
+                        return out;
+                    }};
+                }}
+            }}
+        }})()"
+    ))
+    .await
+    .unwrap();
+    pointer::click(page, "#show").await.unwrap();
+    wait::for_js_true(
+        page,
+        &format!("document.querySelector('#stored').dataset.{key} === {stored:?}"),
+        &format!("the prefilled {key} in the store"),
+    )
+    .await
+    .unwrap();
+
+    fixture
+        .console
+        .assert_clean(&format!("a prefilled {key}"))
+        .unwrap();
+    fixture.close().await.unwrap();
+}
+
+#[test]
+fn an_autocomplete_takes_text_written_before_mount() {
+    block_on(prefill_reaches_the_form(
+        "#city", "Lisbon", "city", "Lisbon",
+    ));
+}
+
+/// The draft commits as a blur would, split on the field's comma.
+#[test]
+fn a_tags_field_commits_text_written_before_mount() {
+    block_on(prefill_reaches_the_form(
+        "#tags",
+        "rust, web",
+        "tags",
+        "rust|web",
+    ));
+}
+
+/// A one-time code lands whole in the first cell and spreads over the rest.
+#[test]
+fn a_pin_field_spreads_a_code_written_before_mount() {
+    block_on(prefill_reaches_the_form("#pin-1", "4821", "pin", "4821"));
+}
+
+#[test]
+fn a_date_field_commits_text_written_before_mount() {
+    block_on(prefill_reaches_the_form(
+        "#due",
+        "2026-03-14",
+        "due",
+        "2026-03-14",
+    ));
+}
+
+#[test]
+fn a_color_field_takes_text_written_before_mount() {
+    block_on(prefill_reaches_the_form(
+        "#color", "#fa5252", "color", "#fa5252",
+    ));
+}

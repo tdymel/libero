@@ -8,7 +8,7 @@ use crate::{
         form::{
             CaretKeys, ComboboxCore, ComboboxOption, DropdownPart, FIELD_CONTROL_SX, clear_button,
             field_props, row_label, use_bound, use_field, use_field_frame, use_focus_open,
-            use_row_cache,
+            use_prefill, use_row_cache,
         },
         layout::use_box,
     },
@@ -198,6 +198,12 @@ pub fn Autocomplete<T: Options>(props: AutocompleteProps<T>) -> Element {
         .prepare();
 
     let oninput = bound.emit(props.oninput);
+    use_prefill(
+        input_element,
+        Some(text.clone()),
+        oninput.clone(),
+        disabled || readonly,
+    );
     let onpick = props.onpick;
 
     let pick_input = oninput.clone();

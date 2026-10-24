@@ -426,8 +426,9 @@ pub(super) fn file_trigger_variant(
     .flatten()
     .chain(attributes)
     .collect();
+    // At its own width, as an avatar or a button is: the field's column would stretch it (todo 4109).
     field.render(rsx! {
-        {draw.call(args)}
+        div { style: "align-self:flex-start;max-width:100%", {draw.call(args)} }
         {required_note(&required_id, required)}
         {input}
         {announcer}

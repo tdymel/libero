@@ -12,7 +12,7 @@ use crate::{
         form::{
             CaretKeys, ComboboxCore, ComboboxOption, DropdownPart, SelectionArgs, clear_button,
             field_control_sx, field_parts_enum, field_props, removable_chip, row_label, use_bound,
-            use_chip_announcer, use_field, use_field_frame,
+            use_chip_announcer, use_field, use_field_frame, use_prefill,
         },
         layout::{BoxStyle, use_box},
     },
@@ -230,6 +230,24 @@ pub fn TagsField(props: TagsFieldProps) -> Element {
             .next()
             .map(|rejection| rejection.tag)
     });
+
+    // Taken as a blur would: no focus came first, so the text commits, and a refused tag stays.
+    let (prefill_add, prefill_splits) = (add.clone(), split_chars.clone());
+    use_prefill(
+        input_element,
+        Some(text.peek().clone()),
+        onchange.is_some().then_some(move |raw: String| {
+            let mut pieces = split(&raw, &prefill_splits);
+            if pieces.is_empty() {
+                pieces.push(raw);
+            }
+            let left = prefill_add(pieces).unwrap_or_default();
+            let _ = input_element.set_value(&left);
+            let mut text = text;
+            text.set(left);
+        }),
+        disabled || readonly,
+    );
 
     let tags = tags_field_chips(
         &held,
