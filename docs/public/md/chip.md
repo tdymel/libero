@@ -10,18 +10,45 @@ Description: A compact token: a tag, a filter, a small action or a link.
 A compact token. With `onchange` or a `name` it is a checkbox, with `onclick` a
 button, with `to` a link, and with none of them a plain tag. `variant` sets the
 unselected look. A checked chip is always a tinted container, with a check before
-its label.
+its label. `icon` and `trailing` take a glyph on either side;
+`color: "neutral", variant: "tonal"` makes the grey info pill.
 
 ## Usage
 
 ```rust
 use dioxus::prelude::*;
-use libero::components::Chip;
+use libero::components::{Chip, Icon};
+use pictogram_icons_lucide as lucide;
 
 #[component]
 fn Demo() -> Element {
     rsx! {
-        Chip { "rust" }
+        Chip {
+            icon: rsx! { Icon { variant: "standard", color: "inherit", svg: lucide::info::outlined } },
+            trailing: rsx! { Icon { variant: "standard", color: "inherit", svg: lucide::chevron_down::outlined } },
+            "rust"
+        }
+    }
+}
+```
+
+An unsized `Icon` in `icon` or `trailing` takes the chip's icon step, so it
+needs no `size`. The grey info pill:
+
+```rust
+use dioxus::prelude::*;
+use libero::components::{Chip, Icon};
+use pictogram_icons_lucide as lucide;
+
+#[component]
+fn Demo() -> Element {
+    rsx! {
+        Chip {
+            color: "neutral",
+            variant: "tonal",
+            icon: rsx! { Icon { variant: "standard", color: "inherit", svg: lucide::clock::outlined } },
+            "Updated 2 h ago"
+        }
     }
 }
 ```
@@ -45,8 +72,8 @@ fn Demo() -> Element {
 | `target` | `String` | - | Link target, such as `_blank`. Only with `to`. `"_blank"` adds a hidden "(opens in a new tab)". |
 | `new_tab_hint` | `bool` | `true` | `false` drops the hidden text a `"_blank"` target adds, and the icon. |
 | `new_tab_icon` | `bool` | `false` | With the hint, draws an external icon after the label. Unset, the theme's `anchor.new_tab_icon`, which is off. |
-| `icon` | `Element` | - | Drawn before the label, with a gap. It never shrinks. |
-| `trailing` | `Element` | - | Drawn after the label, with a gap, such as a remove button. It never shrinks. Not on an `onclick` or `to` chip, which is a button already. |
+| `icon` | `Element` | - | Drawn before the label, with a gap. It never shrinks. An `Icon` with no `size` takes the chip's icon step: `xs` up to an `md` chip, `sm` for `lg` and `xl`, `md` for `xxl`. |
+| `trailing` | `Element` | - | Drawn after the label, with a gap, such as a remove button or a glyph. It never shrinks, and sizes an unsized `Icon` as `icon` does. Not a control on an `onclick` or `to` chip, which is a button already. |
 | `children` | `Element` | required | The label, cut at the chip's edge. Text and `Icon` only. |
 
 Like every component, `Chip` also takes the shared props `sx`, `class`,

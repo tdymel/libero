@@ -1,8 +1,14 @@
 use crate::components::{Control, Demo, DemoValues, DocPage, a11y, disabled_prop, prop, props};
 use dioxus::prelude::*;
 use libero::components::ChipPart;
-use libero::components::{Chip, Code, Input, Text};
+use libero::components::{Chip, Code, Icon, Input, Text};
 use libero::use_theme;
+use pictogram_icons_lucide as lucide;
+
+/// A bare glyph in the chip's label colour, as the demo's code prints it.
+fn glyph_code(name: &str) -> String {
+    format!(r#"Icon {{ variant: "standard", color: "inherit", svg: lucide::{name}::outlined }}"#)
+}
 
 #[component]
 pub fn ChipPage() -> Element {
@@ -49,9 +55,9 @@ pub fn ChipPage() -> Element {
                     .default(if theme.anchor.new_tab_icon { "true" } else { "false" })
                     .doc("With the hint, draws an external icon after the label. Unset, the theme's `anchor.new_tab_icon`, which is off."),
                 prop("icon", "Element")
-                    .doc("Drawn before the label, with a gap. It never shrinks."),
+                    .doc("Drawn before the label, with a gap. It never shrinks. An `Icon` with no `size` takes the chip's icon step: `xs` up to an `md` chip, `sm` for `lg` and `xl`, `md` for `xxl`."),
                 prop("trailing", "Element")
-                    .doc("Drawn after the label, with a gap, such as a remove button. It never shrinks. Not on an `onclick` or `to` chip, which is a button already."),
+                    .doc("Drawn after the label, with a gap, such as a remove button or a glyph. It never shrinks, and sizes an unsized `Icon` as `icon` does. Not a control on an `onclick` or `to` chip, which is a button already."),
                 prop("children", "Element")
                     .doc("The label, cut at the chip's edge. Text and `Icon` only."),
             ])
@@ -86,9 +92,16 @@ pub fn ChipPage() -> Element {
                     Code { source: "to" }
                     " a link, and with none of them a plain tag. "
                     Code { source: "variant" }
-                    " sets the unselected look. A checked chip is always a tinted container, with a check before its label."
+                    " sets the unselected look. A checked chip is always a tinted container, with a check before its label. "
+                    Code { source: "icon" }
+                    " and "
+                    Code { source: "trailing" }
+                    " take a glyph on either side; "
+                    Code { source: "color: \"neutral\", variant: \"tonal\"" }
+                    " makes the grey info pill."
                 }
             },
+            // snippet: item use pictogram_icons_lucide as lucide;
             // snippet: let mut selected = use_signal(|| false);
             Demo {
                 component: "Chip",
@@ -137,6 +150,21 @@ pub fn ChipPage() -> Element {
                                 _ => vec![],
                             }
                         }),
+                    // On by default so the slots show; an unsized `Icon` takes the chip's icon step.
+                    Control::toggle("icons", ["none", "leading", "trailing", "both"])
+                        .labels(["None", "Leading", "Trailing", "Both"])
+                        .default("both")
+                        .code(|_, values| {
+                            let icons = values.str("icons");
+                            let mut lines = Vec::new();
+                            if matches!(icons.as_str(), "leading" | "both") {
+                                lines.push(format!("icon: rsx! {{ {} }}", glyph_code("info")));
+                            }
+                            if matches!(icons.as_str(), "trailing" | "both") {
+                                lines.push(format!("trailing: rsx! {{ {} }}", glyph_code("chevron_down")));
+                            }
+                            lines
+                        }),
                     Control::switch("disabled"),
                     Control::switch("readonly")
                         .hidden_when(|values| values.str("kind") != "filter"),
@@ -167,6 +195,13 @@ pub fn ChipPage() -> Element {
                             .then_some(true),
                         disabled: values.str("disabled") == "true",
                         readonly: values.str("kind") == "filter" && values.str("readonly") == "true",
+                        icon: matches!(values.str("icons").as_str(), "leading" | "both").then(|| rsx! {
+                            Icon { variant: "standard", color: "inherit", svg: lucide::info::outlined }
+                        }),
+                        // No control in `trailing` on an `onclick` or `to` chip: a glyph only.
+                        trailing: matches!(values.str("icons").as_str(), "trailing" | "both").then(|| rsx! {
+                            Icon { variant: "standard", color: "inherit", svg: lucide::chevron_down::outlined }
+                        }),
                         "rust"
                     }
                     // A new-tab link beside it that opts into the icon, shown without the `link` kind.

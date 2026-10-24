@@ -1,7 +1,10 @@
 use crate::common::{attributes_of, body, classes_of, render};
 
 use dioxus::prelude::*;
-use libero::{LiberoProvider, components::Chip};
+use libero::{
+    LiberoProvider,
+    components::{Chip, Icon},
+};
 
 /// The hidden checkbox is `position: absolute`, so the chip has to be its
 /// containing block - the same defect `SegmentedControl` had, where a focused
@@ -176,6 +179,73 @@ fn trailing_follows_the_label_and_stays_out_of_a_checkbox_label() {
         2,
         "{html}"
     );
+}
+
+/// Todo 4128: a grey info pill with no, a leading, a trailing or both icons; each
+/// unsized `Icon` takes the chip's icon step from the theme, not its own 24px.
+#[test]
+fn an_info_chip_draws_each_icon_combination_at_the_chips_icon_step() {
+    fn app() -> Element {
+        let glyph = |id: &str| rsx! { Icon { variant: "standard", color: "inherit", svg { id } } };
+        rsx! {
+            LiberoProvider {
+                Chip { id: "none", color: "neutral", variant: "tonal", "Draft" }
+                Chip { id: "lead", color: "neutral", variant: "tonal", icon: glyph("lead-icon"), "Draft" }
+                Chip { id: "trail", color: "neutral", variant: "tonal", trailing: glyph("trail-icon"), "Draft" }
+                Chip {
+                    id: "both",
+                    color: "neutral",
+                    variant: "tonal",
+                    icon: glyph("both-lead"),
+                    trailing: glyph("both-trail"),
+                    "Draft"
+                }
+            }
+        }
+    }
+
+    let html = render(app);
+    let page = body(&html);
+    // From the chip's id up to the next chip's.
+    let at = |id: &str| page.find(&format!(r#"id="{id}""#)).unwrap();
+    let ids = ["none", "lead", "trail", "both"];
+    let chip = |id: &str| {
+        let next = ids.iter().skip_while(|other| **other != id).nth(1);
+        &page[at(id)..next.map_or(page.len(), |next| at(next))]
+    };
+    for (id, lead, trail) in [
+        ("none", None, None),
+        ("lead", Some("lead-icon"), None),
+        ("trail", None, Some("trail-icon")),
+        ("both", Some("both-lead"), Some("both-trail")),
+    ] {
+        let chip = chip(id);
+        assert_eq!(chip.contains("chip-icon"), lead.is_some(), "{id}: {chip}");
+        assert_eq!(
+            chip.contains("chip-trailing"),
+            trail.is_some(),
+            "{id}: {chip}"
+        );
+        let text = chip.find(">Draft<").unwrap();
+        if let Some(lead) = lead {
+            assert!(chip.find(lead).unwrap() < text, "{id}: {chip}");
+        }
+        if let Some(trail) = trail {
+            assert!(chip.find(trail).unwrap() > text, "{id}: {chip}");
+        }
+    }
+    // The neutral container, so the pill is grey whatever the theme's chip colour.
+    assert!(
+        attributes_of(&page, "span")["style"].contains("--lsx-chip-container:var(--lsx-neutral-"),
+        "{page}"
+    );
+    // An md chip's slots hand an unsized icon the xs step, an lg one the sm step.
+    for (size, step) in [("md", "xs"), ("lg", "sm"), ("xxl", "md")] {
+        let rule = format!(
+            "[data-state~=\"size-{size}\"] > [data-slot='chip-trailing']{{--lsx-icon-size:var(--lsx-icon-size-{step})"
+        );
+        assert!(html.contains(&rule), "{rule}: {html}");
+    }
 }
 
 /// Todo 672: a `_blank` link chip gets Anchor's new-tab cue after its

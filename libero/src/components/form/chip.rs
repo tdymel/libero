@@ -24,7 +24,7 @@ use crate::{
     hooks::{ElementHandle, listener, use_cache, use_css, use_element, use_id, use_theme},
     platform::reads_click_targets,
     sx::{StaticSx, Sx, ThemeAwareValue, sx},
-    theme::{ChipDefaults, ColorShade, CssVar, Size, SizeCss},
+    theme::{ChipDefaults, ColorShade, CssVar, ICON_DEFAULT_SIZE, ICON_SIZE, Size, SizeCss},
     utils::warn,
 };
 
@@ -72,7 +72,18 @@ static CHIP_BASE_SX: StaticSx = StaticSx::new(|| {
         .selector(
             format!("{CHECK} > svg"),
             sx().width("1.125em").height("1.125em"),
-        );
+        )
+        // An unsized `Icon` in either slot takes an icon step under the label's height (4128).
+        .per_size(|size| {
+            sx().selector(
+                format!(
+                    "{}, {}",
+                    ChipPart::Icon.selector(),
+                    ChipPart::Trailing.selector()
+                ),
+                sx().var(ICON_DEFAULT_SIZE, ICON_SIZE.value(chip_icon_size(size))),
+            )
+        });
 
     Variant::ALL
         .iter()
@@ -126,6 +137,14 @@ static CHIP_BASE_SX: StaticSx = StaticSx::new(|| {
         // The `<button>`/`<a>` root focuses itself.
         .focus_visible(focus_ring_sx())
 });
+
+const fn chip_icon_size(size: Size) -> Size {
+    match size {
+        Size::Xs | Size::Sm | Size::Md => Size::Xs,
+        Size::Lg | Size::Xl => Size::Sm,
+        Size::Xxl => Size::Md,
+    }
+}
 
 fn chip_icon_sx() -> Sx {
     sx().display("inline-flex")
