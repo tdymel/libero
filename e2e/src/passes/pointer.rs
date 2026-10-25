@@ -183,12 +183,15 @@ async fn touch_at(
 }
 
 /// A touch pressed at `from`, moved to `to` in `steps`, lifted there; `steps: 0`
-/// is a tap. Turns on touch emulation for the page.
+/// is a tap. Turns on touch emulation for the page. The events carry their own
+/// times and the lift rests, so the swipe starts no fling that swallows the next tap.
 pub async fn touch_drag(page: &Page, from: Point, to: Point, steps: usize) -> Result<()> {
     use chromiumoxide::cdp::browser_protocol::emulation::SetTouchEmulationEnabledParams;
     use chromiumoxide::cdp::browser_protocol::input::{
-        DispatchTouchEventParams, DispatchTouchEventType, TouchPoint,
+        DispatchTouchEventParams, DispatchTouchEventType, TimeSinceEpoch, TouchPoint,
     };
+    const STEP_S: f64 = 0.016;
+    const REST_S: f64 = 0.15;
     page.execute_bounded(SetTouchEmulationEnabledParams::new(true))
         .await?;
     let moves = (1..=steps).map(|step| {
@@ -202,7 +205,15 @@ pub async fn touch_drag(page: &Page, from: Point, to: Point, steps: usize) -> Re
     let events = std::iter::once((DispatchTouchEventType::TouchStart, from))
         .chain(moves)
         .chain(std::iter::once((DispatchTouchEventType::TouchEnd, to)));
-    for (kind, at) in events {
+    let start = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)?
+        .as_secs_f64();
+    for (index, (kind, at)) in events.enumerate() {
+        let rest = if steps > 0 && kind == DispatchTouchEventType::TouchEnd {
+            REST_S
+        } else {
+            0.0
+        };
         let point = TouchPoint::builder()
             .x(at.x)
             .y(at.y)
@@ -211,6 +222,7 @@ pub async fn touch_drag(page: &Page, from: Point, to: Point, steps: usize) -> Re
         let event = DispatchTouchEventParams::builder()
             .r#type(kind)
             .touch_point(point)
+            .timestamp(TimeSinceEpoch::new(start + index as f64 * STEP_S + rest))
             .build()
             .map_err(anyhow::Error::msg)?;
         page.execute_bounded(event).await?;

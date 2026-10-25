@@ -302,6 +302,8 @@ fn a_swipe_pages_the_day_sheet() {
     block_on(async {
         let fixture = phone().await;
         let page = &fixture.page;
+        // Todos 4159, 4171: in front the swipes run fast, so a flinging lift would swallow the title tap.
+        page.bring_to_front().await.unwrap();
         tap(page, &input("due")).await.unwrap();
         sheet_shown(page).await.unwrap();
         let title = |month: &str| {
@@ -312,15 +314,6 @@ fn a_swipe_pages_the_day_sheet() {
         wait::for_js_true(page, &title("September 2026"), "September")
             .await
             .unwrap();
-        // Todo 4159: one gate run lost the title tap; a repeat names what the sheet saw.
-        page.evaluate_bounded(
-            "(() => { const seen = window.__sheetEvents = []; \
-             for (const kind of ['pointerdown', 'pointerup', 'pointercancel', 'click']) \
-               document.addEventListener(kind, (e) => seen.push(kind + ':' + \
-                 (e.target.dataset?.slot || e.target.tagName)), true); return true; })()",
-        )
-        .await
-        .unwrap();
         let months = format!("{SHEET} [data-slot=months]");
         let at = pointer::centre_of(page, &months).await.unwrap();
         let by = |dx: f64| pointer::Point {
@@ -345,19 +338,9 @@ fn a_swipe_pages_the_day_sheet() {
         let grid = format!(
             "document.querySelectorAll('{SHEET} [data-slot=cells] [data-slot=cell]').length === 12"
         );
-        if let Err(error) = wait::for_js_true(page, &grid, "the month grid").await {
-            let seen: String = page
-                .evaluate_bounded(format!(
-                    "JSON.stringify({{ events: window.__sheetEvents, \
-                     title: document.querySelector('{SHEET} [data-slot=title]')?.textContent, \
-                     cells: document.querySelectorAll('{SHEET} [data-slot=cell]').length, \
-                     days: document.querySelectorAll('{SHEET} [data-slot=day]').length }})"
-                ))
-                .await
-                .and_then(|seen| Ok(seen.into_value::<String>()?))
-                .unwrap_or_else(|read| format!("unreadable: {read:#}"));
-            panic!("{error:#}; the sheet saw {seen}");
-        }
+        wait::for_js_true(page, &grid, "the month grid")
+            .await
+            .unwrap();
         fixture.console.assert_clean("a swiped day sheet").unwrap();
         fixture.close().await.unwrap();
     });
