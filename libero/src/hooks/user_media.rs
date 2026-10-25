@@ -255,6 +255,7 @@ impl UserMedia {
             CaptureEvent::Recording => {
                 self.recording.set(true);
                 self.recorded.set(None);
+                self.error.set(None);
             }
             CaptureEvent::Chunk(bytes) => self.chunks.write().extend(bytes),
             CaptureEvent::Recorded(kind, blob) => {
@@ -262,14 +263,17 @@ impl UserMedia {
                 let mut bytes = std::mem::take(&mut *self.chunks.write());
                 let kind = kind.split(';').next().unwrap_or_default().to_string();
                 let name = file_name("recording", &kind);
-                self.recorded.set(match blob {
+                let file = match blob {
                     Some(blob) => file_from_blob(&name, &kind, blob),
                     None => {
                         // The growth's slack, up to the recording's size again, would stay with the file.
                         bytes.shrink_to_fit();
                         file_from_bytes(&name, &kind, bytes)
                     }
-                });
+                };
+                self.error
+                    .set(file.is_none().then_some(UserMediaError::Failed));
+                self.recorded.set(file);
             }
             CaptureEvent::RecordFailed(error) => {
                 self.recording.set(false);
@@ -514,6 +518,49 @@ mod tests {
             media.start();
             assert_eq!(media.error(), Some(UserMediaError::Denied));
             assert!(!media.is_pending());
+        });
+    }
+
+    fn failed_media() -> (VirtualDom, UserMedia) {
+        let mut dom = VirtualDom::new(|| {
+            HANDLE.set(Some(use_user_media(UserMediaOptions::default())));
+            rsx! {}
+        });
+        dom.rebuild_in_place();
+        let mut media = HANDLE.get().expect("rendered");
+        dom.in_runtime(|| media.settle(CaptureEvent::RecordFailed(UserMediaError::TooLarge)));
+        (dom, media)
+    }
+
+    #[test]
+    fn a_new_recording_clears_the_error() {
+        let (dom, mut media) = failed_media();
+        dom.in_runtime(|| {
+            assert_eq!(media.error(), Some(UserMediaError::TooLarge));
+            media.settle(CaptureEvent::Recording);
+            assert_eq!(media.error(), None);
+        });
+    }
+
+    #[cfg(not(feature = "native"))]
+    #[test]
+    fn a_recorded_file_clears_the_error() {
+        let (dom, mut media) = failed_media();
+        dom.in_runtime(|| {
+            media.settle(CaptureEvent::Recorded("video/webm".into(), None));
+            assert!(media.recorded().is_some());
+            assert_eq!(media.error(), None);
+        });
+    }
+
+    #[cfg(feature = "native")]
+    #[test]
+    fn a_recorded_file_that_cannot_be_made_fails() {
+        let (dom, mut media) = failed_media();
+        dom.in_runtime(|| {
+            media.settle(CaptureEvent::Recorded("video/webm".into(), None));
+            assert!(media.recorded().is_none());
+            assert_eq!(media.error(), Some(UserMediaError::Failed));
         });
     }
 }
