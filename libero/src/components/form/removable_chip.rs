@@ -7,7 +7,7 @@ use crate::{
     components::{
         accessibility::VisuallyHidden,
         buttons::ActionIcon,
-        common::{COARSE_INSET, COARSE_POINTER, Glyph, Input},
+        common::{COARSE_INSET, COARSE_POINTER, Glyph, Input, coarse_hit_area_sx},
         form::Chip,
     },
     context::IconSlot,
@@ -42,7 +42,8 @@ static REMOVABLE_CHIP_SX: StaticSx = StaticSx::new(|| {
         )
         .selector(
             "& > [data-slot='chip-trailing']",
-            sx().min_height(LINE_VAR.value()),
+            // No stacking context of its own, or the next row's chip covers this x's `::after`.
+            sx().min_height(LINE_VAR.value()).z_index("auto"),
         )
 });
 
@@ -56,15 +57,17 @@ static REMOVE_BUTTON_SX: StaticSx = StaticSx::new(|| {
             "&:hover",
             sx().background("color-mix(in srgb, currentColor 20%, transparent)"),
         )
-        // 44px wide under a finger (todo 3901); in height only to half the 4px row gap,
-        // or the chip on the next row takes a press meant for this x (4188).
+        // 44x44 under a finger (todo 3901). The `::after` on top owns the pill's own rows,
+        // so the next row's x takes no press meant for this one (4188).
         .position("relative")
+        .and(coarse_hit_area_sx("::before"))
         .media(
             COARSE_POINTER,
             sx().selector(
-                "::before",
+                "::after",
                 sx().content("\"\"")
                     .position("absolute")
+                    .z_index("1")
                     .left(COARSE_INSET)
                     .right(COARSE_INSET)
                     .top(coarse_block_inset())
