@@ -97,7 +97,7 @@ pub fn use_tour(options: TourOptions) -> TourHandle
 | `card` | `Option<Callback<TourView, Element>>` | - | Draws the card's inside in place of the default. The tour still places, names and focuses it; draw your own surface, a `Paper`. |
 | `sx` | `Input<Sx>` | - | Styles the card. |
 | `parts` | `Input<Parts<TourPart>>` | - | Styles for the mask, the highlight and the card's parts. |
-| `storage_key` | `Option<String>` | - | Remembers in local storage that the tour was finished or closed early, for `tour.seen()`; `tour.forget()` drops it. `start()` still starts: offer the tour while `!tour.seen()`. Read at mount. |
+| `storage_key` | `Option<String>` | - | Remembers in local storage that the tour was finished or closed early, for `tour.seen()`; `tour.forget()` drops it. `start()` still starts: offer the tour while `!tour.seen()`. Read each render, so a new key takes effect at once. |
 
 ### `TourStep`
 

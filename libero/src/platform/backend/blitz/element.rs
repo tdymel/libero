@@ -350,7 +350,7 @@ impl ElementApi for BlitzElement {
     fn matches(&self, selector: &str) -> Result<bool, PlatformError> {
         let doc = self.anchor.free_doc().ok_or(PlatformError::Unsupported)?;
         let found = doc
-            .query_selector_all(selector)
+            .query_selector_all(&activate::focus_selectors(selector))
             .map_err(|_| PlatformError::NotFound)?;
         Ok(found.contains(&self.node_id))
     }
@@ -408,7 +408,7 @@ impl ElementApi for BlitzElement {
     ) -> Result<Option<Box<dyn ElementApi>>, PlatformError> {
         let doc = self.anchor.free_doc().ok_or(PlatformError::Unsupported)?;
         let matches = doc
-            .query_selector_all(selector)
+            .query_selector_all(&activate::focus_selectors(selector))
             .map_err(|_| PlatformError::NotFound)?;
         let mut before = std::collections::HashSet::new();
         let mut stack = vec![doc.root_element().id];

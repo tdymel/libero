@@ -61,6 +61,49 @@ fn a_blank_group_label_renders_bare_rows() {
     assert!(!html.contains("menu-group-"), "{html}");
 }
 
+/// Todo 4157: a separator in a blank-label group keys apart from the level's own.
+#[test]
+fn separators_in_a_blank_group_get_distinct_keys() {
+    use dioxus::prelude::*;
+
+    use super::MenuEntry;
+    use super::level::draw_rows;
+
+    fn app() -> Element {
+        rsx! {}
+    }
+    let entries = vec![
+        MenuEntry::Separator,
+        MenuEntry::Group {
+            label: " ".into(),
+            items: vec![MenuEntry::Separator],
+        },
+    ];
+    let mut dom = VirtualDom::new(app);
+    dom.rebuild_in_place();
+    let keys: Vec<_> = dom.in_runtime(|| {
+        let (mut index, mut group, mut separator) = (0, 0, 0);
+        draw_rows(
+            &entries,
+            "menu",
+            &mut index,
+            &mut group,
+            &mut separator,
+            &mut |_, _| {
+                rsx! {}
+            },
+        )
+        .into_iter()
+        .map(|row| row.unwrap().key().map(str::to_owned))
+        .collect()
+    });
+
+    assert_eq!(
+        keys,
+        [Some("separator-0".into()), Some("separator-1".into())]
+    );
+}
+
 /// `app`'s SSR output after its effects ran.
 fn render_open(app: fn() -> dioxus::prelude::Element) -> String {
     let mut dom = dioxus::prelude::VirtualDom::new(app);

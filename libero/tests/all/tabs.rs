@@ -114,7 +114,7 @@ fn a_rich_tab_label_draws_its_content_and_still_names_the_tab() {
 
     let body = body(&render(app));
 
-    // `options` narrows the strip; `option_label` names them; `render_label` fills them.
+    // `options` narrows the strip; a rich `option_label` names them and fills them.
     assert_eq!(body.matches("role=\"tab\"").count(), 2);
     assert!(body.contains("aria-label=\"t:Account\""));
     assert!(body.contains("aria-label=\"t:Billing\""));

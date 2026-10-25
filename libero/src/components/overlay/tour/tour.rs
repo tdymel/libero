@@ -174,7 +174,7 @@ pub struct TourOptions {
     /// Styles the mask, the highlight and the card's parts.
     pub parts: Input<Parts<TourPart>>,
     /// Remembers in local storage that the tour was finished or closed, for
-    /// [`TourHandle::seen`]. Read at mount.
+    /// [`TourHandle::seen`]. Read each render, so a new key takes effect at once.
     pub storage_key: Option<String>,
 }
 

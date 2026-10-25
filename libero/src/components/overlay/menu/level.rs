@@ -248,12 +248,13 @@ pub(super) fn MenuLevel(props: MenuLevelProps) -> Element {
         }));
         let tabbable = tabbable();
         let checks = flat.iter().any(|item| item.check.is_some());
-        let (mut index, mut group) = (0usize, 0usize);
+        let (mut index, mut group, mut separator) = (0usize, 0usize, 0usize);
         draw_rows(
             &props.items,
             &level_id,
             &mut index,
             &mut group,
+            &mut separator,
             &mut |item, index| {
                 let submenu = item.submenu_items().is_some();
                 rsx! {
@@ -374,12 +375,13 @@ pub(super) fn MenuLevel(props: MenuLevelProps) -> Element {
     }
 }
 
-/// A level's rows. `index` and `group` count on across the nesting.
-fn draw_rows(
+/// A level's rows. `index`, `group` and `separator` count on across the nesting.
+pub(super) fn draw_rows(
     entries: &[MenuEntry],
     level_id: &str,
     index: &mut usize,
     group: &mut usize,
+    separator: &mut usize,
     draw_item: &mut dyn FnMut(&MenuItem, usize) -> Element,
 ) -> Vec<Element> {
     let mut rows = Vec::with_capacity(entries.len());
@@ -391,13 +393,15 @@ fn draw_rows(
             }
             MenuEntry::Group { label, items } if label.trim().is_empty() => {
                 // A blank label names nothing, and an unnamed group adds nothing (todo 3840).
-                rows.extend(draw_rows(items, level_id, index, group, draw_item));
+                rows.extend(draw_rows(
+                    items, level_id, index, group, separator, draw_item,
+                ));
             }
             MenuEntry::Group { label, items } => {
                 let label_id = format!("{level_id}-group-{group}");
                 let key = *group;
                 *group += 1;
-                let inner = draw_rows(items, level_id, index, group, draw_item);
+                let inner = draw_rows(items, level_id, index, group, separator, draw_item);
                 rows.push(rsx! {
                     div {
                         key: "group-{key}",
@@ -409,7 +413,8 @@ fn draw_rows(
                 });
             }
             MenuEntry::Separator => {
-                let key = rows.len();
+                let key = *separator;
+                *separator += 1;
                 rows.push(rsx! {
                     Divider { key: "separator-{key}", spacing: "4px" }
                 });

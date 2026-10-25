@@ -206,7 +206,7 @@ pub fn TourPage() -> Element {
                     prop("parts", "Parts<TourPart>")
                         .doc("Styles for the mask, the highlight and the card's parts."),
                     prop("storage_key", "Option<String>")
-                        .doc("Remembers in local storage that the tour was finished or closed early, for `tour.seen()`; `tour.forget()` drops it. `start()` still starts: offer the tour while `!tour.seen()`. Read at mount."),
+                        .doc("Remembers in local storage that the tour was finished or closed early, for `tour.seen()`; `tour.forget()` drops it. `start()` still starts: offer the tour while `!tour.seen()`. Read each render, so a new key takes effect at once."),
                 ])
                 .without_base_props()
                 .parts("TourPart", vec![
