@@ -1,6 +1,6 @@
 # Skipped e2e scenarios
 
-Scenarios: 702
+Scenarios: 704
 
 Generated from the `scenario!` skips in `e2e/tests/all` by `cargo test -p e2e --lib skips`; edit the skip, not this file. A reason starting `upstream:` waits on Dioxus, Blitz, wry or the engine (revisit on their update, todo 3362), a number names the todo that removes it.
 
@@ -217,6 +217,9 @@ The performance scenarios (units `perf`, `table_perf`) are no skips but run on r
 | `native_select::the_arrows_step_a_focused_native_select` | ios | WKWebView opens the picker on an arrow |
 | `native_select::the_arrows_step_a_focused_native_select` | native | a listbox Select stands in for the \<select> on Blitz |
 | `notifications::f8_focuses_the_newest_notification_on_the_event_thread` | all but android | 2216: the split event thread is Android's; the web test above covers F8 |
+| `number_field::a_mouse_still_types_in_a_spin_field` | android | a phone app's tap is a finger's: it spins (4133) |
+| `number_field::a_mouse_still_types_in_a_spin_field` | ios | a phone app's tap is a finger's: it spins (4133) |
+| `number_field::android_a_tap_spins_with_the_keyboard_down` | all but android | only a phone app reports its soft keyboard |
 | `pagination::a_disabling_arrow_hands_focus_to_the_current_page` | android | 958: element identity on the WebView |
 | `pagination::a_disabling_arrow_hands_focus_to_the_current_page` | desktop | 958: element identity on the WebView |
 | `pagination::a_disabling_arrow_hands_focus_to_the_current_page` | ios | 958: element identity on the WebView |

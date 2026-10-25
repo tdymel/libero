@@ -2,7 +2,7 @@
 
 Crate: `libero`
 Import: `use libero::components::NumberField;`
-Feature: `number-field` (off by default, turns on `action-icon`; [features.md](features.md))
+Feature: `number-field` (off by default, turns on `action-icon`, `button`, `paper`, `use-drag`, `use-media-query`, `use-popover`, `use-swipe`, `use-timers`; [features.md](features.md))
 Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/form/number_field.rs>
 Index: [index.md](index.md) lists every other page
 Description: A numeric field over your own number type, with optional steppers in its trailing slot.
@@ -34,6 +34,42 @@ fn Demo() -> Element {
 }
 ```
 
+### Touch input
+
+With `touch_input: TouchInput::Spin`, a tap under a finger opens a spin column
+instead of the soft keyboard: a sheet at the screen's foot below `sm`, a popover
+under the field from `sm` up. A drag, the wheel, a tap on a neighbour or the
+arrow keys step it by `step`, and every step calls `onchange` at once; Done,
+Escape, Back and a tap outside only close it. Without `min` and `max` it spins
+on to the type's limits, and an empty field starts at `min`, else zero. A mouse
+still types.
+
+The keyboard button beside Done switches to typing: it closes the spinner and
+focuses the field with its keypad. A phone browser raises the keyboard at once;
+in an Android app the next tap on the field does.
+
+```rust
+use dioxus::prelude::*;
+use libero::components::{NumberField, TouchInput};
+
+#[component]
+fn Break() -> Element {
+    let mut minutes = use_signal(|| Some(30u32));
+
+    rsx! {
+        NumberField {
+            label: "Break",
+            trailing: rsx! { "min" },
+            describe_trailing: true,
+            step: 5,
+            touch_input: TouchInput::Spin,
+            value: minutes(),
+            onchange: move |next| minutes.set(next),
+        }
+    }
+}
+```
+
 ## Props
 
 ### `NumberField<T: NumberValue>`
@@ -59,6 +95,7 @@ fn Demo() -> Element {
 | `describe_trailing` | `bool` | `false` | `trailing` is text that describes the value, e.g. a unit. |
 | `increment_label` | `String` | `number_field.increase` | Names the plus button, such as "Add a guest". Unset, the localization's `number_field.increase`, "Increase" in English. |
 | `decrement_label` | `String` | `number_field.decrease` | Names the minus button. Unset, the localization's `number_field.decrease`, "Decrease" in English. |
+| `touch_input` | `TouchInput` | `Keyboard` | What a tap under a finger opens. `TouchInput::Spin` opens a spin column that steps by `step`, in a sheet below `sm` and a popover from `sm` up, with no soft keyboard; a mouse still types. See Touch input. |
 | `label` | `Caption` | - | The field's caption, above the control. It names the field. |
 | `description` | `Caption` | - | Between the label and the control. What to enter. |
 | `helper` | `Caption` | - | Under the control. Units, ranges, what the number means. |
@@ -109,9 +146,16 @@ explains how parts work.
 |---|---|
 | `Up` or `Down` | Step the value, with or without `steppers`. |
 | `PageUp` or `PageDown` | Step the value ten steps. |
+| `Home` or `End` | In the touch spinner, go to `min` or `max` when set. |
+| `Enter` or `Escape` | Close the touch spinner and return focus to the field. |
 
 ### Libero handles
 
+- The touch spinner is a `spinbutton` named by the field's label and described
+  by a `describe_trailing` unit. Opening it focuses the column; Done, Escape,
+  Android's Back and a tap outside close it and return focus to the field.
+- The spinner's neighbours and Done are single-pointer alternatives to its drag,
+  and the neighbours are 44px tall under a finger.
 - The stepper buttons are not tab stops, since the arrow keys do the same from
   the field.
 - The phone keypad follows the type and `min`: digits for a whole number from 0,

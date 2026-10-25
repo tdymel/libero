@@ -1,10 +1,10 @@
 use crate::components::{
-    Control, Demo, DemoValues, DocPage, FieldCopy, Wrap, a11y, disabled_prop, field_controls,
-    field_props, prop, props, readonly_prop, status_prop,
+    Control, Demo, DemoValues, DocPage, DocSection, FieldCopy, Wrap, a11y, disabled_prop,
+    field_controls, field_props, prop, props, readonly_prop, status_prop,
 };
 use dioxus::prelude::*;
 use libero::components::FieldPart;
-use libero::components::{Code, Decimals, NumberField, NumberValue, Text};
+use libero::components::{Code, CodeBlock, Decimals, NumberField, NumberValue, Text, TouchInput};
 use libero::use_theme;
 
 struct QuantityCopy;
@@ -152,6 +152,9 @@ pub fn NumberFieldPage() -> Element {
                     prop("decrement_label", "String")
                         .default("number_field.decrease")
                         .doc("Names the minus button. Unset, the localization's `number_field.decrease`, \"Decrease\" in English."),
+                    prop("touch_input", "TouchInput")
+                        .default("Keyboard")
+                        .doc("What a tap under a finger opens. `TouchInput::Spin` opens a spin column that steps by `step`, in a sheet below `sm` and a popover from `sm` up, with no soft keyboard; a mouse still types. See Touch input."),
                     prop("label", "Caption")
                         .doc("The field's caption, above the control. It names the field."),
                     prop("description", "Caption")
@@ -203,7 +206,11 @@ pub fn NumberFieldPage() -> Element {
             accessibility: a11y()
                 .key(["Up", "Down"], "Step the value, with or without `steppers`.")
                 .key(["PageUp", "PageDown"], "Step the value ten steps.")
+                .key(["Home", "End"], "In the touch spinner, go to `min` or `max` when set.")
+                .key(["Enter", "Escape"], "Close the touch spinner and return focus to the field.")
                 .handles([
+                    "The touch spinner is a `spinbutton` named by the field's label and described by a `describe_trailing` unit. Opening it focuses the column; Done, Escape, Android's Back and a tap outside close it and return focus to the field.",
+                    "The spinner's neighbours and Done are single-pointer alternatives to its drag, and the neighbours are 44px tall under a finger.",
                     "The stepper buttons are not tab stops, since the arrow keys do the same from the field.",
                     "The phone keypad follows the type and `min`: digits for a whole number from 0, digits and a point for a fraction from 0, the full keyboard where a negative is allowed, since iOS keypads have no minus. An `inputmode` attribute overrides it.",
                 ])
@@ -425,6 +432,73 @@ pub fn NumberFieldPage() -> Element {
                     }
                 },
             }
+            DocSection { id: "touch-input", title: "Touch input",
+                Text {
+                    "With "
+                    Code { source: "touch_input: TouchInput::Spin" }
+                    ", a tap under a finger opens a spin column instead of the soft keyboard: "
+                    "a sheet at the screen's foot below "
+                    Code { source: "sm" }
+                    ", a popover under the field from "
+                    Code { source: "sm" }
+                    " up. A drag, the wheel, a tap on a neighbour or the arrow keys step it by "
+                    Code { source: "step" }
+                    ", and every step calls "
+                    Code { source: "onchange" }
+                    " at once; Done, Escape, Back and a tap outside only close it. Without "
+                    Code { source: "min" }
+                    " and "
+                    Code { source: "max" }
+                    " it spins on to the type's limits, and an empty field starts at "
+                    Code { source: "min" }
+                    ", else zero. A mouse still types."
+                }
+                Text {
+                    "The keyboard button beside Done switches to typing: it closes the spinner and "
+                    "focuses the field with its keypad. A phone browser raises the keyboard at once; "
+                    "in an Android app the next tap on the field does."
+                }
+                TouchSpinDemo {}
+                CodeBlock { source: TOUCH_SPIN_CODE, language: "rust" }
+            }
+        }
+    }
+}
+
+const TOUCH_SPIN_CODE: &str = r#"use dioxus::prelude::*;
+use libero::components::{NumberField, TouchInput};
+
+#[component]
+fn Break() -> Element {
+    let mut minutes = use_signal(|| Some(30u32));
+
+    rsx! {
+        NumberField {
+            label: "Break",
+            trailing: rsx! { "min" },
+            describe_trailing: true,
+            step: 5,
+            touch_input: TouchInput::Spin,
+            value: minutes(),
+            onchange: move |next| minutes.set(next),
+        }
+    }
+}
+"#;
+
+/// A break in steps of 5 minutes: under a finger a tap spins it.
+#[component]
+fn TouchSpinDemo() -> Element {
+    let mut minutes = use_signal(|| Some(30u32));
+    rsx! {
+        NumberField {
+            label: "Break",
+            trailing: rsx! { "min" },
+            describe_trailing: true,
+            step: 5,
+            touch_input: TouchInput::Spin,
+            value: minutes(),
+            onchange: move |next| minutes.set(next),
         }
     }
 }

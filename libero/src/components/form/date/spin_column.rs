@@ -5,17 +5,14 @@ use dioxus::prelude::*;
 use crate::{
     components::{
         common::{Part, has_shortcut_modifier},
-        form::ChronoPickerPart,
+        form::{
+            ChronoPickerPart,
+            spin::{Turn, key_steps, use_spin_gestures},
+        },
     },
-    hooks::{DragMove, DragOptions, DragStart, use_drag, use_element},
-    platform,
+    hooks::use_element,
     utils::fold_digits,
 };
-
-/// The wheel travel, in pixels, that turns a column one step.
-const WHEEL_STEP: f64 = 40.0;
-/// The drag travel, in pixels, that turns a column one step.
-const DRAG_STEP: f64 = 24.0;
 
 /// One value a column can show.
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -111,22 +108,6 @@ fn typing_goes_on(options: &[SpinOption], text: &str, picked: usize) -> bool {
     })
 }
 
-/// The travel left over and the step a wheel event takes: a notch is one step,
-/// a trackpad's small deltas add up to one.
-fn wheel_steps(held: f64, travel: f64) -> (f64, isize) {
-    // A turn back drops what was held the other way.
-    let total = if held * travel < 0.0 {
-        travel
-    } else {
-        held + travel
-    };
-    match total.abs() >= WHEEL_STEP {
-        // Down the page brings the value below up: the next one.
-        true => (0.0, total.signum() as isize),
-        false => (total, 0),
-    }
-}
-
 /// A number for `aria-valuenow`: the text's, else the option's place.
 fn number(text: &str, index: usize) -> i64 {
     text.parse().unwrap_or(index as i64)
@@ -191,10 +172,6 @@ pub(super) fn SpinColumn(props: SpinColumnProps) -> Element {
     let handle = use_element();
     // The keys typed so far, until they pick a value no key can change.
     let mut typing = use_hook(|| CopyValue::new(String::new()));
-    let mut wheel = use_hook(|| CopyValue::new(0.0_f64));
-    // Where a drag started, and the neighbour a press landed on.
-    let mut drag_from = use_hook(|| CopyValue::new(None::<(SpinAt, isize)>));
-    let mut pressed = use_hook(|| CopyValue::new(None::<isize>));
 
     let current = match at {
         SpinAt::At(index) => Some(index),
@@ -217,11 +194,10 @@ pub(super) fn SpinColumn(props: SpinColumnProps) -> Element {
                 .enumerate()
                 .filter(|(_, option)| !option.disabled)
         };
-        let next = match event.key() {
-            Key::Named(NamedKey::ArrowUp) => stepped(options, at, 1, wrap),
-            Key::Named(NamedKey::ArrowDown) => stepped(options, at, -1, wrap),
-            Key::Named(NamedKey::PageUp) => stepped(options, at, page as isize, wrap),
-            Key::Named(NamedKey::PageDown) => stepped(options, at, -(page as isize), wrap),
+        let key = event.key();
+        let steps = key_steps(&key, page);
+        let next = match key {
+            _ if steps.is_some() => steps.and_then(|delta| stepped(options, at, delta, wrap)),
             Key::Named(NamedKey::Home) => open().next().map(|(index, _)| index),
             Key::Named(NamedKey::End) => open().next_back().map(|(index, _)| index),
             Key::Character(key)
@@ -260,58 +236,23 @@ pub(super) fn SpinColumn(props: SpinColumnProps) -> Element {
         pick(next);
     };
 
-    let options_for_wheel = options.clone();
-    let onwheel = move |event: Event<WheelData>| {
-        // Disabled, the wheel scrolls the page.
-        if disabled {
-            return;
-        }
-        event.prevent_default();
-        let travel = platform::wheel_travel_y(&event.data(), WHEEL_STEP, page as f64);
-        let (total, delta) = wheel_steps(*wheel.peek(), travel);
-        wheel.set(total);
-        if delta != 0 {
-            pick(stepped(&options_for_wheel, at, delta, wrap));
-        }
-    };
-
-    let options_for_drag = options.clone();
-    let onstart = use_callback(move |_: DragStart| drag_from.set(Some((at, 0))));
-    let onmove = use_callback(move |step: DragMove| {
-        let Some((from, taken)) = drag_from.cloned() else {
-            return;
-        };
-        // Up brings the value below into the middle, as a wheel's rim.
-        let steps = (-step.delta().y / DRAG_STEP).round() as isize;
-        if steps == taken {
-            return;
-        }
-        drag_from.set(Some((from, steps)));
-        let next = match steps {
-            0 => match from {
-                SpinAt::At(index) => Some(index),
-                _ => None,
-            },
-            steps => stepped(&options_for_drag, from, steps, wrap),
-        };
-        if let Some(next) = next {
-            onpick.call((column, next));
+    let options_for_turn = options.clone();
+    let onturn = use_callback(move |turn: Turn<SpinAt>| match turn {
+        Turn::By(delta) => pick(stepped(&options_for_turn, at, delta, wrap)),
+        Turn::From(from, steps) => {
+            let next = match steps {
+                0 => match from {
+                    SpinAt::At(index) => Some(index),
+                    _ => None,
+                },
+                steps => stepped(&options_for_turn, from, steps, wrap),
+            };
+            if let Some(next) = next {
+                onpick.call((column, next));
+            }
         }
     });
-    let options_for_press = options.clone();
-    let onend = use_callback(move |()| {
-        let dragged = drag_from.cloned().is_some_and(|(_, taken)| taken != 0);
-        drag_from.set(None);
-        if let Some(delta) = pressed.take().filter(|_| !dragged) {
-            pick(stepped(&options_for_press, at, delta, wrap));
-        }
-    });
-    let drag = use_drag(DragOptions {
-        capture: handle,
-        onstart,
-        onmove,
-        onend,
-    });
+    let gestures = use_spin_gestures(handle, at, disabled, page, onturn);
 
     // An empty column shows no neighbours: nothing is picked to step from.
     let beside = |delta: isize| match at {
@@ -332,7 +273,7 @@ pub(super) fn SpinColumn(props: SpinColumnProps) -> Element {
             span {
                 "data-slot": ChronoPickerPart::Neighbour.slot(),
                 "aria-hidden": "true",
-                onpointerdown: move |_| pressed.set((!text.is_empty() && !disabled).then_some(delta)),
+                onpointerdown: move |_| gestures.press((!text.is_empty() && !disabled).then_some(delta)),
                 "{text}"
             }
         }
@@ -351,13 +292,12 @@ pub(super) fn SpinColumn(props: SpinColumnProps) -> Element {
             "aria-valuemax": value_max,
             onmounted: handle.mount(),
             onkeydown,
-            onwheel,
+            onwheel: gestures.onwheel,
             onblur: move |_| typing.set(String::new()),
-            // Disabled, no drag: its `prevent_default` would cancel the press's focus (3883).
-            onpointerdown: move |event| if !disabled { drag.onpointerdown.call(event) },
-            onpointermove: drag.onpointermove,
-            onpointerup: drag.onpointerup,
-            onpointercancel: drag.onpointercancel,
+            onpointerdown: gestures.onpointerdown,
+            onpointermove: gestures.onpointermove,
+            onpointerup: gestures.onpointerup,
+            onpointercancel: gestures.onpointercancel,
             {neighbour(-1, before)}
             span { "data-slot": ChronoPickerPart::Value.slot(), "{text}" }
             {neighbour(1, after)}
@@ -427,15 +367,6 @@ mod tests {
         // No value yet: the first step lands on the start either way.
         assert_eq!(stepped(&minutes, SpinAt::Empty(6), 1, true), Some(6));
         assert_eq!(stepped(&minutes, SpinAt::Empty(6), -1, true), Some(6));
-    }
-
-    #[test]
-    fn a_wheel_notch_takes_one_step_and_small_deltas_add_up() {
-        assert_eq!(wheel_steps(0.0, 100.0), (0.0, 1));
-        assert_eq!(wheel_steps(0.0, -360.0), (0.0, -1));
-        assert_eq!(wheel_steps(0.0, 15.0), (15.0, 0));
-        assert_eq!(wheel_steps(30.0, 15.0), (0.0, 1));
-        assert_eq!(wheel_steps(30.0, -15.0), (-15.0, 0));
     }
 
     #[test]

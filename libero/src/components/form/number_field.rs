@@ -1,7 +1,11 @@
+mod spinner;
+
 use std::{any::TypeId, borrow::Cow, rc::Rc};
 
 use dioxus::prelude::*;
 use pictogram_icons_lucide as lucide;
+
+use spinner::{Look, NumberSpinner, Spin};
 
 use crate::{
     components::{
@@ -126,7 +130,41 @@ field_props! {
         /// Names the lowering stepper. Defaults to `number_field.decrease`.
         #[props(default, into)]
         decrement_label: Option<String>,
+        /// What a tap under a finger opens: the soft keyboard, or a spinner that steps by `step`.
+        #[props(default)]
+        touch_input: TouchInput,
     }
+}
+
+/// What a tap on a [`NumberField`] opens under a finger. A mouse always types.
+///
+/// ```rust
+/// # use dioxus::prelude::*;
+/// # use libero::components::{NumberField, TouchInput};
+/// # fn app() -> Element {
+/// let mut minutes = use_signal(|| Some(30u32));
+/// rsx! {
+///     // A tap spins in steps of 5; the spinner's keyboard button types instead.
+///     NumberField {
+///         label: "Break",
+///         trailing: rsx! { "min" },
+///         describe_trailing: true,
+///         step: 5,
+///         touch_input: TouchInput::Spin,
+///         value: minutes(),
+///         onchange: move |next| minutes.set(next),
+///     }
+/// }
+/// # }
+/// ```
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub enum TouchInput {
+    /// The soft keyboard, as any text field.
+    #[default]
+    Keyboard,
+    /// A spin column, as a digital clock's: below `sm` in a sheet, a popover from `sm` up.
+    /// Every step is sent at once; Done, Escape, Back and a tap outside only close it.
+    Spin,
 }
 
 /// A numeric field over the caller's own number type, with optional steppers.
@@ -285,6 +323,7 @@ fn NumberFieldShell<T: NumberValue>(
     field: NumberFieldProps<T>,
 ) -> Element {
     let props = field;
+    let unit = trailing;
     let leading = leading.map(|content| rsx! { LiveSlot { content } });
     let caller_trailing = trailing.map(|content| rsx! { LiveSlot { content } });
     let theme = use_theme();
@@ -352,6 +391,9 @@ fn NumberFieldShell<T: NumberValue>(
     use_silent_focus_in(anchor, move || focus(grouped));
     use_silent_focus_out_of(anchor, move || focus(false));
     let kind = use_hook(Keypad::<T>::of);
+    let mut spin = use_signal(Spin::default);
+    let spins = props.touch_input == TouchInput::Spin;
+    let spin_opens = spins && !disabled && !readonly;
 
     let publish = move |next: Option<T>| {
         let next = next.map(|next| rounded(next.clamp_between(min, max)));
@@ -362,6 +404,12 @@ fn NumberFieldShell<T: NumberValue>(
         }
     };
     let typed_publish = publish.clone();
+    let spin_publish = publish.clone();
+    // A spinner's step: the column sends the number it shows next.
+    let spin_to = use_callback(move |next: T| {
+        buffer.set(None);
+        spin_publish(Some(next));
+    });
     // One identity across renders, so `Steppers` can skip. Safe as a
     // `use_callback`: nothing in it focuses or clicks, so it cannot re-enter.
     let nudge = use_callback(move |steps: i32| {
@@ -429,6 +477,7 @@ fn NumberFieldShell<T: NumberValue>(
     // The steppers sit last. The id goes on the caller's part alone, so their names
     // do not describe the input.
     let [leading_id, trailing_id] = field.slot_ids();
+    let unit_id = trailing_id.clone();
     let steppers = props.steppers.then(|| {
         rsx! {
             Steppers {
@@ -503,7 +552,6 @@ fn NumberFieldShell<T: NumberValue>(
         .aria(control)
         .element(&anchor)
         .attr_default("type", "text")
-        .attr_default("inputmode", keypad(kind, min))
         // A leading minus takes the page direction, so `-5` drew as `5-` under `rtl`.
         .attr_default("dir", "ltr")
         // The role carries the range: `min`/`max` mean nothing on `type="text"`.
@@ -546,6 +594,16 @@ fn NumberFieldShell<T: NumberValue>(
             event.prevent_default();
             nudge.call(steps);
         });
+    // The tap's native focus raised no keyboard; its click opens the spinner.
+    let input = match spin_opens {
+        true => input.event("onclick", move |_: MouseEvent| {
+            let now = *spin.peek();
+            if now.keyboardless() && !now.open {
+                spin.write().open = true;
+            }
+        }),
+        false => input,
+    };
     // `focusin`/`focusout`: a caller's own `onfocus` and `onblur` stay theirs.
     let input = match grouped {
         true => input
@@ -583,27 +641,50 @@ fn NumberFieldShell<T: NumberValue>(
         let display = match &*buffer.read() {
             Some(edit) if edit.shows(current, separator) => edit.text.clone(),
             _ => current
-                .map(|value| {
-                    let text = match decimals {
-                        Some(decimals) => decimals.write(&value.format()),
-                        None => value.format(),
-                    };
-                    match (grouped && !focused(), separator.decimal) {
-                        (true, _) => formats.write_number(&text),
-                        (false, Some(decimal)) => text.replacen('.', decimal, 1),
-                        (false, None) => text,
-                    }
-                })
+                .map(|value| written(value, decimals, at_rest, separator, formats))
                 .unwrap_or_default(),
         };
+        // Read only by a spinner field, so a plain one never redraws for it.
+        let keyboardless = spins && spin().keyboardless();
         input
             .clone()
+            .attr_default(
+                "inputmode",
+                if keyboardless {
+                    "none"
+                } else {
+                    keypad(kind, min)
+                },
+            )
             .attr("aria-valuenow", aria_number(current))
             .attr("value", display)
             .render(HtmlTag::Input, attributes.clone(), ())
     });
 
-    field.render(frame.render(rsx! { LiveControl { draw } }))
+    let control = frame.render(rsx! { LiveControl { draw } });
+    let control = match spins {
+        true => rsx! {
+            NumberSpinner::<T> {
+                control,
+                spin,
+                live,
+                bound: bound_value,
+                field_id: field.id().to_string(),
+                labelled: !props.label.is_none(),
+                field_root: field.root(),
+                look: Look { decimals, grouped, separator },
+                step,
+                min,
+                max,
+                size,
+                unit: unit.filter(|_| props.describe_trailing),
+                unit_id,
+                spin_to,
+            }
+        },
+        false => control,
+    };
+    field.render(control)
 }
 
 /// Text typed since the last commit, shown while it parses to the caller's
@@ -617,6 +698,25 @@ struct Edit<T> {
 impl<T: NumberValue> Edit<T> {
     fn shows(&self, current: Option<T>, separator: Separators) -> bool {
         self.held == current || parse::<T>(&self.text, separator) == current
+    }
+}
+
+/// The text a field shows for `value` when no typing is held; `grouped` writes the groups.
+fn written<T: NumberValue>(
+    value: T,
+    decimals: Option<Decimals>,
+    grouped: bool,
+    separator: Separators,
+    formats: &Formats,
+) -> String {
+    let text = match decimals {
+        Some(decimals) => decimals.write(&value.format()),
+        None => value.format(),
+    };
+    match (grouped, separator.decimal) {
+        (true, _) => formats.write_number(&text),
+        (false, Some(decimal)) => text.replacen('.', decimal, 1),
+        (false, None) => text,
     }
 }
 

@@ -49,6 +49,7 @@ icon_set!(lucide: [outlined => lucide_outlined] {
     CheckboxIndeterminate => minus,
     Plus => plus,
     Minus => minus,
+    Keyboard => keyboard,
     Eye => eye,
     EyeOff => eye_off,
     Upload => upload,

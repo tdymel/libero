@@ -109,7 +109,7 @@ it is on (Notes).
 | `form-root` | Form, use_form | alert | on |  |
 | `image-cropper` | ImageCropper | slider, action-icon | off |  |
 | `native-select` | NativeSelect | combobox, select | off |  |
-| `number-field` | NumberField | action-icon | off |  |
+| `number-field` | NumberField | action-icon, button, paper, use-drag, use-media-query, use-popover, use-swipe, use-timers | off |  |
 | `password-field` | PasswordField | text-field, action-icon | off |  |
 | `phone-field` | PhoneField | combobox | off |  |
 | `pin-field` | PinField | use-icon, visually-hidden, use-id | off |  |

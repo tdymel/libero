@@ -4,7 +4,7 @@
 use anyhow::Result;
 use chromiumoxide::Page;
 use e2e::browser::block_on;
-use e2e::driver::{Driver, eventually, eventually_text};
+use e2e::driver::{Driver, eventually, eventually_text, linger};
 use e2e::passes::{keyboard, pointer};
 use e2e::wait::PageBounded;
 use e2e::{Fixture, Suite, Viewport, wait};
@@ -630,3 +630,217 @@ e2e::scenario!(
     "/number-field/decimals",
     the_leading_slot_describes_the_field
 );
+
+const SPINNER: &str = "[role=dialog]";
+const COLUMN: &str = "[role=dialog] [data-slot=spin]";
+const MINUTES: &str = "#minutes";
+
+/// Todo 4133: a mouse types in a `TouchInput::Spin` field; only a finger spins.
+async fn a_mouse_types_in_a_spin_field<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    d.click(MINUTES).await?;
+    let mode = d.attr(MINUTES, "inputmode").await?;
+    anyhow::ensure!(mode.as_deref() == Some("numeric"), "inputmode {mode:?}");
+    anyhow::ensure!(!d.exists(SPINNER).await?, "a click opened the spinner");
+    d.press(keyboard::END).await?;
+    d.press(keyboard::BACKSPACE).await?;
+    d.press(keyboard::BACKSPACE).await?;
+    d.type_text("42").await?;
+    d.press(keyboard::ENTER).await?;
+    // `3`, empty, `4`, `42`: one change each.
+    eventually_text(d, "#spun", "Some(42) 4", "typing 42, Enter").await
+}
+
+e2e::scenario!(
+    a_mouse_still_types_in_a_spin_field,
+    "/number-field/spin",
+    a_mouse_types_in_a_spin_field,
+    android: skip("a phone app's tap is a finger's: it spins (4133)"),
+    ios: skip("a phone app's tap is a finger's: it spins (4133)")
+);
+
+/// Todo 4133: in the app a tap spins with the keyboard down, Back closes the sheet, and the
+/// keyboard button hands the field back for a tap that raises the keyboard.
+async fn a_tap_spins_in_the_app<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    const KEYBOARD: &str = "[role=dialog] [data-slot=actions] button:first-child";
+    d.click(MINUTES).await?;
+    eventually(d, "the spinner after a tap", async |d| {
+        d.exists(COLUMN).await
+    })
+    .await?;
+    linger(d, 40).await;
+    anyhow::ensure!(
+        !d.soft_keyboard_shown().await?,
+        "the tap raised the keyboard"
+    );
+    d.press_back().await?;
+    eventually(d, "Back closed the spinner", async |d| {
+        Ok(!d.exists(SPINNER).await?)
+    })
+    .await?;
+    d.click(MINUTES).await?;
+    eventually(d, "the spinner again", async |d| d.exists(KEYBOARD).await).await?;
+    d.click(KEYBOARD).await?;
+    eventually(d, "the field focused, the spinner closed", async |d| {
+        Ok(d.is_focused(MINUTES).await? && !d.exists(SPINNER).await?)
+    })
+    .await?;
+    // A `focus()` from Rust raises no WebView keyboard (3902): the next tap on the field does.
+    linger(d, 40).await;
+    anyhow::ensure!(
+        !d.soft_keyboard_shown().await?,
+        "the keyboard button raised the keyboard itself: the docs' Touch input section says it does not"
+    );
+    d.click(MINUTES).await?;
+    eventually(d, "the soft keyboard on the next tap", async |d| {
+        d.soft_keyboard_shown().await
+    })
+    .await?;
+    anyhow::ensure!(
+        !d.exists(SPINNER).await?,
+        "a tap while typing opened the spinner"
+    );
+    // Back hides the keyboard first, so the next scenario starts without it.
+    d.press_back().await?;
+    eventually(d, "Back to hide the keyboard", async |d| {
+        Ok(!d.soft_keyboard_shown().await?)
+    })
+    .await
+}
+
+e2e::scenario!(
+    android_a_tap_spins_with_the_keyboard_down,
+    "/number-field/spin",
+    a_tap_spins_in_the_app,
+    android_only("only a phone app reports its soft keyboard")
+);
+
+/// A phone, 360px wide, on the spin page.
+async fn spin_phone() -> Fixture {
+    use chromiumoxide::cdp::browser_protocol::emulation::SetDeviceMetricsOverrideParams;
+    let fixture = Fixture::open("/number-field/spin", Viewport::Mobile)
+        .await
+        .unwrap();
+    fixture
+        .page
+        .execute_bounded(SetDeviceMetricsOverrideParams::new(360, 780, 1.0, true))
+        .await
+        .unwrap();
+    fixture
+}
+
+async fn tap(page: &Page, selector: &str) -> Result<()> {
+    let at = pointer::touch_down(page, selector).await?;
+    pointer::touch_up(page, at).await
+}
+
+async fn spun(page: &Page, text: &str) -> Result<()> {
+    let js = format!("document.querySelector('#spun').textContent === {text:?}");
+    wait::for_js_true(page, &js, text).await
+}
+
+/// Opens the spinner with a tap: no keyboard, the column focused, the sheet at the foot.
+async fn tap_open(page: &Page) -> Result<()> {
+    tap(page, MINUTES).await?;
+    let js = format!(
+        "(() => {{ const i = document.querySelector({MINUTES:?}); \
+         const c = document.querySelector({COLUMN:?}); const s = document.querySelector({SPINNER:?}); \
+         if (!c || getComputedStyle(s).visibility !== 'visible') return false; \
+         const r = s.getBoundingClientRect(); \
+         return i.getAttribute('inputmode') === 'none' && c === document.activeElement \
+           && Math.abs(r.bottom - innerHeight) < 1 && Math.abs(r.width - innerWidth) < 1; }})()"
+    );
+    wait::for_js_true(page, &js, "the sheet, its column focused, no keyboard").await
+}
+
+const CLOSED: &str = "!document.querySelector('[role=dialog]') \
+    && document.querySelector('#minutes') === document.activeElement";
+
+/// A tap opens the sheet without the keyboard; a drag of 3 steps sends 3 changes; Escape and
+/// Done close it and hand focus back to the input.
+#[test]
+fn a_finger_spins_the_number() {
+    block_on(async {
+        let fixture = spin_phone().await;
+        let page = &fixture.page;
+        tap_open(page).await.unwrap();
+        let named = format!(
+            "(() => {{ const c = document.querySelector({COLUMN:?}); \
+             return c.getAttribute('aria-valuenow') === '30' \
+               && document.getElementById(c.getAttribute('aria-labelledby')).textContent === 'Break' \
+               && document.getElementById(c.getAttribute('aria-describedby')).textContent.trim() === 'min'; }})()"
+        );
+        wait::for_js_true(page, &named, "a named column at 30, described by its unit")
+            .await
+            .unwrap();
+        // Up 3 x 24px in small moves: each step is sent once.
+        let at = pointer::touch_down(page, &format!("{COLUMN} [data-slot=value]"))
+            .await
+            .unwrap();
+        for step in 1..=12 {
+            let y = at.y - 6.0 * f64::from(step);
+            pointer::touch_move(page, pointer::Point { x: at.x, y })
+                .await
+                .unwrap();
+        }
+        let end = pointer::Point {
+            x: at.x,
+            y: at.y - 72.0,
+        };
+        pointer::touch_up(page, end).await.unwrap();
+        spun(page, "Some(45) 3").await.unwrap();
+        keyboard::press(page, keyboard::ESCAPE).await.unwrap();
+        wait::for_js_true(page, CLOSED, "Escape closed it, focus on the input")
+            .await
+            .unwrap();
+
+        tap_open(page).await.unwrap();
+        tap(page, &format!("{COLUMN} [data-slot=neighbour]:last-child"))
+            .await
+            .unwrap();
+        spun(page, "Some(50) 4").await.unwrap();
+        tap(page, "[role=dialog] [data-slot=actions] button:last-child")
+            .await
+            .unwrap();
+        wait::for_js_true(page, CLOSED, "Done closed it, focus on the input")
+            .await
+            .unwrap();
+        spun(page, "Some(50) 4").await.unwrap();
+        fixture.console.assert_clean("a finger's spinner").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
+/// The keyboard button closes the sheet and hands the input its keypad back, for typing.
+#[test]
+fn the_keyboard_button_switches_to_typing() {
+    block_on(async {
+        let fixture = spin_phone().await;
+        let page = &fixture.page;
+        tap_open(page).await.unwrap();
+        tap(page, "[role=dialog] [data-slot=actions] button:first-child")
+            .await
+            .unwrap();
+        let typing = format!(
+            "{CLOSED} && document.querySelector({MINUTES:?}).getAttribute('inputmode') === 'numeric'"
+        );
+        wait::for_js_true(page, &typing, "the input focused with its keypad")
+            .await
+            .unwrap();
+        // A tap now types: it opens nothing.
+        tap(page, MINUTES).await.unwrap();
+        page.evaluate(format!("document.querySelector({MINUTES:?}).select()"))
+            .await
+            .unwrap();
+        keyboard::insert_text(page, "42").await.unwrap();
+        keyboard::press(page, keyboard::ENTER).await.unwrap();
+        spun(page, "Some(42) 1").await.unwrap();
+        wait::for_js_true(page, CLOSED, "no spinner while typing")
+            .await
+            .unwrap();
+        fixture
+            .console
+            .assert_clean("typing in a spinner field")
+            .unwrap();
+        fixture.close().await.unwrap();
+    });
+}

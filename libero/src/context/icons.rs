@@ -60,6 +60,8 @@ pub enum IconSlot {
     Plus,
     /// A number field's step down, a lightbox's zoom out.
     Minus,
+    /// A number field's touch spinner, switching to typing.
+    Keyboard,
     /// A password field's reveal button, secret hidden.
     Eye,
     /// A password field's reveal button, secret shown.

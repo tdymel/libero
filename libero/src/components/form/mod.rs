@@ -31,7 +31,7 @@ mod form_value;
 mod handle;
 #[cfg(any(feature = "image-cropper", feature = "file-field"))]
 mod image_cropper;
-#[cfg(any(feature = "color", feature = "date-field"))]
+#[cfg(any(feature = "color", feature = "date-field", feature = "number-field"))]
 mod keyboardless;
 #[cfg(feature = "native-select")]
 mod native_select;
@@ -45,7 +45,8 @@ mod phone_field;
     feature = "combobox",
     feature = "color",
     feature = "date-picker",
-    feature = "menu"
+    feature = "menu",
+    feature = "number-field"
 ))]
 pub(crate) mod phone_sheet;
 #[cfg(feature = "pin-field")]
@@ -66,6 +67,8 @@ mod segmented_control;
 mod select;
 #[cfg(feature = "slider")]
 mod slider;
+#[cfg(any(feature = "date-picker", feature = "number-field"))]
+mod spin;
 #[cfg(feature = "form-root")]
 mod submit;
 #[cfg(feature = "switch")]
@@ -153,7 +156,7 @@ pub use image_cropper::{ImageCropper, ImageCropperPart, ImageCropperProps};
 #[cfg(feature = "native-select")]
 pub use native_select::{NativeSelect, NativeSelectProps};
 #[cfg(feature = "number-field")]
-pub use number_field::{Decimals, NumberField, NumberFieldProps};
+pub use number_field::{Decimals, NumberField, NumberFieldProps, TouchInput};
 #[cfg(feature = "password-field")]
 pub use password_field::{PasswordField, PasswordFieldProps};
 #[cfg(feature = "phone-field")]

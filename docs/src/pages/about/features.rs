@@ -127,7 +127,7 @@ pub(crate) const FEATURES: &[Feature] = &[
     feature("form-root", "form", "Form, use_form", &["alert"], true, &["/form/form"]),
     feature("image-cropper", "form", "ImageCropper", &["slider", "action-icon"], false, &["/form/image-cropper"]),
     feature("native-select", "form", "NativeSelect", &["combobox", "select"], false, &["/form/native-select"]),
-    feature("number-field", "form", "NumberField", &["action-icon"], false, &["/form/number-field"]),
+    feature("number-field", "form", "NumberField", &["action-icon", "button", "paper", "use-drag", "use-media-query", "use-popover", "use-swipe", "use-timers"], false, &["/form/number-field"]),
     feature("password-field", "form", "PasswordField", &["text-field", "action-icon"], false, &["/form/password-field"]),
     feature("phone-field", "form", "PhoneField", &["combobox"], false, &["/form/phone-field"]),
     feature("pin-field", "form", "PinField", &["use-icon", "visually-hidden", "use-id", "loader"], false, &["/form/pin-field"]),

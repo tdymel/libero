@@ -1,7 +1,9 @@
 //! `NumberField` with its steppers, and one field per state its docs page shows.
 
 use dioxus::prelude::*;
-use libero::components::{Button, Decimals, Flex, Form, NumberField, Text, use_form};
+use libero::components::{
+    Button, Decimals, Flex, Form, NumberField, Text, TouchInput, use_form,
+};
 
 use crate::Routes;
 
@@ -12,7 +14,33 @@ pub const ROUTES: Routes = &[
     ("/number-field/rtl", || rsx! { NumberFieldRtlPage {} }),
     ("/number-field/grouped", || rsx! { NumberFieldGroupedPage {} }),
     ("/number-field/decimals", || rsx! { NumberFieldDecimalsPage {} }),
+    ("/number-field/spin", || rsx! { NumberFieldSpinPage {} }),
 ];
+
+/// Todo 4133: a tap spins in steps of 5. `#spun` shows the value and the `onchange` count.
+#[component]
+fn NumberFieldSpinPage() -> Element {
+    let mut minutes = use_signal(|| Some(30u32));
+    let mut changes = use_signal(|| 0u32);
+    rsx! {
+        Flex { direction: "column", gap: "md", max_width: "320px", padding: "md",
+            NumberField {
+                id: "minutes",
+                label: "Break",
+                trailing: rsx! { "min" },
+                describe_trailing: true,
+                step: 5,
+                touch_input: TouchInput::Spin,
+                value: minutes(),
+                onchange: move |next| {
+                    minutes.set(next);
+                    changes += 1;
+                },
+            }
+            Text { id: "spun", {format!("{:?} {}", minutes(), changes())} }
+        }
+    }
+}
 
 /// Two places, a `$` before the field and described by it; `#readout` shows the value as `{:?}`.
 #[component]
