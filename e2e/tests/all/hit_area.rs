@@ -202,6 +202,110 @@ fn a_finger_presses_small_controls_in_a_44px_box() {
     });
 }
 
+/// Todo 4188: under a finger a chip's x takes its whole pill's height and 44px across,
+/// and a tap at the pill's bottom edge removes that chip, not the one on the next row.
+#[test]
+fn a_finger_on_a_chip_x_never_removes_the_next_rows_chip() {
+    use chromiumoxide::cdp::browser_protocol::emulation::SetTouchEmulationEnabledParams;
+    block_on(async {
+        let fixture = Fixture::open("/hit-area", Viewport::Desktop).await.unwrap();
+        let page = &fixture.page;
+        page.execute_bounded(SetTouchEmulationEnabledParams::new(true))
+            .await
+            .unwrap();
+        wait::for_js_true(
+            page,
+            "matchMedia('(pointer: coarse)').matches",
+            "a coarse pointer",
+        )
+        .await
+        .unwrap();
+
+        for case in ["tag-rows", "pick-rows"] {
+            let probe: serde_json::Value = page
+                .evaluate_bounded(format!(
+                    "(() => {{
+                        const xs = [...document.querySelectorAll('[data-case={case}] button[aria-label^=Remove]')];
+                        xs[0].scrollIntoView({{ block: 'center' }});
+                        const misses = [], tops = [];
+                        for (const el of xs) {{
+                            const r = el.getBoundingClientRect();
+                            const pill = el.closest('[data-slot=chip-trailing]').parentElement.getBoundingClientRect();
+                            const cx = r.x + r.width / 2, cy = r.y + r.height / 2;
+                            tops.push([pill.top, pill.height]);
+                            const points = [[-21, 0], [21, 0]];
+                            for (let y = pill.top + 1; y < pill.bottom; y += 1) points.push([0, y - cy]);
+                            for (const [dx, dy] of points) {{
+                                const at = document.elementFromPoint(cx + dx, cy + dy);
+                                if (!at || !el.contains(at)) misses.push([el.ariaLabel, dx, dy, at ? at.outerHTML.slice(0, 60) : null]);
+                            }}
+                        }}
+                        const first = xs[0].getBoundingClientRect();
+                        const pill = xs[0].closest('[data-slot=chip-trailing]').parentElement.getBoundingClientRect();
+                        return {{ misses, tops, tap: {{ x: first.x + first.width / 2, y: pill.bottom - 1 }} }};
+                    }})()"
+                ))
+                .await
+                .unwrap()
+                .into_value()
+                .unwrap();
+            println!("{case}: {probe}");
+            let tops = probe["tops"].as_array().unwrap();
+            // One line per pill, one pill per row: else the x is not over the next row's.
+            assert!(
+                tops.len() == 3
+                    && tops[0][0].as_f64() < tops[1][0].as_f64()
+                    && tops.iter().all(|top| top[1].as_f64() < Some(32.0)),
+                "{case}: the chips do not stack one per row: {tops:?}"
+            );
+            assert_eq!(
+                probe["misses"].as_array().map(Vec::len),
+                Some(0),
+                "{case}: points of an x's box land elsewhere: {}",
+                probe["misses"]
+            );
+
+            let tap = &probe["tap"];
+            tap_at(page, tap["x"].as_f64().unwrap(), tap["y"].as_f64().unwrap()).await;
+            wait::for_js_true(
+                page,
+                &format!(
+                    "!document.querySelector('[data-case={case}] button[aria-label=\"Remove Kiwi 1\"]')
+                        && !!document.querySelector('[data-case={case}] button[aria-label=\"Remove Kiwi 2\"]')"
+                ),
+                "the tapped chip gone and the next row's kept",
+            )
+            .await
+            .unwrap();
+        }
+
+        fixture
+            .console
+            .assert_clean("chip rows under a finger")
+            .unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
+/// A finger down and up at a viewport point.
+async fn tap_at(page: &chromiumoxide::Page, x: f64, y: f64) {
+    use chromiumoxide::cdp::browser_protocol::input::{
+        DispatchTouchEventParams, DispatchTouchEventType, TouchPoint,
+    };
+    for kind in [
+        DispatchTouchEventType::TouchStart,
+        DispatchTouchEventType::TouchEnd,
+    ] {
+        let point = TouchPoint::builder().x(x).y(y).build().unwrap();
+        let event = DispatchTouchEventParams::builder()
+            .r#type(kind)
+            .touch_point(point)
+            .build()
+            .unwrap();
+        page.execute_bounded(event).await.unwrap();
+    }
+}
+
 /// Todo 3589: a `md` icon keeps its own box on a coarse pointer, so grouped icons do not
 /// take each other's presses.
 #[test]

@@ -138,6 +138,31 @@ fn a_rejection_arrives_after_the_change_with_its_reason() {
     });
 }
 
+/// Todo 4189: a comma list pasted into an empty draft becomes chips and leaves the input empty.
+#[test]
+fn a_pasted_list_leaves_no_text_behind() {
+    block_on(async {
+        let fixture = Fixture::open("/tags-field/echo", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        keyboard::tab_to(page, TRIGGER, 10).await.unwrap();
+        keyboard::insert_text(page, "x, y, z").await.unwrap();
+        wait::for_js_true(
+            page,
+            &format!(
+                "document.querySelector('#echo').textContent === '[\"rust\", \"x\", \"y\", \"z\"]' \
+                 && document.querySelector('{TRIGGER}').value === ''"
+            ),
+            "x, y and z added and the input emptied",
+        )
+        .await
+        .unwrap();
+        fixture.console.assert_clean("a pasted list").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
 #[test]
 fn typing_keeps_home_end_and_expanded_honest() {
     super::autocomplete::editable_combobox_typing("/tags-field", "s");

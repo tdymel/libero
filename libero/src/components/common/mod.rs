@@ -65,7 +65,7 @@ pub(crate) use focus_ring::{
 pub(crate) use focusable::FOCUSABLE_SELECTOR;
 #[cfg(any(feature = "text", feature = "title"))]
 pub(crate) use gradient_text::gradient_text_sx;
-pub(crate) use hit_area::{COARSE_POINTER, coarse_hit_area_sx, min_hit_area_sx};
+pub(crate) use hit_area::{COARSE_INSET, COARSE_POINTER, coarse_hit_area_sx, min_hit_area_sx};
 #[cfg(feature = "use-icon")]
 pub(crate) use icons::{Glyph, draw_svg};
 pub(crate) use keys::{NavigationChord, has_shortcut_modifier, is_alt_graph, navigation_chord};

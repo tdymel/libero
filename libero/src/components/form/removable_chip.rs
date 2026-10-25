@@ -7,7 +7,7 @@ use crate::{
     components::{
         accessibility::VisuallyHidden,
         buttons::ActionIcon,
-        common::{Glyph, Input, coarse_hit_area_sx},
+        common::{COARSE_INSET, COARSE_POINTER, Glyph, Input},
         form::Chip,
     },
     context::IconSlot,
@@ -56,10 +56,31 @@ static REMOVE_BUTTON_SX: StaticSx = StaticSx::new(|| {
             "&:hover",
             sx().background("color-mix(in srgb, currentColor 20%, transparent)"),
         )
-        // 44px under a finger (todo 3901); the chip is unclipped, so it reaches past the pill.
+        // 44px wide under a finger (todo 3901); in height only to half the 4px row gap,
+        // or the chip on the next row takes a press meant for this x (4188).
         .position("relative")
-        .and(coarse_hit_area_sx("::before"))
+        .media(
+            COARSE_POINTER,
+            sx().selector(
+                "::before",
+                sx().content("\"\"")
+                    .position("absolute")
+                    .left(COARSE_INSET)
+                    .right(COARSE_INSET)
+                    .top(coarse_block_inset())
+                    .bottom(coarse_block_inset()),
+            ),
+        )
 });
+
+/// The coarse inset, floored at the pill's edge plus 2px: the button sits centred in
+/// the first line, a 1px border from the edge.
+fn coarse_block_inset() -> String {
+    format!(
+        "max({COARSE_INSET}, calc((100% - {}) / 2 - 3px))",
+        LINE_VAR.value()
+    )
+}
 
 /// A list field's chip: the label and an x that drops it, one size step down.
 /// Not a component: a memoized `Callback` would keep its first index ([[codebase/dioxus-memoization-traps]]).

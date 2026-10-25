@@ -770,7 +770,14 @@ fn tags_field_input<F: Fn(Vec<String>) + Clone + 'static>(
                 true if raw != text() => text.set(raw),
                 true => {}
                 // A refused tag stays in the draft, to fix or drop.
-                false => text.set(typing(pieces).unwrap_or_default()),
+                false => {
+                    let rest = typing(pieces).unwrap_or_default();
+                    // An unchanged draft is not written back, so a paste into it would stay (4189).
+                    if rest == text() {
+                        let _ = cursor.input.set_value(&rest);
+                    }
+                    text.set(rest);
+                }
             }
             // Typing disarms the highlight: the next Enter belongs to the typed
             // text, not to a row that moved under it.

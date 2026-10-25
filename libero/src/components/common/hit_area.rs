@@ -4,7 +4,7 @@ use crate::sx::{Sx, sx};
 pub(crate) const COARSE_POINTER: &str = "(pointer: coarse)";
 
 /// Half the shortfall below 44px (WCAG 2.5.5) out on each side; `0` from 44px up.
-const COARSE_INSET: &str = "min(0px, calc((100% - 44px) / 2))";
+pub(crate) const COARSE_INSET: &str = "min(0px, calc((100% - 44px) / 2))";
 
 /// Half the shortfall below 24px (WCAG 2.5.8) out on each side; `0` from 24px up.
 const MIN_INSET: &str = "min(0px, calc((100% - 24px) / 2))";

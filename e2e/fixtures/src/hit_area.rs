@@ -6,7 +6,7 @@ use dioxus::prelude::*;
 use libero::{
     components::{
         ActionIcon, Burger, ButtonGroup, Checkbox, Chip, ColorCode, ColorField, ColorSwatch, Dialog, Flex,
-        Image, NumberField, Pagination, PasswordField, Radio, Select, Slider, SliderChangeEvent,
+        Image, MultiSelect, NumberField, Pagination, PasswordField, Radio, Select, Slider, SliderChangeEvent,
         Switch, TagsField, TextField,
     },
     theme::Size,
@@ -70,6 +70,31 @@ fn HitAreaPage() -> Element {
                 }
             }
             Coarse {}
+            ChipRows {}
+        }
+    }
+}
+
+/// One chip per row, so each x sits right above the next row's (todo 4188).
+#[component]
+fn ChipRows() -> Element {
+    let kiwis = || (1..=3).map(|n| format!("Kiwi {n}")).collect::<Vec<_>>();
+    let mut tags = use_signal(kiwis);
+    let mut picked = use_signal(kiwis);
+    rsx! {
+        Flex { direction: "column", gap: "lg", align: "flex-start",
+            div { "data-case": "tag-rows", width: "120px",
+                TagsField { label: "Tags", value: tags(), onchange: move |next| tags.set(next) }
+            }
+            // Wider: the chevron takes room, and a wrapped label would grow the pill.
+            div { "data-case": "pick-rows", width: "160px",
+                MultiSelect {
+                    label: "Picks",
+                    options: kiwis(),
+                    value: picked(),
+                    onchange: move |next| picked.set(next),
+                }
+            }
         }
     }
 }
