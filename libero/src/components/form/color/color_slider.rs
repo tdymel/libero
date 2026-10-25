@@ -9,7 +9,7 @@ use crate::{
         COARSE_POINTER, Input, Part, Parts, attr, coarse_hit_area_sx, parts_enum, parts_under_sx,
         shadow_sx,
     },
-    sx::{StaticSx, Sx, sx},
+    sx::{FORCED_COLORS, StaticSx, Sx, sx},
     theme::{COLOR_PICKER_THUMB, ColorPickerDefaults, OWN_SHADOW, SLIDER_THUMB, SLIDER_TRACK},
 };
 
@@ -76,6 +76,14 @@ static COLOR_SLIDER_SX: StaticSx = StaticSx::new(|| {
             COARSE_POINTER,
             sx().selector(ColorSliderPart::Track.selector(), sx().z_index("1")),
         )
+        // Forced colours drop a gradient, and a scale of colours is the only way to pick one.
+        .media(
+            FORCED_COLORS,
+            sx().selector(
+                ColorSliderPart::Track.selector(),
+                sx().forced_color_adjust("none"),
+            ),
+        )
 });
 
 #[cfg(test)]
@@ -108,6 +116,17 @@ mod tests {
             .unwrap_or_else(|| panic!("no coarse query: {css}"));
         assert!(css[coarse..].contains("::after"), "{css}");
         assert!(css[coarse..].contains("z-index:1"), "{css}");
+    }
+
+    /// Todo 4205: forced colours must not blank the gradient track.
+    #[test]
+    fn forced_colours_keep_the_gradient_track() {
+        let css = crate::css::Stylesheet::from(&COLOR_SLIDER_SX);
+        let css = css.as_str();
+        let forced = css
+            .find("@media (forced-colors: active)")
+            .unwrap_or_else(|| panic!("no forced-colours rule: {css}"));
+        assert!(css[forced..].contains("forced-color-adjust:none"), "{css}");
     }
 
     #[test]

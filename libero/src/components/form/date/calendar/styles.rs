@@ -316,7 +316,9 @@ pub(super) static CALENDAR_SX: StaticSx = StaticSx::new(|| {
             .selector("& [data-today]", sx().border_color("CanvasText"))
             .selector(
                 "& [data-selected]",
-                sx().background("Highlight")
+                // Else Chromium paints a Canvas backplate behind the digit.
+                sx().forced_color_adjust("none")
+                    .background("Highlight")
                     .color("HighlightText")
                     .hover(sx().background("Highlight")),
             ),

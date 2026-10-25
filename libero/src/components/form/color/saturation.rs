@@ -16,7 +16,7 @@ use crate::{
     },
     localization::fill,
     platform::ElementApi,
-    sx::{StaticSx, sx},
+    sx::{FORCED_COLORS, StaticSx, sx},
     theme::{COLOR_PICKER_SATURATION_HEIGHT, COLOR_PICKER_THUMB, CssVar, Size, SizeCss},
 };
 
@@ -44,6 +44,8 @@ static PANEL_SX: StaticSx = StaticSx::new(|| {
         ))
         .cursor("crosshair")
         .user_select("none")
+        // Forced colours drop the gradient, and the panel is the only way to pick a shade.
+        .media(FORCED_COLORS, sx().forced_color_adjust("none"))
 });
 
 /// The dark rings round a white thumb border, shared with the hue and alpha thumbs.

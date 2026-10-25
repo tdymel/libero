@@ -77,13 +77,10 @@ static COLOR_FIELD_DROPDOWN_SX: StaticSx = StaticSx::new(|| {
                 "& [data-slot='sliders'] [data-slot='track']",
                 sx().var(SLIDER_TRACK, "44px").var(SLIDER_THUMB, "44px"),
             )
-            // One row of finger-sized presets that scrolls sideways; `div` outranks the picker's rule.
+            // Finger-sized presets that wrap, so none is cut at 360px (4206); `div` outranks the picker's rule.
             .selector(
                 "& div > [data-slot='swatches']",
-                sx().flex_wrap("nowrap")
-                    .overflow_x("auto")
-                    .max_width("none")
-                    .padding_block("2px"),
+                sx().max_width("none").padding_block("2px"),
             )
             .selector(
                 "& [data-slot='swatches'] > [data-slot='swatch']",

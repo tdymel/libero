@@ -45,6 +45,14 @@ static FIELDSET_SX: StaticSx = StaticSx::new(|| {
             sx().color("muted.7")
                 .font_size(FIELD_CAPTION_FONT_SIZE.value(Size::Md)),
         )
+        // The severity icon sits in the text line, one em tall, as in a field's caption.
+        .selector(
+            "& > [data-slot='status'] > svg",
+            sx().width("1em")
+                .height("1em")
+                .vertical_align("-0.15em")
+                .with("margin-inline-end", "0.25em"),
+        )
         // The fields inside dim themselves; the group's own text dims with them.
         .when(
             "disabled",

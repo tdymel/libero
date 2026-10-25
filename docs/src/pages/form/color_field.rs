@@ -133,7 +133,7 @@ pub fn ColorFieldPage() -> Element {
                 }
                 Text {
                     "On a phone the dropdown opens as a sheet at the foot of the screen, with a full-width panel, "
-                    "44px sliders and one row of swatches. Under a finger, a tap opens only the picker; "
+                    "44px sliders and 44px swatches that wrap.Under a finger, a tap opens only the picker; "
                     "the color's text box under it takes typing."
                 }
             },
