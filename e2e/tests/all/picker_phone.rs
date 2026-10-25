@@ -266,6 +266,36 @@ fn a_phone_range_scrolls_its_months_and_saves() {
     });
 }
 
+/// Todo 4186: a start alone stays in the sheet; Save then keeps the old range.
+#[test]
+fn a_half_picked_range_saved_keeps_the_old_one() {
+    block_on(async {
+        let fixture = phone().await;
+        let page = &fixture.page;
+        tap(page, &input("stay")).await.unwrap();
+        sheet_shown(page).await.unwrap();
+        tap(page, &day("2026-09-20")).await.unwrap();
+        let old = "document.querySelector('#echo').textContent\
+                   .includes('start: 2026-09-14, end: Some(2026-09-16)')";
+        let started = format!(
+            "document.querySelector('{SHEET} [data-slot=readout]')?.textContent \
+             === '20 Sep–End date' && {old}"
+        );
+        wait::for_js_true(page, &started, "a start in the sheet, the old range kept")
+            .await
+            .unwrap();
+        tap(page, &format!("{SHEET} [data-slot=save] button"))
+            .await
+            .unwrap();
+        let kept = format!("!document.querySelector({SHEET:?}) && {old}");
+        wait::for_js_true(page, &kept, "Save closed the sheet, the old range kept")
+            .await
+            .unwrap();
+        fixture.console.assert_clean("a half-picked range").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
 /// Todo 3924: a sideways swipe over a day's month pages it; the title opens the month grid.
 #[test]
 fn a_swipe_pages_the_day_sheet() {

@@ -397,6 +397,7 @@ pub fn FileField(props: FileFieldProps) -> Element {
         browse: browse_element,
         id: field.id().to_string(),
         labelledby: labelledby.clone(),
+        file: (!cards && !multiple && has_files).then(|| format!("{id_prefix}-0")),
         describedby: describedby.clone(),
         invalid,
         required,

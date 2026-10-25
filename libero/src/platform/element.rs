@@ -378,6 +378,11 @@ pub trait ElementApi {
         None
     }
 
+    /// Where a text control's selection ends, in UTF-16 units; the caret's place when it selects nothing.
+    fn selection_end(&self) -> Option<u32> {
+        None
+    }
+
     /// Puts a text control's caret at `at` UTF-16 units, selecting nothing. A WebView
     /// cannot: `Unsupported`.
     fn set_caret(&self, at: u32) -> Result<(), PlatformError> {

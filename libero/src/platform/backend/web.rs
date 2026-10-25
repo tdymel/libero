@@ -1189,6 +1189,15 @@ impl ElementApi for WebElement {
         }
     }
 
+    fn selection_end(&self) -> Option<u32> {
+        if let Some(input) = self.element.dyn_ref::<web_sys::HtmlInputElement>() {
+            input.selection_end().ok().flatten()
+        } else {
+            let text = self.element.dyn_ref::<web_sys::HtmlTextAreaElement>()?;
+            text.selection_end().ok().flatten()
+        }
+    }
+
     fn set_caret(&self, at: u32) -> Result<(), PlatformError> {
         let set = if let Some(input) = self.element.dyn_ref::<web_sys::HtmlInputElement>() {
             input.set_selection_range(at, at)

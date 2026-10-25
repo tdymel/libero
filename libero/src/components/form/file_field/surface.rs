@@ -34,6 +34,8 @@ pub(super) struct Surface {
     /// The field's id, which the Browse button carries.
     pub(super) id: String,
     pub(super) labelledby: Option<String>,
+    /// The lone file's chip id, so Browse names the file as a native input does.
+    pub(super) file: Option<String>,
     pub(super) describedby: Option<String>,
     pub(super) invalid: bool,
     pub(super) required: bool,
@@ -88,6 +90,7 @@ impl Surface {
             browse: element,
             id,
             labelledby,
+            file,
             describedby,
             invalid,
             required,
@@ -102,7 +105,7 @@ impl Surface {
             attributes,
         } = self;
         let required_id = format!("{id}-required");
-        let named = named(labelledby.as_deref(), &id);
+        let named = named(labelledby.as_deref(), file.as_deref(), &id);
         let described = described(&id, required, describedby.as_deref());
         // Without a label the caller's `aria_label` names the group as well as Browse.
         let group_name = attributes
@@ -373,9 +376,10 @@ pub(super) fn file_dropzone_variant(
     })
 }
 
-/// The label, then the control's own text: "Receipt, Browse files".
-fn named(labelledby: Option<&str>, id: &str) -> Option<String> {
-    labelledby.map(|label| format!("{label} {id}"))
+/// The label, the lone file, then the control's own text: "Receipt, scan.pdf, Browse files".
+fn named(labelledby: Option<&str>, file: Option<&str>, id: &str) -> Option<String> {
+    let ids = [labelledby, file].into_iter().flatten().collect::<Vec<_>>();
+    (!ids.is_empty()).then(|| format!("{} {id}", ids.join(" ")))
 }
 
 /// The required note's id, then the field's own descriptions.
@@ -428,7 +432,7 @@ pub(super) fn file_trigger_variant(
     let required_id = format!("{id}-required");
     let attribute = |name: &'static str, value: String| Attribute::new(name, value, None, false);
     args.attributes = [
-        named(labelledby.as_deref(), &id).map(|v| attribute("aria-labelledby", v)),
+        named(labelledby.as_deref(), None, &id).map(|v| attribute("aria-labelledby", v)),
         described(&id, required, describedby.as_deref()).map(|v| attribute("aria-describedby", v)),
         invalid.then(|| attribute("aria-invalid", "true".into())),
         loading.then(|| attribute("aria-busy", "true".into())),

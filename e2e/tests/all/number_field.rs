@@ -447,9 +447,10 @@ async fn settle(page: &Page, value: &str) -> Result<()> {
     .await
 }
 
-/// Focuses the grouped amount, by a press at `1,23`'s width or by script from a caret at 4, and
-/// waits for the bare number with a caret for which the JS test `caret` holds.
-fn caret_after_focus(press: bool, caret: &str) {
+/// Focuses the grouped amount, by a press at `1,23`'s width or by script from the selection
+/// `select` (a caret at 4, or all of it as a Tab in leaves it), and waits for the bare number with
+/// a selection for which the JS test `caret` holds.
+fn caret_after_focus(select: Option<(u32, u32)>, caret: &str) {
     const AMOUNT: &str = "#amount";
     block_on(async {
         let fixture = Fixture::open("/number-field/grouped", Viewport::Desktop)
@@ -476,16 +477,16 @@ fn caret_after_focus(press: bool, caret: &str) {
             .unwrap()
             .into_value()
             .unwrap();
-        if press {
-            pointer::click_at(page, pointer::Point { x, y })
-                .await
-                .unwrap();
-        } else {
+        if let Some((start, end)) = select {
             page.evaluate_bounded(format!(
-                "(el => {{ el.setSelectionRange(4, 4); el.focus(); }})(document.querySelector({AMOUNT:?}))"
+                "(el => {{ el.setSelectionRange({start}, {end}); el.focus(); }})(document.querySelector({AMOUNT:?}))"
             ))
             .await
             .unwrap();
+        } else {
+            pointer::click_at(page, pointer::Point { x, y })
+                .await
+                .unwrap();
         }
         // The caret settles a task after the bare text, so wait on both.
         let settled = wait::for_js_true(
@@ -519,14 +520,27 @@ fn caret_after_focus(press: bool, caret: &str) {
 /// the separators go, not one digit right per separator.
 #[test]
 fn a_focus_in_a_grouped_number_keeps_the_caret_between_its_digits() {
-    caret_after_focus(false, "el.selectionStart === 3 && el.selectionEnd === 3");
+    caret_after_focus(
+        Some((4, 4)),
+        "el.selectionStart === 3 && el.selectionEnd === 3",
+    );
+}
+
+/// Todo 4184: a Tab in selects all of `1,234,567.5`, and all of the bare number stays selected,
+/// so typing replaces it.
+#[test]
+fn a_tab_into_a_grouped_number_keeps_all_of_it_selected() {
+    caret_after_focus(
+        Some((0, 11)),
+        "el.selectionStart === 0 && el.selectionEnd === 9",
+    );
 }
 
 /// A press places its own caret after the rewrite, near the 3 and the 4: left alone.
 #[test]
 fn a_press_in_a_grouped_number_keeps_the_caret_it_placed() {
     caret_after_focus(
-        true,
+        None,
         "el.selectionStart >= 2 && el.selectionStart <= 4 && el.selectionEnd === el.selectionStart",
     );
 }

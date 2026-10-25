@@ -61,18 +61,27 @@ fn a_time_picked_before_any_day_is_pulled_into_min() {
     });
 }
 
-/// The same for the start of a range of moments.
+/// The same for the start of a range of moments. A field holds a half range in its dropdown
+/// (todo 4186), so its tabs show the start.
 #[test]
 fn a_start_time_picked_before_any_day_is_pulled_into_min() {
     block_on(async {
         let fixture = pick_a_time_first("/chrono-field/time-first-range").await;
-
-        readout_is(
-            &fixture.page,
-            "2026-10-10 09:00:00",
-            "the start time pulled up to min",
-        )
-        .await;
+        let page = &fixture.page;
+        let tab = |n: u8| {
+            format!(
+                "document.querySelector('[role=dialog] [role=tablist] [role=tab]:nth-child({n})').textContent"
+            )
+        };
+        let pulled = format!(
+            "{}.includes('10 Oct') && {}.includes('9:00 AM')",
+            tab(1),
+            tab(2)
+        );
+        wait::for_js_true(page, &pulled, "the start time pulled up to min")
+            .await
+            .unwrap();
+        readout_is(page, "", "nothing emitted for a half range").await;
 
         fixture
             .console

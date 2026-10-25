@@ -7,8 +7,8 @@ use std::{
 
 use chrono::{NaiveDate, NaiveDateTime, NaiveTime};
 
-/// Two days or two `NaiveDateTime`s, the start picked first. `end: None` is a range still being picked: `onchange` emits it,
-/// but a field posts nothing for it and its validators see no value.
+/// Two days or two `NaiveDateTime`s, the start picked first. `end: None` is a range still being picked: a picker's `onchange`
+/// emits it, while a field's dropdown holds it until the end, so closing early keeps the old range.
 ///
 /// ```
 /// # use libero::chrono::NaiveDate;

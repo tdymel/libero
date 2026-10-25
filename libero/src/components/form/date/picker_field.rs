@@ -178,11 +178,16 @@ pub(super) fn use_picker_field<V: FieldValue>(
     let value = bound.value().unwrap_or(field.value);
     let opened = use_signal(|| false);
     let today = use_today_on_open(field.today, opened());
+    // A range's first pick, shown in the picker only: closing before the end keeps `value` (4186).
+    let pending = use_signal(|| None::<V>);
     // Peek-compared: focus then click both open, and an unchanged `set` still redraws.
     let open_to = move |next: bool| {
-        let mut opened = opened;
+        let (mut opened, mut pending) = (opened, pending);
         if *opened.peek() != next {
             opened.set(next);
+        }
+        if !next && pending.peek().is_some() {
+            pending.set(None);
         }
     };
     // Text the form kept refused for this path, from before an unmount.
@@ -522,10 +527,17 @@ pub(super) fn use_picker_field<V: FieldValue>(
     // the keyboard enters with Arrow Down and leaves with Escape.
     // Stable across renders, so the picker memoizes while the field redraws.
     let pick = use_callback(move |next: Option<V>| {
+        let mut pending = pending;
         draft.set(None);
         rejected.set(None);
         keep(None);
-        emit(next);
+        match next.filter(|next| !next.is_complete()) {
+            Some(partial) => pending.set(Some(partial)),
+            None => {
+                pending.set(None);
+                emit(next);
+            }
+        }
         if closes(next) {
             // The focused cell is about to go; focus goes back first.
             if picker_focus.in_dropdown() {
@@ -534,7 +546,7 @@ pub(super) fn use_picker_field<V: FieldValue>(
             open_to(false);
         }
     });
-    // Closes as Escape does, the picks already committed (3903).
+    // Closes as Escape does: a whole pick is committed already, a half range is dropped (3903).
     let save = saves.then(|| {
         rsx! {
             div { "data-slot": "save",
@@ -606,7 +618,7 @@ pub(super) fn use_picker_field<V: FieldValue>(
                 rsx! {
                     {strip}
                     {dropdown(DropdownArgs {
-                        value,
+                        value: pending().or(value),
                         today,
                         size,
                         pick,

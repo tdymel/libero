@@ -412,6 +412,33 @@ fn a_full_single_file_dropzone_keeps_its_error_on_the_card() {
     assert_eq!(x["tabindex"], "0", "{x:?}");
 }
 
+/// Todo 4185: a single-file field's only tab stop names the picked file, as a native input does.
+#[test]
+fn a_single_file_names_its_file_on_the_browse_button() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider {
+                FileField {
+                    id: "one",
+                    label: "Attachment",
+                    value: fake_files(&["scan.pdf"]),
+                    onchange: move |_| {},
+                }
+            }
+        }
+    }
+
+    let body = body(&render(app));
+    let button = attributes_of(&body, "button");
+    assert_eq!(
+        button["aria-labelledby"], "one-label one-file-0 one",
+        "{button:?}"
+    );
+    let chip = tag_with(&body, r#"id="one-file-0""#);
+    assert_eq!(chip["data-slot"], "chip", "{chip:?}");
+    assert!(body.contains("scan.pdf"), "{body}");
+}
+
 /// Read-only keeps the Browse button and the chips reachable and refuses;
 /// disabled takes both out of the order natively.
 #[test]

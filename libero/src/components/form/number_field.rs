@@ -620,10 +620,10 @@ fn NumberFieldShell<T: NumberValue>(
         if let Some(stripped) = stripped.write().take() {
             spawn(async move {
                 next_task().await;
-                if let Some(at) = anchor
-                    .selection_start()
-                    .and_then(|after| stripped.fix(after))
-                {
+                let after = anchor.selection_start();
+                if after.is_some_and(|after| stripped.reselects(after)) {
+                    let _ = anchor.select();
+                } else if let Some(at) = after.and_then(|after| stripped.fix(after)) {
                     let _ = anchor.set_caret(at);
                 }
             });
@@ -636,7 +636,9 @@ fn NumberFieldShell<T: NumberValue>(
         if grouped_shown.replace(at_rest) && !at_rest {
             let text = current.map(|value| formats.write_number(&value.format()));
             let caret = anchor.selection_start().zip(text).zip(separator.group);
-            stripped.set(caret.map(|((at, text), group)| Stripped::of(&text, at, group)));
+            let selected_to = anchor.selection_end();
+            stripped
+                .set(caret.map(|((at, text), group)| Stripped::of(&text, at, selected_to, group)));
         }
         let display = match &*buffer.read() {
             Some(edit) if edit.shows(current, separator) => edit.text.clone(),
@@ -774,15 +776,24 @@ struct Stripped {
     before: u32,
     mapped: u32,
     end: u32,
+    /// The whole grouped text was selected, as a Tab in selects it (4184).
+    whole: bool,
 }
 
 impl Stripped {
-    fn of(text: &str, before: u32, group: &str) -> Self {
+    fn of(text: &str, before: u32, selected_to: Option<u32>, group: &str) -> Self {
+        let length = text.encode_utf16().count() as u32;
         Self {
             before,
             mapped: caret_without_groups(text, before, group),
             end: caret_without_groups(text, u32::MAX, group),
+            whole: before == 0 && length > 0 && selected_to == Some(length),
         }
+    }
+
+    /// Whether to select the stripped text again: the rewrite collapsed the selection.
+    fn reselects(self, after: u32) -> bool {
+        self.whole && (after == 0 || after == self.end)
     }
 
     /// The caret to put once the rewrite left it at `after`: a browser keeps the index or
@@ -948,15 +959,31 @@ mod tests {
     /// A press that placed its own caret after the rewrite is left alone.
     #[test]
     fn only_a_caret_the_rewrite_moved_is_put_back() {
-        let stripped = Stripped::of("1,234,567.5", 4, ",");
+        let stripped = Stripped::of("1,234,567.5", 4, Some(4), ",");
         assert_eq!(stripped.fix(4), Some(3), "the index kept");
         assert_eq!(stripped.fix(9), Some(3), "sent to the end");
         assert_eq!(stripped.fix(6), None, "a press placed it");
         assert_eq!(stripped.fix(3), None, "already there");
+        assert!(!stripped.reselects(9), "a caret is not a selection");
         assert_eq!(
-            Stripped::of("1,234,567.5", 0, ",").fix(9),
+            Stripped::of("1,234,567.5", 0, Some(0), ",").fix(9),
             None,
-            "tabbed in"
+            "clicked at the start"
+        );
+    }
+
+    /// Todo 4184: a Tab in selects the whole grouped text, so the stripped text is selected again.
+    #[test]
+    fn a_whole_selection_is_selected_again() {
+        let tabbed = Stripped::of("1,234", 0, Some(5), ",");
+        assert!(tabbed.reselects(4), "sent to the end");
+        assert!(tabbed.reselects(0), "the index kept");
+        assert!(!tabbed.reselects(2), "a press placed it");
+        assert!(!Stripped::of("1,234", 0, Some(0), ",").reselects(4));
+        assert!(!Stripped::of("1,234", 0, Some(3), ",").reselects(4));
+        assert!(
+            !Stripped::of("1,234", 0, None, ",").reselects(4),
+            "no end read"
         );
     }
 

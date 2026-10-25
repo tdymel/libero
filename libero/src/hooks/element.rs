@@ -359,6 +359,10 @@ impl ElementApi for ElementHandle {
         self.get().ok()?.selection_start()
     }
 
+    fn selection_end(&self) -> Option<u32> {
+        self.get().ok()?.selection_end()
+    }
+
     fn set_caret(&self, at: u32) -> Result<(), PlatformError> {
         self.get()?.set_caret(at)
     }

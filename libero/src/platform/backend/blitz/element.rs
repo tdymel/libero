@@ -103,6 +103,19 @@ impl BlitzElement {
         run_or_defer(&self.anchor, run);
     }
 
+    /// One end of a text control's selection: the editor counts bytes, the DOM UTF-16 units.
+    fn selection_units(&self, end: impl FnOnce(std::ops::Range<usize>) -> usize) -> Option<u32> {
+        let doc = self.anchor.free_doc()?;
+        let editor = &doc
+            .get_node(self.node_id)?
+            .element_data()?
+            .text_input_data()?
+            .editor;
+        let at = end(editor.raw_selection().text_range());
+        let units = editor.raw_text().get(..at)?.encode_utf16().count();
+        u32::try_from(units).ok()
+    }
+
     fn at(&self, node_id: NodeId) -> Box<dyn ElementApi> {
         Box::new(BlitzElement {
             anchor: self.anchor.clone(),
@@ -363,15 +376,11 @@ impl ElementApi for BlitzElement {
     }
 
     fn selection_start(&self) -> Option<u32> {
-        let doc = self.anchor.free_doc()?;
-        let editor = &doc
-            .get_node(self.node_id)?
-            .element_data()?
-            .text_input_data()?
-            .editor;
-        let start = editor.raw_selection().text_range().start;
-        let units = editor.raw_text().get(..start)?.encode_utf16().count();
-        u32::try_from(units).ok()
+        self.selection_units(|range| range.start)
+    }
+
+    fn selection_end(&self) -> Option<u32> {
+        self.selection_units(|range| range.end)
     }
 
     fn set_caret(&self, at: u32) -> Result<(), PlatformError> {
