@@ -134,6 +134,7 @@ struct Doc {
     /// the subscribing scope, callback. Called by [`Listener`]'s `onkeydown`.
     key_callbacks: RefCell<Vec<KeyCallback>>,
     focus: focus::Watch,
+    removed: removed::Owner,
     resize: resize::Watch,
     wheel: wheel::Watch,
     /// A `<style>` changed this poll. See [`SheetWatch`].
@@ -170,6 +171,7 @@ impl Doc {
             show_retry: RefCell::new(None),
             key_callbacks: RefCell::new(Vec::new()),
             focus: focus::Watch::default(),
+            removed: removed::Owner::default(),
             resize: resize::Watch::default(),
             wheel: wheel::Watch::default(),
             sheets_changed: Cell::new(false),

@@ -10,11 +10,10 @@ use dioxus_native_dom::NodeId;
 use super::FreeDoc;
 use super::{Doc, ancestors, anchor, doc, flush_soon, focus, refused};
 
-thread_local! {
-    /// The last known focus owner, and the document-order predecessor of it and
-    /// of each ancestor, nearest first. See [`tab`].
-    static OWNER: RefCell<Option<(NodeId, Vec<NodeId>)>> = const { RefCell::new(None) };
-}
+/// A document's last known focus owner, and the document-order predecessor of
+/// it and of each ancestor, nearest first. Per document, as one thread runs several (4181).
+#[derive(Default)]
+pub(super) struct Owner(RefCell<Option<(NodeId, Vec<NodeId>)>>);
 
 fn present(doc: &BaseDocument, node_id: NodeId) -> bool {
     doc.get_node(node_id)
@@ -49,7 +48,9 @@ pub(super) fn record(doc: &BaseDocument, owner: Option<NodeId>) {
     if entry.is_some() {
         flush_soon();
     }
-    OWNER.set(entry);
+    if let Some(state) = self::doc() {
+        state.removed.0.replace(entry);
+    }
 }
 
 /// A key reaching the wrapper: a Tab from a removed owner starts where it was,
@@ -70,7 +71,9 @@ pub(super) fn keyed(event: &Event<KeyboardData>) {
             let mut doc = anchor.doc_mut();
             focus::watch(&doc);
             doc.set_focus_to(next);
-            OWNER.set(None);
+            if let Some(state) = self::doc() {
+                state.removed.0.replace(None);
+            }
             return;
         }
     }
@@ -96,11 +99,12 @@ pub(super) fn check(doc: &Doc) {
         let Some(document) = anchor.free_doc() else {
             return;
         };
-        let gone = OWNER.with_borrow(|owner| {
-            owner
-                .as_ref()
-                .is_some_and(|(owner, _)| !present(&document, *owner))
-        });
+        let gone = doc
+            .removed
+            .0
+            .borrow()
+            .as_ref()
+            .is_some_and(|(owner, _)| !present(&document, *owner));
         // Blitz moves focus off a removed node to `<html>`.
         let root = document.root_element().id;
         gone && document
@@ -117,20 +121,22 @@ pub(super) fn check(doc: &Doc) {
 /// Where a Tab (`back`: Shift+Tab) goes when the remembered owner is gone and
 /// focus with it: on from the nearest mark still present.
 fn next_stop(doc: &BaseDocument, back: bool) -> Option<NodeId> {
-    let wrapper = self::doc().and_then(|doc| doc.wrapper_id());
+    let state = self::doc()?;
+    let wrapper = state.wrapper_id();
     let focused = doc.get_focussed_node_id();
     let lost = focused
         .is_none_or(|id| id == doc.root_element().id || Some(id) == wrapper || !present(doc, id));
     if !lost {
         return None;
     }
-    let mark = OWNER.with_borrow(|owner| {
+    let mark = {
+        let owner = state.removed.0.borrow();
         let (owner, marks) = owner.as_ref()?;
         if present(doc, *owner) {
             return None;
         }
-        marks.iter().copied().find(|&id| present(doc, id))
-    })?;
+        marks.iter().copied().find(|&id| present(doc, id))?
+    };
     let stop = |node: &blitz_dom::Node| node.is_focussable() && !refused::is_inert(doc, node.id);
     let start = doc.get_node(mark)?;
     if back {

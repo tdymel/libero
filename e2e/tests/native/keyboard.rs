@@ -314,9 +314,8 @@ fn a_tab_from_a_removed_owner_goes_on_from_where_it_was() {
 }
 
 /// Todo 4176: a key in a second live document on the thread must not overwrite the
-/// first one's remembered owner (`removed.rs`'s `OWNER` is per thread).
+/// first one's remembered owner, and the Tab stays in its own document (4181).
 #[test]
-#[ignore = "4181: OWNER is per thread, so Tab goes to #first"]
 fn a_key_in_another_document_keeps_the_removed_owner() {
     let mut older = mount(removable);
     let mut newer = mount(removable);
@@ -330,5 +329,10 @@ fn a_key_in_another_document_keeps_the_removed_owner() {
         older.is_focused("#last"),
         "Tab went to {}",
         older.focus_owner()
+    );
+    assert!(
+        newer.is_focused("#first"),
+        "the Tab moved the other document's focus to {}",
+        newer.focus_owner()
     );
 }
