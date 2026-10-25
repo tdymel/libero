@@ -146,8 +146,8 @@ syn = { version = "2", features = ["full", "visit"] }
 proc-macro2 = "1"
 # The use_timers page's printed stopwatch, compiled as a doc-test.
 web-time = "1.1"
-# The tests cover every component and hook (todos 3887, 3922), and the grammars the old default had (todo 3918).
-libero = { path = ".", features = ["all-components", "all-hooks", "code-lang-rust", "code-lang-bash", "code-lang-markdown", "code-lang-html", "code-lang-css"] }
+# Turns on the features the tests cover; not a self dev-dependency, which dx sees as a cycle (todo 4182).
+libero-test-features = { path = "test-features" }
 
 [features]
 # Reach elements through Blitz directly when running under `dioxus-native`.

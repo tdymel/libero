@@ -1,0 +1,10 @@
+# libero's tests run with every component, hook and these grammars on (todos 3887, 3922, 3918).
+# A separate crate, not a self dev-dependency: dx's hot-patch sees that as a cycle (todo 4182).
+[package]
+name = "libero-test-features"
+version = "0.0.0"
+edition = "2024"
+publish = false
+
+[dependencies]
+libero = { path = "..", features = ["all-components", "all-hooks", "code-lang-rust", "code-lang-bash", "code-lang-markdown", "code-lang-html", "code-lang-css"] }
