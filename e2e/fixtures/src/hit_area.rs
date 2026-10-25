@@ -5,9 +5,10 @@
 use dioxus::prelude::*;
 use libero::{
     components::{
-        ActionIcon, Burger, ButtonGroup, Checkbox, Chip, ColorCode, ColorField, ColorSwatch, Dialog, Flex,
-        Image, MultiSelect, NumberField, Pagination, PasswordField, Radio, Select, Slider, SliderChangeEvent,
-        Switch, TagsField, TextField,
+        ActionIcon, Burger, ButtonGroup, Checkbox, CheckboxGroup, Chip, ColorCode, ColorField,
+        ColorSwatch, Dialog, Flex, Image, MultiSelect, NumberField, Pagination, PasswordField,
+        Radio, RadioGroup, Select, Slider, SliderChangeEvent, Switch, SwitchGroup, TagsField,
+        TextField,
     },
     theme::Size,
 };
@@ -71,6 +72,7 @@ fn HitAreaPage() -> Element {
             }
             Coarse {}
             ChipRows {}
+            Stacked {}
         }
     }
 }
@@ -95,6 +97,26 @@ fn ChipRows() -> Element {
                     onchange: move |next| picked.set(next),
                 }
             }
+        }
+    }
+}
+
+/// Todo 4187: stacked choices at their default pitch, whose finger areas must not reach a
+/// neighbour row.
+#[component]
+fn Stacked() -> Element {
+    let mut plan = use_signal(|| None::<Fruit>);
+    let mut picked = use_signal(Vec::<Fruit>::new);
+    let mut alerts = use_signal(Vec::<Fruit>::new);
+    rsx! {
+        div { "data-case": "stacked-radio",
+            RadioGroup { label: "Plan", value: plan(), onchange: move |next| plan.set(Some(next)) }
+        }
+        div { "data-case": "stacked-checkbox",
+            CheckboxGroup { label: "Picked", value: picked(), onchange: move |next| picked.set(next) }
+        }
+        div { "data-case": "stacked-switch",
+            SwitchGroup { label: "Alerts", value: alerts(), onchange: move |next| alerts.set(next) }
         }
     }
 }

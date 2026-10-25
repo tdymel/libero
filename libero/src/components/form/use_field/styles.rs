@@ -1,5 +1,5 @@
 use crate::{
-    components::common::input_from_str,
+    components::common::{COARSE_POINTER, COARSE_TARGET, input_from_str},
     sx::{StaticSx, sx},
     theme::{
         ChoiceVariant, FIELD_CAPTIONS, FIELD_CARD_PADDING, FIELD_FRAME_GAP, FieldDefaults,
@@ -50,6 +50,15 @@ pub(in crate::components::form) static FIELD_SX: StaticSx = StaticSx::new(|| {
                 .selector(
                     format!("& > label, {FIELD_CAPTIONS}"),
                     sx().grid_column("2"),
+                )
+                // The control's 44px finger area stays in its own row, so a tap on a stacked
+                // choice never lands on the next one (4187).
+                .media(
+                    COARSE_POINTER,
+                    sx().with(
+                        "grid-template-rows",
+                        format!("minmax({COARSE_TARGET}, auto)"),
+                    ),
                 ),
         )
         // Only an aria label: one column and no gap, so the box centres in a cell (4173).
@@ -97,3 +106,22 @@ pub(in crate::components::form) static FIELD_SX: StaticSx = StaticSx::new(|| {
             sx().selector("& > [data-slot='status']", sx().color("error.7")),
         )
 });
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::css::Stylesheet;
+
+    #[test]
+    fn an_inline_row_is_finger_tall_only_under_a_coarse_pointer() {
+        let css = Stylesheet::from(&FIELD_SX);
+        let css = css.as_str();
+        let media = css
+            .find("@media (pointer: coarse)")
+            .unwrap_or_else(|| panic!("no coarse query: {css}"));
+        let rows = css
+            .find("grid-template-rows:minmax(44px, auto)")
+            .unwrap_or_else(|| panic!("no row floor: {css}"));
+        assert!(media < rows, "{css}");
+    }
+}

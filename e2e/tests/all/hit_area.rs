@@ -406,6 +406,75 @@ fn a_compact_icon_in_a_group_keeps_its_width_under_a_finger() {
     });
 }
 
+/// Todo 4187: on a phone, every point of a stacked choice's drawn control and of its 44px
+/// height belongs to that row, and a tap on the drawn lower edge of row 1 picks row 1 only.
+#[test]
+fn a_finger_on_a_stacked_choice_never_lands_on_the_next_row() {
+    use chromiumoxide::cdp::browser_protocol::emulation::SetTouchEmulationEnabledParams;
+    block_on(async {
+        let fixture = Fixture::open("/hit-area", Viewport::Mobile).await.unwrap();
+        let page = &fixture.page;
+        page.execute_bounded(SetTouchEmulationEnabledParams::new(true))
+            .await
+            .unwrap();
+        wait::for_js_true(
+            page,
+            "matchMedia('(pointer: coarse)').matches",
+            "a coarse pointer",
+        )
+        .await
+        .unwrap();
+
+        for (case, drawn) in [
+            ("radio", "circle"),
+            ("checkbox", "box"),
+            ("switch", "track"),
+        ] {
+            let group = format!("[data-case=stacked-{case}]");
+            let probe: (Vec<String>, pointer::Point) = page
+                .evaluate_bounded(format!(
+                    "(() => {{
+                        const rows = [...document.querySelectorAll('{group} [data-slot={drawn}]')].map(el => el.parentElement);
+                        rows[0].scrollIntoView({{ block: 'center' }});
+                        const misses = [];
+                        rows.forEach((row, i) => {{
+                            const r = row.querySelector('[data-slot={drawn}]').getBoundingClientRect();
+                            const cx = r.x + r.width / 2, cy = r.y + r.height / 2;
+                            for (const dy of [-21, 2 - r.height / 2, 0, r.height / 2 - 2, 21]) {{
+                                const at = document.elementFromPoint(cx, cy + dy);
+                                if (at?.closest('[data-slot={drawn}]')?.parentElement !== row) misses.push(`row ${{i}} dy ${{dy}}: ${{at?.outerHTML.slice(0, 60)}}`);
+                            }}
+                        }});
+                        const r = rows[0].querySelector('[data-slot={drawn}]').getBoundingClientRect();
+                        return [misses, {{ x: r.x + r.width / 2, y: r.bottom - 2 }}];
+                    }})()"
+                ))
+                .await
+                .unwrap()
+                .into_value()
+                .unwrap();
+            assert!(probe.0.is_empty(), "{case}: {:?}", probe.0);
+
+            pointer::tap_at(page, probe.1).await.unwrap();
+            wait::for_js_true(
+                page,
+                &format!(
+                    "(() => {{
+                        const inputs = [...document.querySelectorAll('{group} input')];
+                        return inputs[0].checked && inputs.slice(1).every(input => !input.checked);
+                    }})()"
+                ),
+                &format!("the first {case} alone picked"),
+            )
+            .await
+            .unwrap();
+        }
+
+        fixture.console.assert_clean("stacked choices").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
 /// Todo 3589: the choice controls' transitions are off under reduced motion, on without it.
 #[test]
 fn the_choice_controls_skip_their_transitions_under_reduced_motion() {

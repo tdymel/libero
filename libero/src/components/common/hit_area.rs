@@ -3,6 +3,9 @@ use crate::sx::{Sx, sx};
 /// A finger, not a mouse. Blitz reports a fine pointer, so natively this never matches.
 pub(crate) const COARSE_POINTER: &str = "(pointer: coarse)";
 
+/// The finger-sized target (WCAG 2.5.5); a row holding a [`coarse_hit_area_sx`] is this tall.
+pub(crate) const COARSE_TARGET: &str = "44px";
+
 /// Half the shortfall below 44px (WCAG 2.5.5) out on each side; `0` from 44px up.
 pub(crate) const COARSE_INSET: &str = "min(0px, calc((100% - 44px) / 2))";
 
