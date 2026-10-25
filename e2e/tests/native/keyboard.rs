@@ -286,3 +286,49 @@ fn escape_closes_a_modal_over_a_card_before_the_card() {
         "the second Escape did not close the card"
     );
 }
+
+fn removable() -> Element {
+    let mut shown = use_signal(|| true);
+    rsx! {
+        Button { id: "first", "First" }
+        if shown() {
+            Button { id: "gone", onclick: move |_| shown.set(false), "Remove me" }
+        }
+        Button { id: "last", "Last" }
+    }
+}
+
+/// Todo 948: Tab from a button removed by its own Enter goes on from where it was.
+#[test]
+fn a_tab_from_a_removed_owner_goes_on_from_where_it_was() {
+    let mut page = mount(removable);
+    page.focus("#gone");
+    page.press(Key::Named(NamedKey::Enter));
+    assert!(!page.exists("#gone"), "Enter did not remove the button");
+    page.tab();
+    assert!(
+        page.is_focused("#last"),
+        "Tab went to {}",
+        page.focus_owner()
+    );
+}
+
+/// Todo 4176: a key in a second live document on the thread must not overwrite the
+/// first one's remembered owner (`removed.rs`'s `OWNER` is per thread).
+#[test]
+#[ignore = "4181: OWNER is per thread, so Tab goes to #first"]
+fn a_key_in_another_document_keeps_the_removed_owner() {
+    let mut older = mount(removable);
+    let mut newer = mount(removable);
+    older.focus("#gone");
+    older.press(Key::Named(NamedKey::Enter));
+    assert!(!older.exists("#gone"), "Enter did not remove the button");
+    newer.focus("#first");
+    newer.press(Key::Character("a".into()));
+    older.tab();
+    assert!(
+        older.is_focused("#last"),
+        "Tab went to {}",
+        older.focus_owner()
+    );
+}

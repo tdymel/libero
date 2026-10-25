@@ -16,7 +16,27 @@ pub const ROUTES: Routes = &[
         "/image/missed-error-svg",
         || rsx! { MissedErrorPage { src: UNDECODABLE_SVG } },
     ),
+    ("/image/caller-onerror", || rsx! { CallerOnErrorPage {} }),
 ];
+
+/// Todo 4174: a caller's `onerror` on a broken picture with a fallback.
+#[component]
+fn CallerOnErrorPage() -> Element {
+    let mut errors = use_signal(|| 0);
+
+    rsx! {
+        div { width: "64px", height: "64px",
+            Image {
+                id: "caller-onerror",
+                src: MISSING,
+                fallback_src: FALLBACK.to_string(),
+                alt: "A brown square",
+                onerror: move |_| errors += 1,
+            }
+        }
+        p { id: "caller-errors", "{errors}" }
+    }
+}
 
 /// A PNG that decodes to nothing: `complete` is true as soon as it mounts.
 const UNDECODABLE: &str = "data:image/png;base64,bm90IGFuIGltYWdl";

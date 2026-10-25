@@ -70,6 +70,33 @@ fn an_empty_fallback_keeps_the_broken_source() {
     });
 }
 
+/// Todo 4174: a caller's `onerror` runs and the fallback swap still happens.
+#[test]
+#[ignore = "4180: the caller's onerror runs, the fallback swap does not"]
+fn a_caller_onerror_keeps_the_fallback_swap() {
+    block_on(async {
+        let fixture = Fixture::open("/image/caller-onerror", Viewport::Desktop)
+            .await
+            .unwrap();
+        wait::for_js_true(
+            &fixture.page,
+            "(() => { const i = document.querySelector('#caller-onerror'); \
+             return i.complete && document.querySelector('#caller-errors').textContent !== '0'; })()",
+            "the missing source to fail and the caller's onerror to run",
+        )
+        .await
+        .unwrap();
+        wait::for_js_true(
+            &fixture.page,
+            "document.querySelector('#caller-onerror').src.includes('963')",
+            "the fallback source",
+        )
+        .await
+        .unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
 /// Swallows every image `error`, as a server-rendered page misses it before hydration, lets the
 /// pictures fail once, then mounts them again: the browser has the failure by then.
 async fn open_missed_error(fixture: &Fixture) {

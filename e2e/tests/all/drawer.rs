@@ -76,6 +76,30 @@ e2e::scenario!(
 );
 e2e::scenario!(a_right_drawer_hugs_the_right_edge, "/drawer", hugs_the_end);
 
+/// Todo 4175: `sx().margin("16px").height("calc(100% - 32px)")` floats the panel 16px clear.
+async fn sx_insets_the_panel<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    modal::open(d, TRIGGER).await?;
+    let (_, vh) = d.viewport().await?;
+    let inset = |r: &e2e::driver::Rect| {
+        (r.x - 16.0).abs() <= 1.0
+            && (r.y - 16.0).abs() <= 1.0
+            && (vh - r.y - r.height - 16.0).abs() <= 1.0
+    };
+    let settled = eventually(d, "the drawer to sit 16px inside its edges", async |d| {
+        Ok(inset(&d.rect(DIALOG).await?))
+    })
+    .await;
+    let r = d.rect(DIALOG).await?;
+    ensure!(settled.is_ok(), "panel at {r:?} in a viewport {vh}px tall");
+    Ok(())
+}
+
+e2e::scenario!(
+    an_sx_margin_insets_a_drawer,
+    "/drawer/inset",
+    sx_insets_the_panel
+);
+
 /// Opening moves focus in; the first Escape closes it and hands focus to the trigger.
 async fn escape_closes<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
     modal::open(d, TRIGGER).await?;

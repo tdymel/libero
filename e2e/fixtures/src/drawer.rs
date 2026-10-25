@@ -20,7 +20,29 @@ pub const ROUTES: Routes = &[
     ("/drawer/titled", || rsx! { TitledDrawerPage {} }),
     ("/drawer/bottom-swipe", || rsx! { BottomSwipeDrawerPage {} }),
     ("/drawer/close-button", || rsx! { CloseButtonDrawerPage {} }),
+    ("/drawer/inset", || rsx! { InsetDrawerPage {} }),
 ];
+
+/// Todo 4175: the docs' floating-panel recipe, a start drawer inset 16px by `sx`.
+#[component]
+fn InsetDrawerPage() -> Element {
+    let nav = use_drawer(
+        DrawerOptions {
+            aria_label: Some("Menu".into()),
+            sx: sx().margin("16px").height("calc(100% - 32px)").into(),
+            ..Default::default()
+        },
+        |s: ModalScope<()>| {
+            rsx! {
+                Button { id: "drawer-close", variant: "text", onclick: move |_| s.close(), "Close" }
+            }
+        },
+    );
+
+    rsx! {
+        Button { id: "open-drawer", onclick: move |_| { nav.open(); }, "Open menu" }
+    }
+}
 
 /// 4005: a header close button asks `ondismiss` with `CloseButton`, which refuses until allowed.
 #[component]
