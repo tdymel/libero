@@ -2,7 +2,7 @@
 
 Crate: `libero`
 Import: `use libero::components::Textarea;`
-Feature: `textarea` (off by default, turns on `use-debounce`, `use-icon`, `visually-hidden`, `use-id`; [features.md](features.md))
+Feature: `textarea` (off by default, turns on `use-debounce`, `use-icon`, `visually-hidden`, `use-id`, `loader`; [features.md](features.md))
 Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/form/textarea.rs>
 Index: [index.md](index.md) lists every other page
 Description: A multi-line text field, sized by `rows` and resizable by the user.
