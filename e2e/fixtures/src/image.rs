@@ -23,6 +23,7 @@ pub const ROUTES: Routes = &[
 #[component]
 fn CallerOnErrorPage() -> Element {
     let mut errors = use_signal(|| 0);
+    let mut zoom_errors = use_signal(|| 0);
 
     rsx! {
         div { width: "64px", height: "64px",
@@ -35,6 +36,18 @@ fn CallerOnErrorPage() -> Element {
             }
         }
         p { id: "caller-errors", "{errors}" }
+        // Zoomable: the `id` lands on the zoom button, the listeners on its `<img>`.
+        div { width: "64px", height: "64px",
+            Image {
+                id: "caller-onerror-zoom",
+                src: MISSING,
+                fallback_src: FALLBACK.to_string(),
+                alt: "A brown square",
+                zoomable: true,
+                onerror: move |_| zoom_errors += 1,
+            }
+        }
+        p { id: "caller-zoom-errors", "{zoom_errors}" }
     }
 }
 
