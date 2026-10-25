@@ -235,9 +235,9 @@ async fn signup(page: &Page) {
         page,
         SUMMARY,
         &[
+            "Zip code: A city needs its zip code.",
             "Notes: Keep notes under 20 characters.",
             "I accept the terms: Accept the terms.",
-            "Zip code: A city needs its zip code.",
         ],
         "the second submit lists what is still wrong",
     )
