@@ -210,12 +210,54 @@ fn meaningful<T>(name: &'static str, value: impl IntoAttributeValue<T>) -> Optio
     }
 }
 
+fn is_listener(attribute: &Attribute, name: &str) -> bool {
+    attribute.name == name && matches!(attribute.value, AttributeValue::Listener(_))
+}
+
+/// An element keeps one listener per event, so a caller's would replace the
+/// component's own. Each own listener a caller shares a name with becomes one
+/// that runs the own first, then the caller's, in attribute order.
+fn merge_listeners(callers: &mut Vec<Attribute>, own: &mut [Attribute]) {
+    for own_attribute in own.iter_mut() {
+        let name = own_attribute.name;
+        if !matches!(own_attribute.value, AttributeValue::Listener(_))
+            || !callers.iter().any(|caller| is_listener(caller, name))
+        {
+            continue;
+        }
+        let (theirs, rest): (Vec<_>, Vec<_>) = std::mem::take(callers)
+            .into_iter()
+            .partition(|caller| is_listener(caller, name));
+        *callers = rest;
+        let AttributeValue::Listener(first) =
+            std::mem::replace(&mut own_attribute.value, AttributeValue::None)
+        else {
+            continue;
+        };
+        let theirs: Vec<ListenerCallback> = theirs
+            .into_iter()
+            .filter_map(|caller| match caller.value {
+                AttributeValue::Listener(listener) => Some(listener),
+                _ => None,
+            })
+            .collect();
+        // Raw `PlatformEventData`, the payload every listener downcasts to.
+        own_attribute.value = AttributeValue::listener(move |event: Event<PlatformEventData>| {
+            first.call(event.clone().into_any());
+            for listener in &theirs {
+                listener.call(event.clone().into_any());
+            }
+        });
+    }
+}
+
 /// Resolved styling, ready to render as any element. No hooks, so usable in a
 /// branch; `Clone` so one frame renders several elements (`PinField`'s cells).
 #[derive(Clone, PartialEq)]
 pub(crate) struct BoxStyle {
     style: StyleAttributes,
-    /// Rendered after the caller's, so the component wins a duplicate (not `id`).
+    /// Rendered after the caller's, so the component wins a duplicate (not `id`);
+    /// a listener of the same name runs first, then the caller's.
     own: Vec<Attribute>,
     /// Applied in `render` only where the caller set none.
     fallback: Vec<Attribute>,
@@ -285,11 +327,13 @@ impl BoxStyle {
     }
 
     pub fn render(
-        self,
+        mut self,
         component: HtmlTag,
-        attributes: Vec<Attribute>,
+        mut attributes: Vec<Attribute>,
         children: impl IntoChildren,
     ) -> Element {
+        merge_listeners(&mut attributes, &mut self.own);
+
         // A component's own root id plus the caller's: `use_root_id` makes both
         // the caller's, so keeping the first is enough.
         let mut seen_id = false;

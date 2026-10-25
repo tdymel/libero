@@ -515,6 +515,30 @@ fn a_focusable_area_takes_tab_and_scrolls_with_the_arrows() {
     });
 }
 
+/// Todo 4191: a caller's `onkeydown` runs and the arrows still scroll the area.
+#[test]
+fn a_caller_keydown_runs_beside_the_arrow_scrolling() {
+    block_on(async {
+        let fixture = Fixture::open("/scroll-area/caller-keydown", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        page.evaluate_bounded("document.querySelector('#heard-area').focus()")
+            .await
+            .unwrap();
+        keyboard::press(page, keyboard::ARROW_DOWN).await.unwrap();
+        wait::for_js_true(
+            page,
+            "document.querySelector('#heard').textContent !== '0' \
+             && document.querySelector('#heard-area').scrollTop > 0",
+            "the caller's onkeydown to run and the area to scroll",
+        )
+        .await
+        .unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
 /// The area is its own tab stop only while it overflows with nothing focusable
 /// inside, re-checked when its content grows or its pane resizes (585).
 #[test]

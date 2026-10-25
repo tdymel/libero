@@ -1,5 +1,3 @@
-use dioxus::core::{AttributeValue, ListenerCallback};
-use dioxus::html::PlatformEventData;
 use dioxus::prelude::*;
 
 use crate::{
@@ -170,7 +168,8 @@ base_props! {
 }
 
 /// On a zoomable image these go to the `<img>`, not the `<button>` around it.
-const IMG_ATTRIBUTES: [&str; 8] = [
+const IMG_ATTRIBUTES: [&str; 9] = [
+    "onerror",
     "loading",
     "decoding",
     "fetchpriority",
@@ -316,10 +315,11 @@ pub fn Image(props: ImageProps) -> Element {
         .variables(&variables)
         .prepare();
     let on_mounted_src = on_error_src.clone();
-    let (attributes, onerror) = chain_onerror(props.attributes, move || {
-        errored_src.set(Some(on_error_src.clone()))
-    });
+    let attributes = props.attributes;
     let image = image
+        .event("onerror", move |_: Event<ImageData>| {
+            errored_src.set(Some(on_error_src.clone()))
+        })
         .event(
             "onmounted",
             PROBES_AFTER_MOUNT.then_some(move |event: Event<MountedData>| {
@@ -349,10 +349,9 @@ pub fn Image(props: ImageProps) -> Element {
             .and_then(|zoomed| media_url(zoomed, "Image zoomed_src"))
             .unwrap_or_else(|| src.clone());
         let item = LightboxItem::new(zoomed_src, alt.clone().unwrap_or_default());
-        let (mut img_attributes, attributes): (Vec<_>, Vec<_>) = attributes
+        let (img_attributes, attributes): (Vec<_>, Vec<_>) = attributes
             .into_iter()
             .partition(|attribute| IMG_ATTRIBUTES.contains(&attribute.name));
-        img_attributes.push(onerror);
         let image = image
             .attr("src", src)
             .attr("alt", "")
@@ -373,39 +372,11 @@ pub fn Image(props: ImageProps) -> Element {
             }
         };
     }
-    let mut attributes = attributes;
-    attributes.push(onerror);
     image
         .attr("src", src)
         .attr("alt", alt)
         .attr("role", decorative_role)
         .render(HtmlTag::Img, attributes, ())
-}
-
-/// One `onerror` running Image's fallback swap, then the caller's: an element
-/// keeps one listener per event, so a second would drop one (todo 4180).
-fn chain_onerror(
-    attributes: Vec<Attribute>,
-    mut own: impl FnMut() + 'static,
-) -> (Vec<Attribute>, Attribute) {
-    let (callers, attributes): (Vec<_>, Vec<_>) = attributes
-        .into_iter()
-        .partition(|attribute| attribute.name == "onerror");
-    let callers: Vec<ListenerCallback> = callers
-        .into_iter()
-        .filter_map(|attribute| match attribute.value {
-            AttributeValue::Listener(listener) => Some(listener),
-            _ => None,
-        })
-        .collect();
-    // Raw `PlatformEventData`, the payload the caller's listener downcasts to.
-    let onerror = AttributeValue::listener(move |event: Event<PlatformEventData>| {
-        own();
-        for caller in &callers {
-            caller.call(event.clone().into_any());
-        }
-    });
-    (attributes, Attribute::new("onerror", onerror, None, false))
 }
 
 #[cfg(feature = "lightbox")]

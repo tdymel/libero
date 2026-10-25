@@ -553,6 +553,33 @@ fn a_key_leaves_an_axis_the_area_does_not_scroll() {
     assert_eq!(page.rect("#clipped"), start, "a `none` area scrolled");
 }
 
+/// Todo 4191: a caller's `onkeydown` runs beside the area's own arrow scrolling, which Blitz
+/// leaves to the area.
+#[test]
+fn a_caller_keydown_runs_beside_the_arrow_scrolling() {
+    use e2e::native::Key;
+    let mut page = mount(|| {
+        let mut heard = use_signal(|| 0);
+        rsx! {
+            div { width: "200px", height: "80px",
+                ScrollArea {
+                    id: "heard-area",
+                    focusable: true,
+                    aria_label: "Notes",
+                    onkeydown: move |_| heard += 1,
+                    div { id: "tall", height: "400px", "Tall" }
+                }
+            }
+            output { id: "heard", "{heard}" }
+        }
+    });
+    page.focus("#heard-area");
+    let start = page.rect("#tall");
+    page.press(Key::Named(NamedKey::ArrowDown));
+    assert!(page.rect("#tall").1 < start.1, "ArrowDown did not scroll");
+    assert_eq!(page.text("#heard"), "1", "{}", page.tree());
+}
+
 /// Todo 3251: a windowed list's area has skeleton bars behind its rows. Blitz paints no
 /// repeating gradient yet, so a row paints as before; once it does, the covered window hides them.
 #[test]

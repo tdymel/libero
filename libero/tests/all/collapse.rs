@@ -366,4 +366,43 @@ mod dispatched {
             "the inner exit ended the outer one: {html}"
         );
     }
+
+    static CALLER_SAW: GlobalSignal<u32> = Signal::global(|| 0);
+
+    fn caller_listener_app() -> Element {
+        let open = use_context_provider(|| Signal::new(true));
+        rsx! {
+            LiberoProvider {
+                Collapse {
+                    open: open(),
+                    keep_mounted: false,
+                    ontransitionend: move |_| *CALLER_SAW.write() += 1,
+                    "panel body"
+                }
+            }
+        }
+    }
+
+    /// Todo 4191: a caller's listener of the component's own event name no longer replaces it.
+    #[test]
+    fn a_caller_ontransitionend_runs_beside_the_exit_listener() {
+        let Page { mut dom, rec: find } = Page::build(caller_listener_app);
+        let id = *find.transitionend.last().expect("no listener");
+        let mut open = dom.in_scope(ScopeId::APP, consume_context::<Signal<bool>>);
+        dom.in_runtime(|| open.set(false));
+        dom.render_immediate(&mut dioxus::core::NoOpMutations);
+        dom.runtime().handle_event(
+            "transitionend",
+            Event::new(transition_end_event("grid-template-rows"), true),
+            id,
+        );
+        dom.render_immediate(&mut dioxus::core::NoOpMutations);
+        let saw = dom.in_runtime(|| *CALLER_SAW.read());
+        let html = body(&dioxus_ssr::render(&dom));
+        assert_eq!(saw, 1, "the caller's ontransitionend did not run");
+        assert!(
+            !html.contains("panel body"),
+            "the exit listener did not run"
+        );
+    }
 }

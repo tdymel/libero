@@ -14,6 +14,10 @@ pub const ROUTES: Routes = &[
     ("/scroll-area", || rsx! { ScrollAreaPage {} }),
     ("/scroll-area/edges", || rsx! { EdgesPage {} }),
     ("/scroll-area/keyboard", || rsx! { KeyboardPage {} }),
+    (
+        "/scroll-area/caller-keydown",
+        || rsx! { CallerKeydownPage {} },
+    ),
     ("/scroll-area/rtl", || rsx! { RtlPage {} }),
     ("/scroll-area/bars", || rsx! { BarsPage {} }),
     ("/scroll-area/rewrap", || rsx! { RewrapPage {} }),
@@ -243,6 +247,26 @@ fn RtlPage() -> Element {
                 }
             }
         }
+    }
+}
+
+/// A caller's `onkeydown` beside the area's own arrow scrolling (todo 4191).
+#[component]
+fn CallerKeydownPage() -> Element {
+    let mut heard = use_signal(|| 0);
+    rsx! {
+        div { style: "height: 120px",
+            ScrollArea {
+                id: "heard-area",
+                focusable: true,
+                "aria-label": "Notes",
+                onkeydown: move |_| heard += 1,
+                for i in 0..40 {
+                    p { key: "{i}", "Line {i}" }
+                }
+            }
+        }
+        output { id: "heard", "{heard}" }
     }
 }
 
