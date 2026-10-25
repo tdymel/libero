@@ -88,6 +88,21 @@ fn the_corpus_round_trips() {
     }
 }
 
+/// Todo 4136: a line that starts with `=` after a hard break is not a setext underline.
+#[test]
+fn a_line_of_equals_after_a_hard_break_stays_text() {
+    for (source, expected) in [
+        ("a\\\n\\===", "a\\\n\\==="),
+        ("a\\\n\\=", "a\\\n\\="),
+        ("- a\\\n  \\=a", "- a\\\n  \\=a"),
+        ("\\=a", "=a"),
+    ] {
+        let doc = Doc::from_markdown(source);
+        assert_eq!(md(&doc), expected, "from {source:?}");
+        assert_eq!(doc.rekeyed(), Doc::from_markdown(expected).rekeyed());
+    }
+}
+
 #[test]
 fn emit_is_readable() {
     let cases = [

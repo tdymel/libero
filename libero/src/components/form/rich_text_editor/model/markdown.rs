@@ -427,15 +427,17 @@ fn escape(text: &str) -> String {
     out
 }
 
-/// Escapes what only means something at a line start: list markers.
+/// Escapes what only means something at a line start: list markers, and `=` after a break.
 fn escape_line_starts(text: &str) -> String {
     text.split('\n')
-        .map(|line| {
+        .enumerate()
+        .map(|(index, line)| {
             let body = line.trim_start_matches(' ');
             let lead = &line[..line.len() - body.len()];
             let digits = body.chars().take_while(char::is_ascii_digit).count();
             match body.chars().next() {
                 Some('-' | '+') => format!("{lead}\\{body}"),
+                Some('=') if index > 0 => format!("{lead}\\{body}"),
                 Some(_)
                     if digits > 0 && matches!(body[digits..].chars().next(), Some('.' | ')')) =>
                 {

@@ -9,7 +9,7 @@ use crate::{
     LiberoProvider,
     components::{
         FieldStatus, Fieldset, Form, FormHandle, FormScope, Rule, TextField, Textarea, min_length,
-        not_empty, use_form, use_form_context,
+        not_empty, rich_text::Doc, use_form, use_form_context,
     },
 };
 
@@ -1062,6 +1062,38 @@ fn an_empty_required_field_blocks_the_submit_unless_filled_or_disabled() {
             "Terms: Check this box."
         ]
     );
+}
+
+/// Todo 4135: list text is not empty, but a blank doc is.
+#[test]
+fn a_required_rich_text_editor_counts_list_text_as_filled() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider {
+                Form::<()> {
+                    Spy {}
+                    crate::components::RichTextEditor {
+                        label: "Notes",
+                        name: "notes",
+                        required: true,
+                        value: Doc::from_markdown("- one\n- two"),
+                    }
+                    crate::components::RichTextEditor {
+                        label: "Blank",
+                        name: "blank",
+                        required: true,
+                        value: Doc::from_markdown("  "),
+                    }
+                }
+            }
+        }
+    }
+
+    let (dom, _) = mount(app);
+    let scope = scope(&dom);
+    let summary = dom.in_runtime(|| scope.summary());
+    let messages: Vec<_> = summary.iter().map(|item| item.message.as_str()).collect();
+    assert_eq!(messages, ["Blank: Fill in this field."]);
 }
 
 /// Todo 2647: a box or a select asks in its own words, as the browser does per control.

@@ -997,11 +997,7 @@ pub fn RichTextEditor(props: RichTextEditorProps) -> Element {
         .rules(bound.check(&props.validate, value.clone()))
         .bound(&bound)
         .required(required)
-        .empty(bound.is_empty(
-            required,
-            || value.clone(),
-            |doc| doc.blocks.iter().all(|block| block.is_empty()),
-        ))
+        .empty(bound.is_empty(required, || value.clone(), Doc::is_empty))
         .readonly(readonly)
         .disabled(disabled)
         .size(size)
