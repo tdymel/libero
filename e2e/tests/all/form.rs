@@ -1350,3 +1350,146 @@ fn a_pending_field_draws_its_loader_inside_the_frame() {
         fixture.close().await.unwrap();
     });
 }
+
+/// Todo 4207: summary lines follow the page, not registration: a field mounted late and a
+/// Fieldset rule sit in their place. Hidden, focus goes to the first invalid field on the page.
+#[test]
+fn summary_lines_and_hidden_focus_follow_the_page() {
+    const LABELS: &str = "[...document.querySelectorAll('[data-slot=summary] a')].map(a => a.textContent.split(':')[0])";
+    block_on(async {
+        let fixture = Fixture::open("/form/order", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        add_company(page).await.unwrap();
+        click_button(page, "Order").await.unwrap();
+        focus::wait_for_focus(page, "[data-slot=summary]", "a blocked submit")
+            .await
+            .unwrap();
+        let labels: Vec<String> = page
+            .evaluate_bounded(LABELS)
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        assert_eq!(labels, ["Name", "Company name", "Repeat password", "Age"]);
+        fixture.close().await.unwrap();
+
+        let fixture = Fixture::open("/form/order-hidden", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        add_company(page).await.unwrap();
+        pointer::click(page, "#name").await.unwrap();
+        keyboard::type_text(page, "Ada").await.unwrap();
+        click_button(page, "Order").await.unwrap();
+        focus::wait_for_focus(page, "#company", "the first invalid field on the page")
+            .await
+            .unwrap();
+        fixture.console.assert_clean("the summary order").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
+async fn add_company(page: &Page) -> Result<()> {
+    click_button(page, "Add company").await?;
+    wait::for_js_true(
+        page,
+        "!!document.getElementById('company')",
+        "the company field",
+    )
+    .await
+}
+
+/// Todo 4208: a disabled or readonly field is barred from validation, as natively: its own
+/// failing rule neither blocks the submit nor shows.
+#[test]
+fn a_disabled_or_readonly_field_does_not_block_the_submit() {
+    const LINES: &str =
+        "[...document.querySelectorAll('[data-slot=summary] a')].map(a => a.textContent)";
+    block_on(async {
+        let fixture = Fixture::open("/form/order", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        click_button(page, "Order").await.unwrap();
+        focus::wait_for_focus(page, "[data-slot=summary]", "a blocked submit")
+            .await
+            .unwrap();
+        let lines: Vec<String> = page
+            .evaluate_bounded(LINES)
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        assert!(
+            lines
+                .iter()
+                .all(|line| !line.starts_with("Locked") && !line.starts_with("Frozen")),
+            "a barred field has a line: {lines:?}"
+        );
+        let invalid: bool = page
+            .evaluate_bounded(
+                "['locked', 'frozen'].some(id => document.getElementById(id).getAttribute('aria-invalid') === 'true')",
+            )
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        assert!(!invalid, "a barred field shows an error");
+
+        for (field, text) in [("#name", "Ada"), ("#repeat", "secret"), ("#age", "36")] {
+            pointer::click(page, field).await.unwrap();
+            keyboard::type_text(page, text).await.unwrap();
+        }
+        click_button(page, "Order").await.unwrap();
+        wait::for_js_true(
+            page,
+            "document.querySelector('[data-calls]').dataset.calls === '1'",
+            "the submit past the barred fields",
+        )
+        .await
+        .unwrap();
+        fixture.console.assert_clean("barred fields").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
+/// Todo 4209: a second blocked submit with the same count is announced again: the hidden
+/// summary's status changes in the DOM, so a screen reader hears it.
+#[test]
+fn every_blocked_submit_announces_the_error_count() {
+    const STATUS: &str = "[...document.querySelectorAll('[role=status]')].find(s => s.textContent.includes('errors in the form'))";
+    block_on(async {
+        let fixture = Fixture::open("/form/order-hidden", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        click_button(page, "Order").await.unwrap();
+        focus::wait_for_focus(page, "#name", "the first invalid field")
+            .await
+            .unwrap();
+        wait::for_js_true(page, &format!("!!{STATUS}"), "the error count")
+            .await
+            .unwrap();
+        page.evaluate_bounded(format!(
+            "window.__changes = 0; new MutationObserver(r => window.__changes += r.length)\
+             .observe({STATUS}, {{ childList: true, subtree: true, characterData: true }})"
+        ))
+        .await
+        .unwrap();
+        click_button(page, "Order").await.unwrap();
+        wait::for_js_true(
+            page,
+            &format!("window.__changes > 0 && {STATUS}?.textContent === '3 errors in the form.'"),
+            "the count announced again",
+        )
+        .await
+        .unwrap();
+        focus::wait_for_focus(page, "#name", "the first invalid field again")
+            .await
+            .unwrap();
+        fixture.console.assert_clean("the repeated count").unwrap();
+        fixture.close().await.unwrap();
+    });
+}

@@ -77,7 +77,7 @@ parts_enum! {
 /// ```
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub enum SummaryMode {
-    /// A summary above the fields lists every error, linked to its field, and takes focus.
+    /// A summary above the fields lists every error in page order, linked to its field, and takes focus.
     #[default]
     Visible,
     /// No list: focus goes to the first invalid field and a screen reader hears how many errors
@@ -121,7 +121,8 @@ base_props! {
     }
 }
 
-/// A `<form>` that validates on submit and focuses an error summary.
+/// A `<form>` that validates on submit and focuses an error summary. A disabled or readonly
+/// field is not validated, as natively.
 ///
 /// ```rust
 /// # use dioxus::prelude::*;
@@ -267,7 +268,7 @@ pub fn Form<V: FormValue>(props: FormProps<V>) -> Element {
     });
 
     let summary = use_hook(|| {
-        let summary = Summary::new(focus_requests);
+        let summary = Summary::new(focus_requests, form_element);
         handle.attach(Control {
             // Through `store`: a reset clears the current value, not the first.
             reset_value: Rc::new(move || {
@@ -344,9 +345,13 @@ pub fn Form<V: FormValue>(props: FormProps<V>) -> Element {
     }
     let words = use_localization();
     let announcer = hidden.then(|| {
+        // A new node per focus request, so a blocked submit with the same count is heard (4209).
+        let request = *focus_requests.peek();
         rsx! {
             VisuallyHidden { role: "status",
-                if count > 0 { {(words.form.error_count)(count)} }
+                if count > 0 {
+                    span { key: "{request}", {(words.form.error_count)(count)} }
+                }
             }
         }
     });

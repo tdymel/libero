@@ -7,7 +7,7 @@ use dioxus::{
 
 use crate::{
     components::form::{FormErrors, FormScope, SummaryItem},
-    hooks::ElementHandle,
+    hooks::{ElementHandle, id_selector},
     platform::{self, ElementApi, PlatformError},
 };
 
@@ -188,20 +188,25 @@ pub(crate) struct Summary {
     items: Rc<RefCell<Vec<SummaryItem>>>,
     owner: ScopeId,
     focus_requests: Signal<u32>,
+    /// The `<form>`, asked for the fields' page order.
+    form: ElementHandle,
 }
 
 impl Summary {
-    pub fn new(focus_requests: Signal<u32>) -> Self {
+    pub fn new(focus_requests: Signal<u32>, form: ElementHandle) -> Self {
         Self {
             items: Rc::default(),
             owner: current_scope_id(),
             focus_requests,
+            form,
         }
     }
 
-    /// Replaces the lines. A non-empty list takes focus.
-    pub fn set(&self, items: Vec<SummaryItem>) {
+    /// Replaces the lines, in the order their fields sit on the page. A non-empty list takes focus.
+    pub fn set(&self, mut items: Vec<SummaryItem>) {
         let show = !items.is_empty();
+        let ids = self.page_ids(&items);
+        in_page_order(&mut items, &ids);
         *self.items.borrow_mut() = items;
         Runtime::current().needs_update(self.owner);
         if show {
@@ -240,6 +245,40 @@ impl Summary {
             .collect();
         items.clone()
     }
+
+    /// The ids of the lines' fields and group labels, in DOM order; empty where the renderer
+    /// cannot query (a WebView), which keeps registration order.
+    fn page_ids(&self, items: &[SummaryItem]) -> Vec<String> {
+        let selector = items
+            .iter()
+            .filter_map(|item| item.target.as_deref())
+            .flat_map(|id| [id_selector(id), id_selector(&format!("{id}-label"))])
+            .collect::<Vec<_>>()
+            .join(", ");
+        if selector.is_empty() {
+            return Vec::new();
+        }
+        self.form
+            .query_selector_all(&selector)
+            .unwrap_or_default()
+            .iter()
+            .filter_map(|element| element.attribute("id").ok().flatten())
+            .collect()
+    }
+}
+
+/// Sorts the lines by where their field sits on the page (GOV.UK). A line linking to nothing
+/// found goes last, in its old order.
+fn in_page_order(items: &mut [SummaryItem], ids: &[String]) {
+    items.sort_by_key(|item| {
+        item.target
+            .as_deref()
+            .and_then(|target| {
+                ids.iter()
+                    .position(|id| id == target || id.strip_suffix("-label") == Some(target))
+            })
+            .unwrap_or(usize::MAX)
+    });
 }
 
 /// A handle to control a form from code. Pass it as the form's `form` prop.
@@ -250,4 +289,42 @@ pub fn use_form() -> FormHandle {
 /// The handle of the `Form` around this component, or `None` outside one.
 pub fn use_form_context() -> Option<FormHandle> {
     use_hook(try_consume_context::<FormHandle>)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn line(target: Option<&str>) -> SummaryItem {
+        SummaryItem {
+            message: target.unwrap_or("none").to_string(),
+            target: target.map(str::to_string),
+            inline: true,
+        }
+    }
+
+    fn order(items: &[SummaryItem]) -> Vec<&str> {
+        items.iter().map(|item| item.message.as_str()).collect()
+    }
+
+    #[test]
+    fn lines_follow_the_page_and_unfound_ones_go_last() {
+        let mut items = vec![
+            line(Some("age")),
+            line(None),
+            line(Some("gone")),
+            line(Some("passwords")),
+            line(Some("email")),
+        ];
+        let ids = ["email", "passwords-label", "age"].map(str::to_string);
+        in_page_order(&mut items, &ids);
+        assert_eq!(order(&items), ["email", "passwords", "age", "none", "gone"]);
+    }
+
+    #[test]
+    fn no_page_keeps_registration_order() {
+        let mut items = vec![line(Some("b")), line(Some("a"))];
+        in_page_order(&mut items, &[]);
+        assert_eq!(order(&items), ["b", "a"]);
+    }
 }

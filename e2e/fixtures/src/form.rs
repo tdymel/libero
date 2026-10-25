@@ -31,6 +31,8 @@ pub const ROUTES: Routes = &[
     ("/form/secret", || rsx! { SecretPage {} }),
     ("/form/async-rule", || rsx! { AsyncRulePage { loader: false } }),
     ("/form/async-rule-loader", || rsx! { AsyncRulePage { loader: true } }),
+    ("/form/order", || rsx! { OrderPage { hidden: false } }),
+    ("/form/order-hidden", || rsx! { OrderPage { hidden: true } }),
 ];
 
 #[derive(Clone, PartialEq, Default, Fields)]
@@ -891,6 +893,56 @@ pub fn FormPage() -> Element {
             Button { onclick: move |_| renders += 1, "Rerender" }
             Button { onclick: move |_| { let _ = form.submit(); }, "Submit" }
             Button { onclick: move |_| form.reset(), "Reset" }
+        }
+    }
+}
+
+#[derive(Clone, PartialEq, Default, Fields)]
+struct Order {
+    name: String,
+    company: String,
+    #[fields(nested)]
+    password: NewPassword,
+    age: String,
+    locked: String,
+    frozen: String,
+}
+
+/// Todos 4207-4209: a field mounted late above a Fieldset rule, and a disabled and a readonly
+/// field whose own rules fail.
+#[component]
+fn OrderPage(hidden: bool) -> Element {
+    let value = use_store(Order::default);
+    let mut company = use_signal(|| false);
+    let mut calls = use_signal(|| 0u32);
+    let summary = if hidden { SummaryMode::Hidden } else { SummaryMode::Visible };
+    rsx! {
+        Flex { direction: "column", gap: "md", max_width: "320px",
+            span { "data-calls": "{calls}" }
+            Button { onclick: move |_| company.set(true), "Add company" }
+            Form { value, summary, onsubmit: move |_| calls += 1,
+                TextField { id: "name", label: "Name", required: true, name: Order::FIELDS.name() }
+                if company() {
+                    TextField { id: "company", label: "Company name", required: true, name: Order::FIELDS.company() }
+                }
+                Fieldset {
+                    label: "Password",
+                    path: Order::FIELDS.password(),
+                    validate: (|p: &NewPassword| !p.repeat.is_empty())
+                        .error("Repeat the password.")
+                        .on([NewPassword::FIELDS.repeat()]),
+                    PasswordField { label: "Password", name: NewPassword::FIELDS.value() }
+                    PasswordField { id: "repeat", label: "Repeat password", name: NewPassword::FIELDS.repeat() }
+                }
+                TextField { id: "age", label: "Age", required: true, name: Order::FIELDS.age() }
+                TextField { id: "locked", label: "Locked", disabled: true, name: Order::FIELDS.locked(),
+                    validate: not_empty.error("Locked is empty."),
+                }
+                TextField { id: "frozen", label: "Frozen", readonly: true, name: Order::FIELDS.frozen(),
+                    validate: not_empty.error("Frozen is empty."),
+                }
+                Button { r#type: "submit", "Order" }
+            }
         }
     }
 }

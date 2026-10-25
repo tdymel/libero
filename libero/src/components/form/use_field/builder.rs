@@ -217,8 +217,8 @@ impl<'a> FieldBuilder<'a> {
         self
     }
 
-    /// Whether the control is read-only: it cannot be edited, so an empty `required` one does
-    /// not block the submit.
+    /// Whether the control is read-only: it cannot be edited, so neither `required` nor its own
+    /// rules block the submit or show an error, as for a disabled one.
     #[inline]
     pub fn readonly(mut self, readonly: bool) -> Self {
         self.readonly = readonly;

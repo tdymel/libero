@@ -71,10 +71,15 @@ impl FieldBuilder<'_> {
             true => parse == Parse::Empty,
             false => self.empty,
         };
+        // Barred from validation as native constraint validation does: the user cannot fix it (4208).
+        let barred = self.disabled || self.readonly;
         // `required` is a rule at submit inside a form; the field's own rules speak first.
-        let missing = self.required && empty && !self.disabled && !self.readonly && scope.is_some();
+        let missing = self.required && empty && !barred && scope.is_some();
         // The rules over what the field edits speak before the parse and the domain's rules.
-        let own_rules = first_failing(self.rules, mapped).unwrap_or_default();
+        let own_rules = match barred {
+            true => FieldStatus::Valid,
+            false => first_failing(self.rules, mapped).unwrap_or_default(),
+        };
         let rules = match missing {
             true => worst(own_rules.clone(), FieldStatus::Error(required_text.into())),
             false => own_rules.clone(),
