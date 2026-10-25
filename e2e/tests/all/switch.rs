@@ -111,6 +111,50 @@ pub(crate) async fn assert_inputs_over_their_boxes(route: &str) {
     fixture.close().await.unwrap();
 }
 
+/// Todo 4173: an `aria_label`-only control `#in-cell` drops the label column's gap, so its box
+/// centres in the centred `#cell`; the labelled `#{labelled}` keeps the gap. Shared with Checkbox.
+pub(crate) async fn assert_a_bare_control_centres(route: &str, labelled: &str) {
+    let fixture = Fixture::open(route, Viewport::Desktop).await.unwrap();
+    let page = &fixture.page;
+    wait::for_visible(page, "#in-cell + [aria-hidden]")
+        .await
+        .unwrap();
+    let [bare_gap, labelled_gap, offset]: [f64; 3] = page
+        .evaluate_bounded(format!(
+            "(() => {{
+                // The control carries the field's states too: its parent is the field.
+                const gap = id => parseFloat(getComputedStyle(document.getElementById(id)
+                    .parentElement.parentElement).columnGap);
+                const mid = r => r.left + r.width / 2;
+                const box = document.querySelector('#in-cell + [aria-hidden]').getBoundingClientRect();
+                const cell = document.getElementById('cell').getBoundingClientRect();
+                return [gap('in-cell'), gap('{labelled}'), mid(box) - mid(cell)];
+            }})()"
+        ))
+        .await
+        .unwrap()
+        .into_value()
+        .unwrap();
+    assert_eq!(
+        bare_gap, 0.0,
+        "{route}: the aria_label-only control's column gap"
+    );
+    assert!(
+        labelled_gap > 0.0,
+        "{route}: #{labelled} lost its label gap"
+    );
+    assert!(
+        offset.abs() <= 0.5,
+        "{route}: the box sits {offset}px off the cell centre"
+    );
+    fixture.close().await.unwrap();
+}
+
+#[test]
+fn an_aria_label_only_switch_centres_in_a_cell() {
+    block_on(assert_a_bare_control_centres("/switch", "plain"));
+}
+
 #[test]
 fn a_click_at_the_hidden_input_lands_on_the_track() {
     block_on(async {

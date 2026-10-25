@@ -110,6 +110,10 @@ fn SwitchPage() -> Element {
                 onchange: move |next| card.set(next),
             }
             Switch { id: "free", label: "Uncontrolled" }
+            // Todo 4173: an `aria_label`-only switch in a centred table-like cell.
+            div { id: "cell", style: "display: flex; justify-content: center; width: 96px",
+                Switch { id: "in-cell", aria_label: "Enable this row" }
+            }
         }
     }
 }

@@ -130,6 +130,14 @@ impl FieldBuilder<'_> {
 
         let status = Some(&shown);
         let status_state = status.and_then(FieldStatus::state);
+        let description = self.description.unwrap_or(&Caption::None);
+        let helper = self.helper.unwrap_or(&Caption::None);
+        // An inline control with no visible text drops the empty label column and its gap (4173).
+        let solo = self.inline
+            && label.is_none()
+            && description.is_none()
+            && helper.is_none()
+            && status.and_then(FieldStatus::message).is_none();
 
         let mut states = self
             .states
@@ -141,14 +149,12 @@ impl FieldBuilder<'_> {
             .with("disabled", self.disabled)
             .with("required", self.required)
             .with("inline", self.inline)
+            .with("solo", solo)
             .with("card", self.card);
         if let Some(state) = status_state {
             states = states.active(state);
         }
         let states: Input<States> = states.into();
-
-        let description = self.description.unwrap_or(&Caption::None);
-        let helper = self.helper.unwrap_or(&Caption::None);
 
         // Only a `Text` caption is named: markup the caller built is theirs to
         // describe, and the status message is always text. In reading order.

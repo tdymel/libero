@@ -52,6 +52,14 @@ pub(in crate::components::form) static FIELD_SX: StaticSx = StaticSx::new(|| {
                     sx().grid_column("2"),
                 ),
         )
+        // Only an aria label: one column and no gap, so the box centres in a cell (4173).
+        // `start`: a stretched wrapper must not widen the control past its box.
+        .when(
+            "solo",
+            sx().grid_template_columns("auto")
+                .column_gap("0")
+                .justify_content("start"),
+        )
         // The inline layout as a `Paper` surface that is all hit area. No
         // `--lsx-focus-contrast`: the ring sits outside the card.
         .when(

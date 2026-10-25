@@ -32,6 +32,14 @@ fn a_click_at_the_hidden_input_lands_on_the_box() {
     block_on(super::switch::assert_inputs_over_their_boxes("/checkbox"));
 }
 
+#[test]
+fn an_aria_label_only_checkbox_centres_in_a_cell() {
+    block_on(super::switch::assert_a_bare_control_centres(
+        "/checkbox",
+        "terms",
+    ));
+}
+
 /// Todo 2088: under forced colours only a checked or mixed box shows its mark.
 #[test]
 fn only_a_checked_or_mixed_box_shows_its_mark_in_forced_colours() {

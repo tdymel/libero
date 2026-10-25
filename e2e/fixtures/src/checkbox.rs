@@ -87,6 +87,10 @@ fn CheckboxPage() -> Element {
                 checked: false,
                 onchange: move |next| emitted.set(format!("off:{next}")),
             }
+            // Todo 4173: an `aria_label`-only box in a centred table-like cell.
+            div { id: "cell", style: "display: flex; justify-content: center; width: 64px",
+                Checkbox { id: "in-cell", aria_label: "Select this row" }
+            }
         }
     }
 }

@@ -20,3 +20,4 @@ switch "Bluetooth" [checked=false]
   description "Finds nearby devices."
 StaticText "Finds nearby devices."
 switch "Uncontrolled" [checked=false]
+switch "Enable this row" [checked=false]

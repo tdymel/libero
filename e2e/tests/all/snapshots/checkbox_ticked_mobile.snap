@@ -17,3 +17,4 @@ StaticText "You can withdraw consent at any time."
 StaticText "Accept to continue."
 checkbox "Locked" [checked]
 checkbox "Unavailable" [checked=false] [disabled]
+checkbox "Select this row" [checked=false]
