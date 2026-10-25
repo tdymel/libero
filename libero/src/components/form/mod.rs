@@ -78,7 +78,12 @@ mod text_field;
 mod textarea;
 #[cfg(all(feature = "visually-hidden", feature = "use-icon", feature = "use-id"))]
 mod use_field;
-#[cfg(all(feature = "visually-hidden", feature = "use-icon", feature = "use-id"))]
+#[cfg(all(
+    feature = "visually-hidden",
+    feature = "use-icon",
+    feature = "use-id",
+    feature = "loader"
+))]
 mod use_field_frame;
 mod validation;
 
@@ -195,7 +200,12 @@ pub use textarea::{Textarea, TextareaPart, TextareaProps};
 pub(crate) use use_field::{
     Activation, Asks, Bound, MappedState, PreparedField, Setter, use_bound, use_field, use_prefill,
 };
-#[cfg(all(feature = "visually-hidden", feature = "use-icon", feature = "use-id"))]
+#[cfg(all(
+    feature = "visually-hidden",
+    feature = "use-icon",
+    feature = "use-id",
+    feature = "loader"
+))]
 pub(crate) use use_field_frame::{
     FIELD_CONTROL_SX, LiveControl, LiveSlot, PreparedFrame, SLOT_BUTTON_SX, drag_over_sx,
     field_control_sx, slot_button_sx, slot_icon_size, use_field_frame, use_live_slot,
