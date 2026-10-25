@@ -20,7 +20,11 @@ def secure(text: str) -> str:
         facts = json.loads(text)
     except ValueError:
         return "unreadable probe file"
-    types = facts.get("typeof", {})
+    if not isinstance(facts, dict):
+        return "unreadable probe file"
+    types = facts.get("typeof")
+    if not isinstance(types, dict):
+        types = {}
     apis = " ".join(f"{name}={types.get(name)}" for name in ("mediaDevices", "Notification", "geolocation", "clipboard"))
     return f"origin={facts.get('origin')} isSecureContext={facts.get('isSecureContext')} {apis}"
 

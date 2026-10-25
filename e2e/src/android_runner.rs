@@ -195,8 +195,11 @@ fn run_on(
         .into_iter()
         .filter(|name| !skipped.contains(name))
         .collect();
-    if names.is_empty() && skipped.is_empty() {
-        bail!("no android scenario matches {filters:?}");
+    if names.is_empty() {
+        bail!(
+            "no android scenario to run for {filters:?} ({} skipped)",
+            skipped.len()
+        );
     }
     eprintln!(
         "e2e android: running {} scenario(s), {} skipped",

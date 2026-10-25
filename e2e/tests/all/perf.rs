@@ -592,9 +592,15 @@ const FLING: &str = r#"(async () => {
         area.scrollTop += 60;
         await frame();
         const view = area.getBoundingClientRect();
-        const rows = [...pane.querySelectorAll('[data-row]')].map(r => r.getBoundingClientRect());
-        const top = Math.min(...rows.map(r => r.top)), bottom = Math.max(...rows.map(r => r.bottom));
-        worst = Math.max(worst, Math.max(0, top - view.top) + Math.max(0, view.bottom - bottom));
+        const rows = [...pane.querySelectorAll('[data-row]')].map(r => r.getBoundingClientRect())
+            .sort((a, b) => a.top - b.top);
+        let reached = view.top, bare = 0;
+        for (const row of rows) {
+            bare += Math.max(0, Math.min(row.top, view.bottom) - reached);
+            reached = Math.max(reached, row.bottom);
+        }
+        bare += Math.max(0, view.bottom - reached);
+        worst = Math.max(worst, bare);
     }
     return worst;
 })()"#;

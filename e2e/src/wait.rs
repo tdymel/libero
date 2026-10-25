@@ -319,13 +319,23 @@ where
 }
 
 /// Waits for a JavaScript expression to become true. Use it after every interaction:
-/// dioxus re-renders after the event returns.
+/// dioxus re-renders after the event returns. A poll that errors (a throw mid-render, a
+/// context lost to a reload) is retried; the last error rides on the timeout.
 pub async fn for_js_true(page: &Page, expression: &str, what: &str) -> Result<()> {
+    let last_error = std::cell::RefCell::new(None);
     until(what, || async {
-        let value: bool = page.evaluate_bounded(expression).await?.into_value()?;
-        Ok(value)
+        let poll: Result<bool> =
+            async { Ok(page.evaluate_bounded(expression).await?.into_value()?) }.await;
+        Ok(poll.unwrap_or_else(|error| {
+            *last_error.borrow_mut() = Some(format!("{error:#}"));
+            false
+        }))
     })
     .await
+    .map_err(|timed_out| match last_error.take() {
+        Some(error) => anyhow::anyhow!("{timed_out}; the last poll failed: {error}"),
+        None => timed_out,
+    })
 }
 
 /// Reads `expression`, runs `act`, then waits for it to change. A null before-value

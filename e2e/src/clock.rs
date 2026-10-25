@@ -8,7 +8,11 @@ use chromiumoxide::Page;
 /// `window.__heldClock.armed(ms)` / `.fire(ms)` / `.fireAll(ms)`, all others run on the real clock.
 /// Not virtual time: that stops rAF and dioxus effects too, so the arm/fire order is lost.
 pub const HELD_CLOCK: &str = r#"(delays) => {
-    if (window.__heldClock) return;
+    if (window.__heldClock) {
+        delays.forEach((ms) => window.__heldClock.delays.add(ms));
+        return;
+    }
+    const watched = new Set(delays);
     const realSet = window.setTimeout.bind(window);
     const realClear = window.clearTimeout.bind(window);
     const realEvery = window.setInterval.bind(window);
@@ -25,6 +29,7 @@ pub const HELD_CLOCK: &str = r#"(delays) => {
         t.run();
     };
     window.__heldClock = {
+        delays: watched,
         armed: (ms) => [...held.values()].filter((t) => t.ms === ms).length,
         fire: (ms) => {
             const hits = [...held].filter(([, t]) => t.ms === ms);
@@ -39,11 +44,11 @@ pub const HELD_CLOCK: &str = r#"(delays) => {
         },
     };
     window.setTimeout = function (fn, ms, ...args) {
-        if (delays.includes(ms) && typeof fn === 'function') return hold(fn, ms, args, false);
+        if (watched.has(ms) && typeof fn === 'function') return hold(fn, ms, args, false);
         return realSet(fn, ms, ...args);
     };
     window.setInterval = function (fn, ms, ...args) {
-        if (delays.includes(ms) && typeof fn === 'function') return hold(fn, ms, args, true);
+        if (watched.has(ms) && typeof fn === 'function') return hold(fn, ms, args, true);
         return realEvery(fn, ms, ...args);
     };
     window.clearTimeout = function (id) {

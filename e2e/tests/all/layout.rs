@@ -94,15 +94,20 @@ fn an_oversized_child_of_center_spills_toward_the_end() {
             .evaluate_bounded(
                 "(() => { const stage = document.querySelector('#stage').getBoundingClientRect(); \
                    const wide = document.querySelector('#wide').getBoundingClientRect(); \
-                   return [wide.left - stage.left, wide.top - stage.top]; })()",
+                   return [wide.left - stage.left, wide.top - stage.top, \
+                     stage.right - wide.right, stage.bottom - wide.bottom]; })()",
             )
             .await
             .unwrap()
             .into_value()
             .unwrap();
         assert!(
-            edges.iter().all(|edge| *edge >= -1.0),
+            edges[..2].iter().all(|edge| *edge >= -1.0),
             "the child starts past the stage's start edges (left, top): {edges:?}"
+        );
+        assert!(
+            edges[2..].iter().all(|edge| *edge < -1.0),
+            "the child does not extend past the stage's end edges (right, bottom): {edges:?}"
         );
 
         fixture.close().await.unwrap();
