@@ -24,6 +24,9 @@ pub struct FileFieldLabels {
     pub browse: &'static str,
     /// The Browse button's description on a `required` field.
     pub required: &'static str,
+    /// The clear x of a single-file field; `{name}` is the file's name. A `multiple`
+    /// field's x reads [`CommonLabels::clear`](super::CommonLabels::clear).
+    pub clear_file: &'static str,
     /// The dropzone's prompt when no `placeholder` or children are given.
     pub drop_file: &'static str,
     /// The same, for a `multiple` field.
@@ -67,6 +70,7 @@ impl FileFieldLabels {
     pub const ENGLISH: Self = Self {
         browse: "Browse files",
         required: "Required",
+        clear_file: "Clear {name}",
         drop_file: "Drop a file here, or click to pick",
         drop_files: "Drop files here, or click to pick",
         any_of: english_any_of,
@@ -81,6 +85,7 @@ impl FileFieldLabels {
     pub const GERMAN: Self = Self {
         browse: "Dateien durchsuchen",
         required: "Pflichtfeld",
+        clear_file: "{name} leeren",
         drop_file: "Datei hier ablegen oder zum Auswählen klicken",
         drop_files: "Dateien hier ablegen oder zum Auswählen klicken",
         any_of: german_any_of,

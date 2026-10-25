@@ -107,7 +107,7 @@ pub fn FileFieldPage() -> Element {
                         .doc("The `input` variant's Browse button text while nothing is picked. It is the dropzone's prompt when `children` is empty, which a `multiple` dropzone keeps after a pick. A dropzone with neither says the localization's `file_field.drop_file` or `drop_files`; the `input` variant shows nothing."),
                     prop("clearable", "bool")
                         .default(theme.file_field.clearable.to_string())
-                        .doc("Shows an x that empties the field. `input` variant only: a dropzone's cards each have their own x."),
+                        .doc("Shows an x that empties the field; a single-file field's x names its file, \"Clear report.pdf\" (`file_field.clear_file`). `input` variant only: a dropzone's cards each have their own x."),
                     prop("loading", "bool")
                         .default("false")
                         .doc("Shows a `Loader` while an upload runs and marks the field busy. It blocks nothing, `disabled` does that."),

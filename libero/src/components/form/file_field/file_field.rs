@@ -304,6 +304,11 @@ pub fn FileField(props: FileFieldProps) -> Element {
         clearable && has_files && editable,
         size,
         browse_element,
+        value
+            .iter()
+            .next()
+            .filter(|_| !multiple)
+            .map(|file| file.name()),
         emit,
     );
     let chip_class = use_css(Some(&FILE_CHIP_SX), CssLayer::Framework);

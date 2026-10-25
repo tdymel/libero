@@ -22,8 +22,21 @@ pub(crate) fn clear_button(
     size: Size,
     target: ElementHandle,
     field: Option<&PreparedField>,
+    onclear: impl FnMut(MouseEvent) + 'static,
+) -> Option<Element> {
+    clear_button_named(show, size, target, field, None, onclear)
+}
+
+/// [`clear_button`] with its own accessible `name` in place of "Clear".
+pub(crate) fn clear_button_named(
+    show: bool,
+    size: Size,
+    target: ElementHandle,
+    field: Option<&PreparedField>,
+    name: Option<String>,
     mut onclear: impl FnMut(MouseEvent) + 'static,
 ) -> Option<Element> {
+    let name = name.unwrap_or_else(|| current_localization().common.clear.to_string());
     let icon_size: Input<ThemeAwareValue> = ThemeAwareValue::Size(slot_icon_size(size)).into();
     let id = field.map(|field| format!("{}-clear", field.id()));
     let labelledby = field
@@ -36,7 +49,7 @@ pub(crate) fn clear_button(
             ActionIcon {
                 id,
                 aria_labelledby: labelledby,
-                aria_label: current_localization().common.clear,
+                aria_label: name,
                 size: icon_size,
                 sx: &SLOT_BUTTON_SX,
                 onclick: move |event: MouseEvent| {

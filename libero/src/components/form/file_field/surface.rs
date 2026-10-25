@@ -10,11 +10,12 @@ use crate::{
         accessibility::VisuallyHidden,
         common::{Glyph, HtmlTag, Input, Part, States, ring_overlay},
         feedback::Loader,
-        form::{PreparedField, clear_button, use_field_frame},
+        form::{PreparedField, clear_button_named, use_field_frame},
         layout::{BoxStyle, use_box},
     },
     context::IconSlot,
     hooks::{ElementHandle, LocalState, current_localization},
+    localization::fill,
     platform::nested_interactive,
     theme::Size,
 };
@@ -473,15 +474,24 @@ pub(super) fn trailing_slot(
     clearable: bool,
     size: Size,
     browse_element: ElementHandle,
+    single_file: Option<String>,
     emit: Callback<Files>,
 ) -> Option<Element> {
     let spinner = loader.map(|size| rsx! { Loader { size } });
-    // In the field's labelled group already, so "Clear" alone.
-    let clear = clear_button(
+    // In the field's labelled group already; a lone file is named, since the
+    // x empties just it.
+    let name = single_file.map(|name| {
+        fill(
+            current_localization().file_field.clear_file,
+            &[("name", &name)],
+        )
+    });
+    let clear = clear_button_named(
         clearable,
         size,
         browse_element,
         None,
+        name,
         move |event: MouseEvent| {
             // Clearing is not a click on the control, which would open the picker
             // straight after emptying the field.

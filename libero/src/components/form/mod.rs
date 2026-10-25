@@ -111,7 +111,7 @@ pub(crate) use checkbox::{CheckboxLook, LightState, use_checkbox_look};
 #[cfg(feature = "chip")]
 pub use chip::{Chip, ChipPart, ChipProps};
 #[cfg(feature = "action-icon")]
-pub(crate) use clear::clear_button;
+pub(crate) use clear::{clear_button, clear_button_named};
 #[cfg(feature = "color")]
 pub use color::{
     AlphaSlider, AlphaSliderProps, ColorCode, ColorField, ColorFieldProps, ColorFormat,

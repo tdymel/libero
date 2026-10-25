@@ -683,6 +683,41 @@ fn removing_the_single_file_focuses_the_browse_button_it_brings_back() {
     });
 }
 
+/// Todo 4194: a single-file field's clear x names its file, a `multiple` field's stays "Clear".
+#[test]
+fn the_clear_button_of_a_single_file_names_the_file() {
+    block_on(async {
+        let fixture = Fixture::open("/file-field/states", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        wait::for_selector(page, "#bare").await.unwrap();
+        let disk = OnDisk::new();
+
+        drop_files(page, "#bare", disk.paths()[..1].to_vec()).await;
+        wait::for_selector(page, "[aria-label=\"Clear alpha.txt\"]")
+            .await
+            .unwrap();
+        assert!(
+            !page
+                .evaluate_bounded("!!document.querySelector('[aria-label=\"Clear\"]')")
+                .await
+                .unwrap()
+                .into_value::<bool>()
+                .unwrap(),
+            "the single file's x reads only \"Clear\""
+        );
+
+        drop_files(page, "#contract", disk.paths()[..2].to_vec()).await;
+        wait::for_selector(page, "[aria-label=\"Clear\"]")
+            .await
+            .unwrap();
+
+        fixture.console.assert_clean("clear labels").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
 /// Enter and Space on Browse open the picker; read-only keeps the tab order and refuses
 /// every edit; disabled leaves the tab order (529).
 #[test]
