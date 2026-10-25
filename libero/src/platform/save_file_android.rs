@@ -5,10 +5,7 @@ use std::{future::Future, pin::Pin};
 
 use super::super::android_share::{on_main_thread, share_file, share_text};
 use super::super::share::ShareFile;
-use super::{SaveFileApi, SaveOutcome, Saving};
-
-/// Under the Binder's 1 MB transaction cap, which an intent's extras travel through.
-const MAX_TEXT: usize = 500_000;
+use super::{SaveFileApi, SaveOutcome, Saving, fits_intent_extra};
 
 pub(super) struct AndroidSaveFile;
 
@@ -23,7 +20,7 @@ enum Payload {
 impl Payload {
     fn new(name: String, mime: &str, bytes: Vec<u8>) -> Self {
         match String::from_utf8(bytes) {
-            Ok(text) if text.len() <= MAX_TEXT => Self::Text(text),
+            Ok(text) if fits_intent_extra(&text) => Self::Text(text),
             Ok(text) => Self::file(name, mime, text.into_bytes()),
             Err(error) => Self::file(name, mime, error.into_bytes()),
         }

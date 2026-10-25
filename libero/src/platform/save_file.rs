@@ -126,6 +126,14 @@ mod dialog {
 #[path = "save_file_android.rs"]
 mod android;
 
+/// Text for an intent's extras: a parcel stores a string as UTF-16, two bytes a
+/// unit, and the Binder's transaction cap is 1 MB, so half of it is the limit.
+#[cfg(any(test, all(target_os = "android", not(feature = "native"))))]
+fn fits_intent_extra(text: &str) -> bool {
+    const MAX_PARCEL_BYTES: usize = 500_000;
+    text.encode_utf16().count() * 2 <= MAX_PARCEL_BYTES
+}
+
 /// The outcome of writing `bytes` to the path a dialog picked, `None` when cancelled.
 #[cfg(any(
     test,
@@ -247,6 +255,19 @@ mod tests {
     fn save_file_fails_without_a_page_to_save_from() {
         let outcome = block_on(save_file("rows.csv", "text/csv", Vec::new()));
         assert_eq!(outcome, SaveOutcome::Failed(UNSUPPORTED.to_string()));
+    }
+
+    #[test]
+    fn text_near_500_kb_is_too_big_for_an_intent_extra() {
+        assert!(fits_intent_extra(&"a".repeat(250_000)));
+        assert!(!fits_intent_extra(&"a".repeat(400_000)));
+        assert!(!fits_intent_extra(&"a".repeat(500_000)));
+    }
+
+    #[test]
+    fn text_is_measured_in_utf16_units_not_utf8_bytes() {
+        assert!(fits_intent_extra(&"€".repeat(200_000)));
+        assert!(!fits_intent_extra(&"😀".repeat(130_000)));
     }
 
     #[test]
