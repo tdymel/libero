@@ -160,8 +160,9 @@ pub(super) fn is_clone(raw: usize, count: usize, clones: usize) -> bool {
     clones > 0 && (raw < clones || raw >= clones + count)
 }
 
-/// One step from `index`: the slide it lands on and the strip position to scroll to.
-/// Past a looping strip's end that is the adjacent clone; the seam jump lands it.
+/// One step of `by` slides from `index`: the slide it lands on and the strip position to
+/// scroll to. Past a looping strip's end that is a clone (`by` capped to the clones per
+/// end); the seam jump lands it.
 pub(super) fn step_from(
     index: usize,
     forward: bool,
@@ -169,17 +170,19 @@ pub(super) fn step_from(
     clones: usize,
     first: usize,
     last: usize,
+    by: usize,
 ) -> (usize, usize) {
-    let end = count.saturating_sub(1);
-    let next = match (forward, clones > 0) {
-        (true, true) if index >= end => return (0, clones + count),
-        (false, true) if index == 0 => return (end, clones - 1),
-        (true, true) => index + 1,
-        (false, true) => index - 1,
-        (true, false) => (index + 1).min(last),
-        (false, false) => index.saturating_sub(1).max(first),
-    };
-    (next, next + clones)
+    if clones == 0 {
+        let next = match forward {
+            true => (index + by).min(last),
+            false => index.saturating_sub(by).max(first),
+        };
+        return (next, next);
+    }
+    let by = by.clamp(1, clones) as isize;
+    let target = index as isize + if forward { by } else { -by };
+    let real = target.rem_euclid(count as isize) as usize;
+    (real, (target + clones as isize) as usize)
 }
 
 /// Whether a controlled scroll is instant: the first after mount, or one with a
@@ -234,6 +237,10 @@ pub(super) struct Nav {
     pub(super) onindexchange: Option<EventHandler<usize>>,
     /// Slides cloned onto each end of a looping strip; zero otherwise.
     pub(super) clones: usize,
+    /// Slides one control, arrow key or autoplay step moves.
+    pub(super) scroll_by: usize,
+    /// The strip rests wherever a drag leaves it, without snapping.
+    pub(super) free: bool,
 }
 
 impl Nav {
@@ -288,6 +295,7 @@ impl Nav {
             self.clones,
             self.first,
             self.last,
+            self.scroll_by,
         );
         self.move_to(index, raw);
     }
@@ -331,7 +339,7 @@ impl Nav {
     pub(super) fn land(mut self, raw: usize) {
         let next = self.clamp_index(self.real_for(raw));
         // No scroll snap natively: go to the nearest slide; Blitz scrolls instantly.
-        if !snaps_scroll() {
+        if !snaps_scroll() && !self.free {
             self.lower_seam();
             when_free(move || self.go_to(next));
             return;
@@ -408,6 +416,10 @@ pub(super) struct CarouselSetup {
     pub(super) quiet: bool,
     /// The track is a tab stop: not quiet, and no slide holds the stop instead.
     pub(super) track_stop: bool,
+    /// Slides a step moves, at least one.
+    pub(super) scroll_by: usize,
+    /// A drag or swipe may rest between slides: `drag_free` on a plain strip.
+    pub(super) free: bool,
 }
 
 /// `Carousel`'s live state: `nav`, what pauses autoplay, and the drag.
@@ -498,6 +510,8 @@ pub(super) fn use_carousel_state(setup: CarouselSetup) -> CarouselState {
         last,
         onindexchange,
         clones,
+        scroll_by: setup.scroll_by,
+        free: setup.free,
     };
 
     // An effect, not a seed: the window moves with `align`, `per_view` and `count`,

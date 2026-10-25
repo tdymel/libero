@@ -43,6 +43,53 @@ fn an_icon_floats_and_a_long_word_wraps_beside_it() {
     });
 }
 
+/// Todo 4147: the action takes the item's end, and the body wraps beside it, in either direction.
+#[test]
+fn an_action_sits_at_the_items_end_beside_the_body() {
+    block_on(async {
+        for (dir, flip) in [("ltr", 1.0), ("rtl", -1.0)] {
+            let fixture = Fixture::open("/list/action", Viewport::Desktop)
+                .await
+                .unwrap();
+            let page = &fixture.page;
+            page.evaluate_bounded(format!("document.documentElement.dir = '{dir}'"))
+                .await
+                .unwrap();
+            wait::for_js_true(
+                page,
+                &format!("getComputedStyle(document.body).direction === '{dir}'"),
+                "the page to take its direction",
+            )
+            .await
+            .unwrap();
+            // Body, then action, and whether each sits inside the item.
+            let read: Vec<f64> = page
+                .evaluate_bounded(
+                    "['#acted', '#plain-acted'].flatMap(id => { \
+                     const li = document.querySelector(id); const box = li.getBoundingClientRect(); \
+                     const body = li.querySelector(':scope > [data-slot=body]').getBoundingClientRect(); \
+                     const action = li.querySelector(':scope > [data-slot=action]').getBoundingClientRect(); \
+                     const mid = r => (r.left + r.right) / 2; \
+                     return [Math.sign(mid(action) - mid(body)), \
+                             action.left >= box.left - 1 && action.right <= box.right + 1 \
+                               && body.left >= box.left - 1 && body.right <= box.right + 1 ? 1 : 0, \
+                             body.right <= action.left + 1 || body.left >= action.right - 1 ? 1 : 0]; })",
+                )
+                .await
+                .unwrap()
+                .into_value()
+                .unwrap();
+            assert_eq!(
+                read,
+                [flip, 1.0, 1.0, flip, 1.0, 1.0],
+                "{dir}: action beside the body"
+            );
+            fixture.console.assert_clean("the action fixture").unwrap();
+            fixture.close().await.unwrap();
+        }
+    });
+}
+
 /// Todo 2468: the indent follows the nearest parent `List`, and a raw `ul` keeps its own.
 #[test]
 fn a_nested_list_is_indented_by_its_parent_list_only() {

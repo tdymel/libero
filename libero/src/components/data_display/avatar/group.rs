@@ -55,6 +55,14 @@ base_props! {
         /// Circles in total, the `+N` chip included.
         #[props(default)]
         max: Option<usize>,
+        /// The full headcount when `people` lists only some. The `+N` chip counts the
+        /// rest; a value below `people.len()` is ignored.
+        #[props(default)]
+        total: Option<usize>,
+        /// Draws the `+N` chip's content from the hidden count, in place of the `+N` text.
+        /// The chip keeps its tooltip and accessible name.
+        #[props(default)]
+        surplus: Option<Callback<usize, Element>>,
         /// How far each circle is pulled over the one before it.
         /// A size word or any CSS, as `spacing: "0"`.
         #[props(default, into)]
@@ -101,11 +109,12 @@ pub fn AvatarGroup(props: AvatarGroupProps) -> Element {
         .cloned()
         .unwrap_or_else(|| ThemeAwareValue::from(theme.avatar.color));
 
-    let total = props.people.len();
+    let known = props.people.len();
+    let total = props.total.unwrap_or(0).max(known);
     // `max` counts the chip, so it always stands for two or more: no `+1`.
     let shown = match props.max {
-        Some(max) if total > max => max.saturating_sub(1),
-        _ => total,
+        Some(max) if total > max => max.saturating_sub(1).min(known),
+        _ => known,
     };
     let hidden = total - shown;
     let circles = shown + usize::from(hidden > 0);
@@ -169,7 +178,16 @@ pub fn AvatarGroup(props: AvatarGroupProps) -> Element {
         let names = names.join(", ");
         let holes: &[(&str, &dyn std::fmt::Display)] = &[("n", &hidden), ("names", &names)];
         let count = fill(labels.count, holes);
-        let more = fill(labels.more, holes);
+        // Nobody known to name: no tooltip, and the count is the name.
+        let nameable = !names.is_empty();
+        let more = match nameable {
+            true => fill(labels.more, holes),
+            false => count.clone(),
+        };
+        let content = match &props.surplus {
+            Some(surplus) => surplus.call(hidden),
+            None => rsx! { "{count}" },
+        };
 
         let chip_states = States::default()
             .with("grouped", true)
@@ -182,12 +200,15 @@ pub fn AvatarGroup(props: AvatarGroupProps) -> Element {
             // The tooltip's names; the tooltip renders only while open.
             .attr("aria-label", more)
             // Focusable, so the tooltip is reachable without a pointer.
-            .attr("tabindex", "0")
-            .attr("aria-describedby", tip_id.cloned())
-            .render(HtmlTag::Span, Vec::new(), rsx! { "{count}" });
+            .attr("tabindex", nameable.then_some("0"))
+            .attr("aria-describedby", nameable.then(|| tip_id.cloned()))
+            .render(HtmlTag::Span, Vec::new(), content);
 
-        rsx! {
-            Tooltip { label: rsx! { "{names}" }, label_id: tip_id.cloned(), {chip} }
+        match nameable {
+            true => rsx! {
+                Tooltip { label: rsx! { "{names}" }, label_id: tip_id.cloned(), {chip} }
+            },
+            false => chip,
         }
     });
 
@@ -226,6 +247,67 @@ mod tests {
             .and_then(|rest| rest.split('"').next())
             .unwrap_or_else(|| panic!("no aria-describedby: {html}"));
         assert!(html.contains(&format!("id=\"{id}\"")), "{html}");
+    }
+
+    #[test]
+    fn total_counts_the_people_not_listed() {
+        let html = dioxus_ssr::render_element(rsx! {
+            crate::LiberoProvider {
+                AvatarGroup { people: vec!["Ada".into(), "Alan".into()], total: 5 }
+            }
+        });
+        assert!(html.contains("+3"), "{html}");
+        // A total below the listed people is ignored.
+        let html = dioxus_ssr::render_element(rsx! {
+            crate::LiberoProvider {
+                AvatarGroup { people: vec!["Ada".into(), "Alan".into()], total: 1 }
+            }
+        });
+        assert!(!html.contains(">+"), "{html}");
+    }
+
+    #[test]
+    fn total_with_max_counts_from_the_total() {
+        let html = dioxus_ssr::render_element(rsx! {
+            crate::LiberoProvider {
+                AvatarGroup {
+                    people: vec!["Ada".into(), "Alan".into(), "Grace".into()],
+                    max: 3,
+                    total: 10,
+                }
+            }
+        });
+        assert!(html.contains("+8"), "{html}");
+    }
+
+    #[test]
+    fn surplus_draws_the_chip_content() {
+        #[component]
+        fn Group() -> Element {
+            rsx! {
+                crate::LiberoProvider {
+                    AvatarGroup {
+                        people: vec!["Ada".into(), "Alan".into(), "Grace".into()],
+                        max: 2,
+                        surplus: |hidden: usize| rsx! { "and {hidden} more" },
+                    }
+                }
+            }
+        }
+        let html = dioxus_ssr::render_element(rsx! { Group {} });
+        assert!(html.contains("and 2 more"), "{html}");
+        assert!(!html.contains(">+2"), "{html}");
+    }
+
+    #[test]
+    fn a_chip_with_no_known_names_is_not_a_tab_stop() {
+        let html = dioxus_ssr::render_element(rsx! {
+            crate::LiberoProvider {
+                AvatarGroup { people: vec!["Ada".into()], total: 4 }
+            }
+        });
+        assert!(html.contains("+3"), "{html}");
+        assert!(!html.contains("tabindex"), "{html}");
     }
 
     #[test]

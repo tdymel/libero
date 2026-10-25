@@ -64,6 +64,12 @@ pub fn CarouselPage() -> Element {
                     prop("draggable", "bool")
                         .default("false")
                         .doc("Drag to scroll with a mouse. Touch swipes without it. On Blitz and the WebView a drag stops once the pointer leaves the track. With `controls` and `indicators` both off a drag is the only pointer way to move (WCAG 2.5.7), and a debug build warns."),
+                    prop("drag_free", "bool")
+                        .default("false")
+                        .doc("A drag or swipe rests where it ends instead of snapping to a slide; pair it with `draggable` for a mouse. Arrow keys, controls and dots still land on a slide. Ignored with `loop`."),
+                    prop("slides_to_scroll", "Option<usize>")
+                        .default("1")
+                        .doc("Slides one control, arrow key or autoplay step moves, stopping at the last place the strip can rest. Zero counts as 1; a looping strip caps it at the slides in view. The dots stay one per place."),
                     prop("autoplay", "bool")
                         .default("false")
                         .doc("Advances on a timer, with a pause button first in Tab order. Hover pauses it, and focus stops it until the button is pressed. Under `prefers-reduced-motion: reduce` it opens paused. Without `loop` it stops on the last slide and presses Pause; Play there starts over from the first."),
@@ -156,6 +162,13 @@ pub fn CarouselPage() -> Element {
                         }
                     }),
                     Control::switch("draggable"),
+                    Control::switch("drag_free"),
+                    Control::slider("slides_to_scroll", ["1", "2", "3"]).code(|_, values| {
+                        match values.str("slides_to_scroll").as_str() {
+                            "1" => vec![],
+                            value => vec![format!("slides_to_scroll: {value}")],
+                        }
+                    }),
                     Control::switch("autoplay"),
                     Control::switch("loop").code(|_, values| {
                         match values.str("loop").as_str() {
@@ -184,6 +197,8 @@ pub fn CarouselPage() -> Element {
                             controls: values.str("controls") == "true",
                             indicators: values.str("indicators") == "true",
                             draggable: values.str("draggable") == "true",
+                            drag_free: values.str("drag_free") == "true",
+                            slides_to_scroll: values.str("slides_to_scroll").parse::<usize>().ok(),
                             autoplay: values.str("autoplay") == "true",
                             r#loop: values.str("loop") == "true",
                             slides: demo_slides(),

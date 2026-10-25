@@ -2,11 +2,15 @@ use dioxus::prelude::*;
 
 use super::core::{AccordionView, SectionSpec, render_accordion};
 use crate::{
-    components::common::{HtmlTag, Input, OptionLabel, OptionSource, Options, base_props},
+    components::common::{
+        HtmlTag, Input, OptionLabel, OptionSource, Options, base_props, input_from_str,
+    },
     hooks::{use_root_id, use_theme},
-    theme::Size,
+    theme::{AccordionChevronPosition, Size},
     utils::warn,
 };
+
+input_from_str!(AccordionChevronPosition);
 
 /// Which sections are open. The variant is the mode: `One` holds at most one.
 #[derive(Clone, Debug, PartialEq)]
@@ -98,6 +102,16 @@ base_props! {
         heading: Input<HtmlTag>,
         #[props(default, into)]
         size: Input<Size>,
+        /// Default `true`. `false` keeps the open section open in `One` mode: its trigger
+        /// turns `aria-disabled`, and only opening another closes it. `Many` mode ignores it.
+        #[props(default)]
+        collapsible: Option<bool>,
+        /// The chevron before (`start`) or after (`end`, the default) the label.
+        #[props(default, into)]
+        chevron_position: Input<AccordionChevronPosition>,
+        /// Default `true`. `false` keeps the chevron pointing down when a section opens.
+        #[props(default)]
+        rotate_chevron: Option<bool>,
     }
 }
 
@@ -155,6 +169,7 @@ pub fn Accordion<T: Options>(props: AccordionProps<T>) -> Element {
     let list = props.options.or_static();
     let values = list.values();
     let option_disabled = list.disabled();
+    let pinned = !props.collapsible.unwrap_or(true) && matches!(props.open, AccordionOpen::One(_));
 
     let sections: Vec<SectionSpec<T>> = values
         .iter()
@@ -168,6 +183,7 @@ pub fn Accordion<T: Options>(props: AccordionProps<T>) -> Element {
             },
             disabled: option_disabled,
             open: props.open.is_open(value),
+            pinned: pinned && props.open.is_open(value),
         })
         .collect();
 
@@ -176,6 +192,7 @@ pub fn Accordion<T: Options>(props: AccordionProps<T>) -> Element {
     let toggle = use_callback(move |index: usize| {
         if let Some(onchange) = &onchange
             && let Some(value) = values.get(index)
+            && !(pinned && open.is_open(value))
         {
             onchange.call(open.toggled(value.clone()));
         }
@@ -188,6 +205,10 @@ pub fn Accordion<T: Options>(props: AccordionProps<T>) -> Element {
             ontoggle: toggle,
             heading,
             size: props.size.copied_or(theme.accordion.size),
+            chevron_position: props
+                .chevron_position
+                .copied_or(AccordionChevronPosition::default()),
+            rotate_chevron: props.rotate_chevron.unwrap_or(true),
             class: props.class,
             sx: props.sx,
             states: props.states,

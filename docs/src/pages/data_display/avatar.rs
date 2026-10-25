@@ -136,6 +136,12 @@ pub fn AvatarPage() -> Element {
                     prop("max", "Option<usize>")
                         .default("None")
                         .doc("How many circles in total, the `+N` chip included, so the chip always stands for at least two people."),
+                    prop("total", "Option<usize>")
+                        .default("None")
+                        .doc("The full headcount when `people` lists only some, so the `+N` chip counts the rest. A value below `people.len()` is ignored. The chip lists only the hidden people it knows, and is no tab stop when there are none."),
+                    prop("surplus", "Callback<usize, Element>")
+                        .default("None")
+                        .doc("Draws the `+N` chip's content from the hidden count. The chip keeps its look, tooltip and accessible name."),
                     prop("spacing", "ThemeAwareValue")
                         .default("sm")
                         .doc("How far each circle overlaps the one before it, or any CSS, e.g. `spacing: \"0\"`."),
@@ -216,6 +222,19 @@ pub fn AvatarPage() -> Element {
                             "none" => vec![],
                             value => vec![format!("max: {value}")],
                         }),
+                    // Past the six listed people, so the chip counts people the list lacks.
+                    Control::slider("total", ["none", "8", "12", "24"])
+                        .hidden_when(|values| !grouped(values))
+                        .code(|_, values| match values.str("total").as_str() {
+                            "none" => vec![],
+                            value => vec![format!("total: {value}")],
+                        }),
+                    Control::switch("surplus")
+                        .hidden_when(|values| !grouped(values))
+                        .code(|_, values| match values.str("surplus") == "true" {
+                            true => vec![r#"surplus: |hidden: usize| rsx! { "{hidden}+" }"#.to_string()],
+                            false => vec![],
+                        }),
                     Control::slider("spacing", ["0", "xs", "sm", "md", "lg", "xl", "xxl"])
                         .default("sm")
                         .hidden_when(|values| !grouped(values)),
@@ -245,6 +264,9 @@ pub fn AvatarPage() -> Element {
                         return rsx! {
                             AvatarGroup {
                                 max: values.str("max").parse::<usize>().ok(),
+                                total: values.str("total").parse::<usize>().ok(),
+                                surplus: (values.str("surplus") == "true")
+                                    .then(|| Callback::new(|hidden: usize| rsx! { "{hidden}+" })),
                                 spacing: values.str("spacing"),
                                 size: values.str("size"),
                                 radius: values.str("radius"),

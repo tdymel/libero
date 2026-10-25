@@ -18,8 +18,8 @@ use crate::{
     sx::{REDUCED_MOTION, StaticSx, sx},
     theme::{
         ACCORDION_BORDER_COLOR, ACCORDION_CHEVRON_DURATION, ACCORDION_CHEVRON_SIZE,
-        ACCORDION_HOVER, ACCORDION_PAD_X, ACCORDION_PAD_Y, AccordionDefaults,
-        FOCUS_RING_HALO_SPREAD, Size,
+        ACCORDION_HOVER, ACCORDION_PAD_X, ACCORDION_PAD_Y, AccordionChevronPosition,
+        AccordionDefaults, FOCUS_RING_HALO_SPREAD, Size,
     },
 };
 
@@ -71,8 +71,13 @@ static ACCORDION_SX: StaticSx = StaticSx::new(|| {
             sx().background(ACCORDION_HOVER.value()),
         )
         .selector(
-            "& > [data-accordion-item] > [data-accordion-heading] > button[aria-disabled=\"true\"]",
+            "& > [data-accordion-item] > [data-accordion-heading] > button[aria-disabled=\"true\"]:not([data-accordion-pinned])",
             disabled_look_sx("not-allowed"),
+        )
+        // The one open section of a non-collapsible accordion: inert, not dimmed.
+        .selector(
+            "& > [data-accordion-item] > [data-accordion-heading] > button[data-accordion-pinned]",
+            sx().cursor("default"),
         )
         // The reduced-motion guard nests here, at the same specificity, or it loses.
         .selector(
@@ -91,6 +96,29 @@ static ACCORDION_SX: StaticSx = StaticSx::new(|| {
         .selector(
             "& > [data-accordion-item] > [data-accordion-heading] > button[aria-expanded=\"true\"] [data-accordion-chevron]",
             sx().transform("rotate(180deg)"),
+        )
+        .when(
+            "static-chevron",
+            sx().selector(
+                "& > [data-accordion-item] > [data-accordion-heading] > button[aria-expanded=\"true\"] [data-accordion-chevron]",
+                sx().transform("none"),
+            ),
+        )
+        // Flex `order` and a growing label, so RTL flips the side on its own.
+        .when(
+            "chevron-start",
+            sx().selector(
+                "& > [data-accordion-item] > [data-accordion-heading] > button",
+                sx().justify_content("flex-start"),
+            )
+            .selector(
+                "& > [data-accordion-item] > [data-accordion-heading] > button > [data-accordion-chevron]",
+                sx().with("order", "-1"),
+            )
+            .selector(
+                "& > [data-accordion-item] > [data-accordion-heading] > button > span:not([data-accordion-chevron])",
+                sx().with("flex", "1 1 auto"),
+            ),
         )
         // Inside `Collapse`'s clipped box, so the padding animates with the height. The
         // top pad keeps a first child's ring clear of the clip; wide content wraps or scrolls (1.4.10).
@@ -112,6 +140,8 @@ pub(crate) struct SectionSpec<T> {
     pub label: OptionLabel,
     pub disabled: bool,
     pub open: bool,
+    /// Open and not closable: `Accordion`'s `collapsible: false`.
+    pub pinned: bool,
 }
 
 pub(crate) struct AccordionView<T: Options> {
@@ -121,6 +151,8 @@ pub(crate) struct AccordionView<T: Options> {
     /// `h1`..`h6`, already checked.
     pub heading: HtmlTag,
     pub size: Size,
+    pub chevron_position: AccordionChevronPosition,
+    pub rotate_chevron: bool,
     pub class: Input<ClassList>,
     pub sx: Input<crate::sx::Sx>,
     pub states: Input<States>,
@@ -157,6 +189,8 @@ pub(crate) fn render_accordion<T: Options>(view: AccordionView<T>, root: String)
         ontoggle,
         heading: level,
         size,
+        chevron_position,
+        rotate_chevron,
         class,
         sx: user_sx,
         states,
@@ -191,6 +225,8 @@ pub(crate) fn render_accordion<T: Options>(view: AccordionView<T>, root: String)
     let states: Input<States> = states
         .unwrap_or_default()
         .with(size.state_name(), true)
+        .with(chevron_position.state_name(), true)
+        .with("static-chevron", !rotate_chevron)
         .into();
 
     let disabled: Vec<bool> = sections.iter().map(|section| section.disabled).collect();
@@ -204,6 +240,7 @@ pub(crate) fn render_accordion<T: Options>(view: AccordionView<T>, root: String)
                 index,
                 open: section.open,
                 disabled: section.disabled,
+                pinned: section.pinned && !section.disabled,
                 targets: arrow_targets(&disabled, index),
                 level,
                 root: root.clone(),
@@ -233,6 +270,7 @@ fn AccordionSection<T: Options>(
     index: usize,
     open: bool,
     disabled: bool,
+    pinned: bool,
     /// From [`arrow_targets`].
     targets: Option<[usize; 4]>,
     level: HtmlTag,
@@ -298,10 +336,11 @@ fn AccordionSection<T: Options>(
             "aria-expanded": if open { "true" } else { "false" },
             "aria-controls": "{region_id}",
             // `aria-disabled`, not `disabled`: the section stays a tab stop.
-            "aria-disabled": if disabled { "true" } else { "false" },
+            "aria-disabled": if disabled || pinned { "true" } else { "false" },
+            "data-accordion-pinned": pinned.then_some(""),
             "aria-label": name,
             onclick: move |_| {
-                if !disabled {
+                if !disabled && !pinned {
                     ontoggle.call(index);
                 }
             },

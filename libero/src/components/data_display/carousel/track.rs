@@ -42,6 +42,8 @@ pub(super) static CAROUSEL_TRACK_SX: StaticSx = StaticSx::new(|| {
                 sx().scroll_behavior("auto").scroll_snap_type("none"),
             )
             .when("seam", sx().scroll_behavior("auto"))
+            // `drag_free`: no snap point pulls the strip back after a release.
+            .when("free", sx().scroll_snap_type("none"))
             // Inset: the `overflow: hidden` viewport would clip an outset ring.
             .focus_visible(inset_focus_ring_sx("-2px")),
     )
@@ -109,6 +111,7 @@ pub(super) fn carousel_track(
         .with("dragging", dragging())
         // The seam jump has to be instant, or the strip visibly rewinds.
         .with("seam", (nav.seam)())
+        .with("free", nav.free)
         .into();
 
     rsx! {

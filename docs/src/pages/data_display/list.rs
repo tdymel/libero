@@ -3,7 +3,7 @@ use libero::components::Pictogram;
 use pictogram_icons_lucide as lucide;
 
 use dioxus::prelude::*;
-use libero::components::{Code, Icon, List, ListItem, ListItemPart, ListSubheader, Text};
+use libero::components::{Button, Code, Icon, List, ListItem, ListItemPart, ListSubheader, Text};
 use libero::use_theme;
 
 /// The page's own source: the printed parts are cut from its live demo.
@@ -37,6 +37,9 @@ pub fn ListPage() -> Element {
                     prop("icon", "Option<Element>")
                         .default("None")
                         .doc("This item's own icon, in place of the list's."),
+                    prop("action", "Option<Element>")
+                        .default("None")
+                        .doc("A control at the item's end, such as a button, beside the content. Keep it out of `children`."),
                     prop("parts", "Parts<ListItemPart>")
                         .doc("Styles for the inner parts in the Style API tab, under `sx`."),
                     prop("children", "Element")
@@ -45,7 +48,8 @@ pub fn ListPage() -> Element {
                 ])
                 .parts("ListItemPart", vec![
                     (ListItemPart::Icon, "The icon wrapper, with an icon only."),
-                    (ListItemPart::Body, "The content beside the icon, with an icon only."),
+                    (ListItemPart::Body, "The content beside the icon and the action, with either."),
+                    (ListItemPart::Action, "The trailing `action`, with one only."),
                 ]),
                 props("ListSubheader", vec![
                     prop("children", "Element")
@@ -101,7 +105,10 @@ pub fn ListPage() -> Element {
                         // demo-code: children start
                         ListSubheader { "Getting started" }
                         ListItem { "First item" }
-                        ListItem { "Second item" }
+                        ListItem {
+                            action: rsx! { Button { size: "xs", variant: "outlined", "Edit" } },
+                            "Second item"
+                        }
                         ListItem {
                             "Third item, with a nested list"
                             List {

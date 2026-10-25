@@ -108,7 +108,7 @@ const MONO_FONT_FAMILY: &str = "ui-monospace, SFMono-Regular, Menlo, Consolas, m
 pub use accordion::{
     ACCORDION_BORDER_COLOR, ACCORDION_CHEVRON, ACCORDION_CHEVRON_DURATION, ACCORDION_CHEVRON_SIZE,
     ACCORDION_FONT_SIZE, ACCORDION_HOVER, ACCORDION_PAD_X, ACCORDION_PAD_Y, ACCORDION_PADDING_X,
-    ACCORDION_PADDING_Y, AccordionDefaults, AccordionSizeLevel,
+    ACCORDION_PADDING_Y, AccordionChevronPosition, AccordionDefaults, AccordionSizeLevel,
 };
 pub(crate) use action_icon::ACTION_ICON_GLYPH;
 pub use action_icon::{ACTION_ICON_RADIUS, ACTION_ICON_SIZE, ActionIconDefaults};

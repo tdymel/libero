@@ -52,6 +52,27 @@ fn AvatarPage() -> Element {
                     AvatarSpec::from("Barbara Liskov"),
                 ],
             }
+            // Todos 4143, 4144: a headcount beyond the list, and a chip of its own.
+            AvatarGroup {
+                id: "group-total",
+                max: 3,
+                total: 12,
+                people: vec![
+                    AvatarSpec::from("Ada Lovelace"),
+                    AvatarSpec::from("Grace Hopper"),
+                    AvatarSpec::from("Radia Perlman"),
+                ],
+            }
+            AvatarGroup {
+                id: "group-surplus",
+                max: 2,
+                surplus: |hidden: usize| rsx! { "{hidden} more" },
+                people: vec![
+                    AvatarSpec::from("Ada Lovelace"),
+                    AvatarSpec::from("Grace Hopper"),
+                    AvatarSpec::from("Radia Perlman"),
+                ],
+            }
         }
     }
 }

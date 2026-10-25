@@ -5,7 +5,7 @@ use anyhow::{Result, ensure};
 use e2e::archetypes::reset_tab_position;
 use e2e::browser::block_on;
 use e2e::driver::{Driver, eventually, eventually_focused};
-use e2e::passes::{keyboard, motion};
+use e2e::passes::{keyboard, motion, pointer};
 use e2e::suite::Step;
 use e2e::wait::PageBounded;
 use e2e::{Fixture, Suite, Viewport, js, wait};
@@ -194,6 +194,78 @@ fn home_and_end_at_the_ends_leave_the_page_to_scroll() {
         .unwrap();
         assert_keys_left_to_page(page, &[keyboard::END]).await;
         fixture.console.assert_clean("the ends").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
+/// Todo 4140: with `collapsible: false` the open trigger does nothing and is `aria-disabled`;
+/// opening another moves the pin.
+#[test]
+fn a_non_collapsible_accordion_keeps_one_section_open() {
+    block_on(async {
+        let fixture = Fixture::open("/accordion-pinned", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        let state = |index: usize| {
+            format!(
+                "(() => {{ const b = document.querySelector('#pinned-trigger-{index}'); \
+                 return [b.getAttribute('aria-expanded'), b.getAttribute('aria-disabled')]; }})()"
+            )
+        };
+        pointer::click(page, "#pinned-trigger-0").await.unwrap();
+        e2e::clock::frame(page).await.unwrap();
+        let unmoved: Vec<String> = js(page, &state(0)).await;
+        assert_eq!(unmoved, ["true", "true"], "the pinned section closed");
+        pointer::click(page, "#pinned-trigger-1").await.unwrap();
+        wait::for_js_true(
+            page,
+            "document.querySelector('#pinned-trigger-1').getAttribute('aria-expanded') === 'true'",
+            "the second section to open",
+        )
+        .await
+        .unwrap();
+        let first: Vec<String> = js(page, &state(0)).await;
+        let second: Vec<String> = js(page, &state(1)).await;
+        assert_eq!(first, ["false", "false"], "the first closed and unpinned");
+        assert_eq!(second, ["true", "true"], "the second open and pinned");
+        // Focusable though inert: the tab stop stays.
+        keyboard::tab_to(page, "#pinned-trigger-1", 10)
+            .await
+            .unwrap();
+        fixture.console.assert_clean("a pinned accordion").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
+/// Todos 4141, 4142: the chevron leads the label and stays down on an open section.
+#[test]
+fn the_chevron_can_lead_and_stay_still() {
+    block_on(async {
+        let fixture = Fixture::open("/accordion-chevron", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        wait::for_visible(page, "#chevron-trigger-0").await.unwrap();
+        let [chevron_right, label_left]: [f64; 2] = js(
+            page,
+            "(() => { const b = document.querySelector('#chevron-trigger-0'); \
+             const c = b.querySelector('[data-accordion-chevron]'); \
+             const l = b.querySelector('span:not([data-accordion-chevron])'); \
+             return [c.getBoundingClientRect().right, l.getBoundingClientRect().left]; })()",
+        )
+        .await;
+        assert!(
+            chevron_right <= label_left,
+            "the chevron is not before the label: {chevron_right} vs {label_left}"
+        );
+        let open: String = js(
+            page,
+            "getComputedStyle(document.querySelector('#chevron-trigger-0 [data-accordion-chevron]')).transform",
+        )
+        .await;
+        assert_eq!(open, "none", "the open chevron turned");
+        fixture.console.assert_clean("a leading chevron").unwrap();
         fixture.close().await.unwrap();
     });
 }

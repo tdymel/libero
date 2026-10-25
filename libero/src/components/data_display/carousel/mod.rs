@@ -158,6 +158,14 @@ base_props! {
         /// `indicators` both off, a drag is the only pointer way to move: it warns (WCAG 2.5.7).
         #[props(default)]
         draggable: bool,
+        /// A drag or swipe rests where it ends instead of snapping to a slide; pair it with
+        /// `draggable` for a mouse. Ignored with `loop`, whose strip re-seats on a slide.
+        #[props(default)]
+        drag_free: bool,
+        /// Slides one control, arrow key or autoplay step moves; 1 by default.
+        /// A looping strip caps it at the slides visible.
+        #[props(default)]
+        slides_to_scroll: Option<usize>,
         /// Advances on a timer, with a pause control (WCAG 2.2.2). Without `loop` it stops on the last slide.
         #[props(default)]
         autoplay: bool,
@@ -252,6 +260,8 @@ pub fn Carousel(props: CarouselProps) -> Element {
         named: own_label.is_some(),
         quiet,
         track_stop: !quiet && !jump.as_ref().is_some_and(CarouselJump::slide_stop),
+        scroll_by: props.slides_to_scroll.unwrap_or(1).max(1),
+        free: props.drag_free && !props.r#loop,
     };
     let state = use_carousel_state(setup);
     let drag = use_carousel_drag(setup, state, props.draggable);

@@ -30,6 +30,7 @@ pub struct TimelineEvent {
     pub(super) bullet: Option<Element>,
     pub(super) color: Option<ThemeAwareValue>,
     pub(super) line: TimelineLine,
+    pub(super) opposite: Option<Element>,
 }
 
 impl TimelineEvent {
@@ -41,6 +42,7 @@ impl TimelineEvent {
             bullet: None,
             color: None,
             line: TimelineLine::default(),
+            opposite: None,
         }
     }
 
@@ -62,6 +64,13 @@ impl TimelineEvent {
     /// This event's own accent, overriding the timeline's.
     pub fn color(mut self, color: impl Into<ThemeAwareValue>) -> Self {
         self.color = Some(color.into());
+        self
+    }
+
+    /// Content on the other side of the rail from the body, such as a date. One event
+    /// setting it centres the rail for the whole timeline, content on the `align` side.
+    pub fn opposite(mut self, opposite: Element) -> Self {
+        self.opposite = Some(opposite);
         self
     }
 

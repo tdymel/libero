@@ -2,12 +2,33 @@
 //! item, and a raw `ul` inside an item.
 
 use dioxus::prelude::*;
-use libero::components::{List, ListItem, ListSubheader};
+use libero::components::{Button, List, ListItem, ListSubheader};
 
 use crate::Routes;
 
 pub const ROUTES: Routes = &[
     ("/list", || rsx! { ListPage {} }),
+    // Todo 4147: an action at the end of an item, narrow enough to wrap the body.
+    (
+        "/list/action",
+        || rsx! {
+            div { style: "width: 240px",
+                List { id: "actions",
+                    ListItem {
+                        id: "acted",
+                        icon: rsx! { "*" },
+                        action: rsx! { Button { id: "remove", size: "xs", variant: "outlined", "Remove" } },
+                        "Supercalifragilisticexpialidocious"
+                    }
+                    ListItem {
+                        id: "plain-acted",
+                        action: rsx! { Button { size: "xs", variant: "outlined", "Edit" } },
+                        "Second"
+                    }
+                }
+            }
+        },
+    ),
     // A subheader in an ordered list sits outside the number gutter.
     (
         "/list/subheader",

@@ -50,6 +50,8 @@ fn Demo() -> Element {
 |---|---|---|---|
 | `people` | `Vec<AvatarSpec>` | required | The members, as data rather than children so the group can count them. The first is drawn on top. |
 | `max` | `Option<usize>` | `None` | How many circles in total, the `+N` chip included, so the chip always stands for at least two people. |
+| `total` | `Option<usize>` | `None` | The full headcount when `people` lists only some, so the `+N` chip counts the rest. A value below `people.len()` is ignored. The chip lists only the hidden people it knows, and is no tab stop when there are none. |
+| `surplus` | `Callback<usize, Element>` | `None` | Draws the `+N` chip's content from the hidden count. The chip keeps its look, tooltip and accessible name. |
 | `spacing` | `ThemeAwareValue` | `sm` | How far each circle overlaps the one before it, or any CSS, e.g. `spacing: "0"`. |
 | `size` | `Size` | `md` | For every member and the chip. |
 | `radius` | `ThemeAwareValue` | `xxl` | For every member and the chip, or any CSS, e.g. `radius: "0"`. |

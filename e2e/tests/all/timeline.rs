@@ -133,6 +133,86 @@ fn done_and_pending_bullets_stay_apart_in_forced_colours() {
     });
 }
 
+/// Per event of each list: which side of the bullet the body and the opposite sit on
+/// (1 right, -1 left), the rail's worst offset from its bullets' centres, and how far
+/// the opposite's top strays from the body's.
+const OPPOSITE_SIDES: &str = "['#start', '#end', '#alternate'].map(id => { \
+     const items = [...document.querySelectorAll(id + ' > li')]; \
+     const mid = e => { const r = e.getBoundingClientRect(); return (r.left + r.right) / 2; }; \
+     const rows = items.map(li => { const b = mid(li.querySelector(':scope > [data-slot=bullet]')); \
+       return [Math.sign(mid(li.querySelector(':scope > [data-slot=body]')) - b), \
+               Math.sign(mid(li.querySelector(':scope > [data-slot=opposite]')) - b)]; }); \
+     const off = Math.max(...items.slice(0, -1).map(li => { \
+       const box = li.getBoundingClientRect(); const rail = getComputedStyle(li, '::before'); \
+       const b = li.querySelector(':scope > [data-slot=bullet]').getBoundingClientRect(); \
+       return Math.abs(box.left + parseFloat(rail.left) + parseFloat(rail.borderLeftWidth) / 2 \
+                       - (b.left + b.width / 2)); })); \
+     const top = s => li => li.querySelector(':scope > [data-slot=' + s + ']').getBoundingClientRect().top; \
+     const dy = Math.max(...items.map(li => Math.abs(top('opposite')(li) - top('body')(li)))); \
+     return { rows, off, dy }; })";
+
+/// Todo 4148: the opposite content sits across the rail from the body, and the rail stays
+/// under the bullets, in either direction.
+#[test]
+fn the_opposite_sits_across_the_rail_from_the_body() {
+    #[derive(serde::Deserialize)]
+    struct Measured {
+        rows: Vec<[f64; 2]>,
+        off: f64,
+        dy: f64,
+    }
+    block_on(async {
+        for (dir, flip) in [("ltr", 1.0), ("rtl", -1.0)] {
+            let fixture = Fixture::open("/timeline/opposite", Viewport::Desktop)
+                .await
+                .unwrap();
+            let page = &fixture.page;
+            page.evaluate_bounded(format!("document.documentElement.dir = '{dir}'"))
+                .await
+                .unwrap();
+            wait::for_js_true(
+                page,
+                &format!("getComputedStyle(document.body).direction === '{dir}'"),
+                "the page to take its direction",
+            )
+            .await
+            .unwrap();
+            let measured: Vec<Measured> = page
+                .evaluate_bounded(OPPOSITE_SIDES)
+                .await
+                .unwrap()
+                .into_value()
+                .unwrap();
+            let want = [
+                [[1.0, -1.0], [1.0, -1.0]],
+                [[-1.0, 1.0], [-1.0, 1.0]],
+                [[1.0, -1.0], [-1.0, 1.0]],
+            ];
+            for ((measured, want), id) in
+                measured.iter().zip(want).zip(["start", "end", "alternate"])
+            {
+                assert!(
+                    measured.off < 2.0,
+                    "{dir} {id}: rail {}px off its bullets",
+                    measured.off
+                );
+                assert!(
+                    measured.dy < 1.0,
+                    "{dir} {id}: opposite {}px off the body's top",
+                    measured.dy
+                );
+                let want: Vec<[f64; 2]> = want.iter().map(|[a, b]| [a * flip, b * flip]).collect();
+                assert_eq!(measured.rows, want, "{dir} {id}: body and opposite sides");
+            }
+            fixture
+                .console
+                .assert_clean("the opposite fixture")
+                .unwrap();
+            fixture.close().await.unwrap();
+        }
+    });
+}
+
 /// Per list: the rail's worst offset from its bullets' centres (px), and which
 /// side of the first bullet the first event's content sits on (1 right, -1 left).
 const SIDES: &str = "['#left', '#right', '#alternate'].map(id => { \

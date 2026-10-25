@@ -68,6 +68,8 @@ fn Demo() -> Element {
 | `indicators` | `bool` | `false` | The dot strip, one dot per place the strip can rest. That is fewer than the slides when `per_view` is above 1. |
 | `aria_label` | `String` | localization `label` | Names the region. Unset, it falls back to the localization's label and warns. |
 | `draggable` | `bool` | `false` | Drag to scroll with a mouse. Touch swipes without it. On Blitz and the WebView a drag stops once the pointer leaves the track. With `controls` and `indicators` both off a drag is the only pointer way to move (WCAG 2.5.7), and a debug build warns. |
+| `drag_free` | `bool` | `false` | A drag or swipe rests where it ends instead of snapping to a slide; pair it with `draggable` for a mouse. Arrow keys, controls and dots still land on a slide. Ignored with `loop`. |
+| `slides_to_scroll` | `Option<usize>` | `1` | Slides one control, arrow key or autoplay step moves, stopping at the last place the strip can rest. Zero counts as 1; a looping strip caps it at the slides in view. The dots stay one per place. |
 | `autoplay` | `bool` | `false` | Advances on a timer, with a pause button first in Tab order. Hover pauses it, and focus stops it until the button is pressed. Under `prefers-reduced-motion: reduce` it opens paused. Without `loop` it stops on the last slide and presses Pause; Play there starts over from the first. |
 | `autoplay_delay` | `u32` | `4000` | Milliseconds between advances. |
 | `r#loop` | `bool` | `false` | Wraps around at both ends through cloned slides, which repeat a slide's DOM: give interactive slide content no `id` or form `name`. The strip can show the end and the start at once, and the status then reads "Slides 6 to 2 of 6, wrapping around". |

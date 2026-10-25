@@ -71,6 +71,24 @@ fn the_more_chip_tooltip_names_the_hidden_people() {
     });
 }
 
+/// Todos 4143, 4144: `total` counts people the list does not hold, and `surplus` draws the chip.
+#[test]
+fn the_chip_counts_the_total_and_draws_the_surplus() {
+    block_on(async {
+        let fixture = Fixture::open("/avatar", Viewport::Desktop).await.unwrap();
+        let page = &fixture.page;
+        let [counted, drawn]: [String; 2] = e2e::js(
+            page,
+            "[...document.querySelectorAll('#group-total [tabindex=\"0\"], #group-surplus [tabindex=\"0\"]')]\
+             .map(chip => chip.textContent)",
+        )
+        .await;
+        assert_eq!([counted.as_str(), drawn.as_str()], ["+10", "2 more"]);
+        fixture.console.assert_clean("the chip's total").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
 /// Todos 2363, 2601: the smallest initials draw at 10 px or more, and every size follows the root.
 #[test]
 fn the_initials_are_legible_and_follow_the_text_size() {

@@ -13,7 +13,40 @@ pub const ROUTES: Routes = &[
     ("/accordion-wide", || rsx! { WidePanelPage {} }),
     ("/accordion-lone", || rsx! { LoneTriggerPage {} }),
     ("/accordion-ends", || rsx! { EndsPage {} }),
+    ("/accordion-pinned", || rsx! { PinnedPage {} }),
+    ("/accordion-chevron", || rsx! { ChevronPage {} }),
 ];
+
+/// One section always open (todo 4140).
+#[component]
+fn PinnedPage() -> Element {
+    let mut open = use_signal(|| AccordionOpen::One(Some(Step::Shipping)));
+    rsx! {
+        Accordion {
+            id: "pinned",
+            open: open(),
+            onchange: move |next| open.set(next),
+            collapsible: false,
+            panel: |_: Step| rsx! { Text { "Body." } },
+        }
+    }
+}
+
+/// The chevron before the label, and not turning when a section opens (todos 4141, 4142).
+#[component]
+fn ChevronPage() -> Element {
+    let mut open = use_signal(|| AccordionOpen::One(Some(Step::Shipping)));
+    rsx! {
+        Accordion {
+            id: "chevron",
+            open: open(),
+            onchange: move |next| open.set(next),
+            chevron_position: "start",
+            rotate_chevron: false,
+            panel: |_: Step| rsx! { Text { "Body." } },
+        }
+    }
+}
 
 /// An open panel led by a button, then a word with no break opportunity and a child
 /// wider than a phone: the ring and the content stay reachable (todos 2430, 2431).

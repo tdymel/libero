@@ -70,7 +70,7 @@ pub(super) fn use_carousel_drag(
 }
 
 /// Releasing hands the strip back to the browser, which snaps and fires `onscrollend`.
-/// Not on a snap point already (an end, todo 3117), nor on Blitz: the release lands here.
+/// Not on a snap point already (an end, todo 3117), nor on Blitz or a free drag: the release lands here.
 fn settle_release(nav: Nav, orientation: Orientation) {
     let element = nav.track.element;
     let (offset, content, view) = (
@@ -96,7 +96,7 @@ fn settle_release(nav: Nav, orientation: Orientation) {
             Orientation::Horizontal => (x, max_x),
             Orientation::Vertical => (y, max_y),
         };
-        if !snaps_scroll() || nav.rests_on(raw, at, max) {
+        if !snaps_scroll() || nav.free || nav.rests_on(raw, at, max) {
             nav.land(raw);
         }
     });

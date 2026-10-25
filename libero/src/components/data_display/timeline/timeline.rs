@@ -25,6 +25,10 @@ input_from_str!(TimelineAlign);
 /// Horizontal space between the marker and the text column.
 const CONTENT_SPACE: &str = "var(--lsx-spacing-md)";
 
+/// An event's own body and opposite, relative to its `<li>`.
+const ITEM_BODY: &str = "& > [data-slot='body']";
+const ITEM_OPPOSITE: &str = "& > [data-slot='opposite']";
+
 fn rail() -> Rail {
     Rail {
         marker: TIMELINE_BULLET.value(),
@@ -47,6 +51,7 @@ static TIMELINE_BASE_SX: StaticSx = StaticSx::new(|| {
         .gap(TIMELINE_SPACE.value())
         // A centred rail needs a width to centre in; narrower means a narrower parent.
         .when(TimelineAlign::Alternate.state_name(), sx().width("100%"))
+        .when("opposite", sx().width("100%"))
 });
 
 /// One event, the positioned ancestor of its `::before` connector and bullet.
@@ -96,6 +101,47 @@ static TIMELINE_ITEM_SX: StaticSx = StaticSx::new(|| {
                 .and(rail.connector_sx(RailInset::End))
                 .rtl(rail_on(RailInset::Start, &inset)),
         );
+
+    // Beside the marker's half: the centred rail's inset without the `50%`.
+    let half = format!("calc({} / 2 + {CONTENT_SPACE})", rail.marker);
+    // A grid of two halves around the centred rail; the body takes the start half
+    // unless `content-end`. Not under an align state: those pad for a one-sided rail.
+    let opposed = sx()
+        .display("grid")
+        .with("grid-template-columns", "minmax(0, 1fr) minmax(0, 1fr)")
+        .and(rail.connector_sx(RailInset::Center))
+        .selector(
+            ITEM_BODY,
+            sx().with("grid-column", "1")
+                .with("grid-row", "1")
+                .with("padding-inline-end", half.clone())
+                .text_align_end(),
+        )
+        .selector(
+            ITEM_OPPOSITE,
+            sx().with("grid-column", "2")
+                .with("grid-row", "1")
+                .with("padding-inline-start", half.clone())
+                .text_align_start(),
+        );
+    let content_end = sx()
+        .selector(
+            ITEM_BODY,
+            sx().with("grid-column", "2")
+                .with("padding-inline-start", half.clone())
+                .with("padding-inline-end", "0")
+                .text_align_start(),
+        )
+        .selector(
+            ITEM_OPPOSITE,
+            sx().with("grid-column", "1")
+                .with("padding-inline-end", half)
+                .with("padding-inline-start", "0")
+                .text_align_end(),
+        );
+    let one_sided = one_sided
+        .when("opposite", opposed)
+        .when("opposite && content-end", content_end);
 
     // Alternating at every width: no collapse threshold (see the brain page).
     one_sided.when(
@@ -186,6 +232,8 @@ parts_enum! {
         /// Title and content, beside the rail.
         Body = "body" => "& > [data-slot='item'] > [data-slot='body']",
         Title = "title" => "& > [data-slot='item'] > [data-slot='body'] > [data-slot='title']",
+        /// An event's `opposite` content, across the rail from the body.
+        Opposite = "opposite" => "& > [data-slot='item'] > [data-slot='opposite']",
     }
 }
 
@@ -243,10 +291,14 @@ pub fn Timeline(props: TimelineProps) -> Element {
     let radius = ScaleOrCss::new(props.radius.as_ref(), theme.timeline.radius);
     let gap = ScaleOrCss::new(props.gap.as_ref(), theme.timeline.gap);
 
+    // One event with an opposite centres the rail of every event.
+    let opposed = props.items.iter().any(|item| item.opposite.is_some());
+
     let states: Input<States> = props
         .states
         .unwrap_or_default()
         .with(align.state_name(), true)
+        .with("opposite", opposed)
         .with(bullet_size.state_name(), true)
         .with(radius.size.radius_state_name(), true)
         // The third size axis has no `per_*` helper; see `TimelineDefaults`.
@@ -293,8 +345,16 @@ pub fn Timeline(props: TimelineProps) -> Element {
             let line_active = active.is_some_and(|active| index < active);
             let is_current = active == Some(index);
 
+            // The body sits at the end of the rail for `start`, and for an alternating first event.
+            let content_end = match align {
+                TimelineAlign::Start => true,
+                TimelineAlign::End => false,
+                TimelineAlign::Alternate => index % 2 == 0,
+            };
             let item_states = States::default()
-                .with(align.state_name(), true)
+                .with(align.state_name(), !opposed)
+                .with("opposite", opposed)
+                .with("content-end", opposed && content_end)
                 .with("active", is_active)
                 .with("line-active", line_active);
             // `ABSENT` when unset: a raw `style` var it stops declaring would
@@ -310,7 +370,14 @@ pub fn Timeline(props: TimelineProps) -> Element {
                 );
 
             let bullet_states = States::default()
-                .with(align.state_name(), true)
+                .with(
+                    match opposed {
+                        true => TimelineAlign::Alternate,
+                        false => align,
+                    }
+                    .state_name(),
+                    true,
+                )
                 .with("active", is_active)
                 .with("with-child", item.bullet.is_some());
 
@@ -342,6 +409,12 @@ pub fn Timeline(props: TimelineProps) -> Element {
                 }
             };
 
+            let opposite = rsx! {
+                if let Some(opposite) = &item.opposite {
+                    div { "data-slot": TimelinePart::Opposite.slot(), {opposite.clone()} }
+                }
+            };
+
             item_style
                 .clone()
                 .attr("data-state", item_states.data_state())
@@ -349,7 +422,7 @@ pub fn Timeline(props: TimelineProps) -> Element {
                 // Only the current event; hidden text on every done one is noise.
                 .attr("aria-current", is_current.then_some("step"))
                 .attr("data-slot", TimelinePart::Item.slot())
-                .render(HtmlTag::Li, Vec::new(), vec![bullet, body])
+                .render(HtmlTag::Li, Vec::new(), vec![bullet, body, opposite])
         })
         .collect::<Vec<_>>();
 
@@ -382,6 +455,10 @@ mod tests {
                 (
                     "title",
                     "& > [data-slot='item'] > [data-slot='body'] > [data-slot='title']"
+                ),
+                (
+                    "opposite",
+                    "& > [data-slot='item'] > [data-slot='opposite']"
                 ),
             ]
         );

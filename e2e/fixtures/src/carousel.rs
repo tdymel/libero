@@ -15,7 +15,38 @@ pub const ROUTES: Routes = &[
     ("/carousel/replaced", || rsx! { ReplacedPage {} }),
     ("/carousel/drag-end", || drag_end(false)),
     ("/carousel/drag-loop", || drag_end(true)),
+    ("/carousel/scroll-by", || rsx! { ScrollByPage {} }),
+    ("/carousel/drag-free", || rsx! { DragFreePage {} }),
 ];
+
+/// Five slides, a step of two: Next from the first reaches the third, then the last.
+#[component]
+fn ScrollByPage() -> Element {
+    rsx! {
+        Flex { direction: "column", gap: "md", max_width: "420px",
+            Carousel {
+                aria_label: "Pairs",
+                slides_to_scroll: 2,
+                slides: (1..=5).map(|n| rsx! { Text { "Slide {n}" } }).collect(),
+            }
+        }
+    }
+}
+
+/// A draggable strip that rests where a drag leaves it.
+#[component]
+fn DragFreePage() -> Element {
+    rsx! {
+        Flex { direction: "column", gap: "md", max_width: "420px",
+            Carousel {
+                aria_label: "Free slides",
+                draggable: true,
+                drag_free: true,
+                slides: (1..=4).map(|n| rsx! { Text { "Slide {n}" } }).collect(),
+            }
+        }
+    }
+}
 
 /// A focusable `video` as a slide's child, whose outset ring needs the slide's padding (todo 2577).
 #[component]

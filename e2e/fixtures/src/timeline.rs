@@ -8,7 +8,30 @@ use crate::Routes;
 pub const ROUTES: Routes = &[
     ("/timeline", || rsx! { TimelinePage {} }),
     ("/timeline/rich", || rsx! { RichTitlePage {} }),
+    ("/timeline/opposite", || rsx! { OppositePage {} }),
 ];
+
+/// Todo 4148: a date across the rail from each body, in every alignment.
+#[component]
+fn OppositePage() -> Element {
+    let dated = || -> Vec<TimelineEvent> {
+        ["Ordered", "Shipped"]
+            .into_iter()
+            .map(|title| {
+                TimelineEvent::new(title)
+                    .content(rsx! { Text { size: "sm", "Left the depot." } })
+                    .opposite(rsx! { Text { size: "sm", "12 May" } })
+            })
+            .collect()
+    };
+    rsx! {
+        Flex { direction: "column", gap: "xl", max_width: "480px",
+            Timeline { id: "start", items: dated() }
+            Timeline { id: "end", align: "end", items: dated() }
+            Timeline { id: "alternate", align: "alternate", items: dated() }
+        }
+    }
+}
 
 /// Todo 2429: a rich title is drawn, and a screen reader reads its name.
 #[component]

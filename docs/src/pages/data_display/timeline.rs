@@ -6,17 +6,18 @@ use libero::use_theme;
 mod demo;
 use demo::demo_items;
 
-fn switches(values: &DemoValues) -> (bool, bool) {
+fn switches(values: &DemoValues) -> (bool, bool, bool) {
     (
         values.str("bullets") == "true",
         values.str("line") == "dashed",
+        values.str("opposite") == "true",
     )
 }
 
 /// Splices `items`, which `generate_code` never prints, into the generated block.
 fn wrap_page(values: &DemoValues, source: &str) -> String {
-    let (bullets, dashed) = switches(values);
-    let items = format!("    items: demo_items({bullets}, {dashed}),\n");
+    let (bullets, dashed, opposite) = switches(values);
+    let items = format!("    items: demo_items({bullets}, {dashed}, {opposite}),\n");
     match source.strip_suffix('}') {
         // The props form, `Timeline {\n    ..\n}`.
         Some(open) if source.contains('\n') => format!("{open}{items}}}"),
@@ -65,6 +66,7 @@ pub fn TimelinePage() -> Element {
                     (TimelinePart::Bullet, "The dot, or the ring around an event's `bullet`."),
                     (TimelinePart::Body, "Title and content, beside the rail."),
                     (TimelinePart::Title, "The event's title."),
+                    (TimelinePart::Opposite, "An event's `.opposite(..)` content, across the rail from the body."),
                 ]),
                 props("TimelineEvent", vec![
                     prop("new(title)", "impl Into<OptionLabel>")
@@ -72,6 +74,8 @@ pub fn TimelinePage() -> Element {
                         .doc("The event's name, optionally with its own rendering, which a screen reader skips for the name."),
                     prop(".content(Element)", "Element")
                         .doc("The body below the title."),
+                    prop(".opposite(Element)", "Element")
+                        .doc("Content across the rail from the body, such as a time. One event setting it centres the rail for the whole timeline, with the body on the `align` side (`alternate` swaps sides per event). It is read in order, after the body."),
                     prop(".bullet(Element)", "Element")
                         .doc("An icon or avatar inside the bullet in place of the dot. It inverts when active."),
                     prop(".color(value)", "impl Into<ThemeAwareValue>")
@@ -128,6 +132,10 @@ pub fn TimelinePage() -> Element {
                     Control::slider("gap", ["0", "xs", "sm", "md", "lg", "xl", "xxl"]).default("xl"),
                     // Neither is a prop - both change what the `items` vec
                     // holds, which `Wrap` prints in full.
+                    // On: a time across the rail shows `.opposite(..)` at the default switches.
+                    Control::switch("opposite")
+                        .default("true")
+                        .code(|_, _| vec![]),
                     Control::switch("bullets").code(|_, _| vec![]),
                     Control::toggle("line", ["solid", "dashed"])
                         .labels(["Solid", "Dashed"])
@@ -136,8 +144,8 @@ pub fn TimelinePage() -> Element {
                 wrap: Wrap(wrap_page),
                 file: DemoFile(include_str!("timeline/demo.rs")),
                 render: move |values: DemoValues| {
-                    let (bullets, dashed) = switches(&values);
-                    let items = demo_items(bullets, dashed);
+                    let (bullets, dashed, opposite) = switches(&values);
+                    let items = demo_items(bullets, dashed, opposite);
                     let active = values.str("active").parse::<usize>().ok();
 
                     rsx! {

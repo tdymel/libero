@@ -57,6 +57,7 @@ fn Demo() -> Element {
 |---|---|---|---|
 | `new(title)` | `impl Into<OptionLabel>` | required | The event's name, optionally with its own rendering, which a screen reader skips for the name. |
 | `.content(..)` | `Element` | none | The body below the title. |
+| `.opposite(..)` | `Element` | none | Content across the rail from the body, such as a time. One event setting it centres the rail for the whole timeline, with the body on the `align` side (`alternate` swaps sides per event). It is read in order, after the body. |
 | `.bullet(..)` | `Element` | the dot | An icon or avatar inside the bullet in place of the dot. It inverts when active. |
 | `.color(..)` | `impl Into<ThemeAwareValue>` | inherits | This event's own accent, such as an error step in an ordinary run. |
 | `.line(..)` | `TimelineLine` | `Solid` | The connector below this event, `Solid`, `Dashed` or `Dotted`. |
@@ -76,6 +77,7 @@ explains how parts work.
 | `TimelinePart::Bullet` | `bullet` | The dot, or the ring around an event's `bullet`. |
 | `TimelinePart::Body` | `body` | Title and content, beside the rail. |
 | `TimelinePart::Title` | `title` | The event's title. |
+| `TimelinePart::Opposite` | `opposite` | An event's `.opposite(..)` content, across the rail from the body. |
 
 ## Accessibility
 
@@ -151,11 +153,14 @@ On the root.
 | `xs`..`xxl` | The resolved `bullet_size`. |
 | `radius-xs`..`radius-xxl` | The resolved `radius`. |
 | `gap-xs`..`gap-xxl` | The resolved `gap`. |
+| `opposite` | Any event sets `.opposite(..)`. The rail is centred and each event drops its `align-*` token. |
 
 On each event, and on its bullet.
 
 | Token | When |
 |---|---|
 | `active` | This event is at or before `active`. |
+| `opposite` | The timeline has an opposite. On the bullet it is `alternate`, for the centred rail. |
+| `content-end` | The body sits on the rail's end side (event only, with an opposite). |
 | `line-active` | The connector below this event is before `active`. |
 | `with-child` | The bullet holds a caller's element (bullet only). |

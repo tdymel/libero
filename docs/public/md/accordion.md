@@ -56,6 +56,9 @@ fn Demo() -> Element {
 | `option_label` | `Callback<T, OptionLabel>` | `T::label()` | Renames a section. `OptionLabel::rich` draws the trigger as rsx and still names it. |
 | `heading` | `HtmlTag` | `h3` | The heading around each trigger, `h1` to `h6`. |
 | `size` | `Size` | `md` | Type and padding of the triggers and panels. |
+| `collapsible` | `bool` | `true` | `false` keeps the open section open in `One` mode: its trigger turns `aria-disabled` and only opening another closes it. `Many` mode ignores it. |
+| `chevron_position` | `AccordionChevronPosition` | `end` | `end` or `start`: the chevron after or before the label. Logical, so right-to-left flips it. |
+| `rotate_chevron` | `bool` | `true` | `false` keeps the chevron pointing down when a section opens. |
 
 Like every component, `Accordion` also takes the shared props `sx`, `class`,
 `states`, and any extra HTML attributes. An `id` seeds the ids of its parts.
@@ -76,6 +79,8 @@ Like every component, `Accordion` also takes the shared props `sx`, `class`,
 - Every open panel is a region named by its trigger.
 - Panel content wider than the panel wraps, or scrolls inside the panel,
   instead of being cut off.
+- With `collapsible: false` the open trigger is `aria-disabled` and stays a tab
+  stop, and no cursor or hover invites a press.
 
 ### You must
 

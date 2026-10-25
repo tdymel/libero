@@ -866,3 +866,57 @@ fn slides_that_all_fit_leave_no_dead_stop() {
         fixture.close().await.unwrap();
     });
 }
+
+/// Todo 4145: `slides_to_scroll: 2` moves Next and Previous two slides, stopping at the last.
+#[test]
+fn a_step_moves_slides_to_scroll_slides() {
+    block_on(async {
+        let fixture = Fixture::open("/carousel/scroll-by", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        instant_scroll(page).await;
+        for (button, expected) in [(NEXT, 2), (NEXT, 4), (PREVIOUS, 2)] {
+            pointer::click(page, button).await.unwrap();
+            wait::until(
+                &format!("the step to reach slide {}", expected + 1),
+                || async move { Ok(index(page).await? == expected) },
+            )
+            .await
+            .unwrap();
+        }
+        fixture.console.assert_clean("a step of two").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
+/// Todo 4146: a short drag with `drag_free` is not pulled back to a slide on release.
+#[test]
+fn a_free_drag_rests_between_slides() {
+    block_on(async {
+        let fixture = Fixture::open("/carousel/drag-free", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        instant_scroll(page).await;
+        let from = pointer::centre_of(page, TRACK).await.unwrap();
+        let to = pointer::Point {
+            x: from.x - 120.0,
+            y: from.y,
+        };
+        pointer::drag(page, from, to, 12).await.unwrap();
+        wait::for_js_true(
+            page,
+            &format!(
+                "(() => {{ const t = document.querySelector({TRACK:?}); \
+                 return getComputedStyle(t).scrollSnapType === 'none' \
+                 && t.scrollLeft > 60 && t.scrollLeft < t.clientWidth - 60; }})()"
+            ),
+            "the strip to rest between slides after the release",
+        )
+        .await
+        .unwrap();
+        fixture.console.assert_clean("a free drag").unwrap();
+        fixture.close().await.unwrap();
+    });
+}

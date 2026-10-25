@@ -1,6 +1,17 @@
 use crate::css::{CssDeclaration, ToCssDeclarations};
+use crate::str_enum::str_enum;
 use crate::sx::{Sx, sx};
 use crate::theme::{Color, ColorShade, ColorValue, CssVar, Size, SizeCss, Sizes};
+
+str_enum! {
+    /// Which end of a trigger the chevron sits on; logical, so RTL flips it.
+    #[state_prefix = "chevron"]
+    pub enum AccordionChevronPosition {
+        #[default]
+        End = "end",
+        Start = "start",
+    }
+}
 
 pub const ACCORDION_FONT_SIZE: SizeCss = SizeCss::new("--lsx-accordion-font-size-");
 pub const ACCORDION_PADDING_X: SizeCss = SizeCss::new("--lsx-accordion-padding-x-");

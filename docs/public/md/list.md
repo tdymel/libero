@@ -17,7 +17,7 @@ room for its numbers. On an inner `List`, `size` changes only the gap.
 
 ```rust
 use dioxus::prelude::*;
-use libero::components::{List, ListItem, ListSubheader};
+use libero::components::{Button, List, ListItem, ListSubheader};
 
 #[component]
 fn Demo() -> Element {
@@ -25,7 +25,10 @@ fn Demo() -> Element {
         List {
             ListSubheader { "Getting started" }
             ListItem { "First item" }
-            ListItem { "Second item" }
+            ListItem {
+                action: rsx! { Button { size: "xs", variant: "outlined", "Edit" } },
+                "Second item"
+            }
             ListItem {
                 "Third item, with a nested list"
                 List {
@@ -54,6 +57,7 @@ fn Demo() -> Element {
 | Prop | Type | Default | Description |
 |---|---|---|---|
 | `icon` | `Option<Element>` | `None` | This item's own icon, in place of the list's. |
+| `action` | `Option<Element>` | `None` | A control at the item's end, such as a button, beside the content. Keep it out of `children`. |
 | `parts` | `Parts<ListItemPart>` | - | Styles for the inner parts in the Style API tab, under `sx`. |
 | `children` | `Element` | required | The item's content. Keep the list's font size: the icon gutter is in `em` of the list, so a `font_size` on one item misaligns its icon. |
 
@@ -75,7 +79,8 @@ parts work.
 | Part | `data-slot` | Description |
 |---|---|---|
 | `ListItemPart::Icon` | `icon` | The icon wrapper, with an icon only. |
-| `ListItemPart::Body` | `body` | The content beside the icon, with an icon only. |
+| `ListItemPart::Body` | `body` | The content beside the icon and the action, with either. |
+| `ListItemPart::Action` | `action` | The trailing `action`, with one only. |
 
 ## Accessibility
 
@@ -126,4 +131,6 @@ State tokens on the `<ul>`'s (or `<ol>`'s) `data-state`, space separated.
 | `ordered` | `ordered` is set. Decimal markers in a `2em` gutter. |
 
 On a `ListItem`, `with-icon` is set while it shows an icon. The icon then sits
-in a `data-slot="icon"` span and the content in a `data-slot="body"` div.
+in a `data-slot="icon"` span and the content in a `data-slot="body"` div. With
+an `action`, `with-action` is set, and the action sits in a `data-slot="action"`
+span after the body.

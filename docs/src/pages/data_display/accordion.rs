@@ -93,6 +93,15 @@ pub fn AccordionPage() -> Element {
                     prop("size", "Size")
                         .default(theme.accordion.size.as_str())
                         .doc("Type and padding of the triggers and panels."),
+                    prop("collapsible", "bool")
+                        .default("true")
+                        .doc("`false` keeps the open section open in `One` mode: its trigger turns `aria-disabled` and only opening another closes it. `Many` mode ignores it."),
+                    prop("chevron_position", "AccordionChevronPosition")
+                        .default("end")
+                        .doc("`end` or `start`: the chevron after or before the label. Logical, so right-to-left flips it."),
+                    prop("rotate_chevron", "bool")
+                        .default("true")
+                        .doc("`false` keeps the chevron pointing down when a section opens."),
                 ]),
             ],
             accessibility: a11y()
@@ -103,6 +112,7 @@ pub fn AccordionPage() -> Element {
                 .handles([
                     "Every open panel is a region named by its trigger.",
                     "Panel content wider than the panel wraps, or scrolls inside the panel, instead of being cut off.",
+                    "With `collapsible: false` the open trigger is `aria-disabled` and stays a tab stop, and no cursor or hover invites a press.",
                 ])
                 .must([
                     "Pick the heading level the page outline needs, then the size. `h3` assumes a section title above the accordion.",
@@ -156,6 +166,10 @@ pub fn AccordionPage() -> Element {
                         .default("h3"),
                     // The flag lives inside `options`, so the switch stands
                     // for one named section rather than for a prop of its own.
+                    Control::switch("collapsible").default("true"),
+                    Control::toggle("chevron_position", ["end", "start"])
+                        .labels(["End", "Start"]),
+                    Control::switch("rotate_chevron").default("true"),
                     Control::switch("disabled_option").code(|_, values| {
                         if values.str("disabled_option") == "true" {
                             vec![format!("options: {}", FILE.section("disabled"))]
@@ -220,6 +234,9 @@ pub fn AccordionPage() -> Element {
                                 key: "{mode}",
                                 size: values.str("size"),
                                 heading: values.str("heading"),
+                                collapsible: values.str("collapsible") == "true",
+                                chevron_position: values.str("chevron_position"),
+                                rotate_chevron: values.str("rotate_chevron") == "true",
                                 options: options.clone(),
                                 option_label: (values.str("rich_label") == "true").then(|| Callback::new(rich)),
                                 open: open(),
