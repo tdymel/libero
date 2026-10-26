@@ -2,10 +2,11 @@ use dioxus::prelude::*;
 use pictogram_icons_lucide as lucide;
 
 use super::{
-    ColorCode, ColorSwatch, HueSlider, Swatches,
+    ColorCode, ColorSwatch, Swatches,
     alpha_slider::{COLOR_PICKER_RGB, PickerAlphaSlider},
     color_code::round_alpha,
     color_slider::CHECKERBOARD,
+    hue_slider::PickerHueSlider,
     saturation::{SATURATION_HUE, Saturation},
 };
 use crate::{
@@ -333,7 +334,7 @@ pub fn ColorPicker(props: ColorPickerProps) -> Element {
             }
             div { "data-slot": ColorPickerPart::Body.slot(),
                 div { "data-slot": ColorPickerPart::Sliders.slot(),
-                    HueSlider {
+                    PickerHueSlider {
                         value: value.hue(),
                         size,
                         aria_label: part_name(props.hue_label.as_deref(),labels.hue),
@@ -524,6 +525,30 @@ mod tests {
             assert!(thumb.contains(r#"tabindex="0""#), "{thumb}");
             assert!(thumb.contains(r#"aria-readonly="true""#), "{thumb}");
         }
+    }
+
+    /// Todo 4310: a display-only picker's sliders are read-only, so the core does not warn.
+    #[test]
+    fn a_picker_without_oninput_does_not_warn_about_its_sliders() {
+        let never = "Slider: `value` without `oninput` can never change.";
+        let picker = crate::utils::warnings_of(|| {
+            rsx! {
+                crate::LiberoProvider {
+                    ColorPicker { value: ColorCode::default(), with_alpha: true }
+                }
+            }
+        });
+        assert!(!picker.iter().any(|warning| warning == never), "{picker:?}");
+
+        // A standalone skin without `oninput` is not read-only: it still warns.
+        let hue = crate::utils::warnings_of(|| {
+            rsx! {
+                crate::LiberoProvider {
+                    super::super::HueSlider { value: 10.0, aria_label: "Hue" }
+                }
+            }
+        });
+        assert!(hue.iter().any(|warning| warning == never), "{hue:?}");
     }
 
     #[test]

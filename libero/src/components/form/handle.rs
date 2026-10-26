@@ -1,4 +1,7 @@
-use std::{cell::RefCell, rc::Rc};
+use std::{
+    cell::{Cell, RefCell},
+    rc::Rc,
+};
 
 use dioxus::{
     core::{Runtime, ScopeId, current_scope_id},
@@ -28,6 +31,8 @@ pub struct FormHandle {
 
 #[derive(Clone)]
 pub(crate) struct Control {
+    /// While [`FormHandle::reset`] runs the native reset, so the form's `onreset` lets it through.
+    pub resetting: Rc<Cell<bool>>,
     /// Puts the form's value back to `V::default()`, where `V` is still known.
     pub reset_value: Rc<dyn Fn()>,
     pub summary: Summary,
@@ -109,9 +114,14 @@ impl FormHandle {
     /// Back to the start: default value, nothing touched, no summary. A field
     /// with its own `value` and handler keeps what it shows.
     pub fn reset(&self) {
+        let control = self.control();
+        if let Some(control) = &control {
+            control.resetting.set(true);
+        }
         // Before the value, so a bound control ends on the value's default.
         let _ = self.element.reset();
-        if let Some(control) = self.control() {
+        if let Some(control) = control {
+            control.resetting.set(false);
             // In the form's scope: a parent holding the handle is no descendant.
             Runtime::current().in_scope(control.summary.owner, || (control.reset_value)());
             control.summary.set(Vec::new());

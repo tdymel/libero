@@ -267,9 +267,11 @@ pub fn Form<V: FormValue>(props: FormProps<V>) -> Element {
         }
     });
 
+    let resetting = use_hook(|| Rc::new(Cell::new(false)));
     let summary = use_hook(|| {
         let summary = Summary::new(focus_requests, form_element);
         handle.attach(Control {
+            resetting: resetting.clone(),
             // Through `store`: a reset clears the current value, not the first.
             reset_value: Rc::new(move || {
                 if let Some(mut value) = *store.peek() {
@@ -333,7 +335,6 @@ pub fn Form<V: FormValue>(props: FormProps<V>) -> Element {
         }
     });
     let request = use_callback(move |()| requested.set(true));
-    let resetting = use_hook(|| Rc::new(Cell::new(false)));
     let (submit_click, implicit_submit) =
         platform::submit_listeners(move || form_element.mounted(), request).unzip();
 
@@ -422,15 +423,14 @@ pub fn Form<V: FormValue>(props: FormProps<V>) -> Element {
         .attr("aria-busy", if submitting() { "true" } else { "false" })
         .event("onsubmit", move |event: FormEvent| submit.call(event))
         // A native reset button runs `FormHandle::reset` instead, so the value resets too (4254).
-        // That fires its own reset, which goes through: the guard tells it apart.
+        // That fires its own reset, which goes through: the guard tells it apart. In a task:
+        // Chrome ignores `form.reset()` inside a reset, so the text stayed (4310).
         .event("onreset", move |event: FormEvent| {
             if resetting.get() {
                 return;
             }
             event.prevent_default();
-            resetting.set(true);
-            handle.reset();
-            resetting.set(false);
+            spawn(async move { handle.reset() });
         })
         .event("onclick", submit_click)
         .event("onkeydown", implicit_submit)

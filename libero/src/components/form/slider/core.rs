@@ -1347,7 +1347,8 @@ fn SliderBody(live: Signal<Live>, core: SliderCoreProps) -> Element {
     }
     let bars = props.bars.clone().filter(|_| !vertical);
 
-    if props.oninput.is_none() && !disabled {
+    // A read-only slider never changing is the point (4310).
+    if props.oninput.is_none() && !disabled && !props.readonly {
         warn("Slider: `value` without `oninput` can never change.");
     }
 

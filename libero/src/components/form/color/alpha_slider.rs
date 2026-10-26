@@ -70,7 +70,7 @@ pub fn AlphaSlider(props: AlphaSliderProps) -> Element {
         props.color.opaque().to_rgba(),
     );
     let thumb_fill = props.color.with_alpha(props.value).to_rgba();
-    alpha_slider(props, track, thumb_fill)
+    alpha_slider(props, track, thumb_fill, false)
 }
 
 /// `r, g, b` of the picker's color, set on its root: its alpha slider paints
@@ -91,6 +91,8 @@ pub(super) fn PickerAlphaSlider(
     let track =
         format!("linear-gradient(to right, rgba({rgb}, 0), rgba({rgb}, 1)), {CHECKERBOARD}");
     let thumb_fill = format!("rgba({rgb}, {})", round_alpha(value));
+    // A display-only picker hands no `oninput`: read-only, not a forgotten handler (4310).
+    let readonly = oninput.is_none();
     let props = AlphaSliderProps {
         value,
         color: ColorCode::default(),
@@ -105,11 +107,16 @@ pub(super) fn PickerAlphaSlider(
         sx: Input::default(),
         states: Input::default(),
     };
-    alpha_slider(props, track, thumb_fill)
+    alpha_slider(props, track, thumb_fill, readonly)
 }
 
 /// Both sliders' render, past the track's colors. `props.color` is unread.
-fn alpha_slider(props: AlphaSliderProps, track: String, thumb_fill: String) -> Element {
+fn alpha_slider(
+    props: AlphaSliderProps,
+    track: String,
+    thumb_fill: String,
+    readonly: bool,
+) -> Element {
     let theme = use_theme();
     let size = props.size.copied_or(theme.color_picker.size);
     let sx = color_slider_sx(&props.sx, &props.parts);
@@ -150,6 +157,7 @@ fn alpha_slider(props: AlphaSliderProps, track: String, thumb_fill: String) -> E
             size: Input::Value(size),
             color: Input::None,
             disabled: Some(disabled),
+            readonly,
             label: Some(valuetext),
             marks: Vec::new(),
             aria_label,

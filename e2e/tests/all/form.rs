@@ -447,12 +447,12 @@ async fn a_cleared_color_blocks_the_submit<D: Driver>(d: &mut D, _route: &str) -
         Ok(d.attr("#colour", "aria-expanded").await?.as_deref() == Some("false"))
     })
     .await?;
-    // Blurred first: the refusal line it draws moves `#send` under a pointer mid-click.
+    // Blank text is empty, not invalid (4242): like any required field, it says so at the submit.
     d.press(keyboard::TAB).await?;
-    eventually(d, "the cleared colour marked invalid", async |d| {
-        Ok(d.attr("#colour", "aria-invalid").await?.as_deref() == Some("true"))
-    })
-    .await?;
+    ensure!(
+        d.attr("#colour", "aria-invalid").await?.as_deref() != Some("true"),
+        "the cleared colour is invalid before the submit"
+    );
     d.click("#send").await?;
     eventually(d, "the submit to land", async |d| {
         Ok(d.exists(SUMMARY).await? || d.text("#submits").await? != "0")
@@ -466,8 +466,12 @@ async fn a_cleared_color_blocks_the_submit<D: Driver>(d: &mut D, _route: &str) -
     );
     let summary = d.text(SUMMARY).await?;
     ensure!(
-        summary.contains("Colour"),
-        "no Colour line in the summary: {summary}"
+        summary.contains("Colour: Fill in this field."),
+        "no required Colour line in the summary: {summary}"
+    );
+    ensure!(
+        d.attr("#colour", "aria-invalid").await?.as_deref() == Some("true"),
+        "the cleared colour is not invalid after the submit"
     );
     Ok(())
 }

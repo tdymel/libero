@@ -57,6 +57,36 @@ base_props! {
 /// Docs: <https://libero-ui.dev/form/color-picker>
 #[component]
 pub fn HueSlider(props: HueSliderProps) -> Element {
+    hue_slider(props, false)
+}
+
+/// `ColorPicker`'s hue slider: read-only without `oninput`, not a forgotten handler (4310).
+#[component]
+pub(super) fn PickerHueSlider(
+    value: f64,
+    size: Size,
+    aria_label: Option<String>,
+    focusable: bool,
+    oninput: Option<EventHandler<SliderChangeEvent>>,
+) -> Element {
+    let readonly = oninput.is_none();
+    let props = HueSliderProps {
+        value,
+        oninput,
+        size: Input::Value(size),
+        disabled: None,
+        aria_label,
+        focusable: Some(focusable),
+        parts: Input::default(),
+        attributes: Vec::new(),
+        class: Input::default(),
+        sx: Input::default(),
+        states: Input::default(),
+    };
+    hue_slider(props, readonly)
+}
+
+fn hue_slider(props: HueSliderProps, readonly: bool) -> Element {
     let theme = use_theme();
     let size = props.size.copied_or(theme.color_picker.size);
     let sx = color_slider_sx(&props.sx, &props.parts);
@@ -96,6 +126,7 @@ pub fn HueSlider(props: HueSliderProps) -> Element {
             size: Input::Value(size),
             color: Input::None,
             disabled: Some(disabled),
+            readonly,
             label: Some(valuetext),
             marks: Vec::new(),
             aria_label,

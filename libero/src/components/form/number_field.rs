@@ -645,7 +645,10 @@ fn NumberFieldShell<T: NumberValue>(
         false => input,
     };
     // The spinner's dialog and column take the field's name, a spread one too.
-    let labelled_by = field.label_id().or_else(|| {
+    // Not `field.label_id()`: that is set only for a `labelled_by` control, and the input has
+    // `<label for>`; the label always carries this id (4310).
+    let own_label = (!props.label.is_none()).then(|| format!("{}-label", field.id()));
+    let labelled_by = own_label.or_else(|| {
         props
             .attributes
             .iter()
