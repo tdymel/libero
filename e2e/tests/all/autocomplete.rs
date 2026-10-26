@@ -72,6 +72,41 @@ e2e::scenario!(
     open_on_focus
 );
 
+/// Todo 4316: a reopened list keeps no highlight from before its close, so Enter submits the text.
+#[test]
+#[ignore = "todo 4316: fails until the close clears the highlight"]
+fn a_reopened_list_opens_with_no_highlight() {
+    block_on(async {
+        let fixture = Fixture::open("/autocomplete/open-on-focus", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        let active =
+            format!("document.querySelector({TRIGGER:?}).getAttribute('aria-activedescendant')");
+        keyboard::tab_to(page, TRIGGER, 10).await.unwrap();
+        wait::for_visible(page, LISTBOX).await.unwrap();
+        keyboard::press(page, keyboard::ARROW_DOWN).await.unwrap();
+        keyboard::press(page, keyboard::ARROW_DOWN).await.unwrap();
+        wait::for_js_true(page, &format!("{active} !== null"), "a highlight")
+            .await
+            .unwrap();
+        keyboard::press(page, keyboard::ESCAPE).await.unwrap();
+        page.evaluate_bounded("document.querySelector('#before').focus()")
+            .await
+            .unwrap();
+        keyboard::press(page, keyboard::TAB).await.unwrap();
+        wait::for_visible(page, LISTBOX).await.unwrap();
+        let lit: Option<String> = page
+            .evaluate_bounded(active.as_str())
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        assert_eq!(lit, None, "the reopened list's highlight");
+        fixture.close().await.unwrap();
+    });
+}
+
 /// Contrast, focus rings, the accessibility tree and a clean console, at both viewports.
 #[test]
 fn it_meets_the_baseline() {

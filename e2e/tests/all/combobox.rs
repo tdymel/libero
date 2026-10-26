@@ -291,6 +291,30 @@ fn a_select_only_list_opens_on_its_selected_row() {
     });
 }
 
+/// Todo 4317 (APG select-only): a closed ArrowDown opens on the selected row, as a click does.
+#[test]
+#[ignore = "todo 4317: fails until a closed ArrowDown keeps selected_index"]
+fn a_closed_arrow_down_opens_on_the_selected_row() {
+    block_on(async {
+        let fixture = Fixture::open("/combobox/select-only", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        keyboard::tab_to(page, TRIGGER, 10).await.unwrap();
+        keyboard::press(page, keyboard::ARROW_DOWN).await.unwrap();
+        wait::for_js_true(
+            page,
+            "(() => { const rows = [...document.querySelectorAll('[role=option]')]; \
+             const lit = document.querySelector('[role=option][data-state~=active]'); \
+             return !!lit && lit === rows[2]; })()",
+            "ArrowDown to open the list on the third row",
+        )
+        .await
+        .unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
 /// Todo 2458: a suggestion list opens on its first row, so Enter picks it; Escape closes and keeps the text.
 #[test]
 fn in_a_suggestion_list_enter_picks_the_first_row_and_escape_keeps_the_text() {
