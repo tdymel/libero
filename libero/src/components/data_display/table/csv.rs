@@ -103,7 +103,8 @@ fn csv_of(rows: impl IntoIterator<Item = Vec<String>>, guard: bool) -> String {
 /// plain number such as `-5` stays one.
 fn push_field(csv: &mut String, field: &str, guard: bool) {
     let guarded;
-    let runs = field.starts_with(FORMULA_STARTS) && field.parse::<f64>().is_err();
+    let number = field.parse::<f64>().is_ok_and(f64::is_finite);
+    let runs = field.starts_with(FORMULA_STARTS) && !number;
     let field = match guard && runs {
         true => {
             guarded = format!("'{field}");
@@ -222,6 +223,26 @@ mod tests {
         assert_eq!(
             shown_csv(&columns(), &[0], &rows, &order, false),
             "Name\r\n=SUM(A1)\r\n"
+        );
+    }
+
+    #[test]
+    fn words_rust_parses_as_numbers_are_still_guarded() {
+        let rows = [
+            "-Infinity",
+            "+NaN",
+            "-inf",
+            "+infinity",
+            "-nan",
+            "+5",
+            "-1.5e3",
+        ]
+        .map(|name| Row { name, cents: 0 });
+
+        assert_eq!(
+            table_csv(&columns(), &rows),
+            "Name,Price\r\n'-Infinity,$0.00\r\n'+NaN,$0.00\r\n'-inf,$0.00\r\n\
+             '+infinity,$0.00\r\n'-nan,$0.00\r\n+5,$0.00\r\n-1.5e3,$0.00\r\n"
         );
     }
 
