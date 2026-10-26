@@ -227,7 +227,8 @@ pub fn ColorField(props: ColorFieldProps) -> Element {
     // Like the other dropdown fields: the text takes the native `readonly`,
     // the dropdown refuses to open and the eyedropper stands down.
     let readonly = props.readonly.unwrap_or(false);
-    let has_dropdown = (with_picker || !props.swatches.is_empty()) && !disabled;
+    let has_dropdown = (with_picker || !props.swatches.is_empty() || recent_cap > 0) && !disabled;
+    let has_palette = with_picker || !props.swatches.is_empty();
 
     let mut opened = use_signal(|| false);
     // The text as typed, while it differs from `value`'s own spelling. `None`
@@ -728,17 +729,19 @@ pub fn ColorField(props: ColorFieldProps) -> Element {
                 listeners,
                 rsx! {
                     {strip}
-                    ColorPicker {
-                        value,
-                        format: Input::Value(format),
-                        with_alpha,
-                        with_picker,
-                        swatches: props.swatches.clone(),
-                        swatches_per_row: props.swatches_per_row,
-                        full_width: narrow(),
-                        size,
-                        oninput: picked,
-                        onswatchclick: swatch_clicked,
+                    if has_palette {
+                        ColorPicker {
+                            value,
+                            format: Input::Value(format),
+                            with_alpha,
+                            with_picker,
+                            swatches: props.swatches.clone(),
+                            swatches_per_row: props.swatches_per_row,
+                            full_width: narrow(),
+                            size,
+                            oninput: picked,
+                            onswatchclick: swatch_clicked,
+                        }
                     }
                     {recent_row}
                     {text_input}
@@ -810,6 +813,30 @@ mod tests {
         assert!(css.contains("box-shadow:var(--lsx-shadow-lg);"), "{css}");
         assert!(!css.contains("var(--lsx-paper-radius)"), "{css}");
         assert!(!css.contains("var(--lsx-paper-shadow)"), "{css}");
+    }
+
+    /// Todo 4247: recents alone are a dropdown to open, with or without a picker or swatches.
+    #[test]
+    fn recents_without_a_picker_or_swatches_still_open_a_dropdown() {
+        #[component]
+        fn Field(recent_colors: Option<usize>) -> Element {
+            rsx! {
+                ColorField {
+                    label: "Accent",
+                    value: ColorCode::default(),
+                    oninput: move |_| {},
+                    with_picker: false,
+                    recent_colors,
+                }
+            }
+        }
+        let render = |recent_colors| {
+            dioxus_ssr::render_element(rsx! {
+                crate::LiberoProvider { Field { recent_colors } }
+            })
+        };
+        assert!(render(Some(5)).contains(r#"role="combobox""#));
+        assert!(!render(None).contains(r#"role="combobox""#));
     }
 
     #[test]

@@ -19,6 +19,8 @@ pub struct ColorLabels {
     pub invalid: &'static str,
     /// Names `ColorField`'s row of recently picked colors.
     pub recent: &'static str,
+    /// Names `ColorPicker`'s row of preset swatches, unless the caller names the picker.
+    pub swatches: &'static str,
 }
 
 impl ColorLabels {
@@ -33,6 +35,7 @@ impl ColorLabels {
         eye_dropper: "Pick a color from the screen",
         invalid: "Not a valid color",
         recent: "Recent colors",
+        swatches: "Color swatches",
     };
 
     pub const GERMAN: Self = Self {
@@ -46,5 +49,6 @@ impl ColorLabels {
         eye_dropper: "Farbe vom Bildschirm aufnehmen",
         invalid: "Keine gültige Farbe",
         recent: "Zuletzt verwendete Farben",
+        swatches: "Farbfelder",
     };
 }

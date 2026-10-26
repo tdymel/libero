@@ -45,6 +45,7 @@ fn FormPartsPage() -> Element {
                 Button { id: "trigger", attributes: state.a11y_attributes(), onclick: move |_| state.toggle(), "Fruit" }
             }
             ColorPicker { id: "picker", value: ColorCode::hex(0x228be6), with_alpha: true,
+                oninput: move |_| {},
                 swatches: Swatches::new(vec![ColorCode::hex(0xfa5252)]),
                 parts: Parts::new()
                     .part(ColorPickerPart::Thumb, sx().border_width("3px"))

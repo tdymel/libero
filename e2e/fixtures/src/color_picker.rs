@@ -31,6 +31,7 @@ fn ColorPickerSizesPage() -> Element {
                     saturation_label: "Saturation",
                     hue_label: "Hue",
                     alpha_label: "Alpha",
+                    oninput: move |_| {},
                 }
             }
         }

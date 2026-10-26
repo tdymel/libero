@@ -222,6 +222,9 @@ pub fn ColorPicker(props: ColorPickerProps) -> Element {
     if !with_picker && props.swatches.is_empty() {
         warn("ColorPicker: `with_picker: false` without `swatches` renders nothing.");
     }
+    if with_picker && props.oninput.is_none() {
+        warn("ColorPicker: without `oninput` the color can never change.");
+    }
     // Without the alpha slider nothing can change alpha, so the picker holds
     // and emits an opaque color.
     let value = match with_alpha {
@@ -358,10 +361,17 @@ pub fn ColorPicker(props: ColorPickerProps) -> Element {
             .iter()
             .any(|&swatch| swatch_color(swatch, with_alpha).to_rgba() == *picked)
     });
+    // A caller who names the picker already groups its swatches (todo 4246).
+    let named_root = props
+        .attributes
+        .iter()
+        .any(|attribute| matches!(attribute.name, "aria-label" | "aria-labelledby"));
+    let swatches_name = (!named_root).then_some(labels.swatches);
     let swatches = (!presets.is_empty()).then(|| {
         rsx! {
             SwatchRow {
                 swatches: presets,
+                name: swatches_name,
                 selected,
                 with_alpha,
                 size,
@@ -399,6 +409,8 @@ pub fn ColorPicker(props: ColorPickerProps) -> Element {
 #[derive(Props, Clone, PartialEq)]
 struct SwatchRowProps {
     swatches: Swatches,
+    /// Makes the row a named group.
+    name: Option<&'static str>,
     /// The value as `rgba()`, set only when a swatch equals it.
     selected: Option<String>,
     with_alpha: bool,
@@ -413,6 +425,7 @@ struct SwatchRowProps {
 fn SwatchRow(props: SwatchRowProps) -> Element {
     let SwatchRowProps {
         swatches,
+        name: group_name,
         selected,
         with_alpha,
         size,
@@ -455,7 +468,12 @@ fn SwatchRow(props: SwatchRowProps) -> Element {
         }
     });
     rsx! {
-        div { "data-slot": ColorPickerPart::Swatches.slot(), {buttons} }
+        div {
+            "data-slot": ColorPickerPart::Swatches.slot(),
+            role: group_name.map(|_| "group"),
+            aria_label: group_name,
+            {buttons}
+        }
     }
 }
 
@@ -562,6 +580,66 @@ mod tests {
             !readonly.iter().any(|warning| warning == never),
             "{readonly:?}"
         );
+    }
+
+    /// Todo 4307: a display-only picker says so once, as itself, never per slider.
+    #[test]
+    fn a_picker_without_oninput_warns_once_as_itself() {
+        let never = "ColorPicker: without `oninput` the color can never change.";
+        let bare = crate::utils::warnings_of(|| {
+            rsx! {
+                crate::LiberoProvider {
+                    ColorPicker { value: ColorCode::default(), with_alpha: true }
+                }
+            }
+        });
+        assert_eq!(bare, [never], "{bare:?}");
+
+        let palette = crate::utils::warnings_of(|| {
+            rsx! {
+                crate::LiberoProvider {
+                    ColorPicker {
+                        value: ColorCode::default(),
+                        with_picker: false,
+                        swatches: ["#fa5252"],
+                    }
+                }
+            }
+        });
+        assert!(palette.is_empty(), "{palette:?}");
+    }
+
+    /// The swatch row's opening tag in the rendered `body`.
+    fn swatch_row(body: Element) -> String {
+        let html = dioxus_ssr::render_element(rsx! {
+            crate::LiberoProvider { {body} }
+        });
+        html.split('<')
+            .find(|tag| tag.contains(r#"data-slot="swatches""#))
+            .map(|tag| tag.split('>').next().unwrap_or_default().to_string())
+            .unwrap_or_default()
+    }
+
+    /// Todo 4246: the preset row is a named group, unless the caller names the picker.
+    #[test]
+    fn the_swatch_row_is_a_named_group() {
+        let row = swatch_row(rsx! {
+            ColorPicker { value: ColorCode::default(), with_picker: false, swatches: ["#fa5252"] }
+        });
+        assert!(row.contains(r#"role="group""#), "{row}");
+        assert!(row.contains(r#"aria-label="Color swatches""#), "{row}");
+
+        let named = swatch_row(rsx! {
+            ColorPicker {
+                value: ColorCode::default(),
+                with_picker: false,
+                swatches: ["#fa5252"],
+                role: "group",
+                aria_label: "Recent colors",
+            }
+        });
+        assert!(!named.contains("aria-label"), "{named}");
+        assert!(!named.contains("role="), "{named}");
     }
 
     #[test]
