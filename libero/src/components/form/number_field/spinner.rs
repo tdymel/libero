@@ -172,7 +172,8 @@ pub(super) fn NumberSpinner<T: NumberValue>(
     live: Signal<Option<T>>,
     bound: Option<Option<T>>,
     field_id: String,
-    labelled: bool,
+    labelled_by: Option<String>,
+    aria_label: Option<String>,
     field_root: Option<crate::hooks::ElementHandle>,
     look: Look,
     step: T,
@@ -358,10 +359,8 @@ pub(super) fn NumberSpinner<T: NumberValue>(
             .attr("id", dialog_id)
             .attr("data-slot", "spinner-panel")
             .attr("role", "dialog")
-            .attr(
-                "aria-labelledby",
-                labelled.then(|| format!("{field_id}-label")),
-            )
+            .attr("aria-labelledby", labelled_by.clone())
+            .attr("aria-label", aria_label.clone())
             // A press keeps focus on the column.
             .event("onmousedown", move |event: MouseEvent| {
                 event.prevent_default()
@@ -387,7 +386,8 @@ pub(super) fn NumberSpinner<T: NumberValue>(
                             "data-slot": "spin",
                             role: "spinbutton",
                             tabindex: "0",
-                            "aria-labelledby": labelled.then(|| format!("{field_id}-label")),
+                            "aria-labelledby": labelled_by,
+                            "aria-label": aria_label,
                             "aria-describedby": unit_id,
                             "aria-valuenow": aria_number(current),
                             "aria-valuetext": value_text,

@@ -854,3 +854,54 @@ fn the_keyboard_button_switches_to_typing() {
         fixture.close().await.unwrap();
     });
 }
+
+/// Todo 4268: a field disabled while its spinner is open closes the spinner; a key then sends nothing.
+#[test]
+fn disabling_the_field_closes_its_spinner() {
+    block_on(async {
+        let fixture = spin_phone().await;
+        let page = &fixture.page;
+        tap_open(page).await.unwrap();
+        // A script's click, so focus stays on the column as a form's own submit leaves it.
+        page.evaluate("document.querySelector('#lock').click()")
+            .await
+            .unwrap();
+        let closed = format!(
+            "!document.querySelector({SPINNER:?}) && document.querySelector({MINUTES:?}).disabled"
+        );
+        wait::for_js_true(page, &closed, "the spinner closed on disable")
+            .await
+            .unwrap();
+        keyboard::press(page, keyboard::ARROW_UP).await.unwrap();
+        spun(page, "Some(30) 0").await.unwrap();
+        fixture
+            .console
+            .assert_clean("a disabled spinner field")
+            .unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
+/// Todo 4272: without a `label`, the spread `aria-label` names the spinner and its column.
+#[test]
+fn an_aria_label_names_the_spinner() {
+    block_on(async {
+        let fixture = spin_phone().await;
+        let page = &fixture.page;
+        tap(page, "#pause").await.unwrap();
+        let named = format!(
+            "(() => {{ const d = document.querySelector({SPINNER:?}); \
+             const c = document.querySelector({COLUMN:?}); \
+             return !!c && d.getAttribute('aria-label') === 'Pause' \
+               && c.getAttribute('aria-label') === 'Pause' && !c.hasAttribute('aria-labelledby'); }})()"
+        );
+        wait::for_js_true(page, &named, "the dialog and column named Pause")
+            .await
+            .unwrap();
+        fixture
+            .console
+            .assert_clean("an aria-label spinner")
+            .unwrap();
+        fixture.close().await.unwrap();
+    });
+}

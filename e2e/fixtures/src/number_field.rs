@@ -18,10 +18,13 @@ pub const ROUTES: Routes = &[
 ];
 
 /// Todo 4133: a tap spins in steps of 5. `#spun` shows the value and the `onchange` count.
+/// `#lock` disables the field (4268); `#pause` is named by `aria-label` alone (4272).
 #[component]
 fn NumberFieldSpinPage() -> Element {
     let mut minutes = use_signal(|| Some(30u32));
     let mut changes = use_signal(|| 0u32);
+    let mut locked = use_signal(|| false);
+    let mut pause = use_signal(|| Some(5u32));
     rsx! {
         Flex { direction: "column", gap: "md", max_width: "320px", padding: "md",
             NumberField {
@@ -31,6 +34,7 @@ fn NumberFieldSpinPage() -> Element {
                 describe_trailing: true,
                 step: 5,
                 touch_input: TouchInput::Spin,
+                disabled: locked(),
                 value: minutes(),
                 onchange: move |next| {
                     minutes.set(next);
@@ -38,6 +42,14 @@ fn NumberFieldSpinPage() -> Element {
                 },
             }
             Text { id: "spun", {format!("{:?} {}", minutes(), changes())} }
+            Button { id: "lock", onclick: move |_| locked.toggle(), "Lock" }
+            NumberField {
+                id: "pause",
+                "aria-label": "Pause",
+                touch_input: TouchInput::Spin,
+                value: pause(),
+                onchange: move |next| pause.set(next),
+            }
         }
     }
 }

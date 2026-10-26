@@ -2,7 +2,7 @@ mod spinner;
 
 use std::{any::TypeId, borrow::Cow, rc::Rc};
 
-use dioxus::prelude::*;
+use dioxus::{dioxus_core::AttributeValue, prelude::*};
 use pictogram_icons_lucide as lucide;
 
 use spinner::{Look, NumberSpinner, Spin};
@@ -12,7 +12,7 @@ use crate::{
         buttons::{ACTION_ICON_COMPACT, ActionIcon},
         common::{
             COARSE_POINTER, Glyph, HtmlTag, Input, NumberValue, ScaleOrCss, TOOLBAR_ITEM,
-            ToolbarItem, navigation_chord, use_no_toolbar, use_toolbar_item,
+            ToolbarItem, aria_label_of, navigation_chord, use_no_toolbar, use_toolbar_item,
         },
         form::{
             FormScope, LiveControl, LiveSlot, field_control_sx, field_props, slot_button_sx,
@@ -291,6 +291,26 @@ impl Decimals {
         }
     }
 
+    /// A bound's text cut to these places toward the range: down for `max`, up for `min`.
+    fn toward(self, text: &str, up: bool) -> Option<String> {
+        let scale = 10f64.powi(self.places() as i32);
+        let scaled = text.parse::<f64>().ok()? * scale;
+        let cut = if up { scaled.ceil() } else { scaled.floor() };
+        Some(format!("{:.*}", self.places(), cut / scale))
+    }
+
+    /// A step these places cannot show, as text: rounded to them, at least one unit.
+    fn coarse_step(self, text: &str) -> Option<String> {
+        let step = text.parse::<f64>().ok()?;
+        let places = self.places();
+        let unit = 10f64.powi(-(places as i32));
+        let shown = format!("{step:.places$}").parse::<f64>().ok()?;
+        (shown != step).then(|| {
+            let units = (step.abs() / unit).round().max(1.0);
+            format!("{:.places$}", units * unit)
+        })
+    }
+
     /// Typed text cut after these places, where it has more; `mark` is the decimal mark.
     fn cut(self, text: &str, mark: &str) -> Option<String> {
         let (at, mark) = match text.find(mark) {
@@ -375,11 +395,15 @@ fn NumberFieldShell<T: NumberValue>(
     if props.decimals.is_some() && decimals.is_none() {
         warn("NumberField: `decimals` takes `f32` or `f64` only.");
     }
-    // Rounded through the text, so `0.1 + 0.2` publishes `0.3`.
-    let rounded = move |value: T| match decimals {
-        Some(decimals) => T::parse(&decimals.write(&value.format())).unwrap_or(value),
-        None => value,
-    };
+    // A step finer than the places would round back to where it started: 2 + 0.5 shows 2.
+    let coarse = decimals.and_then(|decimals| decimals.coarse_step(&step.format()));
+    use_hook(|| {
+        if coarse.is_some() {
+            warn("NumberField: `step` is finer than `decimals`; it steps by one shown place.");
+        }
+    });
+    let step = coarse.and_then(|text| T::parse(&text)).unwrap_or(step);
+    let rounded = move |value: T| rounded_within(value, decimals, min, max);
     let mut focused = use_signal(|| false);
     // Blitz's Tab and libero's `focus()` fire no `focusin`/`focusout`.
     let focus = move |now: bool| {
@@ -394,6 +418,12 @@ fn NumberFieldShell<T: NumberValue>(
     let mut spin = use_signal(Spin::default);
     let spins = props.touch_input == TouchInput::Spin;
     let spin_opens = spins && !disabled && !readonly;
+    // A field turned disabled or read-only while open (a form submitting) closes it.
+    use_effect(use_reactive!(|spin_opens| {
+        if !spin_opens && spin.peek().open {
+            spin.write().open = false;
+        }
+    }));
 
     let publish = move |next: Option<T>| {
         let next = next.map(|next| rounded(next.clamp_between(min, max)));
@@ -407,6 +437,9 @@ fn NumberFieldShell<T: NumberValue>(
     let spin_publish = publish.clone();
     // A spinner's step: the column sends the number it shows next.
     let spin_to = use_callback(move |next: T| {
+        if !spin_opens {
+            return;
+        }
         buffer.set(None);
         spin_publish(Some(next));
     });
@@ -611,6 +644,17 @@ fn NumberFieldShell<T: NumberValue>(
             .event("onfocusout", move |_: FocusEvent| focused.set(false)),
         false => input,
     };
+    // The spinner's dialog and column take the field's name, a spread one too.
+    let labelled_by = field.label_id().or_else(|| {
+        props
+            .attributes
+            .iter()
+            .find_map(|attribute| match &attribute.value {
+                AttributeValue::Text(id) if attribute.name == "aria-labelledby" => Some(id.clone()),
+                _ => None,
+            })
+    });
+    let aria_label = aria_label_of(&props.attributes);
     let attributes = props.attributes;
     // The caret of the grouped text a focus is about to strip, put right after the redraw.
     let mut stripped = use_hook(|| CopyValue::new(None::<Stripped>));
@@ -672,7 +716,8 @@ fn NumberFieldShell<T: NumberValue>(
                 live,
                 bound: bound_value,
                 field_id: field.id().to_string(),
-                labelled: !props.label.is_none(),
+                labelled_by,
+                aria_label,
                 field_root: field.root(),
                 look: Look { decimals, grouped, separator },
                 step,
@@ -701,6 +746,29 @@ impl<T: NumberValue> Edit<T> {
     fn shows(&self, current: Option<T>, separator: Separators) -> bool {
         self.held == current || parse::<T>(&self.text, separator) == current
     }
+}
+
+/// A clamped `value` rounded through the text, so `0.1 + 0.2` publishes `0.3`. One that
+/// rounds past a bound (`max: 9.999` to 10.00) takes the bound cut toward the range.
+fn rounded_within<T: NumberValue>(
+    value: T,
+    decimals: Option<Decimals>,
+    min: Option<T>,
+    max: Option<T>,
+) -> T {
+    let Some(decimals) = decimals else {
+        return value;
+    };
+    let next = T::parse(&decimals.write(&value.format())).unwrap_or(value);
+    let inside = next.clamp_between(min, max);
+    if inside == next {
+        return next;
+    }
+    decimals
+        .toward(&inside.format(), Some(inside) == min)
+        .and_then(|text| T::parse(&text))
+        .filter(|cut| cut.clamp_between(min, max) == *cut)
+        .unwrap_or(inside)
 }
 
 /// The text a field shows for `value` when no typing is held; `grouped` writes the groups.
@@ -932,7 +1000,10 @@ fn Steppers(
 
 #[cfg(test)]
 mod tests {
-    use super::{DECREMENT_SX, Separators, Stripped, aria_number, caret_without_groups, parse};
+    use super::{
+        DECREMENT_SX, Decimals, Separators, Stripped, aria_number, caret_without_groups, parse,
+        rounded_within,
+    };
     use crate::{css::Stylesheet, localization::Formats};
 
     /// Todo 3589: under a finger a stepper's box reaches 44px, still stopping mid-gap.
@@ -1123,5 +1194,33 @@ mod tests {
         assert_eq!(parse::<i32>("\u{FF0D}\u{FF17}", NONE), Some(-7));
         assert_eq!(parse::<f64>("\u{FF11},\u{FF15}", COMMA), Some(1.5));
         assert_eq!(parse::<i32>("12", NONE), Some(12));
+    }
+
+    /// Todo 4269: rounding never lands past a bound; it cuts the bound toward the range.
+    #[test]
+    fn rounding_stays_inside_the_range() {
+        let two = Some(Decimals::Exactly(2));
+        assert_eq!(rounded_within(9.999, two, None, Some(9.999)), 9.99);
+        assert_eq!(rounded_within(0.001, two, Some(0.001), None), 0.01);
+        assert_eq!(rounded_within(5.006, two, Some(0.0), Some(9.999)), 5.01);
+        assert_eq!(rounded_within(0.1 + 0.2, two, None, None), 0.3);
+        // No shown number fits: the bound itself.
+        assert_eq!(rounded_within(0.004, two, Some(0.001), Some(0.004)), 0.001);
+    }
+
+    /// Todo 4270: a step these places cannot show rounds to them, at least one unit.
+    #[test]
+    fn a_step_finer_than_the_places_coarsens() {
+        assert_eq!(Decimals::AtMost(0).coarse_step("0.5").as_deref(), Some("1"));
+        assert_eq!(
+            Decimals::Exactly(1).coarse_step("0.16").as_deref(),
+            Some("0.2")
+        );
+        assert_eq!(
+            Decimals::AtMost(2).coarse_step("0.001").as_deref(),
+            Some("0.01")
+        );
+        assert_eq!(Decimals::AtMost(1).coarse_step("0.5"), None);
+        assert_eq!(Decimals::AtMost(0).coarse_step("2"), None);
     }
 }
