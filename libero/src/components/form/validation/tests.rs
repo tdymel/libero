@@ -367,6 +367,78 @@ fn a_composite_rule_naming_only_unmounted_fields_blocks_nothing() {
     });
 }
 
+/// Todo 4256: a rule naming only disabled or readonly fields concerns nothing the user can fix.
+#[test]
+fn a_composite_rule_naming_only_barred_fields_blocks_nothing() {
+    fn app() -> Element {
+        let signup = use_store(|| Signup {
+            password: "a".into(),
+            confirm: "b".into(),
+        });
+        rsx! {
+            LiberoProvider {
+                Form {
+                    value: signup,
+                    validate: [
+                        (|s: &Signup| s.password == s.confirm)
+                            .error("They differ")
+                            .on([crate::path!(Signup => confirm)]),
+                        (|s: &Signup| s.password == s.confirm)
+                            .error("Still differ")
+                            .on([crate::path!(Signup => password)]),
+                    ],
+                    Spy {}
+                    TextField { name: crate::path!(Signup => confirm), disabled: true }
+                    TextField { name: crate::path!(Signup => password), readonly: true }
+                }
+            }
+        }
+    }
+
+    let (mut dom, _) = mount(app);
+    dom.in_runtime(|| {
+        let scope = scope(&dom);
+        assert!(!scope.has_errors());
+        assert!(scope.summary().is_empty());
+    });
+    let after = submit(&mut dom);
+    assert!(!after.contains("differ"), "{after}");
+}
+
+/// Todo 4255: a disabled group's own rules are barred like its fields'.
+#[test]
+fn a_disabled_fieldsets_own_rules_block_nothing() {
+    fn app() -> Element {
+        let signup = use_store(|| Signup {
+            password: "a".into(),
+            confirm: "b".into(),
+        });
+        rsx! {
+            LiberoProvider {
+                Form::<()> {
+                    Fieldset {
+                        label: "Pair",
+                        value: signup,
+                        disabled: true,
+                        validate: [(|s: &Signup| s.password == s.confirm).error("The two differ.")],
+                        Spy {}
+                        TextField { name: crate::path!(Signup => password) }
+                    }
+                }
+            }
+        }
+    }
+
+    let (mut dom, _) = mount(app);
+    dom.in_runtime(|| {
+        let scope = scope(&dom);
+        assert!(!scope.has_errors());
+        assert!(scope.summary().is_empty());
+    });
+    let after = submit(&mut dom);
+    assert!(!after.contains("The two differ."), "{after}");
+}
+
 #[test]
 fn a_composite_rule_links_to_the_first_mounted_field_it_names() {
     fn app() -> Element {

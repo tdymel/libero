@@ -128,6 +128,28 @@ fn a_set_error_lands_on_its_field_and_in_the_summary() {
 }
 
 #[test]
+fn two_errors_on_one_path_both_show() {
+    let mut dom = mount();
+    let form = exposed::<FormHandle>(&dom);
+    dom.in_runtime(|| form.set_errors(taken().at(email_path(), "Use a work address.")));
+    let html = settle(&mut dom);
+    assert!(
+        html.contains("This address is taken. Use a work address."),
+        "{html}"
+    );
+    let scope = exposed::<FormScope>(&dom);
+    let summary = dom.in_runtime(|| scope.summary());
+    let messages: Vec<_> = summary.iter().map(|item| item.message.as_str()).collect();
+    assert_eq!(
+        messages,
+        [
+            "Email: This address is taken.",
+            "Email: Use a work address."
+        ]
+    );
+}
+
+#[test]
 fn an_edit_clears_its_fields_error() {
     let mut dom = mount();
     let form = exposed::<FormHandle>(&dom);

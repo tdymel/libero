@@ -333,6 +333,7 @@ pub fn Form<V: FormValue>(props: FormProps<V>) -> Element {
         }
     });
     let request = use_callback(move |()| requested.set(true));
+    let resetting = use_hook(|| Rc::new(Cell::new(false)));
     let (submit_click, implicit_submit) =
         platform::submit_listeners(move || form_element.mounted(), request).unzip();
 
@@ -420,14 +421,16 @@ pub fn Form<V: FormValue>(props: FormProps<V>) -> Element {
         .attr("novalidate", true)
         .attr("aria-busy", if submitting() { "true" } else { "false" })
         .event("onsubmit", move |event: FormEvent| submit.call(event))
-        // A native reset button also takes the form back to pristine: nothing
-        // touched, no summary, as `FormHandle::reset`.
-        .event("onreset", {
-            let summary = summary.clone();
-            move |_: FormEvent| {
-                summary.set(Vec::new());
-                scope.reset();
+        // A native reset button runs `FormHandle::reset` instead, so the value resets too (4254).
+        // That fires its own reset, which goes through: the guard tells it apart.
+        .event("onreset", move |event: FormEvent| {
+            if resetting.get() {
+                return;
             }
+            event.prevent_default();
+            resetting.set(true);
+            handle.reset();
+            resetting.set(false);
         })
         .event("onclick", submit_click)
         .event("onkeydown", implicit_submit)

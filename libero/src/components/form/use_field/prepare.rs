@@ -114,6 +114,7 @@ impl FieldBuilder<'_> {
                     explicit_error: own_explicit.is_error(),
                     parse,
                     required: self.required,
+                    barred,
                     owner: hook.owner,
                 },
             );

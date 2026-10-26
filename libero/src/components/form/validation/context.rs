@@ -91,6 +91,8 @@ pub(crate) struct FieldEntry {
     /// Whether a mapped field's text is a domain value; `Valid` for any other field.
     pub parse: Parse,
     pub required: bool,
+    /// Disabled or readonly: a composite rule naming only such fields neither runs nor blocks.
+    pub barred: bool,
     /// The field's scope, which a reset re-renders.
     pub owner: ScopeId,
 }
@@ -280,13 +282,9 @@ impl FormScope {
         }
     }
 
-    /// The first error set on `name`, worded. Reactive.
+    /// Every error set on `name`, worded and joined. Reactive.
     pub fn error_at(&self, name: &str) -> Option<String> {
-        self.errors
-            .read()
-            .iter()
-            .find(|(path, _)| path == name)
-            .map(|(_, error)| word(&**error))
+        set_text(&self.errors.read(), name)
     }
 
     pub fn touch(&mut self, name: &str) {
@@ -372,7 +370,9 @@ impl FormScope {
             let waited = entry.name.as_ref().is_some_and(|name| {
                 self.waiting.peek().contains(name) && self.waiting.write_unchecked().remove(name)
             });
-            let changed = previous.is_some_and(|previous| !previous.parse.same_kind(&entry.parse));
+            let changed = previous.is_some_and(|previous| {
+                !previous.parse.same_kind(&entry.parse) || previous.barred != entry.barred
+            });
             if waited || changed {
                 Runtime::current().needs_update(self.owner);
             }
@@ -435,7 +435,8 @@ impl FormScope {
     /// Whether a composite rule naming `paths` may run: each field it names holds a
     /// domain value, or nothing and is optional. An invalid field never gets a second,
     /// misleading error, and a rule never sees a required field's missing value.
-    /// A rule none of whose paths a field carries yet waits for one.
+    /// A rule none of whose paths a field carries yet waits for one; one whose fields are
+    /// all barred does not run, as the user cannot fix it.
     pub fn ready(&self, paths: &[String]) -> bool {
         let fields = self.fields.peek();
         let missing: Vec<&String> = paths
@@ -446,22 +447,21 @@ impl FormScope {
                     .any(|field| field.name.as_deref() == Some(path.as_str()))
             })
             .collect();
-        let none = !paths.is_empty() && missing.len() == paths.len();
+        let open = paths.is_empty()
+            || fields
+                .values()
+                .any(|field| !field.barred && names(field, paths));
         let waiting = self.waiting;
         for path in missing {
             if !waiting.peek().contains(path) {
                 waiting.write_unchecked().insert(path.clone());
             }
         }
-        if none {
+        if !open {
             return false;
         }
         fields.values().all(|field| {
-            let named = field
-                .name
-                .as_deref()
-                .is_some_and(|name| paths.iter().any(|path| path == name));
-            !named
+            !names(field, paths)
                 || match field.parse {
                     Parse::Valid => true,
                     Parse::Empty => !field.required,
@@ -555,13 +555,25 @@ impl FormScope {
         let errors = self.errors.peek();
         let mut items: Vec<SummaryItem> = fields
             .values()
-            .filter_map(|field| {
-                let status = joined(field, &errors);
-                let message = status.is_error().then(|| status.message())??;
-                Some(SummaryItem {
+            .flat_map(|field| {
+                // The field's own error, else one line per error set on its name.
+                let messages: Vec<String> = match field.status.is_error() {
+                    true => field
+                        .status
+                        .message()
+                        .map(str::to_string)
+                        .into_iter()
+                        .collect(),
+                    false => errors
+                        .iter()
+                        .filter(|(path, _)| field.name.as_deref() == Some(path.as_str()))
+                        .map(|(_, error)| word(&**error))
+                        .collect(),
+                };
+                messages.into_iter().map(|message| SummaryItem {
                     message: match &field.label {
                         Some(label) => format!("{label}: {message}"),
-                        None => message.to_string(),
+                        None => message,
                     },
                     target: Some(field.id.clone()),
                     inline: true,
@@ -648,15 +660,22 @@ impl FormScope {
 
 type SetErrors = Vec<(String, Rc<dyn FieldError>)>;
 
-/// A field's own status with an error set from code on its name.
-fn joined(field: &FieldEntry, errors: &SetErrors) -> FieldStatus {
-    let set = errors
+/// The errors set on `name`, worded and joined by a space; `None` without one.
+fn set_text(errors: &SetErrors, name: &str) -> Option<String> {
+    let words: Vec<String> = errors
         .iter()
-        .find(|(path, _)| field.name.as_deref() == Some(path.as_str()));
-    match set {
-        Some((_, error)) => worst(field.status.clone(), FieldStatus::Error(word(&**error))),
-        None => field.status.clone(),
-    }
+        .filter(|(path, _)| path == name)
+        .map(|(_, error)| word(&**error))
+        .collect();
+    (!words.is_empty()).then(|| words.join(" "))
+}
+
+/// Whether `field` carries one of `paths`.
+fn names(field: &FieldEntry, paths: &[String]) -> bool {
+    field
+        .name
+        .as_deref()
+        .is_some_and(|name| paths.iter().any(|path| path == name))
 }
 
 fn errors_in(
@@ -672,14 +691,13 @@ fn errors_in(
             .any(|issue| issue.status.is_error() && blocks(fields, issue))
 }
 
-/// A rule naming only unmounted fields concerns nothing on screen, like a hidden field's own rules.
+/// A rule naming only unmounted or barred fields concerns nothing the user can fix, like a
+/// hidden field's own rules.
 fn blocks(fields: &BTreeMap<usize, FieldEntry>, issue: &Issue) -> bool {
     issue.paths.is_empty()
-        || issue.paths.iter().any(|path| {
-            fields
-                .values()
-                .any(|field| field.name.as_deref() == Some(path.as_str()))
-        })
+        || fields
+            .values()
+            .any(|field| !field.barred && names(field, &issue.paths))
 }
 
 /// Runs drop-time cleanup as the scope that owns the signals; with no runtime

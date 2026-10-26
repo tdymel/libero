@@ -754,6 +754,7 @@ fn LoginPage() -> Element {
                 TextField { id: "user", label: "Username", required: true, autocomplete: "username", name: Login::FIELDS.username() }
                 PasswordField { id: "pass", label: "Password", required: true, autocomplete: "current-password", name: Login::FIELDS.password() }
                 Button { id: "send", r#type: "submit", "Log in" }
+                button { id: "wipe", r#type: "reset", "Clear" }
             }
         }
     }

@@ -1033,6 +1033,52 @@ fn a_saved_login_autofill_fills_the_bound_fields() {
     });
 }
 
+/// Todo 4254: a native reset button resets the store too, so the next submit sends no old value.
+#[test]
+fn a_native_reset_button_resets_the_store() {
+    block_on(async {
+        let fixture = Fixture::open("/form/login", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        pointer::click(page, "input[name=username]").await.unwrap();
+        keyboard::type_text(page, "alice").await.unwrap();
+        let stored = "document.querySelector('#stored').dataset";
+        wait::for_js_true(
+            page,
+            &format!("{stored}.user === 'alice'"),
+            "the typed name",
+        )
+        .await
+        .unwrap();
+        pointer::click(page, "#wipe").await.unwrap();
+        wait::for_js_true(
+            page,
+            &format!(
+                "{stored}.user === '' && document.querySelector('input[name=username]').value === ''"
+            ),
+            "the store and the input reset",
+        )
+        .await
+        .unwrap();
+        // Blocked as empty: the old name is not sent.
+        pointer::click(page, "#send").await.unwrap();
+        wait::for_js_true(
+            page,
+            "!!document.querySelector('[data-slot=summary]')",
+            "the summary",
+        )
+        .await
+        .unwrap();
+        wait::for_js_true(page, &format!("{stored}.submits === '0'"), "no submit")
+            .await
+            .unwrap();
+
+        fixture.console.assert_clean("a native reset").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
 /// Todo 4106: a password mapped to `Option<ByAddress<T>>` stores what is typed and submits it.
 #[test]
 fn a_password_mapped_to_a_secret_submits_it() {

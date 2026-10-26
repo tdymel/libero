@@ -240,7 +240,8 @@ pub fn Fieldset<V: FormValue>(props: FieldsetProps<V>) -> Element {
 
     let prefix = binding.prefix();
     let warned_blank = use_hook(|| Rc::new(Cell::new(false)));
-    let issues = match props.validate.is_empty() {
+    // A disabled group's own rules are barred like its fields' (4208): the user cannot fix them.
+    let issues = match props.validate.is_empty() || disabled {
         true => Vec::new(),
         false => binding
             .with::<V, _>(&[], |value| {
@@ -272,6 +273,7 @@ pub fn Fieldset<V: FormValue>(props: FieldsetProps<V>) -> Element {
             status: explicit,
             parse: crate::components::form::Parse::Valid,
             required: false,
+            barred: disabled,
             owner: current_scope_id(),
         },
     );
