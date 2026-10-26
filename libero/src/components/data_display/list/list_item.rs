@@ -5,7 +5,7 @@ use crate::{
         common::{HtmlTag, Input, Part, States, base_props, parts_enum},
         layout::use_box,
     },
-    sx::{StaticSx, sx},
+    sx::{StaticSx, Sx, sx},
     theme::{Size, SizeCss},
 };
 
@@ -45,26 +45,46 @@ static LIST_ITEM_BASE_SX: StaticSx = StaticSx::new(|| {
                     body.display("flow-root").overflow_wrap("anywhere"),
                 ),
         )
-        // A flex row: the action takes the end, so the body is no float's neighbour.
-        .when(
-            "with-action",
-            sx().display("flex")
-                .list_style_type("none")
-                .selector(
-                    ListItemPart::Body.selector(),
-                    sx().flex("1 1 auto")
-                        .min_width("0")
-                        .display("flow-root")
-                        .overflow_wrap("anywhere"),
-                )
-                .selector(
-                    ListItemPart::Action.selector(),
-                    sx().flex_shrink("0")
-                        .align_self("center")
-                        .margin_inline_start(SizeCss::SPACING.value(Size::Sm)),
-                ),
-        )
+        .when("with-action", action_sx())
 });
+
+/// The action takes the item's end, so the body is no float's neighbour.
+fn action_sx() -> Sx {
+    let item = sx().list_style_type("none");
+    if NATIVE {
+        return item
+            .display("flex")
+            .selector(
+                ListItemPart::Body.selector(),
+                sx().flex("1 1 auto")
+                    .min_width("0")
+                    .display("flow-root")
+                    .overflow_wrap("anywhere"),
+            )
+            .selector(
+                ListItemPart::Action.selector(),
+                sx().flex_shrink("0")
+                    .align_self("center")
+                    .margin_inline_start(SizeCss::SPACING.value(Size::Sm)),
+            );
+    }
+    // Two table cells, not a flex row: only a `list-item` counts in an ordered list's
+    // numbering (todo 4172), and the full-width body pushes the action to the end.
+    item.selector(
+        ListItemPart::Body.selector(),
+        sx().display("table-cell")
+            .width("100%")
+            .vertical_align("top")
+            .overflow_wrap("anywhere"),
+    )
+    .selector(
+        ListItemPart::Action.selector(),
+        sx().display("table-cell")
+            .vertical_align("middle")
+            .white_space("nowrap")
+            .padding_inline_start(SizeCss::SPACING.value(Size::Sm)),
+    )
+}
 
 const NATIVE: bool = cfg!(all(not(target_arch = "wasm32"), feature = "native"));
 

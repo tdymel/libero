@@ -29,14 +29,19 @@ pub const ROUTES: Routes = &[
             }
         },
     ),
-    // A subheader in an ordered list sits outside the number gutter.
+    // A subheader in an ordered list sits outside the number gutter. Todo 4172: the action
+    // item still counts, so the last one is 3.
     (
         "/list/subheader",
         || rsx! {
             List { id: "ordered", ordered: true,
                 ListSubheader { id: "subheader", "Steps" }
                 ListItem { id: "first", "Install" }
-                ListItem { "Configure" }
+                ListItem {
+                    action: rsx! { Button { size: "xs", variant: "outlined", "Edit" } },
+                    "Configure"
+                }
+                ListItem { "Deploy" }
             }
         },
     ),

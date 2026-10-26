@@ -2,7 +2,7 @@
 
 use e2e::browser::block_on;
 use e2e::wait::PageBounded;
-use e2e::{Fixture, Suite, Viewport, wait};
+use e2e::{Fixture, Suite, Viewport, ax, wait};
 
 #[test]
 fn it_meets_the_baseline() {
@@ -137,6 +137,12 @@ fn a_subheader_sits_outside_the_number_gutter() {
             .into_value()
             .unwrap();
         assert_eq!(read, ["block", "true", "true"]);
+        // Todo 4172: the flex action item still counts.
+        let numbers = ax::snapshot(page, "#ordered").await.unwrap();
+        assert!(
+            numbers.contains("ListMarker \"3.\""),
+            "the item after an action item lost its number:\n{numbers}"
+        );
         fixture
             .console
             .assert_clean("the subheader fixture")
