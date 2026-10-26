@@ -949,12 +949,13 @@ fn aria_number<T: NumberValue>(number: Option<T>) -> Option<String> {
     finite.then_some(text)
 }
 
-/// `T::parse`, taking the separator as well as `.`: a German user on a US
-/// layout or a numpad types `1.5`. Grouped text (`12,500`) parses too.
+/// `T::parse`, taking the separator as well as `.`. Grouped text (`12,500`) parses too; where
+/// `.` groups (German) one outside the threes is no number, not `1.2345` read as 1234.5 (4267).
 fn parse<T: NumberValue>(text: &str, separator: Separators) -> Option<T> {
     let text = ascii_digits(text);
     let text = match separator.group.and_then(|group| ungrouped(&text, group)) {
         Some(bare) => Cow::Owned(bare),
+        None if separator.group == Some(".") && text.contains('.') => return None,
         None => text,
     };
     match separator.decimal {
@@ -1121,13 +1122,17 @@ mod tests {
         assert_eq!(parse::<f64>("1\u{066B}5", COMMA), Some(1.5));
     }
 
-    /// Todo 3390: text grouped in the locale parses; a numpad's `1.5` stays a decimal.
+    /// Todos 3390, 4267: text grouped in the locale parses; a `.` outside the threes is no number.
     #[test]
     fn grouped_text_parses_in_the_locale() {
         let german = Separators::of::<f64>(&Formats::GERMAN);
         assert_eq!(parse::<f64>("12.500,5", german), Some(12_500.5));
         assert_eq!(parse::<f64>("-1.234.567", german), Some(-1_234_567.0));
-        assert_eq!(parse::<f64>("1.5", german), Some(1.5));
+        assert_eq!(parse::<f64>("1.234", german), Some(1_234.0));
+        for text in ["1.5", "1.2345", "1.23", "12.5,5", "1.234.5"] {
+            assert_eq!(parse::<f64>(text, german), None, "{text}");
+        }
+        assert_eq!(parse::<f64>("1,2345", german), Some(1.2345));
         assert_eq!(
             parse::<i32>("2.026", Separators::of::<i32>(&Formats::GERMAN)),
             Some(2026)
