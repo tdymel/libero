@@ -300,6 +300,18 @@ impl FromStr for ColorCode {
     }
 }
 
+/// Whether `text` spells an alpha channel: 4 or 8 hex digits, or a fourth function argument.
+pub(super) fn names_alpha(text: &str) -> bool {
+    let text = text.trim().to_ascii_lowercase();
+    let inner = ["rgba", "rgb", "hsla", "hsl"]
+        .iter()
+        .find_map(|name| function_args(&text, name));
+    match inner {
+        Some(inner) => arguments(inner).is_ok_and(|(_, alpha)| alpha.is_some()),
+        None => matches!(text.strip_prefix('#').unwrap_or(&text).len(), 4 | 8),
+    }
+}
+
 fn unit(value: f64) -> f64 {
     if value.is_nan() {
         return 0.0;

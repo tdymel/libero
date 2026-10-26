@@ -1,7 +1,7 @@
 use dioxus::prelude::*;
 use pictogram_icons_lucide as lucide;
 
-use super::{ColorCode, ColorFormat, ColorPicker, ColorSwatch, Swatches};
+use super::{ColorCode, ColorFormat, ColorPicker, ColorSwatch, Swatches, color_code::names_alpha};
 use crate::{
     components::{
         accessibility::use_announcer,
@@ -241,6 +241,8 @@ pub fn ColorField(props: ColorFieldProps) -> Element {
     use_effect(move || has_eye_dropper.set(eye_dropper().is_some()));
 
     let value = bound.value().unwrap_or(props.value);
+    let keep_alpha = with_alpha && !format.has_alpha();
+    let typed = move |text: &str| typed_color(text, value, keep_alpha);
     let oninput = props.oninput;
     let setter = bound.setter();
     // Without alpha the field has no way to show or change it, so a typed or
@@ -472,19 +474,26 @@ pub fn ColorField(props: ColorFieldProps) -> Element {
         }),
     );
     // Text that parsed was already emitted, so it goes back to the value's own
-    // spelling; text that did not stays only if asked.
+    // spelling; text that did not stays only if asked. Blank text is empty, not invalid.
+    let blank = move || {
+        draft
+            .peek()
+            .as_deref()
+            .is_some_and(|text| text.trim().is_empty())
+    };
     let unparsable = move || {
         draft
             .peek()
             .as_ref()
             .is_some_and(|text| text.parse::<ColorCode>().is_err())
+            && !blank()
     };
     // Text typed with the dropdown shut is remembered as it settles; an open one, at its close.
     let remember_typed = move || {
         if showing {
             return;
         }
-        if let Some(Ok(color)) = draft.peek().as_ref().map(|text| text.parse::<ColorCode>()) {
+        if let Some(color) = draft.peek().as_deref().and_then(typed) {
             remember(color);
         }
     };
@@ -498,7 +507,7 @@ pub fn ColorField(props: ColorFieldProps) -> Element {
             rejected.set(true);
             announcer.say(labels.invalid.to_string());
         }
-        if fix_on_blur || !unparsable {
+        if fix_on_blur || !unparsable && !blank() {
             draft.set(None);
         }
     };
@@ -527,7 +536,7 @@ pub fn ColorField(props: ColorFieldProps) -> Element {
     // Each parse is sent; the text stays as typed until the blur.
     let on_text = move |event: FormEvent| {
         let text = event.value();
-        if let Ok(color) = text.parse::<ColorCode>() {
+        if let Some(color) = typed(&text) {
             let mut type_in = type_in.clone();
             type_in(color);
         }
@@ -543,7 +552,7 @@ pub fn ColorField(props: ColorFieldProps) -> Element {
         input_element,
         Some(text.clone()),
         Some(move |text: String| {
-            if let Ok(color) = text.parse::<ColorCode>() {
+            if let Some(color) = typed(&text) {
                 let mut type_in = prefill_type_in.clone();
                 type_in(color);
             }
@@ -762,6 +771,16 @@ pub fn ColorField(props: ColorFieldProps) -> Element {
     field.render(control)
 }
 
+/// Typed text as a color. With `keep_alpha` (alpha on, an alpha-less `format`), text
+/// that names no alpha keeps the current one, as the eyedropper does (todo 4241).
+fn typed_color(text: &str, current: ColorCode, keep_alpha: bool) -> Option<ColorCode> {
+    let color = text.parse::<ColorCode>().ok()?;
+    match keep_alpha && !names_alpha(text) {
+        true => Some(color.with_alpha(current.alpha())),
+        false => Some(color),
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -791,5 +810,22 @@ mod tests {
         assert!(css.contains("box-shadow:var(--lsx-shadow-lg);"), "{css}");
         assert!(!css.contains("var(--lsx-paper-radius)"), "{css}");
         assert!(!css.contains("var(--lsx-paper-shadow)"), "{css}");
+    }
+
+    #[test]
+    fn alpha_less_text_keeps_the_current_alpha() {
+        let current: ColorCode = "#228be680".parse().unwrap();
+        let kept = typed_color("#228be7", current, true).unwrap();
+        assert_eq!(kept.to_hexa(), "#228be780");
+        let kept = typed_color("rgb(34, 139, 231)", current, true).unwrap();
+        assert_eq!(kept.to_hexa(), "#228be780");
+        // Text that spells alpha wins, and so does a format that shows it.
+        let named = typed_color("#228be7ff", current, true).unwrap();
+        assert_eq!(named.to_hexa(), "#228be7ff");
+        let named = typed_color("hsl(208 80% 52% / 0.25)", current, true).unwrap();
+        assert_eq!(named.alpha(), 0.25);
+        let opaque = typed_color("#228be7", current, false).unwrap();
+        assert_eq!(opaque.to_hexa(), "#228be7ff");
+        assert!(typed_color("", current, true).is_none());
     }
 }

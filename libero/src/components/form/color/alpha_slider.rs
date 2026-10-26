@@ -11,6 +11,7 @@ use crate::{
         common::{Input, Part, base_props, use_name_warning},
         form::SliderChangeEvent,
         form::slider::{SliderCore, SliderCoreValue},
+        form::use_fieldset_disabled,
     },
     hooks::{use_localization, use_theme},
     localization::fill,
@@ -84,7 +85,7 @@ pub(super) fn PickerAlphaSlider(
     size: Size,
     aria_label: Option<String>,
     focusable: bool,
-    oninput: EventHandler<SliderChangeEvent>,
+    oninput: Option<EventHandler<SliderChangeEvent>>,
 ) -> Element {
     let rgb = COLOR_PICKER_RGB.value();
     let track =
@@ -93,7 +94,7 @@ pub(super) fn PickerAlphaSlider(
     let props = AlphaSliderProps {
         value,
         color: ColorCode::default(),
-        oninput: Some(oninput),
+        oninput,
         size: Input::Value(size),
         disabled: None,
         aria_label,
@@ -122,6 +123,9 @@ fn alpha_slider(props: AlphaSliderProps, track: String, thumb_fill: String) -> E
         "AlphaSlider: no `aria_label`, so the thumb is announced as just \"slider\".",
     );
 
+    // A disabled `Fieldset` disables it, as it does `Slider` (todo 4243).
+    let in_disabled_group = use_fieldset_disabled();
+    let disabled = props.disabled.unwrap_or(false) || in_disabled_group;
     let oninput = props.oninput;
     let emit = use_callback(move |event: SliderChangeEvent<SliderCoreValue>| {
         if let Some(oninput) = &oninput {
@@ -145,7 +149,7 @@ fn alpha_slider(props: AlphaSliderProps, track: String, thumb_fill: String) -> E
             states: props.states,
             size: Input::Value(size),
             color: Input::None,
-            disabled: props.disabled,
+            disabled: Some(disabled),
             label: Some(valuetext),
             marks: Vec::new(),
             aria_label,

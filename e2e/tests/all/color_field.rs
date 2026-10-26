@@ -269,6 +269,40 @@ fn blur_on_unparsable_text_keeps_it_with_an_error() {
     });
 }
 
+/// Todo 4242: text cleared to blank is empty, not invalid: a blur keeps it blank and says nothing.
+#[test]
+fn blur_on_blank_text_is_empty_not_invalid() {
+    block_on(async {
+        let fixture = Fixture::open("/color-field/keep-text", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        keyboard::tab_to(page, INPUT, 5).await.unwrap();
+        page.evaluate_bounded(format!("document.querySelector({INPUT:?}).select()"))
+            .await
+            .unwrap();
+        keyboard::press(page, keyboard::BACKSPACE).await.unwrap();
+        keyboard::press(page, keyboard::TAB).await.unwrap();
+        expect(
+            page,
+            &format!(
+                "(() => {{ const input = document.querySelector({INPUT:?}); \
+                 return document.activeElement.id === 'after' \
+                   && input.value === '' \
+                   && input.getAttribute('aria-invalid') !== 'true' \
+                   && ![...document.querySelectorAll('[role=status]')].some(s => s.textContent.trim() !== ''); }})()"
+            ),
+            "Tab from blank text to keep it blank with no error",
+        )
+        .await;
+        fixture
+            .console
+            .assert_clean("a blurred blank color")
+            .unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
 /// Todo 1548: the default `fix_on_blur` reverts no color on blur, and says why.
 #[test]
 fn a_reverting_blur_says_the_error() {

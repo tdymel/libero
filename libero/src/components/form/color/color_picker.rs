@@ -312,7 +312,7 @@ pub fn ColorPicker(props: ColorPickerProps) -> Element {
                     size,
                     aria_label: part_name(props.alpha_label.as_deref(),labels.alpha),
                     focusable,
-                    oninput: alpha_input,
+                    oninput: oninput.is_some().then_some(alpha_input),
                 }
             }
         });
@@ -338,7 +338,8 @@ pub fn ColorPicker(props: ColorPickerProps) -> Element {
                         size,
                         aria_label: part_name(props.hue_label.as_deref(),labels.hue),
                         focusable,
-                        oninput: hue_input,
+                        // None makes the thumb read-only, as the panel's (todo 4245).
+                        oninput: oninput.is_some().then_some(hue_input),
                     }
                     {alpha}
                 }
@@ -475,6 +476,55 @@ fn swatch_color(color: ColorCode, with_alpha: bool) -> ColorCode {
 mod tests {
     use super::*;
     use crate::components::common::part_table;
+
+    /// Each `role="slider"` tag of the rendered `body`.
+    fn sliders(body: Element) -> Vec<String> {
+        let html = dioxus_ssr::render_element(rsx! {
+            crate::LiberoProvider { {body} }
+        });
+        html.split('<')
+            .filter(|tag| tag.contains(r#"role="slider""#))
+            .map(|tag| tag.split('>').next().unwrap_or_default().to_string())
+            .collect()
+    }
+
+    /// Todo 4243: a disabled `Fieldset` takes all three thumbs out, as it does a `Slider`.
+    #[test]
+    fn a_disabled_fieldset_disables_every_thumb() {
+        // A component, so the `oninput` handler is made inside the runtime.
+        #[component]
+        fn Picker() -> Element {
+            rsx! {
+                ColorPicker {
+                    value: ColorCode::default(),
+                    oninput: move |_| {},
+                    with_alpha: true,
+                }
+            }
+        }
+        let thumbs = sliders(rsx! {
+            crate::components::Fieldset::<()> { label: "Accent", disabled: true, Picker {} }
+        });
+        assert_eq!(thumbs.len(), 3, "{thumbs:?}");
+        // SSR quotes a string but not a bool.
+        for thumb in thumbs.iter().map(|thumb| thumb.replace('"', "")) {
+            assert!(thumb.contains("tabindex=-1"), "{thumb}");
+            assert!(thumb.contains("aria-disabled=true"), "{thumb}");
+        }
+    }
+
+    /// Todo 4245: without `oninput` all three thumbs are read-only tab stops, as `Slider`'s.
+    #[test]
+    fn without_oninput_every_thumb_is_read_only() {
+        let thumbs = sliders(rsx! {
+            ColorPicker { value: ColorCode::default(), with_alpha: true }
+        });
+        assert_eq!(thumbs.len(), 3, "{thumbs:?}");
+        for thumb in thumbs {
+            assert!(thumb.contains(r#"tabindex="0""#), "{thumb}");
+            assert!(thumb.contains(r#"aria-readonly="true""#), "{thumb}");
+        }
+    }
 
     #[test]
     fn a_blank_part_name_falls_back_to_the_default() {

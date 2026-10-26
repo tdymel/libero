@@ -6,8 +6,11 @@ use dioxus::prelude::*;
 use super::{ColorCode, color_picker::ColorPickerPart};
 use crate::{
     components::{
-        common::{HtmlTag, Input, Part, Variables, has_shortcut_modifier, shadow_sx, variables},
-        form::SliderChangeEvent,
+        common::{
+            HtmlTag, Input, Part, States, Variables, disabled_look_sx, has_shortcut_modifier,
+            shadow_sx, variables,
+        },
+        form::{SliderChangeEvent, use_fieldset_disabled},
         layout::use_box,
     },
     hooks::{
@@ -46,6 +49,7 @@ static PANEL_SX: StaticSx = StaticSx::new(|| {
         .user_select("none")
         // Forced colours drop the gradient, and the panel is the only way to pick a shade.
         .media(FORCED_COLORS, sx().forced_color_adjust("none"))
+        .when("disabled", disabled_look_sx("not-allowed"))
 });
 
 /// The dark rings round a white thumb border, shared with the hue and alpha thumbs.
@@ -86,7 +90,9 @@ pub(super) fn Saturation(props: SaturationProps) -> Element {
     let thumb_element = use_element();
 
     let value = props.value;
-    let interactive = props.oninput.is_some();
+    // A disabled `Fieldset` disables the panel, as it does `Slider` (todo 4243).
+    let disabled = use_fieldset_disabled();
+    let interactive = props.oninput.is_some() && !disabled;
     let focusable = props.focusable;
 
     // `(left, top, width, height)`, measured at pointerdown.
@@ -224,13 +230,17 @@ pub(super) fn Saturation(props: SaturationProps) -> Element {
         emit.call(SliderChangeEvent::End(moved));
     });
 
-    let panel_style = use_box().framework_sx(&PANEL_SX).prepare();
+    let states: Input<States> = States::new().with("disabled", disabled).into();
+    let panel_style = use_box().framework_sx(&PANEL_SX).states(&states).prepare();
+    // As `Slider`: without `oninput` the thumb stays a tab stop, read-only (todo 4245).
     let thumb = rsx! {
         SaturationThumb {
             value,
             element: thumb_element,
             aria_label: props.aria_label,
-            tab_stop: interactive && focusable,
+            tab_stop: !disabled && focusable,
+            disabled,
+            readonly: props.oninput.is_none() && !disabled,
             onkeydown,
         }
     };
@@ -253,6 +263,8 @@ fn SaturationThumb(
     element: ElementHandle,
     aria_label: Option<String>,
     tab_stop: bool,
+    disabled: bool,
+    readonly: bool,
     onkeydown: Callback<Event<KeyboardData>>,
 ) -> Element {
     let value = value();
@@ -288,6 +300,8 @@ fn SaturationThumb(
         .attr("aria-valuemax", 100)
         .attr("aria-valuenow", percent(value.saturation()))
         .attr("aria-valuetext", valuetext)
+        .attr("aria-disabled", disabled.then_some("true"))
+        .attr("aria-readonly", readonly.then_some("true"))
         .element(&element)
         .event("onkeydown", onkeydown)
         .render(HtmlTag::Div, Vec::new(), ())

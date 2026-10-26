@@ -5,7 +5,9 @@ use crate::components::{
 };
 use dioxus::prelude::*;
 use libero::components::FieldPart;
-use libero::components::{Code, ColorCode, ColorField, Flex, SliderChangeEvent, Swatches, Text};
+use libero::components::{
+    Code, ColorCode, ColorField, Flex, Input, SliderChangeEvent, Swatches, Text,
+};
 use libero::use_theme;
 
 struct BrandCopy;
@@ -151,11 +153,12 @@ pub fn ColorFieldPage() -> Element {
                     Control::sizes("size").default(theme.color_field.size.as_str()),
                     // `0` is plain CSS, next to the size scale.
                     Control::slider("radius", ["0", "xs", "sm", "md", "lg", "xl", "xxl"]).default(theme.color_field.radius.as_str()),
-                    Control::select("format", ["hex", "hexa", "rgb", "rgba", "hsl", "hsla"])
-                        .labels(["Hex", "Hexa", "RGB", "RGBA", "HSL", "HSLA"])
-                        .default("hex")
+                    // Unset by default, so "With alpha" shows its hexa default (todo 4248).
+                    Control::select("format", ["default", "hex", "hexa", "rgb", "rgba", "hsl", "hsla"])
+                        .labels(["Default", "Hex", "Hexa", "RGB", "RGBA", "HSL", "HSLA"])
+                        .default("default")
                         .code(|_, values| match values.str("format").as_str() {
-                            "hex" => vec![],
+                            "default" => vec![],
                             format => vec![format!("format: {format:?}")],
                         }),
                 ], field_controls::<BrandCopy>(), vec![
@@ -225,7 +228,10 @@ fn ColorFieldDemo(values: DemoValues) -> Element {
                 oninput: move |event: SliderChangeEvent<ColorCode>| color.set(event.value()),
                 size: values.str("size"),
                 radius: values.str("radius"),
-                format: values.str("format"),
+                format: match values.str("format").as_str() {
+                    "default" => Input::None,
+                    format => Input::from(format.to_string()),
+                },
                 with_alpha: is_on(&values, "with_alpha"),
                 swatches,
                 recent_colors: is_on(&values, "recent_colors").then_some(6),
