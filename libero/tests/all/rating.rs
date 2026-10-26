@@ -64,14 +64,65 @@ fn the_slider_minimum_is_where_home_stops() {
     fn app() -> Element {
         rsx! {
             LiberoProvider {
-                Rating { label: "Whole", onchange: move |_| {} }
-                Rating { label: "Clearable", clearable: true, onchange: move |_| {} }
+                Rating { label: "Whole", value: 3.0, onchange: move |_| {} }
+                Rating { label: "Clearable", value: 3.0, clearable: true, onchange: move |_| {} }
             }
         }
     }
     let html = render(app);
     assert_eq!(html.matches(r#"aria-valuemin="1""#).count(), 1, "{html}");
     assert_eq!(html.matches(r#"aria-valuemin="0""#).count(), 1, "{html}");
+}
+
+/// Todo 4301: an unrated 0 never sits below `aria-valuemin`.
+#[test]
+fn an_unrated_value_lowers_the_slider_minimum() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider {
+                Rating { label: "Whole", onchange: move |_| {} }
+                Rating { label: "Halves", fractions: 2, onchange: move |_| {} }
+                Rating { label: "Rated", value: 3.0, onchange: move |_| {} }
+            }
+        }
+    }
+    let html = render(app);
+    assert_eq!(html.matches(r#"aria-valuemin="0""#).count(), 2, "{html}");
+    assert_eq!(html.matches(r#"aria-valuenow="0""#).count(), 2, "{html}");
+    assert_eq!(html.matches(r#"aria-valuemin="1""#).count(), 1, "{html}");
+}
+
+/// Todo 4302: the posted value and `aria-valuenow` keep full precision.
+#[test]
+fn a_fractional_value_posts_and_reports_in_full() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider {
+                Rating {
+                    aria_label: "Third",
+                    name: "third",
+                    fractions: 3,
+                    value: 1.0 / 3.0,
+                    onchange: move |_| {},
+                }
+                Rating {
+                    aria_label: "Eighth",
+                    name: "eighth",
+                    fractions: 8,
+                    value: 0.125,
+                    onchange: move |_| {},
+                }
+            }
+        }
+    }
+    let html = render(app);
+    assert!(html.contains(r#"value="0.3333333333333333""#), "{html}");
+    assert!(html.contains(r#"value="0.125""#), "{html}");
+    assert!(
+        html.contains(r#"aria-valuenow="0.3333333333333333""#),
+        "{html}"
+    );
+    assert!(html.contains(r#"aria-valuetext="0.33 of 5""#), "{html}");
 }
 
 /// Todo 3128: only the warning fill, yellow under 3:1 on white, takes the ink edge.

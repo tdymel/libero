@@ -42,6 +42,16 @@ pub(super) fn stepped(value: f64, delta: i32, fractions: u8, lowest: f64, count:
     ((base + f64::from(delta)) / steps).clamp(lowest, f64::from(count))
 }
 
+/// The slider minimum: the lowest pick, or an unrated `value` below it.
+pub(super) fn slider_min(lowest: f64, value: f64) -> f64 {
+    lowest.min(value)
+}
+
+/// `value` at full precision with a `.` separator, trailing zeros dropped: `3`, `0.125`.
+pub(super) fn plain_number(value: f64) -> String {
+    value.to_string()
+}
+
 /// `value` with at most two decimals, trailing zeros dropped: `3`, `3.5`, `4.25`.
 pub(super) fn number_text(value: f64, separator: &str) -> String {
     let text = format!("{:.2}", (value * 100.0).round() / 100.0);
@@ -98,6 +108,26 @@ mod tests {
         assert_eq!(sane(f64::NAN, 5), 0.0);
         assert_eq!(sane(-1.0, 5), 0.0);
         assert_eq!(sane(7.0, 5), 5.0);
+    }
+
+    #[test]
+    fn an_unrated_value_lowers_the_slider_minimum() {
+        assert_eq!(slider_min(1.0, 0.0), 0.0);
+        assert_eq!(slider_min(0.5, 0.0), 0.0);
+        assert_eq!(slider_min(1.0, 3.0), 1.0);
+        assert_eq!(slider_min(0.0, 0.0), 0.0);
+    }
+
+    #[test]
+    fn posted_numbers_keep_their_precision() {
+        assert_eq!(plain_number(3.0), "3");
+        assert_eq!(plain_number(3.5), "3.5");
+        assert_eq!(plain_number(0.0), "0");
+        let third = stepped(0.0, 1, 3, 0.0, 5);
+        assert_eq!(plain_number(third), "0.3333333333333333");
+        assert_eq!(plain_number(third).parse::<f64>().unwrap(), third);
+        assert_eq!(plain_number(stepped(0.0, 1, 8, 0.0, 5)), "0.125");
+        assert_eq!(plain_number(1.0 / 3.0 * 2.0), "0.6666666666666666");
     }
 
     #[test]

@@ -1,7 +1,9 @@
 use dioxus::prelude::*;
 use pictogram_core::Svg as SvgData;
 
-use super::value::{fill, number_text, sane, stepped, value_at, zone_value};
+use super::value::{
+    fill, number_text, plain_number, sane, slider_min, stepped, value_at, zone_value,
+};
 use crate::{
     components::{
         common::{
@@ -366,7 +368,7 @@ pub fn Rating(props: RatingProps) -> Element {
                 key: "{count}",
                 r#type: "hidden",
                 name: name.to_string(),
-                value: number_text(value, "."),
+                value: plain_number(value),
                 disabled: disabled.then_some(true),
             }
         });
@@ -395,9 +397,9 @@ pub fn Rating(props: RatingProps) -> Element {
             .attr("role", "slider")
             .attr("tabindex", if disabled { "-1" } else { "0" })
             .attr("aria-orientation", "horizontal")
-            .attr("aria-valuemin", number_text(lowest, "."))
+            .attr("aria-valuemin", plain_number(slider_min(lowest, value)))
             .attr("aria-valuemax", count.to_string())
-            .attr("aria-valuenow", number_text(value, "."))
+            .attr("aria-valuenow", plain_number(value))
             .attr("aria-valuetext", text)
             .attr("aria-label", aria_label)
             .attr("aria-labelledby", field.label_id())
