@@ -97,6 +97,68 @@ fn a_caller_onerror_keeps_the_fallback_swap() {
     });
 }
 
+/// Chrome's race under load (todo 4214): `#caller-onerror` fails while the mount probe waits, so
+/// it reads `complete` before the `error` queued with the failure, which a `src` change cancels.
+const FAILURE_BEFORE_PROBE: &str = r#"(() => {
+    const realSet = window.setTimeout.bind(window);
+    const held = [];
+    let caught = false, failed = false;
+    const target = (el) => el instanceof HTMLImageElement && el.id === 'caller-onerror';
+    // Once the picture is in, argless timers (the probe's) wait for its failure.
+    window.setTimeout = function (fn, ms, ...args) {
+        const mounted = !!document.getElementById('caller-onerror');
+        if (mounted && !caught && ms === undefined && typeof fn === 'function') {
+            held.push(() => fn(...args));
+            return 0;
+        }
+        return realSet(fn, ms, ...args);
+    };
+    window.addEventListener('error', (e) => {
+        if (!e.isTrusted || caught || !target(e.target)) return;
+        e.stopImmediatePropagation();
+        caught = true;
+        held.splice(0).forEach((run) => realSet(run, 0));
+    }, true);
+    const complete = Object.getOwnPropertyDescriptor(HTMLImageElement.prototype, 'complete');
+    Object.defineProperty(HTMLImageElement.prototype, 'complete', {
+        configurable: true,
+        get() {
+            const done = complete.get.call(this);
+            if (done && caught && !failed && target(this)) {
+                failed = true;
+                const img = this, src = this.src;
+                realSet(() => { if (img.src === src) img.dispatchEvent(new Event('error')); }, 0);
+            }
+            return done;
+        },
+    });
+})()"#;
+
+/// Todo 4214: the probe that sees the failure before its `error` ran leaves that `error` to the
+/// caller's `onerror`, then swaps.
+#[test]
+fn a_failure_the_probe_sees_first_still_runs_the_caller_onerror() {
+    block_on(async {
+        let fixture = Fixture::open("/image/caller-onerror", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        page.evaluate_on_new_document_bounded(FAILURE_BEFORE_PROBE.to_string())
+            .await
+            .unwrap();
+        page.reload_bounded().await.unwrap();
+        wait::for_js_true(
+            page,
+            "document.querySelector('#caller-errors')?.textContent === '1' \
+             && document.querySelector('#caller-onerror').src.includes('963')",
+            "the caller's onerror to run and the fallback source",
+        )
+        .await
+        .unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
 /// Swallows every image `error`, as a server-rendered page misses it before hydration, lets the
 /// pictures fail once, then mounts them again: the browser has the failure by then.
 async fn open_missed_error(fixture: &Fixture) {

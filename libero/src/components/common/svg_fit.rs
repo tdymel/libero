@@ -69,6 +69,9 @@ pub(crate) fn on_failed_after_mount(
     spawn(async move {
         platform::next_task().await;
         if platform::load_failed(&mounted) {
+            // `complete` turns true before the `error` task queued with it, which a swap would
+            // cancel: a task later that `error` reached the caller's `onerror` (todos 4195, 4214).
+            platform::next_task().await;
             on_failed();
         }
     });

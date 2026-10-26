@@ -323,15 +323,9 @@ pub fn Image(props: ImageProps) -> Element {
         .event(
             "onmounted",
             PROBES_AFTER_MOUNT.then_some(move |event: Event<MountedData>| {
-                let (src, probe, mounted) = (on_mounted_src.clone(), probe.clone(), event.data());
-                // A task later, so the `error` the browser queued with the failure runs the
-                // caller's `onerror` first: the probe's swap would cancel it (todo 4195).
-                spawn(async move {
-                    platform::next_task().await;
-                    let failed = src.clone();
-                    on_failed_after_mount(&src, mounted, &probe, move || {
-                        errored_src.set(Some(failed))
-                    });
+                let failed = on_mounted_src.clone();
+                on_failed_after_mount(&on_mounted_src, event.data(), &probe, move || {
+                    errored_src.set(Some(failed))
                 });
             }),
         )
