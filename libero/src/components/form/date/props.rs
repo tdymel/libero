@@ -39,7 +39,8 @@ macro_rules! date_props {
     (@munch $kind:ident $head:tt $types:tt [$($acc:tt)*] exclude_date $($rest:ident)*) => {
         $crate::components::form::date::props::date_props!(@munch $kind $head $types [$($acc)*
             /// Days that are not accepted, on top of `min` and `max`. Ignored
-            /// for a time, a month and a year.
+            /// for a time, a month and a year. A range checks only its two ends,
+            /// so it may span an excluded day.
             #[props(default)]
             exclude_date: Option<Callback<::chrono::NaiveDate, bool>>,
         ] $($rest)*);

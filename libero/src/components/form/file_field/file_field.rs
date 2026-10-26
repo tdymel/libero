@@ -151,7 +151,7 @@ field_props! {
 ///         trigger: move |t: FileTriggerArgs| rsx! {
 ///             button {
 ///                 r#type: "button",
-///                 disabled: t.disabled,
+///                 "aria-disabled": t.disabled,
 ///                 onclick: move |_| t.open.call(()),
 ///                 ..t.attributes,
 ///                 "Change photo"
@@ -168,7 +168,9 @@ pub struct FileTriggerArgs {
     pub open: Callback<()>,
     /// What the field holds, to draw an avatar or a name.
     pub files: Files,
-    /// The field is disabled or read-only: `open` does nothing.
+    /// The field is disabled or read-only: `open` does nothing. A read-only
+    /// field stays reachable, so draw this as `aria-disabled`, not `disabled`,
+    /// which would leave the tab order.
     pub disabled: bool,
     pub loading: bool,
     /// `id`, `aria-labelledby`, `aria-describedby`, `aria-invalid`, `aria-busy`
