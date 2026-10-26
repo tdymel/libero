@@ -2,7 +2,7 @@ use dioxus::html::FileData;
 use dioxus::prelude::*;
 
 use crate::{
-    components::form::{FormScope, Setter},
+    components::form::{Edited, FormScope, Setter},
     hooks::{ElementHandle, current_formats, current_localization, use_form_owner},
     localization::{FileFieldLabels, Formats, fill},
     platform::{ElementApi, next_task},
@@ -21,6 +21,8 @@ pub(super) struct Taking {
     pub(super) onreject: Option<EventHandler<Vec<FileRejection>>>,
     /// What the chip announcer says of the last refusal, numbered per refusal.
     pub(super) refused: Signal<Option<(u64, String)>>,
+    /// Marked on every emit, so the chip announcer says the field's own edits only.
+    pub(super) edited: Edited,
     pub(super) accept: String,
     pub(super) limits: Limits,
     pub(super) editable: bool,
@@ -51,6 +53,7 @@ pub(super) fn use_file_intake(taking: Taking) -> Intake {
         setter,
         onreject,
         mut refused,
+        edited,
         accept,
         limits,
         editable,
@@ -58,10 +61,13 @@ pub(super) fn use_file_intake(taking: Taking) -> Intake {
         crop,
     } = taking;
 
-    let emit = use_callback(move |files: Files| match (&onchange, &setter) {
-        (Some(onchange), _) => onchange.call(files),
-        (None, Some(setter)) => setter.set(files),
-        (None, None) => {}
+    let emit = use_callback(move |files: Files| {
+        edited.mark();
+        match (&onchange, &setter) {
+            (Some(onchange), _) => onchange.call(files),
+            (None, Some(setter)) => setter.set(files),
+            (None, None) => {}
+        }
     });
 
     let mut owed = use_signal(|| None::<FocusDebt>);

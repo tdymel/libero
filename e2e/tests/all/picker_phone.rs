@@ -192,6 +192,32 @@ fn a_phone_spreads_the_color_picker_over_the_sheet() {
     });
 }
 
+/// Todo 4320: a second tap on the focused text box is no press for the blur that follows.
+#[test]
+fn a_tap_outside_closes_the_sheet_after_two_taps_in_the_text_box() {
+    block_on(async {
+        let fixture = phone().await;
+        let page = &fixture.page;
+        tap(page, &input("color")).await.unwrap();
+        sheet_shown(page).await.unwrap();
+        let focused = format!("document.querySelector({TYPED:?}) === document.activeElement");
+        for _ in 0..2 {
+            tap(page, TYPED).await.unwrap();
+            wait::for_js_true(page, &focused, "the text box focused")
+                .await
+                .unwrap();
+        }
+        // The page's top padding, above the sheet.
+        let top = pointer::Point { x: 180.0, y: 4.0 };
+        pointer::tap_at(page, top).await.unwrap();
+        let closed = format!("!document.querySelector({SHEET:?})");
+        wait::for_js_true(page, &closed, "the sheet closed by the tap outside")
+            .await
+            .unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
 fn day(date: &str) -> String {
     format!("{SHEET} [data-slot=day][data-date='{date}']:not([data-outside])")
 }

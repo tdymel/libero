@@ -5,7 +5,7 @@ use crate::components::form::use_bound;
 use crate::{
     components::{
         common::{Input, OptionSource, Options, Part, Parts, use_combobox},
-        form::{DropdownPart, field_props, removable_chip},
+        form::{DropdownPart, field_props, removable_chip, use_edited},
     },
     hooks::{use_localization, use_theme},
     utils::warn,
@@ -120,7 +120,14 @@ pub fn MultiSelect<T: Options>(props: MultiSelectProps<T>) -> Element {
         &row_disabled,
         props.option.as_ref(),
     );
-    let onchange = bound.emit(props.onchange);
+    // Every emit is the field's own edit, which the live region then says.
+    let edited = use_edited();
+    let onchange = bound.emit(props.onchange).map(|emit| {
+        move |next: Vec<T>| {
+            edited.mark();
+            emit(next)
+        }
+    });
     let size = props.size.copied_or(theme.multi_select.size);
     let disabled = bound.disabled(props.disabled);
     let readonly = props.readonly.unwrap_or(false);
@@ -260,6 +267,7 @@ pub fn MultiSelect<T: Options>(props: MultiSelectProps<T>) -> Element {
             onpick,
             selection,
             value_labels,
+            edited: Some(edited),
             chip_count: held.len(),
             onremove,
             chips: Some(chips),

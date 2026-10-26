@@ -98,10 +98,17 @@ fn every_tag_is_a_chip_whose_remove_button_is_not_a_tab_stop() {
         "an icon-only x needs a name:\n{html}"
     );
     assert_eq!(
-        html.matches("tabindex=\"-1\"").count(),
+        html.matches("tabindex=\"-1\" type=\"button\"").count(),
         2,
         "one x per tag, each out of the tab order:\n{html}"
     );
+    assert_eq!(
+        html.matches("role=\"group\" tabindex=\"-1\" data-slot=\"tag\"")
+            .count(),
+        2,
+        "each wrapper a named group the chip cursor can focus (4311):\n{html}"
+    );
+    assert!(html.contains("aria-label=\"dioxus\""), "{html}");
 }
 
 /// The placeholder describes an empty field, and a field holding chips is not

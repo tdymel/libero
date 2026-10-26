@@ -5,8 +5,9 @@ expression: tree
 ---
 LabelText
   StaticText "Topics"
-StaticText "rust"
-button "Remove rust"
+group "rust"
+  StaticText "rust"
+  button "Remove rust"
 combobox "Topics" [autocomplete=list] [expanded=false] [haspopup=listbox]
 status [atomic] [live=polite]
 status [atomic] [live=polite]

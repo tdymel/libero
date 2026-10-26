@@ -6,7 +6,11 @@ use e2e::browser::block_on;
 use e2e::driver::{Driver, eventually, eventually_focused, eventually_text};
 use e2e::suite::Step;
 use e2e::wait::PageBounded;
-use e2e::{Fixture, Suite, Viewport, ax, passes::keyboard, wait};
+use e2e::{
+    Fixture, Suite, Viewport, ax,
+    passes::{keyboard, pointer},
+    wait,
+};
 
 pub const TRIGGER: &str = "[role=combobox]";
 const LISTBOX: &str = "[role=listbox]";
@@ -196,6 +200,85 @@ async fn tags(page: &chromiumoxide::Page) -> Vec<String> {
     .unwrap()
     .into_value()
     .unwrap()
+}
+
+const OUTSIDE: &str = "#outside";
+
+/// Todo 4324: a list swapped from outside is silent; the field's own edit is said.
+#[test]
+fn only_the_fields_own_edits_are_announced() {
+    block_on(async {
+        let fixture = Fixture::open("/tags-field/outside", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        let said =
+            "[...document.querySelectorAll('[role=status]')].map(e => e.textContent).join('|')";
+        pointer::click(page, "#swap").await.unwrap();
+        wait::for_js_true(
+            page,
+            "document.querySelectorAll(\"[data-slot='tag']\").length === 2",
+            "the swapped tags",
+        )
+        .await
+        .unwrap();
+        let after_swap: String = page
+            .evaluate_bounded(said)
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        assert!(
+            !after_swap.contains("Added") && !after_swap.contains("Removed"),
+            "a swap from outside was said: {after_swap}"
+        );
+
+        keyboard::tab_to(page, OUTSIDE, 10).await.unwrap();
+        keyboard::type_text(page, "c").await.unwrap();
+        keyboard::press(page, keyboard::ENTER).await.unwrap();
+        wait::for_js_true(
+            page,
+            &format!("{said}.includes('Added c')"),
+            "the field's own add to be said",
+        )
+        .await
+        .unwrap();
+        fixture.console.assert_clean("an outside swap").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
+/// Todo 4311: a caller's tag with no button still takes the chip cursor.
+#[test]
+fn a_tag_without_a_button_takes_the_chip_cursor() {
+    use e2e::passes::focus::wait_for_focus;
+    block_on(async {
+        let fixture = Fixture::open("/tags-field/outside", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        keyboard::tab_to(page, OUTSIDE, 10).await.unwrap();
+        keyboard::press(page, keyboard::ARROW_LEFT).await.unwrap();
+        wait_for_focus(page, "#outside-tag-0", "ArrowLeft into a button-less tag")
+            .await
+            .unwrap();
+        let named: bool = page
+            .evaluate_bounded(
+                "(() => { const t = document.activeElement; \
+                 return t.getAttribute('role') === 'group' && t.getAttribute('aria-label') === 'rust'; })()",
+            )
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        assert!(named, "the tag is a named group");
+        keyboard::press(page, keyboard::ARROW_RIGHT).await.unwrap();
+        wait_for_focus(page, OUTSIDE, "ArrowRight past the last tag")
+            .await
+            .unwrap();
+        fixture.console.assert_clean("a button-less tag").unwrap();
+        fixture.close().await.unwrap();
+    });
 }
 
 /// Todo 545: Enter on a refused tag keeps the draft and says why.

@@ -11,7 +11,7 @@ use crate::{
         feedback::Loader,
         form::{
             CropOptions, CropRect, SelectionArgs, field_parts_enum, field_props, slot_icon_size,
-            use_bound, use_field, use_noting_chip_announcer,
+            use_bound, use_edited, use_field, use_noting_chip_announcer,
         },
         layout::{BoxStyle, use_box},
     },
@@ -226,8 +226,12 @@ pub fn FileField(props: FileFieldProps) -> Element {
 
     let value = bound.value().unwrap_or_else(|| props.value.clone());
     let refused = use_signal(|| None::<(u64, String)>);
-    let announcer =
-        use_noting_chip_announcer(value.iter().map(FileData::name).collect(), refused());
+    let edited = use_edited();
+    let announcer = use_noting_chip_announcer(
+        value.iter().map(FileData::name).collect(),
+        refused(),
+        edited,
+    );
     let dragging = use_local_state(|| false);
 
     let crop = props.crop.filter(|_| !multiple);
@@ -252,6 +256,7 @@ pub fn FileField(props: FileFieldProps) -> Element {
         setter: bound.setter(),
         onreject: props.onreject,
         refused,
+        edited,
         accept: props.accept.clone().unwrap_or_default(),
         limits: Limits {
             multiple,

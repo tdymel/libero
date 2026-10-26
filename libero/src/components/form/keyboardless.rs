@@ -157,23 +157,50 @@ pub(crate) fn use_keyboardless() -> Keyboardless {
     Keyboardless {
         keyboardless: soft_keyboard_app() || coarse(),
         class: use_css(Some(&PICKER_INPUT_SX), CssLayer::Framework),
-        press: Press(use_hook(|| CopyValue::new(false))),
+        press: Press {
+            pressed: use_hook(|| CopyValue::new(false)),
+            focused: use_hook(|| CopyValue::new(false)),
+        },
     }
 }
 
 /// A press on the picker's text box, from its `pointerdown` until the field's blur it causes.
 #[derive(Clone, Copy, PartialEq)]
-pub(crate) struct Press(CopyValue<bool>);
+pub(crate) struct Press {
+    pressed: CopyValue<bool>,
+    focused: CopyValue<bool>,
+}
 
 impl Press {
     /// Whether the blur came from a press on the text box; answered once.
     pub(crate) fn taken(self) -> bool {
-        let mut press = self.0;
-        let pressed = *press.peek();
-        if pressed {
-            press.set(false);
+        let mut pressed = self.pressed;
+        let was = *pressed.peek();
+        if was {
+            pressed.set(false);
         }
-        pressed
+        was
+    }
+
+    /// A pointer went down on the text box; one already focused causes no blur.
+    fn start(self) {
+        let mut pressed = self.pressed;
+        pressed.set(!*self.focused.peek());
+    }
+
+    fn cancel(self) {
+        let mut pressed = self.pressed;
+        pressed.set(false);
+    }
+
+    fn enter(self) {
+        let mut focused = self.focused;
+        focused.set(true);
+    }
+
+    fn leave(self) {
+        let mut focused = self.focused;
+        focused.set(false);
     }
 }
 
@@ -221,9 +248,9 @@ impl Keyboardless {
             invalid,
             oninput,
             onkeydown,
-            onblur,
+            mut onblur,
         } = input;
-        let mut press = self.press.0;
+        let press = self.press;
         Some(rsx! {
             input {
                 class: self.class.clone(),
@@ -238,12 +265,18 @@ impl Keyboardless {
                 "aria-invalid": invalid.then_some("true"),
                 // Past the picker's cancelled mousedown, so the tap focuses it natively.
                 onmousedown: move |event| event.stop_propagation(),
-                // Heard before the field's blur, which then keeps the picker open.
-                onpointerdown: move |_| press.set(true),
-                onpointercancel: move |_| press.set(false),
+                onmounted: move |_| press.leave(),
+                // Heard before the field's blur, which then keeps the picker open. A box already
+                // focused is pressed with no blur after it.
+                onpointerdown: move |_| press.start(),
+                onpointercancel: move |_| press.cancel(),
+                onfocus: move |_| press.enter(),
                 oninput,
                 onkeydown,
-                onblur,
+                onblur: move |event| {
+                    press.leave();
+                    onblur(event);
+                },
             }
         })
     }

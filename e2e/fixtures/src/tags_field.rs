@@ -1,7 +1,7 @@
 //! `TagsField` for the combobox archetype, with `suggestions`: without them there is no listbox.
 
 use dioxus::prelude::*;
-use libero::components::{Flex, TagRejection, TagsField, Text};
+use libero::components::{Button, Flex, SelectionArgs, TagRejection, TagsField, Text};
 
 use crate::Routes;
 
@@ -14,7 +14,31 @@ pub const ROUTES: Routes = &[
     ("/tags-field/aria-label", || rsx! { TagsAriaLabelPage {} }),
     ("/tags-field/long", || rsx! { TagsLongPage {} }),
     ("/tags-field/clear", || rsx! { TagsClearPage {} }),
+    ("/tags-field/outside", || rsx! { TagsOutsidePage {} }),
 ];
+
+/// Todos 4311, 4324: tags drawn without a button, and a button that swaps the list from outside.
+#[component]
+fn TagsOutsidePage() -> Element {
+    let mut topics = use_signal(|| vec!["rust".to_string()]);
+
+    rsx! {
+        Flex { direction: "column", gap: "md", max_width: "320px",
+            TagsField {
+                id: "outside",
+                label: "Topics",
+                value: topics(),
+                onchange: move |next| topics.set(next),
+                tag: |args: SelectionArgs<String>| rsx! { span { "{args.value}" } },
+            }
+            Button {
+                id: "swap",
+                onclick: move |_| topics.set(vec!["a".to_string(), "b".to_string()]),
+                "Swap"
+            }
+        }
+    }
+}
 
 /// Todo 4304: a clearable field logging every change in `#changes` and every rejection in `#rejected`.
 #[component]

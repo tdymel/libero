@@ -12,8 +12,8 @@ use crate::{
         form::{
             CaretKeys, ChipFocus, ComboboxCore, ComboboxOption, DropdownPart, SelectionArgs,
             clear_button, field_control_sx, field_parts_enum, field_props, removable_chip,
-            row_label, use_bound, use_chip_announcer, use_chip_handles, use_field, use_field_frame,
-            use_prefill,
+            row_label, use_bound, use_chip_announcer, use_chip_handles, use_edited, use_field,
+            use_field_frame, use_prefill,
         },
         layout::{BoxStyle, use_box},
     },
@@ -147,7 +147,8 @@ pub fn TagsField(props: TagsFieldProps) -> Element {
     // The chips' x and the clear button belong to the field, not the bar.
     use_no_toolbar();
     let held = bound.value().unwrap_or_else(|| props.value.clone());
-    let announcer = use_chip_announcer(held.clone());
+    let edited = use_edited();
+    let announcer = use_chip_announcer(held.clone(), edited);
 
     if props.onchange.is_none() && !bound.is_bound() {
         warn("TagsField: without `onchange` the tags can never change.");
@@ -197,7 +198,13 @@ pub fn TagsField(props: TagsFieldProps) -> Element {
         .attributes(&props.attributes)
         .prepare();
 
-    let onchange = bound.emit(props.onchange);
+    // Every emit is the field's own edit, which the announcer then says.
+    let onchange = bound.emit(props.onchange).map(|emit| {
+        move |next: Vec<String>| {
+            edited.mark();
+            emit(next)
+        }
+    });
 
     // Every path that adds a tag merges here, so the rules cannot disagree.
     let merging = held.clone();
@@ -540,6 +547,7 @@ fn tags_field_chips<F: Fn(Vec<String>) + Clone + 'static>(
             next.remove(index);
             onchange(next);
         });
+        let label = value.clone();
         let chip = match &draw_tag {
             Some(tag) => tag.call(SelectionArgs {
                 value,
@@ -549,16 +557,20 @@ fn tags_field_chips<F: Fn(Vec<String>) + Clone + 'static>(
             }),
             None => removable_chip(value, remove, size, locked),
         };
-        (chip, remove)
+        (chip, remove, label)
     });
 
     rsx! {
-        for (index , (chip , remove)) in chips.enumerate() {
+        for (index , (chip , remove , label)) in chips.enumerate() {
             span {
                 key: "{index}",
                 "data-slot": TagsFieldPart::Tag.slot(),
                 "data-tag-index": "{index}",
                 id: focus.id(index),
+                // A named group the cursor can focus when a caller's `tag` has no button.
+                role: "group",
+                aria_label: "{label}",
+                tabindex: "-1",
                 // The default chip's guard, so a caller's `tag` has it too: a
                 // press on its x must not strand the focus on the body.
                 onmousedown: move |event: MouseEvent| event.prevent_default(),

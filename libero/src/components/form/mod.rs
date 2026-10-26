@@ -172,7 +172,9 @@ pub use radio_group::{RadioGroup, RadioGroupPart, RadioGroupProps};
 #[cfg(feature = "rating")]
 pub use rating::{Rating, RatingPart, RatingProps};
 #[cfg(feature = "chip")]
-pub(crate) use removable_chip::{removable_chip, use_chip_announcer, use_noting_chip_announcer};
+pub(crate) use removable_chip::{
+    Edited, removable_chip, use_chip_announcer, use_edited, use_noting_chip_announcer,
+};
 #[cfg(feature = "rich-text-editor")]
 pub use rich_text_editor::{
     RichTextEditor, RichTextEditorProps, RichTextView, RichTextViewProps, rich_text,

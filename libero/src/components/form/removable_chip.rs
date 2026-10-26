@@ -133,16 +133,64 @@ struct Announced {
     noted: u64,
 }
 
+impl Announced {
+    /// Takes a render's list; its change is said only after `own`, the note whenever it is new.
+    fn observe(
+        &mut self,
+        labels: Vec<String>,
+        own: bool,
+        note: Option<(u64, String)>,
+        words: &ChipsLabels,
+    ) {
+        let mut change = None;
+        if self.labels != labels {
+            if own {
+                change = chip_change(&self.labels, &labels, words);
+            }
+            self.labels = labels;
+        }
+        let note = note.filter(|(number, _)| *number != self.noted);
+        if let Some((number, _)) = &note {
+            self.noted = *number;
+        }
+        let message = match (change, note) {
+            (Some(change), Some((_, note))) => Some(format!("{change} {note}")),
+            (change, note) => change.or(note.map(|(_, note)| note)),
+        };
+        if let Some(message) = message {
+            self.message = Some(message);
+            self.count += 1;
+        }
+    }
+}
+
+/// Set by a field right before it emits its own edit; the next render's change is then
+/// announced. A list loaded, reset or replaced from outside stays silent.
+#[derive(Clone, Copy, PartialEq)]
+pub(crate) struct Edited(CopyValue<bool>);
+
+impl Edited {
+    pub(crate) fn mark(self) {
+        let mut edited = self.0;
+        edited.set(true);
+    }
+}
+
+pub(crate) fn use_edited() -> Edited {
+    Edited(use_hook(|| CopyValue::new(false)))
+}
+
 /// A polite live region saying which chips a list gained or lost, by diffing
 /// labels. Always mounted: a region inserted with its text is not announced.
-pub(crate) fn use_chip_announcer(labels: Vec<String>) -> Element {
-    use_noting_chip_announcer(labels, None)
+pub(crate) fn use_chip_announcer(labels: Vec<String>, edited: Edited) -> Element {
+    use_noting_chip_announcer(labels, None, edited)
 }
 
 /// The same, also saying `note` each time its number changes, after the chips' change.
 pub(crate) fn use_noting_chip_announcer(
     labels: Vec<String>,
     note: Option<(u64, String)>,
+    edited: Edited,
 ) -> Element {
     let words = &use_localization().chips;
     let announced = use_hook(|| {
@@ -153,24 +201,11 @@ pub(crate) fn use_noting_chip_announcer(
             noted: note.as_ref().map_or(0, |(number, _)| *number),
         }))
     });
+    // Consumed at the first render after it is set, a change or not.
+    let mut mark = edited.0;
+    let own = std::mem::take(&mut *mark.write());
     let mut announced = announced.borrow_mut();
-    let mut change = None;
-    if announced.labels != labels {
-        change = chip_change(&announced.labels, &labels, words);
-        announced.labels = labels;
-    }
-    let note = note.filter(|(number, _)| *number != announced.noted);
-    if let Some((number, _)) = &note {
-        announced.noted = *number;
-    }
-    let message = match (change, note) {
-        (Some(change), Some((_, note))) => Some(format!("{change} {note}")),
-        (change, note) => change.or(note.map(|(_, note)| note)),
-    };
-    if let Some(message) = message {
-        announced.message = Some(message);
-        announced.count += 1;
-    }
+    announced.observe(labels, own, note, words);
     let spoken = announced
         .message
         .clone()
@@ -211,11 +246,50 @@ fn chip_change(before: &[String], after: &[String], words: &ChipsLabels) -> Opti
 
 #[cfg(test)]
 mod tests {
-    use super::chip_change;
+    use super::{Announced, chip_change};
     use crate::localization::ChipsLabels;
 
     fn labels(values: &[&str]) -> Vec<String> {
         values.iter().map(|value| value.to_string()).collect()
+    }
+
+    fn announced(values: &[&str]) -> Announced {
+        Announced {
+            labels: labels(values),
+            message: None,
+            count: 0,
+            noted: 0,
+        }
+    }
+
+    fn render(announced: &mut Announced, values: &[&str], own: bool) {
+        announced.observe(labels(values), own, None, &ChipsLabels::ENGLISH);
+    }
+
+    #[test]
+    fn a_list_swapped_from_outside_is_silent() {
+        let mut announced = announced(&["a"]);
+        render(&mut announced, &["a", "b", "c"], false);
+        assert_eq!(announced.message, None);
+        assert_eq!(announced.labels, labels(&["a", "b", "c"]));
+    }
+
+    #[test]
+    fn the_fields_own_edit_is_said() {
+        let mut announced = announced(&["a"]);
+        render(&mut announced, &["a", "b"], true);
+        assert_eq!(announced.message.as_deref(), Some("Added b"));
+        render(&mut announced, &["a"], true);
+        assert_eq!(announced.message.as_deref(), Some("Removed b"));
+    }
+
+    #[test]
+    fn a_refused_edit_does_not_vouch_for_a_later_swap() {
+        let mut announced = announced(&["a"]);
+        render(&mut announced, &["a"], true);
+        render(&mut announced, &["x", "y"], false);
+        assert_eq!(announced.message, None);
+        assert_eq!(announced.count, 0);
     }
 
     #[test]
