@@ -8,6 +8,7 @@ pub(crate) mod model;
 mod node_view;
 mod offsets;
 mod render;
+mod report;
 mod surface;
 mod toolbar;
 mod view;

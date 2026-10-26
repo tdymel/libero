@@ -21,6 +21,7 @@ use super::model::{
 use super::node_view::NodeViews;
 use super::offsets::{to_dom, to_model};
 use super::render::{RenderCtx, blocks, content_sx};
+use super::report::Reporter;
 use super::surface::{Caret, ROOT_ATTR, Report, Surface};
 use super::toolbar::{RichTextTool, tools};
 use super::viewer::RichTextView;
@@ -84,7 +85,7 @@ impl UndoStack for HistoryHandle<EditorState> {
     }
 }
 
-type LiveEditor = Editor<HistoryHandle<EditorState>>;
+pub(super) type LiveEditor = Editor<HistoryHandle<EditorState>>;
 
 /// Typing pauses longer than this start a new undo step.
 const GROUP_MS: u64 = 500;
@@ -225,9 +226,20 @@ impl Echoes {
         self.0.clear();
     }
 
-    /// Whether `incoming` is neither the live doc nor one of ours: a reset.
-    fn foreign(&self, current: &Doc, incoming: &Doc) -> bool {
-        incoming != current && !self.0.contains(incoming)
+    /// Whether `incoming` is a reset. An echo settles itself and the ones before it, so
+    /// once the parent has caught up with the live doc, an older doc is a reset again.
+    fn foreign(&mut self, current: &Doc, incoming: &Doc) -> bool {
+        if incoming == current {
+            self.0.clear();
+            return false;
+        }
+        match self.0.iter().position(|doc| doc == incoming) {
+            Some(at) => {
+                self.0.drain(..=at);
+                false
+            }
+            None => true,
+        }
     }
 }
 
@@ -244,7 +256,7 @@ fn dom_position(editor: &LiveEditor, at: Position) -> (u64, usize) {
     (at.block.0, offset)
 }
 
-fn model_position(editor: &LiveEditor, key: u64, units: usize) -> Option<Position> {
+pub(super) fn model_position(editor: &LiveEditor, key: u64, units: usize) -> Option<Position> {
     let block = editor
         .doc()
         .get(NodeKey(key))
@@ -300,7 +312,7 @@ pub fn RichTextEditor(props: RichTextEditorProps) -> Element {
     // Bumped when the model moved the caret, so the DOM selection follows it.
     let mut placed = use_signal(|| (0u32, false));
     // Bumped after a composition, so the browser's own text nodes are rebuilt.
-    let mut generation = use_signal(|| 0u32);
+    let generation = use_signal(|| 0u32);
     let mut focused = use_signal(|| false);
     let mut composing = use_hook(|| CopyValue::new(false));
     // While the DOM has not caught up with a model caret, its reports are stale.
@@ -365,7 +377,7 @@ pub fn RichTextEditor(props: RichTextEditorProps) -> Element {
     // A foreign controlled value replaces the doc; a late echo of our own does not.
     use_effect(use_reactive!(|value| {
         if let Some(doc) = value
-            && echoes.peek().foreign(editor.peek().doc(), &doc)
+            && echoes.write().foreign(editor.peek().doc(), &doc)
         {
             echoes.write().clear();
             editor.write().reset(doc);
@@ -714,115 +726,34 @@ pub fn RichTextEditor(props: RichTextEditorProps) -> Element {
     };
 
     // The caret's place, kept always; redraws only while an overlay follows it.
-    let mut last_caret = use_hook(|| CopyValue::new(None::<Caret>));
-    let mut caret_tick = use_signal(|| 0u32);
+    let last_caret = use_hook(|| CopyValue::new(None::<Caret>));
+    let caret_tick = use_signal(|| 0u32);
     let mut wants_caret = use_hook(|| CopyValue::new(false));
     if *wants_caret.peek() != props.overlay.is_some() {
         wants_caret.set(props.overlay.is_some());
     }
     let surface = use_hook(|| {
-        Surface::start(token.clone(), move |report: Report| {
-            if report.caret.is_some() && *last_caret.peek() != report.caret {
-                last_caret.set(report.caret);
-                if *wants_caret.peek() {
-                    caret_tick += 1;
-                }
-            }
-            let mut clip = None;
-            if let Some((anchor_key, anchor, head_key, head)) = report.selection
-                && (report.press || !*syncing.peek())
-                && !*composing.peek()
-            {
-                let selection = {
-                    let live = editor.peek();
-                    model_position(&live, anchor_key, anchor)
-                        .zip(model_position(&live, head_key, head))
-                        .map(|(anchor, head)| Selection::range(anchor, head))
-                };
-                if let Some(selection) = selection {
-                    if selection != editor.peek().state().selection {
-                        editor.write().select(selection);
-                        revision += 1;
-                    }
-                    clip = clip_of(&editor.peek(), &registry.peek());
-                }
-            }
-            if let Some((from_key, from, to_key, to, text)) = report.replace
-                && *can_edit.peek()
-            {
-                let range = {
-                    let live = editor.peek();
-                    model_position(&live, from_key, from).zip(model_position(&live, to_key, to))
-                };
-                if let Some((from, to)) = range {
-                    let mut edit = edit;
-                    edit(
-                        &|live| {
-                            live.apply(Record::Step, |state| {
-                                state.select(Selection::range(from, to));
-                                state.delete_selection();
-                                state.insert_text(&text);
-                                true
-                            })
-                        },
-                        false,
-                    );
-                }
-            }
-            if let Some((input_type, data, key)) = report.input
-                && *can_edit.peek()
-            {
-                before_input(&input_type, data, &key);
-            }
-            if let Some((key, code, ctrl, meta, alt, shift)) = report.key
-                && *can_edit.peek()
-                && !*composing.peek()
-            {
-                key_down(KeyPress {
-                    key,
-                    code,
-                    ctrl,
-                    meta,
-                    alt,
-                    shift,
-                });
-            }
-            if report.synced {
-                syncing.set(false);
-            }
-            if let Some((key, text)) = report.text {
-                let sends = submit.peek().is_some_and(|(_, on)| on == SubmitOn::Enter)
-                    && *can_edit.peek()
-                    && !report.shift;
-                let soft = report.shift;
-                let entered = reconcile(editor, NodeKey(key), &text, sends, soft, &mut changed);
-                // Enter in a composed word arrives as its "\n": send after the word is in.
-                if entered && !try_submit(&KeyPress::new("Enter")) {
-                    reconcile(editor, NodeKey(key), &text, false, soft, &mut changed);
-                }
-                note_limit();
-                generation += 1;
-            }
-            if let Some((key, at_end)) = report.code
-                && *can_edit.peek()
-            {
-                enter_code(editor, NodeKey(key), at_end);
-                changed(None, true);
-            }
-            if (report.exit || report.end) && *can_edit.peek() {
-                let leave = if report.exit {
-                    EditorState::exit_code
-                } else {
-                    EditorState::exit_end
-                };
-                let before = editor.peek().doc().clone();
-                if editor.write().apply(Record::Step, leave) {
-                    focused.set(true);
-                    changed(Some(before), true);
-                }
-            }
-            clip
-        })
+        let mut reporter = Reporter {
+            editor,
+            registry,
+            last_caret,
+            wants_caret,
+            caret_tick,
+            revision,
+            syncing,
+            composing,
+            can_edit,
+            generation,
+            focused,
+            submit,
+            edit,
+            changed,
+            before_input,
+            key_down,
+            note_limit,
+            try_submit,
+        };
+        Surface::start(token.clone(), move |report: Report| reporter.handle(report))
     });
 
     use_effect(move || {
@@ -1324,7 +1255,7 @@ fn selected_markdown(live: &LiveEditor, registry: &NodeRegistry) -> Option<Strin
 
 /// What the script copies in a WebView, where Rust's clipboard data never reaches the event
 /// (todo 2106); `None` on the web, whose `oncopy` writes it.
-fn clip_of(live: &LiveEditor, registry: &Option<NodeRegistry>) -> Option<String> {
+pub(super) fn clip_of(live: &LiveEditor, registry: &Option<NodeRegistry>) -> Option<String> {
     if cfg!(target_arch = "wasm32") {
         return None;
     }
@@ -1332,7 +1263,7 @@ fn clip_of(live: &LiveEditor, registry: &Option<NodeRegistry>) -> Option<String>
 }
 
 /// Puts the caret at the start or end of code block `key`, which then renders as source.
-fn enter_code(mut editor: CopyValue<LiveEditor>, key: NodeKey, at_end: bool) {
+pub(super) fn enter_code(mut editor: CopyValue<LiveEditor>, key: NodeKey, at_end: bool) {
     let at = match editor.peek().doc().get(key) {
         Some(block) if at_end => block.len(),
         Some(_) => 0,
@@ -1357,7 +1288,7 @@ fn insert_composed(state: &mut EditorState, text: &str, soft: bool) -> bool {
 /// Takes the text the browser composed into leaf `key` into the model, cut to `max_length`.
 /// With `enter_sends`, a "\n" ending the composed text is Enter pressed in the word: it is
 /// left out and `true` says so. With `soft`, it is a line break instead.
-fn reconcile(
+pub(super) fn reconcile(
     mut editor: CopyValue<LiveEditor>,
     key: NodeKey,
     dom: &str,
@@ -1430,10 +1361,26 @@ mod tests {
     }
 
     #[test]
+    fn an_older_doc_after_the_parent_caught_up_is_a_reset() {
+        let editor = Editor::new(Doc::from_markdown("hi"));
+        let mut echoes = Echoes::default();
+        let sent = [Doc::from_markdown("x"), Doc::new(), editor.doc().clone()];
+        for doc in &sent {
+            echoes.record(doc.clone());
+        }
+        // The parent caught up with every doc, then clears by an earlier one.
+        for doc in &sent {
+            assert!(!echoes.foreign(editor.doc(), doc));
+        }
+        assert!(echoes.foreign(editor.doc(), &Doc::new()));
+        assert!(echoes.foreign(editor.doc(), &sent[0]));
+    }
+
+    #[test]
     fn a_reloaded_doc_is_no_reset_and_a_new_one_is() {
         let mut editor = Editor::new(Doc::new());
         editor.type_text("x");
-        let echoes = Echoes::default();
+        let mut echoes = Echoes::default();
         let json = serde_json::to_string(editor.doc()).unwrap();
         let reloaded: Doc = serde_json::from_str(&json).unwrap();
         assert!(!echoes.foreign(editor.doc(), &reloaded));
