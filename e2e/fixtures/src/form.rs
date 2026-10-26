@@ -18,6 +18,7 @@ pub const ROUTES: Routes = &[
     ("/form/summary", || rsx! { SummaryPage {} }),
     ("/form/targets", || rsx! { TargetsPage {} }),
     ("/form/required", || rsx! { RequiredPage {} }),
+    ("/form/fieldset-rule", || rsx! { FieldsetRulePage {} }),
     ("/form/fieldset-disabled", || rsx! { DisabledFieldsetPage {} }),
     ("/form/fieldset-submit", || rsx! { DisabledFieldsetSubmitPage {} }),
     ("/form/server", || rsx! { ServerStatusPage { at_once: false } }),
@@ -434,6 +435,35 @@ fn RequiredPage() -> Element {
                 },
                 "Fill"
             }
+        }
+    }
+}
+
+#[derive(Clone, PartialEq, Default, Fields)]
+struct Trip {
+    route: Leg,
+}
+
+#[derive(Clone, PartialEq, Default, Fields)]
+struct Leg {
+    start: String,
+    end: String,
+}
+
+/// Todo 4257: a rule over the whole group, failing from the start, with a field after the group.
+#[component]
+fn FieldsetRulePage() -> Element {
+    let trip = use_store(Trip::default);
+    rsx! {
+        Form { value: trip,
+            Fieldset::<Leg> {
+                label: "Trip",
+                path: Trip::FIELDS.route(),
+                validate: [(|leg: &Leg| leg.start != leg.end).error("Pick two places.")],
+                TextField { label: "Start", name: Leg::FIELDS.start() }
+                TextField { label: "End", name: Leg::FIELDS.end() }
+            }
+            TextField { label: "After" }
         }
     }
 }

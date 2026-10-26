@@ -106,7 +106,7 @@ pub fn FieldsetPage() -> Element {
                 prop("value", "Store<V>")
                     .doc("The group's own value, for a fieldset outside a `Form`. A fieldset with no `value`, `path` or rules needs `Fieldset::<()>` so Rust can infer its type."),
                 prop("validate", "Validators<V>")
-                    .doc("Rules over the group's value, one or an array. A rule with `.on(..)` shows on the fields it names. One without shows under the fields once any field in the group was touched."),
+                    .doc("Rules over the group's value, one or an array. A rule with `.on(..)` shows on the fields it names. One without shows under the fields once focus has left the group, or a submit was tried."),
                 prop("path", "FieldName<V>")
                     .doc("Where the group sits inside a `Form`'s value, such as `Order::FIELDS.address()`. The names of the fields inside and the paths in `validate` are relative to it. A field inside posts its full path, such as `address.zip`."),
                 prop("disabled", "bool")

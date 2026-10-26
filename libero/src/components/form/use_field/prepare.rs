@@ -302,7 +302,10 @@ fn summary_label(
 
 /// Whether a `focusout` inside `root` took focus out of it. The web reads `relatedTarget`; Blitz
 /// fires it after the move, so asks where focus is. A WebView cannot answer: any move counts.
-fn focus_left(event: &FocusEvent, root: Option<ElementHandle>) -> bool {
+pub(in crate::components::form) fn focus_left(
+    event: &FocusEvent,
+    root: Option<ElementHandle>,
+) -> bool {
     let Some(mounted) = root.and_then(|root| root.mounted()) else {
         return true;
     };

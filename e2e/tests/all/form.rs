@@ -1554,6 +1554,42 @@ fn a_disabled_or_readonly_field_does_not_block_the_submit() {
     });
 }
 
+/// Todo 4257: a group's own rule stays quiet while focus moves between its fields, and shows
+/// once focus leaves the group.
+#[test]
+fn a_fieldset_rule_shows_once_focus_leaves_the_group() {
+    const SHOWN: &str = "document.body.innerText.includes('Pick two places.')";
+    block_on(async {
+        let fixture = Fixture::open("/form/fieldset-rule", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+
+        keyboard::tab_to(page, "input[name='route.start']", 3)
+            .await
+            .unwrap();
+        keyboard::press(page, keyboard::TAB).await.unwrap();
+        focus::wait_for_focus(page, "input[name='route.end']", "the second field")
+            .await
+            .unwrap();
+        let early: bool = page
+            .evaluate_bounded(SHOWN)
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        assert!(!early, "the rule showed while focus was inside the group");
+
+        keyboard::press(page, keyboard::TAB).await.unwrap();
+        wait::for_js_true(page, SHOWN, "the rule after focus left the group")
+            .await
+            .unwrap();
+
+        fixture.console.assert_clean("a group's rule").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
 /// Todo 4209: a second blocked submit with the same count is announced again: the hidden
 /// summary's status changes in the DOM, so a screen reader hears it.
 #[test]

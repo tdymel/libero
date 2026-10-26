@@ -8,12 +8,12 @@ use crate::{
         form::{
             Binding, Caption, Disabled, FieldEntry, FieldName, FieldStatus, FormScope, FormValue,
             Required, Source, Validators, issues_of,
-            use_field::{caption_content, join_ids, slot_node, status_node},
+            use_field::{caption_content, focus_left, join_ids, slot_node, status_node},
             worst,
         },
         layout::use_box,
     },
-    hooks::{use_element, use_form_owner},
+    hooks::{use_element, use_form_owner, use_silent_focus_out_of},
     platform::lifts_legends,
     sx::{StaticSx, sx},
     theme::{FIELD_CAPTION_FONT_SIZE, FIELD_LABEL_FONT_SIZE, FIELDSET_GAP, FieldsetDefaults, Size},
@@ -229,22 +229,11 @@ pub fn Fieldset<V: FormValue>(props: FieldsetProps<V>) -> Element {
     // With no value there is nothing to judge: a rule run over `V::default()`
     // would report on a value nobody entered.
     let inert = !props.validate.is_empty() && !binding.is_bound();
-    // Its prefix is the form's, so `touched_under` sees every field of the form.
-    let pathless = shared
-        && !props.validate.is_empty()
-        && props.value.is_some()
-        && binding.prefix().is_empty();
     use_hook(|| {
         if inert {
             warn(
                 "Fieldset: `validate` without a `value` never runs. Give the fieldset a `value`, \
                  or put it in a `Form` with one and name its `path` with `FIELDS`.",
-            );
-        }
-        if pathless {
-            warn(
-                "Fieldset: `value` and `validate` without a `path` inside a `Form` or `Fieldset` \
-                 show the group's rules once any field of the form is touched. Give it a `path`.",
             );
         }
     });
@@ -267,8 +256,19 @@ pub fn Fieldset<V: FormValue>(props: FieldsetProps<V>) -> Element {
     };
     scope.raise(key, issues);
 
-    // No rules, no unnamed issue: skip the `touched` subscription.
-    let revealed = !props.validate.is_empty() && (scope.submitted() || scope.touched_under(prefix));
+    // The group's own rule waits for focus to leave the group, or a submit (4257). Counted per
+    // reset, like a field's touched flag; no rules, no unnamed issue, so no subscription.
+    let left_at = use_signal(|| None::<u32>);
+    let leave = move || {
+        let mut left_at = left_at;
+        let now = Some(scope.generation());
+        if *left_at.peek() != now {
+            left_at.set(now);
+        }
+    };
+    use_silent_focus_out_of(element, leave);
+    let revealed =
+        !props.validate.is_empty() && (scope.submitted() || left_at() == Some(scope.generation()));
     let unnamed = match revealed {
         true => scope.unnamed_issue(key),
         false => FieldStatus::Valid,
@@ -346,6 +346,11 @@ pub fn Fieldset<V: FormValue>(props: FieldsetProps<V>) -> Element {
         .states(&states)
         .prepare()
         .element(&element)
+        .event("onfocusout", move |event: FocusEvent| {
+            if focus_left(&event, Some(element)) {
+                leave();
+            }
+        })
         .attr("id", id.clone())
         .attr("aria-disabled", disabled.then_some("true"))
         .attr("aria-describedby", describedby)
@@ -405,27 +410,15 @@ mod tests {
         assert!(warnings.is_empty(), "{warnings:?}");
     }
 
-    /// Todo 2567: inside a form, a pathless group's prefix spans every field of it.
+    /// Todo 2567, 4257: a pathless group's rules no longer wait on every field of the form.
     #[test]
-    fn a_pathless_fieldset_with_rules_in_a_form_asks_for_a_path() {
-        let (_, pathless) = judged_and_warnings(|| {
+    fn a_pathless_fieldset_with_rules_in_a_form_warns_of_nothing() {
+        let (_, warnings) = judged_and_warnings(|| {
             use_context_provider(FormScope::new);
             let value = use_store(|| 7_u32);
             rsx! { LiberoProvider { Fieldset { label: "G", value, validate: rule.error("Never"), "" } } }
         });
-        assert_eq!(pathless.len(), 1, "{pathless:?}");
-        assert!(pathless[0].contains("`path`"), "{pathless:?}");
-
-        let (_, with_path) = judged_and_warnings(|| {
-            use_context_provider(FormScope::new);
-            let value = use_store(|| 7_u32);
-            rsx! {
-                LiberoProvider {
-                    Fieldset { label: "G", path: "g", value, validate: rule.error("Never"), "" }
-                }
-            }
-        });
-        assert!(with_path.is_empty(), "{with_path:?}");
+        assert!(warnings.is_empty(), "{warnings:?}");
     }
 
     /// Counts the `render` spans dioxus opens for a `Fieldset` scope.
@@ -544,9 +537,10 @@ mod tests {
         );
     }
 
-    /// Todo 2570: with no rules there is no unnamed issue to reveal.
+    /// Todo 2570, 4257: a touch elsewhere re-renders no fieldset, ruled or not; only focus
+    /// leaving the group reveals its rule.
     #[test]
-    fn a_fieldset_without_rules_ignores_a_touch() {
+    fn a_touch_elsewhere_re_renders_no_fieldset() {
         let plain = renders_after_a_touch(|| {
             use_context_provider(FormScope::new);
             rsx! { LiberoProvider { Fieldset::<()> { label: "G", "" } } }
@@ -557,6 +551,6 @@ mod tests {
             let value = use_store(|| 7_u32);
             rsx! { LiberoProvider { Fieldset { label: "G", value, validate: rule.error("Never"), "" } } }
         });
-        assert_eq!(ruled, 1, "the control case should re-render on the touch");
+        assert_eq!(ruled, 0);
     }
 }

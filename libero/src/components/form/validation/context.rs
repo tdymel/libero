@@ -355,6 +355,7 @@ impl FormScope {
     }
 
     /// Whether any field at or under `prefix` is touched. Reactive.
+    #[cfg(test)]
     pub fn touched_under(&self, prefix: &str) -> bool {
         self.touched.read().iter().any(|name| {
             prefix.is_empty() || name == prefix || name.starts_with(&format!("{prefix}."))
