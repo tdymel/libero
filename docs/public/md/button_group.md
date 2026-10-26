@@ -13,12 +13,13 @@ ends swap under right-to-left text.
 
 ## Usage
 
-`UnderlineIcon` stands for any component of yours that renders an `svg`. Drop
-`multiple: true` for a group where pressing one button releases the other.
+Pressing one button releases the other; `multiple: true` lets several stay
+pressed.
 
 ```rust
 use dioxus::prelude::*;
-use libero::components::{ActionIcon, Button, ButtonGroup};
+use libero::components::{ActionIcon, Button, ButtonGroup, Pictogram};
+use pictogram_icons_lucide as lucide;
 use std::collections::HashSet;
 
 #[component]
@@ -28,16 +29,17 @@ fn Demo() -> Element {
         ButtonGroup {
             "aria-label": "Text style",
             value: selected(),
-            multiple: true,
             onchange: move |next| selected.set(next),
             Button { value: "bold", "Bold" }
             Button { value: "italic", "Italic" }
-            ActionIcon { value: "underline", aria_label: "Underline", UnderlineIcon {} }
+            ActionIcon {
+                value: "underline",
+                aria_label: "Underline",
+                Pictogram { icon: lucide::underline::outlined }
+            }
         }
     }
 }
-#
-# #[component] fn UnderlineIcon() -> Element { rsx! {} }
 ```
 
 ## Props

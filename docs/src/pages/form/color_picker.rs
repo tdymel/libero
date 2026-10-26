@@ -160,6 +160,7 @@ pub fn ColorPickerPage() -> Element {
                     "Each thumb is a slider with the usual keys.",
                     "The saturation panel meets the 24px target size of WCAG 2.5.8 at every size.",
                     "The swatch equal to the value is pressed and checked.",
+                    "The preset row is a group named \"Color swatches\" (localized, `ColorLabels::swatches`), unless you name the picker.",
                 ])
                 .must([
                     "Name swatches with `Swatches::labelled`. By default they are named by their hex, which a screen reader spells out.",

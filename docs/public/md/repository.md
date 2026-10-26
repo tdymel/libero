@@ -17,13 +17,15 @@ by default.
 
 ```rust
 use dioxus::prelude::*;
-use libero::components::{Repository, RepoHost};
+use libero::components::Repository;
 
 #[component]
 fn Demo() -> Element {
     rsx! {
-        Repository { repo: "tdymel/libero" }
-        Repository { repo: "gitlab-org/gitlab", host: RepoHost::GitLab }
+        Repository {
+            repo: "tdymel/libero",
+            new_tab_icon: true,
+        }
     }
 }
 ```

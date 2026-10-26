@@ -94,7 +94,7 @@ fn percent(values: &DemoValues) -> bool {
 #[component]
 pub fn NumberFieldPage() -> Element {
     let theme = use_theme();
-    let mut quantity = use_signal(|| Some(4i32));
+    let mut quantity = use_signal(|| Some(1i32));
     let mut weight = use_signal(|| Some(1.5f64));
     let mut price = use_signal(|| Some(Cents(1234)));
     let mut total = use_signal(|| Some(1_250.5f64));
@@ -244,7 +244,7 @@ pub fn NumberFieldPage() -> Element {
                     "."
                 }
             },
-            // snippet: let mut quantity = use_signal(|| Some(4i32));
+            // snippet: let mut quantity = use_signal(|| Some(1i32));
             // snippet: let mut weight = use_signal(|| Some(1.5f64));
             // snippet: let mut total = use_signal(|| Some(1_250.5f64));
             // snippet: let mut share = use_signal(|| Some(12.5f64));
@@ -336,8 +336,9 @@ pub fn NumberFieldPage() -> Element {
                             _ => vec![],
                         }),
                     Control::switch("group_digits"),
-                    // A percent has its own bounds.
-                    Control::switch("range").hidden_when(percent).code(|_, values| {
+                    // A percent has its own bounds. On, with the quantity at its minimum,
+                    // so the disabled decrement shows without another switch.
+                    Control::switch("range").default("true").hidden_when(percent).code(|_, values| {
                         match (values.str("range").as_str(), values.str("type").as_str()) {
                             ("true", "f64") if values.str("affix") == "currency" => {
                                 vec!["min: 0.0".to_string(), "max: 10_000.0".to_string()]

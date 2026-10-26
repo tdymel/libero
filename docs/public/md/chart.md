@@ -47,7 +47,7 @@ fn Demo() -> Element {
 
 | Prop | Type | Default | Description |
 |---|---|---|---|
-| `x` | `XValues` | required | The x axis, one value per point: labels, one evenly spaced slot each, or numbers, each point at its value. |
+| `x` | `XValues` | required | The x axis, one value per point: labels, one evenly spaced slot each, or numbers, each point at its value, the axis ticking at round values written with `value_format`. `XValues::from_rows(&rows, |row| ..)` reads a list of records. |
 | `series` | `Vec<Series>` | required | The lines, each with one value per x value. `None`, `NaN` and infinity are gaps. `.color(..)` (a theme color or hex) sets a colour, else the palette by place; `.unit(..)` gives its own unit in the tooltip and summary, while a unit every series shares labels the y axis; `.symbol(PointSymbol::Square)` draws points as that shape, a cue beside colour; `.errors([(low, high), ..])` draws a see-through band, which a stacked chart reads in the tooltip alone; `.mark_line(MarkLine::average())` draws a dashed line labelled on the chart, also `min()`, `max()`, `value(150.0)` and `.label(..)`; `.mark_point(MarkPoint::Max)` pins the highest value, `Min` the lowest; `.secondary_axis()` measures a line on its own scale at the right. |
 | `title` | `Option<String>` | | Shown above the chart, and its accessible name. |
 | `description` | `Option<String>` | | A sentence under the title: what to read from the chart. |
@@ -63,7 +63,7 @@ fn Demo() -> Element {
 | `y2_title` | `Option<String>` | | Beside the right y axis, read downward: what its `Series::secondary_axis()` series measure. |
 | `legend` | `LegendPosition` | bottom with two series or more | `bottom`, `top`, `start`, `end` or `none`. On a chart under 300 px wide, `start` goes above the plot and `end` below it. |
 | `grid` | `Option<bool>` | `true` | Horizontal guide lines. |
-| `value_format` | `ValueFormat` | `Auto` | How values are written on the axis, in the tooltip and in the summary. |
+| `value_format` | `ValueFormat` | `Auto` | How values are written on the axis, in the tooltip and in the summary. Thousands group as the `Formats` say, as `12,500` or `12.500`. |
 | `unit` | `Option<String>` | | After every value, as `"kg"`. |
 | `aspect_ratio` | `Option<f32>` | `16 / 9` | Width over height of the plot. |
 | `loading` | `bool` | `false` | A placeholder instead of the plot, and `aria-busy` on the chart. |
@@ -77,7 +77,7 @@ fn Demo() -> Element {
 | `onhiddenchange` | `Option<EventHandler<Vec<String>>>` | | The hidden lines a legend button asks for. The last shown line stays. |
 | `zoom` | `Option<bool>` | `false` | Zoom and pan the x axis: Ctrl or Cmd with the wheel, a pinch, a drag (Shift or Alt with it once `onrange` is set), the keys. Reset it from code with the `handle`. |
 | `onrange` | `Option<EventHandler<Option<ChartRange>>>` | | Set, a drag or Shift with an arrow brushes a band of x values; Shift or Alt with a drag pans instead. `None` when Escape clears it. |
-| `handle` | `Option<ChartHandle>` | | From `use_chart()`: reads the drawing as SVG or PNG, saves it, resets the zoom and says whether it is zoomed. |
+| `handle` | `Option<ChartHandle>` | | From `use_chart()`: reads the drawing as SVG or PNG, saves it (through `save_file`: a download on the web, the share sheet on Android), resets the zoom and says whether it is zoomed. `is_zoomed()` re-runs the component that reads it. |
 
 ### `BarChart`
 
@@ -102,7 +102,7 @@ fn Demo() -> Element {
 | `bar_gap` | `Option<f32>` | `3` | Between two bars of a group, in pixels. |
 | `legend` | `LegendPosition` | bottom with two series or more | `bottom`, `top`, `start`, `end` or `none`. On a chart under 300 px wide, `start` goes above the plot and `end` below it. |
 | `grid` | `Option<bool>` | `true` | Guide lines across the values. |
-| `value_format` | `ValueFormat` | `Auto` | How values are written on the axis, the bars, in the tooltip and in the summary. On `percent` the axis and the bars write shares in percent. |
+| `value_format` | `ValueFormat` | `Auto` | How values are written on the axis, the bars, in the tooltip and in the summary. On `percent` the axis and the bars write shares in percent. Thousands group as the `Formats` say, as `12,500` or `12.500`. |
 | `unit` | `Option<String>` | | After every value, as `"kg"`. |
 | `aspect_ratio` | `Option<f32>` | `16 / 9` | Width over height of the plot. |
 | `loading` | `bool` | `false` | A placeholder instead of the plot, and `aria-busy` on the chart. |
@@ -116,7 +116,7 @@ fn Demo() -> Element {
 | `onhiddenchange` | `Option<EventHandler<Vec<String>>>` | | The hidden series a legend button asks for. The last shown series stays. |
 | `zoom` | `Option<bool>` | `false` | Zoom and pan along the categories: Ctrl or Cmd with the wheel, a pinch, a drag (Shift or Alt with it once `onrange` is set), the keys. Reset it from code with the `handle`. |
 | `onrange` | `Option<EventHandler<Option<ChartRange>>>` | | Set, a drag or Shift with an arrow brushes a band of categories; Shift or Alt with a drag pans instead. `None` when Escape clears it. |
-| `handle` | `Option<ChartHandle>` | | From `use_chart()`: reads the drawing as SVG or PNG, saves it, resets the zoom and says whether it is zoomed. |
+| `handle` | `Option<ChartHandle>` | | From `use_chart()`: reads the drawing as SVG or PNG, saves it (through `save_file`: a download on the web, the share sheet on Android), resets the zoom and says whether it is zoomed. `is_zoomed()` re-runs the component that reads it. |
 
 ### `FunnelChart`
 
@@ -127,7 +127,7 @@ fn Demo() -> Element {
 | `description` | `Option<String>` | | A sentence under the title: what to read from the chart. |
 | `labels` | `PieLabels` | `percent` | On each stage: `percent`, its share of the first stage, `value`, `name` or `none`, in the ink that reads there. A label wider than its stage is left out; the tooltip and the summary keep it. |
 | `legend` | `LegendPosition` | bottom with two stages or more | `bottom`, `top`, `start`, `end` or `none`. On a chart under 300 px wide, `start` goes above the plot and `end` below it. |
-| `value_format` | `ValueFormat` | `Auto` | How values are written on the stages, in the tooltip and in the summary. |
+| `value_format` | `ValueFormat` | `Auto` | How values are written on the stages, in the tooltip and in the summary. Thousands group as the `Formats` say, as `12,500` or `12.500`. |
 | `unit` | `Option<String>` | | After every value, as `"kg"`. |
 | `grid` | `Option<bool>` | | Shared with the other charts; a funnel has no grid to draw. |
 | `aspect_ratio` | `Option<f32>` | `4 / 3` | Width over height of the plot. Unset, the theme's `pie_aspect_ratio`. |
@@ -140,7 +140,7 @@ fn Demo() -> Element {
 | `hidden` | `Option<Vec<String>>` | | The names of the stages the legend hides; set, they are controlled. |
 | `default_hidden` | `Vec<String>` | `[]` | Seeds the hidden stages once. Ignored when `hidden` is set. |
 | `onhiddenchange` | `Option<EventHandler<Vec<String>>>` | | The hidden stages a legend button asks for. The last shown stage stays. |
-| `handle` | `Option<ChartHandle>` | | From `use_chart()`: reads the drawing as SVG or PNG, saves it. |
+| `handle` | `Option<ChartHandle>` | | From `use_chart()`: reads the drawing as SVG or PNG, saves it (through `save_file`: a download on the web, the share sheet on Android). |
 
 ### `HeatmapChart`
 
@@ -157,7 +157,7 @@ fn Demo() -> Element {
 | `title` | `Option<String>` | | Shown above the chart, and its accessible name. |
 | `description` | `Option<String>` | | A sentence under the title: what to read from the chart. |
 | `legend` | `LegendPosition` | bottom | The colour scale, under the plot; `none` leaves it out. |
-| `value_format` | `ValueFormat` | `Auto` | How values are written in the cells, on the scale, in the tooltip and in the summary. |
+| `value_format` | `ValueFormat` | `Auto` | How values are written in the cells, on the scale, in the tooltip and in the summary. Thousands group as the `Formats` say, as `12,500` or `12.500`. |
 | `unit` | `Option<String>` | | After every value, as `"°C"`. |
 | `grid` | `Option<bool>` | | Shared with the other charts; a heatmap has no grid to draw. |
 | `hidden` | `Option<Vec<String>>` | | Shared with the other charts; a heatmap hides no rows. |
@@ -170,7 +170,7 @@ fn Demo() -> Element {
 | `tooltip_content` | `Option<Callback<ChartPoint, Element>>` | | The tooltip's content instead of the cell's column, row and value. |
 | `onpointclick` | `Option<EventHandler<ChartPoint>>` | | A click on a cell, a second tap on a pinned one, or Enter on the keys' cell. `series` and `series_name` are its row, `index` and `x` its column. |
 | `onactivechange` | `Option<EventHandler<Option<ChartPoint>>>` | | The cell under the pointer or the keys; `None` when it leaves. |
-| `handle` | `Option<ChartHandle>` | | From `use_chart()`: reads the drawing as SVG or PNG, saves it. |
+| `handle` | `Option<ChartHandle>` | | From `use_chart()`: reads the drawing as SVG or PNG, saves it (through `save_file`: a download on the web, the share sheet on Android). |
 
 ### `CandlestickChart`
 
@@ -193,7 +193,7 @@ fn Demo() -> Element {
 | `onrange` | `Option<EventHandler<Option<ChartRange>>>` | | Set, a drag or Shift with an arrow brushes a band of periods; Shift or Alt with a drag pans instead. `None` when Escape clears it. |
 | `legend` | `LegendPosition` | bottom | The Up and Down key, under the plot; `none` leaves it out. |
 | `grid` | `Option<bool>` | `true` | Horizontal guide lines. |
-| `value_format` | `ValueFormat` | `Auto` | How prices are written on the axis, in the tooltip and in the summary. |
+| `value_format` | `ValueFormat` | `Auto` | How prices are written on the axis, in the tooltip and in the summary. Thousands group as the `Formats` say, as `12,500` or `12.500`. |
 | `unit` | `Option<String>` | | After every price, as `"€"`. |
 | `hidden` | `Option<Vec<String>>` | | Shared with the other charts; a candlestick chart hides nothing. |
 | `default_hidden` | `Vec<String>` | `[]` | Shared with the other charts; a candlestick chart hides nothing. |
@@ -205,13 +205,13 @@ fn Demo() -> Element {
 | `tooltip_content` | `Option<Callback<ChartPoint, Element>>` | | The tooltip's content instead of the period and its prices. |
 | `onpointclick` | `Option<EventHandler<ChartPoint>>` | | A click on a candle, a second tap on a pinned one, or Enter on the keys' candle. `index` is its place in `candles`, `value` its close. |
 | `onactivechange` | `Option<EventHandler<Option<ChartPoint>>>` | | The candle under the pointer or the keys; `None` when it leaves. |
-| `handle` | `Option<ChartHandle>` | | From `use_chart()`: reads the drawing as SVG or PNG, saves it, resets the zoom and says whether it is zoomed. |
+| `handle` | `Option<ChartHandle>` | | From `use_chart()`: reads the drawing as SVG or PNG, saves it (through `save_file`: a download on the web, the share sheet on Android), resets the zoom and says whether it is zoomed. `is_zoomed()` re-runs the component that reads it. |
 
 ### `PieChart`
 
 | Prop | Type | Default | Description |
 |---|---|---|---|
-| `slices` | `Vec<Slice>` | required | The slices, each a share of their sum. A negative value takes no share. |
+| `slices` | `Vec<Slice>` | required | The slices, each a share of their sum. A negative value takes no share. `Slice::from(("Chrome", 62.0))` builds one from a pair and `.color("success")` sets its colour, else the palette by place. |
 | `title` | `Option<String>` | | Shown above the chart, and its accessible name. |
 | `description` | `Option<String>` | | A sentence under the title: what to read from the chart. |
 | `donut` | `bool` | `false` | A ring instead of a full pie, `center` in its middle. |
@@ -225,7 +225,7 @@ fn Demo() -> Element {
 | `slice_gap` | `Option<f32>` | `1` | Between two slices, in pixels, in the page's colour. |
 | `slice_radius` | `Size` | `none` | Corner radius of a slice, on the theme's radius scale; a thin slice or a thin ring takes less. Unset, square. |
 | `legend` | `LegendPosition` | bottom with two slices or more | `bottom`, `top`, `start`, `end` or `none`. On a chart under 300 px wide, `start` goes above the plot and `end` below it. |
-| `value_format` | `ValueFormat` | `Auto` | How values are written beside the slices, in the tooltip and in the summary. |
+| `value_format` | `ValueFormat` | `Auto` | How values are written beside the slices, in the tooltip and in the summary. Thousands group as the `Formats` say, as `12,500` or `12.500`. |
 | `unit` | `Option<String>` | | After every value, as `"kg"`. |
 | `grid` | `Option<bool>` | | Shared with the other charts; a pie has no grid to draw. |
 | `aspect_ratio` | `Option<f32>` | `4 / 3` | Width over height of the plot. Unset, the theme's `pie_aspect_ratio`, squarer than the other charts' `aspect_ratio`. |
@@ -238,13 +238,13 @@ fn Demo() -> Element {
 | `hidden` | `Option<Vec<String>>` | | The names of the slices the legend hides; set, they are controlled. |
 | `default_hidden` | `Vec<String>` | `[]` | Seeds the hidden slices once. Ignored when `hidden` is set. |
 | `onhiddenchange` | `Option<EventHandler<Vec<String>>>` | | The hidden slices a legend button asks for. The last shown slice stays. |
-| `handle` | `Option<ChartHandle>` | | From `use_chart()`: reads the drawing as SVG or PNG, saves it. |
+| `handle` | `Option<ChartHandle>` | | From `use_chart()`: reads the drawing as SVG or PNG, saves it (through `save_file`: a download on the web, the share sheet on Android). |
 
 ### `ScatterChart`
 
 | Prop | Type | Default | Description |
 |---|---|---|---|
-| `series` | `Vec<ScatterSeries>` | required | The groups of points, each an x and a y, `ScatterSeries::new("Online", [(12.0, 34.0)])`. A third value, a size, makes the series bubbles, their area by it. A point with an x or y that is not a number is left out. |
+| `series` | `Vec<ScatterSeries>` | required | The groups of points, each an x and a y, `ScatterSeries::new("Online", [(12.0, 34.0)])`. A third value, a size, makes the series bubbles, their area by it. A point with an x or y that is not a number is left out. `ScatterSeries::from_rows("Sales", &rows, |row| (row.price, row.sold))` builds one from your rows. |
 | `title` | `Option<String>` | | Shown above the chart, and its accessible name. |
 | `description` | `Option<String>` | | A sentence under the title: what to read from the chart. |
 | `trend` | `Option<Trend>` | | A curve fitted through each series' points, in its colour: `Linear`, `Exponential` over the points above y 0, `Logarithmic` over those right of x 0, or `Polynomial(n)`, its order held to 2 to 6. |
@@ -257,7 +257,7 @@ fn Demo() -> Element {
 | `y_title` | `Option<String>` | | Beside the y axis, read upward: what it measures. |
 | `legend` | `LegendPosition` | bottom with two series or more | `bottom`, `top`, `start`, `end` or `none`. Each key is its series' point shape. |
 | `grid` | `Option<bool>` | `true` | Horizontal guide lines. |
-| `value_format` | `ValueFormat` | `Auto` | How values are written on the axes, in the tooltip and in the summary. |
+| `value_format` | `ValueFormat` | `Auto` | How values are written on the axes, in the tooltip and in the summary. The axes tick at round values. Thousands group as the `Formats` say, as `12,500` or `12.500`. |
 | `unit` | `Option<String>` | | After every y value, as `"kg"`; a series' own `unit` wins. |
 | `aspect_ratio` | `Option<f32>` | `16 / 9` | Width over height of the plot. |
 | `loading` | `bool` | `false` | A placeholder instead of the plot, and `aria-busy` on the chart. |
@@ -269,7 +269,7 @@ fn Demo() -> Element {
 | `hidden` | `Option<Vec<String>>` | | The names of the series the legend hides; set, they are controlled. |
 | `default_hidden` | `Vec<String>` | `[]` | Seeds the hidden series once. Ignored when `hidden` is set. |
 | `onhiddenchange` | `Option<EventHandler<Vec<String>>>` | | The hidden series a legend button asks for. The last shown series stays. |
-| `handle` | `Option<ChartHandle>` | | From `use_chart()`: reads the drawing as SVG or PNG, saves it. |
+| `handle` | `Option<ChartHandle>` | | From `use_chart()`: reads the drawing as SVG or PNG, saves it (through `save_file`: a download on the web, the share sheet on Android). |
 
 ### `RadarChart`
 
@@ -283,7 +283,7 @@ fn Demo() -> Element {
 | `rings` | `Option<usize>` | `5` | The web's rings, its steps from the centre to the rim. |
 | `legend` | `LegendPosition` | bottom with two series or more | `bottom`, `top`, `start`, `end` or `none`. Each key is its series' point shape. |
 | `grid` | `Option<bool>` | `true` | The web: its rings and spokes. |
-| `value_format` | `ValueFormat` | `Auto` | How values are written in the tooltip and in the summary. |
+| `value_format` | `ValueFormat` | `Auto` | How values are written in the tooltip and in the summary. Thousands group as the `Formats` say, as `12,500` or `12.500`. |
 | `unit` | `Option<String>` | | After every value, as `"pts"`; a series' own `unit` wins. |
 | `aspect_ratio` | `Option<f32>` | `4 / 3` | Width over height of the plot. Unset, the theme's `pie_aspect_ratio`. |
 | `loading` | `bool` | `false` | A placeholder instead of the plot, and `aria-busy` on the chart. |
@@ -295,7 +295,7 @@ fn Demo() -> Element {
 | `hidden` | `Option<Vec<String>>` | | The names of the series the legend hides; set, they are controlled. |
 | `default_hidden` | `Vec<String>` | `[]` | Seeds the hidden series once. Ignored when `hidden` is set. |
 | `onhiddenchange` | `Option<EventHandler<Vec<String>>>` | | The hidden series a legend button asks for. The last shown series stays. |
-| `handle` | `Option<ChartHandle>` | | From `use_chart()`: reads the drawing as SVG or PNG, saves it. |
+| `handle` | `Option<ChartHandle>` | | From `use_chart()`: reads the drawing as SVG or PNG, saves it (through `save_file`: a download on the web, the share sheet on Android). |
 
 Like every component, each chart also takes the shared props `sx`, `class`,
 `style`, `states`, `parts` (`ChartPart`), and any extra HTML attributes.

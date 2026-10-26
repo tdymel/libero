@@ -16,12 +16,12 @@ icon shows where the next press goes: a sun for light, a moon for dark.
 
 ```rust
 use dioxus::prelude::*;
-use libero::{components::ThemeSwitcher, theme::ThemeSet};
+use libero::components::ThemeSwitcher;
 
 #[component]
 fn Demo() -> Element {
     rsx! {
-        ThemeSwitcher { themes: ThemeSet::CATALOGUE }
+        ThemeSwitcher {}
     }
 }
 ```

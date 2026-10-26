@@ -16,18 +16,22 @@ the bubble, not the trigger.
 
 ```rust
 use dioxus::prelude::*;
-use libero::components::{Button, Tooltip};
+use libero::{
+    components::{Box, Button, Tooltip},
+    sx::sx,
+};
 
 #[component]
 fn Demo() -> Element {
     rsx! {
-        Tooltip {
-            label: rsx! { "Saves the current draft" },
-            label_id: "draft-tip",
-            side: "top",
-            size: "lg",
-            gap: "xs",
-            Button { variant: "outlined", aria_describedby: "draft-tip", "Save" }
+        Box {
+            sx: sx().padding("40px"),
+            Tooltip {
+                label: rsx! { "Saves the current draft" },
+                label_id: "draft-tip",
+                arrow: true,
+                Button { variant: "outlined", aria_describedby: "draft-tip", "Save" }
+            }
         }
     }
 }

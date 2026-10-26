@@ -17,23 +17,20 @@ out under each control, so set `fade_color` to the surface the strip sits on.
 ```rust
 use dioxus::prelude::*;
 use libero::{
-    components::{Button, Chip, Flex, Scroller, ScrollerEdges, Text, use_scroller},
+    components::{Chip, Flex, Scroller, ScrollerEdges, Text},
     sx::sx,
 };
 
-const TAGS: [&str; 6] = ["Rust", "Dioxus", "WebAssembly", "Accessibility", "Layout", "Theming"];
+const TAGS: [&str; 2] = ["rust", "dioxus"];
 
 #[component]
 fn Demo() -> Element {
     let mut edges = use_signal(|| None::<ScrollerEdges>);
-    let strip = use_scroller();
 
     rsx! {
         Flex { direction: "column", gap: "sm", sx: sx().width("100%"),
             Scroller {
                 aria_label: "Tags",
-                controls: "never",
-                handle: strip,
                 onedgechange: move |next| edges.set(Some(next)),
                 Flex { direction: "row", gap: "sm", wrap: "nowrap",
                     for tag in TAGS {
@@ -41,13 +38,8 @@ fn Demo() -> Element {
                     }
                 }
             }
-            Flex { direction: "row", gap: "sm",
-                Button { variant: "outlined", onclick: move |_| strip.step_back(), "Scroll tags back" }
-                Button { variant: "outlined", onclick: move |_| strip.step_forward(), "Scroll tags forward" }
-            }
             Text { size: "sm", role: "status",
                 match edges() {
-                    // Only after a resize: a strip that fits from the start reports nothing.
                     Some(ScrollerEdges { at_start: true, at_end: true }) => "Everything fits",
                     Some(ScrollerEdges { at_end: false, .. }) => "More after this",
                     Some(_) => "End of the list",

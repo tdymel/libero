@@ -36,6 +36,7 @@ fn Demo() -> Element {
                     Anchor { to: "https://en.wikipedia.org/wiki/Ada_Lovelace", target: "_blank", "Read more" }
                 }
             },
+            arrow: true,
             Button { variant: "outlined", "Ada Lovelace" }
         }
     }

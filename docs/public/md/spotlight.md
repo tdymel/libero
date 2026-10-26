@@ -20,32 +20,52 @@ Sortable.
 ```rust
 use dioxus::prelude::*;
 use libero::components::{
-    Button, Flex, SpotlightAction, SpotlightOptions, Text, spotlight_filter, use_spotlight,
+    Button, Kbd, SpotlightAction, SpotlightOptions, Text, spotlight_filter, use_spotlight,
 };
 
-fn actions(mut last: Signal<String>) -> Vec<SpotlightAction> {
+fn commands(mut last: Signal<String>) -> Vec<SpotlightAction> {
     let run = move |name: &'static str| move |_| last.set(name.to_string());
     vec![
-        SpotlightAction::new("Home").group("Pages").description("The start page").onclick(run("Home")),
-        SpotlightAction::new("Changelog").group("Pages").keywords(["releases"]).onclick(run("Changelog")),
-        SpotlightAction::new("New file").group("Commands").shortcut("Ctrl N").onclick(run("New file")),
+        SpotlightAction::new("Home")
+            .group("Pages")
+            .description("The start page")
+            .onclick(run("Home")),
+        SpotlightAction::new("Components")
+            .group("Pages")
+            .onclick(run("Components")),
+        SpotlightAction::new("Changelog")
+            .group("Pages")
+            .keywords(["releases", "news"])
+            .onclick(run("Changelog")),
+        SpotlightAction::new("New file")
+            .group("Commands")
+            .shortcut("Ctrl N")
+            .onclick(run("New file")),
+        SpotlightAction::new("Toggle sidebar")
+            .group("Commands")
+            .shortcut("Ctrl B")
+            .onclick(run("Toggle sidebar")),
+        SpotlightAction::new("Sign out")
+            .group("Account")
+            .onclick(run("Sign out")),
     ]
 }
 
 #[component]
 fn Demo() -> Element {
     let last = use_signal(|| String::from("nothing yet"));
-    let all = use_hook(|| actions(last));
-    let spotlight = use_spotlight(SpotlightOptions {
+    let all = use_hook(|| commands(last));
+    let commands = use_spotlight(SpotlightOptions {
         actions: Some(Callback::new(move |query: String| spotlight_filter(&query, &all))),
+        aria_label: Some("Commands".into()),
+        shortcut: Some('j'),
         ..Default::default()
     });
 
     rsx! {
-        Flex { direction: "row", gap: "md",
-            Button { variant: "outlined", onclick: move |_| spotlight.open(), "Open the palette" }
-            Text { size: "sm", role: "status", "Last run: {last()}" }
-        }
+        Button { variant: "outlined", onclick: move |_| commands.open(), "Show" }
+        Text { size: "sm", Kbd { "Ctrl" } " + " Kbd { "J" } " toggles it" }
+        Text { size: "sm", role: "status", "Last run: {last()}" }
     }
 }
 ```

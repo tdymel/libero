@@ -24,6 +24,7 @@ fn Demo() -> Element {
             to: "https://dioxuslabs.com",
             target: "_blank",
             new_tab_icon: true,
+            underline: "not-hover",
             "Read the Dioxus docs"
         }
     }

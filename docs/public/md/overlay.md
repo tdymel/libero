@@ -16,12 +16,18 @@ keeps it inside a box, and `LoadingOverlay` shows one box loading.
 
 ```rust
 use dioxus::prelude::*;
-use libero::components::Overlay;
+use libero::{
+    components::{Overlay, Paper},
+    sx::sx,
+};
 
 #[component]
 fn Demo() -> Element {
     rsx! {
-        Overlay { opacity: "0.6", "Loading..." }
+        Overlay {
+            contained: true,
+            Paper { role: "status", sx: sx().padding("8px 16px"), "Loading..." }
+        }
     }
 }
 ```

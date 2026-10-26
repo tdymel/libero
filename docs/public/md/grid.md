@@ -18,36 +18,25 @@ and the vertical gaps go away.
 
 ```rust
 use dioxus::prelude::*;
-use libero::{components::{Box, GridItem, GridSpan, GridZone, Text}, sx::sx};
-
-#[component]
-fn Card(lines: u32, label: String) -> Element {
-    rsx! {
-        Box {
-            sx: sx()
-                .padding("12px")
-                .background("primary.1")
-                .border_radius("sm")
-                .height(format!("{}px", 28 + lines * 22)),
-            Text { size: "sm", "{label}" }
-        }
-    }
-}
+use libero::{components::{GridItem, GridSpan, GridZone}, sx::sx};
 
 #[component]
 fn Demo() -> Element {
     rsx! {
         GridZone {
             sx: sx().width("100%"),
-            GridItem { span: GridSpan::Third, Card { lines: 1, label: "A" } }
-            GridItem { span: GridSpan::TwoThirds, Card { lines: 4, label: "B" } }
-            GridItem { span: GridSpan::Third, Card { lines: 2, label: "C" } }
-            GridItem { span: GridSpan::Third, Card { lines: 3, label: "D" } }
-            GridItem { span: GridSpan::Half, Card { lines: 1, label: "E" } }
-            GridItem { span: GridSpan::Third, Card { lines: 2, label: "F" } }
+            masonry: true,
+            GridItem { span: GridSpan::Third, Card { lines: 1, "A" } }
+            GridItem { span: GridSpan::TwoThirds, Card { lines: 4, "B" } }
+            GridItem { span: GridSpan::Third, Card { lines: 2, "C" } }
+            GridItem { span: GridSpan::Third, Card { lines: 3, "D" } }
+            GridItem { span: GridSpan::Half, Card { lines: 1, "E" } }
+            GridItem { span: GridSpan::Third, Card { lines: 2, "F" } }
         }
     }
 }
+#
+# #[component] fn Card(lines: usize, children: Element) -> Element { rsx! { {children} } }
 ```
 
 ## Props

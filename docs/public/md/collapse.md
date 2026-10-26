@@ -16,15 +16,11 @@ trigger carries `aria_expanded` and an `aria_controls` pointing at the panel's
 
 ```rust
 use dioxus::prelude::*;
-use libero::{
-    components::{Button, Collapse, Flex, Text},
-    hooks::use_focus_return,
-};
+use libero::components::{Button, Collapse, Flex, Text};
 
 #[component]
 fn Demo() -> Element {
     let mut open = use_signal(|| false);
-    let trigger = use_focus_return();
 
     rsx! {
         Flex {
@@ -32,12 +28,7 @@ fn Demo() -> Element {
             align: "flex-start",
             gap: "sm",
             Button {
-                onclick: move |_| {
-                    if !open() {
-                        trigger.remember_active();
-                    }
-                    open.toggle();
-                },
+                onclick: move |_| open.toggle(),
                 aria_expanded: open(),
                 aria_controls: "shipping-details",
                 "Shipping details"
@@ -45,19 +36,7 @@ fn Demo() -> Element {
             Collapse {
                 id: "shipping-details",
                 open: open(),
-                Flex {
-                    direction: "column",
-                    align: "flex-start",
-                    gap: "sm",
-                    Text { "Shipping is calculated at checkout." }
-                    Button {
-                        onclick: move |_| {
-                            open.set(false);
-                            trigger.restore();
-                        },
-                        "Done"
-                    }
-                }
+                Text { "Shipping is calculated at checkout." }
             }
         }
     }

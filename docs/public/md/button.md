@@ -15,17 +15,16 @@ A clickable action, a toggle, or a link when `to` is set. It defaults to
 
 ```rust
 use dioxus::prelude::*;
-use libero::components::Button;
+use libero::components::{Button, Loader, Pictogram};
+use pictogram_icons_lucide as lucide;
 
 #[component]
 fn Demo() -> Element {
     rsx! {
         Button {
-            color: "primary",
-            variant: "filled",
-            size: "md",
-            radius: "md",
-            onclick: move |_| {},
+            trailing_icon: rsx! { Pictogram { icon: lucide::chevron_right::outlined, width: "1.25em", height: "1.25em" } },
+            loading_position: "start",
+            loader: rsx! { Loader { variant: "dots", size: "xs", color: "currentColor" } },
             "Save changes"
         }
     }

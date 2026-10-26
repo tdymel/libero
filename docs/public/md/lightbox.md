@@ -24,16 +24,12 @@ use libero::{
     hooks::{LightboxItem, LightboxOptions, use_lightbox},
 };
 
-#[derive(Clone, PartialEq)]
-struct Photo {
-    src: String,
-    alt: String,
-    title: String,
-}
-
 #[component]
-fn Demo(photos: Vec<Photo>) -> Element {
-    let lightbox = use_lightbox(LightboxOptions::default());
+fn Demo() -> Element {
+    let photos: Vec<Photo> = Vec::new();
+    let lightbox = use_lightbox(LightboxOptions {
+        ..LightboxOptions::default()
+    });
     let items: Vec<LightboxItem> = photos
         .iter()
         .map(|p| LightboxItem::new(&p.src, &p.alt).caption(&p.title))
@@ -54,6 +50,9 @@ fn Demo(photos: Vec<Photo>) -> Element {
         }
     }
 }
+#
+# #[derive(Clone, PartialEq)]
+# struct Photo { src: String, alt: String, title: String }
 ```
 
 ## API

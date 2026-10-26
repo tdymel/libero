@@ -28,7 +28,7 @@ fn Demo() -> Element {
         Box {
             sx: sx().position("relative").width("160px").height("120px").background("primary.1"),
             Float {
-                Box { sx: sx().padding("4px 8px").background("primary"), "Badge" }
+                Box { sx: sx().padding("4px 8px").background("primary").color("primary-contrast"), "Badge" }
             }
         }
     }

@@ -230,6 +230,13 @@ fn label_aliases(label: &str) -> &'static [&'static str] {
         "Element handle" => &["use_element", "ref", "measure"],
         "Focus return" => &["use_focus_return", "restore focus"],
         "Drag" => &["use_drag", "pointer"],
+        "Sortable list" => &[
+            "use_sortable",
+            "use_sortable_item",
+            "use_labelled_sortable_item",
+            "reorder",
+            "drag and drop",
+        ],
         "Intersection" => &["use_intersection", "use_in_viewport", "viewport", "visible"],
         "Long press" => &["use_long_press", "hold"],
         "Swipe" => &["use_swipe", "use_edge_swipe", "gesture", "edge swipe"],

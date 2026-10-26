@@ -28,7 +28,6 @@ use libero::{components::{AspectRatio, Flex}, sx::sx};
 fn Demo() -> Element {
     rsx! {
         AspectRatio {
-            ratio: 16.0 / 9.0,
             sx: sx().width("240px"),
             Flex {
                 sx: sx().background("primary").color("primary-contrast"),

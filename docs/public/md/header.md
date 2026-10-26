@@ -38,7 +38,7 @@ fn Demo() -> Element {
                 .border("1px solid var(--lsx-muted-3)"),
             ScrollArea {
                 aria_label: "Header demo",
-                Header { color: "primary", "Libero" }
+                Header { "Libero" }
                 Box {
                     sx: sx().padding("md"),
                     for i in 0..12 {

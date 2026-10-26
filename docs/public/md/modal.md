@@ -14,71 +14,80 @@ what `resolve` answered, or `None` when dismissed.
 
 ## Usage
 
-Wrap `use_modal` in a hook of your own. Its parameters are shared by every
-opening, and the `ModalScope` carries the arguments of the one showing.
+`use_modal` takes the render closure, which every opening shares. The
+`ModalScope` carries the arguments of the one showing.
 
 ```rust
 use dioxus::prelude::*;
 use libero::{
-    components::{Button, Dialog, Text},
-    hooks::{ModalHandle, ModalScope, use_modal},
+    components::{Button, Dialog, Flex, Text},
+    hooks::{ModalScope, use_modal},
 };
 
-/// A dismissal answers nothing, so the caller matches on `Option<SaveChoice>`.
 #[derive(Clone, Copy, PartialEq)]
 enum SaveChoice {
     Save,
     Discard,
 }
 
-/// `discard_label` is shared by every opening.
-fn use_save_prompt(discard_label: &'static str) -> ModalHandle<String, SaveChoice> {
-    use_modal(move |s: ModalScope<String, SaveChoice>| {
+#[component]
+fn Demo() -> Element {
+    let prompt = use_modal(move |s: ModalScope<String, SaveChoice>| {
         let document = s.args();
 
         rsx! {
             Dialog {
                 title: "Unsaved changes",
-                size: "sm",
-                Text { "{document} has changes you have not saved." }
-                Button { variant: "text", onclick: move |_| s.close(), "Keep editing" }
-                Button {
-                    variant: "filled",
-                    color: "error",
-                    onclick: move |_| s.resolve(SaveChoice::Discard),
-                    "{discard_label}"
-                }
-                Button {
-                    variant: "filled",
-                    color: "primary",
-                    onclick: move |_| s.resolve(SaveChoice::Save),
-                    "Save"
+                size: "md",
+                full_screen: "phone",
+                Flex {
+                    direction: "column",
+                    gap: "md",
+                    Text { "{document} has changes you have not saved." }
+                    Flex {
+                        direction: "row",
+                        gap: "sm",
+                        wrap: "wrap",
+                        Button { variant: "text", onclick: move |_| s.close(), "Keep editing" }
+                        Button {
+                            variant: "filled",
+                            color: "error",
+                            onclick: move |_| s.resolve(SaveChoice::Discard),
+                            "Discard"
+                        }
+                        Button {
+                            variant: "filled",
+                            color: "primary",
+                            onclick: move |_| s.resolve(SaveChoice::Save),
+                            "Save"
+                        }
+                    }
                 }
             }
         }
-    })
-}
-
-#[component]
-fn Demo() -> Element {
-    let prompt = use_save_prompt("Discard");
+    });
     let mut answer = use_signal(|| "none yet");
 
     rsx! {
-        Button {
-            variant: "outlined",
-            onclick: move |_| {
-                prompt.open_with("notes.md").onresult(move |result| {
-                    answer.set(match result {
-                        Some(SaveChoice::Save) => "saved",
-                        Some(SaveChoice::Discard) => "discarded",
-                        None => "dismissed",
+        Flex {
+            direction: "row",
+            align: "center",
+            gap: "md",
+            Button {
+                variant: "outlined",
+                onclick: move |_| {
+                    prompt.open_with("notes.md").onresult(move |result| {
+                        answer.set(match result {
+                            Some(SaveChoice::Save) => "saved",
+                            Some(SaveChoice::Discard) => "discarded",
+                            None => "dismissed",
+                        });
                     });
-                });
-            },
-            "Close editor"
+                },
+                "Close editor"
+            }
+            Text { role: "status", "Last answer: {answer}" }
         }
-        Text { role: "status", "Last answer: {answer}" }
     }
 }
 ```

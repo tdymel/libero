@@ -480,7 +480,7 @@ fn lifts(key: &Key) -> bool {
 /// }
 /// ```
 ///
-/// Docs: <https://libero-ui.dev/data-display/sortable>
+/// Docs: <https://libero-ui.dev/hooks/use-sortable>
 pub fn use_sortable(options: SortableOptions) -> SortableHandle {
     use_fixed_sortable(options, None)
 }

@@ -16,7 +16,7 @@ it on, usually from a button inside the step.
 
 ```rust
 use dioxus::prelude::*;
-use libero::components::{Button, Options, StepState, Stepper, Text};
+use libero::components::{Button, Flex, Options, Stepper, Text};
 
 #[derive(Clone, PartialEq, Options)]
 enum Stage {
@@ -34,25 +34,29 @@ fn Demo() -> Element {
         Stepper {
             value: stage(),
             aria_label: "Order steps",
-            onstepclick: move |s| stage.set(Some(s)),
-            state: |s: Stage| (s == Stage::Shipping && !address_valid())
-                .then_some(StepState::Error),
             panel: move |s: Stage| match s {
                 Stage::Account => rsx! {
-                    Button { onclick: move |_| stage.set(Some(Stage::Shipping)), "Continue" }
+                    Flex { gap: "sm", align: "flex-start",
+                        Text { "Who is ordering?" }
+                        Button { onclick: move |_| stage.set(Some(Stage::Shipping)), "Continue" }
+                    }
                 },
                 Stage::Shipping => rsx! {
-                    Button { onclick: move |_| stage.set(Some(Stage::Review)), "Continue" }
+                    Flex { gap: "sm", align: "flex-start",
+                        Text { "Where should the parcel go?" }
+                        Button { onclick: move |_| stage.set(Some(Stage::Review)), "Continue" }
+                    }
                 },
                 Stage::Review => rsx! {
-                    Button { onclick: move |_| stage.set(None), "Place order" }
+                    Flex { gap: "sm", align: "flex-start",
+                        Text { "Check the order, then place it." }
+                        Button { onclick: move |_| stage.set(None), "Place order" }
+                    }
                 },
             },
         }
     }
 }
-#
-# fn address_valid() -> bool { true }
 ```
 
 ## Props

@@ -45,17 +45,17 @@ fn hooks() -> Vec<HookRow> {
         row(
             "use_sortable",
             "A list whose items reorder by dragging their handle.",
-            Route::SortablePage {},
+            Route::UseSortablePage {},
         ),
         row(
             "use_sortable_item",
             "One item of a use_sortable list: its handle and offset.",
-            Route::SortablePage {},
+            Route::UseSortablePage {},
         ),
         row(
             "use_labelled_sortable_item",
             "use_sortable_item with a name for the announcements.",
-            Route::SortablePage {},
+            Route::UseSortablePage {},
         ),
         row(
             "use_intersection",

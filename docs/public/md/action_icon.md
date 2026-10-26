@@ -20,23 +20,21 @@ takes the surrounding text color.
 ## Usage
 
 `icon` takes a glyph as `SvgData`, drawn as a [`Pictogram`](pictogram.md).
-Any other content, such as an svg component of yours, goes in as children.
 
 ```rust
 use dioxus::prelude::*;
-use libero::components::ActionIcon;
+use libero::components::{ActionIcon, Loader};
 
 #[component]
 fn Demo() -> Element {
     rsx! {
-        ActionIcon { size: "md", radius: "sm", aria_label: "Confirm",
+        ActionIcon {
+            aria_label: "Confirm",
             icon: pictogram_icons_lucide::check::outlined,
+            loader: rsx! { Loader { variant: "dots", size: "xs", color: "currentColor" } },
         }
-        ActionIcon { aria_label: "Done", CheckmarkIcon {} }
     }
 }
-#
-# #[component] fn CheckmarkIcon() -> Element { rsx! {} }
 ```
 
 ## Props

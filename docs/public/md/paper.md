@@ -25,8 +25,9 @@ use libero::{
 fn Demo() -> Element {
     rsx! {
         Paper {
-            shadow: "sm",
             sx: sx().padding("lg"),
+            component: "a",
+            href: "#order-4021",
             Title { size: "md", component: "h2", "Invoice #4021" }
             Text { "Due 30 September." }
         }

@@ -288,6 +288,7 @@ pub(super) fn nav_tree() -> Vec<TreeNode<NavEntry>> {
                 page(Route::HooksPage {}, "Overview"),
                 page(Route::UseElementPage {}, "Element handle"),
                 page(Route::UseDragPage {}, "Drag"),
+                page(Route::UseSortablePage {}, "Sortable list"),
                 page(Route::UseIntersectionPage {}, "Intersection"),
                 page(Route::UseLongPressPage {}, "Long press"),
                 page(Route::UseSwipePage {}, "Swipe"),

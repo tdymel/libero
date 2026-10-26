@@ -15,7 +15,7 @@ CSS transition, so a native renderer without transitions swaps instantly.
 
 ```rust
 use dioxus::prelude::*;
-use libero::components::{Button, Flex, Paper, Text, Transition, TransitionKind};
+use libero::components::{Button, Flex, Paper, Text, Transition};
 
 #[component]
 fn Demo() -> Element {
@@ -32,7 +32,6 @@ fn Demo() -> Element {
                 "Toggle"
             }
             Transition {
-                kind: TransitionKind::FadeUp,
                 open: show(),
                 Paper { Text { "Hello" } }
             }

@@ -223,6 +223,7 @@ md_pages! {
     UseLocalStorage => "use_local_storage",
     UseLongPress => "use_long_press",
     UseMediaQuery => "use_media_query",
+    UseSortable => "use_sortable",
     UseStylesheet => "use_stylesheet",
     UseSwipe => "use_swipe",
     UseThemeSet => "use_theme_set",

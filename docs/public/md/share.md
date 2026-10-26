@@ -31,9 +31,7 @@ fn Demo() -> Element {
         Share {
             url: "https://libero-ui.dev",
             title: "Libero",
-            variant: "outlined",
         }
-        Share { url: "https://libero-ui.dev", title: "Libero", "Share" }
     }
 }
 ```

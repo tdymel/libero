@@ -23,7 +23,7 @@ fn Demo() -> Element {
         Copy {
             value: "cargo add libero",
             aria_label: "Copy the install command",
-            variant: "outlined",
+            timeout: 2000,
         }
     }
 }

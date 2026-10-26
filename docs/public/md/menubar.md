@@ -18,31 +18,63 @@ of actions, use a single [`Menu`](menu.md).
 
 ```rust
 use dioxus::prelude::*;
-use libero::components::{MenuEntry, MenuItem, Menubar, MenubarMenu};
+use libero::components::{Flex, MenuEntry, MenuItem, Menubar, MenubarMenu, Text};
 
 #[component]
 fn Demo() -> Element {
-    let item = |name: &str| -> MenuEntry { MenuItem::new(name).onselect(|_| {}).into() };
+    let mut last = use_signal(|| String::from("nothing yet"));
+    let pick = move |name: &'static str| move |_| last.set(name.to_string());
+    let item =
+        move |name: &'static str| -> MenuEntry { MenuItem::new(name).onselect(pick(name)).into() };
     let mut wrap = use_signal(|| true);
+
     let menus = vec![
-        MenubarMenu::new("File", vec![
-            item("New"),
-            MenuItem::new("Open recent").submenu(vec![item("notes.md")]).into(),
-            MenuEntry::Separator,
-            MenuItem::new("Save").shortcut("Control+S").onselect(|_| {}).into(),
-        ]),
-        MenubarMenu::new("Edit", vec![
-            item("Undo"),
-            item("Redo"),
-            MenuEntry::Separator,
-            MenuItem::new("Word wrap")
-                .checkbox(wrap())
-                .onselect(move |_| wrap.toggle())
-                .into(),
-        ]),
-        MenubarMenu::new("View", vec![item("Zoom in")]).disabled(true),
+        MenubarMenu::new(
+            "File",
+            vec![
+                item("New"),
+                item("Open"),
+                MenuItem::new("Open recent")
+                    .submenu(vec![item("notes.md"), item("todo.md")])
+                    .into(),
+                MenuEntry::Separator,
+                MenuItem::new("Save")
+                    .shortcut("Control+S")
+                    .onselect(pick("Save"))
+                    .into(),
+            ],
+        ),
+        MenubarMenu::new(
+            "Edit",
+            vec![
+                item("Undo"),
+                item("Redo"),
+                MenuEntry::Separator,
+                item("Cut"),
+                item("Copy"),
+                item("Paste"),
+                MenuEntry::Separator,
+                MenuItem::new("Word wrap")
+                    .checkbox(wrap())
+                    .onselect(move |_| wrap.toggle())
+                    .into(),
+            ],
+        ),
+        MenubarMenu::new("View", vec![item("Zoom in"), item("Zoom out")]).disabled(true),
+        MenubarMenu::new("Help", vec![item("Documentation"), item("About")]),
     ];
-    rsx! { Menubar { aria_label: "Main", menus } }
+
+    rsx! {
+        Flex {
+            direction: "column",
+            gap: "md",
+            Menubar {
+                aria_label: "Main",
+                menus,
+            }
+            Text { size: "sm", role: "status", "Last chosen: {last()}" }
+        }
+    }
 }
 ```
 

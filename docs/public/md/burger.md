@@ -18,9 +18,8 @@ The caller holds the open state and hands it to both the burger and the panel.
 
 ```rust
 use dioxus::prelude::*;
-use libero::components::{Burger, Sidebar};
+use libero::components::{Burger, Paper};
 use libero::sx::sx;
-use libero::theme::Size;
 
 #[component]
 fn Demo() -> Element {
@@ -29,12 +28,13 @@ fn Demo() -> Element {
     rsx! {
         Burger {
             open: open(),
-            "aria-controls": "site-nav",
+            "aria-controls": "burger-demo-panel",
             onclick: move |_| open.toggle(),
-            sx: sx().breakpoint(Size::Sm, sx().display("none")),
         }
-        Sidebar { id: "site-nav", side: "start", role: "navigation",
-            // ..
+        Paper {
+            id: "burger-demo-panel",
+            sx: sx().padding("sm").display(if open() { "block" } else { "none" }),
+            "Navigation"
         }
     }
 }

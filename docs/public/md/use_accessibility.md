@@ -84,3 +84,31 @@ pub fn use_accessibility() -> AccessibilityHandle
 | `reduced_transparency()` | `bool` | Whether the system asks for less transparency. Read-only. |
 
 Every getter is reactive. `Clone`, not `Copy`: clone it into each handler.
+
+## Accessibility
+
+### Libero handles
+
+- `set_reduced_motion(Some(on))` forces reduced motion on or off over the
+  system's, and reaches libero's own CSS and motion on every platform. `None`
+  follows the system again.
+- The system's settings are the page's media queries in a browser and Android's
+  WebView; natively they come from the Linux desktop portal
+  (`org.freedesktop.appearance`, GNOME's and older KDE's own keys as a
+  fallback), and other native platforms report no preference.
+- A forced choice is kept under `lsx-reduced-motion`: in a browser's
+  `localStorage`, and in a file on Android, the desktop WebView and native where
+  `libero::platform::set_storage_dir` (or libero's `desktop` or `native`
+  feature) gives local storage a directory. Elsewhere it lasts for the session.
+
+### You must
+
+- Offer the choice with a way back: a "Follow the system" control that calls
+  `set_reduced_motion(None)`, as the demo does.
+- Apply `reduced_motion()` yourself to a `<style>` your app adds: it still
+  follows the system's setting.
+
+### Limits
+
+- Only reduced motion can be forced. `forced_colors()`, `contrast()` and
+  `reduced_transparency()` are read-only.

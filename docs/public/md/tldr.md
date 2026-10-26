@@ -23,8 +23,9 @@ use libero::components::Tldr;
 #[component]
 fn Demo() -> Element {
     rsx! {
-        Tldr { url: "https://libero-ui.dev/md/tldr.md" }
-        Tldr { url: "https://libero-ui.dev/md/tldr.md", icon_only: true }
+        Tldr {
+            url: "https://libero-ui.dev/md/tldr.md",
+        }
     }
 }
 ```

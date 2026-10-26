@@ -131,6 +131,8 @@ pub(crate) enum Route {
     UseElementPage {},
     #[route("/hooks/use-drag")]
     UseDragPage {},
+    #[route("/hooks/use-sortable")]
+    UseSortablePage {},
     #[route("/hooks/use-intersection")]
     UseIntersectionPage {},
     #[route("/hooks/use-long-press")]

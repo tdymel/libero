@@ -94,7 +94,7 @@ pub(crate) const FEATURES: &[Feature] = &[
         feature("qr-code", "data-display", "QrCode", &["box"], false, &["/data-display/qr-code"]),
         "The fast_qr encoder.",
     ),
-    feature("sortable", "data-display", "Sortable, use_sortable", &["use-drag", "use-icon", "use-id", "use-media-query", "use-timers", "visually-hidden"], false, &["/data-display/sortable"]),
+    feature("sortable", "data-display", "Sortable, use_sortable", &["use-drag", "use-icon", "use-id", "use-media-query", "use-timers", "visually-hidden"], false, &["/data-display/sortable", "/hooks/use-sortable"]),
     noted(
         feature("table", "data-display", "Table, column and the table toolbar buttons", &["badge", "progress-bar", "skeleton", "checkbox", "native-select", "select", "text-field", "pagination", "menu", "sortable", "icon", "action-icon", "button", "collapse", "use-debounce"], false, &["/data-display/table"]),
         "The largest component: its filters and editors bring the select and text fields. With date-field on, a date filter uses DateField.",

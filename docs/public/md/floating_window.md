@@ -32,7 +32,7 @@ fn Demo() -> Element {
             title: Some("Inspector".into()),
             placement: "bottom-end".into(),
             resizable: true,
-            sx: sx().min_width("16rem").max_width("40rem").into(),
+            sx: sx().min_width("16rem").min_height("8rem").max_width("40rem").into(),
             ..Default::default()
         },
         |window| rsx! {
@@ -41,7 +41,9 @@ fn Demo() -> Element {
         },
     );
 
-    rsx! { Button { onclick: move |_| inspector.toggle(), "Inspector" } }
+    rsx! {
+        Button { onclick: move |_| inspector.toggle(), "Inspector" }
+    }
 }
 ```
 

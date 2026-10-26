@@ -16,14 +16,25 @@ no `overflow: hidden` ancestor clips it.
 
 ```rust
 use dioxus::prelude::*;
-use libero::components::{Button, Flex, Menu, MenuEntry, MenuItem, Text, use_menu};
+use libero::{
+    components::{Button, Flex, Menu, MenuEntry, MenuItem, Text, use_menu},
+    sx::sx,
+    theme::Size,
+};
 
 #[component]
 fn Demo() -> Element {
     let menu = use_menu();
     let mut last = use_signal(|| String::from("nothing yet"));
     let pick = move |name: &'static str| move |_| last.set(name.to_string());
+    let mut sort = use_signal(|| "Name");
     let mut hidden = use_signal(|| false);
+    let sort_by = move |name: &'static str| -> MenuEntry {
+        MenuItem::new(name)
+            .radio(sort() == name)
+            .onselect(move |_| sort.set(name))
+            .into()
+    };
 
     let items = vec![
         MenuEntry::Group {
@@ -33,7 +44,12 @@ fn Demo() -> Element {
                     .shortcut("Control+X")
                     .onselect(pick("Cut"))
                     .into(),
+                MenuItem::new("Copy")
+                    .shortcut("Control+C")
+                    .onselect(pick("Copy"))
+                    .into(),
                 MenuItem::new("Paste")
+                    .shortcut("Control+V")
                     .disabled(true)
                     .description("The clipboard is empty")
                     .onselect(pick("Paste"))
@@ -41,16 +57,39 @@ fn Demo() -> Element {
             ],
         },
         MenuEntry::Separator,
+        MenuItem::new("Save").onselect(pick("Save")).into(),
+        MenuItem::new("Save as").onselect(pick("Save as")).into(),
+        MenuItem::new("Zoom in")
+            .keep_open()
+            .onselect(pick("Zoom in"))
+            .into(),
+        MenuItem::new("Share")
+            .submenu(vec![
+                MenuItem::new("Copy link")
+                    .onselect(pick("Copy link"))
+                    .into(),
+                MenuItem::new("Email").onselect(pick("Email")).into(),
+                MenuItem::new("Messages").onselect(pick("Messages")).into(),
+            ])
+            .into(),
+        MenuItem::new("Documentation")
+            .href("https://libero-ui.dev")
+            .new_tab_icon(true)
+            .into(),
+        MenuEntry::Separator,
+        MenuEntry::Group {
+            label: "Sort by".into(),
+            items: vec![sort_by("Name"), sort_by("Date"), sort_by("Size")],
+        },
         MenuItem::new("Show hidden")
             .checkbox(hidden())
             .onselect(move |_| hidden.toggle())
             .into(),
-        MenuItem::new("Save").onselect(pick("Save")).into(),
-        MenuItem::new("Zoom in").keep_open().onselect(pick("Zoom in")).into(),
-        MenuItem::new("Share")
-            .submenu(vec![MenuItem::new("Email").onselect(pick("Email")).into()])
+        MenuEntry::Separator,
+        MenuItem::new("Delete")
+            .color("error")
+            .onselect(pick("Delete"))
             .into(),
-        MenuItem::new("Delete").color("error").onselect(pick("Delete")).into(),
     ];
 
     rsx! {
@@ -61,7 +100,20 @@ fn Demo() -> Element {
             Menu {
                 state: menu,
                 items,
-                Button { variant: "outlined", attributes: menu.a11y_attributes(), "Actions" }
+                sx: sx().breakpoint(
+                    Size::Sm,
+                    sx().width("var(--lsx-popover-anchor-width)")
+                        .max_width("none")
+                        .margin_top("var(--lsx-popover-gap)")
+                        .box_shadow("none"),
+                ),
+                Button {
+                    variant: "light",
+                    radius: "0",
+                    attributes: menu.a11y_attributes(),
+                    sx: sx().width("100%").height("52px"),
+                    "Actions"
+                }
             }
             Text { size: "sm", role: "status", "Last chosen: {last()}" }
         }

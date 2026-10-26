@@ -21,7 +21,7 @@ use libero::components::NumberField;
 
 #[component]
 fn Demo() -> Element {
-    let mut quantity = use_signal(|| Some(4i32));
+    let mut quantity = use_signal(|| Some(1i32));
 
     rsx! {
         NumberField {
@@ -29,6 +29,8 @@ fn Demo() -> Element {
             onchange: move |next| quantity.set(next),
             label: "Quantity",
             steppers: true,
+            min: 1,
+            max: 99,
         }
     }
 }

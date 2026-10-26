@@ -178,6 +178,7 @@ each component you use, see [features.md](features.md).
 - [Overview](hooks.md): Every public libero hook in one table, with what it is for and the page that shows it.
 - [Element handle](use_element.md): A handle to one of your component's own elements, to focus, scroll and measure it on every renderer.
 - [Drag](use_drag.md): Pointer plumbing for a drag. Capture, a start point, deltas against it, and one end path for release and cancel.
+- [Sortable list](use_sortable.md): Makes your own markup a list the user reorders by dragging a handle, by keyboard, or with move buttons.
 - [Intersection](use_intersection.md): Reports how much of an element is visible, with a root, margin and thresholds; polled on Blitz, never intersecting in a server render.
 - [Long press](use_long_press.md): Pointer handlers that call back once a press is held, without breaking a tap or a scroll.
 - [Swipe](use_swipe.md): Touch swipe handlers, and an edge swipe that opens a drawer without fighting Android's back gesture.

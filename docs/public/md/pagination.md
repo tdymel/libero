@@ -27,11 +27,11 @@ fn Demo() -> Element {
 
     rsx! {
         Pagination {
-            total: 42,
             page: page(),
             onchange: move |next| page.set(next),
-            aria_label: "Search results",
-            with_edges: true,
+            aria_label: "Demo pages",
+            total: 10,
+            with_pages: false,
         }
     }
 }

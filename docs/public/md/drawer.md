@@ -20,30 +20,55 @@ content.
 ```rust
 use dioxus::prelude::*;
 use libero::{
-    components::{Anchor, Button, Title},
+    components::{Button, Flex, Options, Tabs, Text},
     hooks::{DrawerOptions, ModalScope, use_drawer},
+    sx::sx,
 };
+
+#[derive(Clone, PartialEq, Options)]
+enum Setting {
+    General,
+    Account,
+    Billing,
+    Privacy,
+    Security,
+    Alerts,
+    Language,
+    Advanced,
+}
 
 #[component]
 fn Demo() -> Element {
+    let mut setting = use_signal(|| Setting::Advanced);
+
     let nav = use_drawer(
         DrawerOptions {
-            anchor: "end".into(),
-            size: "sm".into(),
-            aria_label: Some("Menu".into()),
+            anchor: "start".into(),
+            size: "md".into(),
+            title: Some("Temporary drawer".into()),
+            close_button: true,
             ..Default::default()
         },
-        |s: ModalScope<()>| {
-            rsx! {
-                Title { size: "lg", "Menu" }
-                Anchor { to: "/", "Home" }
-                Button { variant: "text", onclick: move |_| s.close(), "Close" }
+        move |s: ModalScope<()>| rsx! {
+            Flex {
+                direction: "column",
+                gap: "md",
+                sx: sx().padding("16px"),
+                Tabs {
+                    aria_label: "Settings",
+                    placement: "start",
+                    sx: sx().selector("& > [role=\"tablist\"]", sx().max_height("8rem")),
+                    value: setting(),
+                    onchange: move |next| setting.set(next),
+                    panel: |setting: Setting| rsx! { Text { "{setting.label()}" } },
+                }
+                Button { variant: "outlined", onclick: move |_| s.close(), "Close" }
             }
         },
     );
 
     rsx! {
-        Button { variant: "outlined", onclick: move |_| { nav.open(); }, "Open menu" }
+        Button { variant: "outlined", onclick: move |_| { nav.open(); }, "Open drawer" }
     }
 }
 ```

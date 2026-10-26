@@ -23,6 +23,7 @@ use libero::{
     sx::sx,
 };
 
+/// Rounded percentages: a raw `{event:?}` reflows the row every tick.
 fn readout(event: ScrollPositionEvent) -> String {
     let (kind, x, y) = match event {
         ScrollPositionEvent::Start(x, y) => ("Start", x, y),
@@ -34,9 +35,9 @@ fn readout(event: ScrollPositionEvent) -> String {
 
 #[component]
 fn Demo() -> Element {
+    let area = use_scroll_area();
     let mut position = use_signal(|| ScrollPositionEvent::Change(0.0, 0.0));
     let mut edge = use_signal(|| "none");
-    let area = use_scroll_area();
 
     rsx! {
         Flex {

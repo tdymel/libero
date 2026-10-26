@@ -137,6 +137,8 @@ explains how parts work. `ColorSwatch` is one element and has no parts.
   WCAG 2.5.8 at every size. At `xs` and `sm` the two sliders sit further apart
   than `spacing`, so their 24px squares do not overlap.
 - The swatch equal to the value is pressed and checked.
+- The preset row is a group named "Color swatches" (localized,
+  `ColorLabels::swatches`), unless you name the picker.
 
 ### You must
 

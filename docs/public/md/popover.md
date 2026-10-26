@@ -14,16 +14,13 @@ screen.
 
 ## Usage
 
-The role, the trigger's aria and the box's focus are yours, so the example
-carries them.
+The role and the trigger's aria are yours, so the example carries them.
 
 ```rust
 use dioxus::prelude::*;
 use libero::{
     components::{Box, Button},
     hooks::{use_element, use_id, use_popover, Align, PopoverOptions, Side},
-    platform::ElementApi,
-    sx::sx,
     use_theme,
 };
 
@@ -33,37 +30,11 @@ fn Demo() -> Element {
     let mut opened = use_signal(|| false);
     let anchor = use_element();
     let box_id = use_id();
-
-    let popover = use_popover(
-        anchor,
-        opened(),
-        PopoverOptions::new(theme.popover.gap, theme.popover.padding)
-            .side(Side::Bottom)
-            .align(Align::Start)
-            .dismiss(true),
-    );
-    // Escape and a press outside.
+    let popover = use_popover(anchor, opened(), PopoverOptions::new(4.0, theme.popover.padding)
+        .side(Side::Bottom)
+        .align(Align::Start)
+        .dismiss(true));
     popover.on_dismiss(move || opened.set(false));
-    let floating = *popover.floating();
-
-    // Focus the box once it is placed, once per opening.
-    let mut entered = use_signal(|| false);
-    use_effect(move || match (opened(), popover.placed()) {
-        (true, true) if !*entered.peek() => {
-            entered.set(true);
-            let _ = floating.focus();
-        }
-        (false, _) => entered.set(false),
-        _ => {}
-    });
-    // Tab closes it and returns focus to the trigger.
-    let mut close = move |event: &KeyboardEvent| {
-        opened.set(false);
-        let _ = anchor.focus();
-        if event.modifiers().shift() {
-            event.prevent_default();
-        }
-    };
 
     popover.show(opened().then(|| rsx! {
         Box {
@@ -72,14 +43,8 @@ fn Demo() -> Element {
             aria_label: "Example popover",
             tabindex: "-1",
             attributes: popover.floating_events(),
-            onkeydown: move |event: KeyboardEvent| {
-                if event.key() == Key::Named(NamedKey::Tab) {
-                    close(&event);
-                }
-            },
             style: popover.style(),
-            onmounted: floating.mount(),
-            sx: sx().background("surface").padding("var(--lsx-popover-padding)"),
+            onmounted: popover.floating().mount(),
             "Popover content"
         }
     }));
@@ -89,11 +54,6 @@ fn Demo() -> Element {
             onmounted: anchor.mount(),
             onclick: move |_| opened.toggle(),
             attributes: popover.anchor_events(),
-            onkeydown: move |event: KeyboardEvent| {
-                if event.key() == Key::Named(NamedKey::Tab) && opened() {
-                    opened.set(false);
-                }
-            },
             aria_haspopup: "dialog",
             aria_expanded: "{opened()}",
             aria_controls: "{box_id}",

@@ -19,14 +19,27 @@ The link whose `to` matches the current route is active and gets
 
 ```rust
 use dioxus::prelude::*;
-use libero::{components::{Flex, NavLink}, sx::sx};
+use libero::{components::{Badge, Flex, Icon, NavLink}, sx::sx};
 
 #[component]
 fn Demo() -> Element {
     rsx! {
-        Flex { direction: "column", gap: "xs", sx: sx().width("240px"),
-            NavLink { to: Route::GettingStarted {}, "Getting Started" }
-            NavLink { to: Route::NavLinkPage {}, "NavLink" }
+        Flex {
+            direction: "column",
+            gap: "xs",
+            sx: sx().width("240px"),
+            NavLink {
+                to: Route::GettingStarted {},
+                leading: rsx! { Icon { size: "sm", svg: pictogram_icons_lucide::bookmark::outlined } },
+                trailing: rsx! { Badge { variant: "tonal", size: "sm", circle: true, "3" } },
+                "Getting Started"
+            }
+            NavLink {
+                to: Route::NavLinkPage {},
+                leading: rsx! { Icon { size: "sm", svg: pictogram_icons_lucide::bookmark::outlined } },
+                trailing: rsx! { Badge { variant: "tonal", size: "sm", circle: true, "3" } },
+                "NavLink"
+            }
         }
     }
 }

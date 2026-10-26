@@ -26,8 +26,8 @@ fn Demo() -> Element {
         Box {
             sx: sx().height("160px").width("100%").max_width("320px").border("1px solid var(--lsx-muted-3)"),
             Splitter {
-                initial_size: 50.0,
                 aria_label: "Resize panes",
+                initial_size: 50.0,
                 panel_a: rsx! { Box { sx: sx().height("100%").padding("md").background("primary.1"), "A" } },
                 panel_b: rsx! { Box { sx: sx().height("100%").padding("md").background("secondary.1"), "B" } },
             }

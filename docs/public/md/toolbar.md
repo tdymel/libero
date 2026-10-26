@@ -16,33 +16,28 @@ use `ButtonGroup` alone.
 
 ## Usage
 
-`BoldIcon` and its siblings stand for any component of yours that renders an `svg`.
-
 ```rust
 use dioxus::prelude::*;
-use libero::components::{ActionIcon, Toolbar, ToolbarGroup, ToolbarSeparator};
+use libero::components::{ActionIcon, Pictogram, Toolbar, ToolbarGroup, ToolbarSeparator};
+use pictogram_icons_lucide as lucide;
 
 #[component]
 fn Demo() -> Element {
     rsx! {
         Toolbar { "aria-label": "Formatting",
             ToolbarGroup { "aria-label": "Style",
-                ActionIcon { aria_label: "Bold", BoldIcon {} }
-                ActionIcon { aria_label: "Italic", ItalicIcon {} }
+                ActionIcon { aria_label: "Bold", Pictogram { icon: lucide::bold::outlined } }
+                ActionIcon { aria_label: "Italic", Pictogram { icon: lucide::italic::outlined } }
+                ActionIcon { aria_label: "Underline", Pictogram { icon: lucide::underline::outlined } }
             }
             ToolbarSeparator {}
             ToolbarGroup { "aria-label": "History",
-                ActionIcon { aria_label: "Undo", UndoIcon {} }
-                ActionIcon { aria_label: "Redo", disabled: true, RedoIcon {} }
+                ActionIcon { aria_label: "Undo", Pictogram { icon: lucide::undo_2::outlined } }
+                ActionIcon { aria_label: "Redo", disabled: true, Pictogram { icon: lucide::redo_2::outlined } }
             }
         }
     }
 }
-#
-# #[component] fn BoldIcon() -> Element { rsx! {} }
-# #[component] fn ItalicIcon() -> Element { rsx! {} }
-# #[component] fn UndoIcon() -> Element { rsx! {} }
-# #[component] fn RedoIcon() -> Element { rsx! {} }
 ```
 
 ## Style API

@@ -20,29 +20,39 @@ selected.
 
 ```rust
 use dioxus::prelude::*;
-use libero::components::{NavigationBar, NavigationBarItem};
+use libero::components::{NavigationBar, NavigationBarItem, NavigationBarVariant, Pictogram};
+use libero::theme::responsive;
+use pictogram_icons_lucide as lucide;
 
 #[component]
 fn Demo() -> Element {
     rsx! {
-        NavigationBar { "aria-label": "Main",
-            NavigationBarItem { to: Route::Home {}, icon: rsx! { HomeIcon {} }, "Home" }
-            NavigationBarItem { to: Route::Search {}, icon: rsx! { SearchIcon {} }, "Search" }
+        NavigationBar {
+            "aria-label": "Main",
+            variant: responsive(NavigationBarVariant::Bar).sm(NavigationBarVariant::Rail),
+            NavigationBarItem {
+                to: "/home",
+                icon: rsx! { Pictogram { icon: lucide::house::outlined } },
+                "Home"
+            }
+            NavigationBarItem {
+                to: "/search",
+                icon: rsx! { Pictogram { icon: lucide::search::outlined } },
+                "Search"
+            }
+            NavigationBarItem {
+                to: "/inbox",
+                icon: rsx! { Pictogram { icon: lucide::inbox::outlined } },
+                "Inbox"
+            }
+            NavigationBarItem {
+                to: "/profile",
+                icon: rsx! { Pictogram { icon: lucide::user::outlined } },
+                "Profile"
+            }
         }
     }
 }
-#
-# #[derive(Clone, PartialEq, Routable)]
-# enum Route {
-#     #[route("/0")]
-#     Home {},
-#     #[route("/1")]
-#     Search {},
-# }
-# #[component] fn Home() -> Element { rsx! {} }
-# #[component] fn Search() -> Element { rsx! {} }
-# #[component] fn HomeIcon() -> Element { rsx! {} }
-# #[component] fn SearchIcon() -> Element { rsx! {} }
 ```
 
 ## Props

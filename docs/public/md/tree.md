@@ -66,8 +66,10 @@ fn folders() -> HashSet<String> {
 
 #[component]
 fn Demo() -> Element {
-    let mut selected = use_signal(|| None::<String>);
+    let mut current = use_signal(|| None::<String>);
     let mut expanded = use_signal(folders);
+    let mut picked = use_signal(|| HashSet::from(["src/lib.rs".to_string()]));
+    let mut checks = use_signal(|| HashSet::from(["src/components/list.rs".to_string()]));
 
     rsx! {
         Flex {
@@ -80,25 +82,32 @@ fn Demo() -> Element {
             }
             Tree {
                 aria_label: "Project files",
-                data: file_tree(),
-                expanded: expanded(),
-                onexpandedchange: move |next| expanded.set(next),
-                current: selected(),
-                guides: true,
+                current: current(),
                 render_node: move |args: TreeNodeRenderArgs<FileEntry>| {
                     let id = args.id.clone();
                     rsx! {
                         TreeItem {
-                            onclick: move |_| selected.set(Some(id.clone())),
+                            onclick: move |_| current.set(Some(id.clone())),
                             icon: file_icon(&args.data, args.expanded),
                             "{args.data.name}"
                         }
                     }
                 },
+                selected: picked(),
+                onselectedchange: move |next| picked.set(next),
+                multiple: true,
+                checked: checks(),
+                oncheckedchange: move |next| checks.set(next),
+                data: file_tree(),
+                expanded: expanded(),
+                onexpandedchange: move |next| expanded.set(next),
             }
             // Always mounted, so a screen reader hears the text it gains.
             Text { role: "status",
-                if let Some(selected) = selected() { "Selected: " Code { source: "{selected}" } }
+                if let Some(current) = current() {
+                    "Current: "
+                    Code { source: "{current}" }
+                }
             }
         }
     }
