@@ -545,6 +545,49 @@ e2e::scenario!(
     ios: skip("958: element identity on the WebView")
 );
 
+/// 4138: the column behind a removed one is not offered twice, nor reached by Right.
+async fn a_removed_column_leaves_no_slot<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    d.click("#remove-doing").await?;
+    eventually(d, "Doing removed", async |d| {
+        Ok(!d.exists("#column-doing").await?)
+    })
+    .await?;
+    d.click("#Alpha [data-slot=move-to]").await?;
+    eventually_focused(d, "[role=menuitem]", "a click on the trigger").await?;
+    ensure!(
+        d.exists(&row(1)).await? && !d.exists(&row(2)).await?,
+        "Move to offers a column more than the board has"
+    );
+    d.press(keyboard::ESCAPE).await?;
+    eventually_focused(d, "#Alpha [data-slot=move-to]", "Escape").await?;
+
+    lift(d, "Alpha", "1 of 1").await?;
+    d.press(keyboard::ARROW_RIGHT).await?;
+    eventually_text(
+        d,
+        STATUS,
+        "Alpha moved to Done, position 1 of 1.",
+        "Right into the last column",
+    )
+    .await?;
+    lift(d, "Alpha", "1 of 1").await?;
+    d.press(keyboard::ARROW_RIGHT).await?;
+    eventually_text(
+        d,
+        STATUS,
+        "Alpha has no column on that side.",
+        "Right past the last column",
+    )
+    .await
+}
+
+e2e::scenario!(
+    a_removed_column_is_no_longer_offered_by_move_to_or_the_arrow_keys,
+    "/kanban/remove-column",
+    a_removed_column_leaves_no_slot,
+    desktop: skip("958: element identity on the WebView")
+);
+
 /// Lifts `card` by its handle and waits for the lift to be announced.
 async fn lift<D: Driver>(d: &mut D, card: &str, position: &str) -> Result<()> {
     d.focus(&format!("#{card} [data-slot=handle]")).await?;

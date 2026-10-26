@@ -16,6 +16,7 @@ pub const ROUTES: Routes = &[
     ("/kanban/columns", || rsx! { KanbanPage { data: true, wrapped: true } }),
     ("/kanban/capped", || rsx! { CappedPage {} }),
     ("/kanban/menu-only", || rsx! { MenuOnlyPage {} }),
+    ("/kanban/remove-column", || rsx! { RemoveColumnPage {} }),
     ("/kanban/rtl", || rsx! { div { dir: "rtl", KanbanPage { data: false, wrapped: false } } }),
     ("/kanban/column-reorder", || rsx! { ColumnReorderPage { refuse: false } }),
     ("/kanban/column-reorder-rtl", || rsx! { div { dir: "rtl", ColumnReorderPage { refuse: false } } }),
@@ -57,6 +58,32 @@ fn ColumnReorderPage(refuse: bool) -> Element {
         }
         Text { id: "order", "{order}" }
         Text { id: "column-moves", "{moves}" }
+    }
+}
+
+/// Three columns, Alpha in the first; `#remove-doing` drops the middle one.
+#[component]
+fn RemoveColumnPage() -> Element {
+    let mut names = use_signal(|| COLUMNS.to_vec());
+    let mut cards: Cards = use_signal(|| vec![vec!["Alpha"], vec![], vec![]]);
+    rsx! {
+        Button {
+            id: "remove-doing",
+            onclick: move |_| {
+                names.write().remove(1);
+                cards.write().remove(1);
+            },
+            "Remove Doing"
+        }
+        Kanban { id: "board", onmove: move |step: KanbanMove| step.apply(&mut cards.write()),
+            for (column, label) in names().into_iter().enumerate() {
+                KanbanColumn { key: "{label}", index: column, label, id: format!("column-{}", label.replace(' ', "-").to_lowercase()),
+                    for (index, name) in cards()[column].clone().into_iter().enumerate() {
+                        KanbanCard { key: "{name}", index, id: "{name}", label: name, Text { "{name}" } }
+                    }
+                }
+            }
+        }
     }
 }
 

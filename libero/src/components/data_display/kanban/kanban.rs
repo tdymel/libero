@@ -135,8 +135,8 @@ static KANBAN_CARD_SX: StaticSx = StaticSx::new(|| {
 /// reads every column's, not only its own.
 #[derive(Clone, Copy)]
 struct Board {
-    /// Each column's label by position, for the Move to menu.
-    labels: Signal<Vec<Option<String>>>,
+    /// Each column's owner and label by position, for the Move to menu.
+    labels: Signal<Vec<Option<(String, String)>>>,
     onmove: Callback<KanbanMove>,
     announcer: Announcer,
     /// Where a card moved by the board lands: one of its controls takes the focus there.
@@ -357,6 +357,19 @@ base_props! {
     }
 }
 
+/// Empties a column's slot if the column still owns it, then drops the empty tail.
+fn release_label(entries: &mut Vec<Option<(String, String)>>, at: usize, owner: &str) {
+    if let Some(entry) = entries
+        .get_mut(at)
+        .filter(|entry| entry.as_ref().is_some_and(|(held_by, _)| held_by == owner))
+    {
+        *entry = None;
+    }
+    while entries.last().is_some_and(Option::is_none) {
+        entries.pop();
+    }
+}
+
 /// One column of a [`Kanban`]: a header, then its cards in a list.
 ///
 /// Docs: <https://libero-ui.dev/data-display/kanban>
@@ -381,23 +394,24 @@ pub fn KanbanColumn(props: KanbanColumnProps) -> Element {
             announcer.say(said);
         }
     });
+    let marker = use_id();
     let mut labels = board.labels;
     let label = props.label.clone();
+    let mut placed = use_hook(|| CopyValue::new(None));
     use_effect(use_reactive!(|column, label| {
         let mut entries = labels.write();
+        let owner = marker.peek().clone();
+        if let Some(left) = placed.replace(Some(column)).filter(|left| *left != column) {
+            release_label(&mut entries, left, &owner);
+        }
         if entries.len() <= column {
             entries.resize(column + 1, None);
         }
-        entries[column] = Some(label.clone());
+        entries[column] = Some((owner, label.clone()));
     }));
     use_drop(move || {
         if let Ok(mut entries) = labels.try_write() {
-            if let Some(entry) = entries.get_mut(*index.peek()) {
-                *entry = None;
-            }
-            while entries.last().is_some_and(Option::is_none) {
-                entries.pop();
-            }
+            release_label(&mut entries, *index.peek(), &marker.peek());
         }
     });
 
@@ -405,7 +419,6 @@ pub fn KanbanColumn(props: KanbanColumnProps) -> Element {
     let words = current_localization();
     let column_name = fill(words.kanban.column, &[("label", &props.label)]);
     let place = use_labelled_sortable_item(column, Some(column_name.clone()));
-    let marker = use_id();
     let (reorder, move_buttons) = (board.reorder, board.move_buttons);
     use_effect(move || {
         // Again when the handle or the move buttons come or go.
@@ -763,7 +776,7 @@ pub fn KanbanCard(props: KanbanCardProps) -> Element {
             true => column_index.peek().checked_add(1),
             false => column_index.peek().checked_sub(1),
         };
-        let beside = next.and_then(|at| Some((at, board.labels.peek().get(at)?.clone()?)));
+        let beside = next.and_then(|at| Some((at, board.labels.peek().get(at)?.clone()?.1)));
         let Some((to_column, name)) = beside else {
             announcer.say(fill(words.kanban.no_column, &[("label", &card_name)]));
             return;
@@ -790,7 +803,7 @@ pub fn KanbanCard(props: KanbanCardProps) -> Element {
         .read()
         .iter()
         .enumerate()
-        .filter_map(|(at, name)| Some((at, name.clone()?)))
+        .filter_map(|(at, entry)| Some((at, entry.as_ref()?.1.clone())))
         .collect();
     let items = names
         .into_iter()

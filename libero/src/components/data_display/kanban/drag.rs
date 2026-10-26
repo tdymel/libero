@@ -113,7 +113,7 @@ pub(super) struct Landing {
 pub(super) struct BoardDragOptions {
     pub(super) onmove: Callback<KanbanMove>,
     pub(super) announcer: Announcer,
-    pub(super) labels: Signal<Vec<Option<String>>>,
+    pub(super) labels: Signal<Vec<Option<(String, String)>>>,
     pub(super) landing: CopyValue<Option<Landing>>,
 }
 
@@ -492,7 +492,12 @@ pub(super) fn use_board_drag(options: BoardDragOptions) -> BoardDrag {
             (false, _) => say(words.cancelled, label, from.1, count),
             (true, true) => say(words.dropped, label, to.1, count),
             (true, false) => {
-                let column = labels.peek().get(to.0).cloned().flatten();
+                let column = labels
+                    .peek()
+                    .get(to.0)
+                    .cloned()
+                    .flatten()
+                    .map(|(_, name)| name);
                 fill(
                     moved,
                     &[
