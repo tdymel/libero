@@ -293,7 +293,6 @@ fn a_select_only_list_opens_on_its_selected_row() {
 
 /// Todo 4317 (APG select-only): a closed ArrowDown opens on the selected row, as a click does.
 #[test]
-#[ignore = "todo 4317: fails until a closed ArrowDown keeps selected_index"]
 fn a_closed_arrow_down_opens_on_the_selected_row() {
     block_on(async {
         let fixture = Fixture::open("/combobox/select-only", Viewport::Desktop)

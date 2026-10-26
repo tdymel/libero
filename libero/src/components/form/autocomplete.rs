@@ -151,6 +151,12 @@ pub fn Autocomplete<T: Options>(props: AutocompleteProps<T>) -> Element {
         None,
     );
     let row_cache = use_row_cache();
+    // Every open starts with no highlight, so Enter submits the text.
+    use_effect(move || {
+        if !state.is_open() {
+            state.set_active(None);
+        }
+    });
 
     // Trimmed: a phone keyboard's trailing space must not hide "Paris" (todo 2415).
     let query = text.trim().to_lowercase();

@@ -145,7 +145,7 @@ base_props! {
         /// APG select-only: Tab and Alt+ArrowUp pick the highlight before closing.
         #[props(default)]
         commit_on_leave: bool,
-        /// APG select-only: a closed ArrowUp, Home or End opens on the first or last row. A skin with its own trigger keys leaves it off.
+        /// APG select-only: a closed ArrowUp, Home or End opens on the first or last row, a closed ArrowDown on the selected one. A skin with its own trigger keys leaves it off.
         #[props(default)]
         closed_row_keys: bool,
         /// Space picks the highlight, like Enter: a list with no text to type in.
@@ -625,7 +625,11 @@ fn arrow_targets(enabled: &[usize], active_row: Option<usize>, opened: bool) -> 
             (true, Some(_)) => step(1),
             _ => active_row.or(first),
         },
-        up: step(-1),
+        // From no highlight, Up arms the last enabled row (APG list autocomplete).
+        up: match active_row {
+            Some(_) => step(-1),
+            None => enabled.last().copied(),
+        },
         page_down: step(PAGE_ROWS).or(first),
         page_up: step(-PAGE_ROWS).or(first),
         first,
@@ -766,6 +770,11 @@ impl ComboboxKeys {
                 CaretKeys::Always => false,
             };
         match event.key() {
+            // Select-only opens on the selected row, which the open effect picks.
+            Key::Named(NamedKey::ArrowDown) if !opened && self.closed_row_keys => {
+                event.prevent_default();
+                go_to(None);
+            }
             Key::Named(NamedKey::ArrowDown) => {
                 event.prevent_default();
                 go_to(arrows.down);
@@ -855,6 +864,15 @@ mod tests {
         assert!(!space_picks_highlight(false, true, true, false));
         assert!(!space_picks_highlight(true, false, true, false));
         assert!(!space_picks_highlight(true, true, false, false));
+    }
+
+    /// Todo 4319: Up from no highlight lands on the last enabled row.
+    #[test]
+    fn up_from_no_highlight_arms_the_last_enabled_row() {
+        let enabled = [0, 1, 3];
+        assert_eq!(arrow_targets(&enabled, None, true).up, Some(3));
+        assert_eq!(arrow_targets(&enabled, Some(3), true).up, Some(1));
+        assert_eq!(arrow_targets(&[], None, true).up, None);
     }
 
     #[test]

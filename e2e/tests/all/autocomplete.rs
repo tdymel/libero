@@ -74,7 +74,6 @@ e2e::scenario!(
 
 /// Todo 4316: a reopened list keeps no highlight from before its close, so Enter submits the text.
 #[test]
-#[ignore = "todo 4316: fails until the close clears the highlight"]
 fn a_reopened_list_opens_with_no_highlight() {
     block_on(async {
         let fixture = Fixture::open("/autocomplete/open-on-focus", Viewport::Desktop)
@@ -96,13 +95,38 @@ fn a_reopened_list_opens_with_no_highlight() {
             .unwrap();
         keyboard::press(page, keyboard::TAB).await.unwrap();
         wait::for_visible(page, LISTBOX).await.unwrap();
-        let lit: Option<String> = page
-            .evaluate_bounded(active.as_str())
+        let lit: String = page
+            .evaluate_bounded(format!("{active} ?? ''"))
             .await
             .unwrap()
             .into_value()
             .unwrap();
-        assert_eq!(lit, None, "the reopened list's highlight");
+        assert_eq!(lit, "", "the reopened list's highlight");
+        fixture.close().await.unwrap();
+    });
+}
+
+/// Todo 4319 (APG list autocomplete): Up from no highlight lands on the last suggestion.
+#[test]
+fn arrow_up_from_no_highlight_lights_the_last_row() {
+    block_on(async {
+        let fixture = Fixture::open("/autocomplete", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        keyboard::tab_to(page, TRIGGER, 10).await.unwrap();
+        keyboard::type_text(page, "b").await.unwrap();
+        wait::for_visible(page, LISTBOX).await.unwrap();
+        keyboard::press(page, keyboard::ARROW_UP).await.unwrap();
+        wait::for_js_true(
+            page,
+            "(() => { const rows = [...document.querySelectorAll('[role=option]')]; \
+             const lit = document.querySelector('[role=option][data-state~=active]'); \
+             return rows.length > 0 && !!lit && lit === rows[rows.length - 1]; })()",
+            "ArrowUp to light the last row",
+        )
+        .await
+        .unwrap();
         fixture.close().await.unwrap();
     });
 }
