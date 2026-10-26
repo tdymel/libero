@@ -127,13 +127,13 @@ jobs:
           cache-key: ${{ runner.os == 'Windows' && 'platforms-windows-native' || 'platforms-macos-desktop' }}
           save-cache: false
       # Every step runs whatever the last one did, so one run names every red.
-      - run: cargo test -p libero --lib --tests 2>&1 | tee "$RUNNER_TEMP/libero.log"
+      - run: cargo test -p libero --features test-features --lib --tests 2>&1 | tee "$RUNNER_TEMP/libero.log"
       - if: success() || failure()
         run: cargo test -p e2e --lib --bins 2>&1 | tee "$RUNNER_TEMP/e2e.log"
       - if: success() || failure()
         run: cargo test -p docs 2>&1 | tee "$RUNNER_TEMP/docs.log"
       - if: success() || failure()
-        run: cargo clippy -p libero --all-targets --features desktop -- -D warnings 2>&1 | tee "$RUNNER_TEMP/clippy.log"
+        run: cargo clippy -p libero --all-targets --features desktop,test-features -- -D warnings 2>&1 | tee "$RUNNER_TEMP/clippy.log"
       # The Apple and iOS arms (`storage.rs`, `backend/mod.rs`) only an iOS build compiles.
       - if: runner.os == 'macOS' && (success() || failure())
         run: cargo clippy -p libero --target aarch64-apple-ios-sim -- -D warnings 2>&1 | tee "$RUNNER_TEMP/clippy-ios.log"
@@ -504,7 +504,7 @@ jobs:
           name: docs-android
           path: target/dx/docs/debug/android/app/app/build/outputs/apk/debug/app-debug.apk
           retention-days: 3
-      - run: cargo clippy -p libero --all-targets --target aarch64-linux-android -- -D warnings
+      - run: cargo clippy -p libero --all-targets --features test-features --target aarch64-linux-android -- -D warnings
 
   # Simulator build, unsigned. Launching it is 1091.
   ios:

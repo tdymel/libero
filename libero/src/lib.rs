@@ -16,6 +16,8 @@
     not(all(feature = "all-components", feature = "all-hooks")),
     allow(dead_code, unused_imports, unused_macros, unnameable_types)
 )]
+#[cfg(all(test, not(feature = "test-features")))]
+compile_error!("libero's tests need `--features test-features`");
 
 pub mod components;
 pub mod context;

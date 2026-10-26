@@ -4,14 +4,14 @@
 //! only mean anything in a release build:
 //!
 //! ```text
-//! cargo test --release -p libero --test render_cost -- --ignored --nocapture
+//! cargo test --release -p libero --features test-features --test render_cost -- --ignored --nocapture
 //! ```
 //!
 //! One component on its own - every row whose label is that name, or starts
 //! with it and then ` `, `+` or `-`, plus the two controls. Commas for more:
 //!
 //! ```text
-//! RENDER_COST=Notifications cargo test --release -p libero --test render_cost -- --ignored --nocapture
+//! RENDER_COST=Notifications cargo test --release -p libero --features test-features --test render_cost -- --ignored --nocapture
 //! ```
 //!
 //! `span` is a bare element with no scope; `Leaf` the cheapest possible

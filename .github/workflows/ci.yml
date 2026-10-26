@@ -61,15 +61,14 @@ jobs:
         with:
           components: clippy
           cache-key: features
-      - run: cargo clippy -p libero --all-targets --no-default-features -- -D warnings
-      - run: cargo clippy -p libero --all-targets --features full-polymorphism -- -D warnings
-      - run: cargo clippy -p libero --all-targets --features native -- -D warnings
-      - run: cargo clippy -p libero --all-targets --features "$CODE_LANGS" -- -D warnings
+      - run: cargo clippy -p libero --all-targets --no-default-features --features test-features -- -D warnings
+      - run: cargo clippy -p libero --all-targets --features full-polymorphism,test-features -- -D warnings
+      - run: cargo clippy -p libero --all-targets --features native,test-features -- -D warnings
+      - run: cargo clippy -p libero --all-targets --features "test-features,$CODE_LANGS" -- -D warnings
       - run: cargo clippy -p e2e --features native --all-targets -- -D warnings
 
   # Every component, layout and hook feature alone (3909), so a feature list that misses a
-  # dependency fails here. The dev-dependency's self-reference would turn them all on, hence
-  # `--no-dev-deps`. Platform and test-only features are left out. The `wasm` leg is the
+  # dependency fails here. Platform and test-only features are left out. The `wasm` leg is the
   # empty and the default build on wasm32. A shard takes ~5 min, all 186 runs ~15 min.
   each-feature:
     strategy:
@@ -90,7 +89,7 @@ jobs:
         with:
           tool: cargo-hack
       - if: matrix.shard != 'wasm'
-        run: cargo hack clippy -p libero --each-feature --no-dev-deps --exclude-features native,desktop,held-clock,fake-file-dialog,fcm --exclude-all-features --keep-going --partition ${{ matrix.shard }} -- -D warnings
+        run: cargo hack clippy -p libero --each-feature --exclude-features native,desktop,held-clock,fake-file-dialog,fcm,test-features --exclude-all-features --keep-going --partition ${{ matrix.shard }} -- -D warnings
       - if: matrix.shard == 'wasm'
         run: cargo clippy -p libero --target wasm32-unknown-unknown --no-default-features -- -D warnings
       - if: matrix.shard == 'wasm'
@@ -121,8 +120,8 @@ jobs:
           targets: aarch64-linux-android
           components: clippy
           cache-key: android
-      - run: cargo clippy -p libero --all-targets --target aarch64-linux-android -- -D warnings
-      - run: cargo clippy -p libero --all-targets --features fcm --target aarch64-linux-android -- -D warnings
+      - run: cargo clippy -p libero --all-targets --features test-features --target aarch64-linux-android -- -D warnings
+      - run: cargo clippy -p libero --all-targets --features fcm,test-features --target aarch64-linux-android -- -D warnings
 
   test:
     runs-on: ubuntu-24.04
@@ -132,9 +131,9 @@ jobs:
       - uses: ./.github/actions/setup
         with:
           cache-key: test
-      - run: cargo test -p libero --lib --tests
-      - run: cargo test -p libero --lib --features "$CODE_LANGS" highlight
-      - run: cargo test -p libero --lib --features charts chart
+      - run: cargo test -p libero --features test-features --lib --tests
+      - run: cargo test -p libero --lib --features "test-features,$CODE_LANGS" highlight
+      - run: cargo test -p libero --lib --features test-features chart
       # The harness's own unit tests (exact filters, console classifier, focus-ring maths): no browser.
       - run: cargo test -p e2e --lib --bins
       # The two file checks of the browser suite, which the unit shards below never select.
@@ -160,15 +159,15 @@ jobs:
       - if: matrix.part != 'docs'
         run: cargo test -p docs page_snippets
       - if: matrix.part == 'libero-doc'
-        run: cargo test -p libero --doc
+        run: cargo test -p libero --features test-features --doc
       # The chart docs and their pages' snippets compile only with the feature.
       - if: matrix.part == 'libero-doc'
-        run: cargo test -p libero --doc --features charts -- chart Chart
+        run: cargo test -p libero --doc --features test-features -- chart Chart
       # Likewise the Firebase page and its snippets with `fcm`.
       - if: matrix.part == 'libero-doc'
-        run: cargo test -p libero --doc --features fcm -- fcm Fcm
+        run: cargo test -p libero --doc --features fcm,test-features -- fcm Fcm
       - if: matrix.part == 'no-default'
-        run: cargo test -p libero --no-default-features
+        run: cargo test -p libero --no-default-features --features test-features
 
   # One job: three shards built the same binaries three times for under a minute of tests (3413).
   native:

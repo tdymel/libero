@@ -1,6 +1,7 @@
 //! Compiles every ` ```rust ` block in `docs/public/md/*.md` as a doc-test, so a
-//! printed example that stops compiling fails `cargo test -p libero`. Only built
-//! under `cfg(doctest)`; run just these with `cargo test -p libero --doc md_examples`.
+//! printed example that stops compiling fails `cargo test -p libero --features test-features`.
+//! Only built under `cfg(doctest)`; run just these with
+//! `cargo test -p libero --features test-features --doc md_examples`.
 //!
 //! A complete example that names a placeholder - the reader's `Route`, a
 //! `Photo`, an icon, a `submit` function - still compiles: the stand-ins go

@@ -173,7 +173,7 @@ jobs:
             unit)
               # As platforms.yml's unit legs: libero, then the e2e runner's own tests.
               red=0
-              cargo test -p libero --lib --tests -- "$FILTER" 2>&1 | tee "$logs/unit.log" || red=1
+              cargo test -p libero --features test-features --lib --tests -- "$FILTER" 2>&1 | tee "$logs/unit.log" || red=1
               cargo test -p e2e --lib --bins -- "$FILTER" 2>&1 | tee -a "$logs/unit.log" || red=1
               exit "$red" ;;
             native)

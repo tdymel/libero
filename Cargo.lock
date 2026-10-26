@@ -4527,7 +4527,6 @@ dependencies = [
  "image",
  "js-sys",
  "libero-macros",
- "libero-test-features",
  "manganis",
  "objc2-app-kit 0.3.2",
  "pictogram-core",
@@ -4561,13 +4560,6 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn 2.0.119",
-]
-
-[[package]]
-name = "libero-test-features"
-version = "0.0.0"
-dependencies = [
- "libero",
 ]
 
 [[package]]

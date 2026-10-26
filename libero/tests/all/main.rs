@@ -5,7 +5,7 @@
 //! modules share one link instead. Run a single unit by its path:
 //!
 //! ```text
-//! cargo test -p libero --test all accordion::
+//! cargo test -p libero --features test-features --test all accordion::
 //! ```
 //!
 //! `render_cost` stays its own binary: it is a release-mode measurement, not
@@ -13,6 +13,9 @@
 
 // Clippy on android reports the `const {}` thread_locals as not const.
 #![cfg_attr(target_os = "android", allow(clippy::missing_const_for_thread_local))]
+
+#[cfg(not(feature = "test-features"))]
+compile_error!("libero's tests need `--features test-features`");
 
 mod accordion;
 mod action_icon;

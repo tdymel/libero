@@ -146,8 +146,6 @@ syn = { version = "2", features = ["full", "visit"] }
 proc-macro2 = "1"
 # The use_timers page's printed stopwatch, compiled as a doc-test.
 web-time = "1.1"
-# Turns on the features the tests cover; not a self dev-dependency, which dx sees as a cycle (todo 4182).
-libero-test-features = { path = "test-features" }
 
 [features]
 # Reach elements through Blitz directly when running under `dioxus-native`.
@@ -170,6 +168,9 @@ collation = ["dep:icu_collator", "dep:icu_locale_core"]
 # For e2e harnesses only (todo 1514): under `native`, `platform::fake_file_dialog`
 # answers the next pick in place of rfd's dialog. Never in an app build.
 fake-file-dialog = []
+# What libero's own tests and doc-tests cover. A feature, not a dev-dependency on libero: that
+# one made cargo build the lib before its tests could start (26-28 s an edit, now 18-19 s).
+test-features = ["all-components", "all-hooks", "code-lang-rust", "code-lang-bash", "code-lang-markdown", "code-lang-html", "code-lang-css"]
 # The layout, the common components and the common hooks (todo 3922). Without it and with
 # no features, no component and no hook compiles. Docs: /about/features.
 default = ["layout", "text", "title", "anchor", "kbd", "mark", "blockquote", "button", "action-icon", "icon", "alert", "loader", "tooltip", "dialog", "modal", "form-root", "fieldset", "text-field", "checkbox", "switch", "select", "use-media-query", "use-color-scheme", "use-clipboard", "use-debounce", "use-timers", "use-hotkeys", "use-local-storage"]
