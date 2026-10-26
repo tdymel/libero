@@ -511,11 +511,27 @@ fn NumberFieldShell<T: NumberValue>(
     // do not describe the input.
     let [leading_id, trailing_id] = field.slot_ids();
     let unit_id = trailing_id.clone();
+    // The memo alone reads the number, so a step redraws the buttons only at a bound.
+    // Typed text steps from itself (see `nudge`), so it counts, not the caller's value.
+    let reach = use_memo(use_reactive!(|bound_value, min, max, separator| {
+        let value = bound_value.unwrap_or_else(|| live.cloned());
+        let value = buffer
+            .read()
+            .as_ref()
+            .filter(|edit| edit.shows(value, separator))
+            .and_then(|edit| parse::<T>(&edit.text, separator))
+            .or(value);
+        Reach {
+            at_min: value.is_some() && value == min,
+            at_max: value.is_some() && value == max,
+        }
+    }));
     let steppers = props.steppers.then(|| {
         rsx! {
             Steppers {
                 size,
                 disabled: disabled || readonly,
+                reach,
                 increment_label: props.increment_label.clone(),
                 decrement_label: props.decrement_label.clone(),
                 nudge,
@@ -695,6 +711,12 @@ fn NumberFieldShell<T: NumberValue>(
         };
         // Read only by a spinner field, so a plain one never redraws for it.
         let keyboardless = spins && spin().keyboardless();
+        // What the role reads besides the number: a group, a padded place or a comma.
+        let now = aria_number(current);
+        let value_text = current
+            .zip(now.as_ref())
+            .map(|(value, _)| written(value, decimals, grouped, separator, formats))
+            .filter(|text| Some(text) != now.as_ref());
         input
             .clone()
             .attr_default(
@@ -705,7 +727,8 @@ fn NumberFieldShell<T: NumberValue>(
                     keypad(kind, min)
                 },
             )
-            .attr("aria-valuenow", aria_number(current))
+            .attr("aria-valuenow", now)
+            .attr("aria-valuetext", value_text)
             .attr("value", display)
             .render(HtmlTag::Input, attributes.clone(), ())
     });
@@ -954,12 +977,20 @@ fn ascii_digits(text: &str) -> Cow<'_, str> {
     }
 }
 
+/// Whether the number sits on a bound, where the matching stepper has nothing to do.
+#[derive(Clone, Copy, PartialEq)]
+struct Reach {
+    at_min: bool,
+    at_max: bool,
+}
+
 /// The two stepper buttons, a scope of their own: every prop compares equal
 /// while the value moves, so a press redraws the field and not the buttons.
 #[component]
 fn Steppers(
     size: Size,
     disabled: bool,
+    reach: Memo<Reach>,
     increment_label: Option<String>,
     decrement_label: Option<String>,
     nudge: Callback<i32>,
@@ -971,6 +1002,7 @@ fn Steppers(
         .prepare()
         .event("onmousedown", |event: MouseEvent| event.prevent_default());
     let labels = current_localization().number_field;
+    let reach = reach();
     stepper_box.render(
         HtmlTag::Div,
         Vec::new(),
@@ -984,7 +1016,7 @@ fn Steppers(
                 // Not a tab stop: the field is, and the arrow keys do the same
                 // job from there.
                 tabindex: "-1",
-                disabled,
+                disabled: disabled || reach.at_min,
                 onclick: move |_| nudge.call(-1),
                 Glyph { slot: IconSlot::Minus, icon: lucide::minus::outlined }
             }
@@ -993,7 +1025,7 @@ fn Steppers(
                 size: ThemeAwareValue::Size(slot_icon_size(size)),
                 sx: &INCREMENT_SX,
                 tabindex: "-1",
-                disabled,
+                disabled: disabled || reach.at_max,
                 onclick: move |_| nudge.call(1),
                 Glyph { slot: IconSlot::Plus, icon: lucide::plus::outlined }
             }
@@ -1133,6 +1165,60 @@ mod tests {
         });
         assert!(grouped.contains("value=\"12.500,5\""), "{grouped}");
         assert!(grouped.contains("value=\"2026\""), "{grouped}");
+    }
+
+    /// Todo 4273: the role reads the shown text beside the number, only where they differ.
+    #[test]
+    fn the_spinbutton_reads_the_shown_text() {
+        use super::{Decimals, NumberField};
+        use crate::LiberoProvider;
+        use dioxus::prelude::*;
+
+        let mut dom = VirtualDom::new(|| {
+            rsx! {
+                LiberoProvider { formats: &Formats::GERMAN,
+                    NumberField::<f64> { label: "Amount", value: Some(12_500.5), group_digits: true, decimals: Decimals::Exactly(2), onchange: |_| {} }
+                    NumberField::<u32> { label: "Year", value: Some(2026), onchange: |_| {} }
+                    NumberField::<f64> { label: "Empty", value: None, group_digits: true, onchange: |_| {} }
+                }
+            }
+        });
+        dom.rebuild_in_place();
+        let html = dioxus_ssr::render(&dom);
+        assert!(html.contains("aria-valuenow=\"12500.5\""), "{html}");
+        assert!(html.contains("aria-valuetext=\"12.500,50\""), "{html}");
+        assert_eq!(html.matches("aria-valuetext").count(), 1, "{html}");
+    }
+
+    /// Todo 4271: a stepper at its bound is disabled; the other one and a field inside are not.
+    #[test]
+    fn a_stepper_at_its_bound_is_disabled() {
+        use super::NumberField;
+        use crate::LiberoProvider;
+        use dioxus::prelude::*;
+
+        #[component]
+        fn App(value: f64) -> Element {
+            rsx! {
+                LiberoProvider {
+                    NumberField::<f64> { label: "A", value: Some(value), min: 0.0, max: 10.0, steppers: true, onchange: |_| {} }
+                }
+            }
+        }
+        // The buttons, minus then plus, as `(decrease, increase)` disabled flags.
+        let stepper_state = |value: f64| {
+            let mut dom = VirtualDom::new_with_props(App, AppProps { value });
+            dom.rebuild_in_place();
+            let html = dioxus_ssr::render(&dom);
+            let buttons = html.split("<button").skip(1).map(|button| {
+                let tag = &button[..button.find('>').unwrap_or(button.len())];
+                tag.contains("disabled")
+            });
+            buttons.collect::<Vec<_>>()
+        };
+        assert_eq!(stepper_state(0.0), [true, false]);
+        assert_eq!(stepper_state(10.0), [false, true]);
+        assert_eq!(stepper_state(5.0), [false, false]);
     }
 
     /// Todo 3962: `decimals` rounds Rust's text and pads it only when exact.
