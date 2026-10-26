@@ -46,6 +46,10 @@ pub struct DateLocale {
     pub week: &'static str,
     /// The error a date field shows for text it cannot read.
     pub invalid_date: &'static str,
+    /// The error for a range typed with its start only.
+    pub enter_end_date: &'static str,
+    /// The error for a range typed with its end only.
+    pub enter_start_date: &'static str,
     /// The error a time field shows for text it cannot read.
     pub invalid_time: &'static str,
     /// The error for a value before `min`, with no `max`: `{min}` in the field's format.
@@ -180,6 +184,8 @@ impl DateLocale {
         next_days: "Next days",
         week: "Week",
         invalid_date: "Not a valid date",
+        enter_end_date: "Enter an end date",
+        enter_start_date: "Enter a start date",
         invalid_time: "Not a valid time",
         on_or_after: "Must be on or after {min}",
         on_or_before: "Must be on or before {max}",
@@ -252,6 +258,8 @@ impl DateLocale {
         next_days: "Nächste Tage",
         week: "Woche",
         invalid_date: "Kein gültiges Datum",
+        enter_end_date: "Enddatum eingeben",
+        enter_start_date: "Startdatum eingeben",
         invalid_time: "Keine gültige Uhrzeit",
         // "Frühestens" and "spätestens" fit a day and a time alike.
         on_or_after: "Frühestens {min}",

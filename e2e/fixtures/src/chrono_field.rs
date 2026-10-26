@@ -21,6 +21,7 @@ pub const ROUTES: Routes = &[
     ("/chrono-field/time-first-range", || {
         rsx! { TimeFirstRangePage {} }
     }),
+    ("/chrono-field/range-submit", || rsx! { RangeSubmitPage {} }),
 ];
 
 /// `today` the 9th and `min` the 10th at 09:00: a time picked before any day lands on `min`.
@@ -69,6 +70,25 @@ fn TimeFirstRangePage() -> Element {
                 onchange: move |next| stay.set(next),
             }
             Text { id: "readout", {stay().map(|stay| stay.start.to_string()).unwrap_or_default()} }
+        }
+    }
+}
+
+/// An empty named range of days in a raw `<form>`, for a range typed with one end (4249).
+#[component]
+fn RangeSubmitPage() -> Element {
+    let mut stay = use_signal(|| None::<DateRange<NaiveDate>>);
+    rsx! {
+        form { id: "sent",
+            ChronoField::<DateRange<NaiveDate>> {
+                label: "Stay",
+                name: "stay",
+                today: NaiveDate::from_ymd_opt(2026, 10, 9),
+                value: stay(),
+                onchange: move |next| stay.set(next),
+            }
+            Text { id: "readout", {stay().map(|stay| stay.start.to_string()).unwrap_or_default()} }
+            button { id: "submit", r#type: "submit", "Send" }
         }
     }
 }

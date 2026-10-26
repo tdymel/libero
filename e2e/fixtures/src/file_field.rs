@@ -15,6 +15,7 @@ pub const ROUTES: Routes = &[
     ("/file-field/modes", || rsx! { FileModesPage {} }),
     ("/file-field/pick", || rsx! { FilePickPage {} }),
     ("/file-field/crop", || rsx! { FileCropPage {} }),
+    ("/file-field/crop-limit", || rsx! { FileCropLimitPage {} }),
     ("/file-field/reject", || rsx! { FileRejectPage {} }),
     ("/file-field/reset", || rsx! { FileResetPage {} }),
     ("/file-field/single", || rsx! { FileSinglePage {} }),
@@ -262,6 +263,41 @@ fn FileCropPage() -> Element {
             p { id: "stubbed", "{stubbed}" }
             p { id: "rect", "{rect}" }
             p { id: "out", "{out}" }
+        }
+    }
+}
+
+/// The crop page's field under a field `max_size` of 4 KB, 40 bytes after `#tight` (4298):
+/// `#out` is the kept file's name and bytes, `#rejected` what `onreject` got.
+#[component]
+fn FileCropLimitPage() -> Element {
+    let mut files = use_signal(Files::default);
+    let mut limit = use_signal(|| 4096u64);
+    let mut rejected = use_signal(String::new);
+    let out = files().one().map(|file| format!("{} {}", file.name(), file.size()));
+
+    rsx! {
+        Flex { direction: "column", gap: "md", max_width: "360px",
+            Button { id: "tight", onclick: move |_| limit.set(40), "Tighten" }
+            FileField {
+                id: "avatar",
+                label: "Avatar",
+                variant: "dropzone",
+                accept: "image/*",
+                max_size: Some(limit()),
+                crop: CropOptions { aspect: Some(1.0), max_size: Some(16), ..CropOptions::default() },
+                value: files(),
+                onchange: move |next: Files| files.set(next),
+                onreject: move |refused: Vec<FileRejection>| {
+                    let named: Vec<String> = refused
+                        .iter()
+                        .map(|rejection| format!("{:?}", rejection.reason))
+                        .collect();
+                    rejected.set(named.join(","));
+                },
+            }
+            p { id: "out", {out.unwrap_or_default()} }
+            p { id: "rejected", "{rejected}" }
         }
     }
 }

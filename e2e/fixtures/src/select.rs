@@ -35,7 +35,22 @@ pub const ROUTES: Routes = &[
     ("/select/long", || rsx! { SelectLongPage {} }),
     ("/select/long-label", || rsx! { SelectLongLabelPage {} }),
     ("/select/long-custom", || rsx! { SelectLongCustomPage {} }),
+    ("/select/empty", || rsx! { SelectEmptyPage {} }),
 ];
+
+/// Todo 4234: a plain Select without a single option.
+#[component]
+fn SelectEmptyPage() -> Element {
+    let mut value = use_signal(|| None::<String>);
+    rsx! {
+        Select::<String> {
+            label: "Item",
+            options: OptionList::new(Vec::<String>::new()),
+            value: value(),
+            onchange: move |next| value.set(next),
+        }
+    }
+}
 
 /// Three hundred rows whose `option` draws more than the label, with a short label of
 /// wide glyphs and a longer one of narrow glyphs (2742).

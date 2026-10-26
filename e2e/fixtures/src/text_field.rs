@@ -204,12 +204,13 @@ fn TextFieldPage() -> Element {
     }
 }
 
-/// Todo 4295: a plain `<form>`, no libero `Form` around the field.
+/// Todos 4295, 4331: a plain `<form>`, no libero `Form` around the field.
 #[component]
 fn PasswordRawFormPage() -> Element {
     rsx! {
         form { "data-case": "password-raw",
             PasswordField { label: "Secret" }
+            button { r#type: "submit", "Send" }
             button { r#type: "reset", "Clear" }
         }
     }

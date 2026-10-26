@@ -955,12 +955,27 @@ impl Drop for WebBoxResizeSubscription {
 pub(super) fn on_form_reset(
     mounted: &Rc<MountedData>,
     on_reset: Box<dyn Fn()>,
+    submits: bool,
 ) -> Option<Box<dyn ContentSubscription>> {
     let form = form_owner(mounted.downcast::<web_sys::Element>()?)?;
     let closure = Closure::<dyn FnMut()>::new(on_reset);
-    form.add_event_listener_with_callback("reset", closure.as_ref().unchecked_ref())
-        .ok()?;
-    Some(Box::new(WebResetSubscription { form, closure }))
+    let events: &'static [&'static str] = match submits {
+        true => &["reset", "submit"],
+        false => &["reset"],
+    };
+    // Built before adding, so a failed add still has its earlier listeners removed on drop.
+    let subscription = WebResetSubscription {
+        form,
+        closure,
+        events,
+    };
+    for event in events {
+        subscription
+            .form
+            .add_event_listener_with_callback(event, subscription.closure.as_ref().unchecked_ref())
+            .ok()?;
+    }
+    Some(Box::new(subscription))
 }
 
 /// A control's `form`, which honours its `form` attribute; for anything else
@@ -979,15 +994,18 @@ struct WebResetSubscription {
     form: web_sys::HtmlFormElement,
     /// Kept alive for as long as the listener is registered.
     closure: Closure<dyn FnMut()>,
+    events: &'static [&'static str],
 }
 
 impl ContentSubscription for WebResetSubscription {}
 
 impl Drop for WebResetSubscription {
     fn drop(&mut self) {
-        let _ = self
-            .form
-            .remove_event_listener_with_callback("reset", self.closure.as_ref().unchecked_ref());
+        for event in self.events {
+            let _ = self
+                .form
+                .remove_event_listener_with_callback(event, self.closure.as_ref().unchecked_ref());
+        }
     }
 }
 

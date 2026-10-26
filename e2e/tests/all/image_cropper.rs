@@ -301,6 +301,70 @@ fn a_dropped_image_is_cropped_before_the_field_takes_it() {
     drop(file);
 }
 
+/// Drops `file` on `/file-field/crop-limit`, after `#tight` when `tight`, and applies the crop.
+async fn crop_under_the_limit(file: &TempFile, tight: bool) -> Fixture {
+    let fixture = Fixture::open("/file-field/crop-limit", Viewport::Desktop)
+        .await
+        .unwrap();
+    let page = &fixture.page;
+    if tight {
+        pointer::click(page, "#tight").await.unwrap();
+    }
+    crate::file_field::drop_files(page, "[data-fixture-ready] [role=group]", file.drop_arg()).await;
+    let apply =
+        "[role=dialog] :not([data-slot=controls]) > button:last-of-type:not(:first-of-type)";
+    wait::for_js_true(
+        page,
+        &format!(
+            "(() => {{ const apply = document.querySelector({apply:?}); \
+             return !!apply && apply.textContent.trim() === 'Apply' && !apply.disabled; }})()"
+        ),
+        "a picture past max_size to open the crop dialog",
+    )
+    .await
+    .unwrap();
+    pointer::click(page, apply).await.unwrap();
+    fixture
+}
+
+/// Todos 4298, 4332: a pick past the field's `max_size` is still cropped, and its cut is
+/// held to the limit: kept under 4 KB, refused under 40 bytes.
+#[test]
+fn the_cut_not_the_pick_is_held_to_max_size() {
+    // Bytes after IEND pad the pick past 4 KB; the canvas's cut drops them.
+    let file = TempFile::new("e2e-crop-big", &[PNG, &[0u8; 8192][..]].concat());
+    block_on(async {
+        let fixture = crop_under_the_limit(&file, false).await;
+        wait::for_js_true(
+            &fixture.page,
+            "document.getElementById('out').textContent.startsWith('e2e-crop-big-')
+              && document.getElementById('rejected').textContent === ''",
+            "the field to keep the small cut of a large pick",
+        )
+        .await
+        .unwrap();
+        fixture
+            .console
+            .assert_clean("a cut under max_size")
+            .unwrap();
+        fixture.close().await.unwrap();
+
+        let fixture = crop_under_the_limit(&file, true).await;
+        wait::for_js_true(
+            &fixture.page,
+            "document.getElementById('rejected').textContent === 'TooLarge'
+              && document.getElementById('out').textContent === ''
+              && !document.querySelector('[role=dialog]')",
+            "the cut past 40 bytes to be refused",
+        )
+        .await
+        .unwrap();
+        fixture.console.assert_clean("a cut past max_size").unwrap();
+        fixture.close().await.unwrap();
+    });
+    drop(file);
+}
+
 /// A dropped file that is no image: the dialog says so and Apply stays off (1265).
 #[test]
 fn a_broken_image_in_the_crop_dialog_says_so() {

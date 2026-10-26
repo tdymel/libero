@@ -275,8 +275,8 @@ pub(super) fn use_picker_field<V: FieldValue>(
                 emit(None);
                 return None;
             }
-            let read = read_whole(&text, &formats, value, today).map_err(|_| {
-                Rc::new(|locale: &Localization| V::unreadable(&locale.date).to_string())
+            let read = read_whole(&text, &formats, value, today).map_err(|unheld| {
+                Rc::new(move |locale: &Localization| unheld.message::<V>(&locale.date).to_string())
                     as Rc<dyn FieldError>
             });
             match read.and_then(|next| accepts(next).map(|()| next)) {

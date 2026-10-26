@@ -23,13 +23,14 @@ pub(crate) fn on_content_change(
     backend::on_content_change(mounted, tag, callback)
 }
 
-/// Calls `on_reset` on each `reset` of the `<form>` owning `mounted`. `None` when
-/// no form owns it, and off the web.
+/// Calls `on_reset` on each `reset` of the `<form>` owning `mounted`, and each `submit`
+/// with `submits`. `None` when no form owns it, and off the web.
 pub(crate) fn on_form_reset(
     mounted: &Rc<MountedData>,
     on_reset: Box<dyn Fn()>,
+    submits: bool,
 ) -> Option<Box<dyn ContentSubscription>> {
-    backend::on_form_reset(mounted, on_reset)
+    backend::on_form_reset(mounted, on_reset, submits)
 }
 
 /// Sets the `value` of the element with `id`, for a WebView, whose handles cannot

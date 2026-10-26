@@ -295,11 +295,12 @@ pub(crate) fn scroll_chain_into_view(
 pub(crate) fn on_form_reset(
     mounted: &Rc<MountedData>,
     on_reset: Box<dyn Fn()>,
+    submits: bool,
 ) -> Option<Box<dyn ContentSubscription>> {
     #[cfg(not(target_arch = "wasm32"))]
-    let _ = (mounted, on_reset);
+    let _ = (mounted, on_reset, submits);
     #[cfg(target_arch = "wasm32")]
-    return web::on_form_reset(mounted, on_reset);
+    return web::on_form_reset(mounted, on_reset, submits);
     #[cfg(not(target_arch = "wasm32"))]
     return None;
 }

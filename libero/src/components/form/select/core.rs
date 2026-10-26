@@ -701,6 +701,8 @@ pub(crate) fn SelectCore(props: SelectCoreProps) -> Element {
         trigger,
     );
 
+    // An empty list says so even without a query, else the open list draws nothing (todo 4234).
+    let no_rows = rows.rows.is_empty();
     let listbox = select_listbox(Listbox {
         rows,
         header,
@@ -710,7 +712,8 @@ pub(crate) fn SelectCore(props: SelectCoreProps) -> Element {
         size,
         radius: radius.value(),
         loading: props.loading,
-        nothing_found: (searchable && !query.read().is_empty()).then(|| nothing_found.to_string()),
+        nothing_found: (no_rows || searchable && !query.read().is_empty())
+            .then(|| nothing_found.to_string()),
         multiple,
         // A multi-select pick adds or drops a chip, resizing the trigger.
         remeasure: match opened {

@@ -369,6 +369,63 @@ fn a_refused_date_says_which_rule_it_broke() {
     });
 }
 
+/// Todos 4249, 4334: a range typed with one end is refused, asks for the missing end, and
+/// the form posts nothing for it.
+#[test]
+fn a_range_typed_with_one_end_asks_for_the_other_and_posts_nothing() {
+    block_on(async {
+        let fixture = Fixture::open("/chrono-field/range-submit", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        // Enter submits the form too, which would leave the page.
+        page.evaluate_bounded(
+            "document.getElementById('sent') \
+             .addEventListener('submit', (event) => event.preventDefault())",
+        )
+        .await
+        .unwrap();
+
+        keyboard::tab_to(page, INPUT, 5).await.unwrap();
+        for (text, error) in [
+            ("October 21, 2026", "Enter an end date"),
+            ("– October 23, 2026", "Enter a start date"),
+        ] {
+            page.evaluate_bounded(format!("document.querySelector({INPUT:?}).select()"))
+                .await
+                .unwrap();
+            keyboard::type_text(page, text).await.unwrap();
+            keyboard::press(page, keyboard::ENTER).await.unwrap();
+            expect(
+                page,
+                &format!(
+                    "(() => {{ const input = document.querySelector({INPUT:?}); \
+                     const ids = (input.getAttribute('aria-describedby') || '').split(' '); \
+                     return input.getAttribute('aria-invalid') === 'true' && ids.some(id => \
+                       document.getElementById(id)?.textContent.trim() === {error:?}); }})()"
+                ),
+                &format!("{text:?} to describe the input with {error:?}"),
+            )
+            .await;
+        }
+        expect(page, &readout_is(""), "no half range emitted").await;
+        let posted: Vec<String> = page
+            .evaluate_bounded(
+                "[...new FormData(document.getElementById('sent'))] \
+                 .filter(([name, value]) => name.startsWith('stay') && value !== '') \
+                 .map(([name, value]) => `${name}=${value}`)",
+            )
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        assert!(posted.is_empty(), "a half range was posted: {posted:?}");
+
+        fixture.console.assert_clean("a one-ended range").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
 /// A digital column is a named spinbutton, so its value is heard with "Hours".
 #[test]
 fn a_digital_column_is_a_named_spinbutton() {

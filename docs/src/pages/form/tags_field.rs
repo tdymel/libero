@@ -146,7 +146,7 @@ pub fn TagsFieldPage() -> Element {
                         .doc("Corner radius of the frame and the list, independent of `size`. Or any CSS, e.g. `radius: \"0\"`."),
                     prop("value", "Vec<String>")
                         .default("[]")
-                        .doc("The tags, in order, strictly controlled. Pair it with `onchange`."),
+                        .doc("The tags, in order. Controlled with `onchange`; without it, or a bound `name`, the field starts from it and keeps its own edits."),
                     prop("onchange", "EventHandler<Vec<String>>")
                         .doc("Called with the whole list the caller should hold next."),
                     prop("suggestions", "Vec<String>")

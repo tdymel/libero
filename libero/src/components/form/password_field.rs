@@ -8,7 +8,7 @@ use crate::{
         form::{FormScope, SLOT_BUTTON_SX, TextField, field_props, slot_icon_size},
     },
     context::IconSlot,
-    hooks::{listener, use_element, use_form_owner, use_localization, use_theme},
+    hooks::{listener, use_element, use_form_settles, use_localization, use_theme},
     sx::ThemeAwareValue,
 };
 
@@ -77,10 +77,10 @@ pub fn PasswordField(props: PasswordFieldProps) -> Element {
         .reveal_button
         .unwrap_or(theme.password_field.reveal_button);
     // Revealed at a count of the form's submits and resets, so the next one hides it again
-    // (todo 497); outside a libero `Form` the count is the raw `<form>`'s resets (4295).
+    // (todo 497); outside a libero `Form`, the raw `<form>`'s (4295, 4331).
     let form = try_use_context::<FormScope>();
     let button = use_element();
-    let owner = use_form_owner(button, form.is_none() && reveal_button);
+    let owner = use_form_settles(button, form.is_none() && reveal_button);
     let settled = form.map_or(0, |form| form.settled()) + owner().unwrap_or(0);
     let mut revealed_at = use_signal(|| None::<u32>);
     let revealed = move || revealed_at() == Some(settled);

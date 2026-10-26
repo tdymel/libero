@@ -17,6 +17,48 @@ const LISTBOX: &str = "[role=listbox]";
 const SEARCH: &str = "input[role=combobox]";
 const OPTION_COUNT: usize = 5;
 
+/// Todo 4234: an open Select without options says so, as a Combobox does, and the trigger
+/// claims no list it does not show.
+#[test]
+fn an_open_empty_select_says_nothing_is_there() {
+    block_on(async {
+        let fixture = Fixture::open("/select/empty", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        keyboard::tab_to(page, TRIGGER, 5).await.unwrap();
+        keyboard::press(page, keyboard::ARROW_DOWN).await.unwrap();
+        let said = wait::for_js_true(
+            page,
+            &format!(
+                "document.querySelector('[data-slot=nothing-found]')?.textContent.trim() === 'No results' \
+                 && [...document.querySelectorAll('[role=status]')].some(s => s.textContent === 'No results') \
+                 && document.querySelector({TRIGGER:?}).getAttribute('aria-expanded') === 'false'"
+            ),
+            "the open list to say No results",
+        )
+        .await;
+        if let Err(error) = said {
+            let state: String = page
+                .evaluate_bounded(format!(
+                    "JSON.stringify([document.querySelector('[data-slot=nothing-found]')?.outerHTML, \
+                     [...document.querySelectorAll('[role=status]')].map(s => s.textContent), \
+                     document.querySelector({TRIGGER:?}).outerHTML.slice(0, 300), \
+                     document.activeElement.outerHTML.slice(0, 120)])"
+                ))
+                .await
+                .unwrap()
+                .into_value()
+                .unwrap();
+            panic!("{error}: [empty, statuses, trigger, focus] {state}");
+        }
+        fixture
+            .close_allowing("4234: Select warns on an empty option list")
+            .await
+            .unwrap();
+    });
+}
+
 async fn picked<D: Driver>(d: &mut D, expected: &str, after: &str) -> Result<()> {
     eventually(
         d,

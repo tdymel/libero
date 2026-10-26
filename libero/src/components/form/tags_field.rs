@@ -22,7 +22,6 @@ use crate::{
     platform::{ElementApi, caret_edges, is_tab, logical_key},
     sx::{StaticSx, sx},
     theme::Size,
-    utils::warn,
 };
 
 /// The chips and the draft input on one wrapping flow. The field's id and
@@ -64,7 +63,8 @@ field_props! {
     parts(TagsFieldPart);
     extends(input);
     pub struct TagsFieldProps {
-        /// The tags, in order. Strictly controlled - pair it with `onchange`.
+        /// The tags, in order. With `onchange` it is controlled; without one, or a
+        /// bound `name`, the field starts from it and keeps its own edits.
         #[props(default)]
         value: Vec<String>,
         /// Called with the whole list the caller should hold next.
@@ -146,13 +146,13 @@ pub fn TagsField(props: TagsFieldProps) -> Element {
     let item = use_toolbar_item();
     // The chips' x and the clear button belong to the field, not the bar.
     use_no_toolbar();
-    let held = bound.value().unwrap_or_else(|| props.value.clone());
+    // Without a handler or a binding, the field keeps its own edits (todo 4305).
+    let held = bound
+        .value()
+        .or_else(|| bound.entered())
+        .unwrap_or_else(|| props.value.clone());
     let edited = use_edited();
     let announcer = use_chip_announcer(held.clone(), edited);
-
-    if props.onchange.is_none() && !bound.is_bound() {
-        warn("TagsField: without `onchange` the tags can never change.");
-    }
 
     // The draft is the component's own, as `SelectCore` owns its query.
     let mut text = use_signal(String::new);

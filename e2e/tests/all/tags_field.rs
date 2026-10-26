@@ -54,6 +54,40 @@ fn it_honours_the_combobox_contract() {
     });
 }
 
+/// Todo 4305: with a `name` and no `onchange`, the field keeps its own edits and posts them.
+#[test]
+fn a_named_field_without_onchange_keeps_its_edits() {
+    block_on(async {
+        let fixture = Fixture::open("/tags-field/named", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        let input = "#sent input:not([type=hidden])";
+        let posted =
+            "JSON.stringify(new FormData(document.getElementById('sent')).getAll('topics'))";
+        pointer::click(page, input).await.unwrap();
+        keyboard::type_text(page, "css").await.unwrap();
+        keyboard::press(page, keyboard::ENTER).await.unwrap();
+        wait::for_js_true(
+            page,
+            &format!("{posted} === '[\"rust\",\"css\"]' && document.querySelector({input:?}).value === ''"),
+            "the typed tag to be kept and posted",
+        )
+        .await
+        .unwrap();
+        keyboard::press(page, keyboard::BACKSPACE).await.unwrap();
+        wait::for_js_true(
+            page,
+            &format!("{posted} === '[\"rust\"]'"),
+            "Backspace to take the tag back",
+        )
+        .await
+        .unwrap();
+        fixture.console.assert_clean("a named field").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
 /// Todo 3059: a field named by `aria_label` alone names its open list the same.
 #[test]
 fn the_listbox_is_named_by_the_fields_aria_label() {

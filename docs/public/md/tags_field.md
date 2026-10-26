@@ -61,7 +61,7 @@ fn Demo() -> Element {
 |---|---|---|---|
 | `size` | `Size` | `md` | Height, padding, font size and the chips' size. A chip is one step smaller than the field. |
 | `radius` | `ThemeAwareValue` | `sm` | Corner radius of the frame and the list, independent of `size`. Or any CSS, e.g. `radius: "0"`. |
-| `value` | `Vec<String>` | `[]` | The tags, in order, strictly controlled. Pair it with `onchange`. |
+| `value` | `Vec<String>` | `[]` | The tags, in order. Controlled with `onchange`; without it, or a bound `name`, the field starts from it and keeps its own edits. |
 | `onchange` | `EventHandler<Vec<String>>` | - | Called with the whole list the caller should hold next. |
 | `suggestions` | `Vec<String>` | - | Adds a dropdown of tags to pick. Tags already held are not offered. |
 | `split_chars` | `Vec<String>` | `[","]` | Each one commits the text before it, typed or pasted. |

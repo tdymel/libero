@@ -206,16 +206,47 @@ impl<T: FieldValue + Ord> FieldValue for DateRange<T> {
     }
 }
 
-/// Typed text as a value the field may hold: a range typed with one end is unreadable,
+/// Why typed text is no value the field may hold.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(super) enum Unheld {
+    Unreadable,
+    /// A range typed with its start only.
+    NoEnd,
+    /// A range typed with its end only.
+    NoStart,
+}
+
+impl Unheld {
+    pub(super) fn message<V: FieldValue>(self, names: &DateLocale) -> &'static str {
+        match self {
+            Self::Unreadable => V::unreadable(names),
+            Self::NoEnd => names.enter_end_date,
+            Self::NoStart => names.enter_start_date,
+        }
+    }
+}
+
+/// Typed text as a value the field may hold: a range typed with one end is refused,
 /// as only the picker holds a half range.
 pub(super) fn read_whole<V: FieldValue>(
     text: &str,
     formats: &Formats,
     current: Option<V>,
     today: Option<NaiveDate>,
-) -> Result<V, Unreadable> {
-    let read = V::read(text, formats, current, today)?;
-    read.is_complete().then_some(read).ok_or(Unreadable)
+) -> Result<V, Unheld> {
+    match V::read(text, formats, current, today) {
+        Ok(read) if read.is_complete() => Ok(read),
+        Ok(_) => Err(Unheld::NoEnd),
+        // An end alone reads as a half range of its own.
+        Err(Unreadable) => match split_range(text, formats.range_separator) {
+            ("", Some(end))
+                if V::read(end, formats, None, today).is_ok_and(|read| !read.is_complete()) =>
+            {
+                Err(Unheld::NoStart)
+            }
+            _ => Err(Unheld::Unreadable),
+        },
+    }
 }
 
 /// Which rule a typed value broke, so the field can say which.
@@ -478,8 +509,11 @@ mod tests {
         let whole = DateRange::new(day(1), Some(day(5)));
         let read = |text: &str| read_whole::<DateRange<NaiveDate>>(text, &formats, None, None);
         assert_eq!(read("2026年9月1日 ～ 2026年9月5日"), Ok(whole));
-        assert_eq!(read("2026年9月1日"), Err(Unreadable));
-        assert_eq!(read("2026年9月1日 ～ "), Err(Unreadable));
+        assert_eq!(read("2026年9月1日"), Err(Unheld::NoEnd));
+        assert_eq!(read("2026年9月1日 ～ "), Err(Unheld::NoEnd));
+        // Todo 4334: an end alone asks for its start.
+        assert_eq!(read("～ 2026年9月5日"), Err(Unheld::NoStart));
+        assert_eq!(read("～ nonsense"), Err(Unheld::Unreadable));
         assert_eq!(
             read_whole::<NaiveDate>("2026年9月1日", &formats, None, None),
             Ok(day(1))

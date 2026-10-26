@@ -1,5 +1,5 @@
 //! `PasswordField`: the revealed input stays out of a browser's speller (4309), and a plain
-//! `<form>` reset hides it again (4295).
+//! `<form>` reset or submit hides it again (4295, 4331).
 
 use e2e::browser::block_on;
 use e2e::passes::pointer;
@@ -72,6 +72,44 @@ fn a_plain_form_reset_hides_the_secret_again() {
         fixture
             .console
             .assert_clean("resetting a plain form")
+            .unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
+/// Todo 4331: the owner `<form>`'s submit hides the secret too.
+#[test]
+fn a_plain_form_submit_hides_the_secret_again() {
+    block_on(async {
+        let fixture = Fixture::open("/text-field/raw-form", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        let input = "[data-case=password-raw] input";
+        let reveal = "[data-case=password-raw] [data-slot=trailing] button";
+        let kind = format!("document.querySelector({input:?}).type");
+        // Kept on the page, which a real submit would leave.
+        page.evaluate_bounded(
+            "document.querySelector('[data-case=password-raw]') \
+             .addEventListener('submit', (event) => event.preventDefault())",
+        )
+        .await
+        .unwrap();
+
+        pointer::click(page, reveal).await.unwrap();
+        wait::for_js_true(page, &format!("{kind} === 'text'"), "the reveal click")
+            .await
+            .unwrap();
+        pointer::click(page, "[data-case=password-raw] [type=submit]")
+            .await
+            .unwrap();
+        wait::for_js_true(page, &format!("{kind} === 'password'"), "the form submit")
+            .await
+            .unwrap();
+
+        fixture
+            .console
+            .assert_clean("submitting a plain form")
             .unwrap();
         fixture.close().await.unwrap();
     });

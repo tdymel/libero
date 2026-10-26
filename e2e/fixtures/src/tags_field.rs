@@ -15,7 +15,18 @@ pub const ROUTES: Routes = &[
     ("/tags-field/long", || rsx! { TagsLongPage {} }),
     ("/tags-field/clear", || rsx! { TagsClearPage {} }),
     ("/tags-field/outside", || rsx! { TagsOutsidePage {} }),
+    ("/tags-field/named", || rsx! { TagsNamedPage {} }),
 ];
+
+/// Todo 4305: a field with a `name` and no `onchange`, in a raw `<form>`.
+#[component]
+fn TagsNamedPage() -> Element {
+    rsx! {
+        form { id: "sent",
+            TagsField { label: "Topics", name: "topics", value: vec!["rust".to_string()] }
+        }
+    }
+}
 
 /// Todos 4311, 4324: tags drawn without a button, and a button that swaps the list from outside.
 #[component]

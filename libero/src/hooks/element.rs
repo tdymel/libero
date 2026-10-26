@@ -257,6 +257,19 @@ pub(crate) fn use_resize_fallback(
 /// The raw DOM `<form>` owning `element`, while `enabled`: `Some` with its
 /// `reset` count, `None` without one. Stays `None` off the web.
 pub(crate) fn use_form_owner(element: ElementHandle, enabled: bool) -> ReadSignal<Option<u32>> {
+    use_form_events(element, enabled, false)
+}
+
+/// [`use_form_owner`], counting the `submit`s too.
+pub(crate) fn use_form_settles(element: ElementHandle, enabled: bool) -> ReadSignal<Option<u32>> {
+    use_form_events(element, enabled, true)
+}
+
+fn use_form_events(
+    element: ElementHandle,
+    enabled: bool,
+    submits: bool,
+) -> ReadSignal<Option<u32>> {
     // Bumped from the listener, which runs outside every scope.
     let owner = use_signal(|| None::<u32>);
     let slot = use_subscription_slot::<dyn ContentSubscription>();
@@ -274,6 +287,7 @@ pub(crate) fn use_form_owner(element: ElementHandle, enabled: bool) -> ReadSigna
                         let next = owner.peek().unwrap_or(0).wrapping_add(1);
                         owner.set(Some(next));
                     }),
+                    submits,
                 )
             });
         // Kept across a remount, so a count read before it never repeats.

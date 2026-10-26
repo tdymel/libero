@@ -134,7 +134,9 @@ pub(crate) use drag::{
 #[cfg(feature = "use-element")]
 pub use element::{ElementHandle, use_element};
 #[cfg(feature = "use-element")]
-pub(crate) use element::{use_content_changes, use_form_owner, use_resize_fallback};
+pub(crate) use element::{
+    use_content_changes, use_form_owner, use_form_settles, use_resize_fallback,
+};
 #[cfg(all(feature = "use-element", feature = "use-popover"))]
 pub(crate) use element_rect::{ElementRect, use_element_rect};
 #[cfg(feature = "fcm")]
