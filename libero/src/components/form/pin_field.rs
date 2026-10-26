@@ -149,7 +149,8 @@ pub fn PinField(props: PinFieldProps) -> Element {
         .rules(props.validate.check(&value))
         .bound(&bound)
         .required(required)
-        .empty(value.is_empty())
+        // A partly filled pin is missing its rest: `required` means every cell.
+        .empty(cells.iter().any(Option::is_none))
         .readonly(readonly)
         .disabled(disabled)
         .size(size)
@@ -772,7 +773,49 @@ fn PinCell(
 mod tests {
     use dioxus::prelude::*;
 
-    use crate::{LiberoProvider, components::form::PinField, utils::warnings_of};
+    use dioxus::core::provide_root_context;
+
+    use crate::{
+        LiberoProvider,
+        components::form::{Form, FormHandle, PinField, use_form},
+        utils::warnings_of,
+    };
+
+    #[derive(Clone, PartialEq, Default)]
+    struct Login {
+        code: String,
+    }
+
+    #[component]
+    fn Host(code: &'static str, required: bool) -> Element {
+        let login = use_store(|| Login { code: code.into() });
+        let form = use_form();
+        use_hook(|| provide_root_context(form));
+        rsx! {
+            LiberoProvider {
+                Form { form, value: login,
+                    PinField { label: "Code", length: 4usize, required, name: crate::path!(Login => code) }
+                }
+            }
+        }
+    }
+
+    fn valid(code: &'static str, required: bool) -> bool {
+        let mut dom = VirtualDom::new_with_props(Host, HostProps { code, required });
+        dom.rebuild_in_place();
+        dom.render_immediate(&mut dioxus::core::NoOpMutations);
+        let form = dom.in_scope(ScopeId::ROOT, consume_context::<FormHandle>);
+        dom.in_runtime(|| form.validate())
+    }
+
+    /// Todo 4292: `required` inside a form means every cell filled.
+    #[test]
+    fn a_required_pin_needs_every_cell() {
+        assert!(!valid("", true));
+        assert!(!valid("12", true));
+        assert!(valid("1234", true));
+        assert!(valid("12", false));
+    }
 
     fn warns(app: fn() -> Element) -> bool {
         warnings_of(app)

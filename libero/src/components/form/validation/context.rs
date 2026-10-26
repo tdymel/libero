@@ -385,9 +385,14 @@ impl FormScope {
     }
 
     /// An async rule answered: the field's entry takes it ahead of the field's render, so a
-    /// waiting submit judges it.
+    /// waiting submit judges it. A barred field's answer blocks nothing (4211).
     pub fn answer(&mut self, key: usize, answer: &FieldStatus) {
-        if let Some(entry) = self.fields.write_unchecked().get_mut(&key) {
+        if let Some(entry) = self
+            .fields
+            .write_unchecked()
+            .get_mut(&key)
+            .filter(|entry| !entry.barred)
+        {
             let known = match entry.status {
                 FieldStatus::Pending => FieldStatus::Valid,
                 ref status => status.clone(),
@@ -396,20 +401,28 @@ impl FormScope {
         }
     }
 
-    /// Whether an async rule that may end in an error is asking about a field's value.
+    /// The async rules of unbarred fields that are asking now and may end in an error.
+    fn blocking_checks(&self) -> impl Iterator<Item = Rc<Checking>> {
+        let fields = self.fields.peek();
+        let checks = self.checks.peek();
+        let blocking: Vec<_> = checks
+            .iter()
+            .filter(|(key, check)| {
+                check.blocking() && !fields.get(key).is_some_and(|entry| entry.barred)
+            })
+            .map(|(_, check)| check.clone())
+            .collect();
+        blocking.into_iter()
+    }
+
+    /// Whether an async rule that may end in an error is asking about an unbarred field's value.
     pub fn checking(&self) -> bool {
-        self.checks.peek().values().any(|check| check.blocking())
+        self.blocking_checks().next().is_some()
     }
 
     /// Ready once every async rule asking now has answered; their debounces end at once.
     pub fn answered(&self) -> impl Future<Output = ()> + 'static {
-        let checks: Vec<Rc<Checking>> = self
-            .checks
-            .peek()
-            .values()
-            .filter(|check| check.blocking())
-            .cloned()
-            .collect();
+        let checks: Vec<Rc<Checking>> = self.blocking_checks().collect();
         for check in &checks {
             check.hurry();
         }

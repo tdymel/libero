@@ -83,11 +83,13 @@ impl FormHandle {
 
     /// Checks the form as a submit does, without `onsubmit`; `true` when nothing is an error.
     /// Invalid, it shows the summary and focuses it; [`is_valid`](Self::is_valid) does neither.
+    /// It does not wait: `false` while an async rule is still asking, which
+    /// [`submit`](Self::submit) waits for.
     pub fn validate(&self) -> bool {
         let mut scope = self.scope;
         scope.submit();
         scope.warn_unknown_paths();
-        let valid = !scope.has_errors();
+        let valid = !scope.has_errors() && !scope.checking();
         if let Some(control) = self.control() {
             control.summary.set(match valid {
                 true => Vec::new(),

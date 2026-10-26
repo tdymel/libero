@@ -104,6 +104,7 @@ mod number_field;
 mod overlay;
 mod pagination;
 mod paper;
+mod password_field;
 mod perf;
 mod phone_field;
 mod picker_dialog;

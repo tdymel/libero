@@ -134,6 +134,7 @@ struct Setup {
     foreign: bool,
     /// The `Form`'s `pending_loader`.
     loader: bool,
+    disabled: bool,
 }
 
 #[derive(Clone, Default)]
@@ -177,7 +178,7 @@ fn SignupForm(setup: Setup) -> Element {
         Form { form, value: signup, pending_loader: setup.loader,
             onsubmit: move |_| sent.0.set(sent.0.get() + 1),
             if shown() {
-                TextField { label: "Email", name: mapped }
+                TextField { label: "Email", name: mapped, disabled: setup.disabled }
             }
         }
     }
@@ -323,6 +324,42 @@ fn a_submit_waiting_on_a_taken_value_shows_the_answer() {
     assert_eq!(sent(&dom), 0, "a taken address was sent");
     assert!(html.contains("This address is taken."), "{html}");
     assert!(html.contains(r#"data-slot="summary""#), "{html}");
+}
+
+/// Todo 4211: a disabled field's pending check neither holds the submit nor blocks it.
+#[test]
+fn a_barred_fields_check_holds_no_submit_and_blocks_none() {
+    let _clock = manual_timer::install();
+    let mut dom = mount_with(Setup {
+        disabled: true,
+        ..Setup::default()
+    });
+    let server = exposed::<Server>(&dom);
+    type_text(&mut dom, "a@x");
+    assert!(!checking(&dom), "a disabled field is waited for");
+    submit(&mut dom);
+    assert_eq!(sent(&dom), 1, "the submit waited for a disabled field");
+
+    elapse(&mut dom, 300);
+    server.answer(0, Err(EmailError::Taken));
+    settle(&mut dom);
+    assert!(!has_errors(&dom), "a disabled field's answer blocks");
+}
+
+/// Todo 4258: `validate` does not wait, so it never says valid while a rule is asking.
+#[test]
+fn validate_is_false_while_a_rule_is_asking() {
+    let _clock = manual_timer::install();
+    let mut dom = mount();
+    let server = exposed::<Server>(&dom);
+    let form = exposed::<FormHandle>(&dom);
+    type_text(&mut dom, "a@x");
+    assert!(!dom.in_runtime(|| form.validate()));
+
+    elapse(&mut dom, 300);
+    server.answer(0, Ok(()));
+    settle(&mut dom);
+    assert!(dom.in_runtime(|| form.validate()));
 }
 
 #[test]

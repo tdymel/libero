@@ -15,6 +15,7 @@ use crate::{Routes, common::Fruit};
 pub const ROUTES: Routes = &[
     ("/text-field", || rsx! { TextFieldPage {} }),
     ("/text-field/form", || rsx! { PasswordFormPage {} }),
+    ("/text-field/raw-form", || rsx! { PasswordRawFormPage {} }),
     ("/text-field/echo", || rsx! { TextFieldEchoPage {} }),
     ("/text-field/upper", || rsx! { TextFieldUpperPage {} }),
     ("/text-field/password-echo", || rsx! { PasswordEchoPage {} }),
@@ -199,6 +200,17 @@ fn TextFieldPage() -> Element {
                     validate: not_empty.error("Bio needed"),
                 }
             }
+        }
+    }
+}
+
+/// Todo 4295: a plain `<form>`, no libero `Form` around the field.
+#[component]
+fn PasswordRawFormPage() -> Element {
+    rsx! {
+        form { "data-case": "password-raw",
+            PasswordField { label: "Secret" }
+            button { r#type: "reset", "Clear" }
         }
     }
 }

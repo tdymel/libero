@@ -8,7 +8,7 @@ use crate::{
         form::{FormScope, SLOT_BUTTON_SX, TextField, field_props, slot_icon_size},
     },
     context::IconSlot,
-    hooks::{use_localization, use_theme},
+    hooks::{listener, use_element, use_form_owner, use_localization, use_theme},
     sx::ThemeAwareValue,
 };
 
@@ -72,16 +72,18 @@ fn private_attributes(mut attributes: Vec<Attribute>) -> Vec<Attribute> {
 /// Docs: <https://libero-ui.dev/form/password-field>
 #[component]
 pub fn PasswordField(props: PasswordFieldProps) -> Element {
-    // Revealed at a count of the form's submits and resets, so the next one
-    // hides it again (todo 497).
-    let form = try_use_context::<FormScope>();
-    let settled = form.map_or(0, |form| form.settled());
-    let mut revealed_at = use_signal(|| None::<u32>);
-    let revealed = move || revealed_at() == Some(settled);
     let theme = use_theme();
     let reveal_button = props
         .reveal_button
         .unwrap_or(theme.password_field.reveal_button);
+    // Revealed at a count of the form's submits and resets, so the next one hides it again
+    // (todo 497); outside a libero `Form` the count is the raw `<form>`'s resets (4295).
+    let form = try_use_context::<FormScope>();
+    let button = use_element();
+    let owner = use_form_owner(button, form.is_none() && reveal_button);
+    let settled = form.map_or(0, |form| form.settled()) + owner().unwrap_or(0);
+    let mut revealed_at = use_signal(|| None::<u32>);
+    let revealed = move || revealed_at() == Some(settled);
 
     // One static name plus `aria-pressed`: a name that flips is announced as a
     // different button, not as a state change (todo 498).
@@ -124,6 +126,7 @@ pub fn PasswordField(props: PasswordFieldProps) -> Element {
                     sx: &SLOT_BUTTON_SX,
                     // `ActionIcon` follows a disabled `Fieldset` itself.
                     disabled: props.disabled,
+                    attributes: vec![listener("onmounted", button.mount())],
                     onclick: move |_| revealed_at.set((!revealed()).then_some(settled)),
                     // A struck-through eye while the secret is readable.
                     if revealed() {
