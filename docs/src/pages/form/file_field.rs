@@ -1,12 +1,12 @@
 use crate::components::{
-    Child, Control, Demo, DemoValues, DocPage, DocSection, FieldCopy, a11y, field_controls,
-    field_props, prop, props, readonly_prop, status_prop,
+    Child, Control, Demo, DemoValues, DocPage, FieldCopy, a11y, field_controls, field_props, prop,
+    props, readonly_prop, status_prop,
 };
 use dioxus::prelude::*;
 use libero::components::FileFieldPart;
 use libero::components::{
-    Avatar, Button, Code, CodeBlock, CropOptions, FileField, FileRejection, FileTriggerArgs, Files,
-    Flex, Menu, MenuItem, Text, use_menu,
+    Avatar, Button, Code, CropOptions, FileField, FileRejection, FileTriggerArgs, Files, Flex,
+    Menu, MenuItem, MenuState, Text, use_menu,
 };
 use libero::use_theme;
 
@@ -58,6 +58,59 @@ const TRIGGER_CODE: &str = r#"trigger: move |t: FileTriggerArgs| rsx! {
     }
 }"#;
 
+// snippet: let mut files = use_signal(Files::default);
+// snippet: in FileField { label: "Attachment", value: files(), onchange: move |picked| files.set(picked), .. }
+const AVATAR_CODE: &str = r#"trigger: move |t: FileTriggerArgs| rsx! {
+    button {
+        r#type: "button",
+        style: "padding: 0; border: 0; background: none; border-radius: 50%; cursor: pointer",
+        onclick: move |_| t.open.call(()),
+        ..t.attributes,
+        Avatar {
+            name: t.files.one().map_or("No photo".to_string(), |file| file.name()),
+            size: "xl",
+        }
+    }
+}"#;
+
+// snippet: let mut files = use_signal(Files::default);
+// snippet: let menu = use_menu();
+// snippet: in FileField { label: "Attachment", value: files(), onchange: move |picked| files.set(picked), .. }
+const MENU_CODE: &str = r#"trigger: move |t: FileTriggerArgs| {
+    let open = t.open;
+    rsx! {
+        Menu {
+            state: menu,
+            items: vec![
+                MenuItem::new("Upload a picture").onselect(move |_| open.call(())).into(),
+                MenuItem::new("Remove")
+                    .color("error")
+                    .disabled(t.files.one().is_none())
+                    .onselect(move |_| files.set(Files::default()))
+                    .into(),
+            ],
+            button {
+                r#type: "button",
+                style: "padding: 0; border: 0; background: none; border-radius: 50%; cursor: pointer",
+                ..menu.a11y_attributes_on(t.attributes),
+                Avatar {
+                    name: t.files.one().map_or("No photo".to_string(), |file| file.name()),
+                    size: "xl",
+                }
+            }
+        }
+    }
+}"#;
+
+fn trigger_code(_: &Control, values: &DemoValues) -> Vec<String> {
+    match values.str("trigger").as_str() {
+        "button" => vec![TRIGGER_CODE.to_string()],
+        "avatar" => vec![AVATAR_CODE.to_string()],
+        "menu" => vec![MENU_CODE.to_string()],
+        _ => vec![],
+    }
+}
+
 /// The demo's trigger: an outline `Button` naming the held file.
 fn trigger(t: FileTriggerArgs) -> Element {
     let text = match t.files.len() {
@@ -72,6 +125,52 @@ fn trigger(t: FileTriggerArgs) -> Element {
             onclick: move |_| t.open.call(()),
             attributes: t.attributes,
             "{text}"
+        }
+    }
+}
+
+const AVATAR_BUTTON_STYLE: &str =
+    "padding: 0; border: 0; background: none; border-radius: 50%; cursor: pointer";
+
+fn avatar_name(t: &FileTriggerArgs) -> String {
+    t.files
+        .one()
+        .map_or("No photo".to_string(), |file| file.name())
+}
+
+/// An avatar button keeps its own width, so the avatar stays round.
+fn avatar_trigger(t: FileTriggerArgs) -> Element {
+    rsx! {
+        button {
+            r#type: "button",
+            style: AVATAR_BUTTON_STYLE,
+            onclick: move |_| t.open.call(()),
+            ..t.attributes,
+            Avatar { name: avatar_name(&t), size: "xl" }
+        }
+    }
+}
+
+/// The same avatar opens a `Menu`, which keeps the field's id for the label.
+fn menu_trigger(t: FileTriggerArgs, menu: MenuState, mut files: Signal<Files>) -> Element {
+    let open = t.open;
+    rsx! {
+        Menu {
+            state: menu,
+            items: vec![
+                MenuItem::new("Upload a picture").onselect(move |_| open.call(())).into(),
+                MenuItem::new("Remove")
+                    .color("error")
+                    .disabled(t.files.one().is_none())
+                    .onselect(move |_| files.set(Files::default()))
+                    .into(),
+            ],
+            button {
+                r#type: "button",
+                style: AVATAR_BUTTON_STYLE,
+                ..menu.a11y_attributes_on(t.attributes),
+                Avatar { name: avatar_name(&t), size: "xl" }
+            }
         }
     }
 }
@@ -119,7 +218,7 @@ pub fn FileFieldPage() -> Element {
                         .default("Chip, file name or card")
                         .doc("Draws one picked file, remove control included. `args.remove` removes it. Unset, a multiple `input` field draws a chip, a single one the file name, and a dropzone a card under its surface."),
                     prop("trigger", "Callback<FileTriggerArgs, Element>")
-                        .doc("Draws the app's own control, an avatar or a button, in place of the Browse surface, at its own width: no chips, cards, clear x or drop target. The field keeps its label, helper, error, `name`, `accept`, `max_size`, `capture` and `crop`. Make it a focusable `button`, spread `args.attributes` onto it, and call `args.open` from its click: a browser opens no picker outside a user gesture."),
+                        .doc("Draws the app's own control, an avatar or a button, in place of the Browse surface, at its own width: no chips, cards, clear x or drop target. The field keeps its label, helper, error, `name`, `accept`, `max_size`, `capture` and `crop`. Make it a focusable `button`, spread `args.attributes` onto it, and call `args.open` from its click: a browser opens no picker outside a user gesture. The trigger starts at the field's start and follows its `align-items`; `FileFieldPart::Trigger` styles its box. Opening a `Menu` from it works too: `menu.a11y_attributes_on(args.attributes)` keeps the field's `id`."),
                     prop("name", "FieldName<Files>")
                         .doc("What the files post as. A removed file stops posting. A path such as `Claim::FIELDS.receipts()` also binds the files to the surrounding `Form`'s value when the field has no `onchange`."),
                     prop("onchange", "EventHandler<Files>")
@@ -273,10 +372,10 @@ pub fn FileFieldPage() -> Element {
                             }
                         }),
                     // The app's own button in place of the surface (todo 4104).
-                    Control::switch("trigger").code(|_, values| match is_on(values, "trigger") {
-                        true => vec![TRIGGER_CODE.to_string()],
-                        false => vec![],
-                    }),
+                    Control::toggle("trigger", ["none", "button", "avatar", "menu"])
+                        .labels(["None", "Button", "Avatar", "Menu"])
+                        .default("none")
+                        .code(trigger_code),
                     Control::switch("required"),
                     Control::switch("disabled"),
                     Control::switch("loading"),
@@ -285,159 +384,6 @@ pub fn FileFieldPage() -> Element {
                     FileFieldDemo { values }
                 },
             }
-            DocSection { id: "avatar-trigger", title: "Avatar trigger",
-                Text {
-                    "A "
-                    Code { source: "trigger" }
-                    " keeps its own width, so an avatar stays round. The button carries "
-                    Code { source: "args.attributes" }
-                    " and opens the picker in its click; the label and helper stay the field's. "
-                    "It starts at the start of the field and follows the field's "
-                    Code { source: "align-items" }
-                    ", so "
-                    Code { source: "sx: sx().align_items(\"center\")" }
-                    " centres it; "
-                    Code { source: "FileFieldPart::Trigger" }
-                    " styles its box."
-                }
-                AvatarTriggerDemo {}
-                CodeBlock { source: AVATAR_CODE, language: "rust" }
-                Text {
-                    "The same button can open a "
-                    Code { source: "Menu" }
-                    " instead. "
-                    Code { source: "menu.a11y_attributes_on(t.attributes)" }
-                    " keeps the field's "
-                    Code { source: "id" }
-                    ", so the menu is named by the field's label, and an item opens the picker through "
-                    Code { source: "t.open" }
-                    "."
-                }
-                AvatarMenuDemo {}
-                CodeBlock { source: AVATAR_MENU_CODE, language: "rust" }
-            }
-        }
-    }
-}
-
-// snippet: let mut photo = use_signal(Files::default);
-const AVATAR_CODE: &str = r#"FileField {
-    label: "Photo",
-    helper: "Click the avatar to pick a picture.",
-    accept: "image/*",
-    value: photo(),
-    onchange: move |picked| photo.set(picked),
-    trigger: move |t: FileTriggerArgs| rsx! {
-        button {
-            r#type: "button",
-            style: "padding: 0; border: 0; background: none; border-radius: 50%; cursor: pointer",
-            onclick: move |_| t.open.call(()),
-            ..t.attributes,
-            Avatar {
-                name: t.files.one().map_or("No photo".to_string(), |file| file.name()),
-                size: "xl",
-            }
-        }
-    },
-}"#;
-
-/// `AVATAR_CODE`, live.
-#[component]
-fn AvatarTriggerDemo() -> Element {
-    let mut photo = use_signal(Files::default);
-    rsx! {
-        FileField {
-            label: "Photo",
-            helper: "Click the avatar to pick a picture.",
-            accept: "image/*",
-            value: photo(),
-            onchange: move |picked| photo.set(picked),
-            trigger: move |t: FileTriggerArgs| rsx! {
-                button {
-                    r#type: "button",
-                    style: "padding: 0; border: 0; background: none; border-radius: 50%; cursor: pointer",
-                    onclick: move |_| t.open.call(()),
-                    ..t.attributes,
-                    Avatar {
-                        name: t.files.one().map_or("No photo".to_string(), |file| file.name()),
-                        size: "xl",
-                    }
-                }
-            },
-        }
-    }
-}
-
-// snippet: let mut photo = use_signal(Files::default);
-// snippet: let menu = use_menu();
-const AVATAR_MENU_CODE: &str = r#"FileField {
-    label: "Photo",
-    accept: "image/*",
-    value: photo(),
-    onchange: move |picked| photo.set(picked),
-    trigger: move |t: FileTriggerArgs| {
-        let open = t.open;
-        rsx! {
-            Menu {
-                state: menu,
-                items: vec![
-                    MenuItem::new("Upload a picture").onselect(move |_| open.call(())).into(),
-                    MenuItem::new("Remove")
-                        .color("error")
-                        .disabled(t.files.one().is_none())
-                        .onselect(move |_| photo.set(Files::default()))
-                        .into(),
-                ],
-                button {
-                    r#type: "button",
-                    style: "padding: 0; border: 0; background: none; border-radius: 50%; cursor: pointer",
-                    ..menu.a11y_attributes_on(t.attributes),
-                    Avatar {
-                        name: t.files.one().map_or("No photo".to_string(), |file| file.name()),
-                        size: "xl",
-                    }
-                }
-            }
-        }
-    },
-}"#;
-
-/// `AVATAR_MENU_CODE`, live (todo 4111).
-#[component]
-fn AvatarMenuDemo() -> Element {
-    let mut photo = use_signal(Files::default);
-    let menu = use_menu();
-    rsx! {
-        FileField {
-            label: "Photo",
-            accept: "image/*",
-            value: photo(),
-            onchange: move |picked| photo.set(picked),
-            trigger: move |t: FileTriggerArgs| {
-                let open = t.open;
-                rsx! {
-                    Menu {
-                        state: menu,
-                        items: vec![
-                            MenuItem::new("Upload a picture").onselect(move |_| open.call(())).into(),
-                            MenuItem::new("Remove")
-                                .color("error")
-                                .disabled(t.files.one().is_none())
-                                .onselect(move |_| photo.set(Files::default()))
-                                .into(),
-                        ],
-                        button {
-                            r#type: "button",
-                            style: "padding: 0; border: 0; background: none; border-radius: 50%; cursor: pointer",
-                            ..menu.a11y_attributes_on(t.attributes),
-                            Avatar {
-                                name: t.files.one().map_or("No photo".to_string(), |file| file.name()),
-                                size: "xl",
-                            }
-                        }
-                    }
-                }
-            },
         }
     }
 }
@@ -447,6 +393,7 @@ fn AvatarMenuDemo() -> Element {
 fn FileFieldDemo(values: DemoValues) -> Element {
     let field = field_props::<AttachmentCopy>(&values);
     let mut files = use_signal(Files::default);
+    let menu = use_menu();
     let mut refused = use_signal(Vec::<String>::new);
 
     let accept = match values.str("accept").as_str() {
@@ -478,7 +425,12 @@ fn FileFieldDemo(values: DemoValues) -> Element {
                 required: is_on(&values, "required").then_some(true),
                 disabled: is_on(&values, "disabled").then_some(true),
                 loading: is_on(&values, "loading").then_some(true),
-                trigger: is_on(&values, "trigger").then_some(Callback::new(trigger)),
+                trigger: match values.str("trigger").as_str() {
+                    "button" => Some(Callback::new(trigger)),
+                    "avatar" => Some(Callback::new(avatar_trigger)),
+                    "menu" => Some(Callback::new(move |t| menu_trigger(t, menu, files))),
+                    _ => None,
+                },
                 onchange: move |picked: Files| files.set(picked),
                 onreject: move |rejected: Vec<FileRejection>| {
                     refused.set(

@@ -97,7 +97,7 @@ fn Break() -> Element {
 | `describe_trailing` | `bool` | `false` | `trailing` is text that describes the value, e.g. a unit. |
 | `increment_label` | `String` | `number_field.increase` | Names the plus button, such as "Add a guest". Unset, the localization's `number_field.increase`, "Increase" in English. |
 | `decrement_label` | `String` | `number_field.decrease` | Names the minus button. Unset, the localization's `number_field.decrease`, "Decrease" in English. |
-| `touch_input` | `TouchInput` | `Keyboard` | What a tap under a finger opens. `TouchInput::Spin` opens a spin column that steps by `step`, in a sheet below `sm` and a popover from `sm` up, with no soft keyboard; a mouse still types. See Touch input. |
+| `touch_input` | `TouchInput` | `Keyboard` | What a tap under a finger opens. `TouchInput::Spin` opens a spin column that steps by `step`, in a sheet below `sm` and a popover from `sm` up, with no soft keyboard; a mouse still types. Without `min` and `max` it spins on to the type's limits, and an empty field starts at `min`, else zero. The keyboard button beside Done switches to typing: it closes the spinner and focuses the field with its keypad. A phone browser raises the keyboard at once; in an Android app the next tap on the field does. |
 | `label` | `Caption` | - | The field's caption, above the control. It names the field. |
 | `description` | `Caption` | - | Between the label and the control. What to enter. |
 | `helper` | `Caption` | - | Under the control. Units, ranges, what the number means. |

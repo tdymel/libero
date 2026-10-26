@@ -1,10 +1,10 @@
 use crate::components::{
-    Control, Demo, DemoValues, DocPage, DocSection, FieldCopy, Wrap, a11y, disabled_prop,
-    field_controls, field_props, prop, props, readonly_prop, status_prop,
+    Control, Demo, DemoValues, DocPage, FieldCopy, Wrap, a11y, disabled_prop, field_controls,
+    field_props, prop, props, readonly_prop, status_prop,
 };
 use dioxus::prelude::*;
 use libero::components::FieldPart;
-use libero::components::{Code, CodeBlock, Decimals, NumberField, NumberValue, Text, TouchInput};
+use libero::components::{Code, Decimals, NumberField, NumberValue, Text, TouchInput};
 use libero::use_theme;
 
 struct QuantityCopy;
@@ -154,7 +154,7 @@ pub fn NumberFieldPage() -> Element {
                         .doc("Names the minus button. Unset, the localization's `number_field.decrease`, \"Decrease\" in English."),
                     prop("touch_input", "TouchInput")
                         .default("Keyboard")
-                        .doc("What a tap under a finger opens. `TouchInput::Spin` opens a spin column that steps by `step`, in a sheet below `sm` and a popover from `sm` up, with no soft keyboard; a mouse still types. See Touch input."),
+                        .doc("What a tap under a finger opens. `TouchInput::Spin` opens a spin column that steps by `step`, in a sheet below `sm` and a popover from `sm` up, with no soft keyboard; a mouse still types. Without `min` and `max` it spins on to the type's limits, and an empty field starts at `min`, else zero. The keyboard button beside Done switches to typing: it closes the spinner and focuses the field with its keypad. A phone browser raises the keyboard at once; in an Android app the next tap on the field does."),
                     prop("label", "Caption")
                         .doc("The field's caption, above the control. It names the field."),
                     prop("description", "Caption")
@@ -354,6 +354,11 @@ pub fn NumberFieldPage() -> Element {
                             _ => vec![],
                         }
                     }),
+                    // Under a finger a tap opens a spin column; a mouse still types.
+                    Control::switch("touch_spin").code(|_, values| match values.str("touch_spin").as_str() {
+                        "true" => vec!["touch_input: TouchInput::Spin".to_string()],
+                        _ => vec![],
+                    }),
                     Control::switch("required"),
                     Control::switch("disabled"),
                 ]].concat(),
@@ -371,12 +376,16 @@ pub fn NumberFieldPage() -> Element {
                     let increment_label = named.then(|| "Add one".to_string());
                     let decrement_label = named.then(|| "Remove one".to_string());
                     let group_digits = values.str("group_digits") == "true";
+                    let touch_input = match values.str("touch_spin").as_str() {
+                        "true" => TouchInput::Spin,
+                        _ => TouchInput::Keyboard,
+                    };
 
                     match values.str("type").as_str() {
                         "f64" if values.str("affix") == "currency" => rsx! {
                             NumberField {
                                 size, radius, label, aria_label, description, helper, status,
-                                required, disabled, steppers, increment_label, decrement_label, group_digits,
+                                required, disabled, steppers, increment_label, decrement_label, group_digits, touch_input,
                                 leading: rsx! { "$" },
                                 describe_leading: true,
                                 decimals: Decimals::Exactly(2),
@@ -389,7 +398,7 @@ pub fn NumberFieldPage() -> Element {
                         "f64" if percent(&values) => rsx! {
                             NumberField {
                                 size, radius, label, aria_label, description, helper, status,
-                                required, disabled, steppers, increment_label, decrement_label, group_digits,
+                                required, disabled, steppers, increment_label, decrement_label, group_digits, touch_input,
                                 trailing: rsx! { "%" },
                                 describe_trailing: true,
                                 decimals: Decimals::AtMost(1),
@@ -402,7 +411,7 @@ pub fn NumberFieldPage() -> Element {
                         "f64" => rsx! {
                             NumberField {
                                 size, radius, label, aria_label, description, helper, status,
-                                required, disabled, steppers, increment_label, decrement_label, group_digits,
+                                required, disabled, steppers, increment_label, decrement_label, group_digits, touch_input,
                                 step: 0.5f64,
                                 min: ranged.then_some(0.0f64),
                                 max: ranged.then_some(10.0f64),
@@ -413,7 +422,7 @@ pub fn NumberFieldPage() -> Element {
                         "cents" => rsx! {
                             NumberField {
                                 size, radius, label, aria_label, description, helper, status,
-                                required, disabled, steppers, increment_label, decrement_label, group_digits,
+                                required, disabled, steppers, increment_label, decrement_label, group_digits, touch_input,
                                 min: ranged.then_some(Cents(0)),
                                 max: ranged.then_some(Cents(10_000)),
                                 value: price(),
@@ -423,7 +432,7 @@ pub fn NumberFieldPage() -> Element {
                         _ => rsx! {
                             NumberField {
                                 size, radius, label, aria_label, description, helper, status,
-                                required, disabled, steppers, increment_label, decrement_label, group_digits,
+                                required, disabled, steppers, increment_label, decrement_label, group_digits, touch_input,
                                 min: ranged.then_some(1i32),
                                 max: ranged.then_some(99i32),
                                 value: quantity(),
@@ -433,73 +442,6 @@ pub fn NumberFieldPage() -> Element {
                     }
                 },
             }
-            DocSection { id: "touch-input", title: "Touch input",
-                Text {
-                    "With "
-                    Code { source: "touch_input: TouchInput::Spin" }
-                    ", a tap under a finger opens a spin column instead of the soft keyboard: "
-                    "a sheet at the screen's foot below "
-                    Code { source: "sm" }
-                    ", a popover under the field from "
-                    Code { source: "sm" }
-                    " up. A drag, the wheel, a tap on a neighbour or the arrow keys step it by "
-                    Code { source: "step" }
-                    ", and every step calls "
-                    Code { source: "onchange" }
-                    " at once; Done, Escape, Back and a tap outside only close it. Without "
-                    Code { source: "min" }
-                    " and "
-                    Code { source: "max" }
-                    " it spins on to the type's limits, and an empty field starts at "
-                    Code { source: "min" }
-                    ", else zero. A mouse still types."
-                }
-                Text {
-                    "The keyboard button beside Done switches to typing: it closes the spinner and "
-                    "focuses the field with its keypad. A phone browser raises the keyboard at once; "
-                    "in an Android app the next tap on the field does."
-                }
-                TouchSpinDemo {}
-                CodeBlock { source: TOUCH_SPIN_CODE, language: "rust" }
-            }
-        }
-    }
-}
-
-const TOUCH_SPIN_CODE: &str = r#"use dioxus::prelude::*;
-use libero::components::{NumberField, TouchInput};
-
-#[component]
-fn Break() -> Element {
-    let mut minutes = use_signal(|| Some(30u32));
-
-    rsx! {
-        NumberField {
-            label: "Break",
-            trailing: rsx! { "min" },
-            describe_trailing: true,
-            step: 5,
-            touch_input: TouchInput::Spin,
-            value: minutes(),
-            onchange: move |next| minutes.set(next),
-        }
-    }
-}
-"#;
-
-/// A break in steps of 5 minutes: under a finger a tap spins it.
-#[component]
-fn TouchSpinDemo() -> Element {
-    let mut minutes = use_signal(|| Some(30u32));
-    rsx! {
-        NumberField {
-            label: "Break",
-            trailing: rsx! { "min" },
-            describe_trailing: true,
-            step: 5,
-            touch_input: TouchInput::Spin,
-            value: minutes(),
-            onchange: move |next| minutes.set(next),
         }
     }
 }

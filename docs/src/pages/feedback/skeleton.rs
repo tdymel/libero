@@ -1,8 +1,8 @@
 use crate::components::{
-    Child, Control, Demo, DemoValues, DocPage, DocSection, Wrap, a11y, indent, prop, props,
+    Child, Control, Demo, DemoValues, DocPage, Wrap, a11y, indent, prop, props,
 };
 use dioxus::prelude::*;
-use libero::components::{Box, Button, Code, CodeBlock, Flex, Input, Skeleton, Text};
+use libero::components::{Box, Button, Code, Flex, Input, Skeleton, Text};
 use libero::sx::sx;
 use libero::use_theme;
 
@@ -11,37 +11,6 @@ use libero::use_theme;
 const CONTENT: &str = r#"Flex { direction: "row", gap: "sm", align: "center",
     Text { "Ada Lovelace" }
     Button { size: "xs", "Follow" }
-}"#;
-
-/// Todo 107: the grace before a placeholder shows is the caller's timing, so
-/// it is a recipe over `timer()` rather than a prop.
-// snippet: item #[derive(Clone, PartialEq, Default)] struct Profile;
-// snippet: item async fn load_profile() -> Profile { Profile }
-// snippet: item #[component] fn ProfileCard(profile: Profile) -> Element { rsx! {} }
-const GRACE_EXAMPLE: &str = r#"/// How long a fetch may take before its placeholder shows.
-const GRACE: Duration = Duration::from_millis(200);
-
-#[component]
-fn Card() -> Element {
-    let profile = use_resource(load_profile);
-    let loading = profile.read().is_none();
-    let mut slow = use_signal(|| timer().is_none());
-    // Dropping the timer cancels it, so an unmounted card never writes `slow`.
-    let mut grace = use_signal(|| {
-        timer().map(|timer| timer.after(GRACE, Box::new(move || slow.set(true))))
-    });
-    use_drop(move || grace.set(None));
-
-    rsx! {
-        div {
-            "aria-busy": loading,
-            // `opacity`, not `visibility`, which would not hide the grey.
-            opacity: if loading && !slow() { "0" } else { "1" },
-            Skeleton { visible: loading,
-                ProfileCard { profile: profile.read().clone().unwrap_or_default() }
-            }
-        }
-    }
 }"#;
 
 fn busy_region(values: &DemoValues) -> bool {
@@ -143,7 +112,10 @@ pub fn SkeletonPage() -> Element {
                     "the real content, it hides that content while "
                     Code { source: "visible" }
                     " is set, so the placeholder has exactly its size. Hidden content is not "
-                    "announced and not reachable with Tab."
+                    "announced and not reachable with Tab. A fast fetch should not flash it: keep the "
+                    "region transparent until a "
+                    Code { source: "timer()" }
+                    " grace period ends."
                 }
             },
             Demo {
@@ -211,16 +183,6 @@ pub fn SkeletonPage() -> Element {
                         false => skeleton,
                     }
                 },
-            }
-
-            DocSection {
-                title: "Grace period",
-                Text {
-                    "A fast fetch should not flash a placeholder: keep the region transparent until a "
-                    Code { source: "timer()" }
-                    " ends a grace period."
-                }
-                CodeBlock { source: GRACE_EXAMPLE, language: "rust" }
             }
         }
     }

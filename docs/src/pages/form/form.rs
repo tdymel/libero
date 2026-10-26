@@ -1,15 +1,21 @@
 use crate::Route;
 use crate::components::{
-    Control, Demo, DemoFile, DemoValues, DocPage, DocSection, Remount, SectionLink, Wrap, a11y,
-    indent, prop, props,
+    Control, Demo, DemoFile, DemoValues, DocPage, Remount, SectionLink, Wrap, a11y, indent, prop,
+    props,
 };
 use dioxus::prelude::*;
 use libero::components::{
-    Button, Checkbox, Code, CodeBlock, FieldError, FieldName, Fields, Fieldset, Flex, Form,
-    FormErrors, FormPart, PasswordField, Rule, Submit, Text, TextField, Validators, checked,
-    is_email, min_length, not_empty, use_form, use_form_context,
+    Button, Checkbox, Code, FieldError, FieldName, Fields, Fieldset, Flex, Form, FormErrors,
+    FormPart, PasswordField, Rule, Submit, SummaryMode, Text, TextField, Validators, checked,
+    checked_async, is_email, min_length, not_empty, use_form, use_form_context,
 };
 use libero::localization::Localization;
+use std::{
+    cell::{Cell, RefCell},
+    rc::Rc,
+    task::{Poll, Waker},
+    time::Duration,
+};
 
 #[derive(Clone, PartialEq, Default, Fields)]
 pub struct NewPassword {
@@ -27,6 +33,7 @@ pub struct Signup {
     pub company: bool,
     pub company_name: String,
     pub terms: bool,
+    pub username: Option<String>,
 }
 
 // snippet: ignore - builds on Getting Started's `EmailField` and `NewPasswordFieldset`
@@ -41,7 +48,7 @@ struct Signup {
     email: String,
     age: Option<Age>,
     #[fields(nested)]
-    password: NewPassword,__COMPANY_FIELDS__
+    password: NewPassword,__EXTRA_FIELDS__
     terms: bool,
 }
 
@@ -53,8 +60,8 @@ __STATE____HANDLE__
         Form {__FORM__
             value: signup,
 __RULE____SUMMARY__
-            onsubmit: Submit::parse(new_account, move |account: NewAccount| sent.set(account.email)),
-__FIELDS____COMPANY__
+__SUBMIT__
+__FIELDS____USERNAME____COMPANY__
 __TERMS__
 __BUTTONS__
 __STATUS__
@@ -65,36 +72,6 @@ __STATUS__
 /// The page's own source: the printed parts are cut from its live demo.
 const FILE: DemoFile = DemoFile(include_str!("form.rs"));
 
-// Prints from its `demo-code: start` marker, below the imports it compiles with.
-#[rustfmt::skip]
-mod sign_in;
-use sign_in::SignInForm;
-const SIGN_IN_CODE: DemoFile = DemoFile(include_str!("form/sign_in.rs"));
-#[rustfmt::skip]
-mod email_check;
-use email_check::EmailCheckForm;
-const EMAIL_CHECK_CODE: DemoFile = DemoFile(include_str!("form/email_check.rs"));
-
-const UPGRADE_CODE: &str = r#"use dioxus::prelude::*;
-use libero::components::Form;
-use libero::localization::{FormLabels, Localization};
-
-/// Written for the old `onsubmit`, and still forwarding it.
-#[component]
-fn AppForm(onsubmit: Option<EventHandler<FormEvent>>, children: Element) -> Element {
-    rsx! {
-        Form::<()> { onsubmit, {children} }
-    }
-}
-
-static WORDS: Localization = Localization {
-    form: FormLabels {
-        required: "This one is needed.",
-        ..FormLabels::ENGLISH
-    },
-    ..Localization::ENGLISH
-};"#;
-
 /// A section of the live form at the depth `FORM_CODE` splices it in.
 fn nest(name: &str) -> String {
     indent(&indent(&indent(&FILE.section(name))))
@@ -103,18 +80,69 @@ fn nest(name: &str) -> String {
 }
 
 fn form_code(values: &DemoValues, _: &str) -> String {
-    let handle = values.str("form") == "true";
-    let pick = |on: &'static str| if handle { on } else { "" };
-    let company = |on: &'static str| {
-        if values.str("company") == "true" {
-            on
-        } else {
-            ""
-        }
+    let on = |name: &str| values.str(name) == "true";
+    let (handle, loading, hidden, username) = (
+        on("form"),
+        on("async_submit"),
+        on("summary_hidden"),
+        on("username_check"),
+    );
+    let needs_form = handle || loading;
+    let mut imports = Vec::new();
+    if handle {
+        imports.push("Flex");
+    }
+    if hidden {
+        imports.push("SummaryMode");
+    }
+    if username {
+        imports.push("checked_async");
+    }
+    if needs_form {
+        imports.push("use_form");
+    }
+    if handle {
+        imports.push("use_form_context");
+    }
+    let imports = match imports.is_empty() {
+        true => String::new(),
+        false => format!("\nuse libero::components::{{{}}};", imports.join(", ")),
     };
-    let company_fields = match values.str("company") == "true" {
-        true => format!("\n{}", nest("company")),
-        false => String::new(),
+    let std_imports = match loading {
+        true => "\nuse std::time::Duration;",
+        false => "",
+    };
+    let mut extra_fields = String::new();
+    if on("company") {
+        extra_fields += "\n    company: bool,\n    company_name: String,";
+    }
+    if username {
+        extra_fields += "\n    username: Option<String>,";
+    }
+    let optional = |is_on: bool, text: String| if is_on { text } else { String::new() };
+    let mut options = String::new();
+    if on("summary_title") {
+        options += "\n            summary_title: \"Please fix these first:\",";
+    }
+    if hidden {
+        options += "\n            summary: SummaryMode::Hidden,";
+    }
+    if username {
+        options += "\n            pending_loader: true,";
+    }
+    let submit = format!(
+        "            onsubmit: {},",
+        nest(if loading {
+            "async_submit"
+        } else {
+            "submit_sync"
+        })
+        .trim_start()
+    );
+    let buttons = match (handle, loading) {
+        (true, _) => "handle_buttons",
+        (false, true) => "loading_submit",
+        (false, false) => "submit",
     };
     let code = FORM_CODE
         .replace("__STATE__", indent(&FILE.section("state")).trim_end())
@@ -122,37 +150,47 @@ fn form_code(values: &DemoValues, _: &str) -> String {
         .replace("__FIELDS__", &nest("fields"))
         .replace("__TERMS__", &nest("terms"))
         .replace("__STATUS__", &nest("status"))
+        .replace("__SUMMARY__", &options)
+        .replace("__SUBMIT__", &submit)
+        .replace("__IMPORTS__", &format!("{std_imports}{imports}"))
+        .replace("__EXTRA_FIELDS__", &extra_fields)
         .replace(
-            "__SUMMARY__",
-            match values.str("summary_title").as_str() {
-                "true" => "\n            summary_title: \"Please fix these first:\",",
-                _ => "",
+            "__COMPANY__",
+            &optional(on("company"), format!("\n{}", nest("company"))),
+        )
+        .replace(
+            "__USERNAME__",
+            &optional(username, format!("\n{}", nest("username"))),
+        )
+        .replace(
+            "__HANDLE__",
+            if needs_form {
+                "\n    let form = use_form();"
+            } else {
+                ""
             },
         )
         .replace(
-            "__IMPORTS__",
-            pick("\nuse libero::components::{Flex, use_form, use_form_context};"),
+            "__FORM__",
+            if needs_form {
+                "\n            form,"
+            } else {
+                ""
+            },
         )
-        .replace(
-            "__COMPANY_FIELDS__",
-            company("\n    company: bool,\n    company_name: String,"),
-        )
-        .replace("__COMPANY__", &company_fields)
-        .replace("__HANDLE__", pick("\n    let form = use_form();"))
-        .replace("__FORM__", pick("\n            form,"))
-        .replace(
-            "__BUTTONS__",
-            &nest(if handle { "handle_buttons" } else { "submit" }),
-        );
-    let code = format!(
+        .replace("__BUTTONS__", &nest(buttons));
+    let mut code = format!(
         "{code}\n\n{}\n\n{}",
         FILE.section("parse"),
         FILE.section("age")
     );
-    match handle {
-        true => format!("{code}\n\n{}", FILE.section("check_button")),
-        false => code,
+    if username {
+        code += &format!("\n\n{}", FILE.section("username_check"));
     }
+    if handle {
+        code += &format!("\n\n{}", FILE.section("check_button"));
+    }
+    code
 }
 
 fn silent(_: &Control, _: &DemoValues) -> Vec<String> {
@@ -285,127 +323,43 @@ pub fn FormPage() -> Element {
                 // that use it appear.
                 controls: vec![
                     Control::switch("summary_title").code(silent),
+                    Control::switch("summary_hidden").code(silent),
                     Control::switch("form").code(silent),
                     Control::switch("company").code(silent),
+                    Control::switch("async_submit").code(silent),
+                    Control::switch("username_check").code(silent),
                 ],
                 render: move |values: DemoValues| {
-                    let handle = values.str("form") == "true";
+                    let on = |name: &str| values.str(name) == "true";
+                    let (handle, async_submit) = (on("form"), on("async_submit"));
                     // Remounted: the `Form` takes its `form` handle once, on mount.
                     rsx! {
-                        Remount { on: "{handle}",
+                        Remount { on: "{handle}{async_submit}",
                             SignupForm {
-                                summary_title: values.str("summary_title") == "true",
+                                summary_title: on("summary_title"),
+                                hidden: on("summary_hidden"),
                                 handle,
-                                company: values.str("company") == "true",
+                                company: on("company"),
+                                async_submit,
+                                username: on("username_check"),
                             }
                         }
                     }
                 },
-            }
-            DocSection { id: "async-submit", title: "Async submit",
-                Text {
-                    Code { source: "Submit::parse_async(parse, handler)" }
-                    " runs an async "
-                    Code { source: "handler" }
-                    ", such as a request. "
-                    Code { source: "form.is_submitting()" }
-                    " is "
-                    Code { source: "true" }
-                    " until it ends, so the button shows "
-                    Code { source: "loading" }
-                    ", and a second submit meanwhile is ignored. An "
-                    Code { source: "Err" }
-                    " it returns lands like "
-                    Code { source: "set_errors" }
-                    ", and "
-                    Code { source: "FormErrors::form(..)" }
-                    " is an error on no field, such as wrong credentials. With "
-                    Code { source: "summary: SummaryMode::Hidden" }
-                    " a blocked submit focuses the first invalid field instead of a summary, and "
-                    "a screen reader hears how many errors there are. The password is a type with no "
-                    Code { source: "Clone" }
-                    " or "
-                    Code { source: "PartialEq" }
-                    ", held as "
-                    Code { source: "Option<ByAddress<Password>>" }
-                    " and bound with "
-                    Code { source: ".map" }
-                    ". Sign in empty, then with any email and a wrong password, then with "
-                    Code { source: "secret" }
-                    "."
-                }
-                SignInForm {}
-                CodeBlock { source: SIGN_IN_CODE.shown(), language: "rust" }
-            }
-            DocSection { id: "async-rules", title: "Async rules",
-                Text {
-                    Code { source: "checked_async(f)" }
-                    " asks a server whether a parsed value is fine, such as a free email address. "
-                    "It runs once the text parsed and the other rules found no error, 300 ms after "
-                    "the last keystroke unless "
-                    Code { source: ".debounce(ms)" }
-                    " says otherwise. Meanwhile the field is "
-                    Code { source: "FieldStatus::Pending" }
-                    ": its control has "
-                    Code { source: "aria-busy=\"true\"" }
-                    " and "
-                    Code { source: "data-state" }
-                    " "
-                    Code { source: "pending" }
-                    " once it showed its rules, after a blur or a submit, which "
-                    Code { source: "sx().when(\"pending\", ..)" }
-                    " styles. An answer for an older value is "
-                    "dropped. A submit asks at once, waits with "
-                    Code { source: "is_submitting()" }
-                    " set, and then sends or shows the answer. The rule takes the field's "
-                    Code { source: ".message" }
-                    " words, or its own "
-                    Code { source: ".message(fn)" }
-                    ". A plain "
-                    Code { source: "String" }
-                    " field gets one through "
-                    Code { source: ".map" }
-                    " or "
-                    Code { source: ".parsed()" }
-                    ". Type "
-                    Code { source: "taken@example.com" }
-                    ", then any other address."
-                }
-                EmailCheckForm {}
-                CodeBlock { source: EMAIL_CHECK_CODE.shown(), language: "rust" }
-            }
-            DocSection { id: "upgrading", title: "Upgrading",
-                Text {
-                    Code { source: "onsubmit" }
-                    " was an "
-                    Code { source: "Option<EventHandler<FormEvent>>" }
-                    " before it became "
-                    Code { source: "Submit<V>" }
-                    ". A closure still fits, and so does a handler a wrapper forwards, "
-                    "with or without the "
-                    Code { source: "Option" }
-                    ". "
-                    Code { source: "FormLabels" }
-                    " gains fields in minor releases, such as "
-                    Code { source: "error_count" }
-                    ", so build yours from a built-in set rather than listing every field. "
-                    Code { source: "FieldStatus" }
-                    " gained "
-                    Code { source: "Pending" }
-                    ": a "
-                    Code { source: "match" }
-                    " over it needs that arm, or a "
-                    Code { source: "_" }
-                    " one."
-                }
-                CodeBlock { source: UPGRADE_CODE, language: "rust" }
             }
         }
     }
 }
 
 #[component]
-fn SignupForm(summary_title: bool, handle: bool, company: bool) -> Element {
+fn SignupForm(
+    summary_title: bool,
+    hidden: bool,
+    handle: bool,
+    company: bool,
+    async_submit: bool,
+    username: bool,
+) -> Element {
     // demo-code: state start
     let signup = use_store(Signup::default);
     let mut sent = use_signal(String::new);
@@ -417,7 +371,7 @@ fn SignupForm(summary_title: bool, handle: bool, company: bool) -> Element {
     rsx! {
         Form {
             sx: libero::sx::sx().width("100%").max_width("320px"),
-            form: handle.then_some(form),
+            form: (handle || async_submit).then_some(form),
             value: signup,
             // demo-code: rule start
             // Only the whole signup sees the email and the password together.
@@ -426,7 +380,26 @@ fn SignupForm(summary_title: bool, handle: bool, company: bool) -> Element {
                 .on([Signup::FIELDS.password().value()]),
             // demo-code: rule end
             summary_title: summary_title.then(|| "Please fix these first:".to_string()),
-            onsubmit: Submit::parse(new_account, move |account: NewAccount| sent.set(account.email)),
+            summary: if hidden { SummaryMode::Hidden } else { SummaryMode::Visible },
+            pending_loader: username,
+            onsubmit: if async_submit {
+                // demo-code: async_submit start
+                Submit::parse_async(new_account, move |account: NewAccount| async move {
+                    // While the request runs, the form ignores another submit.
+                    delay(Duration::from_secs(1)).await;
+                    if account.email == "locked@example.com" {
+                        // No field is at fault, so the error shows above the fields.
+                        return Err(FormErrors::new().form("This account is locked."));
+                    }
+                    sent.set(account.email);
+                    Ok(())
+                })
+                // demo-code: async_submit end
+            } else {
+                // demo-code: submit_sync start
+                Submit::parse(new_account, move |account: NewAccount| sent.set(account.email))
+                // demo-code: submit_sync end
+            },
             // demo-code: fields start
             // `required` alone blocks an empty submit with "Fill in this field.".
             TextField { label: "Name", name: Signup::FIELDS.name(), required: true }
@@ -436,6 +409,17 @@ fn SignupForm(summary_title: bool, handle: bool, company: bool) -> Element {
             // The text parses into an `Age`; a rule on the age runs only once it did.
             TextField { label: "Age", name: Signup::FIELDS.age().parsed().rules([checked(Age::adult)]) }
             // demo-code: fields end
+            if username {
+                // demo-code: username start
+                // Asked 400 ms after the last keystroke, once the name parsed.
+                TextField {
+                    label: "Username",
+                    name: Signup::FIELDS.username().map(String::clone, username_text)
+                        .message(username_message)
+                        .rules([checked_async(username_free).debounce(400)]),
+                }
+                // demo-code: username end
+            }
             if company {
                 // demo-code: company start
                 Checkbox { label: "Sign up as a company", name: Signup::FIELDS.company() }
@@ -460,11 +444,15 @@ fn SignupForm(summary_title: bool, handle: bool, company: bool) -> Element {
                 // demo-code: handle_buttons start
                 Text { role: "status", if form.is_valid() { "Ready to send." } else { "Not ready yet." } }
                 Flex { gap: "sm",
-                    Button { r#type: "submit", "Create account" }
+                    Button { r#type: "submit", loading: form.is_submitting(), "Create account" }
                     CheckButton {}
                     Button { variant: "outlined", onclick: move |_| form.reset(), "Clear" }
                 }
                 // demo-code: handle_buttons end
+            } else if async_submit {
+                // demo-code: loading_submit start
+                Button { r#type: "submit", loading: form.is_submitting(), "Create account" }
+                // demo-code: loading_submit end
             } else {
                 // demo-code: submit start
                 Button { r#type: "submit", "Create account" }
@@ -546,6 +534,36 @@ impl Age {
 }
 // demo-code: age end
 
+// demo-code: username_check start
+enum UsernameError {
+    Spaces,
+    Taken,
+}
+
+fn username_text(text: String) -> Result<String, UsernameError> {
+    match text.contains(' ') {
+        true => Err(UsernameError::Spaces),
+        false => Ok(text),
+    }
+}
+
+fn username_message(error: &UsernameError, _: &Localization) -> String {
+    match error {
+        UsernameError::Spaces => "Use no spaces.".into(),
+        UsernameError::Taken => "This name is taken. Try another.".into(),
+    }
+}
+
+/// Stands in for a server: a second's wait, then `ada` is taken.
+async fn username_free(name: String) -> Result<(), UsernameError> {
+    delay(Duration::from_secs(1)).await;
+    match name == "ada" {
+        true => Err(UsernameError::Taken),
+        false => Ok(()),
+    }
+}
+// demo-code: username_check end
+
 // demo-code: check_button start
 /// Anything inside a form reaches its handle without a prop.
 #[component]
@@ -601,4 +619,30 @@ fn NewPasswordFieldset(#[props(into)] path: FieldName<NewPassword>) -> Element {
             }
         }
     }
+}
+
+async fn delay(duration: Duration) {
+    let Some(timer) = libero::platform::timer() else {
+        return;
+    };
+    let done = Rc::new(Cell::new(false));
+    let waker = Rc::new(RefCell::new(None::<Waker>));
+    let (fired, wake) = (done.clone(), waker.clone());
+    let _pending = timer.after(
+        duration,
+        Box::new(move || {
+            fired.set(true);
+            if let Some(waker) = wake.borrow_mut().take() {
+                waker.wake();
+            }
+        }),
+    );
+    std::future::poll_fn(|context| match done.get() {
+        true => Poll::Ready(()),
+        false => {
+            *waker.borrow_mut() = Some(context.waker().clone());
+            Poll::Pending
+        }
+    })
+    .await
 }
