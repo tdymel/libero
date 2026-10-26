@@ -3,7 +3,7 @@
 use dioxus::prelude::*;
 use libero::components::{
     Button, CropOptions, CropRect, FileField, FileRejection, FileTriggerArgs, Files, Flex, Form,
-    use_form,
+    SelectionArgs, use_form,
 };
 
 use crate::Routes;
@@ -20,7 +20,34 @@ pub const ROUTES: Routes = &[
     ("/file-field/single", || rsx! { FileSinglePage {} }),
     ("/file-field/limits", || rsx! { FileLimitsPage {} }),
     ("/file-field/trigger", || rsx! { FileTriggerPage {} }),
+    ("/file-field/selection", || rsx! { FileSelectionPage {} }),
 ];
+
+/// Todo 4297: a dropzone whose rows the app draws, each with its own remove button.
+#[component]
+fn FileSelectionPage() -> Element {
+    let mut files = use_signal(Files::default);
+
+    rsx! {
+        Flex { direction: "column", gap: "md", max_width: "360px",
+            FileField {
+                id: "drawn",
+                label: "Drawn",
+                variant: "dropzone",
+                multiple: true,
+                value: files(),
+                onchange: move |next: Files| files.set(next),
+                selection: |s: SelectionArgs<dioxus::html::FileData>| {
+                    let name = s.value.name();
+                    rsx! {
+                        span { "{name}" }
+                        button { r#type: "button", onclick: move |_| s.remove.call(()), "Drop {name}" }
+                    }
+                },
+            }
+        }
+    }
+}
 
 /// Todo 4104: the app's own button opens the picker. `#portrait` is required with a
 /// helper; `#locked` is read-only and draws `aria-disabled` instead of `disabled`.

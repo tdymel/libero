@@ -36,6 +36,9 @@ pub(super) struct Intake {
     /// What the next render owes the keyboard, after a removal or a pick
     /// destroyed the element focus was on.
     pub(super) owed: Signal<Option<FocusDebt>>,
+    /// Counts the picks and drops, kept or not: each one may have left the
+    /// input's `FileList` out of step with the value.
+    pub(super) intakes: Signal<u32>,
     /// A drop.
     pub(super) take: Callback<Vec<FileData>>,
     /// A pick, which the picker filtered by `accept` already.
@@ -62,8 +65,10 @@ pub(super) fn use_file_intake(taking: Taking) -> Intake {
     });
 
     let mut owed = use_signal(|| None::<FocusDebt>);
+    let mut intakes = use_signal(|| 0u32);
 
     let intake = use_callback(move |(files, picked): (Vec<FileData>, bool)| {
+        intakes.with_mut(|count| *count = count.wrapping_add(1));
         if !editable {
             return;
         }
@@ -95,6 +100,7 @@ pub(super) fn use_file_intake(taking: Taking) -> Intake {
     Intake {
         emit,
         owed,
+        intakes,
         take,
         pick,
     }
@@ -186,8 +192,8 @@ fn rejection_note(
 }
 
 /// Writes the caller's value back into the input's `FileList`, what a form
-/// posts, whenever the two disagree.
-pub(super) fn use_input_mirror(input_element: ElementHandle, synced: Files) {
+/// posts, whenever the two disagree: also after a pick that changed no value.
+pub(super) fn use_input_mirror(input_element: ElementHandle, synced: Files, intakes: u32) {
     let mut mirrored = use_signal(Mirrored::default);
     // The token, not `is_mounted`: a `variant` switch mounts a fresh, empty
     // input that must be rewritten too.
@@ -196,10 +202,11 @@ pub(super) fn use_input_mirror(input_element: ElementHandle, synced: Files) {
     let scope = try_use_context::<FormScope>();
     let owner = use_form_owner(input_element, scope.is_none());
     let resets = scope.map_or(0, |form| form.resets()) + owner().unwrap_or(0);
-    use_effect(use_reactive!(|(synced, mount, resets)| {
+    use_effect(use_reactive!(|(synced, mount, resets, intakes)| {
         let next = Mirrored {
             mount,
             resets,
+            intakes,
             files: synced,
         };
         if *mirrored.peek() == next {
@@ -230,5 +237,6 @@ pub(super) fn use_input_mirror(input_element: ElementHandle, synced: Files) {
 struct Mirrored {
     mount: Option<usize>,
     resets: u32,
+    intakes: u32,
     files: Files,
 }

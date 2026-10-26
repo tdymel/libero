@@ -731,6 +731,9 @@ pub fn ImageCropper(props: ImageCropperProps) -> Element {
                 Key::Named(NamedKey::ArrowRight) => shift(grabbed, step, 0.0),
                 Key::Named(NamedKey::ArrowUp) => shift(grabbed, 0.0, -step),
                 Key::Named(NamedKey::ArrowDown) => shift(grabbed, 0.0, step),
+                // APG's large step, vertical as on the colour picker's saturation area.
+                Key::Named(NamedKey::PageUp) => shift(grabbed, 0.0, -KEY_STEP * 10.0),
+                Key::Named(NamedKey::PageDown) => shift(grabbed, 0.0, KEY_STEP * 10.0),
                 Key::Named(NamedKey::Home) => shown.extreme(grabbed, false, ratio, min),
                 Key::Named(NamedKey::End) => shown.extreme(grabbed, true, ratio, min),
                 Key::Character(c) if pan && (c == "+" || c == "=") => {

@@ -674,7 +674,12 @@ async fn the_arrows_move_the_box<D: Driver>(d: &mut D, _route: &str) -> Result<(
     eventually(d, "the box's value text to follow", async |d| {
         Ok(d.attr(BOX, "aria-valuetext").await?.as_deref() == Some("50% by 50%, at 26%, 35%"))
     })
-    .await
+    .await?;
+    // APG's large step (4300).
+    d.press(keyboard::PAGE_UP).await?;
+    eventually_text(d, "#crop", "26,25,50,50", "PageUp").await?;
+    d.press(keyboard::PAGE_DOWN).await?;
+    eventually_text(d, "#crop", "26,35,50,50", "PageDown").await
 }
 
 async fn the_arrows_resize_from_a_corner<D: Driver>(d: &mut D, _route: &str) -> Result<()> {

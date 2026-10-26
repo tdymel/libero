@@ -381,6 +381,51 @@ async fn drag_files_at(page: &Page, x: f64, y: f64, files: Vec<String>, release:
     }
 }
 
+/// Todo 4297: an app's own `selection` rows hand the focus on too: to the next row's
+/// first focusable, then to Browse.
+#[test]
+fn removing_a_drawn_row_focuses_the_next_rows_button() {
+    const DROP_ALPHA: &str = "#drawn-card-0 button";
+    block_on(async {
+        let fixture = Fixture::open("/file-field/selection", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        wait::for_visible(page, SURFACE).await.unwrap();
+        let disk = OnDisk::new();
+        drop_files(page, SURFACE, disk.paths()).await;
+        wait::for_selector(page, "#drawn-card-1 button")
+            .await
+            .unwrap();
+
+        keyboard::tab_to(page, "#drawn-card-1 button", 5)
+            .await
+            .unwrap();
+        keyboard::press(page, keyboard::ENTER).await.unwrap();
+        wait::for_js_true(
+            page,
+            "!document.getElementById('drawn-card-1')",
+            "the beta row to go",
+        )
+        .await
+        .unwrap();
+        focus::wait_for_focus(page, DROP_ALPHA, "removing beta")
+            .await
+            .unwrap();
+
+        keyboard::press(page, keyboard::ENTER).await.unwrap();
+        focus::wait_for_focus(page, BROWSE, "removing the last row")
+            .await
+            .unwrap();
+
+        fixture
+            .console
+            .assert_clean("removing drawn rows by keyboard")
+            .unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
 async fn open_with_two_files() -> (Fixture, OnDisk) {
     let fixture = Fixture::open("/file-field", Viewport::Desktop)
         .await
@@ -1275,7 +1320,7 @@ e2e::scenario!(
 );
 
 /// `max_size: 5`: a file of more than five bytes is refused as `TooLarge`, and the live
-/// region says it is "larger than" the limit.
+/// region says it is "larger than" the limit. The input posts what the field shows (4296).
 async fn a_file_over_max_size_is_refused<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
     d.choose_files("#limits", &[("big.txt", "more than five bytes")])
         .await?;
@@ -1287,7 +1332,35 @@ async fn a_file_over_max_size_is_refused<D: Driver>(d: &mut D, _route: &str) -> 
     eventually(d, "no chip for the large file", async |d| {
         Ok(!d.text(FRAME).await?.contains("big.txt"))
     })
+    .await?;
+    eventually(d, "the input to drop the refused file", async |d| {
+        Ok(posted(d, "limits").await?.is_empty())
+    })
+    .await?;
+    d.choose_files("#limits", &[("ok.txt", "ok")]).await?;
+    eventually(d, "the input to hold the kept file", async |d| {
+        Ok(posted(d, "limits").await? == "ok.txt")
+    })
+    .await?;
+    d.choose_files("#limits", &[("big.txt", "more than five bytes")])
+        .await?;
+    eventually(
+        d,
+        "the input to keep the shown file over the refused one",
+        async |d| Ok(posted(d, "limits").await? == "ok.txt"),
+    )
     .await
+}
+
+/// The names in the `Input` variant field `id`'s `FileList`, what a form posts.
+async fn posted<D: Driver>(d: &mut D, id: &str) -> Result<String> {
+    let names = d
+        .evaluate(&format!(
+            "[...document.getElementById('{id}').parentElement \
+             .querySelector('input[type=file]').files].map(f => f.name).join()"
+        ))
+        .await?;
+    Ok(names.as_str().unwrap_or_default().to_string())
 }
 
 e2e::scenario!(

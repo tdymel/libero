@@ -7,7 +7,7 @@ use pictogram_icons_lucide as lucide;
 use crate::{
     components::{
         buttons::ActionIcon,
-        common::{Glyph, HtmlTag, Input, Part, navigation_chord},
+        common::{FOCUSABLE_SELECTOR, Glyph, HtmlTag, Input, Part, navigation_chord},
         feedback::Loader,
         form::{SelectionArgs, removable_chip},
         layout::BoxStyle,
@@ -15,7 +15,7 @@ use crate::{
     context::IconSlot,
     hooks::{ElementHandle, current_formats, current_localization, id_selector},
     localization::fill,
-    platform::{ElementApi, logical_key},
+    platform::{ElementApi, focus_first_of, logical_key},
     sx::{ThemeAwareValue, sx},
     theme::{FileFieldVariant, Size},
 };
@@ -42,6 +42,7 @@ pub(super) fn use_focus_debt(
     list_element: ElementHandle,
     browse_element: ElementHandle,
     focus_prefix: String,
+    within: bool,
 ) {
     use_effect(use_reactive!(|remaining| {
         let Some(debt) = *owed.peek() else {
@@ -59,23 +60,53 @@ pub(super) fn use_focus_debt(
             // The Browse button is still there, and still focused.
             FocusDebt::Took => return,
         };
-        focus_row(list_element, browse_element, &focus_prefix, target);
+        focus_row(list_element, browse_element, &focus_prefix, within, target);
     }));
 }
 
-/// Focuses row `target` by its tab stop's id under `list`, or the Browse
-/// button for `None`.
-fn focus_row(list: ElementHandle, browse: ElementHandle, prefix: &str, target: Option<usize>) {
-    match target {
-        Some(index) => {
-            if let Ok(row) = list.query_selector(&id_selector(&format!("{prefix}-{index}"))) {
+/// Focuses row `target` by its id under `list` (`within`: the row's first
+/// focusable, else the Browse button), or the Browse button for `None`.
+fn focus_row(
+    list: ElementHandle,
+    browse: ElementHandle,
+    prefix: &str,
+    within: bool,
+    target: Option<usize>,
+) {
+    let row = target.map(|index| id_selector(&format!("{prefix}-{index}")));
+    match (row, within) {
+        (Some(row), false) => {
+            if let Ok(row) = list.query_selector(&row) {
                 let _ = row.focus();
             }
         }
-        None => {
+        (Some(row), true) if focus_first_in(list, &row) => {}
+        _ => {
             let _ = browse.focus();
         }
     }
+}
+
+/// Focuses the first focusable inside `row`, a caller's `selection` as well as
+/// the default card's x.
+fn focus_first_in(list: ElementHandle, row: &str) -> bool {
+    let selector = format!("{row} :is({FOCUSABLE_SELECTOR})");
+    match list.query_selector_all(&selector) {
+        Ok(items) => items
+            .iter()
+            .any(|item| item.focus().is_ok() && item.is_focused()),
+        // A WebView queries nothing: the page focuses the match itself.
+        Err(_) => focus_first_of(&[selector]).is_ok(),
+    }
+}
+
+/// The id prefix of the dropzone's cards; `-{index}` follows.
+pub(super) fn card_prefix(field_id: &str) -> String {
+    format!("{field_id}-card")
+}
+
+fn card_id(field_id: &str, index: usize) -> String {
+    format!("{}-{index}", card_prefix(field_id))
 }
 
 /// Draws the picked files, for one render: chips in the `Input` variant,
@@ -143,6 +174,7 @@ impl FileRows {
             true => rsx! {
                 li {
                     key: "{index}",
+                    id: card_id(&self.field_id, index),
                     class: self.card_class.clone(),
                     "data-slot": FileFieldPart::Card.slot(),
                     {content}
@@ -262,7 +294,7 @@ impl ChipKeys {
             _ => return,
         };
         event.prevent_default();
-        focus_row(self.list, self.browse, &self.id_prefix, target);
+        focus_row(self.list, self.browse, &self.id_prefix, false, target);
     }
 }
 

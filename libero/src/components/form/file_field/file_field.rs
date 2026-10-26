@@ -30,7 +30,7 @@ use super::accept::accept_hint;
 use super::crop::CropGate;
 use super::files::{FileRejection, Files};
 use super::intake::{Intake, Limits, Taking, use_file_intake, use_input_mirror};
-use super::rows::{ChipKeys, FileRows, FocusDebt, use_chip_cursor, use_focus_debt};
+use super::rows::{ChipKeys, FileRows, FocusDebt, card_prefix, use_chip_cursor, use_focus_debt};
 use super::styles::{FILE_CARD_LIST_SX, FILE_CARD_SX, FILE_CHIP_SX, FILE_INPUT_SX};
 use super::surface::{
     Cards, Chips, Surface, file_dropzone_variant, file_input_variant, file_trigger_variant,
@@ -244,6 +244,7 @@ pub fn FileField(props: FileFieldProps) -> Element {
     let Intake {
         emit,
         owed,
+        intakes,
         take,
         pick,
     } = use_file_intake(Taking {
@@ -262,7 +263,7 @@ pub fn FileField(props: FileFieldProps) -> Element {
         crop: crop.map(|_| pending),
     });
 
-    use_input_mirror(input_element, value.clone());
+    use_input_mirror(input_element, value.clone(), intakes());
 
     let open = use_picker(&props, input_element, pick);
     // The trigger's click is the user gesture, so this opens at once.
@@ -331,11 +332,12 @@ pub fn FileField(props: FileFieldProps) -> Element {
         surface,
         list_element,
         browse_element,
-        // Each row's tab stop: a card's x, or the chip itself.
+        // A card's first focusable (its x, or a caller's `selection`'s), or the chip itself.
         match cards {
-            true => format!("{}-remove", field.id()),
+            true => card_prefix(field.id()),
             false => id_prefix.clone(),
         },
+        cards,
     );
 
     // Read off the field before the closures below, which outlive the borrow
