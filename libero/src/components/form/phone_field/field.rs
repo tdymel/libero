@@ -312,17 +312,21 @@ pub fn PhoneField(props: PhoneFieldProps) -> Element {
             if dial_moved.peek().is_some() {
                 dial_moved.set(None);
             }
+            // Re-picking the shown country changes nothing, so nothing fires.
+            let moved = next.iso != country.iso;
             // Only the dial code changed; without a fixed shape the typed text
             // keeps its spacing (todo 87b).
-            text.set(countries::group(next, &typed).unwrap_or_else(|| shown.clone()));
-            if let Some(emit) = &pick_emit {
-                emit(countries::to_e164(next, &typed));
+            if moved {
+                text.set(countries::group(next, &typed).unwrap_or_else(|| shown.clone()));
+                if let Some(emit) = &pick_emit {
+                    emit(countries::to_e164(next, &typed));
+                }
             }
             if !by_user {
                 return;
             }
             state.close();
-            if let Some(oncountrychange) = &oncountrychange {
+            if let (true, Some(oncountrychange)) = (moved, &oncountrychange) {
                 oncountrychange.call(next.iso.to_string());
             }
             // The list and its search box are gone; focus returns to the picker.
@@ -1139,6 +1143,33 @@ mod tests {
         assert_eq!((to.iso, national.as_str()), ("GB", "20"));
         // Letters and other numerals (Roman, fractions) are no digits.
         assert_eq!(digits_of("Ⅻ½a"), "");
+    }
+
+    /// Todo 4291: a single-area NANP row takes the 10-digit number without doubling its area code.
+    #[test]
+    fn a_single_area_nanp_row_posts_its_area_code_once() {
+        assert_eq!(
+            countries::value_of(country("BS"), "(242) 555-0123"),
+            "+12425550123"
+        );
+        assert_eq!(
+            countries::to_e164(country("BS"), "2425550123"),
+            "+12425550123"
+        );
+        assert_eq!(countries::to_e164(country("BS"), "5550123"), "+12425550123");
+        assert_eq!(
+            countries::to_e164(country("AS"), "6845550123"),
+            "+16845550123"
+        );
+        // Another area's 10 digits stay behind the row's dial code, as before.
+        assert_eq!(
+            countries::to_e164(country("BS"), "2125550123"),
+            "+12422125550123"
+        );
+        assert_eq!(
+            countries::to_e164(country("US"), "2425550123"),
+            "+12425550123"
+        );
     }
 
     /// A dial code alone is no number yet (todo 2604): it posts nothing and keeps no digits.

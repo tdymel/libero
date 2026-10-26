@@ -298,9 +298,15 @@ pub(crate) const SHARING: &[&str] = &[
 /// field posts nothing rather than a bare dial code.
 pub(crate) fn to_e164(country: &Country, national: &str) -> String {
     let national = digits_of(national);
-    match national.is_empty() {
-        true => String::new(),
-        false => format!("+{}{national}", country.dial),
+    // A single-area NANP row (`1242`) also takes the 10-digit number led by its own area code.
+    let area = country
+        .dial
+        .strip_prefix('1')
+        .filter(|area| area.len() == 3);
+    match area {
+        _ if national.is_empty() => String::new(),
+        Some(area) if national.len() == 10 && national.starts_with(area) => format!("+1{national}"),
+        _ => format!("+{}{national}", country.dial),
     }
 }
 

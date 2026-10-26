@@ -137,6 +137,8 @@ pub fn PinField(props: PinFieldProps) -> Element {
         .or_else(|| props.value.clone())
         .unwrap_or_else(&*buffer);
     let cells = to_cells(&value, length);
+    // What the cells show: a controlled value past `length` posts cut too.
+    let posted = from_cells(&cells);
 
     let field = use_field()
         .labelled_by()
@@ -195,7 +197,7 @@ pub fn PinField(props: PinFieldProps) -> Element {
     // event ([[codebase/reentrant-handlers]]).
     let report: Rc<dyn Fn(Vec<Option<char>>)> = Rc::new(move |cells: Vec<Option<char>>| {
         let mut buffer = buffer;
-        let next: String = cells.iter().flatten().collect();
+        let next = from_cells(&cells);
         let full = next.chars().count() == length;
         if !controlled {
             buffer.set(next.clone());
@@ -270,7 +272,7 @@ pub fn PinField(props: PinFieldProps) -> Element {
             input {
                 r#type: "hidden",
                 name,
-                value: "{value}",
+                value: posted,
                 disabled: disabled.then_some(true),
             }
         });
@@ -304,9 +306,9 @@ fn to_cells(value: &str, length: usize) -> Vec<Option<char>> {
     cells
 }
 
-/// The last index focus may land on after a spread.
-fn next_len_floor(length: usize) -> usize {
-    length - 1
+/// The value the cells hold, the inverse of [`to_cells`].
+fn from_cells(cells: &[Option<char>]) -> String {
+    cells.iter().flatten().collect()
 }
 
 /// Each cell's own handle, by index, filled in as the cells render.
@@ -377,7 +379,7 @@ impl PinEdit {
             cursor += 1;
         }
         (self.report)(next.clone());
-        (next, cursor.min(next_len_floor(self.length)))
+        (next, cursor.min(self.length - 1))
     }
 
     /// Writes cell `index`'s text. A WebView handle cannot, so it goes by id there.
@@ -788,5 +790,21 @@ mod tests {
         assert!(!warns(
             || rsx! { LiberoProvider { PinField { aria_label: "Code" } } }
         ));
+    }
+
+    /// Todo 4293: the hidden input posts what the cells show, not a longer raw value.
+    #[test]
+    fn the_hidden_input_posts_the_cut_value() {
+        let mut dom = VirtualDom::new(|| {
+            rsx! {
+                LiberoProvider {
+                    PinField { label: "Code", name: "code", length: 4usize, value: "123456" }
+                }
+            }
+        });
+        dom.rebuild_in_place();
+        let html = dioxus_ssr::render(&dom);
+        assert!(html.contains("value=\"1234\""), "{html}");
+        assert!(!html.contains("123456"), "{html}");
     }
 }

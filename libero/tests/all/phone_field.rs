@@ -459,6 +459,65 @@ mod dispatched {
         assert!(!html.contains("Country set to"), "{html}");
     }
 
+    thread_local! {
+        /// Every country change the re-pick field below reported.
+        static CHANGED: std::cell::RefCell<Vec<String>> = const { std::cell::RefCell::new(Vec::new()) };
+    }
+
+    fn repick_app() -> Element {
+        rsx! {
+            LiberoProvider {
+                PhoneField {
+                    label: "Mobile",
+                    country: "DE",
+                    value: "+4930123456",
+                    oninput: move |next: String| EMITTED.with_borrow_mut(|seen| seen.push(next)),
+                    oncountrychange: move |iso: String| CHANGED.with_borrow_mut(|seen| seen.push(iso)),
+                }
+            }
+        }
+    }
+
+    /// Todo 4293: picking the country already shown fires neither callback; another one fires both.
+    #[test]
+    fn re_picking_the_current_country_fires_nothing() {
+        EMITTED.with_borrow_mut(Vec::clear);
+        CHANGED.with_borrow_mut(Vec::clear);
+        let mut page = Page::mount(repick_app);
+        let button = page
+            .rec
+            .first_click
+            .expect("the country button takes clicks");
+        // A fresh recorder per open: the last list's rows are gone.
+        let open = |page: &mut Page| {
+            page.rec = FindClickListener::default();
+            page.click(button);
+            page.render();
+        };
+        open(&mut page);
+        let current = page.rec.matching("click", "aria-selected", "true");
+        let [current] = current[..] else {
+            panic!("not one selected row: {current:?}");
+        };
+        page.click(current);
+        page.render();
+        assert_eq!(EMITTED.with_borrow(Vec::clone), Vec::<String>::new());
+        assert_eq!(CHANGED.with_borrow(Vec::clone), Vec::<String>::new());
+
+        open(&mut page);
+        let selected = page.rec.matching("click", "aria-selected", "true");
+        let other = page
+            .rec
+            .matching("click", "role", "option")
+            .into_iter()
+            .find(|id| !selected.contains(id))
+            .expect("another row");
+        page.click(other);
+        page.render();
+        assert_eq!(EMITTED.with_borrow(Vec::len), 1);
+        assert_eq!(CHANGED.with_borrow(Vec::len), 1);
+    }
+
     /// The text the `tel` input is showing, which is not what it posts.
     fn phone_text(html: &str) -> String {
         attributes_of(&body(html), "input")
