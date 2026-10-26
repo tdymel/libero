@@ -5,6 +5,7 @@ use anyhow::Result;
 use e2e::archetypes::Overlay;
 use e2e::browser::block_on;
 use e2e::driver::{Driver, Platform, eventually, eventually_focused, eventually_text};
+use e2e::passes::pointer::tap;
 use e2e::suite::Step;
 use e2e::wait::{ElementBounded, PageBounded};
 use e2e::{
@@ -1050,11 +1051,6 @@ async fn phone(route: &str) -> Fixture {
     fixture
 }
 
-async fn tap(page: &chromiumoxide::Page, selector: &str) -> Result<()> {
-    let at = pointer::touch_down(page, selector).await?;
-    pointer::touch_up(page, at).await
-}
-
 /// `count` menu levels open, the last one placed edge to edge on the screen's foot.
 async fn sheets_shown(page: &chromiumoxide::Page, count: usize) -> Result<()> {
     let js = format!(
@@ -1119,7 +1115,7 @@ fn below_sm_the_menu_is_a_sheet_that_closes_every_way() {
             x: at.x,
             y: at.y + 200.0,
         };
-        pointer::touch_drag(page, at, to, 4).await.unwrap();
+        pointer::swipe(page, at, to, 4).await.unwrap();
         wait::for_js_true(
             page,
             &format!("{MENU_GONE} && document.querySelector('#last').textContent === ''"),

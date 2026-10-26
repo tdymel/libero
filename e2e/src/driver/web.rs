@@ -156,7 +156,7 @@ impl Driver for Web {
             x: x + dx,
             y: y + dy,
         };
-        in_front(page, pointer::touch_drag(page, from, to, 8)).await
+        pointer::swipe(page, from, to, 8).await
     }
 
     async fn touch_down(&mut self, selector: &str) -> Result<()> {

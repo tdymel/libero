@@ -7,9 +7,10 @@ use chromiumoxide::Page;
 use chromiumoxide::cdp::browser_protocol::emulation::SetDeviceMetricsOverrideParams;
 use e2e::browser::block_on;
 use e2e::driver::{Driver, eventually};
+use e2e::passes::pointer::tap;
 use e2e::passes::{keyboard, pointer};
 use e2e::wait::PageBounded;
-use e2e::{Fixture, Viewport, wait};
+use e2e::{Fixture, Viewport, frames, wait};
 
 const SHEET: &str = "[role=dialog]";
 const TYPED: &str = "[role=dialog] [data-slot=text-input]";
@@ -24,11 +25,6 @@ async fn phone() -> Fixture {
         .await
         .unwrap();
     fixture
-}
-
-async fn tap(page: &Page, selector: &str) -> Result<()> {
-    let at = pointer::touch_down(page, selector).await?;
-    pointer::touch_up(page, at).await
 }
 
 fn input(field: &str) -> String {
@@ -302,8 +298,6 @@ fn a_swipe_pages_the_day_sheet() {
     block_on(async {
         let fixture = phone().await;
         let page = &fixture.page;
-        // Todos 4159, 4171: in front the swipes run fast, so a flinging lift would swallow the title tap.
-        page.bring_to_front().await.unwrap();
         tap(page, &input("due")).await.unwrap();
         sheet_shown(page).await.unwrap();
         let title = |month: &str| {
@@ -320,15 +314,11 @@ fn a_swipe_pages_the_day_sheet() {
             x: at.x + dx,
             y: at.y,
         };
-        pointer::touch_drag(page, by(60.0), by(-60.0), 6)
-            .await
-            .unwrap();
+        pointer::swipe(page, by(60.0), by(-60.0), 6).await.unwrap();
         wait::for_js_true(page, &title("October 2026"), "a swipe left, October")
             .await
             .unwrap();
-        pointer::touch_drag(page, by(-60.0), by(60.0), 6)
-            .await
-            .unwrap();
+        pointer::swipe(page, by(-60.0), by(60.0), 6).await.unwrap();
         wait::for_js_true(page, &title("September 2026"), "a swipe right, September")
             .await
             .unwrap();
@@ -375,26 +365,30 @@ fn a_swipe_down_slides_the_sheet_away() {
         let shifted = |by: f64| format!("Math.abs({}  - {by}) < 1", sheet_shift());
         tap(page, &input("due")).await.unwrap();
         sheet_shown(page).await.unwrap();
-        let at = pointer::touch_down(page, &strip).await.unwrap();
+        let at = pointer::centre_of(page, &strip).await.unwrap();
         let down = |dy: f64| pointer::Point {
             x: at.x,
             y: at.y + dy,
         };
-        pointer::touch_move(page, down(10.0)).await.unwrap();
-        pointer::touch_move(page, down(30.0)).await.unwrap();
-        wait::for_js_true(
-            page,
-            &shifted(30.0),
-            "the sheet 30px down, under the finger",
-        )
+        frames::in_front(page, async {
+            pointer::touch_down(page, &strip).await?;
+            pointer::touch_move(page, down(10.0)).await?;
+            pointer::touch_move(page, down(30.0)).await?;
+            wait::for_js_true(
+                page,
+                &shifted(30.0),
+                "the sheet 30px down, under the finger",
+            )
+            .await?;
+            pointer::touch_up(page, down(30.0)).await
+        })
         .await
         .unwrap();
-        pointer::touch_up(page, down(30.0)).await.unwrap();
         wait::for_js_true(page, &shifted(0.0), "a short swipe sprung back")
             .await
             .unwrap();
         page.evaluate(slide_watch()).await.unwrap();
-        pointer::touch_drag(page, at, down(120.0), 2).await.unwrap();
+        pointer::swipe(page, at, down(120.0), 2).await.unwrap();
         let gone = format!("!document.querySelector({SHEET:?}) && window.slid");
         wait::for_js_true(
             page,
@@ -430,7 +424,7 @@ fn reduced_motion_closes_a_swiped_sheet_at_once() {
             x: at.x,
             y: at.y + 120.0,
         };
-        pointer::touch_drag(page, at, to, 2).await.unwrap();
+        pointer::swipe(page, at, to, 2).await.unwrap();
         let closed = format!("!document.querySelector({SHEET:?}) && !window.slid");
         wait::for_js_true(page, &closed, "closed without a slide")
             .await

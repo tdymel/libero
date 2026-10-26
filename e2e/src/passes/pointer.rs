@@ -1,6 +1,7 @@
 //! Pointer and drag through real `Input.dispatchMouseEvent`, pointer capture included.
 //! SSR dispatches no pointer events, so drags are only tested here (`codebase/testing`).
 
+use crate::frames::in_front;
 use crate::wait::PageBounded;
 use anyhow::Result;
 use chromiumoxide::Page;
@@ -130,8 +131,24 @@ pub async fn long_press(page: &Page, selector: &str, ms: u64) -> Result<()> {
     touch_at(page, DispatchTouchEventType::TouchEnd, at).await
 }
 
+/// A finger tap on an element's centre, the page in front for it. A scenario sends touches
+/// through this, [`swipe`] or its own [`in_front`] block: a page behind waits out a 500 ms
+/// frame on every touch event, and the home tab takes the front back after each gesture.
+pub async fn tap(page: &Page, selector: &str) -> Result<()> {
+    in_front(page, async {
+        let at = touch_down(page, selector).await?;
+        touch_up(page, at).await
+    })
+    .await
+}
+
+/// [`touch_drag`] with the page in front; see [`tap`].
+pub async fn swipe(page: &Page, from: Point, to: Point, steps: usize) -> Result<()> {
+    in_front(page, touch_drag(page, from, to, steps)).await
+}
+
 /// A touch pressed at an element's centre and held, with touch emulation
-/// turned on for the page; returns where, for [`touch_up`].
+/// turned on for the page; returns where, for [`touch_up`]. Run it inside [`in_front`].
 pub async fn touch_down(page: &Page, selector: &str) -> Result<Point> {
     use chromiumoxide::cdp::browser_protocol::emulation::SetTouchEmulationEnabledParams;
     use chromiumoxide::cdp::browser_protocol::input::DispatchTouchEventType;

@@ -189,8 +189,7 @@ const SLIDE_WATCH: &str = "window.slid = false; new MutationObserver(() => { \
 
 async fn open_bottom_swipe(page: &chromiumoxide::Page) -> Result<e2e::passes::pointer::Point> {
     use e2e::passes::pointer;
-    let at = pointer::touch_down(page, TRIGGER).await?;
-    pointer::touch_up(page, at).await?;
+    pointer::tap(page, TRIGGER).await?;
     e2e::wait::for_visible(page, "[data-slot=handle]").await?;
     pointer::centre_of(page, "[data-slot=handle]").await
 }
@@ -211,24 +210,25 @@ fn a_swiped_bottom_drawer_follows_the_finger_and_slides_off() {
             y: at.y + dy,
         };
         let shifted = |by: f64| format!("Math.abs({PANEL_SHIFT} - {by}) < 1");
-        pointer::touch_down(page, "[data-slot=handle]")
-            .await
-            .unwrap();
-        pointer::touch_move(page, down(10.0)).await.unwrap();
-        pointer::touch_move(page, down(30.0)).await.unwrap();
-        e2e::wait::for_js_true(
-            page,
-            &shifted(30.0),
-            "the panel 30px down, under the finger",
-        )
+        e2e::frames::in_front(page, async {
+            pointer::touch_down(page, "[data-slot=handle]").await?;
+            pointer::touch_move(page, down(10.0)).await?;
+            pointer::touch_move(page, down(30.0)).await?;
+            e2e::wait::for_js_true(
+                page,
+                &shifted(30.0),
+                "the panel 30px down, under the finger",
+            )
+            .await?;
+            pointer::touch_up(page, down(30.0)).await
+        })
         .await
         .unwrap();
-        pointer::touch_up(page, down(30.0)).await.unwrap();
         e2e::wait::for_js_true(page, &shifted(0.0), "a short swipe sprung back")
             .await
             .unwrap();
         page.evaluate(SLIDE_WATCH).await.unwrap();
-        pointer::touch_drag(page, at, down(120.0), 2).await.unwrap();
+        pointer::swipe(page, at, down(120.0), 2).await.unwrap();
         e2e::wait::for_js_true(
             page,
             "!document.querySelector('[role=dialog]') && window.slid \
@@ -266,7 +266,7 @@ fn reduced_motion_closes_a_swiped_drawer_at_once() {
             x: at.x,
             y: at.y + 120.0,
         };
-        pointer::touch_drag(page, at, to, 2).await.unwrap();
+        pointer::swipe(page, at, to, 2).await.unwrap();
         e2e::wait::for_js_true(
             page,
             "!document.querySelector('[role=dialog]') && !window.slid",

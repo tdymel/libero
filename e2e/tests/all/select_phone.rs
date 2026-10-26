@@ -7,6 +7,7 @@ use chromiumoxide::Page;
 use chromiumoxide::cdp::browser_protocol::emulation::SetDeviceMetricsOverrideParams;
 use e2e::browser::block_on;
 use e2e::driver::{Driver, eventually};
+use e2e::passes::pointer::tap;
 use e2e::passes::{keyboard, pointer};
 use e2e::wait::PageBounded;
 use e2e::{Fixture, Viewport, wait};
@@ -21,11 +22,6 @@ async fn phone(route: &str) -> Fixture {
         .await
         .unwrap();
     fixture
-}
-
-async fn tap(page: &Page, selector: &str) -> Result<()> {
-    let at = pointer::touch_down(page, selector).await?;
-    pointer::touch_up(page, at).await
 }
 
 /// The sheet is placed, edge to edge on the screen's foot.
@@ -347,7 +343,7 @@ fn a_swipe_down_on_the_grabber_closes_the_sheet() {
             x: from.x,
             y: from.y + 150.0,
         };
-        pointer::touch_drag(page, from, to, 8).await.unwrap();
+        pointer::swipe(page, from, to, 8).await.unwrap();
         closed(page, TRIGGER).await.unwrap();
         fixture.console.assert_clean("a swiped sheet").unwrap();
         fixture.close().await.unwrap();

@@ -127,6 +127,36 @@ fn a_click_reaches_its_target_or_fails() {
     });
 }
 
+/// A tap and a swipe take the front like a Web driver gesture (4210): a page left behind
+/// waits out a frame on every touch of the next tap.
+#[test]
+fn a_touch_gesture_waits_for_the_front() {
+    block_on(async {
+        let fixture = Fixture::open("/loader", Viewport::Mobile).await.unwrap();
+        let page = &fixture.page;
+        let at = pointer::Point { x: 100.0, y: 300.0 };
+        let to = pointer::Point { x: 100.0, y: 200.0 };
+        let wait = std::time::Duration::from_millis(500);
+
+        let held = frames::bring_to_front(page).await.unwrap();
+        let tap = tokio::time::timeout(wait, pointer::tap(page, "body")).await;
+        let swipe = tokio::time::timeout(wait, pointer::swipe(page, at, to, 4)).await;
+        held.release().await.unwrap();
+        assert!(
+            tap.is_err(),
+            "a tap sent its touches without taking the front"
+        );
+        assert!(
+            swipe.is_err(),
+            "a swipe sent its touches without taking the front"
+        );
+
+        pointer::tap(page, "body").await.unwrap();
+        pointer::swipe(page, at, to, 4).await.unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
 /// A gesture inside a fullscreen hold runs at once rather than waiting on the hold it is
 /// part of, and a wait for front behind another test's hold ends within the budget (1755).
 #[test]

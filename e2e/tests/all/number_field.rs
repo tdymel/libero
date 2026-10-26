@@ -5,9 +5,10 @@ use anyhow::Result;
 use chromiumoxide::Page;
 use e2e::browser::block_on;
 use e2e::driver::{Driver, eventually, eventually_text, linger};
+use e2e::passes::pointer::tap;
 use e2e::passes::{keyboard, pointer};
 use e2e::wait::PageBounded;
-use e2e::{Fixture, Suite, Viewport, wait};
+use e2e::{Fixture, Suite, Viewport, frames, wait};
 
 const INPUT: &str = "#quantity";
 const PLUS: &str = "button[aria-label=Increase]";
@@ -742,11 +743,6 @@ async fn spin_phone() -> Fixture {
     fixture
 }
 
-async fn tap(page: &Page, selector: &str) -> Result<()> {
-    let at = pointer::touch_down(page, selector).await?;
-    pointer::touch_up(page, at).await
-}
-
 async fn spun(page: &Page, text: &str) -> Result<()> {
     let js = format!("document.querySelector('#spun').textContent === {text:?}");
     wait::for_js_true(page, &js, text).await
@@ -787,20 +783,20 @@ fn a_finger_spins_the_number() {
             .await
             .unwrap();
         // Up 3 x 24px in small moves: each step is sent once.
-        let at = pointer::touch_down(page, &format!("{COLUMN} [data-slot=value]"))
-            .await
-            .unwrap();
-        for step in 1..=12 {
-            let y = at.y - 6.0 * f64::from(step);
-            pointer::touch_move(page, pointer::Point { x: at.x, y })
-                .await
-                .unwrap();
-        }
-        let end = pointer::Point {
-            x: at.x,
-            y: at.y - 72.0,
-        };
-        pointer::touch_up(page, end).await.unwrap();
+        frames::in_front(page, async {
+            let at = pointer::touch_down(page, &format!("{COLUMN} [data-slot=value]")).await?;
+            for step in 1..=12 {
+                let y = at.y - 6.0 * f64::from(step);
+                pointer::touch_move(page, pointer::Point { x: at.x, y }).await?;
+            }
+            let end = pointer::Point {
+                x: at.x,
+                y: at.y - 72.0,
+            };
+            pointer::touch_up(page, end).await
+        })
+        .await
+        .unwrap();
         spun(page, "Some(45) 3").await.unwrap();
         keyboard::press(page, keyboard::ESCAPE).await.unwrap();
         wait::for_js_true(page, CLOSED, "Escape closed it, focus on the input")
