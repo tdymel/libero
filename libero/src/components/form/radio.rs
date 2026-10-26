@@ -3,17 +3,13 @@ use dioxus::prelude::*;
 use crate::{
     CssLayer,
     components::{
-        accessibility::{VISUALLY_HIDDEN_SX, hidden_input_centred_sx},
         common::{
             HtmlTag, Input, Part, States, base_color_or, coarse_hit_area_sx, disabled_look_sx,
-            fill_color, focus_ring_sx, min_hit_area_sx, names_itself, ring_overlay,
-            ring_overlay_sx, use_name_warning, variables,
+            fill_color, min_hit_area_sx, names_itself, use_name_warning, variables,
         },
-        form::{Disabled, field_parts_enum, field_props, use_field},
-        layout::use_box,
+        form::{choice, field_parts_enum, field_props, use_field, use_fieldset_disabled},
     },
     hooks::{use_cache, use_css, use_element, use_theme},
-    platform::ElementApi,
     sx::{FORCED_COLORS, REDUCED_MOTION, StaticSx, ThemeAwareValue, sx},
     theme::{ChoiceVariant, CssVar, RADIO_CIRCLE, RadioDefaults},
     utils::warn,
@@ -27,23 +23,7 @@ const RADIO_COLOR: CssVar = CssVar::new("--lsx-radio-color");
 const RADIO_ON: CssVar = CssVar::new("--lsx-radio-on");
 
 static RADIO_CONTROL_SX: StaticSx = StaticSx::new(|| {
-    RadioDefaults::theme_vars()
-        .display("inline-flex")
-        .align_items("center")
-        // The visually hidden input is absolutely positioned; without this it
-        // escapes to the nearest positioned ancestor.
-        .position("relative")
-        .selector("& > input", hidden_input_centred_sx())
-        // On the control rather than the circle, so `disabled` below reaches it. Under `:hover`:
-        // WebView spatial navigation makes a `pointer` element a Tab stop (3138).
-        .selector("&:hover", sx().cursor("pointer"))
-        // Drawn by the overlay after the circle, because the focus is on the
-        // input beside it - the same shape as `Checkbox`'s.
-        .selector("& > [data-ring]", ring_overlay_sx())
-        .selector("& > input:focus-visible ~ [data-ring]", focus_ring_sx())
-        // A card rings itself: the control stops being the overlay's
-        // containing block, so the same overlay covers the card.
-        .when("card", sx().position("static"))
+    choice::control_sx(RadioDefaults::theme_vars())
         .when("disabled", disabled_look_sx("not-allowed"))
 });
 
@@ -164,8 +144,8 @@ pub fn Radio(props: RadioProps) -> Element {
 
     let size = props.size.copied_or(theme.radio.size);
     // A disabled `Fieldset` disables the input, but not the circle and label that pick it.
-    let group = try_use_context::<Disabled>();
-    let disabled = props.disabled.unwrap_or(false) || group.is_some_and(|Disabled(group)| group());
+    let group = use_fieldset_disabled();
+    let disabled = props.disabled.unwrap_or(false) || group;
     let required = crate::components::form::fieldset_required(props.required);
     let checked = props.checked.unwrap_or(false);
     // HTML's `readonly` does not apply to a radio, so the activation is refused
@@ -193,11 +173,7 @@ pub fn Radio(props: RadioProps) -> Element {
     };
 
     let element = use_element();
-    // A blank name names nothing: it neither renders nor counts as one.
-    let aria_label = props
-        .aria_label
-        .clone()
-        .filter(|label| !label.trim().is_empty());
+    let aria_label = choice::aria_label(&props.aria_label);
     let field = use_field()
         .inline()
         .card(card)
@@ -232,15 +208,7 @@ pub fn Radio(props: RadioProps) -> Element {
         radio_variables(*checked, color)
     });
 
-    let control = use_box()
-        .framework_sx(&RADIO_CONTROL_SX)
-        .states(&states)
-        .style(Some(style).filter(|style| !style.is_empty()))
-        .prepare();
-    let input = use_box()
-        .framework_sx(&VISUALLY_HIDDEN_SX)
-        .focus_ring(false)
-        .prepare();
+    let (control, input) = choice::use_boxes(&RADIO_CONTROL_SX, &states, style);
     let circle_class = use_css(Some(&RADIO_CIRCLE_SX), CssLayer::Framework);
     let dot_class = use_css(Some(&RADIO_DOT_SX), CssLayer::Framework);
 
@@ -258,28 +226,22 @@ pub fn Radio(props: RadioProps) -> Element {
         .render(HtmlTag::Input, props.attributes, ());
 
     // Decoration that carries the click: a hidden input has no hit area, and a
-    // `<label>` would compete for the name. A card takes the click itself.
+    // `<label>` would compete for the name.
+    let press = choice::press(card, disabled, element, select);
     let circle = rsx! {
         span {
             class: circle_class,
             "data-slot": RadioPart::Circle.slot(),
             "aria-hidden": "true",
-            // Focuses the input as a native click would.
-            onclick: move |_| {
-                if !card {
-                    select();
-                    if !disabled {
-                        let _ = element.focus();
-                    }
-                }
-            },
+            onclick: move |_| press(),
             span { class: dot_class, "data-slot": RadioPart::Dot.slot() }
         }
     };
 
-    field.render(control.attr("data-slot", RadioPart::Control.slot()).render(
-        HtmlTag::Span,
-        Vec::new(),
-        vec![input, circle, ring_overlay()],
+    field.render(choice::control(
+        control,
+        RadioPart::Control.slot(),
+        input,
+        circle,
     ))
 }

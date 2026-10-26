@@ -12,7 +12,7 @@ use crate::{
         },
         layout::use_box,
     },
-    hooks::use_theme,
+    hooks::{use_localization, use_theme},
     sx::{StaticSx, ThemeAwareValue, sx},
     theme::{ChoiceVariant, FIELD_GAP, Size},
     utils::warn,
@@ -277,6 +277,18 @@ fn check_group<T: Options, P: Part>(kind: Kind, props: Group<T, P>) -> Element {
     let list = props.options.or_static();
     let values = list.values();
     let checked: Vec<bool> = values.iter().map(|option| held.contains(option)).collect();
+    // Held values the options don't list still post, so a tick keeps them (todo 4288).
+    let unlisted: Vec<T> = held
+        .iter()
+        .filter(|value| !values.contains(value))
+        .cloned()
+        .collect();
+    if !unlisted.is_empty() && !props.options.is_pending() {
+        warn(&format!(
+            "{}: `value` holds options that are not in `options`, so none of them shows.",
+            kind.name()
+        ));
+    }
     let count = checked.iter().filter(|on| **on).count();
     let full = props.max_checked.is_some_and(|max| count >= max);
     if props.max_checked.is_some_and(|max| count > max) {
@@ -296,6 +308,7 @@ fn check_group<T: Options, P: Part>(kind: Kind, props: Group<T, P>) -> Element {
         .rules(props.validate.check(&held))
         .bound(&bound)
         .required(required)
+        .required_in_name(use_localization().common.required)
         .empty(count == 0)
         .readonly(readonly)
         .asks(Asks::Option)
@@ -335,25 +348,25 @@ fn check_group<T: Options, P: Part>(kind: Kind, props: Group<T, P>) -> Element {
         .states(&states)
         .prepare();
 
-    let onchange = props.onchange;
-    let setter = bound.setter();
+    // Through `emit`, so a pick also drops an error set from code (todo 4289).
+    let emit = bound.emit(props.onchange);
     // Option order, whatever the click order: the value reads the same way the group does.
     let toggle = {
         let values = values.clone();
         let checked = checked.clone();
         use_callback(move |index: usize| {
+            let Some(emit) = &emit else {
+                return;
+            };
             let next: Vec<T> = values
                 .iter()
                 .zip(&checked)
                 .enumerate()
                 .filter(|(at, (_, on))| **on != (*at == index))
                 .map(|(_, (option, _))| option.clone())
+                .chain(unlisted.iter().cloned())
                 .collect();
-            match (&onchange, &setter) {
-                (Some(onchange), _) => onchange.call(next),
-                (None, Some(setter)) => setter.set(next),
-                (None, None) => {}
-            }
+            emit(next);
         })
     };
 
@@ -404,6 +417,8 @@ fn check_group<T: Options, P: Part>(kind: Kind, props: Group<T, P>) -> Element {
         .attr("role", "group")
         .attr("aria-labelledby", field.label_id())
         .attr("aria-describedby", field.describedby())
+        // `aria-invalid` is allowed on a group, `aria-required` is not: the label says it (todo 4287).
+        .attr("aria-invalid", field.invalid().then_some("true"))
         // An empty group while the options load is not a group with none.
         .attr("aria-busy", props.options.is_pending().then_some("true"))
         .render(

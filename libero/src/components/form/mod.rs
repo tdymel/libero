@@ -9,6 +9,8 @@ mod check_group;
 mod checkbox;
 #[cfg(feature = "chip")]
 mod chip;
+#[cfg(any(feature = "checkbox", feature = "switch", feature = "radio"))]
+mod choice;
 #[cfg(feature = "action-icon")]
 mod clear;
 #[cfg(feature = "color")]

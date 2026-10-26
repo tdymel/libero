@@ -5,7 +5,10 @@ use crate::dispatch::*;
 use dioxus::prelude::*;
 use libero::{
     LiberoProvider,
-    components::{Button, Checkbox, Form, OptionList, Radio, RadioGroup, Rule, Switch, use_form},
+    components::{
+        Button, Checkbox, CheckboxGroup, FieldStatus, Form, FormErrors, FormHandle, OptionList,
+        Radio, RadioGroup, Rule, Switch, SwitchGroup, use_form,
+    },
 };
 
 /// Toggling a mixed checkbox gives `true`, as its prop doc promises: a mixed
@@ -357,5 +360,153 @@ fn a_blank_aria_label_is_not_put_on_the_input() {
         let html = body(&render(app));
         let input = attributes_of(&html, "input");
         assert_eq!(input.get("aria-label"), None, "{input:?}");
+    }
+}
+
+fn letters(from: &[&str]) -> Vec<String> {
+    from.iter().map(|letter| letter.to_string()).collect()
+}
+
+fn required_groups() -> Element {
+    rsx! {
+        LiberoProvider {
+            CheckboxGroup::<String> {
+                label: "Checks",
+                required: true,
+                status: FieldStatus::Error("Pick one.".into()),
+                options: letters(&["A", "B"]),
+                onchange: |_| {},
+            }
+            SwitchGroup::<String> {
+                label: "Switches",
+                required: true,
+                status: FieldStatus::Error("Pick one.".into()),
+                options: letters(&["C", "D"]),
+                onchange: |_| {},
+            }
+        }
+    }
+}
+
+/// Todo 4287: `aria-required` is not allowed on `role="group"`, so the label says it, and the
+/// group carries `aria-invalid` as `RadioGroup` does.
+#[test]
+fn a_required_invalid_check_group_says_both() {
+    let html = body(&render(required_groups));
+    let groups = tags_with(&html, r#"role="group""#);
+    assert_eq!(groups.len(), 2, "{html}");
+    for group in &groups {
+        assert_eq!(
+            group.get("aria-invalid").map(String::as_str),
+            Some("true"),
+            "{group:?}"
+        );
+    }
+    assert_eq!(html.matches(" Required").count(), 2, "{html}");
+}
+
+fn checks_holding_an_unlisted_value() -> Element {
+    rsx! {
+        LiberoProvider {
+            CheckboxGroup::<String> {
+                label: "Checks",
+                options: letters(&["A", "B", "C"]),
+                value: letters(&["Z", "B"]),
+                onchange: move |next: Vec<String>| heard(next),
+            }
+        }
+    }
+}
+
+fn switches_holding_an_unlisted_value() -> Element {
+    rsx! {
+        LiberoProvider {
+            SwitchGroup::<String> {
+                label: "Switches",
+                options: letters(&["A", "B", "C"]),
+                value: letters(&["Z", "B"]),
+                onchange: move |next: Vec<String>| heard(next),
+            }
+        }
+    }
+}
+
+/// Todo 4288: the hidden inputs post every held value, so a tick keeps the ones the options
+/// don't list, after the listed ones.
+#[test]
+fn a_tick_keeps_the_held_values_the_options_do_not_list() {
+    for app in [
+        checks_holding_an_unlisted_value as fn() -> Element,
+        switches_holding_an_unlisted_value,
+    ] {
+        let (heard, _) = send(
+            app,
+            false,
+            "click",
+            |find| find.element("click", "text", "A"),
+            click_event,
+        );
+        assert_eq!(heard, [r#"["A", "B", "Z"]"#]);
+    }
+}
+
+fn named_groups_in_a_form() -> Element {
+    let form = use_form();
+    use_hook(|| dioxus::core::provide_root_context(form));
+    rsx! {
+        LiberoProvider {
+            Form::<()> { form,
+                CheckboxGroup::<String> {
+                    label: "Checks",
+                    name: "checks",
+                    options: letters(&["A", "B"]),
+                    onchange: |_| {},
+                }
+                SwitchGroup::<String> {
+                    label: "Switches",
+                    name: "switches",
+                    options: letters(&["C", "D"]),
+                    onchange: |_| {},
+                }
+                RadioGroup::<String> {
+                    label: "Radios",
+                    name: "radios",
+                    options: letters(&["E", "F"]),
+                    onchange: |_| {},
+                }
+            }
+        }
+    }
+}
+
+/// Todo 4289: a pick on a named group drops the error set from code on its name, as an edit does.
+#[test]
+fn a_pick_on_a_named_group_drops_its_set_error() {
+    let mut page = Page::build(named_groups_in_a_form);
+    let form = page
+        .dom
+        .in_scope(ScopeId::ROOT, consume_context::<FormHandle>);
+    page.dom.in_runtime(|| {
+        form.set_errors(
+            FormErrors::new()
+                .at("checks", "Checks taken.")
+                .at("switches", "Switches taken.")
+                .at("radios", "Radios taken."),
+        )
+    });
+    page.render();
+    let html = dioxus_ssr::render(&page.dom);
+    for message in ["Checks taken.", "Switches taken.", "Radios taken."] {
+        assert!(html.contains(message), "{message} not shown: {html}");
+    }
+    for (option, message) in [
+        ("A", "Checks taken."),
+        ("C", "Switches taken."),
+        ("E", "Radios taken."),
+    ] {
+        let target = page.rec.element("click", "text", option);
+        page.click(target);
+        let html = dioxus_ssr::render(&page.dom);
+        assert!(!html.contains(message), "a pick on {option} kept {message}");
     }
 }

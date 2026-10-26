@@ -12,10 +12,9 @@ use crate::{
             Glyph, HtmlTag, Input, Part, ScaleOrCss, States, TOOLBAR_ITEM, ToolbarItem,
             base_color_or, coarse_hit_area_sx, contrast_color, disabled_look_sx,
             disabled_look_within_sx, draw_svg, fill_color, focus_ring_sx, min_hit_area_sx,
-            names_itself, ring_overlay, ring_overlay_sx, use_name_warning, use_toolbar_item,
-            variables,
+            names_itself, ring_overlay_sx, use_name_warning, use_toolbar_item, variables,
         },
-        form::{Activation, Asks, field_parts_enum, field_props, use_bound, use_field},
+        form::{Activation, Asks, choice, field_parts_enum, field_props, use_bound, use_field},
         layout::{BoxStyle, use_box},
     },
     context::IconSlot,
@@ -36,28 +35,13 @@ const CHECKBOX_BORDER: CssVar = CssVar::new("--lsx-checkbox-border");
 const CHECKBOX_MARK: CssVar = CssVar::new("--lsx-checkbox-mark");
 
 static CHECKBOX_CONTROL_SX: StaticSx = StaticSx::new(|| {
-    CheckboxDefaults::theme_vars()
-        // Past `per_radius`'s reset: the field's custom radius, set on its wrapper.
-        .var(SizeCss::RADIUS.override_var(), "inherit")
-        .display("inline-flex")
-        .align_items("center")
-        // The visually hidden input is absolutely positioned; without this it
-        // escapes to the nearest positioned ancestor.
-        .position("relative")
-        .selector("& > input", hidden_input_centred_sx())
-        // On the control rather than the box, so `disabled` below reaches it. Under `:hover`:
-        // WebView spatial navigation makes a `pointer` element a Tab stop (3156).
-        .selector("&:hover", sx().cursor("pointer"))
-        // The ring hugs the box, drawn by the overlay: the focus is on the
-        // input beside it.
-        .selector("& > [data-ring]", ring_overlay_sx())
-        .selector("& > input:focus-visible ~ [data-ring]", focus_ring_sx())
-        // A card rings itself: the control stops being the overlay's
-        // containing block, so the same overlay covers the card.
-        .when("card", sx().position("static"))
-        .when("checked", mark_shown())
-        .when("mixed", mark_shown())
-        .when("disabled", disabled_look_within_sx("not-allowed"))
+    // Past `per_radius`'s reset: the field's custom radius, set on its wrapper.
+    choice::control_sx(
+        CheckboxDefaults::theme_vars().var(SizeCss::RADIUS.override_var(), "inherit"),
+    )
+    .when("checked", mark_shown())
+    .when("mixed", mark_shown())
+    .when("disabled", disabled_look_within_sx("not-allowed"))
 });
 
 fn mark_shown() -> crate::sx::Sx {
@@ -219,11 +203,7 @@ pub fn Checkbox(props: CheckboxProps) -> Element {
     use_effect(use_reactive!(|indeterminate| {
         let _ = element.set_indeterminate(indeterminate);
     }));
-    // A blank name names nothing: it neither renders nor counts as one.
-    let aria_label = props
-        .aria_label
-        .clone()
-        .filter(|label| !label.trim().is_empty());
+    let aria_label = choice::aria_label(&props.aria_label);
     let field = use_field()
         .inline()
         .card(card)
@@ -268,15 +248,7 @@ pub fn Checkbox(props: CheckboxProps) -> Element {
         checkbox_variables(*on, color)
     });
 
-    let control = use_box()
-        .framework_sx(&CHECKBOX_CONTROL_SX)
-        .states(&states)
-        .style(Some(style).filter(|style| !style.is_empty()))
-        .prepare();
-    let input = use_box()
-        .framework_sx(&VISUALLY_HIDDEN_SX)
-        .focus_ring(false)
-        .prepare();
+    let (control, input) = choice::use_boxes(&CHECKBOX_CONTROL_SX, &states, style);
     let box_class = use_css(Some(&CHECKBOX_BOX_SX), CssLayer::Framework);
 
     let input = checkbox_input(field.aria(input), checked, indeterminate)
@@ -295,16 +267,7 @@ pub fn Checkbox(props: CheckboxProps) -> Element {
         // Void element - `()` costs no dynamic node.
         .render(HtmlTag::Input, props.attributes, ());
 
-    // A card takes the click itself. Focuses the input as a native click would,
-    // so its blur shows the rules.
-    let press = move || {
-        if !card {
-            toggle();
-            if !disabled {
-                let _ = element.focus();
-            }
-        }
-    };
+    let press = choice::press(card, disabled, element, toggle);
     field.render(checkbox_control(
         control,
         input,
@@ -350,13 +313,7 @@ fn checkbox_control(
             Glyph { slot, icon, stroke_width: "3" }
         }
     };
-    control
-        .attr("data-slot", CheckboxPart::Control.slot())
-        .render(
-            HtmlTag::Span,
-            Vec::new(),
-            vec![input, box_node, ring_overlay()],
-        )
+    choice::control(control, CheckboxPart::Control.slot(), input, box_node)
 }
 
 /// The light box's control: block-level and box-sized, so it needs no field wrapper.

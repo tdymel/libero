@@ -16,6 +16,9 @@ pub struct CommonLabels {
     /// Read before a field's warning message, visually hidden: the warning is
     /// otherwise told apart from helper text by its colour only.
     pub warning: &'static str,
+    /// Said after a required group's label, as `aria-required` is not allowed on
+    /// `role="group"`: `CheckboxGroup`, `SwitchGroup`.
+    pub required: &'static str,
 }
 
 impl CommonLabels {
@@ -26,6 +29,7 @@ impl CommonLabels {
         loading: "Loading",
         search: "Search",
         warning: "Warning:",
+        required: "Required",
     };
 
     pub const GERMAN: Self = Self {
@@ -35,5 +39,6 @@ impl CommonLabels {
         loading: "Wird geladen",
         search: "Suchen",
         warning: "Warnung:",
+        required: "Pflichtfeld",
     };
 }

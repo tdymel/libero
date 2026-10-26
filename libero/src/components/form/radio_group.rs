@@ -200,6 +200,8 @@ pub fn RadioGroup<T: Options>(props: RadioGroupProps<T>) -> Element {
 
     let onchange = props.onchange;
     let setter = bound.setter();
+    // As `Bound::emit`: a pick drops an error set from code (todo 4289). The handler takes a `T`.
+    let edited = bound.edited();
     // One identity across renders, so an unchanged option skips the re-render.
     let pick = {
         let values = values.clone();
@@ -207,6 +209,7 @@ pub fn RadioGroup<T: Options>(props: RadioGroupProps<T>) -> Element {
             let Some(option) = values.get(index) else {
                 return;
             };
+            edited();
             match (&onchange, &setter) {
                 (Some(onchange), _) => onchange.call(option.clone()),
                 (None, Some(setter)) => setter.set(Some(option.clone())),

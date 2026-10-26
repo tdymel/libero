@@ -3,18 +3,16 @@ use dioxus::prelude::*;
 use crate::{
     CssLayer,
     components::{
-        accessibility::{VISUALLY_HIDDEN_SX, hidden_input_centred_sx},
         common::{
             HtmlTag, Input, Part, ScaleOrCss, States, TOOLBAR_ITEM, ToolbarItem, base_color_or,
-            coarse_hit_area_sx, contrast_color, disabled_look_within_sx, fill_color, focus_ring_sx,
-            min_hit_area_sx, names_itself, ring_overlay, ring_overlay_sx, use_name_warning,
-            use_toolbar_item, variables,
+            coarse_hit_area_sx, contrast_color, disabled_look_within_sx, fill_color,
+            min_hit_area_sx, names_itself, use_name_warning, use_toolbar_item, variables,
         },
-        form::{Asks, field_parts_enum, field_props, use_bound, use_field, use_form_context},
-        layout::use_box,
+        form::{
+            Asks, choice, field_parts_enum, field_props, use_bound, use_field, use_form_context,
+        },
     },
     hooks::{use_cache, use_css, use_element, use_form_owner, use_theme},
-    platform::ElementApi,
     sx::{REDUCED_MOTION, StaticSx, ThemeAwareValue, sx},
     theme::{
         ChoiceVariant, CssVar, NamedColorCss, SWITCH_RADIUS, SWITCH_THUMB, SWITCH_TRACK_H,
@@ -33,25 +31,8 @@ const SWITCH_ON: CssVar = CssVar::new("--lsx-switch-on");
 const INSET: &str = "2px";
 
 static SWITCH_CONTROL_SX: StaticSx = StaticSx::new(|| {
-    SwitchDefaults::theme_vars()
-        // Past `per_radius`'s reset: the field's custom radius, set on its wrapper.
-        .var(SizeCss::RADIUS.override_var(), "inherit")
-        .display("inline-flex")
-        .align_items("center")
-        // The visually hidden input is absolutely positioned; without this it
-        // escapes to the nearest positioned ancestor.
-        .position("relative")
-        .selector("& > input", hidden_input_centred_sx())
-        // On the control rather than the track, so `disabled` below reaches it. Under `:hover`:
-        // WebView spatial navigation makes a `pointer` element a Tab stop (3156).
-        .selector("&:hover", sx().cursor("pointer"))
-        // The ring hugs the track, drawn by the overlay: the focus is on the
-        // input beside it.
-        .selector("& > [data-ring]", ring_overlay_sx())
-        .selector("& > input:focus-visible ~ [data-ring]", focus_ring_sx())
-        // A card rings itself: the control stops being the overlay's
-        // containing block, so the same overlay covers the card.
-        .when("card", sx().position("static"))
+    // Past `per_radius`'s reset: the field's custom radius, set on its wrapper.
+    choice::control_sx(SwitchDefaults::theme_vars().var(SizeCss::RADIUS.override_var(), "inherit"))
         .when("disabled", disabled_look_within_sx("not-allowed"))
 });
 
@@ -232,11 +213,7 @@ pub fn Switch(props: SwitchProps) -> Element {
     let item = use_toolbar_item();
     let owner = use_form_owner(element, !in_form);
     let in_form = in_form || owner().is_some();
-    // A blank name names nothing: it neither renders nor counts as one.
-    let aria_label = props
-        .aria_label
-        .clone()
-        .filter(|label| !label.trim().is_empty());
+    let aria_label = choice::aria_label(&props.aria_label);
     let field = use_field()
         .inline()
         .card(card)
@@ -280,15 +257,7 @@ pub fn Switch(props: SwitchProps) -> Element {
         switch_variables(*checked, color)
     });
 
-    let control = use_box()
-        .framework_sx(&SWITCH_CONTROL_SX)
-        .states(&states)
-        .style(Some(style).filter(|style| !style.is_empty()))
-        .prepare();
-    let input = use_box()
-        .framework_sx(&VISUALLY_HIDDEN_SX)
-        .focus_ring(false)
-        .prepare();
+    let (control, input) = choice::use_boxes(&SWITCH_CONTROL_SX, &states, style);
     let track_class = use_css(Some(&SWITCH_TRACK_SX), CssLayer::Framework);
     let thumb_class = use_css(Some(&SWITCH_THUMB_SX), CssLayer::Framework);
 
@@ -315,34 +284,23 @@ pub fn Switch(props: SwitchProps) -> Element {
 
     // Decoration that carries the click: a hidden input has no hit area, and a
     // `<label>` would compete for the name.
+    let press = choice::press(card, disabled, element, toggle);
     let track = rsx! {
         span {
             class: track_class,
             "data-slot": SwitchPart::Track.slot(),
             "aria-hidden": "true",
-            // A card takes the click itself. Focuses the input as a native
-            // click would, so its blur shows the rules.
-            onclick: move |_| {
-                if !card {
-                    toggle();
-                    if !disabled {
-                        let _ = element.focus();
-                    }
-                }
-            },
+            onclick: move |_| press(),
             span { class: thumb_class, "data-slot": SwitchPart::Thumb.slot() }
         }
     };
 
-    field.render(
-        control
-            .attr("data-slot", SwitchPart::Control.slot())
-            .render(
-                HtmlTag::Span,
-                Vec::new(),
-                vec![input, track, ring_overlay()],
-            ),
-    )
+    field.render(choice::control(
+        control,
+        SwitchPart::Control.slot(),
+        input,
+        track,
+    ))
 }
 
 #[cfg(test)]
