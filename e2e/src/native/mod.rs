@@ -33,7 +33,7 @@ use anyrender::{
 use anyrender_vello_cpu::VelloCpuImageRenderer;
 use blitz_dom::{
     BaseDocument, Document, DocumentConfig, Node,
-    node::{ImageData, SpecialElementData},
+    node::{ImageData, Marker, SpecialElementData},
 };
 use blitz_traits::{
     NodeId,
@@ -1042,6 +1042,17 @@ impl Page {
             queue.extend(layout.as_deref().unwrap_or(&node.children).iter().copied());
         }
         panic!("no inline layout at or under {selector:?}")
+    }
+
+    /// The list marker Blitz numbered the element with, `None` when it counts as no item.
+    pub fn list_marker(&self, selector: &str) -> Option<String> {
+        let doc = self.doc.inner.borrow();
+        let node = doc.get_node(self.node(selector)).expect("a laid out node");
+        let item = node.data.downcast_element()?.list_item_data.as_ref()?;
+        Some(match &item.marker {
+            Marker::Char(char) => char.to_string(),
+            Marker::String(string) => string.clone(),
+        })
     }
 
     /// `getComputedStyle(match).getPropertyValue(property)`: the computed

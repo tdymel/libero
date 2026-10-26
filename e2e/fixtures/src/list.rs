@@ -43,6 +43,15 @@ pub const ROUTES: Routes = &[
                 }
                 ListItem { "Deploy" }
             }
+            // Todo 4213: a reversed list counts the action item down too, so the first is 3.
+            List { id: "reversed", ordered: true, "reversed": true,
+                ListItem { "Install" }
+                ListItem {
+                    action: rsx! { Button { size: "xs", variant: "outlined", "Edit" } },
+                    "Configure"
+                }
+                ListItem { "Deploy" }
+            }
         },
     ),
 ];

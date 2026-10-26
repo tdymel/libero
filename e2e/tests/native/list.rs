@@ -17,6 +17,40 @@ fn app() -> Element {
     }
 }
 
+fn ordered() -> Element {
+    rsx! {
+        List { ordered: true,
+            ListItem { id: "first", "Install" }
+            ListItem { id: "iconed", icon: rsx! { "*" }, "Check" }
+            ListItem {
+                id: "acted",
+                action: rsx! { button { "Edit" } },
+                "Configure"
+            }
+            ListItem { id: "last", "Deploy" }
+        }
+        List { ordered: true, "reversed": true,
+            ListItem { id: "down-first", "Install" }
+            ListItem { icon: rsx! { "*" }, "Check" }
+            ListItem { id: "down-last", "Deploy" }
+        }
+        List { ordered: true, "start": 7,
+            ListItem { icon: rsx! { "*" }, "Check" }
+            ListItem { id: "started", "Deploy" }
+        }
+    }
+}
+
+/// Todo 4213: an icon or an action item counts in the numbering, as on the web, also
+/// counting down or from `start`.
+#[test]
+fn an_icon_or_action_item_counts_in_an_ordered_list() {
+    let page = mount(ordered);
+    let markers = ["#first", "#last", "#down-first", "#down-last", "#started"]
+        .map(|selector| page.list_marker(selector).unwrap_or_default());
+    assert_eq!(markers, ["1. ", "4. ", "3. ", "1. ", "8. "]);
+}
+
 /// The icon's, the body's and the column's boxes as (left, top, right, bottom).
 fn boxes(page: &Page, dir: &str) -> [(f64, f64, f64, f64); 3] {
     let edges = |selector: String| {

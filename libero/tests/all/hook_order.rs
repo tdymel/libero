@@ -10,7 +10,12 @@ use syn::visit::{self, Visit};
 use syn::{BinOp, Expr, ExprCall, ExprMethodCall, ImplItemFn, ItemFn, Local, Macro, TraitItemFn};
 
 /// Branches that cannot flip on a mounted component, each with why: (file, function, reason).
-const FIXED: [(&str, &str, &str); 8] = [
+const FIXED: [(&str, &str, &str); 9] = [
+    (
+        "src/components/data_display/list/list_item.rs",
+        "use_number",
+        "`NATIVE` is a const",
+    ),
     (
         "src/components/buttons/toolbar.rs",
         "Toolbar",

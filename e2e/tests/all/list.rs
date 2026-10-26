@@ -143,6 +143,12 @@ fn a_subheader_sits_outside_the_number_gutter() {
             numbers.contains("ListMarker \"3.\""),
             "the item after an action item lost its number:\n{numbers}"
         );
+        // Todo 4213: counting down, the item before the action item is 3.
+        let numbers = ax::snapshot(page, "#reversed").await.unwrap();
+        assert!(
+            numbers.contains("ListMarker \"3.\"") && numbers.contains("ListMarker \"1.\""),
+            "a reversed list skipped its action item:\n{numbers}"
+        );
         fixture
             .console
             .assert_clean("the subheader fixture")

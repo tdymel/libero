@@ -1,3 +1,4 @@
+use dioxus::core::{AttributeValue, ScopeId};
 use dioxus::prelude::*;
 
 use crate::{
@@ -53,7 +54,54 @@ base_props! {
 #[derive(Clone, Copy)]
 pub(crate) struct ListContext {
     pub(crate) icon: Signal<Option<Element>>,
+    /// Native only, for an ordered list: Blitz skips a flex item in its count (todo 4213).
+    pub(crate) numbering: Signal<Option<Numbering>>,
+    /// Native only: the items' scopes in mount order, taken for DOM order.
+    pub(crate) items: CopyValue<Vec<ScopeId>>,
+    /// Bumped when an item mounts or drops, so the items renumber.
+    pub(crate) version: Signal<u32>,
 }
+
+/// An ordered list's first number and direction, from its `start` and `reversed` attributes.
+#[derive(Clone, Copy, PartialEq)]
+pub(crate) struct Numbering {
+    pub(crate) start: Option<i64>,
+    pub(crate) reversed: bool,
+}
+
+impl Numbering {
+    fn read(attributes: &[Attribute]) -> Self {
+        let value = |name| {
+            attributes
+                .iter()
+                .rev()
+                .find(|attribute| attribute.name == name)
+                .map(|attribute| &attribute.value)
+        };
+        let start = match value("start") {
+            Some(AttributeValue::Int(start)) => Some(*start),
+            Some(AttributeValue::Float(start)) => Some(*start as i64),
+            Some(AttributeValue::Text(start)) => start.trim().parse().ok(),
+            _ => None,
+        };
+        let reversed = match value("reversed") {
+            Some(AttributeValue::Bool(reversed)) => *reversed,
+            Some(AttributeValue::Text(_)) => true,
+            _ => false,
+        };
+        Self { start, reversed }
+    }
+
+    /// The number of the item at `index` among `count`, as a browser counts `list-item`s.
+    pub(crate) fn of(self, index: usize, count: usize) -> i64 {
+        match self.reversed {
+            true => self.start.unwrap_or(count as i64) - index as i64,
+            false => self.start.unwrap_or(1) + index as i64,
+        }
+    }
+}
+
+pub(super) const NATIVE: bool = cfg!(all(not(target_arch = "wasm32"), feature = "native"));
 
 /// A vertical list of [`ListItem`](super::ListItem)s: a bare `ul`, or a numbered `ol`.
 ///
@@ -78,12 +126,20 @@ pub fn List(props: ListProps) -> Element {
 
     let context = use_context_provider(|| ListContext {
         icon: Signal::new(props.icon.clone()),
+        numbering: Signal::new(None),
+        items: CopyValue::new(Vec::new()),
+        version: Signal::new(0),
     });
     // Only a hoisted or absent icon skips the write: `VNode` compares by `Rc`
     // pointer, so an inline `rsx!` icon is unequal and wakes the items every render.
     if *context.icon.peek() != props.icon {
         let mut icon = context.icon;
         icon.set(props.icon.clone());
+    }
+    let numbering = (NATIVE && props.ordered).then(|| Numbering::read(&props.attributes));
+    if *context.numbering.peek() != numbering {
+        let mut signal = context.numbering;
+        signal.set(numbering);
     }
 
     let states: Input<States> = props

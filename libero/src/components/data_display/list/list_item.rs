@@ -1,3 +1,4 @@
+use dioxus::core::current_scope_id;
 use dioxus::prelude::*;
 
 use crate::{
@@ -9,7 +10,7 @@ use crate::{
     theme::{Size, SizeCss},
 };
 
-use super::list::ListContext;
+use super::list::{ListContext, NATIVE};
 
 // Block, so a nested `List` stacks below this item's content. The icon floats instead of
 // flexing: only a `list-item` counts in an ordered list's numbering (todo 2923).
@@ -86,7 +87,47 @@ fn action_sx() -> Sx {
     )
 }
 
-const NATIVE: bool = cfg!(all(not(target_arch = "wasm32"), feature = "native"));
+/// Native only: the item's number in an ordered list, counting icon and action items as
+/// a browser does. Blitz numbers only a `list-item` with a marker (todo 4213).
+fn use_number(context: Option<ListContext>) -> Option<i64> {
+    if !NATIVE {
+        return None;
+    }
+    let id = current_scope_id();
+    use_hook(|| {
+        if let Some(mut items) = context.map(|context| context.items) {
+            items.write().push(id);
+        }
+    });
+    use_effect(move || {
+        if let Some(mut version) = context.map(|context| context.version) {
+            *version.write() += 1;
+        }
+    });
+    use_drop(move || {
+        let Some(ListContext {
+            mut items,
+            mut version,
+            ..
+        }) = context
+        else {
+            return;
+        };
+        if let Ok(mut items) = items.try_write() {
+            items.retain(|item| *item != id);
+        }
+        if let Ok(mut version) = version.try_write() {
+            *version += 1;
+        }
+    });
+
+    let context = context?;
+    let numbering = (*context.numbering.read())?;
+    context.version.read();
+    let items = context.items.read();
+    let index = items.iter().position(|item| *item == id)?;
+    Some(numbering.of(index, items.len()))
+}
 
 parts_enum! {
     /// [`ListItem`]'s inner parts, for its `parts` prop. Present only with an
@@ -131,9 +172,13 @@ base_props! {
 /// Docs: <https://libero-ui.dev/data-display/list>
 #[component]
 pub fn ListItem(props: ListItemProps) -> Element {
-    let inherited =
-        try_use_context::<ListContext>().and_then(|context| context.icon.read().clone());
+    let context = try_use_context::<ListContext>();
+    let inherited = context.and_then(|context| context.icon.read().clone());
     let icon = props.icon.clone().or(inherited);
+    // An icon or action item draws no number; a plain one writes out its own.
+    let number = use_number(context)
+        .filter(|_| icon.is_none() && props.action.is_none())
+        .map(|number| format!("list-style-type: \"{number}. \""));
 
     let states: Input<States> = props
         .states
@@ -161,6 +206,7 @@ pub fn ListItem(props: ListItemProps) -> Element {
         .sx(&props.sx)
         .parts(&props.parts)
         .states(&states)
+        .style(number)
         .prepare()
         .render(HtmlTag::Li, props.attributes, children)
 }
