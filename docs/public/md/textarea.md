@@ -46,7 +46,7 @@ fn Demo() -> Element {
 | `validate` | `Validators<String>` | - | Rules over the text, shown once the field loses focus or its form is submitted. |
 | `name` | `FieldName<String>` | - | What the field posts as. A path such as `Signup::FIELDS.bio()` also binds the text to the surrounding `Form`'s value when the field has no `oninput`. |
 | `placeholder` | `String` | - | Shown while the field is empty. |
-| `counter` | `bool` | `false` | Shows `12/200` in the frame's bottom corner while a `maxlength` attribute is set. It counts as `maxlength` does, so an emoji counts two. |
+| `counter` | `bool` | `false` | Shows `12/200` in the frame's bottom corner while a `maxlength` attribute is set. It counts as `maxlength` does, so an emoji counts two. A `value` past the limit is an error, "2 characters too many", which blocks a `Form`'s submit. |
 | `label` | `Caption` | - | The field's caption, above the control. It names the field. |
 | `description` | `Caption` | - | Between the label and the control. What to enter. |
 | `helper` | `Caption` | - | Under the control. Formatting rules or limits. |
@@ -87,7 +87,8 @@ explains how parts work.
   `textarea.characters_left`.
 - A controlled `value` longer than `maxlength` makes the status say by how
   many, "2 characters too many", from `textarea.characters_over`, after the same
-  pause.
+  pause. With `counter` it is also the field's error: `aria-invalid` once the
+  field is left or its form submitted, and a submit is blocked.
 
 ### You must
 

@@ -78,7 +78,8 @@ static SWISS: Formats = Formats {
 | `group_separator` | `&'static str` | Between every three digits of a number's whole, where a chart, a `FileField` size, or a `NumberField`, `Slider` or `RangeSlider` with `group_digits` writes it: `12,500`, `12.500`; empty for none. |
 
 `Localization` has a group per component, plus `common` for the words many
-share. A value inside a string is a named hole such as `{n}`, so each language
+share, such as `common.required`, which a required `CheckboxGroup` or
+`SwitchGroup` says after its label. A value inside a string is a named hole such as `{n}`, so each language
 puts it where its grammar wants it. `fill(template, &[("n", &3)])` fills the
 holes. A prop that names what only the call site knows, such as a dialog's
 close label, still wins over the localization.

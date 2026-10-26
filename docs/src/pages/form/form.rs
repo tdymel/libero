@@ -199,7 +199,7 @@ pub fn FormPage() -> Element {
                     prop("submit()", "Result<(), PlatformError>")
                         .doc("Submits as the submit button would. `Unsupported` once the form is gone."),
                     prop("reset()", "()")
-                        .doc("Puts the value back to `V::default()` and clears touched fields, the submit and the summary; a `type=\"reset\"` button clears those too. A field with its own `value` and handler keeps what it shows. On the desktop WebView it cannot clear a control that is not bound to the value. Under Blitz it clears unbound text fields, not checkboxes or selects."),
+                        .doc("Puts the value back to what the store held when the form mounted, or when another store was passed, and clears touched fields, the submit and the summary; a `type=\"reset\"` button does the same. A store loaded later, such as from a request, resets to its value at mount: key the `Form` on the record to start from it. A field with its own `value` and handler keeps what it shows. Under Blitz it clears unbound text fields, not checkboxes or selects."),
                     prop("is_valid()", "bool")
                         .doc("Whether nothing is an error, shown or not. It follows changes, so it can drive other UI."),
                     prop("is_submitting()", "bool")

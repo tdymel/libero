@@ -482,7 +482,7 @@ any extra HTML attributes.
 |---|---|---|
 | `validate()` | `bool` | Checks like a submit without calling `onsubmit`. Every status shows, and with an error the summary appears and takes focus. `true` when nothing is an error; a field an async rule is still checking counts as no error. |
 | `submit()` | `Result<(), PlatformError>` | Submits as the submit button would. `Unsupported` once the form is gone. |
-| `reset()` | `()` | Puts the value back to `V::default()` and clears touched fields, the submit and the summary; a `type="reset"` button clears those too. A field with its own `value` and handler keeps what it shows. On the desktop WebView it cannot clear a control that is not bound to the value. Under Blitz it clears unbound text fields, not checkboxes or selects. |
+| `reset()` | `()` | Puts the value back to what the store held when the form mounted, or when another store was passed, and clears touched fields, the submit and the summary; a `type="reset"` button does the same. A store loaded later, such as from a request, resets to its value at mount: key the `Form` on the record to start from it. A field with its own `value` and handler keeps what it shows. Under Blitz it clears unbound text fields, not checkboxes or selects. |
 | `is_valid()` | `bool` | Whether nothing is an error, shown or not. It follows changes, so it can drive other UI. |
 | `is_submitting()` | `bool` | Whether an async handler (`Submit::parse_async`, `Submit::task`) is running, or a submit waits for a `checked_async` rule's answer. It follows changes, so it can set a submit button's `loading`. Meanwhile a submit is ignored and the form has `aria-busy="true"`. |
 | `clear_summary()` | `()` | Hides the summary and resets nothing. |

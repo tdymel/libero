@@ -165,10 +165,14 @@ pub fn Form<V: FormValue>(props: FormProps<V>) -> Element {
     // A field binds on mount, so a different `Store` remounts the fields. `Store`
     // equality is identity, so a write is not a swap.
     let mut store = use_hook(|| CopyValue::new(props.value));
+    // What a reset returns to: the value at mount or at the last swap (4328).
+    let snapshot = |value: Option<Store<V>>| value.map(|value| value.peek().clone());
+    let mut start = use_hook(|| CopyValue::new(snapshot(props.value)));
     let mut record = use_hook(|| CopyValue::new(0u32));
     let swapped = *store.peek() != props.value;
     if swapped {
         store.set(props.value);
+        start.set(snapshot(props.value));
         let next = *record.peek() + 1;
         record.set(next);
     }
@@ -278,10 +282,10 @@ pub fn Form<V: FormValue>(props: FormProps<V>) -> Element {
         handle.attach(Control {
             resetting: resetting.clone(),
             id,
-            // Through `store`: a reset clears the current value, not the first.
+            // Through `store` and `start`: the current store goes back to what it started with.
             reset_value: Rc::new(move || {
                 if let Some(mut value) = *store.peek() {
-                    value.set(V::default());
+                    value.set(start.peek().clone().unwrap_or_default());
                 }
             }),
             summary: summary.clone(),

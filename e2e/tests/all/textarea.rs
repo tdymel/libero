@@ -252,6 +252,91 @@ fn raw_reset_rounds(route: &str) {
     });
 }
 
+/// Clicks the button whose text is `label`.
+fn click_named(label: &str) -> String {
+    format!(
+        "[...document.querySelectorAll('button')].find(b => b.textContent.trim() === {label:?}).click()"
+    )
+}
+
+/// Todo 4328: a reset (native button or `FormHandle`) returns a bound field to the
+/// store's value at mount, not to an empty default.
+#[test]
+fn a_reset_returns_to_the_loaded_value() {
+    block_on(async {
+        let fixture = Fixture::open("/textarea/loaded", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        let shows = |text: &str| format!("document.querySelector('textarea').value === {text:?}");
+
+        wait::for_js_true(page, &shows("Loaded note"), "the loaded text")
+            .await
+            .unwrap();
+        for button in ["Clear", "Reset"] {
+            page.evaluate_bounded(
+                "(() => { const area = document.querySelector('textarea'); area.focus(); \
+                   area.setSelectionRange(area.value.length, area.value.length); })()",
+            )
+            .await
+            .unwrap();
+            keyboard::type_text(page, "!").await.unwrap();
+            wait::for_js_true(page, &shows("Loaded note!"), "typed")
+                .await
+                .unwrap();
+            page.evaluate_bounded(click_named(button)).await.unwrap();
+            wait::for_js_true(
+                page,
+                &format!(
+                    "{} && {}",
+                    shows("Loaded note"),
+                    counter_reads(0, "11/20", "")
+                ),
+                &format!("{button}: the loaded text again"),
+            )
+            .await
+            .unwrap();
+        }
+
+        fixture.console.assert_clean("a loaded reset").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
+/// Todo 4329: with `counter`, a value past `maxlength` is an error that blocks the submit.
+#[test]
+fn a_value_past_the_limit_blocks_the_submit() {
+    block_on(async {
+        let fixture = Fixture::open("/textarea/over", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+
+        page.evaluate_bounded(click_named("Save")).await.unwrap();
+        wait::for_js_true(
+            page,
+            "document.querySelector('textarea').getAttribute('aria-invalid') === 'true' \
+             && document.querySelector('[data-slot=status]')?.textContent.includes('too many')",
+            "the field in error",
+        )
+        .await
+        .unwrap();
+        let sent: String = page
+            .evaluate_bounded("document.querySelector('#sent').textContent")
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        assert_eq!(sent, "0", "the submit went through");
+
+        fixture
+            .console
+            .assert_clean("a value past the limit")
+            .unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
 /// Todo 679: a reset (native button or `FormHandle`) restores an uncontrolled textarea
 /// without an input event, and the count follows.
 #[test]

@@ -35,7 +35,7 @@ pub(crate) struct Control {
     pub resetting: Rc<Cell<bool>>,
     /// The `<form>`'s id, for a WebView, whose handle cannot reset it.
     pub id: Signal<String>,
-    /// Puts the form's value back to `V::default()`, where `V` is still known.
+    /// Puts the form's value back to its value at mount, where `V` is still known.
     pub reset_value: Rc<dyn Fn()>,
     pub summary: Summary,
     /// The form's submit handler: validation, then `onsubmit`.
@@ -113,14 +113,14 @@ impl FormHandle {
         }
     }
 
-    /// Back to the start: default value, nothing touched, no summary. A field
-    /// with its own `value` and handler keeps what it shows.
+    /// Back to the start: the store's value at mount (or at a store swap), nothing touched,
+    /// no summary. A field with its own `value` and handler keeps what it shows.
     pub fn reset(&self) {
         let control = self.control();
         if let Some(control) = &control {
             control.resetting.set(true);
         }
-        // Before the value, so a bound control ends on the value's default.
+        // Before the value, so a bound control ends on the value it resets to.
         if let (Err(PlatformError::Unsupported), Some(control)) = (self.element.reset(), &control) {
             let _ = platform::reset_selector(&id_selector(&control.id.peek()));
         }

@@ -50,7 +50,7 @@ pub fn TextareaPage() -> Element {
                         .doc("Shown while the field is empty."),
                     prop("counter", "bool")
                         .default("false")
-                        .doc("Shows `12/200` in the frame's bottom corner while a `maxlength` attribute is set. It counts as `maxlength` does, so an emoji counts two."),
+                        .doc("Shows `12/200` in the frame's bottom corner while a `maxlength` attribute is set. It counts as `maxlength` does, so an emoji counts two. A `value` past the limit is an error, \"2 characters too many\", which blocks a `Form`'s submit."),
                     prop("label", "Caption")
                         .doc("The field's caption, above the control. It names the field."),
                     prop("description", "Caption")
@@ -79,7 +79,7 @@ pub fn TextareaPage() -> Element {
             accessibility: a11y()
                 .handles([
                     "The visible counter is hidden from screen readers. Instead, a polite status says how many characters are left once a tenth of the limit remains, one second after typing pauses. Its words come from the localization's `textarea.characters_left`.",
-                    "A controlled `value` longer than `maxlength` makes the status say by how many, \"2 characters too many\", from `textarea.characters_over`, after the same pause.",
+                    "A controlled `value` longer than `maxlength` makes the status say by how many, \"2 characters too many\", from `textarea.characters_over`, after the same pause. With `counter` it is also the field's error: `aria-invalid` once the field is left or its form submitted, and a submit is blocked.",
                 ])
                 .must(["Leave `label` unset only when something else names the field."])
                 .example("A bio, `Textarea { label: \"Bio\", maxlength: 200, counter: true }`: the counter is silent while you type, and from 20 characters left a polite status says how many remain once you pause for a second."),

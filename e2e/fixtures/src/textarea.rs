@@ -3,7 +3,9 @@
 //! puts one in a scrolling ancestor (1201).
 
 use dioxus::prelude::*;
-use libero::components::{Button, Fieldset, Flex, Form, Text, TextField, Textarea, use_form};
+use libero::components::{
+    Button, Fields, Fieldset, Flex, Form, Text, TextField, Textarea, use_form,
+};
 
 use crate::Routes;
 
@@ -14,7 +16,41 @@ pub const ROUTES: Routes = &[
     ("/textarea/raw-reset-fieldset", || rsx! { RawFieldsetResetPage {} }),
     ("/textarea/echo", || rsx! { EchoPage {} }),
     ("/textarea/scroller", || rsx! { ScrollerPage {} }),
+    ("/textarea/loaded", || rsx! { LoadedPage { text: "Loaded note" } }),
+    ("/textarea/over", || rsx! { LoadedPage { text: "This note runs past the limit" } }),
 ];
+
+#[derive(Clone, PartialEq, Default, Fields)]
+struct Note {
+    text: String,
+}
+
+/// Todos 4328, 4329: a store loaded before mount, bound to a counted Textarea; `#sent`
+/// counts the submits that went through.
+#[component]
+fn LoadedPage(text: &'static str) -> Element {
+    let note = use_store(|| Note { text: text.to_string() });
+    let form = use_form();
+    let mut sent = use_signal(|| 0u32);
+
+    rsx! {
+        Flex { direction: "column", gap: "md", max_width: "320px",
+            Form { value: note, form, onsubmit: move |_| sent += 1,
+                Textarea {
+                    id: "note",
+                    label: "Note",
+                    counter: true,
+                    maxlength: "20",
+                    name: Note::FIELDS.text(),
+                }
+                button { r#type: "submit", "Save" }
+                button { r#type: "reset", "Clear" }
+            }
+            Button { onclick: move |_| form.reset(), "Reset" }
+            Text { id: "sent", "{sent}" }
+        }
+    }
+}
 
 /// Todo 1201: a three-line textarea between spacers in a short scroller, which
 /// an arrow on the first or last line must not scroll.

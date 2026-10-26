@@ -7,8 +7,8 @@ use crate::{
         accessibility::VisuallyHidden,
         common::{HtmlTag, Input, Part, ScaleOrCss},
         form::{
-            FormScope, field_control_sx, field_parts_enum, field_props, use_bound, use_field,
-            use_field_frame, use_prefill,
+            FieldStatus, FormScope, field_control_sx, field_parts_enum, field_props, use_bound,
+            use_field, use_field_frame, use_prefill, worst,
         },
         layout::use_box,
     },
@@ -148,13 +148,28 @@ pub fn Textarea(props: TextareaProps) -> Element {
     let disabled = bound.disabled(props.disabled);
     let readonly = props.readonly.unwrap_or(false);
     let value = bound.value().or_else(|| props.value.clone());
+    let limit = max_length(&props.attributes).filter(|_| props.counter);
+    let words = use_localization().textarea;
+    // With a counter, a value past `maxlength` is an error, as GOV.UK's character count (4329).
+    let over = limit
+        .zip(value.as_deref().map(length))
+        .filter(|&(max, used)| used > max)
+        .map(|(max, used)| (words.characters_over)(used - max));
+    let rules = bound.check(&props.validate, value.clone());
+    let rules = match &over {
+        Some(text) => Some(worst(
+            rules.unwrap_or_default(),
+            FieldStatus::Error(text.clone()),
+        )),
+        None => rules,
+    };
 
     let mut field = use_field()
         .label(&props.label)
         .description(&props.description)
         .helper(&props.helper)
         .status(&props.status)
-        .rules(bound.check(&props.validate, value.clone()))
+        .rules(rules)
         .bound(&bound)
         .required(required)
         .empty(bound.is_empty(required, || value.clone(), String::is_empty))
@@ -183,7 +198,6 @@ pub fn Textarea(props: TextareaProps) -> Element {
 
     // An uncontrolled length is tracked from input events, stamped with the
     // form's reset count; a raw `<form>` reset is heard off the DOM (todo 685).
-    let limit = max_length(&props.attributes).filter(|_| props.counter);
     let scope = try_use_context::<FormScope>();
     let element = use_element();
     let owner = use_form_owner(
@@ -193,7 +207,6 @@ pub fn Textarea(props: TextareaProps) -> Element {
     let resets = scope.map_or(0, |form| form.resets()) + owner().unwrap_or(0);
     let typed = use_signal(|| (0u32, None::<usize>));
     let counter_class = use_css(Some(&COUNTER_SX), CssLayer::Framework);
-    let words = use_localization().textarea;
     let count = limit.map(|max| {
         let (at, count) = typed();
         let typed_now = match (at == resets, count) {
@@ -203,10 +216,6 @@ pub fn Textarea(props: TextareaProps) -> Element {
         let used = value.as_deref().map_or(typed_now, length);
         (used, max, max.saturating_sub(used))
     });
-    // Only a controlled value runs past `maxlength`; "0 left" would hide it.
-    let over = count
-        .filter(|&(used, max, _)| used > max)
-        .map(|(used, max, _)| (words.characters_over)(used - max));
     // Said once typing stops, not per keystroke (GOV.UK's character count).
     let spoken = over.clone().or_else(|| {
         count
