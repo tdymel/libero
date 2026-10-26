@@ -283,7 +283,10 @@ fn check_group<T: Options, P: Part>(kind: Kind, props: Group<T, P>) -> Element {
         .filter(|value| !values.contains(value))
         .cloned()
         .collect();
-    if !unlisted.is_empty() && !props.options.is_pending() {
+    // Once per mount: a held value stays unlisted for every render after (4348).
+    let mut warned_unlisted = use_hook(|| CopyValue::new(false));
+    if !unlisted.is_empty() && !props.options.is_pending() && !*warned_unlisted.peek() {
+        warned_unlisted.set(true);
         warn(&format!(
             "{}: `value` holds options that are not in `options`, so none of them shows.",
             kind.name()
@@ -549,6 +552,35 @@ mod tests {
         });
         assert_eq!(page.matches("name=\"alerts\"").count(), 1, "{page}");
         assert!(page.contains("value=\"B\""), "{page}");
+    }
+
+    /// Todo 4348: an unlisted held value warns once, not on every render.
+    #[test]
+    fn an_unlisted_value_warns_once() {
+        let mut dom = VirtualDom::new(|| {
+            let mut value = use_context_provider(|| Signal::new(vec!["Z".to_string()]));
+            rsx! {
+                crate::LiberoProvider {
+                    CheckboxGroup::<String> {
+                        label: "Pick",
+                        options: options(),
+                        value: value(),
+                        onchange: move |next| value.set(next),
+                    }
+                }
+            }
+        });
+        crate::utils::take_warnings();
+        dom.rebuild_in_place();
+        dom.in_scope(ScopeId::APP, || {
+            consume_context::<Signal<Vec<String>>>().set(vec!["Z".to_string(), "A".to_string()])
+        });
+        dom.render_immediate(&mut dioxus::dioxus_core::NoOpMutations);
+        let unlisted = crate::utils::take_warnings()
+            .into_iter()
+            .filter(|warning| warning.contains("not in `options`"))
+            .count();
+        assert_eq!(unlisted, 1);
     }
 
     /// Todo 4046: a tick on a named group re-diffs the keyed options next to the hidden inputs.

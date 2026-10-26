@@ -228,14 +228,15 @@ impl Echoes {
 
     /// Whether `incoming` is a reset. An echo settles itself and the ones before it, so
     /// once the parent has caught up with the live doc, an older doc is a reset again.
+    /// A doc emitted twice settles only up to its first emit, so later echoes still count (4349).
     fn foreign(&mut self, current: &Doc, incoming: &Doc) -> bool {
-        if incoming == current {
-            self.0.clear();
-            return false;
-        }
         match self.0.iter().position(|doc| doc == incoming) {
             Some(at) => {
                 self.0.drain(..=at);
+                false
+            }
+            None if incoming == current => {
+                self.0.clear();
                 false
             }
             None => true,
@@ -1374,6 +1375,26 @@ mod tests {
         }
         assert!(echoes.foreign(editor.doc(), &Doc::new()));
         assert!(echoes.foreign(editor.doc(), &sent[0]));
+    }
+
+    /// Todo 4349: type, type, undo emits A, AB, A; the late first A leaves AB an echo.
+    #[test]
+    fn a_late_echo_of_a_repeated_doc_keeps_the_later_echoes() {
+        let mut editor = Editor::new(Doc::new());
+        let mut echoes = Echoes::default();
+        let mut sent = Vec::new();
+        for c in ["a", "b"] {
+            editor.type_text(c);
+            echoes.record(editor.doc().clone());
+            sent.push(editor.doc().clone());
+        }
+        let undone = sent[0].clone();
+        echoes.record(undone.clone());
+        sent.push(undone.clone());
+        for doc in &sent {
+            assert!(!echoes.foreign(&undone, doc));
+        }
+        assert!(echoes.foreign(&undone, &sent[1]));
     }
 
     #[test]

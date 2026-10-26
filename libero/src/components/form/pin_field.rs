@@ -146,7 +146,8 @@ pub fn PinField(props: PinFieldProps) -> Element {
         .description(&props.description)
         .helper(&props.helper)
         .status(&props.status)
-        .rules(props.validate.check(&value))
+        // The cut value, as posted (4351).
+        .rules(props.validate.check(&posted))
         .bound(&bound)
         .required(required)
         // A partly filled pin is missing its rest: `required` means every cell.
@@ -777,7 +778,7 @@ mod tests {
 
     use crate::{
         LiberoProvider,
-        components::form::{Form, FormHandle, PinField, use_form},
+        components::form::{Form, FormHandle, PinField, Rule, use_form},
         utils::warnings_of,
     };
 
@@ -849,5 +850,33 @@ mod tests {
         let html = dioxus_ssr::render(&dom);
         assert!(html.contains("value=\"1234\""), "{html}");
         assert!(!html.contains("123456"), "{html}");
+    }
+
+    /// Todo 4351: the field's rules judge the cut value it posts.
+    #[test]
+    fn the_rules_judge_the_cut_value() {
+        let mut dom = VirtualDom::new(|| {
+            let login = use_store(|| Login {
+                code: "123456".into(),
+            });
+            let form = use_form();
+            use_hook(|| provide_root_context(form));
+            rsx! {
+                LiberoProvider {
+                    Form { form, value: login,
+                        PinField {
+                            label: "Code",
+                            length: 4usize,
+                            name: crate::path!(Login => code),
+                            validate: (|code: &String| code.len() == 4).error("Four digits."),
+                        }
+                    }
+                }
+            }
+        });
+        dom.rebuild_in_place();
+        dom.render_immediate(&mut dioxus::core::NoOpMutations);
+        let form = dom.in_scope(ScopeId::ROOT, consume_context::<FormHandle>);
+        assert!(dom.in_runtime(|| form.validate()));
     }
 }

@@ -421,12 +421,17 @@ impl FormScope {
         self.blocking_checks().next().is_some()
     }
 
+    /// Ends the debounce of every async rule asking now, so each asks at once.
+    pub fn hurry(&self) {
+        for check in self.blocking_checks() {
+            check.hurry();
+        }
+    }
+
     /// Ready once every async rule asking now has answered; their debounces end at once.
     pub fn answered(&self) -> impl Future<Output = ()> + 'static {
         let checks: Vec<Rc<Checking>> = self.blocking_checks().collect();
-        for check in &checks {
-            check.hurry();
-        }
+        self.hurry();
         async move {
             for check in checks {
                 check.wait().await;

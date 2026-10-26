@@ -232,3 +232,18 @@ fn an_async_error_lands_as_set_errors() {
     let form = exposed::<FormHandle>(&dom);
     assert!(!dom.in_runtime(|| form.is_submitting()));
 }
+
+/// Todo 4345: the refusal belongs to the values before the reset.
+#[test]
+fn an_async_error_after_a_reset_is_dropped() {
+    let mut dom = mount(SummaryMode::Visible);
+    let form = exposed::<FormHandle>(&dom);
+    let gate = exposed::<Gate>(&dom);
+    submit(&mut dom);
+    dom.in_runtime(|| form.reset());
+    settle(&mut dom);
+    gate.answer(Err(FormErrors::new().form("Wrong email or password.")));
+    let html = settle(&mut dom);
+    assert!(!html.contains("Wrong email or password."), "{html}");
+    assert!(!dom.in_runtime(|| form.is_submitting()));
+}

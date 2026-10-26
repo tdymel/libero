@@ -347,7 +347,8 @@ pub fn FileField(props: FileFieldProps) -> Element {
             true => card_prefix(field.id()),
             false => id_prefix.clone(),
         },
-        cards,
+        // The Browse button carries the field's id.
+        cards.then(|| field.id().to_string()),
     );
 
     // Read off the field before the closures below, which outlive the borrow

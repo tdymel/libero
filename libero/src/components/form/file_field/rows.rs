@@ -42,7 +42,8 @@ pub(super) fn use_focus_debt(
     list_element: ElementHandle,
     browse_element: ElementHandle,
     focus_prefix: String,
-    within: bool,
+    // The Browse button's id, to focus within a row: see `focus_row`.
+    within: Option<String>,
 ) {
     use_effect(use_reactive!(|remaining| {
         let Some(debt) = *owed.peek() else {
@@ -60,27 +61,33 @@ pub(super) fn use_focus_debt(
             // The Browse button is still there, and still focused.
             FocusDebt::Took => return,
         };
-        focus_row(list_element, browse_element, &focus_prefix, within, target);
+        focus_row(
+            list_element,
+            browse_element,
+            &focus_prefix,
+            within.as_deref(),
+            target,
+        );
     }));
 }
 
-/// Focuses row `target` by its id under `list` (`within`: the row's first
-/// focusable, else the Browse button), or the Browse button for `None`.
+/// Focuses row `target` by its id under `list` (`within`, the Browse button's id: the row's
+/// first focusable, else the Browse button), or the Browse button for `None`.
 fn focus_row(
     list: ElementHandle,
     browse: ElementHandle,
     prefix: &str,
-    within: bool,
+    within: Option<&str>,
     target: Option<usize>,
 ) {
     let row = target.map(|index| id_selector(&format!("{prefix}-{index}")));
     match (row, within) {
-        (Some(row), false) => {
+        (Some(row), None) => {
             if let Ok(row) = list.query_selector(&row) {
                 let _ = row.focus();
             }
         }
-        (Some(row), true) if focus_first_in(list, &row) => {}
+        (Some(row), Some(browse_id)) if focus_first_in(list, &row, browse_id) => {}
         _ => {
             let _ = browse.focus();
         }
@@ -89,14 +96,14 @@ fn focus_row(
 
 /// Focuses the first focusable inside `row`, a caller's `selection` as well as
 /// the default card's x.
-fn focus_first_in(list: ElementHandle, row: &str) -> bool {
+fn focus_first_in(list: ElementHandle, row: &str, browse_id: &str) -> bool {
     let selector = format!("{row} :is({FOCUSABLE_SELECTOR})");
     match list.query_selector_all(&selector) {
         Ok(items) => items
             .iter()
             .any(|item| item.focus().is_ok() && item.is_focused()),
-        // A WebView queries nothing: the page focuses the match itself.
-        Err(_) => focus_first_of(&[selector]).is_ok(),
+        // A WebView queries nothing: the page focuses the match itself, else Browse (4350).
+        Err(_) => focus_first_of(&[selector, id_selector(browse_id)]).is_ok(),
     }
 }
 
@@ -294,7 +301,7 @@ impl ChipKeys {
             _ => return,
         };
         event.prevent_default();
-        focus_row(self.list, self.browse, &self.id_prefix, false, target);
+        focus_row(self.list, self.browse, &self.id_prefix, None, target);
     }
 }
 

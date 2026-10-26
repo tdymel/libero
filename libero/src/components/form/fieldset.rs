@@ -193,12 +193,28 @@ pub fn Fieldset<V: FormValue>(props: FieldsetProps<V>) -> Element {
         *value != props.value || path != props.path.as_str()
     };
     let mut binding = use_hook(|| CopyValue::new(bind()));
+    // What a reset of the form or the raw `<form>` puts the group's own value back to (4347).
+    let snapshot = |value: Option<Store<V>>| value.map(|value| value.peek().clone());
+    let mut start = use_hook(|| CopyValue::new(snapshot(props.value)));
     if swapped {
+        if bound_to.peek().0 != props.value {
+            start.set(snapshot(props.value));
+        }
         bound_to.set((props.value, props.path.as_str().to_string()));
         let next = *record.peek() + 1;
         record.set(next);
         binding.set(bind());
     }
+    let mut resets_seen = use_hook(|| CopyValue::new(None::<u32>));
+    use_effect(move || {
+        let now = scope.resets();
+        if resets_seen.peek().is_some_and(|before| before != now)
+            && let Some(mut value) = bound_to.peek().0
+        {
+            value.set(start.peek().clone().unwrap_or_default());
+        }
+        resets_seen.set(Some(now));
+    });
     let binding = binding.peek().clone();
     use_context_provider(|| binding.clone());
     if swapped {
@@ -535,6 +551,33 @@ mod tests {
             after.contains("second") && !after.contains("first"),
             "{after}"
         );
+    }
+
+    /// Todo 4347: a reset of the form puts the group's own value back to its value at mount.
+    #[test]
+    fn a_form_reset_restores_the_groups_own_value() {
+        let mut dom = VirtualDom::new(|| {
+            use_context_provider(FormScope::new);
+            let value = use_store(|| Pair { a: "start".into() });
+            use_context_provider(|| value);
+            rsx! {
+                LiberoProvider {
+                    Fieldset { label: "G", value,
+                        TextField { label: "A", name: crate::path!(Pair => a) }
+                    }
+                }
+            }
+        });
+        dom.rebuild_in_place();
+        dom.render_immediate(&mut NoOpMutations);
+        dom.in_scope(ScopeId::APP, || {
+            consume_context::<Store<Pair>>().set(Pair { a: "typed".into() });
+            consume_context::<FormScope>().reset();
+        });
+        dom.render_immediate(&mut NoOpMutations);
+        dom.render_immediate(&mut NoOpMutations);
+        let html = dioxus_ssr::render(&dom);
+        assert!(html.contains("start") && !html.contains("typed"), "{html}");
     }
 
     /// Todo 2570, 4257: a touch elsewhere re-renders no fieldset, ruled or not; only focus

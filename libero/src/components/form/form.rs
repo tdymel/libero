@@ -262,11 +262,13 @@ pub fn Form<V: FormValue>(props: FormProps<V>) -> Element {
             }
             Err(Outcome::Running(task)) => {
                 submitting.set(true);
+                let at = scope.resets();
                 // In the form's scope, so the task ends with the form.
                 spawn(async move {
                     let result = task.await;
                     submitting.set(false);
-                    if let Err(errors) = result {
+                    // A reset meanwhile drops the refusal: the errors belong to the old values.
+                    if let (Err(errors), true) = (result, scope.resets() == at) {
                         awaiting.set(None);
                         handle.set_errors(errors);
                     }
