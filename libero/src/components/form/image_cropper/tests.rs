@@ -178,22 +178,56 @@ fn home_and_end_take_the_keyboard_value_to_its_ends() {
     let crop = rect(0.2, 0.3, 0.4, 0.4);
     // The box's value is x: it can travel to either edge of the image.
     assert_close(
-        crop.extreme(Grip::Move, false, None, 0.05),
+        crop.extreme(Grip::Move, false, false, None, 0.05),
         rect(0.0, 0.3, 0.4, 0.4),
     );
     assert_close(
-        crop.extreme(Grip::Move, true, None, 0.05),
+        crop.extreme(Grip::Move, true, false, None, 0.05),
         rect(0.6, 0.3, 0.4, 0.4),
     );
-    // A corner's value is the width, kept to `min` and the image.
-    let (least, greatest) = crop.range(Grip::NorthWest, None, 0.05);
-    assert!((least - 0.05).abs() < 1e-9 && (greatest - 0.6).abs() < 1e-9);
-    let (least, greatest) = crop.range(Grip::SouthEast, None, 0.05);
+    // An east corner's value is the width, kept to `min` and the image.
+    let (least, greatest) = crop.range(Grip::SouthEast, false, None, 0.05);
     assert!((least - 0.05).abs() < 1e-9 && (greatest - 0.8).abs() < 1e-9);
     // A locked ratio follows the width.
     assert_close(
-        rect(0.2, 0.2, 0.4, 0.4).extreme(Grip::SouthEast, true, Some(1.0), 0.05),
+        rect(0.2, 0.2, 0.4, 0.4).extreme(Grip::SouthEast, true, false, Some(1.0), 0.05),
         rect(0.2, 0.2, 0.8, 0.8),
+    );
+}
+
+/// Todo 4321: every slider's ArrowRight raises its value and Home takes it to its least.
+#[test]
+fn arrow_right_raises_each_slider_value_and_home_is_its_least() {
+    let crop = rect(0.2, 0.3, 0.4, 0.4);
+    // The corners, the keyboard's sliders.
+    for grip in Grip::HANDLES[..4].iter().copied() {
+        for ratio in [None, Some(1.0)] {
+            let value = crop.value(grip, false);
+            let right = crop
+                .resized(grip, 0.05, 0.0, ratio, 0.05)
+                .value(grip, false);
+            assert!(right > value, "{grip:?} {ratio:?}: {value} -> {right}");
+            let (least, greatest) = crop.range(grip, false, ratio, 0.05);
+            assert!(least < value && value < greatest, "{grip:?} {ratio:?}");
+            let home = crop.extreme(grip, false, false, ratio, 0.05);
+            assert!((home.value(grip, false) - least).abs() < 1e-9, "{grip:?}");
+        }
+    }
+    // A west corner reports its left edge: Home is the image's edge, End leaves `min`.
+    let (least, greatest) = crop.range(Grip::NorthWest, false, None, 0.05);
+    assert!(least.abs() < 1e-9 && (greatest - 0.55).abs() < 1e-9);
+
+    // Pan mode reports the image's offset, which ArrowRight drags right.
+    let value = crop.value(Grip::Move, true);
+    assert!(crop.panned(0.05, 0.0).value(Grip::Move, true) > value);
+    let (least, greatest) = crop.range(Grip::Move, true, None, 0.05);
+    assert!(
+        least < value && value < greatest,
+        "{least} {value} {greatest}"
+    );
+    assert_close(
+        crop.extreme(Grip::Move, false, true, None, 0.05),
+        rect(0.6, 0.3, 0.4, 0.4),
     );
 }
 

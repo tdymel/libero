@@ -308,27 +308,42 @@ impl CropRect {
         }
     }
 
-    /// The box with `grip`'s keyboard value (x for the box, width for a corner)
-    /// at its least or greatest, the Home and End keys.
-    pub(super) fn extreme(self, grip: Grip, greatest: bool, ratio: Option<f64>, min: f64) -> Self {
-        // Far past any edge: the clamps stop it.
-        let reach = if greatest { 2.0 } else { -2.0 };
-        match grip {
-            Grip::Move => self.moved(reach, 0.0),
-            _ => self.resized(grip, reach * f64::from(grip.sides().0), 0.0, ratio, min),
+    /// `grip`'s slider value, so ArrowRight raises it (APG, todo 4321): the left edge
+    /// for the box and a west corner, the width for an east one, in pan mode the image's offset.
+    pub(super) fn value(self, grip: Grip, pan: bool) -> f64 {
+        match (pan, grip.sides().0) {
+            (true, _) => self.image_transform().1,
+            (false, 1) => self.width,
+            _ => self.x,
         }
     }
 
-    /// The least and greatest of `grip`'s keyboard value, fractions of the image.
-    pub(super) fn range(self, grip: Grip, ratio: Option<f64>, min: f64) -> (f64, f64) {
-        let value = |rect: Self| match grip {
-            Grip::Move => rect.x,
-            _ => rect.width,
+    /// The box with `grip`'s [`Self::value`] at its least or greatest, the Home and End keys.
+    pub(super) fn extreme(
+        self,
+        grip: Grip,
+        greatest: bool,
+        pan: bool,
+        ratio: Option<f64>,
+        min: f64,
+    ) -> Self {
+        // Far past any edge: the clamps stop it.
+        let reach = if greatest { 2.0 } else { -2.0 };
+        match (pan, grip) {
+            // The image moves against the crop.
+            (true, _) => self.moved(-reach, 0.0),
+            (false, Grip::Move) => self.moved(reach, 0.0),
+            _ => self.resized(grip, reach, 0.0, ratio, min),
+        }
+    }
+
+    /// The least and greatest of `grip`'s [`Self::value`].
+    pub(super) fn range(self, grip: Grip, pan: bool, ratio: Option<f64>, min: f64) -> (f64, f64) {
+        let value = |greatest| {
+            self.extreme(grip, greatest, pan, ratio, min)
+                .value(grip, pan)
         };
-        (
-            value(self.extreme(grip, false, ratio, min)),
-            value(self.extreme(grip, true, ratio, min)),
-        )
+        (value(false), value(true))
     }
 
     fn resized_free(self, grip: Grip, dx: f64, dy: f64, min: f64) -> Self {

@@ -98,11 +98,12 @@ pub fn ImageCropperPage() -> Element {
             accessibility: a11y()
                 .key(["Arrow"], "On the box: moves it, with `pan` the image, as a drag does. On a corner: moves that corner, resizing the box.")
                 .key(["Shift+Arrow"], "Ten times as far.")
-                .key(["Home", "End"], "On the box: moves it to the left or right edge. On a corner: sets the box's width to its least or greatest.")
+                .key(["Home", "End"], "On the box: moves it to the left or right edge, with `pan` the image. On a corner: moves its left or right side as far left or right as it goes.")
                 .key(["+", "-"], "With `pan`: zoom the image in or out around the box's centre.")
                 .handles([
                     "The box is a `slider` tab stop named by `aria_label`, its value spoken as \"50% by 50%, at 25%, 25%\".",
                     "The four corners are tab stops of their own, sliders named \"Top left corner\" and so on.",
+                    "Each slider's number rises with ArrowRight: the box's left edge, with `pan` the image's; a left corner's left edge, a right corner's width.",
                     "Each handle is a 24px target around a 12px square.",
                     "A drag focuses the box or the corner it grabbed, so the keys carry on from there.",
                     "On a touch screen a finger on the image, on the box or beside it, drags the box without scrolling the page; a disabled cropper lets the page scroll. Two fingers pinch the box larger or smaller around its centre; so do Ctrl or Cmd with the mouse wheel and a trackpad pinch over the image. A plain wheel scrolls the page.",

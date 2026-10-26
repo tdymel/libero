@@ -779,8 +779,8 @@ pub fn ImageCropper(props: ImageCropperProps) -> Element {
                 // APG's large step, vertical as on the colour picker's saturation area.
                 Key::Named(NamedKey::PageUp) => shift(grabbed, 0.0, -KEY_STEP * 10.0),
                 Key::Named(NamedKey::PageDown) => shift(grabbed, 0.0, KEY_STEP * 10.0),
-                Key::Named(NamedKey::Home) => shown.extreme(grabbed, false, ratio, min),
-                Key::Named(NamedKey::End) => shown.extreme(grabbed, true, ratio, min),
+                Key::Named(NamedKey::Home) => shown.extreme(grabbed, false, pan, ratio, min),
+                Key::Named(NamedKey::End) => shown.extreme(grabbed, true, pan, ratio, min),
                 Key::Character(c) if pan && (c == "+" || c == "=") => {
                     shown.zoomed(ZOOM_STEP, centre, centre, min)
                 }
@@ -917,7 +917,7 @@ pub fn ImageCropper(props: ImageCropperProps) -> Element {
         let onpointerdown = press(grabbed);
         match corner {
             Some((element, label)) => {
-                let (least, greatest) = shown.range(grabbed, ratio, min);
+                let (least, greatest) = shown.range(grabbed, false, ratio, min);
                 rsx! {
                 div {
                     key: "{grabbed.slot()}",
@@ -929,7 +929,7 @@ pub fn ImageCropper(props: ImageCropperProps) -> Element {
                     "aria-describedby": keys_id(),
                     "aria-valuemin": percent(least),
                     "aria-valuemax": percent(greatest),
-                    "aria-valuenow": percent(shown.width),
+                    "aria-valuenow": percent(shown.value(grabbed, false)),
                     "aria-valuetext": valuetext.clone(),
                     "aria-disabled": (!interactive).then_some("true"),
                     onmounted: element.mount(),
@@ -953,7 +953,7 @@ pub fn ImageCropper(props: ImageCropperProps) -> Element {
 
     let onpointerdown_box = press(Grip::Move);
     let onpointerdown_image = onpointerdown_box.clone();
-    let (box_least, box_greatest) = shown.range(Grip::Move, ratio, min);
+    let (box_least, box_greatest) = shown.range(Grip::Move, pan, ratio, min);
     use_box()
         .framework_sx(&IMAGE_CROPPER_SX)
         .class(&props.class)
@@ -998,7 +998,7 @@ pub fn ImageCropper(props: ImageCropperProps) -> Element {
                         "aria-describedby": keys_id(),
                         "aria-valuemin": percent(box_least),
                         "aria-valuemax": percent(box_greatest),
-                        "aria-valuenow": percent(shown.x),
+                        "aria-valuenow": percent(shown.value(Grip::Move, pan)),
                         "aria-valuetext": valuetext.clone(),
                         "aria-disabled": (!interactive).then_some("true"),
                         onmounted: box_element.mount(),

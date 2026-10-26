@@ -100,7 +100,7 @@ explains how parts work.
 |---|---|
 | `Arrow` | On the box: moves it, with `pan` the image, as a drag does. On a corner: moves that corner, resizing the box. |
 | `Shift+Arrow` | Ten times as far. |
-| `Home`, `End` | On the box: moves it to the left or right edge. On a corner: sets the box's width to its least or greatest. |
+| `Home`, `End` | On the box: moves it to the left or right edge, with `pan` the image. On a corner: moves its left or right side as far left or right as it goes. |
 | `+`, `-` | With `pan`: zoom the image in or out around the box's centre. |
 
 ### Libero handles
@@ -109,6 +109,8 @@ explains how parts work.
   "50% by 50%, at 25%, 25%".
 - The four corners are tab stops of their own, sliders named "Top left corner"
   and so on.
+- Each slider's number rises with ArrowRight: the box's left edge, with `pan`
+  the image's; a left corner's left edge, a right corner's width.
 - Each handle is a 24px target around a 12px square.
 - A drag focuses the box or the corner it grabbed, so the keys carry on from
   there.

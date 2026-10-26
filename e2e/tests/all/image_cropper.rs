@@ -758,7 +758,8 @@ async fn the_arrows_resize_from_a_corner<D: Driver>(d: &mut D, _route: &str) -> 
     eventually_text(d, "#crop", "25,24,51,51", "ArrowUp on the top left corner").await
 }
 
-/// Home and End: on the box, to the left or right edge; on a corner, the least or greatest width (3775).
+/// Home and End: on the box, to the left or right edge; on a corner, its side as far left or right
+/// as it goes (3775). A left corner's value is its left edge, so ArrowRight raises it (4321).
 async fn home_and_end_on_the_box_and_a_corner<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
     d.focus(BOX).await?;
     d.press(keyboard::HOME).await?;
@@ -771,10 +772,18 @@ async fn home_and_end_on_the_box_and_a_corner<D: Driver>(d: &mut D, _route: &str
     d.press(keyboard::END).await?;
     eventually_text(d, "#crop", "50,25,50,50", "End on the bottom right corner").await?;
     d.focus(NORTH_WEST).await?;
-    d.press(keyboard::END).await?;
-    eventually_text(d, "#crop", "0,25,100,50", "End on the top left corner").await?;
     d.press(keyboard::HOME).await?;
-    eventually_text(d, "#crop", "95,25,5,50", "Home on the top left corner").await
+    eventually_text(d, "#crop", "0,25,100,50", "Home on the top left corner").await?;
+    d.press(keyboard::END).await?;
+    eventually_text(d, "#crop", "95,25,5,50", "End on the top left corner").await?;
+    d.press(keyboard::ARROW_LEFT).await?;
+    eventually_text(d, "#crop", "94,25,6,50", "ArrowLeft on the top left corner").await?;
+    eventually(
+        d,
+        "the top left corner's value to be its left edge",
+        async |d| Ok(d.attr(NORTH_WEST, "aria-valuenow").await?.as_deref() == Some("94")),
+    )
+    .await
 }
 
 /// A drag by a tenth of the picture, which a phone draws narrower than its 400 px.
