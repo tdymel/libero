@@ -165,11 +165,14 @@ pub async fn touch_up(page: &Page, at: Point) -> Result<()> {
     touch_at(page, DispatchTouchEventType::TouchEnd, at).await
 }
 
-/// A finger tap at a viewport point; turn touch emulation on first.
+/// A finger tap at a viewport point, the page in front for it; turn touch emulation on first.
 pub async fn tap_at(page: &Page, at: Point) -> Result<()> {
     use chromiumoxide::cdp::browser_protocol::input::DispatchTouchEventType;
-    touch_at(page, DispatchTouchEventType::TouchStart, at).await?;
-    touch_at(page, DispatchTouchEventType::TouchEnd, at).await
+    in_front(page, async {
+        touch_at(page, DispatchTouchEventType::TouchStart, at).await?;
+        touch_at(page, DispatchTouchEventType::TouchEnd, at).await
+    })
+    .await
 }
 
 /// Moves a held [`touch_down`] to `to`, still held.

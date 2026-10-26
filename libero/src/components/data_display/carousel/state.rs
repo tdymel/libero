@@ -407,6 +407,8 @@ pub(super) struct CarouselSetup {
     pub(super) controlled: Option<usize>,
     /// `CarouselJump`'s swap counter, or `None` without a provider.
     pub(super) swaps: Option<u64>,
+    /// Set to the swap count once its jump reached the track.
+    pub(super) landed: Option<Signal<u64>>,
     pub(super) r#loop: bool,
     pub(super) autoplay: bool,
     pub(super) autoplay_delay: u32,
@@ -468,6 +470,7 @@ pub(super) fn use_carousel_state(setup: CarouselSetup) -> CarouselState {
         onindexchange,
         controlled,
         swaps,
+        landed,
         autoplay,
         autoplay_delay: delay,
         named,
@@ -520,11 +523,22 @@ pub(super) fn use_carousel_state(setup: CarouselSetup) -> CarouselState {
         nav.pull_into_range();
     }));
 
+    let swaps_seen = use_signal(|| swaps);
+    // A swap's jump reached the track: the caller's lazy pictures may load (todo 4308).
+    let land_swap = move || {
+        if let (Some(mut landed), Some(seen)) = (landed, *swaps_seen.peek())
+            && *landed.peek() != seen
+        {
+            landed.set(seen);
+        }
+    };
+
     // The seam jump, in an effect: `seam`'s instant scrolling reaches the DOM a
     // render later, and a jump from the handler rewound the whole strip.
     use_effect(use_reactive!(|nav| {
         if seam() {
             nav.scroll_to_raw(nav.raw_for(*nav.current.peek()));
+            land_swap();
             // Blitz scrolls instantly and reports no rest for this jump (todo 3120).
             if !snaps_scroll() {
                 nav.lower_seam();
@@ -547,7 +561,7 @@ pub(super) fn use_carousel_state(setup: CarouselSetup) -> CarouselState {
     // A controlled `index`, with the whole tuple reactive.
     let mut mounting = use_signal(|| true);
     let mut applied = use_signal(|| None::<usize>);
-    let mut swaps_seen = use_signal(|| swaps);
+    let mut swaps_seen = swaps_seen;
     use_effect(use_reactive!(|controlled, nav, swaps| {
         let Some(index) = controlled else {
             return;
@@ -566,7 +580,12 @@ pub(super) fn use_carousel_state(setup: CarouselSetup) -> CarouselState {
         // `seam` makes it instant, via the seam effect.
         let first_scroll = std::mem::replace(&mut *mounting.write(), false);
         let swapped = consume_swap(&mut swaps_seen.write(), swaps);
-        match instant_scroll(first_scroll, swapped, nav.clones, index, from, nav.first) {
+        let instant = instant_scroll(first_scroll, swapped, nav.clones, index, from, nav.first);
+        // A swap to where the strip already is has nothing to jump.
+        if !instant {
+            land_swap();
+        }
+        match instant {
             true => seam.set(true),
             // The caller echoing a move: re-scrolling would rewind a wrap off its clone.
             false if index == from && index == *settled.peek() => {}

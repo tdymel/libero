@@ -266,7 +266,11 @@ fn a_finger_on_a_chip_x_never_removes_the_next_rows_chip() {
             );
 
             let tap = &probe["tap"];
-            tap_at(page, tap["x"].as_f64().unwrap(), tap["y"].as_f64().unwrap()).await;
+            let at = pointer::Point {
+                x: tap["x"].as_f64().unwrap(),
+                y: tap["y"].as_f64().unwrap(),
+            };
+            pointer::tap_at(page, at).await.unwrap();
             wait::for_js_true(
                 page,
                 &format!(
@@ -285,25 +289,6 @@ fn a_finger_on_a_chip_x_never_removes_the_next_rows_chip() {
             .unwrap();
         fixture.close().await.unwrap();
     });
-}
-
-/// A finger down and up at a viewport point.
-async fn tap_at(page: &chromiumoxide::Page, x: f64, y: f64) {
-    use chromiumoxide::cdp::browser_protocol::input::{
-        DispatchTouchEventParams, DispatchTouchEventType, TouchPoint,
-    };
-    for kind in [
-        DispatchTouchEventType::TouchStart,
-        DispatchTouchEventType::TouchEnd,
-    ] {
-        let point = TouchPoint::builder().x(x).y(y).build().unwrap();
-        let event = DispatchTouchEventParams::builder()
-            .r#type(kind)
-            .touch_point(point)
-            .build()
-            .unwrap();
-        page.execute_bounded(event).await.unwrap();
-    }
 }
 
 /// Todo 3589: a `md` icon keeps its own box on a coarse pointer, so grouped icons do not

@@ -221,7 +221,7 @@ fn a_click_on_the_picture_plays_or_pauses() {
         clock::settle(page).await.unwrap();
         fade(page).await;
         let at = pointer::centre_of(page, "#player video").await.unwrap();
-        pointer::touch_drag(page, at, at, 0).await.unwrap();
+        pointer::swipe(page, at, at, 0).await.unwrap();
         wait::for_js_true(
             page,
             &format!("!({}) && {PLAYING}", faded_js()),
@@ -229,7 +229,7 @@ fn a_click_on_the_picture_plays_or_pauses() {
         )
         .await
         .unwrap();
-        pointer::touch_drag(page, at, at, 0).await.unwrap();
+        pointer::swipe(page, at, at, 0).await.unwrap();
         wait::for_js_true(page, PAUSED, "a tap on shown controls to pause")
             .await
             .unwrap();
@@ -359,7 +359,7 @@ fn a_tap_on_the_faded_bar_does_not_press_its_button() {
         .await
         .unwrap();
         let at = pointer::centre_of(page, MUTE).await.unwrap();
-        pointer::touch_drag(page, at, at, 0).await.unwrap();
+        pointer::swipe(page, at, at, 0).await.unwrap();
         wait::for_js_true(
             page,
             &format!("!({})", faded_js()),

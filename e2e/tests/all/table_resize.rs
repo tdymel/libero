@@ -50,7 +50,7 @@ e2e::scenario!(
 fn a_touch_in_the_grip_lane_resizes_the_column() {
     use chromiumoxide::cdp::browser_protocol::emulation::SetTouchEmulationEnabledParams;
     use e2e::browser::{Fixture, Viewport, block_on};
-    use e2e::passes::pointer::{Point, touch_drag};
+    use e2e::passes::pointer::{Point, swipe};
     use e2e::wait;
     block_on(async {
         let fixture = Fixture::open("/table-resize", Viewport::Mobile)
@@ -84,7 +84,7 @@ fn a_touch_in_the_grip_lane_resizes_the_column() {
             x: from.x + 60.0,
             y: from.y,
         };
-        touch_drag(page, from, to, 8).await.unwrap();
+        swipe(page, from, to, 8).await.unwrap();
         wait::for_js_true(
             page,
             &format!(

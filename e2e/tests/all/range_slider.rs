@@ -369,7 +369,7 @@ fn a_touch_drags_the_upper_thumb() {
             &fixture.page,
             &format!("{UPPER}.getAttribute('aria-valuenow')"),
             "the upper thumb to move",
-            || pointer::touch_drag(&fixture.page, start, to, 8),
+            || pointer::swipe(&fixture.page, start, to, 8),
         )
         .await
         .unwrap();
@@ -409,7 +409,7 @@ fn a_touch_tap_on_the_track_moves_the_nearest_thumb() {
                 x: low.x + (value - 20.0) / 60.0 * (high.x - low.x),
                 y: low.y,
             };
-            pointer::touch_drag(page, at, at, 0).await.unwrap();
+            pointer::swipe(page, at, at, 0).await.unwrap();
             wait::for_js_true(
                 page,
                 &format!(

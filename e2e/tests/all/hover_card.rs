@@ -250,13 +250,11 @@ async fn an_outside_tap_closes<D: Driver>(d: &mut D, _route: &str) -> Result<()>
         Ok(d.armed(LINGER_MS).await? == 1)
     })
     .await?;
-    d.touch_down(CARD_FIRST).await?;
-    d.touch_up(CARD_FIRST).await?;
+    d.tap(CARD_FIRST).await?;
     d.settle().await?;
     ensure!(d.exists(CARD).await?, "a tap in the card closed it");
     // Above the trigger: the card opens below it, over `#after`.
-    d.touch_down(BEFORE).await?;
-    d.touch_up(BEFORE).await?;
+    d.tap(BEFORE).await?;
     shown(d, CARD, false, "a tap outside").await
 }
 

@@ -70,7 +70,7 @@ fn a_touch_drags_only_from_the_thumb() {
             y: track.y,
         };
 
-        pointer::touch_drag(page, track, aside, 6).await.unwrap();
+        pointer::swipe(page, track, aside, 6).await.unwrap();
         settle::painted(page).await.unwrap();
         let (now, ended): (String, String) = page
             .evaluate_bounded(format!(
@@ -86,7 +86,7 @@ fn a_touch_drags_only_from_the_thumb() {
             "a swipe from the track moved it"
         );
 
-        pointer::touch_drag(page, track, track, 0).await.unwrap();
+        pointer::swipe(page, track, track, 0).await.unwrap();
         wait::for_js_true(
             page,
             &format!(
@@ -103,7 +103,7 @@ fn a_touch_drags_only_from_the_thumb() {
             y: thumb.y,
         };
         wait::for_js_change(page, &value, "a drag from the thumb to move it", || {
-            pointer::touch_drag(page, thumb, back, 8)
+            pointer::swipe(page, thumb, back, 8)
         })
         .await
         .unwrap();

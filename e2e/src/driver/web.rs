@@ -171,6 +171,10 @@ impl Driver for Web {
         in_front(page, pointer::touch_up(page, at)).await
     }
 
+    async fn tap(&mut self, selector: &str) -> Result<()> {
+        pointer::tap(&self.fixture.page, selector).await
+    }
+
     async fn wheel(&mut self, selector: &str, dy: f64) -> Result<()> {
         let page = &self.fixture.page;
         let at = pointer::centre_of(page, selector).await?;

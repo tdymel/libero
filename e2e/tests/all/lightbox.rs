@@ -604,6 +604,14 @@ async fn gallery_swap(page: &Page, viewport: Viewport) -> Result<()> {
             .into_value()?;
         bail!("{error}; the eager pictures read {state:?}");
     }
+    // The lazy pictures wait for their `src` only until the jump landed (todo 4308).
+    wait::for_js_true(
+        page,
+        "[...document.querySelectorAll('[role=dialog] [data-lightbox-frame] img')] \
+         .every(img => img.getAttribute('src')?.endsWith('?second'))",
+        "every swapped picture to take its src once the track jumped",
+    )
+    .await?;
 
     // None at all when the picture's focus scroll got the track there first.
     let scrolls = motion::scrolls(page).await?;

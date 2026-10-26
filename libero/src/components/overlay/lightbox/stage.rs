@@ -50,6 +50,8 @@ pub(super) struct Stage {
     pub(super) zoomable: bool,
     pub(super) swipe: bool,
     pub(super) preload: usize,
+    /// A swapped gallery whose track has not jumped yet: lazy pictures wait for their `src`.
+    pub(super) jumping: bool,
     /// How far a swipe-to-close has travelled down, while one is in progress.
     pub(super) swiping: Option<f64>,
 }
@@ -157,6 +159,7 @@ pub(super) fn lightbox_slide(
         zoomable,
         swipe,
         preload,
+        jumping,
         swiping,
         ..
     } = stage;
@@ -189,10 +192,10 @@ pub(super) fn lightbox_slide(
         (true, None) => active.is_zoomed().then(|| active.transform()),
     };
     let image_variables: Input<Variables> = variables().with(LIGHTBOX_TRANSFORM, transform).into();
-    let loading = match i.abs_diff(current) <= preload {
-        true => "eager",
-        false => "lazy",
-    };
+    let eager = i.abs_diff(current) <= preload;
+    let loading = if eager { "eager" } else { "lazy" };
+    // The track still shows the old index, so a lazy picture there would fetch (todo 4308).
+    let src = (eager || !jumping).then(|| own_src.clone());
 
     // Keyed by picture: Chromium fetches a new `src` on a loaded `<img>` at once,
     // whatever `loading` says (todo 227). Inputs are the frame's (todos 920, 928).
@@ -283,7 +286,7 @@ pub(super) fn lightbox_slide(
                 states: image_states,
                 variables: image_variables,
                 id: image_id(&base_id(), i),
-                src: own_src.clone(),
+                src,
                 alt: item.alt.clone(),
                 loading,
                 draggable: "false",

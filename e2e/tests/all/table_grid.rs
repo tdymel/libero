@@ -514,14 +514,12 @@ e2e::scenario!(
 /// A second tap on the stop cell opens its editor; the first only makes it the stop.
 async fn second_tap<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
     let target = cell(2, 2);
-    d.touch_down(&target).await?;
-    d.touch_up(&target).await?;
+    d.tap(&target).await?;
     at(d, 2, 2, "a first tap").await?;
     if d.exists(EDITOR).await? {
         bail!("the first tap opened the editor");
     }
-    d.touch_down(&target).await?;
-    d.touch_up(&target).await?;
+    d.tap(&target).await?;
     eventually_focused(d, EDITOR, "a second tap").await
 }
 

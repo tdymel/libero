@@ -53,14 +53,26 @@ static CAROUSEL_VIEWPORT_SX: StaticSx = StaticSx::new(|| {
 
 /// A caller's slide-and-`index` swap (`Lightbox`) moves instantly, not by a smooth
 /// scroll that fetches lazy pictures (todo 323); a count, so it survives a re-render.
-/// Also tells the track a slide holds the tab stop (todo 2833).
-#[derive(Clone, Default)]
-pub(crate) struct CarouselJump(Rc<Cell<u64>>, Rc<Cell<bool>>);
+/// Also tells the track a slide holds the tab stop (todo 2833). The third field is the
+/// last swap the track has jumped for; a swap reads as landed once it matches.
+#[derive(Clone)]
+pub(crate) struct CarouselJump(Rc<Cell<u64>>, Rc<Cell<bool>>, Signal<u64>);
+
+impl Default for CarouselJump {
+    fn default() -> Self {
+        Self(Rc::default(), Rc::default(), Signal::new(0))
+    }
+}
 
 impl CarouselJump {
     /// Marks a swap, from the render that draws it.
     pub(crate) fn swapped(&self) {
         self.0.set(self.0.get() + 1);
+    }
+
+    /// Whether the last swap's jump is still to come; subscribes the render that reads it.
+    pub(crate) fn jumping(&self) -> bool {
+        (self.2)() != self.0.get()
     }
 
     /// Whether the showing slide is the tab stop, set from the render that draws the track.
@@ -74,6 +86,10 @@ impl CarouselJump {
 
     fn count(&self) -> u64 {
         self.0.get()
+    }
+
+    fn landed(&self) -> Signal<u64> {
+        self.2
     }
 }
 
@@ -252,6 +268,7 @@ pub fn Carousel(props: CarouselProps) -> Element {
         onindexchange: props.onindexchange,
         controlled: props.index,
         swaps,
+        landed: jump.as_ref().map(CarouselJump::landed),
         r#loop: props.r#loop,
         autoplay: props.autoplay,
         autoplay_delay: props

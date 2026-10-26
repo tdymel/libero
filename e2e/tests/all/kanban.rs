@@ -1130,7 +1130,7 @@ e2e::scenario!(
 #[test]
 fn a_touch_drags_a_column_by_its_handle_and_a_swipe_elsewhere_scrolls() {
     use e2e::browser::{Fixture, Viewport, block_on};
-    use e2e::passes::pointer::{Point, touch_drag};
+    use e2e::passes::pointer::{Point, swipe};
     use e2e::wait;
     block_on(async {
         let fixture = Fixture::open("/kanban/column-reorder", Viewport::Mobile)
@@ -1143,7 +1143,7 @@ fn a_touch_drags_a_column_by_its_handle_and_a_swipe_elsewhere_scrolls() {
             centre(page, &header("doing", "handle")).await,
             centre(page, &header("to-do", "handle")).await,
         );
-        touch_drag(
+        swipe(
             page,
             handle,
             Point {
@@ -1170,7 +1170,7 @@ fn a_touch_drags_a_column_by_its_handle_and_a_swipe_elsewhere_scrolls() {
             .unwrap()
             .into_value()
             .unwrap();
-        touch_drag(
+        swipe(
             page,
             at,
             Point {
@@ -1711,8 +1711,7 @@ fn a_menu_move_to_a_hidden_column_scrolls_it_into_view() {
 #[test]
 fn a_touch_on_the_handle_drags_across_and_elsewhere_scrolls_the_board() {
     use e2e::browser::{Fixture, Viewport, block_on};
-    use e2e::frames::in_front;
-    use e2e::passes::pointer::{Point, touch_drag};
+    use e2e::passes::pointer::{Point, swipe};
     use e2e::wait;
     block_on(async {
         let fixture = Fixture::open("/kanban", Viewport::Mobile).await.unwrap();
@@ -1726,10 +1725,7 @@ fn a_touch_on_the_handle_drags_across_and_elsewhere_scrolls_the_board() {
             x: handle.x + (to.x - from.x),
             y: handle.y,
         };
-        // In front: a tab behind holds each touch event for its next frame, about 1 s.
-        in_front(page, touch_drag(page, handle, at, 12))
-            .await
-            .unwrap();
+        swipe(page, handle, at, 12).await.unwrap();
         wait::for_js_true(
             page,
             "document.querySelector('#order').textContent === 'Alpha Gamma | Delta Beta | '",
@@ -1750,9 +1746,7 @@ fn a_touch_on_the_handle_drags_across_and_elsewhere_scrolls_the_board() {
                 y: text.y,
             },
         );
-        in_front(page, touch_drag(page, start, end, 12))
-            .await
-            .unwrap();
+        swipe(page, start, end, 12).await.unwrap();
         wait::for_js_true(
             page,
             "document.querySelector('#board').scrollLeft > 50",

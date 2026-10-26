@@ -214,6 +214,11 @@ pub trait Driver {
         let _ = selector;
         bail!("{:?}: no held touch", self.platform())
     }
+    /// A finger tap at the first match's centre: [`Driver::touch_down`], then up there.
+    async fn tap(&mut self, selector: &str) -> Result<()> {
+        self.touch_down(selector).await?;
+        self.touch_up(selector).await
+    }
     /// Two touches either side of the first match's centre, `from` px apart,
     /// spread to `to` px apart, then lifted.
     async fn pinch(&mut self, selector: &str, from: f64, to: f64) -> Result<()> {

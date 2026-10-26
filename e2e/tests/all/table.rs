@@ -336,8 +336,12 @@ fn a_cancelled_touch_does_not_make_the_next_key_press_add_a_column() {
 
         pointer::click(page, STOCK).await.unwrap();
         wait_text(page, "#sort", "Stock ascending").await;
-        pointer::touch_down(page, NAME).await.unwrap();
-        cancel_touch(page, NAME).await.unwrap();
+        e2e::frames::in_front(page, async {
+            pointer::touch_down(page, NAME).await?;
+            cancel_touch(page, NAME).await
+        })
+        .await
+        .unwrap();
         page.find_element_bounded(NAME)
             .await
             .unwrap()

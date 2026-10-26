@@ -207,6 +207,8 @@ pub(crate) fn Lightbox(opening: LightboxOpening, options: LightboxOptions) -> El
         zoomable: options.zoom,
         swipe: options.close_on_swipe_down,
         preload: options.preload,
+        // One picture draws no carousel, so no jump would ever land.
+        jumping: count > 1 && jump.jumping(),
         swiping,
     };
 
