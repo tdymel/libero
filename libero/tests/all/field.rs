@@ -2052,8 +2052,8 @@ mod dispatched {
         );
     }
 
-    /// A float field reads the formats' separator and `.` alike; under English
-    /// `1,5` is not a number.
+    /// A float field reads the formats' separator; under English `1,5` is not a number, and under
+    /// German, where `.` groups, `2.5` is none either (4267).
     #[test]
     fn a_float_field_parses_the_formats_decimal_separator() {
         use libero::localization::Formats;
@@ -2073,11 +2073,7 @@ mod dispatched {
 
         dioxus::html::set_event_converter(Box::new(TestConverter));
         for (formats, typed, expected) in [
-            (
-                &Formats::GERMAN,
-                ["1,5", "2.5"],
-                vec!["Some(1.5)", "Some(2.5)"],
-            ),
+            (&Formats::GERMAN, ["1,5", "2.5"], vec!["Some(1.5)"]),
             (&Formats::AMERICAN, ["1,5", "2.5"], vec!["Some(2.5)"]),
         ] {
             FORMATS.set(formats);

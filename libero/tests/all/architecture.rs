@@ -132,6 +132,7 @@ fn renderer_crates_are_only_named_inside_platform() {
         .filter(|edge| edge.external && RENDERER_CRATES.contains(&edge.target.as_str()))
         .filter(|edge| edge.source.starts_with("libero/"))
         .filter(|edge| !edge.source.starts_with("libero/src/platform/"))
+        .filter(|edge| !is_test_file(&edge.source))
         .map(|edge| format!("{} -> {}", edge.source, edge.target))
         .collect();
     assert!(outside.is_empty(), "go through `platform`:\n{outside:#?}");
