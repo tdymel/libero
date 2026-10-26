@@ -70,6 +70,16 @@ fn snap_towards(value: f64, min: f64, step: f64, down: bool) -> f64 {
     round_to(min + step * steps, decimals(step).max(decimals(min)))
 }
 
+/// [`snap_towards`] for the `min_range` clamp; `step: 0` uses the thousandth `snap`
+/// keeps, so the gap's float drift is not emitted (4262).
+fn gap_snap(value: f64, min: f64, max: f64, step: f64, down: bool) -> f64 {
+    let step = match step > 0.0 {
+        true => step,
+        false => 10_f64.powi(-(continuous_decimals(min, max) as i32)),
+    };
+    snap_towards(value, min, step, down)
+}
+
 /// Whether `value` lies on `min..=max`, give or take float drift. A mark off it
 /// would clamp to the track's end, over the last step's (1640).
 pub(super) fn on_track(value: f64, min: f64, max: f64) -> bool {
@@ -135,7 +145,8 @@ impl SliderCoreValue {
     }
 
     /// Moves one thumb to `raw`, snapped and stopped `min_range` short of its
-    /// neighbour, so the pair stays ordered.
+    /// neighbour, so the pair stays ordered. A pair already closer (a form reset
+    /// to `(0, 0)`) never pushes a thumb against its move (4261).
     pub(super) fn moved(
         self,
         index: usize,
@@ -151,14 +162,30 @@ impl SliderCoreValue {
             // The track clamp beats `min_range`; the gap clamp snaps back
             // towards the thumb's origin, to stay on the grid.
             Self::Range { from, to } => match index {
-                0 => Self::Range {
-                    from: snap_towards(value.min(to - min_range), min, step, true).max(min),
-                    to,
-                },
-                _ => Self::Range {
-                    from,
-                    to: snap_towards(value.max(from + min_range), min, step, false).min(max),
-                },
+                0 => {
+                    let stopped =
+                        gap_snap(value.min(to - min_range), min, max, step, true).max(min);
+                    Self::Range {
+                        from: if value >= from {
+                            stopped.max(from)
+                        } else {
+                            stopped
+                        },
+                        to,
+                    }
+                }
+                _ => {
+                    let stopped =
+                        gap_snap(value.max(from + min_range), min, max, step, false).min(max);
+                    Self::Range {
+                        from,
+                        to: if value <= to {
+                            stopped.min(to)
+                        } else {
+                            stopped
+                        },
+                    }
+                }
             },
         }
     }
@@ -181,7 +208,8 @@ impl SliderCoreValue {
     }
 
     /// `aria-valuemin`/`aria-valuemax` for one thumb, which is how far it can
-    /// actually travel rather than how wide the track is.
+    /// actually travel rather than how wide the track is. A pair closer than
+    /// `min_range` keeps each thumb inside its own bounds (4261).
     pub(super) fn bounds(
         self,
         index: usize,
@@ -192,11 +220,16 @@ impl SliderCoreValue {
     ) -> (f64, f64) {
         match (self, index) {
             (Self::Single(_), _) => (min, max),
-            (Self::Range { to, .. }, 0) => {
-                (min, snap_towards(to - min_range, min, step, true).max(min))
-            }
-            (Self::Range { from, .. }, _) => (
-                snap_towards(from + min_range, min, step, false).min(max),
+            (Self::Range { from, to }, 0) => (
+                min,
+                gap_snap(to - min_range, min, max, step, true)
+                    .max(min)
+                    .max(from),
+            ),
+            (Self::Range { from, to }, _) => (
+                gap_snap(from + min_range, min, max, step, false)
+                    .min(max)
+                    .min(to),
                 max,
             ),
         }
@@ -487,6 +520,51 @@ mod tests {
         assert_eq!(
             value.moved(0, 0.9, 0.1, 1.0, 0.2, 0.05),
             SliderCoreValue::Range { from: 0.7, to: 0.9 }
+        );
+    }
+
+    /// Todo 4261: a pair closer than `min_range` (a form reset gives `(0, 0)`) moved
+    /// a thumb against its key, and its `aria-valuenow` fell outside its bounds.
+    #[test]
+    fn a_pair_closer_than_min_range_never_moves_a_thumb_backwards() {
+        let close = SliderCoreValue::Range {
+            from: 50.0,
+            to: 52.0,
+        };
+        // ArrowRight on the lower thumb: it holds rather than dropping to 47.
+        assert_eq!(close.moved(0, 51.0, 0.0, 100.0, 1.0, 5.0), close);
+        // ArrowLeft on the lower thumb restores the gap, the way it was asked to go.
+        assert_eq!(
+            close.moved(0, 49.0, 0.0, 100.0, 1.0, 5.0),
+            SliderCoreValue::Range {
+                from: 47.0,
+                to: 52.0
+            }
+        );
+        let reset = SliderCoreValue::Range { from: 0.0, to: 0.0 };
+        assert_eq!(reset.moved(1, -1.0, 0.0, 100.0, 1.0, 5.0), reset);
+        assert_eq!(
+            reset.moved(1, 1.0, 0.0, 100.0, 1.0, 5.0),
+            SliderCoreValue::Range { from: 0.0, to: 5.0 }
+        );
+        assert_eq!(close.bounds(0, 0.0, 100.0, 1.0, 5.0), (0.0, 50.0));
+        assert_eq!(close.bounds(1, 0.0, 100.0, 1.0, 5.0), (52.0, 100.0));
+        assert_eq!(reset.bounds(1, 0.0, 100.0, 1.0, 5.0), (0.0, 100.0));
+    }
+
+    /// Todo 4262: the continuous gap clamp sent `0.3 - 0.1`, `0.19999999999999998`.
+    #[test]
+    fn a_continuous_gap_clamp_keeps_the_snapped_precision() {
+        let value = SliderCoreValue::Range { from: 0.0, to: 0.3 };
+        assert_eq!(
+            value.moved(0, 0.25, 0.0, 1.0, 0.0, 0.1),
+            SliderCoreValue::Range { from: 0.2, to: 0.3 }
+        );
+        assert_eq!(value.bounds(0, 0.0, 1.0, 0.0, 0.1), (0.0, 0.2));
+        let value = SliderCoreValue::Range { from: 0.1, to: 0.9 };
+        assert_eq!(
+            value.moved(1, 0.15, 0.0, 1.0, 0.0, 0.1),
+            SliderCoreValue::Range { from: 0.1, to: 0.2 }
         );
     }
 

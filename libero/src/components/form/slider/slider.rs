@@ -1,13 +1,13 @@
 use dioxus::prelude::*;
 
 use super::core::{SliderCore, SliderPart};
-use super::scale::{Scale, control_spacing};
+use super::scale::{Scale, control_spacing, use_emit, use_naming};
 use super::slider_value::{SliderChangeEvent, SliderMark, SliderSegment, SliderValue};
 use super::value::SliderCoreValue;
 use crate::{
     components::{
         common::{Input, Orientation},
-        form::{FieldStatus, field_props, use_bound, use_field},
+        form::{field_props, use_bound, use_field},
     },
     hooks::{use_localization, use_theme},
     sx::ThemeAwareValue,
@@ -134,47 +134,8 @@ pub fn Slider<V: SliderValue>(props: SliderProps<V>) -> Element {
         .or_else(|| props.value.clone())
         .unwrap_or_else(|| V::at(min));
 
-    // A discrete value names itself unless the caller says how - which is the
-    // hook an i18n'd slider hangs on, so every caption has to go through it.
-    let named = props.format;
-    let name = move |value: &V| match &named {
-        Some(label) => label.call(value.clone()),
-        None => value.label(),
-    };
-
-    let marks = match props.marks.is_empty() {
-        true => scale.derived_marks::<V>(&name),
-        false => props
-            .marks
-            .iter()
-            .map(|mark| SliderMark {
-                value: mark.value.position(),
-                label: mark.label.clone(),
-            })
-            .collect(),
-    };
-
-    // A discrete value always names itself; a continuous one only when the
-    // caller says how, which is what keeps `aria-valuetext` off a bare number.
-    let labelled = props.format.is_some() || V::options().is_some();
-    let label = use_callback(move |position: f64| name(&V::at(position)));
-
-    let oninput = props.oninput;
-    let setter = bound.setter();
-    let emit = use_callback(move |event: SliderChangeEvent<SliderCoreValue>| {
-        let event = event.map(|value| V::at(value.thumb(0)));
-        match (&oninput, &setter) {
-            (Some(oninput), _) => oninput.call(event),
-            // A bound slider keeps only the values - `Start`/`End` carry
-            // nothing a form's value holds.
-            (None, Some(setter)) => {
-                if let SliderChangeEvent::Change(value) = event {
-                    setter.set(value);
-                }
-            }
-            (None, None) => {}
-        }
-    });
+    let (marks, label) = use_naming(&scale, &props.marks, props.format);
+    let emit = use_emit(props.oninput, &bound, |value| V::at(value.thumb(0)));
 
     let required = crate::components::form::fieldset_required(props.required);
     let required_word = use_localization().slider.required;
@@ -210,14 +171,11 @@ pub fn Slider<V: SliderValue>(props: SliderProps<V>) -> Element {
         "Slider: no `label` or `aria_label`, so the thumb is announced as just \"slider\".",
     );
 
-    let above = !props.label.is_none() || !props.description.is_none();
-    let below = !props.helper.is_none()
-        || props
-            .status
-            .as_ref()
-            .and_then(FieldStatus::message)
-            .is_some();
-    let control_sx = control_spacing(above, below);
+    let control_sx = control_spacing(
+        !props.label.is_none() || !props.description.is_none(),
+        !props.helper.is_none(),
+        props.status.as_ref(),
+    );
 
     let control = rsx! {
         SliderCore {
@@ -232,9 +190,9 @@ pub fn Slider<V: SliderValue>(props: SliderProps<V>) -> Element {
             attributes: props.attributes,
             size: props.size,
             color: props.color,
-            disabled: Some(bound.disabled(props.disabled)),
+            disabled: Some(disabled),
             readonly: props.readonly.unwrap_or(false),
-            label: labelled.then_some(label),
+            label,
             // Unlabelled, the thumb's own name says required instead of the label.
             aria_label: aria_label.map(|name| match required && field.label_id().is_none() {
                 true => format!("{name} {required_word}"),
@@ -266,4 +224,38 @@ pub fn Slider<V: SliderValue>(props: SliderProps<V>) -> Element {
     };
 
     field.render(control)
+}
+
+#[cfg(test)]
+mod tests {
+    use dioxus::{core::NoOpMutations, prelude::*};
+
+    use super::{Slider, SliderChangeEvent};
+    use crate::LiberoProvider;
+
+    /// Todo 4260: turning `preview_on_hover` off skipped a hook and panicked the app.
+    #[test]
+    fn toggling_the_hover_preview_keeps_the_hook_order() {
+        fn app() -> Element {
+            let preview = use_context_provider(|| Signal::new(true));
+            rsx! {
+                LiberoProvider {
+                    Slider {
+                        aria_label: "Volume",
+                        value: 40.0,
+                        preview_on_hover: preview(),
+                        oninput: |_: SliderChangeEvent| {},
+                    }
+                }
+            }
+        }
+        let mut dom = VirtualDom::new(app);
+        dom.rebuild_in_place();
+        for preview in [false, true] {
+            dom.in_scope(ScopeId::APP, || {
+                consume_context::<Signal<bool>>().set(preview)
+            });
+            dom.render_immediate(&mut NoOpMutations);
+        }
+    }
 }

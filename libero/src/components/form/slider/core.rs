@@ -16,9 +16,9 @@ use crate::{
         overlay::{PressFocus, Tooltip, TooltipPinned},
     },
     hooks::{
-        DragMove, DragOptions, DragPoint, DragStart, ElementHandle, LocalState, Rect,
-        sideways_drag_sx, use_css, use_element, use_escape_dismiss, use_formats, use_id,
-        use_local_state, use_localization, use_sideways_drag_if, use_theme,
+        DragMove, DragOptions, DragPoint, DragStart, ElementHandle, Rect, sideways_drag_sx,
+        use_css, use_element, use_escape_dismiss, use_formats, use_id, use_localization,
+        use_sideways_drag_if, use_theme,
     },
     localization::{Formats, fill},
     platform::{Dimensions, ElementApi, logical_key, next_task},
@@ -803,10 +803,16 @@ impl ThumbTrack {
 
     /// The fraction of the range under a pointer at `client` along the track, as the drag maps it.
     fn fraction_at(&self, client: f64) -> Option<f64> {
+        Some(self.along_at(client)?.clamp(0.0, 1.0))
+    }
+
+    /// [`fraction_at`](Self::fraction_at) unclamped. The thumb's centre travels
+    /// between two half-thumb insets, so the pointer maps over that span.
+    fn along_at(&self, client: f64) -> Option<f64> {
         if self.travel <= 0.0 {
             return None;
         }
-        let along = ((client - self.left - self.thumb_along() / 2.0) / self.travel).clamp(0.0, 1.0);
+        let along = (client - self.left - self.thumb_along() / 2.0) / self.travel;
         Some(if self.flipped() { 1.0 - along } else { along })
     }
 }
@@ -861,6 +867,12 @@ impl Grid {
     fn moved(&self, from: SliderCoreValue, index: usize, raw: f64) -> SliderCoreValue {
         from.moved(index, raw, self.min, self.max, self.step, self.min_range)
     }
+
+    /// The value under a pointer at `client`, unsnapped and unclamped: past the end it
+    /// still tells two thumbs on one spot apart (1060).
+    fn value_at(&self, track: &ThumbTrack, client: f64) -> Option<f64> {
+        Some(self.min + track.along_at(client)? * (self.max - self.min))
+    }
 }
 
 #[derive(Clone, Copy)]
@@ -872,23 +884,30 @@ struct Elements {
     thumbs: [ElementHandle; 2],
 }
 
-/// The track's geometry along its axis, measured off the track at pointerdown,
-/// when layout is known settled.
-#[derive(Clone)]
-struct Measured {
-    left: LocalState<f64>,
-    width: LocalState<f64>,
-    thumb: LocalState<f64>,
-    /// Under RTL, or vertical, the minimum is at the far edge.
-    rtl: LocalState<bool>,
-}
-
-fn use_measured() -> Measured {
-    Measured {
-        left: use_local_state(|| 0.0),
-        width: use_local_state(|| 0.0),
-        thumb: use_local_state(|| 0.0),
-        rtl: use_local_state(|| false),
+/// The geometry a drag and the hover preview share. The reads start now, awaited later:
+/// Blitz locks the document while tasks drain and fails a read made inside one.
+fn measure_track(
+    elements: Elements,
+    vertical: bool,
+) -> impl Future<Output = Option<ThumbTrack>> + 'static {
+    let (track_size, track_offset) = (elements.track.dimensions(), elements.track.client_offset());
+    let (thumb_size, thumb_offset) = (
+        elements.thumbs[0].dimensions(),
+        elements.thumbs[0].client_offset(),
+    );
+    let rtl = elements.root.is_rtl();
+    async move {
+        let (Ok(track), Ok(track_at), Ok(thumb), Ok(thumb_at)) = (
+            track_size.await,
+            track_offset.await,
+            thumb_size.await,
+            thumb_offset.await,
+        ) else {
+            return None;
+        };
+        Some(track_geometry(
+            track, track_at, thumb, thumb_at, rtl, vertical,
+        ))
     }
 }
 
@@ -913,7 +932,7 @@ struct Steps {
 fn use_steps(
     live: Signal<Live>,
     grid: Grid,
-    measured: &Measured,
+    thumb_track: Signal<Option<ThumbTrack>>,
     oninput: Option<EventHandler<SliderChangeEvent<SliderCoreValue>>>,
     thumbs: [ElementHandle; 2],
     focusable: bool,
@@ -927,23 +946,9 @@ fn use_steps(
             oninput.call(event);
         }
     });
-    let measured = measured.clone();
-    // A `Callback`: `LocalState` is not `Copy`.
     let position_at = use_callback(move |client: f64| {
-        let thumb = measured.thumb.get();
-        // The thumb's centre only travels between the two half-thumb
-        // insets, so the pointer has to be mapped over that span too.
-        let travel = measured.width.get() - thumb;
-        if travel <= 0.0 {
-            return None;
-        }
-        let along = (client - measured.left.get() - thumb / 2.0) / travel;
-        let along = if measured.rtl.get() {
-            1.0 - along
-        } else {
-            along
-        };
-        Some(grid.min + along * (grid.max - grid.min))
+        let track = (*thumb_track.peek())?;
+        grid.value_at(&track, client)
     });
 
     // `heading`: where the pointer already went, which picks between two
@@ -1023,26 +1028,7 @@ fn use_hover(live: Signal<Live>, grid: Grid, elements: Elements, vertical: bool)
         dirty.set(true);
         // The reads start here: Blitz fails one made inside a task (the document is borrowed).
         if track.peek().is_none() && measuring.peek().is_none() {
-            let (track_size, track_offset) =
-                (elements.track.dimensions(), elements.track.client_offset());
-            let (thumb_size, thumb_offset) = (
-                elements.thumbs[0].dimensions(),
-                elements.thumbs[0].client_offset(),
-            );
-            let rtl = elements.root.is_rtl();
-            measuring.set(Some(Box::pin(async move {
-                let (Ok(track), Ok(track_at), Ok(thumb), Ok(thumb_at)) = (
-                    track_size.await,
-                    track_offset.await,
-                    thumb_size.await,
-                    thumb_offset.await,
-                ) else {
-                    return None;
-                };
-                Some(track_geometry(
-                    track, track_at, thumb, thumb_at, rtl, vertical,
-                ))
-            })));
+            measuring.set(Some(Box::pin(measure_track(elements, vertical))));
         }
         if std::mem::replace(&mut *busy.write(), true) {
             return;
@@ -1138,7 +1124,6 @@ struct DragContext {
     editable: bool,
     focusable: bool,
     elements: Elements,
-    measured: Measured,
     steps: Steps,
     thumb_track: Signal<Option<ThumbTrack>>,
     starting: CopyValue<Starting>,
@@ -1177,9 +1162,7 @@ impl DragContext {
             measuring: true,
             ..Starting::default()
         });
-        let elements = self.elements;
-        let (rtl, vertical) = (elements.root.is_rtl(), self.vertical);
-        self.measured.rtl.set(rtl || vertical);
+        let (elements, vertical) = (self.elements, self.vertical);
         let mut thumb_track = self.thumb_track;
         let track = *thumb_track.peek();
         if let Some(track) = track.filter(|track| !track.stale) {
@@ -1191,40 +1174,15 @@ impl DragContext {
         // Any focus till the task ends is the pointer's, the web's focus of
         // a pressed thumb too: a touch matches `:focus-visible` (1058).
         self.press_focus.mark();
-        // Started here, awaited in the task: Blitz locks the document
-        // while tasks drain.
-        let track_size = elements.track.dimensions();
-        let track_offset = elements.track.client_offset();
-        let thumb_size = elements.thumbs[0].dimensions();
-        let thumb_offset = elements.thumbs[0].client_offset();
+        let measure = measure_track(elements, vertical);
         let ctx = self.clone();
         spawn(async move {
-            let (Ok(dimensions), Ok(track_at)) = (track_size.await, track_offset.await) else {
+            let Some(measured) = measure.await else {
                 ctx.abandon(event);
                 return;
             };
-            let (start, length) = match vertical {
-                true => (track_at.1, dimensions.height),
-                false => (track_at.0, dimensions.width),
-            };
-            if length <= 0.0 {
-                ctx.abandon(event);
-                return;
-            }
-
-            ctx.measured.left.set(start);
-            ctx.measured.width.set(length);
-            let thumb = thumb_size.await;
-            ctx.measured.thumb.set(
-                thumb
-                    .as_ref()
-                    .map_or(0.0, |size| if vertical { size.height } else { size.width }),
-            );
-            if let (Ok(thumb), Ok(thumb_at)) = (thumb, thumb_offset.await) {
-                thumb_track.set(Some(track_geometry(
-                    dimensions, track_at, thumb, thumb_at, rtl, vertical,
-                )));
-            }
+            // `position_at` maps the drag through this same geometry.
+            thumb_track.set(Some(measured));
 
             let steps = ctx.steps;
             match steps.position_at.call(along(event.client, vertical)) {
@@ -1393,20 +1351,20 @@ fn SliderBody(live: Signal<Live>, core: SliderCoreProps) -> Element {
         warn("Slider: `value` without `oninput` can never change.");
     }
 
-    let measured = use_measured();
+    let thumb_track = use_signal(|| None::<ThumbTrack>);
     let steps = use_steps(
         live,
         grid,
-        &measured,
+        thumb_track,
         props.oninput,
         elements.thumbs,
         focusable,
         &press_focus,
     );
-    let thumb_track = use_signal(|| None::<ThumbTrack>);
     // The hover preview's value and geometry, measured at the first move over the slider.
-    let previews = props.preview_on_hover
-        || try_use_context::<HoverPreview>().is_some() && !props.segments.is_empty();
+    // The hook runs on every render, so toggling `preview_on_hover` keeps the hook order (4260).
+    let in_preview = try_use_context::<HoverPreview>().is_some();
+    let previews = props.preview_on_hover || in_preview && !props.segments.is_empty();
     let hover = use_hover(live, grid, elements, vertical);
 
     // Moves and a release that arrive before the measuring task has grabbed
@@ -1420,7 +1378,6 @@ fn SliderBody(live: Signal<Live>, core: SliderCoreProps) -> Element {
         editable,
         focusable,
         elements,
-        measured,
         steps,
         thumb_track,
         starting,
@@ -2109,5 +2066,33 @@ mod tests {
             ..track(false)
         };
         assert_eq!(flat.fraction_at(110.0), None);
+    }
+
+    /// Todo 4265: a drag maps through the hover's `ThumbTrack`, unclamped past the end.
+    #[test]
+    fn a_drag_maps_the_pointer_as_the_preview_does() {
+        let track = ThumbTrack {
+            left: 100.0,
+            travel: 200.0,
+            top: 0.0,
+            thumb: Dimensions {
+                width: 20.0,
+                height: 20.0,
+            },
+            rtl: true,
+            vertical: false,
+            stale: false,
+        };
+        let grid = super::Grid {
+            min: 0.0,
+            max: 50.0,
+            step: 1.0,
+            min_range: 0.0,
+        };
+        for client in [110.0, 160.0, 310.0] {
+            let preview = track.fraction_at(client).map(|fraction| fraction * 50.0);
+            assert_eq!(grid.value_at(&track, client), preview);
+        }
+        assert_eq!(grid.value_at(&track, 360.0), Some(-12.5));
     }
 }

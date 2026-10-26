@@ -1,13 +1,13 @@
 use dioxus::prelude::*;
 
 use super::core::{SliderCore, SliderPart};
-use super::scale::{Scale, control_spacing};
+use super::scale::{Scale, control_spacing, use_emit, use_naming};
 use super::slider_value::{SliderChangeEvent, SliderMark, SliderStep, SliderValue};
 use super::value::SliderCoreValue;
 use crate::{
     components::{
         common::{Input, Orientation},
-        form::{FieldStatus, field_props, use_bound, use_field},
+        form::{field_props, use_bound, use_field},
     },
     hooks::{use_localization, use_theme},
     sx::ThemeAwareValue,
@@ -116,46 +116,9 @@ pub fn RangeSlider<V: SliderValue>(props: RangeSliderProps<V>) -> Element {
         .or_else(|| props.value.clone())
         .unwrap_or_else(|| (V::at(min), V::at(max)));
 
-    // A discrete value names itself unless the caller says how - which is the
-    // hook an i18n'd slider hangs on, so every caption has to go through it.
-    let named = props.format;
-    let name = move |value: &V| match &named {
-        Some(label) => label.call(value.clone()),
-        None => value.label(),
-    };
-
-    let marks = match props.marks.is_empty() {
-        true => scale.derived_marks::<V>(&name),
-        false => props
-            .marks
-            .iter()
-            .map(|mark| SliderMark {
-                value: mark.value.position(),
-                label: mark.label.clone(),
-            })
-            .collect(),
-    };
-
-    // A discrete value always names itself; a continuous one only when the
-    // caller says how, which is what keeps `aria-valuetext` off a bare number.
-    let labelled = props.format.is_some() || V::options().is_some();
-    let label = use_callback(move |position: f64| name(&V::at(position)));
-
-    let oninput = props.oninput;
-    let setter = bound.setter();
-    let emit = use_callback(move |event: SliderChangeEvent<SliderCoreValue>| {
-        let event = event.map(|value| (V::at(value.thumb(0)), V::at(value.thumb(1))));
-        match (&oninput, &setter) {
-            (Some(oninput), _) => oninput.call(event),
-            // A bound slider keeps only the values - `Start`/`End` carry
-            // nothing a form's value holds.
-            (None, Some(setter)) => {
-                if let SliderChangeEvent::Change(value) = event {
-                    setter.set(value);
-                }
-            }
-            (None, None) => {}
-        }
+    let (marks, label) = use_naming(&scale, &props.marks, props.format);
+    let emit = use_emit(props.oninput, &bound, |value| {
+        (V::at(value.thumb(0)), V::at(value.thumb(1)))
     });
 
     let required = crate::components::form::fieldset_required(props.required);
@@ -193,14 +156,11 @@ pub fn RangeSlider<V: SliderValue>(props: RangeSliderProps<V>) -> Element {
         "RangeSlider: no `label` or `aria_label`, so the thumbs are announced as just \"Minimum\" and \"Maximum\".",
     );
 
-    let above = !props.label.is_none() || !props.description.is_none();
-    let below = !props.helper.is_none()
-        || props
-            .status
-            .as_ref()
-            .and_then(FieldStatus::message)
-            .is_some();
-    let control_sx = control_spacing(above, below);
+    let control_sx = control_spacing(
+        !props.label.is_none() || !props.description.is_none(),
+        !props.helper.is_none(),
+        props.status.as_ref(),
+    );
 
     // Unlabelled, each thumb's own name carries the group's and says required,
     // as the label's id would.
@@ -232,9 +192,9 @@ pub fn RangeSlider<V: SliderValue>(props: RangeSliderProps<V>) -> Element {
             attributes: props.attributes,
             size: props.size,
             color: props.color,
-            disabled: Some(bound.disabled(props.disabled)),
+            disabled: Some(disabled),
             readonly: props.readonly.unwrap_or(false),
-            label: labelled.then_some(label),
+            label,
             aria_label: thumb_name(aria_label_from.unwrap_or_else(|| labels.minimum.to_string())),
             aria_label_to: thumb_name(aria_label_to.unwrap_or_else(|| labels.maximum.to_string())),
             labelledby: field.label_id(),

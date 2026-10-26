@@ -1,10 +1,15 @@
 //! What the two skins share: the scale that maps a caller's `SliderValue`
 //! onto the `f64` engine, and the spacing the field's stacked layout needs.
 
-use super::slider_value::{SliderMark, SliderStep, SliderValue};
-use super::value::sane_bounds;
+use dioxus::prelude::*;
+
+use super::slider_value::{SliderChangeEvent, SliderMark, SliderStep, SliderValue};
+use super::value::{SliderCoreValue, sane_bounds};
 use crate::{
-    components::common::Input,
+    components::{
+        common::Input,
+        form::{Bound, FieldStatus},
+    },
     sx::{Sx, sx},
     theme::{Size, SizeCss},
 };
@@ -88,9 +93,63 @@ impl Scale {
     }
 }
 
+/// The marks the track shows, and the namer of a thumb's bubble and `aria-valuetext`:
+/// `None` for a continuous value without `format`, which reads as a bare number.
+pub(super) fn use_naming<V: SliderValue>(
+    scale: &Scale,
+    marks: &[SliderMark<V>],
+    format: Option<Callback<V, String>>,
+) -> (Vec<SliderMark>, Option<Callback<f64, String>>) {
+    // A discrete value names itself unless the caller says how - the hook an i18n'd slider hangs on.
+    let name = move |value: &V| match &format {
+        Some(label) => label.call(value.clone()),
+        None => value.label(),
+    };
+    let marks = match marks.is_empty() {
+        true => scale.derived_marks::<V>(name),
+        false => marks
+            .iter()
+            .map(|mark| SliderMark {
+                value: mark.value.position(),
+                label: mark.label.clone(),
+            })
+            .collect(),
+    };
+    let label = use_callback(move |position: f64| name(&V::at(position)));
+    let labelled = format.is_some() || V::options().is_some();
+    (marks, labelled.then_some(label))
+}
+
+/// The core's events as the skin's value: to `oninput`, else into the bound form's value.
+pub(super) fn use_emit<T: Clone + 'static>(
+    oninput: Option<EventHandler<SliderChangeEvent<T>>>,
+    bound: &Bound<T>,
+    to: impl Fn(SliderCoreValue) -> T + 'static,
+) -> Callback<SliderChangeEvent<SliderCoreValue>> {
+    let setter = bound.setter();
+    use_callback(move |event: SliderChangeEvent<SliderCoreValue>| {
+        let event = event.map(&to);
+        match (&oninput, &setter) {
+            (Some(oninput), _) => oninput.call(event),
+            // A bound slider keeps only the values: `Start`/`End` carry nothing a form's value holds.
+            (None, Some(setter)) => {
+                if let SliderChangeEvent::Change(value) = event {
+                    setter.set(value);
+                }
+            }
+            (None, None) => {}
+        }
+    })
+}
+
 /// Keeps the label off the overhanging thumb and the helper off the mark
 /// captions: the field's gap only reaches the control's box.
-pub(super) fn control_spacing(above: bool, below: bool) -> Input<Sx> {
+pub(super) fn control_spacing(
+    above: bool,
+    helper: bool,
+    status: Option<&FieldStatus>,
+) -> Input<Sx> {
+    let below = helper || status.and_then(FieldStatus::message).is_some();
     if !above && !below {
         return Input::default();
     }

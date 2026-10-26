@@ -93,9 +93,10 @@ impl FormHandle {
     /// Submits the form as its submit button would. [`PlatformError::Unsupported`]
     /// only once the form is gone.
     pub fn submit(&self) -> Result<(), PlatformError> {
+        // On the web the element outlives the form: a detached `<form>` would swallow it (4263).
+        let control = self.control().ok_or(PlatformError::Unsupported)?;
         match self.element.request_submit() {
             Err(PlatformError::Unsupported) => {
-                let control = self.control().ok_or(PlatformError::Unsupported)?;
                 control
                     .submit
                     .call(platform::submit_event(self.element.mounted()));
@@ -319,6 +320,21 @@ mod tests {
         let ids = ["email", "passwords-label", "age"].map(str::to_string);
         in_page_order(&mut items, &ids);
         assert_eq!(order(&items), ["email", "passwords", "age", "none", "gone"]);
+    }
+
+    /// Todo 4263: with no form attached, `submit` is `Unsupported` before it tries the element.
+    #[test]
+    fn a_handle_without_its_form_cannot_submit() {
+        use dioxus::core::NoOpMutations;
+
+        fn app() -> Element {
+            let form = use_form();
+            assert!(matches!(form.submit(), Err(PlatformError::Unsupported)));
+            rsx! {}
+        }
+        let mut dom = VirtualDom::new(app);
+        dom.rebuild_in_place();
+        dom.render_immediate(&mut NoOpMutations);
     }
 
     #[test]
