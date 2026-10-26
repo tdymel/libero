@@ -4,7 +4,7 @@ use pictogram_icons_lucide as lucide;
 use super::crop::{CropRect, CropShape, Grip};
 use crate::{
     components::{
-        accessibility::visually_hidden_absolute_sx,
+        accessibility::{use_announcer, visually_hidden_absolute_sx},
         buttons::ActionIcon,
         common::{
             Glyph, HtmlTag, Input, Part, States, Variables, base_props, disabled_look_within_sx,
@@ -19,7 +19,7 @@ use crate::{
         DragMove, DragOptions, DragPoint, DragStart, use_drag, use_element, use_id,
         use_local_state, use_localization,
     },
-    localization::fill,
+    localization::{ImageCropperLabels, fill},
     platform::{self, ElementApi, when_laid_out},
     sx::{StaticSx, sx},
     theme::{CssVar, PAPER_BACKGROUND},
@@ -44,6 +44,8 @@ const ZOOM_STEP: f64 = 1.1;
 const NUDGE_STEP: f64 = 0.05;
 /// The smallest box side, as a fraction of the image.
 const MIN_SIZE: f64 = 0.05;
+/// The least `min_size`: an empty box has no zoom, so the zoom slider's max fell to 1x (4323).
+const MIN_SIZE_FLOOR: f64 = 0.001;
 /// A handle's hit area (WCAG 2.5.8), around a smaller visible square.
 const HANDLE_HIT: &str = "24px";
 /// A finger's hit area (WCAG 2.5.5, todo 1387).
@@ -130,6 +132,49 @@ impl Touches {
         }
         self.pinch = None;
     }
+}
+
+/// `min_size` kept to a box that can still be drawn and zoomed to.
+pub(super) fn min_side(min_size: Option<f64>) -> f64 {
+    min_size
+        .filter(|min| min.is_finite())
+        .unwrap_or(MIN_SIZE)
+        .clamp(MIN_SIZE_FLOOR, 1.0)
+}
+
+/// The box's `aria-valuetext`, which the move and resize buttons say too (4322).
+pub(super) fn value_text(words: &ImageCropperLabels, pan: bool, rect: CropRect) -> String {
+    let percent = |fraction: f64| (fraction * 100.0).round();
+    let (width, height, x, y) = (
+        percent(rect.width),
+        percent(rect.height),
+        percent(rect.x),
+        percent(rect.y),
+    );
+    let zoom = percent(rect.image_transform().0);
+    let holes: [(&str, &dyn std::fmt::Display); 5] = [
+        ("width", &width),
+        ("height", &height),
+        ("x", &x),
+        ("y", &y),
+        ("zoom", &zoom),
+    ];
+    match pan {
+        true => fill(words.pan_value, &holes),
+        false => fill(words.value, &holes[..4]),
+    }
+}
+
+/// What a button press says: the new box, nothing when it reads as before. A press at an edge
+/// can still move it by a rounding error, as five 5% steps leave `y` at 1e-17.
+pub(super) fn press_message(
+    words: &ImageCropperLabels,
+    pan: bool,
+    before: CropRect,
+    after: CropRect,
+) -> Option<String> {
+    let said = value_text(words, pan, after);
+    (said != value_text(words, pan, before)).then_some(said)
 }
 
 fn client(event: &Event<PointerData>) -> DragPoint {
@@ -369,7 +414,7 @@ base_props! {
         /// image, a pinch, the wheel or the + and - keys zoom it. No resize handles.
         #[props(default)]
         pan: bool,
-        /// The smallest side, a fraction of the image's. Default 0.05.
+        /// The smallest side, a fraction of the image's. Default 0.05, at least 0.001.
         #[props(default)]
         min_size: Option<f64>,
         /// `false` hides the buttons under the image, and with `pan` the zoom bar, from
@@ -439,7 +484,7 @@ pub fn ImageCropper(props: ImageCropperProps) -> Element {
     if props.value.is_some() && props.onchange.is_none() && !props.disabled {
         warn("ImageCropper: `value` without `onchange` can never change.");
     }
-    let min = props.min_size.unwrap_or(MIN_SIZE).clamp(0.0, 1.0);
+    let min = min_side(props.min_size);
     // The pixel `aspect` as a ratio of fractions of this image.
     let ratio = props
         .aspect
@@ -802,48 +847,28 @@ pub fn ImageCropper(props: ImageCropperProps) -> Element {
         });
     };
 
-    // The single-pointer alternative to every drag (WCAG 2.5.7): a press each.
+    // The single-pointer alternative to every drag (WCAG 2.5.7): a press each. Focus stays on
+    // the button, so the new box is said in a status region, as Kanban and Sortable do.
+    let announcer = use_announcer();
+    let pressed = move |rect: CropRect| {
+        if rect == shown {
+            return;
+        }
+        emit.call(rect);
+        if let Some(message) = press_message(&words, pan, shown, rect) {
+            announcer.say(message);
+        }
+    };
     let nudge = move |dx: f64, dy: f64| {
-        Callback::new(move |_: MouseEvent| {
-            let rect = shift(Grip::Move, dx, dy);
-            if rect != shown {
-                emit.call(rect);
-            }
-        })
+        Callback::new(move |_: MouseEvent| pressed(shift(Grip::Move, dx, dy)))
     };
-    let resize = move |factor: f64| {
-        Callback::new(move |_: MouseEvent| {
-            let rect = shown.scaled(factor, min);
-            if rect != shown {
-                emit.call(rect);
-            }
-        })
-    };
+    let resize =
+        move |factor: f64| Callback::new(move |_: MouseEvent| pressed(shown.scaled(factor, min)));
     let has_controls = props.onchange.is_some();
 
     let percent = |fraction: f64| (fraction * 100.0).round();
     let (scale, image_x, image_y) = shown.image_transform();
-    let valuetext = match pan {
-        true => fill(
-            words.pan_value,
-            &[
-                ("zoom", &percent(scale)),
-                ("width", &percent(shown.width)),
-                ("height", &percent(shown.height)),
-                ("x", &percent(shown.x)),
-                ("y", &percent(shown.y)),
-            ],
-        ),
-        false => fill(
-            words.value,
-            &[
-                ("width", &percent(shown.width)),
-                ("height", &percent(shown.height)),
-                ("x", &percent(shown.x)),
-                ("y", &percent(shown.y)),
-            ],
-        ),
-    };
+    let valuetext = value_text(&words, pan, shown);
     // The zoom at the largest and the smallest crop of this shape.
     let zoom_range = (
         shown.scaled(f64::MAX, min).image_transform().0,
@@ -1074,6 +1099,8 @@ pub fn ImageCropper(props: ImageCropperProps) -> Element {
                         }
                     }
                 }
+                // Unconditional: a region inserted with its text is not read.
+                {announcer.render()}
             },
         )
 }

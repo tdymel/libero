@@ -21,6 +21,7 @@ group "Crop area"
   button "Move right" [disabled]
   button "Smaller" [disabled]
   button "Larger" [disabled]
+status [atomic] [live=polite]
 paragraph
   StaticText "10,10,80,80"
 image "A sun on blue, to pan"
@@ -33,3 +34,4 @@ group "Crop area"
   button "Move up" [disabled]
   button "Move down" [disabled]
   button "Move right" [disabled]
+status [atomic] [live=polite]

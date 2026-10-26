@@ -23,5 +23,6 @@ group "Crop area"
   button "Move right"
   button "Smaller"
   button "Larger"
+status [atomic] [live=polite]
 paragraph
   StaticText "25,25,50,50"

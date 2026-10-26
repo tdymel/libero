@@ -77,6 +77,67 @@ fn the_buttons_move_and_resize_the_box_without_a_drag() {
     });
 }
 
+/// Todo 4322: focus stays on a button, so its press says the new box in a status
+/// region; a press at the image's edge moves nothing and says nothing.
+#[test]
+fn a_button_press_says_the_new_box() {
+    block_on(async {
+        let fixture = Fixture::open("/image-cropper", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        wait::for_visible(page, BOX).await.unwrap();
+        let status = "#cropper [role=status]";
+        let said = format!("document.querySelector({status:?}).textContent");
+        wait::for_js_true(page, &format!("{said} === ''"), "an empty region at rest")
+            .await
+            .unwrap();
+        let press = async |button: &str| {
+            pointer::click(page, &format!("#cropper [aria-label='{button}']"))
+                .await
+                .unwrap();
+        };
+        press("Move right").await;
+        wait::for_js_true(
+            page,
+            &format!("{said} === '50% by 50%, at 30%, 25%'"),
+            "the moved box said",
+        )
+        .await
+        .unwrap();
+        for _ in 0..5 {
+            press("Move up").await;
+        }
+        wait::for_js_true(
+            page,
+            &format!("{said} === '50% by 50%, at 30%, 0%'"),
+            "the box at the top edge said",
+        )
+        .await
+        .unwrap();
+        // A repeat lands as a new node: a press that said anything would drop this mark.
+        page.evaluate_bounded(&format!(
+            "document.querySelector({status:?}).firstElementChild.dataset.seen = '1'"
+        ))
+        .await
+        .unwrap();
+        press("Move up").await;
+        e2e::clock::settle(page).await.unwrap();
+        let kept = page
+            .evaluate_bounded(&format!(
+                "document.querySelector({status:?}).firstElementChild.dataset.seen === '1' \
+                 && document.getElementById('crop').textContent === '30,0,50,50'"
+            ))
+            .await
+            .unwrap()
+            .into_value::<bool>()
+            .unwrap();
+        assert!(kept, "a press at the edge said something or moved the box");
+        fixture.console.assert_clean("the said presses").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
 /// Forced colours drop a box-shadow: the dim mask opts out, so the crop still
 /// stands out from the rest of the image (1278).
 #[test]

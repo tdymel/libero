@@ -1,4 +1,6 @@
 use super::crop::{CropRect, Grip};
+use super::image_cropper::{min_side, press_message, value_text};
+use crate::localization::ImageCropperLabels;
 
 fn rect(x: f64, y: f64, width: f64, height: f64) -> CropRect {
     CropRect {
@@ -193,6 +195,61 @@ fn home_and_end_take_the_keyboard_value_to_its_ends() {
         rect(0.2, 0.2, 0.4, 0.4).extreme(Grip::SouthEast, true, Some(1.0), 0.05),
         rect(0.2, 0.2, 0.8, 0.8),
     );
+}
+
+/// Todo 4323: a `min_size` of 0 let the smallest box be empty, so the zoom slider topped out at 1x.
+#[test]
+fn a_zero_min_size_still_lets_the_zoom_go_past_one() {
+    assert_eq!(min_side(None), 0.05);
+    for bad in [Some(0.0), Some(-1.0), Some(f64::NAN)] {
+        let min = min_side(bad);
+        assert!(min > 0.0, "{bad:?} gave {min}");
+    }
+    assert_eq!(min_side(Some(f64::NAN)), 0.05);
+    let crop = CropRect::starting(Some(1.0));
+    let most = crop.scaled(0.0, min_side(Some(0.0))).image_transform().0;
+    assert!(most > 100.0, "the zoom stopped at {most}");
+}
+
+/// Todo 4322: a move or resize button says the new box, and nothing when the box stayed put.
+#[test]
+fn a_button_press_says_the_new_box_and_a_no_op_says_nothing() {
+    let words = ImageCropperLabels::ENGLISH;
+    let crop = rect(0.0, 0.1, 0.4, 0.5);
+    assert_eq!(
+        press_message(&words, false, crop, crop.moved(-0.05, 0.0)),
+        None
+    );
+    let moved = crop.moved(0.05, 0.0);
+    let said = press_message(&words, false, crop, moved);
+    assert_eq!(said.as_deref(), Some("40% by 50%, at 5%, 10%"));
+    assert_eq!(said, Some(value_text(&words, false, moved)));
+    // Five 5% steps up leave a rounding error the sixth, at the edge, takes away.
+    let top = (0..5).fold(rect(0.3, 0.25, 0.5, 0.5), |at, _| at.moved(0.0, -0.05));
+    assert_eq!(
+        press_message(&words, false, top, top.moved(0.0, -0.05)),
+        None
+    );
+    // Pan mode says the zoom too.
+    let zoomed = crop.zoomed(2.0, (0.5, 0.5), (0.5, 0.5), 0.05);
+    let said = press_message(&words, true, crop, zoomed).unwrap();
+    assert!(said.contains("zoom"), "{said}");
+}
+
+/// The region is there before any press: one inserted with its text is not read.
+#[test]
+fn the_cropper_renders_an_empty_status_region() {
+    use dioxus::prelude::*;
+    let mut dom = VirtualDom::new(|| {
+        rsx! {
+            crate::LiberoProvider {
+                super::ImageCropper { src: "/photo.jpg", alt: "Photo", onchange: |_| {} }
+            }
+        }
+    });
+    dom.rebuild_in_place();
+    let html = dioxus_ssr::render(&dom);
+    assert!(html.contains(r#"role="status""#), "{html}");
 }
 
 #[test]
