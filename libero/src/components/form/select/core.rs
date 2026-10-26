@@ -905,18 +905,37 @@ impl SelectTypeahead {
         let Some(row) = found else {
             return false;
         };
-        match (state.is_open(), self.multiple) {
-            // Open: moves the highlight only, as the arrows do.
-            (true, _) => state.set_active(Some(row)),
-            // Closed single select: picks in place, like a native `<select>`.
-            (false, false) => self.onpick.call(row),
-            // Closed multi-select opens instead: a pick toggles, so typing could drop a value.
-            (false, true) => {
+        match typed_move(state.is_open(), self.multiple, from, row) {
+            TypedMove::Highlight => state.set_active(Some(row)),
+            TypedMove::Pick => self.onpick.call(row),
+            TypedMove::Open => {
                 self.open.open(true);
                 state.set_active(Some(row));
             }
+            TypedMove::Stay => {}
         }
         true
+    }
+}
+
+/// What a typeahead hit on `row` does.
+#[derive(Debug, PartialEq)]
+enum TypedMove {
+    Highlight,
+    Pick,
+    Open,
+    Stay,
+}
+
+fn typed_move(open: bool, multiple: bool, from: Option<usize>, row: usize) -> TypedMove {
+    match (open, multiple) {
+        // Open: moves the highlight only, as the arrows do.
+        (true, _) => TypedMove::Highlight,
+        // Closed single select: picks in place; landing on the selection emits nothing, as a native `<select>`.
+        (false, false) if from == Some(row) => TypedMove::Stay,
+        (false, false) => TypedMove::Pick,
+        // Closed multi-select opens instead: a pick toggles, so typing could drop a value.
+        (false, true) => TypedMove::Open,
     }
 }
 
@@ -1479,5 +1498,15 @@ mod tests {
         assert_eq!(&ranked[..2], [250, 260]);
         // A filtered-out row is no candidate.
         assert!(!widest_rows(&labels, &[1, 2, 260]).contains(&250));
+    }
+
+    /// Todo 4232: typeahead landing on a closed single select's selection re-emits nothing.
+    #[test]
+    fn closed_typeahead_on_the_selection_stays() {
+        assert_eq!(typed_move(false, false, Some(2), 2), TypedMove::Stay);
+        assert_eq!(typed_move(false, false, Some(1), 2), TypedMove::Pick);
+        assert_eq!(typed_move(false, false, None, 2), TypedMove::Pick);
+        assert_eq!(typed_move(false, true, Some(2), 2), TypedMove::Open);
+        assert_eq!(typed_move(true, false, Some(2), 2), TypedMove::Highlight);
     }
 }

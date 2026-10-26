@@ -7,6 +7,7 @@ use crate::{
         common::{
             HtmlTag, Input, OptionSource, Options, ScaleOrCss, has_shortcut_modifier, recast_parts,
         },
+        form::select::SelectRowLabel,
         form::{
             Asks, LiveControl, Select, SelectOptionArgs, field_control_sx, field_props, row_label,
             use_bound, use_field, use_field_frame,
@@ -353,6 +354,8 @@ fn listbox<T: Options>(props: NativeSelectProps<T>) -> Element {
         Some(label) => label.call(value.clone()),
         None => value.label(),
     };
+    let typed = use_callback(move |value: T| label(&value));
+    use_context_provider(|| SelectRowLabel(typed));
     let option = use_callback(move |args: SelectOptionArgs<T>| row_label(label(&args.value)));
     let selection = use_callback(move |value: T| rsx! { "{label(&value)}" });
     let onchange = props.onchange;

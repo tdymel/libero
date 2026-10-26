@@ -176,7 +176,7 @@ pub fn Select<T: Options>(props: SelectProps<T>) -> Element {
 
     let searchable = props.searchable.unwrap_or(false);
     let matches = use_search_mask(searchable, values.clone(), props.filter);
-    let row_labels = values.iter().map(Options::label).collect::<Vec<_>>();
+    let row_labels = row_labels(&values);
 
     // Stable, so a closed select's `SelectCore` compares equal and skips.
     let onchange = bound.emit(props.onchange);
@@ -241,6 +241,22 @@ pub fn Select<T: Options>(props: SelectProps<T>) -> Element {
             attributes: props.attributes,
         }
     }
+}
+
+/// Overrides `Options::label` for typeahead, provided by `NativeSelect`'s fallback, which draws `option_label` (todo 4233).
+#[derive(Clone)]
+pub(crate) struct SelectRowLabel<T: 'static>(pub(crate) Callback<T, String>);
+
+/// The text typeahead matches per row: the provided override, else `Options::label`.
+fn row_labels<T: Options>(values: &[T]) -> Vec<String> {
+    let label = try_consume_context::<SelectRowLabel<T>>();
+    values
+        .iter()
+        .map(|value| match &label {
+            Some(SelectRowLabel(label)) => label.call(value.clone()),
+            None => value.label(),
+        })
+        .collect()
 }
 
 /// Which rows a query keeps; `None` unless `searchable`. A stable callback running the newest captures.
@@ -350,6 +366,39 @@ mod tests {
         assert!(!warns(labelled));
         assert!(!warns(aria_labelled));
         assert!(!warns(plain));
+    }
+
+    /// Todo 4233: typeahead reads a provided label override, else `Options::label`.
+    #[test]
+    fn typeahead_labels_follow_a_provided_override() {
+        thread_local! {
+            static SEEN: std::cell::RefCell<Vec<Vec<String>>> = const { std::cell::RefCell::new(Vec::new()) };
+        }
+        #[component]
+        fn Probe() -> Element {
+            SEEN.with(|seen| seen.borrow_mut().push(row_labels(&["Berlin".to_string()])));
+            rsx! {}
+        }
+        fn app() -> Element {
+            rsx! {
+                Probe {}
+                Overridden {}
+            }
+        }
+        #[component]
+        fn Overridden() -> Element {
+            use_context_provider(|| {
+                SelectRowLabel(Callback::new(|value: String| value.to_uppercase()))
+            });
+            rsx! { Probe {} }
+        }
+        let mut dom = VirtualDom::new(app);
+        dom.rebuild_in_place();
+        let seen = SEEN.with(|seen| seen.borrow().clone());
+        assert_eq!(
+            seen,
+            [vec!["Berlin".to_string()], vec!["BERLIN".to_string()]]
+        );
     }
 
     /// Default rows put their text in the label slot, the one that can ellipsise.

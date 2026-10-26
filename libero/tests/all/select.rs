@@ -529,9 +529,9 @@ mod dispatched {
             let (mut dom, trigger) = mount();
             type_keys(&mut dom, trigger, "ber");
 
-            // "b" lands on Berlin, and "be" then "ber" stay on it while it still
-            // matches - the narrowing half of the buffer.
-            assert_eq!(picked(), ["Berlin", "Berlin", "Berlin"]);
+            // "b" lands on Berlin; "be" then "ber" stay on the selection and emit nothing,
+            // as a native `<select>` (todo 4232).
+            assert_eq!(picked(), ["Berlin"]);
             let html = body(&dioxus_ssr::render(&dom));
             assert!(
                 !html.contains(r#"role="listbox""#),
