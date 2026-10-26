@@ -575,3 +575,45 @@ fn a_paste_in_code_stays_raw() {
         "```\na# x\n*y*|b\n```",
     );
 }
+
+/// A new nested list numbers from 1; a second Tab joins it (todo 4278).
+#[test]
+fn indent_starts_a_nested_ordered_list_at_one() {
+    check("3. a\n4. |b", EditorState::indent, "3. a\n   1. |b");
+    check(
+        "3. a\n   1. b\n4. |c",
+        EditorState::indent,
+        "3. a\n   1. b\n   2. |c",
+    );
+}
+
+#[test]
+fn outdent_from_a_nested_ordered_list_keeps_the_tail_numbers() {
+    check(
+        "1. a\n   1. x\n   2. |y\n   3. z",
+        EditorState::outdent,
+        "1. a\n   1. x\n2. |y\n   3. z",
+    );
+}
+
+/// Plain text keeps a line-ending backslash: `C:\` is no hard break (todo 4281).
+#[test]
+fn pasted_plain_text_keeps_a_line_ending_backslash() {
+    let mut s = state("|");
+    s.paste("C:\\\nD:", false);
+    let texts: Vec<String> = s.doc.blocks.iter().map(|block| block.text()).collect();
+    assert_eq!(texts, ["C:\\", "D:"]);
+}
+
+/// A URL pasted in inline code stays code, as typed autolink does (todo 4284).
+#[test]
+fn a_url_pasted_in_inline_code_is_no_link() {
+    let mut s = state("`a|b`");
+    s.paste("https://example.com", false);
+    let linked = s.doc.blocks[0]
+        .inlines()
+        .iter()
+        .any(|inline| matches!(inline, Inline::Text { marks, .. } if marks.has(MarkKind::Link)));
+    assert!(!linked, "{:?}", s.doc.blocks[0].inlines());
+    assert_eq!(s.doc.blocks[0].text(), "ahttps://example.comb");
+}

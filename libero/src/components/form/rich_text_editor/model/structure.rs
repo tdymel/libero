@@ -3,6 +3,14 @@
 use super::doc::{Block, BlockKind, NodeKey};
 use super::state::EditorState;
 
+/// Two lists of the same type, whatever they start at.
+fn same_list(a: &BlockKind, b: &BlockKind) -> bool {
+    matches!(
+        (a, b),
+        (BlockKind::List { ordered: x, .. }, BlockKind::List { ordered: y, .. }) if x == y
+    )
+}
+
 impl EditorState {
     /// Bullet (`ordered: false`) or numbered list. Lifts the selection out when it
     /// is in such a list already, switches the kind of a list of the other kind,
@@ -161,7 +169,14 @@ impl EditorState {
         if index == 0 {
             return false;
         }
-        let list_kind = self.doc.at(&path[..path.len() - 1]).kind.clone();
+        if path.len() < 2 {
+            return false;
+        }
+        // A new nested list numbers from 1; joining one ignores its start.
+        let list_kind = match self.doc.at(&path[..path.len() - 1]).kind {
+            BlockKind::List { ordered: true, .. } => BlockKind::ordered_list(1),
+            _ => BlockKind::bullet_list(),
+        };
         let moved = self.doc.siblings_mut(&path).remove(index);
         let mut previous_path = path.clone();
         *previous_path.last_mut().expect("a path") = index - 1;
@@ -170,7 +185,7 @@ impl EditorState {
             previous
                 .children()
                 .last()
-                .filter(|last| last.kind == list_kind)
+                .filter(|last| same_list(&last.kind, &list_kind))
                 .map(|last| last.key)
         };
         match nested_list {
@@ -205,6 +220,9 @@ impl EditorState {
     fn lift_item(&mut self, item: NodeKey) -> bool {
         let path = self.doc.path(item).expect("the item");
         let index = *path.last().expect("a path");
+        if path.len() < 2 {
+            return false;
+        }
         let list_path = path[..path.len() - 1].to_vec();
         let list_kind = self.doc.at(&list_path).kind.clone();
         let list_key = self.doc.at(&list_path).key;
@@ -214,11 +232,19 @@ impl EditorState {
             .children_mut()
             .split_off(index + 1);
         let mut moved = self.doc.at_mut(&list_path).children_mut().remove(index);
+        // The items after it keep their numbers in either branch.
+        let tail_kind = match list_kind {
+            BlockKind::List {
+                ordered: true,
+                start,
+            } => BlockKind::ordered_list(start.saturating_add(index as u64 + 1)),
+            kind => kind,
+        };
         let outer = self.parent(list_key);
         match outer {
             Some((outer_item, BlockKind::ListItem { .. }, _)) => {
                 if !trailing.is_empty() {
-                    let nested = self.doc.container(list_kind, trailing);
+                    let nested = self.doc.container(tail_kind, trailing);
                     moved.children_mut().push(nested);
                 }
                 self.insert_after(outer_item, false, moved);
@@ -226,18 +252,7 @@ impl EditorState {
             _ => {
                 let mut after: Vec<Block> = std::mem::take(moved.children_mut());
                 if !trailing.is_empty() {
-                    let start = match list_kind {
-                        BlockKind::List {
-                            ordered: true,
-                            start,
-                        } => start + index as u64 + 1,
-                        _ => 1,
-                    };
-                    let kind = match list_kind {
-                        BlockKind::List { ordered: true, .. } => BlockKind::ordered_list(start),
-                        kind => kind,
-                    };
-                    after.push(self.doc.container(kind, trailing));
+                    after.push(self.doc.container(tail_kind, trailing));
                 }
                 for block in after.into_iter().rev() {
                     self.insert_after(list_key, false, block);

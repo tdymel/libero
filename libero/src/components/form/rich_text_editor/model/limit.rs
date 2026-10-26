@@ -1,6 +1,7 @@
 //! A length limit over the doc's plain text, counted as `Doc::plain_text` chars (todo 2715).
 
-use super::doc::{ContentKind, NodeKey};
+use super::doc::{ContentKind, Inline, NodeKey};
+use super::mark::MarkKind;
 use super::state::{EditorState, Position, Selection};
 
 impl EditorState {
@@ -29,6 +30,17 @@ impl EditorState {
         let room = self.room(max);
         if room == 0 && self.selection.is_collapsed() {
             return false;
+        }
+        // A cut URL goes in as plain text: a link must not read other than where it goes.
+        let url = text.trim();
+        if self.selection.is_collapsed()
+            && url.chars().count() > room
+            && self.pasted_url(url).is_some()
+        {
+            let mut marks = self.current_marks();
+            marks.remove(MarkKind::Link);
+            let cut: String = url.chars().take(room).collect();
+            return self.insert_inline(Inline::marked(cut, marks));
         }
         // Markdown syntax and blank lines are not plain text, so the raw cut keeps a margin.
         let bound = room.saturating_mul(2).saturating_add(4096);

@@ -42,7 +42,9 @@ pub(crate) fn LinkDialog(args: LinkArgs, onchoose: EventHandler<LinkChoice>) -> 
     };
     rsx! {
         Dialog { title: words.link,
+            // The browser's URL check would block Save before the field's own error shows.
             form {
+                novalidate: true,
                 onsubmit: move |event: FormEvent| {
                     event.prevent_default();
                     save();

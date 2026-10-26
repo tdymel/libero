@@ -1,5 +1,6 @@
 //! The rich text editor (epic 1159): a pure model and the view over it.
 
+mod bar;
 mod dialogs;
 mod handle;
 mod input;

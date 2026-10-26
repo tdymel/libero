@@ -20,6 +20,7 @@ fn a_caller_toolbar_runs_commands_and_reads_state_through_the_handle() {
         let page = &fixture.page;
         let undo_disabled = "document.getElementById('ext-undo').disabled";
         assert!(js::<bool>(page, undo_disabled).await);
+        editor_status(page).await;
 
         page.evaluate_bounded(format!("{EDITOR}.focus()"))
             .await
@@ -29,6 +30,8 @@ fn a_caller_toolbar_runs_commands_and_reads_state_through_the_handle() {
         select_first_leaf(page).await;
         pointer::click(page, "#ext-bold").await.unwrap();
         out_eq(page, "**ab**\n").await;
+        // Focus went into the text, so the caller's button changes unheard otherwise (todo 4283).
+        announced(page, "Bold on").await;
         wait::for_js_true(
             page,
             &format!(
@@ -91,6 +94,21 @@ fn link_dialog_shortcut_help_block_menu_and_announcements() {
             page,
             "document.activeElement === document.querySelector('[role=dialog] input')",
             "focus in the link field",
+        )
+        .await
+        .unwrap();
+        // A bare domain gets the field's own error, not the browser's URL bubble (todo 4282).
+        keyboard::type_text(page, "example.com").await.unwrap();
+        keyboard::press(page, ENTER).await.unwrap();
+        wait::for_js_true(
+            page,
+            "document.querySelector('[role=dialog] input').getAttribute('aria-invalid') === 'true'",
+            "a bare domain to be a field error",
+        )
+        .await
+        .unwrap();
+        page.evaluate_bounded(
+            "(() => { const i = document.querySelector('[role=dialog] input'); i.select(); })()",
         )
         .await
         .unwrap();

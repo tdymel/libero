@@ -111,11 +111,6 @@ impl<H: UndoStack> Editor<H> {
         &self.state.doc
     }
 
-    #[allow(dead_code, reason = "for the command handle, todo in plan 1159")]
-    pub fn history(&self) -> &H {
-        &self.history
-    }
-
     /// Replaces the doc from outside (a new controlled value): history starts over.
     pub fn reset(&mut self, doc: Doc) {
         self.state = EditorState::new(doc);

@@ -429,3 +429,39 @@ fn blocks_nest_by_indent() {
     assert_eq!(quote[1].kind, BlockKind::code("js"));
     assert_eq!(quote[1].text(), "x");
 }
+
+/// Two lists in one item keep apart, as they do at the top level (todo 4280).
+#[test]
+fn adjacent_lists_in_an_item_stay_apart() {
+    for markdown in ["- x\n  - a\n\n  * b", "1. x\n   1. a\n\n   1) b"] {
+        let doc = Doc::from_markdown(markdown);
+        let item = &doc.blocks[0].children()[0];
+        assert_eq!(item.children().len(), 3, "{markdown:?}");
+        assert_eq!(Doc::from_markdown(&doc.to_markdown()), doc, "{markdown:?}");
+    }
+}
+
+/// A start near `u64::MAX` writes the largest number the reader takes (todo 4285).
+#[test]
+fn a_huge_list_start_writes_without_overflow() {
+    let mut doc = Doc::from_markdown("1. a\n2. b");
+    doc.blocks[0].kind = BlockKind::ordered_list(u64::MAX);
+    assert_eq!(doc.to_markdown(), "999999999. a\n999999999. b\n");
+}
+
+/// A custom inline block without a codec reads back as the paragraph it writes (todo 4285).
+#[test]
+fn a_custom_inline_block_escapes_its_line_start() {
+    use crate::components::form::rich_text_editor::model::CustomContent;
+    let mut doc = Doc::empty();
+    let kind = BlockKind::Custom {
+        name: "note".into(),
+        attrs: Default::default(),
+        content: CustomContent::Inline,
+    };
+    let block = doc.leaf(kind, vec![Inline::text("- x")]);
+    doc.blocks.push(block);
+    let back = Doc::from_markdown(&doc.to_markdown());
+    assert_eq!(back.blocks[0].kind, BlockKind::Paragraph);
+    assert_eq!(back.blocks[0].text(), "- x");
+}

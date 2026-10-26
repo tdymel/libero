@@ -29,21 +29,12 @@ impl Writer<'_> {
         let mut parts: Vec<String> = Vec::new();
         let mut previous_list: Option<(bool, bool)> = None;
         for block in blocks {
-            let alternate = match (&block.kind, previous_list) {
-                // Two lists in a row merge unless their markers differ.
-                (BlockKind::List { ordered, .. }, Some((last_ordered, last_alternate))) => {
-                    *ordered == last_ordered && !last_alternate
-                }
-                _ => false,
-            };
+            let alternate = alternate(&block.kind, previous_list);
             let text = self.block(block, alternate);
             if text.is_empty() {
                 continue;
             }
-            previous_list = match block.kind {
-                BlockKind::List { ordered, .. } => Some((ordered, alternate)),
-                _ => None,
-            };
+            previous_list = list_marker(&block.kind, alternate);
             parts.push(text);
         }
         parts.join("\n\n")
@@ -79,6 +70,10 @@ impl Writer<'_> {
                     .and_then(|spec| spec.to_markdown.as_ref())
                 {
                     Some(write) => write(attrs, &content),
+                    // Read back as a paragraph, so it escapes like one.
+                    None if block.kind.content() == ContentKind::Inline => {
+                        escape_line_starts(&content)
+                    }
                     None => content,
                 }
             }
@@ -86,22 +81,26 @@ impl Writer<'_> {
     }
 
     fn list(&self, block: &Block, ordered: bool, start: u64, alternate: bool) -> String {
-        let loose = block
+        let contents: Vec<String> = block
             .children()
             .iter()
-            .any(|item| self.item(item.children()).contains("\n\n"));
+            .map(|item| self.item(item.children()))
+            .collect();
+        let loose = contents.iter().any(|content| content.contains("\n\n"));
         let items: Vec<String> = block
             .children()
             .iter()
+            .zip(contents)
             .enumerate()
-            .map(|(index, item)| {
+            .map(|(index, (item, content))| {
+                // The reader takes at most 9 digits.
+                let number = start.saturating_add(index as u64).min(999_999_999);
                 let marker = match (ordered, alternate) {
                     (false, false) => "-".to_string(),
                     (false, true) => "*".to_string(),
-                    (true, false) => format!("{}.", start + index as u64),
-                    (true, true) => format!("{})", start + index as u64),
+                    (true, false) => format!("{number}."),
+                    (true, true) => format!("{number})"),
                 };
-                let content = self.item(item.children());
                 let indent = " ".repeat(marker.len() + 1);
                 let marker = match item.kind {
                     BlockKind::ListItem {
@@ -124,11 +123,14 @@ impl Writer<'_> {
     /// An item's blocks: a list right after a paragraph needs no blank line, which keeps the list tight.
     fn item(&self, children: &[Block]) -> String {
         let mut out = String::new();
+        let mut previous_list: Option<(bool, bool)> = None;
         for (index, child) in children.iter().enumerate() {
-            let text = self.block(child, false);
+            let alternate = alternate(&child.kind, previous_list);
+            let text = self.block(child, alternate);
             if text.is_empty() {
                 continue;
             }
+            previous_list = list_marker(&child.kind, alternate);
             if !out.is_empty() {
                 let interrupts = matches!(child.kind, BlockKind::List { .. });
                 let after_paragraph = index > 0 && children[index - 1].kind == BlockKind::Paragraph;
@@ -165,6 +167,24 @@ impl Writer<'_> {
             true => tagged,
             false => delimited,
         }
+    }
+}
+
+/// Two lists in a row merge unless their markers differ: the second takes the other one.
+fn alternate(kind: &BlockKind, previous_list: Option<(bool, bool)>) -> bool {
+    match (kind, previous_list) {
+        (BlockKind::List { ordered, .. }, Some((last_ordered, last_alternate))) => {
+            *ordered == last_ordered && !last_alternate
+        }
+        _ => false,
+    }
+}
+
+/// A written list's type and whether it took the other marker.
+fn list_marker(kind: &BlockKind, alternate: bool) -> Option<(bool, bool)> {
+    match kind {
+        BlockKind::List { ordered, .. } => Some((*ordered, alternate)),
+        _ => None,
     }
 }
 

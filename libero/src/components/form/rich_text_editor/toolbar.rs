@@ -91,8 +91,11 @@ pub(super) struct Tool {
     pub disabled: bool,
 }
 
+/// How many buttons [`tools`] builds.
+const TOOLS: usize = 13;
+
 /// The buttons in bar order; block type sits between the marks and the block toggles.
-pub(super) fn tools(words: &RichTextEditorLabels) -> [Tool; 13] {
+pub(super) fn tools(words: &RichTextEditorLabels) -> [Tool; TOOLS] {
     use {Builtin as B, Group as G, IconSlot as S};
     [
         (
@@ -255,7 +258,7 @@ fn needed(hidden: usize, metrics: Metrics, extra: usize) -> f64 {
         language,
     } = metrics;
     let language = if language > 0.0 { language + gap } else { 0.0 };
-    let icons = 13 - hidden + usize::from(hidden > 0) + extra;
+    let icons = TOOLS - hidden + usize::from(hidden > 0) + extra;
     let history = OVERFLOW[..hidden]
         .iter()
         .filter(|builtin| matches!(builtin, Builtin::Undo | Builtin::Redo))

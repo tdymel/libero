@@ -138,3 +138,18 @@ fn text_a_composition_added_is_cut_but_not_the_text_before_it() {
     check("abc|", |state| state.cut_over(2, 1), "ab|");
     check("abc|", |state| !state.cut_over(9, 1), "abc|");
 }
+
+/// A URL cut to the limit goes in as plain text, never a link to more than it reads (todo 4279).
+#[test]
+fn a_url_cut_at_the_limit_is_no_link() {
+    check(
+        "hello|",
+        |s| s.paste_within("https://example.com/long", false, Some(10)),
+        "hellohttps|",
+    );
+    check(
+        "hi|",
+        |s| s.paste_within("https://a.example", false, Some(40)),
+        "hi[https://a.example|](https://a.example)",
+    );
+}

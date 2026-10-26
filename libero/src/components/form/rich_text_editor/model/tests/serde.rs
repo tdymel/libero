@@ -1,4 +1,4 @@
-use crate::components::form::rich_text_editor::model::{BlockKind, Doc, NodeKey};
+use crate::components::form::rich_text_editor::model::{BlockKind, Doc, EditorState, NodeKey};
 
 #[test]
 fn json_round_trips() {
@@ -123,4 +123,46 @@ fn custom_blocks_load_without_their_registry() {
         serde_json::to_string(&doc).unwrap(),
         format!(r#"{{"version":1,{}"#, &json[1..])
     );
+}
+
+/// A stored item outside a list is wrapped in one, so Shift+Tab finds a list (todo 4274).
+#[test]
+fn a_root_list_item_loads_in_a_list_and_outdents() {
+    let json = r#"{"blocks":[{"type":"list_item","children":[{"type":"paragraph","inlines":[{"type":"text","text":"a"}]}]},{"type":"paragraph","inlines":[{"type":"text","text":"b"}]}]}"#;
+    let doc: Doc = serde_json::from_str(json).unwrap();
+    assert_eq!(doc.to_markdown(), "- a\n\nb\n");
+    let mut state = EditorState::new(doc);
+    assert!(state.outdent());
+    assert_eq!(state.doc.to_markdown(), "a\n\nb\n");
+    let quoted = r#"{"blocks":[{"type":"quote","children":[{"type":"list_item","children":[]}]}]}"#;
+    let doc: Doc = serde_json::from_str(quoted).unwrap();
+    assert!(matches!(
+        doc.blocks[0].children()[0].kind,
+        BlockKind::List { .. }
+    ));
+}
+
+/// Content in the field its kind does not hold still loads (todo 4276).
+#[test]
+fn content_in_the_other_field_is_kept() {
+    let quote = r#"{"blocks":[{"type":"quote","inlines":[{"type":"text","text":"q"}]}]}"#;
+    let doc: Doc = serde_json::from_str(quote).unwrap();
+    assert_eq!(doc.to_markdown(), "> q\n");
+    let both = r#"{"blocks":[{"type":"paragraph","inlines":[{"type":"text","text":"a"}],"children":[{"type":"paragraph","inlines":[{"type":"text","text":"b"}]}]}]}"#;
+    let doc: Doc = serde_json::from_str(both).unwrap();
+    assert_eq!(doc.blocks[0].text(), "a\nb");
+    let heading = r#"{"blocks":[{"type":"heading","level":2,"children":[{"type":"paragraph","inlines":[{"type":"text","text":"h"}]}]}]}"#;
+    let doc: Doc = serde_json::from_str(heading).unwrap();
+    assert_eq!(doc.to_markdown(), "## h\n");
+}
+
+/// An empty stored list gets an item, not a bare paragraph (todo 4277).
+#[test]
+fn an_empty_list_loads_with_an_item() {
+    let doc: Doc = serde_json::from_str(r#"{"blocks":[{"type":"list","ordered":false}]}"#).unwrap();
+    let item = &doc.blocks[0].children()[0];
+    assert!(item.kind.is_list_item());
+    assert_eq!(item.children()[0].kind, BlockKind::Paragraph);
+    let mut state = EditorState::new(doc);
+    assert!(state.outdent());
 }

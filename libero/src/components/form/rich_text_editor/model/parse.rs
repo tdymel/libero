@@ -20,7 +20,7 @@ impl Doc {
     }
 
     /// Pasted text from elsewhere: Markdown, but each line its own paragraph, as
-    /// plain text means it. A `\`-newline break still joins.
+    /// plain text means it. A line-ending `\` stays text (`C:\`).
     pub(crate) fn from_pasted(text: &str) -> Self {
         Self::read(text, true)
     }
@@ -66,11 +66,10 @@ fn blocks(doc: &mut Doc, lines: &[&str], per_line: bool) -> Vec<Block> {
                 continue;
             }
             let mut text = vec![line.trim()];
-            while let Some(next) = lines.get(i).filter(|next| {
-                !blank(next)
-                    && line_syntax(next).is_none()
-                    && (!per_line || text.last().is_some_and(|last| last.ends_with('\\')))
-            }) {
+            while let Some(next) = lines
+                .get(i)
+                .filter(|next| !per_line && !blank(next) && line_syntax(next).is_none())
+            {
                 text.push(next.trim());
                 i += 1;
             }

@@ -1,7 +1,7 @@
 //! Paste: Markdown read back into blocks at the caret (todo 1258).
 
 use super::doc::{Block, BlockKind, ContentKind, Doc, Inline, NodeKey};
-use super::mark::Mark;
+use super::mark::{Href, Mark, MarkKind};
 use super::state::{EditorState, Position};
 use super::syntax::autolink;
 
@@ -77,18 +77,25 @@ impl EditorState {
     /// A pasted bare URL links the selection, or becomes a link at the caret. `None`
     /// when `text` is not just a URL or the paste goes to a code block.
     fn paste_url(&mut self, text: &str) -> Option<bool> {
-        let chars: Vec<char> = text.chars().collect();
-        let (_, href) = autolink(&chars).filter(|(len, _)| *len == chars.len())?;
-        let kind = self.block_kind();
-        if kind.is_code() || kind.content() != ContentKind::Inline {
-            return None;
-        }
+        let href = self.pasted_url(text)?;
         if !self.selection.is_collapsed() {
             return Some(self.set_link(href.as_str()).unwrap_or(false));
         }
         let mark = Mark::Link { href, title: None };
         let marks = self.current_marks().with(mark);
         Some(self.insert_inline(Inline::marked(text, marks)))
+    }
+
+    /// The link a pasted `text` makes: a bare URL outside code, as typed autolink.
+    pub(crate) fn pasted_url(&self, text: &str) -> Option<Href> {
+        let chars: Vec<char> = text.chars().collect();
+        let (_, href) = autolink(&chars).filter(|(len, _)| *len == chars.len())?;
+        let kind = self.block_kind();
+        let in_code = self.selection.is_collapsed() && self.current_marks().has(MarkKind::Code);
+        if kind.is_code() || kind.content() != ContentKind::Inline || in_code {
+            return None;
+        }
+        Some(href)
     }
 
     fn rekey(&mut self, block: &mut Block) {

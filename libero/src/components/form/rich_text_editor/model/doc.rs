@@ -223,15 +223,49 @@ struct BlockRepr {
 
 impl From<BlockRepr> for Block {
     fn from(repr: BlockRepr) -> Self {
-        let mut block = Block {
-            key: NodeKey(0),
-            kind: repr.kind,
-            content: Content::Inlines(repr.inlines),
+        let BlockRepr {
+            kind,
+            mut inlines,
+            mut children,
+        } = repr;
+        // Both fields set: keep both, in the one the kind holds.
+        let content = if children.is_empty() {
+            Content::Inlines(inlines)
+        } else if inlines.is_empty() {
+            Content::Blocks(children)
+        } else if kind.content() == ContentKind::Inline {
+            append_leaves(&mut inlines, children);
+            Content::Inlines(inlines)
+        } else {
+            let paragraph = Block {
+                key: NodeKey(0),
+                kind: BlockKind::Paragraph,
+                content: Content::Inlines(inlines),
+            };
+            children.insert(0, paragraph);
+            Content::Blocks(children)
         };
-        if !repr.children.is_empty() {
-            block.content = Content::Blocks(repr.children);
+        Block {
+            key: NodeKey(0),
+            kind,
+            content,
         }
-        block
+    }
+}
+
+/// Appends the text of each leaf in `blocks`, a hard break before each.
+fn append_leaves(inlines: &mut Vec<Inline>, blocks: Vec<Block>) {
+    for block in blocks {
+        match block.content {
+            Content::Inlines(more) => {
+                if !inlines.is_empty() {
+                    inlines.push(Inline::HardBreak);
+                }
+                inlines.extend(more);
+            }
+            Content::Blocks(children) => append_leaves(inlines, children),
+            Content::Empty => {}
+        }
     }
 }
 
@@ -459,6 +493,7 @@ impl Doc {
         visit(&self.blocks, &mut |block| max = max.max(block.key.0));
         self.next_key = self.next_key.max(max + 1);
         let mut blocks = std::mem::take(&mut self.blocks);
+        self.wrap_loose_items(&mut blocks);
         for block in &mut blocks {
             self.normalize_block(block, &mut seen);
         }
@@ -479,6 +514,49 @@ impl Doc {
         }
     }
 
+    /// Gathers each run of list items outside a list into a bullet list.
+    fn wrap_loose_items(&mut self, blocks: &mut Vec<Block>) {
+        if !blocks.iter().any(|block| block.kind.is_list_item()) {
+            return;
+        }
+        let mut wrapped: Vec<Block> = Vec::with_capacity(blocks.len());
+        let mut open = false;
+        for block in std::mem::take(blocks) {
+            if !block.kind.is_list_item() {
+                open = false;
+                wrapped.push(block);
+                continue;
+            }
+            if !open {
+                let list = self.container(BlockKind::bullet_list(), Vec::new());
+                wrapped.push(list);
+                open = true;
+            }
+            wrapped
+                .last_mut()
+                .expect("the list")
+                .children_mut()
+                .push(block);
+        }
+        *blocks = wrapped;
+    }
+
+    /// Moves content kept in the field the kind does not hold, so none is lost.
+    fn fix_content(&mut self, block: &mut Block) {
+        let content = std::mem::replace(&mut block.content, Content::Empty);
+        block.content = match (block.kind.content(), content) {
+            (ContentKind::Inline, Content::Blocks(children)) => {
+                let mut inlines = Vec::new();
+                append_leaves(&mut inlines, children);
+                Content::Inlines(inlines)
+            }
+            (ContentKind::Blocks, Content::Inlines(inlines)) if !inlines.is_empty() => {
+                Content::Blocks(vec![self.leaf(BlockKind::Paragraph, inlines)])
+            }
+            (_, content) => content,
+        };
+    }
+
     fn normalize_block(&mut self, block: &mut Block, seen: &mut HashSet<NodeKey>) {
         if !seen.insert(block.key) {
             block.key = self.key();
@@ -487,6 +565,7 @@ impl Doc {
         if let BlockKind::Heading { level } = &mut block.kind {
             *level = (*level).clamp(1, 6);
         }
+        self.fix_content(block);
         match block.kind.content() {
             ContentKind::Inline => {
                 if block.kind.is_code() {
@@ -497,12 +576,16 @@ impl Doc {
             }
             ContentKind::Atom => block.content = Content::Empty,
             ContentKind::Blocks => {
-                if matches!(block.kind, BlockKind::List { .. }) {
-                    self.wrap_list_children(block);
-                }
                 if block.children().is_empty() {
                     let paragraph = self.leaf(BlockKind::Paragraph, Vec::new());
                     block.children_mut().push(paragraph);
+                }
+                if matches!(block.kind, BlockKind::List { .. }) {
+                    self.wrap_list_children(block);
+                } else {
+                    let mut children = std::mem::take(block.children_mut());
+                    self.wrap_loose_items(&mut children);
+                    *block.children_mut() = children;
                 }
                 for child in block.children_mut() {
                     self.normalize_block(child, seen);
