@@ -1283,6 +1283,55 @@ fn a_color_field_takes_text_written_before_mount() {
     ));
 }
 
+/// Todo 4327: a reset while a submit waits on an async rule drops that submit: nothing is
+/// sent and the fresh form shows no summary.
+#[test]
+fn a_reset_drops_a_submit_waiting_on_an_async_rule() {
+    block_on(async {
+        let fixture = Fixture::open("/form/async-rule", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        let data = |key: &str, value: &str| {
+            format!("document.querySelector('[data-{key}]').dataset.{key} === {value:?}")
+        };
+
+        pointer::click(page, "#email").await.unwrap();
+        keyboard::type_text(page, "me@libero.dev").await.unwrap();
+        click_button(page, "Sign up").await.unwrap();
+        wait::for_js_true(page, &data("submitting", "true"), "the submit waiting")
+            .await
+            .unwrap();
+        click_button(page, "Reset").await.unwrap();
+        wait::for_js_true(page, &data("submitting", "false"), "the wait over")
+            .await
+            .unwrap();
+        wait::for_js_true(
+            page,
+            "document.querySelector('#email').value === ''",
+            "the field reset",
+        )
+        .await
+        .unwrap();
+        let resubmitted: bool = page
+            .evaluate_bounded(
+                "document.querySelector('[data-sent]').dataset.sent !== '0' \
+                 || !!document.querySelector('[data-slot=summary]')",
+            )
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        assert!(!resubmitted, "the reset form was submitted again");
+
+        fixture
+            .console
+            .assert_clean("a reset during an async rule")
+            .unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
 /// Todo 4087: an async rule shows its field busy after a blur, then its answer; a submit
 /// ends the debounce, waits for the answer and sends once the address is free.
 #[test]

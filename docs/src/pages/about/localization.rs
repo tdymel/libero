@@ -179,7 +179,13 @@ pub fn LocalizationPage() -> Element {
                     Code { source: "Localization" }
                     " has a group per component, plus "
                     Code { source: "common" }
-                    " for the words many share. A value inside a string is a named hole such as "
+                    " for the words many share, such as "
+                    Code { source: "common.required" }
+                    ", which a required "
+                    Code { source: "CheckboxGroup" }
+                    " or "
+                    Code { source: "SwitchGroup" }
+                    " says after its label. A value inside a string is a named hole such as "
                     Code { source: "{{n}}" }
                     ", so each language puts it where its grammar wants it."
                 }

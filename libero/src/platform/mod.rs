@@ -98,7 +98,8 @@ pub(crate) use element::{
     focus_closest_of_focused, focus_first_of, focus_kept, focus_selector, focus_tab_from,
     focus_tab_within, focused_attribute, forget_rtl_tag, input_value, is_rtl, is_rtl_by_tag, join,
     join_all, keep_focused, load_failed, mounted_by_selector, on_content_change, on_form_reset,
-    on_image_error, read_rtl_tag, scroll_padding_properties, set_value_by_id, sets_indeterminate,
+    on_image_error, read_rtl_tag, reset_selector, scroll_padding_properties, set_value_by_id,
+    sets_indeterminate,
 };
 pub use element::{Dimensions, ElementApi, Read};
 pub use error::PlatformError;

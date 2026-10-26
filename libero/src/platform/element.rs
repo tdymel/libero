@@ -44,6 +44,12 @@ pub(crate) fn focus_selector(selector: &str) -> Result<(), PlatformError> {
     backend::focus_selector(selector)
 }
 
+/// Resets the page's first `<form>` matching `selector` as [`ElementApi::reset`] does, for a
+/// WebView, whose handles cannot (4325). `Unsupported` elsewhere: an [`ElementApi`] there can.
+pub(crate) fn reset_selector(selector: &str) -> Result<(), PlatformError> {
+    backend::reset_selector(selector)
+}
+
 /// Focuses the `ancestor` closest to the focused element when that matches `focused`, for
 /// a WebView, where no handle can query. `Unsupported` elsewhere.
 pub(crate) fn focus_closest_of_focused(focused: &str, ancestor: &str) -> Result<(), PlatformError> {

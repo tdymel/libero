@@ -33,6 +33,8 @@ pub struct FormHandle {
 pub(crate) struct Control {
     /// While [`FormHandle::reset`] runs the native reset, so the form's `onreset` lets it through.
     pub resetting: Rc<Cell<bool>>,
+    /// The `<form>`'s id, for a WebView, whose handle cannot reset it.
+    pub id: Signal<String>,
     /// Puts the form's value back to `V::default()`, where `V` is still known.
     pub reset_value: Rc<dyn Fn()>,
     pub summary: Summary,
@@ -119,7 +121,9 @@ impl FormHandle {
             control.resetting.set(true);
         }
         // Before the value, so a bound control ends on the value's default.
-        let _ = self.element.reset();
+        if let (Err(PlatformError::Unsupported), Some(control)) = (self.element.reset(), &control) {
+            let _ = platform::reset_selector(&id_selector(&control.id.peek()));
+        }
         if let Some(control) = control {
             control.resetting.set(false);
             // In the form's scope: a parent holding the handle is no descendant.

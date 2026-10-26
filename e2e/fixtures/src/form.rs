@@ -113,6 +113,7 @@ fn AsyncRulePage(loader: bool) -> Element {
             }
             Button { onclick: move |_| free.answer(false), "Free" }
             Button { onclick: move |_| taken.answer(true), "Taken" }
+            Button { onclick: move |_| form.reset(), "Reset" }
         }
     }
 }

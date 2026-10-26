@@ -158,6 +158,7 @@ pub fn CheckboxGroupPage() -> Element {
                 .handles([
                     "The group is a `group` named by its `label`, so the question is read on entering it.",
                     "Its description, helper and status make up the group's `aria-describedby`.",
+                    "A required group says \"Required\" after its label, from `common.required` in the localization: `aria-required` is not allowed on a `group`.",
                     "Each option is a native checkbox with its own label, and its description is read with it.",
                     "At `max_checked`, the unchecked options are disabled and leave the tab order.",
                     "A group with no name logs a warning.",

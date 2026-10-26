@@ -209,9 +209,8 @@ fn an_uncontrolled_count_follows_a_raw_form_reset() {
     raw_reset_rounds("/textarea/raw-reset");
 }
 
-/// The same inside a standalone `Fieldset`, whose own scope hides the raw reset.
+/// The same inside a standalone `Fieldset`, whose own scope hears the raw reset (4326).
 #[test]
-#[ignore = "todo 4326: a standalone Fieldset's scope never hears a raw reset"]
 fn an_uncontrolled_count_in_a_fieldset_follows_a_raw_form_reset() {
     raw_reset_rounds("/textarea/raw-reset-fieldset");
 }

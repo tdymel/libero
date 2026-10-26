@@ -872,6 +872,17 @@ pub(crate) fn focus_selector(selector: &str) -> Result<(), super::PlatformError>
     };
 }
 
+/// Only a WebView - see [`reset_selector`](crate::platform::reset_selector).
+pub(crate) fn reset_selector(selector: &str) -> Result<(), super::PlatformError> {
+    #[cfg(all(not(target_arch = "wasm32"), not(feature = "native")))]
+    return webview::reset_selector(selector);
+    #[cfg(any(target_arch = "wasm32", feature = "native"))]
+    return {
+        let _ = selector;
+        Err(super::PlatformError::Unsupported)
+    };
+}
+
 /// Only a WebView - see [`focus_closest_of_focused`](crate::platform::focus_closest_of_focused).
 pub(crate) fn focus_closest_of_focused(
     focused: &str,

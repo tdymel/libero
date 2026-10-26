@@ -13,6 +13,7 @@ use crate::{
         },
         layout::use_box,
     },
+    hooks::{use_element, use_form_owner},
     platform::lifts_legends,
     sx::{StaticSx, sx},
     theme::{FIELD_CAPTION_FONT_SIZE, FIELD_LABEL_FONT_SIZE, FIELDSET_GAP, FieldsetDefaults, Size},
@@ -162,6 +163,21 @@ pub fn Fieldset<V: FormValue>(props: FieldsetProps<V>) -> Element {
     use_drop(move || {
         scope.withdraw(key);
         scope.unregister(key);
+    });
+    // Alone, its scope starts over on its raw `<form>`'s reset, so the fields inside hear it (4326).
+    let element = use_element();
+    let owner = use_form_owner(element, !shared);
+    let mut heard = use_hook(|| CopyValue::new(None::<u32>));
+    use_effect(move || {
+        let now = owner();
+        if heard
+            .peek()
+            .zip(now)
+            .is_some_and(|(before, now)| before != now)
+        {
+            scope.reset();
+        }
+        heard.set(now);
     });
 
     // A field binds on mount, so another `value` or `path` remounts the fields, as in `Form`.
@@ -329,6 +345,7 @@ pub fn Fieldset<V: FormValue>(props: FieldsetProps<V>) -> Element {
         .parts(&props.parts)
         .states(&states)
         .prepare()
+        .element(&element)
         .attr("id", id.clone())
         .attr("aria-disabled", disabled.then_some("true"))
         .attr("aria-describedby", describedby)

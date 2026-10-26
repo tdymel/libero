@@ -218,10 +218,14 @@ pub fn Form<V: FormValue>(props: FormProps<V>) -> Element {
             scope.submit();
             submitting.set(true);
             let answered = scope.answered();
+            let at = scope.resets();
             spawn(async move {
                 answered.await;
                 submitting.set(false);
-                let _ = handle.submit();
+                // A reset meanwhile wakes the wait too: that form is not submitted (4327).
+                if scope.resets() == at {
+                    let _ = handle.submit();
+                }
             });
             return;
         }
@@ -268,10 +272,12 @@ pub fn Form<V: FormValue>(props: FormProps<V>) -> Element {
     });
 
     let resetting = use_hook(|| Rc::new(Cell::new(false)));
+    let id = crate::hooks::use_root_id(&attributes);
     let summary = use_hook(|| {
         let summary = Summary::new(focus_requests, form_element);
         handle.attach(Control {
             resetting: resetting.clone(),
+            id,
             // Through `store`: a reset clears the current value, not the first.
             reset_value: Rc::new(move || {
                 if let Some(mut value) = *store.peek() {
@@ -419,6 +425,7 @@ pub fn Form<V: FormValue>(props: FormProps<V>) -> Element {
         .states(&props.states)
         .prepare()
         .element(&form_element)
+        .attr("id", id())
         .attr("novalidate", true)
         .attr("aria-busy", if submitting() { "true" } else { "false" })
         .event("onsubmit", move |event: FormEvent| submit.call(event))

@@ -84,6 +84,31 @@ pub(crate) fn set_value_by_id(id: &str, value: &str) -> Result<(), PlatformError
     Ok(())
 }
 
+/// The page's first `<form>` matching `data` resets, then each `data-controlled` control gets
+/// its value back, as the web's `ElementApi::reset`. Its own `reset` event stays in the page.
+const RESET_FORM: &str = "const form = document.querySelector(data);
+    if (!(form instanceof HTMLFormElement)) return;
+    const saved = [...form.querySelectorAll('[data-controlled]')]
+        .map((el) => [el, el.value, el.checked, el.selectedIndex]);
+    const own = (event) => { if (event.target === form) event.stopImmediatePropagation(); };
+    window.addEventListener('reset', own, { capture: true });
+    try { form.reset(); } finally { window.removeEventListener('reset', own, { capture: true }); }
+    for (const [el, value, checked, index] of saved) {
+        if (el instanceof HTMLSelectElement) el.selectedIndex = index;
+        else if (el instanceof HTMLInputElement) { el.value = value; el.checked = checked; }
+        else if (el instanceof HTMLTextAreaElement) el.value = value;
+    }";
+
+/// Queued, so it runs past the reset event that asked for it, where `form.reset()` would be
+/// ignored, and before the edits of the render it causes.
+pub(crate) fn reset_selector(selector: &str) -> Result<(), PlatformError> {
+    if !runs_scripts() {
+        return Err(PlatformError::Unsupported);
+    }
+    eval_with(json!(selector), RESET_FORM);
+    Ok(())
+}
+
 /// Records each pointer's pressed element for [`follow_pointer`]. A followed release
 /// 4px or more from its press swallows its click: the web's capture on the drag root
 /// sends that click to the root, never to the pressed handle.
