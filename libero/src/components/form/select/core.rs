@@ -164,6 +164,18 @@ pub(crate) struct ChipHandles {
     to_trigger: CopyValue<bool>,
 }
 
+impl ChipHandles {
+    /// The element holding the chips.
+    pub(crate) fn slot(self) -> ElementHandle {
+        self.slot
+    }
+
+    /// Where focus goes past the last chip.
+    pub(crate) fn trigger(self) -> ElementHandle {
+        self.trigger
+    }
+}
+
 pub(crate) fn use_chip_handles() -> ChipHandles {
     ChipHandles {
         cursor: use_signal(|| None),
@@ -182,6 +194,15 @@ pub(crate) struct ChipFocus {
 }
 
 impl ChipFocus {
+    /// `count` chips, whose wrappers take the ids `{id_prefix}-{index}`.
+    pub(crate) fn new(handles: ChipHandles, id_prefix: String, count: usize) -> Self {
+        Self {
+            handles,
+            id_prefix,
+            count,
+        }
+    }
+
     /// The chip wrapper's id.
     pub(crate) fn id(&self, index: usize) -> String {
         format!("{}-{index}", self.id_prefix)
@@ -607,11 +628,7 @@ pub(crate) fn SelectCore(props: SelectCoreProps) -> Element {
         )
     });
 
-    let chip_focus = ChipFocus {
-        handles: chip_handles,
-        id_prefix: format!("{}-chip", state.id()),
-        count: chip_count,
-    };
+    let chip_focus = ChipFocus::new(chip_handles, format!("{}-chip", state.id()), chip_count);
     let placeholder = props.placeholder.clone().unwrap_or_default();
     let (content, chips) = match multiple {
         true => {

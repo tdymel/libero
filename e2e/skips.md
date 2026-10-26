@@ -1,6 +1,6 @@
 # Skipped e2e scenarios
 
-Scenarios: 706
+Scenarios: 708
 
 Generated from the `scenario!` skips in `e2e/tests/all` by `cargo test -p e2e --lib skips`; edit the skip, not this file. A reason starting `upstream:` waits on Dioxus, Blitz, wry or the engine (revisit on their update, todo 3362), a number names the todo that removes it.
 
@@ -399,6 +399,7 @@ The performance scenarios (units `perf`, `table_perf`) are no skips but run on r
 | `tabs::tab_leaves_the_strip_from_a_focused_unselected_tab` | desktop | 958: element identity on the WebView |
 | `tabs::up_and_down_move_between_vertical_tabs` | android | 958: element identity on the WebView |
 | `tabs::up_and_down_move_between_vertical_tabs` | desktop | 958: element identity on the WebView |
+| `tags_field::the_chip_cursor_reaches_the_tags` | native | 3406: Blitz hands a removed chip's focus to a container div, parked with native |
 | `theme_defaults::an_unset_hover_card_align_follows_the_theme` | ios | a touch screen has no hover |
 | `theme_defaults::an_unset_hover_card_side_follows_the_theme` | ios | a touch screen has no hover |
 | `tooltip::a_long_press_on_a_link_trigger_opens_no_link_menu` | desktop | 1126: no touch input under Xvfb |

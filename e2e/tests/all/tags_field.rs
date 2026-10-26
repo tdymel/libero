@@ -1,7 +1,9 @@
 //! `TagsField`: the combobox archetype.
 
+use anyhow::{Result, ensure};
 use e2e::archetypes::Combobox;
 use e2e::browser::block_on;
+use e2e::driver::{Driver, eventually, eventually_focused, eventually_text};
 use e2e::suite::Step;
 use e2e::wait::PageBounded;
 use e2e::{Fixture, Suite, Viewport, ax, passes::keyboard, wait};
@@ -357,6 +359,88 @@ fn the_chip_cursor_walks_and_removes_tags() {
         fixture.close().await.unwrap();
     });
 }
+
+/// Todo 4303: on a WebView too, ArrowLeft from a draft's start focuses the last tag's x and keeps
+/// the draft through the late blur; Delete removes the focused tag with the focus moving on first.
+async fn the_chip_cursor_reaches_the_tags_on<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    eventually_text(d, "#echo", "rust,dioxus,wasm,css", "mounting").await?;
+    d.focus(CURSOR).await?;
+    eventually_focused(d, CURSOR, "focusing the draft").await?;
+    d.type_text("go").await?;
+    eventually(d, "the draft typed", async |d| {
+        Ok(d.value(CURSOR).await? == "go")
+    })
+    .await?;
+    // Two presses walk the caret to the start; the third leaves.
+    for _ in 0..3 {
+        d.press(keyboard::ARROW_LEFT).await?;
+    }
+    eventually_focused(d, &chip("css"), "ArrowLeft at the draft's start").await?;
+    d.press(keyboard::ARROW_LEFT).await?;
+    eventually_focused(d, &chip("wasm"), "ArrowLeft on a tag").await?;
+    ensure!(
+        d.value(CURSOR).await? == "go" && d.text("#echo").await? == "rust,dioxus,wasm,css",
+        "the hand-off committed or dropped the draft"
+    );
+
+    d.press(DELETE).await?;
+    eventually_text(d, "#echo", "rust,dioxus,css", "Delete on wasm").await?;
+    eventually_focused(d, &chip("css"), "Delete").await?;
+    d.press(keyboard::ARROW_RIGHT).await?;
+    eventually_focused(d, CURSOR, "ArrowRight past the last").await?;
+    ensure!(
+        d.value(CURSOR).await? == "go",
+        "the draft did not survive the walk"
+    );
+    Ok(())
+}
+
+e2e::scenario!(
+    the_chip_cursor_reaches_the_tags,
+    "/tags-field/cursor",
+    the_chip_cursor_reaches_the_tags_on,
+    native: skip("3406: Blitz hands a removed chip's focus to a container div, parked with native")
+);
+
+const CLEARABLE: &str = "#clearable";
+
+/// Todo 4304: a press on Clear drops the draft; the input's blur neither commits nor refuses it.
+async fn clear_drops_the_draft_on<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    let clear = format!("{CLEARABLE}-clear");
+    d.focus(CLEARABLE).await?;
+    eventually_focused(d, CLEARABLE, "focusing the draft").await?;
+    // A draft that duplicates a tag would be refused on a commit.
+    d.type_text("rust").await?;
+    eventually(d, "the draft typed", async |d| {
+        Ok(d.value(CLEARABLE).await? == "rust")
+    })
+    .await?;
+    d.click(&clear).await?;
+    eventually_text(d, "#changes", "[]", "Clear with a duplicate draft").await?;
+    ensure!(
+        d.text("#rejected").await?.is_empty(),
+        "the blur refused the draft before the clear"
+    );
+
+    d.focus(CLEARABLE).await?;
+    d.type_text("go").await?;
+    eventually(d, "the second draft typed", async |d| {
+        Ok(d.value(CLEARABLE).await? == "go")
+    })
+    .await?;
+    d.click(&clear).await?;
+    eventually(d, "Clear with a new draft", async |d| {
+        Ok(d.value(CLEARABLE).await?.is_empty())
+    })
+    .await?;
+    eventually_text(d, "#changes", "[]|[]", "Clear with a new draft").await
+}
+
+e2e::scenario!(
+    clear_drops_the_draft,
+    "/tags-field/clear",
+    clear_drops_the_draft_on
+);
 
 /// Todo 3570: a long tag wraps inside its chip, the x stays on the first line, and nothing is cut.
 #[test]

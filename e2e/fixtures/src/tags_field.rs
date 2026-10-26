@@ -13,7 +13,34 @@ pub const ROUTES: Routes = &[
     ("/tags-field/reject", || rsx! { TagsRejectPage {} }),
     ("/tags-field/aria-label", || rsx! { TagsAriaLabelPage {} }),
     ("/tags-field/long", || rsx! { TagsLongPage {} }),
+    ("/tags-field/clear", || rsx! { TagsClearPage {} }),
 ];
+
+/// Todo 4304: a clearable field logging every change in `#changes` and every rejection in `#rejected`.
+#[component]
+fn TagsClearPage() -> Element {
+    let mut topics = use_signal(|| vec!["rust".to_string(), "css".to_string()]);
+    let mut changes = use_signal(Vec::<String>::new);
+    let mut rejected = use_signal(String::new);
+
+    rsx! {
+        Flex { direction: "column", gap: "md", max_width: "320px",
+            TagsField {
+                id: "clearable",
+                label: "Topics",
+                clearable: true,
+                value: topics(),
+                onchange: move |next: Vec<String>| {
+                    changes.write().push(format!("[{}]", next.join("+")));
+                    topics.set(next);
+                },
+                onreject: move |rejection: TagRejection| rejected.set(rejection.tag),
+            }
+            Text { id: "changes", "{changes().join(\"|\")}" }
+            Text { id: "rejected", "{rejected}" }
+        }
+    }
+}
 
 const LONG: &str = "Versandkostenberechnungsgrundlagenverordnungsentwurfsbearbeitungsstelle";
 
@@ -156,6 +183,7 @@ fn TagsCursorPage() -> Element {
                 value: topics(),
                 onchange: move |next| topics.set(next),
             }
+            Text { id: "echo", "{topics().join(\",\")}" }
         }
     }
 }

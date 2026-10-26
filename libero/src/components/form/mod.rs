@@ -178,6 +178,8 @@ pub use rich_text_editor::{
 #[cfg(feature = "segmented-control")]
 pub use segmented_control::{SegmentedControl, SegmentedControlPart, SegmentedControlProps};
 #[cfg(feature = "select")]
+pub(crate) use select::{ChipFocus, use_chip_handles};
+#[cfg(feature = "select")]
 pub use select::{
     MultiSelect, MultiSelectProps, Select, SelectFilterArgs, SelectOptionArgs, SelectPart,
     SelectProps, SelectionArgs,

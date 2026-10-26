@@ -10,15 +10,16 @@ use crate::{
             aria_label_of, ring_overlay, use_combobox, use_no_toolbar, use_toolbar_item,
         },
         form::{
-            CaretKeys, ComboboxCore, ComboboxOption, DropdownPart, SelectionArgs, clear_button,
-            field_control_sx, field_parts_enum, field_props, removable_chip, row_label, use_bound,
-            use_chip_announcer, use_field, use_field_frame, use_prefill,
+            CaretKeys, ChipFocus, ComboboxCore, ComboboxOption, DropdownPart, SelectionArgs,
+            clear_button, field_control_sx, field_parts_enum, field_props, removable_chip,
+            row_label, use_bound, use_chip_announcer, use_chip_handles, use_field, use_field_frame,
+            use_prefill,
         },
         layout::{BoxStyle, use_box},
     },
-    hooks::{ElementHandle, PopoverWidth, use_element, use_localization, use_theme},
+    hooks::{ElementHandle, PopoverWidth, use_localization, use_theme},
     localization::{TagsFieldLabels, fill},
-    platform::{ElementApi, is_tab, logical_key},
+    platform::{ElementApi, caret_edges, is_tab, logical_key},
     sx::{StaticSx, sx},
     theme::Size,
     utils::warn,
@@ -155,12 +156,11 @@ pub fn TagsField(props: TagsFieldProps) -> Element {
     // The draft is the component's own, as `SelectCore` owns its query.
     let mut text = use_signal(String::new);
     let state = use_combobox();
-    let input_element = use_element();
-    let cursor = TagCursor {
-        slot: use_element(),
-        input: input_element,
-        entering: use_hook(|| CopyValue::new(false)),
-    };
+    // The chips' focus walks as on `MultiSelect`, with the draft input as its trigger.
+    let handles = use_chip_handles();
+    let input_element = handles.trigger();
+    // Set while the input hands focus to a tag, so its blur keeps the draft.
+    let entering = use_hook(|| CopyValue::new(false));
 
     let rules = TagRules {
         allow_duplicates: props.allow_duplicates.unwrap_or(false),
@@ -249,13 +249,14 @@ pub fn TagsField(props: TagsFieldProps) -> Element {
         disabled || readonly,
     );
 
+    let focus = ChipFocus::new(handles, format!("{}-tag", field.id()), held.len());
     let tags = tags_field_chips(
         &held,
         &onchange,
         props.tag,
         size,
         (disabled, readonly),
-        cursor,
+        &focus,
     );
 
     let rows = tags_field_rows(suggestions, &held, &text(), &add, text, state);
@@ -282,6 +283,17 @@ pub fn TagsField(props: TagsFieldProps) -> Element {
             }
         },
     );
+    // The x's press blurs the input before its click, and that blur must not commit the draft.
+    let mut clearing = use_hook(|| CopyValue::new(false));
+    let clear = clear.map(|button| {
+        rsx! {
+            span {
+                style: "display: contents",
+                onmousedown: move |_| clearing.set(true),
+                {button}
+            }
+        }
+    });
 
     let frame = use_field_frame()
         .trailing(&clear)
@@ -316,14 +328,17 @@ pub fn TagsField(props: TagsFieldProps) -> Element {
             required,
             row_count,
             placeholder: props.placeholder,
-            cursor,
+            input: input_element,
+            focus,
+            entering,
+            clearing,
             item,
         },
         onchange.clone(),
         props.attributes,
     );
 
-    let control = slot.element(&cursor.slot).render(
+    let control = slot.element(&handles.slot()).render(
         HtmlTag::Div,
         Vec::new(),
         // The input is not the frame's child, so the frame's own ring overlay
@@ -498,65 +513,6 @@ fn split(text: &str, split_chars: &[String]) -> Vec<String> {
     pieces
 }
 
-/// Where the chip cursor moves the focus: the tags' slot and the draft input.
-#[derive(Clone, Copy)]
-struct TagCursor {
-    slot: ElementHandle,
-    input: ElementHandle,
-    /// Set while the input hands focus to a tag, so its blur keeps the draft.
-    entering: CopyValue<bool>,
-}
-
-impl TagCursor {
-    /// Moves from the input onto tag `index`, leaving the draft in the input.
-    fn enter(mut self, index: usize) {
-        self.entering.set(true);
-        self.focus(Some(index));
-        self.entering.set(false);
-    }
-
-    /// Whether the input's blur is [`enter`](Self::enter)'s.
-    fn entering(self) -> bool {
-        *self.entering.peek()
-    }
-
-    /// Focuses tag `index`'s button, or the input for `None`.
-    fn focus(self, index: Option<usize>) {
-        let _ = match index {
-            Some(index) => self
-                .slot
-                .query_selector(&tag_selector(index))
-                .and_then(|button| button.focus()),
-            None => self.input.focus(),
-        };
-    }
-
-    /// Whether the focus is on tag `index`'s button.
-    fn holds(self, index: usize) -> bool {
-        self.slot
-            .query_selector(&tag_selector(index))
-            .is_ok_and(|button| button.is_focused())
-    }
-}
-
-fn tag_selector(index: usize) -> String {
-    format!("[data-tag-index='{index}'] button")
-}
-
-/// Whether the input's caret sits before the draft's first character.
-fn caret_at_start(input: ElementHandle) -> bool {
-    input.selection_start() == Some(0)
-}
-
-/// Where the cursor goes once tag `index` of `count` is removed: the next tag,
-/// which slides into its place, else the one before, else the input.
-fn after_removal(index: usize, count: usize) -> Option<usize> {
-    match index + 1 < count {
-        true => Some(index),
-        false => index.checked_sub(1),
-    }
-}
-
 /// The chips, one per held tag. A keyboard removal moves focus on before the
 /// tag goes ([[principles/focus-after-removal]]).
 fn tags_field_chips<F: Fn(Vec<String>) + Clone + 'static>(
@@ -565,24 +521,21 @@ fn tags_field_chips<F: Fn(Vec<String>) + Clone + 'static>(
     draw_tag: Option<Callback<SelectionArgs<String>, Element>>,
     size: Size,
     (disabled, readonly): (bool, bool),
-    cursor: TagCursor,
+    focus: &ChipFocus,
 ) -> Element {
     let locked = disabled || readonly;
-    let count = held.len();
     let chips = held.iter().cloned().enumerate().map(|(index, value)| {
         let list = held.to_vec();
         let onchange = onchange.clone();
+        let focus = focus.clone();
         // Guarded here as well as by disabling the x: a caller's own `tag`
         // gets `remove` too, and Backspace refuses a locked field.
         let remove = Callback::new(move |_: ()| {
             let (false, Some(onchange)) = (locked, &onchange) else {
                 return;
             };
-            // A mouse removal never focused the tag, so only the keyboard's
-            // focus is moved.
-            if cursor.holds(index) {
-                cursor.focus(after_removal(index, count));
-            }
+            // Only a focused tag moves the focus: a mouse removal never focused it.
+            focus.before_removal(index);
             let mut next = list.clone();
             next.remove(index);
             onchange(next);
@@ -605,26 +558,30 @@ fn tags_field_chips<F: Fn(Vec<String>) + Clone + 'static>(
                 key: "{index}",
                 "data-slot": TagsFieldPart::Tag.slot(),
                 "data-tag-index": "{index}",
+                id: focus.id(index),
                 // The default chip's guard, so a caller's `tag` has it too: a
                 // press on its x must not strand the focus on the body.
                 onmousedown: move |event: MouseEvent| event.prevent_default(),
-                onkeydown: move |event: KeyboardEvent| {
-                    let key = logical_key(&event);
-                    // Tab, Escape and chords pass; every other key is the cursor's.
-                    if is_tab(&event)
-                        || matches!(key, Key::Named(NamedKey::Escape))
-                        || !event.modifiers().is_empty()
-                    {
-                        return;
+                onfocusin: {
+                    let focus = focus.clone();
+                    move |_| focus.entered(index)
+                },
+                onfocusout: {
+                    let focus = focus.clone();
+                    move |_| focus.left(index)
+                },
+                onkeydown: {
+                    let focus = focus.clone();
+                    move |event: KeyboardEvent| {
+                        // Tab, Escape and chords pass; every other key is the cursor's.
+                        if !(is_tab(&event)
+                            || matches!(logical_key(&event), Key::Named(NamedKey::Escape))
+                            || !event.modifiers().is_empty())
+                        {
+                            event.stop_propagation();
+                        }
+                        focus.key(&event, index, remove);
                     }
-                    event.stop_propagation();
-                    match key {
-                        Key::Named(NamedKey::ArrowLeft) => cursor.focus(Some(index.saturating_sub(1))),
-                        Key::Named(NamedKey::ArrowRight) => cursor.focus(Some(index + 1).filter(|next| *next < count)),
-                        Key::Named(NamedKey::Delete) | Key::Named(NamedKey::Backspace) if !locked => remove.call(()),
-                        _ => return,
-                    }
-                    event.prevent_default();
                 },
                 {chip}
             }
@@ -702,7 +659,12 @@ struct Draft {
     required: bool,
     row_count: usize,
     placeholder: Option<String>,
-    cursor: TagCursor,
+    input: ElementHandle,
+    focus: ChipFocus,
+    /// Set while ArrowLeft hands focus to a tag: a WebView's blur arrives later.
+    entering: CopyValue<bool>,
+    /// Set by a press on the clear x, whose blur drops the draft rather than committing it.
+    clearing: CopyValue<bool>,
     item: Option<ToolbarItem>,
 }
 
@@ -725,10 +687,13 @@ fn tags_field_input<F: Fn(Vec<String>) + Clone + 'static>(
         required,
         row_count,
         placeholder,
-        cursor,
+        input,
+        focus,
+        mut entering,
+        mut clearing,
         item,
     } = draft;
-    let (typing, entering, blurring) = (add.clone(), add.clone(), add);
+    let (typing, committing, blurring) = (add.clone(), add.clone(), add);
 
     let mut attributes = match has_suggestions {
         true => state.a11y_attributes(),
@@ -774,7 +739,7 @@ fn tags_field_input<F: Fn(Vec<String>) + Clone + 'static>(
                     let rest = typing(pieces).unwrap_or_default();
                     // An unchanged draft is not written back, so a paste into it would stay (4189).
                     if rest == text() {
-                        let _ = cursor.input.set_value(&rest);
+                        let _ = input.set_value(&rest);
                     }
                     text.set(rest);
                 }
@@ -791,6 +756,8 @@ fn tags_field_input<F: Fn(Vec<String>) + Clone + 'static>(
             if disabled || readonly || event.is_composing() {
                 return;
             }
+            // A key here means the last hand-off to a tag never left the input.
+            entering.set(false);
             match logical_key(&event) {
                 // A highlighted row owns Enter; with nothing typed it bubbles
                 // and a form still submits.
@@ -799,7 +766,7 @@ fn tags_field_input<F: Fn(Vec<String>) + Clone + 'static>(
                         && !text().trim().is_empty() =>
                 {
                     event.prevent_default();
-                    if entering(vec![text()]).is_none() {
+                    if committing(vec![text()]).is_none() {
                         text.set(String::new());
                     }
                     state.set_active(None);
@@ -819,30 +786,35 @@ fn tags_field_input<F: Fn(Vec<String>) + Clone + 'static>(
                 }
                 // From an empty draft, or from the start of one, which stays.
                 Key::Named(NamedKey::ArrowLeft)
-                    if (text().is_empty() || caret_at_start(cursor.input))
+                    // `caret_edges`, as a WebView's handle reads no selection.
+                    if (text().is_empty() || caret_edges(&event).is_some_and(|(start, _)| start))
                         && !held.is_empty()
                         && event.modifiers().is_empty() =>
                 {
                     event.prevent_default();
                     event.stop_propagation();
-                    cursor.enter(held.len() - 1);
+                    // Cleared by the blur, which a WebView delivers after this handler.
+                    entering.set(true);
+                    focus.focus(Some(held.len() - 1));
                 }
                 _ => {}
             }
         })
+        // A hand-off or a press on the x that never blurred the input leaves no blur to reset them.
+        .event("onfocus", move |_: FocusEvent| {
+            entering.set(false);
+            clearing.set(false);
+        })
         // An uncommitted draft becomes a tag rather than being thrown away.
         .event("onblur", move |_: FocusEvent| {
             let draft = text();
-            if !readonly
-                && !cursor.entering()
-                && !draft.trim().is_empty()
-                && blurring(vec![draft]).is_none()
-            {
+            let kept = entering.replace(false) | clearing.replace(false);
+            if !readonly && !kept && !draft.trim().is_empty() && blurring(vec![draft]).is_none() {
                 text.set(String::new());
             }
             state.close();
         })
-        .element(&cursor.input)
+        .element(&input)
         .render(HtmlTag::Input, attributes, ())
 }
 
@@ -952,16 +924,6 @@ mod tests {
             merge(&tags(&["Rust"]), tags(&["rust"]), &rules(true, None)).next,
             Some(tags(&["Rust", "rust"]))
         );
-    }
-
-    /// The cursor stays in the chips while any are left, and prefers the tag
-    /// that slides into the removed one's place.
-    #[test]
-    fn the_cursor_lands_on_the_next_tag_then_the_previous_then_the_input() {
-        assert_eq!(after_removal(0, 3), Some(0));
-        assert_eq!(after_removal(1, 3), Some(1));
-        assert_eq!(after_removal(2, 3), Some(1));
-        assert_eq!(after_removal(0, 1), None);
     }
 
     /// Nothing added means nothing changed, so a refused edit never emits an
