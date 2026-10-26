@@ -19,9 +19,9 @@ use crate::{
 };
 
 use super::{
-    cascader::{CascaderFilterArgs, CascaderNodeArgs, erase_filter, erase_node},
+    cascader::{CascaderFilterArgs, CascaderNodeArgs, Erased, erase_props, value_at},
     core::{CascaderConfig, CascaderLayout, Engine, EngineSetup, Naming, use_cascader_engine},
-    option::{CascaderOption, erase, indices_for_value, options_at},
+    option::{CascaderOption, indices_for_value, options_at},
     trigger::trigger_aria,
 };
 
@@ -284,38 +284,37 @@ pub fn CascaderDropdown<T: Options>(props: CascaderDropdownProps<T>) -> Element 
     let onchange = state.onchange;
     let onpick = {
         let data = data.clone();
-        use_callback(move |next: Option<Vec<usize>>| {
-            let value = next.and_then(|indices| {
-                options_at(&data, &indices)
-                    .last()
-                    .map(|option| option.value.clone())
-            });
-            onchange.call(value);
-        })
+        use_callback(move |next: Option<Vec<usize>>| onchange.call(value_at(&data, next)))
     };
     let committed = state
         .value
         .as_ref()
         .and_then(|value| indices_for_value(&data, value));
+    let Erased {
+        options,
+        node,
+        filter,
+        separator,
+        column_width,
+    } = erase_props(
+        &data,
+        props.node,
+        props.filter,
+        props.separator,
+        props.column_width,
+        theme.cascader.column_width,
+    );
     let config = CascaderConfig {
-        options: Rc::new(erase(&data)),
+        options,
         committed,
         onpick,
-        node: props.node.map(|draw| erase_node(data.clone(), draw)),
-        filter: props
-            .filter
-            .map(|filter| erase_filter(data.clone(), filter)),
-        separator: props
-            .separator
-            .clone()
-            .unwrap_or_else(|| String::from(" / ")),
+        node,
+        filter,
+        separator,
         any_level: props.any_level.unwrap_or(false),
         allow_deselect: props.allow_deselect.unwrap_or(false),
         layout: props.layout.copied_or_default(),
-        column_width: props
-            .column_width
-            .clone()
-            .unwrap_or_else(|| theme.cascader.column_width.to_string()),
+        column_width,
         search_placeholder: props.search_placeholder.clone(),
     };
 

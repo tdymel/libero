@@ -16,7 +16,7 @@ use super::{
         CascaderCore, CascaderLayout, CascaderMatch, CascaderPart, CascaderRender, CascaderRowArgs,
         CascaderTree,
     },
-    option::{CascaderOption, erase, indices_for_value, options_at},
+    option::{CascaderNode, CascaderOption, erase, indices_for_value, options_at},
 };
 
 /// One row's content, handed to `node`. The row itself (highlight, chevron, click) stays the component's.
@@ -37,7 +37,7 @@ pub struct CascaderNodeArgs<T> {
 /// One path under test, handed to `filter` while searching.
 #[derive(Clone, PartialEq)]
 pub struct CascaderFilterArgs<T> {
-    /// What is currently typed in the search box.
+    /// What is currently typed in the search box, trimmed.
     pub query: String,
     /// The path's labels joined by `separator`, what the default filter matches.
     pub label: String,
@@ -141,13 +141,26 @@ pub fn Cascader<T: Options>(props: CascaderProps<T>) -> Element {
         warn("Cascader: `data` is empty, so there is nothing to pick.");
     }
 
-    let separator = props
-        .separator
-        .clone()
-        .unwrap_or_else(|| String::from(" / "));
+    // Shared by the three closures that map an index path back to a `T`.
+    let data = Rc::new(props.data);
+    // Erased fresh each render on purpose - see `CascaderCoreProps::options`.
+    let Erased {
+        options,
+        node,
+        filter,
+        separator,
+        column_width,
+    } = erase_props(
+        &data,
+        props.node,
+        props.filter,
+        props.separator,
+        props.column_width,
+        theme.cascader.column_width,
+    );
     let committed = current
         .as_ref()
-        .and_then(|value| indices_for_value(&props.data, value));
+        .and_then(|value| indices_for_value(&data, value));
     if current.is_some() && committed.is_none() {
         warn("Cascader: no option in `data` holds `value`, so it shows the value's own label.");
     }
@@ -156,7 +169,7 @@ pub fn Cascader<T: Options>(props: CascaderProps<T>) -> Element {
     let display = match &committed {
         None => current.as_ref().map(Options::label).unwrap_or_default(),
         Some(indices) => {
-            let labels: Vec<String> = options_at(&props.data, indices)
+            let labels: Vec<String> = options_at(&data, indices)
                 .iter()
                 .map(|option| option.label.clone())
                 .collect();
@@ -171,34 +184,15 @@ pub fn Cascader<T: Options>(props: CascaderProps<T>) -> Element {
     let form_value = current.as_ref().map(Options::value);
     let emit = bound.emit(props.onchange);
 
-    // Erased fresh each render on purpose - see `CascaderCoreProps::options`.
-    let options = CascaderTree(Rc::new(erase(&props.data)));
-    // Shared by the three closures that map an index path back to a `T`.
-    let data = Rc::new(props.data);
-
-    let onpick = {
-        let data = data.clone();
-        move |next: Option<Vec<usize>>| {
-            let Some(emit) = &emit else {
-                return;
-            };
-            let value = next.and_then(|indices| {
-                options_at(&data, &indices)
-                    .last()
-                    .map(|option| option.value.clone())
-            });
-            emit(value);
+    let onpick = move |next: Option<Vec<usize>>| {
+        if let Some(emit) = &emit {
+            emit(value_at(&data, next));
         }
     };
 
-    let node = props.node.map(|draw| erase_node(data.clone(), draw));
-    let filter = props
-        .filter
-        .map(|filter| erase_filter(data.clone(), filter));
-
     rsx! {
         CascaderCore {
-            options,
+            options: CascaderTree(options),
             committed,
             onpick,
             node,
@@ -210,10 +204,7 @@ pub fn Cascader<T: Options>(props: CascaderProps<T>) -> Element {
             allow_deselect: props.allow_deselect.unwrap_or(false),
             layout: props.layout.copied_or_default(),
             searchable: props.searchable.unwrap_or(false),
-            column_width: props
-                .column_width
-                .clone()
-                .unwrap_or_else(|| theme.cascader.column_width.to_string()),
+            column_width,
             placeholder: props.placeholder,
             search_placeholder: props.search_placeholder,
             clearable: props.clearable.unwrap_or(false),
@@ -238,8 +229,45 @@ pub fn Cascader<T: Options>(props: CascaderProps<T>) -> Element {
     }
 }
 
+/// The `T`-free settings `Cascader` and `CascaderDropdown` both derive from their props.
+pub(super) struct Erased {
+    pub options: Rc<Vec<CascaderNode>>,
+    pub node: Option<CascaderRender>,
+    pub filter: Option<CascaderMatch>,
+    pub separator: String,
+    pub column_width: String,
+}
+
+pub(super) fn erase_props<T: Options>(
+    data: &Rc<Vec<CascaderOption<T>>>,
+    node: Option<Callback<CascaderNodeArgs<T>, Element>>,
+    filter: Option<Callback<CascaderFilterArgs<T>, bool>>,
+    separator: Option<String>,
+    column_width: Option<String>,
+    theme_width: &str,
+) -> Erased {
+    Erased {
+        options: Rc::new(erase(data)),
+        node: node.map(|draw| erase_node(data.clone(), draw)),
+        filter: filter.map(|filter| erase_filter(data.clone(), filter)),
+        separator: separator.unwrap_or_else(|| String::from(" / ")),
+        column_width: column_width.unwrap_or_else(|| theme_width.to_string()),
+    }
+}
+
+/// The value an `onpick` index path names; `None` clears.
+pub(super) fn value_at<T: Options>(
+    data: &[CascaderOption<T>],
+    indices: Option<Vec<usize>>,
+) -> Option<T> {
+    let indices = indices?;
+    options_at(data, &indices)
+        .last()
+        .map(|option| option.value.clone())
+}
+
 /// A caller's `node`, looked up by index path for the `T`-free engine.
-pub(super) fn erase_node<T: Options>(
+fn erase_node<T: Options>(
     data: Rc<Vec<CascaderOption<T>>>,
     draw: Callback<CascaderNodeArgs<T>, Element>,
 ) -> CascaderRender {
@@ -258,7 +286,7 @@ pub(super) fn erase_node<T: Options>(
 }
 
 /// A caller's `filter`, erased as `erase_node`.
-pub(super) fn erase_filter<T: Options>(
+fn erase_filter<T: Options>(
     data: Rc<Vec<CascaderOption<T>>>,
     filter: Callback<CascaderFilterArgs<T>, bool>,
 ) -> CascaderMatch {

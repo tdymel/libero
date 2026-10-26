@@ -22,14 +22,13 @@ use crate::{
 use super::super::{
     dropdown::{Dropdown, DropdownSetup, dropdown_box, use_cascader_dropdown},
     keys::CascaderKeys,
-    nodes::FlatPath,
     option::CascaderNode,
     search::{CascaderSearch, search_header},
 };
 use super::{
     CascaderLayout, CascaderMatch, CascaderRender,
     list::{CascaderList, ListSetup, use_cascader_list},
-    visible_paths,
+    open_paths,
 };
 
 /// The `T`-free tree and its settings, shared by `Cascader`'s field and `CascaderDropdown`.
@@ -133,20 +132,20 @@ pub(in super::super) fn use_cascader_engine(setup: EngineSetup) -> Engine {
     let search = use_element();
     let typed = use_typeahead(TYPEAHEAD_RESET);
 
-    let searching = searchable && opened && !query().is_empty();
+    // Only spaces is no query: it would show every path as results.
+    let searching = searchable && opened && !query.read().trim().is_empty();
     let layout = match searching {
         true => CascaderLayout::Paths,
         false => config.layout,
     };
 
-    // The `Paths` rows the query leaves. `Columns` ignores it; it costs one walk.
-    let visible: Rc<Vec<FlatPath>> = Rc::new(visible_paths(
-        &config.options,
-        config.any_level,
+    // The `Paths` rows the query leaves. `Columns` ignores it.
+    let visible = open_paths(
+        opened,
+        config,
         searching.then(|| query.read().clone()).as_deref(),
-        &config.separator,
-        config.filter.as_ref(),
-    ));
+    );
+    let rows = visible.clone().unwrap_or_default();
 
     let blurred = use_refocus_on_close(opened, searchable, trigger, query);
     let hold = use_touch_hold();
@@ -164,7 +163,7 @@ pub(in super::super) fn use_cascader_engine(setup: EngineSetup) -> Engine {
         names: &names,
         state,
         cursor,
-        visible: &visible,
+        visible,
         layout,
         typed,
         trigger,
@@ -196,7 +195,7 @@ pub(in super::super) fn use_cascader_engine(setup: EngineSetup) -> Engine {
         radius,
         layout,
         // A new column or a shorter match list reshapes the open box.
-        remeasure: (depth * 4096 + visible.len()) as u64,
+        remeasure: (depth * 4096 + rows.len()) as u64,
         gap: theme.popover.gap,
         padding: theme.popover.padding,
         parts,
@@ -205,10 +204,9 @@ pub(in super::super) fn use_cascader_engine(setup: EngineSetup) -> Engine {
     });
 
     // Drawn in the list's place and said by the status region below.
-    let nothing_found = (searching && visible.is_empty()).then_some(nothing_found);
+    let nothing_found = (searching && rows.is_empty()).then_some(nothing_found);
     // What a query left, said but not shown (WCAG 4.1.3, todo 2035).
-    let results =
-        (searching && !visible.is_empty()).then(|| (words.combobox.results)(visible.len()));
+    let results = (searching && !rows.is_empty()).then(|| (words.combobox.results)(rows.len()));
     let body = match nothing_found {
         Some(text) => nothing_found_row(text),
         None => body,
@@ -275,7 +273,8 @@ pub(in super::super) fn use_cascader_engine(setup: EngineSetup) -> Engine {
         open,
         controlled_id,
         descendant,
-        empty: visible.is_empty(),
+        // A tree without roots has no path; closed, the walk is skipped.
+        empty: rows.is_empty() && (opened || config.options.is_empty()),
         wrapper,
         clearance,
         status,

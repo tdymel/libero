@@ -13,7 +13,10 @@ use crate::{
 
 use super::{
     core::CascaderLayout,
-    nodes::{FlatPath, children_at, disabled_at, first_enabled, last_enabled, step, step_in},
+    nodes::{
+        FlatPath, children_at, disabled_at, first_enabled, flatten_paths, last_enabled, step,
+        step_in,
+    },
     option::CascaderNode,
     parent_row::ParentRow,
 };
@@ -22,14 +25,16 @@ use super::{
 /// In an `Rc`: the trigger and the portaled dropdown share it.
 pub(super) struct CascaderKeys {
     pub(super) nodes: Rc<Vec<CascaderNode>>,
-    pub(super) visible: Rc<Vec<FlatPath>>,
+    /// The `Paths` rows while open; `None` while closed, see [`Self::rows`].
+    pub(super) visible: Option<Rc<Vec<FlatPath>>>,
     pub(super) cursor: Signal<Vec<usize>>,
     pub(super) state: ComboboxState,
     pub(super) open: Rc<dyn Fn(bool)>,
     pub(super) commit: Rc<dyn Fn(Vec<usize>, bool)>,
     pub(super) committed: Option<Vec<usize>>,
     pub(super) typed: Typeahead,
-    pub(super) disabled: bool,
+    /// Disabled or read-only: the keys do nothing.
+    pub(super) inert: bool,
     pub(super) searchable: bool,
     pub(super) any_level: bool,
     pub(super) layout: CascaderLayout,
@@ -42,6 +47,14 @@ pub(super) struct CascaderKeys {
 }
 
 impl CascaderKeys {
+    /// The `Paths` rows; a closed list has no query, so a key on it walks the whole tree.
+    fn rows(&self) -> Rc<Vec<FlatPath>> {
+        match &self.visible {
+            Some(visible) => visible.clone(),
+            None => Rc::new(flatten_paths(&self.nodes, self.any_level)),
+        }
+    }
+
     /// The path a pick takes while the highlight is on the narrow list's parent row.
     fn on_parent(&self) -> Option<Vec<usize>> {
         let cursor = self.cursor.read();
@@ -51,7 +64,7 @@ impl CascaderKeys {
 
     pub(super) fn handle(&self, event: KeyboardEvent) {
         // A composing key picks an IME candidate in the search box (todo 3033).
-        if self.disabled || event.is_composing() {
+        if self.inert || event.is_composing() {
             return;
         }
         // APG: Alt+ArrowDown opens in place, Alt+ArrowUp closes; other chords aren't ours.
@@ -131,7 +144,7 @@ impl CascaderKeys {
             .unwrap_or_else(|| self.cursor.read().clone());
         let pickable = match self.layout {
             CascaderLayout::Paths => self
-                .visible
+                .rows()
                 .iter()
                 .any(|path| path.indices == here && !path.disabled),
             CascaderLayout::Columns => {
@@ -152,7 +165,8 @@ impl CascaderKeys {
         match self.layout {
             CascaderLayout::Paths => {
                 // Nothing highlighted: Enter bubbles, so a form still submits.
-                let Some(path) = self.visible.iter().find(|path| path.indices == here) else {
+                let visible = self.rows();
+                let Some(path) = visible.iter().find(|path| path.indices == here) else {
                     return false;
                 };
                 if !path.disabled {
@@ -222,13 +236,11 @@ impl CascaderKeys {
                 false => last_enabled(&self.nodes),
             }
             .map(|index| vec![index]),
-            CascaderLayout::Paths => step(
-                self.visible.len(),
-                |row| self.visible[row].disabled,
-                None,
-                forward,
-            )
-            .map(|row| self.visible[row].indices.clone()),
+            CascaderLayout::Paths => {
+                let visible = self.rows();
+                step(visible.len(), |row| visible[row].disabled, None, forward)
+                    .map(|row| visible[row].indices.clone())
+            }
         }
     }
 
@@ -255,16 +267,14 @@ impl CascaderKeys {
         };
         let found = match self.layout {
             CascaderLayout::Paths => {
-                let labels: Vec<String> = self
-                    .visible
-                    .iter()
-                    .map(|path| path.labels.join(" "))
-                    .collect();
-                let current = self.visible.iter().position(|path| path.indices == here);
+                let visible = self.rows();
+                let labels: Vec<String> =
+                    visible.iter().map(|path| path.labels.join(" ")).collect();
+                let current = visible.iter().position(|path| path.indices == here);
                 typeahead_match(labels.len(), current, &query, |row| {
-                    (!self.visible[row].disabled).then(|| labels[row].as_str())
+                    (!visible[row].disabled).then(|| labels[row].as_str())
                 })
-                .map(|row| self.visible[row].indices.clone())
+                .map(|row| visible[row].indices.clone())
             }
             CascaderLayout::Columns => {
                 let (parents, current) = match here.split_last() {
@@ -299,7 +309,7 @@ impl CascaderKeys {
 
     /// The flat list: Up, Down, Home, End and Enter.
     fn paths(&self, event: KeyboardEvent) {
-        let (mut cursor, visible) = (self.cursor, &self.visible);
+        let (mut cursor, visible) = (self.cursor, self.rows());
         let here = cursor.read().clone();
         let row = visible.iter().position(|path| path.indices == here);
         let key = event.key();

@@ -26,7 +26,8 @@ pub(super) struct ListSetup<'a> {
     pub(super) names: &'a Naming,
     pub(super) state: ComboboxState,
     pub(super) cursor: Signal<Vec<usize>>,
-    pub(super) visible: &'a Rc<Vec<FlatPath>>,
+    /// `None` while closed: the keys walk the tree only when they need it.
+    pub(super) visible: Option<Rc<Vec<FlatPath>>>,
     pub(super) layout: CascaderLayout,
     pub(super) typed: Typeahead,
     pub(super) trigger: ElementHandle,
@@ -70,9 +71,10 @@ pub(super) fn use_cascader_list(setup: ListSetup) -> CascaderList {
     let any_level = config.any_level;
     let committed = config.committed.clone();
 
+    let paths = visible.clone().unwrap_or_default();
     let cursor_now = cursor.read().clone();
     // The cursor as a row of `visible`, the `Paths` keyboard's index.
-    let path_row = visible.iter().position(|path| path.indices == cursor_now);
+    let path_row = paths.iter().position(|path| path.indices == cursor_now);
     let parent_row = use_parent_row();
     let parent_active = parent_row
         .picks(&nodes, any_level, layout, &cursor_now)
@@ -93,14 +95,14 @@ pub(super) fn use_cascader_list(setup: ListSetup) -> CascaderList {
 
     let keys = Rc::new(CascaderKeys {
         nodes: nodes.clone(),
-        visible: visible.clone(),
+        visible,
         cursor,
         state,
         open: open.clone(),
         commit: commit.clone(),
         committed: committed.clone(),
         typed,
-        disabled: inert,
+        inert,
         searchable,
         any_level,
         layout,
@@ -130,7 +132,7 @@ pub(super) fn use_cascader_list(setup: ListSetup) -> CascaderList {
         Body {
             layout,
             depth: cursor_now.len(),
-            visible: visible.clone(),
+            visible: paths,
             path_row,
             listbox_id,
             label_id: names.label_id.clone(),

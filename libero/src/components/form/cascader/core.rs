@@ -24,7 +24,7 @@ mod list;
 
 pub(super) use self::engine::{CascaderConfig, Engine, EngineSetup, Naming, use_cascader_engine};
 use super::{
-    nodes::{FlatPath, flatten_paths, join_labels},
+    nodes::{FlatPath, flatten_paths},
     option::CascaderNode,
     trigger::{CASCADER_TRIGGER_SX, Trigger, cascader_trigger, trigger_control},
 };
@@ -267,8 +267,25 @@ pub(crate) fn CascaderCore(props: CascaderCoreProps) -> Element {
     })
 }
 
+/// [`visible_paths`] while open; closed, the tree is not walked each render (todo 4237).
+pub(super) fn open_paths(
+    opened: bool,
+    config: &CascaderConfig,
+    query: Option<&str>,
+) -> Option<Rc<Vec<FlatPath>>> {
+    opened.then(|| {
+        Rc::new(visible_paths(
+            &config.options,
+            config.any_level,
+            query,
+            &config.separator,
+            config.filter.as_ref(),
+        ))
+    })
+}
+
 /// Every path of the tree, narrowed to what `query` matches while searching.
-fn visible_paths(
+pub(super) fn visible_paths(
     nodes: &[CascaderNode],
     any_level: bool,
     query: Option<&str>,
@@ -279,12 +296,13 @@ fn visible_paths(
     let Some(query) = query else {
         return all_paths;
     };
-    // Trimmed, as the other search boxes: a trailing space must not hide a match.
-    let needle = query.trim().to_lowercase();
+    // Trimmed, as the other search boxes, for a custom `filter` too: a trailing space must not hide a match.
+    let query = query.trim();
+    let needle = query.to_lowercase();
     all_paths
         .into_iter()
         .filter(|path| {
-            let label = join_labels(&path.labels, separator);
+            let label = path.labels.join(separator);
             match filter {
                 Some(filter) => (filter.0)(query, &path.indices, label),
                 None => label.to_lowercase().contains(&needle),
@@ -319,7 +337,8 @@ fn use_cascader_field(
     disabled: bool,
     readonly: bool,
 ) -> CascaderField {
-    let empty = props.committed.is_none();
+    // From the posted value: one no option holds still posts, so it fills the field (todo 4235).
+    let empty = props.form_value.is_none();
     let field = use_field()
         .labelled_by()
         .label(&props.label)

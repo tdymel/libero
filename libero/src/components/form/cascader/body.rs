@@ -24,6 +24,15 @@ pub(super) struct Body {
     pub(super) max_height: &'static str,
 }
 
+/// The strip's inline end, past it on purpose: the browser clamps. RTL `scrollLeft` counts down from 0 (todo 4238).
+pub(super) fn strip_end_x(rtl: bool) -> f64 {
+    let end = f64::from(u32::MAX);
+    match rtl {
+        true => -end,
+        false => end,
+    }
+}
+
 /// A strip of columns, or the flat list of paths.
 pub(super) fn use_cascader_body(rows: CascaderRows, parts: Body) -> Element {
     let Body {
@@ -44,8 +53,7 @@ pub(super) fn use_cascader_body(rows: CascaderRows, parts: Body) -> Element {
         let _ = depth;
         // Subscribes to every reopen, which mounts a new strip at the same handle.
         if strip.mount_token().is_some() {
-            // Past the end on purpose: the browser clamps it.
-            let _ = strip.scroll_to(f64::from(u32::MAX), 0.0);
+            let _ = strip.scroll_to(strip_end_x(strip.is_rtl()), 0.0);
         }
     }));
     let columns = use_box()

@@ -165,6 +165,21 @@ pub(super) struct CascaderRows {
     pub(super) parent_active: bool,
 }
 
+/// What a click commits: `Some(close)`, or `None` when it only drills in.
+pub(super) fn click_commit(
+    whole_path: bool,
+    has_children: bool,
+    any_level: bool,
+    is_committed: bool,
+) -> Option<bool> {
+    match (whole_path, has_children) {
+        // A `Paths` row has no column to drill into: it commits and closes, as Enter does (todo 4236).
+        (true, _) | (false, false) => Some(true),
+        // Drilling into the committed branch is navigation: it never deselects.
+        (false, true) => (any_level && !is_committed).then_some(false),
+    }
+}
+
 impl CascaderRows {
     /// One node through the caller's `node`; a `Paths` row draws one per level.
     fn node(&self, prefix: &[usize]) -> Element {
@@ -213,8 +228,9 @@ impl CascaderRows {
             }
         };
         let picked = indices.clone();
-        // A clicked branch moves the cursor to its first child, since the cursor row never expands.
-        let next_cursor = match first_enabled(children_at(nodes, &indices)) {
+        // A clicked column branch moves the cursor to its first child, since the cursor row never expands.
+        let next_cursor = match first_enabled(children_at(nodes, &indices)).filter(|_| !whole_path)
+        {
             Some(child) => {
                 let mut next = indices.clone();
                 next.push(child);
@@ -222,7 +238,8 @@ impl CascaderRows {
             }
             None => indices.clone(),
         };
-        let (commit, any_level, mut cursor) = (self.commit.clone(), self.any_level, self.cursor);
+        let close = click_commit(whole_path, has_children, self.any_level, is_committed);
+        let (commit, mut cursor) = (self.commit.clone(), self.cursor);
         rsx! {
             ComboboxOption {
                 key: "{level}-{index}",
@@ -235,11 +252,8 @@ impl CascaderRows {
                 disabled: row_disabled,
                 onpick: move |_| {
                     cursor.set(next_cursor.clone());
-                    match has_children {
-                        false => commit(picked.clone(), true),
-                        // Drilling into the committed branch is navigation: it never deselects.
-                        true if any_level && !is_committed => commit(picked.clone(), false),
-                        true => {}
+                    if let Some(close) = close {
+                        commit(picked.clone(), close);
                     }
                 },
                 span { "data-slot": "label", {content} }

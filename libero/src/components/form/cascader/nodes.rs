@@ -94,10 +94,6 @@ fn push_paths(
     }
 }
 
-pub(super) fn join_labels(labels: &[String], separator: &str) -> String {
-    labels.join(separator)
-}
-
 /// The next enabled row, or `None`: clamps rather than wraps, as `ComboboxCore` does.
 /// From no cursor, forward lands on the first enabled row and backward on the last.
 pub(super) fn step(
@@ -226,10 +222,7 @@ mod tests {
     #[test]
     fn leaf_paths_are_the_default_flattening() {
         let paths = flatten_paths(&tree(), false);
-        let joined: Vec<String> = paths
-            .iter()
-            .map(|path| join_labels(&path.labels, " / "))
-            .collect();
+        let joined: Vec<String> = paths.iter().map(|path| path.labels.join(" / ")).collect();
         assert_eq!(
             joined,
             vec![

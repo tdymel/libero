@@ -218,3 +218,136 @@ fn the_headless_state_follows_data_and_value() {
     let (last_labels, _) = seen.last().unwrap();
     assert_eq!(last_labels, &["Tier 1", "Gold ore"], "{seen:?}");
 }
+
+/// Todo 4235: a value no option holds still posts, so the field is not empty and the x shows.
+#[test]
+fn a_value_missing_from_data_still_fills_the_field() {
+    use crate::{LiberoProvider, components::Cascader, components::CascaderOption};
+    use dioxus::prelude::*;
+
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider {
+                Cascader {
+                    label: "Category",
+                    name: "category",
+                    clearable: true,
+                    data: vec![CascaderOption::new("tea", "Tea")],
+                    value: Some("ghost".to_string()),
+                    onchange: move |_: Option<String>| {},
+                }
+            }
+        }
+    }
+
+    let mut dom = VirtualDom::new(app);
+    dom.rebuild_in_place();
+    let html = dioxus_ssr::render(&dom);
+    assert!(html.contains("value=\"ghost\""), "{html}");
+    assert!(html.contains("-clear\""), "{html}");
+}
+
+/// Todo 4236: a `Paths` row has no column to drill into, so a click on a branch closes as Enter does.
+#[test]
+fn a_paths_click_commits_and_closes_like_enter() {
+    use super::rows::click_commit;
+
+    // (whole_path, has_children, any_level, is_committed)
+    assert_eq!(click_commit(true, true, true, false), Some(true));
+    assert_eq!(click_commit(true, true, true, true), Some(true));
+    assert_eq!(click_commit(true, false, false, false), Some(true));
+    // Columns: a branch drills in, picked only under `any_level` and never deselected.
+    assert_eq!(click_commit(false, true, true, false), Some(false));
+    assert_eq!(click_commit(false, true, true, true), None);
+    assert_eq!(click_commit(false, true, false, false), None);
+    assert_eq!(click_commit(false, false, false, false), Some(true));
+}
+
+/// Todo 4237: a closed list walks no paths; an open one walks them all.
+#[test]
+fn a_closed_list_walks_no_paths() {
+    use std::{cell::RefCell, rc::Rc};
+
+    use super::{
+        core::{CascaderConfig, open_paths},
+        option::erase,
+    };
+    use crate::components::CascaderOption;
+    use dioxus::prelude::*;
+
+    thread_local! {
+        static SEEN: RefCell<Vec<Option<usize>>> = const { RefCell::new(Vec::new()) };
+    }
+
+    fn app() -> Element {
+        let tree = [CascaderOption::<String>::new("t", "Tea").children(vec![
+            CascaderOption::new("g", "Green"),
+            CascaderOption::new("b", "Black"),
+        ])];
+        let config = CascaderConfig {
+            options: Rc::new(erase(&tree)),
+            committed: None,
+            onpick: EventHandler::new(|_| {}),
+            node: None,
+            filter: None,
+            separator: " / ".into(),
+            any_level: false,
+            allow_deselect: false,
+            layout: CascaderLayout::Paths,
+            column_width: "220px".into(),
+            search_placeholder: None,
+        };
+        SEEN.with(|seen| {
+            for opened in [false, true] {
+                let rows = open_paths(opened, &config, None).map(|rows| rows.len());
+                seen.borrow_mut().push(rows);
+            }
+        });
+        rsx! {}
+    }
+
+    VirtualDom::new(app).rebuild_in_place();
+    assert_eq!(SEEN.take(), vec![None, Some(2)]);
+}
+
+/// Todo 4238: RTL `scrollLeft` counts down from 0, so the strip's end is a negative offset.
+#[test]
+fn the_column_strip_scrolls_to_its_inline_end() {
+    use super::body::strip_end_x;
+
+    assert!(strip_end_x(false) > 0.0);
+    assert!(strip_end_x(true) < 0.0);
+}
+
+/// Todo 4240: the query is trimmed for a custom `filter` too, not only the default one.
+#[test]
+fn a_custom_filter_gets_the_trimmed_query() {
+    use std::{cell::RefCell, rc::Rc};
+
+    use super::{
+        core::{CascaderMatch, visible_paths},
+        option::erase,
+    };
+    use crate::components::CascaderOption;
+
+    let nodes = erase(&[
+        CascaderOption::<String>::new("tea", "Tea"),
+        CascaderOption::new("milk", "Milk"),
+    ]);
+    let seen = Rc::new(RefCell::new(Vec::new()));
+    let filter = CascaderMatch(Rc::new({
+        let seen = seen.clone();
+        move |query: &str, _: &[usize], label: String| {
+            seen.borrow_mut().push(query.to_string());
+            label.to_lowercase().starts_with(query)
+        }
+    }));
+    let rows = visible_paths(&nodes, false, Some("  te "), " / ", Some(&filter));
+    assert_eq!(rows.len(), 1);
+    assert!(seen.borrow().iter().all(|query| query == "te"), "{seen:?}");
+    // The default filter trims the same way.
+    assert_eq!(
+        visible_paths(&nodes, false, Some(" mil "), " / ", None).len(),
+        1
+    );
+}
