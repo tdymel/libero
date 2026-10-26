@@ -38,6 +38,20 @@ field_props! {
     }
 }
 
+/// Keeps the secret from a browser's spellcheck, even revealed; a caller's attribute wins.
+fn private_attributes(mut attributes: Vec<Attribute>) -> Vec<Attribute> {
+    for (name, value) in [
+        ("spellcheck", "false"),
+        ("autocorrect", "off"),
+        ("autocapitalize", "off"),
+    ] {
+        if attributes.iter().all(|attribute| attribute.name != name) {
+            attributes.push(Attribute::new(name, value, None, false));
+        }
+    }
+    attributes
+}
+
 /// A [`TextField`] for a secret, with a reveal toggle in its trailing slot.
 ///
 /// ```rust
@@ -101,7 +115,7 @@ pub fn PasswordField(props: PasswordFieldProps) -> Element {
             sx: props.sx,
             parts: props.parts,
             states: props.states,
-            attributes: props.attributes,
+            attributes: private_attributes(props.attributes),
             trailing: reveal_button.then(|| rsx! {
                 ActionIcon {
                     aria_label,
@@ -120,5 +134,67 @@ pub fn PasswordField(props: PasswordFieldProps) -> Element {
                 }
             }),
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use dioxus::dioxus_core::AttributeValue;
+
+    use super::*;
+    use crate::LiberoProvider;
+
+    fn html(app: fn() -> Element) -> String {
+        let mut dom = VirtualDom::new(app);
+        dom.rebuild_in_place();
+        dioxus_ssr::render(&dom)
+    }
+
+    fn texts(attributes: &[Attribute], name: &str) -> Vec<String> {
+        attributes
+            .iter()
+            .filter(|attribute| attribute.name == name)
+            .map(|attribute| match &attribute.value {
+                AttributeValue::Text(text) => text.clone(),
+                other => panic!("{other:?}"),
+            })
+            .collect()
+    }
+
+    /// Todo 4294: a cloud spellcheck must not see the secret, hidden or revealed.
+    #[test]
+    fn the_hidden_input_turns_off_spellcheck_correction_and_capitals() {
+        let page = html(|| rsx! { LiberoProvider { PasswordField { label: "Secret" } } });
+        assert!(page.contains("type=\"password\""), "{page}");
+        assert!(page.contains("spellcheck=\"false\""), "{page}");
+        assert!(page.contains("autocorrect=\"off\""), "{page}");
+        assert!(page.contains("autocapitalize=\"off\""), "{page}");
+    }
+
+    /// The reveal only flips `type`; the attributes it renders are these either way.
+    #[test]
+    fn the_defaults_are_set_once_and_do_not_depend_on_the_reveal() {
+        let attributes = private_attributes(Vec::new());
+        assert_eq!(texts(&attributes, "spellcheck"), ["false"]);
+        assert_eq!(texts(&attributes, "autocorrect"), ["off"]);
+        assert_eq!(texts(&attributes, "autocapitalize"), ["off"]);
+    }
+
+    #[test]
+    fn a_caller_attribute_replaces_its_default() {
+        let caller = vec![
+            Attribute::new("spellcheck", "true", None, false),
+            Attribute::new("autocapitalize", "words", None, false),
+        ];
+        let attributes = private_attributes(caller);
+        assert_eq!(texts(&attributes, "spellcheck"), ["true"]);
+        assert_eq!(texts(&attributes, "autocapitalize"), ["words"]);
+        assert_eq!(texts(&attributes, "autocorrect"), ["off"]);
+
+        let page = html(|| {
+            rsx! { LiberoProvider { PasswordField { label: "Secret", "spellcheck": "true" } } }
+        });
+        assert!(page.contains("spellcheck=\"true\""), "{page}");
+        assert!(!page.contains("spellcheck=\"false\""), "{page}");
     }
 }
