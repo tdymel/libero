@@ -74,7 +74,8 @@ field_props! {
         /// With `multiple`, the most files a pick or a drop keeps; the rest are refused.
         #[props(default)]
         max_files: Option<usize>,
-        /// The largest file, in bytes, a pick or a drop keeps; a larger one is refused.
+        /// The largest file, in bytes, a pick or a drop keeps; a larger one is
+        /// refused. With `crop`, the cut file is held to it, not the picked one.
         #[props(default)]
         max_size: Option<u64>,
         /// The `accept` attribute (`.pdf`, `image/*`, ...), applied to drops too.
@@ -251,6 +252,8 @@ pub fn FileField(props: FileFieldProps) -> Element {
         intakes,
         take,
         pick,
+        #[cfg(feature = "image-cropper")]
+        cropped,
     } = use_file_intake(Taking {
         onchange: props.onchange,
         setter: bound.setter(),
@@ -428,7 +431,7 @@ pub fn FileField(props: FileFieldProps) -> Element {
 
     #[cfg(feature = "image-cropper")]
     let gate = crop.map(|options| {
-        rsx! { CropGate { pending, options, emit, owed, oncrop: props.oncrop } }
+        rsx! { CropGate { pending, options, cropped, oncrop: props.oncrop } }
     });
     #[cfg(not(feature = "image-cropper"))]
     let gate: Option<Element> = None;

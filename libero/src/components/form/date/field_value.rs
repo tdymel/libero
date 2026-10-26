@@ -206,6 +206,18 @@ impl<T: FieldValue + Ord> FieldValue for DateRange<T> {
     }
 }
 
+/// Typed text as a value the field may hold: a range typed with one end is unreadable,
+/// as only the picker holds a half range.
+pub(super) fn read_whole<V: FieldValue>(
+    text: &str,
+    formats: &Formats,
+    current: Option<V>,
+    today: Option<NaiveDate>,
+) -> Result<V, Unreadable> {
+    let read = V::read(text, formats, current, today)?;
+    read.is_complete().then_some(read).ok_or(Unreadable)
+}
+
 /// Which rule a typed value broke, so the field can say which.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub(super) enum Refusal {
@@ -456,6 +468,22 @@ mod tests {
         );
         let text = moments.show(&formats);
         assert_eq!(DateRange::read(&text, &formats, None, None), Ok(moments));
+    }
+
+    /// Todo 4249: text with one end must not replace a range with a half range.
+    #[test]
+    fn typed_text_with_one_end_is_no_range() {
+        let formats = wave_dash_formats();
+        let day = |day| NaiveDate::from_ymd_opt(2026, 9, day).expect("a real day");
+        let whole = DateRange::new(day(1), Some(day(5)));
+        let read = |text: &str| read_whole::<DateRange<NaiveDate>>(text, &formats, None, None);
+        assert_eq!(read("2026年9月1日 ～ 2026年9月5日"), Ok(whole));
+        assert_eq!(read("2026年9月1日"), Err(Unreadable));
+        assert_eq!(read("2026年9月1日 ～ "), Err(Unreadable));
+        assert_eq!(
+            read_whole::<NaiveDate>("2026年9月1日", &formats, None, None),
+            Ok(day(1))
+        );
     }
 
     #[test]

@@ -5,7 +5,6 @@ use dioxus::html::FileData;
 use dioxus::prelude::*;
 
 use super::files::Files;
-use super::rows::FocusDebt;
 use crate::{
     components::{
         buttons::Button,
@@ -31,11 +30,16 @@ const CROPPED_TYPES: &[&str] = &[
     "image/avif",
 ];
 
+/// Whether `file` is an image `crop` applies to.
+pub(super) fn crops(file: &FileData) -> bool {
+    file.content_type()
+        .is_some_and(|kind| CROPPED_TYPES.contains(&kind.as_str()))
+}
+
 /// The one picked file, when it is an image `crop` applies to.
 pub(super) fn croppable(files: &Files) -> Option<FileData> {
     let file = files.iter().next()?;
-    let kind = file.content_type()?;
-    (files.len() == 1 && CROPPED_TYPES.contains(&kind.as_str())).then(|| file.clone())
+    (files.len() == 1 && crops(file)).then(|| file.clone())
 }
 
 #[derive(Clone, PartialEq)]
@@ -52,10 +56,9 @@ struct CropArgs {
 pub(super) fn CropGate(
     pending: Signal<Option<FileData>>,
     options: CropOptions,
-    emit: Callback<Files>,
-    /// Owed after Apply: a single-file dropzone puts away the Browse button
-    /// the dialog would hand the focus back to.
-    mut owed: Signal<Option<FocusDebt>>,
+    /// Takes the cut file: it owes the focus after Apply, since a single-file
+    /// dropzone puts away the Browse button the dialog would hand it back to.
+    cropped: Callback<Files>,
     oncrop: Option<EventHandler<CropRect>>,
 ) -> Element {
     let dialog = use_modal(|scope: ModalScope<CropArgs, (CropRect, FileData)>| {
@@ -81,14 +84,13 @@ pub(super) fn CropGate(
                 .ok()
                 .map(|bytes| platform::data_url(&kind, &bytes));
             let args = CropArgs { file, src, options };
-            let Some((rect, cropped)) = dialog.open_with(args).await else {
+            let Some((rect, cut)) = dialog.open_with(args).await else {
                 return;
             };
             if let Some(oncrop) = &oncrop {
                 oncrop.call(rect);
             }
-            owed.set(Some(FocusDebt::Took));
-            emit.call(cropped.into());
+            cropped.call(cut.into());
         });
     });
 

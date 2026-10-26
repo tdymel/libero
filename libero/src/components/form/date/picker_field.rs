@@ -7,7 +7,7 @@ use chrono::NaiveDate;
 use dioxus::prelude::*;
 
 use super::{
-    field_value::{FieldValue, Formats},
+    field_value::{FieldValue, Formats, read_whole},
     range::Iso,
     today::use_today_on_open,
 };
@@ -275,7 +275,7 @@ pub(super) fn use_picker_field<V: FieldValue>(
                 emit(None);
                 return None;
             }
-            let read = V::read(&text, &formats, value, today).map_err(|_| {
+            let read = read_whole(&text, &formats, value, today).map_err(|_| {
                 Rc::new(|locale: &Localization| V::unreadable(&locale.date).to_string())
                     as Rc<dyn FieldError>
             });
