@@ -128,6 +128,7 @@ base_props! {
         #[props(default)]
         active: Option<bool>,
         /// Overrides the `Combobox`'s `disabled` for this row: greyed, `aria-disabled`, not pickable.
+        /// Inside a `Combobox` the arrow keys skip only rows its `OptionList` disables, so disable them there.
         #[props(default)]
         disabled: Option<bool>,
         #[props(default)]
