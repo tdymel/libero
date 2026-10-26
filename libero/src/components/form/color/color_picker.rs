@@ -549,6 +549,19 @@ mod tests {
             }
         });
         assert!(hue.iter().any(|warning| warning == never), "{hue:?}");
+
+        // A readonly `Slider` without `oninput` never changing is the point.
+        let readonly = crate::utils::warnings_of(|| {
+            rsx! {
+                crate::LiberoProvider {
+                    crate::components::Slider::<f64> { value: 5.0, readonly: true, aria_label: "Volume" }
+                }
+            }
+        });
+        assert!(
+            !readonly.iter().any(|warning| warning == never),
+            "{readonly:?}"
+        );
     }
 
     #[test]
