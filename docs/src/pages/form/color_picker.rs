@@ -163,6 +163,7 @@ pub fn ColorPickerPage() -> Element {
                     "The preset row is a group named \"Color swatches\" (localized, `ColorLabels::swatches`), unless you name the picker.",
                 ])
                 .must([
+                    "Give a picker you name `role: \"group\"` beside its `aria-label`: the root is a plain `div` that takes no name, and the swatch row then drops its own.",
                     "Name swatches with `Swatches::labelled`. By default they are named by their hex, which a screen reader spells out.",
                     "Give a standalone `HueSlider` or `AlphaSlider` an `aria_label`. Otherwise screen readers announce an unnamed slider.",
                     "Give a `ColorSwatch` with `onclick` an `aria-label`; without one it is just \"button\", and it warns.",

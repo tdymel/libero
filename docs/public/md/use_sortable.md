@@ -18,12 +18,12 @@ component for its grab handle, element, move buttons and `style()`. On drop
 ```rust
 use dioxus::prelude::*;
 use libero::{
-    components::{ActionIcon, Box, Orientation, Pictogram, VisuallyHidden},
+    components::{Box, Orientation, Pictogram, VisuallyHidden},
     hooks::{
         SortableMove, SortableOptions, drag_handle_sx, use_id, use_labelled_sortable_item,
         use_sortable,
     },
-    sx::sx,
+    sx::{Sx, sx},
 };
 use pictogram_icons_lucide as lucide;
 
@@ -92,28 +92,50 @@ fn Item(index: usize, name: &'static str, horizontal: bool) -> Element {
                 onpointerdown: move |event| item.onpointerdown.call(event),
                 onkeydown: move |event| item.onkeydown.call(event),
                 onblur: move |event| item.onblur.call(event),
-                sx: drag_handle_sx().padding("0").border("0").background("transparent")
-                    .color("inherit").cursor("grab"),
+                sx: control_sx(drag_handle_sx()).cursor("grab"),
                 Pictogram { icon: lucide::grip_vertical::outlined, width: "1em", height: "1em" }
             }
             Box { id: "{help}", hidden: true, {item.instructions} }
             Box { component: "span", "{name}" }
-            ActionIcon {
+            // Mounted, so the hook moves the focus along with the item.
+            Box {
+                component: "button",
+                r#type: "button",
                 aria_label: "Move {name} earlier",
-                size: "sm",
-                icon: earlier,
                 disabled: (item.first)(),
+                onmounted: item.earlier.mount(),
                 onclick: move |event| item.onearlier.call(event),
+                sx: control_sx(sx()),
+                Pictogram { icon: earlier, width: "1em", height: "1em" }
             }
-            ActionIcon {
+            Box {
+                component: "button",
+                r#type: "button",
                 aria_label: "Move {name} later",
-                size: "sm",
-                icon: later,
                 disabled: (item.last)(),
+                onmounted: item.later.mount(),
                 onclick: move |event| item.onlater.call(event),
+                sx: control_sx(sx()),
+                Pictogram { icon: later, width: "1em", height: "1em" }
             }
         }
     }
+}
+
+/// A bare icon button with the 24px target size of WCAG 2.5.8.
+fn control_sx(base: Sx) -> Sx {
+    base.display("inline-flex")
+        .align_items("center")
+        .justify_content("center")
+        .min_width("24px")
+        .min_height("24px")
+        .padding("0")
+        .border("0")
+        .border_radius("sm")
+        .background("transparent")
+        .color("inherit")
+        .cursor("pointer")
+        .selector(":disabled", sx().opacity("0.4").cursor("default"))
 }
 ```
 
@@ -153,7 +175,7 @@ not its index.
 | `onpointerdown`, `onkeydown`, `onblur` | `Callback<Event<..>>` | The grab handle's: Space or Enter lifts and drops, the arrows move, Escape cancels, and focus leaving it cancels a keyboard move. |
 | `instructions` | `&'static str` | The localized key instructions for the grab handle. Render them in a hidden element with an id of yours and point the handle's `aria-describedby` at it. |
 | `touch_instructions` | `&'static str` | For a touch screen that shows the move buttons: a tap lifts nothing, so it points to them. Use it instead of `instructions` there. |
-| `earlier`, `later` | `ElementHandle` | The buttons moving the item one slot up or down (back or forward in a row), without a drag. |
+| `earlier`, `later` | `ElementHandle` | The buttons moving the item one slot up or down (back or forward in a row), without a drag. Mount them: a move takes the item's node out of the page, and the focus comes back to them. |
 | `onearlier`, `onlater` | `Callback<Event<MouseData>>` | Their click handlers. |
 | `first`, `last` | `Memo<bool>` | The item has no slot before or after it. |
 | `dragging` | `Memo<bool>` | This item is the one being dragged. |

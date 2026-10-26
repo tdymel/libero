@@ -85,10 +85,13 @@ pub(crate) fn Lightbox(opening: LightboxOpening, options: LightboxOptions) -> El
     // The swap jumps, so a smooth scroll fetches nothing it passes. Counted once
     // per gallery, or the user's next move would jump too.
     let jump = use_context_provider(CarouselJump::default);
+    // The strip's own: it lands where it already is and would release the stage early (todo 4364).
+    let strip_jump = use_hook(CarouselJump::default);
     let counted = use_hook(|| Rc::new(RefCell::new(opening.clone())));
     if pending && *counted.borrow() != opening {
         *counted.borrow_mut() = opening.clone();
         jump.swapped();
+        strip_jump.swapped();
     }
     if pending {
         // The old `<img>`s are about to go, so focus on one would drop to the page.
@@ -247,6 +250,7 @@ pub(crate) fn Lightbox(opening: LightboxOpening, options: LightboxOptions) -> El
 
     // The zoomable picture is the tab stop, so the stage's track takes none.
     jump.set_slide_stop(options.zoom);
+    strip_jump.set_slide_stop(options.zoom);
     let stage_body = match count {
         // One picture has nothing to page through, so no carousel: its region
         // and "1 of 1" would only be noise.
@@ -365,23 +369,32 @@ pub(crate) fn Lightbox(opening: LightboxOpening, options: LightboxOptions) -> El
                         framework_sx: &LIGHTBOX_THUMBNAILS_SX,
                         variables: thumbnails_variables,
                         "data-slot": LightboxPart::Thumbnails.slot(),
-                        Carousel {
-                            aria_label: localization.lightbox.thumbnails,
-                            slides: thumbnails,
-                            // Follows the picture, never leads it: a clamped
-                            // index near the ends is the strip's business.
-                            index: Some(current),
-                            per_view: shown,
-                            gap: theme.lightbox.thumbnails_gap,
-                            align: "center",
-                            controls: false,
-                            indicators: false,
+                        OwnJump { jump: strip_jump.clone(),
+                            Carousel {
+                                aria_label: localization.lightbox.thumbnails,
+                                slides: thumbnails,
+                                // Follows the picture, never leads it: a clamped
+                                // index near the ends is the strip's business.
+                                index: Some(current),
+                                per_view: shown,
+                                gap: theme.lightbox.thumbnails_gap,
+                                align: "center",
+                                controls: false,
+                                indicators: false,
+                            }
                         }
                     }
                 }
             }
         }
     }
+}
+
+/// Hands the carousels inside a jump of their own.
+#[component]
+fn OwnJump(jump: CarouselJump, children: Element) -> Element {
+    use_context_provider(|| jump);
+    children
 }
 
 #[cfg(test)]

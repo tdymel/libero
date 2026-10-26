@@ -531,6 +531,11 @@ async fn wait_stage_smooth(page: &Page) -> Result<()> {
     .await
 }
 
+/// A function finding the stage's track: the innermost scroller round the frames.
+const FIND_STAGE_TRACK: &str = "() => [...document.querySelectorAll('[role=dialog] *')] \
+    .filter(el => el.querySelector(':scope [data-lightbox-frame]') && el.scrollWidth > el.clientWidth) \
+    .pop()";
+
 async fn gallery_swap(page: &Page, viewport: Viewport) -> Result<()> {
     // Smooth scrolling is the defect, so it has to be on. The suite's Chromium
     // scrolls instantly (todo 687): the spy below reads what was asked for.
@@ -559,6 +564,21 @@ async fn gallery_swap(page: &Page, viewport: Viewport) -> Result<()> {
          list.getEntries().forEach((entry) => window.__swapFetched.add(entry.name))) \
          .observe({ type: 'resource' })",
     )
+    .await?;
+    // Where the track stood as each new `src` was set: Chromium defers a lazy fetch, so
+    // an early `src` fetched nothing and only this shows it (todo 4363).
+    page.evaluate_bounded(format!(
+        "(() => {{ window.__srcAt = []; \
+           const note = (img, value) => {{ if (String(value).endsWith('?second')) \
+             window.__srcAt.push([img, ({FIND_STAGE_TRACK})()?.scrollLeft]); }}; \
+           const setAttribute = Element.prototype.setAttribute; \
+           Element.prototype.setAttribute = function (name, value) {{ \
+             if (this instanceof HTMLImageElement && name === 'src') note(this, value); \
+             return setAttribute.call(this, name, value); }}; \
+           const src = Object.getOwnPropertyDescriptor(HTMLImageElement.prototype, 'src'); \
+           Object.defineProperty(HTMLImageElement.prototype, 'src', {{ ...src, \
+             set(value) {{ note(this, value); src.set.call(this, value); }} }}); }})()"
+    ))
     .await?;
     // The trigger is under the modal, so a script presses it.
     page.evaluate_bounded("document.querySelector('#swap-gallery').click()")
@@ -612,6 +632,19 @@ async fn gallery_swap(page: &Page, viewport: Viewport) -> Result<()> {
         "every swapped picture to take its src once the track jumped",
     )
     .await?;
+    let early: Vec<String> = page
+        .evaluate_bounded(format!(
+            "(() => {{ const left = ({FIND_STAGE_TRACK})().scrollLeft; \
+               return window.__srcAt \
+                 .filter(([img, at]) => img.loading === 'lazy' && img.closest('[data-lightbox-frame]') \
+                   && !(Math.abs(at - left) <= 1)) \
+                 .map(([img, at]) => `${{img.closest('[data-lightbox-frame]').dataset.lightboxFrame}} at ${{at}}, not ${{left}}`); }})()"
+        ))
+        .await?
+        .into_value()?;
+    if !early.is_empty() {
+        bail!("lazy pictures took their src before the track jumped: {early:?}");
+    }
 
     // None at all when the picture's focus scroll got the track there first.
     let scrolls = motion::scrolls(page).await?;

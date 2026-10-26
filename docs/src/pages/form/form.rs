@@ -108,8 +108,10 @@ fn form_code(values: &DemoValues, _: &str) -> String {
         true => String::new(),
         false => format!("\nuse libero::components::{{{}}};", imports.join(", ")),
     };
-    let std_imports = match loading {
-        true => "\nuse std::time::Duration;",
+    // Both wait on `delay`, printed below with its imports (todo 4370).
+    let waits = loading || username;
+    let std_imports = match waits {
+        true => "\nuse std::{cell::{Cell, RefCell}, rc::Rc, task::{Poll, Waker}, time::Duration};",
         false => "",
     };
     let mut extra_fields = String::new();
@@ -189,6 +191,9 @@ fn form_code(values: &DemoValues, _: &str) -> String {
     }
     if handle {
         code += &format!("\n\n{}", FILE.section("check_button"));
+    }
+    if waits {
+        code += &format!("\n\n{}", FILE.section("delay"));
     }
     code
 }
@@ -621,6 +626,8 @@ fn NewPasswordFieldset(#[props(into)] path: FieldName<NewPassword>) -> Element {
     }
 }
 
+// demo-code: delay start
+/// A timer as a future: stands in for the request a real app would await.
 async fn delay(duration: Duration) {
     let Some(timer) = libero::platform::timer() else {
         return;
@@ -646,3 +653,4 @@ async fn delay(duration: Duration) {
     })
     .await
 }
+// demo-code: delay end

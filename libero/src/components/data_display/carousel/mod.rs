@@ -64,6 +64,12 @@ impl Default for CarouselJump {
     }
 }
 
+impl PartialEq for CarouselJump {
+    fn eq(&self, other: &Self) -> bool {
+        Rc::ptr_eq(&self.0, &other.0)
+    }
+}
+
 impl CarouselJump {
     /// Marks a swap, from the render that draws it.
     pub(crate) fn swapped(&self) {

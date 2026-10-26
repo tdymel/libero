@@ -1,11 +1,11 @@
 use dioxus::prelude::*;
 use libero::{
-    components::{ActionIcon, Box, Orientation, Pictogram, VisuallyHidden},
+    components::{Box, Orientation, Pictogram, VisuallyHidden},
     hooks::{
         SortableMove, SortableOptions, drag_handle_sx, use_id, use_labelled_sortable_item,
         use_sortable,
     },
-    sx::sx,
+    sx::{Sx, sx},
 };
 use pictogram_icons_lucide as lucide;
 
@@ -74,26 +74,48 @@ fn Item(index: usize, name: &'static str, horizontal: bool) -> Element {
                 onpointerdown: move |event| item.onpointerdown.call(event),
                 onkeydown: move |event| item.onkeydown.call(event),
                 onblur: move |event| item.onblur.call(event),
-                sx: drag_handle_sx().padding("0").border("0").background("transparent")
-                    .color("inherit").cursor("grab"),
+                sx: control_sx(drag_handle_sx()).cursor("grab"),
                 Pictogram { icon: lucide::grip_vertical::outlined, width: "1em", height: "1em" }
             }
             Box { id: "{help}", hidden: true, {item.instructions} }
             Box { component: "span", "{name}" }
-            ActionIcon {
+            // Mounted, so the hook moves the focus along with the item.
+            Box {
+                component: "button",
+                r#type: "button",
                 aria_label: "Move {name} earlier",
-                size: "sm",
-                icon: earlier,
                 disabled: (item.first)(),
+                onmounted: item.earlier.mount(),
                 onclick: move |event| item.onearlier.call(event),
+                sx: control_sx(sx()),
+                Pictogram { icon: earlier, width: "1em", height: "1em" }
             }
-            ActionIcon {
+            Box {
+                component: "button",
+                r#type: "button",
                 aria_label: "Move {name} later",
-                size: "sm",
-                icon: later,
                 disabled: (item.last)(),
+                onmounted: item.later.mount(),
                 onclick: move |event| item.onlater.call(event),
+                sx: control_sx(sx()),
+                Pictogram { icon: later, width: "1em", height: "1em" }
             }
         }
     }
+}
+
+/// A bare icon button with the 24px target size of WCAG 2.5.8.
+fn control_sx(base: Sx) -> Sx {
+    base.display("inline-flex")
+        .align_items("center")
+        .justify_content("center")
+        .min_width("24px")
+        .min_height("24px")
+        .padding("0")
+        .border("0")
+        .border_radius("sm")
+        .background("transparent")
+        .color("inherit")
+        .cursor("pointer")
+        .selector(":disabled", sx().opacity("0.4").cursor("default"))
 }
