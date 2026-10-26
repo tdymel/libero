@@ -604,7 +604,8 @@ pub(super) fn DateTimeRangeFlow(props: DateTimeRangeFlowProps) -> Element {
         (&root, refresh_today),
         rsx! {
             {strip}
-            {hidden(props.name, value, disabled)}
+            // A half range posts nothing (todo 4253).
+            {hidden(props.name, value.filter(|range| range.end.is_some()), disabled)}
         },
     )
 }

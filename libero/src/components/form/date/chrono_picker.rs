@@ -423,6 +423,36 @@ mod tests {
         assert_soft(&html, 9);
     }
 
+    /// Todo 4253: a half range posts nothing, a whole one posts `start/end`.
+    #[test]
+    fn a_half_range_posts_nothing() {
+        use super::super::{DateRange, DateRangePicker};
+        use chrono::NaiveDateTime;
+
+        let day = |d| NaiveDate::from_ymd_opt(2026, 9, d).expect("a real day");
+        let moment = |d| day(d).and_hms_opt(9, 0, 0).expect("a real time");
+        let html = dioxus_ssr::render_element(rsx! {
+            crate::LiberoProvider {
+                DateRangePicker { name: "a", value: DateRange::new(day(1), None) }
+                ChronoPicker::<DateRange<NaiveDateTime>> {
+                    name: "b",
+                    value: DateRange::new(moment(1), None),
+                }
+                DateRangePicker { name: "c", value: DateRange::new(day(1), Some(day(5))) }
+            }
+        });
+        let posted: Vec<_> = html
+            .split("<input")
+            .skip(1)
+            .map(|tag| tag.split('>').next().unwrap_or_default())
+            .filter(|tag| tag.contains(r#"type="hidden""#))
+            .collect();
+        assert_eq!(posted.len(), 3, "{html}");
+        assert!(!posted[0].contains("2026"), "{}", posted[0]);
+        assert!(!posted[1].contains("2026"), "{}", posted[1]);
+        assert!(posted[2].contains("2026-09-01/2026-09-05"), "{}", posted[2]);
+    }
+
     /// Todo 3881: a disabled `Fieldset` disables the picker as its own prop does.
     #[test]
     fn a_disabled_fieldset_disables_the_picker() {

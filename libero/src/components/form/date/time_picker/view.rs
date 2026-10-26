@@ -56,6 +56,19 @@ pub(super) static TWO_DIGITS: [&str; 60] = [
     "48", "49", "50", "51", "52", "53", "54", "55", "56", "57", "58", "59",
 ];
 
+/// The first (`last` false) or last value on the hand's `step`, the other hands kept.
+pub(super) fn face_edge(hand: Hand, base: NaiveTime, step: u32, last: bool) -> NaiveTime {
+    let (hour, minute, second) = (base.hour(), base.minute(), base.second());
+    match (hand, last) {
+        (Hand::Hour, false) => at(0, minute, second),
+        (Hand::Hour, true) => at(23, minute, second),
+        (Hand::Minute, false) => at(hour, 0, second),
+        (Hand::Minute, true) => at(hour, 59 / step * step, second),
+        (Hand::Second, false) => at(hour, minute, 0),
+        (Hand::Second, true) => at(hour, minute, 59 / step * step),
+    }
+}
+
 pub(super) fn at(hour: u32, minute: u32, second: u32) -> NaiveTime {
     NaiveTime::from_hms_opt(hour, minute, second).expect("in range")
 }
@@ -268,16 +281,7 @@ impl ClockView {
             }
             Key::Named(NamedKey::Home) | Key::Named(NamedKey::End) => {
                 let last = event.key() == Key::Named(NamedKey::End);
-                let (hour, minute, second) =
-                    (self.base.hour(), self.base.minute(), self.base.second());
-                let edge = match (hand(), last) {
-                    (Hand::Hour, false) => at(0, minute, second),
-                    (Hand::Hour, true) => at(23, minute, second),
-                    (Hand::Minute, false) => at(hour, 0, second),
-                    (Hand::Minute, true) => at(hour, 59 / step * step, second),
-                    (Hand::Second, false) => at(hour, minute, 0),
-                    (Hand::Second, true) => at(hour, minute, 59),
-                };
+                let edge = face_edge(hand(), self.base, step, last);
                 match self.open(edge) {
                     true => Some(edge),
                     false => self.stepped(edge, if last { -1 } else { 1 }),

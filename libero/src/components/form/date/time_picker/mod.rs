@@ -266,4 +266,22 @@ mod tests {
         assert_eq!(neighbours("Hours"), ["12", "16"]);
         assert_eq!(neighbours("Seconds"), ["15", "45"]);
     }
+
+    /// Todo 4252: End on the second hand lands on the last value of `second_step`.
+    #[test]
+    fn end_on_the_second_hand_keeps_to_its_step() {
+        let base = view::at(9, 30, 10);
+        assert_eq!(
+            view::face_edge(Hand::Second, base, 15, true),
+            view::at(9, 30, 45)
+        );
+        assert_eq!(
+            view::face_edge(Hand::Second, base, 1, true),
+            view::at(9, 30, 59)
+        );
+        assert_eq!(
+            view::face_edge(Hand::Second, base, 15, false),
+            view::at(9, 30, 0)
+        );
+    }
 }

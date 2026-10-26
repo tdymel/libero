@@ -46,6 +46,8 @@ pub struct DateLocale {
     pub week: &'static str,
     /// The error a date field shows for text it cannot read.
     pub invalid_date: &'static str,
+    /// The error a time field shows for text it cannot read.
+    pub invalid_time: &'static str,
     /// The error for a value before `min`, with no `max`: `{min}` in the field's format.
     pub on_or_after: &'static str,
     /// The error for a value after `max`, with no `min`: `{max}`.
@@ -178,6 +180,7 @@ impl DateLocale {
         next_days: "Next days",
         week: "Week",
         invalid_date: "Not a valid date",
+        invalid_time: "Not a valid time",
         on_or_after: "Must be on or after {min}",
         on_or_before: "Must be on or before {max}",
         between: "Must be between {min} and {max}",
@@ -249,6 +252,7 @@ impl DateLocale {
         next_days: "Nächste Tage",
         week: "Woche",
         invalid_date: "Kein gültiges Datum",
+        invalid_time: "Keine gültige Uhrzeit",
         // "Frühestens" and "spätestens" fit a day and a time alike.
         on_or_after: "Frühestens {min}",
         on_or_before: "Spätestens {max}",

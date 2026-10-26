@@ -110,6 +110,10 @@ impl FieldValue for NaiveTime {
     fn dialog_label(names: &DateLocale) -> &'static str {
         names.time_label
     }
+
+    fn unreadable(names: &DateLocale) -> &'static str {
+        names.invalid_time
+    }
 }
 
 impl FieldValue for NaiveDateTime {
@@ -412,6 +416,19 @@ mod tests {
         );
         // A single value keeps its full text.
         assert_eq!(day(9, 14).show_short(&formats), None);
+    }
+
+    /// Todo 4251: unreadable time text says time, a date-time keeps the date wording.
+    #[test]
+    fn unreadable_time_says_time() {
+        let names = &DateLocale::ENGLISH;
+        assert_eq!(NaiveTime::unreadable(names), "Not a valid time");
+        assert_eq!(NaiveDate::unreadable(names), "Not a valid date");
+        assert_eq!(NaiveDateTime::unreadable(names), "Not a valid date");
+        assert_eq!(
+            NaiveTime::unreadable(&DateLocale::GERMAN),
+            "Keine gültige Uhrzeit"
+        );
     }
 
     fn wave_dash_formats() -> Formats {

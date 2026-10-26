@@ -531,7 +531,8 @@ impl Sealed for DateRange<NaiveDate> {
                 size,
                 focusable: args.focusable,
                 disabled: args.disabled,
-                hidden: hidden_value(args.name, value),
+                // A half range posts nothing, as DateRangeField does (todo 4253).
+                hidden: hidden_value(args.name, value.filter(|range| range.end.is_some())),
                 class: args.class,
                 sx: args.sx,
                 parts: args.parts,
