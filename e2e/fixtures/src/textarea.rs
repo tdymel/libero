@@ -3,7 +3,7 @@
 //! puts one in a scrolling ancestor (1201).
 
 use dioxus::prelude::*;
-use libero::components::{Button, Flex, Form, Text, TextField, Textarea, use_form};
+use libero::components::{Button, Fieldset, Flex, Form, Text, TextField, Textarea, use_form};
 
 use crate::Routes;
 
@@ -11,6 +11,7 @@ pub const ROUTES: Routes = &[
     ("/textarea/counter", || rsx! { CounterPage {} }),
     ("/textarea/reset", || rsx! { ResetPage {} }),
     ("/textarea/raw-reset", || rsx! { RawResetPage {} }),
+    ("/textarea/raw-reset-fieldset", || rsx! { RawFieldsetResetPage {} }),
     ("/textarea/echo", || rsx! { EchoPage {} }),
     ("/textarea/scroller", || rsx! { ScrollerPage {} }),
 ];
@@ -52,6 +53,26 @@ fn RawResetPage() -> Element {
                     counter: true,
                     maxlength: "20",
                     initial_value: "hi",
+                }
+                button { r#type: "reset", "Clear" }
+            }
+        }
+    }
+}
+
+/// Todo 685 inside a standalone `Fieldset`, whose own scope must not hide the raw reset.
+#[component]
+fn RawFieldsetResetPage() -> Element {
+    rsx! {
+        Flex { direction: "column", gap: "md", max_width: "320px",
+            form {
+                Fieldset::<()> { label: "Notes",
+                    Textarea {
+                        label: "Remark",
+                        counter: true,
+                        maxlength: "20",
+                        initial_value: "hi",
+                    }
                 }
                 button { r#type: "reset", "Clear" }
             }
