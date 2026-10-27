@@ -337,9 +337,9 @@ pub fn FormPage() -> Element {
                 render: move |values: DemoValues| {
                     let on = |name: &str| values.str(name) == "true";
                     let (handle, async_submit) = (on("form"), on("async_submit"));
-                    // Remounted: the `Form` takes its `form` handle once, on mount.
+                    // Remounted when the `Form` gains or loses its `form` handle, which it takes once, on mount.
                     rsx! {
-                        Remount { on: "{handle}{async_submit}",
+                        Remount { on: "{handle || async_submit}",
                             SignupForm {
                                 summary_title: on("summary_title"),
                                 hidden: on("summary_hidden"),
@@ -451,7 +451,14 @@ fn SignupForm(
                 Flex { gap: "sm",
                     Button { r#type: "submit", loading: form.is_submitting(), "Create account" }
                     CheckButton {}
-                    Button { variant: "outlined", onclick: move |_| form.reset(), "Clear" }
+                    Button {
+                        variant: "outlined",
+                        onclick: move |_| {
+                            form.reset();
+                            sent.set(String::new());
+                        },
+                        "Clear"
+                    }
                 }
                 // demo-code: handle_buttons end
             } else if async_submit {

@@ -2,7 +2,8 @@
 
 use crate::{
     components::common::{
-        SVG_FIT, inset_focus_ring_sx, ring_overlay_sx, safe_area_padding, svg_fit_sx,
+        COARSE_POINTER, SVG_FIT, inset_focus_ring_sx, ring_overlay_sx, safe_area_padding,
+        svg_fit_sx,
     },
     hooks::drag_handle_sx,
     sx::{FORCED_COLORS, REDUCED_MOTION, StaticSx, sx},
@@ -133,7 +134,7 @@ pub(super) static LIGHTBOX_IMAGE_SX: StaticSx = StaticSx::new(|| {
 });
 
 // Lifted: Blitz hit-tests a zoomed picture past its frame's clip, so a press
-// here panned it (todo 916).
+// here panned it (todo 916). A finger's 44px hit areas need 14px between the 30px buttons.
 pub(super) static LIGHTBOX_TOOLBAR_SX: StaticSx = StaticSx::new(|| {
     sx().position("relative")
         .z_index("1")
@@ -141,6 +142,7 @@ pub(super) static LIGHTBOX_TOOLBAR_SX: StaticSx = StaticSx::new(|| {
         .align_items("center")
         .justify_content("flex-end")
         .gap("sm")
+        .media(COARSE_POINTER, sx().gap("14px"))
         .margin_bottom("md")
 });
 

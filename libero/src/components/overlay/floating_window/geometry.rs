@@ -156,6 +156,13 @@ pub(super) fn use_window_geometry(
             }
         }
     });
+    // Pinning puts the window back at `placement`, as its doc says.
+    let pinned_on = pinned.is_some();
+    use_effect(use_reactive!(|pinned_on| {
+        if pinned_on && position.peek().is_some() {
+            position.set(None);
+        }
+    }));
     // Where a pointer drag started, read once at pointerdown.
     let mut move_origin = use_signal(|| None::<(f64, f64)>);
     let mut size_origin = use_signal(|| None::<(f64, f64)>);

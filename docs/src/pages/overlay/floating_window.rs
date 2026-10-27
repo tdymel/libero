@@ -4,8 +4,9 @@ use libero::{
     components::{
         Button, Code, Dialog, Flex, FloatingWindowOptions, FloatingWindowPart, Text, WindowRect,
     },
-    hooks::{ModalScope, use_floating_window, use_modal},
+    hooks::{ModalScope, use_floating_window, use_media_query, use_modal},
     sx::sx,
+    theme::Size,
 };
 
 /// The three windows the preview opens: the name its handle has in the
@@ -127,9 +128,15 @@ fn wrap_example(values: &DemoValues, _: &str) -> String {
 fn WindowDemo(resizable: bool, pinned: bool, report: bool, values: DemoValues) -> Element {
     let mut last = use_signal(|| None::<WindowRect>);
     let record = use_callback(move |rect: WindowRect| last.set(Some(rect)));
+    let phone = use_media_query(&format!("(width < {})", Size::Sm.breakpoint_value()));
     let options = move |title: &str, placement: &str| FloatingWindowOptions {
         title: Some(title.into()),
-        placement: placement.into(),
+        // Below `sm` the middle of the screen holds the trigger row, so Notes sits at the top.
+        placement: match (phone(), placement) {
+            (true, "center-end") => "top-end",
+            _ => placement,
+        }
+        .into(),
         resizable,
         pinned,
         // A narrow phone page keeps room beside a window.
@@ -271,7 +278,7 @@ pub fn FloatingWindowPage() -> Element {
                     prop("aria_label", "Option<String>").doc("Names the window instead of `title`."),
                     prop("placement", "Input<Placement>").default("center-center").doc("Where it first appears. Once dragged, it stays where it was put, inside the viewport."),
                     prop("resizable", "bool").default("false").doc("Draws the corner resize handle."),
-                    prop("pinned", "bool").default("false").doc("Keeps it at `placement`, with no drag, keyboard move or Move menu item."),
+                    prop("pinned", "bool").default("false").doc("Keeps it at `placement`, with no drag, keyboard move or Move menu item; turning it on puts a moved window back."),
                     prop("z_index", "Input<ThemeAwareValue>").doc("Overrides the stacking. Unset, windows sit below overlays and modals."),
                     prop("sx", "Input<Sx>").doc("Styles the window. `min_width`, `max_width`, `min_height` and `max_height` here limit a resize. Unset, the minimum is 12rem by 6rem, room for the title bar and Close. The window never grows past the viewport."),
                     prop("onmove", "Option<Callback<WindowRect>>").doc("Called after a drag, a keyboard or button move, or a Reset, in viewport pixels."),

@@ -90,12 +90,14 @@ pub(super) static WINDOW_SX: StaticSx = StaticSx::new(|| {
                 .overflow("auto")
                 .padding("sm"),
         )
-        // The grip's corner stays off a classic scrollbar, so a press there scrolls.
+        // The grip's corner stays off a classic scrollbar, so a press there scrolls; a finger's
+        // 44px grip needs the room too.
         .when(
             "resizable",
             sx().selector(
                 FloatingWindowPart::Body.selector(),
-                sx().margin_bottom("14px"),
+                sx().margin_bottom("14px")
+                    .media(COARSE_POINTER, sx().margin_bottom(COARSE_TARGET)),
             ),
         )
         .selector(

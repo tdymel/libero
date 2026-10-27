@@ -57,8 +57,9 @@ base_props! {
         /// The text searched; plain text, so its matches can be found.
         #[props(into)]
         text: String,
-        /// Every case-insensitive match is marked; where terms overlap, the longest wins.
-        /// Blank terms match nothing.
+        /// Every match is marked, compared lowercase character by character (no full case
+        /// folding: `istanbul` does not match `İstanbul`); where terms overlap, the longest
+        /// wins. Blank terms match nothing.
         #[props(default)]
         terms: Vec<String>,
         /// Each match's tint, as [`Mark`]'s `color`.
@@ -160,6 +161,18 @@ mod tests {
         assert_eq!(
             highlight_runs("Größe GRÖSSE größe", &terms(&["größe"])),
             [("Größe", true), (" GRÖSSE ", false), ("größe", true)]
+        );
+    }
+
+    #[test]
+    fn case_is_compared_per_character_without_full_folding() {
+        assert_eq!(
+            highlight_runs("İstanbul", &terms(&["istanbul"])),
+            [("İstanbul", false)]
+        );
+        assert_eq!(
+            highlight_runs("İstanbul", &terms(&["İSTANBUL"])),
+            [("İstanbul", true)]
         );
     }
 }

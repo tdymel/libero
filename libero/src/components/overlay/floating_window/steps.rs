@@ -5,12 +5,13 @@ use super::{floating_window::Adjust, options::FloatingWindowPart};
 use crate::{
     components::{
         buttons::{ActionIcon, Button},
-        common::{Glyph, Part},
+        common::{COARSE_POINTER, COARSE_TARGET, Glyph, Part},
     },
     context::IconSlot,
     hooks::{escape_closes, use_element},
     localization::FloatingWindowLabels,
     platform::ElementApi,
+    sx::sx,
 };
 
 /// The step buttons the menu's Move or Resize shows, until Done or Escape.
@@ -75,7 +76,14 @@ pub(super) fn WindowSteps(
             {step(down, (0.0, 1.0), rsx! { Glyph { slot: IconSlot::ChevronDown, icon: lucide::chevron_down::outlined } })}
             {step(left, (-1.0, 0.0), rsx! { Glyph { slot: IconSlot::ChevronLeft, icon: lucide::chevron_left::outlined } })}
             {step(right, (1.0, 0.0), rsx! { Glyph { slot: IconSlot::ChevronRight, icon: lucide::chevron_right::outlined } })}
-            Button { variant: "outlined", size: "xs", onclick: move |_| ondone.call(()), "{labels.done}" }
+            Button {
+                variant: "outlined",
+                size: "xs",
+                // A pseudo hit area would be clipped by the button's ripple.
+                sx: sx().media(COARSE_POINTER, sx().height(COARSE_TARGET)),
+                onclick: move |_| ondone.call(()),
+                "{labels.done}"
+            }
         }
     }
 }

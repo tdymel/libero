@@ -64,8 +64,16 @@ pub(super) fn use_page_switch(
         seen.set(pressed);
         if focus_within(&root) {
             let target = page.peek().clone().filter(|target| target.is_connected());
-            if let Some(target) = target {
-                let _ = target.focus();
+            match target {
+                Some(target) => {
+                    let _ = target.focus();
+                }
+                // The saved spot left the page: blur to the body, so the next F6 comes back.
+                None => {
+                    if let Some(active) = active_element() {
+                        let _ = active.blur();
+                    }
+                }
             }
         } else {
             page.set(active_element());
