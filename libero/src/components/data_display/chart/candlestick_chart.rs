@@ -4,14 +4,14 @@ use super::{
     Candle, ChartColor, ChartRange,
     engine::{self, Axes, CandleSpec},
     export::ExportSource,
-    frame::{Frame, Interaction, use_plot_size},
+    frame::{Frame, Interaction, is_named, use_plot_size},
     legend::use_hidden_series,
     overlay::{Layout, OverlaySeries},
     props::chart_props,
     zoom::{cut, use_zoom},
 };
 use crate::{
-    components::common::{Input, input_from_str, names_itself, use_name_warning},
+    components::common::{Input, input_from_str, use_name_warning},
     hooks::{use_accessibility, use_formats, use_localization, use_root_id, use_theme},
     localization::{ChartLabels, Formats, fill},
     theme::{CandleStyle, ChartInk, Color, LegendPosition, Theme, chart_color},
@@ -98,7 +98,7 @@ pub fn CandlestickChart(props: CandlestickChartProps) -> Element {
     let formats = use_formats();
     let id = use_root_id(&props.attributes);
     use_name_warning(
-        props.title.is_some() || names_itself(&props.attributes),
+        is_named(&props.title, &props.attributes),
         "CandlestickChart: no `title` - name the chart: it is how a screen reader finds it.",
     );
     let inverted: Vec<String> = (props.candles.iter().zip(&props.x))

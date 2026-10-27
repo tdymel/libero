@@ -347,6 +347,44 @@ async fn zoom_keys<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
 
 e2e::scenario!(the_keys_zoom_pan_and_brush, "/line-chart-zoom", zoom_keys);
 
+/// Ctrl, Alt and Meta chords, the browser's page zoom among them, leave the focused plot alone.
+#[test]
+fn modifier_chords_go_to_the_browser() {
+    use e2e::{Fixture, Viewport, browser::block_on};
+    const MINUS: keyboard::Key = keyboard::Key {
+        key: "-",
+        code: "Minus",
+        vk: 189,
+        text: Some("-"),
+    };
+    block_on(async {
+        let fixture = Fixture::open("/line-chart-zoom", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        page.evaluate_bounded(format!("document.querySelector({LAYER:?}).focus()"))
+            .await
+            .unwrap();
+        let keys = [
+            PLUS,
+            MINUS,
+            ZERO,
+            keyboard::ARROW_RIGHT,
+            keyboard::HOME,
+            keyboard::END,
+            keyboard::ENTER,
+        ];
+        let probe = format!(
+            "[document.querySelector('#active').textContent, \
+             document.querySelector('{RESET}').getAttribute('aria-disabled')]"
+        );
+        keyboard::assert_chords_ignored(page, &keys, &probe)
+            .await
+            .unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
 /// A sideways drag over the plot brushes a band of x values; the hover and click stay.
 async fn brushes<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
     let plot = d.rect(LAYER).await?;

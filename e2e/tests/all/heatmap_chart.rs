@@ -47,7 +47,7 @@ fn the_cells_write_their_values_and_the_scale_keys_an_empty_one() {
         assert!(
             summary.contains("Heatmap of 2 rows by 3 columns, values 5 to 50.")
                 && summary.contains("Highest: Tue, 3 pm: 50. Lowest: Tue, 9 am: 5.")
-                && summary.contains("Tue: 9 am 5, 12 pm no value, 3 pm 50."),
+                && summary.contains("Tue: 9 am: 5, 12 pm: no value, 3 pm: 50."),
             "{summary}"
         );
         fixture.close().await.unwrap();

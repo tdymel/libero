@@ -2223,6 +2223,26 @@ fn a_heatmap_writes_values_that_fit_their_cells() {
     assert!(labels(&spec).is_empty());
 }
 
+/// A cell's label is black or white by the cell's own colour, not the renderer's lightness test.
+#[test]
+fn a_heatmap_label_reads_on_its_cell() {
+    let mut spec = heatmap(vec![vec![Some(1.0), Some(10.0)]]);
+    let fill_of = |svg: &str, label: &str| -> String {
+        let end = svg.find(&format!(">{label}</text>")).expect(label);
+        let tag = &svg[svg[..end].rfind("<text ").expect("tag")..end];
+        let from = tag.find("fill=\"").expect("fill") + 6;
+        tag[from..from + 7].to_string()
+    };
+    let drawn = draw_heatmap(&spec).expect("drawn");
+    assert_eq!(fill_of(&drawn.svg, "1"), "#000000", "{}", drawn.svg);
+    assert_eq!(fill_of(&drawn.svg, "10"), "#FFFFFF", "{}", drawn.svg);
+    spec.steps = 2;
+    spec.values = vec![vec![Some(6.0)]];
+    spec.colors = vec![HexColor::new(0xFFFFFF), HexColor::new(0x000000)];
+    let drawn = draw_heatmap(&spec).expect("drawn");
+    assert_eq!(fill_of(&drawn.svg, "6"), "#FFFFFF", "{}", drawn.svg);
+}
+
 fn candles(ohlc: bool) -> CandleSpec {
     CandleSpec {
         width: 400.0,

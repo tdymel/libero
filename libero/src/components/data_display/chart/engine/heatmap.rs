@@ -77,8 +77,6 @@ pub(crate) fn draw_heatmap(spec: &HeatmapSpec) -> Option<Drawn> {
     scale.max = high as f32;
     scale.colors = spec.colors.iter().map(|color| ink(*color)).collect();
     scale.steps = spec.steps;
-    scale.min_font_color = (0, 0, 0).into();
-    scale.max_font_color = (255, 255, 255).into();
     chart.series.label.formatter = format!("{LABEL_MARK}{{c}}");
     let svg = chart.svg().ok()?;
     let svg = fit_x_labels(&svg, &spec.x, spec.width, spec.height);
@@ -97,7 +95,8 @@ pub(crate) fn draw_heatmap(spec: &HeatmapSpec) -> Option<Drawn> {
         spec.format
             .format(value, spec.unit.as_deref(), spec.formats)
     };
-    let svg = write_cell_labels(&svg, &marks, spec.labels, write);
+    let ink_on_cell = |value: f64| spec.ink.on(cell_color(spec, value));
+    let svg = write_cell_labels(&svg, &marks, spec.labels, write, ink_on_cell);
     marks.sort_by_key(|mark| (mark.series, mark.index));
     let plot = Plot::of(&svg, spec.width, spec.height);
     let svg = match spec.scale {
@@ -144,6 +143,23 @@ pub(super) fn gradient(colors: &[HexColor], position: f64) -> HexColor {
     HexColor::new(
         (mix(from.r(), to.r()) << 16) | (mix(from.g(), to.g()) << 8) | mix(from.b(), to.b()),
     )
+}
+
+/// The colour of the cell of `value`: its class's on a stepped scale, else its gradient's.
+fn cell_color(spec: &HeatmapSpec, value: f64) -> HexColor {
+    let (low, high) = spec.range;
+    let high = if high > low { high } else { low + 1.0 };
+    let share = ((value - low) / (high - low)).clamp(0.0, 1.0);
+    let position = match spec.steps >= 2 {
+        true => {
+            let class = (share * spec.steps as f64)
+                .floor()
+                .min(spec.steps as f64 - 1.0);
+            class / (spec.steps - 1) as f64
+        }
+        false => share,
+    };
+    gradient(&spec.colors, position)
 }
 
 /// The heatmap's SVG grown by its scale: a bar under the plot from the lowest value's colour
@@ -276,12 +292,14 @@ pub(super) fn restyle_cells(svg: &str, ink: &ChartInk) -> String {
 }
 
 /// A cell's label written by `write` at its middle, in the renderer's order of `marks`;
-/// left out unless `show`, or when wider or taller than its cell.
+/// left out unless `show`, or when wider or taller than its cell. A label is filled with
+/// `fill` of its value.
 pub(super) fn write_cell_labels(
     svg: &str,
     marks: &[Mark],
     show: bool,
     write: impl Fn(f64) -> String,
+    fill: impl Fn(f64) -> HexColor,
 ) -> String {
     let mut out = String::with_capacity(svg.len());
     let mut rest = svg;
@@ -323,10 +341,14 @@ pub(super) fn write_cell_labels(
         if !show || text_width(&attributes, &label) > width - 2.0 * EDGE || size > *height {
             continue;
         }
+        let fill = fill(*value).to_string();
         let kept: String = attributes
             .iter()
             .filter(|(attribute, _)| !matches!(*attribute, "x" | "y" | "dominant-baseline"))
-            .map(|(attribute, value)| format!(" {attribute}=\"{value}\""))
+            .map(|(attribute, value)| match *attribute {
+                "fill" => format!(" fill=\"{fill}\""),
+                _ => format!(" {attribute}=\"{value}\""),
+            })
             .collect();
         let _ = write!(
             out,

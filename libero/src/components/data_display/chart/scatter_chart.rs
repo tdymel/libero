@@ -4,13 +4,13 @@ use super::{
     ScatterSeries, Trend,
     engine::{self, Axes, ScatterSpec, ScatterSpecSeries},
     export::ExportSource,
-    frame::{Frame, Interaction, axis_titles, chart_unit_of, hex, use_plot_size},
+    frame::{Frame, Interaction, axis_titles, chart_unit_of, hex, is_named, use_plot_size},
     legend::use_hidden_series,
     overlay::{Layout, OverlaySeries},
     props::chart_props,
 };
 use crate::{
-    components::common::{Input, names_itself, use_name_warning},
+    components::common::{Input, use_name_warning},
     hooks::{use_accessibility, use_formats, use_localization, use_root_id, use_theme},
     localization::{ChartLabels, fill},
     theme::{ChartInk, PointSymbol, Theme, chart_palette},
@@ -84,7 +84,7 @@ pub fn ScatterChart(props: ScatterChartProps) -> Element {
     let formats = use_formats();
     let id = use_root_id(&props.attributes);
     use_name_warning(
-        props.title.is_some() || names_itself(&props.attributes),
+        is_named(&props.title, &props.attributes),
         "ScatterChart: no `title` - name the chart: it is how a screen reader finds it.",
     );
 

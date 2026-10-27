@@ -688,7 +688,13 @@ impl ValueFormat {
             Self::Auto => trim_zeros(format!("{value:.*}", auto_decimals(value))),
             Self::Fixed(decimals) => format!("{value:.*}", usize::from(*decimals)),
             Self::Percent => {
-                let share = trim_zeros(format!("{:.1}", value * 100.0));
+                let share = value * 100.0;
+                let decimals = if share.abs() < 0.1 {
+                    auto_decimals(share)
+                } else {
+                    1
+                };
+                let share = trim_zeros(format!("{share:.decimals$}"));
                 return format!("{}%", formats.write_number(&share));
             }
         };
@@ -752,6 +758,17 @@ mod tests {
         assert_eq!(auto.format(0.0, None, en), "0");
         assert_eq!(ValueFormat::Fixed(2).format(1.0, None, en), "1.00");
         assert_eq!(ValueFormat::Percent.format(0.425, None, de), "42,5%");
+    }
+
+    #[test]
+    fn a_tiny_share_never_reads_zero_percent() {
+        let (en, de) = (&Formats::AMERICAN, &Formats::GERMAN);
+        let percent = ValueFormat::Percent;
+        assert_eq!(percent.format(0.0004, None, en), "0.04%");
+        assert_eq!(percent.format(-0.00012, None, de), "-0,01%");
+        assert_eq!(percent.format(0.000012, None, de), "0,0012%");
+        assert_eq!(percent.format(0.0, None, en), "0%");
+        assert_eq!(percent.format(0.0123, None, en), "1.2%");
     }
 
     /// Todo 3335 s5: the whole is grouped in threes with the locale's separator.

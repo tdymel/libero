@@ -5,7 +5,7 @@ use super::{
     engine::{self, Axes, BarSpec, SeriesExtras, SeriesSpec},
     export::ExportSource,
     frame::{
-        Frame, Interaction, axis_titles, band_summary, chart_unit, hex, mark_line_specs,
+        Frame, Interaction, axis_titles, band_summary, chart_unit, hex, is_named, mark_line_specs,
         mark_point_specs, overlay_series, series_specs, shown_places, summary, use_plot_size,
         with_extras,
     },
@@ -15,7 +15,7 @@ use super::{
     zoom::{cut, use_zoom, windowed},
 };
 use crate::{
-    components::common::{Input, Orientation, names_itself, use_name_warning},
+    components::common::{Input, Orientation, use_name_warning},
     hooks::{use_accessibility, use_formats, use_localization, use_root_id, use_theme},
     localization::fill,
     theme::{BarLabelPosition, BarLayout, ChartInk, chart_palette},
@@ -120,7 +120,7 @@ pub fn BarChart(props: BarChartProps) -> Element {
     let formats = use_formats();
     let id = use_root_id(&props.attributes);
     use_name_warning(
-        props.title.is_some() || names_itself(&props.attributes),
+        is_named(&props.title, &props.attributes),
         "BarChart: no `title` - name the chart: it is how a screen reader finds it.",
     );
 

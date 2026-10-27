@@ -86,6 +86,7 @@ pub(super) fn standalone(
         false => " xmlns=\"http://www.w3.org/2000/svg\"",
     };
     let title = title
+        .filter(|title| !title.trim().is_empty())
         .map(|title| format!("<title>{}</title>", escape(title)))
         .unwrap_or_default();
     // Quotes would end the attribute; a `var()` means nothing outside the page.
@@ -144,6 +145,17 @@ impl ChartHandle {
             *held = Some(owner);
         }
         set_zoom(self.zoom, zoom);
+    }
+
+    /// While the chart shows nothing to export: the drawing goes, the zoom stays.
+    pub(super) fn suspend(&self, owner: u64) {
+        let mut source = self.source;
+        if self.owner.try_peek().is_ok_and(|held| *held == Some(owner))
+            && source.try_peek().is_ok_and(|held| held.is_some())
+            && let Ok(mut slot) = source.try_write()
+        {
+            *slot = None;
+        }
     }
 
     /// On the chart's drop: its drawing and its zoom go with it, unless a newer chart

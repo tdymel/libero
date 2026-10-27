@@ -325,9 +325,6 @@ impl Frame {
             zoom,
         } = self;
         let owner = use_hook(ChartHandle::new_owner);
-        if let Some(handle) = handle {
-            handle.attach(owner, export.clone(), zoom);
-        }
         let held = use_hook(|| CopyValue::new(handle));
         if *held.peek() != handle {
             let mut held = held;
@@ -370,6 +367,12 @@ impl Frame {
             true => vec![labels.all_hidden.to_string()],
             false => summary,
         };
+        if let Some(handle) = handle {
+            match loading || empty || all_hidden {
+                true => handle.suspend(owner),
+                false => handle.attach(owner, export.clone(), zoom),
+            }
+        }
         // A blank title names nothing: no empty heading to point at, and the fallback name stays.
         let title = title.filter(|title| !title.trim().is_empty());
         let title_id = title.as_ref().map(|_| format!("{id}-title"));
@@ -554,6 +557,11 @@ pub(super) fn hex(
         Some(ChartColor::Palette(color, shade)) => chart_color(theme, color, shade, forced),
         None => palette[i % palette.len()],
     }
+}
+
+/// Whether the chart has a name a screen reader finds: a title that is not blank, or its own label.
+pub(super) fn is_named(title: &Option<String>, attributes: &[Attribute]) -> bool {
+    title.as_ref().is_some_and(|title| !title.trim().is_empty()) || names_itself(attributes)
 }
 
 /// The chart's unit: its own, else the one every series shares, for the y axis.

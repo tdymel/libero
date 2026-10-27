@@ -20,7 +20,7 @@ use super::{
 use crate::{
     components::{
         accessibility::use_announcer,
-        common::{Part, focus_ring_sx},
+        common::{Part, focus_ring_sx, has_shortcut_modifier},
     },
     hooks::{use_debounced_callback, use_element, use_escape_dismiss},
     localization::{ChartLabels, Formats, fill},
@@ -845,6 +845,9 @@ pub(super) fn ChartOverlay(props: ChartOverlayProps) -> Element {
         let say_point = say_point.clone();
         let select = select.clone();
         move |event: Event<KeyboardData>| {
+            if has_shortcut_modifier(&event) {
+                return;
+            }
             if let Some(zoom) = zoom {
                 let (start, end) = zoom.peek();
                 // Around the keys' point, else the middle.

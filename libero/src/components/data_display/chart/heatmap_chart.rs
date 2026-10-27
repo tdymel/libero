@@ -4,13 +4,13 @@ use super::{
     ChartColor,
     engine::{self, HeatmapSpec},
     export::ExportSource,
-    frame::{Frame, Interaction, use_plot_size},
+    frame::{Frame, Interaction, is_named, use_plot_size},
     legend::use_hidden_series,
     overlay::{Layout, OverlaySeries},
     props::chart_props,
 };
 use crate::{
-    components::common::{Input, names_itself, use_name_warning},
+    components::common::{Input, use_name_warning},
     hooks::{use_accessibility, use_formats, use_localization, use_root_id, use_theme},
     localization::{ChartLabels, fill},
     theme::{ChartInk, Color, ColorShade, HexColor, LegendPosition, Theme, chart_color, chart_hex},
@@ -74,7 +74,7 @@ pub fn HeatmapChart(props: HeatmapChartProps) -> Element {
     let formats = use_formats();
     let id = use_root_id(&props.attributes);
     use_name_warning(
-        props.title.is_some() || names_itself(&props.attributes),
+        is_named(&props.title, &props.attributes),
         "HeatmapChart: no `title` - name the chart: it is how a screen reader finds it.",
     );
     let ragged = props.values.len() != props.y.len()
@@ -348,8 +348,8 @@ mod tests {
             html.contains("Highest: Mon, 12 pm: 30. Lowest: Tue, 9 am: 8."),
             "{html}"
         );
-        assert!(html.contains("Mon: 9 am 12, 12 pm 30."), "{html}");
-        assert!(html.contains("Tue: 9 am 8, 12 pm no value."), "{html}");
+        assert!(html.contains("Mon: 9 am: 12, 12 pm: 30."), "{html}");
+        assert!(html.contains("Tue: 9 am: 8, 12 pm: no value."), "{html}");
         assert!(html.contains("No value"), "{html}");
         assert!(!html.contains("NaN"), "{html}");
     }

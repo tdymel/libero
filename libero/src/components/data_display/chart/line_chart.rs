@@ -5,7 +5,7 @@ use super::{
     engine::{self, Axes, LineSpec},
     export::ExportSource,
     frame::{
-        Frame, Interaction, axis_titles, band_summary, chart_unit, mark_line_specs,
+        Frame, Interaction, axis_titles, band_summary, chart_unit, is_named, mark_line_specs,
         mark_point_specs, overlay_series, series_specs, shown_places, summary, use_plot_size,
         with_extras,
     },
@@ -15,7 +15,7 @@ use super::{
     zoom::{cut, use_zoom, windowed},
 };
 use crate::{
-    components::common::{Input, names_itself, use_name_warning},
+    components::common::{Input, use_name_warning},
     hooks::{use_accessibility, use_formats, use_localization, use_root_id, use_theme},
     localization::fill,
     theme::{ChartInk, Curve},
@@ -105,7 +105,7 @@ pub fn LineChart(props: LineChartProps) -> Element {
     let formats = use_formats();
     let id = use_root_id(&props.attributes);
     use_name_warning(
-        props.title.is_some() || names_itself(&props.attributes),
+        is_named(&props.title, &props.attributes),
         "LineChart: no `title` - name the chart: it is how a screen reader finds it.",
     );
 
@@ -146,7 +146,8 @@ pub fn LineChart(props: LineChartProps) -> Element {
         .iter()
         .cloned()
         .partition(|series| series.secondary_axis);
-    // Each y axis writes the unit its series share.
+    // Each y axis writes the unit its series share, as the values do, else the chart's.
+    let y_unit = chart_unit(&None, &left).or(props.unit.clone());
     let y2_unit = chart_unit(&None, &right).or(props.unit.clone());
     let write = |series: &Series, value: f64| {
         let unit = series.unit.as_deref().or(unit.as_deref());
@@ -197,7 +198,7 @@ pub fn LineChart(props: LineChartProps) -> Element {
         stroke_width: theme.chart.stroke_width,
         ink: ChartInk::of(theme, forced),
         format: props.value_format,
-        unit: chart_unit(&props.unit, &left),
+        unit: y_unit,
         y2_unit,
         formats,
     };

@@ -5,7 +5,7 @@ description: heatmap_chart at desktop (rest)
 expression: tree
 ---
 figure "Visits"
-  description "Heatmap of 2 rows by 3 columns, values 5 to 50. Highest: Tue, 3 pm: 50. Lowest: Tue, 9 am: 5. Mon: 9 am 10, 12 pm 40, 3 pm 25. Tue: 9 am 5, 12 pm no value, 3 pm 50."
+  description "Heatmap of 2 rows by 3 columns, values 5 to 50. Highest: Tue, 3 pm: 50. Lowest: Tue, 9 am: 5. Mon: 9 am: 10, 12 pm: 40, 3 pm: 25. Tue: 9 am: 5, 12 pm: no value, 3 pm: 50."
   StaticText "Visits"
   application "Visits" [roledescription=chart]
     description "Arrow keys move between points, Enter selects one."
@@ -15,8 +15,8 @@ figure "Visits"
   paragraph
     StaticText "Highest: Tue, 3 pm: 50. Lowest: Tue, 9 am: 5."
   paragraph
-    StaticText "Mon: 9 am 10, 12 pm 40, 3 pm 25."
+    StaticText "Mon: 9 am: 10, 12 pm: 40, 3 pm: 25."
   paragraph
-    StaticText "Tue: 9 am 5, 12 pm no value, 3 pm 50."
+    StaticText "Tue: 9 am: 5, 12 pm: no value, 3 pm: 50."
 paragraph
 paragraph

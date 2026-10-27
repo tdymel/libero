@@ -4,13 +4,13 @@ use super::{
     Slice, ValueFormat,
     engine::{self, FunnelSpec, SeriesSpec},
     export::ExportSource,
-    frame::{Frame, Interaction, hex, overlay_series, shown_places, use_plot_size},
+    frame::{Frame, Interaction, hex, is_named, overlay_series, shown_places, use_plot_size},
     legend::use_hidden_series,
     overlay::Layout,
     props::chart_props,
 };
 use crate::{
-    components::common::{Input, names_itself, use_name_warning},
+    components::common::{Input, use_name_warning},
     hooks::{use_accessibility, use_formats, use_localization, use_root_id, use_theme},
     localization::{ChartLabels, fill},
     theme::{ChartInk, PieLabels, chart_palette},
@@ -56,7 +56,7 @@ pub fn FunnelChart(props: FunnelChartProps) -> Element {
     let formats = use_formats();
     let id = use_root_id(&props.attributes);
     use_name_warning(
-        props.title.is_some() || names_itself(&props.attributes),
+        is_named(&props.title, &props.attributes),
         "FunnelChart: no `title` - name the chart: it is how a screen reader finds it.",
     );
     let rising = props

@@ -4,13 +4,13 @@ use super::{
     RadarAxis, Series,
     engine::{self, RadarSpec, RadarSpecSeries},
     export::ExportSource,
-    frame::{Frame, Interaction, chart_unit, hex, use_plot_size},
+    frame::{Frame, Interaction, chart_unit, hex, is_named, use_plot_size},
     legend::use_hidden_series,
     overlay::{Layout, OverlaySeries},
     props::chart_props,
 };
 use crate::{
-    components::common::{Input, names_itself, use_name_warning},
+    components::common::{Input, use_name_warning},
     hooks::{use_accessibility, use_formats, use_localization, use_root_id, use_theme},
     localization::{ChartLabels, fill},
     theme::{ChartInk, PointSymbol, Theme, chart_palette},
@@ -69,7 +69,7 @@ pub fn RadarChart(props: RadarChartProps) -> Element {
     let formats = use_formats();
     let id = use_root_id(&props.attributes);
     use_name_warning(
-        props.title.is_some() || names_itself(&props.attributes),
+        is_named(&props.title, &props.attributes),
         "RadarChart: no `title` - name the chart: it is how a screen reader finds it.",
     );
     let count = props.axes.len();
