@@ -211,7 +211,7 @@ fn main() {
 
 The Platforms workflow builds the docs app for iOS, macOS and Windows and runs
 the e2e scenarios on each, informational and not part of the required check. A
-scenario that flakes is fixed or skipped. 714 scenarios exist; the last
+scenario that flakes is fixed or skipped. 715 scenarios exist; the last
 column counts the ones left out on that platform, besides 33 that exist for
 Android only.
 
@@ -219,9 +219,9 @@ Android only.
 |---|---|---|
 | iOS (WKWebView) | The simulator build, and the e2e suite in an iPhone simulator, with taps and keys injected through AXe. | 148: 120 because the simulator's tap, drag or Tab did not drive the page, 20 because a touch screen has no hover or wheel. |
 | macOS desktop (WKWebView) | The desktop build, and the e2e suite in a WKWebView window, with the app sending its own NSEvents. | 132: 89 shared with every desktop WebView (the Tab bridge, element identity, touch input) and 43 only here, mostly WebKit not focusing a clicked button and WKWebView misreading list clicks, a fixed bar and wheel scrolls. |
-| macOS native (Blitz) | The Blitz build, and the e2e suite on a windowless CPU renderer. | 60: 58 shared with Blitz on Linux (charts, right-to-left scrolling, media), a panic on a windowed table and a doubled Backspace. |
+| macOS native (Blitz) | The Blitz build, and the e2e suite on a windowless CPU renderer. | 61: 59 shared with Blitz on Linux (charts, right-to-left scrolling, media), a panic on a windowed table and a doubled Backspace. |
 | Windows desktop (WebView2) | The desktop build, and the e2e suite in a WebView2 window, driven over its DevTools port. | 95: 89 shared with every desktop WebView and 6 only here (End in a tall listbox, Shift+Tab out of a date input, an early drop's focus, a picture's asset path). |
-| Windows native (Blitz) | The Blitz build, and the e2e suite on a windowless CPU renderer. | 59: 58 shared with Blitz on Linux and a panic on a windowed table. |
+| Windows native (Blitz) | The Blitz build, and the e2e suite on a windowless CPU renderer. | 60: 59 shared with Blitz on Linux and a panic on a windowed table. |
 
 No real device has run libero: iOS is a simulator, macOS and Windows are hosted
 runners. On all three, no system permission prompt is answered except the iOS

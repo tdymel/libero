@@ -332,6 +332,55 @@ e2e::scenario!(
     a_menu_pin_moves_the_column
 );
 
+/// Every text a live region shows from now on, gathered in `window.__said`.
+const RECORD_SAID: &str = "(() => { window.__said = []; new MutationObserver(() => \
+     document.querySelectorAll('[role=status]').forEach(s => window.__said.push(s.textContent))) \
+     .observe(document.body, { subtree: true, childList: true, characterData: true }); })()";
+
+/// 4427, 4416: a menu pin the host refuses is never said, not even once the host pins that column.
+async fn a_refused_menu_pin_is_never_said<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    d.evaluate(RECORD_SAID).await?;
+    d.click("button[aria-label=\"Origin column options\"]")
+        .await?;
+    let pin = menu_entry(d, "Pin to start").await?;
+    d.click(&pin).await?;
+    eventually_text(d, "#pinned", "Name,Origin", "the host to hear the pin").await?;
+    assert_eq!(d.attr("th[aria-label=Origin]", "data-pin").await?, None);
+
+    d.click("#host-pin").await?;
+    eventually(d, "the host's pin of Origin", async |d| {
+        Ok(d.attr("th[aria-label=Origin]", "data-pin")
+            .await?
+            .as_deref()
+            == Some("start"))
+    })
+    .await?;
+    // A later announcement: any pin news would have come before it.
+    d.click("button[aria-label=\"Season column options\"]")
+        .await?;
+    let right = menu_entry(d, "Move right").await?;
+    d.click(&right).await?;
+    eventually(d, "Season's move to be said", async |d| {
+        Ok(d.text("[role=status]").await?.contains("Season"))
+    })
+    .await?;
+    let said = d.evaluate("window.__said.join('|')").await?;
+    let said = said.as_str().unwrap_or_default();
+    assert!(
+        said.contains("Season"),
+        "the live region went unrecorded: {said}"
+    );
+    assert!(!said.contains("pinned"), "a refused pin was said: {said}");
+    Ok(())
+}
+
+e2e::scenario!(
+    a_refused_menu_pin_stays_unsaid,
+    "/table/pinned-refused",
+    a_refused_menu_pin_is_never_said,
+    native: skip("Blitz reads no scripts")
+);
+
 /// Todo 3256: pinned columns that leave the rest under a third of the area are released
 /// (the checkbox column stays held), and pin again when the area grows.
 async fn narrow_areas_release_their_pins<D: Driver>(d: &mut D, _route: &str) -> Result<()> {

@@ -57,6 +57,7 @@ pub const ROUTES: Routes = &[
         "/table/pinned-unsized",
         || rsx! { PinnedTablePage { rtl: false, sized: false } },
     ),
+    ("/table/pinned-refused", || rsx! { RefusedPinsTablePage {} }),
     (
         "/table/windowed",
         || rsx! { WindowedTablePage { pinned: false } },
@@ -604,6 +605,40 @@ fn PinnedTablePage(rtl: bool, #[props(default = true)] sized: bool) -> Element {
                 columns,
             }
             p { id: "pinned", "{pinned}" }
+        }
+    }
+}
+
+/// The pinned table's columns under a host that refuses every menu pin (todo 4427):
+/// `#pinned` echoes the request, `#host-pin` pins Origin itself.
+#[component]
+fn RefusedPinsTablePage() -> Element {
+    let mut asked = use_signal(String::new);
+    let mut held = use_signal(|| PinnedColumns::default().start(["Name"]));
+    let columns = ["Name", "Origin", "Season", "Colour", "Supplier"]
+        .into_iter()
+        .map(|header| {
+            column(header)
+                .value(move |fruit: &Fruit| format!("{}_{header}", fruit.name))
+                .width("160px")
+        })
+        .collect();
+    rsx! {
+        Table {
+            caption: "Fruit catalogue",
+            scroll: true,
+            column_menu: true,
+            row_key: |fruit: &Fruit| fruit.name.to_string(),
+            pinned_columns: held(),
+            onpinnedcolumnschange: move |next: PinnedColumns| asked.set(next.start.join(",")),
+            data: fruit(),
+            columns,
+        }
+        p { id: "pinned", "{asked}" }
+        button {
+            id: "host-pin",
+            onclick: move |_| held.set(PinnedColumns::default().start(["Name", "Origin"])),
+            "Pin Origin"
         }
     }
 }

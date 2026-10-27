@@ -1,6 +1,6 @@
 # Skipped e2e scenarios
 
-Scenarios: 714
+Scenarios: 715
 
 Generated from the `scenario!` skips in `e2e/tests/all` by `cargo test -p e2e --lib skips`; edit the skip, not this file. A reason starting `upstream:` waits on Dioxus, Blitz, wry or the engine (revisit on their update, todo 3362), a number names the todo that removes it.
 
@@ -361,6 +361,7 @@ The performance scenarios (units `perf`, `table_perf`) are no skips but run on r
 | `table_groups::a_windowed_footer_holds_and_ends_the_rows` | ios | a touch screen has no wheel |
 | `table_groups::a_windowed_scrollbar_stops_above_the_footer` | android | 958: element identity on the WebView |
 | `table_groups::a_windowed_scrollbar_stops_above_the_footer` | native | 1010: Blitz paints its own bar, ours is not drawn |
+| `table_pins::a_refused_menu_pin_stays_unsaid` | native | Blitz reads no scripts |
 | `table_pins::narrow_areas_release_their_pins_and_wide_ones_pin_again` | desktop | its window cannot be narrowed |
 | `table_pins::narrow_areas_release_their_pins_and_wide_ones_pin_again` | native | 1024px is wide enough for the pins |
 | `table_reorder::a_cancelled_grip_drag_moves_no_column` | native | Blitz reads no scripts |

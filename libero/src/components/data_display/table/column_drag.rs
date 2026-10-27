@@ -6,7 +6,10 @@ use dioxus::{
 };
 use pictogram_icons_lucide as lucide;
 
-use super::{column_order::dropped, use_table::StateSlice};
+use super::{
+    column_order::{as_headers, dropped},
+    use_table::StateSlice,
+};
 use crate::{
     components::{accessibility::Announcer, common::Glyph},
     context::IconSlot,
@@ -72,7 +75,8 @@ pub(super) struct DropPlan {
 
 impl DropPlan {
     /// Column `key` dropped at gap `gap` of the unpinned keys `over`: the header order and
-    /// its place among the shown columns from 1, as the menu's Move says it.
+    /// its place among the shown columns from 1, as the menu's Move says it. `None` when
+    /// nothing moves or namesakes would pass one another, which the header order cannot hold.
     fn drop(&self, over: &[String], key: &str, gap: usize) -> Option<(Vec<String>, Option<usize>)> {
         let keys: Vec<String> = self.ranked.iter().map(|(key, _)| key.clone()).collect();
         let next = dropped(&keys, over, key, gap)?;
@@ -81,15 +85,7 @@ impl DropPlan {
             .filter(|next| self.unpinned.iter().any(|(_, shown)| shown == *next))
             .position(|next| next == key)
             .map(|at| self.lead + at + 1);
-        let headers = next
-            .iter()
-            .filter_map(|next| {
-                self.ranked
-                    .iter()
-                    .find(|(ranked, _)| ranked == next)
-                    .map(|(_, header)| header.clone())
-            })
-            .collect();
+        let headers = as_headers(self.ranked.iter().map(|(key, header)| (key, header)), &next)?;
         Some((headers, place))
     }
 }
@@ -481,7 +477,10 @@ pub(super) fn ColumnDragGrip(
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use super::{
+        super::column_order::{ranked, tests::headers},
+        *,
+    };
 
     #[test]
     fn gaps_sit_at_each_start_edge_and_after_the_last_column() {
@@ -529,17 +528,26 @@ mod tests {
         assert_eq!(plan.drop(&keys(&plan), "A", 0), None);
     }
 
-    /// 4417: two columns titled alike move by key, the other staying put.
+    /// 4417, 4428: two columns titled alike move by key, the other staying put; a drop
+    /// passing one over the other is refused, as the header order cannot hold it.
     #[test]
     fn a_repeated_header_drops_by_its_key() {
-        let plan = plan(&[("Name", "Name"), ("Age", "Age"), ("Name-1", "Name")], 0);
+        let specs = headers(&["Name", "Age", "Name"]);
+        let named: Vec<_> = specs
+            .iter()
+            .map(|s| (s.key.as_str(), s.header.as_str()))
+            .collect();
+        let plan = plan(&named, 0);
 
-        let (order, place) = plan.drop(&keys(&plan), "Name-1", 1).unwrap();
-        assert_eq!(order, ["Name", "Name", "Age"]);
+        // The stored order ranks the columns as dropped.
+        let (order, place) = plan.drop(&keys(&plan), "Name\u{1f}1", 1).unwrap();
+        assert_eq!(ranked(&specs, &order), [0, 2, 1]);
         assert_eq!(place, Some(2));
         let (order, place) = plan.drop(&keys(&plan), "Name", 2).unwrap();
-        assert_eq!(order, ["Age", "Name", "Name"]);
+        assert_eq!(ranked(&specs, &order), [1, 0, 2]);
         assert_eq!(place, Some(2));
+        assert_eq!(plan.drop(&keys(&plan), "Name\u{1f}1", 0), None);
+        assert_eq!(plan.drop(&keys(&plan), "Name", 3), None);
     }
 
     #[test]

@@ -1,11 +1,23 @@
-use super::core::HeaderSpec;
+use super::core::{HeaderSpec, namesake_key};
+
+/// `column_order`'s headers as column keys: a header's `n`th listing keys its `n`th namesake.
+pub(super) fn order_keys(column_order: &[String]) -> Vec<String> {
+    column_order
+        .iter()
+        .enumerate()
+        .map(|(at, header)| {
+            let earlier = column_order[..at].iter().filter(|h| *h == header).count();
+            namesake_key(header, earlier)
+        })
+        .collect()
+}
 
 /// Column indices in `column_order`: listed headers first in its order, the
-/// rest after them in column order. Duplicate headers resolve to the first.
+/// rest after them in column order. A repeated header ranks its namesakes in turn.
 pub(super) fn ranked(headers: &[HeaderSpec], column_order: &[String]) -> Vec<usize> {
     let mut ranked: Vec<usize> = Vec::with_capacity(headers.len());
-    for header in column_order {
-        if let Some(index) = headers.iter().position(|spec| spec.header == *header)
+    for key in order_keys(column_order) {
+        if let Some(index) = headers.iter().position(|spec| spec.key == key)
             && !ranked.contains(&index)
         {
             ranked.push(index);
@@ -38,8 +50,8 @@ pub(super) fn order_unpinned(headers: &[HeaderSpec], order: &mut [usize], column
 }
 
 /// The column order after moving `index` one shown, unpinned column towards the
-/// end (`forward`) or the start; `None` at the edge. Lists every header, so
-/// the order survives showing a hidden column.
+/// end (`forward`) or the start; `None` at the edge or when namesakes would pass
+/// one another, which a header list cannot tell. Lists every header, so the order survives showing a hidden column.
 pub(super) fn moved(
     headers: &[HeaderSpec],
     column_order: &[String],
@@ -57,12 +69,29 @@ pub(super) fn moved(
         false => (0..at).rev().find(|&o| movable(ranked[o]))?,
     };
     ranked.swap(at, other);
-    Some(
-        ranked
-            .into_iter()
-            .map(|index| headers[index].header.clone())
-            .collect(),
-    )
+    let keys: Vec<String> = ranked
+        .iter()
+        .map(|&index| headers[index].key.clone())
+        .collect();
+    as_headers(headers.iter().map(|spec| (&spec.key, &spec.header)), &keys)
+}
+
+/// `keys` as the header list `column_order` holds, or `None` when that list would
+/// read back as other keys: namesakes passing one another.
+pub(super) fn as_headers<'a>(
+    columns: impl Iterator<Item = (&'a String, &'a String)> + Clone,
+    keys: &[String],
+) -> Option<Vec<String>> {
+    let headers: Vec<String> = keys
+        .iter()
+        .map(|key| {
+            columns
+                .clone()
+                .find(|(k, _)| *k == key)
+                .map(|(_, h)| h.clone())
+        })
+        .collect::<Option<_>>()?;
+    (order_keys(&headers) == keys).then_some(headers)
 }
 
 /// The column order, every header by rank, after dropping `header` into gap
@@ -84,7 +113,7 @@ pub(super) fn dropped(
 }
 
 #[cfg(test)]
-mod tests {
+pub(super) mod tests {
     use super::{
         super::{
             cell_value::CellAlign,
@@ -93,12 +122,14 @@ mod tests {
         *,
     };
 
-    fn headers(names: &[&str]) -> Vec<HeaderSpec> {
+    /// Specs keyed as `header_specs` keys them, namesakes apart.
+    pub(in super::super) fn headers(names: &[&str]) -> Vec<HeaderSpec> {
         names
             .iter()
-            .map(|header| HeaderSpec {
+            .zip(order_keys(&strings(names)))
+            .map(|(header, key)| HeaderSpec {
                 header: header.to_string(),
-                key: header.to_string(),
+                key,
                 align: CellAlign::Start,
                 sortable: false,
                 row_header: false,
@@ -185,5 +216,27 @@ mod tests {
         );
         assert_eq!(dropped(&ranked, &unpinned, "C", 1), None);
         assert_eq!(dropped(&ranked, &unpinned, "C", 2), None);
+    }
+
+    /// 4428: a repeated header ranks its namesakes in turn, and a move never swaps them.
+    #[test]
+    fn namesakes_rank_in_turn_and_never_pass_one_another() {
+        let mut specs = headers(&["Name", "Age", "Name", "Id"]);
+
+        assert_eq!(
+            ranked(&specs, &strings(&["Name", "Name", "Age"])),
+            vec![0, 2, 1, 3]
+        );
+        assert_eq!(
+            moved(&specs, &[], 1, true),
+            Some(strings(&["Name", "Name", "Age", "Id"]))
+        );
+        specs[1].hidden = true;
+        assert_eq!(moved(&specs, &[], 0, true), None);
+        assert_eq!(moved(&specs, &[], 2, false), None);
+        assert_eq!(
+            moved(&specs, &[], 2, true),
+            Some(strings(&["Name", "Age", "Id", "Name"]))
+        );
     }
 }

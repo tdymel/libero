@@ -53,5 +53,6 @@ grid "Team" [readonly]
       StaticText "38"
     gridcell "Essen" [readonly]
       StaticText "Essen"
+status [atomic] [live=polite]
 button "After"
   StaticText "After"

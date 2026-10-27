@@ -105,6 +105,8 @@ impl PinNews {
     fn owe(mut self, header: String, side: PinSide, pinned: StateSlice<PinnedColumns>) {
         self.0.set(Some((header.clone(), side)));
         // A pin the host refused lapses with the event's renders: no later pin vouches for it.
+        // A refusing host renders nothing: this render runs the check below now.
+        dioxus::core::needs_update();
         let mut news = self.0;
         dioxus::core::queue_effect(move || {
             if pinned.peek().side(&header) != Some(side)

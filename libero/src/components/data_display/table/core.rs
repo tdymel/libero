@@ -190,11 +190,17 @@ pub(super) fn header_specs<T>(
             .iter()
             .filter(|spec| spec.header == specs[index].header)
             .count();
-        if earlier > 0 {
-            specs[index].key = format!("{}\u{1f}{earlier}", specs[index].header);
-        }
+        specs[index].key = namesake_key(&specs[index].header, earlier);
     }
     specs
+}
+
+/// The key of the column titled `header` after `earlier` namesakes.
+pub(super) fn namesake_key(header: &str, earlier: usize) -> String {
+    match earlier {
+        0 => header.to_string(),
+        _ => format!("{header}\u{1f}{earlier}"),
+    }
 }
 
 /// The sorted columns by header index, in priority order.
