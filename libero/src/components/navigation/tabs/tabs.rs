@@ -4,12 +4,11 @@ use super::core::{TabSpec, TabsView, render_tabs};
 use crate::{
     components::common::{
         ClassList, Input, OptionLabel, OptionSource, Options, Parts, States, base_color,
-        input_from_str, parts_enum, parts_under_sx, use_identity_keys,
+        input_from_str, parts_enum, parts_under_sx, use_identity_keys, use_name_warning,
     },
     hooks::{use_root_id, use_theme},
     sx::{Sx, ThemeAwareValue},
     theme::{Size, TabsActivation, TabsPlacement},
-    utils::warn,
 };
 
 input_from_str!(TabsActivation);
@@ -105,20 +104,23 @@ pub fn Tabs<T: Options>(props: TabsProps<T>) -> Element {
     let root = use_root_id(&props.attributes);
     let theme = use_theme();
 
-    if props.onchange.is_none() {
-        warn("Tabs: without `onchange` the selection can never change.");
-    }
-    if props.panel.is_none() {
-        warn("Tabs: without `panel` there is nothing below the tabs to show.");
-    }
+    use_name_warning(
+        props.onchange.is_some(),
+        "Tabs: without `onchange` the selection can never change.",
+    );
+    use_name_warning(
+        props.panel.is_some(),
+        "Tabs: without `panel` there is nothing below the tabs to show.",
+    );
 
     let list = props.options.or_static();
     let values = list.values();
     let option_disabled = list.disabled();
     let selected = values.iter().position(|value| *value == props.value);
-    if selected.is_none() {
-        warn("Tabs: `value` is not one of the tabs, so none is selected.");
-    }
+    use_name_warning(
+        selected.is_some(),
+        "Tabs: `value` is not one of the tabs, so none is selected.",
+    );
 
     let keys = use_identity_keys(&values);
     let tabs: Vec<TabSpec> = values

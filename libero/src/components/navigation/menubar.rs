@@ -8,9 +8,9 @@ use dioxus::prelude::*;
 use crate::{
     components::{
         common::{
-            HtmlTag, Input, Part, Parts, ROW_HOVER_TINT, ScaleOrCss, States, Variables, base_props,
-            disabled_look_sx, forced_on_sx, has_shortcut_modifier, inset_focus_ring_sx, parts_enum,
-            use_label_keys, use_name_warning, variables,
+            COARSE_POINTER, HtmlTag, Input, Part, Parts, ROW_HOVER_TINT, ScaleOrCss, States,
+            Variables, base_props, disabled_look_sx, forced_on_sx, has_shortcut_modifier,
+            inset_focus_ring_sx, parts_enum, use_label_keys, use_name_warning, variables,
         },
         layout::use_box,
     },
@@ -63,6 +63,7 @@ static MENUBAR_SX: StaticSx = StaticSx::new(|| {
                 // WCAG 2.5.8's 24px floor, whatever line height the bar inherits (todo 2421).
                 .box_sizing("border-box")
                 .min_height("24px")
+                .media(COARSE_POINTER, sx().min_height("44px"))
                 .appearance("none")
                 .border("0")
                 .border_radius(MENUBAR_TRIGGER_RADIUS.value())
@@ -77,12 +78,19 @@ static MENUBAR_SX: StaticSx = StaticSx::new(|| {
                 .cursor("pointer")
                 .user_select("none"),
         )
-        // Hover, focus and an open menu share one tint, as `Menu`'s items.
+        // Hover, keyboard focus and an open menu share one tint, as `Menu`'s items. Hover only
+        // with a hovering pointer, and no tint on a tap's `:focus`, or a closed menu looks open.
+        .media(
+            "(hover: hover)",
+            sx().selector(
+                format!("{trigger}:hover:not([aria-disabled=\"true\"])"),
+                sx().background(ROW_HOVER_TINT),
+            ),
+        )
         .selector(
-            format!("{trigger}:hover:not([aria-disabled=\"true\"])"),
+            format!("{trigger}:focus-visible"),
             sx().background(ROW_HOVER_TINT),
         )
-        .selector(format!("{trigger}:focus"), sx().background(ROW_HOVER_TINT))
         // Forced colours drop the tint, so the open trigger takes `Highlight` (todo 2420).
         .selector(
             format!("{trigger}[aria-expanded=\"true\"]"),

@@ -4,10 +4,10 @@ use pictogram_icons_lucide as lucide;
 use crate::{
     components::{
         common::{
-            Glyph, HtmlTag, Input, Part, ROW_HOVER_TINT, States, StyleAttributes, Variables, attr,
-            base_props, disabled_look_sx, forced_on_sx, inset_focus_ring_sx, on_start_bar_sx,
-            on_tint_color, parts_enum, parts_source, sx_source, use_style_attributes, variables,
-            with_parts,
+            COARSE_POINTER, Glyph, HtmlTag, Input, Part, ROW_HOVER_TINT, States, StyleAttributes,
+            Variables, attr, base_props, disabled_look_sx, forced_on_sx, inset_focus_ring_sx,
+            on_start_bar_sx, on_tint_color, parts_enum, parts_source, sx_source,
+            use_style_attributes, variables, with_parts,
         },
         form::use_fieldset_disabled,
         layout::{Collapse, box_style, use_box},
@@ -94,10 +94,13 @@ static NAV_LINK_BASE_SX: StaticSx = StaticSx::new(|| {
         // Inset: a full-width link in a scrolling sidebar would clip an outset ring.
         .focus_visible(inset_focus_ring_sx("-2px"))
         // Neutral grey, so hover doesn't preview the active tint. Skips a disabled
-        // link (todo 596); `:where` keeps `:hover`'s specificity.
-        .selector(
-            "&:hover:not(:where([data-state~=\"disabled\"]))",
-            sx().background(ROW_HOVER_TINT),
+        // link (todo 596); `:where` keeps `:hover`'s specificity. Hovering pointers only, or a tap sticks.
+        .media(
+            "(hover: hover)",
+            sx().selector(
+                "&:hover:not(:where([data-state~=\"disabled\"]))",
+                sx().background(ROW_HOVER_TINT),
+            ),
         )
         // The tint is too faint to mark the state alone, so a coloured start bar
         // does; a full ring would read as the focus ring. After each `background`, which resets it.
@@ -115,9 +118,12 @@ static NAV_LINK_BASE_SX: StaticSx = StaticSx::new(|| {
                 .selector(NavLinkPart::Description.selector(), sx().color("inherit")),
         )
         // The dimmed grey is under 4.5:1 on the hover grey and the active tint.
-        .selector(
-            "&:hover:not(:where([data-state~=\"disabled\"])) > [data-slot='body'] > [data-slot='description']",
-            sx().color("inherit"),
+        .media(
+            "(hover: hover)",
+            sx().selector(
+                "&:hover:not(:where([data-state~=\"disabled\"])) > [data-slot='body'] > [data-slot='description']",
+                sx().color("inherit"),
+            ),
         )
         // Without `href` it has nothing to follow.
         .when("disabled", disabled_look_sx("not-allowed"))
@@ -164,6 +170,7 @@ static NAV_GROUP_SX: StaticSx = StaticSx::new(|| {
                 .flex_shrink("0")
                 .min_width("32px")
                 .min_height("32px")
+                .media(COARSE_POINTER, sx().min_width("44px"))
                 .padding("0")
                 .border("0")
                 .border_radius(SizeCss::RADIUS.value(Size::Sm))
@@ -171,7 +178,10 @@ static NAV_GROUP_SX: StaticSx = StaticSx::new(|| {
                 .color("inherit")
                 .cursor("pointer")
                 .focus_visible(inset_focus_ring_sx("-2px"))
-                .hover(sx().background(ROW_HOVER_TINT))
+                .media(
+                    "(hover: hover)",
+                    sx().hover(sx().background(ROW_HOVER_TINT)),
+                )
                 .selector("&[aria-disabled='true']", disabled_look_sx("not-allowed"))
                 .selector(
                     "& > svg",

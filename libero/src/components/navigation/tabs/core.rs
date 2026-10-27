@@ -34,7 +34,9 @@ static TABS_SX: StaticSx = StaticSx::new(|| {
             sx().display("flex")
                 .align_items("stretch")
                 .overflow_x("auto")
-                .box_shadow(line),
+                .box_shadow(line)
+                // Lifts the 3px indicator above a phone's overlay scrollbar thumb (todo 4635).
+                .media(COARSE_POINTER, sx().padding_bottom("6px")),
         )
         .selector(
             "& [role=\"tab\"]",
@@ -67,9 +69,13 @@ static TABS_SX: StaticSx = StaticSx::new(|| {
             "& [role=\"tab\"]:focus-visible",
             inset_focus_ring_sx("-2px"),
         )
-        .selector(
-            "& [role=\"tab\"]:hover:not([aria-selected=\"true\"]):not([aria-disabled=\"true\"])",
-            sx().background(TABS_HOVER.value()),
+        // Only with a hovering pointer: a tap on touch must not leave the tab lit.
+        .media(
+            "(hover: hover)",
+            sx().selector(
+                "& [role=\"tab\"]:hover:not([aria-selected=\"true\"]):not([aria-disabled=\"true\"])",
+                sx().background(TABS_HOVER.value()),
+            ),
         )
         .selector(
             "& [role=\"tab\"][aria-selected=\"true\"]",
@@ -132,7 +138,8 @@ fn vertical_sx() -> crate::sx::Sx {
                 .flex_shrink("0")
                 .overflow_x("visible")
                 .overflow_y("auto")
-                .max_width("50%"),
+                .max_width("50%")
+                .media(COARSE_POINTER, sx().padding_bottom("0")),
         )
         .selector(
             "& > [role=\"tablist\"] > [role=\"tab\"]",
