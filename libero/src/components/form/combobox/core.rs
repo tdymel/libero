@@ -12,7 +12,7 @@ use crate::{
         form::{
             DropdownPart,
             phone_sheet::{
-                SheetSwipe, narrow_query, phone_sheet_sx, sheet_clearance_style,
+                SheetSwipe, narrow_query, phone_sheet_sx, sheet_clearance_style, use_scroll_clear,
                 use_sheet_clearance, use_sheet_room, use_sheet_swipe,
             },
         },
@@ -296,6 +296,8 @@ pub(crate) fn ComboboxCore(props: ComboboxCoreProps) -> Element {
             clearance.set(0.0);
         }
     }));
+    // Scrolls from here, where the wrapper draws the margin, not where it is measured.
+    use_scroll_clear(anchor, clearance());
     // Unstyled but for the sheet's clearance: catches the keys and anchors the dropdown, so `sx` goes to the dropdown.
     let wrapper = use_box()
         .style(props.sheet.then(|| sheet_clearance_style(clearance())))

@@ -9,8 +9,8 @@ use crate::{
             DropdownPart,
             combobox::COMBOBOX_DROPDOWN_SX,
             phone_sheet::{
-                SheetSwipe, phone_sheet_sx, sheet_clearance_style, use_sheet_clearance,
-                use_sheet_room, use_sheet_swipe,
+                SheetSwipe, phone_sheet_sx, sheet_clearance_style, use_scroll_clear,
+                use_sheet_clearance, use_sheet_room, use_sheet_swipe,
             },
         },
         layout::{BoxStyle, use_box},
@@ -116,6 +116,7 @@ pub(super) fn use_cascader_dropdown(setup: DropdownSetup) -> Dropdown {
     );
 
     let sheet_clearance = use_sheet_clearance(anchor, field, popover, opened, gap);
+    use_scroll_clear(anchor, sheet_clearance);
     let room = use_sheet_room(*popover.floating(), opened && popover.placed());
     let swipe = use_sheet_swipe(*popover.floating(), use_callback(move |()| state.close()));
 

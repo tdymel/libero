@@ -12,6 +12,7 @@ use crate::{Routes, common::Fruit};
 pub const ROUTES: Routes = &[
     ("/select-phone", || rsx! { SelectPhonePage {} }),
     ("/select-phone/low-trigger", || rsx! { LowTriggerPage {} }),
+    ("/select-phone/low-select", || rsx! { LowSelectPage {} }),
     (
         "/select-phone/open-on-focus",
         || rsx! { OpenOnFocusPage {} },
@@ -84,6 +85,23 @@ fn ores() -> Vec<CascaderOption<String>> {
         ]),
         CascaderOption::new("t2", "Tier 2").children(vec![CascaderOption::new("gold", "Gold ore")]),
     ]
+}
+
+/// A `Select` in the screen's foot, in frame but under where the sheet lands (4580).
+#[component]
+fn LowSelectPage() -> Element {
+    let mut fruit = use_signal(|| None::<Fruit>);
+
+    rsx! {
+        Flex { direction: "column", gap: "md", padding: "md",
+            div { style: "height: calc(100vh - 170px)" }
+            div { id: "low",
+                Select { label: "Low", value: fruit(), onchange: move |next| fruit.set(next) }
+            }
+            // Room to scroll the trigger up by the sheet's height.
+            div { style: "height: 100vh" }
+        }
+    }
 }
 
 /// A custom trigger at the screen's foot, which the sheet would cover (3914).

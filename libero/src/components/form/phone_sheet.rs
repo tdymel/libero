@@ -1,3 +1,5 @@
+use std::{cell::Cell, rc::Rc};
+
 use dioxus::prelude::*;
 
 use crate::{
@@ -6,8 +8,8 @@ use crate::{
         use_subscription_slot, use_swipe_close,
     },
     platform::{
-        ElementApi, SCROLL_MARGIN_BOTTOM_VAR, ScrollSubscription, document, on_viewport_resize,
-        visible_band,
+        ContentSubscription, ElementApi, SCROLL_MARGIN_BOTTOM_VAR, ScrollSubscription, document,
+        observe_resize, on_viewport_resize, visible_band,
     },
     sx::{FORCED_COLORS, Sx, sx},
     theme::{Color, ColorShade, ColorValue, CssVar, Size},
@@ -125,6 +127,10 @@ pub(crate) fn use_sheet_room(sheet: ElementHandle, placed: bool) -> String {
         let _ = tick();
         if !placed {
             resizing.clear();
+            // The next open starts from the layout viewport's foot, not this one's keyboard band.
+            if room.peek().is_some() {
+                room.set(None);
+            }
             return;
         }
         if !resizing.is_some() {
@@ -202,13 +208,31 @@ pub(crate) fn use_sheet_clearance(
     let placed = popover.placed();
     let sheet = *popover.floating();
     let mut live = use_signal(|| false);
+    // Bumped when the sheet's size changes, so the effect measures again.
+    let tick = use_signal(|| 0u64);
+    let growing = use_subscription_slot::<dyn ContentSubscription>();
+    let observed: Rc<Cell<Option<usize>>> = use_hook(|| Rc::new(Cell::new(None)));
     use_effect(use_reactive!(|(opened, placed)| {
+        let _ = tick();
         live.set(opened && placed);
         if !(opened && placed) {
+            growing.clear();
+            observed.set(None);
             if *clearance.peek() != 0.0 {
                 clearance.set(0.0);
             }
             return;
+        }
+        // Per mount: a remount is a new node to observe.
+        let token = sheet.mount_token();
+        if observed.replace(token) != token
+            && let Some(mounted) = sheet.mounted()
+        {
+            growing.set(observe_resize(
+                &mounted,
+                sheet.tag(),
+                Box::new(move || bump(tick)),
+            ));
         }
         spawn(async move {
             let (Ok((_, top)), Ok(size), Ok((_, sheet_top)), Ok(sheet_size)) = (
@@ -236,15 +260,28 @@ pub(crate) fn use_sheet_clearance(
                 bottom = bottom.max(field_top + field_size.height);
             }
             // The list may have closed during the measures above.
-            if *live.peek() && sheet_top < bottom && sheet_top + sheet_size.height > top {
-                clearance.set(sheet_size.height + gap + bottom - trigger_bottom);
+            if !*live.peek() {
+                return;
+            }
+            let covers = sheet_top < bottom && sheet_top + sheet_size.height > top;
+            let next = if covers {
+                sheet_size.height + gap + bottom - trigger_bottom
+            } else {
+                0.0
+            };
+            if *clearance.peek() != next {
+                clearance.set(next);
             }
         });
     }));
-    use_effect(move || {
-        if clearance() > 0.0 {
+    clearance()
+}
+
+/// Scrolls the trigger above the sheet once its `scroll-margin-bottom` (the `clearance`) is drawn.
+pub(crate) fn use_scroll_clear(anchor: ElementHandle, clearance: f64) {
+    use_effect(use_reactive!(|clearance| {
+        if clearance > 0.0 {
             let _ = anchor.scroll_into_view(false);
         }
-    });
-    clearance()
+    }));
 }

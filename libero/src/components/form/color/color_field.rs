@@ -15,7 +15,7 @@ use crate::{
             SliderChangeEvent, field_props,
             keyboardless::{PickerInput, use_keyboardless, use_picker_focus},
             phone_sheet::{
-                SheetSwipe, narrow_query, phone_sheet_sx, sheet_clearance_style,
+                SheetSwipe, narrow_query, phone_sheet_sx, sheet_clearance_style, use_scroll_clear,
                 use_sheet_clearance, use_sheet_room, use_sheet_swipe,
             },
             slot_icon_size, use_bound, use_field, use_field_frame, use_prefill,
@@ -421,6 +421,7 @@ pub fn ColorField(props: ColorFieldProps) -> Element {
     let narrow = use_media_query(&narrow_query());
     let room = use_sheet_room(floating, narrow() && popover.placed());
     let clearance = use_sheet_clearance(anchor, field.root(), popover, showing, theme.popover.gap);
+    use_scroll_clear(anchor, clearance);
     let close = use_callback(move |()| opened.set(false));
     let SheetSwipe {
         strip,

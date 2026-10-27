@@ -408,6 +408,34 @@ fn a_low_custom_trigger_clears_the_sheet() {
     });
 }
 
+/// Todo 4580: a `Select` trigger in the bottom of the frame is scrolled above the sheet.
+#[test]
+fn a_low_select_trigger_clears_the_sheet() {
+    const TRIGGER: &str = "#low [role=combobox]";
+    block_on(async {
+        let fixture = phone("/select-phone/low-select").await;
+        let page = &fixture.page;
+        let js = format!(
+            "(() => {{ const r = document.querySelector({TRIGGER:?}).getBoundingClientRect(); \
+             return r.top > innerHeight - 270 && r.bottom < innerHeight; }})()"
+        );
+        wait::for_js_true(page, &js, "the trigger in the bottom 270px, in frame")
+            .await
+            .unwrap();
+        tap(page, TRIGGER).await.unwrap();
+        sheet_shown(page).await.unwrap();
+        let js = format!(
+            "document.querySelector({TRIGGER:?}).getBoundingClientRect().bottom \
+             <= document.querySelector({SHEET:?}).getBoundingClientRect().top"
+        );
+        wait::for_js_true(page, &js, "the trigger above the sheet")
+            .await
+            .unwrap();
+        fixture.console.assert_clean("a low select").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
 /// Above `sm` the lists stay popovers under the field.
 #[test]
 fn a_desktop_keeps_the_popover() {

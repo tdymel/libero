@@ -24,7 +24,7 @@ use crate::{
             FieldStatus, FormScope, Parse, Typed, Validators,
             keyboardless::{PickerInput, use_keyboardless, use_picker_focus},
             phone_sheet::{
-                SheetSwipe, narrow_query, phone_sheet_sx, sheet_clearance_style,
+                SheetSwipe, narrow_query, phone_sheet_sx, sheet_clearance_style, use_scroll_clear,
                 use_sheet_clearance, use_sheet_room, use_sheet_swipe,
             },
             use_bound, use_field, use_field_frame, use_prefill, word,
@@ -377,6 +377,7 @@ pub(super) fn use_picker_field<V: FieldValue>(
         showing,
         theme.popover.gap,
     );
+    use_scroll_clear(anchor, clearance);
     let close = use_callback(move |()| open_to(false));
     let SheetSwipe {
         strip,

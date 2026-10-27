@@ -12,7 +12,7 @@ use crate::{
         form::{
             keyboardless::use_picker_focus,
             phone_sheet::{
-                SheetSwipe, narrow_query, phone_sheet_sx, sheet_clearance_style,
+                SheetSwipe, narrow_query, phone_sheet_sx, sheet_clearance_style, use_scroll_clear,
                 use_sheet_clearance, use_sheet_room, use_sheet_swipe,
             },
             slot_icon_size,
@@ -220,6 +220,7 @@ pub(super) fn NumberSpinner<T: NumberValue>(
     let narrow = use_media_query(&narrow_query());
     let room = use_sheet_room(floating, narrow() && popover.placed());
     let clearance = use_sheet_clearance(anchor, field_root, popover, showing, theme.popover.gap);
+    use_scroll_clear(anchor, clearance);
     let SheetSwipe {
         strip,
         listeners,
