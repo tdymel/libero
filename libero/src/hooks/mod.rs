@@ -124,6 +124,8 @@ pub(crate) use dismiss::{
     use_dismiss, use_dismiss_layer, use_escape_dismiss, use_field_list_layer, use_press_away,
     use_press_marker,
 };
+#[cfg(all(test, feature = "use-drag"))]
+pub(crate) use drag::held_measure;
 #[cfg(feature = "use-drag")]
 pub use drag::{Drag, DragMove, DragOptions, DragPoint, DragStart, drag_handle_sx, use_drag};
 #[cfg(feature = "use-drag")]

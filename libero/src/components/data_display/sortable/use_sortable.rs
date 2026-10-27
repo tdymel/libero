@@ -1324,4 +1324,177 @@ mod tests {
         let repeat = index_fault(&[slot(0), slot(1)], 3).unwrap();
         assert!(repeat.contains("3 items share 2 indices"), "{repeat}");
     }
+
+    #[cfg(not(target_arch = "wasm32"))]
+    mod flick {
+        use std::cell::RefCell;
+        use std::rc::Rc;
+
+        use dioxus::html::geometry::{ClientPoint, ElementPoint, PagePoint, ScreenPoint};
+        use dioxus::html::input_data::{MouseButton, MouseButtonSet};
+        use dioxus::html::point_interaction::{
+            InteractionElementOffset, InteractionLocation, ModifiersInteraction, PointerInteraction,
+        };
+        use dioxus::html::{HasPointerData, PointerData};
+
+        use super::super::*;
+        use crate::hooks::{held_measure, polling_tests};
+
+        type Rendered = (SortableHandle, Signal<usize>, Signal<Vec<(usize, usize)>>);
+
+        thread_local! {
+            static LIST: RefCell<Option<Rendered>> = const { RefCell::new(None) };
+            static FIRST: RefCell<Option<SortableItemHandle>> = const { RefCell::new(None) };
+        }
+
+        fn app() -> Element {
+            rsx! {
+                crate::LiberoProvider { List {} }
+            }
+        }
+
+        #[component]
+        fn List() -> Element {
+            let count = use_signal(|| 4);
+            let mut moves = use_signal(Vec::new);
+            let lift = use_signal(|| None);
+            let scroller = use_element();
+            let list = use_fixed_sortable(
+                SortableOptions {
+                    orientation: Orientation::Vertical,
+                    onreorder: use_callback(move |step: SortableMove| {
+                        moves.write().push((step.from, step.to))
+                    }),
+                },
+                Some(FixedSlots {
+                    count: count(),
+                    pitch: 40.0,
+                    lift,
+                    scroller,
+                    head: 0.0,
+                    foot: 0.0,
+                }),
+            );
+            LIST.with(|slot| *slot.borrow_mut() = Some((list, count, moves)));
+            rsx! {
+                for index in 0..count() {
+                    Item { key: "{index}", index }
+                }
+            }
+        }
+
+        #[component]
+        fn Item(index: usize) -> Element {
+            let item = use_sortable_item(index);
+            if index == 0 {
+                FIRST.with(|slot| *slot.borrow_mut() = Some(item));
+            }
+            rsx! {}
+        }
+
+        /// Flicks the first item 100px down, let go before its measure lands; `shrink` drops the
+        /// last item before it does. The moves reported.
+        fn flick(shrink: bool) -> Vec<(usize, usize)> {
+            let mut dom = polling_tests::started(app);
+            let (list, mut count, moves) = LIST.with(|slot| slot.borrow().expect("rendered"));
+            let first = FIRST.with(|slot| slot.borrow().expect("rendered"));
+            held_measure::hold();
+            dom.in_scope(ScopeId::APP, || {
+                first.onpointerdown.call(pointer(10.0));
+                list.onpointermove.call(pointer(110.0));
+                list.onpointerup.call(pointer(110.0));
+            });
+            polling_tests::flush(&mut dom);
+            if shrink {
+                dom.in_scope(ScopeId::APP, || count.set(3));
+                polling_tests::flush(&mut dom);
+            }
+            assert_eq!(dom.in_scope(ScopeId::APP, held_measure::release), 1);
+            polling_tests::flush(&mut dom);
+            assert!(!*list.sorting.peek(), "the flick is still lifted");
+            moves.peek().clone()
+        }
+
+        #[test]
+        fn a_held_flick_lands_where_it_was_let_go() {
+            assert_eq!(flick(false), vec![(0, 2)]);
+        }
+
+        /// Todo 4421: a list changed before the flick's measure landed ends it unmoved.
+        #[test]
+        fn a_flick_whose_list_changed_before_its_measure_lands_moves_nothing() {
+            assert_eq!(flick(true), Vec::new());
+        }
+
+        fn pointer(y: f64) -> Event<PointerData> {
+            Event::new(Rc::new(PointerData::new(Mouse(y))), true)
+        }
+
+        struct Mouse(f64);
+
+        impl InteractionLocation for Mouse {
+            fn client_coordinates(&self) -> ClientPoint {
+                ClientPoint::new(10.0, self.0)
+            }
+            fn screen_coordinates(&self) -> ScreenPoint {
+                ScreenPoint::new(10.0, self.0)
+            }
+            fn page_coordinates(&self) -> PagePoint {
+                PagePoint::new(10.0, self.0)
+            }
+        }
+        impl InteractionElementOffset for Mouse {
+            fn element_coordinates(&self) -> ElementPoint {
+                ElementPoint::new(0.0, 0.0)
+            }
+        }
+        impl ModifiersInteraction for Mouse {
+            fn modifiers(&self) -> dioxus::html::keyboard_types::Modifiers {
+                Default::default()
+            }
+        }
+        impl PointerInteraction for Mouse {
+            fn trigger_button(&self) -> Option<MouseButton> {
+                Some(MouseButton::Primary)
+            }
+            fn held_buttons(&self) -> MouseButtonSet {
+                Default::default()
+            }
+        }
+        impl HasPointerData for Mouse {
+            fn pointer_id(&self) -> i32 {
+                1
+            }
+            fn width(&self) -> f64 {
+                1.0
+            }
+            fn height(&self) -> f64 {
+                1.0
+            }
+            fn pressure(&self) -> f32 {
+                0.5
+            }
+            fn tangential_pressure(&self) -> f32 {
+                0.0
+            }
+            fn tilt_x(&self) -> i32 {
+                0
+            }
+            fn tilt_y(&self) -> i32 {
+                0
+            }
+            fn twist(&self) -> i32 {
+                0
+            }
+            fn pointer_type(&self) -> String {
+                "mouse".to_string()
+            }
+            fn is_primary(&self) -> bool {
+                true
+            }
+            fn as_any(&self) -> &dyn std::any::Any {
+                self
+            }
+        }
+    }
 }

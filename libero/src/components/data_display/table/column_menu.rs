@@ -141,6 +141,22 @@ impl PinNews {
     }
 }
 
+/// Says Unpin once the event's renders are done, if the host kept it, as [`PinNews`] waits for a pin.
+fn say_unpin(
+    header: String,
+    pinned: StateSlice<PinnedColumns>,
+    announcer: Announcer,
+    labels: TableLabels,
+) {
+    // A refusing host renders nothing: this render runs the check below now.
+    dioxus::core::needs_update();
+    dioxus::core::queue_effect(move || {
+        if pinned.peek().side(&header).is_none() {
+            announcer.say((labels.column_unpinned)(&header));
+        }
+    });
+}
+
 /// The column order after one move, and the column's new place.
 pub(super) type ColumnMove = Option<(Vec<String>, usize)>;
 
@@ -332,7 +348,7 @@ pub(super) fn ColumnMenu(
                         focus.owe(own_key.clone());
                         match to {
                             Some(to) => news.owe(header.clone(), to, pinned),
-                            None => announcer.say((labels.column_unpinned)(&header)),
+                            None => say_unpin(header.clone(), pinned, announcer, labels),
                         }
                     })
                     .into(),

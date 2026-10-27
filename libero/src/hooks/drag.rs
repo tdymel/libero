@@ -488,13 +488,16 @@ impl<T: 'static> EarlyMeasure<T> {
             return;
         }
         state.set(Early::Waiting(key));
-        begin(Callback::new(move |measured: Option<T>| {
-            match state.replace(Early::Idle) {
+        let landed = Callback::new(
+            move |measured: Option<T>| match state.replace(Early::Idle) {
                 Early::Claimed(at, started) if at == key => started.call(measured),
                 Early::Waiting(at) if at == key => state.set(Early::Ready(at, measured)),
                 other => state.set(other),
-            }
-        }));
+            },
+        );
+        #[cfg(test)]
+        let landed = held_measure::gate(landed);
+        begin(landed);
     }
 
     /// Hands `key`'s measure to `started`, now or once it lands; `false` if none was started.
@@ -509,6 +512,52 @@ impl<T: 'static> EarlyMeasure<T> {
             }
         }
         true
+    }
+}
+
+/// Tests only (todo 4432): while held, a press's measure lands at [`held_measure::release`],
+/// so a test can change the list between the measure and its landing.
+#[cfg(test)]
+pub(crate) mod held_measure {
+    use std::cell::RefCell;
+
+    use dioxus::prelude::Callback;
+
+    type Landing = Box<dyn FnOnce()>;
+
+    thread_local! {
+        static HELD: RefCell<Option<Vec<Landing>>> = const { RefCell::new(None) };
+    }
+
+    /// Holds the landings of measures that end from now on.
+    pub(crate) fn hold() {
+        HELD.with(|held| *held.borrow_mut() = Some(Vec::new()));
+    }
+
+    /// Lands the held measures and stops holding; how many landed.
+    pub(crate) fn release() -> usize {
+        let parked = HELD
+            .with(|held| held.borrow_mut().take())
+            .unwrap_or_default();
+        let landed = parked.len();
+        parked.into_iter().for_each(|land| land());
+        landed
+    }
+
+    pub(super) fn gate<T: 'static>(landed: Callback<Option<T>>) -> Callback<Option<T>> {
+        Callback::new(move |measured: Option<T>| {
+            let land: Landing = Box::new(move || landed.call(measured));
+            let parked = HELD.with(|held| match held.borrow_mut().as_mut() {
+                Some(parked) => {
+                    parked.push(land);
+                    None
+                }
+                None => Some(land),
+            });
+            if let Some(land) = parked {
+                land();
+            }
+        })
     }
 }
 

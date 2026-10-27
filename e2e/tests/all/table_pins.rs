@@ -323,6 +323,11 @@ async fn a_menu_pin_moves_the_column<D: Driver>(d: &mut D, _route: &str) -> Resu
             .await?;
         }
     }
+    // 4434: a kept Unpin is said once it settled.
+    eventually(d, "Origin's unpin to be said", async |d| {
+        Ok(d.text("[role=status]").await?.contains("Origin unpinned"))
+    })
+    .await?;
     Ok(())
 }
 
@@ -337,7 +342,8 @@ const RECORD_SAID: &str = "(() => { window.__said = []; new MutationObserver(() 
      document.querySelectorAll('[role=status]').forEach(s => window.__said.push(s.textContent))) \
      .observe(document.body, { subtree: true, childList: true, characterData: true }); })()";
 
-/// 4427, 4416: a menu pin the host refuses is never said, not even once the host pins that column.
+/// 4427, 4416, 4434: a menu pin or unpin the host refuses is never said, not even once the host
+/// pins that column.
 async fn a_refused_menu_pin_is_never_said<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
     d.evaluate(RECORD_SAID).await?;
     d.click("button[aria-label=\"Origin column options\"]")
@@ -346,6 +352,17 @@ async fn a_refused_menu_pin_is_never_said<D: Driver>(d: &mut D, _route: &str) ->
     d.click(&pin).await?;
     eventually_text(d, "#pinned", "Name,Origin", "the host to hear the pin").await?;
     assert_eq!(d.attr("th[aria-label=Origin]", "data-pin").await?, None);
+
+    // 4434: a refused Unpin stays unsaid too.
+    d.click("button[aria-label=\"Name column options\"]")
+        .await?;
+    let unpin = menu_entry(d, "Unpin").await?;
+    d.click(&unpin).await?;
+    eventually_text(d, "#pinned", "", "the host to hear the unpin").await?;
+    assert_eq!(
+        d.attr("th[aria-label=Name]", "data-pin").await?.as_deref(),
+        Some("start")
+    );
 
     d.click("#host-pin").await?;
     eventually(d, "the host's pin of Origin", async |d| {
