@@ -75,8 +75,9 @@ pub fn KanbanPage() -> Element {
                 .key(["Left", "Right"], "Moves a lifted column one place on the board (right to left, mirrored). Home and End move it first or last; Escape puts it back.")
                 .handles([
                     "Each column is a list named by its `label`, and each card a list item.",
-                    "Each card's handle is a button of at least 24px (WCAG 2.5.8) named with the card, \"Reorder Write\", and described by how to move it with the keys. On a touch screen with `move_buttons` on, the description points to the move buttons and the Move to column menu instead, from `KanbanLabels::touch_instructions`; with `move_buttons` off, to the menu alone, from `KanbanLabels::touch_move_to`.",
-                    "Each card has Move up and Move down buttons and a Move to column menu, named with the card, \"Move Write up\", \"Move Write to column\", so nothing needs a drag (WCAG 2.5.7). The menu lists every column, the card's own disabled.",
+                    "Each card's handle is a button of at least 24px (WCAG 2.5.8), 44px on a coarse pointer, named with the card, \"Reorder Write\", and described by how to move it with the keys. On a touch screen with `move_buttons` on, the description points to the move buttons and the Move to column menu instead, from `KanbanLabels::touch_instructions`; with `move_buttons` off, to the menu alone, from `KanbanLabels::touch_move_to`.",
+                    "Each card has Move up and Move down buttons and a Move to column menu, named with the card, \"Move Write up\", \"Move Write to column\", so nothing needs a drag (WCAG 2.5.7). The menu is titled with that name and lists every column, the card's own disabled.",
+                    "A card moved by Left or Right is scrolled whole into view in the board, not only its handle.",
                     "A card sent to another column by the menu lands at its end, and focus follows to its Move to button. A dragged card lands where it was let go, and its handle keeps focus.",
                     "One status region for the board says each lift, move, drop and cancel, with the column and the card's place when the column changes. A drop or Move to is said once the card shows at its new slot, so a move `onmove` refuses is not announced. The words come from `SortableLabels` and `KanbanLabels` in the active `Localization`.",
                     "A drag starts after 4px of pointer movement (8px on touch). Only the handle takes a touch: a swipe on the rest of a card scrolls. The column under the card's centre takes it; let go off the board, it goes back.",
@@ -118,12 +119,12 @@ pub fn KanbanPage() -> Element {
                 children_text: "",
                 file: DemoFile(include_str!("kanban/demo.rs")),
                 controls: vec![
-                    Control::switch("move_buttons").default("true"),
+                    // No `move_buttons` switch: off, the page would need another way to
+                    // reorder without a drag (WCAG 2.5.7).
                     Control::switch("column_reorder").default("true"),
                 ],
                 render: move |values: DemoValues| rsx! {
                     Board {
-                        move_buttons: values.str("move_buttons") != "false",
                         column_reorder: values.str("column_reorder") != "false",
                     }
                 },

@@ -112,15 +112,18 @@ parts work.
 ### Libero handles
 
 - Each column is a list named by its `label`, and each card a list item.
-- Each card's handle is a button of at least 24px (WCAG 2.5.8) named with the
-  card, "Reorder Write", and described by how to move it with the keys. On a
+- Each card's handle is a button of at least 24px (WCAG 2.5.8), 44px on a
+  coarse pointer, named with the card, "Reorder Write", and described by how to move it with the keys. On a
   touch screen with `move_buttons` on, the description points to the move
   buttons and the Move to column menu instead, from
   `KanbanLabels::touch_instructions`; with `move_buttons` off, to the menu alone,
   from `KanbanLabels::touch_move_to`.
 - Each card has Move up and Move down buttons and a Move to column menu, named
   with the card, "Move Write up", "Move Write to column", so nothing needs a
-  drag (WCAG 2.5.7). The menu lists every column, the card's own disabled.
+  drag (WCAG 2.5.7). The menu is titled with that name and lists every column,
+  the card's own disabled.
+- A card moved by Left or Right is scrolled whole into view in the board, not
+  only its handle.
 - A card sent to another column by the menu lands at its end, and focus
   follows to its Move to button. A dragged card lands where it was let go, and
   its handle keeps focus.

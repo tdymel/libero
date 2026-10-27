@@ -54,10 +54,12 @@ button "Refuse moves"
 button "Add Omega"
   StaticText "Add Omega"
 menu "Move Alpha to column" [orientation=vertical]
-  menuitem "To do" [disabled]
-    StaticText "To do"
-  menuitem "Doing"
-    StaticText "Doing"
-  menuitem "Done"
-    StaticText "Done"
+  group "Move Alpha to column"
+    StaticText "Move Alpha to column"
+    menuitem "To do" [disabled]
+      StaticText "To do"
+    menuitem "Doing"
+      StaticText "Doing"
+    menuitem "Done"
+      StaticText "Done"
 --> aria-controls [id="lsx-N-menu"] (rendered above)

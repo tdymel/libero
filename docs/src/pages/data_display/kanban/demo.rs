@@ -187,10 +187,7 @@ const COLUMNS: [&str; 3] = ["To do", "In progress", "Done"];
 /// The cards are your content: here `IssueCard`, built from Text, Badge, Icon and Avatar.
 /// The column order is app data too: a column move applies to the names and the cards alike.
 #[component]
-pub fn Board(
-    #[props(default = true)] move_buttons: bool,
-    #[props(default = true)] column_reorder: bool,
-) -> Element {
+pub fn Board(#[props(default = true)] column_reorder: bool) -> Element {
     let mut issues = use_signal(issues);
     let mut columns = use_signal(|| COLUMNS.to_vec());
     let oncolumnmove = move |step: KanbanColumnMove| {
@@ -199,7 +196,6 @@ pub fn Board(
     };
     rsx! {
         Kanban {
-            move_buttons,
             onmove: move |step: KanbanMove| step.apply(&mut issues.write()),
             oncolumnmove: column_reorder.then_some(EventHandler::new(oncolumnmove)),
             for (column, label) in columns().into_iter().enumerate() {

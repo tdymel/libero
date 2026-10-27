@@ -10,7 +10,8 @@ use crate::{
     components::{
         accessibility::VisuallyHidden,
         common::{
-            Glyph, HtmlTag, Input, Orientation, Part, States, base_props, focus_ring_sx, parts_enum,
+            COARSE_POINTER, COARSE_TARGET, Glyph, HtmlTag, Input, Orientation, Part, States,
+            base_props, focus_ring_sx, parts_enum,
         },
         layout::use_box,
     },
@@ -94,6 +95,11 @@ fn control_sx() -> Sx {
         .color("inherit")
         .focus_visible(focus_ring_sx())
         .selector("& svg", sx().width("16px").height("16px"))
+        // A finger's 44px box (WCAG 2.5.5): the row grows with it, neighbours never overlap.
+        .media(
+            COARSE_POINTER,
+            sx().min_width(COARSE_TARGET).min_height(COARSE_TARGET),
+        )
 }
 
 pub(crate) static SORTABLE_CONTENT_SX: StaticSx =
@@ -415,6 +421,17 @@ mod tests {
                 ("move-later", "& > [data-slot='move-later']"),
             ]
         );
+    }
+
+    #[test]
+    fn the_handle_and_move_buttons_are_finger_sized_on_a_coarse_pointer() {
+        for sx in [&SORTABLE_HANDLE_SX, &SORTABLE_MOVE_SX] {
+            let css = Stylesheet::from(sx).as_str().to_string();
+            let coarse = css.find("@media (pointer: coarse)").unwrap_or_default();
+
+            assert!(css[coarse..].contains("min-width:44px"), "{css}");
+            assert!(css[coarse..].contains("min-height:44px"), "{css}");
+        }
     }
 
     #[test]

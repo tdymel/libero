@@ -1710,12 +1710,17 @@ fn a_menu_move_to_a_hidden_column_scrolls_it_into_view() {
 /// A finger on a handle drags the card to the next column; on a card's text it scrolls the board.
 #[test]
 fn a_touch_on_the_handle_drags_across_and_elsewhere_scrolls_the_board() {
+    use chromiumoxide::cdp::browser_protocol::emulation::SetTouchEmulationEnabledParams;
     use e2e::browser::{Fixture, Viewport, block_on};
     use e2e::passes::pointer::{Point, swipe};
     use e2e::wait;
     block_on(async {
         let fixture = Fixture::open("/kanban", Viewport::Mobile).await.unwrap();
         let page = &fixture.page;
+        // A coarse pointer first: its 44px controls move the handle the swipe aims at.
+        page.execute_bounded(SetTouchEmulationEnabledParams::new(true))
+            .await
+            .unwrap();
         let handle = centre(page, "#Beta [data-slot=handle]").await;
         let (from, to) = (
             centre(page, "#column-0").await,

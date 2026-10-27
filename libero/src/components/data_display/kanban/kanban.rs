@@ -16,8 +16,8 @@ use crate::{
     components::{
         accessibility::{Announcer, use_announcer},
         common::{
-            Glyph, HtmlTag, Input, Orientation, Part, States, base_props, has_shortcut_modifier,
-            parts_enum, use_name_warning,
+            COARSE_POINTER, COARSE_TARGET, Glyph, HtmlTag, Input, Orientation, Part, States,
+            base_props, has_shortcut_modifier, parts_enum, use_name_warning,
         },
         data_display::sortable::{
             SORTABLE_CONTENT_SX, SORTABLE_HANDLE_SX, SORTABLE_MOVE_SX, SortableMove,
@@ -25,13 +25,13 @@ use crate::{
             use_labelled_sortable_item, use_sortable,
         },
         layout::use_box,
-        overlay::{Menu, MenuItem, use_menu},
+        overlay::{Menu, MenuEntry, MenuItem, use_menu},
     },
     context::IconSlot,
     hooks::{current_localization, use_css, use_element, use_id, use_media_query},
     localization::fill,
     platform::{self, ElementApi},
-    sx::{FORCED_COLORS, StaticSx, sx},
+    sx::{FORCED_COLORS, StaticSx, Sx, sx},
     theme::{PAPER_BACKGROUND, PAPER_BORDER_COLOR, PAPER_RADIUS, Size, SizeCss},
 };
 
@@ -100,10 +100,10 @@ static KANBAN_COLUMN_SX: StaticSx = StaticSx::new(|| {
         )
 });
 
-/// The content's basis beside the handle and `buttons` 24px buttons: the rest of the line
+/// The content's basis beside the handle and `buttons` buttons of `size`: the rest of the line
 /// while 8rem fit, else the whole line, so the buttons wrap below it together.
-fn card_content_basis(buttons: u8) -> String {
-    let slot = "(24px + var(--lsx-spacing-xs))";
+fn card_content_basis(buttons: u8, size: &str) -> String {
+    let slot = format!("({size} + var(--lsx-spacing-xs))");
     let line = format!("calc(100% - {slot})");
     let rest = format!("calc(100% - {} * {slot} - 1px)", buttons + 1);
     let room = format!("calc((8rem + {} * {slot} - 100%) * 999)", buttons + 1);
@@ -111,10 +111,23 @@ fn card_content_basis(buttons: u8) -> String {
 }
 
 /// The content's basis beside Move to alone, or with the move buttons too (no `:has()` under Blitz).
-static CARD_CONTENT_ONE_SX: StaticSx =
-    StaticSx::new(|| sx().selector("&[data-slot]", sx().flex_basis(card_content_basis(1))));
-static CARD_CONTENT_THREE_SX: StaticSx =
-    StaticSx::new(|| sx().selector("&[data-slot]", sx().flex_basis(card_content_basis(3))));
+static CARD_CONTENT_ONE_SX: StaticSx = StaticSx::new(|| card_content_sx(1));
+static CARD_CONTENT_THREE_SX: StaticSx = StaticSx::new(|| card_content_sx(3));
+
+/// The basis for 24px buttons, and for a finger's 44px ones.
+fn card_content_sx(buttons: u8) -> Sx {
+    sx().selector(
+        "&[data-slot]",
+        sx().flex_basis(card_content_basis(buttons, "24px")),
+    )
+    .media(
+        COARSE_POINTER,
+        sx().selector(
+            "&[data-slot]",
+            sx().flex_basis(card_content_basis(buttons, COARSE_TARGET)),
+        ),
+    )
+}
 
 // Under 8rem for the content, as in a 220px column, the move buttons wrap below it, end-aligned.
 // A paper card on the column's muted fill (todo 1437).
@@ -722,6 +735,15 @@ pub fn KanbanCard(props: KanbanCardProps) -> Element {
             landing.set(None);
             if let Some(target) = target {
                 let _ = target.focus();
+                // Focus shows the handle only: a card moved by key comes into view whole.
+                if matches!(at.control, Control::Handle)
+                    && let Some(card) = platform::mounted_by_selector(&format!(
+                        "[data-kanban-card=\"{}\"]",
+                        marker.peek()
+                    ))
+                {
+                    let _ = platform::scroll_chain_into_view(&card, false);
+                }
             }
             if let Some(text) = drag.take_pending() {
                 announcer.say(text);
@@ -833,6 +855,11 @@ pub fn KanbanCard(props: KanbanCardProps) -> Element {
                 .into()
         })
         .collect::<Vec<_>>();
+    // The group's label is the sheet's visible title, naming the card.
+    let items = vec![MenuEntry::Group {
+        label: named(words.kanban.move_to),
+        items,
+    }];
 
     let states: Input<States> = props
         .states
@@ -993,6 +1020,19 @@ mod tests {
         assert!(css.contains("flex-wrap:wrap"), "{css}");
         assert!(basis.contains("flex-basis:max(calc(100% - 4 * "), "{basis}");
         assert!(css.contains("margin-inline-start:auto"), "{css}");
+    }
+
+    #[test]
+    fn the_content_basis_reserves_a_finger_sized_slot_per_button_on_a_coarse_pointer() {
+        let basis = Stylesheet::from(&CARD_CONTENT_THREE_SX)
+            .as_str()
+            .to_string();
+        let coarse = basis.find("@media (pointer: coarse)").unwrap_or_default();
+
+        assert!(
+            basis[coarse..].contains("(44px + var(--lsx-spacing-xs))"),
+            "{basis}"
+        );
     }
 
     #[test]
