@@ -2285,4 +2285,43 @@ mod dispatched {
         );
         assert!(blur(&mut page, name).contains(REQUIRED), "the blur lost it");
     }
+
+    /// Todo 4377: a form reset forgets what an unbound field was typed, so its rule judges empty again.
+    #[test]
+    fn a_form_reset_forgets_an_unbound_fields_text() {
+        fn app() -> Element {
+            let handle = use_form();
+            rsx! {
+                LiberoProvider {
+                    Button { id: "submit", onclick: move |_| { handle.validate(); }, "Submit" }
+                    Button { id: "reset", onclick: move |_| handle.reset(), "Reset" }
+                    Form::<()> { form: handle,
+                        TextField { label: "Name", validate: not_empty.error("Enter a name.") }
+                    }
+                }
+            }
+        }
+
+        let mut page = Page::mount(app);
+        let submit = page.rec.element("click", "id", "submit");
+        let reset = page.rec.element("click", "id", "reset");
+        let input = page.rec.registered_for("input")[0];
+        page.dom
+            .runtime()
+            .handle_event("input", Event::new(input_event("Tom"), true), input);
+        page.render();
+        page.click(submit);
+        assert!(
+            !dioxus_ssr::render(&page.dom).contains("Enter a name."),
+            "the rule judged the default"
+        );
+
+        page.click(reset);
+        page.render();
+        page.click(submit);
+        assert!(
+            dioxus_ssr::render(&page.dom).contains("Enter a name."),
+            "the rule judged the text typed before the reset"
+        );
+    }
 }

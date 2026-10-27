@@ -10,6 +10,8 @@ pub const ROUTES: Routes = &[
     ("/color-field/swatches", || rsx! { SwatchesFieldPage {} }),
     ("/color-field/keep-text", || rsx! { KeepTextFieldPage {} }),
     ("/color-field/recent", || rsx! { RecentFieldPage {} }),
+    ("/color-field/recents-only", || rsx! { RecentsOnlyFieldPage {} }),
+    ("/color-field/cleared", || rsx! { ClearedFieldPage {} }),
 ];
 
 const SWATCHES: [&str; 3] = ["#fa5252", "#40c057", "#228be6"];
@@ -101,6 +103,51 @@ fn RecentFieldPage() -> Element {
                 oninput: move |event: SliderChangeEvent<ColorCode>| color.set(event.value()),
             }
             Text { id: "readout", "{color().to_hex()}" }
+        }
+    }
+}
+
+/// Recents with no picker and no swatches: no dropdown until a color is kept (4361).
+#[component]
+fn RecentsOnlyFieldPage() -> Element {
+    let mut color = use_signal(|| "#1c7ed6".parse::<ColorCode>().unwrap());
+
+    rsx! {
+        Flex { direction: "column", gap: "md", max_width: "320px",
+            Button { id: "before", "Before" }
+            ColorField {
+                label: "Accent",
+                with_picker: false,
+                with_eye_dropper: false,
+                recent_colors: 2usize,
+                value: color(),
+                oninput: move |event: SliderChangeEvent<ColorCode>| color.set(event.value()),
+            }
+            Button { id: "after", "After" }
+        }
+    }
+}
+
+/// Named in a `<form>`, `fix_on_blur: false`: cleared text posts nothing (4362).
+#[component]
+fn ClearedFieldPage() -> Element {
+    let mut color = use_signal(|| "#40c057".parse::<ColorCode>().unwrap());
+
+    rsx! {
+        form { id: "sent",
+            Flex { direction: "column", gap: "md", max_width: "320px",
+                Button { id: "before", "Before" }
+                ColorField {
+                    label: "Border color",
+                    name: "border",
+                    with_picker: false,
+                    with_eye_dropper: false,
+                    fix_on_blur: false,
+                    value: color(),
+                    oninput: move |event: SliderChangeEvent<ColorCode>| color.set(event.value()),
+                }
+                Button { id: "after", "After" }
+            }
         }
     }
 }

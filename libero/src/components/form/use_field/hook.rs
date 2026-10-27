@@ -57,7 +57,7 @@ impl FieldHook {
 /// full name, and its bound value. A hook; hand it to `FieldBuilder::bound`.
 pub(crate) fn use_bound<T: Clone + 'static>(name: &FieldName<T>, controlled: bool) -> Bound<T> {
     let hook = use_hook(FieldHook::new);
-    let entered = use_hook(|| Signal::new(None::<T>));
+    let entered = use_hook(|| Signal::new(None::<(u32, T)>));
     let full = (!name.is_empty())
         .then(|| crate::components::form::validation_join(hook.binding.prefix(), name.as_str()));
     let active = !controlled && name.steps().is_some() && hook.binding.is_bound();
@@ -144,8 +144,9 @@ pub(crate) struct Bound<T> {
     /// The name, kept only while it binds.
     pub(super) name: Option<FieldName<T>>,
     pub(super) full: Option<String>,
-    /// What the user last entered, for a field whose value lives nowhere else.
-    pub(super) entered: Signal<Option<T>>,
+    /// What the user last entered, for a field whose value lives nowhere else, with the
+    /// form's reset generation it was entered at: a reset forgets it (4377).
+    pub(super) entered: Signal<Option<(u32, T)>>,
     /// Whether `entered` is a value source: not with a handler or a binding.
     pub(super) owns: bool,
     /// For a name mapped to a domain type.
@@ -181,6 +182,11 @@ impl<T> Bound<T> {
         let full = self.full.clone();
         move || clear_set_error(form, full.as_deref())
     }
+}
+
+/// The form's reset generation; 0 outside a form.
+fn generation(form: Option<(FormScope, usize)>) -> u32 {
+    form.map_or(0, |(scope, _)| scope.generation())
 }
 
 fn clear_set_error(form: Option<FormScope>, full: Option<&str>) {
@@ -225,10 +231,11 @@ impl<T: Clone + 'static> Bound<T> {
             return None;
         }
         let edited = self.edited();
+        let form = self.hook.form;
         Some(move |next: T| {
             // Copied out, so the closure stays an `Fn`.
             if let Some(mut entered) = entered {
-                entered.set(Some(next.clone()));
+                entered.set(Some((generation(form), next.clone())));
             }
             edited();
             match (&handler, &setter) {
@@ -253,7 +260,17 @@ impl<T: Clone + 'static> Bound<T> {
     /// What the user last entered, for a field with no handler and no binding,
     /// so its rules don't judge `T::default()` for ever.
     pub fn entered(&self) -> Option<T> {
-        self.owns.then(|| self.entered.cloned()).flatten()
+        if !self.owns {
+            return None;
+        }
+        // Subscribes, so a field the form does not re-render (a `Chip`) hears a reset too.
+        if let Some((scope, _)) = self.hook.form {
+            scope.resets();
+        }
+        match &*self.entered.read() {
+            Some((at, value)) if *at == generation(self.hook.form) => Some(value.clone()),
+            _ => None,
+        }
     }
 
     /// Whether a `required` field inside a form holds nothing: `shown` is what it draws, else what

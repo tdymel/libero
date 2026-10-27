@@ -324,7 +324,7 @@ mod dispatched {
     use dioxus::prelude::*;
     use libero::{
         LiberoProvider,
-        components::{Chip, Form, MultiSelect},
+        components::{Button, Chip, Form, MultiSelect, use_form},
     };
 
     #[test]
@@ -369,6 +369,30 @@ mod dispatched {
             .handle_event("click", Event::new(click_event(), true), last_click(&find));
         dom.render_immediate(&mut dioxus::core::NoOpMutations);
         assert_eq!(checked_states(&dioxus_ssr::render(&dom)), [true]);
+    }
+
+    /// Todo 4377: a form reset forgets what a chip with no handler was toggled to.
+    #[test]
+    fn a_form_reset_forgets_a_named_chips_own_state() {
+        fn app() -> Element {
+            let handle = use_form();
+            rsx! {
+                LiberoProvider {
+                    Button { id: "reset", onclick: move |_| handle.reset(), "Reset" }
+                    Form::<()> { form: handle,
+                        Chip { name: "open", "Open" }
+                    }
+                }
+            }
+        }
+
+        let mut page = Page::mount(app);
+        let reset = page.rec.element("click", "id", "reset");
+        page.click(last_click(&page.rec));
+        assert_eq!(checked_states(&dioxus_ssr::render(&page.dom)), [true]);
+        page.click(reset);
+        page.render();
+        assert_eq!(checked_states(&dioxus_ssr::render(&page.dom)), [false]);
     }
 
     #[derive(Clone, PartialEq, Default, libero::components::Fields)]

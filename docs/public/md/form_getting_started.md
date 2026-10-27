@@ -420,8 +420,7 @@ A `required` field left empty is an error too, "Fill in this field.", or
 options." for a box, a select or a group of options (`Localization::form`), unless a rule of its own says more; a disabled or
 read-only one never blocks. That error shows only once the form was submitted,
 so tabbing through an empty required field paints nothing; after that it
-follows the value like any rule. A field's own rules show once it loses focus.
-The summary keeps the problems of that submit. A line leaves once it is fixed,
+follows the value like any rule. The summary keeps the problems of that submit. A line leaves once it is fixed,
 and new ones wait for the next submit. A server's answer is a field's `status`:
 an error one set after a valid submit, in `onsubmit` or once a request returns,
 shows the summary, which takes focus and is announced, as a blocked submit's

@@ -107,6 +107,38 @@ fn ticking_an_uncontrolled_checkbox_satisfies_its_own_rules() {
     );
 }
 
+/// Todo 4377: a form reset forgets what an unbound checkbox or switch was toggled to.
+#[test]
+fn a_form_reset_forgets_an_unbound_toggle() {
+    fn app() -> Element {
+        let handle = use_form();
+        rsx! {
+            LiberoProvider {
+                Button { id: "reset", onclick: move |_| handle.reset(), "Reset" }
+                Form::<()> { form: handle,
+                    Checkbox { label: "Agree" }
+                    Switch { label: "Wifi" }
+                }
+            }
+        }
+    }
+
+    let mut page = Page::mount(app);
+    let reset = page.rec.element("click", "id", "reset");
+    let checkbox = page.rec.element("click", "text", "Agree");
+    let switch = page.rec.element("click", "text", "Wifi");
+    page.click(checkbox);
+    page.click(switch);
+    assert_eq!(checked_states(&dioxus_ssr::render(&page.dom)), [true, true]);
+
+    page.click(reset);
+    page.render();
+    assert_eq!(
+        checked_states(&dioxus_ssr::render(&page.dom)),
+        [false, false]
+    );
+}
+
 /// A read-only checkbox keeps its tab stop and its place in the post, so the
 /// one thing that must not happen is the toggle - and the activation is ours,
 /// not the browser's, so only Rust can refuse it (todo 209).

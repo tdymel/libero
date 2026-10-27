@@ -10,7 +10,9 @@ Description: A `<form>` that validates on submit, with plain `Fn(&V) -> bool` ru
 A `<form novalidate>` that holds the whole value in one store, runs rules
 across its fields and validates on submit. The Form
 [getting started](form_getting_started.md) page shows how fields, fieldsets,
-rules and paths fit together.
+rules and paths fit together, what a
+[submit](form_getting_started.md#submit) shows and blocks, and how
+[conditional fields](form_getting_started.md#conditional-fields) drop their rules.
 
 ## Usage
 
@@ -130,128 +132,6 @@ impl Age {
 #     #[props(default, into)] validate: Validators<String>) -> Element { rsx! {} }
 # #[component]
 # fn NewPasswordFieldset(#[props(into)] path: FieldName<NewPassword>) -> Element { rsx! {} }
-```
-
-## Conditional fields
-
-A field shown only for some values is a plain `if` around it. Its rules leave
-with it, so a hidden field never blocks a submit, and neither does a rule whose
-`.on(..)` names only hidden fields. Its value stays in the store, and a rule on
-the whole form that names no field still runs, so check the condition there too.
-
-```rust
-# use dioxus::prelude::*;
-# use libero::components::{Checkbox, Fields, Form, Rule, TextField, not_empty};
-# #[derive(Clone, PartialEq, Default, Fields)]
-# struct Signup { company: bool, company_name: String }
-# #[component]
-# fn CompanyFields() -> Element {
-#     let signup = use_store(Signup::default);
-#     rsx! { Form { value: signup,
-Checkbox { label: "Sign up as a company", name: Signup::FIELDS.company() }
-// Rendered only while ticked, so its rules leave with it.
-if signup.read().company {
-    TextField {
-        label: "Company name",
-        name: Signup::FIELDS.company_name(),
-        validate: not_empty.error("Enter the company name."),
-    }
-}
-# } } }
-```
-
-## Submit
-
-A submit shows every status. With an error, it is cancelled, and a summary of
-every problem appears above the fields and takes focus. Warnings never block.
-A `required` field left empty is an error too, "Fill in this field.", or
-"Check this box.", "Select an item in the list." and "Select one of these
-options." for a box, a select or a group of options (`Localization::form`), unless a rule of its own says more; a disabled or
-read-only one never blocks. That error shows only once the form was submitted,
-so tabbing through an empty required field paints nothing; after that it
-follows the value like any rule. A field's own rules show once it loses focus.
-The summary keeps the problems of that submit. A line leaves once it is fixed,
-and new ones wait for the next submit. A server's answer is a field's `status`:
-an error one set after a valid submit, in `onsubmit` or once a request returns,
-shows the summary, which takes focus and is announced, as a blocked submit's
-would.
-
-## Sticky action bar
-
-A long form keeps its buttons in view with a `Flex` that sticks to the bottom of
-the scrolling area. It is the last child of the `Form`, so its submit button still
-submits, and a surface background keeps the fields from showing through. Give it
-a `z_index` above the fields. The bar keeps its place in the DOM, so Tab still
-reaches it after the fields. It needs a scrolling ancestor, such as the page or
-a `Paper` with a fixed height.
-
-```rust
-# use dioxus::prelude::*;
-# use libero::components::{Button, Fields, Flex, Form, TextField};
-# use libero::sx::sx;
-# #[derive(Clone, PartialEq, Default, Fields)]
-# struct Order { email: String }
-# #[component]
-# fn Checkout() -> Element {
-#     let order = use_store(Order::default);
-#     rsx! {
-Form { value: order, onsubmit: move |_| {},
-    TextField { label: "Email", name: Order::FIELDS.email(), required: true }
-    // ... more fields
-    Flex {
-        direction: "row",
-        gap: "sm",
-        justify: "flex-end",
-        sx: sx()
-            .position("sticky")
-            .bottom("0")
-            .z_index("1")
-            .padding("0.75em 0")
-            .background("surface")
-            .border_top("1px solid"),
-        Button { variant: "outlined", color: "neutral", "Cancel" }
-        Button { r#type: "submit", "Place order" }
-    }
-}
-# } }
-```
-
-The same bar suits a `Stepper`: put it in the `panel`, with Back and Continue in
-place of Cancel and the submit button, so every step has its buttons in the same
-place. Disable Back on the first step instead of leaving it out.
-
-```rust
-# use dioxus::prelude::*;
-# use libero::components::{Button, Flex, Options, Stepper};
-# use libero::sx::sx;
-# #[derive(Clone, PartialEq, Options)]
-# enum Stage { Account, Review }
-# #[component]
-# fn Wizard() -> Element {
-#     let mut stage = use_signal(|| Some(Stage::Account));
-#     rsx! {
-Stepper {
-    value: stage(),
-    aria_label: "Order steps",
-    panel: move |s: Stage| rsx! {
-        // ... the step's fields
-        Flex {
-            direction: "row",
-            gap: "sm",
-            justify: "space-between",
-            sx: sx().position("sticky").bottom("0").z_index("1").padding("0.75em 0").background("surface"),
-            Button {
-                variant: "outlined",
-                color: "neutral",
-                disabled: s == Stage::Account,
-                onclick: move |_| stage.set(Some(Stage::Account)),
-                "Back"
-            }
-            Button { onclick: move |_| stage.set(Some(Stage::Review)), "Continue" }
-        }
-    },
-}
-# } }
 ```
 
 ## Props

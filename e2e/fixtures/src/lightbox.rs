@@ -119,8 +119,8 @@ fn gallery(name: &str) -> Vec<LightboxItem> {
         .collect()
 }
 
-/// Triggers for the first and last picture. `#swap-gallery` sits under the modal, so only a
-/// script presses it: a second `open_with` while open (todo 323).
+/// Triggers for the first and last picture. The swap buttons sit under the modal, so only a
+/// script presses them: a second `open_with` while open (todo 323), to 4 the strip keeps still (4374).
 #[component]
 fn LightboxPage() -> Element {
     let lightbox = use_lightbox(LightboxOptions {
@@ -154,6 +154,14 @@ fn LightboxPage() -> Element {
                     lightbox.open_with((gallery("second"), 2));
                 },
                 "Swap the gallery"
+            }
+            Button {
+                id: "swap-gallery-near",
+                variant: "text",
+                onclick: move |_| {
+                    lightbox.open_with((gallery("near"), 4));
+                },
+                "Swap to the next to last picture"
             }
         }
     }

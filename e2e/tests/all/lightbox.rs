@@ -504,12 +504,45 @@ fn a_gallery_swap_jumps_and_fetches_only_around_the_new_index() {
         // One at a time: a fetch the other page made first may be served without an entry.
         for viewport in Viewport::ALL {
             let fixture = Fixture::open("/lightbox", viewport).await.unwrap();
-            gallery_swap(&fixture.page, viewport)
+            let swap = Swap {
+                button: "swap-gallery",
+                gallery: "second",
+                index: 2,
+                fetched: [1, 2, 3],
+                never: Some(5),
+            };
+            gallery_swap(&fixture.page, viewport, swap)
                 .await
                 .unwrap_or_else(|e| panic!("at {}: {e}", viewport.name()));
             fixture
                 .console
                 .assert_clean(&format!("the lightbox swap at {}", viewport.name()))
+                .unwrap();
+            fixture.close().await.unwrap();
+        }
+    });
+}
+
+/// Todo 4374: a swap from 5 to 4 moves the stage while the strip's clamped index stays put,
+/// so the strip's own jump must not release the stage's lazy pictures early (4364).
+#[test]
+fn a_swap_the_strip_does_not_follow_still_jumps_the_stage() {
+    block_on(async {
+        for viewport in Viewport::ALL {
+            let fixture = Fixture::open("/lightbox", viewport).await.unwrap();
+            let swap = Swap {
+                button: "swap-gallery-near",
+                gallery: "near",
+                index: 4,
+                fetched: [3, 4, 5],
+                never: None,
+            };
+            gallery_swap(&fixture.page, viewport, swap)
+                .await
+                .unwrap_or_else(|e| panic!("at {}: {e}", viewport.name()));
+            fixture
+                .console
+                .assert_clean(&format!("the near swap at {}", viewport.name()))
                 .unwrap();
             fixture.close().await.unwrap();
         }
@@ -536,7 +569,24 @@ const FIND_STAGE_TRACK: &str = "() => [...document.querySelectorAll('[role=dialo
     .filter(el => el.querySelector(':scope [data-lightbox-frame]') && el.scrollWidth > el.clientWidth) \
     .pop()";
 
-async fn gallery_swap(page: &Page, viewport: Viewport) -> Result<()> {
+/// A second `open_with` while open: the button that sends it, the gallery and index it opens,
+/// what the desktop fetches, and an index it must never fetch.
+struct Swap {
+    button: &'static str,
+    gallery: &'static str,
+    index: usize,
+    fetched: [usize; 3],
+    never: Option<usize>,
+}
+
+async fn gallery_swap(page: &Page, viewport: Viewport, swap: Swap) -> Result<()> {
+    let Swap {
+        button,
+        gallery,
+        index,
+        fetched: expected,
+        never,
+    } = swap;
     // Smooth scrolling is the defect, so it has to be on. The suite's Chromium
     // scrolls instantly (todo 687): the spy below reads what was asked for.
     motion::set_reduced_motion(page, false).await?;
@@ -569,7 +619,7 @@ async fn gallery_swap(page: &Page, viewport: Viewport) -> Result<()> {
     // an early `src` fetched nothing and only this shows it (todo 4363).
     page.evaluate_bounded(format!(
         "(() => {{ window.__srcAt = []; \
-           const note = (img, value) => {{ if (String(value).endsWith('?second')) \
+           const note = (img, value) => {{ if (String(value).endsWith('?{gallery}')) \
              window.__srcAt.push([img, ({FIND_STAGE_TRACK})()?.scrollLeft]); }}; \
            const setAttribute = Element.prototype.setAttribute; \
            Element.prototype.setAttribute = function (name, value) {{ \
@@ -581,24 +631,26 @@ async fn gallery_swap(page: &Page, viewport: Viewport) -> Result<()> {
     ))
     .await?;
     // The trigger is under the modal, so a script presses it.
-    page.evaluate_bounded("document.querySelector('#swap-gallery').click()")
+    page.evaluate_bounded(format!("document.querySelector('#{button}').click()"))
         .await?;
     wait::for_js_true(
         page,
         &format!(
-            "document.querySelector('{DIALOG} [data-lightbox-frame=\"2\"] img')?.src.endsWith('?second')"
+            "document.querySelector('{DIALOG} [data-lightbox-frame=\"{index}\"] img')?.src.endsWith('?{gallery}')"
         ),
-        "the second gallery to replace the first",
+        "the swapped gallery to replace the first",
     )
     .await?;
-    wait_showing(page, 2).await?;
-    wait_picture_focused(page, 2).await?;
+    wait_showing(page, index).await?;
+    wait_picture_focused(page, index).await?;
     // Past any smooth scroll (about 300ms from 5 to 2): the track holds still
     // between two polls, and every eager picture of the new gallery has loaded. At desktop
     // also its resource entry: `complete` came before it under load (fetched [], 1513).
     let timed = viewport == Viewport::Desktop;
-    let eager = "[...document.querySelectorAll('[role=dialog] img')] \
-        .filter(img => img.src.endsWith('?second') && img.loading !== 'lazy')";
+    let eager = format!(
+        "[...document.querySelectorAll('[role=dialog] img')] \
+        .filter(img => img.src.endsWith('?{gallery}') && img.loading !== 'lazy')"
+    );
     let settled = wait::for_js_true(
         page,
         &format!(
@@ -627,8 +679,10 @@ async fn gallery_swap(page: &Page, viewport: Viewport) -> Result<()> {
     // The lazy pictures wait for their `src` only until the jump landed (todo 4308).
     wait::for_js_true(
         page,
-        "[...document.querySelectorAll('[role=dialog] [data-lightbox-frame] img')] \
-         .every(img => img.getAttribute('src')?.endsWith('?second'))",
+        &format!(
+            "[...document.querySelectorAll('[role=dialog] [data-lightbox-frame] img')] \
+             .every(img => img.getAttribute('src')?.endsWith('?{gallery}'))"
+        ),
         "every swapped picture to take its src once the track jumped",
     )
     .await?;
@@ -653,17 +707,19 @@ async fn gallery_swap(page: &Page, viewport: Viewport) -> Result<()> {
     }
 
     let fetched: Vec<usize> = page
-        .evaluate_bounded(
+        .evaluate_bounded(format!(
             r#"(() => [...window.__swapFetched]
-                .filter(n => n.endsWith('?second'))
-                .map(n => Number(n.match(/\/(\d)[^/]*\.svg\?second$/)?.[1]) - 1)
-                .sort())()"#,
-        )
+                .filter(n => n.endsWith('?{gallery}'))
+                .map(n => Number(n.match(/\/(\d)[^/]*\.svg\?{gallery}$/)?.[1]) - 1)
+                .sort())()"#
+        ))
         .await?
         .into_value()?;
-    if fetched.contains(&5) || (viewport == Viewport::Desktop && fetched != [1, 2, 3]) {
+    if never.is_some_and(|never| fetched.contains(&never))
+        || (viewport == Viewport::Desktop && fetched != expected)
+    {
         bail!(
-            "the swap to index 2 fetched the second gallery's pictures {fetched:?}; expected [1, 2, 3], and never 5"
+            "the swap to index {index} fetched the {gallery} gallery's pictures {fetched:?}; expected {expected:?}, and never {never:?}"
         );
     }
 

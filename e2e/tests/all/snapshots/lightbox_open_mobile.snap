@@ -9,6 +9,8 @@ button "Open the last picture"
   StaticText "Open the last picture"
 button "Swap the gallery"
   StaticText "Swap the gallery"
+button "Swap to the next to last picture"
+  StaticText "Swap to the next to last picture"
 dialog "Gallery" [modal]
   button "Zoom out" [disabled]
   button "Zoom in"
