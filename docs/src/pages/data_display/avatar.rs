@@ -177,7 +177,7 @@ pub fn AvatarPage() -> Element {
                 .handles([
                     "`name` is the accessible name, so a screen reader says \"Ada Lovelace\" rather than the initials.",
                     "A decorative avatar is hidden whole.",
-                    "The group's `+N` chip is focusable, and its label lists the hidden names. Its words come from the `avatar` labels of the localization.",
+                    "The group's `+N` chip is focusable. Its name is the count, \"3 more\", and its tooltip, which lists the hidden names, describes it. With `total` above the listed people, the names end \"and others\". Its words come from the `avatar` labels of the localization.",
                 ])
                 .must([
                     "Pass `alt: \"\"` where the name shows beside the avatar, or it is read twice.",

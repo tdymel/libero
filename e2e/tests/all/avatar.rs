@@ -56,7 +56,8 @@ fn the_more_chip_tooltip_names_the_hidden_people() {
             format!("document.querySelector({CHIP:?}).getAttribute('aria-label')"),
         )
         .await;
-        assert!(label.contains(HIDDEN), "the chip's name: {label:?}");
+        // Todo 4538: named by the count, the names said once as its description.
+        assert_eq!(label, "2 more", "the chip's name");
 
         keyboard::press(page, keyboard::ESCAPE).await.unwrap();
         wait::for_js_true(

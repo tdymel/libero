@@ -7,8 +7,9 @@ Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/data_d
 Index: [index.md](index.md) lists every other page
 Description: A short status label, one uppercase pill with no role and no interaction.
 
-A short status label, rendered as one `<span>`. An icon and text as children
-sit one spacing step apart. The theme sets the uppercase, letter spacing and
+A short status label, rendered as a `<span>` around a label `<span>`. An icon
+and text as children sit one spacing step apart. A label wider than its
+container ends in an ellipsis; the full text stays in the DOM. The theme sets the uppercase, letter spacing and
 weight in `BadgeDefaults`. For something a user can select, click or follow,
 use [`Chip`](chip.md).
 

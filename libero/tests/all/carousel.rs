@@ -1,6 +1,6 @@
 //! `Carousel`'s rendered contract.
 
-use crate::common::{attributes_of, body, render, tag_with, tags_with};
+use crate::common::{attributes_of, body, render, tag_with};
 
 use dioxus::prelude::*;
 use libero::{LiberoProvider, components::Carousel, localization::Localization};
@@ -76,7 +76,7 @@ fn the_dots_count_resting_positions_and_the_status_names_the_range() {
 }
 
 /// Every slide in view has nowhere to go, whichever slide the caller holds: no status,
-/// no dots and no track stop (todo 3034), only the inactive controls.
+/// no dots and no track stop (todo 3034), and no controls (todo 4537).
 #[test]
 fn a_strip_whose_slides_all_fit_is_quiet() {
     fn app() -> Element {
@@ -99,6 +99,7 @@ fn a_strip_whose_slides_all_fit_is_quiet() {
     assert!(!html.contains("Slides 1–6 of 6"), "{html}");
     assert!(!html.contains("Go to slide"), "{html}");
     assert!(!html.contains("aria-describedby"), "{html}");
+    assert!(!html.contains("aria-controls"), "{html}");
 }
 
 /// A loop with slides to wrap is not quiet, even when they all fit.
@@ -525,7 +526,7 @@ fn an_unnamed_carousel_falls_back_to_the_theme_label() {
     assert_eq!(root["aria-label"], "Carousel");
 }
 
-/// One slide has nowhere to go: no status or dot, and both controls are at an end.
+/// One slide has nowhere to go: no status, no dot and no controls (todo 4537).
 #[test]
 fn a_one_slide_carousel_has_nowhere_to_go() {
     fn app() -> Element {
@@ -542,11 +543,10 @@ fn a_one_slide_carousel_has_nowhere_to_go() {
     let slide = tag_with(&html, r#"aria-label="1 of 1""#);
     assert!(!slide.contains_key("inert"), "{slide:?}");
     let track_id = tag_with(&html, r#"data-slot="track""#)["id"].clone();
-    let controls = tags_with(&html, &format!(r#"aria-controls="{track_id}""#));
-    assert_eq!(controls.len(), 2, "{html}");
-    for control in &controls {
-        assert_eq!(control["aria-disabled"], "true", "{control:?}");
-    }
+    assert!(
+        !html.contains(&format!(r#"aria-controls="{track_id}""#)),
+        "{html}"
+    );
     assert_eq!(html.matches(r#"aria-label="Go to slide"#).count(), 0);
 }
 

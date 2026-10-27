@@ -54,7 +54,7 @@ pub fn CarouselPage() -> Element {
                         .doc("Required for a vertical carousel, which has nothing else to take its height from. A slide is as long as the carousel makes it, so give its content `height: 100%`."),
                     prop("controls", "bool")
                         .default(theme.carousel.controls.to_string())
-                        .doc("Previous and next buttons."),
+                        .doc("Previous and next buttons. Hidden while every slide fits."),
                     prop("indicators", "bool")
                         .default(theme.carousel.indicators.to_string())
                         .doc("The dot strip, one dot per place the strip can rest. That is fewer than the slides when `per_view` is above 1."),

@@ -121,7 +121,8 @@ fn use_tools(piece: &str) -> Option<TableTools> {
 }
 
 /// A menu of the hideable columns, each a checkbox that shows or hides it.
-/// The last shown column stays. Goes in a `Table`'s `toolbar`.
+/// The last shown column stays. Goes in a `Table`'s `toolbar`. Visibility is keyed
+/// by header, so columns sharing one hide and show together.
 ///
 /// ```rust
 /// # use dioxus::prelude::*;

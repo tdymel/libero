@@ -38,6 +38,7 @@ const COLOR_PICKER_SWATCHES_WIDTH: CssVar = CssVar::new("--lsx-color-picker-swat
 const COLOR_PICKER_ALPHA: CssVar = CssVar::new("--lsx-color-picker-alpha");
 /// The hue slider's last step: 360 is the same hue as 0.
 const MAX_HUE: f64 = 359.0;
+const DEAD_SWATCHES: &str = "ColorPicker: a palette without `oninput` or `onswatchclick` shows swatch buttons that do nothing. Pass one.";
 
 static COLOR_PICKER_SX: StaticSx = StaticSx::new(|| {
     let spacing = COLOR_PICKER_SPACING.value();
@@ -153,7 +154,8 @@ base_props! {
         /// Caps how many swatches share a row; unset, they wrap.
         #[props(default)]
         swatches_per_row: Option<usize>,
-        /// `false` leaves only the swatches, a palette.
+        /// `false` leaves only the swatches, a palette. Its swatches are buttons:
+        /// give it `oninput` or `onswatchclick`, or a debug build warns.
         #[props(default)]
         with_picker: Option<bool>,
         /// Corner radius of the swatches and the preview. Round by default.
@@ -225,6 +227,16 @@ pub fn ColorPicker(props: ColorPickerProps) -> Element {
     if with_picker && props.oninput.is_none() {
         warn("ColorPicker: without `oninput` the color can never change.");
     }
+    // A palette's swatches stay buttons; once per mount, as the handlers rarely come and go.
+    let dead_swatches = !with_picker
+        && !props.swatches.is_empty()
+        && props.oninput.is_none()
+        && props.onswatchclick.is_none();
+    use_hook(|| {
+        if dead_swatches {
+            warn(DEAD_SWATCHES);
+        }
+    });
     // Without the alpha slider nothing can change alpha, so the picker holds
     // and emits an opaque color.
     let value = match with_alpha {
@@ -606,7 +618,25 @@ mod tests {
                 }
             }
         });
-        assert!(palette.is_empty(), "{palette:?}");
+        assert_eq!(palette, [DEAD_SWATCHES], "{palette:?}");
+    }
+
+    /// Todo 4543: a palette whose swatches do nothing warns; a handler silences it.
+    #[test]
+    fn a_palette_with_a_swatch_handler_stays_silent() {
+        let handled = crate::utils::warnings_of(|| {
+            rsx! {
+                crate::LiberoProvider {
+                    ColorPicker {
+                        value: ColorCode::default(),
+                        with_picker: false,
+                        swatches: ["#fa5252"],
+                        onswatchclick: |_| {},
+                    }
+                }
+            }
+        });
+        assert!(handled.is_empty(), "{handled:?}");
     }
 
     /// The swatch row's opening tag in the rendered `body`.

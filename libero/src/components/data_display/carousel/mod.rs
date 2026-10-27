@@ -169,6 +169,7 @@ base_props! {
         /// Required for a vertical carousel.
         #[props(default, into)]
         height: Input<ThemeAwareValue>,
+        /// Previous and Next; hidden while every slide fits.
         #[props(default)]
         controls: Option<bool>,
         #[props(default)]
@@ -243,11 +244,14 @@ pub fn Carousel(props: CarouselProps) -> Element {
     let align = props.align.copied_or(theme.carousel.align);
     // No slides: no chrome, no landmark, no tab stop. The root keeps its box.
     let empty = count == 0;
-    let controls = !empty && props.controls.unwrap_or(theme.carousel.controls);
-    let indicators = !empty && !quiet && props.indicators.unwrap_or(theme.carousel.indicators);
+    let wants_controls = props.controls.unwrap_or(theme.carousel.controls);
+    let wants_indicators = props.indicators.unwrap_or(theme.carousel.indicators);
+    // A quiet strip drops its controls too, as Mantine hides inactive ones (todo 4537).
+    let controls = !empty && !quiet && wants_controls;
+    let indicators = !empty && !quiet && wants_indicators;
     let (first, last) = index_range(count, per_view, align);
     use_hook(|| {
-        if drags_alone(props.draggable, controls, indicators) {
+        if drags_alone(props.draggable, wants_controls, wants_indicators) {
             warn(
                 "Carousel: `draggable` with no `controls` and no `indicators` leaves a drag as the only pointer way to move (WCAG 2.5.7). Turn one on.",
             );

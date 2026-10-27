@@ -833,7 +833,8 @@ fn a_click_in_a_draggable_slide_stays_a_click() {
     });
 }
 
-/// Todo 3034: slides that all fit have nowhere to move, so no status, dots or track tab stop.
+/// Todos 3034, 4537: slides that all fit have nowhere to move, so no status, dots,
+/// track tab stop or Previous and Next.
 #[test]
 fn slides_that_all_fit_leave_no_dead_stop() {
     block_on(async {
@@ -851,7 +852,7 @@ fn slides_that_all_fit_leave_no_dead_stop() {
         let [status, dots, stops]: [usize; 3] = page
             .evaluate_bounded(
                 "(() => { const q = (s) => document.querySelectorAll(`[aria-roledescription=carousel] ${s}`).length; \
-                 return [q('[role=status]'), q('[data-slot=indicators]'), q('[tabindex=\"0\"]:not(button)')]; })()",
+                 return [q('[role=status]'), q('[data-slot=indicators]'), q('button, [tabindex=\"0\"]')]; })()",
             )
             .await
             .unwrap()
@@ -860,7 +861,7 @@ fn slides_that_all_fit_leave_no_dead_stop() {
         assert_eq!(
             (status, dots, stops),
             (0, 0, 0),
-            "status, dot strips, track stops"
+            "status, dot strips, tab stops"
         );
         fixture.console.assert_clean("slides that fit").unwrap();
         fixture.close().await.unwrap();

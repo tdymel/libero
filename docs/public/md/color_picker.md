@@ -52,7 +52,7 @@ fn Demo() -> Element {
 | `with_alpha` | `bool` | `false` | Shows the alpha slider and a preview swatch beside it. Without it, the color is always opaque. |
 | `swatches` | `Swatches` | - | Preset colors under the panel, as `ColorCode`s or CSS strings. A string that is no color is skipped with a warning. The swatch equal to `value` shows as picked. |
 | `swatches_per_row` | `usize` | - | Caps how many swatches share a row. Unset, they wrap to fill the width, seven per row at the picker's own width. |
-| `with_picker` | `bool` | `true` | `false` leaves only the swatches, a palette. Without `swatches` it draws nothing and warns. |
+| `with_picker` | `bool` | `true` | `false` leaves only the swatches, a palette. Without `swatches` it draws nothing and warns. Its swatches are buttons: without `oninput` or `onswatchclick` they do nothing, and it warns once. |
 | `onswatchclick` | `EventHandler<ColorCode>` | - | A swatch was clicked. `oninput` fires with the same color first. |
 | `full_width` | `bool` | `false` | Takes the container's width instead of the size step's. |
 | `name` | `String` | - | Posts the color in a hidden input of that name. |

@@ -64,7 +64,7 @@ fn Demo() -> Element {
 | `align` | `CarouselAlign` | `center` | Where a snapped slide comes to rest, `start`, `center` or `end`. Shows best with a fractional `per_view`. Above `per_view` 1 it also moves which slides the strip can reach. |
 | `orientation` | `Orientation` | `horizontal` | Scroll axis. |
 | `height` | `ThemeAwareValue` | `auto` | Required for a vertical carousel, which has nothing else to take its height from. A slide is as long as the carousel makes it, so give its content `height: 100%`. |
-| `controls` | `bool` | `true` | Previous and next buttons. |
+| `controls` | `bool` | `true` | Previous and next buttons. Hidden while every slide fits. |
 | `indicators` | `bool` | `false` | The dot strip, one dot per place the strip can rest. That is fewer than the slides when `per_view` is above 1. |
 | `aria_label` | `String` | localization `label` | Names the region. Unset, it falls back to the localization's label and warns. |
 | `draggable` | `bool` | `false` | Drag to scroll with a mouse. Touch swipes without it. On Blitz and the WebView a drag stops once the pointer leaves the track. With `controls` and `indicators` both off a drag is the only pointer way to move (WCAG 2.5.7), and a debug build warns. |
@@ -115,8 +115,8 @@ explains how parts work.
   of 6", counting a slide at least half in view). It stays quiet while autoplay rotates (WCAG 2.2.2).
 - Previous and Next are buttons. The indicators are one Tab stop with the
   current one marked, and focus follows the slide on them.
-- A carousel whose slides all fit, without `loop`, drops the status, the dots
-  and the track's Tab stop: none of them has a place to go.
+- A carousel whose slides all fit, without `loop`, drops the status, the dots,
+  Previous and Next and the track's Tab stop: none of them has a place to go.
 - With `autoplay`, focus inside the carousel stops it until the pause button
   is pressed. Hover only pauses it.
 

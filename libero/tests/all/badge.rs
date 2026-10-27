@@ -25,11 +25,11 @@ fn badge_class(html: &str) -> String {
 /// its accessible name. A `role="status"` here would make every badge announce
 /// itself on mount - a live region is the caller's own, around the badge.
 #[test]
-fn it_renders_one_span_with_no_role_and_no_aria() {
+fn it_renders_a_span_and_its_label_with_no_role_and_no_aria() {
     let html = body(&render(app));
 
-    assert!(html.contains("<span"), "{html}");
-    assert_eq!(html.matches("<span").count(), 1, "{html}");
+    // The label span carries the ellipsis (todo 4539).
+    assert_eq!(html.matches("<span").count(), 2, "{html}");
     assert!(html.contains(">Shipped</span>"), "{html}");
 
     let attributes = attributes_of(&html, "span");
@@ -38,6 +38,14 @@ fn it_renders_one_span_with_no_role_and_no_aria() {
         attributes.keys().all(|name| !name.starts_with("aria-")),
         "{attributes:?}"
     );
+}
+
+/// Todo 4539: a label too wide for its container ends in an ellipsis, not mid-glyph.
+#[test]
+fn a_long_label_ends_in_an_ellipsis() {
+    let html = render(app);
+    assert!(html.contains("text-overflow:ellipsis"), "{html}");
+    assert!(html.contains(">Shipped</span></span>"), "{html}");
 }
 
 /// `variant_chrome_sx`, not `interactive_variant_sx`: a static label that changed

@@ -188,7 +188,7 @@ mod tests {
     use super::*;
 
     /// Every template with a hole, in one order for every language.
-    fn templates(words: &Localization) -> [&'static str; 108] {
+    fn templates(words: &Localization) -> [&'static str; 109] {
         [
             words.common.remove,
             words.date.on_or_after,
@@ -200,6 +200,7 @@ mod tests {
             words.pagination.current_page,
             words.avatar.count,
             words.avatar.more,
+            words.avatar.others,
             words.pin_field.cell,
             words.carousel.indicator,
             words.carousel.slide,

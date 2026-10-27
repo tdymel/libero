@@ -56,9 +56,12 @@ pub fn BadgePage() -> Element {
                 .example("A \"Paid\" badge in an invoice row, `Badge { color: \"success\", variant: \"tonal\", \"Paid\" }`: read in place with the row, at 4.5:1 or more."),
             lead: rsx! {
                 Text {
-                    "A short status label, rendered as one "
+                    "A short status label, rendered as a "
                     Code { source: "<span>" }
-                    ". An icon and text as children sit one spacing step apart. The theme "
+                    " around a label "
+                    Code { source: "<span>" }
+                    ". An icon and text as children sit one spacing step apart. A label wider than its "
+                    "container ends in an ellipsis; the full text stays in the DOM. The theme "
                     "sets the uppercase, letter spacing and weight in "
                     Code { source: "BadgeDefaults" }
                     ". For something a user can select, click or follow, use "

@@ -187,7 +187,7 @@ pub fn RadarChart(props: RadarChartProps) -> Element {
     let summary = match (props.loading, empty) {
         (true, _) => vec![labels.loading.to_string()],
         (false, true) => Vec::new(),
-        (false, false) => summary(&labels, &x, &series, write),
+        (false, false) => summary(&labels, &axes, &series, write),
     };
 
     Frame {
@@ -269,18 +269,20 @@ fn round_up(value: f64) -> f64 {
 }
 
 /// The axes, then each series' highest and lowest axis and those it has no value on.
+/// Ranked by share of each axis' rim, as drawn (todo 4541).
 fn summary(
     labels: &ChartLabels,
-    axes: &[String],
+    axes: &[(String, f64)],
     series: &[Series],
     write: impl Fn(&Series, f64) -> String,
 ) -> Vec<String> {
+    let names: Vec<&str> = axes.iter().map(|(name, _)| name.as_str()).collect();
     let mut sentences = vec![fill(
         labels.radar_axes,
         &[
             ("kind", &labels.radar),
             ("count", &axes.len().to_string()),
-            ("names", &axes.join(", ")),
+            ("names", &names.join(", ")),
         ],
     )];
     for one in series {
@@ -289,9 +291,12 @@ fn summary(
             .iter()
             .enumerate()
             .filter_map(|(i, value)| value.map(|value| (i, value)));
-        // The first of equal values.
-        let high = values.clone().reduce(|a, b| if b.1 > a.1 { b } else { a });
-        let low = values.reduce(|a, b| if b.1 < a.1 { b } else { a });
+        let share = |(i, value): (usize, f64)| value / axes[i].1;
+        // The first of equal shares.
+        let high = values
+            .clone()
+            .reduce(|a, b| if share(b) > share(a) { b } else { a });
+        let low = values.reduce(|a, b| if share(b) < share(a) { b } else { a });
         let (Some((high, max)), Some((low, min))) = (high, low) else {
             sentences.push(fill(labels.series_empty, &[("name", &one.name)]));
             continue;
@@ -300,15 +305,15 @@ fn summary(
             labels.radar_series,
             &[
                 ("name", &one.name),
-                ("high", &axes[high]),
+                ("high", &names[high]),
                 ("max", &write(one, max)),
-                ("low", &axes[low]),
+                ("low", &names[low]),
                 ("min", &write(one, min)),
             ],
         ));
         let missing: Vec<&str> = (0..axes.len())
             .filter(|i| one.values[*i].is_none())
-            .map(|i| axes[i].as_str())
+            .map(|i| names[i])
             .collect();
         if !missing.is_empty() {
             sentences.push(fill(
@@ -365,6 +370,26 @@ mod tests {
         );
         assert!(html.contains("role=\"application\""), "{html}");
         assert_eq!(html.matches("aria-pressed=\"true\"").count(), 2, "{html}");
+    }
+
+    /// Todo 4541: the summary ranks by share of each axis' rim, as the web draws it.
+    #[test]
+    fn the_summary_ranks_by_share_of_the_rim() {
+        let html = render(|| {
+            rsx! {
+                LiberoProvider {
+                    RadarChart {
+                        title: "Phones",
+                        axes: vec![("Battery", 10.0).into(), ("Price", 1000.0).into(), ("Screen", 10.0).into()],
+                        series: vec![Series::new("A", [9.0, 200.0, 5.0])],
+                    }
+                }
+            }
+        });
+        assert!(
+            html.contains("A: highest on Battery, 9; lowest on Price, 200."),
+            "{html}"
+        );
     }
 
     /// Under three axes there is no web: the empty state.

@@ -39,8 +39,6 @@ static BADGE_BASE_SX: StaticSx = StaticSx::new(|| {
         .white_space("nowrap")
         .user_select("none")
         .cursor("default")
-        // Too wide cuts the label: `text-overflow` is dead on a flex root, and
-        // an inner span for it would cost a second element.
         .width("fit-content")
         .max_width("100%")
         .overflow("hidden");
@@ -60,8 +58,29 @@ static BADGE_BASE_SX: StaticSx = StaticSx::new(|| {
         sx().min_width(BADGE_BOX.value())
             .justify_content("center")
             .padding_left("0")
-            .padding_right("0"),
+            .padding_right("0")
+            .selector("& > * > *", sx().margin("0")),
     )
+});
+
+// A block, as `text-overflow` is dead on the flex root: a long label ends in an ellipsis
+// (todo 4539). Inline here, an icon takes the root's gap as a margin.
+static BADGE_LABEL_SX: StaticSx = StaticSx::new(|| {
+    let step = SizeCss::SPACING.value(Size::Xs);
+    sx().display("block")
+        .min_width("0")
+        .overflow("hidden")
+        .text_overflow("ellipsis")
+        .white_space("nowrap")
+        .selector("& > *", sx().vertical_align("middle"))
+        .selector(
+            "& > :first-child",
+            sx().with("margin-inline-end", step.clone()),
+        )
+        .selector(
+            "& > * ~ :last-child",
+            sx().with("margin-inline-start", step),
+        )
 });
 
 fn badge_variables(props: &BadgeProps, color: &ThemeAwareValue, variant: Variant) -> Variables {
@@ -109,7 +128,7 @@ base_props! {
     }
 }
 
-/// A short status label: a pill of uppercase text.
+/// A short status label: a pill of uppercase text. Too wide, it ends in an ellipsis.
 ///
 /// ```rust
 /// # use dioxus::prelude::*;
@@ -153,6 +172,12 @@ pub fn Badge(props: BadgeProps) -> Element {
         .with("circle", props.circle.unwrap_or(false))
         .into();
 
+    let label = use_box()
+        .framework_sx(&BADGE_LABEL_SX)
+        .focus_ring(false)
+        .prepare()
+        .render(HtmlTag::Span, Vec::new(), props.children);
+
     use_box()
         .framework_sx(&BADGE_BASE_SX)
         .class(&props.class)
@@ -161,5 +186,5 @@ pub fn Badge(props: BadgeProps) -> Element {
         .variables(&variables)
         .style(gradient)
         .prepare()
-        .render(HtmlTag::Span, props.attributes, props.children)
+        .render(HtmlTag::Span, props.attributes, label)
 }

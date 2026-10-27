@@ -123,7 +123,7 @@ fn Demo() -> Element {
 | `manual_sort` | `bool` | `false` | `data` comes sorted, say from a server: a header click only reports through `onsortchange`. |
 | `manual_pagination` | `bool` | `false` | `data` is the current page only: the table draws the page controls and leaves the slicing to you. A column's `aggregate` then covers this page only. |
 | `row_count` | `Option<usize>` | data's length | Rows over all pages with `manual_pagination`, for the page count and the range text. |
-| `hidden_columns` | `Option<Vec<String>>` | `None` | The hidden columns' headers. Set, visibility is controlled: pair it with `onhiddencolumnschange`. A hidden sorted column keeps sorting. |
+| `hidden_columns` | `Option<Vec<String>>` | `None` | The hidden columns' headers. Set, visibility is controlled: pair it with `onhiddencolumnschange`. A hidden sorted column keeps sorting. Columns sharing a header hide and show together: give hideable columns distinct headers. |
 | `default_hidden_columns` | `Vec<String>` | `[]` | Seeds the hidden columns once. Ignored when `hidden_columns` is set. |
 | `onhiddencolumnschange` | `EventHandler<Vec<String>>` | `None` | Called with the hidden columns a column menu pick asks for. |
 | `quick_filter` | `Option<String>` | `None` | The quick filter's text. A row stays when every word occurs, ignoring case, in the text of one of its shown, `filterable` cells. Set, the filter is controlled: pair it with `onquickfilterchange`. The rows are filtered, then sorted, then paged. |

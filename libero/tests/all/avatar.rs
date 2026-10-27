@@ -170,16 +170,15 @@ fn the_overflow_chip_counts_the_people_it_hides() {
 
     assert_eq!(html.matches("role=\"img\"").count(), 3, "{html}");
     assert!(html.contains(">+3</span>"), "{html}");
-    assert!(
-        html.contains("aria-label=\"3 more: Katherine Johnson, Radia Perlman, Barbara Liskov\""),
-        "{html}"
-    );
+    // Todo 4538: named by the count; the tooltip describes it with the names.
+    assert!(html.contains("aria-label=\"3 more\""), "{html}");
 }
 
 static COUNT_LAST: Localization = Localization {
     avatar: AvatarLabels {
         count: "{n}+",
         more: "{names} ({n} weitere)",
+        others: "{names} und weitere",
     },
     ..Localization::ENGLISH
 };
@@ -204,16 +203,18 @@ fn a_locale_can_put_the_count_after_the_names() {
     );
 }
 
-/// The names are in the chip's own label as well as in its tooltip, which is
-/// rendered only while open. The chip is focusable, which is what makes the
-/// tooltip reachable without a pointer.
+/// The names are the chip's description, its tooltip, and said once (todo 4538).
+/// The chip is focusable, which is what makes the tooltip reachable without a pointer.
 #[test]
 fn the_hidden_names_are_reachable_by_keyboard() {
     let html = body(&render(group_app));
 
     assert!(html.contains("tabindex=\"0\""), "{html}");
-    assert!(
-        html.contains("aria-label=\"3 more: Katherine Johnson, Radia Perlman, Barbara Liskov\""),
+    assert!(html.contains("aria-describedby="), "{html}");
+    assert_eq!(
+        html.matches("Katherine Johnson, Radia Perlman, Barbara Liskov")
+            .count(),
+        1,
         "{html}"
     );
 }

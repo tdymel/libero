@@ -102,7 +102,7 @@ pub fn ColorPickerPage() -> Element {
                     prop("swatches_per_row", "usize").doc("Caps how many swatches share a row. Unset, they wrap to fill the width, seven per row at the picker's own width."),
                     prop("with_picker", "bool")
                         .default("true")
-                        .doc("`false` leaves only the swatches, a palette. Without `swatches` it draws nothing and warns."),
+                        .doc("`false` leaves only the swatches, a palette. Without `swatches` it draws nothing and warns. Its swatches are buttons: without `oninput` or `onswatchclick` they do nothing, and it warns once."),
                     prop("onswatchclick", "EventHandler<ColorCode>")
                         .doc("A swatch was clicked. `oninput` fires with the same color first."),
                     prop("full_width", "bool")

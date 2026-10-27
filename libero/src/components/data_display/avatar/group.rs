@@ -175,14 +175,21 @@ pub fn AvatarGroup(props: AvatarGroupProps) -> Element {
             .iter()
             .map(|person| person.name.as_str())
             .collect();
+        // Fewer listed than counted: the names say there are others (todo 4538).
+        let unlisted = names.len() < hidden;
         let names = names.join(", ");
         let holes: &[(&str, &dyn std::fmt::Display)] = &[("n", &hidden), ("names", &names)];
         let count = fill(labels.count, holes);
         // Nobody known to name: no tooltip, and the count is the name.
         let nameable = !names.is_empty();
+        // Named by the count only; the tooltip describes it with the names.
         let more = match nameable {
             true => fill(labels.more, holes),
             false => count.clone(),
+        };
+        let names = match unlisted {
+            true => fill(labels.others, holes),
+            false => names,
         };
         let content = match &props.surplus {
             Some(surplus) => surplus.call(hidden),
@@ -197,7 +204,6 @@ pub fn AvatarGroup(props: AvatarGroupProps) -> Element {
             .clone()
             .attr("data-state", chip_states.data_state())
             .attr("role", "img")
-            // The tooltip's names; the tooltip renders only while open.
             .attr("aria-label", more)
             // Focusable, so the tooltip is reachable without a pointer.
             .attr("tabindex", nameable.then_some("0"))
@@ -278,6 +284,9 @@ mod tests {
             }
         });
         assert!(html.contains("+8"), "{html}");
+        // Todo 4538: one name for eight says there are others.
+        assert!(html.contains("aria-label=\"8 more\""), "{html}");
+        assert!(html.contains("Grace and others"), "{html}");
     }
 
     #[test]

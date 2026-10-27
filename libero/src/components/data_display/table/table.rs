@@ -1195,7 +1195,7 @@ pub struct TableProps<T: Clone + PartialEq + 'static> {
     #[props(default)]
     row_count: Option<usize>,
     /// The hidden columns' headers; set, visibility is controlled. A hidden
-    /// sorted column keeps sorting.
+    /// sorted column keeps sorting. Columns sharing a header hide and show together.
     #[props(default)]
     hidden_columns: Option<Vec<String>>,
     /// Seeds the hidden columns once. Ignored when `hidden_columns` is set.

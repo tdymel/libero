@@ -90,10 +90,12 @@ parts work.
 - `name` is the accessible name, so a screen reader says "Ada Lovelace" rather
   than the initials.
 - A decorative avatar is hidden whole.
-- The group's `+N` chip is focusable, and its label lists the hidden names. Its
-  words come from the `avatar` labels of the [localization](localization.md).
-  `{n}` is the hidden count and `{names}` their names, for example
-  `AvatarLabels { count: "+{n}", more: "{n} weitere: {names}" }`.
+- The group's `+N` chip is focusable. Its name is the count, "3 more", and its
+  tooltip, which lists the hidden names, describes it. With `total` above the
+  listed people, the names end "and others". Its words come from the `avatar`
+  labels of the [localization](localization.md). `{n}` is the hidden count and
+  `{names}` their names, for example
+  `AvatarLabels { count: "+{n}", more: "{n} weitere", others: "{names} und weitere" }`.
 
 ### You must
 
@@ -108,8 +110,9 @@ visible name: the name is read once, from the text, not twice.
 ## Theme defaults
 
 `AvatarDefaults` and `AvatarGroupDefaults` on the theme. The chip's words are
-`AvatarLabels` in the localization: `count` (`+{n}`, the visible text) and
-`more` (`{n} more: {names}`, the accessible name).
+`AvatarLabels` in the localization: `count` (`+{n}`, the visible text), `more`
+(`{n} more`, the accessible name) and `others` (`{names} and others`, the
+tooltip when `total` counts people the list does not hold).
 
 | Field | Type | Default | Description |
 |---|---|---|---|

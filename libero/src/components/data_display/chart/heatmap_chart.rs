@@ -242,7 +242,7 @@ fn scale_colors(theme: &Theme, forced: bool, colors: &[ChartColor]) -> Vec<HexCo
 }
 
 /// Rows by columns and the values' range, the highest and lowest cell, then each row's
-/// cells; a large grid points to the keys instead of its rows.
+/// cells; a large grid names only its empty cells and points to the keys.
 fn summary(
     labels: &ChartLabels,
     spec: &HeatmapSpec,
@@ -285,25 +285,29 @@ fn summary(
             &[("high", &point(highest)), ("low", &point(lowest))],
         ));
     }
-    if rows > MOST_ROWS || rows * columns > MOST_CELLS {
-        sentences.push(labels.cells_by_keys.to_string());
-        return sentences;
-    }
-    sentences.extend((0..rows).map(|row| {
+    let large = rows > MOST_ROWS || rows * columns > MOST_CELLS;
+    // A large grid names only its empty cells, which the keys skip (todo 4540).
+    sentences.extend((0..rows).filter_map(|row| {
         let cells: Vec<String> = (0..columns)
-            .map(|column| match spec.value(row, column) {
-                Some(value) => fill(
+            .filter_map(|column| match spec.value(row, column) {
+                Some(_) if large => None,
+                Some(value) => Some(fill(
                     labels.cell,
                     &[("x", &spec.x[column]), ("value", &write(value))],
-                ),
-                None => fill(labels.cell_empty, &[("x", &spec.x[column])]),
+                )),
+                None => Some(fill(labels.cell_empty, &[("x", &spec.x[column])])),
             })
             .collect();
-        fill(
-            labels.row,
-            &[("name", &spec.y[row]), ("cells", &cells.join(", "))],
-        )
+        (!cells.is_empty()).then(|| {
+            fill(
+                labels.row,
+                &[("name", &spec.y[row]), ("cells", &cells.join(", "))],
+            )
+        })
     }));
+    if large {
+        sentences.push(labels.cells_by_keys.to_string());
+    }
     sentences
 }
 
@@ -372,6 +376,29 @@ mod tests {
             "{html}"
         );
         assert!(!html.contains("D0: 0h"), "{html}");
+    }
+
+    /// Todo 4540: the keys skip an empty cell, so a large grid's summary names it.
+    #[test]
+    fn a_large_heatmap_names_its_empty_cells() {
+        let html = render(|| {
+            let x: Vec<String> = (0..24).map(|h| format!("{h}h")).collect();
+            let y: Vec<String> = (0..7).map(|d| format!("D{d}")).collect();
+            let mut values = vec![(0..24).map(f64::from).collect::<Vec<_>>(); 7];
+            values[2][5] = f64::NAN;
+            values[2][7] = f64::NAN;
+            rsx! {
+                LiberoProvider {
+                    HeatmapChart { title: "Week", x, y, values }
+                }
+            }
+        });
+        assert!(html.contains("D2: 5h: no value, 7h: no value."), "{html}");
+        assert!(!html.contains("D1:"), "{html}");
+        assert!(
+            html.contains("Use the arrow keys to read each cell."),
+            "{html}"
+        );
     }
 
     #[test]

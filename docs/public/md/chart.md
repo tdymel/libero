@@ -333,11 +333,12 @@ Like every component, each chart also takes the shared props `sx`, `class`,
   a bubble series' sizes and each trend line's kind and direction, as "Online:
   linear trend, rising."; a heatmap's, its rows by columns and its lowest and
   highest value, the highest and the lowest cell, then each row's cells (above
-  12 rows or 150 cells, a pointer to the keys instead); a candlestick chart's,
+  12 rows or 150 cells, only the empty cells the keys skip, then a pointer to
+  the keys); a candlestick chart's,
   its periods, the first open and the last close with the change, the highest
   high and the lowest low with their periods, and how many candles rose, fell
-  and stayed; a radar's, its axes, then each series' highest and lowest axis
-  and the axes it has no value on.
+  and stayed; a radar's, its axes, then each series' highest and lowest axis,
+  by share of the axis maximum as drawn, and the axes it has no value on.
 - The plot is one tab stop, a `role="application"` described as a chart, so a
   screen reader hands it the arrows. Each point the keys reach is announced, as
   "This week, Tue: 132", "Chrome: 62, 62%." "Online: x 12, y 34, size 80" or, for a heatmap's cell, "Tue, 12: 46"; a candle reads its four prices and its direction, as "Price, May: open 33, high 44, low 32, close 43, up".

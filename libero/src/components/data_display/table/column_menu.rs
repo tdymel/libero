@@ -527,7 +527,8 @@ pub(super) fn regrouped(grouping: &[String], header: &str, group: bool) -> Vec<S
     next
 }
 
-/// `hidden` with `header` shown or hidden, the others in their order.
+/// `hidden` with `header` shown or hidden, the others in their order. Keyed by the
+/// public header list, so a shared header toggles every column under it (todo 4542).
 pub(super) fn toggle_column(hidden: &[String], header: &str, show: bool) -> Vec<String> {
     let mut next: Vec<String> = hidden.iter().filter(|h| *h != header).cloned().collect();
     if !show {
