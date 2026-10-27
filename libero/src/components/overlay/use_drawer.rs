@@ -42,7 +42,7 @@ pub struct DrawerOptions {
 ///
 /// ```no_run
 /// # use dioxus::prelude::*;
-/// # use libero::components::Anchor;
+/// # use libero::components::{Anchor, Button};
 /// # use libero::hooks::{DrawerOptions, ModalScope, use_drawer};
 /// # fn app() -> Element {
 /// let options = DrawerOptions {
@@ -53,8 +53,7 @@ pub struct DrawerOptions {
 /// let nav = use_drawer(options, |s: ModalScope<()>| rsx! {
 ///     Anchor { to: "/", "Home" }
 /// });
-/// nav.open();
-/// # rsx! {}
+/// rsx! { Button { onclick: move |_| { nav.open(); }, "Menu" } }
 /// # }
 /// ```
 ///

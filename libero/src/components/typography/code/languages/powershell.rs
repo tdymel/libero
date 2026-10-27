@@ -5,13 +5,17 @@ use crate::components::typography::code::highlight::{Grammar, PatternDef, TokenR
 const RULES: &[TokenRule] = &[
     TokenRule {
         name: "comment",
-        patterns: &[PatternDef::new(r"#.*").greedy()],
+        patterns: &[
+            PatternDef::new(r"<#[\s\S]*?#>").greedy(),
+            PatternDef::new(r"#.*").greedy(),
+        ],
     },
     TokenRule {
         name: "string",
+        // The escape is a backtick; a doubled quote stands for the quote.
         patterns: &[
-            PatternDef::new(r#""(?:[^"\\]|\\.)*""#).greedy(),
-            PatternDef::new(r"'[^']*'").greedy(),
+            PatternDef::new(r#""(?:[^"`]|`[\s\S]|"")*""#).greedy(),
+            PatternDef::new(r"'(?:[^']|'')*'").greedy(),
         ],
     },
     TokenRule {
@@ -22,7 +26,8 @@ const RULES: &[TokenRule] = &[
         name: "keyword",
         patterns: &[PatternDef::new(
             r"\b(?:function|param|if|elseif|else|foreach|for|while|do|until|switch|break|continue|return|try|catch|finally|throw|begin|process|end|in)\b",
-        )],
+        )
+        .case_insensitive()],
     },
     TokenRule {
         name: "function",

@@ -13,7 +13,9 @@ const RULES: &[TokenRule] = &[
     TokenRule {
         name: "string",
         patterns: &[
-            PatternDef::new(r#"\$?@?"(?:[^"\\]|\\.)*""#).greedy(),
+            // Verbatim: no backslash escapes, `""` is a quote.
+            PatternDef::new(r#"\$?@\$?"(?:[^"]|"")*""#).greedy(),
+            PatternDef::new(r#"\$?"(?:[^"\\]|\\.)*""#).greedy(),
             PatternDef::new(r"'(?:[^'\\]|\\.)'").greedy().alias("char"),
         ],
     },

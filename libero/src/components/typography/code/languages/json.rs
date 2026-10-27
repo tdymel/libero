@@ -5,7 +5,9 @@ use crate::components::typography::code::highlight::{Grammar, PatternDef, TokenR
 const RULES: &[TokenRule] = &[
     TokenRule {
         name: "property",
-        patterns: &[PatternDef::new(r#"("(?:[^"\\]|\\.)*")(\s*:)"#).lookahead(2)],
+        patterns: &[PatternDef::new(r#"("(?:[^"\\]|\\.)*")(\s*:)"#)
+            .lookahead(2)
+            .greedy()],
     },
     TokenRule {
         name: "string",

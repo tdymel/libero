@@ -335,8 +335,11 @@ impl<S: Default + 'static, R: Clone + 'static> ModalHandle<S, R> {
 ///     Dialog { title: "{s.args().message}",
 ///         Button { onclick: move |_| s.resolve(true), "Delete" } }
 /// });
-/// confirm.open_with("Delete this file?").onresult(move |deleted| { let _ = deleted; });
-/// # rsx! {}
+/// rsx! {
+///     Button { onclick: move |_| {
+///         confirm.open_with("Delete this file?").onresult(move |deleted| { let _ = deleted; });
+///     }, "Delete file" }
+/// }
 /// # }
 /// ```
 ///

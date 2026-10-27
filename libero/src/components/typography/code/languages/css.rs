@@ -38,7 +38,7 @@ const RULES: &[TokenRule] = &[
     },
     TokenRule {
         name: "number",
-        patterns: &[PatternDef::new(r"-?\d*\.?\d+(?:%|[a-zA-Z]+)?")],
+        patterns: &[PatternDef::new(r"(^|[^\w.-])-?\d*\.?\d+(?:%|[a-zA-Z]+)?").lookbehind(1)],
     },
     TokenRule {
         name: "selector",

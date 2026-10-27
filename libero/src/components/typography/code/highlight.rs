@@ -406,10 +406,15 @@ pub(crate) fn highlight(source: &str, language: Language) -> Vec<HighlightedLine
         return lines;
     }
 
-    let tokens = tokenize(source, language.grammar());
+    // No `\r` reaches a pattern, so the native and the web engine tokenize alike (4476).
+    let normalized = match source.contains('\r') {
+        true => std::borrow::Cow::Owned(source.replace("\r\n", "\n")),
+        false => std::borrow::Cow::Borrowed(source),
+    };
+    let tokens = tokenize(&normalized, language.grammar());
     let mut spans = Vec::new();
     flatten(&tokens, &mut spans, None);
-    let lines = split_into_lines(spans, source.ends_with('\n'));
+    let lines = split_into_lines(spans, normalized.ends_with('\n'));
     HIGHLIGHTED.with_borrow_mut(|cache| {
         if cache.len() == HIGHLIGHT_CACHE_LEN {
             cache.pop_front();
@@ -429,9 +434,7 @@ fn split_into_lines(
     for (text, class) in spans {
         let mut rest = text;
         while let Some(newline_pos) = rest.find('\n') {
-            let line_part = rest[..newline_pos]
-                .strip_suffix('\r')
-                .unwrap_or(&rest[..newline_pos]);
+            let line_part = &rest[..newline_pos];
             if !line_part.is_empty() {
                 lines
                     .last_mut()

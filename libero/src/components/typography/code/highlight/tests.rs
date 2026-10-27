@@ -375,6 +375,111 @@ fn highlight_splits_crlf_lines_without_a_carriage_return_in_any_span() {
     );
 }
 
+/// 4476: a line comment ends before the `\r`, as on the web.
+#[test]
+#[cfg(feature = "code-lang-rust")]
+fn a_crlf_line_comment_tokenizes_without_the_carriage_return() {
+    let spans = flat("x // hi\r\ny\r\n", lang("rust"));
+
+    assert_eq!(
+        spans,
+        vec![
+            ("x ".to_string(), None),
+            ("// hi".to_string(), Some("lsx-tok-comment")),
+            ("y".to_string(), None),
+        ]
+    );
+}
+
+#[test]
+#[cfg(feature = "code-lang-html")]
+fn highlight_html_tag_with_trailing_space_and_self_closing_slash() {
+    let spans = flat("<br /><p >x</p>\n", lang("html"));
+
+    assert_eq!(
+        spans
+            .iter()
+            .filter(|(text, class)| (text == "br" || text == "p") && *class == Some("lsx-tok-tag"))
+            .count(),
+        3
+    );
+}
+
+#[test]
+#[cfg(feature = "code-lang-bash")]
+fn highlight_shell_hash_inside_a_word_or_expansion_is_no_comment() {
+    let spans = flat("echo $# ${#a} a#b # c\n", lang("bash"));
+
+    let comments: Vec<_> = spans
+        .iter()
+        .filter(|(_, class)| *class == Some("lsx-tok-comment"))
+        .collect();
+    assert_eq!(comments, [&("# c".to_string(), Some("lsx-tok-comment"))]);
+}
+
+#[test]
+#[cfg(feature = "code-lang-csharp")]
+fn highlight_csharp_verbatim_string_ends_at_an_undoubled_quote() {
+    let spans = flat("var p = @\"C:\\a\"\"b\\\"; // x\n", lang("csharp"));
+
+    assert_span(&spans, "@\"C:\\a\"\"b\\\"", "lsx-tok-string");
+    assert_span(&spans, "// x", "lsx-tok-comment");
+}
+
+#[test]
+#[cfg(feature = "code-lang-css")]
+fn highlight_css_digits_inside_identifiers_are_no_numbers() {
+    let spans = flat("h1 { margin: -2px 1.5em; }\n", lang("css"));
+
+    assert_span(&spans, "-2px", "lsx-tok-number");
+    assert_span(&spans, "1.5em", "lsx-tok-number");
+    assert!(
+        !spans
+            .iter()
+            .any(|(text, class)| text == "1" && *class == Some("lsx-tok-number")),
+        "{spans:?}"
+    );
+}
+
+#[test]
+#[cfg(feature = "code-lang-json")]
+fn highlight_json_property_wins_over_a_string_that_holds_a_colon() {
+    let spans = flat("{\"a\": \"b\\\": c\", \"d\": 1}\n", lang("json"));
+
+    assert_span(&spans, "\"a\"", "lsx-tok-attribute");
+    assert_span(&spans, "\"b\\\": c\"", "lsx-tok-string");
+    assert_span(&spans, "\"d\"", "lsx-tok-attribute");
+}
+
+#[test]
+#[cfg(feature = "code-lang-powershell")]
+fn highlight_powershell_backtick_block_comment_and_mixed_case_keyword() {
+    let spans = flat(
+        "<# a \"b\" #> If ($x) { \"q`\"r\" } # c\n",
+        lang("powershell"),
+    );
+
+    assert_span(&spans, "<# a \"b\" #>", "lsx-tok-comment");
+    assert_span(&spans, "If", "lsx-tok-keyword");
+    assert_span(&spans, "\"q`\"r\"", "lsx-tok-string");
+    assert_span(&spans, "# c", "lsx-tok-comment");
+}
+
+#[test]
+#[cfg(feature = "code-lang-rust")]
+fn highlight_rust_raw_strings_and_char_escapes() {
+    let spans = flat(
+        "r\"a\\\" r#\"b\"c\"# '\\u{1F600}' '\\x41' '\\''\n",
+        lang("rust"),
+    );
+
+    assert_span(&spans, "r\"a\\\"", "lsx-tok-string");
+    assert_span(&spans, "r#\"b\"c\"#", "lsx-tok-string");
+    assert_span(&spans, "'\\u{1F600}'", "lsx-tok-string");
+    assert_span(&spans, "'\\x41'", "lsx-tok-string");
+    assert_span(&spans, "'\\''", "lsx-tok-string");
+}
+
 #[test]
 fn an_empty_match_does_not_hide_the_patterns_later_matches() {
     static GRAMMAR: Grammar = &[TokenRule {

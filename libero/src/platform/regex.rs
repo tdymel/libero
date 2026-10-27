@@ -293,10 +293,11 @@ fn find_impl(
 }
 
 /// Rewrites `\b`, `\w`, `\d` to the ASCII sets JS's `RegExp` has, so server and
-/// client highlight alike (279). `\s` is Unicode in both and stays.
+/// client highlight alike (279). `\s` is Unicode in both and stays. A bare `.` stops at
+/// every JS line terminator, not only `\n` (4476).
 #[cfg(not(target_arch = "wasm32"))]
 fn ascii_semantics(pattern: &str) -> std::borrow::Cow<'_, str> {
-    if !pattern.contains('\\') {
+    if !pattern.contains(['\\', '.']) {
         return std::borrow::Cow::Borrowed(pattern);
     }
 
@@ -328,6 +329,7 @@ fn ascii_semantics(pattern: &str) -> std::borrow::Cow<'_, str> {
                 }
                 None => out.push('\\'),
             },
+            '.' if !in_class => out.push_str(r"[^\n\r\x{2028}\x{2029}]"),
             '[' if !in_class => {
                 in_class = true;
                 out.push('[');
@@ -399,9 +401,23 @@ mod tests {
     fn nothing_else_is_touched() {
         assert_eq!(ascii_semantics(r"\\w"), r"\\w");
         assert_eq!(ascii_semantics(r"[\s\S]*?"), r"[\s\S]*?");
+        assert_eq!(ascii_semantics(r"[^.]"), r"[^.]");
+        assert_eq!(ascii_semantics(r"\."), r"\.");
+    }
+
+    /// 4476: `regex`'s `.` matches `\r`, `RegExp`'s does not.
+    #[test]
+    fn a_dot_stops_at_every_js_line_terminator() {
+        let text = PreparedText::new("// a\r\nb\u{2028}c");
+
+        let matched = regex_api()
+            .find(r"//.*", false, &text, 0)
+            .expect("the comment matches");
+
+        assert_eq!((matched.start, matched.end), (0, 4));
         assert_eq!(
             ascii_semantics(r#""(?:[^"\\]|\\.)*""#),
-            r#""(?:[^"\\]|\\.)*""#
+            r#""(?:[^"\\]|\\[^\n\r\x{2028}\x{2029}])*""#
         );
     }
 

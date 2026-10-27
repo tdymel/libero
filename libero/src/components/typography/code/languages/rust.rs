@@ -14,8 +14,14 @@ const RULES: &[TokenRule] = &[
     TokenRule {
         name: "string",
         patterns: &[
+            PatternDef::new(r#"\bb?r"[^"]*""#).greedy(),
+            PatternDef::new(r##"\bb?r#"[\s\S]*?"#"##).greedy(),
+            PatternDef::new(r###"\bb?r##"[\s\S]*?"##"###).greedy(),
+            PatternDef::new(r####"\bb?r###"[\s\S]*?"###"####).greedy(),
             PatternDef::new(r#""(?:[^"\\]|\\.)*""#).greedy(),
-            PatternDef::new(r"'(?:[^'\\]|\\.)'").greedy().alias("char"),
+            PatternDef::new(r"'(?:[^'\\]|\\(?:u\{[\da-fA-F_]{1,6}\}|x[\da-fA-F]{2}|.))'")
+                .greedy()
+                .alias("char"),
         ],
     },
     TokenRule {

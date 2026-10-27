@@ -36,7 +36,7 @@ const RULES: &[TokenRule] = &[
     },
     TokenRule {
         name: "tag",
-        patterns: &[PatternDef::new(r"</?[-\w]+(?:\s+[^<>]*)?\s*/?>")
+        patterns: &[PatternDef::new(r"</?[-\w]+(?:\s[^<>]*)?/?>")
             .greedy()
             .inside(tag_inside)],
     },
