@@ -218,7 +218,7 @@ pub fn FileFieldPage() -> Element {
                         .default("Chip, file name or card")
                         .doc("Draws one picked file, remove control included. `args.remove` removes it. Unset, a multiple `input` field draws a chip, a single one the file name, and a dropzone a card under its surface."),
                     prop("trigger", "Callback<FileTriggerArgs, Element>")
-                        .doc("Draws the app's own control, an avatar or a button, in place of the Browse surface, at its own width: no chips, cards, clear x or drop target. The field keeps its label, helper, error, `name`, `accept`, `max_size`, `capture` and `crop`. Make it a focusable `button`, spread `args.attributes` onto it, and call `args.open` from its click: a browser opens no picker outside a user gesture. The trigger starts at the field's start and follows its `align-items`; `FileFieldPart::Trigger` styles its box. Opening a `Menu` from it works too: `menu.a11y_attributes_on(args.attributes)` keeps the field's `id`."),
+                        .doc("Draws the app's own control, an avatar or a button, in place of the Browse surface, at its own width: no chips, cards, clear x or drop target. The field keeps its label, helper, error, `name`, `accept`, `max_size`, `capture` and `crop`. Make it a focusable `button`, spread `args.attributes` onto it (a libero `Button` takes them as `attributes`), and call `args.open` from its click: a browser opens no picker outside a user gesture. The trigger starts at the field's start and follows its `align-items`; `FileFieldPart::Trigger` styles its box. Opening a `Menu` from it works too: `menu.a11y_attributes_on(args.attributes)` keeps the field's `id`, so the field's label names the menu."),
                     prop("name", "FieldName<Files>")
                         .doc("What the files post as. A removed file stops posting. A path such as `Claim::FIELDS.receipts()` also binds the files to the surrounding `Form`'s value when the field has no `onchange`."),
                     prop("onchange", "EventHandler<Files>")
@@ -321,6 +321,7 @@ pub fn FileFieldPage() -> Element {
                 }
             },
             // snippet: let mut files = use_signal(Files::default);
+            // snippet: let menu = use_menu();
             Demo {
                 component: "FileField",
                 children_text: "",

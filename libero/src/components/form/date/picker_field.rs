@@ -486,6 +486,8 @@ pub(super) fn use_picker_field<V: FieldValue>(
             _ if readonly || event.is_composing() => {}
             Key::Named(NamedKey::Enter) => {
                 if let Some(error) = commit_on_enter() {
+                    // A refused text holds the form's implicit submit, so the error stays seen (4343).
+                    event.prevent_default();
                     announcer.say(error);
                 }
             }

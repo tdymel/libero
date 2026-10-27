@@ -74,7 +74,7 @@ pub fn SkeletonPage() -> Element {
             properties: vec![props("Skeleton", vec![
                 prop("visible", "bool")
                     .default("true")
-                    .doc("Hides the children behind the placeholder, or draws the standalone shape. `false` shows the children."),
+                    .doc("Hides the children behind the placeholder, or draws the standalone shape. `false` shows the children. A grace period hides the region with `opacity`, since `visibility` would not hide the grey."),
                 prop("height", "ThemeAwareValue")
                     .doc("A CSS length. Unset, the children's height. A standalone shape needs one, or it is zero pixels tall."),
                 prop("width", "ThemeAwareValue")

@@ -11,6 +11,8 @@ A placeholder for content that is still loading. Without children it is a grey
 shape, and a few of them stand in for a layout. Wrapped around the real
 content, it hides that content while `visible` is set, so the placeholder has
 exactly its size. Hidden content is not announced and not reachable with Tab.
+A fast fetch should not flash it: keep the region transparent until a `timer()`
+grace period ends.
 
 ## Usage
 
@@ -36,56 +38,11 @@ fn Profile(name: Option<String>) -> Element {
 }
 ```
 
-## Grace period
-
-A fetch that answers in 50 ms should not flash a placeholder. Keep the region
-transparent until a grace period ends, and end it with `timer()`. Use `opacity`
-for that, since `visibility` would not hide the grey.
-
-```rust
-use std::time::Duration;
-
-use dioxus::prelude::*;
-use libero::components::Skeleton;
-use libero::platform::timer;
-
-/// How long a fetch may take before its placeholder shows.
-const GRACE: Duration = Duration::from_millis(200);
-
-#[component]
-fn Card() -> Element {
-    let profile = use_resource(load_profile);
-    let loading = profile.read().is_none();
-    let mut slow = use_signal(|| timer().is_none());
-    // Dropping the timer cancels it, so an unmounted card never writes `slow`.
-    let mut grace = use_signal(|| {
-        timer().map(|timer| timer.after(GRACE, Box::new(move || slow.set(true))))
-    });
-    use_drop(move || grace.set(None));
-
-    rsx! {
-        div {
-            "aria-busy": loading,
-            // `opacity`, not `visibility`, which would not hide the grey.
-            opacity: if loading && !slow() { "0" } else { "1" },
-            Skeleton { visible: loading,
-                ProfileCard { profile: profile.read().clone().unwrap_or_default() }
-            }
-        }
-    }
-}
-#
-# #[derive(Clone, PartialEq, Default)]
-# struct Profile;
-# async fn load_profile() -> Profile { Profile }
-# #[component] fn ProfileCard(profile: Profile) -> Element { rsx! {} }
-```
-
 ## Props
 
 | Prop | Type | Default | Description |
 |---|---|---|---|
-| `visible` | `bool` | `true` | Hides the children behind the placeholder, or draws the standalone shape. `false` shows the children. |
+| `visible` | `bool` | `true` | Hides the children behind the placeholder, or draws the standalone shape. `false` shows the children. A grace period hides the region with `opacity`, since `visibility` would not hide the grey. |
 | `height` | `ThemeAwareValue` | - | A CSS length. Unset, the children's height. A standalone shape needs one, or it is zero pixels tall. |
 | `width` | `ThemeAwareValue` | `100%` | A CSS length. Ignored with `circle`. |
 | `circle` | `bool` | `false` | A circle as wide as `height`. Without `height`, as wide as the children. |

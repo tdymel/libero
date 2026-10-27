@@ -36,42 +36,6 @@ fn Demo() -> Element {
 }
 ```
 
-### Touch input
-
-With `touch_input: TouchInput::Spin`, a tap under a finger opens a spin column
-instead of the soft keyboard: a sheet at the screen's foot below `sm`, a popover
-under the field from `sm` up. A drag, the wheel, a tap on a neighbour or the
-arrow keys step it by `step`, and every step calls `onchange` at once; Done,
-Escape, Back and a tap outside only close it. Without `min` and `max` it spins
-on to the type's limits, and an empty field starts at `min`, else zero. A mouse
-still types.
-
-The keyboard button beside Done switches to typing: it closes the spinner and
-focuses the field with its keypad. A phone browser raises the keyboard at once;
-in an Android app the next tap on the field does.
-
-```rust
-use dioxus::prelude::*;
-use libero::components::{NumberField, TouchInput};
-
-#[component]
-fn Break() -> Element {
-    let mut minutes = use_signal(|| Some(30u32));
-
-    rsx! {
-        NumberField {
-            label: "Break",
-            trailing: rsx! { "min" },
-            describe_trailing: true,
-            step: 5,
-            touch_input: TouchInput::Spin,
-            value: minutes(),
-            onchange: move |next| minutes.set(next),
-        }
-    }
-}
-```
-
 ## Props
 
 ### `NumberField<T: NumberValue>`
@@ -97,7 +61,7 @@ fn Break() -> Element {
 | `describe_trailing` | `bool` | `false` | `trailing` is text that describes the value, e.g. a unit. |
 | `increment_label` | `String` | `number_field.increase` | Names the plus button, such as "Add a guest". Unset, the localization's `number_field.increase`, "Increase" in English. |
 | `decrement_label` | `String` | `number_field.decrease` | Names the minus button. Unset, the localization's `number_field.decrease`, "Decrease" in English. |
-| `touch_input` | `TouchInput` | `Keyboard` | What a tap under a finger opens. `TouchInput::Spin` opens a spin column that steps by `step`, in a sheet below `sm` and a popover from `sm` up, with no soft keyboard; a mouse still types. Without `min` and `max` it spins on to the type's limits, and an empty field starts at `min`, else zero. The keyboard button beside Done switches to typing: it closes the spinner and focuses the field with its keypad. A phone browser raises the keyboard at once; in an Android app the next tap on the field does. |
+| `touch_input` | `TouchInput` | `Keyboard` | What a tap under a finger opens. `TouchInput::Spin` opens a spin column that steps by `step`, in a sheet below `sm` and a popover from `sm` up, with no soft keyboard; a mouse still types. A drag, the wheel, a tap on a neighbour or an arrow key steps it and calls `onchange` at once; Done, Escape, Back and a tap outside only close it. Without `min` and `max` it spins on to the type's limits, and an empty field starts at `min`, else zero. The keyboard button beside Done switches to typing: it closes the spinner and focuses the field with its keypad. A phone browser raises the keyboard at once; in an Android app the next tap on the field does. |
 | `label` | `Caption` | - | The field's caption, above the control. It names the field. |
 | `description` | `Caption` | - | Between the label and the control. What to enter. |
 | `helper` | `Caption` | - | Under the control. Units, ranges, what the number means. |

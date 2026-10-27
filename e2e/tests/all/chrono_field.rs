@@ -378,10 +378,10 @@ fn a_range_typed_with_one_end_asks_for_the_other_and_posts_nothing() {
             .await
             .unwrap();
         let page = &fixture.page;
-        // Enter submits the form too, which would leave the page.
+        // A refused Enter holds the implicit submit (4343); a submit is counted, not followed.
         page.evaluate_bounded(
-            "document.getElementById('sent') \
-             .addEventListener('submit', (event) => event.preventDefault())",
+            "window.submits = 0; document.getElementById('sent') \
+             .addEventListener('submit', (event) => { window.submits += 1; event.preventDefault(); })",
         )
         .await
         .unwrap();
@@ -420,6 +420,13 @@ fn a_range_typed_with_one_end_asks_for_the_other_and_posts_nothing() {
             .into_value()
             .unwrap();
         assert!(posted.is_empty(), "a half range was posted: {posted:?}");
+        let submits: u32 = page
+            .evaluate_bounded("window.submits")
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        assert_eq!(submits, 0, "a refused Enter submitted the form");
 
         fixture.console.assert_clean("a one-ended range").unwrap();
         fixture.close().await.unwrap();

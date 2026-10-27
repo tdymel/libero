@@ -173,7 +173,7 @@ pub(crate) const FEATURES: &[Feature] = &[
     feature("floating-window", "overlay", "use_floating_window", &["menu", "action-icon", "button", "title", "float", "use-drag"], false, &["/overlay/floating-window"]),
     feature("hover-card", "overlay", "HoverCard", &["paper", "scroll-area", "use-popover", "use-timers"], false, &["/overlay/hover-card"]),
     feature("lightbox", "overlay", "use_lightbox", &["carousel", "modal", "action-icon", "dialog"], false, &["/overlay/lightbox"]),
-    feature("menu", "overlay", "Menu, use_menu", &["anchor", "kbd", "divider", "paper", "use-popover", "use-swipe", "use-timers"], false, &["/overlay/menu"]),
+    feature("menu", "overlay", "Menu, use_menu", &["anchor", "kbd", "divider", "paper", "use-popover", "use-swipe", "use-timers", "use-media-query"], false, &["/overlay/menu"]),
     feature("modal", "overlay", "Modal, use_modal", &["overlay-backdrop", "focus-trap", "use-back"], true, &["/overlay/modal"]),
     feature("overlay-backdrop", "overlay", "Overlay", &["box"], true, &["/overlay/overlay"]),
     // After `overlay-backdrop`: the page's feature line names the first that lists it.

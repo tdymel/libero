@@ -106,7 +106,7 @@ pub fn MultiSelect<T: Options>(props: MultiSelectProps<T>) -> Element {
     let values = list.values();
     // As `Select`: a pending list shows nothing and doesn't report empty.
     let loading = props.options.is_pending();
-    if values.is_empty() && !loading {
+    if values.is_empty() && props.options.is_unset() {
         warn("MultiSelect: no options - a `T` without static `options()` needs `options`.");
     }
 

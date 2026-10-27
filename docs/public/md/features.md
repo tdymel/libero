@@ -155,7 +155,7 @@ it is on (Notes).
 | `floating-window` | use_floating_window | menu, action-icon, button, title, float, use-drag | off |  |
 | `hover-card` | HoverCard | tooltip, focus-trap, paper, scroll-area | off |  |
 | `lightbox` | use_lightbox | carousel, modal, action-icon, dialog | off |  |
-| `menu` | Menu, use_menu | anchor, kbd, divider, paper, use-popover, use-swipe, use-timers | off |  |
+| `menu` | Menu, use_menu | anchor, kbd, divider, paper, use-popover, use-swipe, use-timers, use-media-query | off |  |
 | `modal` | Modal, use_modal | overlay-backdrop, focus-trap, use-back | on |  |
 | `overlay-backdrop` | Overlay | box | on |  |
 | `loading-overlay` | LoadingOverlay | overlay-backdrop, loader, visually-hidden | off |  |

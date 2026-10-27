@@ -176,209 +176,6 @@ an error one set after a valid submit, in `onsubmit` or once a request returns,
 shows the summary, which takes focus and is announced, as a blocked submit's
 would.
 
-## Async submit
-
-`Submit::parse_async(parse, handler)` runs an async `handler`, such as a
-request. `form.is_submitting()` is `true` until it ends, so the button shows
-`loading`, and a second submit meanwhile is ignored. An `Err` it returns lands
-like `set_errors`, and `FormErrors::form(..)` is an error on no field, such as
-wrong credentials. With `summary: SummaryMode::Hidden` a blocked submit focuses
-the first invalid field instead of a summary, and a screen reader hears how
-many errors there are. The password is a type with no `Clone` or `PartialEq`,
-held as `Option<ByAddress<Password>>` and bound with `.map`.
-
-```rust
-use dioxus::prelude::*;
-use libero::components::{
-    Button, ByAddress, Fields, Form, FormErrors, PasswordField, RequiredValue, Submit, SummaryMode,
-    Text, TextField, use_form,
-};
-use std::convert::Infallible;
-
-/// A secret: no `Clone` and no `PartialEq`, so it is never copied by accident.
-struct Password(String);
-
-#[derive(Clone, PartialEq, Default, Fields)]
-struct Login {
-    email: String,
-    // `ByAddress` makes the secret fit for a form value.
-    password: Option<ByAddress<Password>>,
-}
-
-fn password_text(password: &ByAddress<Password>) -> String {
-    password.0.clone()
-}
-
-fn password(text: String) -> Result<ByAddress<Password>, Infallible> {
-    Ok(ByAddress::new(Password(text)))
-}
-
-struct Credentials {
-    email: String,
-    password: ByAddress<Password>,
-}
-
-fn credentials(login: &Login) -> Result<Credentials, FormErrors> {
-    let password = login.password.clone().required(Login::FIELDS.password())?;
-    Ok(Credentials { email: login.email.clone(), password })
-}
-
-#[component]
-fn SignInForm() -> Element {
-    let login = use_store(Login::default);
-    let form = use_form();
-    let mut signed_in = use_signal(String::new);
-
-    rsx! {
-        Form {
-            sx: libero::sx::sx().width("100%").max_width("320px"),
-            form,
-            value: login,
-            // Each field shows its own error, and focus goes to the first one.
-            summary: SummaryMode::Hidden,
-            // While the request runs, the form ignores another submit.
-            onsubmit: Submit::parse_async(credentials, move |sent: Credentials| async move {
-                if !sign_in(&sent).await {
-                    // No field is at fault, so the error shows above the fields.
-                    return Err(FormErrors::new().form("Wrong email or password."));
-                }
-                signed_in.set(sent.email);
-                Ok(())
-            }),
-            TextField { label: "Email", r#type: "email", autocomplete: "username", name: Login::FIELDS.email(), required: true }
-            PasswordField {
-                label: "Password",
-                autocomplete: "current-password",
-                name: Login::FIELDS.password().map(password_text, password),
-                required: true,
-            }
-            Button { r#type: "submit", loading: form.is_submitting(), "Sign in" }
-            Text { role: "status",
-                if !signed_in().is_empty() { "Signed in as {signed_in}." }
-            }
-        }
-    }
-}
-#
-# async fn sign_in(sent: &Credentials) -> bool { sent.password.0 == "secret" }
-```
-
-`Submit::task(handler)` is the same over the `FormEvent`, without a `parse`
-step. A type with neither `Clone` nor `PartialEq`, such as a password type,
-fits a form value as `ByAddress<T>`: clones share it and two compare equal only
-when they are the same one.
-
-## Async rules
-
-`checked_async(f)` asks a server whether a parsed value is fine, such as a free
-email address. It runs once the text parsed and the other rules found no error,
-300 ms after the last keystroke unless `.debounce(ms)` says otherwise.
-Meanwhile the field is `FieldStatus::Pending`: its control has
-`aria-busy="true"` and `data-state` `pending` once it showed its rules, after a
-blur or a submit, which `sx().when("pending", ..)` styles. An
-answer for an older value is dropped. A submit asks at once, waits with
-`is_submitting()` set, and then sends or shows the answer. The rule takes the
-field's `.message` words, or its own `.message(fn)`. A plain `String` field
-gets one through `.map` or `.parsed()`.
-
-```rust
-use dioxus::prelude::*;
-use libero::components::{Button, Fields, Form, Text, TextField, checked_async, use_form};
-use libero::localization::Localization;
-
-#[derive(Clone, PartialEq, Default, Fields)]
-struct Signup {
-    email: Option<String>,
-}
-
-enum EmailError {
-    Invalid,
-    Taken,
-}
-
-fn email(text: String) -> Result<String, EmailError> {
-    match text.contains('@') {
-        true => Ok(text.trim().to_string()),
-        false => Err(EmailError::Invalid),
-    }
-}
-
-fn email_message(error: &EmailError, _: &Localization) -> String {
-    match error {
-        EmailError::Invalid => "Enter an email address, such as me@example.com.".into(),
-        EmailError::Taken => "This address is taken. Sign in instead.".into(),
-    }
-}
-
-#[component]
-pub fn EmailCheckForm() -> Element {
-    let signup = use_store(Signup::default);
-    let form = use_form();
-    let mut sent = use_signal(String::new);
-
-    rsx! {
-        Form {
-            sx: libero::sx::sx().width("100%").max_width("320px"),
-            form,
-            value: signup,
-            // A submit waits for the check, then sends or shows its answer.
-            onsubmit: move |_| sent.set(signup.read().email.clone().unwrap_or_default()),
-            // A loader in the field while the server checks, once the field showed its rules.
-            pending_loader: true,
-            TextField {
-                label: "Email",
-                autocomplete: "email",
-                required: true,
-                // `data-state` `pending` while the server checks.
-                sx: libero::sx::sx().when("pending", libero::sx::sx().cursor("progress")),
-                // Asked 400 ms after the last keystroke, once the address parsed.
-                name: Signup::FIELDS.email().map(String::clone, email).message(email_message)
-                    .rules([checked_async(email_free).debounce(400)]),
-            }
-            Button { r#type: "submit", loading: form.is_submitting(), "Sign up" }
-            Text { role: "status",
-                if !sent().is_empty() { "Signed up as {sent}." }
-            }
-        }
-    }
-}
-#
-# async fn email_free(email: String) -> Result<(), EmailError> {
-#     match email == "taken@example.com" { true => Err(EmailError::Taken), false => Ok(()) }
-# }
-```
-
-## Upgrading
-
-`onsubmit` was an `Option<EventHandler<FormEvent>>` before it became
-`Submit<V>`. A closure still fits, and so does a handler a wrapper forwards,
-with or without the `Option`. `FormLabels` gains fields in minor releases, such
-as `error_count`, so build yours from a built-in set rather than listing every
-field. `FieldStatus` gained `Pending`: a `match` over it needs that arm, or a
-`_` one.
-
-```rust
-use dioxus::prelude::*;
-use libero::components::Form;
-use libero::localization::{FormLabels, Localization};
-
-/// Written for the old `onsubmit`, and still forwarding it.
-#[component]
-fn AppForm(onsubmit: Option<EventHandler<FormEvent>>, children: Element) -> Element {
-    rsx! {
-        Form::<()> { onsubmit, {children} }
-    }
-}
-
-static WORDS: Localization = Localization {
-    form: FormLabels {
-        required: "This one is needed.",
-        ..FormLabels::ENGLISH
-    },
-    ..Localization::ENGLISH
-};
-```
-
 ## Sticky action bar
 
 A long form keeps its buttons in view with a `Flex` that sticks to the bottom of
@@ -467,7 +264,7 @@ Stepper {
 | `validate` | `Validators<V>` | - | Rules over `value`, one or an array. A rule with `.on(..)` shows its status on each field it names, and runs only while each of them holds a parsed value or is empty and optional. |
 | `onsubmit` | `Submit<V>` | - | Fires on a submit with no errors: a closure over the `FormEvent` or an `EventHandler<FormEvent>`, optional too, `Submit::parse(parse, handler)`, or the async `Submit::parse_async(parse, handler)` and `Submit::task(handler)`. Without an `action`, the browser's own submit is cancelled. A `javascript:`, `data:` or `vbscript:` `action` is dropped with a debug warning, so it counts as none. |
 | `summary_title` | `String` | - | A heading over the error summary. |
-| `summary` | `SummaryMode` | `Visible` | `Visible`: a blocked submit or `set_errors` shows a summary of every error above the fields and focuses it. `Hidden`: no summary list; focus goes to the first field that shows its error, and a visually hidden status says how many errors there are (`form.error_count`). Errors no field shows, from `FormErrors::form` or a form rule without `.on(..)`, still show in the summary, which then takes focus when no field does. |
+| `summary` | `SummaryMode` | `Visible` | `Visible`: a blocked submit or `set_errors` shows a summary of every error above the fields and focuses it. `Hidden`: no summary list; focus goes to the first field that shows its error, and a visually hidden status says how many errors there are (`form.error_count`). `FormLabels` gains fields in minor releases, so build yours from a built-in set, `..FormLabels::ENGLISH`. Errors no field shows, from `FormErrors::form` or a form rule without `.on(..)`, still show in the summary, which then takes focus when no field does. |
 | `pending_loader` | `bool` | `false` | Draws a silent `Loader` at the end of a framed field's box while a `checked_async` rule checks its value, once the field shows its rules (after a blur or a submit). The box keeps its height; the control is `aria-busy="true"` either way. Not in a `PinField`'s cells. |
 | `form` | `FormHandle` | - | Controls the form from outside, made with `use_form()`. Taken once, on mount. Without it the form makes its own, which `use_form_context()` returns inside the form. |
 | `children` | `Element` | required | The fields, fieldsets and buttons. |
@@ -509,8 +306,8 @@ any extra HTML attributes.
 | `.message(fn)` | `fn(&E, &Localization) -> String` | Words every error of type `E` on the field, the parse error, `checked` and `checked_async` rules alike. Needed when `E` has no `FieldError`, such as a domain crate's error: without it the name does not compile. |
 | `.rules(..)` | `Validator<T>, Checked<T, E> or CheckedAsync<T, E>` | Rules over `T`, run only on a parsed value. The field's own `validate` runs first, over `W`, before the parse; the first error wins. Adds to earlier calls, so a mixed list is two calls. |
 | `checked(f)` | `Checked<V, E>` | A rule from `Fn(&V) -> Result<(), E>`: the field shows `E`'s words. `.warning()` shows it as a warning, `.message(fn)` words an `E` with no `FieldError`. Fits any `validate` too. |
-| `checked_async(f)` | `CheckedAsync<V, E>` | An async rule from `Fn(V) -> impl Future<Output = Result<(), E>>`, such as a request, for `.rules` only. It runs once the value parsed and the other rules found no error, after `.debounce(ms)` (300 by default); an answer for an older value is dropped. The answers for the last 8 values are kept, so going back to one asks again only after a reset. Meanwhile the field is `FieldStatus::Pending`, and a submit asks at once and waits for the answer. `.warning()` shows a failure as a warning, which a submit does not wait for; `.message(fn)` words an `E` that is not the field's error type. |
-| `pending` | `FieldStatus::Pending` | An async rule is still checking: `aria-busy="true"` on the control and `data-state` `pending`, no message, blocks nothing. It ranks below a warning and above `Valid`. A reset drops the check and its answer. |
+| `checked_async(f)` | `CheckedAsync<V, E>` | An async rule from `Fn(V) -> impl Future<Output = Result<(), E>>`, such as a request, for `.rules` only. It runs once the value parsed and the other rules found no error, after `.debounce(ms)` (300 by default); an answer for an older value is dropped. The answers for the last 8 values are kept, so going back to one asks again only after a reset. Meanwhile the field is `FieldStatus::Pending`, and a submit asks at once and waits for the answer. `.warning()` shows a failure as a warning, which a submit does not wait for; `.message(fn)` words an `E` that is not the field's error type. A plain `String` field gets one through `.map` or `.parsed()`. |
+| `pending` | `FieldStatus::Pending` | An async rule is still checking: `aria-busy="true"` on the control and `data-state` `pending`, no message, blocks nothing. It ranks below a warning and above `Valid`. A reset drops the check and its answer. `data-state` shows once the field showed its rules, after a blur or a submit, for `sx().when("pending", ..)`; a `match` over `FieldStatus` needs this arm, or a `_` one. |
 | `impl FieldError` | `trait` | `fn message(&self, &Localization) -> String`: an error's words in the active language, worded again on a switch. Implemented for `Fn(&Localization) -> String`, `String` and `&'static str`; there is no `Display` fallback. |
 | `.at(path, error)` | `FormErrors` | Errors by field path for `set_errors` and `parse`: `FormErrors::new().at(path, error)` with a `FieldError`, or `.at_with(path, error, fn)` worded by a `fn(&E, &Localization) -> String`. `path` is a `FieldPath`, a `FieldName` or its spelling. `.form(error)` is an error on the whole form, such as wrong credentials: an unlinked summary line, shown with `SummaryMode::Hidden` too, cleared by the next submit, a reset or `clear_errors`, not by an edit. |
 | `.required(path)` | `Result<T, FormErrors>` | On an `Option<T>`, with `RequiredValue` in scope: the value, else an error on `path` worded as an empty `required` field. Turns a missing value into a `FormErrors` entry with `?` instead of an `unwrap()`. |

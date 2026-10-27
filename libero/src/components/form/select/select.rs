@@ -132,7 +132,8 @@ pub fn Select<T: Options>(props: SelectProps<T>) -> Element {
     let values = list.values();
     // A pending list shows nothing and doesn't report empty.
     let loading = props.options.is_pending();
-    if values.is_empty() && !loading {
+    // A passed empty list is real data ("No results"); only an unset prop is a mistake.
+    if values.is_empty() && props.options.is_unset() {
         warn("Select: no options - a `T` without static `options()` needs `options`.");
     }
     let selected_index = current

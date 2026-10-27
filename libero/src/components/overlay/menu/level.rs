@@ -14,12 +14,12 @@ use super::{
 use crate::{
     components::{
         common::{HtmlTag, Input, Part, Parts, ScaleOrCss, States, Variables, variables},
-        form::phone_sheet::{use_sheet_room, use_sheet_swipe},
+        form::phone_sheet::{narrow_query, use_sheet_room, use_sheet_swipe},
         layout::{Divider, use_box},
     },
     hooks::{
         Align, DismissHandle, DismissOptions, ElementHandle, PopoverOptions, PressMarker, Side,
-        TYPEAHEAD_RESET, use_dismiss, use_popover_on, use_theme, use_typeahead,
+        TYPEAHEAD_RESET, use_dismiss, use_media_query, use_popover_on, use_theme, use_typeahead,
     },
     theme::{Size, SizeCss},
 };
@@ -140,7 +140,9 @@ pub(super) fn MenuLevel(props: MenuLevelProps) -> Element {
     );
     // Swiped away, a submenu sheet hands focus to its item, the root to the trigger.
     let swipe = use_sheet_swipe(floating, use_callback(move |()| dismiss.dismiss()));
-    let room = use_sheet_room(floating, open && placed);
+    // As `ComboboxPopup`: off the sheet's width the room is never read, so no measure, no redraw.
+    let narrow = use_media_query(&narrow_query());
+    let room = use_sheet_room(floating, narrow() && open && placed);
     // Portaled beside its parents, so focus here would read as leaving them.
     // The guards unregister on drop.
     let parents = props.parents.0.clone();
