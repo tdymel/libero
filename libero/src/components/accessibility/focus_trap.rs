@@ -75,19 +75,34 @@ fn cycle_focus(root: &ElementHandle, backwards: bool) -> bool {
     let index = items.iter().position(|item| item.is_focused());
     let order = tab_order(&items);
     let stops = tab_stops(root, &items, backwards);
-    focus_next(&items, &stops, &order, index, backwards)
+    // No stop to move to: focus on the trap or its modal box stays there (APG).
+    focus_next(&items, &stops, &order, index, backwards) || holds_focus(root)
 }
 
-/// Focus fell to the document: on `<body>` (`<html>` on Blitz) or on a removed element.
+/// Controls a script may focus out of Tab order (a roving toolbar's `tabindex="-1"` button).
+const CONTROLS: &str = "a[href], button, input, select, textarea, summary, iframe, audio, video";
+
+fn holds_focus(root: &ElementHandle) -> bool {
+    root.is_focused() || root.query_selector(":focus").is_ok()
+}
+
+/// Focus fell out of the trap: to the document (`<body>`, `<html>` on Blitz, a removed element) or
+/// onto a container that is no Tab stop and no widget, as a clicked `<main tabindex="-1">` (4662).
 /// A platform that cannot say, or a window blur, which keeps the element, is not a fall.
-fn focus_fell() -> bool {
-    document()
-        .and_then(|document| document.active_element())
-        .is_some_and(|active| {
-            !active.is_connected()
-                || active.query_selector("body").is_ok()
-                || active.query_selector(":scope:is(body) > *").is_ok()
-        })
+fn focus_fell(root: &ElementHandle) -> bool {
+    !holds_focus(root)
+        && document()
+            .and_then(|document| document.active_element())
+            .is_some_and(|active| {
+                !active.is_connected()
+                    || active.query_selector("body").is_ok()
+                    || active.query_selector(":scope:is(body) > *").is_ok()
+                    || active
+                        .matches(&format!(
+                            ":not({FOCUSABLE_SELECTOR}, {CONTROLS}, [role], [contenteditable])"
+                        ))
+                        .unwrap_or(false)
+            })
 }
 
 thread_local! {
@@ -164,7 +179,8 @@ base_props! {
 /// It has no Escape, and restores focus on unmount only with `restore_focus`.
 ///
 /// With nothing focusable inside it focuses an `aria-modal="true"` child, or else
-/// itself when given a `tabindex` and a box (not its default `display: contents`).
+/// itself when given a `tabindex` and a box (not its default `display: contents`), and Tab
+/// keeps focus there.
 ///
 /// A native radio group, the radios sharing a `name` and a form, is one stop: its checked
 /// radio, or else its first.
@@ -226,7 +242,7 @@ pub fn FocusTrap(props: FocusTrapProps) -> Element {
             api.on_key_unfiltered(Box::new(move |chord: KeyChord| {
                 chord.key == Key::Named(NamedKey::Tab)
                     && holds_last(id)
-                    && focus_fell()
+                    && focus_fell(&root)
                     && root
                         .query_selector_all(FOCUSABLE_SELECTOR)
                         .is_ok_and(|items| {
@@ -257,7 +273,7 @@ pub fn FocusTrap(props: FocusTrapProps) -> Element {
                     return;
                 }
                 // Moved on to an element outside, or the window blurred: not ours to take back.
-                if !focus_fell() {
+                if !focus_fell(&root) {
                     held.set(false);
                     return;
                 }

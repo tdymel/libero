@@ -19,7 +19,39 @@ pub const ROUTES: Routes = &[
     ("/focus-trap/autofocus", || rsx! { AutofocusPage {} }),
     ("/focus-trap/leaving", || rsx! { LeavingPage {} }),
     ("/focus-trap/placeholder", || rsx! { PlaceholderPage {} }),
+    ("/focus-trap/container", || rsx! { ContainerPage {} }),
+    ("/focus-trap/empty", || rsx! { EmptyPage {} }),
 ];
+
+/// A trap inside a `tabindex="-1"` main, as the docs shell's: a click on its text focuses the main (4662).
+#[component]
+fn ContainerPage() -> Element {
+    rsx! {
+        main { id: "main", tabindex: "-1",
+            button { id: "before", "Before" }
+            p { id: "outside", "Text outside the trap." }
+            FocusTrap {
+                button { id: "first", "First" }
+                button { id: "middle", "Middle" }
+            }
+            button { id: "after", "After" }
+        }
+    }
+}
+
+/// A modal box with nothing to press inside: Tab keeps focus on it (4663).
+#[component]
+fn EmptyPage() -> Element {
+    rsx! {
+        button { id: "before", "Before" }
+        FocusTrap {
+            div { id: "modal", role: "dialog", aria_modal: "true", aria_label: "Notice", tabindex: "-1",
+                "Nothing to press."
+            }
+        }
+        button { id: "after", "After" }
+    }
+}
 
 /// A `FocusTrapInitialFocus` placeholder, then a stop that removes itself (2812).
 #[component]

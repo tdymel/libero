@@ -259,6 +259,58 @@ fn focus_that_falls_out_of_the_trap_comes_back() {
     });
 }
 
+/// A click that focuses a `tabindex="-1"` main around the trap is a fall too: focus comes back
+/// and Tab stays in (4662).
+#[test]
+fn a_click_that_focuses_a_container_outside_comes_back() {
+    block_on(async {
+        let fixture = Fixture::open("/focus-trap/container", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        focus::wait_for_focus(page, "#first", "mount")
+            .await
+            .unwrap();
+        pointer::click(page, "#middle").await.unwrap();
+        focus::wait_for_focus(page, "#middle", "a click on Middle")
+            .await
+            .unwrap();
+        pointer::click(page, "#outside").await.unwrap();
+        focus::wait_for_focus(page, "#middle", "a click on the text in the main")
+            .await
+            .unwrap();
+        keyboard::press(page, keyboard::TAB).await.unwrap();
+        focus::wait_for_focus(page, "#first", "Tab after the click wraps to First")
+            .await
+            .unwrap();
+        fixture.console.assert_clean("a click on the main").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
+/// A modal box with nothing to press keeps focus on Tab and Shift+Tab (4663).
+#[test]
+fn tab_in_a_trap_with_no_stop_keeps_focus_on_the_modal_box() {
+    block_on(async {
+        let fixture = Fixture::open("/focus-trap/empty", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        focus::wait_for_focus(page, "#modal", "mount on the modal box")
+            .await
+            .unwrap();
+        // The browser moves focus within the press, so a check right after it sees any escape.
+        keyboard::press(page, keyboard::TAB).await.unwrap();
+        focus::wait_for_focus(page, "#modal", "Tab").await.unwrap();
+        keyboard::press_shift(page, keyboard::TAB).await.unwrap();
+        focus::wait_for_focus(page, "#modal", "Shift+Tab")
+            .await
+            .unwrap();
+        fixture.console.assert_clean("an empty trap").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
 /// A used `FocusTrapInitialFocus` is no autofocus target: a removed focused stop sends focus to
 /// the first real stop, not back to the hidden placeholder (2812).
 #[test]

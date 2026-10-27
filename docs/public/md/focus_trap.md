@@ -28,7 +28,7 @@ fn Demo() -> Element {
         Flex {
             direction: "column",
             gap: "sm",
-            align: "flex-start",
+            align: "center",
             Button { variant: "text", "Before" }
             if trapped() {
                 FocusTrap {
@@ -82,9 +82,12 @@ no props at all.
 - With `restore_focus`, unmounting the trap puts focus back where it was before
   the trap took it.
 - Focus that falls to the page goes back into the trap: to the last focused
-  child after a click on plain text outside, or to the first focusable child
-  when the focused control was removed. A Tab that finds focus on the page comes
-  back into the trap.
+  child after a click on plain text outside, also when that click focuses a
+  container that is no Tab stop such as a `tabindex="-1"` main, or to the first
+  focusable child when the focused control was removed. A Tab that finds focus
+  on the page comes back into the trap.
+- A trap with nothing focusable inside keeps focus on its modal box or on
+  itself: Tab does not leave it.
 - A native radio group, the radios sharing a `name` and a form, is one Tab stop:
   its checked radio, or else its first (its last for Shift+Tab).
 
@@ -127,7 +130,8 @@ and Cancel close it, and focus goes back to the button that opened it.
 - In a desktop WebView or on Android, Tab and Shift+Tab move between the
   children but do not wrap: at either end they leave the trap.
 - Focus moved on purpose to another control outside, by a click or a script,
-  stays there: the trap takes back only focus that fell to the page.
+  stays there, as does focus on an element with a `role` such as a portaled
+  menu item: the trap takes back only focus that fell to the page.
 
 ## Theme defaults
 
