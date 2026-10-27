@@ -8,7 +8,7 @@ use super::{
 };
 use crate::{
     components::{
-        accessibility::{focus_edge, focus_first_stop, tab_order, tab_stops},
+        accessibility::{focus_edge, focus_first_stop, tab_order},
         common::{
             FOCUSABLE_SELECTOR, HtmlTag, Input, ScaleOrCss, States, Variables, base_props, css_px,
             input_from_str, inset_focus_ring_sx, variables,
@@ -589,11 +589,8 @@ fn trigger_tab(event: &KeyboardEvent, open: bool, anchor: ElementHandle, floatin
         return;
     };
     // A later control that is `display: none` ignores `focus()`: the card follows the last that takes it.
-    let moved = focus_first_stop(
-        &items,
-        &tab_stops(&anchor, &items, false),
-        order[at + 1..].iter().copied(),
-    ) || focus_edge(&floating, false);
+    let moved = focus_first_stop(&anchor, &items, order[at + 1..].iter().copied(), false)
+        || focus_edge(&floating, false);
     if moved {
         event.prevent_default();
         // An enclosing `Modal`'s `FocusTrap` would take focus back out.
@@ -620,11 +617,7 @@ fn card_tab(event: &KeyboardEvent, anchor: ElementHandle, floating: ElementHandl
         false => order[at + 1..].to_vec(),
     };
     // A control that is `display: none` ignores `focus()`, so the edge is the last that takes it.
-    let inside = focus_first_stop(
-        &items,
-        &tab_stops(&floating, &items, backwards),
-        beyond.into_iter(),
-    );
+    let inside = focus_first_stop(&floating, &items, beyond.into_iter(), backwards);
     let via_trigger = !inside && focus_edge(&anchor, true);
     // Forward off the trigger, the browser's own Tab moves on.
     if inside || (via_trigger && backwards) {

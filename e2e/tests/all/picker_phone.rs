@@ -62,7 +62,8 @@ fn a_finger_opens_the_sheet_and_types_in_it() {
              const own = document.querySelector({TYPED:?}); \
              return i.getAttribute('inputmode') === 'none' && i === document.activeElement \
                && !!own && !own.hasAttribute('inputmode') && own.value === i.value \
-               && document.getElementById(own.getAttribute('aria-labelledby')).textContent === 'Stay'; }})()"
+               && own.getAttribute('aria-labelledby').split(' ') \
+                 .map((id) => document.getElementById(id).textContent).join(' ') === 'Stay Type it in'; }})()"
         );
         wait::for_js_true(page, &keyboardless, "inputmode none, and a named text box")
             .await

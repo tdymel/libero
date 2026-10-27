@@ -22,6 +22,9 @@ pub struct CommonLabels {
     /// Read with a group at its `max_checked`, whose other options are off: `CheckboxGroup`,
     /// `SwitchGroup`. `{max}` is the limit.
     pub at_most: &'static str,
+    /// Said after a picker field's label on the picker's own text box, which a finger types
+    /// in: `ChronoField`, `ColorField`.
+    pub type_in: &'static str,
 }
 
 impl CommonLabels {
@@ -34,6 +37,7 @@ impl CommonLabels {
         warning: "Warning:",
         required: "Required",
         at_most: "At most {max} can be selected",
+        type_in: "Type it in",
     };
 
     pub const GERMAN: Self = Self {
@@ -45,5 +49,6 @@ impl CommonLabels {
         warning: "Warnung:",
         required: "Pflichtfeld",
         at_most: "Höchstens {max} können ausgewählt werden",
+        type_in: "Eintippen",
     };
 }
