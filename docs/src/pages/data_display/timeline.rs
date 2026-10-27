@@ -75,9 +75,9 @@ pub fn TimelinePage() -> Element {
                     prop(".content(Element)", "Element")
                         .doc("The body below the title."),
                     prop(".opposite(Element)", "Element")
-                        .doc("Content across the rail from the body, such as a time. One event setting it centres the rail for the whole timeline, with the body on the `align` side (`alternate` swaps sides per event). It is read in order, after the body."),
+                        .doc("Content across the rail from the body, such as a time. One event setting it centres the rail for the whole timeline from the `sm` breakpoint up, with the body on the `align` side (`alternate` swaps sides per event). Below `sm` the rail runs down the start edge and the content takes only the width it needs, beside the body. It is read in order, after the body."),
                     prop(".bullet(Element)", "Element")
-                        .doc("An icon or avatar inside the bullet in place of the dot. It inverts when active."),
+                        .doc("An icon or avatar inside the bullet in place of the dot. It inverts when active, so use an outlined glyph: a solid one covers the fill and the done bullet reads as a pending ring."),
                     prop(".color(value)", "impl Into<ThemeAwareValue>")
                         .doc("This event's own accent, such as an error step in an ordinary run."),
                     prop(".line(TimelineLine)", "TimelineLine")
@@ -97,6 +97,7 @@ pub fn TimelinePage() -> Element {
                 ])
                 .example("An order's history in a `Timeline` with `active` on the \"Shipped\" event: a screen reader reads each event's place in the list and marks \"Shipped\" as the current step. A failed delivery says \"Failed\" in its title, not only in red.")
                 .limits([
+                    "A pending bullet is filled with the `Paper` colour. On a page of another colour, such as a dark page behind a lighter `Paper`, the ring shows a disc of that colour; set `bullet_background` on the theme to the surface the timeline sits on.",
                     "A screen reader hears only which event is current, as `aria-current=\"step\"`. Done and pending are visual; put them in the title or content where they matter. With `active` past the end, the last event still reads as current.",
                 ]),
             lead: rsx! {

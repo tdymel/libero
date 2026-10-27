@@ -151,10 +151,13 @@ fn a_subheader_sits_outside_the_number_gutter() {
             numbers.contains("ListMarker \"3.\"") && numbers.contains("ListMarker \"1.\""),
             "a reversed list skipped its action item:\n{numbers}"
         );
-        fixture
-            .console
-            .assert_clean("the subheader fixture")
-            .unwrap();
+        // Todo 4629: the fixture's ordered lists hold a subheader on purpose, and that warns.
+        fixture.console.settle().await.unwrap();
+        let messages = fixture.console.drain();
+        assert!(
+            !messages.is_empty() && messages.iter().all(|m| m.contains("ListSubheader:")),
+            "expected only the ordered-subheader warning: {messages:?}"
+        );
         fixture.close().await.unwrap();
     });
 }

@@ -26,7 +26,7 @@ fn Demo() -> Element {
             ListSubheader { "Getting started" }
             ListItem { "First item" }
             ListItem {
-                action: rsx! { Button { size: "xs", variant: "outlined", "Edit" } },
+                action: rsx! { Button { size: "sm", variant: "outlined", "aria-label": "Edit Second item", "Edit" } },
                 "Second item"
             }
             ListItem {
@@ -65,7 +65,7 @@ fn Demo() -> Element {
 
 | Prop | Type | Default | Description |
 |---|---|---|---|
-| `children` | `Element` | required | The caption. An ordered list does not number it. |
+| `children` | `Element` | required | The caption. An ordered list does not number it, but a screen reader counts it: use one ordered `List` per group instead. |
 
 Like every component, all three also take the shared props `sx`, `class`, `style`,
 `states`, and any extra HTML attributes.
@@ -96,6 +96,12 @@ parts work.
   text too.
 - A `ListSubheader` is read as one more item. For groups a screen reader names,
   nest one `List` per group, each with an `aria-label`.
+- In an ordered `List`, never use a `ListSubheader`: the numbers skip it but a
+  screen reader counts it, so "1. First item" is announced as item 2 of 4. Nest
+  one ordered `List` per group instead; a debug build warns.
+- Name each repeated `action` with its item, such as
+  `aria-label: "Edit Second item"`, when several items share a label. Every
+  button would otherwise read "Edit".
 
 ### Example
 

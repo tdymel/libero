@@ -24,7 +24,8 @@ pub fn demo_items(bullets: bool, dashed: bool, opposite: bool) -> Vec<TimelineEv
             if bullets {
                 event = event.bullet(match index {
                     0 => rsx! { Pictogram { icon: lucide::code::outlined } },
-                    1 => rsx! { Pictogram { icon: pictogram_icons_simple::github::regular } },
+                    // Outlined: a solid glyph would cover the active fill.
+                    1 => rsx! { Pictogram { icon: lucide::git_pull_request::outlined } },
                     2 => rsx! { Pictogram { icon: lucide::check::outlined } },
                     _ => rsx! { Pictogram { icon: lucide::file::outlined } },
                 });

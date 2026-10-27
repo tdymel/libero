@@ -213,6 +213,55 @@ fn the_opposite_sits_across_the_rail_from_the_body() {
     });
 }
 
+/// Todo 4630: on a phone the rail runs down the start edge and the opposite takes only
+/// its text's width, with the body beside it.
+#[test]
+fn a_phone_sizes_the_opposite_to_its_text() {
+    #[derive(serde::Deserialize)]
+    struct Measured {
+        bullet_start: f64,
+        opposite_share: f64,
+        body_after_opposite: bool,
+        off: f64,
+    }
+    const PHONE: &str = "(() => { const li = document.querySelector('#start > li'); \
+         const box = li.getBoundingClientRect(); \
+         const part = s => li.querySelector(':scope > [data-slot=' + s + ']').getBoundingClientRect(); \
+         const bullet = part('bullet'), body = part('body'), opposite = part('opposite'); \
+         const rail = getComputedStyle(li, '::before'); \
+         return { bullet_start: bullet.left - box.left, opposite_share: opposite.width / box.width, \
+           body_after_opposite: body.left >= opposite.right - 0.5, \
+           off: Math.abs(box.left + parseFloat(rail.left) + parseFloat(rail.borderLeftWidth) / 2 \
+                         - (bullet.left + bullet.width / 2)) }; })()";
+    block_on(async {
+        let fixture = Fixture::open("/timeline/opposite", Viewport::Mobile)
+            .await
+            .unwrap();
+        let measured: Measured = fixture
+            .page
+            .evaluate_bounded(PHONE)
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        assert!(
+            measured.bullet_start < 1.0,
+            "the bullet is off the start edge"
+        );
+        assert!(
+            measured.opposite_share < 0.3,
+            "the opposite takes {} of the row",
+            measured.opposite_share
+        );
+        assert!(
+            measured.body_after_opposite,
+            "the body overlaps the opposite"
+        );
+        assert!(measured.off < 2.0, "rail {}px off its bullet", measured.off);
+        fixture.close().await.unwrap();
+    });
+}
+
 /// Per list: the rail's worst offset from its bullets' centres (px), and which
 /// side of the first bullet the first event's content sits on (1 right, -1 left).
 const SIDES: &str = "['#left', '#right', '#alternate'].map(id => { \

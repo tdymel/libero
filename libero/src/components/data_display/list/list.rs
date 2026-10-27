@@ -57,6 +57,8 @@ base_props! {
 #[derive(Clone, Copy)]
 pub(crate) struct ListContext {
     pub(crate) icon: Signal<Option<Element>>,
+    /// Whether the list is an `ol` when it mounts, for a subheader's warning.
+    pub(crate) ordered: bool,
     /// Native only, for an ordered list: Blitz skips a flex item in its count (todo 4213).
     pub(crate) numbering: Signal<Option<Numbering>>,
     /// Native only: the items' [`order_id`]s, put in DOM order after each render.
@@ -181,6 +183,7 @@ pub fn List(props: ListProps) -> Element {
 
     let context = use_context_provider(|| ListContext {
         icon: Signal::new(props.icon.clone()),
+        ordered: props.ordered,
         numbering: Signal::new(None),
         items: CopyValue::new(Vec::new()),
         list: order_id(),

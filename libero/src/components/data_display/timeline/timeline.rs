@@ -53,7 +53,6 @@ static TIMELINE_BASE_SX: StaticSx = StaticSx::new(|| {
         .when(TimelineAlign::Alternate.state_name(), sx().width("100%"))
         .when("opposite", sx().width("100%"))
 });
-
 /// One event, the positioned ancestor of its `::before` connector and bullet.
 static TIMELINE_ITEM_SX: StaticSx = StaticSx::new(|| {
     let rail = rail();
@@ -104,26 +103,49 @@ static TIMELINE_ITEM_SX: StaticSx = StaticSx::new(|| {
 
     // Beside the marker's half: the centred rail's inset without the `50%`.
     let half = format!("calc({} / 2 + {CONTENT_SPACE})", rail.marker);
-    // A grid of two halves around the centred rail; the body takes the start half
-    // unless `content-end`. Not under an align state: those pad for a one-sided rail.
-    let opposed = sx()
-        .display("grid")
+    // From `sm` up, a grid of two halves around the centred rail; the body takes the start
+    // half unless `content-end`. Not under an align state: those pad for a one-sided rail.
+    let centred_halves = sx()
         .with("grid-template-columns", "minmax(0, 1fr) minmax(0, 1fr)")
+        .padding_left("0")
         .and(rail.connector_sx(RailInset::Center))
+        .rtl(
+            sx().padding_right("0")
+                .and(rail.connector_sx(RailInset::Center))
+                .selector("&:not(:last-of-type)::before", sx().with("right", "auto")),
+        )
         .selector(
             ITEM_BODY,
             sx().with("grid-column", "1")
-                .with("grid-row", "1")
                 .with("padding-inline-end", half.clone())
                 .text_align_end(),
         )
         .selector(
             ITEM_OPPOSITE,
             sx().with("grid-column", "2")
-                .with("grid-row", "1")
                 .with("padding-inline-start", half.clone())
+                .with("padding-inline-end", "0")
                 .text_align_start(),
         );
+    // Below `sm` the rail runs down the start edge and the opposite takes only its
+    // content's width, so a short time does not claim half a phone.
+    let opposed = sx()
+        .display("grid")
+        .with("grid-template-columns", "auto minmax(0, 1fr)")
+        .padding_left(inset.clone())
+        .and(rail.connector_sx(RailInset::Start))
+        .rtl(rail_on(RailInset::End, &inset))
+        .selector(
+            ITEM_OPPOSITE,
+            sx().with("grid-column", "1")
+                .with("grid-row", "1")
+                .with("padding-inline-end", CONTENT_SPACE),
+        )
+        .selector(
+            ITEM_BODY,
+            sx().with("grid-column", "2").with("grid-row", "1"),
+        )
+        .breakpoint(Size::Sm, centred_halves);
     let content_end = sx()
         .selector(
             ITEM_BODY,
@@ -139,9 +161,10 @@ static TIMELINE_ITEM_SX: StaticSx = StaticSx::new(|| {
                 .with("padding-inline-start", "0")
                 .text_align_end(),
         );
-    let one_sided = one_sided
-        .when("opposite", opposed)
-        .when("opposite && content-end", content_end);
+    let one_sided = one_sided.when("opposite", opposed).when(
+        "opposite && content-end",
+        sx().breakpoint(Size::Sm, content_end),
+    );
 
     // Alternating at every width: no collapse threshold (see the brain page).
     one_sided.when(
@@ -217,6 +240,19 @@ static TIMELINE_BULLET_SX: StaticSx = StaticSx::new(|| {
             TimelineAlign::Alternate.state_name(),
             // Through `Rail`: the other half of `centred_content_inset`.
             sx().left(rail.centred_marker_start()).right("auto"),
+        )
+        // On the start edge below `sm`, where the item has no centred rail.
+        .when(
+            "opposite",
+            sx().left("0")
+                .right("auto")
+                .rtl(sx().right("0").left("auto"))
+                .breakpoint(
+                    Size::Sm,
+                    sx().left(rail.centred_marker_start())
+                        .right("auto")
+                        .rtl(sx().left(rail.centred_marker_start()).right("auto")),
+                ),
         )
 });
 
@@ -378,6 +414,7 @@ pub fn Timeline(props: TimelineProps) -> Element {
                     .state_name(),
                     true,
                 )
+                .with("opposite", opposed)
                 .with("active", is_active)
                 .with("with-child", item.bullet.is_some());
 
@@ -462,5 +499,17 @@ mod tests {
                 ),
             ]
         );
+    }
+
+    /// Todo 4630: the two halves around a centred rail start at `sm`; a phone sizes the opposite to its text.
+    #[test]
+    fn the_opposite_column_takes_half_the_row_only_from_sm_up() {
+        let sheet = crate::css::Stylesheet::from(&TIMELINE_ITEM_SX);
+        let css = sheet.as_str();
+
+        let phone = css.find("auto minmax(0, 1fr)").expect(css);
+        let halves = css.find("minmax(0, 1fr) minmax(0, 1fr)").expect(css);
+        let media = css.find("@media (min-width").expect(css);
+        assert!(phone < media && media < halves, "{css}");
     }
 }

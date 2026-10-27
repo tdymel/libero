@@ -54,7 +54,7 @@ pub fn ListPage() -> Element {
                 props("ListSubheader", vec![
                     prop("children", "Element")
                         .default("required")
-                        .doc("The caption. An ordered list does not number it."),
+                        .doc("The caption. An ordered list does not number it, but a screen reader counts it: use one ordered `List` per group instead."),
                 ]),
             ],
             accessibility: a11y()
@@ -63,6 +63,8 @@ pub fn ListPage() -> Element {
                     "Keep a `List`'s children to `ListItem`s and `ListSubheader`s. A stray element between them breaks the list and its item count for a screen reader.",
                     "When an icon carries meaning, such as done or missing, say it in the item's text too.",
                     "A `ListSubheader` is read as one more item. For groups a screen reader names, nest one `List` per group, each with an `aria-label`.",
+                    "In an ordered `List`, never use a `ListSubheader`: the numbers skip it but a screen reader counts it, so \"1. First item\" is announced as item 2 of 4. Nest one ordered `List` per group instead; a debug build warns.",
+                    "Name each repeated `action` with its item, such as `aria-label: \"Edit Second item\"`, when several items share a label. Every button would otherwise read \"Edit\".",
                 ])
                 .example("A checklist of `ListItem`s with check icons: a screen reader says the item count and reads each item's text. The item says \"done\" in words, since the icon is not read."),
             lead: rsx! {
@@ -102,11 +104,14 @@ pub fn ListPage() -> Element {
                         icon: (values.str("icon") == "true").then(|| rsx! {
                             Icon { variant: "standard", color: "primary", size: "sm", Pictogram { icon: lucide::check::outlined } }
                         }),
+                        // Not in the code: an ordered list is counted wrong with one (see `must`).
+                        if values.str("ordered") != "true" {
+                            ListSubheader { "Getting started" }
+                        }
                         // demo-code: children start
-                        ListSubheader { "Getting started" }
                         ListItem { "First item" }
                         ListItem {
-                            action: rsx! { Button { size: "xs", variant: "outlined", "Edit" } },
+                            action: rsx! { Button { size: "sm", variant: "outlined", "aria-label": "Edit Second item", "Edit" } },
                             "Second item"
                         }
                         ListItem {

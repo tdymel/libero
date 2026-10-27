@@ -62,7 +62,8 @@ pub struct TimelineDefaults {
     pub color: ColorValue,
     pub line_color: ColorValue,
     /// The bullet's surface and an active bullet's glyph colour. `PAPER_BACKGROUND`,
-    /// not `white`, so dark mode follows `PaperDefaults` (todo 45).
+    /// not `white`, so dark mode follows `PaperDefaults` (todo 45). Off `Paper`, on a page
+    /// of another colour, the disc shows as Paper: set this to that surface.
     pub bullet_background: &'static str,
     /// `Xl` is the dot; lower it for a squarer marker.
     pub radius: Size,

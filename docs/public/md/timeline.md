@@ -57,8 +57,8 @@ fn Demo() -> Element {
 |---|---|---|---|
 | `new(title)` | `impl Into<OptionLabel>` | required | The event's name, optionally with its own rendering, which a screen reader skips for the name. |
 | `.content(..)` | `Element` | none | The body below the title. |
-| `.opposite(..)` | `Element` | none | Content across the rail from the body, such as a time. One event setting it centres the rail for the whole timeline, with the body on the `align` side (`alternate` swaps sides per event). It is read in order, after the body. |
-| `.bullet(..)` | `Element` | the dot | An icon or avatar inside the bullet in place of the dot. It inverts when active. |
+| `.opposite(..)` | `Element` | none | Content across the rail from the body, such as a time. One event setting it centres the rail for the whole timeline from the `sm` breakpoint up, with the body on the `align` side (`alternate` swaps sides per event). Below `sm` the rail runs down the start edge and the content takes only the width it needs, beside the body. It is read in order, after the body. |
+| `.bullet(..)` | `Element` | the dot | An icon or avatar inside the bullet in place of the dot. It inverts when active, so use an outlined glyph: a solid one covers the fill and the done bullet reads as a pending ring. |
 | `.color(..)` | `impl Into<ThemeAwareValue>` | inherits | This event's own accent, such as an error step in an ordinary run. |
 | `.line(..)` | `TimelineLine` | `Solid` | The connector below this event, `Solid`, `Dashed` or `Dotted`. |
 
@@ -105,6 +105,9 @@ current step. A failed delivery says "Failed" in its title, not only in red.
 
 ### Limits
 
+- A pending bullet is filled with the `Paper` colour. On a page of another colour,
+  such as a dark page behind a lighter `Paper`, the ring shows a disc of that
+  colour; set `bullet_background` on the theme to the surface the timeline sits on.
 - A screen reader hears only which event is current, as `aria-current="step"`.
   Done and pending are visual; put them in the title or content where they
   matter. With `active` past the end, the last event still reads as current.
@@ -160,7 +163,7 @@ On each event, and on its bullet.
 | Token | When |
 |---|---|
 | `active` | This event is at or before `active`. |
-| `opposite` | The timeline has an opposite. On the bullet it is `alternate`, for the centred rail. |
+| `opposite` | The timeline has an opposite. The bullet also has `align-alternate`, for the centred rail from `sm` up. |
 | `content-end` | The body sits on the rail's end side (event only, with an opposite). |
 | `line-active` | The connector below this event is before `active`. |
 | `with-child` | The bullet holds a caller's element (bullet only). |
