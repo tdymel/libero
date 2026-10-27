@@ -159,6 +159,13 @@ impl View {
         } = strip;
         let cell = move |day: NaiveDate| {
             let (picked, _) = selection.marks(day, None);
+            let month = format_date(day, "MMM", names);
+            // Starts with the visible "Sep 14", so voice control finds it (WCAG 2.5.3).
+            let label = format!(
+                "{month} {}, {}",
+                day.day(),
+                format_date(day, (formats.date)(DateLevel::Day), names)
+            );
             rsx! {
                 div {
                     key: "{day}",
@@ -171,7 +178,7 @@ impl View {
                         "data-today": (today == Some(day)).then_some("true"),
                         "aria-current": (today == Some(day)).then_some("date"),
                         "data-selected": picked.then_some("true"),
-                        "aria-label": format_date(day, (formats.date)(DateLevel::Day), names),
+                        "aria-label": label,
                         disabled: self.day_disabled(day).then_some(true),
                         "aria-disabled": disabled.then_some("true"),
                         tabindex: self.tabindex(day == stop),
@@ -184,7 +191,7 @@ impl View {
                             active.set(Some(day));
                             onpick.call(day);
                         },
-                        span { "data-slot": ChronoPickerPart::Month.slot(),{format_date(day, "MMM", names)} }
+                        span { "data-slot": ChronoPickerPart::Month.slot(), "{month}" }
                         span { "{day.day()}" }
                     }
                 }

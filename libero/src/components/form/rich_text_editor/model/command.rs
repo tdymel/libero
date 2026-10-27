@@ -388,18 +388,26 @@ impl Chord {
     /// Whether `press` is this chord. `apple` maps `Mod` to Cmd. A symbol key matches
     /// with Shift too unless the chord names Shift: `/` is Shift+7 on a German layout.
     pub fn matches(&self, press: &KeyPress, apple: bool) -> bool {
-        if normalize_key(&press.key) != self.key {
-            return false;
-        }
+        self.matches_exactly(press, apple) || self.matches_shifted_symbol(press, apple)
+    }
+
+    fn matches_exactly(&self, press: &KeyPress, apple: bool) -> bool {
+        normalize_key(&press.key) == self.key && self.modifiers_match(press, apple)
+    }
+
+    fn matches_shifted_symbol(&self, press: &KeyPress, apple: bool) -> bool {
         let symbol = !self.key.chars().all(char::is_alphanumeric);
-        self.modifiers_match(press, apple)
-            || (symbol && !self.shift && press.shift && {
-                let unshifted = KeyPress {
+        symbol
+            && !self.shift
+            && press.shift
+            && normalize_key(&press.key) == self.key
+            && self.modifiers_match(
+                &KeyPress {
                     shift: false,
                     ..press.clone()
-                };
-                self.modifiers_match(&unshifted, apple)
-            })
+                },
+                apple,
+            )
     }
 
     /// Matches by `code` when the key itself is not a plain letter or digit:
@@ -527,6 +535,8 @@ impl Keymap {
             .map(|(_, label)| label.as_str())
     }
 
+    /// An exact key or code match wins over the symbol Shift fallback, as in ProseMirror:
+    /// German Ctrl+Shift+7 types `/` but runs `Mod+Shift+7`, not `Mod+/`.
     pub fn command_for(&self, press: &KeyPress, apple: bool) -> Option<&CommandName> {
         let found = |matches: fn(&Chord, &KeyPress, bool) -> bool| {
             self.bindings
@@ -534,7 +544,9 @@ impl Keymap {
                 .find(|(chord, _)| matches(chord, press, apple))
                 .map(|(_, command)| command)
         };
-        found(Chord::matches).or_else(|| found(Chord::matches_by_code))
+        found(Chord::matches_exactly)
+            .or_else(|| found(Chord::matches_by_code))
+            .or_else(|| found(Chord::matches_shifted_symbol))
     }
 
     /// The chords that run `command`, for tooltips and a shortcut list.

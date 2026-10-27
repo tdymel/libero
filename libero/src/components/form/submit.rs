@@ -6,7 +6,12 @@ use crate::components::form::FormErrors;
 
 /// What a [`Form`](crate::components::Form) does with a submit its fields let through: a
 /// closure over the [`FormEvent`] or an `Option<EventHandler<FormEvent>>`, or [`Submit::parse`], which builds a command from the
-/// value first. [`Submit::parse_async`] and [`Submit::task`] take async handlers.
+/// value first. [`Submit::parse_async`] and [`Submit::task`] take async handlers; a closure
+/// that returns a future is not one, so wrap it in [`Submit::task`].
+///
+/// A `Submit` keeps its closure in the scope that built it until that scope unmounts, so
+/// one built inline adds one per render. A parent that re-renders often builds it once:
+/// `let onsubmit = use_hook(|| Submit::parse(parse, handler));`.
 pub struct Submit<V: 'static> {
     run: Option<Callback<(FormEvent, V), Result<(), Outcome>>>,
 }

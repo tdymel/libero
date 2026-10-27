@@ -72,7 +72,7 @@ shows Ctrl.
 | `Ctrl+Shift+Z` or `Ctrl+Y` | Redo. |
 | `Ctrl+K` | Opens the link dialog: links the selection, or edits or removes the link at the caret. |
 | `Ctrl+Shift+U` | Removes the link at the caret. |
-| `Ctrl+/` | Lists the editor's shortcuts, from the live keymap. |
+| `Ctrl+/` | Lists the editor's shortcuts, from the live keymap. Where `/` is `Shift+7`, as on a German layout, `Ctrl+Shift+7` stays the numbered list and the keypad `/` opens the list. |
 | `Alt+F10` | Moves focus to the toolbar; the arrow keys move through it, Escape returns to the text. |
 
 ### Libero handles

@@ -270,9 +270,13 @@ fn Mention(props: NodeViewProps) -> Element {
 
 #[component]
 fn Callout(props: NodeViewProps) -> Element {
+    let mut pressed = use_signal(|| 0);
     rsx! {
         aside { class: "callout",
-            span { contenteditable: "false", "Note: " }
+            span { contenteditable: "false",
+                "Note: "
+                button { class: "callout-action", onclick: move |_| pressed += 1, "Pressed {pressed}" }
+            }
             {props.children}
         }
     }

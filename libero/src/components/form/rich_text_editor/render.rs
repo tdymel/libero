@@ -223,7 +223,10 @@ fn custom(
                 {view}
             }
         },
-        Some(view) => rsx! { div { "data-node": "{name}", {view} } },
+        // Typed text targets the surface above, so a key seen here is from a focused control.
+        Some(view) => rsx! {
+            div { "data-node": "{name}", onkeydown: ctx.on_island_key(), {view} }
+        },
         None if atom => rsx! {
             div { "data-key": key, "data-node": "{name}", contenteditable: "false", "{name}" }
         },

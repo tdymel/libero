@@ -70,7 +70,7 @@ pub(super) fn chrono_picker_parts() -> Vec<(ChronoPickerPart, &'static str)> {
         ),
         (
             ChronoPickerPart::Readout,
-            "Analog clock: the digits over the face, buttons that pick the hand.",
+            "Analog clock: the digits over the face, buttons that pick the hand. Scrolling range calendar: the picked range's two ends above the months.",
         ),
         (ChronoPickerPart::Face, "Analog clock: the face, a slider."),
         (

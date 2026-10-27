@@ -101,7 +101,7 @@ picker in it with the field's `dropdown_parts`.
 | `ChronoPickerPart::Neighbour` | `neighbour` | Digital clock, duration: the faded values above and below a column's value. |
 | `ChronoPickerPart::Separator` | `separator` | Digital clock: the `:` between columns. |
 | `ChronoPickerPart::Unit` | `unit` | Duration: the unit after each column. |
-| `ChronoPickerPart::Readout` | `readout` | Analog clock: the digits over the face, buttons that pick the hand. |
+| `ChronoPickerPart::Readout` | `readout` | Analog clock: the digits over the face, buttons that pick the hand. Scrolling range calendar: the picked range's two ends above the months. |
 | `ChronoPickerPart::Face` | `face` | Analog clock: the face, a slider. |
 | `ChronoPickerPart::Mark` | `mark` | Analog clock: a number on the face. |
 | `ChronoPickerPart::Ticks` | `ticks` | Analog clock: the ring of ticks for steps finer than the marks. |

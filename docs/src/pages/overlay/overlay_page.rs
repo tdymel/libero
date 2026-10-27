@@ -53,11 +53,12 @@ pub fn OverlayPage() -> Element {
             accessibility: a11y()
                 .handles([
                     "`LoadingOverlay` marks its box `aria-busy` and its children `inert` while loading, so Tab and a screen reader skip the covered content, and a status region outside the box says \"Loading\".",
+                    "Focus inside a `LoadingOverlay`'s children moves to the box while it loads, so a keyboard keeps its place, and goes back to the same control when loading ends, unless the user moved it meanwhile.",
                 ])
                 .must([
                     "For a modal backdrop, use a `Dialog` in `use_modal`, which brings its own overlay. An overlay does not trap focus or hide the page from a screen reader.",
                     "Give an overlay you close on a click a keyboard close as well, such as a `Button` inside it: a backdrop click alone leaves keyboard users no way out.",
-                    "Move focus out of a `LoadingOverlay`'s children before it starts loading, or keep it for loads the user did not start there: focus inside `inert` content drops to the page.",
+                    "For a long load started inside a `LoadingOverlay`, offer a way out outside it, such as a Cancel button: until it ends, focus waits on the busy box.",
                 ])
                 .example("A profile card saving, `LoadingOverlay { loading: saving(), .. }` around it: the card dims under a spinner, Tab skips its buttons, and a screen reader hears \"Loading\" once."),
             lead: rsx! {

@@ -36,23 +36,28 @@ fn Calendars() -> Element {
         LiberoProvider {
             formats: &Formats::GERMAN,
             DatePicker { value: day, onchange: |_| {} }
-            // German words as well, only in here.
-            LiberoProvider {
-                localization: &Localization::GERMAN,
-                formats: &Formats::GERMAN,
-                DatePicker { value: day, onchange: |_| {} }
+            // German words as well, only in here; `lang` lets a screen reader say them in German.
+            div { lang: "de",
+                LiberoProvider {
+                    localization: &Localization::GERMAN,
+                    formats: &Formats::GERMAN,
+                    DatePicker { value: day, onchange: |_| {} }
+                }
             }
         }
     }
 }
 ```
 
-Three limits:
+Four limits:
 
 - The theme is a sheet on the document root, so a nested provider's `themes`
   do not scope to its subtree.
 - `direction` also sets the document root. For one subtree, put a `dir="rtl"`
   attribute on an element around it.
+- Only the outermost provider sets the root's `lang`. Put `lang="de"` on an
+  element around an inner provider in another language, as above, or a screen
+  reader reads its words in the page's voice.
 - `use_localization_handle` and `use_formats_handle` switch the nearest provider
   only.
 

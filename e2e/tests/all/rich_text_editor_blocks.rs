@@ -65,15 +65,39 @@ fn node_views_draw_caller_nodes_and_keep_their_content_editable() {
         )
         .await;
         assert_eq!(note, 1, "the view renders once, its children once");
+
+        // Todo 4562: Enter on a control inside the view presses it, not the editor's keymap.
+        let before = out(page).await;
+        let focused: bool = js(
+            page,
+            &format!(
+                "(() => {{ const b = {EDITOR}.querySelector('aside.callout .callout-action'); b.focus(); return document.activeElement === b; }})()"
+            ),
+        )
+        .await;
+        assert!(focused, "the view's button takes focus");
+        keyboard::press(page, ENTER).await.unwrap();
+        wait::for_js_true(
+            page,
+            "document.querySelector('.callout-action')?.textContent === 'Pressed 1'",
+            "the view's button pressed",
+        )
+        .await
+        .unwrap();
+        assert_eq!(
+            out(page).await,
+            before,
+            "the keymap ran on the view's button"
+        );
         fixture.close().await.unwrap();
     });
 }
 
-/// A German layout sends "/" as Shift+7.
-const SLASH_DE: Key = Key {
+/// A French layout sends "/" as Shift+: (German Shift+7 runs `Mod+Shift+7` instead, todo 4544).
+const SLASH_FR: Key = Key {
     key: "/",
-    code: "Digit7",
-    vk: 55,
+    code: "Period",
+    vk: 190,
     text: None,
 };
 
@@ -103,7 +127,7 @@ fn arrow_up_enters_a_rendered_code_block_and_shift_slash_opens_help() {
         keyboard::type_text(page, "Z").await.unwrap();
         out_eq(page, "above\n\n```\nlet x = 1;Z\n```\n\nbelow\n").await;
 
-        keyboard::press_with(page, SLASH_DE, CTRL | keyboard::SHIFT)
+        keyboard::press_with(page, SLASH_FR, CTRL | keyboard::SHIFT)
             .await
             .unwrap();
         wait::for_js_true(

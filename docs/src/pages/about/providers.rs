@@ -15,11 +15,13 @@ const NESTED: &str = r#"rsx! {
     LiberoProvider {
         formats: &Formats::GERMAN,
         DatePicker { value: day, onchange: |_| {} }
-        // German words as well, only in here.
-        LiberoProvider {
-            localization: &Localization::GERMAN,
-            formats: &Formats::GERMAN,
-            DatePicker { value: day, onchange: |_| {} }
+        // German words as well, only in here; `lang` lets a screen reader say them in German.
+        div { lang: "de",
+            LiberoProvider {
+                localization: &Localization::GERMAN,
+                formats: &Formats::GERMAN,
+                DatePicker { value: day, onchange: |_| {} }
+            }
         }
     }
 }"#;
@@ -92,24 +94,30 @@ pub fn ProvidersPage() -> Element {
                             DatePicker { value: day, onchange: |_| {} }
                         }
                     }
-                    LiberoProvider { localization: &Localization::GERMAN, formats: &Formats::GERMAN,
-                        Paper { sx: sx().padding("md"),
-                            Flex { direction: "column", gap: "sm",
-                                Title { size: "sm", component: "h3", "Inner provider" }
-                                DatePicker { value: day, onchange: |_| {} }
+                    div { lang: "de",
+                        LiberoProvider { localization: &Localization::GERMAN, formats: &Formats::GERMAN,
+                            Paper { sx: sx().padding("md"),
+                                Flex { direction: "column", gap: "sm",
+                                    Title { size: "sm", component: "h3", "Inner provider" }
+                                    DatePicker { value: day, onchange: |_| {} }
+                                }
                             }
                         }
                     }
                 }
                 CodeBlock { source: NESTED, language: "rust" }
                 Text {
-                    "Three limits. The theme is a sheet on the document root, so a nested provider's "
+                    "Four limits. The theme is a sheet on the document root, so a nested provider's "
                     Code { source: "themes" }
                     " do not scope to its subtree. "
                     Code { source: "direction" }
                     " also sets the document root; for one subtree, put a "
                     Code { source: "dir=\"rtl\"" }
-                    " attribute on an element around it. And hooks such as "
+                    " attribute on an element around it. The language is the root's too: only the outermost provider sets "
+                    Code { source: "lang" }
+                    ", so put "
+                    Code { source: "lang=\"de\"" }
+                    " on an element around an inner provider in another language, as above, or a screen reader reads its words in the page's voice. And hooks such as "
                     Code { source: "use_localization_handle" }
                     " switch the nearest provider only."
                 }

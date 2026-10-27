@@ -195,7 +195,7 @@ The dropdown is portaled out of the field, so its parts take the
 | `ChronoDropdownPart::Neighbour` | `neighbour` | Digital clock, duration: the faded values above and below a column's value. |
 | `ChronoDropdownPart::Separator` | `separator` | Digital clock: the `:` between columns. |
 | `ChronoDropdownPart::Unit` | `unit` | Duration: the unit after each column. |
-| `ChronoDropdownPart::Readout` | `readout` | Analog clock: the digits over the face, buttons that pick the hand. |
+| `ChronoDropdownPart::Readout` | `readout` | Analog clock: the digits over the face, buttons that pick the hand. Scrolling range calendar: the picked range's two ends above the months. |
 | `ChronoDropdownPart::Face` | `face` | Analog clock: the face, a slider. |
 | `ChronoDropdownPart::Mark` | `mark` | Analog clock: a number on the face. |
 | `ChronoDropdownPart::Ticks` | `ticks` | Analog clock: the ring of ticks for steps finer than the marks. |

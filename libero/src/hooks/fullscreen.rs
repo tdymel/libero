@@ -147,7 +147,9 @@ impl FullscreenHandle {
 /// iframe without `allowfullscreen`), the handle draws it: it sets `data-fullscreen="drawn"`, and
 /// your CSS makes the element a fixed box over the page. Escape and focus
 /// leaving the element leave it. The page behind is not made inert: a screen reader
-/// can still reach it unless you hide it.
+/// can still reach it unless you hide it. A fixed box cannot leave its ancestors' stacking
+/// context: inside a `ScrollArea` (as in an `AppShell`), a sticky header or a sidebar
+/// with a higher `z-index` still paints over it, so keep the element outside one.
 ///
 /// ```rust
 /// # use dioxus::prelude::*;

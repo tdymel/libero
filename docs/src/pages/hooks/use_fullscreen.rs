@@ -26,6 +26,7 @@ pub fn UseFullscreenPage() -> Element {
                 .limits([
                     "Blitz and a server render have no Fullscreen API: the handle always draws it.",
                     "The drawn fullscreen keeps the browser's bars and the device's status bar.",
+                    "The drawn fixed box cannot leave its ancestors' stacking context. Inside a `ScrollArea`, as in an `AppShell`, a sticky header or a sidebar with a higher `z-index` still paints over it, and covers its controls. Where the drawn path can run, keep the element outside such a scroller.",
                     "On Android, a fullscreen entered without a tap (from a timer, say) may let Back close the app.",
                 ]),
             lead: rsx! {

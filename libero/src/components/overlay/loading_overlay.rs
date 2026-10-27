@@ -1,3 +1,5 @@
+use std::rc::Rc;
+
 use dioxus::prelude::*;
 
 use super::overlay::Overlay;
@@ -8,7 +10,8 @@ use crate::{
         feedback::Loader,
         layout::use_box,
     },
-    hooks::use_localization,
+    hooks::{use_element, use_localization},
+    platform::{self, ElementApi, document},
     sx::{StaticSx, sx},
 };
 
@@ -17,7 +20,8 @@ static LOADING_OVERLAY_SX: StaticSx = StaticSx::new(|| sx().position("relative")
 
 base_props! {
     pub struct LoadingOverlayProps {
-        /// Covers the children with a dim and a loader, and makes them `inert`.
+        /// Covers the children with a dim and a loader, and makes them `inert`. Focus
+        /// they held waits on the box and returns when loading ends, unless it moved on.
         #[props(default)]
         loading: bool,
         /// The content that loads. `class`/`sx`/`attributes` style the box around it.
@@ -26,7 +30,10 @@ base_props! {
 }
 
 /// A loading state over one box: dims its children, blocks them and says
-/// "Loading" once. The box is `aria-busy` while `loading`.
+/// "Loading" once. The box is `aria-busy` while `loading`; the status that says it
+/// renders as the box's next sibling, outside it, since a reader may mute a busy box;
+/// a parent's `nth-child` and sibling selectors count it.
+/// Focus inside moves to the box while loading and back to its control after.
 ///
 /// ```
 /// # use dioxus::prelude::*;
@@ -45,6 +52,43 @@ base_props! {
 pub fn LoadingOverlay(props: LoadingOverlayProps) -> Element {
     let localization = use_localization();
     let loading = props.loading;
+    let frame = use_element();
+    let content = use_element();
+
+    // `inert` would drop focus inside to the page: the box holds it while loading,
+    // and the control gets it back after (todo 4545).
+    let mut held = use_hook(|| CopyValue::new(None::<Rc<dyn ElementApi>>));
+    let mut was_loading = use_hook(|| CopyValue::new(false));
+    if loading != *was_loading.peek() {
+        was_loading.set(loading);
+        if loading {
+            let focused = content
+                .mounted()
+                .and_then(|mounted| platform::element(&mounted).query_selector(":focus").ok());
+            held.set(focused.map(Rc::from));
+        }
+    }
+    use_effect(use_reactive!(|loading| {
+        let Some(element) = held.peek().clone() else {
+            return;
+        };
+        let frame = frame.mounted().map(|mounted| platform::element(&mounted));
+        if loading {
+            if let Some(frame) = frame {
+                let _ = frame.focus();
+            }
+            return;
+        }
+        held.set(None);
+        // Not when the user moved on meanwhile.
+        let stayed = frame.is_some_and(|frame| frame.is_focused())
+            || document()
+                .and_then(|document| document.active_element())
+                .is_none_or(|active| matches!(active.matches("body, html"), Ok(true)));
+        if stayed && element.is_connected() {
+            let _ = element.focus();
+        }
+    }));
 
     let busy = use_box()
         .framework_sx(&LOADING_OVERLAY_SX)
@@ -52,13 +96,20 @@ pub fn LoadingOverlay(props: LoadingOverlayProps) -> Element {
         .sx(&props.sx)
         .states(&props.states)
         .prepare()
+        .element(&frame)
         .attr("aria-busy", loading.then_some("true"))
+        .attr("tabindex", loading.then_some("-1"))
         .render(
             HtmlTag::Div,
             props.attributes,
             rsx! {
                 // `contents`: the wrapper only carries `inert`, never the layout.
-                div { style: "display: contents", inert: loading.then_some("true"), {props.children} }
+                div {
+                    style: "display: contents",
+                    inert: loading.then_some("true"),
+                    onmounted: content.mount(),
+                    {props.children}
+                }
                 if loading {
                     Overlay { contained: true, "data-slot": "overlay", Loader {} }
                 }

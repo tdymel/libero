@@ -78,6 +78,26 @@ fn a_loading_box_is_busy_inert_and_announced() {
             .await
             .unwrap();
 
+        // Todo 4545: a load started from inside parks focus on the box; its end puts it back.
+        keyboard::press(page, keyboard::ENTER).await.unwrap();
+        wait::for_js_true(
+            page,
+            "!!document.querySelector('#loading [data-slot=overlay]') \
+             && document.activeElement?.id === 'loading'",
+            "the load to start and focus to wait on the box",
+        )
+        .await
+        .unwrap();
+        // `click()` ends it without moving focus, as a finished request would.
+        let _: bool = js(page, "(document.querySelector('#toggle').click(), true)").await;
+        wait::for_js_true(
+            page,
+            "document.activeElement?.id === 'inside'",
+            "focus back on the button after loading",
+        )
+        .await
+        .unwrap();
+
         fixture.console.assert_clean("a loading box").unwrap();
         fixture.close().await.unwrap();
     });

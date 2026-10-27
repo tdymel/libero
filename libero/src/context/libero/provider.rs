@@ -47,7 +47,8 @@ pub fn LiberoProvider(
     #[props(default, into)]
     themes: ThemeSet,
     /// Every string libero shows a reader. Read at mount; switch it later with
-    /// [`use_localization_handle`](crate::hooks::use_localization_handle).
+    /// [`use_localization_handle`](crate::hooks::use_localization_handle). Only the
+    /// outermost provider sets the root's `lang`: put `lang` around a nested one.
     #[props(default = &Localization::ENGLISH)]
     localization: &'static Localization,
     /// How dates, times and numbers are written, whatever the language. Read at

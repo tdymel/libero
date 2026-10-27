@@ -51,7 +51,8 @@ parts_enum! {
         Separator = "separator" => "& [data-slot='separator']",
         /// Duration: the unit after each column.
         Unit = "unit" => "& [data-slot='unit']",
-        /// Analog clock: the digits over the face, buttons that pick the hand.
+        /// Analog clock: the digits over the face, buttons that pick the hand. Scrolling
+        /// range calendar: the picked range's two ends above the months.
         Readout = "readout" => "& [data-slot='readout']",
         /// Analog clock: the face, a slider.
         Face = "face" => "& [data-slot='face']",

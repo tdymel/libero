@@ -40,13 +40,27 @@ fn every_default_chord_runs_a_known_command() {
 
 #[test]
 fn a_symbol_chord_matches_with_the_shift_its_layout_needs() {
-    let keymap = Keymap::default();
+    let mut keymap = Keymap::default();
     let german_slash = KeyPress {
         ctrl: true,
         shift: true,
         code: "Digit7".into(),
         ..KeyPress::new("/")
     };
+    // The by-code Mod+Shift+7 wins over the Shift fallback of Mod+/.
+    assert_eq!(
+        keymap.command_for(&german_slash, false),
+        Some(&Builtin::OrderedList.into())
+    );
+    let french_slash = KeyPress {
+        code: "Period".into(),
+        ..german_slash.clone()
+    };
+    assert_eq!(
+        keymap.command_for(&french_slash, false),
+        Some(&Builtin::Shortcuts.into())
+    );
+    keymap.unbind_command(Builtin::OrderedList);
     assert_eq!(
         keymap.command_for(&german_slash, false),
         Some(&Builtin::Shortcuts.into())
