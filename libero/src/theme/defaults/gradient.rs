@@ -552,6 +552,28 @@ mod tests {
         }
     }
 
+    /// Todo 4558: the Mark demo's second stop, so any colour picked first reads at 4.5:1;
+    /// into `secondary`, `success`, `warning` and `muted` read 4.24:1.
+    #[test]
+    fn every_palette_colour_into_error_carries_a_label() {
+        let themes = [&Theme::DEFAULT, &Theme::DARK];
+        for from in [
+            "primary",
+            "secondary",
+            "error",
+            "warning",
+            "info",
+            "success",
+            "neutral",
+            "muted",
+        ] {
+            let stops = stops(Some(from), Gradient::default().to("error"));
+            let (score, ..) =
+                best_label(&themes, |theme| gradient_points(&stops, theme, false)).unwrap();
+            assert!(score >= TEXT_CONTRAST, "{from}: {score:.2}:1");
+        }
+    }
+
     /// `color` is the first stop, `to` the second; unset, both are the theme's.
     #[test]
     fn color_is_the_first_stop_and_unset_falls_back_to_the_theme() {

@@ -54,7 +54,8 @@ impl MenuDefaults {
                 font_size: "0.75rem",
                 item_height: 28.0,
                 padding_x: "8px",
-                label_font_size: "0.6875rem",
+                // 12px, as Badge (todo 4556).
+                label_font_size: "0.75rem",
             },
             MenuSizeLevel {
                 font_size: "0.875rem",

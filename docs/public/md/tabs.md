@@ -136,7 +136,7 @@ tab.
 | `activation` | `TabsActivation` | Default `activation` when the prop is omitted. |
 | `sizes` | `Sizes<TabsSizeLevel>` | `font_size`, `padding_x`, `padding_y`, `indicator`, `icon_gap` per size. |
 | `border_color` | `ColorValue` | The line the whole strip sits on. |
-| `hover_color` | `ColorValue` | Background of an unselected tab while hovered. |
+| `hover_color` | `Option<ColorValue>` | Background of an unselected tab while hovered. `None`, the default, takes the theme's row hover tint: the first muted step that shows at 1.15:1 on the page and the card. |
 
 ## CSS variables
 

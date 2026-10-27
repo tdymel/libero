@@ -1,7 +1,7 @@
 use crate::css::{CssDeclaration, ToCssDeclarations};
 use crate::str_enum::str_enum;
 use crate::sx::{Sx, sx};
-use crate::theme::{Color, ColorShade, ColorValue, CssVar, Size, SizeCss, Sizes};
+use crate::theme::{Color, ColorShade, ColorValue, CssVar, NamedColorCss, Size, SizeCss, Sizes};
 
 pub const TABS_FONT_SIZE: SizeCss = SizeCss::new("--lsx-tabs-font-size-");
 pub const TABS_PADDING_X: SizeCss = SizeCss::new("--lsx-tabs-padding-x-");
@@ -64,7 +64,9 @@ pub struct TabsDefaults {
     pub sizes: Sizes<TabsSizeLevel>,
     /// The line the whole strip sits on.
     pub border_color: ColorValue,
-    pub hover_color: ColorValue,
+    /// A hovered tab's background. `None`: the theme's row hover tint, the muted step that
+    /// shows on page and card.
+    pub hover_color: Option<ColorValue>,
 }
 
 impl TabsDefaults {
@@ -117,7 +119,8 @@ impl TabsDefaults {
             },
         ),
         border_color: ColorValue::Shade(Color::Muted, ColorShade::S3),
-        hover_color: ColorValue::Shade(Color::Muted, ColorShade::S1),
+        // Measured per theme: `muted.1` vanished on a dark card (todo 4555).
+        hover_color: None,
     };
 
     pub fn size_sx(size: Size) -> Sx {
@@ -137,7 +140,10 @@ impl ToCssDeclarations for TabsDefaults {
     fn to_css_declarations(&self) -> Vec<CssDeclaration> {
         let mut declarations = vec![
             TABS_BORDER_COLOR.declare(self.border_color.value()),
-            TABS_HOVER.declare(self.hover_color.value()),
+            TABS_HOVER.declare(
+                self.hover_color
+                    .map_or(NamedColorCss::ROW_HOVER.value(), |color| color.value()),
+            ),
         ];
         for size in Size::ALL {
             let level = self.sizes.get(size);

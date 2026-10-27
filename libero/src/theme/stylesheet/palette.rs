@@ -5,6 +5,7 @@ use crate::{
 };
 
 const ROW_HOVER_CONTRAST: f32 = 1.15;
+const ROW_STRIPE_CONTRAST: f32 = 1.05;
 
 const SHADES: [ColorShade; 9] = [
     ColorShade::S1,
@@ -40,6 +41,7 @@ pub(super) fn push_palette_declarations(
 }
 
 /// The muted fill step a hovered row takes: the first that shows 1.15:1 on every card (todo 2683).
+/// A striped row takes a lower step at 1.05:1, so a hovered stripe still changes (todo 4555).
 fn push_row_hover_declaration(
     declarations: &mut Vec<CssDeclaration>,
     base: HexColor,
@@ -48,20 +50,48 @@ fn push_row_hover_declaration(
 ) {
     let ramp = Color::Muted.shade_ramp();
     let fill_base = base.fill_base(ramp, ends);
-    let shade = SHADES
+    let shows = |color: HexColor, floor: f32| {
+        cards
+            .iter()
+            .chain([&ends.surface])
+            .all(|card| color.contrast_ratio(*card) >= floor)
+    };
+    let step = |shade| fill_base.shade(shade, ramp, ends);
+    let hover = SHADES
         .into_iter()
-        .find(|shade| {
-            let step = fill_base.shade(*shade, ramp, ends);
-            cards
-                .iter()
-                .chain([&ends.surface])
-                .all(|card| step.contrast_ratio(*card) >= ROW_HOVER_CONTRAST)
-        })
-        .unwrap_or(ColorShade::S9);
+        .position(|shade| shows(step(shade), ROW_HOVER_CONTRAST))
+        .unwrap_or(SHADES.len() - 1);
     declarations.push(CssDeclaration::new(
         NamedColorCss::ROW_HOVER.name(),
-        ColorValue::Fill(Color::Muted, shade).value(),
+        ColorValue::Fill(Color::Muted, SHADES[hover]).value(),
     ));
+
+    let stripe = match SHADES[..hover]
+        .iter()
+        .find(|shade| shows(step(**shade), ROW_STRIPE_CONTRAST))
+    {
+        Some(shade) => ColorValue::Fill(Color::Muted, *shade).value(),
+        // No step below the hover shows: the first mix of the page into it that does.
+        None => {
+            let to = step(SHADES[hover]);
+            (1..100)
+                .map(|weight| mix(to, ends.surface, weight))
+                .find(|color| shows(*color, ROW_STRIPE_CONTRAST))
+                .unwrap_or(to)
+                .to_string()
+        }
+    };
+    declarations.push(CssDeclaration::new(
+        NamedColorCss::ROW_STRIPE.name(),
+        stripe,
+    ));
+}
+
+/// `a` at `percent` over `b`, as `color-mix(in srgb, …)` paints it.
+fn mix(a: HexColor, b: HexColor, percent: u8) -> HexColor {
+    let share = f32::from(percent) / 100.0;
+    let mix = |x: u8, y: u8| (f32::from(x) * share + f32::from(y) * (1.0 - share)).round() as u32;
+    HexColor::new((mix(a.r(), b.r()) << 16) | (mix(a.g(), b.g()) << 8) | mix(a.b(), b.b()))
 }
 
 fn push_named_color_declarations(declarations: &mut Vec<CssDeclaration>, ends: Ends) {
@@ -88,6 +118,20 @@ pub(super) fn foreground_var(foreground: HexColor, ends: Ends) -> String {
         NamedColorCss::INK.value()
     } else {
         NamedColorCss::SURFACE.value()
+    }
+}
+
+/// The theme's own end that reads on `fill`, else true black or white, as Mantine's
+/// `autoContrast`: a grey ink reaches no 4.5:1 on a mid yellow (todo 4554).
+fn fill_label(fill: HexColor, ends: Ends) -> String {
+    let pick = fill.readable_contrast(ends);
+    if fill.contrast_ratio(ends.foreground(pick)) >= TEXT_CONTRAST {
+        return foreground_var(pick, ends);
+    }
+    let (black, white) = (HexColor::new(0x00_00_00), HexColor::new(0xFF_FF_FF));
+    match fill.contrast_ratio(black) >= fill.contrast_ratio(white) {
+        true => black.to_string(),
+        false => white.to_string(),
     }
 }
 
@@ -129,10 +173,7 @@ fn push_color_declarations(
     for shade in SHADES {
         declarations.push(CssDeclaration::new(
             ColorValue::Contrast(color, shade).var_name(),
-            foreground_var(
-                fill_base.shade(shade, ramp, ends).readable_contrast(ends),
-                ends,
-            ),
+            fill_label(fill_base.shade(shade, ramp, ends), ends),
         ));
     }
 

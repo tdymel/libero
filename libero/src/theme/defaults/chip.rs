@@ -36,9 +36,9 @@ impl ChipDefaults {
         color: Color::Primary,
         selected_check: true,
         sizes: Sizes::new(
-            // 24px like `sm`: the WCAG 2.5.8 minimum target (1494).
+            // 24px like `sm`: the WCAG 2.5.8 minimum target (1494). 12px text, as Badge (4556).
             ChipSizeLevel {
-                font_size: "0.6875rem",
+                font_size: "0.75rem",
                 height: "1.5rem",
                 padding_x: "0.5rem",
             },
@@ -112,15 +112,18 @@ mod tests {
         }
     }
 
-    /// Todo 2707 raised md to the 14px floor; the steps above it moved along.
+    /// Todo 2707 raised md to the 14px floor; the steps above it moved along. Xs meets sm
+    /// at the 12px floor (todo 4556).
     #[test]
-    fn the_font_sizes_rise_strictly_from_a_14px_md() {
+    fn the_font_sizes_rise_strictly_from_a_12px_sm_to_a_14px_md() {
         let rem = |size| {
             let font = ChipDefaults::DEFAULT.sizes.get(size).font_size;
             font.trim_end_matches("rem").parse::<f32>().unwrap()
         };
+        assert_eq!(rem(Size::Xs), 0.75);
+        assert_eq!(rem(Size::Sm), 0.75);
         assert_eq!(rem(Size::Md), 0.875);
-        for pair in Size::ALL.windows(2) {
+        for pair in Size::ALL[1..].windows(2) {
             assert!(rem(pair[0]) < rem(pair[1]), "{pair:?}");
         }
     }

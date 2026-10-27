@@ -31,9 +31,12 @@ pub struct TableDefaults {
     pub size: Size,
     pub sizes: Sizes<TableSizeLevel>,
     pub border_color: ColorValue,
-    pub hover_color: ColorValue,
-    /// Every other body row's background, when `striped`.
-    pub stripe_color: ColorValue,
+    /// A hovered row's background. `None`: the theme's row hover tint, the muted step that
+    /// shows on page and card.
+    pub hover_color: Option<ColorValue>,
+    /// Every other body row's background, when `striped`. `None`: the theme's stripe tint,
+    /// a muted step under the hover that still shows on page and card.
+    pub stripe_color: Option<ColorValue>,
     /// A selected row's background, hovered or not.
     pub selected_color: ColorValue,
     /// A group row's background, with `row_grouping`.
@@ -78,9 +81,9 @@ impl TableDefaults {
             },
         ),
         border_color: ColorValue::Shade(Color::Muted, ColorShade::S3),
-        // One step past the stripe, so a hovered striped row still changes.
-        hover_color: ColorValue::Shade(Color::Muted, ColorShade::S2),
-        stripe_color: ColorValue::Shade(Color::Muted, ColorShade::S1),
+        // Measured per theme: fixed steps vanished on a dark card (todo 4555).
+        hover_color: None,
+        stripe_color: None,
         selected_color: ColorValue::Shade(Color::Primary, ColorShade::S1),
         group_color: ColorValue::Shade(Color::Muted, ColorShade::S1),
         group_indent: "20px",
@@ -143,8 +146,14 @@ impl ToCssDeclarations for TableDefaults {
     fn to_css_declarations(&self) -> Vec<CssDeclaration> {
         let mut declarations = vec![
             TABLE_BORDER_COLOR.declare(self.border_color.value()),
-            TABLE_HOVER.declare(self.hover_color.value()),
-            TABLE_STRIPE.declare(self.stripe_color.value()),
+            TABLE_HOVER.declare(
+                self.hover_color
+                    .map_or(NamedColorCss::ROW_HOVER.value(), |color| color.value()),
+            ),
+            TABLE_STRIPE.declare(
+                self.stripe_color
+                    .map_or(NamedColorCss::ROW_STRIPE.value(), |color| color.value()),
+            ),
             TABLE_SELECTED.declare(self.selected_color.value()),
             TABLE_GROUP.declare(self.group_color.value()),
             TABLE_GROUP_INDENT.declare(self.group_indent),

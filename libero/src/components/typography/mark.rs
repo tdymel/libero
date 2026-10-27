@@ -75,9 +75,9 @@ base_props! {
     pub struct MarkProps {
         #[props(default, into)]
         color: Input<ThemeAwareValue>,
-        /// Fills the highlight with a gradient from `color`, its text black or white to
-        /// read on every point: `("secondary", 45)` or a [`Gradient`]. A literal stop's
-        /// contrast is the caller's to check.
+        /// Fills the highlight with a gradient from `color` (unset: the theme gradient's first
+        /// stop, not the tint's `warning`), its text black or white to read on every point:
+        /// `("secondary", 45)` or a [`Gradient`]. A literal stop's contrast is the caller's to check.
         #[props(default, into)]
         gradient: Option<Gradient>,
         children: Element,

@@ -49,6 +49,8 @@ fn no_gradient(values: &DemoValues) -> bool {
 pub fn MarkPage() -> Element {
     let theme = use_theme();
     let [gradient_to, gradient_deg] = gradient_controls(no_gradient);
+    // Every palette colour reads into `error`; into `secondary`, three fall to 4.24:1 (4558).
+    let gradient_to = gradient_to.default("error");
 
     rsx! {
         DocPage {
@@ -58,7 +60,7 @@ pub fn MarkPage() -> Element {
             properties: vec![props("Mark", vec![
                 prop("color", "ThemeAwareValue")
                     .default("warning, tinted")
-                    .doc("A theme color name gets a light shade, and an explicit shade such as `error.4` stays as it is. Any CSS color works too. Under a gradient, its first stop."),
+                    .doc("A theme color name gets a light shade, and an explicit shade such as `error.4` stays as it is. Any CSS color works too. Under a gradient, its first stop; unset, the gradient starts at the theme gradient's first stop, not at `warning`."),
                 prop("gradient", "Gradient")
                     .doc("Fills the highlight with a gradient from `color` to a second stop, as `(\"info\", 90)` or `Gradient::default().to(\"info\").deg(90)`; `Gradient::default()` is the theme's. The text turns black or white, whichever reads on both stops and the span between; the contrast of a literal CSS stop is yours to check. Solid in its first stop where a renderer drops the image; in forced colors, the system highlight colors."),
                 prop("children", "Element").default("required").doc("The highlighted content."),
@@ -86,6 +88,7 @@ pub fn MarkPage() -> Element {
                 .must([
                     "With a CSS color name such as `gold`, the text keeps the page's color: check its contrast.",
                     "Check the contrast of a literal CSS stop in `gradient`.",
+                    "Check a hand-picked pair of theme stops: in the default light theme, `success` into `secondary` reads only 4.24:1, and a debug build warns in the console. There, any theme color into `error`, the demo's default, reads.",
                     "Say in the text why a highlight matters. Not every screen reader announces `<mark>`.",
                 ])
                 .example("A search result with the query highlighted, `Mark { \"libero\" }`: the text stays readable on the tint, and the result says \"1 match\" in words, since not every screen reader announces the highlight."),

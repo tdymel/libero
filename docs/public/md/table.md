@@ -388,8 +388,8 @@ each cell of that row, and names the row's toggle "Details for Cherry".
 | `size` | `Size` | The size when the prop is unset, `Md`. |
 | `sizes` | `Sizes<TableSizeLevel>` | Per size: `font_size`, `padding_x` and `padding_y` of every cell. `Md` is 1rem (16px), 12px and 10px. |
 | `border_color` | `ColorValue` | Color of the header and row rules. |
-| `hover_color` | `ColorValue` | Row background while hovered, `muted.2`: one step past the stripe. |
-| `stripe_color` | `ColorValue` | Every other body row's background with `striped`, `muted.1`. |
+| `hover_color` | `Option<ColorValue>` | Row background while hovered. `None`, the default, takes the theme's row hover tint: the first muted step that shows at 1.15:1 on the page and the card. |
+| `stripe_color` | `Option<ColorValue>` | Every other body row's background with `striped`. `None`, the default, takes a lighter muted step than the hover that still shows at 1.05:1 on the page and the card, so a hovered stripe still changes. |
 | `selected_color` | `ColorValue` | A selected row's background, hovered or not, `primary.1`. |
 | `group_color` | `ColorValue` | A group row's background with `row_grouping`, `muted.1`. |
 | `group_indent` | `&'static str` | How far each nested group's toggle moves in, `20px`. |

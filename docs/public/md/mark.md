@@ -35,7 +35,7 @@ fn Demo() -> Element {
 
 | Prop | Type | Default | Description |
 |---|---|---|---|
-| `color` | `ThemeAwareValue` | `warning`, tinted | A theme color name gets a light shade, and an explicit shade such as `error.4` stays as it is. Any CSS color works too. Under a gradient, its first stop. |
+| `color` | `ThemeAwareValue` | `warning`, tinted | A theme color name gets a light shade, and an explicit shade such as `error.4` stays as it is. Any CSS color works too. Under a gradient, its first stop; unset, the gradient starts at the theme gradient's first stop, not at `warning`. |
 | `gradient` | `Gradient` | - | Fills the highlight with a gradient from `color` to a second stop, as `("info", 90)` or `Gradient::default().to("info").deg(90)`; `Gradient::default()` is the theme's. The text turns black or white, whichever reads on both stops and the span between; the contrast of a literal CSS stop is yours to check. Solid in its first stop where a renderer drops the image; in forced colors, the system highlight colors. |
 | `children` | `Element` | required | The highlighted content. |
 
@@ -70,6 +70,9 @@ Like every component, both also take the shared props `sx`, `class`, `style`,
 - With a CSS color name such as `gold`, the text keeps the page's color: check
   its contrast.
 - Check the contrast of a literal CSS stop in `gradient`.
+- Check a hand-picked pair of theme stops: in the default light theme,
+  `success` into `secondary` reads only 4.24:1, and a debug build warns in the
+  console. There, any theme color into `error`, the demo's default, reads.
 - Say in the text why a highlight matters. Not every screen reader announces
   `<mark>`.
 

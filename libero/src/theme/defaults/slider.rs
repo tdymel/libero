@@ -40,7 +40,8 @@ impl SliderDefaults {
             SliderSizeLevel {
                 track_size: "2px",
                 thumb_size: "12px",
-                font_size: "0.6875rem",
+                // 12px marks, as Badge (todo 4556).
+                font_size: "0.75rem",
             },
             SliderSizeLevel {
                 track_size: "3px",

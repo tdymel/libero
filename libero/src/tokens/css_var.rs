@@ -210,6 +210,8 @@ impl NamedColorCss {
     pub const TEXT_DIMMED: NamedColorCss = NamedColorCss::new("--lsx-text-dimmed");
     /// The one hover tint of list-like rows: the muted fill step that shows on the card.
     pub(crate) const ROW_HOVER: NamedColorCss = NamedColorCss::new("--lsx-row-hover");
+    /// A striped row's tint: a muted fill step under [`ROW_HOVER`](Self::ROW_HOVER) that shows on the card.
+    pub(crate) const ROW_STRIPE: NamedColorCss = NamedColorCss::new("--lsx-row-stripe");
 
     pub const fn new(name: &'static str) -> Self {
         Self {

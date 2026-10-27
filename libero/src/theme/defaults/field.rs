@@ -71,9 +71,10 @@ impl FieldDefaults {
         gap: "4px",
         frame_gap: "8px",
         sizes: Sizes::new(
+            // 12px label and caption, as Badge (todo 4556).
             FieldSizeLevel {
-                label_font_size: "0.6875rem",
-                caption_font_size: "0.6875rem",
+                label_font_size: "0.75rem",
+                caption_font_size: "0.75rem",
                 font_size: "0.75rem",
                 height: "28px",
                 padding_y: "4px",
@@ -202,7 +203,8 @@ mod tests {
         length.trim_end_matches("rem").parse().unwrap()
     }
 
-    /// Todo 2707 raised md to the type floor; the steps above it moved along.
+    /// Todo 2707 raised md to the type floor; the steps above it moved along. The xs label
+    /// meets sm's at the 12px floor (todo 4556).
     #[test]
     fn the_text_and_label_rise_strictly_from_a_16px_and_14px_md() {
         let level = |size| FieldDefaults::DEFAULT.sizes.get(size);
@@ -211,10 +213,27 @@ mod tests {
         for pair in Size::ALL.windows(2) {
             let (low, high) = (level(pair[0]), level(pair[1]));
             assert!(rem(low.font_size) < rem(high.font_size), "{pair:?}");
-            assert!(
-                rem(low.label_font_size) < rem(high.label_font_size),
-                "{pair:?}"
-            );
+            if pair[0] != Size::Xs {
+                assert!(
+                    rem(low.label_font_size) < rem(high.label_font_size),
+                    "{pair:?}"
+                );
+            }
+        }
+    }
+
+    /// Todo 4556: no label, caption or value below 12px, as Badge (3601).
+    #[test]
+    fn no_text_is_below_12px() {
+        for size in Size::ALL {
+            let level = FieldDefaults::DEFAULT.sizes.get(size);
+            for length in [
+                level.label_font_size,
+                level.caption_font_size,
+                level.font_size,
+            ] {
+                assert!(rem(length) >= 0.75, "{size:?}: {length}");
+            }
         }
     }
 

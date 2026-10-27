@@ -65,29 +65,90 @@ fn the_fill_ramp_is_still_a_ramp() {
     );
 }
 
-/// No palette colour may ship a fill nobody can label.
+/// No palette colour may ship a fill nobody can label, at any step of any shipped theme:
+/// a grey ink read 2.73:1 on Kanagawa's warning fill, so true black or white steps in (todo 4554).
 #[test]
-fn every_default_fill_carries_its_own_foreground() {
-    // Against the painted foreground: a dark theme's ink is not pure white.
-    for theme in [&Theme::DEFAULT, &Theme::DARK, &crate::theme::NORD_LIGHT] {
-        let css = Stylesheet::from(theme).as_str().to_string();
+fn every_shipped_fill_carries_its_own_foreground() {
+    for set in ThemeSet::CATALOGUE {
+        for theme in [Some(set.light_theme()), set.dark_theme()]
+            .into_iter()
+            .flatten()
+        {
+            let css = Stylesheet::from(theme).as_str().to_string();
+            for name in PALETTE {
+                for step in 1..=9 {
+                    let fill =
+                        HexColor::parse(&root_var(&css, &format!("--lsx-{name}-fill-{step}")))
+                            .expect("a hex");
+                    let label = root_var(&css, &format!("--lsx-{name}-contrast-{step}"));
+                    // Against the painted foreground: a dark theme's ink is not pure white.
+                    let foreground = match label.as_str() {
+                        "var(--lsx-ink)" => theme.ink,
+                        "var(--lsx-surface)" => theme.surface,
+                        "#000000" | "#FFFFFF" => {
+                            // Only where neither of the theme's ends reads (Linus, 4554).
+                            let best = fill
+                                .contrast_ratio(theme.ink)
+                                .max(fill.contrast_ratio(theme.surface));
+                            assert!(
+                                best < TEXT_CONTRAST,
+                                "{} {}: {name} fill-{step} left an end at {best:.2}:1",
+                                set.name(),
+                                theme.surface.color_scheme()
+                            );
+                            HexColor::parse(&label).expect("a hex")
+                        }
+                        other => panic!("unexpected contrast value {other}"),
+                    };
 
-        for name in PALETTE {
-            let fill =
-                HexColor::parse(&root_var(&css, &format!("--lsx-{name}-fill-6"))).expect("a hex");
-            let foreground = match root_var(&css, &format!("--lsx-{name}-contrast-6")).as_str() {
-                "var(--lsx-ink)" => theme.ink,
-                "var(--lsx-surface)" => theme.surface,
-                other => panic!("unexpected contrast value {other}"),
-            };
-
-            let ratio = fill.contrast_ratio(foreground);
-            assert!(
-                ratio >= TEXT_CONTRAST,
-                "{name} fill {fill} labelled at {ratio:.2}:1"
-            );
+                    let ratio = fill.contrast_ratio(foreground);
+                    assert!(
+                        ratio >= TEXT_CONTRAST,
+                        "{} {}: {name} fill-{step} {fill} labelled at {ratio:.2}:1",
+                        set.name(),
+                        theme.surface.color_scheme()
+                    );
+                }
+            }
         }
     }
+}
+
+/// Todo 4554: the theme's own end where it reads, true black only where it can't.
+#[test]
+fn a_fill_takes_black_only_where_the_theme_s_ink_falls_short() {
+    let warning = |theme: &Theme| {
+        let css = Stylesheet::from(theme).as_str().to_string();
+        root_var(&css, "--lsx-warning-contrast-6")
+    };
+    assert_eq!(warning(&Theme::DEFAULT), NamedColorCss::INK.value());
+    assert_eq!(warning(&crate::theme::KANAGAWA_LIGHT), "#000000");
+
+    // Libero light keeps every end; dark only swaps the six steps under 4.5:1.
+    let literals = |theme: &Theme| {
+        let css = Stylesheet::from(theme).as_str().to_string();
+        let mut literals = Vec::new();
+        for name in PALETTE {
+            for step in 1..=9 {
+                if root_var(&css, &format!("--lsx-{name}-contrast-{step}")).starts_with('#') {
+                    literals.push(format!("{name}-{step}"));
+                }
+            }
+        }
+        literals
+    };
+    assert_eq!(literals(&Theme::DEFAULT), Vec::<String>::new());
+    assert_eq!(
+        literals(&Theme::DARK),
+        [
+            "primary-4",
+            "secondary-4",
+            "secondary-5",
+            "error-4",
+            "warning-3",
+            "success-3"
+        ]
+    );
 }
 
 /// Yellow and green reach no 4.5:1 on white within the ramp, so their text role mixes
@@ -233,53 +294,74 @@ fn text_roles_falling_short(theme: &Theme) -> Vec<&'static str> {
         .collect()
 }
 
-/// Todo 2683: every shipped theme's row hover tint shows at 1.15:1 on its own card.
+/// A tint var's hex: a muted fill step's `var()` or the hex itself.
+fn tint_hex(css: &str, name: &str) -> HexColor {
+    let tint = root_var(css, name);
+    let hex = tint
+        .strip_prefix("var(")
+        .and_then(|var| var.strip_suffix(')'))
+        .map_or(tint.clone(), |var| root_var(css, var));
+    HexColor::parse(&hex).unwrap_or_else(|| panic!("{name}: {hex} is a hex"))
+}
+
+/// Todos 2683, 4555: every shipped theme's row hover tint shows at 1.15:1 on its own page
+/// and card, the stripe at 1.05:1 and lighter than the hover, so a hovered stripe changes.
 #[test]
-fn every_shipped_theme_shows_its_row_hover_tint_on_the_card() {
+fn every_shipped_theme_shows_its_row_hover_and_stripe_tints_on_the_card() {
     for set in ThemeSet::CATALOGUE {
         for theme in [Some(set.light_theme()), set.dark_theme()]
             .into_iter()
             .flatten()
         {
             let css = Stylesheet::from(theme).as_str().to_string();
-            let tint = root_var(&css, NamedColorCss::ROW_HOVER.name());
-            let fill = tint
-                .strip_prefix("var(")
-                .and_then(|name| name.strip_suffix(')'))
-                .map(|name| root_var(&css, name))
-                .and_then(|hex| HexColor::parse(&hex))
-                .expect("a muted fill step");
+            let hover = tint_hex(&css, NamedColorCss::ROW_HOVER.name());
+            let stripe = tint_hex(&css, NamedColorCss::ROW_STRIPE.name());
             let card = HexColor::parse(theme.paper.background).expect("a hex");
+            let scheme = theme.surface.color_scheme();
+
+            for (what, against) in [("page", theme.surface), ("card", card)] {
+                for (tint, color, floor) in [("hover", hover, 1.15), ("stripe", stripe, 1.05)] {
+                    let ratio = color.contrast_ratio(against);
+                    assert!(
+                        ratio >= floor,
+                        "{} {scheme}: the {tint} {color} is {ratio:.3}:1 on the {what}",
+                        set.name()
+                    );
+                }
+            }
             assert!(
-                fill.contrast_ratio(card) >= 1.15,
-                "{} {}: {tint} is {:.3}:1 on the card",
-                set.name(),
-                theme.surface.color_scheme(),
-                fill.contrast_ratio(card)
+                stripe.contrast_ratio(theme.surface) < hover.contrast_ratio(theme.surface),
+                "{} {scheme}: the stripe {stripe} is not lighter than the hover {hover}",
+                set.name()
             );
         }
     }
 }
 
-/// Todo 2683: `muted.2` was 1.09:1 on the dark card; the row hover tint is the first muted
-/// fill step that shows 1.15:1 there (`muted.3`) and stays `muted.2` on white.
+/// Todos 2683, 4555: `muted.2` was 1.09:1 on the dark card, `muted.1` 1.00:1; the row hover
+/// tint is the first muted fill step that shows 1.15:1 there, the stripe the step below.
 #[test]
-fn the_row_hover_tint_shows_on_the_card_of_each_scheme() {
-    for (theme, card, step) in [
-        (Theme::DEFAULT, HexColor::new(0xFF_FF_FF), 2),
-        (Theme::DARK, HexColor::new(0x25_26_2B), 3),
+fn the_row_hover_and_stripe_tints_show_on_the_card_of_each_scheme() {
+    for (theme, card, hover, stripe) in [
+        (Theme::DEFAULT, HexColor::new(0xFF_FF_FF), 2, 1),
+        (Theme::DARK, HexColor::new(0x25_26_2B), 3, 2),
     ] {
         let css = Stylesheet::from(&theme).as_str().to_string();
-        let tint = root_var(&css, NamedColorCss::ROW_HOVER.name());
-        assert_eq!(tint, format!("var(--lsx-muted-fill-{step})"));
-
-        let fill =
-            HexColor::parse(&root_var(&css, &format!("--lsx-muted-fill-{step}"))).expect("a hex");
-        assert!(
-            fill.contrast_ratio(card) >= 1.15,
-            "{fill} on {card}: {:.3}:1",
-            fill.contrast_ratio(card)
-        );
+        for (name, step, floor) in [
+            (NamedColorCss::ROW_HOVER.name(), hover, 1.15),
+            (NamedColorCss::ROW_STRIPE.name(), stripe, 1.05),
+        ] {
+            assert_eq!(
+                root_var(&css, name),
+                format!("var(--lsx-muted-fill-{step})")
+            );
+            let fill = tint_hex(&css, name);
+            assert!(
+                fill.contrast_ratio(card) >= floor,
+                "{fill} on {card}: {:.3}:1",
+                fill.contrast_ratio(card)
+            );
+        }
     }
 }
 
