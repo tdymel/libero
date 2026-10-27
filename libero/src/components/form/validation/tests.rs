@@ -172,6 +172,38 @@ fn a_composite_rule_lands_on_every_field_it_names() {
     assert_eq!(after.matches("Passwords differ").count(), 2);
 }
 
+/// Todo 4504: a disabled field cannot take the focus the summary link gives.
+#[test]
+fn a_composite_summary_line_links_to_an_open_field_it_names() {
+    fn app() -> Element {
+        let signup = use_store(|| Signup {
+            password: "a".into(),
+            confirm: "b".into(),
+        });
+        rsx! {
+            LiberoProvider {
+                Form {
+                    value: signup,
+                    validate: [
+                        (|s: &Signup| s.password == s.confirm)
+                            .error("Passwords differ")
+                            .on([crate::path!(Signup => password), crate::path!(Signup => confirm)]),
+                    ],
+                    Spy {}
+                    TextField { name: "password", label: "Password", value: "a", disabled: true }
+                    TextField { name: "confirm", label: "Confirm", value: "b" }
+                }
+            }
+        }
+    }
+
+    let (mut dom, _) = mount(app);
+    submit(&mut dom);
+    let items = scope(&dom).summary();
+    assert_eq!(items.len(), 1, "{items:?}");
+    assert_eq!(items[0].message, "Confirm: Passwords differ");
+}
+
 /// The composite rule of `a_composite_rule_lands_on_every_field_it_names`,
 /// with both fields behind a toggle.
 fn toggled_signup() -> Element {

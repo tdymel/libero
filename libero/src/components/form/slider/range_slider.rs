@@ -135,6 +135,7 @@ pub fn RangeSlider<V: SliderValue>(props: RangeSliderProps<V>) -> Element {
         .bound(&bound)
         .required(required)
         .required_in_name(labels.required)
+        .readonly(props.readonly.unwrap_or(false))
         .disabled(disabled)
         .size(props.size.copied_or(theme.slider.size))
         .class(&props.class)

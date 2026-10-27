@@ -638,7 +638,12 @@ impl FormScope {
                         },
                     }
                 } else {
-                    let target = issue.paths.iter().find_map(|path| named(path));
+                    // A barred field cannot take the focus, so an open one is preferred (todo 4504).
+                    let target = issue
+                        .paths
+                        .iter()
+                        .filter_map(|path| named(path))
+                        .min_by_key(|field| field.barred);
                     SummaryItem {
                         message: match target.and_then(|field| field.label.as_ref()) {
                             Some(label) => format!("{label}: {message}"),

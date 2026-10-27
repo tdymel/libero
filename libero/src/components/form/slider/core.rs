@@ -1425,10 +1425,12 @@ fn SliderBody(live: Signal<Live>, core: SliderCoreProps) -> Element {
         if let Some(raw) = key_target(key, value.thumb(index), grid, shift, &theme.slider) {
             event.prevent_default();
             // `Change` then `End`: a key press settles at once, and callers commit
-            // on `End`.
+            // on `End`. A key that moves nothing emits nothing, as a native range does.
             let moved = grid.moved(value, index, raw);
-            steps.emit.call(SliderChangeEvent::Change(moved));
-            steps.emit.call(SliderChangeEvent::End(moved));
+            if moved != value {
+                steps.emit.call(SliderChangeEvent::Change(moved));
+                steps.emit.call(SliderChangeEvent::End(moved));
+            }
         }
     });
 

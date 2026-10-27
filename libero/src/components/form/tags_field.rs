@@ -545,6 +545,21 @@ fn split(text: &str, split_chars: &[String]) -> Vec<String> {
     pieces
 }
 
+/// `split`, except a keystroke leaves the text after the last separator as the
+/// draft; a paste (`typed` false) commits every piece.
+fn split_typed(raw: &str, typed: bool, split_chars: &[String]) -> (Vec<String>, String) {
+    let cut = match typed {
+        true => split_chars
+            .iter()
+            .filter(|char| !char.is_empty())
+            .filter_map(|char| raw.rfind(char.as_str()).map(|at| at + char.len()))
+            .max(),
+        false => None,
+    }
+    .unwrap_or(raw.len());
+    (split(&raw[..cut], split_chars), raw[cut..].to_string())
+}
+
 /// The chips, one per held tag. A keyboard removal moves focus on before the
 /// tag goes ([[principles/focus-after-removal]]).
 fn tags_field_chips<F: Fn(Vec<String>) + Clone + 'static>(
@@ -765,15 +780,29 @@ fn tags_field_input<F: Fn(Vec<String>) + Clone + 'static>(
             if raw == text() {
                 return;
             }
-            let pieces: Vec<String> = split(&raw, &split_chars);
+            let typed = raw.chars().count() <= text().chars().count() + 1;
+            let (pieces, tail) = split_typed(&raw, typed, &split_chars);
             match pieces.is_empty() {
+                // A stray separator before the first letter is dropped with it.
+                true if !tail.is_empty() => text.set(tail),
                 // Only separators: keep them, or an already rendered `""` is not
                 // written back and the comma stays on screen.
                 true if raw != text() => text.set(raw),
                 true => {}
                 // A refused tag stays in the draft, to fix or drop.
                 false => {
-                    let rest = typing(pieces).unwrap_or_default();
+                    let mut rest = typing(pieces).unwrap_or_default();
+                    if !tail.is_empty() {
+                        if !rest.is_empty() {
+                            rest.push_str(
+                                split_chars
+                                    .iter()
+                                    .find(|char| !char.is_empty())
+                                    .map_or("", String::as_str),
+                            );
+                        }
+                        rest.push_str(&tail);
+                    }
                     // An unchanged draft is not written back, so a paste into it would stay (4189).
                     if rest == text() {
                         let _ = input.set_value(&rest);
@@ -881,6 +910,29 @@ mod tests {
         assert_eq!(split("a,b;c", &tags(&[",", ";"])), tags(&["a", "b", "c"]));
         // Only separators: nothing to commit, and nothing to clear either.
         assert!(split(",,", &tags(&[","])).is_empty());
+    }
+
+    /// Todo 4500: a keystroke after a separator starts the next draft; a paste commits all.
+    #[test]
+    fn a_keystroke_keeps_the_text_after_the_last_separator_as_the_draft() {
+        let comma = tags(&[","]);
+        assert_eq!(split_typed(",r", true, &comma), (Vec::new(), "r".into()));
+        assert_eq!(
+            split_typed("abc,def", true, &comma),
+            (tags(&["abc"]), "def".into())
+        );
+        assert_eq!(
+            split_typed("rust,", true, &comma),
+            (tags(&["rust"]), String::new())
+        );
+        assert_eq!(
+            split_typed("rus", true, &comma),
+            (Vec::new(), String::new())
+        );
+        assert_eq!(
+            split_typed("a,b,c", false, &comma),
+            (tags(&["a", "b", "c"]), String::new())
+        );
     }
 
     /// A paste and the same tags typed one after another have to land the same

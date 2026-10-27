@@ -213,7 +213,11 @@ pub fn CheckboxGroupPage() -> Element {
                             Some(max) => vec![format!("max_checked: {max}")],
                             None => vec![],
                         }),
-                ], field_controls::<ToppingCopy>(), vec![
+                ], field_controls::<ToppingCopy>().into_iter().map(|control| match control.name {
+                    // The description states the cap the demo sets by default.
+                    "description" => control.default("true"),
+                    _ => control,
+                }).collect(), vec![
                     Control::switch("required"),
                     Control::switch("disabled"),
                     Control::switch("readonly"),

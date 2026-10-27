@@ -127,8 +127,13 @@ pub(super) fn use_emit<T: Clone + 'static>(
     to: impl Fn(SliderCoreValue) -> T + 'static,
 ) -> Callback<SliderChangeEvent<SliderCoreValue>> {
     let setter = bound.setter();
+    let edited = bound.edited();
     use_callback(move |event: SliderChangeEvent<SliderCoreValue>| {
         let event = event.map(&to);
+        // A slide drops an error set from code on the field, as `Bound::emit` does (todo 4501).
+        if matches!(event, SliderChangeEvent::Change(_)) {
+            edited();
+        }
         match (&oninput, &setter) {
             (Some(oninput), _) => oninput.call(event),
             // A bound slider keeps only the values: `Start`/`End` carry nothing a form's value holds.
