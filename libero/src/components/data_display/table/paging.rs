@@ -139,6 +139,9 @@ pub(super) struct TablePagerProps {
     pub total: usize,
     /// Clamped.
     pub page: u32,
+    /// Whether the clamped page is written back: not while no rows or no server count
+    /// say how many pages there are.
+    pub settles: bool,
     pub page_size: usize,
     pub page_sizes: Vec<usize>,
     pub caption: Option<String>,
@@ -154,8 +157,15 @@ pub(super) fn TablePager(props: TablePagerProps) -> Element {
         total,
         page,
         page_size,
+        settles,
         ..
     } = props;
+    // A page past the last, after the rows shrank, becomes the last for the host too.
+    use_effect(use_reactive!(|page, settles| {
+        if settles && state.page.read() != page {
+            state.page.set(page);
+        }
+    }));
     let rows = page_rows(total, page, page_size);
     let from = if rows.is_empty() { 0 } else { rows.start + 1 };
     let range = (labels.range)(from, rows.end, total);
@@ -163,13 +173,13 @@ pub(super) fn TablePager(props: TablePagerProps) -> Element {
         Some(caption) => (labels.pages_of)(caption),
         None => labels.pages.to_string(),
     };
-    // Said on a change only: the first render's range is no news.
+    // Said when the page or its size changes: the first render and a data refresh are no news.
     let announcer = use_announcer();
-    let mut said = use_signal(|| range.clone());
+    let mut said = use_hook(|| CopyValue::new((page, page_size)));
     let shown = range.clone();
-    use_effect(use_reactive!(|(shown,)| {
-        if *said.peek() != shown {
-            said.set(shown.clone());
+    use_effect(use_reactive!(|page, page_size, shown| {
+        if *said.peek() != (page, page_size) {
+            said.set((page, page_size));
             announcer.say(shown);
         }
     }));
@@ -181,7 +191,8 @@ pub(super) fn TablePager(props: TablePagerProps) -> Element {
         // Keeps the first shown row on screen.
         let page_next = page_of_row(first, next);
         state.page_size.set(next);
-        if page_next != page {
+        // The stored page, not the clamped one: they differ until the clamp is written back.
+        if page_next != state.page.peek() {
             state.page.set(page_next);
         }
     };

@@ -38,8 +38,8 @@ use super::{
     column::{Column, ColumnDefaults},
     column_drag::use_column_drag,
     column_filter::{ColumnFilter, FilterLogic, cell_tests},
-    column_menu::{MenuColumn, use_menu_focus},
-    core::{BodySpec, RowFn, TableSort, lead_count, render_body},
+    column_menu::{MenuColumn, use_menu_focus, use_pin_news},
+    core::{BodySpec, RowFn, TableSort, lead_count, render_body, use_user_sort},
     detail::Details,
     edit::RowUpdate,
     filter_panel::use_panel_control,
@@ -56,7 +56,7 @@ use super::{
     selection::{Selection, TreeSelect, toggle_row},
     sticky::use_edge_height,
     toolbar::{TableTools, ToolView},
-    use_table::use_table,
+    use_table::{use_removed_columns, use_table},
     window::{
         TABLE_MIN_WIDTH_VAR, TABLE_ROW_HEIGHT_VAR, reveal_slot, use_row_focus, window_attributes,
         windowed_min_width, windowed_sx,
@@ -1034,7 +1034,8 @@ pub struct TableProps<T: Clone + PartialEq + 'static> {
     /// Adds a checkbox column, with a select-all box in its header.
     #[props(default)]
     selectable: bool,
-    /// The selected rows' `row_key`s; set, the selection is controlled.
+    /// The selected rows' `row_key`s; set, the selection is controlled. Keys of rows that
+    /// leave `data` stay, so it can span a server's pages: drop them when deleting rows.
     #[props(default)]
     selection: Option<Vec<String>>,
     /// Seeds the selection once. Ignored when `selection` is set.
@@ -1340,8 +1341,9 @@ pub fn Table<T: Clone + PartialEq + 'static>(mut props: TableProps<T>) -> Elemen
     });
     let preview = use_signal(|| None);
     let measured = use_hook(|| CopyValue::new(BTreeMap::new()));
-    let column_drag = use_column_drag(state.column_order);
+    let column_drag = use_column_drag(state.column_order, announcer);
     let menu_focus = use_menu_focus();
+    let pin_news = use_pin_news();
     let drags = props.column_menu;
     let touch = use_hook(|| CopyValue::new(false));
     let instructions_id = use_id();
@@ -1366,6 +1368,14 @@ pub fn Table<T: Clone + PartialEq + 'static>(mut props: TableProps<T>) -> Elemen
         || props.default_page_size.is_some()
         || !props.page_sizes.is_empty();
     use_page_reset(state);
+    use_removed_columns(
+        state,
+        props
+            .columns
+            .iter()
+            .map(|column| column.header.clone())
+            .collect(),
+    );
     use_page_size_reseed(state, &props.page_sizes, props.default_page_size);
     let caption_id = use_id();
     use_name_warning(
@@ -1380,6 +1390,7 @@ pub fn Table<T: Clone + PartialEq + 'static>(mut props: TableProps<T>) -> Elemen
         .unwrap_or(props.size.copied_or(use_theme().table.size));
     let localization = use_localization();
     let (labels, lang) = (localization.table, localization.lang);
+    let user_sort = use_user_sort(state.sort, announcer, labels);
     let resize = props.resizable_columns.then_some(ColumnResize {
         widths: state.column_widths,
         preview,
@@ -1462,15 +1473,26 @@ pub fn Table<T: Clone + PartialEq + 'static>(mut props: TableProps<T>) -> Elemen
             pin_widths,
             pin_edges,
             warned,
+            pin_news,
         },
         drags.then_some(column_drag),
     );
+    if let Some((column, side, held)) = header.pin_said.clone() {
+        let said = match (held, side) {
+            (false, _) => labels.column_pin_released,
+            (true, PinSide::Start) => labels.column_pinned_start,
+            (true, PinSide::End) => labels.column_pinned_end,
+        };
+        // After this render: a write while it runs would warn.
+        spawn(async move { announcer.say(said(&column)) });
+    }
     let menu_columns: Rc<[MenuColumn]> = header
         .headers
         .iter()
         .zip(&props.columns)
         .map(|(spec, column)| MenuColumn {
             header: spec.header.clone(),
+            key: spec.key.clone(),
             sortable: spec.sortable,
             hideable: spec.hideable,
             hidden: spec.hidden,
@@ -1499,6 +1521,8 @@ pub fn Table<T: Clone + PartialEq + 'static>(mut props: TableProps<T>) -> Elemen
                 panel,
                 focus: menu_focus,
                 announcer,
+                sort: user_sort,
+                news: pin_news,
                 grid: cell_focus,
             },
         ),
@@ -1788,8 +1812,11 @@ pub fn Table<T: Clone + PartialEq + 'static>(mut props: TableProps<T>) -> Elemen
         let header = header_action(
             headers.clone(),
             active.clone(),
-            state.sort,
-            move |index| menu_focus.open(index),
+            user_sort,
+            {
+                let headers = headers.clone();
+                move |index| menu_focus.open(&headers[index].key)
+            },
             props.column_menu,
         );
         let select = selection
@@ -2020,7 +2047,7 @@ pub fn Table<T: Clone + PartialEq + 'static>(mut props: TableProps<T>) -> Elemen
                     told: bounded.then(|| EventHandler::new(move |height| foot.set(height))),
                 },
                 active,
-                sort: state.sort,
+                sort: user_sort,
                 touch: props.multi_sort.then_some(touch),
                 sort_order: labels.sort_order,
                 select_all: selection

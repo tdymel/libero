@@ -8,7 +8,7 @@ use dioxus::prelude::*;
 use super::super::{
     cell_focus::{FocusTarget, GridRow, TreeNode},
     column::Column,
-    core::{ActiveSort, HeaderSpec, TableSort, align_attr, next_sort},
+    core::{ActiveSort, HeaderSpec, UserSort, align_attr, next_sort},
     footer::aggregate_cell,
     grid::{GridFocus, GridWindow, TreeNav},
     pipeline::{GroupInfo, VisibleRow},
@@ -16,7 +16,6 @@ use super::super::{
     row_groups::{GroupCells, GroupRow, GroupValues},
     selection::{Selection, group_state},
     tree::TreeLevel,
-    use_table::StateSlice,
     window::{BodyRows, RowFocus, RowWindow, window_attributes},
 };
 use crate::{components::common::attr, localization::labels::table::TableLabels};
@@ -235,7 +234,7 @@ pub(super) fn tree_nav<T: Clone + 'static>(spec: TreeSpec<'_, T>) -> TreeNav {
 pub(super) fn header_action(
     headers: Rc<Vec<HeaderSpec>>,
     active: ActiveSort,
-    sort: StateSlice<Vec<TableSort>>,
+    sort: UserSort,
     open_menu: impl Fn(usize) + 'static,
     menus: bool,
 ) -> Callback<(usize, bool)> {

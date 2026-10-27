@@ -361,18 +361,34 @@ async fn narrow_areas_release_their_pins<D: Driver>(d: &mut D, _route: &str) -> 
     // Still reachable: no pinned column covers any header's menu button.
     d.click("button[aria-label=\"Origin column options\"]")
         .await?;
-    menu_entry(d, "Pin to start").await?;
-    d.press(keyboard::ESCAPE).await?;
+    let pin = menu_entry(d, "Pin to start").await?;
+    // 4406: a pin released at once says so, not "pinned".
+    d.click(&pin).await?;
+    eventually_text(
+        d,
+        "[role=status]",
+        "Origin not pinned: not enough room",
+        "the released pin's announcement",
+    )
+    .await?;
+    // 4406: released Name moves as an unpinned column does, and Unpin drops its pin.
+    d.click("button[aria-label=\"Name column options\"]")
+        .await?;
+    menu_entry(d, "Move right").await?;
+    let unpin = menu_entry(d, "Unpin").await?;
+    d.click(&unpin).await?;
+    eventually_text(d, "#pinned", "Origin|Supplier", "Unpin of a released Name").await?;
     if web {
         d.resize_viewport(1280.0, 800.0).await?;
         eventually(d, "the pins to hold again", async |d| {
-            Ok(
-                d.attr("th[aria-label=Name]", "data-pin").await?.as_deref() == Some("start")
-                    && d.attr("th[aria-label=Supplier]", "data-pin")
-                        .await?
-                        .as_deref()
-                        == Some("end"),
-            )
+            Ok(d.attr("th[aria-label=Origin]", "data-pin")
+                .await?
+                .as_deref()
+                == Some("start")
+                && d.attr("th[aria-label=Supplier]", "data-pin")
+                    .await?
+                    .as_deref()
+                    == Some("end"))
         })
         .await?;
     }

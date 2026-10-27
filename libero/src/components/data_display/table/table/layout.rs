@@ -8,9 +8,9 @@ use dioxus::prelude::*;
 use super::super::{
     column::Column,
     column_drag::{ColumnDrag, DropPlan},
-    column_menu::{ColumnMenu, MenuColumn, MenuFocus},
+    column_menu::{ColumnMenu, MenuColumn, MenuFocus, PinNews},
     column_order::{moved, order_unpinned, ranked},
-    core::{ActiveSort, HeaderSpec, WidthSpec, active_sort, header_specs},
+    core::{ActiveSort, HeaderSpec, UserSort, WidthSpec, active_sort, header_specs},
     filter_panel::PanelControl,
     filter_popover::FilterTarget,
     header_filters::HeaderFilter,
@@ -31,6 +31,7 @@ pub(super) struct Measures {
     pub pin_widths: Signal<HashMap<String, f64>>,
     pub pin_edges: Signal<[Option<f64>; 2]>,
     pub warned: CopyValue<Vec<String>>,
+    pub pin_news: PinNews,
 }
 
 pub(super) struct HeaderLayout {
@@ -53,6 +54,8 @@ pub(super) struct HeaderLayout {
     /// The column group header rows above the column headers.
     pub group_rows: usize,
     pub head_rows: usize,
+    /// A menu pin settled this render: the header, its side, and whether the room kept it.
+    pub pin_said: Option<(String, PinSide, bool)>,
 }
 
 /// The header specs, pinned and ordered; with `drag`, its drop plan follows them.
@@ -72,6 +75,7 @@ pub(super) fn header_layout<T: Clone + PartialEq + 'static>(
         pin_widths,
         pin_edges,
         mut warned,
+        pin_news,
     } = measures;
     let widths = state.column_widths.read();
     let mut headers = header_specs(
@@ -111,6 +115,15 @@ pub(super) fn header_layout<T: Clone + PartialEq + 'static>(
             widths: &measured,
         },
     );
+    // Its width decides the fit: measured, declared, or none to measure against yet.
+    let pin_said = pin_news.settle(&fitted, |header| {
+        area_width.peek().is_none()
+            || measured.contains_key(header)
+            || headers.iter().any(|spec| {
+                spec.header == header
+                    && (spec.hidden || spec.width.as_deref().is_some_and(|w| w.ends_with("px")))
+            })
+    });
     let (mut layout, unknown) =
         pin_columns(&mut headers, &fitted, lead_width.as_deref(), &measured);
     let column_order = state.column_order.read();
@@ -126,6 +139,11 @@ pub(super) fn header_layout<T: Clone + PartialEq + 'static>(
                 .filter(|&&index| headers[index].pin.is_none())
                 .map(|&index| (index, headers[index].header.clone()))
                 .collect(),
+            lead: layout
+                .iter()
+                .take_while(|&&index| headers[index].pin.is_some())
+                .count(),
+            shown: layout.len(),
         };
         let mut current = drag.plan;
         if *current.peek() != plan {
@@ -178,6 +196,7 @@ pub(super) fn header_layout<T: Clone + PartialEq + 'static>(
         active,
         group_rows,
         head_rows,
+        pin_said,
     }
 }
 
@@ -213,6 +232,8 @@ pub(super) struct MenuSpec {
     pub panel: PanelControl,
     pub focus: MenuFocus,
     pub announcer: Announcer,
+    pub sort: UserSort,
+    pub news: PinNews,
     /// `cell_focus`: the header cell is the stop.
     pub grid: bool,
 }
@@ -238,6 +259,8 @@ pub(super) fn column_menus<T: Clone + PartialEq + 'static>(
         panel,
         focus,
         announcer,
+        sort,
+        news,
         grid,
     } = spec;
     let FilterBase {
@@ -276,10 +299,12 @@ pub(super) fn column_menus<T: Clone + PartialEq + 'static>(
                         announcer,
                     }),
                     active: active.clone(),
-                    sort: state.sort,
+                    sort,
                     multi_sort: props.multi_sort,
                     hidden: state.hidden_columns,
                     pinned: state.pinned_columns,
+                    side: headers[index].pin.as_ref().map(|pin| pin.side),
+                    news,
                     grouping: state.row_grouping,
                     labels,
                     size,

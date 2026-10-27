@@ -1,6 +1,8 @@
 use crate::common::{body, render};
 use crate::table_fixture::{Person, order_of};
 
+use std::cell::RefCell;
+
 use dioxus::prelude::*;
 use libero::{
     LiberoProvider,
@@ -120,6 +122,32 @@ fn a_controlled_page_past_the_end_shows_the_last_page() {
     assert_eq!(shown(&body), ["Eve"], "{body}");
     assert!(body.contains("5–5 of 5"), "{body}");
     assert!(body.contains("aria-current=\"page\""), "{body}");
+}
+
+/// 4407: the clamped page goes back to the host, so its page matches the screen.
+#[test]
+fn a_controlled_page_past_the_end_is_written_back() {
+    thread_local! {
+        static ASKED: RefCell<Vec<u32>> = const { RefCell::new(Vec::new()) };
+    }
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider {
+                Table {
+                    aria_label: "People",
+                    data: people(),
+                    columns: vec![column("Name").value(|row: &Person| row.name.to_string())],
+                    page: 9,
+                    onpagechange: |page| ASKED.with_borrow_mut(|asked| asked.push(page)),
+                    page_size: 2,
+                    onpagesizechange: |_| {},
+                }
+            }
+        }
+    }
+
+    render(app);
+    assert_eq!(ASKED.with_borrow(Vec::clone), [3]);
 }
 
 #[test]

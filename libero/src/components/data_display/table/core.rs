@@ -22,11 +22,14 @@ use super::{
     window::{BodyRows, render_window},
 };
 use crate::{
-    components::{accessibility::VisuallyHidden, common::Glyph},
+    components::{
+        accessibility::{Announcer, VisuallyHidden},
+        common::Glyph,
+    },
     context::IconSlot,
     css::declaration_value,
     hooks::{ElementHandle, listener},
-    localization::fill,
+    localization::{TableLabels, fill},
     platform,
 };
 
@@ -104,6 +107,8 @@ impl<T, R> PartialEq for RowFn<T, R> {
 /// What the non-generic body needs from a `Column<T>`, once `T` is gone.
 pub(super) struct HeaderSpec {
     pub header: String,
+    /// The DOM key of its cells: the header, unique past a repeated one.
+    pub key: String,
     pub align: CellAlign,
     pub sortable: bool,
     pub row_header: bool,
@@ -138,7 +143,7 @@ pub(super) fn header_specs<T>(
     hidden: &[String],
     sizing: WidthSpec,
 ) -> Vec<HeaderSpec> {
-    columns
+    let mut specs: Vec<HeaderSpec> = columns
         .iter()
         .enumerate()
         .map(|(index, column)| {
@@ -161,6 +166,7 @@ pub(super) fn header_specs<T>(
                 .and_then(|width| declaration_value("min-width", width));
             HeaderSpec {
                 header: column.header.clone(),
+                key: column.header.clone(),
                 align: resolved.align,
                 sortable: column.sortable,
                 row_header: column.row_header,
@@ -177,7 +183,18 @@ pub(super) fn header_specs<T>(
                 resize: (sizing.resizable && column.resizable).then_some(column.resize_limits),
             }
         })
-        .collect()
+        .collect();
+    // A repeated header keys by its place among its namesakes: keys stay unique.
+    for index in 1..specs.len() {
+        let earlier = specs[..index]
+            .iter()
+            .filter(|spec| spec.header == specs[index].header)
+            .count();
+        if earlier > 0 {
+            specs[index].key = format!("{}\u{1f}{earlier}", specs[index].header);
+        }
+    }
+    specs
 }
 
 /// The sorted columns by header index, in priority order.
@@ -278,6 +295,63 @@ pub(super) fn next_sort(
         )
         .map(entry)
         .collect()
+}
+
+/// The sort as the reader's own picks write it: the table says each (WCAG 4.1.3), a
+/// host-set or restored sort stays silent.
+#[derive(Clone, Copy, PartialEq)]
+pub(super) struct UserSort {
+    slice: StateSlice<Vec<TableSort>>,
+    /// The sort the last pick asked for; a controlled host may refuse it.
+    expected: CopyValue<Option<Vec<TableSort>>>,
+}
+
+impl UserSort {
+    pub fn set(mut self, next: Vec<TableSort>) {
+        if self.slice.peek() != next {
+            self.expected.set(Some(next.clone()));
+            self.slice.set(next);
+        }
+    }
+}
+
+pub(super) fn use_user_sort(
+    slice: StateSlice<Vec<TableSort>>,
+    announcer: Announcer,
+    labels: TableLabels,
+) -> UserSort {
+    let mut expected = use_hook(|| CopyValue::new(None::<Vec<TableSort>>));
+    let mut last = use_hook(|| CopyValue::new(slice.peek()));
+    use_effect(move || {
+        let now = slice.read();
+        let before = std::mem::replace(&mut *last.write(), now.clone());
+        if expected.peek().as_ref() != Some(&now) {
+            return;
+        }
+        expected.set(None);
+        if let Some((column, direction)) = sort_change(&before, &now) {
+            let said = match direction {
+                Some(SortDirection::Ascending) => labels.column_sorted_ascending,
+                Some(SortDirection::Descending) => labels.column_sorted_descending,
+                None => labels.column_unsorted,
+            };
+            announcer.say(said(&column));
+        }
+    });
+    UserSort { slice, expected }
+}
+
+/// The column a sort change touched: the first entry new or turned, else the first dropped.
+fn sort_change(before: &[TableSort], now: &[TableSort]) -> Option<(String, Option<SortDirection>)> {
+    now.iter()
+        .find(|entry| !before.contains(entry))
+        .map(|entry| (entry.column.clone(), Some(entry.direction)))
+        .or_else(|| {
+            before
+                .iter()
+                .find(|entry| !now.iter().any(|kept| kept.column == entry.column))
+                .map(|entry| (entry.column.clone(), None))
+        })
 }
 
 /// A row's cells and its DOM key: the caller's `row_key`, else its index in
@@ -398,7 +472,7 @@ pub(super) struct BodySpec {
     pub footer: Option<FooterCells>,
     pub foot: Foot,
     pub active: ActiveSort,
-    pub sort: StateSlice<Vec<TableSort>>,
+    pub sort: UserSort,
     /// Set with `multi_sort`: whether the press before a header click was a touch.
     pub touch: Option<CopyValue<bool>>,
     pub sort_order: &'static str,
@@ -643,7 +717,8 @@ pub(super) fn render_body(body: BodySpec) -> Element {
                         });
                         rsx! {
                             th {
-                                key: "{index}",
+                                // By header: a column the host adds or removes shifts the indices.
+                                key: "{spec.key}",
                                 scope: "col",
                                 rowspan: (rowspan > 1).then(|| rowspan.to_string()),
                                 "data-align": align_attr(spec.align),
@@ -847,7 +922,7 @@ pub(super) fn render_cells(
             if headers[column].row_header {
                 rsx! {
                     th {
-                        key: "{column}",
+                        key: "{headers[column].key}",
                         scope: "row",
                         colspan: (span > 1).then(|| span.to_string()),
                         "data-align": align_attr(headers[column].align),
@@ -862,7 +937,7 @@ pub(super) fn render_cells(
             } else {
                 rsx! {
                     td {
-                        key: "{column}",
+                        key: "{headers[column].key}",
                         colspan: (span > 1).then(|| span.to_string()),
                         "data-align": align_attr(headers[column].align),
                         "data-pin": pin.as_ref().map(|pin| pin.side.as_str()),
@@ -887,7 +962,7 @@ pub(super) fn render_cells(
 struct SortContext {
     active: Rc<ActiveSort>,
     headers: Rc<Vec<HeaderSpec>>,
-    sort: StateSlice<Vec<TableSort>>,
+    sort: UserSort,
     touch: Option<CopyValue<bool>>,
     /// Whether the order badges show: two or more sorted columns.
     ranked: bool,
@@ -994,6 +1069,43 @@ mod tests {
             .collect()
     }
 
+    /// 4408: the announcement names the column a pick turned, added or dropped.
+    #[test]
+    fn a_sort_change_names_the_column_it_touched() {
+        let by = |column: &str, direction| TableSort::new(column, direction);
+        let age = [by("Age", Ascending)];
+
+        assert_eq!(
+            sort_change(&[], &age),
+            Some(("Age".into(), Some(Ascending)))
+        );
+        assert_eq!(
+            sort_change(&age, &[by("Age", Descending)]),
+            Some(("Age".into(), Some(Descending)))
+        );
+        assert_eq!(sort_change(&age, &[]), Some(("Age".into(), None)));
+        assert_eq!(
+            sort_change(&age, &[by("Name", Ascending)]),
+            Some(("Name".into(), Some(Ascending)))
+        );
+        assert_eq!(
+            sort_change(&[by("Age", Ascending), by("Name", Ascending)], &age),
+            Some(("Name".into(), None))
+        );
+        assert_eq!(sort_change(&age, &age), None);
+    }
+
+    /// 4410: a repeated header still keys its cells apart.
+    #[test]
+    fn repeated_headers_key_apart() {
+        let (_, mut columns) = ages();
+        columns[1] = column("Name").value(|age: &u32| *age);
+        let headers = header_specs(&columns, &ColumnDefaults::new(), &[], unsized_spec());
+
+        assert_eq!(headers[0].key, headers[0].header);
+        assert_ne!(headers[1].key, headers[0].key);
+    }
+
     fn sorted(keys: &[SortKey], direction: SortDirection) -> Vec<usize> {
         sorted_order(&[(keys.to_vec(), direction)], None)
     }
@@ -1087,6 +1199,7 @@ mod tests {
             .iter()
             .map(|name| HeaderSpec {
                 header: name.to_string(),
+                key: name.to_string(),
                 align: CellAlign::Start,
                 sortable: true,
                 row_header: false,

@@ -98,6 +98,7 @@ mod tests {
             .iter()
             .map(|header| HeaderSpec {
                 header: header.to_string(),
+                key: header.to_string(),
                 align: CellAlign::Start,
                 sortable: false,
                 row_header: false,

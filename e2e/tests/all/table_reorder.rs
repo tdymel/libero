@@ -217,6 +217,14 @@ async fn a_menu_moves_a_column<D: Driver>(d: &mut D, _route: &str) -> Result<()>
         Ok(d.attr("th[aria-label=Name]", "aria-sort").await?.is_some())
     })
     .await?;
+    // 4408: focus stays on the button, so the sort is said.
+    eventually_text(
+        d,
+        "[role=status]",
+        "Sorted by Name, ascending",
+        "the sort announcement",
+    )
+    .await?;
     d.click("button[aria-label=\"Name column options\"]")
         .await?;
     let right = "[role=menuitem][data-menu-index=\"6\"]";
@@ -669,6 +677,14 @@ e2e::scenario!(
 async fn a_grip_drag_moves_a_column<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
     drag_grip_to(d, "Name", "Origin", past_middle).await?;
     eventually_text(d, "#columns", "Stock Origin Name", "a drag past Origin").await?;
+    // 4413: a drop is said as a menu move is.
+    eventually_text(
+        d,
+        "[role=status]",
+        "Name moved to column 3 of 3",
+        "the drop announcement",
+    )
+    .await?;
     eventually(d, "Name's cells to follow, the ghost gone", async |d| {
         Ok(d.text("tbody tr:first-child th").await? == "Cherry"
             && d.rect("th[aria-label=Name]").await?.x > d.rect("th[aria-label=Origin]").await?.x

@@ -296,3 +296,38 @@ pub(crate) fn use_table(config: TableConfig) -> TableState {
         expanded,
     }
 }
+
+/// Drops the filters and sorts of a column the host removed, which would return with it
+/// unseen; a hidden column keeps them. A header never shown keeps its seeded state.
+pub(crate) fn use_removed_columns(state: TableState, headers: Vec<String>) {
+    let mut last = use_hook(|| CopyValue::new(headers.clone()));
+    use_effect(use_reactive!(|headers| {
+        let gone: Vec<String> = last
+            .peek()
+            .iter()
+            .filter(|header| !headers.contains(header))
+            .cloned()
+            .collect();
+        last.set(headers);
+        if gone.is_empty() {
+            return;
+        }
+        let filters = state.column_filters.peek();
+        if filters.iter().any(|filter| gone.contains(&filter.column)) {
+            state.column_filters.set(
+                filters
+                    .into_iter()
+                    .filter(|filter| !gone.contains(&filter.column))
+                    .collect(),
+            );
+        }
+        let sort = state.sort.peek();
+        if sort.iter().any(|entry| gone.contains(&entry.column)) {
+            state.sort.set(
+                sort.into_iter()
+                    .filter(|entry| !gone.contains(&entry.column))
+                    .collect(),
+            );
+        }
+    }));
+}

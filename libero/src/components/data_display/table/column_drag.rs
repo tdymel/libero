@@ -8,11 +8,11 @@ use pictogram_icons_lucide as lucide;
 
 use super::{column_order::dropped, use_table::StateSlice};
 use crate::{
-    components::common::Glyph,
+    components::{accessibility::Announcer, common::Glyph},
     context::IconSlot,
     hooks::{
         DragMove, DragOptions, DragStart, ElementHandle, edge_scroll_step, use_drag_cancel,
-        use_element, use_escape_dismiss, use_interval,
+        use_element, use_escape_dismiss, use_interval, use_localization,
     },
     platform::{ElementApi, PlatformError},
 };
@@ -65,12 +65,16 @@ pub(super) struct DropPlan {
     pub ranked: Vec<String>,
     /// The shown, unpinned columns in display order, by header index.
     pub unpinned: Vec<(usize, String)>,
+    /// The shown columns pinned before them, and all shown: a drop says its place.
+    pub lead: usize,
+    pub shown: usize,
 }
 
 /// A drag under way: the measured layout, once read, and the pointer.
 #[derive(Clone, Copy, PartialEq)]
 struct Dragging {
-    index: usize,
+    /// The dragging grip: its scope follows its column, an index shifts when the host's columns change.
+    grip: ScopeId,
     start_x: f64,
     x: f64,
     y: f64,
@@ -140,14 +144,15 @@ pub(super) struct ColumnDrag {
     pub plan: CopyValue<DropPlan>,
     pub table: ElementHandle,
     pub region: ElementHandle,
-    /// The header cells' boxes by header index, owned by the table: every grip reads them all.
-    boxes: CopyValue<BTreeMap<usize, ElementHandle>>,
+    /// The header cells' boxes by header, owned by the table: every grip reads them all.
+    boxes: CopyValue<BTreeMap<String, ElementHandle>>,
     owner: ScopeId,
+    announcer: Announcer,
     dragging: Signal<Option<Dragging>>,
     geometry: CopyValue<Option<Geometry>>,
 }
 
-pub(super) fn use_column_drag(order: StateSlice<Vec<String>>) -> ColumnDrag {
+pub(super) fn use_column_drag(order: StateSlice<Vec<String>>, announcer: Announcer) -> ColumnDrag {
     ColumnDrag {
         order,
         plan: use_hook(|| CopyValue::new(DropPlan::default())),
@@ -155,6 +160,7 @@ pub(super) fn use_column_drag(order: StateSlice<Vec<String>>) -> ColumnDrag {
         region: use_element(),
         boxes: use_hook(|| CopyValue::new(BTreeMap::new())),
         owner: current_scope_id(),
+        announcer,
         dragging: use_signal(|| None),
         geometry: use_hook(|| CopyValue::new(None)),
     }
@@ -197,16 +203,21 @@ fn read_rect(
 /// Move right are the keyboard and drag-free way (WCAG 2.5.7).
 #[component]
 pub(super) fn ColumnDragGrip(index: usize, header: String, drag: ColumnDrag) -> Element {
-    // Fills the header cell, to measure it. Kept per index, a hidden column's unread.
+    // Fills the header cell, to measure it. Kept per header, a hidden column's unread.
     let mut boxes = drag.boxes;
     let cell = *boxes
         .write()
-        .entry(index)
+        .entry(header.clone())
         .or_insert_with(|| ElementHandle::new_in_scope(drag.owner));
+    let labels = use_localization().table;
+    // The unpinned columns the drag measured its gaps over: a column the host adds or
+    // removes meanwhile shifts the plan's.
+    let mut measured_over = use_hook(|| CopyValue::new(Vec::<String>::new()));
     let grip = use_element();
+    let scope = current_scope_id();
     let mut dragging = drag.dragging;
     let mut geometry = drag.geometry;
-    let ours_now = move || (*dragging.peek()).filter(|active| active.index == index);
+    let ours_now = move || (*dragging.peek()).filter(|active| active.grip == scope);
     let auto_scroll = use_interval(
         move || {
             let Some(active) = ours_now() else {
@@ -246,23 +257,34 @@ pub(super) fn ColumnDragGrip(index: usize, header: String, drag: ColumnDrag) -> 
         geometry.set(None);
     });
     // Through a memo: a move redraws the dragged grip only, not every header's (todo 2584).
-    let mine = use_memo(move || dragging().filter(|active| active.index == index));
+    let mine = use_memo(move || dragging().filter(|active| active.grip == scope));
     let ours = mine.read().is_some();
     let _ = use_escape_dismiss(ours, true, cancel);
     let end_header = header.clone();
     let drop_at = use_callback(move |gap: usize| {
         let plan = drag.plan.peek();
-        let names: Vec<String> = plan.unpinned.iter().map(|(_, h)| h.clone()).collect();
+        let names = measured_over.peek().clone();
         if let Some(next) = dropped(&plan.ranked, &names, &end_header, gap) {
+            // Its place among the shown columns, as the menu's Move says it.
+            let place = next
+                .iter()
+                .filter(|header| plan.unpinned.iter().any(|(_, shown)| shown == *header))
+                .position(|header| *header == end_header)
+                .map(|at| plan.lead + at + 1);
             drag.order.set(next);
+            if let Some(place) = place {
+                drag.announcer
+                    .say((labels.column_moved)(&end_header, place, plan.shown));
+            }
         }
     });
     // The OS revoked the pointer: no reorder, as Escape; a measure still running finds it gone.
     let revoked = use_callback(move |()| {
-        if (*dragging.peek()).is_some_and(|active| active.index == index) {
+        if (*dragging.peek()).is_some_and(|active| active.grip == scope) {
             cancel.call(());
         }
     });
+    let header_start = header.clone();
     let options = DragOptions {
         capture: grip,
         onstart: Callback::new(move |start: DragStart| {
@@ -272,9 +294,10 @@ pub(super) fn ColumnDragGrip(index: usize, header: String, drag: ColumnDrag) -> 
             let columns: Vec<_> = plan
                 .unpinned
                 .iter()
-                .filter_map(|(at, _)| boxes.get(at).map(|element| read_rect(element)))
+                .filter_map(|(_, name)| boxes.get(name).map(|element| read_rect(element)))
                 .collect();
-            let Some(own) = boxes.get(&index).map(|element| read_rect(element)) else {
+            measured_over.set(plan.unpinned.iter().map(|(_, name)| name.clone()).collect());
+            let Some(own) = boxes.get(&header_start).map(|element| read_rect(element)) else {
                 start.cancel.call(());
                 return;
             };
@@ -285,7 +308,7 @@ pub(super) fn ColumnDragGrip(index: usize, header: String, drag: ColumnDrag) -> 
             let (table, region) = (read_rect(&drag.table), read_rect(&drag.region));
             let (content, offset) = (drag.region.scroll_size(), drag.region.scroll_offset());
             dragging.set(Some(Dragging {
-                index,
+                grip: scope,
                 start_x: start.client.x,
                 x: start.client.x,
                 y: start.client.y,
@@ -327,7 +350,7 @@ pub(super) fn ColumnDragGrip(index: usize, header: String, drag: ColumnDrag) -> 
                 };
                 let gaps = gap_edges(&edges);
                 // Still ours: an Escape may have come first.
-                let Some(mut active) = (*dragging.peek()).filter(|active| active.index == index)
+                let Some(mut active) = (*dragging.peek()).filter(|active| active.grip == scope)
                 else {
                     return;
                 };
@@ -353,7 +376,7 @@ pub(super) fn ColumnDragGrip(index: usize, header: String, drag: ColumnDrag) -> 
             let Some(mut active) = *dragging.peek() else {
                 return;
             };
-            if active.index != index {
+            if active.grip != scope {
                 return;
             }
             (active.x, active.y) = (step.client.x, step.client.y);
@@ -373,7 +396,7 @@ pub(super) fn ColumnDragGrip(index: usize, header: String, drag: ColumnDrag) -> 
             }
         }),
         onend: Callback::new(move |()| {
-            let Some(mut active) = (*dragging.peek()).filter(|active| active.index == index) else {
+            let Some(mut active) = (*dragging.peek()).filter(|active| active.grip == scope) else {
                 return;
             };
             // Unmeasured yet: the measure drops it where it was let go.

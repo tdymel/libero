@@ -334,6 +334,7 @@ pub(super) fn page_window<T: Clone + PartialEq + 'static>(
             state,
             total,
             page,
+            settles: total > 0 && (!props.manual_pagination || props.row_count.is_some()),
             page_size,
             page_sizes: std::mem::take(&mut props.page_sizes),
             caption: props.caption.clone(),

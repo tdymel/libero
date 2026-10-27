@@ -178,6 +178,25 @@ pub struct TableLabels {
     pub column_pinned_start: fn(&str) -> String,
     pub column_pinned_end: fn(&str) -> String,
     pub column_unpinned: fn(&str) -> String,
+    /// Announced instead after a menu pin the table releases at once, for lack of room.
+    ///
+    /// ```
+    /// use libero::localization::TableLabels;
+    ///
+    /// assert_eq!((TableLabels::ENGLISH.column_pin_released)("Name"), "Name not pinned: not enough room");
+    /// ```
+    pub column_pin_released: fn(&str) -> String,
+    /// Announced after the reader's own sort change: the column it sorted by, or dropped.
+    ///
+    /// ```
+    /// use libero::localization::TableLabels;
+    ///
+    /// assert_eq!((TableLabels::ENGLISH.column_sorted_ascending)("Name"), "Sorted by Name, ascending");
+    /// assert_eq!((TableLabels::GERMAN.column_unsorted)("Name"), "Sortierung nach Name aufgehoben");
+    /// ```
+    pub column_sorted_ascending: fn(&str) -> String,
+    pub column_sorted_descending: fn(&str) -> String,
+    pub column_unsorted: fn(&str) -> String,
     /// Announced after the column menu hides its own column, from the header text.
     ///
     /// ```
@@ -573,6 +592,38 @@ fn german_unpinned(column: &str) -> String {
     format!("Fixierung von {column} gelöst")
 }
 
+fn english_pin_released(column: &str) -> String {
+    format!("{column} not pinned: not enough room")
+}
+
+fn german_pin_released(column: &str) -> String {
+    format!("{column} nicht fixiert: zu wenig Platz")
+}
+
+fn english_sorted_ascending(column: &str) -> String {
+    format!("Sorted by {column}, ascending")
+}
+
+fn german_sorted_ascending(column: &str) -> String {
+    format!("Nach {column} aufsteigend sortiert")
+}
+
+fn english_sorted_descending(column: &str) -> String {
+    format!("Sorted by {column}, descending")
+}
+
+fn german_sorted_descending(column: &str) -> String {
+    format!("Nach {column} absteigend sortiert")
+}
+
+fn english_unsorted(column: &str) -> String {
+    format!("{column} no longer sorted")
+}
+
+fn german_unsorted(column: &str) -> String {
+    format!("Sortierung nach {column} aufgehoben")
+}
+
 fn english_column_hidden(column: &str) -> String {
     format!("{column} hidden")
 }
@@ -808,6 +859,10 @@ impl TableLabels {
         column_pinned_start: english_pinned_start,
         column_pinned_end: english_pinned_end,
         column_unpinned: english_unpinned,
+        column_pin_released: english_pin_released,
+        column_sorted_ascending: english_sorted_ascending,
+        column_sorted_descending: english_sorted_descending,
+        column_unsorted: english_unsorted,
         column_hidden: english_column_hidden,
         resize_column: english_resize_column,
         reorder: "Reorder",
@@ -893,6 +948,10 @@ impl TableLabels {
         column_pinned_start: german_pinned_start,
         column_pinned_end: german_pinned_end,
         column_unpinned: german_unpinned,
+        column_pin_released: german_pin_released,
+        column_sorted_ascending: german_sorted_ascending,
+        column_sorted_descending: german_sorted_descending,
+        column_unsorted: german_unsorted,
         column_hidden: german_column_hidden,
         resize_column: german_resize_column,
         reorder: "Neu anordnen",
@@ -973,6 +1032,10 @@ mod tests {
                 labels.column_pinned_start,
                 labels.column_pinned_end,
                 labels.column_unpinned,
+                labels.column_pin_released,
+                labels.column_sorted_ascending,
+                labels.column_sorted_descending,
+                labels.column_unsorted,
                 labels.column_hidden,
                 labels.group_by,
                 labels.ungroup,

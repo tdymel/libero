@@ -9,7 +9,7 @@ use pictogram_icons_lucide as lucide;
 use super::{
     cell_value::SortDirection,
     column_filter::{CellTest, filter_of},
-    core::{ActiveSort, TableSort},
+    core::{ActiveSort, TableSort, UserSort},
     filter_panel::PanelControl,
     filter_popover::{FilterPopover, FilterTarget, FilteredButton},
     pinning::{PinSide, PinnedColumns},
@@ -33,6 +33,8 @@ use crate::{
 #[derive(Clone, PartialEq)]
 pub(super) struct MenuColumn {
     pub header: String,
+    /// Its header cell's key: a menu's focus follows the column, not its index.
+    pub key: String,
     pub sortable: bool,
     pub hideable: bool,
     pub hidden: bool,
@@ -44,9 +46,9 @@ pub(super) struct MenuColumn {
 /// it (Hide): the trigger, or a neighbour's. Owned by the table.
 #[derive(Clone, Copy, PartialEq)]
 pub(super) struct MenuFocus {
-    /// The menu buttons by header index.
-    triggers: CopyValue<BTreeMap<usize, ElementHandle>>,
-    owed: Signal<Option<usize>>,
+    /// The menu buttons by column key.
+    triggers: CopyValue<BTreeMap<String, ElementHandle>>,
+    owed: Signal<Option<String>>,
     owner: ScopeId,
 }
 
@@ -58,11 +60,11 @@ pub(super) fn use_menu_focus() -> MenuFocus {
     };
     // After the render that moved or dropped the header: the node is in place.
     use_effect(move || {
-        let Some(index) = (focus.owed)() else {
+        let Some(key) = (focus.owed)() else {
             return;
         };
         focus.owed.set(None);
-        if let Some(trigger) = focus.triggers.peek().get(&index) {
+        if let Some(trigger) = focus.triggers.peek().get(&key) {
             let _ = trigger.focus();
         }
     });
@@ -70,24 +72,54 @@ pub(super) fn use_menu_focus() -> MenuFocus {
 }
 
 impl MenuFocus {
-    fn trigger(self, index: usize) -> ElementHandle {
+    fn trigger(self, key: &str) -> ElementHandle {
         let mut triggers = self.triggers;
-        *triggers.write().entry(index).or_insert_with(|| {
+        *triggers.write().entry(key.to_string()).or_insert_with(|| {
             ElementHandle::new_in_scope(self.owner).retag(observes_by_tag().then(next_observe_tag))
         })
     }
 
-    /// Opens header `index`'s menu as a click on its button would, else focuses the button.
-    pub(super) fn open(self, index: usize) {
-        if let Some(trigger) = self.triggers.peek().get(&index)
+    /// Opens column `key`'s menu as a click on its button would, else focuses the button.
+    pub(super) fn open(self, key: &str) {
+        if let Some(trigger) = self.triggers.peek().get(key)
             && trigger.click().is_err()
         {
             let _ = trigger.focus();
         }
     }
 
-    fn owe(mut self, index: usize) {
-        self.owed.set(Some(index));
+    fn owe(mut self, key: String) {
+        self.owed.set(Some(key));
+    }
+}
+
+/// A menu pin, said once its column's width is known: the room may release it at once.
+#[derive(Clone, Copy, PartialEq)]
+pub(super) struct PinNews(CopyValue<Option<(String, PinSide)>>);
+
+pub(super) fn use_pin_news() -> PinNews {
+    PinNews(use_hook(|| CopyValue::new(None)))
+}
+
+impl PinNews {
+    fn owe(mut self, header: String, side: PinSide) {
+        self.0.set(Some((header, side)));
+    }
+
+    /// The owed pin and whether `kept` holds it, once `known` has its column's width.
+    pub(super) fn settle(
+        mut self,
+        kept: &PinnedColumns,
+        known: impl Fn(&str) -> bool,
+    ) -> Option<(String, PinSide, bool)> {
+        let ready = self
+            .0
+            .peek()
+            .as_ref()
+            .is_some_and(|(header, _)| known(header));
+        let (header, side) = ready.then(|| self.0.write().take()).flatten()?;
+        let held = kept.side(&header) == Some(side);
+        Some((header, side, held))
     }
 }
 
@@ -100,10 +132,13 @@ pub(super) fn ColumnMenu(
     index: usize,
     columns: Rc<[MenuColumn]>,
     active: Rc<ActiveSort>,
-    sort: StateSlice<Vec<TableSort>>,
+    sort: UserSort,
     multi_sort: bool,
     hidden: StateSlice<Vec<String>>,
     pinned: StateSlice<PinnedColumns>,
+    /// The side the layout holds the column at: a pin the room released is none.
+    side: Option<PinSide>,
+    news: PinNews,
     grouping: StateSlice<Vec<String>>,
     /// The column order after a move towards the start and towards the end, with the
     /// column's place among the shown ones from 1; `None` at that edge.
@@ -128,27 +163,30 @@ pub(super) fn ColumnMenu(
     announcer: Announcer,
 ) -> Element {
     let menu = use_menu();
-    let trigger = focus.trigger(index);
+    let trigger = focus.trigger(&columns[index].key);
     let mut filter_open = use_signal(|| false);
     let filter_marker = use_press_marker();
     let filtered_button = use_hook(ElementHandle::new);
     let mut opener = use_signal(move || trigger);
     let column = &columns[index];
+    let own_key = column.key.clone();
+    let neighbour_key = neighbour.map(|neighbour| columns[neighbour].key.clone());
     let shown = columns.iter().filter(|column| !column.hidden).count();
     let current = active
         .iter()
         .find(|(column, _)| *column == index)
         .map(|(_, direction)| *direction);
-    let side = pinned.read().side(&column.header);
+    // A released pin is still requested: Unpin drops it, so it does not return with the room.
+    let requested = pinned.read().side(&column.header);
     // Rows a pick adds (Unpin's moves, Unsort) wait for the close: Blitz panics on a
     // button made and dropped in one render (form owner, todo 3534).
     let mut held = use_hook(|| CopyValue::new(None));
     let shape = *held.peek();
-    let (current, side) = match (menu.is_open(), shape) {
+    let (current, side, requested) = match (menu.is_open(), shape) {
         (true, Some(shape)) => shape,
         _ => {
-            held.set(Some((current, side)));
-            (current, side)
+            held.set(Some((current, side, requested)));
+            (current, side, requested)
         }
     };
     let mut items: Vec<MenuEntry> = Vec::new();
@@ -257,24 +295,27 @@ pub(super) fn ColumnMenu(
     if let Some(width) = width {
         items.extend(width.items(&column.header, labels));
     }
-    // The side it is on is left out.
-    for (label, to, said) in [
-        (
-            labels.pin_start,
-            Some(PinSide::Start),
-            labels.column_pinned_start,
-        ),
-        (labels.pin_end, Some(PinSide::End), labels.column_pinned_end),
-        (labels.unpin, None, labels.column_unpinned),
+    // The side it is on is left out; a pin is said once the table kept or released it.
+    for (label, to) in [
+        (labels.pin_start, Some(PinSide::Start)),
+        (labels.pin_end, Some(PinSide::End)),
+        (labels.unpin, None),
     ] {
-        if to != side {
-            let header = column.header.clone();
+        let offered = match to {
+            Some(_) => to != side,
+            None => requested.is_some(),
+        };
+        if offered {
+            let (header, own_key) = (column.header.clone(), own_key.clone());
             items.push(
                 MenuItem::new(label)
                     .onselect(move |_| {
                         pinned.set(pinned.read().with(&header, to));
-                        focus.owe(index);
-                        announcer.say(said(&header));
+                        focus.owe(own_key.clone());
+                        match to {
+                            Some(to) => news.owe(header.clone(), to),
+                            None => announcer.say((labels.column_unpinned)(&header)),
+                        }
                     })
                     .into(),
             );
@@ -287,7 +328,7 @@ pub(super) fn ColumnMenu(
         items.push(MenuEntry::Separator);
     }
     if column.hideable {
-        let header = column.header.clone();
+        let (header, neighbour_key) = (column.header.clone(), neighbour_key.clone());
         let item = MenuItem::new(labels.hide_column);
         let item = match shown <= 1 {
             true => item.description(labels.last_column),
@@ -297,8 +338,8 @@ pub(super) fn ColumnMenu(
             item.disabled(shown <= 1)
                 .onselect(move |_| {
                     hidden.set(toggle_column(&hidden.read(), &header, false));
-                    if let Some(neighbour) = neighbour {
-                        focus.owe(neighbour);
+                    if let Some(neighbour) = &neighbour_key {
+                        focus.owe(neighbour.clone());
                     }
                     announcer.say((labels.column_hidden)(&header));
                 })
@@ -314,6 +355,7 @@ pub(super) fn ColumnMenu(
                     hidden: off,
                     ..
                 } = columns[column].clone();
+                let neighbour_key = neighbour_key.clone();
                 // The last shown column stays, and says so.
                 let last = !off && shown <= 1;
                 let item = MenuItem::new(header.clone());
@@ -330,9 +372,9 @@ pub(super) fn ColumnMenu(
                         // the checkbox is gone before its state is read.
                         if column == index
                             && !off
-                            && let Some(neighbour) = neighbour
+                            && let Some(neighbour) = &neighbour_key
                         {
-                            focus.owe(neighbour);
+                            focus.owe(neighbour.clone());
                         }
                         if !off {
                             announcer.say((labels.column_hidden)(&header));
@@ -463,6 +505,7 @@ mod tests {
             .iter()
             .map(|header| MenuColumn {
                 header: header.to_string(),
+                key: header.to_string(),
                 sortable: true,
                 hideable: true,
                 hidden: false,
