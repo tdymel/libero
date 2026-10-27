@@ -15,7 +15,7 @@ use crate::{
 
 use super::{
     tree::{Check, TreeMarks},
-    tree_row::{TreeRowContext, TreeRowToggle},
+    tree_row::{TreeRowContext, TreeRowExpand, TreeRowToggle},
 };
 
 /// The chevron's turn and the label's stretch, for both standard rows.
@@ -83,6 +83,19 @@ static TREE_ITEM_CONTENT_SX: StaticSx = StaticSx::new(|| {
     )
 });
 
+// A 24px target around the 16px glyph; the margins keep the column chevron-wide.
+static CHEVRON_TARGET_SX: StaticSx = StaticSx::new(|| {
+    sx().display("flex")
+        .align_items("center")
+        .justify_content("center")
+        .flex_shrink("0")
+        .width("24px")
+        .height("24px")
+        .margin_inline_start("-4px")
+        .margin_inline_end("-4px")
+        .cursor("pointer")
+});
+
 // Chevron-width, so leaves line up with their branch siblings.
 static LEADING_SPACER_SX: StaticSx =
     StaticSx::new(|| sx().flex_shrink("0").width(ICON_SIZE.value(Size::Xs)));
@@ -116,6 +129,7 @@ fn use_check_mark(row: Option<TreeRowContext>) -> Option<Element> {
 /// Chevron or spacer, check box, icon, label, trailing icon and trailing element, as siblings.
 fn item_parts(
     expanded: Option<Option<bool>>,
+    expand: Option<TreeRowExpand>,
     mark: Option<Element>,
     icon: Option<SvgData>,
     trailing_icon: Option<SvgData>,
@@ -124,13 +138,23 @@ fn item_parts(
 ) -> Element {
     let leading = match expanded {
         Some(Some(expanded)) => rsx! {
-            Icon {
-                variant: "standard",
-                size: "xs",
-                color: "muted.6",
-                "data-tree-chevron": true,
-                states: States::new().with("expanded", expanded),
-                Glyph { slot: IconSlot::ChevronRight, icon: lucide::chevron_right::outlined }
+            Box {
+                framework_sx: &CHEVRON_TARGET_SX,
+                // The glyph alone opens the branch; the row's pick and click stay out of it.
+                onclick: move |event: MouseEvent| {
+                    event.stop_propagation();
+                    if let Some(TreeRowExpand(expand)) = expand {
+                        expand.call(());
+                    }
+                },
+                Icon {
+                    variant: "standard",
+                    size: "xs",
+                    color: "muted.6",
+                    "data-tree-chevron": true,
+                    states: States::new().with("expanded", expanded),
+                    Glyph { slot: IconSlot::ChevronRight, icon: lucide::chevron_right::outlined }
+                }
             }
         },
         Some(None) => rsx! {
@@ -203,8 +227,10 @@ base_props! {
 pub fn TreeItemContent(props: TreeItemContentProps) -> Element {
     let row = use_hook(try_consume_context::<TreeRowContext>);
     let mark = use_check_mark(row);
+    let expand = use_hook(try_consume_context::<TreeRowExpand>);
     let parts = item_parts(
         row_expanded(row),
+        expand,
         mark,
         props.icon,
         props.trailing_icon,
@@ -277,8 +303,10 @@ pub fn TreeItem(props: TreeItemProps) -> Element {
         None => (if group_disabled { "-1" } else { "0" }, group_disabled),
     };
     let mark = use_check_mark(row);
+    let expand = use_hook(try_consume_context::<TreeRowExpand>);
     let parts = item_parts(
         row_expanded(row),
+        expand,
         mark,
         props.icon,
         props.trailing_icon,

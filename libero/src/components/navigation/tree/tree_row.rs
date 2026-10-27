@@ -17,7 +17,7 @@ use crate::{
     },
     sx::{StaticSx, ThemeAwareValue, sx},
     theme::{
-        Color, ColorShade, ColorValue, CssVar, ICON_SIZE, LIST_INDENT, Size,
+        Color, ColorShade, ColorValue, CssVar, ICON_SIZE, LIST_GAP, LIST_INDENT, Size,
         TREE_GUIDE_ACTIVE_COLOR, TREE_GUIDE_ACTIVE_WIDTH, TREE_GUIDE_COLOR, TREE_GUIDE_WIDTH,
     },
 };
@@ -47,6 +47,10 @@ pub(super) struct TreeRowState {
 /// Toggles the row's check, for the box `TreeItemContent` draws.
 #[derive(Clone, Copy)]
 pub(super) struct TreeRowToggle(pub Callback<()>);
+
+/// Toggles the row's expansion, for the chevron `TreeItemContent` draws.
+#[derive(Clone, Copy)]
+pub(super) struct TreeRowExpand(pub Callback<()>);
 
 /// Whether the enclosing tree row already draws the current look; outside a tree, `false`.
 pub(crate) fn row_draws_current() -> bool {
@@ -96,6 +100,10 @@ static TREE_ROW_SX: StaticSx = StaticSx::new(|| {
             ),
         )
 });
+
+// The first child sits a List gap under its parent, as siblings do.
+static TREE_GROUP_SX: StaticSx =
+    StaticSx::new(|| sx().per_size(|size| sx().padding_block_start(LIST_GAP.value(size))));
 
 /// The group's padding after the guide: what is left of `List`'s indent, at least none.
 const TREE_GUIDE_PADDING: CssVar = CssVar::new("--lsx-tree-guide-padding");
@@ -271,6 +279,16 @@ pub(super) fn TreeRow(props: TreeRowProps) -> Element {
         }
     });
     use_context_provider(|| TreeRowToggle(toggle_check));
+    let mut active_id = props.active_id;
+    let expansion = props.expansion;
+    let expand_id = node.id.clone();
+    let toggle_open = use_callback(move |()| {
+        if !disabled && has_children {
+            active_id.set(Some(expand_id.clone()));
+            expansion.toggle(&expand_id);
+        }
+    });
+    use_context_provider(|| TreeRowExpand(toggle_open));
 
     // No chevron column here: that's `default_tree_render`'s.
     let content = props.render_node.call(TreeNodeRenderArgsErased {
@@ -285,8 +303,6 @@ pub(super) fn TreeRow(props: TreeRowProps) -> Element {
         indeterminate: checked == Some(Check::Mixed),
     });
 
-    let mut active_id = props.active_id;
-    let expansion = props.expansion;
     let id = node.id.clone();
 
     // Any focus on the row takes the tab stop: a click in a child group's indent
@@ -370,6 +386,7 @@ pub(super) fn TreeRow(props: TreeRowProps) -> Element {
                     "role": "group",
                     "data-slot": TreePart::Group.slot(),
                     size: props.size,
+                    sx: TREE_GROUP_SX.clone(),
                     for (index , child) in node.children.iter().enumerate() {
                         TreeRow {
                             key: "{child.id}",

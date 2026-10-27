@@ -1039,14 +1039,20 @@ fn TreeCore(props: TreeCoreProps) -> Element {
             Key::Named(NamedKey::Enter) => {
                 if !node.disabled {
                     event.prevent_default();
+                    // With both marks Space checks, so Enter selects; Right/Left open a branch.
+                    let enter_selects = selectable && checkable;
                     if node.has_children {
-                        expansion.toggle(&current);
+                        if enter_selects {
+                            marks.pick.call((current.clone(), Pick::Toggle));
+                        } else {
+                            expansion.toggle(&current);
+                        }
                     } else {
                         if selectable {
                             let mut enter_click = marks.enter_click;
                             enter_click.set(Some(current.clone()));
                             // A single selection picks the leaf it activates.
-                            if !multiple {
+                            if !multiple || enter_selects {
                                 marks.pick.call((current.clone(), Pick::Toggle));
                             }
                         }

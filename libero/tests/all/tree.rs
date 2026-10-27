@@ -570,22 +570,39 @@ mod dispatched {
 
         let Page { mut dom, rec: find } = Page::build(app);
         // A tree root's click listener only moves focus, so clicking it is a no-op.
-        assert_eq!(find.clicks.len(), 6, "one per branch row and tree root");
+        assert_eq!(
+            find.clicks.len(),
+            9,
+            "one per branch row, chevron and tree root"
+        );
+        let rows = find.matching("click", "data-slot", "content");
+        assert_eq!(rows.len(), 3, "one row content per tree");
 
-        for expanded in ["true", "false", "true"] {
-            for &row in &find.clicks {
+        let click = |dom: &mut VirtualDom, targets: &[dioxus::core::ElementId], expanded: &str| {
+            for &target in targets {
                 dom.runtime()
-                    .handle_event("click", Event::new(click_event(), true), row);
+                    .handle_event("click", Event::new(click_event(), true), target);
             }
             dom.render_immediate(&mut dioxus::core::NoOpMutations);
-            let html = body(&dioxus_ssr::render(&dom));
+            let html = body(&dioxus_ssr::render(dom));
             assert_eq!(
                 html.matches(&format!(r#"aria-expanded="{expanded}""#))
                     .count(),
                 3,
                 "{html}"
             );
+        };
+        for expanded in ["true", "false", "true"] {
+            click(&mut dom, &rows, expanded);
         }
+        // The chevrons toggle too; the roots among them do nothing.
+        let others: Vec<_> = find
+            .clicks
+            .iter()
+            .copied()
+            .filter(|id| !rows.contains(id))
+            .collect();
+        click(&mut dom, &others, "false");
     }
 }
 

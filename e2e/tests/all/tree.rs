@@ -885,6 +885,91 @@ fn enter_on_a_leaf_picks_once() {
     });
 }
 
+const TEXT_IS: &str = "(id, text) => document.querySelector(id).textContent === text";
+
+/// Todos 4614/4615: a chevron tap only opens its branch; with `selected` and `checked`
+/// Enter selects the branch and Space checks it.
+#[test]
+fn the_chevron_opens_and_enter_selects_where_space_checks() {
+    block_on(async {
+        let fixture = Fixture::open("/tree/select-check", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        pointer::click(page, "[data-tree-id='a'] [data-tree-chevron]")
+            .await
+            .unwrap();
+        wait::for_js_true(
+            page,
+            "document.querySelector(\"[data-tree-id='a']\").getAttribute('aria-expanded') === 'true'",
+            "a chevron tap to open a",
+        )
+        .await
+        .unwrap();
+        wait::for_js_true(
+            page,
+            &format!(
+                "({TEXT_IS})('#selected', '') && ({TEXT_IS})('#clicks', '0') && ({TEXT_IS})('#checked', '')"
+            ),
+            "the chevron tap to leave the selection, the checks and the clicks alone",
+        )
+        .await
+        .unwrap();
+        keyboard::press(page, keyboard::ENTER).await.unwrap();
+        wait::for_js_true(
+            page,
+            &format!(
+                "({TEXT_IS})('#selected', 'a') && document.querySelector(\"[data-tree-id='a']\").getAttribute('aria-expanded') === 'true'"
+            ),
+            "Enter to select a and keep it open",
+        )
+        .await
+        .unwrap();
+        keyboard::press(page, keyboard::SPACE).await.unwrap();
+        wait::for_js_true(
+            page,
+            &format!("({TEXT_IS})('#checked', 'a,a1') && ({TEXT_IS})('#selected', 'a')"),
+            "Space to check a and its leaf, and keep the selection",
+        )
+        .await
+        .unwrap();
+        fixture.console.assert_clean("chevron and Enter").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
+/// Todo 4616: an open branch's first child sits the sibling gap under it.
+#[test]
+fn an_open_group_keeps_the_sibling_gap() {
+    block_on(async {
+        let fixture = Fixture::open("/tree/select-check", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        pointer::click(page, "[data-tree-id='a'] [data-tree-chevron]")
+            .await
+            .unwrap();
+        wait::for_visible(page, "[data-tree-id='a1']")
+            .await
+            .unwrap();
+        let gaps: Vec<f64> = page
+            .evaluate_bounded(
+                "(() => { const r = id => document.querySelector(`[data-tree-id='${id}'] > [data-slot=content]`).getBoundingClientRect(); \
+                 return [r('a1').top - r('a').bottom, r('b').top - r('a1').bottom]; })()",
+            )
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        assert!(
+            gaps[0] > 1.0 && (gaps[0] - gaps[1]).abs() < 1.0,
+            "gap under the parent and between siblings: {gaps:?}"
+        );
+        fixture.console.assert_clean("group gap").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
 /// Non-strict `checked`: a leaf's box makes branch `a` mixed, both leaves make it true, and Space
 /// on `a` unchecks all three.
 #[test]

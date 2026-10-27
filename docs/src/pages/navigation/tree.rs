@@ -74,7 +74,14 @@ fn file_tree() -> Vec<TreeNode<FileEntry>> {
                     name: "hooks",
                     kind: FileKind::Folder,
                 },
-            ),
+            )
+            .children(vec![TreeNode::new(
+                "src/hooks/use_tree.rs",
+                FileEntry {
+                    name: "use_tree.rs",
+                    kind: FileKind::Rust,
+                },
+            )]),
             TreeNode::new(
                 "src/lib.rs",
                 FileEntry {
@@ -350,8 +357,8 @@ pub fn TreePage() -> Element {
                 .key(["Up", "Down"], "Moves between visible rows.")
                 .key(["Left", "Right"], "Collapses and expands, or jumps to the parent and first child.")
                 .key(["Home", "End"], "Jumps to the first or last row.")
-                .key(["Enter"], "Opens or closes a branch, or clicks a leaf's link, button or `TreeItem`. In a single `selected` tree, a leaf is selected too.")
-                .key(["Space"], "Opens or closes a branch, or clicks a leaf's link, button or `TreeItem`. With `selected` or `checked`, toggles the row's selection or check instead.")
+                .key(["Enter"], "Opens or closes a branch, or clicks a leaf's link, button or `TreeItem`. In a single `selected` tree, a leaf is selected too. With both `selected` and `checked`, toggles the row's selection instead, branches included.")
+                .key(["Space"], "Opens or closes a branch, or clicks a leaf's link, button or `TreeItem`. With `selected` or `checked`, toggles the row's selection or check instead; with both, it checks.")
                 .key(["*"], "Opens every closed sibling of the row.")
                 .key(["Shift+Space"], "With `selected` and `multiple`, adds the range from the last row picked to this one. Not with `checked`.")
                 .key(["Shift+Up", "Shift+Down"], "With `selected` and `multiple`, moves focus and toggles the row it lands on.")

@@ -212,8 +212,8 @@ parts work.
 | `Up` or `Down` | Moves between visible rows. |
 | `Left` or `Right` | Collapses and expands, or jumps to the parent and first child. |
 | `Home` or `End` | Jumps to the first or last row. |
-| `Enter` | Opens or closes a branch, or clicks a leaf's link, button or `TreeItem`. In a single `selected` tree, a leaf is selected too. |
-| `Space` | Opens or closes a branch, or clicks a leaf's link, button or `TreeItem`. With `selected` or `checked`, toggles the row's selection or check instead. |
+| `Enter` | Opens or closes a branch, or clicks a leaf's link, button or `TreeItem`. In a single `selected` tree, a leaf is selected too. With both `selected` and `checked`, toggles the row's selection instead, branches included. |
+| `Space` | Opens or closes a branch, or clicks a leaf's link, button or `TreeItem`. With `selected` or `checked`, toggles the row's selection or check instead; with both, it checks. |
 | `*` | Opens every closed sibling of the row. |
 | `Shift+Space` | With `selected` and `multiple`, adds the range from the last row picked to this one. Not with `checked`. |
 | `Shift+Up` or `Shift+Down` | With `selected` and `multiple`, moves focus and toggles the row it lands on. |

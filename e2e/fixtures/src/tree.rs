@@ -79,6 +79,7 @@ pub const ROUTES: Routes = &[
         "/tree/select-enter-multiple",
         || rsx! { SelectEnterTreePage { multiple: true } },
     ),
+    ("/tree/select-check", || rsx! { SelectCheckTreePage {} }),
     ("/tree/guides", || rsx! { GuidesTreePage {} }),
     ("/tree/links/current", || rsx! { CurrentLinkTreePage {} }),
     (
@@ -326,6 +327,39 @@ fn SelectEnterTreePage(multiple: bool) -> Element {
             },
             render_node: move |args: TreeNodeRenderArgs<&'static str>| rsx! {
                 TreeItem { onclick: move |_| {}, "{args.data}" }
+            },
+        }
+    }
+}
+
+/// Todos 4614/4615/4616: `selected` and `checked` together, `TreeItem` rows counting `#clicks`.
+#[component]
+fn SelectCheckTreePage() -> Element {
+    let mut selected = use_signal(HashSet::<String>::new);
+    let mut checked = use_signal(HashSet::<String>::new);
+    let mut clicks = use_signal(|| 0);
+    let joined = |set: &HashSet<String>| {
+        let mut ids: Vec<&str> = set.iter().map(String::as_str).collect();
+        ids.sort();
+        ids.join(",")
+    };
+    let data = vec![
+        TreeNode::new("a", "a").children(vec![TreeNode::new("a1", "a1")]),
+        TreeNode::new("b", "b"),
+    ];
+    rsx! {
+        output { id: "selected", "{joined(&selected())}" }
+        output { id: "checked", "{joined(&checked())}" }
+        output { id: "clicks", "{clicks}" }
+        Tree {
+            aria_label: "Files",
+            data,
+            selected: selected(),
+            onselectedchange: move |next| selected.set(next),
+            checked: checked(),
+            oncheckedchange: move |next| checked.set(next),
+            render_node: move |args: TreeNodeRenderArgs<&'static str>| rsx! {
+                TreeItem { onclick: move |_| clicks += 1, "{args.data}" }
             },
         }
     }
