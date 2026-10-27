@@ -143,8 +143,9 @@ fn the_viewport_cap_survives_a_callers_max_width() {
             Some(rule[..rule.find('}')?].to_owned())
         })
         .collect();
+    // `100%`, not `100dvw`: the fixed box's block leaves out a classic scrollbar (4510).
     for declaration in [
-        "max-width:100dvw",
+        "max-width:100%",
         "max-height:100dvh",
         "flex-direction:column",
     ] {

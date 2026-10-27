@@ -49,6 +49,8 @@ pub(super) struct MenuLevelProps {
     root: ScopeId,
     /// The root `Menu`'s wrapper, which holds the trigger.
     wrapper: ElementHandle,
+    /// The root `Menu`'s trigger, which may sit beside the wrapper.
+    trigger: ElementHandle,
     open: bool,
     /// Focus an item once placed, whenever this grows.
     request: u64,
@@ -175,6 +177,7 @@ pub(super) fn MenuLevel(props: MenuLevelProps) -> Element {
     let level = Level {
         floating,
         wrapper: props.wrapper,
+        trigger: props.trigger,
         dismiss,
         id: own_id,
         close_all,
@@ -361,6 +364,7 @@ pub(super) fn MenuLevel(props: MenuLevelProps) -> Element {
                 floating,
                 root,
                 wrapper: props.wrapper,
+                trigger: props.trigger,
                 open: open && expanded == Some(index),
                 request: match child_request() {
                     (request, target) if target == index => request,

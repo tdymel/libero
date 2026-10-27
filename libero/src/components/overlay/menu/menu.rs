@@ -194,6 +194,7 @@ pub fn Menu(props: MenuProps) -> Element {
             floating,
             root: owner,
             wrapper,
+            trigger,
             open,
             request: state.request().0,
             initial: state.request().1,

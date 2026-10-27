@@ -398,27 +398,30 @@ pub fn Virtualize(
         }
     }));
 
-    let (before, after) = match kept {
+    let range = stage.revise_rows(visible.range.clone(), count);
+    // Keyed: unkeyed, a row's node would pass to the next row as the window shifts.
+    rendered.set((visible.range.start, visible.range.end));
+    let rows = row_indices(range, kept).map(|index| {
+        let key = match item_key {
+            Some(item_key) => item_key.call(index),
+            None => index.to_string(),
+        };
+        item.call(index).map(|row| keyed(row, key))
+    });
+    rsx! {
+        {rows}
+    }
+}
+
+/// The rendered rows, the kept one beside them. A revise extension can reach the kept
+/// row; it then renders there only, not twice under one key (4509).
+fn row_indices(rows: Range<usize>, kept: Option<(usize, bool)>) -> impl Iterator<Item = usize> {
+    let (before, after) = match kept.filter(|(index, _)| !rows.contains(index)) {
         Some((index, true)) => (Some(index), None),
         Some((index, false)) => (None, Some(index)),
         None => (None, None),
     };
-    // Keyed: unkeyed, a row's node would pass to the next row as the window shifts.
-    rendered.set((visible.range.start, visible.range.end));
-    let rows = before
-        .into_iter()
-        .chain(stage.revise_rows(visible.range, count))
-        .chain(after)
-        .map(|index| {
-            let key = match item_key {
-                Some(item_key) => item_key.call(index),
-                None => index.to_string(),
-            };
-            item.call(index).map(|row| keyed(row, key))
-        });
-    rsx! {
-        {rows}
-    }
+    before.into_iter().chain(rows).chain(after)
 }
 
 /// The geometry keeping the row at the top in place when the pitch went from `old` to
@@ -542,6 +545,19 @@ mod tests {
         };
         assert_eq!(fits.revise_rows(0..10, 10), 0..3);
         assert_eq!(pitch(fits.revised(3.0 * 80.0, (0, 10), 10)), Some(80.0));
+    }
+
+    /// Todo 4509: a kept row the revise extension reaches renders once, in its place.
+    #[test]
+    fn a_kept_row_inside_the_revise_extension_renders_once() {
+        let rows = |range, kept| row_indices(range, kept).collect::<Vec<_>>();
+        assert_eq!(rows(10..13, Some((20, false))), vec![10, 11, 12, 20]);
+        assert_eq!(rows(10..13, Some((5, true))), vec![5, 10, 11, 12]);
+        assert_eq!(
+            rows(10..17, Some((14, false))),
+            (10..17).collect::<Vec<_>>()
+        );
+        assert_eq!(rows(3..10, Some((5, true))), (3..10).collect::<Vec<_>>());
     }
 
     #[test]

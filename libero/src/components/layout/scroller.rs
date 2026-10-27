@@ -513,7 +513,7 @@ pub fn Scroller(props: ScrollerProps) -> Element {
                 inset,
                 content.width - view.width,
             );
-            if (target - offset).abs() >= EDGE_TOLERANCE {
+            if (target - inline_x(offset)).abs() >= EDGE_TOLERANCE {
                 clearing.set(true);
                 area.scroll_to(target, 0.0);
             }

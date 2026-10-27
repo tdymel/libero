@@ -5,7 +5,9 @@ use crate::hooks::{
     ElementHandle, FocusWithin, claim_back_entry, listener, use_back, use_focus_within,
     use_subscription_slot,
 };
-use crate::platform::{self, FullscreenApi, FullscreenSubscription, focused_attribute, next_task};
+use crate::platform::{
+    self, ElementApi, FullscreenApi, FullscreenSubscription, focused_attribute, next_task,
+};
 
 /// Set on the element while it fills the screen: `native` or `drawn`.
 pub(crate) const FULLSCREEN_ATTR: &str = "data-fullscreen";
@@ -18,6 +20,8 @@ pub struct FullscreenHandle {
     available: Signal<bool>,
     active: Signal<bool>,
     drawn: Signal<bool>,
+    /// Keeps `tabindex` past a drawn fullscreen while the element itself holds focus.
+    kept: Signal<bool>,
     focus: FocusWithin,
 }
 
@@ -65,6 +69,11 @@ impl FullscreenHandle {
                 let _ = api.exit();
             }
         } else if *drawn.peek() {
+            // Dropping the `tabindex` under focus would blur it to the body (4512).
+            if self.element.is_focused() {
+                let mut kept = self.kept;
+                kept.set(true);
+            }
             drawn.set(false);
         }
     }
@@ -106,7 +115,7 @@ impl FullscreenHandle {
             )
         }));
         // A click on nothing focusable inside lands focus here, not on the page.
-        if state == Some("drawn") {
+        if state == Some("drawn") || (self.kept)() {
             attributes.push(Attribute::new(
                 "tabindex",
                 AttributeValue::Text("-1".into()),
@@ -161,16 +170,20 @@ impl FullscreenHandle {
 /// Docs: <https://libero-ui.dev/hooks/use-fullscreen>
 pub fn use_fullscreen(element: ElementHandle) -> FullscreenHandle {
     let mut drawn = use_signal(|| false);
+    let kept = use_signal(|| false);
     // A `focusin` in between only moved focus inside; a WebView's trails over
     // IPC, so there the page says where focus landed.
     let moves = use_signal(|| 0u64);
     let focus = use_focus_within(
         move || vec![element.mounted()],
         move |change| {
-            let mut moves = moves;
+            let (mut moves, mut kept) = (moves, kept);
             if change.within {
                 moves += 1;
                 return;
+            }
+            if *kept.peek() {
+                kept.set(false);
             }
             if !*drawn.peek() {
                 return;
@@ -194,6 +207,7 @@ pub fn use_fullscreen(element: ElementHandle) -> FullscreenHandle {
         available: use_signal(|| false),
         active: use_signal(|| false),
         drawn,
+        kept,
         focus,
     };
     // Android's Back leaves the fullscreen rather than the app (1275).

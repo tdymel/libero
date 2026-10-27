@@ -17,7 +17,8 @@ pub(super) static WINDOW_SX: StaticSx = StaticSx::new(|| {
         .display("flex")
         .flex_direction("column")
         // A caller's max replaces these; the `Float` wrapper caps it again.
-        .max_width("100dvw")
+        // `100%`, not `100dvw`: that one runs under a classic scrollbar (1.4.10).
+        .max_width("100%")
         .max_height("100dvh")
         // A resize never shrinks it past the title bar and Close (todo 1535).
         .min_width("12rem")
@@ -108,7 +109,7 @@ pub(super) static WINDOW_SX: StaticSx = StaticSx::new(|| {
 
 pub(super) static FLOAT_SX: StaticSx = StaticSx::new(|| {
     sx().width("max-content")
-        .max_width("100dvw")
+        .max_width("100%")
         .max_height("100dvh")
         .display("flex")
         .flex_direction("column")

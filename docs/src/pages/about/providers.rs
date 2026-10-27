@@ -5,6 +5,7 @@ use libero::{
     chrono::NaiveDate,
     components::{Checkbox, Code, CodeBlock, DatePicker, Flex, Paper, Text, Title},
     localization::{Formats, Localization},
+    sx::sx,
 };
 use pictogram_icons_lucide as lucide;
 
@@ -85,14 +86,14 @@ pub fn ProvidersPage() -> Element {
                     "the outer one follows this site, English words and German formats, so only the words differ."
                 }
                 Flex { direction: "row", gap: "lg", wrap: "wrap", align: "start",
-                    Paper { padding: "md",
+                    Paper { sx: sx().padding("md"),
                         Flex { direction: "column", gap: "sm",
                             Title { size: "sm", component: "h3", "Outer provider" }
                             DatePicker { value: day, onchange: |_| {} }
                         }
                     }
                     LiberoProvider { localization: &Localization::GERMAN, formats: &Formats::GERMAN,
-                        Paper { padding: "md",
+                        Paper { sx: sx().padding("md"),
                             Flex { direction: "column", gap: "sm",
                                 Title { size: "sm", component: "h3", "Inner provider" }
                                 DatePicker { value: day, onchange: |_| {} }

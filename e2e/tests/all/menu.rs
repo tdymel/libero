@@ -1401,6 +1401,37 @@ async fn a_second_press_on_a_sibling_trigger_closes<D: Driver>(
     sibling_expanded(d, false).await
 }
 
+/// Todo 4511: Tab in a menu whose trigger sits beside it moves on from that trigger, not from
+/// the portal outlet at the app's end.
+#[test]
+fn tab_out_of_a_sibling_triggers_menu_moves_on_from_the_trigger() {
+    block_on(async {
+        let fixture = Fixture::open("/menu-file", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        keyboard::tab_to(page, "#tools", 6).await.unwrap();
+        keyboard::press(page, keyboard::ENTER).await.unwrap();
+        wait::for_js_true(
+            page,
+            "!!document.activeElement.closest('[role=menu]')",
+            "focus in the open menu",
+        )
+        .await
+        .unwrap();
+        keyboard::press(page, keyboard::TAB).await.unwrap();
+        wait::for_js_true(
+            page,
+            &format!("{MENU_GONE} && document.activeElement.id === 'after-tools'"),
+            "the menu closed and focus after the trigger",
+        )
+        .await
+        .unwrap();
+        fixture.console.assert_clean("a Tab out").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
 async fn sibling_expanded<D: Driver>(d: &mut D, open: bool) -> Result<()> {
     eventually(d, "the sibling trigger's state", async |d| {
         let now = d.attr("#tools", "aria-expanded").await?;

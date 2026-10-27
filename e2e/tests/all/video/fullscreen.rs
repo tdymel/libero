@@ -91,6 +91,51 @@ fn fullscreen_takes_the_player_and_escape_or_f_gives_it_back() {
     });
 }
 
+/// Todo 4512 (2.4.3): Escape with focus on the drawn box itself, as a click on the picture
+/// leaves it, keeps focus there instead of dropping it to the body.
+#[test]
+fn escape_from_the_focused_drawn_box_keeps_focus_on_it() {
+    block_on(async {
+        let _fullscreen;
+        let fixture = Fixture::open("/video/refused", Viewport::Desktop)
+            .await
+            .unwrap();
+        _fullscreen = e2e::frames::keep_fullscreen().await;
+        let page = &fixture.page;
+        wait::for_js_true(
+            page,
+            "!!document.querySelector('#player[data-refused]')",
+            "the refusal",
+        )
+        .await
+        .unwrap();
+        pointer::click(page, FULLSCREEN).await.unwrap();
+        let drawn = "document.querySelector('[data-fullscreen=drawn]')";
+        wait::for_js_true(page, &format!("!!{drawn}"), "the drawn box")
+            .await
+            .unwrap();
+        wait::for_js_true(
+            page,
+            &format!("({drawn}.focus(), document.activeElement === {drawn})"),
+            "focus on the drawn box",
+        )
+        .await
+        .unwrap();
+        page.evaluate_bounded(format!("window.__box = {drawn}"))
+            .await
+            .unwrap();
+        keyboard::press(page, keyboard::ESCAPE).await.unwrap();
+        wait::for_js_true(
+            page,
+            &format!("{STATE} === 'none' && document.activeElement === window.__box"),
+            "Escape to leave with focus kept on the box",
+        )
+        .await
+        .unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
 /// Native or pseudo, whichever the renderer grants; Blitz has no controls to press.
 async fn fullscreen_toggles<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
     let _fullscreen = e2e::frames::keep_fullscreen().await;

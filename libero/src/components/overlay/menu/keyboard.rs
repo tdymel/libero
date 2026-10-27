@@ -12,6 +12,7 @@ use crate::{
 pub(super) struct Level {
     pub(super) floating: ElementHandle,
     pub(super) wrapper: ElementHandle,
+    pub(super) trigger: ElementHandle,
     pub(super) dismiss: DismissHandle,
     /// The level's id, which its rows' ids start with.
     pub(super) id: CopyValue<String>,
@@ -79,10 +80,14 @@ impl Level {
     /// Tab leaves via the trigger, so the browser's Tab moves on from there,
     /// not from the portal outlet.
     fn tab_out(self) {
-        let _ = self
+        let inside = self
             .wrapper
             .query_selector("[aria-haspopup=\"menu\"]")
             .and_then(|trigger| trigger.focus());
+        // A trigger beside the `Menu` is not in the wrapper: the root's anchor, found by its id.
+        if inside.is_err() {
+            let _ = self.trigger.focus();
+        }
         self.close_all.call(false);
     }
 

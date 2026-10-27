@@ -11,8 +11,8 @@ use libero::{
     platform::{ElementApi, KeySubscription, keyboard},
     sx::{Sx, sx},
     theme::{
-        ACTION_ICON_RADIUS, BUTTON_HEIGHT, HEADER_HEIGHT_VAR, PAPER_BACKGROUND, Size,
-        TITLE_FONT_FAMILY, ThemeSet, TitleDefaults, Z_INDEX_HEADER,
+        ACTION_ICON_RADIUS, BUTTON_HEIGHT, PAPER_BACKGROUND, Size, TITLE_FONT_FAMILY, ThemeSet,
+        TitleDefaults, Z_INDEX_HEADER,
     },
 };
 use pictogram_icons_lucide as lucide;
@@ -162,7 +162,10 @@ pub(crate) fn AppShell() -> Element {
             // The site's prose stays English when the Localization page swaps the root's
             // `lang`; portaled dropdowns sit outside and follow it (todo 2075).
             lang: "en",
-            sx: sx().gap("0"),
+            // The row takes what the header leaves: it wraps to two rows at 320 px (4514).
+            // The visible viewport: under a phone's toolbar `100vh` hid the page's end.
+            // An engine without `dvh` drops the max and keeps the `100vh` height.
+            sx: sx().gap("0").height("100vh").max_height("100dvh"),
             RouteEffects { open, area, content, section }
             {skip_link(main)}
             {shell_header(open, burger, home, search, modifier)}
@@ -174,12 +177,7 @@ pub(crate) fn AppShell() -> Element {
                 // Nav and page side by side at every width.
                 wrap: false,
                 // The drawer's containing block.
-                sx: sx()
-                    .position("relative")
-                    .height(format!("calc(100vh - {})", HEADER_HEIGHT_VAR.value()))
-                    // The visible viewport: under a phone's toolbar `100vh` hid the page's end.
-                    // An engine without `dvh` drops this and keeps the `100vh` height.
-                    .max_height(format!("calc(100dvh - {})", HEADER_HEIGHT_VAR.value())),
+                sx: sx().position("relative").flex("1").min_height("0"),
                 // The drag's handle on the drawer, to measure its width.
                 div { display: "contents", onmounted: nav_box.mount(),
                     DocsNav {

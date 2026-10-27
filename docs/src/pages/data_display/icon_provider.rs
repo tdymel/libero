@@ -9,6 +9,7 @@ use libero::{
         Anchor, Checkbox, Code, Flex, NumberField, Options, Pagination, PasswordField, Select,
         SvgData, Text,
     },
+    sx::sx,
 };
 use pictogram_icons_lucide as lucide;
 
@@ -127,7 +128,8 @@ fn Inputs() -> Element {
     let mut quantity = use_signal(|| Some(1));
     let mut page = use_signal(|| 2);
     rsx! {
-        Flex { direction: "column", gap: "md",
+        // `min-width: 0`: the fields' default widths pushed the preview pane wider (4516).
+        Flex { direction: "column", gap: "md", sx: sx().min_width("0"),
             Select { label: "Fruit", value: fruit(), onchange: move |next| fruit.set(next) }
             Checkbox { label: "Ripe", checked: ripe(), onchange: move |next| ripe.set(next) }
             PasswordField { label: "Password" }

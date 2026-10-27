@@ -429,6 +429,56 @@ fn under_rtl_a_tabbed_item_is_not_left_under_a_control() {
     });
 }
 
+/// Todo 4508: under RTL the clear check compared an inline target with the raw negative
+/// `scrollLeft`, so every later scroll snapped back to the focused item.
+#[test]
+fn under_rtl_a_scroll_away_from_a_tabbed_item_stays() {
+    block_on(async {
+        let fixture = Fixture::open("/scroller/rtl", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        motion::set_reduced_motion(page, true).await.unwrap();
+        keyboard::tab_to(page, "#before", 3).await.unwrap();
+        keyboard::tab_to(page, "#tag-0", 3).await.unwrap();
+        for i in 1..=6 {
+            keyboard::press(page, keyboard::TAB).await.unwrap();
+            focus::assert_focused(page, &format!("#tag-{i}"), "Tab along the strip")
+                .await
+                .unwrap();
+        }
+        wait::for_js_true(
+            page,
+            &format!("{HIDDEN} <= 0.5 && document.querySelector('{STRIP}').scrollLeft < -1"),
+            "tag-6 clear, the strip moved off its start",
+        )
+        .await
+        .unwrap();
+        // The snap-back runs in a task after `scrollend`: two frames and a task cover it. The
+        // tab's own clearing may still be armed and bring it back once; the bug did every time.
+        let offset: f64 = page
+            .evaluate_bounded(format!(
+                "(async () => {{ const v = document.querySelector('{STRIP}'); \
+                 for (let i = 0; i < 3; i++) {{ \
+                   const ended = new Promise(r => v.addEventListener('scrollend', r, {{ once: true }})); \
+                   v.scrollLeft = 0; await ended; \
+                   await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(() => setTimeout(r)))); \
+                   if (Math.abs(v.scrollLeft) < 1) break; \
+                 }} return v.scrollLeft; }})()"
+            ))
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        assert!(
+            offset.abs() < 1.0,
+            "the strip came back to {offset}px after a scroll to its start"
+        );
+        fixture.console.assert_clean("an RTL scroll away").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
 /// With smooth scrolling a cut-short scroll left the item hidden, so the scroll's end checks
 /// again. The suite's Chromium scrolls instantly otherwise (687).
 #[test]

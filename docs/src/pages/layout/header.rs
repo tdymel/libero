@@ -1,5 +1,6 @@
 use crate::components::{
-    Control, Demo, DemoValues, DocPage, UNSET, Wrap, a11y, indent, or_unset, prop, props,
+    Control, Demo, DemoValues, DocPage, UNSET, Wrap, a11y, gradient_controls, gradient_value,
+    indent, or_unset, prop, props,
 };
 use dioxus::prelude::*;
 use libero::{
@@ -17,9 +18,14 @@ fn wrap_frame(_: &DemoValues, code: &str) -> String {
     )
 }
 
+fn no_gradient(values: &DemoValues) -> bool {
+    values.str("gradient") != "true"
+}
+
 #[component]
 pub fn HeaderPage() -> Element {
     let theme = use_theme();
+    let [gradient_to, gradient_deg] = gradient_controls(no_gradient);
     rsx! {
         DocPage {
             title: "Header",
@@ -90,6 +96,17 @@ pub fn HeaderPage() -> Element {
                         color => vec![format!("color: {color:?}")],
                     }),
                     Control::switch("glass"),
+                    // The theme's own second stop and angle print as `Gradient::default()`.
+                    Control::switch("gradient").code(|_, values| {
+                        let default = values.str("gradient_to") == "secondary"
+                            && values.str("gradient_deg") == "45";
+                        match values.str("gradient").as_str() {
+                            "true" if default => vec!["gradient: Gradient::default()".to_string()],
+                            _ => vec![],
+                        }
+                    }),
+                    gradient_to,
+                    gradient_deg,
                 ],
                 render: move |values: DemoValues| rsx! {
                     Box {
@@ -109,6 +126,8 @@ pub fn HeaderPage() -> Element {
                                     color => Input::from(color),
                                 },
                                 glass: values.str("glass") == "true",
+                                gradient: (values.str("gradient") == "true")
+                                    .then(|| gradient_value(&values)),
                                 "Libero"
                             }
                             Box {

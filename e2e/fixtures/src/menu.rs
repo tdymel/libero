@@ -148,6 +148,8 @@ fn MenuFilePage() -> Element {
                 state: beside,
                 items: vec![MenuItem::new("Ruler").onselect(|_| {}).into()],
             }
+            // Where Tab out of the beside menu lands (4511).
+            Button { id: "after-tools", "After" }
         }
     }
 }
