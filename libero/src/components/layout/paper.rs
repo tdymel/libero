@@ -280,13 +280,10 @@ pub fn Paper(mut props: PaperProps) -> Element {
         (SizeCss::SHADOW, paper_shadow(&props)),
     ];
     let style = custom.into_iter().fold(style, |style, (scale, value)| {
-        match value.custom_css(scale) {
-            Some(css) => Some(format!(
-                "{}{}:{css};",
-                style.unwrap_or_default(),
-                scale.override_var().name()
-            )),
-            None => style,
+        let declaration = value.override_variables(scale).render();
+        match declaration.is_empty() {
+            true => style,
+            false => Some(format!("{}{declaration}", style.unwrap_or_default())),
         }
     });
 

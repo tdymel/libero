@@ -363,10 +363,10 @@ pub fn Chip(props: ChipProps) -> Element {
         (variant, checked, color, disabled),
         |(variant, checked, color, disabled)| chip_variables(*variant, *checked, color, *disabled),
     );
-    let style = match radius.custom_css(SizeCss::RADIUS) {
-        Some(css) => format!("{style}{}:{css};", SizeCss::RADIUS.override_var().name()),
-        None => style,
-    };
+    let style = format!(
+        "{style}{}",
+        radius.override_variables(SizeCss::RADIUS).render()
+    );
     let style = Some(style).filter(|style| !style.is_empty());
 
     let states: Input<States> = props

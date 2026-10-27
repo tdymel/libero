@@ -406,6 +406,34 @@ fn the_elevated_variant_reads_the_surface_and_publishes_its_focus_contrast() {
     );
 }
 
+/// Todo 4466: a custom `radius` rides the override variable; one that leaves its declaration is refused.
+#[test]
+fn a_radius_that_leaves_its_declaration_is_refused() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider {
+                Button { id: "safe", radius: "4px", "Safe" }
+                Button { id: "hostile", radius: "0;position:fixed;background:url(https://evil.example/x)", "Hostile" }
+            }
+        }
+    }
+
+    let html = body(&render(app));
+    let name = SizeCss::RADIUS.override_var();
+
+    assert!(
+        nth_attributes(&html, "button", 0)["style"].ends_with(&format!("{}:4px;", name.name())),
+    );
+    let hostile = nth_attributes(&html, "button", 1);
+    assert!(
+        hostile
+            .get("style")
+            .is_none_or(|style| !style.contains(name.name())),
+        "{hostile:?}"
+    );
+    assert!(!html.contains("position:fixed"), "{html}");
+}
+
 /// A `data-state` as a set: the order the tokens are assembled in is not the contract.
 fn tokens(state: &str) -> BTreeSet<&str> {
     state.split_whitespace().collect()

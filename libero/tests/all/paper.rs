@@ -1,7 +1,39 @@
 use crate::common::{attributes_of, body, classes_of, has_rule_for, render};
 
 use dioxus::prelude::*;
-use libero::{LiberoProvider, components::Paper};
+use libero::{LiberoProvider, components::Paper, theme::SizeCss};
+
+/// Todo 4466: a custom `radius` or `shadow` rides its override variable; one that leaves its declaration is refused.
+#[test]
+fn a_radius_or_shadow_that_leaves_its_declaration_is_refused() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider {
+                Paper { id: "safe", radius: "4px", shadow: "0 1px red", "Safe" }
+                Paper {
+                    id: "hostile",
+                    radius: "0;position:fixed",
+                    shadow: "none;background:url(https://evil.example/x)",
+                    "Hostile"
+                }
+            }
+        }
+    }
+
+    let html = body(&render(app));
+    let radius = SizeCss::RADIUS.override_var();
+    let shadow = SizeCss::SHADOW.override_var();
+
+    assert!(html.contains(&format!("{}:4px;", radius.name())), "{html}");
+    assert!(
+        html.contains(&format!("{}:0 1px red;", shadow.name())),
+        "{html}"
+    );
+    assert!(!html.contains("position:fixed"), "{html}");
+    assert!(!html.contains("evil.example"), "{html}");
+    assert_eq!(html.matches(radius.name()).count(), 1, "{html}");
+    assert_eq!(html.matches(shadow.name()).count(), 1, "{html}");
+}
 
 #[test]
 fn a_paper_is_a_surface_with_no_semantics_of_its_own() {

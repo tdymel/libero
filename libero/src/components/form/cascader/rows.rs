@@ -5,7 +5,7 @@ use pictogram_icons_lucide as lucide;
 
 use crate::{
     components::{
-        common::{Glyph, HtmlTag, ROW_HOVER_TINT, States},
+        common::{Glyph, HtmlTag, ROW_HOVER_TINT, States, variables},
         form::ComboboxOption,
         layout::{Box, BoxStyle, ScrollArea},
     },
@@ -53,6 +53,11 @@ fn cascader_rows_sx() -> Sx {
 
 /// `column_width`, set on each column's `style` so the narrow rule can override the width.
 const COLUMN_WIDTH: CssVar = CssVar::new("--lsx-cascader-column-width");
+
+/// A `width` that would leave its declaration is dropped, so the theme's width stays (todo 4467).
+pub(super) fn column_style(width: &str) -> String {
+    variables().with(COLUMN_WIDTH, width.to_string()).render()
+}
 
 /// The narrow header: back to the parent's level. A `button` inherits neither font nor color.
 fn drill_back_sx() -> Sx {
@@ -359,7 +364,7 @@ impl CascaderRows {
                     div {
                         key: "{level}",
                         "data-slot": "column",
-                        style: "{COLUMN_WIDTH.name()}:{width}",
+                        style: column_style(width),
                         ScrollArea {
                             sx: sx().max_height(max_height),
                             scroll_position_y: scroll_y,

@@ -1,4 +1,5 @@
 use crate::{
+    components::common::{Variables, variables},
     sx::{Input, Sx, ThemeAwareValue, sx},
     tokens::{Responsive, Size, SizeCss},
 };
@@ -91,6 +92,11 @@ impl ScaleOrCss {
         self.custom
             .as_ref()
             .and_then(|css| css.resolve(Some(scale)))
+    }
+
+    /// `custom_css` as the `scale.override_var()` declaration; empty when absent or refused by the guard.
+    pub fn override_variables(&self, scale: SizeCss) -> Variables {
+        variables().with(scale.override_var(), self.custom_css(scale))
     }
 }
 

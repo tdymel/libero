@@ -363,10 +363,10 @@ pub fn Button(props: ButtonProps) -> Element {
         Some(gradient) => format!("{style}{gradient}"),
         None => style,
     };
-    let style = match radius.custom_css(SizeCss::RADIUS) {
-        Some(radius) => format!("{style}{}:{radius};", SizeCss::RADIUS.override_var().name()),
-        None => style,
-    };
+    let style = format!(
+        "{style}{}",
+        radius.override_variables(SizeCss::RADIUS).render()
+    );
     let style = match props.justify.resolve(None) {
         Some(justify) => format!(
             "{style}{}",

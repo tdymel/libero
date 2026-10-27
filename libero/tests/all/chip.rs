@@ -4,7 +4,28 @@ use dioxus::prelude::*;
 use libero::{
     LiberoProvider,
     components::{Chip, Icon},
+    theme::SizeCss,
 };
+
+/// Todo 4466: a custom `radius` rides the override variable; one that leaves its declaration is refused.
+#[test]
+fn a_radius_that_leaves_its_declaration_is_refused() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider {
+                Chip { id: "safe", radius: "4px", "Safe" }
+                Chip { id: "hostile", radius: "0;position:fixed;background:url(https://evil.example/x)", "Hostile" }
+            }
+        }
+    }
+
+    let html = body(&render(app));
+    let name = SizeCss::RADIUS.override_var();
+
+    assert!(html.contains(&format!("{}:4px;", name.name())), "{html}");
+    assert!(!html.contains("position:fixed"), "{html}");
+    assert_eq!(html.matches(name.name()).count(), 1, "{html}");
+}
 
 /// The hidden checkbox is `position: absolute`, so the chip has to be its
 /// containing block - the same defect `SegmentedControl` had, where a focused

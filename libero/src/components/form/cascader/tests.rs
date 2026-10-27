@@ -1,9 +1,22 @@
 use super::{
     core::{CascaderLayout, active_descendant, controlled_id},
     dropdown::CASCADER_DROPDOWN_SX,
-    rows::CASCADER_COLUMNS_SX,
+    rows::{CASCADER_COLUMNS_SX, column_style},
 };
 use crate::css::Stylesheet;
+
+/// Todo 4467: a `column_width` that leaves its declaration is not written to the column's style.
+#[test]
+fn a_column_width_that_leaves_its_declaration_is_refused() {
+    assert_eq!(column_style("12rem"), "--lsx-cascader-column-width:12rem;");
+    for hostile in [
+        "10px;position:fixed",
+        "10px}body{x:y",
+        "url(https://evil.example/x",
+    ] {
+        assert_eq!(column_style(hostile), "", "{hostile}");
+    }
+}
 
 /// Todo 3813: a searchable `Cascader` with no name leaves its search box named by the placeholder only.
 #[test]

@@ -15,6 +15,7 @@ use crate::{
         },
         layout::{paper_sx, scroll_on_key, use_box},
     },
+    css::stays_in_declaration,
     hooks::{
         Align, DismissOptions, ElementHandle, POPOVER_AVAILABLE_HEIGHT, PopoverOptions, Side,
         owner_link, placement_sx, use_dismiss, use_element, use_focus_within, use_popover_on,
@@ -425,15 +426,14 @@ pub fn HoverCard(props: HoverCardProps) -> Element {
         let arrow = props.arrow.then(|| {
             // The arrow is no child of the card, so it reads the caller's `sx` fill and shadow.
             let caller = props.sx.as_ref();
-            let shadow = caller
-                .and_then(|sx| sx.declared_css(&[Property::BoxShadow]))
-                .unwrap_or_else(|| SizeCss::SHADOW.value(props.shadow.copied_or(defaults.shadow)));
-            let mut style = format!("box-shadow:{shadow};");
-            if let Some(fill) = caller
-                .and_then(|sx| sx.declared_css(&[Property::Background, Property::BackgroundColor]))
-            {
-                style.push_str(&format!("background:{fill};"));
-            }
+            let shadow = caller.and_then(|sx| sx.declared_css(&[Property::BoxShadow]));
+            let fill = caller
+                .and_then(|sx| sx.declared_css(&[Property::Background, Property::BackgroundColor]));
+            let style = arrow_style(
+                shadow,
+                SizeCss::SHADOW.value(props.shadow.copied_or(defaults.shadow)),
+                fill,
+            );
             rsx! {
                 PopoverArrow {
                     sx: &HOVER_CARD_ARROW_SX,
@@ -551,6 +551,18 @@ pub fn HoverCard(props: HoverCardProps) -> Element {
         )
 }
 
+/// The arrow's shadow and fill. A caller value that would leave its declaration is
+/// dropped: the shadow falls back to `default_shadow`, the fill to none (todo 4468).
+fn arrow_style(shadow: Option<String>, default_shadow: String, fill: Option<String>) -> String {
+    let safe = |value: String| stays_in_declaration(&value).then_some(value);
+    let shadow = shadow.and_then(safe).unwrap_or(default_shadow);
+    let mut style = format!("box-shadow:{shadow};");
+    if let Some(fill) = fill.and_then(safe) {
+        style.push_str(&format!("background:{fill};"));
+    }
+    style
+}
+
 /// The text of the attribute `name`, if it is set to non-empty text.
 fn attribute_text(attributes: &[Attribute], name: &str) -> Option<String> {
     attributes
@@ -636,5 +648,23 @@ mod tests {
 
         assert!(html.contains("role=\"dialog\""), "{html}");
         assert!(!html.contains("aria-label"), "{html}");
+    }
+
+    /// Todo 4468: the arrow's inline shadow and fill, read from the caller's `sx`, refuse a hostile value.
+    /// The arrow mounts only once the popover is placed, so the SSR render has none to read.
+    #[test]
+    fn the_arrow_refuses_a_shadow_or_fill_that_leaves_its_declaration() {
+        assert_eq!(
+            arrow_style(
+                Some("0 0 1px red;position:fixed".into()),
+                "none".into(),
+                Some("red;background:url(https://evil.example/x)".into())
+            ),
+            "box-shadow:none;"
+        );
+        assert_eq!(
+            arrow_style(Some("0 1px red".into()), "none".into(), Some("blue".into())),
+            "box-shadow:0 1px red;background:blue;"
+        );
     }
 }
