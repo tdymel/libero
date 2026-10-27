@@ -1,7 +1,7 @@
 use dioxus::prelude::*;
 use libero::{
     components::{Code, Flex, Part, Table, Text, Title, column},
-    sx::sx,
+    sx::{Sx, sx},
 };
 
 use super::SectionLink;
@@ -336,6 +336,16 @@ pub fn PartsPanel(properties: Vec<PropGroup>) -> Element {
     }
 }
 
+/// Top-aligned; cells break inside words, and a description's short chip may wrap too: its
+/// nowrap held the table past a 375px page (4609).
+fn table_sx() -> Sx {
+    sx().selector(
+        "& td",
+        sx().vertical_align("top").with("overflow-wrap", "anywhere"),
+    )
+    .selector("& td:last-child code", sx().white_space("normal"))
+}
+
 #[component]
 fn PropRows(name: String, properties: Vec<PropDoc>, base: bool, extends: String) -> Element {
     let mut rows = properties;
@@ -347,12 +357,7 @@ fn PropRows(name: String, properties: Vec<PropDoc>, base: bool, extends: String)
         Table {
             aria_label: name,
             scroll: true,
-            // Top-aligned so a wrapped name keeps its description beside it. Cells may break
-            // inside words: long types pushed the auto-layout table past a 390px page.
-            sx: sx().selector(
-                "& td",
-                sx().vertical_align("top").with("overflow-wrap", "anywhere"),
-            ),
+            sx: table_sx(),
             data: rows,
             columns: vec![
                 column("Name")
@@ -385,10 +390,7 @@ fn PartRows(name: String, parts: Vec<PartDoc>) -> Element {
         Table {
             aria_label: name,
             scroll: true,
-            sx: sx().selector(
-                "& td",
-                sx().vertical_align("top").with("overflow-wrap", "anywhere"),
-            ),
+            sx: table_sx(),
             data: parts,
             columns: vec![
                 column("Part")

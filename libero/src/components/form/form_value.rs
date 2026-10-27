@@ -6,7 +6,8 @@ pub trait FormValue: Clone + PartialEq + Default + 'static {}
 impl<T: Clone + PartialEq + Default + 'static> FormValue for T {}
 
 /// A value with neither `Clone` nor `PartialEq`, such as a secret, made fit for a form: clones
-/// share it and two compare equal only when they are the same one.
+/// share it and two compare equal only when they are the same one. Retyping the original
+/// makes a new one, so the form reads as changed. `Debug` prints `ByAddress(..)`, not the value.
 ///
 /// ```
 /// use libero::components::{ByAddress, Fields};
@@ -25,6 +26,7 @@ impl<T: Clone + PartialEq + Default + 'static> FormValue for T {}
 pub struct ByAddress<T>(Rc<T>);
 
 impl<T> ByAddress<T> {
+    /// Wraps `value` in a new holder that equals only its own clones.
     pub fn new(value: T) -> Self {
         Self(Rc::new(value))
     }
@@ -68,9 +70,12 @@ impl<T: Default> Default for ByAddress<T> {
     }
 }
 
-impl<T: fmt::Debug> fmt::Debug for ByAddress<T> {
+impl<T> Eq for ByAddress<T> {}
+
+/// Prints `ByAddress(..)`: the type holds secrets, so the value never reaches a log.
+impl<T> fmt::Debug for ByAddress<T> {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
-        self.0.fmt(formatter)
+        formatter.write_str("ByAddress(..)")
     }
 }
 
@@ -81,6 +86,20 @@ mod tests {
     struct Secret(&'static str);
 
     /// Todo 4114: the value comes back once no clone holds it.
+    /// Todo 4602: Debug never prints the secret.
+    #[test]
+    fn debug_hides_the_value() {
+        #[derive(Debug)]
+        struct Leaky(&'static str);
+        let secret = ByAddress::new(Leaky("hunter2"));
+        assert_eq!(secret.0.0, "hunter2");
+        assert_eq!(format!("{secret:?}"), "ByAddress(..)");
+        assert_eq!(
+            format!("{:#?}", Some(secret)),
+            "Some(\n    ByAddress(..),\n)"
+        );
+    }
+
     #[test]
     fn try_unwrap_returns_the_value_when_unshared() {
         let secret = ByAddress::new(Secret("hunter2"));

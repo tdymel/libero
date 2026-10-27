@@ -254,7 +254,14 @@ impl<S: 'static, R: Clone + 'static> ModalHandle<S, R> {
     pub fn open_with(&self, args: impl Into<S>) -> Opening<R> {
         let mut signal = self.resolution;
         let (generation, focus_return, replaced, superseded) = {
-            let mut resolution = signal.write();
+            // Gone with its owner: nothing opens, and the opening settles as dismissed.
+            let Ok(mut resolution) = signal.try_write() else {
+                return Opening {
+                    resolution: self.resolution,
+                    closer: self.closer,
+                    generation: 0,
+                };
+            };
             resolution.generation += 1;
             resolution.outcome = None;
             let superseded = std::mem::take(&mut resolution.handlers);

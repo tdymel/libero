@@ -13,6 +13,7 @@ use crate::{
         layout::use_box,
     },
     hooks::{use_localization, use_theme},
+    localization::fill,
     sx::{StaticSx, ThemeAwareValue, sx},
     theme::{ChoiceVariant, FIELD_GAP, Size},
     utils::warn,
@@ -267,7 +268,10 @@ fn check_group<T: Options, P: Part>(kind: Kind, props: Group<T, P>) -> Element {
     let readonly = props.readonly.unwrap_or(false);
     let held = bound.value().unwrap_or_else(|| props.value.clone());
 
-    if props.onchange.is_none() && !bound.is_bound() && !disabled {
+    // Once per mount, as `warned_unlisted`: the same props warn on every render after (4604).
+    let mut warned_onchange = use_hook(|| CopyValue::new(false));
+    if props.onchange.is_none() && !bound.is_bound() && !disabled && !*warned_onchange.peek() {
+        warned_onchange.set(true);
         warn(&format!(
             "{}: without `onchange` the selection can never change.",
             kind.name()
@@ -294,14 +298,18 @@ fn check_group<T: Options, P: Part>(kind: Kind, props: Group<T, P>) -> Element {
     }
     let count = checked.iter().filter(|on| **on).count();
     let full = props.max_checked.is_some_and(|max| count >= max);
-    if props.max_checked.is_some_and(|max| count > max) {
+    // A readonly group disables nothing at the cap, so it has nothing to explain (4603).
+    let capped = full && !readonly;
+    let mut warned_over = use_hook(|| CopyValue::new(false));
+    if props.max_checked.is_some_and(|max| count > max) && !*warned_over.peek() {
+        warned_over.set(true);
         warn(&format!(
             "{}: `value` holds more than `max_checked` options.",
             kind.name()
         ));
     }
 
-    let field = use_field()
+    let mut field = use_field()
         .labelled_by()
         .names_group()
         .label(&props.label)
@@ -373,6 +381,17 @@ fn check_group<T: Options, P: Part>(kind: Kind, props: Group<T, P>) -> Element {
         })
     };
 
+    // Says why the unchecked options are off, which their disabled state alone does not (4604).
+    let limit_id = format!("{}-limit", field.id());
+    let at_most = use_localization().common.at_most;
+    let limit = props.max_checked.filter(|_| capped).map(|max| {
+        field.describe_also(limit_id.clone());
+        let words = fill(at_most, &[("max", &max)]);
+        rsx! {
+            span { key: "{limit_id}", id: "{limit_id}", hidden: true, "{words}" }
+        }
+    });
+
     let option_disabled = list.disabled();
     let variant = props.variant.copied_or(theme_variant);
     let options = values.iter().enumerate().map(|(index, option)| {
@@ -396,7 +415,7 @@ fn check_group<T: Options, P: Part>(kind: Kind, props: Group<T, P>) -> Element {
                 variant,
                 color: props.color.clone(),
                 checked: checked[index],
-                disabled: disabled || option_disabled[index] || (full && !checked[index]),
+                disabled: disabled || option_disabled[index] || (capped && !checked[index]),
                 readonly,
                 toggle,
             }
@@ -427,7 +446,7 @@ fn check_group<T: Options, P: Part>(kind: Kind, props: Group<T, P>) -> Element {
         .render(
             HtmlTag::Div,
             Vec::new(),
-            options.chain(hidden).collect::<Vec<_>>(),
+            options.chain(hidden).chain(limit).collect::<Vec<_>>(),
         );
 
     field.render(group)

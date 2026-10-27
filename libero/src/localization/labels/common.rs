@@ -19,6 +19,9 @@ pub struct CommonLabels {
     /// Said after a required group's label, as `aria-required` is not allowed on
     /// `role="group"`: `CheckboxGroup`, `SwitchGroup`.
     pub required: &'static str,
+    /// Read with a group at its `max_checked`, whose other options are off: `CheckboxGroup`,
+    /// `SwitchGroup`. `{max}` is the limit.
+    pub at_most: &'static str,
 }
 
 impl CommonLabels {
@@ -30,6 +33,7 @@ impl CommonLabels {
         search: "Search",
         warning: "Warning:",
         required: "Required",
+        at_most: "At most {max} can be selected",
     };
 
     pub const GERMAN: Self = Self {
@@ -40,5 +44,6 @@ impl CommonLabels {
         search: "Suchen",
         warning: "Warnung:",
         required: "Pflichtfeld",
+        at_most: "Höchstens {max} können ausgewählt werden",
     };
 }

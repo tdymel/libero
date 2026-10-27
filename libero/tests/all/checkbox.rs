@@ -437,6 +437,64 @@ fn a_required_invalid_check_group_says_both() {
     assert_eq!(html.matches(" Required").count(), 2, "{html}");
 }
 
+fn capped_group() -> Element {
+    rsx! {
+        LiberoProvider {
+            CheckboxGroup::<String> {
+                label: "Checks",
+                options: letters(&["A", "B", "C"]),
+                value: letters(&["A"]),
+                max_checked: 1,
+                onchange: |_| {},
+            }
+        }
+    }
+}
+
+fn capped_readonly_group() -> Element {
+    rsx! {
+        LiberoProvider {
+            CheckboxGroup::<String> {
+                label: "Checks",
+                options: letters(&["A", "B", "C"]),
+                value: letters(&["A"]),
+                max_checked: 1,
+                readonly: true,
+                onchange: |_| {},
+            }
+        }
+    }
+}
+
+/// Todo 4604: the options a cap switches off are explained to the group's describedby.
+#[test]
+fn a_check_group_at_its_cap_says_why_the_rest_are_off() {
+    let html = body(&render(capped_group));
+    let group = &tags_with(&html, r#"role="group""#)[0];
+    let described = group.get("aria-describedby").expect("a describedby");
+    let limit = described
+        .split(' ')
+        .find(|id| id.ends_with("-limit"))
+        .unwrap_or_else(|| panic!("{described}"));
+    assert!(html.contains(&format!(r#"id="{limit}""#)), "{html}");
+    assert!(html.contains("At most 1 can be selected"), "{html}");
+    let off = tags_with(&html, r#"type="checkbox""#)
+        .iter()
+        .filter(|input| input.contains_key("disabled"))
+        .count();
+    assert_eq!(off, 2, "{html}");
+}
+
+/// Todo 4603: a readonly group at the cap disables nothing, so it has nothing to explain.
+#[test]
+fn a_readonly_check_group_at_its_cap_disables_nothing() {
+    let html = body(&render(capped_readonly_group));
+    let inputs = tags_with(&html, r#"type="checkbox""#);
+    assert_eq!(inputs.len(), 3, "{html}");
+    assert!(inputs.iter().all(|input| !input.contains_key("disabled")));
+    assert!(!html.contains("At most"), "{html}");
+}
+
 fn checks_holding_an_unlisted_value() -> Element {
     rsx! {
         LiberoProvider {

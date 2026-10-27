@@ -160,12 +160,11 @@ pub fn CheckboxGroupPage() -> Element {
                     "Its description, helper and status make up the group's `aria-describedby`.",
                     "A required group says \"Required\" after its label, from `common.required` in the localization: `aria-required` is not allowed on a `group`.",
                     "Each option is a native checkbox with its own label, and its description is read with it.",
-                    "At `max_checked`, the unchecked options are disabled and leave the tab order.",
+                    "At `max_checked`, the unchecked options are disabled and leave the tab order, and the group's `aria-describedby` says the cap, from `common.at_most` in the localization. A `readonly` group disables nothing.",
                     "A group with no name logs a warning.",
                 ])
                 .must([
                     "Without a visible `label`, spread `\"aria-label\"`, since the option labels do not say what the question is.",
-                    "With `max_checked`, say the cap in the `label` or `description`: a disabled option does not say why.",
                 ])
                 .example("A toppings question, `CheckboxGroup { label: \"Toppings\", max_checked: 2 }`: a screen reader says \"Toppings\" on the first box, and once two are checked the rest read as disabled."),
             lead: rsx! {

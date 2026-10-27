@@ -300,6 +300,54 @@ fn unmounting_the_owner_settles_an_open_modal() {
     assert_eq!(settled, ["awaited", "handler"]);
 }
 
+/// Todo 4605: a handle kept past its unmounted owner opens nothing and settles as a dismissal.
+#[test]
+fn opening_after_the_owner_unmounted_is_a_dismissal() {
+    fn app() -> Element {
+        let shown = use_signal(|| true);
+        let outcome: Outcome = use_signal(Vec::new);
+        OWNER.set(Some((shown, outcome)));
+        rsx! {
+            LiberoProvider {
+                if shown() {
+                    Owner {}
+                }
+            }
+        }
+    }
+
+    #[component]
+    fn Owner() -> Element {
+        let modal = use_modal(|_: ModalScope<(), bool>| rsx! { Dialog { "asking" } });
+        use_hook(move || KEPT_OPEN.set(Some(modal)));
+        rsx! {}
+    }
+
+    let mut dom = VirtualDom::new(app);
+    dom.rebuild_in_place();
+    dom.process_events();
+    let (mut shown, mut outcome) = OWNER.get().expect("the app rendered");
+    let modal = KEPT_OPEN.get().expect("the owner rendered");
+
+    dom.in_runtime(|| shown.set(false));
+    dom.render_immediate(&mut NoOpMutations);
+    dom.process_events();
+
+    dom.in_runtime(|| {
+        modal.open().onresult(move |result| {
+            assert_eq!(result, None);
+            outcome.write().push("handler");
+        });
+    });
+    assert_eq!(dom.in_runtime(|| outcome.peek().clone()), ["handler"]);
+    assert!(!dioxus_ssr::render(&dom).contains("asking"));
+}
+
+thread_local! {
+    static KEPT_OPEN: std::cell::Cell<Option<ModalHandle<(), bool>>> =
+        const { std::cell::Cell::new(None) };
+}
+
 thread_local! {
     static HANDLE: std::cell::Cell<Option<(ModalHandle<(), bool>, Outcome)>> =
         const { std::cell::Cell::new(None) };
