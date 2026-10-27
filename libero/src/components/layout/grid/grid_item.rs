@@ -7,10 +7,9 @@ use crate::{
     },
     sx::{StaticSx, sx},
     theme::{GRID_ITEM_ROW_SPAN_VAR, GRID_ITEM_ROWS_VAR, Responsive},
-    utils::warn,
 };
 
-use super::{GRID_ITEM_STATE, GridSpan, GridZoneContext, ZoneState, container_name};
+use super::{GRID_ITEM_STATE, GridSpan, GridZoneContext, Warned, ZoneState, container_name};
 
 static GRID_ITEM_SX: StaticSx = StaticSx::new(|| {
     let base = sx().min_width("0").when(
@@ -73,8 +72,12 @@ pub fn GridItem(props: GridItemProps) -> Element {
     // Per item, so a late or never-measured item affects only itself.
     let mut rows = use_signal(|| None::<u32>);
 
+    let warned = use_hook(Warned::default);
+
     if zone.is_none() {
-        warn("GridItem: used outside a GridZone - it will not be placed.");
+        warned.once("no-zone", || {
+            "GridItem: used outside a GridZone - it will not be placed.".to_string()
+        });
     }
 
     let masonry = zone.is_some_and(|zone| zone.state.read().masonry);
@@ -102,9 +105,9 @@ pub fn GridItem(props: GridItemProps) -> Element {
 
     // Masonry drops the caller's row span: one writer of `grid-row`.
     if masonry && props.rows.as_ref().is_some() {
-        warn(
-            "GridItem: rows is ignored in a masonry zone, which derives the row span from the measured height.",
-        );
+        warned.once("masonry-rows", || {
+            "GridItem: rows is ignored in a masonry zone, which derives the row span from the measured height.".to_string()
+        });
     }
     let row_span = props
         .rows
@@ -136,9 +139,9 @@ pub fn GridItem(props: GridItemProps) -> Element {
     let sx = match zone.map(|zone| zone.state.peek().container).unwrap_or("") {
         "" => {
             if zone.is_some() && span.breakpoints().next().is_some() {
-                warn(
-                    "GridItem: span breakpoints are ignored in a GridZone without an area, which has no container to query.",
-                );
+                warned.once("span-breakpoints", || {
+                    "GridItem: span breakpoints are ignored in a GridZone without an area, which has no container to query.".to_string()
+                });
             }
             props.sx.clone()
         }

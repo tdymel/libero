@@ -37,7 +37,17 @@ impl ShortcutHelpLabels {
         option: "Option",
         meta_other: "Meta",
         space: "Space",
-        key_names: &[],
+        key_names: &[
+            ("Escape", "Esc"),
+            ("Delete", "Del"),
+            ("Insert", "Ins"),
+            ("PageUp", "Page Up"),
+            ("PageDown", "Page Down"),
+            ("ArrowUp", "Up Arrow"),
+            ("ArrowDown", "Down Arrow"),
+            ("ArrowLeft", "Left Arrow"),
+            ("ArrowRight", "Right Arrow"),
+        ],
     };
 
     pub const GERMAN: Self = Self {
@@ -66,18 +76,11 @@ impl ShortcutHelpLabels {
         ],
     };
 
-    /// What a key shows, from its `Key` name: `Space`, the non-Apple `Meta`, or
-    /// a named key; a name missing here shows as it is.
-    pub(crate) fn key_word(&self, key: &str) -> String {
-        match key {
-            "Space" => self.space,
-            "Meta" => self.meta_other,
-            _ => self
-                .key_names
-                .iter()
-                .find(|(name, _)| *name == key)
-                .map_or(key, |(_, word)| *word),
-        }
-        .to_string()
+    /// What a named key shows, from its `Key` name; a name missing here shows as it is.
+    pub(crate) fn key_name<'a>(&self, key: &'a str) -> &'a str {
+        self.key_names
+            .iter()
+            .find(|(name, _)| *name == key)
+            .map_or(key, |(_, word)| *word)
     }
 }

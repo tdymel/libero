@@ -6,7 +6,6 @@ use crate::hooks::{
     ElementHandle,
     popover::{OpenPopups, focus_in_popup_of, use_open_popups},
 };
-use crate::localization::ShortcutHelpLabels;
 use crate::platform::{
     KeyChord, KeySubscription, keyboard, meta_held, mod_is_meta, warn_bare_chord, warn_once,
     warn_reserved_chord,
@@ -94,7 +93,7 @@ impl Hotkey {
 
 /// A parsed chord.
 #[derive(Clone, Debug, PartialEq)]
-struct Chord {
+pub(crate) struct Chord {
     key: Key,
     ctrl: bool,
     meta: bool,
@@ -105,7 +104,7 @@ struct Chord {
 impl Chord {
     /// `None` for a chord with no key or a name no key has. `apple` is where
     /// `mod` means Cmd.
-    fn parse(text: &str, apple: bool) -> Option<Self> {
+    pub(crate) fn parse(text: &str, apple: bool) -> Option<Self> {
         let text = text.trim();
         let (modifiers, key) = match text {
             "+" => ("", "+"),
@@ -393,56 +392,57 @@ pub fn use_hotkeys(bindings: impl IntoIterator<Item = Hotkey>) {
     });
 }
 
-/// The key names `chord` shows, modifiers first in the platform's order; `None`
-/// for a chord [`use_hotkeys`] would not bind.
-pub(crate) fn chord_keys(
-    chord: &str,
-    apple: bool,
-    words: &ShortcutHelpLabels,
-) -> Option<Vec<String>> {
-    let chord = Chord::parse(chord, apple)?;
-    let (alt, meta) = match apple {
-        true => (words.option, words.meta),
-        false => (words.alt, "Meta"),
-    };
-    let mut keys: Vec<String> = [
-        (chord.ctrl, words.ctrl),
-        (chord.alt, alt),
-        (chord.shift, words.shift),
-        (chord.meta, meta),
-    ]
-    .into_iter()
-    .filter(|(held, _)| *held)
-    .map(|(_, name)| name.to_string())
-    .collect();
-    keys.push(match chord.key {
-        Key::Character(text) if text == " " => "Space".to_string(),
-        Key::Character(text) => text.to_uppercase(),
-        other => other.to_string(),
-    });
-    Some(keys)
+/// One key of a chord as shown, before a localization names it.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub(crate) enum ChordKey {
+    Ctrl,
+    Alt,
+    Shift,
+    Meta,
+    Space,
+    /// A character in capitals, or a named key by its `Key` name (`ArrowUp`).
+    Key(String),
 }
 
-/// `chord` as `aria-keyshortcuts` writes it (`Control+Shift+B`); `None` for a chord
-/// [`use_hotkeys`] would not bind.
-pub(crate) fn aria_keyshortcuts(chord: &str, apple: bool) -> Option<String> {
-    let chord = Chord::parse(chord, apple)?;
-    let mut keys: Vec<String> = [
-        (chord.ctrl, "Control"),
-        (chord.alt, "Alt"),
-        (chord.shift, "Shift"),
-        (chord.meta, "Meta"),
+impl ChordKey {
+    /// The `aria-keyshortcuts` spelling.
+    fn aria(&self) -> &str {
+        match self {
+            Self::Ctrl => "Control",
+            Self::Alt => "Alt",
+            Self::Shift => "Shift",
+            Self::Meta => "Meta",
+            Self::Space => "Space",
+            Self::Key(name) => name,
+        }
+    }
+}
+
+/// The keys of `chord`, modifiers first in the platform's order.
+pub(crate) fn chord_keys(chord: &Chord) -> Vec<ChordKey> {
+    let mut keys: Vec<ChordKey> = [
+        (chord.ctrl, ChordKey::Ctrl),
+        (chord.alt, ChordKey::Alt),
+        (chord.shift, ChordKey::Shift),
+        (chord.meta, ChordKey::Meta),
     ]
     .into_iter()
     .filter(|(held, _)| *held)
-    .map(|(_, name)| name.to_string())
+    .map(|(_, key)| key)
     .collect();
-    keys.push(match chord.key {
-        Key::Character(text) if text == " " => "Space".to_string(),
-        Key::Character(text) => text.to_uppercase(),
-        other => other.to_string(),
+    keys.push(match &chord.key {
+        Key::Character(text) if text == " " => ChordKey::Space,
+        Key::Character(text) => ChordKey::Key(text.to_uppercase()),
+        other => ChordKey::Key(other.to_string()),
     });
-    Some(keys.join("+"))
+    keys
+}
+
+/// `chord` as `aria-keyshortcuts` writes it (`Control+Shift+B`).
+pub(crate) fn aria_keyshortcuts(chord: &Chord) -> String {
+    let keys = chord_keys(chord);
+    let names: Vec<&str> = keys.iter().map(ChordKey::aria).collect();
+    names.join("+")
 }
 
 /// The chords bound page-wide; a `within` chord overrides only its own region, so it is not warned about.
@@ -514,14 +514,31 @@ mod tests {
     }
 
     #[test]
-    fn a_chord_shows_the_platforms_key_names() {
-        let words = ShortcutHelpLabels::ENGLISH;
-        let keys = |chord, apple| chord_keys(chord, apple, &words);
-        assert_eq!(keys("shift+mod+k", false).unwrap(), ["Ctrl", "Shift", "K"]);
-        assert_eq!(keys("shift+mod+k", true).unwrap(), ["Shift", "Cmd", "K"]);
-        assert_eq!(keys("alt+f10", true).unwrap(), ["Option", "F10"]);
-        assert_eq!(keys("space", false).unwrap(), ["Space"]);
+    fn a_chord_keeps_its_keys_in_the_platforms_order() {
+        use ChordKey::*;
+        let keys = |chord, apple| Chord::parse(chord, apple).map(|chord| chord_keys(&chord));
+        assert_eq!(
+            keys("shift+mod+k", false).unwrap(),
+            [Ctrl, Shift, Key("K".into())]
+        );
+        assert_eq!(
+            keys("shift+mod+k", true).unwrap(),
+            [Shift, Meta, Key("K".into())]
+        );
+        assert_eq!(keys("alt+f10", true).unwrap(), [Alt, Key("F10".into())]);
+        assert_eq!(keys("space", false).unwrap(), [Space]);
+        assert_eq!(
+            keys("ctrl+ArrowUp", false).unwrap(),
+            [Ctrl, Key("ArrowUp".into())]
+        );
         assert_eq!(keys("hyper+k", false), None);
+    }
+
+    #[test]
+    fn aria_keyshortcuts_spells_the_keys_for_a_screen_reader() {
+        let aria = |chord| aria_keyshortcuts(&Chord::parse(chord, false).unwrap());
+        assert_eq!(aria("shift+mod+b"), "Control+Shift+B");
+        assert_eq!(aria("meta+space"), "Meta+Space");
     }
 
     #[test]
@@ -569,7 +586,6 @@ mod tests {
     fn a_multi_char_key_starting_non_ascii_does_not_parse() {
         for text in ["éa", "ß+ab", "ctrl+ñx"] {
             assert_eq!(Chord::parse(text, false), None, "{text:?}");
-            assert_eq!(aria_keyshortcuts(text, false), None, "{text:?}");
         }
         assert_eq!(Chord::parse("é", false).unwrap().key, character("é"));
     }

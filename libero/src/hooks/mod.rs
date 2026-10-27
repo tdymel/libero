@@ -157,9 +157,9 @@ pub use geolocation::{Geolocation, use_geolocation};
 #[cfg(feature = "use-history")]
 pub use history::{HistoryHandle, UndoHistory, use_history};
 #[cfg(feature = "use-hotkeys")]
-pub use hotkeys::{Hotkey, use_hotkeys};
+pub(crate) use hotkeys::{Chord, ChordKey, aria_keyshortcuts, chord_keys};
 #[cfg(feature = "use-hotkeys")]
-pub(crate) use hotkeys::{aria_keyshortcuts, chord_keys};
+pub use hotkeys::{Hotkey, use_hotkeys};
 #[cfg(feature = "use-icon")]
 pub use icons::use_icon;
 #[cfg(feature = "use-id")]

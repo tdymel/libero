@@ -1,4 +1,4 @@
-use std::{cell::Cell, rc::Rc};
+use std::{cell::RefCell, rc::Rc};
 
 use dioxus::prelude::*;
 
@@ -39,6 +39,19 @@ pub(crate) struct GridZoneContext {
 /// `Box`-derived child, e.g. a stray `Text`, into one row.
 pub(crate) const GRID_ITEM_STATE: &str = "grid-item";
 
+/// Per-instance warning keys: each fires once, not on every render.
+#[derive(Clone, Default)]
+pub(crate) struct Warned(Rc<RefCell<Vec<&'static str>>>);
+
+impl Warned {
+    pub(crate) fn once(&self, key: &'static str, message: impl FnOnce() -> String) {
+        if !self.0.borrow().contains(&key) {
+            self.0.borrow_mut().push(key);
+            warn(&message());
+        }
+    }
+}
+
 /// Prefixed, so it can't collide with a caller's own container name.
 pub(crate) fn container_name(area: &str) -> String {
     format!("lsx-zone-{area}")
@@ -58,8 +71,9 @@ static GRID_ZONE_SX: StaticSx = StaticSx::new(|| {
         .align_content("start")
         // The track's `minmax(0, 1fr)` protects the track, not the zone in it.
         .min_width("0")
-        // Eleven length gaps can't shrink and overflow a narrow zone; the `4%`
-        // cap engages only under ~300px.
+        // Eleven length gaps can't shrink and overflow a narrow zone. The `4%` cap
+        // engages below ~300px at `md` and ~600px at `xl`, so on a phone; a row
+        // gap is not capped, as its `%` resolves against the zone's height.
         .column_gap(format!("min({gap}, 4%)"))
         .row_gap(gap.clone())
         // Only a named zone: containment collapses a shrink-to-fit standalone
@@ -105,7 +119,8 @@ base_props! {
         #[props(default)]
         masonry: bool,
         /// Between items: a size word or any CSS, as `gap: "12px"`. Masonry packs by a
-        /// `px` or `rem` length; another CSS value packs by the theme's gap.
+        /// `px` or `rem` length, counting a `rem` as 16px; another CSS value packs by the
+        /// theme's gap. Only the column gap shrinks, to 4% of the zone's width; a row gap keeps its size.
         #[props(default, into)]
         gap: Input<ThemeAwareValue>,
         #[props(default, into)]
@@ -136,31 +151,43 @@ pub fn GridZone(props: GridZoneProps) -> Element {
     let grid = try_use_context::<GridContext>();
     // Read before this zone provides its own: the zone enclosing a nested grid.
     let enclosing = try_use_context::<GridZoneContext>();
-    let warned = use_hook(|| Rc::new(Cell::new(false)));
+    let warned = use_hook(Warned::default);
 
     let area = props.area;
     if grid.is_none() && area.is_set() {
-        warn(&format!(
-            "GridZone: area `{}` is set outside a Grid; its container containment can collapse \
-             the zone to zero width. Omit `area` for a standalone zone.",
-            area.name
-        ));
+        warned.once("orphan-area", || {
+            format!(
+                "GridZone: area `{}` is set outside a Grid; its container containment can collapse \
+                 the zone to zero width. Omit `area` for a standalone zone.",
+                area.name
+            )
+        });
     } else if let Some(grid) = grid.as_ref()
         && area.is_set()
         && !grid.template.read().contains(&area)
     {
         if grid.template.read().0.source == area.source {
-            warn(&format!(
-                "GridZone: area `{}` is not in the parent Grid's template.",
-                area.name
-            ));
+            warned.once("unknown-area", || {
+                format!(
+                    "GridZone: area `{}` is not in the parent Grid's template.",
+                    area.name
+                )
+            });
         } else {
-            warn(&format!(
-                "GridZone: area `{}` comes from a different GridArea enum than the parent \
-                 Grid's template.",
-                area.name
-            ));
+            warned.once("other-enum", || {
+                format!(
+                    "GridZone: area `{}` comes from a different GridArea enum than the parent \
+                     Grid's template.",
+                    area.name
+                )
+            });
         }
+    } else if grid.is_some() && !area.is_set() {
+        warned.once("no-area", || {
+            "GridZone: a zone inside a Grid needs an `area`, or it is placed by auto-flow and \
+             ignores the template."
+                .to_string()
+        });
     }
 
     let gap = ScaleOrCss::new(props.gap.as_ref(), theme.grid.zone_gap);
@@ -168,12 +195,13 @@ pub fn GridZone(props: GridZoneProps) -> Element {
     let measured = custom.as_deref().and_then(css_px);
     if props.masonry
         && let Some(css) = custom.as_deref().filter(|_| measured.is_none())
-        && !warned.replace(true)
     {
-        warn(&format!(
-            "GridZone: masonry packs by a px or rem gap, so `{css}` packs by the theme's gap \
-             and the rows are off by the difference."
-        ));
+        warned.once("masonry-gap", || {
+            format!(
+                "GridZone: masonry packs by a px or rem gap, so `{css}` packs by the theme's gap \
+                 and the rows are off by the difference."
+            )
+        });
     }
     let gap_px = measured.map_or(theme.spacing.get(gap.size).into(), |px| px.round() as u32);
     let container = if area.is_set() { area.name } else { "" };
@@ -182,10 +210,12 @@ pub fn GridZone(props: GridZoneProps) -> Element {
     if !container.is_empty()
         && enclosing.is_some_and(|zone| zone.state.peek().container == container)
     {
-        warn(&format!(
-            "GridZone: a nested zone reuses the area name `{container}`, so a responsive \
-             GridItem span in the outer zone would resolve against the inner one.",
-        ));
+        warned.once("nested-area", || {
+            format!(
+                "GridZone: a nested zone reuses the area name `{container}`, so a responsive \
+                 GridItem span in the outer zone would resolve against the inner one."
+            )
+        });
     }
 
     let state = ZoneState {
@@ -243,13 +273,17 @@ pub fn GridZone(props: GridZoneProps) -> Element {
 
 #[cfg(test)]
 mod tests {
+    use std::sync::atomic::{AtomicUsize, Ordering};
+
     use dioxus::prelude::*;
 
     use crate::{
         LiberoProvider,
-        components::layout::{GridArea, GridZone},
-        utils::warnings_of,
+        components::layout::{Grid, GridArea, GridItem, GridTemplate, GridZone},
+        utils::{take_warnings, warnings_of},
     };
+
+    static RENDERS: AtomicUsize = AtomicUsize::new(0);
 
     #[derive(Clone, Copy, PartialEq)]
     struct Body;
@@ -269,6 +303,39 @@ mod tests {
             "{orphan:?}"
         );
         assert!(plain.is_empty(), "{plain:?}");
+    }
+
+    /// Todo 4644: a re-render with the same misuse does not warn again.
+    #[test]
+    fn a_misuse_warns_once_across_renders() {
+        fn app() -> Element {
+            // A new class each render, so every component re-renders with the same misuse.
+            let class = format!("n{}", RENDERS.fetch_add(1, Ordering::Relaxed));
+            let template = GridTemplate::new()
+                .row(|row| row.cell(Body))
+                .build()
+                .unwrap();
+            rsx! {
+                LiberoProvider {
+                    Grid { template,
+                        GridZone { class: class.clone(), GridItem { class: class.clone(), "x" } }
+                    }
+                    GridItem { class, "orphan" }
+                }
+            }
+        }
+        take_warnings();
+        let mut dom = VirtualDom::new(app);
+        dom.rebuild_in_place();
+        for _ in 0..2 {
+            dom.mark_dirty(ScopeId::APP);
+            dom.render_immediate(&mut dioxus::core::NoOpMutations);
+        }
+        let warnings = take_warnings();
+        let count = |needle: &str| warnings.iter().filter(|w| w.contains(needle)).count();
+        assert!(RENDERS.load(Ordering::Relaxed) >= 3);
+        assert_eq!(count("needs an `area`"), 1, "{warnings:?}");
+        assert_eq!(count("outside a GridZone"), 1, "{warnings:?}");
     }
 
     #[test]

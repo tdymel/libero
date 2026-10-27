@@ -138,9 +138,14 @@ pub fn DocPage(
                 .min_width("max-content")
                 .white_space("nowrap"),
         )
+        // A phone drops the tab icons, so "Accessibility" is not cut at 375px.
         .media(
             "(max-width: 30rem)",
-            sx().selector("& > [role=tablist] > [role=tab]", sx().padding_inline("sm")),
+            sx().selector("& > [role=tablist] > [role=tab]", sx().padding_inline("sm"))
+                .selector(
+                    "& > [role=tablist] > [role=tab] > [data-slot=icon]",
+                    sx().display("none"),
+                ),
         );
 
     rsx! {

@@ -1,3 +1,5 @@
+use std::{cell::RefCell, collections::HashSet, rc::Rc};
+
 use dioxus::prelude::*;
 use pictogram_icons_lucide as lucide;
 
@@ -22,8 +24,8 @@ use crate::{
     },
     context::IconSlot,
     hooks::{
-        aria_keyshortcuts, child_ripple_sx, current_localization, use_gradient_style, use_ripple,
-        use_theme,
+        Chord, aria_keyshortcuts, child_ripple_sx, current_localization, use_gradient_style,
+        use_ripple, use_theme,
     },
     platform::mod_is_meta,
     sx::{StaticSx, Sx, ThemeAwareValue, sx},
@@ -339,14 +341,25 @@ pub(crate) struct TooltipOpenDelay(pub(crate) u32);
 #[component]
 pub fn ActionIcon(props: ActionIconProps) -> Element {
     let group = use_button_group();
-    if !props.tooltip.unwrap_or(false) {
-        return action_icon(props);
-    }
     let apple = mod_is_meta();
-    let keys = props
-        .shortcut
-        .as_deref()
-        .and_then(|chord| chord_words(chord, apple, &current_localization().shortcut_help));
+    // Each bad chord warns once per instance, not on every render.
+    let warned = use_hook(|| Rc::new(RefCell::new(HashSet::<String>::new())));
+    let chord = props.shortcut.as_deref().and_then(|text| {
+        let chord = Chord::parse(text, apple);
+        if chord.is_none() && warned.borrow_mut().insert(text.to_string()) {
+            warn(&format!(
+                "ActionIcon: `shortcut` {text:?} is not a chord `use_hotkeys` takes, so it is not announced or shown."
+            ));
+        }
+        chord
+    });
+    let keyshortcuts = chord.as_ref().map(aria_keyshortcuts);
+    if !props.tooltip.unwrap_or(false) {
+        return action_icon(props, keyshortcuts);
+    }
+    let keys = chord
+        .as_ref()
+        .map(|chord| chord_words(chord, apple, &current_localization().shortcut_help));
     let mut label = props.aria_label.clone();
     if !label.trim().is_empty() && opens_new_tab(&props, &group) {
         label = format!("{label} {}", current_localization().anchor.new_tab);
@@ -362,7 +375,7 @@ pub fn ActionIcon(props: ActionIconProps) -> Element {
                     {chord_kbd(keys)}
                 }
             },
-            {action_icon(props)}
+            {action_icon(props, keyshortcuts)}
         }
     }
 }
@@ -375,11 +388,7 @@ fn opens_new_tab(props: &ActionIconProps, group: &ButtonGroupContext) -> bool {
         && wants_new_tab_hint(props.target.as_deref(), props.new_tab_hint)
 }
 
-fn action_icon(mut props: ActionIconProps) -> Element {
-    let keyshortcuts = props
-        .shortcut
-        .as_deref()
-        .and_then(|chord| aria_keyshortcuts(chord, mod_is_meta()));
+fn action_icon(mut props: ActionIconProps, keyshortcuts: Option<String>) -> Element {
     let group = use_button_group();
     let own_selected = props.selected.is_some();
     fill_from_group(&mut props, &group);
@@ -433,15 +442,6 @@ fn action_icon(mut props: ActionIconProps) -> Element {
     );
     // A blank own label would override a spread `aria-label` (todo 2336).
     let aria_label = (!props.aria_label.trim().is_empty()).then(|| props.aria_label.clone());
-    let unparsed_shortcut = props.shortcut.is_some() && keyshortcuts.is_none();
-    use_hook(move || {
-        if unparsed_shortcut {
-            warn(
-                "ActionIcon: `shortcut` is not a chord `use_hotkeys` takes, so it is not announced or shown.",
-            );
-        }
-    });
-
     let ripple = use_ripple();
     let showing = ripple.showing();
 
@@ -629,6 +629,37 @@ mod tests {
             icon: None,
             children: None,
         }
+    }
+
+    /// Todo 4648: a re-render with the same bad chord does not warn again.
+    #[test]
+    fn a_bad_shortcut_warns_once_across_renders() {
+        use std::sync::atomic::{AtomicUsize, Ordering};
+
+        use crate::{LiberoProvider, utils::take_warnings};
+
+        static RENDERS: AtomicUsize = AtomicUsize::new(0);
+        fn app() -> Element {
+            let aria_label = format!("Bold {}", RENDERS.fetch_add(1, Ordering::Relaxed));
+            rsx! {
+                LiberoProvider {
+                    ActionIcon { aria_label, shortcut: "hyper+b", tooltip: true, "B" }
+                }
+            }
+        }
+        take_warnings();
+        let mut dom = VirtualDom::new(app);
+        dom.rebuild_in_place();
+        for _ in 0..2 {
+            dom.mark_dirty(ScopeId::APP);
+            dom.render_immediate(&mut dioxus::core::NoOpMutations);
+        }
+        let bad: Vec<_> = take_warnings()
+            .into_iter()
+            .filter(|w| w.contains("hyper+b"))
+            .collect();
+        assert!(RENDERS.load(Ordering::Relaxed) >= 3);
+        assert_eq!(bad.len(), 1, "{bad:?}");
     }
 
     /// Sizing is always ActionIcon's; the color vars appear only when it

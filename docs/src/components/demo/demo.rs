@@ -409,16 +409,22 @@ fn DemoControl(
     values: Signal<DemoValues>,
 ) -> Element {
     let (control, mut values) = (control.0, values);
+    // Switches spread over the row, centred to read as a group;
+    // the min keeps a long label from wrapping under its switch.
+    let row_sx = if control.kind == ControlKind::Switch {
+        sx().flex("1 1 0").min_width("104px").align_items("center")
+    } else {
+        sx().width("100%")
+    };
+    // A finger's 44px for the select and the segments; the switch and slider already take it.
+    let row_sx = row_sx.media(
+        "(pointer: coarse)",
+        sx().selector("& select, & [data-slot=segment]", sx().min_height("44px")),
+    );
     rsx! {
         Flex {
             direction: "column",
-            // Switches spread over the row, centred to read as a group;
-            // the min keeps a long label from wrapping under its switch.
-            sx: if control.kind == ControlKind::Switch {
-                sx().flex("1 1 0").min_width("104px").align_items("center")
-            } else {
-                sx().width("100%")
-            },
+            sx: row_sx,
             // The slider's bubble sits above its track, so it
             // needs more room under the label than the rest.
             gap: if control.kind == ControlKind::Slider { "sm" } else { "xs" },

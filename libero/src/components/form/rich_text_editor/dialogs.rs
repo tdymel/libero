@@ -217,8 +217,7 @@ pub(crate) fn tool_announcement(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::hooks::chord_keys;
-    use crate::localization::Localization;
+    use crate::hooks::Chord;
 
     #[test]
     fn every_default_row_is_a_chord_shortcut_help_shows() {
@@ -239,10 +238,9 @@ mod tests {
             .filter(|(_, name)| command_label(name, &words).is_some())
             .count();
         assert_eq!(rows.len(), labelled);
-        let help = Localization::ENGLISH.shortcut_help;
         for (chord, _) in Keymap::default().bindings() {
             let chord = chord.to_string().to_lowercase();
-            assert!(chord_keys(&chord, false, &help).is_some(), "{chord}");
+            assert!(Chord::parse(&chord, false).is_some(), "{chord}");
         }
     }
 

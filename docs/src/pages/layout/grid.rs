@@ -10,14 +10,14 @@ use libero::{
 
 /// The zone's children, printed verbatim - their point is that they are
 /// *different heights*, which is what `masonry` reacts to.
-// snippet: item #[component] fn Card(lines: usize, children: Element) -> Element { children }
+// snippet: item #[component] fn Card(lines: u32, label: String) -> Element { rsx! { "{label}" } }
 // snippet: in GridZone { .. }
-const CARDS: &str = r#"GridItem { span: GridSpan::Third, Card { lines: 1, "A" } }
-GridItem { span: GridSpan::TwoThirds, Card { lines: 4, "B" } }
-GridItem { span: GridSpan::Third, Card { lines: 2, "C" } }
-GridItem { span: GridSpan::Third, Card { lines: 3, "D" } }
-GridItem { span: GridSpan::Half, Card { lines: 1, "E" } }
-GridItem { span: GridSpan::Third, Card { lines: 2, "F" } }"#;
+const CARDS: &str = r#"GridItem { span: GridSpan::Third, Card { lines: 1, label: "A" } }
+GridItem { span: GridSpan::TwoThirds, Card { lines: 4, label: "B" } }
+GridItem { span: GridSpan::Third, Card { lines: 2, label: "C" } }
+GridItem { span: GridSpan::Third, Card { lines: 3, label: "D" } }
+GridItem { span: GridSpan::Half, Card { lines: 1, label: "E" } }
+GridItem { span: GridSpan::Third, Card { lines: 2, label: "F" } }"#;
 
 /// The preview pane shrink-wraps, and a zone has no width of its own.
 // snippet: in GridZone { .. }
@@ -193,7 +193,7 @@ pub fn GridPage() -> Element {
                     prop("area", "AreaName").doc("The `Grid` area this zone fills. Zones land by name, so their order only sets the reading and tab order. A zone with an area is a size container (`container-type: inline-size`), not a containing block: a `position: fixed` descendant, such as a `fixed` `Header`, stays on the viewport, and an absolutely positioned one needs `position: relative` on its `GridItem`. Omit it to use the zone on its own, without a `Grid`, and give it a width."),
                     prop("dense", "bool").default("false").doc("Fills the gaps a wider item left, so an item may move up or sideways out of source order."),
                     prop("masonry", "bool").default("false").doc("Packs items of different heights with no vertical gaps. The zone's height follows its items, so scroll inside a `GridItem`, not around the zone, and set no `align-self` or `margin-bottom` on an item. Keep it out of a container whose width follows its content: a scrollbar coming and going makes it measure again and again."),
-                    prop("gap", "ThemeAwareValue").default("md").doc("Space between items, or any CSS, e.g. `gap: \"12px\"`. Masonry packs by a `px` or `rem` gap; other CSS packs by the theme's gap."),
+                    prop("gap", "ThemeAwareValue").default("md").doc("Space between items, or any CSS, e.g. `gap: \"12px\"`. Masonry packs by a `px` or `rem` gap, counting a `rem` as 16px; other CSS packs by the theme's gap. Only the column gap shrinks, to 4% of the zone's width; a row gap keeps its size."),
                     prop("component", "HtmlTag").default("div").doc("The element to render."),
                     prop("children", "Element").doc("`GridItem`s."),
                 ]),
@@ -225,7 +225,7 @@ pub fn GridPage() -> Element {
                     "wall needs no template."
                 }
             },
-            // snippet: item #[component] fn Card(lines: usize, children: Element) -> Element { rsx! { {children} } }
+            // snippet: item #[component] fn Card(lines: u32, label: String) -> Element { rsx! { "{label}" } }
             Demo {
                 component: "GridZone",
                 children_text: "",

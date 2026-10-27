@@ -11,7 +11,11 @@ use super::{GridArea, GridTemplate, GridTemplateBuilder};
 /// # use libero::components::{Grid, GridArea, StaticGridTemplate};
 /// # fn app() -> Element {
 /// # #[derive(Clone, Copy, PartialEq)] enum PageArea { Header, Sidebar, Content }
-/// # impl GridArea for PageArea { fn name(&self) -> &'static str { "a" } }
+/// # impl GridArea for PageArea {
+/// #     fn name(&self) -> &'static str {
+/// #         match self { Self::Header => "header", Self::Sidebar => "sidebar", Self::Content => "content" }
+/// #     }
+/// # }
 /// static PAGE: StaticGridTemplate<PageArea> = StaticGridTemplate::new(|template| {
 ///     template
 ///         .row(|row| row.cell(PageArea::Header))

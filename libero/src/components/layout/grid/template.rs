@@ -76,6 +76,10 @@ pub enum GridTemplateError {
     InvalidName {
         name: &'static str,
     },
+    /// Two different variants return one `name()`, so their zones would overlap.
+    DuplicateName {
+        name: &'static str,
+    },
 }
 
 impl fmt::Display for GridTemplateError {
@@ -89,6 +93,9 @@ impl fmt::Display for GridTemplateError {
             ),
             Self::NonRectangular { area } => {
                 write!(f, "area `{area}` does not form a rectangle")
+            }
+            Self::DuplicateName { name } => {
+                write!(f, "two different areas are both named `{name}`")
             }
             Self::InvalidName { name } => write!(
                 f,
@@ -117,7 +124,11 @@ pub(crate) struct TemplateInner {
 /// # use dioxus::prelude::*;
 /// # use libero::components::{GridArea, StaticGridTemplate};
 /// # #[derive(Clone, Copy, PartialEq)] enum PageArea { Header, Sidebar, Content }
-/// # impl GridArea for PageArea { fn name(&self) -> &'static str { "a" } }
+/// # impl GridArea for PageArea {
+/// #     fn name(&self) -> &'static str {
+/// #         match self { Self::Header => "header", Self::Sidebar => "sidebar", Self::Content => "content" }
+/// #     }
+/// # }
 /// static PAGE: StaticGridTemplate<PageArea> = StaticGridTemplate::new(|template| {
 ///     template
 ///         .row(|row| row.cell(PageArea::Header))
@@ -194,6 +205,18 @@ impl<A: GridArea> GridTemplateBuilder<A> {
                 columns,
                 rows: lengths,
             });
+        }
+
+        // Two variants sharing a name would merge into one overlapping zone.
+        let mut variants: Vec<A> = Vec::new();
+        for area in self.rows.iter().flatten() {
+            if variants.contains(area) {
+                continue;
+            }
+            if let Some(twin) = variants.iter().find(|seen| seen.name() == area.name()) {
+                return Err(GridTemplateError::DuplicateName { name: twin.name() });
+            }
+            variants.push(*area);
         }
 
         // Each row is divided equally by its own cell count, so a 2-cell row
@@ -367,6 +390,30 @@ mod tests {
             .unwrap();
 
         assert_eq!(template.0.columns, 6);
+    }
+
+    #[derive(Clone, Copy, PartialEq)]
+    enum Twins {
+        Left,
+        Right,
+    }
+
+    impl GridArea for Twins {
+        fn name(&self) -> &'static str {
+            "a"
+        }
+    }
+
+    #[test]
+    fn two_variants_with_one_name_are_rejected() {
+        let built = GridTemplate::new()
+            .row(|row| row.cell(Twins::Left).cell(Twins::Right))
+            .build();
+
+        assert_eq!(
+            built.unwrap_err(),
+            GridTemplateError::DuplicateName { name: "a" }
+        );
     }
 
     #[test]

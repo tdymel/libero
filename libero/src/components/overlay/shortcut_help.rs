@@ -10,7 +10,7 @@ use crate::{
         overlay::Dialog,
         typography::{chord_kbd, chord_words},
     },
-    hooks::{current_localization, use_css, use_element, use_resize_fallback},
+    hooks::{Chord, current_localization, use_css, use_element, use_resize_fallback},
     platform::{ElementApi, mod_is_meta},
     sx::{StaticSx, sx},
     utils::warn,
@@ -98,7 +98,7 @@ pub fn ShortcutHelp(props: ShortcutHelpProps) -> Element {
     // Each bad chord warns once per instance, not on every render (todo 2450).
     let warned = use_hook(|| Rc::new(RefCell::new(HashSet::<String>::new())));
     let rows = props.shortcuts.iter().filter_map(|shortcut| {
-        let Some(keys) = chord_words(&shortcut.chord, apple, words) else {
+        let Some(chord) = Chord::parse(&shortcut.chord, apple) else {
             if warned.borrow_mut().insert(shortcut.chord.clone()) {
                 warn(&format!(
                     "ShortcutHelp: `{}` is not a chord `use_hotkeys` binds, so it is left out.",
@@ -107,6 +107,7 @@ pub fn ShortcutHelp(props: ShortcutHelpProps) -> Element {
             }
             return None;
         };
+        let keys = chord_words(&chord, apple, words);
         Some(rsx! {
             dt { {chord_kbd(keys)} }
             dd { "{shortcut.description}" }
