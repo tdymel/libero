@@ -10,11 +10,11 @@ pub use crate::tokens::{
 /// Set it on any focusable with a resting shadow; `shadow_sx` does both.
 pub const OWN_SHADOW: CssVar = CssVar::new("--lsx-own-shadow");
 
-/// The library's one focus indicator: a dark stripe with a light halo. Two tones
-/// carry their own contrast, whatever surface the caller paints it on.
+/// The library's one focus indicator: a stripe in the page's ink with a halo in its surface.
+/// Two tones carry their own contrast, whatever surface the caller paints it on.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct FocusRingDefaults {
-    /// The stripe. Dark, since the halo only rescues a dark surround.
+    /// The stripe: the ink end, so the halo (the surface end) rescues a surround of the same tone.
     pub color: ColorValue,
     /// What the stripe reads against.
     pub halo: ColorValue,

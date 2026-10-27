@@ -71,7 +71,7 @@ fn Stopwatch() -> Element {
             }
             div { role: "status",
                 if saved() {
-                    "Lap saved"
+                    "Lap {laps.len()} saved"
                 }
             }
             if !list.is_empty() {

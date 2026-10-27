@@ -9,11 +9,12 @@ use dioxus::html::input_data::{MouseButton, MouseButtonSet};
 use dioxus::html::point_interaction::{
     InteractionElementOffset, InteractionLocation, ModifiersInteraction, PointerInteraction,
 };
-use dioxus::html::{HasPointerData, PointerData};
+use dioxus::html::{HasPointerData, MouseData, PointerData};
 use dioxus::prelude::*;
 
 use super::polling_tests::{self, pump, pump_until};
 use crate::hooks::{LongPress, LongPressOptions, use_long_press};
+use crate::test_converter::FakeMouse;
 
 thread_local! {
     static PRESS: RefCell<Option<LongPress>> = const { RefCell::new(None) };
@@ -193,6 +194,32 @@ fn a_press_after_a_cancelled_one_fires() {
     // Once: the cancelled press does not fire as well.
     settle(&mut dom);
     assert_eq!(fired(), 1);
+}
+
+fn click(dom: &VirtualDom) -> bool {
+    let event = Event::new(Rc::new(MouseData::new(FakeMouse)), true);
+    dom.in_runtime(|| handlers().onclick.call(event))
+}
+
+#[test]
+fn the_click_after_a_fired_press_is_swallowed_once() {
+    let mut dom = started();
+    down(&dom, at(5.0, 5.0));
+    fires(&mut dom);
+    up(&dom, at(5.0, 5.0));
+    assert!(click(&dom), "the press's own click got through");
+    assert!(!click(&dom), "a later click was swallowed too");
+}
+
+#[test]
+fn a_fired_press_released_off_the_element_leaves_the_next_click_alone() {
+    let mut dom = started();
+    down(&dom, at(5.0, 5.0));
+    fires(&mut dom);
+    dom.in_runtime(|| handlers().onpointerleave.call(event(at(5.0, 5.0))));
+    up(&dom, at(5.0, 200.0));
+    pump(&mut dom, 150);
+    assert!(!click(&dom), "the next click was swallowed");
 }
 
 impl InteractionLocation for Fake {

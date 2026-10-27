@@ -20,13 +20,15 @@ pub fn Shortcuts() -> Element {
 
     rsx! {
         Flex { direction: "column", gap: "sm",
-            Text { "Search opened {searches} times" }
-            Text { "Help opened {helps} times" }
+            div { role: "status",
+                Text { "Search opened {searches} times" }
+                Text { "Help opened {helps} times" }
+                Text { "Bold pressed {bolds} times" }
+            }
             TextField { label: "Press F8 while typing" }
             div { onmounted: editor.mount(), ..editor.attributes(),
                 TextField { label: "Press Ctrl+B (Cmd+B on a Mac) in here" }
             }
-            Text { "Bold pressed {bolds} times" }
         }
     }
 }

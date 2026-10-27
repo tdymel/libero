@@ -191,9 +191,19 @@ impl Chord {
     }
 }
 
-/// What Shift makes of a punctuation key on a US layout.
+/// What Shift makes of a digit or punctuation key on a US layout.
 fn shifted_symbol(symbol: char) -> Option<char> {
     Some(match symbol {
+        '1' => '!',
+        '2' => '@',
+        '3' => '#',
+        '4' => '$',
+        '5' => '%',
+        '6' => '^',
+        '7' => '&',
+        '8' => '*',
+        '9' => '(',
+        '0' => ')',
         '/' => '?',
         ',' => '<',
         '.' => '>',
@@ -668,6 +678,8 @@ mod tests {
     fn shift_on_the_key_under_a_symbol_is_warned_about() {
         let warning = |chord: &str| Chord::parse(chord, false).unwrap().shifted_symbol_warning();
         assert!(warning("shift+/").unwrap().contains("\"shift+?\""));
+        assert!(warning("shift+1").unwrap().contains("\"shift+!\""));
+        assert!(warning("mod+shift+0").unwrap().contains("\"shift+)\""));
         assert_eq!(warning("shift+?"), None);
         assert_eq!(warning("/"), None);
         assert_eq!(warning("shift+k"), None);

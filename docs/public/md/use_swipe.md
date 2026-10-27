@@ -45,6 +45,7 @@ fn SwipePad() -> Element {
                 sx: sx()
                     .touch_action("none")
                     .height("160px")
+                    .padding("md")
                     .border("1px dashed")
                     .border_radius("md")
                     .display("grid")

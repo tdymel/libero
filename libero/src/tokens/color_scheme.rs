@@ -6,12 +6,11 @@ pub const COLOR_SCHEME_STORAGE_KEY: &str = "lsx-color-scheme";
 /// wasm bundle runs too late for. Paste it into your `index.html`'s `<head>`:
 ///
 /// ```html
-/// <script>try{var s=localStorage.getItem('lsx-color-scheme');
-/// if(s==='light'||s==='dark')document.documentElement.setAttribute('data-lsx-theme',s)}catch(e){}</script>
+/// <script>try{var s=localStorage.getItem('lsx-color-scheme');if(s==='light'||s==='dark')document.documentElement.setAttribute('data-lsx-theme',s)}catch(e){}</script>
 /// ```
 ///
-/// `LiberoProvider` can't emit it: an inserted `<script>` never runs. A strict CSP needs its
-/// hash: `sha256-i2dSUtjYkvH3Km+1WnMbJX1ZfgYnbdyuKeoc3clqFQ0=` (pinned by a test).
+/// Keep it on one line: a newline changes the hash. `LiberoProvider` can't emit it: an inserted
+/// `<script>` never runs. A strict CSP needs its hash:`sha256-i2dSUtjYkvH3Km+1WnMbJX1ZfgYnbdyuKeoc3clqFQ0=` (pinned by a test).
 ///
 /// Docs: <https://libero-ui.dev/about/theming>
 pub const COLOR_SCHEME_RESTORE_SCRIPT: &str = "try{var s=localStorage.getItem('lsx-color-scheme');\

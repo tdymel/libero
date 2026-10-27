@@ -102,6 +102,8 @@ pub fn use_long_press(on_long_press: Callback, options: LongPressOptions) -> Lon
         },
         ms,
     );
+    // The click that ends a fired press follows its release at once; one later is not its own.
+    let release = use_timeout(move || fired.set(false), 100);
     let cancel = use_callback(move |()| {
         timeout.stop();
         if press.peek().is_some() {
@@ -110,6 +112,7 @@ pub fn use_long_press(on_long_press: Callback, options: LongPressOptions) -> Lon
     });
 
     let onpointerdown = use_callback(move |event: PointerEvent| {
+        release.stop();
         if *fired.peek() {
             fired.set(false);
         }
@@ -141,7 +144,12 @@ pub fn use_long_press(on_long_press: Callback, options: LongPressOptions) -> Lon
             cancel.call(());
         }
     });
-    let end = use_callback(move |_: PointerEvent| cancel.call(()));
+    let end = use_callback(move |_: PointerEvent| {
+        cancel.call(());
+        if *fired.peek() {
+            release.start();
+        }
+    });
 
     let oncontextmenu = use_callback(move |event: MouseEvent| {
         if *fired.peek() {

@@ -319,7 +319,7 @@ pub fn edge_swipe_sx() -> Sx {
 /// # }
 /// ```
 ///
-/// Docs: <https://libero-ui.dev/hooks/use-edge-swipe>
+/// Docs: <https://libero-ui.dev/hooks/use-swipe>
 pub fn use_edge_swipe(on_swipe: Callback, options: EdgeSwipeOptions) -> Swipe {
     let direction = use_direction();
     let mut viewport = use_signal(|| None::<f64>);
