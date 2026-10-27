@@ -286,7 +286,12 @@ fn builtin_view(name: &str, block: &Block, key: String, ctx: RenderCtx<'_>) -> E
                 {view}
             }
         },
-        _ => view.unwrap_or_else(VNode::empty),
+        // Typed text targets the surface above, so a key seen here is from a focused control.
+        _ => view.map_or_else(VNode::empty, |view| {
+            rsx! {
+                div { style: "display: contents", onkeydown: ctx.on_island_key(), {view} }
+            }
+        }),
     }
 }
 
@@ -519,6 +524,44 @@ mod tests {
                 island_key: None,
             },
         )
+    }
+
+    fn button_paragraph(props: NodeViewProps) -> Element {
+        rsx! {
+            div { {props.children} button { "Act" } }
+        }
+    }
+
+    fn with_paragraph_view() -> Element {
+        let doc = Doc::from_markdown("hello");
+        let views = NodeViews::new().with("paragraph", button_paragraph);
+        blocks(
+            &doc.blocks,
+            RenderCtx {
+                source_code: None,
+                on_code: None,
+                on_task: None,
+                task_label: "Task done",
+                id_prefix: "ed",
+                views: &views,
+                fence: None,
+                heading_offset: 0,
+                island_key: Some(use_hook(|| CopyValue::new(false))),
+            },
+        )
+    }
+
+    /// Todo 4620: a built-in view sits in the same key-isolating wrapper a custom view gets.
+    #[test]
+    fn a_built_in_view_isolates_the_keys_of_its_controls() {
+        let mut dom = VirtualDom::new(with_paragraph_view);
+        dom.rebuild_in_place();
+        let html = dioxus_ssr::render(&dom);
+        assert!(
+            html.contains("<div style=\"display: contents\"><div><p data-key"),
+            "{html}"
+        );
+        assert!(html.contains("<button>Act</button>"), "{html}");
     }
 
     /// Todo 3794: a caller's `list_item` view still gets the task box and its state.

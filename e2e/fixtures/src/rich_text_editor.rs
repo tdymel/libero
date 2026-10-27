@@ -334,8 +334,14 @@ fn Heading(props: NodeViewProps) -> Element {
         .get("level")
         .and_then(|level| level.as_u64())
         .unwrap_or(0);
+    let mut pressed = use_signal(|| 0);
     rsx! {
-        header { class: "fancy-heading", "data-level": "{level}", {props.children} }
+        header { class: "fancy-heading", "data-level": "{level}",
+            span { contenteditable: "false",
+                button { class: "heading-action", onclick: move |_| pressed += 1, "Pressed {pressed}" }
+            }
+            {props.children}
+        }
     }
 }
 

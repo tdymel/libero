@@ -184,6 +184,44 @@ fn node_views_draw_built_in_blocks_and_keep_them_editable() {
     });
 }
 
+/// Todo 4620: a control inside a built-in view keeps its keys from the editor's keymap.
+#[test]
+fn a_control_in_a_built_in_view_keeps_its_keys() {
+    block_on(async {
+        let fixture = Fixture::open("/rich-text-editor/builtins", Viewport::Mobile)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        wait::for_selector(page, "[role=textbox] .heading-action")
+            .await
+            .unwrap();
+        let before = out(page).await;
+        let focused: bool = js(
+            page,
+            &format!(
+                "(() => {{ const b = {EDITOR}.querySelector('header.fancy-heading .heading-action'); b.focus(); return document.activeElement === b; }})()"
+            ),
+        )
+        .await;
+        assert!(focused, "the view's button takes focus");
+        keyboard::press(page, ENTER).await.unwrap();
+        wait::for_js_true(
+            page,
+            "document.querySelector('.heading-action')?.textContent === 'Pressed 1'",
+            "the view's button pressed",
+        )
+        .await
+        .unwrap();
+        keyboard::press(page, keyboard::ARROW_DOWN).await.unwrap();
+        assert_eq!(
+            out(page).await,
+            before,
+            "the keymap ran on the view's button"
+        );
+        fixture.close().await.unwrap();
+    });
+}
+
 /// Todo 2753: a task's box is a named checkbox outside the text. A click toggles its own item
 /// in one undo step and says so, the caret stays put, and the arrows pass over the box.
 #[test]

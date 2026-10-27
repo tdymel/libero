@@ -1,4 +1,4 @@
-use std::rc::Rc;
+use std::{collections::HashSet, rc::Rc};
 
 use dioxus::prelude::*;
 
@@ -120,6 +120,16 @@ fn use_tools(piece: &str) -> Option<TableTools> {
     tools
 }
 
+/// The first header two hideable columns share.
+fn shared_header(columns: &[MenuColumn]) -> Option<&str> {
+    let mut seen = HashSet::new();
+    columns
+        .iter()
+        .filter(|column| column.hideable)
+        .find(|column| !seen.insert(column.header.as_str()))
+        .map(|column| column.header.as_str())
+}
+
 /// A menu of the hideable columns, each a checkbox that shows or hides it.
 /// The last shown column stays. Goes in a `Table`'s `toolbar`. Visibility is keyed
 /// by header, so columns sharing one hide and show together.
@@ -143,10 +153,19 @@ pub fn TableColumnsButton() -> Element {
     let tools = use_tools("TableColumnsButton");
     let menu = use_menu();
     let labels = use_localization().table;
+    let mut warned = use_hook(|| CopyValue::new(false));
     let Some(tools) = tools else {
         return rsx! {};
     };
     let view = tools.view.read();
+    if !warned()
+        && let Some(header) = shared_header(&view.columns)
+    {
+        warned.set(true);
+        warn(&format!(
+            "TableColumnsButton: hideable columns share the header `{header}`, so they hide and show together (todo 4426)."
+        ));
+    }
     let (hidden, announcer) = (tools.hidden, tools.announcer);
     let shown = view.columns.iter().filter(|column| !column.hidden).count();
     let items: Vec<MenuEntry> = view
@@ -303,8 +322,31 @@ pub fn TableFilterButton() -> Element {
 
 #[cfg(test)]
 mod tests {
-    use super::{DENSITIES, nearest_density};
-    use crate::theme::Size;
+    use super::{DENSITIES, nearest_density, shared_header};
+    use crate::{components::data_display::table::column_menu::MenuColumn, theme::Size};
+
+    fn column(header: &str, hideable: bool) -> MenuColumn {
+        MenuColumn {
+            header: header.into(),
+            key: header.into(),
+            sortable: false,
+            hideable,
+            hidden: false,
+            groupable: false,
+        }
+    }
+
+    #[test]
+    fn only_hideable_columns_sharing_a_header_are_named() {
+        let same = [column("Name", false), column("Name", true)];
+        assert_eq!(shared_header(&same), None);
+        let twins = [
+            column("Id", true),
+            column("Name", true),
+            column("Name", true),
+        ];
+        assert_eq!(shared_header(&twins), Some("Name"));
+    }
 
     #[test]
     fn every_size_marks_one_density() {
