@@ -53,6 +53,7 @@ impl FloatingWindowHandle {
         }
     }
 
+    /// Closes the window if it is open, else opens it.
     pub fn toggle(&self) {
         if *self.open.peek() {
             self.close();
@@ -61,6 +62,7 @@ impl FloatingWindowHandle {
         }
     }
 
+    /// Whether the window is open; reading it subscribes the caller to changes.
     pub fn is_open(&self) -> bool {
         (self.open)()
     }

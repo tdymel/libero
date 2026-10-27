@@ -18,6 +18,7 @@ pub struct DrawerOptions {
     /// Width when docked start or end, height when docked top or bottom: a size word or any
     /// CSS, as `size: "24rem".into()`.
     pub size: Input<ThemeAwareValue>,
+    /// Stacking order of the panel. Unset, the modal layer's.
     pub z_index: Input<ThemeAwareValue>,
     /// Names the panel, which is a dialog. With neither this nor `title` it is a `warn()`.
     pub aria_label: Option<String>,

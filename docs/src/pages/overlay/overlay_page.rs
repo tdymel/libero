@@ -10,7 +10,7 @@ const LOADING: &str = r#"Paper { role: "status", sx: sx().padding("8px 16px"), "
 
 const CARD: &str = r#"Paper { sx: sx().padding("16px"),
     Text { "Ada Lovelace" }
-    Button { "Edit profile" }
+    Button { variant: "outlined", color: "muted", "Edit profile" }
 }"#;
 
 fn is_loading(values: &DemoValues) -> bool {
@@ -99,7 +99,7 @@ pub fn OverlayPage() -> Element {
                         LoadingOverlay { loading: values.str("loading") == "true",
                             Paper { sx: sx().padding("16px"),
                                 Text { "Ada Lovelace" }
-                                Button { "Edit profile" }
+                                Button { variant: "outlined", color: "muted", "Edit profile" }
                             }
                         }
                     },

@@ -59,6 +59,77 @@ fn the_move_handle_keeps_24px_under_a_smaller_page_font() {
     });
 }
 
+/// Todos 4586, 4587, 4588: under a finger the corner grip, the move handle, Close and the
+/// menu button take presses 21px above and below their centres, in either direction.
+#[test]
+fn a_finger_presses_the_title_bar_and_the_grip_in_a_44px_box() {
+    use chromiumoxide::cdp::browser_protocol::emulation::SetTouchEmulationEnabledParams;
+    block_on(async {
+        for dir in ["ltr", "rtl"] {
+            let fixture = Fixture::open("/floating-window", Viewport::Desktop)
+                .await
+                .unwrap();
+            let page = &fixture.page;
+            page.execute_bounded(SetTouchEmulationEnabledParams::new(true))
+                .await
+                .unwrap();
+            wait::for_js_true(
+                page,
+                "matchMedia('(pointer: coarse)').matches",
+                "a coarse pointer",
+            )
+            .await
+            .unwrap();
+            page.evaluate_bounded(format!("document.documentElement.dir = '{dir}'"))
+                .await
+                .unwrap();
+            open(page).await.unwrap();
+
+            // The grip's box is 44px and holds the corner point; the others by probe.
+            let grip = rect(page, SEPARATOR).await.unwrap();
+            assert!(
+                grip.2 >= 43.5 && grip.3 >= 43.5,
+                "{dir}: the grip is {}x{}",
+                grip.2,
+                grip.3
+            );
+            for selector in [HANDLE, CLOSE, MENU] {
+                let misses: Vec<String> = page
+                    .evaluate_bounded(format!(
+                        "(() => {{
+                            const el = document.querySelector({selector:?});
+                            const r = el.getBoundingClientRect();
+                            const cx = r.x + r.width / 2, cy = r.y + r.height / 2;
+                            const misses = [];
+                            const win = document.querySelector({DIALOG:?}).getBoundingClientRect();
+                            for (const dy of [-21, 0, 21])
+                                for (const dx of [0]) {{
+                                    // Sideways the buttons share their gap; the window clips the top.
+                                    if (cy + dy < win.top) continue;
+                                    const at = document.elementFromPoint(cx + dx, cy + dy);
+                                    if (!at || !el.contains(at)) misses.push(`${{dx}},${{dy}}`);
+                                }}
+                            return misses;
+                        }})()"
+                    ))
+                    .await
+                    .unwrap()
+                    .into_value()
+                    .unwrap();
+                assert!(
+                    misses.is_empty(),
+                    "{dir}: {selector} misses a finger at {misses:?}"
+                );
+            }
+            fixture
+                .console
+                .assert_clean("a finger on the window")
+                .unwrap();
+            fixture.close().await.unwrap();
+        }
+    });
+}
+
 #[test]
 fn it_meets_the_baseline() {
     Suite::new("floating_window", "/floating-window")

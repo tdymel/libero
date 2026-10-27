@@ -54,7 +54,7 @@ static TABS_SX: StaticSx = StaticSx::new(|| {
                 // The strip scrolls; a label wider than it wraps (1.4.10).
                 .flex_shrink("0")
                 .max_width("100%")
-                .with("overflow-wrap", "anywhere")
+                .with("overflow-wrap", "break-word")
                 .cursor("pointer")
                 // The scrolling strip clips it vertically, so it widens a narrow icon tab only;
                 // a finger gets the height from the tab itself (todo 3596).

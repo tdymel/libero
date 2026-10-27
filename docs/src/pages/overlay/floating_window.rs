@@ -2,8 +2,7 @@ use crate::components::{Control, Demo, DemoValues, DocPage, Wrap, a11y, indent, 
 use dioxus::prelude::*;
 use libero::{
     components::{
-        Button, Code, Dialog, Flex, FloatingWindowOptions, FloatingWindowPart, Input, Text,
-        WindowRect,
+        Button, Code, Dialog, Flex, FloatingWindowOptions, FloatingWindowPart, Text, WindowRect,
     },
     hooks::{ModalScope, use_floating_window, use_modal},
     sx::sx,
@@ -22,7 +21,7 @@ Button { onclick: move |_| window.close(), "Done" }"#,
     (
         "notes",
         "Notes",
-        "top-end",
+        "center-end",
         r#"Text { "A modal opened from here covers every window." }
 Button { onclick: move |_| { confirm.open(); }, "Open a modal" }"#,
     ),
@@ -62,13 +61,15 @@ fn hook_code(
     if values.str("resizable") == "true" {
         options.push("resizable: true,".into());
         options.push(
-            r#"sx: sx().min_width("16rem").min_height("8rem").max_width("40rem").into(),"#.into(),
+            r#"sx: sx().width("18rem").min_width("16rem").min_height("8rem").max_width("40rem").into(),"#.into(),
         );
+    } else {
+        options.push(r#"sx: sx().max_width("18rem").into(),"#.into());
     }
     if values.str("pinned") == "true" {
         options.push("pinned: true,".into());
     }
-    if values.str("onmove") == "true" {
+    if values.str("report_moves") == "true" {
         options.push("onmove: Some(report),".into());
         options.push("onresize: Some(report),".into());
     }
@@ -96,7 +97,7 @@ fn wrap_example(values: &DemoValues, _: &str) -> String {
         .collect();
 
     let mut code = String::new();
-    if values.str("onmove") == "true" {
+    if values.str("report_moves") == "true" {
         code.push_str("let mut last = use_signal(|| None::<WindowRect>);\n");
         code.push_str("let report = use_callback(move |rect: WindowRect| last.set(Some(rect)));\n");
     }
@@ -113,7 +114,7 @@ fn wrap_example(values: &DemoValues, _: &str) -> String {
         }
         _ => "Button {\n    onclick: move |_| {\n        inspector.open();\n        notes.open();\n        layers.open();\n    },\n    \"Open all three\"\n}".to_string(),
     };
-    let readout = if values.str("onmove") == "true" {
+    let readout = if values.str("report_moves") == "true" {
         indent(READOUT)
     } else {
         String::new()
@@ -131,13 +132,15 @@ fn WindowDemo(resizable: bool, pinned: bool, report: bool, values: DemoValues) -
         placement: placement.into(),
         resizable,
         pinned,
+        // A narrow phone page keeps room beside a window.
         sx: if resizable {
-            sx().min_width("16rem")
+            sx().width("18rem")
+                .min_width("16rem")
                 .min_height("8rem")
                 .max_width("40rem")
                 .into()
         } else {
-            Input::None
+            sx().max_width("18rem").into()
         },
         onmove: report.then_some(record),
         onresize: report.then_some(record),
@@ -158,7 +161,7 @@ fn WindowDemo(resizable: bool, pinned: bool, report: bool, values: DemoValues) -
             Button { onclick: move |_| window.close(), "Done" }
         }
     });
-    let notes = use_floating_window(options("Notes", "top-end"), move |_| {
+    let notes = use_floating_window(options("Notes", "center-end"), move |_| {
         rsx! {
             Text { "A modal opened from here covers every window." }
             Button {
@@ -337,13 +340,13 @@ pub fn FloatingWindowPage() -> Element {
                     // On, so the resize handle and the menu's Resize show without another switch.
                     Control::switch("resizable").default("true"),
                     Control::switch("pinned"),
-                    Control::switch("onmove"),
+                    Control::switch("report_moves"),
                 ],
                 render: move |values: DemoValues| rsx! {
                     WindowDemo {
                         resizable: values.str("resizable") == "true",
                         pinned: values.str("pinned") == "true",
-                        report: values.str("onmove") == "true",
+                        report: values.str("report_moves") == "true",
                         values: values.clone(),
                     }
                 },

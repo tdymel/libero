@@ -1,13 +1,29 @@
 use super::options::FloatingWindowPart;
 use crate::{
     components::{
-        common::{Part, focus_ring_sx, inset_focus_ring_sx, min_hit_area_sx},
+        common::{
+            COARSE_POINTER, COARSE_TARGET, Part, coarse_hit_area_sx, focus_ring_sx,
+            inset_focus_ring_sx, min_hit_area_sx,
+        },
         layout::paper_sx,
     },
     hooks::drag_handle_sx,
     sx::{StaticSx, Sx, sx},
     theme::{PAPER_BORDER_COLOR, Size, SizeCss},
 };
+
+/// The resize grip's glyph stays 14px; a finger gets a 44px box round it (the corner has no room
+/// outside the clipping window for a `::before`).
+fn finger_grip_sx(side: &str) -> Sx {
+    sx().media(
+        COARSE_POINTER,
+        sx().width(COARSE_TARGET)
+            .height(COARSE_TARGET)
+            .with("background-size", "14px 14px")
+            .with("background-position", format!("{side} bottom"))
+            .with("background-repeat", "no-repeat"),
+    )
+}
 
 // `paper_sx()`, with the parts keyed by `data-slot` under one class.
 pub(super) static WINDOW_SX: StaticSx = StaticSx::new(|| {
@@ -45,6 +61,7 @@ pub(super) static WINDOW_SX: StaticSx = StaticSx::new(|| {
                 // `1.5em` follows the page's font: under 16px it still takes presses in 24px (2.5.8).
                 .position("relative")
                 .and(min_hit_area_sx("::before"))
+                .and(coarse_hit_area_sx("::before"))
                 // A long word wraps instead of being clipped by the window (1.4.10).
                 .selector("& h2", sx().margin("0").with("overflow-wrap", "anywhere"))
                 .selector("&:focus-visible", inset_focus_ring_sx("-2px")),
@@ -97,12 +114,17 @@ pub(super) static WINDOW_SX: StaticSx = StaticSx::new(|| {
                 )
                 .opacity("0.6")
                 .selector("&:focus-visible", inset_focus_ring_sx("-2px"))
+                .and(finger_grip_sx("right"))
                 // The end corner under RTL is the bottom-left (todo 796).
                 .rtl(
-                    sx().right("auto").left("0").cursor("nesw-resize").background(
-                        "linear-gradient(225deg, transparent 55%, currentColor 55%, currentColor 62%, \
-                         transparent 62%, transparent 75%, currentColor 75%, currentColor 82%, transparent 82%)",
-                    ),
+                    sx().right("auto")
+                        .left("0")
+                        .cursor("nesw-resize")
+                        .background(
+                            "linear-gradient(225deg, transparent 55%, currentColor 55%, currentColor 62%, \
+                             transparent 62%, transparent 75%, currentColor 75%, currentColor 82%, transparent 82%)",
+                        )
+                        .and(finger_grip_sx("left")),
                 ),
         )
 });
