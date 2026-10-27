@@ -35,7 +35,7 @@ fn trigger_code(values: &DemoValues) -> String {
     let mut trigger = TRIGGER.to_string();
     if values.str("docked") == "true" {
         trigger = trigger
-            .replace("\"outlined\"", "\"light\"")
+            .replace("\"outlined\"", "\"tonal\"")
             .replace("    attributes:", "    radius: \"0\",\n    attributes:")
             .replace(
                 "    \"Actions\"",
@@ -48,9 +48,15 @@ fn trigger_code(values: &DemoValues) -> String {
     }
 }
 
-fn wrap(_: &DemoValues, source: &str) -> String {
+fn wrap(values: &DemoValues, source: &str) -> String {
+    let layout = match values.str("docked").as_str() {
+        "true" => {
+            "direction: \"column\",\n        align: \"stretch\",\n        sx: sx().width(\"100%\"),"
+        }
+        _ => "direction: \"row\",\n        align: \"center\",",
+    };
     format!(
-        "{}\n\nrsx! {{\n    Flex {{\n        direction: \"row\",\n        align: \"center\",\n        gap: \"md\",\n{}        Text {{ size: \"sm\", role: \"status\", \"Last chosen: {{last()}}\" }}\n    }}\n}}",
+        "{}\n\nrsx! {{\n    Flex {{\n        {layout}\n        gap: \"md\",\n{}        Text {{ size: \"sm\", role: \"status\", \"Last chosen: {{last()}}\" }}\n    }}\n}}",
         FILE.section("preamble"),
         indent(&indent(source))
     )

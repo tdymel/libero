@@ -64,6 +64,9 @@ pub(super) struct MenuLevelProps {
     /// Cancels every level above's pending hover, so crossing a sibling keeps this open.
     /// A key pressed here calls it too (4423).
     onpointerenter: Option<Callback<()>>,
+    /// A submenu's parent item label, shown as the sheet's heading on a phone (4617).
+    #[props(default)]
+    title: Option<String>,
     side: Side,
     align: Align,
     size: Size,
@@ -226,10 +229,19 @@ pub(super) fn MenuLevel(props: MenuLevelProps) -> Element {
     };
 
     // Every submenu level stays mounted while this one is open, its own open or not.
-    let submenus: Vec<(usize, Vec<MenuEntry>, (ElementHandle, ElementHandle))> = flat
+    type Submenu = (
+        usize,
+        String,
+        Vec<MenuEntry>,
+        (ElementHandle, ElementHandle),
+    );
+    let submenus: Vec<Submenu> = flat
         .iter()
         .enumerate()
-        .filter_map(|(index, item)| Some((index, item.submenu_items()?.clone(), anchor_of(index))))
+        .filter_map(|(index, item)| {
+            let items = item.submenu_items()?.clone();
+            Some((index, item.label.clone(), items, anchor_of(index)))
+        })
         .collect();
 
     let expanded = open_child();
@@ -317,8 +329,20 @@ pub(super) fn MenuLevel(props: MenuLevelProps) -> Element {
         attributes.extend(dismiss.floating_events());
         attributes.extend(swipe.listeners);
         let strip = swipe.strip;
+        // Hidden from the tree: the box's `aria-labelledby` reads it (4617).
+        let title_id = format!("{level_id}-title");
+        let labelledby = match (narrow(), &props.title) {
+            (true, Some(_)) => title_id.clone(),
+            _ => props.labelledby.clone(),
+        };
+        let title = props.title.as_ref().map(|title| {
+            rsx! {
+                div { id: "{title_id}", "data-slot": "sheet-title", aria_hidden: "true", "{title}" }
+            }
+        });
         let content = rsx! {
             {strip}
+            {title}
             {rows.into_iter()}
         };
         let onpointerenter = props.onpointerenter;
@@ -326,7 +350,7 @@ pub(super) fn MenuLevel(props: MenuLevelProps) -> Element {
             .attr("id", level_id.clone())
             .attr("role", "menu")
             .attr("tabindex", "-1")
-            .attr("aria-labelledby", props.labelledby.clone())
+            .attr("aria-labelledby", labelledby)
             .event("onmouseenter", move |_: MouseEvent| {
                 if let Some(onpointerenter) = onpointerenter {
                     onpointerenter.call(());
@@ -354,7 +378,7 @@ pub(super) fn MenuLevel(props: MenuLevelProps) -> Element {
     let submenu_side = Side::End;
 
     rsx! {
-        for (index, items, (anchor, floating)) in submenus {
+        for (index, title, items, (anchor, floating)) in submenus {
             MenuLevel {
                 key: "{index}",
                 items: if open && expanded == Some(index) { items } else { Vec::new() },
@@ -376,6 +400,7 @@ pub(super) fn MenuLevel(props: MenuLevelProps) -> Element {
                 onedge: props.onedge,
                 parents: parents.clone(),
                 onpointerenter: Some(cancel_callback),
+                title,
                 side: submenu_side,
                 align: Align::Start,
                 size: props.size,

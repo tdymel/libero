@@ -74,6 +74,7 @@ pub fn MenuDemo(
             label: "Sort by".into(),
             items: vec![sort_by("Name"), sort_by("Date"), sort_by("Size")],
         },
+        MenuEntry::Separator,
         MenuItem::new("Show hidden")
             .checkbox(hidden())
             .onselect(move |_| hidden.toggle())
@@ -87,9 +88,11 @@ pub fn MenuDemo(
     // demo-code: preamble end
 
     rsx! {
+        // Docked, the status gets its own line, so a choice never resizes the trigger.
         Flex {
-            direction: "row",
-            align: "center",
+            direction: if docked { "column" } else { "row" },
+            align: if docked { "stretch" } else { "center" },
+            sx: docked.then(|| sx().width("100%")),
             gap: "md",
             Menu {
                 state: menu,
@@ -111,7 +114,7 @@ pub fn MenuDemo(
                     )
                 }),
                 Button {
-                    variant: if docked { "light" } else { "outlined" },
+                    variant: if docked { "tonal" } else { "outlined" },
                     radius: docked.then_some("0"),
                     disabled: disabled.then_some(true),
                     attributes: menu.a11y_attributes(),

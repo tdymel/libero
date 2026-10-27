@@ -22,8 +22,9 @@ pub(crate) struct Placed {
     pub(crate) available_height: f64,
     /// Kept hidden: the box takes its capped height first, to be measured again.
     pub(crate) provisional: bool,
-    /// Where an arrow on the box's near edge points at the anchor's centre.
-    pub(crate) arrow: ArrowPoint,
+    /// Where an arrow on the box's near edge points at the anchor's centre;
+    /// `None` while the box overlaps the anchor.
+    pub(crate) arrow: Option<ArrowPoint>,
 }
 
 /// A point on the box's edge facing the anchor, in viewport coordinates, kept
@@ -125,6 +126,16 @@ pub(crate) fn place(
         true => options.side.opposite(),
         false => options.side,
     };
+    // Room on neither start nor end: below, then above, as Floating UI's flip (4613).
+    let fits =
+        |side: Side| room(Edge::of(side, rtl), anchor, viewport, options.padding) >= needed(side);
+    let side = match options.flip && !side.is_vertical() && !fits(side) {
+        true => [Side::Bottom, Side::Top]
+            .into_iter()
+            .find(|side| fits(*side))
+            .unwrap_or(side),
+        false => side,
+    };
 
     let align = options.align;
     // Along `x` an RTL start is the right edge; along `y` there is no direction.
@@ -187,6 +198,11 @@ pub(crate) fn place(
         ),
         Edge::Right => (x, arrow_across(centre_y, y, floating.height)),
     };
+    // A box shifted over its anchor has no edge facing it, so nothing to point from.
+    let overlaps = x < anchor.x + anchor.width
+        && anchor.x < x + floating.width
+        && y < anchor.y + anchor.height
+        && anchor.y < y + floating.height;
 
     Placed {
         x,
@@ -194,10 +210,10 @@ pub(crate) fn place(
         placement: Placement { side, align },
         available_height: available_height.max(0.0),
         provisional: false,
-        arrow: ArrowPoint {
+        arrow: (!overlaps).then_some(ArrowPoint {
             x: arrow_x,
             y: arrow_y,
-        },
+        }),
     }
 }
 
@@ -279,7 +295,7 @@ mod tests {
             &options().align(Align::Start),
             false,
         );
-        assert_eq!(under.arrow, ArrowPoint { x: 200.0, y: 144.0 });
+        assert_eq!(under.arrow, Some(ArrowPoint { x: 200.0, y: 144.0 }));
         // Flipped above and shifted off the left edge: the arrow stays inset from the corner.
         let shifted = place(
             anchor_at(-150.0, 600.0),
@@ -290,10 +306,10 @@ mod tests {
         );
         assert_eq!(
             shifted.arrow,
-            ArrowPoint {
+            Some(ArrowPoint {
                 x: 8.0 + ARROW_INSET,
                 y: 596.0
-            }
+            })
         );
         // RTL `End` is the left: the arrow sits on the box's right edge, at the anchor's middle.
         let beside = place(
@@ -303,7 +319,7 @@ mod tests {
             &options().side(Side::End),
             true,
         );
-        assert_eq!(beside.arrow, ArrowPoint { x: 396.0, y: 120.0 });
+        assert_eq!(beside.arrow, Some(ArrowPoint { x: 396.0, y: 120.0 }));
     }
 
     #[test]
@@ -454,10 +470,11 @@ mod tests {
         assert_eq!(placed.y, 100.0, "start-aligned on the vertical axis now");
     }
 
-    /// A phone-wide submenu (todo 3641, MENU-2): no room on either side, so it
-    /// overlaps its anchor inside the viewport instead of running off the right.
+    /// 4613: a phone-wide side box with room on neither side goes below, then
+    /// above, as Floating UI's flip; with no room there either it overlaps the
+    /// anchor inside the viewport (todo 3641) and has no arrow.
     #[test]
-    fn a_side_box_with_room_on_neither_side_overlaps_the_anchor() {
+    fn a_side_box_with_room_on_neither_side_falls_back_to_the_perpendicular() {
         let phone = Dimensions {
             width: 320.0,
             height: 900.0,
@@ -466,17 +483,51 @@ mod tests {
             width: 120.0,
             height: 178.0,
         };
-        let row = Rect {
+        let row = |y: f64| Rect {
             x: 46.0,
-            y: 806.0,
+            y,
             width: 180.0,
             height: 36.0,
         };
-        let placed = place(row, submenu, phone, &options().side(Side::End), false);
+        let end = options().side(Side::End);
 
-        assert_eq!(placed.placement.side, Side::End, "86 right beats 38 left");
-        assert_eq!(placed.x, 192.0, "320 minus the 8px padding minus the box");
-        assert_eq!(placed.y, 714.0, "900 minus the padding minus the box");
+        let below = place(row(100.0), submenu, phone, &end, false);
+        assert_eq!(
+            below.placement.side,
+            Side::Bottom,
+            "86 right, 38 left, 756 below"
+        );
+        assert_eq!(
+            (below.x, below.y),
+            (46.0, 140.0),
+            "start-aligned under the gap"
+        );
+        assert!(below.arrow.is_some());
+
+        let above = place(row(806.0), submenu, phone, &end, false);
+        assert_eq!(above.placement.side, Side::Top, "50 below, 798 above");
+        assert_eq!(above.y, 624.0, "806 minus the box minus the gap");
+
+        let short = Dimensions {
+            width: 320.0,
+            height: 300.0,
+        };
+        let covered = place(row(120.0), submenu, short, &end, false);
+        assert_eq!(
+            covered.placement.side,
+            Side::End,
+            "no side holds it, so it stays"
+        );
+        assert_eq!(covered.x, 192.0, "320 minus the 8px padding minus the box");
+        assert_eq!(covered.y, 114.0, "300 minus the padding minus the box");
+        assert_eq!(covered.arrow, None, "the box sits over its anchor");
+
+        let kept = place(row(100.0), submenu, phone, &end.flip(false), false);
+        assert_eq!(
+            kept.placement.side,
+            Side::End,
+            "without flip it keeps its side"
+        );
 
         let fits = place(
             anchor_at(100.0, 100.0),

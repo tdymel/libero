@@ -2,7 +2,7 @@ use super::menu::MenuPart;
 use crate::{
     components::{
         common::{LogicalTextAlign, Part, ROW_HOVER_TINT, disabled_look_sx, inset_focus_ring_sx},
-        form::phone_sheet::phone_sheet_sx,
+        form::phone_sheet::{narrow_query, phone_sheet_sx},
         layout::paper_sx,
     },
     hooks::{POPOVER_AVAILABLE_HEIGHT, placement_sx},
@@ -116,9 +116,30 @@ pub(super) static MENU_SX: StaticSx = StaticSx::new(|| {
             format!("{} svg", MenuPart::Chevron.selector()),
             sx().transform("scaleX(-1)"),
         ))
-        // Below `sm`, every level is the pickers' sheet; a submenu stacks on its parent.
+        // Below `sm`, every level is the pickers' sheet; a submenu stacks on its parent,
+        // headed by its parent item's label (4617).
         .and(phone_sheet_sx())
+        // Two exclusive queries: a plain rule is printed after the media one and would win.
+        .media(
+            format!("(min-width: {})", Size::Sm.breakpoint_value()),
+            sx().selector(SHEET_TITLE, sx().display("none")),
+        )
+        .media(
+            narrow_query(),
+            sx().selector(
+                SHEET_TITLE,
+                sx().display("block")
+                    .flex("none")
+                    .padding(format!("0 {} 6px", MENU_ITEM_PAD_X.value()))
+                    .font_size(MENU_ITEM_FONT.value())
+                    .font_weight("600")
+                    .with("overflow-wrap", "anywhere")
+                    .user_select("none"),
+            ),
+        )
 });
+
+const SHEET_TITLE: &str = "& > [data-slot='sheet-title']";
 
 /// A coloured row's colour, for its label and leading slot.
 pub(super) const ITEM_COLOR: CssVar = CssVar::new("--lsx-menu-item-color");

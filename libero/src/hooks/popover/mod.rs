@@ -128,18 +128,20 @@ impl PopoverHandle {
     }
 
     /// Where an arrow points at the anchor from the box's edge, once placed: in the
-    /// viewport, or with `in_box` from the box's top left corner.
+    /// viewport, or with `in_box` from the box's top left corner. `None` while the box covers the anchor.
     pub(crate) fn arrow(&self, in_box: bool) -> Option<ArrowPoint> {
         self.placed
             .read()
             .as_ref()
             .filter(|placed| !placed.provisional)
-            .map(|placed| match in_box {
-                true => ArrowPoint {
-                    x: placed.arrow.x - placed.x,
-                    y: placed.arrow.y - placed.y,
-                },
-                false => placed.arrow,
+            .and_then(|placed| {
+                placed.arrow.map(|arrow| match in_box {
+                    true => ArrowPoint {
+                        x: arrow.x - placed.x,
+                        y: arrow.y - placed.y,
+                    },
+                    false => arrow,
+                })
             })
     }
 
