@@ -13,33 +13,83 @@ pub(crate) fn style_text(css: &str) -> Cow<'_, str> {
 
 /// Whether `value` stays inside its declaration: no `{`, `}` or `/*` outside a string,
 /// no `;` outside a string or parentheses, and every string and parenthesis closed.
+/// An unquoted `url(` must not turn into a bad-url, which ends at its first `)` (todo 4465).
 pub(crate) fn stays_in_declaration(value: &str) -> bool {
     let mut quote = None;
     let mut depth = 0u32;
-    let mut chars = value.chars().peekable();
-    while let Some(c) = chars.next() {
+    let mut url = false;
+    // Start of the identifier before the current character, and whether it holds an escape.
+    let mut ident: Option<(usize, bool)> = None;
+    let mut chars = value.char_indices().peekable();
+    while let Some((i, c)) = chars.next() {
+        if url {
+            match c {
+                ')' => {
+                    url = false;
+                    depth -= 1;
+                }
+                '\\' if matches!(chars.next(), None | Some((_, '\n' | '\r' | '\x0c'))) => {
+                    return false;
+                }
+                '\\' => {}
+                '(' | '"' | '\'' | '{' | '}' => return false,
+                c if is_css_whitespace(c) => {
+                    while chars.next_if(|&(_, c)| is_css_whitespace(c)).is_some() {}
+                    if !matches!(chars.peek(), None | Some((_, ')'))) {
+                        return false;
+                    }
+                }
+                c if c.is_control() => return false,
+                _ => {}
+            }
+            continue;
+        }
         // An escape takes the next character, which must exist: a trailing `\` escapes the `;`.
         if c == '\\' {
             if chars.next().is_none() {
                 return false;
             }
+            if quote.is_none() {
+                ident = Some((ident.map_or(i, |(start, _)| start), true));
+            }
             continue;
         }
+        if quote.is_none() && (c.is_alphanumeric() || matches!(c, '-' | '_') || !c.is_ascii()) {
+            ident.get_or_insert((i, false));
+            continue;
+        }
+        let name = ident.take();
         match (quote, c) {
             (Some(_), '\n' | '\r' | '\x0c') => return false,
             (Some(open), c) if c == open => quote = None,
             (Some(_), _) => {}
             (None, '"' | '\'') => quote = Some(c),
-            (None, '(') => depth += 1,
+            (None, '(') => {
+                depth += 1;
+                // An escaped function name could spell `url` unseen, so it is refused.
+                if let Some((start, escaped)) = name {
+                    if escaped {
+                        return false;
+                    }
+                    if value[start..i].eq_ignore_ascii_case("url") {
+                        while chars.next_if(|&(_, c)| is_css_whitespace(c)).is_some() {}
+                        url = !matches!(chars.peek(), Some((_, '"' | '\'')));
+                    }
+                }
+            }
             (None, ')') if depth == 0 => return false,
             (None, ')') => depth -= 1,
             (None, '{' | '}') => return false,
             (None, ';') if depth == 0 => return false,
-            (None, '/') if chars.peek() == Some(&'*') => return false,
+            (None, '/') if matches!(chars.peek(), Some((_, '*'))) => return false,
             (None, _) => {}
         }
     }
     quote.is_none() && depth == 0
+}
+
+fn is_css_whitespace(c: char) -> bool {
+    matches!(c, ' ' | '\t' | '\n' | '\r' | '\x0c')
 }
 
 /// `value` when it stays in its declaration, else `None` and a debug warning: a free
@@ -94,6 +144,13 @@ mod tests {
             "calc(1px",
             "1px)",
             "{",
+            // A bad-url ends at its first `)`, so the `;` after it ends the declaration.
+            "url(a(b);color:red;--y:x)",
+            "url(a(b);position:fixed;inset:0;background:url(https://evil.example/x);--y:x)",
+            "URL(a\"b);color:red;--y:x)",
+            "url(a b);color:red;--y:x)",
+            "url(a\\\n);color:red;--y:x)",
+            "u\\72l(a(b);color:red;--y:x)",
         ] {
             assert!(!stays_in_declaration(attack), "{attack}");
         }
@@ -111,6 +168,10 @@ mod tests {
             "url(data:image/png;base64,iVBORw0KGgo=)",
             "url(\"data:image/svg+xml;utf8,<svg/>\")",
             "\"\\\"\"",
+            "url( a.png )",
+            "url( 'a b.png' )",
+            "url(a\\(b.png)",
+            "myurl(a(b))",
             "",
         ] {
             assert!(stays_in_declaration(value), "{value}");

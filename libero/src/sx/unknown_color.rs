@@ -226,7 +226,16 @@ pub(crate) fn warn_unknown_color_name(property: Property, value: &str) {
     thread_local! {
         static WARNED: std::cell::RefCell<Vec<(Property, String)>> = const { std::cell::RefCell::new(Vec::new()) };
     }
-    if !property.takes_color() || !is_identifier(value) {
+    // A palette name with a shade, `primry.7`, is still a name (todo 4474).
+    let name = match value.split_once('.') {
+        Some((name, shade))
+            if !shade.is_empty() && shade.bytes().all(|byte| byte.is_ascii_digit()) =>
+        {
+            name
+        }
+        _ => value,
+    };
+    if !property.takes_color() || !is_identifier(name) {
         return;
     }
     let lower = value.to_ascii_lowercase();
@@ -275,6 +284,15 @@ mod tests {
             1,
             "once per property"
         );
+    }
+
+    /// Todo 4474: the shaded spelling warns as the bare one does; a real shade stays silent.
+    #[test]
+    fn a_misspelled_theme_colour_with_a_shade_warns() {
+        let warnings = warnings_of(sx().color("primry.7").background("pirmary-contrast.1"));
+        assert_eq!(warnings.len(), 2, "{warnings:?}");
+        assert!(warnings[0].contains("`primry.7`"), "{warnings:?}");
+        assert!(warnings_of(sx().color("primary.7").background("primary.1")).is_empty());
     }
 
     #[test]

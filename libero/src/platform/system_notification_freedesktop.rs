@@ -58,6 +58,8 @@ struct Routes {
     events: HashMap<u32, mpsc::UnboundedSender<NotificationEvent>>,
     /// The notification server's unique bus name; only its signals count.
     server: Option<String>,
+    /// Whether the server parses the body as markup, asked once (todo 4472).
+    body_markup: Option<bool>,
 }
 
 impl Routes {
@@ -169,6 +171,19 @@ fn handle(connection: Option<&LocalConnection>, routes: &RefCell<Routes>, comman
                 return;
             };
             let replaces = routes.borrow().replaces(notification.tag.as_deref());
+            let markup = *routes.borrow_mut().body_markup.get_or_insert_with(|| {
+                let capabilities: Result<(Vec<String>,), _> =
+                    proxy.method_call(INTERFACE, "GetCapabilities", ());
+                capabilities.is_ok_and(|(capabilities,)| {
+                    capabilities
+                        .iter()
+                        .any(|capability| capability == "body-markup")
+                })
+            });
+            let body = match markup {
+                true => escape_markup(&notification.body),
+                false => notification.body,
+            };
             let mut hints = PropMap::new();
             if notification.silent {
                 hints.insert(
@@ -184,7 +199,7 @@ fn handle(connection: Option<&LocalConnection>, routes: &RefCell<Routes>, comman
                     replaces,
                     notification.icon,
                     notification.title,
-                    notification.body,
+                    body,
                     action_list(&notification.actions),
                     hints,
                     -1i32,
@@ -206,6 +221,14 @@ fn handle(connection: Option<&LocalConnection>, routes: &RefCell<Routes>, comman
             }
         }
     }
+}
+
+/// `body` as plain text for a server that parses markup: a `<` or `&` from user data
+/// would drop text or inject a link or an image.
+fn escape_markup(body: &str) -> String {
+    body.replace('&', "&amp;")
+        .replace('<', "&lt;")
+        .replace('>', "&gt;")
 }
 
 /// The unique bus name that owns the notification service, the sender of its signals.
@@ -326,6 +349,15 @@ impl Drop for FreedesktopShown {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// Todo 4472: a markup server shows user text as text, not as a link or an image.
+    #[test]
+    fn a_markup_body_is_escaped() {
+        assert_eq!(
+            escape_markup("a < b && <a href=\"x\">c</a>"),
+            "a &lt; b &amp;&amp; &lt;a href=\"x\"&gt;c&lt;/a&gt;"
+        );
+    }
 
     #[test]
     fn a_tag_replaces_its_notification_until_it_closes() {

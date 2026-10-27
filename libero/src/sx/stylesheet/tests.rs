@@ -210,6 +210,36 @@ fn nested_media_modifiers_fold_into_one_query() {
     assert_eq!(css.as_str().matches("@media").count(), 1);
 }
 
+/// Todo 4471: a media type, `not` or a comma list would change meaning under `and`.
+#[test]
+fn a_media_query_that_is_no_and_chain_nests() {
+    for (outer, inner) in [
+        ("(min-width: 1px)", "screen"),
+        ("(max-width: 600px), print", "(min-width: 62rem)"),
+        ("not print", "(min-width: 62rem)"),
+        ("(a: 1) or (b: 2)", "(min-width: 62rem)"),
+    ] {
+        let css = Stylesheet::from(&sx().media(outer, sx().media(inner, sx().color("red"))));
+
+        assert!(
+            css.as_str()
+                .contains(&format!("@media {outer}{{@media {inner}{{")),
+            "{}",
+            css.as_str()
+        );
+    }
+    let css = Stylesheet::from(&sx().media(
+        "(a: 1) AND (b: 2)",
+        sx().media("(c: 3)and(d: 4)", sx().color("red")),
+    ));
+    assert!(
+        css.as_str()
+            .contains("@media (a: 1) AND (b: 2) and (c: 3)and(d: 4){"),
+        "{}",
+        css.as_str()
+    );
+}
+
 #[test]
 fn a_media_modifier_nests_inside_a_selector() {
     let css = Stylesheet::from(

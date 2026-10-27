@@ -3,9 +3,9 @@ use dioxus::{dioxus_core::AttributeValue, prelude::*};
 use crate::{
     components::{
         common::{
-            HtmlTag, Input, ScaleOrCss, States, Variables, base_color, base_props, contrast_color,
-            fill_color, focus_ring_sx, hover_color, hover_contrast_color, selected_color,
-            variables,
+            HtmlTag, Input, ScaleOrCss, States, Variables, allowed_href, base_color, base_props,
+            contrast_color, fill_color, focus_ring_sx, hover_color, hover_contrast_color,
+            selected_color, variables,
         },
         layout::use_box,
     },
@@ -105,25 +105,37 @@ fn interactive_sx() -> Sx {
         .focus_visible(focus_ring_sx())
 }
 
+fn has_attribute(attributes: &[Attribute], name: &str) -> bool {
+    attributes
+        .iter()
+        .any(|attribute| attribute.name == name && !matches!(attribute.value, AttributeValue::None))
+}
+
 /// Whether the surface takes a press: a link, a button, or a spread `onclick`.
+/// An `href` makes only an `<a>` a link (todo 4470).
 fn paper_interactive(component: HtmlTag, attributes: &[Attribute]) -> bool {
     component == HtmlTag::Button
-        || attributes.iter().any(|attribute| {
-            matches!(attribute.name, "href" | "onclick")
-                && !matches!(attribute.value, AttributeValue::None)
-        })
+        || (component == HtmlTag::A && has_attribute(attributes, "href"))
+        || has_attribute(attributes, "onclick")
 }
 
 /// A spread `onclick` on a surface with no role or tab stop of its own: the look without a
 /// keyboard path (todo 3821). A `tabindex` says the caller wired the keys.
 fn paper_unreachable_press(component: HtmlTag, attributes: &[Attribute]) -> bool {
-    let has = |name: &str| {
-        attributes.iter().any(|attribute| {
-            attribute.name == name && !matches!(attribute.value, AttributeValue::None)
-        })
-    };
-    let reachable = component == HtmlTag::Button || has("href") || has("tabindex");
+    let has = |name| has_attribute(attributes, name);
+    let reachable =
+        component == HtmlTag::Button || (component == HtmlTag::A && has("href")) || has("tabindex");
     has("onclick") && !reachable
+}
+
+/// Drops a spread `href` with a blocked scheme, as every library link does (todo 3620).
+fn drop_blocked_href(attributes: &mut Vec<Attribute>) {
+    attributes.retain(|attribute| match &attribute.value {
+        AttributeValue::Text(url) if attribute.name == "href" => {
+            allowed_href(url, &format!("Paper `href` `{url}`"))
+        }
+        _ => true,
+    });
 }
 
 // Own vars, not `PAPER_BACKGROUND`: an uncoloured `Paper` nested inside keeps the surface.
@@ -249,7 +261,8 @@ base_props! {
 ///
 /// Docs: <https://libero-ui.dev/layout/paper>
 #[component]
-pub fn Paper(props: PaperProps) -> Element {
+pub fn Paper(mut props: PaperProps) -> Element {
+    drop_blocked_href(&mut props.attributes);
     let states = paper_states(&props);
     let gradient = use_glass_gradient_style(
         props.gradient.as_ref(),
@@ -401,6 +414,39 @@ mod tests {
         };
         assert!(warns(unreachable));
         assert!(!warns(reachable));
+    }
+
+    fn href(url: &str) -> Vec<Attribute> {
+        vec![Attribute::new("href", url.to_string(), None, false)]
+    }
+
+    /// Todo 4469: a `javascript:` card link is dropped with a warning, a plain one is kept.
+    #[test]
+    fn a_blocked_href_is_dropped() {
+        crate::utils::take_warnings();
+        let mut blocked = href("javascript:alert(1)");
+        drop_blocked_href(&mut blocked);
+        assert!(blocked.is_empty());
+        assert!(
+            crate::utils::take_warnings()
+                .iter()
+                .any(|warning| warning.contains("javascript:"))
+        );
+        let mut kept = href("/orders");
+        drop_blocked_href(&mut kept);
+        assert_eq!(kept.len(), 1);
+    }
+
+    /// Todo 4470: an `href` presses only on an `<a>`.
+    #[test]
+    fn an_href_makes_only_an_anchor_interactive() {
+        assert!(paper_interactive(HtmlTag::A, &href("/orders")));
+        assert!(!paper_interactive(HtmlTag::Div, &href("/orders")));
+        let mut press = href("/orders");
+        // Any value but `None` counts; a listener would need a runtime.
+        press.push(Attribute::new("onclick", "x".to_string(), None, false));
+        assert!(paper_unreachable_press(HtmlTag::Div, &press));
+        assert!(!paper_unreachable_press(HtmlTag::A, &press));
     }
 
     #[test]

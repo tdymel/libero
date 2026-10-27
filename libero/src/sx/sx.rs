@@ -134,7 +134,8 @@ impl Sx {
     }
 
     /// Styles while `query` matches, e.g. `"(prefers-reduced-motion: reduce)"`.
-    /// Passed verbatim, so a typo silently matches nothing; nested ones join with `and`.
+    /// Passed verbatim, so a typo silently matches nothing; nested `(…)` conditions join
+    /// with `and`, and a media type, `not`, `or` or a comma list nests as its own `@media`.
     pub fn media(self, query: impl Into<String>, nested: Sx) -> Self {
         self.modifier(SxModifierKey::Media(query.into()), nested)
     }

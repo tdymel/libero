@@ -49,6 +49,8 @@ const SMALL_ICON: &str = "libero_notification";
 const LARGE_ICON_PX: u32 = 256;
 
 struct Route {
+    /// The random part of the tap URL: another app could start the activity with a guessed key.
+    nonce: u64,
     events: mpsc::UnboundedSender<NotificationEvent>,
     /// The action ids, by their index in the URL.
     actions: Vec<String>,
@@ -189,6 +191,7 @@ fn ask() -> PermissionState {
 
 struct Content {
     key: u64,
+    nonce: u64,
     title: String,
     body: Option<String>,
     tag: Option<String>,
@@ -332,7 +335,7 @@ fn post(env: &mut JNIEnv, activity: &JObject, content: &Content) -> JniResult<()
         format!("(Z){builder_class}"),
         &[JValue::Bool(1)],
     )?;
-    let tap = tap_intent(env, activity, content.key, None)?;
+    let tap = tap_intent(env, activity, content.key, content.nonce, None)?;
     env.call_method(
         &builder,
         "setContentIntent",
@@ -340,7 +343,7 @@ fn post(env: &mut JNIEnv, activity: &JObject, content: &Content) -> JniResult<()
         &[JValue::Object(&tap)],
     )?;
     for (index, title) in content.action_titles.iter().enumerate() {
-        let press = tap_intent(env, activity, content.key, Some(index))?;
+        let press = tap_intent(env, activity, content.key, content.nonce, Some(index))?;
         let title = env.new_string(title)?;
         let action = env.new_object(
             "android/app/Notification$Action$Builder",
@@ -422,11 +425,12 @@ fn tap_intent<'a>(
     env: &mut JNIEnv<'a>,
     activity: &JObject,
     key: u64,
+    nonce: u64,
     action: Option<usize>,
 ) -> JniResult<JObject<'a>> {
     let url = match action {
-        Some(index) => format!("{SCHEME}:{key}/{index}"),
-        None => format!("{SCHEME}:{key}"),
+        Some(index) => format!("{SCHEME}:{key}/{nonce}/{index}"),
+        None => format!("{SCHEME}:{key}/{nonce}"),
     };
     let url = env.new_string(url)?;
     let uri = env
@@ -487,15 +491,25 @@ fn cancel(tag: Option<String>, key: u64) {
     });
 }
 
-/// The key in a tapped notification's URL, and the pressed action's index.
-fn tapped(scheme: &str, path: &str) -> Option<(u64, Option<usize>)> {
+/// The key and nonce in a tapped notification's URL, and the pressed action's index.
+fn tapped(scheme: &str, path: &str) -> Option<(u64, u64, Option<usize>)> {
     if scheme != SCHEME {
         return None;
     }
-    match path.split_once('/') {
-        Some((key, index)) => Some((key.parse().ok()?, Some(index.parse().ok()?))),
-        None => Some((path.parse().ok()?, None)),
-    }
+    let mut parts = path.split('/');
+    let key = parts.next()?.parse().ok()?;
+    let nonce = parts.next()?.parse().ok()?;
+    let index = match parts.next() {
+        Some(index) => Some(index.parse().ok()?),
+        None => None,
+    };
+    parts.next().is_none().then_some((key, nonce, index))
+}
+
+/// A tap URL's nonce: `RandomState` keys its hasher from the OS's randomness.
+fn random_nonce() -> u64 {
+    use std::hash::BuildHasher;
+    std::hash::RandomState::new().hash_one(NEXT_KEY.load(Ordering::Relaxed))
 }
 
 /// Once per window: tao's `Opened` carries the tapped notification's URL.
@@ -512,12 +526,16 @@ fn listen_for_taps() {
             return;
         };
         for url in urls {
-            let Some((key, action)) = tapped(url.scheme(), url.path()) else {
+            let Some((key, nonce, action)) = tapped(url.scheme(), url.path()) else {
                 continue;
             };
             debug!("libero notification {key} tapped, action {action:?}");
             let mut routes = ROUTES.lock().unwrap_or_else(|poison| poison.into_inner());
-            let Some(route) = routes.get_or_insert_default().remove(&key) else {
+            let routes = routes.get_or_insert_default();
+            if routes.get(&key).is_none_or(|route| route.nonce != nonce) {
+                continue;
+            }
+            let Some(route) = routes.remove(&key) else {
                 continue;
             };
             let event = match action {
@@ -571,6 +589,7 @@ impl SystemNotificationApi for AndroidNotification {
     ) -> Shown {
         listen_for_taps();
         let key = NEXT_KEY.fetch_add(1, Ordering::Relaxed);
+        let nonce = random_nonce();
         let tag = notification.tag.clone();
         let (actions, action_titles) = notification
             .actions
@@ -579,6 +598,7 @@ impl SystemNotificationApi for AndroidNotification {
             .unzip();
         let mut content = Content {
             key,
+            nonce,
             title: notification.title.clone(),
             body: notification.body.clone(),
             tag: tag.clone(),
@@ -612,6 +632,7 @@ impl SystemNotificationApi for AndroidNotification {
                 .insert(
                     key,
                     Route {
+                        nonce,
                         events: sender,
                         actions,
                         tag: tag.clone(),
@@ -681,10 +702,14 @@ mod tests {
     fn a_tag_keeps_one_identity_and_taps_parse_the_key() {
         assert_eq!(identity(Some("build"), 9), (Some("build"), 0));
         assert_eq!(identity(None, 9), (None, 9));
-        assert_eq!(tapped(SCHEME, "12"), Some((12, None)));
-        assert_eq!(tapped(SCHEME, "12/1"), Some((12, Some(1))));
-        assert_eq!(tapped("https", "12"), None);
-        assert_eq!(tapped(SCHEME, "x"), None);
-        assert_eq!(tapped(SCHEME, "12/x"), None);
+        assert_eq!(tapped(SCHEME, "12/77"), Some((12, 77, None)));
+        assert_eq!(tapped(SCHEME, "12/77/1"), Some((12, 77, Some(1))));
+        // Todo 4473: a URL without the nonce is no tap.
+        assert_eq!(tapped(SCHEME, "12"), None);
+        assert_eq!(tapped("https", "12/77"), None);
+        assert_eq!(tapped(SCHEME, "x/77"), None);
+        assert_eq!(tapped(SCHEME, "12/77/x"), None);
+        assert_eq!(tapped(SCHEME, "12/77/1/2"), None);
+        assert_ne!(random_nonce(), random_nonce());
     }
 }
