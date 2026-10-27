@@ -344,8 +344,12 @@ impl<T: Clone + 'static> RowContext<T> {
                     Some(level) => {
                         let lead = self.node_lead(row, key, level);
                         // Unpadded block: Blitz misses an inline box in the padded cell (hit.rs).
+                        // A flex row, so wrapped text keeps the indent (todo 4665).
                         let body = rsx! {
-                            div { "data-node-cell": true, {lead} "{text}" {body} }
+                            div { "data-node-cell": true,
+                                {lead}
+                                span { "data-node-text": true, "{text}" {body} }
+                            }
                         };
                         (String::new(), Some(body))
                     }

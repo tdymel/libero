@@ -3,7 +3,8 @@
 //! one of 500 rows, and one with editable Age and City cells, which stores its
 //! edits or (`/kept`) only logs them, `/button` with a button in each City cell,
 //! `/custom` with its own Age editor, `/windowed` with fixed 28px rows, `/sticky` with a sum footer, `/formats`
-//! with empty yes/no and date cells, `/header-filters` with a filtered Name column.
+//! with empty yes/no and date cells, `/header-filters` with a filtered Name column,
+//! `/wide` with 45vw columns, the third partly in view.
 
 use dioxus::prelude::*;
 use libero::{
@@ -21,6 +22,7 @@ pub const ROUTES: Routes = &[
     ("/table-grid/selectable", || rsx! { GridPage { selectable: true } }),
     ("/table-grid/resizable", || rsx! { GridPage { resizable: true } }),
     ("/table-grid/header-filters", || rsx! { GridPage { header_filters: true } }),
+    ("/table-grid/wide", || rsx! { GridPage { wide: true } }),
     ("/table-grid/windowed", || rsx! { WindowedGridPage {} }),
     ("/table-grid/sticky", || rsx! { StickyGridPage {} }),
     ("/table-grid/editable", || rsx! { EditableGridPage { store: true } }),
@@ -58,6 +60,7 @@ fn GridPage(
     #[props(default)] selectable: bool,
     #[props(default)] resizable: bool,
     #[props(default)] header_filters: bool,
+    #[props(default)] wide: bool,
 ) -> Element {
     let mut columns = vec![
         column("Name").value(|p: &Person| p.name.to_string()).sortable().row_header(),
@@ -71,11 +74,15 @@ fn GridPage(
             }
         }));
     }
+    if wide {
+        columns = columns.into_iter().map(|column| column.min_width("45vw")).collect();
+    }
     rsx! {
         button { id: "before", "Before" }
         Table {
             caption: "Team",
             cell_focus: true,
+            scroll: wide,
             selectable,
             column_menu: selectable || resizable || header_filters,
             resizable_columns: resizable,

@@ -497,6 +497,7 @@ fn german_select_row(row: &str) -> String {
 /// `TableLabels::ENGLISH.selected`.
 fn english_selected(count: usize) -> String {
     match count {
+        0 => "No rows selected".to_string(),
         1 => "1 row selected".to_string(),
         _ => format!("{count} rows selected"),
     }
@@ -505,6 +506,7 @@ fn english_selected(count: usize) -> String {
 /// `TableLabels::GERMAN.selected`.
 fn german_selected(count: usize) -> String {
     match count {
+        0 => "Keine Zeilen ausgewählt".to_string(),
         1 => "1 Zeile ausgewählt".to_string(),
         _ => format!("{count} Zeilen ausgewählt"),
     }

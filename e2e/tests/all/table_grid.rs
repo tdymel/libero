@@ -325,6 +325,20 @@ async fn reveals<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
     .await?;
     d.press_ctrl(keyboard::HOME).await?;
     eventually_focused(d, &head(1), "Ctrl+Home on the header").await?;
+    // The rows scroll back to the first too, not left at the end (todo 4667).
+    eventually(
+        d,
+        "Ctrl+Home shows the first row under the header",
+        async |d| {
+            const FIRST: &str = "tbody tr[aria-rowindex='2']";
+            if !d.exists(FIRST).await? {
+                return Ok(false);
+            }
+            let (row, head) = (d.rect(FIRST).await?, d.rect("thead").await?);
+            Ok((row.y - (head.y + head.height)).abs() <= 1.0)
+        },
+    )
+    .await?;
     d.press(keyboard::ARROW_DOWN).await?;
     eventually(
         d,
@@ -344,6 +358,29 @@ e2e::scenario!(
     a_windowed_grid_scrolls_to_the_focused_cell,
     "/table-grid/windowed",
     reveals,
+    android: skip("958: roving keys are inert in the emulator's WebView")
+);
+
+/// Each arrow shows the focused cell whole, not only a fully hidden one (todo 4667).
+async fn reveals_sideways<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    d.focus(STOP).await?;
+    eventually_focused(d, &head(1), "focus on the stop").await?;
+    for (col, after) in [(2, "ArrowRight to Age"), (3, "ArrowRight to City")] {
+        d.press(keyboard::ARROW_RIGHT).await?;
+        eventually_focused(d, &head(col), after).await?;
+        eventually(d, &format!("{after}, shown whole"), async |d| {
+            let (cell, area) = (d.rect(&head(col)).await?, d.rect(AREA).await?);
+            Ok(cell.x >= area.x - 1.0 && cell.x + cell.width <= area.x + area.width + 1.0)
+        })
+        .await?;
+    }
+    Ok(())
+}
+
+e2e::scenario!(
+    an_arrow_shows_a_partly_hidden_cell_whole,
+    "/table-grid/wide",
+    reveals_sideways,
     android: skip("958: roving keys are inert in the emulator's WebView")
 );
 

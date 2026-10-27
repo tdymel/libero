@@ -15,7 +15,7 @@ use super::{
     window::reveal_slot,
 };
 use crate::{
-    components::common::attr,
+    components::common::{attr, reveal_block, reveal_inline},
     hooks::{ElementHandle, listener, use_id, use_silent_focus_in, use_silent_focus_out_of},
     platform::{
         ElementApi, PlatformError, arrow_target, element, focus_selector, focused_tag,
@@ -287,17 +287,25 @@ pub(super) fn use_grid_focus(table: ElementHandle, region: ElementHandle) -> Gri
         let turn = latest.get() + 1;
         latest.set(turn);
         let selector = format!("[data-cell-stop='{}']", id.peek());
-        let focus = move || match table.query_selector(&selector) {
-            Ok(cell) => {
-                let _ = cell.focus();
+        // A pinned cell is in view already: its scroll padding would push it back.
+        let unpinned = format!("{selector}:not([data-pin])");
+        let body = format!("tbody {selector}");
+        let focus = move || {
+            match table.query_selector(&selector) {
+                Ok(cell) => {
+                    let _ = cell.focus();
+                }
+                // A WebView queries nothing: the page focuses it.
+                Err(_) => {
+                    let _ = focus_selector(&selector);
+                }
             }
-            // A WebView queries nothing: the page focuses it.
-            Err(_) => {
-                let _ = focus_selector(&selector);
-            }
+            // Chrome's `focus()` scrolls only a fully hidden cell: a partly hidden one shows whole (todo 4667).
+            reveal_inline(region, &unpinned);
         };
         let Some(reveal) = reveal else {
             focus();
+            reveal_block(region, &body);
             return;
         };
         // Once the window's new rows are laid out: Blitz lays out after effects.
@@ -756,6 +764,12 @@ impl GridFocus {
                     edges: rows.edges,
                 })
             }
+            // The first row under the header, not the rows left scrolled at the end (todo 4667).
+            (Some(window), GridRow::Head(_)) if by == Move::GridStart => Some(Reveal {
+                slot: 0,
+                pitch: window.pitch,
+                edges: rows.edges,
+            }),
             _ => None,
         };
         self.request.set(Some(reveal));

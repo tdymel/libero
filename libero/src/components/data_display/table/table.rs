@@ -11,8 +11,8 @@ use crate::{
         accessibility::use_announcer,
         common::{
             ClassList, HtmlTag, Input, LogicalTextAlign, Parts, Sides, States, Variables, attr,
-            coarse_hit_area_sx, inset_focus_ring_sx, inset_ring_sides_sx, min_hit_area_sx,
-            names_itself, use_name_warning, variables,
+            coarse_hit_area_sx, inset_focus_ring_sx, inset_ring_sides_sx, names_itself,
+            use_name_warning, variables,
         },
         form::use_checkbox_look,
         layout::{scroll_area_base, use_box},
@@ -584,7 +584,9 @@ static TABLE_SX: StaticSx = StaticSx::new(|| {
             .border_radius("4px")
             .background("none")
             .color("inherit")
-            .cursor("pointer"),
+            .cursor("pointer")
+            .position("relative")
+            .and(coarse_hit_area_sx("::before")),
     )
     .selector(
         "& [data-detail-button]:focus-visible",
@@ -618,6 +620,12 @@ static TABLE_SX: StaticSx = StaticSx::new(|| {
     .selector(
         "& [data-reorder-controls]",
         sx().display("flex").align_items("center"),
+    )
+    // A finger's 44px hit areas on the 24px handle and move buttons (todo 4669).
+    .selector(
+        "& [data-reorder-handle], & [data-reorder-move]",
+        sx().position("relative")
+            .and(coarse_hit_area_sx("::before")),
     )
     // As `Sortable`'s items: the neighbours slide only while a row drags.
     .selector(
@@ -777,7 +785,9 @@ static TABLE_SX: StaticSx = StaticSx::new(|| {
             .letter_spacing("inherit")
             .color("inherit")
             .white_space("nowrap")
-            .cursor("pointer"),
+            .cursor("pointer")
+            .position("relative")
+            .and(coarse_hit_area_sx("::before")),
     )
     .selector(
         "& [data-group-toggle]:focus-visible",
@@ -795,11 +805,25 @@ static TABLE_SX: StaticSx = StaticSx::new(|| {
         "& [data-group-toggle][aria-expanded=\"false\"] svg",
         sx().transform("rotate(90deg)"),
     ))
+    // The indent and toggle lead; the text wraps in its own column beside them.
+    .selector(
+        "& [data-node-cell]",
+        sx().display("flex").align_items("flex-start"),
+    )
+    .selector(
+        "& [data-node-text]",
+        sx().flex("1 1 auto").min_width("0").align_self("center"),
+    )
     // A tree row's toggle, or a leaf's spacer as wide, before its first cell's text.
     .selector(
         "& [data-node-toggle]",
         sx().display("inline-flex")
-            .with("vertical-align", "middle")
+            .align_items("center")
+            .justify_content("center")
+            .flex("none")
+            // A 24px box (WCAG 2.5.8), 44px under a finger: its only touch way.
+            .width("24px")
+            .height("24px")
             .with("margin-inline-end", "4px")
             .padding("0")
             .border("0")
@@ -807,9 +831,8 @@ static TABLE_SX: StaticSx = StaticSx::new(|| {
             .background("none")
             .color("inherit")
             .cursor("pointer")
-            // The 16px chevron takes presses in a 24px box (WCAG 2.5.8).
             .position("relative")
-            .and(min_hit_area_sx("::before")),
+            .and(coarse_hit_area_sx("::before")),
     )
     .selector(
         "& [data-node-toggle]:focus-visible",
@@ -818,7 +841,8 @@ static TABLE_SX: StaticSx = StaticSx::new(|| {
     .selector(
         "& [data-node-spacer]",
         sx().display("inline-block")
-            .width("16px")
+            .flex("none")
+            .width("24px")
             .with("margin-inline-end", "4px"),
     )
     .selector(
@@ -1952,13 +1976,7 @@ pub fn Table<T: Clone + PartialEq + 'static>(mut props: TableProps<T>) -> Elemen
         attributes: &mut attributes,
     });
 
-    let mut names = chrome::names(
-        props.caption.take(),
-        caption_id(),
-        &mut attributes,
-        scrolls,
-        bounded,
-    );
+    let mut names = chrome::names(props.caption.take(), caption_id(), &mut attributes, scrolls);
 
     let states: Input<States> = std::mem::take(&mut props.states)
         .unwrap_or_default()

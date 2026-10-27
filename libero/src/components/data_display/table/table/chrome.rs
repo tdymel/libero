@@ -50,7 +50,6 @@ pub(super) fn names(
     caption_id: String,
     attributes: &mut Vec<Attribute>,
     scrolls: bool,
-    bounded: bool,
 ) -> Names {
     let described_by = caption.as_ref().map(|_| caption_id.clone());
     let mut caption = caption.map(|text| CaptionSpec {
@@ -85,9 +84,9 @@ pub(super) fn names(
         },
     };
 
-    // Blitz skips a `<caption>`, and a capped table's would scroll away over its
-    // sticky header: a div before the table then, naming it.
-    let before = if lays_out_captions() && !bounded {
+    // Blitz skips a `<caption>`, and a scrolled table's would scroll away, sideways or
+    // over its sticky header (todo 4668): a div before the table then, naming it.
+    let before = if lays_out_captions() && !scrolls {
         None
     } else {
         caption.take()
@@ -200,8 +199,8 @@ pub(super) fn chrome<T: Clone + PartialEq + 'static>(
             rsx! { "{spec.text}" },
         )
     });
-    // Capped, above the scroll area: the header then starts at its top (todo 1454).
-    let (before, above) = match bounded {
+    // Above the scroll area: the header starts at its top (todo 1454), the caption stays put sideways.
+    let (before, above) = match scrolls {
         true => (None, before),
         false => (before, None),
     };

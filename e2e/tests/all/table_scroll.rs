@@ -606,19 +606,20 @@ fn a_wide_table_scrolls_from_a_focused_header() {
             let state: String = page
                 .evaluate_bounded(format!(
                     "(() => {{ const r = document.querySelector({REGION:?}); \
-                     const c = document.querySelector('caption'); \
+                     const c = document.getElementById(document.querySelector('table').getAttribute('aria-labelledby')); \
                      return [r.scrollWidth > r.clientWidth, \
                      document.documentElement.scrollWidth <= innerWidth, \
                      r.getAttribute('role'), r.tabIndex, \
-                     c.textContent].join('|'); }})()"
+                     c.textContent, r.contains(c)].join('|'); }})()"
                 ))
                 .await
                 .unwrap()
                 .into_value()
                 .unwrap();
             assert_eq!(
-                state, "true|true||-1|Fruit catalogue",
-                "at {at}: overflows itself, not the page; no stop beside its header buttons"
+                state, "true|true||-1|Fruit catalogue|false",
+                "at {at}: overflows itself, not the page; no stop beside its header buttons; \
+                 the caption above the sideways scroll (todo 4668)"
             );
 
             page.evaluate_bounded("document.querySelector('th button').focus()")

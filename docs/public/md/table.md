@@ -69,7 +69,7 @@ fn Demo() -> Element {
 | `loading` | `bool` | `false` | Rows are on their way. While no row shows, placeholder rows fill the body, a page of them when paged, else five, and the table is `aria-busy`. With rows shown, they stay usable under a thin progress bar over the table's top edge, named by the localized `table.loading`, "Loading rows". The empty row waits until loading ends. |
 | `toolbar` | `Option<Element>` | `None` | A row above the table for your own controls, say an export or add button. With `show_quick_filter` the search field joins it at the end. It wraps on a narrow screen and stays put while the table scrolls. `TableColumnsButton`, `TableDensityButton`, `TableFilterButton` and `TableExportButton` work only in here. `TableColumnsButton` opens a checklist that shows and hides the hideable columns; `TableDensityButton` picks compact, standard or comfortable rows, `size` small, medium or large. |
 | `csv_formula_guard` | `bool` | `true` | Gives a `TableExportButton` cell that starts with `=`, `+`, `-`, `@`, Tab or CR, a plain number aside, a leading `'`, so a spreadsheet reads it as text, not a formula (CSV injection, OWASP), as `table_csv` does. `false` exports every cell as it is, as `table_csv_raw` does. |
-| `scroll` | `bool` | `false` | Wraps the table in a `ScrollArea` that scrolls sideways. `class`, `sx` and `attributes` stay on the table. |
+| `scroll` | `bool` | `false` | Wraps the table in a `ScrollArea` that scrolls sideways. The `caption` sits above the scrolled box, so it stays in view. `class`, `sx` and `attributes` stay on the table. |
 | `max_height` | `Option<String>` | `None` | Caps the table's height, any CSS length. The rows scroll in a `ScrollArea`, both ways, under a header that stays put, with the scrollbar beside the rows only. The `caption` sits above the scrolled box. The header takes the page surface's colour: on another background, set it with `sx().selector("& thead th", ..)`. |
 | `sticky_header` | `Option<String>` | `None` | Keeps the header in view while the page, or the scrolling container around the table, scrolls past the rows: this far below its top edge, a CSS length, say `"0"` or a fixed app header's height. It sticks to the nearest ancestor with an `overflow` other than `visible`, even one that only scrolls sideways. The footer and a `toolbar` do not stick. A focus scroll leaves the focused cell clear of the header. No effect with `max_height`, whose header stays put already, or with `scroll` and pinned columns, whose scroll area holds the header instead of the page; a debug build warns. |
 | `virtual_row_height` | `Option<f64>` | `None` | With `max_height`, renders only the rows in view plus a few beyond each edge, so ten thousand rows scroll like fifty. Every body row is clipped to this height in px: one line per cell, longer text ends in an ellipsis. The table then lays out fixed, columns without a `width` sharing the rest evenly. A row holding focus stays rendered while it scrolls away. With `onrowreorder` a keyboard move scrolls to its slot, and a row dragged to the top or bottom edge scrolls the rows on. Ignored with `row_detail`, which renders every row; a debug build warns. |
@@ -320,8 +320,9 @@ Like every component, `Table` also takes the shared props `sx`, `class`,
   stops too and the first header cell is the first.
 - In a grid with an editable column, the other cells are `aria-readonly`. The
   editor is a text field named "Edit" plus the column and the row's name, "Edit
-  Bonus, Ana", a number column's with a decimal keypad and a `bool` column's a
-  checkbox, mixed while an `Option<bool>` is empty. A value that does not
+  Bonus, Ana", a number column's with a numeric keypad when its type has no
+  sign (a signed one keeps the text keyboard for the minus) and a `bool`
+  column's a checkbox, mixed while an `Option<bool>` is empty. A value that does not
   parse or validate marks it `aria-invalid`, shows the `validate` message (or
   "Not a valid value") under it, linked by `aria-describedby`, and announces it
   once; typing clears it. A custom `editor` gets the message as `EditCtx::error` and clears it with `EditCtx::changed`.

@@ -3,9 +3,8 @@ source: e2e/src/suite.rs
 description: table_wide at desktop (rest)
 expression: tree
 ---
+StaticText "Fruit catalogue"
 table "Fruit catalogue"
-  caption
-    StaticText "Fruit catalogue"
   rowgroup
     row
       columnheader "Name"
