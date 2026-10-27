@@ -4,7 +4,7 @@
 use std::time::Duration;
 
 use dioxus::prelude::*;
-use e2e::native::{ColorScheme, Page, mount, mount_in};
+use e2e::native::{ColorScheme, Key, Page, mount, mount_in};
 use libero::{
     components::{Button, Icon},
     hooks::use_color_scheme,
@@ -17,6 +17,30 @@ fn ring_app() -> Element {
     rsx! {
         Button { id: "go", "Go" }
     }
+}
+
+fn stopping_app() -> Element {
+    rsx! {
+        button { id: "go", onkeydown: |event: KeyboardEvent| event.stop_propagation(), "Go" }
+    }
+}
+
+/// A component's stopped key never reaches the wrapper's `keydown`: its release arms the ring.
+#[test]
+fn a_stopped_key_rings_the_focus_after_a_click() {
+    let mut page = mount(stopping_app);
+    page.click("#go");
+    assert!(
+        page.is_focused("#go"),
+        "the click focused {}",
+        page.focus_owner()
+    );
+    assert_eq!(page.attr("#go", "data-lsx-focus-visible"), None);
+    page.press(Key::Named(NamedKey::ArrowDown));
+    assert_eq!(
+        page.attr("#go", "data-lsx-focus-visible").as_deref(),
+        Some("")
+    );
 }
 
 fn icon_app() -> Element {

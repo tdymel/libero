@@ -43,7 +43,8 @@ pub(super) fn key_down(event: &Event<KeyboardData>) {
             return false;
         };
         let length = text.encode_utf16().count();
-        if typed == 0 && length < limit {
+        // A paste over a selection may land at the limit, and is cut too.
+        if typed == 0 && (length < limit || !collapsed) {
             PASTE.set(Some(Paste {
                 node: node.id,
                 before: text.to_string(),

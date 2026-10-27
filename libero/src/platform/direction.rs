@@ -54,7 +54,7 @@ pub(crate) fn apply_lang(lang: &str) {
 }
 
 /// The root's `dir` through the document handle alone. `false` where there is
-/// none yet: a WebView, or Blitz before the provider mounted.
+/// none yet: a WebView page without scripts, or Blitz before the provider mounted.
 pub(crate) fn set_root_direction(direction: Direction) -> bool {
     document().is_some_and(|document| document.set_root_attribute("dir", Some(direction.as_str())))
 }

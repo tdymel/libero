@@ -121,8 +121,8 @@ pub(crate) fn focused_attribute(attr: &str) -> super::Read<Option<String>> {
     backend::focused_attribute(attr)
 }
 
-/// Keeps the focused element page-side, for a WebView, which holds no active
-/// element (no `DocumentApi`). `None` elsewhere. [`focus_kept`] focuses it.
+/// Keeps the focused element page-side, for a WebView, whose `DocumentApi` names
+/// no active element. `None` elsewhere. [`focus_kept`] focuses it.
 pub(crate) fn keep_focused() -> Option<u64> {
     backend::keep_focused()
 }

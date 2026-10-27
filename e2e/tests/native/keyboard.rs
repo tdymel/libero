@@ -313,6 +313,38 @@ fn a_tab_from_a_removed_owner_goes_on_from_where_it_was() {
     );
 }
 
+fn removable_before_hidden() -> Element {
+    let mut shown = use_signal(|| true);
+    rsx! {
+        Button { id: "first", "First" }
+        if shown() {
+            Button { id: "gone", onclick: move |_| shown.set(false), "Remove me" }
+        }
+        div { display: "none",
+            Button { id: "collapsed", "Collapsed" }
+        }
+        div { visibility: "hidden",
+            Button { id: "invisible", "Invisible" }
+        }
+        Button { id: "last", "Last" }
+    }
+}
+
+/// Todo 4527: the Tab from a removed owner skips stops that are not rendered.
+#[test]
+fn a_tab_from_a_removed_owner_skips_unrendered_stops() {
+    let mut page = mount(removable_before_hidden);
+    page.focus("#gone");
+    page.press(Key::Named(NamedKey::Enter));
+    assert!(!page.exists("#gone"), "Enter did not remove the button");
+    page.tab();
+    assert!(
+        page.is_focused("#last"),
+        "Tab went to {}",
+        page.focus_owner()
+    );
+}
+
 /// Todo 4176: a key in a second live document on the thread must not overwrite the
 /// first one's remembered owner, and the Tab stays in its own document (4181).
 #[test]

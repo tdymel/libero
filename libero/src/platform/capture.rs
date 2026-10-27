@@ -268,6 +268,7 @@ pub(crate) const CAPTURE_SCRIPT: &str = "const [attr, tag, whole] = data;
     };
     const record = (max) => {
         if (!stream || recorder) return;
+        if (typeof MediaRecorder === 'undefined') return send({ recordError: 'Unsupported' });
         const media = stream.getVideoTracks().length ? 'video' : 'audio';
         const type = TYPES.find((t) => t.startsWith(media) && MediaRecorder.isTypeSupported?.(t));
         let current;

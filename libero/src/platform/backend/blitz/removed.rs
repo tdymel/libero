@@ -137,7 +137,7 @@ fn next_stop(doc: &BaseDocument, back: bool) -> Option<NodeId> {
         }
         marks.iter().copied().find(|&id| present(doc, id))?
     };
-    let stop = |node: &blitz_dom::Node| node.is_focussable() && !refused::is_inert(doc, node.id);
+    let stop = |node: &blitz_dom::Node| node.is_focussable() && !refused::refuses_tab(doc, node.id);
     let start = doc.get_node(mark)?;
     if back {
         if stop(start) {

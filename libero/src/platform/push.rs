@@ -46,11 +46,11 @@ impl PushError {
 pub(crate) type Subscribed<T> = Pin<Box<dyn Future<Output = Result<T, PushError>>>>;
 
 pub(crate) trait PushApi {
-    /// The page's subscription, without prompting.
-    fn current(&self) -> Subscribed<Option<PushEndpoint>>;
+    /// The `service_worker` registration's subscription, without prompting.
+    fn current(&self, service_worker: &str) -> Subscribed<Option<PushEndpoint>>;
     /// Registers the worker and subscribes, prompting for the permission.
     fn subscribe(&self, options: &PushOptions) -> Subscribed<PushEndpoint>;
-    fn unsubscribe(&self) -> Subscribed<()>;
+    fn unsubscribe(&self, service_worker: &str) -> Subscribed<()>;
 }
 
 /// Each answers an error name, `null` or `[endpoint, p256dh, auth]`.
@@ -63,8 +63,9 @@ const PUSH_SCRIPT: &str = "
     };
     const failure = (error) => error?.name === 'NotAllowedError' ? 'Denied'
         : error?.name === 'NotSupportedError' ? 'Unsupported' : 'Failed';
-    const subscription = async () =>
-        (await navigator.serviceWorker.getRegistration())?.pushManager.getSubscription();
+    // By the script's URL: its default scope may not cover the page (`/assets/sw.js`).
+    const subscription = async (script) =>
+        (await navigator.serviceWorker.getRegistration(script))?.pushManager.getSubscription();
     const key = (base64url) => {
         const base64 = base64url.replace(/-/g, '+').replace(/_/g, '/');
         const text = atob(base64 + '='.repeat((4 - base64.length % 4) % 4));
@@ -78,8 +79,8 @@ const PUSH_SCRIPT: &str = "
             if (worker.state === 'redundant') fail(new Error('redundant'));
         });
     });
-    const current = async () => {
-        try { return endpoint(await subscription()); } catch (error) { return failure(error); }
+    const current = async (script) => {
+        try { return endpoint(await subscription(script)); } catch (error) { return failure(error); }
     };
     const subscribe = async (script, vapid) => {
         try {
@@ -91,8 +92,8 @@ const PUSH_SCRIPT: &str = "
             }));
         } catch (error) { return failure(error); }
     };
-    const unsubscribe = async () => {
-        try { await (await subscription())?.unsubscribe(); return null; } catch (error) { return failure(error); }
+    const unsubscribe = async (script) => {
+        try { await (await subscription(script))?.unsubscribe(); return null; } catch (error) { return failure(error); }
     };";
 
 #[cfg(target_arch = "wasm32")]
@@ -147,8 +148,12 @@ mod web {
     pub(super) struct WebPush;
 
     impl PushApi for WebPush {
-        fn current(&self) -> Subscribed<Option<PushEndpoint>> {
-            run("", "current()", &[])
+        fn current(&self, service_worker: &str) -> Subscribed<Option<PushEndpoint>> {
+            run(
+                "script",
+                "current(script)",
+                &[JsValue::from_str(service_worker)],
+            )
         }
 
         fn subscribe(&self, options: &PushOptions) -> Subscribed<PushEndpoint> {
@@ -163,8 +168,12 @@ mod web {
             Box::pin(async move { subscribed.await?.ok_or(PushError::Failed) })
         }
 
-        fn unsubscribe(&self) -> Subscribed<()> {
-            let done = run("", "unsubscribe()", &[]);
+        fn unsubscribe(&self, service_worker: &str) -> Subscribed<()> {
+            let done = run(
+                "script",
+                "unsubscribe(script)",
+                &[JsValue::from_str(service_worker)],
+            );
             Box::pin(async move { done.await.map(|_| ()) })
         }
     }

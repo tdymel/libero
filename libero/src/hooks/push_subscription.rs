@@ -60,7 +60,7 @@ impl PushSubscription {
         let Some(api) = self.start() else {
             return;
         };
-        let done = api.unsubscribe();
+        let done = api.unsubscribe(&self.options.peek().service_worker);
         let mut this = *self;
         spawn(async move {
             let done = done.await;
@@ -154,7 +154,7 @@ pub fn use_push_subscription(options: PushOptions) -> PushSubscription {
             return;
         };
         subscription.supported.set(true);
-        let current = api.current();
+        let current = api.current(&push_options.peek().service_worker);
         spawn(async move {
             if let Ok(Some(endpoint)) = current.await {
                 subscription.subscription.set(Some(endpoint));

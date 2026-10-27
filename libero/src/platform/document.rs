@@ -18,7 +18,8 @@ pub trait DocumentApi {
     fn colors_changed(&self) {}
 }
 
-/// The document, `None` where Rust holds none: a WebView, a headless build.
+/// The document, `None` where none runs: a headless build, a WebView page without
+/// scripts. A WebView's has no `active_element` and sets root attributes by script.
 ///
 /// ```no_run
 /// if let Some(document) = libero::platform::document() {

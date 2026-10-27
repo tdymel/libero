@@ -1,6 +1,6 @@
 use serde_json::{Value, json};
 
-use super::{eval_with, runs_scripts};
+use super::{Slot, eval_with, runs_scripts};
 use crate::platform::share::{SHARE_SCRIPT, ShareApi, ShareData, Sharing, outcome_of, text_fields};
 use crate::utils::encode_base64;
 
@@ -21,10 +21,20 @@ impl ShareApi for WebViewShare {
             .map(|file| json!([file.name, file.mime, encode_base64(&file.bytes)]))
             .collect();
         let [title, text, url] = text_fields(&data);
+        // Parked, not `join`ed: the sheet can outlast `CHANNEL_HOLD_MS`.
+        let slot = Slot::new();
         let script = eval_with(
             json!([title, text, url, files]),
-            &format!("{SHARE_SCRIPT}\nreturn await share(...data);"),
+            &format!(
+                "{SHARE_SCRIPT}\ndioxus.send(await share(...data));\n{}",
+                slot.park("")
+            ),
         );
-        Box::pin(async move { outcome_of(script.join::<String>().await.ok()) })
+        Box::pin(async move {
+            let mut script = script;
+            let answer = script.recv::<String>().await.ok();
+            drop(slot);
+            outcome_of(answer)
+        })
     }
 }

@@ -22,7 +22,7 @@ use dioxus::{
 use dioxus_native_dom::{NodeHandle, NodeId, synthetic_click_event};
 
 use super::FreeDoc;
-use super::{anchor, defer, focus, later};
+use super::{anchor, defer, focus, later, run_or_defer};
 use crate::platform::keyboard::takes_typing;
 
 thread_local! {
@@ -233,6 +233,12 @@ pub(super) fn key_down(event: &Event<KeyboardData>) {
 
 /// Space released where it was pressed, unprevented: a click.
 pub(super) fn key_up(event: &Event<KeyboardData>) {
+    // No capture phase: a key whose press a component stopped arms the ring here.
+    if !KEYBOARD.replace(true)
+        && let Some(anchor) = anchor()
+    {
+        run_or_defer(&anchor, sync_marks);
+    }
     if !is_space(event) {
         return;
     }

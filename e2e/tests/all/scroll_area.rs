@@ -701,6 +701,32 @@ fn a_change_inside_a_child_component_re_checks_the_tab_stop() {
             .await
             .unwrap();
 
+        // An attribute alone, no child-list change, re-checks it too (4528).
+        for attribute in ["inert", "aria-hidden"] {
+            let set = format!(
+                "document.querySelectorAll('#nested a').forEach((a) => a.setAttribute('{attribute}', 'true'))"
+            );
+            page.evaluate_bounded(set).await.unwrap();
+            wait::for_js_true(
+                page,
+                STOP,
+                &format!("an {attribute} link to give the stop back"),
+            )
+            .await
+            .unwrap();
+            let clear = format!(
+                "document.querySelectorAll('#nested a').forEach((a) => a.removeAttribute('{attribute}'))"
+            );
+            page.evaluate_bounded(clear).await.unwrap();
+            wait::for_js_true(
+                page,
+                &format!("!({STOP})"),
+                &format!("the link without {attribute} to take the stop away"),
+            )
+            .await
+            .unwrap();
+        }
+
         fixture
             .console
             .assert_clean("a change inside a child")

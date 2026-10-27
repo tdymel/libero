@@ -31,6 +31,11 @@ pub(super) fn is_inert(doc: &BaseDocument, node_id: NodeId) -> bool {
     })
 }
 
+/// A Tab stop the web skips and Blitz does not: under `inert`, or not rendered.
+pub(super) fn refuses_tab(doc: &BaseDocument, node_id: NodeId) -> bool {
+    is_inert(doc, node_id) || !is_rendered(doc, node_id)
+}
+
 fn refuses_press(doc: &BaseDocument, node_id: NodeId) -> bool {
     doc.get_node(node_id)
         .and_then(|node| node.element_data())
@@ -133,7 +138,7 @@ pub(super) fn tab(event: &Event<KeyboardData>) {
                 doc.next_node(start, filter)
             }
         };
-        let refused = |id| is_inert(&doc, id) || !is_rendered(&doc, id);
+        let refused = |id| refuses_tab(&doc, id);
         let blitz = step(&|_| true);
         if !blitz.is_some_and(refused) {
             return;

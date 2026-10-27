@@ -116,13 +116,26 @@ pub(crate) fn click_selector(selector: &str) -> Result<(), PlatformError> {
 }
 
 /// The page's tab stops, `kept` ones always: positive `tabindex` ascending, then 0 in DOM order (2720).
-const TAB_ORDER: &str = "const tabOrder = (...kept) => {
+/// A radio group is one stop: a kept radio, else the checked one, else its first (last `backwards`).
+const TAB_ORDER: &str = "const tabOrder = (backwards, ...kept) => {
         const candidates = document.querySelectorAll('a[href], area[href], button, input, \
             select, textarea, summary, iframe, [tabindex], \
             [contenteditable]:not([contenteditable=\"false\"])');
-        const stops = [...candidates].filter((el) => kept.includes(el) || (el.tabIndex >= 0
-            && !el.disabled && !el.closest('[inert]') && el.type !== 'hidden'
+        const shown = [...candidates].filter((el) => kept.includes(el) || (el.tabIndex >= 0
+            && !el.matches(':disabled') && !el.closest('[inert]') && el.type !== 'hidden'
             && el.getClientRects().length > 0 && getComputedStyle(el).visibility !== 'hidden'));
+        const radio = (el) => el instanceof HTMLInputElement && el.type === 'radio' && el.name;
+        const leads = new Map();
+        for (const el of shown.filter(radio)) {
+            const names = leads.get(el.form) ?? new Map();
+            leads.set(el.form, names);
+            const lead = names.get(el.name);
+            if (!lead || (!kept.includes(lead) && (kept.includes(el)
+                || (el.checked && !lead.checked) || (backwards && !lead.checked)))) {
+                names.set(el.name, el);
+            }
+        }
+        const stops = shown.filter((el) => !radio(el) || leads.get(el.form).get(el.name) === el);
         const rank = (el) => (el.tabIndex > 0 ? el.tabIndex : Infinity);
         return stops.map((el, i) => [el, i])
             .sort(([a, i], [b, j]) => rank(a) - rank(b) || i - j)
@@ -134,7 +147,7 @@ const TAB_ORDER: &str = "const tabOrder = (...kept) => {
 const FOCUS_TAB_FROM: &str = "const [selector, backwards] = data;
     const from = selector ? document.querySelector(selector) : document.activeElement;
     if (!from) return;
-    const order = tabOrder(from);
+    const order = tabOrder(backwards, from);
     (order[order.indexOf(from) + (backwards ? -1 : 1)] ?? from).focus();";
 
 pub(crate) fn focus_tab_from(selector: &str, backwards: bool) -> Result<(), PlatformError> {
@@ -155,7 +168,7 @@ const FOCUS_TAB_WITHIN: &str = "const [root, exit, backwards] = data;
     const out = document.querySelector(exit);
     const from = document.activeElement;
     if (!box || !out) return;
-    const order = tabOrder(from, out);
+    const order = tabOrder(backwards, from, out);
     const inside = order.filter((el) => box.contains(el));
     const at = inside.indexOf(from);
     const next = at < 0 ? null : inside[at + (backwards ? -1 : 1)];

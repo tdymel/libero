@@ -134,7 +134,6 @@ pub(super) fn is_rtl(mounted: &Rc<MountedData>) -> bool {
         .is_some_and(element_is_rtl)
 }
 
-/// An `<img>` that finished with no picture.
 pub(super) fn input_value(mounted: &Rc<MountedData>) -> Option<String> {
     let element = mounted.downcast::<web_sys::Element>()?;
     if let Some(input) = element.dyn_ref::<web_sys::HtmlInputElement>() {
@@ -145,6 +144,7 @@ pub(super) fn input_value(mounted: &Rc<MountedData>) -> Option<String> {
         .map(web_sys::HtmlTextAreaElement::value)
 }
 
+/// An `<img>` that finished with no picture.
 pub(super) fn load_failed(mounted: &Rc<MountedData>) -> bool {
     mounted
         .downcast::<web_sys::Element>()
@@ -836,7 +836,7 @@ impl Drop for WebEdgePan {
 
 /// Attributes that make a node focusable or not, or reshape it through a
 /// class. Not `style`: a `Virtualize` rewrites the observed wrapper's on scroll.
-const CONTENT_ATTRIBUTES: [&str; 7] = [
+const CONTENT_ATTRIBUTES: [&str; 9] = [
     "tabindex",
     "disabled",
     "href",
@@ -844,6 +844,8 @@ const CONTENT_ATTRIBUTES: [&str; 7] = [
     "hidden",
     "open",
     "class",
+    "inert",
+    "aria-hidden",
 ];
 
 /// The observer batches a render's records into one callback.
@@ -1365,12 +1367,15 @@ impl ElementApi for WebElement {
             }
             ancestor = element.parent_element();
         };
-        let margin = |side: &str| {
-            style(&self.element, &format!("scroll-margin-{side}"))
+        let pixels = |element: &web_sys::Element, property: String| {
+            style(element, &property)
                 .trim_end_matches("px")
                 .parse::<f64>()
                 .unwrap_or(0.0)
         };
+        let margin = |side: &str| pixels(&self.element, format!("scroll-margin-{side}"));
+        // A published sticky Header sets the scroller's padding (607, 690).
+        let padding = |side: &str| pixels(&scroller, format!("scroll-padding-{side}"));
         let top = rect.top() - margin("top");
         let bottom = rect.bottom() + margin("bottom");
         // The page's own rect scrolls with it; its view is the viewport.
@@ -1378,7 +1383,8 @@ impl ElementApi for WebElement {
             true => 0.0,
             false => scroller.get_bounding_client_rect().top() + scroller.client_top() as f64,
         };
-        let view_bottom = view_top + scroller.client_height() as f64;
+        let view_bottom = view_top + scroller.client_height() as f64 - padding("bottom");
+        let view_top = view_top + padding("top");
         let Some(delta) = super::nearest_scroll(top, bottom, view_top, view_bottom) else {
             return Ok(());
         };

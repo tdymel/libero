@@ -213,7 +213,16 @@ fn extensions(accept: &str) -> Option<Vec<String>> {
         }
         extensions.extend(known);
     }
-    (!extensions.is_empty()).then_some(extensions)
+    // Upper case too: GTK's patterns are case-sensitive, and a camera names `IMG_0001.JPG`.
+    let cased: Vec<String> = extensions
+        .into_iter()
+        .flat_map(|lower| {
+            let upper = lower.to_ascii_uppercase();
+            let upper = (upper != lower).then_some(upper);
+            std::iter::once(lower).chain(upper)
+        })
+        .collect();
+    (!cased.is_empty()).then_some(cased)
 }
 
 /// A file the dialog picked, read from the disk when asked.
@@ -394,13 +403,21 @@ mod tests {
 
     #[test]
     fn suffixes_and_types_become_extensions() {
-        assert_eq!(filter(".PDF"), Some(vec!["pdf".into()]));
+        assert_eq!(filter(".PDF"), Some(vec!["pdf".into(), "PDF".into()]));
         assert_eq!(
             filter("image/jpeg, .txt"),
-            Some(vec!["jpg".into(), "jpeg".into(), "txt".into()])
+            Some(
+                ["jpg", "JPG", "jpeg", "JPEG", "txt", "TXT"]
+                    .map(String::from)
+                    .to_vec()
+            )
         );
         let images = filter("image/*").unwrap();
         assert!(images.contains(&"png".into()) && images.contains(&"svg".into()));
+        assert!(
+            images.contains(&"JPG".into()),
+            "a camera's upper-case name shows"
+        );
         assert!(!images.contains(&"pdf".into()));
     }
 

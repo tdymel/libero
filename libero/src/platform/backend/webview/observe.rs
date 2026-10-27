@@ -164,7 +164,8 @@ pub(crate) fn observe_content(
         tag,
         "observer = new MutationObserver(() => dioxus.send(true));
         observer.observe(target, { childList: true, subtree: true, characterData: true,
-            attributeFilter: ['tabindex', 'disabled', 'href', 'contenteditable', 'hidden', 'open', 'class'] });",
+            attributeFilter: ['tabindex', 'disabled', 'href', 'contenteditable', 'hidden', 'open', 'class',
+                'inert', 'aria-hidden'] });",
         callback,
     )
 }

@@ -1,6 +1,6 @@
 use serde_json::json;
 
-use super::{eval_with, runs_scripts};
+use super::{Slot, eval_with, runs_scripts};
 use crate::platform::waveform::{PEAKS_SCRIPT, Peaks, WaveformApi};
 
 pub(crate) fn waveform() -> Option<&'static dyn WaveformApi> {
@@ -12,19 +12,28 @@ struct WebViewWaveform;
 static WAVEFORM: WebViewWaveform = WebViewWaveform;
 
 impl WaveformApi for WebViewWaveform {
+    /// Parked, not `join`ed: a large file can decode past `CHANNEL_HOLD_MS`.
     fn peaks(&self, src: &str, bars: usize) -> Peaks {
+        let slot = Slot::new();
         let script = eval_with(
             json!([src, bars]),
             &format!(
                 "{PEAKS_SCRIPT}
                 const [src, bars] = data;
                 try {{
-                    return await peaks(src, bars);
+                    dioxus.send(await peaks(src, bars));
                 }} catch (error) {{
-                    return null;
-                }}"
+                    dioxus.send(null);
+                }}
+                {}",
+                slot.park("")
             ),
         );
-        Box::pin(async move { script.join::<Option<Vec<f64>>>().await.ok().flatten() })
+        Box::pin(async move {
+            let mut script = script;
+            let answer = script.recv::<Option<Vec<f64>>>().await.ok().flatten();
+            drop(slot);
+            answer
+        })
     }
 }

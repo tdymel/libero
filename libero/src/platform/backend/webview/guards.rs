@@ -1,7 +1,7 @@
 use dioxus::prelude::{Event, PointerData, spawn};
 use serde_json::json;
 
-use super::{eval, eval_with, page, runs_scripts};
+use super::{Slot, eval, eval_with, page, runs_scripts};
 use crate::platform::PlatformError;
 
 /// Wraps the interpreter's attribute write. Each `input` records the text it sent;
@@ -188,23 +188,32 @@ pub(crate) fn on_pointer_release(pointer_id: i32, onrelease: dioxus::prelude::Ca
     if !runs_scripts() {
         return;
     }
+    // Parked, not `join`ed: a held drag can outlast `CHANNEL_HOLD_MS`.
+    let slot = Slot::new();
     let script = eval_with(
         json!(pointer_id),
-        "await new Promise((done) => {
-            if (window.__lsxPressed && !window.__lsxPressed.has(data)) return done();
-            const up = (event) => {
-                if (event.pointerId !== data) return;
-                window.removeEventListener('pointerup', up, true);
-                window.removeEventListener('pointercancel', up, true);
-                done();
-            };
-            window.addEventListener('pointerup', up, true);
-            window.addEventListener('pointercancel', up, true);
-        });
-        return true;",
+        &format!(
+            "await new Promise((done) => {{
+                if (window.__lsxPressed && !window.__lsxPressed.has(data)) return done();
+                const up = (event) => {{
+                    if (event.pointerId !== data) return;
+                    window.removeEventListener('pointerup', up, true);
+                    window.removeEventListener('pointercancel', up, true);
+                    done();
+                }};
+                window.addEventListener('pointerup', up, true);
+                window.addEventListener('pointercancel', up, true);
+            }});
+            dioxus.send(true);
+            {}",
+            slot.park("")
+        ),
     );
     spawn(async move {
-        if script.join::<bool>().await.is_ok() {
+        let mut script = script;
+        let released = script.recv::<bool>().await.is_ok();
+        drop(slot);
+        if released {
             onrelease.call(());
         }
     });

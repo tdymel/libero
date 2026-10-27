@@ -109,8 +109,13 @@ mod dialog {
     impl SaveFileApi for DialogSaveFile {
         fn save(&self, name: &str, _mime: &str, bytes: Vec<u8>) -> Saving {
             let mut dialog = rfd::AsyncFileDialog::new().set_file_name(name);
+            // Both cases: GTK's patterns are case-sensitive (`rows.CSV` hid `*.csv`).
             if let Some((_, extension)) = name.rsplit_once('.') {
-                dialog = dialog.add_filter(extension, &[extension]);
+                let cased = [
+                    extension.to_ascii_lowercase(),
+                    extension.to_ascii_uppercase(),
+                ];
+                dialog = dialog.add_filter(extension, &cased);
             }
             Box::pin(async move {
                 let picked = dialog.save_file().await;
