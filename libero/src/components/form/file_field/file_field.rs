@@ -230,11 +230,8 @@ pub fn FileField(props: FileFieldProps) -> Element {
     let value = bound.value().unwrap_or_else(|| props.value.clone());
     let refused = use_signal(|| None::<(u64, String)>);
     let edited = use_edited();
-    let announcer = use_noting_chip_announcer(
-        value.iter().map(FileData::name).collect(),
-        refused(),
-        Some(edited),
-    );
+    let names: Vec<String> = value.iter().map(FileData::name).collect();
+    let announcer = use_noting_chip_announcer(names.clone(), refused(), Some(edited));
     let dragging = use_local_state(|| false);
 
     let crop = props.crop.filter(|_| !multiple);
@@ -262,6 +259,7 @@ pub fn FileField(props: FileFieldProps) -> Element {
         onreject: props.onreject,
         refused,
         edited,
+        names,
         accept: props.accept.clone().unwrap_or_default(),
         limits: Limits {
             multiple,

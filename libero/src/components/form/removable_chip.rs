@@ -134,18 +134,21 @@ struct Announced {
 }
 
 impl Announced {
-    /// Takes a render's list; its change is said only when it equals the list `edited` expects,
+    /// Takes a render's list; its change is said only when it carries out the `edited` effect,
     /// the note whenever it is new. Any change uses `edited` up, so a refused edit vouches for no later list.
     fn observe(
         &mut self,
         labels: Vec<String>,
-        edited: &mut Option<Vec<String>>,
+        edited: &mut Option<Effect>,
         note: Option<(u64, String)>,
         words: &ChipsLabels,
     ) {
         let mut change = None;
         if self.labels != labels {
-            if edited.take().is_some_and(|expected| expected == labels) {
+            if edited
+                .take()
+                .is_some_and(|effect| effect == Effect::between(&self.labels, &labels))
+            {
                 change = chip_change(&self.labels, &labels, words);
             }
             self.labels = labels;
@@ -165,15 +168,38 @@ impl Announced {
     }
 }
 
-/// Set by a field right before it emits its own edit, with the labels it expects; that list
-/// is then announced however late it lands. A list loaded, reset or replaced from outside stays silent.
+/// The labels an edit added and removed, case-folded and trimmed, so a host that sorts or
+/// normalises its list still carries it out; a rename is one of each.
+#[derive(Clone, PartialEq, Debug)]
+pub(crate) struct Effect {
+    added: Vec<String>,
+    removed: Vec<String>,
+}
+
+impl Effect {
+    fn between(before: &[String], after: &[String]) -> Self {
+        let fold = |labels: &[String]| -> Vec<String> {
+            labels
+                .iter()
+                .map(|label| label.trim().to_lowercase())
+                .collect()
+        };
+        let (mut added, mut removed) = diff(&fold(before), &fold(after));
+        added.sort();
+        removed.sort();
+        Self { added, removed }
+    }
+}
+
+/// Set by a field right before it emits its own edit, with its list and the one it sends; the next
+/// list change is announced if it does the same, however late it lands. Any other list stays silent.
 #[derive(Clone, Copy, PartialEq)]
-pub(crate) struct Edited(CopyValue<Option<Vec<String>>>);
+pub(crate) struct Edited(CopyValue<Option<Effect>>);
 
 impl Edited {
-    pub(crate) fn mark(self, expected: Vec<String>) {
+    pub(crate) fn mark(self, before: &[String], after: &[String]) {
         let mut edited = self.0;
-        edited.set(Some(expected));
+        edited.set(Some(Effect::between(before, after)));
     }
 }
 
@@ -221,19 +247,9 @@ pub(crate) fn use_noting_chip_announcer(
 }
 
 /// What a list gained and lost, as one sentence; `None` when it only moved.
-/// Counted, not set-compared, so a duplicate's removal is heard.
 fn chip_change(before: &[String], after: &[String], words: &ChipsLabels) -> Option<String> {
-    let mut removed: Vec<String> = Vec::new();
-    let mut remaining = after.to_vec();
-    for label in before {
-        match remaining.iter().position(|held| held == label) {
-            Some(at) => {
-                remaining.remove(at);
-            }
-            None => removed.push(label.clone()),
-        }
-    }
-    let (added, removed) = (remaining.join(", "), removed.join(", "));
+    let (added, removed) = diff(before, after);
+    let (added, removed) = (added.join(", "), removed.join(", "));
     match (added.is_empty(), removed.is_empty()) {
         (true, true) => None,
         (false, true) => Some(fill(words.added, &[("labels", &added)])),
@@ -245,9 +261,24 @@ fn chip_change(before: &[String], after: &[String], words: &ChipsLabels) -> Opti
     }
 }
 
+/// The labels `after` gained and `before` lost. Counted, not set-compared, so a duplicate's removal is heard.
+fn diff(before: &[String], after: &[String]) -> (Vec<String>, Vec<String>) {
+    let mut removed = Vec::new();
+    let mut added = after.to_vec();
+    for label in before {
+        match added.iter().position(|held| held == label) {
+            Some(at) => {
+                added.remove(at);
+            }
+            None => removed.push(label.clone()),
+        }
+    }
+    (added, removed)
+}
+
 #[cfg(test)]
 mod tests {
-    use super::{Announced, chip_change};
+    use super::{Announced, Effect, chip_change};
     use crate::localization::ChipsLabels;
 
     fn labels(values: &[&str]) -> Vec<String> {
@@ -263,7 +294,11 @@ mod tests {
         }
     }
 
-    fn render(announced: &mut Announced, values: &[&str], mark: &mut Option<Vec<String>>) {
+    fn edit(before: &[&str], after: &[&str]) -> Option<Effect> {
+        Some(Effect::between(&labels(before), &labels(after)))
+    }
+
+    fn render(announced: &mut Announced, values: &[&str], mark: &mut Option<Effect>) {
         announced.observe(labels(values), mark, None, &ChipsLabels::ENGLISH);
     }
 
@@ -278,20 +313,20 @@ mod tests {
     #[test]
     fn the_fields_own_edit_is_said() {
         let mut announced = announced(&["a"]);
-        render(&mut announced, &["a", "b"], &mut Some(labels(&["a", "b"])));
+        render(&mut announced, &["a", "b"], &mut edit(&["a"], &["a", "b"]));
         assert_eq!(announced.message.as_deref(), Some("Added b"));
-        render(&mut announced, &["a"], &mut Some(labels(&["a"])));
+        render(&mut announced, &["a"], &mut edit(&["a", "b"], &["a"]));
         assert_eq!(announced.message.as_deref(), Some("Removed b"));
     }
 
     #[test]
     fn an_edit_landing_renders_late_is_still_said() {
         let mut announced = announced(&["a"]);
-        let mut mark = Some(labels(&["a", "b"]));
+        let mut mark = edit(&["a"], &["a", "b"]);
         // The field redraws (its draft cleared) before the caller's awaited list arrives.
         render(&mut announced, &["a"], &mut mark);
         render(&mut announced, &["a"], &mut mark);
-        assert_eq!(mark, Some(labels(&["a", "b"])));
+        assert_eq!(mark, edit(&["a"], &["a", "b"]));
         assert_eq!(announced.count, 0);
         render(&mut announced, &["a", "b"], &mut mark);
         assert_eq!(mark, None);
@@ -301,11 +336,46 @@ mod tests {
     #[test]
     fn a_refused_edit_vouches_for_no_other_list() {
         let mut announced = announced(&["a"]);
-        let mut mark = Some(labels(&["a", "b"]));
+        let mut mark = edit(&["a"], &["a", "b"]);
         // The caller kept its list, then loaded another: silent, and the mark is spent.
         render(&mut announced, &["a"], &mut mark);
         render(&mut announced, &["c"], &mut mark);
         assert_eq!(mark, None);
+        render(&mut announced, &["a", "b"], &mut mark);
+        assert_eq!(announced.message, None);
+    }
+
+    #[test]
+    fn a_sorting_or_normalising_host_still_carries_the_edit() {
+        // MultiSelect holds [b], the user picks a, the host stores its option order.
+        let mut announced = announced(&["b"]);
+        render(&mut announced, &["a", "b"], &mut edit(&["b"], &["b", "a"]));
+        assert_eq!(announced.message.as_deref(), Some("Added a"));
+        // A host lowercasing and trimming tags still did what the edit asked.
+        render(
+            &mut announced,
+            &["a", "b", "new"],
+            &mut edit(&["a", "b"], &["a", "b", " New"]),
+        );
+        assert_eq!(announced.message.as_deref(), Some("Added new"));
+        render(
+            &mut announced,
+            &["a", "renamed", "new"],
+            &mut edit(&["a", "b", "new"], &["a", "Renamed", "new"]),
+        );
+        assert_eq!(
+            announced.message.as_deref(),
+            Some("Added renamed. Removed b")
+        );
+    }
+
+    #[test]
+    fn a_list_doing_something_else_is_silent_and_drops_the_mark() {
+        let mut announced = announced(&["a"]);
+        let mut mark = edit(&["a"], &["a", "b"]);
+        render(&mut announced, &["a", "c"], &mut mark);
+        assert_eq!((announced.count, &mark), (0, &None));
+        // A later sync that happens to match the refused edit is not the field's.
         render(&mut announced, &["a", "b"], &mut mark);
         assert_eq!(announced.message, None);
     }

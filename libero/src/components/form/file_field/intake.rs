@@ -23,6 +23,8 @@ pub(super) struct Taking {
     pub(super) refused: Signal<Option<(u64, String)>>,
     /// Marked with the names on every emit, so the chip announcer says the field's own edits only.
     pub(super) edited: Edited,
+    /// The names the field holds, which an emit's mark diffs against.
+    pub(super) names: Vec<String>,
     pub(super) accept: String,
     pub(super) limits: Limits,
     pub(super) editable: bool,
@@ -57,6 +59,7 @@ pub(super) fn use_file_intake(taking: Taking) -> Intake {
         onreject,
         mut refused,
         edited,
+        names,
         accept,
         limits,
         editable,
@@ -65,7 +68,10 @@ pub(super) fn use_file_intake(taking: Taking) -> Intake {
     } = taking;
 
     let emit = use_callback(move |files: Files| {
-        edited.mark(files.iter().map(FileData::name).collect());
+        edited.mark(
+            &names,
+            &files.iter().map(FileData::name).collect::<Vec<_>>(),
+        );
         match (&onchange, &setter) {
             (Some(onchange), _) => onchange.call(files),
             (None, Some(setter)) => setter.set(files),

@@ -2190,6 +2190,31 @@ mod dispatched {
             "the refused text outlived an outside value:\n{html}"
         );
         assert_eq!(attributes_of(&html, "input")["value"], "September 4, 2026");
+
+        // Todo 4391: an `onchange` host clearing the value drops a refused text too.
+        dom.runtime()
+            .handle_event("input", Event::new(input_event("abc"), true), field);
+        dom.render_immediate(&mut dioxus::core::NoOpMutations);
+        dom.runtime().handle_event(
+            "keydown",
+            Event::new(key_event(Key::Named(NamedKey::Enter)), true),
+            field,
+        );
+        dom.render_immediate(&mut dioxus::core::NoOpMutations);
+        let html = body(&dioxus_ssr::render(&dom));
+        assert!(
+            html.contains(r#"value="abc""#),
+            "abc was not refused:\n{html}"
+        );
+        dom.in_runtime(|| day.set(None));
+        dom.render_immediate(&mut dioxus::core::NoOpMutations);
+        dom.process_events();
+        dom.render_immediate(&mut dioxus::core::NoOpMutations);
+        let html = body(&dioxus_ssr::render(&dom));
+        assert!(
+            !html.contains("abc") && !html.contains(r#"aria-invalid="true""#),
+            "the refused text outlived a cleared value:\n{html}"
+        );
     }
 
     fn readonly_color() -> Element {

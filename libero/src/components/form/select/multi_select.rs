@@ -122,9 +122,13 @@ pub fn MultiSelect<T: Options>(props: MultiSelectProps<T>) -> Element {
     );
     // Every emit is the field's own edit, which the live region then says.
     let edited = use_edited();
+    let before = held.iter().map(Options::label).collect::<Vec<_>>();
     let onchange = bound.emit(props.onchange).map(|emit| {
         move |next: Vec<T>| {
-            edited.mark(next.iter().map(Options::label).collect());
+            edited.mark(
+                &before,
+                &next.iter().map(Options::label).collect::<Vec<_>>(),
+            );
             emit(next)
         }
     });

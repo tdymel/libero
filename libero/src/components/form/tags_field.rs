@@ -211,9 +211,10 @@ pub fn TagsField(props: TagsFieldProps) -> Element {
         .prepare();
 
     // Every emit is the field's own edit, which the announcer then says.
+    let before = held.clone();
     let onchange = bound.emit(props.onchange).map(|emit| {
         move |next: Vec<String>| {
-            edited.mark(next.clone());
+            edited.mark(&before, &next);
             emit(next)
         }
     });

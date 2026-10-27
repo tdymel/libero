@@ -239,10 +239,10 @@ pub(super) fn use_picker_field<V: FieldValue>(
     };
     let resets_value = setter.is_some() && onchange.is_none();
     // A value set from outside replaces the refused text and its error, as on `NumberField` (4386).
-    // `None` does not: a bound refusal resets the value to it.
+    // On a bound field `None` does not: its refusal resets the value to it.
     let outside_keep = keep.clone();
     use_effect(use_reactive!(|value| {
-        if value.is_some() && rejected.peek().is_some() {
+        if (value.is_some() || !resets_value) && rejected.peek().is_some() {
             draft.set(None);
             rejected.set(None);
             outside_keep(None);

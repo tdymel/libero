@@ -455,7 +455,7 @@ mod dispatched {
     /// keyboard-only, so they need real dispatched events rather than SSR.
     mod select_keyboard {
         use super::*;
-        use libero::components::{OptionItem, OptionList, Select};
+        use libero::components::{MultiSelect, OptionItem, OptionList, Select};
 
         thread_local! {
             static PICKED: std::cell::RefCell<Vec<String>> = const { std::cell::RefCell::new(Vec::new()) };
@@ -604,6 +604,38 @@ mod dispatched {
             assert!(id.ends_with("-option-1"), "{id}");
 
             assert_eq!(picked(), Vec::<String>::new(), "an arrow picked something");
+        }
+
+        /// Todo 4392: a host storing its own order still hears the pick, though the list differs from the one sent.
+        #[test]
+        fn a_sorting_host_still_hears_its_pick() {
+            fn sorting() -> Element {
+                let mut held = use_signal(|| vec!["Bonn".to_string()]);
+                rsx! {
+                    LiberoProvider {
+                        MultiSelect::<String> {
+                            label: "Cities",
+                            options: cities(),
+                            value: held(),
+                            onchange: move |mut next: Vec<String>| {
+                                next.sort();
+                                held.set(next);
+                            },
+                        }
+                    }
+                }
+            }
+            let Page { mut dom, rec: find } = Page::build(sorting);
+            let trigger = *find.keydown.last().expect("the trigger listens for keys");
+            // Opening arms the held Bonn; Berlin above it is added before it.
+            press(&mut dom, trigger, Key::Character(" ".into()));
+            press(&mut dom, trigger, Key::Named(NamedKey::ArrowUp));
+            press(&mut dom, trigger, Key::Named(NamedKey::Enter));
+            let html = body(&dioxus_ssr::render(&dom));
+            assert!(
+                html.contains("Added Berlin</span>"),
+                "the sorted list went silent:\n{html}"
+            );
         }
     }
 
