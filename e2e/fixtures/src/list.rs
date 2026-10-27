@@ -54,7 +54,23 @@ pub const ROUTES: Routes = &[
             }
         },
     ),
+    // Todo 4401: a keyed insert and a reversal renumber in DOM order, not mount order (Blitz).
+    ("/list/keyed-insert", || rsx! { KeyedInsertPage {} }),
 ];
+
+#[component]
+fn KeyedInsertPage() -> Element {
+    let mut labels = use_signal(|| vec!["A", "B"]);
+    rsx! {
+        button { id: "insert", onclick: move |_| labels.write().insert(1, "X"), "Insert X" }
+        button { id: "swap", onclick: move |_| labels.write().reverse(), "Swap" }
+        List { id: "keyed", ordered: true,
+            for label in labels() {
+                ListItem { key: "{label}", "{label}" }
+            }
+        }
+    }
+}
 
 #[component]
 fn ListPage() -> Element {

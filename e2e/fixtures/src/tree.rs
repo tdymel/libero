@@ -67,6 +67,7 @@ pub const ROUTES: Routes = &[
         },
     ),
     ("/tree/controlled", || rsx! { ControlledTreePage {} }),
+    ("/tree/outside-collapse", || rsx! { OutsideCollapseTreePage {} }),
     ("/tree/chevron", || rsx! { ChevronTreePage {} }),
     ("/tree/activate", || rsx! { ActivateTreePage {} }),
     ("/tree/activate-item", || rsx! { ActivateItemTreePage {} }),
@@ -332,6 +333,38 @@ fn ControlledTreePage() -> Element {
             onexpandedchange: move |_| requests += 1,
         }
         span { id: "requests", "data-requests": "{requests}" }
+    }
+}
+
+/// Todo 4395: the app collapses `src` from outside; F2 on the page asks for it.
+#[component]
+fn OutsideCollapseTreePage() -> Element {
+    let data = || {
+        vec![
+            TreeNode::new("src", "src").children(vec![
+                TreeNode::new("main", "main"),
+                TreeNode::new("lib", "lib"),
+            ]),
+            TreeNode::new("docs", "docs"),
+            TreeNode::new("tests", "tests"),
+        ]
+    };
+    let mut expanded = use_signal(|| HashSet::from(["src".to_string()]));
+
+    rsx! {
+        div {
+            onkeydown: move |event: KeyboardEvent| {
+                if event.key() == Key::Named(NamedKey::F2) {
+                    expanded.set(HashSet::new());
+                }
+            },
+            Tree {
+                aria_label: "Files",
+                data: data(),
+                expanded: expanded(),
+                onexpandedchange: move |next| expanded.set(next),
+            }
+        }
     }
 }
 

@@ -4,7 +4,7 @@ use anyhow::Result;
 use chromiumoxide::cdp::browser_protocol::emulation::SetDeviceMetricsOverrideParams;
 use e2e::archetypes::{Orientation, RovingTabindex, reset_tab_position};
 use e2e::browser::block_on;
-use e2e::driver::{Driver, eventually, eventually_focused};
+use e2e::driver::{Driver, eventually, eventually_focused, eventually_text};
 use e2e::passes::pointer;
 use e2e::suite::Step;
 use e2e::wait::PageBounded;
@@ -125,6 +125,36 @@ e2e::scenario!(
     tab_leaves_the_strip_and_shift_tab_comes_back_to_the_selected_tab,
     "/tabs",
     tab_out_and_back,
+    android: skip("958: element identity on the WebView"),
+    desktop: skip("958: element identity on the WebView")
+);
+
+const BETA: &str = "[role=tab][aria-label=Beta]";
+const TAB_STOP: &str = "[role=tab][tabindex='0']";
+
+/// Todo 4397: removing the tab before the focused one keeps focus and the tab stop on Beta.
+async fn focus_follows_its_tab<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    // By the arrow: Blitz fires no focus event for a scripted focus.
+    d.focus("[role=tab][aria-label=Gamma]").await?;
+    d.press(keyboard::ARROW_LEFT).await?;
+    eventually_focused(d, BETA, "ArrowLeft from Gamma").await?;
+    d.press(keyboard::F2).await?;
+    eventually(d, "Alpha to leave the strip", async |d| {
+        Ok(!d
+            .attrs(TAB, "aria-label")
+            .await?
+            .iter()
+            .any(|name| name == "Alpha"))
+    })
+    .await?;
+    eventually_focused(d, BETA, "Alpha's removal").await?;
+    eventually_text(d, TAB_STOP, "Beta", "Alpha's removal").await
+}
+
+e2e::scenario!(
+    removing_an_earlier_tab_keeps_focus_on_its_own_tab,
+    "/tabs-shrinking",
+    focus_follows_its_tab,
     android: skip("958: element identity on the WebView"),
     desktop: skip("958: element identity on the WebView")
 );

@@ -8,7 +8,7 @@ use crate::{
         common::{
             ClassList, HtmlTag, Input, LogicalTextAlign, OptionLabel, Options, States,
             disabled_look_sx, draw_svg, has_shortcut_modifier, inset_focus_ring_sx,
-            use_closing_focus,
+            use_closing_focus, use_identity_keys,
         },
         layout::{Collapse, use_box},
     },
@@ -198,22 +198,35 @@ pub(crate) fn render_accordion<T: Options>(view: AccordionView<T>, root: String)
     } = view;
 
     let root_element = use_element();
+    // By value: an index key would remount a section and its panel when options shift.
+    let values: Vec<T> = sections
+        .iter()
+        .map(|section| section.value.clone())
+        .collect();
+    let keys = use_identity_keys(&values);
 
     // A panel closing with focus inside returns it to its trigger. Checked in
     // render: by the effect, a zero-duration panel is gone.
     let open: Vec<usize> = (0..sections.len()).filter(|i| sections[*i].open).collect();
-    let previous = use_hook(|| Rc::new(RefCell::new(open.clone())));
+    let open_keys: Vec<(String, usize)> = open.iter().map(|&i| (keys[i].clone(), i)).collect();
+    let previous = use_hook(|| Rc::new(RefCell::new(open_keys.clone())));
     let closing = use_closing_focus(root_element);
     {
         let mut previous = previous.borrow_mut();
-        if *previous != open {
-            let _ = previous.iter().filter(|i| !open.contains(i)).any(|i| {
-                closing.closing(
-                    id_selector(&format!("{root}-region-{i}")),
-                    id_selector(&format!("{root}-trigger-{i}")),
-                )
-            });
-            *previous = open.clone();
+        if *previous != open_keys {
+            let still_open = |key: &String| open_keys.iter().any(|(open, _)| open == key);
+            // The region is matched in the DOM still drawn; the trigger after the update.
+            let _ = previous
+                .iter()
+                .filter(|(key, _)| !still_open(key))
+                .any(|(key, was)| {
+                    let at = keys.iter().position(|now| now == key).unwrap_or(*was);
+                    closing.closing(
+                        id_selector(&format!("{root}-region-{was}")),
+                        id_selector(&format!("{root}-trigger-{at}")),
+                    )
+                });
+            *previous = open_keys;
         }
     }
     let repay = closing.clone();
@@ -232,9 +245,9 @@ pub(crate) fn render_accordion<T: Options>(view: AccordionView<T>, root: String)
     let disabled: Vec<bool> = sections.iter().map(|section| section.disabled).collect();
 
     let items = rsx! {
-        for (index, section) in sections.into_iter().enumerate() {
+        for ((index, section), key) in sections.into_iter().enumerate().zip(keys) {
             AccordionSection {
-                key: "{index}",
+                key: "{key}",
                 value: section.value,
                 label: section.label,
                 index,

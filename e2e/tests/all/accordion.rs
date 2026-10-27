@@ -496,6 +496,31 @@ e2e::scenario!(
     ios: skip("958: element identity on the WebView")
 );
 
+/// Todo 4400: a section inserted ahead of the open one keeps its panel, so the focus and
+/// the text typed in it stay.
+async fn growing_keeps_focus<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    d.focus("#field-Beta").await?;
+    d.type_text("typed").await?;
+    d.press(keyboard::F2).await?;
+    eventually(d, "Alpha's trigger to appear", async |d| {
+        d.exists("#growing-trigger-0").await
+    })
+    .await?;
+    eventually_focused(d, "#field-Beta", "Alpha inserted ahead of Beta").await?;
+    let text = d.value("#field-Beta").await?;
+    ensure!(text == "typed", "Beta's input lost its text: {text:?}");
+    Ok(())
+}
+
+e2e::scenario!(
+    a_section_inserted_ahead_keeps_the_focus_and_its_text,
+    "/accordion-growing",
+    growing_keeps_focus,
+    android: skip("958: element identity on the WebView"),
+    desktop: skip("958: element identity on the WebView"),
+    ios: skip("958: element identity on the WebView")
+);
+
 /// Ctrl/Alt/Meta chords are the browser's: no focus move, no toggle.
 #[test]
 fn modifier_chords_go_to_the_browser() {

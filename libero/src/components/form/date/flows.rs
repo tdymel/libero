@@ -138,6 +138,7 @@ fn step_tab(name: &'static str, value: Option<String>, disabled: bool) -> TabSpe
         None => rsx! { "{name}" },
     };
     TabSpec {
+        key: name.to_string(),
         name: String::new(),
         content,
         disabled,

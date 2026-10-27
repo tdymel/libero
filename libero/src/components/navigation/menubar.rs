@@ -10,7 +10,7 @@ use crate::{
         common::{
             HtmlTag, Input, Part, Parts, ROW_HOVER_TINT, ScaleOrCss, States, Variables, base_props,
             disabled_look_sx, forced_on_sx, has_shortcut_modifier, inset_focus_ring_sx, parts_enum,
-            use_name_warning, variables,
+            use_identity_keys, use_name_warning, variables,
         },
         layout::use_box,
     },
@@ -154,16 +154,16 @@ base_props! {
     }
 }
 
-/// Everything the triggers' handlers share. One menu state per menu the bar
-/// has ever had, so a returning menu gets its own again.
+/// Everything the triggers' handlers share, a menu state and a key per menu.
 #[derive(Clone)]
 struct Row {
     bar: ElementHandle,
     states: Rc<[MenuState]>,
+    keys: Rc<[String]>,
     disabled: Rc<[bool]>,
     loop_focus: bool,
-    /// The trigger focused last - the tab stop while no menu is open.
-    current: Signal<Option<usize>>,
+    /// The key of the trigger focused last - the tab stop while no menu is open.
+    current: Signal<Option<String>>,
     /// The disabled trigger an open menu was left for: the bar stays in open
     /// mode, so the next enabled trigger opens its menu (APG, todo 568).
     armed: Rc<Cell<Option<usize>>>,
@@ -186,7 +186,7 @@ impl Row {
 
     fn focus(&self, index: usize) {
         let mut current = self.current;
-        current.set(Some(index));
+        current.set(self.keys.get(index).cloned());
         let _ = self
             .bar
             .query_selector(&format!("[data-menubar-index=\"{index}\"]"))
@@ -257,7 +257,10 @@ pub fn Menubar(props: MenubarProps) -> Element {
         "Menubar: empty `aria_label`, so it is announced as just \"menubar\".",
     );
     let bar = use_element();
-    let current = use_signal(|| None::<usize>);
+    // By label, so a menu keeps its state, focus and tab stop when the list changes.
+    let labels: Vec<String> = props.menus.iter().map(|menu| menu.label.clone()).collect();
+    let keys: Rc<[String]> = use_identity_keys(&labels).into();
+    let current = use_signal(|| None::<String>);
     let typeahead = use_typeahead(TYPEAHEAD_RESET);
     // A tap sends a compatibility `mouseenter` before its click: switching
     // there made the click close the menu it had just opened.
@@ -266,25 +269,43 @@ pub fn Menubar(props: MenubarProps) -> Element {
 
     // Not `use_menu()` in a loop: hook slots would shift with the list's length.
     // Created on first need and kept, like `MenuLevel`'s anchor pool.
-    let pool: Rc<RefCell<Vec<MenuState>>> = use_hook(|| Rc::new(RefCell::new(Vec::new())));
+    let pool: Rc<RefCell<Vec<(String, MenuState)>>> =
+        use_hook(|| Rc::new(RefCell::new(Vec::new())));
     let len = props.menus.len();
     let states: Rc<[MenuState]> = {
         let mut pool = pool.borrow_mut();
-        while pool.len() < len {
-            let index = pool.len();
-            pool.push(MenuState::new(format!("{}-{index}", id())));
+        // A new menu takes a dropped one's state, so the pool stays at the longest list.
+        for key in keys.iter() {
+            if pool.iter().any(|(known, _)| known == key) {
+                continue;
+            }
+            match pool.iter_mut().find(|(known, _)| !keys.contains(known)) {
+                // Closed: one dropped on this render may still be open.
+                Some(free) => {
+                    free.1.close();
+                    free.0 = key.clone();
+                }
+                None => {
+                    let state = MenuState::new(format!("{}-{}", id(), pool.len()));
+                    pool.push((key.clone(), state));
+                }
+            }
         }
-        // A menu dropped while open would otherwise mount open when it comes back.
-        for state in &pool[len..] {
+        // A dropped menu closes with its trigger gone.
+        for (_, state) in pool.iter().filter(|(known, _)| !keys.contains(known)) {
             state.close();
         }
-        pool.iter().copied().collect()
+        keys.iter()
+            .filter_map(|key| pool.iter().find(|(known, _)| known == key))
+            .map(|(_, state)| *state)
+            .collect()
     };
 
     let loop_focus = props.loop_focus.unwrap_or(theme.menubar.loop_focus);
     let row = Row {
         bar,
         states,
+        keys: keys.clone(),
         disabled: props.menus.iter().map(|menu| menu.disabled).collect(),
         loop_focus,
         current,
@@ -294,8 +315,10 @@ pub fn Menubar(props: MenubarProps) -> Element {
     // The tab stop: the open menu's trigger, else the last focused, else the first.
     let tabbable = row
         .open_index()
-        .or(current())
-        .filter(|&index| index < len)
+        .or_else(|| {
+            let current = current.read();
+            keys.iter().position(|key| Some(key) == current.as_ref())
+        })
         .unwrap_or(0);
 
     let labels: Rc<Vec<Option<String>>> = Rc::new(
@@ -416,11 +439,13 @@ pub fn Menubar(props: MenubarProps) -> Element {
             }
         };
 
+        let key = row.keys[index].clone();
         let onfocus = {
             let mut current = current;
+            let key = key.clone();
             move |_: FocusEvent| {
-                if *current.peek() != Some(index) {
-                    current.set(Some(index));
+                if current.peek().as_ref() != Some(&key) {
+                    current.set(Some(key.clone()));
                 }
             }
         };
@@ -440,7 +465,7 @@ pub fn Menubar(props: MenubarProps) -> Element {
 
         rsx! {
             Menu {
-                key: "{index}",
+                key: "{key}",
                 state,
                 items: menu.items.clone(),
                 side: props.side,

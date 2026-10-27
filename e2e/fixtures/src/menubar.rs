@@ -11,7 +11,29 @@ pub const ROUTES: Routes = &[
     ("/menubar-docs", || rsx! { MenubarDocsPage {} }),
     ("/menubar-shrink", || rsx! { MenubarShrinkPage {} }),
     ("/menubar-parts", || rsx! { MenubarPartsPage {} }),
+    ("/menubar-labels", || rsx! { MenubarLabelsPage {} }),
 ];
+
+/// `F2` on the bar drops `File`; the menus are keyed by label, so focus stays on `Edit`.
+#[component]
+fn MenubarLabelsPage() -> Element {
+    let mut labels = use_signal(|| vec!["File", "Edit", "View"]);
+    let menus: Vec<MenubarMenu> = labels()
+        .into_iter()
+        .map(|label| MenubarMenu::new(label, vec![MenuItem::new("Item").onselect(|_| {}).into()]))
+        .collect();
+
+    rsx! {
+        div {
+            onkeydown: move |event: KeyboardEvent| {
+                if event.key() == Key::Named(NamedKey::F2) {
+                    labels.write().retain(|label| *label != "File");
+                }
+            },
+            Menubar { aria_label: "Editor", menus }
+        }
+    }
+}
 
 /// `menu_parts` reaches the portaled menus' labels.
 #[component]

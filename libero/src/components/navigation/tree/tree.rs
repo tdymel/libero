@@ -823,23 +823,26 @@ fn TreeCore(props: TreeCoreProps) -> Element {
     // So a removed row hands the tab stop to the row taking its place.
     let mut last_index = use_hook(|| CopyValue::new(0_usize));
     let vanished = active_id.read().as_ref().is_some_and(|id| !visible(id));
+    // Inside a collapsed branch, the branch that hides it.
+    let hiding_branch = |id: &str| {
+        path_to(&props.data, id)?
+            .into_iter()
+            .rev()
+            .map(str::to_string)
+            .find(|id| visible(id))
+    };
     let resolved_active = active_id
         .read()
         .clone()
         .filter(visible)
+        .or_else(|| hiding_branch(active_id.read().as_deref()?))
         .or_else(|| {
+            // Only a row gone from `data`: the one now at its place.
             vanished.then_some(())?;
             let index = last_index().min(order.len().checked_sub(1)?);
             Some(order[index].id.to_string())
         })
-        .or_else(|| {
-            // Inside a collapsed branch, the branch that hides it.
-            let path = path_to(&props.data, props.current.as_deref()?)?;
-            path.into_iter()
-                .rev()
-                .map(str::to_string)
-                .find(|id| visible(id))
-        })
+        .or_else(|| hiding_branch(props.current.as_deref()?))
         .or_else(|| order.first().map(|node| node.id.to_string()));
     if let Some(index) = resolved_active
         .as_deref()

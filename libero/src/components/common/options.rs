@@ -151,3 +151,65 @@ impl From<&str> for OptionLabel {
         Self::from(name.to_string())
     }
 }
+
+/// One key per value that follows it by `PartialEq`, its identity: a keyed node
+/// moves with its value when the list changes. Equal values get keys of their own.
+#[cfg(any(feature = "accordion", feature = "menubar", feature = "tabs"))]
+pub(crate) fn use_identity_keys<T: PartialEq + Clone + 'static>(values: &[T]) -> Vec<String> {
+    use std::{cell::RefCell, rc::Rc};
+    let known = use_hook(|| Rc::new(RefCell::new((0_u64, Vec::<(T, u64)>::new()))));
+    let mut known = known.borrow_mut();
+    let (last, previous) = &mut *known;
+    *previous = assign_keys(previous, last, values);
+    previous.iter().map(|(_, key)| key.to_string()).collect()
+}
+
+#[cfg(any(feature = "accordion", feature = "menubar", feature = "tabs", test))]
+fn assign_keys<T: PartialEq + Clone>(
+    previous: &[(T, u64)],
+    last: &mut u64,
+    values: &[T],
+) -> Vec<(T, u64)> {
+    let mut taken = vec![false; previous.len()];
+    values
+        .iter()
+        .map(|value| {
+            let reused = (0..previous.len()).find(|&at| !taken[at] && previous[at].0 == *value);
+            let key = match reused {
+                Some(at) => {
+                    taken[at] = true;
+                    previous[at].1
+                }
+                None => {
+                    *last += 1;
+                    *last
+                }
+            };
+            (value.clone(), key)
+        })
+        .collect()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::assign_keys;
+
+    #[test]
+    fn a_key_follows_its_value_through_an_insert_and_a_removal() {
+        let mut last = 0;
+        let first = assign_keys(&[], &mut last, &['b', 'c']);
+        assert_eq!(first, [('b', 1), ('c', 2)]);
+        let inserted = assign_keys(&first, &mut last, &['a', 'b', 'c']);
+        assert_eq!(inserted, [('a', 3), ('b', 1), ('c', 2)]);
+        let removed = assign_keys(&inserted, &mut last, &['c', 'a']);
+        assert_eq!(removed, [('c', 2), ('a', 3)]);
+    }
+
+    #[test]
+    fn equal_values_get_keys_of_their_own() {
+        let mut last = 0;
+        let first = assign_keys(&[], &mut last, &['a', 'a']);
+        assert_eq!(first, [('a', 1), ('a', 2)]);
+        assert_eq!(assign_keys(&first, &mut last, &['a']), [('a', 1)]);
+    }
+}

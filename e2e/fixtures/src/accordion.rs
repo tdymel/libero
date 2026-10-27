@@ -15,6 +15,7 @@ pub const ROUTES: Routes = &[
     ("/accordion-ends", || rsx! { EndsPage {} }),
     ("/accordion-pinned", || rsx! { PinnedPage {} }),
     ("/accordion-chevron", || rsx! { ChevronPage {} }),
+    ("/accordion-growing", || rsx! { GrowingPage {} }),
 ];
 
 /// One section always open (todo 4140).
@@ -118,6 +119,30 @@ fn LongLabelPage() -> Element {
                 other => OptionLabel::from(other.label()),
             },
             panel: |_: Step| rsx! { Text { "Body." } },
+        }
+    }
+}
+
+/// A section inserted ahead of the open one keeps its panel and the focus in it (todo 4400).
+#[component]
+fn GrowingPage() -> Element {
+    let mut open = use_signal(|| AccordionOpen::One(Some("Beta".to_string())));
+    let mut options = use_signal(|| vec!["Beta".to_string(), "Gamma".to_string()]);
+    rsx! {
+        div {
+            onkeydown: move |event: KeyboardEvent| {
+                let known = options.read().iter().any(|value| value == "Alpha");
+                if event.key() == Key::Named(NamedKey::F2) && !known {
+                    options.write().insert(0, "Alpha".to_string());
+                }
+            },
+            Accordion {
+                id: "growing",
+                open: open(),
+                onchange: move |next| open.set(next),
+                options: options(),
+                panel: |value: String| rsx! { input { id: "field-{value}" } },
+            }
         }
     }
 }

@@ -1,4 +1,6 @@
-use dioxus::core::{AttributeValue, ScopeId};
+use std::sync::atomic::{AtomicU64, Ordering};
+
+use dioxus::core::AttributeValue;
 use dioxus::prelude::*;
 
 use crate::{
@@ -6,7 +8,8 @@ use crate::{
         common::{HtmlTag, Input, States, base_props},
         layout::use_box,
     },
-    hooks::use_theme,
+    hooks::{ElementHandle, use_element, use_theme},
+    platform::ElementApi,
     sx::{StaticSx, sx},
     theme::{ListDefaults, Size},
 };
@@ -56,8 +59,10 @@ pub(crate) struct ListContext {
     pub(crate) icon: Signal<Option<Element>>,
     /// Native only, for an ordered list: Blitz skips a flex item in its count (todo 4213).
     pub(crate) numbering: Signal<Option<Numbering>>,
-    /// Native only: the items' scopes in mount order, taken for DOM order.
-    pub(crate) items: CopyValue<Vec<ScopeId>>,
+    /// Native only: the items' [`order_id`]s, put in DOM order after each render.
+    pub(crate) items: CopyValue<Vec<u64>>,
+    /// The list's own [`order_id`], which its items name so a nested list's stay apart.
+    pub(crate) list: u64,
     /// Bumped when an item mounts or drops, so the items renumber.
     pub(crate) version: Signal<u32>,
 }
@@ -103,6 +108,54 @@ impl Numbering {
 
 pub(super) const NATIVE: bool = cfg!(all(not(target_arch = "wasm32"), feature = "native"));
 
+/// A process-wide unique id for a list or an item, written into the DOM on native.
+pub(super) fn order_id() -> u64 {
+    static NEXT: AtomicU64 = AtomicU64::new(0);
+    NEXT.fetch_add(1, Ordering::Relaxed)
+}
+
+/// Native only: after each render, and each item mount or drop, sorts the items as the
+/// DOM has them. Mount order misses a keyed insert or move.
+fn use_dom_order(context: ListContext, element: ElementHandle) {
+    let mut renders = use_hook(|| CopyValue::new(0_u64));
+    if NATIVE {
+        *renders.write() += 1;
+    }
+    let renders = *renders.peek();
+    use_effect(use_reactive!(|(renders,)| {
+        let _ = renders;
+        let ListContext {
+            numbering,
+            mut items,
+            list,
+            mut version,
+            ..
+        } = context;
+        // Read for the subscription: an item mounting alone renders no list.
+        version.read();
+        if !NATIVE || numbering.peek().is_none() {
+            return;
+        }
+        let Ok(nodes) = element.query_selector_all(&format!("[data-list-of=\"{list}\"]")) else {
+            return;
+        };
+        let order: Vec<u64> = nodes
+            .iter()
+            .filter_map(|node| node.attribute("data-list-item").ok().flatten())
+            .filter_map(|id| id.parse().ok())
+            .filter(|id| items.peek().contains(id))
+            .collect();
+        let moved = {
+            let items = items.peek();
+            order.len() == items.len() && *items != order
+        };
+        if moved {
+            items.set(order);
+            *version.write() += 1;
+        }
+    }));
+}
+
 /// A vertical list of [`ListItem`](super::ListItem)s: a bare `ul`, or a numbered `ol`.
 ///
 /// ```rust
@@ -128,8 +181,11 @@ pub fn List(props: ListProps) -> Element {
         icon: Signal::new(props.icon.clone()),
         numbering: Signal::new(None),
         items: CopyValue::new(Vec::new()),
+        list: order_id(),
         version: Signal::new(0),
     });
+    let element = use_element();
+    use_dom_order(context, element);
     // Only a hoisted or absent icon skips the write: `VNode` compares by `Rc`
     // pointer, so an inline `rsx!` icon is unequal and wakes the items every render.
     if *context.icon.peek() != props.icon {
@@ -160,6 +216,7 @@ pub fn List(props: ListProps) -> Element {
         .sx(&props.sx)
         .states(&states)
         .prepare()
+        .element(&element)
         // Safari/VoiceOver drops list semantics under `list-style: none`.
         .attr_default("role", "list")
         .render(tag, props.attributes, props.children)

@@ -4,7 +4,7 @@ use super::core::{TabSpec, TabsView, render_tabs};
 use crate::{
     components::common::{
         ClassList, Input, OptionLabel, OptionSource, Options, Parts, States, base_color,
-        input_from_str, parts_enum, parts_under_sx,
+        input_from_str, parts_enum, parts_under_sx, use_identity_keys,
     },
     hooks::{use_root_id, use_theme},
     sx::{Sx, ThemeAwareValue},
@@ -120,16 +120,19 @@ pub fn Tabs<T: Options>(props: TabsProps<T>) -> Element {
         warn("Tabs: `value` is not one of the tabs, so none is selected.");
     }
 
+    let keys = use_identity_keys(&values);
     let tabs: Vec<TabSpec> = values
         .iter()
         .zip(&option_disabled)
-        .map(|(value, &disabled)| {
+        .zip(keys)
+        .map(|((value, &disabled), key)| {
             let label = match &props.option_label {
                 Some(label) => label.call(value.clone()),
                 None => OptionLabel::from(value.label()),
             };
             let name = label.name;
             TabSpec {
+                key,
                 content: label.content.unwrap_or_else(|| rsx! { "{name}" }),
                 name,
                 disabled,

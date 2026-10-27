@@ -39,13 +39,25 @@ pub(super) fn nav_link_color(value: Option<&ThemeAwareValue>) -> Option<Color> {
     }
 }
 
-/// An in-page anchor adds a `#fragment` to the route without leaving the page,
-/// so it's ignored - unless `to` names a fragment itself, then it must match.
+/// An in-page anchor adds a `#fragment` and a search a `?query` without leaving
+/// the page, so each is ignored - unless `to` names one itself, then it must match.
 pub(crate) fn route_matches(route: &str, to: &str) -> bool {
-    if to.contains('#') {
-        return route == to;
+    let (route, route_fragment) = split_off(route, '#');
+    let (to, to_fragment) = split_off(to, '#');
+    if to_fragment.is_some() && route_fragment != to_fragment {
+        return false;
     }
-    route.split('#').next() == Some(to)
+    match to.contains('?') {
+        true => route == to,
+        false => split_off(route, '?').0 == to,
+    }
+}
+
+fn split_off(route: &str, mark: char) -> (&str, Option<&str>) {
+    match route.split_once(mark) {
+        Some((head, tail)) => (head, Some(tail)),
+        None => (route, None),
+    }
 }
 
 const NAV_LINK_ACTIVE_BACKGROUND_VAR: CssVar = CssVar::new("--lsx-nav-link-active-background");
@@ -523,6 +535,17 @@ mod tests {
         assert!(route_matches("/form#summary", "/form#summary"));
         assert!(!route_matches("/form#other", "/form#summary"));
         assert!(!route_matches("/form", "/form#summary"));
+    }
+
+    #[test]
+    fn a_query_on_the_route_is_ignored_unless_to_names_one() {
+        assert!(route_matches("/search?q=rust", "/search"));
+        assert!(route_matches("/search?q=rust#hits", "/search"));
+        assert!(route_matches("/search?q=rust#hits", "/search#hits"));
+        assert!(!route_matches("/searches?q=rust", "/search"));
+        assert!(route_matches("/search?q=rust", "/search?q=rust"));
+        assert!(!route_matches("/search?q=go", "/search?q=rust"));
+        assert!(!route_matches("/search", "/search?q=rust"));
     }
 
     /// The `S1` tint and, as the bar, the colour's label on that tint.

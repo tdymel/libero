@@ -528,6 +528,37 @@ e2e::scenario!(
     controlled
 );
 
+/// Todo 4395: a branch the app collapses from outside under a focused row hands focus and
+/// the tab stop to its own row, not to the row at the hidden row's index.
+async fn outside_collapse<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    d.focus("[data-tree-id='main']").await?;
+    d.press(keyboard::F2).await?;
+    eventually(d, "main to leave the tree", async |d| {
+        Ok(!d.exists("[data-tree-id='main']").await?)
+    })
+    .await?;
+    eventually_focused(d, "[data-tree-id='src']", "the app collapsed src").await?;
+    ensure!(
+        d.attr("[data-tree-id='src']", "tabindex").await?.as_deref() == Some("0"),
+        "src is not the tab stop after its collapse"
+    );
+    ensure!(
+        d.attr("[data-tree-id='docs']", "tabindex")
+            .await?
+            .as_deref()
+            != Some("0"),
+        "docs took the tab stop from the collapsed src"
+    );
+    Ok(())
+}
+
+e2e::scenario!(
+    a_collapse_from_outside_takes_focus_to_the_parent,
+    "/tree/outside-collapse",
+    outside_collapse,
+    native: skip("3406: Blitz hands the vanished row's focus to a container div, parked with native")
+);
+
 /// Todos 1135/1136: the guide runs under the branch's chevron on the inline-start
 /// side, the current row's marker sits on it without moving its label, and the
 /// trailing icon follows the label.

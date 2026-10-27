@@ -1,6 +1,6 @@
 # Skipped e2e scenarios
 
-Scenarios: 708
+Scenarios: 713
 
 Generated from the `scenario!` skips in `e2e/tests/all` by `cargo test -p e2e --lib skips`; edit the skip, not this file. A reason starting `upstream:` waits on Dioxus, Blitz, wry or the engine (revisit on their update, todo 3362), a number names the todo that removes it.
 
@@ -8,6 +8,9 @@ The performance scenarios (units `perf`, `table_perf`) are no skips but run on r
 
 | Test | Platform | Reason |
 | --- | --- | --- |
+| `accordion::a_section_inserted_ahead_keeps_the_focus_and_its_text` | android | 958: element identity on the WebView |
+| `accordion::a_section_inserted_ahead_keeps_the_focus_and_its_text` | desktop | 958: element identity on the WebView |
+| `accordion::a_section_inserted_ahead_keeps_the_focus_and_its_text` | ios | 958: element identity on the WebView |
 | `accordion::focus_returns_to_the_trigger_of_a_panel_that_closes_around_it` | android | 958: element identity on the WebView |
 | `accordion::focus_returns_to_the_trigger_of_a_panel_that_closes_around_it` | desktop | 958: element identity on the WebView |
 | `accordion::focus_returns_to_the_trigger_of_a_panel_that_closes_around_it` | ios | 958: element identity on the WebView |
@@ -172,6 +175,7 @@ The performance scenarios (units `perf`, `table_perf`) are no skips but run on r
 | `line_chart::hovering_shows_the_point_s_tooltip_and_marker` | ios | a touch screen has no hover |
 | `line_chart::the_chart_exports_as_svg_and_png` | native | the PNG export never lands on Blitz |
 | `line_chart::the_tooltip_keeps_its_height_from_point_to_point` | native | Blitz has no script reads |
+| `list::a_keyed_insert_renumbers_the_items_in_dom_order` | web | the browser numbers the items itself; no inline marker to read |
 | `menu::a_click_outside_closes_it_and_leaves_focus_where_it_went` | ios | upstream: WebKit does not focus a clicked button |
 | `menu::a_click_outside_closes_it_and_leaves_focus_where_it_went` | macos desktop | upstream: WebKit does not focus a clicked button |
 | `menu::a_menu_item_opens_the_file_picker` | desktop | 1126: the GTK file chooser is not driven |
@@ -392,6 +396,8 @@ The performance scenarios (units `perf`, `table_perf`) are no skips but run on r
 | `tabs::arrow_right_moves_focus_and_selection_to_the_next_tab` | desktop | 958: element identity on the WebView |
 | `tabs::left_and_right_do_nothing_on_a_vertical_strip` | android | 958: element identity on the WebView |
 | `tabs::left_and_right_do_nothing_on_a_vertical_strip` | desktop | 958: element identity on the WebView |
+| `tabs::removing_an_earlier_tab_keeps_focus_on_its_own_tab` | android | 958: element identity on the WebView |
+| `tabs::removing_an_earlier_tab_keeps_focus_on_its_own_tab` | desktop | 958: element identity on the WebView |
 | `tabs::shift_tab_leaves_the_strip_from_a_clicked_disabled_tab` | desktop | 958: element identity on the WebView (Shift+Tab stays in the strip) |
 | `tabs::tab_leaves_the_strip_and_shift_tab_comes_back_to_the_selected_tab` | android | 958: element identity on the WebView |
 | `tabs::tab_leaves_the_strip_and_shift_tab_comes_back_to_the_selected_tab` | desktop | 958: element identity on the WebView |
@@ -438,6 +444,7 @@ The performance scenarios (units `perf`, `table_perf`) are no skips but run on r
 | `tour::tab_stays_in_the_card` | android | 959: Tab leaves a trap for the body on the WebView |
 | `tour::tab_stays_in_the_card` | desktop | 959: Shift+Tab from the first control leaves a trap on the WebView |
 | `tour::tab_stays_in_the_card` | ios | 959: Shift+Tab from the first control leaves a trap on the WebView |
+| `tree::a_collapse_from_outside_takes_focus_to_the_parent` | native | 3406: Blitz hands the vanished row's focus to a container div, parked with native |
 | `tree::a_vanished_rows_button_hands_focus_to_the_next_row` | native | 3406: Blitz hands the vanished button's focus to a container div, parked with native |
 | `use_back::android_back_steps_down_below_a_menu` | all but android | 2003: no Back key off Android |
 | `use_back::android_back_steps_down_twice_without_a_tap` | all but android | 3322: no Back key off Android |

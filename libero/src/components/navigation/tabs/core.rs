@@ -184,6 +184,8 @@ fn vertical_side_sx(edge: &str, ltr: &str, rtl: &str) -> crate::sx::Sx {
 /// the accessible one, or empty for the content's own.
 #[derive(Clone, PartialEq)]
 pub(crate) struct TabSpec {
+    /// Stays with the tab as the list changes, so focus and the tab stop do too.
+    pub key: String,
     pub name: String,
     pub content: Element,
     pub disabled: bool,
@@ -310,15 +312,18 @@ fn TabStrip(
 ) -> Element {
     let disabled: Vec<bool> = tabs.iter().map(|tab| tab.disabled).collect();
     // One tab stop: the focused tab, else the selected one, else the first enabled.
-    let focused = use_signal(|| None::<usize>);
-    let tab_stop = focused()
-        .filter(|&index| index < tabs.len())
+    let keys: Vec<String> = tabs.iter().map(|tab| tab.key.clone()).collect();
+    let focused = use_signal(|| None::<String>);
+    let tab_stop = focused
+        .read()
+        .as_ref()
+        .and_then(|key| keys.iter().position(|tab| tab == key))
         .or(selected)
         .or_else(|| disabled.iter().position(|off| !off));
-    let focus_on = move |index: Option<usize>| {
-        if *focused.peek() != index {
+    let focus_on = move |key: Option<String>| {
+        if *focused.peek() != key {
             let mut focused = focused;
-            focused.set(index);
+            focused.set(key);
         }
     };
     let list_element = use_element();
@@ -360,7 +365,7 @@ fn TabStrip(
             onselect.call(next);
         }
         // Blitz fires no focus event for a scripted `focus()`.
-        focus_on(Some(next));
+        focus_on(keys.get(next).cloned());
         let tab = id_selector(&format!("{keydown_root}-tab-{next}"));
         match root_element.query_selector(&tab) {
             Ok(tab) => {
@@ -396,7 +401,7 @@ fn TabStrip(
             ..naming,
             for (index, tab) in tabs.iter().enumerate() {
                 button {
-                    key: "{index}",
+                    key: "{tab.key}",
                     id: "{root}-tab-{index}",
                     r#type: "button",
                     role: "tab",
@@ -412,11 +417,15 @@ fn TabStrip(
                     tabindex: if focusable && tab_stop == Some(index) { "0" } else { "-1" },
                     "data-slot": TabsPart::Tab.slot(),
                     onkeydown: move |event| onkeydown.call((index, event)),
-                    onfocus: move |_| focus_on(Some(index)),
+                    onfocus: {
+                        let key = tab.key.clone();
+                        move |_| focus_on(Some(key.clone()))
+                    },
                     onclick: {
                         let disabled = tab.disabled;
+                        let key = tab.key.clone();
                         move |_| {
-                            focus_on(Some(index));
+                            focus_on(Some(key.clone()));
                             if !disabled {
                                 onselect.call(index);
                             }

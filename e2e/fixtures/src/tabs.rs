@@ -22,6 +22,7 @@ pub const ROUTES: Routes = &[
     ("/tabs-lone", || rsx! { TabsLonePage {} }),
     ("/tabs-sm", || rsx! { TabsSmPage {} }),
     ("/tabs-vertical", || rsx! { TabsVerticalPage {} }),
+    ("/tabs-shrinking", || rsx! { TabsShrinkingPage {} }),
 ];
 
 /// Vertical tabs: a column on the start side, moved by Up and Down.
@@ -307,6 +308,37 @@ fn TabsCrowdedPage() -> Element {
             panel: |t: Crowded| rsx! {
                 Text { "panel for {t.label()}" }
             },
+        }
+    }
+}
+
+/// Todo 4397: F2 removes Alpha, the tab before the focused Beta.
+#[component]
+fn TabsShrinkingPage() -> Element {
+    let mut names = use_signal(|| {
+        vec![
+            "Alpha".to_string(),
+            "Beta".to_string(),
+            "Gamma".to_string(),
+        ]
+    });
+    let mut section = use_signal(|| "Gamma".to_string());
+
+    rsx! {
+        div {
+            onkeydown: move |event: KeyboardEvent| {
+                if event.key() == Key::Named(NamedKey::F2) {
+                    names.write().retain(|name| name != "Alpha");
+                }
+            },
+            Tabs {
+                aria_label: "Settings",
+                activation: TabsActivation::Manual,
+                value: section(),
+                onchange: move |next| section.set(next),
+                options: names(),
+                panel: |s: String| rsx! { Text { "panel for {s}" } },
+            }
         }
     }
 }

@@ -1,6 +1,8 @@
 //! `List`: a nested list takes the indent of the list it sits in.
 
+use anyhow::Result;
 use e2e::browser::block_on;
+use e2e::driver::{Driver, eventually};
 use e2e::wait::PageBounded;
 use e2e::{Fixture, Suite, Viewport, ax, wait};
 
@@ -156,3 +158,34 @@ fn a_subheader_sits_outside_the_number_gutter() {
         fixture.close().await.unwrap();
     });
 }
+
+/// Each plain item's number from its inline `list-style-type`, in DOM order.
+async fn markers<D: Driver>(d: &mut D) -> Result<Vec<String>> {
+    Ok(d.attrs("#keyed > li", "style")
+        .await?
+        .iter()
+        .map(|style| style.split('"').nth(1).unwrap_or_default().to_string())
+        .collect())
+}
+
+/// Todo 4401: a keyed insert and a reversal renumber in DOM order, not mount order, on Blitz.
+async fn a_keyed_insert_renumbers<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    d.click("#insert").await?;
+    eventually(d, "three items", async |d| Ok(markers(d).await?.len() == 3)).await?;
+    eventually(d, "1, 2, 3 in DOM order after the insert", async |d| {
+        Ok(markers(d).await? == ["1. ", "2. ", "3. "])
+    })
+    .await?;
+    d.click("#swap").await?;
+    eventually(d, "1, 2, 3 in DOM order after the swap", async |d| {
+        Ok(markers(d).await? == ["1. ", "2. ", "3. "])
+    })
+    .await
+}
+
+e2e::scenario!(
+    a_keyed_insert_renumbers_the_items_in_dom_order,
+    "/list/keyed-insert",
+    a_keyed_insert_renumbers,
+    web: skip("the browser numbers the items itself; no inline marker to read")
+);

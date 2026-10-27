@@ -1,4 +1,3 @@
-use dioxus::core::current_scope_id;
 use dioxus::prelude::*;
 
 use crate::{
@@ -10,7 +9,7 @@ use crate::{
     theme::{Size, SizeCss},
 };
 
-use super::list::{ListContext, NATIVE};
+use super::list::{ListContext, NATIVE, order_id};
 
 // Block, so a nested `List` stacks below this item's content. The icon floats instead of
 // flexing: only a `list-item` counts in an ordered list's numbering (todo 2923).
@@ -89,11 +88,10 @@ fn action_sx() -> Sx {
 
 /// Native only: the item's number in an ordered list, counting icon and action items as
 /// a browser does. Blitz numbers only a `list-item` with a marker (todo 4213).
-fn use_number(context: Option<ListContext>) -> Option<i64> {
+fn use_number(context: Option<ListContext>, id: u64) -> Option<i64> {
     if !NATIVE {
         return None;
     }
-    let id = current_scope_id();
     use_hook(|| {
         if let Some(mut items) = context.map(|context| context.items) {
             items.write().push(id);
@@ -176,9 +174,14 @@ pub fn ListItem(props: ListItemProps) -> Element {
     let inherited = context.and_then(|context| context.icon.read().clone());
     let icon = props.icon.clone().or(inherited);
     // An icon or action item draws no number; a plain one writes out its own.
-    let number = use_number(context)
+    let id = use_hook(order_id);
+    let number = use_number(context, id)
         .filter(|_| icon.is_none() && props.action.is_none())
         .map(|number| format!("list-style-type: \"{number}. \""));
+    // Native only: where `List` reads the items' DOM order from.
+    let order = context
+        .filter(|context| NATIVE && context.numbering.read().is_some())
+        .map(|context| (context.list.to_string(), id.to_string()));
 
     let states: Input<States> = props
         .states
@@ -208,6 +211,8 @@ pub fn ListItem(props: ListItemProps) -> Element {
         .states(&states)
         .style(number)
         .prepare()
+        .attr("data-list-of", order.as_ref().map(|(list, _)| list.clone()))
+        .attr("data-list-item", order.map(|(_, item)| item))
         .render(HtmlTag::Li, props.attributes, children)
 }
 

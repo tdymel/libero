@@ -4,7 +4,7 @@
 use anyhow::Result;
 use e2e::archetypes::{Orientation, Overlay, RovingTabindex};
 use e2e::browser::block_on;
-use e2e::driver::{Driver, eventually, eventually_focused};
+use e2e::driver::{Driver, eventually, eventually_focused, eventually_text};
 use e2e::passes::{keyboard, pointer};
 use e2e::suite::Step;
 use e2e::wait::PageBounded;
@@ -145,6 +145,23 @@ e2e::scenario!(
     "/menubar-docs",
     hovering_switches,
     ios: skip("a touch screen has no hover")
+);
+
+/// Todo 4397: a menu dropped before the focused one keeps focus and the tab stop on its
+/// label, not on the index it held.
+async fn focus_follows_the_label<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    let tabbable = "[role=menubar] [data-menubar-index][tabindex=\"0\"]";
+    d.focus(&trigger(1)).await?;
+    d.press(keyboard::F2).await?;
+    eventually_text(d, &trigger(0), "Edit", "F2 dropped File").await?;
+    eventually_focused(d, &trigger(0), "F2 dropped File").await?;
+    eventually_text(d, tabbable, "Edit", "F2 dropped File").await
+}
+
+e2e::scenario!(
+    focus_follows_the_label_when_an_earlier_menu_is_dropped,
+    "/menubar-labels",
+    focus_follows_the_label
 );
 
 #[test]
