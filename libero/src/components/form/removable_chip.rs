@@ -136,6 +136,7 @@ struct Announced {
 impl Announced {
     /// Takes a render's list; its change is said only when `edited`, the note whenever it is new.
     /// `edited` is used up by the next change, not the next render: the caller's new list may land a render late.
+    /// Unused, it lapses once the event's renders are done (`Edited::mark`).
     fn observe(
         &mut self,
         labels: Vec<String>,
@@ -174,6 +175,12 @@ impl Edited {
     pub(crate) fn mark(self) {
         let mut edited = self.0;
         edited.set(true);
+        // Spent with this event's renders: a refused edit vouches for no later list (4381).
+        dioxus::core::queue_effect(move || {
+            if let Ok(mut mark) = edited.try_write() {
+                *mark = false;
+            }
+        });
     }
 }
 

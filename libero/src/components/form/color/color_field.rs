@@ -302,21 +302,21 @@ pub fn ColorField(props: ColorFieldProps) -> Element {
         true => Input::Value(FieldStatus::Error(labels.invalid.to_string())),
         false => props.status.clone(),
     };
+    // A color is always held: only text cleared to blank leaves the field empty.
+    let cleared = draft
+        .read()
+        .as_deref()
+        .is_some_and(|text| text.trim().is_empty());
     let field = use_field()
         .label(&props.label)
         .description(&props.description)
         .helper(&props.helper)
         .status(&status)
-        .rules(props.validate.check(&value))
+        // Cleared text posts nothing, so the rules do not judge the color it hides (4384).
+        .rules(props.validate.check(&value).filter(|_| !cleared))
         .bound(&bound)
         .required(required)
-        // A color is always held: only text cleared to blank leaves the field empty.
-        .empty(
-            draft
-                .read()
-                .as_deref()
-                .is_some_and(|text| text.trim().is_empty()),
-        )
+        .empty(cleared)
         .readonly(readonly)
         .disabled(disabled)
         .size(size)
@@ -751,10 +751,6 @@ pub fn ColorField(props: ColorFieldProps) -> Element {
 
     // Posts the value in `format`, as `ColorPicker` does, never the text being typed (todo 2315).
     // Text cleared and kept (no `fix_on_blur`) posts nothing, as the field shows (4362).
-    let cleared = draft
-        .read()
-        .as_deref()
-        .is_some_and(|text| text.trim().is_empty());
     let hidden = bound.name().map(|name| {
         rsx! {
             input {

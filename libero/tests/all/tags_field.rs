@@ -284,6 +284,48 @@ mod dispatched {
         );
     }
 
+    thread_local! {
+        static HELD: std::cell::Cell<Option<Signal<Vec<String>>>> = const { std::cell::Cell::new(None) };
+    }
+
+    fn refusing() -> Element {
+        let held = use_signal(|| vec!["rust".to_string()]);
+        HELD.set(Some(held));
+        rsx! {
+            LiberoProvider {
+                TagsField { label: "Topics", value: held(), onchange: move |_: Vec<String>| {} }
+            }
+        }
+    }
+
+    /// Todo 4381: a refused add's mark lapses with its event, so a later swap from outside stays silent.
+    #[test]
+    fn a_refused_edit_does_not_vouch_for_a_later_swap() {
+        let Page { mut dom, rec } = Page::build(refusing);
+        let input = rec.input.expect("the draft input");
+        dom.runtime()
+            .handle_event("input", Event::new(input_event("wasm"), true), input);
+        dom.render_immediate(&mut dioxus::core::NoOpMutations);
+        dom.runtime().handle_event(
+            "keydown",
+            Event::new(key_event(Key::Named(NamedKey::Enter)), true),
+            input,
+        );
+        dom.render_immediate(&mut dioxus::core::NoOpMutations);
+        // A host waits for its next work here, which runs the event's effects.
+        dom.process_events();
+
+        let mut held = HELD.get().expect("the fixture's list");
+        dom.in_runtime(|| held.set(vec!["x".to_string(), "y".to_string()]));
+        dom.render_immediate(&mut dioxus::core::NoOpMutations);
+        let html = dioxus_ssr::render(&dom);
+        assert!(html.contains(">x<"), "the swap did not land:\n{html}");
+        assert!(
+            !html.contains("Added"),
+            "a refused add vouched for a swap:\n{html}"
+        );
+    }
+
     fn clearable_topics() -> Element {
         rsx! {
             LiberoProvider {

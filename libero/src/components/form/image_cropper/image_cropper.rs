@@ -858,8 +858,8 @@ pub fn ImageCropper(props: ImageCropperProps) -> Element {
             return;
         }
         emit.call(rect);
-        // Said after the caller's render, so it names the box that stands.
-        spawn(async move {
+        // An effect, not a task: a task can run before this field's own rerender (4383).
+        dioxus::core::queue_effect(move || {
             if let Some(message) = press_message(&words, pan, shown, *latest.peek()) {
                 announcer.say(message);
             }

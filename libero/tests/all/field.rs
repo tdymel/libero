@@ -2089,6 +2089,50 @@ mod dispatched {
         }
     }
 
+    /// Todo 4382: a value set from outside replaces refused text, and the field's error goes with it.
+    #[test]
+    fn an_outside_value_drops_the_refused_texts_error() {
+        thread_local! {
+            static AGE: std::cell::Cell<Option<Signal<Option<i32>>>> = const { std::cell::Cell::new(None) };
+        }
+        fn app() -> Element {
+            let age = use_signal(|| None::<i32>);
+            AGE.set(Some(age));
+            rsx! {
+                LiberoProvider {
+                    NumberField { label: "Age", value: age(), onchange: move |_: Option<i32>| {} }
+                }
+            }
+        }
+
+        let Page { mut dom, rec: find } = Page::build(app);
+        let typed = find.input.expect("registered no input listener");
+        let committed = find.change.expect("registered no change listener");
+        for (name, field) in [("input", typed), ("change", committed)] {
+            dom.runtime()
+                .handle_event(name, Event::new(input_event("abc"), true), field);
+            dom.render_immediate(&mut dioxus::core::NoOpMutations);
+        }
+        let html = dioxus_ssr::render(&dom);
+        assert!(
+            html.contains("Enter a number."),
+            "abc was not refused:\n{html}"
+        );
+
+        let mut age = AGE.get().expect("the fixture's value");
+        dom.in_runtime(|| age.set(Some(30)));
+        // The render, its effect, and the render the effect asks for.
+        dom.render_immediate(&mut dioxus::core::NoOpMutations);
+        dom.process_events();
+        dom.render_immediate(&mut dioxus::core::NoOpMutations);
+        let html = body(&dioxus_ssr::render(&dom));
+        assert!(
+            !html.contains("Enter a number.") && !html.contains(r#"aria-invalid="true""#),
+            "the error outlived an outside value:\n{html}"
+        );
+        assert_eq!(attributes_of(&html, "input")["value"], "30");
+    }
+
     fn readonly_color() -> Element {
         rsx! {
             LiberoProvider {

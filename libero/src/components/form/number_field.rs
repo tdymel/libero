@@ -386,7 +386,7 @@ fn NumberFieldShell<T: NumberValue>(
             held: None,
         })
     });
-    // Why the last commit was refused; cleared by the next keystroke, step or reset.
+    // Why the last commit was refused; cleared by the next keystroke, step, reset or outside value.
     let mut rejected = use_signal(|| kept.map(|typed| typed.error));
     // A form reset drops the typed text, which `-` or `.` would outlive on a `None` value.
     let anchor = use_element();
@@ -460,6 +460,19 @@ fn NumberFieldShell<T: NumberValue>(
             _ => scope.drop_typed(full),
         }
     };
+    // A value set from outside replaces the refused text, and its error goes with it (4382).
+    let outside_keep = keep.clone();
+    use_effect(use_reactive!(|bound_value| {
+        let value = bound_value.unwrap_or_else(|| live.cloned());
+        let shown = buffer
+            .peek()
+            .as_ref()
+            .is_some_and(|edit| edit.shows(value, separator));
+        if rejected.peek().is_some() && !shown {
+            rejected.set(None);
+            outside_keep(None);
+        }
+    }));
     let unrefuse = {
         let keep = keep.clone();
         move || {
