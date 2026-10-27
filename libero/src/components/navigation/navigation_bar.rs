@@ -274,7 +274,7 @@ static NAVIGATION_BAR_ITEM_SX: StaticSx = StaticSx::new(|| {
         .display("flex")
         .flex_direction("column")
         .align_items("center")
-        .justify_content("center")
+        .justify_content("flex-start")
         .gap("4px")
         .padding("6px 0")
         .margin("0")
@@ -300,9 +300,13 @@ static NAVIGATION_BAR_ITEM_SX: StaticSx = StaticSx::new(|| {
                 .border_radius("16px")
                 .selector("& > svg", sx().width("24px").height("24px")),
         )
-        .selector(
-            "&:hover:not(:where([data-state~=\"disabled\"], [data-state~=\"selected\"])) > [data-slot='icon']",
-            sx().background("muted.2"),
+        // Only with a hovering pointer: a tap on touch must not leave the pill lit.
+        .media(
+            "(hover: hover)",
+            sx().selector(
+                "&:hover:not(:where([data-state~=\"disabled\"], [data-state~=\"selected\"])) > [data-slot='icon']",
+                sx().background("muted.2"),
+            ),
         )
         // Two lines at most, then an ellipsis: a long label must not grow the bar.
         // Blitz has no line clamp: a two-line height cap cuts it without the ellipsis.
@@ -313,7 +317,7 @@ static NAVIGATION_BAR_ITEM_SX: StaticSx = StaticSx::new(|| {
                 .font_size(TEXT_FONT_SIZE.value(Size::Xs))
                 .line_height("1.25")
                 .text_align("center")
-                .with("overflow-wrap", "anywhere")
+                .with("overflow-wrap", "break-word")
                 .overflow("hidden");
             match clamps_lines() {
                 // Padding inside the box keeps the clamped ellipsis from hanging past it (3943).
@@ -552,10 +556,7 @@ pub fn NavigationBar(props: NavigationBarProps) -> Element {
     let states: Input<States> = props
         .states
         .unwrap_or_default()
-        .with(
-            position.state_name(),
-            plain == Some(NavigationBarVariant::Bar),
-        )
+        .with(position.state_name(), true)
         .with(NavigationBarVariant::Rail.state_name(), rail)
         .with(
             "rail-fixed",

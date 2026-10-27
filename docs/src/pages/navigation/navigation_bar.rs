@@ -175,6 +175,8 @@ pub fn NavigationBarPage() -> Element {
                             "rail" => vec!["variant: \"rail\"".to_string()],
                             _ => vec![],
                         }),
+                    Control::toggle("position", ["static", "sticky"])
+                        .labels(["Static", "Sticky"]),
                     Control::toggle("show_labels", ["always", "selected", "never"])
                         .labels(["Always", "Selected", "Never"]),
                     Control::color("color").default(theme.navigation_bar.color.as_str()),
@@ -182,6 +184,7 @@ pub fn NavigationBarPage() -> Element {
                     Control::switch("disabled").code(|_, _| vec![]),
                 ],
                 render: move |values: DemoValues| {
+                    let position = values.str("position");
                     let show_labels = values.str("show_labels");
                     let color = values.str("color");
                     let badge = values.str("badge") == "true";
@@ -213,6 +216,7 @@ pub fn NavigationBarPage() -> Element {
                                     shape => NavigationBarVariant::from(shape).into(),
                                 },
                                 sx: nav,
+                                position: position.as_str(),
                                 show_labels: show_labels.as_str(),
                                 color,
                                 for (index, (label, _, _, icon)) in ITEMS.into_iter().enumerate() {
