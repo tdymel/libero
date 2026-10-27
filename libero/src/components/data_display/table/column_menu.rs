@@ -294,8 +294,9 @@ pub(super) fn ColumnMenu(
         items.push(
             MenuItem::new(label(&header))
                 .onselect(move |_| {
-                    grouping.set(regrouped(&grouping.read(), &header, !grouped));
-                    announcer.say(said(&header));
+                    let next = regrouped(&grouping.read(), &header, !grouped);
+                    let header = header.clone();
+                    grouping.set_then(next, move || announcer.say(said(&header)));
                 })
                 .into(),
         );
@@ -318,8 +319,8 @@ pub(super) fn ColumnMenu(
                     .disabled(next.is_none())
                     .onselect(move |_| {
                         if let Some((next, place)) = next.clone() {
-                            order.set(next);
-                            announcer.say((labels.column_moved)(&header, place, shown));
+                            let said = (labels.column_moved)(&header, place, shown);
+                            order.set_then(next, move || announcer.say(said));
                         }
                     })
                     .into(),
@@ -371,11 +372,14 @@ pub(super) fn ColumnMenu(
         items.push(
             item.disabled(shown <= 1)
                 .onselect(move |_| {
-                    hidden.set(toggle_column(&hidden.read(), &header, false));
-                    if let Some(neighbour) = &neighbour_key {
-                        focus.owe(neighbour.clone());
-                    }
-                    announcer.say((labels.column_hidden)(&header));
+                    let (said, neighbour) =
+                        ((labels.column_hidden)(&header), neighbour_key.clone());
+                    hidden.set_then(toggle_column(&hidden.read(), &header, false), move || {
+                        if let Some(neighbour) = neighbour {
+                            focus.owe(neighbour);
+                        }
+                        announcer.say(said);
+                    });
                 })
                 .into(),
         );
@@ -401,18 +405,21 @@ pub(super) fn ColumnMenu(
                     .disabled(last)
                     .keep_open()
                     .onselect(move |_| {
-                        hidden.set(toggle_column(&hidden.read(), &header, off));
-                        // Hiding its own column unmounts this menu, as Hide does (todo 1490):
-                        // the checkbox is gone before its state is read.
-                        if column == index
-                            && !off
-                            && let Some(neighbour) = &neighbour_key
-                        {
-                            focus.owe(neighbour.clone());
-                        }
-                        if !off {
-                            announcer.say((labels.column_hidden)(&header));
-                        }
+                        let (said, neighbour) =
+                            ((labels.column_hidden)(&header), neighbour_key.clone());
+                        hidden.set_then(toggle_column(&hidden.read(), &header, off), move || {
+                            // Hiding its own column unmounts this menu, as Hide does (todo 1490):
+                            // the checkbox is gone before its state is read.
+                            if column == index
+                                && !off
+                                && let Some(neighbour) = neighbour
+                            {
+                                focus.owe(neighbour);
+                            }
+                            if !off {
+                                announcer.say(said);
+                            }
+                        });
                     })
                     .into()
             })

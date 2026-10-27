@@ -165,13 +165,20 @@ impl FilterOperator {
 /// A number as typed. The locale's group separator is dropped where it splits the whole into
 /// threes (`1,000`, `12.500,5`); else a lone comma is the decimal point, so `1,5` is 1.5.
 pub(super) fn parse_number(text: &str, formats: &Formats) -> Option<f64> {
+    number_text(text, formats)
+        .parse::<f64>()
+        .ok()
+        .filter(|value| value.is_finite())
+}
+
+/// A typed number in the form `str::parse` reads, by [`parse_number`]'s rules.
+pub(super) fn number_text(text: &str, formats: &Formats) -> String {
     let text = text.trim();
     let text = ungrouped(text, formats.group_separator).unwrap_or_else(|| text.to_string());
-    let text = match (text.matches(',').count(), text.contains('.')) {
+    match (text.matches(',').count(), text.contains('.')) {
         (1, false) => text.replace(',', "."),
         _ => text,
-    };
-    text.parse::<f64>().ok().filter(|value| value.is_finite())
+    }
 }
 
 /// An ISO day as its sort number, `None` when it does not parse.

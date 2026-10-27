@@ -161,29 +161,32 @@ impl CellValue for bool {
 
 macro_rules! numeric_cell_value {
     ($($ty:ty),+ $(,)?) => {
-        $(
-            impl CellValue for $ty {
-                fn cell_text(&self) -> String {
-                    self.to_string()
-                }
-
-                fn sort_key(&self) -> SortKey {
-                    SortKey::num(*self as f64)
-                }
-
-                fn align() -> CellAlign {
-                    CellAlign::End
-                }
-
-                fn filter_kind() -> FilterKind {
-                    FilterKind::Number
-                }
+        $(numeric_cell_value!(@ $ty, |n: $ty| n as f64);)+
+    };
+    (@ $ty:ty, $key:expr) => {
+        impl CellValue for $ty {
+            fn cell_text(&self) -> String {
+                self.to_string()
             }
-        )+
+
+            fn sort_key(&self) -> SortKey {
+                SortKey::num(($key)(*self))
+            }
+
+            fn align() -> CellAlign {
+                CellAlign::End
+            }
+
+            fn filter_kind() -> FilterKind {
+                FilterKind::Number
+            }
+        }
     };
 }
 
-numeric_cell_value!(i8, i16, i32, i64, isize, u8, u16, u32, u64, usize, f32, f64);
+numeric_cell_value!(i8, i16, i32, i64, isize, u8, u16, u32, u64, usize, f64);
+// Widened through the decimal it prints, so `0.1f32` filters as `= 0.1`; the order holds.
+numeric_cell_value!(@ f32, |n: f32| n.to_string().parse().unwrap_or(f64::NAN));
 
 /// Printed as `2024-03-09`; give the column a `.format` for a local form.
 impl CellValue for chrono::NaiveDate {
@@ -366,6 +369,19 @@ mod tests {
         assert_eq!(<u32 as CellValue>::align(), CellAlign::End);
         // The trap this exists to prevent: "9" after "10" as text.
         assert!(9u32.sort_key().compare(&10u32.sort_key(), None).is_lt());
+    }
+
+    #[test]
+    fn an_f32_keys_by_the_decimal_it_shows() {
+        use super::super::column_filter::{CellTest, ColumnFilter, FilterOperator};
+        let equals = CellTest::new(
+            &ColumnFilter::new("A", FilterOperator::Equals, "0.1"),
+            FilterKind::Number,
+            &crate::localization::Formats::AMERICAN,
+        )
+        .unwrap();
+        assert!(equals.passes("0.1", &0.1f32.sort_key()));
+        assert!(0.1f32.sort_key().compare(&0.2f32.sort_key(), None).is_lt());
     }
 
     #[test]

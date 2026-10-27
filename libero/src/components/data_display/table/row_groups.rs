@@ -160,6 +160,8 @@ impl<T: PartialEq> GroupAggregates<T> {
 #[derive(Clone, PartialEq)]
 pub(super) struct GroupCells {
     pub leads: usize,
+    /// With `cell_focus` and a hidden column: each shown column's `aria-colindex`, in display order.
+    pub colindex: Option<Rc<[usize]>>,
     /// Each shown column's pin, in display order.
     pub pins: Rc<[Option<CellPin>]>,
     /// Each shown column's `data-align`, in display order.
@@ -197,6 +199,7 @@ pub(super) fn GroupRow(
 ) -> Element {
     let GroupCells {
         leads,
+        colindex,
         pins,
         aligns,
         labels,
@@ -205,12 +208,14 @@ pub(super) fn GroupRow(
     } = cells;
     let name = (labels.group_toggle)(&label, count);
     // The checkbox column leads after the handles and toggles, so it gets its own cell.
+    let indexed = colindex.is_some();
     let select = select.zip(selected).map(|((look, choose), state)| {
         let id = id.clone();
         rsx! {
             td {
                 key: "{leads}select",
                 "data-select": true,
+                aria_colindex: indexed.then(|| leads.to_string()),
                 // As a row's box: no reach to Blitz's focus guard (todo 1406).
                 onclick: |event| {
                     event.stop_propagation();
@@ -255,6 +260,7 @@ pub(super) fn GroupRow(
                 "data-pin": pin.as_ref().map(|pin| pin.side.as_str()),
                 "data-pin-edge": pin.as_ref().filter(|pin| pin.edge).map(|_| true),
                 style: pin.as_ref().map(CellPin::style),
+                aria_colindex: colindex.as_ref().map(|indices| indices[position].to_string()),
                 {button}
                 if let Some((name, text)) = aggregate {
                     span { "data-group-aggregate": true,
@@ -272,6 +278,7 @@ pub(super) fn GroupRow(
                     key: "lead{leads}",
                     "data-group-lead": true,
                     colspan: (leads > 1).then(|| leads.to_string()),
+                    aria_colindex: indexed.then_some("1"),
                 }
             }
             {select}

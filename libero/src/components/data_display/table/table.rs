@@ -1502,7 +1502,8 @@ pub fn Table<T: Clone + PartialEq + 'static>(mut props: TableProps<T>) -> Elemen
         .collect();
     let editable = props.columns.iter().any(|column| column.edit.is_some());
     let cell_focus = props.cell_focus || editable;
-    let tests = cell_tests(&props.columns, &state.column_filters.read(), use_formats());
+    let formats = use_formats();
+    let tests = cell_tests(&props.columns, &state.column_filters.read(), formats);
     let active_filters = tests.len();
     if props.toolbar.is_some() {
         tools.show(ToolView {
@@ -1707,10 +1708,11 @@ pub fn Table<T: Clone + PartialEq + 'static>(mut props: TableProps<T>) -> Elemen
         .then(|| col_indices(&layout, headers.len(), lead_columns));
     let nodes_slice = state.expanded_nodes;
     let toggle_node = use_callback(move |(key, name, open): (String, String, bool)| {
-        nodes_slice.set(toggle_row(&nodes_slice.peek(), &key, open));
-        announcer.say(match open {
-            true => (labels.group_expanded)(&name),
-            false => (labels.group_collapsed)(&name),
+        nodes_slice.set_then(toggle_row(&nodes_slice.peek(), &key, open), move || {
+            announcer.say(match open {
+                true => (labels.group_expanded)(&name),
+                false => (labels.group_collapsed)(&name),
+            })
         });
     });
     let context = Rc::new(RowContext {
@@ -1747,6 +1749,7 @@ pub fn Table<T: Clone + PartialEq + 'static>(mut props: TableProps<T>) -> Elemen
         editable,
         announcer,
         labels,
+        formats,
     });
     // A new generation redraws every row; an equal context keeps the last one.
     let generation = {
@@ -1759,10 +1762,11 @@ pub fn Table<T: Clone + PartialEq + 'static>(mut props: TableProps<T>) -> Elemen
     row_context.set((generation, Some(context.clone())));
     let groups_slice = state.expanded_groups;
     let toggle_group = use_callback(move |(id, label, open): (String, String, bool)| {
-        groups_slice.set(toggle_row(&groups_slice.peek(), &id, open));
-        announcer.say(match open {
-            true => (labels.group_expanded)(&label),
-            false => (labels.group_collapsed)(&label),
+        groups_slice.set_then(toggle_row(&groups_slice.peek(), &id, open), move || {
+            announcer.say(match open {
+                true => (labels.group_expanded)(&label),
+                false => (labels.group_collapsed)(&label),
+            })
         });
     });
     let group_row = group_row(GroupSpec {
@@ -1775,6 +1779,7 @@ pub fn Table<T: Clone + PartialEq + 'static>(mut props: TableProps<T>) -> Elemen
         selected_rows: &selected_rows,
         selection: selection.as_ref(),
         leads: lead_columns,
+        colindex: colindex.as_deref(),
         labels,
         toggle: toggle_group,
         select: select_group,

@@ -62,6 +62,26 @@ impl<V: Clone + PartialEq + 'static> StateSlice<V> {
             onchange.call(next);
         }
     }
+
+    /// `set`, then `then` once the event's renders are done, if the slice holds `next`: a
+    /// controlled host may refuse it, and a refused change is never said later.
+    pub fn set_then(self, next: V, then: impl FnOnce() + 'static) {
+        self.set(next.clone());
+        // A refusing host renders nothing: this render runs the check below now.
+        dioxus::core::needs_update();
+        // In the slice's own scope: a hide unmounts the menu that asked.
+        let check = move || {
+            if self.peek() == next {
+                then();
+            }
+        };
+        match dioxus::core::Runtime::try_current() {
+            Some(runtime) => runtime.in_scope(self.value.origin_scope(), || {
+                dioxus::core::queue_effect(check)
+            }),
+            None => dioxus::core::queue_effect(check),
+        }
+    }
 }
 
 /// `default` seeds the slice once; `controlled` overrides it on every render.
@@ -79,7 +99,10 @@ fn use_state_slice<V: Clone + PartialEq + 'static>(
     {
         value.set(controlled);
     }
-    if is_controlled && onchange.is_none() {
+    // Once per mount, not on every render.
+    let mut warned = use_hook(|| CopyValue::new(false));
+    if is_controlled && onchange.is_none() && !*warned.peek() {
+        warned.set(true);
         warn(unanswered);
     }
     StateSlice {

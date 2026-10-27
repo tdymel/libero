@@ -24,7 +24,7 @@ use crate::{
     },
     context::IconSlot,
     hooks::listener,
-    localization::labels::table::TableLabels,
+    localization::{Formats, labels::table::TableLabels},
     platform::{infers_grid_cells, moves_table_rows},
     theme::TABLE_GROUP_INDENT,
 };
@@ -66,6 +66,8 @@ pub(super) struct RowContext<T: 'static> {
     pub editable: bool,
     pub announcer: Announcer,
     pub labels: TableLabels,
+    /// The separators an edited number is read with.
+    pub formats: &'static Formats,
 }
 
 impl<T> RowContext<T> {
@@ -98,6 +100,7 @@ impl<T> RowContext<T> {
             editable,
             announcer,
             labels,
+            formats,
         } = self;
         let cells = |context: &Self| {
             context
@@ -145,6 +148,7 @@ impl<T> RowContext<T> {
             && *editable == other.editable
             && *announcer == other.announcer
             && *labels == other.labels
+            && std::ptr::eq(*formats, other.formats)
     }
 }
 
@@ -459,8 +463,9 @@ impl<T: Clone + 'static> RowContext<T> {
         let commit = {
             let (row, columns, key) = (row.clone(), self.columns.clone(), key.to_string());
             let (onrowupdate, announcer, labels) = (self.onrowupdate, self.announcer, self.labels);
+            let formats = self.formats;
             Callback::new(move |(text, leave): (String, Leave)| {
-                match commit_edit(&row, &columns[column], &text) {
+                match commit_edit(&row, &columns[column], &text, formats) {
                     Ok(next) => {
                         if let (Some(next), Some(onrowupdate)) = (next, onrowupdate) {
                             onrowupdate.call(RowUpdate {
@@ -523,6 +528,7 @@ impl<T: Clone + 'static> RowContext<T> {
                     error: error.clone(),
                     error_id: error_id.clone(),
                     hint,
+                    keypad: spec.edit.as_ref().and_then(|edit| edit.keypad),
                     commit,
                     cancel,
                     changed,

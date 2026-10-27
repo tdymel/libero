@@ -15,9 +15,10 @@ use crate::{
     context::IconSlot,
     hooks::{
         DragMove, DragOptions, DragStart, ElementHandle, edge_scroll_step, use_drag_cancel,
-        use_element, use_escape_dismiss, use_interval, use_localization,
+        use_element, use_escape_dismiss, use_interval, use_localization, use_subscription_slot,
     },
-    platform::{ElementApi, PlatformError},
+    platform::{ElementApi, PlatformError, ScrollSubscription, scroll},
+    utils::bump,
 };
 
 /// A box in client coordinates.
@@ -98,18 +99,22 @@ struct Dragging {
     start_x: f64,
     x: f64,
     y: f64,
-    /// How far the region scrolled since the start, by the drag's own edge scroll.
+    /// How far the region scrolled sideways since the start: the edge scroll's or a wheel's.
     scrolled: f64,
     gap: Option<usize>,
+    /// The table's client offset the geometry follows: a page scroll redraws the ghost.
+    origin: (f64, f64),
     /// Let go before the measure came back (the WebView reads over IPC): it drops on arrival.
     released: bool,
     /// The geometry arrived: the grip redraws with its ghost.
     measured: bool,
 }
 
-/// The layout a drag measured at its start.
+/// The layout a drag measured at its start, moved with the table since.
 #[derive(Clone, Default, PartialEq)]
 struct Geometry {
+    /// The table's client offset the boxes below were read at.
+    origin: (f64, f64),
     cell: Rect,
     /// The table, cut to its scroll region: where a drop counts.
     area: Rect,
@@ -145,6 +150,18 @@ impl Geometry {
             .contains(x, y)
             .then(|| nearest_gap(&gaps, x))
             .flatten()
+    }
+
+    /// The boxes moved with the table, now at client offset `origin`: a page scroll mid-drag.
+    fn follow(&mut self, origin: (f64, f64)) {
+        let (dx, dy) = (origin.0 - self.origin.0, origin.1 - self.origin.1);
+        self.origin = origin;
+        for rect in [&mut self.cell, &mut self.area] {
+            (rect.x, rect.y) = (rect.x + dx, rect.y + dy);
+        }
+        for gap in &mut self.gaps {
+            *gap += dx;
+        }
     }
 
     /// Px per tick the region scrolls by with the pointer at `x`.
@@ -285,6 +302,43 @@ pub(super) fn ColumnDragGrip(
     // Through a memo: a move redraws the dragged grip only, not every header's (todo 2584).
     let mine = use_memo(move || dragging().filter(|active| active.grip == scope));
     let ours = mine.read().is_some();
+    // A wheel or page scroll mid-drag moves the columns under the pointer: follow it, as Sortable does (2540).
+    let scroll_tick = use_signal(|| 0_u64);
+    let listening = use_subscription_slot::<dyn ScrollSubscription>();
+    use_effect(move || {
+        if !mine().is_some_and(|active| active.measured) {
+            listening.clear();
+            return;
+        }
+        if !listening.is_some()
+            && let Some(api) = scroll()
+        {
+            listening.set(Some(api.on_scroll(Box::new(move || bump(scroll_tick)))));
+        }
+    });
+    use_effect(move || {
+        if scroll_tick() == 0 || ours_now().is_none() {
+            return;
+        }
+        let (at, offset) = (drag.table.client_offset(), drag.region.scroll_offset());
+        spawn(async move {
+            let (Ok(at), Ok(offset)) = (at.await, offset.await) else {
+                return;
+            };
+            let (Some(mut active), Some(mut measured)) = (ours_now(), geometry.peek().clone())
+            else {
+                return;
+            };
+            measured.follow(at);
+            active.origin = at;
+            if let Some(scroll) = measured.scroll {
+                active.scrolled = offset.0 - scroll.from.0;
+            }
+            active.gap = measured.gap_at(active.x, active.y, active.scrolled);
+            geometry.set(Some(measured));
+            dragging.set(Some(active));
+        });
+    });
     let _ = use_escape_dismiss(ours, true, cancel);
     let (end_header, end_key) = (header.clone(), column.clone());
     let drop_at = use_callback(move |gap: usize| {
@@ -332,6 +386,7 @@ pub(super) fn ColumnDragGrip(
                 x: start.client.x,
                 y: start.client.y,
                 scrolled: 0.0,
+                origin: (0.0, 0.0),
                 gap: None,
                 released: false,
                 measured: false,
@@ -374,6 +429,7 @@ pub(super) fn ColumnDragGrip(
                     return;
                 };
                 let measured = Geometry {
+                    origin: (table.x, table.y),
                     cell,
                     area,
                     gaps,

@@ -37,15 +37,14 @@ const FILTERS_KEY: &str = "filters";
 
 /// The header filters row: a field under each filterable shown column, by
 /// header index in `cells`, and empty cells under the rest and the lead columns.
-/// `rowindex` is its `aria-rowindex` in a windowed table.
+/// `rowindex` is its `aria-rowindex` in a windowed table, `colindex` each column's
+/// `aria-colindex` in a grid with a hidden column.
 pub(super) fn filter_row(
     headers: &[HeaderSpec],
     shown: &[usize],
     mut cells: Vec<Option<Element>>,
-    reorder: bool,
-    detail: bool,
-    select: bool,
-    rowindex: Option<usize>,
+    (reorder, detail, select): (bool, bool, bool),
+    (rowindex, colindex): (Option<usize>, Option<&[usize]>),
 ) -> Element {
     let cells: Vec<Element> = shown
         .iter()
@@ -58,21 +57,26 @@ pub(super) fn filter_row(
                     "data-pin": pin.map(|pin| pin.side.as_str()),
                     "data-pin-edge": pin.filter(|pin| pin.edge).map(|_| true),
                     style: pin.map(CellPin::style),
+                    aria_colindex: colindex.map(|indices| indices[index].to_string()),
                     {cells.get_mut(index).and_then(Option::take)}
                 }
             }
         })
         .collect();
+    // The lead cells come first, one column each.
+    let lead = |place: usize| colindex.map(|_| place.to_string());
+    let detail_at = 1 + usize::from(reorder);
+    let select_at = detail_at + usize::from(detail);
     rsx! {
         tr { key: "{FILTERS_KEY}", "data-filters": true, aria_rowindex: rowindex.map(|index| index.to_string()),
             if reorder {
-                td { "data-reorder": true }
+                td { "data-reorder": true, aria_colindex: lead(1) }
             }
             if detail {
-                td { "data-detail-toggle": true }
+                td { "data-detail-toggle": true, aria_colindex: lead(detail_at) }
             }
             if select {
-                td { "data-select": true }
+                td { "data-select": true, aria_colindex: lead(select_at) }
             }
             {cells.into_iter()}
         }

@@ -29,8 +29,8 @@ pub(super) struct Selection {
 
 impl Selection {
     fn set(&self, next: Vec<String>) {
-        self.announcer.say((self.labels.selected)(next.len()));
-        self.slice.set(next);
+        let (announcer, said) = (self.announcer, (self.labels.selected)(next.len()));
+        self.slice.set_then(next, move || announcer.say(said));
     }
 
     /// The select-all box: checked with every row selected, mixed with some.

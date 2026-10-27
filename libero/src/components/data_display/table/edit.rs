@@ -6,11 +6,17 @@ use std::rc::Rc;
 use dioxus::prelude::*;
 use pictogram_icons_lucide as lucide;
 
-use super::{cell_focus::Move, cell_value::EditKind, column::Column};
+use super::{
+    cell_focus::Move,
+    cell_value::{EditKind, EditValue},
+    column::Column,
+    column_filter::number_text,
+};
 use crate::{
     components::{accessibility::VisuallyHidden, common::Glyph, form::Activation},
     context::IconSlot,
     hooks::{ElementHandle, use_element, use_silent_focus_out_of},
+    localization::Formats,
     platform::{ElementApi, is_tab, sets_indeterminate},
 };
 
@@ -85,6 +91,8 @@ type EditorFn = Rc<dyn Fn(EditCtx) -> Element>;
 /// An editable column's parts; `set` parses the text and sets it, `None` when it does not parse.
 pub(super) struct ColumnEdit<T> {
     pub kind: EditKind,
+    /// The text editor's `inputmode`, from [`keypad`].
+    pub keypad: Option<&'static str>,
     pub set: EditSet<T>,
     pub validate: Option<EditCheck<T>>,
     pub editor: Option<EditorFn>,
@@ -101,6 +109,7 @@ impl<T> Clone for ColumnEdit<T> {
     fn clone(&self) -> Self {
         Self {
             kind: self.kind,
+            keypad: self.keypad,
             set: self.set.clone(),
             validate: self.validate.clone(),
             editor: self.editor.clone(),
@@ -126,6 +135,18 @@ impl<T> Default for EditExtras<T> {
     }
 }
 
+/// A number editor's `inputmode`, as `NumberField` picks it: iOS's `numeric` and
+/// `decimal` keypads have no minus, and `numeric` no point.
+pub(super) fn keypad<V: EditValue>() -> Option<&'static str> {
+    (V::edit_kind() == EditKind::Number).then(|| {
+        match (V::parse("-1").is_some(), V::parse("0.5").is_some()) {
+            (true, _) => "text",
+            (false, true) => "decimal",
+            (false, false) => "numeric",
+        }
+    })
+}
+
 #[derive(Clone, Debug, PartialEq)]
 pub(super) enum EditError {
     /// Not a value of the column's type.
@@ -135,10 +156,12 @@ pub(super) enum EditError {
 }
 
 /// `row` with `text` set in `column`; `Ok(None)` when the text is the value's own.
+/// A number takes the locale's separators as the column filters do: `12,5` is 12.5.
 pub(super) fn commit_edit<T: Clone>(
     row: &T,
     column: &Column<T>,
     text: &str,
+    formats: &Formats,
 ) -> Result<Option<T>, EditError> {
     let Some(edit) = &column.edit else {
         return Ok(None);
@@ -146,6 +169,14 @@ pub(super) fn commit_edit<T: Clone>(
     if text == (column.value_text)(row) {
         return Ok(None);
     }
+    let number;
+    let text = match edit.kind {
+        EditKind::Number => {
+            number = number_text(text, formats);
+            number.as_str()
+        }
+        _ => text,
+    };
     let mut next = row.clone();
     (edit.set)(&mut next, text).ok_or(EditError::Parse)?;
     if let Some(validate) = &edit.validate {
@@ -220,6 +251,7 @@ pub(super) fn CellEditor(
     error_id: String,
     /// The form the text takes, for a kind that has no obvious one.
     hint: Option<&'static str>,
+    keypad: Option<&'static str>,
     commit: Callback<(String, Leave), bool>,
     cancel: Callback<()>,
     changed: Callback<()>,
@@ -285,7 +317,7 @@ pub(super) fn CellEditor(
             }
             input {
                 r#type: if boxed { "checkbox" } else { "text" },
-                inputmode: (kind == EditKind::Number).then_some("decimal"),
+                inputmode: keypad,
                 aria_label: label,
                 aria_invalid: invalid.then_some("true"),
                 aria_describedby: (!described.is_empty()).then(|| described.join(" ")),
@@ -367,6 +399,10 @@ mod tests {
         }
     }
 
+    fn commit<T: Clone>(row: &T, column: &Column<T>, text: &str) -> Result<Option<T>, EditError> {
+        commit_edit(row, column, text, &Formats::AMERICAN)
+    }
+
     fn age() -> Column<Person> {
         column("Age")
             .value(|p: &Person| p.age)
@@ -375,20 +411,20 @@ mod tests {
 
     #[test]
     fn a_valid_text_applies_the_setter() {
-        let next = commit_edit(&ana(), &age(), " 42 ").unwrap().unwrap();
+        let next = commit(&ana(), &age(), " 42 ").unwrap().unwrap();
         assert_eq!(next.age, 42);
         assert_eq!(next.name, "Ana");
     }
 
     #[test]
     fn a_bad_number_is_an_error() {
-        assert_eq!(commit_edit(&ana(), &age(), "old"), Err(EditError::Parse));
+        assert_eq!(commit(&ana(), &age(), "old"), Err(EditError::Parse));
         let checked = age().validate(|_: &Person, age: &u32| match *age <= 150 {
             true => Ok(()),
             false => Err("Too old".into()),
         });
         assert_eq!(
-            commit_edit(&ana(), &checked, "200"),
+            commit(&ana(), &checked, "200"),
             Err(EditError::Invalid("Too old".into()))
         );
     }
@@ -404,7 +440,7 @@ mod tests {
             .editor(|_: EditCtx| rsx! {})
             .editable(|p: &mut Person, age: u32| p.age = age);
         assert_eq!(
-            commit_edit(&ana(), &column, "200"),
+            commit(&ana(), &column, "200"),
             Err(EditError::Invalid("Too old".into()))
         );
         assert!(column.edit.is_some_and(|edit| edit.editor.is_some()));
@@ -412,10 +448,10 @@ mod tests {
 
     #[test]
     fn an_unchanged_text_is_no_update() {
-        assert_eq!(commit_edit(&ana(), &age(), "31"), Ok(None));
+        assert_eq!(commit(&ana(), &age(), "31"), Ok(None));
         // The value's own text, not a `format`ted one.
         let formatted = age().format(|p: &Person| format!("{} years", p.age));
-        assert_eq!(commit_edit(&ana(), &formatted, "31"), Ok(None));
+        assert_eq!(commit(&ana(), &formatted, "31"), Ok(None));
     }
 
     #[test]
@@ -578,6 +614,34 @@ mod tests {
         let nick = column("Nick")
             .value(|p: &Person| p.nick.clone())
             .editable(|p: &mut Person, nick: Option<String>| p.nick = nick);
-        assert_eq!(commit_edit(&ana(), &nick, "").unwrap().unwrap().nick, None);
+        assert_eq!(commit(&ana(), &nick, "").unwrap().unwrap().nick, None);
+    }
+
+    #[test]
+    fn a_signed_number_gets_a_keypad_with_a_minus() {
+        assert_eq!(keypad::<i32>(), Some("text"));
+        assert_eq!(keypad::<f64>(), Some("text"));
+        assert_eq!(keypad::<Option<u8>>(), Some("numeric"));
+        assert_eq!(keypad::<String>(), None);
+    }
+
+    #[derive(Clone, Debug, PartialEq)]
+    struct Pay(f64);
+
+    #[test]
+    fn a_number_takes_the_locale_separators() {
+        let pay = column("Pay")
+            .value(|p: &Pay| p.0)
+            .editable(|p: &mut Pay, pay: f64| p.0 = pay);
+        assert_eq!(commit(&Pay(1.0), &pay, "12,5"), Ok(Some(Pay(12.5))));
+        assert_eq!(commit(&Pay(1.0), &pay, "1,250.5"), Ok(Some(Pay(1250.5))));
+        let german = Formats {
+            group_separator: ".",
+            ..Formats::AMERICAN
+        };
+        assert_eq!(
+            commit_edit(&Pay(1.0), &pay, "1.250,5", &german),
+            Ok(Some(Pay(1250.5)))
+        );
     }
 }

@@ -294,6 +294,10 @@ pub(super) fn ResizeHandle(
                 .map(|width| width.round().to_string()),
             aria_valuemin: limits.min.is_finite().then(|| limits.min.to_string()),
             aria_valuemax: limits.max.is_finite().then(|| limits.max.to_string()),
+            // ARIA's implicit 0..100 would clamp an unbounded width.
+            aria_valuetext: now
+                .filter(|width| width.is_finite())
+                .map(|width| (resize.labels.column_width)(&header, width.round())),
             onmounted: grip.mount(),
             onkeydown,
             onpointerdown: move |event| drag.onpointerdown.call(event),

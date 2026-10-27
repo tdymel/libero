@@ -220,3 +220,96 @@ fn a_filter_past_the_page_goes_back_to_page_one() {
     );
     assert_eq!(PAGES.with_borrow(Vec::clone), [1]);
 }
+
+/// A host that holds the open groups and keeps a toggle only while `ACCEPTS` holds.
+fn held_groups() -> Element {
+    let mut open = use_signal(Vec::<String>::new);
+    rsx! {
+        LiberoProvider {
+            Table {
+                aria_label: "People",
+                data: people(),
+                columns: vec![
+                    column("Name").value(|row: &Person| row.name.to_string()),
+                    column("Age").value(|row: &Person| row.age),
+                ],
+                default_row_grouping: vec!["Name".to_string()],
+                expanded_groups: open(),
+                onexpandedgroupschange: move |next| {
+                    if ACCEPTS.get() {
+                        open.set(next);
+                    }
+                },
+            }
+        }
+    }
+}
+
+/// 4445: a group toggle is said once the host keeps it, and not when it refuses.
+#[test]
+fn a_group_toggle_is_said_only_once_kept() {
+    for accepts in [false, true] {
+        ACCEPTS.set(accepts);
+        let mut page = Page::mount(held_groups);
+        let toggles = page.rec.registered_for("click");
+        page.click(toggles[0]);
+        settle(&mut page);
+        let html = html(&page);
+        assert_eq!(html.contains("Ada expanded"), accepts, "{html}");
+    }
+}
+
+/// 4442: a plain click that clears a multi-sort is said by the clicked column.
+#[test]
+fn a_cleared_multi_sort_names_the_clicked_column() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider {
+                Table {
+                    aria_label: "People",
+                    data: people(),
+                    columns: crate::table_fixture::person_columns(),
+                    multi_sort: true,
+                    default_sort: vec![
+                        TableSort::new("Age", SortDirection::Ascending),
+                        TableSort::new("Name", SortDirection::Descending),
+                    ],
+                }
+            }
+        }
+    }
+    let mut page = Page::mount(app);
+    // Name's sort button comes first.
+    let buttons = page.rec.registered_for("click");
+    page.click(buttons[0]);
+    settle(&mut page);
+    let html = html(&page);
+    assert!(!html.contains("aria-sort"), "{html}");
+    assert!(html.contains("Name no longer sorted"), "{html}");
+    assert!(!html.contains("Age no longer sorted"), "{html}");
+}
+
+/// 4444: with a hidden column, the filter row's cells carry the header cells' `aria-colindex`.
+#[test]
+fn the_filter_row_skips_a_hidden_columns_index() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider {
+                Table {
+                    aria_label: "People",
+                    data: people(),
+                    columns: columns(&["Name", "Phone", "Email"]),
+                    header_filters: true,
+                    cell_focus: true,
+                    default_hidden_columns: vec!["Phone".to_string()],
+                }
+            }
+        }
+    }
+    let page = Page::mount(app);
+    let html = html(&page);
+    let filters = &html[html.find("data-filters").expect("a filters row")..];
+    let filters = &filters[..filters.find("</tr>").unwrap()];
+    assert!(filters.contains("aria-colindex=\"3\""), "{filters}");
+    assert!(!filters.contains("aria-colindex=\"2\""), "{filters}");
+}

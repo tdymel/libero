@@ -316,23 +316,36 @@ impl UserSort {
     /// Said once the event's renders are done, if the slice then holds the pick: a controlled
     /// host may refuse it, and a refused pick is never said later.
     pub fn set(self, next: Vec<TableSort>) {
+        self.set_by(next, None);
+    }
+
+    /// A header click on column `index`: the next step of its sort, said by its name.
+    pub fn click(
+        self,
+        active: &[(usize, SortDirection)],
+        headers: &[HeaderSpec],
+        index: usize,
+        add: bool,
+    ) {
+        self.set_by(
+            next_sort(active, headers, index, add),
+            Some(headers[index].header.clone()),
+        );
+    }
+
+    /// `clicked` names the column a cleared sort is said by.
+    fn set_by(self, next: Vec<TableSort>, clicked: Option<String>) {
         let before = self.slice.peek();
         if before == next {
             return;
         }
-        self.slice.set(next.clone());
-        // A refusing host renders nothing: this render runs the check below now.
-        dioxus::core::needs_update();
         let Self {
             slice,
             announcer,
             labels,
         } = self;
-        dioxus::core::queue_effect(move || {
-            if slice.peek() != next {
-                return;
-            }
-            if let Some((column, direction)) = sort_change(&before, &next) {
+        slice.set_then(next.clone(), move || {
+            if let Some((column, direction)) = sort_change(&before, &next, clicked.as_deref()) {
                 let said = match direction {
                     Some(SortDirection::Ascending) => labels.column_sorted_ascending,
                     Some(SortDirection::Descending) => labels.column_sorted_descending,
@@ -356,15 +369,22 @@ impl UserSort {
     }
 }
 
-/// The column a sort change touched: the first entry new or turned, else the first dropped.
-fn sort_change(before: &[TableSort], now: &[TableSort]) -> Option<(String, Option<SortDirection>)> {
+/// The column a sort change touched: the first entry new or turned, else the `clicked`
+/// one if dropped, else the first dropped.
+fn sort_change(
+    before: &[TableSort],
+    now: &[TableSort],
+    clicked: Option<&str>,
+) -> Option<(String, Option<SortDirection>)> {
+    let dropped = |entry: &&TableSort| !now.iter().any(|kept| kept.column == entry.column);
     now.iter()
         .find(|entry| !before.contains(entry))
         .map(|entry| (entry.column.clone(), Some(entry.direction)))
         .or_else(|| {
-            before
-                .iter()
-                .find(|entry| !now.iter().any(|kept| kept.column == entry.column))
+            let mut gone = before.iter().filter(dropped);
+            let first = gone.clone().next();
+            gone.find(|entry| Some(entry.column.as_str()) == clicked)
+                .or(first)
                 .map(|entry| (entry.column.clone(), None))
         })
 }
@@ -776,9 +796,9 @@ pub(super) fn render_body(body: BodySpec) -> Element {
         .collect();
     // Under the header rows, so it counts after them.
     let filter_row = filters.map(|cells| {
-        let (reorder, detail, select) = leads;
         let rowindex = indexed.then_some(head_rows.len() + 1);
-        filter_row(&headers, &shown, cells, reorder, detail, select, rowindex)
+        let colindex = grid.as_ref().and_then(|grid| grid.colindex.as_deref());
+        filter_row(&headers, &shown, cells, leads, (rowindex, colindex))
     });
     let head_levels = head_rows.len() + usize::from(filter_row.is_some());
     // After the body's rows, or its one empty row.
@@ -1058,7 +1078,7 @@ fn sort_button(spec: &HeaderSpec, index: usize, context: SortContext) -> Element
             },
             onclick: move |event: MouseEvent| {
                 let add = adds_column(touch, &event);
-                sort.set(next_sort(&active, &headers, index, add));
+                sort.click(&active, &headers, index, add);
             },
             {header_body(spec)}
             // Always rendered, so sorting can't change the width;
@@ -1089,25 +1109,23 @@ mod tests {
     fn a_sort_change_names_the_column_it_touched() {
         let by = |column: &str, direction| TableSort::new(column, direction);
         let age = [by("Age", Ascending)];
+        let change = |before: &[TableSort], now: &[TableSort]| sort_change(before, now, None);
 
+        assert_eq!(change(&[], &age), Some(("Age".into(), Some(Ascending))));
         assert_eq!(
-            sort_change(&[], &age),
-            Some(("Age".into(), Some(Ascending)))
-        );
-        assert_eq!(
-            sort_change(&age, &[by("Age", Descending)]),
+            change(&age, &[by("Age", Descending)]),
             Some(("Age".into(), Some(Descending)))
         );
-        assert_eq!(sort_change(&age, &[]), Some(("Age".into(), None)));
+        assert_eq!(change(&age, &[]), Some(("Age".into(), None)));
         assert_eq!(
-            sort_change(&age, &[by("Name", Ascending)]),
+            change(&age, &[by("Name", Ascending)]),
             Some(("Name".into(), Some(Ascending)))
         );
         assert_eq!(
-            sort_change(&[by("Age", Ascending), by("Name", Ascending)], &age),
+            change(&[by("Age", Ascending), by("Name", Ascending)], &age),
             Some(("Name".into(), None))
         );
-        assert_eq!(sort_change(&age, &age), None);
+        assert_eq!(change(&age, &age), None);
     }
 
     /// 4410: a repeated header still keys its cells apart.
@@ -1375,6 +1393,17 @@ mod tests {
         );
         let removed = next_sort(&[(0, Descending), (2, Ascending)], &specs, 0, true);
         assert_eq!(removed, [TableSort::new("City", Ascending)]);
+    }
+
+    #[test]
+    fn a_cleared_multi_sort_is_said_by_the_clicked_column() {
+        let before = [
+            TableSort::new("Age", Ascending),
+            TableSort::new("Name", Descending),
+        ];
+        let said = sort_change(&before, &[], Some("Name"));
+        assert_eq!(said, Some(("Name".into(), None)));
+        assert_eq!(sort_change(&before, &[], None), Some(("Age".into(), None)));
     }
 
     fn ages() -> (Vec<u32>, Vec<Column<u32>>) {

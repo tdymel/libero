@@ -125,6 +125,11 @@ async fn the_keys_resize<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
         Ok(d.attr(&grip, "aria-valuenow").await?.as_deref() == Some("300"))
     })
     .await?;
+    // Todo 4443: ARIA's implicit 0..100 would clamp the width; the text states it.
+    eventually(d, "aria-valuetext to state the width", async |d| {
+        Ok(d.attr(&grip, "aria-valuetext").await?.as_deref() == Some("Name: 300 px"))
+    })
+    .await?;
     d.press(keyboard::HOME).await?;
     eventually_text(d, WIDTHS, "Name=100", "Home").await
 }

@@ -5,7 +5,7 @@ use dioxus::prelude::*;
 use super::{
     cell_value::{CellAlign, CellValue, EditValue, FilterKind, SortKey},
     column_filter::SelectOption,
-    edit::{ColumnEdit, EditCtx, EditExtras},
+    edit::{ColumnEdit, EditCtx, EditExtras, keypad},
     resize::ResizeLimits,
 };
 use crate::localization::Aggregate;
@@ -481,6 +481,7 @@ impl<T> Column<T> {
     pub fn editable<V: EditValue>(mut self, set: impl Fn(&mut T, V) + 'static) -> Self {
         self.edit = Some(ColumnEdit {
             kind: V::edit_kind(),
+            keypad: keypad::<V>(),
             set: Rc::new(move |row, text| V::parse(text).map(|value| set(row, value))),
             validate: self.extras.validate.take(),
             editor: self.extras.editor.take(),

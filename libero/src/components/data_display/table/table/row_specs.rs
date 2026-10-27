@@ -8,7 +8,7 @@ use dioxus::prelude::*;
 use super::super::{
     cell_focus::{FocusTarget, GridRow, TreeNode},
     column::Column,
-    core::{ActiveSort, HeaderSpec, UserSort, align_attr, next_sort},
+    core::{ActiveSort, HeaderSpec, UserSort, align_attr},
     footer::aggregate_cell,
     grid::{GridFocus, GridWindow, TreeNav},
     pipeline::{GroupInfo, VisibleRow},
@@ -37,6 +37,8 @@ pub(super) struct GroupSpec<'a, T> {
     pub selection: Option<&'a Selection>,
     /// The leading select, detail and reorder columns a group row spans.
     pub leads: usize,
+    /// With `cell_focus` and a hidden column: each column's `aria-colindex`.
+    pub colindex: Option<&'a [usize]>,
     pub labels: TableLabels,
     /// Opens or closes a group: its id, its label and the new state.
     pub toggle: Callback<(String, String, bool)>,
@@ -55,12 +57,14 @@ pub(super) fn group_row<T: 'static>(spec: GroupSpec<'_, T>) -> GroupRowFn {
         selected_rows,
         selection,
         leads,
+        colindex,
         labels,
         toggle,
         select,
     } = spec;
     let cells = GroupCells {
         leads,
+        colindex: colindex.map(|indices| layout.iter().map(|&index| indices[index]).collect()),
         pins: layout
             .iter()
             .map(|&index| headers[index].pin.clone())
@@ -240,7 +244,7 @@ pub(super) fn header_action(
 ) -> Callback<(usize, bool)> {
     Callback::new(move |(index, menu): (usize, bool)| match menu {
         false if headers[index].sortable => {
-            sort.set(next_sort(&active, &headers, index, false));
+            sort.click(&active, &headers, index, false);
         }
         true if menus => open_menu(index),
         _ => {}
