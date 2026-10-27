@@ -12,10 +12,24 @@ fn wrap_open(values: &DemoValues, code: &str) -> String {
         return code.to_string();
     }
     format!(
-        "let mut open = use_signal(|| true);\n\n\
+        "let mut open = use_signal(|| true);\n\
+         let mut moved = use_signal(|| false);\n\
+         let (dialog, reopen) = (use_element(), use_element());\n\
+         // Closing and reopening each unmount the focused button: hand the focus on.\n\
+         use_effect(move || {{\n    \
+             let target = if open() {{ dialog }} else {{ reopen }};\n    \
+             if moved() && target.is_mounted() {{\n        \
+                 let _ = target.focus();\n    \
+             }}\n\
+         }});\n\n\
          rsx! {{\n    \
              if open() {{\n{}    }} else {{\n        \
-                 Button {{ variant: \"outlined\", onclick: move |_| open.set(true), \"Reopen\" }}\n    \
+                 Button {{\n            \
+                     variant: \"outlined\",\n            \
+                     onmounted: reopen.mount(),\n            \
+                     onclick: move |_| open.set(true),\n            \
+                     \"Reopen\"\n        \
+                 }}\n    \
              }}\n\
          }}",
         indent(&indent(code)),
@@ -27,11 +41,13 @@ fn wrap_open(values: &DemoValues, code: &str) -> String {
 #[component]
 fn DialogDemo(titled: bool, close_button: bool, size: String, radius: String) -> Element {
     let mut open = use_signal(|| true);
-    let reopen = use_element();
-    // The close button unmounts with the dialog, so focus goes to the button that replaces it.
+    let mut moved = use_signal(|| false);
+    let (dialog, reopen) = (use_element(), use_element());
+    // Closing and reopening each unmount the focused button: the focus goes to its replacement.
     use_effect(move || {
-        if !open() && reopen.is_mounted() {
-            let _ = reopen.focus();
+        let target = if open() { dialog } else { reopen };
+        if moved() && target.is_mounted() {
+            let _ = target.focus();
         }
     });
 
@@ -50,7 +66,12 @@ fn DialogDemo(titled: bool, close_button: bool, size: String, radius: String) ->
         Dialog {
             title: titled.then(|| "Unsaved changes".to_string()),
             aria_label: (!titled).then(|| "Unsaved changes".to_string()),
-            onclose: close_button.then_some(EventHandler::new(move |_| open.set(false))),
+            onclose: close_button.then_some(EventHandler::new(move |_| {
+                moved.set(true);
+                open.set(false);
+            })),
+            tabindex: close_button.then_some("-1"),
+            onmounted: dialog.mount(),
             size,
             radius,
             Text { "notes.md has changes you have not saved." }
@@ -148,7 +169,11 @@ pub fn DialogPage() -> Element {
                     Control::switch("close_button")
                         .default("true")
                         .code(|_, values| match values.str("close_button").as_str() {
-                            "true" => vec!["onclose: move |_| open.set(false)".to_string()],
+                            "true" => vec![
+                                "onclose: move |_| { moved.set(true); open.set(false) }".to_string(),
+                                r#"tabindex: "-1""#.to_string(),
+                                "onmounted: dialog.mount()".to_string(),
+                            ],
                             _ => vec![],
                         }),
                 ],

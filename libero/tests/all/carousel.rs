@@ -58,7 +58,8 @@ fn six() -> Vec<Element> {
 }
 
 /// Six three-up rest at four places, so there are four dots, each named by the
-/// first slide it shows; the status names the slides showing (todo 550).
+/// slide it makes current, so no two share a name (todo 4672); the status names
+/// the slides showing (todo 550).
 #[test]
 fn the_dots_count_resting_positions_and_the_status_names_the_range() {
     fn app() -> Element {
@@ -71,8 +72,34 @@ fn the_dots_count_resting_positions_and_the_status_names_the_range() {
 
     let html = body(&render(app));
     assert!(html.contains("Slides 1–3 of 6"), "{html}");
-    assert!(html.contains(r#"aria-label="Go to slide 4""#), "{html}");
-    assert!(!html.contains(r#"aria-label="Go to slide 5""#), "{html}");
+    assert!(html.contains(r#"aria-label="Go to slide 5""#), "{html}");
+    assert!(!html.contains(r#"aria-label="Go to slide 1""#), "{html}");
+    assert!(!html.contains(r#"aria-label="Go to slide 6""#), "{html}");
+}
+
+/// Two dots resting on the same view still make different slides current, so they
+/// never share a name (todo 4672).
+#[test]
+fn dots_at_a_fractional_view_have_distinct_names() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider {
+                Carousel { aria_label: "Offers", per_view: 1.5, indicators: true, slides: six() }
+            }
+        }
+    }
+
+    let html = body(&render(app));
+    let mut names: Vec<&str> = html
+        .split(r#"aria-label="Go to slide "#)
+        .skip(1)
+        .filter_map(|rest| rest.split('"').next())
+        .collect();
+    let dots = names.len();
+    names.sort_unstable();
+    names.dedup();
+    assert!(dots > 1, "{html}");
+    assert_eq!(names.len(), dots, "{html}");
 }
 
 /// Every slide in view has nowhere to go, whichever slide the caller holds: no status,

@@ -6,7 +6,7 @@ use crate::{
         buttons::ActionIcon,
         common::{
             Glyph, HtmlTag, Input, Part, States, Variables, attr, base_props, input_from_str,
-            names_itself, parts_enum, use_name_warning, variables,
+            names_itself, parts_enum, safe_area_padding, use_name_warning, variables,
         },
         layout::{Box, paper_sx, use_box},
         typography::Title,
@@ -42,13 +42,19 @@ static DIALOG_BASE_SX: StaticSx = StaticSx::new(|| {
 
 /// Edge to edge over `Modal`'s frame: its negative margins cancel the frame's `md`
 /// padding, and `stretch` and `flex-grow` fill it. Plain CSS, so no centred first frame.
+/// Its padding clears a notch and a home indicator on all four sides.
 fn full_screen_sx() -> Sx {
+    let padding = SizeCss::SPACING.value(Size::Lg);
     sx().margin(format!("calc(-1 * {})", SizeCss::SPACING.value(Size::Md)))
         .align_self("stretch")
         .flex_grow("1")
         .max_width("none")
         .border_radius("0")
         .box_shadow("none")
+        .with("padding-top", safe_area_padding(&padding, "top"))
+        .with("padding-right", safe_area_padding(&padding, "right"))
+        .with("padding-bottom", safe_area_padding(&padding, "bottom"))
+        .with("padding-left", safe_area_padding(&padding, "left"))
 }
 
 str_enum! {

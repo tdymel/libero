@@ -12,8 +12,8 @@ use crate::{
         accessibility::VisuallyHidden,
         buttons::ActionIcon,
         common::{
-            Glyph, Input, Orientation, Part, States, focus_ring_sx, focused_disabled_sx, shadow_sx,
-            states,
+            Glyph, Input, Orientation, Part, States, coarse_hit_area_sx, focus_ring_sx,
+            focused_disabled_sx, shadow_sx, states,
         },
         layout::Box,
     },
@@ -77,6 +77,7 @@ pub(super) static CAROUSEL_CONTROL_SX: StaticSx = StaticSx::new(|| {
         .and(shadow_sx(SizeCss::SHADOW.value(Size::Sm)))
         .cursor("pointer")
         .selector("& > svg", sx().width("60%").height("60%"))
+        .and(coarse_hit_area_sx("::before"))
         // The row runs right to left, so the arrows point the other way.
         .when(
             "horizontal",
@@ -112,6 +113,7 @@ pub(super) static CAROUSEL_PAUSE_SX: StaticSx = StaticSx::new(|| {
         .and(shadow_sx(SizeCss::SHADOW.value(Size::Sm)))
         .cursor("pointer")
         .selector("& > svg", sx().width("55%").height("55%"))
+        .and(coarse_hit_area_sx("::before"))
         // Beside Next's column: on a short strip it covered Next.
         .when(
             "beside-next",

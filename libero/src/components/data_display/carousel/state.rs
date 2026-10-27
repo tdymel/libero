@@ -561,6 +561,7 @@ pub(super) fn use_carousel_state(setup: CarouselSetup) -> CarouselState {
     // A controlled `index`, with the whole tuple reactive.
     let mut mounting = use_signal(|| true);
     let mut applied = use_signal(|| None::<usize>);
+    let mut place = use_signal(|| None);
     let mut swaps_seen = swaps_seen;
     use_effect(use_reactive!(|controlled, nav, swaps| {
         let Some(index) = controlled else {
@@ -578,7 +579,10 @@ pub(super) fn use_carousel_state(setup: CarouselSetup) -> CarouselState {
         }
         // A smooth first scroll swept past every earlier slide (~1.5s to 6 of 6):
         // `seam` makes it instant, via the seam effect.
-        let first_scroll = std::mem::replace(&mut *mounting.write(), false);
+        // A new orientation or a remounted track starts from its origin: a first scroll too.
+        let here = (nav.orientation, nav.track.element.mount_token());
+        let relocated = place.write().replace(here).is_some_and(|was| was != here);
+        let first_scroll = std::mem::replace(&mut *mounting.write(), false) || relocated;
         let swapped = consume_swap(&mut swaps_seen.write(), swaps);
         let instant = instant_scroll(first_scroll, swapped, nav.clones, index, from, nav.first);
         // A swap to where the strip already is has nothing to jump.

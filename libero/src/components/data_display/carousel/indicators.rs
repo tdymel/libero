@@ -148,12 +148,8 @@ pub(super) fn CarouselIndicators(view: CarouselView) -> Element {
                     states: states()
                         .with(orientation.state_name(), true)
                         .with("current", index == current()),
-                    // By the first slide it shows; a looping dot by its own (todo 550).
-                    aria_label: numbered(
-                        labels.indicator,
-                        if looping { index } else { nav.showing(index).0 },
-                        count,
-                    ),
+                    // By the slide it makes current: two dots never share a name.
+                    aria_label: numbered(labels.indicator, index, count),
                     aria_current: (index == current()).then(|| "true".to_string()),
                     // Roving: one tab stop; arrows move the focus with the slide.
                     id: indicator_id(&track_id(), index),

@@ -215,12 +215,18 @@ pub(crate) fn render_accordion<T: Options>(view: AccordionView<T>, root: String)
         let mut previous = previous.borrow_mut();
         if *previous != open_keys {
             let still_open = |key: &String| open_keys.iter().any(|(open, _)| open == key);
+            // A section opened by the same update takes focus, else the closed trigger.
+            let opened = open_keys
+                .iter()
+                .find(|(key, _)| !previous.iter().any(|(was, _)| was == key))
+                .map(|(_, at)| *at);
             // The region is matched in the DOM still drawn; the trigger after the update.
             let _ = previous
                 .iter()
                 .filter(|(key, _)| !still_open(key))
                 .any(|(key, was)| {
-                    let at = keys.iter().position(|now| now == key).unwrap_or(*was);
+                    let at = opened
+                        .unwrap_or_else(|| keys.iter().position(|now| now == key).unwrap_or(*was));
                     closing.closing(
                         id_selector(&format!("{root}-region-{was}")),
                         id_selector(&format!("{root}-trigger-{at}")),

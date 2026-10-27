@@ -470,7 +470,8 @@ async fn focus_returns<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
     d.focus(CONTINUE).await?;
     d.press(keyboard::ENTER).await?;
     until_expanded(d, 2, true, "Continue").await?;
-    eventually_focused(d, FIRST, "Shipping closing around Continue").await
+    // Continue opens Review as Shipping closes: the opened trigger takes the focus (todo 4671).
+    eventually_focused(d, &trigger(2), "Review, opened as Shipping closes").await
 }
 
 e2e::scenario!(

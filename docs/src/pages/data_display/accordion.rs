@@ -67,6 +67,40 @@ pub fn AccordionPage() -> Element {
     let several = use_signal(|| AccordionOpen::Many(vec![Step::Shipping]));
     let theme = use_theme();
 
+    // Built once: a new callback per render would redraw every section.
+    let many_panel = use_callback(
+        // demo-code: many start
+        |step: Step| match step {
+            Step::Shipping => rsx! { Text { "Where should the parcel go?" } },
+            Step::Payment => rsx! { Text { "Card, invoice or bank transfer." } },
+            Step::Review => rsx! { Text { "Check the order, then place it." } },
+        },
+        // demo-code: many end
+    );
+    let one_panel = {
+        let mut open = one;
+        use_callback(
+            // demo-code: one start
+            move |step: Step| match step {
+                Step::Shipping => rsx! {
+                    Flex { gap: "sm", align: "flex-start",
+                        Text { "Where should the parcel go?" }
+                        Button { onclick: move |_| open.set(Some(Step::Payment).into()), "Continue" }
+                    }
+                },
+                Step::Payment => rsx! {
+                    Flex { gap: "sm", align: "flex-start",
+                        Text { "Card, invoice or bank transfer." }
+                        Button { onclick: move |_| open.set(Some(Step::Review).into()), "Continue" }
+                    }
+                },
+                Step::Review => rsx! { Text { "Check the order, then place it." } },
+            },
+            // demo-code: one end
+        )
+    };
+    let rich_label = use_callback(rich);
+
     rsx! {
         DocPage {
             title: "Accordion",
@@ -166,7 +200,9 @@ pub fn AccordionPage() -> Element {
                         .default("h3"),
                     // The flag lives inside `options`, so the switch stands
                     // for one named section rather than for a prop of its own.
-                    Control::switch("collapsible").default("true"),
+                    Control::switch("collapsible")
+                        .default("true")
+                        .hidden_when(many),
                     Control::toggle("chevron_position", ["end", "start"])
                         .labels(["End", "Start"]),
                     Control::switch("rotate_chevron").default("true"),
@@ -188,37 +224,7 @@ pub fn AccordionPage() -> Element {
                 render: move |values: DemoValues| {
                     let is_many = many(&values);
                     let mut open = if is_many { several } else { one };
-                    let panel = if is_many {
-                        Callback::new(
-                            // demo-code: many start
-                            |step: Step| match step {
-                                Step::Shipping => rsx! { Text { "Where should the parcel go?" } },
-                                Step::Payment => rsx! { Text { "Card, invoice or bank transfer." } },
-                                Step::Review => rsx! { Text { "Check the order, then place it." } },
-                            },
-                            // demo-code: many end
-                        )
-                    } else {
-                        Callback::new(
-                            // demo-code: one start
-                            move |step: Step| match step {
-                                Step::Shipping => rsx! {
-                                    Flex { gap: "sm", align: "flex-start",
-                                        Text { "Where should the parcel go?" }
-                                        Button { onclick: move |_| open.set(Some(Step::Payment).into()), "Continue" }
-                                    }
-                                },
-                                Step::Payment => rsx! {
-                                    Flex { gap: "sm", align: "flex-start",
-                                        Text { "Card, invoice or bank transfer." }
-                                        Button { onclick: move |_| open.set(Some(Step::Review).into()), "Continue" }
-                                    }
-                                },
-                                Step::Review => rsx! { Text { "Check the order, then place it." } },
-                            },
-                            // demo-code: one end
-                        )
-                    };
+                    let panel = if is_many { many_panel } else { one_panel };
                     let options = if values.str("disabled_option") == "true" {
                         // demo-code: disabled start
                         OptionList::from_options().disabling(|step| *step == Step::Review)
@@ -238,7 +244,7 @@ pub fn AccordionPage() -> Element {
                                 chevron_position: values.str("chevron_position"),
                                 rotate_chevron: values.str("rotate_chevron") == "true",
                                 options: options.clone(),
-                                option_label: (values.str("rich_label") == "true").then(|| Callback::new(rich)),
+                                option_label: (values.str("rich_label") == "true").then_some(rich_label),
                                 open: open(),
                                 onchange: move |next| open.set(next),
                                 panel,

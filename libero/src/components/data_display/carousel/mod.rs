@@ -351,13 +351,18 @@ pub fn Carousel(props: CarouselProps) -> Element {
             (!empty).then_some(labels.roledescription),
         )
         .attr("aria-label", (!empty).then(|| aria_label.clone()))
-        .event("onmouseenter", move |_: Event<MouseData>| {
-            let mut hovered = state.hovered;
-            hovered.set(true)
+        // Mouse only: a tap fires the compat mouseenter and would hold autoplay off.
+        .event("onpointerenter", move |event: Event<PointerData>| {
+            if event.data().pointer_type() == "mouse" {
+                let mut hovered = state.hovered;
+                hovered.set(true)
+            }
         })
-        .event("onmouseleave", move |_: Event<MouseData>| {
-            let mut hovered = state.hovered;
-            hovered.set(false)
+        .event("onpointerleave", move |event: Event<PointerData>| {
+            if event.data().pointer_type() == "mouse" {
+                let mut hovered = state.hovered;
+                hovered.set(false)
+            }
         })
         .event("onfocusin", focus.focusin(0))
         .event("onfocusout", focus.focusout(0));
