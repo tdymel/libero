@@ -135,7 +135,7 @@ pub(crate) fn permission_of(name: Option<&str>) -> Option<PermissionState> {
 
 /// Shared by the web and the WebView. `show` resolves to an error name or
 /// `{ close, detach }`; without a `Notification` constructor (Chrome on Android), or
-/// with actions, it falls back to the page's service worker, which reports by posting
+/// with actions, it falls back to the page's service worker (else any active one), which reports by posting
 /// `{ libero: data.libero, event: 'click' | 'close' | 'action', action }` to the page.
 #[cfg_attr(any(feature = "native", target_os = "android"), allow(dead_code))]
 pub(crate) const NOTIFICATION_SCRIPT: &str = "
@@ -158,7 +158,9 @@ pub(crate) const NOTIFICATION_SCRIPT: &str = "
             return plain();
         } catch (error) {
             const workers = navigator.serviceWorker;
-            const registration = await workers?.getRegistration();
+            // A worker under `/assets/` has a scope that misses the page, so fall back to any active one.
+            const registration = await workers?.getRegistration()
+                ?? (await workers?.getRegistrations())?.find((found) => found.active);
             if (!registration) {
                 // Only a worker shows actions: without one, the notification goes without them.
                 if (!options.actions) return 'Failed';

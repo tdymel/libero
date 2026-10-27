@@ -1,7 +1,7 @@
 use dioxus::html::FileData;
 use serde_json::json;
 
-use super::{decode_base64, eval_with, runs_scripts};
+use super::{Slot, decode_base64, eval_with, runs_scripts};
 use crate::platform::file_dialog::{FileDialogApi, Picked, held_file};
 use crate::platform::image_crop::{CROP_SCRIPT, Cropped, Fractions, ImageCropApi, cropped_name};
 use crate::utils::encode_base64;
@@ -19,7 +19,7 @@ struct WebViewFileDialog;
 static FILE_DIALOG: WebViewFileDialog = WebViewFileDialog;
 
 /// A detached input: dioxus hands a click on one of its own inputs to the host,
-/// which picks nothing on Android. Resolves to `[name, type, lastModified, base64]`s.
+/// which picks nothing on Android. Sends `[name, type, lastModified, base64]`s.
 const PICK_FILES: &str = "const [accept, multiple, capture] = data;
     const input = document.createElement('input');
     input.type = 'file';
@@ -38,17 +38,24 @@ const PICK_FILES: &str = "const [accept, multiple, capture] = data;
         }
         return btoa(binary);
     };
-    return await Promise.all(files.map(async (file) =>
-        [file.name, file.type, file.lastModified, encode(new Uint8Array(await file.arrayBuffer()))]));";
+    dioxus.send(await Promise.all(files.map(async (file) =>
+        [file.name, file.type, file.lastModified, encode(new Uint8Array(await file.arrayBuffer()))])));";
 
 impl FileDialogApi for WebViewFileDialog {
     fn open(&self, accept: &str, multiple: bool, capture: Option<&str>) -> Picked {
-        let script = eval_with(json!([accept, multiple, capture]), PICK_FILES);
+        // Parked, not `join`ed: the dialog and the encoding can outlast `CHANNEL_HOLD_MS`.
+        let slot = Slot::new();
+        let script = eval_with(
+            json!([accept, multiple, capture]),
+            &format!("{PICK_FILES}\n{}", slot.park("")),
+        );
         Box::pin(async move {
+            let mut script = script;
             let picked = script
-                .join::<Vec<(String, String, f64, String)>>()
+                .recv::<Vec<(String, String, f64, String)>>()
                 .await
                 .unwrap_or_default();
+            drop(slot);
             picked
                 .into_iter()
                 .filter_map(|(name, content_type, modified, encoded)| {
@@ -70,6 +77,8 @@ impl ImageCropApi for WebViewImageCrop {
             let bytes = file.read_bytes().await.ok()?;
             let from = file.content_type().unwrap_or_default();
             // Both ways as base64: the IPC carries JSON only.
+            // Parked, not `join`ed: a large image can crop past `CHANNEL_HOLD_MS`.
+            let slot = Slot::new();
             let script = eval_with(
                 json!([encode_base64(&bytes), from, rect, max]),
                 &format!(
@@ -82,10 +91,15 @@ impl ImageCropApi for WebViewImageCrop {
                     for (let at = 0; at < out.length; at += 0x8000) {{
                         binary += String.fromCharCode(...out.subarray(at, at + 0x8000));
                     }}
-                    return [blob.type, btoa(binary)];"
+                    dioxus.send([blob.type, btoa(binary)]);
+                    {}",
+                    slot.park("")
                 ),
             );
-            let (to, encoded) = script.join::<(String, String)>().await.ok()?;
+            let mut script = script;
+            let answer = script.recv::<(String, String)>().await.ok();
+            drop(slot);
+            let (to, encoded) = answer?;
             let name = cropped_name(&file.name(), &from, &to);
             Some(held_file(
                 name,

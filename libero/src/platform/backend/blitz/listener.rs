@@ -76,7 +76,10 @@ pub(in crate::platform::backend) fn Listener(children: Element) -> Element {
                 }
             },
             // Bubble phase, `onpointerdown` in `raw`: this dioxus has no capture listeners.
-            onmousedown: |event| focus::mouse_pressed(&event),
+            onmousedown: |event| {
+                activate::pointer_seen();
+                focus::mouse_pressed(&event);
+            },
             onkeydown: |event| {
                 forget_press();
                 BLANK_PRESS.set(false);
@@ -106,6 +109,7 @@ pub(in crate::platform::backend) fn Listener(children: Element) -> Element {
                 followed(&event, false);
             },
             onpointerup: move |event| {
+                activate::pointer_seen();
                 HELD.set(false);
                 followed(&event, true);
                 focus::released();

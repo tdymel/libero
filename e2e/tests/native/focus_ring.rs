@@ -43,6 +43,32 @@ fn a_stopped_key_rings_the_focus_after_a_click() {
     );
 }
 
+fn pressing_app() -> Element {
+    rsx! {
+        button { id: "first", "First" }
+        button { id: "go", onpointerdown: |event: PointerEvent| event.stop_propagation(), "Go" }
+    }
+}
+
+/// A component's stopped `pointerdown` never reaches the wrapper: the click still disarms the ring.
+#[test]
+fn a_stopped_press_disarms_the_ring() {
+    let mut page = mount(pressing_app);
+    page.tab();
+    assert!(
+        page.is_focused("#first"),
+        "Tab reached {}",
+        page.focus_owner()
+    );
+    assert_eq!(
+        page.attr("#first", "data-lsx-focus-visible").as_deref(),
+        Some("")
+    );
+    page.click("#go");
+    page.focus("#first");
+    assert_eq!(page.attr("#first", "data-lsx-focus-visible"), None);
+}
+
 fn icon_app() -> Element {
     let scheme = use_color_scheme();
     rsx! {

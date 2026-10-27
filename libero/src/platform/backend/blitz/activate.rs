@@ -283,6 +283,15 @@ pub(super) fn pointer_down(event: &Event<PointerData>, raw: &Rc<PlatformEventDat
     PRESSES.set(Some((now, at.x, at.y, count)));
 }
 
+/// A pointer event bubbled out of the app: disarms the ring a stopped `pointerdown` left armed.
+pub(super) fn pointer_seen() {
+    if KEYBOARD.replace(false)
+        && let Some(anchor) = anchor()
+    {
+        run_or_defer(&anchor, sync_marks);
+    }
+}
+
 /// Whether the last press was cancelled, by its `pointerdown` or `mousedown`: Blitz's
 /// click default would then count its click from an older press, and the web moves no focus for it.
 pub(super) fn press_cancelled() -> bool {
