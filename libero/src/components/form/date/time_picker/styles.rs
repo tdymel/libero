@@ -69,9 +69,13 @@ pub(in super::super) static TIME_PICKER_SX: StaticSx = StaticSx::new(|| {
         )
         .selector(
             ChronoPickerPart::Neighbour.selector(),
-            // The press is the single-pointer alternative to the drag: 24px target (WCAG 2.5.8).
+            // The press is the single-pointer alternative to the drag: 24px target (WCAG 2.5.8),
+            // the column's full width rather than its text's.
             sx().display("flex")
                 .align_items("center")
+                .justify_content("center")
+                .align_self("stretch")
+                .min_width("24px")
                 .min_height("max(1.25em, 24px)")
                 .color("text-dimmed")
                 .hover(sx().cursor("pointer"))

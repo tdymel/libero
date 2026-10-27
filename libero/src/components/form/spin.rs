@@ -4,7 +4,7 @@
 use dioxus::prelude::*;
 
 use crate::{
-    hooks::{DragMove, DragOptions, DragStart, ElementHandle, use_drag},
+    hooks::{DragMove, DragOptions, DragStart, ElementHandle, use_drag_cancel},
     platform,
 };
 
@@ -33,9 +33,9 @@ pub(crate) fn key_steps(key: &Key, page: usize) -> Option<isize> {
     }
 }
 
-/// The travel left over and the step a wheel event takes: a notch is one step,
-/// a trackpad's small deltas add up to one.
-pub(crate) fn wheel_steps(held: f64, travel: f64) -> (f64, isize) {
+/// The travel left over and the steps a wheel event takes: a notch is one step,
+/// a trackpad's small deltas add up to one, a page delta (`paged`) takes its whole travel.
+pub(crate) fn wheel_steps(held: f64, travel: f64, paged: bool) -> (f64, isize) {
     // A turn back drops what was held the other way.
     let total = if held * travel < 0.0 {
         travel
@@ -44,6 +44,7 @@ pub(crate) fn wheel_steps(held: f64, travel: f64) -> (f64, isize) {
     };
     match total.abs() >= WHEEL_STEP {
         // Down the page brings the value below up: the next one.
+        true if paged => (0.0, (total / WHEEL_STEP).round() as isize),
         true => (0.0, total.signum() as isize),
         false => (total, 0),
     }
@@ -88,7 +89,8 @@ pub(crate) fn use_spin_gestures<A: Copy + 'static>(
         }
         event.prevent_default();
         let travel = platform::wheel_travel_y(&event.data(), WHEEL_STEP, page as f64);
-        let (total, delta) = wheel_steps(*wheel.peek(), travel);
+        let paged = platform::wheel_is_paged(&event.data());
+        let (total, delta) = wheel_steps(*wheel.peek(), travel, paged);
         wheel.set(total);
         if delta != 0 {
             onturn.call(Turn::By(delta));
@@ -114,16 +116,28 @@ pub(crate) fn use_spin_gestures<A: Copy + 'static>(
             onturn.call(Turn::By(delta));
         }
     });
-    let drag = use_drag(DragOptions {
-        capture: handle,
-        onstart,
-        onmove,
-        onend,
+    // A revoked pointer steps nothing: the press and the drag are dropped.
+    let oncancel = use_callback(move |()| {
+        drag_from.set(None);
+        pressed.set(None);
     });
+    let drag = use_drag_cancel(
+        DragOptions {
+            capture: handle,
+            onstart,
+            onmove,
+            onend,
+        },
+        oncancel,
+    );
     // Disabled, no drag: its `prevent_default` would cancel the press's focus (3883).
     let onpointerdown = use_callback(move |event: Event<PointerData>| {
         if !disabled {
             drag.onpointerdown.call(event);
+        }
+        // A press that started no drag (a right-click) never ends: it must not step later.
+        if !*drag.dragging.peek() {
+            pressed.set(None);
         }
     });
     SpinGestures {
@@ -142,10 +156,16 @@ mod tests {
 
     #[test]
     fn a_wheel_notch_takes_one_step_and_small_deltas_add_up() {
-        assert_eq!(wheel_steps(0.0, 100.0), (0.0, 1));
-        assert_eq!(wheel_steps(0.0, -360.0), (0.0, -1));
-        assert_eq!(wheel_steps(0.0, 15.0), (15.0, 0));
-        assert_eq!(wheel_steps(30.0, 15.0), (0.0, 1));
-        assert_eq!(wheel_steps(30.0, -15.0), (-15.0, 0));
+        assert_eq!(wheel_steps(0.0, 100.0, false), (0.0, 1));
+        assert_eq!(wheel_steps(0.0, -360.0, false), (0.0, -1));
+        assert_eq!(wheel_steps(0.0, 15.0, false), (15.0, 0));
+        assert_eq!(wheel_steps(30.0, 15.0, false), (0.0, 1));
+        assert_eq!(wheel_steps(30.0, -15.0, false), (-15.0, 0));
+    }
+
+    #[test]
+    fn a_page_delta_takes_the_steps_of_a_page() {
+        assert_eq!(wheel_steps(0.0, 120.0, true), (0.0, 3));
+        assert_eq!(wheel_steps(0.0, -400.0, true), (0.0, -10));
     }
 }

@@ -116,6 +116,11 @@ pub(crate) fn wheel_travel_y(data: &WheelData, line: f64, page: f64) -> f64 {
     if NATIVE { -travel } else { travel }
 }
 
+/// Whether the wheel reports its travel in pages, as a page-mode wheel setting does.
+pub(crate) fn wheel_is_paged(data: &WheelData) -> bool {
+    matches!(data.delta(), WheelDelta::Pages(_))
+}
+
 /// A live scroll subscription. Dropping it unsubscribes.
 pub trait ScrollSubscription {}
 

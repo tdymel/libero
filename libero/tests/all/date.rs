@@ -30,9 +30,9 @@ fn a_time_picker_draws_a_spinbutton_per_part_and_posts_the_time() {
     }
     let html = body(&render(app));
 
-    // The default en-US clock: hours, minutes at 15 with their unit (todo 894), AM/PM.
+    // The default en-US clock: hours and minutes at 15 with their unit (todos 894, 4599), AM/PM.
     assert_eq!(html.matches("role=\"spinbutton\"").count(), 3);
-    for text in ["09", "30 minutes", "AM"] {
+    for text in ["9 o&#39;clock", "30 minutes", "AM"] {
         assert!(
             html.contains(&format!("aria-valuetext=\"{text}\"")),
             "{text}: {html}"

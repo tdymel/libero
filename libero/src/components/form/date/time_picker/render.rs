@@ -143,7 +143,7 @@ impl ClockView {
         let minutes_page = (15 / step).max(1) as usize;
         rsx! {
             div { "data-slot": ChronoPickerPart::Columns.slot(),
-                {column(Column::Hours, names.hours_label.to_string(), hours, hours_at, hour_text, None, 3)}
+                {column(Column::Hours, names.hours_label.to_string(), hours, hours_at, hour_text, Some((names.hour_of_day_value)(self.hour_label(hour_index))), 3)}
                 span { "data-slot": ChronoPickerPart::Separator.slot(), "aria-hidden": "true", ":" }
                 {column(Column::Minutes, names.minutes_label.to_string(), minutes, minutes_at, TWO_DIGITS[minute as usize], Some((names.minutes_value)(minute)), minutes_page)}
                 {seconds}

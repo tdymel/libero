@@ -98,6 +98,16 @@ pub struct DateLocale {
     pub hours_value: fn(u32) -> String,
     pub minutes_value: fn(u32) -> String,
     pub seconds_value: fn(u32) -> String,
+    /// A clock's hour column as a screen reader says it: `9 o'clock`.
+    pub hour_of_day_value: fn(u32) -> String,
+}
+
+fn english_hour_of_day(n: u32) -> String {
+    format!("{n} o'clock")
+}
+
+fn german_hour_of_day(n: u32) -> String {
+    format!("{n} Uhr")
 }
 
 fn english_hours(n: u32) -> String {
@@ -215,6 +225,7 @@ impl DateLocale {
         hours_value: english_hours,
         minutes_value: english_minutes,
         seconds_value: english_seconds,
+        hour_of_day_value: english_hour_of_day,
     };
 
     pub const GERMAN: Self = Self {
@@ -290,6 +301,7 @@ impl DateLocale {
         hours_value: german_hours,
         minutes_value: german_minutes,
         seconds_value: german_seconds,
+        hour_of_day_value: german_hour_of_day,
     };
 }
 
