@@ -182,6 +182,7 @@ pub(super) fn NumberSpinner<T: NumberValue>(
     size: Size,
     unit: Option<Signal<Option<Element>>>,
     unit_id: Option<String>,
+    spin_hint_id: String,
     spin_to: Callback<T>,
 ) -> Element {
     let theme = use_theme();
@@ -427,6 +428,9 @@ pub(super) fn NumberSpinner<T: NumberValue>(
             onfocusout: focus.focusout(0),
             style: sheet_clearance_style(clearance),
             {control}
+            if spin().keyboardless() {
+                span { id: "{spin_hint_id}", hidden: true, "{labels.spin_hint}" }
+            }
         }
     }
 }

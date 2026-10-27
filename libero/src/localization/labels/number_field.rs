@@ -7,6 +7,8 @@ pub struct NumberFieldLabels {
     pub done: &'static str,
     /// Names the spinner's keyboard button, which switches to typing.
     pub keyboard: &'static str,
+    /// Describes the input while a tap opens the spinner, not the keyboard.
+    pub spin_hint: &'static str,
     /// The error for typed text that is no number, such as `1.5` where `.` groups.
     pub invalid_number: &'static str,
 }
@@ -17,6 +19,7 @@ impl NumberFieldLabels {
         increase: "Increase",
         done: "Done",
         keyboard: "Type a number",
+        spin_hint: "Tap to pick a number",
         invalid_number: "Enter a number.",
     };
 
@@ -25,6 +28,7 @@ impl NumberFieldLabels {
         increase: "Erhöhen",
         done: "Fertig",
         keyboard: "Zahl eingeben",
+        spin_hint: "Tippen, um eine Zahl zu wählen",
         invalid_number: "Geben Sie eine Zahl ein.",
     };
 }

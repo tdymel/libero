@@ -77,9 +77,11 @@ fn NumberFieldDecimalsPage() -> Element {
 }
 
 /// Todo 3390: `group_digits` groups the number until the field takes the focus.
+/// `#fee` pads two places (4717).
 #[component]
 fn NumberFieldGroupedPage() -> Element {
     let mut amount = use_signal(|| Some(1_234_567.5f64));
+    let mut fee = use_signal(|| Some(1_250.5f64));
     rsx! {
         Flex { direction: "column", gap: "md", max_width: "320px",
             NumberField {
@@ -88,6 +90,14 @@ fn NumberFieldGroupedPage() -> Element {
                 group_digits: true,
                 value: amount(),
                 onchange: move |next| amount.set(next),
+            }
+            NumberField {
+                id: "fee",
+                label: "Fee",
+                group_digits: true,
+                decimals: Decimals::Exactly(2),
+                value: fee(),
+                onchange: move |next| fee.set(next),
             }
             Button { id: "after", "After" }
         }

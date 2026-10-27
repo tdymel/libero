@@ -253,7 +253,7 @@ pub fn ButtonPage() -> Element {
                             loader: custom_loader(&values),
                             gap: values.str("gap"),
                             ripple: values.str("ripple") != "false",
-                            r#type: values.str("type"),
+                            r#type: (!is_link(&values)).then(|| values.str("type")),
                             to: match values.str("link").as_str() {
                                 "true" => Input::from("https://dioxuslabs.com"),
                                 _ => Input::None,

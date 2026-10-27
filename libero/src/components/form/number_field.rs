@@ -572,7 +572,7 @@ fn NumberFieldShell<T: NumberValue>(
         Some(error) => field.parse(Parse::Invalid(error)),
         None => field,
     };
-    let field = field
+    let mut field = field
         .label(&props.label)
         .description(&props.description)
         .helper(&props.helper)
@@ -604,6 +604,11 @@ fn NumberFieldShell<T: NumberValue>(
     // do not describe the input.
     let [leading_id, trailing_id] = field.slot_ids();
     let unit_id = trailing_id.clone();
+    // The spinner renders the hint only while a tap opens it instead of the keyboard.
+    let spin_hint_id = format!("{}-spin-hint", field.id());
+    if spin_opens {
+        field.describe_also(spin_hint_id.clone());
+    }
     // The memo alone reads the number, so a step redraws the buttons only at a bound.
     // Typed text steps from itself (see `nudge`), so it counts, not the caller's value.
     let reach =
@@ -820,7 +825,7 @@ fn NumberFieldShell<T: NumberValue>(
         let (mut stripped, mut grouped_shown) = (stripped, grouped_shown);
         let at_rest = grouped && !focused();
         if grouped_shown.replace(at_rest) && !at_rest {
-            let text = current.map(|value| formats.write_number(&value.format()));
+            let text = current.map(|value| written(value, decimals, true, separator, formats));
             let caret = anchor.selection_start().zip(text).zip(separator.group);
             let selected_to = anchor.selection_end();
             stripped
@@ -875,6 +880,7 @@ fn NumberFieldShell<T: NumberValue>(
                 size,
                 unit: unit.filter(|_| props.describe_trailing),
                 unit_id,
+                spin_hint_id,
                 spin_to,
             }
         },

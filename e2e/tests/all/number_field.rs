@@ -456,11 +456,16 @@ async fn settle(page: &Page, value: &str) -> Result<()> {
     .await
 }
 
-/// Focuses the grouped amount, by a press at `1,23`'s width or by script from the selection
-/// `select` (a caret at 4, or all of it as a Tab in leaves it), and waits for the bare number with
-/// a selection for which the JS test `caret` holds.
-fn caret_after_focus(select: Option<(u32, u32)>, caret: &str) {
-    const AMOUNT: &str = "#amount";
+/// Focuses the grouped `field` showing `shown`, by a press at `1,23`'s width or by script from
+/// the selection `select` (a caret at 4, or all of it as a Tab in leaves it), and waits for the
+/// number as `bare` with a selection for which the JS test `caret` holds.
+fn caret_after_focus(
+    field: &str,
+    shown: &str,
+    bare: &str,
+    select: Option<(u32, u32)>,
+    caret: &str,
+) {
     block_on(async {
         let fixture = Fixture::open("/number-field/grouped", Viewport::Desktop)
             .await
@@ -468,14 +473,14 @@ fn caret_after_focus(select: Option<(u32, u32)>, caret: &str) {
         let page = &fixture.page;
         wait::for_js_true(
             page,
-            &format!("document.querySelector({AMOUNT:?}).value === '1,234,567.5'"),
+            &format!("document.querySelector({field:?}).value === {shown:?}"),
             "the grouped number",
         )
         .await
         .unwrap();
         let (x, y): (f64, f64) = page
             .evaluate_bounded(format!(
-                "(() => {{ const el = document.querySelector({AMOUNT:?}); \
+                "(() => {{ const el = document.querySelector({field:?}); \
                  const style = getComputedStyle(el), r = el.getBoundingClientRect(); \
                  const ctx = document.createElement('canvas').getContext('2d'); \
                  ctx.font = style.font; \
@@ -488,7 +493,7 @@ fn caret_after_focus(select: Option<(u32, u32)>, caret: &str) {
             .unwrap();
         if let Some((start, end)) = select {
             page.evaluate_bounded(format!(
-                "(el => {{ el.setSelectionRange({start}, {end}); el.focus(); }})(document.querySelector({AMOUNT:?}))"
+                "(el => {{ el.setSelectionRange({start}, {end}); el.focus(); }})(document.querySelector({field:?}))"
             ))
             .await
             .unwrap();
@@ -500,16 +505,14 @@ fn caret_after_focus(select: Option<(u32, u32)>, caret: &str) {
         // The caret settles a task after the bare text, so wait on both.
         let settled = wait::for_js_true(
             page,
-            &format!(
-                "(el => el.value === '1234567.5' && {caret})(document.querySelector({AMOUNT:?}))"
-            ),
+            &format!("(el => el.value === {bare:?} && {caret})(document.querySelector({field:?}))"),
             "the bare number with the caret in place",
         )
         .await;
         if let Err(error) = settled {
             let state: (String, Option<u32>, Option<u32>) = page
                 .evaluate_bounded(format!(
-                    "(el => [el.value, el.selectionStart, el.selectionEnd])(document.querySelector({AMOUNT:?}))"
+                    "(el => [el.value, el.selectionStart, el.selectionEnd])(document.querySelector({field:?}))"
                 ))
                 .await
                 .unwrap()
@@ -530,6 +533,9 @@ fn caret_after_focus(select: Option<(u32, u32)>, caret: &str) {
 #[test]
 fn a_focus_in_a_grouped_number_keeps_the_caret_between_its_digits() {
     caret_after_focus(
+        "#amount",
+        "1,234,567.5",
+        "1234567.5",
         Some((4, 4)),
         "el.selectionStart === 3 && el.selectionEnd === 3",
     );
@@ -540,8 +546,23 @@ fn a_focus_in_a_grouped_number_keeps_the_caret_between_its_digits() {
 #[test]
 fn a_tab_into_a_grouped_number_keeps_all_of_it_selected() {
     caret_after_focus(
+        "#amount",
+        "1,234,567.5",
+        "1234567.5",
         Some((0, 11)),
         "el.selectionStart === 0 && el.selectionEnd === 9",
+    );
+}
+
+/// Todo 4717: a Tab into a number padded to two places selects all of `1,250.50` too.
+#[test]
+fn a_tab_into_a_padded_grouped_number_keeps_all_of_it_selected() {
+    caret_after_focus(
+        "#fee",
+        "1,250.50",
+        "1250.50",
+        Some((0, 8)),
+        "el.selectionStart === 0 && el.selectionEnd === 7",
     );
 }
 
@@ -549,6 +570,9 @@ fn a_tab_into_a_grouped_number_keeps_all_of_it_selected() {
 #[test]
 fn a_press_in_a_grouped_number_keeps_the_caret_it_placed() {
     caret_after_focus(
+        "#amount",
+        "1,234,567.5",
+        "1234567.5",
         None,
         "el.selectionStart >= 2 && el.selectionStart <= 4 && el.selectionEnd === el.selectionStart",
     );
@@ -790,6 +814,13 @@ fn a_finger_spins_the_number() {
         wait::for_js_true(page, &named, "a named column at 30, described by its unit")
             .await
             .unwrap();
+        let hinted = format!(
+            "document.querySelector({MINUTES:?}).getAttribute('aria-describedby').split(' ') \
+               .map(id => document.getElementById(id)?.textContent.trim()).includes('Tap to pick a number')"
+        );
+        wait::for_js_true(page, &hinted, "the input described by the spin hint (4718)")
+            .await
+            .unwrap();
         // Up 3 x 24px in small moves: each step is sent once.
         frames::in_front(page, async {
             let at = pointer::touch_down(page, &format!("{COLUMN} [data-slot=value]")).await?;
@@ -844,6 +875,14 @@ fn the_keyboard_button_switches_to_typing() {
         wait::for_js_true(page, &typing, "the input focused with its keypad")
             .await
             .unwrap();
+        // Typing needs no hint to tap (4718).
+        wait::for_js_true(
+            page,
+            "!document.querySelector('#minutes-spin-hint')",
+            "no spin hint",
+        )
+        .await
+        .unwrap();
         // A tap now types: it opens nothing.
         tap(page, MINUTES).await.unwrap();
         page.evaluate(format!("document.querySelector({MINUTES:?}).select()"))
