@@ -135,7 +135,7 @@ impl StepperDefaults {
         pending_color: ColorValue::Shade(Color::Muted, ColorShade::S6),
         error_color: ColorValue::Shade(Color::Error, ColorShade::S6),
         connector_color: ColorValue::Shade(Color::Muted, ColorShade::S6),
-        description_color: ColorValue::Shade(Color::Muted, ColorShade::S7),
+        description_color: ColorValue::Text(Color::Muted, ColorShade::S7),
         line_width: 2,
         content_padding: Size::Md,
     };

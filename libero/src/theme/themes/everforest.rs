@@ -7,7 +7,7 @@ pub static EVERFOREST_LIGHT: Theme = Theme {
     surface: HexColor::new(0xFDF6E3),
     ink: HexColor::new(0x5C6A72),
     neutral: HexColor::new(0x5C6A72),
-    muted: HexColor::new(0x829181),
+    muted: HexColor::new(0x808F80),
     primary: HexColor::new(0x3A94C5),
     secondary: HexColor::new(0xDF69BA),
     info: HexColor::new(0x35A77C),

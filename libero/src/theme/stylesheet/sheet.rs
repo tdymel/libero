@@ -43,7 +43,8 @@ impl From<&ThemeSet> for Stylesheet {
     /// :root[data-lsx-theme="dark"]  { … }
     /// ```
     ///
-    /// Without a dark theme, one theme's sheet. [`ThemeSet::named`] themes are not in
+    /// Each block pins its theme's `color-scheme`, so a pinned theme paints native parts in its
+    /// own scheme against the OS. Without a dark theme, one theme's sheet. [`ThemeSet::named`] themes are not in
     /// here: selecting one rebuilds the sheet.
     fn from(set: &ThemeSet) -> Self {
         let light = set.light_theme();
@@ -51,15 +52,15 @@ impl From<&ThemeSet> for Stylesheet {
             return Stylesheet::from(light);
         };
 
-        let mut css = root_block(":root", light);
+        let mut css = pair_block(":root", light);
         // The system case; `:not(..)` lets an explicit choice win, as `@media` adds no specificity.
         let _ = write!(
             css,
             "@media {DARK_SCHEME_QUERY}{{{}}}",
-            root_block(&format!(":root:not([{THEME_ATTRIBUTE}])"), dark)
+            pair_block(&format!(":root:not([{THEME_ATTRIBUTE}])"), dark)
         );
-        css.push_str(&root_block(&theme_selector(ThemeSet::LIGHT), light));
-        css.push_str(&root_block(&theme_selector(ThemeSet::DARK), dark));
+        css.push_str(&pair_block(&theme_selector(ThemeSet::LIGHT), light));
+        css.push_str(&pair_block(&theme_selector(ThemeSet::DARK), dark));
 
         // From the light theme: its colours are vars, and `font_smoothing` is not a scheme choice.
         css.push_str(&base_layer_and_keyframes(light, "light dark"));
@@ -122,6 +123,19 @@ fn root_block(selector: &str, theme: &Theme) -> String {
         .to_string()
 }
 
+/// [`root_block`] that also pins `color-scheme`, so a pinned theme paints native parts in its
+/// own scheme whatever the OS prefers.
+fn pair_block(selector: &str, theme: &Theme) -> String {
+    let mut declarations = theme_declarations(theme);
+    declarations.push(CssDeclaration::new(
+        "color-scheme",
+        theme.surface.color_scheme(),
+    ));
+    Stylesheet::new(vec![CssScope::new(selector, declarations)])
+        .as_str()
+        .to_string()
+}
+
 /// Everything but the vars, emitted once per sheet. Reset and `body` go in `lsx-base`, or
 /// they'd beat an app's layered base styles (Tailwind v4); vars and keyframes stay unlayered.
 fn base_layer_and_keyframes(theme: &Theme, color_scheme: &str) -> String {
@@ -151,7 +165,7 @@ fn base_layer_and_keyframes(theme: &Theme, color_scheme: &str) -> String {
 fn global_reset_scopes(theme: &Theme, color_scheme: &str) -> Vec<CssScope> {
     let mut html_declarations = vec![
         CssDeclaration::new("box-sizing", "border-box"),
-        // Canvas, scrollbars and native controls follow the theme; a pair passes `light dark`.
+        // Canvas, scrollbars and native controls follow the theme; a pair's root blocks override it.
         CssDeclaration::new("color-scheme", color_scheme),
     ];
     if theme.font_smoothing {

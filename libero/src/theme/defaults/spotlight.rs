@@ -33,9 +33,9 @@ impl SpotlightDefaults {
         radius: Size::Md,
         padding: "4px",
         search_font_size: "1.125rem",
-        // Shade 7, not 6: muted.6 on white is below 4.5:1 for text this small.
-        group_color: ColorValue::Shade(Color::Muted, ColorShade::S7),
-        description_color: ColorValue::Shade(Color::Muted, ColorShade::S7),
+        // Text role, step 7: re-based per theme for 4.5:1 on the card; muted.6 is below it for small text.
+        group_color: ColorValue::Text(Color::Muted, ColorShade::S7),
+        description_color: ColorValue::Text(Color::Muted, ColorShade::S7),
     };
 }
 

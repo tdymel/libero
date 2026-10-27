@@ -111,7 +111,7 @@ fn every_text_role_reads_on_the_dark_theme_s_page() {
 }
 
 /// Every shipped set: ink and every text role read on page and card (text roles mix past
-/// S9, todo 3614), `muted.6` reaches 3:1; under 4.5:1 is recorded (todo 394): ported palettes are others' designs.
+/// S9, todo 3614), `muted.6` reaches 3:1 on both; under 4.5:1 on the page is recorded (todo 394): ported palettes are others' designs.
 #[test]
 fn every_shipped_set_reads_on_its_own_page() {
     let mut quiet = Vec::new();
@@ -140,11 +140,12 @@ fn every_shipped_set_reads_on_its_own_page() {
                 set.name()
             );
 
-            let ratio = muted_on_its_page(theme);
-            // Todo 1308: borders and handles are non-text, so 3:1 is a floor (WCAG 1.4.11).
+            let ratio = muted_on(theme, theme.surface);
+            let on_card = muted_on(theme, paper);
+            // Todos 1308, 4552: borders and handles are non-text, so 3:1 is a floor on page and card (WCAG 1.4.11).
             assert!(
-                ratio >= 3.0,
-                "{} {scheme}: muted.6 on its own page is {ratio:.2}:1",
+                ratio >= 3.0 && on_card >= 3.0,
+                "{} {scheme}: muted.6 on its own page is {ratio:.2}:1, on its card {on_card:.2}:1",
                 set.name()
             );
             if ratio < TEXT_CONTRAST {
@@ -163,18 +164,18 @@ fn every_shipped_set_reads_on_its_own_page() {
             "Catppuccin light: 4.36:1",
             "One dark: 3.72:1",
             "Gruvbox Classic light: 4.28:1",
-            "Ayu light: 3.05:1",
+            "Ayu light: 3.21:1",
             "Ayu dark: 3.52:1",
-            "Ayu Mirage light: 3.05:1",
+            "Ayu Mirage light: 3.21:1",
             "Ayu Mirage dark: 3.58:1",
-            "Everforest light: 3.08:1",
+            "Everforest light: 3.16:1",
             "Everforest dark: 4.24:1",
-            "Kanagawa light: 3.00:1",
+            "Kanagawa light: 3.98:1",
             "Kanagawa dark: 3.33:1",
-            "Kanagawa Dragon light: 3.00:1",
+            "Kanagawa Dragon light: 3.98:1",
             "Ef Night light: 4.49:1",
-            "Vague light: 3.02:1",
-            "Vague dark: 3.02:1",
+            "Vague light: 3.28:1",
+            "Vague dark: 3.30:1",
         ],
         "the shipped palettes' muted.6 moved"
     );
@@ -210,12 +211,12 @@ fn the_shadcn_pair_reads_and_keeps_its_edges_and_ring_visible() {
     }
 }
 
-/// `muted.6` on `theme`'s surface; never re-based, so it stays as pale as drawn.
-fn muted_on_its_page(theme: &Theme) -> f32 {
+/// `muted.6` on `against`; never re-based, so it stays as pale as drawn.
+fn muted_on(theme: &Theme, against: HexColor) -> f32 {
     let css = Stylesheet::from(theme).as_str().to_string();
     HexColor::parse(&root_var(&css, "--lsx-muted-6"))
         .expect("a hex")
-        .contrast_ratio(theme.surface)
+        .contrast_ratio(against)
 }
 
 /// Palette colours whose text role misses [`TEXT_CONTRAST`] on `theme`'s surface.

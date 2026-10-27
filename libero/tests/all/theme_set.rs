@@ -86,6 +86,19 @@ fn the_default_provider_ships_the_library_s_pair() {
     assert!(html.contains("color-scheme:light dark;"));
     // The dark theme's own page, which the light one never emits.
     assert!(html.contains("--lsx-surface:#1A1B1E;"));
+
+    // Todo 4551: each block pins its own scheme, so a pin beats the OS.
+    let block = |selector: &str| html.split_once(selector).expect(selector).1.split_once('}');
+    for (selector, scheme) in [
+        (r#":root[data-lsx-theme="light"]{"#, "light"),
+        (r#":root[data-lsx-theme="dark"]{"#, "dark"),
+    ] {
+        let (declarations, _) = block(selector).expect("a block");
+        assert!(
+            declarations.ends_with(&format!("color-scheme:{scheme};")),
+            "{selector}"
+        );
+    }
 }
 
 /// `use_theme()` is reactive: a component that read the old theme re-renders

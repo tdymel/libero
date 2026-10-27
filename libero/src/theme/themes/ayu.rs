@@ -7,7 +7,7 @@ pub static AYU_LIGHT: Theme = Theme {
     surface: HexColor::new(0xFAFAFA),
     ink: HexColor::new(0x5C6166),
     neutral: HexColor::new(0x5C6166),
-    muted: HexColor::new(0x8A9199),
+    muted: HexColor::new(0x868D95),
     primary: HexColor::new(0x399EE6),
     secondary: HexColor::new(0xA37ACC),
     info: HexColor::new(0x55B4D4),

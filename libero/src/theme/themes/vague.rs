@@ -6,8 +6,8 @@
 //! - the five accents are the dark half's; the stylesheet re-derives roles per page;
 //! - `ink` is the dark `bg`, `#141415`;
 //! - page and card are the dark `text` (`#cdcdcd`) mixed 80% and 60% toward white;
-//! - `muted` is the dark `text-muted` (`#606079`) moved to 3.03:1 from the page,
-//!   the first step past 3:1.
+//! - `muted` is the dark `text-muted` (`#606079`) moved toward the ink to 3:1 on page
+//!   and card (todo 4552), the first step past it.
 //!
 //! The gradient runs info to secondary: no label reads at 4.5:1 on primary to secondary
 //! (todo 2051).
@@ -26,7 +26,7 @@ pub static VAGUE_LIGHT: Theme = Theme {
     surface: HexColor::new(0xF5F5F5),
     ink: HexColor::new(0x141415),
     neutral: HexColor::new(0x141415),
-    muted: HexColor::new(0x8C8C9E),
+    muted: HexColor::new(0x868697),
     primary: HexColor::new(0x6E94B2),
     secondary: HexColor::new(0xBB9DBD),
     info: HexColor::new(0x7E98E8),
@@ -46,7 +46,7 @@ pub static VAGUE_DARK: Theme = Theme {
     surface: HexColor::new(0x141415),
     ink: HexColor::new(0xCDCDCD),
     neutral: HexColor::new(0xCDCDCD),
-    muted: HexColor::new(0x606079),
+    muted: HexColor::new(0x66667E),
     primary: HexColor::new(0x6E94B2),
     secondary: HexColor::new(0xBB9DBD),
     info: HexColor::new(0x7E98E8),
