@@ -31,6 +31,7 @@ pub const ROUTES: Routes = &[
     ("/menu-docked", || rsx! { MenuDockedPage {} }),
     ("/menu-phone", || rsx! { MenuPhonePage {} }),
     ("/menu-phone-docked", || rsx! { MenuPhoneDockedPage {} }),
+    ("/menu-phone-long", || rsx! { MenuPhoneLongPage {} }),
     ("/menu-file", || rsx! { MenuFilePage {} }),
 ];
 
@@ -75,6 +76,24 @@ fn MenuPhonePage() -> Element {
             }
             Text { id: "last", "{last}" }
             button { id: "outside", r#type: "button", "Elsewhere" }
+        }
+    }
+}
+
+/// Todo 4610: more rows than the phone sheet holds, on a page that scrolls too.
+#[component]
+fn MenuPhoneLongPage() -> Element {
+    let menu = use_menu();
+    let items = (0..30)
+        .map(|n| MenuItem::new(format!("Item {n}")).onselect(|_| {}).into())
+        .collect::<Vec<MenuEntry>>();
+
+    rsx! {
+        Flex { direction: "column", gap: "md", padding: "16px",
+            Menu { state: menu, items,
+                Button { variant: "outlined", attributes: menu.a11y_attributes(), "Actions" }
+            }
+            div { style: "height: 200vh" }
         }
     }
 }

@@ -85,7 +85,10 @@ static COMBOBOX_SHEET_SX: StaticSx = StaticSx::new(|| {
             narrow_query(),
             sx().selector(
                 "& > [data-slot='listbox']",
-                sx().flex("1 1 auto").min_height("0").max_height("none"),
+                sx().flex("1 1 auto")
+                    .min_height("0")
+                    .max_height("none")
+                    .with("overscroll-behavior", "contain"),
             )
             .selector(
                 "& > [data-slot='sheet-footer']",

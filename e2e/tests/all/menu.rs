@@ -1240,6 +1240,31 @@ fn below_sm_the_menu_is_a_sheet_that_closes_every_way() {
     });
 }
 
+/// Todo 4610: a scrolling sheet keeps its grab strip in view and does not chain into the page.
+#[test]
+fn a_scrolled_phone_sheet_keeps_its_strip_and_the_page_still() {
+    block_on(async {
+        let fixture = phone("/menu-phone-long").await;
+        let page = &fixture.page;
+        tap(page, TRIGGER).await.unwrap();
+        sheets_shown(page, 1).await.unwrap();
+        let js = "(() => { const s = document.querySelector('[role=menu]'); \
+                  s.scrollTop = 300; \
+                  const h = s.querySelector('[data-slot=sheet-handle]').getBoundingClientRect(); \
+                  return s.scrollTop > 100 && getComputedStyle(s).overscrollBehaviorY === 'contain' \
+                    && Math.abs(h.top - s.getBoundingClientRect().top) < 2; })()";
+        wait::for_js_true(
+            page,
+            js,
+            "the strip stays at the sheet's top, overscroll contained",
+        )
+        .await
+        .unwrap();
+        fixture.console.assert_clean("a scrolled sheet").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
 /// Todo 4110: Back closes the phone's sheet, not the app.
 async fn back_closes_the_sheet<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
     d.click(TRIGGER).await?;

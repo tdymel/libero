@@ -37,6 +37,8 @@ pub(crate) fn phone_sheet_sx() -> Sx {
             .border_bottom_left_radius("0")
             .border_bottom_right_radius("0")
             .padding_bottom("calc(4px + env(safe-area-inset-bottom, 0px))")
+            // A swipe in the sheet must not scroll the page behind it (4610).
+            .with("overscroll-behavior", "contain")
             // Follows a swipe down from the strip, slides off past the keyboard's foot or springs back (3957).
             .and(swipe_close_sx())
             .var(SWIPE_BEYOND, SHEET_FOOT.value_or("0px"))
@@ -48,8 +50,13 @@ pub(crate) fn phone_sheet_sx() -> Sx {
             // The swipe strip over the rows, its grab bar centred, as a bottom `Drawer`'s.
             .selector(
                 SHEET_HANDLE,
+                // Sticky: a sheet that is itself the scroller (`Menu`) keeps its strip in view.
                 sx().display("block")
-                    .position("relative")
+                    .position("sticky")
+                    // Stuck where it sits unscrolled: the box's padding offsets it.
+                    .top("-4px")
+                    .z_index("1")
+                    .background("inherit")
                     .flex("none")
                     .height("20px")
                     .margin_top("-4px")
