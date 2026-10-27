@@ -44,7 +44,7 @@ fn Demo() -> Element {
 | Prop | Type | Default | Description |
 |---|---|---|---|
 | `text` | `String` | required | The plain text searched, in a `<span>`. |
-| `terms` | `Vec<String>` | `[]` | Every match of any term, whatever its case, is a `Mark`. Where terms overlap, the longest wins; touching matches join into one. Blank terms match nothing. |
+| `terms` | `Vec<String>` | `[]` | Every match of any term is a `Mark`, compared lowercase character by character (no full case folding: `istanbul` does not match `İstanbul`). Where terms overlap, the longest wins; touching matches join into one. Blank terms match nothing. |
 | `color` | `ThemeAwareValue` | `warning`, tinted | Each match's `color`, as on `Mark`. |
 | `gradient` | `Gradient` | - | Each match's `gradient`, as on `Mark`. |
 

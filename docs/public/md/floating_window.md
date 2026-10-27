@@ -65,7 +65,7 @@ handle, so the body can close its own window.
 | `aria_label` | `Option<String>` | - | Names the window instead of `title`. |
 | `placement` | `Input<Placement>` | `center-center` | Where it first appears. Once dragged, it stays where it was put, inside the viewport. |
 | `resizable` | `bool` | `false` | Draws the corner resize handle. |
-| `pinned` | `bool` | `false` | Keeps it at `placement`, with no drag, keyboard move or Move menu item. |
+| `pinned` | `bool` | `false` | Keeps it at `placement`, with no drag, keyboard move or Move menu item; turning it on puts a moved window back. |
 | `z_index` | `Input<ThemeAwareValue>` | - | Overrides the stacking. Unset, windows sit below overlays and modals. |
 | `sx` | `Input<Sx>` | - | Styles the window. `min_width`, `max_width`, `min_height` and `max_height` here limit a resize. Unset, the minimum is 12rem by 6rem, room for the title bar and Close. The window never grows past the viewport. |
 | `onmove` | `Option<Callback<WindowRect>>` | - | Called after a drag, a keyboard or button move, or a Reset, in viewport pixels. |
