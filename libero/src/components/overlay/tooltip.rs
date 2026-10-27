@@ -474,11 +474,13 @@ fn TooltipBubble(
     let gap = ScaleOrCss::new(tooltip.gap.as_ref(), theme.tooltip.gap);
     let custom = gap.custom_css(SizeCss::SPACING);
     let measured = custom.as_deref().and_then(css_px);
-    if let Some(css) = custom.as_deref().filter(|_| measured.is_none()) {
-        warn(&format!(
-            "Tooltip: gap `{css}` is not a px or rem length, so the bubble is placed by the theme's gap."
-        ));
-    }
+    use_hook(|| {
+        if let Some(css) = custom.as_deref().filter(|_| measured.is_none()) {
+            warn(&format!(
+                "Tooltip: gap `{css}` is not a px or rem length, so the bubble is placed by the theme's gap."
+            ));
+        }
+    });
     let reach = if tooltip.arrow {
         arrow_reach(ARROW_SIZE)
     } else {

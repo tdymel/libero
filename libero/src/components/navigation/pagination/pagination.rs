@@ -7,7 +7,7 @@ use crate::{
         common::{
             Glyph, HtmlTag, Input, Part, ScaleOrCss, States, Variables, base_color, base_props,
             coarse_hit_area_sx, contrast_color, fill_color, focus_ring_sx, focused_disabled_sx,
-            literal_contrast, on_state_sx, parts_enum, variables,
+            literal_contrast, on_state_sx, parts_enum, use_name_warning, variables,
         },
         form::use_fieldset_disabled,
         layout::{BoxStyle, use_box},
@@ -22,7 +22,6 @@ use crate::{
         PAGINATION_CONTROL_SIZE, PAGINATION_GAP, PaginationDefaults, Size, SizeCss,
     },
     use_theme,
-    utils::warn,
 };
 
 use super::range::{PaginationItem, pagination_range};
@@ -198,9 +197,10 @@ pub fn Pagination(props: PaginationProps) -> Element {
     let with_controls = props.with_controls.unwrap_or(true);
     let with_edges = props.with_edges.unwrap_or(false);
 
-    if props.onchange.is_none() {
-        warn("Pagination: without `onchange` the page can never change.");
-    }
+    use_name_warning(
+        props.onchange.is_some(),
+        "Pagination: without `onchange` the page can never change.",
+    );
 
     // Fill and text from one ramp, so no `autoContrast` knob is needed.
     let picked = props

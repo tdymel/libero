@@ -346,7 +346,7 @@ base_props! {
         /// The column's position on the board, from 0. Key it by its data, not this.
         index: usize,
         /// The column's name: the header's text, the list's name, a Move to entry. A blank
-        /// one names nothing: the list is named by `header` instead, or not at all.
+        /// one warns: the Move to menu and the announcements use the column's number.
         #[props(into)]
         label: String,
         /// The header's content instead of `label`, which stays the list's name.
@@ -379,8 +379,8 @@ pub fn KanbanColumn(props: KanbanColumnProps) -> Element {
     let column = props.index;
     let labelled = !props.label.trim().is_empty();
     use_name_warning(
-        labelled || props.header.is_some(),
-        "KanbanColumn: a blank `label` and no `header`, so the list is announced without a name.",
+        labelled,
+        "KanbanColumn: a blank `label`, so the Move to menu and the move announcements name the column by its number.",
     );
     let mut index = use_signal(|| column);
     if *index.peek() != column {
@@ -396,7 +396,11 @@ pub fn KanbanColumn(props: KanbanColumnProps) -> Element {
     });
     let marker = use_id();
     let mut labels = board.labels;
-    let label = props.label.clone();
+    let name_of = |label: &str, column: usize| match label.trim().is_empty() {
+        true => (column + 1).to_string(),
+        false => label.to_string(),
+    };
+    let label = name_of(&props.label, column);
     let mut placed = use_hook(|| CopyValue::new(None));
     use_effect(use_reactive!(|column, label| {
         let mut entries = labels.write();
@@ -417,7 +421,10 @@ pub fn KanbanColumn(props: KanbanColumnProps) -> Element {
 
     // Before this column's own `use_sortable`: the board's list of columns is the nearest yet.
     let words = current_localization();
-    let column_name = fill(words.kanban.column, &[("label", &props.label)]);
+    let column_name = fill(
+        words.kanban.column,
+        &[("label", &name_of(&props.label, column))],
+    );
     let place = use_labelled_sortable_item(column, Some(column_name.clone()));
     let (reorder, move_buttons) = (board.reorder, board.move_buttons);
     use_effect(move || {
@@ -947,9 +954,9 @@ mod tests {
     use super::*;
     use crate::{Stylesheet, components::common::part_table};
 
-    /// Todo 3853: a column with a blank label and no header leaves the list unnamed.
+    /// Todo 4459: a header names the list but not the Move to menu or the announcements.
     #[test]
-    fn a_blank_column_label_without_a_header_warns() {
+    fn a_blank_column_label_warns_with_or_without_a_header() {
         fn blank() -> Element {
             rsx! {
                 crate::LiberoProvider {
@@ -973,7 +980,7 @@ mod tests {
         };
 
         assert!(warns(blank));
-        assert!(!warns(headed));
+        assert!(warns(headed));
     }
 
     #[test]

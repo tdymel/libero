@@ -6,7 +6,7 @@ use crate::{
         buttons::{ACTION_ICON_COMPACT, ActionIcon, is_compact},
         common::{
             HtmlTag, Input, Part, States, Variables, base_props, parts_enum, parts_under_sx,
-            variables,
+            use_name_warning, variables,
         },
         layout::use_box,
     },
@@ -17,7 +17,6 @@ use crate::{
         BURGER_COLOR, BURGER_LINE_SIZE, BURGER_SIZE, BURGER_SIZES, BURGER_TRANSITION_DURATION,
         BURGER_TRANSITION_TIMING, Size, SizeCss,
     },
-    utils::warn,
 };
 
 /// One bar: the middle one is the glyph `<span>`, the outer two its pseudo-elements.
@@ -171,11 +170,10 @@ pub fn Burger(props: BurgerProps) -> Element {
         })
         .unwrap_or_else(|| default_label(&labels, props.open).to_string());
 
-    if is_orphan_disclosure(props.open, &attributes) {
-        warn(
-            "Burger: `open` is set but no `aria-controls` was spread, so nothing says which panel this button expands.",
-        );
-    }
+    use_name_warning(
+        !is_orphan_disclosure(props.open, &attributes),
+        "Burger: `open` is set but no `aria-controls` was spread, so nothing says which panel this button expands.",
+    );
 
     // The button's size is a `calc`, so `ActionIcon` cannot tell `xs` and `sm` from it.
     let states: Input<States> = props

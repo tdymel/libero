@@ -4,6 +4,7 @@ use super::core::{AccordionView, SectionSpec, render_accordion};
 use crate::{
     components::common::{
         HtmlTag, Input, OptionLabel, OptionSource, Options, base_props, input_from_str,
+        use_name_warning,
     },
     hooks::{use_root_id, use_theme},
     theme::{AccordionChevronPosition, Size},
@@ -144,27 +145,32 @@ pub fn Accordion<T: Options>(props: AccordionProps<T>) -> Element {
     let root = use_root_id(&props.attributes);
     let theme = use_theme();
 
-    if props.onchange.is_none() {
-        warn("Accordion: without `onchange` no section can ever open or close.");
-    }
-    if props.panel.is_none() {
-        warn("Accordion: without `panel` an open section has nothing to show.");
-    }
+    use_name_warning(
+        props.onchange.is_some(),
+        "Accordion: without `onchange` no section can ever open or close.",
+    );
+    use_name_warning(
+        props.panel.is_some(),
+        "Accordion: without `panel` an open section has nothing to show.",
+    );
 
-    let heading = match props.heading.copied_or(HtmlTag::H3) {
+    let requested = props.heading.copied_or(HtmlTag::H3);
+    let heading = match requested {
         level @ (HtmlTag::H1
         | HtmlTag::H2
         | HtmlTag::H3
         | HtmlTag::H4
         | HtmlTag::H5
         | HtmlTag::H6) => level,
-        other => {
-            warn(&format!(
-                "Accordion: `heading` must be h1..h6, not {other:?}; using h3."
-            ));
-            HtmlTag::H3
-        }
+        _ => HtmlTag::H3,
     };
+    use_hook(|| {
+        if heading != requested {
+            warn(&format!(
+                "Accordion: `heading` must be h1..h6, not {requested:?}; using h3."
+            ));
+        }
+    });
 
     let list = props.options.or_static();
     let values = list.values();

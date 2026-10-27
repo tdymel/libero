@@ -165,8 +165,8 @@ base_props! {
 /// With nothing focusable inside it focuses an `aria-modal="true"` child, or else
 /// itself when given a `tabindex` and a box (not its default `display: contents`).
 ///
-/// A native radio group is one stop, grouped by `name` only and its checked radio found by
-/// `value`: two forms sharing a radio name, or radios sharing or lacking a `value`, mislead it.
+/// A native radio group, the radios sharing a `name` and a form, is one stop: its checked
+/// radio, or else its first.
 ///
 /// ```rust
 /// # use dioxus::prelude::*;

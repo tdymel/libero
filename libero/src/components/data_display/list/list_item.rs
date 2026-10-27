@@ -50,9 +50,9 @@ static LIST_ITEM_BASE_SX: StaticSx = StaticSx::new(|| {
 
 /// The action takes the item's end, so the body is no float's neighbour.
 fn action_sx() -> Sx {
-    let item = sx().list_style_type("none");
     if NATIVE {
-        return item
+        return sx()
+            .list_style_type("none")
             .display("flex")
             .selector(
                 ListItemPart::Body.selector(),
@@ -69,12 +69,13 @@ fn action_sx() -> Sx {
             );
     }
     // Two table cells, not a flex row: only a `list-item` counts in an ordered list's
-    // numbering (todo 4172), and the full-width body pushes the action to the end.
-    item.selector(
+    // numbering (todo 4172), and the full-width body pushes the action to the end. The
+    // marker stays, so the item keeps its number (todo 4462).
+    sx().selector(
         ListItemPart::Body.selector(),
         sx().display("table-cell")
             .width("100%")
-            .vertical_align("top")
+            .vertical_align("baseline")
             .overflow_wrap("anywhere"),
     )
     .selector(
@@ -173,7 +174,7 @@ pub fn ListItem(props: ListItemProps) -> Element {
     let context = try_use_context::<ListContext>();
     let inherited = context.and_then(|context| context.icon.read().clone());
     let icon = props.icon.clone().or(inherited);
-    // An icon or action item draws no number; a plain one writes out its own.
+    // Native: an icon or action item draws no number; a plain one writes out its own.
     let id = use_hook(order_id);
     let number = use_number(context, id)
         .filter(|_| icon.is_none() && props.action.is_none())

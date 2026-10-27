@@ -63,6 +63,8 @@ static VISUALLY_HIDDEN_FOCUSABLE_SX: StaticSx = StaticSx::new(|| {
         PaperDefaults::background_sx()
             .pointer_events("auto")
             .z_index(Z_INDEX_FLOAT.value())
+            .top("sm")
+            .with("inset-inline-start", "sm")
             .width("auto")
             .height("auto")
             .margin("0")
@@ -137,6 +139,20 @@ mod tests {
         let focused = &css[css.find(":focus-within{").expect(css)..];
 
         assert!(focused.contains("z-index:var(--lsx-z-index-float"), "{css}");
+    }
+
+    /// A fixed box has no scroll parent, so focus must pin it inside the viewport (2.4.11).
+    #[test]
+    fn a_focused_skip_link_is_pinned_to_the_viewport_corner() {
+        let css = crate::css::Stylesheet::from(&*VISUALLY_HIDDEN_FOCUSABLE_SX);
+        let css = css.as_str();
+        let focused = &css[css.find(":focus-within{").expect(css)..];
+
+        assert!(focused.contains("top:var(--lsx-spacing-sm)"), "{css}");
+        assert!(
+            focused.contains("inset-inline-start:var(--lsx-spacing-sm)"),
+            "{css}"
+        );
     }
 
     /// Todo 3557: Blitz hit-tests the clipped box, so only focus gives the press back.

@@ -60,13 +60,10 @@ pub(super) fn picture(index: usize) -> Element {
     }
 }
 
-/// A caller's caption. `min-width: 0` and ellipses keep a long title from pushing the control
+/// A caller's caption. `min-width: 0` and wrapping keep a long title from pushing the control
 /// out; `color: inherit`, since a `<button>` inherits none and the bar's colour is the scrim's.
 pub(super) fn caption(index: usize, mut selected: Signal<[bool; 6]>) -> Element {
-    let line = sx()
-        .overflow("hidden")
-        .text_overflow("ellipsis")
-        .white_space("nowrap");
+    let line = sx().overflow_wrap("anywhere");
     let on = selected()[index];
     // Filled when selected; otherwise the bar's colour, the scrim's.
     let icon = match on {

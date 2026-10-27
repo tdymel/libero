@@ -67,8 +67,8 @@ impl From<Responsive<u8>> for Input<Responsive<u8>> {
 /// The column counts a twelve-track `GridZone` expresses exactly; others snap.
 const COLUMN_COUNTS: [u8; 6] = [1, 2, 3, 4, 6, 12];
 
-/// A tie snaps down, to the wider cell: 5 becomes 4.
-fn snap_cols(cols: u8) -> u8 {
+/// A tie snaps down, to the wider cell: 5 becomes 4. Warns only while `mounting`.
+fn snap_cols(cols: u8, mounting: bool) -> u8 {
     if COLUMN_COUNTS.contains(&cols) {
         return cols;
     }
@@ -77,22 +77,27 @@ fn snap_cols(cols: u8) -> u8 {
         .into_iter()
         .min_by_key(|count| count.abs_diff(cols))
         .unwrap_or(1);
-    warn(&format!(
-        "ImageList: cols {cols} is not a divisor of twelve, snapped to {snapped}. A cell spans \
-         whole tracks of a twelve-track GridZone."
-    ));
+    if mounting {
+        warn(&format!(
+            "ImageList: cols {cols} is not a divisor of twelve, snapped to {snapped}. A cell spans \
+             whole tracks of a twelve-track GridZone."
+        ));
+    }
     snapped
 }
 
 /// `None` for a ratio no cell can take: zero, negative or not finite (todo 2428).
-fn usable_ratio(ratio: Option<f32>) -> Option<f32> {
+/// Warns only while `mounting`.
+fn usable_ratio(ratio: Option<f32>, mounting: bool) -> Option<f32> {
     let ratio = ratio?;
     if ratio.is_finite() && ratio > 0.0 {
         return Some(ratio);
     }
-    warn(&format!(
-        "ImageList: ratio {ratio} is not a positive number, the theme's ratio is used instead."
-    ));
+    if mounting {
+        warn(&format!(
+            "ImageList: ratio {ratio} is not a positive number, the theme's ratio is used instead."
+        ));
+    }
     None
 }
 
@@ -409,17 +414,22 @@ base_props! {
 pub fn ImageList(props: ImageListProps) -> Element {
     let theme = use_theme();
     let defaults = &theme.image_list;
+    // Debug warnings speak once per mount, not on every render.
+    let mounting = use_hook(|| CopyValue::new(true)).replace(false);
 
     let variant = props.variant.copied_or(defaults.variant);
     let masonry = variant == ImageListVariant::Masonry;
     let quilted = variant == ImageListVariant::Quilted;
-    let cols = props.cols.copied_or(defaults.cols).map(snap_cols);
+    let cols = props
+        .cols
+        .copied_or(defaults.cols)
+        .map(|cols| snap_cols(cols, mounting));
     let gap = props
         .gap
         .as_ref()
         .cloned()
         .unwrap_or_else(|| Responsive::new(defaults.gap.into()));
-    if masonry && gap.breakpoints().next().is_some() {
+    if mounting && masonry && gap.breakpoints().next().is_some() {
         warn(
             "ImageList: masonry packs by the base gap, so its rows are off by the difference at a breakpoint gap.",
         );
@@ -437,12 +447,12 @@ pub fn ImageList(props: ImageListProps) -> Element {
         });
     let radius = ScaleOrCss::new(props.radius.as_ref(), defaults.radius);
 
-    if masonry && props.ratio.as_ref().is_some() {
+    if mounting && masonry && props.ratio.as_ref().is_some() {
         warn(
             "ImageList: ratio is ignored by the masonry variant - a packed cell takes its height from its own picture.",
         );
     }
-    let ratio = usable_ratio(props.ratio.as_ref().copied().filter(|_| !masonry));
+    let ratio = usable_ratio(props.ratio.as_ref().copied().filter(|_| !masonry), mounting);
 
     let spans = cols.map(span_for_cols);
     let default_span = spans.base();
@@ -549,7 +559,7 @@ pub fn ImageList(props: ImageListProps) -> Element {
 
         let span = item.span.unwrap_or(default_span);
         let cell_spans = item.span.map_or(spans, Responsive::new);
-        if item.rows.is_some() && !quilted {
+        if mounting && item.rows.is_some() && !quilted {
             warn(&format!(
                 "ImageList: ImageItem::rows is ignored by the {} variant - only quilted places a \
                  cell over more than one row.",
@@ -678,20 +688,20 @@ mod tests {
     #[test]
     fn a_divisor_of_twelve_is_left_alone() {
         for cols in COLUMN_COUNTS {
-            assert_eq!(snap_cols(cols), cols);
+            assert_eq!(snap_cols(cols, false), cols);
         }
     }
 
     /// Ties (5, 9) go to the wider cell; nothing snaps to zero.
     #[test]
     fn everything_else_snaps_to_the_nearest_divisor() {
-        assert_eq!(snap_cols(0), 1);
-        assert_eq!(snap_cols(5), 4);
-        assert_eq!(snap_cols(7), 6);
-        assert_eq!(snap_cols(8), 6);
-        assert_eq!(snap_cols(9), 6);
-        assert_eq!(snap_cols(10), 12);
-        assert_eq!(snap_cols(200), 12);
+        assert_eq!(snap_cols(0, false), 1);
+        assert_eq!(snap_cols(5, false), 4);
+        assert_eq!(snap_cols(7, false), 6);
+        assert_eq!(snap_cols(8, false), 6);
+        assert_eq!(snap_cols(9, false), 6);
+        assert_eq!(snap_cols(10, false), 12);
+        assert_eq!(snap_cols(200, false), 12);
     }
 
     /// An ordinary cell is its width over the ratio, with no gap term.
@@ -722,11 +732,41 @@ mod tests {
     /// Todo 2428: such a ratio made every quilted cell's strut zero.
     #[test]
     fn a_ratio_no_cell_can_take_falls_back_to_the_theme() {
-        assert_eq!(usable_ratio(Some(1.5)), Some(1.5));
-        assert_eq!(usable_ratio(None), None);
+        assert_eq!(usable_ratio(Some(1.5), false), Some(1.5));
+        assert_eq!(usable_ratio(None, false), None);
         for ratio in [0.0, -1.0, f32::NAN, f32::INFINITY] {
-            assert_eq!(usable_ratio(Some(ratio)), None, "{ratio}");
+            assert_eq!(usable_ratio(Some(ratio), false), None, "{ratio}");
         }
+    }
+
+    /// Todo 4461: a re-render must not repeat a misuse warning.
+    #[test]
+    fn a_misused_list_warns_once_per_mount() {
+        static RENDERS: std::sync::atomic::AtomicU32 = std::sync::atomic::AtomicU32::new(0);
+        fn app() -> Element {
+            // A new ratio each time, so the list itself re-renders.
+            let ratio = 1.0 + RENDERS.fetch_add(1, std::sync::atomic::Ordering::SeqCst) as f32;
+            rsx! {
+                crate::LiberoProvider {
+                    ImageList { cols: 5u8, ratio, items: Vec::new() }
+                }
+            }
+        }
+        crate::utils::take_warnings();
+        let mut dom = VirtualDom::new(app);
+        dom.rebuild_in_place();
+        dom.mark_dirty(ScopeId::APP);
+        dom.render_immediate(&mut dioxus::core::NoOpMutations);
+        assert!(RENDERS.load(std::sync::atomic::Ordering::SeqCst) >= 2);
+        let warnings = crate::utils::take_warnings();
+        assert_eq!(
+            warnings
+                .iter()
+                .filter(|warning| warning.contains("cols 5"))
+                .count(),
+            1,
+            "{warnings:?}"
+        );
     }
 
     /// Todo 2425: a zoom button's ring is inset, and outranks the button's own.

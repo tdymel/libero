@@ -199,8 +199,9 @@ impl<V: Clone + 'static> Choices<V> {
     /// # let _ = teams;
     /// ```
     pub fn of(entries: Vec<(V, Cow<'static, str>)>, label: fn(&V) -> String) -> Self {
-        for (i, (_, key)) in entries.iter().enumerate() {
-            if entries[..i].iter().any(|(_, earlier)| earlier == key) {
+        let mut seen = std::collections::HashSet::with_capacity(entries.len());
+        for (_, key) in &entries {
+            if !seen.insert(key.as_ref()) {
                 panic!("Choices::of: the key `{key}` names two entries; each needs its own");
             }
         }
@@ -265,7 +266,14 @@ impl<V: Clone + 'static> Choices<V> {
 
     /// The choice posted as `key`.
     pub fn by_key(&self, key: &str) -> Option<Choice<V>> {
-        self.choices().into_iter().find(|choice| choice.key == key)
+        self.entries
+            .iter()
+            .find(|(_, entry_key)| entry_key == key)
+            .map(|(value, entry_key)| Choice {
+                value: value.clone(),
+                key: entry_key.clone(),
+                label: Label::Fn(self.label),
+            })
     }
 }
 
