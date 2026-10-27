@@ -124,7 +124,7 @@ pub fn MultiSelect<T: Options>(props: MultiSelectProps<T>) -> Element {
     let edited = use_edited();
     let onchange = bound.emit(props.onchange).map(|emit| {
         move |next: Vec<T>| {
-            edited.mark();
+            edited.mark(next.iter().map(Options::label).collect());
             emit(next)
         }
     });

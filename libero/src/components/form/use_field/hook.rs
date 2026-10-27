@@ -247,6 +247,7 @@ impl<T: Clone + 'static> Bound<T> {
     }
 
     /// Clears what was entered, so a form reset draws `value` again.
+    /// Kept beside the reset generation: a native form reset without a `FormScope` bumps none.
     pub(crate) fn forget_entered(&self) -> impl Fn() + Copy + 'static {
         let entered = self.entered;
         move || {

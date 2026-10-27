@@ -1722,8 +1722,8 @@ mod dispatched {
     use libero::{
         LiberoProvider,
         components::{
-            Button, ColorCode, ColorField, Form, NumberField, PasswordField, PinField, Rule,
-            SliderChangeEvent, TextField, not_empty, use_form,
+            Button, ColorCode, ColorField, DateField, Form, NumberField, PasswordField, PinField,
+            Rule, SliderChangeEvent, TextField, not_empty, use_form,
         },
     };
 
@@ -2131,6 +2131,65 @@ mod dispatched {
             "the error outlived an outside value:\n{html}"
         );
         assert_eq!(attributes_of(&html, "input")["value"], "30");
+
+        // A later outside None brings back neither the refused text nor its error (4387).
+        dom.in_runtime(|| age.set(None));
+        dom.render_immediate(&mut dioxus::core::NoOpMutations);
+        dom.process_events();
+        dom.render_immediate(&mut dioxus::core::NoOpMutations);
+        let html = body(&dioxus_ssr::render(&dom));
+        assert!(
+            !html.contains("abc") && !html.contains(r#"aria-invalid="true""#),
+            "the refused text came back:\n{html}"
+        );
+    }
+
+    /// Todo 4386: a date set from outside replaces refused text and its error, as on `NumberField`.
+    #[test]
+    fn an_outside_date_drops_the_refused_text_and_its_error() {
+        thread_local! {
+            static DAY: std::cell::Cell<Option<Signal<Option<libero::chrono::NaiveDate>>>> =
+                const { std::cell::Cell::new(None) };
+        }
+        fn app() -> Element {
+            let day = use_signal(|| None);
+            DAY.set(Some(day));
+            rsx! {
+                LiberoProvider {
+                    DateField { label: "Arrival", value: day(), onchange: move |_| {} }
+                }
+            }
+        }
+
+        let Page { mut dom, rec: find } = Page::build(app);
+        let field = find.input.expect("registered no input listener");
+        dom.runtime()
+            .handle_event("input", Event::new(input_event("abc"), true), field);
+        dom.render_immediate(&mut dioxus::core::NoOpMutations);
+        dom.runtime().handle_event(
+            "keydown",
+            Event::new(key_event(Key::Named(NamedKey::Enter)), true),
+            field,
+        );
+        dom.render_immediate(&mut dioxus::core::NoOpMutations);
+        let html = body(&dioxus_ssr::render(&dom));
+        assert!(
+            html.contains(r#"value="abc""#) && html.contains(r#"aria-invalid="true""#),
+            "abc was not refused:\n{html}"
+        );
+
+        let mut day = DAY.get().expect("the fixture's value");
+        dom.in_runtime(|| day.set(libero::chrono::NaiveDate::from_ymd_opt(2026, 9, 4)));
+        // The render, its effect, and the render the effect asks for.
+        dom.render_immediate(&mut dioxus::core::NoOpMutations);
+        dom.process_events();
+        dom.render_immediate(&mut dioxus::core::NoOpMutations);
+        let html = body(&dioxus_ssr::render(&dom));
+        assert!(
+            !html.contains("abc") && !html.contains(r#"aria-invalid="true""#),
+            "the refused text outlived an outside value:\n{html}"
+        );
+        assert_eq!(attributes_of(&html, "input")["value"], "September 4, 2026");
     }
 
     fn readonly_color() -> Element {
@@ -2328,6 +2387,48 @@ mod dispatched {
             "a submit first did not show it"
         );
         assert!(blur(&mut page, name).contains(REQUIRED), "the blur lost it");
+    }
+
+    /// Todo 4384: text cleared and kept posts nothing, so the rules do not judge the color it
+    /// hides; required still reports it empty.
+    #[test]
+    fn a_cleared_color_fields_rules_wait_while_required_reports_empty() {
+        fn app() -> Element {
+            let handle = use_form();
+            rsx! {
+                LiberoProvider {
+                    Button { id: "submit", onclick: move |_| { handle.validate(); }, "Submit" }
+                    Form::<()> { form: handle,
+                        ColorField {
+                            label: "Accent",
+                            name: "accent",
+                            required: true,
+                            value: ColorCode::default(),
+                            oninput: move |_| {},
+                            validate: (|_: &ColorCode| false).error("Never a fit."),
+                        }
+                    }
+                }
+            }
+        }
+
+        let mut page = Page::mount(app);
+        let submit = page.rec.element("click", "id", "submit");
+        let input = page.rec.registered_for("input")[0];
+        page.dom
+            .runtime()
+            .handle_event("input", Event::new(input_event(""), true), input);
+        page.render();
+        page.click(submit);
+        let html = dioxus_ssr::render(&page.dom);
+        assert!(
+            !html.contains("Never a fit."),
+            "a rule judged the hidden color:\n{html}"
+        );
+        assert!(
+            html.contains("Fill in this field."),
+            "required missed the empty text:\n{html}"
+        );
     }
 
     /// Todo 4377: a form reset forgets what an unbound field was typed, so its rule judges empty again.

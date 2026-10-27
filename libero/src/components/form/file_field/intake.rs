@@ -21,7 +21,7 @@ pub(super) struct Taking {
     pub(super) onreject: Option<EventHandler<Vec<FileRejection>>>,
     /// What the chip announcer says of the last refusal, numbered per refusal.
     pub(super) refused: Signal<Option<(u64, String)>>,
-    /// Marked on every emit, so the chip announcer says the field's own edits only.
+    /// Marked with the names on every emit, so the chip announcer says the field's own edits only.
     pub(super) edited: Edited,
     pub(super) accept: String,
     pub(super) limits: Limits,
@@ -65,7 +65,7 @@ pub(super) fn use_file_intake(taking: Taking) -> Intake {
     } = taking;
 
     let emit = use_callback(move |files: Files| {
-        edited.mark();
+        edited.mark(files.iter().map(FileData::name).collect());
         match (&onchange, &setter) {
             (Some(onchange), _) => onchange.call(files),
             (None, Some(setter)) => setter.set(files),

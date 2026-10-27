@@ -213,7 +213,7 @@ pub fn TagsField(props: TagsFieldProps) -> Element {
     // Every emit is the field's own edit, which the announcer then says.
     let onchange = bound.emit(props.onchange).map(|emit| {
         move |next: Vec<String>| {
-            edited.mark();
+            edited.mark(next.clone());
             emit(next)
         }
     });

@@ -461,6 +461,7 @@ fn NumberFieldShell<T: NumberValue>(
         }
     };
     // A value set from outside replaces the refused text, and its error goes with it (4382).
+    // The text goes too, or a later outside `None` would draw it again unflagged (4387).
     let outside_keep = keep.clone();
     use_effect(use_reactive!(|bound_value| {
         let value = bound_value.unwrap_or_else(|| live.cloned());
@@ -470,6 +471,7 @@ fn NumberFieldShell<T: NumberValue>(
             .is_some_and(|edit| edit.shows(value, separator));
         if rejected.peek().is_some() && !shown {
             rejected.set(None);
+            buffer.set(None);
             outside_keep(None);
         }
     }));

@@ -134,19 +134,18 @@ struct Announced {
 }
 
 impl Announced {
-    /// Takes a render's list; its change is said only when `edited`, the note whenever it is new.
-    /// `edited` is used up by the next change, not the next render: the caller's new list may land a render late.
-    /// Unused, it lapses once the event's renders are done (`Edited::mark`).
+    /// Takes a render's list; its change is said only when it equals the list `edited` expects,
+    /// the note whenever it is new. Any change uses `edited` up, so a refused edit vouches for no later list.
     fn observe(
         &mut self,
         labels: Vec<String>,
-        edited: &mut bool,
+        edited: &mut Option<Vec<String>>,
         note: Option<(u64, String)>,
         words: &ChipsLabels,
     ) {
         let mut change = None;
         if self.labels != labels {
-            if std::mem::take(edited) {
+            if edited.take().is_some_and(|expected| expected == labels) {
                 change = chip_change(&self.labels, &labels, words);
             }
             self.labels = labels;
@@ -166,26 +165,20 @@ impl Announced {
     }
 }
 
-/// Set by a field right before it emits its own edit; the next render's change is then
-/// announced. A list loaded, reset or replaced from outside stays silent.
+/// Set by a field right before it emits its own edit, with the labels it expects; that list
+/// is then announced however late it lands. A list loaded, reset or replaced from outside stays silent.
 #[derive(Clone, Copy, PartialEq)]
-pub(crate) struct Edited(CopyValue<bool>);
+pub(crate) struct Edited(CopyValue<Option<Vec<String>>>);
 
 impl Edited {
-    pub(crate) fn mark(self) {
+    pub(crate) fn mark(self, expected: Vec<String>) {
         let mut edited = self.0;
-        edited.set(true);
-        // Spent with this event's renders: a refused edit vouches for no later list (4381).
-        dioxus::core::queue_effect(move || {
-            if let Ok(mut mark) = edited.try_write() {
-                *mark = false;
-            }
-        });
+        edited.set(Some(expected));
     }
 }
 
 pub(crate) fn use_edited() -> Edited {
-    Edited(use_hook(|| CopyValue::new(false)))
+    Edited(use_hook(|| CopyValue::new(None)))
 }
 
 /// A polite live region saying which chips a list gained or lost, by diffing
@@ -212,7 +205,7 @@ pub(crate) fn use_noting_chip_announcer(
     let mut announced = announced.borrow_mut();
     match edited {
         Some(Edited(mut mark)) => announced.observe(labels, &mut mark.write(), note, words),
-        None => announced.observe(labels, &mut false, note, words),
+        None => announced.observe(labels, &mut None, note, words),
     }
     let spoken = announced
         .message
@@ -270,15 +263,14 @@ mod tests {
         }
     }
 
-    fn render(announced: &mut Announced, values: &[&str], mut own: bool) -> bool {
-        announced.observe(labels(values), &mut own, None, &ChipsLabels::ENGLISH);
-        own
+    fn render(announced: &mut Announced, values: &[&str], mark: &mut Option<Vec<String>>) {
+        announced.observe(labels(values), mark, None, &ChipsLabels::ENGLISH);
     }
 
     #[test]
     fn a_list_swapped_from_outside_is_silent() {
         let mut announced = announced(&["a"]);
-        render(&mut announced, &["a", "b", "c"], false);
+        render(&mut announced, &["a", "b", "c"], &mut None);
         assert_eq!(announced.message, None);
         assert_eq!(announced.labels, labels(&["a", "b", "c"]));
     }
@@ -286,21 +278,36 @@ mod tests {
     #[test]
     fn the_fields_own_edit_is_said() {
         let mut announced = announced(&["a"]);
-        render(&mut announced, &["a", "b"], true);
+        render(&mut announced, &["a", "b"], &mut Some(labels(&["a", "b"])));
         assert_eq!(announced.message.as_deref(), Some("Added b"));
-        render(&mut announced, &["a"], true);
+        render(&mut announced, &["a"], &mut Some(labels(&["a"])));
         assert_eq!(announced.message.as_deref(), Some("Removed b"));
     }
 
     #[test]
-    fn an_edit_landing_a_render_late_is_still_said() {
+    fn an_edit_landing_renders_late_is_still_said() {
         let mut announced = announced(&["a"]);
-        // The field redraws (its draft cleared) before the caller's new list arrives.
-        let still_marked = render(&mut announced, &["a"], true);
-        assert!(still_marked);
+        let mut mark = Some(labels(&["a", "b"]));
+        // The field redraws (its draft cleared) before the caller's awaited list arrives.
+        render(&mut announced, &["a"], &mut mark);
+        render(&mut announced, &["a"], &mut mark);
+        assert_eq!(mark, Some(labels(&["a", "b"])));
         assert_eq!(announced.count, 0);
-        assert!(!render(&mut announced, &["a", "b"], still_marked));
+        render(&mut announced, &["a", "b"], &mut mark);
+        assert_eq!(mark, None);
         assert_eq!(announced.message.as_deref(), Some("Added b"));
+    }
+
+    #[test]
+    fn a_refused_edit_vouches_for_no_other_list() {
+        let mut announced = announced(&["a"]);
+        let mut mark = Some(labels(&["a", "b"]));
+        // The caller kept its list, then loaded another: silent, and the mark is spent.
+        render(&mut announced, &["a"], &mut mark);
+        render(&mut announced, &["c"], &mut mark);
+        assert_eq!(mark, None);
+        render(&mut announced, &["a", "b"], &mut mark);
+        assert_eq!(announced.message, None);
     }
 
     #[test]
