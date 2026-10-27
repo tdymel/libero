@@ -419,6 +419,8 @@ pub(super) struct TreeMarks {
     pub pick: Callback<(String, Pick)>,
     pub check: Callback<String>,
     pub look: Signal<Option<CheckboxLook>>,
+    /// The row whose Enter clicked its control: that click's bubble must not pick again.
+    pub enter_click: CopyValue<Option<String>>,
 }
 
 /// The row whose `<li>` holds focus, kept from the rows' focus events for a
@@ -766,12 +768,14 @@ fn use_marks(
             onchange.call(toggled_checks(&data, checked, strict, off, &id));
         }
     });
+    let enter_click = use_hook(|| CopyValue::new(None));
     use_context_provider(|| TreeMarks {
         selected,
         checks,
         pick,
         check,
         look,
+        enter_click,
     })
 }
 
@@ -1038,9 +1042,13 @@ fn TreeCore(props: TreeCoreProps) -> Element {
                     if node.has_children {
                         expansion.toggle(&current);
                     } else {
-                        // A single selection picks the leaf it activates.
-                        if selectable && !multiple {
-                            marks.pick.call((current.clone(), Pick::Toggle));
+                        if selectable {
+                            let mut enter_click = marks.enter_click;
+                            enter_click.set(Some(current.clone()));
+                            // A single selection picks the leaf it activates.
+                            if !multiple {
+                                marks.pick.call((current.clone(), Pick::Toggle));
+                            }
                         }
                         dom.click(&current);
                     }

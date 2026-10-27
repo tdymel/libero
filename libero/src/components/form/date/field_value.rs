@@ -52,6 +52,10 @@ pub trait FieldValue: Iso + PartialEq + 'static {
         current: Option<Self>,
         today: Option<NaiveDate>,
     ) -> Result<Self, Unreadable>;
+    /// The day the value falls on; a range end's typed text takes its year from the start's.
+    fn day(self) -> Option<NaiveDate> {
+        None
+    }
     /// Whether the value counts as one: a range still missing its end posts nothing and
     /// fails a `required` rule.
     fn is_complete(self) -> bool {
@@ -74,6 +78,10 @@ impl FieldValue for NaiveDate {
 
     fn show_short_range(range: DateRange<Self>, formats: &Formats) -> Option<String> {
         Some(short_days(range, formats.names))
+    }
+
+    fn day(self) -> Option<NaiveDate> {
+        Some(self)
     }
 
     fn read(
@@ -123,6 +131,10 @@ impl FieldValue for NaiveDateTime {
             self.date().show(formats),
             self.time().show(formats)
         )
+    }
+
+    fn day(self) -> Option<NaiveDate> {
+        Some(self.date())
     }
 
     /// `14 Sep 09:00 – 16 Sep 17:00`, years only when they differ.
@@ -191,7 +203,7 @@ impl<T: FieldValue + Ord> FieldValue for DateRange<T> {
         let end = end
             .map(|end| {
                 let current_end = current.and_then(|range| range.end).or(Some(start));
-                T::read(end, formats, current_end, today)
+                T::read(end, formats, current_end, start.day().or(today))
             })
             .transpose()?;
         Ok(DateRange::new(start, end).ordered())
@@ -518,6 +530,23 @@ mod tests {
             read_whole::<NaiveDate>("2026年9月1日", &formats, None, None),
             Ok(day(1))
         );
+    }
+
+    /// Todo 4497: a year-less end takes the start's year, not today's or the old end's.
+    #[test]
+    fn a_yearless_range_end_takes_the_starts_year() {
+        let formats = wave_dash_formats();
+        let day = |year, month, day| NaiveDate::from_ymd_opt(year, month, day).expect("a day");
+        let (today, old) = (
+            day(2026, 9, 1),
+            DateRange::new(day(2026, 1, 1), Some(day(2026, 1, 5))),
+        );
+        let read = |current| {
+            DateRange::<NaiveDate>::read("2027年3月1日 ～ 3月5日", &formats, current, Some(today))
+        };
+        let want = Ok(DateRange::new(day(2027, 3, 1), Some(day(2027, 3, 5))));
+        assert_eq!(read(None), want);
+        assert_eq!(read(Some(old)), want);
     }
 
     #[test]

@@ -184,9 +184,12 @@ impl FocusOpen {
     }
 
     pub(crate) fn blur(self) {
-        let (mut focused, mut pressed) = (self.focused, self.pressed);
+        let (mut focused, mut pressed, mut returning) =
+            (self.focused, self.pressed, self.returning);
         focused.set(false);
         pressed.set(false);
+        // A touch close leaves focus on the trigger, so no focus event took the flag.
+        returning.set(false);
         if let Some(mut from_chip) = self.from_chip {
             from_chip.set(false);
         }

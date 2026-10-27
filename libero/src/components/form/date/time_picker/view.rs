@@ -121,15 +121,21 @@ impl ClockView {
         }
     }
 
-    /// `base` moved into the morning or the afternoon and clamped to `min` and
-    /// `max`; `None` when that half lies wholly outside them.
+    /// `base` moved into the morning or the afternoon, onto the nearest hour the step
+    /// offers there; `None` when that half lies wholly outside `min` and `max`.
     pub(super) fn half(self, pm: bool) -> Option<NaiveTime> {
         let offset = if pm { 12 } else { 0 };
         if !self.within(at(offset, 0, 0), at(offset + 11, 59, 59)) {
             return None;
         }
         let base = self.base;
-        Some(at(base.hour() % 12 + offset, base.minute(), base.second()))
+        let wanted = base.hour() % 12 + offset;
+        let hour = (offset..offset + 12)
+            .filter(|hour| {
+                self.on_hour_step(*hour) && self.within(at(*hour, 0, 0), at(*hour, 59, 59))
+            })
+            .min_by_key(|hour| hour.abs_diff(wanted))?;
+        Some(at(hour, base.minute(), base.second()))
     }
 
     pub(super) fn clamp(self, time: NaiveTime) -> NaiveTime {
@@ -263,7 +269,7 @@ impl ClockView {
         let hand = self.hand;
         let step = self.step_of(hand());
         let page = match hand() {
-            Hand::Hour => 3,
+            Hand::Hour => (3 / step).max(1),
             _ => (15 / step).max(1),
         };
         let next = match event.key() {

@@ -166,6 +166,8 @@ fn a_range_picker_blanks_neighbour_days_and_tints_the_inside() {
     let html = body(&render(app));
 
     assert_eq!(html.matches("role=\"grid\"").count(), 2);
+    // Several cells are selected, so each grid says so (todo 4495).
+    assert_eq!(html.matches("aria-multiselectable=\"true\"").count(), 2);
     // Side by side, only each month's own days are buttons: 30 + 31.
     assert_eq!(html.matches("data-slot=\"day\"").count(), 61);
     assert_eq!(html.matches("data-selected=\"true\"").count(), 2);
@@ -1081,7 +1083,7 @@ mod dispatched {
         page.render();
 
         let html = body(&dioxus_ssr::render(&page.dom));
-        assert!(html.contains("Dates, </span>10 Oct"), "{html}");
+        assert!(!html.contains("Dates, </span>"), "{html}");
         assert!(html.contains("Start time, </span>9:00 AM"), "{html}");
     }
 

@@ -15,7 +15,7 @@ tabpanel "Dates"
   button "March 2026" [live=polite]
     StaticText "March 2026"
   button "Next month"
-  grid "March 2026"
+  grid "March 2026" [multiselectable]
     row "Sunday Monday Tuesday Wednesday Thursday Friday Saturday"
       columnheader "Sunday"
         StaticText "Su"

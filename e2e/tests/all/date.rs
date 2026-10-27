@@ -61,8 +61,8 @@ fn a_time_picked_before_any_day_is_pulled_into_min() {
     });
 }
 
-/// The same for the start of a range of moments. A field holds a half range in its dropdown
-/// (todo 4186), so its tabs show the start.
+/// The same for the start of a range of moments, which stays a time until a day is picked
+/// (todo 4496): the Dates tab shows no day, the Start tab the pulled-up time.
 #[test]
 fn a_start_time_picked_before_any_day_is_pulled_into_min() {
     block_on(async {
@@ -74,7 +74,7 @@ fn a_start_time_picked_before_any_day_is_pulled_into_min() {
             )
         };
         let pulled = format!(
-            "{}.includes('10 Oct') && {}.includes('9:00 AM')",
+            "!{}.includes('Oct') && {}.includes('9:00 AM')",
             tab(1),
             tab(2)
         );

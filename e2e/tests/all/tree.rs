@@ -844,6 +844,47 @@ fn space_shift_arrows_and_ctrl_a_select_rows() {
     });
 }
 
+/// Todo 4493: Enter on a `TreeItem` leaf picks it once in a single tree, and leaves the
+/// selection alone in a multiple one, where Space toggles.
+#[test]
+fn enter_on_a_leaf_picks_once() {
+    block_on(async {
+        for (route, multiple) in [
+            ("/tree/select-enter", false),
+            ("/tree/select-enter-multiple", true),
+        ] {
+            let fixture = Fixture::open(route, Viewport::Desktop).await.unwrap();
+            let page = &fixture.page;
+            keyboard::tab_to(page, ROW, 3).await.unwrap();
+            keyboard::press(page, keyboard::ENTER).await.unwrap();
+            keyboard::press(page, keyboard::ARROW_DOWN).await.unwrap();
+            let key = if multiple {
+                keyboard::SPACE
+            } else {
+                keyboard::ENTER
+            };
+            keyboard::press(page, key).await.unwrap();
+            wait::for_js_true(
+                page,
+                "document.querySelector('#selected').textContent === 'two'",
+                "the second leaf to be the only selected row",
+            )
+            .await
+            .unwrap();
+            let changes = if multiple { "'1'" } else { "'2'" };
+            wait::for_js_true(
+                page,
+                &format!("document.querySelector('#changes').textContent === {changes}"),
+                "one onselectedchange per pick",
+            )
+            .await
+            .unwrap();
+            fixture.console.assert_clean("Enter on a leaf").unwrap();
+            fixture.close().await.unwrap();
+        }
+    });
+}
+
 /// Non-strict `checked`: a leaf's box makes branch `a` mixed, both leaves make it true, and Space
 /// on `a` unchecks all three.
 #[test]

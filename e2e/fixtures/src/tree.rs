@@ -71,6 +71,14 @@ pub const ROUTES: Routes = &[
     ("/tree/chevron", || rsx! { ChevronTreePage {} }),
     ("/tree/activate", || rsx! { ActivateTreePage {} }),
     ("/tree/activate-item", || rsx! { ActivateItemTreePage {} }),
+    (
+        "/tree/select-enter",
+        || rsx! { SelectEnterTreePage { multiple: false } },
+    ),
+    (
+        "/tree/select-enter-multiple",
+        || rsx! { SelectEnterTreePage { multiple: true } },
+    ),
     ("/tree/guides", || rsx! { GuidesTreePage {} }),
     ("/tree/links/current", || rsx! { CurrentLinkTreePage {} }),
     (
@@ -291,6 +299,33 @@ fn ActivateItemTreePage() -> Element {
                 rsx! {
                     TreeItem { onclick: move |_| activated.set(id.clone()), "{args.data}" }
                 }
+            },
+        }
+    }
+}
+
+/// Todo 4493: `TreeItem` leaves in a selectable tree; `#changes` counts `onselectedchange` calls.
+#[component]
+fn SelectEnterTreePage(multiple: bool) -> Element {
+    let mut selected = use_signal(HashSet::<String>::new);
+    let mut changes = use_signal(|| 0);
+    let mut ids: Vec<String> = selected().into_iter().collect();
+    ids.sort();
+    let data = vec![TreeNode::new("one", "One"), TreeNode::new("two", "Two")];
+    rsx! {
+        output { id: "selected", "{ids.join(\",\")}" }
+        output { id: "changes", "{changes}" }
+        Tree {
+            aria_label: "Pages",
+            data,
+            selected: selected(),
+            multiple,
+            onselectedchange: move |next| {
+                changes += 1;
+                selected.set(next);
+            },
+            render_node: move |args: TreeNodeRenderArgs<&'static str>| rsx! {
+                TreeItem { onclick: move |_| {}, "{args.data}" }
             },
         }
     }

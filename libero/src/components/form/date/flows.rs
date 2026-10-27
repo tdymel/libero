@@ -486,15 +486,19 @@ pub(super) fn DateTimeRangeFlow(props: DateTimeRangeFlowProps) -> Element {
             }
         },
         Step::Start => {
-            let start_day = start.map(|start| start.date()).or(today);
-            let (min, max) = time_limits(start_day, props.min, props.max);
+            let start_day = start.map(|start| start.date());
+            let (min, max) = time_limits(start_day.or(today), props.min, props.max);
             let onchange = EventHandler::new(move |time: Option<NaiveTime>| {
                 let Some(time) = time else {
                     return;
                 };
                 match start_day {
                     Some(day) => emit(on_day(day, time, props.min, props.max), end),
-                    None => pending_start.set(Some(time)),
+                    // Held until a day is picked, pulled into the limits as on today.
+                    None => pending_start.set(Some(match today {
+                        Some(day) => on_day(day, time, props.min, props.max).time(),
+                        None => time,
+                    })),
                 }
             });
             rsx! {

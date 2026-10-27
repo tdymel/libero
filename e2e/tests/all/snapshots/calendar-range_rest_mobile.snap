@@ -7,7 +7,7 @@ generic [live=polite]
   StaticText "Start date"
   StaticText "End date"
 button "Previous year"
-grid "March 2026"
+grid "March 2026" [multiselectable]
   row "Sunday Monday Tuesday Wednesday Thursday Friday Saturday"
     columnheader "Sunday"
       StaticText "Su"
@@ -125,7 +125,7 @@ grid "March 2026"
     gridcell
     gridcell
     gridcell
-grid "April 2026"
+grid "April 2026" [multiselectable]
   row "Sunday Monday Tuesday Wednesday Thursday Friday Saturday"
     columnheader "Sunday"
       StaticText "Su"
@@ -241,7 +241,7 @@ grid "April 2026"
         StaticText "30"
     gridcell
     gridcell
-grid "May 2026"
+grid "May 2026" [multiselectable]
   row "Sunday Monday Tuesday Wednesday Thursday Friday Saturday"
     columnheader "Sunday"
       StaticText "Su"
@@ -367,7 +367,7 @@ grid "May 2026"
     gridcell
     gridcell
     gridcell
-grid "June 2026"
+grid "June 2026" [multiselectable]
   row "Sunday Monday Tuesday Wednesday Thursday Friday Saturday"
     columnheader "Sunday"
       StaticText "Su"
@@ -483,7 +483,7 @@ grid "June 2026"
     gridcell
     gridcell
     gridcell
-grid "July 2026"
+grid "July 2026" [multiselectable]
   row "Sunday Monday Tuesday Wednesday Thursday Friday Saturday"
     columnheader "Sunday"
       StaticText "Su"
@@ -601,7 +601,7 @@ grid "July 2026"
       button "July 31, 2026"
         StaticText "31"
     gridcell
-grid "August 2026"
+grid "August 2026" [multiselectable]
   row "Sunday Monday Tuesday Wednesday Thursday Friday Saturday"
     columnheader "Sunday"
       StaticText "Su"
@@ -727,7 +727,7 @@ grid "August 2026"
     gridcell
     gridcell
     gridcell
-grid "September 2026"
+grid "September 2026" [multiselectable]
   row "Sunday Monday Tuesday Wednesday Thursday Friday Saturday"
     columnheader "Sunday"
       StaticText "Su"
@@ -843,7 +843,7 @@ grid "September 2026"
     gridcell
     gridcell
     gridcell
-grid "October 2026"
+grid "October 2026" [multiselectable]
   row "Sunday Monday Tuesday Wednesday Thursday Friday Saturday"
     columnheader "Sunday"
       StaticText "Su"
@@ -961,7 +961,7 @@ grid "October 2026"
     gridcell "October 31, 2026" [selected=false]
       button "October 31, 2026"
         StaticText "31"
-grid "November 2026"
+grid "November 2026" [multiselectable]
   row "Sunday Monday Tuesday Wednesday Thursday Friday Saturday"
     columnheader "Sunday"
       StaticText "Su"
@@ -1077,7 +1077,7 @@ grid "November 2026"
     gridcell
     gridcell
     gridcell
-grid "December 2026"
+grid "December 2026" [multiselectable]
   row "Sunday Monday Tuesday Wednesday Thursday Friday Saturday"
     columnheader "Sunday"
       StaticText "Su"
@@ -1195,7 +1195,7 @@ grid "December 2026"
         StaticText "31"
     gridcell
     gridcell
-grid "January 2027"
+grid "January 2027" [multiselectable]
   row "Sunday Monday Tuesday Wednesday Thursday Friday Saturday"
     columnheader "Sunday"
       StaticText "Su"
@@ -1321,7 +1321,7 @@ grid "January 2027"
     gridcell
     gridcell
     gridcell
-grid "February 2027"
+grid "February 2027" [multiselectable]
   row "Sunday Monday Tuesday Wednesday Thursday Friday Saturday"
     columnheader "Sunday"
       StaticText "Su"

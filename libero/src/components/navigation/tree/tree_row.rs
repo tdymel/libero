@@ -315,12 +315,16 @@ pub(super) fn TreeRow(props: TreeRowProps) -> Element {
             return;
         }
         active_id.set(Some(id.clone()));
+        let mut enter_click = marks.enter_click;
+        let from_enter = enter_click.write().take().as_deref() == Some(id.as_str());
         if is_selected.is_some() {
-            let pick = match event.modifiers().shift() {
-                true => Pick::Range,
-                false => Pick::Toggle,
-            };
-            marks.pick.call((id.clone(), pick));
+            if !from_enter {
+                let pick = match event.modifiers().shift() {
+                    true => Pick::Range,
+                    false => Pick::Toggle,
+                };
+                marks.pick.call((id.clone(), pick));
+            }
         } else if checked.is_some() && !has_children {
             marks.check.call(id.clone());
         }

@@ -427,6 +427,7 @@ pub(super) fn Calendar(props: CalendarProps) -> Element {
                     div {
                         key: "{index}",
                         role: "grid",
+                        "aria-multiselectable": matches!(selection, Selection::Range(_)).then_some("true"),
                         "aria-label": format_date(month, formats.month_heading, names),
                         "data-week-numbers": grid.week_numbers.then_some("true"),
                         onkeydown,

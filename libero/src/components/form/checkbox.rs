@@ -412,6 +412,8 @@ pub(crate) struct CheckboxLook {
     off: BoxStyle,
     mixed: BoxStyle,
     disabled: BoxStyle,
+    disabled_on: BoxStyle,
+    disabled_mixed: BoxStyle,
     input: BoxStyle,
     box_class: Option<String>,
     check: SvgData,
@@ -442,6 +444,20 @@ pub(crate) fn use_checkbox_look(size: Size, enabled: bool) -> Option<CheckboxLoo
     let mixed = framework(&LIGHT_CONTROL_SX, states("mixed"));
     let off = framework(&LIGHT_CONTROL_SX, base.clone().into());
     let disabled = framework(&LIGHT_CONTROL_SX, states("disabled"));
+    let disabled_on = framework(
+        &LIGHT_CONTROL_SX,
+        base.clone()
+            .with("checked", true)
+            .with("disabled", true)
+            .into(),
+    );
+    let disabled_mixed = framework(
+        &LIGHT_CONTROL_SX,
+        base.clone()
+            .with("mixed", true)
+            .with("disabled", true)
+            .into(),
+    );
     let input = {
         let builder = use_box();
         match enabled {
@@ -459,6 +475,8 @@ pub(crate) fn use_checkbox_look(size: Size, enabled: bool) -> Option<CheckboxLoo
         off,
         mixed,
         disabled,
+        disabled_on,
+        disabled_mixed,
         input,
         box_class,
         check,
@@ -466,7 +484,7 @@ pub(crate) fn use_checkbox_look(size: Size, enabled: bool) -> Option<CheckboxLoo
     })
 }
 
-/// A [`CheckboxLook`] box's state; a disabled box draws unchecked.
+/// A [`CheckboxLook`] box's state; a disabled box keeps its tick or dash.
 #[derive(Clone, Copy, PartialEq)]
 pub(crate) struct LightState {
     pub checked: bool,
@@ -535,6 +553,8 @@ impl CheckboxLook {
     /// The control's look for `state` and the box's mark.
     fn control_and_mark(&self, state: LightState) -> (BoxStyle, Element) {
         let control = match (state.disabled, state.indeterminate, state.checked) {
+            (true, true, _) => &self.disabled_mixed,
+            (true, _, true) => &self.disabled_on,
             (true, ..) => &self.disabled,
             (_, true, _) => &self.mixed,
             (_, _, true) => &self.on,

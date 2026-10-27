@@ -9,7 +9,7 @@ button "March 2026" [live=polite]
 button "April 2026" [live=polite]
   StaticText "April 2026"
 button "Next month"
-grid "March 2026"
+grid "March 2026" [multiselectable]
   row "Sunday Monday Tuesday Wednesday Thursday Friday Saturday"
     columnheader "Sunday"
       StaticText "Su"
@@ -135,7 +135,7 @@ grid "March 2026"
     gridcell
     gridcell
     gridcell
-grid "April 2026"
+grid "April 2026" [multiselectable]
   row "Sunday Monday Tuesday Wednesday Thursday Friday Saturday"
     columnheader "Sunday"
       StaticText "Su"
