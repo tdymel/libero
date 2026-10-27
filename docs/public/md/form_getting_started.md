@@ -46,12 +46,13 @@ fn EmailField(
     #[props(into)] label: String,
     #[props(default, into)] name: FieldName<String>,
     #[props(default, into)] validate: Validators<String>,
+    #[props(default)] required: bool,
 ) -> Element {
     // The caller's rules go first, so a missing email shows before a malformed
     // one. Then the rule that makes this an email field.
     let rules = validate.with(is_email.error("That is not an email address."));
     rsx! {
-        TextField { r#type: "email", autocomplete: "email", label, name, validate: rules, placeholder: "you@example.com" }
+        TextField { r#type: "email", autocomplete: "email", label, name, required, validate: rules, placeholder: "you@example.com" }
     }
 }
 ```
@@ -90,7 +91,7 @@ fn AddressFieldset(#[props(into)] label: String, #[props(into)] path: FieldName<
                 .error("A city needs its zip code.")
                 .on([Address::FIELDS.zip()]),
             // Paths relative to the group work wherever the group sits.
-            TextField { label: "Street", autocomplete: "street-address", name: Address::FIELDS.street(), validate: not_empty.error("Enter a street.") }
+            TextField { label: "Street", required: true, autocomplete: "street-address", name: Address::FIELDS.street(), validate: not_empty.error("Enter a street.") }
             TextField { label: "Zip code", autocomplete: "postal-code", name: Address::FIELDS.zip() }
             TextField { label: "City", autocomplete: "address-level2", name: Address::FIELDS.city() }
         }
@@ -128,7 +129,7 @@ fn OrderForm() -> Element {
                 .error("Enter a billing address, or bill to the shipping address.")
                 .on([Order::FIELDS.billing().street()]),
             onsubmit: move |_| placed.set(true),
-            EmailField { label: "Email", name: Order::FIELDS.email(), validate: not_empty.error("Enter your email.") }
+            EmailField { label: "Email", required: true, name: Order::FIELDS.email(), validate: not_empty.error("Enter your email.") }
             AddressFieldset { label: "Shipping address", path: Order::FIELDS.shipping() }
             Checkbox { label: "Bill to the shipping address", name: Order::FIELDS.same_billing() }
             // Rendered only while unticked: ticked, the billing fields neither validate nor
@@ -150,7 +151,7 @@ fn OrderForm() -> Element {
 # struct Address { street: String, zip: String, city: String }
 # #[component]
 # fn EmailField(#[props(into)] label: String, #[props(default, into)] name: FieldName<String>,
-#     #[props(default, into)] validate: Validators<String>) -> Element { rsx! {} }
+#     #[props(default, into)] validate: Validators<String>, #[props(default)] required: bool) -> Element { rsx! {} }
 # #[component]
 # fn AddressFieldset(#[props(into)] label: String, #[props(into)] path: FieldName<Address>) -> Element { rsx! {} }
 ```

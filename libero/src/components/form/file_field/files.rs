@@ -83,6 +83,14 @@ pub(super) fn format_size(bytes: u64, words: &FileFieldLabels, formats: &Formats
     }
 }
 
+/// A file name as its stem and extension (dot included), so a clip can spare the extension.
+pub(super) fn split_extension(name: &str) -> (&str, &str) {
+    match name.rfind('.') {
+        Some(dot) if dot > 0 && dot + 1 < name.len() => name.split_at(dot),
+        _ => (name, ""),
+    }
+}
+
 impl std::ops::Deref for Files {
     type Target = [FileData];
 
@@ -131,6 +139,17 @@ mod tests {
         assert_eq!(size(999_999_999), "1.0 GB");
         assert_eq!(size(5_400_000), "5.4 MB");
         assert_eq!(size(2_000_000_000), "2.0 GB");
+    }
+
+    #[test]
+    fn a_name_splits_at_its_last_dot() {
+        assert_eq!(
+            split_extension("report.final.pdf"),
+            ("report.final", ".pdf")
+        );
+        assert_eq!(split_extension(".gitignore"), (".gitignore", ""));
+        assert_eq!(split_extension("notes."), ("notes.", ""));
+        assert_eq!(split_extension("README"), ("README", ""));
     }
 
     /// Todos 656, 689 and 709: the units are the localization's, the

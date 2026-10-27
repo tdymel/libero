@@ -6,6 +6,7 @@ use pictogram_icons_lucide as lucide;
 
 use crate::{
     components::{
+        accessibility::VisuallyHidden,
         buttons::ActionIcon,
         common::{FOCUSABLE_SELECTOR, Glyph, HtmlTag, Input, Part, navigation_chord},
         feedback::Loader,
@@ -21,7 +22,7 @@ use crate::{
 };
 
 use super::file_field::FileFieldPart;
-use super::files::{Files, format_size};
+use super::files::{Files, format_size, split_extension};
 
 /// What the next render owes the keyboard, once the control focus was on has
 /// gone away. See [[principles/focus-after-removal]] in the project brain.
@@ -199,6 +200,11 @@ impl FileRows {
                         false => "-1",
                     },
                 );
+                // A focused chip is named by its file, and says what Delete does.
+                let name = stop.map(|_| file.name());
+                let hint = stop
+                    .filter(|_| self.editable)
+                    .map(|_| chip_hint_id(&self.field_id));
                 rsx! {
                     li {
                         key: "{index}",
@@ -206,6 +212,8 @@ impl FileRows {
                         "data-slot": FileFieldPart::Chip.slot(),
                         id,
                         tabindex: stop,
+                        "aria-label": name,
+                        "aria-describedby": hint,
                         // Keeps a press on an x (a caller's too) from taking
                         // the focus the removal hands on.
                         onmousedown: move |event: MouseEvent| event.prevent_default(),
@@ -217,6 +225,20 @@ impl FileRows {
             }
         }
     }
+}
+
+fn chip_hint_id(field_id: &str) -> String {
+    format!("{field_id}-chip-hint")
+}
+
+/// The hidden Delete hint the chips' `aria-describedby` names, once any chip is a tab stop.
+pub(super) fn chip_hint(field_id: &str, shown: bool) -> Option<Element> {
+    let hint = current_localization().file_field.remove_hint;
+    shown.then(|| {
+        rsx! {
+            VisuallyHidden { id: chip_hint_id(field_id), "{hint}" }
+        }
+    })
 }
 
 /// The `Input` variant's chips, a list inside the group. `None` while empty.
@@ -357,6 +379,17 @@ pub(super) fn card_list(
         .render(HtmlTag::Ul, Vec::new(), drawn)
 }
 
+/// The name, clipped at the stem so a long one keeps its extension.
+fn file_name(name: &str) -> Element {
+    let (stem, extension) = split_extension(name);
+    rsx! {
+        span { "data-slot": "name",
+            span { "data-slot": "stem", "{stem}" }
+            span { "data-slot": "extension", "{extension}" }
+        }
+    }
+}
+
 /// A chip with an x for several files, the bare filename for one: the clear
 /// button already removes it.
 fn default_chip(
@@ -370,9 +403,7 @@ fn default_chip(
     if !multiple {
         // `data-slot` so the control can clip it: one long filename would
         // otherwise push the frame past its parent's width.
-        return rsx! {
-            span { "data-slot": "name", "{name}" }
-        };
+        return file_name(&name);
     }
     // The chip `MultiSelect` and `TagsField` draw. Its press guard keeps the
     // focus on the control, so a mouse removal needs no repair.
@@ -400,7 +431,7 @@ fn default_card(
     let size = format_size(file.size(), &words.file_field, current_formats());
     let remove_label = fill(words.common.remove, &[("label", &name)]);
     rsx! {
-        span { "data-slot": "name", "{name}" }
+        {file_name(&name)}
         span { "data-slot": "size", "{size}" }
         if let Some(size) = loading {
             Loader { size }

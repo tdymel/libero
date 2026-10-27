@@ -339,6 +339,8 @@ pub(super) fn padding_press(
     let element = tab_stop(control.clone()).or_else(|| {
         (0..stops.length())
             .filter_map(|index| stops.item(index)?.dyn_into::<web_sys::Element>().ok())
+            // A value list's tab stops (FileField's chips) are not the control.
+            .filter(|stop| !matches!(stop.closest("[data-slot='value']"), Ok(Some(_))))
             .find_map(tab_stop)
     })?;
     Some(Box::new(WebElement {

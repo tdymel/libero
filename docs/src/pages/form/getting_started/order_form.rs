@@ -27,7 +27,7 @@ pub fn OrderForm() -> Element {
                 .error("Enter a billing address, or bill to the shipping address.")
                 .on([Order::FIELDS.billing().street()]),
             onsubmit: move |_| placed.set(true),
-            EmailField { label: "Email", name: Order::FIELDS.email(), validate: not_empty.error("Enter your email.") }
+            EmailField { label: "Email", required: true, name: Order::FIELDS.email(), validate: not_empty.error("Enter your email.") }
             AddressFieldset { label: "Shipping address", path: Order::FIELDS.shipping() }
             Checkbox { label: "Bill to the shipping address", name: Order::FIELDS.same_billing() }
             // Rendered only while unticked: ticked, the billing fields neither validate nor

@@ -432,7 +432,10 @@ fn FileFieldDemo(values: DemoValues) -> Element {
                     "menu" => Some(Callback::new(move |t| menu_trigger(t, menu, files))),
                     _ => None,
                 },
-                onchange: move |picked: Files| files.set(picked),
+                onchange: move |picked: Files| {
+                    refused.set(Vec::new());
+                    files.set(picked);
+                },
                 onreject: move |rejected: Vec<FileRejection>| {
                     refused.set(
                         rejected

@@ -22,7 +22,7 @@ use crate::{
 
 use super::file_field::{FileFieldPart, FileTriggerArgs};
 use super::files::Files;
-use super::rows::{ChipKeys, StandIn, card_list, chip_list};
+use super::rows::{ChipKeys, StandIn, card_list, chip_hint, chip_list};
 use super::styles::{
     FILE_BROWSE_SX, FILE_CONTROL_SX, FILE_DROPZONE_BROWSE_SX, FILE_DROPZONE_SX, FILE_TRIGGER_SX,
 };
@@ -299,6 +299,14 @@ pub(super) fn file_input_variant(
         placeholder,
     } = chips;
     let browse = browse_content(&control.id, &placeholder, drawn.is_empty());
+    let hint = chip_hint(
+        &control.id,
+        control.editable
+            && control
+                .keys
+                .as_ref()
+                .is_some_and(|keys| keys.multiple && keys.count > 0),
+    );
     let chips = chip_list(drawn, list_element);
     let frame_states: Input<States> = field
         .states()
@@ -318,6 +326,7 @@ pub(super) fn file_input_variant(
             input,
             {browse}
         }
+        {hint}
         {announcer}
     })
 }
@@ -457,6 +466,8 @@ pub(super) fn file_trigger_variant(
         invalid.then(|| attribute("aria-invalid", "true".into())),
         loading.then(|| attribute("aria-busy", "true".into())),
         Some(attribute("id", id)),
+        // What a click on the label looks for.
+        (!args.disabled).then(|| attribute("tabindex", "0".into())),
     ]
     .into_iter()
     .flatten()

@@ -283,7 +283,7 @@ pub fn FileField(props: FileFieldProps) -> Element {
 
     let field_sx = full_width(&props.sx);
 
-    let field = use_field()
+    let mut field = use_field()
         .labelled_by()
         .label(&props.label)
         .description(&props.description)
@@ -301,8 +301,12 @@ pub fn FileField(props: FileFieldProps) -> Element {
         .sx(&field_sx)
         .parts(&props.parts)
         .states(&props.states)
-        .attributes(&props.attributes)
-        .prepare();
+        .attributes(&props.attributes);
+    // As a native label opens a file input; a `trigger` takes the focus instead.
+    if props.trigger.is_none() {
+        field = field.activates(browse_element, move || trigger_open.call(()));
+    }
+    let field = field.prepare();
 
     let has_files = !value.is_empty();
     // Chips ride inside the control, so they sit one step down the field's

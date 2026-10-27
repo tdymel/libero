@@ -22,6 +22,8 @@
 pub struct FileFieldLabels {
     /// The `Input` variant's Browse button, heard after the field's label.
     pub browse: &'static str,
+    /// Describes each chip of an editable `multiple` field: the key that removes it.
+    pub remove_hint: &'static str,
     /// The Browse button's description on a `required` field.
     pub required: &'static str,
     /// The clear x of a single-file field; `{name}` is the file's name. A `multiple`
@@ -69,6 +71,7 @@ fn german_any_of(group: &str) -> String {
 impl FileFieldLabels {
     pub const ENGLISH: Self = Self {
         browse: "Browse files",
+        remove_hint: "Press Delete to remove",
         required: "Required",
         clear_file: "Clear {name}",
         drop_file: "Drop a file here, or click to pick",
@@ -84,6 +87,7 @@ impl FileFieldLabels {
 
     pub const GERMAN: Self = Self {
         browse: "Dateien durchsuchen",
+        remove_hint: "Zum Entfernen Entf drücken",
         required: "Pflichtfeld",
         clear_file: "{name} leeren",
         drop_file: "Datei hier ablegen oder zum Auswählen klicken",

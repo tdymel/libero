@@ -21,7 +21,7 @@ pub fn AddressFieldset(#[props(into)] label: String, #[props(into)] path: FieldN
                 .error("A city needs its zip code.")
                 .on([Address::FIELDS.zip()]),
             // Paths relative to the group work wherever the group sits.
-            TextField { label: "Street", autocomplete: "street-address", name: Address::FIELDS.street(), validate: not_empty.error("Enter a street.") }
+            TextField { label: "Street", required: true, autocomplete: "street-address", name: Address::FIELDS.street(), validate: not_empty.error("Enter a street.") }
             TextField { label: "Zip code", autocomplete: "postal-code", name: Address::FIELDS.zip() }
             TextField { label: "City", autocomplete: "address-level2", name: Address::FIELDS.city() }
         }

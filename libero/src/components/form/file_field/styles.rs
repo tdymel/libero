@@ -4,12 +4,19 @@ use crate::{
         form::{drag_over_sx, field_control_sx},
     },
     platform::draws_placeholders,
-    sx::{StaticSx, sx},
+    sx::{StaticSx, Sx, sx},
     theme::{
         FILE_FIELD_DROPZONE_HEIGHT, FILE_FIELD_PADDING, FILE_FIELD_RADIUS, FileFieldDefaults,
         SizeCss,
     },
 };
+
+/// A name's stem: the part a long name ellipsizes, leaving the extension.
+fn stem_sx() -> Sx {
+    sx().min_width("0")
+        .overflow("hidden")
+        .text_overflow("ellipsis")
+}
 
 /// The `Input` variant's group, the `Select` trigger's shape: the chips, then
 /// the Browse button over the rest of the line.
@@ -41,12 +48,13 @@ pub(super) static FILE_CONTROL_SX: StaticSx = StaticSx::new(|| {
         // pushes the frame past whatever width its parent allows.
         .selector(
             "& [data-slot='name']",
-            sx().display("block")
+            sx().display("flex")
                 .min_width("0")
                 .overflow("hidden")
-                .text_overflow("ellipsis")
                 .white_space("nowrap"),
         )
+        .selector("& [data-slot='stem']", stem_sx())
+        .selector("& [data-slot='extension']", sx().flex("none"))
         .selector("& [data-slot='chip'] > *", sx().max_width("100%"))
         // The ring goes on what was drawn, not on the item, so it follows that
         // element's own radius.
@@ -213,11 +221,13 @@ pub(super) static FILE_CARD_SX: StaticSx = StaticSx::new(|| {
         .selector(
             "& [data-slot='name']",
             sx().flex("1 1 auto")
+                .display("flex")
                 .min_width("0")
                 .overflow("hidden")
-                .text_overflow("ellipsis")
                 .white_space("nowrap"),
         )
+        .selector("& [data-slot='stem']", stem_sx())
+        .selector("& [data-slot='extension']", sx().flex("none"))
         .selector(
             "& [data-slot='size']",
             sx().flex("0 0 auto")
