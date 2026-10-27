@@ -21,7 +21,8 @@ pub(super) fn value_at(along: f64, count: u8, fractions: u8) -> f64 {
 
 /// The value a symbol's `zone`-th slice picks: symbol 0, slice 0 of halves is 0.5.
 pub(super) fn zone_value(symbol: u8, zone: u8, fractions: u8) -> f64 {
-    f64::from(symbol) + f64::from(zone + 1) / f64::from(fractions)
+    let steps = f64::from(fractions);
+    (f64::from(symbol) * steps + f64::from(zone + 1)) / steps
 }
 
 /// How much of symbol `index` is filled, 0 to 1.
@@ -82,6 +83,23 @@ mod tests {
         assert_eq!(zone_value(0, 1, 2), 1.0);
         assert_eq!(zone_value(2, 0, 1), 3.0);
         assert_eq!(zone_value(3, 2, 4), 3.75);
+    }
+
+    #[test]
+    fn a_zone_matches_the_key_step_bit_for_bit() {
+        for fractions in 1..=10u8 {
+            let mut value = 0.0;
+            for symbol in 0..10u8 {
+                for zone in 0..fractions {
+                    value = stepped(value, 1, fractions, 0.0, 10);
+                    assert_eq!(
+                        zone_value(symbol, zone, fractions),
+                        value,
+                        "{fractions} {symbol} {zone}"
+                    );
+                }
+            }
+        }
     }
 
     #[test]

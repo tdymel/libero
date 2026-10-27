@@ -419,7 +419,8 @@ pub fn RichTextEditor(props: RichTextEditorProps) -> Element {
     });
     let fence_menu = use_menu();
     let (more_menu, more_button) = (use_menu(), use_element());
-    let mut fence_key = use_hook(|| CopyValue::new(false));
+    // A key aimed at a focusable island inside the surface, not at the text (todo 4488).
+    let mut island_key = use_hook(|| CopyValue::new(false));
     let help_modal = use_modal(move |scope: ModalScope<Vec<Shortcut>>| {
         rsx! { ShortcutHelp { title: words.shortcuts, shortcuts: scope.args() } }
     });
@@ -868,7 +869,7 @@ pub fn RichTextEditor(props: RichTextEditorProps) -> Element {
             attr("aria-label", format!("{shown}, {}", words.code_language)),
             listener("onmousedown", |event: MouseEvent| event.prevent_default()),
             // The button's keys are the menu's, not the text's.
-            listener("onkeydown", move |_: KeyboardEvent| fence_key.set(true)),
+            listener("onkeydown", move |_: KeyboardEvent| island_key.set(true)),
         ]);
         rsx! {
             Menu { state: fence_menu, items: language_items.clone(),
@@ -892,6 +893,7 @@ pub fn RichTextEditor(props: RichTextEditorProps) -> Element {
                     views: &props.nodes,
                     fence: fence.as_ref(),
                     heading_offset: 0,
+                    island_key: editable.then_some(island_key),
                 },
             )
         } else {
@@ -941,7 +943,7 @@ pub fn RichTextEditor(props: RichTextEditorProps) -> Element {
 
     let onkeydown = move |event: KeyboardEvent| {
         // Not `is_composing()`: Gboard keeps a composing region open over typed words.
-        if std::mem::take(&mut *fence_key.write()) || *composing.peek() {
+        if std::mem::take(&mut *island_key.write()) || *composing.peek() {
             return;
         }
         let modifiers = event.modifiers();

@@ -415,6 +415,28 @@ fn quotes_wrap_and_unwrap() {
     check("> a|", EditorState::toggle_quote, "a|");
 }
 
+/// A selection across list levels lifts or quotes the outer list, never nests items
+/// straight in a list (todo 4485).
+#[test]
+fn toggles_across_list_levels_keep_lists_well_formed() {
+    check(
+        "- a\n  - |b\n- c|",
+        |s| s.toggle_list(false),
+        "a\n\n- |b\n\nc|",
+    );
+    check(
+        "- a\n  - |b\n- c|",
+        |s| s.toggle_list(true),
+        "1. a\n   - |b\n2. c|",
+    );
+    check(
+        "- a\n  - |b\n- c|",
+        EditorState::toggle_quote,
+        "> - a\n>   - |b\n> - c|",
+    );
+    check("- |a\n- b|", EditorState::toggle_quote, "> - |a\n> - b|");
+}
+
 #[test]
 fn insert_rule_splits_and_moves_on() {
     check("ab|cd", EditorState::insert_rule, "ab\n\n---\n\n|cd");

@@ -556,7 +556,7 @@ impl EditorState {
     }
 
     pub fn insert_rule(&mut self) -> bool {
-        let rule = self.doc.leaf(BlockKind::Rule, Vec::new());
+        let rule = Block::new(self.doc.key(), BlockKind::Rule);
         self.insert_block(rule)
     }
 

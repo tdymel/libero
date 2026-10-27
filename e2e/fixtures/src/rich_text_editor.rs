@@ -109,7 +109,7 @@ fn StatesPage() -> Element {
 fn NarrowPage() -> Element {
     let mut doc = use_signal(|| {
         Doc::from_markdown(
-            "intro\n\n```rust\nprintln!(\"a line far longer than the twenty rem row it sits in\");\n```\n",
+            "- intro\n- two\n\n```rust\nprintln!(\"a line far longer than the twenty rem row it sits in\");\n```\n",
         )
     });
 

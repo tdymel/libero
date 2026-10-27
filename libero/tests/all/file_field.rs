@@ -70,6 +70,32 @@ fn an_aria_label_names_the_group_of_a_field_without_a_label() {
     assert_eq!(group["aria-label"], "Receipt", "{body}");
 }
 
+/// Todo 4489: an unlabelled Browse holding a file keeps its name first and "Browse files" last.
+#[test]
+fn an_unlabelled_browse_with_a_file_keeps_its_name_and_action() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider {
+                FileField { aria_label: "Attachment", value: fake_files(&["scan.pdf"]), onchange: move |_| {} }
+            }
+        }
+    }
+
+    let body = body(&render(app));
+    let button = tag_with(&body, r#"data-slot="browse""#);
+    let id = &button["id"];
+    let ids: Vec<&str> = button["aria-labelledby"].split(' ').collect();
+    let browse = format!("{id}-browse");
+    assert_eq!(ids.len(), 3, "{button:?}");
+    assert_eq!(
+        (ids[0], ids[2]),
+        (id.as_str(), browse.as_str()),
+        "{button:?}"
+    );
+    assert!(body.contains(&format!(r#"id="{browse}""#)), "{body}");
+    assert!(body.contains(&format!(r#"id="{}""#, ids[1])), "{body}");
+}
+
 /// Todo 3833: a blank `aria_label` names nothing, so the group does not carry it.
 #[test]
 fn a_blank_aria_label_is_not_put_on_the_group() {

@@ -110,11 +110,23 @@ pub(crate) struct RenderCtx<'a> {
     pub fence: Option<&'a Element>,
     /// Added to every heading's level, clamped at `h6`.
     pub heading_offset: u8,
+    /// Set by a key pressed in a focusable island (a rendered code block, an atom view),
+    /// so the surface's keymap leaves it to that island (todo 4488).
+    pub island_key: Option<CopyValue<bool>>,
 }
 
 impl RenderCtx<'_> {
     fn heading_level(&self, level: u8) -> u8 {
         level.saturating_add(self.heading_offset).min(6)
+    }
+
+    fn on_island_key(&self) -> impl FnMut(KeyboardEvent) + 'static {
+        let island_key = self.island_key;
+        move |_| {
+            if let Some(mut island_key) = island_key {
+                island_key.set(true);
+            }
+        }
     }
 }
 
@@ -203,7 +215,13 @@ fn custom(
     let atom = matches!(content, Content::Empty);
     match ctx.views.render(name, attrs, children.clone()) {
         Some(view) if atom => rsx! {
-            div { "data-key": key, "data-node": "{name}", contenteditable: "false", {view} }
+            div {
+                "data-key": key,
+                "data-node": "{name}",
+                contenteditable: "false",
+                onkeydown: ctx.on_island_key(),
+                {view}
+            }
         },
         Some(view) => rsx! { div { "data-node": "{name}", {view} } },
         None if atom => rsx! {
@@ -257,7 +275,13 @@ fn builtin_view(name: &str, block: &Block, key: String, ctx: RenderCtx<'_>) -> E
     let view = ctx.views.render(name, &attrs, children);
     match block.kind {
         BlockKind::Rule => rsx! {
-            div { "data-key": key, "data-node": "{name}", contenteditable: "false", {view} }
+            div {
+                "data-key": key,
+                "data-node": "{name}",
+                contenteditable: "false",
+                onkeydown: ctx.on_island_key(),
+                {view}
+            }
         },
         _ => view.unwrap_or_else(VNode::empty),
     }
@@ -350,6 +374,8 @@ fn code(block: &Block, language: &str, ctx: RenderCtx<'_>) -> Element {
             "data-code": "view",
             "data-code-key": key.0.to_string(),
             contenteditable: "false",
+            // Its scroll region is a tab stop once it overflows.
+            onkeydown: ctx.on_island_key(),
             onmousedown: move |event: MouseEvent| {
                 if let Some(on_code) = on_code {
                     event.prevent_default();
@@ -438,6 +464,7 @@ mod tests {
                 views: &views,
                 fence: None,
                 heading_offset: 0,
+                island_key: None,
             },
         )
     }
@@ -486,6 +513,7 @@ mod tests {
                 views: &views,
                 fence: None,
                 heading_offset: 0,
+                island_key: None,
             },
         )
     }

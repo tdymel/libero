@@ -28,7 +28,7 @@ impl Doc {
     fn read(markdown: &str, per_line: bool) -> Self {
         let lines: Vec<&str> = markdown.lines().collect();
         let mut doc = Doc::empty();
-        doc.blocks = blocks(&mut doc, &lines, per_line);
+        doc.blocks = blocks(&mut doc, &lines, per_line, 0);
         doc.normalize();
         doc
     }
@@ -55,20 +55,35 @@ fn line_syntax(line: &str) -> Option<(BlockSyntax, &str)> {
         .map(|syntax| (syntax, rest))
 }
 
-fn blocks(doc: &mut Doc, lines: &[&str], per_line: bool) -> Vec<Block> {
+/// How many quotes and list items deep the reader nests; deeper markers stay text, so
+/// a pasted `> > > ...` cannot overflow the stack (todo 4486).
+pub(super) const MAX_NESTING: usize = 32;
+
+/// [`line_syntax`], but a quote or list marker past [`MAX_NESTING`] is no syntax.
+fn nested_syntax(line: &str, depth: usize) -> Option<(BlockSyntax, &str)> {
+    let nests = |syntax: &BlockSyntax| {
+        matches!(
+            syntax,
+            BlockSyntax::Quote | BlockSyntax::Bullet(_) | BlockSyntax::Ordered(..)
+        )
+    };
+    line_syntax(line).filter(|(syntax, _)| depth < MAX_NESTING || !nests(syntax))
+}
+
+fn blocks(doc: &mut Doc, lines: &[&str], per_line: bool, depth: usize) -> Vec<Block> {
     let mut out = Vec::new();
     let mut i = 0;
     while i < lines.len() {
         let line = lines[i];
         i += 1;
-        let Some((syntax, rest)) = line_syntax(line) else {
+        let Some((syntax, rest)) = nested_syntax(line, depth) else {
             if blank(line) {
                 continue;
             }
             let mut text = vec![line.trim()];
             while let Some(next) = lines
                 .get(i)
-                .filter(|next| !per_line && !blank(next) && line_syntax(next).is_none())
+                .filter(|next| !per_line && !blank(next) && nested_syntax(next, depth).is_none())
             {
                 text.push(next.trim());
                 i += 1;
@@ -101,7 +116,7 @@ fn blocks(doc: &mut Doc, lines: &[&str], per_line: bool) -> Vec<Block> {
                     inner.push(rest);
                     i += 1;
                 }
-                let children = blocks(doc, &inner, per_line);
+                let children = blocks(doc, &inner, per_line, depth + 1);
                 doc.container(BlockKind::Quote, children)
             }
             BlockSyntax::Bullet(_) | BlockSyntax::Ordered(..) => {
@@ -126,7 +141,7 @@ fn blocks(doc: &mut Doc, lines: &[&str], per_line: bool) -> Vec<Block> {
                         inner.push(next.get(width..).unwrap_or(""));
                         i += 1;
                     }
-                    let children = blocks(doc, &inner, per_line);
+                    let children = blocks(doc, &inner, per_line, depth + 1);
                     items.push(doc.container(BlockKind::ListItem { checked }, children));
                     match lines.get(i).and_then(|l| Some((*l, line_syntax(l)?))) {
                         Some((next, (other, rest))) if same(&other) => {

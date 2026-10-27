@@ -7,7 +7,7 @@ use super::rich_text_editor::{
 use chromiumoxide::Page;
 use e2e::browser::{Scheme, block_on};
 use e2e::passes::keyboard::{self, CTRL, ENTER, Key};
-use e2e::passes::{contrast, pointer};
+use e2e::passes::{contrast, focus, pointer};
 use e2e::wait::PageBounded;
 use e2e::{Fixture, Viewport, js, wait};
 
@@ -520,6 +520,45 @@ fn the_editor_overlays_keep_their_contrast_in_both_schemes() {
                 .unwrap();
             fixture.close().await.unwrap();
         }
+    });
+}
+
+/// Todo 4488: keys in an overflowing code block's scroll region are not the keymap's, so
+/// Escape, Tab, Tab leaves the editor and nests no item.
+#[test]
+fn keys_in_a_code_region_leave_the_list_alone() {
+    block_on(async {
+        let fixture = Fixture::open("/rich-text-editor/narrow", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        let region = "#row [data-code=view] [data-slot=scroll][tabindex='0']";
+        wait::for_selector(page, region).await.unwrap();
+        pointer::click(page, "#row li:nth-child(2) p")
+            .await
+            .unwrap();
+        focus::wait_for_focus(page, "#row [role=textbox]", "the click on the second item")
+            .await
+            .unwrap();
+        keyboard::press(page, keyboard::ESCAPE).await.unwrap();
+        keyboard::press(page, keyboard::TAB).await.unwrap();
+        focus::wait_for_focus(page, region, "Escape, Tab")
+            .await
+            .unwrap();
+        keyboard::press(page, keyboard::TAB).await.unwrap();
+        wait::for_js_true(
+            page,
+            "!document.getElementById('row').contains(document.activeElement)",
+            "the second Tab to leave the editor",
+        )
+        .await
+        .unwrap();
+        assert!(js::<bool>(page, "!document.querySelector('#row li li')").await);
+        fixture
+            .console
+            .assert_clean("tabbing through the code region")
+            .unwrap();
+        fixture.close().await.unwrap();
     });
 }
 

@@ -23,6 +23,16 @@ fn pasting(before: &str, text: &str, after: &str) {
     assert_eq!(show(&state), after, "from {before:?}");
 }
 
+/// A typed `)` finds its `]` in one pass, not one scan per earlier `[` (todo 4487).
+#[test]
+fn a_typed_link_after_many_brackets_stays_linear() {
+    let mut editor = editor(&format!("{}[a](https://a.example|", "[".repeat(40_000)));
+    let started = std::time::Instant::now();
+    editor.type_text(")");
+    assert!(started.elapsed().as_secs() < 2, "{:?}", started.elapsed());
+    assert!(show(editor.state()).ends_with("\\[[a|](https://a.example)"));
+}
+
 #[test]
 fn a_url_followed_by_a_space_becomes_a_link() {
     typing(

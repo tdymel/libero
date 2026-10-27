@@ -9,7 +9,8 @@ use super::mark::{Mark, MarkKind};
 use super::markdown::closer;
 use super::state::{EditorState, Position};
 use super::syntax::{
-    BlockSyntax, DELIMITERS, autolink, block_syntax, closing_span, link, task_box,
+    BlockSyntax, DELIMITERS, autolink, block_syntax, brackets, closing_span, link_closed_at,
+    task_box,
 };
 
 /// Where the whitespace-free word ending `text` starts.
@@ -126,11 +127,12 @@ impl EditorState {
         if text.last() != Some(&')') {
             return false;
         }
+        let closes = brackets(&text);
         let found = (0..text.len())
             .rev()
             .filter(|open| text[*open] == '[' && (*open == 0 || text[*open - 1] != '!'))
             .find_map(|open| {
-                link(&text, open)
+                link_closed_at(&text, *closes.get(&open)?)
                     .filter(|(close, end, _)| *end == text.len() && *close > open + 1)
                     .map(|(close, _, mark)| (open, close, mark))
             });

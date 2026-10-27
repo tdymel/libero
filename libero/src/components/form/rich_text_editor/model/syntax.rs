@@ -145,27 +145,8 @@ pub(super) fn autolink(word: &[char]) -> Option<(usize, Href)> {
     valid.then_some((end, href))
 }
 
-/// A `[text](url "title")` link at `at` with a safe URL: its `]`, the index after `)`, the mark.
-pub(super) fn link(chars: &[char], at: usize) -> Option<(usize, usize, Mark)> {
-    let mut depth = 0;
-    let mut close = at + 1;
-    loop {
-        match *chars.get(close)? {
-            '\\' => close += 1,
-            // A `]` in a code span closes nothing (todo 3114).
-            '`' => close = code_span(chars, close).unwrap_or(close),
-            '[' => depth += 1,
-            ']' if depth == 0 => break,
-            ']' => depth -= 1,
-            _ => {}
-        }
-        close += 1;
-    }
-    link_closed_at(chars, close)
-}
-
-/// The `]` of every `[` in one pass, as [`link`] finds it, so many unmatched `[` stay
-/// linear (todo 3012).
+/// The `]` of every `[` in one pass, nested brackets matched, escapes and code spans
+/// skipped (todo 3114), so many unmatched `[` stay linear (todos 3012, 4487).
 pub(super) fn brackets(chars: &[char]) -> HashMap<usize, usize> {
     let (mut open, mut closes) = (Vec::new(), HashMap::new());
     let mut i = 0;
@@ -270,7 +251,8 @@ mod tests {
 
     #[test]
     fn a_destination_longer_than_the_cap_stays_plain_text() {
-        assert!(link(&link_to(MAX_DESTINATION), 0).is_some());
-        assert!(link(&link_to(MAX_DESTINATION + 1), 0).is_none());
+        // `]` is at 2 in `[a](...)`.
+        assert!(link_closed_at(&link_to(MAX_DESTINATION), 2).is_some());
+        assert!(link_closed_at(&link_to(MAX_DESTINATION + 1), 2).is_none());
     }
 }

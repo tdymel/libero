@@ -71,6 +71,7 @@ pub fn RichTextView(props: RichTextViewProps) -> Element {
                     views: &props.nodes,
                     fence: None,
                     heading_offset: props.heading_offset,
+                    island_key: None,
                 },
             ),
         )

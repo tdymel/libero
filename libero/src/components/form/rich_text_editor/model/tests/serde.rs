@@ -10,6 +10,16 @@ fn json_round_trips() {
     assert_eq!(back.rekeyed(), doc.rekeyed());
 }
 
+/// An inserted rule equals its reload, so an echoed value is no reset (todo 4484).
+#[test]
+fn an_inserted_rule_equals_its_reload() {
+    let mut state = EditorState::new(Doc::from_markdown("a"));
+    assert!(state.insert_rule());
+    let back: Doc = serde_json::from_str(&serde_json::to_string(&state.doc).unwrap()).unwrap();
+    assert_eq!(back, state.doc);
+    assert_eq!(Doc::from_markdown(&state.doc.to_markdown()), state.doc);
+}
+
 #[test]
 fn json_is_compact_and_has_no_keys() {
     let doc = Doc::from_markdown("**hi**\n\n- a");

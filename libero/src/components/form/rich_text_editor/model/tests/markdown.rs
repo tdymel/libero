@@ -3,6 +3,23 @@ use crate::components::form::rich_text_editor::model::{
     BlockKind, Doc, Href, Inline, Mark, MarkKind, Marks, NodeRegistry, NodeSpec,
 };
 
+/// Quotes and lists nest at most `MAX_NESTING` deep; deeper markers stay text (todo 4486).
+#[test]
+fn deep_nesting_stops_at_the_cap() {
+    use crate::components::form::rich_text_editor::model::parse::MAX_NESTING;
+    for marker in ["> ", "- ", "1. "] {
+        let doc = Doc::from_markdown(&format!("{}x", marker.repeat(5_000)));
+        let (mut block, mut depth) = (&doc.blocks[0], 0);
+        while let Some(child) = block.children().first() {
+            depth += usize::from(!block.kind.is_list_item());
+            block = child;
+        }
+        assert_eq!(depth, MAX_NESTING, "{marker:?}");
+        assert!(block.text().starts_with(marker.trim_end()), "{marker:?}");
+        assert!(block.text().ends_with('x'));
+    }
+}
+
 /// Markdown whose model must survive `emit` then `parse` unchanged.
 const CORPUS: &[&str] = &[
     "",

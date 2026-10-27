@@ -551,10 +551,11 @@ fn offered(codes: &Option<Vec<String>>) -> Vec<&'static Country> {
 }
 
 /// The field's country: the pick while the value fits it, so `242` typed in a
-/// US field stays US; else the value's own dial code.
+/// US field stays US, and `+1` half-typed in a Bahamas (`1242`) field stays BS;
+/// else the value's own dial code.
 pub(crate) fn country_for(value: Option<&str>, picked: &'static Country) -> &'static Country {
     let digits = digits_of(value.unwrap_or_default());
-    if digits.is_empty() || digits.starts_with(picked.dial) {
+    if digits.is_empty() || digits.starts_with(picked.dial) || picked.dial.starts_with(&digits) {
         return picked;
     }
     countries::by_dial(&digits).unwrap_or(picked)
@@ -1124,6 +1125,11 @@ mod tests {
         assert_eq!(to.iso, "US");
         // Half a code names nothing yet; the value is what was typed so far.
         assert_eq!(dialled("+4", country("DE")), None);
+        // Half a single-area NANP code keeps that pick, not US (todo 4490).
+        assert_eq!(dialled("+1", country("BS")), None);
+        assert_eq!(dialled("0012", country("BS")), None);
+        let (to, national) = dialled("+1 242 555 0123", country("BS")).expect("a dial code");
+        assert_eq!((to.iso, national.as_str()), ("BS", "5550123"));
         assert_eq!(countries::value_of(country("DE"), "+4"), "+4");
         assert_eq!(countries::value_of(country("DE"), "+"), "");
         assert_eq!(dialled("171 1234567", country("DE")), None);

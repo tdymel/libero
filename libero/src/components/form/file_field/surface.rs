@@ -106,7 +106,6 @@ impl Surface {
             attributes,
         } = self;
         let required_id = format!("{id}-required");
-        let named = named(labelledby.as_deref(), file.as_deref(), &id);
         let described = described(&id, required, describedby.as_deref());
         // Without a label the caller's `aria_label` names the group as well as Browse.
         let group_name = attributes
@@ -120,6 +119,12 @@ impl Surface {
                 }
                 _ => None,
             });
+        let named = named(
+            labelledby.as_deref(),
+            file.as_deref(),
+            &id,
+            group_name.is_some(),
+        );
         let press = move || {
             // A press on the input opens it natively; its own click bubbling
             // back here while `opening` is not a second press.
@@ -293,7 +298,7 @@ pub(super) fn file_input_variant(
         list_element,
         placeholder,
     } = chips;
-    let browse = browse_content(&placeholder, drawn.is_empty());
+    let browse = browse_content(&control.id, &placeholder, drawn.is_empty());
     let chips = chip_list(drawn, list_element);
     let frame_states: Input<States> = field
         .states()
@@ -378,9 +383,23 @@ pub(super) fn file_dropzone_variant(
 }
 
 /// The label, the lone file, then the control's own text: "Receipt, scan.pdf, Browse files".
-fn named(labelledby: Option<&str>, file: Option<&str>, id: &str) -> Option<String> {
+/// Without a label the button's own `aria-label` leads and its hidden text ends (todo 4489).
+fn named(
+    labelledby: Option<&str>,
+    file: Option<&str>,
+    id: &str,
+    aria_label: bool,
+) -> Option<String> {
+    if let (None, Some(file), true) = (labelledby, file, aria_label) {
+        return Some(format!("{id} {file} {}", browse_id(id)));
+    }
     let ids = [labelledby, file].into_iter().flatten().collect::<Vec<_>>();
     (!ids.is_empty()).then(|| format!("{} {id}", ids.join(" ")))
+}
+
+/// The id of the Browse button's hidden "Browse files".
+fn browse_id(id: &str) -> String {
+    format!("{id}-browse")
 }
 
 /// The required note's id, then the field's own descriptions.
@@ -433,7 +452,7 @@ pub(super) fn file_trigger_variant(
     let required_id = format!("{id}-required");
     let attribute = |name: &'static str, value: String| Attribute::new(name, value, None, false);
     args.attributes = [
-        named(labelledby.as_deref(), None, &id).map(|v| attribute("aria-labelledby", v)),
+        named(labelledby.as_deref(), None, &id, false).map(|v| attribute("aria-labelledby", v)),
         described(&id, required, describedby.as_deref()).map(|v| attribute("aria-describedby", v)),
         invalid.then(|| attribute("aria-invalid", "true".into())),
         loading.then(|| attribute("aria-busy", "true".into())),
@@ -454,8 +473,9 @@ pub(super) fn file_trigger_variant(
 /// The `Input` variant's Browse button: the placeholder while nothing is
 /// picked, the upload glyph once files are held, and the hidden text that says
 /// what the button does.
-fn browse_content(placeholder: &str, empty: bool) -> Element {
+fn browse_content(id: &str, placeholder: &str, empty: bool) -> Element {
     let browse = current_localization().file_field.browse;
+    let browse_id = browse_id(id);
     rsx! {
         if empty && !placeholder.is_empty() {
             span { "data-placeholder": "true", "{placeholder}" }
@@ -463,7 +483,7 @@ fn browse_content(placeholder: &str, empty: bool) -> Element {
         if !empty {
             Glyph { slot: IconSlot::Upload, icon: lucide::upload::outlined }
         }
-        VisuallyHidden { "{browse}" }
+        VisuallyHidden { id: browse_id, "{browse}" }
     }
 }
 

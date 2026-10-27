@@ -17,9 +17,19 @@ impl EditorState {
     /// and wraps each selected block in an item otherwise.
     pub fn toggle_list(&mut self, ordered: bool) -> bool {
         let (from, to) = self.ordered();
-        let from_list = self.nearest(from.block, |kind| matches!(kind, BlockKind::List { .. }));
-        let to_list = self.nearest(to.block, |kind| matches!(kind, BlockKind::List { .. }));
-        if let Some(list) = from_list.filter(|list| Some(*list) == to_list) {
+        // Ends at different levels act on the deepest list holding both (todo 4485).
+        let lists = |key: NodeKey| -> Vec<NodeKey> {
+            self.ancestors(key)
+                .into_iter()
+                .filter(|(_, kind)| matches!(kind, BlockKind::List { .. }))
+                .map(|(key, _)| key)
+                .collect()
+        };
+        let to_lists = lists(to.block);
+        let common = lists(from.block)
+            .into_iter()
+            .find(|list| to_lists.contains(list));
+        if let Some(list) = common {
             let BlockKind::List {
                 ordered: current, ..
             } = self.block(list).kind
@@ -275,9 +285,20 @@ impl EditorState {
             }
             return true;
         }
-        let Some((parent_path, first, last)) = self.sibling_range() else {
+        let Some((mut parent_path, mut first, mut last)) = self.sibling_range() else {
             return false;
         };
+        // List items never go straight into a quote: quote their whole list (todo 4485).
+        while parent_path.len() > 1
+            && matches!(
+                self.doc.at(&parent_path[..parent_path.len() - 1]).kind,
+                BlockKind::List { .. }
+            )
+        {
+            parent_path.pop();
+            first = *parent_path.last().expect("a path");
+            last = first;
+        }
         let taken: Vec<Block> = self
             .doc
             .siblings_mut(&parent_path)
