@@ -196,6 +196,7 @@ pub(super) fn FilterPanel(
         PopoverOptions::new(theme.popover.gap, theme.popover.padding)
             .side(Side::Bottom)
             .align(Align::Start)
+            .remeasure(slice.read().len() as u64)
             .dismiss(true),
     );
     let close = move |refocus: bool| {

@@ -329,11 +329,14 @@ pub(super) fn ColumnDragGrip(
             else {
                 return;
             };
-            measured.follow(at);
-            active.origin = at;
+            // The table sits in the region, so its own scroll moves it too: only the page's counts.
+            let mut at = at;
             if let Some(scroll) = measured.scroll {
                 active.scrolled = offset.0 - scroll.from.0;
+                at = (at.0 + active.scrolled, at.1 + offset.1 - scroll.from.1);
             }
+            measured.follow(at);
+            active.origin = at;
             active.gap = measured.gap_at(active.x, active.y, active.scrolled);
             geometry.set(Some(measured));
             dragging.set(Some(active));

@@ -1024,6 +1024,90 @@ fn a_grip_held_at_the_region_edge_scrolls_to_the_last_gap() {
     });
 }
 
+/// Todo 4570: a wheel over the region mid-drag moves the gaps under a pointer that stays
+/// put: the line follows to Origin's start, and the drop lands there (4437).
+#[test]
+fn a_wheel_mid_column_drag_moves_the_drop_gap() {
+    use chromiumoxide::cdp::browser_protocol::input::{
+        DispatchMouseEventParams, DispatchMouseEventType,
+    };
+    use e2e::browser::{Fixture, Viewport, block_on};
+    use e2e::passes::pointer::{self, Point};
+    use e2e::wait;
+    const REGION: &str = "document.querySelector('[data-table-scroll]')";
+    block_on(async {
+        let fixture = Fixture::open("/table-column-scroll", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        let from = pointer::centre_of(page, "th[aria-label=Name] [data-drag-handle]")
+            .await
+            .unwrap();
+        // The region's middle, clear of the edge zones that scroll it themselves.
+        let middle: Vec<f64> = page
+            .evaluate_bounded(format!(
+                "(() => {{ const r = {REGION}.getBoundingClientRect(); \
+                 return [r.x + r.width / 2, r.y + r.height / 2]; }})()"
+            ))
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        let held = Point {
+            x: middle[0],
+            y: from.y,
+        };
+        pointer::drag_held(page, from, held, 10).await.unwrap();
+        wait::for_js_true(
+            page,
+            "!!document.querySelector('[data-drop-line]')",
+            "the drop line at the held grip",
+        )
+        .await
+        .unwrap();
+        // A wheel turn over the held pointer, its button staying down.
+        let wheel = DispatchMouseEventParams::builder()
+            .r#type(DispatchMouseEventType::MouseWheel)
+            .x(held.x)
+            .y(held.y)
+            .buttons(1)
+            .delta_x(400.0)
+            .delta_y(0.0)
+            .build()
+            .unwrap();
+        page.execute_bounded(wheel).await.unwrap();
+        wait::for_js_true(
+            page,
+            &format!("{REGION}.scrollLeft > 100"),
+            "the wheel to scroll the region sideways",
+        )
+        .await
+        .unwrap();
+        wait::for_js_true(
+            page,
+            "(() => { const line = document.querySelector('[data-drop-line]'); \
+             const origin = document.querySelector('th[aria-label=Origin]'); \
+             return !!line && Math.abs(line.getBoundingClientRect().x - origin.getBoundingClientRect().x) < 4; })()",
+            "the drop line at Origin's start after the wheel",
+        )
+        .await
+        .unwrap();
+        pointer::release(page, held).await.unwrap();
+        wait::for_js_true(
+            page,
+            "document.querySelector('#columns').textContent === 'Stock Name Origin'",
+            "a drop at the gap the wheel brought under the pointer",
+        )
+        .await
+        .unwrap();
+        fixture
+            .console
+            .assert_clean("a wheel mid column drag")
+            .unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
 /// Todo 1450: held mid-drag, the ghost header and the drop line are each the
 /// top box near their leading edge, so nothing covers or clips them.
 #[test]
