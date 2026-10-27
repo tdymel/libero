@@ -2,8 +2,8 @@ use dioxus::core::{Attribute, AttributeValue};
 use dioxus::prelude::*;
 
 use super::media_controls::{
-    Captions, MediaControls, MediaFallback, VolumePart, chapter_jump, notify, use_media_keys,
-    use_media_start, use_sound,
+    Captions, MediaControls, MediaFallback, SPEED, VolumePart, chapter_jump, notify,
+    use_media_keys, use_media_start, use_sound,
 };
 use super::{
     MediaPreload, MediaSource,
@@ -143,13 +143,18 @@ static VIDEO_SX: StaticSx = StaticSx::new(|| {
                 .media(REDUCED_MOTION, sx().transition("none"))
                 .selector("& > *", sx().flex_shrink("0"))
                 // A narrow bar fits the chapters button too: wrapping happens before any shrinking.
+                // The speed label is text: it keeps its width, at least a button's.
                 .selector(
                     "& button",
-                    sx().container_query(
-                        CONTROLS_CONTAINER,
-                        NARROWEST,
-                        sx().max_width("2.25rem").max_height("2.25rem"),
-                    ),
+                    sx().container_query(CONTROLS_CONTAINER, NARROWEST, sx().max_height("2.25rem")),
+                )
+                .selector(
+                    format!("& button:not([data-slot='{SPEED}'])"),
+                    sx().container_query(CONTROLS_CONTAINER, NARROWEST, sx().max_width("2.25rem")),
+                )
+                .selector(
+                    format!("& button[data-slot='{SPEED}']"),
+                    sx().container_query(CONTROLS_CONTAINER, NARROWEST, sx().min_width("2.25rem")),
                 )
                 .selector("& [data-slot='track']", light_track())
                 // Chapters: the gaps between the light segments show the scrim.

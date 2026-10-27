@@ -11,7 +11,8 @@ use crate::{
         accessibility::VisuallyHidden,
         buttons::{ActionIcon, Button, TooltipOpenDelay},
         common::{
-            Glyph, HtmlTag, Input, Part, Parts, allowed_href, has_shortcut_modifier, parts_enum,
+            COARSE_POINTER, COARSE_TARGET, Glyph, HtmlTag, Input, Part, Parts, allowed_href,
+            coarse_hit_area_sx, has_shortcut_modifier, parts_enum,
         },
         form::{HoverPreview, Slider, SliderChangeEvent, SliderSegment, SliderTrack},
         layout::{paper_sx, use_box},
@@ -35,6 +36,7 @@ pub(super) const TIME: &str = "time";
 pub(super) const CHAPTER: &str = "chapter";
 pub(super) const SEEK: &str = "seek";
 pub(super) const VOLUME: &str = "volume";
+pub(super) const SPEED: &str = "speed";
 pub(super) const MESSAGE: &str = "message";
 
 parts_enum! {
@@ -586,6 +588,12 @@ fn MediaSpeed(media: MediaHandle, size: Input<Size>, overlay: bool) -> Element {
         None,
         false,
     ));
+    attributes.push(Attribute::new(
+        "data-slot",
+        AttributeValue::Text(SPEED.into()),
+        None,
+        false,
+    ));
     rsx! {
         Menu { state: menu, items, size: size.clone(),
             // "1×" stays "1×" in a right-to-left page, not "×1".
@@ -646,9 +654,11 @@ pub(super) fn MediaVolume(
             .attr("data-slot", VolumePart::Card.slot())
             .attr("role", "dialog")
             .attr("aria-label", labels.volume)
-            // Tab leaves the card for its trigger, as a menu does.
+            // Tab and Escape leave the card for its trigger. Escape is read even when taken:
+            // the slider's value bubble takes the first one from the dismiss stack.
             .event("onkeydown", move |event: KeyboardEvent| {
-                if is_tab(&event) {
+                let escape = event.key() == Key::Named(NamedKey::Escape) && !event.is_auto_repeating();
+                if is_tab(&event) || escape {
                     event.prevent_default();
                     opened.set(false);
                     let _ = anchor.focus();
@@ -670,6 +680,7 @@ pub(super) fn MediaVolume(
                             step: 5.0,
                             size: size.clone(),
                             aria_label: labels.volume,
+                            sx: coarse_hit_area_sx("::before"),
                             oninput: move |event: SliderChangeEvent| sound.set_volume(event.value() / 100.0),
                         }
                     }
@@ -701,10 +712,15 @@ pub(super) fn MediaVolume(
                 size: icon_size(&size),
                 // Half a button: it only opens the menu, so the speaker stays the target. At xs
                 // 1.25em is under 24px, and its 24px hit area took the speaker's (WCAG 2.5.8).
+                // A finger gets the full 44px, which the row makes room for.
                 sx: match size.as_ref() {
                     Some(Size::Xs) => sx().min_width("24px").width("24px"),
                     _ => sx().min_width("1.25em").width("1.25em"),
-                },
+                }
+                .media(
+                    COARSE_POINTER,
+                    sx().min_width(COARSE_TARGET).width(COARSE_TARGET),
+                ),
                 attributes: popover.anchor_events(),
                 onmounted: anchor.mount(),
                 onclick: move |_| opened.toggle(),
@@ -741,7 +757,8 @@ pub(super) fn MediaSeek(
             .collect(),
         None => Vec::new(),
     };
-    let value = scrub().unwrap_or_else(|| media.current_time());
+    // Floored as the visible time is, so the spoken time matches it.
+    let value = scrub().unwrap_or_else(|| media.current_time().floor());
     let total = duration.map_or_else(|| "--:--".to_string(), clock);
     let format = use_callback(move |seconds: f64| {
         fill(
@@ -758,6 +775,7 @@ pub(super) fn MediaSeek(
             size,
             disabled: duration.is_none(),
             aria_label: labels.seek,
+            sx: coarse_hit_area_sx("::before"),
             format,
             track,
             segments,

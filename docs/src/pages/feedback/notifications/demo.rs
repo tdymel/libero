@@ -45,7 +45,7 @@ pub fn card_notification(s: NotificationScope<Message>) -> Element {
                     Flex { direction: "row", gap: "sm",
                         Button {
                             variant: "outlined",
-                            size: "xs",
+                            size: "sm",
                             onclick: move |_| {
                                 onaction.call(format!("Replying to {sender}."));
                                 s.close()
@@ -54,7 +54,7 @@ pub fn card_notification(s: NotificationScope<Message>) -> Element {
                         }
                         Button {
                             variant: "standard",
-                            size: "xs",
+                            size: "sm",
                             onclick: move |_| {
                                 onaction.call(format!("Muted {sender}."));
                                 s.close()

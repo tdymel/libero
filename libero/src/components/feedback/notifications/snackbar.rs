@@ -3,7 +3,14 @@ use std::{cell::RefCell, rc::Rc};
 use dioxus::prelude::*;
 
 use super::handle::{DEFAULT_TEMPLATE_SX, NotificationScope};
-use crate::components::{buttons::Button, feedback::Alert};
+use crate::{
+    components::{
+        buttons::Button,
+        common::{COARSE_POINTER, coarse_hit_area_sx},
+        feedback::Alert,
+    },
+    sx::sx,
+};
 
 /// A snackbar's one button. Pressing it runs `onclick`, then closes the notification.
 #[derive(Clone)]
@@ -83,6 +90,8 @@ pub fn snackbar(s: NotificationScope<SnackbarData>) -> Element {
                 variant: "standard",
                 color: "currentColor",
                 size: "xs",
+                // The button clips its overflow, which would clip the hit area.
+                sx: coarse_hit_area_sx("::before").media(COARSE_POINTER, sx().overflow("visible")),
                 onclick: move |_| {
                     (onclick.borrow_mut())();
                     s.close();

@@ -101,6 +101,12 @@ static AUDIO_SX: StaticSx = StaticSx::new(|| {
             AudioPart::Volume.selector(),
             sx().display("flex").align_items("center"),
         )
+        // Block level, so a tooltip's wrapper is the button's height and the row centres
+        // it as the chevron and the speed button beside it.
+        .selector(
+            format!("{} span > button", AudioPart::Controls.selector()),
+            sx().display("flex"),
+        )
         // Smaller buttons, not hidden ones, so mute and volume stay (WCAG 1.4.10, todo 1393).
         .container_query(AUDIO_CONTAINER, NARROWEST, compact_buttons(Size::Sm))
         .container_query(AUDIO_CONTAINER, TINY, compact_buttons(Size::Xs))
