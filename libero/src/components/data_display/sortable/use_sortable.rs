@@ -1349,12 +1349,12 @@ mod tests {
 
         fn app() -> Element {
             rsx! {
-                crate::LiberoProvider { List {} }
+                crate::LiberoProvider { SortableList {} }
             }
         }
 
         #[component]
-        fn List() -> Element {
+        fn SortableList() -> Element {
             let count = use_signal(|| 4);
             let mut moves = use_signal(Vec::new);
             let lift = use_signal(|| None);
