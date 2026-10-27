@@ -40,7 +40,7 @@ fn focus_first(root: &ElementHandle, tag: Option<&str>) {
         return;
     }
     if let Ok(mut items) = root.query_selector_all(FOCUSABLE_SELECTOR) {
-        let mut stops = tab_stops(root, &items);
+        let mut stops = tab_stops(root, &items, false);
         let mut order = tab_order(&items);
         // An autofocus target leads; one that takes no focus falls through to the first stop.
         if let Ok(target) = root.query_selector("[data-autofocus]") {
@@ -74,7 +74,8 @@ fn cycle_focus(root: &ElementHandle, backwards: bool) -> bool {
     };
     let index = items.iter().position(|item| item.is_focused());
     let order = tab_order(&items);
-    focus_next(&items, &tab_stops(root, &items), &order, index, backwards)
+    let stops = tab_stops(root, &items, backwards);
+    focus_next(&items, &stops, &order, index, backwards)
 }
 
 /// Focus fell to the document: on `<body>` (`<html>` on Blitz) or on a removed element.
@@ -229,8 +230,10 @@ pub fn FocusTrap(props: FocusTrapProps) -> Element {
                     && root
                         .query_selector_all(FOCUSABLE_SELECTOR)
                         .is_ok_and(|items| {
-                            let (stops, order) = (tab_stops(&root, &items), tab_order(&items));
-                            focus_next(&items, &stops, &order, None, chord.modifiers.shift())
+                            let backwards = chord.modifiers.shift();
+                            let (stops, order) =
+                                (tab_stops(&root, &items, backwards), tab_order(&items));
+                            focus_next(&items, &stops, &order, None, backwards)
                         })
             }))
         }))

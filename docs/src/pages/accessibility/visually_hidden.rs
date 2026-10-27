@@ -1,12 +1,15 @@
 use crate::components::{Control, Demo, DemoValues, DocPage, Wrap, a11y, indent, prop, props};
 use dioxus::prelude::*;
-use libero::components::{Anchor, Code, Text, VisuallyHidden};
+use libero::{
+    components::{Anchor, Box, Code, Text, VisuallyHidden},
+    sx::sx,
+};
 
 /// Prints the link the hidden text sits in, since the point is what it's read after.
 /// `focusable` prints a skip link instead.
 fn wrap_link(values: &DemoValues, code: &str) -> String {
     if values.str("focusable") == "true" {
-        return "VisuallyHidden {\n    focusable: true,\n    Anchor { to: \"#skip-demo-content\", \"Skip to content\" }\n}\nText { id: \"skip-demo-content\", tabindex: \"-1\", \"The content the link skips to.\" }"
+        return "Box {\n    sx: sx().position(\"relative\").padding_top(\"2.5rem\"),\n    VisuallyHidden {\n        focusable: true,\n        sx: sx().position(\"absolute\"),\n        Anchor { to: \"#skip-demo-content\", \"Skip to content\" }\n    }\n    Text { id: \"skip-demo-content\", tabindex: \"-1\", \"The content the link skips to.\" }\n}"
             .to_string();
     }
     format!(
@@ -60,12 +63,15 @@ pub fn VisuallyHiddenPage() -> Element {
                 children_text: " about focus management",
                 controls: vec![Control::switch("focusable")],
                 render: move |values: DemoValues| if values.str("focusable") == "true" {
+                    // Absolute in its own box: a fixed link would show at the page's corner, under the docs header.
                     rsx! {
-                        VisuallyHidden { focusable: true,
-                            Anchor { to: "#skip-demo-content", "Skip to content" }
+                        Box { sx: sx().position("relative").padding_top("2.5rem"),
+                            VisuallyHidden { focusable: true, sx: sx().position("absolute"),
+                                Anchor { to: "#skip-demo-content", "Skip to content" }
+                            }
+                            // The docs' own `main` is taken: a target of the demo's own.
+                            Text { id: "skip-demo-content", tabindex: "-1", "The content the link skips to." }
                         }
-                        // The docs' own `main` is taken: a target of the demo's own.
-                        Text { id: "skip-demo-content", tabindex: "-1", "The content the link skips to." }
                     }
                 } else { rsx! {
                     Text {

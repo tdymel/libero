@@ -86,7 +86,7 @@ no props at all.
   when the focused control was removed. A Tab that finds focus on the page comes
   back into the trap.
 - A native radio group, the radios sharing a `name` and a form, is one Tab stop:
-  its checked radio, or else its first.
+  its checked radio, or else its first (its last for Shift+Tab).
 
 ### You must
 

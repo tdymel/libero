@@ -51,6 +51,15 @@ fn an_icon_or_action_item_counts_in_an_ordered_list() {
     assert_eq!(markers, ["1. ", "4. ", "3. ", "1. ", "8. "]);
 }
 
+/// Todo 4559: a flex action item has no marker, so it draws its number as a leading span.
+#[test]
+fn an_action_item_draws_its_own_number() {
+    let page = mount(ordered);
+    assert_eq!(page.laid_out_text("#acted > [data-slot=marker]"), "3.");
+    assert!(!page.exists("#iconed > [data-slot=marker]"));
+    assert!(!page.exists("#first > [data-slot=marker]"));
+}
+
 /// The icon's, the body's and the column's boxes as (left, top, right, bottom).
 fn boxes(page: &Page, dir: &str) -> [(f64, f64, f64, f64); 3] {
     let edges = |selector: String| {

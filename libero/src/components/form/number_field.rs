@@ -42,6 +42,7 @@ static STEPPERS_SX: StaticSx =
 /// The input is `dir="ltr"`; its text still sits at the page's start.
 static NUMBER_CONTROL_SX: StaticSx = StaticSx::new(|| {
     field_control_sx()
+        .width("100%")
         .text_align("start")
         .rtl(sx().text_align("right"))
 });

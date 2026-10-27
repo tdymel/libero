@@ -191,8 +191,9 @@ pub(crate) fn slot_button_sx() -> Sx {
 
 pub(crate) static SLOT_BUTTON_SX: StaticSx = StaticSx::new(slot_button_sx);
 
-/// The native control inside the frame, stripped of the frame's chrome.
-pub(crate) static FIELD_CONTROL_SX: StaticSx = StaticSx::new(field_control_sx);
+/// The native `<input>` inside the frame, stripped of the frame's chrome. A percentage width
+/// drops its ~150px intrinsic width from the frame's min-content, so a field fits a 320px column.
+pub(crate) static FIELD_CONTROL_SX: StaticSx = StaticSx::new(|| field_control_sx().width("100%"));
 
 /// The same declarations, for a control that extends them.
 pub(crate) fn field_control_sx() -> Sx {

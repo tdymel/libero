@@ -26,7 +26,28 @@ pub const ROUTES: Routes = &[
         || rsx! { TooltipWindowPage {} },
     ),
     ("/floating-window-owner", || rsx! { OwnerWindowPage {} }),
+    (
+        "/floating-window-scrolled",
+        || rsx! { ScrolledWindowPage {} },
+    ),
 ];
+
+/// Todo 4567: a page that scrolls, so a classic scrollbar takes part of the viewport width.
+#[component]
+fn ScrolledWindowPage() -> Element {
+    let window = use_floating_window(
+        FloatingWindowOptions {
+            title: Some("Scrolled".into()),
+            ..Default::default()
+        },
+        |_| rsx! { Text { "A window beside a scrollbar." } },
+    );
+
+    rsx! {
+        Button { id: "open-window", variant: "outlined", onclick: move |_| window.open(), "Scrolled" }
+        div { style: "height: 3000px;" }
+    }
+}
 
 /// Todo 4405: a tooltip inside a window, so one Escape may close only the tooltip.
 #[component]

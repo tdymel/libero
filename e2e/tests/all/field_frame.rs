@@ -626,6 +626,41 @@ e2e::scenario!(
     a_field_shrinks_into_a_narrow_row
 );
 
+/// WCAG 1.4.10 (todo 4568): a stepper NumberField and a PasswordField have a min-content
+/// that fits a 320px column.
+async fn a_field_min_content_fits_320<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    for stage in ["#min-number", "#min-password"] {
+        let rect = d.rect(stage).await?;
+        anyhow::ensure!(
+            rect.width <= 320.0,
+            "{:?}: {stage} has a min-content of {}px",
+            d.platform(),
+            rect.width
+        );
+    }
+    for button in [
+        "#min-number button[aria-label=Increase]",
+        "#min-number button[aria-label=Decrease]",
+        "#min-password button",
+    ] {
+        let rect = d.rect(button).await?;
+        anyhow::ensure!(
+            rect.width >= 24.0 || rect.height >= 24.0,
+            "{:?}: {button} squeezed to {}x{}",
+            d.platform(),
+            rect.width,
+            rect.height
+        );
+    }
+    Ok(())
+}
+
+e2e::scenario!(
+    a_field_min_content_fits_320,
+    "/field-frame/min-content",
+    a_field_min_content_fits_320
+);
+
 /// WCAG 1.4.10 (todo 3023): a label, captions and a status of one unbreakable
 /// word wrap inside a 200px field instead of overflowing it.
 async fn a_long_word_wraps_inside_the_field<D: Driver>(d: &mut D, _route: &str) -> Result<()> {

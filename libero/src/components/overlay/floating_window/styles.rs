@@ -5,7 +5,7 @@ use crate::{
         layout::paper_sx,
     },
     hooks::drag_handle_sx,
-    sx::{StaticSx, sx},
+    sx::{StaticSx, Sx, sx},
     theme::{PAPER_BORDER_COLOR, Size, SizeCss},
 };
 
@@ -107,10 +107,12 @@ pub(super) static WINDOW_SX: StaticSx = StaticSx::new(|| {
         )
 });
 
-pub(super) static FLOAT_SX: StaticSx = StaticSx::new(|| {
+pub(super) fn float_sx() -> Sx {
     sx().width("max-content")
         .max_width("100%")
         .max_height("100dvh")
         .display("flex")
         .flex_direction("column")
-});
+}
+
+pub(super) static FLOAT_SX: StaticSx = StaticSx::new(float_sx);

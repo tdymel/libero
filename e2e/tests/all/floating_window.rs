@@ -1035,6 +1035,42 @@ fn a_tall_window_stays_reachable() {
     });
 }
 
+/// Todo 4567: a window dragged past the right edge stops at the page's scrollbar, not under it.
+#[test]
+fn a_moved_window_stays_clear_of_a_classic_scrollbar() {
+    block_on(async {
+        let fixture = Fixture::open_with_scrollbars("/floating-window-scrolled", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        let bar: f64 = page
+            .evaluate_bounded("innerWidth - document.documentElement.clientWidth")
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        assert!(bar > 0.0, "the page draws no classic scrollbar to clear");
+        pointer::click(page, TRIGGER).await.unwrap();
+        wait::for_visible(page, HANDLE).await.unwrap();
+        let from = pointer::centre_of(page, HANDLE).await.unwrap();
+        let to = pointer::Point {
+            x: from.x + 4000.0,
+            y: from.y,
+        };
+        pointer::drag(page, from, to, 8).await.unwrap();
+        wait::for_js_true(
+            page,
+            "(() => { const r = document.querySelector('[role=dialog]').getBoundingClientRect(); \
+             const room = document.documentElement.clientWidth; \
+             return r.right <= room + 0.5 && r.right >= room - 2; })()",
+            "the window to end at the scrollbar's edge",
+        )
+        .await
+        .unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
 /// `FloatingWindow` whose title bar is deaf to the arrows (a capturing listener): nothing a
 /// snapshot or axe sees changes.
 #[test]

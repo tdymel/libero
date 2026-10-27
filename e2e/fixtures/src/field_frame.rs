@@ -6,8 +6,8 @@ use libero::{
     chrono::{NaiveDate, NaiveTime},
     components::{
         Autocomplete, Cascader, CascaderOption, ChronoField, ColorCode, ColorField, FieldStatus,
-        FileField, Files, Flex, MultiSelect, NativeSelect, NumberField, PhoneField, PinField,
-        Select, SliderChangeEvent, TagsField, TextField, Textarea, TimeField,
+        FileField, Files, Flex, MultiSelect, NativeSelect, NumberField, PasswordField,
+        PhoneField, PinField, Select, SliderChangeEvent, TagsField, TextField, Textarea, TimeField,
     },
 };
 
@@ -17,7 +17,26 @@ pub const ROUTES: Routes = &[
     ("/field-frame", || rsx! { FieldFramePage {} }),
     ("/field-frame/narrow", || rsx! { NarrowPage {} }),
     ("/field-frame/long-word", || rsx! { LongWordPage {} }),
+    ("/field-frame/min-content", || rsx! { MinContentPage {} }),
 ];
+
+/// Fields in boxes as narrow as their min-content, which a 320px column must hold (1.4.10).
+#[component]
+fn MinContentPage() -> Element {
+    rsx! {
+        div { id: "min-number", style: "width: min-content;",
+            NumberField::<i32> {
+                label: "Quantity",
+                steppers: true,
+                value: Some(3),
+                onchange: |_| {},
+            }
+        }
+        div { id: "min-password", style: "width: min-content;",
+            PasswordField { label: "Password" }
+        }
+    }
+}
 
 const LONG_WORD: &str = "Supercalifragilisticexpialidocious_Supercalifragilisticexpialidocious";
 

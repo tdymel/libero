@@ -30,8 +30,12 @@ fn form_owners(root: &ElementHandle, items: &[Box<dyn ElementApi>]) -> Vec<usize
 }
 
 /// Which of `items` are Tab stops: a native radio group (same `name` and form)
-/// is one, its `:checked` radio or else its first.
-pub(crate) fn tab_stops(root: &ElementHandle, items: &[Box<dyn ElementApi>]) -> Vec<bool> {
+/// is one, its `:checked` radio or else its first (its last for `backwards`, as a browser's Shift+Tab).
+pub(crate) fn tab_stops(
+    root: &ElementHandle,
+    items: &[Box<dyn ElementApi>],
+    backwards: bool,
+) -> Vec<bool> {
     let attr = |item: &dyn ElementApi, name| item.attribute(name).ok().flatten();
     let group = |item: &dyn ElementApi| {
         let radio = attr(item, "type").is_some_and(|ty| ty.eq_ignore_ascii_case("radio"));
@@ -60,20 +64,24 @@ pub(crate) fn tab_stops(root: &ElementHandle, items: &[Box<dyn ElementApi>]) -> 
         .zip(&checked)
         .filter_map(|(key, checked)| key.filter(|_| *checked))
         .collect();
+    // The walk's direction picks which radio of an undecided group comes first.
+    let walk: Vec<usize> = match backwards {
+        true => (0..keys.len()).rev().collect(),
+        false => (0..keys.len()).collect(),
+    };
     let mut seen = HashSet::new();
-    keys.iter()
-        .zip(&checked)
-        .map(|(key, checked)| {
-            let Some(key) = key else {
-                return true;
-            };
-            let stop = !seen.contains(key) && (*checked || !decided.contains(key));
-            if stop {
-                seen.insert(*key);
-            }
-            stop
-        })
-        .collect()
+    let mut stops = vec![true; keys.len()];
+    for at in walk {
+        let Some(key) = keys[at] else {
+            continue;
+        };
+        let stop = !seen.contains(&key) && (checked[at] || !decided.contains(&key));
+        if stop {
+            seen.insert(key);
+        }
+        stops[at] = stop;
+    }
+    stops
 }
 
 /// Item indices in the browser's Tab order: positive `tabindex` ascending, then the rest in DOM order.
@@ -101,7 +109,7 @@ pub(crate) fn focus_edge(root: &ElementHandle, last: bool) -> bool {
     let Ok(items) = root.query_selector_all(FOCUSABLE_SELECTOR) else {
         return false;
     };
-    let stops = tab_stops(root, &items);
+    let stops = tab_stops(root, &items, last);
     let order = tab_order(&items);
     match last {
         true => focus_first_stop(&items, &stops, order.into_iter().rev()),

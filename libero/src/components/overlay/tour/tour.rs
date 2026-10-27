@@ -836,8 +836,11 @@ fn tab_in_target(target: &ElementHandle, card: &ElementHandle, backwards: bool) 
         // On an element out of the Tab order: the browser's own Tab.
         (false, None) => return false,
     };
-    focus_first_stop(&items, &tab_stops(target, &items), after.into_iter())
-        || focus_edge(card, backwards)
+    focus_first_stop(
+        &items,
+        &tab_stops(target, &items, backwards),
+        after.into_iter(),
+    ) || focus_edge(card, backwards)
 }
 
 /// One step's card, drawn afresh per step: its popover anchors to that step's target.

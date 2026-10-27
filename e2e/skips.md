@@ -1,6 +1,6 @@
 # Skipped e2e scenarios
 
-Scenarios: 715
+Scenarios: 716
 
 Generated from the `scenario!` skips in `e2e/tests/all` by `cargo test -p e2e --lib skips`; edit the skip, not this file. A reason starting `upstream:` waits on Dioxus, Blitz, wry or the engine (revisit on their update, todo 3362), a number names the todo that removes it.
 

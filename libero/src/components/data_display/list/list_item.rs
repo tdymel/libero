@@ -55,6 +55,10 @@ fn action_sx() -> Sx {
             .list_style_type("none")
             .display("flex")
             .selector(
+                "& > [data-slot='marker']",
+                sx().flex_shrink("0").margin_inline_end("0.5em"),
+            )
+            .selector(
                 ListItemPart::Body.selector(),
                 sx().flex("1 1 auto")
                     .min_width("0")
@@ -174,9 +178,14 @@ pub fn ListItem(props: ListItemProps) -> Element {
     let context = try_use_context::<ListContext>();
     let inherited = context.and_then(|context| context.icon.read().clone());
     let icon = props.icon.clone().or(inherited);
-    // Native: an icon or action item draws no number; a plain one writes out its own.
+    // Native: a plain item writes out its own number; an action item (a flex row, so no
+    // marker) draws it as a leading span (todo 4559); an icon item takes the icon instead.
     let id = use_hook(order_id);
-    let number = use_number(context, id)
+    let number = use_number(context, id);
+    let marker = number
+        .filter(|_| icon.is_none() && props.action.is_some())
+        .map(|number| format!("{number}."));
+    let number = number
         .filter(|_| icon.is_none() && props.action.is_none())
         .map(|number| format!("list-style-type: \"{number}. \""));
     // Native only: where `List` reads the items' DOM order from.
@@ -194,6 +203,9 @@ pub fn ListItem(props: ListItemProps) -> Element {
     let children = match (icon, props.action) {
         (None, None) => props.children,
         (icon, action) => rsx! {
+            if let Some(marker) = marker {
+                span { "data-slot": "marker", "aria-hidden": "true", {marker} }
+            }
             if let Some(icon) = icon {
                 span { "data-slot": ListItemPart::Icon.slot(), "aria-hidden": "true", {icon} }
             }

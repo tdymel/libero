@@ -24,13 +24,14 @@ const DEMO_COLS: &str = "4";
 /// from a laptop up.
 const RESPONSIVE_COLS: Responsive<u8> = responsive(1).sm(2).md(4);
 
+/// The untouched `cols` on a phone: four cells of ~70px break a caption's words by letter.
+const NARROW_DEMO_COLS: Responsive<u8> = responsive(2).md(4);
+
 fn cols(values: &DemoValues, fallback: Responsive<u8>) -> Responsive<u8> {
-    match values.str("responsive") == "true" {
-        true => RESPONSIVE_COLS,
-        false => values
-            .str("cols")
-            .parse::<u8>()
-            .map_or(fallback, Into::into),
+    match (values.str("responsive") == "true", values.str("cols")) {
+        (true, _) => RESPONSIVE_COLS,
+        (false, cols) if cols == DEMO_COLS => NARROW_DEMO_COLS,
+        (false, cols) => cols.parse::<u8>().map_or(fallback, Into::into),
     }
 }
 

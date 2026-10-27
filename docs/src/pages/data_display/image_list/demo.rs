@@ -71,19 +71,29 @@ pub(super) fn caption(index: usize, mut selected: Signal<[bool; 6]>) -> Element 
         false => sx().color("inherit").flex("0 0 auto"),
     };
 
+    // The button drops below the text in a narrow cell, which then keeps its words whole.
     rsx! {
-        Box { sx: sx().flex("1 1 auto").min_width("0"),
-            Box { sx: line.clone().font_weight("500"), "{TITLES[index]}" }
-            Box { sx: line.font_size("0.75rem"), "{AUTHORS[index]}" }
-        }
-        ActionIcon {
-            variant: if on { "filled" } else { "standard" },
-            sx: icon,
-            size: "sm",
-            aria_label: format!("Select {}", TITLES[index]),
-            aria_pressed: on,
-            onclick: move |_| selected.write()[index] ^= true,
-            Pictogram { icon: lucide::check::outlined }
+        Box {
+            sx: sx()
+                .flex("1 1 auto")
+                .min_width("0")
+                .display("flex")
+                .flex_wrap("wrap")
+                .align_items("center")
+                .gap("4px"),
+            Box { sx: sx().flex("1 1 6rem").min_width("0"),
+                Box { sx: line.clone().font_weight("500"), "{TITLES[index]}" }
+                Box { sx: line.font_size("0.75rem"), "{AUTHORS[index]}" }
+            }
+            ActionIcon {
+                variant: if on { "filled" } else { "standard" },
+                sx: icon,
+                size: "sm",
+                aria_label: format!("Select {}", TITLES[index]),
+                aria_pressed: on,
+                onclick: move |_| selected.write()[index] ^= true,
+                Pictogram { icon: lucide::check::outlined }
+            }
         }
     }
 }

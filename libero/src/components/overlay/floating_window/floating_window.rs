@@ -7,7 +7,7 @@ use super::{
     options::{FloatingWindowOptions, FloatingWindowPart},
     page_switch::use_page_switch,
     steps::WindowSteps,
-    styles::{FLOAT_SX, WINDOW_SX},
+    styles::{FLOAT_SX, WINDOW_SX, float_sx},
     title_bar::WindowTitleBar,
 };
 use crate::{
@@ -19,7 +19,7 @@ use crate::{
     hooks::{ElementHandle, escape_closes, use_element, use_focus_within, use_id},
     localization::{FloatingWindowLabels, fill},
     platform::{ElementApi, PlatformError},
-    sx::ThemeAwareValue,
+    sx::{Sx, ThemeAwareValue},
     utils::unique_id,
 };
 
@@ -87,17 +87,14 @@ fn use_adjust(
     (onadjust, steps)
 }
 
-/// Where the float sits: its placement until moved, then clamped pixel offsets.
+/// Where the float sits: its placement until moved, then clamped pixel offsets. The
+/// horizontal one is a left margin, whose `%` is the viewport without a classic scrollbar.
 fn float_position(
     geometry: WindowGeometry,
     placement: Placement,
-) -> (
-    Input<Placement>,
-    Input<ThemeAwareValue>,
-    Input<ThemeAwareValue>,
-) {
+) -> (Input<Placement>, Input<ThemeAwareValue>, Input<Sx>) {
     let Some((x, y)) = (geometry.position)() else {
-        return (Input::Value(placement), Input::None, Input::None);
+        return (Input::Value(placement), Input::None, Input::from(&FLOAT_SX));
     };
     // The new size, not the last measured one: a report reads this render (3311).
     let measured = (geometry.size)()
@@ -111,8 +108,8 @@ fn float_position(
     };
     (
         Input::Value(left),
-        Input::from(clamped(x, measured.map(|m| m.0), "100dvw")),
         Input::from(clamped(y, measured.map(|m| m.1), "100dvh")),
+        Input::from(float_sx().with("margin-left", clamped(x, measured.map(|m| m.0), "100%"))),
     )
 }
 
@@ -252,7 +249,7 @@ pub(crate) fn FloatingWindow(props: FloatingWindowProps) -> Element {
         }
     };
 
-    let (float_placement, offset_x, offset_y) = float_position(geometry, placement);
+    let (float_placement, offset_y, float_sx) = float_position(geometry, placement);
 
     // Inline, so a resize beats the caller's `sx` size (todo 922). Width capped
     // here as a caller's `max_width` replaces ours; height by the wrapper.
@@ -335,12 +332,11 @@ pub(crate) fn FloatingWindow(props: FloatingWindowProps) -> Element {
         Float {
             fixed: true,
             placement: float_placement,
-            offset_x,
             offset_y,
             z_index,
             // As wide as the window (`left: 50%` would wrap it at half the
             // viewport), and the viewport cap no caller `sx` reaches.
-            sx: &FLOAT_SX,
+            sx: float_sx,
             {window}
         }
     }

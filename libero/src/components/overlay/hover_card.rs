@@ -591,7 +591,7 @@ fn trigger_tab(event: &KeyboardEvent, open: bool, anchor: ElementHandle, floatin
     // A later control that is `display: none` ignores `focus()`: the card follows the last that takes it.
     let moved = focus_first_stop(
         &items,
-        &tab_stops(&anchor, &items),
+        &tab_stops(&anchor, &items, false),
         order[at + 1..].iter().copied(),
     ) || focus_edge(&floating, false);
     if moved {
@@ -620,7 +620,11 @@ fn card_tab(event: &KeyboardEvent, anchor: ElementHandle, floating: ElementHandl
         false => order[at + 1..].to_vec(),
     };
     // A control that is `display: none` ignores `focus()`, so the edge is the last that takes it.
-    let inside = focus_first_stop(&items, &tab_stops(&floating, &items), beyond.into_iter());
+    let inside = focus_first_stop(
+        &items,
+        &tab_stops(&floating, &items, backwards),
+        beyond.into_iter(),
+    );
     let via_trigger = !inside && focus_edge(&anchor, true);
     // Forward off the trigger, the browser's own Tab moves on.
     if inside || (via_trigger && backwards) {

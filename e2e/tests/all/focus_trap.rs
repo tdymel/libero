@@ -49,7 +49,7 @@ async fn tab_passes_over_hidden_stops<D: Driver>(d: &mut D, _route: &str) -> Res
     );
     let walked = walk(d, 5, true).await?;
     ensure!(
-        walked == ["last", "summary", "s1", "r2", "first"],
+        walked == ["last", "summary", "s2", "r2", "first"],
         "Shift+Tab from First: {walked:?}"
     );
 
@@ -81,6 +81,12 @@ async fn a_radio_group_is_one_stop<D: Driver>(d: &mut D, _route: &str) -> Result
         walked == ["r2", "s1", "last", "first"],
         "Tab from First: {walked:?}"
     );
+    // An unchecked group is entered at its last radio going backwards, as a browser does (4563).
+    let walked = walk(d, 4, true).await?;
+    ensure!(
+        walked == ["last", "s2", "r2", "first"],
+        "Shift+Tab from First: {walked:?}"
+    );
     Ok(())
 }
 
@@ -100,6 +106,11 @@ async fn forms_split_a_radio_name<D: Driver>(d: &mut D, _route: &str) -> Result<
     ensure!(
         walked == ["a2", "b1", "last", "first"],
         "Tab from First: {walked:?}"
+    );
+    let walked = walk(d, 4, true).await?;
+    ensure!(
+        walked == ["last", "b2", "a2", "first"],
+        "Shift+Tab from First: {walked:?}"
     );
     Ok(())
 }
