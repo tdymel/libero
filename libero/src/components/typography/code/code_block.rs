@@ -10,8 +10,8 @@ use crate::{
         accessibility::VisuallyHidden,
         buttons::Copy,
         common::{
-            HtmlTag, Input, Part, States, Variables, attr, base_props, inset_focus_ring_sx,
-            names_itself, parts_enum, variables,
+            COARSE_POINTER, COARSE_TARGET, HtmlTag, Input, Part, States, Variables, attr,
+            base_props, inset_focus_ring_sx, names_itself, parts_enum, variables,
         },
         layout::{Box, BoxStyle, use_box},
     },
@@ -56,6 +56,12 @@ static CODE_BLOCK_HEADER_SX: StaticSx = StaticSx::new(|| {
         .font_family(CODE_FONT_FAMILY.value())
         .font_size(Size::Xs)
         .color(CODE_BLOCK_MUTED_TEXT.value())
+        // Room for the copy button's 44px hit area, which the container's clip would cut.
+        .media(
+            COARSE_POINTER,
+            sx().min_height(format!("calc({COARSE_TARGET} + 1px)"))
+                .padding_right("10px"),
+        )
 });
 
 // No `variant`/`color` on the `Copy`, so these fully control the look.
@@ -87,6 +93,14 @@ static CODE_COPY_BUTTON_FLOATING_SX: StaticSx = StaticSx::new(|| {
         .hover(
             sx().background(CODE_BLOCK_COPY_HOVER_BACKGROUND.value())
                 .color(CODE_BLOCK_COPY_HOVER_TEXT.value()),
+        )
+        // The 44px hit area needs 10px of room on each side, or the container clips it.
+        .media(
+            COARSE_POINTER,
+            sx().top("10px").right(format!(
+                "calc(11px + {})",
+                CODE_SCROLLBAR_WIDTH_VAR.value_or("0px")
+            )),
         )
 });
 
@@ -176,9 +190,9 @@ static CODE_LINE_CONTENT_SX: StaticSx = StaticSx::new(|| {
         .when("copy-space", sx().padding_right(COPY_SPACE))
 });
 
-// The floating copy button's 8px inset and ~26px width, plus a gap: the
-// first line scrolls out from under it.
-const COPY_SPACE: &str = "40px";
+// The floating copy button's inset (11px on a coarse pointer) and ~26px width, plus a
+// gap: the first line scrolls out from under it.
+const COPY_SPACE: &str = "43px";
 
 static CODE_PLAIN_PRE_SX: StaticSx = StaticSx::new(|| {
     sx().display("block")

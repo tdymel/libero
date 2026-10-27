@@ -344,6 +344,13 @@ fn table_sx() -> Sx {
         sx().vertical_align("top").with("overflow-wrap", "anywhere"),
     )
     .selector("& td:last-child code", sx().white_space("normal"))
+    // A phone stacks the description under its name; the header row is then redundant (4705).
+    .media(
+        "(max-width: 30rem)",
+        sx().selector("& thead", sx().display("none"))
+            .selector("& tbody tr", sx().display("block"))
+            .selector("& td", sx().display("block")),
+    )
 }
 
 #[component]

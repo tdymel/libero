@@ -34,9 +34,12 @@ const RULES: &[TokenRule] = &[
     },
     TokenRule {
         name: "keyword",
-        patterns: &[PatternDef::new(
-            r"\b(?:as|async|await|break|const|continue|crate|dyn|else|enum|extern|fn|for|if|impl|in|let|loop|match|mod|move|mut|pub|ref|return|self|Self|static|struct|super|trait|type|unsafe|use|where|while)\b",
-        )],
+        patterns: &[
+            PatternDef::new(
+                r"\b(?:as|async|await|break|const|continue|crate|dyn|else|enum|extern|fn|for|if|impl|in|let|loop|match|mod|move|mut|pub|ref|return|self|Self|static|struct|super|trait|type|unsafe|use|where|while)\b",
+            ),
+            PatternDef::new(r"\b(?:bool|char|f32|f64|[ui](?:8|16|32|64|128|size)|str)\b"),
+        ],
     },
     super::FUNCTION_CALL,
     TokenRule {

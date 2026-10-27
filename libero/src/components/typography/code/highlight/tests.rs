@@ -279,6 +279,19 @@ fn highlight_rust_classifies_keyword_string_comment_and_number() {
 
 #[test]
 #[cfg(feature = "code-lang-rust")]
+fn highlight_rust_primitive_types_are_keywords() {
+    let spans = flat(
+        "let width: u32 = 3; fn f(s: &str) -> bool {}\n",
+        lang("rust"),
+    );
+
+    for primitive in ["u32", "str", "bool"] {
+        assert_span(&spans, primitive, "lsx-tok-keyword");
+    }
+}
+
+#[test]
+#[cfg(feature = "code-lang-rust")]
 fn highlight_rust_string_quotes_share_the_string_class() {
     let spans = flat("\"hi\"\n", lang("rust"));
 
