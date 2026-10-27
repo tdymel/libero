@@ -56,7 +56,8 @@ static TABS_SX: StaticSx = StaticSx::new(|| {
                 // The strip scrolls; a label wider than it wraps (1.4.10).
                 .flex_shrink("0")
                 .max_width("100%")
-                .with("overflow-wrap", "break-word")
+                // A text label is an anonymous flex item: only `anywhere` lowers its min-content.
+                .with("overflow-wrap", "anywhere")
                 .cursor("pointer")
                 // The scrolling strip clips it vertically, so it widens a narrow icon tab only;
                 // a finger gets the height from the tab itself (todo 3596).
@@ -143,9 +144,11 @@ fn vertical_sx() -> crate::sx::Sx {
         )
         .selector(
             "& > [role=\"tablist\"] > [role=\"tab\"]",
+            // The column sizes to its labels: a word breaks only when it must (todo 4589).
             sx().border_bottom("0")
                 .justify_content("flex-start")
-                .text_align("start"),
+                .text_align("start")
+                .with("overflow-wrap", "break-word"),
         )
         .selector(
             "& > [role=\"tabpanel\"]",

@@ -131,7 +131,7 @@ fn typing_fills_the_digital_columns() {
         keyboard::press(page, keyboard::HOME).await.unwrap();
         wait::for_js_true(
             page,
-            &format!("document.querySelector({limited:?}).getAttribute('aria-valuetext') === '09'"),
+            &format!("document.querySelector({limited:?}).getAttribute('aria-valuetext') === \"9 o'clock\""),
             "Home to the first hour inside min",
         )
         .await
