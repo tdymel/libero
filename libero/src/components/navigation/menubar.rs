@@ -10,7 +10,7 @@ use crate::{
         common::{
             HtmlTag, Input, Part, Parts, ROW_HOVER_TINT, ScaleOrCss, States, Variables, base_props,
             disabled_look_sx, forced_on_sx, has_shortcut_modifier, inset_focus_ring_sx, parts_enum,
-            use_identity_keys, use_name_warning, variables,
+            use_label_keys, use_name_warning, variables,
         },
         layout::use_box,
     },
@@ -257,9 +257,10 @@ pub fn Menubar(props: MenubarProps) -> Element {
         "Menubar: empty `aria_label`, so it is announced as just \"menubar\".",
     );
     let bar = use_element();
-    // By label, so a menu keeps its state, focus and tab stop when the list changes.
+    // By label, so a menu keeps its state, focus and tab stop when the list changes;
+    // a rename in place keeps its key, so an open menu stays open (4419).
     let labels: Vec<String> = props.menus.iter().map(|menu| menu.label.clone()).collect();
-    let keys: Rc<[String]> = use_identity_keys(&labels).into();
+    let keys: Rc<[String]> = use_label_keys(&labels).into();
     let current = use_signal(|| None::<String>);
     let typeahead = use_typeahead(TYPEAHEAD_RESET);
     // A tap sends a compatibility `mouseenter` before its click: switching

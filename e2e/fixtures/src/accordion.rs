@@ -16,6 +16,7 @@ pub const ROUTES: Routes = &[
     ("/accordion-pinned", || rsx! { PinnedPage {} }),
     ("/accordion-chevron", || rsx! { ChevronPage {} }),
     ("/accordion-growing", || rsx! { GrowingPage {} }),
+    ("/accordion-insert", || rsx! { InsertPage {} }),
 ];
 
 /// One section always open (todo 4140).
@@ -143,6 +144,50 @@ fn GrowingPage() -> Element {
                 options: options(),
                 panel: |value: String| rsx! { input { id: "field-{value}" } },
             }
+        }
+    }
+}
+
+/// Todo 4419: a section inserted or removed ahead of the open Beta keeps it open and its trigger focused.
+#[component]
+fn InsertPage() -> Element {
+    let mut open = use_signal(|| AccordionOpen::One(Some("Beta".to_string())));
+    let mut options = use_signal(|| {
+        vec![
+            "Alpha".to_string(),
+            "Beta".to_string(),
+            "Gamma".to_string(),
+        ]
+    });
+    rsx! {
+        input {
+            id: "insert",
+            oninput: move |_| {
+                let known = options.read().iter().any(|value| value == "Zero");
+                if known {
+                    options.write().retain(|value| value != "Zero");
+                } else {
+                    options.write().insert(0, "Zero".to_string());
+                }
+            },
+        }
+        input {
+            id: "remove",
+            oninput: move |_| {
+                let known = options.read().iter().any(|value| value == "Alpha");
+                if known {
+                    options.write().retain(|value| value != "Alpha");
+                } else {
+                    options.write().insert(0, "Alpha".to_string());
+                }
+            },
+        }
+        Accordion {
+            id: "steps",
+            open: open(),
+            onchange: move |next| open.set(next),
+            options: options(),
+            panel: |value: String| rsx! { Text { "Body of {value}." } },
         }
     }
 }

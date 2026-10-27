@@ -59,7 +59,8 @@ pub(super) struct MenuLevelProps {
     /// The root's, on every level: ArrowRight in a submenu moves on too (APG menubar).
     onedge: Option<Callback<MenuEdge>>,
     parents: Parents,
-    /// The parent cancels a pending hover, so crossing a sibling keeps this open.
+    /// Cancels every level above's pending hover, so crossing a sibling keeps this open.
+    /// A key pressed here calls it too (4423).
     onpointerenter: Option<Callback<()>>,
     side: Side,
     align: Align,
@@ -178,6 +179,7 @@ pub(super) fn MenuLevel(props: MenuLevelProps) -> Element {
         id: own_id,
         close_all,
         onedge: props.onedge,
+        cancel_above: props.onpointerenter,
         active,
         open_child,
         child_request,
@@ -199,7 +201,13 @@ pub(super) fn MenuLevel(props: MenuLevelProps) -> Element {
         open,
         Duration::from_millis(theme.menu.submenu_delay.into()),
     );
-    let cancel_callback = use_callback(move |()| hover.cancel());
+    let above = props.onpointerenter;
+    let cancel_callback = use_callback(move |()| {
+        hover.cancel();
+        if let Some(above) = above {
+            above.call(());
+        }
+    });
 
     // Per submenu item, its anchor (this scope's) and box (the root's), kept
     // across renders so neither changes under the submenu.

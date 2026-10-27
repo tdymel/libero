@@ -17,6 +17,8 @@ pub(super) struct Level {
     pub(super) id: CopyValue<String>,
     pub(super) close_all: Callback<bool>,
     pub(super) onedge: Option<Callback<MenuEdge>>,
+    /// Cancels the pending hover of every level above; `None` on the root.
+    pub(super) cancel_above: Option<Callback<()>>,
     pub(super) active: Signal<Option<usize>>,
     pub(super) open_child: Signal<Option<usize>>,
     /// Which submenu to focus into, with a counter so asking twice counts.
@@ -133,6 +135,10 @@ impl Level {
         labels: &[Option<String>],
         hover: &HoverDelay,
     ) {
+        // Keys in a submenu: a row above the pointer rests on must not take focus back (4423).
+        if let Some(cancel_above) = self.cancel_above {
+            cancel_above.call(());
+        }
         // Ctrl/Alt/Meta with a navigation key is the browser's chord.
         let navigation = matches!(
             event.key(),

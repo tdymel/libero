@@ -800,6 +800,8 @@ pub(crate) fn use_fixed_sortable(
                     // A flick let go before the measure still lands where it was let go.
                     (Some(measured), Some(commit)) => {
                         session.set(Some(measured));
+                        // A list changed during the measure ends it unmoved (4421).
+                        drop_stale();
                         finish(commit);
                     }
                     (Some(measured), None) => lift(measured),

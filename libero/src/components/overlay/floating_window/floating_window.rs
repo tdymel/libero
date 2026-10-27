@@ -38,6 +38,9 @@ fn clamped(at: f64, size: Option<f64>, viewport: &str) -> String {
     format!("clamp(0px, {at}px, calc({viewport} - {size}px))")
 }
 
+/// Names the window's root, so its owner finds it after the window's scope is gone.
+pub(crate) const WINDOW_MARKER: &str = "data-floating-window";
+
 /// Whether focus is known to be outside `root`. A platform that cannot say
 /// answers `false`, so focus still returns to the trigger.
 fn focus_elsewhere(root: &ElementHandle) -> bool {
@@ -159,6 +162,9 @@ pub(crate) struct FloatingWindowProps {
     /// Where the page had focus, read by `open` in its handler: Blitz cannot
     /// answer the window's first render (todo 671).
     opener: Callback<(), Option<Rc<dyn ElementApi>>>,
+    /// The [`WINDOW_MARKER`] value.
+    #[props(default)]
+    marker: String,
     children: Element,
 }
 
@@ -278,6 +284,7 @@ pub(crate) fn FloatingWindow(props: FloatingWindowProps) -> Element {
         .element(&root)
         .attr("role", "dialog")
         .attr("tabindex", "-1")
+        .attr(WINDOW_MARKER, props.marker.clone())
         .attr(
             "aria-labelledby",
             (aria_label.is_none() && title.is_some()).then(&*title_id),

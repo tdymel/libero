@@ -3,8 +3,8 @@ use std::rc::Rc;
 use dioxus::prelude::*;
 
 use crate::{
-    components::overlay::{FloatingWindow, FloatingWindowOptions},
-    hooks::{FocusReturn, use_focus_return, use_portal},
+    components::overlay::{FloatingWindow, FloatingWindowOptions, WINDOW_MARKER},
+    hooks::{FocusReturn, use_focus_return, use_id, use_portal},
     platform::{ElementApi, document},
 };
 
@@ -104,20 +104,33 @@ pub fn use_floating_window(
     let onclose = use_callback(move |()| handle.close());
     let onmount = use_callback(move |left| focus_left.set(Some(left)));
     let opener = use_callback(move |()| page.peek().clone());
+    // Read by selector at the owner's drop: the window's own scope may be gone by then.
+    let marker = use_id().peek().clone();
+    let drop_marker = marker.clone();
 
     let content = open().then(|| {
         rsx! {
-            FloatingWindow { options, onclose, onmount, opener, {render.call(handle)} }
+            FloatingWindow { options, onclose, onmount, opener, marker, {render.call(handle)} }
         }
     });
     use_portal(content);
 
-    // The owner unmounting takes the window with it: hand focus back (4404).
+    // The owner unmounting takes the window with it: hand focus back (4404), but
+    // only from inside the window, never from a page field being typed in (4420).
     use_drop(move || {
-        if open.try_peek().is_ok_and(|open| *open) {
+        if open.try_peek().is_ok_and(|open| *open) && focus_inside(&drop_marker) {
             focus_return.restore_detached();
         }
     });
 
     handle
+}
+
+/// Whether focus sits in the window marked `marker`; `true` where the renderer cannot tell.
+fn focus_inside(marker: &str) -> bool {
+    let Some(active) = document().and_then(|document| document.active_element()) else {
+        return true;
+    };
+    let selector = format!("[{WINDOW_MARKER}=\"{marker}\"], [{WINDOW_MARKER}=\"{marker}\"] *");
+    active.matches(&selector).unwrap_or(true)
 }

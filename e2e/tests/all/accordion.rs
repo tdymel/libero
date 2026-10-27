@@ -521,6 +521,92 @@ e2e::scenario!(
     ios: skip("958: element identity on the WebView")
 );
 
+/// The trigger whose text is `label`, so an insert ahead does not change which one it is.
+fn trigger_named(label: &str) -> String {
+    format!(
+        "[...document.querySelectorAll('{TRIGGER}')].find(b => b.textContent.trim() === '{label}')"
+    )
+}
+
+/// Beta's trigger has focus and is expanded.
+fn beta_focused_and_open() -> String {
+    let beta = trigger_named("Beta");
+    format!(
+        "(() => {{ const t = {beta}; return !!t && document.activeElement === t && t.getAttribute('aria-expanded') === 'true'; }})()"
+    )
+}
+
+/// Focuses Beta's trigger once it is open, then fires the `input` on `id`, which moves no focus.
+async fn focus_beta_then_fire(page: &Page, id: &str) {
+    page.evaluate_bounded(format!("({}).focus()", trigger_named("Beta")))
+        .await
+        .unwrap();
+    wait::for_js_true(page, &beta_focused_and_open(), "Beta open and focused")
+        .await
+        .unwrap();
+    page.evaluate_bounded(format!(
+        "document.getElementById('{id}').dispatchEvent(new Event('input', {{ bubbles: true }}))"
+    ))
+    .await
+    .unwrap();
+}
+
+/// Todo 4419: a section inserted ahead of the open Beta keeps it open and its trigger focused.
+#[test]
+fn a_section_inserted_ahead_keeps_its_open_state_and_focus() {
+    block_on(async {
+        let fixture = Fixture::open("/accordion-insert", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        focus_beta_then_fire(page, "insert").await;
+        wait::for_js_true(
+            page,
+            &format!("!!{}", trigger_named("Zero")),
+            "Zero's trigger",
+        )
+        .await
+        .unwrap();
+        wait::for_js_true(
+            page,
+            &beta_focused_and_open(),
+            "Beta still open and focused",
+        )
+        .await
+        .unwrap();
+        fixture.console.assert_clean("an inserted section").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
+/// Todo 4419: a section removed ahead of the open Beta keeps it open and its trigger focused.
+#[test]
+fn a_section_removed_ahead_keeps_its_open_state_and_focus() {
+    block_on(async {
+        let fixture = Fixture::open("/accordion-insert", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        focus_beta_then_fire(page, "remove").await;
+        wait::for_js_true(
+            page,
+            &format!("!{}", trigger_named("Alpha")),
+            "Alpha's trigger removed",
+        )
+        .await
+        .unwrap();
+        wait::for_js_true(
+            page,
+            &beta_focused_and_open(),
+            "Beta still open and focused",
+        )
+        .await
+        .unwrap();
+        fixture.console.assert_clean("a removed section").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
 /// Ctrl/Alt/Meta chords are the browser's: no focus move, no toggle.
 #[test]
 fn modifier_chords_go_to_the_browser() {

@@ -44,7 +44,7 @@ pub(crate) use drawer::Drawer;
 #[cfg(feature = "drawer")]
 pub use drawer::DrawerAnchor;
 #[cfg(feature = "floating-window")]
-pub(crate) use floating_window::FloatingWindow;
+pub(crate) use floating_window::{FloatingWindow, WINDOW_MARKER};
 #[cfg(feature = "floating-window")]
 pub use floating_window::{FloatingWindowOptions, FloatingWindowPart, WindowRect};
 #[cfg(feature = "hover-card")]

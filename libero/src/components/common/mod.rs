@@ -76,8 +76,10 @@ pub(crate) use neighbour::neighbour;
 pub use number_value::NumberValue;
 pub(crate) use number_value::decimals;
 pub use option_list::{OptionItem, OptionList, OptionSource};
-#[cfg(any(feature = "accordion", feature = "menubar", feature = "tabs"))]
+#[cfg(any(feature = "accordion", feature = "tabs"))]
 pub(crate) use options::use_identity_keys;
+#[cfg(feature = "menubar")]
+pub(crate) use options::use_label_keys;
 pub use options::{OptionLabel, Options};
 // The derive and the trait share a name and one import, the way serde's do.
 pub use crate::sx::states::{States, states};

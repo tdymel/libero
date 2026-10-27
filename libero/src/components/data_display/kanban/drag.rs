@@ -354,25 +354,29 @@ pub(super) fn use_board_drag(options: BoardDragOptions) -> BoardDrag {
             .map(|list| list.as_ref().map(read))
             .collect();
         let mut columns = vec![Vec::new(); lists.peek().len()];
-        for placed in placed.values() {
+        for (&id, placed) in placed.iter() {
             if let Some(column) = columns.get_mut(placed.column) {
-                column.push((placed.index, placed.element.clone()));
+                column.push((placed.index, id, placed.element.clone()));
             }
         }
         // Each column's mounted cards in order; a filtered column's indices may skip (2517).
         for column in &mut columns {
-            column.sort_by_key(|(index, _)| *index);
+            column.sort_by_key(|(index, _, _)| *index);
         }
         let indices: Vec<Vec<usize>> = columns
             .iter()
-            .map(|column| column.iter().map(|(index, _)| *index).collect())
+            .map(|column| column.iter().map(|(index, _, _)| *index).collect())
+            .collect();
+        let ids: Vec<Vec<usize>> = columns
+            .iter()
+            .map(|column| column.iter().map(|(_, id, _)| *id).collect())
             .collect();
         let card_reads: Option<Vec<Vec<Reading>>> = columns
             .iter()
             .map(|column| {
                 column
                     .iter()
-                    .map(|(_, node)| node.as_ref().map(read))
+                    .map(|(_, _, node)| node.as_ref().map(read))
                     .collect()
             })
             .collect();
@@ -430,7 +434,7 @@ pub(super) fn use_board_drag(options: BoardDragOptions) -> BoardDrag {
                 y: (0.0, most_y),
             };
             let mut lanes = Vec::with_capacity(lanes_read.len());
-            for ((list, cards), indices) in lanes_read.into_iter().zip(indices) {
+            for (((list, cards), indices), ids) in lanes_read.into_iter().zip(indices).zip(ids) {
                 let (Some(list), Some(cards)) = (list, cards.into_iter().collect()) else {
                     started.call(None);
                     return;
@@ -439,6 +443,7 @@ pub(super) fn use_board_drag(options: BoardDragOptions) -> BoardDrag {
                     list,
                     cards,
                     indices,
+                    ids,
                 });
             }
             let Some(from) = lanes
@@ -484,21 +489,38 @@ pub(super) fn use_board_drag(options: BoardDragOptions) -> BoardDrag {
             .filter(|placed| placed.column == from.0)
             .map(|placed| placed.index);
         // Let go off the board, or the card left its column meanwhile, it goes back.
-        let landed = commit
+        let aimed = commit
             .then(|| lanes.target(dx, dy))
             .flatten()
             .filter(|_| now.is_some());
-        let to = landed.unwrap_or(from);
+        // The lift measured the slots; the cards shown now place and count them (4424).
+        let shown_in = |column: usize| {
+            let mut shown: Vec<(usize, usize)> = cards
+                .peek()
+                .iter()
+                .filter(|(_, placed)| placed.column == column)
+                .map(|(&id, placed)| (placed.index, id))
+                .collect();
+            shown.sort_unstable();
+            shown
+        };
+        let ids_in = |column: usize| -> Vec<usize> {
+            shown_in(column).into_iter().map(|(_, id)| id).collect()
+        };
+        let lifted_slot = ids_in(from.0).iter().position(|&id| id == ended.id);
+        let from_now = (from.0, lifted_slot.unwrap_or(from.1));
+        let landed = aimed.map(|to| (to.0, lanes.slot_now(to, ended.id, &ids_in(to.0))));
+        let to = landed.unwrap_or(from_now);
         edge.set((0.0, 0.0));
         auto_scroll.stop();
         lifted.set(None);
         travel.set((0.0, 0.0));
         scrolled.set((0.0, 0.0));
         pressed.set(None);
-        let count = lanes.lanes[to.0].cards.len();
+        let count = shown_in(to.0).len();
         let label = &ended.label;
         let said = match (landed.is_some(), to.0 == from.0) {
-            (false, _) => say(words.cancelled, label, from.1, count),
+            (false, _) => say(words.cancelled, label, from_now.1, count),
             (true, true) => say(words.dropped, label, to.1, count),
             (true, false) => {
                 let column = labels
@@ -519,26 +541,21 @@ pub(super) fn use_board_drag(options: BoardDragOptions) -> BoardDrag {
             }
         };
         // A move waits for the render that shows it: the app may refuse it.
-        match to == from {
+        match to == from_now {
             true => announcer.say(said),
             false => pending.set(Some(said)),
         }
         // Slots count the mounted cards; the move and the landing speak `index`.
         let from_index = now.unwrap_or_else(|| lanes.lifted_index());
-        let to_index = match to == from {
+        let to_index = match to == from_now {
             true => from_index,
             false => {
-                let mut shown: Vec<usize> = cards
-                    .peek()
-                    .values()
-                    .filter(|placed| placed.column == to.0)
-                    .map(|placed| placed.index)
-                    .collect();
-                shown.sort_unstable();
+                let shown: Vec<usize> =
+                    shown_in(to.0).into_iter().map(|(index, _)| index).collect();
                 lanes.index_at(to, &shown, from_index)
             }
         };
-        if to != from {
+        if to != from_now {
             landing.set(Some(Landing {
                 column: to.0,
                 index: to_index,
@@ -555,7 +572,11 @@ pub(super) fn use_board_drag(options: BoardDragOptions) -> BoardDrag {
                 to: to_index,
             });
         }
-        let (x, y) = lanes.landing(to);
+        // Measured at the lift: a card that came or went above either slot shifts it a pitch.
+        let (x, y) = lanes.landing(aimed.unwrap_or(from));
+        let (aim, start) = (aimed.map_or(from.1, |aimed| aimed.1), from.1);
+        let shifted = (to.1 as f64 - aim as f64) - (from_now.1 as f64 - start as f64);
+        let y = y + shifted * lanes.pitch();
         let offset = (dx - x, dy - y);
         if offset.0.abs() > 0.5 || offset.1.abs() > 0.5 {
             settle.set(Some(Settle {

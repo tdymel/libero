@@ -34,7 +34,8 @@ const SETTLE: Duration = Duration::from_millis(30);
 enum Kind {
     /// The border box, as `ResizeObserver` reports it.
     Resize(Rc<dyn Fn(Event<ResizeData>)>),
-    /// The scroll size, where a subtree change shows.
+    /// The scroll size, where a subtree change shows, and the children's order,
+    /// where a keyed move shows (a `MutationObserver`'s `childList`, 4422).
     Content(Rc<dyn Fn()>),
     /// The visible share inside a root, as `IntersectionObserver` reports it.
     Intersect(Box<Intersect>),
@@ -68,6 +69,8 @@ struct Watched {
     anchor: NodeHandle,
     node_id: NodeId,
     last: Option<(f32, f32)>,
+    /// [`Kind::Content`]'s direct children at the last check.
+    children: Option<Vec<NodeId>>,
     origin: Origin,
     kind: Kind,
 }
@@ -151,6 +154,7 @@ fn watch(mounted: &Rc<MountedData>, kind: Kind) -> Option<Box<dyn ContentSubscri
         node_id,
         anchor,
         last: None,
+        children: None,
         origin: Origin::here(),
         kind,
     });
@@ -356,7 +360,17 @@ pub(super) fn check(doc: &Doc) {
                 }
                 let (size, border, content) = measure(&base, watched)?;
                 let previous = watched.last.replace(size);
-                if previous == Some(size) {
+                let reordered = match watched.kind {
+                    Kind::Content(_) => {
+                        let now = base
+                            .get_node(watched.node_id)
+                            .map(|node| node.children.to_vec());
+                        let before = std::mem::replace(&mut watched.children, now);
+                        before.is_some() && before != watched.children
+                    }
+                    _ => false,
+                };
+                if previous == Some(size) && !reordered {
                     return None;
                 }
                 let first = previous.is_none();

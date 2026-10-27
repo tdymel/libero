@@ -12,7 +12,32 @@ pub const ROUTES: Routes = &[
     ("/menubar-shrink", || rsx! { MenubarShrinkPage {} }),
     ("/menubar-parts", || rsx! { MenubarPartsPage {} }),
     ("/menubar-labels", || rsx! { MenubarLabelsPage {} }),
+    ("/menubar-rename", || rsx! { MenubarRenamePage {} }),
 ];
+
+/// `#rename`'s input event renames `Inbox (3)` to `Inbox (4)` and back, `#insert`'s puts
+/// `New` first and takes it away: no click, so an open menu stays open through them (4419).
+#[component]
+fn MenubarRenamePage() -> Element {
+    let mut unread = use_signal(|| 3);
+    let mut inserted = use_signal(|| false);
+    let item = |name: &str| -> MenuEntry { MenuItem::new(name).onselect(|_| {}).into() };
+    let mut menus = vec![
+        MenubarMenu::new("File", vec![item("Save")]),
+        MenubarMenu::new(format!("Inbox ({unread})"), vec![item("Read"), item("Archive")]),
+    ];
+    if inserted() {
+        menus.insert(0, MenubarMenu::new("New", vec![item("Message")]));
+    }
+
+    rsx! {
+        Flex { direction: "column", gap: "md", max_width: "420px",
+            Menubar { aria_label: "Mail", menus }
+            input { id: "rename", oninput: move |_| unread.set(if unread() == 3 { 4 } else { 3 }) }
+            input { id: "insert", oninput: move |_| inserted.toggle() }
+        }
+    }
+}
 
 /// `F2` on the bar drops `File`; the menus are keyed by label, so focus stays on `Edit`.
 #[component]

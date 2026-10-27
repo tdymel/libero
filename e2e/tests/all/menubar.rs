@@ -158,6 +158,56 @@ async fn focus_follows_the_label<D: Driver>(d: &mut D, _route: &str) -> Result<(
     eventually_text(d, tabbable, "Edit", "F2 dropped File").await
 }
 
+/// Todo 4419: an open menu renamed in place, or with a menu put first and taken away,
+/// stays open with focus inside it.
+#[test]
+fn an_open_menu_stays_open_through_a_rename_an_insert_and_a_removal() {
+    block_on(async {
+        let fixture = Fixture::open("/menubar-rename", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        let fire = |id: &str| {
+            format!(
+                "document.getElementById('{id}').dispatchEvent(new Event('input', {{ bubbles: true }}))"
+            )
+        };
+        // `count` triggers, so a check run before the change's render cannot pass.
+        let open = |label: &str, count: usize| {
+            format!(
+                "(() => {{ const all = [...document.querySelectorAll({TRIGGERS:?})]; \
+                 const t = all.find(t => t.textContent.trim() === {label:?}); \
+                 return all.length === {count} && !!t && t.getAttribute('aria-expanded') === 'true' \
+                 && !!document.activeElement?.closest('[role=menu]') \
+                 && document.activeElement.textContent.trim() === 'Read'; }})()"
+            )
+        };
+        page.evaluate_bounded(format!("document.querySelector({:?}).focus()", trigger(1)))
+            .await
+            .unwrap();
+        keyboard::press(page, keyboard::ARROW_DOWN).await.unwrap();
+        wait::for_js_true(page, &open("Inbox (3)", 2), "Inbox open")
+            .await
+            .unwrap();
+        for (id, label, count, after) in [
+            ("rename", "Inbox (4)", 2, "the rename"),
+            ("insert", "Inbox (4)", 3, "New put first"),
+            ("insert", "Inbox (4)", 2, "New taken away"),
+        ] {
+            page.evaluate_bounded(fire(id)).await.unwrap();
+            wait::for_js_true(
+                page,
+                &open(label, count),
+                &format!("Inbox open after {after}"),
+            )
+            .await
+            .unwrap();
+        }
+        fixture.console.assert_clean("a renamed open menu").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
 e2e::scenario!(
     focus_follows_the_label_when_an_earlier_menu_is_dropped,
     "/menubar-labels",

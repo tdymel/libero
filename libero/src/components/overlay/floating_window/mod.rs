@@ -8,5 +8,5 @@ mod styles;
 mod tests;
 mod title_bar;
 
-pub(crate) use floating_window::FloatingWindow;
+pub(crate) use floating_window::{FloatingWindow, WINDOW_MARKER};
 pub use options::{FloatingWindowOptions, FloatingWindowPart, WindowRect};

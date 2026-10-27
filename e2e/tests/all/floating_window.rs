@@ -614,6 +614,56 @@ fn an_unmounted_owner_hands_focus_back() {
     });
 }
 
+/// Todo 4420: an owner unmounted while focus is in a page field leaves focus there.
+#[test]
+fn an_unmounted_owner_keeps_focus_in_a_page_field() {
+    block_on(async {
+        let fixture = Fixture::open("/floating-window-owner", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        activate(page, "#show-owner").await;
+        wait::for_visible(page, DIALOG).await.unwrap();
+        page.evaluate_bounded("document.getElementById('page-field').focus()")
+            .await
+            .unwrap();
+        keyboard::type_text(page, "a").await.unwrap();
+        wait_for(
+            page,
+            "document.getElementById('page-field').value === 'a' && document.activeElement?.id === 'page-field'",
+            "the page field to hold the typed character",
+        )
+        .await;
+        page.evaluate_bounded(
+            "document.getElementById('drop-owner').dispatchEvent(new Event('change', { bubbles: true }))",
+        )
+        .await
+        .unwrap();
+        wait_for(
+            page,
+            "!document.querySelector('[role=dialog]') && !document.getElementById('remove-owner')",
+            "the owner and its window to be gone",
+        )
+        .await;
+        e2e::clock::settle(page).await.unwrap();
+        let active: String = page
+            .evaluate_bounded("document.activeElement?.id ?? ''")
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        assert_eq!(
+            active, "page-field",
+            "focus left the page field when the owner unmounted"
+        );
+        fixture
+            .console
+            .assert_clean("an unmounted owner beside a page field")
+            .unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
 /// A title with no break opportunity wraps in the title bar at 320px instead
 /// of being clipped by the window (1.4.10).
 #[test]

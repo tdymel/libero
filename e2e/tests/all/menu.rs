@@ -478,6 +478,61 @@ fn keys_and_a_close_drop_a_pending_hover_open() {
     });
 }
 
+/// Todo 4423: a key in a submenu drops the pending hover of the level above, so the row
+/// the pointer rests on neither takes focus nor closes the submenu.
+#[test]
+fn a_key_in_a_submenu_drops_the_pending_hover_above() {
+    const SHARE: &str = "[role=menuitem][aria-haspopup=menu]";
+    const SAVE: &str = "[role=menu] [data-menu-index=\"2\"]";
+    const SUBMENU_DELAY: u32 = 150;
+    block_on(async {
+        let fixture = Fixture::open("/menu", Viewport::Desktop).await.unwrap();
+        let page = &fixture.page;
+        let focus_on =
+            |text: &str| format!("document.activeElement?.textContent.trim() === '{text}'");
+        let expanded =
+            format!("document.querySelector('{SHARE}')?.getAttribute('aria-expanded') === 'true'");
+        let outcome = async {
+            e2e::clock::hold(page, &[SUBMENU_DELAY]).await?;
+            pointer::click(page, TRIGGER).await?;
+            wait::for_js_true(page, &focus_on("Cut"), "focus on Cut").await?;
+            pointer::hover(page, SHARE).await?;
+            wait::for_js_true(page, &focus_on("Share"), "the hover to focus Share").await?;
+            keyboard::press(page, keyboard::ARROW_RIGHT).await?;
+            wait::for_js_true(page, &focus_on("Email"), "ArrowRight into the submenu").await?;
+            anyhow::ensure!(
+                page.evaluate_bounded(format!(
+                    "document.querySelector({SAVE:?})?.textContent.trim() === 'Save'"
+                ))
+                .await?
+                .into_value::<bool>()?,
+                "row 2 is not Save"
+            );
+            // Resting on Save schedules focusing it and closing Share's submenu.
+            pointer::hover(page, SAVE).await?;
+            painted(page).await?;
+            keyboard::press(page, keyboard::ARROW_DOWN).await?;
+            painted(page).await?;
+            page.evaluate_bounded(format!("window.__heldClock.fireAll({SUBMENU_DELAY})"))
+                .await?;
+            painted(page).await?;
+            anyhow::ensure!(
+                page.evaluate_bounded(format!("{} && {expanded}", focus_on("Email")))
+                    .await?
+                    .into_value::<bool>()?,
+                "the hover above took focus to Save or closed the submenu"
+            );
+            Ok::<_, anyhow::Error>(())
+        }
+        .await;
+        let console = fixture.console.assert_clean("a pending hover above");
+
+        fixture.close().await.unwrap();
+        outcome.unwrap();
+        console.unwrap();
+    });
+}
+
 /// `parts` reaches the labels on the submenu level too, `sx` its box.
 #[test]
 fn parts_and_sx_style_every_level() {

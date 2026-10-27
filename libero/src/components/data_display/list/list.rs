@@ -8,7 +8,7 @@ use crate::{
         common::{HtmlTag, Input, States, base_props},
         layout::use_box,
     },
-    hooks::{ElementHandle, use_element, use_theme},
+    hooks::{ElementHandle, use_content_changes, use_element, use_theme},
     platform::ElementApi,
     sx::{StaticSx, sx},
     theme::{ListDefaults, Size},
@@ -114,16 +114,18 @@ pub(super) fn order_id() -> u64 {
     NEXT.fetch_add(1, Ordering::Relaxed)
 }
 
-/// Native only: after each render, and each item mount or drop, sorts the items as the
-/// DOM has them. Mount order misses a keyed insert or move.
-fn use_dom_order(context: ListContext, element: ElementHandle) {
+/// Native only: after each render, each item mount or drop and each change to its
+/// children, sorts the items as the DOM has them. Mount order misses a keyed insert or move.
+fn use_dom_order(context: ListContext, element: ElementHandle, ordered: bool) {
     let mut renders = use_hook(|| CopyValue::new(0_u64));
     if NATIVE {
         *renders.write() += 1;
     }
     let renders = *renders.peek();
+    // A keyed move inside a child component renders no list (4422).
+    let changes = use_content_changes(element, NATIVE && ordered).count;
     use_effect(use_reactive!(|(renders,)| {
-        let _ = renders;
+        let _ = (renders, changes());
         let ListContext {
             numbering,
             mut items,
@@ -185,7 +187,7 @@ pub fn List(props: ListProps) -> Element {
         version: Signal::new(0),
     });
     let element = use_element();
-    use_dom_order(context, element);
+    use_dom_order(context, element, props.ordered);
     // Only a hoisted or absent icon skips the write: `VNode` compares by `Rc`
     // pointer, so an inline `rsx!` icon is unequal and wakes the items every render.
     if *context.icon.peek() != props.icon {

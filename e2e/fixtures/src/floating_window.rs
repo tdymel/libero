@@ -51,11 +51,14 @@ fn TooltipWindowPage() -> Element {
 }
 
 /// Todo 4404: the window's owner unmounts while it is open and focused.
+/// Todo 4420: `#drop-owner` unmounts it from outside, so focus can stay in `#page-field`.
 #[component]
 fn OwnerWindowPage() -> Element {
     let mut owned = use_signal(|| false);
     rsx! {
         Button { id: "show-owner", variant: "outlined", onclick: move |_| owned.set(true), "Owner" }
+        input { id: "page-field", r#type: "text", "aria-label": "Page field" }
+        input { id: "drop-owner", r#type: "checkbox", onchange: move |_| owned.set(false) }
         if owned() {
             WindowOwner { onremove: move |()| owned.set(false) }
         }

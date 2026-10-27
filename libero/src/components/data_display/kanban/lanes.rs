@@ -22,12 +22,13 @@ impl Rect {
     }
 }
 
-/// One column: its card list and its mounted cards in order, with each one's `index`.
+/// One column: its card list and its mounted cards in order, with each one's `index` and board id.
 #[derive(Clone, Debug, PartialEq)]
 pub(super) struct Lane {
     pub(super) list: Rect,
     pub(super) cards: Vec<Rect>,
     pub(super) indices: Vec<usize>,
+    pub(super) ids: Vec<usize>,
 }
 
 impl Lane {
@@ -87,8 +88,34 @@ impl Lanes {
             .unwrap_or(0.0)
     }
 
+    /// Slot `target` of the lift, read against `now`, the ids its column shows at the drop (the
+    /// lifted card's included in its own): the card it lands before keeps it, else the one after (4424).
+    pub(super) fn slot_now(&self, target: (usize, usize), lifted: usize, now: &[usize]) -> usize {
+        let (column, to) = target;
+        let then: Vec<usize> = self.lanes.get(column).map_or_else(Vec::new, |lane| {
+            lane.ids
+                .iter()
+                .copied()
+                .filter(|&id| id != lifted)
+                .collect()
+        });
+        let rest: Vec<usize> = now.iter().copied().filter(|&id| id != lifted).collect();
+        let at = |id: &usize| rest.iter().position(|now| now == id);
+        let split = to.min(then.len());
+        then[split..]
+            .iter()
+            .find_map(at)
+            .or_else(|| {
+                then[..split]
+                    .iter()
+                    .rev()
+                    .find_map(|id| at(id).map(|at| at + 1))
+            })
+            .unwrap_or(to.min(rest.len()))
+    }
+
     /// How far the cards step aside for the dragged one.
-    fn pitch(&self) -> f64 {
+    pub(super) fn pitch(&self) -> f64 {
         self.own().height + self.gap()
     }
 
@@ -204,6 +231,8 @@ mod tests {
             },
             cards: (0..count).map(|at| rect(x, at as f64 * 50.0)).collect(),
             indices: (0..count).collect(),
+            // Unique on the board: column 0's 0, 1, 2 and column 1's 120.
+            ids: (0..count).map(|at| x as usize + at).collect(),
         };
         Lanes {
             lanes: vec![lane(0.0, 3), lane(120.0, 1), lane(240.0, 0)],
@@ -316,6 +345,34 @@ mod tests {
             lanes.index_at((1, 1), &lanes.lanes[1].indices, lanes.lifted_index()),
             6
         );
+    }
+
+    /// 4399: the indices the column shows at the drop count, not those measured at the lift.
+    #[test]
+    fn a_drop_lands_by_the_indices_shown_now_not_at_the_lift() {
+        let mut lanes = board(0, 1);
+        lanes.lanes[1].indices = vec![5];
+        // Card 8 arrived during the drag: slot 1 lands just before it, not after 5.
+        assert_eq!(lanes.index_at((1, 1), &[5, 8], lanes.lifted_index()), 8);
+        // Card 5 left: the slot after it is the end of what is shown.
+        assert_eq!(lanes.index_at((1, 1), &[2], lanes.lifted_index()), 3);
+    }
+
+    /// 4424: a card added or removed during the drag keeps the landing beside the same card.
+    #[test]
+    fn a_slot_follows_its_neighbour_through_a_change_during_the_drag() {
+        let lanes = board(0, 1);
+        // Column 1 showed card 120; card 99 arrived above it.
+        assert_eq!(lanes.slot_now((1, 0), 1, &[99, 120]), 1);
+        assert_eq!(lanes.slot_now((1, 1), 1, &[99, 120]), 2);
+        // Column 2 was empty and still is.
+        assert_eq!(lanes.slot_now((2, 0), 1, &[]), 0);
+        // In its own column (0, 1, 2 with 1 lifted), card 0 left: slot 2 is after card 2 still.
+        assert_eq!(lanes.slot_now((0, 2), 1, &[1, 2]), 1);
+        assert_eq!(lanes.slot_now((0, 1), 1, &[1, 2]), 0);
+        // Its neighbour gone, it falls to the card before.
+        assert_eq!(lanes.slot_now((1, 0), 1, &[]), 0);
+        assert_eq!(lanes.slot_now((0, 2), 1, &[0, 1]), 1);
     }
 
     #[test]

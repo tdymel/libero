@@ -189,3 +189,27 @@ e2e::scenario!(
     a_keyed_insert_renumbers,
     web: skip("the browser numbers the items itself; no inline marker to read")
 );
+
+/// Todo 4422: a keyed move made inside a child component renumbers in DOM order on Blitz.
+async fn a_keyed_move_in_a_child_renumbers<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    eventually(d, "1, 2, 3 at first", async |d| {
+        Ok(markers(d).await? == ["1. ", "2. ", "3. "])
+    })
+    .await?;
+    d.click("#swap").await?;
+    eventually(d, "C first after the swap", async |d| {
+        Ok(d.text("#keyed > li").await?.trim().starts_with('C'))
+    })
+    .await?;
+    eventually(d, "1, 2, 3 in DOM order after the swap", async |d| {
+        Ok(markers(d).await? == ["1. ", "2. ", "3. "])
+    })
+    .await
+}
+
+e2e::scenario!(
+    a_keyed_move_in_a_child_component_renumbers_in_dom_order,
+    "/list/keyed-child",
+    a_keyed_move_in_a_child_renumbers,
+    web: skip("the browser numbers the items itself; no inline marker to read")
+);

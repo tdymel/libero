@@ -23,6 +23,7 @@ pub const ROUTES: Routes = &[
     ("/tabs-sm", || rsx! { TabsSmPage {} }),
     ("/tabs-vertical", || rsx! { TabsVerticalPage {} }),
     ("/tabs-shrinking", || rsx! { TabsShrinkingPage {} }),
+    ("/tabs-insert", || rsx! { TabsInsertPage {} }),
 ];
 
 /// Vertical tabs: a column on the start side, moved by Up and Down.
@@ -334,6 +335,53 @@ fn TabsShrinkingPage() -> Element {
             Tabs {
                 aria_label: "Settings",
                 activation: TabsActivation::Manual,
+                value: section(),
+                onchange: move |next| section.set(next),
+                options: names(),
+                panel: |s: String| rsx! { Text { "panel for {s}" } },
+            }
+        }
+    }
+}
+
+/// Todo 4419: a tab inserted or removed ahead of the focused Two keeps its focus and selection.
+#[component]
+fn TabsInsertPage() -> Element {
+    let mut names = use_signal(|| {
+        vec![
+            "One".to_string(),
+            "Two".to_string(),
+            "Three".to_string(),
+        ]
+    });
+    let mut section = use_signal(|| "Two".to_string());
+
+    rsx! {
+        Flex { direction: "column", gap: "md", max_width: "420px",
+            input {
+                id: "insert",
+                oninput: move |_| {
+                    let known = names.read().iter().any(|name| name == "Zero");
+                    if known {
+                        names.write().retain(|name| name != "Zero");
+                    } else {
+                        names.write().insert(0, "Zero".to_string());
+                    }
+                },
+            }
+            input {
+                id: "remove",
+                oninput: move |_| {
+                    let known = names.read().iter().any(|name| name == "One");
+                    if known {
+                        names.write().retain(|name| name != "One");
+                    } else {
+                        names.write().insert(0, "One".to_string());
+                    }
+                },
+            }
+            Tabs {
+                aria_label: "Settings",
                 value: section(),
                 onchange: move |next| section.set(next),
                 options: names(),

@@ -1,6 +1,7 @@
 //! `Tabs`: the roving-tabindex archetype's first consumer.
 
 use anyhow::Result;
+use chromiumoxide::Page;
 use chromiumoxide::cdp::browser_protocol::emulation::SetDeviceMetricsOverrideParams;
 use e2e::archetypes::{Orientation, RovingTabindex, reset_tab_position};
 use e2e::browser::block_on;
@@ -158,6 +159,93 @@ e2e::scenario!(
     android: skip("958: element identity on the WebView"),
     desktop: skip("958: element identity on the WebView")
 );
+
+const TWO: &str = "[role=tab][aria-label=Two]";
+const ONE: &str = "[role=tab][aria-label=One]";
+const ZERO: &str = "[role=tab][aria-label=Zero]";
+
+/// True when Two has focus and is selected, so a tab that took its place fails it.
+fn two_focused_and_selected() -> String {
+    format!(
+        "(() => {{ const t = document.querySelector({TWO:?}); \
+         return !!t && document.activeElement === t && t.getAttribute('aria-selected') === 'true'; }})()"
+    )
+}
+
+/// Focuses Two once it is selected, then fires the `input` on `id`, which moves no focus.
+async fn focus_two_then_fire(page: &Page, id: &str) {
+    page.evaluate_bounded(format!("document.querySelector({TWO:?}).focus()"))
+        .await
+        .unwrap();
+    wait::for_js_true(
+        page,
+        &two_focused_and_selected(),
+        "Two focused and selected",
+    )
+    .await
+    .unwrap();
+    page.evaluate_bounded(format!(
+        "document.getElementById('{id}').dispatchEvent(new Event('input', {{ bubbles: true }}))"
+    ))
+    .await
+    .unwrap();
+}
+
+/// Todo 4419: a tab inserted ahead of the focused Two keeps its focus and selection.
+#[test]
+fn a_tab_inserted_ahead_keeps_its_focus_and_selection() {
+    block_on(async {
+        let fixture = Fixture::open("/tabs-insert", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        focus_two_then_fire(page, "insert").await;
+        wait::for_js_true(
+            page,
+            &format!("!!document.querySelector({ZERO:?})"),
+            "Zero inserted",
+        )
+        .await
+        .unwrap();
+        wait::for_js_true(
+            page,
+            &two_focused_and_selected(),
+            "Two keeps its focus and selection",
+        )
+        .await
+        .unwrap();
+        fixture.console.assert_clean("an inserted tab").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
+/// Todo 4419: a tab removed ahead of the focused Two keeps its focus and selection.
+#[test]
+fn a_tab_removed_ahead_keeps_its_focus_and_selection() {
+    block_on(async {
+        let fixture = Fixture::open("/tabs-insert", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        focus_two_then_fire(page, "remove").await;
+        wait::for_js_true(
+            page,
+            &format!("!document.querySelector({ONE:?})"),
+            "One removed",
+        )
+        .await
+        .unwrap();
+        wait::for_js_true(
+            page,
+            &two_focused_and_selected(),
+            "Two keeps its focus and selection",
+        )
+        .await
+        .unwrap();
+        fixture.console.assert_clean("a removed tab").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
 
 /// Forced colours paint every transparent underline, so each tab looked
 /// selected (todo 500). The selected one must keep a line the others lack.

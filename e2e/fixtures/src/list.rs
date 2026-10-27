@@ -56,7 +56,29 @@ pub const ROUTES: Routes = &[
     ),
     // Todo 4401: a keyed insert and a reversal renumber in DOM order, not mount order (Blitz).
     ("/list/keyed-insert", || rsx! { KeyedInsertPage {} }),
+    // Todo 4422: a keyed move inside a child component renders no List (Blitz).
+    ("/list/keyed-child", || rsx! { KeyedChildPage {} }),
 ];
+
+/// `#swap` writes a signal only `Rows` reads: neither the page nor the `List` renders.
+#[component]
+fn KeyedChildPage() -> Element {
+    let mut labels = use_context_provider(|| Signal::new(vec!["A", "B", "C"]));
+    rsx! {
+        button { id: "swap", onclick: move |_| labels.write().reverse(), "Swap" }
+        List { id: "keyed", ordered: true, Rows {} }
+    }
+}
+
+#[component]
+fn Rows() -> Element {
+    let labels = use_context::<Signal<Vec<&'static str>>>();
+    rsx! {
+        for label in labels() {
+            ListItem { key: "{label}", "{label}" }
+        }
+    }
+}
 
 #[component]
 fn KeyedInsertPage() -> Element {
