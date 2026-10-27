@@ -134,6 +134,7 @@ mod table_filter;
 mod table_fixture;
 mod table_grid;
 mod table_groups;
+mod table_news;
 mod table_paging;
 mod table_pin;
 mod table_reorder;

@@ -28,6 +28,7 @@ table "Fruit"
       StaticText "Grape"
     cell "3"
       StaticText "3"
+status [atomic] [live=polite]
 LabelText
   StaticText "Rows per page"
 combobox "Rows per page" = 3 [expanded=false] [haspopup=listbox]

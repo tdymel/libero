@@ -163,7 +163,7 @@ pub(super) fn footer_row(
             let cell = cells.get_mut(index).and_then(Option::take);
             rsx! {
                 td {
-                    key: "{index}",
+                    key: "{headers[index].key}",
                     "data-align": align_attr(headers[index].align),
                     "data-pin": pin.map(|pin| pin.side.as_str()),
                     "data-pin-edge": pin.filter(|pin| pin.edge).map(|_| true),

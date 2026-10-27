@@ -61,13 +61,37 @@ impl Rect {
 /// What a drop needs, refreshed by the table each render.
 #[derive(Clone, Default, PartialEq)]
 pub(super) struct DropPlan {
-    /// Every header in its current rank, as `oncolumnorderchange` lists them.
-    pub ranked: Vec<String>,
-    /// The shown, unpinned columns in display order, by header index.
+    /// Every column's key and header in its current rank, as `oncolumnorderchange` lists them.
+    pub ranked: Vec<(String, String)>,
+    /// The shown, unpinned columns in display order: header index and key.
     pub unpinned: Vec<(usize, String)>,
     /// The shown columns pinned before them, and all shown: a drop says its place.
     pub lead: usize,
     pub shown: usize,
+}
+
+impl DropPlan {
+    /// Column `key` dropped at gap `gap` of the unpinned keys `over`: the header order and
+    /// its place among the shown columns from 1, as the menu's Move says it.
+    fn drop(&self, over: &[String], key: &str, gap: usize) -> Option<(Vec<String>, Option<usize>)> {
+        let keys: Vec<String> = self.ranked.iter().map(|(key, _)| key.clone()).collect();
+        let next = dropped(&keys, over, key, gap)?;
+        let place = next
+            .iter()
+            .filter(|next| self.unpinned.iter().any(|(_, shown)| shown == *next))
+            .position(|next| next == key)
+            .map(|at| self.lead + at + 1);
+        let headers = next
+            .iter()
+            .filter_map(|next| {
+                self.ranked
+                    .iter()
+                    .find(|(ranked, _)| ranked == next)
+                    .map(|(_, header)| header.clone())
+            })
+            .collect();
+        Some((headers, place))
+    }
 }
 
 /// A drag under way: the measured layout, once read, and the pointer.
@@ -144,7 +168,7 @@ pub(super) struct ColumnDrag {
     pub plan: CopyValue<DropPlan>,
     pub table: ElementHandle,
     pub region: ElementHandle,
-    /// The header cells' boxes by header, owned by the table: every grip reads them all.
+    /// The header cells' boxes by column key, owned by the table: every grip reads them all.
     boxes: CopyValue<BTreeMap<String, ElementHandle>>,
     owner: ScopeId,
     announcer: Announcer,
@@ -202,12 +226,18 @@ fn read_rect(
 /// the drop line while it drags. Pointer only: the column menu's Move left and
 /// Move right are the keyboard and drag-free way (WCAG 2.5.7).
 #[component]
-pub(super) fn ColumnDragGrip(index: usize, header: String, drag: ColumnDrag) -> Element {
-    // Fills the header cell, to measure it. Kept per header, a hidden column's unread.
+pub(super) fn ColumnDragGrip(
+    index: usize,
+    header: String,
+    /// The column's key: two columns may share a header.
+    column: String,
+    drag: ColumnDrag,
+) -> Element {
+    // Fills the header cell, to measure it. Kept per column, a hidden column's unread.
     let mut boxes = drag.boxes;
     let cell = *boxes
         .write()
-        .entry(header.clone())
+        .entry(column.clone())
         .or_insert_with(|| ElementHandle::new_in_scope(drag.owner));
     let labels = use_localization().table;
     // The unpinned columns the drag measured its gaps over: a column the host adds or
@@ -260,17 +290,10 @@ pub(super) fn ColumnDragGrip(index: usize, header: String, drag: ColumnDrag) -> 
     let mine = use_memo(move || dragging().filter(|active| active.grip == scope));
     let ours = mine.read().is_some();
     let _ = use_escape_dismiss(ours, true, cancel);
-    let end_header = header.clone();
+    let (end_header, end_key) = (header.clone(), column.clone());
     let drop_at = use_callback(move |gap: usize| {
         let plan = drag.plan.peek();
-        let names = measured_over.peek().clone();
-        if let Some(next) = dropped(&plan.ranked, &names, &end_header, gap) {
-            // Its place among the shown columns, as the menu's Move says it.
-            let place = next
-                .iter()
-                .filter(|header| plan.unpinned.iter().any(|(_, shown)| shown == *header))
-                .position(|header| *header == end_header)
-                .map(|at| plan.lead + at + 1);
+        if let Some((next, place)) = plan.drop(&measured_over.peek(), &end_key, gap) {
             drag.order.set(next);
             if let Some(place) = place {
                 drag.announcer
@@ -284,7 +307,7 @@ pub(super) fn ColumnDragGrip(index: usize, header: String, drag: ColumnDrag) -> 
             cancel.call(());
         }
     });
-    let header_start = header.clone();
+    let key_start = column.clone();
     let options = DragOptions {
         capture: grip,
         onstart: Callback::new(move |start: DragStart| {
@@ -294,10 +317,10 @@ pub(super) fn ColumnDragGrip(index: usize, header: String, drag: ColumnDrag) -> 
             let columns: Vec<_> = plan
                 .unpinned
                 .iter()
-                .filter_map(|(_, name)| boxes.get(name).map(|element| read_rect(element)))
+                .filter_map(|(_, key)| boxes.get(key).map(|element| read_rect(element)))
                 .collect();
-            measured_over.set(plan.unpinned.iter().map(|(_, name)| name.clone()).collect());
-            let Some(own) = boxes.get(&header_start).map(|element| read_rect(element)) else {
+            measured_over.set(plan.unpinned.iter().map(|(_, key)| key.clone()).collect());
+            let Some(own) = boxes.get(&key_start).map(|element| read_rect(element)) else {
                 start.cancel.call(());
                 return;
             };
@@ -472,6 +495,51 @@ mod tests {
             vec![120.0, 70.0, 0.0]
         );
         assert!(gap_edges(&[]).is_empty());
+    }
+
+    fn plan(columns: &[(&str, &str)], lead: usize) -> DropPlan {
+        let ranked: Vec<(String, String)> = columns
+            .iter()
+            .map(|(key, header)| (key.to_string(), header.to_string()))
+            .collect();
+        DropPlan {
+            unpinned: ranked
+                .iter()
+                .enumerate()
+                .map(|(index, (key, _))| (index, key.clone()))
+                .collect(),
+            shown: lead + ranked.len(),
+            ranked,
+            lead,
+        }
+    }
+
+    fn keys(plan: &DropPlan) -> Vec<String> {
+        plan.unpinned.iter().map(|(_, key)| key.clone()).collect()
+    }
+
+    /// 4409: a drop says the column's place among all shown, after the pinned lead.
+    #[test]
+    fn a_drop_names_its_place_after_the_pinned_lead() {
+        let plan = plan(&[("A", "A"), ("B", "B"), ("C", "C")], 1);
+
+        let (order, place) = plan.drop(&keys(&plan), "A", 3).unwrap();
+        assert_eq!(order, ["B", "C", "A"]);
+        assert_eq!(place, Some(4));
+        assert_eq!(plan.drop(&keys(&plan), "A", 0), None);
+    }
+
+    /// 4417: two columns titled alike move by key, the other staying put.
+    #[test]
+    fn a_repeated_header_drops_by_its_key() {
+        let plan = plan(&[("Name", "Name"), ("Age", "Age"), ("Name-1", "Name")], 0);
+
+        let (order, place) = plan.drop(&keys(&plan), "Name-1", 1).unwrap();
+        assert_eq!(order, ["Name", "Name", "Age"]);
+        assert_eq!(place, Some(2));
+        let (order, place) = plan.drop(&keys(&plan), "Name", 2).unwrap();
+        assert_eq!(order, ["Age", "Name", "Name"]);
+        assert_eq!(place, Some(2));
     }
 
     #[test]

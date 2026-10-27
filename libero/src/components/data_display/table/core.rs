@@ -302,43 +302,52 @@ pub(super) fn next_sort(
 #[derive(Clone, Copy, PartialEq)]
 pub(super) struct UserSort {
     slice: StateSlice<Vec<TableSort>>,
-    /// The sort the last pick asked for; a controlled host may refuse it.
-    expected: CopyValue<Option<Vec<TableSort>>>,
+    announcer: Announcer,
+    labels: TableLabels,
 }
 
 impl UserSort {
-    pub fn set(mut self, next: Vec<TableSort>) {
-        if self.slice.peek() != next {
-            self.expected.set(Some(next.clone()));
-            self.slice.set(next);
-        }
-    }
-}
-
-pub(super) fn use_user_sort(
-    slice: StateSlice<Vec<TableSort>>,
-    announcer: Announcer,
-    labels: TableLabels,
-) -> UserSort {
-    let mut expected = use_hook(|| CopyValue::new(None::<Vec<TableSort>>));
-    let mut last = use_hook(|| CopyValue::new(slice.peek()));
-    use_effect(move || {
-        let now = slice.read();
-        let before = std::mem::replace(&mut *last.write(), now.clone());
-        if expected.peek().as_ref() != Some(&now) {
+    /// Said once the event's renders are done, if the slice then holds the pick: a controlled
+    /// host may refuse it, and a refused pick is never said later.
+    pub fn set(self, next: Vec<TableSort>) {
+        let before = self.slice.peek();
+        if before == next {
             return;
         }
-        expected.set(None);
-        if let Some((column, direction)) = sort_change(&before, &now) {
-            let said = match direction {
-                Some(SortDirection::Ascending) => labels.column_sorted_ascending,
-                Some(SortDirection::Descending) => labels.column_sorted_descending,
-                None => labels.column_unsorted,
-            };
-            announcer.say(said(&column));
+        self.slice.set(next.clone());
+        // A refusing host renders nothing: this render runs the check below now.
+        dioxus::core::needs_update();
+        let Self {
+            slice,
+            announcer,
+            labels,
+        } = self;
+        dioxus::core::queue_effect(move || {
+            if slice.peek() != next {
+                return;
+            }
+            if let Some((column, direction)) = sort_change(&before, &next) {
+                let said = match direction {
+                    Some(SortDirection::Ascending) => labels.column_sorted_ascending,
+                    Some(SortDirection::Descending) => labels.column_sorted_descending,
+                    None => labels.column_unsorted,
+                };
+                announcer.say(said(&column));
+            }
+        });
+    }
+
+    pub fn new(
+        slice: StateSlice<Vec<TableSort>>,
+        announcer: Announcer,
+        labels: TableLabels,
+    ) -> Self {
+        Self {
+            slice,
+            announcer,
+            labels,
         }
-    });
-    UserSort { slice, expected }
+    }
 }
 
 /// The column a sort change touched: the first entry new or turned, else the first dropped.
@@ -712,7 +721,7 @@ pub(super) fn render_body(body: BodySpec) -> Element {
                         // A pinned column moves by its pin.
                         let mover = drag.filter(|_| spec.pin.is_none()).map(|drag| {
                             rsx! {
-                                ColumnDragGrip { index, header: spec.header.clone(), drag }
+                                ColumnDragGrip { index, header: spec.header.clone(), column: spec.key.clone(), drag }
                             }
                         });
                         rsx! {

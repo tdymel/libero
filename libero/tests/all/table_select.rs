@@ -1,7 +1,7 @@
 //! Row selection: the checkbox column, select-all and its mixed state.
 
 use crate::common::{body, render};
-use crate::table_fixture::{Stock, people, person_columns};
+use crate::table_fixture::{Person, Stock, people};
 
 use dioxus::prelude::*;
 use libero::{
@@ -131,7 +131,12 @@ fn a_table_without_selectable_has_no_checkbox_column() {
     fn app() -> Element {
         rsx! {
             LiberoProvider {
-                Table { aria_label: "People", data: people(), columns: person_columns() }
+                Table {
+                    aria_label: "People",
+                    data: people(),
+                    // Unsortable: a sort is said, so a sortable column brings the live region.
+                    columns: vec![column("Name").value(|row: &Person| row.name.to_string())],
+                }
             }
         }
     }

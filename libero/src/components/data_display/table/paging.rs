@@ -161,9 +161,12 @@ pub(super) fn TablePager(props: TablePagerProps) -> Element {
         ..
     } = props;
     // A page past the last, after the rows shrank, becomes the last for the host too.
-    use_effect(use_reactive!(|page, settles| {
-        if settles && state.page.read() != page {
-            state.page.set(page);
+    // Clamped from the stored page as it is now: a reset to page 1 in this flush wins.
+    use_effect(use_reactive!(|settles, total, page_size| {
+        let stored = state.page.read();
+        let clamped = clamp_page(total, stored, page_size);
+        if settles && stored != clamped {
+            state.page.set(clamped);
         }
     }));
     let rows = page_rows(total, page, page_size);

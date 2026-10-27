@@ -116,7 +116,7 @@ pub(super) fn header_layout<T: Clone + PartialEq + 'static>(
         },
     );
     // Its width decides the fit: measured, declared, or none to measure against yet.
-    let pin_said = pin_news.settle(&fitted, |header| {
+    let pin_said = pin_news.settle(&pinned, &fitted, |header| {
         area_width.peek().is_none()
             || measured.contains_key(header)
             || headers.iter().any(|spec| {
@@ -132,12 +132,12 @@ pub(super) fn header_layout<T: Clone + PartialEq + 'static>(
         let plan = DropPlan {
             ranked: ranked(&headers, &column_order)
                 .into_iter()
-                .map(|index| headers[index].header.clone())
+                .map(|index| (headers[index].key.clone(), headers[index].header.clone()))
                 .collect(),
             unpinned: layout
                 .iter()
                 .filter(|&&index| headers[index].pin.is_none())
-                .map(|&index| (index, headers[index].header.clone()))
+                .map(|&index| (index, headers[index].key.clone()))
                 .collect(),
             lead: layout
                 .iter()

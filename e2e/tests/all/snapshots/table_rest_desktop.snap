@@ -26,3 +26,4 @@ table "Fruit"
       StaticText "Banana"
     cell "0 left"
       StaticText "0 left"
+status [atomic] [live=polite]

@@ -39,7 +39,7 @@ use super::{
     column_drag::use_column_drag,
     column_filter::{ColumnFilter, FilterLogic, cell_tests},
     column_menu::{MenuColumn, use_menu_focus, use_pin_news},
-    core::{BodySpec, RowFn, TableSort, lead_count, render_body, use_user_sort},
+    core::{BodySpec, RowFn, TableSort, UserSort, lead_count, render_body},
     detail::Details,
     edit::RowUpdate,
     filter_panel::use_panel_control,
@@ -1390,7 +1390,7 @@ pub fn Table<T: Clone + PartialEq + 'static>(mut props: TableProps<T>) -> Elemen
         .unwrap_or(props.size.copied_or(use_theme().table.size));
     let localization = use_localization();
     let (labels, lang) = (localization.table, localization.lang);
-    let user_sort = use_user_sort(state.sort, announcer, labels);
+    let user_sort = UserSort::new(state.sort, announcer, labels);
     let resize = props.resizable_columns.then_some(ColumnResize {
         widths: state.column_widths,
         preview,
@@ -1486,6 +1486,7 @@ pub fn Table<T: Clone + PartialEq + 'static>(mut props: TableProps<T>) -> Elemen
         // After this render: a write while it runs would warn.
         spawn(async move { announcer.say(said(&column)) });
     }
+    let sortable = header.headers.iter().any(|spec| spec.sortable);
     let menu_columns: Rc<[MenuColumn]> = header
         .headers
         .iter()
@@ -2079,6 +2080,7 @@ pub fn Table<T: Clone + PartialEq + 'static>(mut props: TableProps<T>) -> Elemen
         );
     // The live region: valid in no part of a table, so beside it.
     let announces = props.selectable
+        || sortable
         || props.show_quick_filter
         || has_reorder
         || editable

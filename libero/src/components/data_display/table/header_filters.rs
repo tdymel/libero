@@ -53,7 +53,7 @@ pub(super) fn filter_row(
             let pin = headers[index].pin.as_ref();
             rsx! {
                 td {
-                    key: "{index}",
+                    key: "{headers[index].key}",
                     "data-filter-cell": true,
                     "data-pin": pin.map(|pin| pin.side.as_str()),
                     "data-pin-edge": pin.filter(|pin| pin.edge).map(|_| true),

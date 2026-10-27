@@ -102,22 +102,38 @@ pub(super) fn use_pin_news() -> PinNews {
 }
 
 impl PinNews {
-    fn owe(mut self, header: String, side: PinSide) {
-        self.0.set(Some((header, side)));
+    fn owe(mut self, header: String, side: PinSide, pinned: StateSlice<PinnedColumns>) {
+        self.0.set(Some((header.clone(), side)));
+        // A pin the host refused lapses with the event's renders: no later pin vouches for it.
+        let mut news = self.0;
+        dioxus::core::queue_effect(move || {
+            if pinned.peek().side(&header) != Some(side)
+                && let Ok(mut owed) = news.try_write()
+                && owed.as_ref() == Some(&(header, side))
+            {
+                *owed = None;
+            }
+        });
     }
 
     /// The owed pin and whether `kept` holds it, once `known` has its column's width.
+    /// A pin `requested` no longer holds is dropped unsaid.
     pub(super) fn settle(
         mut self,
+        requested: &PinnedColumns,
         kept: &PinnedColumns,
         known: impl Fn(&str) -> bool,
     ) -> Option<(String, PinSide, bool)> {
-        let ready = self
-            .0
-            .peek()
-            .as_ref()
-            .is_some_and(|(header, _)| known(header));
-        let (header, side) = ready.then(|| self.0.write().take()).flatten()?;
+        let owed = self.0.peek().clone();
+        let (header, side) = owed?;
+        if requested.side(&header) != Some(side) {
+            self.0.set(None);
+            return None;
+        }
+        if !known(&header) {
+            return None;
+        }
+        self.0.set(None);
         let held = kept.side(&header) == Some(side);
         Some((header, side, held))
     }
@@ -313,7 +329,7 @@ pub(super) fn ColumnMenu(
                         pinned.set(pinned.read().with(&header, to));
                         focus.owe(own_key.clone());
                         match to {
-                            Some(to) => news.owe(header.clone(), to),
+                            Some(to) => news.owe(header.clone(), to, pinned),
                             None => announcer.say((labels.column_unpinned)(&header)),
                         }
                     })
@@ -542,6 +558,32 @@ mod tests {
             sorted_by(&columns, &active, 0, None, false),
             vec![TableSort::new("B", Descending)]
         );
+    }
+
+    /// 4416: a pin the host refused is dropped unsaid, so the host's own pin later is not said
+    /// either; a pin the host stored and the room released is said as released.
+    #[test]
+    fn a_refused_pin_is_dropped_unsaid() {
+        let mut dom = VirtualDom::new(|| rsx! {});
+        dom.rebuild_in_place();
+        dom.in_scope(ScopeId::APP, || {
+            let owed = || PinNews(CopyValue::new(Some(("Name".to_string(), PinSide::Start))));
+            let (none, name) = (
+                PinnedColumns::default(),
+                PinnedColumns::default().start(["Name"]),
+            );
+
+            let refused = owed();
+            assert_eq!(refused.settle(&none, &none, |_| false), None);
+            assert_eq!(refused.settle(&name, &name, |_| true), None);
+
+            let unmeasured = owed();
+            assert_eq!(unmeasured.settle(&name, &none, |_| false), None);
+            assert_eq!(
+                unmeasured.settle(&name, &none, |_| true),
+                Some(("Name".to_string(), PinSide::Start, false))
+            );
+        });
     }
 
     #[test]

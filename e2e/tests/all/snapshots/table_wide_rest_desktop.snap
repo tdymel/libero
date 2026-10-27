@@ -83,3 +83,4 @@ table "Fruit catalogue"
       StaticText "Banana_Price_description"
     cell "Banana_Supplier_description"
       StaticText "Banana_Supplier_description"
+status [atomic] [live=polite]
