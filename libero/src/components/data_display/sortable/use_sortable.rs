@@ -182,6 +182,8 @@ struct Registered {
 #[derive(Clone, PartialEq)]
 struct Session {
     from: usize,
+    /// The lifted item's registry id, to tell it was removed or replaced.
+    id: usize,
     spans: Vec<Span>,
     /// `-1.0` where the flow runs against the screen axis: a row right to left.
     sign: f64,
@@ -301,6 +303,8 @@ struct SortableContext {
     onblur: Callback<usize>,
     onstep: Callback<(usize, bool)>,
     onlift: Callback<(usize, bool), Option<usize>>,
+    /// Ends a drag the list changed under, after an item moved or mounted.
+    revalidate: Callback<()>,
 }
 
 /// One node's position read, started at once: see `ElementApi::dimensions`.
@@ -621,7 +625,7 @@ pub(crate) fn use_fixed_sortable(
                 (Measure::Read(start_reads(&items)), items[from].1.clone())
             }
         };
-        let label = label_of(from).1;
+        let (id, label) = label_of(from);
         settle.set(None);
         let list_reads = (!keyed && fixed_slots.peek().is_none())
             .then(|| (element.client_offset(), element.scroll_offset()));
@@ -645,12 +649,23 @@ pub(crate) fn use_fixed_sortable(
             }
             started.call(Some(Session {
                 from,
+                id,
                 spans,
                 sign: if flipped { -1.0 } else { 1.0 },
                 keyed: keyed.then_some(from),
                 label,
             }));
         });
+    };
+
+    let mut reset = move || {
+        session.set(None);
+        travel.set(0.0);
+        pressed.set(None);
+        auto_scroll.stop();
+        edge.set(None);
+        anchor.set(None);
+        scrolled.set(0.0);
     };
 
     // Ends the session at `to`; `commit: false` puts the item back.
@@ -664,13 +679,7 @@ pub(crate) fn use_fixed_sortable(
         } else {
             ended.from
         };
-        session.set(None);
-        travel.set(0.0);
-        pressed.set(None);
-        auto_scroll.stop();
-        edge.set(None);
-        anchor.set(None);
-        scrolled.set(0.0);
+        reset();
         let count = ended.spans.len();
         let words_for = if commit {
             words.dropped
@@ -678,7 +687,7 @@ pub(crate) fn use_fixed_sortable(
             words.cancelled
         };
         announce(say(words_for, &ended.label, to, count));
-        let (id, _) = label_of(ended.from);
+        let id = ended.id;
         let from_slot = ended.offset(travel_now) - slot_offset(&ended.spans, ended.from, to);
         if from_slot.abs() > 0.5 {
             settle.set(Some(Settle {
@@ -698,6 +707,30 @@ pub(crate) fn use_fixed_sortable(
                 step,
             }));
             onreorder.call(step);
+        }
+    };
+
+    // The list changed under the drag: its spans and `from` no longer hold, so it ends unmoved (4398).
+    let mut drop_stale = move || {
+        let Some(lifted) = session.peek().clone() else {
+            return;
+        };
+        let registry = registry.peek();
+        let fixed = *fixed_slots.peek();
+        let len = fixed.map_or(registry.len(), |slots| slots.count);
+        // A window unmounts rows, so a fixed list checks only its count.
+        let replaced = fixed.is_none()
+            && !registry
+                .get(lifted.from)
+                .is_some_and(|item| owns(item, lifted.id));
+        if lifted.spans.len() == len && !replaced {
+            return;
+        }
+        let at = registry.iter().position(|item| owns(item, lifted.id));
+        drop(registry);
+        reset();
+        if let Some(at) = at {
+            announce(say(words.cancelled, &lifted.label, at, len));
         }
     };
 
@@ -919,6 +952,13 @@ pub(crate) fn use_fixed_sortable(
         onreorder.call(step);
     });
 
+    let revalidate = use_callback(move |()| drop_stale());
+    // A lift measured before a change lands with the old spans too.
+    use_effect(move || {
+        let _ = (count(), session.read().is_some());
+        drop_stale();
+    });
+
     // Fixed slots count every row, mounted or not; a keyboard lift is told up.
     let slot_count = fixed.map(|slots| slots.count);
     use_effect(use_reactive!(|slot_count| {
@@ -1013,6 +1053,7 @@ pub(crate) fn use_fixed_sortable(
         onblur,
         onstep,
         onlift,
+        revalidate,
     });
 
     SortableHandle {
@@ -1122,6 +1163,7 @@ pub(crate) fn use_spanning_sortable_item(
         if *count.peek() != len {
             count.set(len);
         }
+        context.revalidate.call(());
         // Moving a node in the DOM blurs it. Only for that move: after an ignored one,
         // a later unrelated change of index must not pull the focus here.
         let moved = *refocus.peek();

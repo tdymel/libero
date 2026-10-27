@@ -2176,3 +2176,84 @@ mod a_touch_drag_moves_the_card_soon_on_a_slow_phone {
         });
     }
 }
+
+/// Todo 4399: a card above the dragged one removed mid-drag; the drop moves the card from its index now.
+#[test]
+fn a_drop_after_a_change_moves_the_card_from_its_index_now() {
+    use chromiumoxide::cdp::browser_protocol::input::DispatchMouseEventType as Kind;
+    use e2e::browser::{Fixture, Viewport, block_on};
+    use e2e::frames::in_front;
+    use e2e::passes::pointer::Point;
+    use e2e::wait;
+    block_on(async {
+        let fixture = Fixture::open("/kanban/data", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        let handle = centre(page, "#Gamma [data-slot=handle]").await;
+        let done = centre(page, "#column-2").await;
+        let lifted = Point {
+            x: handle.x + 20.0,
+            y: handle.y,
+        };
+        in_front(page, async {
+            mouse_at(page, Kind::MouseMoved, handle, false).await;
+            mouse_at(page, Kind::MousePressed, handle, true).await;
+            for step in 1..=4 {
+                let at = Point {
+                    x: handle.x + 5.0 * f64::from(step),
+                    y: handle.y,
+                };
+                mouse_at(page, Kind::MouseMoved, at, true).await;
+            }
+            Ok(())
+        })
+        .await
+        .unwrap();
+        wait::for_js_true(
+            page,
+            "document.querySelector('#Gamma')?.dataset.state?.includes('dragging')",
+            "Gamma lifted",
+        )
+        .await
+        .unwrap();
+        page.evaluate_bounded("document.querySelector('#remove').click()")
+            .await
+            .unwrap();
+        wait::for_js_true(page, "!document.querySelector('#Beta')", "Beta removed")
+            .await
+            .unwrap();
+        in_front(page, async {
+            for step in 1..=10 {
+                let t = f64::from(step) / 10.0;
+                let at = Point {
+                    x: lifted.x + (done.x - lifted.x) * t,
+                    y: lifted.y + (done.y - lifted.y) * t,
+                };
+                mouse_at(page, Kind::MouseMoved, at, true).await;
+            }
+            mouse_at(page, Kind::MouseReleased, done, false).await;
+            Ok(())
+        })
+        .await
+        .unwrap();
+        wait::for_js_true(
+            page,
+            "document.querySelector('#moves').textContent !== ''",
+            "the drop to report a move",
+        )
+        .await
+        .unwrap();
+        let (moves, order): (String, String) = page
+            .evaluate_bounded(
+                "[document.querySelector('#moves').textContent, document.querySelector('#order').textContent]",
+            )
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        assert_eq!(moves, "0.1>2.0 ", "the move left a stale index");
+        assert_eq!(order, "Alpha | Delta | Gamma");
+        fixture.close().await.unwrap();
+    });
+}

@@ -2,7 +2,9 @@
 
 use dioxus::prelude::*;
 use libero::{
-    components::{Button, Flex, FloatingWindowOptions, MenuPart, Parts, Text, WindowRect},
+    components::{
+        Button, Flex, FloatingWindowOptions, MenuPart, Parts, Text, Tooltip, WindowRect,
+    },
     hooks::use_floating_window,
     sx::sx,
 };
@@ -19,7 +21,63 @@ pub const ROUTES: Routes = &[
         || rsx! { AnchoredWindowPage {} },
     ),
     ("/floating-window-pinned", || rsx! { PinnedWindowPage {} }),
+    (
+        "/floating-window-tooltip",
+        || rsx! { TooltipWindowPage {} },
+    ),
+    ("/floating-window-owner", || rsx! { OwnerWindowPage {} }),
 ];
+
+/// Todo 4405: a tooltip inside a window, so one Escape may close only the tooltip.
+#[component]
+fn TooltipWindowPage() -> Element {
+    let window = use_floating_window(
+        FloatingWindowOptions {
+            title: Some("Tips".into()),
+            ..Default::default()
+        },
+        |_| {
+            rsx! {
+                Tooltip { label: rsx! { "Saves the draft" }, label_id: "save-tip",
+                    Button { id: "save", "aria-describedby": "save-tip", "Save" }
+                }
+            }
+        },
+    );
+
+    rsx! {
+        Button { id: "open-window", variant: "outlined", onclick: move |_| window.open(), "Tips" }
+    }
+}
+
+/// Todo 4404: the window's owner unmounts while it is open and focused.
+#[component]
+fn OwnerWindowPage() -> Element {
+    let mut owned = use_signal(|| false);
+    rsx! {
+        Button { id: "show-owner", variant: "outlined", onclick: move |_| owned.set(true), "Owner" }
+        if owned() {
+            WindowOwner { onremove: move |()| owned.set(false) }
+        }
+    }
+}
+
+#[component]
+fn WindowOwner(onremove: Callback<()>) -> Element {
+    let window = use_floating_window(
+        FloatingWindowOptions {
+            title: Some("Owned".into()),
+            ..Default::default()
+        },
+        move |_| {
+            rsx! {
+                Button { id: "remove-owner", variant: "text", onclick: move |_| onremove.call(()), "Remove owner" }
+            }
+        },
+    );
+    use_effect(move || window.open());
+    rsx! {}
+}
 
 /// Todo 2353: a window placed at the bottom end, not yet moved, resized by key.
 #[component]

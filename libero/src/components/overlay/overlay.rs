@@ -37,6 +37,7 @@ base_props! {
         /// `position: relative` and a `z-index`, or the layer stacks against the page.
         #[props(default)]
         contained: bool,
+        /// Also gets the clicks inside that bubble up: stop them on the content to keep it open.
         #[props(default)]
         onclick: Option<EventHandler<MouseEvent>>,
         children: Option<Element>,

@@ -196,6 +196,7 @@ pub(super) fn MenuLevel(props: MenuLevelProps) -> Element {
         .unwrap_or(first)));
     let hover = use_hover_delay(
         level,
+        open,
         Duration::from_millis(theme.menu.submenu_delay.into()),
     );
     let cancel_callback = use_callback(move |()| hover.cancel());

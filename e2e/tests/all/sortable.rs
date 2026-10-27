@@ -704,6 +704,56 @@ fn a_cancelled_pointer_puts_it_back() {
     });
 }
 
+/// Todo 4398: the list changing under a keyboard lift ends it unmoved, and a removed
+/// lifted item leaves the other items free to lift.
+#[test]
+fn a_list_change_under_a_lift_ends_it() {
+    block_on(async {
+        let fixture = Fixture::open("/sortable/changing", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        let lift = async |handle: &str, item: &str| {
+            page.evaluate_bounded(format!("document.querySelector('{handle}').focus()"))
+                .await?;
+            keyboard::press(page, keyboard::SPACE).await?;
+            wait::for_visible(page, &format!("{item}[data-state~=dragging]")).await
+        };
+        let ended = "!document.querySelector('[data-state~=dragging]')";
+        let outcome = async {
+            lift("#Gamma button", "#Gamma").await?;
+            keyboard::press(page, keyboard::ARROW_DOWN).await?;
+            page.evaluate_bounded("document.querySelector('#drop-alpha').click()")
+                .await?;
+            wait::for_js_true(page, ended, "Alpha's removal to end the lift").await?;
+
+            lift("#Gamma button", "#Gamma").await?;
+            page.evaluate_bounded("document.querySelector('#drop-gamma').click()")
+                .await?;
+            wait::for_js_true(page, ended, "the lifted item's removal to end the lift").await?;
+
+            lift("#Beta button", "#Beta").await?;
+            keyboard::press(page, keyboard::ARROW_DOWN).await?;
+            keyboard::press(page, keyboard::SPACE).await?;
+            wait::for_js_true(
+                page,
+                "document.querySelector('#order').textContent === 'Delta Beta'",
+                "a later lift to move Beta",
+            )
+            .await?;
+            let moves: String = page
+                .evaluate_bounded("document.querySelector('#moves').textContent")
+                .await?
+                .into_value()?;
+            ensure!(moves == "0>1 ", "a stale drop was reported: {moves:?}");
+            anyhow::Ok(())
+        }
+        .await;
+        fixture.close().await.unwrap();
+        outcome.unwrap();
+    });
+}
+
 /// A held Space or Enter neither drops nor lifts again on its auto-repeats (2509).
 #[test]
 fn a_held_lift_key_does_not_toggle_on_its_repeats() {

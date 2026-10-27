@@ -554,6 +554,66 @@ fn each_window_closes_alone_and_a_close_from_the_page_keeps_focus() {
     });
 }
 
+/// Todo 4405: Escape on a focused tooltip's trigger closes the tooltip only; the next one the window.
+#[test]
+fn one_escape_closes_a_tooltip_in_a_window_and_not_the_window() {
+    block_on(async {
+        let fixture = Fixture::open("/floating-window-tooltip", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        activate(page, TRIGGER).await;
+        wait::for_visible(page, DIALOG).await.unwrap();
+        page.evaluate_bounded("document.querySelector('#save').focus()")
+            .await
+            .unwrap();
+        wait::for_visible(page, "#save-tip").await.unwrap();
+
+        keyboard::press(page, keyboard::ESCAPE).await.unwrap();
+        wait::for_hidden(page, "#save-tip").await.unwrap();
+        crate::settle::painted(page).await.unwrap();
+        assert!(
+            wait::exists(page, DIALOG).await.unwrap(),
+            "the Escape that closed the tooltip closed the window too"
+        );
+
+        keyboard::press(page, keyboard::ESCAPE).await.unwrap();
+        wait_for(
+            page,
+            "!document.querySelector('[role=dialog]') && document.activeElement?.id === 'open-window'",
+            "the second Escape to close the window and focus its trigger",
+        )
+        .await;
+        fixture
+            .console
+            .assert_clean("a tooltip in a window")
+            .unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
+/// Todo 4404: the owner unmounting with its window open and focused hands focus back to the opener.
+#[test]
+fn an_unmounted_owner_hands_focus_back() {
+    block_on(async {
+        let fixture = Fixture::open("/floating-window-owner", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        activate(page, "#show-owner").await;
+        wait::for_visible(page, "#remove-owner").await.unwrap();
+        activate(page, "#remove-owner").await;
+        wait_for(
+            page,
+            "!document.querySelector('[role=dialog]') && document.activeElement?.id === 'show-owner'",
+            "focus to return to the opener once the owner is gone",
+        )
+        .await;
+        fixture.console.assert_clean("an unmounted owner").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
 /// A title with no break opportunity wraps in the title bar at 320px instead
 /// of being clipped by the window (1.4.10).
 #[test]

@@ -421,6 +421,63 @@ fn a_reopened_menu_starts_its_submenu_closed_on_fresh_items() {
     });
 }
 
+/// Todo 4403: a key or a close within the submenu delay drops the hover's pending open, so
+/// it neither pulls focus back to Share nor leaves its submenu open on the next open.
+#[test]
+fn keys_and_a_close_drop_a_pending_hover_open() {
+    const SHARE: &str = "[role=menuitem][aria-haspopup=menu]";
+    const SUBMENU_DELAY: u32 = 150;
+    block_on(async {
+        let fixture = Fixture::open("/menu", Viewport::Desktop).await.unwrap();
+        let page = &fixture.page;
+        let focus_on =
+            |text: &str| format!("document.activeElement?.textContent.trim() === '{text}'");
+        let collapsed =
+            format!("document.querySelector('{SHARE}')?.getAttribute('aria-expanded') !== 'true'");
+        let fire = format!("window.__heldClock.fireAll({SUBMENU_DELAY})");
+        let outcome = async {
+            e2e::clock::hold(page, &[SUBMENU_DELAY]).await?;
+            pointer::click(page, TRIGGER).await?;
+            wait::for_js_true(page, &focus_on("Cut"), "focus on Cut").await?;
+            pointer::hover(page, SHARE).await?;
+            wait::for_js_true(page, &focus_on("Share"), "the hover to focus Share").await?;
+            keyboard::press(page, keyboard::ARROW_UP).await?;
+            wait::for_js_true(page, &focus_on("Save"), "ArrowUp to Save").await?;
+            page.evaluate_bounded(fire.clone()).await?;
+            painted(page).await?;
+            anyhow::ensure!(
+                page.evaluate_bounded(format!("{} && {collapsed}", focus_on("Save")))
+                    .await?
+                    .into_value::<bool>()?,
+                "the hover's timer pulled focus back to Share or opened its submenu"
+            );
+
+            pointer::move_to(page, pointer::Point { x: 2.0, y: 2.0 }).await?;
+            pointer::hover(page, SHARE).await?;
+            wait::for_js_true(page, &focus_on("Share"), "the hover to focus Share").await?;
+            keyboard::press(page, keyboard::ESCAPE).await?;
+            wait::for_js_true(page, &focus_on("Actions"), "Escape to close the menu").await?;
+            page.evaluate_bounded(fire.clone()).await?;
+            pointer::click(page, TRIGGER).await?;
+            wait::for_js_true(page, &focus_on("Cut"), "focus on Cut again").await?;
+            painted(page).await?;
+            anyhow::ensure!(
+                page.evaluate_bounded(collapsed.clone())
+                    .await?
+                    .into_value::<bool>()?,
+                "the reopened menu showed Share's submenu open"
+            );
+            Ok::<_, anyhow::Error>(())
+        }
+        .await;
+        let console = fixture.console.assert_clean("a pending hover open");
+
+        fixture.close().await.unwrap();
+        outcome.unwrap();
+        console.unwrap();
+    });
+}
+
 /// `parts` reaches the labels on the submenu level too, `sx` its box.
 #[test]
 fn parts_and_sx_style_every_level() {

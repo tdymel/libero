@@ -42,7 +42,7 @@ pub fn OverlayPage() -> Element {
                     prop("opacity", "ThemeAwareValue").default("0.6").doc("How dark the dim is."),
                     prop("blur", "ThemeAwareValue").default("none").doc("How much the content behind is blurred. A bare number becomes `px`."),
                     prop("contained", "bool").default("false").doc("Covers its nearest positioned ancestor instead of the viewport. Give that box `position: relative` and a `z-index`, or the layer still stacks against the whole page."),
-                    prop("onclick", "EventHandler<MouseEvent>").doc("Called on a click anywhere on the overlay, such as a backdrop click."),
+                    prop("onclick", "EventHandler<MouseEvent>").doc("Called on a click anywhere on the overlay, such as a backdrop click. A click inside its children bubbles here too, as in Mantine: stop it on the content, such as `onclick: move |event| event.stop_propagation()` on a card, to keep the overlay open."),
                     prop("children", "Element").doc("Content centred on the overlay, such as a loading spinner."),
                 ]),
                 props("LoadingOverlay", vec![

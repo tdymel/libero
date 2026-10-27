@@ -146,6 +146,10 @@ impl Level {
         if navigation && has_shortcut_modifier(&event) {
             return;
         }
+        // The keys take over: a pending hover must not pull focus back (4403).
+        if navigation || is_tab(&event) {
+            hover.cancel();
+        }
         let key = logical_key(&event);
         match key {
             Key::Named(NamedKey::ArrowDown) => {
@@ -169,7 +173,6 @@ impl Level {
             }
             Key::Named(NamedKey::ArrowRight) if opens => {
                 event.prevent_default();
-                hover.cancel();
                 self.enter_submenu(index);
             }
             // Closes this submenu only. On the root it is the menubar's.
@@ -206,6 +209,7 @@ impl Level {
                     event.prevent_default();
                 }
                 if let Some(row) = found {
+                    hover.cancel();
                     self.focus(row);
                 }
             }

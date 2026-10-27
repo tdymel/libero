@@ -112,5 +112,12 @@ pub fn use_floating_window(
     });
     use_portal(content);
 
+    // The owner unmounting takes the window with it: hand focus back (4404).
+    use_drop(move || {
+        if open.try_peek().is_ok_and(|open| *open) {
+            focus_return.restore_detached();
+        }
+    });
+
     handle
 }

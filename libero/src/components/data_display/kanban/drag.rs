@@ -477,8 +477,17 @@ pub(super) fn use_board_drag(options: BoardDragOptions) -> BoardDrag {
         let (dx, dy) = (dx + sx, dy + sy);
         let lanes = &ended.lanes;
         let from = (lanes.from_column, lanes.from);
-        // Let go off the board, it goes back.
-        let landed = commit.then(|| lanes.target(dx, dy)).flatten();
+        // The app may have changed the cards since the lift: the card's index is read anew (4399).
+        let now = cards
+            .peek()
+            .get(&ended.id)
+            .filter(|placed| placed.column == from.0)
+            .map(|placed| placed.index);
+        // Let go off the board, or the card left its column meanwhile, it goes back.
+        let landed = commit
+            .then(|| lanes.target(dx, dy))
+            .flatten()
+            .filter(|_| now.is_some());
         let to = landed.unwrap_or(from);
         edge.set((0.0, 0.0));
         auto_scroll.stop();
@@ -515,10 +524,19 @@ pub(super) fn use_board_drag(options: BoardDragOptions) -> BoardDrag {
             false => pending.set(Some(said)),
         }
         // Slots count the mounted cards; the move and the landing speak `index`.
-        let from_index = lanes.lifted_index();
+        let from_index = now.unwrap_or_else(|| lanes.lifted_index());
         let to_index = match to == from {
             true => from_index,
-            false => lanes.index_at(to),
+            false => {
+                let mut shown: Vec<usize> = cards
+                    .peek()
+                    .values()
+                    .filter(|placed| placed.column == to.0)
+                    .map(|placed| placed.index)
+                    .collect();
+                shown.sort_unstable();
+                lanes.index_at(to, &shown, from_index)
+            }
         };
         if to != from {
             landing.set(Some(Landing {

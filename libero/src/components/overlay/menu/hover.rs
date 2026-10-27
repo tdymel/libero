@@ -55,7 +55,8 @@ impl HoverDelay {
     }
 }
 
-pub(super) fn use_hover_delay(level: Level, delay: Duration) -> HoverDelay {
+/// `open` is the level's: a closed level drops the pending action (4403).
+pub(super) fn use_hover_delay(level: Level, open: bool, delay: Duration) -> HoverDelay {
     let action = use_hook(|| CopyValue::new(None::<HoverAction>));
     let scheduled = use_scheduled(move |_| {
         let mut slot = action;
@@ -68,6 +69,11 @@ pub(super) fn use_hover_delay(level: Level, delay: Duration) -> HoverDelay {
             open_child.set(action.open);
         }
     });
+    use_effect(use_reactive!(|open| {
+        if !open {
+            scheduled.cancel();
+        }
+    }));
     HoverDelay {
         action,
         scheduled,

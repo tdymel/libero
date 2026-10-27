@@ -67,13 +67,13 @@ impl Lanes {
         self.lanes[self.from_column].indices[self.from]
     }
 
-    /// The `index` a card dropped in slot `target` takes: just before the next shown card,
-    /// else just after the last one. In its own column, counted after its removal.
-    pub(super) fn index_at(&self, target: (usize, usize)) -> usize {
+    /// The `index` a card dropped in slot `target` takes among `shown`, the indices its column
+    /// shows now: just before the next shown card, else just after the last one. In its own
+    /// column, counted after the removal of `lifted`, its index now.
+    pub(super) fn index_at(&self, target: (usize, usize), shown: &[usize], lifted: usize) -> usize {
         let (column, to) = target;
         let own = column == self.from_column;
-        let lifted = own.then(|| self.lifted_index());
-        drop_index(&self.lanes[column].indices, lifted, to)
+        drop_index(shown, own.then_some(lifted), to)
     }
 
     /// The space between two cards, from the first column holding two.
@@ -272,10 +272,22 @@ mod tests {
     fn with_every_card_mounted_a_slot_is_its_index() {
         let lanes = board(0, 1);
         assert_eq!(lanes.lifted_index(), 1);
-        assert_eq!(lanes.index_at((0, 0)), 0);
-        assert_eq!(lanes.index_at((0, 2)), 2);
-        assert_eq!(lanes.index_at((1, 1)), 1);
-        assert_eq!(lanes.index_at((2, 0)), 0);
+        assert_eq!(
+            lanes.index_at((0, 0), &lanes.lanes[0].indices, lanes.lifted_index()),
+            0
+        );
+        assert_eq!(
+            lanes.index_at((0, 2), &lanes.lanes[0].indices, lanes.lifted_index()),
+            2
+        );
+        assert_eq!(
+            lanes.index_at((1, 1), &lanes.lanes[1].indices, lanes.lifted_index()),
+            1
+        );
+        assert_eq!(
+            lanes.index_at((2, 0), &lanes.lanes[2].indices, lanes.lifted_index()),
+            0
+        );
     }
 
     /// Todo 2517: column 0 shows its cards 1, 3 and 4 of a longer list.
@@ -287,11 +299,23 @@ mod tests {
         assert_eq!(lanes.slot(0, 0), None);
         assert_eq!(lanes.lifted_index(), 3);
         // Before the first shown, after the last shown, counted with 3 taken out.
-        assert_eq!(lanes.index_at((0, 0)), 1);
-        assert_eq!(lanes.index_at((0, 2)), 4);
+        assert_eq!(
+            lanes.index_at((0, 0), &lanes.lanes[0].indices, lanes.lifted_index()),
+            1
+        );
+        assert_eq!(
+            lanes.index_at((0, 2), &lanes.lanes[0].indices, lanes.lifted_index()),
+            4
+        );
         lanes.lanes[1].indices = vec![5];
-        assert_eq!(lanes.index_at((1, 0)), 5);
-        assert_eq!(lanes.index_at((1, 1)), 6);
+        assert_eq!(
+            lanes.index_at((1, 0), &lanes.lanes[1].indices, lanes.lifted_index()),
+            5
+        );
+        assert_eq!(
+            lanes.index_at((1, 1), &lanes.lanes[1].indices, lanes.lifted_index()),
+            6
+        );
     }
 
     #[test]

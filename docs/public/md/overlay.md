@@ -40,7 +40,7 @@ fn Demo() -> Element {
 | `opacity` | `ThemeAwareValue` | `0.6` | How dark the dim is. |
 | `blur` | `ThemeAwareValue` | `none` | How much the content behind is blurred. A bare number becomes `px`. |
 | `contained` | `bool` | `false` | Covers its nearest positioned ancestor instead of the viewport. Give that box `position: relative` and a `z-index`, or the layer still stacks against the whole page. |
-| `onclick` | `EventHandler<MouseEvent>` | - | Called on a click anywhere on the overlay, such as a backdrop click. |
+| `onclick` | `EventHandler<MouseEvent>` | - | Called on a click anywhere on the overlay, such as a backdrop click. A click inside its children bubbles here too, as in Mantine: stop it on the content, such as `onclick: move |event| event.stop_propagation()` on a card, to keep the overlay open. |
 | `children` | `Element` | - | Content centred on the overlay, such as a loading spinner. |
 
 ### `LoadingOverlay`

@@ -15,6 +15,7 @@ pub const ROUTES: Routes = &[
     ("/sortable/hook", || rsx! { HookPage {} }),
     ("/sortable/long", || rsx! { LongPage {} }),
     ("/sortable/ignored", || rsx! { IgnoredPage {} }),
+    ("/sortable/changing", || rsx! { ChangingPage {} }),
 ];
 
 const NAMES: [&str; 4] = ["Alpha", "Beta", "Gamma", "Delta"];
@@ -123,6 +124,31 @@ fn IgnoredPage() -> Element {
                 onclick: move |_| items.write().rotate_right(1),
                 "Rotate"
             }
+        }
+    }
+}
+
+/// Todo 4398: `#drop-alpha` and `#drop-gamma` remove an item, clicked by script during a lift.
+#[component]
+fn ChangingPage() -> Element {
+    let mut items = use_signal(|| NAMES.to_vec());
+    let mut moves = use_signal(String::new);
+    rsx! {
+        Flex { direction: "column", gap: "md", max_width: "320px",
+            Sortable {
+                id: "list",
+                onreorder: move |step: SortableMove| {
+                    moves.write().push_str(&format!("{}>{} ", step.from, step.to));
+                    step.apply(&mut items.write());
+                },
+                for (index, name) in items().into_iter().enumerate() {
+                    SortableItem { key: "{name}", index, id: "{name}", label: name, Text { "{name}" } }
+                }
+            }
+            Text { id: "order", {items().join(" ")} }
+            Text { id: "moves", "{moves}" }
+            Button { id: "drop-alpha", onclick: move |_| items.write().retain(|name| *name != "Alpha"), "Remove Alpha" }
+            Button { id: "drop-gamma", onclick: move |_| items.write().retain(|name| *name != "Gamma"), "Remove Gamma" }
         }
     }
 }
