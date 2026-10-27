@@ -222,17 +222,9 @@ fn no_pair_falls_short_in_the_light_theme() {
     assert_eq!(short_pairs(light), Vec::<String>::new());
 }
 
-/// Recorded, not asserted away: a dark theme's `fill-3` of yellow and green is
-/// a mid tone that neither end of the page reads on, so no label can fix it.
+/// A dark theme's `fill-3` of yellow and green was a mid tone no label read on; the fill
+/// label now falls back to true black or white there (todo 4554), so no pair is short.
 #[test]
 fn only_the_tonal_selected_yellow_and_green_fall_short_in_the_dark_theme() {
-    assert_eq!(
-        short_pairs(dark),
-        [
-            "Button warning tonal selected 3.99",
-            "Button success tonal selected 4.34",
-            "ActionIcon warning tonal selected 3.99",
-            "ActionIcon success tonal selected 4.34",
-        ]
-    );
+    assert_eq!(short_pairs(dark), Vec::<String>::new());
 }

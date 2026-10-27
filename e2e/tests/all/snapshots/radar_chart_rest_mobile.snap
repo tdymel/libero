@@ -5,7 +5,7 @@ description: radar_chart at mobile (rest)
 expression: tree
 ---
 figure "Cars"
-  description "Radar chart over 4 axes: Speed, Power, Range, Cost. X: highest on Speed, 8; lowest on Cost, 5. Y: highest on Range, 18; lowest on Cost, 4. Y: no value on Power, drawn at the centre."
+  description "Radar chart over 4 axes: Speed, Power, Range, Cost. X: highest on Speed, 8; lowest on Range, 7. Y: highest on Range, 18; lowest on Cost, 4. Y: no value on Power, drawn at the centre."
   StaticText "Cars"
   application "Cars" [roledescription=chart]
     description "Arrow keys move between points, Enter selects one."
@@ -20,7 +20,7 @@ figure "Cars"
   paragraph
     StaticText "Radar chart over 4 axes: Speed, Power, Range, Cost."
   paragraph
-    StaticText "X: highest on Speed, 8; lowest on Cost, 5."
+    StaticText "X: highest on Speed, 8; lowest on Range, 7."
   paragraph
     StaticText "Y: highest on Range, 18; lowest on Cost, 4."
   paragraph
