@@ -321,7 +321,7 @@ pub fn FileFieldPage() -> Element {
                 }
             },
             // snippet: let mut files = use_signal(Files::default);
-            // snippet: let menu = use_menu();
+            // snippet: when trigger=menu let menu = use_menu();
             Demo {
                 component: "FileField",
                 children_text: "",
