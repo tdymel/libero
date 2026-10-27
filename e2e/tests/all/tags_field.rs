@@ -83,6 +83,27 @@ fn a_named_field_without_onchange_keeps_its_edits() {
         )
         .await
         .unwrap();
+        // Todo 4365: a reset forgets the field's own edits and its draft.
+        keyboard::type_text(page, "css").await.unwrap();
+        keyboard::press(page, keyboard::ENTER).await.unwrap();
+        keyboard::type_text(page, "go").await.unwrap();
+        wait::for_js_true(
+            page,
+            &format!("{posted} === '[\"rust\",\"css\"]'"),
+            "a second tag kept",
+        )
+        .await
+        .unwrap();
+        page.evaluate_bounded("document.getElementById('sent').reset()")
+            .await
+            .unwrap();
+        wait::for_js_true(
+            page,
+            &format!("{posted} === '[\"rust\"]' && document.querySelector({input:?}).value === ''"),
+            "the reset to drop the edits and the draft",
+        )
+        .await
+        .unwrap();
         fixture.console.assert_clean("a named field").unwrap();
         fixture.close().await.unwrap();
     });
@@ -558,6 +579,39 @@ e2e::scenario!(
     "/tags-field/clear",
     clear_drops_the_draft_on
 );
+
+/// Todo 4367: a press on Clear dragged off it is no click, so the draft its blur kept commits.
+#[test]
+fn a_press_dragged_off_clear_commits_the_draft() {
+    block_on(async {
+        let fixture = Fixture::open("/tags-field/clear", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        pointer::click(page, CLEARABLE).await.unwrap();
+        keyboard::type_text(page, "go").await.unwrap();
+        let clear = format!("{CLEARABLE}-clear");
+        wait::for_visible(page, &clear).await.unwrap();
+        let from = pointer::centre_of(page, &clear).await.unwrap();
+        let away = pointer::Point {
+            x: from.x,
+            y: from.y + 200.0,
+        };
+        pointer::drag(page, from, away, 4).await.unwrap();
+        wait::for_js_true(
+            page,
+            &format!(
+                "document.querySelector({CLEARABLE:?}).value === '' \
+                 && document.getElementById('changes').textContent.includes('go')"
+            ),
+            "the dragged-off press to commit the draft",
+        )
+        .await
+        .unwrap();
+        fixture.console.assert_clean("a cancelled Clear").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
 
 /// Todo 3570: a long tag wraps inside its chip, the x stays on the first line, and nothing is cut.
 #[test]

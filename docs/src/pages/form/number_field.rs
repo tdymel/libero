@@ -114,7 +114,7 @@ pub fn NumberFieldPage() -> Element {
                     prop("value", "Option<T>")
                         .doc("The number in the field, strictly controlled. `None` is the empty field. A signal that starts at `None` needs its type, such as `None::<i32>`."),
                     prop("onchange", "EventHandler<Option<T>>")
-                        .doc("Called with the number the caller should hold next, `None` once the field is emptied. Half-typed text such as `-` never reaches it; a float `1.` already parses, so it arrives as `1`. Leaving the field clamps a number out of range and reverts text that never parsed."),
+                        .doc("Called with the number the caller should hold next, `None` once the field is emptied. Half-typed text such as `-` never reaches it; a float `1.` already parses, so it arrives as `1`. Leaving the field clamps a number out of range. Text that never parsed stays, with the error `number_field.invalid_number` (\"Enter a number.\"), and holds a form's submit."),
                     prop("validate", "Validators<Option<T>>")
                         .doc("Rules over the number, shown once the field loses focus or its form is submitted."),
                     prop("min", "Option<T>")

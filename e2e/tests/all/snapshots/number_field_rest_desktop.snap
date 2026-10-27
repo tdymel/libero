@@ -9,6 +9,7 @@ spinbutton "Quantity" = 3 [valuemax=0] [valuemin=0] [valuetext=3]
   StaticText "3"
 button "Decrease"
 button "Increase"
+status [atomic] [live=polite]
 LabelText
   StaticText "Seats"
 spinbutton "Seats" = 50 [valuemax=99] [valuemin=10] [valuetext=50]
@@ -16,6 +17,7 @@ spinbutton "Seats" = 50 [valuemax=99] [valuemin=10] [valuetext=50]
   StaticText "50"
 button "Decrease"
 button "Increase"
+status [atomic] [live=polite]
 StaticText "10 to 99."
 LabelText
   StaticText "Weight"
@@ -23,15 +25,18 @@ spinbutton "Weight" = 1.5 [valuemax=0] [valuemin=0] [valuetext=1.5]
   StaticText "1.5"
 button "Decrease"
 button "Increase"
+status [atomic] [live=polite]
 LabelText
   StaticText "Locked"
 spinbutton "Locked" = 7 [valuemax=0] [valuemin=0] [valuetext=7]
   StaticText "7"
 button "Decrease" [disabled]
 button "Increase" [disabled]
+status [atomic] [live=polite]
 LabelText
   StaticText "Disabled"
 spinbutton "Disabled" = 7 [disabled] [valuemax=0] [valuemin=0] [valuetext=7]
   StaticText "7"
 button "Decrease" [disabled]
 button "Increase" [disabled]
+status [atomic] [live=polite]

@@ -274,10 +274,10 @@ fn a_step_starts_from_the_typed_text() {
     });
 }
 
-/// Todo 504: an emptied field hands its caller `None`, and text that never
-/// parsed reverts on commit, so text, value and `aria-valuenow` stay together.
+/// Todo 504: an emptied field hands its caller `None`. Text that never parsed stays on
+/// commit with the field's error, the caller's value untouched (4359).
 #[test]
-fn emptying_the_field_clears_the_value_and_junk_reverts() {
+fn emptying_the_field_clears_the_value_and_junk_is_refused() {
     const BACKSPACE: keyboard::Key = keyboard::Key {
         key: "Backspace",
         code: "Backspace",
@@ -304,20 +304,13 @@ fn emptying_the_field_clears_the_value_and_junk_reverts() {
         held(page, RANGED, "42").await.unwrap();
         retype(page, "-").await.unwrap();
         keyboard::press(page, keyboard::TAB).await.unwrap();
-        held(page, RANGED, "42").await.unwrap();
+        refused(page, RANGED, "-", "42").await.unwrap();
 
-        // Todo 3847: a float field reverts `NaN`, which `str::parse` accepts but no caller wants.
+        // Todo 3847: `NaN`, which `str::parse` accepts but no caller wants, is refused too.
         keyboard::tab_to(page, "#weight", 10).await.unwrap();
         retype(page, "NaN").await.unwrap();
         keyboard::press(page, keyboard::TAB).await.unwrap();
-        wait::for_js_true(
-            page,
-            "(() => { const el = document.querySelector('#weight'); \
-             return el.value === '1.5' && el.getAttribute('aria-valuenow') === '1.5'; })()",
-            "the weight to revert from NaN",
-        )
-        .await
-        .unwrap();
+        refused(page, "#weight", "NaN", "1.5").await.unwrap();
 
         fixture.console.assert_clean("emptying a number").unwrap();
         fixture.close().await.unwrap();
@@ -399,6 +392,21 @@ fn modifier_chords_do_not_step() {
         fixture.console.assert_clean("number field chords").unwrap();
         fixture.close().await.unwrap();
     });
+}
+
+/// Refused `text` stays shown with the field's error, `aria-valuenow` still the caller's `value`.
+async fn refused(page: &Page, selector: &str, text: &str, value: &str) -> Result<()> {
+    wait::for_js_true(
+        page,
+        &format!(
+            "(() => {{ const el = document.querySelector({selector:?}); \
+             const error = document.getElementById(el.id + '-status'); \
+             return el.value === {text:?} && el.getAttribute('aria-valuenow') === {value:?} \
+             && el.getAttribute('aria-invalid') === 'true' && error?.textContent === 'Enter a number.'; }})()"
+        ),
+        &format!("{selector} to refuse {text}"),
+    )
+    .await
 }
 
 /// Select the field's text and type `text` over it.

@@ -227,8 +227,8 @@ pub fn ColorField(props: ColorFieldProps) -> Element {
     // Like the other dropdown fields: the text takes the native `readonly`,
     // the dropdown refuses to open and the eyedropper stands down.
     let readonly = props.readonly.unwrap_or(false);
-    let has_dropdown = (with_picker || !props.swatches.is_empty() || recent_cap > 0) && !disabled;
     let has_palette = with_picker || !props.swatches.is_empty();
+    let has_dropdown = opens_dropdown(has_palette, recent_cap, recents.read().len()) && !disabled;
 
     let mut opened = use_signal(|| false);
     // The text as typed, while it differs from `value`'s own spelling. `None`
@@ -750,12 +750,17 @@ pub fn ColorField(props: ColorFieldProps) -> Element {
     }));
 
     // Posts the value in `format`, as `ColorPicker` does, never the text being typed (todo 2315).
+    // Text cleared and kept (no `fix_on_blur`) posts nothing, as the field shows (4362).
+    let cleared = draft
+        .read()
+        .as_deref()
+        .is_some_and(|text| text.trim().is_empty());
     let hidden = bound.name().map(|name| {
         rsx! {
             input {
                 r#type: "hidden",
                 name,
-                value: value.to_format(format),
+                value: if cleared { String::new() } else { value.to_format(format) },
                 disabled,
             }
         }
@@ -772,6 +777,11 @@ pub fn ColorField(props: ColorFieldProps) -> Element {
         }
     };
     field.render(control)
+}
+
+/// Recents alone open nothing until one is kept: an empty dialog is no popup (4361).
+fn opens_dropdown(has_palette: bool, recent_cap: usize, recents: usize) -> bool {
+    has_palette || recent_cap > 0 && recents > 0
 }
 
 /// Typed text as a color. With `keep_alpha` (alpha on, an alpha-less `format`), text
@@ -815,9 +825,9 @@ mod tests {
         assert!(!css.contains("var(--lsx-paper-shadow)"), "{css}");
     }
 
-    /// Todo 4247: recents alone are a dropdown to open, with or without a picker or swatches.
+    /// Todo 4247: recents alone are a dropdown to open, once one is kept (4361).
     #[test]
-    fn recents_without_a_picker_or_swatches_still_open_a_dropdown() {
+    fn recents_alone_open_a_dropdown_once_one_is_kept() {
         #[component]
         fn Field(recent_colors: Option<usize>) -> Element {
             rsx! {
@@ -835,8 +845,11 @@ mod tests {
                 crate::LiberoProvider { Field { recent_colors } }
             })
         };
-        assert!(render(Some(5)).contains(r#"role="combobox""#));
+        assert!(!render(Some(5)).contains(r#"role="combobox""#));
         assert!(!render(None).contains(r#"role="combobox""#));
+        assert!(opens_dropdown(false, 5, 1));
+        assert!(!opens_dropdown(false, 5, 0));
+        assert!(opens_dropdown(true, 0, 0));
     }
 
     #[test]

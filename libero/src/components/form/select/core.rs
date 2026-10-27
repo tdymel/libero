@@ -14,8 +14,8 @@ use crate::{
         form::{
             Asks, CaretKeys, ComboboxCore, ComboboxOption, DropdownPart, Edited, FocusOpen,
             PreparedField, RowCache, TouchHold, VIRTUAL_ROWS, clear_button, field_control_sx,
-            field_parts_enum, field_props, use_chip_announcer, use_edited, use_field,
-            use_field_frame, use_focus_open, use_refocus_on_close, use_row_cache, use_touch_hold,
+            field_parts_enum, field_props, use_chip_announcer, use_field, use_field_frame,
+            use_focus_open, use_refocus_on_close, use_row_cache, use_touch_hold,
             with_drawn_placeholder,
         },
         layout::{BoxStyle, use_box},
@@ -354,12 +354,10 @@ field_props! {
         /// Drawn in the trigger (beside it when `multiple`) from the chip cursor. `None` shows `placeholder`.
         #[props(default)]
         selection: Option<SelectionDraw>,
-        /// A `multiple` trigger's hidden value text; its live region announces changes.
+        /// A `multiple` trigger's hidden value text, and the mark the caller sets on its own
+        /// edits; the live region says those.
         #[props(default)]
-        value_labels: Vec<String>,
-        /// Marked by the caller on its own edits, which the live region then says.
-        #[props(default)]
-        edited: Option<Edited>,
+        value_labels: Option<(Vec<String>, Edited)>,
         /// How many chips `selection` draws, for the cursor over them.
         #[props(default)]
         chip_count: usize,
@@ -539,11 +537,9 @@ pub(crate) fn SelectCore(props: SelectCoreProps) -> Element {
         .framework_sx(&MULTI_CHEVRON_SX)
         .states(field.states())
         .prepare();
-    let own_edits = use_edited();
-    let announcer = use_chip_announcer(
-        props.value_labels.clone(),
-        props.edited.unwrap_or(own_edits),
-    );
+    let (value_labels, edited) = props.value_labels.clone().unzip();
+    let value_labels = value_labels.unwrap_or_default();
+    let announcer = use_chip_announcer(value_labels.clone(), edited);
 
     // A multi-select's chevron, replaced by the clear button. Neither takes focus from the trigger.
     let trailing = match (multiple, &clear) {
@@ -649,7 +645,7 @@ pub(crate) fn SelectCore(props: SelectCoreProps) -> Element {
                         focus: Some(chip_focus.clone()),
                     })
                 }),
-                &props.value_labels,
+                &value_labels,
                 &placeholder,
             )
         }

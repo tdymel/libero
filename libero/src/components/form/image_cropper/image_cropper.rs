@@ -850,14 +850,20 @@ pub fn ImageCropper(props: ImageCropperProps) -> Element {
     // The single-pointer alternative to every drag (WCAG 2.5.7): a press each. Focus stays on
     // the button, so the new box is said in a status region, as Kanban and Sortable do.
     let announcer = use_announcer();
+    // The box as last drawn: a controlled caller may clamp or refuse the press (4354).
+    let mut latest = use_hook(|| CopyValue::new(shown));
+    latest.set(shown);
     let pressed = move |rect: CropRect| {
         if rect == shown {
             return;
         }
         emit.call(rect);
-        if let Some(message) = press_message(&words, pan, shown, rect) {
-            announcer.say(message);
-        }
+        // Said after the caller's render, so it names the box that stands.
+        spawn(async move {
+            if let Some(message) = press_message(&words, pan, shown, *latest.peek()) {
+                announcer.say(message);
+            }
+        });
     };
     let nudge = move |dx: f64, dy: f64| {
         Callback::new(move |_: MouseEvent| pressed(shift(Grip::Move, dx, dy)))

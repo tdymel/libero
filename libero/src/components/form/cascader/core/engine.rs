@@ -139,9 +139,10 @@ pub(in super::super) fn use_cascader_engine(setup: EngineSetup) -> Engine {
         false => config.layout,
     };
 
-    // The `Paths` rows the query leaves. `Columns` ignores it.
+    // The `Paths` rows the query leaves; `Columns` walks no paths (4355).
+    let paths = layout == CascaderLayout::Paths;
     let visible = open_paths(
-        opened,
+        opened && paths,
         config,
         searching.then(|| query.read().clone()).as_deref(),
     );
@@ -273,8 +274,11 @@ pub(in super::super) fn use_cascader_engine(setup: EngineSetup) -> Engine {
         open,
         controlled_id,
         descendant,
-        // A tree without roots has no path; closed, the walk is skipped.
-        empty: rows.is_empty() && (opened || config.options.is_empty()),
+        // A tree without roots has no path; closed or in columns, the walk is skipped.
+        empty: match opened && paths {
+            true => rows.is_empty(),
+            false => config.options.is_empty(),
+        },
         wrapper,
         clearance,
         status,

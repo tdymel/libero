@@ -233,7 +233,7 @@ pub fn FileField(props: FileFieldProps) -> Element {
     let announcer = use_noting_chip_announcer(
         value.iter().map(FileData::name).collect(),
         refused(),
-        edited,
+        Some(edited),
     );
     let dragging = use_local_state(|| false);
 

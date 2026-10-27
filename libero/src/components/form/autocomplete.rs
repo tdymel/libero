@@ -151,7 +151,8 @@ pub fn Autocomplete<T: Options>(props: AutocompleteProps<T>) -> Element {
         None,
     );
     let row_cache = use_row_cache();
-    // Every open starts with no highlight, so Enter submits the text.
+    // A close drops the highlight, so a typed or focus open leaves Enter to submit the text;
+    // an arrow open highlights its row on purpose.
     use_effect(move || {
         if !state.is_open() {
             state.set_active(None);

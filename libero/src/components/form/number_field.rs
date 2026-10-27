@@ -9,14 +9,16 @@ use spinner::{Look, NumberSpinner, Spin};
 
 use crate::{
     components::{
+        accessibility::use_announcer,
         buttons::{ACTION_ICON_COMPACT, ActionIcon},
         common::{
             COARSE_POINTER, Glyph, HtmlTag, Input, NumberValue, ScaleOrCss, TOOLBAR_ITEM,
             ToolbarItem, aria_label_of, navigation_chord, use_no_toolbar, use_toolbar_item,
         },
         form::{
-            FormScope, LiveControl, LiveSlot, field_control_sx, field_props, slot_button_sx,
-            slot_icon_size, use_bound, use_field, use_field_frame, use_live_slot, use_prefill,
+            FieldError, FieldStatus, FormScope, LiveControl, LiveSlot, Parse, Typed,
+            field_control_sx, field_props, slot_button_sx, slot_icon_size, use_bound, use_field,
+            use_field_frame, use_live_slot, use_prefill, word,
         },
         layout::use_box,
     },
@@ -25,7 +27,7 @@ use crate::{
         current_localization, use_element, use_form_owner, use_formats, use_silent_focus_in,
         use_silent_focus_out_of, use_theme,
     },
-    localization::Formats,
+    localization::{Formats, Localization},
     platform::{ElementApi, next_task},
     sx::{StaticSx, Sx, ThemeAwareValue, sx},
     theme::Size,
@@ -312,9 +314,11 @@ impl Decimals {
     }
 
     /// Typed text cut after these places, where it has more; `mark` is the decimal mark.
-    fn cut(self, text: &str, mark: &str) -> Option<String> {
+    /// A `.` stands in for it unless `.` groups, where `1.234` is a whole number (4358).
+    fn cut(self, text: &str, mark: &str, group: Option<&str>) -> Option<String> {
         let (at, mark) = match text.find(mark) {
             Some(at) => (at, mark),
+            None if group == Some(".") => return None,
             None => (text.find('.')?, "."),
         };
         let (whole, fraction) = (&text[..at], &text[at + mark.len()..]);
@@ -369,17 +373,36 @@ fn NumberFieldShell<T: NumberValue>(
         warn("NumberField: without `onchange` the value can never change.");
     }
 
+    // Text that is no number, kept by the form over an unmount, as `DateField` keeps its own (4359).
+    let scope = try_use_context::<FormScope>();
+    let kept = use_hook(|| {
+        let full = bound.name()?;
+        scope?.typed(full).filter(|_| current().is_none())
+    });
     // The raw text, so that in-progress input survives a render. See `Edit`.
-    let mut buffer = use_signal(|| None::<Edit<T>>);
+    let mut buffer = use_signal(|| {
+        kept.as_ref().map(|typed| Edit {
+            text: typed.text.clone(),
+            held: None,
+        })
+    });
+    // Why the last commit was refused; cleared by the next keystroke, step or reset.
+    let mut rejected = use_signal(|| kept.map(|typed| typed.error));
     // A form reset drops the typed text, which `-` or `.` would outlive on a `None` value.
     let anchor = use_element();
-    let scope = try_use_context::<FormScope>();
     let owner = use_form_owner(anchor, scope.is_none());
     let resets = scope.map_or(0, |form| form.resets()) + owner().unwrap_or(0);
+    // Not on mount, which may restore text the form kept.
+    let seen = use_hook(|| Rc::new(std::cell::Cell::new(resets)));
     use_effect(use_reactive!(|resets| {
-        let _ = resets;
+        if seen.replace(resets) == resets {
+            return;
+        }
         if buffer.peek().is_some() {
             buffer.set(None);
+        }
+        if rejected.peek().is_some() {
+            rejected.set(None);
         }
     }));
 
@@ -425,6 +448,46 @@ fn NumberFieldShell<T: NumberValue>(
         }
     }));
 
+    // Refused text resets a bound value, as a mapped field's does; the form keeps the text.
+    let full = bound.name().map(str::to_string);
+    let resets_value = setter.is_some() && onchange.is_none();
+    let keep = move |typed: Option<Typed>| {
+        let (Some(mut scope), Some(full)) = (scope, &full) else {
+            return;
+        };
+        match typed {
+            Some(typed) if resets_value => scope.keep_typed(full, typed),
+            _ => scope.drop_typed(full),
+        }
+    };
+    let unrefuse = {
+        let keep = keep.clone();
+        move || {
+            let mut rejected = rejected;
+            if rejected.peek().is_some() {
+                rejected.set(None);
+                keep(None);
+            }
+        }
+    };
+    let refuse_setter = setter.clone();
+    // Returns the error to say; the text stays.
+    let refuse = {
+        let keep = keep.clone();
+        move |text: String| {
+            let error =
+                Rc::new(|locale: &Localization| locale.number_field.invalid_number.to_string())
+                    as Rc<dyn FieldError>;
+            let said = word(&*error);
+            let mut rejected = rejected;
+            rejected.set(Some(error.clone()));
+            keep(Some(Typed { text, error }));
+            if let (true, Some(setter)) = (resets_value && current().is_some(), &refuse_setter) {
+                setter.set(None);
+            }
+            said
+        }
+    };
     let publish = move |next: Option<T>| {
         let next = next.map(|next| rounded(next.clamp_between(min, max)));
         match (&onchange, &setter) {
@@ -436,15 +499,18 @@ fn NumberFieldShell<T: NumberValue>(
     let typed_publish = publish.clone();
     let spin_publish = publish.clone();
     // A spinner's step: the column sends the number it shows next.
+    let spin_unrefuse = unrefuse.clone();
     let spin_to = use_callback(move |next: T| {
         if !spin_opens {
             return;
         }
         buffer.set(None);
+        spin_unrefuse();
         spin_publish(Some(next));
     });
     // One identity across renders, so `Steppers` can skip. Safe as a
     // `use_callback`: nothing in it focuses or clicks, so it cannot re-enter.
+    let nudge_unrefuse = unrefuse.clone();
     let nudge = use_callback(move |steps: i32| {
         if readonly {
             return;
@@ -466,6 +532,7 @@ fn NumberFieldShell<T: NumberValue>(
             };
         }
         buffer.set(None);
+        nudge_unrefuse();
         publish(Some(next));
     });
     let publish = typed_publish;
@@ -479,11 +546,21 @@ fn NumberFieldShell<T: NumberValue>(
         })
         .flatten();
 
-    let field = use_field()
+    // Refused text outranks the caller's status: the field cannot hold what it shows.
+    let status: Input<FieldStatus> = match rejected() {
+        Some(error) => Input::Value(FieldStatus::Error(word(&*error))),
+        None => props.status.clone(),
+    };
+    let field = use_field();
+    let field = match rejected() {
+        Some(error) => field.parse(Parse::Invalid(error)),
+        None => field,
+    };
+    let field = field
         .label(&props.label)
         .description(&props.description)
         .helper(&props.helper)
-        .status(&props.status)
+        .status(&status)
         .rules(rules)
         .bound(&bound)
         .required(required)
@@ -513,19 +590,27 @@ fn NumberFieldShell<T: NumberValue>(
     let unit_id = trailing_id.clone();
     // The memo alone reads the number, so a step redraws the buttons only at a bound.
     // Typed text steps from itself (see `nudge`), so it counts, not the caller's value.
-    let reach = use_memo(use_reactive!(|bound_value, min, max, separator| {
-        let value = bound_value.unwrap_or_else(|| live.cloned());
-        let value = buffer
-            .read()
-            .as_ref()
-            .filter(|edit| edit.shows(value, separator))
-            .and_then(|edit| parse::<T>(&edit.text, separator))
-            .or(value);
-        Reach {
-            at_min: value.is_some() && value == min,
-            at_max: value.is_some() && value == max,
-        }
-    }));
+    let reach =
+        use_memo(use_reactive!(|bound_value,
+                                min,
+                                max,
+                                separator,
+                                decimals| {
+            let value = bound_value.unwrap_or_else(|| live.cloned());
+            // A bound the places cannot show is reached at its rounded value: 9.99 under a 9.999 max (4360).
+            let bound =
+                |bound: Option<T>| bound.map(|bound| rounded_within(bound, decimals, min, max));
+            let value = buffer
+                .read()
+                .as_ref()
+                .filter(|edit| edit.shows(value, separator))
+                .and_then(|edit| parse::<T>(&edit.text, separator))
+                .or(value);
+            Reach {
+                at_min: value.is_some() && value == bound(min),
+                at_max: value.is_some() && value == bound(max),
+            }
+        }));
     let steppers = props.steppers.then(|| {
         rsx! {
             Steppers {
@@ -561,13 +646,17 @@ fn NumberFieldShell<T: NumberValue>(
         .focus_ring(false)
         .prepare();
 
+    let typed_unrefuse = unrefuse.clone();
+    let announcer = use_announcer();
     let on_text = move |mut text: String| {
         let mut buffer = buffer;
+        typed_unrefuse();
+        announcer.clear();
         // Written back at once, as a native field drops a char past `maxlength`: a cut that
         // equals the last render diffs to nothing.
-        if let Some(cut) =
-            decimals.and_then(|decimals| decimals.cut(&text, separator.decimal.unwrap_or(".")))
-        {
+        if let Some(cut) = decimals.and_then(|decimals| {
+            decimals.cut(&text, separator.decimal.unwrap_or("."), separator.group)
+        }) {
             let _ = anchor.set_value(&cut);
             text = cut;
         }
@@ -587,6 +676,7 @@ fn NumberFieldShell<T: NumberValue>(
         buffer.set(Some(Edit { text, held }));
     };
     let prefilled = on_text.clone();
+    let (blur_refuse, enter_refuse) = (refuse.clone(), refuse);
     use_prefill(
         anchor,
         None,
@@ -619,12 +709,18 @@ fn NumberFieldShell<T: NumberValue>(
         .event("oninput", move |event: FormEvent| on_text(event.value()))
         // Fires when the field is left or Enter commits an edit. Dropping the
         // buffer redraws the canonical text, which also rewrites the DOM.
+        // Text that is no number stays, with the field's error (4359).
         .event("onchange", move |event: FormEvent| {
-            if let Some(parsed) = parse::<T>(&event.value(), separator)
-                && parsed.clamp_between(min, max) != parsed
-            {
-                commit(Some(parsed));
+            let text = event.value();
+            match parse::<T>(&text, separator) {
+                None if !text.trim().is_empty() => {
+                    blur_refuse(text);
+                    return;
+                }
+                Some(parsed) if parsed.clamp_between(min, max) != parsed => commit(Some(parsed)),
+                _ => {}
             }
+            keep(None);
             buffer.set(None);
         })
         .event("onkeydown", move |event: KeyboardEvent| {
@@ -633,6 +729,17 @@ fn NumberFieldShell<T: NumberValue>(
                 return;
             }
             let steps = match event.key() {
+                // A refused text holds the form's implicit submit, so the error stays seen.
+                Key::Named(NamedKey::Enter) => {
+                    let text = buffer.peek().as_ref().map(|edit| edit.text.clone());
+                    if let Some(text) = text.filter(|text| {
+                        !text.trim().is_empty() && parse::<T>(text, separator).is_none()
+                    }) {
+                        event.prevent_default();
+                        announcer.say(enter_refuse(text));
+                    }
+                    return;
+                }
                 Key::Named(NamedKey::ArrowUp) => 1,
                 Key::Named(NamedKey::ArrowDown) => -1,
                 Key::Named(NamedKey::PageUp) => 10,
@@ -757,7 +864,10 @@ fn NumberFieldShell<T: NumberValue>(
         },
         false => control,
     };
-    field.render(control)
+    field.render(rsx! {
+        {control}
+        {announcer.render()}
+    })
 }
 
 /// Text typed since the last commit, shown while it parses to the caller's
@@ -1242,13 +1352,22 @@ mod tests {
     #[test]
     fn decimals_cut_typed_digits() {
         use super::Decimals::{AtMost, Exactly};
-        assert_eq!(Exactly(2).cut("12.345", "."), Some("12.34".into()));
-        assert_eq!(Exactly(2).cut("12,345", ","), Some("12,34".into()));
-        assert_eq!(Exactly(2).cut("12.345", ","), Some("12.34".into()));
-        assert_eq!(AtMost(2).cut("12.34", "."), None);
-        assert_eq!(AtMost(2).cut("12", "."), None);
-        assert_eq!(AtMost(0).cut("12.", "."), None);
-        assert_eq!(AtMost(0).cut("12.5", "."), Some("12".into()));
+        assert_eq!(Exactly(2).cut("12.345", ".", None), Some("12.34".into()));
+        assert_eq!(Exactly(2).cut("12,345", ",", None), Some("12,34".into()));
+        assert_eq!(
+            Exactly(2).cut("12.345", ",", Some(" ")),
+            Some("12.34".into())
+        );
+        assert_eq!(AtMost(2).cut("12.34", ".", None), None);
+        assert_eq!(AtMost(2).cut("12", ".", None), None);
+        assert_eq!(AtMost(0).cut("12.", ".", None), None);
+        assert_eq!(AtMost(0).cut("12.5", ".", None), Some("12".into()));
+        // Todo 4358: where `.` groups, `1.234` is a thousand, not a fraction to cut.
+        assert_eq!(Exactly(2).cut("1.234", ",", Some(".")), None);
+        assert_eq!(
+            Exactly(2).cut("1.234,567", ",", Some(".")),
+            Some("1.234,56".into())
+        );
     }
 
     /// Todo 3962: the caller's slots draw, and `Exactly` pads the shown number.

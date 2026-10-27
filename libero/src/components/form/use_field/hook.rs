@@ -239,6 +239,17 @@ impl<T: Clone + 'static> Bound<T> {
         })
     }
 
+    /// Clears what was entered, so a form reset draws `value` again.
+    pub(crate) fn forget_entered(&self) -> impl Fn() + Copy + 'static {
+        let entered = self.entered;
+        move || {
+            let mut entered = entered;
+            if entered.peek().is_some() {
+                entered.set(None);
+            }
+        }
+    }
+
     /// What the user last entered, for a field with no handler and no binding,
     /// so its rules don't judge `T::default()` for ever.
     pub fn entered(&self) -> Option<T> {

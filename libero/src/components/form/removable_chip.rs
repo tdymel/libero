@@ -134,17 +134,18 @@ struct Announced {
 }
 
 impl Announced {
-    /// Takes a render's list; its change is said only after `own`, the note whenever it is new.
+    /// Takes a render's list; its change is said only when `edited`, the note whenever it is new.
+    /// `edited` is used up by the next change, not the next render: the caller's new list may land a render late.
     fn observe(
         &mut self,
         labels: Vec<String>,
-        own: bool,
+        edited: &mut bool,
         note: Option<(u64, String)>,
         words: &ChipsLabels,
     ) {
         let mut change = None;
         if self.labels != labels {
-            if own {
+            if std::mem::take(edited) {
                 change = chip_change(&self.labels, &labels, words);
             }
             self.labels = labels;
@@ -182,7 +183,7 @@ pub(crate) fn use_edited() -> Edited {
 
 /// A polite live region saying which chips a list gained or lost, by diffing
 /// labels. Always mounted: a region inserted with its text is not announced.
-pub(crate) fn use_chip_announcer(labels: Vec<String>, edited: Edited) -> Element {
+pub(crate) fn use_chip_announcer(labels: Vec<String>, edited: Option<Edited>) -> Element {
     use_noting_chip_announcer(labels, None, edited)
 }
 
@@ -190,7 +191,7 @@ pub(crate) fn use_chip_announcer(labels: Vec<String>, edited: Edited) -> Element
 pub(crate) fn use_noting_chip_announcer(
     labels: Vec<String>,
     note: Option<(u64, String)>,
-    edited: Edited,
+    edited: Option<Edited>,
 ) -> Element {
     let words = &use_localization().chips;
     let announced = use_hook(|| {
@@ -201,11 +202,11 @@ pub(crate) fn use_noting_chip_announcer(
             noted: note.as_ref().map_or(0, |(number, _)| *number),
         }))
     });
-    // Consumed at the first render after it is set, a change or not.
-    let mut mark = edited.0;
-    let own = std::mem::take(&mut *mark.write());
     let mut announced = announced.borrow_mut();
-    announced.observe(labels, own, note, words);
+    match edited {
+        Some(Edited(mut mark)) => announced.observe(labels, &mut mark.write(), note, words),
+        None => announced.observe(labels, &mut false, note, words),
+    }
     let spoken = announced
         .message
         .clone()
@@ -262,8 +263,9 @@ mod tests {
         }
     }
 
-    fn render(announced: &mut Announced, values: &[&str], own: bool) {
-        announced.observe(labels(values), own, None, &ChipsLabels::ENGLISH);
+    fn render(announced: &mut Announced, values: &[&str], mut own: bool) -> bool {
+        announced.observe(labels(values), &mut own, None, &ChipsLabels::ENGLISH);
+        own
     }
 
     #[test]
@@ -284,12 +286,14 @@ mod tests {
     }
 
     #[test]
-    fn a_refused_edit_does_not_vouch_for_a_later_swap() {
+    fn an_edit_landing_a_render_late_is_still_said() {
         let mut announced = announced(&["a"]);
-        render(&mut announced, &["a"], true);
-        render(&mut announced, &["x", "y"], false);
-        assert_eq!(announced.message, None);
+        // The field redraws (its draft cleared) before the caller's new list arrives.
+        let still_marked = render(&mut announced, &["a"], true);
+        assert!(still_marked);
         assert_eq!(announced.count, 0);
+        assert!(!render(&mut announced, &["a", "b"], still_marked));
+        assert_eq!(announced.message.as_deref(), Some("Added b"));
     }
 
     #[test]

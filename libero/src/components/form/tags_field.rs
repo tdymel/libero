@@ -10,14 +10,14 @@ use crate::{
             aria_label_of, ring_overlay, use_combobox, use_no_toolbar, use_toolbar_item,
         },
         form::{
-            CaretKeys, ChipFocus, ComboboxCore, ComboboxOption, DropdownPart, SelectionArgs,
-            clear_button, field_control_sx, field_parts_enum, field_props, removable_chip,
-            row_label, use_bound, use_chip_announcer, use_chip_handles, use_edited, use_field,
-            use_field_frame, use_prefill,
+            CaretKeys, ChipFocus, ComboboxCore, ComboboxOption, DropdownPart, FormScope,
+            SelectionArgs, clear_button, field_control_sx, field_parts_enum, field_props,
+            removable_chip, row_label, use_bound, use_chip_announcer, use_chip_handles, use_edited,
+            use_field, use_field_frame, use_prefill,
         },
         layout::{BoxStyle, use_box},
     },
-    hooks::{ElementHandle, PopoverWidth, use_localization, use_theme},
+    hooks::{ElementHandle, PopoverWidth, use_form_owner, use_localization, use_theme},
     localization::{TagsFieldLabels, fill},
     platform::{ElementApi, caret_edges, is_tab, logical_key},
     sx::{StaticSx, sx},
@@ -63,8 +63,8 @@ field_props! {
     parts(TagsFieldPart);
     extends(input);
     pub struct TagsFieldProps {
-        /// The tags, in order. With `onchange` it is controlled; without one, or a
-        /// bound `name`, the field starts from it and keeps its own edits.
+        /// The tags, in order. With `onchange` it is controlled; a path `name` binds the list
+        /// to the `Form` instead. With neither, the field starts from it and keeps its own edits.
         #[props(default)]
         value: Vec<String>,
         /// Called with the whole list the caller should hold next.
@@ -152,7 +152,7 @@ pub fn TagsField(props: TagsFieldProps) -> Element {
         .or_else(|| bound.entered())
         .unwrap_or_else(|| props.value.clone());
     let edited = use_edited();
-    let announcer = use_chip_announcer(held.clone(), edited);
+    let announcer = use_chip_announcer(held.clone(), Some(edited));
 
     // The draft is the component's own, as `SelectCore` owns its query.
     let mut text = use_signal(String::new);
@@ -160,6 +160,18 @@ pub fn TagsField(props: TagsFieldProps) -> Element {
     // The chips' focus walks as on `MultiSelect`, with the draft input as its trigger.
     let handles = use_chip_handles();
     let input_element = handles.trigger();
+    // A form reset drops the own edits and the draft, as `NumberField` does (4365).
+    let scope = try_use_context::<FormScope>();
+    let owner = use_form_owner(input_element, scope.is_none());
+    let resets = scope.map_or(0, |form| form.resets()) + owner().unwrap_or(0);
+    let forget = bound.forget_entered();
+    use_effect(use_reactive!(|resets| {
+        let _ = resets;
+        forget();
+        if !text.peek().is_empty() {
+            text.set(String::new());
+        }
+    }));
     // Set while the input hands focus to a tag, so its blur keeps the draft.
     let entering = use_hook(|| CopyValue::new(false));
 
@@ -292,11 +304,23 @@ pub fn TagsField(props: TagsFieldProps) -> Element {
     );
     // The x's press blurs the input before its click, and that blur must not commit the draft.
     let mut clearing = use_hook(|| CopyValue::new(false));
+    let cancelled_add = add.clone();
     let clear = clear.map(|button| {
         rsx! {
             span {
                 style: "display: contents",
-                onmousedown: move |_| clearing.set(true),
+                // Only a press that blurs the input defers its draft.
+                onmousedown: move |_| clearing.set(input_element.is_focused()),
+                // A press dragged off the x never becomes a click: the draft its blur kept commits (4367).
+                onmouseleave: move |_| {
+                    if !clearing.replace(false) || input_element.is_focused() {
+                        return;
+                    }
+                    let draft = text.peek().clone();
+                    if !draft.trim().is_empty() && cancelled_add(vec![draft]).is_none() {
+                        text.set(String::new());
+                    }
+                },
                 {button}
             }
         }
@@ -820,7 +844,8 @@ fn tags_field_input<F: Fn(Vec<String>) + Clone + 'static>(
         // An uncommitted draft becomes a tag rather than being thrown away.
         .event("onblur", move |_: FocusEvent| {
             let draft = text();
-            let kept = entering.replace(false) | clearing.replace(false);
+            // `clearing` stays set until the click, or the press leaving the x, settles the draft.
+            let kept = entering.replace(false) | *clearing.peek();
             if !readonly && !kept && !draft.trim().is_empty() && blurring(vec![draft]).is_none() {
                 text.set(String::new());
             }
