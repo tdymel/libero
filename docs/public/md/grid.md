@@ -13,8 +13,8 @@ zone. A zone also works alone, so a masonry wall needs no template.
 
 ## Usage
 
-A zone on its own, with six cards of mixed spans and heights. Turn on `masonry`
-and the vertical gaps go away.
+A zone on its own, with six cards of mixed spans and heights. Turn off `masonry`
+to see the vertical gaps it removes.
 
 ```rust
 use dioxus::prelude::*;

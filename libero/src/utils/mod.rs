@@ -15,6 +15,6 @@ pub(crate) use data_url::encode_base64;
 pub(crate) use digits::{ascii_digit, digits_of, fold_digit, fold_digits, ungrouped};
 pub(crate) use id::unique_id;
 pub(crate) use signal::bump;
-pub(crate) use warn::warn;
 #[cfg(test)]
 pub(crate) use warn::{take_warnings, warnings_of};
+pub(crate) use warn::{use_warn_once, warn};

@@ -1,5 +1,3 @@
-use std::{cell::RefCell, collections::HashSet, rc::Rc};
-
 use dioxus::prelude::*;
 use pictogram_icons_lucide as lucide;
 
@@ -33,7 +31,7 @@ use crate::{
         ACTION_ICON_GLYPH, ACTION_ICON_RADIUS, ACTION_ICON_SIZE, BUTTON_HEIGHT, CssVar, Gradient,
         ICON_SIZE, LOADER_SIZE, Size, SizeCss,
     },
-    utils::warn,
+    utils::use_warn_once,
 };
 
 const ACTION_ICON_COLOR_VAR: CssVar = CssVar::new("--lsx-action-icon-color");
@@ -345,12 +343,11 @@ pub(crate) struct TooltipOpenDelay(pub(crate) u32);
 pub fn ActionIcon(props: ActionIconProps) -> Element {
     let group = use_button_group();
     let apple = mod_is_meta();
-    // Each bad chord warns once per instance, not on every render.
-    let warned = use_hook(|| Rc::new(RefCell::new(HashSet::<String>::new())));
+    let warned = use_warn_once();
     let chord = props.shortcut.as_deref().and_then(|text| {
         let chord = Chord::parse(text, apple);
-        if chord.is_none() && warned.borrow_mut().insert(text.to_string()) {
-            warn(&format!(
+        if chord.is_none() {
+            warned.once(text, || format!(
                 "ActionIcon: `shortcut` {text:?} is not a chord `use_hotkeys` takes, so it is not announced or shown."
             ));
         }
@@ -409,10 +406,10 @@ fn action_icon(mut props: ActionIconProps, keyshortcuts: Option<String>) -> Elem
     let item = item.filter(|_| !disabled || soft_disabled);
 
     // Once per instance, as the bad-chord warning.
-    let warned = use_hook(|| Rc::new(RefCell::new(HashSet::<&'static str>::new())));
+    let warned = use_warn_once();
     let warn_once = |when: bool, message: &'static str| {
-        if when && warned.borrow_mut().insert(message) {
-            warn(message);
+        if when {
+            warned.once(message, || message.to_string());
         }
     };
     warn_once(

@@ -7,9 +7,10 @@ use crate::{
     },
     sx::{StaticSx, sx},
     theme::{GRID_ITEM_ROW_SPAN_VAR, GRID_ITEM_ROWS_VAR, Responsive},
+    utils::use_warn_once,
 };
 
-use super::{GRID_ITEM_STATE, GridSpan, GridZoneContext, Warned, ZoneState, container_name};
+use super::{GRID_ITEM_STATE, GridSpan, GridZoneContext, ZoneState, container_name};
 
 static GRID_ITEM_SX: StaticSx = StaticSx::new(|| {
     let base = sx().min_width("0").when(
@@ -72,7 +73,7 @@ pub fn GridItem(props: GridItemProps) -> Element {
     // Per item, so a late or never-measured item affects only itself.
     let mut rows = use_signal(|| None::<u32>);
 
-    let warned = use_hook(Warned::default);
+    let warned = use_warn_once();
 
     if zone.is_none() {
         warned.once("no-zone", || {

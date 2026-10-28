@@ -14,7 +14,7 @@ pub struct ShortcutHelpLabels {
     pub meta_other: &'static str,
     pub space: &'static str,
     /// Named keys by their `Key` name (`ArrowUp`, `Escape`); a key missing here
-    /// shows that name.
+    /// shows that name. The slice replaces the whole table, so list every key to name.
     ///
     /// ```
     /// use libero::localization::ShortcutHelpLabels;

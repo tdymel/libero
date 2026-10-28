@@ -1,5 +1,3 @@
-use std::{cell::RefCell, rc::Rc};
-
 use dioxus::prelude::*;
 
 use crate::{
@@ -13,7 +11,7 @@ use crate::{
         GRID_ITEM_ROWS_VAR, GRID_ROW_UNIT, GRID_ZONE_AREA_VAR, GRID_ZONE_CONTAINER_VAR,
         GRID_ZONE_GAP, SizeCss,
     },
-    utils::warn,
+    utils::use_warn_once,
 };
 
 use super::{AreaName, GridContext};
@@ -38,19 +36,6 @@ pub(crate) struct GridZoneContext {
 /// Only `GridItem` writes this token; bare `[data-state]` would crush any
 /// `Box`-derived child, e.g. a stray `Text`, into one row.
 pub(crate) const GRID_ITEM_STATE: &str = "grid-item";
-
-/// Per-instance warning keys: each fires once, not on every render.
-#[derive(Clone, Default)]
-pub(crate) struct Warned(Rc<RefCell<Vec<&'static str>>>);
-
-impl Warned {
-    pub(crate) fn once(&self, key: &'static str, message: impl FnOnce() -> String) {
-        if !self.0.borrow().contains(&key) {
-            self.0.borrow_mut().push(key);
-            warn(&message());
-        }
-    }
-}
 
 /// Prefixed, so it can't collide with a caller's own container name.
 pub(crate) fn container_name(area: &str) -> String {
@@ -151,7 +136,7 @@ pub fn GridZone(props: GridZoneProps) -> Element {
     let grid = try_use_context::<GridContext>();
     // Read before this zone provides its own: the zone enclosing a nested grid.
     let enclosing = try_use_context::<GridZoneContext>();
-    let warned = use_hook(Warned::default);
+    let warned = use_warn_once();
 
     let area = props.area;
     if grid.is_none() && area.is_set() {

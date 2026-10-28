@@ -418,7 +418,7 @@ impl ChordKey {
     }
 }
 
-/// The keys of `chord`, modifiers first in the platform's order.
+/// The keys of `chord`, modifiers first as Ctrl, Alt, Shift, Meta on every platform.
 pub(crate) fn chord_keys(chord: &Chord) -> Vec<ChordKey> {
     let mut keys: Vec<ChordKey> = [
         (chord.ctrl, ChordKey::Ctrl),

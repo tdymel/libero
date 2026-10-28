@@ -8,6 +8,7 @@ const SHORTCUTS: &str = r#"shortcuts: vec![
     Shortcut::new("mod+i", "Italic"),
     Shortcut::new("shift+mod+k", "Insert a link"),
     Shortcut::new("alt+f10", "Go to the toolbar"),
+    Shortcut::new("escape", "Close"),
 ]"#;
 
 #[component]
@@ -29,7 +30,7 @@ pub fn ShortcutHelpPage() -> Element {
             accessibility: a11y()
                 .handles([
                     "A `Dialog` named by its title, the shortcuts a description list: each chord a `dt`, what it does the `dd`.",
-                    "Each key is a `kbd`. `mod` shows as Cmd on Apple platforms and Ctrl elsewhere. The modifiers, Space and named keys such as Escape take their names from the localization's `ShortcutHelpLabels`; a key missing from its `key_names` shows its `Key` name, `ArrowUp`.",
+                    "Each key is a `kbd`. `mod` shows as Cmd on Apple platforms and Ctrl elsewhere. The modifiers, Space and named keys such as Escape take their names from the localization's `ShortcutHelpLabels`; a key missing from its `key_names` shows its `Key` name, `F10`.",
                     "A list taller than 24rem or 60% of the window scrolls inside the dialog, and only then becomes a tab stop, a `region` named by the title, so the keyboard can scroll it.",
                 ])
                 .must([
@@ -78,6 +79,7 @@ pub fn ShortcutHelpPage() -> Element {
                             Shortcut::new("mod+i", "Italic"),
                             Shortcut::new("shift+mod+k", "Insert a link"),
                             Shortcut::new("alt+f10", "Go to the toolbar"),
+                            Shortcut::new("escape", "Close"),
                         ],
                     }
                 },

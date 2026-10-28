@@ -1,5 +1,3 @@
-use std::{cell::RefCell, collections::HashSet, rc::Rc};
-
 use dioxus::prelude::*;
 
 use crate::{
@@ -13,7 +11,7 @@ use crate::{
     hooks::{Chord, current_localization, use_css, use_element, use_resize_fallback},
     platform::{ElementApi, mod_is_meta},
     sx::{StaticSx, sx},
-    utils::warn,
+    utils::use_warn_once,
 };
 
 const SHORTCUT_LIST: &str = "lsx-shortcut-list";
@@ -96,15 +94,15 @@ pub fn ShortcutHelp(props: ShortcutHelpProps) -> Element {
     let list_class = use_css(Some(&SHORTCUT_LIST_SX), CssLayer::Framework);
     let apple = mod_is_meta();
     // Each bad chord warns once per instance, not on every render (todo 2450).
-    let warned = use_hook(|| Rc::new(RefCell::new(HashSet::<String>::new())));
+    let warned = use_warn_once();
     let rows = props.shortcuts.iter().filter_map(|shortcut| {
         let Some(chord) = Chord::parse(&shortcut.chord, apple) else {
-            if warned.borrow_mut().insert(shortcut.chord.clone()) {
-                warn(&format!(
+            warned.once(&shortcut.chord, || {
+                format!(
                     "ShortcutHelp: `{}` is not a chord `use_hotkeys` binds, so it is left out.",
                     shortcut.chord
-                ));
-            }
+                )
+            });
             return None;
         };
         let keys = chord_words(&chord, apple, words);

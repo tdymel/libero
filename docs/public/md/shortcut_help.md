@@ -29,6 +29,7 @@ fn Demo() -> Element {
                     Shortcut::new("mod+i", "Italic"),
                     Shortcut::new("shift+mod+k", "Insert a link"),
                     Shortcut::new("alt+f10", "Go to the toolbar"),
+                    Shortcut::new("escape", "Close"),
                 ],
             }
         }
@@ -60,7 +61,7 @@ Like every component, `ShortcutHelp` also takes the shared props `sx`, `class`,
 - Each key is a `kbd`. `mod` shows as Cmd on Apple platforms and Ctrl
   elsewhere. The modifiers, Space and named keys such as Escape take their
   names from the localization's `ShortcutHelpLabels`; a key missing from its
-  `key_names` shows its `Key` name, `ArrowUp`.
+  `key_names` shows its `Key` name, `F10`.
 - A list taller than 24rem or 60% of the window scrolls inside the dialog, and
   only then becomes a tab stop, a `region` named by the title, so the keyboard
   can scroll it.
