@@ -9,7 +9,8 @@ use crate::{
     components::{
         common::{
             COARSE_POINTER, ClassList, HtmlTag, Input, Part, States, Variables, base_color,
-            disabled_look_within_sx, has_shortcut_modifier, shadow_sx, text_color, variables,
+            coarse_hit_area_sx, disabled_look_within_sx, has_shortcut_modifier, shadow_sx,
+            text_color, variables,
         },
         form::field_parts_enum,
         layout::use_box,
@@ -105,6 +106,16 @@ static SLIDER_ROOT_SX: StaticSx = StaticSx::new(|| {
         .width("100%")
         .min_height(SLIDER_THUMB.value())
         .user_select("none")
+        // A 44px tall press under a finger (todo 4766). The track stacks above it, so a press
+        // on a thumb still starts a drag rather than a jump.
+        .and(coarse_hit_area_sx("::after"))
+        .media(
+            COARSE_POINTER,
+            sx().selector(
+                format!("& > [data-slot='{}']", SliderPart::Track.slot()),
+                sx().z_index("1"),
+            ),
+        )
         // Room for the captions. Padding, not margin, which would collapse.
         .when("marks-labeled", sx().padding_bottom("1.5em"))
         // No grab cursor for a drag `onstart` refuses.
@@ -1932,6 +1943,18 @@ mod tests {
             }
         }
         assert!(short.is_empty(), "a fill fell under 3:1: {short:?}");
+    }
+
+    /// Todo 4766: a finger's press is 44px, and the track stays above it for a drag.
+    #[test]
+    fn a_coarse_pointer_grows_the_press_under_the_track() {
+        let css = crate::css::Stylesheet::from(&super::SLIDER_ROOT_SX);
+        let css = css.as_str();
+        let coarse = css
+            .find("@media (pointer: coarse)")
+            .unwrap_or_else(|| panic!("no coarse query: {css}"));
+        assert!(css[coarse..].contains("::after"), "{css}");
+        assert!(css[coarse..].contains("z-index:1"), "{css}");
     }
 
     /// Todo 3412: a bare bubble groups its thousands only when asked.
