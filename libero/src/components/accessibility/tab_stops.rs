@@ -43,7 +43,7 @@ fn form_owners(root: &dyn ElementApi, items: &[Box<dyn ElementApi>]) -> Vec<Owne
             (inside > 0).then(|| (at + 1, form_depth(form.as_ref(), "form") + 1, inside))
         })
         .peekable();
-    let mut open: Vec<(usize, usize)> = Vec::new();
+    let mut open: Vec<(usize, usize, usize)> = Vec::new();
     items
         .iter()
         .map(|item| {
@@ -52,17 +52,19 @@ fn form_owners(root: &dyn ElementApi, items: &[Box<dyn ElementApi>]) -> Vec<Owne
             } else {
                 form_depth(item.as_ref(), "*")
             };
-            while open.last().is_some_and(|(_, left)| *left == 0) {
+            while open.last().is_some_and(|(_, _, left)| *left == 0) {
                 open.pop();
             }
+            // Only a form inside the open one opens here: a later sibling form waits for its run.
             while let Some(&(form, level, inside)) = ahead.peek()
                 && depth >= level
+                && open.last().is_none_or(|(_, top, _)| level > *top)
             {
-                open.push((form, inside));
+                open.push((form, level, inside));
                 ahead.next();
             }
-            let around = open.last().map_or(0, |(form, _)| *form);
-            for (_, left) in &mut open {
+            let around = open.last().map_or(0, |(form, _, _)| *form);
+            for (_, _, left) in &mut open {
                 *left = left.saturating_sub(1);
             }
             match item.attribute("form").ok().flatten() {
@@ -432,6 +434,22 @@ mod tests {
             ..Fake::default()
         };
         let groups = radio_groups(&root, &boxed(&[inside, loose]));
+        assert_eq!(groups[0], groups[1]);
+    }
+
+    /// Form A holds a `form=""` radio, then a formless radio and form B follow: the two group (4759).
+    #[test]
+    fn a_later_sibling_form_does_not_own_the_radios_before_it() {
+        let focused = Rc::new(Cell::new(0));
+        let mut emptied = in_depth(radio(1, &focused, "tone"), 1);
+        emptied.attrs.push(("form", ""));
+        let loose = radio(2, &focused, "tone");
+        let other = in_depth(radio(3, &focused, "plan"), 1);
+        let root = Fake {
+            children: vec![form_of(&[&emptied]), form_of(&[&other])],
+            ..Fake::default()
+        };
+        let groups = radio_groups(&root, &boxed(&[emptied, loose, other]));
         assert_eq!(groups[0], groups[1]);
     }
 
