@@ -7,14 +7,12 @@ use dioxus::{core::provide_root_context, prelude::*};
 use crate::{
     LiberoProvider, choices,
     components::{
-        Rule,
         common::{Choice, Choices},
         form::{
             CheckboxGroup, FieldName, FieldPath, Form, FormErrors, FormHandle, FormScope,
-            MultiSelect, NativeSelect, RadioGroup, RequiredValue, SegmentedControl, Select, Submit,
-            TextField, use_bound, use_form,
+            MultiSelect, NativeSelect, RadioGroup, RequiredValue, Rule, SegmentedControl, Select,
+            Submit, TextField, not_empty, use_bound, use_form,
         },
-        not_empty,
     },
 };
 
