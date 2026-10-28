@@ -186,7 +186,7 @@ pub fn AvatarPage() -> Element {
                 .example("A comment author, `Avatar { name: \"Ada Lovelace\", alt: \"\" }` beside the visible name: the name is read once, from the text, not twice."),
             lead: rsx! {
                 Text {
-                    "A person as a fixed square. It shows the picture, else "
+                    "A person as a fixed-size circle or square. It shows the picture, else "
                     Code { source: "children" }
                     ", else "
                     Code { source: "initials" }

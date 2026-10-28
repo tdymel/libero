@@ -1,7 +1,7 @@
 use crate::{
     components::{
         common::{LogicalTextAlign, focus_ring_sx, ring_overlay_sx},
-        form::{drag_over_sx, field_control_sx},
+        form::{drag_over_sx, field_control_sx, framed_remove_sx},
     },
     platform::draws_placeholders,
     sx::{StaticSx, Sx, sx},
@@ -56,6 +56,7 @@ pub(super) static FILE_CONTROL_SX: StaticSx = StaticSx::new(|| {
         .selector("& [data-slot='stem']", stem_sx())
         .selector("& [data-slot='extension']", sx().flex("none"))
         .selector("& [data-slot='chip'] > *", sx().max_width("100%"))
+        .and(framed_remove_sx())
         // The ring goes on what was drawn, not on the item, so it follows that
         // element's own radius.
         .selector("& [data-slot='chip']:focus-visible", sx().outline("none"))

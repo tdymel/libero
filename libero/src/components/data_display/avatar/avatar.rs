@@ -82,6 +82,16 @@ pub(super) fn avatar_sx() -> Sx {
         )
     });
 
+    // An unfilled member in a group takes the ring's colour, or the circles under it show through.
+    let base = [Variant::Outlined, Variant::Standard]
+        .into_iter()
+        .fold(base, |base, variant| {
+            base.when(
+                format!("{} && grouped", variant.state_name()),
+                sx().background(PAPER_BACKGROUND.value()),
+            )
+        });
+
     // A border on the outlined arm only: elsewhere it would inset the picture.
     base.when(
         Variant::Outlined.state_name(),

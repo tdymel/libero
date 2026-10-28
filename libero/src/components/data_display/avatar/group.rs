@@ -52,7 +52,7 @@ base_props! {
     pub struct AvatarGroupProps {
         /// The members, in paint order: the first is drawn on top.
         people: Vec<AvatarSpec>,
-        /// Circles in total, the `+N` chip included.
+        /// Circles in total, the `+N` chip included; 0 counts as 1.
         #[props(default)]
         max: Option<usize>,
         /// The full headcount when `people` lists only some. The `+N` chip counts the
@@ -111,9 +111,9 @@ pub fn AvatarGroup(props: AvatarGroupProps) -> Element {
 
     let known = props.people.len();
     let total = props.total.unwrap_or(0).max(known);
-    // `max` counts the chip, so it always stands for two or more: no `+1`.
-    let shown = match props.max {
-        Some(max) if total > max => max.saturating_sub(1).min(known),
+    // `max` counts the chip, so it always stands for two or more: no `+1`. 0 counts as 1.
+    let shown = match props.max.map(|max| max.max(1)) {
+        Some(max) if total > max => (max - 1).min(known),
         _ => known,
     };
     let hidden = total - shown;
@@ -287,6 +287,15 @@ mod tests {
         // Todo 4538: one name for eight says there are others.
         assert!(html.contains("aria-label=\"8 more\""), "{html}");
         assert!(html.contains("Grace and others"), "{html}");
+    }
+
+    #[test]
+    fn a_max_of_zero_counts_as_one() {
+        let html = dioxus_ssr::render_element(rsx! {
+            crate::LiberoProvider { AvatarGroup { people: vec!["Ada".into()], max: 0 } }
+        });
+        assert!(!html.contains(">+"), "{html}");
+        assert!(html.contains("Ada"), "{html}");
     }
 
     #[test]

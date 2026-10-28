@@ -291,6 +291,97 @@ fn a_finger_on_a_chip_x_never_removes_the_next_rows_chip() {
     });
 }
 
+/// Todos 4688, 4692: under a finger no chip x takes a press on a label or on the frame's
+/// padding around the chips.
+#[test]
+fn a_chip_x_takes_no_press_on_a_label_or_the_frame_padding() {
+    use chromiumoxide::cdp::browser_protocol::emulation::SetTouchEmulationEnabledParams;
+    block_on(async {
+        let fixture = Fixture::open("/hit-area", Viewport::Mobile).await.unwrap();
+        let page = &fixture.page;
+        page.execute_bounded(SetTouchEmulationEnabledParams::new(true))
+            .await
+            .unwrap();
+        wait::for_js_true(
+            page,
+            "matchMedia('(pointer: coarse)').matches",
+            "a coarse pointer",
+        )
+        .await
+        .unwrap();
+        page.evaluate_bounded(
+            "(() => {
+                const input = document.querySelector('[data-case=file-chips] input[type=file]');
+                const files = new DataTransfer();
+                for (const name of ['report.pdf', 'budget.pdf', 'minutes.pdf']) files.items.add(new File(['x'], name));
+                input.files = files.files;
+                input.dispatchEvent(new Event('change', { bubbles: true }));
+            })()",
+        )
+        .await
+        .unwrap();
+
+        for case in ["tag-rows", "pick-rows", "wrap-rows", "file-chips"] {
+            wait::for_js_true(
+                page,
+                &format!("document.querySelectorAll('[data-case={case}] button[aria-label^=Remove]').length == 3"),
+                "three chips",
+            )
+            .await
+            .unwrap();
+            let probe: serde_json::Value = page
+                .evaluate_bounded(format!(
+                    "(() => {{
+                        const xs = [...document.querySelectorAll('[data-case={case}] button[aria-label^=Remove]')];
+                        xs[0].scrollIntoView({{ block: 'center' }});
+                        const misses = [];
+                        let padding = 0;
+                        const hitsOtherX = (x, y, own) => {{
+                            const at = document.elementFromPoint(x, y);
+                            const hit = at && at.closest('button[aria-label^=Remove]');
+                            return !!hit && hit !== own;
+                        }};
+                        xs.forEach((el, at) => {{
+                            const x = el.getBoundingClientRect();
+                            const pill = el.closest('[data-slot=chip-trailing]').parentElement;
+                            const p = pill.getBoundingClientRect();
+                            const label = pill.querySelector('[data-slot=label]').getBoundingClientRect();
+                            const frame = el.closest('[data-slot=frame]').getBoundingClientRect();
+                            const cx = x.x + x.width / 2;
+                            padding = Math.max(padding, frame.bottom - p.bottom, p.top - frame.top);
+                            for (let px = label.left + 1; px < label.right; px += 4) {{
+                                if (hitsOtherX(px, label.bottom - 1, el)) misses.push(['label', el.ariaLabel, px]);
+                            }}
+                            // Past the first row's top and the last row's bottom: the frame's padding.
+                            const edges = [at == 0 ? p.top - 3 : null, at == xs.length - 1 ? p.bottom + 3 : null];
+                            for (const y of edges) {{
+                                if ('{case}' == 'file-chips' && y !== null && y > frame.top && y < frame.bottom && hitsOtherX(cx, y, null)) misses.push(['padding', el.ariaLabel, y - p.top]);
+                            }}
+                        }});
+                        return {{ misses, padding }};
+                    }})()"
+                ))
+                .await
+                .unwrap()
+                .into_value()
+                .unwrap();
+            println!("{case}: {probe}");
+            assert_eq!(
+                probe["misses"].as_array().map(Vec::len),
+                Some(0),
+                "{case}: a label or the padding lands on an x: {}",
+                probe["misses"]
+            );
+        }
+
+        fixture
+            .console
+            .assert_clean("chip labels and frame padding under a finger")
+            .unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
 /// Todo 3589: a `md` icon keeps its own box on a coarse pointer, so grouped icons do not
 /// take each other's presses.
 #[test]

@@ -6,7 +6,7 @@ use dioxus::prelude::*;
 use libero::{
     components::{
         ActionIcon, Burger, ButtonGroup, Checkbox, CheckboxGroup, Chip, ColorCode, ColorField,
-        ColorSwatch, Dialog, Flex, Image, MultiSelect, NumberField, Pagination, PasswordField,
+        ColorSwatch, Dialog, FileField, Files, Flex, Image, MultiSelect, NumberField, Pagination, PasswordField,
         Radio, RadioGroup, Select, Slider, SliderChangeEvent, Switch, SwitchGroup, TagsField,
         TextField,
     },
@@ -72,6 +72,7 @@ fn HitAreaPage() -> Element {
             }
             Coarse {}
             ChipRows {}
+            FileChips {}
             Stacked {}
         }
     }
@@ -83,10 +84,21 @@ fn ChipRows() -> Element {
     let kiwis = || (1..=3).map(|n| format!("Kiwi {n}")).collect::<Vec<_>>();
     let mut tags = use_signal(kiwis);
     let mut picked = use_signal(kiwis);
+    let mut wrapped = use_signal(|| {
+        vec![
+            "A kiwi with a long label that wraps".to_string(),
+            "Kiwi 2".to_string(),
+            "Kiwi 3".to_string(),
+        ]
+    });
     rsx! {
         Flex { direction: "column", gap: "lg", align: "flex-start",
             div { "data-case": "tag-rows", width: "120px",
                 TagsField { label: "Tags", value: tags(), onchange: move |next| tags.set(next) }
+            }
+            // A wrapped label under the next row's x (todo 4688).
+            div { "data-case": "wrap-rows", width: "120px",
+                TagsField { label: "Wrapped", value: wrapped(), onchange: move |next| wrapped.set(next) }
             }
             // Wider: the chevron takes room, and a wrapped label would grow the pill.
             div { "data-case": "pick-rows", width: "160px",
@@ -96,6 +108,23 @@ fn ChipRows() -> Element {
                     value: picked(),
                     onchange: move |next| picked.set(next),
                 }
+            }
+        }
+    }
+}
+
+/// Todo 4692: a field frame's padding around a file chip's x, which must not remove the file.
+#[component]
+fn FileChips() -> Element {
+    let mut files = use_signal(Files::default);
+    rsx! {
+        div { "data-case": "file-chips", width: "200px",
+            FileField {
+                id: "file-chips",
+                label: "Files",
+                multiple: true,
+                value: files(),
+                onchange: move |next: Files| files.set(next),
             }
         }
     }

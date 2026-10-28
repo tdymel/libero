@@ -1,4 +1,4 @@
-use std::{cell::RefCell, rc::Rc};
+use std::{cell::RefCell, fmt::Display, rc::Rc};
 
 use dioxus::prelude::*;
 use pictogram_icons_lucide as lucide;
@@ -7,13 +7,13 @@ use crate::{
     components::{
         accessibility::VisuallyHidden,
         buttons::ActionIcon,
-        common::{COARSE_INSET, COARSE_POINTER, Glyph, Input, coarse_hit_area_sx},
+        common::{COARSE_INSET, COARSE_POINTER, Glyph, Input},
         form::Chip,
     },
     context::IconSlot,
     hooks::{current_localization, use_localization},
     localization::{ChipsLabels, fill},
-    sx::{StaticSx, ThemeAwareValue, sx},
+    sx::{StaticSx, Sx, ThemeAwareValue, sx},
     theme::{CHIP_HEIGHT, CssVar, Size},
 };
 
@@ -38,7 +38,9 @@ static REMOVABLE_CHIP_SX: StaticSx = StaticSx::new(|| {
                 .display("flex")
                 .align_items("center")
                 .min_height(LINE_VAR.value())
-                .overflow_wrap("anywhere"),
+                .overflow_wrap("anywhere")
+                // Above the next row's x `::before`, which reaches up into this label (4688).
+                .media(COARSE_POINTER, sx().position("relative").z_index("1")),
         )
         .selector(
             "& > [data-slot='chip-trailing']",
@@ -60,29 +62,49 @@ static REMOVE_BUTTON_SX: StaticSx = StaticSx::new(|| {
         // 44x44 under a finger (todo 3901). The `::after` on top owns the pill's own rows,
         // so the next row's x takes no press meant for this one (4188).
         .position("relative")
-        .and(coarse_hit_area_sx("::before"))
         .media(
             COARSE_POINTER,
             sx().selector(
+                "::before",
+                sx().content("\"\"")
+                    .position("absolute")
+                    .left(COARSE_INSET)
+                    .right(COARSE_INSET)
+                    .top(coarse_block_inset(REACH_VAR.value_or(UNCLIPPED)))
+                    .bottom(coarse_block_inset(REACH_VAR.value_or(UNCLIPPED))),
+            )
+            .selector(
                 "::after",
                 sx().content("\"\"")
                     .position("absolute")
                     .z_index("1")
                     .left(COARSE_INSET)
                     .right(COARSE_INSET)
-                    .top(coarse_block_inset())
-                    .bottom(coarse_block_inset()),
+                    .top(coarse_block_inset("0px"))
+                    .bottom(coarse_block_inset("0px")),
             ),
         )
 });
 
-/// The coarse inset, floored at the pill's edge plus 2px: the button sits centred in
-/// the first line, a 1px border from the edge.
-fn coarse_block_inset() -> String {
+/// How far the x's 44px `::before` may reach past the pill's rows; a field frame sets it to 0.
+const REACH_VAR: CssVar = CssVar::new("--lsx-removable-chip-reach");
+
+/// Past any pill: the `::before` keeps its full 44px.
+const UNCLIPPED: &str = "9999px";
+
+/// The coarse inset, floored at the pill's edge plus 2px, less `reach`: the button sits
+/// centred in the first line, a 1px border from the edge.
+fn coarse_block_inset(reach: impl Display) -> String {
     format!(
-        "max({COARSE_INSET}, calc((100% - {}) / 2 - 3px))",
+        "max({COARSE_INSET}, calc((100% - {}) / 2 - 3px - {reach}))",
         LINE_VAR.value()
     )
+}
+
+/// For a field frame holding chips: the x's 44px area stops at the pill's rows, so a tap
+/// in the frame's padding removes nothing (4692).
+pub(crate) fn framed_remove_sx() -> Sx {
+    sx().var(REACH_VAR, "0px")
 }
 
 /// A list field's chip: the label and an x that drops it, one size step down.
@@ -139,7 +161,7 @@ impl Announced {
     fn observe(
         &mut self,
         labels: Vec<String>,
-        edited: &mut Option<Effect>,
+        edited: &mut Option<Pending>,
         note: Option<(u64, String)>,
         words: &ChipsLabels,
     ) {
@@ -147,11 +169,17 @@ impl Announced {
         if self.labels != labels {
             if edited
                 .take()
-                .is_some_and(|effect| effect == Effect::between(&self.labels, &labels))
+                .is_some_and(|pending| pending.effect == Effect::between(&self.labels, &labels))
             {
                 change = chip_change(&self.labels, &labels, words);
             }
             self.labels = labels;
+        } else if let Some(pending) = edited {
+            // The first same-list render is the field's own redraw; a second means the host kept its list.
+            match pending.idle_renders {
+                0 => pending.idle_renders = 1,
+                _ => *edited = None,
+            }
         }
         let note = note.filter(|(number, _)| *number != self.noted);
         if let Some((number, _)) = &note {
@@ -191,15 +219,32 @@ impl Effect {
     }
 }
 
+/// An edit the field emitted, and the renders since that kept the list as it was.
+#[derive(Clone, PartialEq, Debug)]
+pub(crate) struct Pending {
+    effect: Effect,
+    idle_renders: u8,
+}
+
 /// Set by a field right before it emits its own edit, with its list and the one it sends; the next
-/// list change is announced if it does the same, however late it lands. Any other list stays silent.
+/// list change is announced if it does the same. Any other list stays silent, and so does one
+/// following a second render that kept the old list: the host refused the edit.
 #[derive(Clone, Copy, PartialEq)]
-pub(crate) struct Edited(CopyValue<Option<Effect>>);
+pub(crate) struct Edited(CopyValue<Option<Pending>>);
 
 impl Edited {
     pub(crate) fn mark(self, before: &[String], after: &[String]) {
         let mut edited = self.0;
-        edited.set(Some(Effect::between(before, after)));
+        edited.set(Some(Pending::new(Effect::between(before, after))));
+    }
+}
+
+impl Pending {
+    fn new(effect: Effect) -> Self {
+        Self {
+            effect,
+            idle_renders: 0,
+        }
     }
 }
 
@@ -278,7 +323,7 @@ fn diff(before: &[String], after: &[String]) -> (Vec<String>, Vec<String>) {
 
 #[cfg(test)]
 mod tests {
-    use super::{Announced, Effect, chip_change};
+    use super::{Announced, Effect, Pending, chip_change};
     use crate::localization::ChipsLabels;
 
     fn labels(values: &[&str]) -> Vec<String> {
@@ -294,11 +339,14 @@ mod tests {
         }
     }
 
-    fn edit(before: &[&str], after: &[&str]) -> Option<Effect> {
-        Some(Effect::between(&labels(before), &labels(after)))
+    fn edit(before: &[&str], after: &[&str]) -> Option<Pending> {
+        Some(Pending::new(Effect::between(
+            &labels(before),
+            &labels(after),
+        )))
     }
 
-    fn render(announced: &mut Announced, values: &[&str], mark: &mut Option<Effect>) {
+    fn render(announced: &mut Announced, values: &[&str], mark: &mut Option<Pending>) {
         announced.observe(labels(values), mark, None, &ChipsLabels::ENGLISH);
     }
 
@@ -325,8 +373,6 @@ mod tests {
         let mut mark = edit(&["a"], &["a", "b"]);
         // The field redraws (its draft cleared) before the caller's awaited list arrives.
         render(&mut announced, &["a"], &mut mark);
-        render(&mut announced, &["a"], &mut mark);
-        assert_eq!(mark, edit(&["a"], &["a", "b"]));
         assert_eq!(announced.count, 0);
         render(&mut announced, &["a", "b"], &mut mark);
         assert_eq!(mark, None);
@@ -340,6 +386,19 @@ mod tests {
         // The caller kept its list, then loaded another: silent, and the mark is spent.
         render(&mut announced, &["a"], &mut mark);
         render(&mut announced, &["c"], &mut mark);
+        assert_eq!(mark, None);
+        render(&mut announced, &["a", "b"], &mut mark);
+        assert_eq!(announced.message, None);
+    }
+
+    #[test]
+    fn a_refused_edit_does_not_vouch_for_an_equal_list_loaded_later() {
+        let mut announced = announced(&["a"]);
+        let mut mark = edit(&["a"], &["a", "b"]);
+        // The field's own redraw, then the host's render that kept the list.
+        render(&mut announced, &["a"], &mut mark);
+        assert!(mark.is_some());
+        render(&mut announced, &["a"], &mut mark);
         assert_eq!(mark, None);
         render(&mut announced, &["a", "b"], &mut mark);
         assert_eq!(announced.message, None);
