@@ -209,6 +209,37 @@ fn a_play_click_from_outside_the_carousel_keeps_it_playing() {
     );
 }
 
+const STATUS: &str = "[aria-roledescription=carousel] [role=status]";
+
+fn live(page: &Page) -> Option<String> {
+    page.attr(STATUS, "aria-live")
+}
+
+/// Todo 4729: Blitz's mouse `pointerenter` pauses, its `pointerleave` resumes, and
+/// the toggle never presses; a rotating carousel keeps its status quiet.
+#[test]
+fn a_mouse_hover_pauses_and_leaving_resumes() {
+    let mut page = mount(autoplaying);
+    assert_eq!(live(&page).as_deref(), Some("off"), "not rotating at rest");
+    page.hover(TRACK);
+    assert!(
+        page.wait_for(|page| live(page).as_deref() == Some("polite")),
+        "hover did not pause, status {:?}",
+        live(&page)
+    );
+    page.hover("#before");
+    assert!(
+        page.wait_for(|page| live(page).as_deref() == Some("off")),
+        "leaving did not resume, status {:?}",
+        live(&page)
+    );
+    assert_eq!(
+        pressed(&page).as_deref(),
+        Some("false"),
+        "hover pressed Pause"
+    );
+}
+
 /// Todo 2634: a Tab from the Play toggle to the track is a move within the carousel, no
 /// new focus entry that pauses the rotation again.
 #[test]
