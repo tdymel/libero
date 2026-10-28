@@ -187,9 +187,18 @@ fn the_picked_swatch_is_pressed_and_checked() {
         .await
         .unwrap();
 
-        keyboard::tab_to(page, "[aria-label='#40c057']", 10)
+        // The row is one Tab stop on the picked swatch; an arrow moves to the next (4722).
+        keyboard::tab_to(page, "[aria-label='#fa5252']", 10)
             .await
             .unwrap();
+        keyboard::press(page, keyboard::ARROW_RIGHT).await.unwrap();
+        wait::for_js_true(
+            page,
+            "document.activeElement.getAttribute('aria-label') === '#40c057'",
+            "ArrowRight to focus the green swatch",
+        )
+        .await
+        .unwrap();
         keyboard::press(page, keyboard::ENTER).await.unwrap();
         wait::for_js_true(
             page,
