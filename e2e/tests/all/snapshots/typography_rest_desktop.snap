@@ -43,7 +43,9 @@ paragraph
   StaticText "Call"
   code
     StaticText "let"
-    StaticText "s: &str ="
+    StaticText "s: &"
+    StaticText "str"
+    StaticText "="
     StaticText ""x""
     StaticText ";"
     StaticText "// note"
