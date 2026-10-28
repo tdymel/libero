@@ -98,6 +98,23 @@ async fn reopens_after_each_close<D: Driver>(d: &mut D, _route: &str) -> Result<
     Ok(())
 }
 
+/// Todo 4741: a touch drag on a drag handle in the band moves it, the drawer stays shut
+/// and the handle keeps focus.
+async fn a_band_drag_handle_keeps_its_press<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    let handle = d.rect("#handle").await?;
+    let y = handle.y + handle.height / 2.0;
+    d.swipe_from(IN_BAND, y, 120.0, 0.0).await?;
+    eventually(d, "the handle to be dragged", async |d| {
+        Ok(d.text("#dragged").await?.parse::<f64>().unwrap_or(0.0) > 48.0)
+    })
+    .await?;
+    d.settle().await?;
+    text_is(d, "#opens", "0").await?;
+    let owner = d.focus_owner().await?;
+    assert!(d.is_focused("#handle").await?, "focus went to {owner}");
+    Ok(())
+}
+
 #[cfg_attr(not(feature = "android"), allow(dead_code))]
 const WIDE_SCROLL_LEFT: &str = "document.querySelector('#wide').scrollLeft";
 
@@ -248,6 +265,12 @@ e2e::scenario!(
     an_edge_swipe_reopens_a_drawer_five_times,
     "/use-swipe/drawer",
     reopens_after_each_close,
+    desktop: skip("1126: no touch input under Xvfb")
+);
+e2e::scenario!(
+    a_touch_drag_on_a_band_handle_never_opens_the_drawer,
+    "/use-swipe/drawer-drag",
+    a_band_drag_handle_keeps_its_press,
     desktop: skip("1126: no touch input under Xvfb")
 );
 e2e::scenario!(

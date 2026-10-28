@@ -1707,6 +1707,38 @@ fn a_menu_move_to_a_hidden_column_scrolls_it_into_view() {
     });
 }
 
+/// 4780: a column moved forward by its button on a phone scrolls the board to the
+/// button that keeps the focus.
+#[test]
+fn a_column_move_button_keeps_its_focus_in_view() {
+    use e2e::browser::{Fixture, Viewport, block_on};
+    use e2e::wait;
+    block_on(async {
+        let fixture = Fixture::open("/kanban/column-reorder", Viewport::Mobile)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        let later = header("to-do", "move-later");
+        page.evaluate_bounded(format!("document.querySelector('{later}').click()"))
+            .await
+            .unwrap();
+        wait::for_js_true(
+            page,
+            &format!(
+                "(() => {{ const b = document.querySelector('#board').getBoundingClientRect(); \
+                 const f = document.activeElement.getBoundingClientRect(); \
+                 return document.activeElement === document.querySelector('{later}') \
+                 && document.querySelector('#order').textContent.startsWith('Doing') \
+                 && f.left >= b.left - 1 && f.right <= b.right + 1; }})()"
+            ),
+            "the moved column's forward button focused and in view",
+        )
+        .await
+        .unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
 /// A finger on a handle drags the card to the next column; on a card's text it scrolls the board.
 #[test]
 fn a_touch_on_the_handle_drags_across_and_elsewhere_scrolls_the_board() {

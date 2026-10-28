@@ -10,7 +10,8 @@ use crate::{
 #[derive(Clone, PartialEq)]
 pub enum MenuEntry {
     Item(MenuItem),
-    /// A named, inline section, `role="group"`. Not a submenu.
+    /// A named, inline section, `role="group"`. Not a submenu. A root menu's only
+    /// entry names the menu itself instead, so the name is read once.
     Group {
         label: String,
         items: Vec<MenuEntry>,

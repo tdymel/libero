@@ -246,6 +246,14 @@ pub(super) fn MenuLevel(props: MenuLevelProps) -> Element {
 
     let expanded = open_child();
     let level_id = props.id.clone();
+    // A root whose one entry is a named group: the group's label names the menu, once (4782).
+    let lone = match (depth, props.items.as_slice()) {
+        (0, [MenuEntry::Group { label, items }]) if !label.trim().is_empty() => {
+            Some((label, items))
+        }
+        _ => None,
+    };
+    let lone_id = format!("{level_id}-group-0");
 
     // Only an open level draws rows: a closed one redraws with every parent render.
     let mut events = use_hook(|| {
@@ -274,9 +282,9 @@ pub(super) fn MenuLevel(props: MenuLevelProps) -> Element {
         }));
         let tabbable = tabbable();
         let checks = flat.iter().any(|item| item.check.is_some());
-        let (mut index, mut group, mut separator) = (0usize, 0usize, 0usize);
+        let (mut index, mut group, mut separator) = (0usize, lone.is_some() as usize, 0usize);
         draw_rows(
-            &props.items,
+            lone.map_or(&props.items, |(_, items)| items),
             &level_id,
             &mut index,
             &mut group,
@@ -331,8 +339,9 @@ pub(super) fn MenuLevel(props: MenuLevelProps) -> Element {
         let strip = swipe.strip;
         // Hidden from the tree: the box's `aria-labelledby` reads it (4617).
         let title_id = format!("{level_id}-title");
-        let labelledby = match (narrow(), &props.title) {
-            (true, Some(_)) => title_id.clone(),
+        let labelledby = match (narrow(), &props.title, lone) {
+            (true, Some(_), _) => title_id.clone(),
+            (_, _, Some(_)) => lone_id.clone(),
             _ => props.labelledby.clone(),
         };
         let title = props.title.as_ref().map(|title| {
@@ -340,9 +349,15 @@ pub(super) fn MenuLevel(props: MenuLevelProps) -> Element {
                 div { id: "{title_id}", "data-slot": "sheet-title", aria_hidden: "true", "{title}" }
             }
         });
+        let lone_label = lone.map(|(label, _)| {
+            rsx! {
+                div { id: "{lone_id}", "data-slot": MenuPart::GroupLabel.slot(), aria_hidden: "true", "{label}" }
+            }
+        });
         let content = rsx! {
             {strip}
             {title}
+            {lone_label}
             {rows.into_iter()}
         };
         let onpointerenter = props.onpointerenter;

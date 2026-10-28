@@ -1,7 +1,7 @@
 use dioxus::prelude::*;
 
 use crate::{
-    hooks::{DragPoint, use_direction, use_subscription_slot},
+    hooks::{DragPoint, drag::take_press_claim, use_direction, use_subscription_slot},
     platform::{
         self, EDGE_SWIPE_MARK, EdgeBand, ScrollSubscription, hold_edge_pan,
         holds_edge_pan_by_pointer,
@@ -293,7 +293,8 @@ pub fn edge_swipe_sx() -> Sx {
 /// [`edge_swipe_sx`] on a box covering the page; no strip covers the content,
 /// so taps go through. It adds a way in, not the only one: keep a button that
 /// opens the same drawer (WCAG 2.5.1). RTL follows [`use_direction`]. A swipe
-/// during a running fling, whose pointer the browser cancels, still counts.
+/// during a running fling, whose pointer the browser cancels, still counts. A press
+/// on a [`use_drag`](super::use_drag) handle inside drags and never opens.
 ///
 /// ```rust
 /// # use dioxus::prelude::*;
@@ -337,11 +338,18 @@ pub fn use_edge_swipe(on_swipe: Callback, options: EdgeSwipeOptions) -> Swipe {
     });
     // A swipe that beat the viewport measurement waits for it.
     let mut waiting = use_signal(|| None::<SwipeEvent>);
+    // The press a drag handle inside took: it drags, it never opens (4741).
+    let mut claimed = use_signal(|| None::<i32>);
     // By the pointer, or after its cancel by the touch the browser took from it.
-    let on_track = use_callback(move |event: SwipeEvent| match decide.call(event) {
-        Some(true) => on_swipe.call(()),
-        Some(false) => {}
-        None => waiting.set(Some(event)),
+    let on_track = use_callback(move |event: SwipeEvent| {
+        if claimed.peek().is_some() {
+            return;
+        }
+        match decide.call(event) {
+            Some(true) => on_swipe.call(()),
+            Some(false) => {}
+            None => waiting.set(Some(event)),
+        }
     });
     use_effect(use_reactive!(|(options, rtl)| {
         holding.clear();
@@ -373,6 +381,9 @@ pub fn use_edge_swipe(on_swipe: Callback, options: EdgeSwipeOptions) -> Swipe {
 
     let mut held = use_signal(|| None::<Held>);
     let onpointermove = use_callback(move |event: PointerEvent| {
+        if *claimed.peek() == Some(event.pointer_id()) {
+            return;
+        }
         let current = *held.peek();
         if let Some(mut current) = current
             && current.pointer_id == event.pointer_id()
@@ -408,6 +419,16 @@ pub fn use_edge_swipe(on_swipe: Callback, options: EdgeSwipeOptions) -> Swipe {
     let onpointerdown = use_callback(move |event: PointerEvent| {
         if waiting.peek().is_some() {
             waiting.set(None);
+        }
+        let claim = take_press_claim(event.pointer_id()).then_some(event.pointer_id());
+        if claim != *claimed.peek() {
+            claimed.set(claim);
+        }
+        if claim.is_some() {
+            if held.peek().is_some() {
+                held.set(None);
+            }
+            return;
         }
         if holds_edge_pan_by_pointer() {
             let at = event.client_coordinates();

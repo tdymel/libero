@@ -1182,6 +1182,10 @@ pub(crate) fn use_spanning_sortable_item(
                 Refocus::Earlier => earlier.focus(),
                 Refocus::Later => later.focus(),
             };
+            // The focus keeps the scroll: a moved item can land out of view (4780).
+            if let Some(node) = element.mounted() {
+                let _ = platform::scroll_chain_into_view(&node, false);
+            }
         }
     }));
     use_drop(move || {

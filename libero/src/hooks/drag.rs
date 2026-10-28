@@ -248,6 +248,23 @@ impl Pending {
     }
 }
 
+thread_local! {
+    /// The pointer a drag handle took at its press, for an ancestor's edge swipe (4741).
+    static CLAIMED: std::cell::Cell<Option<i32>> = const { std::cell::Cell::new(None) };
+}
+
+/// Whether a drag handle took `pointer_id`'s press; handles fire before the ancestors
+/// a press bubbles to. Takes the claim.
+pub(crate) fn take_press_claim(pointer_id: i32) -> bool {
+    CLAIMED.take() == Some(pointer_id)
+}
+
+fn release_press_claim(pointer_id: i32) {
+    if CLAIMED.get() == Some(pointer_id) {
+        CLAIMED.set(None);
+    }
+}
+
 fn client_point(event: &Event<PointerData>) -> DragPoint {
     let coordinates = event.client_coordinates();
     DragPoint {
@@ -364,6 +381,7 @@ fn use_drag_inner(
             return;
         }
         event.prevent_default();
+        CLAIMED.set(Some(event.pointer_id()));
         let client = client_point(&event);
         let press = ActiveDrag {
             pointer_id: event.pointer_id(),
@@ -418,6 +436,7 @@ fn use_drag_inner(
     // A touch released before it moved is a tap: start and end at once. A
     // distance press is a click, reported to nobody.
     let onpointerup = use_callback(move |event: Event<PointerData>| {
+        release_press_claim(event.pointer_id());
         let Some(Pending { press, slop, .. }) = *pending.peek() else {
             end.call(event);
             return;
@@ -434,6 +453,7 @@ fn use_drag_inner(
     // The OS can revoke a pointer mid-drag; without this the drag sticks. A
     // pending touch the page scrolled is dropped unreported.
     let onpointercancel = use_callback(move |event: Event<PointerData>| {
+        release_press_claim(event.pointer_id());
         if pending
             .peek()
             .is_some_and(|pending| pending.press.pointer_id == event.pointer_id())

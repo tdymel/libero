@@ -65,7 +65,17 @@ static KANBAN_COLUMN_SX: StaticSx = StaticSx::new(|| {
                 .gap("xs")
                 .font_weight("600")
                 .padding("4px 0")
-                .selector("& > [data-name]", sx().flex("1 1 auto").min_width("0")),
+                .selector("& > [data-name]", sx().flex("1 1 auto").min_width("0"))
+                // A finger's 44px buttons left the name 58px (4781): they wrap below it, end-aligned.
+                .media(
+                    COARSE_POINTER,
+                    sx().flex_wrap("wrap").justify_content("flex-end").selector(
+                        "& > [data-name]",
+                        sx().flex_basis(format!(
+                            "calc(100% - {COARSE_TARGET} - var(--lsx-spacing-xs))"
+                        )),
+                    ),
+                ),
         )
         .selector(
             KanbanColumnPart::List.selector(),

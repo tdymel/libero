@@ -108,8 +108,9 @@ async fn german_words<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
     };
     eventually(d, "the German trigger name", name).await?;
     open(d).await?;
+    // The lone group's label names the menu itself (4782).
     let group = d
-        .attr("[role=menu] [role=group]", "aria-labelledby")
+        .attr("[role=menu]", "aria-labelledby")
         .await?
         .unwrap_or_default();
     eventually_text(d, &format!("#{group}"), "Zusammenfassen mit", "opening").await?;

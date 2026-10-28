@@ -6,8 +6,8 @@ use libero::{
     LiberoProvider,
     components::{Box, ScrollArea},
     hooks::{
-        EdgeSwipeOptions, SwipeDirection, SwipeEvent, SwipeOptions, edge_swipe_sx, use_edge_swipe,
-        use_swipe,
+        DragMove, DragOptions, EdgeSwipeOptions, SwipeDirection, SwipeEvent, SwipeOptions,
+        drag_handle_sx, edge_swipe_sx, use_drag, use_edge_swipe, use_element, use_swipe,
     },
     sx::sx,
     theme::Direction,
@@ -20,7 +20,44 @@ pub const ROUTES: Routes = &[
     ("/use-swipe/edge", || rsx! { EdgePage {} }),
     ("/use-swipe/edge-rtl", || rsx! { EdgeRtlPage {} }),
     ("/use-swipe/drawer", || rsx! { DrawerPage {} }),
+    ("/use-swipe/drawer-drag", || rsx! { DrawerPage { handle: true } }),
 ];
+
+/// A drag handle in the band, as a Kanban card's at 375px (todo 4741).
+#[component]
+fn BandHandle() -> Element {
+    let track = use_element();
+    let mut x = use_signal(|| 0.0);
+    let drag = use_drag(DragOptions {
+        capture: track,
+        onstart: Callback::new(|_| {}),
+        onmove: Callback::new(move |step: DragMove| x.set(step.delta().x)),
+        onend: Callback::new(|()| {}),
+    });
+    rsx! {
+        div {
+            onmounted: track.mount(),
+            style: "position: relative; height: 80px;",
+            onpointermove: move |event| drag.onpointermove.call(event),
+            onpointerup: move |event| drag.onpointerup.call(event),
+            onpointercancel: move |event| drag.onpointercancel.call(event),
+            Box {
+                id: "handle",
+                tabindex: 0,
+                aria_label: "Drag",
+                onpointerdown: move |event| drag.onpointerdown.call(event),
+                sx: drag_handle_sx()
+                    .position("absolute")
+                    .left("48px")
+                    .width("44px")
+                    .height("44px")
+                    .background("#fde"),
+                style: "translate: {x}px",
+            }
+            p { id: "dragged", "{x}" }
+        }
+    }
+}
 
 #[component]
 fn SwipePad() -> Element {
@@ -68,7 +105,7 @@ fn EdgePage() -> Element {
 /// The docs shell's drawer: the swipe opens it mid-press and the page turns inert,
 /// so the press never ends on the page (todo 2170).
 #[component]
-fn DrawerPage() -> Element {
+fn DrawerPage(#[props(default)] handle: bool) -> Element {
     let mut open = use_signal(|| false);
     let mut opens = use_signal(|| 0);
     let swipe = use_edge_swipe(
@@ -91,6 +128,9 @@ fn DrawerPage() -> Element {
                 onpointercancel: move |event| swipe.onpointercancel.call(event),
                 sx: edge_swipe_sx().height("3000px"),
                 p { id: "opens", "{opens}" }
+                if handle {
+                    BandHandle {}
+                }
                 // A code block's box: its own scroller, so the page's `touch-action` stops there.
                 div {
                     id: "scroller",

@@ -272,3 +272,42 @@ fn a_coloured_item_carries_its_text_colour() {
     // The error hue's text shade, not its plain fill shade.
     assert!(style.contains("error"), "{style}");
 }
+
+/// Todo 4782: a root whose one entry is a named group is named by that label, once:
+/// the menu points at it and no `role="group"` repeats it.
+#[test]
+fn a_lone_named_group_names_the_menu_once() {
+    use dioxus::prelude::*;
+
+    use super::{Menu, MenuEntry, MenuItem, use_menu};
+
+    fn app() -> Element {
+        let menu = use_menu();
+        use_hook(|| menu.open());
+        rsx! {
+            crate::LiberoProvider {
+                Menu {
+                    state: menu,
+                    items: vec![MenuEntry::Group {
+                        label: "Move Alpha to column".into(),
+                        items: vec![MenuItem::new("Done").onselect(|_| {}).into()],
+                    }],
+                    crate::components::Button { attributes: menu.a11y_attributes(), "Move" }
+                }
+            }
+        }
+    }
+    let html = render_open(app);
+    assert_eq!(html.matches("Move Alpha to column").count(), 1, "{html}");
+    // The stylesheet names `[role="group"]`; an element ends its attributes with it.
+    assert!(!html.contains("role=\"group\">"), "{html}");
+    let label = html
+        .split("id=\"")
+        .find_map(|rest| rest.split('"').next().filter(|id| id.ends_with("-group-0")))
+        .expect(&html)
+        .to_string();
+    assert!(
+        html.contains(&format!("aria-labelledby=\"{label}\"")),
+        "{html}"
+    );
+}
