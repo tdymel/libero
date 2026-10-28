@@ -136,7 +136,10 @@ fn a_scrolling_table_sits_in_a_scroll_area_that_is_no_stop_until_it_overflows() 
     let html = render(app);
     let region = region(&html);
 
-    assert!(body(&html).contains(">Stock</caption>"));
+    // The caption is a div above the scroll area (todo 4668) that names the table.
+    let caption_id = &attributes_of(&html, "table")["aria-labelledby"];
+    assert!(body(&html).contains(&format!("id=\"{caption_id}\">Stock</div>")));
+    assert!(!body(&html).contains("<caption"));
     // Measured once mounted: the e2e covers the named stop of an overflowing one.
     assert_eq!(region["tabindex"], "-1");
     assert!(!region.contains_key("role"), "{region:?}");
