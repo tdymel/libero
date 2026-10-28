@@ -68,8 +68,8 @@ static REMOVE_BUTTON_SX: StaticSx = StaticSx::new(|| {
                 "::before",
                 sx().content("\"\"")
                     .position("absolute")
-                    .left(COARSE_INSET)
-                    .right(COARSE_INSET)
+                    .inset_inline_start("0px")
+                    .inset_inline_end(END_INSET)
                     .top(coarse_block_inset(REACH_VAR.value_or(UNCLIPPED)))
                     .bottom(coarse_block_inset(REACH_VAR.value_or(UNCLIPPED))),
             )
@@ -78,13 +78,16 @@ static REMOVE_BUTTON_SX: StaticSx = StaticSx::new(|| {
                 sx().content("\"\"")
                     .position("absolute")
                     .z_index("1")
-                    .left(COARSE_INSET)
-                    .right(COARSE_INSET)
+                    .inset_inline_start("0px")
+                    .inset_inline_end(END_INSET)
                     .top(coarse_block_inset("0px"))
                     .bottom(coarse_block_inset("0px")),
             ),
         )
 });
+
+/// The x grows to 44px at its end and vertically, never back over the label (4688).
+const END_INSET: &str = "min(0px, calc(100% - 44px))";
 
 /// How far the x's 44px `::before` may reach past the pill's rows; a field frame sets it to 0.
 const REACH_VAR: CssVar = CssVar::new("--lsx-removable-chip-reach");

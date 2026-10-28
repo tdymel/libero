@@ -202,7 +202,7 @@ fn a_finger_presses_small_controls_in_a_44px_box() {
     });
 }
 
-/// Todo 4188: under a finger a chip's x takes its whole pill's height and 44px across,
+/// Todo 4188: under a finger a chip's x takes its whole pill's height and 44px from its own left edge,
 /// and a tap at the pill's bottom edge removes that chip, not the one on the next row.
 #[test]
 fn a_finger_on_a_chip_x_never_removes_the_next_rows_chip() {
@@ -233,7 +233,7 @@ fn a_finger_on_a_chip_x_never_removes_the_next_rows_chip() {
                             const pill = el.closest('[data-slot=chip-trailing]').parentElement.getBoundingClientRect();
                             const cx = r.x + r.width / 2, cy = r.y + r.height / 2;
                             tops.push([pill.top, pill.height]);
-                            const points = [[-21, 0], [21, 0]];
+                            const points = [[-6, 0], [36, 0]];
                             for (let y = pill.top + 1; y < pill.bottom; y += 1) points.push([0, y - cy]);
                             for (const [dx, dy] of points) {{
                                 const at = document.elementFromPoint(cx + dx, cy + dy);
@@ -350,7 +350,7 @@ fn a_chip_x_takes_no_press_on_a_label_or_the_frame_padding() {
                             const cx = x.x + x.width / 2;
                             padding = Math.max(padding, frame.bottom - p.bottom, p.top - frame.top);
                             for (let px = label.left + 1; px < label.right; px += 4) {{
-                                if (hitsOtherX(px, label.bottom - 1, el)) misses.push(['label', el.ariaLabel, px]);
+                                if (hitsOtherX(px, label.bottom - 1, null)) misses.push(['label', el.ariaLabel, px]);
                             }}
                             // Past the first row's top and the last row's bottom: the frame's padding.
                             const edges = [at == 0 ? p.top - 3 : null, at == xs.length - 1 ? p.bottom + 3 : null];
