@@ -4,8 +4,9 @@ use pictogram_icons_lucide as lucide;
 use crate::{
     components::{
         common::{
-            Glyph, HtmlTag, Input, Part, States, Variables, base_props, focus_ring_sx,
-            input_from_str, inset_focus_ring_sx, parts_enum, states, variables,
+            Glyph, HtmlTag, Input, Orientation, Part, States, Variables, base_props,
+            coarse_hit_area_sx, coarse_reach_sx, focus_ring_sx, input_from_str,
+            inset_focus_ring_sx, parts_enum, states, variables,
         },
         layout::{
             Box, ScrollArea, ScrollAreaBase, ScrollAreaHandle, ScrollPositionEvent, inline_x,
@@ -298,6 +299,9 @@ static SCROLLER_CONTROL_SX: StaticSx = StaticSx::new(|| {
         .border_width("0")
         .color("inherit")
         .cursor("pointer")
+        // A finger gets 44px of height; along the strip it stays on the control, off the items.
+        .and(coarse_hit_area_sx("::before"))
+        .and(coarse_reach_sx(Orientation::Horizontal, "0px"))
         // `visibility` flips at once on the fade in, so a shown control takes the
         // click on any clock (Blitz's stands still between frames, todo 2593).
         .transition(format!("opacity {duration}"))
@@ -904,6 +908,19 @@ mod tests {
         let disabled = &disabled[..disabled.find('}').unwrap()];
 
         assert!(disabled.contains("pointer-events:none;"), "{css}");
+    }
+
+    /// 4725: a finger gets 44px of control height, none of it taken from the strip's items.
+    #[test]
+    fn a_coarse_pointer_grows_the_control_to_44px_high_only() {
+        let css = Stylesheet::from(&SCROLLER_CONTROL_SX);
+        let css = css.as_str();
+        let media = css
+            .find("@media (pointer: coarse)")
+            .unwrap_or_else(|| panic!("no coarse query: {css}"));
+
+        assert!(css[media..].contains("::before"), "{css}");
+        assert!(css.contains("calc(0px / 2)"), "{css}");
     }
 
     #[test]

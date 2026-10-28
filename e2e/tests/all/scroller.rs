@@ -414,6 +414,54 @@ fn a_drag_is_inert_under_controls_never() {
     });
 }
 
+/// Todo 4725: a finger reaches a control shorter than 44px from just above its box; a mouse does not.
+#[test]
+fn a_finger_reaches_a_step_control_from_just_outside_it() {
+    use chromiumoxide::cdp::browser_protocol::emulation::SetTouchEmulationEnabledParams;
+    const CONTROL: &str = "#wide > button:last-of-type";
+    // Past the box by 3px, inside the 4px a 36px control grows by.
+    const PROBE: &str = "(() => { const c = document.querySelector('#wide > button:last-of-type'); \
+        const r = c.getBoundingClientRect(); \
+        return r.height < 40 && document.elementFromPoint(r.left + r.width / 2, r.top - 3) === c; })()";
+    block_on(async {
+        let fixture = Fixture::open("/scroller/plain", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        wait::for_js_true(
+            page,
+            &format!(
+                "document.querySelector('{CONTROL}').getAttribute('aria-disabled') === 'false'"
+            ),
+            "the strip to measure",
+        )
+        .await
+        .unwrap();
+        let mouse: bool = page
+            .evaluate_bounded(PROBE)
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        assert!(!mouse, "a mouse reached the control from outside its box");
+
+        page.execute_bounded(SetTouchEmulationEnabledParams::new(true))
+            .await
+            .unwrap();
+        wait::for_js_true(
+            page,
+            "matchMedia('(pointer: coarse)').matches",
+            "a coarse pointer",
+        )
+        .await
+        .unwrap();
+        wait::for_js_true(page, PROBE, "a finger to reach the control from 3px above")
+            .await
+            .unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
 /// Todo 4724: a press on a field inside a draggable strip focuses it.
 #[test]
 fn a_click_on_a_field_in_a_draggable_strip_focuses_it() {
