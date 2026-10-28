@@ -438,7 +438,7 @@ impl Android {
 
     /// Returns once the page saw the tap: `input tap` returns before it lands, and a late
     /// tap's focus would take the next `focus()` back (3268).
-    async fn tap(&self, at: pointer::Point) -> Result<()> {
+    async fn tap_at(&self, at: pointer::Point) -> Result<()> {
         self.page
             .evaluate_bounded(
                 "(() => {
@@ -486,7 +486,7 @@ impl Driver for Android {
 
     async fn click(&mut self, selector: &str) -> Result<()> {
         let at = self.centre(selector).await?;
-        self.tap(at).await
+        self.tap_at(at).await
     }
 
     /// No hover on a touch screen: CDP's mouse move instead.
@@ -501,7 +501,7 @@ impl Driver for Android {
     }
 
     async fn click_at(&mut self, x: f64, y: f64) -> Result<()> {
-        self.tap(pointer::Point { x, y }).await
+        self.tap_at(pointer::Point { x, y }).await
     }
 
     async fn viewport(&mut self) -> Result<(f64, f64)> {
