@@ -14,7 +14,7 @@ use crate::{
     hooks::{current_localization, use_localization},
     localization::{ChipsLabels, fill},
     sx::{StaticSx, Sx, ThemeAwareValue, sx},
-    theme::{CHIP_HEIGHT, CssVar, Size},
+    theme::{CHIP_HEIGHT, CHIP_PADDING_X, CssVar, Size},
 };
 
 /// The first line's height: the chip's height less its 1px borders.
@@ -31,6 +31,13 @@ static REMOVABLE_CHIP_SX: StaticSx = StaticSx::new(|| {
             sx().height("auto")
                 .min_height(CHIP_HEIGHT.value(size))
                 .var(LINE_VAR, format!("calc({} - 2px)", CHIP_HEIGHT.value(size)))
+                .var(
+                    END_VAR,
+                    format!(
+                        "calc(-1 * ({} + 1px + {HALF_GAP}))",
+                        CHIP_PADDING_X.value(size)
+                    ),
+                )
         })
         .selector(
             "& > [data-slot='label']",
@@ -69,7 +76,7 @@ static REMOVE_BUTTON_SX: StaticSx = StaticSx::new(|| {
                 sx().content("\"\"")
                     .position("absolute")
                     .inset_inline_start("0px")
-                    .inset_inline_end(END_INSET)
+                    .inset_inline_end(end_inset())
                     .top(coarse_block_inset(REACH_VAR.value_or(UNCLIPPED)))
                     .bottom(coarse_block_inset(REACH_VAR.value_or(UNCLIPPED))),
             )
@@ -79,15 +86,24 @@ static REMOVE_BUTTON_SX: StaticSx = StaticSx::new(|| {
                     .position("absolute")
                     .z_index("1")
                     .inset_inline_start("0px")
-                    .inset_inline_end(END_INSET)
+                    .inset_inline_end(end_inset())
                     .top(coarse_block_inset("0px"))
                     .bottom(coarse_block_inset("0px")),
             ),
         )
 });
 
-/// The x grows to 44px at its end and vertically, never back over the label (4688).
-const END_INSET: &str = "min(0px, calc(100% - 44px))";
+/// The x grows to 44px at its end and vertically, never back over the label (4688), and
+/// at most half the gap past its pill, short of the next chip (4783).
+fn end_inset() -> String {
+    format!("max({}, min(0px, calc(100% - 44px)))", END_VAR.value())
+}
+
+/// The x's end inset that reaches half the gap past the pill's end: its padding and border.
+const END_VAR: CssVar = CssVar::new("--lsx-removable-chip-end");
+
+/// Half the 4px gap MultiSelect, TagsField and FileField leave between chips.
+const HALF_GAP: &str = "2px";
 
 /// How far the x's 44px `::before` may reach past the pill's rows; a field frame sets it to 0.
 const REACH_VAR: CssVar = CssVar::new("--lsx-removable-chip-reach");
@@ -118,7 +134,26 @@ pub(crate) fn removable_chip(
     size: Size,
     disabled: bool,
 ) -> Element {
+    let content = rsx! { "{label}" };
+    drawn_chip(label, content, Some(remove), size, disabled)
+}
+
+/// As [`removable_chip`], drawing `content` for `label`; without `remove` it has no x.
+pub(crate) fn drawn_chip(
+    label: String,
+    content: Element,
+    remove: Option<Callback<()>>,
+    size: Size,
+    disabled: bool,
+) -> Element {
     let size = size.step_down();
+    let Some(remove) = remove else {
+        return rsx! {
+            Chip { size, sx: &REMOVABLE_CHIP_SX,
+                span { "data-slot": "label", {content} }
+            }
+        };
+    };
     // Of the chip's height, not its font: an `em` x shrinks as the field grows.
     let icon_size: Input<ThemeAwareValue> =
         ThemeAwareValue::String(format!("calc({} * 0.6)", CHIP_HEIGHT.value(size))).into();
@@ -143,7 +178,7 @@ pub(crate) fn removable_chip(
                     Glyph { slot: IconSlot::Close, icon: lucide::x::outlined }
                 }
             } },
-            span { "data-slot": "label", "{label}" }
+            span { "data-slot": "label", {content} }
         }
     }
 }
@@ -189,7 +224,11 @@ impl Announced {
             self.noted = *number;
         }
         let message = match (change, note) {
-            (Some(change), Some((_, note))) => Some(format!("{change} {note}")),
+            // Two sentences, not one run-on (4786).
+            (Some(change), Some((_, note))) => Some(match change.ends_with('.') {
+                true => format!("{change} {note}"),
+                false => format!("{change}. {note}"),
+            }),
             (change, note) => change.or(note.map(|(_, note)| note)),
         };
         if let Some(message) = message {
@@ -440,6 +479,26 @@ mod tests {
         // A later sync that happens to match the refused edit is not the field's.
         render(&mut announced, &["a", "b"], &mut mark);
         assert_eq!(announced.message, None);
+    }
+
+    #[test]
+    fn an_edit_and_a_note_are_two_sentences() {
+        let mut announced = announced(&[]);
+        let mut mark = edit(&[], &["report.pdf"]);
+        let note = Some((
+            1,
+            "Not added, the field takes one file: note.txt".to_string(),
+        ));
+        announced.observe(
+            labels(&["report.pdf"]),
+            &mut mark,
+            note,
+            &ChipsLabels::ENGLISH,
+        );
+        assert_eq!(
+            announced.message.as_deref(),
+            Some("Added report.pdf. Not added, the field takes one file: note.txt")
+        );
     }
 
     #[test]

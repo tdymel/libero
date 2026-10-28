@@ -30,7 +30,9 @@ use super::accept::accept_hint;
 use super::crop::CropGate;
 use super::files::{FileRejection, Files};
 use super::intake::{Intake, Limits, Taking, use_file_intake, use_input_mirror};
-use super::rows::{ChipKeys, FileRows, FocusDebt, card_prefix, use_chip_cursor, use_focus_debt};
+use super::rows::{
+    ChipKeys, FileRows, FocusDebt, card_prefix, name_id, use_chip_cursor, use_focus_debt,
+};
 use super::styles::{FILE_CARD_LIST_SX, FILE_CARD_SX, FILE_CHIP_SX, FILE_INPUT_SX};
 use super::surface::{
     Cards, Chips, Surface, file_dropzone_variant, file_input_variant, file_trigger_variant,
@@ -302,8 +304,9 @@ pub fn FileField(props: FileFieldProps) -> Element {
         .parts(&props.parts)
         .states(&props.states)
         .attributes(&props.attributes);
-    // As a native label opens a file input; a `trigger` takes the focus instead.
-    if props.trigger.is_none() {
+    // As a native label opens a file input; a `trigger` takes the focus instead, and so
+    // does a full single-file dropzone's card x, with Browse gone (4785).
+    if props.trigger.is_none() && surface {
         field = field.activates(browse_element, move || trigger_open.call(()));
     }
     let field = field.prepare();
@@ -417,7 +420,11 @@ pub fn FileField(props: FileFieldProps) -> Element {
         browse: browse_element,
         id: field.id().to_string(),
         labelledby: labelledby.clone(),
-        file: (!cards && !multiple && has_files).then(|| format!("{id_prefix}-0")),
+        // The hidden whole name, not the split one a caller's `selection` lacks.
+        file: (!cards && !multiple && has_files).then(|| match props.selection {
+            Some(_) => format!("{id_prefix}-0"),
+            None => name_id(&id_prefix, 0),
+        }),
         describedby: describedby.clone(),
         invalid,
         required,

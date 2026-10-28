@@ -8,9 +8,9 @@ use crate::{
     platform::{ElementApi, nested_interactive, next_task},
 };
 
-/// A checkable control's activation, taken off the browser. A cancelled click
-/// restores the old `checked` after dioxus re-rendered inside the dispatch, so
-/// label clicks are cancelled and Space is answered on `keydown`.
+/// A label click that activates the control, taken off the browser: a checkable's toggle, or
+/// FileField's picker (no `wire`). A cancelled click restores the old `checked` after dioxus
+/// re-rendered inside the dispatch, so label clicks are cancelled and Space is answered on `keydown`.
 #[derive(Clone)]
 pub(crate) struct Activation {
     /// Attached to the input by [`wire`](Self::wire), and focused by the label.

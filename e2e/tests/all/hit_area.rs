@@ -202,8 +202,8 @@ fn a_finger_presses_small_controls_in_a_44px_box() {
     });
 }
 
-/// Todo 4188: under a finger a chip's x takes its whole pill's height and 44px from its own left edge,
-/// and a tap at the pill's bottom edge removes that chip, not the one on the next row.
+/// Todo 4188: under a finger a chip's x takes its whole pill's height and reaches from its own left
+/// edge to just past the pill (4783), and a tap at the pill's bottom edge removes that chip, not the one on the next row.
 #[test]
 fn a_finger_on_a_chip_x_never_removes_the_next_rows_chip() {
     use chromiumoxide::cdp::browser_protocol::emulation::SetTouchEmulationEnabledParams;
@@ -233,7 +233,7 @@ fn a_finger_on_a_chip_x_never_removes_the_next_rows_chip() {
                             const pill = el.closest('[data-slot=chip-trailing]').parentElement.getBoundingClientRect();
                             const cx = r.x + r.width / 2, cy = r.y + r.height / 2;
                             tops.push([pill.top, pill.height]);
-                            const points = [[-6, 0], [36, 0]];
+                            const points = [[-6, 0], [pill.right + 1 - cx, 0]];
                             for (let y = pill.top + 1; y < pill.bottom; y += 1) points.push([0, y - cy]);
                             for (const [dx, dy] of points) {{
                                 const at = document.elementFromPoint(cx + dx, cy + dy);
@@ -377,6 +377,113 @@ fn a_chip_x_takes_no_press_on_a_label_or_the_frame_padding() {
         fixture
             .console
             .assert_clean("chip labels and frame padding under a finger")
+            .unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
+/// Todo 4783: under a finger a chip's x stops half a gap past its pill, so a tap on the next
+/// chip's start or just past the last chip removes nothing, in either direction.
+#[test]
+fn a_chip_x_reaches_no_further_than_half_the_gap_to_the_next_chip() {
+    use chromiumoxide::cdp::browser_protocol::emulation::SetTouchEmulationEnabledParams;
+    block_on(async {
+        let fixture = Fixture::open("/hit-area", Viewport::Mobile).await.unwrap();
+        let page = &fixture.page;
+        page.execute_bounded(SetTouchEmulationEnabledParams::new(true))
+            .await
+            .unwrap();
+        wait::for_js_true(
+            page,
+            "matchMedia('(pointer: coarse)').matches",
+            "a coarse pointer",
+        )
+        .await
+        .unwrap();
+        page.evaluate_bounded(
+            "(() => {
+                const input = document.querySelector('[data-case=file-row] input[type=file]');
+                const files = new DataTransfer();
+                for (const name of ['a.pdf', 'b.pdf', 'c.pdf']) files.items.add(new File(['x'], name));
+                input.files = files.files;
+                input.dispatchEvent(new Event('change', { bubbles: true }));
+            })()",
+        )
+        .await
+        .unwrap();
+
+        for case in ["tag-row", "tag-row-rtl", "file-row", "pick-row"] {
+            wait::for_js_true(
+                page,
+                &format!("document.querySelectorAll('[data-case={case}] button[aria-label^=Remove]').length == 3"),
+                "three chips",
+            )
+            .await
+            .unwrap();
+            let probe: serde_json::Value = page
+                .evaluate_bounded(format!(
+                    "(() => {{
+                        const xs = [...document.querySelectorAll('[data-case={case}] button[aria-label^=Remove]')];
+                        xs[0].scrollIntoView({{ block: 'center' }});
+                        const rtl = getComputedStyle(xs[0]).direction == 'rtl';
+                        const pills = xs.map(el => el.closest('[data-slot=chip-trailing]').parentElement.getBoundingClientRect());
+                        const misses = [];
+                        const hits = (x, y, own) => {{
+                            const at = document.elementFromPoint(x, y);
+                            return !!at && own.contains(at);
+                        }};
+                        xs.forEach((el, at) => {{
+                            const p = pills[at], cy = el.getBoundingClientRect().y + el.getBoundingClientRect().height / 2;
+                            const next = pills[at + 1];
+                            // The next chip's near edge, or 3px past the last chip.
+                            const x = next ? (rtl ? next.right - 2 : next.left + 2) : (rtl ? p.left - 3 : p.right + 3);
+                            if (next && Math.abs(next.top - p.top) > 1) misses.push(['wrapped', el.ariaLabel]);
+                            if (hits(x, cy, el)) misses.push([next ? 'next chip' : 'past the last', el.ariaLabel, x - (rtl ? p.left : p.right)]);
+                        }});
+                        const tap = {{ x: rtl ? pills[1].right - 2 : pills[1].left + 2, y: pills[1].top + pills[1].height / 2 }};
+                        return {{ misses, tap }};
+                    }})()"
+                ))
+                .await
+                .unwrap()
+                .into_value()
+                .unwrap();
+            println!("{case}: {probe}");
+            assert_eq!(
+                probe["misses"].as_array().map(Vec::len),
+                Some(0),
+                "{case}: an x takes a press past its own pill: {}",
+                probe["misses"]
+            );
+
+            // Not on the file chip: a press there opens the picker. The open list comes last.
+            if case == "file-row" {
+                continue;
+            }
+            let tap = &probe["tap"];
+            let at = pointer::Point {
+                x: tap["x"].as_f64().unwrap(),
+                y: tap["y"].as_f64().unwrap(),
+            };
+            pointer::tap_at(page, at).await.unwrap();
+            let kept: bool = page
+                .evaluate_bounded(format!(
+                    "new Promise(done => requestAnimationFrame(() => requestAnimationFrame(() =>
+                        done(document.querySelectorAll('[data-case={case}] button[aria-label^=Remove]').length == 3))))"
+                ))
+                .await
+                .unwrap()
+                .into_value()
+                .unwrap();
+            assert!(
+                kept,
+                "{case}: a tap on the second chip's start removed a chip"
+            );
+        }
+
+        fixture
+            .console
+            .assert_clean("a chip row under a finger")
             .unwrap();
         fixture.close().await.unwrap();
     });

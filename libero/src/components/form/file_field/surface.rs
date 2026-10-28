@@ -455,6 +455,7 @@ pub(super) fn file_trigger_variant(
         invalid,
         required,
         loading,
+        interactive,
         attributes,
         ..
     } = control;
@@ -466,8 +467,8 @@ pub(super) fn file_trigger_variant(
         invalid.then(|| attribute("aria-invalid", "true".into())),
         loading.then(|| attribute("aria-busy", "true".into())),
         Some(attribute("id", id)),
-        // What a click on the label looks for.
-        (!args.disabled).then(|| attribute("tabindex", "0".into())),
+        // What a click on the label looks for; a read-only trigger stays focusable (4785).
+        interactive.then(|| attribute("tabindex", "0".into())),
     ]
     .into_iter()
     .flatten()

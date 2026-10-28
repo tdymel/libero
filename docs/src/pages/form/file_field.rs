@@ -1,6 +1,6 @@
 use crate::components::{
-    Child, Control, Demo, DemoValues, DocPage, FieldCopy, a11y, field_controls, field_props, prop,
-    props, readonly_prop, status_prop,
+    Control, Demo, DemoValues, DocPage, FieldCopy, a11y, field_controls, field_props, prop, props,
+    readonly_prop, status_prop,
 };
 use dioxus::prelude::*;
 use libero::components::FileFieldPart;
@@ -28,23 +28,15 @@ fn dropzone(values: &DemoValues) -> bool {
     values.str("variant") == "dropzone"
 }
 
+/// A dropzone takes no placeholder, so its own `drop_file` or `drop_files` prompt speaks.
 fn variant_code(_control: &Control, values: &DemoValues) -> Vec<String> {
     match dropzone(values) {
         true => vec![r#"variant: "dropzone""#.to_string()],
-        false => vec![],
+        false => vec![format!("placeholder: {PLACEHOLDER:?}")],
     }
 }
 
-/// The prompt is `children`, so it prints inside the braces. Only the
-/// `Dropzone` variant has one.
-fn prompt(values: &DemoValues) -> String {
-    match dropzone(values) {
-        true => PROMPT.to_string(),
-        false => String::new(),
-    }
-}
-
-const PROMPT: &str = "Drop files here, or click to pick";
+const PLACEHOLDER: &str = "No file picked";
 
 // snippet: let mut files = use_signal(Files::default);
 // snippet: in FileField { label: "Attachment", value: files(), onchange: move |picked| files.set(picked), .. }
@@ -325,9 +317,7 @@ pub fn FileFieldPage() -> Element {
             Demo {
                 component: "FileField",
                 children_text: "",
-                child: Child(prompt),
                 fixed: vec![
-                    r#"placeholder: "No file picked""#.to_string(),
                     "value: files()".to_string(),
                     "onchange: move |picked| files.set(picked)".to_string(),
                 ],
@@ -396,6 +386,8 @@ fn FileFieldDemo(values: DemoValues) -> Element {
     let mut files = use_signal(Files::default);
     let menu = use_menu();
     let mut refused = use_signal(Vec::<String>::new);
+    // The field calls `onreject` before `onchange` in one intake, so that `onchange` keeps the refusal.
+    let mut just_refused = use_hook(|| CopyValue::new(false));
 
     let accept = match values.str("accept").as_str() {
         "any" => None,
@@ -416,7 +408,7 @@ fn FileFieldDemo(values: DemoValues) -> Element {
                 clearable: is_on(&values, "clearable"),
                 max_files: is_on(&values, "limits").then_some(3),
                 max_size: is_on(&values, "limits").then_some(5_000_000),
-                placeholder: "No file picked",
+                placeholder: (!dropzone(&values)).then(|| PLACEHOLDER.to_string()),
                 value: files(),
                 label: field.label,
                 aria_label: field.aria_label,
@@ -433,10 +425,14 @@ fn FileFieldDemo(values: DemoValues) -> Element {
                     _ => None,
                 },
                 onchange: move |picked: Files| {
-                    refused.set(Vec::new());
+                    if !just_refused() {
+                        refused.set(Vec::new());
+                    }
                     files.set(picked);
                 },
                 onreject: move |rejected: Vec<FileRejection>| {
+                    just_refused.set(true);
+                    spawn(async move { just_refused.set(false) });
                     refused.set(
                         rejected
                             .iter()
@@ -444,7 +440,6 @@ fn FileFieldDemo(values: DemoValues) -> Element {
                             .collect(),
                     );
                 },
-                {prompt(&values)}
             }
             Text { size: "sm", "value: {names:?}" }
             Text { size: "sm", "refused: {refused:?}" }

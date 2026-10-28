@@ -694,6 +694,36 @@ fn a_read_only_single_file_dropzone_stays_reachable() {
     });
 }
 
+/// Todo 4785: with Browse gone from a full single-file dropzone, a label click focuses the card's x.
+#[test]
+fn a_label_click_on_a_full_single_dropzone_focuses_the_cards_x() {
+    block_on(async {
+        let fixture = Fixture::open("/file-field/single", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        wait::for_visible(page, SURFACE).await.unwrap();
+        let disk = OnDisk::with(&["alpha.txt"]);
+        drop_files(page, SURFACE, disk.paths()).await;
+        wait::for_selector(page, "#single-remove-0").await.unwrap();
+
+        pointer::click(page, "#single-label").await.unwrap();
+        wait::for_js_true(
+            page,
+            "document.activeElement && document.activeElement.id === 'single-remove-0'",
+            "the card's x to take the focus",
+        )
+        .await
+        .unwrap();
+
+        fixture
+            .console
+            .assert_clean("a label click on a full dropzone")
+            .unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
 /// Todo 3086: removing the file of a single-file dropzone re-mounts Browse, and focus lands on it.
 #[test]
 fn removing_the_single_file_focuses_the_browse_button_it_brings_back() {
@@ -1104,7 +1134,7 @@ fn a_drop_on_the_card_list_is_taken_not_opened() {
         assert_drag_cancelled(page, "a drop on the card list").await;
         wait::for_js_true(
             page,
-            "[...document.querySelectorAll('[data-fixture-ready] ul[role=list] [data-slot=name]')]\
+            "[...document.querySelectorAll('[data-fixture-ready] ul[role=list] [data-slot=name] > :not([aria-hidden])')]\
              .map(name => name.textContent).join() === 'gamma.txt'",
             "the dropped file's card, as the surface's drop would leave it",
         )

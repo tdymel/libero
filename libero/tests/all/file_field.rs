@@ -196,7 +196,7 @@ fn switching_variant_at_runtime_swaps_the_control_and_its_styles() {
             .split("step ")
             .nth(1)
             .and_then(|rest| rest.chars().next());
-        let dropzone = body.contains("Drop a file here, or click to pick");
+        let dropzone = body.contains("Drop a file here, or choose one");
         let classes = control_classes(&body);
         let input_control = classes == input_classes;
         // The registry keeps the old variant's sheet cached (todo 2194), so only
@@ -242,8 +242,8 @@ fn a_caller_id_that_is_no_css_identifier_is_the_field_id() {
 }
 
 /// Todo 250: a `multiple` field draws the chip `MultiSelect` and `TagsField`
-/// draw - the label in its `label` slot, and an x named after the file that
-/// is out of the tab order. The label carries its full text as a `title` (todo 2965).
+/// draw - the name in its `label` slot, clipped as a single one is (4784), and
+/// an x named after the file that is out of the tab order.
 #[test]
 fn a_multiple_file_field_draws_the_shared_removable_chip() {
     fn app() -> Element {
@@ -262,7 +262,7 @@ fn a_multiple_file_field_draws_the_shared_removable_chip() {
     let html = render(app);
     let body = body(&html);
     assert!(
-        body.contains(r#"<span data-slot="label">a.txt</span>"#),
+        body.contains(r#"<span data-slot="label"><span data-slot="name"><span data-slot="stem" aria-hidden="true">a</span>"#),
         "{body}"
     );
     let named = body.find(r#""Remove b.txt""#).expect("the second chip's x");
@@ -456,13 +456,24 @@ fn a_single_file_names_its_file_on_the_browse_button() {
 
     let body = body(&render(app));
     let button = attributes_of(&body, "button");
+    // The hidden whole name: the split stem and extension would read "scan .pdf" (4784).
     assert_eq!(
-        button["aria-labelledby"], "one-label one-file-0 one",
+        button["aria-labelledby"], "one-label one-file-0-name one",
         "{button:?}"
     );
     let chip = tag_with(&body, r#"id="one-file-0""#);
     assert_eq!(chip["data-slot"], "chip", "{chip:?}");
-    assert!(body.contains("scan.pdf"), "{body}");
+    let name = body
+        .find(r#"id="one-file-0-name""#)
+        .expect("the hidden name");
+    assert!(
+        body[name..]
+            .split('<')
+            .next()
+            .unwrap()
+            .ends_with(">scan.pdf"),
+        "{body}"
+    );
 }
 
 /// Read-only keeps the Browse button and the chips reachable and refuses;
@@ -664,15 +675,9 @@ mod dispatched {
             !file[0].contains_key("disabled"),
             "a read-only field still posts: {file:?}"
         );
-        // Both chips' x stand down with the field.
+        // No chip draws an x, as `FileRows.editable` says (4787).
         let removes = tags_with(&html, r#"aria-label="Remove"#);
-        assert_eq!(removes.len(), 2, "{removes:?}");
-        assert!(
-            removes
-                .iter()
-                .all(|x| x.get("aria-disabled").is_some_and(|v| v == "true")),
-            "{removes:?}"
-        );
+        assert_eq!(removes.len(), 0, "{removes:?}");
 
         READ_ONLY.set(false);
         assert_eq!(

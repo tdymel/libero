@@ -73,6 +73,7 @@ fn HitAreaPage() -> Element {
             Coarse {}
             ChipRows {}
             FileChips {}
+            ChipRow {}
             Stacked {}
         }
     }
@@ -125,6 +126,43 @@ fn FileChips() -> Element {
                 multiple: true,
                 value: files(),
                 onchange: move |next: Files| files.set(next),
+            }
+        }
+    }
+}
+
+/// Todo 4783: chips side by side in one row, so each x sits right before the next chip.
+#[component]
+fn ChipRow() -> Element {
+    let kiwis = || (1..=3).map(|n| format!("Kiwi {n}")).collect::<Vec<_>>();
+    let mut tags = use_signal(kiwis);
+    let mut tags_rtl = use_signal(kiwis);
+    let mut picked = use_signal(kiwis);
+    let mut files = use_signal(Files::default);
+    rsx! {
+        Flex { direction: "column", gap: "lg",
+            div { "data-case": "tag-row",
+                TagsField { label: "Row tags", value: tags(), onchange: move |next| tags.set(next) }
+            }
+            div { "data-case": "tag-row-rtl", dir: "rtl",
+                TagsField { label: "Row tags RTL", value: tags_rtl(), onchange: move |next| tags_rtl.set(next) }
+            }
+            div { "data-case": "pick-row",
+                MultiSelect {
+                    label: "Row picks",
+                    options: kiwis(),
+                    value: picked(),
+                    onchange: move |next| picked.set(next),
+                }
+            }
+            div { "data-case": "file-row",
+                FileField {
+                    id: "file-row",
+                    label: "Row files",
+                    multiple: true,
+                    value: files(),
+                    onchange: move |next: Files| files.set(next),
+                }
             }
         }
     }

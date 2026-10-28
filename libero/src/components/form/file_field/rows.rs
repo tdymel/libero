@@ -10,7 +10,7 @@ use crate::{
         buttons::ActionIcon,
         common::{FOCUSABLE_SELECTOR, Glyph, HtmlTag, Input, Part, navigation_chord},
         feedback::Loader,
-        form::{SelectionArgs, removable_chip},
+        form::{SelectionArgs, drawn_chip},
         layout::BoxStyle,
     },
     context::IconSlot,
@@ -175,7 +175,14 @@ impl FileRows {
                     format!("{}-remove-{index}", self.field_id),
                     self.card_named.clone(),
                 ),
-                false => default_chip(&file, remove, self.size, self.multiple, self.editable),
+                false => default_chip(
+                    &file,
+                    remove,
+                    self.size,
+                    self.multiple,
+                    self.editable,
+                    name_id(&self.keys.id_prefix, index),
+                ),
             },
         };
         match self.cards {
@@ -225,6 +232,11 @@ impl FileRows {
             }
         }
     }
+}
+
+/// The hidden full name of a chip's file, which a single file's Browse is named by.
+pub(super) fn name_id(id_prefix: &str, index: usize) -> String {
+    format!("{id_prefix}-{index}-name")
 }
 
 fn chip_hint_id(field_id: &str) -> String {
@@ -379,13 +391,15 @@ pub(super) fn card_list(
         .render(HtmlTag::Ul, Vec::new(), drawn)
 }
 
-/// The name, clipped at the stem so a long one keeps its extension.
-fn file_name(name: &str) -> Element {
+/// The name, clipped at the stem so a long one keeps its extension. The split spans are
+/// hidden, as a name read from them gains a space; a hidden copy reads it whole (4784).
+fn file_name(name: &str, id: Option<String>) -> Element {
     let (stem, extension) = split_extension(name);
     rsx! {
         span { "data-slot": "name",
-            span { "data-slot": "stem", "{stem}" }
-            span { "data-slot": "extension", "{extension}" }
+            span { "data-slot": "stem", "aria-hidden": "true", "{stem}" }
+            span { "data-slot": "extension", "aria-hidden": "true", "{extension}" }
+            VisuallyHidden { id, "{name}" }
         }
     }
 }
@@ -398,16 +412,18 @@ fn default_chip(
     size: Size,
     multiple: bool,
     editable: bool,
+    name_id: String,
 ) -> Element {
     let name = file.name();
     if !multiple {
         // `data-slot` so the control can clip it: one long filename would
         // otherwise push the frame past its parent's width.
-        return file_name(&name);
+        return file_name(&name, Some(name_id));
     }
-    // The chip `MultiSelect` and `TagsField` draw. Its press guard keeps the
-    // focus on the control, so a mouse removal needs no repair.
-    removable_chip(name, remove, size, !editable)
+    // The chip `MultiSelect` and `TagsField` draw, clipped as the single name is. Its press
+    // guard keeps the focus on the control; no x while disabled or read-only, as on a card.
+    let content = file_name(&name, None);
+    drawn_chip(name, content, editable.then_some(remove), size, !editable)
 }
 
 /// One picked file as a row under the dropzone: the name, its size, and an x
@@ -431,7 +447,7 @@ fn default_card(
     let size = format_size(file.size(), &words.file_field, current_formats());
     let remove_label = fill(words.common.remove, &[("label", &name)]);
     rsx! {
-        {file_name(&name)}
+        {file_name(&name, None)}
         span { "data-slot": "size", "{size}" }
         if let Some(size) = loading {
             Loader { size }

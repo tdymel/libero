@@ -173,7 +173,7 @@ pub use radio_group::{RadioGroup, RadioGroupPart, RadioGroupProps};
 pub use rating::{Rating, RatingPart, RatingProps};
 #[cfg(feature = "chip")]
 pub(crate) use removable_chip::{
-    Edited, framed_remove_sx, removable_chip, use_chip_announcer, use_edited,
+    Edited, drawn_chip, framed_remove_sx, removable_chip, use_chip_announcer, use_edited,
     use_noting_chip_announcer,
 };
 #[cfg(feature = "rich-text-editor")]
