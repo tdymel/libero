@@ -13,6 +13,12 @@ pub(crate) fn nested_interactive(event: &Event<MouseData>, boundary: &str) -> bo
     super::backend::nested_interactive(event, boundary)
 }
 
+/// [`nested_interactive`] for a pointer press: whether it landed on something
+/// interactive nested in the nearest `boundary`.
+pub(crate) fn nested_interactive_pointer(event: &Event<PointerData>, boundary: &str) -> bool {
+    super::backend::nested_interactive_pointer(event, boundary)
+}
+
 /// Whether [`nested_interactive`] can answer. The Android WebView cannot: it
 /// reads no click target (958).
 pub(crate) fn reads_click_targets() -> bool {

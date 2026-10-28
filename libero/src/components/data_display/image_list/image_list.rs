@@ -369,7 +369,8 @@ parts_enum! {
 base_props! {
     parts(ImageListPart);
     pub struct ImageListProps {
-        /// One cell each, in render order.
+        /// One cell each, in render order. Cells are keyed by position, so a reorder or
+        /// prepend hands each cell's state (an image's load, a focus) to another picture.
         #[props(default)]
         items: Vec<ImageItem>,
         /// Columns, snapped to a divisor of twelve: `3`, or `responsive(1).sm(2).lg(3)`.

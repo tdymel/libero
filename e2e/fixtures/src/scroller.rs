@@ -20,6 +20,14 @@ fn DragPage() -> Element {
         div { style: "max-width: 300px",
             WordStrip { id: "never", controls: "never" }
             WordStrip { id: "stepped", controls: "always" }
+            Scroller { id: "fields", aria_label: "fields", draggable: true, controls: "always",
+                Flex { direction: "row", gap: "sm", wrap: false,
+                    input { id: "field", r#type: "text", "aria-label": "Field" }
+                    for i in 0..12 {
+                        span { key: "{i}", style: "white-space: nowrap", "Word {i}" }
+                    }
+                }
+            }
         }
     }
 }

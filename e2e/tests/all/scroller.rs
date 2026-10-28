@@ -414,6 +414,27 @@ fn a_drag_is_inert_under_controls_never() {
     });
 }
 
+/// Todo 4724: a press on a field inside a draggable strip focuses it.
+#[test]
+fn a_click_on_a_field_in_a_draggable_strip_focuses_it() {
+    block_on(async {
+        let fixture = Fixture::open("/scroller/drag", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        pointer::click(page, "#field").await.unwrap();
+        focus::assert_focused(page, "#field", "a click on a field in a draggable strip")
+            .await
+            .unwrap();
+
+        fixture
+            .console
+            .assert_clean("a click on a field in a draggable strip")
+            .unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
 /// 2.4.11 under RTL: an item is measured from the right edge, where the
 /// strip starts.
 #[test]

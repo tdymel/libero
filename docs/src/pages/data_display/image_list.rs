@@ -8,8 +8,9 @@ use libero::{
         ActionIcon, Box, Code, GridSpan, Image, ImageBar, ImageItem, ImageList, ImageListPart,
         Input, Text,
     },
+    hooks::use_is_mobile,
     sx::sx,
-    theme::{Responsive, Theme, responsive},
+    theme::{Responsive, Size, Theme, responsive},
     use_theme,
 };
 
@@ -24,14 +25,21 @@ const DEMO_COLS: &str = "4";
 /// from a laptop up.
 const RESPONSIVE_COLS: Responsive<u8> = responsive(1).sm(2).md(4);
 
-/// The untouched `cols` on a phone: four cells of ~70px break a caption's words by letter.
-const NARROW_DEMO_COLS: Responsive<u8> = responsive(2).md(4);
+/// Columns on a phone for any count above it: cells under ~160px break a caption's words by letter.
+const NARROW_COLS: u8 = 2;
+
+/// A count above two holds two columns on a phone and its own from `md` up.
+fn narrowed(cols: u8) -> Responsive<u8> {
+    match cols > NARROW_COLS {
+        true => responsive(NARROW_COLS).md(cols),
+        false => cols.into(),
+    }
+}
 
 fn cols(values: &DemoValues, fallback: Responsive<u8>) -> Responsive<u8> {
     match (values.str("responsive") == "true", values.str("cols")) {
         (true, _) => RESPONSIVE_COLS,
-        (false, cols) if cols == DEMO_COLS => NARROW_DEMO_COLS,
-        (false, cols) => cols.parse::<u8>().map_or(fallback, Into::into),
+        (false, cols) => cols.parse::<u8>().map_or(fallback, narrowed),
     }
 }
 
@@ -65,10 +73,15 @@ fn items_code(values: &DemoValues) -> String {
 
     // Only the featured cells get these, so the block has to pick them out.
     let mut featured = String::new();
+    let mut note = String::new();
     if values.str("span") == "true"
         && values.str("responsive") != "true"
         && let Some(wide) = wide_span(values.str("cols").parse::<u8>().unwrap_or(2))
     {
+        if wide != GridSpan::Full {
+            // `span` is fixed per width, and the phone's two columns need `Full`.
+            note.push_str("// Under 768px `cols` is 2: use `Full` there.\n        ");
+        }
         featured.push_str(&format!(
             ".span(GridSpan::{})",
             match wide {
@@ -94,7 +107,7 @@ fn items_code(values: &DemoValues) -> String {
         false => format!(
             "items: photos\n    .iter()\n    .enumerate()\n    .map(|(i, p)| {{\n        let item = {item};\n        \
              // Every third cell is bigger than `cols` makes the rest.\n        \
-             if i.is_multiple_of(3) {{ item{featured} }} else {{ item }}\n    }})\n    .collect()"
+             {note}if i.is_multiple_of(3) {{ item{featured} }} else {{ item }}\n    }})\n    .collect()"
         ),
     }
 }
@@ -117,6 +130,7 @@ pub fn ImageListPage() -> Element {
     let theme = use_theme();
     let defaults = &theme.image_list;
     let selected = use_signal(|| [false; 6]);
+    let mobile = use_is_mobile();
 
     rsx! {
         DocPage {
@@ -211,9 +225,12 @@ pub fn ImageListPage() -> Element {
                         // differs.
                         .code(|_, values| {
                             let value = values.str("cols");
-                            match value == Theme::DEFAULT.image_list.cols.to_string() {
-                                true => vec![],
-                                false => vec![format!("cols: {value}")],
+                            match value.parse::<u8>().map(narrowed) {
+                                Ok(cols) if cols.base() != cols.at(Size::Md) => {
+                                    vec![format!("cols: {cols}")]
+                                }
+                                _ if value == Theme::DEFAULT.image_list.cols.to_string() => vec![],
+                                _ => vec![format!("cols: {value}")],
                             }
                         }),
                     Control::toggle("variant", ["standard", "masonry", "quilted", "woven"])
@@ -282,7 +299,7 @@ pub fn ImageListPage() -> Element {
                             (_, "16:9") => Input::Value(16.0 / 9.0),
                             _ => Input::None,
                         },
-                        items: items(&values, selected),
+                        items: items(&values, selected, mobile()),
                     }
                 },
                 wrap: Wrap(placeholder_header),

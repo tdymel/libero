@@ -1051,6 +1051,22 @@ pub(crate) fn nested_interactive(event: &Event<MouseData>, boundary: &str) -> bo
     };
 }
 
+/// [`nested_interactive`] for a pointer press - see
+/// [`nested_interactive_pointer`](crate::platform::nested_interactive_pointer).
+pub(crate) fn nested_interactive_pointer(event: &Event<PointerData>, boundary: &str) -> bool {
+    #[cfg(not(target_arch = "wasm32"))]
+    let _ = event;
+    #[cfg(target_arch = "wasm32")]
+    return web::nested_interactive_pointer(event, boundary);
+    #[cfg(all(not(target_arch = "wasm32"), feature = "native"))]
+    return blitz::nested_interactive(boundary);
+    #[cfg(all(not(target_arch = "wasm32"), not(feature = "native")))]
+    return {
+        let _ = boundary;
+        false
+    };
+}
+
 /// Only Blitz needs it: its editor ignores `maxlength` - see
 /// [`fit_max_length`](crate::platform::fit_max_length).
 #[cfg(all(not(target_arch = "wasm32"), feature = "native"))]

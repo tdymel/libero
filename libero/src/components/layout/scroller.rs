@@ -18,8 +18,8 @@ use crate::{
         use_localization, use_resize_fallback, use_silent_focus_in, use_theme,
     },
     platform::{
-        ElementApi, PlatformError, element, is_measured_resize, mounted_by_selector, next_task,
-        scroll, when_laid_out, when_laid_out_retry,
+        ElementApi, PlatformError, element, is_measured_resize, mounted_by_selector,
+        nested_interactive_pointer, next_task, scroll, when_laid_out, when_laid_out_retry,
     },
     sx::{REDUCED_MOTION, StaticSx, Sx, ThemeAwareValue, sx},
     theme::{
@@ -373,7 +373,8 @@ base_props! {
         /// Pixels one control press scrolls. Defaults to the theme's.
         #[props(default)]
         scroll_amount: Option<u32>,
-        /// `"auto"` (default), `"always"` or `"never"`.
+        /// `"auto"` (default), `"always"` or `"never"`. Under `auto` a control that keeps
+        /// focus at its end stays shown over the last item; `always` reserves room for both.
         #[props(default, into)]
         controls: Input<ScrollerControls>,
         /// The width of each control strip.
@@ -591,8 +592,11 @@ pub fn Scroller(props: ScrollerProps) -> Element {
         {
             return;
         }
-        // Keeps a text selection or native drag from claiming the pointer.
-        event.prevent_default();
+        // Keeps a text selection or native drag from claiming the pointer, but not
+        // from an input or link in the strip, which a mouse must still be able to focus.
+        if !nested_interactive_pointer(&event, "[data-slot='viewport']") {
+            event.prevent_default();
+        }
         // Read now: read at drag start, the first move would use the last origin.
         let offset = viewport.scroll_offset();
         rtl.set(viewport.is_rtl());

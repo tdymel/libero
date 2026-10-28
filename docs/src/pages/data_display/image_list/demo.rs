@@ -65,11 +65,15 @@ pub(super) fn picture(index: usize) -> Element {
 pub(super) fn caption(index: usize, mut selected: Signal<[bool; 6]>) -> Element {
     let line = sx().overflow_wrap("anywhere");
     let on = selected()[index];
-    // Filled when selected; otherwise the bar's colour, the scrim's.
+    // Filled when selected; otherwise the bar's colour, the scrim's. A finger gets 44px.
     let icon = match on {
         true => sx().flex("0 0 auto"),
         false => sx().color("inherit").flex("0 0 auto"),
-    };
+    }
+    .media(
+        "(pointer: coarse)",
+        sx().min_width("44px").min_height("44px"),
+    );
 
     // The button drops below the text in a narrow cell, which then keeps its words whole.
     rsx! {
@@ -98,10 +102,16 @@ pub(super) fn caption(index: usize, mut selected: Signal<[bool; 6]>) -> Element 
     }
 }
 
-pub(super) fn items(values: &DemoValues, selected: Signal<[bool; 6]>) -> Vec<ImageItem> {
+/// `mobile` is the window under `md`, where `cols` holds two (`narrowed`) and a span follows.
+pub(super) fn items(
+    values: &DemoValues,
+    selected: Signal<[bool; 6]>,
+    mobile: bool,
+) -> Vec<ImageItem> {
     let bar = values.str("bar");
     let scrim = values.str("scrim") == "true";
     let cols = values.str("cols").parse::<u8>().unwrap_or(2);
+    let cols = if mobile { cols.min(NARROW_COLS) } else { cols };
     let span = values.str("span") == "true" && values.str("responsive") != "true";
     let link = values.str("link") == "true";
     let rows = values.str("rows") == "true" && values.str("variant") == "quilted";

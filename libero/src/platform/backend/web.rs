@@ -281,12 +281,22 @@ pub(super) fn rtl_target(event: &Event<KeyboardData>) -> bool {
 /// Nested when the target's nearest interactive element sits inside `boundary`.
 /// dioxus-web delegates from the root, so a selector stands in for `currentTarget`.
 pub(super) fn nested_interactive(event: &Event<MouseData>, boundary: &str) -> bool {
+    nested_in(event.downcast::<web_sys::MouseEvent>(), boundary)
+}
+
+/// [`nested_interactive`] for a pointer press.
+pub(super) fn nested_interactive_pointer(event: &Event<PointerData>, boundary: &str) -> bool {
+    nested_in(
+        event
+            .downcast::<web_sys::PointerEvent>()
+            .map(std::ops::Deref::deref),
+        boundary,
+    )
+}
+
+fn nested_in(event: Option<&web_sys::MouseEvent>, boundary: &str) -> bool {
     let nested = || -> Option<bool> {
-        let target = event
-            .downcast::<web_sys::MouseEvent>()?
-            .target()?
-            .dyn_into::<web_sys::Element>()
-            .ok()?;
+        let target = event?.target()?.dyn_into::<web_sys::Element>().ok()?;
         let boundary = target.closest(boundary).ok()??;
         let hit = target.closest(INTERACTIVE).ok()??;
         Some(hit != boundary && boundary.contains(Some(&hit)))

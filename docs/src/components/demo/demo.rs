@@ -650,8 +650,9 @@ pub fn Demo(
                 align: "stretch",
                 sx: sx().border_bottom(border()),
                 Box {
-                    // A phone's narrow card keeps 8px: a coarse pointer's 308px calendar fits at 360px (3955).
-                    sx: card_query(sx().padding("8px"), 400, sx().padding("24px"))
+                    // A phone's narrow card keeps 8px inline: a coarse pointer's 308px calendar fits
+                    // at 360px (3955). 12px block, or the scroll box clips an outset focus ring (4726).
+                    sx: card_query(sx().padding("12px 8px"), 400, sx().padding("24px"))
                         .flex("1")
                         .min_width("240px")
                         .display("flex")
