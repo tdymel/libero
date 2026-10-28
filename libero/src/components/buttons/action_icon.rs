@@ -45,7 +45,8 @@ const ACTION_ICON_ON_CONTAINER_VAR: CssVar = CssVar::new("--lsx-action-icon-on-c
 const ACTION_ICON_SELECTED_VAR: CssVar = CssVar::new("--lsx-action-icon-selected");
 const ACTION_ICON_ON_STATE_VAR: CssVar = CssVar::new("--lsx-action-icon-on-state");
 
-/// Set on the `xs` and `sm` icons, the only ones whose 44px touch box does not crowd a neighbour.
+/// Set on the `xs` and `sm` icons, which grow a 44px touch box: a `Toolbar` or `ButtonGroup` keeps
+/// it off a neighbour, a loose row needs a 10px (`xs`) or 7px (`sm`) gap.
 pub(crate) const ACTION_ICON_COMPACT: &str = "compact";
 
 /// An `xs` or `sm` size word, or a length up to `sm`'s 30px (`rem` and `em` at 16px).
@@ -263,7 +264,8 @@ base_props! {
         #[props(default, into)]
         color: Input<ThemeAwareValue>,
         /// A size word takes `Button`'s height, the glyph `Icon`'s size; a length
-        /// sizes both. Below 24px the press target stays 24x24 (WCAG 2.5.8), 44x44 under a finger at `xs` and `sm`.
+        /// sizes both. Below 24px the press target stays 24x24 (WCAG 2.5.8), 44x44 under a finger at `xs` and `sm`
+        /// (in a `Toolbar`, up to half its gap along the bar).
         #[props(default, into)]
         size: Input<ThemeAwareValue>,
         #[props(default, into)]
@@ -280,6 +282,7 @@ base_props! {
         #[props(default)]
         disabled: Option<bool>,
         /// With `disabled`: keeps the button in the Tab order, as on `Button`. Either way it keeps a focus it has.
+        /// Unset, `false`; inside a `Toolbar`, `true`.
         #[props(default)]
         focusable_when_disabled: Option<bool>,
         /// Toggle button: renders `aria-pressed`. `None` is a plain action.
@@ -405,23 +408,31 @@ fn action_icon(mut props: ActionIconProps, keyshortcuts: Option<String>) -> Elem
     // An explicit `false` takes a toolbar item out of the arrow order too.
     let item = item.filter(|_| !disabled || soft_disabled);
 
-    if is_link && props.loading == Some(true) {
-        warn("ActionIcon: `loading` is ignored on a link - an `<a>` has nothing to wait for.");
-    }
+    // Once per instance, as the bad-chord warning.
+    let warned = use_hook(|| Rc::new(RefCell::new(HashSet::<&'static str>::new())));
+    let warn_once = |when: bool, message: &'static str| {
+        if when && warned.borrow_mut().insert(message) {
+            warn(message);
+        }
+    };
+    warn_once(
+        is_link && props.loading == Some(true),
+        "ActionIcon: `loading` is ignored on a link - an `<a>` has nothing to wait for.",
+    );
     let glyph = match (props.icon, props.children.take()) {
         (Some(icon), children) => {
-            if children.is_some() {
-                warn("ActionIcon: both `icon` and `children` set; `children` is ignored.");
-            }
+            warn_once(
+                children.is_some(),
+                "ActionIcon: both `icon` and `children` set; `children` is ignored.",
+            );
             rsx! { Pictogram { icon } }
         }
         (None, children) => children.unwrap_or_else(VNode::empty),
     };
-    if selectable && is_link {
-        warn(
-            "ActionIcon: a link keeps the `selected` look but not `aria-pressed`, which `<a>` has no use for.",
-        );
-    }
+    warn_once(
+        selectable && is_link,
+        "ActionIcon: a link keeps the `selected` look but not `aria-pressed`, which `<a>` has no use for.",
+    );
 
     let has_variant_styling = props.variant.as_ref().is_some() || props.color.as_ref().is_some();
     let theme = use_theme();

@@ -6,8 +6,8 @@ use crate::{
     components::{
         common::{
             HtmlTag, Input, Orientation, Part, States, TOOLBAR_ITEM, ToolbarScope, base_props,
-            has_shortcut_modifier, names_itself, parts_enum, use_name_warning, use_provide_toolbar,
-            use_toolbar,
+            coarse_reach_sx, has_shortcut_modifier, names_itself, parts_enum, use_name_warning,
+            use_provide_toolbar, use_toolbar,
         },
         layout::use_box,
     },
@@ -19,6 +19,7 @@ use crate::{
     },
     sx::{StaticSx, sx},
     theme::{ColorCss, ColorShade, Size, SizeCss},
+    utils::warn,
 };
 
 parts_enum! {
@@ -58,6 +59,7 @@ static TOOLBAR_SX: StaticSx = StaticSx::new(|| {
             Orientation::Horizontal.state_name(),
             // A long bar wraps rather than widening the page (1.4.10).
             sx().flex_wrap("wrap")
+                .and(coarse_reach_sx(Orientation::Horizontal, &gap))
                 .selector(group, sx().flex_wrap("wrap"))
                 .selector(
                     separator,
@@ -70,6 +72,7 @@ static TOOLBAR_SX: StaticSx = StaticSx::new(|| {
             Orientation::Vertical.state_name(),
             sx().flex_direction("column")
                 .align_items("stretch")
+                .and(coarse_reach_sx(Orientation::Vertical, &gap))
                 .selector(group, sx().flex_direction("column").align_items("stretch"))
                 .selector(
                     separator,
@@ -245,12 +248,31 @@ pub fn Toolbar(props: ToolbarProps) -> Element {
             return;
         }
         event.prevent_default();
-        if let Some(target) = target.and_then(|target| items.get(target)) {
-            // Here too: Blitz fires `focusin` before the focus moves.
-            if let Some(id) = marked_id(target.as_ref()) {
+        let Some(target) = target else {
+            return;
+        };
+        // Onward from the target, past items that cannot hold focus (`display: none`); the
+        // focused one at worst takes it back.
+        let len = items.len();
+        let toward = step.unwrap_or(if target == 0 { 1 } else { -1 });
+        let onward = (0..len as isize)
+            .map(|n| target as isize + n * toward)
+            .map_while(|index| match loop_focus {
+                true => Some(index.rem_euclid(len as isize) as usize),
+                false => usize::try_from(index).ok().filter(|&index| index < len),
+            });
+        for index in onward {
+            let item = &items[index];
+            let _ = item.focus();
+            if !item.is_focused() {
+                continue;
+            }
+            // After the focus holds, so the stop never parks on an item that refused it; Blitz
+            // fires `focusin` before the focus moves, so the stop is set here too.
+            if let Some(id) = marked_id(item.as_ref()) {
                 scope.focused(id);
             }
-            let _ = target.focus();
+            break;
         }
     };
 
@@ -358,6 +380,18 @@ fn marked_id(item: &dyn ElementApi) -> Option<u64> {
     item.attribute(TOOLBAR_ITEM).ok()??.parse().ok()
 }
 
+/// Once per mount: the bar styles its groups and separators, so outside one they draw nothing.
+fn use_outside_warning(part: &'static str) {
+    let inside = use_toolbar().is_some();
+    use_hook(move || {
+        if !inside {
+            warn(&format!(
+                "{part}: not inside a `Toolbar`, which lays it out and draws it, so it renders unstyled."
+            ));
+        }
+    });
+}
+
 base_props! {
     pub struct ToolbarGroupProps {
         children: Element,
@@ -385,6 +419,7 @@ base_props! {
 /// Docs: <https://libero-ui.dev/buttons/toolbar>
 #[component]
 pub fn ToolbarGroup(props: ToolbarGroupProps) -> Element {
+    use_outside_warning("ToolbarGroup");
     use_name_warning(
         names_itself(&props.attributes),
         "ToolbarGroup: no `aria-label` or `aria-labelledby`, so it is announced as just \"group\".",
@@ -422,6 +457,7 @@ base_props! {
 /// Docs: <https://libero-ui.dev/buttons/toolbar>
 #[component]
 pub fn ToolbarSeparator(props: ToolbarSeparatorProps) -> Element {
+    use_outside_warning("ToolbarSeparator");
     // Perpendicular to the bar; `horizontal` is the role's default.
     let across = match use_toolbar().map(|toolbar| toolbar.orientation()) {
         Some(Orientation::Vertical) | None => None,

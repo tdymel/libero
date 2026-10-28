@@ -18,7 +18,7 @@ use `ButtonGroup` alone.
 
 ```rust
 use dioxus::prelude::*;
-use libero::components::{ActionIcon, Pictogram, Toolbar, ToolbarGroup, ToolbarSeparator};
+use libero::components::{ActionIcon, Toolbar, ToolbarGroup, ToolbarSeparator};
 use pictogram_icons_lucide as lucide;
 
 #[component]
@@ -26,14 +26,14 @@ fn Demo() -> Element {
     rsx! {
         Toolbar { "aria-label": "Formatting",
             ToolbarGroup { "aria-label": "Style",
-                ActionIcon { aria_label: "Bold", Pictogram { icon: lucide::bold::outlined } }
-                ActionIcon { aria_label: "Italic", Pictogram { icon: lucide::italic::outlined } }
-                ActionIcon { aria_label: "Underline", Pictogram { icon: lucide::underline::outlined } }
+                ActionIcon { aria_label: "Bold", icon: lucide::bold::outlined }
+                ActionIcon { aria_label: "Italic", icon: lucide::italic::outlined }
+                ActionIcon { aria_label: "Underline", icon: lucide::underline::outlined }
             }
             ToolbarSeparator {}
             ToolbarGroup { "aria-label": "History",
-                ActionIcon { aria_label: "Undo", Pictogram { icon: lucide::undo_2::outlined } }
-                ActionIcon { aria_label: "Redo", disabled: true, Pictogram { icon: lucide::redo_2::outlined } }
+                ActionIcon { aria_label: "Undo", icon: lucide::undo_2::outlined }
+                ActionIcon { aria_label: "Redo", disabled: true, icon: lucide::redo_2::outlined }
             }
         }
     }
@@ -84,6 +84,10 @@ parts work.
   stepper buttons stay out of the arrow order.
 - `ToolbarGroup` is a `role="group"`; `ToolbarSeparator` a `role="separator"`
   across the bar.
+- Under a finger a small control's 44px touch box reaches at most half the gap
+  along the bar, so a tap never runs its neighbour.
+- An arrow passes over a control that cannot take focus, such as one hidden
+  with `display: none`.
 
 ### You must
 

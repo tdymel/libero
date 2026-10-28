@@ -80,6 +80,8 @@ pub fn ToolbarPage() -> Element {
                     "A text field keeps Left and Right until the caret sits at its start or end with nothing selected; then the arrow moves on. Home and End stay the field's.",
                     "`NumberField`'s Up and Down stay its stepper, in a vertical bar too; its stepper buttons stay out of the arrow order.",
                     "`ToolbarGroup` is a `role=\"group\"`; `ToolbarSeparator` a `role=\"separator\"` across the bar.",
+                    "Under a finger a small control's 44px touch box reaches at most half the gap along the bar, so a tap never runs its neighbour.",
+                    "An arrow passes over a control that cannot take focus, such as one hidden with `display: none`.",
                 ])
                 .must([
                     "Name the bar with `aria-label`, or `aria-labelledby` on a visible heading. Without either it warns in debug builds.",

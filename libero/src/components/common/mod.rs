@@ -66,7 +66,8 @@ pub(crate) use focusable::FOCUSABLE_SELECTOR;
 #[cfg(any(feature = "text", feature = "title"))]
 pub(crate) use gradient_text::gradient_text_sx;
 pub(crate) use hit_area::{
-    COARSE_INSET, COARSE_POINTER, COARSE_TARGET, coarse_hit_area_sx, min_hit_area_sx,
+    COARSE_INSET, COARSE_POINTER, COARSE_TARGET, coarse_hit_area_sx, coarse_reach_sx,
+    min_hit_area_sx,
 };
 #[cfg(feature = "use-icon")]
 pub(crate) use icons::{Glyph, draw_svg};

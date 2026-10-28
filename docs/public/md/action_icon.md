@@ -23,7 +23,7 @@ takes the surrounding text color.
 
 ```rust
 use dioxus::prelude::*;
-use libero::components::{ActionIcon, Loader};
+use libero::components::ActionIcon;
 
 #[component]
 fn Demo() -> Element {
@@ -31,7 +31,6 @@ fn Demo() -> Element {
         ActionIcon {
             aria_label: "Confirm",
             icon: pictogram_icons_lucide::check::outlined,
-            loader: rsx! { Loader { variant: "dots", size: "xs", color: "currentColor" } },
         }
     }
 }
@@ -50,8 +49,8 @@ fn Demo() -> Element {
 | `tooltip` | `bool` | `false` | Shows `aria_label` in a `Tooltip` on hover and keyboard focus. The text is the name itself, so a screen reader does not hear it twice. |
 | `shortcut` | `String` | - | The chord that runs the action, as `use_hotkeys` takes it (`"mod+b"`). Shown in the tooltip as keys named for the platform, and set as `aria-keyshortcuts`. Binding the key is up to you. |
 | `selected` | `bool` | - | Makes it a toggle button. A bare toggle shows a 1px ring while on; with `variant` or `color` set it takes that variant's selected look. Leave it unset for a plain action. |
-| `disabled` | `bool` | `false` | Disables and dims the button: `aria-disabled` rather than `disabled`, so a focused button keeps its focus. It leaves the Tab order and ignores presses. |
-| `focusable_when_disabled` | `bool` | `false` | With `disabled`: keeps the button in the Tab order. |
+| `disabled` | `bool` | `false` | Disables and dims the button: `aria-disabled` rather than `disabled`, so a focused button keeps its focus. It leaves the Tab order and ignores presses; inside a `Toolbar` it stays focusable unless `focusable_when_disabled` is `false`. |
+| `focusable_when_disabled` | `bool` | `false` | With `disabled`: keeps the button in the Tab order. Inside a `Toolbar` the default is `true`, so the bar's arrow keys still reach it. |
 | `loading` | `bool` | `false` | Shows a `Loader` over the icon and ignores clicks. The button stays focusable and sets `aria-busy`; announce the progress in your own status region. Ignored on a link. |
 | `loader` | `Element` | - | Drawn in place of the `Loader` while `loading`. Size it yourself, e.g. `Loader { size: "xs" }`. |
 | `ripple` | `bool` | `true` | The press ripple. `false` drops it. Reduced motion drops it anyway. |
@@ -89,6 +88,9 @@ Like every component, `ActionIcon` also takes the shared props `sx`, `class`,
   read.
 - Below 24px, keep other targets clear of that 24x24 box, or the one drawn
   later takes the overlap.
+- Under a finger an `xs` or `sm` icon takes presses in a 44x44 box. In a loose
+  row, keep 10px (`xs`) or 7px (`sm`) between icons, or a tap on one runs its
+  neighbour. A `Toolbar` or `ButtonGroup` keeps the boxes apart itself.
 - Announce the progress and the result of a `loading` button in your own
   `role="status"` region. The button announces nothing itself.
 

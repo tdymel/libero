@@ -12,7 +12,7 @@ use crate::{
         FloatingWindowOptions, HoverCard, HueSlider, Menubar, MenubarMenu, NavigationBar,
         NavigationBarItem, ProgressBar, QrCode, Radio, RadioGroup, RangeSlider, Rating,
         RichTextEditor, ScrollArea, SegmentedControl, Slider, Splitter, SpotlightOptions, Switch,
-        Table, Tabs, Toolbar, ToolbarGroup, TourOptions, TourStep, Video, column,
+        Table, Tabs, Toolbar, ToolbarGroup, ToolbarSeparator, TourOptions, TourStep, Video, column,
         rich_text::{NodeViewProps, NodeViews, use_rich_text_editor},
         use_spotlight, use_tour,
     },
@@ -220,6 +220,23 @@ fn an_unnamed_toolbar_group_warns() {
     assert!(!warns(
         || rsx! { LiberoProvider { Toolbar { "aria-label": "Format", ToolbarGroup { "aria-label": "Style", ActionIcon { aria_label: "Bold", "B" } } } } },
         prefix
+    ));
+}
+
+/// Todo 4713: the bar draws its parts, so a stray one warns.
+#[test]
+fn a_toolbar_part_outside_a_toolbar_warns() {
+    assert!(warns(
+        || rsx! { LiberoProvider { ToolbarGroup { "aria-label": "Style" } } },
+        "ToolbarGroup: not inside"
+    ));
+    assert!(warns(
+        || rsx! { LiberoProvider { ToolbarSeparator {} } },
+        "ToolbarSeparator: not inside"
+    ));
+    assert!(!warns(
+        || rsx! { LiberoProvider { Toolbar { "aria-label": "Format", ToolbarGroup { "aria-label": "Style" } ToolbarSeparator {} } } },
+        "Toolbar"
     ));
 }
 

@@ -1,4 +1,8 @@
-use crate::sx::{Sx, sx};
+use crate::{
+    components::common::Orientation,
+    sx::{Sx, sx},
+    theme::CssVar,
+};
 
 /// A finger, not a mouse. Blitz reports a fine pointer, so natively this never matches.
 pub(crate) const COARSE_POINTER: &str = "(pointer: coarse)";
@@ -21,6 +25,18 @@ pub(crate) fn min_hit_area_sx(pseudo: &str) -> Sx {
     )
 }
 
+/// How far a coarse box may reach out along a row or a column; unset, the full 44px.
+const COARSE_REACH_INLINE: CssVar = CssVar::new("--lsx-coarse-reach-inline");
+const COARSE_REACH_BLOCK: CssVar = CssVar::new("--lsx-coarse-reach-block");
+
+/// [`COARSE_INSET`], reaching no further than `reach` but keeping the 24px box.
+fn reach_inset(reach: &CssVar) -> String {
+    format!(
+        "max({COARSE_INSET}, min({MIN_INSET}, calc(-1 * {})))",
+        reach.value_or("22px")
+    )
+}
+
 /// Grows a positioned element's press target to 44x44 on a coarse pointer, drawn size
 /// unchanged (todo 2707). `pseudo` is a free `::before`/`::after`; an `overflow` clips it.
 pub(crate) fn coarse_hit_area_sx(pseudo: &str) -> Sx {
@@ -30,9 +46,20 @@ pub(crate) fn coarse_hit_area_sx(pseudo: &str) -> Sx {
             pseudo,
             sx().content("\"\"")
                 .position("absolute")
-                .inset(COARSE_INSET),
+                .inset_block(reach_inset(&COARSE_REACH_BLOCK))
+                .inset_inline(reach_inset(&COARSE_REACH_INLINE)),
         ),
     )
+}
+
+/// Set on a bar or row with `gap` between its items along `orientation`: each item's
+/// [`coarse_hit_area_sx`] then reaches half the gap that way, so no tap lands on a neighbour.
+pub(crate) fn coarse_reach_sx(orientation: Orientation, gap: impl std::fmt::Display) -> Sx {
+    let reach = match orientation {
+        Orientation::Horizontal => COARSE_REACH_INLINE,
+        Orientation::Vertical => COARSE_REACH_BLOCK,
+    };
+    sx().var(reach, format!("calc({gap} / 2)"))
 }
 
 #[cfg(test)]
@@ -55,5 +82,35 @@ mod tests {
             .unwrap_or_else(|| panic!("no inset: {css}"));
         assert!(media < inset, "{css}");
         assert!(css[media..].contains("::before"), "{css}");
+    }
+
+    static ROW: StaticSx = StaticSx::new(|| coarse_reach_sx(Orientation::Horizontal, "4px"));
+    static COLUMN: StaticSx = StaticSx::new(|| coarse_reach_sx(Orientation::Vertical, "6px"));
+
+    #[test]
+    fn a_bar_caps_the_reach_along_its_axis_only() {
+        let css = Stylesheet::from(&PROBE);
+        let css = css.as_str();
+        for reach in [&COARSE_REACH_INLINE, &COARSE_REACH_BLOCK] {
+            assert!(css.contains(&reach_inset(reach)), "{css}");
+        }
+        assert!(reach_inset(&COARSE_REACH_INLINE).contains(MIN_INSET));
+
+        let row = Stylesheet::from(&ROW);
+        assert!(
+            row.as_str()
+                .contains("--lsx-coarse-reach-inline:calc(4px / 2)"),
+            "{}",
+            row.as_str()
+        );
+        assert!(!row.as_str().contains("reach-block"), "{}", row.as_str());
+        let column = Stylesheet::from(&COLUMN);
+        assert!(
+            column
+                .as_str()
+                .contains("--lsx-coarse-reach-block:calc(6px / 2)"),
+            "{}",
+            column.as_str()
+        );
     }
 }

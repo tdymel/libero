@@ -3,7 +3,7 @@ use crate::components::{
     not_gradient_variant, prop, props,
 };
 use dioxus::prelude::*;
-use libero::components::{ActionIcon, Code, Input, Loader, Text};
+use libero::components::{ActionIcon, Code, Flex, Input, Loader, Text};
 use libero::use_theme;
 
 /// The `shortcut` switch's chord, shown in the tooltip and as `aria-keyshortcuts`.
@@ -55,10 +55,10 @@ pub fn ActionIconPage() -> Element {
                     .doc("Makes it a toggle button. A bare toggle shows a 1px ring while on; with `variant` or `color` set it takes that variant's selected look. Leave it unset for a plain action."),
                 prop("disabled", "bool")
                     .default("false")
-                    .doc("Disables and dims the button: `aria-disabled` rather than `disabled`, so a focused button keeps its focus. It leaves the Tab order and ignores presses."),
+                    .doc("Disables and dims the button: `aria-disabled` rather than `disabled`, so a focused button keeps its focus. It leaves the Tab order and ignores presses; inside a `Toolbar` it stays focusable unless `focusable_when_disabled` is `false`."),
                 prop("focusable_when_disabled", "bool")
                     .default("false")
-                    .doc("With `disabled`: keeps the button in the Tab order."),
+                    .doc("With `disabled`: keeps the button in the Tab order. Inside a `Toolbar` the default is `true`, so the bar's arrow keys still reach it."),
                 prop("loading", "bool")
                     .default("false")
                     .doc("Shows a `Loader` over the icon and ignores clicks. The button stays focusable and sets `aria-busy`; announce the progress in your own status region. Ignored on a link."),
@@ -96,6 +96,7 @@ pub fn ActionIconPage() -> Element {
                 .must([
                     "Name the button with `aria_label`: the icon gives a screen reader nothing to read.",
                     "Below 24px, keep other targets clear of that 24x24 box, or the one drawn later takes the overlap.",
+                    "Under a finger an `xs` or `sm` icon takes presses in a 44x44 box. In a loose row, keep 10px (`xs`) or 7px (`sm`) between icons, or a tap on one runs its neighbour. A `Toolbar` or `ButtonGroup` keeps the boxes apart itself.",
                     "Announce the progress and the result of a `loading` button in your own `role=\"status\"` region. The button announces nothing itself.",
                 ])
                 .example("A bold button in an editor bar, `ActionIcon { aria_label: \"Bold\", shortcut: \"Control+B\", .. }`: a screen reader reads \"Bold, button\" and announces the shortcut."),
@@ -163,8 +164,8 @@ pub fn ActionIconPage() -> Element {
                         .hidden_when(|values| values.str("disabled") != "true"),
                     // An `<a>` has nothing to wait for: ignored, with a warning.
                     Control::switch("loading").hidden_when(is_link),
-                    // On, so the second button below, which always loads, shows it without `loading`.
-                    Control::switch("custom_loader").default("true").hidden_when(is_link).code(|_, values| {
+                    // Off: still, under reduced motion, the dots read as a "more" button; the ring reads as busy.
+                    Control::switch("custom_loader").hidden_when(is_link).code(|_, values| {
                         match values.str("custom_loader").as_str() {
                             "true" => vec![CUSTOM_LOADER.to_string()],
                             _ => vec![],
@@ -192,7 +193,8 @@ pub fn ActionIconPage() -> Element {
                             _ => vec![],
                         }),
                 ],
-                render: move |values: DemoValues| rsx! {
+                // 12px apart: clear of each other's focus ring and of an `xs` icon's 44px touch box.
+                render: move |values: DemoValues| rsx! { Flex { direction: "row", gap: "12px",
                     ActionIcon {
                         variant: values.str("variant"),
                         gradient: gradient_value(&values),
@@ -253,6 +255,7 @@ pub fn ActionIconPage() -> Element {
                             size: values.str("size"),
                             radius: values.str("radius"),
                             disabled: values.str("disabled") == "true",
+                            focusable_when_disabled: values.str("focusable_when_disabled") == "true",
                             tooltip: values.str("tooltip") == "true",
                             to: "https://dioxuslabs.com",
                             target: "_blank",
@@ -261,7 +264,7 @@ pub fn ActionIconPage() -> Element {
                             icon: pictogram_icons_lucide::link::outlined,
                         }
                     }
-                },
+                } },
             }
         }
     }
