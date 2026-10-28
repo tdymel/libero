@@ -108,6 +108,11 @@ static SPINNER_SX: StaticSx = StaticSx::new(|| {
                 .justify_content("space-between")
                 .gap(SizeCss::SPACING.value(Size::Sm)),
         )
+        // The keyboard button, as large as the sheet's Done under a finger (4778).
+        .selector(
+            "& > [data-slot='actions'] > :first-child",
+            sx().media(COARSE_POINTER, sx().min_width("44px").min_height("44px")),
+        )
         .and(phone_sheet_sx())
 });
 

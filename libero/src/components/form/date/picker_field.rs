@@ -578,12 +578,13 @@ pub(super) fn use_picker_field<V: FieldValue>(
         }
     });
     // Shares the field's draft: Enter commits and hands focus back, a blur commits (3905).
+    let locale = use_localization();
     let picker_input = keyboardless.input(PickerInput {
         field_id: field_box.id().to_string(),
         labelled: !field.label.is_none(),
         fallback_label: V::dialog_label(names),
         value: full_text,
-        invalid: rejected().is_some(),
+        refusal: rejected().map(|error| error.message(locale)),
         oninput: move |event: FormEvent| {
             rejected.set(None);
             announcer.clear();

@@ -158,7 +158,7 @@ pub fn SwitchGroupPage() -> Element {
                     "Its description, helper and status make up the group's `aria-describedby`.",
                     "A required group says \"Required\" after its label, from `common.required` in the localization: `aria-required` is not allowed on a `group`.",
                     "Each switch is a native checkbox announced as a switch, with its own label, and its description is read with it.",
-                    "At `max_checked`, the off switches are disabled and leave the tab order, and the group's `aria-describedby` says the cap, from `common.at_most` in the localization. A `readonly` group disables nothing.",
+                    "At `max_checked`, the off switches are disabled and leave the tab order, and a line under the switches says the cap, from `common.at_most` in the localization. The group's `aria-describedby` holds that line, and the switch that reaches the cap announces it. A `readonly` group disables nothing.",
                     "A group with no name logs a warning.",
                 ])
                 .must([

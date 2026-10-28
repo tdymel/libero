@@ -18,6 +18,9 @@ use crate::{
     theme::{Size, SizeCss},
 };
 
+/// A modal dialog: a Tab that leaves a picker stays inside it.
+const MODAL_SELECTOR: &str = "[aria-modal='true']";
+
 /// Where focus is in a picker field's input (0) and dropdown (1). A WebView answers no
 /// `:focus` query and focuses nothing below a handle: the pair's own focus events and the
 /// page's ids stand in there (todo 3952).
@@ -100,27 +103,37 @@ impl PickerFocus {
         }
     }
 
-    /// Focuses the page's first Tab stop after the field's input, outside the dropdown
-    /// `dropdown_id`; whether one took it.
+    /// Focuses the first Tab stop after the field's input, outside the dropdown `dropdown_id`;
+    /// whether one took it. Inside a modal it stays there and wraps to the modal's first (4777).
     fn focus_after_input(self, dropdown_id: &str) -> bool {
         let Some(page) = mounted_by_selector("body").map(|data| element(&data)) else {
             return false;
         };
-        let Ok(items) = page.query_selector_all(FOCUSABLE_SELECTOR) else {
+        let input = id_selector(&self.input_id.peek());
+        // The innermost modal holding the input: one nested in another comes after it.
+        let modal = page
+            .query_selector_all(MODAL_SELECTOR)
+            .unwrap_or_default()
+            .into_iter()
+            .rfind(|modal| modal.query_selector(&input).is_ok());
+        let wraps = modal.is_some();
+        let scope = modal.unwrap_or(page);
+        let Ok(items) = scope.query_selector_all(FOCUSABLE_SELECTOR) else {
             return false;
         };
-        let input = id_selector(&self.input_id.peek());
         let inside = format!("{} *", id_selector(dropdown_id));
         let matches = |at: usize, selector: &str| items[at].matches(selector).unwrap_or(false);
         let order = tab_order(&items);
         let Some(from) = order.iter().position(|at| matches(*at, &input)) else {
             return false;
         };
+        let wrapped = order[..from].iter().filter(|_| wraps);
         let after = order[from + 1..]
             .iter()
+            .chain(wrapped)
             .copied()
             .filter(|at| !matches(*at, &inside));
-        focus_first_stop(page.as_ref(), &items, after, false)
+        focus_first_stop(scope.as_ref(), &items, after, false)
     }
 
     /// Tab in the dropdown `dropdown_id`: past its first stop it goes back to the input, past
@@ -173,11 +186,16 @@ static PICKER_INPUT_SX: StaticSx = StaticSx::new(|| {
         .selector("&[aria-invalid='true']", sx().border_color("error.7"))
 });
 
+/// Why the text box's text was refused, under it in the sheet (4778).
+static PICKER_REFUSAL_SX: StaticSx =
+    StaticSx::new(|| sx().margin("4px 0 0").color("error.7").font_size("0.875em"));
+
 /// Whether a field's input keeps the soft keyboard down, and the picker's own text input.
 #[derive(Clone, PartialEq)]
 pub(crate) struct Keyboardless {
     keyboardless: bool,
     class: Option<String>,
+    refusal_class: Option<String>,
     type_in: &'static str,
     press: Press,
 }
@@ -187,6 +205,7 @@ pub(crate) fn use_keyboardless() -> Keyboardless {
     Keyboardless {
         keyboardless: soft_keyboard_app() || coarse(),
         class: use_css(Some(&PICKER_INPUT_SX), CssLayer::Framework),
+        refusal_class: use_css(Some(&PICKER_REFUSAL_SX), CssLayer::Framework),
         type_in: use_localization().common.type_in,
         press: Press {
             pressed: use_hook(|| CopyValue::new(false)),
@@ -243,7 +262,8 @@ pub(crate) struct PickerInput<I, K, B> {
     /// The name without a field label.
     pub(crate) fallback_label: &'static str,
     pub(crate) value: String,
-    pub(crate) invalid: bool,
+    /// Why the typed text was refused, while it is.
+    pub(crate) refusal: Option<String>,
     pub(crate) oninput: I,
     pub(crate) onkeydown: K,
     pub(crate) onblur: B,
@@ -276,12 +296,14 @@ impl Keyboardless {
             labelled,
             fallback_label,
             value,
-            invalid,
+            refusal,
             oninput,
             onkeydown,
             mut onblur,
         } = input;
         let press = self.press;
+        let invalid = refusal.is_some();
+        let refusal_id = format!("{field_id}-text-error");
         // Told apart from the field's own input, which has the same label (4608).
         let hint_id = format!("{field_id}-text-hint");
         Some(rsx! {
@@ -299,8 +321,7 @@ impl Keyboardless {
                 "aria-labelledby": labelled.then(|| format!("{field_id}-label {hint_id}")),
                 "aria-label": (!labelled).then_some(fallback_label),
                 "aria-invalid": invalid.then_some("true"),
-                // The field's error line, which says why the text was refused.
-                "aria-describedby": invalid.then(|| format!("{field_id}-status")),
+                "aria-describedby": invalid.then_some(refusal_id.as_str()),
                 // Past the picker's cancelled mousedown, so the tap focuses it natively.
                 onmousedown: move |event| event.stop_propagation(),
                 onmounted: move |_| press.leave(),
@@ -315,6 +336,15 @@ impl Keyboardless {
                     press.leave();
                     onblur(event);
                 },
+            }
+            // The sheet may cover the field's own error line.
+            if let Some(refusal) = refusal {
+                div {
+                    class: self.refusal_class.clone(),
+                    "data-slot": "text-error",
+                    id: "{refusal_id}",
+                    "{refusal}"
+                }
             }
         })
     }

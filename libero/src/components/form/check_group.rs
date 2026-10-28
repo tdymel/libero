@@ -2,6 +2,7 @@ use dioxus::prelude::*;
 
 use crate::{
     components::{
+        accessibility::use_announcer,
         common::{
             ClassList, HtmlTag, Input, OptionSource, Options, Orientation, Part, Parts, States,
             names_itself, use_name_warning,
@@ -15,7 +16,7 @@ use crate::{
     hooks::{use_localization, use_theme},
     localization::fill,
     sx::{StaticSx, ThemeAwareValue, sx},
-    theme::{ChoiceVariant, FIELD_GAP, Size},
+    theme::{ChoiceVariant, FIELD_CAPTION_FONT_SIZE, FIELD_GAP, Size},
     utils::warn,
 };
 
@@ -32,6 +33,11 @@ static CHECK_GROUP_SX: StaticSx = StaticSx::new(|| {
         .selector(
             "& > *",
             sx().min_height(format!("calc(24px - {})", FIELD_GAP.value())),
+        )
+        // The cap's reason, drawn as a helper caption (4779).
+        .selector(
+            "& > [data-slot='limit']",
+            sx().flex_basis("100%").color("text-dimmed"),
         )
         .when(
             "horizontal",
@@ -361,14 +367,27 @@ fn check_group<T: Options, P: Part>(kind: Kind, props: Group<T, P>) -> Element {
 
     // Through `emit`, so a pick also drops an error set from code (todo 4289).
     let emit = bound.emit(props.onchange);
+    let at_most = use_localization().common.at_most;
+    let limit_words = props.max_checked.map(|max| fill(at_most, &[("max", &max)]));
+    // A tick that reaches the cap says so: the description changes on the group, not the box (4779).
+    let announcer = use_announcer();
+    let max_checked = props.max_checked;
     // Option order, whatever the click order: the value reads the same way the group does.
     let toggle = {
         let values = values.clone();
         let checked = checked.clone();
+        let limit_words = limit_words.clone();
         use_callback(move |index: usize| {
             let Some(emit) = &emit else {
                 return;
             };
+            let ticks = !checked.get(index).copied().unwrap_or(true);
+            match &limit_words {
+                Some(words) if ticks && max_checked == Some(count + 1) => {
+                    announcer.say(words.clone())
+                }
+                _ => announcer.clear(),
+            }
             let next: Vec<T> = values
                 .iter()
                 .zip(&checked)
@@ -383,14 +402,21 @@ fn check_group<T: Options, P: Part>(kind: Kind, props: Group<T, P>) -> Element {
 
     // Says why the unchecked options are off, which their disabled state alone does not (4604).
     let limit_id = format!("{}-limit", field.id());
-    let at_most = use_localization().common.at_most;
-    let limit = props.max_checked.filter(|_| capped).map(|max| {
+    let limit = limit_words.clone().filter(|_| capped).map(|words| {
         field.describe_also(limit_id.clone());
-        let words = fill(at_most, &[("max", &max)]);
         rsx! {
-            span { key: "{limit_id}", id: "{limit_id}", hidden: true, "{words}" }
+            div {
+                key: "{limit_id}",
+                id: "{limit_id}",
+                "data-slot": "limit",
+                style: "font-size: {FIELD_CAPTION_FONT_SIZE.value(size)}",
+                "{words}"
+            }
         }
     });
+    let announced = rsx! {
+        Fragment { key: "{limit_id}-announcer", {announcer.render()} }
+    };
 
     let option_disabled = list.disabled();
     let variant = props.variant.copied_or(theme_variant);
@@ -446,7 +472,11 @@ fn check_group<T: Options, P: Part>(kind: Kind, props: Group<T, P>) -> Element {
         .render(
             HtmlTag::Div,
             Vec::new(),
-            options.chain(hidden).chain(limit).collect::<Vec<_>>(),
+            options
+                .chain(hidden)
+                .chain(limit)
+                .chain([announced])
+                .collect::<Vec<_>>(),
         );
 
     field.render(group)

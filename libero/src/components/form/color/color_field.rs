@@ -635,7 +635,7 @@ pub fn ColorField(props: ColorFieldProps) -> Element {
                 labelled: !props.label.is_none(),
                 fallback_label: labels.choose,
                 value: picker_text,
-                invalid: rejected() && draft.read().is_some(),
+                refusal: (rejected() && draft.read().is_some()).then(|| labels.invalid.to_string()),
                 oninput: on_text,
                 onkeydown: move |event: KeyboardEvent| {
                     if event.key() != Key::Named(NamedKey::Enter) || event.is_composing() {

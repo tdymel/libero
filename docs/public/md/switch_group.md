@@ -106,8 +106,9 @@ explains how parts work.
 - Each switch is a native checkbox announced as a switch, with its own label,
   and its description is read with it.
 - At `max_checked`, the off switches are disabled and leave the tab order, and
-  the group's `aria-describedby` says the cap, from `common.at_most` in the
-  localization. A `readonly` group disables nothing.
+  a line under the switches says the cap, from `common.at_most` in the
+  localization. The group's `aria-describedby` holds that line, and the switch
+  that reaches the cap announces it. A `readonly` group disables nothing.
 - A group with no name logs a warning.
 
 ### You must

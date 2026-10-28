@@ -1,5 +1,6 @@
 ---
 source: e2e/src/suite.rs
+assertion_line: 626
 description: switch_group at mobile (rest)
 expression: tree
 ---
@@ -9,5 +10,6 @@ group "Alerts"
   switch "Email" [checked=false]
   switch "Push" [checked]
   switch "Sms" [checked=false]
+  status [atomic] [live=polite]
 paragraph
   StaticText "Push"

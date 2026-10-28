@@ -1,5 +1,6 @@
 ---
 source: e2e/src/suite.rs
+assertion_line: 626
 description: checkbox_group at desktop (rest)
 expression: tree
 ---
@@ -12,4 +13,5 @@ group "Toppings"
   checkbox "Olives" [checked=false]
   checkbox "Basil" [checked=false]
   checkbox "Chili" [checked=false]
+  status [atomic] [live=polite]
 paragraph

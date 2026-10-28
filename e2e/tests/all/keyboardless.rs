@@ -15,13 +15,23 @@ const FIELD: &str = "#due input[data-controlled]";
 
 /// The sheet open, its text box focused by a tap.
 async fn typing() -> Fixture {
-    let fixture = Fixture::open("/keyboardless", Viewport::Mobile)
-        .await
-        .unwrap();
+    typing_at("/keyboardless", None).await
+}
+
+/// As [`typing`] on `route`, after a tap on `opener` when there is one.
+async fn typing_at(route: &str, opener: Option<&str>) -> Fixture {
+    let fixture = Fixture::open(route, Viewport::Mobile).await.unwrap();
     let page = &fixture.page;
     page.execute_bounded(SetDeviceMetricsOverrideParams::new(360, 780, 1.0, true))
         .await
         .unwrap();
+    if let Some(opener) = opener {
+        tap(page, opener).await.unwrap();
+        let shown = format!("!!document.querySelector({FIELD:?})");
+        wait::for_js_true(page, &shown, "the field in the modal")
+            .await
+            .unwrap();
+    }
     tap(page, FIELD).await.unwrap();
     let shown = format!("!!document.querySelector({TYPED:?})");
     wait::for_js_true(page, &shown, "the sheet's text box")
@@ -64,7 +74,41 @@ fn tab_past_the_text_box_leaves_the_sheet() {
     });
 }
 
-/// Todo 4607: a refused text box draws an error border and is described by the error line.
+/// Todo 4777: the field last in a modal, Tab past the text box stays in the modal.
+#[test]
+fn tab_past_the_text_box_stays_in_a_modal() {
+    block_on(async {
+        let fixture = typing_at("/keyboardless/modal", Some("#open")).await;
+        let page = &fixture.page;
+        keyboard::press(page, keyboard::TAB).await.unwrap();
+        let kept = "(() => { const at = document.activeElement; \
+             return !!at && !at.matches('[data-slot=text-input]') \
+               && !!at.closest('#modal'); })()";
+        let outside = "document.activeElement?.id === 'behind'";
+        wait::for_js_true(page, &format!("{kept} || {outside}"), "focus moved")
+            .await
+            .unwrap();
+        let at: String = page
+            .evaluate("document.activeElement?.id || document.activeElement?.tagName")
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        assert!(
+            page.evaluate(kept)
+                .await
+                .unwrap()
+                .into_value::<bool>()
+                .unwrap(),
+            "focus left the modal, on {at}"
+        );
+        fixture.console.assert_clean("Tab in a modal").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
+/// Todos 4607, 4778: a refused text box draws an error border and is described by a line
+/// shown in the sheet.
 #[test]
 fn a_refused_text_box_shows_its_error() {
     block_on(async {
@@ -81,12 +125,13 @@ fn a_refused_text_box_shows_its_error() {
              if (!own || own.getAttribute('aria-invalid') !== 'true') return false; \
              const line = document.getElementById(own.getAttribute('aria-describedby')); \
              return !!line && line.textContent.trim().length > 0 \
+               && !!line.closest({SHEET:?}) && line.getBoundingClientRect().height > 0 \
                && getComputedStyle(own).borderTopColor !== {calm:?}; }})()"
         );
         wait::for_js_true(
             page,
             &refused,
-            "aria-invalid, described and an error border",
+            "aria-invalid, described by a line in the sheet and an error border",
         )
         .await
         .unwrap();

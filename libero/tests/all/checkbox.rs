@@ -476,7 +476,9 @@ fn a_check_group_at_its_cap_says_why_the_rest_are_off() {
         .split(' ')
         .find(|id| id.ends_with("-limit"))
         .unwrap_or_else(|| panic!("{described}"));
-    assert!(html.contains(&format!(r#"id="{limit}""#)), "{html}");
+    let line = &tags_with(&html, &format!(r#"id="{limit}""#))[0];
+    // Shown, not only read out (4779).
+    assert!(!line.contains_key("hidden"), "{html}");
     assert!(html.contains("At most 1 can be selected"), "{html}");
     let off = tags_with(&html, r#"type="checkbox""#)
         .iter()

@@ -20,6 +20,16 @@ async fn a_capped_group_holds_its_picks_in_option_order<D: Driver>(
     eventually_text(d, "#value", "Basil", "Basil checked").await?;
     d.click(&option_box(1)).await?;
     eventually_text(d, "#value", "Cheese,Basil", "option order, not click order").await?;
+    // Todo 4779: the cap's reason is shown, and the tick that reached it is told.
+    let reason = "At most 2 can be selected";
+    eventually_text(
+        d,
+        "[role=group] > [data-slot=limit]",
+        reason,
+        "the shown limit",
+    )
+    .await?;
+    eventually_text(d, "[role=group] [role=status]", reason, "the cap announced").await?;
 
     eventually(
         d,
