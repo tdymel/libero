@@ -324,6 +324,7 @@ pub(super) fn use_picker_field<V: FieldValue>(
         (None, false) => Parse::Empty,
     };
     let field_box = use_field()
+        .label_only_focuses()
         .label(field.label)
         .description(field.description)
         .helper(field.helper)

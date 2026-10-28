@@ -207,7 +207,8 @@ pub(crate) use table::{
 };
 pub use task::awaits_layout;
 pub(crate) use task::{
-    fonts_ready, next_task, page_task, when_free, when_laid_out, when_laid_out_retry,
+    after_press, fonts_ready, next_task, page_task, watch_presses, when_free, when_laid_out,
+    when_laid_out_retry,
 };
 #[cfg(all(not(target_arch = "wasm32"), feature = "native"))]
 pub use task::{reveal_in, watch_focus_in};

@@ -1032,7 +1032,7 @@ mod dispatched {
         }
 
         let mut page = Page::mount(app);
-        let input = page.rec.first_click.expect("the input takes clicks");
+        let input = page.rec.element("click", "role", "combobox");
         page.click(input);
         page.render();
         let time = page.rec.element("click", "text", "Time");
@@ -1072,7 +1072,7 @@ mod dispatched {
         }
 
         let mut page = Page::mount(app);
-        let input = page.rec.first_click.expect("the input takes clicks");
+        let input = page.rec.element("click", "role", "combobox");
         page.click(input);
         page.render();
         let start = page.rec.element("click", "text", "Start time");
@@ -1126,8 +1126,8 @@ mod dispatched {
         fn after_two_picks(close: bool) -> (bool, bool) {
             CLOSE.with(|cell| cell.set(close));
             let mut page = Page::mount(trip);
-            // The input's click listener is the first outside the frame.
-            let input = page.rec.first_click.expect("the input takes clicks");
+            // The label's click only focuses (4757): the input's opens.
+            let input = page.rec.element("click", "role", "combobox");
             click(&mut page, input);
             assert!(open(&page.dom), "a click opens the dropdown");
 

@@ -62,6 +62,7 @@ pub(super) fn label_node(
     labelled_by: bool,
     activation: Option<Activation>,
     focuses: Option<ElementHandle>,
+    only_focuses: Option<ElementHandle>,
 ) -> Option<Element> {
     if label.is_none() {
         return None;
@@ -83,13 +84,23 @@ pub(super) fn label_node(
     let slot = FieldPart::Label.slot();
     // One arm per listener, because a listener cannot be optional and most
     // labels need none.
-    Some(match (activation, focuses) {
+    Some(match (activation, focuses.or(only_focuses)) {
         (Some(activation), _) => rsx! {
             label {
                 "data-slot": slot,
                 id: named,
                 r#for: points_at,
                 onclick: activation.label_click(),
+                {content}
+                {asterisk}
+            }
+        },
+        (None, Some(root)) if !labelled_by => rsx! {
+            label {
+                "data-slot": slot,
+                id: named,
+                r#for: points_at,
+                onclick: focus_only(root, id.to_string()),
                 {content}
                 {asterisk}
             }
@@ -131,6 +142,21 @@ fn focus_labelled(root: ElementHandle, label_id: String) -> impl FnMut(Event<Mou
         if nested_interactive(&event, CLICK_BOUNDARY) {
             return;
         }
+        if let Ok(control) = root.query_selector(&selector) {
+            let _ = control.focus();
+        }
+    }
+}
+
+/// The label's click for a popup field's control: focuses it with no forwarded click, as a native
+/// select's label does, so the popup stays shut (4757).
+fn focus_only(root: ElementHandle, id: String) -> impl FnMut(Event<MouseData>) + 'static {
+    let selector = format!("[id=\"{}\"]", crate::hooks::escape_css_string(&id));
+    move |event| {
+        if nested_interactive(&event, CLICK_BOUNDARY) {
+            return;
+        }
+        event.prevent_default();
         if let Ok(control) = root.query_selector(&selector) {
             let _ = control.focus();
         }

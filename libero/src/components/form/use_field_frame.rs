@@ -5,8 +5,8 @@ use dioxus::prelude::*;
 use crate::{
     components::{
         common::{
-            HtmlTag, Input, Part, States, disabled_look_within_sx, focus_ring_sx, ring_overlay,
-            ring_overlay_sx,
+            COARSE_POINTER, COARSE_TARGET, HtmlTag, Input, Part, States, disabled_look_within_sx,
+            focus_ring_sx, ring_overlay, ring_overlay_sx,
         },
         feedback::Loader,
         form::{FieldPart, FormScope},
@@ -18,8 +18,9 @@ use crate::{
     },
     sx::{StaticSx, Sx, sx},
     theme::{
-        ACTION_ICON_GLYPH, ACTION_ICON_SIZE, BUTTON_HEIGHT, ColorCss, ColorShade, FieldDefaults,
-        ICON_DEFAULT_SIZE, ICON_SIZE, ICON_SLOT_PAD, LOADER_SIZE, PaperDefaults, Size, SizeCss,
+        ACTION_ICON_GLYPH, ACTION_ICON_SIZE, BUTTON_HEIGHT, ColorCss, ColorShade, FIELD_HEIGHT,
+        FieldDefaults, ICON_DEFAULT_SIZE, ICON_SIZE, ICON_SLOT_PAD, LOADER_SIZE, PaperDefaults,
+        Size, SizeCss,
     },
 };
 
@@ -96,6 +97,13 @@ static FIELD_FRAME_SX: StaticSx = StaticSx::new(|| {
                     "margin-inline-end",
                     format!("calc(({} - 1em) / 2)", BUTTON_HEIGHT.value(step)),
                 ),
+            )
+        })
+        // A finger's 44px under a coarse pointer, as an inline row has (4758).
+        .per_size(|size| {
+            sx().media(
+                COARSE_POINTER,
+                sx().min_height(format!("max({COARSE_TARGET}, {})", FIELD_HEIGHT.value(size))),
             )
         })
         // The `Form`'s `pending_loader`, laid out as a slot.
@@ -561,6 +569,22 @@ mod tests {
             css.contains(
                 "background-image:linear-gradient(color-mix(in srgb, var(--lsx-primary-6) 8%"
             ),
+            "{css}"
+        );
+    }
+
+    /// Todo 4758: every size is a finger tall under a coarse pointer, and only there.
+    #[test]
+    fn every_frame_size_is_finger_tall_only_under_a_coarse_pointer() {
+        let css = crate::css::Stylesheet::from(&FIELD_FRAME_SX);
+        let css = css.as_str();
+        let floors = css.matches("min-height:max(44px, ").count();
+        assert_eq!(floors, Size::ALL.len(), "{css}");
+        let media = css
+            .find("@media (pointer: coarse)")
+            .unwrap_or_else(|| panic!("no coarse query: {css}"));
+        assert!(
+            media < css.find("min-height:max(44px").unwrap_or(0),
             "{css}"
         );
     }

@@ -14,6 +14,25 @@ pub(crate) async fn page_task() {
     super::backend::webview_next_task().await;
 }
 
+/// Runs `run` once the press under way, if any, has ended and its `click` has run; at once
+/// natively. A blur's reveal waits for it, or the error it shows moves the button pressed (4756).
+pub(crate) fn after_press(run: impl FnOnce() + 'static) {
+    #[cfg(target_arch = "wasm32")]
+    dioxus::prelude::spawn(async move {
+        web::press_ended().await;
+        next_task().await;
+        run();
+    });
+    #[cfg(not(target_arch = "wasm32"))]
+    run();
+}
+
+/// Starts tracking presses for [`after_press`], once per page; before the first press it waits on.
+pub(crate) fn watch_presses() {
+    #[cfg(target_arch = "wasm32")]
+    web::watch_presses();
+}
+
 /// `true` once the page's web fonts have loaded; `false` at once where there is no fonts
 /// API (Blitz).
 pub(crate) async fn fonts_ready() -> bool {
@@ -68,8 +87,58 @@ pub fn watch_focus_in(doc: &blitz_dom::BaseDocument) {
 
 #[cfg(target_arch = "wasm32")]
 mod web {
-    use wasm_bindgen::{JsCast, JsValue};
+    use std::cell::{Cell, RefCell};
+
+    use wasm_bindgen::{JsCast, JsValue, closure::Closure};
     use wasm_bindgen_futures::JsFuture;
+
+    thread_local! {
+        static WATCHING: Cell<bool> = const { Cell::new(false) };
+        static PRESSED: Cell<bool> = const { Cell::new(false) };
+        /// What `press_ended` resolves at the press's `pointerup` or `pointercancel`.
+        static WAITING: RefCell<Vec<js_sys::Function>> = const { RefCell::new(Vec::new()) };
+    }
+
+    pub(super) fn watch_presses() {
+        if WATCHING.replace(true) {
+            return;
+        }
+        let Some(window) = web_sys::window() else {
+            return;
+        };
+        let down = Closure::<dyn Fn()>::new(|| PRESSED.set(true));
+        let up = Closure::<dyn Fn()>::new(|| {
+            PRESSED.set(false);
+            for resolve in WAITING.take() {
+                let _ = resolve.call0(&JsValue::NULL);
+            }
+        });
+        // Capture on the window: a control that stops its press still counts.
+        let _ = window.add_event_listener_with_callback_and_bool(
+            "pointerdown",
+            down.as_ref().unchecked_ref(),
+            true,
+        );
+        for kind in ["pointerup", "pointercancel"] {
+            let _ = window.add_event_listener_with_callback_and_bool(
+                kind,
+                up.as_ref().unchecked_ref(),
+                true,
+            );
+        }
+        down.forget();
+        up.forget();
+    }
+
+    pub(super) async fn press_ended() {
+        if !PRESSED.get() {
+            return;
+        }
+        let promise = js_sys::Promise::new(&mut |resolve, _| {
+            WAITING.with_borrow_mut(|waiting| waiting.push(resolve));
+        });
+        let _ = JsFuture::from(promise).await;
+    }
 
     pub(super) async fn fonts_ready() -> bool {
         let ready = web_sys::window()

@@ -107,6 +107,101 @@ fn a_blocked_submit_focuses_the_summary_and_its_lines_reach_the_fields() {
     });
 }
 
+/// Todo 4756: the error a blur reveals above the submit button waits for the press on it, so a
+/// click and a tap on the button both submit at once (the summary shows).
+#[test]
+fn a_press_on_submit_lands_though_the_blur_reveals_an_error_above_it() {
+    use chromiumoxide::cdp::browser_protocol::emulation::SetTouchEmulationEnabledParams;
+    block_on(async {
+        let fixture = Fixture::open("/form/blur-submit", Viewport::Mobile)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        for case in ["mouse", "touch"] {
+            let input = format!("[data-case={case}] input");
+            let button = format!("[data-case={case}] button[type=submit]");
+            if case == "touch" {
+                page.execute_bounded(SetTouchEmulationEnabledParams::new(true))
+                    .await
+                    .unwrap();
+                pointer::tap(page, &input).await.unwrap();
+            } else {
+                pointer::click(page, &input).await.unwrap();
+            }
+            focus::wait_for_focus(page, &input, case).await.unwrap();
+            keyboard::type_text(page, "abc").await.unwrap();
+            match case {
+                "touch" => pointer::tap(page, &button).await.unwrap(),
+                _ => pointer::click(page, &button).await.unwrap(),
+            }
+            wait::for_js_true(
+                page,
+                &format!("!!document.querySelector('[data-case={case}] [data-slot=summary]')"),
+                &format!("the {case} press on submit to submit"),
+            )
+            .await
+            .unwrap();
+        }
+
+        fixture
+            .console
+            .assert_clean("a press on submit after a blur")
+            .unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
+/// Todo 4757: a label click or tap on a popup field focuses it and opens nothing, as a native
+/// select's label does.
+#[test]
+fn a_label_press_focuses_a_popup_field_and_leaves_it_shut() {
+    use chromiumoxide::cdp::browser_protocol::emulation::SetTouchEmulationEnabledParams;
+    block_on(async {
+        let fixture = Fixture::open("/form/label-tap", Viewport::Mobile)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        for touch in [false, true] {
+            if touch {
+                page.execute_bounded(SetTouchEmulationEnabledParams::new(true))
+                    .await
+                    .unwrap();
+                // Todo 4758: every framed field is a finger tall under a coarse pointer.
+                wait::for_js_true(
+                    page,
+                    "matchMedia('(pointer: coarse)').matches && [...document.querySelectorAll('[data-slot=frame]')]
+                        .every(frame => frame.getBoundingClientRect().height >= 43.5)",
+                    "44px frames under a coarse pointer",
+                )
+                .await
+                .unwrap();
+            }
+            for id in ["due", "colour"] {
+                let label = format!("label[for={id}]");
+                match touch {
+                    true => pointer::tap(page, &label).await.unwrap(),
+                    false => pointer::click(page, &label).await.unwrap(),
+                }
+                let input = format!("#{id}");
+                focus::wait_for_focus(page, &input, &label).await.unwrap();
+                e2e::clock::settle(page).await.unwrap();
+                let expanded: Option<String> = page
+                    .evaluate_bounded(format!(
+                        "document.querySelector('#{id}').getAttribute('aria-expanded')"
+                    ))
+                    .await
+                    .unwrap()
+                    .into_value()
+                    .unwrap();
+                assert_eq!(expanded.as_deref(), Some("false"), "{id}, touch {touch}");
+            }
+        }
+
+        fixture.console.assert_clean("a label press").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
 /// Todo 1272: a summary line reads as a link by its underline, not by colour alone, also in
 /// forced colours (GOV.UK's summary).
 #[test]

@@ -308,6 +308,7 @@ pub fn ColorField(props: ColorFieldProps) -> Element {
         .as_deref()
         .is_some_and(|text| text.trim().is_empty());
     let field = use_field()
+        .label_only_focuses()
         .label(&props.label)
         .description(&props.description)
         .helper(&props.helper)

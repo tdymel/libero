@@ -34,7 +34,51 @@ pub const ROUTES: Routes = &[
     ("/form/async-rule-loader", || rsx! { AsyncRulePage { loader: true } }),
     ("/form/order", || rsx! { OrderPage { hidden: false } }),
     ("/form/order-hidden", || rsx! { OrderPage { hidden: true } }),
+    ("/form/blur-submit", || rsx! { BlurSubmitPage {} }),
+    ("/form/label-tap", || rsx! { LabelTapPage {} }),
 ];
+
+/// Todo 4757: a label tap focuses a popup field and leaves its popup shut.
+#[component]
+fn LabelTapPage() -> Element {
+    rsx! {
+        Flex { direction: "column", gap: "md", max_width: "320px",
+            TextField { id: "name", label: "Name" }
+            DateField { id: "due", label: "Due" }
+            ColorField { id: "colour", label: "Colour", value: ColorCode::rgba(1, 2, 3, 1.0) }
+        }
+    }
+}
+
+/// Todo 4756: the error a blur reveals above the submit button must not swallow the press on it.
+#[component]
+fn BlurSubmitPage() -> Element {
+    rsx! {
+        Flex { direction: "column", gap: "md", max_width: "320px",
+            for case in ["touch", "mouse"] {
+                BlurSubmitForm { key: "{case}", case }
+            }
+        }
+    }
+}
+
+#[component]
+fn BlurSubmitForm(case: &'static str) -> Element {
+    let mut text = use_signal(String::new);
+    rsx! {
+        div { "data-case": case,
+            Form::<()> {
+                TextField {
+                    label: "New password",
+                    value: text(),
+                    oninput: move |value| text.set(value),
+                    validate: min_length(8).error("Use at least 8 characters."),
+                }
+                Button { r#type: "submit", "Create account" }
+            }
+        }
+    }
+}
 
 #[derive(Clone, PartialEq, Default, Fields)]
 struct Mailbox {

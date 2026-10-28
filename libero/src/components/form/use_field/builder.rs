@@ -49,8 +49,11 @@ pub(crate) struct FieldBuilder<'a> {
     pub(super) labelled_by: bool,
     pub(super) group: bool,
     pub(super) label_with_id: bool,
+    pub(super) label_only_focuses: bool,
     pub(super) text_slots: [bool; 2],
     pub(super) activation: Option<Activation>,
+    /// Applied in `prepare`, so it holds whichever of it and `activates` comes first.
+    pub(super) enter: bool,
     pub(super) size: Size,
     pub(super) radius: ScaleOrCss,
     pub(super) class: Option<&'a Input<ClassList>>,
@@ -85,8 +88,10 @@ impl Default for FieldBuilder<'_> {
             labelled_by: false,
             group: false,
             label_with_id: false,
+            label_only_focuses: false,
             text_slots: [false; 2],
             activation: None,
+            enter: false,
             size: Size::Md,
             radius: ScaleOrCss::new(None, Size::Sm),
             class: None,
@@ -279,6 +284,14 @@ impl<'a> FieldBuilder<'a> {
         self
     }
 
+    /// A label click only focuses the control, as a native select's label does: a popup field
+    /// whose control opens on a click stays shut (4757).
+    #[inline]
+    pub fn label_only_focuses(mut self) -> Self {
+        self.label_only_focuses = true;
+        self
+    }
+
     /// Which frame slots describe the control too - a prefix, a counter. The
     /// caller says so (`describe_leading`/`_trailing`): an icon's name must not.
     #[inline]
@@ -299,9 +312,7 @@ impl<'a> FieldBuilder<'a> {
     /// one it is left to the browser, which submits.
     #[inline]
     pub fn enter_activates(mut self, enter: bool) -> Self {
-        if let Some(activation) = &mut self.activation {
-            activation.enter = enter;
-        }
+        self.enter = enter;
         self
     }
 

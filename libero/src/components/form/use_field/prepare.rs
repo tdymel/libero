@@ -192,7 +192,8 @@ impl FieldBuilder<'_> {
             wrapper = wrapper.sx(sx);
         }
         let mut wrapper = wrapper.parts_source(self.parts).prepare();
-        let activation = self.activation.map(|mut activation| {
+        let activation = self.activation.map(|activation| {
+            let mut activation = activation.enter_activates(self.enter);
             activation.card = self.card;
             activation
         });
@@ -239,12 +240,15 @@ impl FieldBuilder<'_> {
         // it is - and leaves a caller's own `onblur` alone. A move inside (a `PinField` cell to the
         // next) is no blur (1564).
         if touches {
+            platform::watch_presses();
             wrapper = wrapper.event("onfocusout", move |event: FocusEvent| {
                 if focus_left(&event, root) {
-                    touch();
+                    // The reveal waits for the press's click: an error above the pressed button moves it (4756).
+                    platform::after_press(touch.clone());
                 }
             });
         }
+        let only_focuses = root.filter(|_| self.label_only_focuses);
         let root = root.filter(|_| silent.is_some() || focuses);
 
         PreparedField {
@@ -255,6 +259,7 @@ impl FieldBuilder<'_> {
                 self.labelled_by,
                 activation.clone(),
                 root.filter(|_| focuses),
+                only_focuses,
             ),
             labelled_by: (self.labelled_by || self.label_with_id) && !label.is_none(),
             description: slot_node(FieldPart::Description.slot(), &id_value, description),
