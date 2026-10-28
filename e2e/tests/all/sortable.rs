@@ -868,6 +868,134 @@ fn a_hook_hands_out_the_touch_instructions() {
     });
 }
 
+/// The page's order, status and focus: what a failed touch wait reports.
+async fn touch_state(page: &chromiumoxide::Page) -> String {
+    page.evaluate_bounded(
+        "JSON.stringify([document.querySelector('#order')?.textContent, \
+         document.querySelector('[role=status]')?.textContent, \
+         document.activeElement?.outerHTML.slice(0, 200), \
+         document.querySelector('#list').scrollLeft, innerWidth, \
+         JSON.stringify(document.querySelector('#Alpha button').getBoundingClientRect())])",
+    )
+    .await
+    .ok()
+    .and_then(|state| state.into_value::<String>().ok())
+    .unwrap_or_default()
+}
+
+/// Turns touch emulation on and waits for the finger-sized layout it brings, so no measure
+/// is taken in the old one.
+async fn finger_layout(page: &chromiumoxide::Page) -> Result<()> {
+    use chromiumoxide::cdp::browser_protocol::emulation::SetTouchEmulationEnabledParams;
+    page.execute_bounded(SetTouchEmulationEnabledParams::new(true))
+        .await?;
+    wait::for_js_true(
+        page,
+        "document.querySelector('#Alpha button').getBoundingClientRect().height >= 44",
+        "the finger-sized handle",
+    )
+    .await
+}
+
+/// A touch from `from` to `to` at a finger's pace, the page in front.
+async fn paced_swipe(
+    page: &chromiumoxide::Page,
+    from: e2e::passes::pointer::Point,
+    to: e2e::passes::pointer::Point,
+) -> Result<()> {
+    use e2e::passes::pointer::{self, Point};
+    const STEPS: usize = 8;
+    e2e::frames::in_front(page, async {
+        pointer::touch_down(page, "#Alpha button").await?;
+        for step in 1..=STEPS {
+            let t = step as f64 / STEPS as f64;
+            let at = Point {
+                x: from.x + (to.x - from.x) * t,
+                y: from.y + (to.y - from.y) * t,
+            };
+            pointer::touch_move(page, at).await?;
+            tokio::time::sleep(std::time::Duration::from_millis(30)).await;
+        }
+        pointer::touch_up(page, to).await
+    })
+    .await
+}
+
+/// Todo 4769: a touch let go far off the list puts the item back, as Kanban does.
+#[test]
+fn a_touch_released_far_off_the_list_puts_it_back() {
+    use e2e::passes::pointer::{self, Point};
+    block_on(async {
+        let fixture = Fixture::open("/sortable", Viewport::Mobile).await.unwrap();
+        let page = &fixture.page;
+        let outcome = async {
+            wait::for_visible(page, "#Alpha button").await?;
+            finger_layout(page).await?;
+            let from = pointer::centre_of(page, "#Alpha button").await?;
+            let delta = pointer::centre_of(page, "#Delta").await?;
+            let alpha = pointer::centre_of(page, "#Alpha").await?;
+            let to = Point {
+                x: from.x,
+                y: from.y + delta.y - alpha.y + 160.0,
+            };
+            paced_swipe(page, from, to).await?;
+            wait::for_js_true(
+                page,
+                "document.querySelector('[role=status]').textContent \
+                 === 'Cancelled. Alpha back at position 1 of 4.'",
+                "a release far below the list to cancel",
+            )
+            .await?;
+            let order: String = page
+                .evaluate_bounded("document.querySelector('#order').textContent")
+                .await?
+                .into_value()?;
+            ensure!(
+                order == "Alpha Beta Gamma Delta",
+                "a release far off the list reordered: {order}"
+            );
+            Ok(())
+        }
+        .await;
+        let state = touch_state(page).await;
+        fixture.close().await.unwrap();
+        outcome.unwrap_or_else(|error| panic!("{error:#}: {state}"));
+    });
+}
+
+/// A touch let go just past the last item still drops it there.
+#[test]
+fn a_touch_released_just_past_the_list_still_drops() {
+    use e2e::passes::pointer::{self, Point};
+    block_on(async {
+        let fixture = Fixture::open("/sortable", Viewport::Mobile).await.unwrap();
+        let page = &fixture.page;
+        let outcome = async {
+            wait::for_visible(page, "#Alpha button").await?;
+            finger_layout(page).await?;
+            let from = pointer::centre_of(page, "#Alpha button").await?;
+            let delta = pointer::centre_of(page, "#Delta").await?;
+            let alpha = pointer::centre_of(page, "#Alpha").await?;
+            // Just past the last item still lands there.
+            let to = Point {
+                x: from.x,
+                y: from.y + delta.y - alpha.y + 20.0,
+            };
+            paced_swipe(page, from, to).await?;
+            wait::for_js_true(
+                page,
+                "document.querySelector('#order').textContent === 'Beta Gamma Delta Alpha'",
+                "a release just past the last item to drop",
+            )
+            .await
+        }
+        .await;
+        let state = touch_state(page).await;
+        fixture.close().await.unwrap();
+        outcome.unwrap_or_else(|error| panic!("{error:#}: {state}"));
+    });
+}
+
 #[test]
 fn it_meets_the_baseline() {
     Suite::new("sortable", "/sortable")

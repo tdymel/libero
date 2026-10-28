@@ -49,11 +49,11 @@ pub fn SortablePage() -> Element {
                 .key(["Home", "End"], "Moves a lifted item to the first or last slot.")
                 .key(["Escape"], "Puts a lifted or dragged item back where it was.")
                 .handles([
-                    "Each item's handle is a button of at least 24px (WCAG 2.5.8) named with the item, \"Reorder Apple\", and described by how to move it with the keys. On a touch screen with the move buttons shown, the description points to them instead.",
+                    "Each item's handle is a button of at least 24px (WCAG 2.5.8), 44px under a finger (2.5.5), named with the item, \"Reorder Apple\", and described by how to move it with the keys. On a touch screen with the move buttons shown, the description points to them instead.",
                     "Each item has Move up and Move down buttons (back and forward in a row), named with the item, \"Move Apple up\", so one pointer reorders without a drag (WCAG 2.5.7). At the list's ends the button that cannot move is disabled, and focus goes to the other one.",
                     "A status region says each lift, move, drop and cancel with the item and its place. A key that would move an item past either end says it stays. The words come from `SortableLabels` in the active `Localization`.",
                     "A horizontal list wider than its container scrolls inside itself and never widens the page (WCAG 1.4.10).",
-                    "A drag starts after 4px of pointer movement (8px on touch), so a click on the handle stays a click. Only the handle takes a touch: a swipe on the rest of an item scrolls the page.",
+                    "A drag starts after 4px of pointer movement (8px on touch), so a click on the handle stays a click. Only the handle takes a touch: a swipe on the rest of an item scrolls the page. Let go with the item wholly past either end of the list, it goes back, as with Escape.",
                     "Focus leaving a lifted item's handle cancels the move. After a drop the handle keeps focus.",
                     "A lifted item scrolls into view at each key, in a long list and in a row that scrolls inside itself. Holding Space or Enter lifts or drops once.",
                     "A dropped item slides into its slot. Under reduced motion it lands at once, and the others jump instead of sliding.",

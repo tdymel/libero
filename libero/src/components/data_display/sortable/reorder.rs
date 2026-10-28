@@ -65,6 +65,15 @@ pub(crate) fn clamp_offset(spans: &[Span], from: usize, offset: f64) -> f64 {
         .min(last.end() - own.end())
 }
 
+/// Whether item `from`, dragged by `offset`, has left the list's extent altogether.
+pub(crate) fn beyond(spans: &[Span], from: usize, offset: f64) -> bool {
+    let (Some(first), Some(last), Some(own)) = (spans.first(), spans.last(), spans.get(from))
+    else {
+        return false;
+    };
+    own.start + offset >= last.end() || own.end() + offset <= first.start
+}
+
 /// Where item `from` lands, dragged by `offset`: past every neighbour whose
 /// middle its leading edge crossed. Its middle would never get a tall item past
 /// a short last one.
@@ -144,6 +153,18 @@ mod tests {
         assert_eq!(target_index(&even(), 1, -1000.0), 0);
         assert_eq!(clamp_offset(&even(), 1, 1000.0), 50.0);
         assert_eq!(clamp_offset(&even(), 1, -1000.0), -50.0);
+    }
+
+    #[test]
+    fn an_item_is_beyond_the_list_only_once_it_has_left_it_altogether() {
+        let spans = even();
+        assert!(!beyond(&spans, 2, 39.0));
+        assert!(beyond(&spans, 2, 40.0));
+        assert!(!beyond(&spans, 0, 139.0));
+        assert!(beyond(&spans, 0, 140.0));
+        assert!(!beyond(&spans, 0, -39.0));
+        assert!(beyond(&spans, 0, -40.0));
+        assert!(!beyond(&[], 0, 1000.0));
     }
 
     #[test]

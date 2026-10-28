@@ -3,7 +3,7 @@ use std::rc::Rc;
 
 use dioxus::prelude::*;
 
-use super::reorder::{SortableMove, Span, clamp_offset, shift, slot_offset, target_index};
+use super::reorder::{SortableMove, Span, beyond, clamp_offset, shift, slot_offset, target_index};
 use crate::{
     components::common::{Orientation, has_shortcut_modifier},
     hooks::{
@@ -674,6 +674,9 @@ pub(crate) fn use_fixed_sortable(
             return;
         };
         let travel_now = *travel.peek();
+        // A release well off the list cancels, as Kanban's off the board (4769).
+        let commit =
+            commit && (ended.keyed.is_some() || !beyond(&ended.spans, ended.from, travel_now));
         let to = if commit {
             ended.target(travel_now)
         } else {

@@ -83,10 +83,10 @@ parts work.
 
 ### Libero handles
 
-- Each item's handle is a button of at least 24px (WCAG 2.5.8) named with the
-  item, "Reorder Apple", and described by how to move it with the keys. On a
-  touch screen with the move buttons shown, the description points to them
-  instead.
+- Each item's handle is a button of at least 24px (WCAG 2.5.8), 44px under a
+  finger (2.5.5), named with the item, "Reorder Apple", and described by how
+  to move it with the keys. On a touch screen with the move buttons shown, the
+  description points to them instead.
 - Each item has Move up and Move down buttons (back and forward in a row),
   named with the item, "Move Apple up", so one pointer reorders without a drag
   (WCAG 2.5.7). At the list's ends the button that cannot move is disabled,
@@ -98,7 +98,8 @@ parts work.
   widens the page (WCAG 1.4.10).
 - A drag starts after 4px of pointer movement (8px on touch), so a click on
   the handle stays a click. Only the handle takes a touch: a swipe on the rest
-  of an item scrolls the page.
+  of an item scrolls the page. Let go with the item wholly past either end of
+  the list, it goes back, as with Escape.
 - Focus leaving a lifted item's handle cancels the move. After a drop the
   handle keeps focus.
 - A lifted item scrolls into view at each key, in a long list and in a row
