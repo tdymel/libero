@@ -1738,6 +1738,14 @@ fn a_touch_on_the_handle_drags_across_and_elsewhere_scrolls_the_board() {
         )
         .await
         .unwrap();
+        // 4680: the card lands in another column, and its handle keeps the focus.
+        wait::for_js_true(
+            page,
+            "document.activeElement === document.querySelector('#Beta [data-slot=handle]')",
+            "the dragged card's handle to keep focus in Doing",
+        )
+        .await
+        .unwrap();
 
         // From the text's end edge leftwards, inside the viewport.
         let text = centre(page, "#Alpha [data-slot=content]").await;
