@@ -37,6 +37,7 @@ fn AddressFieldset() -> Element {
             ],
             TextField {
                 label: "Street",
+                required: true,
                 autocomplete: "street-address",
                 name: Address::FIELDS.street(),
             }
@@ -218,6 +219,7 @@ fn AddressFieldset(
             ],
             TextField {
                 label: "Street",
+                required: true,
                 autocomplete: "street-address",
                 name: Address::FIELDS.street(),
             }

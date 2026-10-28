@@ -14,6 +14,10 @@ pub(crate) const FORCED_COLORS: &str = "(forced-colors: active)";
 /// Blitz reports no pointer at all, hence `(pointer: none)`: a phone's finger is `coarse`.
 const CAN_HOVER: &str = "(hover: hover), (pointer: none)";
 
+/// What [`CAN_HOVER`] leaves out, a finger. No `pointer: fine` here: the table e2e finds
+/// the hover rules by that text.
+const NO_HOVER: &str = "(hover: none) and (pointer: coarse)";
+
 /// A style: declarations plus nested modifiers, rendered to one hashed class.
 /// Values take theme tokens: sizes (`"md"`), palette colours (`"primary.7"`), vars.
 /// Values, selectors and queries reach the stylesheet unescaped: never user text.
@@ -76,6 +80,11 @@ impl Sx {
     /// matches `:hover` until the next tap elsewhere, so the tint would stay lit.
     pub(crate) fn hover_tint(self, selector: impl Into<String>, nested: Sx) -> Self {
         self.selector(selector, Sx::new().media(CAN_HOVER, nested))
+    }
+
+    /// A look under `selector` for a pointer that cannot hover, the complement of [`hover_tint`](Self::hover_tint).
+    pub(crate) fn no_hover(self, selector: impl Into<String>, nested: Sx) -> Self {
+        self.selector(selector, Sx::new().media(NO_HOVER, nested))
     }
 
     /// Styles while the element has focus, by pointer too; prefer [`focus_visible`](Self::focus_visible) for rings.

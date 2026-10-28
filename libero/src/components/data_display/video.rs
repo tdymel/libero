@@ -2,8 +2,8 @@ use dioxus::core::{Attribute, AttributeValue};
 use dioxus::prelude::*;
 
 use super::media_controls::{
-    Captions, MediaControls, MediaFallback, SPEED, VolumePart, chapter_jump, notify,
-    use_media_keys, use_media_start, use_sound,
+    Captions, MediaControls, MediaFallback, SPEED, VolumePart, block_tooltip_buttons_sx,
+    chapter_jump, notify, use_media_keys, use_media_start, use_sound,
 };
 use super::{
     MediaPreload, MediaSource,
@@ -240,6 +240,7 @@ static VIDEO_SX: StaticSx = StaticSx::new(|| {
             VideoPart::Volume.selector(),
             sx().display("flex").align_items("center"),
         )
+        .and(block_tooltip_buttons_sx(VideoPart::Controls.selector()))
         .selector(
             VideoPart::Message.selector(),
             sx().margin_top(SizeCss::SPACING.value(Size::Xs))

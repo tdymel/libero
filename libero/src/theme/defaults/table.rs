@@ -125,12 +125,17 @@ impl TableDefaults {
                 "& tbody tr[data-detail]:hover",
                 sx().background("transparent"),
             )
-            // Not on the hovered row: the stripe's selector would outrank the hover.
-            // Marked from Rust, as `nth-child` would count detail rows.
+            // Not on the hovered row: the stripe's selector would outrank the hover. Without
+            // hover a tapped row keeps `:hover`, so it keeps its stripe. Marked from Rust, as
+            // `nth-child` would count detail rows.
             .when(
                 "striped",
-                sx().selector(
+                sx().hover_tint(
                     "& tbody tr[data-stripe]:not(:hover):not([aria-selected=\"true\"])",
+                    sx().background(TABLE_STRIPE.value()),
+                )
+                .no_hover(
+                    "& tbody tr[data-stripe]:not([aria-selected=\"true\"])",
                     sx().background(TABLE_STRIPE.value()),
                 ),
             )

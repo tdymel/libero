@@ -87,6 +87,12 @@ pub(super) fn controls_sx() -> Sx {
         .selector("& > *", sx().flex_shrink("0"))
 }
 
+/// Under `controls`, a button in a tooltip's wrapper is block level, so the wrapper is the
+/// button's height and the row centres it as the chevron beside it.
+pub(super) fn block_tooltip_buttons_sx(controls: &str) -> Sx {
+    sx().selector(format!("{controls} span > button"), sx().display("flex"))
+}
+
 /// The seek wrapper: takes what the row leaves, down to `2rem`.
 pub(super) fn seek_sx() -> Sx {
     sx().flex("1 1 0").min_width("2rem")

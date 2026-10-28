@@ -4,8 +4,8 @@ use dioxus::prelude::*;
 
 use super::media_controls::{
     CONTROLS, MediaFallback, MediaSeek, MediaStatus, MediaVolume, SEEK, Sound, TIME, VolumePart,
-    clock, controls_sx, icon_size, notify, seek_sx, space_toggles, times, use_late_tooltips,
-    use_media_keys, use_media_start, use_sound,
+    block_tooltip_buttons_sx, clock, controls_sx, icon_size, notify, seek_sx, space_toggles, times,
+    use_late_tooltips, use_media_keys, use_media_start, use_sound,
 };
 use crate::{
     components::{
@@ -101,12 +101,7 @@ static AUDIO_SX: StaticSx = StaticSx::new(|| {
             AudioPart::Volume.selector(),
             sx().display("flex").align_items("center"),
         )
-        // Block level, so a tooltip's wrapper is the button's height and the row centres
-        // it as the chevron and the speed button beside it.
-        .selector(
-            format!("{} span > button", AudioPart::Controls.selector()),
-            sx().display("flex"),
-        )
+        .and(block_tooltip_buttons_sx(AudioPart::Controls.selector()))
         // Smaller buttons, not hidden ones, so mute and volume stay (WCAG 1.4.10, todo 1393).
         .container_query(AUDIO_CONTAINER, NARROWEST, compact_buttons(Size::Sm))
         .container_query(AUDIO_CONTAINER, TINY, compact_buttons(Size::Xs))

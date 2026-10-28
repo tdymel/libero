@@ -271,6 +271,15 @@ fn a_hover_tint_applies_only_with_a_hovering_pointer() {
 }
 
 #[test]
+fn a_no_hover_look_applies_only_without_a_hovering_pointer() {
+    let css = Stylesheet::from(&sx().no_hover("&:not(.a)", sx().color("red")));
+    let css = css.as_str();
+
+    assert!(css.contains("@media (hover: none) and (pointer: coarse){"));
+    assert!(css.contains(":not(.a){color:red;}"));
+}
+
+#[test]
 fn sx_container_marks_and_queries_a_named_container() {
     let marker = Stylesheet::from(&sx().container("demo-card"));
     assert!(

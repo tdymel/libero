@@ -5,9 +5,9 @@ use dioxus::prelude::*;
 use crate::{
     components::{
         common::{
-            HtmlTag, Input, Orientation, Part, States, TOOLBAR_ITEM, ToolbarScope, base_props,
-            coarse_reach_sx, has_shortcut_modifier, names_itself, parts_enum, use_name_warning,
-            use_provide_toolbar, use_toolbar,
+            COARSE_POINTER, HtmlTag, Input, Orientation, Part, States, TOOLBAR_ITEM, ToolbarScope,
+            base_props, coarse_reach_sx, has_shortcut_modifier, names_itself, parts_enum,
+            use_name_warning, use_provide_toolbar, use_toolbar,
         },
         layout::use_box,
     },
@@ -31,6 +31,9 @@ parts_enum! {
         Separator = "separator" => "& [data-slot='separator']",
     }
 }
+
+/// Between wrapped rows under a finger: a 30px item's 44px box reaches 7px past it.
+const WRAPPED_ROW_GAP: &str = "14px";
 
 // Groups and separators are styled from the bar, so a toolbar costs one class.
 static TOOLBAR_SX: StaticSx = StaticSx::new(|| {
@@ -57,10 +60,18 @@ static TOOLBAR_SX: StaticSx = StaticSx::new(|| {
         )
         .when(
             Orientation::Horizontal.state_name(),
-            // A long bar wraps rather than widening the page (1.4.10).
+            // A long bar wraps rather than widening the page (1.4.10). Under a finger the wrapped
+            // rows are apart by `WRAPPED_ROW_GAP`, a single row is as tall as ever, and no box
+            // reaches past half of it into the row above.
             sx().flex_wrap("wrap")
                 .and(coarse_reach_sx(Orientation::Horizontal, &gap))
-                .selector(group, sx().flex_wrap("wrap"))
+                .and(coarse_reach_sx(Orientation::Vertical, WRAPPED_ROW_GAP))
+                .media(COARSE_POINTER, sx().with("row-gap", WRAPPED_ROW_GAP))
+                .selector(
+                    group,
+                    sx().flex_wrap("wrap")
+                        .media(COARSE_POINTER, sx().with("row-gap", WRAPPED_ROW_GAP)),
+                )
                 .selector(
                     separator,
                     sx().width("0")
@@ -472,4 +483,22 @@ pub fn ToolbarSeparator(props: ToolbarSeparatorProps) -> Element {
         .attr("aria-orientation", across)
         .attr("data-slot", ToolbarPart::Separator.slot())
         .render(HtmlTag::Div, props.attributes, rsx! {})
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::css::Stylesheet;
+
+    #[test]
+    fn a_wrapped_row_sits_clear_of_the_box_above_under_a_finger() {
+        let css = Stylesheet::from(&TOOLBAR_SX);
+        let css = css.as_str();
+        assert!(
+            css.contains("--lsx-coarse-reach-block:calc(14px / 2)"),
+            "{css}"
+        );
+        let coarse = css.find("@media (pointer: coarse)").expect("coarse query");
+        assert!(css[coarse..].contains("row-gap:14px"), "{css}");
+    }
 }
