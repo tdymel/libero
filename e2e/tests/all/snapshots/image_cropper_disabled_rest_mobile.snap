@@ -14,7 +14,7 @@ slider "Bottom right corner" = 80 [disabled] [orientation=horizontal] [valuemax=
   description "Arrow keys move the crop area, or resize it from a corner. Shift moves further."
 slider "Bottom left corner" = 10 [disabled] [orientation=horizontal] [valuemax=85] [valuemin=0]
   description "Arrow keys move the crop area, or resize it from a corner. Shift moves further."
-group "Crop area"
+group "Crop area controls"
   button "Move left" [disabled]
   button "Move up" [disabled]
   button "Move down" [disabled]
@@ -29,7 +29,7 @@ slider "Crop area" = 0 [disabled] [orientation=horizontal] [valuemax=30] [valuem
   description "Arrow keys move the image, plus and minus zoom it. Shift moves further."
 slider "Zoom" = -0.003143551293760538 [disabled] [orientation=horizontal] [valuemax=2.0768563747406006] [valuemin=-0.2231435477733612]
   description "100%"
-group "Crop area"
+group "Crop area controls"
   button "Move left" [disabled]
   button "Move up" [disabled]
   button "Move down" [disabled]

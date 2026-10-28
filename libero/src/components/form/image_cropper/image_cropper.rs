@@ -7,9 +7,9 @@ use crate::{
         accessibility::{use_announcer, visually_hidden_absolute_sx},
         buttons::ActionIcon,
         common::{
-            Glyph, HtmlTag, Input, Part, States, Variables, base_props, disabled_look_within_sx,
-            focus_ring_sx, has_shortcut_modifier, media_url, on_failed_after_mount, parts_enum,
-            use_svg_probe, variables,
+            Glyph, HtmlTag, Input, Part, States, Variables, base_props, coarse_hit_area_sx,
+            disabled_look_within_sx, focus_ring_sx, has_shortcut_modifier, media_url,
+            on_failed_after_mount, parts_enum, use_svg_probe, variables,
         },
         form::{Slider, SliderChangeEvent},
         layout::use_box,
@@ -51,6 +51,8 @@ const HANDLE_HIT: &str = "24px";
 /// A finger's hit area (WCAG 2.5.5, todo 1387).
 const HANDLE_HIT_COARSE: &str = "44px";
 const HANDLE_DOT: &str = "12px";
+/// Between the 30px buttons under a finger: a 44px pitch.
+const CONTROLS_GAP_COARSE: &str = "14px";
 const COARSE: &str = "(pointer: coarse)";
 
 parts_enum! {
@@ -210,6 +212,12 @@ static IMAGE_CROPPER_SX: StaticSx = StaticSx::new(|| {
         .max_width("100%")
         .line_height("0")
         .user_select("none")
+        // A finger-sized handle on the image's edge sticks out half its 44px: room for it inside
+        // the root, or it widens the page. A clip margin still counts towards the scroll width.
+        .media(
+            COARSE,
+            sx().box_sizing("border-box").padding_inline("22px"),
+        )
         .selector(
             "& > [data-slot='image']",
             sx().display("block")
@@ -236,7 +244,8 @@ static IMAGE_CROPPER_SX: StaticSx = StaticSx::new(|| {
                 .flex_wrap("wrap")
                 .justify_content("center")
                 .padding_block("xs")
-                .line_height("normal"),
+                .line_height("normal")
+                .media(COARSE, sx().gap(CONTROLS_GAP_COARSE)),
         )
         // Clipped apart from the box, so a handle on the image's edge keeps
         // its whole hit area. Under the frame, it takes a drag or pinch begun on the image (2113).
@@ -320,7 +329,9 @@ static IMAGE_CROPPER_SX: StaticSx = StaticSx::new(|| {
         // image's cell, so the bar never covers the box (1613).
         .when(
             "pan",
+            // No handles to give room: the clip would show the zoomed image in the padding.
             sx().overflow("hidden")
+                .padding_inline("0")
                 .selector(
                     "& > [data-slot='image']",
                     sx().with("transform-origin", "0 0").transform(format!(
@@ -346,7 +357,13 @@ static IMAGE_CROPPER_SX: StaticSx = StaticSx::new(|| {
                         .padding_inline("sm")
                         .padding_block("xs")
                         .line_height("normal")
-                        .background(PAPER_BACKGROUND.value()),
+                        .background(PAPER_BACKGROUND.value())
+                        // A finger's height round the 16px slider, so its hit area stays in the bar.
+                        .media(COARSE, sx().padding_block("14px")),
+                )
+                .selector(
+                    "& > [data-slot='zoom'] [data-slot='track']",
+                    coarse_hit_area_sx("::before"),
                 )
                 .selector(
                     "& > [data-slot='controls']",
@@ -370,7 +387,10 @@ static IMAGE_CROPPER_SX: StaticSx = StaticSx::new(|| {
                     sx().cursor("not-allowed"),
                 )
                 // A disabled cropper lets the page scroll from its image.
-                .selector("& > [data-slot='mask']", sx().touch_action("auto")),
+                .selector(
+                    "& > [data-slot='mask'], & > [data-slot='frame'], & > [data-slot='frame'] > [data-slot='handle']",
+                    sx().touch_action("auto"),
+                ),
         );
 
     [
@@ -478,6 +498,8 @@ pub fn ImageCropper(props: ImageCropperProps) -> Element {
     // The cropper's client top-left there, for a pinch's midpoint.
     let origin = use_local_state(|| (0.0_f64, 0.0_f64));
     let touches = use_local_state(Touches::default);
+    // The press was a finger's: no focus follows it, or its ring shows after every touch.
+    let touched = use_local_state(|| false);
 
     let pan = props.pan;
     let interactive = !props.disabled && props.onchange.is_some();
@@ -582,15 +604,21 @@ pub fn ImageCropper(props: ImageCropperProps) -> Element {
         }
     });
 
-    let focus_grip = use_callback(move |grabbed: Grip| {
-        let element = match grabbed {
-            Grip::NorthWest => corners[0],
-            Grip::NorthEast => corners[1],
-            Grip::SouthEast => corners[2],
-            Grip::SouthWest => corners[3],
-            _ => box_element,
-        };
-        let _ = element.focus();
+    let focus_grip = use_callback({
+        let touched = touched.clone();
+        move |grabbed: Grip| {
+            if touched.get() {
+                return;
+            }
+            let element = match grabbed {
+                Grip::NorthWest => corners[0],
+                Grip::NorthEast => corners[1],
+                Grip::SouthEast => corners[2],
+                Grip::SouthWest => corners[3],
+                _ => box_element,
+            };
+            let _ = element.focus();
+        }
     });
 
     // The latest move while the start is unmeasured: a slow WebView moves first (1230).
@@ -670,11 +698,12 @@ pub fn ImageCropper(props: ImageCropperProps) -> Element {
     });
 
     let press = {
-        let (grip, touches) = (grip.clone(), touches.clone());
+        let (grip, touches, touched) = (grip.clone(), touches.clone(), touched.clone());
         move |grabbed: Grip| {
-            let (grip, touches) = (grip.clone(), touches.clone());
+            let (grip, touches, touched) = (grip.clone(), touches.clone(), touched.clone());
             move |event: Event<PointerData>| {
                 event.stop_propagation();
+                touched.set(event.pointer_type() == "touch");
                 if event.pointer_type() == "touch" {
                     let mut now = touches.get();
                     if !now.put(event.pointer_id(), client(&event)) {
@@ -871,6 +900,47 @@ pub fn ImageCropper(props: ImageCropperProps) -> Element {
     let resize =
         move |factor: f64| Callback::new(move |_: MouseEvent| pressed(shown.scaled(factor, min)));
     let has_controls = props.onchange.is_some();
+    // Pan mode zooms through its slider instead of the last two.
+    let mut buttons = vec![
+        (
+            words.move_left,
+            IconSlot::ChevronLeft,
+            lucide::chevron_left::outlined,
+            nudge(-NUDGE_STEP, 0.0),
+        ),
+        (
+            words.move_up,
+            IconSlot::ChevronUp,
+            lucide::chevron_up::outlined,
+            nudge(0.0, -NUDGE_STEP),
+        ),
+        (
+            words.move_down,
+            IconSlot::ChevronDown,
+            lucide::chevron_down::outlined,
+            nudge(0.0, NUDGE_STEP),
+        ),
+        (
+            words.move_right,
+            IconSlot::ChevronRight,
+            lucide::chevron_right::outlined,
+            nudge(NUDGE_STEP, 0.0),
+        ),
+    ];
+    if !pan {
+        buttons.push((
+            words.smaller,
+            IconSlot::Minus,
+            lucide::minus::outlined,
+            resize(1.0 / ZOOM_STEP),
+        ));
+        buttons.push((
+            words.larger,
+            IconSlot::Plus,
+            lucide::plus::outlined,
+            resize(ZOOM_STEP),
+        ));
+    }
 
     let percent = |fraction: f64| (fraction * 100.0).round();
     let (scale, image_x, image_y) = shown.image_transform();
@@ -1044,62 +1114,17 @@ pub fn ImageCropper(props: ImageCropperProps) -> Element {
                         div {
                             "data-slot": ImageCropperPart::Controls.slot(),
                             role: "group",
-                            "aria-label": aria_label.clone(),
-                            ActionIcon {
-                                variant: "standard",
-                                color: "muted",
-                                size: "sm",
-                                aria_label: words.move_left,
-                                disabled: !interactive,
-                                onclick: nudge(-NUDGE_STEP, 0.0),
-                                Glyph { slot: IconSlot::ChevronLeft, icon: lucide::chevron_left::outlined }
-                            }
-                            ActionIcon {
-                                variant: "standard",
-                                color: "muted",
-                                size: "sm",
-                                aria_label: words.move_up,
-                                disabled: !interactive,
-                                onclick: nudge(0.0, -NUDGE_STEP),
-                                Glyph { slot: IconSlot::ChevronUp, icon: lucide::chevron_up::outlined }
-                            }
-                            ActionIcon {
-                                variant: "standard",
-                                color: "muted",
-                                size: "sm",
-                                aria_label: words.move_down,
-                                disabled: !interactive,
-                                onclick: nudge(0.0, NUDGE_STEP),
-                                Glyph { slot: IconSlot::ChevronDown, icon: lucide::chevron_down::outlined }
-                            }
-                            ActionIcon {
-                                variant: "standard",
-                                color: "muted",
-                                size: "sm",
-                                aria_label: words.move_right,
-                                disabled: !interactive,
-                                onclick: nudge(NUDGE_STEP, 0.0),
-                                Glyph { slot: IconSlot::ChevronRight, icon: lucide::chevron_right::outlined }
-                            }
-                            // Pan mode zooms through its slider instead.
-                            if !pan {
+                            "aria-label": words.controls,
+                            for (label , slot , icon , onclick) in buttons {
                                 ActionIcon {
+                                    key: "{label}",
                                     variant: "standard",
                                     color: "muted",
                                     size: "sm",
-                                    aria_label: words.smaller,
+                                    aria_label: label,
                                     disabled: !interactive,
-                                    onclick: resize(1.0 / ZOOM_STEP),
-                                    Glyph { slot: IconSlot::Minus, icon: lucide::minus::outlined }
-                                }
-                                ActionIcon {
-                                    variant: "standard",
-                                    color: "muted",
-                                    size: "sm",
-                                    aria_label: words.larger,
-                                    disabled: !interactive,
-                                    onclick: resize(ZOOM_STEP),
-                                    Glyph { slot: IconSlot::Plus, icon: lucide::plus::outlined }
+                                    onclick,
+                                    Glyph { slot, icon }
                                 }
                             }
                         }

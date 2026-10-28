@@ -3,6 +3,8 @@
 pub struct ImageCropperLabels {
     /// Names the crop box.
     pub label: &'static str,
+    /// Names the group of buttons under the image.
+    pub controls: &'static str,
     /// The box's and corners' description: their keys.
     pub keys: &'static str,
     /// `aria-valuetext`: `{width}`, `{height}`, `{x}` and `{y}` in percent of the image.
@@ -43,6 +45,7 @@ pub struct ImageCropperLabels {
 impl ImageCropperLabels {
     pub const ENGLISH: Self = Self {
         label: "Crop area",
+        controls: "Crop area controls",
         keys: "Arrow keys move the crop area, or resize it from a corner. Shift moves further.",
         value: "{width}% by {height}%, at {x}%, {y}%",
         pan_keys: "Arrow keys move the image, plus and minus zoom it. Shift moves further.",
@@ -68,6 +71,7 @@ impl ImageCropperLabels {
 
     pub const GERMAN: Self = Self {
         label: "Zuschnitt",
+        controls: "Zuschnitt-Steuerung",
         keys: "Pfeiltasten verschieben den Zuschnitt oder ändern an einer Ecke seine Größe. Mit Umschalt weiter.",
         value: "{width} % mal {height} %, bei {x} %, {y} %",
         pan_keys: "Pfeiltasten verschieben das Bild, Plus und Minus zoomen es. Mit Umschalt weiter.",

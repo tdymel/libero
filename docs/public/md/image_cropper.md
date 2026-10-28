@@ -111,7 +111,7 @@ explains how parts work.
   and so on.
 - Each slider's number rises with ArrowRight: the box's left edge, with `pan`
   the image's; a left corner's left edge, a right corner's width.
-- Each handle is a 24px target around a 12px square.
+- Each handle is a 24px target around a 12px square, 44px on a touch screen.
 - A drag focuses the box or the corner it grabbed, so the keys carry on from
   there.
 - On a touch screen a finger on the image, on the box or beside it, drags the
@@ -126,7 +126,7 @@ explains how parts work.
 - With `pan` a slider named "Zoom" under the image zooms around the box's
   centre, by one pointer or its keys, so no pinch is needed (WCAG 2.5.1). Every
   step zooms by the same factor. Its value is the zoom, "100%".
-- Under the image a group named by `aria_label` holds buttons for every drag
+- Under the image a group named "Crop area controls" holds buttons for every drag
   (WCAG 2.5.7): "Move left", "Move up", "Move down" and "Move right" move the
   box 5% of the image, with `pan` the image under it; "Smaller" and "Larger"
   scale the box around its centre, without `pan`. With `controls: false` the
@@ -163,7 +163,8 @@ and `{y}` in percent: "{width}% by {height}%, at {x}%, {y}%" in English. With
 `pan`, `pan_keys` and `pan_value` take their place; `pan_value` adds `{zoom}`, in
 percent of the starting zoom: "{width}% by {height}%, at {x}%, {y}%, zoom {zoom}%".
 The pan mode's zoom slider is named by `zoom` ("Zoom") and speaks `zoom_value`
-("{zoom}%"). The buttons under the image are named by `move_up`, `move_down`,
+("{zoom}%"). The group of buttons under the image is named by `controls`, the
+buttons by `move_up`, `move_down`,
 `move_left`, `move_right`, `smaller` and `larger`. A crop dialog that cannot load
 the image says `load_failed`, one whose cut fails `crop_failed`.
 

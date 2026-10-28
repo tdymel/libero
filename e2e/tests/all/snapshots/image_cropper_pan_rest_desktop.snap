@@ -8,7 +8,7 @@ slider "Crop area" = 0 [orientation=horizontal] [valuemax=30] [valuemin=-30]
   description "Arrow keys move the image, plus and minus zoom it. Shift moves further."
 slider "Zoom" = -0.003143551293760538 [orientation=horizontal] [valuemax=2.0768563747406006] [valuemin=-0.2231435477733612]
   description "100%"
-group "Crop area"
+group "Crop area controls"
   button "Move left"
   button "Move up"
   button "Move down"

@@ -22,6 +22,15 @@ const PNG: &[u8] = &[
     66, 96, 130,
 ];
 
+/// Turns touch emulation on before a measure: a coarse pointer insets the picture, and the
+/// first touch would otherwise shift the geometry read earlier.
+async fn coarse_pointer(page: &chromiumoxide::Page) -> Result<()> {
+    use chromiumoxide::cdp::browser_protocol::emulation::SetTouchEmulationEnabledParams;
+    page.execute_bounded(SetTouchEmulationEnabledParams::new(true))
+        .await?;
+    Ok(())
+}
+
 #[test]
 fn it_meets_the_baseline() {
     Suite::new("image_cropper", "/image-cropper")
@@ -589,6 +598,7 @@ fn a_touch_drags_the_box_and_two_pinch_it() {
         wait::for_js_true(page, &format!("{crop} === '25,25,50,50'"), "the box")
             .await
             .unwrap();
+        coarse_pointer(page).await.unwrap();
         // Room to scroll, so a drag that scrolled the page would show.
         let _: bool = e2e::js(page, "(document.body.style.paddingBottom = '200vh', true)").await;
         let (left, top, width, height, scroll, scrolls): (f64, f64, f64, f64, f64, bool) = page
@@ -679,11 +689,10 @@ fn a_drag_or_wheel_beside_the_box_moves_or_scales_it() {
         wait::for_js_true(page, &format!("{crop} === '25,25,50,50'"), "the box")
             .await
             .unwrap();
+        let image = "(() => { const r = document.querySelector('[data-slot=image]').getBoundingClientRect();
+                  return [r.left, r.top, r.width, r.height]; })()";
         let (left, top, width, height): (f64, f64, f64, f64) = page
-            .evaluate_bounded(
-                "(() => { const r = document.querySelector('[data-slot=image]').getBoundingClientRect();
-                  return [r.left, r.top, r.width, r.height]; })()",
-            )
+            .evaluate_bounded(image)
             .await
             .unwrap()
             .into_value()
@@ -700,6 +709,14 @@ fn a_drag_or_wheel_beside_the_box_moves_or_scales_it() {
         frames::in_front(page, async {
             pointer::drag(page, from, to, 8).await?;
             wait::for_js_true(page, &format!("{crop} === '15,15,50,50'"), "a mouse drag").await?;
+            // The finger's layout, measured again: a coarse pointer insets the picture.
+            coarse_pointer(page).await?;
+            let (left, top, width, height): (f64, f64, f64, f64) =
+                page.evaluate_bounded(image).await?.into_value()?;
+            let from = Point {
+                x: left + width * 0.04,
+                y: top + height * 0.1,
+            };
             let back = Point {
                 x: from.x + width / 10.0,
                 y: from.y + height / 10.0,

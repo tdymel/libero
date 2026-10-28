@@ -16,7 +16,7 @@ slider "Bottom right corner" = 50 [orientation=horizontal] [valuemax=75] [valuem
   description "Arrow keys move the crop area, or resize it from a corner. Shift moves further."
 slider "Bottom left corner" = 25 [orientation=horizontal] [valuemax=70] [valuemin=0]
   description "Arrow keys move the crop area, or resize it from a corner. Shift moves further."
-group "Crop area"
+group "Crop area controls"
   button "Move left"
   button "Move up"
   button "Move down"
