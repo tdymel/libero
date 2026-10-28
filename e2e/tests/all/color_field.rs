@@ -16,8 +16,12 @@ const EYE_DROPPER: &str = "[aria-label='Pick a color from the screen']";
 #[test]
 fn tab_past_the_dropdown_moves_on_from_the_field() {
     block_on(async {
-        // Stops in the dropdown after the one Arrow Down focuses.
-        for (route, later_stops) in [("/color-field/alpha", 5), ("/color-field/swatches", 2)] {
+        // Stops in the dropdown after the one Arrow Down focuses, then the swatch row's one
+        // stop and the swatch an ArrowRight reaches from it (4722).
+        for (route, later_stops, stop, next) in [
+            ("/color-field/alpha", 3, "#fa5252", "#40c057"),
+            ("/color-field/swatches", 0, "#40c057", "#228be6"),
+        ] {
             let fixture = Fixture::open(route, Viewport::Desktop).await.unwrap();
             let page = &fixture.page;
 
@@ -43,15 +47,22 @@ fn tab_past_the_dropdown_moves_on_from_the_field() {
             }
             expect(
                 page,
-                "document.activeElement.getAttribute('aria-label') === '#228be6'",
-                &format!("{route}: Tab to reach the last swatch"),
+                &format!("document.activeElement.getAttribute('aria-label') === '{stop}'"),
+                &format!("{route}: Tab to reach the swatch row's stop"),
+            )
+            .await;
+            keyboard::press(page, keyboard::ARROW_RIGHT).await.unwrap();
+            expect(
+                page,
+                &format!("document.activeElement.getAttribute('aria-label') === '{next}'"),
+                &format!("{route}: ArrowRight to move to the next swatch"),
             )
             .await;
             keyboard::press(page, keyboard::TAB).await.unwrap();
             expect(
                 page,
                 &format!("document.activeElement === document.querySelector({EYE_DROPPER:?})"),
-                &format!("{route}: Tab from the last swatch to move on from the text input"),
+                &format!("{route}: Tab from the swatch row to move on from the text input"),
             )
             .await;
             keyboard::press(page, keyboard::TAB).await.unwrap();

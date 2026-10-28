@@ -4,7 +4,7 @@ use dioxus::prelude::*;
 
 use crate::{
     components::{
-        accessibility::use_announcer,
+        accessibility::{Announcer, use_announcer},
         common::{
             ComboboxState, HtmlTag, Input, Part, Parts, ScaleOrCss, TOOLBAR_ITEM, ToolbarItem,
             aria_label_of, ring_overlay, use_combobox, use_no_toolbar, use_toolbar_item,
@@ -210,11 +210,14 @@ pub fn TagsField(props: TagsFieldProps) -> Element {
         .attributes(&props.attributes)
         .prepare();
 
+    let refusals = use_announcer();
     // Every emit is the field's own edit, which the announcer then says.
     let before = held.clone();
     let onchange = bound.emit(props.onchange).map(|emit| {
         move |next: Vec<String>| {
             edited.mark(&before, &next);
+            // A refusal said earlier is stale once the list changes.
+            refusals.clear();
             emit(next)
         }
     });
@@ -225,7 +228,6 @@ pub fn TagsField(props: TagsFieldProps) -> Element {
     let emit = onchange.clone();
     // An `Rc`, not a `use_callback`: blur calls it ([[codebase/reentrant-handlers]]).
     // Returns the first rejected tag, which the draft keeps.
-    let refusals = use_announcer();
     let localization = use_localization();
     let words = localization.tags_field;
     let add: Add = Rc::new(move |pieces: Vec<String>| {
@@ -279,14 +281,26 @@ pub fn TagsField(props: TagsFieldProps) -> Element {
         &focus,
     );
 
-    let rows = tags_field_rows(suggestions, &held, &text(), &add, text, state);
+    // Every pick would be refused, so the list says why instead of offering rows.
+    let full = has_suggestions && props.max_tags.is_some_and(|max| held.len() >= max);
+    let rows = tags_field_rows(
+        suggestions.filter(|_| !full),
+        &held,
+        &text(),
+        &add,
+        text,
+        state,
+    );
     let row_count = rows.len();
-    let nothing_found = (!text().trim().is_empty()
-        && props
-            .suggestions
-            .as_ref()
-            .is_some_and(|all| !all.is_empty()))
-    .then(|| localization.combobox.nothing_found.to_string());
+    let nothing_found = match full {
+        true => Some(limit_message(&words)),
+        false => (!text().trim().is_empty()
+            && props
+                .suggestions
+                .as_ref()
+                .is_some_and(|all| !all.is_empty()))
+        .then(|| localization.combobox.nothing_found.to_string()),
+    };
 
     let clear_change = onchange.clone();
     let clearable = props.clearable.unwrap_or(false);
@@ -364,6 +378,7 @@ pub fn TagsField(props: TagsFieldProps) -> Element {
             focus,
             entering,
             clearing,
+            refusals,
             item,
         },
         onchange.clone(),
@@ -518,6 +533,12 @@ fn refusal_message(refused: &[TagRejection], words: &TagsFieldLabels) -> Option<
     })
     .collect();
     (!sentences.is_empty()).then(|| sentences.join(". "))
+}
+
+/// The `full` sentence without its tag list: "Tag limit reached, not added".
+fn limit_message(words: &TagsFieldLabels) -> String {
+    let head = words.full.split("{labels}").next().unwrap_or(words.full);
+    head.trim_end_matches([':', ' ']).to_string()
 }
 
 /// The pieces a string breaks into, or nothing at all when it holds no splitter
@@ -717,6 +738,8 @@ struct Draft {
     entering: CopyValue<bool>,
     /// Set by a press on the clear x, whose blur drops the draft rather than committing it.
     clearing: CopyValue<bool>,
+    /// Emptied on a keystroke, so a refusal does not outlive the text it was about.
+    refusals: Announcer,
     item: Option<ToolbarItem>,
 }
 
@@ -743,6 +766,7 @@ fn tags_field_input<F: Fn(Vec<String>) + Clone + 'static>(
         focus,
         mut entering,
         mut clearing,
+        refusals,
         item,
     } = draft;
     let (typing, committing, blurring) = (add.clone(), add.clone(), add);
@@ -780,6 +804,7 @@ fn tags_field_input<F: Fn(Vec<String>) + Clone + 'static>(
             if raw == text() {
                 return;
             }
+            refusals.clear();
             let typed = raw.chars().count() <= text().chars().count() + 1;
             let (pieces, tail) = split_typed(&raw, typed, &split_chars);
             match pieces.is_empty() {
@@ -996,6 +1021,19 @@ mod tests {
             Some("Already added: b. Tag limit reached, not added: a".to_string())
         );
         assert_eq!(refusal_message(&[], &TagsFieldLabels::ENGLISH), None);
+    }
+
+    /// Todo 4721: the full list's row reuses the refusal sentence, minus its tag list.
+    #[test]
+    fn the_limit_row_is_the_refusal_without_its_tags() {
+        assert_eq!(
+            limit_message(&TagsFieldLabels::ENGLISH),
+            "Tag limit reached, not added"
+        );
+        assert_eq!(
+            limit_message(&TagsFieldLabels::GERMAN),
+            "Höchstzahl erreicht, nicht hinzugefügt"
+        );
     }
 
     /// Trimmed and lowercased on both sides - and a batch is compared against

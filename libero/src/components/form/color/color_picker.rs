@@ -13,13 +13,14 @@ use crate::{
     components::{
         common::{
             COARSE_POINTER, Glyph, HtmlTag, Input, Part, States, Variables, base_props,
-            input_from_str, parts_enum, variables,
+            has_shortcut_modifier, input_from_str, parts_enum, variables,
         },
         form::SliderChangeEvent,
         layout::use_box,
     },
     context::IconSlot,
-    hooks::{use_localization, use_theme},
+    hooks::{id_selector, use_element, use_id, use_localization, use_theme},
+    platform::{ElementApi, focus_selector, logical_key},
     sx::{StaticSx, ThemeAwareValue, sx},
     theme::{
         COLOR_PICKER_PREVIEW, COLOR_PICKER_SPACING, COLOR_PICKER_SWATCH, COLOR_PICKER_THUMB,
@@ -34,6 +35,8 @@ input_from_str!(ColorFormat);
 
 /// The swatch row's widest extent, set only when `swatches_per_row` caps it.
 const COLOR_PICKER_SWATCHES_WIDTH: CssVar = CssVar::new("--lsx-color-picker-swatches-width");
+/// A swatch's drawn extent: the size step's, or 44px under a coarse pointer.
+const COLOR_PICKER_SWATCH_HIT: CssVar = CssVar::new("--lsx-color-picker-swatch-hit");
 /// The value's alpha, for the preview beside the alpha slider.
 const COLOR_PICKER_ALPHA: CssVar = CssVar::new("--lsx-color-picker-alpha");
 /// The hue slider's last step: 360 is the same hue as 0.
@@ -44,6 +47,7 @@ static COLOR_PICKER_SX: StaticSx = StaticSx::new(|| {
     let spacing = COLOR_PICKER_SPACING.value();
     let preview = COLOR_PICKER_PREVIEW.value();
     let swatch = COLOR_PICKER_SWATCH.value();
+    let hit = COLOR_PICKER_SWATCH_HIT.value();
     let thumb = COLOR_PICKER_THUMB.value();
     let live = format!(
         "rgba({}, {})",
@@ -97,12 +101,16 @@ static COLOR_PICKER_SX: StaticSx = StaticSx::new(|| {
                 .gap(spacing)
                 .max_width(COLOR_PICKER_SWATCHES_WIDTH.value_or("none")),
         )
-        // Fixed per size step: seven fit the step's own width.
+        // Fixed per size step: seven fit the step's own width. Under a finger
+        // each is 44px (todo 4722), which the row's width cap counts too.
+        .var(COLOR_PICKER_SWATCH_HIT, swatch.clone())
+        .media(
+            COARSE_POINTER,
+            sx().var(COLOR_PICKER_SWATCH_HIT, format!("max({swatch}, 44px)")),
+        )
         .selector(
             "& > [data-slot='swatches'] > *",
-            sx().width(swatch.clone())
-                .height(swatch.clone())
-                .min_width(swatch),
+            sx().width(hit.clone()).height(hit.clone()).min_width(hit),
         )
         .selector(
             "& > [data-slot='swatches'] svg",
@@ -268,7 +276,7 @@ pub fn ColorPicker(props: ColorPickerProps) -> Element {
                     let count = count.max(1);
                     format!(
                         "calc({count} * {} + {} * {})",
-                        COLOR_PICKER_SWATCH.value(),
+                        COLOR_PICKER_SWATCH_HIT.value(),
                         count - 1,
                         COLOR_PICKER_SPACING.value()
                     )
@@ -446,6 +454,45 @@ fn SwatchRow(props: SwatchRowProps) -> Element {
         oninput,
         onswatchclick,
     } = props;
+    let id = use_id();
+    let list = use_element();
+    // The row is one tab stop: the focused swatch, else the picked one, else the first.
+    let mut stop = use_signal(|| None::<usize>);
+    let count = swatches.len();
+    let picked = selected.as_ref().and_then(|rgba| {
+        swatches
+            .iter()
+            .position(|&color| swatch_color(color, with_alpha).to_rgba() == *rgba)
+    });
+    let tab_stop = stop().filter(|&at| at < count).or(picked).unwrap_or(0);
+    let onkeydown = use_callback(move |(at, event): (usize, KeyboardEvent)| {
+        if has_shortcut_modifier(&event) {
+            return;
+        }
+        let next = match logical_key(&event) {
+            Key::Named(NamedKey::ArrowRight | NamedKey::ArrowDown) => (at + 1) % count,
+            Key::Named(NamedKey::ArrowLeft | NamedKey::ArrowUp) => (at + count - 1) % count,
+            Key::Named(NamedKey::Home) => 0,
+            Key::Named(NamedKey::End) => count - 1,
+            _ => return,
+        };
+        if next == at {
+            return;
+        }
+        event.prevent_default();
+        // Blitz fires no focus event for a scripted `focus()`.
+        stop.set(Some(next));
+        let swatch = id_selector(&format!("{}-{next}", id.peek()));
+        match list.query_selector(&swatch) {
+            Ok(swatch) => {
+                let _ = swatch.focus();
+            }
+            // A WebView queries nothing: the page focuses it.
+            Err(_) => {
+                let _ = focus_selector(&swatch);
+            }
+        }
+    });
     let buttons = swatches.iter().copied().enumerate().map(|(index, color)| {
         let color = swatch_color(color, with_alpha);
         let pressed = selected.as_ref() == Some(&color.to_rgba());
@@ -461,7 +508,10 @@ fn SwatchRow(props: SwatchRowProps) -> Element {
                 "data-slot": ColorPickerPart::Swatch.slot(),
                 aria_label: name,
                 aria_pressed: pressed.to_string(),
-                tabindex: (!focusable).then_some("-1"),
+                id: "{id}-{index}",
+                tabindex: if focusable && tab_stop == index { "0" } else { "-1" },
+                onfocus: move |_| stop.set(Some(index)),
+                onkeydown: move |event| onkeydown.call((index, event)),
                 onclick: move |_| {
                     if let Some(oninput) = &oninput {
                         // Settled at once, so a caller committing on `End`
@@ -482,6 +532,7 @@ fn SwatchRow(props: SwatchRowProps) -> Element {
     rsx! {
         div {
             "data-slot": ColorPickerPart::Swatches.slot(),
+            onmounted: list.mount(),
             role: group_name.map(|_| "group"),
             aria_label: group_name,
             {buttons}
