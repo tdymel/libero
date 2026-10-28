@@ -575,20 +575,21 @@ impl FormScope {
         let mut items: Vec<SummaryItem> = fields
             .values()
             .flat_map(|field| {
-                // The field's own error, else one line per error set on its name.
-                let messages: Vec<String> = match field.status.is_error() {
-                    true => field
-                        .status
-                        .message()
-                        .map(str::to_string)
-                        .into_iter()
-                        .collect(),
-                    false => errors
-                        .iter()
-                        .filter(|(path, _)| field.name.as_deref() == Some(path.as_str()))
-                        .map(|(_, error)| word(&**error))
-                        .collect(),
-                };
+                // The field's own error, then one line per error set on its name: both block.
+                let own = field
+                    .status
+                    .is_error()
+                    .then(|| field.status.message().map(str::to_string))
+                    .flatten();
+                let messages: Vec<String> = own
+                    .into_iter()
+                    .chain(
+                        errors
+                            .iter()
+                            .filter(|(path, _)| field.name.as_deref() == Some(path.as_str()))
+                            .map(|(_, error)| word(&**error)),
+                    )
+                    .collect();
                 messages.into_iter().map(|message| SummaryItem {
                     message: match &field.label {
                         Some(label) => format!("{label}: {message}"),
@@ -633,7 +634,10 @@ impl FormScope {
                         },
                         None => SummaryItem {
                             message: message.clone(),
-                            target: fields.values().next().map(|field| field.id.clone()),
+                            target: fields
+                                .values()
+                                .min_by_key(|field| field.barred)
+                                .map(|field| field.id.clone()),
                             inline: false,
                         },
                     }

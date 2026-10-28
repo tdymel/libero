@@ -157,6 +157,10 @@ fn a_hidden_summary_still_shows_a_form_wide_error() {
     let html = settle(&mut dom);
     assert!(html.contains(r#"data-slot="summary""#), "{html}");
     assert!(html.contains("Wrong email or password."), "{html}");
+    assert!(
+        !html.contains("error in the form"),
+        "announced twice: {html}"
+    );
 }
 
 #[test]

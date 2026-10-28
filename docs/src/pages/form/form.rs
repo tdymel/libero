@@ -409,7 +409,7 @@ fn SignupForm(
             // `required` alone blocks an empty submit with "Fill in this field.".
             TextField { label: "Name", name: Signup::FIELDS.name(), required: true }
             // A specialized field and a composed part, built in Getting started.
-            EmailField { label: "Email", name: Signup::FIELDS.email(), validate: not_empty.error("Enter your email.") }
+            EmailField { label: "Email", required: true, name: Signup::FIELDS.email(), validate: not_empty.error("Enter your email.") }
             NewPasswordFieldset { path: Signup::FIELDS.password() }
             // The text parses into an `Age`; a rule on the age runs only once it did.
             TextField { label: "Age", name: Signup::FIELDS.age().parsed().rules([checked(Age::adult)]) }
@@ -442,6 +442,7 @@ fn SignupForm(
             Checkbox {
                 label: "I accept the terms",
                 name: Signup::FIELDS.terms(),
+                required: true,
                 validate: not_empty.error("Accept the terms to continue."),
             }
             // demo-code: terms end
@@ -601,10 +602,11 @@ fn EmailField(
     #[props(into)] label: String,
     #[props(default, into)] name: FieldName<String>,
     #[props(default, into)] validate: Validators<String>,
+    #[props(default)] required: bool,
 ) -> Element {
     let rules = validate.with(is_email.error("That is not an email address."));
     rsx! {
-        TextField { r#type: "email", autocomplete: "email", label, name, validate: rules, placeholder: "you@example.com" }
+        TextField { r#type: "email", autocomplete: "email", label, name, required, validate: rules, placeholder: "you@example.com" }
     }
 }
 

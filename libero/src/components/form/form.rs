@@ -45,7 +45,10 @@ static SUMMARY_LIST_SX: StaticSx = StaticSx::new(|| {
             "& a",
             sx().color("inherit")
                 .text_decoration("underline")
-                .cursor("pointer"),
+                .cursor("pointer")
+                // A finger-sized line: inline-block lets the padding count.
+                .display("inline-block")
+                .padding_block("10px"),
         )
 });
 
@@ -363,7 +366,8 @@ pub fn Form<V: FormValue>(props: FormProps<V>) -> Element {
         let request = *focus_requests.peek();
         rsx! {
             VisuallyHidden { role: "status",
-                if count > 0 {
+                // Empty while the summary takes focus, so its alert is the only announcement.
+                if count > 0 && items.is_empty() {
                     span { key: "{request}", {(words.form.error_count)(count)} }
                 }
             }

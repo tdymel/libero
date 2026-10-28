@@ -7,12 +7,14 @@ use dioxus::{core::provide_root_context, prelude::*};
 use crate::{
     LiberoProvider, choices,
     components::{
+        Rule,
         common::{Choice, Choices},
         form::{
             CheckboxGroup, FieldName, FieldPath, Form, FormErrors, FormHandle, FormScope,
             MultiSelect, NativeSelect, RadioGroup, RequiredValue, SegmentedControl, Select, Submit,
             TextField, use_bound, use_form,
         },
+        not_empty,
     },
 };
 
@@ -146,6 +148,37 @@ fn two_errors_on_one_path_both_show() {
             "Email: This address is taken.",
             "Email: Use a work address."
         ]
+    );
+}
+
+/// Todo 4754: a server error blocks the submit, so the summary lists it beside the field's own.
+#[test]
+fn a_set_error_joins_the_fields_own_error_in_the_summary() {
+    #[component]
+    fn Ruled() -> Element {
+        let signup = use_store(Signup::default);
+        let form = use_form();
+        expose(form);
+        rsx! {
+            Form { form, value: signup,
+                EmailProbe {}
+                TextField { label: "Email", name: email_path(), validate: [not_empty.error("Required")] }
+            }
+        }
+    }
+
+    let mut dom = VirtualDom::new(|| rsx! { LiberoProvider { Ruled {} } });
+    dom.rebuild_in_place();
+    settle(&mut dom);
+    let form = exposed::<FormHandle>(&dom);
+    dom.in_runtime(|| form.set_errors(taken()));
+    settle(&mut dom);
+    let scope = exposed::<FormScope>(&dom);
+    let summary = dom.in_runtime(|| scope.summary());
+    let messages: Vec<_> = summary.iter().map(|item| item.message.as_str()).collect();
+    assert_eq!(
+        messages,
+        ["Email: Required", "Email: This address is taken."]
     );
 }
 

@@ -337,6 +337,36 @@ fn a_fieldset_puts_its_prefix_in_front_and_shows_an_unnamed_rule_itself() {
     assert!(after.contains("Check the whole address"));
 }
 
+/// Todo 4754: a form rule naming no field links an open field, as a named one does.
+#[test]
+fn a_form_rule_naming_no_field_links_an_open_field() {
+    fn app() -> Element {
+        let signup = use_store(Signup::default);
+        rsx! {
+            LiberoProvider {
+                Form {
+                    value: signup,
+                    validate: [(|_: &Signup| false).error("Try again later")],
+                    Spy {}
+                    TextField { name: "a", label: "A", value: "", disabled: true }
+                    TextField { name: "b", label: "B", value: "" }
+                }
+            }
+        }
+    }
+
+    let (mut dom, _) = mount(app);
+    let html = submit(&mut dom);
+    let items = scope(&dom).summary();
+    assert_eq!(items.len(), 1, "{items:?}");
+    let id = items[0].target.clone().expect("a target");
+    let open_input = html
+        .split("<input")
+        .find(|tag| tag.contains(r#"name="b""#))
+        .expect("the open field");
+    assert!(open_input.contains(&format!(r#"id="{id}""#)), "{html}");
+}
+
 #[test]
 fn the_summary_lists_field_errors_and_composite_errors() {
     fn app() -> Element {
