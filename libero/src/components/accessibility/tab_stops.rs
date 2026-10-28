@@ -1,4 +1,7 @@
-use std::collections::{HashMap, HashSet};
+use std::{
+    cell::Cell,
+    collections::{HashMap, HashSet},
+};
 
 use crate::{components::common::FOCUSABLE_SELECTOR, platform::ElementApi};
 
@@ -7,35 +10,64 @@ use crate::{components::common::FOCUSABLE_SELECTOR, platform::ElementApi};
 enum Owner {
     /// The root's forms in document order from 1; 0 for none.
     Form(usize),
-    /// A `form` attribute naming no form inside the root.
+    /// A `form` attribute naming no form inside the root: a form outside it, or none (the
+    /// platform cannot tell which, so a missing id still groups apart from the formless).
     Named(String),
 }
 
-/// Each item's form: its `form` attribute's, else the one around it (4600). The items
-/// inside a form are one run per form in document order, so the runs' sizes tell which is whose.
+/// How many `form` ancestors `element` has, counted by growing `form form ... <tag>` selectors.
+fn form_depth(element: &dyn ElementApi, tag: &str) -> usize {
+    let mut selector = format!("form {tag}");
+    let mut depth = 0;
+    while element.matches(&selector).unwrap_or(false) {
+        depth += 1;
+        selector.insert_str(0, "form ");
+    }
+    depth
+}
+
+/// Each item's form: its `form` attribute's, else its nearest ancestor form in `root` (4600). The
+/// items under a form are one run in document order, so a stack of open runs tells which is whose.
 fn form_owners(root: &dyn ElementApi, items: &[Box<dyn ElementApi>]) -> Vec<Owner> {
     let forms = root.query_selector_all("form").unwrap_or_default();
     let ids: Vec<Option<String>> = forms
         .iter()
         .map(|form| form.attribute("id").ok().flatten())
         .collect();
-    let mut runs = forms.iter().enumerate().map(|(at, form)| {
-        let inside = form.query_selector_all(FOCUSABLE_SELECTOR);
-        (at + 1, inside.map_or(0, |inside| inside.len()))
-    });
-    let (mut owner, mut left) = (0, 0);
+    // Each form with items: its number, its depth counting itself and its run's length.
+    let mut ahead = forms
+        .iter()
+        .enumerate()
+        .filter_map(|(at, form)| {
+            let inside = form.query_selector_all(FOCUSABLE_SELECTOR).ok()?.len();
+            (inside > 0).then(|| (at + 1, form_depth(form.as_ref(), "form") + 1, inside))
+        })
+        .peekable();
+    let mut open: Vec<(usize, usize)> = Vec::new();
     items
         .iter()
         .map(|item| {
-            let mut around = 0;
-            if !forms.is_empty() && item.matches("form *").unwrap_or(false) {
-                while left == 0 {
-                    (owner, left) = runs.next().unwrap_or((usize::MAX, usize::MAX));
-                }
-                left -= 1;
-                around = owner;
+            let depth = if forms.is_empty() {
+                0
+            } else {
+                form_depth(item.as_ref(), "*")
+            };
+            while open.last().is_some_and(|(_, left)| *left == 0) {
+                open.pop();
+            }
+            while let Some(&(form, level, inside)) = ahead.peek()
+                && depth >= level
+            {
+                open.push((form, inside));
+                ahead.next();
+            }
+            let around = open.last().map_or(0, |(form, _)| *form);
+            for (_, left) in &mut open {
+                *left = left.saturating_sub(1);
             }
             match item.attribute("form").ok().flatten() {
+                // A `form` naming nothing leaves the item without a form, whatever surrounds it.
+                Some(id) if id.is_empty() => Owner::Form(0),
                 Some(id) => match ids.iter().position(|form| form.as_ref() == Some(&id)) {
                     Some(at) => Owner::Form(at + 1),
                     None => Owner::Named(id),
@@ -57,7 +89,9 @@ fn radio_groups(root: &dyn ElementApi, items: &[Box<dyn ElementApi>]) -> Vec<Opt
             .filter(|name| !name.is_empty())
     };
     let names: Vec<Option<String>> = items.iter().map(|item| group(item.as_ref())).collect();
-    if names.iter().all(Option::is_none) {
+    // No two radios sharing a name: every radio is a stop, so no owner needs reading.
+    let mut seen = HashSet::new();
+    if names.iter().flatten().all(|name| seen.insert(name)) {
         return vec![None; items.len()];
     }
     let mut numbers = HashMap::new();
@@ -71,17 +105,9 @@ fn radio_groups(root: &dyn ElementApi, items: &[Box<dyn ElementApi>]) -> Vec<Opt
         .collect()
 }
 
-/// Which of `items` are Tab stops: a native radio group (same `name` and form)
-/// is one, its `:checked` radio or else its first (its last for `backwards`, as a browser's Shift+Tab).
-#[cfg(feature = "focus-trap")]
-pub(crate) fn tab_stops(
-    root: &dyn ElementApi,
-    items: &[Box<dyn ElementApi>],
-    backwards: bool,
-) -> Vec<bool> {
-    stops_of(items, &radio_groups(root, items), backwards)
-}
-
+/// Which of `items` are Tab stops: a native radio group (same `name` and form) is one, its
+/// `:checked` radio or else its first. `backwards` picks the last, as Firefox's Shift+Tab does
+/// (Chromium lands on the first).
 fn stops_of(items: &[Box<dyn ElementApi>], keys: &[Option<usize>], backwards: bool) -> Vec<bool> {
     if keys.iter().all(Option::is_none) {
         return vec![true; items.len()];
@@ -161,8 +187,15 @@ pub(crate) fn focus_first_stop(
     let groups = radio_groups(root, items);
     let stops = stops_of(items, &groups, backwards);
     let order: Vec<usize> = order.collect();
-    let takes = |at: usize| items[at].focus().is_ok() && items[at].is_focused();
-    order.iter().enumerate().any(|(step, &at)| {
+    let first_ok = Cell::new(None);
+    let takes = |at: usize| {
+        if items[at].focus().is_err() {
+            return false;
+        }
+        first_ok.set(first_ok.get().or(Some(at)));
+        items[at].is_focused()
+    };
+    let taken = order.iter().enumerate().any(|(step, &at)| {
         if !stops.get(at).copied().unwrap_or(true) {
             return false;
         }
@@ -173,7 +206,9 @@ pub(crate) fn focus_first_stop(
                     .filter(|&&other| groups[other] == Some(group))
                     .any(|&other| takes(other))
             })
-    })
+    });
+    // A renderer that applies focus later cannot confirm it: the first stop that took it.
+    taken || first_ok.get().is_some_and(|at| items[at].focus().is_ok())
 }
 
 #[cfg(test)]
@@ -194,11 +229,12 @@ mod tests {
         assert_eq!(order_by_tabindex(&[None, Some(0), None]), [0, 1, 2]);
     }
 
-    /// A radio, a form or a root: answers attributes, `form *`, `:checked` and focus.
+    /// A radio, a form or a root: answers attributes, `form ... *`, `:checked` and focus.
     #[derive(Clone, Default)]
     struct Fake {
         attrs: Vec<(&'static str, &'static str)>,
-        in_form: bool,
+        /// How many forms enclose it.
+        depth: usize,
         checked: bool,
         refuses: bool,
         children: Vec<Fake>,
@@ -267,10 +303,12 @@ mod tests {
             Ok(found.map(|(_, value)| value.to_string()))
         }
         fn matches(&self, selector: &str) -> Result<bool, PlatformError> {
-            Ok(match selector {
-                "form *" => self.in_form,
-                ":checked" => self.checked,
-                _ => false,
+            let mut words: Vec<&str> = selector.split(' ').collect();
+            Ok(match words.pop() {
+                Some("*" | "form") if words.iter().all(|word| *word == "form") => {
+                    self.depth >= words.len()
+                }
+                _ => selector == ":checked" && self.checked,
             })
         }
         fn query_selector(&self, _: &str) -> Result<Box<dyn ElementApi>, PlatformError> {
@@ -305,7 +343,7 @@ mod tests {
     fn a_radio_follows_its_form_attribute() {
         let focused = Rc::new(Cell::new(0));
         let inside = Fake {
-            in_form: true,
+            depth: 1,
             ..radio(1, &focused, "size")
         };
         let mut named = radio(2, &focused, "size");
@@ -325,6 +363,83 @@ mod tests {
         let groups = radio_groups(&root, &items);
         assert_eq!(groups[0], groups[1]);
         assert_ne!(groups[0], groups[2]);
+    }
+
+    fn in_depth(radio: Fake, depth: usize) -> Fake {
+        Fake { depth, ..radio }
+    }
+
+    fn form_of(children: &[&Fake]) -> Fake {
+        Fake {
+            children: children.iter().map(|child| (*child).clone()).collect(),
+            ..Fake::default()
+        }
+    }
+
+    /// An outer form holds Z1 and an inner form holding Z2 and Z3: two groups, not one.
+    #[test]
+    fn a_nested_form_owns_its_own_radios() {
+        let focused = Rc::new(Cell::new(0));
+        let z1 = in_depth(radio(1, &focused, "size"), 1);
+        let z2 = in_depth(radio(2, &focused, "size"), 2);
+        let z3 = in_depth(radio(3, &focused, "size"), 2);
+        let inner = Fake {
+            depth: 1,
+            ..form_of(&[&z2, &z3])
+        };
+        let outer = form_of(&[&z1, &z2, &z3]);
+        let root = Fake {
+            children: vec![outer, inner],
+            ..Fake::default()
+        };
+        let groups = radio_groups(&root, &boxed(&[z1, z2, z3]));
+        assert_ne!(groups[0], groups[1]);
+        assert_eq!(groups[1], groups[2]);
+    }
+
+    /// The root sits in a form and holds one: the radio around the inner form is not its radio.
+    #[test]
+    fn a_root_inside_a_form_keeps_the_forms_apart() {
+        let focused = Rc::new(Cell::new(0));
+        let around = in_depth(radio(1, &focused, "size"), 1);
+        let first = in_depth(radio(2, &focused, "size"), 2);
+        let second = in_depth(radio(3, &focused, "size"), 2);
+        let inner = Fake {
+            depth: 1,
+            ..form_of(&[&first, &second])
+        };
+        let root = Fake {
+            children: vec![inner],
+            ..Fake::default()
+        };
+        let groups = radio_groups(&root, &boxed(&[around, first, second]));
+        assert_ne!(groups[0], groups[1]);
+        assert_eq!(groups[1], groups[2]);
+    }
+
+    /// `form=""` leaves a radio without a form even inside one: it joins the formless radios.
+    #[test]
+    fn an_empty_form_attribute_groups_with_the_formless() {
+        let focused = Rc::new(Cell::new(0));
+        let mut inside = in_depth(radio(1, &focused, "size"), 1);
+        inside.attrs.push(("form", ""));
+        let loose = radio(2, &focused, "size");
+        let root = Fake {
+            children: vec![Fake {
+                children: vec![inside.clone()],
+                ..Fake::default()
+            }],
+            ..Fake::default()
+        };
+        let groups = radio_groups(&root, &boxed(&[inside, loose]));
+        assert_eq!(groups[0], groups[1]);
+    }
+
+    #[test]
+    fn radios_with_distinct_names_are_all_stops() {
+        let focused = Rc::new(Cell::new(0));
+        let items = boxed(&[radio(1, &focused, "a"), radio(2, &focused, "b")]);
+        assert_eq!(radio_groups(&Fake::default(), &items), [None, None]);
     }
 
     /// The checked radio is hidden: the group's next radio takes focus, not the button after.

@@ -1,6 +1,16 @@
 use std::{fmt, ops::Deref, rc::Rc};
 
-/// What a `Form` or `Fieldset` can hold as its value.
+/// What a `Form` or `Fieldset` can hold as its value. It is implemented for every
+/// `Clone + PartialEq + Default + 'static` type, so there is nothing to implement.
+///
+/// ```
+/// use libero::components::FormValue;
+///
+/// #[derive(Clone, PartialEq, Default)]
+/// struct Login { name: String }
+/// fn holds<V: FormValue>() {}
+/// holds::<Login>();
+/// ```
 pub trait FormValue: Clone + PartialEq + Default + 'static {}
 
 impl<T: Clone + PartialEq + Default + 'static> FormValue for T {}
@@ -64,6 +74,8 @@ impl<T> From<T> for ByAddress<T> {
     }
 }
 
+/// Each call makes a new holder, so `default() != default()`; a form value that compares
+/// against its own default should hold an `Option<ByAddress<T>>`, whose default is `None`.
 impl<T: Default> Default for ByAddress<T> {
     fn default() -> Self {
         Self::new(T::default())

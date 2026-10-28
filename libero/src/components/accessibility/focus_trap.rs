@@ -7,7 +7,7 @@ use dioxus::core::AttributeValue;
 use dioxus::prelude::*;
 
 use super::{
-    tab_stops::{tab_order, tab_stops},
+    tab_stops::{focus_first_stop, tab_order},
     visually_hidden::VISUALLY_HIDDEN_FIXED_SX,
 };
 use crate::{
@@ -40,17 +40,15 @@ fn focus_first(root: &ElementHandle, tag: Option<&str>) {
         return;
     }
     if let Ok(mut items) = root.query_selector_all(FOCUSABLE_SELECTOR) {
-        let mut stops = tab_stops(root, &items, false);
         let mut order = tab_order(&items);
         // An autofocus target leads; one that takes no focus falls through to the first stop.
         if let Ok(target) = root.query_selector("[data-autofocus]") {
             items.insert(0, target);
-            stops.insert(0, true);
             order = std::iter::once(0)
                 .chain(order.into_iter().map(|at| at + 1))
                 .collect();
         }
-        if focus_next(&items, &stops, &order, None, false) {
+        if focus_next(root, &items, &order, None, false) {
             return;
         }
     }
@@ -74,9 +72,8 @@ fn cycle_focus(root: &ElementHandle, backwards: bool) -> bool {
     };
     let index = items.iter().position(|item| item.is_focused());
     let order = tab_order(&items);
-    let stops = tab_stops(root, &items, backwards);
     // No stop to move to: focus on the trap or its modal box stays there (APG).
-    focus_next(&items, &stops, &order, index, backwards) || holds_focus(root)
+    focus_next(root, &items, &order, index, backwards) || holds_focus(root)
 }
 
 /// Controls a script may focus out of Tab order (a roving toolbar's `tabindex="-1"` button).
@@ -131,38 +128,32 @@ impl Drop for Registered {
     }
 }
 
-/// Focuses the stop after item `index` in `order` (from `None`: the first, or last backwards).
-/// Skips non-stops and a `display: none` match, which ignores `focus()`.
+/// Focuses the stop after item `index` in `order` (from `None`: the first, or last backwards),
+/// wrapping round; the walk is [`focus_first_stop`]'s.
 fn focus_next(
+    root: &dyn ElementApi,
     items: &[Box<dyn ElementApi>],
-    stops: &[bool],
     order: &[usize],
     index: Option<usize>,
     backwards: bool,
 ) -> bool {
-    let len = order.len();
     let index = index.and_then(|index| order.iter().position(|at| *at == index));
-    let mut first_ok = None;
-    for step in 1..=len {
-        let next = order[match (index, backwards) {
-            (None, false) => step - 1,
-            (None, true) => len - step,
-            (Some(i), false) => (i + step) % len,
-            (Some(i), true) => (i + len - step) % len,
-        }];
-        if !stops.get(next).copied().unwrap_or(true) {
-            continue;
-        }
-        if items[next].focus().is_err() {
-            continue;
-        }
-        if items[next].is_focused() {
-            return true;
-        }
-        first_ok.get_or_insert(next);
-    }
-    // A renderer that applies focus later cannot confirm it: the plain next stop.
-    first_ok.is_some_and(|next| items[next].focus().is_ok())
+    let split = match (index, backwards) {
+        (Some(at), false) => at + 1,
+        (Some(at), true) => at,
+        (None, _) => 0,
+    };
+    let (head, tail) = order.split_at(split);
+    let walk: Vec<usize> = match backwards {
+        true => head
+            .iter()
+            .rev()
+            .chain(tail.iter().rev())
+            .copied()
+            .collect(),
+        false => tail.iter().chain(head).copied().collect(),
+    };
+    focus_first_stop(root, items, walk.into_iter(), backwards)
 }
 
 base_props! {
@@ -246,10 +237,8 @@ pub fn FocusTrap(props: FocusTrapProps) -> Element {
                     && root
                         .query_selector_all(FOCUSABLE_SELECTOR)
                         .is_ok_and(|items| {
-                            let backwards = chord.modifiers.shift();
-                            let (stops, order) =
-                                (tab_stops(&root, &items, backwards), tab_order(&items));
-                            focus_next(&items, &stops, &order, None, backwards)
+                            let order = tab_order(&items);
+                            focus_next(&root, &items, &order, None, chord.modifiers.shift())
                         })
             }))
         }))
