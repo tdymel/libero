@@ -349,7 +349,12 @@ fn table_sx() -> Sx {
         "(max-width: 30rem)",
         sx().selector("& thead", sx().display("none"))
             .selector("& tbody tr", sx().display("block"))
-            .selector("& td", sx().display("block")),
+            .selector("& td", sx().display("block"))
+            // Only a row's last cell keeps the rule, so the stacked cells read as one entry (4733).
+            .selector(
+                "& tbody tr > td:not(:last-child)",
+                sx().border_bottom("none").padding_bottom("0"),
+            ),
     )
 }
 
@@ -397,7 +402,14 @@ fn PartRows(name: String, parts: Vec<PartDoc>) -> Element {
         Table {
             aria_label: name,
             scroll: true,
-            sx: table_sx(),
+            // The hidden header leaves the stacked slot cell without its column name (4733).
+            sx: table_sx().media(
+                "(max-width: 30rem)",
+                sx().selector(
+                    "& td:nth-child(2)::before",
+                    sx().with("content", "\"data-slot: \"").with("opacity", "0.7"),
+                ),
+            ),
             data: parts,
             columns: vec![
                 column("Part")
