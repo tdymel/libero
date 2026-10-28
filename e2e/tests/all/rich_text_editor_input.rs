@@ -574,6 +574,50 @@ fn a_mention_list_in_a_modal_counts_as_inside() {
     });
 }
 
+/// Todo 4805: Enter and text at the end of an editor near the bottom of its scroller scroll
+/// the caret into view, below the sticky toolbar.
+#[test]
+fn typing_at_the_scroller_bottom_scrolls_the_caret_into_view() {
+    // The box when it scrolls, else the page: the scroller and the bottom edge of what it shows.
+    const SCROLLER: &str = "const box = document.getElementById('scroller'), \
+        own = box.scrollHeight > box.clientHeight, s = own ? box : document.scrollingElement, \
+        edge = () => own ? box.getBoundingClientRect().bottom : innerHeight";
+    block_on(async {
+        for (route, viewport) in [
+            ("/rich-text-editor/scrolled", Viewport::Desktop),
+            ("/rich-text-editor/scrolled", Viewport::Mobile),
+            ("/rich-text-editor/scrolled-box", Viewport::Desktop),
+        ] {
+            let fixture = Fixture::open(route, viewport).await.unwrap();
+            let page = &fixture.page;
+            wait::for_selector(page, "[role=textbox]").await.unwrap();
+            // The editor's bottom edge 80px above the scroller's.
+            page.evaluate_bounded(format!(
+                "(() => {{ {SCROLLER}; s.scrollTop += {EDITOR}.getBoundingClientRect().bottom - (edge() - 80); {EDITOR}.focus(); }})()"
+            ))
+            .await
+            .unwrap();
+            for _ in 0..6 {
+                keyboard::type_text(page, "line").await.unwrap();
+                keyboard::press(page, ENTER).await.unwrap();
+            }
+            keyboard::type_text(page, "last").await.unwrap();
+            holds(
+                page,
+                &format!(
+                    "(() => {{ {SCROLLER}; const r = getSelection().getRangeAt(0).getClientRects()[0], \
+                       t = document.querySelector('[role=toolbar]').getBoundingClientRect(); \
+                       return r && {EDITOR}.textContent.endsWith('last') && r.bottom <= edge() && r.top >= t.bottom - 1 \
+                         ? 'ok' : JSON.stringify([r, t, edge(), s.scrollTop]); }})()"
+                ),
+                &format!("{route} {}: the caret in view below the toolbar", viewport.name()),
+            )
+            .await;
+            fixture.close().await.unwrap();
+        }
+    });
+}
+
 #[test]
 fn a_mention_list_near_the_viewport_bottom_flips_above_the_caret() {
     block_on(async {

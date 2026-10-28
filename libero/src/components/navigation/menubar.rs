@@ -63,7 +63,7 @@ static MENUBAR_SX: StaticSx = StaticSx::new(|| {
                 // WCAG 2.5.8's 24px floor, whatever line height the bar inherits (todo 2421).
                 .box_sizing("border-box")
                 .min_height("24px")
-                .media(COARSE_POINTER, sx().min_height("44px"))
+                .media(COARSE_POINTER, sx().min_height("44px").min_width("44px"))
                 .appearance("none")
                 .border("0")
                 .border_radius(MENUBAR_TRIGGER_RADIUS.value())

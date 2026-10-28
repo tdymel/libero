@@ -33,6 +33,8 @@ pub const ROUTES: Routes = &[
     ("/rich-text-editor/states", || rsx! { StatesPage {} }),
     ("/rich-text-editor/view", || rsx! { ViewPage {} }),
     ("/rich-text-editor/far", || rsx! { FarPage {} }),
+    ("/rich-text-editor/scrolled", || rsx! { ScrolledPage {} }),
+    ("/rich-text-editor/scrolled-box", || rsx! { ScrolledPage { boxed: true } }),
     ("/rich-text-editor/rtl-code", || rsx! { RtlCodePage {} }),
     ("/rich-text-editor/custom-toggle", || rsx! { CustomTogglePage {} }),
 ];
@@ -68,6 +70,19 @@ fn FarPage() -> Element {
         button { id: "far-clear", onclick: move |_| { editor.clear(); }, "Clear" }
         div { height: "3000px" }
         RichTextEditor { label: "Comment", toolbar: false, handle: editor }
+    }
+}
+
+/// A toolbar editor with room to scroll above and below it, in the page or in a box (todo 4805).
+#[component]
+fn ScrolledPage(#[props(default)] boxed: bool) -> Element {
+    let height = if boxed { "600px" } else { "auto" };
+    rsx! {
+        div { id: "scroller", height, overflow_y: "auto",
+            div { height: "1500px" }
+            RichTextEditor { label: "Notes" }
+            div { height: "1500px" }
+        }
     }
 }
 

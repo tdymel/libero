@@ -97,6 +97,31 @@ const caretAt = (s, leaf) => {
     return { x: rect.left, y: rect.top, height: rect.height, width: innerWidth,
         viewport_height: innerHeight, rtl: getComputedStyle(root()).direction === 'rtl' };
 };
+// The sticky toolbar's bottom edge in the viewport, which the caret must clear.
+const barBottom = () => {
+    for (let p = root(); p && p.parentElement; p = p.parentElement) {
+        for (const c of p.parentElement.children) {
+            if (c !== p && c.querySelector('[role=toolbar]') && getComputedStyle(c).position === 'sticky') {
+                return c.getBoundingClientRect().bottom;
+            }
+        }
+    }
+    return 0;
+};
+// A model-placed caret does not scroll by itself: bring its line into every scroller, clear of the toolbar.
+const reveal = (s, leaf) => {
+    const gap = 8, bar = barBottom();
+    for (let p = root().parentElement; p; p = p.parentElement) {
+        const page = p === document.documentElement || p === document.body;
+        const box = p.getBoundingClientRect();
+        if (!page && !(/(auto|scroll)/.test(getComputedStyle(p).overflowY) && p.scrollHeight > p.clientHeight)) continue;
+        const c = caretAt(s, leaf);
+        const top = Math.max(page ? 0 : box.top, bar) + gap, bottom = (page ? innerHeight : box.bottom) - gap;
+        const by = c.y < top ? c.y - top : c.y + c.height > bottom ? c.y + c.height - bottom : 0;
+        if (by) (page ? document.scrollingElement : p).scrollTop += by;
+        if (page) break;
+    }
+};
 document.addEventListener('selectionchange', report);
 // Chrome queues `selectionchange` behind input, and a report may reach the model after the
 // next key: input right after a press goes with its selection, until the model acks it (todo 2062).
@@ -250,6 +275,7 @@ while (true) {
             const [an, aoff] = locate(a, ao), [hn, hoff] = locate(h, ho);
             document.getSelection().setBaseAndExtent(an, aoff, hn, hoff);
             if (m.focus && m.scroll) h.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+            else if (!m.focus) reveal(document.getSelection(), h);
         }
         // After the selectionchange this move queues, so that one is not stale.
         setTimeout(() => dioxus.send({ synced: true }), 0);

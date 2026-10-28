@@ -2,6 +2,7 @@
 //! each menu, whose Escape returns focus to its trigger.
 
 use anyhow::Result;
+use chromiumoxide::cdp::browser_protocol::emulation::SetTouchEmulationEnabledParams;
 use e2e::archetypes::{Orientation, Overlay, RovingTabindex};
 use e2e::browser::block_on;
 use e2e::driver::{Driver, eventually, eventually_focused, eventually_text};
@@ -592,6 +593,32 @@ fn a_trigger_is_24px_high_at_line_height_1() {
         .await
         .unwrap();
         fixture.console.assert_clean("trigger height").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
+/// Todo 4806: under a coarse pointer a short label such as `File` still gets a 44px target (2.5.5).
+#[test]
+fn every_trigger_is_44px_wide_and_high_under_a_coarse_pointer() {
+    block_on(async {
+        let fixture = Fixture::open("/menubar-docs", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        wait::for_visible(page, FIRST).await.unwrap();
+        page.execute_bounded(SetTouchEmulationEnabledParams::new(true))
+            .await
+            .unwrap();
+        wait::for_js_true(
+            page,
+            &format!(
+                "[...document.querySelectorAll({TRIGGERS:?})].every(t => {{ \
+                   const r = t.getBoundingClientRect(); return r.width >= 43.99 && r.height >= 43.99; }})"
+            ),
+            "every trigger to be 44px wide and high",
+        )
+        .await
+        .unwrap();
         fixture.close().await.unwrap();
     });
 }
