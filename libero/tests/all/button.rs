@@ -233,6 +233,26 @@ fn the_children_stay_the_buttons_flex_items() {
     assert!(rules.contains("max-width:100%;min-width:0;"), "{rules}");
 }
 
+/// Todo 4719: under a finger a button is 44px each way, drawn by its own box since the
+/// ripple's `overflow: hidden` would clip a `::before`.
+#[test]
+fn a_button_grows_to_a_finger_on_a_coarse_pointer() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider { Button { size: "xs", "Save" } }
+        }
+    }
+
+    let html = render(app);
+    let media = html
+        .find("@media (pointer: coarse)")
+        .unwrap_or_else(|| panic!("no coarse query: {html}"));
+    assert!(
+        html[media..].contains("min-height:44px;min-width:44px;"),
+        "{html}"
+    );
+}
+
 /// Todo 662: `icon` gets a slot of its own before the children, kept whole and
 /// a spacing step from them; while loading it hides with the children.
 #[test]

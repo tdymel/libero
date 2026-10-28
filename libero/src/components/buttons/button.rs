@@ -5,11 +5,11 @@ use crate::{
         common::{
             BUTTON_COLOR_VAR, BUTTON_CONTAINER_VAR, BUTTON_CONTRAST_VAR, BUTTON_FILL_VAR,
             BUTTON_HOVER_VAR, BUTTON_ON_CONTAINER_VAR, BUTTON_ON_STATE_VAR, BUTTON_SELECTED_VAR,
-            BUTTON_VARS, HtmlTag, Input, Part, ScaleOrCss, States, TOOLBAR_ITEM, ToolbarItem,
-            Variant, base_color, base_props, contrast_color, disabled_look_sx, fill_color,
-            focus_ring_sx, input_from_str, interactive_variant_sx, label_color, literal_contrast,
-            parts_enum, text_color, use_button_group, use_toolbar_item, variables, variant_colors,
-            variant_selected_sx,
+            BUTTON_VARS, COARSE_POINTER, COARSE_TARGET, HtmlTag, Input, Part, ScaleOrCss, States,
+            TOOLBAR_ITEM, ToolbarItem, Variant, base_color, base_props, contrast_color,
+            disabled_look_sx, fill_color, focus_ring_sx, input_from_str, interactive_variant_sx,
+            label_color, literal_contrast, parts_enum, text_color, use_button_group,
+            use_toolbar_item, variables, variant_colors, variant_selected_sx,
         },
         feedback::Loader,
         form::use_fieldset_disabled,
@@ -86,6 +86,11 @@ static BUTTON_BASE_SX: StaticSx = StaticSx::new(|| {
         .when("loading", sx().cursor("progress"))
         .when("loading-overlay", loading_overlay_sx())
         .and(zoom_height_sx())
+        // The ripple's `overflow: hidden` clips a `::before` hit area, so the box itself grows.
+        .media(
+            COARSE_POINTER,
+            sx().min_height(COARSE_TARGET).min_width(COARSE_TARGET),
+        )
         .focus_visible(focus_ring_sx())
 });
 
