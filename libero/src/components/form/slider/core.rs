@@ -14,7 +14,7 @@ use crate::{
         },
         form::field_parts_enum,
         layout::use_box,
-        overlay::{PressFocus, Tooltip, TooltipPinned},
+        overlay::{PressFocus, Tooltip, TooltipClear, TooltipPinned, clear_reach},
     },
     hooks::{
         DragMove, DragOptions, DragPoint, DragStart, ElementHandle, Rect, sideways_drag_sx,
@@ -409,6 +409,7 @@ fn SliderHoverPreview(
             size,
             gap: Size::Sm,
             side: track.vertical.then_some(Side::End),
+            reach: track.reach,
             id: None,
             rtl: track.rtl,
             shown: true,
@@ -769,6 +770,9 @@ struct ThumbTrack {
     /// The thumb's edge across the track: its top, or its left on a vertical one.
     top: f64,
     thumb: Dimensions,
+    /// How far the mark captions reach past the thumb at the inline end, 0 on a line
+    /// or without captions: a bubble on that side clears them (4775).
+    reach: f64,
     rtl: bool,
     vertical: bool,
     /// From the press till the new measure: the bubble stays mounted, hidden (2188).
@@ -844,6 +848,7 @@ fn track_geometry(
     (track_left, track_top): (f64, f64),
     thumb: Dimensions,
     (thumb_left, thumb_top): (f64, f64),
+    reach: f64,
     rtl: bool,
     vertical: bool,
 ) -> ThumbTrack {
@@ -856,6 +861,7 @@ fn track_geometry(
         travel,
         top,
         thumb,
+        reach,
         rtl,
         vertical,
         stale: false,
@@ -909,6 +915,7 @@ fn measure_track(
         elements.thumbs[0].client_offset(),
     );
     let rtl = elements.root.is_rtl();
+    let reach = clear_reach(elements.track, elements.thumbs[0]);
     async move {
         let (Ok(track), Ok(track_at), Ok(thumb), Ok(thumb_at)) = (
             track_size.await,
@@ -919,7 +926,13 @@ fn measure_track(
             return None;
         };
         Some(track_geometry(
-            track, track_at, thumb, thumb_at, rtl, vertical,
+            track,
+            track_at,
+            thumb,
+            thumb_at,
+            reach.await,
+            rtl,
+            vertical,
         ))
     }
 }
@@ -1332,6 +1345,8 @@ fn SliderBody(live: Signal<Live>, core: SliderCoreProps) -> Element {
     // Names each thumb's value bubble, so the thumb can point at it.
     let bubble_id = use_id();
     let press_focus = use_context_provider(PressFocus::default);
+    // An upright track's marked captions only; a line's carry no marker.
+    use_context_provider(|| TooltipClear(elements.track));
 
     let (min, max) = grid_bounds(props.min, props.max, props.step);
     let grid = Grid {
@@ -1669,6 +1684,8 @@ fn SliderThumbs(props: SliderThumbsProps) -> Element {
                 span {
                     class: mark_label_class.clone(),
                     "data-slot": SliderPart::MarkLabel.slot(),
+                    // An upright track's captions sit where a thumb's bubble lands.
+                    "data-tooltip-clear": vertical.then_some("true"),
                     style: "{at}",
                     "aria-hidden": captions_hidden,
                     {label}
@@ -1791,6 +1808,7 @@ fn SliderThumbs(props: SliderThumbsProps) -> Element {
                     size,
                     gap,
                     side: vertical.then_some(Side::Start),
+                    reach: track.reach,
                     id: if shown { bubble_id.clone() } else { None },
                     rtl: track.rtl,
                     shown,
@@ -2056,6 +2074,7 @@ mod tests {
             (50.0, 100.0),
             thumb,
             (42.0, 0.0),
+            0.0,
             false,
             true,
         );
@@ -2078,6 +2097,7 @@ mod tests {
                 width: 20.0,
                 height: 20.0,
             },
+            reach: 0.0,
             rtl,
             vertical: false,
             stale: false,
@@ -2108,6 +2128,7 @@ mod tests {
                 width: 20.0,
                 height: 20.0,
             },
+            reach: 0.0,
             rtl: true,
             vertical: false,
             stale: false,

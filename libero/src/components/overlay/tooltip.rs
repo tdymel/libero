@@ -1,4 +1,4 @@
-use std::{cell::Cell, rc::Rc};
+use std::{cell::Cell, future::Future, rc::Rc};
 
 use dioxus::prelude::*;
 
@@ -129,6 +129,46 @@ impl PressFocus {
 
     fn take(&self) -> bool {
         self.0.replace(false)
+    }
+}
+
+/// Marks an element of a [`TooltipClear`] root that a bubble on the trigger's inline end stays clear of.
+const CAPTION_ATTR: &str = "data-tooltip-clear";
+
+/// Provided above a `Tooltip` whose trigger has captions at its inline end, marked
+/// `data-tooltip-clear` inside this element (an upright slider's marks, todo 4775).
+#[derive(Clone, Copy)]
+pub(crate) struct TooltipClear(pub(crate) ElementHandle);
+
+/// How far the [`CAPTION_ATTR`] elements in `root` reach past `anchor`'s inline end, 0 with none.
+pub(crate) fn clear_reach(
+    root: ElementHandle,
+    anchor: ElementHandle,
+) -> impl Future<Output = f64> + 'static {
+    let selector = format!("[{CAPTION_ATTR}]");
+    let captions: Vec<_> = root
+        .query_selector_all(&selector)
+        .unwrap_or_default()
+        .iter()
+        .map(|caption| (caption.dimensions(), caption.client_offset()))
+        .collect();
+    let (size, offset, rtl) = (anchor.dimensions(), anchor.client_offset(), anchor.is_rtl());
+    async move {
+        let (Ok(size), Ok((left, _))) = (size.await, offset.await) else {
+            return 0.0;
+        };
+        let mut reach = 0.0f64;
+        for (caption_size, caption_offset) in captions {
+            if let (Ok(caption_size), Ok((caption_left, _))) =
+                (caption_size.await, caption_offset.await)
+            {
+                reach = reach.max(match rtl {
+                    true => left - caption_left,
+                    false => caption_left + caption_size.width - (left + size.width),
+                });
+            }
+        }
+        reach
     }
 }
 
@@ -366,6 +406,8 @@ pub(crate) fn TooltipPinned(
     gap: Size,
     /// Unset, the theme's side.
     side: Option<Side>,
+    /// How far the trigger's captions reach past its inline end, which a bubble there clears.
+    reach: f64,
     id: Option<String>,
     rtl: bool,
     shown: bool,
@@ -373,7 +415,8 @@ pub(crate) fn TooltipPinned(
     let theme = use_theme();
     let options = PopoverOptions::new(theme.spacing.get(gap).into(), theme.popover.padding)
         .side(side.unwrap_or(theme.tooltip.side))
-        .align(Align::Center);
+        .align(Align::Center)
+        .end_reach(reach);
     let floating = use_element();
     let slot = use_portal_slot();
     // The bubble's size and the viewport, which a drag does not change.
@@ -492,14 +535,25 @@ fn TooltipBubble(
     let close_delay = tooltip.close_delay.unwrap_or(theme.tooltip.close_delay);
     let padding = theme.popover.padding;
 
+    // Placed once the captions it clears are measured, so it never lands on one first.
+    let clear = use_hook(try_consume_context::<TooltipClear>);
+    let mut reach = use_signal(|| None::<f64>);
+    use_effect(move || {
+        if let Some(TooltipClear(root)) = clear {
+            let measure = clear_reach(root, anchor);
+            spawn(async move { reach.set(Some(measure.await)) });
+        }
+    });
+
     let popover = use_popover_on(
         anchor,
         use_element(),
-        true,
+        clear.is_none() || reach().is_some(),
         PopoverOptions::new(offset, padding)
             .side(side)
             .align(Align::Center)
-            .remeasure(generation),
+            .remeasure(generation)
+            .end_reach(reach().unwrap_or(0.0)),
     );
     let floating = *popover.floating();
     // Focus never enters the bubble: Escape alone.

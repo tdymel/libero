@@ -50,6 +50,8 @@ pub struct PopoverOptions {
     /// Escape and a press outside close the box, through
     /// [`PopoverHandle::on_dismiss`](super::PopoverHandle::on_dismiss). Off by default.
     pub dismiss: bool,
+    /// Pixels past the anchor's inline end that stay clear, for a box landing on `Side::End`.
+    pub(crate) end_reach: f64,
 }
 
 impl PopoverOptions {
@@ -66,7 +68,14 @@ impl PopoverOptions {
             width: PopoverWidth::default(),
             remeasure: 0,
             dismiss: false,
+            end_reach: 0.0,
         }
+    }
+
+    /// Sets [`end_reach`](Self::end_reach).
+    pub(crate) fn end_reach(mut self, end_reach: f64) -> Self {
+        self.end_reach = end_reach;
+        self
     }
 
     /// Sets [`side`](Self::side).

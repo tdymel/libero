@@ -23,7 +23,39 @@ pub const ROUTES: Routes = &[
     ("/slider/grouped", || rsx! { SliderGroupedPage {} }),
     ("/slider/preview-resize", || rsx! { SliderPreviewResizePage {} }),
     ("/slider/preview-vertical", || rsx! { SliderPreviewVerticalPage {} }),
+    ("/slider/captions-vertical", || rsx! { SliderCaptionsVerticalPage {} }),
 ];
+
+/// Todo 4775: 200px upright tracks with captions at the viewport's left edge, so their
+/// bubbles have no room at the start side: `Level` at 50, `Top` at its maximum.
+#[component]
+fn SliderCaptionsVerticalPage() -> Element {
+    let mut level = use_signal(|| 50.0f64);
+    let mut top = use_signal(|| 100.0f64);
+    let marks = || vec![SliderMark::labeled(0.0, "Min"), SliderMark::labeled(100.0, "Maximum")];
+    rsx! {
+        Flex { direction: "column", gap: "lg", sx: sx().padding("16px 0 0 4px"),
+            Slider {
+                id: "level",
+                aria_label: "Level",
+                orientation: "vertical",
+                sx: sx().height("200px"),
+                value: level(),
+                marks: marks(),
+                oninput: move |e: SliderChangeEvent<f64>| level.set(e.value()),
+            }
+            Slider {
+                id: "top",
+                aria_label: "Top",
+                orientation: "vertical",
+                sx: sx().height("200px"),
+                value: top(),
+                marks: marks(),
+                oninput: move |e: SliderChangeEvent<f64>| top.set(e.value()),
+            }
+        }
+    }
+}
 
 /// Todo 4038: 200px upright tracks at 0 and 0..10 that preview the value under a hovering mouse.
 #[component]

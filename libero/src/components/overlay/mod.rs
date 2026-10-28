@@ -69,7 +69,7 @@ pub use spotlight::{
     use_spotlight,
 };
 #[cfg(feature = "tooltip")]
-pub(crate) use tooltip::{PressFocus, TooltipPinned};
+pub(crate) use tooltip::{PressFocus, TooltipClear, TooltipPinned, clear_reach};
 #[cfg(feature = "tooltip")]
 pub use tooltip::{Tooltip, TooltipProps};
 #[cfg(feature = "tour")]

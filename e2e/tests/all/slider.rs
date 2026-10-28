@@ -399,13 +399,23 @@ fn sample_bubble(thumb: &str, check: &str) -> String {
 
 /// Drags `thumb` 120px with `sample_bubble` running; the frames shown and failed.
 async fn drag_sampled(page: &chromiumoxide::Page, thumb: &str, check: &str) -> (usize, String) {
+    drag_sampled_by(page, thumb, check, (120.0, 0.0)).await
+}
+
+/// [`drag_sampled`] by `(dx, dy)` px.
+async fn drag_sampled_by(
+    page: &chromiumoxide::Page,
+    thumb: &str,
+    check: &str,
+    (dx, dy): (f64, f64),
+) -> (usize, String) {
     page.evaluate_bounded(sample_bubble(thumb, check))
         .await
         .unwrap();
     let from = pointer::centre_of(page, thumb).await.unwrap();
     let to = pointer::Point {
-        x: from.x + 120.0,
-        y: from.y,
+        x: from.x + dx,
+        y: from.y + dy,
     };
     let value = format!("document.querySelector('{thumb}').getAttribute('aria-valuenow')");
     wait::for_js_change(page, &value, "the thumb to move", || {
@@ -457,6 +467,60 @@ fn the_drag_bubble_flips_below_at_the_top_edge() {
         );
         fixture.console.assert_clean("a drag").unwrap();
         fixture.close().await.unwrap();
+    });
+}
+
+/// Todo 4775: with no room at the start side, an upright track's drag bubble lands past its captions.
+#[test]
+fn an_upright_drag_bubble_clears_the_captions() {
+    block_on(async {
+        let fixture = Fixture::open("/slider/captions-vertical", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        // The pinned bubble's point is `position: fixed`; the thumb's own hover bubble is not.
+        let check = "getComputedStyle(el.parentElement).position !== 'fixed' \
+            || b.left >= Math.max(...[...document.querySelectorAll('[data-slot=mark-label]')] \
+            .map((e) => e.getBoundingClientRect().right)) - 0.5";
+        let (shown, failed) =
+            drag_sampled_by(page, "[aria-label=Level]", check, (0.0, -80.0)).await;
+        assert!(shown > 3, "the bubble showed in {shown} frames of the drag");
+        assert_eq!(failed, "[]", "frames with the bubble over a caption [b, t]");
+        fixture.console.assert_clean("a drag").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
+/// Todo 4775: hovering the maximum's thumb opens its tooltip past the caption beside it.
+#[test]
+fn an_upright_thumb_tooltip_clears_the_captions() {
+    block_on(async {
+        let fixture = Fixture::open("/slider/captions-vertical", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        let outcome = async {
+            let thumb = pointer::centre_of(page, "#top [role=slider]").await?;
+            pointer::move_to(page, thumb).await?;
+            let open = "(() => { const e = document.querySelector('[role=tooltip]:not([hidden])'); \
+                return !!e && e.checkVisibility({ visibilityProperty: true }) && e.textContent === '100'; })()";
+            wait::for_js_true(page, open, "the tooltip of 100").await?;
+            let clear: bool = page
+                .evaluate_bounded(
+                    "(() => { const b = document.querySelector('[role=tooltip]:not([hidden])').getBoundingClientRect(); \
+                     return b.left >= Math.max(...[...document.querySelectorAll('#top [data-slot=mark-label]')] \
+                         .map((e) => e.getBoundingClientRect().right)) - 0.5; })()",
+                )
+                .await?
+                .into_value()?;
+            ensure!(clear, "the tooltip of the maximum sits over its caption");
+            Ok::<_, anyhow::Error>(())
+        }
+        .await;
+        let console = fixture.console.assert_clean("hovering the maximum");
+        fixture.close().await.unwrap();
+        outcome.unwrap();
+        console.unwrap();
     });
 }
 

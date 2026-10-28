@@ -124,18 +124,23 @@ pub(crate) fn place_rounded(
         false => floating.width + options.gap,
     };
 
+    // The end side starts past what the caller keeps clear there.
+    let clear = |side: Side| match side {
+        Side::End => options.end_reach,
+        _ => 0.0,
+    };
     let preferred = room(
         Edge::of(options.side, rtl),
         anchor,
         viewport,
         options.padding,
-    );
+    ) - clear(options.side);
     let opposite = room(
         Edge::of(options.side.opposite(), rtl),
         anchor,
         viewport,
         options.padding,
-    );
+    ) - clear(options.side.opposite());
     // Flip only when the preferred side cannot hold the box *and* the opposite
     // holds more; too big for both, it stays and `shift` decides.
     let side = match options.flip && preferred < needed(options.side) && opposite > preferred {
@@ -143,8 +148,9 @@ pub(crate) fn place_rounded(
         false => options.side,
     };
     // Room on neither start nor end: below, then above, as Floating UI's flip (4613).
-    let fits =
-        |side: Side| room(Edge::of(side, rtl), anchor, viewport, options.padding) >= needed(side);
+    let fits = |side: Side| {
+        room(Edge::of(side, rtl), anchor, viewport, options.padding) - clear(side) >= needed(side)
+    };
     let side = match options.flip && !side.is_vertical() && !fits(side) {
         true => [Side::Bottom, Side::Top]
             .into_iter()
@@ -170,11 +176,11 @@ pub(crate) fn place_rounded(
             anchor.y + anchor.height + options.gap,
         ),
         Edge::Left => (
-            anchor.x - floating.width - options.gap,
+            anchor.x - floating.width - options.gap - clear(side),
             cross_axis(align, anchor.y, anchor.height, floating.height),
         ),
         Edge::Right => (
-            anchor.x + anchor.width + options.gap,
+            anchor.x + anchor.width + options.gap + clear(side),
             cross_axis(align, anchor.y, anchor.height, floating.height),
         ),
     };
@@ -336,6 +342,47 @@ mod tests {
             true,
         );
         assert_eq!(beside.arrow, Some(ArrowPoint { x: 396.0, y: 120.0 }));
+    }
+
+    /// 4775: a box on the end side starts `end_reach` past the anchor, the start side does not.
+    #[test]
+    fn the_end_side_clears_the_reach() {
+        let tooltip = Dimensions {
+            width: 60.0,
+            height: 20.0,
+        };
+        let options = options().side(Side::Start).end_reach(40.0);
+        // No room at the start: flips to the end, past the 40px that stay clear.
+        let flipped = place(anchor_at(20.0, 100.0), tooltip, viewport(), &options, false);
+        assert_eq!(flipped.placement.side, Side::End);
+        assert_eq!(flipped.x, 20.0 + 200.0 + 4.0 + 40.0);
+        let mirrored = place(anchor_at(740.0, 100.0), tooltip, viewport(), &options, true);
+        assert_eq!(mirrored.placement.side, Side::End);
+        assert_eq!(mirrored.x, 740.0 - 60.0 - 4.0 - 40.0, "the left in RTL");
+        // Room at the start: unchanged.
+        let start = place(
+            anchor_at(400.0, 100.0),
+            tooltip,
+            viewport(),
+            &options,
+            false,
+        );
+        assert_eq!(
+            (start.placement.side, start.x),
+            (Side::Start, 400.0 - 60.0 - 4.0)
+        );
+        // The reach counts against the room: 92px past the anchor holds 64, 52 does not.
+        let end = options.side(Side::End);
+        let tight = place(anchor_at(700.0, 100.0), tooltip, viewport(), &end, false);
+        assert_eq!(tight.placement.side, Side::Start);
+        let plain = place(
+            anchor_at(700.0, 100.0),
+            tooltip,
+            viewport(),
+            &end.end_reach(0.0),
+            false,
+        );
+        assert_eq!(plain.placement.side, Side::End);
     }
 
     /// 4746: a corner of 16px pushes the arrow past it, not to the flat 12px inset.
