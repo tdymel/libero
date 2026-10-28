@@ -78,6 +78,7 @@ pub(super) use observe::{
 };
 pub(crate) use permission::permission;
 pub(super) use press::press;
+pub(crate) use press::{press_ended, watch_presses};
 #[cfg(target_os = "android")]
 pub(crate) use raster::square_png;
 #[cfg(feature = "charts")]
@@ -360,6 +361,8 @@ struct PageState {
     guarding_values: Cell<bool>,
     /// Whether [`guard_defaults`] ran on this page.
     guarding_defaults: Cell<bool>,
+    /// Whether [`watch_presses`] ran on this page.
+    watching_presses: Cell<bool>,
     /// Each tagged element's computed `direction` as RTL, mirrored by [`watch_direction`].
     rtl: RefCell<HashMap<u64, bool>>,
     /// A following handle's tag to the tag of the element it follows.

@@ -151,6 +151,27 @@ fn a_press_on_submit_lands_though_the_blur_reveals_an_error_above_it() {
     });
 }
 
+/// Todo 4796: the 4756 press on submit held past the blur's round trip, so a WebView reveals the
+/// error under the press too; a zero drag is that held press.
+async fn a_held_press_on_submit_lands<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    let input = "[data-case=mouse] input";
+    d.click(input).await?;
+    eventually_focused(d, input, "the password field").await?;
+    d.type_text("abc").await?;
+    d.drag("[data-case=mouse] button[type=submit]", 0.0, 0.0)
+        .await?;
+    eventually(d, "the held press on submit to submit", async |d| {
+        d.exists("[data-case=mouse] [data-slot=summary]").await
+    })
+    .await
+}
+
+e2e::scenario!(
+    a_held_press_on_submit_lands_though_the_blur_reveals_an_error_above_it,
+    "/form/blur-submit",
+    a_held_press_on_submit_lands
+);
+
 /// Todo 4757: a label click or tap on a popup field focuses it and opens nothing, as a native
 /// select's label does.
 #[test]

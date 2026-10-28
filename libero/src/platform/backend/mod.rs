@@ -56,6 +56,8 @@ pub(crate) use webview::media as webview_media;
 pub(crate) use webview::next_task as webview_next_task;
 #[cfg(all(not(target_arch = "wasm32"), not(feature = "native")))]
 pub(crate) use webview::permission as webview_permission;
+#[cfg(all(not(target_arch = "wasm32"), not(feature = "native")))]
+pub(crate) use webview::press_ended as webview_press_ended;
 #[cfg(all(
     not(target_arch = "wasm32"),
     not(target_os = "android"),
@@ -83,6 +85,8 @@ pub(crate) use webview::svg_png as webview_svg_png;
     not(feature = "native")
 ))]
 pub(crate) use webview::system_notification as webview_system_notification;
+#[cfg(all(not(target_arch = "wasm32"), not(feature = "native")))]
+pub(crate) use webview::watch_presses as webview_watch_presses;
 #[cfg(all(not(target_arch = "wasm32"), not(feature = "native")))]
 pub(crate) use webview::waveform as webview_waveform;
 #[cfg(all(target_os = "linux", feature = "desktop", not(feature = "native")))]

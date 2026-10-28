@@ -23,7 +23,13 @@ pub(crate) fn after_press(run: impl FnOnce() + 'static) {
         next_task().await;
         run();
     });
-    #[cfg(not(target_arch = "wasm32"))]
+    // The WebView too: its render lands mid-press, past the IPC round trip (4796).
+    #[cfg(all(not(target_arch = "wasm32"), not(feature = "native")))]
+    dioxus::prelude::spawn(async move {
+        super::backend::webview_press_ended().await;
+        run();
+    });
+    #[cfg(all(not(target_arch = "wasm32"), feature = "native"))]
     run();
 }
 
@@ -31,6 +37,8 @@ pub(crate) fn after_press(run: impl FnOnce() + 'static) {
 pub(crate) fn watch_presses() {
     #[cfg(target_arch = "wasm32")]
     web::watch_presses();
+    #[cfg(all(not(target_arch = "wasm32"), not(feature = "native")))]
+    super::backend::webview_watch_presses();
 }
 
 /// `true` once the page's web fonts have loaded; `false` at once where there is no fonts

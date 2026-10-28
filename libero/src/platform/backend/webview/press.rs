@@ -3,8 +3,47 @@ use std::rc::Rc;
 use dioxus::prelude::spawn;
 use serde_json::json;
 
-use super::{Slot, WebViewListener, eval_with, runs_scripts};
+use super::{Slot, WebViewListener, eval, eval_with, page, runs_scripts};
 use crate::platform::{PRESS_MARKER_ATTR, PressApi, PressSubscription};
+
+/// Whether a press is down, and what waits for its `pointerup` or `pointercancel`; capture on the
+/// window, as the web's: a control that stops its press still counts.
+const WATCH_PRESSES: &str = "if (window.__lsxPress) return;
+    const press = window.__lsxPress = { down: false, waiting: [] };
+    window.addEventListener('pointerdown', () => { press.down = true; }, { capture: true });
+    const up = () => {
+        press.down = false;
+        press.waiting.splice(0).forEach((done) => done());
+    };
+    window.addEventListener('pointerup', up, { capture: true });
+    window.addEventListener('pointercancel', up, { capture: true });";
+
+/// Starts tracking presses for [`press_ended`], once per page.
+pub(crate) fn watch_presses() {
+    if !runs_scripts() {
+        return;
+    }
+    if let Some(page) = page()
+        && !page.watching_presses.replace(true)
+    {
+        eval(WATCH_PRESSES);
+    }
+}
+
+/// Answers once the press under way, if any, has ended: the answer leaves a task after its
+/// `pointerup`, so the press's `click` reaches Rust first (4796).
+pub(crate) async fn press_ended() {
+    if runs_scripts() {
+        let _ = eval(
+            "const press = window.__lsxPress;
+            if (press?.down) await new Promise((done) => press.waiting.push(done));
+            await new Promise((done) => setTimeout(done));
+            return 0;",
+        )
+        .join::<u8>()
+        .await;
+    }
+}
 
 pub(crate) fn press() -> Option<&'static dyn PressApi> {
     runs_scripts().then_some(&PRESS as &'static dyn PressApi)
