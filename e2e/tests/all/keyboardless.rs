@@ -74,37 +74,49 @@ fn tab_past_the_text_box_leaves_the_sheet() {
     });
 }
 
+/// Tab past the text box of the field last in `container`, opened on `route`, stays inside it.
+async fn tab_stays_in(route: &str, opener: Option<&str>, container: &str) {
+    let fixture = typing_at(route, opener).await;
+    let page = &fixture.page;
+    keyboard::press(page, keyboard::TAB).await.unwrap();
+    let kept = format!(
+        "(() => {{ const at = document.activeElement; \
+         return !!at && !at.matches('[data-slot=text-input]') \
+           && !!at.closest({container:?}); }})()"
+    );
+    let kept = kept.as_str();
+    let outside = "document.activeElement?.id === 'behind'";
+    wait::for_js_true(page, &format!("{kept} || {outside}"), "focus moved")
+        .await
+        .unwrap();
+    let at: String = page
+        .evaluate("document.activeElement?.id || document.activeElement?.tagName")
+        .await
+        .unwrap()
+        .into_value()
+        .unwrap();
+    assert!(
+        page.evaluate(kept)
+            .await
+            .unwrap()
+            .into_value::<bool>()
+            .unwrap(),
+        "focus left the container, on {at}"
+    );
+    fixture.console.assert_clean("Tab in a container").unwrap();
+    fixture.close().await.unwrap();
+}
+
 /// Todo 4777: the field last in a modal, Tab past the text box stays in the modal.
 #[test]
 fn tab_past_the_text_box_stays_in_a_modal() {
-    block_on(async {
-        let fixture = typing_at("/keyboardless/modal", Some("#open")).await;
-        let page = &fixture.page;
-        keyboard::press(page, keyboard::TAB).await.unwrap();
-        let kept = "(() => { const at = document.activeElement; \
-             return !!at && !at.matches('[data-slot=text-input]') \
-               && !!at.closest('#modal'); })()";
-        let outside = "document.activeElement?.id === 'behind'";
-        wait::for_js_true(page, &format!("{kept} || {outside}"), "focus moved")
-            .await
-            .unwrap();
-        let at: String = page
-            .evaluate("document.activeElement?.id || document.activeElement?.tagName")
-            .await
-            .unwrap()
-            .into_value()
-            .unwrap();
-        assert!(
-            page.evaluate(kept)
-                .await
-                .unwrap()
-                .into_value::<bool>()
-                .unwrap(),
-            "focus left the modal, on {at}"
-        );
-        fixture.console.assert_clean("Tab in a modal").unwrap();
-        fixture.close().await.unwrap();
-    });
+    block_on(tab_stays_in("/keyboardless/modal", Some("#open"), "#modal"));
+}
+
+/// Todo 4801: the same in a bare `FocusTrap`, which has no `aria-modal`.
+#[test]
+fn tab_past_the_text_box_stays_in_a_focus_trap() {
+    block_on(tab_stays_in("/keyboardless/trap", None, "#trap"));
 }
 
 /// Todos 4607, 4778: a refused text box draws an error border and is described by a line

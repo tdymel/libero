@@ -284,6 +284,8 @@ pub fn FocusTrap(props: FocusTrapProps) -> Element {
         .sx(&props.sx)
         .states(&props.states)
         .prepare()
+        // Read by keyboardless pickers: a Tab past one stays in the trap (4801).
+        .attr("data-focus-trap", true)
         // Not `.element(&root)`: mount and first focus share the one `onmounted`.
         .event("onmounted", move |event: Event<MountedData>| {
             (root.mount())(event);

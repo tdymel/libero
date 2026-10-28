@@ -1,11 +1,11 @@
 //! A picker field under a finger, then a button: Tab out of its sheet (todo 4606), the refused
-//! text box (4607) and its name (4608). The same field last in a modal (4777).
+//! text box (4607) and its name (4608). The same field last in a modal (4777) and in a bare `FocusTrap` (4801).
 
 use dioxus::prelude::*;
 use libero::{
     LiberoProvider,
     chrono::NaiveDate,
-    components::{Button, ChronoField, Dialog, Flex},
+    components::{Button, ChronoField, Dialog, Flex, FocusTrap},
     hooks::{ModalScope, use_modal},
 };
 
@@ -14,7 +14,20 @@ use crate::Routes;
 pub const ROUTES: Routes = &[
     ("/keyboardless", || rsx! { KeyboardlessPage {} }),
     ("/keyboardless/modal", || rsx! { ModalPage {} }),
+    ("/keyboardless/trap", || rsx! { TrapPage {} }),
 ];
+
+/// The field last in a bare `FocusTrap`, no `aria-modal` around it (4801).
+#[component]
+fn TrapPage() -> Element {
+    rsx! {
+        FocusTrap { id: "trap",
+            button { id: "first", "First" }
+            DueField {}
+        }
+        button { id: "behind", "Behind" }
+    }
+}
 
 #[component]
 fn KeyboardlessPage() -> Element {

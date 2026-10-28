@@ -21,6 +21,20 @@ fn focus_trap_renders_its_children() {
     assert!(body(&html).contains("trapped"));
 }
 
+/// Keyboardless pickers find the trap by this marker (4801).
+#[test]
+fn focus_trap_root_carries_its_marker() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider {
+                FocusTrap { "trapped" }
+            }
+        }
+    }
+
+    assert!(body(&render(app)).contains("data-focus-trap"));
+}
+
 /// `FocusTrap` is `display: contents`, so nothing can host an absolute
 /// initial-focus span; a fixed one never makes the document scroll to it.
 #[test]

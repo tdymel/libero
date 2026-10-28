@@ -18,8 +18,8 @@ use crate::{
     theme::{Size, SizeCss},
 };
 
-/// A modal dialog: a Tab that leaves a picker stays inside it.
-const MODAL_SELECTOR: &str = "[aria-modal='true']";
+/// A modal dialog or a `FocusTrap`: a Tab that leaves a picker stays inside it.
+const MODAL_SELECTOR: &str = ":is([aria-modal='true'], [data-focus-trap])";
 
 /// Where focus is in a picker field's input (0) and dropdown (1). A WebView answers no
 /// `:focus` query and focuses nothing below a handle: the pair's own focus events and the
