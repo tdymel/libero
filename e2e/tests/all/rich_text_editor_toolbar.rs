@@ -5,6 +5,7 @@ use super::rich_text_editor::{
     select, select_first_leaf, until,
 };
 use chromiumoxide::Page;
+use chromiumoxide::cdp::browser_protocol::emulation::SetDeviceMetricsOverrideParams;
 use e2e::browser::block_on;
 use e2e::passes::keyboard::{self, CTRL, ENTER, Key};
 use e2e::passes::pointer;
@@ -180,6 +181,48 @@ fn link_dialog_shortcut_help_block_menu_and_announcements() {
 }
 
 const MORE: &str = "document.querySelector('[role=toolbar] [aria-label=\"More formatting\"]')";
+
+/// Turning a phone to portrait moves Undo into More; that redraw panicked the app (4771).
+#[test]
+fn a_resize_that_moves_undo_into_more_keeps_the_bar_working() {
+    block_on(async {
+        let fixture = Fixture::open("/rich-text-editor", Viewport::Mobile)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        let shown =
+            |name: &str| format!("!!document.querySelector('[role=toolbar] [aria-label={name}]')");
+        // Nine hidden, Redo in More and Undo still shown; then ten, the history group gone.
+        let nine = format!("{} && !{}", shown("Undo"), shown("Redo"));
+        for (width, state) in [(430, nine), (375, format!("!{}", shown("Undo")))] {
+            page.execute_bounded(SetDeviceMetricsOverrideParams::new(
+                width,
+                Viewport::Mobile.size().1,
+                1.0,
+                true,
+            ))
+            .await
+            .unwrap();
+            let reached = until(page, &state).await;
+            fixture.console.settle().await.unwrap();
+            assert!(reached, "{width}px: {state}, {:?}", fixture.console.drain());
+        }
+        page.evaluate_bounded(format!("{EDITOR}.focus()"))
+            .await
+            .unwrap();
+        let bold = "document.querySelector('[role=toolbar] [aria-label=Bold]')";
+        press(page, bold).await;
+        let pressed = until(
+            page,
+            &format!("{bold}.getAttribute('aria-pressed') === 'true'"),
+        )
+        .await;
+        fixture.console.settle().await.unwrap();
+        fixture.console.assert_clean("the resize to 375px").unwrap();
+        assert!(pressed, "Bold no longer toggles after the resize");
+        fixture.close().await.unwrap();
+    });
+}
 
 #[test]
 fn a_narrow_toolbar_keeps_one_row_and_moves_the_rest_into_more() {

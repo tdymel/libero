@@ -250,6 +250,21 @@ pub(super) fn hidden(width: f64, metrics: Metrics, extra: usize) -> usize {
         .unwrap_or(OVERFLOW.len())
 }
 
+/// [`hidden`], and whether the language button goes into More too: once even every
+/// [`OVERFLOW`] button in More leaves it no room.
+pub(super) fn hidden_beside_language(width: f64, metrics: Metrics, extra: usize) -> (usize, bool) {
+    let count = hidden(width, metrics, extra);
+    if metrics.language <= 0.0 || needed(count, metrics, extra) <= width {
+        return (count, false);
+    }
+    let bare = Metrics {
+        language: 0.0,
+        ..metrics
+    };
+    // At least one, so the room counted holds the More trigger it lands in.
+    (hidden(width, bare, extra).max(1), true)
+}
+
 fn needed(hidden: usize, metrics: Metrics, extra: usize) -> f64 {
     let Metrics {
         icon,
@@ -329,5 +344,20 @@ mod tests {
             ..Metrics::default()
         };
         assert!(hidden(width, coded, 0) > hidden(width, Metrics::default(), 0));
+    }
+
+    /// Todo 4774: a phone's code block bar wrapped with all eleven in More.
+    #[test]
+    fn a_phone_moves_the_language_button_into_more_only_when_nothing_else_fits() {
+        let coded = Metrics {
+            block_type: 123.0,
+            language: 73.0,
+            ..Metrics::default()
+        };
+        assert_eq!(hidden_beside_language(325.0, coded, 0), (10, true));
+        let wide = hidden_beside_language(600.0, coded, 0);
+        assert_eq!(wide, (hidden(600.0, coded, 0), false));
+        let plain = Metrics::default();
+        assert_eq!(hidden_beside_language(300.0, plain, 0), (11, false));
     }
 }

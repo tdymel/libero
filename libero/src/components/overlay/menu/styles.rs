@@ -1,7 +1,10 @@
 use super::menu::MenuPart;
 use crate::{
     components::{
-        common::{LogicalTextAlign, Part, ROW_HOVER_TINT, disabled_look_sx, inset_focus_ring_sx},
+        common::{
+            COARSE_POINTER, COARSE_TARGET, LogicalTextAlign, Part, ROW_HOVER_TINT,
+            disabled_look_sx, inset_focus_ring_sx,
+        },
         form::phone_sheet::{narrow_query, phone_sheet_sx},
         layout::paper_sx,
     },
@@ -69,6 +72,11 @@ pub(super) static MENU_SX: StaticSx = StaticSx::new(|| {
                 .white_space("nowrap")
                 .cursor("pointer")
                 .user_select("none"),
+        )
+        // A finger-sized row in the sheet and the popover alike (WCAG 2.5.5, todo 4774).
+        .media(
+            COARSE_POINTER,
+            sx().selector(item, sx().min_height(COARSE_TARGET)),
         )
         // Hover and focus share a tint: focus follows the pointer.
         .hover_tint(
@@ -143,3 +151,22 @@ const SHEET_TITLE: &str = "& > [data-slot='sheet-title']";
 
 /// A coloured row's colour, for its label and leading slot.
 pub(super) const ITEM_COLOR: CssVar = CssVar::new("--lsx-menu-item-color");
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::css::Stylesheet;
+
+    #[test]
+    fn a_coarse_pointer_gets_finger_sized_rows() {
+        let css = Stylesheet::from(&MENU_SX);
+        let css = css.as_str();
+        let coarse = css
+            .find(&format!("@media {COARSE_POINTER}"))
+            .unwrap_or_else(|| panic!("no coarse query: {css}"));
+        assert!(
+            css[coarse..].contains(&format!("min-height:{COARSE_TARGET}")),
+            "{css}"
+        );
+    }
+}

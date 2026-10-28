@@ -6,7 +6,10 @@ use dioxus::prelude::*;
 use super::model::{Attrs, Block, BlockKind, Content, Inline, Mark, Marks, NodeKey};
 use super::node_view::NodeViews;
 use crate::{
-    components::typography::{CodeBlock, inline_side_spacers},
+    components::{
+        common::COARSE_POINTER,
+        typography::{CodeBlock, inline_side_spacers},
+    },
     sx::{Sx, sx},
     theme::{ANCHOR_COLOR, CODE_FONT_FAMILY, ColorCss, ColorShade},
 };
@@ -69,6 +72,19 @@ pub(crate) fn content_sx(base: Sx) -> Sx {
             sx().content("''")
                 .position("absolute")
                 .inset("calc(50% - 12px)"),
+        )
+        // A finger's 44px across, out into the gutter; up to the text and the next line, no further.
+        // `li` outranks the plain rule above, which prints after a media one.
+        .media(
+            COARSE_POINTER,
+            sx().selector(
+                "& li [data-task][data-clickable]::after",
+                // Offsets from the padding box, inside the 1px border.
+                sx().top("calc(-0.25em - 1px)")
+                    .bottom("calc(-0.25em - 1px)")
+                    .left("calc(1.5em - 45px)")
+                    .right("calc(-0.5em - 1px)"),
+            ),
         )
         // Inline code, links and quotes as `Code`, `Anchor` and `Blockquote` draw them.
         .selector(

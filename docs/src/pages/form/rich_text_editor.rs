@@ -1,6 +1,6 @@
 use crate::components::{
-    Control, Demo, DemoFile, DemoValues, DocPage, FieldCopy, Wrap, a11y, field_controls, indent,
-    prop, props, status_prop,
+    Control, Demo, DemoFile, DemoValues, DocPage, FieldCopy, PageScroll, Wrap, a11y,
+    field_controls, indent, prop, props, status_prop,
 };
 use dioxus::prelude::*;
 use libero::components::rich_text::Doc;
@@ -68,11 +68,11 @@ fn wrap_extensions(values: &DemoValues, code: &str) -> String {
     let used: Vec<&str> = [
         (on.mentions, "Attrs"),
         (on.keymap, "Builtin"),
-        (on.binds(), "Chord"),
+        (on.any(), "Chord"),
         (on.shout || on.mentions, "Commands"),
         (on.mentions, "EditorInput"),
         (on.mentions, "EditorState"),
-        (on.binds(), "Keymap"),
+        (on.any(), "Keymap"),
         (on.mentions, "NodeRegistry"),
         (on.mentions, "NodeSpec"),
         (on.mentions, "NodeViewProps"),
@@ -107,7 +107,7 @@ fn wrap_extensions(values: &DemoValues, code: &str) -> String {
             registered.join("\n")
         ));
     }
-    if on.binds() {
+    if on.any() {
         let bound: Vec<String> = [
             (on.shout, "shout-chord"),
             (on.mentions, "mention-chord"),
@@ -261,9 +261,9 @@ pub fn RichTextEditorPage() -> Element {
                 .handles([
                     "The text is a multiline `role=\"textbox\"`, named by `label` and described by `description`, `helper` and a hint read on focus: in a list Tab indents, and Escape, then Tab leaves (`RichTextEditorLabels::leave_hint`).",
                     "The toolbar is one tab stop, moved through with the arrows. Clicking it keeps focus and the selection in the text. Each mark and block button reports `aria-pressed`, shows its name and chord in a tooltip on hover and focus, and carries the chord as `aria-keyshortcuts`.",
-                    "In a narrow column the toolbar stays one row: the less used buttons move into a \"More formatting\" menu, so the arrows only reach what is shown. Bold, italic and the text type menu always stay.",
+                    "In a narrow column the less used buttons, and in a code block the language menu, move into a \"More formatting\" menu so the toolbar keeps to one row; the arrows only reach what is shown. Bold, italic and the text type menu always stay, so only a column narrower than those wraps.",
                     "A shortcut that toggles a mark, list, quote or block type is said in a polite live region, \"Bold on\", \"Heading 2\".",
-                    "The text type menu and a code block's language menu are menu buttons whose name includes the current choice, \"Code language: Rust\". The language button on the fence is not a tab stop; `Ctrl+Shift+L` reaches it.",
+                    "The text type menu and a code block's language menu are menu buttons whose name includes the current choice, \"Language: Rust\". The language button on the fence starts its name with its visible text, \"rust, Code language\", and is not a tab stop; `Ctrl+Shift+L` reaches it.",
                     "The link dialog focuses its labelled URL field and shows a refused scheme as that field's error. Closing or saving returns focus to what opened it: the text after `Ctrl+K` or a click while typing, else the Link button. A toolbar menu's Escape returns the same way.",
                     "With `onsubmit` the text carries the send key as `aria-keyshortcuts` (`Enter`, or `Control+Enter`, `Meta+Enter` on Apple platforms, for `SubmitOn::ModEnter`), and with `SubmitOn::Enter` also `enterkeyhint=\"send\"`, so a phone keyboard labels its Enter key. A send leaves focus in the text, and the handle's `clear` keeps it there.",
                     "With `max_length`, typing or a paste that reaches the limit says \"Character limit reached\" in the live region (`RichTextEditorLabels::limit_reached`), once until the text or the caret moves, so further refused keys stay quiet.",
@@ -295,6 +295,8 @@ pub fn RichTextEditorPage() -> Element {
             Demo {
                 component: "RichTextEditor",
                 wide_preview: true,
+                // The page scrolls the preview, so the sticky toolbar stays in view (4773).
+                page_scroll: PageScroll(|_| true),
                 children_text: "",
                 fixed: vec![
                     "value: doc()".to_string(),
@@ -343,7 +345,7 @@ pub fn RichTextEditorPage() -> Element {
                         }
                     }),
                     Control::switch("keymap").code(|_, values| {
-                        match Extensions::of(values).binds() {
+                        match Extensions::of(values).any() {
                             true => vec!["keymap: keymap()".to_string()],
                             false => vec![],
                         }

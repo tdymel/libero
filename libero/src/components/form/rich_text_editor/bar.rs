@@ -5,11 +5,13 @@ use dioxus::prelude::*;
 use pictogram_icons_lucide as lucide;
 
 use super::model::{BlockKind, Builtin, CommandName, Keymap};
-use super::toolbar::{Group, Metrics, OVERFLOW, RichTextTool, Tool, hidden as overflow_count};
+use super::toolbar::{Group, Metrics, OVERFLOW, RichTextTool, Tool, hidden_beside_language};
 use crate::{
     components::{
         buttons::{ActionIcon, Button, Toolbar, ToolbarGroup, ToolbarSeparator},
-        common::Glyph,
+        common::{Glyph, HtmlTag, coarse_hit_area_sx},
+        data_display::Icon,
+        layout::use_box,
         overlay::{Menu, MenuEntry, MenuItem, MenuState, use_menu},
         typography::Language,
     },
@@ -17,7 +19,24 @@ use crate::{
     hooks::{ElementHandle, listener, use_element},
     localization::RichTextEditorLabels,
     platform::ElementApi,
+    sx::{StaticSx, sx},
+    theme::PaperDefaults,
 };
+
+/// Sticky, so the bar stays in reach while the caret is far down (Mantine's sticky toolbar).
+/// The gap keeps the focused frame's ring off a pressed button.
+static BAR_SX: StaticSx = StaticSx::new(|| {
+    sx().position("sticky")
+        .top("0")
+        .z_index("1")
+        .and(PaperDefaults::background_sx())
+        .margin_bottom("xs")
+        // A 44px press under a finger, its reach capped by the toolbar's gap; `Button` grows itself.
+        .selector(
+            "& [role=toolbar] button",
+            sx().and(coarse_hit_area_sx("::before")),
+        )
+});
 
 /// What [`use_bar`] draws from; `run_command` is the editor's runner for every command.
 pub(super) struct Bar<R> {
@@ -161,13 +180,13 @@ where
     };
     // The widest language label seen, so moving between code blocks never reflows the bar.
     let mut language_width = use_signal(|| None::<f64>);
-    let crowded = bar_width().map_or(0, |width| {
+    let (crowded, language_hidden) = bar_width().map_or((0, false), |width| {
         let measured = metrics().unwrap_or_default();
         let language = match language_label {
             Some(_) => language_width().unwrap_or(measured.block_type),
             None => 0.0,
         };
-        overflow_count(
+        hidden_beside_language(
             width,
             Metrics {
                 language,
@@ -216,23 +235,41 @@ where
         });
     };
     let hidden = &OVERFLOW[..crowded];
-    let more_items: Vec<MenuEntry> = buttons
-        .iter()
-        .filter(|tool| hidden.contains(&tool.builtin))
-        .map(|tool| {
-            let builtin = tool.builtin;
-            let item = MenuItem::new(tool.label)
-                .leading(rsx! { Glyph { slot: tool.slot, icon: tool.icon } })
-                .disabled(tool.disabled)
-                .onselect(move |_| {
-                    run_command(builtin.into(), true, true);
-                });
-            match tool.selected {
-                Some(on) => item.checkbox(on),
-                None => item,
-            }
-            .into()
-        })
+    // A bar too narrow even for the language button lists it first, its menu as a submenu.
+    let language_entry = language_label
+        .as_deref()
+        .filter(|_| language_hidden)
+        .map(|language| {
+            MenuItem::new(format!("{}: {language}", words.language))
+                .submenu(language_items.clone())
+                .into()
+        });
+    let more_items: Vec<MenuEntry> = language_entry
+        .into_iter()
+        .chain(
+            buttons
+                .iter()
+                .filter(|tool| hidden.contains(&tool.builtin))
+                .map(|tool| {
+                    let builtin = tool.builtin;
+                    let item = MenuItem::new(tool.label)
+                        // Bare, a leading glyph is 0px wide in the menu's slot.
+                        .leading(rsx! {
+                            Icon { variant: "standard", size: "sm", color: "inherit",
+                                Glyph { slot: tool.slot, icon: tool.icon }
+                            }
+                        })
+                        .disabled(tool.disabled)
+                        .onselect(move |_| {
+                            run_command(builtin.into(), true, true);
+                        });
+                    match tool.selected {
+                        Some(on) => item.checkbox(on),
+                        None => item,
+                    }
+                    .into()
+                }),
+        )
         .collect();
     let shown_in = |group: Group| -> Vec<Tool> {
         buttons
@@ -334,6 +371,7 @@ where
         custom_tools: custom_tools.clone(),
         block_kind: block_kind.clone(),
         crowded,
+        language_hidden,
         menus: [
             block_menu.a11y_attributes(),
             language_menu.a11y_attributes(),
@@ -341,62 +379,66 @@ where
         ],
         keymap: *keymap_revision.peek(),
     };
+    let bar_box = use_box().framework_sx(&BAR_SX).prepare();
     shown.then(|| {
-        rsx! {
-            ToolbarSlot { look, bar: rsx! {
-            div { onresize,
-                Toolbar { "aria-label": words.toolbar, focus_from: element, onmousedown: keep,
-                    ToolbarGroup { "aria-label": words.marks,
-                        for tool in marks { {button(tool)} }
+        // A new count draws a new bar: diffing out the history group beside More panicked (4771).
+        let toolbar = rsx! {
+            Toolbar { key: "{crowded}-{language_hidden}", "aria-label": words.toolbar, focus_from: element, onmousedown: keep,
+                ToolbarGroup { "aria-label": words.marks,
+                    for tool in marks { {button(tool)} }
+                }
+                ToolbarSeparator {}
+                ToolbarGroup { "aria-label": words.blocks,
+                    Menu { state: block_menu, items: block_items,
+                        Button {
+                            attributes: block_attributes,
+                            "aria-label": "{words.block_type}: {block_label}",
+                            variant: "standard",
+                            color: "ink",
+                            "{block_label}"
+                        }
                     }
-                    ToolbarSeparator {}
-                    ToolbarGroup { "aria-label": words.blocks,
-                        Menu { state: block_menu, items: block_items,
+                    if let Some(language) = language_label.as_deref().filter(|_| !language_hidden) {
+                        Menu { state: language_menu, items: language_items,
                             Button {
-                                attributes: block_attributes,
-                                "aria-label": "{words.block_type}: {block_label}",
+                                attributes: language_attributes,
+                                "aria-label": "{words.language}: {language}",
                                 variant: "standard",
                                 color: "ink",
-                                "{block_label}"
-                            }
-                        }
-                        if let Some(language) = language_label {
-                            Menu { state: language_menu, items: language_items,
-                                Button {
-                                    attributes: language_attributes,
-                                    "aria-label": "{words.language}: {language}",
-                                    variant: "standard",
-                                    color: "ink",
-                                    "{language}"
-                                }
-                            }
-                        }
-                        for tool in block_tools { {button(tool)} }
-                    }
-                    if !custom_tools.is_empty() {
-                        ToolbarSeparator {}
-                        ToolbarGroup { "aria-label": words.custom_tools,
-                            for (tool, selected) in custom_tools {
-                                {custom_button(tool, selected)}
+                                "{language}"
                             }
                         }
                     }
-                    if !history.is_empty() {
-                        ToolbarSeparator {}
-                        ToolbarGroup { "aria-label": words.history,
-                            for tool in history { {button(tool)} }
+                    for tool in block_tools { {button(tool)} }
+                }
+                if !custom_tools.is_empty() {
+                    ToolbarSeparator {}
+                    ToolbarGroup { "aria-label": words.custom_tools,
+                        for (tool, selected) in custom_tools {
+                            {custom_button(tool, selected)}
                         }
                     }
-                    if !more_items.is_empty() {
-                        Menu { state: more_menu, items: more_items,
-                            ActionIcon { attributes: more_attributes, aria_label: words.more,
-                                Glyph { slot: IconSlot::More, icon: lucide::ellipsis_vertical::outlined }
-                            }
+                }
+                if !history.is_empty() {
+                    ToolbarSeparator {}
+                    ToolbarGroup { "aria-label": words.history,
+                        for tool in history { {button(tool)} }
+                    }
+                }
+                if !more_items.is_empty() {
+                    Menu { state: more_menu, items: more_items,
+                        ActionIcon { attributes: more_attributes, aria_label: words.more,
+                            Glyph { slot: IconSlot::More, icon: lucide::ellipsis_vertical::outlined }
                         }
                     }
                 }
             }
-            } }
+        };
+        let bar = bar_box
+            .event("onresize", onresize)
+            .render(HtmlTag::Div, vec![], toolbar);
+        rsx! {
+            ToolbarSlot { look, bar }
         }
     })
 }
@@ -411,6 +453,7 @@ struct ToolbarLook {
     /// The block type and code language menus' radios and labels.
     block_kind: BlockKind,
     crowded: usize,
+    language_hidden: bool,
     menus: [Vec<Attribute>; 3],
     keymap: u32,
 }

@@ -28,12 +28,8 @@ impl Extensions {
         }
     }
 
+    /// Some extension is on. Each binds a chord, so the snippet prints `keymap()`.
     pub fn any(self) -> bool {
-        self.shout || self.mentions || self.keymap
-    }
-
-    /// Something binds a chord, so the snippet prints `keymap()`.
-    pub fn binds(self) -> bool {
         self.shout || self.mentions || self.keymap
     }
 }
