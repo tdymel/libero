@@ -7,7 +7,7 @@ use dioxus::core::AttributeValue;
 use dioxus::prelude::*;
 
 use super::{
-    tab_stops::{focus_first_stop, tab_order},
+    tab_stops::{focus_stop_unconfirmed, tab_order},
     visually_hidden::VISUALLY_HIDDEN_FIXED_SX,
 };
 use crate::{
@@ -129,7 +129,7 @@ impl Drop for Registered {
 }
 
 /// Focuses the stop after item `index` in `order` (from `None`: the first, or last backwards),
-/// wrapping round; the walk is [`focus_first_stop`]'s.
+/// wrapping round; the walk is [`focus_stop_unconfirmed`]'s.
 fn focus_next(
     root: &dyn ElementApi,
     items: &[Box<dyn ElementApi>],
@@ -153,7 +153,7 @@ fn focus_next(
             .collect(),
         false => tail.iter().chain(head).copied().collect(),
     };
-    focus_first_stop(root, items, walk.into_iter(), backwards)
+    focus_stop_unconfirmed(root, items, walk.into_iter(), backwards)
 }
 
 base_props! {

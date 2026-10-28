@@ -186,6 +186,29 @@ pub(crate) fn focus_first_stop(
     order: impl Iterator<Item = usize>,
     backwards: bool,
 ) -> bool {
+    walk_stops(root, items, order, backwards).0
+}
+
+/// [`focus_first_stop`], but a renderer that applies focus later cannot confirm it: with no
+/// stop confirmed, the first that took `focus()`. Only for a trap, which has nowhere to cross to (4793).
+#[cfg(feature = "focus-trap")]
+pub(crate) fn focus_stop_unconfirmed(
+    root: &dyn ElementApi,
+    items: &[Box<dyn ElementApi>],
+    order: impl Iterator<Item = usize>,
+    backwards: bool,
+) -> bool {
+    let (taken, first_ok) = walk_stops(root, items, order, backwards);
+    taken || first_ok.is_some_and(|at| items[at].focus().is_ok())
+}
+
+/// Whether a stop took focus, and the first one whose `focus()` did not fail.
+fn walk_stops(
+    root: &dyn ElementApi,
+    items: &[Box<dyn ElementApi>],
+    order: impl Iterator<Item = usize>,
+    backwards: bool,
+) -> (bool, Option<usize>) {
     let groups = radio_groups(root, items);
     let stops = stops_of(items, &groups, backwards);
     let order: Vec<usize> = order.collect();
@@ -209,8 +232,7 @@ pub(crate) fn focus_first_stop(
                     .any(|&other| takes(other))
             })
     });
-    // A renderer that applies focus later cannot confirm it: the first stop that took it.
-    taken || first_ok.get().is_some_and(|at| items[at].focus().is_ok())
+    (taken, first_ok.get())
 }
 
 #[cfg(test)]
@@ -506,5 +528,21 @@ mod tests {
         focused.set(0);
         assert!(focus_first_stop(&root, &items, 2..4, false));
         assert_eq!(focused.get(), 4);
+    }
+
+    /// Only a hidden control is left: the walk reports no stop, so a caller crosses past it (4793).
+    #[test]
+    fn a_hidden_last_control_is_no_stop() {
+        let focused = Rc::new(Cell::new(0));
+        let hidden = Fake {
+            id: 1,
+            refuses: true,
+            focused: focused.clone(),
+            ..Fake::default()
+        };
+        let (root, items) = (Fake::default(), boxed(&[hidden]));
+        assert!(!focus_first_stop(&root, &items, 0..1, false));
+        #[cfg(feature = "focus-trap")]
+        assert!(focus_stop_unconfirmed(&root, &items, 0..1, false));
     }
 }
