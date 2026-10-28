@@ -36,18 +36,15 @@ fn bars_code(_control: &Control, values: &DemoValues) -> Vec<String> {
     }
 }
 
-/// The value type decides `value`, `oninput` and the name the thumb reports,
-/// so the mode control prints all three.
+/// The value type decides `value` and `oninput`, so the mode control prints both.
 fn mode_code(_control: &Control, values: &DemoValues) -> Vec<String> {
     match discrete(values) {
         true => vec![
-            r#"aria_label: "Quality""#.to_string(),
             "value: quality()".to_string(),
             "oninput: move |event: SliderChangeEvent<Quality>| { quality.set(event.value()); last_quality.set(event) }"
                 .to_string(),
         ],
         false => vec![
-            r#"aria_label: "Volume""#.to_string(),
             "value: volume()".to_string(),
             "oninput: move |event: SliderChangeEvent| { volume.set(event.value()); last.set(event) }"
                 .to_string(),
@@ -244,7 +241,7 @@ pub fn SliderPage() -> Element {
                         .doc("Shows a bubble over the value a hovering mouse or pen points at, before a press picks it. Escape hides it until the pointer leaves the slider. Touch has no hover, so it never shows there. The bubble follows the pointer and goes when it leaves the slider, so it is not hoverable (WCAG 1.4.13)."),
                     prop("orientation", "Orientation")
                         .default("horizontal")
-                        .doc("`vertical` runs the track bottom to top, `12rem` tall unless `sx` sets a `height`, with the mark captions beside it. A touch anywhere on it drags, since no swipe scrolls past an upright track. A vertical track is a line: `bars` and `segments` are dropped."),
+                        .doc("`vertical` runs the track bottom to top, `12rem` tall unless `sx` sets a `height`, with the mark captions beside it. A touch on the track's strip drags, since no swipe scrolls past an upright track; the row beside it still scrolls the page. A vertical track is a line: `bars` and `segments` are dropped."),
                 ])
                 .parts("SliderPart", vec![
                     (SliderPart::Label, "The label above the control."),
@@ -370,11 +367,13 @@ pub fn SliderPage() -> Element {
                             false => vec![],
                         }
                     }),
+                    // Without a `label` the thumb needs `aria_label`, which a label would outrank.
                     Control::switch("label").default("true").code(|_, values| {
                         match (values.str("label").as_str(), discrete(values)) {
                             ("true", true) => vec![r#"label: "Quality""#.to_string()],
                             ("true", false) => vec![r#"label: "Volume""#.to_string()],
-                            _ => vec![],
+                            (_, true) => vec![r#"aria_label: "Quality""#.to_string()],
+                            (_, false) => vec![r#"aria_label: "Volume""#.to_string()],
                         }
                     }),
                     Control::switch("description").code(|_, values| {
@@ -400,7 +399,8 @@ pub fn SliderPage() -> Element {
                             sx: sx().width("100%"),
                             if discrete(&values) {
                                 Slider {
-                                    aria_label: "Quality",
+                                    aria_label: (!is_on(&values, "label"))
+                                        .then(|| "Quality".to_string()),
                                     value: quality(),
                                     size: values.str("size"),
                                     color: values.str("color"),
@@ -447,7 +447,8 @@ pub fn SliderPage() -> Element {
                                 }
                             } else {
                                 Slider {
-                                    aria_label: "Volume",
+                                    aria_label: (!is_on(&values, "label"))
+                                        .then(|| "Volume".to_string()),
                                     value: volume(),
                                     size: values.str("size"),
                                     color: values.str("color"),

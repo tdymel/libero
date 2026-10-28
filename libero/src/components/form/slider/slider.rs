@@ -194,11 +194,14 @@ pub fn Slider<V: SliderValue>(props: SliderProps<V>) -> Element {
             disabled: Some(disabled),
             readonly: props.readonly.unwrap_or(false),
             label,
-            // Unlabelled, the thumb's own name says required instead of the label.
-            aria_label: aria_label.map(|name| match required && field.label_id().is_none() {
-                true => format!("{name} {required_word}"),
-                false => name,
-            }),
+            // `aria-labelledby` wins, so a labelled field drops it. Unlabelled, the thumb's own
+            // name says required instead of the label.
+            aria_label: aria_label
+                .filter(|_| field.label_id().is_none())
+                .map(|name| match required {
+                    true => format!("{name} {required_word}"),
+                    false => name,
+                }),
             labelledby: field.label_id(),
             describedby: field.describedby(),
             invalid: field.invalid(),

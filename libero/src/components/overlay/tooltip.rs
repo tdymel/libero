@@ -381,7 +381,8 @@ pub(crate) fn TooltipPinned(
     let retry = use_signal(|| 0u8);
     // A label that changes size while shown is measured again.
     let mut resized = use_signal(|| 0u64);
-    use_resize_fallback(floating, move |_| resized += 1);
+    let on_resize = move |_: Event<ResizeData>| resized += 1;
+    use_resize_fallback(floating, on_resize);
     use_effect(use_reactive!(|shown| {
         let tries = retry();
         let _ = resized();
@@ -451,6 +452,7 @@ pub(crate) fn TooltipPinned(
         .element(&floating)
         .attr("role", shown.then_some("tooltip"))
         .attr("id", id)
+        .event("onresize", on_resize)
         .render(HtmlTag::Span, Vec::new(), label);
     slot.show(Some(rsx! {
         span { class: point_class, style, {bubble} }

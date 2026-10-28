@@ -138,6 +138,8 @@ static SLIDER_ROOT_SX: StaticSx = StaticSx::new(|| {
                 .align_items("flex-start")
                 .height("12rem")
                 .padding_bottom("0")
+                // Only the track's width takes the drag; a full-width root swallowed page swipes.
+                .width("fit-content")
                 // A vertical swipe is the drag, not a scroll.
                 .touch_action("none")
                 .selector(
@@ -1777,7 +1779,7 @@ fn SliderThumbs(props: SliderThumbsProps) -> Element {
                     anchor: track.at(fraction(thumb_value, min, max)),
                     size,
                     gap,
-                    side: vertical.then_some(Side::End),
+                    side: vertical.then_some(Side::Start),
                     id: if shown { bubble_id.clone() } else { None },
                     rtl: track.rtl,
                     shown,
@@ -1796,7 +1798,8 @@ fn SliderThumbs(props: SliderThumbsProps) -> Element {
                     label: rsx! { {bubble_text} },
                     size,
                     gap,
-                    side: vertical.then_some(Side::End),
+                    // Away from the captions, which sit at the inline end.
+                    side: vertical.then_some(Side::Start),
                     open,
                     label_id,
                     // No bridge: it would take the thumb's presses, and Blitz

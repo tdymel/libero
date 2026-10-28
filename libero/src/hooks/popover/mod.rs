@@ -33,6 +33,7 @@ use crate::{
 pub(crate) use owners::open_popups;
 pub(crate) use owners::{OpenPopups, focus_in_popup_of, owner_link, use_open_popups};
 pub(crate) use place::place;
+use place::place_rounded;
 
 /// The room on the box's side, set by [`PopoverHandle::style`]: a box that can
 /// grow tall takes `max-height: min(<own>, var(.., <own>))` and scrolls (WCAG 1.4.10).
@@ -448,6 +449,7 @@ pub(crate) fn use_popover_on(
         let anchor_size = anchor.dimensions();
         let anchor_offset = anchor.client_offset();
         let floating_size = floating.dimensions();
+        let corner = floating.computed_px("border-top-left-radius");
         let viewport = document.viewport();
         let band = visible_band();
         let rtl = anchor.is_rtl();
@@ -474,6 +476,7 @@ pub(crate) fn use_popover_on(
             };
             // A panned visual viewport (todos 2200, 2219): place in the visible part, shifted back below.
             let band = band.await.unwrap_or(VisibleBand::WHOLE);
+            let radius = corner.await.ok().flatten().unwrap_or(0.0);
             if closes.get() != opened {
                 return;
             }
@@ -517,7 +520,7 @@ pub(crate) fn use_popover_on(
                 width: right - left,
                 height: viewport.height - top,
             };
-            let mut next = place(
+            let mut next = place_rounded(
                 Rect {
                     x: x - left,
                     y: y - top,
@@ -527,6 +530,7 @@ pub(crate) fn use_popover_on(
                 visible,
                 &options,
                 rtl,
+                radius,
             );
             next.x += left;
             next.y += top;

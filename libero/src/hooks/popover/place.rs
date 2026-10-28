@@ -35,13 +35,17 @@ pub(crate) struct ArrowPoint {
     pub(crate) y: f64,
 }
 
-/// How far an arrow's centre stays from the box's ends, clear of a rounded corner.
+/// How far an arrow's centre stays from the box's ends at the least.
 const ARROW_INSET: f64 = 12.0;
 
-/// `centre` held on the box spanning `start..start + size`, off its corners.
-fn arrow_across(centre: f64, start: f64, size: f64) -> f64 {
-    match size > 2.0 * ARROW_INSET {
-        true => centre.clamp(start + ARROW_INSET, start + size - ARROW_INSET),
+/// Half the diagonal of the widest arrow drawn, a 10px square.
+const ARROW_REACH: f64 = 7.1;
+
+/// `centre` held on the box spanning `start..start + size`, clear of a corner of `radius`.
+fn arrow_across(centre: f64, start: f64, size: f64, radius: f64) -> f64 {
+    let inset = ARROW_INSET.max(radius + ARROW_REACH);
+    match size > 2.0 * inset {
+        true => centre.clamp(start + inset, start + size - inset),
         false => start + size / 2.0,
     }
 }
@@ -102,6 +106,18 @@ pub(crate) fn place(
     viewport: Dimensions,
     options: &PopoverOptions,
     rtl: bool,
+) -> Placed {
+    place_rounded(anchor, floating, viewport, options, rtl, 0.0)
+}
+
+/// [`place`] for a box with corners of `radius`, which its arrow stays clear of.
+pub(crate) fn place_rounded(
+    anchor: Rect,
+    floating: Dimensions,
+    viewport: Dimensions,
+    options: &PopoverOptions,
+    rtl: bool,
+    radius: f64,
 ) -> Placed {
     let needed = |side: Side| match side.is_vertical() {
         true => floating.height + options.gap,
@@ -188,15 +204,15 @@ pub(crate) fn place(
     );
     let (arrow_x, arrow_y) = match Edge::of(side, rtl) {
         Edge::Top => (
-            arrow_across(centre_x, x, floating.width),
+            arrow_across(centre_x, x, floating.width, radius),
             y + floating.height,
         ),
-        Edge::Bottom => (arrow_across(centre_x, x, floating.width), y),
+        Edge::Bottom => (arrow_across(centre_x, x, floating.width, radius), y),
         Edge::Left => (
             x + floating.width,
-            arrow_across(centre_y, y, floating.height),
+            arrow_across(centre_y, y, floating.height, radius),
         ),
-        Edge::Right => (x, arrow_across(centre_y, y, floating.height)),
+        Edge::Right => (x, arrow_across(centre_y, y, floating.height, radius)),
     };
     // A box shifted over its anchor has no edge facing it, so nothing to point from.
     let overlaps = x < anchor.x + anchor.width
@@ -320,6 +336,26 @@ mod tests {
             true,
         );
         assert_eq!(beside.arrow, Some(ArrowPoint { x: 396.0, y: 120.0 }));
+    }
+
+    /// 4746: a corner of 16px pushes the arrow past it, not to the flat 12px inset.
+    #[test]
+    fn the_arrow_clears_a_rounded_corner() {
+        let shifted = place_rounded(
+            anchor_at(-150.0, 600.0),
+            dropdown(),
+            viewport(),
+            &options(),
+            false,
+            16.0,
+        );
+        assert_eq!(
+            shifted.arrow,
+            Some(ArrowPoint {
+                x: 8.0 + 16.0 + ARROW_REACH,
+                y: 596.0
+            })
+        );
     }
 
     #[test]
