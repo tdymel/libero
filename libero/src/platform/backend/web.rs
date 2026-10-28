@@ -415,6 +415,10 @@ pub(super) fn focus_pressed(event: &Event<PointerData>, within: &Rc<MountedData>
         }
         let options = web_sys::FocusOptions::new();
         options.set_prevent_scroll(true);
+        // A finger needs no ring (4804); a mouse press is left to the browser's heuristic.
+        if event.pointer_type() == "touch" {
+            options.set_focus_visible(false);
+        }
         handle.focus_with_options(&options).ok()
     };
     let _ = focus();

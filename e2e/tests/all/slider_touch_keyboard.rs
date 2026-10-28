@@ -112,6 +112,38 @@ fn a_touch_drags_only_from_the_thumb() {
     });
 }
 
+/// Todo 4804: a touch drag from the thumb focuses it without a focus ring.
+#[test]
+fn a_touch_drag_focuses_the_thumb_without_a_ring() {
+    block_on(async {
+        let fixture = Fixture::open("/slider/scroll", Viewport::Mobile)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        let thumb = pointer::centre_of(page, SCROLL_THUMB).await.unwrap();
+        let aside = pointer::Point {
+            x: thumb.x + 80.0,
+            y: thumb.y,
+        };
+        pointer::swipe(page, thumb, aside, 8).await.unwrap();
+        let focused =
+            format!("document.activeElement === document.querySelector('{SCROLL_THUMB}')");
+        wait::for_js_true(page, &focused, "the drag to focus the thumb")
+            .await
+            .unwrap();
+        let ring: bool = page
+            .evaluate_bounded(format!(
+                "document.querySelector('{SCROLL_THUMB}').matches(':focus-visible')"
+            ))
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        assert!(!ring, "a touch drag left the thumb's focus ring");
+        fixture.close().await.unwrap();
+    });
+}
+
 /// The keyboard half of the same contract, which a drag cannot prove.
 #[test]
 fn the_thumb_moves_with_the_arrow_keys() {
