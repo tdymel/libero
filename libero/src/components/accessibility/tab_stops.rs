@@ -378,6 +378,22 @@ mod tests {
         }
     }
 
+    /// Two sibling forms each hold a radio of one name: two groups.
+    #[test]
+    fn sibling_forms_keep_their_radios_apart() {
+        let focused = Rc::new(Cell::new(0));
+        let first = in_depth(radio(1, &focused, "size"), 1);
+        let second = in_depth(radio(2, &focused, "size"), 1);
+        let third = in_depth(radio(3, &focused, "size"), 1);
+        let root = Fake {
+            children: vec![form_of(&[&first]), form_of(&[&second, &third])],
+            ..Fake::default()
+        };
+        let groups = radio_groups(&root, &boxed(&[first, second, third]));
+        assert_ne!(groups[0], groups[1]);
+        assert_eq!(groups[1], groups[2]);
+    }
+
     /// An outer form holds Z1 and an inner form holding Z2 and Z3: two groups, not one.
     #[test]
     fn a_nested_form_owns_its_own_radios() {
@@ -390,13 +406,16 @@ mod tests {
             ..form_of(&[&z2, &z3])
         };
         let outer = form_of(&[&z1, &z2, &z3]);
+        let z4 = in_depth(radio(4, &focused, "size"), 1);
         let root = Fake {
-            children: vec![outer, inner],
+            children: vec![outer, inner, form_of(&[&z4])],
             ..Fake::default()
         };
-        let groups = radio_groups(&root, &boxed(&[z1, z2, z3]));
+        let groups = radio_groups(&root, &boxed(&[z1, z2, z3, z4]));
         assert_ne!(groups[0], groups[1]);
         assert_eq!(groups[1], groups[2]);
+        assert_ne!(groups[0], groups[3]);
+        assert_ne!(groups[1], groups[3]);
     }
 
     /// The root sits in a form and holds one: the radio around the inner form is not its radio.
