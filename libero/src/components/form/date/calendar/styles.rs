@@ -31,7 +31,7 @@ pub(super) static CALENDAR_SX: StaticSx = StaticSx::new(|| {
         .letter_spacing("inherit")
         .font_size("inherit")
         .cursor("pointer")
-        .hover(sx().background("muted.1"));
+        .hover_tint(":hover", sx().background("muted.1"));
     ChronoPickerDefaults::theme_vars()
         .var(CALENDAR_DAY, CHRONO_DAY.value())
         .media(
@@ -64,7 +64,7 @@ pub(super) static CALENDAR_SX: StaticSx = StaticSx::new(|| {
         )
         .selector(
             "& div[data-slot='title']",
-            sx().cursor("default").hover(sx().background("transparent")),
+            sx().cursor("default").hover_tint(":hover", sx().background("transparent")),
         )
         .selector(
             "& > [data-slot='months'], & > [data-slot='panel'] > [data-slot='months']",
@@ -115,7 +115,7 @@ pub(super) static CALENDAR_SX: StaticSx = StaticSx::new(|| {
             "& [data-slot='preset'][aria-pressed='true']",
             sx().background("primary.1")
                 .color("primary-contrast.1")
-                .hover(sx().background("primary.2")),
+                .hover_tint(":hover", sx().background("primary.2")),
         )
         // Drawn only to measure how many months fit (todo 3958); opacity keeps focus.
         .selector("&[data-state~='measuring']", sx().opacity("0"))
@@ -251,7 +251,11 @@ pub(super) static CALENDAR_SX: StaticSx = StaticSx::new(|| {
         )
         // Dimmed it reads 3.07:1 on the selected fill (todo 1998), 4.08:1 on the hover fill.
         .selector(
-            "& [data-slot='strip'] :is([data-selected], [data-slot='day']:hover:not(:disabled)) > [data-slot='month']",
+            "& [data-slot='strip'] [data-selected] > [data-slot='month']",
+            sx().color("inherit"),
+        )
+        .hover_tint(
+            "& [data-slot='strip'] [data-slot='day']:hover:not(:disabled) > [data-slot='month']",
             sx().color("inherit"),
         )
         .selector(
@@ -269,7 +273,7 @@ pub(super) static CALENDAR_SX: StaticSx = StaticSx::new(|| {
             sx().background("primary.1")
                 .color("primary-contrast.1")
                 .border_radius("0")
-                .hover(sx().background("primary.2")),
+                .hover_tint(":hover", sx().background("primary.2")),
         )
         // After the plain hover and the range tint, so a picked day keeps its
         // fill under the mouse: equal specificity, source order decides.
@@ -277,18 +281,18 @@ pub(super) static CALENDAR_SX: StaticSx = StaticSx::new(|| {
             "& [data-selected]",
             sx().background("primary.6")
                 .color("primary-contrast.6")
-                .hover(sx().background("primary.7")),
+                .hover_tint(":hover", sx().background("primary.7")),
         )
         .selector(
             "& :is([data-slot='day'], [data-slot='cell']):disabled",
-            disabled_look_sx("not-allowed").hover(sx().background("transparent")),
+            disabled_look_sx("not-allowed").hover_tint(":hover", sx().background("transparent")),
         )
         // A disabled picker (todo 3881): soft, so a focused day keeps its focus.
         .selector(
             "& :is([data-slot='day'], [data-slot='cell'], [data-slot='title'])[aria-disabled='true']",
             disabled_look_sx("not-allowed"),
         )
-        .selector(
+        .hover_tint(
             "& [aria-disabled='true']:not([data-selected], [data-in-range]):hover",
             sx().background("transparent"),
         )
@@ -320,7 +324,7 @@ pub(super) static CALENDAR_SX: StaticSx = StaticSx::new(|| {
                 sx().forced_color_adjust("none")
                     .background("Highlight")
                     .color("HighlightText")
-                    .hover(sx().background("Highlight")),
+                    .hover_tint(":hover", sx().background("Highlight")),
             ),
         )
 });

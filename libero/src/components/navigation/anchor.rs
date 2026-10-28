@@ -27,11 +27,11 @@ fn underline_sx(underline: AnchorUnderline) -> Sx {
         AnchorUnderline::Always => sx().text_decoration("underline"),
         AnchorUnderline::NotHover => sx()
             .text_decoration("underline")
-            .hover(sx().text_decoration("none")),
+            .hover_tint(":hover", sx().text_decoration("none")),
         AnchorUnderline::Never => sx().text_decoration("none"),
         AnchorUnderline::Hover => sx()
             .text_decoration("none")
-            .hover(sx().text_decoration("underline")),
+            .hover_tint(":hover", sx().text_decoration("underline")),
     }
 }
 

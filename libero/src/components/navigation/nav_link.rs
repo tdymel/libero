@@ -95,12 +95,9 @@ static NAV_LINK_BASE_SX: StaticSx = StaticSx::new(|| {
         .focus_visible(inset_focus_ring_sx("-2px"))
         // Neutral grey, so hover doesn't preview the active tint. Skips a disabled
         // link (todo 596); `:where` keeps `:hover`'s specificity. Hovering pointers only, or a tap sticks.
-        .media(
-            "(hover: hover)",
-            sx().selector(
-                "&:hover:not(:where([data-state~=\"disabled\"]))",
-                sx().background(ROW_HOVER_TINT),
-            ),
+        .hover_tint(
+            "&:hover:not(:where([data-state~=\"disabled\"]))",
+            sx().background(ROW_HOVER_TINT),
         )
         // The tint is too faint to mark the state alone, so a coloured start bar
         // does; a full ring would read as the focus ring. After each `background`, which resets it.
@@ -118,12 +115,9 @@ static NAV_LINK_BASE_SX: StaticSx = StaticSx::new(|| {
                 .selector(NavLinkPart::Description.selector(), sx().color("inherit")),
         )
         // The dimmed grey is under 4.5:1 on the hover grey and the active tint.
-        .media(
-            "(hover: hover)",
-            sx().selector(
-                "&:hover:not(:where([data-state~=\"disabled\"])) > [data-slot='body'] > [data-slot='description']",
-                sx().color("inherit"),
-            ),
+        .hover_tint(
+            "&:hover:not(:where([data-state~=\"disabled\"])) > [data-slot='body'] > [data-slot='description']",
+            sx().color("inherit"),
         )
         // Without `href` it has nothing to follow.
         .when("disabled", disabled_look_sx("not-allowed"))
@@ -178,10 +172,7 @@ static NAV_GROUP_SX: StaticSx = StaticSx::new(|| {
                 .color("inherit")
                 .cursor("pointer")
                 .focus_visible(inset_focus_ring_sx("-2px"))
-                .media(
-                    "(hover: hover)",
-                    sx().hover(sx().background(ROW_HOVER_TINT)),
-                )
+                .hover_tint(":hover", sx().background(ROW_HOVER_TINT))
                 .selector("&[aria-disabled='true']", disabled_look_sx("not-allowed"))
                 .selector(
                     "& > svg",

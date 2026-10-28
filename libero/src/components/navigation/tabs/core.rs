@@ -71,12 +71,9 @@ static TABS_SX: StaticSx = StaticSx::new(|| {
             inset_focus_ring_sx("-2px"),
         )
         // Only with a hovering pointer: a tap on touch must not leave the tab lit.
-        .media(
-            "(hover: hover)",
-            sx().selector(
-                "& [role=\"tab\"]:hover:not([aria-selected=\"true\"]):not([aria-disabled=\"true\"])",
-                sx().background(TABS_HOVER.value()),
-            ),
+        .hover_tint(
+            "& [role=\"tab\"]:hover:not([aria-selected=\"true\"]):not([aria-disabled=\"true\"])",
+            sx().background(TABS_HOVER.value()),
         )
         .selector(
             "& [role=\"tab\"][aria-selected=\"true\"]",

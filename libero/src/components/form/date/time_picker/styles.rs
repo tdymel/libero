@@ -29,7 +29,7 @@ pub(in super::super) static TIME_PICKER_SX: StaticSx = StaticSx::new(|| {
         .letter_spacing("inherit")
         .font_size("inherit")
         .cursor("pointer")
-        .hover(sx().background("muted.1"));
+        .hover_tint(":hover", sx().background("muted.1"));
     ChronoPickerDefaults::theme_vars()
         .display("inline-flex")
         .flex_direction("column")
@@ -61,7 +61,7 @@ pub(in super::super) static TIME_PICKER_SX: StaticSx = StaticSx::new(|| {
                 // A touch drags the column rather than scrolling the page.
                 .touch_action("none")
                 .user_select("none")
-                .hover(sx().background("muted.1")),
+                .hover_tint(":hover", sx().background("muted.1")),
         )
         .selector(
             ChronoPickerPart::Value.selector(),
@@ -136,7 +136,7 @@ pub(in super::super) static TIME_PICKER_SX: StaticSx = StaticSx::new(|| {
                 // The face's fill: the hand passes under an inner mark, not behind its digits.
                 .background("muted.1")
                 // A step above the face: the button's own `muted.1` hover vanished on it.
-                .hover(sx().background("muted.2")),
+                .hover_tint(":hover", sx().background("muted.2")),
         )
         // A quiet grey made for the face's tint, not half opacity: that read 3.87:1 (todo 1999).
         .selector(
@@ -150,7 +150,7 @@ pub(in super::super) static TIME_PICKER_SX: StaticSx = StaticSx::new(|| {
             )
                 .cursor("not-allowed")
                 .media(FORCED_COLORS, sx().color("GrayText"))
-                .hover(sx().background("muted.1")),
+                .hover_tint(":hover", sx().background("muted.1")),
         )
         // One tick per step where the marks are coarser than the step.
         .selector(
@@ -177,11 +177,11 @@ pub(in super::super) static TIME_PICKER_SX: StaticSx = StaticSx::new(|| {
         .selector("& [data-selected]", {
             sx().background("primary.6")
                 .color("primary-contrast.6")
-                .hover(sx().background("primary.7"))
+                .hover_tint(":hover", sx().background("primary.7"))
         })
         .selector(
             "& button:disabled",
-            disabled_look_sx("not-allowed").hover(sx().background("transparent")),
+            disabled_look_sx("not-allowed").hover_tint(":hover", sx().background("transparent")),
         )
         // A disabled picker (todo 3881): soft, so a focused column keeps its focus.
         // No drag, so a touch scrolls the page again (3886).
@@ -189,7 +189,7 @@ pub(in super::super) static TIME_PICKER_SX: StaticSx = StaticSx::new(|| {
             "& [aria-disabled='true']",
             disabled_look_sx("not-allowed").touch_action("auto"),
         )
-        .selector(
+        .hover_tint(
             "& :is(button, [data-slot='spin'])[aria-disabled='true']:not([data-selected]):hover",
             sx().background("transparent"),
         )
@@ -207,7 +207,7 @@ pub(in super::super) static TIME_PICKER_SX: StaticSx = StaticSx::new(|| {
                 "& [data-selected]",
                 sx().background("Highlight")
                     .color("HighlightText")
-                    .hover(sx().background("Highlight")),
+                    .hover_tint(":hover", sx().background("Highlight")),
             )
             .selector(
                 "& [data-slot='hand'], & [data-slot='pivot']",

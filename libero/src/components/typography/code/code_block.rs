@@ -68,7 +68,8 @@ static CODE_BLOCK_HEADER_SX: StaticSx = StaticSx::new(|| {
 static CODE_COPY_BUTTON_SX: StaticSx = StaticSx::new(|| {
     sx().border_radius("6px")
         .color(CODE_BLOCK_MUTED_TEXT.value())
-        .hover(
+        .hover_tint(
+            ":hover",
             sx().background(CODE_BLOCK_COPY_HOVER_BACKGROUND.value())
                 .color(CODE_BLOCK_COPY_HOVER_TEXT.value()),
         )
@@ -90,7 +91,8 @@ static CODE_COPY_BUTTON_FLOATING_SX: StaticSx = StaticSx::new(|| {
         .border_color(CODE_BLOCK_BORDER.value())
         .border_radius("6px")
         .color(CODE_BLOCK_MUTED_TEXT.value())
-        .hover(
+        .hover_tint(
+            ":hover",
             sx().background(CODE_BLOCK_COPY_HOVER_BACKGROUND.value())
                 .color(CODE_BLOCK_COPY_HOVER_TEXT.value()),
         )

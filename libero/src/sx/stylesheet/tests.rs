@@ -254,6 +254,23 @@ fn a_media_modifier_nests_inside_a_selector() {
 }
 
 #[test]
+fn a_hover_tint_applies_only_with_a_hovering_pointer() {
+    let css = Stylesheet::from(
+        &sx()
+            .hover_tint("&:hover", sx().color("red"))
+            .selector("&:active", sx().color("blue")),
+    );
+    let css = css.as_str();
+
+    let guard = css
+        .find("@media (hover: hover), (pointer: none){")
+        .expect("hover guard");
+    assert!(css[guard..].contains(":hover{color:red;}"));
+    // The guard keeps the rule in place, so a later pressed state still wins.
+    assert!(guard < css.find(":active{").expect("pressed rule"));
+}
+
+#[test]
 fn sx_container_marks_and_queries_a_named_container() {
     let marker = Stylesheet::from(&sx().container("demo-card"));
     assert!(

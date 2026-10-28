@@ -10,6 +10,10 @@ pub(crate) const REDUCED_MOTION: &str = "(prefers-reduced-motion: reduce)";
 /// The one forced-colours query for [`Sx::media`], same reason.
 pub(crate) const FORCED_COLORS: &str = "(forced-colors: active)";
 
+/// The one hovering-pointer query, used through [`Sx::hover_tint`].
+/// Blitz reports no pointer at all, hence `(pointer: none)`: a phone's finger is `coarse`.
+const CAN_HOVER: &str = "(hover: hover), (pointer: none)";
+
 /// A style: declarations plus nested modifiers, rendered to one hashed class.
 /// Values take theme tokens: sizes (`"md"`), palette colours (`"primary.7"`), vars.
 /// Values, selectors and queries reach the stylesheet unescaped: never user text.
@@ -66,6 +70,12 @@ impl Sx {
     /// Styles while the pointer is over the element.
     pub fn hover(self, nested: Sx) -> Self {
         self.selector(":hover", nested)
+    }
+
+    /// A hover look under `selector`, only with a pointer that hovers: a touch tap
+    /// matches `:hover` until the next tap elsewhere, so the tint would stay lit.
+    pub(crate) fn hover_tint(self, selector: impl Into<String>, nested: Sx) -> Self {
+        self.selector(selector, Sx::new().media(CAN_HOVER, nested))
     }
 
     /// Styles while the element has focus, by pointer too; prefer [`focus_visible`](Self::focus_visible) for rings.

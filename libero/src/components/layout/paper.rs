@@ -79,7 +79,7 @@ fn glass_state_sx() -> Sx {
             PaperDefaults::glass_gradient_state_sx(&gradient),
         )
     };
-    sx().hover(layer(HOVER_LAYER))
+    sx().hover_tint(":hover", layer(HOVER_LAYER))
         .selector(":active", layer(PRESSED_LAYER))
 }
 
@@ -97,7 +97,10 @@ fn interactive_sx() -> Sx {
     // The UA's link colours would otherwise turn the label red while pressed.
     sx().color("inherit")
         .cursor("pointer")
-        .hover(layer(HOVER_LAYER, gradient_hover_sx(), &PAPER_HOVER))
+        .hover_tint(
+            ":hover",
+            layer(HOVER_LAYER, gradient_hover_sx(), &PAPER_HOVER),
+        )
         .selector(
             ":active",
             layer(PRESSED_LAYER, gradient_pressed_sx(), &PAPER_PRESSED),

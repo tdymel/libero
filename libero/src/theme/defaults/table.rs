@@ -119,9 +119,9 @@ impl TableDefaults {
                     sx().background(NamedColorCss::SURFACE.value()),
                 ),
             )
-            .selector("& tbody tr:hover", sx().background(TABLE_HOVER.value()))
+            .hover_tint("& tbody tr:hover", sx().background(TABLE_HOVER.value()))
             // A row's detail is no row of its own.
-            .selector(
+            .hover_tint(
                 "& tbody tr[data-detail]:hover",
                 sx().background("transparent"),
             )

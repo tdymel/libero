@@ -301,12 +301,9 @@ static NAVIGATION_BAR_ITEM_SX: StaticSx = StaticSx::new(|| {
                 .selector("& > svg", sx().width("24px").height("24px")),
         )
         // Only with a hovering pointer: a tap on touch must not leave the pill lit.
-        .media(
-            "(hover: hover)",
-            sx().selector(
-                "&:hover:not(:where([data-state~=\"disabled\"], [data-state~=\"selected\"])) > [data-slot='icon']",
-                sx().background("muted.2"),
-            ),
+        .hover_tint(
+            "&:hover:not(:where([data-state~=\"disabled\"], [data-state~=\"selected\"])) > [data-slot='icon']",
+            sx().background("muted.2"),
         )
         // Two lines at most, then an ellipsis: a long label must not grow the bar.
         // Blitz has no line clamp: a two-line height cap cuts it without the ellipsis.

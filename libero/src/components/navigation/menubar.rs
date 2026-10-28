@@ -80,12 +80,9 @@ static MENUBAR_SX: StaticSx = StaticSx::new(|| {
         )
         // Hover, keyboard focus and an open menu share one tint, as `Menu`'s items. Hover only
         // with a hovering pointer, and no tint on a tap's `:focus`, or a closed menu looks open.
-        .media(
-            "(hover: hover)",
-            sx().selector(
-                format!("{trigger}:hover:not([aria-disabled=\"true\"])"),
-                sx().background(ROW_HOVER_TINT),
-            ),
+        .hover_tint(
+            format!("{trigger}:hover:not([aria-disabled=\"true\"])"),
+            sx().background(ROW_HOVER_TINT),
         )
         .selector(
             format!("{trigger}:focus-visible"),

@@ -78,7 +78,7 @@ fn drill_back_sx() -> Sx {
         .line_height("1.5")
         .text_align("start")
         .cursor("pointer")
-        .hover(sx().background(ROW_HOVER_TINT))
+        .hover_tint(":hover", sx().background(ROW_HOVER_TINT))
         .selector(
             "& > [data-slot='back']",
             sx().flex("0 0 auto")

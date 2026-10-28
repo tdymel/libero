@@ -83,7 +83,10 @@ pub(super) static CAROUSEL_CONTROL_SX: StaticSx = StaticSx::new(|| {
             "horizontal",
             sx().rtl(sx().selector("& > svg", sx().transform("scaleX(-1)"))),
         )
-        .hover(sx().background(CAROUSEL_CONTROL_HOVER_BACKGROUND.value()))
+        .hover_tint(
+            ":hover",
+            sx().background(CAROUSEL_CONTROL_HOVER_BACKGROUND.value()),
+        )
         // Disabled keeps its tab stop, so focus is never dropped at either end.
         .when(
             "disabled",

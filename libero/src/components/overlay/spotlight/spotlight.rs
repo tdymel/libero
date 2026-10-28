@@ -107,7 +107,7 @@ static SPOTLIGHT_BODY_SX: StaticSx = StaticSx::new(|| {
                 .cursor("pointer")
                 .user_select("none"),
         )
-        .selector("& [role=\"option\"]:hover", sx().background(ROW_HOVER_TINT))
+        .hover_tint("& [role=\"option\"]:hover", sx().background(ROW_HOVER_TINT))
         .selector(
             "& [role=\"option\"][data-active]",
             sx().background(ROW_HOVER_TINT),

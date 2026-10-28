@@ -109,7 +109,7 @@ pub(crate) fn interactive_variant_sx(
         // The state layer over the image, not a flat colour.
         Variant::Gradient => {
             return variant_chrome_sx(variant, vars)
-                .selector(HOVER, gradient_hover_sx())
+                .hover_tint(HOVER, gradient_hover_sx())
                 .selector(ACTIVE, gradient_pressed_sx());
         }
     };
@@ -141,7 +141,7 @@ pub(crate) fn interactive_variant_sx(
     }
 
     variant_chrome_sx(variant, vars)
-        .selector(HOVER, hovered)
+        .hover_tint(HOVER, hovered)
         .selector(ACTIVE, pressed)
 }
 

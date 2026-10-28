@@ -66,7 +66,7 @@ static ACCORDION_SX: StaticSx = StaticSx::new(|| {
             "& > [data-accordion-item] > [data-accordion-heading] > button:focus-visible:focus-visible",
             inset_focus_ring_sx("-2px"),
         )
-        .selector(
+        .hover_tint(
             "& > [data-accordion-item] > [data-accordion-heading] > button:hover:not([aria-disabled=\"true\"])",
             sx().background(ACCORDION_HOVER.value()),
         )

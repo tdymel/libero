@@ -450,7 +450,7 @@ fn default_card(
                     sx: sx()
                         .color("inherit")
                         .border_radius("50%")
-                        .selector(
+                        .hover_tint(
                             "&:hover",
                             sx().background("color-mix(in srgb, currentColor 12%, transparent)"),
                         ),

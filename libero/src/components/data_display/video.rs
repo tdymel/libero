@@ -171,8 +171,12 @@ static VIDEO_SX: StaticSx = StaticSx::new(|| {
                 )
                 .selector("& [data-slot='thumb']", sx().border_color(LIGHT_FILL))
                 // The theme's light state tint left the white text under 3:1 (todo 1388).
+                .hover_tint(
+                    "& button:hover:not(:disabled)",
+                    sx().background(STATE_TINT).color("#fff"),
+                )
                 .selector(
-                    "& button:is(:hover, :active, [aria-expanded='true']):not(:disabled)",
+                    "& button:is(:active, [aria-expanded='true']):not(:disabled)",
                     sx().background(STATE_TINT).color("#fff"),
                 )
                 // Shown captions: a bar under the icon, as YouTube's; a border survives forced colours.

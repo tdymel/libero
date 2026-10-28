@@ -71,7 +71,7 @@ pub(super) static MENU_SX: StaticSx = StaticSx::new(|| {
                 .user_select("none"),
         )
         // Hover and focus share a tint: focus follows the pointer.
-        .selector(
+        .hover_tint(
             format!("{item}:hover:not([aria-disabled=\"true\"])"),
             sx().background(ROW_HOVER_TINT),
         )

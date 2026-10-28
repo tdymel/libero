@@ -55,7 +55,7 @@ static REMOVE_BUTTON_SX: StaticSx = StaticSx::new(|| {
     sx().color("inherit")
         .font_size("inherit")
         .border_radius("50%")
-        .selector(
+        .hover_tint(
             "&:hover",
             sx().background("color-mix(in srgb, currentColor 20%, transparent)"),
         )

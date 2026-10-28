@@ -98,7 +98,7 @@ static COMBOBOX_ROW_SX: StaticSx = StaticSx::new(|| {
         )
         // Hover and the keyboard's row share the tint; only the active row takes the ring.
         // The pointer cursor only under hover: a bare one makes the row a Tab stop under Android's spatial navigation (3158).
-        .hover(sx().background(ROW_HOVER_TINT).cursor("pointer"))
+        .hover_tint(":hover", sx().background(ROW_HOVER_TINT).cursor("pointer"))
         .when("active", sx().background(ROW_HOVER_TINT))
         // The contrast twin, not `primary.7` (hard to read). A ring means active.
         .when(
@@ -108,14 +108,19 @@ static COMBOBOX_ROW_SX: StaticSx = StaticSx::new(|| {
                 .and(forced_on_sx()),
         )
         // After the selected tint: equal specificity, so source order decides.
-        .when("selected", sx().hover(sx().background("primary.2")))
+        .when(
+            "selected",
+            sx().hover_tint(":hover", sx().background("primary.2")),
+        )
         // A ring, since a tint can't mark an already tinted row. Inset, so the dropdown doesn't clip it.
         .when("active", inset_focus_ring_sx(ACTIVE_RING_OFFSET))
         // Last, so it beats the tints by source order. The hover is undone by hand.
         .when(
             "disabled",
-            disabled_look_sx("not-allowed")
-                .hover(sx().background("transparent").cursor("not-allowed")),
+            disabled_look_sx("not-allowed").hover_tint(
+                ":hover",
+                sx().background("transparent").cursor("not-allowed"),
+            ),
         )
 });
 
