@@ -16,12 +16,14 @@ const SHEET: &str = "[role=dialog]";
 const TYPED: &str = "[role=dialog] [data-slot=text-input]";
 
 async fn phone() -> Fixture {
-    let fixture = Fixture::open("/picker-phone", Viewport::Mobile)
-        .await
-        .unwrap();
+    phone_at("/picker-phone", 360).await
+}
+
+async fn phone_at(route: &str, width: i64) -> Fixture {
+    let fixture = Fixture::open(route, Viewport::Mobile).await.unwrap();
     fixture
         .page
-        .execute_bounded(SetDeviceMetricsOverrideParams::new(360, 780, 1.0, true))
+        .execute_bounded(SetDeviceMetricsOverrideParams::new(width, 780, 1.0, true))
         .await
         .unwrap();
     fixture
@@ -134,6 +136,70 @@ fn a_finger_gets_44px_clock_neighbours() {
              return n.length > 0 && n.every(e => e.getBoundingClientRect().height >= 43.5); }})()"
         );
         wait::for_js_true(page, &js, "44px neighbours")
+            .await
+            .unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
+/// Todo 4825: a finger presses the clock's hour, minute and AM/PM 22px out from their middle.
+#[test]
+fn a_finger_gets_44px_clock_segments() {
+    block_on(async {
+        let fixture = phone_at("/picker-phone", 375).await;
+        let page = &fixture.page;
+        tap(page, &input("at")).await.unwrap();
+        sheet_shown(page).await.unwrap();
+        let js = format!(
+            "(() => {{ const b = [...document.querySelectorAll('{SHEET} [data-slot=readout] button')]; \
+             return b.length === 4 && b.every(e => {{ const r = e.getBoundingClientRect(); \
+               const x = r.left + r.width / 2, y = r.top + r.height / 2; \
+               return [[-21.5, 0], [21.5, 0], [0, -21.5], [0, 21.5]].every(([dx, dy]) => \
+                 document.elementFromPoint(x + dx, y + dy)?.closest('button') === e); }}); }})()"
+        );
+        wait::for_js_true(page, &js, "44px clock segments")
+            .await
+            .unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
+/// Todo 4825: the mini row's days are 44px wide to a finger; the row scrolls instead.
+#[test]
+fn a_finger_gets_44px_mini_days() {
+    block_on(async {
+        let fixture = phone_at("/picker-phone/grid", 375).await;
+        let page = &fixture.page;
+        tap(page, &input("mini")).await.unwrap();
+        sheet_shown(page).await.unwrap();
+        let js = format!(
+            "(() => {{ const d = [...document.querySelectorAll('{SHEET} [data-slot=strip] [data-slot=day]')]; \
+             return d.length === 7 && d.every(e => e.getBoundingClientRect().width >= 43.5) \
+               && document.documentElement.scrollWidth <= innerWidth; }})()"
+        );
+        wait::for_js_true(page, &js, "seven 44px days, no page overflow")
+            .await
+            .unwrap();
+        fixture.console.assert_clean("a phone's mini row").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
+/// Todo 4825: at 375px, under presets the month with week numbers sits centred in the sheet.
+#[test]
+fn presets_leave_the_week_numbered_month_centred() {
+    block_on(async {
+        let fixture = phone_at("/picker-phone/grid", 375).await;
+        let page = &fixture.page;
+        tap(page, &input("weeks")).await.unwrap();
+        sheet_shown(page).await.unwrap();
+        let js = format!(
+            "(() => {{ const s = document.querySelector({SHEET:?}).getBoundingClientRect(); \
+             const g = document.querySelector('{SHEET} [role=grid][data-week-numbers]'); \
+             if (!g) return false; const r = g.getBoundingClientRect(); \
+             return Math.abs((r.left - s.left) - (s.right - r.right)) < 1.5; }})()"
+        );
+        wait::for_js_true(page, &js, "the month centred under the presets")
             .await
             .unwrap();
         fixture.close().await.unwrap();

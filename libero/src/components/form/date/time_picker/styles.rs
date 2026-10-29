@@ -1,8 +1,8 @@
 use crate::{
     components::{
         common::{
-            COARSE_POINTER, Part, borderless_on_state_sx, disabled_look_sx, focus_ring_sx,
-            inset_focus_ring_sx, on_tint_color,
+            COARSE_POINTER, COARSE_TARGET, Part, borderless_on_state_sx, disabled_look_sx,
+            focus_ring_sx, inset_focus_ring_sx, on_tint_color,
         },
         form::ChronoPickerPart,
     },
@@ -105,7 +105,11 @@ pub(in super::super) static TIME_PICKER_SX: StaticSx = StaticSx::new(|| {
         )
         .selector(
             "& [data-slot='readout'] button",
-            button.clone().height(format!("calc(1.25 * {day})")),
+            button
+                .clone()
+                .height(format!("calc(1.25 * {day})"))
+                // Drawn 44px wide to a finger: AM sits 4px off the minutes (todo 4825).
+                .media(COARSE_POINTER, sx().min_width(COARSE_TARGET)),
         )
         // The house on-state ring marks the hand being set (todo 744).
         .selector(

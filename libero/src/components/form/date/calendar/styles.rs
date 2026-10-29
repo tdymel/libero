@@ -1,6 +1,9 @@
 use crate::{
     components::{
-        common::{COARSE_POINTER, Part, disabled_look_sx, focus_ring_sx, inset_focus_ring_sx},
+        common::{
+            COARSE_POINTER, COARSE_TARGET, Part, disabled_look_sx, focus_ring_sx,
+            inset_focus_ring_sx,
+        },
         form::ChronoPickerPart,
     },
     sx::{FORCED_COLORS, StaticSx, sx},
@@ -86,6 +89,14 @@ pub(super) static CALENDAR_SX: StaticSx = StaticSx::new(|| {
             sx().gap("8px").media(
                 format!("(min-width: {})", Size::Sm.breakpoint_value()),
                 sx().flex_direction("row").align_items("flex-start").gap("12px"),
+            ),
+        )
+        // Under wrapped presets the months sit centred, not at the start (todo 4825).
+        .selector(
+            "&[data-state~='presets']:not([data-state~='scroll']) > [data-slot='panel']",
+            sx().align_self("center").media(
+                format!("(min-width: {})", Size::Sm.breakpoint_value()),
+                sx().align_self("auto"),
             ),
         )
         .selector(
@@ -227,7 +238,15 @@ pub(super) static CALENDAR_SX: StaticSx = StaticSx::new(|| {
         )
         .selector(
             "& [data-slot='strip'] > [data-slot='months']",
-            sx().min_width("0"),
+            // Under a finger the row scrolls rather than shrink a day below 44px (todo 4825);
+            // the padding keeps the focus ring inside the scroller.
+            sx().min_width("0").media(
+                COARSE_POINTER,
+                sx().overflow_x("auto")
+                    .overscroll_behavior_x("contain")
+                    .padding("4px")
+                    .margin("-4px"),
+            ),
         )
         .selector(
             "& [data-slot='strip'] [role='grid']",
@@ -235,7 +254,9 @@ pub(super) static CALENDAR_SX: StaticSx = StaticSx::new(|| {
         )
         .selector(
             "& [data-slot='strip'] [role='gridcell']",
-            sx().flex("0 1 auto").min_width("0"),
+            sx().flex("0 1 auto")
+                .min_width("0")
+                .media(COARSE_POINTER, sx().min_width(COARSE_TARGET)),
         )
         .selector(
             "& [data-slot='strip'] [data-slot='day']",
