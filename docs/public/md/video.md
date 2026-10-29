@@ -153,12 +153,18 @@ screen, from [use_fullscreen](use_fullscreen.md).
 - The bar overlays the bottom of the picture and fades after 3 seconds of
   untouched play or as the mouse leaves; paused, it stays. A pointer move, a
   tap, a key or focus moved into it brings it back, and after a key it stays
-  until the next click or tap. It never leaves the Tab order.
+  until the next click or tap; a tap that focuses a button does not hold it.
+  It never leaves the Tab order.
 - A click on the picture plays or pauses. A tap while the bar is faded only
   shows it.
 - No control leaves the player at any width: below 22rem the total time goes,
   below 15rem the bar moves under the picture and wraps, so it fits at 320px
   and 200% zoom (WCAG 1.4.10).
+- Under a finger every bar button is a 44px box (WCAG 2.5.5); below 22rem the
+  chapters, captions and speed fold into one menu named "More controls", each
+  a submenu, so one row fits a 320px phone.
+- Captions are at least 1rem tall: browsers draw them at 5% of the picture's
+  height, 9px on a phone (WCAG 1.4.4).
 - A black scrim under the bar keeps its text at 4.5:1 and its icons and tracks
   at 3:1 over any picture, in light and dark (WCAG 1.4.3, 1.4.11).
 - A polite status says "Loading" while playing waits for data; a failed source

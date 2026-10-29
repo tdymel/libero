@@ -16,7 +16,7 @@ use crate::{
         },
         form::{HoverPreview, Slider, SliderChangeEvent, SliderSegment, SliderTrack},
         layout::{paper_sx, use_box},
-        overlay::{Menu, MenuItem, Shortcut, ShortcutHelp, use_menu},
+        overlay::{Menu, MenuEntry, MenuItem, Shortcut, ShortcutHelp, use_menu},
     },
     context::IconSlot,
     hooks::{
@@ -38,6 +38,9 @@ pub(super) const SEEK: &str = "seek";
 pub(super) const VOLUME: &str = "volume";
 pub(super) const SPEED: &str = "speed";
 pub(super) const MESSAGE: &str = "message";
+/// On a video's bar: `buttons` wraps the chapters, captions and speed buttons, `menu` the
+/// menu holding them, which a narrow bar under a finger shows instead (todo 4832).
+pub(super) const FOLD: &str = "data-fold";
 
 parts_enum! {
     /// The volume menu's parts, for the `volume_parts` prop of [`Audio`](super::Audio) and
@@ -356,6 +359,17 @@ pub(super) fn MediaControls(
             ChaptersMenu { media, chapters: chapters.clone(), size: size.clone() }
         }
     });
+    let more_menu = overlay.then(|| {
+        rsx! {
+            MoreMenu {
+                media,
+                captions,
+                caption_tracks: caption_tracks.clone(),
+                chapters: chapters.clone(),
+                size: size.clone(),
+            }
+        }
+    });
     let captions_button = rsx! {
         if let (Some(captions), false) = (captions, caption_tracks.is_empty()) {
             CaptionsMenu { media, captions, tracks: caption_tracks, size: size.clone() }
@@ -416,9 +430,12 @@ pub(super) fn MediaControls(
                 {sound_controls}
                 MediaTime { media }
                 {chapter}
-                {chapters_menu}
-                {captions_button}
-                {speed}
+                div { "data-fold": "buttons",
+                    {chapters_menu}
+                    {captions_button}
+                    {speed}
+                }
+                div { "data-fold": "menu", {more_menu} }
                 {fullscreen_button}
             } else {
                 {play}
@@ -447,18 +464,7 @@ fn CaptionsMenu(
     let labels = use_localization().media;
     let menu = use_menu();
     let showing = captions.showing();
-    let items = std::iter::once(
-        MenuItem::new(labels.captions_off)
-            .radio(showing.is_none())
-            .onselect(move |_| captions.choose(media, None)),
-    )
-    .chain(tracks.into_iter().map(|(track, name)| {
-        MenuItem::new(name)
-            .radio(showing == Some(track))
-            .onselect(move |_| captions.choose(media, Some(track)))
-    }))
-    .map(Into::into)
-    .collect();
+    let items = caption_items(media, captions, tracks, labels.captions_off);
     let mut attributes = menu.a11y_attributes();
     attributes.push(Attribute::new(
         "data-captions",
@@ -479,6 +485,28 @@ fn CaptionsMenu(
             }
         }
     }
+}
+
+/// Off and each track; picking one shows it.
+fn caption_items(
+    media: MediaHandle,
+    captions: Captions,
+    tracks: Vec<(usize, String)>,
+    off: &str,
+) -> Vec<MenuEntry> {
+    let showing = captions.showing();
+    std::iter::once(
+        MenuItem::new(off)
+            .radio(showing.is_none())
+            .onselect(move |_| captions.choose(media, None)),
+    )
+    .chain(tracks.into_iter().map(|(track, name)| {
+        MenuItem::new(name)
+            .radio(showing == Some(track))
+            .onselect(move |_| captions.choose(media, Some(track)))
+    }))
+    .map(Into::into)
+    .collect()
 }
 
 /// Space on a slider plays and pauses; a button keeps its own Space, so no hotkey.
@@ -539,18 +567,7 @@ fn MediaChapter(media: MediaHandle, chapters: Vec<Chapter>) -> Element {
 fn ChaptersMenu(media: MediaHandle, chapters: Vec<Chapter>, size: Input<Size>) -> Element {
     let labels = use_localization().media;
     let menu = use_menu();
-    let current = current_chapter(&chapters, media.current_time());
-    let items = chapters
-        .into_iter()
-        .enumerate()
-        .map(|(index, chapter)| {
-            let start = chapter.start;
-            MenuItem::new(format!("{} {}", clock(start), chapter.title))
-                .radio(current == Some(index))
-                .onselect(move |_| media.seek(start))
-                .into()
-        })
-        .collect();
+    let items = chapter_items(media, chapters);
     rsx! {
         Menu { state: menu, items, size: size.clone(),
             ActionIcon {
@@ -564,14 +581,24 @@ fn ChaptersMenu(media: MediaHandle, chapters: Vec<Chapter>, size: Input<Size>) -
     }
 }
 
-/// The speed button, "1×", and its menu of [`RATES`].
-#[component]
-fn MediaSpeed(media: MediaHandle, size: Input<Size>, overlay: bool) -> Element {
-    let labels = use_localization().media;
-    let separator = use_formats().decimal_separator;
-    let menu = use_menu();
+fn chapter_items(media: MediaHandle, chapters: Vec<Chapter>) -> Vec<MenuEntry> {
+    let current = current_chapter(&chapters, media.current_time());
+    chapters
+        .into_iter()
+        .enumerate()
+        .map(|(index, chapter)| {
+            let start = chapter.start;
+            MenuItem::new(format!("{} {}", clock(start), chapter.title))
+                .radio(current == Some(index))
+                .onselect(move |_| media.seek(start))
+                .into()
+        })
+        .collect()
+}
+
+fn speed_items(media: MediaHandle, separator: &str) -> Vec<MenuEntry> {
     let rate = media.rate();
-    let items = RATES
+    RATES
         .into_iter()
         .map(|option| {
             MenuItem::new(times(option, separator))
@@ -579,8 +606,17 @@ fn MediaSpeed(media: MediaHandle, size: Input<Size>, overlay: bool) -> Element {
                 .onselect(move |_| media.set_rate(option))
                 .into()
         })
-        .collect();
-    let shown = times(rate, separator);
+        .collect()
+}
+
+/// The speed button, "1×", and its menu of [`RATES`].
+#[component]
+fn MediaSpeed(media: MediaHandle, size: Input<Size>, overlay: bool) -> Element {
+    let labels = use_localization().media;
+    let separator = use_formats().decimal_separator;
+    let menu = use_menu();
+    let items = speed_items(media, separator);
+    let shown = times(media.rate(), separator);
     // Narrow padding: the row must fit 320px with every button. Over the
     // picture it takes the bar's light text, as the icons do.
     let mut look = sx().padding_inline(SizeCss::SPACING.value(Size::Xs));
@@ -604,6 +640,67 @@ fn MediaSpeed(media: MediaHandle, size: Input<Size>, overlay: bool) -> Element {
         Menu { state: menu, items, size: size.clone(),
             // "1×" stays "1×" in a right-to-left page, not "×1".
             Button { attributes, dir: "ltr", variant: "standard", size, sx: look, "{shown}" }
+        }
+    }
+}
+
+/// A narrow bar's chapters, captions and speed under a finger, each a submenu (todo 4832).
+#[component]
+fn MoreMenu(
+    media: MediaHandle,
+    captions: Option<Captions>,
+    caption_tracks: Vec<(usize, String)>,
+    chapters: Vec<Chapter>,
+    size: Input<Size>,
+) -> Element {
+    let labels = use_localization().media;
+    let separator = use_formats().decimal_separator;
+    let menu = use_menu();
+    let mut items: Vec<MenuEntry> = Vec::new();
+    if !chapters.is_empty() {
+        items.push(
+            MenuItem::new(labels.chapters)
+                .submenu(chapter_items(media, chapters))
+                .into(),
+        );
+    }
+    if let Some(captions) = captions {
+        let item = MenuItem::new(labels.captions);
+        items.push(
+            if caption_tracks.is_empty() {
+                let item = item
+                    .checkbox(captions.showing().is_some())
+                    .onselect(move |_| captions.toggle(media));
+                match captions.track {
+                    Some(_) => item,
+                    None => item.disabled(true).description(labels.no_captions),
+                }
+            } else {
+                item.submenu(caption_items(
+                    media,
+                    captions,
+                    caption_tracks,
+                    labels.captions_off,
+                ))
+            }
+            .into(),
+        );
+    }
+    let rate = times(media.rate(), separator);
+    items.push(
+        MenuItem::new(fill(labels.speed, &[("rate", &rate)]))
+            .submenu(speed_items(media, separator))
+            .into(),
+    );
+    rsx! {
+        Menu { state: menu, items, size: size.clone(),
+            ActionIcon {
+                attributes: menu.a11y_attributes(),
+                aria_label: labels.more_controls,
+                tooltip: true,
+                size: icon_size(&size),
+                Glyph { slot: IconSlot::More, icon: lucide::ellipsis_vertical::outlined }
+            }
         }
     }
 }

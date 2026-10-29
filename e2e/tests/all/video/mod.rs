@@ -38,7 +38,8 @@ fn it_meets_the_baseline() {
     Suite::new("video", "/video")
         .ready("#player [data-slot=seek] [role=slider]:not([aria-disabled=true])")
         .focusable(PLAY)
-        .targets(PLAY)
+        // Not the overflow menu's button, shown only on a narrow bar under a finger.
+        .targets("#player [data-slot=controls] button:not([data-fold=menu] button)")
         .run();
 }
 
@@ -89,6 +90,129 @@ fn the_controls_fit_a_narrow_player() {
             .await
             .unwrap();
         }
+        fixture.close().await.unwrap();
+    });
+}
+
+/// The overflow menu's button on a narrow bar under a finger.
+const MORE: &str = "#player button[aria-label='More controls']";
+
+/// Each shown bar button as `[name WxH, short]`: under 44px, or an edge's middle hits another element.
+const BAR_BUTTONS_JS: &str = "[...document.querySelectorAll('#player [data-slot=controls] button')]
+    .filter((b) => b.getClientRects().length > 0)
+    .map((b) => { const r = b.getBoundingClientRect();
+        const x = r.left + r.width / 2, y = r.top + r.height / 2;
+        const edges = [[x, r.top + 1], [x, r.bottom - 1], [r.left + 1, y], [r.right - 1, y]];
+        const missed = edges.some(([x, y]) => !b.contains(document.elementFromPoint(x, y)));
+        return [`${b.getAttribute('aria-label')} ${r.width}x${r.height}`, r.width < 43.5 || r.height < 43.5 || missed]; })";
+
+/// Todo 4832: under a finger every bar button is a 44px box, and on a 375px phone's 325px
+/// picture, or a 320px one's 270px, one row fits: chapters, captions and speed fold into one menu.
+#[test]
+fn on_a_phone_the_bar_is_one_row_of_44px_buttons() {
+    use chromiumoxide::cdp::browser_protocol::emulation::SetTouchEmulationEnabledParams;
+    block_on(async {
+        let fixture = Fixture::open("/video/phone", Viewport::Mobile)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        page.execute_bounded(SetTouchEmulationEnabledParams::new(true))
+            .await
+            .unwrap();
+        wait::for_js_true(
+            page,
+            "matchMedia('(pointer: coarse)').matches \
+             && document.querySelector('#player [data-slot=time]').textContent === '0:00 / 0:15'",
+            "a coarse pointer and the duration",
+        )
+        .await
+        .unwrap();
+        for width in [325, 270] {
+            page.evaluate_bounded(format!(
+                "document.querySelector('#player').style.width = '{width}px'"
+            ))
+            .await
+            .unwrap();
+            let buttons: Vec<(String, bool)> = page
+                .evaluate_bounded(BAR_BUTTONS_JS)
+                .await
+                .unwrap()
+                .into_value()
+                .unwrap();
+            let fits: bool = page
+                .evaluate_bounded(controls_fit(width, true))
+                .await
+                .unwrap()
+                .into_value()
+                .unwrap();
+            let menus: String = page
+                .evaluate_bounded(
+                    "[...document.querySelectorAll('#player [data-slot=controls] [aria-haspopup=menu]')]
+                     .filter((b) => b.getClientRects().length > 0)
+                     .map((b) => b.getAttribute('aria-label')).join(', ')",
+                )
+                .await
+                .unwrap()
+                .into_value()
+                .unwrap();
+            assert!(
+                !buttons.is_empty() && buttons.iter().all(|(_, small)| !small),
+                "a button under 44px at {width}px: {buttons:?}"
+            );
+            assert_eq!(menus, "More controls", "the menus shown at {width}px");
+            assert!(fits, "the bar wraps or overflows at {width}px: {buttons:?}");
+        }
+        fixture.close().await.unwrap();
+    });
+}
+
+/// Todo 4832: the overflow menu holds chapters, captions and speed, each a submenu that works.
+#[test]
+fn on_a_phone_the_overflow_menu_sets_the_speed() {
+    use chromiumoxide::cdp::browser_protocol::emulation::SetTouchEmulationEnabledParams;
+    block_on(async {
+        let fixture = Fixture::open("/video/phone", Viewport::Mobile)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        page.execute_bounded(SetTouchEmulationEnabledParams::new(true))
+            .await
+            .unwrap();
+        // Marks the first menu item whose text holds `text`, for a tap.
+        let pick = async |text: &str| {
+            let item = format!(
+                "[...document.querySelectorAll('[role=menu] [role^=menuitem]')].find((item) => item.textContent.includes('{text}'))"
+            );
+            wait::for_js_true(page, &format!("!!{item}"), &format!("the item {text}"))
+                .await
+                .unwrap();
+            page.evaluate_bounded(format!(
+                "document.querySelector('[data-pick]')?.removeAttribute('data-pick'); {item}.setAttribute('data-pick', '')"
+            ))
+            .await
+            .unwrap();
+            pointer::tap(page, "[data-pick]").await.unwrap();
+        };
+        wait::for_visible(page, MORE).await.unwrap();
+        pointer::tap(page, MORE).await.unwrap();
+        wait::for_js_true(
+            page,
+            "[...document.querySelectorAll('[role=menu] [role^=menuitem]')]
+                 .map((item) => item.textContent.trim()).join('|').match(/^Chapters.*\\|Captions.*\\|Playback speed 1×/) !== null",
+            "the menu to list chapters, captions and speed",
+        )
+        .await
+        .unwrap();
+        pick("Playback speed").await;
+        pick("1.5×").await;
+        wait::for_js_true(
+            page,
+            "document.querySelector('#player video').playbackRate === 1.5",
+            "a tapped rate to set the speed",
+        )
+        .await
+        .unwrap();
+        fixture.console.assert_clean("/video/phone").unwrap();
         fixture.close().await.unwrap();
     });
 }
@@ -370,6 +494,7 @@ fn a_shrink_wrapping_parent_keeps_the_box() {
                     "(() => {{ const player = document.querySelector('{row} [role=group]');
                      const video = player.querySelector('video').getBoundingClientRect();
                      const tops = new Set([...player.querySelectorAll('[data-slot=controls] button')]
+                         .filter((b) => b.getClientRects().length > 0)
                          .map((b) => Math.round(b.getBoundingClientRect().top)));
                      return player.getBoundingClientRect().width === {width}
                          && Math.round(video.height) === Math.round({width} * 9 / 16) && tops.size === 1; }})()"

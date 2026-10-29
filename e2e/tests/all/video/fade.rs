@@ -451,6 +451,35 @@ fn a_mouse_press_then_leave_fades_the_bar_with_focus_on_the_button() {
     });
 }
 
+/// Todo 4832: a finger's focus lands after its touch ends; a tap on Play leaves it ringless,
+/// so the bar still fades while playing.
+#[test]
+fn a_tap_on_play_lets_the_bar_fade() {
+    block_on(async {
+        let fixture = Fixture::open("/video/long", Viewport::Mobile)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        clock::hold(page, &[IDLE_MS]).await.unwrap();
+        wait::for_js_true(page, LONG_DURATION, "the duration")
+            .await
+            .unwrap();
+        pointer::tap(page, PLAY).await.unwrap();
+        wait::for_js_true(
+            page,
+            &format!(
+                "{PLAYING} && document.activeElement === document.querySelector('{PLAY}')
+                 && !document.activeElement.matches(':focus-visible')"
+            ),
+            "a tap to play, Play focused without a ring",
+        )
+        .await
+        .unwrap();
+        fade(page).await;
+        fixture.close().await.unwrap();
+    });
+}
+
 /// Todo 1418: a press the browser cancels ends too, so focus from code shows the row after it.
 #[test]
 fn a_cancelled_press_does_not_stop_focus_showing_the_controls() {

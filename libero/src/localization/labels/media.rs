@@ -28,6 +28,8 @@ pub struct MediaLabels {
     pub captions_off: &'static str,
     /// A video's chapters menu button.
     pub chapters: &'static str,
+    /// The menu button holding chapters, captions and speed on a narrow bar under a finger.
+    pub more_controls: &'static str,
     /// The rows of the `ShortcutHelp` that Shift+? opens in the player.
     pub shortcut_play: &'static str,
     pub shortcut_back: &'static str,
@@ -61,6 +63,7 @@ impl MediaLabels {
         no_captions: "No captions for this video",
         captions_off: "Off",
         chapters: "Chapters",
+        more_controls: "More controls",
         shortcut_play: "Play or pause",
         shortcut_back: "Back 10 seconds",
         shortcut_forward: "Forward 10 seconds",
@@ -92,6 +95,7 @@ impl MediaLabels {
         no_captions: "Keine Untertitel für dieses Video",
         captions_off: "Aus",
         chapters: "Kapitel",
+        more_controls: "Weitere Steuerelemente",
         shortcut_play: "Abspielen oder pausieren",
         shortcut_back: "10 Sekunden zurückspulen",
         shortcut_forward: "10 Sekunden vorspulen",

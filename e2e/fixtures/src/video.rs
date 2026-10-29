@@ -34,7 +34,31 @@ pub const ROUTES: Routes = &[
     ("/video/chapters", || rsx! { ChaptersPage {} }),
     // Todo 2654: every `<source>` fails, which sets no MediaError.
     ("/video/sources-failing", || rsx! { SourcesFailingPage {} }),
+    // Todo 4832: as the docs demo on a 375px phone, chapters and captions on the bar.
+    ("/video/phone", || rsx! { PhonePage {} }),
 ];
+
+#[component]
+fn PhonePage() -> Element {
+    let src = use_hook(|| silent_wav(15));
+    rsx! {
+        div { id: "player", width: "325px",
+            Video {
+                src,
+                label: "Phone",
+                aspect_ratio: "16 / 9",
+                chapters: chapters(),
+                tracks: vec![MediaTrack {
+                    src: CAPTIONS.into(),
+                    kind: TrackKind::Captions,
+                    srclang: "en".into(),
+                    label: "English".into(),
+                    default: true,
+                }],
+            }
+        }
+    }
+}
 
 #[component]
 fn SourcesFailingPage() -> Element {

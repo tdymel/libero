@@ -2,7 +2,7 @@ use dioxus::core::{Attribute, AttributeValue};
 use dioxus::prelude::*;
 
 use super::media_controls::{
-    Captions, MediaControls, MediaFallback, SPEED, VolumePart, block_tooltip_buttons_sx,
+    Captions, FOLD, MediaControls, MediaFallback, SPEED, VolumePart, block_tooltip_buttons_sx,
     chapter_jump, notify, use_media_keys, use_media_start, use_sound,
 };
 use super::{
@@ -12,7 +12,8 @@ use super::{
 use crate::{
     components::{
         common::{
-            HtmlTag, Input, Part, Parts, base_props, media_url, parts_enum, use_name_warning,
+            COARSE_POINTER, COARSE_TARGET, HtmlTag, Input, Part, Parts, base_props, media_url,
+            parts_enum, use_name_warning,
         },
         layout::use_box,
         overlay::Shortcut,
@@ -24,7 +25,7 @@ use crate::{
         use_element, use_fullscreen, use_localization, use_media, use_portal_slot, use_scroll_lock,
         use_timeout,
     },
-    platform,
+    platform::{self, focus_visible},
     sx::{FORCED_COLORS, REDUCED_MOTION, StaticSx, sx},
     theme::{ACTION_ICON_SIZE, BUTTON_HEIGHT, ColorCss, ColorShade, Size, SizeCss, Z_INDEX_MODAL},
     utils::warn,
@@ -110,6 +111,8 @@ static VIDEO_SX: StaticSx = StaticSx::new(|| {
                     FORCED_COLORS,
                     sx().outline("1px solid CanvasText").outline_offset("-1px"),
                 )
+                // Chrome draws cues at 5% of the picture's height, 9px on a phone: 1rem at least.
+                .selector("&::cue", sx().font_size("max(1rem, 1em)"))
                 // The captions sit above the shown bar, as YouTube's.
                 .selector(
                     format!("&{CUES}"),
@@ -142,6 +145,21 @@ static VIDEO_SX: StaticSx = StaticSx::new(|| {
                 .transition("opacity 200ms ease")
                 .media(REDUCED_MOTION, sx().transition("none"))
                 .selector("& > *", sx().flex_shrink("0"))
+                .selector(format!("& > [{FOLD}]"), sx().display("contents"))
+                .selector(format!("& > [{FOLD}] > *"), sx().flex_shrink("0"))
+                .selector(format!("& > [{FOLD}='menu']"), sx().display("none"))
+                // A finger gets 44px boxes, past the narrow cap below, over the seek thumb's
+                // stacked hit area, which reached 4px into Play (todo 4832).
+                .media(
+                    COARSE_POINTER,
+                    sx().selector(
+                        "& button",
+                        sx().min_width(COARSE_TARGET)
+                            .min_height(COARSE_TARGET)
+                            .position("relative")
+                            .z_index("1"),
+                    ),
+                )
                 // A narrow bar fits the chapters button too: wrapping happens before any shrinking.
                 // The speed label is text: it keeps its width, at least a button's.
                 .selector(
@@ -208,6 +226,21 @@ static VIDEO_SX: StaticSx = StaticSx::new(|| {
                     .background_color(BLACK),
             )
             .selector(format!("{media}{CUES}"), sx().transform("none")),
+        )
+        // Under a finger a narrow bar folds chapters, captions and speed into one menu, gapless
+        // between the 44px boxes, so one row fits a 320px phone (todo 4832).
+        .container_query(
+            PLAYER_CONTAINER,
+            NARROWEST,
+            sx().media(
+                COARSE_POINTER,
+                sx().selector(
+                    controls,
+                    sx().column_gap("0")
+                        .selector(format!("& > [{FOLD}='buttons']"), sx().display("none"))
+                        .selector(format!("& > [{FOLD}='menu']"), sx().display("contents")),
+                ),
+            ),
         )
         // The seek track takes its row, so it shrinks with the player; below 22rem the total time goes.
         .selector(
@@ -728,6 +761,8 @@ pub fn Video(props: VideoProps) -> Element {
     let controls = use_controls_idle(playing);
 
     let mut pressing = use_hook(|| CopyValue::new(false));
+    // A finger's focus lands after its touch ends, past `pressing` (todo 4832).
+    let mut touched = use_hook(|| CopyValue::new(false));
     // A click on the picture plays or pauses, as YouTube's; a tap on hidden controls only shows
     // them, once its click is through: the bar takes hits again as soon as it shows (todo 3660).
     let mut tap_shows = use_hook(|| CopyValue::new(false));
@@ -735,8 +770,9 @@ pub fn Video(props: VideoProps) -> Element {
     let mut attributes = props.attributes;
     // Focus moved in without a press, by a key, code or AT, counts as a key, also while paused
     // (todos 1249, 3656): the bar then stays up once a Space on a focused button starts playing.
-    attributes.extend(fullscreen.attributes_with_focusin(move |_| {
-        if !*pressing.peek() {
+    attributes.extend(fullscreen.attributes_with_focusin(move |event| {
+        let ringless_tap = touched.replace(false) && focus_visible(event) == Some(false);
+        if !*pressing.peek() && !ringless_tap {
             controls.by_key();
         }
     }));
@@ -749,15 +785,19 @@ pub fn Video(props: VideoProps) -> Element {
         }
     };
     attributes.extend([
-        listener("onpointerdown", move |_: Event<PointerData>| {
+        listener("onpointerdown", move |event: Event<PointerData>| {
             pressing.set(true);
+            touched.set(event.pointer_type() == "touch");
             controls.by_pointer();
             if playing && !*tap_shows.peek() {
                 controls.wake();
             }
         }),
         listener("onpointerup", released),
-        listener("onpointercancel", released),
+        listener("onpointercancel", move |event: Event<PointerData>| {
+            touched.set(false);
+            released(event);
+        }),
         listener("onpointerleave", move |event: Event<PointerData>| {
             released(event.clone());
             // A mouse only: a touch leaves after every tap.
@@ -802,6 +842,7 @@ pub fn Video(props: VideoProps) -> Element {
             onmounted: media.mount(),
             onpointerdown: move |event: PointerEvent| tap_shows.set(event.pointer_type() == "touch" && hidden),
             onclick: move |_| {
+                touched.set(false);
                 if *tap_shows.peek() {
                     controls.wake();
                 } else if media.error().is_none() {
@@ -1101,6 +1142,21 @@ mod tests {
             Chapter::new(-1.0, "Before"),
         ]);
         assert_eq!(chapters, [Chapter::new(0.0, "A"), Chapter::new(5.0, "B")]);
+    }
+
+    /// Todo 4832: Chrome's cues are 5% of the picture's height, 9px on a phone.
+    #[test]
+    fn the_cues_are_at_least_1rem() {
+        let css = crate::css::Stylesheet::from(&VIDEO_SX);
+        let css = css.as_str();
+        let cue = css
+            .find("::cue")
+            .unwrap_or_else(|| panic!("no ::cue rule: {css}"));
+        assert!(
+            css[cue..].starts_with("::cue{font-size:max(1rem, 1em)"),
+            "{}",
+            &css[cue..]
+        );
     }
 
     fn alpha(rgba: &str) -> f32 {
