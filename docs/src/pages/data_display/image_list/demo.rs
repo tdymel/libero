@@ -87,7 +87,8 @@ pub(super) fn caption(index: usize, mut selected: Signal<[bool; 6]>) -> Element 
                 .gap("4px"),
             Box { sx: sx().flex("1 1 6rem").min_width("0"),
                 Box { sx: line.clone().font_weight("500"), "{TITLES[index]}" }
-                Box { sx: line.font_size("0.75rem"), "{AUTHORS[index]}" }
+                // Isolated, so a right-to-left page keeps the handle's `@` in front.
+                Box { sx: line.font_size("0.75rem"), bdi { "{AUTHORS[index]}" } }
             }
             ActionIcon {
                 variant: if on { "filled" } else { "standard" },

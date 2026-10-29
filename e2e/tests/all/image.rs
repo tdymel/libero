@@ -71,7 +71,8 @@ fn an_empty_fallback_keeps_the_broken_source() {
 }
 
 /// Todos 4174, 4180: a caller's `onerror` runs and the fallback swap still
-/// happens, on a plain and on a zoomable picture.
+/// happens, on a plain and on a zoomable picture. Todo 4960: the fallback drops
+/// the zoom button, so the zoomable one's id lands on its `<img>`.
 #[test]
 fn a_caller_onerror_keeps_the_fallback_swap() {
     block_on(async {
@@ -80,13 +81,14 @@ fn a_caller_onerror_keeps_the_fallback_swap() {
             .unwrap();
         for (img, count) in [
             ("#caller-onerror", "#caller-errors"),
-            ("#caller-onerror-zoom img", "#caller-zoom-errors"),
+            ("img#caller-onerror-zoom", "#caller-zoom-errors"),
         ] {
             wait::for_js_true(
                 &fixture.page,
                 &format!(
                     "document.querySelector('{count}').textContent !== '0' \
-                     && document.querySelector('{img}').src.includes('963')"
+                     && document.querySelector('{img}')?.src.includes('963') \
+                     && !document.querySelector('#caller-onerror-zoom button, button#caller-onerror-zoom')"
                 ),
                 &format!("{img}: the caller's onerror to run and the fallback source"),
             )

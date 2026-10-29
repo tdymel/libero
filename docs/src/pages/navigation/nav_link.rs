@@ -167,7 +167,8 @@ pub fn NavLinkPage() -> Element {
                         Flex {
                             direction: "column",
                             gap: "xs",
-                            sx: sx().width("240px"),
+                            // In rem, so the column grows with 200% text, up to the preview.
+                            sx: sx().width("15rem").max_width("100%"),
                             NavLink {
                                 to: crate::Route::GettingStarted {},
                                 active,

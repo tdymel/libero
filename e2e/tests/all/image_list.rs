@@ -34,6 +34,39 @@ pub fn ring_clipped(root: &str) -> String {
     )
 }
 
+/// Todo 4959: a tall picture's own height grew its quilted row past the cell ratio.
+#[test]
+fn a_tall_picture_keeps_its_quilted_cell_ratio() {
+    block_on(async {
+        let fixture = Fixture::open("/image-list-quilted-tall", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        wait::for_js_true(
+            page,
+            "(() => { const img = document.querySelector('[role=list] img'); \
+             return !!img && img.complete && img.naturalHeight > 0; })()",
+            "the tall picture to load",
+        )
+        .await
+        .unwrap();
+        // Each cell against its strut, the `::before` that alone should set the row.
+        let off: Vec<String> = page
+            .evaluate_bounded(
+                "[...document.querySelectorAll('[role=list] > li')].flatMap((li, i) => { \
+                 const strut = parseFloat(getComputedStyle(li, '::before').paddingTop); \
+                 const height = li.getBoundingClientRect().height; \
+                 return strut > 0 && Math.abs(height - strut) <= 1 ? [] : [`cell ${i}: ${height} vs strut ${strut}`]; })",
+            )
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        assert!(off.is_empty(), "{off:?}");
+        fixture.close().await.unwrap();
+    });
+}
+
 /// Todo 2523: a quilted cell's `Below` bar, unclipped since 2481, stays inside its
 /// `<li>`, and no two cells overlap: the `1fr` rows grow to the bar.
 #[test]

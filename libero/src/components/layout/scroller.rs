@@ -6,7 +6,7 @@ use crate::{
         common::{
             Glyph, HtmlTag, Input, Orientation, Part, States, Variables, base_props,
             coarse_hit_area_sx, coarse_reach_sx, focus_ring_sx, input_from_str,
-            inset_focus_ring_sx, parts_enum, states, variables,
+            inset_focus_ring_sx, parts_enum, states, use_name_warning, variables,
         },
         layout::{
             Box, ScrollArea, ScrollAreaBase, ScrollAreaHandle, ScrollPositionEvent, inline_x,
@@ -207,6 +207,30 @@ impl ScrollerHandle {
                 );
             }
         });
+    }
+
+    /// Runs to the start or the end, as Home and End on the focused strip do.
+    fn run_to_edge(&self, end: bool) {
+        let (area, viewport) = (self.area, self.area.element);
+        let (content, size) = (viewport.scroll_size(), viewport.dimensions());
+        spawn(async move {
+            if let (Ok(content), Ok(size)) = (content.await, size.await) {
+                let max = (content.width - size.width).max(0.0);
+                area.scroll_to(if end { max } else { 0.0 }, 0.0);
+            }
+        });
+    }
+}
+
+/// Home or End pressed without a modifier: `Some(true)` for End.
+fn edge_key(key: &Key, modifiers: Modifiers) -> Option<bool> {
+    if !modifiers.is_empty() {
+        return None;
+    }
+    match key {
+        Key::Named(NamedKey::Home) => Some(false),
+        Key::Named(NamedKey::End) => Some(true),
+        _ => None,
     }
 }
 
@@ -424,6 +448,10 @@ base_props! {
 pub fn Scroller(props: ScrollerProps) -> Element {
     let theme = use_theme();
     let labels = use_localization().scroller;
+    use_name_warning(
+        !props.aria_label.trim().is_empty(),
+        "Scroller: blank `aria_label`, so the strip's region has no name and is not a landmark.",
+    );
     // Always called, so the hook order does not depend on the prop.
     let own = use_scroller();
     let has_handle = props.handle.is_some();
@@ -686,6 +714,15 @@ pub fn Scroller(props: ScrollerProps) -> Element {
             },
             onresize: resized,
             onfocusin: move |_| clear_focus(),
+            // Chromium hands Home and End on a horizontal strip to the page (todo 4956).
+            onkeydown: move |event: KeyboardEvent| {
+                if let Some(end) = edge_key(&event.key(), event.modifiers())
+                    && viewport.is_focused()
+                {
+                    event.prevent_default();
+                    handle.run_to_edge(end);
+                }
+            },
             onpointerdown,
             onpointermove,
             onpointerup,
@@ -752,6 +789,19 @@ pub fn Scroller(props: ScrollerProps) -> Element {
 mod tests {
     use super::*;
     use crate::{components::common::part_table, css::Stylesheet};
+
+    /// Home and End run the strip to its edges; with a modifier they stay the browser's.
+    #[test]
+    fn home_and_end_map_to_the_edges() {
+        let none = Modifiers::empty();
+        assert_eq!(edge_key(&Key::Named(NamedKey::Home), none), Some(false));
+        assert_eq!(edge_key(&Key::Named(NamedKey::End), none), Some(true));
+        assert_eq!(
+            edge_key(&Key::Named(NamedKey::End), Modifiers::CONTROL),
+            None
+        );
+        assert_eq!(edge_key(&Key::Named(NamedKey::ArrowRight), none), None);
+    }
 
     /// The slot names are public: a rename here is a breaking change.
     #[test]

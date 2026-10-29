@@ -66,6 +66,8 @@ fn PlainPage() -> Element {
             }
         }
         button { id: "after", "After" }
+        // A page that scrolls, so a key the strip drops would move it.
+        div { style: "height: 200vh" }
     }
 }
 

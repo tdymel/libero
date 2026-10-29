@@ -24,7 +24,32 @@ pub const ROUTES: Routes = &[
         "/image-list-long-caption",
         || rsx! { ImageListLongCaptionPage {} },
     ),
+    (
+        "/image-list-quilted-tall",
+        || rsx! { ImageListQuiltedTallPage {} },
+    ),
 ];
+
+/// A picture four times taller than wide.
+const TALL_PICTURE: &str = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='400' viewBox='0 0 1 4'%3E%3Crect width='1' height='4' fill='%23369'/%3E%3C/svg%3E";
+
+/// Todo 4959: a tall picture beside a flat cell, in quilted cells of one row each.
+#[component]
+fn ImageListQuiltedTallPage() -> Element {
+    rsx! {
+        div { style: "width: 600px",
+            ImageList {
+                cols: 2u8,
+                variant: "quilted",
+                gap: "md",
+                items: vec![
+                    ImageItem::new(rsx! { Image { src: TALL_PICTURE, alt: "A tall blue strip" } }),
+                    ImageItem::new(rsx! { div { style: "background: #777" } }),
+                ],
+            }
+        }
+    }
+}
 
 /// Todo 2858: a caption word wider than its cell, on an overlay and on a `Below` bar.
 #[component]

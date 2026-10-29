@@ -315,6 +315,8 @@ static NAVIGATION_BAR_ITEM_SX: StaticSx = StaticSx::new(|| {
                 .line_height("1.25")
                 .text_align("center")
                 .with("overflow-wrap", "break-word")
+                // A single word too wide at 200% breaks with a hyphen, in the page's `lang` (4954).
+                .with("hyphens", "auto")
                 .overflow("hidden");
             match clamps_lines() {
                 // Padding inside the box keeps the clamped ellipsis from hanging past it (3943).
@@ -425,6 +427,8 @@ base_props! {
     pub struct NavigationBarProps {
         /// `static` (default), `sticky` or `fixed`; both of the latter publish
         /// `--lsx-navigation-bar-height` and pad focus clear of the bar.
+        /// Both set `scroll-padding-bottom` on `:root`, which a sticky bar resting at the
+        /// root's bottom edge needs; a sticky bar in an inner pane leaves that padding on too.
         #[props(default, into)]
         position: Input<NavigationBarPosition>,
         /// `bar` (default) along the bottom edge, or `rail`, a column on the inline-start

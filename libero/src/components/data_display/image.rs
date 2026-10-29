@@ -143,6 +143,7 @@ base_props! {
         /// built from user data can act as a tracking beacon.
         #[props(into)]
         src: String,
+        /// Shown once `src` fails to load, with the same `alt` and no zoom button.
         #[props(default)]
         fallback_src: Option<String>,
         #[props(default, into)]
@@ -153,6 +154,7 @@ base_props! {
         #[props(default, into)]
         radius: Input<ThemeAwareValue>,
         /// What the picture shows. `None` warns in debug builds unless `decorative`.
+        /// The fallback keeps it, so word it to fit `fallback_src` too.
         #[props(default, into)]
         alt: Option<String>,
         /// Marks the picture as decoration: `alt=""` and `role="presentation"`.
@@ -185,6 +187,11 @@ fn zoom_unavailable(zoomable: bool, lightbox: bool) -> Option<&'static str> {
     (zoomable && !lightbox).then_some(
         "Image: `zoomable` needs libero's `lightbox` feature - the picture renders unzoomable.",
     )
+}
+
+/// Whether the zoom button renders: not in a link, not without the lightbox, not once `src` failed.
+fn zoomable_now(zoomable: bool, in_link: bool, failed: bool) -> bool {
+    zoomable && !in_link && !failed && cfg!(feature = "lightbox")
 }
 
 fn zoom_label(alt: &str, labels: &ImageLabels) -> String {
@@ -254,8 +261,6 @@ pub fn Image(props: ImageProps) -> Element {
             warn(note);
         }
     });
-    let zoomable = props.zoomable && !in_link && cfg!(feature = "lightbox");
-
     // An empty fallback is no fallback, on every platform.
     let fallback_own = props
         .fallback_src
@@ -264,6 +269,8 @@ pub fn Image(props: ImageProps) -> Element {
         .and_then(|fallback| media_url(fallback, "Image fallback_src"));
     let fallback_src = fallback_own.as_deref();
     let show_fallback = errored_src.read().as_deref() == Some(own_src.as_str());
+    // A broken picture, or its stand-in, has nothing to zoom into (todo 4960).
+    let zoomable = zoomable_now(props.zoomable, in_link, show_fallback);
     let src = match fallback_src {
         Some(fallback) if show_fallback => fallback.to_string(),
         _ => own_src.clone(),
@@ -470,6 +477,14 @@ mod tests {
         assert!(zoom_unavailable(true, false).is_some_and(|note| note.contains("`lightbox`")));
         assert_eq!(zoom_unavailable(true, true), None);
         assert_eq!(zoom_unavailable(false, false), None);
+    }
+
+    /// A failed `src`, with or without its fallback showing, has nothing to zoom into.
+    #[test]
+    fn a_failed_picture_renders_no_zoom_button() {
+        assert_eq!(zoomable_now(true, false, false), cfg!(feature = "lightbox"));
+        assert!(!zoomable_now(true, false, true));
+        assert!(!zoomable_now(true, true, false));
     }
 
     use crate::utils::warnings_of;

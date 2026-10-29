@@ -18,7 +18,7 @@ use crate::{
         IMAGE_LIST_BAR_PADDING, IMAGE_LIST_RADIUS, ImageListDefaults, ImageListVariant, Responsive,
         Size, SizeCss,
     },
-    utils::warn,
+    utils::{Warned, use_warn_once},
 };
 
 use super::item::ImageItem;
@@ -67,8 +67,8 @@ impl From<Responsive<u8>> for Input<Responsive<u8>> {
 /// The column counts a twelve-track `GridZone` expresses exactly; others snap.
 const COLUMN_COUNTS: [u8; 6] = [1, 2, 3, 4, 6, 12];
 
-/// A tie snaps down, to the wider cell: 5 becomes 4. Warns only while `mounting`.
-fn snap_cols(cols: u8, mounting: bool) -> u8 {
+/// A tie snaps down, to the wider cell: 5 becomes 4. Warns once per `warned`.
+fn snap_cols(cols: u8, warned: &Warned) -> u8 {
     if COLUMN_COUNTS.contains(&cols) {
         return cols;
     }
@@ -77,27 +77,27 @@ fn snap_cols(cols: u8, mounting: bool) -> u8 {
         .into_iter()
         .min_by_key(|count| count.abs_diff(cols))
         .unwrap_or(1);
-    if mounting {
-        warn(&format!(
+    warned.once("cols", || {
+        format!(
             "ImageList: cols {cols} is not a divisor of twelve, snapped to {snapped}. A cell spans \
              whole tracks of a twelve-track GridZone."
-        ));
-    }
+        )
+    });
     snapped
 }
 
 /// `None` for a ratio no cell can take: zero, negative or not finite (todo 2428).
-/// Warns only while `mounting`.
-fn usable_ratio(ratio: Option<f32>, mounting: bool) -> Option<f32> {
+/// Warns once per `warned`.
+fn usable_ratio(ratio: Option<f32>, warned: &Warned) -> Option<f32> {
     let ratio = ratio?;
     if ratio.is_finite() && ratio > 0.0 {
         return Some(ratio);
     }
-    if mounting {
-        warn(&format!(
+    warned.once("ratio", || {
+        format!(
             "ImageList: ratio {ratio} is not a positive number, the theme's ratio is used instead."
-        ));
-    }
+        )
+    });
     None
 }
 
@@ -235,10 +235,11 @@ fn media_base() -> Sx {
                 .height("100%")
                 .selector("& > *", sx().height("100%").object_fit("cover")),
         )
-        // Overrides the ratio box: the cell's `::before` sizes the row.
+        // Overrides the ratio box: the cell's `::before` sizes the row. Size containment
+        // keeps a tall picture's own height out of the auto row (todo 4959).
         .when(
             ImageListVariant::Quilted.state_name(),
-            sx().aspect_ratio("auto"),
+            sx().aspect_ratio("auto").with("contain", "size"),
         )
         .when(
             // A cell keeps the picture's own height, which the packing measures.
@@ -415,8 +416,8 @@ base_props! {
 pub fn ImageList(props: ImageListProps) -> Element {
     let theme = use_theme();
     let defaults = &theme.image_list;
-    // Debug warnings speak once per mount, not on every render.
-    let mounting = use_hook(|| CopyValue::new(true)).replace(false);
+    // Debug warnings speak once per cause, not on every render.
+    let warned = use_warn_once();
 
     let variant = props.variant.copied_or(defaults.variant);
     let masonry = variant == ImageListVariant::Masonry;
@@ -424,16 +425,16 @@ pub fn ImageList(props: ImageListProps) -> Element {
     let cols = props
         .cols
         .copied_or(defaults.cols)
-        .map(|cols| snap_cols(cols, mounting));
+        .map(|cols| snap_cols(cols, &warned));
     let gap = props
         .gap
         .as_ref()
         .cloned()
         .unwrap_or_else(|| Responsive::new(defaults.gap.into()));
-    if mounting && masonry && gap.breakpoints().next().is_some() {
-        warn(
-            "ImageList: masonry packs by the base gap, so its rows are off by the difference at a breakpoint gap.",
-        );
+    if masonry && gap.breakpoints().next().is_some() {
+        warned.once("masonry-gap", || {
+            "ImageList: masonry packs by the base gap, so its rows are off by the difference at a breakpoint gap.".into()
+        });
     }
     // The zone takes the base; a breakpoint replaces it through the zone's override var.
     let gap_sx = gap
@@ -448,12 +449,12 @@ pub fn ImageList(props: ImageListProps) -> Element {
         });
     let radius = ScaleOrCss::new(props.radius.as_ref(), defaults.radius);
 
-    if mounting && masonry && props.ratio.as_ref().is_some() {
-        warn(
-            "ImageList: ratio is ignored by the masonry variant - a packed cell takes its height from its own picture.",
-        );
+    if masonry && props.ratio.as_ref().is_some() {
+        warned.once("masonry-ratio", || {
+            "ImageList: ratio is ignored by the masonry variant - a packed cell takes its height from its own picture.".into()
+        });
     }
-    let ratio = usable_ratio(props.ratio.as_ref().copied().filter(|_| !masonry), mounting);
+    let ratio = usable_ratio(props.ratio.as_ref().copied().filter(|_| !masonry), &warned);
 
     let spans = cols.map(span_for_cols);
     let default_span = spans.base();
@@ -560,12 +561,14 @@ pub fn ImageList(props: ImageListProps) -> Element {
 
         let span = item.span.unwrap_or(default_span);
         let cell_spans = item.span.map_or(spans, Responsive::new);
-        if mounting && item.rows.is_some() && !quilted {
-            warn(&format!(
-                "ImageList: ImageItem::rows is ignored by the {} variant - only quilted places a \
-                 cell over more than one row.",
-                variant.as_str()
-            ));
+        if item.rows.is_some() && !quilted {
+            warned.once("rows", || {
+                format!(
+                    "ImageList: ImageItem::rows is ignored by the {} variant - only quilted places a \
+                     cell over more than one row.",
+                    variant.as_str()
+                )
+            });
         }
         let rows = item.rows.filter(|_| quilted);
 
@@ -686,23 +689,48 @@ mod tests {
         );
     }
 
+    /// A bad `cols` set after the first render still warns, once (todo 4963).
+    #[test]
+    fn a_cause_that_shows_up_after_mount_warns_once() {
+        static RENDERS: std::sync::atomic::AtomicU8 = std::sync::atomic::AtomicU8::new(0);
+        fn app() -> Element {
+            // 3 fits, then 5 and 7 snap.
+            let cols = 3 + 2 * RENDERS.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
+            rsx! { crate::LiberoProvider { ImageList { cols, items: Vec::new() } } }
+        }
+        crate::utils::take_warnings();
+        let mut dom = VirtualDom::new(app);
+        dom.rebuild_in_place();
+        for _ in 0..2 {
+            dom.mark_dirty(ScopeId::APP);
+            dom.render_immediate(&mut dioxus::core::NoOpMutations);
+        }
+        let warnings = crate::utils::take_warnings();
+        let snapped: Vec<_> = warnings
+            .iter()
+            .filter(|warning| warning.starts_with("ImageList: cols"))
+            .collect();
+        assert_eq!(snapped.len(), 1, "{warnings:?}");
+    }
+
     #[test]
     fn a_divisor_of_twelve_is_left_alone() {
         for cols in COLUMN_COUNTS {
-            assert_eq!(snap_cols(cols, false), cols);
+            assert_eq!(snap_cols(cols, &Warned::default()), cols);
         }
     }
 
     /// Ties (5, 9) go to the wider cell; nothing snaps to zero.
     #[test]
     fn everything_else_snaps_to_the_nearest_divisor() {
-        assert_eq!(snap_cols(0, false), 1);
-        assert_eq!(snap_cols(5, false), 4);
-        assert_eq!(snap_cols(7, false), 6);
-        assert_eq!(snap_cols(8, false), 6);
-        assert_eq!(snap_cols(9, false), 6);
-        assert_eq!(snap_cols(10, false), 12);
-        assert_eq!(snap_cols(200, false), 12);
+        let quiet = &Warned::default();
+        assert_eq!(snap_cols(0, quiet), 1);
+        assert_eq!(snap_cols(5, quiet), 4);
+        assert_eq!(snap_cols(7, quiet), 6);
+        assert_eq!(snap_cols(8, quiet), 6);
+        assert_eq!(snap_cols(9, quiet), 6);
+        assert_eq!(snap_cols(10, quiet), 12);
+        assert_eq!(snap_cols(200, quiet), 12);
     }
 
     /// An ordinary cell is its width over the ratio, with no gap term.
@@ -733,10 +761,11 @@ mod tests {
     /// Todo 2428: such a ratio made every quilted cell's strut zero.
     #[test]
     fn a_ratio_no_cell_can_take_falls_back_to_the_theme() {
-        assert_eq!(usable_ratio(Some(1.5), false), Some(1.5));
-        assert_eq!(usable_ratio(None, false), None);
+        let warned = &Warned::default();
+        assert_eq!(usable_ratio(Some(1.5), warned), Some(1.5));
+        assert_eq!(usable_ratio(None, warned), None);
         for ratio in [0.0, -1.0, f32::NAN, f32::INFINITY] {
-            assert_eq!(usable_ratio(Some(ratio), false), None, "{ratio}");
+            assert_eq!(usable_ratio(Some(ratio), warned), None, "{ratio}");
         }
     }
 

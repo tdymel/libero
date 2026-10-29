@@ -180,12 +180,13 @@ pub fn ScrollerPage() -> Element {
             ],
             accessibility: a11y()
                 .key(["Left", "Right"], "Scrolls the focused strip.")
+                .key(["Home", "End"], "Runs the focused strip to its start or its end.")
                 .handles([
                     "The strip is a tab stop while it overflows with nothing focusable inside. Focusable children take the focus themselves, and the strip scrolls each into view.",
                     "A control at its own end leaves the tab order, but keeps focus if it had it.",
                 ])
                 .must([
-                    "Name the strip with `aria_label`. It is required, as the strip is a named region and can be a tab stop.",
+                    "Name the strip with `aria_label`. It is required, as the strip is a named region and can be a tab stop; a blank one warns in debug builds.",
                     "With `controls: \"never\"`, bind a `handle` and give it buttons of your own: the strip drags only then, and the buttons are the alternative to a drag.",
                 ])
                 .example("A row of category chips, `Scroller { aria_label: \"Categories\", .. }`: Tab moves from chip to chip, and the strip scrolls each one into view."),

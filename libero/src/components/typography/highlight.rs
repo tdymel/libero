@@ -10,15 +10,25 @@ use crate::{
     theme::Gradient,
 };
 
-/// The byte length of `term` matched case-insensitively at the start of `text`.
+/// Chars that attach to the one before (combining marks, variation selectors, skin
+/// tones): a match never ends before one, which would split a letter (approximate).
+fn attaches(c: char) -> bool {
+    matches!(c as u32,
+        0x0300..=0x036F | 0x1AB0..=0x1AFF | 0x1DC0..=0x1DFF | 0x20D0..=0x20FF
+            | 0xFE00..=0xFE0F | 0xFE20..=0xFE2F | 0x1F3FB..=0x1F3FF | 0xE0100..=0xE01EF)
+}
+
+/// The byte length of `term` matched case-insensitively at the start of `text`,
+/// stretched over the marks that follow it.
 fn match_len(text: &str, term: &str) -> Option<usize> {
-    let mut rest = text.char_indices();
+    let mut rest = text.char_indices().peekable();
     for wanted in term.chars() {
         let (_, found) = rest.next()?;
         if !found.to_lowercase().eq(wanted.to_lowercase()) {
             return None;
         }
     }
+    while rest.next_if(|(_, c)| attaches(*c)).is_some() {}
     Some(rest.next().map_or(text.len(), |(at, _)| at))
 }
 
@@ -59,7 +69,8 @@ base_props! {
         text: String,
         /// Every match is marked, compared lowercase character by character (no full case
         /// folding: `istanbul` does not match `İstanbul`); where terms overlap, the longest
-        /// wins. Blank terms match nothing.
+        /// wins. Blank terms match nothing. No Unicode normalization: a match takes the
+        /// combining marks after it along, so `cafe` marks all of a decomposed `café`.
         #[props(default)]
         terms: Vec<String>,
         /// Each match's tint, as [`Mark`]'s `color`.
@@ -173,6 +184,19 @@ mod tests {
         assert_eq!(
             highlight_runs("İstanbul", &terms(&["İSTANBUL"])),
             [("İstanbul", true)]
+        );
+    }
+
+    /// A decomposed `é` is `e` plus U+0301: a match on `cafe` takes the accent along.
+    #[test]
+    fn a_match_takes_its_trailing_combining_marks() {
+        assert_eq!(
+            highlight_runs("cafe\u{301} au lait", &terms(&["cafe"])),
+            [("cafe\u{301}", true), (" au lait", false)]
+        );
+        assert_eq!(
+            highlight_runs("a\u{301}\u{328}b", &terms(&["a"])),
+            [("a\u{301}\u{328}", true), ("b", false)]
         );
     }
 }

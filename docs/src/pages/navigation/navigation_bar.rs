@@ -81,6 +81,14 @@ fn frame_sx(rail: bool) -> Sx {
     }
 }
 
+/// A short pane that scrolls, so a sticky bar visibly rests at its bottom edge.
+fn sticky_pane_sx() -> Sx {
+    sx().flex_direction("column")
+        .height("240px")
+        .overflow_y("auto")
+        .with("scroll-padding-bottom", "var(--lsx-navigation-bar-height)")
+}
+
 #[component]
 pub fn NavigationBarPage() -> Element {
     let theme = use_theme();
@@ -98,7 +106,7 @@ pub fn NavigationBarPage() -> Element {
                         .doc("`\"bar\"`, a row along the bottom edge for a phone, or `\"rail\"`, an 88px column on the inline-start edge for a tablet or a desktop: the right edge in a right-to-left page. A rail spans the viewport's height and sticks to its top, or docks to the viewport with `position: \"fixed\"`, and publishes its measured width as `--lsx-navigation-rail-width` in place of the bar's height. Set one per breakpoint, as `responsive(NavigationBarVariant::Bar).sm(NavigationBarVariant::Rail)` for a bar on a phone and a rail from the theme's `sm` up: each switch is a CSS media query, so server-rendered HTML and the first paint are right without a script. `position` applies to the shape in effect at each width, and each publishes its own variable there. Keep the same items in the same order at every width."),
                     prop("position", "NavigationBarPosition")
                         .default("static")
-                        .doc("`\"static\"` stays in the flow. `\"sticky\"` holds it at the bottom of its scroller, `\"fixed\"` at the viewport's; both publish the bar's measured height as `--lsx-navigation-bar-height` and keep focus clear of the bar. Pad the page's end by `var(--lsx-navigation-bar-height)`. `\"fixed\"` clears a phone's home indicator, and needs `viewport-fit=cover` in the page's viewport meta, or the browser reports no safe area. A native app docks both the same way."),
+                        .doc("`\"static\"` stays in the flow. `\"sticky\"` holds it at the bottom of its scroller, `\"fixed\"` at the viewport's; both publish the bar's measured height as `--lsx-navigation-bar-height` and keep focus clear of the bar with `scroll-padding-bottom` on `:root`, which a sticky bar at the page's bottom edge needs. A sticky bar in an inner pane sets that root padding too; give the pane its own. Pad the page's end by `var(--lsx-navigation-bar-height)`. `\"fixed\"` clears a phone's home indicator, and needs `viewport-fit=cover` in the page's viewport meta, or the browser reports no safe area. A native app docks both the same way."),
                     prop("show_labels", "LabelVisibility")
                         .default("always")
                         .doc("`\"always\"`, `\"selected\"` (only the selected item's) or `\"never\"`. A hidden label still names its item."),
@@ -192,13 +200,24 @@ pub fn NavigationBarPage() -> Element {
                     let variant = values.str("variant");
                     let wide = format!("(min-width: {})", Size::Sm.breakpoint_value());
                     // The frame follows the bar's own query, so neither waits for a script.
+                    let sticky = position == "sticky";
+                    let bar_frame = match sticky {
+                        true => frame_sx(false).and(sticky_pane_sx()),
+                        false => frame_sx(false),
+                    };
+                    // Sticky, the bar follows the page text in a top-down pane; a rail keeps its place.
+                    let page = match (sticky, variant.as_str()) {
+                        (false, _) | (true, "rail") => sx(),
+                        (true, RESPONSIVE) => sx().order("-1").media(wide.clone(), sx().order("0")),
+                        (true, _) => sx().order("-1"),
+                    };
                     let (frame, nav) = match variant.as_str() {
                         RESPONSIVE => (
-                            frame_sx(false).media(wide.clone(), frame_sx(true)),
+                            bar_frame.media(wide.clone(), frame_sx(true)),
                             sx().media(wide, sx().height("100%")),
                         ),
                         "rail" => (frame_sx(true), sx().height("100%")),
-                        _ => (frame_sx(false), sx()),
+                        _ => (bar_frame, sx()),
                     };
                     let frame = frame
                         .max_width("100%")
@@ -232,7 +251,14 @@ pub fn NavigationBarPage() -> Element {
                                     }
                                 }
                             }
-                            Box { sx: sx().padding("md").flex("1").min_height("120px"), "{ITEMS[current()].0}" }
+                            Box { sx: sx().padding("md").flex("1 0 auto").min_height("120px").and(page),
+                                Text { "{ITEMS[current()].0}" }
+                                if sticky {
+                                    for line in 1..=8 {
+                                        Text { key: "{line}", sx: sx().color("text-dimmed"), "Line {line} of the page: scroll the pane, the bar stays at its bottom edge." }
+                                    }
+                                }
+                            }
                         }
                     }
                 },

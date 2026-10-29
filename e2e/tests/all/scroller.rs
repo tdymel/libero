@@ -210,6 +210,49 @@ fn the_strip_is_a_tab_stop_only_while_it_overflows() {
     });
 }
 
+/// Todo 4956: Chromium handed Home and End on the focused strip to the page, which
+/// scrolled away while the strip stayed put.
+#[test]
+fn home_and_end_run_the_focused_strip_not_the_page() {
+    block_on(async {
+        let fixture = Fixture::open("/scroller/plain", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        motion::set_reduced_motion(page, true).await.unwrap();
+        let wide = "#wide > [data-slot=viewport]";
+        wait::for_js_true(
+            page,
+            &format!("document.querySelector('{wide}').getAttribute('tabindex') === '0'"),
+            "the overflowing strip to become a tab stop",
+        )
+        .await
+        .unwrap();
+        keyboard::tab_to(page, "#before", 3).await.unwrap();
+        keyboard::tab_to(page, wide, 3).await.unwrap();
+        let at = |edge: &str| {
+            format!(
+                "(() => {{ const v = document.querySelector('{wide}'); \
+                 return window.scrollY === 0 && Math.abs(v.scrollLeft - ({edge})) <= 1; }})()"
+            )
+        };
+        keyboard::press(page, keyboard::END).await.unwrap();
+        wait::for_js_true(
+            page,
+            &at("v.scrollWidth - v.clientWidth"),
+            "End at the strip's end",
+        )
+        .await
+        .unwrap();
+        keyboard::press(page, keyboard::HOME).await.unwrap();
+        wait::for_js_true(page, &at("0"), "Home back at the start")
+            .await
+            .unwrap();
+        fixture.console.assert_clean("Home and End").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
 /// The backward control, then the forward one.
 const BACK: &str = "#strip > button:first-of-type";
 const FORWARD: &str = "#strip > button:last-of-type";
