@@ -365,10 +365,10 @@ fn a_phone_opens_the_country_list_in_the_sheet() {
     });
 }
 
-/// Todos 3901 and 4783: a held chip's x is 44px tall and at least 24px wide to a finger (WCAG 2.5.8),
-/// reaching no further than half the gap past its pill.
+/// Todos 3901, 4783 and 4909: to a finger a held chip's x is at least 24x24 (WCAG 2.5.8), stays
+/// inside the frame and reaches no further than half the gap past its pill.
 #[test]
-fn a_finger_gets_a_44px_chip_remove() {
+fn a_finger_gets_a_chip_remove_inside_the_frame() {
     block_on(async {
         let fixture = phone("/select-phone").await;
         let page = &fixture.page;
@@ -377,13 +377,16 @@ fn a_finger_gets_a_44px_chip_remove() {
         let js = "(() => { const x = document.querySelector('#many [data-slot=remove] button'); \
                   const area = getComputedStyle(x, '::before'); \
                   const pill = x.closest('[data-slot=chip-trailing]').parentElement.getBoundingClientRect(); \
-                  const end = x.getBoundingClientRect().left + parseFloat(area.width); \
-                  return parseFloat(area.height) >= 43.5 && parseFloat(area.width) >= 24 \
-                      && end <= pill.right + 2.5; })()";
+                  const frame = x.closest('[data-slot=frame]').getBoundingClientRect(); \
+                  const box = x.getBoundingClientRect(); \
+                  const top = box.top + parseFloat(area.top), height = parseFloat(area.height); \
+                  const end = box.left + parseFloat(area.width); \
+                  return height >= 23.5 && parseFloat(area.width) >= 24 && end <= pill.right + 2.5 \
+                      && top >= frame.top - 0.5 && top + height <= frame.bottom + 0.5; })()";
         wait::for_js_true(
             page,
             js,
-            "a 44px tall, 24px wide remove target short of the next chip",
+            "a 24x24 remove target inside the frame, short of the next chip",
         )
         .await
         .unwrap();
