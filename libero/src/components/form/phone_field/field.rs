@@ -7,8 +7,8 @@ use crate::{
     components::{
         accessibility::VisuallyHidden,
         common::{
-            ComboboxState, Glyph, HtmlTag, Input, Part, Parts, ScaleOrCss, inset_focus_ring_sx,
-            use_combobox,
+            COARSE_POINTER, ComboboxState, Glyph, HtmlTag, Input, Part, Parts, ScaleOrCss,
+            coarse_hit_area_sx, inset_focus_ring_sx, use_combobox,
         },
         form::{
             CaretKeys, ComboboxCore, ComboboxOption, DropdownPart, FIELD_CONTROL_SX, FormScope,
@@ -23,9 +23,9 @@ use crate::{
         use_localization, use_theme,
     },
     localization::fill,
-    platform::{ElementApi, blur_counts, focus_tab_from, is_tab},
+    platform::{ElementApi, blur_counts, focus_tab_from, focus_without_ring, is_tab},
     sx::{StaticSx, Sx, sx},
-    theme::{FOCUS_RING_WIDTH, Size, ios_text_floor_sx},
+    theme::{FIELD_PADDING_X, FOCUS_RING_WIDTH, Size, ios_text_floor_sx},
     utils::digits_of,
 };
 
@@ -47,6 +47,18 @@ static PICKER_SX: StaticSx = StaticSx::new(|| {
         .line_height("1.5")
         // 2.5.8's 24px, which a line of `xs`-`md` text falls short of (todo 763).
         .min_height("24px")
+        // A finger's 44px over the frame, and into its padding before the flag (todo 4823).
+        .position("relative")
+        .and(coarse_hit_area_sx("::before"))
+        .per_size(|size| {
+            sx().media(
+                COARSE_POINTER,
+                sx().selector(
+                    "::before",
+                    sx().inset_inline_start(format!("calc(-1 * {})", FIELD_PADDING_X.value(size))),
+                ),
+            )
+        })
         .padding("0")
         .margin("0")
         .cursor("pointer")
@@ -769,7 +781,12 @@ fn phone_picker(picker_box: BoxStyle, button: PickerButton) -> Element {
                 if !state.is_open() {
                     state.set_active(home_row());
                     // The `mousedown` cancel leaves it unfocused, and its blur closes a held list.
-                    if hold.holding() {
+                    // A finger's press brings no ring, as Select's trigger (todo 4823).
+                    if hold.holding()
+                        && !element
+                            .mounted()
+                            .is_some_and(|node| focus_without_ring(&node))
+                    {
                         let _ = element.focus();
                     }
                 }

@@ -316,6 +316,114 @@ fn the_country_button_is_at_least_24px_square() {
     });
 }
 
+/// Waits for the focus on the picker, then whether it shows its ring.
+async fn picker_ring(page: &Page) -> bool {
+    wait::for_js_true(
+        page,
+        &format!("document.activeElement === document.querySelector({PICKER:?})"),
+        "the focus on the picker",
+    )
+    .await
+    .unwrap();
+    page.evaluate_bounded(format!(
+        "document.querySelector({PICKER:?}).matches(':focus-visible')"
+    ))
+    .await
+    .unwrap()
+    .into_value()
+    .unwrap()
+}
+
+/// Todo 4823: a finger's tap opens the sheet with the picker focused but ringless, as
+/// Select's trigger; a tapped row hands the focus back without a ring too.
+#[test]
+fn a_touch_tap_focuses_the_picker_without_a_ring() {
+    block_on(async {
+        let fixture = Fixture::open("/phone-field", Viewport::Mobile)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        pointer::tap(page, PICKER).await.unwrap();
+        wait::for_js_true(
+            page,
+            &format!(
+                "document.activeElement === document.querySelector({PICKER:?}) \
+                 && !!document.querySelector('[role=listbox] [role=option]')"
+            ),
+            "a tap to open the list, the picker focused",
+        )
+        .await
+        .unwrap();
+        assert!(
+            !picker_ring(page).await,
+            "a tap left the picker's focus ring"
+        );
+        // The row after the open's own, Germany, in view.
+        pointer::tap(page, "[role=option][aria-selected=true] + [role=option]")
+            .await
+            .unwrap();
+        wait::for_js_true(
+            page,
+            &format!(
+                "!document.querySelector('[role=listbox]') \
+                 && !document.querySelector({PICKER:?}).getAttribute('aria-label').includes('Germany')"
+            ),
+            "a tapped row to pick its country and close the list",
+        )
+        .await
+        .unwrap();
+        assert!(
+            !picker_ring(page).await,
+            "a tapped row left the picker's focus ring"
+        );
+        fixture.console.assert_clean("/phone-field").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
+/// Todo 4823: under a finger the picker's target is 44px over the frame and reaches into the
+/// frame's padding before it, so a tap there opens the list rather than focusing the number.
+#[test]
+fn a_touch_beside_the_picker_opens_its_list() {
+    use chromiumoxide::cdp::browser_protocol::emulation::SetTouchEmulationEnabledParams;
+    block_on(async {
+        for (dx, dy, place) in [(0.0, -8.0, "8px above"), (-6.0, 0.0, "6px before")] {
+            let fixture = Fixture::open("/phone-field", Viewport::Mobile)
+                .await
+                .unwrap();
+            let page = &fixture.page;
+            wait::for_visible(page, PICKER).await.unwrap();
+            page.execute_bounded(SetTouchEmulationEnabledParams::new(true))
+                .await
+                .unwrap();
+            // Above the centre, or before the start edge, of the picker.
+            let (x, y): (f64, f64) = page
+                .evaluate_bounded(format!(
+                    "(r => [{dx} < 0 ? r.left + {dx} : r.left + r.width / 2, {dy} < 0 ? r.top + {dy} : r.top + r.height / 2])\
+                     (document.querySelector({PICKER:?}).getBoundingClientRect())"
+                ))
+                .await
+                .unwrap()
+                .into_value()
+                .unwrap();
+            pointer::tap_at(page, pointer::Point { x, y })
+                .await
+                .unwrap();
+            wait::for_js_true(
+                page,
+                &format!(
+                    "document.querySelector({PICKER:?}).getAttribute('aria-expanded') === 'true' \
+                     && document.activeElement !== document.querySelector({TEL:?})"
+                ),
+                &format!("a tap {place} the picker to open its list"),
+            )
+            .await
+            .unwrap();
+            fixture.close().await.unwrap();
+        }
+    });
+}
+
 /// A value whose dial code no country lists shows as `+digits` and posts unchanged.
 #[test]
 fn a_value_with_an_unlisted_dial_code_is_shown_and_posted() {
