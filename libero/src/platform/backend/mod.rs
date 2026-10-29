@@ -1170,6 +1170,24 @@ pub(crate) fn focus_pressed(event: &Event<PointerData>, within: &Rc<MountedData>
     web::focus_pressed(event, within);
 }
 
+/// Only the web has `:focus-visible` - see [`focus_ring_shown`](crate::platform::focus_ring_shown).
+pub(crate) fn focus_ring_shown() -> Option<bool> {
+    #[cfg(target_arch = "wasm32")]
+    return web::focus_ring_shown();
+    #[cfg(not(target_arch = "wasm32"))]
+    return None;
+}
+
+/// Only the web takes `focusVisible` - see [`focus_without_ring`](crate::platform::focus_without_ring).
+pub(crate) fn focus_without_ring(mounted: &Rc<MountedData>) -> bool {
+    #[cfg(not(target_arch = "wasm32"))]
+    let _ = mounted;
+    #[cfg(target_arch = "wasm32")]
+    return web::focus_without_ring(mounted);
+    #[cfg(not(target_arch = "wasm32"))]
+    return false;
+}
+
 /// Only Blitz fires no `submit` - see
 /// `emulates_submit` in `platform`.
 pub(crate) fn emulates_submit() -> bool {

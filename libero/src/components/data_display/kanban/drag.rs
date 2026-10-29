@@ -107,6 +107,8 @@ pub(super) struct Landing {
     pub(super) left: Option<u64>,
     /// A card at the slot claimed it and waits for its control to mount.
     pub(super) held: bool,
+    /// Whether the focus showed its ring at the move: a touch press had none (4813).
+    pub(super) ring: bool,
 }
 
 /// What [`use_board_drag`] takes from its board.
@@ -564,6 +566,7 @@ pub(super) fn use_board_drag(options: BoardDragOptions) -> BoardDrag {
                 from: (from.0, from_index),
                 left: None,
                 held: false,
+                ring: platform::focus_ring_shown().unwrap_or(true),
             }));
             onmove.call(KanbanMove {
                 from_column: from.0,

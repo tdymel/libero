@@ -1778,6 +1778,11 @@ fn a_touch_on_the_handle_drags_across_and_elsewhere_scrolls_the_board() {
         )
         .await
         .unwrap();
+        // 4813: the landing refocus keeps the finger's press ringless.
+        assert!(
+            !ring_on(page, "#Beta [data-slot=handle]").await,
+            "a touch drop across columns left the handle's focus ring"
+        );
 
         // From the text's end edge leftwards, inside the viewport.
         let text = centre(page, "#Alpha [data-slot=content]").await;
@@ -1807,6 +1812,59 @@ fn a_touch_on_the_handle_drags_across_and_elsewhere_scrolls_the_board() {
             .unwrap();
         assert_eq!(order, "Alpha Gamma | Delta Beta | ", "a swipe moved a card");
         fixture.console.assert_clean("touch drags").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
+/// Whether `selector` matches `:focus-visible`.
+async fn ring_on(page: &chromiumoxide::Page, selector: &str) -> bool {
+    let selector = serde_json::to_string(selector).unwrap();
+    page.evaluate_bounded(format!(
+        "document.querySelector({selector}).matches(':focus-visible')"
+    ))
+    .await
+    .unwrap()
+    .into_value()
+    .unwrap()
+}
+
+/// 4813: a card the keys move across keeps its handle's focus ring.
+#[test]
+fn a_key_move_across_keeps_the_handle_ring() {
+    use e2e::browser::{Fixture, Viewport, block_on};
+    use e2e::wait;
+    block_on(async {
+        let fixture = Fixture::open("/kanban", Viewport::Mobile).await.unwrap();
+        let page = &fixture.page;
+        let handle = "#Beta [data-slot=handle]";
+        keyboard::tab_to(page, handle, 20).await.unwrap();
+        keyboard::press(page, keyboard::SPACE).await.unwrap();
+        wait::for_js_true(
+            page,
+            "document.querySelector('[role=status]').textContent.startsWith('Lifted Beta')",
+            "Space to lift Beta",
+        )
+        .await
+        .unwrap();
+        keyboard::press(page, keyboard::ARROW_RIGHT).await.unwrap();
+        wait::for_js_true(
+            page,
+            "document.querySelector('#order').textContent === 'Alpha Gamma | Delta Beta | '",
+            "ArrowRight to move Beta to Doing",
+        )
+        .await
+        .unwrap();
+        wait::for_js_true(
+            page,
+            &format!("document.activeElement === document.querySelector('{handle}')"),
+            "the moved card's handle to take the focus",
+        )
+        .await
+        .unwrap();
+        assert!(
+            ring_on(page, handle).await,
+            "a key move across lost the handle's focus ring"
+        );
         fixture.close().await.unwrap();
     });
 }

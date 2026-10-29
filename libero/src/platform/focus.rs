@@ -10,6 +10,17 @@ pub(crate) fn focus_pressed(event: &Event<PointerData>, within: &Rc<MountedData>
     backend::focus_pressed(event, within);
 }
 
+/// Whether the focused element shows its ring (`:focus-visible`); `None` off the web.
+/// Read before a move that remounts it, to refocus it the same way (4813).
+pub(crate) fn focus_ring_shown() -> Option<bool> {
+    backend::focus_ring_shown()
+}
+
+/// Focuses `mounted` without a focus ring; `false` where the renderer can't (off the web).
+pub(crate) fn focus_without_ring(mounted: &Rc<MountedData>) -> bool {
+    backend::focus_without_ring(mounted)
+}
+
 /// Whether focus is on `mounted` or inside it; a WebView answers `false`.
 pub(crate) fn focus_is_in(mounted: &Rc<MountedData>) -> bool {
     backend::focus_is_in(mounted)

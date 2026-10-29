@@ -492,6 +492,7 @@ pub fn KanbanColumn(props: KanbanColumnProps) -> Element {
                     from: (column, from),
                     left: None,
                     held: false,
+                    ring: true,
                 }));
             }
             onmove.call(KanbanMove {
@@ -744,7 +745,13 @@ pub fn KanbanCard(props: KanbanCardProps) -> Element {
         if target.is_none_or(|target| target.mounted().is_some()) {
             landing.set(None);
             if let Some(target) = target {
-                let _ = target.focus();
+                let quiet = !at.ring
+                    && target
+                        .mounted()
+                        .is_some_and(|node| platform::focus_without_ring(&node));
+                if !quiet {
+                    let _ = target.focus();
+                }
                 // Focus shows the handle only: a card moved by key comes into view whole.
                 if matches!(at.control, Control::Handle)
                     && let Some(card) = platform::mounted_by_selector(&format!(
@@ -776,6 +783,7 @@ pub fn KanbanCard(props: KanbanCardProps) -> Element {
                 from: (from_column, index),
                 left: None,
                 held: false,
+                ring: platform::focus_ring_shown().unwrap_or(true),
             }));
             drag.announce_on_landing(fill(
                 words.kanban.moved,

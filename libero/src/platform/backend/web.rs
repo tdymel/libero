@@ -424,6 +424,23 @@ pub(super) fn focus_pressed(event: &Event<PointerData>, within: &Rc<MountedData>
     let _ = focus();
 }
 
+pub(super) fn focus_ring_shown() -> Option<bool> {
+    let active = web_sys::window()?.document()?.active_element()?;
+    active.matches(":focus-visible").ok()
+}
+
+pub(super) fn focus_without_ring(mounted: &Rc<MountedData>) -> bool {
+    let Some(element) = mounted.downcast::<web_sys::Element>() else {
+        return false;
+    };
+    let Some(element) = element.dyn_ref::<web_sys::HtmlElement>() else {
+        return false;
+    };
+    let options = web_sys::FocusOptions::new();
+    options.set_focus_visible(false);
+    element.focus_with_options(&options).is_ok()
+}
+
 pub(super) fn prefers_reduced_motion() -> bool {
     web_sys::window()
         .and_then(|window| window.match_media(crate::sx::REDUCED_MOTION).ok()?)

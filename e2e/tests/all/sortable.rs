@@ -987,12 +987,74 @@ fn a_touch_released_just_past_the_list_still_drops() {
                 "document.querySelector('#order').textContent === 'Beta Gamma Delta Alpha'",
                 "a release just past the last item to drop",
             )
-            .await
+            .await?;
+            // 4813: the refocus after the move keeps the finger's press ringless.
+            wait::for_js_true(
+                page,
+                "document.activeElement === document.querySelector('#Alpha button')",
+                "the dropped item's handle to take the focus",
+            )
+            .await?;
+            ensure!(
+                !ring_on(page, "#Alpha button").await?,
+                "a touch drop to the last slot left the handle's focus ring"
+            );
+            Ok(())
         }
         .await;
         let state = touch_state(page).await;
         fixture.close().await.unwrap();
         outcome.unwrap_or_else(|error| panic!("{error:#}: {state}"));
+    });
+}
+
+/// Whether `selector` matches `:focus-visible`.
+async fn ring_on(page: &chromiumoxide::Page, selector: &str) -> Result<bool> {
+    let selector = serde_json::to_string(selector)?;
+    Ok(page
+        .evaluate_bounded(format!(
+            "document.querySelector({selector}).matches(':focus-visible')"
+        ))
+        .await?
+        .into_value()?)
+}
+
+/// 4813: an item the keys drop in the last slot keeps its handle's focus ring.
+#[test]
+fn a_key_drop_to_the_last_slot_keeps_the_handle_ring() {
+    block_on(async {
+        let fixture = Fixture::open("/sortable", Viewport::Mobile).await.unwrap();
+        let page = &fixture.page;
+        keyboard::tab_to(page, "#Alpha button", 20).await.unwrap();
+        keyboard::press(page, keyboard::SPACE).await.unwrap();
+        wait::for_js_true(
+            page,
+            "document.querySelector('[role=status]').textContent === 'Lifted Alpha, position 1 of 4.'",
+            "Space to lift Alpha",
+        )
+        .await
+        .unwrap();
+        keyboard::press(page, keyboard::END).await.unwrap();
+        keyboard::press(page, keyboard::SPACE).await.unwrap();
+        wait::for_js_true(
+            page,
+            "document.querySelector('#order').textContent === 'Beta Gamma Delta Alpha'",
+            "End and Space to drop Alpha last",
+        )
+        .await
+        .unwrap();
+        wait::for_js_true(
+            page,
+            "document.activeElement === document.querySelector('#Alpha button')",
+            "the dropped item's handle to take the focus",
+        )
+        .await
+        .unwrap();
+        assert!(
+            ring_on(page, "#Alpha button").await.unwrap(),
+            "a key drop to the last slot lost the handle's focus ring"
+        );
+        fixture.close().await.unwrap();
     });
 }
 

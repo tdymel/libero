@@ -230,6 +230,8 @@ struct Moved {
     id: usize,
     control: Refocus,
     step: SortableMove,
+    /// Whether the control showed its focus ring when moved: a touch press had none (4813).
+    ring: bool,
 }
 
 /// A windowed list's slots, all one pitch, most of them unmounted (Table, todo 1408).
@@ -708,6 +710,7 @@ pub(crate) fn use_fixed_sortable(
                 id,
                 control: Refocus::Handle,
                 step,
+                ring: platform::focus_ring_shown().unwrap_or(true),
             }));
             onreorder.call(step);
         }
@@ -952,6 +955,7 @@ pub(crate) fn use_fixed_sortable(
             id,
             control: keep,
             step,
+            ring: platform::focus_ring_shown().unwrap_or(true),
         }));
         announce(say(words.moved, &label, to, total));
         onreorder.call(step);
@@ -1172,16 +1176,29 @@ pub(crate) fn use_spanning_sortable_item(
         // Moving a node in the DOM blurs it. Only for that move: after an ignored one,
         // a later unrelated change of index must not pull the focus here.
         let moved = *refocus.peek();
-        if let Some(Moved { control, step, .. }) = moved.filter(|moved| moved.id == id) {
+        if let Some(Moved {
+            control,
+            step,
+            ring,
+            ..
+        }) = moved.filter(|moved| moved.id == id)
+        {
             refocus.set(None);
             if (before, index) != (Some(step.from), step.to) {
                 return;
             }
-            let _ = match control {
-                Refocus::Handle => handle.focus(),
-                Refocus::Earlier => earlier.focus(),
-                Refocus::Later => later.focus(),
+            let target = match control {
+                Refocus::Handle => handle,
+                Refocus::Earlier => earlier,
+                Refocus::Later => later,
             };
+            let quiet = !ring
+                && target
+                    .mounted()
+                    .is_some_and(|node| platform::focus_without_ring(&node));
+            if !quiet {
+                let _ = target.focus();
+            }
             // The focus keeps the scroll: a moved item can land out of view (4780).
             if let Some(node) = element.mounted() {
                 let _ = platform::scroll_chain_into_view(&node, false);
