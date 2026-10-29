@@ -81,7 +81,7 @@ impl PreparedField {
         self.invalid
     }
 
-    /// The wrapper's element, held for a `labelled_by` field or a Blitz focus watch.
+    /// The wrapper's element, always held: a sheet's clearance measures the helper and error in it (4907).
     pub fn root(&self) -> Option<ElementHandle> {
         self.root
     }

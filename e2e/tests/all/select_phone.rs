@@ -444,6 +444,84 @@ fn a_low_select_trigger_clears_the_sheet() {
     });
 }
 
+/// Todo 4907: the sheet clears a low field's helper, not only its trigger.
+async fn helper_clears_the_sheet(route: &str, trigger: &str) {
+    let fixture = phone(route).await;
+    let page = &fixture.page;
+    tap(page, trigger).await.unwrap();
+    sheet_shown(page).await.unwrap();
+    let js = format!(
+        "document.querySelector('#low [data-slot=helper]').getBoundingClientRect().bottom \
+         <= document.querySelector({SHEET:?}).getBoundingClientRect().top + 0.5"
+    );
+    wait::for_js_true(page, &js, "the helper above the sheet")
+        .await
+        .unwrap();
+    fixture.console.assert_clean(route).unwrap();
+    fixture.close().await.unwrap();
+}
+
+#[test]
+fn a_low_color_field_clears_its_helper() {
+    block_on(helper_clears_the_sheet(
+        "/select-phone/low-color",
+        "#low input",
+    ));
+}
+
+#[test]
+fn a_low_phone_field_clears_its_helper() {
+    block_on(helper_clears_the_sheet(
+        "/select-phone/low-phone",
+        "#low [id$='-picker']",
+    ));
+}
+
+/// Todo 4907: a tap on a tab outside the sheet only closes it, and focus is on the picker:
+/// kept there, or handed back from the sheet's search box.
+async fn outside_tap_leaves_focus_on_the_picker(from_search: bool) {
+    const PICKER: &str = "#low [id$='-picker']";
+    const TAB: &str = "[role=tab][aria-selected=false]";
+    let fixture = phone("/select-phone/low-phone").await;
+    let page = &fixture.page;
+    tap(page, PICKER).await.unwrap();
+    sheet_shown(page).await.unwrap();
+    if from_search {
+        let search = format!("{SHEET} input");
+        tap(page, &search).await.unwrap();
+        let js = format!("document.activeElement === document.querySelector({search:?})");
+        wait::for_js_true(page, &js, "focus in the search box")
+            .await
+            .unwrap();
+    }
+    tap(page, TAB).await.unwrap();
+    let js = format!(
+        "(() => {{ const s = document.querySelector({SHEET:?}); \
+         return (!s || getComputedStyle(s).visibility !== 'visible') \
+           && document.querySelectorAll('[role=tab][aria-selected=false]').length === 1 \
+           && document.activeElement === document.querySelector({PICKER:?}); }})()"
+    );
+    wait::for_js_true(
+        page,
+        &js,
+        "the sheet closed, the tab unselected, focus on the picker",
+    )
+    .await
+    .unwrap();
+    fixture.console.assert_clean("an outside tap").unwrap();
+    fixture.close().await.unwrap();
+}
+
+#[test]
+fn an_outside_tap_leaves_focus_on_the_picker() {
+    block_on(outside_tap_leaves_focus_on_the_picker(false));
+}
+
+#[test]
+fn an_outside_tap_hands_focus_from_the_search_to_the_picker() {
+    block_on(outside_tap_leaves_focus_on_the_picker(true));
+}
+
 /// Above `sm` the lists stay popovers under the field.
 #[test]
 fn a_desktop_keeps_the_popover() {

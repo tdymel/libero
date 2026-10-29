@@ -449,7 +449,11 @@ fn ComboboxPopup(props: ComboboxPopupProps) -> Element {
     // Off the sheet's width the room is never read: no measure, no redraw.
     let narrow = use_media_query(&narrow_query());
     let narrow = props.sheet && narrow();
-    let room = use_sheet_room(*popover.floating(), narrow && popover.placed());
+    let room = use_sheet_room(
+        *popover.floating(),
+        narrow && popover.placed(),
+        props.onclose,
+    );
     let SheetSwipe {
         strip,
         listeners,

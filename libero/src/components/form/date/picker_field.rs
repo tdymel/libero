@@ -370,7 +370,8 @@ pub(super) fn use_picker_field<V: FieldValue>(
         PopoverOptions::new(theme.popover.gap, theme.popover.padding),
     );
     let floating = *popover.floating();
-    let room = use_sheet_room(floating, narrow() && popover.placed());
+    let close = use_callback(move |()| open_to(false));
+    let room = use_sheet_room(floating, narrow() && popover.placed(), close);
     let clearance = use_sheet_clearance(
         anchor,
         field_box.root(),
@@ -379,7 +380,6 @@ pub(super) fn use_picker_field<V: FieldValue>(
         theme.popover.gap,
     );
     use_scroll_clear(anchor, clearance);
-    let close = use_callback(move |()| open_to(false));
     let SheetSwipe {
         strip,
         listeners,

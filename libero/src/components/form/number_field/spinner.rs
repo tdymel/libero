@@ -224,14 +224,15 @@ pub(super) fn NumberSpinner<T: NumberValue>(
     );
     let floating = *popover.floating();
     let narrow = use_media_query(&narrow_query());
-    let room = use_sheet_room(floating, narrow() && popover.placed());
+    let sheet_close = use_callback(move |()| close(false));
+    let room = use_sheet_room(floating, narrow() && popover.placed(), sheet_close);
     let clearance = use_sheet_clearance(anchor, field_root, popover, showing, theme.popover.gap);
     use_scroll_clear(anchor, clearance);
     let SheetSwipe {
         strip,
         listeners,
         style: drag,
-    } = use_sheet_swipe(floating, use_callback(move |()| close(false)));
+    } = use_sheet_swipe(floating, sheet_close);
     let dropdown_states: Input<States> = States::new().active("bordered").into();
     let dropdown = use_box()
         .framework_sx(&SPINNER_SX)

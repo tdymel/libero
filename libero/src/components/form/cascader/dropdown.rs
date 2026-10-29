@@ -156,8 +156,9 @@ pub(super) fn use_cascader_dropdown(setup: DropdownSetup) -> Dropdown {
 
     let sheet_clearance = use_sheet_clearance(anchor, field, popover, opened, gap);
     use_scroll_clear(anchor, sheet_clearance);
-    let room = use_sheet_room(*popover.floating(), opened && popover.placed());
-    let swipe = use_sheet_swipe(*popover.floating(), use_callback(move |()| state.close()));
+    let close = use_callback(move |()| state.close());
+    let room = use_sheet_room(*popover.floating(), opened && popover.placed(), close);
+    let swipe = use_sheet_swipe(*popover.floating(), close);
 
     let search_box = use_box().framework_sx(&CASCADER_SEARCH_SX).prepare();
     let wrapper = use_box()

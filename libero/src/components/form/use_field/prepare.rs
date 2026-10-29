@@ -249,7 +249,6 @@ impl FieldBuilder<'_> {
             });
         }
         let only_focuses = root.filter(|_| self.label_only_focuses);
-        let root = root.filter(|_| silent.is_some() || focuses);
 
         PreparedField {
             label: label_node(

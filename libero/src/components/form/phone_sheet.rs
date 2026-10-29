@@ -130,12 +130,18 @@ const SHEET_RIGHT: CssVar = CssVar::new("--lsx-sheet-right");
 #[derive(Clone, Copy)]
 pub(crate) struct SheetComposite(pub(crate) ElementHandle);
 
-/// A press outside the open sheet only closes it, as a scrim would: its click is swallowed (4826).
+/// A press outside the open sheet only closes it, as a scrim would: its click is swallowed (4826)
+/// and focus stays put (4907); `onclose` closes it, as a swipe does.
 /// One on any open popup or its anchor, the sheet's own trigger included, keeps its click.
-fn use_sheet_outside_press(placed: bool) {
+fn use_sheet_outside_press(placed: bool, onclose: Callback<()>) {
     let popups = use_open_popups();
     let composite = try_use_context::<SheetComposite>();
     let swallowing = use_subscription_slot::<dyn PressSubscription>();
+    let swallowed = use_signal(|| 0u64);
+    let mut open = use_hook(|| CopyValue::new(false));
+    if *open.peek() != placed {
+        open.set(placed);
+    }
     use_effect(use_reactive!(|placed| {
         if !placed {
             swallowing.clear();
@@ -148,16 +154,23 @@ fn use_sheet_outside_press(placed: bool) {
                         .is_some_and(|owner| element_contains(&owner, target));
                     !in_composite && !in_open_popup(popups, target)
                 }),
+                Rc::new(move || bump(swallowed)),
                 composite.and_then(|SheetComposite(owner)| owner.tag()),
             ));
         }
     }));
+    // Only a swallowed click closes it: a press that scrolled keeps the sheet.
+    use_effect(move || {
+        if swallowed() > 0 && *open.peek() {
+            onclose.call(());
+        }
+    });
 }
 
 /// A phone browser's keyboard shrinks only the visual viewport (2173): the open sheet's foot
-/// and room follow it, as inline vars for its `style`. Also swallows an outside press's click.
-pub(crate) fn use_sheet_room(sheet: ElementHandle, placed: bool) -> String {
-    use_sheet_outside_press(placed);
+/// and room follow it, as inline vars for its `style`. Also closes the sheet on an outside press.
+pub(crate) fn use_sheet_room(sheet: ElementHandle, placed: bool, onclose: Callback<()>) -> String {
+    use_sheet_outside_press(placed, onclose);
     let mut room = use_signal(|| None::<SheetBand>);
     let tick = use_signal(|| 0u64);
     let resizing = use_subscription_slot::<dyn ScrollSubscription>();

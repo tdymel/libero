@@ -4,8 +4,8 @@
 
 use dioxus::prelude::*;
 use libero::components::{
-    Button, Cascader, CascaderDropdown, CascaderOption, Flex, MultiSelect, OptionList, PhoneField,
-    Select, Text, use_cascader,
+    Button, Cascader, CascaderDropdown, CascaderOption, ColorField, Flex, MultiSelect, OptionList,
+    Options, PhoneField, Select, Tabs, Text, use_cascader,
 };
 
 use crate::{Routes, common::Fruit};
@@ -14,6 +14,8 @@ pub const ROUTES: Routes = &[
     ("/select-phone", || rsx! { SelectPhonePage {} }),
     ("/select-phone/low-trigger", || rsx! { LowTriggerPage {} }),
     ("/select-phone/low-select", || rsx! { LowSelectPage {} }),
+    ("/select-phone/low-color", || rsx! { LowColorPage {} }),
+    ("/select-phone/low-phone", || rsx! { LowPhonePage {} }),
     (
         "/select-phone/open-on-focus",
         || rsx! { OpenOnFocusPage {} },
@@ -122,6 +124,55 @@ fn LowSelectPage() -> Element {
             }
             // Room to scroll the trigger up by the sheet's height.
             div { style: "height: 100vh" }
+        }
+    }
+}
+
+/// A field with a helper in the screen's foot: the sheet clears the helper too (4907).
+#[component]
+fn LowField(children: Element) -> Element {
+    rsx! {
+        Flex { direction: "column", gap: "md", padding: "md",
+            div { style: "height: calc(100vh - 170px)" }
+            div { id: "low", {children} }
+            div { style: "height: 100vh" }
+        }
+    }
+}
+
+#[component]
+fn LowColorPage() -> Element {
+    rsx! {
+        LowField {
+            ColorField { label: "Brand color", helper: "Shown in the theme preview." }
+        }
+    }
+}
+
+#[derive(Clone, PartialEq, Options)]
+enum Section {
+    Account,
+    Billing,
+}
+
+/// Tabs above, as the docs page's: a tap on one closes the sheet and leaves focus on the picker (4907).
+#[component]
+fn LowPhonePage() -> Element {
+    let mut section = use_signal(|| Section::Account);
+
+    rsx! {
+        // Fixed, so it stays in view once the field scrolls above the sheet.
+        div { style: "position: fixed; top: 0; left: 0; right: 0; z-index: 1; background: white",
+            Tabs {
+                aria_label: "Sections",
+                value: section(),
+                onchange: move |next| section.set(next),
+                options: OptionList::from_options(),
+                panel: |_: Section| rsx! { "panel" },
+            }
+        }
+        LowField {
+            PhoneField { label: "Phone", country: "DE", helper: "Include the area code." }
         }
     }
 }

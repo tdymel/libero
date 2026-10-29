@@ -420,10 +420,10 @@ pub fn ColorField(props: ColorFieldProps) -> Element {
     );
     let floating = *popover.floating();
     let narrow = use_media_query(&narrow_query());
-    let room = use_sheet_room(floating, narrow() && popover.placed());
+    let close = use_callback(move |()| opened.set(false));
+    let room = use_sheet_room(floating, narrow() && popover.placed(), close);
     let clearance = use_sheet_clearance(anchor, field.root(), popover, showing, theme.popover.gap);
     use_scroll_clear(anchor, clearance);
-    let close = use_callback(move |()| opened.set(false));
     let SheetSwipe {
         strip,
         listeners,

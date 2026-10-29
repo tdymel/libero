@@ -606,7 +606,9 @@ fn NumberFieldShell<T: NumberValue>(
     let unit_id = trailing_id.clone();
     // The spinner renders the hint only while a tap opens it instead of the keyboard.
     let spin_hint_id = format!("{}-spin-hint", field.id());
-    if spin_opens {
+    // A memo, so opening the spinner redraws the spinner and not the field.
+    let keyboardless = use_memo(move || spin().keyboardless());
+    if spin_opens && keyboardless() {
         field.describe_also(spin_hint_id.clone());
     }
     // The memo alone reads the number, so a step redraws the buttons only at a bound.
@@ -1356,6 +1358,26 @@ mod tests {
         assert_eq!(stepper_state(0.0), [true, false]);
         assert_eq!(stepper_state(10.0), [false, true]);
         assert_eq!(stepper_state(5.0), [false, false]);
+    }
+
+    /// Todo 4908: under a fine pointer the spinner draws no hint, so no IDREF names it.
+    #[test]
+    fn the_spin_hint_is_named_only_when_it_renders() {
+        use super::{NumberField, TouchInput};
+        use crate::LiberoProvider;
+        use dioxus::prelude::*;
+
+        let mut dom = VirtualDom::new(|| {
+            rsx! {
+                LiberoProvider {
+                    NumberField::<u32> { label: "Quantity", value: Some(1), touch_input: TouchInput::Spin, onchange: |_| {} }
+                }
+            }
+        });
+        dom.rebuild_in_place();
+        let html = dioxus_ssr::render(&dom);
+        assert!(html.contains("<input"), "{html}");
+        assert!(!html.contains("spin-hint"), "{html}");
     }
 
     /// Todo 3962: `decimals` rounds Rust's text and pads it only when exact.

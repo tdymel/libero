@@ -145,10 +145,11 @@ pub(super) fn MenuLevel(props: MenuLevelProps) -> Element {
         },
     );
     // Swiped away, a submenu sheet hands focus to its item, the root to the trigger.
-    let swipe = use_sheet_swipe(floating, use_callback(move |()| dismiss.dismiss()));
+    let sheet_close = use_callback(move |()| dismiss.dismiss());
+    let swipe = use_sheet_swipe(floating, sheet_close);
     // As `ComboboxPopup`: off the sheet's width the room is never read, so no measure, no redraw.
     let narrow = use_media_query(&narrow_query());
-    let room = use_sheet_room(floating, narrow() && open && placed);
+    let room = use_sheet_room(floating, narrow() && open && placed, sheet_close);
     // Portaled beside its parents, so focus here would read as leaving them.
     // The guards unregister on drop.
     let parents = props.parents.0.clone();

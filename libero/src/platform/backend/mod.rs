@@ -1135,21 +1135,22 @@ pub(crate) fn on_pointer_release(pointer_id: i32, onrelease: Callback<()>) {
 pub(crate) fn swallow_outside_clicks(
     media: &str,
     outside: crate::platform::OutsidePress,
+    onswallow: std::rc::Rc<dyn Fn()>,
     kept: Option<u64>,
 ) -> Option<Box<dyn crate::platform::PressSubscription>> {
     #[cfg(target_arch = "wasm32")]
     return {
         let _ = kept;
-        web::swallow_outside_clicks(media, outside)
+        web::swallow_outside_clicks(media, outside, onswallow)
     };
     #[cfg(all(not(target_arch = "wasm32"), feature = "native"))]
     return {
         let _ = kept;
-        blitz::swallow_outside_clicks(media, outside)
+        blitz::swallow_outside_clicks(media, outside, onswallow)
     };
     #[cfg(all(not(target_arch = "wasm32"), not(feature = "native")))]
     return {
-        let _ = outside;
+        let _ = (outside, onswallow);
         webview::swallow_outside_clicks(media, kept)
     };
 }

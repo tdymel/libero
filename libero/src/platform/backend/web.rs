@@ -1710,6 +1710,9 @@ thread_local! {
     /// Whether the press under way loses its click, and whether the window clears it yet.
     static SWALLOWING: Cell<bool> = const { Cell::new(false) };
     static SWALLOW_GUARDED: Cell<bool> = const { Cell::new(false) };
+    /// Told when the press under way loses its click.
+    static ON_SWALLOW: std::cell::RefCell<Option<Rc<dyn Fn()>>> =
+        const { std::cell::RefCell::new(None) };
 }
 
 /// Once per page, ahead of every subscription's listener: a new press, a cancelled one (a
@@ -1718,7 +1721,10 @@ fn guard_swallow(window: &web_sys::Window) {
     if SWALLOW_GUARDED.replace(true) {
         return;
     }
-    let clear = Closure::<dyn FnMut()>::new(|| SWALLOWING.set(false));
+    let clear = Closure::<dyn FnMut()>::new(|| {
+        SWALLOWING.set(false);
+        ON_SWALLOW.take();
+    });
     for event in ["pointerdown", "pointercancel", "keydown"] {
         let _ = window.add_event_listener_with_callback_and_bool(
             event,
@@ -1727,10 +1733,26 @@ fn guard_swallow(window: &web_sys::Window) {
         );
     }
     clear.forget();
+    // As a scrim would, the swallowed press moves no focus either: a tap's mousedown follows its pointerup (4907).
+    let hold_focus =
+        Closure::<dyn FnMut(web_sys::MouseEvent)>::new(|event: web_sys::MouseEvent| {
+            if event.is_trusted() && SWALLOWING.get() {
+                event.prevent_default();
+            }
+        });
+    let _ = window.add_event_listener_with_callback_and_bool(
+        "mousedown",
+        hold_focus.as_ref().unchecked_ref(),
+        true,
+    );
+    hold_focus.forget();
     let click = Closure::<dyn FnMut(web_sys::MouseEvent)>::new(|event: web_sys::MouseEvent| {
         if event.is_trusted() && SWALLOWING.replace(false) {
             event.stop_propagation();
             event.prevent_default();
+            if let Some(onswallow) = ON_SWALLOW.take() {
+                onswallow();
+            }
         }
     });
     let _ = window.add_event_listener_with_callback_and_bool(
@@ -1744,6 +1766,7 @@ fn guard_swallow(window: &web_sys::Window) {
 pub(super) fn swallow_outside_clicks(
     media: &str,
     outside: crate::platform::OutsidePress,
+    onswallow: Rc<dyn Fn()>,
 ) -> Option<Box<dyn crate::platform::PressSubscription>> {
     let window = web_sys::window()?;
     guard_swallow(&window);
@@ -1758,6 +1781,7 @@ pub(super) fn swallow_outside_clicks(
             };
             if query.matches() && outside(&Rc::new(MountedData::new(Found(target)))) {
                 SWALLOWING.set(true);
+                ON_SWALLOW.set(Some(onswallow.clone()));
             }
         });
     window
