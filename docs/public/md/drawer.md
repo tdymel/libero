@@ -62,7 +62,7 @@ fn Demo() -> Element {
                     onchange: move |next| setting.set(next),
                     panel: |setting: Setting| rsx! { Text { "{setting.label()}" } },
                 }
-                Button { variant: "outlined", onclick: move |_| s.close(), "Close" }
+                Button { variant: "outlined", onclick: move |_| s.close(), "Done" }
             }
         },
     );

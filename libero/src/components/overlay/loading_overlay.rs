@@ -10,7 +10,7 @@ use crate::{
         feedback::Loader,
         layout::use_box,
     },
-    hooks::{use_element, use_localization},
+    hooks::{ElementHandle, use_element, use_id, use_localization},
     platform::{self, ElementApi, document},
     sx::{StaticSx, sx},
 };
@@ -54,6 +54,7 @@ pub fn LoadingOverlay(props: LoadingOverlayProps) -> Element {
     let loading = props.loading;
     let frame = use_element();
     let content = use_element();
+    let content_id = use_id();
 
     // `inert` would drop focus inside to the page: the box holds it while loading,
     // and the control gets it back after (todo 4545).
@@ -62,10 +63,11 @@ pub fn LoadingOverlay(props: LoadingOverlayProps) -> Element {
     if loading != *was_loading.peek() {
         was_loading.set(loading);
         if loading {
-            let focused = content
-                .mounted()
-                .and_then(|mounted| platform::element(&mounted).query_selector(":focus").ok());
-            held.set(focused.map(Rc::from));
+            held.set(focus_inside(&content, &content_id.peek()).map(Rc::from));
+        } else if held.peek().is_some() && !box_holds_focus(&frame) {
+            // Read before the box loses its `tabindex`, which drops its focus to the
+            // page: focus the user moved off the box stays put (todo 4968).
+            held.set(None);
         }
     }
     use_effect(use_reactive!(|loading| {
@@ -80,12 +82,7 @@ pub fn LoadingOverlay(props: LoadingOverlayProps) -> Element {
             return;
         }
         held.set(None);
-        // Not when the user moved on meanwhile.
-        let stayed = frame.is_some_and(|frame| frame.is_focused())
-            || document()
-                .and_then(|document| document.active_element())
-                .is_none_or(|active| matches!(active.matches("body, html"), Ok(true)));
-        if stayed && element.is_connected() {
+        if element.is_connected() {
             let _ = element.focus();
         }
     }));
@@ -107,6 +104,7 @@ pub fn LoadingOverlay(props: LoadingOverlayProps) -> Element {
                 div {
                     style: "display: contents",
                     inert: loading.then_some("true"),
+                    "data-lsx-loading-content": "{content_id}",
                     onmounted: content.mount(),
                     {props.children}
                 }
@@ -123,6 +121,28 @@ pub fn LoadingOverlay(props: LoadingOverlayProps) -> Element {
             if loading { {localization.common.loading} }
         }
     }
+}
+
+/// Whether the box still has focus; a renderer that cannot tell says yes.
+fn box_holds_focus(frame: &ElementHandle) -> bool {
+    let Some(mounted) = frame.mounted() else {
+        return true;
+    };
+    platform::element(&mounted).is_focused()
+        || document().is_none_or(|document| document.active_element().is_none())
+}
+
+/// The focused element inside `content`. `activeElement`, not `:focus`, which
+/// misses it while the window is in the background (todo 4969).
+fn focus_inside(content: &ElementHandle, id: &str) -> Option<Box<dyn ElementApi>> {
+    let inside = format!("[data-lsx-loading-content=\"{id}\"] *");
+    if let Some(active) = document().and_then(|document| document.active_element())
+        && let Ok(contained) = active.matches(&inside)
+    {
+        return contained.then_some(active);
+    }
+    let mounted = content.mounted()?;
+    platform::element(&mounted).query_selector(":focus").ok()
 }
 
 #[cfg(test)]

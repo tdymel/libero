@@ -3,7 +3,7 @@
 
 use e2e::browser::block_on;
 use e2e::passes::{focus::assert_focused, keyboard, pointer};
-use e2e::{Fixture, Viewport, js, wait};
+use e2e::{Fixture, Viewport, clock, js, wait};
 
 /// A `contained` overlay covers its positioned box, not the viewport.
 #[test]
@@ -97,6 +97,34 @@ fn a_loading_box_is_busy_inert_and_announced() {
         )
         .await
         .unwrap();
+
+        // Todo 4968: focus left on the page meanwhile, as a click on text leaves it, stays there.
+        keyboard::press(page, keyboard::ENTER).await.unwrap();
+        wait::for_js_true(
+            page,
+            "document.activeElement?.id === 'loading'",
+            "focus to wait on the box",
+        )
+        .await
+        .unwrap();
+        let _: bool = js(
+            page,
+            "(document.activeElement.blur(), document.querySelector('#toggle').click(), true)",
+        )
+        .await;
+        wait::for_js_true(
+            page,
+            "!document.querySelector('#loading').hasAttribute('aria-busy')",
+            "the load to end",
+        )
+        .await
+        .unwrap();
+        clock::next_frame(page).await.unwrap();
+        let active: String = js(page, "document.activeElement?.tagName ?? ''").await;
+        assert_eq!(
+            active, "BODY",
+            "focus the user moved away is not pulled back"
+        );
 
         fixture.console.assert_clean("a loading box").unwrap();
         fixture.close().await.unwrap();

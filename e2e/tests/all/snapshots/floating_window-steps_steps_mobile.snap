@@ -17,7 +17,7 @@ dialog "Inspector"
     button "Move down"
     button "Move left"
     button "Move right"
-    button "Done"
+    button "Done moving"
       StaticText "Done"
   paragraph
     StaticText "Drag the title bar, or focus it and use the arrow keys."

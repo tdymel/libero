@@ -15,7 +15,7 @@ const CONTENT: &str = r#"Flex {
     gap: "md",
     sx: sx().padding("16px"),
     Text { "Closes on Escape or a backdrop click." }
-    Button { variant: "outlined", onclick: move |_| s.close(), "Close" }
+    Button { variant: "outlined", onclick: move |_| s.close(), "Done" }
 }"#;
 
 /// The enum is the tab strip, so the tabs variant has to print it. `static`: the
@@ -48,7 +48,7 @@ static TABS_CONTENT: &str = r#"Flex {
         onchange: move |next| setting.set(next),
         panel: |setting: Setting| rsx! { Text { "{setting.label()}" } },
     }
-    Button { variant: "outlined", onclick: move |_| s.close(), "Close" }
+    Button { variant: "outlined", onclick: move |_| s.close(), "Done" }
 }"#;
 
 #[derive(Clone, PartialEq, Options)]
@@ -141,7 +141,7 @@ fn DrawerDemo(
                     } else {
                         Text { "Closes on Escape or a backdrop click." }
                     }
-                    Button { variant: "outlined", onclick: move |_| s.close(), "Close" }
+                    Button { variant: "outlined", onclick: move |_| s.close(), "Done" }
                 }
             }
         },

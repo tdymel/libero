@@ -114,7 +114,7 @@ explains how parts work.
 - The title bar's menu offers Move, Resize and Reset. Move and Resize show
   step buttons, one click per step, so neither needs a drag. Done or Escape
   hides them. Their group is named "Move window by steps" or "Resize window by
-  steps", apart from the handles.
+  steps", apart from the handles, and Done reads "Done moving" or "Done resizing".
 
 ### You must
 

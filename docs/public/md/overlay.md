@@ -26,7 +26,7 @@ fn Demo() -> Element {
     rsx! {
         Overlay {
             contained: true,
-            Paper { role: "status", sx: sx().padding("8px 16px"), "Loading..." }
+            Paper { sx: sx().padding("8px 16px"), "Loading..." }
         }
     }
 }
@@ -71,6 +71,9 @@ Like every component, `Overlay` and `LoadingOverlay` also take the shared props
   page from a screen reader.
 - Give an overlay you close on a click a keyboard close as well, such as a
   `Button` inside it: a backdrop click alone leaves keyboard users no way out.
+- An `Overlay` announces nothing. For a load a screen reader hears, use a
+  `LoadingOverlay`, or keep a `role: "status"` region mounted and set its text
+  when the load starts.
 - For a long load started inside a `LoadingOverlay`, offer a way out outside
   it, such as a Cancel button: until it ends, focus waits on the busy box.
 

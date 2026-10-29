@@ -131,9 +131,10 @@ fn WindowDemo(resizable: bool, pinned: bool, report: bool, values: DemoValues) -
     let phone = use_media_query(&format!("(width < {})", Size::Sm.breakpoint_value()));
     let options = move |title: &str, placement: &str| FloatingWindowOptions {
         title: Some(title.into()),
-        // Below `sm` the middle of the screen holds the trigger row, so Notes sits at the top.
+        // Below `sm` the middle holds the trigger row and the top the site header,
+        // so Notes sits at the bottom (todo 4965).
         placement: match (phone(), placement) {
-            (true, "center-end") => "top-end",
+            (true, "center-end") => "bottom-center",
             _ => placement,
         }
         .into(),
@@ -314,7 +315,7 @@ pub fn FloatingWindowPage() -> Element {
                 .key(["F6"], "Moves focus between the page and the topmost window.")
                 .handles([
                     "A window takes focus when it opens.",
-                    "The title bar's menu offers Move, Resize and Reset. Move and Resize show step buttons, one click per step, so neither needs a drag. Done or Escape hides them. Their group is named \"Move window by steps\" or \"Resize window by steps\", apart from the handles.",
+                    "The title bar's menu offers Move, Resize and Reset. Move and Resize show step buttons, one click per step, so neither needs a drag. Done or Escape hides them. Their group is named \"Move window by steps\" or \"Resize window by steps\", apart from the handles, and Done reads \"Done moving\" or \"Done resizing\".",
                 ])
                 .must([
                     "Pick a `placement` that does not cover the page's controls: the page behind a window still takes Tab.",

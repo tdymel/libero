@@ -32,6 +32,10 @@ pub struct FloatingWindowLabels {
     pub taller: &'static str,
     /// Hides the move or resize buttons again.
     pub done: &'static str,
+    /// The move row's Done button name, apart from the resize row's.
+    pub done_moving: &'static str,
+    /// The resize row's Done button name.
+    pub done_resizing: &'static str,
 }
 
 impl FloatingWindowLabels {
@@ -55,6 +59,8 @@ impl FloatingWindowLabels {
         shorter: "Shorter",
         taller: "Taller",
         done: "Done",
+        done_moving: "Done moving",
+        done_resizing: "Done resizing",
     };
 
     pub const GERMAN: Self = Self {
@@ -77,6 +83,8 @@ impl FloatingWindowLabels {
         shorter: "Niedriger",
         taller: "Höher",
         done: "Fertig",
+        done_moving: "Fertig mit Verschieben",
+        done_resizing: "Fertig mit Größenänderung",
     };
 }
 
@@ -90,6 +98,10 @@ mod tests {
         for labels in [FloatingWindowLabels::ENGLISH, FloatingWindowLabels::GERMAN] {
             assert_ne!(labels.move_steps, labels.move_handle);
             assert_ne!(labels.resize_steps, labels.resize_handle);
+            // Todo 4966: the name keeps the visible word.
+            assert_ne!(labels.done_moving, labels.done_resizing);
+            assert!(labels.done_moving.contains(labels.done));
+            assert!(labels.done_resizing.contains(labels.done));
         }
     }
 }

@@ -32,13 +32,15 @@ pub(super) fn WindowSteps(
             let _ = first.focus();
         }
     }));
-    let (name, [up, down, left, right]) = match adjust {
+    let (name, done, [up, down, left, right]) = match adjust {
         Adjust::Resize => (
             labels.resize_steps,
+            labels.done_resizing,
             [labels.shorter, labels.taller, labels.narrower, labels.wider],
         ),
         _ => (
             labels.move_steps,
+            labels.done_moving,
             [
                 labels.move_up,
                 labels.move_down,
@@ -81,6 +83,7 @@ pub(super) fn WindowSteps(
                 size: "xs",
                 // A pseudo hit area would be clipped by the button's ripple.
                 sx: sx().media(COARSE_POINTER, sx().height(COARSE_TARGET)),
+                aria_label: done,
                 onclick: move |_| ondone.call(()),
                 "{labels.done}"
             }

@@ -1,17 +1,62 @@
 use crate::components::{Control, Demo, DemoValues, DocPage, Wrap, a11y, indent, prop, props};
 use dioxus::prelude::*;
 use libero::{
-    components::{Box, Button, Code, Input, LoadingOverlay, Overlay, Paper, Text},
+    components::{Box, Button, Code, Flex, Input, LoadingOverlay, Overlay, Paper, Text},
+    hooks::use_timeout,
     sx::sx,
 };
 
-/// On its own surface, so it reads at every dim.
-const LOADING: &str = r#"Paper { role: "status", sx: sx().padding("8px 16px"), "Loading..." }"#;
+/// On its own surface, so it reads at every dim. No live role: one mounted with its
+/// text is not announced, `LoadingOverlay` is (todo 4970).
+const LOADING: &str = r#"Paper { sx: sx().padding("8px 16px"), "Loading..." }"#;
 
+/// Tall enough that the centred Loader clears the name and the buttons (todo 4972).
+// snippet: let mut saving = use_signal(|| true);
 const CARD: &str = r#"Paper { sx: sx().padding("16px"),
-    Text { "Ada Lovelace" }
-    Button { variant: "outlined", color: "muted", "Edit profile" }
+    Flex { direction: "column", justify: "space-between", sx: sx().min_height("128px"),
+        Text { "Ada Lovelace" }
+        Flex { direction: "row", gap: "sm",
+            Button { variant: "outlined", color: "muted", "Edit profile" }
+            Button { onclick: move |_| saving.set(true), "Save" }
+        }
+    }
 }"#;
+
+/// How long the demo's Save pretends to save.
+const SAVE_MS: u64 = 2000;
+
+/// The card, whose Save starts a short load from inside, so the held focus can be
+/// tried (todo 4973). The Loading switch shows the same state.
+#[component]
+fn SavingCard(values: DemoValues) -> Element {
+    let done = {
+        let values = values.clone();
+        use_timeout(move || values.set("loading", "false"), SAVE_MS)
+    };
+    let loading = values.str("loading") == "true";
+    rsx! {
+        LoadingOverlay { loading,
+            Paper { sx: sx().padding("16px"),
+                Flex {
+                    direction: "column",
+                    justify: "space-between",
+                    sx: sx().min_height("128px"),
+                    Text { "Ada Lovelace" }
+                    Flex { direction: "row", gap: "sm",
+                        Button { variant: "outlined", color: "muted", "Edit profile" }
+                        Button {
+                            onclick: move |_| {
+                                values.set("loading", "true");
+                                done.start();
+                            },
+                            "Save"
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
 
 fn is_loading(values: &DemoValues) -> bool {
     values.str("mode") == "loading"
@@ -21,8 +66,7 @@ fn is_loading(values: &DemoValues) -> bool {
 fn wrap_mode(values: &DemoValues, source: &str) -> String {
     match is_loading(values) {
         true => format!(
-            "LoadingOverlay {{\n    loading: {},\n{}}}",
-            values.str("loading"),
+            "LoadingOverlay {{\n    loading: saving(),\n{}}}",
             indent(CARD)
         ),
         false => source.to_string(),
@@ -58,6 +102,7 @@ pub fn OverlayPage() -> Element {
                 .must([
                     "For a modal backdrop, use a `Dialog` in `use_modal`, which brings its own overlay. An overlay does not trap focus or hide the page from a screen reader.",
                     "Give an overlay you close on a click a keyboard close as well, such as a `Button` inside it: a backdrop click alone leaves keyboard users no way out.",
+                    "An `Overlay` announces nothing. For a load a screen reader hears, use a `LoadingOverlay`, or keep a `role: \"status\"` region mounted and set its text when the load starts.",
                     "For a long load started inside a `LoadingOverlay`, offer a way out outside it, such as a Cancel button: until it ends, focus waits on the busy box.",
                 ])
                 .example("A profile card saving, `LoadingOverlay { loading: saving(), .. }` around it: the card dims under a spinner, Tab skips its buttons, and a screen reader hears \"Loading\" once."),
@@ -74,6 +119,7 @@ pub fn OverlayPage() -> Element {
                     " shows one box loading."
                 }
             },
+            // snippet: let mut saving = use_signal(|| true);
             Demo {
                 component: "Overlay",
                 children_text: "",
@@ -87,7 +133,8 @@ pub fn OverlayPage() -> Element {
                     Control::slider("opacity", ["0.2", "0.4", "0.6", "0.8"])
                         .default("0.6")
                         .hidden_when(is_loading),
-                    Control::slider("blur", ["auto", "2px", "4px", "8px"]).hidden_when(is_loading),
+                    Control::slider("blur", ["none", "2px", "4px", "8px"]).hidden_when(is_loading),
+                    // The card's Save turns it on for a moment too.
                     Control::switch("loading")
                         .default("true")
                         .code(|_, _| vec![])
@@ -95,14 +142,7 @@ pub fn OverlayPage() -> Element {
                 ],
                 wrap: Wrap(wrap_mode),
                 render: move |values: DemoValues| match is_loading(&values) {
-                    true => rsx! {
-                        LoadingOverlay { loading: values.str("loading") == "true",
-                            Paper { sx: sx().padding("16px"),
-                                Text { "Ada Lovelace" }
-                                Button { variant: "outlined", color: "muted", "Edit profile" }
-                            }
-                        }
-                    },
+                    true => rsx! { SavingCard { values: values.clone() } },
                     false => rsx! {
                         Box {
                             sx: sx()
@@ -116,10 +156,10 @@ pub fn OverlayPage() -> Element {
                                 contained: true,
                                 opacity: values.str("opacity"),
                                 blur: match values.str("blur").as_str() {
-                                    "auto" => Input::None,
+                                    "none" => Input::None,
                                     blur => Input::from(blur),
                                 },
-                                Paper { role: "status", sx: sx().padding("8px 16px"), "Loading..." }
+                                Paper { sx: sx().padding("8px 16px"), "Loading..." }
                             }
                         }
                     },

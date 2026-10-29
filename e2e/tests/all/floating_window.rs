@@ -353,7 +353,8 @@ async fn menu_adjust(page: &Page) -> Result<()> {
     pointer::click(page, "[data-slot=steps] [aria-label='Wider']").await?;
     let wider = wait_for_size(page, (moved.2 + STEP, moved.3), "the Wider button").await?;
     assert_report(page, RESIZE_REPORT, wider, "the Wider button").await?;
-    pointer::click(page, "[data-slot=steps] button:last-child").await?;
+    // Todo 4966: the resize row's Done is named apart from the move row's.
+    pointer::click(page, "[data-slot=steps] [aria-label='Done resizing']").await?;
     expect_focus(page, MENU, "Done to hand focus back to the menu button").await?;
 
     choose(page, "Reset position and size").await?;
