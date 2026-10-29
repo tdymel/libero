@@ -142,7 +142,7 @@ static SCROLL_AREA_BASE_SX: StaticSx = StaticSx::new(|| {
             .when(
                 format!("visible-hover && {token}"),
                 sx().scrollbar_width("none")
-                    .hover(sx().scrollbar_width(width))
+                    .hover_tint(":hover", sx().scrollbar_width(width))
                     .selector(":focus-within", sx().scrollbar_width(width)),
             )
             .when(

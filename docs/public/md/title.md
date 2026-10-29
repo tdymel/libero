@@ -15,12 +15,18 @@ disagree.
 
 ```rust
 use dioxus::prelude::*;
-use libero::components::Title;
+use libero::{components::Title, sx::sx};
 
 #[component]
 fn Demo() -> Element {
     rsx! {
-        Title { "The quick brown fox" }
+        Title {
+            component: "h2",
+            truncate: "end",
+            title: "The quick brown fox jumps over the lazy dog and keeps running",
+            sx: sx().max_width("20rem"),
+            "The quick brown fox jumps over the lazy dog and keeps running"
+        }
     }
 }
 ```

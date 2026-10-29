@@ -13,7 +13,22 @@ pub const ROUTES: Routes = &[
     ("/marquee-short", || rsx! { ShortPage {} }),
     ("/marquee-fade", || rsx! { FadePage {} }),
     ("/marquee-pair", || rsx! { PairPage {} }),
+    ("/marquee-hover", || rsx! { HoverPage {} }),
 ];
+
+/// Words only, so a tap focuses nothing and only `:hover` could pause it (todo 4872).
+#[component]
+fn HoverPage() -> Element {
+    rsx! {
+        div { max_width: "420px",
+            Marquee { pause_on_hover: true,
+                for n in 1..=16 {
+                    span { "Word{n}" }
+                }
+            }
+        }
+    }
+}
 
 /// A ticker with faded edges, whose fade must leave a focused link alone (todo 2857).
 #[component]

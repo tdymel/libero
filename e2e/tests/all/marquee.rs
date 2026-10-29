@@ -2,7 +2,7 @@
 //! overlap Carousel's pause had with Next (551).
 
 use e2e::browser::block_on;
-use e2e::passes::{keyboard, motion};
+use e2e::passes::{keyboard, motion, pointer};
 use e2e::wait::PageBounded;
 use e2e::{Fixture, Suite, Viewport, wait};
 
@@ -362,6 +362,57 @@ fn the_fade_steps_aside_for_a_focused_link() {
             .unwrap();
         assert_eq!(shown, ["none", "none"], "the fade covers a focused link");
         fixture.console.assert_clean("the faded marquee").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
+/// Todo 4872: a pointer that hovers pauses the strip, a finger's tap does not: a tap
+/// keeps `:hover` until the next tap elsewhere, so the strip stayed still.
+#[test]
+fn only_a_hovering_pointer_pauses() {
+    const STATE: &str =
+        "getComputedStyle(document.querySelector('[data-slot=track]')).animationPlayState";
+    const WORD: &str = "[data-slot=group]:first-child span:first-child";
+    block_on(async {
+        let fixture = Fixture::open("/marquee-hover", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        wait::for_visible(page, WORD).await.unwrap();
+        pointer::hover(page, WORD).await.unwrap();
+        let hovered: String = page
+            .evaluate_bounded(STATE)
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        assert_eq!(hovered, "paused", "a hovering pointer pauses");
+        fixture.close().await.unwrap();
+
+        let fixture = Fixture::open("/marquee-hover", Viewport::Mobile)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        wait::for_visible(page, WORD).await.unwrap();
+        crate::hit_area::emulate_coarse_pointer(page).await;
+        wait::for_js_true(page, "!matchMedia('(hover: hover)').matches", "no hover")
+            .await
+            .unwrap();
+        pointer::tap(page, WORD).await.unwrap();
+        wait::for_js_true(
+            page,
+            "document.querySelector('[data-slot=track]').parentElement.matches(':hover')",
+            "the tap to leave :hover",
+        )
+        .await
+        .unwrap();
+        let tapped: String = page
+            .evaluate_bounded(STATE)
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        assert_eq!(tapped, "running", "a tap leaves the strip running");
         fixture.close().await.unwrap();
     });
 }

@@ -200,7 +200,7 @@ static MARQUEE_BASE_SX: StaticSx = StaticSx::new(|| {
         )
         .when(
             "pause-on-hover",
-            sx().selector(
+            sx().hover_tint(
                 "&:hover > [data-slot='track']",
                 sx().animation_play_state("paused"),
             ),

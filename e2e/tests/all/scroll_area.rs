@@ -1452,3 +1452,60 @@ fn offset_scrollbars_keep_the_track_off_a_flush_trailing_control() {
         fixture.close().await.unwrap();
     });
 }
+
+/// Todo 4873: `Hover` shows its bar to a hovering pointer and on focus, not after a tap,
+/// which keeps `:hover` until the next tap elsewhere. A finger still scrolls it.
+#[test]
+fn a_tap_leaves_the_hover_bar_hidden() {
+    use e2e::passes::pointer::Point;
+    const AREA: &str = "#bars-hover";
+    let bar = format!("getComputedStyle(document.querySelector('{AREA}')).scrollbarWidth");
+    block_on(async {
+        let fixture = Fixture::open("/scroll-area/bars", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        wait::for_visible(page, AREA).await.unwrap();
+        pointer::hover(page, AREA).await.unwrap();
+        wait::for_js_true(page, &format!("{bar} !== 'none'"), "the bar under a mouse")
+            .await
+            .unwrap();
+        fixture.close().await.unwrap();
+
+        let fixture = Fixture::open("/scroll-area/bars", Viewport::Mobile)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        wait::for_visible(page, AREA).await.unwrap();
+        crate::hit_area::emulate_coarse_pointer(page).await;
+        wait::for_js_true(page, "!matchMedia('(hover: hover)').matches", "no hover")
+            .await
+            .unwrap();
+
+        let at = pointer::centre_of(page, AREA).await.unwrap();
+        let up = Point {
+            x: at.x,
+            y: at.y - 60.0,
+        };
+        pointer::swipe(page, at, up, 4).await.unwrap();
+        let area = format!("document.querySelector('{AREA}')");
+        wait::for_js_true(page, &format!("{area}.scrollTop > 0"), "a swipe scrolls")
+            .await
+            .unwrap();
+
+        pointer::tap(page, AREA).await.unwrap();
+        let blurred = format!(
+            "(() => {{ document.activeElement?.blur(); return {area}.matches(':hover') && {bar} === 'none'; }})()"
+        );
+        wait::for_js_true(page, &blurred, "no bar after a tap, focus gone")
+            .await
+            .unwrap();
+        page.evaluate_bounded(format!("{area}.focus()"))
+            .await
+            .unwrap();
+        wait::for_js_true(page, &format!("{bar} !== 'none'"), "the bar on focus")
+            .await
+            .unwrap();
+        fixture.close().await.unwrap();
+    });
+}
