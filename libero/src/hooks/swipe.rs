@@ -294,7 +294,8 @@ pub fn edge_swipe_sx() -> Sx {
 /// so taps go through. It adds a way in, not the only one: keep a button that
 /// opens the same drawer (WCAG 2.5.1). RTL follows [`use_direction`]. A swipe
 /// during a running fling, whose pointer the browser cancels, still counts. A press
-/// on a [`use_drag`](super::use_drag) handle inside drags and never opens.
+/// on a [`use_drag`](super::use_drag) handle inside drags and never opens, nor does one
+/// on a `touch-action: none` box inside, such as a drawing canvas (not on Blitz).
 ///
 /// ```rust
 /// # use dioxus::prelude::*;
@@ -340,9 +341,14 @@ pub fn use_edge_swipe(on_swipe: Callback, options: EdgeSwipeOptions) -> Swipe {
     let mut waiting = use_signal(|| None::<SwipeEvent>);
     // The press a drag handle inside took: it drags, it never opens (4741).
     let mut claimed = use_signal(|| None::<i32>);
+    // The press an app's `touch-action: none` box inside keeps (4800), and the current
+    // press: the script's report may land after the press in a WebView.
+    let refused = use_signal(|| None::<i32>);
+    let mut pressed = use_signal(|| None::<i32>);
     // By the pointer, or after its cancel by the touch the browser took from it.
     let on_track = use_callback(move |event: SwipeEvent| {
-        if claimed.peek().is_some() {
+        if claimed.peek().is_some() || refused.peek().is_some_and(|id| Some(id) == *pressed.peek())
+        {
             return;
         }
         match decide.call(event) {
@@ -369,6 +375,10 @@ pub fn use_edge_swipe(on_swipe: Callback, options: EdgeSwipeOptions) -> Swipe {
                         delta,
                     });
                 }
+            }),
+            Box::new(move |pointer_id| {
+                let mut refused = refused;
+                refused.set(Some(pointer_id));
             }),
         ));
     }));
@@ -419,6 +429,9 @@ pub fn use_edge_swipe(on_swipe: Callback, options: EdgeSwipeOptions) -> Swipe {
     let onpointerdown = use_callback(move |event: PointerEvent| {
         if waiting.peek().is_some() {
             waiting.set(None);
+        }
+        if *pressed.peek() != Some(event.pointer_id()) {
+            pressed.set(Some(event.pointer_id()));
         }
         let claim = take_press_claim(event.pointer_id()).then_some(event.pointer_id());
         if claim != *claimed.peek() {

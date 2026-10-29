@@ -1,6 +1,6 @@
 # Skipped e2e scenarios
 
-Scenarios: 719
+Scenarios: 720
 
 Generated from the `scenario!` skips in `e2e/tests/all` by `cargo test -p e2e --lib skips`; edit the skip, not this file. A reason starting `upstream:` waits on Dioxus, Blitz, wry or the engine (revisit on their update, todo 3362), a number names the todo that removes it.
 
@@ -460,6 +460,7 @@ The performance scenarios (units `perf`, `table_perf`) are no skips but run on r
 | `use_swipe::a_mouse_drag_is_never_a_swipe` | android | adb drags with a finger |
 | `use_swipe::a_mouse_drag_is_never_a_swipe` | ios | a touch screen has no mouse drag |
 | `use_swipe::a_touch_drag_on_a_band_handle_never_opens_the_drawer` | desktop | 1126: no touch input under Xvfb |
+| `use_swipe::a_touch_swipe_on_a_band_canvas_never_opens_the_drawer` | desktop | 1126: no touch input under Xvfb |
 | `use_swipe::a_touch_swipe_reports_its_direction_past_the_distance` | desktop | 1126: no touch input under Xvfb |
 | `use_swipe::an_edge_swipe_opens_from_the_right_under_rtl` | desktop | 1126: no touch input under Xvfb |
 | `use_swipe::an_edge_swipe_opens_only_from_the_band_past_the_back_zone` | desktop | 1126: no touch input under Xvfb |

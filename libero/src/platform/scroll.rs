@@ -220,14 +220,18 @@ pub(crate) struct EdgeBand {
 /// went, `[x, y, dx, dy]` in client px.
 pub(crate) type LostSwipe = Box<dyn Fn([f64; 4])>;
 
+/// A band press on an app's `touch-action: none` box under the swiped element, by pointer id.
+pub(crate) type RefusedPress = Box<dyn Fn(i32)>;
+
 /// The custom property [`hold_edge_pan`] finds the swiped element by, inherited.
 pub(crate) const EDGE_SWIPE_MARK: &str = "--lsx-edge-swipe";
 
-/// `(inset, width, left, distance, swiped) => remove`: holds every move of a band touch
-/// going inward, mostly sideways, from inner scrollers. One whose pointer was cancelled
+/// `(inset, width, left, distance, swiped, refused) => remove`: holds every move of a band
+/// touch going inward, mostly sideways, from inner scrollers. One whose pointer was cancelled
 /// anyway (its first move uncancelable in a fling) goes to `swiped` past `distance` (2190).
+/// A band press on a `touch-action: none` box inside goes to `refused` and is never held (4800).
 #[cfg_attr(all(not(target_arch = "wasm32"), feature = "native"), allow(dead_code))]
-pub(crate) const EDGE_PAN_JS: &str = "(inset, width, left, distance, swiped) => {
+pub(crate) const EDGE_PAN_JS: &str = "(inset, width, left, distance, swiped, refused) => {
     let start = null;
     let origin = null;
     let holding = false;
@@ -248,13 +252,28 @@ pub(crate) const EDGE_PAN_JS: &str = "(inset, width, left, distance, swiped) => 
         }
         pinned = [];
     };
+    const inBand = (x) => {
+        const from = left ? x : innerWidth - x;
+        return from >= inset && from <= inset + width;
+    };
+    const marked = (box) => getComputedStyle(box).getPropertyValue('--lsx-edge-swipe').trim() === '1';
+    // The mark is inherited: a box without it lies past the swiped element.
+    const refuses = (target) => {
+        for (let box = target; box instanceof Element && marked(box); box = box.parentElement) {
+            if (getComputedStyle(box).touchAction === 'none') return true;
+        }
+        return false;
+    };
+    const press = (event) => {
+        if (event.pointerType === 'mouse' || !event.isPrimary || !inBand(event.clientX)) return;
+        if (refuses(event.target)) refused(event.pointerId);
+    };
     const down = (event) => {
         reset();
         const touch = event.touches[0];
         if (event.touches.length !== 1 || !(event.target instanceof Element)) return;
-        const from = left ? touch.clientX : innerWidth - touch.clientX;
-        if (from < inset || from > inset + width) return;
-        if (getComputedStyle(event.target).getPropertyValue('--lsx-edge-swipe').trim() !== '1') return;
+        if (!inBand(touch.clientX)) return;
+        if (!marked(event.target) || refuses(event.target)) return;
         start = { x: touch.clientX, y: touch.clientY };
         origin = start;
         for (let box = event.target; box; box = box.parentElement) {
@@ -301,12 +320,14 @@ pub(crate) const EDGE_PAN_JS: &str = "(inset, width, left, distance, swiped) => 
     };
     const capture = { capture: true };
     const passive = { capture: true, passive: true };
+    addEventListener('pointerdown', press, passive);
     addEventListener('touchstart', down, passive);
     addEventListener('touchmove', move, { capture: true, passive: false });
     addEventListener('pointercancel', cancel, passive);
     addEventListener('touchend', end, passive);
     addEventListener('touchcancel', end, passive);
     return () => {
+        removeEventListener('pointerdown', press, capture);
         removeEventListener('touchstart', down, capture);
         removeEventListener('touchmove', move, capture);
         removeEventListener('pointercancel', cancel, capture);
@@ -319,12 +340,13 @@ pub(crate) const EDGE_PAN_JS: &str = "(inset, width, left, distance, swiped) => 
 /// Holds a sideways pan from `band` for an edge swipe until the subscription drops: an
 /// inner scroller's `touch-action` would else take the touch and cancel the pointer
 /// (2170). Only inside an element carrying [`EDGE_SWIPE_MARK`]; `None` on Blitz. A
-/// swipe the pointer lost all the same goes to `swiped`.
+/// swipe the pointer lost all the same goes to `swiped`, a press it must leave to `refused`.
 pub(crate) fn hold_edge_pan(
     band: EdgeBand,
     swiped: LostSwipe,
+    refused: RefusedPress,
 ) -> Option<Box<dyn ScrollSubscription>> {
-    backend::hold_edge_pan(band, swiped)
+    backend::hold_edge_pan(band, swiped, refused)
 }
 
 /// Whether an edge swipe holds the pan by cancelling its own `pointermove`s: Blitz runs

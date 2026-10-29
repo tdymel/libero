@@ -21,7 +21,24 @@ pub const ROUTES: Routes = &[
     ("/use-swipe/edge-rtl", || rsx! { EdgeRtlPage {} }),
     ("/use-swipe/drawer", || rsx! { DrawerPage {} }),
     ("/use-swipe/drawer-drag", || rsx! { DrawerPage { handle: true } }),
+    ("/use-swipe/drawer-canvas", || rsx! { DrawerPage { canvas: true } }),
 ];
+
+/// An app's own `touch-action: none` canvas in the band, no `use_drag` (todo 4800).
+#[component]
+fn BandCanvas() -> Element {
+    let mut moves = use_signal(|| 0);
+    rsx! {
+        canvas {
+            id: "canvas",
+            width: "200",
+            height: "80",
+            style: "display: block; touch-action: none; background: #fed;",
+            onpointermove: move |_| moves += 1,
+        }
+        p { id: "drawn", "{moves}" }
+    }
+}
 
 /// A drag handle in the band, as a Kanban card's at 375px (todo 4741).
 #[component]
@@ -105,7 +122,7 @@ fn EdgePage() -> Element {
 /// The docs shell's drawer: the swipe opens it mid-press and the page turns inert,
 /// so the press never ends on the page (todo 2170).
 #[component]
-fn DrawerPage(#[props(default)] handle: bool) -> Element {
+fn DrawerPage(#[props(default)] handle: bool, #[props(default)] canvas: bool) -> Element {
     let mut open = use_signal(|| false);
     let mut opens = use_signal(|| 0);
     let swipe = use_edge_swipe(
@@ -130,6 +147,9 @@ fn DrawerPage(#[props(default)] handle: bool) -> Element {
                 p { id: "opens", "{opens}" }
                 if handle {
                     BandHandle {}
+                }
+                if canvas {
+                    BandCanvas {}
                 }
                 // A code block's box: its own scroller, so the page's `touch-action` stops there.
                 div {

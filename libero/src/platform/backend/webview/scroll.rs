@@ -202,6 +202,7 @@ fn edge_pan_args(band: crate::platform::scroll::EdgeBand) -> serde_json::Value {
 pub(crate) fn hold_edge_pan(
     band: crate::platform::scroll::EdgeBand,
     swiped: crate::platform::scroll::LostSwipe,
+    refused: crate::platform::scroll::RefusedPress,
 ) -> Option<Box<dyn ScrollSubscription>> {
     if !runs_scripts() {
         return None;
@@ -210,7 +211,8 @@ pub(crate) fn hold_edge_pan(
     let script = eval_with(
         edge_pan_args(band),
         &format!(
-            "const remove = ({})(data[0], data[1], data[2], data[3], (...swipe) => dioxus.send(swipe));
+            "const remove = ({})(data[0], data[1], data[2], data[3],
+                (...swipe) => dioxus.send(swipe), (id) => dioxus.send([id]));
             {}
             remove();",
             crate::platform::scroll::EDGE_PAN_JS,
@@ -219,8 +221,13 @@ pub(crate) fn hold_edge_pan(
     );
     let task = spawn(async move {
         let mut script = script;
-        while let Ok(swipe) = script.recv::<[f64; 4]>().await {
-            swiped(swipe);
+        // Four numbers are a lost swipe, one a refused press's pointer id.
+        while let Ok(message) = script.recv::<Vec<f64>>().await {
+            match message[..] {
+                [x, y, dx, dy] => swiped([x, y, dx, dy]),
+                [pointer_id] => refused(pointer_id as i32),
+                _ => {}
+            }
         }
     });
     Some(Box::new(WebViewListener {

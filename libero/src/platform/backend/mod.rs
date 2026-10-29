@@ -657,16 +657,17 @@ pub(crate) fn on_viewport_resize(callback: Box<dyn Fn()>) -> Option<Box<dyn Scro
 pub(crate) fn hold_edge_pan(
     band: crate::platform::scroll::EdgeBand,
     swiped: crate::platform::scroll::LostSwipe,
+    refused: crate::platform::scroll::RefusedPress,
 ) -> Option<Box<dyn ScrollSubscription>> {
     #[cfg(target_arch = "wasm32")]
-    return web::hold_edge_pan(band, swiped);
+    return web::hold_edge_pan(band, swiped, refused);
     #[cfg(all(not(target_arch = "wasm32"), feature = "native"))]
     return {
-        let _ = (band, swiped);
+        let _ = (band, swiped, refused);
         None
     };
     #[cfg(all(not(target_arch = "wasm32"), not(feature = "native")))]
-    return webview::hold_edge_pan(band, swiped);
+    return webview::hold_edge_pan(band, swiped, refused);
 }
 
 /// `scrollIntoView`'s `nearest`, vertically: how far a view spanning

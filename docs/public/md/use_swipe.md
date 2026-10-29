@@ -114,6 +114,8 @@ browser's own sideways pan of that box (inner scrollers keep theirs but from the
 band), so spread
 it on the main column, not on a horizontal scroller. The edge swipe
 reads the direction from `use_direction` and the viewport width at each press.
+A press on a `use_drag` handle or on a `touch-action: none` box inside it, such
+as a drawing canvas, stays with that box and never opens.
 
 ## Accessibility
 

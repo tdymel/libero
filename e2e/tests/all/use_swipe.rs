@@ -115,6 +115,23 @@ async fn a_band_drag_handle_keeps_its_press<D: Driver>(d: &mut D, _route: &str) 
     Ok(())
 }
 
+/// Todo 4800: a swipe on an app's `touch-action: none` canvas in the band draws on
+/// it and never opens the drawer; one from a plain spot of the band still does.
+async fn a_band_canvas_keeps_its_press<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    let canvas = d.rect("#canvas").await?;
+    d.swipe_from(IN_BAND, canvas.y + canvas.height / 2.0, 120.0, 0.0)
+        .await?;
+    eventually(d, "the canvas to see the moves", async |d| {
+        Ok(d.text("#drawn").await?.parse::<u32>().unwrap_or(0) > 0)
+    })
+    .await?;
+    d.settle().await?;
+    text_is(d, "#opens", "0").await?;
+    let (_, vh) = d.viewport().await?;
+    d.swipe_from(IN_BAND, vh * 0.75, 120.0, 0.0).await?;
+    text_is(d, "#opens", "1").await
+}
+
 #[cfg_attr(not(feature = "android"), allow(dead_code))]
 const WIDE_SCROLL_LEFT: &str = "document.querySelector('#wide').scrollLeft";
 
@@ -271,6 +288,12 @@ e2e::scenario!(
     a_touch_drag_on_a_band_handle_never_opens_the_drawer,
     "/use-swipe/drawer-drag",
     a_band_drag_handle_keeps_its_press,
+    desktop: skip("1126: no touch input under Xvfb")
+);
+e2e::scenario!(
+    a_touch_swipe_on_a_band_canvas_never_opens_the_drawer,
+    "/use-swipe/drawer-canvas",
+    a_band_canvas_keeps_its_press,
     desktop: skip("1126: no touch input under Xvfb")
 );
 e2e::scenario!(
