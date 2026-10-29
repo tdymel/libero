@@ -33,6 +33,16 @@ const INSET: &str = "2px";
 static SWITCH_CONTROL_SX: StaticSx = StaticSx::new(|| {
     // Past `per_radius`'s reset: the field's custom radius, set on its wrapper.
     choice::control_sx(SwitchDefaults::theme_vars().var(SizeCss::RADIUS.override_var(), "inherit"))
+        // The focus ring follows the track.
+        .border_radius(SWITCH_RADIUS.value())
+        .when(
+            "error",
+            choice::error_sx("[data-slot='track']", sx().background("error.7")),
+        )
+        .when(
+            "card && checked",
+            choice::checked_card_sx(SWITCH_COLOR_VAR.value()),
+        )
         .when("disabled", disabled_look_within_sx("not-allowed"))
 });
 
@@ -314,6 +324,25 @@ mod tests {
         let css = Stylesheet::from(&SWITCH_CONTROL_SX).as_str().to_string();
         assert!(
             css.contains("@media (forced-colors: active)") && css.contains("color:GrayText"),
+            "{css}"
+        );
+    }
+
+    /// Todos 4974, 4975, 4977: an error turns the off track red, the focus ring follows
+    /// the track's radius, a checked card's border takes the track colour.
+    #[test]
+    fn the_track_shows_error_focus_and_checked_card() {
+        let css = Stylesheet::from(&SWITCH_CONTROL_SX).as_str().to_string();
+        assert!(
+            css.contains(&format!("border-radius:{};", SWITCH_RADIUS.value())),
+            "{css}"
+        );
+        assert!(
+            css.contains("[data-state~=\"error\"]:not([data-state~=\"checked\"]):not([data-state~=\"mixed\"]) > [data-slot='track']{background:var(--lsx-error-fill-7);"),
+            "{css}"
+        );
+        assert!(
+            css.contains("[data-state~=\"card\"][data-state~=\"checked\"] > [data-ring]{border:1px solid var(--lsx-switch-color);}"),
             "{css}"
         );
     }

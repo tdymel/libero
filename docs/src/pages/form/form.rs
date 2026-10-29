@@ -238,7 +238,7 @@ pub fn FormPage() -> Element {
                 ]),
                 props("FormHandle", vec![
                     prop("validate()", "bool")
-                        .doc("Checks like a submit without calling `onsubmit`. Every status shows, and with an error the summary appears and takes focus. `true` when nothing is an error; a field an async rule is still checking counts as no error."),
+                        .doc("Checks like a submit without calling `onsubmit`. Every status shows, and with an error the summary appears and takes focus. `true` when nothing is an error. It does not wait: `false` while an async rule is still checking, which it asks at once; its answer checks again, and with an error the summary appears and takes focus then."),
                     prop("submit()", "Result<(), PlatformError>")
                         .doc("Submits as the submit button would. `Unsupported` once the form is gone."),
                     prop("reset()", "()")
@@ -283,7 +283,7 @@ pub fn FormPage() -> Element {
                     prop("checked_async(f)", "CheckedAsync<V, E>")
                         .doc("An async rule from `Fn(V) -> impl Future<Output = Result<(), E>>`, such as a request, for `.rules` only. It runs once the value parsed and the other rules found no error, after `.debounce(ms)` (300 by default); an answer for an older value is dropped. The answers for the last 8 values are kept, so going back to one asks again only after a reset. Meanwhile the field is `FieldStatus::Pending`, and a submit asks at once and waits for the answer. `.warning()` shows a failure as a warning, which a submit does not wait for; `.message(fn)` words an `E` that is not the field's error type. A plain `String` field gets one through `.map` or `.parsed()`."),
                     prop("pending", "FieldStatus::Pending")
-                        .doc("An async rule is still checking: `aria-busy=\"true\"` on the control and `data-state` `pending`, no message, blocks nothing. It ranks below a warning and above `Valid`. A reset drops the check and its answer. `data-state` shows once the field showed its rules, after a blur or a submit, for `sx().when(\"pending\", ..)`; a `match` over `FieldStatus` needs this arm, or a `_` one."),
+                        .doc("An async rule is still checking: no message, blocks nothing. Both `aria-busy=\"true\"` on the control and `data-state` `pending`, for `sx().when(\"pending\", ..)`, show once the field showed its rules, after a blur or a submit. It ranks below a warning and above `Valid`. A reset drops the check and its answer. A `match` over `FieldStatus` needs this arm, or a `_` one."),
                     prop("impl FieldError", "trait")
                         .doc("`fn message(&self, &Localization) -> String`: an error's words in the active language, worded again on a switch. Implemented for `Fn(&Localization) -> String`, `String` and `&'static str`; there is no `Display` fallback."),
                     prop(".at(path, error)", "FormErrors")
@@ -448,7 +448,8 @@ fn SignupForm(
             // demo-code: terms end
             if handle {
                 // demo-code: handle_buttons start
-                Text { role: "status", if form.is_valid() { "Ready to send." } else { "Not ready yet." } }
+                // Not live: it reads "Ready" while an async rule checks (4982).
+                Text { if form.is_valid() { "Ready to send." } else { "Not ready yet." } }
                 Flex { gap: "sm",
                     Button { r#type: "submit", loading: form.is_submitting(), "Create account" }
                     CheckButton {}

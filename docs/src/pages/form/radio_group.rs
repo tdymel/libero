@@ -128,7 +128,7 @@ pub fn RadioGroupPage() -> Element {
                     prop("disabled", "bool")
                         .default("false")
                         .doc("Disables every option and dims the group."),
-                    readonly_prop("group").also("Chromium does not announce read-only on a group, so say it in the label or description where it matters."),
+                    readonly_prop("group").also("It looks like an editable one, and Chromium does not announce read-only on a group, so say it in the label or description where it matters."),
                 ])
                 .parts("RadioGroupPart", vec![
                     (RadioGroupPart::Label, "The label above the control."),

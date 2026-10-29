@@ -56,7 +56,7 @@ pub fn SwitchPage() -> Element {
                 status_prop(),
                 required_prop().also("Inside a `Form`, an empty one fails the submit."),
                 disabled_prop("switch"),
-                readonly_prop("switch").also("Chromium does not announce read-only on a switch, so say it in the label or description where it matters."),
+                readonly_prop("switch").also("It looks like an editable one, and Chromium does not announce read-only on a switch, so say it in the label or description where it matters."),
                 prop("aria_label", "String")
                     .doc("Names the switch when it has no `label`."),
                 prop("variant", "ChoiceVariant")
@@ -128,6 +128,7 @@ pub fn SwitchPage() -> Element {
                     }),
                     Control::switch("required"),
                     Control::switch("disabled"),
+                    Control::switch("readonly"),
                 ]].concat(),
                 render: move |values: DemoValues| {
                     let field = field_props::<NotificationsCopy>(&values);
@@ -153,6 +154,7 @@ pub fn SwitchPage() -> Element {
                             status: field.status,
                             required: (values.str("required") == "true").then_some(true),
                             disabled: (values.str("disabled") == "true").then_some(true),
+                            readonly: (values.str("readonly") == "true").then_some(true),
                         }
                     }
                 },

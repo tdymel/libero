@@ -34,6 +34,11 @@ static RADIO_GROUP_SX: StaticSx = StaticSx::new(|| {
                 .flex_wrap("wrap")
                 .column_gap("16px"),
         )
+        // Cards grow to fill their row from one basis, so wrapped rows line up (4976).
+        .when(
+            "horizontal && cards",
+            sx().selector("& > *", sx().flex("1 1 12rem")),
+        )
 });
 
 /// The selector for option `index` page-wide, scoped by the group's shared `name`.
@@ -140,6 +145,7 @@ pub fn RadioGroup<T: Options>(props: RadioGroupProps<T>) -> Element {
     let size = props.size.copied_or(theme.radio.size);
     let required = crate::components::form::fieldset_required(props.required);
     let horizontal = props.orientation.copied_or_default() == Orientation::Horizontal;
+    let variant = props.variant.copied_or(theme.radio.variant);
 
     let bound = use_bound(&props.name, props.onchange.is_some());
     let disabled = bound.disabled(props.disabled);
@@ -191,6 +197,7 @@ pub fn RadioGroup<T: Options>(props: RadioGroupProps<T>) -> Element {
         .cloned()
         .unwrap_or_default()
         .with("horizontal", horizontal)
+        .with("cards", variant == ChoiceVariant::Card)
         .into();
 
     let group = use_box()
@@ -284,7 +291,6 @@ pub fn RadioGroup<T: Options>(props: RadioGroupProps<T>) -> Element {
     let invalid = field.invalid();
     let option_label = props.option_label;
     let option_description = props.option_description;
-    let variant = props.variant.copied_or(theme.radio.variant);
     let color = props.color.clone();
 
     let refocus = {
@@ -453,5 +459,19 @@ mod tests {
             }
         });
         assert!(!ready.contains("aria-busy"), "{ready}");
+    }
+
+    /// Todo 4976: wrapped cards grow from one basis, so their rows line up.
+    #[test]
+    fn horizontal_cards_grow_from_one_basis() {
+        let css = crate::css::Stylesheet::from(&RADIO_GROUP_SX)
+            .as_str()
+            .to_string();
+        assert!(
+            css.contains(
+                "[data-state~=\"horizontal\"][data-state~=\"cards\"] > *{flex:1 1 12rem;}"
+            ),
+            "{css}"
+        );
     }
 }

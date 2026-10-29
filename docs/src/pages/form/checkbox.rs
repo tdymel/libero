@@ -60,7 +60,7 @@ pub fn CheckboxPage() -> Element {
                     status_prop(),
                     required_prop().also("Inside a `Form`, an empty one fails the submit."),
                     disabled_prop("checkbox"),
-                    readonly_prop("checkbox").also("Chromium does not announce read-only on a checkbox, so say it in the label or description where it matters."),
+                    readonly_prop("checkbox").also("It looks like an editable one, and Chromium does not announce read-only on a checkbox, so say it in the label or description where it matters."),
                     prop("aria_label", "String")
                         .doc("Names the checkbox when it has no `label`."),
                     prop("variant", "ChoiceVariant")
@@ -129,6 +129,7 @@ pub fn CheckboxPage() -> Element {
                     Control::switch("indeterminate"),
                     Control::switch("required"),
                     Control::switch("disabled"),
+                    Control::switch("readonly"),
                 ]].concat(),
                 render: move |values: DemoValues| {
                     let field = field_props::<TermsCopy>(&values);
@@ -160,6 +161,7 @@ pub fn CheckboxPage() -> Element {
                             status: field.status,
                             required: (values.str("required") == "true").then_some(true),
                             disabled: (values.str("disabled") == "true").then_some(true),
+                            readonly: (values.str("readonly") == "true").then_some(true),
                         }
                     }
                 },

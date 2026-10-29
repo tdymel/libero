@@ -34,6 +34,19 @@ pub(super) fn control_sx(vars: Sx) -> Sx {
         .when("card", sx().position("static"))
 }
 
+/// An unchecked control's `mark` in the error colour, as a text field's frame (4974).
+pub(super) fn error_sx(mark: &str, look: Sx) -> Sx {
+    sx().selector(
+        format!("&:not([data-state~=\"checked\"]):not([data-state~=\"mixed\"]) > {mark}"),
+        look,
+    )
+}
+
+/// A checked card's border in the control colour, drawn by the ring overlay that covers it (4977).
+pub(super) fn checked_card_sx(color: String) -> Sx {
+    sx().selector("& > [data-ring]", sx().border(format!("1px solid {color}")))
+}
+
 /// A blank name names nothing: it neither renders nor counts as one.
 pub(super) fn aria_label(label: &Option<String>) -> Option<String> {
     label.clone().filter(|label| !label.trim().is_empty())

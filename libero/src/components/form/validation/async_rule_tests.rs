@@ -362,6 +362,26 @@ fn validate_is_false_while_a_rule_is_asking() {
     assert!(dom.in_runtime(|| form.validate()));
 }
 
+/// Todo 4981: a `validate` during a check shows the summary once a failing answer lands.
+#[test]
+fn validate_during_a_check_shows_the_summary_on_the_answer() {
+    let _clock = manual_timer::install();
+    let mut dom = mount();
+    let server = exposed::<Server>(&dom);
+    let form = exposed::<FormHandle>(&dom);
+    type_text(&mut dom, "a@x");
+    assert!(!dom.in_runtime(|| form.validate()));
+    let html = settle(&mut dom);
+    assert!(!html.contains(r#"data-slot="summary""#), "{html}");
+    assert_eq!(server.asked(), ["a@x"], "validate did not end the debounce");
+
+    server.answer(0, Err(EmailError::Taken));
+    let html = settle(&mut dom);
+    assert!(html.contains(r#"data-slot="summary""#), "{html}");
+    assert!(html.contains("This address is taken."), "{html}");
+    assert_eq!(sent(&dom), 0, "validate submitted");
+}
+
 #[test]
 fn a_warning_rule_holds_no_submit() {
     let _clock = manual_timer::install();

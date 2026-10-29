@@ -24,6 +24,16 @@ const RADIO_ON: CssVar = CssVar::new("--lsx-radio-on");
 
 static RADIO_CONTROL_SX: StaticSx = StaticSx::new(|| {
     choice::control_sx(RadioDefaults::theme_vars())
+        // The focus ring follows the circle.
+        .border_radius("50%")
+        .when(
+            "error",
+            choice::error_sx("[data-slot='circle']", sx().border_color("error.7")),
+        )
+        .when(
+            "card && checked",
+            choice::checked_card_sx(RADIO_COLOR.value()),
+        )
         .when("disabled", disabled_look_sx("not-allowed"))
 });
 
@@ -183,6 +193,7 @@ pub fn Radio(props: RadioProps) -> Element {
         .helper(&props.helper)
         .status(&props.status)
         .required(required)
+        .readonly(readonly)
         .disabled(disabled)
         .size(size)
         .class(&props.class)
@@ -244,4 +255,26 @@ pub fn Radio(props: RadioProps) -> Element {
         input,
         circle,
     ))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::css::Stylesheet;
+
+    /// Todos 4974, 4975, 4977: an error rings the unchecked circle red, the focus ring is
+    /// round, a checked card's border takes the radio colour.
+    #[test]
+    fn the_circle_shows_error_focus_and_checked_card() {
+        let css = Stylesheet::from(&RADIO_CONTROL_SX).as_str().to_string();
+        assert!(css.contains("border-radius:50%"), "{css}");
+        assert!(
+            css.contains(":not([data-state~=\"checked\"]):not([data-state~=\"mixed\"]) > [data-slot='circle']"),
+            "{css}"
+        );
+        assert!(
+            css.contains("> [data-ring]{border:1px solid var(--lsx-radio-color)"),
+            "{css}"
+        );
+    }
 }

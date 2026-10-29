@@ -84,7 +84,8 @@ impl FormHandle {
     /// Checks the form as a submit does, without `onsubmit`; `true` when nothing is an error.
     /// Invalid, it shows the summary and focuses it; [`is_valid`](Self::is_valid) does neither.
     /// It does not wait: `false` while an async rule is still asking, which
-    /// [`submit`](Self::submit) waits for. That rule's debounce ends, so it asks at once.
+    /// [`submit`](Self::submit) waits for. That rule's debounce ends, so it asks at once,
+    /// and its answer checks the form again, showing and focusing the summary if invalid.
     pub fn validate(&self) -> bool {
         let mut scope = self.scope;
         scope.submit();
@@ -99,8 +100,27 @@ impl FormHandle {
                 true => Vec::new(),
                 false => scope.summary(),
             });
+            if checking {
+                self.validate_when_answered(control.summary.owner);
+            }
         }
         valid
+    }
+
+    /// Checks again once the pending rules answer, unless a reset came first (4981).
+    fn validate_when_answered(&self, owner: ScopeId) {
+        let handle = *self;
+        let answered = self.scope.answered();
+        let at = self.scope.resets();
+        // In the form's scope, so the wait ends with the form.
+        Runtime::current().in_scope(owner, || {
+            spawn(async move {
+                answered.await;
+                if handle.scope.resets() == at && handle.control().is_some() {
+                    handle.validate();
+                }
+            })
+        });
     }
 
     /// Submits the form as its submit button would. [`PlatformError::Unsupported`]

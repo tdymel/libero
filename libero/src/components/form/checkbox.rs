@@ -39,8 +39,18 @@ static CHECKBOX_CONTROL_SX: StaticSx = StaticSx::new(|| {
     choice::control_sx(
         CheckboxDefaults::theme_vars().var(SizeCss::RADIUS.override_var(), "inherit"),
     )
+    // The focus ring follows the box.
+    .border_radius(CHECKBOX_RADIUS.value())
     .when("checked", mark_shown())
     .when("mixed", mark_shown())
+    .when(
+        "error",
+        choice::error_sx("[data-slot='box']", sx().border_color("error.7")),
+    )
+    .when(
+        "card && checked || card && mixed",
+        choice::checked_card_sx(CHECKBOX_BORDER.value()),
+    )
     .when("disabled", disabled_look_within_sx("not-allowed"))
 });
 
@@ -625,5 +635,26 @@ impl CheckboxLook {
             .attr("data-slot", CheckboxPart::Control.slot())
             .event("onclick", press)
             .render(HtmlTag::Span, Vec::new(), vec![input, box_node])
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::css::Stylesheet;
+
+    /// Todos 4974, 4977: an error outlines the unchecked box red, a checked or mixed
+    /// card's border takes the box colour.
+    #[test]
+    fn the_box_shows_error_and_checked_card() {
+        let css = Stylesheet::from(&CHECKBOX_CONTROL_SX).as_str().to_string();
+        assert!(
+            css.contains("[data-state~=\"error\"]:not([data-state~=\"checked\"]):not([data-state~=\"mixed\"]) > [data-slot='box']{border-color:var(--lsx-error-7);}"),
+            "{css}"
+        );
+        assert!(
+            css.contains("[data-state~=\"card\"][data-state~=\"mixed\"] > [data-ring]{border:1px solid var(--lsx-checkbox-border);}"),
+            "{css}"
+        );
     }
 }
