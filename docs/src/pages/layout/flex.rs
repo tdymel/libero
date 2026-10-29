@@ -14,8 +14,7 @@ Box { sx: sx().padding("8px 16px").background("primary.1"), "Three" }"#;
 
 /// `align` and `justify` distribute spare space, so the flex itself needs a box bigger than its children.
 // snippet: in Flex { .. }
-const BOX_SX: &str =
-    r#"sx: sx().width("400px").height("200px").padding("8px").background("muted.1")"#;
+const BOX_SX: &str = r#"sx: sx().width("100%").max_width("400px").height("200px").padding("8px").background("muted.1")"#;
 
 /// The `responsive` switch's gap: tight on a phone, wide from a laptop up.
 const RESPONSIVE_GAP: Responsive<Size> = responsive(Size::Xs).md(Size::Xl);
@@ -98,7 +97,12 @@ fn controls() -> Vec<Control> {
             "Space between",
             "Space around",
         ]),
-        Control::select("wrap", ["auto", "wrap", "nowrap"]).labels(["Auto", "Wrap", "No wrap"]),
+        Control::select("wrap", ["auto", "wrap", "nowrap", "wrap-reverse"]).labels([
+            "Auto",
+            "Wrap",
+            "No wrap",
+            "Wrap reverse",
+        ]),
     ]
 }
 
@@ -127,7 +131,7 @@ pub fn FlexPage() -> Element {
                     .doc("Space between children: a size, any CSS such as `\"0\"`, or one per breakpoint, `gap: responsive(Size::Xs).md(Size::Xl)`. Breakpoints follow the window, not the parent."),
                 prop("wrap", "FlexWrap")
                     .default("nowrap in a column, wrap in a row")
-                    .doc("Whether children wrap onto new lines. Also takes a `bool`."),
+                    .doc("Whether children wrap onto new lines; `wrap-reverse` stacks the new lines before the first. Also takes a `bool`."),
                 prop("children", "Element").doc("The flex's children."),
             ])],
             accessibility: a11y()
@@ -157,7 +161,8 @@ pub fn FlexPage() -> Element {
                 render: move |values: DemoValues| rsx! {
                     Flex {
                         sx: sx()
-                            .width("400px")
+                            .width("100%")
+                            .max_width("400px")
                             .height("200px")
                             .padding("8px")
                             .background("muted.1"),

@@ -37,7 +37,6 @@ fn Demo() -> Element {
 |---|---|---|---|
 | `variables` | `Variables` | - | Custom properties set on the element's `style`, so `sx` can use a changing value without a new class per value. |
 | `component` | `HtmlTag` | `div` | The element to render, any of the 111 HTML5 element names. The 28 outside the default set (document metadata, embedded and media content, `template`, `slot`, bidi and ruby) need the `full-polymorphism` feature and render as a `div` without it. |
-| `framework_sx` | `&'static StaticSx` | - | Base styles for a component built on `Box`. They sit on a CSS layer below `sx`, so a caller's `sx` still wins. |
 | `style` | `String` | - | Raw `style` declarations, applied after `variables`. |
 | `alt` | `String` | - | The `img` alt text. |
 | `r#type` | `String` | - | The `button` type, such as `"submit"`. |
@@ -59,6 +58,8 @@ Like every component, `Box` also takes the shared props `sx`, `class`, `style`,
   keyboard support.
 - Set `r#type: "button"` on a `button` inside a form, or it submits the form.
 - Give an `img` an `alt`, empty for a decorative one.
+- Mark a `target: "_blank"` link as opening a new tab, or use `Anchor`, which
+  does.
 - Set `disabled`, `aria-disabled` and `aria-selected` yourself, or use the
   component that owns the state: the `disabled` and `selected` states only
   style the box.

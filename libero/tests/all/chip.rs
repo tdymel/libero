@@ -512,3 +512,40 @@ fn a_clickable_chip_with_checked_says_pressed() {
     assert!(buttons[1].contains(r#"aria-pressed="false""#), "{html}");
     assert!(!buttons[2].contains("aria-pressed"), "{html}");
 }
+
+/// Todo 4898: a checked link chip is the current page, and `checked: false` overrides a router's.
+#[test]
+fn a_checked_link_chip_is_the_current_page() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider {
+                Chip { to: "/on", checked: true, "on" }
+                Chip { to: "/off", checked: false, "off" }
+                Chip { to: "/plain", "plain" }
+            }
+        }
+    }
+
+    let html = render(app);
+    let links: Vec<&str> = html.split("<a").skip(1).collect();
+    assert!(links[0].contains(r#"aria-current="page""#), "{html}");
+    assert!(links[1].contains(r#"aria-current="false""#), "{html}");
+    assert!(!links[2].contains("aria-current"), "{html}");
+}
+
+/// Todo 4898: ARIA allows no `aria-disabled` on a generic span; the checkbox keeps `disabled`.
+#[test]
+fn a_disabled_span_chip_carries_no_aria_disabled() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider {
+                Chip { disabled: true, "tag" }
+                Chip { disabled: true, checked: false, onchange: move |_| {}, "filter" }
+            }
+        }
+    }
+
+    let html = body(&render(app));
+    assert!(!html.contains("aria-disabled"), "{html}");
+    assert!(html.contains("disabled=true"), "{html}");
+}

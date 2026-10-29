@@ -11,8 +11,7 @@ checkbox "css" [checked]
 LabelText
   StaticText "css"
 checkbox "html" [checked=false]
-generic [disabled]
-  checkbox "Unavailable" [checked=false] [disabled]
+checkbox "Unavailable" [checked=false] [disabled]
 button "Action"
   StaticText "Action"
 link "Link" [current=page]

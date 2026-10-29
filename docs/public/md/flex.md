@@ -27,7 +27,7 @@ use libero::{
 fn Demo() -> Element {
     rsx! {
         Flex {
-            sx: sx().width("400px").height("200px").padding("8px").background("muted.1"),
+            sx: sx().width("100%").max_width("400px").height("200px").padding("8px").background("muted.1"),
             Box { sx: sx().padding("8px 16px").background("primary.1"), "One" }
             Box { sx: sx().padding("8px 16px").background("primary.1"), "Two" }
             Box { sx: sx().padding("8px 16px").background("primary.1"), "Three" }
@@ -45,10 +45,10 @@ fn Demo() -> Element {
 | `align` | `ThemeAwareValue` | `stretch` in a column, `center` in a row | Cross-axis alignment. |
 | `justify` | `ThemeAwareValue` | `flex-start` | Main-axis alignment. |
 | `gap` | `Responsive<ThemeAwareValue>` | `md` | Space between children: a size, any CSS such as `"0"`, or one per breakpoint, `gap: responsive(Size::Xs).md(Size::Xl)`. Breakpoints follow the window, not the parent. |
-| `wrap` | `FlexWrap` | `nowrap` in a column, `wrap` in a row | Whether children wrap onto new lines. Also takes a `bool`. |
+| `wrap` | `FlexWrap` | `nowrap` in a column, `wrap` in a row | Whether children wrap onto new lines; `wrap-reverse` stacks the new lines before the first. Also takes a `bool`. |
 | `children` | `Element` | required | The flex's children. |
 
-`FlexDirection` is `row`, `column`, `row-reverse` or `column-reverse`, `FlexWrap` is `wrap` or `nowrap`. A row
+`FlexDirection` is `row`, `column`, `row-reverse` or `column-reverse`, `FlexWrap` is `wrap`, `nowrap` or `wrap-reverse`. A row
 wraps by default so it reflows on a narrow screen. `wrap: false` turns that off.
 
 Like every component, `Flex` also takes the shared props `sx`, `class`, `style`,

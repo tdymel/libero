@@ -71,6 +71,7 @@ pub fn ChipPage() -> Element {
                 .handles([
                     "A `readonly` chip keeps its tab stop and ignores the toggle.",
                     "An `onclick` chip with `checked` sets `aria-pressed` from it; without `checked` it is a plain button.",
+                    "A `to` chip with `checked: true` says `aria-current=\"page\"`, as `NavLink` does; `checked: false` says `aria-current=\"false\"`.",
                     "A selectable chip's `aria_label` goes on its checkbox, not on the root `span`.",
                     "A chip in a list field (`MultiSelect`, `TagsField`) cut with an ellipsis shows its full text in a `title`. That is a hover reveal only: a keyboard or touch user does not get it, so keep labels short.",
                 ])
@@ -161,7 +162,7 @@ pub fn ChipPage() -> Element {
                                 lines.push(format!("icon: rsx! {{ {} }}", glyph_code("info")));
                             }
                             if matches!(icons.as_str(), "trailing" | "both") {
-                                lines.push(format!("trailing: rsx! {{ {} }}", glyph_code("chevron_down")));
+                                lines.push(format!("trailing: rsx! {{ {} }}", glyph_code("star")));
                             }
                             lines
                         }),
@@ -200,7 +201,7 @@ pub fn ChipPage() -> Element {
                         }),
                         // No control in `trailing` on an `onclick` or `to` chip: a glyph only.
                         trailing: matches!(values.str("icons").as_str(), "trailing" | "both").then(|| rsx! {
-                            Icon { variant: "standard", color: "inherit", svg: lucide::chevron_down::outlined }
+                            Icon { variant: "standard", color: "inherit", svg: lucide::star::outlined }
                         }),
                         "rust"
                     }

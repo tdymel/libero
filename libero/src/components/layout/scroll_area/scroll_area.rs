@@ -607,8 +607,20 @@ pub fn ScrollArea(props: ScrollAreaProps) -> Element {
         }
     }));
     let tab_stop = props.focusable || (automatic && auto_stop());
+    // A caller's `tabindex >= 0` is a stop too: it keeps the region and its name (todo 4897).
+    let caller_stop = props.attributes.iter().any(|attribute| {
+        attribute.name == "tabindex"
+            && match &attribute.value {
+                AttributeValue::Text(index) => {
+                    index.trim().parse::<i64>().is_ok_and(|index| index >= 0)
+                }
+                AttributeValue::Int(index) => *index >= 0,
+                _ => false,
+            }
+    });
+    let named_stop = tab_stop || caller_stop;
     let mut warned = use_hook(|| CopyValue::new(false));
-    if tab_stop && !warned() && !names_itself(&props.attributes) {
+    if named_stop && !warned() && !names_itself(&props.attributes) {
         warned.set(true);
         warn(
             "ScrollArea: a tab stop with no `aria-label` or `aria-labelledby`, so the \
@@ -841,7 +853,7 @@ pub fn ScrollArea(props: ScrollAreaProps) -> Element {
         scroll_area_variables(props.scrollbar_color.as_ref(), skeleton()).into();
 
     // ARIA prohibits naming a generic: the name waits for a role.
-    let has_role = tab_stop
+    let has_role = named_stop
         || props
             .attributes
             .iter()
@@ -918,7 +930,7 @@ pub fn ScrollArea(props: ScrollAreaProps) -> Element {
         // `-1` opts out of Chromium's implicit stop, so every browser gets the
         // same one: this, named as a region (APG scrollable region).
         .attr_default("tabindex", if tab_stop { "0" } else { "-1" })
-        .attr_default("role", tab_stop.then_some("region"))
+        .attr_default("role", named_stop.then_some("region"))
         .event("onscroll", (tracks_scroll && !reported).then_some(onscroll))
         .event(
             "onscrollend",

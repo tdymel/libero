@@ -16,11 +16,12 @@ const FILE: DemoFile = DemoFile(include_str!("scroll_area.rs"));
 
 // demo-code: readout start
 /// Rounded percentages: a raw `{event:?}` reflows the row every tick.
-fn readout(event: ScrollPositionEvent) -> String {
+fn readout(event: Option<ScrollPositionEvent>) -> String {
     let (kind, x, y) = match event {
-        ScrollPositionEvent::Start(x, y) => ("Start", x, y),
-        ScrollPositionEvent::Change(x, y) => ("Change", x, y),
-        ScrollPositionEvent::End(x, y) => ("End", x, y),
+        None => return "No scroll yet".to_string(),
+        Some(ScrollPositionEvent::Start(x, y)) => ("Start", x, y),
+        Some(ScrollPositionEvent::Change(x, y)) => ("Change", x, y),
+        Some(ScrollPositionEvent::End(x, y)) => ("End", x, y),
     };
     format!("{kind} at x {x:.0}%, y {y:.0}%")
 }
@@ -29,7 +30,7 @@ fn readout(event: ScrollPositionEvent) -> String {
 /// Prints the sized parent a scroll area fills, and the readout and jump buttons it wires to.
 fn wrap_frame(_: &DemoValues, code: &str) -> String {
     format!(
-        "{}\n\n{}\n\nrsx! {{\n    Flex {{\n        direction: \"column\",\n        gap: \"sm\",\n        sx: sx().width(\"100%\"),\n        Box {{\n            sx: sx().height(\"160px\").width(\"100%\").border(\"1px solid var(--lsx-muted-3)\"),\n{}        }}\n        Text {{ size: \"sm\", \"{{readout(position())}}\" }}\n        // A reached edge is a result, so a screen reader hears it.\n        Text {{ size: \"sm\", role: \"status\", \"Last edge: {{edge()}}\" }}\n        Flex {{\n            gap: \"sm\",\n            Button {{ size: \"sm\", variant: \"outlined\", onclick: move |_| area.scroll_to_percent(None, Some(0.0)), \"Scroll to top\" }}\n            Button {{ size: \"sm\", variant: \"outlined\", onclick: move |_| area.scroll_to_percent(None, Some(100.0)), \"Scroll to bottom\" }}\n            Button {{ size: \"sm\", variant: \"outlined\", onclick: move |_| area.scroll_to(0.0, 120.0), \"Scroll to 120px\" }}\n        }}\n    }}\n}}",
+        "{}\n\n{}\n\nrsx! {{\n    Flex {{\n        direction: \"column\",\n        gap: \"sm\",\n        sx: sx().width(\"100%\"),\n        Box {{\n            sx: sx().height(\"160px\").width(\"100%\").border(\"1px solid var(--lsx-muted-3)\"),\n{}        }}\n        Text {{ size: \"sm\", \"{{readout(position())}}\" }}\n        // A reached edge is a result, so a screen reader hears it.\n        Text {{ size: \"sm\", role: \"status\", \"Last edge: {{edge()}}\" }}\n        Flex {{\n            direction: \"row\",\n            gap: \"sm\",\n            Button {{ size: \"sm\", variant: \"outlined\", onclick: move |_| area.scroll_to_percent(None, Some(0.0)), \"Scroll to top\" }}\n            Button {{ size: \"sm\", variant: \"outlined\", onclick: move |_| area.scroll_to_percent(None, Some(100.0)), \"Scroll to bottom\" }}\n            Button {{ size: \"sm\", variant: \"outlined\", onclick: move |_| area.scroll_to(0.0, 120.0), \"Scroll to 120px\" }}\n        }}\n    }}\n}}",
         FILE.section("readout"),
         FILE.section("state"),
         indent(&indent(&indent(code)))
@@ -41,7 +42,7 @@ pub fn ScrollAreaPage() -> Element {
     let theme = use_theme();
     // demo-code: state start
     let area = use_scroll_area();
-    let mut position = use_signal(|| ScrollPositionEvent::Change(0.0, 0.0));
+    let mut position = use_signal(|| None::<ScrollPositionEvent>);
     let mut edge = use_signal(|| "none");
     // demo-code: state end
 
@@ -73,7 +74,7 @@ pub fn ScrollAreaPage() -> Element {
                     .doc("From `use_scroll_area()`. Its `scroll_to_percent(x, y)` and `scroll_to(x, y)` in px scroll the area from any handler, on every call. A `None` percent keeps that axis; a call before the area mounts does nothing."),
                 prop("focusable", "bool")
                     .default("false")
-                    .doc("Makes the area a tab stop always. Without it, the area is one only while it overflows and holds nothing focusable. Your own `tabindex`, or a `role` other than `region`, turns that off."),
+                    .doc("Makes the area a tab stop always. Without it, the area is one only while it overflows and holds nothing focusable. Your own `tabindex`, or a `role` other than `region`, turns that off; a `tabindex` of 0 or more still makes it a `region` that keeps its name."),
                 prop("onscroll", "EventHandler<ScrollPositionEvent>")
                     .doc("Fires on every scroll with the position as a percent of each axis: `Start` when a scroll begins, `Change` while it runs, `End` when it stops."),
                 prop("onresize", "EventHandler<Event<ResizeData>>")
@@ -188,9 +189,11 @@ pub fn ScrollAreaPage() -> Element {
                                 // demo-code: wiring start
                                 aria_label: "Items",
                                 handle: area,
-                                onscroll: move |event: ScrollPositionEvent| position.set(event),
+                                onscroll: move |event: ScrollPositionEvent| position.set(Some(event)),
                                 ontopreached: move |_| edge.set("top"),
                                 onbottomreached: move |_| edge.set("bottom"),
+                                onleftreached: move |_| edge.set("left"),
+                                onrightreached: move |_| edge.set("right"),
                                 // demo-code: wiring end
                                 if values.str("virtualize") == "true" {
                                     // demo-code: virtual start
@@ -224,6 +227,7 @@ pub fn ScrollAreaPage() -> Element {
                         Text { size: "sm", "{readout(position())}" }
                         Text { size: "sm", role: "status", "Last edge: {edge()}" }
                         Flex {
+                            direction: "row",
                             gap: "sm",
                             Button {
                                 size: "sm",

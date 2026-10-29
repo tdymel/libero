@@ -24,7 +24,8 @@ base_props! {
         /// Which element to render as - `div` by default.
         #[props(default, into)]
         component: Input<HtmlTag>,
-        /// Base styles of a component built on `Box`, on its own CSS layer.
+        /// Crate-internal: base styles of a component built on `Box`, on its own CSS layer.
+        #[doc(hidden)]
         #[props(default)]
         framework_sx: Option<&'static StaticSx>,
         /// Merged after `variables`, not overwritten by it.

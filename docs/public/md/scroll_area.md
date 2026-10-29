@@ -24,11 +24,12 @@ use libero::{
 };
 
 /// Rounded percentages: a raw `{event:?}` reflows the row every tick.
-fn readout(event: ScrollPositionEvent) -> String {
+fn readout(event: Option<ScrollPositionEvent>) -> String {
     let (kind, x, y) = match event {
-        ScrollPositionEvent::Start(x, y) => ("Start", x, y),
-        ScrollPositionEvent::Change(x, y) => ("Change", x, y),
-        ScrollPositionEvent::End(x, y) => ("End", x, y),
+        None => return "No scroll yet".to_string(),
+        Some(ScrollPositionEvent::Start(x, y)) => ("Start", x, y),
+        Some(ScrollPositionEvent::Change(x, y)) => ("Change", x, y),
+        Some(ScrollPositionEvent::End(x, y)) => ("End", x, y),
     };
     format!("{kind} at x {x:.0}%, y {y:.0}%")
 }
@@ -36,7 +37,7 @@ fn readout(event: ScrollPositionEvent) -> String {
 #[component]
 fn Demo() -> Element {
     let area = use_scroll_area();
-    let mut position = use_signal(|| ScrollPositionEvent::Change(0.0, 0.0));
+    let mut position = use_signal(|| None::<ScrollPositionEvent>);
     let mut edge = use_signal(|| "none");
 
     rsx! {
@@ -49,9 +50,11 @@ fn Demo() -> Element {
                 ScrollArea {
                     aria_label: "Items",
                     handle: area,
-                    onscroll: move |event: ScrollPositionEvent| position.set(event),
+                    onscroll: move |event: ScrollPositionEvent| position.set(Some(event)),
                     ontopreached: move |_| edge.set("top"),
                     onbottomreached: move |_| edge.set("bottom"),
+                    onleftreached: move |_| edge.set("left"),
+                    onrightreached: move |_| edge.set("right"),
                     Box {
                         sx: sx().width("150%").padding("md"),
                         for i in 0..20 {
@@ -64,6 +67,7 @@ fn Demo() -> Element {
             // A reached edge is a result, so a screen reader hears it.
             Text { size: "sm", role: "status", "Last edge: {edge()}" }
             Flex {
+                direction: "row",
                 gap: "sm",
                 Button { size: "sm", variant: "outlined", onclick: move |_| area.scroll_to_percent(None, Some(0.0)), "Scroll to top" }
                 Button { size: "sm", variant: "outlined", onclick: move |_| area.scroll_to_percent(None, Some(100.0)), "Scroll to bottom" }
@@ -86,7 +90,7 @@ fn Demo() -> Element {
 | `scroll_position_x` | `f64` | - | Scrolls to this percent (0-100) horizontally. A signal re-applies it on every change, a literal once at mount. |
 | `scroll_position_y` | `f64` | - | The same as `scroll_position_x`, vertically. |
 | `handle` | `ScrollAreaHandle` | - | From `use_scroll_area()`. Its `scroll_to_percent(x, y)` and `scroll_to(x, y)` in px scroll the area from any handler, on every call. A `None` percent keeps that axis; a call before the area mounts does nothing. |
-| `focusable` | `bool` | `false` | Makes the area a tab stop always. Without it, the area is one only while it overflows and holds nothing focusable. Your own `tabindex`, or a `role` other than `region`, turns that off. |
+| `focusable` | `bool` | `false` | Makes the area a tab stop always. Without it, the area is one only while it overflows and holds nothing focusable. Your own `tabindex`, or a `role` other than `region`, turns that off; a `tabindex` of 0 or more still makes it a `region` that keeps its name. |
 | `onscroll` | `EventHandler<ScrollPositionEvent>` | - | Fires on every scroll with the position as a percent of each axis: `Start` when a scroll begins, `Change` while it runs, `End` when it stops. |
 | `onresize` | `EventHandler<Event<ResizeData>>` | - | Fires after the area resized. |
 | `ontopreached` | `EventHandler<()>` | - | Fires once when the top edge is reached. |

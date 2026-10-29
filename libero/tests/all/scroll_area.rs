@@ -123,6 +123,23 @@ fn a_callers_tabindex_and_role_win() {
     assert!(!html.contains(r#"role="region""#), "{html}");
 }
 
+/// A caller's `tabindex="0"` is a stop: it keeps the default region and its name (4897).
+#[test]
+fn a_callers_tab_stop_keeps_the_region_and_its_name() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider {
+                ScrollArea { tabindex: "0", aria_label: "Terms", "content" }
+            }
+        }
+    }
+
+    let html = body(&render(app));
+
+    assert!(html.contains(r#"role="region""#), "{html}");
+    assert!(html.contains(r#"aria-label="Terms""#), "{html}");
+}
+
 fn rows(html: &str) -> usize {
     html.matches("data-row=").count()
 }

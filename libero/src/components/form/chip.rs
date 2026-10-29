@@ -10,7 +10,7 @@ use crate::{
         accessibility::VISUALLY_HIDDEN_SX,
         common::{
             ACTIVE, COARSE_POINTER, Glyph, HtmlTag, Input, Part, ScaleOrCss, States, Variant,
-            VariantColors, VariantVars, aria_label_of, base_color_or, base_props,
+            VariantColors, VariantVars, aria_label_of, attr, base_color_or, base_props,
             coarse_hit_area_sx, contrast_color, contrast_shade_color, disabled_look_sx, fill_color,
             focus_ring_sx, interactive_variant_sx, label_color, on_ring_sx, on_state_sx,
             parts_enum, parts_under_sx, ring_overlay, ring_overlay_sx, shade_color, text_color,
@@ -446,6 +446,17 @@ pub fn Chip(props: ChipProps) -> Element {
     if !selectable {
         // `InternalAnchor` has no `onclick`, so a link chip navigates for real.
         if let Some(to) = props.to.as_ref().cloned() {
+            // As `NavLink`: a checked link is the current page, and `checked: false`
+            // overrides the router `Link`'s own `aria-current` (todo 4898).
+            let aria_current = props.checked.map(|on| if on { "page" } else { "false" });
+            let mut attributes = props.attributes;
+            if let Some(aria_current) = aria_current
+                && !attributes
+                    .iter()
+                    .any(|attribute| attribute.name == "aria-current")
+            {
+                attributes.push(attr("aria-current", aria_current));
+            }
             // `<a>` has no native `disabled`: dropping `to` stops navigation.
             // Without `href` it is `generic`, so the role comes back by hand.
             if disabled {
@@ -453,7 +464,7 @@ pub fn Chip(props: ChipProps) -> Element {
                     .attr_default("role", "link")
                     .attr("aria-disabled", "true")
                     .attr("tabindex", "-1")
-                    .render(HtmlTag::A, props.attributes, content);
+                    .render(HtmlTag::A, attributes, content);
             }
 
             // After the children, so a caller's ellipsis span never cuts it.
@@ -467,7 +478,7 @@ pub fn Chip(props: ChipProps) -> Element {
                     framework_sx: &CHIP_BASE_SX,
                     states,
                     style,
-                    attributes: props.attributes,
+                    attributes,
                     {labelled}
                     if hint {
                         NewTabHint { icon: props.new_tab_icon }
@@ -496,11 +507,8 @@ pub fn Chip(props: ChipProps) -> Element {
                 .render(HtmlTag::Button, props.attributes, content);
         }
 
-        return root.attr("aria-disabled", disabled).render(
-            HtmlTag::Span,
-            props.attributes,
-            content,
-        );
+        // No `aria-disabled`: ARIA does not allow it on a generic span.
+        return root.render(HtmlTag::Span, props.attributes, content);
     }
 
     let onchange = bound.emit(props.onchange);
@@ -543,17 +551,17 @@ pub fn Chip(props: ChipProps) -> Element {
     // take a button's click for the checkbox.
     // The pill's padding, which the label's `::after` covers on the web only.
     let mut padding_click = activation.padding_click("span[data-state~=\"selectable\"]");
-    root.attr("aria-disabled", disabled)
-        .event("onclick", move |event: Event<MouseData>| {
-            if !trailing_hit.replace(false) {
-                padding_click(event);
-            }
-        })
-        .render(
-            HtmlTag::Span,
-            attributes,
-            vec![input, label, trailing, ring_overlay()],
-        )
+    // The input carries `disabled`; ARIA does not allow `aria-disabled` on this generic span.
+    root.event("onclick", move |event: Event<MouseData>| {
+        if !trailing_hit.replace(false) {
+            padding_click(event);
+        }
+    })
+    .render(
+        HtmlTag::Span,
+        attributes,
+        vec![input, label, trailing, ring_overlay()],
+    )
 }
 
 /// What an `onclick`/`to` chip's `trailing` may not hold: a control of its own.

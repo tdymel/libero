@@ -9,8 +9,7 @@ LabelText
   StaticText "rust"
 checkbox "css" [checked=false]
 checkbox "html" [checked=false]
-generic [disabled]
-  checkbox "Unavailable" [checked=false] [disabled]
+checkbox "Unavailable" [checked=false] [disabled]
 button "Action"
   StaticText "Action"
 link "Link" [current=page]

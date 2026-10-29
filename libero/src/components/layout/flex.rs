@@ -3,8 +3,8 @@ use dioxus::prelude::*;
 use crate::{
     components::{
         common::{
-            HtmlTag, Input, States, Variables, base_props, focus_ring_sx, input_from_str,
-            responsive_sx, variables, with_own,
+            HtmlTag, Input, States, Variables, base_props, input_from_str, responsive_sx,
+            variables, with_own,
         },
         layout::use_box,
     },
@@ -14,8 +14,6 @@ use crate::{
         FLEX_ALIGN_VAR, FLEX_JUSTIFY_VAR, FLEX_WRAP_VAR, FlexDefaults, Responsive, Size, SizeCss,
     },
 };
-
-// Missing: an option, or at least a variable, to give every child the same width.
 
 str_enum! {
     pub enum FlexDirection {
@@ -75,6 +73,8 @@ str_enum! {
         Wrap = "wrap",
         #[default]
         NoWrap = "nowrap",
+        /// Wraps, the new lines stacking before the first: bottom to top in a row.
+        WrapReverse = "wrap-reverse",
     }
 }
 
@@ -92,26 +92,6 @@ impl From<bool> for Input<FlexWrap> {
 
 input_from_str!(FlexWrap);
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn flex_wrap_parses_bools_and_strings() {
-        assert_eq!(FlexWrap::from(true).as_str(), "wrap");
-        assert_eq!(FlexWrap::from(false).as_str(), "nowrap");
-        assert_eq!(FlexWrap::from("wrap"), FlexWrap::Wrap);
-        assert_eq!(FlexWrap::from("wrap-reverse"), FlexWrap::NoWrap);
-        assert_eq!(FlexWrap::from("nonsense"), FlexWrap::NoWrap);
-    }
-
-    #[test]
-    fn direction_takes_the_enum_as_well_as_a_string() {
-        let direction: Input<FlexDirection> = FlexDirection::Row.into();
-        assert_eq!(direction, Input::from("row"));
-    }
-}
-
 // `gap` folds in after `row`, so it beats either axis's default spacing.
 // The per-instance vars reset to `initial` so a nested Flex does not inherit them.
 static FLEX_BASE_SX: StaticSx = StaticSx::new(|| {
@@ -121,7 +101,6 @@ static FLEX_BASE_SX: StaticSx = StaticSx::new(|| {
         .var(FLEX_JUSTIFY_VAR, "initial")
         .var(FLEX_WRAP_VAR, "initial")
         .and(FlexDefaults::default_sx(false))
-        .and(sx().focus_visible(focus_ring_sx()))
         .when("row", FlexDefaults::default_sx(true))
         // After `row`, which sets the plain direction.
         .when("row-reverse", sx().flex_direction("row-reverse"))
@@ -162,7 +141,7 @@ base_props! {
         /// `row-reverse` and `column-reverse` reorder the look only, not the reading or Tab order.
         #[props(default, into)]
         direction: Input<Responsive<FlexDirection>>,
-        /// `true` or `FlexWrap::Wrap` wraps.
+        /// `true` or `FlexWrap::Wrap` wraps; `FlexWrap::WrapReverse` stacks the new lines before the first.
         #[props(default, into)]
         wrap: Input<FlexWrap>,
         children: Element,
@@ -265,8 +244,23 @@ pub fn Flex(props: FlexProps) -> Element {
 }
 
 #[cfg(test)]
-mod variables_tests {
+mod tests {
     use super::*;
+
+    #[test]
+    fn flex_wrap_parses_bools_and_strings() {
+        assert_eq!(FlexWrap::from(true).as_str(), "wrap");
+        assert_eq!(FlexWrap::from(false).as_str(), "nowrap");
+        assert_eq!(FlexWrap::from("wrap"), FlexWrap::Wrap);
+        assert_eq!(FlexWrap::from("wrap-reverse"), FlexWrap::WrapReverse);
+        assert_eq!(FlexWrap::from("nonsense"), FlexWrap::NoWrap);
+    }
+
+    #[test]
+    fn direction_takes_the_enum_as_well_as_a_string() {
+        let direction: Input<FlexDirection> = FlexDirection::Row.into();
+        assert_eq!(direction, Input::from("row"));
+    }
 
     fn flex_props(wrap: Input<FlexWrap>, align: Input<ThemeAwareValue>) -> FlexProps {
         FlexProps {
