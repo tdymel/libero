@@ -230,6 +230,9 @@ base_props! {
 /// A `disabled` trigger takes no focus, so its tooltip is mouse-only: give a `Button`
 /// `focusable_when_disabled`.
 ///
+/// A tap elsewhere hides a long-press bubble; in a browser, a trigger with no focusable or a
+/// text entry (no soft keyboard) keeps it for `touch_close_delay`.
+///
 /// ```
 /// # use dioxus::prelude::*;
 /// # use libero::components::{Button, Tooltip};
