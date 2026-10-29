@@ -47,7 +47,7 @@ fn AddressFieldset() -> Element {
             ],
             TextField {
                 label: "Street",
-                autocomplete: "street-address",
+                autocomplete: "address-line1",
                 name: Address::FIELDS.street(),
             }
             TextField {

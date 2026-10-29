@@ -381,7 +381,10 @@ fn listbox<T: Options>(props: NativeSelectProps<T>) -> Element {
             helper: props.helper,
             status: props.status,
             size: props.size.copied_or(theme.native_select.size),
-            radius: props.radius.clone(),
+            radius: match props.radius {
+                Input::None => Input::Value(theme.native_select.radius.into()),
+                radius => radius,
+            },
             disabled: props.disabled,
             required: props.required,
             class: props.class,

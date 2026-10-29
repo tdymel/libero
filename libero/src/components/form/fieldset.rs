@@ -323,25 +323,24 @@ pub fn Fieldset<V: FormValue>(props: FieldsetProps<V>) -> Element {
         rsx! { legend { "data-slot": FieldsetPart::Legend.slot(), {content} } }
     });
 
-    let mut children = Vec::with_capacity(5);
-    children.extend(legend);
-    children.extend(slot_node(
-        FieldsetPart::Description.slot(),
-        &id,
-        &props.description,
-    ));
-    let record = *record.peek();
-    children.push(rsx! {
-        for record in [record] {
-            Fragment { key: "{record}", {props.children.clone()} }
-        }
-    });
-    children.extend(slot_node(FieldsetPart::Helper.slot(), &id, &props.helper));
-    children.extend(status_node(
+    let description = slot_node(FieldsetPart::Description.slot(), &id, &props.description);
+    let helper = slot_node(FieldsetPart::Helper.slot(), &id, &props.helper);
+    let status_line = status_node(
         &id,
         Some(&status),
         crate::hooks::use_localization().common.warning,
-    ));
+    );
+    let record = *record.peek();
+    // Fixed slots: a caption that appears must not shift the fields and remount them (4926).
+    let children = rsx! {
+        {legend}
+        {description}
+        for record in [record] {
+            Fragment { key: "{record}", {props.children.clone()} }
+        }
+        {helper}
+        {status_line}
+    };
 
     let mut states = props
         .states

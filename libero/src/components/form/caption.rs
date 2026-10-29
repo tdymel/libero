@@ -71,6 +71,8 @@ impl From<Option<&str>> for Caption {
     }
 }
 
+/// A `Node` owns its own emptiness: `Some(VNode::empty())` still renders the slot,
+/// so pass `None` for no caption.
 impl From<Option<Element>> for Caption {
     fn from(element: Option<Element>) -> Self {
         element.map_or(Self::None, Self::Node)
