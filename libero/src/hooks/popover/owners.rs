@@ -116,6 +116,19 @@ pub(crate) fn focus_in_popup_of(open: OpenPopups, scope: &Rc<MountedData>) -> bo
     })
 }
 
+/// Whether `target` lies in an open popup's anchor or box.
+pub(crate) fn in_open_popup(open: OpenPopups, target: &Rc<MountedData>) -> bool {
+    let Ok(popups) = open.0.try_read() else {
+        return false;
+    };
+    popups
+        .iter()
+        .filter_map(Popup::mounted)
+        .any(|(anchor, floating)| {
+            element_contains(&anchor, target) || element_contains(&floating, target)
+        })
+}
+
 /// Whether popup `at`'s anchor lies in the scope, or in a popup whose own does.
 fn owned_by<E>(
     at: usize,

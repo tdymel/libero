@@ -1,7 +1,7 @@
 //! The picker fields below `sm`: the phone sheet (todo 3900), the text-input switch (3905),
 //! the clock face (3926), the color sheet (3923), the short range text (3904), the scrolling
 //! range (3903), the swiped day (3924), the swiped-away sheet (3957) and a range's explicit
-//! `columns` cut to the months that fit (3958).
+//! `columns` cut to the months that fit (3958) and the outside tap that only closes (4826).
 
 use dioxus::prelude::*;
 use libero::{
@@ -28,9 +28,12 @@ fn PickerPhonePage() -> Element {
     let mut at = use_signal(|| NaiveTime::from_hms_opt(9, 30, 0));
     let mut digital = use_signal(|| NaiveTime::from_hms_opt(9, 30, 0));
     let mut color = use_signal(|| "#228be6".parse::<ColorCode>().unwrap());
+    let mut taps = use_signal(|| 0u32);
 
     rsx! {
         Flex { direction: "column", gap: "md", padding: "md",
+            // Counts the clicks an outside tap lets through (4826).
+            button { id: "tally", onclick: move |_| taps += 1, "Tapped {taps}" }
             div { id: "stay",
                 ChronoField::<DateRange<NaiveDate>> {
                     label: "Stay",

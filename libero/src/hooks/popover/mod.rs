@@ -31,7 +31,9 @@ use crate::{
 
 #[cfg(test)]
 pub(crate) use owners::open_popups;
-pub(crate) use owners::{OpenPopups, focus_in_popup_of, owner_link, use_open_popups};
+pub(crate) use owners::{
+    OpenPopups, focus_in_popup_of, in_open_popup, owner_link, use_open_popups,
+};
 pub(crate) use place::place;
 use place::place_rounded;
 

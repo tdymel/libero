@@ -1706,6 +1706,87 @@ struct WebKeySubscription {
 
 impl KeySubscription for WebKeySubscription {}
 
+thread_local! {
+    /// Whether the press under way loses its click, and whether the window clears it yet.
+    static SWALLOWING: Cell<bool> = const { Cell::new(false) };
+    static SWALLOW_GUARDED: Cell<bool> = const { Cell::new(false) };
+}
+
+/// Once per page, ahead of every subscription's listener: a new press, a cancelled one (a
+/// scroll) or a key clears the swallow; a real click while it stands is stopped.
+fn guard_swallow(window: &web_sys::Window) {
+    if SWALLOW_GUARDED.replace(true) {
+        return;
+    }
+    let clear = Closure::<dyn FnMut()>::new(|| SWALLOWING.set(false));
+    for event in ["pointerdown", "pointercancel", "keydown"] {
+        let _ = window.add_event_listener_with_callback_and_bool(
+            event,
+            clear.as_ref().unchecked_ref(),
+            true,
+        );
+    }
+    clear.forget();
+    let click = Closure::<dyn FnMut(web_sys::MouseEvent)>::new(|event: web_sys::MouseEvent| {
+        if event.is_trusted() && SWALLOWING.replace(false) {
+            event.stop_propagation();
+            event.prevent_default();
+        }
+    });
+    let _ = window.add_event_listener_with_callback_and_bool(
+        "click",
+        click.as_ref().unchecked_ref(),
+        true,
+    );
+    click.forget();
+}
+
+pub(super) fn swallow_outside_clicks(
+    media: &str,
+    outside: crate::platform::OutsidePress,
+) -> Option<Box<dyn crate::platform::PressSubscription>> {
+    let window = web_sys::window()?;
+    guard_swallow(&window);
+    let query = window.match_media(media).ok()??;
+    let closure =
+        Closure::<dyn FnMut(web_sys::PointerEvent)>::new(move |event: web_sys::PointerEvent| {
+            let Some(target) = event
+                .target()
+                .and_then(|target| target.dyn_into::<web_sys::Element>().ok())
+            else {
+                return;
+            };
+            if query.matches() && outside(&Rc::new(MountedData::new(Found(target)))) {
+                SWALLOWING.set(true);
+            }
+        });
+    window
+        .add_event_listener_with_callback_and_bool(
+            "pointerdown",
+            closure.as_ref().unchecked_ref(),
+            true,
+        )
+        .ok()?;
+    Some(Box::new(WebPressListener { window, closure }))
+}
+
+struct WebPressListener {
+    window: web_sys::Window,
+    closure: Closure<dyn FnMut(web_sys::PointerEvent)>,
+}
+
+impl crate::platform::PressSubscription for WebPressListener {}
+
+impl Drop for WebPressListener {
+    fn drop(&mut self) {
+        let _ = self.window.remove_event_listener_with_callback_and_bool(
+            "pointerdown",
+            self.closure.as_ref().unchecked_ref(),
+            true,
+        );
+    }
+}
+
 impl Drop for WebKeySubscription {
     fn drop(&mut self) {
         if let Some(target) = &self.target {

@@ -1107,6 +1107,19 @@ pub(crate) fn on_pointer_release(pointer_id: i32, onrelease: Callback<()>) {
     let _ = (pointer_id, onrelease);
 }
 
+/// Only the web - see [`swallow_outside_clicks`](crate::platform::swallow_outside_clicks).
+pub(crate) fn swallow_outside_clicks(
+    media: &str,
+    outside: crate::platform::OutsidePress,
+) -> Option<Box<dyn crate::platform::PressSubscription>> {
+    #[cfg(not(target_arch = "wasm32"))]
+    let _ = (media, outside);
+    #[cfg(target_arch = "wasm32")]
+    return web::swallow_outside_clicks(media, outside);
+    #[cfg(not(target_arch = "wasm32"))]
+    return None;
+}
+
 /// Only the web can see a click's target today - see
 /// [`padding_press`](crate::platform::padding_press).
 pub(crate) fn padding_press(

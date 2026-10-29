@@ -4,12 +4,13 @@ use dioxus::prelude::*;
 
 use crate::{
     hooks::{
-        ElementHandle, PopoverHandle, SWIPE_BEYOND, SwipeClose, swipe_close_sx,
-        use_subscription_slot, use_swipe_close,
+        ElementHandle, PopoverHandle, SWIPE_BEYOND, SwipeClose, in_open_popup, swipe_close_sx,
+        use_open_popups, use_subscription_slot, use_swipe_close,
     },
     platform::{
-        ContentSubscription, ElementApi, SCROLL_MARGIN_BOTTOM_VAR, ScrollSubscription, document,
-        observe_resize, on_viewport_resize, visible_band,
+        ContentSubscription, ElementApi, PressSubscription, SCROLL_MARGIN_BOTTOM_VAR,
+        ScrollSubscription, document, observe_resize, on_viewport_resize, swallow_outside_clicks,
+        visible_band,
     },
     sx::{FORCED_COLORS, Sx, sx},
     theme::{Color, ColorShade, ColorValue, CssVar, Size},
@@ -124,9 +125,27 @@ const SHEET_ROOM: CssVar = CssVar::new("--lsx-sheet-room");
 const SHEET_LEFT: CssVar = CssVar::new("--lsx-sheet-left");
 const SHEET_RIGHT: CssVar = CssVar::new("--lsx-sheet-right");
 
+/// A press outside the open sheet only closes it, as a scrim would: its click is swallowed (4826).
+/// One on any open popup or its anchor, the sheet's own trigger included, keeps its click.
+fn use_sheet_outside_press(placed: bool) {
+    let popups = use_open_popups();
+    let swallowing = use_subscription_slot::<dyn PressSubscription>();
+    use_effect(use_reactive!(|placed| {
+        if !placed {
+            swallowing.clear();
+        } else if !swallowing.is_some() {
+            swallowing.set(swallow_outside_clicks(
+                &narrow_query(),
+                Box::new(move |target| !in_open_popup(popups, target)),
+            ));
+        }
+    }));
+}
+
 /// A phone browser's keyboard shrinks only the visual viewport (2173): the open sheet's foot
-/// and room follow it, as inline vars for its `style`.
+/// and room follow it, as inline vars for its `style`. Also swallows an outside press's click.
 pub(crate) fn use_sheet_room(sheet: ElementHandle, placed: bool) -> String {
+    use_sheet_outside_press(placed);
     let mut room = use_signal(|| None::<SheetBand>);
     let tick = use_signal(|| 0u64);
     let resizing = use_subscription_slot::<dyn ScrollSubscription>();

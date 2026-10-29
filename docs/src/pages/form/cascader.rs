@@ -417,7 +417,7 @@ pub fn CascaderPage() -> Element {
                 .handles([
                     "In `\"paths\"`, and so while searching, `Left` and `Right` move the search box's caret.",
                     "Below the `sm` breakpoint (48rem), `\"columns\"` shows only the cursor's level. A header names its parent, and its back button (\"Back to Europe\", `Localization::cascader.back`) goes up one level, as `Left` does. It never takes focus, so focus stays on the trigger. With `any_level`, a first row \"Select Europe\" picks the parent and closes. The keyboard cursor reaches that row: `Up` from a column's first row moves onto it, and `Enter` picks it.",
-                    "Below the `sm` breakpoint the dropdown is a full-width sheet at the foot of the screen. It is not modal: no backdrop, no focus trap, and `Escape` or a press outside closes it. Opening it scrolls the page, as far as it can, so the trigger stays above the sheet.",
+                    "Below the `sm` breakpoint the dropdown is a full-width sheet at the foot of the screen. It is not modal: no backdrop, no focus trap, and `Escape` or a press outside closes it; that press does not click what lies under it. Opening it scrolls the page, as far as it can, so the trigger stays above the sheet.",
                     "Android's Back button closes the dropdown as Escape does, rather than the app.",
                     clear_name!("Category"),
                 ])

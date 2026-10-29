@@ -2,7 +2,7 @@ use std::rc::Rc;
 
 use dioxus::prelude::{Callback, Event, MountedData, MouseData, PointerData};
 
-use super::ElementApi;
+use super::{ElementApi, PressSubscription};
 
 /// Whether this click hit something interactive (link, button, field) nested in
 /// the nearest `boundary`, which then leaves the click to it, as a `<label>` does.
@@ -47,6 +47,18 @@ pub(crate) fn follow_pointer(
 /// ends when iOS WebKit sends a touch's release past its capture (3603). WebView only.
 pub(crate) fn on_pointer_release(pointer_id: i32, onrelease: Callback<()>) {
     super::backend::on_pointer_release(pointer_id, onrelease)
+}
+
+/// Whether a press on this target lands outside, for [`swallow_outside_clicks`].
+pub(crate) type OutsidePress = Box<dyn Fn(&Rc<MountedData>) -> bool>;
+
+/// Until dropped, while `media` matches, swallows the click of each press whose target `outside`
+/// accepts; one pressed before the drop still loses its click. Web only (4826), elsewhere `None`.
+pub(crate) fn swallow_outside_clicks(
+    media: &str,
+    outside: OutsidePress,
+) -> Option<Box<dyn PressSubscription>> {
+    super::backend::swallow_outside_clicks(media, outside)
 }
 
 /// The control a press on a frame's padding belongs to: the first tab stop in

@@ -611,3 +611,65 @@ e2e::scenario!(
         "a phone's finger; the web's is select_phone::a_swipe_down_on_the_grabber_closes_the_sheet"
     )
 );
+
+const TALLY: &str = "#tally";
+
+fn tally_is(taps: u32) -> String {
+    format!("document.querySelector({TALLY:?}).textContent.trim() === 'Tapped {taps}'")
+}
+
+/// Todo 4826: a tap above the sheet only closes it, as a scrim would; the button under it stays untouched.
+#[test]
+fn a_tap_outside_the_sheet_only_closes_it() {
+    block_on(async {
+        let fixture = phone().await;
+        let page = &fixture.page;
+        tap(page, &input("due")).await.unwrap();
+        sheet_shown(page).await.unwrap();
+        tap(page, TALLY).await.unwrap();
+        let closed = format!("!document.querySelector({SHEET:?})");
+        wait::for_js_true(page, &closed, "the sheet closed by the tap outside")
+            .await
+            .unwrap();
+        crate::settle::painted(page).await.unwrap();
+        wait::for_js_true(page, &tally_is(0), "the tap's click swallowed")
+            .await
+            .unwrap();
+        // Closed, the next tap lands.
+        tap(page, TALLY).await.unwrap();
+        wait::for_js_true(page, &tally_is(1), "the next tap clicks")
+            .await
+            .unwrap();
+        fixture
+            .console
+            .assert_clean("a tap outside the sheet")
+            .unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
+/// Todo 4826: above `sm` the dropdown is a popover, and a click outside both closes it and lands.
+#[test]
+fn a_click_outside_the_dropdown_above_sm_still_lands() {
+    block_on(async {
+        let fixture = Fixture::open("/picker-phone", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        pointer::click(page, &input("due")).await.unwrap();
+        wait::for_visible(page, SHEET).await.unwrap();
+        pointer::click(page, TALLY).await.unwrap();
+        let closed = format!("!document.querySelector({SHEET:?})");
+        wait::for_js_true(page, &closed, "the dropdown closed by the click outside")
+            .await
+            .unwrap();
+        wait::for_js_true(page, &tally_is(1), "the click landed")
+            .await
+            .unwrap();
+        fixture
+            .console
+            .assert_clean("a click outside the dropdown")
+            .unwrap();
+        fixture.close().await.unwrap();
+    });
+}

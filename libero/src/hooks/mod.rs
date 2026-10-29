@@ -184,8 +184,8 @@ pub use media::{MediaError, MediaHandle, use_media};
 pub use media_query::{use_is_mobile, use_media_query};
 #[cfg(feature = "use-popover")]
 pub(crate) use popover::{
-    AVAILABLE_HEIGHT as POPOVER_AVAILABLE_HEIGHT, ArrowPoint, Rect, owner_link, place,
-    placement_sx, use_marked_popover, use_popover_on,
+    AVAILABLE_HEIGHT as POPOVER_AVAILABLE_HEIGHT, ArrowPoint, Rect, in_open_popup, owner_link,
+    place, placement_sx, use_marked_popover, use_open_popups, use_popover_on,
 };
 #[cfg(feature = "use-popover")]
 pub use popover::{
