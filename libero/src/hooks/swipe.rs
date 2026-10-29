@@ -4,7 +4,7 @@ use crate::{
     hooks::{DragPoint, drag::take_press_claim, use_direction, use_subscription_slot},
     platform::{
         self, EDGE_SWIPE_MARK, EdgeBand, ScrollSubscription, hold_edge_pan,
-        holds_edge_pan_by_pointer,
+        holds_edge_pan_by_pointer, refuses_edge_swipe,
     },
     sx::{Sx, sx},
 };
@@ -295,7 +295,7 @@ pub fn edge_swipe_sx() -> Sx {
 /// opens the same drawer (WCAG 2.5.1). RTL follows [`use_direction`]. A swipe
 /// during a running fling, whose pointer the browser cancels, still counts. A press
 /// on a [`use_drag`](super::use_drag) handle inside drags and never opens, nor does one
-/// on a `touch-action: none` box inside, such as a drawing canvas (not on Blitz).
+/// on a `touch-action: none` box inside, such as a drawing canvas.
 ///
 /// ```rust
 /// # use dioxus::prelude::*;
@@ -445,14 +445,22 @@ pub fn use_edge_swipe(on_swipe: Callback, options: EdgeSwipeOptions) -> Swipe {
         }
         if holds_edge_pan_by_pointer() {
             let at = event.client_coordinates();
-            let next = (event.is_primary()
-                && event.pointer_type() != "mouse"
-                && in_band(at.x, *viewport.peek(), &options, rtl) == Some(true))
-            .then_some(Held {
-                pointer_id: event.pointer_id(),
-                start: DragPoint { x: at.x, y: at.y },
-                holding: None,
-            });
+            let touch = event.is_primary() && event.pointer_type() != "mouse";
+            // No script on Blitz: its hit test finds the app's `touch-action: none` box (4814).
+            // Blitz reuses a finger's pointer id, so each press sets or clears it.
+            let refuses = touch && refuses_edge_swipe(&event);
+            let refusal = refuses.then_some(event.pointer_id());
+            if *refused.peek() != refusal {
+                let mut refused = refused;
+                refused.set(refusal);
+            }
+            let next =
+                (touch && !refuses && in_band(at.x, *viewport.peek(), &options, rtl) == Some(true))
+                    .then_some(Held {
+                        pointer_id: event.pointer_id(),
+                        start: DragPoint { x: at.x, y: at.y },
+                        holding: None,
+                    });
             if next != *held.peek() {
                 held.set(next);
             }

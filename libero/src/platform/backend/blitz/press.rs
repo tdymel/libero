@@ -5,7 +5,10 @@ use dioxus::prelude::*;
 use dioxus_native_dom::{NodeHandle, NodeId};
 
 use super::FreeDoc;
-use super::{INTERACTIVE, activate, ancestors, anchor, doc, refused, removed};
+use super::{
+    INTERACTIVE, activate, ancestors, anchor, doc, refused, removed, resolved_style_value,
+};
+use crate::platform::scroll::EDGE_SWIPE_MARK;
 
 thread_local! {
     /// A press whose focus move Blitz has not made yet: the focus owner at the
@@ -85,6 +88,25 @@ pub(super) fn tab_from_start(event: &Event<KeyboardData>) {
     if unmoved && present {
         anchor.doc_mut().set_focus_to(start);
     }
+}
+
+/// The script's walk (`EDGE_PAN_JS`): from the hit up while the inherited mark holds, a box
+/// with `touch-action: none` keeps the press.
+pub(in crate::platform::backend) fn refuses_edge_swipe(event: &Event<PointerData>) -> bool {
+    let point = event.page_coordinates();
+    let Some(anchor) = anchor() else {
+        return false;
+    };
+    let Some(doc) = anchor.free_doc() else {
+        return false;
+    };
+    let Some(hit) = doc.hit(point.x as f32, point.y as f32) else {
+        return false;
+    };
+    ancestors(&doc, hit.node_id)
+        .filter(|&id| doc.get_node(id).is_some_and(|node| node.is_element()))
+        .take_while(|&id| resolved_style_value(&doc, id, EDGE_SWIPE_MARK).trim() == "1")
+        .any(|id| resolved_style_value(&doc, id, "touch-action") == "none")
 }
 
 pub(super) fn forget_press() {

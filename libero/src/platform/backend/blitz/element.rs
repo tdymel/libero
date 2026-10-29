@@ -40,7 +40,12 @@ impl dioxus::html::RenderedElementBacking for Found {
 pub(in crate::platform::backend) fn mounted_by_selector(selector: &str) -> Option<Rc<MountedData>> {
     let anchor = doc()?.anchor()?;
     let node_id = anchor.free_doc()?.query_selector(selector).ok()??;
-    Some(Rc::new(MountedData::new(Found { anchor, node_id })))
+    Some(mounted_node(anchor, node_id))
+}
+
+/// Node `node_id` as a mounted element, a hit-tested one say.
+pub(super) fn mounted_node(anchor: NodeHandle, node_id: NodeId) -> Rc<MountedData> {
+    Rc::new(MountedData::new(Found { anchor, node_id }))
 }
 
 /// The node behind `mounted`, and a handle to reach its document by.

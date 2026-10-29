@@ -415,6 +415,25 @@ fn a_tap_on_another_trigger_opens_its_menu() {
     });
 }
 
+/// Todos 4841, 4839: below `sm`, with File's sheet open, a tap on Edit keeps its click, Blitz's
+/// too: the sheet closes and Edit's opens. A mouse switches menus on hover first.
+async fn another_trigger_opens_from_a_sheet<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    d.resize_viewport(360.0, 720.0).await?;
+    d.tap(&trigger(0)).await?;
+    only_open(d, 0, "a tap on File").await?;
+    d.tap(&trigger(1)).await?;
+    only_open(d, 1, "a tap on Edit over File's sheet").await
+}
+
+e2e::scenario!(
+    a_tap_on_another_trigger_opens_its_sheet,
+    "/menubar-docs",
+    another_trigger_opens_from_a_sheet,
+    desktop: skip("1126: no touch input under Xvfb"),
+    android: skip("no viewport resize on a phone"),
+    ios: skip("no viewport resize on a phone")
+);
+
 /// APG menubar: an open menu travels with Left/Right, from a submenu too; a disabled
 /// trigger takes focus and opens nothing, the next enabled one opens (568).
 #[test]

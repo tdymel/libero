@@ -60,6 +60,12 @@ impl Driver for Native {
         Ok((f64::from(width), f64::from(height)))
     }
 
+    async fn resize_viewport(&mut self, width: f64, height: f64) -> Result<()> {
+        self.page
+            .resize(width.round() as u32, height.round() as u32);
+        Ok(())
+    }
+
     /// A wheel at the window's centre: whatever scrolls there takes it, the page in a plain fixture.
     async fn scroll_by(&mut self, dy: f64) -> Result<()> {
         let (width, height) = self.page.window_size();

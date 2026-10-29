@@ -472,13 +472,26 @@ pub(crate) fn Listener(children: Element) -> Element {
     return children;
 }
 
-/// The portal outlet's box; only Blitz places it (see `blitz::PortalRoot`).
+/// The portal outlet's box; only Blitz places it (see `blitz::PortalRoot`). A WebView's carries
+/// [`webview::PORTAL_ATTR`].
 #[allow(non_snake_case)]
 pub(crate) fn PortalRoot(children: Element) -> Element {
     use dioxus::prelude::*;
     #[cfg(all(not(target_arch = "wasm32"), feature = "native"))]
     return rsx! { blitz::PortalRoot { {children} } };
-    #[cfg(not(all(not(target_arch = "wasm32"), feature = "native")))]
+    #[cfg(all(not(target_arch = "wasm32"), not(feature = "native")))]
+    return {
+        let marker = vec![Attribute::new(
+            webview::PORTAL_ATTR,
+            dioxus::core::AttributeValue::Text("1".to_string()),
+            None,
+            false,
+        )];
+        rsx! {
+            div { ..marker, {children} }
+        }
+    };
+    #[cfg(target_arch = "wasm32")]
     return rsx! { div { {children} } };
 }
 
@@ -668,6 +681,17 @@ pub(crate) fn hold_edge_pan(
     };
     #[cfg(all(not(target_arch = "wasm32"), not(feature = "native")))]
     return webview::hold_edge_pan(band, swiped, refused);
+}
+
+/// See [`refuses_edge_swipe`](crate::platform::scroll::refuses_edge_swipe).
+pub(crate) fn refuses_edge_swipe(press: &dioxus::prelude::PointerEvent) -> bool {
+    #[cfg(all(not(target_arch = "wasm32"), feature = "native"))]
+    return blitz::refuses_edge_swipe(press);
+    #[cfg(not(all(not(target_arch = "wasm32"), feature = "native")))]
+    return {
+        let _ = press;
+        false
+    };
 }
 
 /// `scrollIntoView`'s `nearest`, vertically: how far a view spanning
@@ -1107,17 +1131,27 @@ pub(crate) fn on_pointer_release(pointer_id: i32, onrelease: Callback<()>) {
     let _ = (pointer_id, onrelease);
 }
 
-/// Only the web - see [`swallow_outside_clicks`](crate::platform::swallow_outside_clicks).
+/// See [`swallow_outside_clicks`](crate::platform::swallow_outside_clicks).
 pub(crate) fn swallow_outside_clicks(
     media: &str,
     outside: crate::platform::OutsidePress,
+    kept: Option<u64>,
 ) -> Option<Box<dyn crate::platform::PressSubscription>> {
-    #[cfg(not(target_arch = "wasm32"))]
-    let _ = (media, outside);
     #[cfg(target_arch = "wasm32")]
-    return web::swallow_outside_clicks(media, outside);
-    #[cfg(not(target_arch = "wasm32"))]
-    return None;
+    return {
+        let _ = kept;
+        web::swallow_outside_clicks(media, outside)
+    };
+    #[cfg(all(not(target_arch = "wasm32"), feature = "native"))]
+    return {
+        let _ = kept;
+        blitz::swallow_outside_clicks(media, outside)
+    };
+    #[cfg(all(not(target_arch = "wasm32"), not(feature = "native")))]
+    return {
+        let _ = outside;
+        webview::swallow_outside_clicks(media, kept)
+    };
 }
 
 /// Only the web can see a click's target today - see

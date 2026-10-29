@@ -77,7 +77,7 @@ pub(super) use observe::{
     command_by_tag, computed_px, has_match, observe_content, observe_resize, on_intersection,
 };
 pub(crate) use permission::permission;
-pub(super) use press::press;
+pub(super) use press::{PORTAL_ATTR, press, swallow_outside_clicks};
 pub(crate) use press::{press_ended, watch_presses};
 #[cfg(target_os = "android")]
 pub(crate) use raster::square_png;

@@ -714,6 +714,55 @@ fn a_tap_outside_the_sheet_only_closes_it() {
     });
 }
 
+/// Todo 4839: below `sm` a press above the sheet only closes it on every platform, the WebView's and
+/// Blitz's too; the button under it gets no click, the next press does.
+async fn an_outside_press_only_closes<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    async fn open<D: Driver>(d: &mut D) -> Result<()> {
+        d.click(&input("due")).await?;
+        eventually(d, "the sheet", async |d| {
+            Ok(d.exists(SHEET).await? && d.style(SHEET, "visibility").await? == "visible")
+        })
+        .await
+    }
+    d.resize_viewport(360.0, 720.0).await?;
+    open(d).await?;
+    // A press inside keeps its click.
+    d.click(&format!("{SHEET} [data-date='2026-09-20']"))
+        .await?;
+    eventually(d, "the picked day", async |d| {
+        Ok(d.text("#echo").await?.contains("2026-09-20"))
+    })
+    .await?;
+    if !d.exists(SHEET).await? {
+        open(d).await?;
+    }
+    d.click(TALLY).await?;
+    eventually(d, "the sheet closed by the press outside", async |d| {
+        Ok(!d.exists(SHEET).await?)
+    })
+    .await?;
+    d.settle().await?;
+    let tally = d.text(TALLY).await?;
+    if tally != "Tapped 0" {
+        bail!("the press outside the sheet clicked the button: {tally:?}");
+    }
+    d.click(TALLY).await?;
+    eventually(d, "the next press to click", async |d| {
+        Ok(d.text(TALLY).await? == "Tapped 1")
+    })
+    .await
+}
+
+e2e::scenario!(
+    an_outside_press_on_a_sheet_only_closes_it,
+    "/picker-phone",
+    an_outside_press_only_closes,
+    macos: skip("the desktop harness resizes only an X window"),
+    windows: skip("the desktop harness resizes only an X window"),
+    android: skip("no viewport resize on a phone"),
+    ios: skip("no viewport resize on a phone")
+);
+
 /// Todo 4826: above `sm` the dropdown is a popover, and a click outside both closes it and lands.
 #[test]
 fn a_click_outside_the_dropdown_above_sm_still_lands() {

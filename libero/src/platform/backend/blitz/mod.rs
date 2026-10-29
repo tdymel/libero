@@ -35,6 +35,7 @@ mod removed;
 mod resize;
 mod scroll;
 mod sticky;
+mod swallow;
 mod wheel;
 
 pub(super) use activate::focus_selectors;
@@ -66,10 +67,11 @@ pub(super) use portal::{PortalEntry, PortalRoot};
 use press::{
     BLANK_PRESS, HIT, PRESS, activated, focusable_ancestor, forget_press, pressed, tab_from_start,
 };
-pub(super) use press::{focus_pressed, nested_interactive};
+pub(super) use press::{focus_pressed, nested_interactive, refuses_edge_swipe};
 pub(super) use resize::{on_content_change, on_intersection, on_resize, on_viewport_resize};
 use scroll::{LAYOUT_TRIES, notify_scroll, show};
 pub(super) use scroll::{reveal, scroll, scroll_chain_into_view, scroll_padding_properties};
+pub(super) use swallow::swallow_outside_clicks;
 
 use super::{INTERACTIVE, origin::Origin};
 use crate::{platform::TimerSubscription, tokens::ColorScheme};

@@ -148,6 +148,7 @@ fn use_sheet_outside_press(placed: bool) {
                         .is_some_and(|owner| element_contains(&owner, target));
                     !in_composite && !in_open_popup(popups, target)
                 }),
+                composite.and_then(|SheetComposite(owner)| owner.tag()),
             ));
         }
     }));

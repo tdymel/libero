@@ -1,10 +1,11 @@
 use std::rc::Rc;
 
+use dioxus::document::Eval;
 use dioxus::prelude::spawn;
 use serde_json::json;
 
 use super::{Slot, WebViewListener, eval, eval_with, page, runs_scripts};
-use crate::platform::{PRESS_MARKER_ATTR, PressApi, PressSubscription};
+use crate::platform::{OBSERVE_ATTR, OWNER_ATTR, PRESS_MARKER_ATTR, PressApi, PressSubscription};
 
 /// Whether a press is down, and what waits for its `pointerup` or `pointercancel`; capture on the
 /// window, as the web's: a control that stops its press still counts.
@@ -91,3 +92,70 @@ impl PressApi for WebViewPress {
 }
 
 impl PressSubscription for WebViewListener {}
+
+/// On the WebView's portal outlet: a press inside lands in an open layer.
+pub(crate) const PORTAL_ATTR: &str = "data-lsx-portal";
+
+/// The web's swallow (4826), decided in the page: no `outside` reaches it (958). Once per page,
+/// ahead of every subscription's press listener, a new press, a cancel or a key clears it.
+const SWALLOW: &str = "const [media, kept, observe, owner, portal] = data;
+    if (!window.__lsxSwallow) {
+        const state = window.__lsxSwallow = { on: false };
+        const clear = () => { state.on = false; };
+        for (const type of ['pointerdown', 'pointercancel', 'keydown']) {
+            window.addEventListener(type, clear, { capture: true });
+        }
+        window.addEventListener('click', (event) => {
+            if (!event.isTrusted || !state.on) return;
+            state.on = false;
+            event.stopPropagation();
+            event.preventDefault();
+        }, { capture: true });
+    }
+    const query = window.matchMedia(media);
+    // A layer, an open trigger, the anchor of a rendered layer, or the kept element.
+    const keeps = (target) => {
+        for (let at = target instanceof Element ? target : null; at; at = at.parentElement) {
+            if (at.hasAttribute(portal) || at.getAttribute('aria-expanded') === 'true') return true;
+            const tag = at.getAttribute(observe);
+            if (tag === null) continue;
+            if (kept !== null && Number(tag) === kept) return true;
+            if (document.querySelector(`[${owner}=\"${CSS.escape(tag)}\"]`)) return true;
+        }
+        return false;
+    };
+    const onPress = (event) => {
+        if (query.matches && !keeps(event.target)) window.__lsxSwallow.on = true;
+    };
+    window.addEventListener('pointerdown', onPress, { capture: true });";
+
+pub(crate) fn swallow_outside_clicks(
+    media: &str,
+    kept: Option<u64>,
+) -> Option<Box<dyn PressSubscription>> {
+    if !runs_scripts() {
+        return None;
+    }
+    let slot = Slot::new();
+    let script = eval_with(
+        json!([media, kept, OBSERVE_ATTR, OWNER_ATTR, PORTAL_ATTR]),
+        &format!(
+            "{SWALLOW}
+            {}
+            window.removeEventListener('pointerdown', onPress, {{ capture: true }});",
+            slot.park("")
+        ),
+    );
+    Some(Box::new(WebViewSwallow {
+        _script: script,
+        _slot: slot,
+    }))
+}
+
+/// The page's listener lives until the slot drops.
+struct WebViewSwallow {
+    _script: Eval,
+    _slot: Slot,
+}
+
+impl PressSubscription for WebViewSwallow {}

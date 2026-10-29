@@ -1,6 +1,6 @@
 # Skipped e2e scenarios
 
-Scenarios: 720
+Scenarios: 722
 
 Generated from the `scenario!` skips in `e2e/tests/all` by `cargo test -p e2e --lib skips`; edit the skip, not this file. A reason starting `upstream:` waits on Dioxus, Blitz, wry or the engine (revisit on their update, todo 3362), a number names the todo that removes it.
 
@@ -185,6 +185,9 @@ The performance scenarios (units `perf`, `table_perf`) are no skips but run on r
 | `menu::a_tall_menu_above_fits_the_room` | windows desktop | 3421: END scrolls by the listbox height from before the popup shrank |
 | `menu::a_tall_menu_below_fits_the_room` | windows desktop | 3421: END scrolls by the listbox height from before the popup shrank |
 | `menu::android_back_closes_the_sheet` | all but android | 4110: no Back key off Android |
+| `menubar::a_tap_on_another_trigger_opens_its_sheet` | android | no viewport resize on a phone |
+| `menubar::a_tap_on_another_trigger_opens_its_sheet` | desktop | 1126: no touch input under Xvfb |
+| `menubar::a_tap_on_another_trigger_opens_its_sheet` | ios | no viewport resize on a phone |
 | `menubar::hovering_another_trigger_switches_the_open_menu` | ios | a touch screen has no hover |
 | `menubar::the_arrows_rove_along_the_bar_and_wrap` | android | 958: element identity on the WebView |
 | `menubar::the_arrows_rove_along_the_bar_and_wrap` | desktop | 958: element identity on the WebView |
@@ -247,6 +250,10 @@ The performance scenarios (units `perf`, `table_perf`) are no skips but run on r
 | `picker_dialog::android_back_closes_a_date_field` | all but android | 1275: no Back key off Android |
 | `picker_dialog::tab_leaves_a_color_picker_at_its_edges` | native | Blitz reads no script; the WebView walk this guards is 4042's |
 | `picker_dialog::tab_leaves_a_date_picker_at_its_edges` | native | Blitz reads no script; the WebView walk this guards is 4042's |
+| `picker_phone::an_outside_press_on_a_sheet_only_closes_it` | android | no viewport resize on a phone |
+| `picker_phone::an_outside_press_on_a_sheet_only_closes_it` | ios | no viewport resize on a phone |
+| `picker_phone::an_outside_press_on_a_sheet_only_closes_it` | macos desktop | the desktop harness resizes only an X window |
+| `picker_phone::an_outside_press_on_a_sheet_only_closes_it` | windows desktop | the desktop harness resizes only an X window |
 | `picker_phone::android_a_swipe_slides_a_date_sheet_off` | all but android | a phone's finger; the web's is a_swipe_down_slides_the_sheet_away |
 | `picker_phone::android_a_swipe_slides_a_select_sheet_off` | all but android | a phone's finger; the web's is select_phone::a_swipe_down_on_the_grabber_closes_the_sheet |
 | `pin_field::a_digit_retyped_without_a_key_leaves_no_drifted_cell` | desktop | 1126: no text without a key (no IME path) under xdotool |

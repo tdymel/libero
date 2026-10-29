@@ -7,8 +7,8 @@ use dioxus_native_dom::{NodeHandle, NodeId};
 
 use super::{
     BLANK_PRESS, HELD, HIT, PRESS, activate, defer, doc, focus, followed, forget_press, keyed,
-    max_length, notify_scroll, placeholder, pressed, refused, removed, resize, tab_from_start,
-    wheel,
+    max_length, notify_scroll, placeholder, pressed, refused, removed, resize, swallow,
+    tab_from_start, wheel,
 };
 
 /// Wraps the app, so a press's target is known until its click bubbled and keys
@@ -60,6 +60,7 @@ pub(in crate::platform::backend) fn Listener(children: Element) -> Element {
         activate::pointer_down(&event, &raw.data);
         refused::pressed(&event);
         pressed(&event);
+        swallow::pressed();
     });
     let raw = vec![
         Attribute::new("onclick", onclick, None, false),
@@ -82,6 +83,7 @@ pub(in crate::platform::backend) fn Listener(children: Element) -> Element {
             },
             onkeydown: |event| {
                 forget_press();
+                swallow::clear();
                 BLANK_PRESS.set(false);
                 focus::forget_kept();
                 focus::keyed(&event);

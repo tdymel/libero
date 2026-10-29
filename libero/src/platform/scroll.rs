@@ -349,6 +349,12 @@ pub(crate) fn hold_edge_pan(
     backend::hold_edge_pan(band, swiped, refused)
 }
 
+/// Whether `press` lands on a `touch-action: none` box inside the element carrying
+/// [`EDGE_SWIPE_MARK`]: Blitz hit-tests it (4814), elsewhere [`hold_edge_pan`]'s script reports it.
+pub(crate) fn refuses_edge_swipe(press: &dioxus::prelude::PointerEvent) -> bool {
+    backend::refuses_edge_swipe(press)
+}
+
 /// Whether an edge swipe holds the pan by cancelling its own `pointermove`s: Blitz runs
 /// no script for [`hold_edge_pan`], but skips the touch pan of a cancelled move (2792).
 pub(crate) fn holds_edge_pan_by_pointer() -> bool {

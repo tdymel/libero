@@ -56,6 +56,9 @@ pub struct Desktop {
     cdp: Option<webview2::Cdp>,
     /// The test module path minus the scenario: one app per unit (~5 s a launch).
     unit: String,
+    /// The viewport before a scenario resized it, restored before the next one reuses the app.
+    #[cfg_attr(any(target_os = "macos", windows), allow(dead_code))]
+    resized_from: Option<(f64, f64)>,
 }
 
 impl Desktop {
@@ -144,6 +147,7 @@ impl Desktop {
             #[cfg(windows)]
             cdp: None,
             unit: unit.to_string(),
+            resized_from: None,
         };
         desktop.bridge.wait_for("[data-fixture-ready]")?;
         // `Shell` installs the route hook in an effect, after the marker mounts.
@@ -168,6 +172,10 @@ impl Desktop {
         let errors: Vec<String> = self.bridge.json("__e2eErrors")?;
         if !errors.is_empty() {
             bail!("{what}: console errors in the desktop WebView: {errors:?}");
+        }
+        #[cfg(not(any(target_os = "macos", windows)))]
+        if let Some((width, height)) = self.resized_from.take() {
+            self.resize_window(width, height)?;
         }
         *IDLE.lock().unwrap_or_else(PoisonError::into_inner) = Some(self);
         Ok(())
@@ -272,6 +280,31 @@ impl Desktop {
             &at.1.to_string(),
         ])?;
         Ok(at)
+    }
+
+    /// Resizes the window until the viewport is `width` x `height` CSS px; the menu bar keeps its px.
+    fn resize_window(&mut self, width: f64, height: f64) -> Result<()> {
+        let geometry = xdotool(&["getwindowgeometry", "--shell", &self.window])?;
+        let read = |key: &str| -> Result<f64> {
+            Ok(geometry
+                .lines()
+                .find_map(|line| line.strip_prefix(key))
+                .with_context(|| format!("xdotool gave no {key}"))?
+                .parse()?)
+        };
+        let (inner_width, inner_height): (f64, f64) =
+            self.bridge.json("[innerWidth, innerHeight]")?;
+        let window_width = read("WIDTH=")? + (width - inner_width) * self.scale;
+        let window_height = read("HEIGHT=")? + (height - inner_height) * self.scale;
+        xdotool(&[
+            "windowsize",
+            &self.window,
+            &window_width.round().to_string(),
+            &window_height.round().to_string(),
+        ])?;
+        self.bridge.wait_until(&format!(
+            "innerWidth === {width} && innerHeight === {height}"
+        ))
     }
 
     /// A CSS-px viewport point in window px, as `xdotool --window` takes it.
@@ -719,6 +752,14 @@ impl Driver for Desktop {
 
     async fn viewport(&mut self) -> Result<(f64, f64)> {
         self.bridge.json("[innerWidth, innerHeight]")
+    }
+
+    /// The window under Xvfb; `finish` restores the size for the unit's next scenario.
+    #[cfg(not(any(target_os = "macos", windows)))]
+    async fn resize_viewport(&mut self, width: f64, height: f64) -> Result<()> {
+        let before = self.bridge.json("[innerWidth, innerHeight]")?;
+        self.resized_from.get_or_insert(before);
+        self.resize_window(width.round(), height.round())
     }
 
     async fn press(&mut self, key: Key) -> Result<()> {

@@ -10,7 +10,7 @@ use dioxus_native_dom::NodeId;
 use super::FreeDoc;
 use super::{
     BLANK_PRESS, activate, ancestors, anchor, defer, doc, focus, focusable_ancestor, forget_press,
-    is_rendered,
+    is_rendered, swallow,
 };
 
 thread_local! {
@@ -68,9 +68,10 @@ pub(super) fn press_origin(doc: &BaseDocument, node_id: NodeId) -> Option<NodeId
     }
 }
 
-/// Prevents a release on a disabled control or under `inert`, within 2px of the
-/// press only: a prevented release would leave Blitz's drag running.
+/// Prevents a release on a disabled control or under `inert`, or one whose click is
+/// [`swallow`]ed, within 2px of the press only: a prevented release would leave Blitz's drag running.
 pub(super) fn release(event: &Event<PointerData>) {
+    let swallowed = swallow::take();
     let point = event.page_coordinates();
     let still = PRESSED_AT
         .take()
@@ -86,7 +87,7 @@ pub(super) fn release(event: &Event<PointerData>) {
         let Some(hit) = doc.hit(point.x as f32, point.y as f32) else {
             return;
         };
-        if refusing(&doc, hit.node_id).is_none() {
+        if !swallowed && refusing(&doc, hit.node_id).is_none() {
             return;
         }
         let target =

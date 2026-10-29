@@ -53,12 +53,15 @@ pub(crate) fn on_pointer_release(pointer_id: i32, onrelease: Callback<()>) {
 pub(crate) type OutsidePress = Box<dyn Fn(&Rc<MountedData>) -> bool>;
 
 /// Until dropped, while `media` matches, swallows the click of each press whose target `outside`
-/// accepts; one pressed before the drop still loses its click. Web only (4826), elsewhere `None`.
+/// accepts; one pressed before the drop still loses its click (4826). Blitz keeps the click of a
+/// release over 2px from its press. A WebView cannot call `outside`: it keeps the click of a press
+/// in a portaled layer, an open trigger or the element of WebView tag `kept` (4839).
 pub(crate) fn swallow_outside_clicks(
     media: &str,
     outside: OutsidePress,
+    kept: Option<u64>,
 ) -> Option<Box<dyn PressSubscription>> {
-    super::backend::swallow_outside_clicks(media, outside)
+    super::backend::swallow_outside_clicks(media, outside, kept)
 }
 
 /// The control a press on a frame's padding belongs to: the first tab stop in
