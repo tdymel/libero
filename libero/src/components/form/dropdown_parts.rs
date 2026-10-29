@@ -11,6 +11,8 @@ parts_enum! {
     pub enum DropdownPart {
         /// The dropdown box itself.
         Panel = "dropdown" => "&",
+        /// Below `sm`, on a field whose dropdown opens as a sheet: the swipe strip atop it.
+        SheetHandle = "sheet-handle" => "& > [data-slot='sheet-handle']",
         /// The search box above the rows: a searchable `Select` or `MultiSelect`,
         /// a searchable `Cascader`, `PhoneField`'s country list.
         Search = "search" => "& [data-slot='search']",
@@ -49,8 +51,9 @@ fn under_picker(selector: &str) -> String {
         .join(", ")
 }
 
-/// Declares a picker field's dropdown enum: [`DropdownPart::Panel`], then the
-/// listed parts of the picker it holds, matched through the dropdown box.
+/// Declares a picker field's dropdown enum: [`DropdownPart::Panel`] and
+/// [`DropdownPart::SheetHandle`], then the listed parts of the picker it holds,
+/// matched through the dropdown box.
 macro_rules! picker_dropdown_parts {
     (
         $(#[$meta:meta])*
@@ -61,6 +64,8 @@ macro_rules! picker_dropdown_parts {
         $vis enum $name {
             /// The dropdown box itself.
             Panel,
+            /// Below `sm`, where the dropdown opens as a sheet: the swipe strip atop it.
+            SheetHandle,
             $(
                 #[doc = concat!("The picker's [`", stringify!($picker), "::", stringify!($variant), "`].")]
                 $variant,
@@ -68,11 +73,12 @@ macro_rules! picker_dropdown_parts {
         }
 
         impl crate::components::common::Part for $name {
-            const ALL: &'static [Self] = &[Self::Panel, $(Self::$variant),+];
+            const ALL: &'static [Self] = &[Self::Panel, Self::SheetHandle, $(Self::$variant),+];
 
             fn slot(self) -> &'static str {
                 match self {
                     Self::Panel => DropdownPart::Panel.slot(),
+                    Self::SheetHandle => DropdownPart::SheetHandle.slot(),
                     $(Self::$variant => $picker::$variant.slot()),+
                 }
             }
@@ -86,8 +92,9 @@ macro_rules! picker_dropdown_parts {
                 });
                 match self {
                     Self::Panel => DropdownPart::Panel.selector(),
-                    // `Panel` is 0, the picker's parts follow in order.
-                    part => &REBASED[part as usize - 1],
+                    Self::SheetHandle => DropdownPart::SheetHandle.selector(),
+                    // `Panel` and `SheetHandle` are 0 and 1, the picker's parts follow in order.
+                    part => &REBASED[part as usize - 2],
                 }
             }
         }
@@ -97,7 +104,7 @@ macro_rules! picker_dropdown_parts {
 #[cfg(feature = "date-field")]
 picker_dropdown_parts! {
     /// The inner parts of a date or time field's dropdown, for its `dropdown_parts`
-    /// prop: the box, then the [`ChronoPicker`](super::ChronoPicker)'s parts.
+    /// prop: the box and its sheet strip, then the [`ChronoPicker`](super::ChronoPicker)'s parts.
     pub enum ChronoDropdownPart: ChronoPickerPart {
         Header, Nav, Title, Months, Weekday, Day, Month, Blank, Cells, Cell, Strip,
         Columns, Spin, Value, Neighbour, Separator, Unit, Readout, Face, Mark, Ticks, Hand, Pivot,
@@ -108,7 +115,8 @@ picker_dropdown_parts! {
 #[cfg(feature = "color")]
 picker_dropdown_parts! {
     /// The inner parts of [`ColorField`](super::ColorField)'s dropdown, for its
-    /// `dropdown_parts` prop: the box, then the [`ColorPicker`](super::ColorPicker)'s parts.
+    /// `dropdown_parts` prop: the box and its sheet strip, then the
+    /// [`ColorPicker`](super::ColorPicker)'s parts.
     pub enum ColorDropdownPart: ColorPickerPart {
         Saturation, Body, Sliders, Hue, Alpha, Track, Thumb, Preview, Swatches, Swatch,
     }
@@ -126,6 +134,7 @@ mod tests {
             part_table::<DropdownPart>(),
             [
                 ("dropdown", "&"),
+                ("sheet-handle", "& > [data-slot='sheet-handle']"),
                 ("search", "& [data-slot='search']"),
                 ("listbox", "& [data-slot='listbox']"),
                 ("group", "& [data-slot='group']"),
@@ -142,14 +151,15 @@ mod tests {
         );
     }
 
-    /// Every picker part is listed, in the picker's order, after the box, and each
-    /// alternative is the picker's own one step below the box.
+    /// Every picker part is listed, in the picker's order, after the box and its sheet
+    /// strip, and each alternative is the picker's own one step below the box.
     fn assert_mirrors<D: Part + std::fmt::Debug, P: Part>() {
         let slots: Vec<_> = D::ALL.iter().map(|part| part.slot()).collect();
-        let mut expected = vec!["dropdown"];
+        let mut expected = vec!["dropdown", "sheet-handle"];
         expected.extend(P::ALL.iter().map(|part| part.slot()));
         assert_eq!(slots, expected);
-        for (dropdown, picker) in D::ALL[1..].iter().zip(P::ALL) {
+        assert_eq!(D::ALL[1].selector(), DropdownPart::SheetHandle.selector());
+        for (dropdown, picker) in D::ALL[2..].iter().zip(P::ALL) {
             let ours: Vec<_> = dropdown.selector().split(", ").collect();
             let theirs: Vec<_> = picker.selector().split(", ").collect();
             assert_eq!(ours.len(), theirs.len(), "{dropdown:?}");

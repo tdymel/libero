@@ -636,7 +636,8 @@ fn a_press_in_the_search_text_places_the_caret() {
     });
 }
 
-/// Todo 3771: a query nothing matches draws no listbox, so the button stops saying expanded.
+/// Todo 3771: a query nothing matches draws no listbox, so the button stops saying expanded;
+/// "No results" is shown and said instead (4881).
 #[test]
 fn a_query_without_a_match_leaves_the_button_collapsed() {
     block_on(async {
@@ -666,6 +667,7 @@ fn a_query_without_a_match_leaves_the_button_collapsed() {
         )
         .await
         .unwrap();
+        crate::autocomplete::wait_for_nothing_found(page, "a query without a match").await;
 
         fixture.console.assert_clean("/phone-field").unwrap();
         fixture.close().await.unwrap();

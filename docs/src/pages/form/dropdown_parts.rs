@@ -135,6 +135,7 @@ pub(super) fn color_picker_parts() -> Vec<(ColorPickerPart, &'static str)> {
 }
 
 const PANEL: &str = "The dropdown box itself.";
+const SHEET_HANDLE: &str = "Below `sm`: the swipe strip atop the sheet.";
 
 use DropdownPart as D;
 
@@ -150,6 +151,7 @@ pub(super) const COMBOBOX_DROPDOWN: &[DropdownPart] = &[
 ];
 pub(super) const SELECT_DROPDOWN: &[DropdownPart] = &[
     D::Panel,
+    D::SheetHandle,
     D::Search,
     D::Listbox,
     D::Group,
@@ -162,14 +164,17 @@ pub(super) const SUGGESTION_DROPDOWN: &[DropdownPart] =
     &[D::Panel, D::Listbox, D::Option, D::OptionLabel, D::Empty];
 pub(super) const PHONE_DROPDOWN: &[DropdownPart] = &[
     D::Panel,
+    D::SheetHandle,
     D::Search,
     D::Listbox,
     D::Option,
     D::CountryName,
     D::CountryDial,
+    D::Empty,
 ];
 pub(super) const CASCADER_DROPDOWN: &[DropdownPart] = &[
     D::Panel,
+    D::SheetHandle,
     D::Search,
     D::Listbox,
     D::Column,
@@ -189,6 +194,7 @@ pub(super) fn list_dropdown_parts(drawn: &[DropdownPart]) -> Vec<(DropdownPart, 
         .map(|part| {
             let description = match part {
                 DropdownPart::Panel => PANEL,
+                DropdownPart::SheetHandle => SHEET_HANDLE,
                 DropdownPart::Search => "The search box above the rows.",
                 DropdownPart::Listbox => "The scrolling list of rows.",
                 DropdownPart::Group => "A group of rows that share a label, from an `OptionList`.",
@@ -207,26 +213,53 @@ pub(super) fn list_dropdown_parts(drawn: &[DropdownPart]) -> Vec<(DropdownPart, 
         .collect()
 }
 
-/// The date fields' dropdown: the box, then every `ChronoPicker` part.
-pub(super) fn chrono_dropdown_parts() -> Vec<(ChronoDropdownPart, &'static str)> {
-    let picker = chrono_picker_parts()
-        .into_iter()
-        .map(|(_, description)| description);
-    ChronoDropdownPart::ALL
+/// A picker field's dropdown rows in its enum's order, each matched to its description
+/// by slot; a part without one is left out, which the unit test catches.
+fn picker_dropdown_rows<D: Part, P: Part>(
+    picker: Vec<(P, &'static str)>,
+) -> Vec<(D, &'static str)> {
+    D::ALL
         .iter()
-        .copied()
-        .zip(std::iter::once(PANEL).chain(picker))
+        .filter_map(|&part| {
+            let description = match part.slot() {
+                slot if slot == DropdownPart::Panel.slot() => PANEL,
+                slot if slot == DropdownPart::SheetHandle.slot() => SHEET_HANDLE,
+                slot => picker.iter().find(|(row, _)| row.slot() == slot)?.1,
+            };
+            Some((part, description))
+        })
         .collect()
 }
 
-/// `ColorField`'s dropdown: the box, then every `ColorPicker` part.
+/// The date fields' dropdown: the box and its sheet strip, then every `ChronoPicker` part.
+pub(super) fn chrono_dropdown_parts() -> Vec<(ChronoDropdownPart, &'static str)> {
+    picker_dropdown_rows(chrono_picker_parts())
+}
+
+/// `ColorField`'s dropdown: the box and its sheet strip, then every `ColorPicker` part.
 pub(super) fn color_dropdown_parts() -> Vec<(ColorDropdownPart, &'static str)> {
-    let picker = color_picker_parts()
-        .into_iter()
-        .map(|(_, description)| description);
-    ColorDropdownPart::ALL
-        .iter()
-        .copied()
-        .zip(std::iter::once(PANEL).chain(picker))
-        .collect()
+    picker_dropdown_rows(color_picker_parts())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn assert_one_row_each<P: Part + PartialEq + std::fmt::Debug>(rows: &[(P, &str)]) {
+        assert_eq!(rows.len(), P::ALL.len());
+        for part in P::ALL {
+            let count = rows.iter().filter(|(row, _)| row == part).count();
+            assert_eq!(count, 1, "{part:?}");
+        }
+    }
+
+    /// Todo 4883: every part of a dropdown or picker enum has exactly one docs row.
+    #[test]
+    fn every_part_has_exactly_one_row() {
+        assert_one_row_each(&chrono_picker_parts());
+        assert_one_row_each(&color_picker_parts());
+        assert_one_row_each(&chrono_dropdown_parts());
+        assert_one_row_each(&color_dropdown_parts());
+        assert_one_row_each(&list_dropdown_parts(DropdownPart::ALL));
+    }
 }

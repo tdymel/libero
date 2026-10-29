@@ -489,6 +489,8 @@ pub fn PhoneField(props: PhoneFieldProps) -> Element {
             dropdown_parts: props.dropdown_parts,
             tabbed,
             field: field.root(),
+            nothing_found: (!query.read().trim().is_empty())
+                .then(|| localization.combobox.nothing_found.to_string()),
         },
         rows,
     );
@@ -833,6 +835,8 @@ struct Picker {
     tabbed: CopyValue<bool>,
     /// The field's root, which the phone sheet clears.
     field: Option<ElementHandle>,
+    /// `Some(text)` while a query filters, as `Select`'s: no row left shows and says it.
+    nothing_found: Option<String>,
 }
 
 /// The frame's leading slot: the country picker with its list, or - with
@@ -857,12 +861,16 @@ fn phone_leading(with_select: bool, parts: Picker, rows: Vec<Element>) -> Option
         dropdown_parts,
         mut tabbed,
         field,
+        nothing_found,
     } = parts;
 
+    // A filter shrinks the box: a list placed above re-places, or "No results" floats off the field.
+    let remeasure = rows.len() as u64;
     match with_select {
         true => Some(rsx! {
             ComboboxCore {
                 rows,
+                remeasure,
                 active: state.active(),
                 onactive: move |row| state.set_active(Some(row)),
                 opened,
@@ -894,6 +902,7 @@ fn phone_leading(with_select: bool, parts: Picker, rows: Vec<Element>) -> Option
                 parts: dropdown_parts,
                 sheet: true,
                 field,
+                nothing_found,
                 {picker}
             }
         }),

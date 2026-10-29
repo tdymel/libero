@@ -300,13 +300,15 @@ const CHART_PROPS: [&str; 17] = [
 const KNOWN_GAPS: &[(&str, &str)] = &[
     ("Cascader", "leading"),
     ("ChronoField", "leading"),
-    // Cascader's and PhoneField's dropdown parts; `Combobox` passes its core no search box.
+    // Cascader's and PhoneField's dropdown parts; `Combobox` passes its core no search box
+    // and opens no phone sheet.
     ("Combobox", "column"),
     ("Combobox", "dial"),
     ("Combobox", "drill-back"),
     ("Combobox", "name"),
     ("Combobox", "pick-parent"),
     ("Combobox", "search"),
+    ("Combobox", "sheet-handle"),
     ("MultiSelect", "leading"),
     ("NativeSelect", "leading"),
     ("NativeSelect", "trailing"),

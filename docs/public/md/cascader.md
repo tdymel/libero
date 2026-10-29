@@ -194,6 +194,7 @@ The dropdown is portaled out of the field, so its parts take the
 | Part | `data-slot` | Description |
 |---|---|---|
 | `DropdownPart::Panel` | `dropdown` | The dropdown box itself. |
+| `DropdownPart::SheetHandle` | `sheet-handle` | Below `sm`: the swipe strip atop the sheet. |
 | `DropdownPart::Search` | `search` | The search box above the rows. |
 | `DropdownPart::Listbox` | `listbox` | The scrolling list of rows. |
 | `DropdownPart::Option` | `option` | A row. |

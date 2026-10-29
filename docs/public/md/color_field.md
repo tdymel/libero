@@ -106,6 +106,7 @@ The dropdown is portaled out of the field, so its parts take the
 | Part | `data-slot` | Description |
 |---|---|---|
 | `ColorDropdownPart::Panel` | `dropdown` | The dropdown box itself. |
+| `ColorDropdownPart::SheetHandle` | `sheet-handle` | Below `sm`: the swipe strip atop the sheet. |
 | `ColorDropdownPart::Saturation` | `saturation` | The saturation and brightness panel. |
 | `ColorDropdownPart::Body` | `body` | The row under the panel: the sliders and the preview. |
 | `ColorDropdownPart::Sliders` | `sliders` | The column of the hue and alpha sliders. |

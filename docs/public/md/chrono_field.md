@@ -178,6 +178,7 @@ The dropdown is portaled out of the field, so its parts take the
 | Part | `data-slot` | Description |
 |---|---|---|
 | `ChronoDropdownPart::Panel` | `dropdown` | The dropdown box itself. |
+| `ChronoDropdownPart::SheetHandle` | `sheet-handle` | Below `sm`: the swipe strip atop the sheet. |
 | `ChronoDropdownPart::Header` | `header` | Calendar: the row over a month, a year or a decade, with paging buttons and title. |
 | `ChronoDropdownPart::Nav` | `nav` | Calendar: a paging button, in the header or beside the mini calendar's row. |
 | `ChronoDropdownPart::Title` | `title` | Calendar: the month, year or decade heading, a button that climbs a level. |
