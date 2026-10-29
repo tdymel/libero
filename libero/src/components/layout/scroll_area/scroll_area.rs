@@ -302,6 +302,7 @@ base_props! {
         #[props(default, into)]
         scrollbars: Input<ScrollAxis>,
         /// `"always"` (default), `"hover"`, `"hidden"`, or `"scroll"` (as `"hover"` for now).
+        /// `"hover"` shows it under a hovering pointer and while focus is inside (touch: focus only).
         #[props(default, into)]
         scrollbar_visibility: Input<ScrollbarVisibility>,
         /// CSS `scrollbar-width`: `"thin"` (default) or `"auto"`.

@@ -1587,3 +1587,36 @@ e2e::scenario!(
     "/select/tall/above",
     a_tall_dropdown_fits_the_room
 );
+
+/// 4886: a list placed above re-places as a query shrinks it, so "No results" stays at the field.
+async fn a_shrunk_list_above_stays_at_the_field<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    let top = d.rect(TRIGGER).await?.y;
+    d.click(TRIGGER).await?;
+    ends_at(d, top, "the open list above the field").await?;
+    d.type_text("zzz").await?;
+    eventually(d, "No results", async |d| {
+        d.exists("[data-slot=nothing-found]").await
+    })
+    .await?;
+    ends_at(d, top, "the shrunk list still ending at the field").await
+}
+
+/// The dropdown's bottom edge sits just above `top`, the gap apart.
+async fn ends_at<D: Driver>(d: &mut D, top: f64, what: &str) -> Result<()> {
+    const DROPDOWN: &str = "[data-slot=dropdown]";
+    eventually(d, what, async |d| {
+        if !d.exists(DROPDOWN).await? {
+            return Ok(false);
+        }
+        let dropdown = d.rect(DROPDOWN).await?;
+        let bottom = dropdown.y + dropdown.height;
+        Ok(bottom <= top + 1.0 && bottom >= top - 24.0)
+    })
+    .await
+}
+
+e2e::scenario!(
+    a_shrunk_select_above_stays_at_the_field,
+    "/select/tall/above/searchable",
+    a_shrunk_list_above_stays_at_the_field
+);

@@ -57,7 +57,7 @@ pub fn ScrollAreaPage() -> Element {
                     .doc("Which axes scroll and show a scrollbar. `none` clips the overflow."),
                 prop("scrollbar_visibility", "ScrollbarVisibility")
                     .default(theme.scroll_area.visibility.as_str())
-                    .doc("When the scrollbar shows, `always`, `hover` or `hidden`. `scroll` acts like `hover` for now. In a browser or WebView, `always` draws its own track and thumb, so the bar stays where the system overlays and fades its scrollbars; drag the thumb or press the track. The other values keep the native bar."),
+                    .doc("When the scrollbar shows, `always`, `hover` or `hidden`. `hover` shows the bar under a hovering pointer and while focus is inside, so a touch user sees it only on focus. `scroll` acts like `hover` for now. In a browser or WebView, `always` draws its own track and thumb, so the bar stays where the system overlays and fades its scrollbars; drag the thumb or press the track. The other values keep the native bar."),
                 prop("scrollbar_size", "ScrollbarSize")
                     .default(theme.scroll_area.size.as_str())
                     .doc("`thin` or `auto`: the CSS `scrollbar-width`, or 8px and 12px for the bar `always` draws."),

@@ -308,6 +308,7 @@ const KNOWN_GAPS: &[(&str, &str)] = &[
     ("Combobox", "name"),
     ("Combobox", "pick-parent"),
     ("Combobox", "search"),
+    ("Combobox", "sheet-footer"),
     ("Combobox", "sheet-handle"),
     ("MultiSelect", "leading"),
     ("NativeSelect", "leading"),

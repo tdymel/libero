@@ -1,4 +1,4 @@
-use super::dropdown_parts::{SELECT_DROPDOWN, list_dropdown_parts};
+use super::dropdown_parts::{MULTI_SELECT_DROPDOWN, list_dropdown_parts};
 use crate::components::{
     Control, Demo, DemoFile, DemoValues, DocPage, FieldCopy, Wrap, a11y, field_controls,
     field_props, indent, prop, props, readonly_prop, required_prop, status_prop,
@@ -270,7 +270,7 @@ pub fn MultiSelectPage() -> Element {
                     (SelectPart::Helper, "The caption under the control."),
                     (SelectPart::Status, "The validation message."),
                 ])
-                .dropdown_parts("DropdownPart", list_dropdown_parts(SELECT_DROPDOWN)),
+                .dropdown_parts("DropdownPart", list_dropdown_parts(MULTI_SELECT_DROPDOWN)),
                 props("Domain enums", vec![
                     prop(".choices(&X)", "Mapped<Vec<V>, Vec<Choice<V>>, Infallible>")
                         .doc("On a path to `Vec<V>`: binds `name` to a domain enum through a `Choices<V>` list, so the form's value holds `Vec<V>` and the field edits `Vec<Choice<V>>`. Pass `X.list()` as `options` too. `.rules(..)` after it run over `Vec<V>`."),

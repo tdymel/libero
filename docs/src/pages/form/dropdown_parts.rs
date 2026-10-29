@@ -160,6 +160,18 @@ pub(super) const SELECT_DROPDOWN: &[DropdownPart] = &[
     D::OptionLabel,
     D::Empty,
 ];
+pub(super) const MULTI_SELECT_DROPDOWN: &[DropdownPart] = &[
+    D::Panel,
+    D::SheetHandle,
+    D::Search,
+    D::Listbox,
+    D::Group,
+    D::GroupLabel,
+    D::Option,
+    D::OptionLabel,
+    D::Empty,
+    D::SheetFooter,
+];
 pub(super) const SUGGESTION_DROPDOWN: &[DropdownPart] =
     &[D::Panel, D::Listbox, D::Option, D::OptionLabel, D::Empty];
 pub(super) const PHONE_DROPDOWN: &[DropdownPart] = &[
@@ -202,6 +214,7 @@ pub(super) fn list_dropdown_parts(drawn: &[DropdownPart]) -> Vec<(DropdownPart, 
                 DropdownPart::Option => "A row.",
                 DropdownPart::OptionLabel => "A row's `span { \"data-slot\": \"label\" }`, which ends in an ellipsis.",
                 DropdownPart::Empty => "The text shown when the query matches nothing.",
+                DropdownPart::SheetFooter => "Below `sm`: the bar pinned under the rows that holds Done.",
                 DropdownPart::Column => "One level's column.",
                 DropdownPart::DrillBack => "On a narrow screen, the header over a child level that goes back to its parent.",
                 DropdownPart::PickParent => "On a narrow screen with `any_level`, the row that picks the parent.",

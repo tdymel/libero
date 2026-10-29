@@ -508,7 +508,7 @@ fn ComboboxPopup(props: ComboboxPopupProps) -> Element {
     let mut by_pointer = props.by_pointer;
     let footer = props.footer.filter(|_| narrow).map(|footer| {
         rsx! {
-            div { "data-slot": "sheet-footer", {footer} }
+            div { "data-slot": DropdownPart::SheetFooter.slot(), {footer} }
         }
     });
     let (strip, mut attributes) = (props.sheet.then_some(strip), props.attributes);

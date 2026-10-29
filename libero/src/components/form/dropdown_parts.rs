@@ -28,6 +28,8 @@ parts_enum! {
         OptionLabel = "label" => "& [data-slot='option'] > [data-slot='label']",
         /// The text shown when a query matches nothing.
         Empty = "nothing-found" => "& [data-slot='nothing-found']",
+        /// `MultiSelect`, below `sm`: the bar pinned under the rows that holds Done.
+        SheetFooter = "sheet-footer" => "& > [data-slot='sheet-footer']",
         /// `Cascader`: one level's column.
         Column = "column" => "& [data-slot='column']",
         /// `Cascader`, narrow: the header over a child level, back to its parent.
@@ -142,6 +144,7 @@ mod tests {
                 ("option", "& [data-slot='option']"),
                 ("label", "& [data-slot='option'] > [data-slot='label']"),
                 ("nothing-found", "& [data-slot='nothing-found']"),
+                ("sheet-footer", "& > [data-slot='sheet-footer']"),
                 ("column", "& [data-slot='column']"),
                 ("drill-back", "& [data-slot='drill-back']"),
                 ("pick-parent", "& [data-slot='pick-parent']"),

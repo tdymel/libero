@@ -145,6 +145,7 @@ The dropdown is portaled out of the field, so its parts take the
 | `DropdownPart::Option` | `option` | A row. |
 | `DropdownPart::OptionLabel` | `label` | A row's `span { "data-slot": "label" }`, which ends in an ellipsis. |
 | `DropdownPart::Empty` | `nothing-found` | The text shown when the query matches nothing. |
+| `DropdownPart::SheetFooter` | `sheet-footer` | Below `sm`: the bar pinned under the rows that holds Done. |
 
 ## Accessibility
 

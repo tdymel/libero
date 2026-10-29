@@ -83,7 +83,7 @@ fn Demo() -> Element {
 | Prop | Type | Default | Description |
 |---|---|---|---|
 | `scrollbars` | `ScrollAxis` | `vertical` | Which axes scroll and show a scrollbar. `none` clips the overflow. |
-| `scrollbar_visibility` | `ScrollbarVisibility` | `always` | When the scrollbar shows, `always`, `hover` or `hidden`. `scroll` acts like `hover` for now. In a browser or WebView, `always` draws its own track and thumb, so the bar stays where the system overlays and fades its scrollbars; drag the thumb or press the track. The other values keep the native bar. |
+| `scrollbar_visibility` | `ScrollbarVisibility` | `always` | When the scrollbar shows, `always`, `hover` or `hidden`. `hover` shows the bar under a hovering pointer and while focus is inside, so a touch user sees it only on focus. `scroll` acts like `hover` for now. In a browser or WebView, `always` draws its own track and thumb, so the bar stays where the system overlays and fades its scrollbars; drag the thumb or press the track. The other values keep the native bar. |
 | `scrollbar_size` | `ScrollbarSize` | `thin` | `thin` or `auto`: the CSS `scrollbar-width`, or 8px and 12px for the bar `always` draws. |
 | `scrollbar_color` | `ThemeAwareValue` | - | Thumb color. A theme color name paints its text shade, darker on a light page so the thumb stands out. The track stays transparent. Unset it is `muted.6`. |
 | `offset_scrollbars` | `bool` | `false` | Pads the end edge by the drawn bar's width, 8px or 12px, so a flush trailing control is not under it. Only for the bar `always` draws; it pads even while the content fits, so the layout does not shift when it starts to overflow. |

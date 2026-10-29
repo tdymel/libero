@@ -738,14 +738,17 @@ pub(crate) fn SelectCore(props: SelectCoreProps) -> Element {
         nothing_found: (no_rows || searchable && !query.read().is_empty())
             .then(|| nothing_found.to_string()),
         multiple,
-        // A multi-select pick adds or drops a chip, resizing the trigger.
+        // A multi-select pick resizes the trigger; a query resizes the box, which re-places above (4886).
         remeasure: match opened {
-            true => picked
-                .read()
-                .selected
-                .iter()
-                .filter(|selected| **selected)
-                .count() as u64,
+            true => {
+                let chips = picked
+                    .read()
+                    .selected
+                    .iter()
+                    .filter(|selected| **selected)
+                    .count();
+                ((chips as u64) << 32) | visible.len() as u64
+            }
             false => 0,
         },
         // Focused once measured; earlier is a silent no-op. Never on a touch open.

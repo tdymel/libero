@@ -32,6 +32,10 @@ pub const ROUTES: Routes = &[
         "/select/tall/above",
         || rsx! { SelectTallPage { top: "calc(100vh - 100px)" } },
     ),
+    (
+        "/select/tall/above/searchable",
+        || rsx! { SelectTallPage { top: "calc(100vh - 100px)", searchable: true } },
+    ),
     ("/select/long", || rsx! { SelectLongPage {} }),
     ("/select/long-label", || rsx! { SelectLongLabelPage {} }),
     ("/select/long-custom", || rsx! { SelectLongCustomPage {} }),
@@ -144,15 +148,16 @@ enum Row {
 }
 
 /// Forty rows and no list cap, the trigger at `top`: only the room on the
-/// side it lands on holds the dropdown (1739).
+/// side it lands on holds the dropdown (1739). Searchable: a query shrinks it (4886).
 #[component]
-fn SelectTallPage(top: &'static str) -> Element {
+fn SelectTallPage(top: &'static str, #[props(default)] searchable: bool) -> Element {
     let mut value = use_signal(|| None::<Row>);
 
     rsx! {
         div { position: "absolute", left: "16px", top, width: "240px",
             Select {
                 label: "Row",
+                searchable,
                 value: value(),
                 onchange: move |next| value.set(next),
                 dropdown_parts: Parts::new().part(DropdownPart::Listbox, sx().max_height("none")),
