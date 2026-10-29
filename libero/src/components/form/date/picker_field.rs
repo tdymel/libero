@@ -370,7 +370,14 @@ pub(super) fn use_picker_field<V: FieldValue>(
         PopoverOptions::new(theme.popover.gap, theme.popover.padding),
     );
     let floating = *popover.floating();
-    let close = use_callback(move |()| open_to(false));
+    let picker_focus = use_picker_focus(anchor, floating, field_box.id());
+    // An outside tap or a swipe hands focus in the sheet back to the input, as Escape does (4916).
+    let close = use_callback(move |()| {
+        if picker_focus.in_dropdown() {
+            picker_focus.focus_input();
+        }
+        open_to(false);
+    });
     let room = use_sheet_room(floating, narrow() && popover.placed(), close);
     let clearance = use_sheet_clearance(
         anchor,
@@ -393,7 +400,6 @@ pub(super) fn use_picker_field<V: FieldValue>(
         .style(Some(format!("{}{room}{drag}", popover.vars())))
         .prepare();
     let keyboardless = use_keyboardless();
-    let picker_focus = use_picker_focus(anchor, floating, field_box.id());
     let dialog_id = format!("{}-dialog", field_box.id());
     let entry_id = dialog_id.clone();
     let tab_id = dialog_id.clone();
@@ -421,15 +427,7 @@ pub(super) fn use_picker_field<V: FieldValue>(
     };
     let focus_input = move || picker_focus.focus_input();
     // On the Escape stack exactly while the handler below takes Escape, so a `HoverCard` leaves it.
-    use_field_list_layer(
-        opened() && !readonly,
-        use_callback(move |()| {
-            if picker_focus.in_dropdown() {
-                focus_input();
-            }
-            open_to(false);
-        }),
-    );
+    use_field_list_layer(opened() && !readonly, close);
     // Element 0 is the text input, 1 the dropdown; closes once focus is in neither.
     // Focus alone does not open (WCAG 3.2.1): Arrow Down or a click does.
     let focus = use_focus_within(

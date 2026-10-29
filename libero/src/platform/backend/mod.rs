@@ -1150,8 +1150,8 @@ pub(crate) fn swallow_outside_clicks(
     };
     #[cfg(all(not(target_arch = "wasm32"), not(feature = "native")))]
     return {
-        let _ = (outside, onswallow);
-        webview::swallow_outside_clicks(media, kept)
+        let _ = outside;
+        webview::swallow_outside_clicks(media, onswallow, kept)
     };
 }
 

@@ -1,6 +1,5 @@
 use std::rc::Rc;
 
-use dioxus::document::Eval;
 use dioxus::prelude::spawn;
 use serde_json::json;
 
@@ -98,18 +97,25 @@ pub(crate) const PORTAL_ATTR: &str = "data-lsx-portal";
 
 /// The web's swallow (4826), decided in the page: no `outside` reaches it (958). Once per page,
 /// ahead of every subscription's press listener, a new press, a cancel or a key clears it.
+/// As on the web, the swallowed press moves no focus and its click is sent to Rust (4915).
 const SWALLOW: &str = "const [media, kept, observe, owner, portal] = data;
     if (!window.__lsxSwallow) {
-        const state = window.__lsxSwallow = { on: false };
-        const clear = () => { state.on = false; };
+        const state = window.__lsxSwallow = { on: false, told: null };
+        const clear = () => { state.on = false; state.told = null; };
         for (const type of ['pointerdown', 'pointercancel', 'keydown']) {
             window.addEventListener(type, clear, { capture: true });
         }
+        // A tap's mousedown follows its pointerup.
+        window.addEventListener('mousedown', (event) => {
+            if (event.isTrusted && state.on) event.preventDefault();
+        }, { capture: true });
         window.addEventListener('click', (event) => {
             if (!event.isTrusted || !state.on) return;
-            state.on = false;
+            const told = state.told;
+            clear();
             event.stopPropagation();
             event.preventDefault();
+            told?.();
         }, { capture: true });
     }
     const query = window.matchMedia(media);
@@ -125,12 +131,15 @@ const SWALLOW: &str = "const [media, kept, observe, owner, portal] = data;
         return false;
     };
     const onPress = (event) => {
-        if (query.matches && !keeps(event.target)) window.__lsxSwallow.on = true;
+        if (!query.matches || keeps(event.target)) return;
+        window.__lsxSwallow.on = true;
+        window.__lsxSwallow.told = () => dioxus.send(0);
     };
     window.addEventListener('pointerdown', onPress, { capture: true });";
 
 pub(crate) fn swallow_outside_clicks(
     media: &str,
+    onswallow: Rc<dyn Fn()>,
     kept: Option<u64>,
 ) -> Option<Box<dyn PressSubscription>> {
     if !runs_scripts() {
@@ -146,16 +155,14 @@ pub(crate) fn swallow_outside_clicks(
             slot.park("")
         ),
     );
-    Some(Box::new(WebViewSwallow {
-        _script: script,
-        _slot: slot,
+    let task = spawn(async move {
+        let mut script = script;
+        while script.recv::<u8>().await.is_ok() {
+            onswallow();
+        }
+    });
+    Some(Box::new(WebViewListener {
+        task,
+        _slot: Rc::new(slot),
     }))
 }
-
-/// The page's listener lives until the slot drops.
-struct WebViewSwallow {
-    _script: Eval,
-    _slot: Slot,
-}
-
-impl PressSubscription for WebViewSwallow {}

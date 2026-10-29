@@ -522,6 +522,63 @@ fn an_outside_tap_hands_focus_from_the_search_to_the_picker() {
     block_on(outside_tap_leaves_focus_on_the_picker(true));
 }
 
+/// Todo 4916: with focus in a picker's sheet, a tap on a tab closes it and hands focus to the input.
+async fn outside_tap_hands_focus_to_the_input(route: &str) {
+    const INPUT: &str = "#low input";
+    const DIALOG: &str = "[role=dialog]";
+    let fixture = phone(route).await;
+    let page = &fixture.page;
+    tap(page, INPUT).await.unwrap();
+    // The spinner takes focus itself; the others get it as a tap into them would.
+    let js = format!(
+        "(() => {{ const s = document.querySelector({DIALOG:?}); \
+         if (!s || getComputedStyle(s).visibility !== 'visible') return false; \
+         if (!s.contains(document.activeElement)) \
+           s.querySelector('[tabindex=\"0\"], button, input')?.focus(); \
+         return s.contains(document.activeElement); }})()"
+    );
+    wait::for_js_true(page, &js, "the sheet open, focus in it")
+        .await
+        .unwrap();
+    tap(page, "[role=tab][aria-selected=false]").await.unwrap();
+    let js = format!(
+        "(() => {{ const s = document.querySelector({DIALOG:?}); \
+         return (!s || getComputedStyle(s).visibility !== 'visible') \
+           && document.querySelectorAll('[role=tab][aria-selected=false]').length === 1 \
+           && document.activeElement === document.querySelector({INPUT:?}); }})()"
+    );
+    wait::for_js_true(
+        page,
+        &js,
+        "the sheet closed, the tab unselected, focus on the input",
+    )
+    .await
+    .unwrap();
+    fixture.console.assert_clean(route).unwrap();
+    fixture.close().await.unwrap();
+}
+
+#[test]
+fn an_outside_tap_hands_focus_from_the_color_sheet_to_the_input() {
+    block_on(outside_tap_hands_focus_to_the_input(
+        "/select-phone/low-color",
+    ));
+}
+
+#[test]
+fn an_outside_tap_hands_focus_from_the_date_sheet_to_the_input() {
+    block_on(outside_tap_hands_focus_to_the_input(
+        "/select-phone/low-date",
+    ));
+}
+
+#[test]
+fn an_outside_tap_hands_focus_from_the_spinner_to_the_input() {
+    block_on(outside_tap_hands_focus_to_the_input(
+        "/select-phone/low-number",
+    ));
+}
+
 /// Above `sm` the lists stay popovers under the field.
 #[test]
 fn a_desktop_keeps_the_popover() {

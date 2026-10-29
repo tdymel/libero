@@ -224,15 +224,22 @@ pub(super) fn NumberSpinner<T: NumberValue>(
     );
     let floating = *popover.floating();
     let narrow = use_media_query(&narrow_query());
-    let sheet_close = use_callback(move |()| close(false));
-    let room = use_sheet_room(floating, narrow() && popover.placed(), sheet_close);
+    let picker_focus = use_picker_focus(anchor, floating, &field_id);
+    // Escape, Back, an outside tap and a swipe hand focus in the sheet back to the input (4916).
+    let done = use_callback(move |()| {
+        if picker_focus.in_dropdown() {
+            picker_focus.focus_input();
+        }
+        close(false);
+    });
+    let room = use_sheet_room(floating, narrow() && popover.placed(), done);
     let clearance = use_sheet_clearance(anchor, field_root, popover, showing, theme.popover.gap);
     use_scroll_clear(anchor, clearance);
     let SheetSwipe {
         strip,
         listeners,
         style: drag,
-    } = use_sheet_swipe(floating, sheet_close);
+    } = use_sheet_swipe(floating, done);
     let dropdown_states: Input<States> = States::new().active("bordered").into();
     let dropdown = use_box()
         .framework_sx(&SPINNER_SX)
@@ -243,7 +250,6 @@ pub(super) fn NumberSpinner<T: NumberValue>(
             FIELD_FONT_SIZE.value(size)
         )))
         .prepare();
-    let picker_focus = use_picker_focus(anchor, floating, &field_id);
     let dialog_id = format!("{field_id}-spinner");
     let column_id = format!("{field_id}-spin");
 
@@ -260,14 +266,7 @@ pub(super) fn NumberSpinner<T: NumberValue>(
         }
     });
     let focus_input = move || picker_focus.focus_input();
-    let done = move || {
-        if picker_focus.in_dropdown() {
-            focus_input();
-        }
-        close(false);
-    };
-    // Escape and Android's Back close it, as a tap outside does.
-    use_field_list_layer(showing, use_callback(move |()| done()));
+    use_field_list_layer(showing, done);
     let settle = move || {
         spawn(async move {
             if !picker_focus.settled_inside().await {
@@ -333,7 +332,7 @@ pub(super) fn NumberSpinner<T: NumberValue>(
             Key::Named(NamedKey::End) if max.is_some() => max,
             Key::Named(NamedKey::Enter) => {
                 event.prevent_default();
-                done();
+                done(());
                 return;
             }
             _ => return,
@@ -378,7 +377,7 @@ pub(super) fn NumberSpinner<T: NumberValue>(
             .event("onkeydown", move |event: KeyboardEvent| match event.key() {
                 Key::Named(NamedKey::Escape) => {
                     event.prevent_default();
-                    done();
+                    done(());
                 }
                 _ if is_tab(&event) => picker_focus.tab(&tab_id, &event),
                 _ => {}
@@ -421,7 +420,7 @@ pub(super) fn NumberSpinner<T: NumberValue>(
                             onclick: keyboard,
                             Glyph { slot: IconSlot::Keyboard, icon: lucide::keyboard::outlined }
                         }
-                        Button { onclick: move |_| done(), {labels.done} }
+                        Button { onclick: move |_| done(()), {labels.done} }
                     }
                 },
             )

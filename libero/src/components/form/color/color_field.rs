@@ -420,7 +420,14 @@ pub fn ColorField(props: ColorFieldProps) -> Element {
     );
     let floating = *popover.floating();
     let narrow = use_media_query(&narrow_query());
-    let close = use_callback(move |()| opened.set(false));
+    let picker_focus = use_picker_focus(anchor, floating, field.id());
+    // An outside tap or a swipe hands focus in the sheet back to the input, as Escape does (4916).
+    let close = use_callback(move |()| {
+        if picker_focus.in_dropdown() {
+            picker_focus.focus_input();
+        }
+        opened.set(false);
+    });
     let room = use_sheet_room(floating, narrow() && popover.placed(), close);
     let clearance = use_sheet_clearance(anchor, field.root(), popover, showing, theme.popover.gap);
     use_scroll_clear(anchor, clearance);
@@ -437,7 +444,6 @@ pub fn ColorField(props: ColorFieldProps) -> Element {
         .style(Some(format!("{}{room}{drag}", popover.vars())))
         .prepare();
     let keyboardless = use_keyboardless();
-    let picker_focus = use_picker_focus(anchor, floating, field.id());
     let dialog_id = format!("{}-dialog", field.id());
     let entry_id = dialog_id.clone();
     let tab_id = dialog_id.clone();
@@ -467,15 +473,7 @@ pub fn ColorField(props: ColorFieldProps) -> Element {
     let focus_input = move || picker_focus.focus_input();
     // On the Escape stack exactly while the key handler below would take
     // Escape, so a `HoverCard` around this field leaves the press to it.
-    use_field_list_layer(
-        showing,
-        use_callback(move |()| {
-            if picker_focus.in_dropdown() {
-                focus_input();
-            }
-            opened.set(false);
-        }),
-    );
+    use_field_list_layer(showing, close);
     // Text that parsed was already emitted, so it goes back to the value's own
     // spelling; text that did not stays only if asked. Blank text is empty, not invalid.
     let blank = move || {

@@ -4,9 +4,10 @@
 
 use dioxus::prelude::*;
 use libero::components::{
-    Button, Cascader, CascaderDropdown, CascaderOption, ColorField, Flex, MultiSelect, OptionList,
-    Options, PhoneField, Select, Tabs, Text, use_cascader,
+    Button, Cascader, CascaderDropdown, CascaderOption, ChronoField, ColorField, Flex, MultiSelect,
+    NumberField, OptionList, Options, PhoneField, Select, Tabs, Text, TouchInput, use_cascader,
 };
+use libero::chrono::NaiveDate;
 
 use crate::{Routes, common::Fruit};
 
@@ -16,6 +17,8 @@ pub const ROUTES: Routes = &[
     ("/select-phone/low-select", || rsx! { LowSelectPage {} }),
     ("/select-phone/low-color", || rsx! { LowColorPage {} }),
     ("/select-phone/low-phone", || rsx! { LowPhonePage {} }),
+    ("/select-phone/low-date", || rsx! { LowDatePage {} }),
+    ("/select-phone/low-number", || rsx! { LowNumberPage {} }),
     (
         "/select-phone/open-on-focus",
         || rsx! { OpenOnFocusPage {} },
@@ -129,35 +132,9 @@ fn LowSelectPage() -> Element {
 }
 
 /// A field with a helper in the screen's foot: the sheet clears the helper too (4907).
+/// Tabs above, as the docs page's: a tap on one only closes the sheet (4907, 4916).
 #[component]
 fn LowField(children: Element) -> Element {
-    rsx! {
-        Flex { direction: "column", gap: "md", padding: "md",
-            div { style: "height: calc(100vh - 170px)" }
-            div { id: "low", {children} }
-            div { style: "height: 100vh" }
-        }
-    }
-}
-
-#[component]
-fn LowColorPage() -> Element {
-    rsx! {
-        LowField {
-            ColorField { label: "Brand color", helper: "Shown in the theme preview." }
-        }
-    }
-}
-
-#[derive(Clone, PartialEq, Options)]
-enum Section {
-    Account,
-    Billing,
-}
-
-/// Tabs above, as the docs page's: a tap on one closes the sheet and leaves focus on the picker (4907).
-#[component]
-fn LowPhonePage() -> Element {
     let mut section = use_signal(|| Section::Account);
 
     rsx! {
@@ -171,8 +148,61 @@ fn LowPhonePage() -> Element {
                 panel: |_: Section| rsx! { "panel" },
             }
         }
+        Flex { direction: "column", gap: "md", padding: "md",
+            div { style: "height: calc(100vh - 170px)" }
+            div { id: "low", {children} }
+            div { style: "height: 100vh" }
+        }
+    }
+}
+
+#[derive(Clone, PartialEq, Options)]
+enum Section {
+    Account,
+    Billing,
+}
+
+#[component]
+fn LowColorPage() -> Element {
+    rsx! {
+        LowField {
+            ColorField { label: "Brand color", helper: "Shown in the theme preview." }
+        }
+    }
+}
+
+#[component]
+fn LowPhonePage() -> Element {
+    rsx! {
         LowField {
             PhoneField { label: "Phone", country: "DE", helper: "Include the area code." }
+        }
+    }
+}
+
+#[component]
+fn LowDatePage() -> Element {
+    let mut due = use_signal(|| None::<NaiveDate>);
+
+    rsx! {
+        LowField {
+            ChronoField::<NaiveDate> { label: "Due", value: due(), onchange: move |next| due.set(next) }
+        }
+    }
+}
+
+#[component]
+fn LowNumberPage() -> Element {
+    let mut count = use_signal(|| Some(3u32));
+
+    rsx! {
+        LowField {
+            NumberField::<u32> {
+                label: "Count",
+                touch_input: TouchInput::Spin,
+                value: count(),
+                onchange: move |next| count.set(next),
+            }
         }
     }
 }

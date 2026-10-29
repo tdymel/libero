@@ -55,8 +55,8 @@ pub(crate) type OutsidePress = Box<dyn Fn(&Rc<MountedData>) -> bool>;
 /// Until dropped, while `media` matches, swallows the click of each press whose target `outside`
 /// accepts; one pressed before the drop still loses its click (4826). Blitz keeps the click of a
 /// release over 2px from its press. A WebView cannot call `outside`: it keeps the click of a press
-/// in a portaled layer, an open trigger or the element of WebView tag `kept` (4839). On the web the
-/// swallowed press moves no focus, and `onswallow` hears its click go (not on a WebView, 4907).
+/// in a portaled layer, an open trigger or the element of WebView tag `kept` (4839). On the web and
+/// a WebView the swallowed press moves no focus (4907, 4915); `onswallow` hears its click go.
 pub(crate) fn swallow_outside_clicks(
     media: &str,
     outside: OutsidePress,

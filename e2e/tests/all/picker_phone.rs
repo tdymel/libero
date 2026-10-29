@@ -6,7 +6,7 @@ use anyhow::{Result, bail};
 use chromiumoxide::Page;
 use chromiumoxide::cdp::browser_protocol::emulation::SetDeviceMetricsOverrideParams;
 use e2e::browser::block_on;
-use e2e::driver::{Driver, eventually};
+use e2e::driver::{Driver, Platform, eventually};
 use e2e::passes::pointer::tap;
 use e2e::passes::{keyboard, pointer};
 use e2e::wait::PageBounded;
@@ -745,6 +745,10 @@ async fn an_outside_press_only_closes<D: Driver>(d: &mut D, _route: &str) -> Res
     let tally = d.text(TALLY).await?;
     if tally != "Tapped 0" {
         bail!("the press outside the sheet clicked the button: {tally:?}");
+    }
+    // As a scrim's, the press moved no focus (4907, 4915); Blitz still moves it.
+    if d.platform() != Platform::Native && !d.is_focused(&input("due")).await? {
+        bail!("the press outside the sheet moved focus off the field");
     }
     d.click(TALLY).await?;
     eventually(d, "the next press to click", async |d| {
