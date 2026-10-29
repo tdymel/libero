@@ -4,7 +4,7 @@ use crate::components::{
 };
 use dioxus::prelude::*;
 use libero::{
-    components::{Box, Code, Flex, Input, Paper, Text, Title},
+    components::{Box, Code, Input, Paper, Text, Title},
     sx::sx,
     use_theme,
 };
@@ -26,26 +26,14 @@ const HREF: &str = "#order-4021";
 /// blur softens hard edges the glass overlaps.
 const BACKDROP: &str = "repeating-conic-gradient(var(--lsx-secondary-fill-6) 0 25%, var(--lsx-ink) 0 50%) 0 0 / 96px 96px";
 
-/// The second glass beside the demo's: tinted if the demo's is plain, plain if it is tinted.
-fn other_glass(values: &DemoValues) -> (Option<&'static str>, &'static str) {
-    match values.str("color").as_str() {
-        UNSET => (Some("primary"), "Tinted glass"),
-        _ => (None, "Plain glass"),
-    }
-}
-
-/// Glass prints the backdrop `Box` it sits on, with the second glass beside it; off, the bare `Paper`.
+/// Glass prints the backdrop `Box` it sits on; off, the bare `Paper`.
 fn wrap_backdrop(values: &DemoValues, code: &str) -> String {
     if values.str("glass") != "true" {
         return code.to_string();
     }
-    let (color, label) = other_glass(values);
-    let color = color
-        .map(|color| format!("color: {color:?}, "))
-        .unwrap_or_default();
     format!(
-        "Box {{\n    sx: sx().padding(\"xl\").background({BACKDROP:?}),\n    Flex {{ gap: \"md\", wrap: \"wrap\",\n{}\n        Paper {{ glass: true, {color}sx: sx().padding(\"lg\"), Text {{ {label:?} }} }}\n    }}\n}}",
-        indent(&indent(code))
+        "Box {{\n    sx: sx().padding(\"xl\").background({BACKDROP:?}),\n{}\n}}",
+        indent(code)
     )
 }
 
@@ -180,24 +168,10 @@ pub fn PaperPage() -> Element {
                         }
                     };
                     let backdrop = libero::sx::sx().padding("xl").background(BACKDROP);
-                    let (color, label) = other_glass(&values);
 
                     rsx! {
                         if glass {
-                            Box { sx: backdrop,
-                                Flex { gap: "md", wrap: "wrap",
-                                    {paper}
-                                    Paper {
-                                        glass: true,
-                                        color: match color {
-                                            Some(color) => Input::from(color),
-                                            None => Input::None,
-                                        },
-                                        sx: libero::sx::sx().padding("lg"),
-                                        Text { "{label}" }
-                                    }
-                                }
-                            }
+                            Box { sx: backdrop, {paper} }
                         } else {
                             {paper}
                         }

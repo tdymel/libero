@@ -6,7 +6,7 @@ use libero::{
     components::{
         ActionIcon, Box, Burger, Button, ButtonGroup, DirectionToggle, Header, Kbd, Pictogram,
         Repository, SpotlightHandle, SpotlightOptions, ThemeSwitcher, spotlight_filter,
-        use_spotlight,
+        use_spotlight, visually_hidden_sx,
     },
     sx::{Sx, sx},
     theme::{
@@ -46,47 +46,57 @@ fn DocsHeaderPage() -> Element {
         ..Default::default()
     });
     rsx! {
+        // Edge to edge as in the docs: the fixture's 24px page padding would cost the row 48px.
         if seeded() == Some(true) {
-            Header {
-                id: "docs-header",
-                publish_height: true,
-                glass: true,
-                sx: header_sx(),
-                Burger {
-                    id: "docs-burger",
-                    open: open(),
-                    "aria-controls": "docs-nav",
-                    onclick: move |_| open.set(!open()),
-                    sx: burger_sx(false),
-                }
-                // The logo and name, as wide as the docs' own.
-                Box {
-                    component: "span",
-                    sx: sx()
-                        .display("flex")
-                        .align_items("center")
-                        .gap("xs")
-                        .breakpoint(Size::Sm, sx().gap("md"))
-                        .min_width("0"),
+            Box { sx: sx().margin_inline("-24px"),
+                Header {
+                    id: "docs-header",
+                    publish_height: true,
+                    glass: true,
+                    sx: header_sx(),
+                    Burger {
+                        id: "docs-burger",
+                        open: open(),
+                        "aria-controls": "docs-nav",
+                        onclick: move |_| open.set(!open()),
+                        sx: burger_sx(false),
+                    }
+                    // The logo and name, as wide as the docs' own.
                     Box {
                         component: "span",
                         sx: sx()
-                            .width("40px")
-                            .breakpoint(Size::Sm, sx().width("72px"))
-                            .min_width("0")
-                            .height("44px"),
+                            .display("flex")
+                            .align_items("center")
+                            .gap("xs")
+                            .breakpoint(Size::Sm, sx().gap("md"))
+                            .min_width("0"),
+                        Box {
+                            component: "span",
+                            sx: sx()
+                                .width("40px")
+                                .breakpoint(Size::Sm, sx().width("72px"))
+                                .min_width("0")
+                                .height("44px"),
+                        }
+                        Box {
+                            component: "span",
+                            sx: wordmark_sx(),
+                            "Libero"
+                        }
                     }
-                    Box {
-                        component: "span",
-                        sx: sx().font_family(TITLE_FONT_FAMILY.value()).and(TitleDefaults::size_sx(Size::Lg)),
-                        "Libero"
-                    }
+                    {search_button(search, "Ctrl")}
+                    {site_tools(search)}
                 }
-                {search_button(search, "Ctrl")}
-                {site_tools(search)}
             }
         }
     }
+}
+
+/// The name beside the logo. Hidden but still read below 360px, so the row fits a 320px phone (4993).
+fn wordmark_sx() -> Sx {
+    sx().font_family(TITLE_FONT_FAMILY.value())
+        .and(TitleDefaults::size_sx(Size::Lg))
+        .media("(max-width: 359.98px)", visually_hidden_sx())
 }
 
 /// Tighter on a phone: the seven controls just miss 320px at `md`.
@@ -121,16 +131,8 @@ fn site_tools(search: SpotlightHandle) -> Element {
                         // the next item gets back its outer corners and loses the seam.
                         .selector("& > :nth-child(2) :is(button, a)", first_item_sx())
                         .selector("& > :nth-child(2):is(button, a)", first_item_sx()),
-                )
-                // Under a finger the small icons are boxes of their own: a group's press
-                // box grows across it only, and these sit edge to edge.
-                .media(
-                    "(pointer: coarse)",
-                    sx().selector(
-                        "& > :is(button, a), & > * :is(button, a)",
-                        sx().min_width("44px").min_height("44px"),
-                    ),
                 ),
+            // No 44px boxes under a finger: they wrapped the row on a phone (4993); `sm` keeps 24px.
             // Below `Sm`, the field's own breakpoint: one of the two always shows, also
             // with a raised default font size (a `px` query and a `rem` one drift apart).
             ActionIcon {

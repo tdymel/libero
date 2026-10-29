@@ -3,7 +3,7 @@ use crate::components::{
     not_gradient_variant, prop, props,
 };
 use dioxus::prelude::*;
-use libero::components::{Button, ButtonPart, Code, Flex, Input, Loader, Pictogram, Text};
+use libero::components::{Button, ButtonPart, Code, Input, Loader, Pictogram, Text};
 use libero::use_theme;
 use pictogram_icons_lucide as lucide;
 
@@ -14,6 +14,11 @@ const CUSTOM_LOADER: &str =
 
 fn is_link(values: &DemoValues) -> bool {
     values.str("link") == "true"
+}
+
+/// Hides the loader controls until the button loads, as a link never does.
+fn not_loading(values: &DemoValues) -> bool {
+    is_link(values) || values.str("loading") != "true"
 }
 
 fn custom_loader(values: &DemoValues) -> Option<Element> {
@@ -178,17 +183,15 @@ pub fn ButtonPage() -> Element {
                         .hidden_when(|values| values.str("disabled") != "true"),
                     // An `<a>` has nothing to wait for: ignored, with a warning.
                     Control::switch("loading").hidden_when(is_link),
-                    // On and at the start, so the second button below, which always loads,
-                    // shows both without another switch.
                     Control::toggle("loading_position", ["center", "start", "end"])
                         .labels(["Center", "Start", "End"])
-                        .default("start")
-                        .hidden_when(is_link)
+                        .default("center")
+                        .hidden_when(not_loading)
                         .code(|_, values| match values.str("loading_position").as_str() {
                             "center" => vec![],
                             value => vec![format!("loading_position: {value:?}")],
                         }),
-                    Control::switch("custom_loader").default("true").hidden_when(is_link).code(|_, values| {
+                    Control::switch("custom_loader").hidden_when(not_loading).code(|_, values| {
                         match values.str("custom_loader").as_str() {
                             "true" => vec![CUSTOM_LOADER.to_string()],
                             _ => vec![],
@@ -228,84 +231,40 @@ pub fn ButtonPage() -> Element {
                     ),
                 ],
                 render: move |values: DemoValues| rsx! {
-                    Flex { direction: "row", gap: "sm",
-                        Button {
-                            color: values.str("color"),
-                            variant: values.str("variant"),
-                            gradient: gradient_value(&values),
-                            size: values.str("size"),
-                            radius: values.str("radius"),
-                            full_width: values.str("full_width") == "true",
-                            justify: match values.str("justify").as_str() {
-                                "center" => Input::None,
-                                value => Input::from(value),
-                            },
-                            selected: match values.str("selected").as_str() {
-                                _ if is_link(&values) => None,
-                                "true" => Some(true),
-                                "false" => Some(false),
-                                _ => None,
-                            },
-                            disabled: values.str("disabled") == "true",
-                            focusable_when_disabled: values.str("focusable_when_disabled") == "true",
-                            loading: values.str("loading") == "true" && !is_link(&values),
-                            loading_position: values.str("loading_position"),
-                            loader: custom_loader(&values),
-                            gap: values.str("gap"),
-                            ripple: values.str("ripple") != "false",
-                            r#type: (!is_link(&values)).then(|| values.str("type")),
-                            to: match values.str("link").as_str() {
-                                "true" => Input::from("https://dioxuslabs.com"),
-                                _ => Input::None,
-                            },
-                            target: (values.str("link") == "true").then(|| "_blank".to_string()),
-                            new_tab_icon: (values.str("new_tab_icon") == "true").then_some(true),
-                            trailing_icon: (values.str("trailing_icon") == "true")
-                                .then(|| rsx! { Pictogram { icon: lucide::chevron_right::outlined, width: "1.25em", height: "1.25em" } }),
-                            "Save changes"
-                        }
-                        // Always loading, so the position and the loader show without the `loading` switch.
-                        if !is_link(&values) {
-                            Button {
-                                variant: values.str("variant"),
-                                color: values.str("color"),
-                                size: values.str("size"),
-                                loading: true,
-                                loading_position: values.str("loading_position"),
-                                loader: custom_loader(&values),
-                                icon: rsx! { Pictogram { icon: lucide::save::outlined } },
-                                "Saving"
-                            }
-                        }
-                        // A full-width row with `justify`, shown without a switch.
-                        if !is_link(&values) {
-                            Button {
-                                variant: values.str("variant"),
-                                color: values.str("color"),
-                                size: values.str("size"),
-                                full_width: true,
-                                justify: "space-between",
-                                icon: rsx! { Pictogram { icon: lucide::user::outlined, width: "1.25em", height: "1.25em" } },
-                                trailing_icon: rsx! { Pictogram { icon: lucide::chevron_right::outlined, width: "1.25em", height: "1.25em" } },
-                                "Account"
-                            }
-                        }
-                        // The secondary action beside a filled one, shown without a switch.
-                        if !is_link(&values) {
-                            Button { color: "neutral", variant: "outlined", size: values.str("size"), "Cancel" }
-                        }
-                        // A new-tab link beside it that opts into the icon, shown without the `link` switch.
-                        if !is_link(&values) {
-                            Button {
-                                variant: values.str("variant"),
-                                color: values.str("color"),
-                                size: values.str("size"),
-                                to: "https://dioxuslabs.com",
-                                target: "_blank",
-                                new_tab_icon: true,
-                                "Dioxus"
-                            }
-                        }
+                    Button {
+                        color: values.str("color"),
+                        variant: values.str("variant"),
+                        gradient: gradient_value(&values),
+                        size: values.str("size"),
+                        radius: values.str("radius"),
+                        full_width: values.str("full_width") == "true",
+                        justify: match values.str("justify").as_str() {
+                            "center" => Input::None,
+                            value => Input::from(value),
+                        },
+                        selected: match values.str("selected").as_str() {
+                            _ if is_link(&values) => None,
+                            "true" => Some(true),
+                            "false" => Some(false),
+                            _ => None,
+                        },
+                        disabled: values.str("disabled") == "true",
+                        focusable_when_disabled: values.str("focusable_when_disabled") == "true",
+                        loading: values.str("loading") == "true" && !is_link(&values),
+                        loading_position: values.str("loading_position"),
+                        loader: custom_loader(&values),
+                        gap: values.str("gap"),
+                        ripple: values.str("ripple") != "false",
+                        r#type: (!is_link(&values)).then(|| values.str("type")),
+                        to: match values.str("link").as_str() {
+                            "true" => Input::from("https://dioxuslabs.com"),
+                            _ => Input::None,
+                        },
+                        target: (values.str("link") == "true").then(|| "_blank".to_string()),
+                        new_tab_icon: (values.str("new_tab_icon") == "true").then_some(true),
+                        trailing_icon: (values.str("trailing_icon") == "true")
+                            .then(|| rsx! { Pictogram { icon: lucide::chevron_right::outlined, width: "1.25em", height: "1.25em" } }),
+                        "Save changes"
                     }
                 },
             }

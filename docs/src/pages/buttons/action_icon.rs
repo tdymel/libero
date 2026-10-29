@@ -3,7 +3,7 @@ use crate::components::{
     not_gradient_variant, prop, props,
 };
 use dioxus::prelude::*;
-use libero::components::{ActionIcon, Code, Flex, Input, Loader, Text};
+use libero::components::{ActionIcon, Code, Input, Loader, Text};
 use libero::use_theme;
 
 /// The `shortcut` switch's chord, shown in the tooltip and as `aria-keyshortcuts`.
@@ -165,7 +165,8 @@ pub fn ActionIconPage() -> Element {
                     // An `<a>` has nothing to wait for: ignored, with a warning.
                     Control::switch("loading").hidden_when(is_link),
                     // Off: still, under reduced motion, the dots read as a "more" button; the ring reads as busy.
-                    Control::switch("custom_loader").hidden_when(is_link).code(|_, values| {
+                    Control::switch("custom_loader")
+                        .hidden_when(|values| is_link(values) || values.str("loading") != "true").code(|_, values| {
                         match values.str("custom_loader").as_str() {
                             "true" => vec![CUSTOM_LOADER.to_string()],
                             _ => vec![],
@@ -193,79 +194,39 @@ pub fn ActionIconPage() -> Element {
                             _ => vec![],
                         }),
                 ],
-                // 12px apart: clear of each other's focus ring and of an `xs` icon's 44px touch box.
-                render: move |values: DemoValues| rsx! { Flex { direction: "row", gap: "12px",
-                    ActionIcon {
-                        variant: values.str("variant"),
-                        gradient: gradient_value(&values),
-                        color: match values.str("color").as_str() {
-                            "primary" => Input::None,
-                            color => Input::from(color),
-                        },
-                        size: values.str("size"),
-                        radius: values.str("radius"),
-                        selected: match values.str("selected").as_str() {
-                            _ if is_link(&values) => None,
-                            "true" => Some(true),
-                            "false" => Some(false),
-                            _ => None,
-                        },
-                        tooltip: values.str("tooltip") == "true",
-                        shortcut: (values.str("shortcut") == "true").then(|| SHORTCUT.to_string()),
-                        disabled: values.str("disabled") == "true",
-                        focusable_when_disabled: values.str("focusable_when_disabled") == "true",
-                        loading: values.str("loading") == "true" && !is_link(&values),
-                        loader: custom_loader(&values),
-                        ripple: values.str("ripple") != "false",
-                        to: match values.str("link").as_str() {
-                            "true" => Input::from("https://dioxuslabs.com"),
-                            _ => Input::None,
-                        },
-                        target: (values.str("link") == "true").then(|| "_blank".to_string()),
-                        new_tab_icon: (values.str("new_tab_icon") == "true").then_some(true),
-                        aria_label: "Confirm",
-                        icon: pictogram_icons_lucide::check::outlined,
-                    }
-                    // Always loading, so the loader shows without the `loading` switch.
-                    if !is_link(&values) {
-                        ActionIcon {
-                            variant: values.str("variant"),
-                            gradient: gradient_value(&values),
-                            color: match values.str("color").as_str() {
-                                "primary" => Input::None,
-                                color => Input::from(color),
-                            },
-                            size: values.str("size"),
-                            radius: values.str("radius"),
-                            tooltip: values.str("tooltip") == "true",
-                            loading: true,
-                            loader: custom_loader(&values),
-                            aria_label: "Saving",
-                            icon: pictogram_icons_lucide::save::outlined,
-                        }
-                    }
-                    // A new-tab link beside it that opts into the corner icon, shown without the `link` switch.
-                    if !is_link(&values) {
-                        ActionIcon {
-                            variant: values.str("variant"),
-                            gradient: gradient_value(&values),
-                            color: match values.str("color").as_str() {
-                                "primary" => Input::None,
-                                color => Input::from(color),
-                            },
-                            size: values.str("size"),
-                            radius: values.str("radius"),
-                            disabled: values.str("disabled") == "true",
-                            focusable_when_disabled: values.str("focusable_when_disabled") == "true",
-                            tooltip: values.str("tooltip") == "true",
-                            to: "https://dioxuslabs.com",
-                            target: "_blank",
-                            new_tab_icon: true,
-                            aria_label: "Dioxus",
-                            icon: pictogram_icons_lucide::link::outlined,
-                        }
-                    }
-                } },
+                render: move |values: DemoValues| rsx! {
+                ActionIcon {
+                    variant: values.str("variant"),
+                    gradient: gradient_value(&values),
+                    color: match values.str("color").as_str() {
+                        "primary" => Input::None,
+                        color => Input::from(color),
+                    },
+                    size: values.str("size"),
+                    radius: values.str("radius"),
+                    selected: match values.str("selected").as_str() {
+                        _ if is_link(&values) => None,
+                        "true" => Some(true),
+                        "false" => Some(false),
+                        _ => None,
+                    },
+                    tooltip: values.str("tooltip") == "true",
+                    shortcut: (values.str("shortcut") == "true").then(|| SHORTCUT.to_string()),
+                    disabled: values.str("disabled") == "true",
+                    focusable_when_disabled: values.str("focusable_when_disabled") == "true",
+                    loading: values.str("loading") == "true" && !is_link(&values),
+                    loader: custom_loader(&values),
+                    ripple: values.str("ripple") != "false",
+                    to: match values.str("link").as_str() {
+                        "true" => Input::from("https://dioxuslabs.com"),
+                        _ => Input::None,
+                    },
+                    target: (values.str("link") == "true").then(|| "_blank".to_string()),
+                    new_tab_icon: (values.str("new_tab_icon") == "true").then_some(true),
+                    aria_label: "Confirm",
+                    icon: pictogram_icons_lucide::check::outlined,
+                }
+                },
             }
         }
     }

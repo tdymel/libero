@@ -6,6 +6,7 @@ use libero::{
         ActionIcon, Anchor, Box, Burger, Button, ButtonGroup, Container, DirectionToggle, Flex,
         Header, Icon, Kbd, Pictogram, Repository, ScrollArea, ScrollAreaHandle, SpotlightHandle,
         SpotlightOptions, ThemeSwitcher, spotlight_filter, use_scroll_area, use_spotlight,
+        visually_hidden_sx,
     },
     hooks::{ElementHandle, edge_swipe_sx, use_back, use_element, use_media_query},
     platform::{ElementApi, KeySubscription, keyboard},
@@ -314,7 +315,7 @@ fn shell_header(
                 // Title's `lg` look on a span: a non-heading `Title` warns (todo 2545).
                 Box {
                     component: "span",
-                    sx: sx().font_family(TITLE_FONT_FAMILY.value()).and(TitleDefaults::size_sx(Size::Lg)),
+                    sx: wordmark_sx(),
                     "Libero"
                 }
             }
@@ -322,6 +323,13 @@ fn shell_header(
             {site_tools(search)}
         }
     }
+}
+
+/// The name beside the logo. Hidden but still read below 360px, so the row fits a 320px phone (4993).
+fn wordmark_sx() -> Sx {
+    sx().font_family(TITLE_FONT_FAMILY.value())
+        .and(TitleDefaults::size_sx(Size::Lg))
+        .media("(max-width: 359.98px)", visually_hidden_sx())
 }
 
 /// Tighter on a phone: the seven controls just miss 320px at `md`.
@@ -356,16 +364,8 @@ fn site_tools(search: SpotlightHandle) -> Element {
                         // the next item gets back its outer corners and loses the seam.
                         .selector("& > :nth-child(2) :is(button, a)", first_item_sx())
                         .selector("& > :nth-child(2):is(button, a)", first_item_sx()),
-                )
-                // Under a finger the small icons are boxes of their own: a group's press
-                // box grows across it only, and these sit edge to edge.
-                .media(
-                    "(pointer: coarse)",
-                    sx().selector(
-                        "& > :is(button, a), & > * :is(button, a)",
-                        sx().min_width("44px").min_height("44px"),
-                    ),
                 ),
+            // No 44px boxes under a finger: they wrapped the row on a phone (4993); `sm` keeps 24px.
             // Below `Sm`, the field's own breakpoint: one of the two always shows, also
             // with a raised default font size (a `px` query and a `rem` one drift apart).
             ActionIcon {

@@ -205,19 +205,6 @@ pub fn ChipPage() -> Element {
                         }),
                         "rust"
                     }
-                    // A new-tab link beside it that opts into the icon, shown without the `link` kind.
-                    if values.str("kind") != "link" {
-                        Chip {
-                            color: values.str("color"),
-                            variant: values.str("variant"),
-                            size: values.str("size"),
-                            radius: values.str("radius"),
-                            to: "https://dioxuslabs.com",
-                            target: "_blank",
-                            new_tab_icon: true,
-                            "Dioxus"
-                        }
-                    }
                 },
             }
         }

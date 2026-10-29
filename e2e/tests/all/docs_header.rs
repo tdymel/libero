@@ -1,5 +1,5 @@
-//! The docs site's header row (todo 4829): under a finger every control is a 44px box and the
-//! row still fits a 320px screen.
+//! The docs site's header row (todos 4829, 4993): under a finger every control keeps the 24px
+//! WCAG target and the row stays one row on a 320px screen.
 
 use chromiumoxide::cdp::browser_protocol::emulation::SetDeviceMetricsOverrideParams;
 use e2e::browser::block_on;
@@ -12,7 +12,8 @@ const CONTROLS: &str = "[...document.querySelectorAll('#docs-header button, #doc
     .map(el => {
         const r = el.getBoundingClientRect();
         return { name: el.id || el.getAttribute('aria-label') || el.textContent.trim(),
-                 width: r.width, height: r.height, left: r.left, right: r.right };
+                 width: r.width, height: r.height, left: r.left, right: r.right,
+                 middle: (r.top + r.bottom) / 2 };
     })";
 
 #[derive(Debug, serde::Deserialize)]
@@ -22,6 +23,7 @@ struct Control {
     height: f64,
     left: f64,
     right: f64,
+    middle: f64,
 }
 
 async fn open_coarse_at_320() -> Fixture {
@@ -55,6 +57,7 @@ const SHARED: &[&str] = &[
     "burger_sx",
     "site_tools",
     "search_button",
+    "wordmark_sx",
 ];
 
 /// The item `fn name` from its signature to its closing brace, comments and indent dropped.
@@ -84,9 +87,9 @@ fn the_fixture_copy_matches_the_docs_shell() {
     }
 }
 
-/// Todo 4829: the burger and the site tools were 28px and 30px boxes that touched each other.
+/// Todo 4993: the 44px boxes of 4829 wrapped the row on a phone; 24px is the floor (WCAG 2.5.8).
 #[test]
-fn a_finger_gets_44px_header_controls_that_fit_320px() {
+fn a_finger_gets_one_header_row_of_24px_controls_at_320px() {
     block_on(async {
         let fixture = open_coarse_at_320().await;
         let page = &fixture.page;
@@ -94,10 +97,20 @@ fn a_finger_gets_44px_header_controls_that_fit_320px() {
         let controls: Vec<Control> = e2e::js(page, CONTROLS).await;
         let small: Vec<String> = controls
             .iter()
-            .filter(|c| c.width < 43.5 || c.height < 43.5)
+            .filter(|c| c.width < 23.5 || c.height < 23.5)
             .map(|c| format!("{} {}x{}", c.name, c.width, c.height))
             .collect();
-        assert!(small.is_empty(), "controls under 44px: {small:?}");
+        assert!(small.is_empty(), "controls under 24px: {small:?}");
+        let middle = controls[0].middle;
+        let wrapped: Vec<String> = controls
+            .iter()
+            .filter(|c| (c.middle - middle).abs() > 2.0)
+            .map(|c| format!("{} at {}", c.name, c.middle))
+            .collect();
+        assert!(
+            wrapped.is_empty(),
+            "controls off the first row at {middle}: {wrapped:?}, all: {controls:?}"
+        );
 
         let overflow: f64 = e2e::js(
             page,
