@@ -433,6 +433,28 @@ fn the_first_line_scrolls_clear_of_the_floating_copy_button() {
     });
 }
 
+/// Todo 4838. At phone width, unscrolled, no text of the first row sits under the floating
+/// copy button, however far that row runs.
+#[test]
+fn the_floating_copy_button_covers_no_text_of_the_first_line() {
+    const CLEAR: &str = "(() => { const block = document.querySelector('#first-line-block'); \
+        const row = block.querySelector('pre > code > span'); \
+        if (!row || !row.textContent.includes('copy button')) return false; \
+        const copy = block.querySelector('button').getBoundingClientRect(); \
+        const range = document.createRange(); range.selectNodeContents(row); \
+        return [...range.getClientRects()].every((r) => r.width === 0 \
+            || r.left >= copy.right || r.right <= copy.left || r.top >= copy.bottom || r.bottom <= copy.top); })()";
+    block_on(async {
+        let fixture = Fixture::open("/code", Viewport::Mobile).await.unwrap();
+        let page = &fixture.page;
+        wait::for_visible(page, FIRST_LINE_SCROLL).await.unwrap();
+        wait::for_js_true(page, CLEAR, "no first-line text under the copy button")
+            .await
+            .unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
 /// Todo 2345. A 200% default font size grows the row pitch with the text, so rows
 /// don't overlap and `max_lines: 2` still shows two whole lines.
 #[test]
@@ -447,7 +469,8 @@ fn the_row_pitch_follows_a_larger_default_font_size() {
             const rows = [...document.querySelectorAll('#blank-line-block pre > code > span')]
                 .map(r => Math.round(r.getBoundingClientRect().height)).join();
             const tall = document.querySelector('#tall-block [data-slot=scroll]').clientHeight;
-            return rows === '40,40,40' && Math.round(tall) === 2 * 40 + 24; })()"#;
+            // The tall block's floating copy button keeps a 28px band above its first row.
+            return rows === '40,40,40' && Math.round(tall) === 2 * 40 + 24 + 28; })()"#;
         wait::for_js_true(page, PITCH, "40px rows and a two-line max height")
             .await
             .unwrap();

@@ -129,4 +129,4 @@ State tokens on the rows and cells the block builds, not on its root.
 | `diff-add` / `diff-remove` | a line row | `diff` is set and the line starts with `+` / `-`. |
 | `highlighted` | a line row | The line is named by `highlight_lines` (and `diff` is off). |
 | `no-gutter` | a line's content cell, or its diff marker cell | `line_numbers` is off, so the first cell takes the gutter's padding. |
-| `copy-space` | the first line's content cell, or the plain `pre` while highlighting runs | The copy button floats (`copyable` without `header`), so the first line ends clear of it. |
+| `copy-space` | the first line's row, or the plain `pre` while highlighting runs | The copy button floats (`copyable` without `header`), so the first line starts below it. |

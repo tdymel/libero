@@ -510,6 +510,61 @@ async fn double_click_off_centre(page: &Page) -> Result<()> {
     Ok(())
 }
 
+/// Todo 4833: the tap that opens the viewer is the first half of a double tap to the browser, so
+/// a tap on the picture right after dispatches `dblclick`; only two taps on the picture zoom it.
+/// The zoom-in button is the probe: it steps 1.25x from fit.
+#[test]
+fn a_tap_on_the_picture_right_after_opening_does_not_zoom() {
+    const IMG: &str = "[role=dialog] [data-lightbox-frame=\"0\"] img";
+    block_on(async {
+        let fixture = Fixture::open("/lightbox", Viewport::Desktop).await.unwrap();
+        let page = &fixture.page;
+        motion::set_reduced_motion(page, true).await.unwrap();
+        pointer::click(page, TRIGGER).await.unwrap();
+        wait::for_visible(page, DIALOG).await.unwrap();
+        wait_showing(page, 0).await.unwrap();
+        wait::for_js_true(
+            page,
+            &format!("document.querySelector({IMG:?})?.naturalWidth > 0"),
+            "the first picture to decode",
+        )
+        .await
+        .unwrap();
+        let at = pointer::centre_of(page, IMG).await.unwrap();
+        press_at(page, at, MouseButton::Left, 2).await.unwrap();
+
+        // The zoom-in click queues behind a zoom the tap started, so the picture settles at
+        // 1.25x only if the tap zoomed nothing (else 2x, then 2.5x).
+        pointer::click(page, ZOOM_IN).await.unwrap();
+        let style = format!("document.querySelector({IMG:?}).style.cssText");
+        wait::for_js_true(
+            page,
+            &format!(
+                "(() => {{ const s = {style}; const same = window.__style === s; \
+                 window.__style = s; return same && s.includes('scale('); }})()"
+            ),
+            "the picture to settle zoomed",
+        )
+        .await
+        .unwrap();
+        let seen: String = page
+            .evaluate_bounded(style.as_str())
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        assert!(
+            seen.contains("scale(1.25)"),
+            "the opening tap counted as a double tap: the picture is at {seen:?}, not 1.25x"
+        );
+        fixture
+            .console
+            .assert_clean("the lightbox opening tap")
+            .unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
 const ZOOM_IN: &str = "[role=dialog] button[aria-label='Zoom in']";
 
 /// The current picture's scale, read off its inline transform; 1 when fitted.

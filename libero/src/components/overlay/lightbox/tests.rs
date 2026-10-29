@@ -298,6 +298,22 @@ fn a_double_click_restores_the_zoom_before_its_first_click() {
     assert_ne!(clicks.cancelled, ticket, "the queued centrings are dropped");
 }
 
+/// Todo 4833: the opening tap pairs with the first tap on the picture in the browser.
+#[test]
+fn a_double_click_needs_two_clicks_on_the_picture() {
+    let mut clicks = Clicks::default();
+    clicks.clicked(None);
+    assert!(
+        !clicks.doubled(),
+        "one click on the picture, then a dblclick"
+    );
+
+    clicks.clicked(None);
+    clicks.clicked(None);
+    assert!(clicks.doubled());
+    assert!(!clicks.doubled(), "a double-click spends its clicks");
+}
+
 #[test]
 fn a_double_click_on_a_fitted_picture_restores_nothing() {
     let mut clicks = Clicks::default();

@@ -357,8 +357,13 @@ pub(super) fn lightbox_slide(
                     }
                 },
                 // Before the frame zooms: a double-click's two clicks must not pan (todo 2283).
-                ondoubleclick: move |_| {
+                ondoubleclick: move |event: Event<MouseData>| {
                     if !zoomable || i != *index.peek() {
+                        return;
+                    }
+                    // The tap that opened the viewer pairs with the first tap on it (todo 4833).
+                    if !zooming.doubled() {
+                        event.stop_propagation();
                         return;
                     }
                     if let Some(before) = zooming.undo_clicks() {

@@ -66,25 +66,33 @@ fn wrap_hook(values: &DemoValues, _: &str) -> String {
              ..Default::default()\n\
          }});\n\n\
          rsx! {{\n    \
-             Flex {{\n        \
-                 direction: \"row\",\n        \
-                 gap: \"sm\",\n        \
-                 Button {{\n            \
-                     variant: \"outlined\",\n            \
-                     onmounted: search.mount(),\n            \
-                     attributes: search.attributes(),\n            \
-                     onclick: move |_| searches += 1,\n            \
-                     \"Search\"\n        \
+             Flex {{ direction: \"column\", gap: \"sm\",\n        \
+                 Flex {{\n            \
+                     direction: \"row\",\n            \
+                     gap: \"sm\",\n            \
+                     wrap: \"nowrap\",\n            \
+                     align: \"center\",\n            \
+                     Button {{\n                \
+                         variant: \"outlined\",\n                \
+                         onmounted: search.mount(),\n                \
+                         attributes: search.attributes(),\n                \
+                         onclick: move |_| searches += 1,\n                \
+                         \"Search\"\n            \
+                     }}\n            \
+                     Text {{\n                \
+                         size: \"sm\",\n                \
+                         role: \"status\",\n                \
+                         if tour.seen() {{ \"Seen\" }} else {{ \"Not seen yet\" }}\n                \
+                         \", searches: {{searches}}\"\n            \
+                     }}\n        \
                  }}\n        \
-                 // Found by its id: no handle to pass down.\n        \
-                 Button {{ id: \"tour-demo-create\", variant: \"outlined\", \"New project\" }}\n        \
-                 Button {{ onclick: move |_| tour.start(), \"Take the tour\" }}\n        \
-                 Button {{ variant: \"text\", onclick: move |_| tour.forget(), \"Forget seen\" }}\n        \
-                 Text {{\n            \
-                     size: \"sm\",\n            \
-                     role: \"status\",\n            \
-                     if tour.seen() {{ \"Seen\" }} else {{ \"Not seen yet\" }}\n            \
-                     \", searches: {{searches}}\"\n        \
+                 Flex {{\n            \
+                     direction: \"row\",\n            \
+                     gap: \"sm\",\n            \
+                     // Found by its id: no handle to pass down.\n            \
+                     Button {{ id: \"tour-demo-create\", variant: \"outlined\", \"New project\" }}\n            \
+                     Button {{ onclick: move |_| tour.start(), \"Take the tour\" }}\n            \
+                     Button {{ variant: \"text\", onclick: move |_| tour.forget(), \"Forget seen\" }}\n        \
                  }}\n    \
              }}\n\
          }}"
@@ -147,26 +155,35 @@ fn TourDemo(side: String, mask_click: String, custom: bool) -> Element {
         ..Default::default()
     });
 
+    // The status stays in Search's row: the card opens above or below it and would cover any other.
     rsx! {
-        Flex {
-            direction: "row",
-            gap: "sm",
-            Button {
-                variant: "outlined",
-                onmounted: search.mount(),
-                attributes: search.attributes(),
-                onclick: move |_| searches += 1,
-                "Search"
+        Flex { direction: "column", gap: "sm",
+            Flex {
+                direction: "row",
+                gap: "sm",
+                wrap: "nowrap",
+                align: "center",
+                Button {
+                    variant: "outlined",
+                    onmounted: search.mount(),
+                    attributes: search.attributes(),
+                    onclick: move |_| searches += 1,
+                    "Search"
+                }
+                Text {
+                    size: "sm",
+                    role: "status",
+                    if tour.seen() { "Seen" } else { "Not seen yet" }
+                    ", searches: {searches}"
+                }
             }
-            // Found by its id: no handle to pass down.
-            Button { id: "tour-demo-create", variant: "outlined", "New project" }
-            Button { onclick: move |_| tour.start(), "Take the tour" }
-            Button { variant: "text", onclick: move |_| tour.forget(), "Forget seen" }
-            Text {
-                size: "sm",
-                role: "status",
-                if tour.seen() { "Seen" } else { "Not seen yet" }
-                ", searches: {searches}"
+            Flex {
+                direction: "row",
+                gap: "sm",
+                // Found by its id: no handle to pass down.
+                Button { id: "tour-demo-create", variant: "outlined", "New project" }
+                Button { onclick: move |_| tour.start(), "Take the tour" }
+                Button { variant: "text", onclick: move |_| tour.forget(), "Forget seen" }
             }
         }
     }

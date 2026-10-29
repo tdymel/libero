@@ -391,6 +391,97 @@ fn the_marquee_preview_fits_its_box() {
     });
 }
 
+/// Todo 4833: on the Tour demo's interactive Search step the card does not cover the
+/// `role=status` count, at 375 and 1280.
+#[test]
+fn the_tour_demo_card_leaves_the_status_clear() {
+    const BUTTON: &str = "[...document.querySelectorAll('#docs-main button')]\
+        .find((b) => b.textContent.trim() === 'Take the tour')";
+    const CARD: &str = "document.querySelector('[role=dialog]')";
+    const STATUS: &str = "[...document.querySelectorAll('#docs-main [role=status]')]\
+        .find((e) => e.textContent.includes('searches'))";
+    block_on(async {
+        for viewport in [Viewport::Mobile, Viewport::Desktop] {
+            let fixture = Fixture::open_until(
+                "/overlay/tour",
+                viewport,
+                Scheme::Light,
+                "#docs-main [role=status]",
+            )
+            .await
+            .unwrap();
+            let page = &fixture.page;
+            let at = viewport.name();
+            e2e::passes::motion::set_reduced_motion(page, true)
+                .await
+                .unwrap();
+            page.evaluate_bounded(format!("{BUTTON}.click()"))
+                .await
+                .unwrap();
+            wait::for_js_true(
+                page,
+                &format!("{CARD}?.textContent.includes('Welcome')"),
+                &format!("{at}: the first card"),
+            )
+            .await
+            .unwrap();
+            page.evaluate_bounded(format!(
+                "[...{CARD}.querySelectorAll('button')].find((b) => b.textContent.trim() === 'Next').click()"
+            ))
+            .await
+            .unwrap();
+            // The card holds still from one poll to the next once placed beside Search.
+            wait::for_js_true(
+                page,
+                &format!(
+                    "(() => {{ const card = {CARD}; if (!card || !card.textContent.includes('Search')) return false; \
+                     const r = card.getBoundingClientRect(); const key = [r.x, r.y, r.width, r.height].join(); \
+                     const same = window.__cardKey === key; window.__cardKey = key; return same && r.width > 0; }})()"
+                ),
+                &format!("{at}: the Search card at rest"),
+            )
+            .await
+            .unwrap();
+            wait::for_js_true(
+                page,
+                &format!(
+                    "(() => {{ const c = {CARD}.getBoundingClientRect(), s = ({STATUS}).getBoundingClientRect(); \
+                     return c.left >= s.right || c.right <= s.left || c.top >= s.bottom || c.bottom <= s.top; }})()"
+                ),
+                &format!("{at}: the status clear of the card"),
+            )
+            .await
+            .unwrap();
+            close(fixture).await;
+        }
+    });
+}
+
+/// Todo 4838: the Alert demo shows an Alert at its default switches, not only the button
+/// that mounts one.
+#[test]
+fn the_alert_demo_shows_an_alert_at_its_defaults() {
+    block_on(async {
+        let fixture = Fixture::open_until(
+            "/feedback/alert",
+            Viewport::Desktop,
+            Scheme::Light,
+            "#docs-main button",
+        )
+        .await
+        .unwrap();
+        wait::for_js_true(
+            &fixture.page,
+            "[...document.querySelectorAll('#docs-main [data-slot=title]')]\
+             .some((e) => e.textContent.includes('Card expiring'))",
+            "an Alert in the demo at its defaults",
+        )
+        .await
+        .unwrap();
+        close(fixture).await;
+    });
+}
+
 /// Todo 3735: no label in a demo's controls is cut with an ellipsis, the selected `Outlined` of
 /// the Variant toggle included, at 1280 and at phone width, in both schemes.
 #[test]

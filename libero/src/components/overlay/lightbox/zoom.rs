@@ -324,17 +324,26 @@ pub(super) fn refit(frame: ElementHandle, picture: ElementHandle, zooming: Zoomi
 }
 
 /// The zooms before the last two clicks on the picture (`None`: it did not
-/// centre), and a count each double-click bumps to drop the centring queued.
+/// centre), a count each double-click bumps to drop the centring queued, and the
+/// clicks on the picture since the last double-click.
 #[derive(Clone, Copy, Debug, Default, PartialEq)]
 pub(super) struct Clicks {
     pub(super) before: [Option<Zoom>; 2],
     pub(super) cancelled: u64,
+    taps: u8,
 }
 
 impl Clicks {
     pub(super) fn clicked(&mut self, before: Option<Zoom>) -> u64 {
         self.before = [self.before[1], before];
+        self.taps = self.taps.saturating_add(1);
         self.cancelled
+    }
+
+    /// Whether both clicks of the `dblclick` landed on the picture: the tap that opened the
+    /// viewer is the first half of one to the browser, but not a click here.
+    pub(super) fn doubled(&mut self) -> bool {
+        std::mem::take(&mut self.taps) >= 2
     }
 
     /// The zoom before the double-click's first click, so its two centrings undo.
@@ -394,6 +403,11 @@ impl Zooming {
     pub(super) fn clicked(self, before: Option<Zoom>) -> u64 {
         let mut clicks = self.clicks;
         clicks.write().clicked(before)
+    }
+
+    pub(super) fn doubled(self) -> bool {
+        let mut clicks = self.clicks;
+        clicks.write().doubled()
     }
 
     pub(super) fn undo_clicks(self) -> Option<Zoom> {

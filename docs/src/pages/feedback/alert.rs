@@ -18,9 +18,9 @@ const ACTION_CODE: &str =
 #[component]
 pub fn AlertPage() -> Element {
     let theme = use_theme();
-    // Mounted on demand: a live region mounted with its text on first paint
-    // is the live-region shape `Notifications` avoids.
-    let mut shown = use_signal(|| false);
+    // Shown at first so the demo has an Alert at its defaults; the button mounts it again,
+    // and a live region mounted after load is the one a screen reader announces.
+    let mut shown = use_signal(|| true);
     let trigger = use_element();
 
     rsx! {

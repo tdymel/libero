@@ -78,7 +78,7 @@ static CODE_COPY_BUTTON_SX: StaticSx = StaticSx::new(|| {
 // Measured on the scroll box; 0 under overlay scrollbars.
 const CODE_SCROLLBAR_WIDTH_VAR: CssVar = CssVar::new("--lsx-code-block-scrollbar-width");
 
-// Centred on the first code line: 12px padding + half a line, minus half the 26px button.
+// In the band `COPY_BAND_PX` keeps above the first line, at the top-right corner.
 static CODE_COPY_BUTTON_FLOATING_SX: StaticSx = StaticSx::new(|| {
     sx().position("absolute")
         .top(format!("calc({CODE_LINE_HEIGHT} / 2 - 1px)"))
@@ -133,6 +133,7 @@ static CODE_LINE_ROW_SX: StaticSx = StaticSx::new(|| {
         .flex_direction("row")
         // A blank line has no gutter digit or text to give it height (todo 771).
         .min_height(CODE_LINE_HEIGHT)
+        .when("copy-space", sx().padding_top(format!("{COPY_BAND_PX}px")))
         .when("highlighted", marked_row_sx(ColorCss::PRIMARY))
         .when("diff-add", marked_row_sx(ColorCss::SUCCESS))
         .when("diff-remove", marked_row_sx(ColorCss::ERROR))
@@ -189,12 +190,11 @@ static CODE_LINE_CONTENT_SX: StaticSx = StaticSx::new(|| {
         .white_space("pre")
         .padding_right("16px")
         .when("no-gutter", sx().padding_left("12px"))
-        .when("copy-space", sx().padding_right(COPY_SPACE))
 });
 
-// The floating copy button's inset (11px on a coarse pointer) and ~26px width, plus a
-// gap: the first line scrolls out from under it.
-const COPY_SPACE: &str = "43px";
+// The floating copy button's inset (10px on a coarse pointer), its ~26px height and a gap:
+// the first line starts below it, so no long line runs under the button (todo 4838).
+const COPY_BAND_PX: u32 = 28;
 
 static CODE_PLAIN_PRE_SX: StaticSx = StaticSx::new(|| {
     sx().display("block")
@@ -204,7 +204,13 @@ static CODE_PLAIN_PRE_SX: StaticSx = StaticSx::new(|| {
         .font_size(Size::Sm)
         // As `CODE_LINES_SX`, so `max_lines` holds while highlighting runs.
         .line_height(CODE_LINE_HEIGHT)
-        .when("copy-space", sx().padding_right(COPY_SPACE))
+        .when(
+            "copy-space",
+            sx().padding_top(format!(
+                "{}px",
+                CODE_LINES_VERTICAL_PADDING_PX / 2 + COPY_BAND_PX
+            )),
+        )
 });
 
 parts_enum! {
@@ -366,7 +372,8 @@ fn code_line_row(
 ) -> Element {
     let states = row_state
         .map(|s| States::new().active(s))
-        .unwrap_or_default();
+        .unwrap_or_default()
+        .with("copy-space", copy_space);
     let (marker, spoken) = match diff.flatten() {
         Some(DiffStatus::Added) => ("+", Some(labels.added)),
         Some(DiffStatus::Removed) => ("-", Some(labels.removed)),
@@ -392,11 +399,7 @@ fn code_line_row(
     let content = styles
         .content
         .clone()
-        .with_states(
-            &States::new()
-                .with("no-gutter", !line_numbers && diff.is_none())
-                .with("copy-space", copy_space),
-        )
+        .with_states(&States::new().with("no-gutter", !line_numbers && diff.is_none()))
         .render(
             HtmlTag::Span,
             Vec::new(),
@@ -425,8 +428,12 @@ fn code_line_row(
     )
 }
 
-fn max_lines_height(max_lines: u32) -> String {
-    format!("calc({max_lines} * {CODE_LINE_HEIGHT} + {CODE_LINES_VERTICAL_PADDING_PX}px)")
+fn max_lines_height(max_lines: u32, floating_copy: bool) -> String {
+    let band = if floating_copy { COPY_BAND_PX } else { 0 };
+    format!(
+        "calc({max_lines} * {CODE_LINE_HEIGHT} + {}px)",
+        CODE_LINES_VERTICAL_PADDING_PX + band
+    )
 }
 
 fn gutter_variables(gutter_width: String) -> Variables {
@@ -566,7 +573,7 @@ pub fn CodeBlock(props: CodeBlockProps) -> Element {
         }
     });
     let scroll_sx: Input<Sx> = match props.max_lines {
-        Some(max_lines) => sx().max_height(max_lines_height(max_lines)),
+        Some(max_lines) => sx().max_height(max_lines_height(max_lines, floating_copy)),
         None => sx(),
     }
     .into();
@@ -828,7 +835,8 @@ mod tests {
     #[test]
     fn the_row_pitch_follows_the_root_font_size() {
         assert!(CODE_LINE_HEIGHT.ends_with("rem"));
-        assert_eq!(max_lines_height(3), "calc(3 * 1.25rem + 24px)");
+        assert_eq!(max_lines_height(3, false), "calc(3 * 1.25rem + 24px)");
+        assert_eq!(max_lines_height(3, true), "calc(3 * 1.25rem + 52px)");
         let css = crate::css::Stylesheet::from(&CODE_LINE_ROW_SX);
         assert!(css.as_str().contains("min-height:1.25rem"), "{css:?}");
         let css = crate::css::Stylesheet::from(&CODE_COPY_BUTTON_FLOATING_SX);
