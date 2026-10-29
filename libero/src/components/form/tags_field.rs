@@ -12,8 +12,8 @@ use crate::{
         form::{
             CaretKeys, ChipFocus, ComboboxCore, ComboboxOption, DropdownPart, FormScope,
             SelectionArgs, clear_button, field_control_sx, field_parts_enum, field_props,
-            removable_chip, row_label, use_bound, use_chip_announcer, use_chip_handles, use_edited,
-            use_field, use_field_frame, use_prefill,
+            framed_remove_sx, removable_chip, row_label, use_bound, use_chip_announcer,
+            use_chip_handles, use_edited, use_field, use_field_frame, use_prefill,
         },
         layout::{BoxStyle, use_box},
     },
@@ -45,6 +45,7 @@ static TAGS_VALUE_SX: StaticSx = StaticSx::new(|| {
             "& [data-slot='remove']",
             sx().display("inline-flex").align_items("center"),
         )
+        .and(framed_remove_sx())
 });
 
 /// The draft input. `flex-basis`, not `min-width`, so it wraps onto its own

@@ -14,8 +14,8 @@ use crate::{
         form::{
             Asks, CaretKeys, ComboboxCore, ComboboxOption, DropdownPart, Edited, FocusOpen,
             PreparedField, RowCache, TouchHold, VIRTUAL_ROWS, clear_button, field_control_sx,
-            field_parts_enum, field_props, use_chip_announcer, use_field, use_field_frame,
-            use_focus_open, use_refocus_on_close, use_row_cache, use_touch_hold,
+            field_parts_enum, field_props, framed_remove_sx, use_chip_announcer, use_field,
+            use_field_frame, use_focus_open, use_refocus_on_close, use_row_cache, use_touch_hold,
             with_drawn_placeholder,
         },
         layout::{BoxStyle, use_box},
@@ -99,6 +99,7 @@ static MULTI_VALUE_SX: StaticSx = StaticSx::new(|| {
             "& [data-slot='remove']",
             sx().display("inline-flex").align_items("center"),
         )
+        .and(framed_remove_sx())
         // A chip without an x takes the focus itself; the ring goes on the drawn chip, for its radius.
         .selector(
             format!(

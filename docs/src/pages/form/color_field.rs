@@ -20,8 +20,15 @@ impl FieldCopy for BrandCopy {
     const ERROR: &'static str = "Pick a brand color.";
 }
 
-const SWATCHES: [&str; 7] = [
-    "#2e2e2e", "#fa5252", "#be4bdb", "#228be6", "#12b886", "#fab005", "#fd7e14",
+/// Named as the ColorPicker demo's, so a screen reader reads "Red", not a spelled-out hex.
+const SWATCHES: [(&str, &str); 7] = [
+    ("#2e2e2e", "Dark"),
+    ("#fa5252", "Red"),
+    ("#be4bdb", "Grape"),
+    ("#228be6", "Blue"),
+    ("#12b886", "Teal"),
+    ("#fab005", "Yellow"),
+    ("#fd7e14", "Orange"),
 ];
 
 fn is_on(values: &DemoValues, name: &str) -> bool {
@@ -139,7 +146,7 @@ pub fn ColorFieldPage() -> Element {
                     "the color's text box under it takes typing."
                 }
             },
-            // snippet: item const SWATCHES: [&str; 7] = [""; 7];
+            // snippet: item const SWATCHES: [(&str, &str); 7] = [("", ""); 7];
             // snippet: let mut color = use_signal(|| ColorCode::hex(0x228be6));
             Demo {
                 component: "ColorField",
@@ -165,7 +172,7 @@ pub fn ColorFieldPage() -> Element {
                     Control::switch("with_alpha"),
                     // On by default: the phone sheet's swatch row shows without a switch (3923).
                     Control::switch("swatches").default("true").code(|_, values| match is_on(values, "swatches") {
-                        true => vec!["swatches: SWATCHES".to_string()],
+                        true => vec!["swatches: Swatches::labelled(SWATCHES)".to_string()],
                         false => vec![],
                     }),
                     // On by default, so a pick shows the row without a switch.
@@ -217,7 +224,7 @@ fn ColorFieldDemo(values: DemoValues) -> Element {
     let mut color = use_signal(|| ColorCode::hex(0x228be6));
 
     let swatches = match is_on(&values, "swatches") {
-        true => Swatches::from(SWATCHES),
+        true => Swatches::labelled(SWATCHES),
         false => Swatches::default(),
     };
 

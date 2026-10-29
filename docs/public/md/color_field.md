@@ -21,10 +21,16 @@ opens only the picker; the color's text box under it takes typing.
 
 ```rust
 use dioxus::prelude::*;
-use libero::components::{ColorCode, ColorField, SliderChangeEvent};
+use libero::components::{ColorCode, ColorField, SliderChangeEvent, Swatches};
 
-const SWATCHES: [&str; 7] = [
-    "#2e2e2e", "#fa5252", "#be4bdb", "#228be6", "#12b886", "#fab005", "#fd7e14",
+const SWATCHES: [(&str, &str); 7] = [
+    ("#2e2e2e", "Dark"),
+    ("#fa5252", "Red"),
+    ("#be4bdb", "Grape"),
+    ("#228be6", "Blue"),
+    ("#12b886", "Teal"),
+    ("#fab005", "Yellow"),
+    ("#fd7e14", "Orange"),
 ];
 
 #[component]
@@ -36,7 +42,7 @@ fn Demo() -> Element {
             value: color(),
             oninput: move |event: SliderChangeEvent<ColorCode>| color.set(event.value()),
             label: "Brand color",
-            swatches: SWATCHES,
+            swatches: Swatches::labelled(SWATCHES),
             recent_colors: 6,
         }
     }

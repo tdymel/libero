@@ -237,6 +237,7 @@ pub fn ActionIconPage() -> Element {
                             },
                             size: values.str("size"),
                             radius: values.str("radius"),
+                            tooltip: values.str("tooltip") == "true",
                             loading: true,
                             loader: custom_loader(&values),
                             aria_label: "Saving",

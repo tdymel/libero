@@ -52,7 +52,8 @@ pub fn PasswordFieldPage() -> Element {
                         .default("password_field.show")
                         .doc("The reveal button's name, such as \"Show PIN\". Unset, the localization's `password_field.show`, \"Show password\" in English."),
                     prop("label", "Caption")
-                        .doc("The field's caption, above the control. It names the field."),                    prop("description", "Caption")
+                        .doc("The field's caption, above the control. It names the field."),
+                    prop("description", "Caption")
                         .doc("Between the label and the control. What to enter."),
                     prop("helper", "Caption")
                         .doc("Under the control. The password rules."),

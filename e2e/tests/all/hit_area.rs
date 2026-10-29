@@ -306,8 +306,8 @@ fn a_finger_on_a_chip_x_never_removes_the_next_rows_chip() {
     });
 }
 
-/// Todos 4688, 4692: under a finger no chip x takes a press on a label or on the frame's
-/// padding around the chips.
+/// Todos 4688, 4692, 4909: under a finger no chip x takes a press on a label, on the frame's
+/// padding around the chips or just past its border.
 #[test]
 fn a_chip_x_takes_no_press_on_a_label_or_the_frame_padding() {
     use chromiumoxide::cdp::browser_protocol::emulation::SetTouchEmulationEnabledParams;
@@ -370,8 +370,11 @@ fn a_chip_x_takes_no_press_on_a_label_or_the_frame_padding() {
                             // Past the first row's top and the last row's bottom: the frame's padding.
                             const edges = [at == 0 ? p.top - 3 : null, at == xs.length - 1 ? p.bottom + 3 : null];
                             for (const y of edges) {{
-                                if ('{case}' == 'file-chips' && y !== null && y > frame.top && y < frame.bottom && hitsOtherX(cx, y, null)) misses.push(['padding', el.ariaLabel, y - p.top]);
+                                if (y !== null && y > frame.top && y < frame.bottom && hitsOtherX(cx, y, null)) misses.push(['padding', el.ariaLabel, y - p.top]);
                             }}
+                            // 1px past the frame's border (todo 4909).
+                            if (at == 0 && hitsOtherX(cx, frame.top - 1, null)) misses.push(['border', el.ariaLabel, frame.top - 1 - p.top]);
+                            if (at == xs.length - 1 && hitsOtherX(cx, frame.bottom + 1, null)) misses.push(['border', el.ariaLabel, frame.bottom + 1 - p.bottom]);
                         }});
                         return {{ misses, padding }};
                     }})()"
