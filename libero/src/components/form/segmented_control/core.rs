@@ -120,7 +120,7 @@ static SEGMENTED_CONTROL_SX: StaticSx = StaticSx::new(|| {
         )
         // The overlapped border would otherwise cut into the next segment's
         // focus ring and selected background.
-        .selector("& > label:hover", sx().z_index("1"))
+        .hover_tint("& > label:hover", sx().z_index("1"))
         .selector("& > label[data-state~=\"checked\"]", sx().z_index("1"))
         // The ring goes on the label: the radio has no size, and sits beside
         // its label so `+` reaches it.

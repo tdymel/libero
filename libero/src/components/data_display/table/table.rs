@@ -199,9 +199,12 @@ static TABLE_SX: StaticSx = StaticSx::new(|| {
             .opacity("0"),
     )
     // `aria-sort`, on the sorted header only, doubles as the styling state.
+    .hover_tint(
+        "& th[data-sortable]:not([aria-sort]) [data-sort-button]:hover svg",
+        sx().opacity("0.5"),
+    )
     .selector(
-        "& th[data-sortable]:not([aria-sort]) [data-sort-button]:hover svg, \
-             & th[data-sortable]:not([aria-sort]) [data-sort-button]:focus svg",
+        "& th[data-sortable]:not([aria-sort]) [data-sort-button]:focus svg",
         sx().opacity("0.5"),
     )
     .selector(
@@ -454,8 +457,12 @@ static TABLE_SX: StaticSx = StaticSx::new(|| {
         sx().with("background-position", "left center"),
     ))
     // `:active` makes Chromium's touch adjustment count the grip as a target (as 1463).
+    .hover_tint(
+        "& th:hover [data-resize-handle]",
+        sx().color("primary.6").with("background-size", "2px 100%"),
+    )
     .selector(
-        "& th:hover [data-resize-handle], & [data-resize-handle][data-dragging], \
+        "& [data-resize-handle][data-dragging], \
          & [data-resize-handle]:active, & [data-resize-handle]:focus-visible",
         sx().color("primary.6").with("background-size", "2px 100%"),
     )
@@ -2152,6 +2159,7 @@ pub fn Table<T: Clone + PartialEq + 'static>(mut props: TableProps<T>) -> Elemen
 mod tests {
     use super::TABLE_SX;
     use crate::css::Stylesheet;
+    use crate::sx::hover_guarded;
 
     #[test]
     fn a_cell_editor_is_at_least_16px_on_ios_so_focus_does_not_zoom() {
@@ -2178,5 +2186,19 @@ mod tests {
             css.contains("[data-cell-editor] input:focus-visible{"),
             "{css}"
         );
+    }
+
+    /// A tapped header keeps `:hover`, so its sort preview and resize grip stayed lit (todo 4676).
+    #[test]
+    fn header_hover_looks_need_a_hovering_pointer() {
+        let stylesheet = Stylesheet::from(&*TABLE_SX);
+        let css = stylesheet.as_str();
+        for needle in [
+            "[data-sort-button]:hover svg",
+            "th:hover [data-resize-handle]",
+        ] {
+            assert!(hover_guarded(css, needle), "{needle}: {css}");
+        }
+        assert!(!hover_guarded(css, "[data-sort-button]:focus svg"), "{css}");
     }
 }

@@ -112,7 +112,7 @@ static CHIP_BASE_SX: StaticSx = StaticSx::new(|| {
             )
             .and(on_state_sx(None))
             // An `Elevated` chip's hover lift and press would drop the ring otherwise.
-            .selector(
+            .hover_tint(
                 "&:hover:not(:where(:disabled, [data-state~=\"disabled\"]))",
                 on_ring_sx(None),
             )
@@ -582,6 +582,7 @@ fn use_nested_control_warning(slot: ElementHandle, nested: bool) {
 mod tests {
     use super::*;
     use crate::css::Stylesheet;
+    use crate::sx::hover_guarded;
 
     /// The label is a flex root, where `text-overflow` never applies. The
     /// declaration promised an ellipsis the chip never drew (todo 94).
@@ -614,5 +615,13 @@ mod tests {
             .unwrap_or_else(|| panic!("no selectable arm: {css}"));
         assert!(css[..selectable].contains("overflow:hidden"), "{css}");
         assert!(css[selectable..].contains("overflow:visible"), "{css}");
+    }
+
+    /// The checked ring under `:hover` goes with the hover look, behind the same guard (todo 4676).
+    #[test]
+    fn the_checked_hover_ring_needs_a_hovering_pointer() {
+        let css = Stylesheet::from(&CHIP_BASE_SX);
+        let css = css.as_str();
+        assert!(hover_guarded(css, ":hover:not("), "{css}");
     }
 }

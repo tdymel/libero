@@ -235,6 +235,7 @@ pub(crate) use gradient::{
     gradient_pressed_sx, gradient_selected_sx, gradient_surface_sx,
     theme_declarations as gradient_theme_declarations,
 };
+pub(crate) use grid::GRID_ZONE_MASONRY_GAP;
 pub use grid::{
     GRID_AREAS_VAR, GRID_COLUMNS_VAR, GRID_GAP, GRID_ITEM_ROW_SPAN_VAR, GRID_ITEM_ROWS_VAR,
     GRID_ROW_UNIT, GRID_ZONE_AREA_VAR, GRID_ZONE_CONTAINER_VAR, GRID_ZONE_GAP, GridDefaults,

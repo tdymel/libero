@@ -565,6 +565,61 @@ fn a_tap_on_the_picture_right_after_opening_does_not_zoom() {
     });
 }
 
+/// Todo 4842: a double click on the frame beside the picture zoomed it, skipping the
+/// two-tap check; only a double press on the picture zooms. The zoom-in button probes as above.
+#[test]
+fn a_double_click_beside_the_picture_does_not_zoom() {
+    const FRAME: &str = "[role=dialog] [data-lightbox-frame=\"0\"]";
+    const IMG: &str = "[role=dialog] [data-lightbox-frame=\"0\"] img";
+    block_on(async {
+        let fixture = Fixture::open("/lightbox", Viewport::Desktop).await.unwrap();
+        let page = &fixture.page;
+        motion::set_reduced_motion(page, true).await.unwrap();
+        pointer::click(page, TRIGGER).await.unwrap();
+        wait::for_visible(page, DIALOG).await.unwrap();
+        wait_showing(page, 0).await.unwrap();
+        wait::for_js_true(
+            page,
+            &format!("document.querySelector({IMG:?})?.naturalWidth > 0"),
+            "the first picture to decode",
+        )
+        .await
+        .unwrap();
+        // The picture's box covers the frame here; only a native SVG leaves the frame bare.
+        page.evaluate_bounded(format!(
+            "(() => {{ const f = document.querySelector({FRAME:?}); const r = f.getBoundingClientRect(); \
+             f.dispatchEvent(new MouseEvent('dblclick', {{ bubbles: true, detail: 2, \
+             clientX: r.left + 4, clientY: r.top + 4 }})); }})()"
+        ))
+        .await
+        .unwrap();
+
+        pointer::click(page, ZOOM_IN).await.unwrap();
+        let style = format!("document.querySelector({IMG:?}).style.cssText");
+        wait::for_js_true(
+            page,
+            &format!(
+                "(() => {{ const s = {style}; const same = window.__style === s; \
+                 window.__style = s; return same && s.includes('scale('); }})()"
+            ),
+            "the picture to settle zoomed",
+        )
+        .await
+        .unwrap();
+        let seen: String = page
+            .evaluate_bounded(style.as_str())
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        assert!(
+            seen.contains("scale(1.25)"),
+            "a double click beside the picture zoomed it: {seen:?}, not 1.25x"
+        );
+        fixture.close().await.unwrap();
+    });
+}
+
 const ZOOM_IN: &str = "[role=dialog] button[aria-label='Zoom in']";
 
 /// The current picture's scale, read off its inline transform; 1 when fitted.

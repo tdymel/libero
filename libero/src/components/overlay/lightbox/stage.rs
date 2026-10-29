@@ -222,20 +222,6 @@ pub(super) fn lightbox_slide(
                     move |scale| wheel_step(scale, closer, max_zoom),
                 );
             },
-            ondoubleclick: move |event: Event<MouseData>| {
-                if !zoomable || i != *index.peek() {
-                    return;
-                }
-                let client = event.client_coordinates();
-                zoom_about(
-                    frame,
-                    image,
-                    zooming,
-                    i,
-                    Some(DragPoint { x: client.x, y: client.y }),
-                    move |scale| zooming.step_scale(scale),
-                );
-            },
             // The drag still captures on the picture, so the moves and the
             // release land there.
             onpointerdown: move |event: Event<PointerData>| {
@@ -356,19 +342,28 @@ pub(super) fn lightbox_slide(
                         centre_on(frame, image, zooming, i, DragPoint { x: client.x, y: client.y }, ticket);
                     }
                 },
-                // Before the frame zooms: a double-click's two clicks must not pan (todo 2283).
+                // On the picture only, not its frame (todo 4842).
                 ondoubleclick: move |event: Event<MouseData>| {
                     if !zoomable || i != *index.peek() {
                         return;
                     }
                     // The tap that opened the viewer pairs with the first tap on it (todo 4833).
                     if !zooming.doubled() {
-                        event.stop_propagation();
                         return;
                     }
+                    // A double-click's two clicks must not pan (todo 2283).
                     if let Some(before) = zooming.undo_clicks() {
                         zoom.set(before);
                     }
+                    let client = event.client_coordinates();
+                    zoom_about(
+                        frame,
+                        image,
+                        zooming,
+                        i,
+                        Some(DragPoint { x: client.x, y: client.y }),
+                        move |scale| zooming.step_scale(scale),
+                    );
                 },
                 onpointermove: move |event: Event<PointerData>| {
                     let id = event.pointer_id();

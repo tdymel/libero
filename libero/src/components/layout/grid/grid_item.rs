@@ -70,8 +70,9 @@ base_props! {
 #[component]
 pub fn GridItem(props: GridItemProps) -> Element {
     let zone = try_use_context::<GridZoneContext>();
-    // Per item, so a late or never-measured item affects only itself.
-    let mut rows = use_signal(|| None::<u32>);
+    // Per item, so a late or never-measured item affects only itself. The height, not
+    // the span: a narrow zone caps its gap without the item resizing (todo 4657).
+    let mut height = use_signal(|| None::<f64>);
 
     let warned = use_warn_once();
 
@@ -81,28 +82,34 @@ pub fn GridItem(props: GridItemProps) -> Element {
         });
     }
 
-    let masonry = zone.is_some_and(|zone| zone.state.read().masonry);
+    let state = zone.map(|zone| *zone.state.read());
+    let masonry = state.is_some_and(|state| state.masonry);
 
     // Also the mount-time measurement, via `ResizeObserver`'s initial observation.
     // An element with no box (`display: none`) stays unmeasured.
     let onresize = masonry.then_some(move |event: Event<ResizeData>| {
-        let Some(zone) = zone else { return };
         let Ok(size) = event.get_border_box_size() else {
             return;
         };
-        let ZoneState {
-            unit_px, gap_px, ..
-        } = *zone.state.peek();
-        let next = rows_spanned(size.height, unit_px, gap_px);
-
         // The no-op check keeps a height -> scrollbar -> width feedback loop
         // from becoming a render loop.
-        if *rows.peek() != Some(next) {
-            rows.set(Some(next));
+        if *height.peek() != Some(size.height) {
+            height.set(Some(size.height));
         }
     });
 
-    let measured = rows.read().filter(|_| masonry);
+    let measured = match (state, *height.read()) {
+        (
+            Some(ZoneState {
+                masonry: true,
+                unit_px,
+                gap_px,
+                ..
+            }),
+            Some(height),
+        ) => Some(rows_spanned(height, unit_px, gap_px)),
+        _ => None,
+    };
 
     // Masonry drops the caller's row span: one writer of `grid-row`.
     if masonry && props.rows.as_ref().is_some() {

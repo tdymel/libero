@@ -4,6 +4,7 @@
 
 use e2e::browser::block_on;
 use e2e::passes::keyboard;
+use e2e::wait::PageBounded;
 use e2e::{Fixture, Viewport, wait};
 
 /// Opens the fixture, waits for `expression`, and closes it clean.
@@ -107,6 +108,48 @@ fn a_masonry_zones_gap_spaces_its_items_vertically() {
          })()",
         "the masonry items one gap apart",
     );
+}
+
+/// Todo 4657: at 200px the `lg` column gap caps to 4%, 8px, and the masonry spacing with
+/// it: the items pack one capped gap apart and the zone cancels the last one.
+#[test]
+fn a_narrow_masonry_zone_caps_its_vertical_gap_like_its_columns() {
+    const SPACING: &str = "(() => { \
+           const a = document.querySelector('#stone-a'); \
+           const zone = a.parentElement; \
+           zone.parentElement.style.width = '200px'; \
+           const b = document.querySelector('#stone-b'); \
+           const space = b.getBoundingClientRect().top - a.getBoundingClientRect().bottom; \
+           return [getComputedStyle(a).marginBottom, `${space}px`, \
+             getComputedStyle(zone).marginBottom]; \
+         })()";
+    block_on(async {
+        let fixture = Fixture::open("/grid-zone", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        let capped = format!(
+            "(([margin, space, cancel]) => margin === 8 && Math.abs(space - 8) < 1 \
+             && cancel === -8)({SPACING}.map(parseFloat))"
+        );
+        if wait::for_js_true(page, &capped, "the masonry items one capped gap apart")
+            .await
+            .is_err()
+        {
+            let seen: [String; 3] = page
+                .evaluate_bounded(SPACING)
+                .await
+                .unwrap()
+                .into_value()
+                .unwrap();
+            panic!("[item margin, space, zone margin] at 200px, not 8px each: {seen:?}");
+        }
+        fixture
+            .console
+            .assert_clean("a narrow masonry zone")
+            .unwrap();
+        fixture.close().await.unwrap();
+    });
 }
 
 /// `dense` backfills the row beside A with C, ahead of B in the picture, while Tab

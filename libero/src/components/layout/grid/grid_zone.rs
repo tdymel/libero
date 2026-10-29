@@ -9,7 +9,7 @@ use crate::{
     sx::{StaticSx, ThemeAwareValue, sx},
     theme::{
         GRID_ITEM_ROWS_VAR, GRID_ROW_UNIT, GRID_ZONE_AREA_VAR, GRID_ZONE_CONTAINER_VAR,
-        GRID_ZONE_GAP, SizeCss,
+        GRID_ZONE_GAP, GRID_ZONE_MASONRY_GAP, SizeCss,
     },
     utils::use_warn_once,
 };
@@ -47,9 +47,11 @@ static GRID_ZONE_SX: StaticSx = StaticSx::new(|| {
     let measured = format!("{item}[data-state~=\"measured\"]");
 
     let gap = GRID_ZONE_GAP.overridable();
+    let masonry_gap = GRID_ZONE_MASONRY_GAP.value_or(&gap);
     sx().display("grid")
         // Set per breakpoint by an `ImageList`; a nested zone must not inherit it.
         .var(GRID_ZONE_GAP.override_var(), "initial")
+        .var(GRID_ZONE_MASONRY_GAP, "initial")
         .grid_area(GRID_ZONE_AREA_VAR.value_or("auto"))
         .container_name(GRID_ZONE_CONTAINER_VAR.value_or("none"))
         .grid_template_columns("repeat(12, minmax(0, 1fr))")
@@ -57,8 +59,8 @@ static GRID_ZONE_SX: StaticSx = StaticSx::new(|| {
         // The track's `minmax(0, 1fr)` protects the track, not the zone in it.
         .min_width("0")
         // Eleven length gaps can't shrink and overflow a narrow zone. The `4%` cap
-        // engages below ~300px at `md` and ~600px at `xl`, so on a phone; a row
-        // gap is not capped, as its `%` resolves against the zone's height.
+        // engages below ~300px at `md` and ~600px at `xl`, so on a phone; a row gap's
+        // `%` resolves against the height, so only masonry caps it, from a measured width.
         .column_gap(format!("min({gap}, 4%)"))
         .row_gap(gap.clone())
         // Only a named zone: containment collapses a shrink-to-fit standalone
@@ -71,7 +73,7 @@ static GRID_ZONE_SX: StaticSx = StaticSx::new(|| {
                 // A row gap would make the quantum ragged; the item carries it,
                 // and the zone cancels the last one.
                 .row_gap("0")
-                .margin_bottom(format!("calc(-1 * {gap})"))
+                .margin_bottom(format!("calc(-1 * {masonry_gap})"))
                 // `minmax`: an unmeasured item (SSR, native) grows its track
                 // instead of overflowing onto the items below.
                 .grid_auto_rows(format!("minmax({}, auto)", GRID_ROW_UNIT.value()))
@@ -79,7 +81,7 @@ static GRID_ZONE_SX: StaticSx = StaticSx::new(|| {
                     &item,
                     // At `stretch` each measurement reports its row span and
                     // the span climbs. Masonry only, or cards lose equal heights.
-                    sx().align_self("start").margin_bottom(gap),
+                    sx().align_self("start").margin_bottom(masonry_gap),
                 )
                 // (0,3,0) beats the item's (0,2,0) `grid-column` rule: framework
                 // sheets come in hash order, so `& > *` would lose.
@@ -105,7 +107,8 @@ base_props! {
         masonry: bool,
         /// Between items: a size word or any CSS, as `gap: "12px"`. Masonry packs by a
         /// `px` or `rem` length, counting a `rem` as 16px; another CSS value packs by the
-        /// theme's gap. Only the column gap shrinks, to 4% of the zone's width; a row gap keeps its size.
+        /// theme's gap. The column gap shrinks to 4% of the zone's width, and a masonry zone's
+        /// vertical gap with it; a plain row gap keeps its size.
         #[props(default, into)]
         gap: Input<ThemeAwareValue>,
         #[props(default, into)]
@@ -137,6 +140,8 @@ pub fn GridZone(props: GridZoneProps) -> Element {
     // Read before this zone provides its own: the zone enclosing a nested grid.
     let enclosing = try_use_context::<GridZoneContext>();
     let warned = use_warn_once();
+    // 4% of the zone's width in px, as the column gap's cap; masonry only.
+    let mut gap_cap = use_signal(|| None::<u32>);
 
     let area = props.area;
     if grid.is_none() && area.is_set() {
@@ -188,7 +193,22 @@ pub fn GridZone(props: GridZoneProps) -> Element {
             )
         });
     }
-    let gap_px = measured.map_or(theme.spacing.get(gap.size).into(), |px| px.round() as u32);
+    let full_gap_px = measured.map_or(theme.spacing.get(gap.size).into(), |px| px.round() as u32);
+    let gap_px = match *gap_cap.read() {
+        Some(cap) if props.masonry => full_gap_px.min(cap),
+        _ => full_gap_px,
+    };
+    // Only a capped gap is written: at full size the CSS keeps the caller's own value.
+    let masonry_gap = (gap_px < full_gap_px).then(|| format!("{gap_px}px"));
+    let onresize = props.masonry.then_some(move |event: Event<ResizeData>| {
+        let Ok(size) = event.get_content_box_size() else {
+            return;
+        };
+        let cap = Some((size.width * 0.04).round() as u32);
+        if *gap_cap.peek() != cap {
+            gap_cap.set(cap);
+        }
+    });
     let container = if area.is_set() { area.name } else { "" };
     // A nested zone reusing the area name would capture the outer zone's
     // responsive spans.
@@ -222,17 +242,21 @@ pub fn GridZone(props: GridZoneProps) -> Element {
     // Cached per change: building the three vars was ~0.45x `Leaf`.
     // The zone's and an image list's `calc()`s need a length.
     let gap_css = as_length(gap.resolve(SizeCss::SPACING));
-    let style = use_cache((container, gap_css), |(container, gap_css)| {
-        let named = !container.is_empty();
-        variables()
-            .with(GRID_ZONE_AREA_VAR, named.then(|| container.to_string()))
-            .with(GRID_ZONE_GAP, gap_css.clone())
-            .with(
-                GRID_ZONE_CONTAINER_VAR,
-                named.then(|| container_name(container)),
-            )
-            .render()
-    });
+    let style = use_cache(
+        (container, gap_css, masonry_gap),
+        |(container, gap_css, masonry_gap)| {
+            let named = !container.is_empty();
+            variables()
+                .with(GRID_ZONE_AREA_VAR, named.then(|| container.to_string()))
+                .with(GRID_ZONE_GAP, gap_css.clone())
+                .with(GRID_ZONE_MASONRY_GAP, masonry_gap.clone())
+                .with(
+                    GRID_ZONE_CONTAINER_VAR,
+                    named.then(|| container_name(container)),
+                )
+                .render()
+        },
+    );
 
     let states: Input<States> = props
         .states
@@ -249,6 +273,7 @@ pub fn GridZone(props: GridZoneProps) -> Element {
         .states(&states)
         .style(Some(style))
         .prepare()
+        .event("onresize", onresize)
         .render(
             props.component.copied_or(HtmlTag::Div),
             props.attributes,

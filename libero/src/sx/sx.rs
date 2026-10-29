@@ -18,6 +18,20 @@ const CAN_HOVER: &str = "(hover: hover), (pointer: none)";
 /// the hover rules by that text.
 const NO_HOVER: &str = "(hover: none) and (pointer: coarse)";
 
+/// Whether every rule holding `needle` in `css` sits inside the [`CAN_HOVER`] guard.
+#[cfg(test)]
+pub(crate) fn hover_guarded(css: &str, needle: &str) -> bool {
+    let guard = format!("@media {CAN_HOVER}{{");
+    let mut hits = css.match_indices(needle).peekable();
+    assert!(hits.peek().is_some(), "no {needle}: {css}");
+    hits.all(|(at, _)| {
+        css[..at].rfind(&guard).is_some_and(|start| {
+            let span = &css[start..at];
+            span.matches('{').count() > span.matches('}').count()
+        })
+    })
+}
+
 /// A style: declarations plus nested modifiers, rendered to one hashed class.
 /// Values take theme tokens: sizes (`"md"`), palette colours (`"primary.7"`), vars.
 /// Values, selectors and queries reach the stylesheet unescaped: never user text.

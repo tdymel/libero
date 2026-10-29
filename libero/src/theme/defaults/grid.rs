@@ -14,6 +14,8 @@ pub const GRID_ZONE_AREA_VAR: CssVar = CssVar::new("--lsx-grid-zone-area");
 pub const GRID_ZONE_CONTAINER_VAR: CssVar = CssVar::new("--lsx-grid-zone-container");
 /// The masonry row span from a measured height: written by `GridItem`, read by the zone's rule.
 pub const GRID_ITEM_ROWS_VAR: CssVar = CssVar::new("--lsx-grid-item-rows");
+/// A narrow masonry zone's gap capped like its column gap, in px; unset at full size.
+pub(crate) const GRID_ZONE_MASONRY_GAP: CssVar = CssVar::new("--lsx-grid-zone-masonry-gap");
 /// A caller's own `GridItem { rows }` span; not [`GRID_ITEM_ROWS_VAR`]: one property, one writer.
 pub const GRID_ITEM_ROW_SPAN_VAR: CssVar = CssVar::new("--lsx-grid-item-row-span");
 
