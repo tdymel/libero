@@ -285,6 +285,53 @@ fn copies_that_do_not_fill_the_box_warn_once() {
     });
 }
 
+/// Todo 4831: the pause toggle's 44px finger box sits inside the clipped root, not cut at its edge.
+#[test]
+fn the_pause_toggle_keeps_its_44px_finger_box() {
+    use chromiumoxide::cdp::browser_protocol::emulation::SetTouchEmulationEnabledParams;
+    block_on(async {
+        for route in ["/marquee", "/marquee-vertical"] {
+            let fixture = Fixture::open(route, Viewport::Desktop).await.unwrap();
+            let page = &fixture.page;
+            page.execute_bounded(SetTouchEmulationEnabledParams::new(true))
+                .await
+                .unwrap();
+            wait::for_js_true(
+                page,
+                "matchMedia('(pointer: coarse)').matches",
+                "a coarse pointer",
+            )
+            .await
+            .unwrap();
+            wait::for_visible(page, PAUSE).await.unwrap();
+            let misses: Vec<(f64, f64)> = page
+                .evaluate_bounded(format!(
+                    "(() => {{
+                        const el = document.querySelector({PAUSE:?});
+                        const r = el.getBoundingClientRect();
+                        const cx = r.x + r.width / 2, cy = r.y + r.height / 2;
+                        const misses = [];
+                        for (const dx of [-21, 0, 21]) for (const dy of [-21, 0, 21]) {{
+                            const at = document.elementFromPoint(cx + dx, cy + dy);
+                            if (!at || !el.contains(at)) misses.push([dx, dy]);
+                        }}
+                        return misses;
+                    }})()"
+                ))
+                .await
+                .unwrap()
+                .into_value()
+                .unwrap();
+            assert!(
+                misses.is_empty(),
+                "{route}: points of the toggle's 44px box land elsewhere: {misses:?}"
+            );
+            fixture.console.assert_clean("the marquee").unwrap();
+            fixture.close().await.unwrap();
+        }
+    });
+}
+
 /// Todo 2857: the fade is opaque paper at the ends, so it hides while focus is in the strip.
 #[test]
 fn the_fade_steps_aside_for_a_focused_link() {

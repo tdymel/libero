@@ -340,6 +340,13 @@ impl Ticks {
                 .unwrap_or(15) as usize,
             false => 0,
         };
+        // A step that never ends (66.67) stops at two decimals, as `ValueFormat::Auto` does:
+        // three read `250,000` as a quarter million where the comma groups.
+        let decimals = if step >= 1.0 {
+            decimals.min(2)
+        } else {
+            decimals
+        };
         Self {
             decimals,
             scale,

@@ -169,6 +169,23 @@ fn a_fixed_axis_range_and_titles_are_drawn() {
     assert!(svg.contains("rotate(-90)"), "{svg}");
 }
 
+/// Todo 4830: a step that does not divide the range writes two decimals at most, so the
+/// end tick never reads `250,000` (a quarter million in a German text).
+#[test]
+fn an_uneven_step_writes_at_most_two_decimals() {
+    let mut spec = line(vec![spec("A", &[Some(60.0), Some(240.0)])], &["Q1", "Q2"]);
+    spec.axes = Axes {
+        min: Some(50.0),
+        max: Some(250.0),
+        ticks: 3,
+        ..Axes::default()
+    };
+    let svg = draw_line(&spec).expect("drawn").svg;
+    for label in ["50,00 kg", "116,67 kg", "183,33 kg", "250,00 kg"] {
+        assert!(svg.contains(label), "{label}: {svg}");
+    }
+}
+
 /// Unset ends land on a round step, as many as `ticks` asks or one more or fewer.
 #[test]
 fn an_unset_axis_end_lands_on_a_round_step() {

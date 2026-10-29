@@ -170,15 +170,16 @@ fn trend(values: &DemoValues) -> Option<(&'static str, Trend)> {
     }
 }
 
-/// The value axis' fixed ends, `y_min` and `y_max`, for the chart type.
+/// The value axis' fixed ends, `y_min` and `y_max`, for the chart type. Each span divides by
+/// every `y_ticks` choice (2 to 10 steps), so the labels stay round.
 fn y_range(values: &DemoValues) -> Option<(f64, f64)> {
     match (values.str("y_range").as_str(), values.str("type").as_str()) {
         ("auto", _) => None,
-        (_, "bar") => Some((-50.0, 150.0)),
-        (_, "scatter") => Some((0.0, 100.0)),
-        (_, "candlestick") => Some((20.0, 60.0)),
-        _ if values.str("area") == "stacked" => Some((0.0, 400.0)),
-        _ => Some((50.0, 250.0)),
+        (_, "bar") => Some((-60.0, 180.0)),
+        (_, "scatter") => Some((0.0, 120.0)),
+        (_, "candlestick") => Some((10.0, 70.0)),
+        _ if values.str("area") == "stacked" => Some((0.0, 480.0)),
+        _ => Some((0.0, 240.0)),
     }
 }
 

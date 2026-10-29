@@ -2,7 +2,7 @@ use dioxus::prelude::*;
 
 use super::ChartPart;
 use crate::{
-    components::common::{Part, focus_ring_sx},
+    components::common::{COARSE_POINTER, COARSE_TARGET, Part, focus_ring_sx},
     sx::{Sx, sx},
     theme::PointSymbol,
     tokens::NamedColorCss,
@@ -26,7 +26,12 @@ pub(super) fn legend_sx() -> Sx {
             .color("inherit")
             .with("font", "inherit")
             .cursor("pointer")
-            .focus_visible(focus_ring_sx()),
+            .focus_visible(focus_ring_sx())
+            // A finger's target (todo 4830): taller rows, not a hit area over the wrapped neighbours.
+            .media(
+                COARSE_POINTER,
+                sx().min_height(COARSE_TARGET).min_width(COARSE_TARGET),
+            ),
     )
     // Struck through, not only dimmed: the state reads without colour.
     .selector(

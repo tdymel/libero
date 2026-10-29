@@ -2,7 +2,7 @@ use dioxus::prelude::*;
 use libero::{
     components::{Anchor, Chip, Flex, Icon, OptionLabel, Options, Pictogram, Tabs, Title, Tldr},
     sx::{Sx, sx},
-    theme::{HEADER_HEIGHT_VAR, PAPER_BORDER_COLOR},
+    theme::{HEADER_HEIGHT_VAR, PAPER_BACKGROUND, PAPER_BORDER_COLOR},
 };
 use pictogram_icons_lucide as lucide;
 
@@ -137,6 +137,25 @@ pub fn DocPage(
             sx().flex("1 0 0")
                 .min_width("max-content")
                 .white_space("nowrap"),
+        )
+        // A row that scrolls shows a shadow at each edge with tabs beyond it: the covers
+        // scroll with the content (`local`) and hide the fixed shadows at either end.
+        .selector(
+            "& > [role=tablist]",
+            sx().with(
+                "background-image",
+                format!(
+                    "linear-gradient(to right, {paper} 30%, transparent), \
+                     linear-gradient(to left, {paper} 30%, transparent), \
+                     radial-gradient(farthest-side at 0 50%, color-mix(in srgb, currentColor 30%, transparent), transparent), \
+                     radial-gradient(farthest-side at 100% 50%, color-mix(in srgb, currentColor 30%, transparent), transparent)",
+                    paper = PAPER_BACKGROUND.value(),
+                ),
+            )
+            .with("background-repeat", "no-repeat")
+            .with("background-position", "0 0, 100% 0, 0 0, 100% 0")
+            .with("background-size", "2rem 100%, 2rem 100%, 0.75rem 100%, 0.75rem 100%")
+            .with("background-attachment", "local, local, scroll, scroll"),
         )
         // A phone drops the tab icons, so "Accessibility" is not cut at 375px.
         .media(

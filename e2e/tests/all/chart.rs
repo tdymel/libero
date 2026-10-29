@@ -46,3 +46,56 @@ async fn switches<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
 }
 
 e2e::scenario!(the_segments_swap_the_chart, "/chart", switches);
+
+/// Todo 4830: under a finger every legend key takes presses 21px above and below its centre.
+#[test]
+fn a_finger_presses_a_legend_key_in_a_44px_box() {
+    use chromiumoxide::cdp::browser_protocol::emulation::SetTouchEmulationEnabledParams;
+    use e2e::wait::PageBounded;
+    use e2e::{Fixture, Viewport, wait};
+    e2e::browser::block_on(async {
+        let fixture = Fixture::open("/chart", Viewport::Mobile).await.unwrap();
+        let page = &fixture.page;
+        page.execute_bounded(SetTouchEmulationEnabledParams::new(true))
+            .await
+            .unwrap();
+        wait::for_js_true(
+            page,
+            "matchMedia('(pointer: coarse)').matches",
+            "a coarse pointer",
+        )
+        .await
+        .unwrap();
+        for segment in [0, 1, 2] {
+            page.evaluate_bounded(format!(
+                "document.querySelector('[role=radiogroup] label[for$=\"-segment-{segment}\"]').click()"
+            ))
+            .await
+            .unwrap();
+            wait::for_visible(page, "#chart [data-slot=legend] button")
+                .await
+                .unwrap();
+            let misses: Vec<String> = page
+                .evaluate_bounded(
+                    "(() => [...document.querySelectorAll('#chart [data-slot=legend] button')].flatMap((el) => {
+                        el.scrollIntoView({ block: 'center' });
+                        const r = el.getBoundingClientRect();
+                        const cx = r.x + r.width / 2, cy = r.y + r.height / 2;
+                        return [-21, 0, 21]
+                            .filter((dy) => { const at = document.elementFromPoint(cx, cy + dy); return !at || !el.contains(at); })
+                            .map((dy) => `${el.textContent} ${dy}`);
+                    }))()",
+                )
+                .await
+                .unwrap()
+                .into_value()
+                .unwrap();
+            assert!(
+                misses.is_empty(),
+                "segment {segment}: legend points outside their key: {misses:?}"
+            );
+        }
+        fixture.console.assert_clean("the legend").unwrap();
+        fixture.close().await.unwrap();
+    });
+}

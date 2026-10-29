@@ -5,8 +5,8 @@ use crate::{
     components::{
         buttons::ActionIcon,
         common::{
-            Glyph, HtmlTag, Input, Orientation, Part, ScaleOrCss, States, Variables, base_props,
-            parts_enum, variables,
+            COARSE_POINTER, Glyph, HtmlTag, Input, Orientation, Part, ScaleOrCss, States,
+            Variables, base_props, parts_enum, variables,
         },
         layout::use_box,
     },
@@ -54,6 +54,8 @@ fn fade(side: &str) -> String {
 
 static MARQUEE_BASE_SX: StaticSx = StaticSx::new(|| {
     let offset = SizeCss::SPACING.value(Size::Xs);
+    // Under a finger the toggle's 44px box reaches 10px out of its 24px: keep it inside the clip.
+    let coarse_offset = format!("max({offset}, 10px)");
     let (track, copies, pause) = (
         MarqueePart::Track.selector(),
         MarqueePart::Group.selector(),
@@ -90,6 +92,11 @@ static MARQUEE_BASE_SX: StaticSx = StaticSx::new(|| {
                 .z_index("2")
                 .right(offset.clone())
                 .rtl(sx().right("auto").left(offset.clone()))
+                .media(
+                    COARSE_POINTER,
+                    sx().right(coarse_offset.clone())
+                        .rtl(sx().right("auto").left(coarse_offset.clone())),
+                )
                 .media(REDUCED_MOTION, sx().display("none")),
         );
 
@@ -141,7 +148,11 @@ static MARQUEE_BASE_SX: StaticSx = StaticSx::new(|| {
                 .with("scroll-padding-block", ring_room),
         )
         .selector(copies, sx().flex_direction("column"))
-        .selector(pause, sx().bottom(offset));
+        .selector(
+            pause,
+            sx().bottom(offset)
+                .media(COARSE_POINTER, sx().bottom(coarse_offset)),
+        );
 
     // Between the track and the toggle. Off under reduced motion, where it would cover
     // the first copy, and while focus is inside, where it would cover a link (todo 2857).

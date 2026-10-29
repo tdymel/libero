@@ -1015,3 +1015,54 @@ fn a_combobox_demo_closes_on_an_outside_click() {
         }
     });
 }
+
+/// Todo 4831: a docs tab row wider than the phone scrolls inside itself and says so (an edge
+/// shadow towards the hidden tabs), instead of cutting "Accessibility" with no cue.
+#[test]
+fn a_crowded_doc_tab_row_shows_that_it_scrolls() {
+    use chromiumoxide::cdp::browser_protocol::emulation::SetDeviceMetricsOverrideParams;
+    block_on(async {
+        let routes = [
+            "/data-display/video",
+            "/feedback/progress-bar",
+            "/feedback/circular-progress",
+            "/feedback/alert",
+            "/buttons/theme-switcher",
+        ];
+        for route in routes {
+            let fixture = Fixture::open_until(
+                route,
+                Viewport::Mobile,
+                Scheme::Light,
+                "#docs-main [role=tab]",
+            )
+            .await
+            .unwrap();
+            let page = &fixture.page;
+            for width in [375, 320] {
+                page.execute_bounded(SetDeviceMetricsOverrideParams::new(width, 800, 1.0, true))
+                    .await
+                    .unwrap();
+                let (scrolls, cue): (bool, bool) = page
+                    .evaluate_bounded(
+                        "(() => { const list = document.querySelector('#docs-main [role=tablist]'); \
+                         const style = getComputedStyle(list); \
+                         return [list.scrollWidth > list.clientWidth + 1, \
+                           style.backgroundImage.includes('gradient') && style.backgroundAttachment.includes('scroll')]; })()",
+                    )
+                    .await
+                    .unwrap()
+                    .into_value()
+                    .unwrap();
+                assert!(
+                    !scrolls || cue,
+                    "{route} at {width}px: the tab row scrolls with no cue"
+                );
+                if route.ends_with("video") && width == 320 {
+                    assert!(scrolls, "{route} at {width}px: the fixture tests nothing");
+                }
+            }
+            close(fixture).await;
+        }
+    });
+}
