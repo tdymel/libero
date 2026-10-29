@@ -34,6 +34,7 @@ static TEXTAREA_CONTROL_SX: StaticSx = StaticSx::new(|| {
 
 field_parts_enum! {
     /// [`Textarea`]'s inner parts, for its `parts` prop: a field's, and the counter.
+    /// `Leading` and `Trailing` match nothing: a Textarea renders neither slot.
     pub enum TextareaPart framed {
         /// The `12/200` badge in the frame's bottom corner, with `counter`. Beside the
         /// control, so one level deeper too where the renderer draws no placeholder.

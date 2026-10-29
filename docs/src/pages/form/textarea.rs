@@ -70,7 +70,6 @@ pub fn TextareaPage() -> Element {
                     (TextareaPart::Description, "The caption between the label and the control."),
                     (TextareaPart::Frame, "The bordered box around the control."),
                     (TextareaPart::Control, "The element the label names."),
-                    (TextareaPart::Trailing, "The slot after the control: a chevron, a toggle."),
                     (TextareaPart::Counter, "The `12/200` badge in the frame's bottom corner, with `counter`."),
                     (TextareaPart::Helper, "The caption under the control."),
                     (TextareaPart::Status, "The validation message."),
@@ -85,7 +84,7 @@ pub fn TextareaPage() -> Element {
                 .example("A bio, `Textarea { label: \"Bio\", maxlength: 200, counter: true }`: the counter is silent while you type, and from 20 characters left a polite status says how many remain once you pause for a second."),
             lead: rsx! {
                 Text {
-                    "A multi-line text field with the same slots as "
+                    "A multi-line text field with the same captions as "
                     Code { source: "TextField" }
                     ". "
                     Code { source: "rows" }

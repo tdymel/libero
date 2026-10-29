@@ -28,7 +28,9 @@ static LIST_ITEM_BASE_SX: StaticSx = StaticSx::new(|| {
             sx(),
         ),
     };
+    // A long word or URL wraps in a plain item too, as in an icon or action one (4990).
     sx().padding("0")
+        .overflow_wrap("anywhere")
         .when(
             "with-icon",
             item.list_style_type("none")

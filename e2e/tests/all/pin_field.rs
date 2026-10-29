@@ -383,6 +383,81 @@ fn typing_before_a_digit_replaces_it() {
     });
 }
 
+/// Todo 4984: Backspace on a middle cell keeps focus there, and the next digit goes
+/// back in where the cleared one was rather than over the one before it.
+#[test]
+fn a_digit_typed_after_a_middle_backspace_goes_back_in_its_place() {
+    block_on(async {
+        let fixture = Fixture::open("/pin-field", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        focus_at(page, 0, 0).await;
+        keyboard::type_text(page, "1234").await.unwrap();
+        expect_cells(page, "1|2|3|4 @3", "1234 typed").await;
+
+        focus_at(page, 1, 1).await;
+        keyboard::press(page, keyboard::BACKSPACE).await.unwrap();
+        expect_cells(page, "1|3|4| @1", "Backspace on the 2").await;
+        press_digit(page, "5").await;
+        expect_cells(page, "1|5|3|4 @2", "5 typed after it").await;
+
+        // The same with Delete, and a retyped 3 goes in rather than moving on.
+        focus_at(page, 2, 1).await;
+        keyboard::press(page, DELETE).await.unwrap();
+        expect_cells(page, "1|5|4| @2", "Delete on the 3").await;
+        press_digit(page, "4").await;
+        expect_cells(page, "1|5|4|4 @3", "4 typed after it").await;
+
+        fixture
+            .console
+            .assert_clean("pin field middle Backspace")
+            .unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
+/// Todo 4985: a new whole code written over a full pin, as a resent OTP autofills,
+/// fires `oncomplete` again; the same code again does not.
+#[test]
+fn a_new_code_over_a_full_pin_completes_again() {
+    const SELECT: &str = "document.querySelectorAll('[role=group] input')[0].select()";
+    block_on(async {
+        let fixture = Fixture::open("/pin-field/echo", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        for (code, completes) in [("1234", "1"), ("5678", "2"), ("5678", "2")] {
+            page.evaluate_bounded(SELECT).await.unwrap();
+            page.execute_bounded(InsertTextParams::new(code))
+                .await
+                .unwrap();
+            wait::for_js_true(
+                page,
+                &format!(
+                    "document.querySelector('#echo').textContent === '{code}' \
+                     && document.querySelector('#completes').textContent === '{completes}'"
+                ),
+                &format!("{code} filled, {completes} completions"),
+            )
+            .await
+            .unwrap();
+        }
+        // The repeat changed nothing, so nothing is still to land.
+        crate::settle::painted(page).await.unwrap();
+        let completes: String = page
+            .evaluate_bounded("document.querySelector('#completes').textContent")
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        assert_eq!(completes, "2", "the same code completed again");
+
+        fixture.console.assert_clean("pin field refill").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
 /// A paste into a filled cell replaces from that cell on, whichever side of
 /// its digit the caret was.
 #[test]
@@ -575,7 +650,8 @@ fn typing_past_the_pin_lands_in_the_first_empty_cell() {
     });
 }
 
-/// Todos 1597, 1598, 1600: eight cells and seven dashes fit 288px, a reader
+/// Todos 1597, 1598, 1600, 4989: eight cells and seven dashes fit 288px, the dashes
+/// give way before a cell turns into a sliver, a reader
 /// skips the dashes, and a phone neither capitalises nor corrects a letter.
 #[test]
 fn eight_letter_cells_fit_a_phone_and_read_as_cells_only() {
@@ -599,6 +675,8 @@ fn eight_letter_cells_fit_a_phone_and_read_as_cells_only() {
                  const dashes = [...group.children].filter(c => c.tagName === 'SPAN'); \
                  return [ \
                    group.scrollWidth <= group.clientWidth, \
+                   [...group.children].filter(c => c.tagName === 'DIV') \
+                     .every(c => c.getBoundingClientRect().width >= 28), \
                    [...group.children].every(c => c.getBoundingClientRect().right <= box.right + 0.5), \
                    dashes.length === 7 && dashes.every(d => d.getAttribute('aria-hidden') === 'true'), \
                    cells.every(c => c.getAttribute('autocapitalize') === 'off' \
@@ -609,9 +687,19 @@ fn eight_letter_cells_fit_a_phone_and_read_as_cells_only() {
             .unwrap()
             .into_value()
             .unwrap();
+        let widths: String = page
+            .evaluate_bounded(
+                "[...document.querySelector('[role=group]').children] \
+                 .map(c => c.tagName + ' ' + c.getBoundingClientRect().width.toFixed(1)).join(', ')",
+            )
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
         assert_eq!(
-            checks, [true; 4],
-            "[no scroll, inside 288px, dashes hidden, no autocapitalize/correct/spellcheck]"
+            checks, [true; 5],
+            "[no scroll, cells 28px+ (4989), inside 288px, dashes hidden, \
+             no autocapitalize/correct/spellcheck]: {widths}"
         );
         let tree = ax::snapshot(page, "[role=group]").await.unwrap();
         assert!(!tree.contains("\"-\""), "a dash is read:\n{tree}");

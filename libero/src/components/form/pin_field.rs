@@ -21,7 +21,7 @@ use crate::{
     localization::fill,
     platform::{ElementApi, PlatformError, meta_held, set_value_by_id},
     sx::{StaticSx, sx},
-    theme::{FIELD_HEIGHT, PinFieldDefaults},
+    theme::{FIELD_HEIGHT, PIN_FIELD_GAP, PinFieldDefaults},
     utils::fold_digit,
 };
 
@@ -50,6 +50,23 @@ static PIN_FIELD_ROW_SX: StaticSx = StaticSx::new(|| {
         })
         // A percentage drops the input's own ~150px from the cell's minimum.
         .selector("& input", sx().text_align("center").width("100%"))
+        // A separator shrinks away before a cell does (4989): its two gaps live
+        // inside it, half each, and leave one gap between the cells once it is gone.
+        .selector(
+            "& > span",
+            sx().display("flex")
+                .align_items("center")
+                .flex("0 100 auto")
+                .min_width("0")
+                .overflow("hidden")
+                .margin_left(format!("calc({} / -2)", PIN_FIELD_GAP.value()))
+                .margin_right(format!("calc({} / -2)", PIN_FIELD_GAP.value())),
+        )
+        .selector(
+            "& > span::before, & > span::after",
+            sx().content("''")
+                .flex(format!("0 1 calc({} / 2)", PIN_FIELD_GAP.value())),
+        )
 });
 
 field_props! {
@@ -64,9 +81,11 @@ field_props! {
         #[props(default, into)]
         validate: crate::components::form::Validators<String>,
         /// Fires once when the last empty cell fills; clearing a cell re-arms it.
+        /// A new full code pasted or autofilled over a full pin fires it again.
         #[props(default)]
         oncomplete: Option<EventHandler<String>>,
-        /// How many cells.
+        /// How many cells. Lowering it below the value cuts what the cells show
+        /// and post, but leaves the caller's value as it is: no `oninput` fires.
         #[props(default, into)]
         length: Input<usize>,
         /// Which characters a cell accepts; others are dropped at the key.
@@ -197,7 +216,7 @@ pub fn PinField(props: PinFieldProps) -> Element {
     let was_full = cells.iter().all(Option::is_some);
     // An `Rc`, not a `use_callback`: it writes signals read inside an input
     // event ([[codebase/reentrant-handlers]]).
-    let report: Rc<dyn Fn(Vec<Option<char>>)> = Rc::new(move |cells: Vec<Option<char>>| {
+    let report: Report = Rc::new(move |cells: Vec<Option<char>>, rewrite: bool| {
         let mut buffer = buffer;
         let next = from_cells(&cells);
         let full = next.chars().count() == length;
@@ -208,9 +227,9 @@ pub fn PinField(props: PinFieldProps) -> Element {
             oninput(next.clone());
         }
         // Latched: without it every keystroke on a full pin reports a
-        // completion, and a submit handler would run again on each.
+        // completion. A new code written in one edit (a resent OTP) re-arms it.
         if full
-            && !was_full
+            && (!was_full || rewrite)
             && let Some(oncomplete) = &oncomplete
         {
             oncomplete.call(next);
@@ -222,8 +241,10 @@ pub fn PinField(props: PinFieldProps) -> Element {
     let handles: CellHandles = use_hook(|| Rc::new(RefCell::new(Vec::new())));
     handles.borrow_mut().resize(length, None);
     let handled_delete = use_hook(|| Rc::new(Cell::new(false)));
+    let insert_at = use_hook(|| Rc::new(Cell::new(None)));
     let edit = PinEdit {
         handled_delete,
+        insert_at,
         cells: cells.clone(),
         length,
         kind,
@@ -313,6 +334,9 @@ fn from_cells(cells: &[Option<char>]) -> String {
     cells.iter().flatten().collect()
 }
 
+/// Reports the next cells; `true` for a whole new code written in one edit.
+type Report = Rc<dyn Fn(Vec<Option<char>>, bool)>;
+
 /// Each cell's own handle, by index, filled in as the cells render.
 type CellHandles = Rc<RefCell<Vec<Option<ElementHandle>>>>;
 
@@ -344,7 +368,10 @@ struct PinEdit {
     /// The field's id; cell `n` is `{id}-{n + 1}`.
     id: String,
     readonly: bool,
-    report: Rc<dyn Fn(Vec<Option<char>>)>,
+    report: Report,
+    /// The middle cell just cleared: the next character typed there goes in
+    /// before the ones that moved up, rather than over them (todo 4984).
+    insert_at: Rc<Cell<Option<usize>>>,
     /// Set while a prevented Backspace or Delete is held: Blitz on macOS still runs its
     /// delete binding after it, whose `oninput` would undo the key's own edit (todo 3342).
     handled_delete: Rc<Cell<bool>>,
@@ -360,17 +387,37 @@ impl PinEdit {
         let _ = cell_at(&self.root, &self.handles, index).and_then(|el| el.focus());
     }
 
-    /// One cell set or cleared. Returns the cells it reported.
+    /// One cell set or cleared. Returns the cells it reported, closed up as
+    /// the next render shows them.
     fn edit(&self, index: usize, character: Option<char>) -> Vec<Option<char>> {
         let mut next = self.cells.clone();
-        next[index] = character;
-        (self.report)(next.clone());
+        match (self.insert_at.take() == Some(index), character) {
+            (true, Some(_)) => next.insert(index, character),
+            _ => next[index] = character,
+        }
+        let next = to_cells(&from_cells(&next), self.length);
+        (self.report)(next.clone(), false);
+        next
+    }
+
+    /// Clears filled cell `index`, with the cells it reported. A middle one keeps
+    /// focus, as it now holds the next character (4984); so does the last cell.
+    fn clear(&self, index: usize, step_back: bool) -> Vec<Option<char>> {
+        let middle = self.cells.get(index + 1).is_some_and(Option::is_some);
+        let next = self.edit(index, None);
+        self.insert_at.set(middle.then_some(index));
+        if step_back && !middle && index + 1 < self.length {
+            self.focus(index.wrapping_sub(1));
+        }
         next
     }
 
     /// A paste, from `index` onwards. Returns the cells it reported and the
     /// cell the caret lands on.
     fn spread(&self, index: usize, characters: Vec<char>) -> (Vec<Option<char>>, usize) {
+        self.insert_at.set(None);
+        // A whole code in one edit, as a resent OTP autofills (4985).
+        let rewrite = characters.len() >= self.length;
         let mut next = self.cells.clone();
         let mut cursor = index;
         for character in characters {
@@ -380,7 +427,8 @@ impl PinEdit {
             next[cursor] = Some(character);
             cursor += 1;
         }
-        (self.report)(next.clone());
+        let rewrite = rewrite && next != self.cells;
+        (self.report)(next.clone(), rewrite);
         (next, cursor.min(self.length - 1))
     }
 
@@ -426,13 +474,7 @@ impl PinEdit {
         let accepted: Vec<char> = raw.into_iter().filter(|c| self.kind.accepts(*c)).collect();
         let next = match accepted.len() {
             // Emptied without a key event (a soft keyboard's Backspace): step back as `keys` does.
-            0 if emptied && self.cells[index].is_some() => {
-                let next = self.edit(index, None);
-                if index + 1 < self.length {
-                    self.focus(index.wrapping_sub(1));
-                }
-                next
-            }
+            0 if emptied && self.cells[index].is_some() => self.clear(index, true),
             // Every character was rejected, or an empty cell stayed empty.
             0 => self.cells.clone(),
             _ => self.place(index, accepted),
@@ -505,6 +547,12 @@ impl PinEdit {
         if event.is_composing() || navigation_chord(&event).is_some() {
             return;
         }
+        if !matches!(
+            event.key(),
+            Key::Character(_) | Key::Named(NamedKey::Unidentified)
+        ) {
+            self.insert_at.set(None);
+        }
         match event.key() {
             Key::Named(NamedKey::ArrowLeft) => {
                 event.prevent_default();
@@ -528,7 +576,7 @@ impl PinEdit {
                 self.handled_delete.set(true);
                 // An empty cell reports nothing: `oninput` would see an unchanged pin.
                 if self.cells[index].is_some() && !readonly {
-                    self.edit(index, None);
+                    self.clear(index, false);
                 }
             }
             Key::Named(NamedKey::Backspace) => {
@@ -536,12 +584,7 @@ impl PinEdit {
                 self.handled_delete.set(true);
                 match self.cells[index].is_some() && !readonly {
                     true => {
-                        self.edit(index, None);
-                        // The last cell keeps focus: it is where the next
-                        // character goes, and the pin is one short.
-                        if index + 1 < length {
-                            self.focus(index.wrapping_sub(1));
-                        }
+                        self.clear(index, true);
                     }
                     false => self.focus(index.wrapping_sub(1)),
                 }
@@ -557,7 +600,10 @@ impl PinEdit {
                     }
                     // Retyping what the cell already holds reads as
                     // confirming it, so move on instead of rewriting it.
-                    Some(character) if self.cells[index] == Some(character) => {
+                    Some(character)
+                        if self.cells[index] == Some(character)
+                            && self.insert_at.get() != Some(index) =>
+                    {
                         event.prevent_default();
                         self.focus(index + 1);
                     }

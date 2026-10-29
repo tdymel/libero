@@ -68,8 +68,8 @@ pub fn PinFieldPage() -> Element {
             accessibility: a11y()
                 .key(["Left", "Right"], "Moves to the cell on the left or right. The cells run left to right in a right-to-left locale too, so Left is always the previous cell.")
                 .key(["Home", "End"], "Moves to the first or last cell.")
-                .key(["Backspace"], "Removes the character, so the ones after it move one cell left, and moves back, except from the last cell; on an empty cell, only moves back.")
-                .key(["Delete"], "Removes the character, so the ones after it move one cell left, and stays.")
+                .key(["Backspace"], "Removes the character, so the ones after it move one cell left. In a middle cell it stays, and the next character typed goes back in there; from the last filled cell it moves back, except from the last cell. On an empty cell, only moves back.")
+                .key(["Delete"], "Removes the character, so the ones after it move one cell left, and stays; the next character typed goes back in there.")
                 .key(["Space"], "Moves to the next cell without typing.")
                 .key(["Letter"], "Typing the character a cell already holds moves to the next cell without a change.")
                 .key(["Tab"], "Moves to the next cell, and past the last one leaves the field, as in any group of inputs.")
@@ -141,10 +141,14 @@ pub fn PinFieldPage() -> Element {
 #[component]
 fn PinFieldDemo(values: DemoValues) -> Element {
     let mut value = use_signal(String::new);
-    let mut verified = use_signal(|| false);
+    // The length it fired at: another length is a new pin, not yet complete.
+    let mut verified = use_signal(|| None::<usize>);
 
     let length = values.str("length").parse::<usize>().unwrap_or(4);
     let field = field_props::<CodeCopy>(&values);
+    // What the cells show: a shorter length cuts the value.
+    let count = value().chars().take(length).count();
+    let complete = verified() == Some(length) && count == length;
 
     rsx! {
         Flex { direction: "column", gap: "sm", align: "center",
@@ -165,16 +169,16 @@ fn PinFieldDemo(values: DemoValues) -> Element {
                 value: value(),
                 oninput: move |next| {
                     value.set(next);
-                    verified.set(false);
+                    verified.set(None);
                 },
-                oncomplete: move |_| verified.set(true),
+                oncomplete: move |_| verified.set(Some(length)),
             }
             // The count stays silent per key; only the completion is announced.
-            if !verified() {
-                Text { size: "sm", "{value().chars().count()} of {length} entered." }
+            if !complete {
+                Text { size: "sm", "{count} of {length} entered." }
             }
             Text { size: "sm", role: "status",
-                if verified() { "Complete, oncomplete fired once." }
+                if complete { "Complete, oncomplete fired once." }
             }
         }
     }

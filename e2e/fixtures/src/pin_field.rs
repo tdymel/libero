@@ -52,12 +52,13 @@ fn PinFieldWidePage() -> Element {
     }
 }
 
-/// The typed code echoed in `#echo` and its `oninput` calls counted in
-/// `#inputs`, for the shared web/native scenarios.
+/// The typed code echoed in `#echo`, its `oninput` calls counted in `#inputs`
+/// and its `oncomplete` calls in `#completes`, for the shared web/native scenarios.
 #[component]
 fn PinFieldEchoPage() -> Element {
     let mut pin = use_signal(String::new);
     let mut inputs = use_signal(|| 0);
+    let mut completes = use_signal(|| 0);
 
     rsx! {
         Flex { direction: "column", gap: "md", max_width: "320px",
@@ -69,9 +70,11 @@ fn PinFieldEchoPage() -> Element {
                     pin.set(next);
                     inputs += 1;
                 },
+                oncomplete: move |_| completes += 1,
             }
             Text { id: "echo", "{pin}" }
             Text { id: "inputs", "{inputs}" }
+            Text { id: "completes", "{completes}" }
         }
     }
 }
