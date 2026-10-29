@@ -648,6 +648,8 @@ pub fn Demo(
                 direction: "row",
                 wrap: "wrap",
                 align: "stretch",
+                // The panel's border parts the two; a gap left the preview's centre off its cell's (4871).
+                gap: "0",
                 sx: sx().border_bottom(border()),
                 Box {
                     // A phone's narrow card keeps 8px inline: a coarse pointer's 308px calendar fits

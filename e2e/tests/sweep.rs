@@ -391,6 +391,37 @@ fn the_marquee_preview_fits_its_box() {
     });
 }
 
+/// Todo 4871: the PinField preview sits centred in its cell, the stretch up to the
+/// controls panel's border beside it or the card's edge below it, at 375 and 1280.
+#[test]
+fn the_pin_field_preview_is_centred_in_its_cell() {
+    const CENTRED: &str = "(() => { const field = document.querySelector('#docs-main [role=group]:has(input)'); \
+        if (!field) return false; \
+        let preview = field.parentElement; \
+        while (preview && getComputedStyle(preview).justifyContent !== 'safe center') preview = preview.parentElement; \
+        const p = preview.getBoundingClientRect(), f = field.getBoundingClientRect(); \
+        const panel = preview.nextElementSibling?.getBoundingClientRect(); \
+        const right = panel && panel.top < p.bottom - 1 ? panel.left : preview.parentElement.getBoundingClientRect().right; \
+        return Math.abs((f.left + f.right) / 2 - (p.left + right) / 2) <= 1; })()";
+    block_on(async {
+        for viewport in [Viewport::Mobile, Viewport::Desktop] {
+            let fixture = Fixture::open_until(
+                "/form/pin-field",
+                viewport,
+                Scheme::Light,
+                "#docs-main [role=group] input",
+            )
+            .await
+            .unwrap();
+            let at = viewport.name();
+            wait::for_js_true(&fixture.page, CENTRED, &format!("{at}: a centred preview"))
+                .await
+                .unwrap();
+            close(fixture).await;
+        }
+    });
+}
+
 /// Todo 4833: on the Tour demo's interactive Search step the card does not cover the
 /// `role=status` count, at 375 and 1280.
 #[test]

@@ -135,3 +135,9 @@ group "Rust code"
       StaticText "b ="
       StaticText "2"
       StaticText ";"
+group "Code"
+  button "Copy code"
+    description "Code"
+  status [atomic] [live=polite]
+  code
+    StaticText "cargo add libero"

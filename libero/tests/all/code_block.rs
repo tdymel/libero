@@ -217,6 +217,31 @@ fn a_floating_copy_button_reserves_space_on_the_first_row_only() {
     assert!(!body(&render(headed)).contains("copy-space"));
 }
 
+/// Todo 4870. A lone line ends beside the floating copy button: a band above it read as
+/// a second, empty row. Highlighted rows and the plain `pre` alike.
+#[test]
+fn a_lone_line_sits_beside_the_floating_copy_button() {
+    fn rows() -> Element {
+        rsx! {
+            LiberoProvider {
+                CodeBlock { header: false, highlight_lines: "1", source: "cargo add libero" }
+            }
+        }
+    }
+    fn plain() -> Element {
+        rsx! {
+            LiberoProvider {
+                CodeBlock { header: false, source: "cargo add libero" }
+            }
+        }
+    }
+
+    for html in [body(&render(rows)), body(&render(plain))] {
+        assert!(!html.contains("copy-space"), "{html}");
+        assert_eq!(html.matches("copy-beside").count(), 1, "{html}");
+    }
+}
+
 /// Events dispatched the way a renderer does, through [`crate::dispatch`].
 /// No clipboard without `native`; `native` has arboard, which may write, and the in-crate tests fake both answers.
 #[cfg(not(feature = "native"))]

@@ -190,11 +190,34 @@ static CODE_LINE_CONTENT_SX: StaticSx = StaticSx::new(|| {
         .white_space("pre")
         .padding_right("16px")
         .when("no-gutter", sx().padding_left("12px"))
+        .when("copy-beside", sx().padding_right(COPY_SPACE))
 });
 
 // The floating copy button's inset (10px on a coarse pointer), its ~26px height and a gap:
 // the first line starts below it, so no long line runs under the button (todo 4838).
 const COPY_BAND_PX: u32 = 28;
+
+// The button's inset (11px on a coarse pointer), ~26px width and a gap, for a lone line.
+const COPY_SPACE: &str = "43px";
+
+/// Where a floating copy button leaves its room: a lone line ends beside it, as a band
+/// above one line split the box in two (todo 4870); longer code starts below it.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum CopyRoom {
+    None,
+    Beside,
+    Above,
+}
+
+impl CopyRoom {
+    fn new(floating_copy: bool, line_count: usize) -> Self {
+        match (floating_copy, line_count) {
+            (false, _) => Self::None,
+            (true, 0 | 1) => Self::Beside,
+            (true, _) => Self::Above,
+        }
+    }
+}
 
 static CODE_PLAIN_PRE_SX: StaticSx = StaticSx::new(|| {
     sx().display("block")
@@ -211,6 +234,7 @@ static CODE_PLAIN_PRE_SX: StaticSx = StaticSx::new(|| {
                 CODE_LINES_VERTICAL_PADDING_PX / 2 + COPY_BAND_PX
             )),
         )
+        .when("copy-beside", sx().padding_right(COPY_SPACE))
 });
 
 parts_enum! {
@@ -366,14 +390,14 @@ fn code_line_row(
     line_numbers: bool,
     diff: DiffCell,
     row_state: Option<&'static str>,
-    copy_space: bool,
+    copy_room: CopyRoom,
     labels: &CodeBlockLabels,
     styles: &LineStyles,
 ) -> Element {
     let states = row_state
         .map(|s| States::new().active(s))
         .unwrap_or_default()
-        .with("copy-space", copy_space);
+        .with("copy-space", copy_room == CopyRoom::Above);
     let (marker, spoken) = match diff.flatten() {
         Some(DiffStatus::Added) => ("+", Some(labels.added)),
         Some(DiffStatus::Removed) => ("-", Some(labels.removed)),
@@ -399,7 +423,11 @@ fn code_line_row(
     let content = styles
         .content
         .clone()
-        .with_states(&States::new().with("no-gutter", !line_numbers && diff.is_none()))
+        .with_states(
+            &States::new()
+                .with("no-gutter", !line_numbers && diff.is_none())
+                .with("copy-beside", copy_room == CopyRoom::Beside),
+        )
         .render(
             HtmlTag::Span,
             Vec::new(),
@@ -428,8 +456,12 @@ fn code_line_row(
     )
 }
 
-fn max_lines_height(max_lines: u32, floating_copy: bool) -> String {
-    let band = if floating_copy { COPY_BAND_PX } else { 0 };
+fn max_lines_height(max_lines: u32, copy_room: CopyRoom) -> String {
+    let band = if copy_room == CopyRoom::Above {
+        COPY_BAND_PX
+    } else {
+        0
+    };
     format!(
         "calc({max_lines} * {CODE_LINE_HEIGHT} + {}px)",
         CODE_LINES_VERTICAL_PADDING_PX + band
@@ -445,7 +477,7 @@ fn code_lines(
     line_numbers: bool,
     highlighted_lines: &HashSet<usize>,
     diff_statuses: Option<&[Option<DiffStatus>]>,
-    floating_copy: bool,
+    copy_room: CopyRoom,
     labels: &CodeBlockLabels,
     styles: &LineStyles,
 ) -> Element {
@@ -468,8 +500,8 @@ fn code_lines(
                             None if highlighted_lines.contains(&(index + 1)) => Some("highlighted"),
                             None => None,
                         };
-                        let copy_space = floating_copy && index == 0;
-                        code_line_row(index, line, line_numbers, diff, row_state, copy_space, labels, styles)
+                        let room = if index == 0 { copy_room } else { CopyRoom::None };
+                        code_line_row(index, line, line_numbers, diff, row_state, room, labels, styles)
                     }
                 }
             }
@@ -560,11 +592,12 @@ pub fn CodeBlock(props: CodeBlockProps) -> Element {
             display_source.clone()
         }
     });
-    let floating_copy = copyable && !header;
+    let line_count = display_source.lines().count();
+    let copy_room = CopyRoom::new(copyable && !header, line_count);
     let (highlighted_lines, overrun) = props
         .highlight_lines
         .as_deref()
-        .map(|spec| parse_highlighted_lines(spec, display_source.lines().count()))
+        .map(|spec| parse_highlighted_lines(spec, line_count))
         .unwrap_or_default();
     // Once per mount: the highlight resource resolving is already a second render.
     use_hook(move || {
@@ -573,7 +606,7 @@ pub fn CodeBlock(props: CodeBlockProps) -> Element {
         }
     });
     let scroll_sx: Input<Sx> = match props.max_lines {
-        Some(max_lines) => sx().max_height(max_lines_height(max_lines, floating_copy)),
+        Some(max_lines) => sx().max_height(max_lines_height(max_lines, copy_room)),
         None => sx(),
     }
     .into();
@@ -635,7 +668,7 @@ pub fn CodeBlock(props: CodeBlockProps) -> Element {
             line_numbers,
             &highlighted_lines,
             props.diff.then_some(&diff_statuses[..]),
-            floating_copy,
+            copy_room,
             &labels,
             &line_styles,
         ),
@@ -643,7 +676,9 @@ pub fn CodeBlock(props: CodeBlockProps) -> Element {
             Box {
                 component: "pre",
                 framework_sx: &CODE_PLAIN_PRE_SX,
-                states: States::new().with("copy-space", floating_copy),
+                states: States::new()
+                    .with("copy-space", copy_room == CopyRoom::Above)
+                    .with("copy-beside", copy_room == CopyRoom::Beside),
                 Box {
                     component: "code",
                     {display_source.as_str()}
@@ -835,8 +870,21 @@ mod tests {
     #[test]
     fn the_row_pitch_follows_the_root_font_size() {
         assert!(CODE_LINE_HEIGHT.ends_with("rem"));
-        assert_eq!(max_lines_height(3, false), "calc(3 * 1.25rem + 24px)");
-        assert_eq!(max_lines_height(3, true), "calc(3 * 1.25rem + 52px)");
+        assert_eq!(
+            max_lines_height(3, CopyRoom::None),
+            "calc(3 * 1.25rem + 24px)"
+        );
+        assert_eq!(
+            max_lines_height(3, CopyRoom::Beside),
+            "calc(3 * 1.25rem + 24px)"
+        );
+        assert_eq!(
+            max_lines_height(3, CopyRoom::Above),
+            "calc(3 * 1.25rem + 52px)"
+        );
+        assert_eq!(CopyRoom::new(true, 1), CopyRoom::Beside);
+        assert_eq!(CopyRoom::new(true, 2), CopyRoom::Above);
+        assert_eq!(CopyRoom::new(false, 1), CopyRoom::None);
         let css = crate::css::Stylesheet::from(&CODE_LINE_ROW_SX);
         assert!(css.as_str().contains("min-height:1.25rem"), "{css:?}");
         let css = crate::css::Stylesheet::from(&CODE_COPY_BUTTON_FLOATING_SX);

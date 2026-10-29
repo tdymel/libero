@@ -455,6 +455,33 @@ fn the_floating_copy_button_covers_no_text_of_the_first_line() {
     });
 }
 
+/// Todo 4870. A lone line shares its row with the floating copy button: no empty band
+/// above it, one row of height, and still no text under the button.
+#[test]
+fn a_lone_line_shares_its_row_with_the_floating_copy_button() {
+    const ONE_ROW: &str = "(() => { const block = document.querySelector('#one-line-block'); \
+        const code = block.querySelector('pre > code'); \
+        if (!code || !code.textContent.includes('cargo add')) return false; \
+        const copy = block.querySelector('button').getBoundingClientRect(); \
+        const range = document.createRange(); range.selectNodeContents(document.createTreeWalker(code, NodeFilter.SHOW_TEXT).nextNode()); \
+        const text = range.getBoundingClientRect(); \
+        const pitch = parseFloat(getComputedStyle(code).lineHeight); \
+        const scroll = block.querySelector('[data-slot=scroll]').clientHeight; \
+        return text.top < copy.bottom && text.bottom > copy.top && text.right <= copy.left \
+            && Math.round(scroll) === Math.round(pitch) + 24; })()";
+    block_on(async {
+        for viewport in [Viewport::Mobile, Viewport::Desktop] {
+            let fixture = Fixture::open("/code", viewport).await.unwrap();
+            let page = &fixture.page;
+            wait::for_visible(page, "#one-line-block").await.unwrap();
+            wait::for_js_true(page, ONE_ROW, "one row, beside the copy button")
+                .await
+                .unwrap();
+            fixture.close().await.unwrap();
+        }
+    });
+}
+
 /// Todo 2345. A 200% default font size grows the row pitch with the text, so rows
 /// don't overlap and `max_lines: 2` still shows two whole lines.
 #[test]

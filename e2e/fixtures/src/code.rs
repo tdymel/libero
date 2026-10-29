@@ -51,6 +51,8 @@ fn CodePage() -> Element {
             CodeBlock { id: "first-line-block", language: "rust", header: false, copyable: true,
                 source: "let s = \"a first line long enough to run under the copy button\";\nlet b = 2;"
             }
+            // Todo 4870: a lone line sits beside the floating copy button, as the home hero's.
+            CodeBlock { id: "one-line-block", header: false, copyable: true, source: "cargo add libero" }
         }
     }
 }
