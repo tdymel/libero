@@ -10,14 +10,15 @@ use crate::{
     CssLayer,
     components::{
         common::{
-            HtmlTag, Input, ScaleOrCss, States, base_props, css_px, input_from_str, variables,
+            FOCUSABLE_SELECTOR, HtmlTag, Input, ScaleOrCss, States, base_props, css_px,
+            input_from_str, variables,
         },
         layout::use_box,
     },
     hooks::{
         Align, ElementHandle, PopoverOptions, Rect, escape_closes, place, placement_sx, use_css,
         use_element, use_escape_dismiss, use_focus_within, use_popover_on, use_portal_slot,
-        use_resize_fallback, use_theme,
+        use_press_away, use_press_marker, use_resize_fallback, use_theme,
     },
     platform::{Dimensions, ElementApi, document, keyboard, when_laid_out},
     sx::{REDUCED_MOTION, StaticSx, Sx, ThemeAwareValue, sx},
@@ -33,6 +34,11 @@ use crate::theme::Side;
 input_from_str!(Side);
 
 const TOOLTIP_GAP_VAR: CssVar = CssVar::new("--lsx-tooltip-gap");
+
+/// A trigger whose focus raises a soft keyboard.
+const TEXT_ENTRY_SELECTOR: &str = "textarea, [contenteditable]:not([contenteditable='false']), \
+    input:not([type='button'], [type='checkbox'], [type='color'], [type='file'], [type='image'], \
+    [type='radio'], [type='range'], [type='reset'], [type='submit'])";
 
 /// The bubble's widest, unless the viewport is narrower.
 const MAX_WIDTH: &str = "20rem";
@@ -269,12 +275,20 @@ pub fn Tooltip(props: TooltipProps) -> Element {
             focused.set(false);
         }
     }));
+    // A long press opened it and focused the trigger, so an outside tap, which blurs,
+    // closes it at once, as `HoverCard` (todo 4879).
+    let touch_open = use_hook(|| Rc::new(Cell::new(false)));
+    // That focus is ours: it must not hold the bubble open as keyboard focus.
+    let ours = use_hook(|| Rc::new(Cell::new(false)));
     let focus = use_focus_within(move || vec![anchor.mounted()], {
-        let pressed = pressed.clone();
+        let (pressed, touch_open, ours) = (pressed.clone(), touch_open.clone(), ours.clone());
         move |change| {
             let mut focused = focused;
             if !change.within {
                 focused.set(false);
+                if touch_open.get() {
+                    hover.set(false);
+                }
                 return;
             }
             if disabled {
@@ -282,8 +296,8 @@ pub fn Tooltip(props: TooltipProps) -> Element {
             }
             // The web answers itself, except for a focus from code after a
             // press outside this wrapper, which its caller marks (todo 476).
-            let pointer = pressed.replace(false);
-            if !marked() && change.focus_visible().unwrap_or(!pointer) {
+            let (pointer, ours) = (pressed.replace(false), ours.replace(false));
+            if !marked() && !ours && change.focus_visible().unwrap_or(!pointer) {
                 focused.set(true);
             }
         }
@@ -307,9 +321,6 @@ pub fn Tooltip(props: TooltipProps) -> Element {
         });
     }
 
-    // Every hook above the branch - `prepare()` is the hook.
-    let wrapper = use_box().framework_sx(&TRIGGER_WRAPPER_SX).prepare();
-
     let open_delay = props.open_delay.unwrap_or(theme.tooltip.open_delay);
     let close_delay = props.close_delay.unwrap_or(theme.tooltip.close_delay);
     let touch_open_delay = props.touch_open_delay.unwrap_or(LONG_PRESS);
@@ -317,6 +328,41 @@ pub fn Tooltip(props: TooltipProps) -> Element {
     // Disabled keeps the wrapper and its listeners, so the trigger is not remounted.
     let open = !disabled && props.open.unwrap_or(hover.get() || focused());
     let dismissible = props.open.is_none();
+
+    // A text entry is left alone: focus would raise the soft keyboard, so it lingers.
+    let (pressed_by_touch, opened_by_touch) = (touch.clone(), touch_open.clone());
+    use_effect(use_reactive!(|(open,)| {
+        if !open {
+            opened_by_touch.set(false);
+            return;
+        }
+        if !pressed_by_touch.get() || opened_by_touch.replace(true) {
+            return;
+        }
+        if anchor.query_selector(":focus").is_err()
+            && let Ok(trigger) = anchor.query_selector(FOCUSABLE_SELECTOR)
+            && !matches!(trigger.matches(TEXT_ENTRY_SELECTOR), Ok(true))
+        {
+            ours.set(true);
+            if trigger.focus().is_err() {
+                ours.set(false);
+            }
+        }
+    }));
+    // A WebView tap leaves focus on the trigger: a press outside closes it there.
+    let marker = use_press_marker();
+    let away = use_callback({
+        let touch_open = touch_open.clone();
+        move |()| {
+            if touch_open.get() {
+                hover.set(false);
+            }
+        }
+    });
+    use_press_away(open, marker, away);
+
+    // Every hook above the branch - `prepare()` is the hook.
+    let wrapper = use_box().framework_sx(&TRIGGER_WRAPPER_SX).prepare();
 
     let bubble = match open {
         true => rsx! {
@@ -392,7 +438,11 @@ pub fn Tooltip(props: TooltipProps) -> Element {
             }
         });
     }
-    wrapper.render(HtmlTag::Span, Vec::new(), vec![props.children, bubble])
+    wrapper.render(
+        HtmlTag::Span,
+        marker.attribute().into_iter().collect(),
+        vec![props.children, bubble],
+    )
 }
 
 /// A bubble on a rect its caller works out each render, a slider thumb's from

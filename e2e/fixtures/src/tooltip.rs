@@ -17,7 +17,24 @@ pub const ROUTES: Routes = &[
     ("/tooltip-link", || rsx! { TooltipLinkPage {} }),
     ("/tooltip-arrow", || rsx! { TooltipArrowPage {} }),
     ("/tooltip-touch", || rsx! { TooltipTouchPage {} }),
+    ("/tooltip-input", || rsx! { TooltipInputPage {} }),
 ];
+
+/// A text input as the trigger: a long press must not focus it and raise a keyboard (todo 4879).
+#[component]
+fn TooltipInputPage() -> Element {
+    rsx! {
+        Button { id: "before", "Before" }
+        div { margin_left: "200px", padding_top: "40px",
+            Tooltip {
+                label: rsx! { "Your full name" },
+                label_id: "save-tip",
+                side: "bottom",
+                input { id: "save", "aria-describedby": "save-tip", "aria-label": "Name" }
+            }
+        }
+    }
+}
 
 /// Touch delays nothing else schedules, so a held clock takes exactly them (todo 4001).
 #[component]

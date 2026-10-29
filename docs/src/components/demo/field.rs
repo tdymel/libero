@@ -17,10 +17,11 @@ pub trait FieldCopy {
 /// prints `C::ARIA_LABEL` instead.
 pub fn field_controls<C: FieldCopy>() -> Vec<Control> {
     vec![
-        Control::toggle("status", ["valid", "warning", "error"])
-            .labels(["Valid", "Warning", "Error"])
+        Control::toggle("status", ["valid", "pending", "warning", "error"])
+            .labels(["Valid", "Pending", "Warning", "Error"])
             .default("valid")
             .code(|_, values| match values.str("status").as_str() {
+                "pending" => vec!["status: FieldStatus::Pending".to_string()],
                 "warning" => vec![format!(
                     "status: FieldStatus::Warning({:?}.into())",
                     C::WARNING
@@ -64,6 +65,7 @@ pub fn field_props<C: FieldCopy>(values: &DemoValues) -> FieldProps {
         description: on("description").then(|| C::DESCRIPTION.to_string()),
         helper: on("helper").then(|| C::HELPER.to_string()),
         status: match values.str("status").as_str() {
+            "pending" => FieldStatus::Pending,
             "warning" => FieldStatus::Warning(C::WARNING.to_string()),
             "error" => FieldStatus::Error(C::ERROR.to_string()),
             _ => FieldStatus::Valid,
@@ -112,5 +114,17 @@ mod tests {
             props.status,
             FieldStatus::Error("Write a few words.".to_string())
         );
+    }
+
+    #[test]
+    fn pending_status_prints_and_sets_pending() {
+        let controls = field_controls::<Notes>();
+        let values = DemoValues::defaults(&controls).with("status", "pending");
+        let status = &controls[0];
+        assert_eq!(
+            (status.code.unwrap())(status, &values),
+            ["status: FieldStatus::Pending"]
+        );
+        assert_eq!(field_props::<Notes>(&values).status, FieldStatus::Pending);
     }
 }

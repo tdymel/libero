@@ -75,6 +75,10 @@ Like every component, `Tooltip` also takes the shared props `sx`, `class`,
 - On touch, a tap shows nothing: a 500 ms hold shows the bubble, and it stays
   1.5 s after the release. `touch_open_delay` and `touch_close_delay` change
   both times.
+- On touch, a tap elsewhere hides a bubble a long press opened. In a browser
+  this needs a focusable trigger that is no text field: the long press focuses
+  it, and a text field would raise the keyboard. Other triggers keep the bubble
+  for the 1.5 s.
 
 ### You must
 

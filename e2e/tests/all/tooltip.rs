@@ -179,6 +179,71 @@ e2e::scenario!(
     long_press_opens,
     desktop: skip("1126: no touch input under Xvfb")
 );
+/// Todo 4879: a tap outside closes a lingering long-press bubble at once, as `HoverCard` (4002).
+async fn an_outside_tap_closes<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    // Lifted only once the bubble shows: a timed hold races the long-press timer under load.
+    d.touch_down(TRIGGER).await?;
+    is_open(d, true, "a long press").await?;
+    ensure!(
+        d.hold_timers(&[LINGER_MS]).await?,
+        "the driver holds no timers"
+    );
+    d.touch_up(TRIGGER).await?;
+    eventually(d, "the release to arm the linger", async |d| {
+        Ok(d.armed(LINGER_MS).await? == 1)
+    })
+    .await?;
+    d.tap("#before").await?;
+    is_open(d, false, "a tap outside").await
+}
+
+e2e::scenario!(
+    a_tap_outside_closes_a_long_press_bubble,
+    "/tooltip/quick",
+    an_outside_tap_closes,
+    desktop: skip("1126: no touch input under Xvfb")
+);
+/// Todo 4879: a long press on a text entry opens the bubble without focusing it, so no
+/// soft keyboard rises.
+async fn a_text_entry_keeps_its_focus<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    const ACTIVE: &str = "document.activeElement && document.activeElement.id";
+    d.touch_down(TRIGGER).await?;
+    is_open(d, true, "a long press").await?;
+    d.settle().await?;
+    ensure!(
+        d.evaluate(ACTIVE).await?.as_str() != Some("save"),
+        "the long press focused the text entry"
+    );
+    d.touch_up(TRIGGER).await
+}
+
+e2e::scenario!(
+    a_long_press_leaves_a_text_entry_unfocused,
+    "/tooltip-input",
+    a_text_entry_keeps_its_focus,
+    desktop: skip("1126: no touch input under Xvfb")
+);
+/// Todo 4879: where a tap leaves focus on the trigger (a WebView), a press outside closes a
+/// touch-opened bubble. Scripted pointer events: they move no focus, as a tap does not.
+async fn a_webview_press_outside_closes<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    const PRESS: &str = "((selector) => document.querySelector(selector).dispatchEvent(\
+        new PointerEvent('pointerdown', { bubbles: true, pointerType: 'touch' })))";
+    d.evaluate(&format!("{PRESS}('{TRIGGER}')")).await?;
+    is_open(d, true, "a long press").await?;
+    d.evaluate(&format!("{PRESS}('{TRIGGER}')")).await?;
+    d.settle().await?;
+    ensure!(d.exists(OPEN).await?, "a press on the trigger closed it");
+    d.evaluate(&format!("{PRESS}('#before')")).await?;
+    is_open(d, false, "a press outside").await
+}
+
+e2e::scenario!(
+    a_webview_press_outside_closes_a_touch_bubble,
+    "/tooltip/quick",
+    a_webview_press_outside_closes,
+    web: skip("focus tells a press outside apart there; no press listener"),
+    native: skip("focus tells a press outside apart there; no press listener")
+);
 /// Todo 4001: `touch_open_delay` and `touch_close_delay` replace the long press and the linger.
 async fn touch_delays_apply<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
     const OPEN_MS: u32 = 321;

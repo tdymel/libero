@@ -211,7 +211,7 @@ fn main() {
 
 The Platforms workflow builds the docs app for iOS, macOS and Windows and runs
 the e2e scenarios on each, informational and not part of the required check. A
-scenario that flakes is fixed or skipped. 722 scenarios exist; the last
+scenario that flakes is fixed or skipped. 725 scenarios exist; the last
 column counts the ones left out on that platform, besides 33 that exist for
 Android only.
 

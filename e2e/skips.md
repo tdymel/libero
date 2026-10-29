@@ -1,6 +1,6 @@
 # Skipped e2e scenarios
 
-Scenarios: 722
+Scenarios: 725
 
 Generated from the `scenario!` skips in `e2e/tests/all` by `cargo test -p e2e --lib skips`; edit the skip, not this file. A reason starting `upstream:` waits on Dioxus, Blitz, wry or the engine (revisit on their update, todo 3362), a number names the todo that removes it.
 
@@ -418,10 +418,14 @@ The performance scenarios (units `perf`, `table_perf`) are no skips but run on r
 | `tags_field::the_chip_cursor_reaches_the_tags` | native | 3406: Blitz hands a removed chip's focus to a container div, parked with native |
 | `theme_defaults::an_unset_hover_card_align_follows_the_theme` | ios | a touch screen has no hover |
 | `theme_defaults::an_unset_hover_card_side_follows_the_theme` | ios | a touch screen has no hover |
+| `tooltip::a_long_press_leaves_a_text_entry_unfocused` | desktop | 1126: no touch input under Xvfb |
 | `tooltip::a_long_press_on_a_link_trigger_opens_no_link_menu` | desktop | 1126: no touch input under Xvfb |
 | `tooltip::a_long_press_on_a_link_trigger_opens_no_link_menu` | native | 3237: the native driver reads no script |
 | `tooltip::a_long_press_opens_it_on_touch` | desktop | 1126: no touch input under Xvfb |
 | `tooltip::a_short_touch_cancels_the_open` | desktop | 1126: no touch input under Xvfb |
+| `tooltip::a_tap_outside_closes_a_long_press_bubble` | desktop | 1126: no touch input under Xvfb |
+| `tooltip::a_webview_press_outside_closes_a_touch_bubble` | native | focus tells a press outside apart there; no press listener |
+| `tooltip::a_webview_press_outside_closes_a_touch_bubble` | web | focus tells a press outside apart there; no press listener |
 | `tooltip::escape_closes_it_under_the_pointer` | ios | a touch screen has no hover |
 | `tooltip::escape_closes_it_under_the_pointer` | web | 1760: escape_closes_it_under_the_pointer_and_on_focus covers it |
 | `tooltip::hover_opens_it_below_the_trigger_and_leaving_closes_it` | android | 996: no hover on touch; a long press opens it instead |

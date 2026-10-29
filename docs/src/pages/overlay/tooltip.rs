@@ -79,6 +79,7 @@ pub fn TooltipPage() -> Element {
                 .handles([
                     "Keyboard focus anywhere inside `Tooltip` shows the bubble, a click does not.",
                     "On touch, a tap shows nothing: a 500 ms hold shows the bubble, and it stays 1.5 s after the release. `touch_open_delay` and `touch_close_delay` change both times.",
+                    "On touch, a tap elsewhere hides a bubble a long press opened. In a browser this needs a focusable trigger that is no text field: the long press focuses it, and a text field would raise the keyboard. Other triggers keep the bubble for the 1.5 s.",
                 ])
                 .must([
                     "Give the bubble an id with `label_id` and point your trigger's `aria-describedby` at it, so a screen reader reads the label. The demo's Save button does.",
