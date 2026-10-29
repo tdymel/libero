@@ -46,7 +46,7 @@ fn Demo() -> Element {
 | `files` | `Vec<ShareFile>` | - | Files (name, MIME type, bytes), shared where the target takes them: on the web where `canShare` takes them, on Android by name from the app's cache (kept a day). Elsewhere the title, text and link still go. |
 | `variant` | `Variant` | - | Visual style, as on `ActionIcon` or `Button`. Icon-only with `color` also unset, the button draws no chrome of its own. |
 | `color` | `ThemeAwareValue` | - | Accent color. A theme color name or any CSS color. |
-| `size` | `ThemeAwareValue` | `md` | Button size. With `children`, only a size word applies. |
+| `size` | `ThemeAwareValue` | `md` | Button size. The default is the icon-only `ActionIcon`'s; with `children`, the `Button`'s, and only a size word applies. |
 | `radius` | `ThemeAwareValue` | `sm` | Corner radius, independent of `size`. |
 | `aria_label` | `String` | - | The button's name, such as "Share this article". Unset, the name is the localization's `share`, or the `children` text. |
 | `label` | `String` | - | Describes what a press shares, read after the name, such as "Link to this page". |
@@ -80,6 +80,8 @@ glyph is the `IconSlot::Share` slot of an [IconProvider](icon_provider.md).
 
 - Name an icon-only button after what it shares with `aria_label`, such as
   "Share article", or keep the short name and say what it shares with `label`.
+- With `children`, keep the visible text inside any `aria_label`, or leave it
+  unset, so a voice command that says the text still finds the button.
 - For a share control of your own on `use_share()`, call `share` in the press
   handler and say the outcome in a status region that is already mounted.
 

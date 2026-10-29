@@ -207,18 +207,20 @@ async fn hidden_child<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
     Ok(())
 }
 
-/// Todo 2318: `Copy` renders a status span after its button, which is not a group item.
+/// Todos 2318, 4903: `Copy` and `Share` render a status span after their button, not a group item.
 async fn copy_ends_the_group<D: Driver>(d: &mut D, route: &str) -> Result<()> {
     let end = if route.ends_with("/rtl") {
         TOP_LEFT
     } else {
         TOP_RIGHT
     };
-    ensure!(round(d, "#c2", end).await?, "Copy's end corner is square");
-    ensure!(
-        !round(d, "#c1", end).await?,
-        "the button before Copy rounds its end"
-    );
+    for (last, before, name) in [("#c2", "#c1", "Copy"), ("#sh2", "#sh1", "Share")] {
+        ensure!(round(d, last, end).await?, "{name}'s end corner is square");
+        ensure!(
+            !round(d, before, end).await?,
+            "the button before {name} rounds its end"
+        );
+    }
     Ok(())
 }
 

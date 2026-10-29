@@ -15,7 +15,8 @@ use crate::{
     utils::warn,
 };
 
-/// A control inside an item: the item itself, or one it wraps (`Repository`'s span, `ThemeSwitcher`'s pair).
+/// A control inside an item: the item itself, or one it wraps (`Repository`'s, `Copy`'s and
+/// `Share`'s spans, `ThemeSwitcher`'s pair).
 const CONTROL: &str = ":is(button, a)";
 
 /// The theme's hairline, `Divider`'s colour: a borderless variant has no edge to share.
@@ -55,7 +56,7 @@ fn pair_seam(line: Sx) -> Sx {
 fn coarse_across(ends: Sx) -> Sx {
     sx().media(
         COARSE_POINTER,
-        // The items themselves, one wrapper in (`Repository`), and the pair's two controls.
+        // The items themselves, one wrapper in (`Repository`, `Copy`, `Share`), and the pair's two controls.
         sx().selector(format!("& > {CONTROL}::before"), ends.clone())
             .selector(format!("& > * > {CONTROL}::before"), ends.clone())
             .selector(

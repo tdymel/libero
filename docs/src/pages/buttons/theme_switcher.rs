@@ -38,10 +38,10 @@ pub fn ThemeSwitcherPage() -> Element {
                     .default(theme.theme_switcher.color.as_str())
                     .doc("Accent color. A theme color name or any CSS color."),
                 prop("size", "ThemeAwareValue")
-                    .default("md")
+                    .default(theme.action_icon.size.as_str())
                     .doc("Button size. The icon takes 55% of it."),
                 prop("radius", "ThemeAwareValue")
-                    .default("sm")
+                    .default(theme.action_icon.radius.as_str())
                     .doc("Corner radius, independent of `size`."),
                 prop("themes", "&'static [&'static ThemeSet]")
                     .doc("Adds the theme picker, a second button that opens a menu of these sets. `class`, `sx` and extra attributes then land on the group around both."),
@@ -52,7 +52,7 @@ pub fn ThemeSwitcherPage() -> Element {
                     .doc("Replaces the three built-in button names. Gets the scheme a press shows next, always `Light` or `Dark` without `with_system` (even when the press stores `System`), and returns what the press does."),
                 prop("disabled", "bool")
                     .default("false")
-                    .doc("Disables and dims the button."),
+                    .doc("Disables and dims the toggle and, with `themes`, the picker and its menu."),
                 prop("parts", "Parts<ThemeSwitcherPart>")
                     .doc("Styles for the inner parts in the Style API tab, under `sx`. `Toggle`, `Picker` and `Chevron` exist with `themes` only."),
                 prop("menu_parts", "Parts<MenuPart>")

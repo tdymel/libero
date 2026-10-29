@@ -63,6 +63,11 @@ group "Copying"
     StaticText "Install"
   button "Copy the command"
   status [atomic] [live=polite]
+group "Sharing"
+  button "Docs"
+    StaticText "Docs"
+  button "Share the docs"
+  status [atomic] [live=polite]
 group "Tipped"
   button "Label"
     StaticText "Label"

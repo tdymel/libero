@@ -65,7 +65,7 @@ pub fn SharePage() -> Element {
                     .doc("Accent color. A theme color name or any CSS color."),
                 prop("size", "ThemeAwareValue")
                     .default(theme.action_icon.size.as_str())
-                    .doc("Button size. With `children`, only a size word applies."),
+                    .doc("Button size. The default is the icon-only `ActionIcon`'s; with `children`, the `Button`'s, and only a size word applies."),
                 prop("radius", "ThemeAwareValue")
                     .default(theme.action_icon.radius.as_str())
                     .doc("Corner radius, independent of `size`."),
@@ -91,6 +91,7 @@ pub fn SharePage() -> Element {
                 ])
                 .must([
                     "Name an icon-only button after what it shares with `aria_label`, such as \"Share article\", or keep the short name and say what it shares with `label`.",
+                    "With `children`, keep the visible text inside any `aria_label`, or leave it unset, so a voice command that says the text still finds the button.",
                     "For a share control of your own on `use_share()`, call `share` in the press handler and say the outcome in a status region that is already mounted.",
                 ])
                 .example("An article's share button, `Share { url, label: \"Link to this article\" }`: the button reads \"Share, Link to this article\". On a phone the share sheet opens; on a desktop without one, the status region says \"Copied\"."),

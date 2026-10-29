@@ -113,28 +113,27 @@ fn a_press_hands_the_data_to_the_share_sheet() {
     });
 }
 
-/// Todo 3383: while the sheet is open the button is `aria-busy` and `data-state` says
-/// `pending`; a second press shares nothing, and both go when the share settles.
+/// Todo 3383: while the sheet is open `data-state` says `pending` (no `aria-busy`: the sheet
+/// announces itself, todo 4903); a second press shares nothing, and it goes when the share settles.
 #[test]
-fn the_button_is_busy_while_the_sheet_is_open() {
+fn the_button_is_pending_while_the_sheet_is_open() {
     block_on(async {
         let fixture = Fixture::open("/share", Viewport::Desktop).await.unwrap();
         let page = &fixture.page;
-        let busy = format!(
-            "(() => {{ const b = document.querySelector('{BARE}'); \
-             return `${{b.getAttribute('aria-busy')}} ${{b.dataset.state ?? ''}}`; }})()"
-        );
-        let busy_is = |text: &str| format!("({busy}).includes('{text}')");
+        let pending = |on: bool| {
+            format!(
+                "(() => {{ const b = document.querySelector('{BARE}'); \
+                 return !b.hasAttribute('aria-busy') \
+                 && (b.dataset.state ?? '').split(' ').includes('pending') === {on}; }})()"
+            )
+        };
 
         page.evaluate_bounded(stub_share("pending", true))
             .await
             .unwrap();
         keyboard::tab_to(page, BARE, 5).await.unwrap();
         keyboard::press(page, keyboard::ENTER).await.unwrap();
-        wait::for_js_true(page, &busy_is("true"), "aria-busy while the sheet is open")
-            .await
-            .unwrap();
-        wait::for_js_true(page, &busy_is("pending"), "the pending state")
+        wait::for_js_true(page, &pending(true), "the pending state")
             .await
             .unwrap();
         keyboard::press(page, keyboard::ENTER).await.unwrap();
@@ -150,7 +149,7 @@ fn the_button_is_busy_while_the_sheet_is_open() {
         wait::for_js_true(page, &outcome_is("Shared"), "the share to settle")
             .await
             .unwrap();
-        wait::for_js_true(page, &busy_is("null "), "the busy marks to go")
+        wait::for_js_true(page, &pending(false), "the pending state to go")
             .await
             .unwrap();
         fixture.console.assert_clean("a pending share").unwrap();

@@ -84,9 +84,6 @@ pub fn Share(props: ShareProps) -> Element {
     let mut attributes = props.attributes.clone();
     attributes.extend(silent.map(|silent| listener("onmounted", silent.mount())));
     let pending = share.pending();
-    if pending {
-        attributes.push(Attribute::new("aria-busy", "true", None, false));
-    }
     let states: Input<States> = props
         .states
         .clone()

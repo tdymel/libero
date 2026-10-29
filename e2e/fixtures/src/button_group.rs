@@ -4,7 +4,7 @@ use std::collections::HashSet;
 
 use dioxus::prelude::*;
 use libero::components::{
-    ActionIcon, Button, ButtonGroup, Copy, DirectionToggle, Flex, Text, ThemeSwitcher,
+    ActionIcon, Button, ButtonGroup, Copy, DirectionToggle, Flex, Share, Text, ThemeSwitcher,
 };
 use libero::theme::ThemeSet;
 
@@ -114,6 +114,11 @@ fn ButtonGroupPage() -> Element {
             ButtonGroup { id: "copying", "aria-label": "Copying", variant: "outlined",
                 Button { id: "c1", "Install" }
                 Copy { id: "c2", value: "cargo add libero", aria_label: "Copy the command" }
+            }
+            // `Share` has the same trailing status span (todo 4903).
+            ButtonGroup { id: "sharing", "aria-label": "Sharing", variant: "outlined",
+                Button { id: "sh1", "Docs" }
+                Share { id: "sh2", url: "https://libero-ui.dev", aria_label: "Share the docs" }
             }
             ButtonGroup { id: "tipped", "aria-label": "Tipped", variant: "outlined",
                 Button { id: "t1", "Label" }

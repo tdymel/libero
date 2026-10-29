@@ -1,6 +1,5 @@
 ---
 source: e2e/src/suite.rs
-assertion_line: 618
 description: button_group at desktop (rest)
 expression: tree
 ---
@@ -63,6 +62,11 @@ group "Copying"
   button "Install"
     StaticText "Install"
   button "Copy the command"
+  status [atomic] [live=polite]
+group "Sharing"
+  button "Docs"
+    StaticText "Docs"
+  button "Share the docs"
   status [atomic] [live=polite]
 group "Tipped"
   button "Label"
