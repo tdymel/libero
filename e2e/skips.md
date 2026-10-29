@@ -422,6 +422,7 @@ The performance scenarios (units `perf`, `table_perf`) are no skips but run on r
 | `theme_defaults::an_unset_hover_card_align_follows_the_theme` | ios | a touch screen has no hover |
 | `theme_defaults::an_unset_hover_card_side_follows_the_theme` | ios | a touch screen has no hover |
 | `tooltip::a_long_press_leaves_a_text_entry_unfocused` | desktop | 1126: no touch input under Xvfb |
+| `tooltip::a_long_press_leaves_a_text_entry_unfocused` | native | 3237: the native driver reads no script |
 | `tooltip::a_long_press_on_a_link_trigger_opens_no_link_menu` | desktop | 1126: no touch input under Xvfb |
 | `tooltip::a_long_press_on_a_link_trigger_opens_no_link_menu` | native | 3237: the native driver reads no script |
 | `tooltip::a_long_press_opens_it_on_touch` | desktop | 1126: no touch input under Xvfb |

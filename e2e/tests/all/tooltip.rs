@@ -221,7 +221,8 @@ e2e::scenario!(
     a_long_press_leaves_a_text_entry_unfocused,
     "/tooltip-input",
     a_text_entry_keeps_its_focus,
-    desktop: skip("1126: no touch input under Xvfb")
+    desktop: skip("1126: no touch input under Xvfb"),
+    native: skip("3237: the native driver reads no script")
 );
 /// Todo 4879: where a tap leaves focus on the trigger (a WebView), a press outside closes a
 /// touch-opened bubble. Scripted pointer events: they move no focus, as a tap does not.
