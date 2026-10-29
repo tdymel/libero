@@ -29,10 +29,13 @@ pub fn KbdPage() -> Element {
                     Code { source: "<kbd>" }
                     ", styled from the theme. A shortcut is several keys with your own "
                     "separator: save with "
-                    Kbd { "Ctrl" }
-                    " + "
-                    Kbd { "S" }
-                    "."
+                    // One unit: a 375px line broke between the keys.
+                    span { style: "white-space: nowrap",
+                        Kbd { "Ctrl" }
+                        " + "
+                        Kbd { "S" }
+                        "."
+                    }
                 }
             },
             Demo {

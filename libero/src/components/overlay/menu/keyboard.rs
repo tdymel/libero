@@ -48,6 +48,13 @@ impl Level {
         }
     }
 
+    /// Focuses the menu box itself, with no item active.
+    pub(super) fn focus_box(self) {
+        if let Err(PlatformError::Unsupported) = self.floating.focus() {
+            let _ = focus_selector(&id_selector(&self.id.peek()));
+        }
+    }
+
     /// Clicks item `index`: Space on a link, which only Enter activates natively.
     pub(super) fn click(self, index: usize) {
         let _ = self
@@ -97,7 +104,7 @@ impl Level {
         if !self.floating.is_focused() || self.len == 0 || has_shortcut_modifier(&event) {
             return;
         }
-        match event.key() {
+        match logical_key(&event) {
             Key::Named(NamedKey::ArrowDown) | Key::Named(NamedKey::Home) => {
                 event.prevent_default();
                 self.focus(0);
@@ -105,6 +112,18 @@ impl Level {
             Key::Named(NamedKey::ArrowUp) | Key::Named(NamedKey::End) => {
                 event.prevent_default();
                 self.focus(self.len - 1);
+            }
+            // A tap opens a menubar's menu on its box (4862): the neighbours stay a key away.
+            key @ (Key::Named(NamedKey::ArrowLeft) | Key::Named(NamedKey::ArrowRight))
+                if self.depth == 0 =>
+            {
+                if let Some(onedge) = self.onedge {
+                    event.prevent_default();
+                    onedge.call(match key {
+                        Key::Named(NamedKey::ArrowLeft) => MenuEdge::Previous,
+                        _ => MenuEdge::Next,
+                    });
+                }
             }
             _ if is_tab(&event) => self.tab_out(),
             _ => {}
@@ -282,6 +301,11 @@ pub(super) fn use_level_focus(
         let index = match initial {
             MenuFocus::First => first,
             MenuFocus::Last => len - 1,
+            // ArrowDown on the box goes on to the first item.
+            MenuFocus::Container => {
+                spawn(async move { level.focus_box() });
+                return;
+            }
         };
         // Out of this dispatch: the click that opened the menu ends by
         // focusing the trigger.

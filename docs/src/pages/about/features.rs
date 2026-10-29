@@ -148,7 +148,7 @@ pub(crate) const FEATURES: &[Feature] = &[
     feature("center", "layout", "Center", &["box"], true, &["/layout/center"]),
     feature("collapse", "layout", "Collapse", &["box", "use-timers"], true, &["/layout/collapse"]),
     feature("container", "layout", "Container", &["box"], true, &["/layout/container"]),
-    feature("divider", "layout", "Divider", &["use-id", "use-icon", "visually-hidden"], true, &["/layout/divider"]),
+    feature("divider", "layout", "Divider", &["box", "use-id"], true, &["/layout/divider"]),
     feature("flex", "layout", "Flex", &["box"], true, &["/layout/flex"]),
     feature("float", "layout", "Float", &["box"], true, &["/layout/float"]),
     feature("grid", "layout", "Grid, GridItem, GridZone", &["box"], true, &["/layout/grid"]),

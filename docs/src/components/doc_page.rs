@@ -2,7 +2,7 @@ use dioxus::prelude::*;
 use libero::{
     components::{Anchor, Chip, Flex, Icon, OptionLabel, Options, Pictogram, Tabs, Title, Tldr},
     sx::{Sx, sx},
-    theme::{HEADER_HEIGHT_VAR, PAPER_BACKGROUND, PAPER_BORDER_COLOR},
+    theme::{HEADER_HEIGHT_VAR, NamedColorCss, PAPER_BORDER_COLOR},
 };
 use pictogram_icons_lucide as lucide;
 
@@ -140,16 +140,17 @@ pub fn DocPage(
         )
         // A row that scrolls shows a shadow at each edge with tabs beyond it: the covers
         // scroll with the content (`local`) and hide the fixed shadows at either end.
+        // In the page's own surface: the paper is lighter than the dark page (todo 4858).
         .selector(
             "& > [role=tablist]",
             sx().with(
                 "background-image",
                 format!(
-                    "linear-gradient(to right, {paper} 30%, transparent), \
-                     linear-gradient(to left, {paper} 30%, transparent), \
+                    "linear-gradient(to right, {page} 30%, transparent), \
+                     linear-gradient(to left, {page} 30%, transparent), \
                      radial-gradient(farthest-side at 0 50%, color-mix(in srgb, currentColor 30%, transparent), transparent), \
                      radial-gradient(farthest-side at 100% 50%, color-mix(in srgb, currentColor 30%, transparent), transparent)",
-                    paper = PAPER_BACKGROUND.value(),
+                    page = NamedColorCss::SURFACE.value(),
                 ),
             )
             .with("background-repeat", "no-repeat")

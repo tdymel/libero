@@ -21,7 +21,7 @@ fn wrap_rule(values: &DemoValues, code: &str) -> String {
     let indented = indent(code);
     match values.str("orientation").as_str() {
         "vertical" => format!(
-            "Box {{\n    sx: sx().display(\"flex\").align_items(\"center\").justify_content(\"center\").height(\"64px\"),\n    Text {{ \"Left\" }}\n{indented}    Text {{ \"Right\" }}\n}}"
+            "Box {{\n    sx: sx().display(\"flex\").align_items(\"center\").justify_content(\"center\").height(\"120px\"),\n    Text {{ \"Left\" }}\n{indented}    Text {{ \"Right\" }}\n}}"
         ),
         _ => format!(
             "Box {{\n    sx: sx().width(\"240px\").text_align(\"center\"),\n    Text {{ \"Above\" }}\n{indented}    Text {{ \"Below\" }}\n}}"
@@ -123,7 +123,8 @@ pub fn DividerPage() -> Element {
                                     .display("flex")
                                     .align_items("center")
                                     .justify_content("center")
-                                    .height("64px"),
+                                    // The label takes ~43px: a shorter row leaves stubs of rule.
+                                    .height("120px"),
                                 Text { "Left" }
                                 {divider}
                                 Text { "Right" }

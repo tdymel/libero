@@ -65,7 +65,15 @@ fn generate_svg(data: String, robustness: QrRobustness) -> Option<String> {
         })
 }
 
-/// `data` as a scalable QR code SVG. Renders nothing if `data` is too long to encode.
+fn too_long_message(robustness: QrRobustness) -> String {
+    format!(
+        "QrCode: `data` is too long to encode at robustness {robustness:?}; nothing renders. \
+         Shorten it or lower `robustness`."
+    )
+}
+
+/// `data` as a scalable QR code SVG. Renders nothing if `data` is too long to encode,
+/// with a warning in a debug build.
 ///
 /// ```rust
 /// # use dioxus::prelude::*;
@@ -93,9 +101,14 @@ pub fn QrCode(props: QrCodeProps) -> Element {
     );
 
     // Synchronous, so the server and the first client frame render the code.
-    let svg = use_memo(use_reactive!(|data, robustness| generate_svg(
-        data, robustness
-    )));
+    // Once per payload: the memo reruns only when `data` or `robustness` change.
+    let svg = use_memo(use_reactive!(|data, robustness| {
+        let svg = generate_svg(data, robustness);
+        if svg.is_none() {
+            crate::utils::warn(&too_long_message(robustness));
+        }
+        svg
+    }));
 
     let boxed = use_box()
         .framework_sx(&QR_CODE_BASE_SX)
@@ -148,5 +161,24 @@ mod tests {
         assert!(!html.contains("role=\"img\""), "{html}");
         assert!(!html.contains("aria-label"), "{html}");
         assert!(html.contains("aria-hidden=\"true\""), "{html}");
+    }
+
+    /// Todo 4863: a payload past the capacity renders nothing, but says why.
+    #[cfg(debug_assertions)]
+    #[test]
+    fn a_too_long_payload_warns() {
+        let warnings = crate::utils::warnings_of(|| {
+            rsx! {
+                crate::LiberoProvider {
+                    QrCode { data: "a".repeat(3000), robustness: "high", aria_label: "A link" }
+                }
+            }
+        });
+        let message = too_long_message(QrRobustness::High);
+        assert_eq!(
+            warnings.iter().filter(|w| **w == message).count(),
+            1,
+            "{warnings:?}"
+        );
     }
 }

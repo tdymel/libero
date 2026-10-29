@@ -130,7 +130,7 @@ it is on (Notes).
 | `center` | Center | box | on |  |
 | `collapse` | Collapse | box, use-timers | on |  |
 | `container` | Container | box | on |  |
-| `divider` | Divider | use-id, use-icon, visually-hidden | on |  |
+| `divider` | Divider | box, use-id | on |  |
 | `flex` | Flex | box | on |  |
 | `float` | Float | box | on |  |
 | `grid` | Grid, GridItem, GridZone | box | on |  |

@@ -45,7 +45,7 @@ fn Profile(name: Option<String>) -> Element {
 | `visible` | `bool` | `true` | Hides the children behind the placeholder, or draws the standalone shape. `false` shows the children. A grace period hides the region with `opacity`, since `visibility` would not hide the grey. |
 | `height` | `ThemeAwareValue` | - | A CSS length. Unset, the children's height. A standalone shape needs one, or it is zero pixels tall. |
 | `width` | `ThemeAwareValue` | `100%` | A CSS length. Ignored with `circle`. |
-| `circle` | `bool` | `false` | A circle as wide as `height`. Without `height`, as wide as the children. |
+| `circle` | `bool` | `false` | A circle as wide as `height`. Without `height`, a pill around the children. |
 | `radius` | `ThemeAwareValue` | `sm` | Corner radius, or any CSS, e.g. `radius: "0"`. Ignored with `circle`. |
 | `animate` | `bool` | `true` | Runs the pulse. With reduced motion it stops half-way. |
 | `children` | `Element` | - | The real content, when the skeleton wraps it. |

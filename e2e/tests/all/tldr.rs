@@ -306,6 +306,50 @@ fn space_and_enter_follow_the_link_and_return_focus() {
     });
 }
 
+/// Todo 4862: a tap opens on the menu box with no row highlighted; ArrowDown goes on to the
+/// first link. A mouse click still opens on the first link.
+#[test]
+fn a_tap_opens_on_the_box_and_a_click_on_the_first_link() {
+    block_on(async {
+        let fixture = Fixture::open("/tldr", Viewport::Mobile).await.unwrap();
+        let page = &fixture.page;
+        let outcome = async {
+            wait::for_visible(page, TRIGGER).await?;
+            pointer::tap(page, TRIGGER).await?;
+            wait::for_js_true(
+                page,
+                "document.activeElement.matches('[role=menu]') \
+                 && !document.querySelector('[role=menu] :focus')",
+                "the menu box focused, no link",
+            )
+            .await?;
+            keyboard::press(page, keyboard::ARROW_DOWN).await?;
+            wait::for_js_true(
+                page,
+                &format!("{NAME_OF}(document.activeElement) === 'ChatGPT'"),
+                "ArrowDown on the first link",
+            )
+            .await?;
+            keyboard::press(page, keyboard::ESCAPE).await?;
+            wait::for_js_true(page, "!document.querySelector('[role=menu]')", "closed").await?;
+
+            pointer::click(page, TRIGGER).await?;
+            wait::for_js_true(
+                page,
+                &format!("{NAME_OF}(document.activeElement) === 'ChatGPT'"),
+                "a click on the first link",
+            )
+            .await
+        }
+        .await;
+        let console = fixture.console.assert_clean("tldr tap");
+
+        fixture.close().await.unwrap();
+        outcome.unwrap();
+        console.unwrap();
+    });
+}
+
 /// `menu_parts` reaches the labels of the portaled menu.
 #[test]
 fn menu_parts_style_the_portaled_menu() {

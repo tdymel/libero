@@ -12,6 +12,8 @@ pub(crate) enum MenuFocus {
     #[default]
     First,
     Last,
+    /// The menu box, no item: a finger did not ask for a highlighted row (todo 4862).
+    Container,
 }
 
 /// A [`Menu`](super::Menu)'s open state and the id tying the trigger to it.
@@ -79,11 +81,15 @@ impl MenuState {
     }
 
     pub fn toggle(&self) {
+        self.toggle_at(MenuFocus::First);
+    }
+
+    pub(crate) fn toggle_at(&self, focus: MenuFocus) {
         // Copied out: matching on `peek()` holds the borrow through the write.
         let opened = *self.opened.peek();
         match opened {
             true => self.close(),
-            false => self.open(),
+            false => self.open_at(focus),
         }
     }
 

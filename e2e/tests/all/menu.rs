@@ -1240,6 +1240,35 @@ fn below_sm_the_menu_is_a_sheet_that_closes_every_way() {
     });
 }
 
+/// Todo 4862: a finger opens the sheet on its box, no row highlighted; ArrowDown takes the first.
+#[test]
+fn a_tap_opens_the_sheet_on_its_box() {
+    block_on(async {
+        let fixture = phone("/menu-phone").await;
+        let page = &fixture.page;
+        tap(page, TRIGGER).await.unwrap();
+        sheets_shown(page, 1).await.unwrap();
+        wait::for_js_true(
+            page,
+            "document.activeElement.matches('[role=menu]') \
+             && !document.querySelector('[role=menu] :focus')",
+            "the sheet focused, no row",
+        )
+        .await
+        .unwrap();
+        keyboard::press(page, keyboard::ARROW_DOWN).await.unwrap();
+        wait::for_js_true(
+            page,
+            "document.activeElement === document.querySelector('[role=menu] [role=menuitem]')",
+            "ArrowDown on the first row",
+        )
+        .await
+        .unwrap();
+        fixture.console.assert_clean("a tapped sheet").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
 /// Todo 4610: a scrolling sheet keeps its grab strip in view and does not chain into the page.
 #[test]
 fn a_scrolled_phone_sheet_keeps_its_strip_and_the_page_still() {

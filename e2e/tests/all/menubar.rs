@@ -401,12 +401,16 @@ fn a_tap_on_another_trigger_opens_its_menu() {
             wait::for_js_true(page, &format!("{EXPANDED} === '1000'"), "File open").await?;
             tap(page, &trigger(1)).await?;
             wait::for_js_true(page, &format!("{EXPANDED} === '0100'"), "Edit open").await?;
+            // A tap opens on the box, no row highlighted (4862); ArrowLeft still moves on.
             wait::for_js_true(
                 page,
-                "document.activeElement?.textContent.trim() === 'Undo'",
-                "focus on Undo",
+                "document.activeElement.matches('[role=menu]') \
+                 && !document.querySelector('[role=menu] :focus')",
+                "focus on Edit's menu box",
             )
-            .await
+            .await?;
+            keyboard::press(page, keyboard::ARROW_LEFT).await?;
+            wait::for_js_true(page, &format!("{EXPANDED} === '1000'"), "File open again").await
         }
         .await;
 

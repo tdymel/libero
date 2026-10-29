@@ -86,7 +86,7 @@ base_props! {
         /// A CSS length. Unset, `100%`. Ignored when `circle`.
         #[props(default, into)]
         width: Input<ThemeAwareValue>,
-        /// Round, with width equal to `height`.
+        /// Round, with width equal to `height`. Without `height`, a pill around the children.
         #[props(default)]
         circle: bool,
         /// Corner: a size word or any CSS, as `radius: "0"`. Ignored when `circle`.

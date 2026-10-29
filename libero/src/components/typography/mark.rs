@@ -73,6 +73,8 @@ fn mark_variables(color: Option<&ThemeAwareValue>, default_color: Color) -> Vari
 
 base_props! {
     pub struct MarkProps {
+        /// The tint: a theme colour, a shade or a hex sets the text to its twin. Any other CSS
+        /// colour (`"gold"`, `rgb()`, a `var()`) sets only the background: set the text in `sx`.
         #[props(default, into)]
         color: Input<ThemeAwareValue>,
         /// Fills the highlight with a gradient from `color` (unset: the theme gradient's first

@@ -142,6 +142,8 @@ pub fn Menu(props: MenuProps) -> Element {
 
     let onclose = use_callback(move |()| state.close());
     let marker = state.marker();
+    // A touch or pen press on the trigger: its click opens on the box, not the first item.
+    let mut finger = use_hook(|| CopyValue::new(false));
     let wrapper_attributes: Vec<Attribute> = open
         .then(|| marker.attribute())
         .flatten()
@@ -153,12 +155,21 @@ pub fn Menu(props: MenuProps) -> Element {
             wrapper_box
                 .attr("data-menu-wrapper", id.clone())
                 // The caller's trigger bubbles here; Enter and Space arrive as a click.
+                .event("onpointerdown", move |event: PointerEvent| {
+                    finger.set(matches!(event.pointer_type().as_str(), "touch" | "pen"));
+                })
                 .event("onclick", move |_: MouseEvent| {
+                    let focus = match std::mem::take(&mut *finger.write()) {
+                        true => MenuFocus::Container,
+                        false => MenuFocus::First,
+                    };
                     if !disabled {
-                        state.toggle();
+                        state.toggle_at(focus);
                     }
                 })
                 .event("onkeydown", move |event: KeyboardEvent| {
+                    // Enter and Space click too: a press left over from a scroll is not theirs.
+                    finger.set(false);
                     // Alt+ArrowDown and the like are the browser's or the page's.
                     if disabled || has_shortcut_modifier(&event) {
                         return;
