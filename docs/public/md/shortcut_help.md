@@ -48,6 +48,8 @@ fn Demo() -> Element {
 |---|---|---|---|
 | `shortcuts` | `Vec<Shortcut>` | required | The rows, each `Shortcut::new(chord, what it does)`. A chord `use_hotkeys` would not bind is left out, with a warning in debug builds. |
 | `title` | `String` | - | The heading. Unset, the localization's `shortcut_help.title`, "Keyboard shortcuts". |
+| `close_label` | `String` | `"Close"` | The close button's accessible name, such as "Close shortcuts". Unset, the localization's `common.close`. |
+| `full_screen` | `DialogFullScreen` | `never` | Inside a modal, fills the screen edge to edge instead of centring: `"phone"` below the `sm` breakpoint, `"always"` at every width. The list then grows past its 24rem cap and the modal scrolls. Outside a modal it does nothing. |
 
 Like every component, `ShortcutHelp` also takes the shared props `sx`, `class`,
 `style`, `states`, and any extra HTML attributes. They go to its `Dialog`.
@@ -63,8 +65,8 @@ Like every component, `ShortcutHelp` also takes the shared props `sx`, `class`,
   names from the localization's `ShortcutHelpLabels`; a key missing from its
   `key_names` shows its `Key` name, `F10`.
 - A list taller than 24rem or 60% of the window scrolls inside the dialog, and
-  only then becomes a tab stop, a `region` named by the title, so the keyboard
-  can scroll it.
+  only then becomes a tab stop, a `region` named "Shortcut list" (the
+  localization's `shortcut_help.list`), so the keyboard can scroll it.
 
 ### You must
 

@@ -72,7 +72,7 @@ async fn a_long_list_scrolls_inside<D: Driver>(d: &mut D, _route: &str) -> Resul
     );
     let name = d.attr(LONG_REGION, "aria-label").await?;
     ensure!(
-        name.as_deref() == Some("Long"),
+        name.as_deref() == Some("Shortcut list"),
         "the region is named {name:?}"
     );
     for short in ["#narrow", "#wide"] {

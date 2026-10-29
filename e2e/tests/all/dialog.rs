@@ -75,6 +75,31 @@ fn a_long_dialog_title_stays_inside_the_dialog() {
     });
 }
 
+/// Todo 4847: an untitled dialog's close row adds no margin above the content on a phone.
+#[test]
+fn an_untitled_header_leaves_no_gap_on_a_phone() {
+    block_on(async {
+        let fixture = Fixture::open("/dialog/untitled", Viewport::Mobile)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        wait::for_selector(page, "#untitled-content").await.unwrap();
+
+        let gap: f64 = page
+            .evaluate_bounded(
+                "(() => { const h = document.querySelector('#untitled > [data-slot=header]'); \
+                 const c = document.querySelector('#untitled-content'); \
+                 return c.getBoundingClientRect().top - h.getBoundingClientRect().bottom; })()",
+            )
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        assert!(gap <= 1.0, "the close row leaves {gap}px above the content");
+        fixture.close().await.unwrap();
+    });
+}
+
 /// Todo 2561: `width: 100%` plus a margin stuck out of the container by the margin.
 #[test]
 fn an_inline_dialog_fits_its_container() {

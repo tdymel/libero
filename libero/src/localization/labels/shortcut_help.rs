@@ -3,6 +3,8 @@
 pub struct ShortcutHelpLabels {
     /// The dialog's title, unless its `title` prop is set.
     pub title: &'static str,
+    /// Names the list's scroll region once it scrolls, apart from the dialog it sits in.
+    pub list: &'static str,
     pub ctrl: &'static str,
     pub alt: &'static str,
     pub shift: &'static str,
@@ -30,6 +32,7 @@ pub struct ShortcutHelpLabels {
 impl ShortcutHelpLabels {
     pub const ENGLISH: Self = Self {
         title: "Keyboard shortcuts",
+        list: "Shortcut list",
         ctrl: "Ctrl",
         alt: "Alt",
         shift: "Shift",
@@ -52,6 +55,7 @@ impl ShortcutHelpLabels {
 
     pub const GERMAN: Self = Self {
         title: "Tastenkürzel",
+        list: "Liste der Tastenkürzel",
         ctrl: "Strg",
         alt: "Alt",
         shift: "Umschalt",

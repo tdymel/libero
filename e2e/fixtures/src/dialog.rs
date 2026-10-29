@@ -13,7 +13,18 @@ use crate::Routes;
 pub const ROUTES: Routes = &[
     ("/dialog", || rsx! { DialogPage {} }),
     ("/dialog/long-title", || rsx! { LongTitlePage {} }),
+    ("/dialog/untitled", || rsx! { UntitledPage {} }),
 ];
+
+/// Todo 4847: no title, so the header holds only the close button.
+#[component]
+fn UntitledPage() -> Element {
+    rsx! {
+        Dialog { id: "untitled", aria_label: "Filters", onclose: |_| {},
+            Text { id: "untitled-content", "Narrow the list." }
+        }
+    }
+}
 
 /// Todo 2947: one word in the title wider than a 320px dialog.
 #[component]

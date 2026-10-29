@@ -33,10 +33,12 @@ fn BurgerPreview(size: String, color: String, disabled: bool) -> Element {
     let mut open = use_signal(|| false);
 
     rsx! {
+        // The panel below and the column at the preview's top, so opening it never moves the burger.
         Flex {
-            direction: "row",
+            direction: "column",
             align: "center",
             gap: "md",
+            sx: sx().align_self("flex-start"),
             Burger {
                 open: open(),
                 "aria-controls": PANEL_ID,

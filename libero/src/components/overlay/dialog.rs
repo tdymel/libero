@@ -71,19 +71,24 @@ str_enum! {
 
 input_from_str!(DialogFullScreen);
 
-static DIALOG_HEADER_SX: StaticSx = StaticSx::new(|| {
+fn dialog_header_sx(margin_bottom: &str) -> Sx {
     sx().display("flex")
         .align_items("flex-start")
         // Not `space-between`: a lone close button would sit top-left.
         .justify_content("flex-end")
         .gap("sm")
-        .margin_bottom("md")
+        .margin_bottom(margin_bottom)
         // The 30px close box reaches into the padding, its glyph where a bare one sat.
         .selector(
             "& > button",
             sx().margin_top("-5px").margin_inline_end("-5px"),
         )
-});
+}
+
+static DIALOG_HEADER_SX: StaticSx = StaticSx::new(|| dialog_header_sx("md"));
+
+// A lone close button keeps its own row but adds no gap: on a phone the height counts (4847).
+static DIALOG_BARE_HEADER_SX: StaticSx = StaticSx::new(|| dialog_header_sx("0"));
 
 static DIALOG_HEADER_TITLE_SX: StaticSx = StaticSx::new(|| {
     sx().margin("0")
@@ -333,7 +338,9 @@ fn DialogHeader(
     close: Callback<()>,
 ) -> Element {
     rsx! {
-        Box { framework_sx: &DIALOG_HEADER_SX, "data-slot": DialogPart::Header.slot(),
+        Box {
+            framework_sx: if title.is_some() { &DIALOG_HEADER_SX } else { &DIALOG_BARE_HEADER_SX },
+            "data-slot": DialogPart::Header.slot(),
             if let Some(title) = title {
                 Title {
                     "data-slot": DialogPart::Title.slot(),
@@ -453,6 +460,42 @@ mod tests {
             "{html}"
         );
         assert!(html.contains("data-state=\"full-screen-phone\""), "{html}");
+    }
+
+    /// Todo 4847: a header holding only the close button drops its margin below.
+    #[test]
+    fn an_untitled_header_drops_its_margin() {
+        fn app() -> Element {
+            rsx! {
+                crate::LiberoProvider {
+                    Dialog { title: "Notes", close_button: true, onclose: |_| {}, "one" }
+                    Dialog { aria_label: "Notes", close_button: true, onclose: |_| {}, "two" }
+                }
+            }
+        }
+        let mut dom = VirtualDom::new(app);
+        dom.rebuild_in_place();
+        let html = dioxus_ssr::render(&dom);
+        let headers: Vec<_> = html
+            .split("<div")
+            .filter(|tag| tag.contains("data-slot=\"header\""))
+            .map(|tag| tag.split('>').next().unwrap_or_default())
+            .collect();
+
+        assert_eq!(headers.len(), 2, "{html}");
+        assert_ne!(headers[0], headers[1], "{html}");
+        let bare = crate::css::Stylesheet::from(&DIALOG_BARE_HEADER_SX);
+        assert!(
+            bare.as_str().contains("margin-bottom:0"),
+            "{}",
+            bare.as_str()
+        );
+        let titled = crate::css::Stylesheet::from(&DIALOG_HEADER_SX);
+        assert!(
+            !titled.as_str().contains("margin-bottom:0"),
+            "{}",
+            titled.as_str()
+        );
     }
 
     /// Todo 2564: a spread `alertdialog` survives, any other role gives way.

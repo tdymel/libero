@@ -3,14 +3,16 @@ use dioxus::prelude::*;
 use crate::{
     CssLayer,
     components::{
-        common::{HtmlTag, Input, base_props, inset_focus_ring_sx},
+        common::{HtmlTag, Input, States, base_props, inset_focus_ring_sx},
         layout::use_box,
-        overlay::Dialog,
+        overlay::{Dialog, DialogFullScreen},
         typography::{chord_kbd, chord_words},
     },
+    context::ModalContext,
     hooks::{Chord, current_localization, use_css, use_element, use_resize_fallback},
     platform::{ElementApi, mod_is_meta},
     sx::{StaticSx, sx},
+    theme::Size,
     utils::use_warn_once,
 };
 
@@ -35,10 +37,16 @@ static SHORTCUT_LIST_SX: StaticSx = StaticSx::new(|| {
 });
 
 // A long keymap scrolls inside, so the dialog fits a short window or panel.
+// Full screen, the list grows and the modal's frame scrolls (4849).
 static SHORTCUT_SCROLL_SX: StaticSx = StaticSx::new(|| {
     sx().max_height("min(24rem, 60vh)")
         .overflow_y("auto")
         .focus_visible(inset_focus_ring_sx("-2px"))
+        .when("full-screen-always", sx().max_height("none"))
+        .media(
+            format!("not all and (min-width: {})", Size::Sm.breakpoint_value()),
+            sx().when("full-screen-phone", sx().max_height("none")),
+        )
 });
 
 /// One row of a [`ShortcutHelp`]: a chord as [`Hotkey`](crate::hooks::Hotkey) takes it, and
@@ -66,6 +74,13 @@ base_props! {
         #[props(default, into)]
         title: Option<String>,
         shortcuts: Vec<Shortcut>,
+        /// The close button's accessible name, e.g. "Close shortcuts".
+        #[props(default, into)]
+        close_label: Option<String>,
+        /// Inside a modal, fills the screen edge to edge instead of centring: `"phone"`
+        /// below the `sm` breakpoint, `"always"` at every width. Unset, centred.
+        #[props(default, into)]
+        full_screen: Input<DialogFullScreen>,
     }
 }
 
@@ -111,7 +126,7 @@ pub fn ShortcutHelp(props: ShortcutHelpProps) -> Element {
             dd { "{shortcut.description}" }
         })
     });
-    // A blank title names neither the dialog nor the scroll region (todo 3841).
+    // A blank title does not name the dialog (todo 3841).
     let title = props
         .title
         .filter(|title| !title.trim().is_empty())
@@ -143,18 +158,36 @@ pub fn ShortcutHelp(props: ShortcutHelpProps) -> Element {
     }));
     let scrolls = overflows();
     // `role=region` on the `dl` itself would drop its list semantics.
+    // Dialog's own rule: full screen only inside a modal.
+    let in_modal = try_use_context::<ModalContext>()
+        .filter(ModalContext::is_modal)
+        .is_some();
+    let full_screen = match in_modal {
+        true => props.full_screen.copied_or_default(),
+        false => DialogFullScreen::Never,
+    };
+    let states: Input<States> = States::default()
+        .with("full-screen-phone", full_screen == DialogFullScreen::Phone)
+        .with(
+            "full-screen-always",
+            full_screen == DialogFullScreen::Always,
+        )
+        .into();
     let scroll_box = use_box()
         .framework_sx(&SHORTCUT_SCROLL_SX)
+        .states(&states)
         .prepare()
         .element(&scroll_element)
         .event("onresize", move |_: Event<ResizeData>| measure())
         .attr("tabindex", scrolls.then_some("0"))
         .attr("role", scrolls.then_some("region"))
-        .attr("aria-label", scrolls.then(|| title.clone()));
+        .attr("aria-label", scrolls.then_some(words.list));
 
     rsx! {
         Dialog {
             title,
+            close_label: props.close_label,
+            full_screen: props.full_screen,
             class: props.class,
             sx: props.sx,
             states: props.states,
@@ -218,5 +251,51 @@ mod tests {
 
         let title = ShortcutHelpLabels::ENGLISH.title;
         assert!(html.contains(&format!(">{title}</h2>")), "{html}");
+    }
+
+    /// Todo 4848: the scroll region has its own name, so it does not repeat the dialog's.
+    #[test]
+    fn the_region_is_named_apart_from_the_dialog() {
+        for labels in [ShortcutHelpLabels::ENGLISH, ShortcutHelpLabels::GERMAN] {
+            assert!(!labels.list.trim().is_empty(), "{labels:?}");
+            assert_ne!(labels.list, labels.title, "{labels:?}");
+        }
+        assert_eq!(ShortcutHelpLabels::ENGLISH.list, "Shortcut list");
+        assert_eq!(ShortcutHelpLabels::GERMAN.list, "Liste der Tastenkürzel");
+    }
+
+    /// Todo 4849: `full_screen` and `close_label` reach the dialog, and full screen lifts the cap.
+    #[test]
+    fn full_screen_and_close_label_reach_the_dialog() {
+        #[component]
+        fn InModal() -> Element {
+            use_context_provider(|| crate::context::ModalContext {
+                onclose: Some(Callback::new(|()| {})),
+                dismiss_guard: None,
+            });
+            rsx! {
+                ShortcutHelp {
+                    full_screen: "always",
+                    close_label: "Close shortcuts",
+                    shortcuts: vec![Shortcut::new("mod+b", "Bold")],
+                }
+            }
+        }
+        fn app() -> Element {
+            rsx! {
+                crate::LiberoProvider { InModal {} }
+            }
+        }
+        let mut dom = VirtualDom::new(app);
+        dom.rebuild_in_place();
+        let html = dioxus_ssr::render(&dom);
+
+        assert!(html.contains("aria-label=\"Close shortcuts\""), "{html}");
+        // The dialog and the scroll box both carry it: the box drops its height cap.
+        assert_eq!(
+            html.matches("data-state=\"full-screen-always\"").count(),
+            2,
+            "{html}"
+        );
     }
 }
