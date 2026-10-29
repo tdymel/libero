@@ -197,6 +197,29 @@ e2e::scenario!(
     ios: skip("958: element identity on the WebView")
 );
 
+/// Focus on a `tabindex="-1"` title made Tab jump to the first stop and Shift+Tab to the last (4892).
+async fn tab_from_a_non_stop_goes_on_from_it<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    eventually_focused(d, "#first", "mount").await?;
+    d.focus("#title").await?;
+    eventually_focused(d, "#title", "focusing the title").await?;
+    d.press(keyboard::TAB).await?;
+    eventually_focused(d, "#middle", "Tab from the title").await?;
+    d.focus("#title").await?;
+    eventually_focused(d, "#title", "focusing the title again").await?;
+    d.press_shift(keyboard::TAB).await?;
+    eventually_focused(d, "#first", "Shift+Tab from the title").await?;
+    Ok(())
+}
+
+e2e::scenario!(
+    tab_from_a_focused_non_stop_moves_to_its_neighbour,
+    "/focus-trap/title",
+    tab_from_a_non_stop_goes_on_from_it,
+    android: skip("958: element identity on the WebView"),
+    desktop: skip("958: element identity on the WebView"),
+    ios: skip("958: element identity on the WebView")
+);
+
 /// Focus that leaves without a Tab (2297): a click on text outside comes back, a blur that
 /// keeps the element (a window switch) moves nothing, and a Tab after the focused stop is
 /// removed stays in.

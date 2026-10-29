@@ -50,7 +50,7 @@ pub fn IndicatorPage() -> Element {
                     .doc("Above it, the label renders as `{max}+`, so `128` shows `99+` at the theme's cap of 99, while `99` itself renders `99`. Falls back to the theme's cap."),
                 prop("size", "Size")
                     .default(theme.indicator.size.as_str())
-                    .doc("The dot's diameter, and the height of a labelled one, from 6px to 22px."),
+                    .doc("The dot's diameter, and the height of a labelled one, from 6px to 22px. A labelled one is never shorter than 1.4 times its font size."),
                 prop("color", "ThemeAwareValue")
                     .default(theme.indicator.color.as_str())
                     .doc("The fill, a theme color name or a CSS color. A theme or hex color also sets a label color that reads on it; any other CSS color gets `contrast-color()`."),

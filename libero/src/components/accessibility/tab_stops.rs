@@ -124,10 +124,11 @@ fn stops_of(items: &[Box<dyn ElementApi>], keys: &[Option<usize>], backwards: bo
         .zip(&checked)
         .filter_map(|(key, checked)| key.filter(|_| *checked))
         .collect();
-    // The walk's direction picks which radio of an undecided group comes first.
+    // The walk's direction in Tab order picks which radio of an undecided group comes first.
+    let order = tab_order(items);
     let walk: Vec<usize> = match backwards {
-        true => (0..keys.len()).rev().collect(),
-        false => (0..keys.len()).collect(),
+        true => order.into_iter().rev().collect(),
+        false => order,
     };
     let mut seen = HashSet::new();
     let mut stops = vec![true; keys.len()];
@@ -492,6 +493,25 @@ mod tests {
         };
         let groups = radio_groups(&root, &boxed(&[emptied, loose, other]));
         assert_eq!(groups[0], groups[1]);
+    }
+
+    /// A later radio with `tabindex="1"` comes first in Tab order, so it is the unchecked
+    /// group's stop forwards and the earlier one backwards (4893).
+    #[test]
+    fn an_unchecked_group_picks_its_stop_in_tab_order() {
+        let focused = Rc::new(Cell::new(0));
+        let mut ahead = radio(2, &focused, "size");
+        ahead.attrs.push(("tabindex", "1"));
+        let button = Fake {
+            id: 3,
+            attrs: vec![("tabindex", "2")],
+            focused: focused.clone(),
+            ..Fake::default()
+        };
+        let items = boxed(&[radio(1, &focused, "size"), ahead, button]);
+        let groups = radio_groups(&Fake::default(), &items);
+        assert_eq!(stops_of(&items, &groups, false), [false, true, true]);
+        assert_eq!(stops_of(&items, &groups, true), [true, false, true]);
     }
 
     #[test]

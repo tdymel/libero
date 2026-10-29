@@ -52,6 +52,7 @@ pub fn BadgePage() -> Element {
                 .must([
                     "For a badge that reports a change, wrap it in your own `role=\"status\"` region.",
                     "Say what a `circle` count counts: a bare \"9\" reads as a number. Add the unit as `VisuallyHidden` text, `Badge { circle: true, \"9\", VisuallyHidden { \" unread\" } }`, or name it in the row (\"9 unread\").",
+                    "The theme's uppercase reaches the accessible name in some browsers, and a screen reader may spell a short word such as \"NEW\" letter by letter. Where the word matters, set `text_transform` to `none` in `BadgeDefaults`.",
                 ])
                 .example("A \"Paid\" badge in an invoice row, `Badge { color: \"success\", variant: \"tonal\", \"Paid\" }`: read in place with the row, at 4.5:1 or more."),
             lead: rsx! {

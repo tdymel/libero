@@ -70,6 +70,9 @@ Like every component, `Badge` also takes the shared props `sx`, `class`,
   as `VisuallyHidden` text,
   `Badge { circle: true, "9", VisuallyHidden { " unread" } }`, or name it in
   the row ("9 unread").
+- The theme's uppercase reaches the accessible name in some browsers, and a
+  screen reader may spell a short word such as "NEW" letter by letter. Where
+  the word matters, set `text_transform` to `none` in `BadgeDefaults`.
 
 ### Example
 

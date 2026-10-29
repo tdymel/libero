@@ -1,6 +1,6 @@
 # Skipped e2e scenarios
 
-Scenarios: 725
+Scenarios: 726
 
 Generated from the `scenario!` skips in `e2e/tests/all` by `cargo test -p e2e --lib skips`; edit the skip, not this file. A reason starting `upstream:` waits on Dioxus, Blitz, wry or the engine (revisit on their update, todo 3362), a number names the todo that removes it.
 
@@ -103,6 +103,9 @@ The performance scenarios (units `perf`, `table_perf`) are no skips but run on r
 | `focus_trap::radio_groups_split_by_form` | android | 958: element identity on the WebView |
 | `focus_trap::radio_groups_split_by_form` | desktop | 958: element identity on the WebView |
 | `focus_trap::radio_groups_split_by_form` | ios | 958: element identity on the WebView |
+| `focus_trap::tab_from_a_focused_non_stop_moves_to_its_neighbour` | android | 958: element identity on the WebView |
+| `focus_trap::tab_from_a_focused_non_stop_moves_to_its_neighbour` | desktop | 958: element identity on the WebView |
+| `focus_trap::tab_from_a_focused_non_stop_moves_to_its_neighbour` | ios | 958: element identity on the WebView |
 | `focus_trap::tab_passes_over_a_stop_that_is_not_rendered` | android | 958: element identity on the WebView |
 | `focus_trap::tab_passes_over_a_stop_that_is_not_rendered` | desktop | 958: element identity on the WebView |
 | `focus_trap::tab_passes_over_a_stop_that_is_not_rendered` | ios | 958: element identity on the WebView |

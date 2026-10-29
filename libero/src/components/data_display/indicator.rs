@@ -11,8 +11,9 @@ use crate::{
     hooks::use_theme,
     sx::{FORCED_COLORS, REDUCED_MOTION, StaticSx, ThemeAwareValue, sx},
     theme::{
-        CssVar, INDICATOR_BORDER_WIDTH, INDICATOR_PROCESSING_DURATION, INDICATOR_RADII,
-        INDICATOR_RADIUS, IndicatorDefaults, PAPER_BACKGROUND, Size, SizeCss,
+        CssVar, INDICATOR_BORDER_WIDTH, INDICATOR_BOX, INDICATOR_FONT,
+        INDICATOR_PROCESSING_DURATION, INDICATOR_RADII, INDICATOR_RADIUS, IndicatorDefaults,
+        PAPER_BACKGROUND, Size, SizeCss,
     },
 };
 
@@ -71,12 +72,21 @@ static INDICATOR_BASE_SX: StaticSx = StaticSx::new(|| {
             .media(FORCED_COLORS, sx().background("CanvasText")),
     );
 
+    // A count's box and line floor at 1.4 times its font: the xs 6px box spilled an 8px label (4891).
+    let floor = format!(
+        "max({}, calc({} * 1.4))",
+        INDICATOR_BOX.value(),
+        INDICATOR_FONT.value()
+    );
     base.when("with-border", with_border)
         .when("processing", processing)
         .when(
             "labelled",
             sx().padding_left(format!("calc({} / 2)", SizeCss::SPACING.value(Size::Xs)))
-                .padding_right(format!("calc({} / 2)", SizeCss::SPACING.value(Size::Xs))),
+                .padding_right(format!("calc({} / 2)", SizeCss::SPACING.value(Size::Xs)))
+                .min_height(floor.clone())
+                .min_width(floor.clone())
+                .line_height(floor),
         )
 });
 
@@ -97,7 +107,7 @@ base_props! {
         /// Above it, the label renders as `{max}+`. Defaults to the theme's cap.
         #[props(default, into)]
         max: Option<u32>,
-        /// The dot's diameter, and the height of a labelled one.
+        /// The dot's diameter, and the height of a labelled one, at least 1.4 times its font size.
         #[props(default, into)]
         size: Input<Size>,
         /// The fill. The label takes its auto-contrast twin.

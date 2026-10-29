@@ -21,7 +21,21 @@ pub const ROUTES: Routes = &[
     ("/focus-trap/placeholder", || rsx! { PlaceholderPage {} }),
     ("/focus-trap/container", || rsx! { ContainerPage {} }),
     ("/focus-trap/empty", || rsx! { EmptyPage {} }),
+    ("/focus-trap/title", || rsx! { TitlePage {} }),
 ];
+
+/// A `tabindex="-1"` title between stops, as a dialog's heading is: Tab from it goes on (4892).
+#[component]
+fn TitlePage() -> Element {
+    rsx! {
+        FocusTrap {
+            button { id: "first", "First" }
+            span { id: "title", tabindex: "-1", "Title" }
+            button { id: "middle", "Middle" }
+            button { id: "last", "Last" }
+        }
+    }
+}
 
 /// A trap inside a `tabindex="-1"` main, as the docs shell's: a click on its text focuses the main (4662).
 #[component]

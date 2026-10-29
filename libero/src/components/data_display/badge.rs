@@ -37,7 +37,6 @@ static BADGE_BASE_SX: StaticSx = StaticSx::new(|| {
         .border_style("solid")
         .border_width("1px")
         .white_space("nowrap")
-        .user_select("none")
         .cursor("default")
         .width("fit-content")
         .max_width("100%")

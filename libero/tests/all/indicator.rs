@@ -71,6 +71,38 @@ fn a_count_over_max_is_capped() {
     );
 }
 
+/// The xs 6px box held an 8px count that spilled out (4891): a label floors the box and its
+/// line at 1.4 times the font size, and a bare dot keeps its diameter.
+#[test]
+fn a_labelled_count_floors_at_its_font_size() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider { Indicator { label: 128, size: "xs" } }
+        }
+    }
+
+    let html = render(app);
+    let class = indicator_class(&html);
+    let floor = "max(var(--lsx-indicator-box), calc(var(--lsx-indicator-font) * 1.4))";
+    let labelled = html
+        .split(&format!(r#".{class}[data-state~="labelled"]{{"#))
+        .nth(1)
+        .and_then(|rest| rest.split('}').next())
+        .expect("a labelled rule");
+    for property in ["min-height", "min-width", "line-height"] {
+        assert!(
+            labelled.contains(&format!("{property}:{floor};")),
+            "{property} in {labelled}"
+        );
+    }
+    let base = html
+        .split(&format!(".{class}{{"))
+        .nth(1)
+        .and_then(|rest| rest.split('}').next())
+        .expect("a base rule");
+    assert!(base.contains("height:var(--lsx-indicator-box);"), "{base}");
+}
+
 /// The ping is a `::before` at `inset: 0`, so the root must be its containing
 /// block - otherwise it resolves against the `Float` around it and only looks
 /// right while the dot is the `Float`'s sole unpadded child. And the root

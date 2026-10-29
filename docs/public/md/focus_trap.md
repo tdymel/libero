@@ -36,6 +36,8 @@ fn Demo() -> Element {
                     Flex {
                         direction: "row",
                         gap: "sm",
+                        justify: "center",
+                        wrap: true,
                         onkeydown: move |event: KeyboardEvent| {
                             if event.key() == Key::Named(NamedKey::Escape) {
                                 trapped.set(false);

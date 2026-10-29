@@ -63,6 +63,20 @@ fn the_variant_chrome_has_no_hover() {
     assert!(!html.contains(&format!(".{class}:hover")), "{html}");
 }
 
+/// A badge is a static label, so its text stays selectable; the arrow cursor stays (4894).
+#[test]
+fn its_label_is_selectable_text() {
+    let html = render(app);
+    let class = badge_class(&html);
+    let base = html
+        .split(&format!(".{class}{{"))
+        .nth(1)
+        .and_then(|rest| rest.split('}').next())
+        .expect("a base rule");
+    assert!(!base.contains("user-select"), "{base}");
+    assert!(base.contains("cursor:default;"), "{base}");
+}
+
 /// `circle` has to floor the width at *the active size's* height, and the rule
 /// that does it cannot know which size token is on. So each size step
 /// republishes its height unsuffixed and `circle` reads that - hardcode a step

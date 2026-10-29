@@ -24,7 +24,8 @@ pub const INDICATOR_KEYFRAMES: &str = concat!(
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct IndicatorSizeLevel {
-    /// The dot's diameter, and the height and minimum width of a labelled one.
+    /// The dot's diameter, and the height and minimum width of a labelled one, which never
+    /// drop below 1.4 times `font_size`.
     pub size: &'static str,
     pub font_size: &'static str,
 }

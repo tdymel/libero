@@ -67,7 +67,9 @@ fn focus_first(root: &ElementHandle, tag: Option<&str>) {
 
 /// `false` when nothing took focus, so the caller leaves Tab to the browser.
 fn cycle_focus(root: &ElementHandle, backwards: bool) -> bool {
-    let Ok(items) = root.query_selector_all(FOCUSABLE_SELECTOR) else {
+    // A focused non-stop (a `tabindex="-1"` title) joins the list in document order, so the
+    // walk starts beside it rather than at the first stop (4892).
+    let Ok(items) = root.query_selector_all(&format!("{FOCUSABLE_SELECTOR}, :focus")) else {
         return false;
     };
     let index = items.iter().position(|item| item.is_focused());
