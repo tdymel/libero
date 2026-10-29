@@ -93,7 +93,8 @@ fn an_explicit_component_beats_the_sizes_tag() {
     assert_eq!(attributes_of(&html, "h2")["data-state"], "size-lg");
 }
 
-/// Todo 2543: a long word at `xxl` must break inside a 320px column.
+/// Todo 2543: a long word at `xxl` must break inside a 320px column. Todo 4852:
+/// `anywhere`, as `break-word` leaves the word in a flex parent's min-content.
 #[test]
 fn a_title_breaks_a_long_word() {
     fn app() -> Element {
@@ -105,7 +106,7 @@ fn a_title_breaks_a_long_word() {
 
     assert!(
         rules.iter().any(|rule| rule.unconditional()
-            && rule.declarations.get("overflow-wrap").map(String::as_str) == Some("break-word")),
+            && rule.declarations.get("overflow-wrap").map(String::as_str) == Some("anywhere")),
         "no overflow-wrap on the title: {rules:?}"
     );
 }

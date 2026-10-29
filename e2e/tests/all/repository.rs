@@ -225,10 +225,7 @@ fn a_count_joins_the_icon_and_is_cached_for_the_session() {
         let page = &fixture.page;
         mount_with_fetch(page, "{ stargazers_count: 1234, star_count: 1234 }").await;
         let (name, text, width, height) = link(page, GITHUB, "1.2k").await;
-        assert_eq!(
-            name,
-            "GitHub example/repo, 1,234 stars (opens in a new tab)"
-        );
+        assert_eq!(name, "GitHub example/repo, 1234 stars (opens in a new tab)");
         assert_eq!(text, "1.2k");
         assert!(width > height, "no pill: {width}x{height}");
         // Unmount and mount again: the count comes from the session, not a second call.
@@ -269,7 +266,7 @@ fn aria_label_replaces_the_subject_and_the_count_stays() {
             .unwrap();
         let page = &fixture.page;
         let (name, text, _, _) = link(page, "#named", "1.2k").await;
-        assert_eq!(name, "Example source, 1,234 stars (opens in a new tab)");
+        assert_eq!(name, "Example source, 1234 stars (opens in a new tab)");
         assert_eq!(text, "1.2k", "the seeded count did not show");
         let (raw, _, _, _) = link(page, "#raw", "1.2k").await;
         assert_eq!(raw, "Example source, opens a new tab");

@@ -11,9 +11,14 @@ use crate::{
     sx::StaticSx,
 };
 
-fn navigation_target_href(to: NavigationTarget) -> String {
-    match to {
-        NavigationTarget::Internal(url) | NavigationTarget::External(url) => url,
+/// A link the router does not handle still keeps its base path, else it leaves the app
+/// (todo 4855).
+fn plain_href(to: NavigationTarget, router: Option<RouterContext>) -> String {
+    match (to, router) {
+        (NavigationTarget::Internal(url), Some(router)) => {
+            router.prefix().unwrap_or_default() + &url
+        }
+        (NavigationTarget::Internal(url) | NavigationTarget::External(url), _) => url,
     }
 }
 
@@ -75,7 +80,8 @@ pub(crate) fn render_anchor(
     let is_blank = target
         .as_deref()
         .is_some_and(|target| target.eq_ignore_ascii_case("_blank"));
-    let router = (target.is_none() || is_blank).then(try_router).flatten();
+    let mounted = try_router();
+    let router = mounted.filter(|_| target.is_none() || is_blank);
 
     // Without a router every string is `External`, so only an absolute URL counts as one.
     let rel = matches!(&to, NavigationTarget::External(url) if url.contains("://") || url.starts_with("//"))
@@ -87,7 +93,7 @@ pub(crate) fn render_anchor(
             Some(router) => routed(box_style(style_attributes), router, to, is_blank),
             None => box_style(style_attributes)
                 .attr_default("rel", rel)
-                .attr("href", navigation_target_href(to))
+                .attr("href", plain_href(to, mounted))
                 .attr("target", target),
         }
     } else {

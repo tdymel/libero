@@ -33,7 +33,7 @@ each component you use, see [features.md](features.md).
 - [Grid](grid.md): A layout matrix of named areas: `Grid` holds the shape, a `GridZone` is a twelve-column container with optional masonry, a `GridItem` takes a fraction of it.
 - [Center](center.md): Centers its child horizontally and vertically.
 - [Container](container.md): Centers content and caps its width at a breakpoint.
-- [AspectRatio](aspect_ratio.md): Enforces a width-to-height ratio on its child, cropping it to fill the box.
+- [AspectRatio](aspect_ratio.md): Holds its child to a width-to-height ratio, filling the box.
 - [Divider](divider.md): A horizontal or vertical rule, with an optional label sitting in the line.
 - [Collapse](collapse.md): Animates its children's height open and closed, and follows the content when its height changes.
 - [Float](float.md): Anchors its child to a corner or edge of the nearest positioned ancestor, like a badge on an avatar.

@@ -74,13 +74,16 @@ fn inset_ring() -> Sx {
     inset_focus_ring_sx(&ring_offset())
 }
 
-fn aspect_ratio_variables(ratio: Option<&f32>) -> Variables {
-    // CSS drops a ratio that is not positive and finite; the box falls back to `auto`.
+/// CSS drops a ratio that is not positive and finite; the box falls back to `auto`.
+fn warn_on_bad_ratio(ratio: Option<&f32>) {
     if let Some(ratio) = ratio.filter(|ratio| !(ratio.is_finite() && **ratio > 0.0)) {
         warn(&format!(
             "AspectRatio: ratio {ratio} is not a positive finite number; the browser ignores it."
         ));
     }
+}
+
+fn aspect_ratio_variables(ratio: Option<&f32>) -> Variables {
     variables().with(ASPECT_RATIO.override_var(), ratio.map(f32::to_string))
 }
 
@@ -110,6 +113,9 @@ base_props! {
 /// Docs: <https://libero-ui.dev/layout/aspect-ratio>
 #[component]
 pub fn AspectRatio(props: AspectRatioProps) -> Element {
+    let ratio = props.ratio.as_ref().copied();
+    // Once per mount, not per render (todo 4854).
+    use_hook(|| warn_on_bad_ratio(ratio.as_ref()));
     let variables: Input<Variables> = aspect_ratio_variables(props.ratio.as_ref()).into();
 
     use_box()
@@ -155,12 +161,41 @@ mod tests {
     fn a_ratio_css_rejects_warns() {
         for ratio in [0.0, -1.0, f32::NAN, f32::INFINITY] {
             take_warnings();
-            aspect_ratio_variables(Some(&ratio));
+            warn_on_bad_ratio(Some(&ratio));
             assert_eq!(take_warnings().len(), 1, "ratio {ratio}");
         }
-        aspect_ratio_variables(Some(&1.5));
-        aspect_ratio_variables(None);
+        warn_on_bad_ratio(Some(&1.5));
+        warn_on_bad_ratio(None);
         assert!(take_warnings().is_empty());
+    }
+
+    /// Todo 4854: a re-render with the same bad ratio does not warn again.
+    #[test]
+    fn a_bad_ratio_warns_once_across_renders() {
+        use std::sync::atomic::{AtomicUsize, Ordering};
+
+        use crate::LiberoProvider;
+
+        static RENDERS: AtomicUsize = AtomicUsize::new(0);
+        fn app() -> Element {
+            let render = RENDERS.fetch_add(1, Ordering::Relaxed).to_string();
+            rsx! {
+                LiberoProvider { AspectRatio { "data-render": render, ratio: 0.0, "box" } }
+            }
+        }
+        take_warnings();
+        let mut dom = VirtualDom::new(app);
+        dom.rebuild_in_place();
+        for _ in 0..2 {
+            dom.mark_dirty(ScopeId::APP);
+            dom.render_immediate(&mut dioxus::core::NoOpMutations);
+        }
+        let ratio: Vec<_> = take_warnings()
+            .into_iter()
+            .filter(|warning| warning.starts_with("AspectRatio:"))
+            .collect();
+        assert!(RENDERS.load(Ordering::Relaxed) >= 3);
+        assert_eq!(ratio.len(), 1, "{ratio:?}");
     }
 
     /// Todo 637: `.x > *:focus-visible` ties a `Button`'s `.y:focus-visible`

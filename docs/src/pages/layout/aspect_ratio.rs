@@ -29,27 +29,30 @@ pub fn AspectRatioPage() -> Element {
                 prop("ratio", "f32")
                     .default("1.0")
                     .doc("Width-to-height ratio, e.g. `16.0 / 9.0`."),
-                prop("children", "Element").doc("The child to crop, filling the box. An `a`, `picture` or `span` child becomes a block; give any other inline child `display: block`, and a `picture`'s inner `img` the full size. The size and `object-fit` reach the direct child only: an image inside a wrapper needs `width: 100%`, `height: 100%` and `object-fit: cover` itself. Other children, such as text, are not clipped: at larger text they run past the box or grow it."),
+                prop("children", "Element").doc("The child that fills the box; an image or a video is cropped to it. An `a`, `picture` or `span` child becomes a block; give any other inline child `display: block`, and a `picture`'s inner `img` the full size. The size and `object-fit` reach the direct child only: an image inside a wrapper needs `width: 100%`, `height: 100%` and `object-fit: cover` itself. A text child is never clipped: when it needs more room, at larger text or a narrow width, it grows the box taller than its ratio."),
             ])],
             accessibility: a11y()
-                .handles(["A focused child keeps its focus ring: it is drawn inside the clip."])
+                .handles([
+                    "A focused child keeps its focus ring: it is drawn inside the child's edges.",
+                    "A text child grows the box past its ratio at larger text, so nothing is cut off.",
+                ])
                 .must([
-                "Keep nothing meaningful at the child's edges: they get cropped.",
-                "Leave room below a text child: at larger text it can run past the box.",
+                "Keep nothing meaningful at an image's or a video's edges: they get cropped.",
+                "Leave room below a text child: at larger text it grows the box taller than its ratio.",
                 "Give an image `alt` text that describes what the reader can see.",
             ])
                 .example("A video thumbnail in `AspectRatio { ratio: 16.0 / 9.0, .. }` with an image whose `alt` is \"Sunset over the harbour\": the picture is cropped at its edges, and the play button in its centre keeps its focus ring."),
             lead: rsx! {
                 Text {
-                    "Enforces a width-to-height ratio on its child, cropping it to fill the "
-                    "box. Write "
+                    "Holds its child to a width-to-height ratio, filling the box. Write "
                     Code { source: "ratio" }
                     " as a division, like "
                     Code { source: "16.0 / 9.0" }
                     ". The box has no size of its own, so give it a width. An image or a "
                     "video is cropped with "
                     Code { source: "object-fit: cover" }
-                    ", not stretched."
+                    ", not stretched. A text child that needs more room grows the box past "
+                    "its ratio instead of being cut off."
                 }
             },
             Demo {

@@ -250,6 +250,47 @@ fn an_internal_blank_link_under_a_router_opens_a_new_tab() {
     assert!(html.contains("(opens in a new tab)"), "{html}");
 }
 
+#[derive(Clone, PartialEq, Routable)]
+enum SelfRoute {
+    #[route("/")]
+    SelfTarget {},
+    #[route("/elsewhere")]
+    Elsewhere {},
+}
+
+#[component]
+fn SelfTarget() -> Element {
+    rsx! {
+        LiberoProvider {
+            Anchor { to: "/elsewhere", target: "_self", "Elsewhere" }
+        }
+    }
+}
+
+#[component]
+fn Elsewhere() -> Element {
+    rsx! {}
+}
+
+/// Todo 4855: an internal link with a target other than `_blank` keeps the router's base path.
+#[test]
+fn an_internal_self_link_under_a_prefixed_router_keeps_the_prefix() {
+    fn app() -> Element {
+        use_hook(|| {
+            dioxus::history::provide_history_context(std::rc::Rc::new(
+                dioxus::history::MemoryHistory::default().with_prefix("/base"),
+            ))
+        });
+        rsx! { Router::<SelfRoute> {} }
+    }
+
+    let html = body(&render(app));
+    let attributes = attributes_of(&html, "a");
+
+    assert_eq!(attributes["href"], "/base/elsewhere", "{html}");
+    assert_eq!(attributes["target"], "_self", "{html}");
+}
+
 /// Todo 2996: a link-mode `Button` and `ActionIcon` announce a new tab as `Anchor` does.
 #[test]
 fn a_blank_button_and_action_icon_say_they_open_a_new_tab() {

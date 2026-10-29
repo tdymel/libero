@@ -5,18 +5,17 @@ Import: `use libero::components::AspectRatio;`
 Feature: `aspect-ratio` (on by default, turns on `box`; [features.md](features.md))
 Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/layout/aspect_ratio.rs>
 Index: [index.md](index.md) lists every other page
-Description: Enforces a width-to-height ratio on its child, cropping it to fill the box.
+Description: Holds its child to a width-to-height ratio, filling the box.
 
-Enforces a width-to-height ratio on its child, cropping it to fill the box.
-Write `ratio` as a division, like `16.0 / 9.0`. The box has no size of its own,
-so give it a width. The child fills it and the overflow is clipped: an image or
-a video is cropped with `object-fit: cover`, not stretched, and an `a`,
-`picture` or `span` child becomes a block. Give any other inline child
-`display: block`, and a `picture`'s inner `img` the full size. The size and
-`object-fit` reach the direct child only: an image inside a wrapper is not
+Holds its child to a width-to-height ratio, filling the box. Write `ratio` as a
+division, like `16.0 / 9.0`. The box has no size of its own, so give it a
+width. An image or a video is cropped with `object-fit: cover`, not stretched,
+and an `a`, `picture` or `span` child becomes a block. Give any other inline
+child `display: block`, and a `picture`'s inner `img` the full size. The size
+and `object-fit` reach the direct child only: an image inside a wrapper is not
 cropped unless it gets `width: 100%`, `height: 100%` and `object-fit: cover`
-itself. Any other child, such as text, is not clipped: larger text runs
-past the box or grows it instead of losing lines.
+itself. A text child that needs more room grows the box past its ratio instead
+of being cut off.
 
 ## Usage
 
@@ -45,7 +44,7 @@ fn Demo() -> Element {
 | Prop | Type | Default | Description |
 |---|---|---|---|
 | `ratio` | `f32` | `1.0` | Width-to-height ratio, e.g. `16.0 / 9.0`. |
-| `children` | `Element` | required | The child to crop, filling the box. An `a`, `picture` or `span` child becomes a block; give any other inline child `display: block`, and a `picture`'s inner `img` the full size. The size and `object-fit` reach the direct child only: an image inside a wrapper needs `width: 100%`, `height: 100%` and `object-fit: cover` itself. Other children, such as text, are not clipped: at larger text they run past the box or grow it. |
+| `children` | `Element` | required | The child that fills the box; an image or a video is cropped to it. An `a`, `picture` or `span` child becomes a block; give any other inline child `display: block`, and a `picture`'s inner `img` the full size. The size and `object-fit` reach the direct child only: an image inside a wrapper needs `width: 100%`, `height: 100%` and `object-fit: cover` itself. A text child is never clipped: when it needs more room, at larger text or a narrow width, it grows the box taller than its ratio. |
 
 Like every component, `AspectRatio` also takes the shared props `sx`, `class`,
 `style`, `states`, and any extra HTML attributes.
@@ -54,12 +53,13 @@ Like every component, `AspectRatio` also takes the shared props `sx`, `class`,
 
 ### Libero handles
 
-- A focused child keeps its focus ring: it is drawn inside the clip.
+- A focused child keeps its focus ring: it is drawn inside the child's edges.
+- A text child grows the box past its ratio at larger text, so nothing is cut off.
 
 ### You must
 
-- Keep nothing meaningful at the child's edges: they get cropped.
-- Leave room below a text child: at larger text it can run past the box.
+- Keep nothing meaningful at an image's or a video's edges: they get cropped.
+- Leave room below a text child: at larger text it grows the box taller than its ratio.
 - Give an image `alt` text that describes what the reader can see.
 
 ### Example

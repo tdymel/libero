@@ -27,6 +27,7 @@ fn cut_code(values: &DemoValues) -> Vec<String> {
         lines.push(format!("truncate: {value:?}"));
     }
     if is_cut(values) {
+        lines.push(format!("title: {TEXT:?}"));
         lines.push(format!("sx: sx().max_width({CUT_WIDTH:?})"));
     }
     lines
@@ -47,7 +48,7 @@ pub fn TitlePage() -> Element {
                     .doc("Visual size, `xs` to `xxl`. Also picks the tag unless `component` is set."),
                 prop("component", "HtmlTag")
                     .default("follows size")
-                    .doc("The heading tag. The size's look stays. A debug build warns for a tag other than `h1` to `h6`."),
+                    .doc("The heading tag. The size's look stays. With `size` unset it is `h1`, whatever the theme's size. A debug build warns for a tag other than `h1` to `h6`."),
                 prop("gradient", "Gradient")
                     .doc("Paints the glyphs with a gradient from the theme's first stop to a second, as `(\"info\", 90)` or `Gradient::default().to(\"info\").deg(90)`; `Gradient::default()` is the theme's. The contrast of a literal CSS stop is yours to check, and a debug build warns when a hex stop reads under 4.5:1 on the page background. Solid in its first stop in print and in native windows, the system text color in forced colors."),
                 prop("truncate", "Truncate")
@@ -62,7 +63,7 @@ pub fn TitlePage() -> Element {
                     "A cut heading is still whole in the DOM, so a screen reader and the outline read all of it.",
                 ])
                 .must([
-                    "Pass a heading that may be cut as `title` too, so sighted users can read it on hover.",
+                    "Pass a heading that may be cut as `title` too, so a mouse user can read it on hover. A hover title does not reach touch or keyboard users: on narrow screens prefer `line_clamp` or let the heading wrap, and show the full text elsewhere where it matters.",
                     "Keep one `h1` per page and skip no levels.",
                     "A `lg` heading in a section under the page's `h1` needs `component: \"h2\"`, or the document jumps from `h1` to `h3`.",
                     "Check the contrast of a literal CSS stop in `gradient`. A debug build warns when a hex stop reads under 4.5:1 on the page background.",
@@ -100,10 +101,16 @@ pub fn TitlePage() -> Element {
                     controls: vec![
                         Control::sizes("size")
                             .default(theme.title.size.as_str()),
+                        // An h2: the page's own title is its one h1 (todo 4850).
                         Control::slider(
                             "component",
                             ["auto", "h1", "h2", "h3", "h4", "h5", "h6"],
-                        ),
+                        )
+                        .default("h2")
+                        .code(|_, values| match values.str("component").as_str() {
+                            "auto" => vec![],
+                            tag => vec![format!("component: {tag:?}")],
+                        }),
                         // The theme's own second stop and angle print as `Gradient::default()`.
                         Control::switch("gradient").code(|_, values| {
                             let default = values.str("gradient_to") == "secondary"
@@ -136,6 +143,8 @@ pub fn TitlePage() -> Element {
                                 end => Input::from(end),
                             },
                             line_clamp: values.str("line_clamp").parse::<u32>().ok(),
+                            // The cut text on hover, as the Must asks.
+                            title: is_cut(&values).then_some(TEXT),
                             sx: is_cut(&values).then(|| sx().max_width(CUT_WIDTH)),
                             component: match values.str("component").as_str() {
                                 // The default follows `size`, so leave the prop unset.

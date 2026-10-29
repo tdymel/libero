@@ -109,7 +109,7 @@
 /form/tags-field	TagsField - Libero	A field whose value is a Vec<String> of typed tags, drawn as chips around the input.	/md/tags_field.md	Form	/form/getting-started
 /form/text-field	TextField - Libero	A single-line text field with a label, a description, helper text and a validation message.	/md/text_field.md	Form	/form/getting-started
 /form/textarea	Textarea - Libero	A multi-line text field, sized by rows and resizable by the user.	/md/textarea.md	Form	/form/getting-started
-/layout/aspect-ratio	AspectRatio - Libero	Enforces a width-to-height ratio on its child, cropping it to fill the box.	/md/aspect_ratio.md	Layout	/layout/box
+/layout/aspect-ratio	AspectRatio - Libero	Holds its child to a width-to-height ratio, filling the box.	/md/aspect_ratio.md	Layout	/layout/box
 /layout/box	Box - Libero	The primitive every other component is built on, rendered as any tag via component and styled through sx.	/md/box.md	Layout	/layout/box
 /layout/center	Center - Libero	Centers its child horizontally and vertically.	/md/center.md	Layout	/layout/box
 /layout/collapse	Collapse - Libero	Animates its children's height open and closed, and follows the content when its height changes.	/md/collapse.md	Layout	/layout/box

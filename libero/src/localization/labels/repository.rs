@@ -6,13 +6,13 @@
 )]
 pub struct RepositoryLabels {
     /// The count as heard after the host and repo: the exact count, for the plural,
-    /// and the same count in the formats' digit groups (`1,234`), which a screen reader
-    /// reads alike everywhere. A fn, for plural forms.
+    /// and the same count as bare digits (`1234`), as digit groups read as a decimal
+    /// under another language's formats. A fn, for plural forms.
     ///
     /// ```
     /// use libero::localization::RepositoryLabels;
     ///
-    /// assert_eq!((RepositoryLabels::ENGLISH.stars)(1_234, "1,234"), "1,234 stars");
+    /// assert_eq!((RepositoryLabels::ENGLISH.stars)(1_234, "1234"), "1234 stars");
     /// assert_eq!((RepositoryLabels::GERMAN.stars)(1, "1"), "1 Stern");
     /// ```
     pub stars: fn(u64, &str) -> String,

@@ -17,8 +17,9 @@ static TITLE_BASE_SX: StaticSx = StaticSx::new(|| {
     TitleDefaults::theme_vars()
         .and(truncate_sx(TITLE_LINE_HEIGHT))
         .margin("0")
-        // A long word at `xxl` is wider than a 320px column (WCAG 1.4.10).
-        .overflow_wrap("break-word")
+        // A long word at `xxl` is wider than a 320px column (WCAG 1.4.10). Unlike
+        // `break-word`, `anywhere` also shrinks min-content, so a flex parent stays narrow.
+        .overflow_wrap("anywhere")
         .when("gradient", gradient_text_sx())
 });
 

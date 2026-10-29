@@ -291,11 +291,15 @@ pub fn Paper(mut props: PaperProps) -> Element {
     });
 
     let component = props.component.copied_or_default();
-    if paper_unreachable_press(component, &props.attributes) {
-        warn(
-            "Paper: `onclick` on a surface with no tab stop has no keyboard path; render it as `a` or `button`.",
-        );
-    }
+    let unreachable = paper_unreachable_press(component, &props.attributes);
+    // Once per mount, not per render (todo 4854).
+    use_hook(|| {
+        if unreachable {
+            warn(
+                "Paper: `onclick` on a surface with no tab stop has no keyboard path; render it as `a` or `button`.",
+            );
+        }
+    });
 
     use_box()
         .framework_sx(props.framework_sx.unwrap_or(&PAPER_BASE_SX))
@@ -414,6 +418,35 @@ mod tests {
         };
         assert!(warns(unreachable));
         assert!(!warns(reachable));
+    }
+
+    /// Todo 4854: a re-render of the same unreachable press does not warn again.
+    #[test]
+    fn an_unreachable_press_warns_once_across_renders() {
+        use std::sync::atomic::{AtomicUsize, Ordering};
+
+        use crate::{LiberoProvider, utils::take_warnings};
+
+        static RENDERS: AtomicUsize = AtomicUsize::new(0);
+        fn app() -> Element {
+            let render = RENDERS.fetch_add(1, Ordering::Relaxed).to_string();
+            rsx! {
+                LiberoProvider { Paper { "data-render": render, onclick: |_| {}, "sheet" } }
+            }
+        }
+        take_warnings();
+        let mut dom = VirtualDom::new(app);
+        dom.rebuild_in_place();
+        for _ in 0..2 {
+            dom.mark_dirty(ScopeId::APP);
+            dom.render_immediate(&mut dioxus::core::NoOpMutations);
+        }
+        let paper: Vec<_> = take_warnings()
+            .into_iter()
+            .filter(|warning| warning.starts_with("Paper:"))
+            .collect();
+        assert!(RENDERS.load(Ordering::Relaxed) >= 3);
+        assert_eq!(paper.len(), 1, "{paper:?}");
     }
 
     fn href(url: &str) -> Vec<Attribute> {

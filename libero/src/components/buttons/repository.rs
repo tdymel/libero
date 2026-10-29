@@ -12,7 +12,7 @@ use crate::{
         layout::use_box,
     },
     hooks::{SessionText, session_text, use_cache, use_formats, use_localization, use_theme},
-    localization::{Formats, RepositoryLabels},
+    localization::RepositoryLabels,
     platform,
     sx::{StaticSx, ThemeAwareValue, sx},
     theme::{ACTION_ICON_SIZE, Color},
@@ -115,15 +115,10 @@ fn parse_stars(body: &str, field: &str) -> Option<u64> {
         .as_u64()
 }
 
-/// The name's subject and the exact count, which speech reads alike, not the pill's `1,2k`.
-fn named_with_stars(
-    subject: &str,
-    count: u64,
-    labels: &RepositoryLabels,
-    formats: &Formats,
-) -> String {
-    let exact = formats.write_number(&count.to_string());
-    format!("{subject}, {}", (labels.stars)(count, &exact))
+/// The name's subject and the bare count, not the pill's `1,2k`: digit groups read as
+/// a decimal when the labels' language and the formats differ (todo 4853).
+fn named_with_stars(subject: &str, count: u64, labels: &RepositoryLabels) -> String {
+    format!("{subject}, {}", (labels.stars)(count, &count.to_string()))
 }
 
 /// Half the button, from its size rather than its width, which a pill grows.
@@ -255,7 +250,7 @@ pub fn Repository(props: RepositoryProps) -> Element {
         .unwrap_or_else(|| format!("{} {}", host.name(), props.repo));
     // `ActionIcon` adds the new-tab cue to this.
     let aria_label = match count {
-        Some(count) => named_with_stars(&subject, count, &localization.repository, formats),
+        Some(count) => named_with_stars(&subject, count, &localization.repository),
         None => subject,
     };
     // A raw `aria-label` attribute is the whole name; a blank one names nothing and is dropped.
@@ -401,18 +396,14 @@ mod tests {
         assert_eq!(parse_stars("<html>", "star_count"), None);
     }
 
-    /// The name says the exact count in the formats' groups, where the pill shows `1.2k`.
+    /// Todo 4853: the name says the bare count, where the pill shows `1.2k`; English
+    /// words over German groups read `6.186` as six point one eight six.
     #[test]
-    fn the_name_says_the_exact_count() {
-        let name = |count, formats| {
-            named_with_stars("GitHub a/b", count, &RepositoryLabels::ENGLISH, formats)
-        };
-        assert_eq!(name(1_234, &Formats::AMERICAN), "GitHub a/b, 1,234 stars");
-        assert_eq!(
-            name(1_234_567, &Formats::GERMAN),
-            "GitHub a/b, 1.234.567 stars"
-        );
-        assert_eq!(name(1, &Formats::AMERICAN), "GitHub a/b, 1 star");
+    fn the_name_says_the_bare_count() {
+        let name = |count| named_with_stars("GitHub a/b", count, &RepositoryLabels::ENGLISH);
+        assert_eq!(name(1_234), "GitHub a/b, 1234 stars");
+        assert_eq!(name(6_186), "GitHub a/b, 6186 stars");
+        assert_eq!(name(1), "GitHub a/b, 1 star");
     }
 
     /// A count fetched within the TTL is reused; an older or untimed one is fetched again.
