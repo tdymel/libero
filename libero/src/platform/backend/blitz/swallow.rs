@@ -1,5 +1,5 @@
 //! An outside press's click swallowed (4839): no capture phase, so the wrapper's press decides
-//! and [`refused::release`](super::refused::release) prevents the release, as for a disabled control.
+//! and [`refused::release`](super::refused::release) prevents the release and holds focus (4931).
 
 use std::{
     cell::{Cell, RefCell},

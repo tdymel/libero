@@ -97,8 +97,9 @@ pub(super) fn release(event: &Event<PointerData>) {
     event.prevent_default();
     forget_press();
     BLANK_PRESS.set(false);
-    // A press that cancelled its `mousedown` keeps focus where it is.
-    if focus::press_kept_focus() {
+    // A press that cancelled its `mousedown` keeps focus where it is, as does a swallowed one
+    // (a scrim's press on the web and WebView, 4907, 4915).
+    if swallowed || focus::press_kept_focus() {
         return;
     }
     match (target, wrapper) {
