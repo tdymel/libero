@@ -72,7 +72,7 @@ const PUBLISHER_ATTRIBUTE: &str = "data-lsx-header";
 
 thread_local! {
     /// Mounted sticky/fixed Headers, oldest first: the last one publishes, and
-    /// unmounting it hands the root back to the one before.
+    /// unmounting it hands the root back to the one before. Per thread, not per document (todo 4952).
     static PUBLISHERS: RefCell<Vec<String>> = const { RefCell::new(Vec::new()) };
 }
 
@@ -266,7 +266,8 @@ base_props! {
         #[props(default, into)]
         z_index: Input<ThemeAwareValue>,
         /// Publishes the height on `:root`, so focus scrolls clear; a `Fixed` header always does.
-        /// The page's banner only.
+        /// The page's banner only. One window per thread publishes: with several windows on a
+        /// thread, only the last mounted publishing Header's window gets the height.
         #[props(default)]
         publish_height: bool,
         /// Frosted glass, as on `Paper`: a `color` tints it.

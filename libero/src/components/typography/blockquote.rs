@@ -35,7 +35,15 @@ struct Palette {
 fn palette(value: Option<&ThemeAwareValue>, default_color: Color) -> Palette {
     let from_shade = |color: Color, shade: ColorShade| Palette {
         background: ThemeAwareValue::ColorValue(ColorValue::Fill(color, shade)),
-        border: ThemeAwareValue::ColorValue(ColorValue::Shade(color, ACCENT_SHADE)),
+        // From 6 up the bar takes the fill's own shade, so a solid quote shows no lighter bar.
+        border: ThemeAwareValue::ColorValue(ColorValue::Shade(
+            color,
+            if shade as u8 > ACCENT_SHADE as u8 {
+                shade
+            } else {
+                ACCENT_SHADE
+            },
+        )),
         contrast: Some(ThemeAwareValue::ColorValue(ColorValue::Contrast(
             color, shade,
         ))),
@@ -284,6 +292,25 @@ mod tests {
             format!("{}:navy;", FOCUS_RING_HALO.name()),
         ] {
             assert!(css.contains(&pair), "{pair} in {css}");
+        }
+    }
+
+    /// Todo 4950: `primary.8` filled solid kept a shade-6 bar.
+    #[test]
+    fn a_dark_shade_bar_matches_its_fill() {
+        for (shade, bar) in [
+            (ColorShade::S3, ACCENT_SHADE),
+            (ColorShade::S6, ACCENT_SHADE),
+            (ColorShade::S8, ColorShade::S8),
+            (ColorShade::S9, ColorShade::S9),
+        ] {
+            let color = ThemeAwareValue::ColorValue(ColorValue::Shade(Color::Primary, shade));
+            let css = blockquote_variables(Some(&color), Color::Primary).to_string();
+            let expected = ColorValue::Shade(Color::Primary, bar).value();
+            assert!(
+                css.contains(&format!("{}:{expected};", BLOCKQUOTE_BORDER_COLOR.name())),
+                "{shade:?}: {css}"
+            );
         }
     }
 

@@ -3,10 +3,21 @@ use crate::components::{
 };
 use dioxus::prelude::*;
 use libero::{
-    components::{Box, Code, Float, Text},
+    components::{Box, Code, Float, Input, Text},
     sx::sx,
     use_theme,
 };
+
+/// Clears a sticky `Header` that publishes its height; `0px` without one.
+const BELOW_HEADER: &str = "var(--lsx-header-height, 0px)";
+
+/// A fixed top float goes under the page's sticky header unless pushed below it.
+fn header_offset(values: &DemoValues) -> Option<&'static str> {
+    let clears = values.str("fixed") == "true"
+        && values.str("placement").starts_with("top")
+        && values.str("offset_y") == "auto";
+    clears.then_some(BELOW_HEADER)
+}
 
 const CHILD: &str = r#"Box { sx: sx().padding("4px 8px").background("primary").color("primary-contrast"), "Badge" }"#;
 
@@ -113,8 +124,13 @@ pub fn FloatPage() -> Element {
                         "offset_y",
                         ["-lg", "-md", "-sm", "-xs", "auto", "xs", "sm", "md", "lg"],
                     )
-                    .default("auto"),
-                    // Leaves the frame for the window's own corner.
+                    .default("auto")
+                    .code(|_, values| match (header_offset(values), values.str("offset_y")) {
+                        (Some(offset), _) => vec![format!("offset_y: {offset:?}")],
+                        (None, value) if value == "auto" => vec![],
+                        (None, value) => vec![format!("offset_y: {value:?}")],
+                    }),
+                    // Leaves the frame for the window's own corner, below the docs header.
                     Control::switch("fixed"),
                 ],
                 render: move |values: DemoValues| rsx! {
@@ -127,7 +143,10 @@ pub fn FloatPage() -> Element {
                         Float {
                             placement: values.str("placement"),
                             offset_x: or_unset(values.str("offset_x")),
-                            offset_y: or_unset(values.str("offset_y")),
+                            offset_y: match header_offset(&values) {
+                                Some(offset) => Input::from(offset.to_string()),
+                                None => or_unset(values.str("offset_y")),
+                            },
                             fixed: values.str("fixed") == "true",
                             Box {
                                 sx: sx().padding("4px 8px").background("primary").color("primary-contrast"),

@@ -40,6 +40,28 @@ e2e::scenario!(
     enters_and_exits
 );
 
+/// Todo 4947: unmounted, the wrapper leaves the flow, so the Flex gap above it closes.
+async fn leaves_the_flow_once_closed<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    let position = d.style(ROOT, "position").await?;
+    ensure!(position == "absolute", "closed position {position}");
+    d.click(TOGGLE).await?;
+    eventually(d, "the open transition to rejoin the flow", async |d| {
+        Ok(d.style(ROOT, "position").await? == "static" && opacity(d).await? > 0.99)
+    })
+    .await?;
+    d.click(TOGGLE).await?;
+    eventually(d, "the unmounted wrapper to leave the flow", async |d| {
+        Ok(d.style(ROOT, "position").await? == "absolute")
+    })
+    .await
+}
+
+e2e::scenario!(
+    it_leaves_the_flow_once_unmounted,
+    "/transition",
+    leaves_the_flow_once_closed
+);
+
 /// An omitted `open` renders open at once and enters by the `appear` keyframe, not a state flip.
 async fn enters_on_mount<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
     let state = d.attr(ROOT, "data-state").await?.unwrap_or_default();

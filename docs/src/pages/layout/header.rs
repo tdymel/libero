@@ -4,7 +4,7 @@ use crate::components::{
 };
 use dioxus::prelude::*;
 use libero::{
-    components::{Box, Code, Header, Input, ScrollArea, Text},
+    components::{Anchor, Box, Code, Header, Input, ScrollArea, Text},
     sx::sx,
     use_theme,
 };
@@ -17,6 +17,16 @@ fn wrap_frame(_: &DemoValues, code: &str) -> String {
         indent(&indent(code))
     )
 }
+
+/// The brand and a short nav, so the variants' link colour, underline and focus halo show.
+const CHILDREN: &str = r#""Libero"
+Box {
+    component: "nav",
+    aria_label: "Demo links",
+    sx: sx().display("flex").gap("md").with("margin-inline-start", "auto"),
+    Anchor { to: Route::GettingStarted {}, "Docs" }
+    Anchor { to: Route::HeaderPage {}, "Header" }
+}"#;
 
 fn no_gradient(values: &DemoValues) -> bool {
     values.str("gradient") != "true"
@@ -37,7 +47,7 @@ pub fn HeaderPage() -> Element {
                     .doc("`sticky` pins to the top of the scrolling ancestor, `static` scrolls away. `fixed` pins to the viewport, so offset your content by `var(--lsx-header-height)`. In a native app `fixed` scrolls with the page for now; use `sticky`."),
                 prop("publish_height", "bool")
                     .default("false")
-                    .doc("Publishes the height as `--lsx-header-height` and `scroll-padding-top` on `:root`, so focus scrolls clear of a sticky banner. A `fixed` header always does. Set it on the page's own banner only."),
+                    .doc("Publishes the height as `--lsx-header-height` and `scroll-padding-top` on `:root`, so focus scrolls clear of a sticky banner. A `fixed` header always does. Set it on the page's own banner only. Only one window per thread publishes: in a desktop app with several windows, the last publishing header mounted wins."),
                 prop("size", "ThemeAwareValue")
                     .default(theme.header.size.as_str())
                     .doc("Minimum height. The header grows when its content wraps."),
@@ -84,7 +94,8 @@ pub fn HeaderPage() -> Element {
             Demo {
                 component: "Header",
                 wide_preview: true,
-                children_text: "Libero",
+                children_text: "",
+                children_code: CHILDREN.to_string(),
                 controls: vec![
                     Control::toggle("position", ["sticky", "static"]).labels(["Sticky", "Static"]),
                     Control::sizes("size")
@@ -129,6 +140,13 @@ pub fn HeaderPage() -> Element {
                                 gradient: (values.str("gradient") == "true")
                                     .then(|| gradient_value(&values)),
                                 "Libero"
+                                Box {
+                                    component: "nav",
+                                    aria_label: "Demo links",
+                                    sx: sx().display("flex").gap("md").with("margin-inline-start", "auto"),
+                                    Anchor { to: crate::Route::GettingStarted {}, "Docs" }
+                                    Anchor { to: crate::Route::HeaderPage {}, "Header" }
+                                }
                             }
                             Box {
                                 sx: sx().padding("md"),

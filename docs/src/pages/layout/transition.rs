@@ -2,7 +2,10 @@ use crate::components::{
     Child, Control, Demo, DemoFile, DemoValues, DocPage, Wrap, a11y, indent, prop, props,
 };
 use dioxus::prelude::*;
-use libero::components::{Code, Text, TransitionKind};
+use libero::{
+    components::{Code, Text, TransitionKind},
+    use_theme,
+};
 
 mod demo;
 use demo::TransitionDemo;
@@ -91,6 +94,8 @@ fn wrap_page(_values: &DemoValues, source: &str) -> String {
 
 #[component]
 pub fn TransitionPage() -> Element {
+    let theme_duration = use_theme().transition.duration;
+    let duration_default = theme_duration.to_string();
     rsx! {
         DocPage {
             title: "Transition",
@@ -100,15 +105,15 @@ pub fn TransitionPage() -> Element {
                 prop("kind", "TransitionKind")
                     .default("Fade")
                     .doc("How the children move in and out. Travel: `Fade`, `FadeUp`, `FadeDown`, `FadeLeft`, `FadeRight`, `SlideUp`, `SlideDown`, `SlideLeft`, `SlideRight`. Grow: `Scale`, `ScaleX`, `ScaleY`, `Pop`, `PopTopLeft`, `PopTopRight`, `PopBottomLeft`, `PopBottomRight`. Lean or turn: `SkewUp`, `SkewDown`, `RotateLeft`, `RotateRight`. All of them also fade. The slides travel the children's own size; left and right are physical directions."),
-                prop("open", "bool")
-                    .default("true")
+                prop("open", "Option<bool>")
+                    .default("none (one-time entrance)")
                     .doc("Omitted, the children animate in once on mount and never exit. Passed, they enter and exit as it flips; the first value does not animate. You own this state."),
                 prop("duration", "u32")
-                    .default("200")
-                    .doc("Animation length in milliseconds. `0` turns the animation off."),
+                    .default(duration_default.as_str())
+                    .doc("Animation length in milliseconds. `0` turns the animation off. Set it here or in the theme: the unmount timer reads only these, so a longer duration set in CSS is cut short on close."),
                 prop("from", "Sx")
                     .doc("Extra styles of the closed state, stacked on the `kind`'s; every property it sets also animates, and a `transform` in it replaces the kind's. Needs a passed `open`: the mount entrance animates only the `kind`."),
-                prop("children", "Element").doc("The content that animates. It is unmounted once the exit ends."),
+                prop("children", "Element").doc("The content that animates. It is unmounted once the exit ends, and the empty wrapper leaves the layout, so a `Flex` or `Stack` gap closes."),
             ])],
             accessibility: a11y()
                 .handles([
@@ -146,7 +151,7 @@ pub fn TransitionPage() -> Element {
                         }
                     }),
                     Control::slider("duration", ["0", "100", "200", "600", "1200"])
-                        .default("200")
+                        .default(duration_default.as_str())
                         .labels(["0ms", "100ms", "200ms", "600ms", "1200ms"])
                         .code(|control, values| {
                             let value = values.str("duration");
@@ -164,8 +169,8 @@ pub fn TransitionPage() -> Element {
                 ],
                 wrap: Wrap(wrap_page),
                 render: move |values: DemoValues| {
-                    let duration = match values.str("duration").as_str() {
-                        "200" => None,
+                    let duration = match values.str("duration") {
+                        value if value == theme_duration.to_string() => None,
                         value => value.parse::<u32>().ok(),
                     };
 

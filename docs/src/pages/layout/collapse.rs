@@ -5,6 +5,8 @@ use dioxus::prelude::*;
 use libero::{
     components::{Button, Code, Collapse, Flex, Text},
     hooks::use_focus_return,
+    sx::sx,
+    use_theme,
 };
 
 /// The page's own source: the printed parts are cut from its live demo.
@@ -36,8 +38,9 @@ fn content_code(values: &DemoValues) -> String {
     } else if count == 1 {
         return lines.remove(0);
     }
+    // The padding keeps the Done button's focus ring inside the panel's clip.
     let align = match focus_return(values) {
-        true => "    align: \"flex-start\",\n",
+        true => "    align: \"flex-start\",\n    sx: sx().padding(\"6px\"),\n",
         false => "",
     };
     format!(
@@ -119,6 +122,7 @@ fn CollapseDemo(
                     Flex {
                         direction: "column",
                         align: "flex-start",
+                        sx: sx().padding("6px"),
                         gap: "sm",
                         for text in texts {
                             Text { "{text}" }
@@ -151,6 +155,9 @@ fn CollapseDemo(
 
 #[component]
 pub fn CollapsePage() -> Element {
+    let theme = use_theme();
+    let theme_duration = theme.collapse.duration;
+    let duration_default = theme_duration.to_string();
     rsx! {
         DocPage {
             title: "Collapse",
@@ -163,7 +170,7 @@ pub fn CollapsePage() -> Element {
                     .default("true")
                     .doc("Keeps the children in the DOM while closed, out of the focus order and hidden from screen readers, so a half-typed form survives. `false` removes them once the panel has closed."),
                 prop("duration", "u32")
-                    .default("200")
+                    .default(duration_default.as_str())
                     .doc("Animation length in milliseconds. `0` turns the animation off."),
                 prop("children", "Element").doc("The content that grows and shrinks."),
             ])],
@@ -205,7 +212,7 @@ pub fn CollapsePage() -> Element {
                 ],
                 controls: vec![
                     Control::slider("duration", ["0", "100", "200", "600", "1200"])
-                        .default("200")
+                        .default(duration_default.as_str())
                         .labels(["0ms", "100ms", "200ms", "600ms", "1200ms"])
                         .code(|control, values| {
                             let value = values.str("duration");
@@ -230,8 +237,8 @@ pub fn CollapsePage() -> Element {
                         "false" => Some(false),
                         _ => None,
                     };
-                    let duration = match values.str("duration").as_str() {
-                        "200" => None,
+                    let duration = match values.str("duration") {
+                        value if value == theme_duration.to_string() => None,
                         value => value.parse::<u32>().ok(),
                     };
 

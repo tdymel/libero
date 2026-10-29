@@ -9,6 +9,9 @@ use libero::{
 /// Printed as a `fixed` line, so the preview and the code block share it: a
 /// container is invisible without a background to see its edges by.
 // snippet: in Container { .. }
+/// A `section` is a landmark only once it has a name.
+const SECTION_LABEL: &str = "Page content";
+
 const SX: &str = r#"sx: sx().background("muted.1").padding_top("16px").padding_bottom("16px")"#;
 
 #[component]
@@ -27,7 +30,7 @@ pub fn ContainerPage() -> Element {
                     .default(theme.container.size.as_str())
                     .doc("Max width, a breakpoint (`xs` is 36rem, `xxl` 101rem) or a CSS length."),
                 prop("gutters", "ThemeAwareValue")
-                    .default("md")
+                    .default(theme.container.gutters.as_str())
                     .doc("Horizontal padding, a spacing step or a CSS length."),
                 prop("children", "Element").doc("The container's content."),
             ])],
@@ -60,18 +63,27 @@ pub fn ContainerPage() -> Element {
                 children_text: "Centered, width-capped content.",
                 fixed: vec![SX.to_string()],
                 controls: vec![
-                    Control::sizes("size").default(theme.container.size.as_str()),
-                    Control::sizes("gutters")
-                        .default("md"),
+                    // The px stop shows a cap at phone width, where every breakpoint is wider.
+                    Control::slider("size", ["240px", "xs", "sm", "md", "lg", "xl", "xxl"])
+                        .default(theme.container.size.as_str()),
+                    Control::sizes("gutters").default(theme.container.gutters.as_str()),
                     // No `main`: the docs page is one already, and a page has one main.
                     Control::toggle("component", ["div", "section"])
-                        .labels(["Div", "Section"]),
+                        .labels(["Div", "Section"])
+                        .code(|_, values| match values.str("component").as_str() {
+                            "section" => vec![
+                                "component: \"section\"".to_string(),
+                                format!("aria_label: \"{SECTION_LABEL}\""),
+                            ],
+                            _ => vec![],
+                        }),
                 ],
                 render: move |values: DemoValues| rsx! {
                     Container {
                         size: values.str("size"),
                         gutters: values.str("gutters"),
                         component: values.str("component"),
+                        aria_label: (values.str("component") == "section").then_some(SECTION_LABEL),
                         sx: sx().background("muted.1").padding_top("16px").padding_bottom("16px"),
                         "Centered, width-capped content."
                     }

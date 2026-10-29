@@ -56,7 +56,10 @@ fn an_initially_closed_transition_renders_no_children() {
     let html = render(closed_app);
 
     assert!(!body(&html).contains("panel body"), "{}", body(&html));
-    assert_eq!(attributes_of(&html, "div")["data-state"], "closed");
+    assert_eq!(
+        attributes_of(&html, "div")["data-state"],
+        "closed unmounted"
+    );
 }
 
 /// The server sends visible open markup; the entrance is a keyframe, so it needs no JS.

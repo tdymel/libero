@@ -77,6 +77,9 @@ static TRANSITION_BASE_SX: StaticSx = StaticSx::new(|| {
             sx().animation(format!("{TRANSITION_APPEAR} {duration} {easing} backwards"))
                 .media(REDUCED_MOTION, sx().animation("none")),
         )
+        // Out of the flow once the children are gone, so a Flex or Stack gap closes; not
+        // `display: none`, which would leave the reopening root no style to animate from.
+        .when("unmounted", sx().position("absolute"))
         .and(state_transitions(&[]))
 });
 
@@ -221,6 +224,8 @@ base_props! {
         #[props(default)]
         open: Option<bool>,
         /// Milliseconds, defaulting to `theme.transition.duration`. `0` disables it.
+        /// The unmount timer reads only this prop or the theme: a longer duration set in CSS
+        /// (`--lsx-transition-duration`, an `sx` `transition`) is cut short on close.
         #[props(default)]
         duration: Option<u32>,
         /// Extra styles of the closed state, on top of `kind`'s; every property it sets animates.
@@ -268,6 +273,7 @@ pub fn Transition(props: TransitionProps) -> Element {
         .with("open", shown)
         .with("closed", !shown)
         .with("appear", props.open.is_none())
+        .with("unmounted", !presence.mounted())
         .into();
     let variables: Input<Variables> = transition_variables(props.kind, props.duration).into();
     let sx: Input<Sx> = match &props.from {
@@ -394,6 +400,15 @@ mod tests {
         assert!(css.contains("transition:opacity "), "{css}");
         assert!(css.contains(", margin-top "), "{css}");
         assert!(!css.contains("color:red;x"), "{css}");
+    }
+
+    /// Todo 4947: a closed, unmounted root must not take a parent's gap.
+    #[test]
+    fn an_unmounted_root_leaves_the_flow() {
+        let sheet = crate::css::Stylesheet::from(&TRANSITION_BASE_SX);
+        let css = sheet.as_str();
+
+        assert!(css.contains("position:absolute"), "{css}");
     }
 
     /// Todo 2578: an explicit `visible` would punch through a closed ancestor.
