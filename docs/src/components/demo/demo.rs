@@ -770,6 +770,23 @@ mod tests {
         assert_eq!(settled.str("value"), "2");
     }
 
+    /// Todo 4920: a size cut from below settles on the smallest left, not the largest.
+    #[test]
+    fn a_word_no_longer_offered_settles_on_the_first() {
+        let controls = vec![
+            Control::switch("label"),
+            Control::sizes("size")
+                .options_from(|values| match values.str("label").as_str() {
+                    "true" => vec!["md".to_string(), "lg".to_string()],
+                    _ => vec!["xs".to_string(), "md".to_string(), "lg".to_string()],
+                })
+                .default("xs"),
+        ];
+        let values = DemoValues::defaults(&controls);
+        let settled = values.with("label", "true").settled(&controls).unwrap();
+        assert_eq!(settled.str("size"), "md");
+    }
+
     /// Todos 866, 3735: the longest label, checked, sizes every segment, so four placements
     /// and five variants never fit the side column, while short labels keep the 88px floor.
     #[test]

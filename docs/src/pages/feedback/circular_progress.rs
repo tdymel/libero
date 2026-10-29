@@ -2,6 +2,7 @@ use crate::components::{Child, Control, Demo, DemoValues, DocPage, a11y, prop, p
 use dioxus::prelude::*;
 use libero::{
     components::{CircularProgress, CircularProgressPart, Code, Input, Text},
+    theme::Theme,
     use_theme,
 };
 
@@ -15,6 +16,43 @@ fn label_text(values: &DemoValues) -> String {
         true => format!("{}%", values.str("value")),
         false => String::new(),
     }
+}
+
+fn controls(theme: &Theme) -> Vec<Control> {
+    vec![
+        Control::switch("indeterminate").code(|_, values| {
+            if indeterminate(values) {
+                vec!["value: None".to_string()]
+            } else {
+                vec![format!("value: {}.0", values.str("value"))]
+            }
+        }),
+        Control::slider(
+            "value",
+            [
+                "0", "10", "20", "30", "40", "50", "60", "70", "80", "90", "100",
+            ],
+        )
+        .default("40")
+        // Printed by `indeterminate`, which owns the prop.
+        .code(|_, _| vec![])
+        .hidden_when(indeterminate),
+        Control::color("color"),
+        // The 12px label spills over a ring below `md`.
+        Control::sizes("size")
+            .default(theme.circular_progress.size.as_str())
+            .options_from(|values| {
+                let sizes = ["xs", "sm", "md", "lg", "xl", "xxl"];
+                let from = if label_text(values).is_empty() { 0 } else { 2 };
+                sizes[from..].iter().map(ToString::to_string).collect()
+            }),
+        Control::sizes("thickness").default(theme.circular_progress.thickness.as_str()),
+        // Not a prop: the centred children.
+        Control::switch("label")
+            .default("true")
+            .code(|_, _| vec![])
+            .hidden_when(indeterminate),
+    ]
 }
 
 #[component]
@@ -78,34 +116,7 @@ pub fn CircularProgressPage() -> Element {
                 children_text: "",
                 child: Child(label_text),
                 fixed: vec![r#"aria_label: "Upload""#.to_string()],
-                controls: vec![
-                    Control::switch("indeterminate").code(|_, values| {
-                        if indeterminate(values) {
-                            vec!["value: None".to_string()]
-                        } else {
-                            vec![format!("value: {}.0", values.str("value"))]
-                        }
-                    }),
-                    Control::slider(
-                        "value",
-                        ["0", "10", "20", "30", "40", "50", "60", "70", "80", "90", "100"],
-                    )
-                    .default("40")
-                    // Printed by `indeterminate`, which owns the prop.
-                    .code(|_, _| vec![])
-                    .hidden_when(indeterminate),
-                    Control::color("color"),
-                    // Large enough for its label; the prop's own default is `md`.
-                    Control::sizes("size").default("xl").code(|_, values| {
-                        match values.str("size").as_str() {
-                            "md" => vec![],
-                            size => vec![format!("size: {size:?}")],
-                        }
-                    }),
-                    Control::sizes("thickness").default("md"),
-                    // Not a prop: the centred children.
-                    Control::switch("label").default("true").code(|_, _| vec![]),
-                ],
+                controls: controls(theme),
                 render: move |values: DemoValues| {
                     let label = label_text(&values);
                     rsx! {
@@ -125,5 +136,50 @@ pub fn CircularProgressPage() -> Element {
                 },
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn control<'a>(controls: &'a [Control], name: &str) -> &'a Control {
+        controls
+            .iter()
+            .find(|control| control.name == name)
+            .unwrap()
+    }
+
+    /// A spinning ring has no percentage, so the Label switch would do nothing.
+    #[test]
+    fn the_label_switch_hides_while_indeterminate() {
+        let controls = controls(&Theme::DEFAULT);
+        let values = DemoValues::defaults(&controls);
+        let label = control(&controls, "label");
+        assert!(!label.is_hidden(&values));
+        assert!(label.is_hidden(&values.with("indeterminate", "true")));
+    }
+
+    /// Todo 4920: below `md` the 12px label spills over the ring.
+    #[test]
+    fn the_size_starts_at_md_while_labelled() {
+        let controls = controls(&Theme::DEFAULT);
+        let values = DemoValues::defaults(&controls);
+        let size = control(&controls, "size");
+        assert_eq!(size.resolved(&values).options, ["md", "lg", "xl", "xxl"]);
+        let unlabelled = values.with("label", "false");
+        assert_eq!(size.resolved(&unlabelled).options.len(), 6);
+    }
+
+    #[test]
+    fn the_size_and_thickness_default_to_the_theme() {
+        let theme = Theme::DEFAULT;
+        let controls = controls(&theme);
+        let defaults = theme.circular_progress;
+        assert_eq!(control(&controls, "size").default, defaults.size.as_str());
+        assert_eq!(
+            control(&controls, "thickness").default,
+            defaults.thickness.as_str()
+        );
     }
 }

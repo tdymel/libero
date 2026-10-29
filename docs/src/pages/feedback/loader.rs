@@ -81,7 +81,7 @@ pub fn LoaderPage() -> Element {
                     Control::toggle("variant", ["oval", "bars", "dots"]).default(theme.loader.variant.as_str())
                         .labels(["Oval", "Bars", "Dots"]),
                     Control::sizes("size").default(theme.loader.size.as_str()),
-                    // A bare `primary` is what an unset `color` resolves to,
+                    // The theme's colour is what an unset `color` resolves to,
                     // so that swatch prints nothing.
                     Control::color("color").default(theme.loader.color.as_str()),
                     // Neither is a prop: they place the loader beside its
@@ -99,7 +99,7 @@ pub fn LoaderPage() -> Element {
                             variant: values.str("variant"),
                             size: values.str("size"),
                             color: match values.str("color").as_str() {
-                                "primary" => Input::None,
+                                color if color == theme.loader.color.as_str() => Input::None,
                                 color => Input::from(color),
                             },
                         }

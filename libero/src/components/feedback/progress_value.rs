@@ -1,15 +1,15 @@
 //! The value maths and ARIA numbers `ProgressBar` and `CircularProgress` share.
 
-use crate::utils::warn;
+use crate::platform::warn_once;
 
-/// The drawn share, in `0.0..=1.0`. A broken range warns and draws empty.
+/// The drawn share, in `0.0..=1.0`. A broken range warns once and draws empty.
 pub(crate) fn fraction(component: &str, value: f64, min: f64, max: f64) -> f64 {
     if max <= min || !(min.is_finite() && max.is_finite()) {
-        warn(&format!("{component}: `max` must be greater than `min`."));
+        warn_once(format!("{component}: `max` must be greater than `min`."));
         return 0.0;
     }
     if !value.is_finite() {
-        warn(&format!("{component}: `value` must be a finite number."));
+        warn_once(format!("{component}: `value` must be a finite number."));
         return 0.0;
     }
     (value.clamp(min, max) - min) / (max - min)
@@ -25,13 +25,18 @@ pub(crate) fn value_now(value: f64, min: f64, max: f64) -> f64 {
     }
 }
 
-/// The rounded share, held at 99% until the value is full.
+/// `aria-valuemax`: `min` when `min > max`, so AT reads the empty range the fill draws.
+pub(crate) fn value_max(min: f64, max: f64) -> f64 {
+    if min > max { min } else { max }
+}
+
+/// The rounded share, held at 1% until the value is empty and at 99% until it is full.
 pub(crate) fn percentage(fraction: f64) -> String {
     let percent = (fraction * 100.0).round();
     format!(
         "{}%",
-        if fraction < 1.0 {
-            percent.min(99.0)
+        if fraction > 0.0 && fraction < 1.0 {
+            percent.clamp(1.0, 99.0)
         } else {
             percent
         }
@@ -140,6 +145,34 @@ mod tests {
     fn the_percentage_reads_100_only_when_full() {
         assert_eq!(percentage(0.995), "99%");
         assert_eq!(percentage(0.9999), "99%");
+    }
+
+    /// Todo 4919: 0.4 of 100 draws a sliver, so it must not read "0%".
+    #[test]
+    fn the_percentage_reads_0_only_when_empty() {
+        assert_eq!(percentage(0.004), "1%");
+        assert_eq!(percentage(0.0001), "1%");
+        assert_eq!(percentage(0.006), "1%");
+    }
+
+    #[test]
+    fn a_reversed_range_reports_max_at_min() {
+        assert_eq!(value_max(10.0, 0.0), 10.0);
+        assert_eq!(value_max(0.0, 100.0), 100.0);
+        assert_eq!(value_max(10.0, 10.0), 10.0);
+        assert!(value_max(0.0, f64::INFINITY).is_infinite());
+    }
+
+    /// A ticking bar with a broken range or value says so once, not per render.
+    #[cfg(debug_assertions)]
+    #[test]
+    fn each_broken_input_warns_once() {
+        crate::utils::take_warnings();
+        for _ in 0..3 {
+            fraction(5.0, 10.0, 0.0);
+            fraction(f64::NAN, 0.0, 100.0);
+        }
+        assert_eq!(crate::utils::take_warnings().len(), 2);
     }
 
     #[test]

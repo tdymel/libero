@@ -23,6 +23,21 @@ fn the_root_carries_the_role_the_raw_values_and_the_name() {
     assert_eq!(root["aria-valuetext"], "30%", "{html}");
 }
 
+/// A range with `min > max` draws empty, so AT reads an empty range at `min`.
+#[test]
+fn a_reversed_range_reads_as_an_empty_one() {
+    fn app() -> Element {
+        rsx! { LiberoProvider { CircularProgress { aria_label: "Upload", value: 5.0, min: 10.0, max: 0.0 } } }
+    }
+
+    let html = body(&render(app));
+    let root = attributes_of(&html, "span");
+
+    assert_eq!(root["aria-valuemin"], "10", "{html}");
+    assert_eq!(root["aria-valuemax"], "10", "{html}");
+    assert_eq!(root["aria-valuenow"], "10", "{html}");
+}
+
 #[test]
 fn a_blank_name_is_not_put_on_the_root() {
     fn app() -> Element {

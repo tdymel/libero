@@ -47,6 +47,21 @@ fn the_root_carries_the_role_the_raw_values_and_the_name() {
     );
 }
 
+/// A range with `min > max` draws empty, so AT reads an empty range at `min`.
+#[test]
+fn a_reversed_range_reads_as_an_empty_one() {
+    fn app() -> Element {
+        rsx! { LiberoProvider { ProgressBar { aria_label: "Upload", value: 5.0, min: 10.0, max: 0.0 } } }
+    }
+
+    let html = body(&render(app));
+    let root = attributes_of(&html, "div");
+
+    assert_eq!(root["aria-valuemin"], "10", "{html}");
+    assert_eq!(root["aria-valuemax"], "10", "{html}");
+    assert_eq!(root["aria-valuenow"], "10", "{html}");
+}
+
 /// `None` is how ARIA spells "busy, amount unknown": no `aria-valuenow`, and
 /// no percentage to announce either.
 #[test]

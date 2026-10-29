@@ -20,7 +20,7 @@ use crate::{
     },
 };
 
-use super::progress_value::{aria_number, fraction, percentage, value_now};
+use super::progress_value::{aria_number, fraction, percentage, value_max, value_now};
 
 const DETERMINATE_STATE: &str = "determinate";
 const INDETERMINATE_STATE: &str = "indeterminate";
@@ -377,7 +377,10 @@ pub fn CircularProgress(props: CircularProgressProps) -> Element {
         .prepare()
         .attr("role", "progressbar")
         .attr("aria-valuemin", aria_number(props.min))
-        .attr("aria-valuemax", aria_number(props.max))
+        .attr(
+            "aria-valuemax",
+            aria_number(value_max(props.min, props.max)),
+        )
         // Omitted while indeterminate, as ARIA requires.
         .attr(
             "aria-valuenow",

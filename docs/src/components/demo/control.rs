@@ -159,7 +159,8 @@ impl Control {
         control
     }
 
-    /// The option `value` settles on once it is not offered: the nearest number, else the last.
+    /// The option `value` settles on once it is not offered: the nearest number, else the
+    /// first, so a size cut from below lands on the smallest left.
     pub fn settle(&self, value: &str) -> String {
         if self.options.iter().any(|option| option == value) {
             return value.to_string();
@@ -172,7 +173,7 @@ impl Control {
             .iter()
             .min_by(|a, b| distance(a).total_cmp(&distance(b)))
             .filter(|option| distance(option).is_finite())
-            .or(self.options.last())
+            .or(self.options.first())
             .cloned()
             .unwrap_or_default()
     }
