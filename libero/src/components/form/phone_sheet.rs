@@ -9,8 +9,8 @@ use crate::{
     },
     platform::{
         ContentSubscription, ElementApi, PressSubscription, SCROLL_MARGIN_BOTTOM_VAR,
-        ScrollSubscription, document, observe_resize, on_viewport_resize, swallow_outside_clicks,
-        visible_band,
+        ScrollSubscription, document, element_contains, observe_resize, on_viewport_resize,
+        swallow_outside_clicks, visible_band,
     },
     sx::{FORCED_COLORS, Sx, sx},
     theme::{Color, ColorShade, ColorValue, CssVar, Size},
@@ -125,10 +125,16 @@ const SHEET_ROOM: CssVar = CssVar::new("--lsx-sheet-room");
 const SHEET_LEFT: CssVar = CssVar::new("--lsx-sheet-left");
 const SHEET_RIGHT: CssVar = CssVar::new("--lsx-sheet-right");
 
+/// A composite of sheet owners, as a `Menubar`'s row: a press inside it keeps its click, so a
+/// sibling trigger opens its own sheet (4841).
+#[derive(Clone, Copy)]
+pub(crate) struct SheetComposite(pub(crate) ElementHandle);
+
 /// A press outside the open sheet only closes it, as a scrim would: its click is swallowed (4826).
 /// One on any open popup or its anchor, the sheet's own trigger included, keeps its click.
 fn use_sheet_outside_press(placed: bool) {
     let popups = use_open_popups();
+    let composite = try_use_context::<SheetComposite>();
     let swallowing = use_subscription_slot::<dyn PressSubscription>();
     use_effect(use_reactive!(|placed| {
         if !placed {
@@ -136,7 +142,12 @@ fn use_sheet_outside_press(placed: bool) {
         } else if !swallowing.is_some() {
             swallowing.set(swallow_outside_clicks(
                 &narrow_query(),
-                Box::new(move |target| !in_open_popup(popups, target)),
+                Box::new(move |target| {
+                    let in_composite = composite
+                        .and_then(|SheetComposite(owner)| owner.try_mounted())
+                        .is_some_and(|owner| element_contains(&owner, target));
+                    !in_composite && !in_open_popup(popups, target)
+                }),
             ));
         }
     }));

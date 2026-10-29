@@ -12,6 +12,7 @@ use crate::{
             Variables, base_props, disabled_look_sx, forced_on_sx, has_shortcut_modifier,
             inset_focus_ring_sx, parts_enum, use_label_keys, use_name_warning, variables,
         },
+        form::phone_sheet::SheetComposite,
         layout::use_box,
     },
     hooks::{
@@ -262,6 +263,7 @@ pub fn Menubar(props: MenubarProps) -> Element {
         "Menubar: empty `aria_label`, so it is announced as just \"menubar\".",
     );
     let bar = use_element();
+    use_context_provider(|| SheetComposite(bar));
     // By label, so a menu keeps its state, focus and tab stop when the list changes;
     // a rename in place keeps its key, so an open menu stays open (4419).
     let labels: Vec<String> = props.menus.iter().map(|menu| menu.label.clone()).collect();
