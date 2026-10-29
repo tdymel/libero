@@ -84,6 +84,9 @@ parts work.
   focus to the current page.
 - The page names come from the [localization](localization.md)'s
   `PaginationLabels`, and `label` overrides them.
+- Under a finger every control takes a 44px box. Neighbours sit closer than that,
+  so their boxes meet mid-gap and a tap in the gap goes to the nearer control;
+  sideways each box is narrower than 44px.
 
 ### You must
 

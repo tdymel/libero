@@ -11,6 +11,7 @@ pub struct SplitterDefaults {
     pub size: Size,
     pub divider_sizes: Sizes<u8>,
     /// Invisible hit-target thickness, reaching into pane B; 24 meets WCAG 2.5.8 on its own.
+    /// A coarse pointer takes at least 44.
     pub hit_sizes: Sizes<u8>,
     /// Percent floor applied to both panes.
     pub min_size: f64,

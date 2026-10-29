@@ -16,7 +16,8 @@ The content sits in a [`ScrollArea`](scroll_area.md), so it scrolls apart from
 the page, down and, for a line wider than the panel, sideways. A start or end
 panel takes half its parent's width at most, and a top or bottom one half its
 height, if the parent has a set height, so a small screen leaves the content
-room.
+room. The cap is half the row, so in the preview on a narrow screen the larger
+sizes all stop at half the width and look alike.
 
 ## Usage
 

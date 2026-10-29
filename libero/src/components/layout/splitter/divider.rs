@@ -2,7 +2,7 @@ use dioxus::prelude::*;
 
 use crate::{
     components::{
-        common::{HtmlTag, Input, States},
+        common::{COARSE_POINTER, COARSE_TARGET, HtmlTag, Input, States},
         layout::use_box,
     },
     hooks::{ElementHandle, drag_handle_sx, sideways_drag_sx},
@@ -46,9 +46,11 @@ static SPLITTER_HIT_SX: StaticSx = StaticSx::new(|| {
         .when("vertical", sideways_drag_sx());
 
     Size::ALL.into_iter().fold(base, |acc, size| {
-        let inset = format!(
-            "calc({} - {})",
-            SPLITTER_DIVIDER_SIZE.value(size),
+        let divider = SPLITTER_DIVIDER_SIZE.value(size);
+        let inset = format!("calc({divider} - {})", SPLITTER_HIT_SIZE.value(size));
+        // A finger's 44px, still reaching into pane B only.
+        let coarse = format!(
+            "calc({divider} - max({}, {COARSE_TARGET}))",
             SPLITTER_HIT_SIZE.value(size)
         );
         acc.when(
@@ -57,7 +59,8 @@ static SPLITTER_HIT_SX: StaticSx = StaticSx::new(|| {
                 .bottom("0")
                 .inset_inline_start("0")
                 .inset_inline_end(inset.clone())
-                .cursor("col-resize"),
+                .cursor("col-resize")
+                .media(COARSE_POINTER, sx().inset_inline_end(coarse.clone())),
         )
         .when(
             format!("horizontal && {}", size.state_name()),
@@ -65,7 +68,8 @@ static SPLITTER_HIT_SX: StaticSx = StaticSx::new(|| {
                 .right("0")
                 .top("0")
                 .bottom(inset)
-                .cursor("row-resize"),
+                .cursor("row-resize")
+                .media(COARSE_POINTER, sx().bottom(coarse)),
         )
     })
 });

@@ -381,6 +381,49 @@ fn the_default_hit_area_is_24px_thick() {
     });
 }
 
+/// Todo 4827: under a finger the hit area is 44px across the line, both ways, and still
+/// reaches into pane B only, so pane A's scrollbar stays clear.
+#[test]
+fn a_finger_gets_a_44px_hit_area_on_either_divider() {
+    use chromiumoxide::cdp::browser_protocol::emulation::SetTouchEmulationEnabledParams;
+    block_on(async {
+        let fixture = Fixture::open("/splitter/scroll", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        page.execute_bounded(SetTouchEmulationEnabledParams::new(true))
+            .await
+            .unwrap();
+        wait::for_js_true(
+            page,
+            "matchMedia('(pointer: coarse)').matches",
+            "a coarse pointer",
+        )
+        .await
+        .unwrap();
+
+        let (row, column): (f64, f64) = page
+            .evaluate_bounded(format!(
+                "[document.querySelector({ROW:?}).getBoundingClientRect().width, \
+                 document.querySelector({COLUMN:?}).getBoundingClientRect().height]"
+            ))
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        assert!(
+            row >= 43.9,
+            "the vertical divider's hit area is {row}px wide"
+        );
+        assert!(
+            column >= 43.9,
+            "the horizontal divider's hit area is {column}px tall"
+        );
+        fixture.console.assert_clean("a coarse splitter").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
 /// A floor raised after the divider moved pulls pane A up to it, and the
 /// separator never reports a value outside its own bounds.
 #[test]
@@ -515,6 +558,44 @@ fn pane_a_scrollbar_is_not_under_the_hit_area() {
                 .unwrap();
             assert_eq!(verdict, "ok", "under {dir}");
         }
+        fixture.close().await.unwrap();
+    });
+}
+
+/// Todo 4827: the 44px finger hit area still leaves pane A's scrollbar strip to the pane.
+#[test]
+fn pane_a_scrollbar_is_not_under_the_coarse_hit_area() {
+    use chromiumoxide::cdp::browser_protocol::emulation::SetTouchEmulationEnabledParams;
+    block_on(async {
+        let fixture = Fixture::open_with_scrollbars("/splitter/content", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        page.execute_bounded(SetTouchEmulationEnabledParams::new(true))
+            .await
+            .unwrap();
+        wait::for_js_true(
+            page,
+            "matchMedia('(pointer: coarse)').matches",
+            "a coarse pointer",
+        )
+        .await
+        .unwrap();
+        wait::for_visible(page, "#pane-a").await.unwrap();
+        let verdict: String = page
+            .evaluate_bounded(
+                "(() => { const pane = document.getElementById('pane-a').parentElement; \
+                 const bar = pane.offsetWidth - pane.clientWidth; \
+                 if (bar <= 0) return 'pane A has no scrollbar'; \
+                 const r = pane.getBoundingClientRect(); \
+                 const hit = document.elementFromPoint(r.right - bar / 2, r.top + r.height / 2); \
+                 return hit === pane ? 'ok' : 'the scrollbar strip hits ' + hit.outerHTML.slice(0, 60); })()",
+            )
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        assert_eq!(verdict, "ok");
         fixture.close().await.unwrap();
     });
 }

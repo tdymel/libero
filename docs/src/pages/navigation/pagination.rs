@@ -63,6 +63,7 @@ pub fn PaginationPage() -> Element {
                     "Every control is a button and a tab stop, except an arrow at its end, which is `aria-disabled` and out of the Tab order. Under `disabled` every control is `aria-disabled` and stays a tab stop, so focus is not lost.",
                     "An arrow that disables itself on click, such as next on the last page, hands focus to the current page.",
                     "The page names come from the localization's `PaginationLabels`, and `label` overrides them.",
+                    "Under a finger every control takes a 44px box. Neighbours sit closer than that, so their boxes meet mid-gap and a tap in the gap goes to the nearer control; sideways each box is narrower than 44px.",
                 ])
                 .must([
                     "Keep `theme.pagination.gap` at 2px or more: at `xs` the controls are 22px and meet the 24px target size only through the gap.",

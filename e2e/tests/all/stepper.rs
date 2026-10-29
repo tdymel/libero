@@ -677,3 +677,48 @@ fn a_vertical_panel_keeps_wide_content_and_rings_usable() {
         fixture.close().await.unwrap();
     });
 }
+
+/// Todo 4827: under a finger a clickable vertical step header takes presses 21px above and
+/// below its centre, drawn size unchanged.
+#[test]
+fn a_vertical_step_header_takes_a_finger_in_a_44px_box() {
+    use chromiumoxide::cdp::browser_protocol::emulation::SetTouchEmulationEnabledParams;
+    block_on(async {
+        let fixture = Fixture::open("/stepper-vertical", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        page.execute_bounded(SetTouchEmulationEnabledParams::new(true))
+            .await
+            .unwrap();
+        wait::for_js_true(
+            page,
+            "matchMedia('(pointer: coarse)').matches",
+            "a coarse pointer",
+        )
+        .await
+        .unwrap();
+
+        let misses: Vec<String> = e2e::js(
+            page,
+            "[...document.querySelectorAll('#stepper button[data-slot=header]')].flatMap(el => {
+                const r = el.getBoundingClientRect();
+                const cx = r.x + r.width / 2, cy = r.y + r.height / 2;
+                return [-21, 0, 21].flatMap(dy => {
+                    const at = document.elementFromPoint(cx, cy + dy);
+                    return at && el.contains(at) ? [] : [el.id + ' ' + dy];
+                });
+            })",
+        )
+        .await;
+        assert!(
+            misses.is_empty(),
+            "points of the 44px box land elsewhere: {misses:?}"
+        );
+        fixture
+            .console
+            .assert_clean("probing the vertical headers")
+            .unwrap();
+        fixture.close().await.unwrap();
+    });
+}

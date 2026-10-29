@@ -8,8 +8,8 @@ use crate::{
         accessibility::VisuallyHidden,
         common::{
             ClassList, Glyph, HtmlTag, Input, LogicalTextAlign, Orientation, Part, Rail, RailInset,
-            States, Variables, focus_ring_sx, inset_focus_ring_sx, names_itself, on_ring_sx,
-            parts_enum, reveal_inline, use_closing_focus, variables,
+            States, Variables, coarse_hit_area_sx, focus_ring_sx, inset_focus_ring_sx,
+            names_itself, on_ring_sx, parts_enum, reveal_inline, use_closing_focus, variables,
         },
         layout::{Collapse, use_box},
     },
@@ -247,6 +247,11 @@ static STEPPER_SX: StaticSx = StaticSx::new(|| {
             "& > ol > li",
             sx().position("relative")
                 .and(rail.connector_sx(RailInset::Start)),
+        )
+        // The header is only marker-tall: a finger gets its 44px from a `::before` (4827).
+        .selector(
+            format!("& > ol > li > button{header_slot}"),
+            coarse_hit_area_sx("::before"),
         )
         // `Rail` is physical; under RTL the inline-start edge is the right.
         .rtl(

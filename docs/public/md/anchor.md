@@ -40,7 +40,7 @@ fn Demo() -> Element {
 | `target` | `String` | - | The link's `target` attribute. `"_blank"` adds a hidden "(opens in a new tab)". |
 | `new_tab_hint` | `bool` | `true` | `false` drops the hidden text a `"_blank"` target adds, and the icon. |
 | `new_tab_icon` | `bool` | `false` | With the hint, draws a small external icon after the text. Unset, the theme's `anchor.new_tab_icon`, which is off. `Button`, `ActionIcon`, `Chip`, `NavLink`, `Repository` and `MenuItem` take it too. |
-| `underline` | `AnchorUnderline` | `hover` | When the underline draws: `always`, `hover` (only under the pointer), `not-hover` (at rest, gone under the pointer) or `never`. |
+| `underline` | `AnchorUnderline` | `hover` | When the underline draws: `always`, `hover` (only under the pointer), `not-hover` (at rest, gone under the pointer) or `never`. On a touch screen nothing hovers, so `hover` draws no underline and `not-hover` always does. |
 | `children` | `Element` | required | The link's content. |
 | `parts` | `Parts<AnchorPart>` | - | Styles for the inner parts in the Style API tab, under `sx`. |
 

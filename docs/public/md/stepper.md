@@ -105,8 +105,9 @@ explains how parts work.
   and Space activate. There are no arrow keys.
 - `aria_label` and `aria_labelledby` land on the step list, not the root.
 - A horizontal strip never widens the page (WCAG 1.4.10): the connectors
-  shrink first, then steps that still don't fit scroll inside the strip.
-  Labels keep their words whole; only a word wider than the strip breaks.
+  shrink first, down to a quarter of the size's spacing (2 to 7px, a short dash
+  on a phone with descriptions), then steps that still don't fit scroll inside
+  the strip. Labels keep their words whole; only a word wider than the strip breaks.
   While it scrolls and no step is clickable, the strip itself is a tab stop,
   so the arrow keys can scroll it in any browser. Without an `aria_label` or
   `aria_labelledby` it is named "Steps" (`StepperLabels::steps`).

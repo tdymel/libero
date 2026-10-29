@@ -37,7 +37,7 @@ pub fn AnchorPage() -> Element {
                     .doc("With the hint, draws a small external icon after the text. Unset, the theme's `anchor.new_tab_icon`, which is off. `Button`, `ActionIcon`, `Chip`, `NavLink`, `Repository` and `MenuItem` take it too."),
                 prop("underline", "AnchorUnderline")
                     .default("hover")
-                    .doc("When the underline draws: `always`, `hover` (only under the pointer), `not-hover` (at rest, gone under the pointer) or `never`."),
+                    .doc("When the underline draws: `always`, `hover` (only under the pointer), `not-hover` (at rest, gone under the pointer) or `never`. On a touch screen nothing hovers, so `hover` draws no underline and `not-hover` always does."),
                 prop("children", "Element").default("required").doc("The link's content."),
                 prop("parts", "Parts<AnchorPart>")
                     .doc("Styles for the inner parts in the Style API tab, under `sx`."),

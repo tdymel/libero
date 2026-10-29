@@ -80,6 +80,10 @@ pub fn SidebarPage() -> Element {
                     Code { source: "use_drawer" }
                     "."
                 }
+                Text {
+                    "The cap is half the row, so in the preview on a narrow screen the larger "
+                    "sizes all stop at half the width and look alike."
+                }
             },
             Demo {
                 component: "Sidebar",
