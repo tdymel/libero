@@ -89,6 +89,8 @@ fn content_code(_control: &Control, values: &DemoValues) -> Vec<String> {
 #[component]
 pub fn AvatarPage() -> Element {
     let theme = use_theme();
+    // Built once: a `Callback` made in `render` lives until the demo scope drops.
+    let surplus = use_callback(|hidden: usize| rsx! { "{hidden}+" });
     rsx! {
         DocPage {
             title: "Avatar",
@@ -135,7 +137,7 @@ pub fn AvatarPage() -> Element {
                         .doc("The members, as data rather than children so the group can count them. The first is drawn on top."),
                     prop("max", "Option<usize>")
                         .default("None")
-                        .doc("How many circles in total, the `+N` chip included, so the chip always stands for at least two people."),
+                        .doc("How many circles in total, the `+N` chip included, so the chip always stands for at least two people. `0` counts as `1`."),
                     prop("total", "Option<usize>")
                         .default("None")
                         .doc("The full headcount when `people` lists only some, so the `+N` chip counts the rest. A value below `people.len()` is ignored. The chip lists only the hidden people it knows, and is no tab stop when there are none."),
@@ -153,7 +155,7 @@ pub fn AvatarPage() -> Element {
                         .doc("For every member and the chip, or any CSS, e.g. `radius: \"0\"`."),
                     prop("variant", "Variant")
                         .default(theme.avatar.variant.as_str())
-                        .doc("For every member and the chip."),
+                        .doc("For every member and the chip. `standard` has no edge, so it suits a single avatar: in a group its members read as loose initials."),
                     prop("color", "ThemeAwareValue")
                         .default(theme.avatar.color.as_str())
                         .doc("The tint of every member without a `color` of its own."),
@@ -265,8 +267,7 @@ pub fn AvatarPage() -> Element {
                             AvatarGroup {
                                 max: values.str("max").parse::<usize>().ok(),
                                 total: values.str("total").parse::<usize>().ok(),
-                                surplus: (values.str("surplus") == "true")
-                                    .then(|| Callback::new(|hidden: usize| rsx! { "{hidden}+" })),
+                                surplus: (values.str("surplus") == "true").then_some(surplus),
                                 spacing: values.str("spacing"),
                                 size: values.str("size"),
                                 radius: values.str("radius"),

@@ -5,8 +5,8 @@ use super::spec::AvatarSpec;
 use crate::{
     components::{
         common::{
-            HtmlTag, Input, ScaleOrCss, States, Variables, Variant, base_props, focus_ring_sx,
-            variables,
+            COARSE_POINTER, HtmlTag, Input, ScaleOrCss, States, Variables, Variant, base_props,
+            coarse_hit_area_sx, focus_ring_sx, variables,
         },
         data_display::Avatar,
         layout::use_box,
@@ -42,10 +42,17 @@ static AVATAR_GROUP_SX: StaticSx = StaticSx::new(|| {
 
 /// The avatar base plus the focus state an avatar never has.
 static AVATAR_CHIP_SX: StaticSx = StaticSx::new(|| {
-    avatar_sx().focus_visible(focus_ring_sx().z_index(format!(
-        "calc({} + {FOCUS_RAISE})",
-        AVATAR_GROUP_INDEX.value()
-    )))
+    let raised = format!("calc({} + {FOCUS_RAISE})", AVATAR_GROUP_INDEX.value());
+    avatar_sx()
+        // A finger gets a 44px box over the members (todo 4905): the chip stops clipping
+        // and stacking, so its `::before` rises above its neighbour.
+        .and(coarse_hit_area_sx("::before"))
+        .media(
+            COARSE_POINTER,
+            sx().when("grouped", sx().overflow("visible").z_index("auto"))
+                .selector("::before", sx().z_index(raised.clone())),
+        )
+        .focus_visible(focus_ring_sx().z_index(raised))
 });
 
 base_props! {
@@ -72,6 +79,8 @@ base_props! {
         /// A step on `Avatar`'s radius scale, or any CSS, for every member and the chip.
         #[props(default, into)]
         radius: Input<ThemeAwareValue>,
+        /// For every member and the chip. `Standard` has no edge, so it suits a single
+        /// avatar: in a group its members read as loose initials.
         #[props(default, into)]
         variant: Input<Variant>,
         /// The tint every member without one of its own takes.

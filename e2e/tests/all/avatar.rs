@@ -90,6 +90,40 @@ fn the_chip_counts_the_total_and_draws_the_surplus() {
     });
 }
 
+/// Todo 4905: under a finger the `+N` chip takes taps in a 44px box, over its neighbour.
+#[test]
+fn a_finger_reaches_the_small_chips_over_their_neighbour() {
+    block_on(async {
+        let fixture = Fixture::open("/avatar", Viewport::Mobile).await.unwrap();
+        let page = &fixture.page;
+        crate::hit_area::emulate_coarse_pointer(page).await;
+        for group in ["#group-xs", "#group-sm"] {
+            // The points of a 40px box around the chip's centre that miss it.
+            let misses: Vec<String> = e2e::js(
+                page,
+                format!(
+                    "(() => {{ const chip = document.querySelector('{group} [tabindex=\"0\"]'); \
+                     chip.scrollIntoView({{ block: 'center' }}); \
+                     const r = chip.getBoundingClientRect(); \
+                     const cx = r.x + r.width / 2, cy = r.y + r.height / 2; const misses = []; \
+                     for (const dx of [-20, -11.5, 0, 11.5, 20]) for (const dy of [-20, 0, 20]) {{ \
+                       const at = document.elementFromPoint(cx + dx, cy + dy); \
+                       if (!at || at.closest('[tabindex]') !== chip) \
+                         misses.push(`${{dx}},${{dy}}: ${{at ? at.outerHTML.slice(0, 50) : null}}`); }} \
+                     return misses; }})()"
+                ),
+            )
+            .await;
+            assert!(misses.is_empty(), "{group}: taps miss the chip: {misses:?}");
+        }
+        fixture
+            .console
+            .assert_clean("tapping the small chips")
+            .unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
 /// Todos 2363, 2601: the smallest initials draw at 10 px or more, and every size follows the root.
 #[test]
 fn the_initials_are_legible_and_follow_the_text_size() {

@@ -73,6 +73,23 @@ fn AvatarPage() -> Element {
                     AvatarSpec::from("Radia Perlman"),
                 ],
             }
+            // Todo 4905: the smallest chips, partly covered by their neighbour; the gap
+            // keeps their 44px boxes apart.
+            div { display: "flex", flex_direction: "column", gap: "48px", padding: "24px",
+                for size in ["xs", "sm"] {
+                    AvatarGroup {
+                        id: "group-{size}",
+                        size,
+                        max: 3,
+                        people: vec![
+                            AvatarSpec::from("Ada Lovelace"),
+                            AvatarSpec::from("Grace Hopper"),
+                            AvatarSpec::from("Radia Perlman"),
+                            AvatarSpec::from("Barbara Liskov"),
+                        ],
+                    }
+                }
+            }
         }
     }
 }

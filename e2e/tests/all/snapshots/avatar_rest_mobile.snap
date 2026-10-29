@@ -1,5 +1,6 @@
 ---
 source: e2e/src/suite.rs
+assertion_line: 626
 description: avatar at mobile (rest)
 expression: tree
 ---
@@ -68,5 +69,15 @@ image "Ada Lovelace"
 image "2 more"
   description "Grace Hopper, Radia Perlman"
   StaticText "2 more"
+image "Ada Lovelace"
+image "Grace Hopper"
+image "2 more"
+  description "Radia Perlman, Barbara Liskov"
+  StaticText "+2"
+image "Ada Lovelace"
+image "Grace Hopper"
+image "2 more"
+  description "Radia Perlman, Barbara Liskov"
+  StaticText "+2"
 tooltip "Radia Perlman, Barbara Liskov"
   StaticText "Radia Perlman, Barbara Liskov"

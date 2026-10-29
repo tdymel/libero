@@ -59,6 +59,35 @@ fn many(values: &DemoValues) -> bool {
     values.str("mode") == "many"
 }
 
+fn review_off(values: &DemoValues) -> bool {
+    values.str("disabled_option") == "true"
+}
+
+/// One mode's panels. With `review_off` the step into Review is disabled: a host-opened
+/// disabled section cannot be closed from its trigger.
+fn one_steps(
+    mut open: Signal<AccordionOpen<Step>>,
+    review_off: bool,
+) -> impl FnMut(Step) -> Element {
+    // demo-code: one start
+    move |step: Step| match step {
+        Step::Shipping => rsx! {
+            Flex { gap: "sm", align: "flex-start",
+                Text { "Where should the parcel go?" }
+                Button { onclick: move |_| open.set(Some(Step::Payment).into()), "Continue" }
+            }
+        },
+        Step::Payment => rsx! {
+            Flex { gap: "sm", align: "flex-start",
+                Text { "Card, invoice or bank transfer." }
+                Button { disabled: review_off, onclick: move |_| open.set(Some(Step::Review).into()), "Continue" }
+            }
+        },
+        Step::Review => rsx! { Text { "Check the order, then place it." } },
+    }
+    // demo-code: one end
+}
+
 #[component]
 pub fn AccordionPage() -> Element {
     // One signal per mode, so switching the mode control does not have to
@@ -77,28 +106,8 @@ pub fn AccordionPage() -> Element {
         },
         // demo-code: many end
     );
-    let one_panel = {
-        let mut open = one;
-        use_callback(
-            // demo-code: one start
-            move |step: Step| match step {
-                Step::Shipping => rsx! {
-                    Flex { gap: "sm", align: "flex-start",
-                        Text { "Where should the parcel go?" }
-                        Button { onclick: move |_| open.set(Some(Step::Payment).into()), "Continue" }
-                    }
-                },
-                Step::Payment => rsx! {
-                    Flex { gap: "sm", align: "flex-start",
-                        Text { "Card, invoice or bank transfer." }
-                        Button { onclick: move |_| open.set(Some(Step::Review).into()), "Continue" }
-                    }
-                },
-                Step::Review => rsx! { Text { "Check the order, then place it." } },
-            },
-            // demo-code: one end
-        )
-    };
+    let one_panel = use_callback(one_steps(one, false));
+    let one_panel_review_off = use_callback(one_steps(one, true));
     let rich_label = use_callback(rich);
 
     rsx! {
@@ -119,14 +128,14 @@ pub fn AccordionPage() -> Element {
                         .doc("A section's body. A closed panel is not mounted, so it keeps no state. A closure that captures a plain value redraws only when its section's value or open state changes."),
                     prop("options", "OptionSource<T>")
                         .default("T::options()")
-                        .doc("The sections to show. A `Vec<T>` converts. An `OptionList<T>` can disable a section, which renders, cannot be toggled and stays a tab stop. Groups are drawn flat."),
+                        .doc("The sections to show. A `Vec<T>` converts. An `OptionList<T>` can disable a section, which renders, cannot be toggled and stays a tab stop. A disabled section the host opens through `open` cannot be closed from its trigger, so open only enabled ones. Groups are drawn flat."),
                     prop("option_label", "Callback<T, OptionLabel>")
                         .default("T::label()")
                         .doc("Renames a section. `OptionLabel::rich` draws the trigger as rsx and still names it."),
                     prop("heading", "HtmlTag").default("h3").doc("The heading around each trigger, `h1` to `h6`."),
                     prop("size", "Size")
                         .default(theme.accordion.size.as_str())
-                        .doc("Type and padding of the triggers and panels."),
+                        .doc("Type and padding of the triggers and panels. Panel content takes the type size only where it sets none of its own; `Text` sets its own."),
                     prop("collapsible", "bool")
                         .default("true")
                         .doc("`false` keeps the open section open in `One` mode: its trigger turns `aria-disabled` and only opening another closes it. `Many` mode ignores it."),
@@ -191,23 +200,28 @@ pub fn AccordionPage() -> Element {
                         .labels(["One", "Many"])
                         .code(|_, values| {
                             let mode = if many(values) { "many" } else { "one" };
-                            vec![format!("panel: {}", FILE.section(mode).trim_end_matches(','))]
+                            let disabled = match review_off(values) {
+                                true => "disabled: true, ",
+                                false => "",
+                            };
+                            let panel = FILE.section(mode).replace("disabled: review_off, ", disabled);
+                            vec![format!("panel: {}", panel.trim_end_matches(','))]
                         }),
                     Control::sizes("size")
                         .default(theme.accordion.size.as_str()),
                     Control::toggle("heading", ["h2", "h3", "h4"])
                         .labels(["H2", "H3", "H4"])
                         .default("h3"),
-                    // The flag lives inside `options`, so the switch stands
-                    // for one named section rather than for a prop of its own.
                     Control::switch("collapsible")
                         .default("true")
                         .hidden_when(many),
                     Control::toggle("chevron_position", ["end", "start"])
                         .labels(["End", "Start"]),
                     Control::switch("rotate_chevron").default("true"),
+                    // The flag lives inside `options`, so the switch stands
+                    // for one named section rather than for a prop of its own.
                     Control::switch("disabled_option").code(|_, values| {
-                        if values.str("disabled_option") == "true" {
+                        if review_off(values) {
                             vec![format!("options: {}", FILE.section("disabled"))]
                         } else {
                             vec![]
@@ -224,20 +238,25 @@ pub fn AccordionPage() -> Element {
                 render: move |values: DemoValues| {
                     let is_many = many(&values);
                     let mut open = if is_many { several } else { one };
-                    let panel = if is_many { many_panel } else { one_panel };
-                    let options = if values.str("disabled_option") == "true" {
+                    let off = review_off(&values);
+                    let panel = match (is_many, off) {
+                        (true, _) => many_panel,
+                        (false, true) => one_panel_review_off,
+                        (false, false) => one_panel,
+                    };
+                    let options = if off {
                         // demo-code: disabled start
                         OptionList::from_options().disabling(|step| *step == Step::Review)
                         // demo-code: disabled end
                     } else {
                         OptionList::from_options()
                     };
-                    // Keyed by mode, so a switch remounts it: `panel` captures `is_many` and
-                    // the mode's signal, and a section redraws only when it changes.
+                    // Keyed by mode and the disabled option, so a switch remounts it: a section
+                    // redraws only when its value or open state changes, not with `panel`.
                     rsx! {
-                        for mode in [is_many] {
+                        for (mode, off) in [(is_many, off)] {
                             Accordion {
-                                key: "{mode}",
+                                key: "{mode}-{off}",
                                 size: values.str("size"),
                                 heading: values.str("heading"),
                                 collapsible: values.str("collapsible") == "true",

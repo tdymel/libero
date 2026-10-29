@@ -83,6 +83,7 @@ pub(super) fn avatar_sx() -> Sx {
     });
 
     // An unfilled member in a group takes the ring's colour, or the circles under it show through.
+    // Standard keeps no edge: it is documented as a single-avatar variant (todo 4905).
     let base = [Variant::Outlined, Variant::Standard]
         .into_iter()
         .fold(base, |base, variant| {

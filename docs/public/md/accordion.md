@@ -52,10 +52,10 @@ fn Demo() -> Element {
 | `open` | `AccordionOpen<T>` | `One(None)` | Which sections are open. `One(Option<T>)` holds at most one, `Many(Vec<T>)` any number. Controlled, so pair it with `onchange`. An `Option<T>` or a `Vec<T>` converts into one. |
 | `onchange` | `EventHandler<AccordionOpen<T>>` | `None` | Called with the whole new open set, in the same mode, ready to store. |
 | `panel` | `Callback<T, Element>` | `None` | A section's body. A closed panel is not mounted, so it keeps no state. A closure that captures a plain value redraws only when its section's value or open state changes. |
-| `options` | `OptionSource<T>` | `T::options()` | The sections to show. A `Vec<T>` converts. An `OptionList<T>` can disable a section, which renders, cannot be toggled and stays a tab stop. Groups are drawn flat. |
+| `options` | `OptionSource<T>` | `T::options()` | The sections to show. A `Vec<T>` converts. An `OptionList<T>` can disable a section, which renders, cannot be toggled and stays a tab stop. A disabled section the host opens through `open` cannot be closed from its trigger, so open only enabled ones. Groups are drawn flat. |
 | `option_label` | `Callback<T, OptionLabel>` | `T::label()` | Renames a section. `OptionLabel::rich` draws the trigger as rsx and still names it. |
 | `heading` | `HtmlTag` | `h3` | The heading around each trigger, `h1` to `h6`. |
-| `size` | `Size` | `md` | Type and padding of the triggers and panels. |
+| `size` | `Size` | `md` | Type and padding of the triggers and panels. Panel content takes the type size only where it sets none of its own; `Text` sets its own. |
 | `collapsible` | `bool` | `true` | `false` keeps the open section open in `One` mode: its trigger turns `aria-disabled` and only opening another closes it. `Many` mode ignores it. |
 | `chevron_position` | `AccordionChevronPosition` | `end` | `end` or `start`: the chevron after or before the label. Logical, so right-to-left flips it. |
 | `rotate_chevron` | `bool` | `true` | `false` keeps the chevron pointing down when a section opens. |

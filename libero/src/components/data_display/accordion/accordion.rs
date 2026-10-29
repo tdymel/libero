@@ -92,7 +92,8 @@ base_props! {
         #[props(default)]
         panel: Option<Callback<T, Element>>,
         /// The sections; defaults to every `Options::options()`. Groups are flattened,
-        /// and a pending source draws none.
+        /// and a pending source draws none. A disabled section the host opens through
+        /// `open` cannot be closed from its trigger, so open only enabled ones.
         #[props(default, into)]
         options: OptionSource<T>,
         /// Overrides `Options::label`; `OptionLabel::rich` draws rsx.
