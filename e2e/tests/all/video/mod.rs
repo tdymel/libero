@@ -121,7 +121,7 @@ fn on_a_phone_the_bar_is_one_row_of_44px_buttons() {
             .unwrap();
         wait::for_js_true(
             page,
-            "matchMedia('(pointer: coarse)').matches \
+            "matchMedia('(pointer: coarse)').matches && document.fonts.status === 'loaded' \
              && document.querySelector('#player [data-slot=time]').textContent === '0:00 / 0:15'",
             "a coarse pointer and the duration",
         )
@@ -162,6 +162,19 @@ fn on_a_phone_the_bar_is_one_row_of_44px_buttons() {
             assert_eq!(menus, "More controls", "the menus shown at {width}px");
             assert!(fits, "the bar wraps or overflows at {width}px: {buttons:?}");
         }
+        // Todo 4864: the row had 2px to spare at 270px, so a wider font wrapped it; the time gives way.
+        page.evaluate_bounded(
+            "document.querySelector('#player [data-slot=time]').style.letterSpacing = '4px'",
+        )
+        .await
+        .unwrap();
+        let fits: bool = page
+            .evaluate_bounded(controls_fit(270, true))
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        assert!(fits, "a wider time readout wraps the bar at 270px");
         fixture.close().await.unwrap();
     });
 }

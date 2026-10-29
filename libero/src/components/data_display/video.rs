@@ -239,6 +239,11 @@ static VIDEO_SX: StaticSx = StaticSx::new(|| {
                     sx().column_gap("0")
                         .selector(format!("& > [{FOLD}='buttons']"), sx().display("none"))
                         .selector(format!("& > [{FOLD}='menu']"), sx().display("contents")),
+                )
+                // The row had 2px to spare at 270px: the time takes what is left, so it never wraps (4864).
+                .selector(
+                    VideoPart::Time.selector(),
+                    sx().flex("1 1 0").min_width("0").overflow("hidden"),
                 ),
             ),
         )
