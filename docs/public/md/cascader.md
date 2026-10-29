@@ -93,7 +93,7 @@ fn Demo() -> Element {
 | `name` | `FieldName<Option<T>>` | - | Posts the selected value's `Options::value()` in a hidden input of that name. A path such as `Listing::FIELDS.category()` also binds the selection to the surrounding `Form`'s value when there is no `onchange`. |
 | `validate` | `Validators<Option<T>>` | - | Rules over the selected value, shown once the field loses focus or its form is submitted. |
 | `placeholder` | `String` | - | Shown while nothing is selected. |
-| `search_placeholder` | `String` | - | What the search box says while empty. |
+| `search_placeholder` | `String` | - | What the search box says while empty. The default is `Localization::common.search`. |
 | `clearable` | `bool` | `false` | Shows an x in place of the chevron while a value is selected. |
 | `label` | `Caption` | - | The caption above the control, and the field's name. |
 | `description` | `Caption` | - | Between the label and the control. What to pick. |
@@ -159,7 +159,7 @@ Like every component, it also takes the shared props `sx`, `class`, `style`,
 | `separator` | `String` | `" / "` | Between labels in a `"paths"` row. |
 | `node` | `Callback<CascaderNodeArgs<T>, Element>` | `label` | Draws one row's content, such as a trailing stock count. |
 | `column_width` | `String` | `220px` | As on `Cascader`. |
-| `search_placeholder` | `String` | - | What the search box says while empty. |
+| `search_placeholder` | `String` | - | As on `Cascader`. |
 | `size` | `Size` | `md` | Row height and font size. |
 | `radius` | `ThemeAwareValue` | `sm` | The list's corner radius. |
 | `disabled` | `bool` | `false` | The trigger opens nothing, and an open list closes. Disable your button too. |
