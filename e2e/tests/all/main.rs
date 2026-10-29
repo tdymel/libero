@@ -40,6 +40,7 @@ mod date;
 mod dialog;
 mod direction_toggle;
 mod divider;
+mod docs_header;
 mod docs_shell;
 mod drawer;
 mod dropdown_parts;

@@ -24,6 +24,24 @@ fn rule<'a>(html: &'a str, selector: &str) -> &'a str {
     &rule[..rule.find('}').expect("an unterminated rule")]
 }
 
+/// Todo 4837: the actions' per-size min-height must carry a coarse floor of its own, as it
+/// outranks `Button`'s.
+#[test]
+fn an_actions_per_size_height_floors_at_44px_on_a_coarse_pointer() {
+    fn app() -> Element {
+        rsx! { LiberoProvider { Alert { actions: rsx! { "Undo" }, "Saved." } } }
+    }
+
+    let html = render(app);
+    let media = html
+        .find("@media (pointer: coarse)")
+        .unwrap_or_else(|| panic!("no coarse query: {html}"));
+    assert!(
+        html[media..].contains("min-height:max(44px, calc(1.5em + 2px))"),
+        "{html}"
+    );
+}
+
 #[test]
 fn a_blank_close_label_falls_back_to_the_localized_close() {
     fn app() -> Element {

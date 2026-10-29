@@ -21,6 +21,21 @@ const PROBE: &str = "const HIT = (el) => {
     return { width: r.width, height: r.height, misses };
 };";
 
+/// Turns touch emulation on and waits until `(pointer: coarse)` matches.
+pub async fn emulate_coarse_pointer(page: &chromiumoxide::Page) {
+    use chromiumoxide::cdp::browser_protocol::emulation::SetTouchEmulationEnabledParams;
+    page.execute_bounded(SetTouchEmulationEnabledParams::new(true))
+        .await
+        .unwrap();
+    wait::for_js_true(
+        page,
+        "matchMedia('(pointer: coarse)').matches",
+        "a coarse pointer",
+    )
+    .await
+    .unwrap();
+}
+
 #[derive(Debug, Deserialize)]
 struct Hit {
     width: f64,

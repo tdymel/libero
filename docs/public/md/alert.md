@@ -74,6 +74,8 @@ explains how parts work.
   own `role` replaces either.
 - The icon is hidden from screen readers.
 - `actions` come after the message and before the close button in `Tab` order.
+- Under a finger each action `Button` is at least 44px tall and wide, an `xs`
+  one included.
 
 ### You must
 

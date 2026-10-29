@@ -1,4 +1,4 @@
-use crate::common::{attributes_of, render};
+use crate::common::{attributes_of, body, render};
 
 use dioxus::prelude::*;
 use libero::{
@@ -23,6 +23,34 @@ fn an_icon_is_drawn_instead_of_the_children() {
     let html = render(app);
     assert_eq!(html.matches(r#"<path d="M2 8h12"/>"#).count(), 2, "{html}");
     assert!(!html.contains("children"), "{html}");
+}
+
+/// Todo 4837: under a finger an `md` icon is 44px each way by its own box; an `xs`, a
+/// `calc`-sized one and a `Burger` state themselves.
+#[test]
+fn a_bigger_icon_grows_to_a_finger_but_a_small_one_keeps_its_size() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider {
+                ActionIcon { id: "md", aria_label: "Copy", icon: BAR }
+                ActionIcon { id: "xs", aria_label: "Pin", icon: BAR, size: "xs" }
+                ActionIcon { id: "calc", aria_label: "Drop", icon: BAR, size: "calc(2em * 0.6)" }
+                ActionIcon { id: "wide", aria_label: "Big", icon: BAR, size: "44px" }
+            }
+        }
+    }
+
+    let html = render(app);
+    let media = html
+        .find(r#"@media (pointer: coarse){"#)
+        .and_then(|_| html.find(r#"[data-state~="grows"]"#))
+        .unwrap_or_else(|| panic!("no rule for a growing icon: {html}"));
+    assert!(
+        html[media..].contains("min-width:44px;min-height:44px;"),
+        "{html}"
+    );
+    // The `md` and the 44px one only, not the `xs` nor the `calc`.
+    assert_eq!(body(&html).matches("grows").count(), 2, "{html}");
 }
 
 #[test]

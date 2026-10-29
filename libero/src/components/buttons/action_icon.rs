@@ -4,14 +4,14 @@ use pictogram_icons_lucide as lucide;
 use crate::{
     components::{
         common::{ButtonGroupContext, Glyph, use_button_group},
+        common::{
+            COARSE_POINTER, COARSE_TARGET, VariantVars, base_color, borderless_on_state_sx,
+            coarse_hit_area_sx, contrast_color, disabled_look_sx, fill_color, focus_ring_sx,
+            interactive_variant_sx, literal_contrast, min_hit_area_sx, names_itself, text_color,
+            use_name_warning, variant_colors, variant_selected_sx,
+        },
         common::{HtmlTag, Input, States, Variables, Variant, base_props, variables},
         common::{TOOLBAR_ITEM, ToolbarItem, use_toolbar_item},
-        common::{
-            VariantVars, base_color, borderless_on_state_sx, coarse_hit_area_sx, contrast_color,
-            disabled_look_sx, fill_color, focus_ring_sx, interactive_variant_sx, literal_contrast,
-            min_hit_area_sx, names_itself, text_color, use_name_warning, variant_colors,
-            variant_selected_sx,
-        },
         data_display::{Pictogram, SvgData},
         feedback::Loader,
         form::use_fieldset_disabled,
@@ -47,21 +47,42 @@ const ACTION_ICON_ON_STATE_VAR: CssVar = CssVar::new("--lsx-action-icon-on-state
 /// it off a neighbour, a loose row needs a 10px (`xs`) or 7px (`sm`) gap.
 pub(crate) const ACTION_ICON_COMPACT: &str = "compact";
 
+/// Set on the `md` and larger icons, whose own box grows to 44px under a finger, as `Button`'s does.
+pub(crate) const ACTION_ICON_GROWS: &str = "grows";
+
+/// A `px`, `rem` or `em` length (16px) in pixels; a `calc` or a variable is `None`.
+fn length_px(text: &str) -> Option<f32> {
+    let text = text.trim();
+    let (number, scale) = match text.strip_suffix("rem").or_else(|| text.strip_suffix("em")) {
+        Some(number) => (number, 16.0),
+        None => (text.trim_end_matches("px"), 1.0),
+    };
+    number
+        .trim()
+        .parse::<f32>()
+        .ok()
+        .map(|length| length * scale)
+}
+
 /// An `xs` or `sm` size word, or a length up to `sm`'s 30px (`rem` and `em` at 16px).
 pub(crate) fn is_compact(size: Option<&ThemeAwareValue>) -> bool {
     match size {
         Some(ThemeAwareValue::Size(size)) => matches!(size, Size::Xs | Size::Sm),
         Some(ThemeAwareValue::String(text) | ThemeAwareValue::Number(text)) => {
-            let text = text.trim();
-            let (number, scale) = match text.strip_suffix("rem").or_else(|| text.strip_suffix("em"))
-            {
-                Some(number) => (number, 16.0),
-                None => (text.trim_end_matches("px"), 1.0),
-            };
-            number
-                .trim()
-                .parse::<f32>()
-                .is_ok_and(|length| length * scale <= 30.0)
+            length_px(text).is_some_and(|length| length <= 30.0)
+        }
+        _ => false,
+    }
+}
+
+/// An `md` or larger size word (`themed` when unset), or a length past 30px. A size the
+/// icon cannot read, a `calc`, is neither: a wrapper that knows it sets the state itself.
+pub(crate) fn grows_on_touch(size: Option<&ThemeAwareValue>, themed: Size) -> bool {
+    match size {
+        None => !matches!(themed, Size::Xs | Size::Sm),
+        Some(ThemeAwareValue::Size(size)) => !matches!(size, Size::Xs | Size::Sm),
+        Some(ThemeAwareValue::String(text) | ThemeAwareValue::Number(text)) => {
+            length_px(text).is_some_and(|length| length > 30.0)
         }
         _ => false,
     }
@@ -120,6 +141,13 @@ static ACTION_ICON_BASE_SX: StaticSx = StaticSx::new(|| {
         // 44x44 on a coarse pointer.
         .and(min_hit_area_sx("::before"))
         .when(ACTION_ICON_COMPACT, coarse_hit_area_sx("::before"))
+        .when(
+            ACTION_ICON_GROWS,
+            sx().media(
+                COARSE_POINTER,
+                sx().min_width(COARSE_TARGET).min_height(COARSE_TARGET),
+            ),
+        )
         // A chromeless toggle's pressed look; the variants repeat it over their fill.
         .when(
             "checked",
@@ -463,6 +491,11 @@ fn action_icon(mut props: ActionIconProps, keyshortcuts: Option<String>) -> Elem
     // Unless a wrapper (`Burger`) set it for a size it computes.
     let states = if is_compact(props.size.as_ref()) {
         states.with(ACTION_ICON_COMPACT, true)
+    } else {
+        states
+    };
+    let states = if grows_on_touch(props.size.as_ref(), theme.action_icon.size) {
+        states.with(ACTION_ICON_GROWS, true)
     } else {
         states
     };

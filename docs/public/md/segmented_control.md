@@ -116,6 +116,11 @@ explains how parts work.
 | `Space` | Picks the focused segment. |
 | `Enter` | Outside a `Form`: picks the focused segment. Inside one: submits the form, as on a native radio. |
 
+### Libero handles
+
+- Under a finger every segment is at least 44px tall, in a wrapped or vertical
+  strip too.
+
 ### You must
 
 - Without a visible label, spread `"aria-label"`, since the segments name the

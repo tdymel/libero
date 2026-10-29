@@ -96,7 +96,7 @@ pub fn ActionIconPage() -> Element {
                 .must([
                     "Name the button with `aria_label`: the icon gives a screen reader nothing to read.",
                     "Below 24px, keep other targets clear of that 24x24 box, or the one drawn later takes the overlap.",
-                    "Under a finger an `xs` or `sm` icon takes presses in a 44x44 box. In a loose row, keep 10px (`xs`) or 7px (`sm`) between icons, or a tap on one runs its neighbour. A `Toolbar` or `ButtonGroup` keeps the boxes apart itself.",
+                    "Under a finger an `xs` or `sm` icon takes presses in a 44x44 box. In a loose row, keep 10px (`xs`) or 7px (`sm`) between icons, or a tap on one runs its neighbour. A `Toolbar` or `ButtonGroup` keeps the boxes apart itself. From `md` up the icon itself grows to 44x44 under a finger, as `Button` does.",
                     "Announce the progress and the result of a `loading` button in your own `role=\"status\"` region. The button announces nothing itself.",
                 ])
                 .example("A bold button in an editor bar, `ActionIcon { aria_label: \"Bold\", shortcut: \"Control+B\", .. }`: a screen reader reads \"Bold, button\" and announces the shortcut."),

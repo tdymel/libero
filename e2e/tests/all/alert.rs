@@ -17,6 +17,30 @@ fn it_meets_the_baseline() {
         .run();
 }
 
+/// Todo 4837: the actions' per-size height must not outrank a button's 44px under a finger.
+#[test]
+fn a_finger_gets_44px_action_buttons() {
+    block_on(async {
+        let fixture = Fixture::open("/alert/actions", Viewport::Mobile)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        crate::hit_area::emulate_coarse_pointer(page).await;
+
+        let short: Vec<String> = e2e::js(
+            page,
+            "[...document.querySelectorAll('#actions [data-slot=actions] > button')].flatMap(el => {
+                const r = el.getBoundingClientRect();
+                return r.height >= 43.5 && r.width >= 43.5 ? [] : [el.id + ' ' + r.width + 'x' + r.height];
+            })",
+        )
+        .await;
+        assert!(short.is_empty(), "action buttons under 44px: {short:?}");
+        fixture.console.assert_clean("measuring actions").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
 /// An ellipsis at 320px cut the title for every sighted reader, with no way to
 /// read the rest (WCAG 1.4.10).
 #[test]

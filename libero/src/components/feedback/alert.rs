@@ -5,9 +5,9 @@ use crate::{
     components::{
         buttons::ActionIcon,
         common::{
-            Glyph, HtmlTag, Input, Part, States, Variables, Variant, VariantVars, base_color,
-            base_props, contrast_color, fill_color, label_color, literal_contrast, parts_enum,
-            variables, variant_chrome_sx, variant_container_colors,
+            COARSE_POINTER, COARSE_TARGET, Glyph, HtmlTag, Input, Part, States, Variables, Variant,
+            VariantVars, base_color, base_props, contrast_color, fill_color, label_color,
+            literal_contrast, parts_enum, variables, variant_chrome_sx, variant_container_colors,
         },
         layout::{paper_sx, use_box},
     },
@@ -93,10 +93,18 @@ static ALERT_BASE_SX: StaticSx = StaticSx::new(|| {
                     sx().white_space("normal")
                         .overflow_wrap("anywhere")
                         .per_size(|size| {
-                            sx().height("auto").min_height(format!(
-                                "max({}, calc(1.5em + 2px))",
-                                BUTTON_HEIGHT.value(size)
-                            ))
+                            sx().height("auto")
+                                .min_height(format!(
+                                    "max({}, calc(1.5em + 2px))",
+                                    BUTTON_HEIGHT.value(size)
+                                ))
+                                // Same selector as the step's height, which outranks `Button`'s own.
+                                .media(
+                                    COARSE_POINTER,
+                                    sx().min_height(format!(
+                                        "max({COARSE_TARGET}, calc(1.5em + 2px))"
+                                    )),
+                                )
                         }),
                 ),
         )

@@ -14,6 +14,32 @@ fn values_for(values: &DemoValues) -> Vec<String> {
         .collect()
 }
 
+/// The counts on offer: seven `xl` or `xxl` stars outgrow a phone's 325px pane.
+fn counts_for(values: &DemoValues) -> Vec<String> {
+    let big = matches!(values.str("size").as_str(), "xl" | "xxl");
+    let counts: &[&str] = if big { &["3", "5"] } else { &["3", "5", "7"] };
+    counts.iter().map(|count| count.to_string()).collect()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// Todo 4836: seven `xxl` stars overflowed the 325px pane at 375px.
+    #[test]
+    fn an_xl_or_xxl_row_offers_at_most_five_stars() {
+        let controls = vec![
+            Control::sizes("size"),
+            Control::toggle("count", ["3", "5", "7"]),
+        ];
+        let values = DemoValues::defaults(&controls);
+        assert_eq!(counts_for(&values.with("size", "md")), ["3", "5", "7"]);
+        for size in ["xl", "xxl"] {
+            assert_eq!(counts_for(&values.with("size", size)), ["3", "5"]);
+        }
+    }
+}
+
 #[component]
 pub fn RatingPage() -> Element {
     let theme = use_theme();
@@ -139,6 +165,7 @@ pub fn RatingPage() -> Element {
                             _ => vec![],
                         }),
                     Control::toggle("count", ["3", "5", "7"])
+                        .options_from(counts_for)
                         .default("5")
                         .code(|_, values| match values.str("count").as_str() {
                             "5" => vec![],

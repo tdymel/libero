@@ -90,7 +90,8 @@ Like every component, `ActionIcon` also takes the shared props `sx`, `class`,
   later takes the overlap.
 - Under a finger an `xs` or `sm` icon takes presses in a 44x44 box. In a loose
   row, keep 10px (`xs`) or 7px (`sm`) between icons, or a tap on one runs its
-  neighbour. A `Toolbar` or `ButtonGroup` keeps the boxes apart itself.
+  neighbour. A `Toolbar` or `ButtonGroup` keeps the boxes apart itself. From
+  `md` up the icon itself grows to 44x44 under a finger, as `Button` does.
 - Announce the progress and the result of a `loading` button in your own
   `role="status"` region. The button announces nothing itself.
 

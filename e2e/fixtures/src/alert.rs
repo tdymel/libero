@@ -10,7 +10,25 @@ use crate::Routes;
 pub const ROUTES: Routes = &[
     ("/alert", || rsx! { AlertPage {} }),
     ("/alert/long-action", || rsx! { LongActionPage {} }),
+    ("/alert/actions", || rsx! { ActionsPage {} }),
 ];
+
+/// Todo 4837: an action button at each size, so a finger's 44px floor is checked on all.
+#[component]
+fn ActionsPage() -> Element {
+    rsx! {
+        Flex { direction: "column", gap: "md", max_width: "320px",
+            Alert { id: "actions",
+                actions: rsx! {
+                    Button { id: "action-xs", size: "xs", "Update card" }
+                    Button { id: "action-sm", size: "sm", "Later" }
+                    Button { id: "action-md", "Dismiss" }
+                },
+                "Update it before the next invoice."
+            }
+        }
+    }
+}
 
 const COLORS: [&str; 4] = ["info", "success", "warning", "error"];
 const VARIANTS: [&str; 5] = ["filled", "tonal", "outlined", "elevated", "standard"];

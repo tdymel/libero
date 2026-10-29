@@ -299,6 +299,35 @@ async fn tab_in(fixture: &Fixture) -> i64 {
     -1
 }
 
+/// Todo 4836: under a finger every segment is 44px tall, in a wrapped, a vertical and a
+/// default strip alike.
+#[test]
+fn a_finger_gets_44px_segments() {
+    block_on(async {
+        for route in [
+            "/segmented-control",
+            "/segmented-control/field",
+            "/segmented-control/long",
+        ] {
+            let fixture = Fixture::open(route, Viewport::Mobile).await.unwrap();
+            let page = &fixture.page;
+            crate::hit_area::emulate_coarse_pointer(page).await;
+
+            let short: Vec<String> = e2e::js(
+                page,
+                "[...document.querySelectorAll('[role=radiogroup] > label')].flatMap(el => {
+                    const h = el.getBoundingClientRect().height;
+                    return h >= 43.5 ? [] : [el.textContent + ' ' + h];
+                })",
+            )
+            .await;
+            assert!(short.is_empty(), "{route}: segments under 44px: {short:?}");
+            fixture.console.assert_clean("measuring segments").unwrap();
+            fixture.close().await.unwrap();
+        }
+    });
+}
+
 /// The field's wiring lands on the group: name, captions, error, required.
 #[test]
 fn the_group_carries_the_field_wiring() {

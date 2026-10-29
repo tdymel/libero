@@ -68,6 +68,7 @@ pub fn AlertPage() -> Element {
                     "An `error` or `warning` color renders `role=\"alert\"`, which interrupts a screen reader. Every other color renders the polite `role=\"status\"`. Your own `role` replaces either.",
                     "The icon is hidden from screen readers.",
                     "`actions` come after the message and before the close button in `Tab` order.",
+                    "Under a finger each action `Button` is at least 44px tall and wide, an `xs` one included.",
                 ])
                 .must([
                     "Name each action by what it does, such as \"Update card\": the alert takes no focus, so a reader finds the button by `Tab`.",

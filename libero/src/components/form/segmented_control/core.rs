@@ -5,10 +5,11 @@ use crate::{
     components::{
         common::Part,
         common::{
-            BUTTON_HOVER_VAR, BUTTON_ON_STATE_VAR, BUTTON_SELECTED_VAR, BUTTON_VARS, Glyph,
-            HtmlTag, Input, Orientation, ScaleOrCss, States, ToolbarItem, Variables, Variant,
-            disabled_look_sx, focus_ring_sx, focused_disabled_opacity_sx, has_shortcut_modifier,
-            interactive_variant_sx, neighbour, variables, variant_selected_sx,
+            BUTTON_HOVER_VAR, BUTTON_ON_STATE_VAR, BUTTON_SELECTED_VAR, BUTTON_VARS,
+            COARSE_POINTER, COARSE_TARGET, Glyph, HtmlTag, Input, Orientation, ScaleOrCss, States,
+            ToolbarItem, Variables, Variant, disabled_look_sx, focus_ring_sx,
+            focused_disabled_opacity_sx, has_shortcut_modifier, interactive_variant_sx, neighbour,
+            variables, variant_selected_sx,
         },
         form::{Activation, field_parts_enum},
         layout::use_box,
@@ -96,7 +97,9 @@ static SEGMENTED_CONTROL_SX: StaticSx = StaticSx::new(|| {
                         "max({}, calc(1.5em + 2px))",
                         BUTTON_HEIGHT.value(size)
                     ))
-                }),
+                })
+                // The box itself grows, not a `::before`: wrapped or vertical segments would overlap.
+                .media(COARSE_POINTER, sx().min_height(COARSE_TARGET)),
         )
         .selector(
             "& > label > span",

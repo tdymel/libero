@@ -275,8 +275,7 @@ fn shell_header(
             // under the sticky bar shows through.
             publish_height: true,
             glass: true,
-            // Tighter on a phone: the seven controls just miss 320px at `md`.
-            sx: sx().gap("sm").breakpoint(Size::Sm, sx().gap("md")),
+            sx: header_sx(),
             // Focus target when a page link closes the drawer. On the button itself, not a
             // wrapper: a WebView focuses a handle but cannot query below it (2213).
             Burger {
@@ -284,14 +283,7 @@ fn shell_header(
                 "aria-controls": "docs-nav",
                 onclick: move |_| open.set(!open()),
                 onmounted: burger.mount(),
-                // Hidden from `Sm` up, so the drawer can't open on desktop.
-                // The home page has no sidebar, so its burger stays.
-                sx: if home {
-                    sx().hover(sx().background("muted.1"))
-                } else {
-                    sx().hover(sx().background("muted.1"))
-                        .breakpoint(Size::Sm, sx().display("none"))
-                },
+                sx: burger_sx(home),
             }
             // The way home: the nav has no entry for it.
             Anchor {
@@ -327,45 +319,75 @@ fn shell_header(
                 }
             }
             {search_button(search, modifier)}
-            // One joined control.
-            ButtonGroup {
-                "aria-label": "Site tools",
-                size: "sm",
-                // Logical, so the controls stay at the end under RTL. From `Sm` up the
-                // search field takes the free space instead.
-                sx: sx()
-                    .margin_inline_start("auto")
-                    .breakpoint(
-                        Size::Sm,
-                        sx().margin_inline_start("0")
-                            // The hidden phone search still counts as the first child, so
-                            // the next item gets back its outer corners and loses the seam.
-                            .selector("& > :nth-child(2) :is(button, a)", first_item_sx())
-                            .selector("& > :nth-child(2):is(button, a)", first_item_sx()),
+            {site_tools(search)}
+        }
+    }
+}
+
+/// Tighter on a phone: the seven controls just miss 320px at `md`.
+fn header_sx() -> Sx {
+    sx().gap("sm").breakpoint(Size::Sm, sx().gap("md"))
+}
+
+/// Hidden from `Sm` up, so the drawer can't open on desktop; the home page has no sidebar.
+fn burger_sx(home: bool) -> Sx {
+    if home {
+        sx().hover(sx().background("muted.1"))
+    } else {
+        sx().hover(sx().background("muted.1"))
+            .breakpoint(Size::Sm, sx().display("none"))
+    }
+}
+
+/// One joined control.
+fn site_tools(search: SpotlightHandle) -> Element {
+    rsx! {
+        ButtonGroup {
+            "aria-label": "Site tools",
+            size: "sm",
+            // Logical, so the controls stay at the end under RTL. From `Sm` up the
+            // search field takes the free space instead.
+            sx: sx()
+                .margin_inline_start("auto")
+                .breakpoint(
+                    Size::Sm,
+                    sx().margin_inline_start("0")
+                        // The hidden phone search still counts as the first child, so
+                        // the next item gets back its outer corners and loses the seam.
+                        .selector("& > :nth-child(2) :is(button, a)", first_item_sx())
+                        .selector("& > :nth-child(2):is(button, a)", first_item_sx()),
+                )
+                // Under a finger the small icons are boxes of their own: a group's press
+                // box grows across it only, and these sit edge to edge.
+                .media(
+                    "(pointer: coarse)",
+                    sx().selector(
+                        "& > :is(button, a), & > * :is(button, a)",
+                        sx().min_width("44px").min_height("44px"),
                     ),
-                // Below `Sm`, the field's own breakpoint: one of the two always shows, also
-                // with a raised default font size (a `px` query and a `rem` one drift apart).
-                ActionIcon {
-                    aria_label: "Search",
-                    "aria-keyshortcuts": "Control+K Meta+K",
-                    onclick: move |_| search.open(),
-                    variant: "outlined",
-                    color: "muted",
-                    sx: sx().breakpoint(Size::Sm, sx().display("none")),
-                    span {
-                        display: "inline-flex",
-                        width: "18px",
-                        height: "18px",
-                        Pictogram { icon: lucide::search::outlined }
-                    }
+                ),
+            // Below `Sm`, the field's own breakpoint: one of the two always shows, also
+            // with a raised default font size (a `px` query and a `rem` one drift apart).
+            ActionIcon {
+                aria_label: "Search",
+                "aria-keyshortcuts": "Control+K Meta+K",
+                onclick: move |_| search.open(),
+                variant: "outlined",
+                color: "muted",
+                sx: sx().breakpoint(Size::Sm, sx().display("none")),
+                span {
+                    display: "inline-flex",
+                    width: "18px",
+                    height: "18px",
+                    Pictogram { icon: lucide::search::outlined }
                 }
-                // Wide enough for the count, so it arriving late moves no neighbour (todo 3336).
-                Repository { repo: REPO, sx: sx().min_width("3.5rem") }
-                // Lets a reviewer check any component right to left.
-                DirectionToggle {}
-                // In the header, so any page can be checked in every scheme and palette.
-                ThemeSwitcher { themes: ThemeSet::CATALOGUE }
             }
+            // Wide enough for the count, so it arriving late moves no neighbour (todo 3336).
+            Repository { repo: REPO, sx: sx().min_width("3.5rem") }
+            // Lets a reviewer check any component right to left.
+            DirectionToggle {}
+            // In the header, so any page can be checked in every scheme and palette.
+            ThemeSwitcher { themes: ThemeSet::CATALOGUE }
         }
     }
 }

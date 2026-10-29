@@ -22,6 +22,30 @@ fn it_meets_the_baseline() {
         .run();
 }
 
+/// Todo 4837: under a finger an `md` icon is 44x44 drawn, as a `Button` is.
+#[test]
+fn a_finger_gets_a_44px_md_icon() {
+    block_on(async {
+        let fixture = Fixture::open("/action-icon", Viewport::Mobile)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        crate::hit_area::emulate_coarse_pointer(page).await;
+
+        let (width, height): (f64, f64) = e2e::js(
+            page,
+            "(() => { const r = document.querySelector('#plain').getBoundingClientRect(); return [r.width, r.height]; })()",
+        )
+        .await;
+        assert!(
+            width >= 43.5 && height >= 43.5,
+            "#plain is {width}x{height} under a finger"
+        );
+        fixture.console.assert_clean("measuring #plain").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
 const CLICKS: &str = "document.getElementById('clicks').textContent";
 
 /// Todo 1094: an `icon` glyph is sized and filled like a child svg.

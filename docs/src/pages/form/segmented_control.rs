@@ -158,6 +158,7 @@ pub fn SegmentedControlPage() -> Element {
                 .key(["Left", "Right", "Up", "Down"], "Move the selection.")
                 .key(["Space"], "Picks the focused segment.")
                 .key(["Enter"], "Outside a `Form`: picks the focused segment. Inside one: submits the form, as on a native radio.")
+                .handles(["Under a finger every segment is at least 44px tall, in a wrapped or vertical strip too."])
                 .must(["Without a visible label, spread `\"aria-label\"`, since the segments name the options, not the question."])
                 .example("An alignment strip with no visible label, `\"aria-label\": \"Alignment\"`: Tab enters the whole strip once, the arrows move the selection, and the next Tab leaves it.")
                 .limits(["A row too long for its container wraps (WCAG 1.4.10). Without `gap`, the second line keeps the joined look: its first segment overlaps by 1px and its ends stay square. Set `gap` or a vertical `orientation` where it may wrap.", "With `selected_check`, picking a segment widens it by the check, so the strip reflows; theme `selected_check: false` keeps its width."]),
