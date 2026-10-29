@@ -68,7 +68,7 @@ pub(super) fn use_file_intake(taking: Taking) -> Intake {
     } = taking;
 
     let emit = use_callback(move |files: Files| {
-        edited.mark(
+        edited.mark_exact(
             &names,
             &files.iter().map(FileData::name).collect::<Vec<_>>(),
         );

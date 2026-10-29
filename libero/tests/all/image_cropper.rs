@@ -1,4 +1,4 @@
-use crate::common::{body, render, tags_with};
+use crate::common::{body, element_at, render, tags_with};
 use crate::dispatch::Page;
 
 use dioxus::prelude::*;
@@ -20,6 +20,7 @@ fn a_clamped_press_says_the_box_the_caller_kept() {
         rsx! {
             LiberoProvider {
                 ImageCropper {
+                    id: "cropper",
                     src: "/photo.png",
                     alt: "Photo",
                     value: crop(),
@@ -41,25 +42,15 @@ fn a_clamped_press_says_the_box_the_caller_kept() {
     assert!(!said.contains("at 15%"), "{html}");
 }
 
-/// The markup inside the first `role="status"` element.
+/// The markup inside the `role="status"` region of the cropper with `id="cropper"`.
 fn status_text(html: &str) -> &str {
-    let start = html.find(r#"role="status""#).expect("a status region");
-    let inner = start + html[start..].find('>').expect("its open tag ends") + 1;
-    let mut depth = 0;
-    let mut at = inner;
-    while let Some(offset) = html[at..].find('<') {
-        let tag = at + offset;
-        if html[tag..].starts_with("</") {
-            if depth == 0 {
-                return &html[inner..tag];
-            }
-            depth -= 1;
-        } else if !html[tag..].split('>').next().unwrap_or("").ends_with('/') {
-            depth += 1;
-        }
-        at = tag + 1;
-    }
-    &html[inner..]
+    let cropper = element_at(html, html.find(r#"id="cropper""#).expect("the cropper"));
+    let region = element_at(
+        cropper,
+        cropper.find(r#"role="status""#).expect("its status region"),
+    );
+    let inner = region.find('>').expect("its open tag ends") + 1;
+    &region[inner..region.rfind("</").expect("its close tag")]
 }
 
 /// Todo 3833: a blank `aria_label` names nothing, so the crop box and its controls keep the default name.

@@ -207,7 +207,7 @@ impl Announced {
         if self.labels != labels {
             if edited
                 .take()
-                .is_some_and(|pending| pending.effect == Effect::between(&self.labels, &labels))
+                .is_some_and(|pending| pending.carried_out(&self.labels, &labels))
             {
                 change = chip_change(&self.labels, &labels, words);
             }
@@ -238,8 +238,8 @@ impl Announced {
     }
 }
 
-/// The labels an edit added and removed, case-folded and trimmed, so a host that sorts or
-/// normalises its list still carries it out; a rename is one of each.
+/// The labels an edit added and removed, sorted so a host that sorts its list still carries it
+/// out; a rename is one of each. Folded also trims and lowercases, for a host that normalises tags.
 #[derive(Clone, PartialEq, Debug)]
 pub(crate) struct Effect {
     added: Vec<String>,
@@ -247,11 +247,14 @@ pub(crate) struct Effect {
 }
 
 impl Effect {
-    fn between(before: &[String], after: &[String]) -> Self {
+    fn between(before: &[String], after: &[String], fold: bool) -> Self {
         let fold = |labels: &[String]| -> Vec<String> {
             labels
                 .iter()
-                .map(|label| label.trim().to_lowercase())
+                .map(|label| match fold {
+                    true => label.trim().to_lowercase(),
+                    false => label.clone(),
+                })
                 .collect()
         };
         let (mut added, mut removed) = diff(&fold(before), &fold(after));
@@ -265,6 +268,7 @@ impl Effect {
 #[derive(Clone, PartialEq, Debug)]
 pub(crate) struct Pending {
     effect: Effect,
+    fold: bool,
     idle_renders: u8,
 }
 
@@ -275,18 +279,48 @@ pub(crate) struct Pending {
 pub(crate) struct Edited(CopyValue<Option<Pending>>);
 
 impl Edited {
+    /// For tags and option labels, compared trimmed and case-folded.
     pub(crate) fn mark(self, before: &[String], after: &[String]) {
-        let mut edited = self.0;
-        edited.set(Some(Pending::new(Effect::between(before, after))));
+        self.arm(Pending::armed(before, after, true));
+    }
+
+    /// For file names, compared exactly: `a.txt` and `A.TXT` are two files.
+    pub(crate) fn mark_exact(self, before: &[String], after: &[String]) {
+        self.arm(Pending::armed(before, after, false));
+    }
+
+    fn arm(self, pending: Option<Pending>) {
+        if let Some(pending) = pending {
+            let mut edited = self.0;
+            edited.set(Some(pending));
+        }
     }
 }
 
 impl Pending {
-    fn new(effect: Effect) -> Self {
-        Self {
+    /// `None` for an emit that changes nothing, which would vouch for an outside list that only recases.
+    fn armed(before: &[String], after: &[String], fold: bool) -> Option<Self> {
+        let effect = Effect::between(before, after, fold);
+        (!effect.added.is_empty() || !effect.removed.is_empty()).then_some(Self {
             effect,
+            fold,
             idle_renders: 0,
+        })
+    }
+
+    /// Whether the list going from `before` to `after` did what this edit asked. A rename onto a
+    /// label the list holds counts when a deduping host merged the two: only the removal shows.
+    fn carried_out(&self, before: &[String], after: &[String]) -> bool {
+        let done = Effect::between(before, after, self.fold);
+        if done == self.effect {
+            return true;
         }
+        let held = Effect::between(&[], before, self.fold).added;
+        let (merged, extra) = diff(&done.added, &self.effect.added);
+        !self.effect.removed.is_empty()
+            && done.removed == self.effect.removed
+            && extra.is_empty()
+            && merged.iter().all(|label| held.contains(label))
     }
 }
 
@@ -365,7 +399,7 @@ fn diff(before: &[String], after: &[String]) -> (Vec<String>, Vec<String>) {
 
 #[cfg(test)]
 mod tests {
-    use super::{Announced, Effect, Pending, chip_change};
+    use super::{Announced, Pending, chip_change};
     use crate::localization::ChipsLabels;
 
     fn labels(values: &[&str]) -> Vec<String> {
@@ -382,10 +416,55 @@ mod tests {
     }
 
     fn edit(before: &[&str], after: &[&str]) -> Option<Pending> {
-        Some(Pending::new(Effect::between(
-            &labels(before),
-            &labels(after),
-        )))
+        Pending::armed(&labels(before), &labels(after), true)
+    }
+
+    fn file_edit(before: &[&str], after: &[&str]) -> Option<Pending> {
+        Pending::armed(&labels(before), &labels(after), false)
+    }
+
+    #[test]
+    fn a_no_op_emit_vouches_for_no_recased_list() {
+        // The field re-sent its list as it was; the host then recased it on its own.
+        let mut mark = edit(&["a"], &["a"]);
+        assert_eq!(mark, None);
+        let mut announced = announced(&["a"]);
+        render(&mut announced, &["A"], &mut mark);
+        assert_eq!(announced.message, None);
+    }
+
+    #[test]
+    fn a_rename_a_deduping_host_merges_says_the_removal() {
+        let mut announced = announced(&["a", "b"]);
+        render(&mut announced, &["a"], &mut edit(&["a", "b"], &["a", "A"]));
+        assert_eq!(announced.message.as_deref(), Some("Removed b"));
+    }
+
+    #[test]
+    fn a_rename_the_host_only_half_did_is_silent() {
+        // The new label is nowhere in the old list, so dropping b alone is not the rename.
+        let mut announced = announced(&["a", "b"]);
+        render(&mut announced, &["a"], &mut edit(&["a", "b"], &["a", "c"]));
+        assert_eq!(announced.message, None);
+        // A refused rename keeps the list: silent too.
+        let mut announced = self::announced(&["a", "b"]);
+        let mut mark = edit(&["a", "b"], &["a", "A"]);
+        render(&mut announced, &["a", "b"], &mut mark);
+        render(&mut announced, &["a", "b"], &mut mark);
+        assert_eq!((announced.message, mark), (None, None));
+    }
+
+    #[test]
+    fn file_names_compare_exactly() {
+        // Asked for a second file a.txt; the host kept two A.txt, a file the user never picked.
+        let mut announced = announced(&["A.txt"]);
+        let mut mark = file_edit(&["A.txt"], &["A.txt", "a.txt"]);
+        render(&mut announced, &["A.txt", "A.txt"], &mut mark);
+        assert_eq!(announced.message, None);
+        let mut announced = self::announced(&["A.txt"]);
+        let mut mark = file_edit(&["A.txt"], &["A.txt", "a.txt"]);
+        render(&mut announced, &["A.txt", "a.txt"], &mut mark);
+        assert_eq!(announced.message.as_deref(), Some("Added a.txt"));
     }
 
     fn render(announced: &mut Announced, values: &[&str], mark: &mut Option<Pending>) {
