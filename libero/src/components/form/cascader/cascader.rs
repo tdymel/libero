@@ -89,7 +89,7 @@ field_props! {
         /// Shown while nothing is selected.
         #[props(default)]
         placeholder: Option<String>,
-        /// What the search box says while empty.
+        /// What the search box says while empty; the localized "Search" by default.
         #[props(default)]
         search_placeholder: Option<String>,
         /// A hidden input posting `Options::value()`. A field path also binds to the `Form` without `onchange`.

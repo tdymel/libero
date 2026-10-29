@@ -324,7 +324,7 @@ pub fn CascaderPage() -> Element {
                     prop("validate", "Validators<Option<T>>")
                         .doc("Rules over the selected value, shown once the field loses focus or its form is submitted."),
                     prop("placeholder", "String").doc("Shown while nothing is selected."),
-                    prop("search_placeholder", "String").doc("What the search box says while empty."),
+                    prop("search_placeholder", "String").default("\"Search\"").doc("What the search box says while empty. The default is `Localization::common.search`."),
                     prop("clearable", "bool")
                         .default("false")
                         .doc("Shows an x in place of the chevron while a value is selected."),
@@ -395,7 +395,7 @@ pub fn CascaderPage() -> Element {
                     prop("separator", "String").default("\" / \"").doc("Between labels in a `\"paths\"` row."),
                     prop("node", "Callback<CascaderNodeArgs<T>, Element>").default("label").doc("Draws one row's content, such as a trailing stock count."),
                     prop("column_width", "String").default(theme.cascader.column_width).doc("As on `Cascader`."),
-                    prop("search_placeholder", "String").doc("What the search box says while empty."),
+                    prop("search_placeholder", "String").default("\"Search\"").doc("As on `Cascader`."),
                     prop("size", "Size").default(theme.cascader.size.as_str()).doc("Row height and font size."),
                     prop("radius", "ThemeAwareValue").default(theme.cascader.radius.as_str()).doc("The list's corner radius."),
                     prop("disabled", "bool").default("false").doc("The trigger opens nothing, and an open list closes. Disable your button too."),
@@ -478,7 +478,15 @@ pub fn CascaderPage() -> Element {
                         "true" => vec![CUSTOM_NODE.to_string()],
                         _ => vec![],
                     }),
-                    Control::switch("searchable"),
+                    Control::switch("searchable").code(|_, values| {
+                        match values.str("searchable").as_str() {
+                            "true" => vec![
+                                "searchable: true".to_string(),
+                                "search_placeholder: \"Search categories\"".to_string(),
+                            ],
+                            _ => vec![],
+                        }
+                    }),
                     Control::switch("any_level"),
                     Control::switch("allow_deselect"),
                     Control::switch("clearable"),
@@ -507,6 +515,7 @@ pub fn CascaderPage() -> Element {
                                 status: field.status,
                                 node: (values.str("node") == "true").then(|| Callback::new(category_node)),
                                 searchable: (values.str("searchable") == "true").then_some(true),
+                                search_placeholder: "Search categories",
                                 any_level: (values.str("any_level") == "true").then_some(true),
                                 allow_deselect: (values.str("allow_deselect") == "true").then_some(true),
                                 clearable: (values.str("clearable") == "true").then_some(true),

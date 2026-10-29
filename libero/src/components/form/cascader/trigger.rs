@@ -15,7 +15,7 @@ use crate::{
     sx::{StaticSx, sx},
 };
 
-use super::{core::CascaderPart, keys::CascaderKeys};
+use super::{core::CascaderPart, dropdown::PressOpen, keys::CascaderKeys};
 
 /// The chevron sits inside the control, not the frame's trailing slot, so clicking it opens the list.
 pub(super) static CASCADER_TRIGGER_SX: StaticSx = StaticSx::new(|| {
@@ -114,6 +114,7 @@ pub(super) struct Trigger {
     pub(super) searchable: bool,
     /// Searchable only: a touch open keeps focus here.
     pub(super) hold: Option<TouchHold>,
+    pub(super) pressed: PressOpen,
     /// Held now, so still the combobox.
     pub(super) held: bool,
     pub(super) blurred: Signal<bool>,
@@ -143,6 +144,7 @@ pub(super) fn cascader_trigger(
         readonly,
         searchable,
         hold,
+        pressed,
         held,
         mut blurred,
         empty,
@@ -177,6 +179,7 @@ pub(super) fn cascader_trigger(
             }
         })
         .event("onpointerdown", move |event: PointerEvent| {
+            pressed.press();
             if let Some(hold) = hold {
                 hold.press(&event, state.is_open());
             }
@@ -202,6 +205,7 @@ pub(super) fn cascader_trigger(
         })
         // Not on a frame wrapper: it would take the x's Enter and Space.
         .event("onkeydown", move |event: KeyboardEvent| {
+            pressed.key();
             if let Some(hold) = hold {
                 hold.key(state.is_open());
             }

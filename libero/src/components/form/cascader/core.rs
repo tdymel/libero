@@ -203,6 +203,7 @@ pub(crate) fn CascaderCore(props: CascaderCoreProps) -> Element {
         clearance: _,
         status,
         hold,
+        pressed,
         held,
         blurred,
     } = use_cascader_engine(EngineSetup {
@@ -241,6 +242,7 @@ pub(crate) fn CascaderCore(props: CascaderCoreProps) -> Element {
             readonly,
             searchable,
             hold: searchable.then_some(hold),
+            pressed,
             held,
             blurred,
             empty,

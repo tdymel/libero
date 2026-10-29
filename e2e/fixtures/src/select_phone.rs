@@ -1,10 +1,11 @@
 //! The list fields below `sm`: `Select`, `MultiSelect` and `PhoneField` open the phone
 //! sheet (todos 3897, 3898, 3899, 3925), and a low custom `Cascader` trigger clears it (3914).
+//! A searchable `MultiSelect` and a grouped `Select` check touch focus and targets (4834, 4835).
 
 use dioxus::prelude::*;
 use libero::components::{
-    Button, Cascader, CascaderDropdown, CascaderOption, Flex, MultiSelect, PhoneField, Select,
-    Text, use_cascader,
+    Button, Cascader, CascaderDropdown, CascaderOption, Flex, MultiSelect, OptionList, PhoneField,
+    Select, Text, use_cascader,
 };
 
 use crate::{Routes, common::Fruit};
@@ -42,6 +43,8 @@ fn SelectPhonePage() -> Element {
     let mut plain = use_signal(|| None::<Fruit>);
     let mut searched = use_signal(|| None::<Fruit>);
     let mut many = use_signal(|| vec![Fruit::Apple]);
+    let mut many_searched = use_signal(Vec::<Fruit>::new);
+    let mut grouped = use_signal(|| Some(Fruit::Banana));
     let mut ore = use_signal(|| None::<String>);
 
     rsx! {
@@ -59,6 +62,25 @@ fn SelectPhonePage() -> Element {
             }
             div { id: "many",
                 MultiSelect { label: "Many", value: many(), onchange: move |next| many.set(next) }
+            }
+            div { id: "many-searched",
+                MultiSelect {
+                    label: "Many searched",
+                    searchable: true,
+                    value: many_searched(),
+                    onchange: move |next| many_searched.set(next),
+                }
+            }
+            // The selection fits at the top, under the first heading (4835).
+            div { id: "grouped",
+                Select {
+                    label: "Grouped",
+                    options: OptionList::grouped()
+                        .group("Orchard", [Fruit::Apple, Fruit::Cherry])
+                        .group("Other", [Fruit::Banana, Fruit::Damson, Fruit::Elderberry]),
+                    value: grouped(),
+                    onchange: move |next| grouped.set(next),
+                }
             }
             div { id: "phone",
                 PhoneField { label: "Phone", country: "DE" }

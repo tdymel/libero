@@ -153,6 +153,7 @@ pub fn MultiSelect<T: Options>(props: MultiSelectProps<T>) -> Element {
                 if !disabled && !readonly {
                     if let Some(focus) = &focus {
                         focus.before_removal(index);
+                        focus.keep_in_field();
                     }
                     onremove.call(index);
                 }

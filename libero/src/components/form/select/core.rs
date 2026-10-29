@@ -6,8 +6,8 @@ use crate::{
         accessibility::VisuallyHidden,
         buttons::Button,
         common::{
-            ComboboxState, Glyph, HtmlTag, Input, Part, Parts, ScaleOrCss, States, TOOLBAR_ITEM,
-            ToolbarItem, aria_label_of, attr, focus_ring_sx, has_shortcut_modifier,
+            COARSE_POINTER, ComboboxState, Glyph, HtmlTag, Input, Part, Parts, ScaleOrCss, States,
+            TOOLBAR_ITEM, ToolbarItem, aria_label_of, attr, focus_ring_sx, has_shortcut_modifier,
             inset_focus_ring_sx, names_itself, navigation_chord, ring_overlay, use_name_warning,
             use_toolbar_item,
         },
@@ -26,7 +26,8 @@ use crate::{
         typeahead_match, use_element, use_localization, use_theme, use_typeahead,
     },
     platform::{
-        ElementApi, PlatformError, blur_counts, focus_selector, focus_tab_from, is_tab, logical_key,
+        ElementApi, PlatformError, blur_counts, focus_is_in, focus_selector, focus_tab_from,
+        focus_without_ring, is_tab, logical_key, reads_dom_synchronously,
     },
     sx::{StaticSx, ThemeAwareValue, sx},
     theme::{FOCUS_RING_WIDTH, Size, ios_text_floor_sx},
@@ -132,6 +133,9 @@ static SEARCH_SX: StaticSx = StaticSx::new(|| {
         .line_height("1.5")
         .and(ios_text_floor_sx("1em"))
         .padding("4px 8px")
+        // 44px under a finger, as the sheet's rows and Done (todo 4835).
+        .box_sizing("border-box")
+        .media(COARSE_POINTER, sx().min_height("44px"))
         .border_bottom("1px solid")
         // The box's only boundary: 3:1, as a field frame (WCAG 1.4.11, todo 490).
         .border_color("muted.6")
@@ -260,6 +264,27 @@ impl ChipFocus {
                 true => Some(index),
                 false => index.checked_sub(1),
             });
+        }
+    }
+
+    /// After a pressed x, which the slot's `mousedown` cancel left unfocused: focus outside the
+    /// field moves to the trigger, without a ring (todo 4834).
+    pub(crate) fn keep_in_field(&self) {
+        // A WebView can't say where focus is.
+        let Some(slot) = self.handles.slot.mounted() else {
+            return;
+        };
+        if !reads_dom_synchronously() || focus_is_in(&slot) {
+            return;
+        }
+        let mut to_trigger = self.handles.to_trigger;
+        to_trigger.set(true);
+        let trigger = self.handles.trigger;
+        if !trigger
+            .mounted()
+            .is_some_and(|node| focus_without_ring(&node))
+        {
+            let _ = trigger.focus();
         }
     }
 
@@ -463,6 +488,7 @@ pub(crate) fn SelectCore(props: SelectCoreProps) -> Element {
         searchable,
         trigger: trigger_element,
         hold: searchable.then_some(hold),
+        by_touch: use_hook(|| CopyValue::new(false)),
         disabled,
         readonly,
     };
@@ -855,6 +881,8 @@ struct SelectOpen {
     trigger: ElementHandle,
     /// Searchable only.
     hold: Option<TouchHold>,
+    /// The last press was a finger's or pen's, not a mouse's.
+    by_touch: CopyValue<bool>,
     disabled: bool,
     readonly: bool,
 }
@@ -878,19 +906,28 @@ impl SelectOpen {
 
     /// The opening press, on the trigger, chip slot or chevron.
     fn press(self, event: &PointerEvent) {
+        let mut by_touch = self.by_touch;
+        by_touch.set(event.pointer_type() != "mouse");
         if let Some(hold) = self.hold {
             hold.press(event, self.state.is_open());
         }
     }
 
     /// For the chip slot and chevron: focuses the trigger and toggles. State is read first,
-    /// since a searchable list closes on its box's blur.
+    /// since a searchable list closes on its box's blur. A finger's focus has no ring (todo 4834).
     fn toggle(self) {
         if self.disabled {
             return;
         }
         let next = !self.state.is_open();
-        let _ = self.trigger.focus();
+        let ringless = *self.by_touch.peek()
+            && self
+                .trigger
+                .mounted()
+                .is_some_and(|node| focus_without_ring(&node));
+        if !ringless {
+            let _ = self.trigger.focus();
+        }
         if !self.readonly {
             self.open(next);
         }

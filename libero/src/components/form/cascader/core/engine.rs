@@ -20,7 +20,9 @@ use crate::{
 };
 
 use super::super::{
-    dropdown::{Dropdown, DropdownSetup, dropdown_box, use_cascader_dropdown},
+    dropdown::{
+        Dropdown, DropdownSetup, PressOpen, dropdown_box, use_cascader_dropdown, use_press_open,
+    },
     keys::CascaderKeys,
     option::CascaderNode,
     search::{CascaderSearch, search_header},
@@ -97,6 +99,8 @@ pub(in super::super) struct Engine {
     pub(in super::super) status: Element,
     /// A touch open: the trigger keeps focus until the search box's own tap (todo 3899).
     pub(in super::super) hold: TouchHold,
+    /// The trigger's press and keys feed it.
+    pub(in super::super) pressed: PressOpen,
     /// Held now, so the trigger is still the combobox.
     pub(in super::super) held: bool,
     /// [`use_refocus_on_close`]'s blur mark, set by a held trigger's blur.
@@ -151,6 +155,7 @@ pub(in super::super) fn use_cascader_engine(setup: EngineSetup) -> Engine {
     let blurred = use_refocus_on_close(opened, searchable, trigger, query);
     let hold = use_touch_hold();
     let held = searchable && opened && hold.held();
+    let pressed = use_press_open();
 
     let CascaderList {
         keys,
@@ -195,6 +200,7 @@ pub(in super::super) fn use_cascader_engine(setup: EngineSetup) -> Engine {
         size,
         radius,
         layout,
+        pressed: pressed.pressed(),
         // A new column or a shorter match list reshapes the open box.
         remeasure: (depth * 4096 + rows.len()) as u64,
         gap: theme.popover.gap,
@@ -225,7 +231,11 @@ pub(in super::super) fn use_cascader_engine(setup: EngineSetup) -> Engine {
         };
         // No listbox while nothing matches; a dangling id is invalid (todo 2291).
         let controls = nothing_found.is_none().then(|| controlled_id.clone());
-        let placeholder = config.search_placeholder.clone().unwrap_or_default();
+        // Never empty: the box has no other sign it is there (todo 4835).
+        let placeholder = config
+            .search_placeholder
+            .clone()
+            .unwrap_or_else(|| words.common.search.to_string());
         let name = names
             .aria_label
             .clone()
@@ -248,6 +258,7 @@ pub(in super::super) fn use_cascader_engine(setup: EngineSetup) -> Engine {
             dropdown,
             popover.floating(),
             dropdown_keys,
+            pressed,
             attributes,
             rsx! {
                 {strip}
@@ -283,6 +294,7 @@ pub(in super::super) fn use_cascader_engine(setup: EngineSetup) -> Engine {
         clearance,
         status,
         hold,
+        pressed,
         held,
         blurred,
     }

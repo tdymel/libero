@@ -467,3 +467,188 @@ fn a_desktop_keeps_the_popover() {
         d.finish("a desktop select").await.unwrap();
     });
 }
+
+/// Waits for focus inside `field`, then whether the focused element shows its ring.
+async fn focus_ring_in(page: &Page, field: &str) -> bool {
+    let focused = format!("!!document.activeElement.closest({field:?})");
+    wait::for_js_true(page, &focused, "the focus in the field")
+        .await
+        .unwrap();
+    page.evaluate_bounded("document.activeElement.matches(':focus-visible')")
+        .await
+        .unwrap()
+        .into_value()
+        .unwrap()
+}
+
+/// Todo 4834: a tap on a multi-select focuses its trigger without the keyboard ring, and Done keeps it so.
+#[test]
+fn a_touch_tap_focuses_the_multi_select_without_a_ring() {
+    const TRIGGER: &str = "#many [role=combobox]";
+    block_on(async {
+        let fixture = phone("/select-phone").await;
+        let page = &fixture.page;
+        tap(page, TRIGGER).await.unwrap();
+        sheet_shown(page).await.unwrap();
+        assert!(
+            !focus_ring_in(page, "#many").await,
+            "a tap left the trigger's focus ring"
+        );
+        tap(page, &format!("{SHEET} [data-slot=sheet-footer] button"))
+            .await
+            .unwrap();
+        closed(page, TRIGGER).await.unwrap();
+        assert!(
+            !focus_ring_in(page, "#many").await,
+            "Done left the trigger's focus ring"
+        );
+        fixture
+            .console
+            .assert_clean("a tapped multi-select")
+            .unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
+/// Todo 4834: a tapped chip x keeps the focus in the field, not on the body, and draws no ring.
+#[test]
+fn a_tapped_chip_remove_keeps_the_focus_in_the_field() {
+    block_on(async {
+        let fixture = phone("/select-phone").await;
+        let page = &fixture.page;
+        tap(page, "#many [data-slot=remove] button").await.unwrap();
+        wait::for_js_true(
+            page,
+            "!document.querySelector('#many [data-slot=remove] button')",
+            "the tapped chip removed",
+        )
+        .await
+        .unwrap();
+        assert!(
+            !focus_ring_in(page, "#many").await,
+            "the removal left a focus ring"
+        );
+        fixture.console.assert_clean("a tapped chip x").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
+/// Todo 4835: under a finger the sheet's search box is 44px tall, on `Select` and `MultiSelect`.
+#[test]
+fn a_finger_gets_a_44px_sheet_search_box() {
+    block_on(async {
+        for field in ["#searched", "#many-searched"] {
+            let fixture = phone("/select-phone").await;
+            let page = &fixture.page;
+            tap(page, &format!("{field} [role=combobox]"))
+                .await
+                .unwrap();
+            sheet_shown(page).await.unwrap();
+            let js = format!(
+                "(() => {{ const box = document.querySelector({SEARCH:?}); \
+                 return !!box && box.getBoundingClientRect().height >= 43.5; }})()"
+            );
+            wait::for_js_true(page, &js, &format!("a 44px search box in {field}"))
+                .await
+                .unwrap();
+            fixture.close().await.unwrap();
+        }
+    });
+}
+
+/// Todo 4835: a grouped list whose selection fits at the top opens unscrolled, its first heading whole.
+#[test]
+fn a_grouped_sheet_opens_on_its_first_heading() {
+    block_on(async {
+        let fixture = phone("/select-phone").await;
+        let page = &fixture.page;
+        tap(page, "#grouped [role=combobox]").await.unwrap();
+        sheet_shown(page).await.unwrap();
+        let js = format!(
+            "(() => {{ const list = document.querySelector('{SHEET} [role=listbox]'); \
+             const row = list && list.querySelector('[role=option][aria-selected=true]'); \
+             if (!row) return false; \
+             const l = list.getBoundingClientRect(), r = row.getBoundingClientRect(); \
+             return r.top >= l.top && r.bottom <= l.bottom; }})()"
+        );
+        wait::for_js_true(page, &js, "the selected row in view")
+            .await
+            .unwrap();
+        crate::settle::painted(page).await.unwrap();
+        let (overflows, top): (bool, f64) = page
+            .evaluate_bounded(format!(
+                "(l => [l.scrollHeight > l.clientHeight, l.scrollTop])\
+                 (document.querySelector('{SHEET} [role=listbox]'))"
+            ))
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        assert!(overflows, "the grouped list fits, so it proves nothing");
+        assert_eq!(top, 0.0, "the sheet scrolled though the selection fit");
+        fixture.close().await.unwrap();
+    });
+}
+
+/// Todo 4834: a tap opens the cascader with no keyboard ring on its cursor row, as `Select`.
+#[test]
+fn a_touch_open_draws_no_ring_on_the_cascader_rows() {
+    block_on(async {
+        let fixture = phone("/select-phone").await;
+        let page = &fixture.page;
+        tap(page, "#cascade [role=combobox]").await.unwrap();
+        sheet_shown(page).await.unwrap();
+        // Drilled in, the cursor sits on the first child.
+        tap(
+            page,
+            &format!("{SHEET} [role=option]:has([data-slot=branch])"),
+        )
+        .await
+        .unwrap();
+        let js = format!(
+            "(() => {{ const a = document.querySelector('{SHEET} [role=option][data-state~=active]');\
+             if (!a) return false; const s = getComputedStyle(a); \
+             return s.boxShadow === 'none' && s.outlineStyle === 'none'; }})()"
+        );
+        wait::for_js_true(page, &js, "the cursor row without a ring")
+            .await
+            .unwrap();
+        fixture.console.assert_clean("a tapped cascader").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
+/// Todo 4835: the cascader's search box says "Search" without a `search_placeholder`, and its
+/// drill-back button is 44px tall under a finger.
+#[test]
+fn a_cascader_sheet_names_its_search_and_backs_out_44px() {
+    block_on(async {
+        let fixture = phone("/select-phone").await;
+        let page = &fixture.page;
+        tap(page, "#cascade [role=combobox]").await.unwrap();
+        sheet_shown(page).await.unwrap();
+        let js = format!(
+            "(() => {{ const box = document.querySelector({SEARCH:?}); \
+             return !!box && box.placeholder === 'Search' \
+               && box.getBoundingClientRect().height >= 43.5; }})()"
+        );
+        wait::for_js_true(page, &js, "a 44px search box saying Search")
+            .await
+            .unwrap();
+        tap(
+            page,
+            &format!("{SHEET} [role=option]:has([data-slot=branch])"),
+        )
+        .await
+        .unwrap();
+        let js = format!(
+            "(() => {{ const back = document.querySelector('{SHEET} [data-slot=drill-back]'); \
+             return !!back && back.getBoundingClientRect().height >= 43.5; }})()"
+        );
+        wait::for_js_true(page, &js, "a 44px drill-back button")
+            .await
+            .unwrap();
+        fixture.console.assert_clean("a cascader sheet").unwrap();
+        fixture.close().await.unwrap();
+    });
+}

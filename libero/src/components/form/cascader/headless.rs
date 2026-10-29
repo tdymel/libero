@@ -205,7 +205,7 @@ base_props! {
         /// One column's minimum width; `"max-content"` fits the longest row. Defaults to the theme's.
         #[props(default)]
         column_width: Option<String>,
-        /// What the search box says while empty.
+        /// What the search box says while empty; the localized "Search" by default.
         #[props(default)]
         search_placeholder: Option<String>,
         /// Row height and font size.
@@ -328,6 +328,7 @@ pub fn CascaderDropdown<T: Options>(props: CascaderDropdownProps<T>) -> Element 
         clearance,
         status,
         hold,
+        pressed,
         held,
         mut blurred,
     } = use_cascader_engine(EngineSetup {
@@ -389,6 +390,7 @@ pub fn CascaderDropdown<T: Options>(props: CascaderDropdownProps<T>) -> Element 
             wrapper
                 // The trigger's click bubbles here; on a `button`, so do Enter and Space.
                 .event("onpointerdown", move |event: PointerEvent| {
+                    pressed.press();
                     if searchable {
                         hold.press(&event, combobox.is_open());
                     }
@@ -409,6 +411,7 @@ pub fn CascaderDropdown<T: Options>(props: CascaderDropdownProps<T>) -> Element 
                     }
                 })
                 .event("onkeydown", move |event: KeyboardEvent| {
+                    pressed.key();
                     if searchable {
                         hold.key(combobox.is_open());
                     }

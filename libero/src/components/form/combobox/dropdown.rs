@@ -9,7 +9,7 @@ use crate::{
         form::DropdownPart,
         layout::{ScrollArea, ScrollAreaHandle, Virtualize, use_scroll_area},
     },
-    platform::{ElementApi, next_task, when_laid_out},
+    platform::{ElementApi, PlatformError, next_task, when_laid_out, when_laid_out_retry},
     sx::sx,
     theme::Size,
     utils::warn,
@@ -111,6 +111,16 @@ pub(super) fn ComboboxDropdown(
         let y = windowed.active_slot.map(|slot| slot as f64 / last * 100.0);
         (y, windowed.slots.len() as f64 * row_height)
     });
+    // Drawn in full, the highlight scrolls in only when out of view: a percent clipped a group heading (todo 4835).
+    let reveal = match windowed.is_none() && !loading {
+        true => active,
+        false => None,
+    };
+    use_effect(use_reactive!(|reveal| {
+        if reveal.is_some() {
+            when_laid_out(move || reveal_active(area, scroll_y, UNLAID_TRIES));
+        }
+    }));
     // A newer list (a filter below the threshold, say) retires a pending follow (todo 2709).
     let mut follows = use_hook(|| CopyValue::new(0u32));
     // Unseen until the first follow lands, or the top rows flash before the highlight's (todo 2719).
@@ -212,7 +222,6 @@ pub(super) fn ComboboxDropdown(
                     sx: sx().max_height(max_height),
                     // The windowed list's area, so the root stays one across the switch.
                     handle: area,
-                    scroll_position_y: scroll_y,
                     id: listbox_id(&id),
                     "data-slot": DropdownPart::Listbox.slot(),
                     "role": "listbox",
@@ -342,6 +351,39 @@ impl Windowed {
             },
         }
     }
+}
+
+/// Tries for an unlaid list before the reveal gives up.
+const UNLAID_TRIES: u8 = 3;
+
+/// Scrolls the list just enough to show its active row, `fallback` percent where the
+/// renderer can't query below a handle (a WebView).
+fn reveal_active(area: ScrollAreaHandle, fallback: Option<f64>, tries: u8) {
+    let root = area.element;
+    if !root.is_mounted() {
+        return;
+    }
+    let (content, viewport) = (root.scroll_size(), root.dimensions());
+    spawn(async move {
+        let (Ok(content), Ok(viewport)) = (content.await, viewport.await) else {
+            return;
+        };
+        if viewport.height <= 0.0 && tries > 0 {
+            let failed = UNLAID_TRIES - tries;
+            return when_laid_out_retry(failed, move || reveal_active(area, fallback, tries - 1));
+        }
+        // Rows that fit never scroll, and the reveal's walk would reach the page.
+        if content.height <= viewport.height + 0.5 {
+            return;
+        }
+        match root.query_selector("[role='option'][data-state~='active']") {
+            Ok(row) => {
+                let _ = row.scroll_into_view(false);
+            }
+            Err(PlatformError::Unsupported) => area.scroll_to_percent(None, fallback),
+            Err(_) => {}
+        }
+    });
 }
 
 /// Scrolls a windowed list to `y` percent once its padding stands for every slot. A height that

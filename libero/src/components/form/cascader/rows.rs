@@ -5,7 +5,7 @@ use pictogram_icons_lucide as lucide;
 
 use crate::{
     components::{
-        common::{Glyph, HtmlTag, ROW_HOVER_TINT, States, variables},
+        common::{COARSE_POINTER, Glyph, HtmlTag, ROW_HOVER_TINT, States, variables},
         form::ComboboxOption,
         layout::{Box, BoxStyle, ScrollArea},
     },
@@ -66,6 +66,9 @@ fn drill_back_sx() -> Sx {
         .gap("4px")
         .width("100%")
         .padding("4px 8px")
+        // 44px under a finger, as the rows below it (todo 4835).
+        .box_sizing("border-box")
+        .media(COARSE_POINTER, sx().min_height("44px"))
         .border("none")
         .border_bottom("1px solid")
         .border_color("muted.2")

@@ -2,7 +2,7 @@ use dioxus::prelude::*;
 
 use crate::{
     components::{
-        common::{HtmlTag, Part, inset_focus_ring_sx},
+        common::{COARSE_POINTER, HtmlTag, Part, inset_focus_ring_sx},
         form::{ComboboxState, DropdownPart, TouchHold, with_drawn_placeholder},
         layout::BoxStyle,
     },
@@ -27,6 +27,9 @@ pub(super) static CASCADER_SEARCH_SX: StaticSx = StaticSx::new(|| {
         .line_height("1.5")
         .and(ios_text_floor_sx("1em"))
         .padding("4px 8px")
+        // 44px under a finger, as the sheet's rows (todo 4835).
+        .box_sizing("border-box")
+        .media(COARSE_POINTER, sx().min_height("44px"))
         .border_bottom("1px solid")
         // The box's only boundary: 3:1, as a field frame (WCAG 1.4.11, todo 490).
         .border_color("muted.6")

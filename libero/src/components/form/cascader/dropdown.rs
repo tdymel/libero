@@ -33,11 +33,44 @@ use super::{
 pub(super) static CASCADER_DROPDOWN_SX: StaticSx =
     StaticSx::new(|| COMBOBOX_DROPDOWN_SX.clone().and(phone_sheet_sx()));
 
+/// Opened by a press, the cursor row draws no keyboard ring until a key, as `ComboboxCore` (todo 4834).
+/// Not a signal: read when the open redraws anyway.
+#[derive(Clone, Copy)]
+pub(super) struct PressOpen(CopyValue<bool>);
+
+pub(super) fn use_press_open() -> PressOpen {
+    PressOpen(use_hook(|| CopyValue::new(false)))
+}
+
+impl PressOpen {
+    /// A pointer press on the trigger.
+    pub(super) fn press(self) {
+        self.set(true);
+    }
+
+    /// Any key on the trigger or the open list.
+    pub(super) fn key(self) {
+        self.set(false);
+    }
+
+    pub(super) fn pressed(self) -> bool {
+        *self.0.peek()
+    }
+
+    fn set(self, next: bool) {
+        let mut flag = self.0;
+        if *flag.peek() != next {
+            flag.set(next);
+        }
+    }
+}
+
 /// The open list's box, holding the search box and the rows.
 pub(super) fn dropdown_box(
     style: BoxStyle,
     floating: &ElementHandle,
     keys: Rc<CascaderKeys>,
+    pressed: PressOpen,
     attributes: Vec<Attribute>,
     content: Element,
 ) -> Element {
@@ -48,7 +81,10 @@ pub(super) fn dropdown_box(
             event.prevent_default()
         })
         // Portaled, so keys inside would bubble to `PortalOutlet`, not the trigger.
-        .event("onkeydown", move |event: KeyboardEvent| keys.handle(event))
+        .event("onkeydown", move |event: KeyboardEvent| {
+            pressed.key();
+            keys.handle(event)
+        })
         .attr("data-slot", DropdownPart::Panel.slot())
         .render(HtmlTag::Div, attributes, content)
 }
@@ -65,6 +101,8 @@ pub(super) struct DropdownSetup<'a> {
     pub(super) size: Size,
     pub(super) radius: Size,
     pub(super) layout: CascaderLayout,
+    /// [`PressOpen::pressed`].
+    pub(super) pressed: bool,
     pub(super) remeasure: u64,
     pub(super) gap: f64,
     pub(super) padding: f64,
@@ -95,6 +133,7 @@ pub(super) fn use_cascader_dropdown(setup: DropdownSetup) -> Dropdown {
         size,
         radius,
         layout,
+        pressed,
         remeasure,
         gap,
         padding,
@@ -130,6 +169,7 @@ pub(super) fn use_cascader_dropdown(setup: DropdownSetup) -> Dropdown {
         .with(radius.radius_state_name(), true)
         .with("bordered", true)
         .with(layout.state_name(), true)
+        .with("pointer", pressed)
         .into();
     let mut dropdown = use_box()
         // `use_popover` caps it to the viewport; wide columns scroll inside instead of off-screen.
