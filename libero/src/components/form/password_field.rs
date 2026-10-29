@@ -126,7 +126,13 @@ pub fn PasswordField(props: PasswordFieldProps) -> Element {
                     sx: &SLOT_BUTTON_SX,
                     // `ActionIcon` follows a disabled `Fieldset` itself.
                     disabled: props.disabled,
-                    attributes: vec![listener("onmounted", button.mount())],
+                    attributes: vec![
+                        listener("onmounted", button.mount()),
+                        // A press keeps focus in the input, so a phone keyboard stays open.
+                        listener("onpointerdown", |event: Event<PointerData>| {
+                            event.prevent_default()
+                        }),
+                    ],
                     onclick: move |_| revealed_at.set((!revealed()).then_some(settled)),
                     // A struck-through eye while the secret is readable.
                     if revealed() {

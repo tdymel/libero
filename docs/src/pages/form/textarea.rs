@@ -5,7 +5,7 @@ use crate::components::{
 use dioxus::prelude::*;
 use libero::components::TextareaPart;
 use libero::components::{Code, Text, Textarea};
-use libero::use_theme;
+use libero::{sx::sx, use_theme};
 
 struct NotesCopy;
 
@@ -134,6 +134,8 @@ pub fn TextareaPage() -> Element {
                     let field = field_props::<NotesCopy>(&values);
                     rsx! {
                     Textarea {
+                        // Sized by content, it is narrower than the card on a phone.
+                        sx: sx().width("100%").max_width("320px"),
                         size: values.str("size"),
                         radius: values.str("radius"),
                         rows: values.str("rows").parse::<u32>().unwrap_or(3),

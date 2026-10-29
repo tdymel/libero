@@ -2,7 +2,7 @@
 //! `<form>` reset or submit hides it again (4295, 4331).
 
 use e2e::browser::block_on;
-use e2e::passes::pointer;
+use e2e::passes::{keyboard, pointer};
 use e2e::wait::PageBounded;
 use e2e::{Fixture, Viewport, wait};
 
@@ -42,6 +42,43 @@ fn a_revealed_secret_keeps_spellcheck_correction_and_capitals_off() {
         );
 
         fixture.console.assert_clean("revealing a secret").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
+/// Todo 4824: a touch on the reveal button keeps focus in the input, so a phone keyboard
+/// stays open, and the button is still a Tab stop.
+#[test]
+fn a_touch_on_the_reveal_button_keeps_focus_in_the_input() {
+    block_on(async {
+        let fixture = Fixture::open("/text-field", Viewport::Mobile)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        let in_input = format!("document.activeElement === document.querySelector({INPUT:?})");
+
+        pointer::tap(page, INPUT).await.unwrap();
+        wait::for_js_true(page, &in_input, "the tap to focus the input")
+            .await
+            .unwrap();
+        pointer::tap(page, REVEAL).await.unwrap();
+        wait::for_js_true(
+            page,
+            &format!("document.querySelector({INPUT:?}).type === 'text'"),
+            "the reveal tap",
+        )
+        .await
+        .unwrap();
+        let kept: bool = page
+            .evaluate_bounded(in_input)
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        assert!(kept, "the reveal tap moved focus out of the input");
+
+        keyboard::tab_to(page, REVEAL, 3).await.unwrap();
+        fixture.console.assert_clean("tapping reveal").unwrap();
         fixture.close().await.unwrap();
     });
 }

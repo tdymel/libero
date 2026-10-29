@@ -5,7 +5,7 @@ use crate::components::{
 use dioxus::prelude::*;
 use libero::components::FieldPart;
 use libero::components::{Code, Text, TextField};
-use libero::use_theme;
+use libero::{sx::sx, use_theme};
 
 struct UsernameCopy;
 
@@ -156,6 +156,8 @@ pub fn TextFieldPage() -> Element {
                     let field = field_props::<UsernameCopy>(&values);
                     rsx! {
                     TextField {
+                        // Sized by content, it is narrower than the card on a phone.
+                        sx: sx().width("100%").max_width("320px"),
                         size: values.str("size"),
                         radius: values.str("radius"),
                         label: field.label,
