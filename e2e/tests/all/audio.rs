@@ -681,7 +681,7 @@ fn space_on_the_slider_ignores_chords_and_key_repeat() {
 /// The speed button steps 1x, 1.5x, 2x and back, its name following.
 #[test]
 fn the_speed_button_cycles() {
-    const SPEED: &str = "#player [data-slot=controls] > button:last-child";
+    const SPEED: &str = "#player [data-slot=speed] > button";
     block_on(async {
         let fixture = Fixture::open("/audio", Viewport::Desktop).await.unwrap();
         let page = &fixture.page;
@@ -702,6 +702,62 @@ fn the_speed_button_cycles() {
         }
 
         fixture.console.assert_clean("speed").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
+/// Todos 4865-4867, under a finger at xs and md: no seek or volume pseudo covers a button
+/// outside the bar, Play keeps its whole box off the seek thumb, Mute keeps its 44px reach
+/// clear of the chevron, and the speed pill is the icons' height with a 44px target.
+#[test]
+fn under_a_finger_each_control_keeps_its_own_target() {
+    use chromiumoxide::cdp::browser_protocol::emulation::SetTouchEmulationEnabledParams;
+    block_on(async {
+        let fixture = Fixture::open("/audio/phone", Viewport::Mobile)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        page.execute_bounded(SetTouchEmulationEnabledParams::new(true))
+            .await
+            .unwrap();
+        wait::for_js_true(
+            page,
+            "matchMedia('(pointer: coarse)').matches \
+             && !!document.querySelector('#md [data-slot=seek] [role=slider]:not([aria-disabled=true])')",
+            "a coarse pointer and the players",
+        )
+        .await
+        .unwrap();
+        // The points that missed their control, by name.
+        let missed: Vec<String> = page
+            .evaluate_bounded(
+                "(() => { const missed = [];
+                 const at = (x, y) => document.elementFromPoint(x, y);
+                 const outside = document.querySelector('#outside').getBoundingClientRect();
+                 if (!document.querySelector('#outside').contains(at(outside.left + outside.width / 2, outside.top + outside.height / 2)))
+                     missed.push('outside');
+                 for (const id of ['xs', 'md']) {
+                     const bar = document.querySelector(`#${id} [data-slot=controls]`);
+                     const play = bar.querySelector('button');
+                     const mute = bar.querySelector('[data-slot=volume] button');
+                     const pill = bar.querySelector('button[aria-label^=Playback]');
+                     const speed = pill.closest('[data-slot=speed]') ?? pill;
+                     const p = play.getBoundingClientRect(), m = mute.getBoundingClientRect(), s = pill.getBoundingClientRect();
+                     const py = p.top + p.height / 2, my = m.top + m.height / 2, mx = m.left + m.width / 2;
+                     for (const x of [p.left + 1, p.left + p.width / 2, p.right - 1])
+                         if (!play.contains(at(x, py))) missed.push(`${id} play at ${Math.round(x - p.left)}`);
+                     for (const x of [mx - 20, mx + 20])
+                         if (!mute.contains(at(x, my))) missed.push(`${id} mute at ${Math.round(x - mx)}`);
+                     if (s.height > m.height + 0.5) missed.push(`${id} speed ${s.height} tall`);
+                     if (!speed.contains(at(s.left + s.width / 2, s.top + s.height / 2 - 20))) missed.push(`${id} speed above`);
+                 }
+                 return missed; })()",
+            )
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        assert!(missed.is_empty(), "points off their control: {missed:?}");
         fixture.close().await.unwrap();
     });
 }

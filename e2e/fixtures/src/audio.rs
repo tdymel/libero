@@ -16,7 +16,21 @@ pub const ROUTES: Routes = &[
     ("/audio/late", || rsx! { LatePage {} }),
     // Todo 1509: a rising tone, whose decoded bars rise where the silent file's stay flat.
     ("/audio/rising", || rsx! { RisingPage {} }),
+    // Todos 4865-4867: xs and md players in a positioned box, plain text above them in it.
+    ("/audio/phone", || rsx! { PhonePage {} }),
 ];
+
+#[component]
+fn PhonePage() -> Element {
+    let src = use_hook(|| silent_wav(4));
+    rsx! {
+        div { style: "position: relative; padding: 8px",
+            p { id: "outside", "Outside" }
+            div { id: "xs", Audio { src: src.clone(), label: "Extra small", size: "xs" } }
+            div { id: "md", Audio { src, label: "Medium", size: "md" } }
+        }
+    }
+}
 
 #[component]
 fn RisingPage() -> Element {

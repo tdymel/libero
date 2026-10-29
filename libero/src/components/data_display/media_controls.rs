@@ -12,7 +12,7 @@ use crate::{
         buttons::{ActionIcon, Button, TooltipOpenDelay},
         common::{
             COARSE_POINTER, COARSE_TARGET, Glyph, HtmlTag, Input, Part, Parts, allowed_href,
-            coarse_hit_area_sx, has_shortcut_modifier, parts_enum,
+            has_shortcut_modifier, parts_enum,
         },
         form::{HoverPreview, Slider, SliderChangeEvent, SliderSegment, SliderTrack},
         layout::{paper_sx, use_box},
@@ -783,7 +783,6 @@ pub(super) fn MediaVolume(
                             step: 5.0,
                             size: size.clone(),
                             aria_label: labels.volume,
-                            sx: coarse_hit_area_sx("::before"),
                             oninput: move |event: SliderChangeEvent| sound.set_volume(event.value() / 100.0),
                         }
                     }
@@ -878,7 +877,6 @@ pub(super) fn MediaSeek(
             size,
             disabled: duration.is_none(),
             aria_label: labels.seek,
-            sx: coarse_hit_area_sx("::before"),
             format,
             track,
             segments,

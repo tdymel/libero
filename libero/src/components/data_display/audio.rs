@@ -3,16 +3,16 @@ use std::{cell::RefCell, rc::Rc};
 use dioxus::prelude::*;
 
 use super::media_controls::{
-    CONTROLS, MediaFallback, MediaSeek, MediaStatus, MediaVolume, SEEK, Sound, TIME, VolumePart,
-    block_tooltip_buttons_sx, clock, controls_sx, icon_size, notify, seek_sx, space_toggles, times,
-    use_late_tooltips, use_media_keys, use_media_start, use_sound,
+    CONTROLS, MediaFallback, MediaSeek, MediaStatus, MediaVolume, SEEK, SPEED, Sound, TIME,
+    VolumePart, block_tooltip_buttons_sx, clock, controls_sx, icon_size, notify, seek_sx,
+    space_toggles, times, use_late_tooltips, use_media_keys, use_media_start, use_sound,
 };
 use crate::{
     components::{
         buttons::{ActionIcon, Button},
         common::{
-            Glyph, HtmlTag, Input, Part, Parts, base_props, is_script_url, media_url, parts_enum,
-            use_name_warning,
+            COARSE_POINTER, Glyph, HtmlTag, Input, Part, Parts, base_props, coarse_hit_area_sx,
+            is_script_url, media_url, parts_enum, use_name_warning,
         },
         form::SliderTrack,
         layout::use_box,
@@ -22,7 +22,10 @@ use crate::{
     localization::fill,
     platform::waveform,
     sx::{FORCED_COLORS, StaticSx, Sx, sx},
-    theme::{BUTTON_FONT_SIZE, BUTTON_HEIGHT, ColorCss, ColorShade, ICON_SIZE, Size, SizeCss},
+    theme::{
+        ACTION_ICON_SIZE, BUTTON_FONT_SIZE, BUTTON_HEIGHT, ColorCss, ColorShade, ICON_SIZE,
+        SLIDER_THUMB, Size, SizeCss,
+    },
     utils::warn,
 };
 use pictogram_icons_lucide as lucide;
@@ -85,6 +88,17 @@ static AUDIO_SX: StaticSx = StaticSx::new(|| {
             AudioPart::Seek.selector(),
             seek_sx()
                 .flex_shrink("1")
+                // The thumb's 44px target at 0 stops at the wrapper's start, off Play (todo 4866).
+                .media(
+                    COARSE_POINTER,
+                    sx().selector(
+                        "& [data-slot='control']",
+                        sx().margin_inline_start(format!(
+                            "calc(22px - {} / 2)",
+                            SLIDER_THUMB.value()
+                        )),
+                    ),
+                )
                 // Half the bars where the track is short, or they run together.
                 .selector(
                     "& [data-slot='bars'] > span:nth-child(even)",
@@ -99,7 +113,23 @@ static AUDIO_SX: StaticSx = StaticSx::new(|| {
         )
         .selector(
             AudioPart::Volume.selector(),
-            sx().display("flex").align_items("center"),
+            sx().display("flex").align_items("center").media(
+                COARSE_POINTER,
+                // The chevron clears the speaker's 44px reach, which cut it to 34px (todo 4867).
+                sx().selector(
+                    "& > button",
+                    sx().margin_inline_start(format!(
+                        "max(0px, calc((44px - {}) / 2))",
+                        ACTION_ICON_SIZE.overridable()
+                    )),
+                ),
+            ),
+        )
+        .selector(
+            format!("& [data-slot='{SPEED}']"),
+            sx().display("flex")
+                .position("relative")
+                .and(coarse_hit_area_sx("::before")),
         )
         .and(block_tooltip_buttons_sx(AudioPart::Controls.selector()))
         // Smaller buttons, not hidden ones, so mute and volume stay (WCAG 1.4.10, todo 1393).
@@ -493,18 +523,27 @@ fn shown_time(paused: bool, elapsed: f64, duration: Option<f64>) -> String {
 fn AudioSpeed(media: MediaHandle, size: Input<Size>) -> Element {
     let labels = use_localization().media;
     let shown = times(media.rate(), use_formats().decimal_separator);
+    // A finger gets the icons' 44px pseudo target, on a wrapper: the Button's ripple clips its
+    // own. The press bubbles from the button, so the wrapper takes the click (todo 4867).
     rsx! {
-        Button {
-            aria_label: fill(labels.speed, &[("rate", &shown)]),
-            // "1×" stays "1×" in a right-to-left page, not "×1".
-            dir: "ltr",
-            variant: "tonal",
-            radius: "xl",
-            size,
-            // Narrow padding and a fixed width: "1.5×" must not shift the track.
-            sx: sx().padding_inline(SizeCss::SPACING.value(Size::Xs)).min_width("3.25em"),
+        div {
+            "data-slot": SPEED,
             onclick: move |_| media.set_rate(next_speed(media.rate())),
-            "{shown}"
+            Button {
+                aria_label: fill(labels.speed, &[("rate", &shown)]),
+                // "1×" stays "1×" in a right-to-left page, not "×1".
+                dir: "ltr",
+                variant: "tonal",
+                radius: "xl",
+                size,
+                // Narrow padding and a fixed width: "1.5×" must not shift the track. The row's
+                // height under a finger, as the icons beside it.
+                sx: sx().padding_inline(SizeCss::SPACING.value(Size::Xs))
+                    .min_width("3.25em")
+                    .position("relative")
+                    .media(COARSE_POINTER, sx().min_height("0")),
+                "{shown}"
+            }
         }
     }
 }
