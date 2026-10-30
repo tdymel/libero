@@ -872,6 +872,50 @@ impl Drop for WebEdgePan {
     }
 }
 
+pub(super) fn hold_sheet_pan(
+    id: u64,
+    report: Box<dyn Fn(crate::platform::scroll::SheetPan)>,
+) -> Option<Box<dyn ScrollSubscription>> {
+    let install = js_sys::Function::new_no_args(&format!(
+        "return {};",
+        crate::platform::scroll::SHEET_PAN_JS
+    ))
+    .call0(&JsValue::NULL)
+    .ok()?
+    .dyn_into::<js_sys::Function>()
+    .ok()?;
+    let closure = Closure::<dyn Fn(f64, f64, f64)>::new(move |kind, dx, dy| {
+        report(crate::platform::scroll::SheetPan::from_report(kind, dx, dy));
+    });
+    let remove = install
+        .call3(
+            &JsValue::NULL,
+            &JsValue::from_str(&id.to_string()),
+            &JsValue::from_f64(crate::platform::scroll::SHEET_PAN_SLOP),
+            closure.as_ref(),
+        )
+        .ok()?
+        .dyn_into::<js_sys::Function>()
+        .ok()?;
+    Some(Box::new(WebSheetPan {
+        remove,
+        _closure: closure,
+    }))
+}
+
+struct WebSheetPan {
+    remove: js_sys::Function,
+    _closure: Closure<dyn Fn(f64, f64, f64)>,
+}
+
+impl ScrollSubscription for WebSheetPan {}
+
+impl Drop for WebSheetPan {
+    fn drop(&mut self) {
+        let _ = self.remove.call0(&JsValue::NULL);
+    }
+}
+
 /// Attributes that make a node focusable or not, or reshape it through a
 /// class. Not `style`: a `Virtualize` rewrites the observed wrapper's on scroll.
 const CONTENT_ATTRIBUTES: [&str; 9] = [

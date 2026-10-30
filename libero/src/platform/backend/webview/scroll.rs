@@ -236,6 +236,37 @@ pub(crate) fn hold_edge_pan(
     }))
 }
 
+/// Injected, as [`hold_edge_pan`]: the script answers the `touchmove` synchronously.
+pub(crate) fn hold_sheet_pan(
+    id: u64,
+    report: Box<dyn Fn(crate::platform::scroll::SheetPan)>,
+) -> Option<Box<dyn ScrollSubscription>> {
+    if !runs_scripts() {
+        return None;
+    }
+    let slot = Slot::new();
+    let script = eval_with(
+        json!([id.to_string(), crate::platform::scroll::SHEET_PAN_SLOP]),
+        &format!(
+            "const remove = ({})(data[0], data[1], (kind, dx, dy) => dioxus.send([kind, dx, dy]));
+            {}
+            remove();",
+            crate::platform::scroll::SHEET_PAN_JS,
+            slot.park("")
+        ),
+    );
+    let task = spawn(async move {
+        let mut script = script;
+        while let Ok([kind, dx, dy]) = script.recv::<[f64; 3]>().await {
+            report(crate::platform::scroll::SheetPan::from_report(kind, dx, dy));
+        }
+    });
+    Some(Box::new(WebViewListener {
+        task,
+        _slot: Rc::new(slot),
+    }))
+}
+
 impl ScrollSubscription for WebViewListener {}
 
 #[cfg(test)]

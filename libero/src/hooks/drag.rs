@@ -240,6 +240,10 @@ impl Pending {
                 false => PendingStep::Wait,
             };
         }
+        // Mostly down past the slop: a scroll's or a sheet's swipe, as the web's cancel (4994).
+        if dy.abs() >= SIDEWAYS_SLOP && dy.abs() > dx.abs() {
+            return PendingStep::Drop;
+        }
         // Not yet sideways: wait, the browser cancels a swipe it scrolls.
         match dx.abs() < SIDEWAYS_SLOP || dx.abs() <= dy.abs() {
             true => PendingStep::Wait,
@@ -617,8 +621,17 @@ mod tests {
     fn a_sideways_touch_begins_only_moving_more_across_than_down() {
         let press = pending(true, None);
         assert_eq!(press.step(7.0, 0.0), PendingStep::Wait);
-        assert_eq!(press.step(10.0, 12.0), PendingStep::Wait);
+        assert_eq!(press.step(6.0, 7.0), PendingStep::Wait);
         assert_eq!(press.step(-10.0, 3.0), PendingStep::Begin);
+    }
+
+    #[test]
+    fn a_sideways_touch_drops_once_it_moved_its_slop_mostly_down() {
+        let press = pending(true, None);
+        assert_eq!(press.step(2.0, 7.0), PendingStep::Wait);
+        assert_eq!(press.step(10.0, 12.0), PendingStep::Drop);
+        assert_eq!(press.step(0.0, -9.0), PendingStep::Drop);
+        assert_eq!(press.step(12.0, 10.0), PendingStep::Begin);
     }
 
     #[test]

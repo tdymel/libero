@@ -90,7 +90,7 @@ pub(crate) use raster::svg_png;
 ))]
 pub(crate) use save_file::save_file;
 pub(super) use scroll::{
-    hold_edge_pan, on_element_scroll, on_viewport_resize, scroll, visible_band,
+    hold_edge_pan, hold_sheet_pan, on_element_scroll, on_viewport_resize, scroll, visible_band,
 };
 pub(crate) use selected::mounted_by_selector;
 pub(super) use selected::selected_natural_size;

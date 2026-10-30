@@ -1,11 +1,16 @@
+use std::cell::Cell;
+
+use dioxus::core::{Attribute, AttributeValue};
 use dioxus::prelude::*;
 
 use crate::{
     hooks::{
-        DragMove, DragOptions, DragPoint, ElementHandle, SwipeOptions, listener, use_drag_cancel,
-        use_scheduled,
+        DragPoint, ElementHandle, SwipeOptions, listener, use_scheduled, use_subscription_slot,
     },
-    platform::prefers_reduced_motion,
+    platform::{
+        self, ElementApi, SWIPE_CLOSE_ATTR, ScrollSubscription, SheetPan, hold_sheet_pan,
+        prefers_reduced_motion, swipe_press,
+    },
     sx::{Sx, Variables, sx},
     theme::CssVar,
 };
@@ -17,6 +22,8 @@ const SWIPE_EASE: CssVar = CssVar::new("--lsx-swipe-ease");
 pub(crate) const SWIPE_BEYOND: CssVar = CssVar::new("--lsx-swipe-beyond");
 /// How long a swiped box slides off or springs back, in ms.
 const SWIPE_SLIDE_MS: u64 = 200;
+/// Blitz starts a touch pan once the finger is more than 2px from the press.
+const PAN_SLOP: f64 = 2.0;
 
 /// The `transform` and `transition` that move a box by [`use_swipe_close`]'s variables.
 pub(crate) fn swipe_close_sx() -> Sx {
@@ -58,17 +65,87 @@ fn swiped_off(dx: f64, dy: f64) -> bool {
     dy >= SwipeOptions::default().distance && dy > dx.abs()
 }
 
+/// A press the pointer path follows: Blitz, which runs no script, or a pen on the strip.
+#[derive(Clone, Copy, Debug, PartialEq)]
+enum Press {
+    /// Not yet past the slop; `grip` when it pressed the strip.
+    Wait {
+        pointer_id: i32,
+        start: DragPoint,
+        grip: bool,
+    },
+    /// A scroller under it scrolls; it hands over back at the top, still moving down.
+    Scroll { pointer_id: i32, last_y: f64 },
+    /// The box follows from `base`.
+    Drag { pointer_id: i32, base: DragPoint },
+}
+
+impl Press {
+    fn pointer_id(self) -> i32 {
+        match self {
+            Press::Wait { pointer_id, .. }
+            | Press::Scroll { pointer_id, .. }
+            | Press::Drag { pointer_id, .. } => pointer_id,
+        }
+    }
+
+    /// The press after a move to `at`; `None` once sideways, a control's or a scroller's.
+    fn step(self, at: DragPoint, scrolled: impl Fn() -> bool) -> Option<Press> {
+        match self {
+            Press::Wait {
+                pointer_id,
+                start,
+                grip,
+            } => {
+                let (dx, dy) = (at.x - start.x, at.y - start.y);
+                if dx.abs().max(dy.abs()) <= PAN_SLOP {
+                    Some(self)
+                } else if dx.abs() >= dy.abs() {
+                    None
+                } else if dy > 0.0 && (grip || !scrolled()) {
+                    Some(Press::Drag {
+                        pointer_id,
+                        base: start,
+                    })
+                } else {
+                    Some(Press::Scroll {
+                        pointer_id,
+                        last_y: at.y,
+                    })
+                }
+            }
+            Press::Scroll { pointer_id, last_y } if at.y > last_y && !scrolled() => {
+                Some(Press::Drag {
+                    pointer_id,
+                    base: DragPoint { x: at.x, y: last_y },
+                })
+            }
+            Press::Scroll { pointer_id, .. } => Some(Press::Scroll {
+                pointer_id,
+                last_y: at.y,
+            }),
+            Press::Drag { .. } => Some(self),
+        }
+    }
+}
+
+thread_local! {
+    static NEXT_MARK: Cell<u64> = const { Cell::new(0) };
+}
+
 /// What [`use_swipe_close`] hands out: the strip's press handler, the swiped box's
-/// listeners, and the vars for its `style`.
+/// attributes, and the vars for its `style`.
 pub(crate) struct SwipeClose {
     pub(crate) onpointerdown: Callback<PointerEvent>,
     pub(crate) listeners: Vec<Attribute>,
     pub(crate) variables: Variables,
 }
 
-/// A touch drag down from a strip moves the `capture` box along; let go far enough, and
-/// `allow` (unset, always) lets it, it slides off and `onclose` runs, else it springs back
-/// (3957). Give the box [`swipe_close_sx`].
+/// A touch drag down anywhere on the `capture` box moves it along, as an Android bottom
+/// sheet (4994): from its strip always, from elsewhere unless an inner control owns the drag
+/// or a scroller there is scrolled down, which scrolls first and then hands over. Let go far
+/// enough, and `allow` (unset, always) lets it, it slides off and `onclose` runs, else it
+/// springs back (3957). Give the box [`swipe_close_sx`] and its strip `data-swipe-handle`.
 pub(crate) fn use_swipe_close(
     capture: ElementHandle,
     allow: Option<Callback<(), bool>>,
@@ -76,59 +153,159 @@ pub(crate) fn use_swipe_close(
 ) -> SwipeClose {
     let mut drag = use_signal(|| SwipeDrag::Rest);
     let mut last = use_hook(|| CopyValue::new(DragPoint { x: 0.0, y: 0.0 }));
+    let mark = use_hook(|| NEXT_MARK.replace(NEXT_MARK.get() + 1));
     // Blitz fires no `transitionend`: a timer closes once the slide is over.
     let slid = use_scheduled(move |_| {
         drag.set(SwipeDrag::Rest);
         onclose.call(());
     });
-    let drags = use_drag_cancel(
-        DragOptions {
-            capture,
-            onstart: use_callback(move |_| last.set(DragPoint { x: 0.0, y: 0.0 })),
-            onmove: use_callback(move |step: DragMove| {
-                let delta = step.delta();
-                last.set(delta);
-                let next = SwipeDrag::Follow(delta.y.max(0.0));
-                if *drag.peek() != next {
-                    drag.set(next);
-                }
-            }),
-            onend: use_callback(move |()| {
-                let delta = *last.peek();
-                if !swiped_off(delta.x, delta.y) || allow.is_some_and(|allow| !allow.call(())) {
-                    drag.set(SwipeDrag::Rest);
-                } else if prefers_reduced_motion() {
-                    drag.set(SwipeDrag::Rest);
-                    onclose.call(());
-                } else {
-                    drag.set(SwipeDrag::Off);
-                    slid.after(SWIPE_SLIDE_MS);
-                }
-            }),
-        },
-        use_callback(move |()| drag.set(SwipeDrag::Rest)),
-    );
-    let dragging = drags.dragging;
-    let listeners = vec![
-        listener("onpointermove", move |event: PointerEvent| {
-            // Blitz pans the scrolling box unless the move is prevented.
-            if *dragging.peek() {
-                event.prevent_default();
+    let follow = use_callback(move |delta: DragPoint| {
+        last.set(delta);
+        let next = SwipeDrag::Follow(delta.y.max(0.0));
+        if *drag.peek() != next {
+            drag.set(next);
+        }
+    });
+    let rest = use_callback(move |()| {
+        if *drag.peek() != SwipeDrag::Rest {
+            drag.set(SwipeDrag::Rest);
+        }
+    });
+    let finish = use_callback(move |()| {
+        let delta = *last.peek();
+        if !swiped_off(delta.x, delta.y) || allow.is_some_and(|allow| !allow.call(())) {
+            drag.set(SwipeDrag::Rest);
+        } else if prefers_reduced_motion() {
+            drag.set(SwipeDrag::Rest);
+            onclose.call(());
+        } else {
+            drag.set(SwipeDrag::Off);
+            slid.after(SWIPE_SLIDE_MS);
+        }
+    });
+
+    // The web and a WebView: a script holds the touch, so a scroller can hand it over.
+    let holding = use_subscription_slot::<dyn ScrollSubscription>();
+    let mounted = capture.is_mounted();
+    use_effect(use_reactive!(|mounted| {
+        if !mounted {
+            holding.clear();
+        } else if !holding.is_some() {
+            holding.set(hold_sheet_pan(
+                mark,
+                Box::new(move |pan| match pan {
+                    SheetPan::Move { dx, dy } => follow.call(DragPoint { x: dx, y: dy }),
+                    SheetPan::End => finish.call(()),
+                    SheetPan::Cancel => rest.call(()),
+                }),
+            ));
+        }
+    }));
+
+    // Blitz, and a pen on the strip elsewhere: the box's pointer listeners.
+    let mut press = use_hook(|| CopyValue::new(None::<Press>));
+    let mut gripped = use_hook(|| CopyValue::new(None::<i32>));
+    let release = use_callback(move |(event, ended): (PointerEvent, bool)| {
+        let Some(current) = *press.peek() else {
+            return;
+        };
+        if current.pointer_id() != event.pointer_id() {
+            return;
+        }
+        press.set(None);
+        if let Press::Drag { .. } = current {
+            if ended {
+                finish.call(());
+            } else {
+                rest.call(());
             }
-            drags.onpointermove.call(event);
+        }
+    });
+    let up = use_callback(move |event: PointerEvent| release.call((event, true)));
+    // The moves Blitz reports from outside the box.
+    let track = use_callback(move |event: PointerEvent| {
+        if let Some(Press::Drag { pointer_id, base }) = *press.peek()
+            && pointer_id == event.pointer_id()
+        {
+            let at = event.client_coordinates();
+            follow.call(DragPoint {
+                x: at.x - base.x,
+                y: at.y - base.y,
+            });
+        }
+    });
+    let onmove = use_callback(move |event: PointerEvent| {
+        let Some(current) = *press.peek() else {
+            return;
+        };
+        if current.pointer_id() != event.pointer_id() {
+            return;
+        }
+        let at = event.client_coordinates();
+        let at = DragPoint { x: at.x, y: at.y };
+        let next = current.step(at, || {
+            swipe_press(&event, mark).is_some_and(|hit| hit.scrolled)
+        });
+        if next != Some(current) {
+            press.set(next);
+        }
+        let Some(Press::Drag { base, .. }) = next else {
+            return;
+        };
+        // Blitz pans the scrolling box unless the move is prevented.
+        event.prevent_default();
+        if !matches!(current, Press::Drag { .. })
+            && capture.set_pointer_capture(event.pointer_id()).is_err()
+            && let Some(within) = capture.mounted()
+        {
+            platform::follow_pointer(&event, &within, track, up);
+        }
+        follow.call(DragPoint {
+            x: at.x - base.x,
+            y: at.y - base.y,
+        });
+    });
+    let listeners = vec![
+        Attribute::new(
+            SWIPE_CLOSE_ATTR,
+            AttributeValue::Text(mark.to_string()),
+            None,
+            false,
+        ),
+        listener("onpointerdown", move |event: PointerEvent| {
+            let grip = gripped.replace(None) == Some(event.pointer_id());
+            // Touch and pen only: a mouse has Escape and the box's own close (WCAG 2.5.1).
+            if !event.is_primary() || event.pointer_type() == "mouse" {
+                return;
+            }
+            let takes = match swipe_press(&event, mark) {
+                Some(hit) => hit.shown && !hit.refused,
+                None => grip && event.pointer_type() == "pen",
+            };
+            if takes {
+                let at = event.client_coordinates();
+                press.set(Some(Press::Wait {
+                    pointer_id: event.pointer_id(),
+                    start: DragPoint { x: at.x, y: at.y },
+                    grip,
+                }));
+            }
         }),
-        listener("onpointerup", move |event: PointerEvent| {
-            drags.onpointerup.call(event)
+        listener("onpointermove", move |event: PointerEvent| {
+            onmove.call(event)
         }),
+        listener("onpointerup", move |event: PointerEvent| up.call(event)),
         listener("onpointercancel", move |event: PointerEvent| {
-            drags.onpointercancel.call(event)
+            release.call((event, false))
         }),
     ];
-    // Touch and pen only: a mouse has Escape and the box's own close (WCAG 2.5.1).
+    // Fires before the box's own, which it bubbles to. A press on the strip moves no focus:
+    // a blur would close a field's sheet.
     let onpointerdown = use_callback(move |event: PointerEvent| {
         if event.is_primary() && event.pointer_type() != "mouse" {
-            drags.onpointerdown.call(event);
+            event.prevent_default();
         }
+        gripped.set(Some(event.pointer_id()));
     });
     SwipeClose {
         onpointerdown,
@@ -162,5 +339,71 @@ mod tests {
         );
         assert!(style(SwipeDrag::Off, false).contains("calc(100% + "));
         assert!(style(SwipeDrag::Off, true).ends_with("--lsx-swipe-ease:0ms;"));
+    }
+
+    const START: DragPoint = DragPoint { x: 100.0, y: 100.0 };
+
+    fn wait(grip: bool) -> Press {
+        Press::Wait {
+            pointer_id: 1,
+            start: START,
+            grip,
+        }
+    }
+
+    fn at(x: f64, y: f64) -> DragPoint {
+        DragPoint { x, y }
+    }
+
+    #[test]
+    fn a_press_at_the_top_drags_once_it_goes_down() {
+        assert_eq!(
+            wait(false).step(at(101.0, 102.0), || false),
+            Some(wait(false))
+        );
+        assert_eq!(
+            wait(false).step(at(101.0, 106.0), || false),
+            Some(Press::Drag {
+                pointer_id: 1,
+                base: START
+            })
+        );
+        // Sideways is a horizontal scroller's or a slider's.
+        assert_eq!(wait(false).step(at(108.0, 104.0), || false), None);
+    }
+
+    #[test]
+    fn a_scrolled_body_scrolls_first_and_hands_over_at_its_top() {
+        let scrolling = wait(false).step(at(100.0, 106.0), || true);
+        assert_eq!(
+            scrolling,
+            Some(Press::Scroll {
+                pointer_id: 1,
+                last_y: 106.0
+            })
+        );
+        let still = scrolling.and_then(|press| press.step(at(100.0, 120.0), || true));
+        assert_eq!(
+            still,
+            Some(Press::Scroll {
+                pointer_id: 1,
+                last_y: 120.0
+            })
+        );
+        assert_eq!(
+            still.and_then(|press| press.step(at(100.0, 130.0), || false)),
+            Some(Press::Drag {
+                pointer_id: 1,
+                base: at(100.0, 120.0)
+            })
+        );
+    }
+
+    #[test]
+    fn the_strip_drags_even_over_a_scrolled_body() {
+        assert!(matches!(
+            wait(true).step(at(100.0, 106.0), || true),
+            Some(Press::Drag { .. })
+        ));
     }
 }

@@ -147,23 +147,19 @@ e2e::scenario!(
     ios: skip("upstream: WebKit does not focus a clicked button")
 );
 
-/// Todo 3590: a touch swipe down on the content or up on the strip leaves the bottom
-/// drawer open; down from the strip in its top padding closes it as `Dismiss::Swipe`.
+/// Todos 3590, 4994: a touch swipe up on the strip leaves the bottom drawer open; down
+/// anywhere on it, its content too, closes it as `Dismiss::Swipe`.
 async fn a_swipe_down_closes<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
     modal::open(d, TRIGGER).await?;
-    let body = d.rect("#drawer-body").await?;
-    d.swipe_from(body.x + 8.0, body.y + body.height / 2.0, 0.0, 80.0)
-        .await?;
     let strip = d.rect("[data-slot=handle]").await?;
     ensure!(strip.height >= 8.0, "the strip is {}px tall", strip.height);
     let (x, y) = (strip.x + strip.width / 2.0, strip.y + strip.height / 2.0);
     d.swipe_from(x, y, 0.0, -80.0).await?;
     d.flush().await?;
-    ensure!(
-        d.exists(DIALOG).await?,
-        "a swipe off the strip or upward closed the drawer"
-    );
-    d.swipe_from(x, y, 0.0, 80.0).await?;
+    ensure!(d.exists(DIALOG).await?, "a swipe up closed the drawer");
+    let body = d.rect("#drawer-body").await?;
+    d.swipe_from(body.x + 8.0, body.y + body.height / 2.0, 0.0, 80.0)
+        .await?;
     eventually(d, "the swipe to close the drawer", async |d| {
         Ok(!d.exists(DIALOG).await? && d.text("#reasons").await? == "Swipe")
     })

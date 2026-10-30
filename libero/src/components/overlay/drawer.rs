@@ -170,7 +170,7 @@ pub(crate) fn Drawer(props: DrawerProps) -> Element {
     let class = props.class.clone().unwrap_or_default().with(drawer_class);
     let (placement, float_sx) = drawer_float_placement(anchor);
     let modal = try_use_context::<ModalContext>();
-    // The panel follows the finger from the strip and slides off, as the phone sheet's.
+    // The panel follows a swipe down anywhere on it and slides off, as the phone sheet's (4994).
     let panel = use_element();
     let SwipeClose {
         onpointerdown,
@@ -217,6 +217,7 @@ pub(crate) fn Drawer(props: DrawerProps) -> Element {
                     div {
                         class: strip_class,
                         "data-slot": "handle",
+                        "data-swipe-handle": "true",
                         aria_hidden: "true",
                         onpointerdown: move |event| onpointerdown.call(event),
                         if props.handle {

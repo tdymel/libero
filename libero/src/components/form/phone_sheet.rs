@@ -40,7 +40,7 @@ pub(crate) fn phone_sheet_sx() -> Sx {
             .padding_bottom("calc(4px + env(safe-area-inset-bottom, 0px))")
             // A swipe in the sheet must not scroll the page behind it (4610).
             .with("overscroll-behavior", "contain")
-            // Follows a swipe down from the strip, slides off past the keyboard's foot or springs back (3957).
+            // Follows a swipe down on the sheet, slides off past the keyboard's foot or springs back (3957).
             .and(swipe_close_sx())
             .var(SWIPE_BEYOND, SHEET_FOOT.value_or("0px"))
             // Tracks the visible viewport as a phone's URL bar slides in and out.
@@ -97,7 +97,7 @@ pub(crate) struct SheetSwipe {
     pub(crate) style: String,
 }
 
-/// A touch swipe down from the sheet's top closes it, as a bottom `Drawer`'s (Maintainer 2026-10-22).
+/// A touch swipe down anywhere on the sheet closes it, as a bottom `Drawer`'s (4994).
 pub(crate) fn use_sheet_swipe(capture: ElementHandle, onclose: Callback<()>) -> SheetSwipe {
     let SwipeClose {
         onpointerdown,
@@ -107,6 +107,7 @@ pub(crate) fn use_sheet_swipe(capture: ElementHandle, onclose: Callback<()>) -> 
     let strip = rsx! {
         div {
             "data-slot": "sheet-handle",
+            "data-swipe-handle": "true",
             aria_hidden: "true",
             onpointerdown: move |event| onpointerdown.call(event),
         }

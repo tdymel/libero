@@ -175,7 +175,7 @@ pub fn DrawerPage() -> Element {
                     prop("title", "Option<String>").doc("A visible heading at the top of the panel that names it."),
                     prop("sx", "Input<Sx>").doc("Styles the panel. The content is yours to style; a bottom drawer's swipe strip is `& > [data-slot='handle']`."),
                     prop("ondismiss", "Option<Callback<Dismiss, bool>>").doc("Whether Escape, the backdrop, Back, a swipe or the header close button may close it; `false` keeps it open, e.g. over an unsaved draft. Unset, all close."),
-                    prop("handle", "bool").default("false").doc("Docked bottom, a touch swipe down from the panel's top padding closes it; `true` draws a grab bar there. Other anchors ignore it. Let go far enough and, once `ondismiss` allows `Dismiss::Swipe`, it slides off and closes; a short swipe springs back. Under reduced motion it closes at once."),
+                    prop("handle", "bool").default("false").doc("Docked bottom, a touch swipe down on the panel closes it; `true` draws a grab bar in its top padding. Other anchors ignore it. Let go far enough and, once `ondismiss` allows `Dismiss::Swipe`, it slides off and closes; a short swipe springs back. Under reduced motion it closes at once."),
                     prop("close_button", "bool").default("false").doc("Draws a close button in the header, beside `title`. As a `Dialog`'s, it asks `ondismiss` with `Dismiss::CloseButton`."),
                 ]).without_base_props(),
             ],
@@ -187,7 +187,7 @@ pub fn DrawerPage() -> Element {
                     "A dismissal settles the `Opening` with `None`, so a result handler runs with `None`: match `Some(answer)` to act on an answer only.",
                     "A `title` is a heading that names the panel; without it or `aria_label` the panel warns in a debug build.",
                     "Android's Back button closes the drawer, as Escape does, rather than the app.",
-                    "Docked bottom, a touch swipe down from the panel's top edge closes it. It is an extra route: Escape, Back, the backdrop and the content's own close button still work.",
+                    "Docked bottom, a touch swipe down anywhere on the panel closes it, as an Android bottom sheet: content scrolled down scrolls back first, and a control that drags itself, such as a slider or a text field, keeps its gesture. It is an extra route: Escape, Back, the backdrop and the content's own close button still work.",
                 ])
                 .must([
                     "Set `DrawerOptions::title` or `aria_label`, since the panel is a dialog with no name of its own.",
@@ -221,7 +221,7 @@ pub fn DrawerPage() -> Element {
                     Control::slider("size", ["xs", "sm", "md", "lg", "xl", "xxl", "24rem"]).default(theme.drawer.size.as_str()),
                     // On by default, so the header button shows on the first open; printed while on.
                     Control::switch("close_button").default("true").code(|_, _| vec![]),
-                    // Drawn only docked bottom, where a touch swipe down from it closes the panel.
+                    // Drawn only docked bottom, where a touch swipe down closes the panel.
                     Control::switch("handle").hidden_when(|values| values.str("anchor") != "bottom"),
                     // A short vertical Tabs strip that scrolls its last tab into view on open.
                     Control::switch("tabs").default("true").code(|_, _| vec![]),

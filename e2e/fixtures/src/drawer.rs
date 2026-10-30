@@ -90,7 +90,7 @@ fn BottomSwipeDrawerPage() -> Element {
         },
         |s: ModalScope<()>| {
             rsx! {
-                div { id: "drawer-body", "Swipe the bar down to close." }
+                div { id: "drawer-body", "Swipe down to close." }
                 Button { id: "drawer-close", onclick: move |_| s.close(), "Done" }
             }
         },

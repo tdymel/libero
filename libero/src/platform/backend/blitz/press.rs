@@ -8,7 +8,7 @@ use super::FreeDoc;
 use super::{
     INTERACTIVE, activate, ancestors, anchor, doc, refused, removed, resolved_style_value,
 };
-use crate::platform::scroll::EDGE_SWIPE_MARK;
+use crate::platform::scroll::{EDGE_SWIPE_MARK, SWIPE_CLOSE_ATTR, SWIPE_HANDLE_ATTR, SwipePress};
 
 thread_local! {
     /// A press whose focus move Blitz has not made yet: the focus owner at the
@@ -107,6 +107,73 @@ pub(in crate::platform::backend) fn refuses_edge_swipe(event: &Event<PointerData
         .filter(|&id| doc.get_node(id).is_some_and(|node| node.is_element()))
         .take_while(|&id| resolved_style_value(&doc, id, EDGE_SWIPE_MARK).trim() == "1")
         .any(|id| resolved_style_value(&doc, id, "touch-action") == "none")
+}
+
+/// The script's walk (`SHEET_PAN_JS`): from the hit up to the box marked `id`.
+pub(in crate::platform::backend) fn swipe_press(event: &Event<PointerData>, id: u64) -> SwipePress {
+    let point = event.page_coordinates();
+    let read = || -> Option<SwipePress> {
+        let anchor = anchor()?;
+        let doc = anchor.free_doc()?;
+        let hit = doc.hit(point.x as f32, point.y as f32)?;
+        let attr = |node_id: NodeId, name: &str| {
+            doc.get_node(node_id)?
+                .element_data()?
+                .attrs
+                .iter()
+                .find(|attr| *attr.name.local == *name)
+                .map(|attr| attr.value.clone())
+        };
+        let id = id.to_string();
+        let path: Vec<NodeId> = ancestors(&doc, hit.node_id)
+            .filter(|&node_id| doc.get_node(node_id).is_some_and(|node| node.is_element()))
+            .collect();
+        let at = path
+            .iter()
+            .position(|&node_id| attr(node_id, SWIPE_CLOSE_ATTR).as_deref() == Some(&id))?;
+        let selector = format!("[{SWIPE_HANDLE_ATTR}]");
+        let shown = doc
+            .query_selector_all_in(path[at], &selector)
+            .ok()?
+            .first()
+            .is_some_and(|&strip| resolved_style_value(&doc, strip, "display") != "none");
+        let inner = &path[..at];
+        let grip = inner
+            .iter()
+            .any(|&node_id| attr(node_id, SWIPE_HANDLE_ATTR).is_some());
+        let refused = !grip
+            && inner.iter().any(|&node_id| {
+                let name = doc
+                    .get_node(node_id)
+                    .and_then(|node| node.element_data())
+                    .map(|element| element.name.local.to_string())
+                    .unwrap_or_default();
+                matches!(name.as_str(), "input" | "textarea" | "select")
+                    || attr(node_id, "contenteditable")
+                        .is_some_and(|value| !value.eq_ignore_ascii_case("false"))
+                    || {
+                        let action = resolved_style_value(&doc, node_id, "touch-action");
+                        !matches!(action.as_str(), "auto" | "manipulation")
+                            && !action.split(' ').any(|part| part == "pan-y")
+                    }
+            });
+        let scrolled = !grip
+            && path[..=at].iter().any(|&node_id| {
+                doc.get_node(node_id).is_some_and(|node| {
+                    node.scroll_offset().y > 0.5
+                        && matches!(
+                            resolved_style_value(&doc, node_id, "overflow-y").as_str(),
+                            "auto" | "scroll"
+                        )
+                })
+            });
+        Some(SwipePress {
+            shown,
+            refused,
+            scrolled,
+        })
+    };
+    read().unwrap_or_default()
 }
 
 pub(super) fn forget_press() {

@@ -683,6 +683,36 @@ pub(crate) fn hold_edge_pan(
     return webview::hold_edge_pan(band, swiped, refused);
 }
 
+/// See [`hold_sheet_pan`](crate::platform::scroll::hold_sheet_pan).
+pub(crate) fn hold_sheet_pan(
+    id: u64,
+    report: Box<dyn Fn(crate::platform::scroll::SheetPan)>,
+) -> Option<Box<dyn ScrollSubscription>> {
+    #[cfg(target_arch = "wasm32")]
+    return web::hold_sheet_pan(id, report);
+    #[cfg(all(not(target_arch = "wasm32"), feature = "native"))]
+    return {
+        let _ = (id, report);
+        None
+    };
+    #[cfg(all(not(target_arch = "wasm32"), not(feature = "native")))]
+    return webview::hold_sheet_pan(id, report);
+}
+
+/// See [`swipe_press`](crate::platform::scroll::swipe_press).
+pub(crate) fn swipe_press(
+    press: &dioxus::prelude::PointerEvent,
+    id: u64,
+) -> Option<crate::platform::scroll::SwipePress> {
+    #[cfg(all(not(target_arch = "wasm32"), feature = "native"))]
+    return Some(blitz::swipe_press(press, id));
+    #[cfg(not(all(not(target_arch = "wasm32"), feature = "native")))]
+    return {
+        let _ = (press, id);
+        None
+    };
+}
+
 /// See [`refuses_edge_swipe`](crate::platform::scroll::refuses_edge_swipe).
 pub(crate) fn refuses_edge_swipe(press: &dioxus::prelude::PointerEvent) -> bool {
     #[cfg(all(not(target_arch = "wasm32"), feature = "native"))]

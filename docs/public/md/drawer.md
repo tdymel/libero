@@ -101,7 +101,7 @@ behave the same. See [Modal](modal.md).
 | `title` | `Option<String>` | - | A visible heading at the top of the panel that names it. |
 | `sx` | `Input<Sx>` | - | Styles the panel. The content is yours to style; a bottom drawer's swipe strip is `& > [data-slot='handle']`. |
 | `ondismiss` | `Option<Callback<Dismiss, bool>>` | - | Whether Escape, the backdrop, Back, a swipe or the header close button may close it; `false` keeps it open, e.g. over an unsaved draft. Unset, all close. |
-| `handle` | `bool` | `false` | Docked bottom, a touch swipe down from the panel's top padding closes it; `true` draws a grab bar there. Other anchors ignore it. Let go far enough and, once `ondismiss` allows `Dismiss::Swipe`, it slides off and closes; a short swipe springs back. Under reduced motion it closes at once. |
+| `handle` | `bool` | `false` | Docked bottom, a touch swipe down on the panel closes it; `true` draws a grab bar in its top padding. Other anchors ignore it. Let go far enough and, once `ondismiss` allows `Dismiss::Swipe`, it slides off and closes; a short swipe springs back. Under reduced motion it closes at once. |
 | `close_button` | `bool` | `false` | Draws a close button in the header, beside `title`. As a `Dialog`'s, it asks `ondismiss` with `Dismiss::CloseButton`. |
 
 ## Accessibility
@@ -122,7 +122,9 @@ behave the same. See [Modal](modal.md).
 - A `title` is a heading that names the panel; without it or `aria_label` the
   panel warns in a debug build.
 - Android's Back button closes the drawer, as Escape does, rather than the app.
-- Docked bottom, a touch swipe down from the panel's top edge closes it. It is
+- Docked bottom, a touch swipe down anywhere on the panel closes it, as an
+  Android bottom sheet: content scrolled down scrolls back first, and a control
+  that drags itself, such as a slider or a text field, keeps its gesture. It is
   an extra route: Escape, Back, the backdrop and the content's own close button
   still work.
 

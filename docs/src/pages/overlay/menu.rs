@@ -167,7 +167,7 @@ pub fn MenuPage() -> Element {
                 .handles([
                     "Typing jumps to an item, \"s\" to the next one starting with S and \"sav\" to Save. A pause of half a second starts over.",
                     "`menu.a11y_attributes()` wires your trigger. `menu.a11y_attributes_on(attributes)` wires a trigger that already has an `id`, such as a `FileField` trigger's: the menu keeps that id and takes the trigger's name.",
-                    "Below the `sm` breakpoint the menu opens as a sheet at the foot of the screen, with the same items. A swipe down from its top, a press outside, Escape and Back close it. A submenu opens as a second sheet over it and closes alone.",
+                    "Below the `sm` breakpoint the menu opens as a sheet at the foot of the screen, with the same items. A swipe down on it, a press outside, Escape and Back close it. A submenu opens as a second sheet over it and closes alone.",
                     "Android's Back button closes the menu as Escape does, rather than the app.",
                     "A tap or a pen opens the menu on the menu itself, with no item highlighted. Down or Up then moves to the first or last item.",
                 ])

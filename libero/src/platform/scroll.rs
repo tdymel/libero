@@ -360,3 +360,159 @@ pub(crate) fn refuses_edge_swipe(press: &dioxus::prelude::PointerEvent) -> bool 
 pub(crate) fn holds_edge_pan_by_pointer() -> bool {
     NATIVE
 }
+
+/// The attribute a swiped-closed box carries, valued with its [`hold_sheet_pan`] id.
+pub(crate) const SWIPE_CLOSE_ATTR: &str = "data-swipe-close";
+/// The attribute of a swiped box's strip: a swipe from it is always the box's, and the
+/// box swipes only while its strip is drawn. The script names it literally.
+#[cfg_attr(
+    not(all(not(target_arch = "wasm32"), feature = "native")),
+    allow(dead_code)
+)]
+pub(crate) const SWIPE_HANDLE_ATTR: &str = "data-swipe-handle";
+
+/// How far, in CSS px, a touch moves before [`hold_sheet_pan`] decides whose it is.
+#[cfg_attr(all(not(target_arch = "wasm32"), feature = "native"), allow(dead_code))]
+pub(crate) const SHEET_PAN_SLOP: f64 = 4.0;
+
+/// A touch [`hold_sheet_pan`] took for its box: moved `dx`, `dy` from where it took it, then let go.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub(crate) enum SheetPan {
+    Move { dx: f64, dy: f64 },
+    End,
+    Cancel,
+}
+
+impl SheetPan {
+    /// From the script's `[kind, dx, dy]`.
+    #[cfg_attr(all(not(target_arch = "wasm32"), feature = "native"), allow(dead_code))]
+    pub(crate) fn from_report(kind: f64, dx: f64, dy: f64) -> Self {
+        match kind as i32 {
+            0 => SheetPan::Move { dx, dy },
+            1 => SheetPan::End,
+            _ => SheetPan::Cancel,
+        }
+    }
+}
+
+/// `(id, slop, report) => remove`: a touch in the box marked `id` going down first is the
+/// box's, unless it presses an inner control owning a vertical drag (an input, a `touch-action`
+/// without `pan-y`) or a scroller on its way is scrolled down. That one scrolls, and hands
+/// over once it is back at the top and still moving down (Android's nested scroll, 4994).
+/// Taking the touch cancels the pointer at the press, as the browser's own pan would.
+/// Reports `[0, dx, dy]` per held move, `[1]` on the lift, `[2]` on a cancel.
+#[cfg_attr(all(not(target_arch = "wasm32"), feature = "native"), allow(dead_code))]
+pub(crate) const SHEET_PAN_JS: &str = "(id, slop, report) => {
+    let press = null;
+    let pointer = null;
+    const owner = (target) => target instanceof Element ? target.closest('[data-swipe-close]') : null;
+    const shown = (box) => {
+        const strip = box.querySelector('[data-swipe-handle]');
+        return !!strip && strip.closest('[data-swipe-close]') === box && strip.getClientRects().length > 0;
+    };
+    const refuses = (target, box) => {
+        for (let el = target; el && el !== box; el = el.parentElement) {
+            if (el.matches('input, textarea, select, [contenteditable]:not([contenteditable=\"false\"])')) return true;
+            const action = getComputedStyle(el).touchAction;
+            if (action !== 'auto' && action !== 'manipulation' && !action.split(' ').includes('pan-y')) return true;
+        }
+        return false;
+    };
+    const scrolled = (target, box) => {
+        for (let el = target; el; el = el.parentElement) {
+            if (el.scrollTop > 0.5 && el.scrollHeight > el.clientHeight && /auto|scroll/.test(getComputedStyle(el).overflowY)) return true;
+            if (el === box) return false;
+        }
+        return false;
+    };
+    const drop = () => {
+        if (press?.state === 'drag') report(2, 0, 0);
+        press = null;
+    };
+    const down = (event) => {
+        drop();
+        const box = owner(event.target);
+        if (event.touches.length !== 1 || !box || box.getAttribute('data-swipe-close') !== id || !shown(box)) return;
+        const strip = event.target.closest('[data-swipe-handle]');
+        const grip = !!strip && strip.closest('[data-swipe-close]') === box;
+        const selecting = !(getSelection()?.isCollapsed ?? true);
+        if (!grip && (selecting || refuses(event.target, box))) return;
+        const touch = event.touches[0];
+        press = { target: event.target, box, grip, pointer, x: touch.clientX, y: touch.clientY, last: touch.clientY, state: 'wait' };
+    };
+    const pressed = (event) => {
+        if (event.pointerType === 'touch' && event.isPrimary) pointer = event.pointerId;
+    };
+    // An inner control's pending press (a sideways slider, a month swipe) drops, as on a pan.
+    const take = () => {
+        press.state = 'drag';
+        if (press.pointer === null) return;
+        press.target.dispatchEvent(new PointerEvent('pointercancel', { pointerId: press.pointer, pointerType: 'touch', isPrimary: true, bubbles: true }));
+    };
+    const move = (event) => {
+        if (!press) return;
+        if (event.touches.length !== 1) return drop();
+        const touch = event.touches[0];
+        if (press.state === 'wait') {
+            const dx = touch.clientX - press.x;
+            const dy = touch.clientY - press.y;
+            if (Math.max(Math.abs(dx), Math.abs(dy)) < slop) return;
+            // Sideways is a horizontal scroller's or a control's.
+            if (Math.abs(dx) >= Math.abs(dy)) return drop();
+            if (dy > 0 && (press.grip || !scrolled(press.target, press.box))) take();
+            else press.state = 'scroll';
+        } else if (press.state === 'scroll' && touch.clientY > press.last && !scrolled(press.target, press.box)) {
+            take();
+            press.x = touch.clientX;
+            press.y = press.last;
+        }
+        press.last = touch.clientY;
+        if (press.state !== 'drag') return;
+        if (event.cancelable) event.preventDefault();
+        report(0, touch.clientX - press.x, touch.clientY - press.y);
+    };
+    const end = (event) => {
+        if (press?.state === 'drag') report(event.type === 'touchend' ? 1 : 2, 0, 0);
+        press = null;
+    };
+    const passive = { capture: true, passive: true };
+    const capture = { capture: true };
+    addEventListener('pointerdown', pressed, passive);
+    addEventListener('touchstart', down, passive);
+    addEventListener('touchmove', move, { capture: true, passive: false });
+    addEventListener('touchend', end, passive);
+    addEventListener('touchcancel', end, passive);
+    return () => {
+        drop();
+        removeEventListener('pointerdown', pressed, capture);
+        removeEventListener('touchstart', down, capture);
+        removeEventListener('touchmove', move, capture);
+        removeEventListener('touchend', end, capture);
+        removeEventListener('touchcancel', end, capture);
+    };
+}";
+
+/// Holds a touch pan of the box marked `id` (see [`SHEET_PAN_JS`]) until the subscription
+/// drops, reporting it to `report`. `None` on Blitz, which runs no script: see [`swipe_press`].
+pub(crate) fn hold_sheet_pan(
+    id: u64,
+    report: Box<dyn Fn(SheetPan)>,
+) -> Option<Box<dyn ScrollSubscription>> {
+    backend::hold_sheet_pan(id, report)
+}
+
+/// What a press on a swiped box lands on, read at once: Blitz only, elsewhere the script decides.
+#[derive(Clone, Copy, Debug, Default, PartialEq)]
+pub(crate) struct SwipePress {
+    /// The box's strip is drawn: it swipes at all.
+    pub(crate) shown: bool,
+    /// An inner control owning a drag keeps it.
+    pub(crate) refused: bool,
+    /// A scroller between the press and the box is scrolled down.
+    pub(crate) scrolled: bool,
+}
+
+/// [`SwipePress`] for a press at `event`'s point in the box marked `id`; `None` off Blitz.
+pub(crate) fn swipe_press(event: &dioxus::prelude::PointerEvent, id: u64) -> Option<SwipePress> {
+    backend::swipe_press(event, id)
+}

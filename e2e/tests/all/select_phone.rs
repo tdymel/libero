@@ -350,6 +350,208 @@ fn a_swipe_down_on_the_grabber_closes_the_sheet() {
     });
 }
 
+/// Todo 4994: a swipe down from a row closes the sheet, as Android's bottom sheet, and picks nothing.
+#[test]
+fn a_swipe_down_on_the_rows_closes_the_sheet() {
+    const TRIGGER: &str = "#plain [role=combobox]";
+    block_on(async {
+        let fixture = phone("/select-phone").await;
+        let page = &fixture.page;
+        tap(page, TRIGGER).await.unwrap();
+        sheet_shown(page).await.unwrap();
+        let from = pointer::centre_of(page, &format!("{SHEET} [role=option]"))
+            .await
+            .unwrap();
+        let to = pointer::Point {
+            x: from.x,
+            y: from.y + 150.0,
+        };
+        pointer::swipe(page, from, to, 8).await.unwrap();
+        closed(page, TRIGGER).await.unwrap();
+        wait::for_js_true(
+            page,
+            "document.querySelector('#echo').textContent.startsWith('None ')",
+            "no pick",
+        )
+        .await
+        .unwrap();
+        fixture
+            .console
+            .assert_clean("a sheet swiped by a row")
+            .unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
+/// The sheet's vertical scroller, the sheet itself or a list in it.
+const SCROLLER: &str = "[...document.querySelectorAll('[data-slot=dropdown], [data-slot=dropdown] *')]\
+     .find(e => e.scrollHeight > e.clientHeight + 10 && /auto|scroll/.test(getComputedStyle(e).overflowY))";
+
+/// Scrolls the sheet's list to `top` and answers the middle of its box.
+async fn scroll_list_to(page: &Page, top: f64) -> Result<pointer::Point> {
+    let js = format!(
+        "(() => {{ const s = {SCROLLER}; if (!s) return false; s.scrollTop = {top}; \
+         return Math.abs(s.scrollTop - {top}) < 1; }})()"
+    );
+    wait::for_js_true(page, &js, "the list scrolled").await?;
+    let rect: Vec<f64> = page
+        .evaluate(format!(
+            "(() => {{ const r = {SCROLLER}.getBoundingClientRect(); \
+             return [r.x + r.width / 2, r.y + r.height / 2]; }})()"
+        ))
+        .await?
+        .into_value()?;
+    Ok(pointer::Point {
+        x: rect[0],
+        y: rect[1],
+    })
+}
+
+/// Todo 4994: a swipe down on a scrolled list scrolls it back first and leaves the sheet; from
+/// near the top the same swipe reaches the top and hands over, closing it.
+#[test]
+fn a_scrolled_list_scrolls_before_the_sheet_swipes_away() {
+    const TRIGGER: &str = "#phone [id$='-picker']";
+    block_on(async {
+        let fixture = phone("/select-phone").await;
+        let page = &fixture.page;
+        tap(page, TRIGGER).await.unwrap();
+        sheet_shown(page).await.unwrap();
+        let from = scroll_list_to(page, 600.0).await.unwrap();
+        let down = |dy: f64| pointer::Point {
+            x: from.x,
+            y: from.y + dy,
+        };
+        pointer::swipe(page, from, down(120.0), 8).await.unwrap();
+        let js = format!(
+            "(() => {{ const s = {SCROLLER}; const sheet = document.querySelector({SHEET:?}); \
+             return s.scrollTop < 590 && s.scrollTop > 300 \
+               && sheet.style.getPropertyValue('--lsx-swipe-drag') === '0px' \
+               && document.querySelector({TRIGGER:?}).getAttribute('aria-expanded') === 'true'; }})()"
+        );
+        wait::for_js_true(page, &js, "the list scrolled back, the sheet kept")
+            .await
+            .unwrap();
+        let from = scroll_list_to(page, 30.0).await.unwrap();
+        let to = pointer::Point {
+            x: from.x,
+            y: from.y + 200.0,
+        };
+        pointer::swipe(page, from, to, 12).await.unwrap();
+        closed(page, TRIGGER).await.unwrap();
+        fixture
+            .console
+            .assert_clean("a scrolled sheet swiped away")
+            .unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
+/// Todo 4994: a swipe down over the calendar, a `pan-y` month swiper, closes the date sheet and picks no day.
+#[test]
+fn a_swipe_down_the_calendar_closes_the_date_sheet() {
+    const SHEET: &str = "[data-swipe-close]";
+    block_on(async {
+        let fixture = phone("/select-phone/low-date").await;
+        let page = &fixture.page;
+        tap(page, "#low input").await.unwrap();
+        wait::for_js_true(
+            page,
+            &format!(
+                "(() => {{ const s = document.querySelector({SHEET:?}); \
+                 return !!s && getComputedStyle(s).visibility === 'visible' \
+                   && Math.abs(s.getBoundingClientRect().bottom - innerHeight) < 1; }})()"
+            ),
+            "the date sheet at the foot",
+        )
+        .await
+        .unwrap();
+        let from = pointer::centre_of(page, &format!("{SHEET} [role=grid]"))
+            .await
+            .unwrap();
+        let to = pointer::Point {
+            x: from.x,
+            y: from.y + 150.0,
+        };
+        pointer::swipe(page, from, to, 8).await.unwrap();
+        let js = format!(
+            "(() => {{ const s = document.querySelector({SHEET:?}); \
+             return (!s || getComputedStyle(s).visibility !== 'visible') \
+               && document.querySelector('#low input').value === ''; }})()"
+        );
+        wait::for_js_true(page, &js, "the sheet gone, no day picked")
+            .await
+            .unwrap();
+        fixture
+            .console
+            .assert_clean("a date sheet swiped by its calendar")
+            .unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
+/// Todo 4994: a drag down the color area inside the sheet stays the area's, not the sheet's.
+#[test]
+fn a_drag_on_the_color_area_keeps_the_sheet() {
+    const AREA: &str = "[data-swipe-close] [data-slot=saturation]";
+    block_on(async {
+        let fixture = phone("/select-phone/low-color").await;
+        let page = &fixture.page;
+        tap(page, "#low input").await.unwrap();
+        // Settled at the foot: the field scrolls above it as it opens.
+        wait::for_js_true(
+            page,
+            &format!(
+                "(() => {{ const s = document.querySelector('[data-swipe-close]'); \
+                 return !!s && !!document.querySelector({AREA:?}) \
+                   && Math.abs(s.getBoundingClientRect().bottom - innerHeight) < 1; }})()"
+            ),
+            "the color sheet at the foot",
+        )
+        .await
+        .unwrap();
+        let corner: Vec<f64> = page
+            .evaluate(format!(
+                "(() => {{ const r = document.querySelector({AREA:?}).getBoundingClientRect(); \
+                 return [r.right - 6, r.top + 40]; }})()"
+            ))
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        let from = pointer::Point {
+            x: corner[0],
+            y: corner[1],
+        };
+        let to = pointer::Point {
+            x: from.x,
+            y: from.y + 100.0,
+        };
+        // The area's own drag: its moves arrive, no cancel takes them.
+        page.evaluate(format!(
+            "(() => {{ window.areaMoves = 0; window.areaCancels = 0; \
+             const area = document.querySelector({AREA:?}); \
+             area.addEventListener('pointermove', () => window.areaMoves++); \
+             area.addEventListener('pointercancel', () => window.areaCancels++); }})()"
+        ))
+        .await
+        .unwrap();
+        pointer::swipe(page, from, to, 8).await.unwrap();
+        let js = "(() => { const s = document.querySelector('[data-swipe-close]'); \
+             return !!s && getComputedStyle(s).visibility === 'visible' \
+               && s.style.getPropertyValue('--lsx-swipe-drag') === '0px' \
+               && window.areaMoves >= 4 && window.areaCancels === 0; })()";
+        wait::for_js_true(page, js, "the area kept the drag, the sheet stayed")
+            .await
+            .unwrap();
+        fixture
+            .console
+            .assert_clean("a color area drag in the sheet")
+            .unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
 #[test]
 fn a_phone_opens_the_country_list_in_the_sheet() {
     block_on(async {

@@ -101,6 +101,26 @@ fn a_swiped_sheet_slides_off_then_closes() {
     );
 }
 
+/// Todo 4994: a swipe down from the sheet's body, not only its strip, slides it off on Blitz.
+#[test]
+fn a_swipe_down_the_sheet_body_closes_it() {
+    let mut page = mount(chrono_field);
+    page.resize(360, 640);
+    page.click(INPUT);
+    assert!(
+        page.wait_for(|page| page.exists("[data-slot=sheet-handle]")),
+        "{}",
+        page.tree()
+    );
+    let (left, top, width, height) = page.rect(DIALOG);
+    let (x, y) = ((left + width / 2.0) as f32, (top + height / 2.0) as f32);
+    page.swipe_from(x, y, 0.0, 120.0);
+    assert!(
+        page.wait_for(|page| !page.exists(DIALOG)),
+        "a swipe down the body left the sheet open"
+    );
+}
+
 /// Todo 3958: an explicit `columns: 2` shows the months that fit below `sm`, both past it.
 #[test]
 fn explicit_columns_fit_a_narrow_window() {
