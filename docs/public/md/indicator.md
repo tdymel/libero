@@ -41,7 +41,7 @@ fn Demo() -> Element {
 | `max` | `Option<u32>` | `99` | Above it, the label renders as `{max}+`, so `128` shows `99+` at the theme's cap of 99, while `99` itself renders `99`. Falls back to the theme's cap. |
 | `size` | `Size` | `md` | The dot's diameter, and the height of a labelled one, from 6px to 22px. A labelled one is never shorter than 1.4 times its font size. |
 | `color` | `ThemeAwareValue` | `error` | The fill, a theme color name or a CSS color. A theme or hex color also sets a label color that reads on it; any other CSS color gets `contrast-color()`. |
-| `radius` | `ThemeAwareValue` | `xxl` | A step on the indicator's own radius scale, `1px` to `6px`, or any CSS, e.g. `radius: "0"`. The default `xxl` is round at every size. |
+| `radius` | `ThemeAwareValue` | `xxl` | A step on the indicator's own radius scale, `1px` (`xs`) to `6px` (`xl`), or any CSS, e.g. `radius: "0"`. The default `xxl` is `9999px`, round at every size. |
 | `with_border` | `bool` | `false` | A ring in the surface color, so the dot reads on top of a picture. |
 | `processing` | `bool` | `false` | A ping behind the dot that repeats until you set it back to `false`. Stops under `prefers-reduced-motion`. |
 

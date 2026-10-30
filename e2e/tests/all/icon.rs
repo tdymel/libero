@@ -66,7 +66,11 @@ fn a_contained_glyph_is_inset_and_a_bare_one_fills_the_box() {
             .unwrap()
             .into_value()
             .unwrap();
-        assert!((filled - 0.6).abs() < 0.02, "filled glyph share {filled}");
+        // The 24px box floors its glyph at 16px (todo 5065); from lg up the share is 60%.
+        assert!(
+            (filled - 16.0 / 24.0).abs() < 0.02,
+            "filled glyph share {filled}"
+        );
         let bare: f64 = fixture
             .page
             .evaluate_bounded(share("bare"))

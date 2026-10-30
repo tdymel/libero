@@ -181,10 +181,26 @@ pub fn IconProviderPage() -> Element {
                 children_text: "",
                 children_code: "Inputs {{}}",
                 controls: vec![
-                    Control::select("set", SETS).code(|_, values| vec![demo_code(values)]),
-                    Control::select("chevron", CHEVRONS).code(|_, _| vec![]),
-                    Control::select("check", CHECKS).code(|_, _| vec![]),
-                    Control::select("eye", EYES).code(|_, _| vec![]),
+                    Control::select("set", SETS)
+                        .labels([
+                            "Lucide",
+                            "Material rounded",
+                            "Material filled",
+                            "Tabler outlined",
+                            "Bootstrap outlined",
+                            "Phosphor regular",
+                            "Phosphor bold",
+                        ])
+                        .code(|_, values| vec![demo_code(values)]),
+                    Control::select("chevron", CHEVRONS)
+                        .labels(["From the set", "Chevrons down", "Circle chevron down"])
+                        .code(|_, _| vec![]),
+                    Control::select("check", CHECKS)
+                        .labels(["From the set", "Check check", "Square check"])
+                        .code(|_, _| vec![]),
+                    Control::select("eye", EYES)
+                        .labels(["From the set", "Scan eye", "View"])
+                        .code(|_, _| vec![]),
                 ],
                 wrap: Wrap(wrap),
                 render: move |values: DemoValues| rsx! {

@@ -56,7 +56,7 @@ pub fn IndicatorPage() -> Element {
                     .doc("The fill, a theme color name or a CSS color. A theme or hex color also sets a label color that reads on it; any other CSS color gets `contrast-color()`."),
                 prop("radius", "ThemeAwareValue")
                     .default(theme.indicator.radius.as_str())
-                    .doc("A step on the indicator's own radius scale, `1px` to `6px`, or any CSS, e.g. `radius: \"0\"`. The default `xxl` is round at every size."),
+                    .doc("A step on the indicator's own radius scale, `1px` (`xs`) to `6px` (`xl`), or any CSS, e.g. `radius: \"0\"`. The default `xxl` is `9999px`, round at every size."),
                 prop("with_border", "bool")
                     .default("false")
                     .doc("A ring in the surface color, so the dot reads on top of a picture."),

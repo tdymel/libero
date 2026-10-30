@@ -1,4 +1,4 @@
-use dioxus::{dioxus_core::AttributeValue, prelude::*};
+use dioxus::prelude::*;
 
 use crate::{
     components::{
@@ -24,8 +24,9 @@ const ICON_RADIUS_VAR: CssVar = CssVar::new("--lsx-icon-radius");
 const ICON_CONTAINER_VAR: CssVar = CssVar::new("--lsx-icon-container");
 const ICON_ON_CONTAINER_VAR: CssVar = CssVar::new("--lsx-icon-on-container");
 const ICON_GLYPH_VAR: CssVar = CssVar::new("--lsx-icon-glyph");
-/// The glyph's share of a contained icon's box: 24px in 40px.
-const ICON_GLYPH_INSET: &str = "60%";
+/// A contained glyph's size: 60% of the box (24px in 40px), floored at 16px below lg
+/// so it stays legible, and capped at 80% so it keeps clear of the edge.
+const ICON_GLYPH_INSET: &str = "min(max(60%, 16px), 80%)";
 
 pub(crate) const ICON_VARS: VariantVars<'static> = VariantVars {
     color: &ICON_COLOR_VAR,
@@ -45,6 +46,9 @@ static ICON_BASE_SX: StaticSx = StaticSx::new(|| {
         .align_items("center")
         .justify_content("center")
         .flex_shrink("0")
+        // So an outlined variant's border colour draws (as Badge).
+        .border_style("solid")
+        .border_width("1px")
         .width(side.clone())
         .height(side)
         .with("padding", pad.clone())
@@ -60,11 +64,11 @@ static ICON_BASE_SX: StaticSx = StaticSx::new(|| {
     Variant::ALL.iter().fold(base, |base, &variant| {
         let chrome = variant_chrome_sx(variant, &ICON_VARS);
         // A glyph inside a container keeps clear of its edges; a bare one fills the box.
-        let glyph = match variant {
-            Variant::Standard => "100%",
-            _ => ICON_GLYPH_INSET,
+        let chrome = match variant {
+            // No border, so the bare glyph keeps the whole box.
+            Variant::Standard => chrome.border_width("0").var(ICON_GLYPH_VAR, "100%"),
+            _ => chrome.var(ICON_GLYPH_VAR, ICON_GLYPH_INSET),
         };
-        let chrome = chrome.var(ICON_GLYPH_VAR, glyph);
         base.when(variant.state_name(), chrome)
     })
 });
@@ -209,13 +213,9 @@ pub fn Icon(props: IconProps) -> Element {
     // `aria-hidden` on a focusable control leaves a Tab stop nothing announces.
     let interactive = is_interactive(component);
     let hideable = !named && !interactive;
-    let blank_label = props.attributes.iter().any(|attribute| {
-        attribute.name == "aria-label"
-            && matches!(&attribute.value, AttributeValue::Text(text) if text.trim().is_empty())
-    });
     use_name_warning(
-        !(interactive && blank_label && !named),
-        "Icon: a blank `aria-label` names nothing, so a focusable icon may be announced without a name.",
+        !interactive || named,
+        "Icon: a focusable icon needs an `aria-label` or `aria-labelledby`, or it is announced without a name.",
     );
     let children = match (props.src, props.svg) {
         (Some(src), _) => match media_url(&src, "Icon") {
@@ -297,22 +297,43 @@ mod tests {
     }
 
     #[test]
-    fn a_blank_label_on_a_focusable_icon_warns() {
-        let warnings = crate::utils::warnings_of(|| {
-            rsx! {
-                crate::LiberoProvider { Icon { component: HtmlTag::Button, "aria-label": "  " } }
-            }
-        });
-        assert!(
-            warnings.iter().any(|w| w.starts_with("Icon:")),
-            "{warnings:?}"
-        );
-        let warnings = crate::utils::warnings_of(|| {
-            rsx! {
-                crate::LiberoProvider { Icon { component: HtmlTag::Button, "aria-label": "Close" } }
-            }
-        });
-        assert!(warnings.is_empty(), "{warnings:?}");
+    fn an_unnamed_or_blank_labelled_focusable_icon_warns() {
+        let warns = |element: fn() -> Element| {
+            crate::utils::warnings_of(element)
+                .iter()
+                .any(|w| w.starts_with("Icon:"))
+        };
+        assert!(warns(|| rsx! {
+            crate::LiberoProvider { Icon { component: HtmlTag::Button } }
+        }));
+        assert!(warns(|| rsx! {
+            crate::LiberoProvider { Icon { component: HtmlTag::Button, "aria-label": "  " } }
+        }));
+        assert!(!warns(|| rsx! {
+            crate::LiberoProvider { Icon { component: HtmlTag::Button, "aria-label": "Close" } }
+        }));
+        assert!(!warns(|| rsx! {
+            crate::LiberoProvider { Icon { component: HtmlTag::A, "aria-labelledby": "x" } }
+        }));
+        assert!(!warns(|| rsx! { crate::LiberoProvider { Icon {} } }));
+    }
+
+    /// The outlined variant's border colour needs a border to draw on.
+    #[test]
+    fn the_icon_box_has_a_one_pixel_border_except_when_bare() {
+        let css = crate::css::Stylesheet::from(&ICON_BASE_SX);
+        let css = css.as_str();
+        assert!(css.contains("border-style:solid;"), "{css}");
+        assert!(css.contains("border-width:1px;"), "{css}");
+        assert!(css.contains("border-width:0;"), "{css}");
+    }
+
+    /// 5065: the 60% share left a 14px glyph at md; below lg a 16px floor holds.
+    #[test]
+    fn a_contained_glyph_has_a_floor_and_a_cap() {
+        assert_eq!(ICON_GLYPH_INSET, "min(max(60%, 16px), 80%)");
+        let css = crate::css::Stylesheet::from(&ICON_BASE_SX);
+        assert!(css.as_str().contains(ICON_GLYPH_INSET), "{}", css.as_str());
     }
 
     #[test]

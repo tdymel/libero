@@ -1,8 +1,10 @@
 use dioxus::prelude::*;
 use libero::components::Pictogram;
 use libero::{
-    components::{Box, Button, ColorCode, ColorPicker, ColorSwatch, Flex, SliderChangeEvent},
-    hooks::use_element,
+    components::{
+        Box, Button, ColorCode, ColorPicker, ColorSwatch, Flex, SliderChangeEvent, States,
+    },
+    hooks::{use_direction, use_element},
     platform::ElementApi,
     sx::sx,
 };
@@ -78,6 +80,26 @@ fn swatch_button() -> libero::sx::Sx {
         .hover(sx().background("transparent"))
 }
 
+/// The swatch an arrow key lands on, wrapping; `rtl` swaps left and right.
+fn next_swatch(from: usize, count: usize, key: &Key, rtl: bool) -> Option<usize> {
+    let (forward, back) = match rtl {
+        false => (NamedKey::ArrowRight, NamedKey::ArrowLeft),
+        true => (NamedKey::ArrowLeft, NamedKey::ArrowRight),
+    };
+    let last = count.checked_sub(1)?;
+    match key {
+        Key::Named(named) if *named == forward || *named == NamedKey::ArrowDown => {
+            Some(if from >= last { 0 } else { from + 1 })
+        }
+        Key::Named(named) if *named == back || *named == NamedKey::ArrowUp => {
+            Some(from.checked_sub(1).unwrap_or(last))
+        }
+        Key::Named(NamedKey::Home) => Some(0),
+        Key::Named(NamedKey::End) => Some(last),
+        _ => None,
+    }
+}
+
 /// A swatch per theme color, then one opening a `ColorPicker` for any other. A swatch sets its
 /// name, the picker a hex, so the code block prints what the caller would type.
 #[component]
@@ -96,6 +118,8 @@ pub fn ColorControl(
             .unwrap_or(ColorCode::hex(FIRST_CUSTOM))
     });
     let trigger = use_element();
+    let row = use_element();
+    let rtl = use_direction().is_rtl();
 
     let is_custom = !control.options.contains(&value);
     let swatches: Vec<(String, String, String)> = control
@@ -113,6 +137,39 @@ pub fn ColorControl(
     } else {
         "Custom color".to_string()
     };
+    // One Tab stop: the checked swatch, else the first. The custom swatch comes last.
+    let count = control.options.len() + usize::from(has_custom);
+    let tab_stop = control
+        .options
+        .iter()
+        .position(|option| *option == value)
+        .or(is_custom.then_some(control.options.len()))
+        .filter(|&at| at < count)
+        .unwrap_or(0);
+    let arrows = {
+        let options = control.options.clone();
+        move |event: KeyboardEvent| {
+            if event
+                .modifiers()
+                .intersects(Modifiers::CONTROL | Modifiers::ALT | Modifiers::META)
+            {
+                return;
+            }
+            let Some(next) = next_swatch(tab_stop, count, &event.key(), rtl) else {
+                return;
+            };
+            event.prevent_default();
+            open.set(false);
+            // Arrows move and check in one press (APG radio group).
+            match options.get(next) {
+                Some(option) => onchange.call(option.clone()),
+                None => onchange.call(custom().to_hex()),
+            }
+            let _ = row
+                .query_selector(&format!("[data-swatch=\"{next}\"]"))
+                .and_then(|swatch| swatch.focus());
+        }
+    };
 
     rsx! {
         Flex {
@@ -124,16 +181,22 @@ pub fn ColorControl(
                 direction: "row",
                 gap: "xs",
                 sx: sx().width("100%"),
-                role: "group",
+                role: "radiogroup",
                 aria_label: "{label}",
-                // Toggle `Button`s, not a `SegmentedControl`: swatches read as separate chips.
-                for (option, fill_color, tick_color) in swatches.iter() {
+                onmounted: row.mount(),
+                onkeydown: arrows,
+                // Radio `Button`s, not a `SegmentedControl`: swatches read as separate chips.
+                for (at, (option, fill_color, tick_color)) in swatches.iter().enumerate() {
                     Button {
                         key: "{option}",
                         size: "sm",
                         variant: "text",
+                        role: "radio",
                         aria_label: "{option}",
-                        selected: value == *option,
+                        aria_checked: value == *option,
+                        tabindex: if at == tab_stop { "0" } else { "-1" },
+                        "data-swatch": "{at}",
+                        states: States::default().with("checked", value == *option),
                         onclick: {
                             let option = option.clone();
                             move |_| {
@@ -160,8 +223,11 @@ pub fn ColorControl(
                         Button {
                             size: "sm",
                             variant: "text",
+                            role: "radio",
                             aria_label: "{custom_label}",
-                            aria_expanded: open(),
+                            aria_checked: is_custom,
+                            tabindex: if control.options.len() == tab_stop { "0" } else { "-1" },
+                            "data-swatch": "{control.options.len()}",
                             onclick: move |_| {
                                 let opening = !open();
                                 open.set(opening);
@@ -220,6 +286,30 @@ pub fn ColorControl(
 mod tests {
     use super::*;
     use crate::components::DemoValues;
+
+    #[test]
+    fn arrows_walk_the_swatches_and_flip_under_rtl() {
+        let right = Key::Named(NamedKey::ArrowRight);
+        let left = Key::Named(NamedKey::ArrowLeft);
+        assert_eq!(next_swatch(0, 3, &right, false), Some(1));
+        assert_eq!(next_swatch(0, 3, &left, false), Some(2));
+        assert_eq!(next_swatch(0, 3, &right, true), Some(2));
+        assert_eq!(next_swatch(0, 3, &left, true), Some(1));
+        assert_eq!(
+            next_swatch(2, 3, &Key::Named(NamedKey::ArrowDown), true),
+            Some(0)
+        );
+        assert_eq!(
+            next_swatch(1, 3, &Key::Named(NamedKey::End), false),
+            Some(2)
+        );
+        assert_eq!(
+            next_swatch(1, 3, &Key::Named(NamedKey::Home), false),
+            Some(0)
+        );
+        assert_eq!(next_swatch(0, 3, &Key::Named(NamedKey::Enter), false), None);
+        assert_eq!(next_swatch(0, 0, &right, false), None);
+    }
 
     /// Text's unset swatch follows its gradient switch (todo 5035).
     #[test]
