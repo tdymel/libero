@@ -55,6 +55,7 @@ mod field_value;
 mod fieldset;
 mod file_field;
 mod flex;
+mod floating_action_button;
 mod floating_window;
 mod floating_window_resize;
 mod flows;

@@ -12,7 +12,8 @@ badge on an avatar. The parent sets `position: relative` itself. The offsets
 follow the page, not the placement, so on a `top-end` badge a positive
 `offset_x` and a negative `offset_y` hang it off the corner in left-to-right
 text. Under `dir=rtl` that corner is at the left edge, so use a negative
-`offset_x`.
+`offset_x`. For a button floating over the page, use
+[FloatingActionButton](floating_action_button.md).
 
 ## Usage
 

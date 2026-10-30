@@ -1,0 +1,10 @@
+---
+source: e2e/src/suite.rs
+description: floating_action_button at mobile (rest)
+expression: tree
+---
+link "Before"
+  StaticText "Before"
+StaticText "Page"
+button "New message"
+button "Search"

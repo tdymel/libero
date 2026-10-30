@@ -129,6 +129,8 @@ pub fn ButtonPage() -> Element {
                     Code { source: "r#type: \"submit\"" }
                     ". For an icon-only button, use "
                     Code { source: "ActionIcon" }
+                    "; for one floating over the page, "
+                    Code { source: "FloatingActionButton" }
                     "."
                 }
             },

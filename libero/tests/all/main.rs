@@ -63,6 +63,7 @@ mod fieldset;
 mod file_field;
 mod flex;
 mod float;
+mod floating_action_button;
 mod floating_window;
 mod focus_trap;
 mod gap;

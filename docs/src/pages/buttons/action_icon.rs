@@ -114,7 +114,9 @@ pub fn ActionIconPage() -> Element {
                     Code { source: "Button" }
                     " with its "
                     Code { source: "icon" }
-                    " prop instead."
+                    " prop instead. For one floating over the page, use "
+                    Code { source: "FloatingActionButton" }
+                    "."
                 }
                 Text {
                     "With neither "

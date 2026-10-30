@@ -51,6 +51,7 @@ each component you use, see [features.md](features.md).
 - [ButtonGroup](button_group.md): Buttons and action icons side by side as one control, sharing seams and defaults.
 - [Copy](copy.md): An icon button that copies a value to the clipboard and confirms it with a check and a spoken "Copied".
 - [DirectionToggle](direction_toggle.md): An icon button that turns the app's text between left to right and right to left.
+- [FloatingActionButton](floating_action_button.md): The main action of a screen as a button that floats over the page at a corner, icon-only or extended with a label.
 - [Repository](repository.md): A link to a GitHub or GitLab repository with its star count beside the host's icon.
 - [Share](share.md): A button that opens the system share sheet, or copies the link where there is none, and says "Copied".
 - [ThemeSwitcher](theme_switcher.md): An icon button that flips the colour scheme, optionally through the system's too, with an optional theme picker beside it.

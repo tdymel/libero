@@ -186,6 +186,8 @@ pub(crate) enum Route {
     CopyPage {},
     #[route("/buttons/direction-toggle")]
     DirectionTogglePage {},
+    #[route("/buttons/floating-action-button")]
+    FloatingActionButtonPage {},
     #[route("/buttons/repository")]
     RepositoryPage {},
     #[route("/buttons/share")]

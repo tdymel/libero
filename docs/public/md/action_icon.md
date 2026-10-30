@@ -12,7 +12,8 @@ Need icons? [pictogram](https://github.com/tdymel/pictogram) ships lucide, Table
 An icon-only button for actions like copy, close or delete. It renders a
 `<button>`, or a link when `to` is set. `aria_label` is required, because the
 icon gives a screen reader nothing to read. Once the button carries a visible
-label, use a `Button` with its `icon` prop instead.
+label, use a `Button` with its `icon` prop instead. For one floating over
+the page, use [FloatingActionButton](floating_action_button.md).
 
 With neither `variant` nor `color` set, it has no background of its own and
 takes the surrounding text color.

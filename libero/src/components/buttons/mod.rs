@@ -8,6 +8,8 @@ mod button_group;
 mod copy;
 #[cfg(feature = "direction-toggle")]
 mod direction_toggle;
+#[cfg(feature = "floating-action-button")]
+mod floating_action_button;
 #[cfg(feature = "repository")]
 mod repository;
 #[cfg(feature = "share")]
@@ -35,6 +37,8 @@ pub use button_group::{ButtonGroup, ButtonGroupProps};
 pub use copy::{Copy, CopyProps};
 #[cfg(feature = "direction-toggle")]
 pub use direction_toggle::{DirectionToggle, DirectionToggleProps};
+#[cfg(feature = "floating-action-button")]
+pub use floating_action_button::{FloatingActionButton, FloatingActionButtonProps};
 #[cfg(feature = "repository")]
 pub use repository::{RepoHost, Repository, RepositoryPart, RepositoryProps};
 #[cfg(feature = "share")]

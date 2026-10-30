@@ -120,6 +120,7 @@ md_pages! {
     FileField => "file_field",
     Flex => "flex",
     Float => "float",
+    FloatingActionButton => "floating_action_button",
     FloatingWindow => "floating_window",
     FocusTrap => "focus_trap",
     Form => "form",

@@ -34,6 +34,7 @@ mod field;
 mod file_field;
 mod flex;
 mod float;
+mod floating_action_button;
 mod floating_window;
 mod focus_ring;
 mod form;
@@ -219,6 +220,7 @@ pub use flex::{
     FLEX_WRAP_VAR, FlexAxisDefaults, FlexDefaults,
 };
 pub use float::{FLOAT_OFFSET_X, FLOAT_OFFSET_Y, FloatDefaults, Placement};
+pub use floating_action_button::FloatingActionButtonDefaults;
 pub use floating_window::FloatingWindowDefaults;
 pub use focus_ring::{
     FOCUS_RING_COLOR, FOCUS_RING_HALO, FOCUS_RING_HALO_SPREAD, FOCUS_RING_HALO_WIDTH,

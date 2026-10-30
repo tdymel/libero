@@ -39,7 +39,7 @@ every component group, `all-hooks` every hook.
 | Group | Turns on |
 |---|---|
 | `accessibility` | focus-trap, visually-hidden |
-| `buttons` | action-icon, button, button-group, copy, direction-toggle, repository, share, theme-switcher, tldr, toolbar |
+| `buttons` | action-icon, button, button-group, copy, direction-toggle, floating-action-button, repository, share, theme-switcher, tldr, toolbar |
 | `data-display` | accordion, audio, avatar, badge, carousel, charts, data-list, icon, image, image-list, indicator, kanban, list, marquee, pictogram, qr-code, sortable, table, timeline, video |
 | `feedback` | alert, circular-progress, loader, notifications, progress-bar, skeleton |
 | `form` | autocomplete, cascader, checkbox, checkbox-group, chip, color, combobox, date-field, date-picker, fieldset, file-field, form-root, image-cropper, native-select, number-field, password-field, phone-field, pin-field, radio, radio-group, rating, rich-text-editor, segmented-control, select, slider, switch, switch-group, tags-field, text-field, textarea |
@@ -64,6 +64,7 @@ it is on (Notes).
 | `button-group` | ButtonGroup | box | off |  |
 | `copy` | Copy | action-icon, use-clipboard, use-timers | off |  |
 | `direction-toggle` | DirectionToggle | action-icon, use-direction | off |  |
+| `floating-action-button` | FloatingActionButton | action-icon, button, float | off |  |
 | `repository` | Repository | action-icon, use-local-storage | off | The Simple Icons brand marks (pictogram-icons-simple). |
 | `share` | Share | action-icon, icon, button, use-share | off |  |
 | `theme-switcher` | ThemeSwitcher | menu, action-icon, use-color-scheme | off |  |

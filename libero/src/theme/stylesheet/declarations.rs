@@ -100,6 +100,7 @@ pub(super) fn theme_declarations(theme: &Theme) -> Vec<CssDeclaration> {
         ink,
         surface,
         // Plain values read from Rust - no CSS vars of their own.
+        floating_action_button: _,
         floating_window: _,
         phone_field: _,
         tags_field: _,

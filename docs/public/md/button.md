@@ -9,7 +9,8 @@ Description: A clickable action, a toggle, or a router-aware link.
 
 A clickable action, a toggle, or a link when `to` is set. It defaults to
 `type="button"`, so it never submits a form by accident. A submit button sets
-`r#type: "submit"`. For an icon-only button, use [ActionIcon](action_icon.md).
+`r#type: "submit"`. For an icon-only button, use [ActionIcon](action_icon.md);
+for one floating over the page, [FloatingActionButton](floating_action_button.md).
 
 ## Usage
 

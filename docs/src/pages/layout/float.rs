@@ -81,6 +81,8 @@ pub fn FloatPage() -> Element {
                     Code { source: "dir=rtl" }
                     " that corner is at the left edge, so use a negative "
                     Code { source: "offset_x" }
+                    ". For a button floating over the page, use "
+                    Code { source: "FloatingActionButton" }
                     "."
                 }
             },

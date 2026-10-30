@@ -9,10 +9,11 @@ use crate::{
     components::{
         ActionIcon, AlphaSlider, Anchor, Audio, Avatar, Button, ButtonGroup, Carousel, Checkbox,
         CircularProgress, ColorCode, ColorPicker, ColorSwatch, Dialog, Drawer, Fieldset,
-        FloatingWindowOptions, HoverCard, HueSlider, Menubar, MenubarMenu, NavigationBar,
-        NavigationBarItem, ProgressBar, QrCode, Radio, RadioGroup, RangeSlider, Rating,
-        RichTextEditor, ScrollArea, SegmentedControl, Slider, Splitter, SpotlightOptions, Switch,
-        Table, Tabs, Toolbar, ToolbarGroup, ToolbarSeparator, TourOptions, TourStep, Video, column,
+        FloatingActionButton, FloatingWindowOptions, HoverCard, HueSlider, Menubar, MenubarMenu,
+        NavigationBar, NavigationBarItem, ProgressBar, QrCode, Radio, RadioGroup, RangeSlider,
+        Rating, RichTextEditor, ScrollArea, SegmentedControl, Slider, Splitter, SpotlightOptions,
+        Switch, Table, Tabs, Toolbar, ToolbarGroup, ToolbarSeparator, TourOptions, TourStep, Video,
+        column,
         rich_text::{NodeViewProps, NodeViews, use_rich_text_editor},
         use_spotlight, use_tour,
     },
@@ -470,6 +471,24 @@ fn an_action_icon_with_an_empty_label_warns() {
     ));
     assert!(!warns(
         || rsx! { LiberoProvider { ActionIcon { aria_label: "", "aria-labelledby": "copy", "x" } } },
+        prefix
+    ));
+}
+
+/// An icon-only one needs `aria_label`; a label in `children` names it.
+#[test]
+fn an_icon_only_floating_action_button_without_a_label_warns() {
+    let prefix = "ActionIcon: an empty `aria_label`";
+    assert!(warns(
+        || rsx! { LiberoProvider { FloatingActionButton { icon: rsx! { svg {} } } } },
+        prefix
+    ));
+    assert!(!warns(
+        || rsx! { LiberoProvider { FloatingActionButton { aria_label: "Add", icon: rsx! { svg {} } } } },
+        prefix
+    ));
+    assert!(!warns(
+        || rsx! { LiberoProvider { FloatingActionButton { icon: rsx! { svg {} }, "Add" } } },
         prefix
     ));
 }

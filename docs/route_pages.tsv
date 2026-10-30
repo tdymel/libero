@@ -44,6 +44,7 @@
 /buttons/button-group	ButtonGroup - Libero	Buttons and action icons side by side as one control, sharing seams and defaults.	/md/button_group.md	Buttons	/buttons/button
 /buttons/copy	Copy - Libero	An icon button that copies a value to the clipboard and confirms it with a check and a spoken "Copied".	/md/copy.md	Buttons	/buttons/button
 /buttons/direction-toggle	DirectionToggle - Libero	An icon button that turns the app's text between left to right and right to left.	/md/direction_toggle.md	Buttons	/buttons/button
+/buttons/floating-action-button	FloatingActionButton - Libero	The main action of a screen as a button that floats over the page at a corner, icon-only or extended with a label.	/md/floating_action_button.md	Buttons	/buttons/button
 /buttons/repository	Repository - Libero	A link to a GitHub or GitLab repository with its star count beside the host's icon.	/md/repository.md	Buttons	/buttons/button
 /buttons/share	Share - Libero	A button that opens the system share sheet, or copies the link where there is none, and says "Copied".	/md/share.md	Buttons	/buttons/button
 /buttons/theme-switcher	ThemeSwitcher - Libero	An icon button that flips the colour scheme, optionally through the system's too, with an optional theme picker beside it.	/md/theme_switcher.md	Buttons	/buttons/button
