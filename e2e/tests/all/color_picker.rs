@@ -386,6 +386,42 @@ fn a_drag_moves_the_pad_and_leaves_the_thumb_focused() {
     });
 }
 
+/// A finger drag moves the pad but leaves focus where it was: a focused thumb would show its
+/// ring after every touch (4997).
+#[test]
+fn a_touch_drag_moves_the_pad_without_focusing_the_thumb() {
+    block_on(async {
+        let fixture = Fixture::open("/color-picker", Viewport::Mobile)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        let (from, to) = pad_points(page, (0.25, 0.25), (0.75, 0.75)).await;
+        let before = reading(page).await;
+        // In front: behind, each touch event waits about a second for a frame.
+        e2e::frames::in_front(page, pointer::touch_drag(page, from, to, 8))
+            .await
+            .unwrap();
+        wait::for_js_true(
+            page,
+            &format!("{READING} !== {before:?}"),
+            "the touch drag to move the pad",
+        )
+        .await
+        .unwrap();
+        let focused: bool = page
+            .evaluate_bounded(format!(
+                "document.activeElement === document.querySelector({THUMB:?})"
+            ))
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        assert!(!focused, "a touch drag focused the thumb");
+        fixture.console.assert_clean("a touch drag").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
 /// A press, no drag, jumps the thumb to the pressed spot and focuses it, on the pad
 /// and on the hue track: the equivalent that spares the 16px thumbs 2.5.8 (todo 1811).
 #[test]
@@ -610,6 +646,12 @@ async fn the_arrows_step_the_hue<D: Driver>(d: &mut D, _route: &str) -> Result<(
 
 /// Todo 1545: 360 is hue 0, so End must stop the thumb at the right, not wrap it left.
 async fn end_keeps_the_hue_at_the_right<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    // The announced top is the one End reaches (4998).
+    let max = d.attr(HUE, "aria-valuemax").await?;
+    anyhow::ensure!(
+        max.as_deref() == Some("359"),
+        "aria-valuemax {max:?}, not 359"
+    );
     d.focus(HUE).await?;
     for (key, name) in [
         (keyboard::END, "End"),

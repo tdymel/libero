@@ -1,5 +1,5 @@
 use super::crop::{CropRect, Grip};
-use super::image_cropper::{min_side, press_message, value_text};
+use super::image_cropper::{min_side, press_message, slider_zoom, value_text};
 use crate::localization::ImageCropperLabels;
 
 fn rect(x: f64, y: f64, width: f64, height: f64) -> CropRect {
@@ -291,4 +291,15 @@ fn pixels_round_and_stay_inside_the_image() {
     let pixels = rect(0.5, 0.5, 0.6, 0.6).to_pixels(101, 100);
     assert_eq!((pixels.x, pixels.y), (51, 50));
     assert_eq!((pixels.width, pixels.height), (50, 50));
+}
+
+#[test]
+fn the_zoom_slider_says_the_box_zoom_its_snapped_value_stands_for() {
+    // 266.5%: the slider snaps ln to 0.98, whose exp alone reads 266% beside the box's 267%.
+    let exact = 2.665;
+    let percent = |zoom: f64| (zoom * 100.0).round();
+    assert_eq!(percent(0.98_f64.exp()), 266.0);
+    assert_eq!(percent(slider_zoom(0.98, exact)), 267.0);
+    // A value a step away is its own zoom.
+    assert_eq!(slider_zoom(0.99, exact), 0.99_f64.exp());
 }

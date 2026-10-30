@@ -40,7 +40,7 @@ const COLOR_PICKER_SWATCH_HIT: CssVar = CssVar::new("--lsx-color-picker-swatch-h
 /// The value's alpha, for the preview beside the alpha slider.
 const COLOR_PICKER_ALPHA: CssVar = CssVar::new("--lsx-color-picker-alpha");
 /// The hue slider's last step: 360 is the same hue as 0.
-const MAX_HUE: f64 = 359.0;
+pub(super) const MAX_HUE: f64 = 359.0;
 const DEAD_SWATCHES: &str = "ColorPicker: a palette without `oninput` or `onswatchclick` shows swatch buttons that do nothing. Pass one.";
 
 static COLOR_PICKER_SX: StaticSx = StaticSx::new(|| {

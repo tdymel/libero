@@ -2,7 +2,7 @@ use dioxus::prelude::*;
 
 use super::{
     ColorCode,
-    color_picker::ColorPickerPart,
+    color_picker::{ColorPickerPart, MAX_HUE},
     color_slider::{ColorSliderPart, HUE_GRADIENT, color_slider_sx, ltr_scale},
 };
 use crate::{
@@ -20,7 +20,8 @@ use crate::{
 base_props! {
     parts(ColorSliderPart);
     pub struct HueSliderProps {
-        /// Degrees, `0-360`. Controlled: pair it with `oninput`.
+        /// Degrees, `0-360`; a `ColorPicker`'s hue runs `0-359`, as 360 is 0.
+        /// Controlled: pair it with `oninput`.
         value: f64,
         /// `Start`/`End` bracket a drag, `Change` carries every new hue.
         #[props(default)]
@@ -57,7 +58,7 @@ base_props! {
 /// Docs: <https://libero-ui.dev/form/color-picker>
 #[component]
 pub fn HueSlider(props: HueSliderProps) -> Element {
-    hue_slider(props, false)
+    hue_slider(props, false, 360.0)
 }
 
 /// `ColorPicker`'s hue slider: read-only without `oninput`, not a forgotten handler (4310).
@@ -83,10 +84,10 @@ pub(super) fn PickerHueSlider(
         sx: Input::default(),
         states: Input::default(),
     };
-    hue_slider(props, readonly)
+    hue_slider(props, readonly, MAX_HUE)
 }
 
-fn hue_slider(props: HueSliderProps, readonly: bool) -> Element {
+fn hue_slider(props: HueSliderProps, readonly: bool, max: f64) -> Element {
     let theme = use_theme();
     let size = props.size.copied_or(theme.color_picker.size);
     let sx = color_slider_sx(&props.sx, &props.parts);
@@ -117,7 +118,7 @@ fn hue_slider(props: HueSliderProps, readonly: bool) -> Element {
         SliderCore {
             value: SliderCoreValue::Single(props.value),
             min: 0.0,
-            max: 360.0,
+            max,
             step: 1.0,
             attributes: ltr_scale(props.attributes),
             class: props.class,

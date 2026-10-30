@@ -124,6 +124,15 @@ fn a_button_press_says_the_new_box() {
         )
         .await
         .unwrap();
+        // A press that would change nothing is `aria-disabled`, not silent (4999).
+        wait::for_js_true(
+            page,
+            "document.querySelector(\"#cropper [aria-label='Move up']\").getAttribute('aria-disabled') === 'true' \
+             && !document.querySelector(\"#cropper [aria-label='Move down']\").hasAttribute('aria-disabled')",
+            "Move up aria-disabled at the top edge, Move down not",
+        )
+        .await
+        .unwrap();
         // A repeat lands as a new node: a press that said anything would drop this mark.
         page.evaluate_bounded(&format!(
             "document.querySelector({status:?}).firstElementChild.dataset.seen = '1'"
@@ -1033,6 +1042,16 @@ async fn the_zoom_bar_leaves_the_box_clear<D: Driver>(d: &mut D, _route: &str) -
     anyhow::ensure!(
         (frame.y + frame.height - zoom.y).abs() < 1.0 && (frame.width - zoom.width).abs() < 1.0,
         "the frame {frame:?} does not end on the zoom bar {zoom:?}"
+    );
+    // Minus and plus glyphs flank the track (5004).
+    let (minus, plus, track) = (
+        d.rect("[data-slot=zoom] > svg:first-child").await?,
+        d.rect("[data-slot=zoom] > svg:last-child").await?,
+        d.rect("[data-slot=zoom] [data-slot=track]").await?,
+    );
+    anyhow::ensure!(
+        minus.x + minus.width <= track.x + 0.5 && track.x + track.width <= plus.x + 0.5,
+        "the glyphs {minus:?} and {plus:?} do not flank the track {track:?}"
     );
     Ok(())
 }

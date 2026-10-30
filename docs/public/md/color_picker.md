@@ -66,7 +66,7 @@ fn Demo() -> Element {
 
 | Prop | Type | Default | Description |
 |---|---|---|---|
-| `value` | `f64` | required | The hue in degrees, 0 to 360. Pair it with `oninput`. |
+| `value` | `f64` | required | The hue in degrees, 0 to 360. Pair it with `oninput`. A `ColorPicker`'s own hue slider stops at 359: 360 is the same hue as 0. |
 | `oninput` | `EventHandler<SliderChangeEvent>` | - | Every new hue. |
 | `size` | `Size` | `md` | Track height and thumb. |
 | `disabled` | `bool` | `false` | Dims the slider and stops it moving. |
@@ -130,9 +130,18 @@ explains how parts work. `ColorSwatch` is one element and has no parts.
 
 ## Accessibility
 
+### Keyboard
+
+| Key | Action |
+|---|---|
+| `ArrowRight`, `ArrowDown` | In the swatch row: the next swatch, wrapping to the first. Down goes to the next swatch, not the one below it. |
+| `ArrowLeft`, `ArrowUp` | In the swatch row: the previous swatch, wrapping to the last. |
+| `Home`, `End` | In the swatch row: the first or the last swatch. |
+
 ### Libero handles
 
-- Each thumb is a slider with the usual keys.
+- Each thumb is a slider with the usual keys. In a `ColorPicker` the hue runs
+  from 0 to 359 degrees, since 360 is the same hue as 0.
 - The saturation panel and the hue and alpha thumbs meet the 24px target size of
   WCAG 2.5.8 at every size. At `xs` and `sm` the two sliders sit further apart
   than `spacing`, so their 24px squares do not overlap.

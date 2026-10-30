@@ -143,14 +143,17 @@ pub(super) fn Saturation(props: SaturationProps) -> Element {
 
     // The latest move while the panel is unmeasured, applied once it is (1266).
     let early = use_local_state(|| None::<(f64, f64)>);
+    // The press was a finger's: no focus follows it, or its ring shows after every touch.
+    let touched = use_local_state(|| false);
     let onstart = use_callback({
-        let early = early.clone();
+        let (early, touched) = (early.clone(), touched.clone());
         move |event: DragStart| {
             if !interactive {
                 event.cancel.call(());
                 return;
             }
             let (rect, early) = (rect.clone(), early.clone());
+            let focus = focusable && !touched.get();
             // The last drag's rect would map an early move to a stale point.
             rect.set((0.0, 0.0, 0.0, 0.0));
             early.set(None);
@@ -172,7 +175,7 @@ pub(super) fn Saturation(props: SaturationProps) -> Element {
                         }
                         // The drag cancels the pointerdown, and with it the
                         // browser's own focus - the keys would be unreachable.
-                        if focusable {
+                        if focus {
                             let _ = thumb_element.focus();
                         }
                     }
@@ -196,6 +199,11 @@ pub(super) fn Saturation(props: SaturationProps) -> Element {
         onstart,
         onmove,
         onend,
+    });
+    let drag_down = drag.onpointerdown;
+    let onpointerdown = use_callback(move |event: Event<PointerData>| {
+        touched.set(event.pointer_type() == "touch");
+        drag_down.call(event);
     });
 
     let onkeydown = use_callback(move |event: Event<KeyboardData>| {
@@ -248,7 +256,7 @@ pub(super) fn Saturation(props: SaturationProps) -> Element {
     panel_style
         .attr("data-slot", ColorPickerPart::Saturation.slot())
         .element(&panel_element)
-        .event("onpointerdown", drag.onpointerdown)
+        .event("onpointerdown", onpointerdown)
         .event("onpointermove", drag.onpointermove)
         .event("onpointerup", drag.onpointerup)
         .event("onpointercancel", drag.onpointercancel)

@@ -122,7 +122,7 @@ pub fn ColorPickerPage() -> Element {
                 ])
                 .parts("ColorPickerPart", color_picker_parts()),
                 props("HueSlider", vec![
-                    prop("value", "f64").default("required").doc("The hue in degrees, 0 to 360. Pair it with `oninput`."),
+                    prop("value", "f64").default("required").doc("The hue in degrees, 0 to 360. Pair it with `oninput`. A `ColorPicker`'s own hue slider stops at 359: 360 is the same hue as 0."),
                     prop("oninput", "EventHandler<SliderChangeEvent>").doc("Every new hue."),
                     prop("size", "Size").default(theme.color_picker.size.as_str()).doc("Track height and thumb."),
                     prop("disabled", "bool").default("false").doc("Dims the slider and stops it moving."),
@@ -156,9 +156,12 @@ pub fn ColorPickerPage() -> Element {
                 ]),
             ],
             accessibility: a11y()
+                .key(["ArrowRight", "ArrowDown"], "In the swatch row: the next swatch, wrapping to the first. Down goes to the next swatch, not the one below it.")
+                .key(["ArrowLeft", "ArrowUp"], "In the swatch row: the previous swatch, wrapping to the last.")
+                .key(["Home", "End"], "In the swatch row: the first or the last swatch.")
                 .handles([
-                    "Each thumb is a slider with the usual keys.",
-                    "The saturation panel meets the 24px target size of WCAG 2.5.8 at every size.",
+                    "Each thumb is a slider with the usual keys. In a `ColorPicker` the hue runs from 0 to 359 degrees, since 360 is the same hue as 0.",
+                    "The saturation panel and the hue and alpha thumbs meet the 24px target size of WCAG 2.5.8 at every size. At `xs` and `sm` the two sliders sit further apart than `spacing`, so their 24px squares do not overlap.",
                     "The swatch equal to the value is pressed and checked.",
                     "The preset row is a group named \"Color swatches\" (localized, `ColorLabels::swatches`), unless you name the picker.",
                 ])
@@ -169,8 +172,7 @@ pub fn ColorPickerPage() -> Element {
                     "Give a `ColorSwatch` with `onclick` an `aria-label`; without one it is just \"button\", and it warns.",
                     "Name the color in text beside a plain `ColorSwatch`, or give it `role: \"img\"` and an `aria-label`: on its own it says nothing.",
                 ])
-                .example("A brand color picker with `swatches: Swatches::labelled(..)` naming each swatch \"Ocean\", \"Forest\" and so on: a screen reader reads \"Ocean\", not a hex code spelled out, and the swatch equal to the value reads as pressed.")
-                .limits(["The hue and alpha tracks meet the 24px target size of WCAG 2.5.8 from `md` up, not at `sm` or `xs`."]),
+                .example("A brand color picker with `swatches: Swatches::labelled(..)` naming each swatch \"Ocean\", \"Forest\" and so on: a screen reader reads \"Ocean\", not a hex code spelled out, and the swatch equal to the value reads as pressed."),
             lead: rsx! {
                 Text {
                     "A saturation panel and a hue slider, with an optional alpha slider and "

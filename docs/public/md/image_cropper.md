@@ -101,7 +101,7 @@ explains how parts work.
 | `Arrow` | On the box: moves it, with `pan` the image, as a drag does. On a corner: moves that corner, resizing the box. |
 | `Shift+Arrow` | Ten times as far. |
 | `Home`, `End` | On the box: moves it to the left or right edge, with `pan` the image. On a corner: moves its left or right side as far left or right as it goes. |
-| `+`, `-` | With `pan`: zoom the image in or out around the box's centre. |
+| `+`, `=`, `-` | With `pan`: + or = zooms the image in, - zooms it out, around the box's centre. |
 
 ### Libero handles
 
@@ -125,11 +125,14 @@ explains how parts work.
   100%".
 - With `pan` a slider named "Zoom" under the image zooms around the box's
   centre, by one pointer or its keys, so no pinch is needed (WCAG 2.5.1). Every
-  step zooms by the same factor. Its value is the zoom, "100%".
+  step zooms by the same factor. Its value is the zoom, "100%", the same number
+  the box says. Minus and plus glyphs, hidden from assistive tech, mark its ends.
 - Under the image a group named "Crop area controls" holds buttons for every drag
   (WCAG 2.5.7): "Move left", "Move up", "Move down" and "Move right" move the
   box 5% of the image, with `pan` the image under it; "Smaller" and "Larger"
-  scale the box around its centre, without `pan`. With `controls: false` the
+  scale the box around its centre, without `pan`. A button whose press would
+  leave the box as it is, such as "Move left" at the left edge, is
+  `aria-disabled` and stays focusable. With `controls: false` the
   buttons and the zoom bar stay out of sight until focus reaches them.
 - With an `aspect`, a corner key resizes both sides together.
 - The box and the corners describe their keys.

@@ -38,6 +38,8 @@ const IMAGE_Y: CssVar = CssVar::new("--lsx-image-cropper-image-y");
 
 /// Arrow keys move this far, Shift+arrow ten times as far.
 const KEY_STEP: f64 = 0.01;
+/// The pan zoom slider's step, on ln(zoom).
+const ZOOM_SLIDER_STEP: f64 = 0.01;
 /// Pan mode's + and - zoom by this factor, the Larger and Smaller buttons scale by it.
 const ZOOM_STEP: f64 = 1.1;
 /// A move button's step, Shift+arrow's half.
@@ -177,6 +179,14 @@ pub(super) fn press_message(
 ) -> Option<String> {
     let said = value_text(words, pan, after);
     (said != value_text(words, pan, before)).then_some(said)
+}
+
+/// The zoom a slider value on ln(zoom) stands for: `exact` while it is `exact` snapped to the step.
+pub(super) fn slider_zoom(value: f64, exact: f64) -> f64 {
+    match (value - exact.ln()).abs() <= ZOOM_SLIDER_STEP / 2.0 {
+        true => exact,
+        false => value.exp(),
+    }
 }
 
 fn client(event: &Event<PointerData>) -> DragPoint {
@@ -354,6 +364,10 @@ static IMAGE_CROPPER_SX: StaticSx = StaticSx::new(|| {
                     "& > [data-slot='zoom']",
                     sx().grid_area("2 / 1")
                         .position("relative")
+                        // Minus and plus glyphs at the ends say what the bare track does (5004).
+                        .display("flex")
+                        .align_items("center")
+                        .gap("xs")
                         .padding_inline("sm")
                         .padding_block("xs")
                         .line_height("normal")
@@ -361,6 +375,11 @@ static IMAGE_CROPPER_SX: StaticSx = StaticSx::new(|| {
                         // A finger's height round the 16px slider, so its hit area stays in the bar.
                         .media(COARSE, sx().padding_block("14px")),
                 )
+                .selector(
+                    "& > [data-slot='zoom'] > svg",
+                    sx().flex("none").width("16px").height("16px"),
+                )
+                .selector("& > [data-slot='zoom'] > :not(svg)", sx().flex("1").min_width("0"))
                 .selector(
                     "& > [data-slot='zoom'] [data-slot='track']",
                     coarse_hit_area_sx("::before"),
@@ -894,11 +913,9 @@ pub fn ImageCropper(props: ImageCropperProps) -> Element {
             }
         });
     };
-    let nudge = move |dx: f64, dy: f64| {
-        Callback::new(move |_: MouseEvent| pressed(shift(Grip::Move, dx, dy)))
-    };
-    let resize =
-        move |factor: f64| Callback::new(move |_: MouseEvent| pressed(shown.scaled(factor, min)));
+    // Each button's box: one that reads as now is `aria-disabled`, not a silent press (4999).
+    let nudge = move |dx: f64, dy: f64| shift(Grip::Move, dx, dy);
+    let resize = move |factor: f64| shown.scaled(factor, min);
     let has_controls = props.onchange.is_some();
     // Pan mode zooms through its slider instead of the last two.
     let mut buttons = vec![
@@ -950,8 +967,13 @@ pub fn ImageCropper(props: ImageCropperProps) -> Element {
         shown.scaled(f64::MAX, min).image_transform().0,
         shown.scaled(0.0, min).image_transform().0,
     );
-    let zoom_text =
-        use_callback(move |zoom: f64| fill(words.zoom_value, &[("zoom", &percent(zoom.exp()))]));
+    // The box's exact zoom while the slider shows it snapped to `step`, so both say one number.
+    let mut exact_zoom = use_hook(|| CopyValue::new(scale));
+    exact_zoom.set(scale);
+    let zoom_text = use_callback(move |zoom: f64| {
+        let zoom = slider_zoom(zoom, *exact_zoom.peek());
+        fill(words.zoom_value, &[("zoom", &percent(zoom))])
+    });
     let keys = if pan { words.pan_keys } else { words.keys };
     let tabindex = if interactive { "0" } else { "-1" };
     let placed_at = if pan { shown.frame() } else { shown };
@@ -1091,12 +1113,13 @@ pub fn ImageCropper(props: ImageCropperProps) -> Element {
                     span { id: keys_id(), hidden: true, "{keys}" }
                     if pan {
                         div { "data-slot": ImageCropperPart::Zoom.slot(),
+                            Glyph { slot: IconSlot::Minus, icon: lucide::minus::outlined }
                             // On ln(zoom), so every step zooms by the same factor (1476).
                             Slider::<f64> {
                                 value: scale.ln(),
                                 min: zoom_range.0.ln(),
                                 max: zoom_range.1.ln(),
-                                step: 0.01,
+                                step: ZOOM_SLIDER_STEP,
                                 disabled: !interactive,
                                 aria_label: words.zoom,
                                 format: zoom_text,
@@ -1108,6 +1131,7 @@ pub fn ImageCropper(props: ImageCropperProps) -> Element {
                                     }
                                 },
                             }
+                            Glyph { slot: IconSlot::Plus, icon: lucide::plus::outlined }
                         }
                     }
                     if has_controls {
@@ -1115,7 +1139,7 @@ pub fn ImageCropper(props: ImageCropperProps) -> Element {
                             "data-slot": ImageCropperPart::Controls.slot(),
                             role: "group",
                             "aria-label": words.controls,
-                            for (label , slot , icon , onclick) in buttons {
+                            for (label , slot , icon , rect) in buttons {
                                 ActionIcon {
                                     key: "{label}",
                                     variant: "standard",
@@ -1123,7 +1147,9 @@ pub fn ImageCropper(props: ImageCropperProps) -> Element {
                                     size: "sm",
                                     aria_label: label,
                                     disabled: !interactive,
-                                    onclick,
+                                    "aria-disabled": (interactive && press_message(&words, pan, shown, rect).is_none())
+                                        .then_some("true"),
+                                    onclick: move |_| pressed(rect),
                                     Glyph { slot, icon }
                                 }
                             }
