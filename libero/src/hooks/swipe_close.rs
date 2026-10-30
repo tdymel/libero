@@ -43,6 +43,14 @@ enum SwipeDrag {
 }
 
 impl SwipeDrag {
+    /// Where a move `dy` down puts the box; `None` while it slides off.
+    fn follow(self, dy: f64) -> Option<SwipeDrag> {
+        match self {
+            SwipeDrag::Off => None,
+            _ => Some(SwipeDrag::Follow(dy.max(0.0))),
+        }
+    }
+
     /// The drag and ease vars; always set, as a renderer keeps a dropped declaration.
     fn variables(self, reduced_motion: bool) -> Variables {
         let ease = match (self, reduced_motion) {
@@ -159,19 +167,26 @@ pub(crate) fn use_swipe_close(
         drag.set(SwipeDrag::Rest);
         onclose.call(());
     });
+    // Sliding off, the box ignores a new touch: it closes all the same (5012).
+    let sliding = move || *drag.peek() == SwipeDrag::Off;
     let follow = use_callback(move |delta: DragPoint| {
+        let Some(next) = drag.peek().follow(delta.y) else {
+            return;
+        };
         last.set(delta);
-        let next = SwipeDrag::Follow(delta.y.max(0.0));
         if *drag.peek() != next {
             drag.set(next);
         }
     });
     let rest = use_callback(move |()| {
-        if *drag.peek() != SwipeDrag::Rest {
+        if !sliding() && *drag.peek() != SwipeDrag::Rest {
             drag.set(SwipeDrag::Rest);
         }
     });
     let finish = use_callback(move |()| {
+        if sliding() {
+            return;
+        }
         let delta = *last.peek();
         if !swiped_off(delta.x, delta.y) || allow.is_some_and(|allow| !allow.call(())) {
             drag.set(SwipeDrag::Rest);
@@ -278,10 +293,11 @@ pub(crate) fn use_swipe_close(
             if !event.is_primary() || event.pointer_type() == "mouse" {
                 return;
             }
-            let takes = match swipe_press(&event, mark) {
-                Some(hit) => hit.shown && !hit.refused,
-                None => grip && event.pointer_type() == "pen",
-            };
+            let takes = !sliding()
+                && match swipe_press(&event, mark) {
+                    Some(hit) => hit.shown && !hit.refused,
+                    None => grip && event.pointer_type() == "pen",
+                };
             if takes {
                 let at = event.client_coordinates();
                 press.set(Some(Press::Wait {
@@ -339,6 +355,16 @@ mod tests {
         );
         assert!(style(SwipeDrag::Off, false).contains("calc(100% + "));
         assert!(style(SwipeDrag::Off, true).ends_with("--lsx-swipe-ease:0ms;"));
+    }
+
+    #[test]
+    fn a_box_sliding_off_follows_no_new_touch() {
+        assert_eq!(SwipeDrag::Rest.follow(-5.0), Some(SwipeDrag::Follow(0.0)));
+        assert_eq!(
+            SwipeDrag::Follow(4.0).follow(9.0),
+            Some(SwipeDrag::Follow(9.0))
+        );
+        assert_eq!(SwipeDrag::Off.follow(30.0), None);
     }
 
     const START: DragPoint = DragPoint { x: 100.0, y: 100.0 };

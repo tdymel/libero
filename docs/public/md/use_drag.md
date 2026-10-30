@@ -101,11 +101,11 @@ pub fn drag_handle_sx() -> Sx
 | Field | Type | Description |
 |---|---|---|
 | `capture` | `ElementHandle` | The element that takes pointer capture and carries the move, up and cancel handlers. |
-| `onstart` | `Callback<DragStart>` | The pointer went down. `DragStart` has `client: DragPoint` and `cancel: Callback<()>`. |
+| `onstart` | `Callback<DragStart>` | The pointer went down. `DragStart` has `client: DragPoint` and `cancel: Callback<()>`. The press's default (focus, compatibility mouse events) is already prevented, even for a press it cancels. |
 | `onmove` | `Callback<DragMove>` | `DragMove` has `start` and `client`, and `delta()`. |
 | `onend` | `Callback<()>` | Released or cancelled. Not called after `cancel`. |
 
-`Drag` is `Copy`: `dragging: Signal<bool>`, and the four handlers
+`Drag` is `Copy`: `dragging: ReadSignal<bool>`, and the four handlers
 `onpointerdown`, `onpointermove`, `onpointerup`, `onpointercancel`, each a
 `Callback<Event<PointerData>>`. `DragPoint` has `x` and `y` in client
 coordinates. `drag_handle_sx()` sets `touch-action: none`.

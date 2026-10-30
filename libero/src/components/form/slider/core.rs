@@ -382,7 +382,7 @@ fn value_text(
 fn SliderHoverPreview(
     mut hovered: Signal<Option<(f64, ThumbTrack)>>,
     mut muted: CopyValue<bool>,
-    dragging: Signal<bool>,
+    dragging: ReadSignal<bool>,
     min: f64,
     max: f64,
     size: Size,
@@ -1611,7 +1611,7 @@ struct SliderThumbsProps {
     thumb_elements: [ElementHandle; 2],
     onkeydown: Callback<(usize, Event<KeyboardData>)>,
     onthumbdown: Callback<Event<PointerData>>,
-    dragging: Signal<bool>,
+    dragging: ReadSignal<bool>,
     active: Signal<usize>,
     thumb_track: Signal<Option<ThumbTrack>>,
 }

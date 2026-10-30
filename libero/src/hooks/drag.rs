@@ -55,7 +55,8 @@ pub struct DragOptions {
     /// owning the geometry, not the grab handle.
     pub capture: ElementHandle,
     /// Vetoes by calling [`DragStart::cancel`], not by returning: measuring
-    /// may take a round-trip.
+    /// may take a round-trip. The press's default (focus, compatibility mouse
+    /// events) is already prevented, even for a press this vetoes.
     pub onstart: Callback<DragStart>,
     /// Every pointer move while the drag lasts.
     pub onmove: Callback<DragMove>,
@@ -74,7 +75,7 @@ struct ActiveDrag {
 #[derive(Clone, Copy)]
 pub struct Drag {
     /// `true` from the drag's start to its end.
-    pub dragging: Signal<bool>,
+    pub dragging: ReadSignal<bool>,
     /// The grab handle.
     pub onpointerdown: Callback<Event<PointerData>>,
     /// The capture element.
@@ -257,6 +258,14 @@ thread_local! {
     static CLAIMED: std::cell::Cell<Option<i32>> = const { std::cell::Cell::new(None) };
 }
 
+/// Claims `pointer_id`'s press for the press's own dispatch only: a press released
+/// elsewhere or vetoed leaves no claim for a later press with that id (5008).
+fn claim_press(pointer_id: i32) {
+    CLAIMED.set(Some(pointer_id));
+    // Tasks run after the dispatch, once every ancestor saw the press.
+    dioxus::core::spawn_forever(async move { release_press_claim(pointer_id) });
+}
+
 /// Whether a drag handle took `pointer_id`'s press; handles fire before the ancestors
 /// a press bubbles to. Takes the claim.
 pub(crate) fn take_press_claim(pointer_id: i32) -> bool {
@@ -294,7 +303,11 @@ fn use_drag_inner(
     let mut dragging = use_signal(|| false);
     let mut pending = use_signal(|| Option::<Pending>::None);
 
+    // A vetoed press is no handle's: an ancestor's edge swipe may take it.
     let cancel = use_callback(move |()| {
+        if let Some(drag) = *active.peek() {
+            release_press_claim(drag.pointer_id);
+        }
         active.set(None);
         dragging.set(false);
     });
@@ -384,8 +397,9 @@ fn use_drag_inner(
         {
             return;
         }
+        // Before `onstart`, which may veto later than the press can still be prevented (5009).
         event.prevent_default();
-        CLAIMED.set(Some(event.pointer_id()));
+        claim_press(event.pointer_id());
         let client = client_point(&event);
         let press = ActiveDrag {
             pointer_id: event.pointer_id(),
@@ -469,7 +483,7 @@ fn use_drag_inner(
     });
 
     Drag {
-        dragging,
+        dragging: dragging.into(),
         onpointerdown,
         onpointermove,
         onpointerup,
@@ -632,6 +646,22 @@ mod tests {
         assert_eq!(press.step(10.0, 12.0), PendingStep::Drop);
         assert_eq!(press.step(0.0, -9.0), PendingStep::Drop);
         assert_eq!(press.step(12.0, 10.0), PendingStep::Begin);
+    }
+
+    #[test]
+    fn a_press_claim_ends_with_its_dispatch() {
+        let mut dom = VirtualDom::new(|| {
+            use_hook(|| {
+                claim_press(7);
+                assert!(take_press_claim(7));
+                // Released outside the capture element: no up clears it.
+                claim_press(8);
+            });
+            rsx! {}
+        });
+        dom.rebuild_in_place();
+        dom.process_events();
+        assert!(!take_press_claim(8));
     }
 
     #[test]
