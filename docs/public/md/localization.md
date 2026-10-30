@@ -12,7 +12,8 @@ with any formats: this site is English in German formats.
 
 ## Usage
 
-The docs page's controls switch the site's language, formats and direction.
+The docs page's controls switch the preview's language and formats, through a nested
+`LiberoProvider`, and the site's direction.
 
 ```rust
 use dioxus::prelude::*;

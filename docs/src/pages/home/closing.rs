@@ -28,7 +28,7 @@ pub fn Closing() -> Element {
                             size: "xxl",
                             component: "h2",
                             id: "closing-title",
-                            color: ColorCss::PRIMARY.role_value("text-", ColorShade::S6),
+                            sx: sx().color(ColorCss::PRIMARY.role_value("text-", ColorShade::S6)),
                             "The ball is in your hands"
                         }
                         CtaStack {
@@ -55,9 +55,10 @@ pub fn Closing() -> Element {
                 Divider {}
                 Text { size: "sm", color: "muted.7",
                     "MIT or Apache-2.0. Source on "
-                    Anchor { to: GITHUB, target: "_blank", "GitHub" }
+                    // Anchor sizes itself, not from the Text around it.
+                    Anchor { to: GITHUB, target: "_blank", size: "sm", "GitHub" }
                     ". Built with "
-                    Anchor { to: "https://dioxuslabs.com", target: "_blank", "Dioxus" }
+                    Anchor { to: "https://dioxuslabs.com", target: "_blank", size: "sm", "Dioxus" }
                     "."
                 }
             }

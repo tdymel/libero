@@ -2,9 +2,11 @@ use crate::components::{Control, Demo, DemoValues, DocPage, DocSection, Wrap, in
 use crate::pages::form::date_locales::{Choice, FORMATS, LANGUAGES, options, picked};
 use dioxus::prelude::*;
 use libero::{
+    LiberoProvider,
     chrono::{NaiveDate, NaiveDateTime, NaiveTime},
     components::{ChronoField, Code, CodeBlock, DatePicker, Flex, Table, Text, column},
     hooks::use_direction,
+    localization::{Formats, Localization},
     sx::sx,
     theme::Direction,
     use_formats_handle, use_localization_handle,
@@ -121,7 +123,7 @@ pub fn LocalizationPage() -> Element {
                 children_code: "Router::<Route> {}".to_string(),
                 wrap: Wrap(wrap_direction),
                 controls: vec![
-                    // Each swaps the site's own while the page is open.
+                    // Language and formats switch the preview only; direction is the document's.
                     Control::toggle("localization", options(&LANGUAGES))
                         .default(site.0.clone())
                         .code(|_, values| prop_of(&LANGUAGES, values, "localization", "Localization")),
@@ -174,7 +176,7 @@ pub fn LocalizationPage() -> Element {
                     Code { source: "D. MMMM YYYY" }
                     "."
                 }
-                CodeBlock { source: CUSTOM_FORMATS, language: "rust" }
+                CodeBlock { source: CUSTOM_FORMATS, label: "Custom formats", language: "rust" }
                 Text {
                     Code { source: "Localization" }
                     " has a group per component, plus "
@@ -189,7 +191,7 @@ pub fn LocalizationPage() -> Element {
                     Code { source: "{{n}}" }
                     ", so each language puts it where its grammar wants it."
                 }
-                CodeBlock { source: OVERRIDE_LOCALIZATION, language: "rust" }
+                CodeBlock { source: OVERRIDE_LOCALIZATION, label: "Overridden localization", language: "rust" }
                 Text {
                     "A group can gain fields in a minor release, so end each one with "
                     Code { source: "..Group::ENGLISH" }
@@ -208,7 +210,7 @@ pub fn LocalizationPage() -> Element {
                     Code { source: "use_formats_handle()" }
                     ", and every component that reads them follows."
                 }
-                CodeBlock { source: SWITCH_LOCALIZATION, language: "rust" }
+                CodeBlock { source: SWITCH_LOCALIZATION, label: "Switching localization at runtime", language: "rust" }
             }
 
             DocSection {
@@ -223,8 +225,8 @@ pub fn LocalizationPage() -> Element {
     }
 }
 
-/// A calendar and a date-time field in the site's language, formats and
-/// direction, which it sets from the controls and puts back on leaving.
+/// A calendar and a date-time field in the picked language and formats, under a nested
+/// provider, and the site's direction, which it sets from the control and puts back on leaving.
 #[component]
 fn LocalizationPreview(values: DemoValues) -> Element {
     let (language_name, language) = picked(&LANGUAGES, &values.str("localization"));
@@ -236,19 +238,15 @@ fn LocalizationPreview(values: DemoValues) -> Element {
     };
     let (_, conventions) = picked(&FORMATS, &values.str("formats"));
     let rtl = values.str("direction") == "rtl";
-    let localization = use_localization_handle();
-    let formats = use_formats_handle();
     let direction = use_direction();
-    let site = use_hook(|| (localization.get(), formats.get(), direction.kept()));
+    let site = use_hook(|| direction.kept());
     let turn_to = if rtl { Direction::Rtl } else { Direction::Ltr };
     // The direction both effects last agreed on: the control's effect must not read the handle,
     // or it would undo the header toggle.
     let applied = use_hook(|| Rc::new(Cell::new(direction.get())));
     {
         let (direction, applied) = (direction.clone(), applied.clone());
-        use_effect(use_reactive!(|language, conventions, turn_to| {
-            localization.set(language);
-            formats.set(conventions);
+        use_effect(use_reactive!(|turn_to| {
             if applied.get() != turn_to {
                 applied.set(turn_to);
                 direction.set(turn_to);
@@ -270,15 +268,37 @@ fn LocalizationPreview(values: DemoValues) -> Element {
         });
     }
     use_drop(move || {
-        localization.set(site.0);
-        formats.set(site.1);
         // The choice found, or none: a visit alone should keep nothing.
-        match site.2 {
-            _ if direction.kept() == site.2 => {}
+        match site {
+            _ if direction.kept() == site => {}
             Some(found) => direction.set(found),
             None => direction.clear(),
         }
     });
+
+    // Only the preview switches language and formats: the site's chrome stays English (WCAG 3.1.2).
+    rsx! {
+        div { lang,
+            LiberoProvider { localization: language, formats: conventions,
+                PreviewFields { language, conventions, lang }
+            }
+        }
+    }
+}
+
+/// The fields, switched through the nested provider's handles as the controls move.
+#[component]
+fn PreviewFields(
+    language: &'static Localization,
+    conventions: &'static Formats,
+    lang: &'static str,
+) -> Element {
+    let localization = use_localization_handle();
+    let formats = use_formats_handle();
+    use_effect(use_reactive!(|language, conventions| {
+        localization.set(language);
+        formats.set(conventions);
+    }));
 
     let mut day = use_signal(|| NaiveDate::from_ymd_opt(2026, 9, 14));
     let mut moment = use_signal(|| {
@@ -287,7 +307,7 @@ fn LocalizationPreview(values: DemoValues) -> Element {
             .map(|(day, time)| NaiveDateTime::new(day, time))
     });
     rsx! {
-        Flex { lang, gap: "md", wrap: "wrap", align: "start", justify: "center",
+        Flex { gap: "md", wrap: "wrap", align: "start", justify: "center",
             DatePicker { value: day(), onchange: move |next| day.set(next) }
             ChronoField::<NaiveDateTime> {
                 value: moment(),
@@ -311,9 +331,16 @@ mod tests {
             const { std::cell::RefCell::new(None) };
     }
 
+    thread_local! {
+        static SITE_LANG: std::cell::RefCell<Option<Box<dyn Fn() -> &'static str>>> =
+            const { std::cell::RefCell::new(None) };
+    }
+
     #[component]
     fn Probe() -> Element {
         HANDLE.with(|handle| *handle.borrow_mut() = Some(use_direction()));
+        let site = use_localization_handle();
+        SITE_LANG.with(|lang| *lang.borrow_mut() = Some(Box::new(move || site.get().lang)));
         rsx! {}
     }
 
@@ -414,5 +441,26 @@ mod tests {
                 "{language}: {html}"
             );
         }
+    }
+
+    /// The German pick reaches the preview only: the site's chrome keeps its English (todo 5029).
+    #[test]
+    fn the_site_keeps_its_language() {
+        let mut dom = VirtualDom::new_with_props(
+            Preview,
+            PreviewProps {
+                language: "Deutsch",
+            },
+        );
+        dom.rebuild_in_place();
+        for _ in 0..4 {
+            dom.process_events();
+            dom.render_immediate(&mut dioxus::core::NoOpMutations);
+        }
+        let site =
+            dom.in_runtime(|| SITE_LANG.with(|lang| lang.borrow().as_ref().map(|get| get())));
+        assert_eq!(site, Some("en"));
+        let html = dioxus_ssr::render(&dom);
+        assert!(html.contains("lang=\"de\""), "{html}");
     }
 }

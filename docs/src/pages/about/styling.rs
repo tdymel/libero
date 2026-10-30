@@ -287,7 +287,7 @@ pub fn StylingPage() -> Element {
                 title: "Theme values",
                 Text { "A value is a plain string. The ones the theme knows resolve against it." }
                 CodeTable { label: "Theme values", head: ["Value", "Resolves to"], rows: VALUES.to_vec() }
-                CodeBlock { source: THEME_VALUES, language: "rust" }
+                CodeBlock { source: THEME_VALUES, label: "Theme values in sx", language: "rust" }
                 Text {
                     "CSS text reaches the stylesheet unescaped, and so do selectors and media "
                     "queries. Never build them from user text: a "
@@ -338,7 +338,7 @@ pub fn StylingPage() -> Element {
                     Code { source: "block_size" }
                     " are width and height the same way."
                 }
-                CodeBlock { source: AXES, language: "rust" }
+                CodeBlock { source: AXES, label: "Axis shorthands", language: "rust" }
             }
 
             DocSection {
@@ -395,7 +395,7 @@ pub fn StylingPage() -> Element {
                     Code { source: "focus_visible" }
                     " are shorthands for it."
                 }
-                CodeBlock { source: SELECTORS, language: "rust" }
+                CodeBlock { source: SELECTORS, label: "Selectors", language: "rust" }
             }
 
             DocSection {
@@ -407,8 +407,8 @@ pub fn StylingPage() -> Element {
                     Code { source: "bp()" }
                     " puts the steps inside the value."
                 }
-                CodeBlock { source: RESPONSIVE, language: "rust" }
-                CodeBlock { source: RESPONSIVE_VALUE, language: "rust" }
+                CodeBlock { source: RESPONSIVE, label: "Responsive breakpoints", language: "rust" }
+                CodeBlock { source: RESPONSIVE_VALUE, label: "Responsive value", language: "rust" }
                 Text {
                     "Breakpoints follow the window, not the parent element: resize the "
                     "window to see them, as a narrow preview does not switch."
@@ -435,8 +435,8 @@ pub fn StylingPage() -> Element {
                     Code { source: "when" }
                     ", never the other way round, or the state's rule wins."
                 }
-                CodeBlock { source: MEDIA, language: "rust" }
-                CodeBlock { source: MEDIA_NESTING, language: "rust" }
+                CodeBlock { source: MEDIA, label: "Media queries", language: "rust" }
+                CodeBlock { source: MEDIA_NESTING, label: "Media queries in nested selectors", language: "rust" }
                 Text {
                     Code { source: "supports" }
                     " nests styles under "
@@ -446,14 +446,14 @@ pub fn StylingPage() -> Element {
                     "condition is passed through verbatim. Native Blitz judges it too: a "
                     "property its engine knows applies the block, an unknown one drops it."
                 }
-                CodeBlock { source: SUPPORTS, language: "rust" }
+                CodeBlock { source: SUPPORTS, label: "Supports queries", language: "rust" }
                 Text {
                     Code { source: "container_query" }
                     " asks about a named ancestor instead of the window, for a component in "
                     "a sidebar, a grid cell or a card. A container no longer takes its width "
                     "from its content, so never make a shrink-to-fit box one."
                 }
-                CodeBlock { source: CONTAINER, language: "rust" }
+                CodeBlock { source: CONTAINER, label: "Container queries", language: "rust" }
             }
 
             DocSection {
@@ -464,7 +464,7 @@ pub fn StylingPage() -> Element {
                     Code { source: "sx" }
                     ", and every other attribute or event goes to the rendered tag."
                 }
-                CodeBlock { source: ESCAPE_HATCHES, language: "rust" }
+                CodeBlock { source: ESCAPE_HATCHES, label: "Escape hatches", language: "rust" }
             }
 
             DocSection {
@@ -475,7 +475,7 @@ pub fn StylingPage() -> Element {
                     Code { source: "sx" }
                     " always beats a component's own styling."
                 }
-                CodeBlock { source: LAYER_ORDER, language: "css" }
+                CodeBlock { source: LAYER_ORDER, label: "Layer order", language: "css" }
                 CodeTable { label: "Cascade layers", head: ["Layer", "What it holds"], rows: LAYERS.to_vec() }
                 Text {
                     "A stylesheet of your own is in no layer, so "
@@ -485,14 +485,14 @@ pub fn StylingPage() -> Element {
                     " first. To rank your own layers among libero's, declare the order "
                     "yourself before libero mounts."
                 }
-                CodeBlock { source: APP_LAYER_ORDER, language: "css" }
+                CodeBlock { source: APP_LAYER_ORDER, label: "App layer order", language: "css" }
                 Text {
                     "Declaring the order also makes Tailwind v4 work: its reset under "
                     "libero's components, its utilities over them. Put it before "
                     Code { source: "@import \"tailwindcss\"" }
                     "."
                 }
-                CodeBlock { source: TAILWIND_LAYER_ORDER, language: "css" }
+                CodeBlock { source: TAILWIND_LAYER_ORDER, label: "Tailwind layer order", language: "css" }
             }
 
             DocSection {
@@ -504,7 +504,7 @@ pub fn StylingPage() -> Element {
                     Code { source: "sx" }
                     " inside libero is one, and your own components should copy that."
                 }
-                CodeBlock { source: STATIC_SX, language: "rust" }
+                CodeBlock { source: STATIC_SX, label: "Static sx", language: "rust" }
             }
 
             DocSection {
@@ -555,7 +555,7 @@ pub fn StylingPage() -> Element {
                     Code { source: ".my-alert [data-slot='title'] {{ font-weight: 700 }}" }
                     "."
                 }
-                CodeBlock { source: PARTS, language: "rust" }
+                CodeBlock { source: PARTS, label: "Styling parts", language: "rust" }
                 Text {
                     "Parts a component renders in a portal (a "
                     Code { source: "Dialog" }

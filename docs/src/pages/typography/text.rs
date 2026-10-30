@@ -102,8 +102,14 @@ pub fn TextPage() -> Element {
                         .default(theme.text.size.as_str()),
                     Control::toggle("component", ["p", "span", "div"])
                         .labels(["P", "Span", "Div"]),
-                    // Unset inherits the page's ink, so the unset swatch is painted ink.
-                    Control::color("color").with_unset().unset_swatch("ink"),
+                    // Unset inherits the page's ink, or under a gradient starts at the theme's first stop.
+                    Control::color("color")
+                        .with_unset()
+                        .unset_swatch("ink")
+                        .unset_swatch_when(
+                            |values| !no_gradient(values),
+                            format!("{}.6", theme.gradient.from.as_str()),
+                        ),
                     // The theme's own second stop and angle print as `Gradient::default()`.
                     Control::switch("gradient").code(|_, values| {
                         let default = values.str("gradient_to") == "secondary"

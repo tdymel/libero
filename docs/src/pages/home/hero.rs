@@ -75,7 +75,14 @@ pub fn Hero() -> Element {
                     Text { "One Dioxus codebase for the web, the desktop, Android and iOS; iOS has run in a simulator only." }
                     Flex { direction: "row", gap: "sm", wrap: "wrap", justify: "center",
                         for platform in PLATFORMS {
-                            Badge { key: "{platform}", variant: "outlined", color: "primary.8", "{platform}" }
+                            // Uppercase would read "IOS".
+                            Badge {
+                                key: "{platform}",
+                                variant: "outlined",
+                                color: "primary.8",
+                                sx: sx().text_transform("none"),
+                                "{platform}"
+                            }
                         }
                     }
                 }

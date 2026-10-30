@@ -281,13 +281,13 @@ pub fn GettingStarted() -> Element {
                         ", so add that exact version: a second copy of dioxus would not share libero's contexts."
                     }
                 }
-                CodeBlock { source: INSTALL_COMMANDS, language: "shell" }
+                CodeBlock { source: INSTALL_COMMANDS, label: "Install commands", language: "shell" }
                 Text {
                     "Wrap your app in "
                     Code { source: "LiberoProvider" }
                     " once, at the root. It registers the theme and every style your components use."
                 }
-                CodeBlock { source: QUICK_START_EXAMPLE, language: "rust" }
+                CodeBlock { source: QUICK_START_EXAMPLE, label: "Quick start example", language: "rust" }
             }
 
             DocSection {
@@ -342,7 +342,7 @@ pub fn GettingStarted() -> Element {
                         column("What it does").value(|row: &(&str, &str)| row.1),
                     ],
                 }
-                CodeBlock { source: FEATURES_EXAMPLE, language: "toml" }
+                CodeBlock { source: FEATURES_EXAMPLE, label: "Cargo features example", language: "toml" }
             }
         }
     }
@@ -372,7 +372,7 @@ fn Panel(children: Element) -> Element {
 fn WebPanel() -> Element {
     rsx! {
         Panel {
-            CodeBlock { source: WEB_COMMANDS, language: "shell" }
+            CodeBlock { source: WEB_COMMANDS, label: "Web commands", language: "shell" }
             Text { "What keeps the download small:" }
             Checklist {
                 ListItem {
@@ -398,8 +398,8 @@ fn WebPanel() -> Element {
                     " grammars your pages highlight."
                 }
             }
-            CodeBlock { source: WEB_PROFILE, language: "toml" }
-            CodeBlock { source: WEB_DIOXUS, language: "toml" }
+            CodeBlock { source: WEB_PROFILE, label: "Web release profile", language: "toml" }
+            CodeBlock { source: WEB_DIOXUS, label: "Web Dioxus.toml", language: "toml" }
         }
     }
 }
@@ -419,8 +419,8 @@ fn NativePanel() -> Element {
                 Code { source: "windows" }
                 ")."
             }
-            CodeBlock { source: NATIVE_CARGO, language: "toml" }
-            CodeBlock { source: NATIVE_COMMANDS, language: "shell" }
+            CodeBlock { source: NATIVE_CARGO, label: "Native Cargo.toml", language: "toml" }
+            CodeBlock { source: NATIVE_COMMANDS, label: "Native commands", language: "shell" }
             Text { "On Linux you need:" }
             Checklist {
                 ListItem {
@@ -466,7 +466,7 @@ fn DesktopPanel() -> Element {
                 Code { source: "desktop" }
                 " for system notifications on Linux."
             }
-            CodeBlock { source: DESKTOP_COMMANDS, language: "shell" }
+            CodeBlock { source: DESKTOP_COMMANDS, label: "Desktop commands", language: "shell" }
             Text { "On Linux you need:" }
             Checklist {
                 ListItem {
@@ -482,7 +482,7 @@ fn DesktopPanel() -> Element {
                 Code { source: "http://dioxus.index.html" }
                 ", which WebView2 does not count as a secure context: the camera, microphone, location, notifications and clipboard APIs are missing. Mark that one origin secure, never a wildcard or a list: it is your app's own bundled page. Keep wry's default arguments, which these replace. Confirmed on Windows CI, where the page then reports a secure context:"
             }
-            CodeBlock { source: WINDOWS_SECURE_ORIGIN, language: "rust" }
+            CodeBlock { source: WINDOWS_SECURE_ORIGIN, label: "Windows secure origin", language: "rust" }
         }
     }
 }
@@ -506,7 +506,7 @@ fn AndroidPanel() -> Element {
                 ListItem { "The Android SDK with the NDK (27), platform 34 and build tools 34, and a JDK." }
                 ListItem { "An emulator or a device that " Code { source: "adb devices" } " lists." }
             }
-            CodeBlock { source: ANDROID_COMMANDS, language: "shell" }
+            CodeBlock { source: ANDROID_COMMANDS, label: "Android commands", language: "shell" }
             Text {
                 Code { source: "dx" }
                 " finds the NDK only through "
@@ -517,7 +517,7 @@ fn AndroidPanel() -> Element {
                 Code { source: "adb logcat" }
                 "."
             }
-            CodeBlock { source: ANDROID_DIOXUS, language: "toml" }
+            CodeBlock { source: ANDROID_DIOXUS, label: "Android Dioxus.toml", language: "toml" }
         }
     }
 }
@@ -542,7 +542,7 @@ fn IosPanel() -> Element {
                     Code { source: "rustup target add aarch64-apple-ios-sim aarch64-apple-ios x86_64-apple-ios" }
                 }
             }
-            CodeBlock { source: IOS_COMMANDS, language: "shell" }
+            CodeBlock { source: IOS_COMMANDS, label: "iOS commands", language: "shell" }
             Text {
                 "dioxus's page has no "
                 Code { source: "viewport-fit=cover" }
@@ -550,7 +550,7 @@ fn IosPanel() -> Element {
                 Code { source: "maximum-scale=1, user-scalable=no" }
                 ", which blocks pinch zoom (WCAG 1.4.4); fields keep their text at 16px on iOS, so the page does not need it. Rewrite the viewport meta from the head:"
             }
-            CodeBlock { source: IOS_VIEWPORT, language: "rust" }
+            CodeBlock { source: IOS_VIEWPORT, label: "iOS viewport", language: "rust" }
         }
     }
 }

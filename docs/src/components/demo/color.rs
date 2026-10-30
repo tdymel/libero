@@ -27,6 +27,11 @@ fn swatch(control: &Control, option: &str) -> (String, String) {
                 Some(color) => color.to_string(),
                 None => "surface".to_string(),
             };
+            // A palette shade takes its own contrast tick, as that swatch does.
+            let name = fill.split_once('.').map_or(fill.as_str(), |(name, _)| name);
+            if control.options.iter().any(|option| option == name) {
+                return swatch(control, &fill);
+            }
             // An ink swatch needs a tick that reads on it.
             let tick = if fill == "ink" { "surface" } else { "ink" };
             (fill, tick.to_string())
@@ -207,6 +212,30 @@ pub fn ColorControl(
                     }
                 }
             }
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::components::DemoValues;
+
+    /// Text's unset swatch follows its gradient switch (todo 5035).
+    #[test]
+    fn the_unset_swatch_follows_another_control() {
+        let color = Control::color("color")
+            .with_unset()
+            .unset_swatch("ink")
+            .unset_swatch_when(|values| values.str("gradient") == "true", "primary.6");
+        for (on, fill, tick) in [
+            ("false", "ink", "surface"),
+            ("true", "primary.6", "primary-contrast.6"),
+        ] {
+            let values =
+                DemoValues::defaults(&[color.clone(), Control::switch("gradient").default(on)]);
+            let shown = color.resolved(&values);
+            assert_eq!(swatch(&shown, UNSET), (fill.to_string(), tick.to_string()));
         }
     }
 }

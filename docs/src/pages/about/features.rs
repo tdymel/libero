@@ -418,7 +418,7 @@ pub fn FeaturesPage() -> Element {
                     Code { source: "libero" }
                     "."
                 }
-                CodeBlock { source: RECOMMENDED, language: "toml" }
+                CodeBlock { source: RECOMMENDED, label: "Recommended features", language: "toml" }
             }
 
             DocSection {

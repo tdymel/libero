@@ -34,6 +34,9 @@ pub enum ControlKind {
     Select,
 }
 
+/// A question about the other controls' values.
+pub type ValuesTest = fn(&DemoValues) -> bool;
+
 /// One prop of the demoed component, exposed as its literal values.
 #[derive(Clone)]
 pub struct Control {
@@ -51,6 +54,9 @@ pub struct Control {
     /// The `UNSET` swatch's paint when unset is a color no offered name says (`ScrollArea`'s
     /// grey-5 thumb). `None` leaves it white.
     pub unset_swatch: Option<String>,
+    /// The `UNSET` swatch's paint while another control changes what unset renders
+    /// (Text's gradient takes the theme's first stop). Replaces `unset_swatch` in the panel.
+    pub unset_swatch_when: Option<(ValuesTest, String)>,
     /// Whether a `ControlKind::Color` ends in a `ColorPicker` swatch. Off where the page builds
     /// tokens from the value (`{color}-contrast`), which a hex cannot name.
     pub custom: bool,
@@ -71,6 +77,8 @@ impl PartialEq for Control {
             && self.labels == other.labels
             && self.hidden.is_some() == other.hidden.is_some()
             && self.unset_swatch == other.unset_swatch
+            && self.unset_swatch_when.as_ref().map(|(_, color)| color)
+                == other.unset_swatch_when.as_ref().map(|(_, color)| color)
             && self.custom == other.custom
             && self.options_from.is_some() == other.options_from.is_some()
     }
@@ -140,6 +148,7 @@ impl Control {
             labels: None,
             hidden: None,
             unset_swatch: None,
+            unset_swatch_when: None,
             custom: kind == ControlKind::Color,
             options_from: None,
         }
@@ -150,11 +159,22 @@ impl Control {
         self
     }
 
-    /// This control with the options `values` give it.
+    /// Paints the `UNSET` swatch `color` while `test` holds for the other controls.
+    pub fn unset_swatch_when(mut self, test: ValuesTest, color: impl Into<String>) -> Self {
+        self.unset_swatch_when = Some((test, color.into()));
+        self
+    }
+
+    /// This control with the options and unset swatch `values` give it.
     pub fn resolved(&self, values: &DemoValues) -> Self {
         let mut control = self.clone();
         if let Some(options) = self.options_from {
             control.options = options(values);
+        }
+        if let Some((test, color)) = &self.unset_swatch_when
+            && test(values)
+        {
+            control.unset_swatch = Some(color.clone());
         }
         control
     }

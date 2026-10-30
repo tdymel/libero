@@ -89,7 +89,7 @@ pub fn PlatformPage() -> Element {
                     Code { source: "desktop" }
                     " (a WebView window) or "
                     Code { source: "mobile" }
-                    " (Android's WebView). These docs build with each of them."
+                    " (the Android and iOS WebViews). These docs build with each of them."
                 }
             }
 

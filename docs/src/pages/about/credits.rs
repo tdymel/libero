@@ -1,10 +1,7 @@
 use crate::components::{DocPage, DocSection};
 use crate::site::PICTOGRAM_REPO;
 use dioxus::prelude::*;
-use libero::{
-    components::{Anchor, Code, Table, Text, column},
-    sx::sx,
-};
+use libero::components::{Anchor, Code, Table, Text, Title, column};
 
 /// Name, what it is used for, licence, and its source.
 type Row = (&'static str, &'static str, &'static str, &'static str);
@@ -145,7 +142,7 @@ pub fn CreditsPage() -> Element {
 
             DocSection {
                 title: "Notices",
-                Text { sx: sx().font_weight("600"), "Lucide (ISC)" }
+                Title { component: "h3", size: "sm","Lucide (ISC)" }
                 Text {
                     "Copyright (c) 2026 Lucide Icons and Contributors. Icons derived from "
                     "Feather are also under the MIT License, Copyright (c) 2013-present Cole Bemis."
@@ -155,9 +152,9 @@ pub fn CreditsPage() -> Element {
                     "purpose with or without fee is hereby granted, provided that the above "
                     "copyright notice and this permission notice appear in all copies."
                 }
-                Text { sx: sx().font_weight("600"), "Lobe Icons (MIT)" }
+                Title { component: "h3", size: "sm","Lobe Icons (MIT)" }
                 Text { "Copyright (c) 2023 LobeHub." }
-                Text { sx: sx().font_weight("600"), "pictogram (MIT OR Apache-2.0)" }
+                Title { component: "h3", size: "sm","pictogram (MIT OR Apache-2.0)" }
                 Text {
                     "Copyright (c) 2025 Tom Dymel. "
                     "Used as the "
@@ -170,7 +167,7 @@ pub fn CreditsPage() -> Element {
                     Code { source: "pictogram-icons-simple" }
                     " crates. Licence texts ship with the crates."
                 }
-                Text { sx: sx().font_weight("600"), "MIT icon sets" }
+                Title { component: "h3", size: "sm","MIT icon sets" }
                 Text { "Feather: Copyright (c) 2013-2023 Cole Bemis." }
                 Text { "Heroicons: Copyright (c) Tailwind Labs, Inc." }
                 Text { "Iconoir: Copyright (c) 2021 Luca Burgio." }
@@ -198,7 +195,7 @@ pub fn CreditsPage() -> Element {
                     "OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE "
                     "SOFTWARE."
                 }
-                Text { sx: sx().font_weight("600"), "Material Design Icons (Apache-2.0)" }
+                Title { component: "h3", size: "sm","Material Design Icons (Apache-2.0)" }
                 Text {
                     "Copyright Google LLC. Licensed under the Apache License, Version 2.0 (the "
                     "\"License\"); you may not use this file except in compliance with the License. "
@@ -208,7 +205,7 @@ pub fn CreditsPage() -> Element {
                     "distributed under the License is distributed on an \"AS IS\" BASIS, WITHOUT "
                     "WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied."
                 }
-                Text { sx: sx().font_weight("600"), "Font Awesome Free (CC BY 4.0)" }
+                Title { component: "h3", size: "sm","Font Awesome Free (CC BY 4.0)" }
                 Text {
                     "Font Awesome Free by @fontawesome - "
                     Anchor { to: "https://fontawesome.com", "https://fontawesome.com" }
@@ -216,7 +213,7 @@ pub fn CreditsPage() -> Element {
                     Anchor { to: "https://creativecommons.org/licenses/by/4.0/", "CC BY 4.0" }
                     ". Changed: converted from SVG to Rust data by pictogram."
                 }
-                Text { sx: sx().font_weight("600"), "VS Code Codicons (CC BY 4.0)" }
+                Title { component: "h3", size: "sm","VS Code Codicons (CC BY 4.0)" }
                 Text {
                     "Codicons by Microsoft Corporation, "
                     Anchor { to: "https://github.com/microsoft/vscode-codicons", "https://github.com/microsoft/vscode-codicons" }

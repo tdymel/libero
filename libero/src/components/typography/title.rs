@@ -10,7 +10,7 @@ use crate::{
     hooks::{use_gradient_style, use_theme},
     sx::StaticSx,
     theme::{Gradient, Size, TITLE_LINE_HEIGHT, TitleDefaults},
-    utils::warn,
+    utils::{Warned, use_warn_once},
 };
 
 static TITLE_BASE_SX: StaticSx = StaticSx::new(|| {
@@ -36,14 +36,17 @@ fn default_component(size: Size) -> HtmlTag {
 }
 
 /// Todo 2545: another tag keeps the heading look but leaves the outline silently.
-fn warn_unless_heading(component: HtmlTag) {
+/// Once per tag, so a later change of `component` warns too (todo 5038).
+fn warn_unless_heading(warned: &Warned, component: HtmlTag) {
     use HtmlTag::{H1, H2, H3, H4, H5, H6};
     if !matches!(component, H1 | H2 | H3 | H4 | H5 | H6) {
-        warn(&format!(
-            "Title: component `{}` is not a heading, so it is missing from the outline; \
-             use h1 to h6, or `Text` for the look alone",
-            component.as_str()
-        ));
+        warned.once(component.as_str(), || {
+            format!(
+                "Title: component `{}` is not a heading, so it is missing from the outline; \
+                 use h1 to h6, or `Text` for the look alone",
+                component.as_str()
+            )
+        });
     }
 }
 
@@ -120,7 +123,8 @@ pub fn Title(props: TitleProps) -> Element {
         .copied()
         // The caller's size, never the theme's: a theme must not move the outline.
         .unwrap_or_else(|| default_component(props.size.copied_or(Size::Xxl)));
-    use_hook(|| warn_unless_heading(component));
+    let warned = use_warn_once();
+    warn_unless_heading(&warned, component);
 
     use_box()
         .framework_sx(&TITLE_BASE_SX)
@@ -153,5 +157,32 @@ mod tests {
             || rsx! { LiberoProvider { Title { component: "h2", "Second level" } } }
         ));
         assert!(!warns(|| rsx! { LiberoProvider { Title { "Default" } } }));
+    }
+
+    thread_local! {
+        static TAG: std::cell::Cell<Option<Signal<&'static str>>> = const { std::cell::Cell::new(None) };
+    }
+
+    #[component]
+    fn Switching() -> Element {
+        let tag = use_signal(|| "h2");
+        TAG.with(|cell| cell.set(Some(tag)));
+        rsx! { LiberoProvider { Title { component: tag(), "Turns" } } }
+    }
+
+    #[test]
+    fn a_component_changed_after_mount_warns() {
+        crate::utils::take_warnings();
+        let mut dom = VirtualDom::new(Switching);
+        dom.rebuild_in_place();
+        assert!(crate::utils::take_warnings().is_empty());
+        let mut tag = TAG.with(|cell| cell.get()).expect("rendered");
+        dom.in_runtime(|| tag.set("div"));
+        dom.render_immediate(&mut dioxus::core::NoOpMutations);
+        let warnings = crate::utils::take_warnings();
+        assert!(
+            warnings.iter().any(|w| w.starts_with("Title:")),
+            "{warnings:?}"
+        );
     }
 }

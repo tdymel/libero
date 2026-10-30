@@ -58,7 +58,8 @@ fn Stat(value: &'static str, title: &'static str) -> Element {
                         .font_size("2.25rem")
                         .font_weight("800")
                         .line_height("1"),
-                    "{value}"
+                    // "100+" keeps its order in a right-to-left page.
+                    bdi { dir: "ltr", "{value}" }
                 }
                 Text { component: "span", sx: sx().font_weight("700"), "{title}" }
             }

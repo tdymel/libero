@@ -25,8 +25,8 @@ The web and Blitz answer all of them. A WebView, on desktop or Android, answers
 them through the page's scripts, but some element calls there are unsupported.
 
 The renderer is a build-time choice, one dioxus feature each: `web`, `native`
-(Blitz), `desktop` (a WebView window) or `mobile` (Android's WebView). These
-docs build with each of them.
+(Blitz), `desktop` (a WebView window) or `mobile` (the Android and iOS
+WebViews). These docs build with each of them.
 
 ## Using them
 

@@ -39,6 +39,10 @@ const NESTED_ICONS: &str = r#"rsx! {
 pub fn ProvidersPage() -> Element {
     // March: "September" is the same word in German.
     let day = NaiveDate::from_ymd_opt(2026, 3, 14);
+    let mut outer_day = use_signal(|| day);
+    let mut inner_day = use_signal(|| day);
+    let mut outer_checked = use_signal(|| true);
+    let mut inner_checked = use_signal(|| true);
 
     rsx! {
         DocPage {
@@ -91,7 +95,7 @@ pub fn ProvidersPage() -> Element {
                     Paper { sx: sx().padding("md"),
                         Flex { direction: "column", gap: "sm",
                             Title { size: "sm", component: "h3", "Outer provider" }
-                            DatePicker { value: day, onchange: |_| {} }
+                            DatePicker { value: outer_day(), onchange: move |next| outer_day.set(next) }
                         }
                     }
                     div { lang: "de",
@@ -99,13 +103,13 @@ pub fn ProvidersPage() -> Element {
                             Paper { sx: sx().padding("md"),
                                 Flex { direction: "column", gap: "sm",
                                     Title { size: "sm", component: "h3", "Inner provider" }
-                                    DatePicker { value: day, onchange: |_| {} }
+                                    DatePicker { value: inner_day(), onchange: move |next| inner_day.set(next) }
                                 }
                             }
                         }
                     }
                 }
-                CodeBlock { source: NESTED, language: "rust" }
+                CodeBlock { source: NESTED, label: "Nested LiberoProvider", language: "rust" }
                 Text {
                     "Four limits. The theme is a sheet on the document root, so a nested provider's "
                     Code { source: "themes" }
@@ -131,13 +135,13 @@ pub fn ProvidersPage() -> Element {
                 }
                 Flex { direction: "column", gap: "sm", align: "start",
                     IconProvider { icons: IconSet::new().with(IconSlot::CheckboxCheck, lucide::check_check::outlined),
-                        Checkbox { label: "Outer", checked: true, onchange: |_| {} }
+                        Checkbox { label: "Outer", checked: outer_checked(), onchange: move |next| outer_checked.set(next) }
                         IconProvider { icons: IconSet::new().with(IconSlot::CheckboxCheck, lucide::square_check::outlined),
-                            Checkbox { label: "Inner", checked: true, onchange: |_| {} }
+                            Checkbox { label: "Inner", checked: inner_checked(), onchange: move |next| inner_checked.set(next) }
                         }
                     }
                 }
-                CodeBlock { source: NESTED_ICONS, language: "rust" }
+                CodeBlock { source: NESTED_ICONS, label: "Nested IconProvider", language: "rust" }
             }
         }
     }

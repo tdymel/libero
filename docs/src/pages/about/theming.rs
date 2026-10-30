@@ -154,7 +154,7 @@ pub fn ThemingPage() -> Element {
                     Code { source: "Theme::DEFAULT" }
                     "."
                 }
-                CodeBlock { source: CUSTOM_THEME, language: "rust" }
+                CodeBlock { source: CUSTOM_THEME, label: "Custom theme", language: "rust" }
             }
 
             DocSection {
@@ -169,7 +169,7 @@ pub fn ThemingPage() -> Element {
                     Code { source: "primary.9" }
                     " are the shades."
                 }
-                CodeBlock { source: USING_COLORS, language: "rust" }
+                CodeBlock { source: USING_COLORS, label: "Using colors", language: "rust" }
             }
 
             DocSection {
@@ -178,7 +178,7 @@ pub fn ThemingPage() -> Element {
                     "Every prop a caller leaves unset comes from the component's struct on "
                     "the theme. Pill-shaped buttons everywhere is one change here."
                 }
-                CodeBlock { source: COMPONENT_DEFAULTS, language: "rust" }
+                CodeBlock { source: COMPONENT_DEFAULTS, label: "Component defaults", language: "rust" }
                 Text {
                     "Two structs serve every component: "
                     Code { source: "focus_ring" }
@@ -218,7 +218,7 @@ pub fn ThemingPage() -> Element {
                     Code { source: "paper.glass_blur" }
                     " blurs what shows through. Stay at 70 or more, so text keeps its contrast."
                 }
-                CodeBlock { source: SCALES, language: "rust" }
+                CodeBlock { source: SCALES, label: "Scales", language: "rust" }
             }
 
             DocSection {
@@ -242,7 +242,7 @@ pub fn ThemingPage() -> Element {
                     Code { source: "(\"secondary\", 45)" }
                     "."
                 }
-                CodeBlock { source: GRADIENT, language: "rust" }
+                CodeBlock { source: GRADIENT, label: "Gradient", language: "rust" }
             }
 
             DocSection {
@@ -262,7 +262,7 @@ pub fn ThemingPage() -> Element {
                     Code { source: "ThemeSet::CATALOGUE" }
                     " has ready-made pairs such as Catppuccin, Dracula and Nord."
                 }
-                CodeBlock { source: THEME_SET, language: "rust" }
+                CodeBlock { source: THEME_SET, label: "Theme set", language: "rust" }
                 Text {
                     Code { source: "ThemeSwitcher" }
                     " is a ready-made switch."
@@ -277,7 +277,7 @@ pub fn ThemingPage() -> Element {
                     Code { source: "sx" }
                     "."
                 }
-                CodeBlock { source: READING_THE_THEME, language: "rust" }
+                CodeBlock { source: READING_THE_THEME, label: "Reading the theme", language: "rust" }
             }
 
             DocSection {
