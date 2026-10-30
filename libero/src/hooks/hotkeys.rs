@@ -247,6 +247,41 @@ struct Entry {
     within: Vec<ElementHandle>,
 }
 
+/// The bindings of the last render. `generation` moves when the chord list
+/// changes, so a press queued against the old list is dropped, not run on another entry.
+#[derive(Default)]
+struct Bindings {
+    generation: u64,
+    entries: Vec<Entry>,
+}
+
+impl Bindings {
+    fn replace(&mut self, entries: Vec<Entry>) {
+        let same = self.entries.len() == entries.len()
+            && self
+                .entries
+                .iter()
+                .zip(&entries)
+                .all(|(old, new)| old.chord == new.chord);
+        if !same {
+            self.generation += 1;
+        }
+        self.entries = entries;
+    }
+
+    /// Runs the handlers of queued presses made against the current list.
+    fn run(&mut self, fired: impl IntoIterator<Item = (u64, usize)>) {
+        for (generation, index) in fired {
+            if generation != self.generation {
+                continue;
+            }
+            if let Some(entry) = self.entries.get_mut(index) {
+                (entry.handler)();
+            }
+        }
+    }
+}
+
 impl Entry {
     /// No scope, or focus in one of its mounted elements or a popup opened from one.
     fn in_scope(&self, pressed: &KeyChord, popups: OpenPopups) -> bool {
@@ -313,12 +348,12 @@ pub fn use_hotkeys(bindings: impl IntoIterator<Item = Hotkey>) {
     let bound = !entries.is_empty();
     let chords = global_chords(&entries);
 
-    let shared: Rc<RefCell<Vec<Entry>>> = use_hook(|| Rc::new(RefCell::new(Vec::new())));
-    *shared.borrow_mut() = entries;
+    let shared: Rc<RefCell<Bindings>> = use_hook(|| Rc::new(RefCell::new(Bindings::default())));
+    shared.borrow_mut().replace(entries);
 
     // The key callback runs with no runtime on the web: it records, an effect runs the handler.
     let tick = use_signal(|| 0u64);
-    let pending: Rc<RefCell<Vec<usize>>> = use_hook(|| Rc::new(RefCell::new(Vec::new())));
+    let pending: Rc<RefCell<Vec<(u64, usize)>>> = use_hook(|| Rc::new(RefCell::new(Vec::new())));
     let listening: Rc<RefCell<Vec<Box<dyn KeySubscription>>>> =
         use_hook(|| Rc::new(RefCell::new(Vec::new())));
     use_drop({
@@ -353,7 +388,8 @@ pub fn use_hotkeys(bindings: impl IntoIterator<Item = Hotkey>) {
         let entries = owned.clone();
         let queue = queue.clone();
         let callback = Box::new(move |pressed: KeyChord| {
-            let hit = entries.borrow().iter().position(|entry| {
+            let bindings = entries.borrow();
+            let hit = bindings.entries.iter().position(|entry| {
                 (entry.include_editable || !pressed.text_entry)
                     && entry
                         .chord
@@ -366,7 +402,7 @@ pub fn use_hotkeys(bindings: impl IntoIterator<Item = Hotkey>) {
                 return false;
             };
             if !pressed.repeat {
-                queue.borrow_mut().push(index);
+                queue.borrow_mut().push((bindings.generation, index));
                 bump(tick);
             }
             true
@@ -383,12 +419,8 @@ pub fn use_hotkeys(bindings: impl IntoIterator<Item = Hotkey>) {
             return;
         }
         seen.set(pressed);
-        let fired: Vec<usize> = pending.borrow_mut().drain(..).collect();
-        for index in fired {
-            if let Some(entry) = shared.borrow_mut().get_mut(index) {
-                (entry.handler)();
-            }
-        }
+        let fired: Vec<(u64, usize)> = pending.borrow_mut().drain(..).collect();
+        shared.borrow_mut().run(fired);
     });
 }
 
@@ -647,6 +679,42 @@ mod tests {
             assert!(!entry(vec![unmounted]).in_scope(&press, popups));
             assert!(!entry(vec![unmounted, ElementHandle::new()]).in_scope(&press, popups));
         });
+    }
+
+    fn counting(chord: &str, hits: &Rc<RefCell<Vec<String>>>) -> Entry {
+        let (hits, name) = (hits.clone(), chord.to_owned());
+        Entry {
+            chord: Chord::parse(chord, false),
+            handler: Box::new(move || hits.borrow_mut().push(name.clone())),
+            include_editable: false,
+            guard: None,
+            within: Vec::new(),
+        }
+    }
+
+    #[test]
+    fn a_press_queued_before_the_bindings_change_is_dropped() {
+        let hits = Rc::new(RefCell::new(Vec::new()));
+        let mut bindings = Bindings::default();
+        bindings.replace(vec![counting("f2", &hits), counting("f8", &hits)]);
+        let before = bindings.generation;
+        // F8 was entry 1; a conditional binding shifts it before the effect runs.
+        bindings.replace(vec![counting("f8", &hits)]);
+        bindings.run([(before, 1)]);
+        assert!(hits.borrow().is_empty());
+        bindings.run([(bindings.generation, 0)]);
+        assert_eq!(*hits.borrow(), ["f8"]);
+    }
+
+    #[test]
+    fn a_rerender_with_the_same_chords_keeps_queued_presses() {
+        let hits = Rc::new(RefCell::new(Vec::new()));
+        let mut bindings = Bindings::default();
+        bindings.replace(vec![counting("f2", &hits), counting("f8", &hits)]);
+        let before = bindings.generation;
+        bindings.replace(vec![counting("f2", &hits), counting("f8", &hits)]);
+        bindings.run([(before, 1)]);
+        assert_eq!(*hits.borrow(), ["f8"]);
     }
 
     #[test]

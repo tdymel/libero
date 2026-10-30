@@ -24,7 +24,7 @@ pub fn UseHotkeysPage() -> Element {
                 ])
                 .must([
                     "Offer the same action another way: a visible control or menu item. A shortcut alone excludes anyone who cannot press the chord (WCAG 2.1.4, 2.5.1).",
-                    "Tell the reader the chord exists, on the control it triggers or in a help dialog.",
+                    "Tell the reader the chord exists, on the control it triggers or in a help dialog. The demo's buttons show it and name it in `aria-keyshortcuts`.",
                 ])
                 .example("A bold shortcut, `Hotkey::new(\"mod+b\", ..)`, next to a Bold button whose tooltip says \"Ctrl+B\": the button does the same for anyone who cannot press the chord, and the tooltip tells everyone else it exists.")
                 .limits([

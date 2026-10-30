@@ -16,7 +16,7 @@ pub fn UseLongPressPage() -> Element {
                 .handles([
                     "A tap that ends before the delay runs no callback and keeps its click.",
                     "The press is dropped when the pointer moves beyond the tolerance, leaves, is cancelled (a touch that starts to scroll), or a second finger lands.",
-                    "The browser's own long-press menu is suppressed only after the press fired, and the click that follows the release is reported so you can skip it.",
+                    "The browser's own long-press menu is suppressed while a touch or pen press is held and after the press fired, so it cannot cancel the press, and the click that follows the release is reported so you can skip it.",
                 ])
                 .must([
                     "Offer the same action without holding: a long press is a gesture with no keyboard or switch equivalent (WCAG 2.5.1, 2.1.1). Put it on a context menu, a key such as Shift+F10, or a visible button, as the demo's \"Count a hold\" does.",
@@ -51,7 +51,7 @@ pub fn UseLongPressPage() -> Element {
                     Code { source: "onclick" }
                     ". Read "
                     Code { source: "pressing" }
-                    " for a hold cue, and give the element "
+                    " for a hold cue, shown beside the label rather than in it so a screen reader does not hear a rename, and give the element "
                     Code { source: "user-select: none" }
                     " so holding does not select text."
                 }

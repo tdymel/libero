@@ -27,11 +27,13 @@ pub fn HoldToCount() -> Element {
                         taps += 1;
                     }
                 },
-                if (press.pressing)() {
-                    "Keep holding"
-                } else {
-                    "Tap, or hold"
-                }
+                "Tap, or hold"
+            }
+            // A visual cue only: the button keeps its accessible name mid-press.
+            span {
+                aria_hidden: "true",
+                visibility: if !(press.pressing)() { "hidden" },
+                "Keep holding"
             }
             // The same action without holding (WCAG 2.5.1, 2.1.1).
             Button { variant: "outlined", onclick: move |_| holds += 1, "Count a hold" }

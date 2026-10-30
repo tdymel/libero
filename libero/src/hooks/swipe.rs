@@ -12,15 +12,20 @@ use crate::{
 /// Which way a swipe went on screen.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum SwipeDirection {
+    /// Towards the left of the screen, also under RTL.
     Left,
+    /// Towards the right of the screen, also under RTL.
     Right,
+    /// Towards the top of the screen.
     Up,
+    /// Towards the bottom of the screen.
     Down,
 }
 
 /// What [`use_swipe`] reports, once per press.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct SwipeEvent {
+    /// Which way the swipe went.
     pub direction: SwipeDirection,
     /// Where the pointer went down, in client coordinates.
     pub start: DragPoint,
@@ -44,9 +49,13 @@ impl Default for SwipeOptions {
 /// Handlers to spread onto the swiped element.
 #[derive(Clone, Copy)]
 pub struct Swipe {
+    /// Starts tracking a primary touch or pen; a second finger drops it.
     pub onpointerdown: Callback<PointerEvent>,
+    /// Reports the swipe once the pointer covers the distance.
     pub onpointermove: Callback<PointerEvent>,
+    /// Ends the press.
     pub onpointerup: Callback<PointerEvent>,
+    /// Ends the press, as a touch the browser takes for a pan does.
     pub onpointercancel: Callback<PointerEvent>,
 }
 
@@ -196,12 +205,14 @@ pub enum SwipeEdge {
     /// Left, right under RTL: where a navigation drawer sits.
     #[default]
     Start,
+    /// Right, left under RTL.
     End,
 }
 
 /// What [`use_edge_swipe`] takes.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct EdgeSwipeOptions {
+    /// The inline edge the swipe starts from.
     pub edge: SwipeEdge,
     /// Where the band a swipe must start in begins, CSS px in from the
     /// viewport's edge: past Android's system back zone, so both keep working.

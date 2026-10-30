@@ -15,7 +15,7 @@ pub fn UseDragPage() -> Element {
             accessibility: a11y()
                 .handles(["A right or middle button never starts a drag, and a second finger is ignored."])
                 .must([
-                    "Give anything a drag sets a second way in: a pointer is not a keyboard. The demo's knob is a focusable, named slider that takes the arrow keys, Home and End.",
+                    "Give anything a drag sets a second way in: a pointer is not a keyboard. The demo's knob is a focusable, named slider that takes the arrow keys, Home and End. Its `aria-valuetext` says the unit, and under RTL it starts on the right with the arrows mirrored.",
                 ])
                 .example("A volume knob dragged with `use_drag`: the knob is also a focusable slider named \"Volume\", so a keyboard user turns it with the arrows, Home and End.")
                 .limits([

@@ -12,7 +12,8 @@ a pointer stays down for `options.ms` (400 by default). It moves no more than
 `move_tolerance` px (10) in that time. Spread the returned callbacks onto one
 element: `onpointerdown`, `onpointermove`, `onpointerup`, `onpointerleave`,
 `onpointercancel`, `oncontextmenu` and `onclick`. Read `pressing` for a hold
-cue, and give the element `user-select: none` so holding does not select text.
+cue, shown beside the label rather than in it so a screen reader does not hear a
+rename, and give the element `user-select: none` so holding does not select text.
 
 ## Usage
 
@@ -46,11 +47,13 @@ fn HoldToCount() -> Element {
                         taps += 1;
                     }
                 },
-                if (press.pressing)() {
-                    "Keep holding"
-                } else {
-                    "Tap, or hold"
-                }
+                "Tap, or hold"
+            }
+            // A visual cue only: the button keeps its accessible name mid-press.
+            span {
+                aria_hidden: "true",
+                visibility: if !(press.pressing)() { "hidden" },
+                "Keep holding"
             }
             // The same action without holding (WCAG 2.5.1, 2.1.1).
             Button { variant: "outlined", onclick: move |_| holds += 1, "Count a hold" }
@@ -81,7 +84,7 @@ pub struct LongPressOptions {
 | `onpointerdown` | `Callback<PointerEvent>` | Starts the press. |
 | `onpointermove` | `Callback<PointerEvent>` | Drops the press beyond the tolerance. |
 | `onpointerup`, `onpointerleave`, `onpointercancel` | `Callback<PointerEvent>` | Drop the press. |
-| `oncontextmenu` | `Callback<MouseEvent>` | Suppresses the browser's menu, only after the press fired. |
+| `oncontextmenu` | `Callback<MouseEvent>` | Suppresses the browser's menu while a touch or pen press is held and after the press fired. |
 | `onclick` | `Callback<MouseEvent, bool>` | Call it first in your `onclick`: `true` for the click a fired press ends with, which you should skip. |
 | `pressing` | `ReadSignal<bool>` | `true` from the pointer going down until the press fires or is dropped. |
 
@@ -95,8 +98,9 @@ of the newest render is the one used.
 - A tap that ends before the delay runs no callback and keeps its click.
 - The press is dropped when the pointer moves beyond the tolerance, leaves, is
   cancelled (a touch that starts to scroll), or a second finger lands.
-- The browser's own long-press menu is suppressed only after the press fired,
-  and the click that follows the release is reported so you can skip it.
+- The browser's own long-press menu is suppressed while a touch or pen press is
+  held and after the press fired, so it cannot cancel the press, and the click
+  that follows the release is reported so you can skip it.
 
 ### You must
 

@@ -33,7 +33,8 @@ pub struct LongPress {
     pub onpointerleave: Callback<PointerEvent>,
     /// Drops the press, as a touch that starts to scroll does.
     pub onpointercancel: Callback<PointerEvent>,
-    /// Suppresses the browser's own long-press menu, only after the press fired.
+    /// Suppresses the browser's own long-press menu once the press fired, and
+    /// while a touch or pen press is held, so the menu cannot race the timer.
     pub oncontextmenu: Callback<MouseEvent>,
     /// Call it first in your own `onclick`: it answers `true` for the click a
     /// fired press ends with, which you should skip, and stops that click
@@ -48,6 +49,13 @@ struct Press {
     pointer_id: i32,
     x: f64,
     y: f64,
+    mouse: bool,
+}
+
+/// Android Chrome opens its own touch long-press menu at about 400-500 ms and
+/// then cancels the pointer, so a held touch press keeps the menu shut.
+fn blocks_context_menu(fired: bool, press: Option<Press>) -> bool {
+    fired || press.is_some_and(|press| !press.mouse)
 }
 
 /// Calls `on_long_press` once a pointer stays down for `options.ms`.
@@ -129,6 +137,7 @@ pub fn use_long_press(on_long_press: Callback, options: LongPressOptions) -> Lon
             pointer_id: event.pointer_id(),
             x: at.x,
             y: at.y,
+            mouse: event.pointer_type() == "mouse",
         }));
         timeout.start();
     });
@@ -152,7 +161,7 @@ pub fn use_long_press(on_long_press: Callback, options: LongPressOptions) -> Lon
     });
 
     let oncontextmenu = use_callback(move |event: MouseEvent| {
-        if *fired.peek() {
+        if blocks_context_menu(*fired.peek(), *press.peek()) {
             event.prevent_default();
         }
     });
@@ -175,5 +184,31 @@ pub fn use_long_press(on_long_press: Callback, options: LongPressOptions) -> Lon
         oncontextmenu,
         onclick,
         pressing: pressing.into(),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn held(mouse: bool) -> Option<Press> {
+        Some(Press {
+            pointer_id: 1,
+            x: 0.0,
+            y: 0.0,
+            mouse,
+        })
+    }
+
+    #[test]
+    fn a_held_touch_press_blocks_the_menu() {
+        assert!(blocks_context_menu(false, held(false)));
+        assert!(blocks_context_menu(true, None));
+    }
+
+    #[test]
+    fn a_mouse_press_or_no_press_keeps_the_menu() {
+        assert!(!blocks_context_menu(false, held(true)));
+        assert!(!blocks_context_menu(false, None));
     }
 }

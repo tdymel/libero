@@ -39,6 +39,8 @@ pub fn SwipePad() -> Element {
             ButtonGroup { "aria-label": "Swipe by button",
                 Button { onclick: move |_| last.set(Some(SwipeDirection::Left)), "Left" }
                 Button { onclick: move |_| last.set(Some(SwipeDirection::Right)), "Right" }
+                Button { onclick: move |_| last.set(Some(SwipeDirection::Up)), "Up" }
+                Button { onclick: move |_| last.set(Some(SwipeDirection::Down)), "Down" }
             }
             div { role: "status", "{said}" }
         }
