@@ -37,6 +37,13 @@ impl Default for MediaState {
     }
 }
 
+/// An element's `duration` as known seconds: NaN before the metadata, and Infinity for a
+/// live stream or a MediaRecorder WebM, are unknown (5050).
+#[cfg_attr(not(target_arch = "wasm32"), allow(dead_code))]
+pub(crate) fn known_duration(raw: f64) -> Option<f64> {
+    raw.is_finite().then_some(raw)
+}
+
 /// Events that change a [`MediaState`]; `timeupdate` is the only frequent one.
 #[cfg(any(target_arch = "wasm32", not(feature = "native")))]
 pub(crate) const MEDIA_EVENTS: &[&str] = &[
@@ -149,7 +156,7 @@ mod web {
             paused,
             ended: element.ended(),
             current_time: element.current_time(),
-            duration: duration.is_finite().then_some(duration),
+            duration: super::known_duration(duration),
             volume: element.volume(),
             muted: element.muted(),
             rate: element.playback_rate(),
@@ -334,5 +341,17 @@ mod web {
                 true,
             );
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::known_duration;
+
+    #[test]
+    fn an_infinite_or_missing_duration_is_unknown() {
+        assert_eq!(known_duration(f64::INFINITY), None, "a recorded WebM");
+        assert_eq!(known_duration(f64::NAN), None, "before the metadata");
+        assert_eq!(known_duration(42.5), Some(42.5));
     }
 }

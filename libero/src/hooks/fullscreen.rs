@@ -148,8 +148,10 @@ impl FullscreenHandle {
 /// your CSS makes the element a fixed box over the page. Escape and focus
 /// leaving the element leave it. The page behind is not made inert: a screen reader
 /// can still reach it unless you hide it. A fixed box cannot leave its ancestors' stacking
-/// context: inside a `ScrollArea` (as in an `AppShell`), a sticky header or a sidebar
-/// with a higher `z-index` still paints over it, so keep the element outside one.
+/// context, and a `ScrollArea` is one (`z-index: 0`): inside it, as in an `AppShell`, a sticky
+/// header or a sidebar with a higher `z-index` still paints over the box. Keep the element
+/// outside, or raise the area while it holds the box: `&:has([data-fullscreen='drawn'])`
+/// with `z-index: var(--lsx-z-index-modal)`, as the docs site does.
 ///
 /// ```rust
 /// # use dioxus::prelude::*;
@@ -159,7 +161,7 @@ impl FullscreenHandle {
 /// let fullscreen = use_fullscreen(chart);
 ///
 /// rsx! {
-///     style { "#chart[data-fullscreen='drawn'] {{ position: fixed; inset: 0; z-index: 1000; }}" }
+///     style { "#chart[data-fullscreen='drawn'] {{ position: fixed; inset: 0; z-index: var(--lsx-z-index-modal); }}" }
 ///     div { id: "chart", onmounted: chart.mount(), ..fullscreen.attributes(),
 ///         button { onclick: move |_| fullscreen.toggle(),
 ///             if fullscreen.is_fullscreen() { "Exit fullscreen" } else { "Fullscreen" }

@@ -10,15 +10,22 @@ use libero::{
 pub fn Measure() -> Element {
     let panel = use_element();
     let mut size = use_signal(String::new);
+    let mut width = use_signal(|| 240);
 
     rsx! {
         Flex { direction: "column", align: "flex-start", gap: "sm",
             Box {
                 onmounted: panel.mount(),
-                sx: sx().width("240px").height("96px").padding("md")
+                sx: sx().height("96px").padding("md").max_width("100%")
                     .background("muted.1").border_radius("8px"),
-                style: "resize: both; overflow: auto",
-                "Drag the corner to resize me."
+                // A drag on the corner resizes it too, where the browser offers one.
+                style: "width: {width}px; resize: both; overflow: auto",
+                "Resize me."
+            }
+            Flex { direction: "row", gap: "sm", wrap: "wrap",
+                Button { variant: "outlined", onclick: move |_| width.set(160), "Narrow" }
+                Button { variant: "outlined", onclick: move |_| width.set(240), "Medium" }
+                Button { variant: "outlined", onclick: move |_| width.set(320), "Wide" }
             }
             Button {
                 variant: "outlined",

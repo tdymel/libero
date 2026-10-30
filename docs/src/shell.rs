@@ -13,7 +13,7 @@ use libero::{
     sx::{Sx, sx},
     theme::{
         ACTION_ICON_RADIUS, BUTTON_HEIGHT, PAPER_BACKGROUND, Size, TITLE_FONT_FAMILY, ThemeSet,
-        TitleDefaults, Z_INDEX_HEADER,
+        TitleDefaults, Z_INDEX_HEADER, Z_INDEX_MODAL,
     },
 };
 use pictogram_icons_lucide as lucide;
@@ -198,7 +198,8 @@ pub(crate) fn AppShell() -> Element {
                         .min_height("0")
                         // Default `min-width: auto` let the longest code line push the row
                         // wider instead of that block scrolling.
-                        .min_width("0"),
+                        .min_width("0")
+                        .and(page_layer_sx()),
                     // Above `main`: the section scroll queries `main` below it.
                     div { display: "contents", onmounted: content.mount(),
                         Container {
@@ -229,6 +230,15 @@ pub(crate) fn AppShell() -> Element {
             }
         }
     }
+}
+
+/// The page area is a stacking context (`ScrollArea`): a drawn fullscreen inside lifts
+/// it above the header, else the header covers the box's Exit (5040).
+fn page_layer_sx() -> Sx {
+    sx().selector(
+        "&:has([data-fullscreen='drawn'])",
+        sx().z_index(Z_INDEX_MODAL.value()),
+    )
 }
 
 /// WCAG 2.4.1 skip link, off-screen until focused. The click moves focus itself,

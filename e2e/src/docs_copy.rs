@@ -1,8 +1,13 @@
 //! The `docs_shell` fixture copies `docs/src/heading_focus.rs` (todo 951), so the docs'
-//! route-change focus is tested on the copy; this keeps the copied functions equal (1802).
+//! route-change focus is tested on the copy, and `page_layer_sx` from `docs/src/shell.rs`;
+//! this keeps the copied functions equal (1802).
 
 const DOCS: &str = include_str!("../../docs/src/heading_focus.rs");
 const COPY: &str = include_str!("../fixtures/src/docs_shell.rs");
+const SHELL: &str = include_str!("../../docs/src/shell.rs");
+
+/// The functions the fixture copies from `docs/src/shell.rs`.
+const SHELL_SHARED: &[&str] = &["page_layer_sx"];
 
 /// The functions both files hold; `use_fragment_landing` differs by design (the id source).
 const SHARED: &[&str] = &[
@@ -32,12 +37,16 @@ fn item(source: &str, name: &str) -> Option<String> {
 
 #[test]
 fn the_fixture_copy_matches_the_docs() {
-    for name in SHARED {
-        let docs = item(DOCS, name).unwrap_or_else(|| panic!("the docs lost `fn {name}`"));
+    let pairs = SHARED
+        .iter()
+        .map(|name| (DOCS, name))
+        .chain(SHELL_SHARED.iter().map(|name| (SHELL, name)));
+    for (source, name) in pairs {
+        let docs = item(source, name).unwrap_or_else(|| panic!("the docs lost `fn {name}`"));
         let copy = item(COPY, name).unwrap_or_else(|| panic!("the copy lost `fn {name}`"));
         assert_eq!(
             copy, docs,
-            "`fn {name}` in e2e/fixtures/src/docs_shell.rs drifted from docs/src/heading_focus.rs"
+            "`fn {name}` in e2e/fixtures/src/docs_shell.rs drifted from the docs"
         );
     }
 }

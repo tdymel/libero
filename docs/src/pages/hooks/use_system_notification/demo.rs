@@ -48,6 +48,8 @@ pub fn Notify() -> Element {
     let permission = permission_text(notifier.permission());
     let push_status = match (push.is_supported(), push.error()) {
         (false, _) | (true, Some(PushError::Unsupported)) => "unsupported here",
+        // No library timeout: a slow push service may still answer.
+        _ if push.is_pending() => "subscribing",
         (true, Some(PushError::Denied)) => "refused, notifications are not allowed",
         (true, Some(PushError::Failed)) => "the subscription failed",
         (true, None) if push.endpoint().is_some() => "subscribed",
@@ -59,7 +61,10 @@ pub fn Notify() -> Element {
             Flex { gap: "sm", wrap: "wrap",
                 Button { onclick: move |_| notifier.request(), "Allow notifications" }
                 Button {
-                    onclick: move |_| notifier.show(SystemNotification {
+                    onclick: move |_| {
+                        // A failure overrides this through `notifier.error()`.
+                        last.set("Notification shown".into());
+                        notifier.show(SystemNotification {
                         body: Some("3 tests failed in the nightly run".into()),
                         icon: Some(LOGO.to_string()),
                         tag: Some("demo".into()),
@@ -70,7 +75,8 @@ pub fn Notify() -> Element {
                         ],
                         on_action: Some(acted),
                         ..SystemNotification::new("Build finished")
-                    }),
+                        });
+                    },
                     "Notify"
                 }
                 Button { variant: "outlined", onclick: move |_| notifier.close("demo"), "Close it" }
@@ -89,7 +95,10 @@ pub fn Notify() -> Element {
                     "Push endpoint: {subscription.endpoint}"
                 }
             }
-            Text { size: "sm", "Permission: {permission}. Push: {push_status}." }
+            // Announces a press of the push button: Subscribing, then its answer.
+            div { role: "status",
+                Text { size: "sm", "Permission: {permission}. Push: {push_status}." }
+            }
         }
     }
 }

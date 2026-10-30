@@ -140,6 +140,7 @@ pub fn VideoPage() -> Element {
                     "On a WebView each command and state change crosses the IPC, so the time trails by a moment.",
                     "The seek slider moves in whole seconds, so a chapter starting at 12.4 s is named from 13 s in the slider's value; the label beside the time follows the exact time. A chapters track on another origin needs CORS.",
                     "The shown controls cover the bottom of the picture. Chromium-based browsers draw the captions above them, through the WebKit captions box Safari shares; Firefox offers no hook to move them, so there the bar covers them until it fades.",
+                    "A MediaRecorder WebM has no duration in its header: the total reads `--:--` and the seek slider stays disabled until the browser learns it, at the earliest once played to the end.",
                     "Captions show once playing starts: browsers draw none over the poster.",
                     "Fullscreen is libero's own `use_fullscreen` over the browser's Fullscreen API, no library; where the API is refused, a fixed box over the window. A floating mini player is the browser's own Picture-in-Picture (Firefox's button on the video, Chrome's context menu): its window is outside the page, so focus cannot follow it.",
                     "The demo's VP9 WebM may not play in older Safari: give `sources` a WebM and keep an MP4 (H.264) as `src`.",

@@ -156,7 +156,8 @@ impl MediaHandle {
         (self.current_time)()
     }
 
-    /// Seconds; `None` until the metadata loads, and for a live stream.
+    /// Seconds; `None` until the metadata loads, for a live stream, and for a MediaRecorder
+    /// WebM, whose header holds none, until played to the end.
     pub fn duration(&self) -> Option<f64> {
         (self.duration)()
     }

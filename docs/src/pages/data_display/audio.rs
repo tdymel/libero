@@ -83,6 +83,7 @@ pub fn AudioPage() -> Element {
                 .limits([
                     "Blitz plays no media: the controls give way to `children`, by default a link to the file.",
                     "On a WebView each command and state change crosses the IPC, so the time trails by a moment.",
+                    "A MediaRecorder WebM has no duration in its header: the total reads `--:--` and the seek slider stays disabled until the browser learns it, at the earliest once played to the end.",
                     "The bars need the file readable by the page: a file on another origin without CORS, or `preload: none`, keeps placeholder bars drawn from the URL. So does a file over 10 minutes or 20 MB, which is not decoded.",
                 ]),
             lead: rsx! {

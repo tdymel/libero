@@ -9,7 +9,7 @@ pub fn Panel() -> Element {
     let panel = use_element();
     let fullscreen = use_fullscreen(panel);
     let drawn = if fullscreen.is_drawn() {
-        "position: fixed; inset: 0; z-index: 1000;"
+        "position: fixed; inset: 0; z-index: var(--lsx-z-index-modal);"
     } else {
         ""
     };

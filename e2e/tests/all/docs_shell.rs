@@ -128,3 +128,41 @@ fn a_fragment_load_lands_on_the_section() {
         fixture.close().await.unwrap();
     });
 }
+
+/// A refused fullscreen draws the panel over the whole page: the page area rises
+/// above the sticky header, so the Exit under it takes the tap (5040).
+#[test]
+fn a_drawn_fullscreen_covers_the_docs_header() {
+    block_on(async {
+        let fixture = Fixture::open("/docs-shell/fullscreen", Viewport::Mobile)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        wait::for_visible(page, "#panel[data-refused] #toggle")
+            .await
+            .unwrap();
+        page.evaluate_bounded("document.querySelector('#toggle').click()")
+            .await
+            .unwrap();
+        wait::for_js_true(
+            page,
+            "document.querySelector('#panel')?.dataset.fullscreen === 'drawn'",
+            "the refused request to draw the panel",
+        )
+        .await
+        .unwrap();
+        wait::for_js_true(
+            page,
+            "(() => { const r = document.querySelector('#toggle').getBoundingClientRect(); \
+             return r.top < 96 && document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2)?.closest('#toggle') !== null; })()",
+            "Exit, under the header's band, to take the tap",
+        )
+        .await
+        .unwrap();
+        fixture
+            .console
+            .assert_clean("the fullscreen fixture")
+            .unwrap();
+        fixture.close().await.unwrap();
+    });
+}

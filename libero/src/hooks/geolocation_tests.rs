@@ -73,6 +73,7 @@ fn start_fake_watch(dom: &VirtualDom) -> Geolocation {
     dom.in_runtime(|| {
         location.watch.set(Some(Box::new(Fake)));
         location.watching.set(true);
+        location.locating.set(true);
     });
     location
 }
@@ -149,4 +150,25 @@ fn stop_and_unmount_drop_the_watch() {
     dom.in_runtime(|| shown.set(false));
     pump(&mut dom);
     assert!(DROPPED.get(), "unmount clears the watch");
+}
+
+#[test]
+fn a_watch_is_pending_until_its_first_answer() {
+    let dom = mounted();
+    let mut location = start_fake_watch(&dom);
+    dom.in_runtime(|| {
+        assert!(
+            location.is_pending(),
+            "Follow shows Locating before the first fix"
+        );
+        location.settle(Ok(FIX));
+        assert!(!location.is_pending());
+        location.settle(Ok(FIX));
+        assert!(!location.is_pending());
+    });
+    let mut location = start_fake_watch(&dom);
+    dom.in_runtime(|| {
+        location.stop();
+        assert!(!location.is_pending(), "stop ends the wait");
+    });
 }

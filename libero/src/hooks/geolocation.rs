@@ -35,6 +35,8 @@ pub struct Geolocation {
     position: Signal<Option<Position>>,
     error: Signal<Option<GeolocationError>>,
     pending: Signal<bool>,
+    /// A watch waits for its first fix.
+    locating: Signal<bool>,
     watching: Signal<bool>,
     watch: Signal<Option<Box<dyn GeolocationSubscription>>>,
 }
@@ -80,15 +82,20 @@ impl Geolocation {
         );
         self.watch.set(Some(watch));
         self.watching.set(true);
+        self.locating.set(true);
     }
 
     /// Ends a [`watch`](Self::watch); the last position stays.
     pub fn stop(&mut self) {
         self.watching.set(false);
+        self.locating.set(false);
         self.watch.set(None);
     }
 
     pub(crate) fn settle(&mut self, fix: Fix) {
+        if *self.locating.peek() {
+            self.locating.set(false);
+        }
         let known = match fix {
             Ok(position) => {
                 self.position.set(Some(position));
@@ -137,9 +144,10 @@ impl Geolocation {
         (self.error)()
     }
 
-    /// Whether a [`request`](Self::request) waits for its answer. Reactive.
+    /// Whether a [`request`](Self::request) waits for its answer, or a
+    /// [`watch`](Self::watch) for its first fix. Reactive.
     pub fn is_pending(&self) -> bool {
-        (self.pending)()
+        (self.pending)() || (self.locating)()
     }
 
     /// Whether a [`watch`](Self::watch) runs. Reactive.
@@ -159,6 +167,7 @@ pub fn use_geolocation(options: GeolocationOptions) -> Geolocation {
         position: use_signal(|| None),
         error: use_signal(|| None),
         pending: use_signal(|| false),
+        locating: use_signal(|| false),
         watching: use_signal(|| false),
         watch: use_signal(|| None),
     };

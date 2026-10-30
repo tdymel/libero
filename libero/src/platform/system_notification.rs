@@ -22,7 +22,8 @@ pub struct SystemNotification {
     /// Runs when the user clicks it while this component is mounted, after the
     /// click focused the window. Behind a service worker, only if it posts the click back.
     pub on_click: Option<Callback<()>>,
-    /// Buttons on the notification. The web shows them only through a service worker.
+    /// Buttons on the notification. On the web only a service worker's notification has
+    /// them: a page's own shows without its buttons.
     pub actions: Vec<NotificationAction>,
     /// Runs with the [`NotificationAction::id`] the user pressed, as `on_click` runs.
     pub on_action: Option<Callback<String>>,

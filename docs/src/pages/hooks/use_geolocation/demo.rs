@@ -40,7 +40,11 @@ pub fn ShareLocation() -> Element {
             }
             div { role: "status", "{status}" }
             if let Some(fix) = location.position() {
-                Text { "{fix.latitude:.2}, {fix.longitude:.2}, within {fix.accuracy:.0} m" }
+                // Beside an error the fix is an old one.
+                Text {
+                    if location.error().is_some() { "Last known: " }
+                    "{fix.latitude:.2}, {fix.longitude:.2}, within {fix.accuracy:.0} m"
+                }
             }
             Text { size: "sm", "Permission: {permission}" }
         }

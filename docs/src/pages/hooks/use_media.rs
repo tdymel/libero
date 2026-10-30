@@ -33,7 +33,7 @@ const METHODS: [(&str, &str); 10] = [
     ),
     (
         "duration()",
-        "Seconds; `None` until the metadata loads, and for a live stream.",
+        "Seconds; `None` until the metadata loads, for a live stream, and for a MediaRecorder WebM, whose header holds none, until played to the end.",
     ),
     (
         "buffering()",

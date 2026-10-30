@@ -1,12 +1,15 @@
 //! The docs shell's heading focus and scroll. The hooks are a copy of
 //! `docs/src/heading_focus.rs`: e2e never includes docs source (todo 951);
-//! `e2e/src/docs_copy.rs` keeps the copied functions equal (1802).
+//! `e2e/src/docs_copy.rs` keeps the copied functions equal (1802). `page_layer_sx`
+//! copies `docs/src/shell.rs`.
 
 use dioxus::prelude::*;
 use libero::{
     components::{Button, ScrollArea, ScrollAreaHandle, use_scroll_area},
-    hooks::{ElementHandle, use_element},
+    hooks::{ElementHandle, use_element, use_fullscreen},
     platform::ElementApi,
+    sx::{Sx, sx},
+    theme::Z_INDEX_MODAL,
 };
 
 use crate::Routes;
@@ -122,7 +125,64 @@ pub const ROUTES: Routes = &[
     ("/docs-shell/scroll", || rsx! { ScrollPage {} }),
     ("/docs-shell/section", || rsx! { SectionPage {} }),
     ("/docs-shell/fragment", || rsx! { FragmentPage {} }),
+    ("/docs-shell/fullscreen", || rsx! { FullscreenPage {} }),
 ];
+
+/// The page area is a stacking context (`ScrollArea`): a drawn fullscreen inside lifts
+/// it above the header, else the header covers the box's Exit (5040).
+fn page_layer_sx() -> Sx {
+    sx().selector(
+        "&:has([data-fullscreen='drawn'])",
+        sx().z_index(Z_INDEX_MODAL.value()),
+    )
+}
+
+/// The panel refuses the Fullscreen API, as an iframe or WebView does; marks it once set.
+const REFUSE: &str = "const panel = document.querySelector('#panel');
+    panel.requestFullscreen = () => Promise.reject(new TypeError('refused'));
+    panel.dataset.refused = 'true';";
+
+/// The docs shell's layers: a sticky header over the page `ScrollArea`, a panel inside
+/// that falls back to the drawn fullscreen.
+#[component]
+fn FullscreenPage() -> Element {
+    let panel = use_element();
+    let fullscreen = use_fullscreen(panel);
+    use_effect(|| {
+        document::eval(REFUSE);
+    });
+    let drawn = match fullscreen.is_drawn() {
+        true => "position: fixed; inset: 0; z-index: var(--lsx-z-index-modal);",
+        false => "",
+    };
+    rsx! {
+        div { display: "flex", flex_direction: "column", height: "100vh",
+            header {
+                position: "sticky",
+                top: "0",
+                z_index: "var(--lsx-z-index-header)",
+                height: "96px",
+                flex_shrink: "0",
+                background: "Canvas",
+                a { href: "#", "Home" }
+            }
+            div { display: "flex", position: "relative", flex: "1", min_height: "0",
+                ScrollArea { id: "page-area", "aria-label": "Page", sx: page_layer_sx().flex("1"),
+                    div {
+                        id: "panel",
+                        onmounted: panel.mount(),
+                        style: "{drawn} padding: 16px; background: Canvas;",
+                        ..fullscreen.attributes(),
+                        Button { id: "toggle", onclick: move |_| fullscreen.toggle(),
+                            if fullscreen.is_fullscreen() { "Exit fullscreen" } else { "Fullscreen" }
+                        }
+                    }
+                    div { height: "1500px" }
+                }
+            }
+        }
+    }
+}
 
 /// Two "pages" behind one signal: the hook only needs a value that changes.
 #[component]
