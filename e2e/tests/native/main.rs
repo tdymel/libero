@@ -24,6 +24,7 @@ mod docs_shell;
 mod element_api;
 mod fieldset;
 mod file_field;
+mod floating_action_button;
 mod focus_events;
 mod focus_return;
 mod focus_ring;

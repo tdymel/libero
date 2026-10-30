@@ -77,7 +77,8 @@ base_props! {
 /// a docked `NavigationBar` and the safe area. Logical, so `end` flips under `dir="rtl"`.
 fn edge_sx(placement: Placement, offset: &str, fixed: bool) -> Sx {
     use Placement::*;
-    let mut edges = sx();
+    // Flex, so no line box: Blitz put a 6px strut under the inline-flex button (todo 5062).
+    let mut edges = sx().display("flex");
     match placement {
         TopStart | TopCenter | TopEnd => {
             let top = if fixed {
