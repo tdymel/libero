@@ -64,7 +64,7 @@ fn Demo() -> Element {
 | `status` | `FieldStatus` | `Valid` | Validation state, under the helper. A bare `&str` is an error; an empty one or `None` is `Valid`. |
 | `required` | `bool` | `false` | Sets `aria-required` on the group and marks the label. Inside a `Form`, an empty one fails the submit. |
 | `disabled` | `bool` | `false` | Disables every option and dims the group. |
-| `readonly` | `bool` | `false` | Focusable and posted with the form, but not editable. `disabled` drops the group from the tab order and the post instead. Chromium does not announce read-only on a group, so say it in the label or description where it matters. |
+| `readonly` | `bool` | `false` | Focusable and posted with the form, but not editable. `disabled` drops the group from the tab order and the post instead. It looks like an editable one, and Chromium does not announce read-only on a group, so say it in the label or description where it matters. |
 
 ### Domain enums
 

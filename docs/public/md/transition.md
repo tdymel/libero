@@ -46,9 +46,9 @@ fn Demo() -> Element {
 |---|---|---|---|
 | `kind` | `TransitionKind` | `Fade` | How the children move in and out. Travel: `Fade`, `FadeUp`, `FadeDown`, `FadeLeft`, `FadeRight`, `SlideUp`, `SlideDown`, `SlideLeft`, `SlideRight`. Grow: `Scale`, `ScaleX`, `ScaleY`, `Pop`, `PopTopLeft`, `PopTopRight`, `PopBottomLeft`, `PopBottomRight`. Lean or turn: `SkewUp`, `SkewDown`, `RotateLeft`, `RotateRight`. All of them also fade. The slides travel the children's own size; left and right are physical directions. |
 | `open` | `bool` | `true` | Omitted, the children animate in once on mount and never exit. Passed, they enter and exit as it flips; the first value does not animate. You own this state. |
-| `duration` | `u32` | `200` | Animation length in milliseconds. `0` turns the animation off. |
+| `duration` | `u32` | `200` | Animation length in milliseconds. `0` turns the animation off. Set it here or in the theme: the unmount timer reads only these, so a longer duration set in CSS is cut short on close. |
 | `from` | `Sx` | none | Extra styles of the closed state, stacked on the `kind`'s; every property it sets also animates, and a `transform` in it replaces the kind's. Needs a passed `open`: the mount entrance animates only the `kind`. |
-| `children` | `Element` | required | The content that animates. It is unmounted once the exit ends. |
+| `children` | `Element` | required | The content that animates. It is unmounted once the exit ends, and the empty wrapper leaves the layout, so a `Flex` or `Stack` gap closes. |
 
 Like every component, `Transition` also takes the shared props `sx`, `class`,
 `style`, `states`, and any extra HTML attributes.

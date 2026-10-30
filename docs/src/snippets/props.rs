@@ -329,6 +329,7 @@ const KNOWN_GAPS: &[(&str, &str)] = &[
     ("Select", "leading"),
     ("TagsField", "leading"),
     ("Textarea", "leading"),
+    ("Textarea", "trailing"),
 ];
 
 /// What `base_props!` adds; the page's tables append all but `parts` themselves.

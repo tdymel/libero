@@ -51,7 +51,7 @@ fn Demo() -> Element {
 | `status` | `FieldStatus` | `Valid` | Validation state, under the helper. A bare `&str` is an error; an empty one or `None` is `Valid`. |
 | `required` | `bool` | `false` | Sets `aria-required` and marks the label; a field without a visible `label` shows no mark. Inside a `Form`, an empty one fails the submit. |
 | `disabled` | `bool` | `false` | Disables and dims the switch. |
-| `readonly` | `bool` | `false` | Focusable and posted with the form, but not editable. `disabled` drops the switch from the tab order and the post instead. Chromium does not announce read-only on a switch, so say it in the label or description where it matters. |
+| `readonly` | `bool` | `false` | Focusable and posted with the form, but not editable. `disabled` drops the switch from the tab order and the post instead. It looks like an editable one, and Chromium does not announce read-only on a switch, so say it in the label or description where it matters. |
 | `aria_label` | `String` | - | Names the switch when it has no `label`. |
 | `variant` | `ChoiceVariant` | `plain` | `card` draws the switch as a bordered surface you can click anywhere. Pair it with a `description`. On the web a link inside the card keeps its own click. Natively the whole card toggles. |
 

@@ -19,6 +19,9 @@ fn wrap_frame(_: &DemoValues, code: &str) -> String {
 }
 
 /// The brand and a short nav, so the variants' link colour, underline and focus halo show.
+// snippet: item #[derive(Clone, PartialEq, Routable)] enum Route { #[route("/")] GettingStarted {}, #[route("/header")] HeaderPage {} }
+// snippet: item #[component] fn GettingStarted() -> Element { rsx! {} }
+// snippet: item #[component] fn HeaderPage() -> Element { rsx! {} }
 const CHILDREN: &str = r#""Libero"
 Box {
     component: "nav",
@@ -91,6 +94,9 @@ pub fn HeaderPage() -> Element {
                     " pins to the viewport, so the demo leaves it out."
                 }
             },
+            // snippet: item #[derive(Clone, PartialEq, Routable)] enum Route { #[route("/")] GettingStarted {}, #[route("/header")] HeaderPage {} }
+            // snippet: item #[component] fn GettingStarted() -> Element { rsx! {} }
+            // snippet: item #[component] fn HeaderPage() -> Element { rsx! {} }
             Demo {
                 component: "Header",
                 wide_preview: true,

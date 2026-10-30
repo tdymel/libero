@@ -7,7 +7,7 @@ Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/form/t
 Index: [index.md](index.md) lists every other page
 Description: A multi-line text field, sized by `rows` and resizable by the user.
 
-A multi-line text field with the same slots as [TextField](text_field.md).
+A multi-line text field with the same captions as [TextField](text_field.md).
 `rows` sets the starting height, and the user can drag it taller. With server
 rendering, the box stays empty until the app hydrates.
 
@@ -72,7 +72,6 @@ explains how parts work.
 | `TextareaPart::Description` | `description` | The caption between the label and the control. |
 | `TextareaPart::Frame` | `frame` | The bordered box around the control. |
 | `TextareaPart::Control` | `control` | The element the label names. |
-| `TextareaPart::Trailing` | `trailing` | The slot after the control: a chevron, a toggle. |
 | `TextareaPart::Counter` | `counter` | The `12/200` badge in the frame's bottom corner, with `counter`. |
 | `TextareaPart::Helper` | `helper` | The caption under the control. |
 | `TextareaPart::Status` | `status` | The validation message. |

@@ -6,12 +6,12 @@ use libero::{
     use_theme,
 };
 
-/// Printed as a `fixed` line, so the preview and the code block share it: a
-/// container is invisible without a background to see its edges by.
-// snippet: in Container { .. }
 /// A `section` is a landmark only once it has a name.
 const SECTION_LABEL: &str = "Page content";
 
+/// Printed as a `fixed` line, so the preview and the code block share it: a
+/// container is invisible without a background to see its edges by.
+// snippet: in Container { .. }
 const SX: &str = r#"sx: sx().background("muted.1").padding_top("16px").padding_bottom("16px")"#;
 
 #[component]
