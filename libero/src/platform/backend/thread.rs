@@ -20,6 +20,10 @@ use crate::platform::{TimerApi, TimerSubscription};
 /// timer that never fires.
 pub(super) fn timer() -> Option<&'static dyn TimerApi> {
     #[cfg(test)]
+    if super::manual_timer::off() {
+        return None;
+    }
+    #[cfg(test)]
     if let Some(manual) = super::manual_timer::active() {
         return Runtime::try_current().map(|_| manual);
     }

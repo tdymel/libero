@@ -1,30 +1,63 @@
 use dioxus::prelude::*;
 use libero::{
     components::{Button, Flex, TextField},
-    hooks::use_indexed_db,
+    hooks::{StorageError, use_debounced_callback, use_indexed_db, use_timeout},
 };
 
 // demo-code: start
 #[component]
 pub fn KeptNotes() -> Element {
     let mut notes = use_indexed_db("libero-docs-notes", String::new);
+    // The field follows every key; the store gets the text once typing pauses.
+    let mut typed = use_signal(|| None::<String>);
+    let save = use_debounced_callback(
+        move |()| {
+            if let Some(text) = typed.peek().clone() {
+                notes.set(text);
+            }
+        },
+        400,
+    );
+    // A fast load shows no loading text at all.
+    let mut slow = use_signal(|| false);
+    let wait = use_timeout(move || slow.set(true), 500);
+    use_hook(move || wait.start());
+    // Rendered from the start, so a failed save is announced once.
     let status = match notes.error() {
-        _ if !notes.is_loaded() => "Loading your notes".to_string(),
-        Some(error) => format!("Not saved ({error:?}): kept until you leave"),
-        None if notes.is_stored() => "Saved on this device".to_string(),
-        None => String::new(),
+        _ if !notes.is_loaded() && slow() => "Loading your notes",
+        _ if !notes.is_loaded() => "",
+        Some(StorageError::Invalid) => "The kept notes could not be read: starting empty",
+        Some(StorageError::Full) => {
+            "Not saved, this device's storage is full: kept until you leave"
+        }
+        Some(StorageError::Unavailable) => "Not saved, storage is off here: kept until you leave",
+        None if notes.is_stored() => "Saved on this device",
+        None => "",
     };
 
     rsx! {
         Flex { direction: "column", align: "flex-start", gap: "sm",
             TextField {
                 label: "Notes, kept after a reload",
-                value: notes.get(),
+                value: typed().unwrap_or_else(|| notes.get()),
                 disabled: !notes.is_loaded(),
-                oninput: move |next| notes.set(next),
+                aria_busy: !notes.is_loaded(),
+                oninput: move |next| {
+                    typed.set(Some(next));
+                    save.call(());
+                },
             }
             div { role: "status", "{status}" }
-            Button { variant: "outlined", onclick: move |_| notes.remove(), "Forget notes" }
+            Button {
+                variant: "outlined",
+                disabled: !notes.is_loaded(),
+                focusable_when_disabled: true,
+                onclick: move |_| {
+                    typed.set(None);
+                    notes.remove();
+                },
+                "Forget notes"
+            }
         }
     }
 }

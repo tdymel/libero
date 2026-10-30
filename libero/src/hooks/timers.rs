@@ -59,6 +59,11 @@ impl Scheduled {
         pending.set(timer().map(make));
         self.skip_fired();
     }
+
+    /// Whether a timer is set; false after `after`/`every` where no timer runs.
+    fn armed(&self) -> bool {
+        self.pending.peek().is_some()
+    }
 }
 
 /// A [`Scheduled`] that calls `on_fire` in this scope each time it fires. Two
@@ -139,11 +144,12 @@ pub struct TimeoutHandle {
 }
 
 impl TimeoutHandle {
-    /// Starts the countdown, or restarts one under way.
+    /// Starts the countdown, or restarts one under way. Without a platform timer
+    /// (a server render) it stays idle.
     pub fn start(&self) {
         let mut active = self.active;
-        active.set(true);
         self.scheduled.after(self.ms);
+        active.set(self.scheduled.armed());
     }
 
     /// Cancels a countdown under way; the callback does not run.
@@ -204,11 +210,12 @@ pub struct IntervalHandle {
 }
 
 impl IntervalHandle {
-    /// Starts ticking, or restarts the period of one under way.
+    /// Starts ticking, or restarts the period of one under way. Without a platform
+    /// timer (a server render) it stays idle.
     pub fn start(&self) {
         let mut active = self.active;
-        active.set(true);
         self.scheduled.every(self.ms);
+        active.set(self.scheduled.armed());
     }
 
     /// Stops ticking.

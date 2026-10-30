@@ -16,11 +16,14 @@ pub fn UndoableNote() -> Element {
             onkeydown: move |event: KeyboardEvent| {
                 let modifiers = event.modifiers();
                 let Key::Character(key) = event.key() else { return };
-                if !(modifiers.ctrl() || modifiers.meta()) || !key.eq_ignore_ascii_case("z") {
+                // Ctrl+Y is Windows' redo; Cmd+Y is history on macOS, so it is left alone.
+                let redo_y = modifiers.ctrl() && !modifiers.shift() && key.eq_ignore_ascii_case("y");
+                let z = (modifiers.ctrl() || modifiers.meta()) && key.eq_ignore_ascii_case("z");
+                if !redo_y && !z {
                     return;
                 }
                 event.prevent_default();
-                if modifiers.shift() {
+                if redo_y || modifiers.shift() {
                     note.redo();
                 } else {
                     note.undo();
@@ -52,7 +55,10 @@ pub fn UndoableNote() -> Element {
                 }
                 Button {
                     variant: "text",
-                    onclick: move |_| note.reset(String::new()),
+                    disabled: note.value().is_empty(),
+                    focusable_when_disabled: true,
+                    // One undo step, so Undo brings the text back.
+                    onclick: move |_| note.push(String::new()),
                     "Clear"
                 }
             }

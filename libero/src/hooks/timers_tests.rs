@@ -290,6 +290,18 @@ fn an_interval_ticks_between_start_and_stop() {
 }
 
 #[test]
+fn without_a_timer_start_leaves_timeout_and_interval_idle() {
+    let _off = manual_timer::switch_off();
+    let timeout_dom = started(timeout_app);
+    timeout_dom.in_runtime(|| timeout().start());
+    assert!(!timeout_dom.in_runtime(|| timeout().pending()));
+
+    let interval_dom = started(interval_app);
+    interval_dom.in_runtime(|| interval().toggle());
+    assert!(!interval_dom.in_runtime(|| interval().active()));
+}
+
+#[test]
 fn an_interval_stopped_after_a_tick_but_before_the_render_does_not_call_back() {
     let _clock = manual_timer::install();
     let mut dom = started(interval_app);

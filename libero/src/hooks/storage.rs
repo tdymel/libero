@@ -166,8 +166,8 @@ pub(super) fn warn_once(mut warned: CopyValue<u8>, error: StorageError) {
 /// rsx! {
 ///     button { onclick: move |_| count.update(|count| *count += 1), "Visited {count.get()} times" }
 ///     button { onclick: move |_| count.remove(), "Reset" }
-///     if let Some(error) = count.error() {
-///         p { role: "status", "Not saved: {error:?}" }
+///     if count.error().is_some() {
+///         p { role: "status", "Not saved on this device: counted until you leave" }
 ///     }
 /// }
 /// # }

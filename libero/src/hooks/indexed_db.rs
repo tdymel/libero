@@ -129,8 +129,8 @@ fn settle(mut entry: Entry, warned: CopyValue<u8>, error: Option<StorageError>) 
 ///     } else {
 ///         p { role: "status", "Loading the draft" }
 ///     }
-///     if let Some(error) = draft.error() {
-///         p { role: "status", "Not saved: {error:?}" }
+///     if draft.error().is_some() {
+///         p { role: "status", "Not saved on this device: kept until you leave" }
 ///     }
 /// }
 /// # }

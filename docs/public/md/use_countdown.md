@@ -36,6 +36,12 @@ fn in_90_seconds() -> SystemTime {
 fn Offer() -> Element {
     let mut end = use_signal(in_90_seconds);
     let left = use_countdown(end());
+    // The text changes only at a milestone, so each is announced once.
+    let milestone = match left().as_secs() {
+        0 => "Offer ended",
+        1..=60 => "One minute left",
+        _ => "",
+    };
 
     rsx! {
         Flex { direction: "column", align: "flex-start", gap: "sm",
@@ -45,6 +51,7 @@ fn Offer() -> Element {
                 VisuallyHidden { {format_duration(left(), DurationStyle::Spoken)} }
             }
             Text { "In short units: {format_duration(left(), DurationStyle::Short)}" }
+            Text { role: "status", "{milestone}" }
             Button { variant: "outlined", onclick: move |_| end.set(in_90_seconds()), "Restart" }
         }
     }

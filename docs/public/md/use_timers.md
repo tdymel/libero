@@ -29,13 +29,13 @@ fn Stopwatch() -> Element {
     let mut since = use_signal(|| None::<Instant>);
     let mut banked = use_signal(|| 0.0);
     let mut seconds = use_signal(|| 0);
-    let mut laps = use_signal(Vec::<f64>::new);
+    let mut splits = use_signal(Vec::<f64>::new);
     let mut saved = use_signal(|| false);
     // Reads the clock, so a late tick loses no time.
     let elapsed = move || banked() + since().map_or(0.0, |at: Instant| at.elapsed().as_secs_f64());
     let interval = use_interval(move || seconds.set(elapsed() as u64), 1000);
     let flash = use_timeout(move || saved.set(false), 2000);
-    let list = laps.read().iter().map(|lap| format!("{lap:.1} s")).collect::<Vec<_>>().join(", ");
+    let list = splits.read().iter().map(|split| format!("{split:.1} s")).collect::<Vec<_>>().join(", ");
 
     rsx! {
         Flex { direction: "column", align: "flex-start", gap: "sm",
@@ -61,21 +61,23 @@ fn Stopwatch() -> Element {
                 }
                 Button {
                     variant: "outlined",
+                    disabled: since().is_none(),
+                    focusable_when_disabled: true,
                     onclick: move |_| {
-                        laps.push(elapsed());
+                        splits.push(elapsed());
                         saved.set(true);
                         flash.start();
                     },
-                    "Save lap"
+                    "Save split"
                 }
             }
             div { role: "status",
                 if saved() {
-                    "Lap {laps.len()} saved"
+                    "Split {splits.len()} saved"
                 }
             }
             if !list.is_empty() {
-                Text { "Laps: {list}" }
+                Text { "Splits: {list}" }
             }
         }
     }
@@ -112,7 +114,7 @@ runs, so it sees current state.
 ### You must
 
 - Announce what a timer changes with a live region (`role="status"`), as the
-  demo does for "Lap saved": a sighted user sees it appear, a screen reader
+  demo does for "Split saved": a sighted user sees it appear, a screen reader
   hears nothing otherwise.
 - Give the reader a way to stop anything that moves on its own for more than
   five seconds (WCAG 2.2.2). A `use_interval` that starts itself needs a Stop

@@ -32,15 +32,18 @@ fn UndoableNote() -> Element {
             direction: "column",
             align: "flex-start",
             gap: "sm",
-            // Ctrl+Z and Ctrl+Shift+Z (Cmd on macOS) anywhere in the note's controls.
+            // Ctrl+Z, Ctrl+Shift+Z and Ctrl+Y (Cmd on macOS) anywhere in the note's controls.
             onkeydown: move |event: KeyboardEvent| {
                 let modifiers = event.modifiers();
                 let Key::Character(key) = event.key() else { return };
-                if !(modifiers.ctrl() || modifiers.meta()) || !key.eq_ignore_ascii_case("z") {
+                // Ctrl+Y is Windows' redo; Cmd+Y is history on macOS, so it is left alone.
+                let redo_y = modifiers.ctrl() && !modifiers.shift() && key.eq_ignore_ascii_case("y");
+                let z = (modifiers.ctrl() || modifiers.meta()) && key.eq_ignore_ascii_case("z");
+                if !redo_y && !z {
                     return;
                 }
                 event.prevent_default();
-                if modifiers.shift() { note.redo(); } else { note.undo(); }
+                if redo_y || modifiers.shift() { note.redo(); } else { note.undo(); }
             },
             TextField {
                 label: "Note",
@@ -81,8 +84,8 @@ fn UndoableNote() -> Element {
 
 ### You must
 
-- Offer undo and redo from the keyboard as well, as the demo does with Ctrl+Z
-  and Ctrl+Shift+Z (Cmd on macOS) on the element around the field; a button
+- Offer undo and redo from the keyboard as well, as the demo does with Ctrl+Z,
+  Ctrl+Shift+Z and Ctrl+Y (Cmd+Z and Cmd+Shift+Z on macOS) on the element around the field; a button
   alone leaves a keyboard user tabbing away from the field.
 - Keep the Undo and Redo buttons focusable in the tab order, even at the end of
   the stack (`focusable_when_disabled`), and named by their text or

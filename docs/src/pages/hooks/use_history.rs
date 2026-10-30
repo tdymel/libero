@@ -17,7 +17,7 @@ pub fn UseHistoryPage() -> Element {
                     "Nothing on screen: the hook keeps snapshots, your controls show them.",
                 ])
                 .must([
-                    "Offer undo and redo from the keyboard as well, as the demo does with Ctrl+Z and Ctrl+Shift+Z (Cmd on macOS) on the element around the field; a button alone leaves a keyboard user tabbing away from the field.",
+                    "Offer undo and redo from the keyboard as well, as the demo does with Ctrl+Z, Ctrl+Shift+Z and Ctrl+Y (Cmd+Z and Cmd+Shift+Z on macOS) on the element around the field; a button alone leaves a keyboard user tabbing away from the field.",
                     "Keep the Undo and Redo buttons focusable in the tab order, even at the end of the stack (`focusable_when_disabled`), and named by their text or `aria-label`.",
                 ])
                 .example("A notes field with `use_history`: Ctrl+Z and Ctrl+Shift+Z undo and redo in the field, and the Undo and Redo buttons stay in the tab order with `focusable_when_disabled` at either end of the stack."),

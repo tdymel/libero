@@ -10,15 +10,15 @@ pub fn Stopwatch() -> Element {
     let mut since = use_signal(|| None::<Instant>);
     let mut banked = use_signal(|| 0.0);
     let mut seconds = use_signal(|| 0);
-    let mut laps = use_signal(Vec::<f64>::new);
+    let mut splits = use_signal(Vec::<f64>::new);
     let mut saved = use_signal(|| false);
     let elapsed = move || banked() + since().map_or(0.0, |at: Instant| at.elapsed().as_secs_f64());
     let interval = use_interval(move || seconds.set(elapsed() as u64), 1000);
     let flash = use_timeout(move || saved.set(false), 2000);
-    let list = laps
+    let list = splits
         .read()
         .iter()
-        .map(|lap| format!("{lap:.1} s"))
+        .map(|split| format!("{split:.1} s"))
         .collect::<Vec<_>>()
         .join(", ");
 
@@ -46,21 +46,23 @@ pub fn Stopwatch() -> Element {
                 }
                 Button {
                     variant: "outlined",
+                    disabled: since().is_none(),
+                    focusable_when_disabled: true,
                     onclick: move |_| {
-                        laps.push(elapsed());
+                        splits.push(elapsed());
                         saved.set(true);
                         flash.start();
                     },
-                    "Save lap"
+                    "Save split"
                 }
             }
             div { role: "status",
                 if saved() {
-                    "Lap {laps.len()} saved"
+                    "Split {splits.len()} saved"
                 }
             }
             if !list.is_empty() {
-                Text { "Laps: {list}" }
+                Text { "Splits: {list}" }
             }
         }
     }

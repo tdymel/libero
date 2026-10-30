@@ -17,7 +17,7 @@ pub fn UseTimersPage() -> Element {
                     "Both cancel when the component unmounts, so a callback never runs into a screen the reader has left.",
                 ])
                 .must([
-                    "Announce what a timer changes with a live region (`role=\"status\"`), as the demo does for \"Lap saved\": a sighted user sees it appear, a screen reader hears nothing otherwise.",
+                    "Announce what a timer changes with a live region (`role=\"status\"`), as the demo does for \"Split saved\": a sighted user sees it appear, a screen reader hears nothing otherwise.",
                     "Give the reader a way to stop anything that moves on its own for more than five seconds (WCAG 2.2.2). A `use_interval` that starts itself needs a Stop control.",
                 ])
                 .example("A quiz countdown on `use_interval`: a Pause button stops it, and a status line says \"One minute left\" once, rather than every second.")

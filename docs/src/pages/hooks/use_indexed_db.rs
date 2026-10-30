@@ -24,7 +24,7 @@ pub fn UseIndexedDbPage() -> Element {
                     "Announce a failed save once in a status region where the user relies on it, as the demo does.",
                     "Keep personal data out of IndexedDB unless the user agreed: it stays on the device, readable by every script of the site.",
                 ])
-                .example("A notes box keeps its text: while it loads the field is disabled and a status line says \"Loading your notes\", after a reload the text is back, and a \"Forget notes\" button clears it.")
+                .example("A notes box keeps its text: while it loads the field is disabled and busy, a load slower than half a second shows \"Loading your notes\" in a status line, after a reload the text is back, and a \"Forget notes\" button clears it.")
                 .limits([
                     "A kept value lives in one browser or app install: another device starts from the default.",
                     "Web: one IndexedDB database, `libero`, with one store; a write in one tab shows in the origin's other tabs at once. Blitz, a desktop app with the `desktop` feature and Android keep a file per key in the app's data directory. Any other build keeps values in memory until you call `libero::platform::set_storage_dir(path)`.",

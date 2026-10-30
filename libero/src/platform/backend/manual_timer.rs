@@ -48,6 +48,29 @@ pub(crate) fn install() -> Installed {
     Installed
 }
 
+thread_local! {
+    static OFF: std::cell::Cell<bool> = const { std::cell::Cell::new(false) };
+}
+
+/// Turns the timer back on when dropped.
+pub(crate) struct Off;
+
+impl Drop for Off {
+    fn drop(&mut self) {
+        OFF.with(|off| off.set(false));
+    }
+}
+
+/// No `timer()` on this thread from now on, as where the platform has none.
+pub(crate) fn switch_off() -> Off {
+    OFF.with(|off| off.set(true));
+    Off
+}
+
+pub(super) fn off() -> bool {
+    OFF.with(std::cell::Cell::get)
+}
+
 pub(super) fn active() -> Option<&'static dyn TimerApi> {
     installed().then_some(&MANUAL as &'static dyn TimerApi)
 }
