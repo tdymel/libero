@@ -140,6 +140,10 @@ lists the "Main" navigation, and the current item reads as the current page.
 
 - A native app has no line clamp: a long label is cut at two lines without an
   ellipsis.
+- A label word too wide for its item, as "Search" at 200% zoom, breaks with a
+  hyphen only where the browser can hyphenate it in the page's `lang`: never a
+  one-syllable word, and nothing in Chromium on Linux, which has no
+  hyphenation dictionaries. There it breaks mid-word without one.
 
 ## Theme defaults
 

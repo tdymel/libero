@@ -154,6 +154,8 @@ pub(crate) struct SwipeClose {
 /// or a scroller there is scrolled down, which scrolls first and then hands over. Let go far
 /// enough, and `allow` (unset, always) lets it, it slides off and `onclose` runs, else it
 /// springs back (3957). Give the box [`swipe_close_sx`] and its strip `data-swipe-handle`.
+/// A pen on the web swipes from the body only where it fires touch events (Chromium on Android,
+/// Safari); elsewhere the browser's pan cancels its pointer, so it swipes from the strip (5054).
 pub(crate) fn use_swipe_close(
     capture: ElementHandle,
     allow: Option<Callback<(), bool>>,
@@ -217,7 +219,7 @@ pub(crate) fn use_swipe_close(
         }
     }));
 
-    // Blitz, and a pen on the strip elsewhere: the box's pointer listeners.
+    // Blitz, and a pen on the strip elsewhere (one firing no touch events): the box's pointer listeners.
     let mut press = use_hook(|| CopyValue::new(None::<Press>));
     let mut gripped = use_hook(|| CopyValue::new(None::<i32>));
     let release = use_callback(move |(event, ended): (PointerEvent, bool)| {

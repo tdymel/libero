@@ -197,6 +197,7 @@ pub fn DrawerPage() -> Element {
                 .limits([
                     "On Android, a drawer opened without a tap (on mount or from a timer) may let Back close the app.",
                     "In a desktop WebView or on Android, Tab and Shift+Tab move between the controls but can leave the drawer at its ends.",
+                    "A pen that fires no touch events, as in Firefox or with a Windows pen, swipes a bottom drawer down from its grab bar only: the browser's own pan takes it anywhere else.",
                 ]),
             lead: rsx! {
                 Text {

@@ -440,14 +440,15 @@ pub(crate) const SHEET_PAN_JS: &str = "(id, slop, report) => {
         const touch = event.touches[0];
         press = { target: event.target, box, grip, pointer, x: touch.clientX, y: touch.clientY, last: touch.clientY, state: 'wait' };
     };
+    // A stylus fires touch events too in Chromium on Android and in Safari (5054).
     const pressed = (event) => {
-        if (event.pointerType === 'touch' && event.isPrimary) pointer = event.pointerId;
+        if ((event.pointerType === 'touch' || event.pointerType === 'pen') && event.isPrimary) pointer = { id: event.pointerId, type: event.pointerType };
     };
     // An inner control's pending press (a sideways slider, a month swipe) drops, as on a pan.
     const take = () => {
         press.state = 'drag';
         if (press.pointer === null) return;
-        press.target.dispatchEvent(new PointerEvent('pointercancel', { pointerId: press.pointer, pointerType: 'touch', isPrimary: true, bubbles: true }));
+        press.target.dispatchEvent(new PointerEvent('pointercancel', { pointerId: press.pointer.id, pointerType: press.pointer.type, isPrimary: true, bubbles: true }));
     };
     const move = (event) => {
         if (!press) return;

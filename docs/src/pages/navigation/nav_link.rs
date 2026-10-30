@@ -96,7 +96,10 @@ pub fn NavLinkPage() -> Element {
                     "A `target: \"_blank\"` link reads a hidden \"(opens in a new tab)\". `new_tab_icon: true` also draws a small external icon. `new_tab_hint: false` drops both.",
                 ])
                 .must(["Wrap a list of them in a `<nav>` to make a navigation landmark."])
-                .limits(["In a native app, Tab still enters the nested links of a closed panel."])
+                .limits([
+                    "In a native app, Tab still enters the nested links of a closed panel.",
+                    "A word too wide for the link breaks with a hyphen only where the browser can hyphenate it in the page's `lang`: never a one-syllable word, and nothing in Chromium on Linux, which has no hyphenation dictionaries. There it breaks mid-word without one.",
+                ])
                 .example("A side menu of `NavLink`s inside a `<nav>`: a screen reader lists the navigation landmark, and a link with a `description` keeps its short name, such as \"Docs\"."),
             lead: rsx! {
                 Text {

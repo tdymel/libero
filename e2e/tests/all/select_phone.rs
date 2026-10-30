@@ -383,6 +383,53 @@ fn a_swipe_down_on_the_rows_closes_the_sheet() {
     });
 }
 
+/// Todo 5054: a stylus firing touch events, as on Android, swipes the sheet from a row, and the
+/// row's pending pen press is cancelled as a finger's is. CDP has no stylus touch, so script events.
+#[test]
+fn a_stylus_swipe_on_a_row_cancels_its_pen_press() {
+    const TRIGGER: &str = "#plain [role=combobox]";
+    block_on(async {
+        let fixture = phone("/select-phone").await;
+        let page = &fixture.page;
+        tap(page, TRIGGER).await.unwrap();
+        sheet_shown(page).await.unwrap();
+        page.evaluate(format!(
+            "(() => {{ const row = document.querySelector({:?}); \
+             const r = row.getBoundingClientRect(); const x = r.x + r.width / 2, y = r.y + r.height / 2; \
+             window.penCancels = []; \
+             row.addEventListener('pointercancel', e => window.penCancels.push(e.pointerId + ':' + e.pointerType)); \
+             row.dispatchEvent(new PointerEvent('pointerdown', {{ pointerId: 9, pointerType: 'pen', isPrimary: true, \
+               bubbles: true, clientX: x, clientY: y }})); \
+             const fire = (type, dy) => {{ \
+               const t = new Touch({{ identifier: 1, target: row, clientX: x, clientY: y + dy, touchType: 'stylus' }}); \
+               row.dispatchEvent(new TouchEvent(type, {{ touches: [t], targetTouches: [t], changedTouches: [t], \
+                 bubbles: true, cancelable: true }})); }}; \
+             fire('touchstart', 0); fire('touchmove', 10); fire('touchmove', 30); }})()",
+            format!("{SHEET} [role=option]")
+        ))
+        .await
+        .unwrap();
+        let js = format!(
+            "(() => {{ const s = document.querySelector({SHEET:?}); \
+             return window.penCancels.join() === '9:pen' \
+               && parseFloat(s.style.getPropertyValue('--lsx-swipe-drag')) > 10; }})()"
+        );
+        wait::for_js_true(page, &js, "the pen press cancelled, the sheet following")
+            .await
+            .unwrap();
+        page.evaluate(
+            "window.dispatchEvent(new TouchEvent('touchcancel', { bubbles: true }))".to_string(),
+        )
+        .await
+        .unwrap();
+        fixture
+            .console
+            .assert_clean("a sheet swiped by a stylus")
+            .unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
 /// The sheet's vertical scroller, the sheet itself or a list in it.
 const SCROLLER: &str = "[...document.querySelectorAll('[data-slot=dropdown], [data-slot=dropdown] *')]\
      .find(e => e.scrollHeight > e.clientHeight + 10 && /auto|scroll/.test(getComputedStyle(e).overflowY))";
