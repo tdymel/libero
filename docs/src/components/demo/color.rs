@@ -3,8 +3,9 @@ use libero::components::Pictogram;
 use libero::{
     components::{
         Box, Button, ColorCode, ColorPicker, ColorSwatch, Flex, SliderChangeEvent, States,
+        VisuallyHidden,
     },
-    hooks::{use_direction, use_element},
+    hooks::{use_direction, use_element, use_id},
     platform::ElementApi,
     sx::sx,
 };
@@ -120,6 +121,7 @@ pub fn ColorControl(
     let trigger = use_element();
     let row = use_element();
     let rtl = use_direction().is_rtl();
+    let hint_id = use_id();
 
     let is_custom = !control.options.contains(&value);
     let swatches: Vec<(String, String, String)> = control
@@ -220,12 +222,15 @@ pub fn ColorControl(
                     div {
                         style: "display: contents",
                         onmounted: trigger.mount(),
+                        VisuallyHidden { id: "{hint_id}", "Opens a color picker" }
                         Button {
                             size: "sm",
                             variant: "text",
                             role: "radio",
                             aria_label: "{custom_label}",
                             aria_checked: is_custom,
+                            // `aria-haspopup` is not valid on a radio: a description says it instead.
+                            "aria-describedby": "{hint_id}",
                             tabindex: if control.options.len() == tab_stop { "0" } else { "-1" },
                             "data-swatch": "{control.options.len()}",
                             onclick: move |_| {
@@ -309,6 +314,36 @@ mod tests {
         );
         assert_eq!(next_swatch(0, 3, &Key::Named(NamedKey::Enter), false), None);
         assert_eq!(next_swatch(0, 0, &right, false), None);
+    }
+
+    /// The custom swatch is described as opening a picker (todo 5096).
+    #[test]
+    fn the_custom_swatch_says_it_opens_a_picker() {
+        fn app() -> Element {
+            rsx! {
+                libero::context::LiberoProvider {
+                    ColorControl {
+                        control: Control::color("color"),
+                        label: "Color",
+                        value: "primary",
+                        onchange: |_| {},
+                    }
+                }
+            }
+        }
+        let mut dom = VirtualDom::new(app);
+        dom.rebuild_in_place();
+        let html = dioxus_ssr::render(&dom);
+        let described = html
+            .split("<button")
+            .find(|button| button.contains("Custom color"))
+            .and_then(|button| button.split("aria-describedby=\"").nth(1))
+            .and_then(|rest| rest.split('"').next())
+            .expect(&html);
+        assert!(
+            html.contains(&format!("id=\"{described}\"")) && html.contains("Opens a color picker"),
+            "{html}"
+        );
     }
 
     /// Text's unset swatch follows its gradient switch (todo 5035).

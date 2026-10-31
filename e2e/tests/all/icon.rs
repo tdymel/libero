@@ -84,6 +84,68 @@ fn a_contained_glyph_is_inset_and_a_bare_one_fills_the_box() {
     });
 }
 
+/// Todo 5095: from lg up a contained glyph is 60% of the box's inside, with no 16px floor.
+#[test]
+fn a_large_contained_glyph_takes_sixty_percent_of_the_box() {
+    block_on(async {
+        let fixture = Fixture::open("/icon", Viewport::Desktop).await.unwrap();
+        let [glyph, inside, outside]: [f64; 3] = fixture
+            .page
+            .evaluate_bounded(
+                "(() => { const b = document.getElementById('large'); \
+                 return [b.querySelector('svg').getBoundingClientRect().width, \
+                 b.clientWidth, b.getBoundingClientRect().width]; })()",
+            )
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        assert!((outside - 32.0).abs() < 0.5, "lg box {outside}");
+        assert!(
+            (glyph / inside - 0.6).abs() < 0.02,
+            "lg glyph {glyph} in {inside}"
+        );
+
+        fixture.close().await.unwrap();
+    });
+}
+
+/// Todo 5095: an outlined icon draws a 1px border in its colour; a standard one has none.
+#[test]
+fn an_outlined_icon_draws_a_one_pixel_border() {
+    block_on(async {
+        let fixture = Fixture::open("/icon", Viewport::Desktop).await.unwrap();
+        let border = |id: &str| {
+            format!(
+                "(() => {{ const s = getComputedStyle(document.getElementById('{id}')); \
+                 return [s.borderTopStyle, s.borderTopWidth, s.borderTopColor, s.color]; }})()"
+            )
+        };
+
+        let [style, width, colour, text]: [String; 4] = fixture
+            .page
+            .evaluate_bounded(border("outlined"))
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        assert_eq!((style.as_str(), width.as_str()), ("solid", "1px"));
+        assert_ne!(colour, "rgba(0, 0, 0, 0)", "the border is transparent");
+        assert_eq!(colour, text, "the border takes the icon's colour");
+
+        let [_, bare, _, _]: [String; 4] = fixture
+            .page
+            .evaluate_bounded(border("bare"))
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        assert_eq!(bare, "0px", "a standard icon has no border");
+
+        fixture.close().await.unwrap();
+    });
+}
+
 /// Todo 1094: `svg` draws its body inside the box, stroked in the icon's colour and sized by it.
 async fn svg_glyph<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
     let colour = d.style("#pictogram", "color").await?;

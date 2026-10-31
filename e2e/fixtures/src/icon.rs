@@ -1,6 +1,7 @@
 //! A filled `Icon` in a theme colour, for its cached colour variables, and a
 //! named one beside the unnamed one (todo 612), a `standard` one (786), and
-//! one drawn from `SvgData` (1094), and one masked from a `src` image (1152).
+//! one drawn from `SvgData` (1094), and one masked from a `src` image (1152), an `lg` one
+//! and an outlined one (5095).
 
 use dioxus::prelude::*;
 use libero::components::{Button, Icon, SvgData};
@@ -22,6 +23,12 @@ fn IconPage() -> Element {
             svg { view_box: "0 0 24 24", circle { cx: "12", cy: "12", r: "8" } }
         }
         Icon { id: "bare", variant: "standard",
+            svg { view_box: "0 0 24 24", circle { cx: "12", cy: "12", r: "8" } }
+        }
+        Icon { id: "large", size: "lg",
+            svg { view_box: "0 0 24 24", circle { cx: "12", cy: "12", r: "8" } }
+        }
+        Icon { id: "outlined", variant: "outlined", color: "error",
             svg { view_box: "0 0 24 24", circle { cx: "12", cy: "12", r: "8" } }
         }
         Icon { id: "pictogram", variant: "standard", color: "error", svg: RING }
