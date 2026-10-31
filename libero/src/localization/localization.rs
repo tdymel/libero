@@ -188,7 +188,7 @@ mod tests {
     use super::*;
 
     /// Every template with a hole, in one order for every language.
-    fn templates(words: &Localization) -> [&'static str; 111] {
+    fn templates(words: &Localization) -> [&'static str; 110] {
         [
             words.common.remove,
             words.common.at_most,
@@ -212,7 +212,6 @@ mod tests {
             words.lightbox.thumbnail,
             words.lightbox.zoomed,
             words.floating_window.size,
-            words.notifications.region,
             words.sortable.handle,
             words.sortable.item,
             words.sortable.lifted,

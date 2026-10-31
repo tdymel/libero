@@ -586,6 +586,64 @@ fn a_placement_change_leaves_shown_notifications_in_place() {
     });
 }
 
+/// Todo 5069: under RTL an end stack sits off its edge by the offset, inside the host, as a
+/// start one does; the physical translate pushed both past the edge.
+#[test]
+fn under_rtl_a_stack_keeps_its_offset_inside_the_host() {
+    // The anchored edge's gap, and whether the stack fits the host, for the notification
+    // with `text`. The stack is the live region's parent.
+    const GAPS: &str = "(text) => {
+        const li = [...document.querySelectorAll('[aria-live] li')]
+            .find(li => li.textContent.includes(text));
+        if (!li) return null;
+        const host = li.closest('[data-notifications-host]').getBoundingClientRect();
+        const stack = li.closest('[aria-live]').parentElement.getBoundingClientRect();
+        return [stack.left - host.left, host.right - stack.right];
+    }";
+
+    block_on(async {
+        let fixture = Fixture::open("/notifications-host", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        let _: bool = js(page, "(document.documentElement.dir = 'rtl', true)").await;
+
+        // Bottom end: the left edge under RTL.
+        pointer::click(page, TRIGGER).await.unwrap();
+        wait::for_js_true(page, &format!("!!({GAPS})('Message 1')"), "the end stack")
+            .await
+            .unwrap();
+        let (left, right): (f64, f64) = js(page, format!("({GAPS})('Message 1')")).await;
+        assert!(
+            (4.0..40.0).contains(&left),
+            "end stack {left}px off the left edge"
+        );
+        assert!(
+            right > left,
+            "end stack sits right of centre: {right}px from the right"
+        );
+
+        // Top start: the right edge under RTL.
+        pointer::click(page, "#move").await.unwrap();
+        pointer::click(page, TRIGGER).await.unwrap();
+        wait::for_js_true(page, &format!("!!({GAPS})('Message 2')"), "the start stack")
+            .await
+            .unwrap();
+        let (left, right): (f64, f64) = js(page, format!("({GAPS})('Message 2')")).await;
+        assert!(
+            (4.0..40.0).contains(&right),
+            "start stack {right}px off the right edge"
+        );
+        assert!(
+            left > right,
+            "start stack sits left of centre: {left}px from the left"
+        );
+
+        fixture.console.assert_clean("RTL stacks").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
 /// A contained host unmounting with focus inside a notification sends focus
 /// back where it came from, not to `<body>` (todo 577).
 #[test]
@@ -761,7 +819,7 @@ e2e::scenario!(
 );
 
 /// Todo 575: F8 focuses the newest notification, and closing it returns focus to where F8
-/// was pressed. The region names the key.
+/// was pressed. The region names the key as its shortcut (todo 5072).
 #[test]
 fn f8_focuses_the_newest_notification() {
     const CLEAR: &str = ".clear-all";
@@ -774,13 +832,14 @@ fn f8_focuses_the_newest_notification() {
 
         let region: String = page
             .evaluate_bounded(
-                "document.querySelector('[role=region]')?.getAttribute('aria-label') ?? ''",
+                "(r => r ? `${r.getAttribute('aria-label')} ${r.getAttribute('aria-keyshortcuts')}` : '')\
+                 (document.querySelector('[role=region]'))",
             )
             .await
             .unwrap()
             .into_value()
             .unwrap();
-        assert_eq!(region, "Notifications (F8)");
+        assert_eq!(region, "Notifications F8");
 
         keyboard::tab_to(page, TRIGGER, 5).await.unwrap();
         keyboard::press(page, keyboard::ENTER).await.unwrap();

@@ -89,9 +89,10 @@ fn only_a_region_with_a_notification_holds_a_list() {
     assert_eq!(html.matches(r#"aria-live="polite""#).count(), 9, "{html}");
 }
 
-/// Todo 575: one region around every stack, named after the hotkey.
+/// Todo 575: one region around every stack. Todo 5072: named plainly, the hotkey in
+/// `aria-keyshortcuts`, so a phone reader does not hear an unpressable key.
 #[test]
-fn the_stacks_sit_in_one_region_named_after_the_hotkey() {
+fn the_stacks_sit_in_one_region_that_names_the_hotkey_as_a_shortcut() {
     fn app() -> Element {
         rsx! {
             LiberoProvider { Notifications {} }
@@ -105,15 +106,10 @@ fn the_stacks_sit_in_one_region_named_after_the_hotkey() {
 
     let html = body(&render(app));
     assert_eq!(html.matches(r#"role="region""#).count(), 1, "{html}");
-    assert!(
-        html.contains(r#"aria-label="Notifications (F8)""#),
-        "{html}"
-    );
+    assert!(html.contains(r#"aria-label="Notifications""#), "{html}");
+    assert!(html.contains(r#"aria-keyshortcuts="F8""#), "{html}");
     let html = body(&render(f9));
-    assert!(
-        html.contains(r#"aria-label="Notifications (F9)""#),
-        "{html}"
-    );
+    assert!(html.contains(r#"aria-keyshortcuts="F9""#), "{html}");
 }
 
 /// The stock snackbar: its message, one action button, and the close button after it.

@@ -9,7 +9,7 @@ button "Notify assertively"
   StaticText "Notify assertively"
 button "Notify for a while"
   StaticText "Notify for a while"
-region "Notifications (F8)"
+region "Notifications" [keyshortcuts=F8]
   generic [live=assertive]
   generic [live=polite]
   generic [live=assertive]

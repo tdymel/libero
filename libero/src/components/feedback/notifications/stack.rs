@@ -20,6 +20,15 @@ static STACK_SX: StaticSx = StaticSx::new(|| {
             NOTIFICATION_OFFSET.value()
         ))
         .pointer_events("none")
+        // Logical margins, not `Float`'s physical offset: they flip with `end` under RTL.
+        .when(
+            "horizontal-start",
+            sx().margin_inline_start(NOTIFICATION_OFFSET.value()),
+        )
+        .when(
+            "horizontal-end",
+            sx().margin_inline_end(NOTIFICATION_OFFSET.value()),
+        )
 });
 
 /// One live region, always rendered. Spaced here, not by a `gap`, so an empty
@@ -58,8 +67,7 @@ pub(super) fn NotificationStack(props: StackProps) -> Element {
         Float {
             fixed: props.fixed,
             placement: Input::Value(placement),
-            offset_x: edge_offset(placement, Axis::Horizontal),
-            offset_y: edge_offset(placement, Axis::Vertical),
+            offset_y: vertical_offset(placement),
             z_index: props.z_index,
             sx: &STACK_SX,
             for (live, items) in regions {
@@ -95,29 +103,33 @@ pub(super) fn NotificationStack(props: StackProps) -> Element {
     }
 }
 
-enum Axis {
-    Horizontal,
-    Vertical,
+/// `Float`'s offsets are a translate: negative from the bottom edge.
+fn vertical_offset(placement: Placement) -> String {
+    use Placement::*;
+    match placement {
+        TopStart | TopCenter | TopEnd => NOTIFICATION_OFFSET.value(),
+        BottomStart | BottomCenter | BottomEnd => {
+            format!("calc(-1 * {})", NOTIFICATION_OFFSET.value())
+        }
+        CenterStart | CenterCenter | CenterEnd => "0px".to_string(),
+    }
 }
 
-/// `Float`'s offsets are a translate: negative from an end or bottom edge.
-fn edge_offset(placement: Placement, axis: Axis) -> String {
-    use Placement::*;
-    let from_start = match axis {
-        Axis::Horizontal => match placement {
-            TopStart | CenterStart | BottomStart => Some(true),
-            TopEnd | CenterEnd | BottomEnd => Some(false),
-            TopCenter | CenterCenter | BottomCenter => None,
-        },
-        Axis::Vertical => match placement {
-            TopStart | TopCenter | TopEnd => Some(true),
-            BottomStart | BottomCenter | BottomEnd => Some(false),
-            CenterStart | CenterCenter | CenterEnd => None,
-        },
-    };
-    match from_start {
-        Some(true) => NOTIFICATION_OFFSET.value(),
-        Some(false) => format!("calc(-1 * {})", NOTIFICATION_OFFSET.value()),
-        None => "0px".to_string(),
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// Todo 5069: a physical translate pushed an end stack off screen under RTL.
+    #[test]
+    fn the_inline_offset_is_a_logical_margin() {
+        let css = crate::css::Stylesheet::from(&*STACK_SX);
+        let css = css.as_str();
+
+        assert!(css.contains("margin-inline-start:"), "{css}");
+        assert!(css.contains("margin-inline-end:"), "{css}");
+        assert!(
+            !css.contains("margin-left") && !css.contains("margin-right"),
+            "{css}"
+        );
     }
 }

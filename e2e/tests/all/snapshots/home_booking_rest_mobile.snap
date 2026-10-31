@@ -27,7 +27,7 @@ tabpanel "Book"
     switch "On the terrace" [checked=false]
     button "Book"
       StaticText "Book"
-region "Notifications (F8)"
+region "Notifications" [keyshortcuts=F8]
   generic [live=assertive]
   generic [live=polite]
   generic [live=assertive]

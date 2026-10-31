@@ -10,7 +10,6 @@ use super::{
 use crate::{
     components::{common::Input, layout::Box},
     hooks::{use_localization, use_portal_slot, use_theme},
-    localization::fill,
     sx::{StaticSx, ThemeAwareValue, sx},
     theme::{AutoClose, Placement, Z_INDEX_NOTIFICATION},
 };
@@ -83,7 +82,7 @@ pub fn Notifications(
         Key::Character(text) => text.to_uppercase(),
         key => key.to_string(),
     };
-    let region_label = fill(localization.notifications.region, &[("key", &key_name)]);
+    let region_label = localization.notifications.region;
 
     let host_placement = placement.copied_or(theme.notifications.placement);
     let limit = limit.unwrap_or(theme.notifications.limit);
@@ -151,6 +150,7 @@ pub fn Notifications(
             framework_sx: &LANDMARK_SX,
             role: "region",
             "aria-label": region_label,
+            "aria-keyshortcuts": key_name,
             {stacks.into_iter()}
         }
     };

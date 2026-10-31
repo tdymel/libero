@@ -87,6 +87,9 @@ fn wrap_demo(values: &DemoValues, _: &str) -> String {
         if auto_close != "6000" {
             fields.push(format!("auto_close: {}", auto_close_code(&auto_close)));
         }
+        if values.str("pause_scope") == "hovered" {
+            fields.push("pause_scope: NotificationPause::Hovered".to_string());
+        }
         let fields: String = fields
             .iter()
             .map(|field| format!("        {field},\n"))
@@ -239,7 +242,7 @@ pub fn NotificationsPage() -> Element {
                         .doc("The stack a notification joins unless it names its own."),
                     prop("limit", "usize")
                         .default("5")
-                        .doc("How many show at once per stack. The rest wait."),
+                        .doc("How many show at once per stack. The rest wait. On a phone, 2 or 3: five fill half a 375 px screen."),
                     prop("auto_close", "AutoClose")
                         .default("After(6000)")
                         .doc("When a notification closes, unless it says otherwise."),
@@ -290,17 +293,18 @@ pub fn NotificationsPage() -> Element {
                 ]),
             ],
             accessibility: a11y()
-                .key(["F8"], "Focuses the newest notification from anywhere. The host's `hotkey` sets the key.")
+                .key(["F8"], "Focuses the newest notification from anywhere. The host's `hotkey` sets the key; the region, named \"Notifications\", carries it in `aria-keyshortcuts`.")
                 .handles([
                     "Showing one takes no focus. `live` picks a polite or an assertive announcement.",
                     "Without the hotkey, a close button comes after the rest of the page in `Tab` order.",
-                    "A focused notification never closes on its own.",
+                    "A focused notification never closes on its own. On a touch screen a tap on its text focuses it, so it stays open until you tap elsewhere (with `pause_scope: All`, the others in the host wait too).",
                     "Closing the focused one moves focus to the next notification's close button in its stack (the previous one's if it was last; the first focusable element when that one has no close button), and back to where `F8` was pressed once the stack is empty.",
                 ])
                 .must([
                     "Give one with an action, such as Undo, `AutoClose::Never`: it is safer.",
                     "In your own template, draw the close button yourself: read `s.closable()` and give the button an `aria_label`, as the Card option does.",
                     "Leave `closable` on for one that never closes on its own, unless it has an action that closes it. Neither Escape nor `F8` closes a notification, so the demo hides the switch for such an alert.",
+                    "While one stays on screen, set `scroll-padding-bottom` (`-top` for a top placement) on your scroll root to the stack's height: else `Tab` scrolls a control only as far as under the stack.",
                 ])
                 .example("A \"Message archived\" notification with an Undo action and `AutoClose::Never`: it takes no focus when it shows, F8 jumps to it, and once it closes focus returns to where F8 was pressed."),
             lead: rsx! {
@@ -382,11 +386,7 @@ pub fn NotificationsPage() -> Element {
                     Control::toggle("pause_scope", ["all", "hovered"])
                         .labels(["All", "Hovered"])
                         .default("all")
-                        .hidden_when(|values| values.str("contained") != "true")
-                        .code(|_, values| match values.str("pause_scope").as_str() {
-                            "hovered" => vec!["pause_scope: NotificationPause::Hovered".to_string()],
-                            _ => vec![],
-                        }),
+                        .hidden_when(|values| values.str("contained") != "true"),
                 ],
                 render: move |values: DemoValues| {
                     let contained = values.str("contained") == "true";

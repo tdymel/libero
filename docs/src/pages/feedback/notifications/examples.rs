@@ -149,11 +149,8 @@ pub(super) fn Examples(
             }),
             Flex { direction: "row", justify: "center", gap: "sm", wrap: "wrap",
                 Button { variant: "outlined", onclick: show, "Show one" }
-                Button { variant: "standard", onclick: move |_| {
-                        notify.clear();
-                        cards.clear();
-                    },
-                    "Clear all" }
+                // Every handle shares the host's store: one `clear()` empties every template.
+                Button { variant: "standard", onclick: move |_| notify.clear(), "Clear all" }
             }
             // Always mounted, so a screen reader hears what Reply or Mute did.
             Text { size: "sm", role: "status", "{last}" }

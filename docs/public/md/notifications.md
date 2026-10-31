@@ -77,7 +77,7 @@ The host.
 | Prop | Type | Default | Description |
 |---|---|---|---|
 | `placement` | `Placement` | `bottom-end` | The stack a notification joins unless it names its own. |
-| `limit` | `usize` | `5` | How many show at once per stack. The rest wait. |
+| `limit` | `usize` | `5` | How many show at once per stack. The rest wait. On a phone, 2 or 3: five fill half a 375 px screen. |
 | `auto_close` | `AutoClose` | `After(6000)` | When a notification closes, unless it says otherwise. |
 | `contained` | `bool` | `false` | Draws the stacks in this host's own box and gives the handles below it their own queue. Read once, at mount. |
 | `hotkey` | `Key` | `F8` | Focuses the newest notification from anywhere, pressed without Ctrl, Alt, Meta or Shift. |
@@ -159,7 +159,7 @@ and `From<String>` fill `message`. The handler is an `FnMut()`, kept in an
 
 | Key | Action |
 |---|---|
-| `F8` | Focuses the newest notification from anywhere. The host's `hotkey` sets the key. |
+| `F8` | Focuses the newest notification from anywhere. The host's `hotkey` sets the key; the region, named "Notifications", carries it in `aria-keyshortcuts`. |
 
 ### Libero handles
 
@@ -167,7 +167,9 @@ and `From<String>` fill `message`. The handler is an `FnMut()`, kept in an
   announcement.
 - Without the hotkey, a close button comes after the rest of the page in `Tab`
   order.
-- A focused notification never closes on its own.
+- A focused notification never closes on its own. On a touch screen a tap on
+  its text focuses it, so it stays open until you tap elsewhere (with
+  `pause_scope: All`, the others in the host wait too).
 - Closing the focused one moves focus to the next notification's close button
   in its stack (the previous one's if it was last; the first focusable element
   when that one has no close button), and back to where `F8` was pressed once
@@ -181,6 +183,9 @@ and `From<String>` fill `message`. The handler is an `FnMut()`, kept in an
 - Leave `closable` on for one that never closes on its own, unless it has an
   action that closes it. Neither Escape nor `F8` closes a notification, so the
   demo hides the switch for such an alert.
+- While one stays on screen, set `scroll-padding-bottom` (`-top` for a top
+  placement) on your scroll root to the stack's height: else `Tab` scrolls a
+  control only as far as under the stack.
 
 ### Example
 
@@ -203,8 +208,7 @@ returns to where F8 was pressed.
 | `transition_duration` | `u32` | `200` ms, the entry and the exit. |
 
 The default template's close button is named by the localization's
-`common.close`, and the region by `notifications.region` (`{key}` is the
-hotkey).
+`common.close`, and the region by `notifications.region`.
 
 The stacks sit on `z_index.notification` (2100), above modals and the
 dropdowns opened inside them.

@@ -9,8 +9,16 @@ use crate::{
         common::{COARSE_POINTER, coarse_hit_area_sx},
         feedback::Alert,
     },
-    sx::sx,
+    sx::{StaticSx, sx},
 };
+
+/// A coarse pointer's 44px action is centred in its row: the message and the close
+/// button centre too, or they sit higher than its label (todo 5075).
+static SNACKBAR_SX: StaticSx = StaticSx::new(|| {
+    (*DEFAULT_TEMPLATE_SX)
+        .clone()
+        .media(COARSE_POINTER, sx().align_items("center"))
+});
 
 /// A snackbar's one button. Pressing it runs `onclick`, then closes the notification.
 #[derive(Clone)]
@@ -113,8 +121,24 @@ pub fn snackbar(s: NotificationScope<SnackbarData>) -> Element {
             role: "group",
             actions,
             onclose: s.closable().then(|| EventHandler::new(move |()| s.close())),
-            sx: &DEFAULT_TEMPLATE_SX,
+            sx: &SNACKBAR_SX,
             {message}
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// Todo 5075: under a coarse pointer the 44px Undo centred 10px below the message.
+    #[test]
+    fn a_coarse_pointer_centres_the_row() {
+        let css = crate::css::Stylesheet::from(&*SNACKBAR_SX);
+        let css = css.as_str();
+
+        let media = css.find("coarse").unwrap_or_else(|| panic!("{css}"));
+        assert!(css[media..].contains("align-items:center"), "{css}");
+        assert!(css.contains("box-shadow:"), "{css}");
     }
 }
