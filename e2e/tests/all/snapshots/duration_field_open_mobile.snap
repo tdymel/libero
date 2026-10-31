@@ -17,4 +17,6 @@ dialog "Duration"
     StaticText "30"
   spinbutton "Seconds" = 0 [valuemax=59] [valuemin=0]
     StaticText "00"
+  button "Save"
+    StaticText "Save"
 --> aria-controls [id="lsx-N-dialog"] (rendered above)

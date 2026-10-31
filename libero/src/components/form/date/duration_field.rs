@@ -28,9 +28,27 @@ fn bare(word: &str) -> String {
     word.to_lowercase().replace('.', "")
 }
 
-/// `1.5` or `1,5`, or a `.5`: a fraction, which `read_duration` refuses instead of
-/// reading `1.5 h` as 15 h.
-fn has_decimal_separator(text: &str) -> bool {
+/// Whether `word.` is one of the locale's unit words that end in a dot (`Std.`).
+fn abbreviates(word: &str, names: &DateLocale) -> bool {
+    let word = word.to_lowercase();
+    [
+        names.hours_short,
+        names.hours_label,
+        names.minutes_short,
+        names.minutes_label,
+        names.seconds_short,
+        names.seconds_label,
+    ]
+    .iter()
+    .any(|own| {
+        own.strip_suffix('.')
+            .is_some_and(|own| own.to_lowercase() == word)
+    })
+}
+
+/// `1.5` or `1,5`, or a `.5`, or `1h.5`: a fraction, which `read_duration` refuses instead of
+/// reading `1.5 h` as 15 h. The dot of an abbreviation (`1 Std.30`) is not one (5133).
+fn has_decimal_separator(text: &str, names: &DateLocale) -> bool {
     let chars: Vec<char> = text.chars().collect();
     let digit = |index: Option<usize>| {
         index
@@ -40,11 +58,30 @@ fn has_decimal_separator(text: &str) -> bool {
     chars.iter().enumerate().any(|(at, &c)| {
         let (before, after) = (at.checked_sub(1), Some(at + 1));
         match c {
-            '.' => digit(after) && !before.is_some_and(|b| chars[b].is_alphabetic()),
+            '.' if digit(after) => {
+                let start = chars[..at]
+                    .iter()
+                    .rposition(|c| !c.is_alphabetic())
+                    .map_or(0, |b| b + 1);
+                let word: String = chars[start..at].iter().collect();
+                word.is_empty() || !abbreviates(&word, names)
+            }
             ',' => digit(before) && digit(after),
             _ => false,
         }
     })
+}
+
+/// A full-width colon, dot or comma (a CJK IME's default) as its ASCII form (5134).
+fn fold_punctuation(text: &str) -> String {
+    text.chars()
+        .map(|c| match c {
+            '\u{FF1A}' => ':',
+            '\u{FF0E}' => '.',
+            '\u{FF0C}' => ',',
+            c => c,
+        })
+        .collect()
 }
 
 /// Which part a unit word names: 0 hours, 1 minutes, 2 seconds. The locale's
@@ -97,8 +134,8 @@ fn unit_of(word: &str, names: &DateLocale) -> Option<usize> {
 /// Reads `1 h 30 min`, `1h30`, `90 min`, `1:30`, `1:30:15` or bare minutes.
 /// A number after a unit counts in the next smaller one. Nothing negative.
 fn read_duration(text: &str, names: &DateLocale) -> Result<TimeDelta, Unreadable> {
-    let text = fold_digits(text.trim());
-    if has_decimal_separator(&text) {
+    let text = fold_punctuation(&fold_digits(text.trim()));
+    if has_decimal_separator(&text, names) {
         return Err(Unreadable);
     }
     let text = bare(&text);
@@ -280,6 +317,27 @@ mod tests {
         }
         assert_eq!(read("1 h, 30 min"), Some(of(1, 30, 0)));
         assert_eq!(read_duration("1 Std. 30 Min.", DE).ok(), Some(of(1, 30, 0)));
+    }
+
+    /// Todo 5133: a fraction right after a unit read as the next unit.
+    #[test]
+    fn a_fraction_after_a_unit_is_refused_but_an_abbreviations_dot_is_not() {
+        for text in ["1h.5", "1 h.30", "1 hour.5"] {
+            assert_eq!(read_duration(text, EN).ok(), None, "{text:?}");
+        }
+        assert_eq!(read_duration("1 Std.30 Min.", DE).ok(), Some(of(1, 30, 0)));
+        assert_eq!(read_duration("1 h.30", DE).ok(), None);
+    }
+
+    /// Todo 5134: a CJK IME's full-width colon was refused.
+    #[test]
+    fn full_width_punctuation_reads_as_ascii() {
+        let read = |text| read_duration(text, EN).ok();
+        assert_eq!(read("\u{FF11}\u{FF1A}\u{FF13}\u{FF10}"), Some(of(1, 30, 0)));
+        assert_eq!(read("1\u{FF1A}30\u{FF1A}15"), Some(of(1, 30, 15)));
+        assert_eq!(read("1\u{FF0E}5 h"), None);
+        assert_eq!(read("1\u{FF0C}5"), None);
+        assert_eq!(read("1 h\u{FF0C} 30 min"), Some(of(1, 30, 0)));
     }
 
     #[test]

@@ -1,4 +1,4 @@
-use crate::components::{Control, Demo, DemoFile, DemoValues, DocPage, a11y, prop, props};
+use crate::components::{Child, Control, Demo, DemoFile, DemoValues, DocPage, a11y, prop, props};
 use libero::components::Pictogram;
 use pictogram_icons_lucide as lucide;
 
@@ -39,7 +39,7 @@ pub fn ListPage() -> Element {
                         .doc("This item's own icon, in place of the list's."),
                     prop("action", "Option<Element>")
                         .default("None")
-                        .doc("A control at the item's end, such as a button, beside the content. Keep it out of `children`."),
+                        .doc("A control at the item's end, such as a button, beside the content. Keep it out of `children`. Use one compact control: the action does not wrap, so a second button or a long label narrows the content beside it."),
                     prop("parts", "Parts<ListItemPart>")
                         .doc("Styles for the inner parts in the Style API tab, under `sx`."),
                     prop("children", "Element")
@@ -85,7 +85,11 @@ pub fn ListPage() -> Element {
             Demo {
                 component: "List",
                 children_text: "",
-                children_code: FILE.section("children"),
+                // The subheader the demo shows, printed whenever it is shown (5137).
+                code_child: Child(|values: &DemoValues| match values.str("ordered").as_str() {
+                    "true" => FILE.section("children").to_string(),
+                    _ => format!("ListSubheader {{ \"Getting started\" }}\n{}", FILE.section("children")),
+                }),
                 controls: vec![
                     Control::sizes("size")
                         .default(theme.list.size.as_str()),
@@ -104,7 +108,7 @@ pub fn ListPage() -> Element {
                         icon: (values.str("icon") == "true").then(|| rsx! {
                             Icon { variant: "standard", color: "primary", size: "sm", Pictogram { icon: lucide::check::outlined } }
                         }),
-                        // Not in the code: an ordered list is counted wrong with one (see `must`).
+                        // Off when ordered: an ordered list is counted wrong with one (see `must`).
                         if values.str("ordered") != "true" {
                             ListSubheader { "Getting started" }
                         }

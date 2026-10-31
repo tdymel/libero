@@ -34,7 +34,7 @@ pub fn DataListPage() -> Element {
                         .doc("The term, a `<dt>`. `sx`, `class` and `states` style the term only."),
                     prop("children", "Element")
                         .default("required")
-                        .doc("The term's descriptions, in one `<dd>`."),
+                        .doc("The term's descriptions, in one `<dd>`. To give a description an `id` (an `aria-describedby` target) or a style, wrap it in a `div` here: `div { id: \"plan-note\", \"Pro\" }`."),
                 ]),
             ],
             accessibility: a11y()

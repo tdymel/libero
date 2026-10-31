@@ -578,6 +578,13 @@ fn a_typed_duration_reads_its_units_and_refuses_the_bounds() {
             .await;
         }
         expect(page, &readout_is("1200"), "the held duration kept").await;
+        // Todo 5132: the form posts nothing while it shows refused text.
+        expect(
+            page,
+            "document.querySelector('input[name=length]').value === ''",
+            "refused text posting nothing",
+        )
+        .await;
 
         fixture.console.assert_clean("typing durations").unwrap();
         fixture.close().await.unwrap();

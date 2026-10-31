@@ -53,7 +53,7 @@ fn Demo() -> Element {
 | Prop | Type | Default | Description |
 |---|---|---|---|
 | `label` | `Element` | required | The term, a `<dt>`. `sx`, `class` and `states` style the term only. |
-| `children` | `Element` | required | The term's descriptions, in one `<dd>`. |
+| `children` | `Element` | required | The term's descriptions, in one `<dd>`. To give a description an `id` (an `aria-describedby` target) or a style, wrap it in a `div` here: `div { id: "plan-note", "Pro" }`. |
 
 Like every component, both also take the shared props `sx`, `class`, `style`,
 `states`, and any extra HTML attributes.

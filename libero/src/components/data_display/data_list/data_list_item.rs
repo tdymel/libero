@@ -6,7 +6,8 @@ base_props! {
     pub struct DataListItemProps {
         /// The term (`<dt>`), which `sx`/`class`/`states` decorate.
         label: Element,
-        /// Descriptions for `label`, in a single `<dd>`.
+        /// Descriptions for `label`, in a single `<dd>`. For an `id` or a style on a
+        /// description, wrap it in a `div` here.
         children: Element,
     }
 }

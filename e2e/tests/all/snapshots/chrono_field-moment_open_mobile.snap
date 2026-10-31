@@ -173,5 +173,7 @@ dialog "Date"
         gridcell "April 11, 2026" [selected=false]
           button "April 11, 2026"
             StaticText "11"
+  button "Save"
+    StaticText "Save"
 --> aria-controls [id="lsx-N-dialog"] (rendered above)
 --> aria-controls [id="lsx-N-panel-0"] (rendered above)

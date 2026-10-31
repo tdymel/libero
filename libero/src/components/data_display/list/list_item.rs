@@ -28,7 +28,7 @@ static LIST_ITEM_BASE_SX: StaticSx = StaticSx::new(|| {
             sx(),
         ),
     };
-    // A long word or URL wraps in a plain item too, as in an icon or action one (4990).
+    // A long word or URL wraps; the icon and action bodies inherit it (4990, 5135).
     sx().padding("0")
         .overflow_wrap("anywhere")
         .when(
@@ -42,10 +42,7 @@ static LIST_ITEM_BASE_SX: StaticSx = StaticSx::new(|| {
                         .height("1lh")
                         .margin_inline_end(SizeCss::SPACING.value(Size::Sm)),
                 )
-                .selector(
-                    ListItemPart::Body.selector(),
-                    body.display("flow-root").overflow_wrap("anywhere"),
-                ),
+                .selector(ListItemPart::Body.selector(), body.display("flow-root")),
         )
         .when("with-action", action_sx())
 });
@@ -62,10 +59,7 @@ fn action_sx() -> Sx {
             )
             .selector(
                 ListItemPart::Body.selector(),
-                sx().flex("1 1 auto")
-                    .min_width("0")
-                    .display("flow-root")
-                    .overflow_wrap("anywhere"),
+                sx().flex("1 1 auto").min_width("0").display("flow-root"),
             )
             .selector(
                 ListItemPart::Action.selector(),
@@ -81,8 +75,7 @@ fn action_sx() -> Sx {
         ListItemPart::Body.selector(),
         sx().display("table-cell")
             .width("100%")
-            .vertical_align("baseline")
-            .overflow_wrap("anywhere"),
+            .vertical_align("baseline"),
     )
     .selector(
         ListItemPart::Action.selector(),
@@ -153,6 +146,7 @@ base_props! {
         #[props(default)]
         icon: Option<Element>,
         /// A control at the item's end, such as a button. Keep it out of `children`.
+        /// One compact control: the action does not wrap, so a second one narrows the body.
         #[props(default)]
         action: Option<Element>,
         children: Element,

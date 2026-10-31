@@ -89,7 +89,7 @@ fn Demo() -> Element {
 | `offset_scrollbars` | `bool` | `false` | Pads the end edge by the drawn bar's width, 8px or 12px, so a flush trailing control is not under it. Only for the bar `always` draws; it pads even while the content fits, so the layout does not shift when it starts to overflow. |
 | `scroll_position_x` | `f64` | - | Scrolls to this percent (0-100) horizontally. A signal re-applies it on every change, a literal once at mount. |
 | `scroll_position_y` | `f64` | - | The same as `scroll_position_x`, vertically. |
-| `handle` | `ScrollAreaHandle` | - | From `use_scroll_area()`. Its `scroll_to_percent(x, y)` and `scroll_to(x, y)` in px scroll the area from any handler, on every call. A `None` percent keeps that axis; a call before the area mounts does nothing. |
+| `handle` | `ScrollAreaHandle` | - | From `use_scroll_area()`. Its `scroll_to_percent(x, y)` and `scroll_to(x, y)` in px scroll the area from any handler, on every call. A `None` percent keeps that axis, and an axis outside `scrollbars` does not scroll; a call before the area mounts does nothing. |
 | `focusable` | `bool` | `false` | Makes the area a tab stop always. Without it, the area is one only while it overflows and holds nothing focusable. Your own `tabindex`, or a `role` other than `region`, turns that off; a `tabindex` of 0 or more still makes it a `region` that keeps its name. |
 | `onscroll` | `EventHandler<ScrollPositionEvent>` | - | Fires on every scroll with the position as a percent of each axis: `Start` when a scroll begins, `Change` while it runs, `End` when it stops. |
 | `onresize` | `EventHandler<Event<ResizeData>>` | - | Fires after the area resized. |

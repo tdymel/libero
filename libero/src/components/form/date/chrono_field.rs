@@ -228,7 +228,8 @@ pub(super) fn chrono_field<V: DateValue>(
         },
         // The scrolling range leaves the closing to its Save (todo 3903).
         move |next| close && !V::scrolls(&picker, *narrow.peek()) && V::closes(next),
-        V::scrolls(&picker, narrow()),
+        // A phone sheet no pick closes has a control to finish with, not only a swipe (5129).
+        V::scrolls(&picker, narrow()) || narrow() && !(close && V::pick_closes()),
         // Only the props `V` reads, so the picker has nothing to warn about.
         move |args: DropdownArgs<V>| {
             rsx! {

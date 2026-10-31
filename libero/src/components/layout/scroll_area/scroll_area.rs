@@ -541,6 +541,11 @@ pub fn ScrollArea(props: ScrollAreaProps) -> Element {
     let root = props.handle.map_or(own, |handle| handle.element);
 
     let scrollbars = props.scrollbars.copied_or(theme.scroll_area.scrollbars);
+    if let Some(mut axes) = props.handle.and_then(|handle| handle.axes)
+        && *axes.peek() != scrollbars
+    {
+        axes.set(scrollbars);
+    }
     let visibility = props
         .scrollbar_visibility
         .copied_or(theme.scroll_area.visibility);
@@ -830,7 +835,7 @@ pub fn ScrollArea(props: ScrollAreaProps) -> Element {
     let scroll_position_x = props.scroll_position_x;
     let scroll_position_y = props.scroll_position_y;
     use_effect(use_reactive!(|scroll_position_x, scroll_position_y| {
-        scroll_to_percent(root, scroll_position_x, scroll_position_y);
+        scroll_to_percent(root, scrollbars, scroll_position_x, scroll_position_y);
     }));
 
     let states: Input<States> = props

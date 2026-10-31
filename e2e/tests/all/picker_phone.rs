@@ -355,6 +355,45 @@ fn a_phone_range_scrolls_its_months_and_saves() {
     });
 }
 
+/// Todo 5129: a time's sheet, which no pick closes, has a Save that closes it and hands focus
+/// back; a day's sheet, which a pick closes, has none.
+#[test]
+fn a_sheet_no_pick_closes_has_a_save() {
+    block_on(async {
+        let fixture = phone().await;
+        let page = &fixture.page;
+        let save = format!("{SHEET} [data-slot=save] button");
+        tap(page, &input("due")).await.unwrap();
+        sheet_shown(page).await.unwrap();
+        let none = format!("!document.querySelector({save:?})");
+        wait::for_js_true(page, &none, "no Save on the day sheet")
+            .await
+            .unwrap();
+        keyboard::press(page, keyboard::ESCAPE).await.unwrap();
+        let closed = format!("!document.querySelector({SHEET:?})");
+        wait::for_js_true(page, &closed, "Escape closed the day sheet")
+            .await
+            .unwrap();
+
+        tap(page, &input("digital")).await.unwrap();
+        sheet_shown(page).await.unwrap();
+        let named = format!("document.querySelector({save:?})?.textContent.trim() === 'Save'");
+        wait::for_js_true(page, &named, "a Save on the time sheet")
+            .await
+            .unwrap();
+        tap(page, &save).await.unwrap();
+        let back = format!(
+            "{closed} && document.activeElement === document.querySelector({:?})",
+            input("digital")
+        );
+        wait::for_js_true(page, &back, "Save closed the sheet, focus on the field")
+            .await
+            .unwrap();
+        fixture.console.assert_clean("a time sheet's Save").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
 /// Todo 4186: a start alone stays in the sheet; Save then keeps the old range.
 #[test]
 fn a_half_picked_range_saved_keeps_the_old_one() {

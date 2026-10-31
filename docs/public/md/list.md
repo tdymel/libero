@@ -57,7 +57,7 @@ fn Demo() -> Element {
 | Prop | Type | Default | Description |
 |---|---|---|---|
 | `icon` | `Option<Element>` | `None` | This item's own icon, in place of the list's. |
-| `action` | `Option<Element>` | `None` | A control at the item's end, such as a button, beside the content. Keep it out of `children`. |
+| `action` | `Option<Element>` | `None` | A control at the item's end, such as a button, beside the content. Keep it out of `children`. Use one compact control: the action does not wrap, so a second button or a long label narrows the content beside it. |
 | `parts` | `Parts<ListItemPart>` | - | Styles for the inner parts in the Style API tab, under `sx`. |
 | `children` | `Element` | required | The item's content. Keep the list's font size: the icon gutter is in `em` of the list, so a `font_size` on one item misaligns its icon. |
 

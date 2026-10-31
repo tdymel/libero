@@ -17,4 +17,6 @@ dialog "Time"
     StaticText "30"
   spinbutton "AM/PM" = 0 [valuemax=1] [valuemin=0]
     StaticText "AM"
+  button "Save"
+    StaticText "Save"
 --> aria-controls [id="lsx-N-dialog"] (rendered above)

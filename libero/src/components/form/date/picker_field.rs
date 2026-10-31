@@ -519,7 +519,7 @@ pub(super) fn use_picker_field<V: FieldValue>(
         })
         .render(HtmlTag::Input, field.attributes, ());
 
-    // The text shows a format; the form gets ISO 8601.
+    // The text shows a format; the form gets ISO 8601, nothing while the text is refused (5132).
     let hidden = bound.name().map(|name| {
         rsx! {
             input {
@@ -528,7 +528,7 @@ pub(super) fn use_picker_field<V: FieldValue>(
                 // A disabled field posts nothing (todo 3873).
                 disabled,
                 value: value
-                    .filter(|value| value.is_complete())
+                    .filter(|value| value.is_complete() && rejected().is_none())
                     .map(Iso::iso)
                     .unwrap_or_default(),
             }

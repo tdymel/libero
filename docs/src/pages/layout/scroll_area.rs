@@ -27,10 +27,35 @@ fn readout(event: Option<ScrollPositionEvent>) -> String {
 }
 // demo-code: readout end
 
+/// The jump buttons' calls and labels: along x for a horizontal area, whose y does not scroll.
+fn jumps(horizontal: bool) -> [(&'static str, &'static str); 3] {
+    match horizontal {
+        true => [
+            ("area.scroll_to_percent(Some(0.0), None)", "Scroll to start"),
+            ("area.scroll_to_percent(Some(100.0), None)", "Scroll to end"),
+            ("area.scroll_to(120.0, 0.0)", "Scroll to 120px"),
+        ],
+        false => [
+            ("area.scroll_to_percent(None, Some(0.0))", "Scroll to top"),
+            (
+                "area.scroll_to_percent(None, Some(100.0))",
+                "Scroll to bottom",
+            ),
+            ("area.scroll_to(0.0, 120.0)", "Scroll to 120px"),
+        ],
+    }
+}
+
 /// Prints the sized parent a scroll area fills, and the readout and jump buttons it wires to.
-fn wrap_frame(_: &DemoValues, code: &str) -> String {
+fn wrap_frame(values: &DemoValues, code: &str) -> String {
+    let buttons: String = jumps(values.str("scrollbars") == "horizontal")
+        .iter()
+        .map(|(call, label)| {
+            format!("            Button {{ size: \"sm\", variant: \"outlined\", onclick: move |_| {call}, \"{label}\" }}\n")
+        })
+        .collect();
     format!(
-        "{}\n\n{}\n\nrsx! {{\n    Flex {{\n        direction: \"column\",\n        gap: \"sm\",\n        sx: sx().width(\"100%\"),\n        Box {{\n            sx: sx().height(\"160px\").width(\"100%\").border(\"1px solid var(--lsx-muted-3)\"),\n{}        }}\n        Text {{ size: \"sm\", \"{{readout(position())}}\" }}\n        // A reached edge is a result, so a screen reader hears it.\n        Text {{ size: \"sm\", role: \"status\", \"Last edge: {{edge()}}\" }}\n        Flex {{\n            direction: \"row\",\n            gap: \"sm\",\n            Button {{ size: \"sm\", variant: \"outlined\", onclick: move |_| area.scroll_to_percent(None, Some(0.0)), \"Scroll to top\" }}\n            Button {{ size: \"sm\", variant: \"outlined\", onclick: move |_| area.scroll_to_percent(None, Some(100.0)), \"Scroll to bottom\" }}\n            Button {{ size: \"sm\", variant: \"outlined\", onclick: move |_| area.scroll_to(0.0, 120.0), \"Scroll to 120px\" }}\n        }}\n    }}\n}}",
+        "{}\n\n{}\n\nrsx! {{\n    Flex {{\n        direction: \"column\",\n        gap: \"sm\",\n        sx: sx().width(\"100%\"),\n        Box {{\n            sx: sx().height(\"160px\").width(\"100%\").border(\"1px solid var(--lsx-muted-3)\"),\n{}        }}\n        Text {{ size: \"sm\", \"{{readout(position())}}\" }}\n        // A reached edge is a result, so a screen reader hears it.\n        Text {{ size: \"sm\", role: \"status\", \"Last edge: {{edge()}}\" }}\n        Flex {{\n            direction: \"row\",\n            gap: \"sm\",\n{buttons}        }}\n    }}\n}}",
         FILE.section("readout"),
         FILE.section("state"),
         indent(&indent(&indent(code)))
@@ -71,7 +96,7 @@ pub fn ScrollAreaPage() -> Element {
                 prop("scroll_position_y", "f64")
                     .doc("The same as `scroll_position_x`, vertically."),
                 prop("handle", "ScrollAreaHandle")
-                    .doc("From `use_scroll_area()`. Its `scroll_to_percent(x, y)` and `scroll_to(x, y)` in px scroll the area from any handler, on every call. A `None` percent keeps that axis; a call before the area mounts does nothing."),
+                    .doc("From `use_scroll_area()`. Its `scroll_to_percent(x, y)` and `scroll_to(x, y)` in px scroll the area from any handler, on every call. A `None` percent keeps that axis, and an axis outside `scrollbars` does not scroll; a call before the area mounts does nothing."),
                 prop("focusable", "bool")
                     .default("false")
                     .doc("Makes the area a tab stop always. Without it, the area is one only while it overflows and holds nothing focusable. Your own `tabindex`, or a `role` other than `region`, turns that off; a `tabindex` of 0 or more still makes it a `region` that keeps its name."),
@@ -137,9 +162,12 @@ pub fn ScrollAreaPage() -> Element {
             Demo {
                 component: "ScrollArea",
                 children_text: "",
-                code_child: Child(|values: &DemoValues| match values.str("virtualize").as_str() {
-                    "true" => FILE.section("virtual").to_string(),
-                    _ => FILE.section("content").to_string(),
+                code_child: Child(|values: &DemoValues| {
+                    match (values.str("virtualize") == "true", values.str("scrollbars") == "horizontal") {
+                        (true, _) => FILE.section("virtual").to_string(),
+                        (false, true) => FILE.section("row").to_string(),
+                        (false, false) => FILE.section("content").to_string(),
+                    }
                 }),
                 fixed: FILE
                     .section("wiring")
@@ -164,88 +192,102 @@ pub fn ScrollAreaPage() -> Element {
                     // which renders only the rows in view.
                     Control::switch("virtualize").code(|_, _| vec![]),
                 ],
-                render: move |values: DemoValues| rsx! {
-                    Flex {
-                        direction: "column",
-                        gap: "sm",
-                        // Pinned, so a longer `Change at ...` readout
-                        // cannot widen the column mid-scroll.
-                        sx: sx().width("100%"),
-                        Box {
-                            sx: sx()
-                                .height("160px")
-                                .width("100%")
-                                .border("1px solid var(--lsx-muted-3)"),
-                            ScrollArea {
-                                scrollbars: values.str("scrollbars"),
-                                scrollbar_visibility: values.str("scrollbar_visibility"),
-                                scrollbar_size: values.str("scrollbar_size"),
-                                scrollbar_color: match values.str("scrollbar_color").as_str() {
-                                    UNSET => Input::None,
-                                    color => Input::from(color),
-                                },
-                                offset_scrollbars: values.str("offset_scrollbars") == "true",
-                                // The plain content makes the area a tab stop, so it needs a name.
-                                // demo-code: wiring start
-                                aria_label: "Items",
-                                handle: area,
-                                onscroll: move |event: ScrollPositionEvent| position.set(Some(event)),
-                                ontopreached: move |_| edge.set("top"),
-                                onbottomreached: move |_| edge.set("bottom"),
-                                onleftreached: move |_| edge.set("left"),
-                                onrightreached: move |_| edge.set("right"),
-                                // demo-code: wiring end
-                                if values.str("virtualize") == "true" {
-                                    // demo-code: virtual start
-                                    List {
-                                        Virtualize {
-                                            count: 50_000,
-                                            item: move |index: usize| rsx! {
-                                                ListItem {
-                                                    sx: sx().padding("sm"),
-                                                    aria_setsize: 50_000,
-                                                    aria_posinset: index + 1,
-                                                    "Row {index}"
-                                                }
-                                            },
+                render: move |values: DemoValues| {
+                    let horizontal = values.str("scrollbars") == "horizontal";
+                    rsx! {
+                        Flex {
+                            direction: "column",
+                            gap: "sm",
+                            // Pinned, so a longer `Change at ...` readout
+                            // cannot widen the column mid-scroll.
+                            sx: sx().width("100%"),
+                            Box {
+                                sx: sx()
+                                    .height("160px")
+                                    .width("100%")
+                                    .border("1px solid var(--lsx-muted-3)"),
+                                ScrollArea {
+                                    scrollbars: values.str("scrollbars"),
+                                    scrollbar_visibility: values.str("scrollbar_visibility"),
+                                    scrollbar_size: values.str("scrollbar_size"),
+                                    scrollbar_color: match values.str("scrollbar_color").as_str() {
+                                        UNSET => Input::None,
+                                        color => Input::from(color),
+                                    },
+                                    offset_scrollbars: values.str("offset_scrollbars") == "true",
+                                    // The plain content makes the area a tab stop, so it needs a name.
+                                    // demo-code: wiring start
+                                    aria_label: "Items",
+                                    handle: area,
+                                    onscroll: move |event: ScrollPositionEvent| position.set(Some(event)),
+                                    ontopreached: move |_| edge.set("top"),
+                                    onbottomreached: move |_| edge.set("bottom"),
+                                    onleftreached: move |_| edge.set("left"),
+                                    onrightreached: move |_| edge.set("right"),
+                                    // demo-code: wiring end
+                                    if values.str("virtualize") == "true" {
+                                        // demo-code: virtual start
+                                        List {
+                                            Virtualize {
+                                                count: 50_000,
+                                                item: move |index: usize| rsx! {
+                                                    ListItem {
+                                                        sx: sx().padding("sm"),
+                                                        aria_setsize: 50_000,
+                                                        aria_posinset: index + 1,
+                                                        "Row {index}"
+                                                    }
+                                                },
+                                            }
                                         }
-                                    }
-                                    // demo-code: virtual end
-                                } else {
-                                    // demo-code: content start
-                                    Box {
-                                        sx: sx().width("150%").padding("md"),
-                                        for i in 0..20 {
-                                            Text { key: "{i}", "Item {i}" }
+                                        // demo-code: virtual end
+                                    } else if horizontal {
+                                        // One wide row: stacked rows would be clipped past reach (5131).
+                                        // demo-code: row start
+                                        Flex {
+                                            direction: "row",
+                                            gap: "lg",
+                                            wrap: "nowrap",
+                                            sx: sx().width("max-content").padding("md"),
+                                            for i in 0..20 {
+                                                Text { key: "{i}", "Item {i}" }
+                                            }
                                         }
+                                        // demo-code: row end
+                                    } else {
+                                        // demo-code: content start
+                                        Box {
+                                            sx: sx().width("150%").padding("md"),
+                                            for i in 0..20 {
+                                                Text { key: "{i}", "Item {i}" }
+                                            }
+                                        }
+                                        // demo-code: content end
                                     }
-                                    // demo-code: content end
                                 }
                             }
-                        }
-                        // The position changes per scroll and stays silent; a reached edge is a result.
-                        Text { size: "sm", "{readout(position())}" }
-                        Text { size: "sm", role: "status", "Last edge: {edge()}" }
-                        Flex {
-                            direction: "row",
-                            gap: "sm",
-                            Button {
-                                size: "sm",
-                                variant: "outlined",
-                                onclick: move |_| area.scroll_to_percent(None, Some(0.0)),
-                                "Scroll to top"
-                            }
-                            Button {
-                                size: "sm",
-                                variant: "outlined",
-                                onclick: move |_| area.scroll_to_percent(None, Some(100.0)),
-                                "Scroll to bottom"
-                            }
-                            Button {
-                                size: "sm",
-                                variant: "outlined",
-                                onclick: move |_| area.scroll_to(0.0, 120.0),
-                                "Scroll to 120px"
+                            // The position changes per scroll and stays silent; a reached edge is a result.
+                            Text { size: "sm", "{readout(position())}" }
+                            Text { size: "sm", role: "status", "Last edge: {edge()}" }
+                            Flex {
+                                direction: "row",
+                                gap: "sm",
+                                for (index, (_, label)) in jumps(horizontal).into_iter().enumerate() {
+                                    Button {
+                                        key: "{label}",
+                                        size: "sm",
+                                        variant: "outlined",
+                                        onclick: move |_| match (index, horizontal) {
+                                            (0, false) => area.scroll_to_percent(None, Some(0.0)),
+                                            (1, false) => area.scroll_to_percent(None, Some(100.0)),
+                                            (_, false) => area.scroll_to(0.0, 120.0),
+                                            (0, true) => area.scroll_to_percent(Some(0.0), None),
+                                            (1, true) => area.scroll_to_percent(Some(100.0), None),
+                                            (_, true) => area.scroll_to(120.0, 0.0),
+                                        },
+                                        "{label}"
+                                    }
+                                }
                             }
                         }
                     }

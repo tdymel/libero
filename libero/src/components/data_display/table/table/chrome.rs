@@ -280,7 +280,7 @@ pub(super) fn chrome<T: Clone + PartialEq + 'static>(
                     // Nor the sticky footer at the bottom.
                     bar_inset_bottom: bounded.then_some(foot_gap),
                     // Its root, mounted by the area itself, is where a column drop counts.
-                    handle: ScrollAreaHandle { element: region },
+                    handle: ScrollAreaHandle { element: region, axes: None },
                     // Only a pinned table follows its area's width.
                     onresize: tracks_area.then(|| {
                         EventHandler::new(move |event: Event<ResizeData>| {

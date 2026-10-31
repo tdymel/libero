@@ -350,6 +350,11 @@ pub(super) trait SealedField: FieldValue {
 
     /// Whether a pick leaves nothing more to pick, so a field may close its dropdown.
     fn closes(value: Option<Self>) -> bool;
+
+    /// Whether some pick closes the dropdown; a kind none does gets a Save in the phone sheet (5129).
+    fn pick_closes() -> bool {
+        false
+    }
 }
 
 impl SealedField for NaiveDate {
@@ -374,6 +379,10 @@ impl SealedField for NaiveDate {
     }
 
     fn closes(_: Option<Self>) -> bool {
+        true
+    }
+
+    fn pick_closes() -> bool {
         true
     }
 }
@@ -424,6 +433,10 @@ impl SealedField for DateRange<NaiveDate> {
 
     fn closes(value: Option<Self>) -> bool {
         value.is_some_and(|range| range.end.is_some())
+    }
+
+    fn pick_closes() -> bool {
+        true
     }
 }
 
