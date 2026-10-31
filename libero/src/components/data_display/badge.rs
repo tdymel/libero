@@ -60,6 +60,11 @@ static BADGE_BASE_SX: StaticSx = StaticSx::new(|| {
             .padding_right("0")
             .selector("& > * > *", sx().margin("0")),
     )
+    // Outside the label, so its ellipsis never cuts the icon and the root's gap spaces it.
+    .selector(
+        format!("& > [data-slot='{TRAILING_ICON_SLOT}']"),
+        sx().display("inline-flex").flex_shrink("0"),
+    )
 });
 
 // A block, as `text-overflow` is dead on the flex root: a long label ends in an ellipsis
@@ -81,6 +86,8 @@ static BADGE_LABEL_SX: StaticSx = StaticSx::new(|| {
             sx().with("margin-inline-start", step),
         )
 });
+
+const TRAILING_ICON_SLOT: &str = "badge-trailing-icon";
 
 fn badge_variables(props: &BadgeProps, color: &ThemeAwareValue, variant: Variant) -> Variables {
     let base = base_color(Some(color));
@@ -122,6 +129,9 @@ base_props! {
         /// A circle for a one- or two-character count.
         #[props(default)]
         circle: Option<bool>,
+        /// Drawn after the label, as `Icon { .. }` after "Verified".
+        #[props(default)]
+        trailing_icon: Option<Element>,
         /// The label.
         children: Element,
     }
@@ -176,6 +186,12 @@ pub fn Badge(props: BadgeProps) -> Element {
         .focus_ring(false)
         .prepare()
         .render(HtmlTag::Span, Vec::new(), props.children);
+    let content = rsx! {
+        {label}
+        if let Some(icon) = props.trailing_icon {
+            span { "data-slot": TRAILING_ICON_SLOT, {icon} }
+        }
+    };
 
     use_box()
         .framework_sx(&BADGE_BASE_SX)
@@ -185,5 +201,5 @@ pub fn Badge(props: BadgeProps) -> Element {
         .variables(&variables)
         .style(gradient)
         .prepare()
-        .render(HtmlTag::Span, props.attributes, label)
+        .render(HtmlTag::Span, props.attributes, content)
 }

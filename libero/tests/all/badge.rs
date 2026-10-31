@@ -153,3 +153,26 @@ fn radius_defaults_to_the_theme_pill_and_a_step_resolves_through_the_badge_scale
         "{style}"
     );
 }
+
+/// Todo 4618: a `trailing_icon` sits after the label, outside its ellipsis, in its own slot.
+#[test]
+fn a_trailing_icon_follows_the_label_outside_its_ellipsis() {
+    fn icon_app() -> Element {
+        rsx! {
+            LiberoProvider {
+                Badge { trailing_icon: rsx! { i { "*" } }, "Verified" }
+            }
+        }
+    }
+    let html = render(icon_app);
+    assert!(
+        html.contains(
+            r#">Verified</span><span data-slot="badge-trailing-icon"><i>*</i></span></span>"#
+        ),
+        "{html}"
+    );
+    assert!(
+        html.contains("[data-slot='badge-trailing-icon']{display:inline-flex;flex-shrink:0"),
+        "{html}"
+    );
+}

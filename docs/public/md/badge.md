@@ -46,6 +46,7 @@ fn Demo() -> Element {
 | `size` | `Size` | `md` | Height, horizontal padding and font size, on a scale smaller than a chip's. |
 | `radius` | `ThemeAwareValue` | `xxl` | A step on the badge's own radius scale, `2px` to `12px`, or any CSS, e.g. `radius: "0"`. The default `xxl` is a pill at every height. |
 | `circle` | `bool` | `false` | Drops the horizontal padding and makes the width at least the height, for a count of one or two characters. |
+| `trailing_icon` | `Element` | - | Drawn after the label, one spacing step away, as a check after "Verified". It never shrinks, and a long label's ellipsis stops before it. |
 | `children` | `Element` | required | The label. |
 
 Like every component, `Badge` also takes the shared props `sx`, `class`,

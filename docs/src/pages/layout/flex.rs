@@ -1,8 +1,8 @@
-use crate::components::{Control, Demo, DemoValues, DocPage, a11y, or_unset, prop, props};
+use crate::components::{Child, Control, Demo, DemoValues, DocPage, a11y, or_unset, prop, props};
 use dioxus::prelude::*;
 use libero::{
-    components::{Box, Flex, FlexDirection, Text},
-    sx::{ThemeAwareValue, sx},
+    components::{Box, Code, Flex, FlexDirection, Text},
+    sx::{Sx, ThemeAwareValue, sx},
     theme::{Responsive, Size, responsive},
 };
 
@@ -11,6 +11,19 @@ use libero::{
 const CHILDREN: &str = r#"Box { sx: sx().padding("8px 16px").background("primary.1"), "One" }
 Box { sx: sx().padding("8px 16px").background("primary.1"), "Two" }
 Box { sx: sx().padding("8px 16px").background("primary.1"), "Three" }"#;
+
+/// The equal-widths recipe: each child grows from a zero basis, and `min_width` lets a long one shrink.
+const EQUAL_CHILDREN: &str = r#"Box { sx: sx().flex("1 1 0").min_width("0").padding("8px 16px").background("primary.1"), "One" }
+Box { sx: sx().flex("1 1 0").min_width("0").padding("8px 16px").background("primary.1"), "Two" }
+Box { sx: sx().flex("1 1 0").min_width("0").padding("8px 16px").background("primary.1"), "Three, the longest" }"#;
+
+fn child_sx(values: &DemoValues) -> Sx {
+    let child = sx().padding("8px 16px").background("primary.1");
+    match values.str("equal_widths") == "true" {
+        true => sx().flex("1 1 0").min_width("0").and(child),
+        false => child,
+    }
+}
 
 /// `align` and `justify` distribute spare space, so the flex itself needs a box bigger than its children.
 // snippet: in Flex { .. }
@@ -103,6 +116,8 @@ fn controls() -> Vec<Control> {
             "No wrap",
             "Wrap reverse",
         ]),
+        // Swaps the children's code, so the prop list prints nothing.
+        Control::switch("equal_widths").code(|_, _| vec![]),
     ]
 }
 
@@ -149,13 +164,24 @@ pub fn FlexPage() -> Element {
                 Text {
                     "A flexbox container with theme-aware direction, gap, alignment and "
                     "wrapping. A row and a column each have their own theme defaults, so "
-                    "a row wraps and centers its children without naming a value."
+                    "a row wraps and centers its children without naming a value. For "
+                    "children of equal size whatever their content, give each "
+                    Code { source: "flex: 1 1 0" }
+                    " and "
+                    Code { source: "min-width: 0" }
+                    ", as the "
+                    Code { source: "equal_widths" }
+                    " switch shows."
                 }
             },
             Demo {
                 component: "Flex",
                 children_text: "",
                 children_code: CHILDREN,
+                code_child: Child(|values: &DemoValues| match values.str("equal_widths").as_str() {
+                    "true" => EQUAL_CHILDREN.to_string(),
+                    _ => CHILDREN.to_string(),
+                }),
                 fixed: vec![BOX_SX.to_string()],
                 controls: controls(),
                 render: move |values: DemoValues| rsx! {
@@ -171,17 +197,10 @@ pub fn FlexPage() -> Element {
                         align: or_unset(values.str("align")),
                         justify: or_unset(values.str("justify")),
                         wrap: or_unset(values.str("wrap")),
-                        Box {
-                            sx: sx().padding("8px 16px").background("primary.1"),
-                            "One"
-                        }
-                        Box {
-                            sx: sx().padding("8px 16px").background("primary.1"),
-                            "Two"
-                        }
-                        Box {
-                            sx: sx().padding("8px 16px").background("primary.1"),
-                            "Three"
+                        Box { sx: child_sx(&values), "One" }
+                        Box { sx: child_sx(&values), "Two" }
+                        Box { sx: child_sx(&values),
+                            if values.str("equal_widths") == "true" { "Three, the longest" } else { "Three" }
                         }
                     }
                 },

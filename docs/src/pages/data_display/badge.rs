@@ -4,9 +4,12 @@ use crate::components::{
 };
 use dioxus::prelude::*;
 use libero::{
-    components::{Badge, Code, Input, Text},
+    components::{Badge, Code, Input, Pictogram, Text},
     use_theme,
 };
+use pictogram_icons_lucide as lucide;
+
+const TRAILING_ICON: &str = "trailing_icon: rsx! { Pictogram { icon: lucide::check::outlined, width: \"1em\", height: \"1em\" } }";
 
 /// The label is a child, not a prop, so the control that varies it prints
 /// nothing of its own. `Demo` renders it as the child.
@@ -41,6 +44,8 @@ pub fn BadgePage() -> Element {
                 prop("circle", "bool")
                     .default("false")
                     .doc("Drops the horizontal padding and makes the width at least the height, for a count of one or two characters."),
+                prop("trailing_icon", "Element")
+                    .doc("Drawn after the label, one spacing step away, as a check after \"Verified\". It never shrinks, and a long label's ellipsis stops before it."),
                 prop("children", "Element").default("required").doc("The label."),
             ])],
             accessibility: a11y()
@@ -90,6 +95,10 @@ pub fn BadgePage() -> Element {
                         .default(theme.badge.radius.as_str())
                         .hidden_when(|values| values.str("variant") == "standard"),
                     Control::switch("circle"),
+                    Control::switch("trailing_icon").code(|_, values| match values.str("trailing_icon").as_str() {
+                        "true" => vec![TRAILING_ICON.to_string()],
+                        _ => vec![],
+                    }),
                     // The child, not a prop: `circle` needs a one- or two-character label.
                     Control::toggle("label", ["New", "Beta", "9"]).code(|_, _| vec![]),
                 ],
@@ -104,6 +113,9 @@ pub fn BadgePage() -> Element {
                         size: values.str("size"),
                         radius: values.str("radius"),
                         circle: values.str("circle") == "true",
+                        trailing_icon: (values.str("trailing_icon") == "true").then(|| rsx! {
+                            Pictogram { icon: lucide::check::outlined, width: "1em", height: "1em" }
+                        }),
                         {values.str("label")}
                     }
                 },

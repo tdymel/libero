@@ -125,6 +125,12 @@ pub fn ColorPickerPage() -> Element {
                     prop("focusable", "bool")
                         .default("true")
                         .doc("`false` keeps the thumbs and swatches out of the tab order, for a picker in a dropdown whose input must keep focus."),
+                    prop("disabled", "bool")
+                        .default("false")
+                        .doc("Dims the panel, the sliders and the swatches and takes them out of the tab order. The hidden input no longer posts. A disabled `Fieldset` does the same."),
+                    prop("readonly", "bool")
+                        .default("false")
+                        .doc("Shows the color but ignores drags, keys and swatch clicks, `oninput` included. The thumbs stay tab stops and read as read-only."),
                     prop("saturation_label", "String").default("color.saturation").doc("Names the saturation panel's thumb. Unset, the localization's `color.saturation`."),
                     prop("hue_label", "String").default("color.hue").doc("Names the hue slider's thumb. Unset, the localization's `color.hue`."),
                     prop("alpha_label", "String").default("color.alpha").doc("Names the alpha slider's thumb. Unset, the localization's `color.alpha`."),
@@ -247,6 +253,8 @@ pub fn ColorPickerPage() -> Element {
                         }
                     }),
                     Control::switch("full_width").hidden_when(|values| !picker(values)),
+                    Control::switch("disabled").hidden_when(|values| !picker(values)),
+                    Control::switch("readonly").hidden_when(|values| !picker(values)),
                 ],
                 render: move |values: DemoValues| match values.str("component").as_str() {
                     "hue" => rsx! { HueSliderPreview {} },
@@ -281,6 +289,8 @@ fn ColorPickerDemo(values: DemoValues) -> Element {
                 with_alpha: is_on(&values, "with_alpha") && with_picker(&values),
                 full_width,
                 swatches,
+                disabled: is_on(&values, "disabled"),
+                readonly: is_on(&values, "readonly"),
                 saturation_label: "Saturation",
                 hue_label: "Hue",
                 alpha_label: "Opacity",

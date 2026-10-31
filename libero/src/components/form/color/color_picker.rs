@@ -15,7 +15,7 @@ use crate::{
             COARSE_POINTER, Glyph, HtmlTag, Input, Part, States, Variables, base_props,
             has_shortcut_modifier, input_from_str, parts_enum, variables,
         },
-        form::SliderChangeEvent,
+        form::{Disabled, SliderChangeEvent},
         layout::use_box,
     },
     context::IconSlot,
@@ -197,6 +197,12 @@ base_props! {
         /// dropdown whose text input must keep it (`ColorField`).
         #[props(default)]
         focusable: Option<bool>,
+        /// Takes every thumb and swatch out of the tab order, and the hidden input out of the form.
+        #[props(default)]
+        disabled: Option<bool>,
+        /// Shows the color but ignores drags, keys and swatch clicks; the thumbs stay tab stops.
+        #[props(default)]
+        readonly: Option<bool>,
     }
 }
 
@@ -229,17 +235,34 @@ pub fn ColorPicker(props: ColorPickerProps) -> Element {
         .as_ref()
         .cloned()
         .unwrap_or(theme.color_picker.radius.into());
+    // Every thumb and swatch inside reads it, as inside a disabled `Fieldset` (todo 4244).
+    let parent_disabled = use_hook(try_consume_context::<Disabled>);
+    let mut own_disabled = use_hook(|| Disabled(Signal::new(false)));
+    use_context_provider(|| own_disabled);
+    let disabled =
+        props.disabled.unwrap_or(false) || parent_disabled.is_some_and(|Disabled(parent)| parent());
+    if *own_disabled.0.peek() != disabled {
+        own_disabled.0.set(disabled);
+    }
+    // Read-only is the display-only picker without handlers: the thumbs say so (todo 4245).
+    let readonly = props.readonly.unwrap_or(false);
+    let (oninput, onswatchclick) = match readonly {
+        true => (None, None),
+        false => (props.oninput, props.onswatchclick),
+    };
     if !with_picker && props.swatches.is_empty() {
         warn("ColorPicker: `with_picker: false` without `swatches` renders nothing.");
     }
-    if with_picker && props.oninput.is_none() {
+    if with_picker && oninput.is_none() && !readonly && !disabled {
         warn("ColorPicker: without `oninput` the color can never change.");
     }
     // A palette's swatches stay buttons; once per mount, as the handlers rarely come and go.
     let dead_swatches = !with_picker
         && !props.swatches.is_empty()
-        && props.oninput.is_none()
-        && props.onswatchclick.is_none();
+        && !readonly
+        && !disabled
+        && oninput.is_none()
+        && onswatchclick.is_none();
     use_hook(|| {
         if dead_swatches {
             warn(DEAD_SWATCHES);
@@ -251,7 +274,6 @@ pub fn ColorPicker(props: ColorPickerProps) -> Element {
         true => props.value,
         false => props.value.opaque(),
     };
-    let oninput = props.oninput;
     let focusable = props.focusable.unwrap_or(true);
     // The value as a signal of one identity, so the panel's props compare
     // equal and only the scopes that read it redraw - the thumb, on a drag.
@@ -372,7 +394,6 @@ pub fn ColorPicker(props: ColorPickerProps) -> Element {
         }
     });
 
-    let onswatchclick = props.onswatchclick;
     let presets = props.swatches;
     // Only a match reaches the row, so a drag between swatches leaves its props
     // equal and it skips the redraw.
@@ -409,7 +430,7 @@ pub fn ColorPicker(props: ColorPickerProps) -> Element {
     });
     let hidden = props.name.map(|name| {
         rsx! {
-            input { r#type: "hidden", name, value: value.to_format(format) }
+            input { r#type: "hidden", name, disabled, value: value.to_format(format) }
         }
     });
 
@@ -593,6 +614,71 @@ mod tests {
             assert!(thumb.contains("tabindex=-1"), "{thumb}");
             assert!(thumb.contains("aria-disabled=true"), "{thumb}");
         }
+    }
+
+    /// Todo 4244: `disabled` takes out the thumbs, the swatches and the hidden input.
+    #[test]
+    fn the_disabled_prop_disables_every_part() {
+        #[component]
+        fn Picker() -> Element {
+            rsx! {
+                ColorPicker {
+                    value: ColorCode::default(),
+                    oninput: move |_| {},
+                    with_alpha: true,
+                    swatches: ["#fa5252"],
+                    name: "accent",
+                    disabled: true,
+                }
+            }
+        }
+        let html = dioxus_ssr::render_element(rsx! {
+            crate::LiberoProvider { Picker {} }
+        })
+        .replace('"', "");
+        let tags: Vec<_> = html
+            .split('<')
+            .filter(|tag| tag.contains("role=slider") || tag.contains("data-slot=swatch "))
+            .collect();
+        assert_eq!(tags.len(), 4, "{tags:?}");
+        for tag in tags {
+            assert!(tag.contains("tabindex=-1"), "{tag}");
+            assert!(tag.contains("aria-disabled=true"), "{tag}");
+        }
+        let hidden = html.split('<').find(|tag| tag.contains("type=hidden"));
+        assert!(hidden.is_some_and(|tag| tag.contains("disabled")), "{html}");
+    }
+
+    /// Todo 4244: `readonly` keeps the thumbs as read-only tab stops even with `oninput`, silently.
+    #[test]
+    fn the_readonly_prop_makes_every_thumb_read_only() {
+        #[component]
+        fn Picker() -> Element {
+            rsx! {
+                ColorPicker {
+                    value: ColorCode::default(),
+                    oninput: move |_| {},
+                    with_alpha: true,
+                    readonly: true,
+                }
+            }
+        }
+        let thumbs = sliders(rsx! {
+            Picker {}
+        });
+        assert_eq!(thumbs.len(), 3, "{thumbs:?}");
+        for thumb in thumbs {
+            assert!(thumb.contains(r#"tabindex="0""#), "{thumb}");
+            assert!(thumb.contains(r#"aria-readonly="true""#), "{thumb}");
+        }
+        let warnings = crate::utils::warnings_of(|| {
+            rsx! {
+                crate::LiberoProvider {
+                    ColorPicker { value: ColorCode::default(), readonly: true }
+                }
+            }
+        });
+        assert!(warnings.is_empty(), "{warnings:?}");
     }
 
     /// Todo 4245: without `oninput` all three thumbs are read-only tab stops, as `Slider`'s.

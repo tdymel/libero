@@ -59,6 +59,8 @@ fn Demo() -> Element {
 | `name` | `String` | - | Posts the color in a hidden input of that name. |
 | `format` | `ColorFormat` | `hex, or hexa with alpha` | How the hidden input writes the color. `hex`, `hexa`, `rgb`, `rgba`, `hsl` or `hsla`. |
 | `focusable` | `bool` | `true` | `false` keeps the thumbs and swatches out of the tab order, for a picker in a dropdown whose input must keep focus. |
+| `disabled` | `bool` | `false` | Dims the panel, the sliders and the swatches and takes them out of the tab order. The hidden input no longer posts. A disabled `Fieldset` does the same. |
+| `readonly` | `bool` | `false` | Shows the color but ignores drags, keys and swatch clicks, `oninput` included. The thumbs stay tab stops and read as read-only. |
 | `saturation_label` | `String` | `color.saturation` | Names the saturation panel's thumb. Unset, the localization's `color.saturation`. |
 | `hue_label` | `String` | `color.hue` | Names the hue slider's thumb. Unset, the localization's `color.hue`. |
 | `alpha_label` | `String` | `color.alpha` | Names the alpha slider's thumb. Unset, the localization's `color.alpha`. |

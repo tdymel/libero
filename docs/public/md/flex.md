@@ -9,7 +9,10 @@ Description: A flexbox container with theme-aware direction, gap, alignment and 
 
 A flexbox container with theme-aware direction, gap, alignment and wrapping. A
 row and a column each have their own theme defaults, so a row wraps and centers
-its children without naming a value.
+its children without naming a value. For children of equal size whatever their
+content, give each `flex: 1 1 0` and `min-width: 0`, as the `equal_widths`
+switch shows:
+`Box { sx: sx().flex("1 1 0").min_width("0"), "One" }`.
 
 ## Usage
 
