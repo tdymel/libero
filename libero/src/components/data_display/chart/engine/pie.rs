@@ -234,6 +234,12 @@ pub(crate) fn draw_pie(spec: &PieSpec) -> Option<Drawn> {
         &marks,
         |slice| spec.ink.on(spec.slices[slice].color),
         spec.ink.label,
+        // A ring's band keeps a label whose empty corner pokes past it; a full pie's slices
+        // meet at their edges, so the whole box in the page's font must fit (5115).
+        match spec.donut {
+            Some(_) => (1.0, 0.8),
+            None => (PAGE_FONT_SLACK, PAGE_FONT_SLACK),
+        },
     );
     Some(Drawn {
         svg: spec.ink.paint(svg),

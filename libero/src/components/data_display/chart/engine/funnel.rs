@@ -79,11 +79,13 @@ pub(crate) fn draw_funnel(spec: &FunnelSpec) -> Option<Drawn> {
         .map(|&i| (0, i, value(&spec.stages[i]), spec.stages[i].name.as_str()))
         .collect();
     let mut marks = match_marks(&expected, &triggers);
+    // Across a stage the page's wider font must fit too (5106); glyphs leave the corners empty.
     let svg = ink_slice_labels(
         &svg,
         &marks,
         |stage| spec.ink.on(spec.stages[stage].color),
         spec.ink.label,
+        (PAGE_FONT_SLACK, 0.8),
     );
     // The keys walk the author's order, as the summary and the legend read.
     marks.sort_by_key(|mark| mark.index);

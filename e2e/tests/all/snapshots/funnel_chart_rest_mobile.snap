@@ -1,6 +1,5 @@
 ---
 source: e2e/src/suite.rs
-assertion_line: 618
 description: funnel_chart at mobile (rest)
 expression: tree
 ---
@@ -8,7 +7,7 @@ figure "Checkout"
   description "Funnel chart from Visits to Orders. Visits: 1,000, 100% of the first. Carts: 400, 40% of the first. Orders: 100, 10% of the first."
   StaticText "Checkout"
   application "Checkout" [roledescription=chart]
-    description "Arrow keys move between points, Enter selects one."
+    description "Arrow keys move between points, Home and End to the first and last. Enter selects one."
   status [atomic] [live=polite]
   list "Stages"
     listitem [level=1]

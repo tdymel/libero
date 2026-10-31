@@ -110,6 +110,18 @@ pub(super) fn overlay_sx() -> Sx {
             .with("flex", "none")
             .white_space("nowrap"),
     )
+    // The name keeps its width; the long text wraps in a narrow column, off most of the plot.
+    .selector(
+        "& > [data-slot='tooltip'] [data-chart-row][data-wrap] > :nth-child(2)",
+        sx().with("flex", "none"),
+    )
+    .selector(
+        "& > [data-slot='tooltip'] [data-chart-row][data-wrap] > :last-child",
+        sx().with("flex", "0 1 auto")
+            .white_space("normal")
+            .with("overflow-wrap", "normal")
+            .with("max-inline-size", "12em"),
+    )
     .selector(
         "& > [data-slot='tooltip'] [data-active]",
         sx().font_weight("600"),
@@ -598,6 +610,18 @@ pub(super) fn ChartOverlay(props: ChartOverlayProps) -> Element {
             }
         }
     };
+    // Escape, or a tap that never dragged, drops the band.
+    let mut clear_selection = move || {
+        if onrange.is_none() || selection.peek().is_none() {
+            return false;
+        }
+        selection.set(None);
+        announcer.say(labels.selection_cleared.to_string());
+        if let Some(onrange) = onrange {
+            onrange.call(None);
+        }
+        true
+    };
     let active_mark = move || {
         let key = (*active.peek())?;
         with_marks(&|geometry| {
@@ -748,7 +772,7 @@ pub(super) fn ChartOverlay(props: ChartOverlayProps) -> Element {
     };
     let mut release = {
         let select = select.clone();
-        move |event: Event<PointerData>| {
+        move |event: Event<PointerData>, lifted: bool| {
             let id = event.pointer_id();
             touches.write().retain(|touch| touch.0 != id);
             let current = *gesture.peek();
@@ -759,11 +783,14 @@ pub(super) fn ChartOverlay(props: ChartOverlayProps) -> Element {
                         select(band);
                     }
                 }
-                Some(Gesture::Press { id: pressed, .. } | Gesture::Pan { id: pressed, .. })
-                    if pressed == id =>
-                {
-                    gesture.set(None)
+                // A press lifted before it dragged is a tap: on the band or off it, it clears it.
+                Some(Gesture::Press { id: pressed, .. }) if pressed == id => {
+                    gesture.set(None);
+                    if lifted {
+                        clear_selection();
+                    }
                 }
+                Some(Gesture::Pan { id: pressed, .. }) if pressed == id => gesture.set(None),
                 Some(Gesture::Pinch { .. }) => gesture.set(None),
                 _ => {}
             }
@@ -771,9 +798,9 @@ pub(super) fn ChartOverlay(props: ChartOverlayProps) -> Element {
     };
     let onpointerup = {
         let mut release = release.clone();
-        move |event: Event<PointerData>| release(event)
+        move |event: Event<PointerData>| release(event, true)
     };
-    let onpointercancel = move |event: Event<PointerData>| release(event);
+    let onpointercancel = move |event: Event<PointerData>| release(event, false);
     // Ctrl or Cmd with the wheel, and a trackpad's pinch, zoom; a sideways or Shift wheel pans.
     let onwheel = move |event: Event<WheelData>| {
         let Some(zoom) = zoom else {
@@ -872,16 +899,8 @@ pub(super) fn ChartOverlay(props: ChartOverlayProps) -> Element {
                     return;
                 }
             }
-            if event.key() == Key::Named(NamedKey::Escape)
-                && onrange.is_some()
-                && selection.peek().is_some()
-            {
+            if event.key() == Key::Named(NamedKey::Escape) && clear_selection() {
                 event.stop_propagation();
-                selection.set(None);
-                announcer.say(labels.selection_cleared.to_string());
-                if let Some(onrange) = onrange {
-                    onrange.call(None);
-                }
                 return;
             }
             let step = match event.key() {
@@ -991,6 +1010,11 @@ pub(super) fn ChartOverlay(props: ChartOverlayProps) -> Element {
         .map(|geometry| format!("0 0 {} {}", geometry.width, geometry.height))
         .unwrap_or_default();
     let plot = geometry.map(|g| g.plot).unwrap_or(Plot::whole(0.0, 0.0));
+    let several = geometry.is_some_and(|g| {
+        g.marks
+            .first()
+            .is_some_and(|first| g.marks.iter().any(|mark| mark.series != first.series))
+    });
     let marker = current.map(|mark| match &mark.shape {
         MarkShape::Point { x, y } => {
             let Plot { left, top, right, bottom } = plot;
@@ -1104,6 +1128,13 @@ pub(super) fn ChartOverlay(props: ChartOverlayProps) -> Element {
         }
         div { id: keys_id, hidden: true,
             "{labels.keys}"
+            // Lying bars walk their series with left and right: "points" covers it.
+            if several && !swap_axes {
+                " {labels.series_keys}"
+            }
+            if onpointclick.is_some() {
+                " {labels.select_key}"
+            }
             if zoom.is_some() {
                 " {labels.zoom_keys}"
             }
@@ -1171,12 +1202,18 @@ fn tip_body(
         (Layout::Free, _) | (_, MarkShape::Sector { .. }) => None,
         _ => x.get(active.index).cloned(),
     };
+    // A point's own text, as a candle's four prices, wraps; a plain value never breaks.
+    let long = own.is_some();
     rsx! {
         if let Some(heading) = heading {
             div { "{heading}" }
         }
         for (i, (is_active, name, color, value)) in rows.into_iter().enumerate() {
-            div { key: "{i}", "data-chart-row": true, "data-active": is_active.then_some("true"),
+            div {
+                key: "{i}",
+                "data-chart-row": true,
+                "data-active": is_active.then_some("true"),
+                "data-wrap": long.then_some("true"),
                 span { "data-chart-swatch": true, style: "--lsx-chart-swatch:{color}" }
                 span { "{name}" }
                 span { "{value}" }

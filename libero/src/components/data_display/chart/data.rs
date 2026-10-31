@@ -302,7 +302,8 @@ impl Series {
     }
 
     /// A dashed line across the plot at the series' average, lowest, highest or a fixed
-    /// value, labelled: `Series::new("Sales", [3, 5]).mark_line(MarkLine::average())`.
+    /// value, labelled: `Series::new("Sales", [3, 5]).mark_line(MarkLine::average())`. Drawn on
+    /// a line chart that is not `stacked`, on upright `grouped` bars and on a line among bars.
     pub fn mark_line(mut self, line: MarkLine) -> Self {
         self.mark_lines.push(line);
         self
@@ -695,14 +696,20 @@ impl ValueFormat {
                     1
                 };
                 let share = trim_zeros(format!("{share:.decimals$}"));
-                return format!("{}%", formats.write_number(&share));
+                return with_unit(formats.write_number(&share), Some("%"));
             }
         };
-        let number = formats.write_number(&number);
-        match unit.filter(|unit| !unit.is_empty()) {
-            Some(unit) => format!("{number} {unit}"),
-            None => number,
-        }
+        with_unit(formats.write_number(&number), unit)
+    }
+}
+
+/// `number` with its `unit` after a space; a `%` right after it, as `Percent` writes it, so
+/// a chart has one percent style.
+pub(crate) fn with_unit(number: String, unit: Option<&str>) -> String {
+    match unit.filter(|unit| !unit.is_empty()) {
+        Some("%") => format!("{number}%"),
+        Some(unit) => format!("{number} {unit}"),
+        None => number,
     }
 }
 
@@ -758,6 +765,8 @@ mod tests {
         assert_eq!(auto.format(0.0, None, en), "0");
         assert_eq!(ValueFormat::Fixed(2).format(1.0, None, en), "1.00");
         assert_eq!(ValueFormat::Percent.format(0.425, None, de), "42,5%");
+        // A `%` unit takes `Percent`'s style: one per chart (5118).
+        assert_eq!(auto.format(2.6, Some("%"), de), "2,6%");
     }
 
     #[test]

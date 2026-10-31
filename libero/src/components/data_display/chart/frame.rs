@@ -205,7 +205,8 @@ static CHART_BASE_SX: StaticSx = StaticSx::new(|| {
 
 const CHART_CONTAINER: &str = "lsx-chart";
 /// Under this, a legend beside the plot would leave it too small: it goes above or below.
-const NARROW: &str = "(max-width: 300px)";
+/// A phone-width chart is under it.
+const NARROW: &str = "(max-width: 25rem)";
 
 /// A side legend over or under the plot, in DOM order: the start's above, the end's below.
 fn stacked() -> Sx {
@@ -838,6 +839,11 @@ pub(super) fn axis_titles(
         .into_iter()
         .filter_map(|(label, title)| Some(fill(label, &[("title", title.as_ref()?)])))
         .collect()
+}
+
+/// Whether the right axis' title is its one series' name, so the summary names it once.
+pub(super) fn names_its_one(y2_title: &Option<String>, right: &[Series]) -> bool {
+    matches!((y2_title, right), (Some(title), [one]) if *title == one.name)
 }
 
 /// The plot's size, snapped, once it is measured: by its resizes, and at mount in case

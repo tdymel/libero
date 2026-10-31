@@ -39,7 +39,11 @@ pub(super) fn legend_sx() -> Sx {
         sx().color(NamedColorCss::TEXT_DIMMED.value())
             .with("text-decoration", "line-through"),
     )
-    .selector("& button[aria-disabled='true']", sx().cursor("default"))
+    // The last shown key is locked: dimmed a little, not struck, so a tap on it promises nothing.
+    .selector(
+        "& button[aria-disabled='true']",
+        sx().cursor("default").opacity("0.7"),
+    )
 }
 
 /// The series the legend hides, by name: `hidden` when set, else its own, seeded by

@@ -6,8 +6,8 @@ use super::{
     export::ExportSource,
     frame::{
         Frame, Interaction, axis_titles, band_summary, chart_unit, is_named, mark_line_specs,
-        mark_point_specs, overlay_series, series_specs, shown_places, summary, use_plot_size,
-        with_extras,
+        mark_point_specs, names_its_one, overlay_series, series_specs, shown_places, summary,
+        use_plot_size, with_extras,
     },
     legend::use_hidden_series,
     overlay::Layout,
@@ -69,7 +69,7 @@ chart_props! {
         #[props(default)]
         zoom: Option<bool>,
         /// Set, a drag or Shift with an arrow key selects a band of x values; `None` when
-        /// Escape clears it. With `zoom`, Shift or Alt with a drag pans.
+        /// Escape or a tap clears it. With `zoom`, Shift or Alt with a drag pans.
         #[props(default)]
         onrange: Option<EventHandler<Option<ChartRange>>>,
     }
@@ -184,7 +184,11 @@ pub fn LineChart(props: LineChartProps) -> Element {
             max: props.y_max,
             ticks: props.y_ticks.unwrap_or(theme.chart.y_ticks),
             x_title: props.x_title.clone(),
-            y_title: props.y_title.clone(),
+            // As the right title: none beside an axis with no shown series.
+            y_title: props
+                .y_title
+                .clone()
+                .filter(|_| shown.iter().any(|i| !props.series[*i].secondary_axis)),
             y2_title: props.y2_title.clone(),
             compact: labels.compact,
         },
@@ -226,7 +230,8 @@ pub fn LineChart(props: LineChartProps) -> Element {
             if !props.stacked {
                 sentences.extend(band_summary(&labels, &props.series, write));
             }
-            if !right.is_empty() {
+            // A right title naming its one series already says which it measures.
+            if !right.is_empty() && !names_its_one(&props.y2_title, &right) {
                 let names: Vec<&str> = right.iter().map(|series| series.name.as_str()).collect();
                 sentences.push(fill(labels.secondary, &[("names", &names.join(", "))]));
             }
@@ -393,7 +398,8 @@ mod tests {
             }
         });
         assert!(
-            html.contains("Revenue: 12.500,5 EUR to ") && html.contains("Margin: 12,5 % to "),
+            // A `%` unit is written as `ValueFormat::Percent` writes a share (todo 5118).
+            html.contains("Revenue: 12.500,5 EUR to ") && html.contains("Margin: 12,5% to "),
             "{html}"
         );
 
@@ -405,6 +411,76 @@ mod tests {
         assert_eq!(chart_unit(&Some("g".into()), &units).as_deref(), Some("g"));
         let mixed = [units[0].clone(), Series::new("c", [3.0])];
         assert_eq!(chart_unit(&None, &mixed), None);
+    }
+
+    /// Todo 5110, 5109: a right title naming its one series is said once, and the keys
+    /// say Enter only with a click handler, Up and Down only with several series.
+    #[test]
+    fn the_right_axis_is_named_once_and_the_keys_say_only_what_works() {
+        let html = render(|| {
+            rsx! {
+                LiberoProvider {
+                    LineChart {
+                        title: "Visitors",
+                        x: ["Mon", "Tue"],
+                        y2_title: "Conversion",
+                        series: vec![
+                            Series::new("Visits", [1.0, 2.0]),
+                            Series::new("Conversion", [1.5, 2.5]).secondary_axis(),
+                        ],
+                    }
+                }
+            }
+        });
+        assert!(html.contains("Right y axis: Conversion."), "{html}");
+        assert!(!html.contains("On the right y axis:"), "{html}");
+        assert!(html.contains("Up and down move between series."), "{html}");
+        assert!(!html.contains("Enter selects one."), "{html}");
+
+        let html = render(|| {
+            rsx! {
+                LiberoProvider {
+                    LineChart {
+                        title: "Visitors",
+                        x: ["Mon", "Tue"],
+                        onpointclick: |_| {},
+                        series: vec![Series::new("Visits", [1.0, 2.0])],
+                    }
+                }
+            }
+        });
+        assert!(html.contains("Enter selects one."), "{html}");
+        assert!(!html.contains("Up and down"), "{html}");
+    }
+
+    /// Todo 5113: with every left series hidden the left title leaves the drawing, as the
+    /// right one does; the summary keeps it.
+    #[test]
+    fn the_left_title_goes_with_its_last_shown_series() {
+        let html = render(|| {
+            rsx! {
+                LiberoProvider {
+                    LineChart {
+                        title: "Visitors",
+                        x: ["Mon", "Tue"],
+                        y_title: "People",
+                        default_hidden: vec!["Visits".to_string()],
+                        series: vec![
+                            Series::new("Visits", [1.0, 2.0]),
+                            Series::new("Conversion", [1.5, 2.5]).secondary_axis(),
+                        ],
+                    }
+                }
+            }
+        });
+        let drawing = html
+            .split("data-chart-drawing")
+            .nth(1)
+            .and_then(|rest| rest.split("</svg>").next())
+            .unwrap_or_default();
+        assert!(!drawing.is_empty(), "{html}");
+        assert!(!drawing.contains("People"), "{drawing}");
+        assert!(html.contains("Y axis: People."), "{html}");
     }
 
     /// Past the palette's end a line starts over in the first colour, dashed.

@@ -7,7 +7,7 @@ figure "Browsers"
   description "Pie chart, total 100. Chrome: 60, 60%. Safari: 25, 25%. Other: 15, 15%."
   StaticText "Browsers"
   application "Browsers" [roledescription=chart]
-    description "Arrow keys move between points, Enter selects one."
+    description "Arrow keys move between points, Home and End to the first and last. Enter selects one."
   status [atomic] [live=polite]
   list "Slices"
     listitem [level=1]

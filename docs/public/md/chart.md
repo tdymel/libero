@@ -61,7 +61,7 @@ fn Demo() -> Element {
 | `x_title` | `Option<String>` | | Under the x axis: what it counts. |
 | `y_title` | `Option<String>` | | Beside the y axis, read upward: what it measures. |
 | `y2_title` | `Option<String>` | | Beside the right y axis, read downward: what its `Series::secondary_axis()` series measure. |
-| `legend` | `LegendPosition` | bottom with two series or more | `bottom`, `top`, `start`, `end` or `none`. On a chart under 300 px wide, `start` goes above the plot and `end` below it. |
+| `legend` | `LegendPosition` | bottom with two series or more | `bottom`, `top`, `start`, `end` or `none`. On a chart under 25rem (400 px) wide, `start` goes above the plot and `end` below it. |
 | `grid` | `Option<bool>` | `true` | Horizontal guide lines. |
 | `value_format` | `ValueFormat` | `Auto` | How values are written on the axis, in the tooltip and in the summary. Thousands group as the `Formats` say, as `12,500` or `12.500`. |
 | `unit` | `Option<String>` | | After every value, as `"kg"`. |
@@ -76,7 +76,7 @@ fn Demo() -> Element {
 | `default_hidden` | `Vec<String>` | `[]` | Seeds the hidden lines once. Ignored when `hidden` is set. |
 | `onhiddenchange` | `Option<EventHandler<Vec<String>>>` | | The hidden lines a legend button asks for. The last shown line stays. |
 | `zoom` | `Option<bool>` | `false` | Zoom and pan the x axis: Ctrl or Cmd with the wheel, a pinch, a drag (Shift or Alt with it once `onrange` is set), the keys. Reset it from code with the `handle`. |
-| `onrange` | `Option<EventHandler<Option<ChartRange>>>` | | Set, a drag or Shift with an arrow brushes a band of x values; Shift or Alt with a drag pans instead. `None` when Escape clears it. |
+| `onrange` | `Option<EventHandler<Option<ChartRange>>>` | | Set, a drag or Shift with an arrow brushes a band of x values; Shift or Alt with a drag pans instead. `None` when Escape, or a tap or click that does not drag, clears it. |
 | `handle` | `Option<ChartHandle>` | | From `use_chart()`: reads the drawing as SVG or PNG, saves it (through `save_file`: a download on the web, the share sheet on Android), resets the zoom and says whether it is zoomed. `is_zoomed()` re-runs the component that reads it. |
 
 ### `BarChart`
@@ -84,7 +84,7 @@ fn Demo() -> Element {
 | Prop | Type | Default | Description |
 |---|---|---|---|
 | `x` | `XValues` | required | The categories, one per bar or group of bars. |
-| `series` | `Vec<Series>` | required | The bars' series, each with one value per x value. `None` leaves no bar. `.colors([..])` colours bars one by one, `.negative_color(..)` those below 0, and `.errors([(low, high), ..])` draws error bars, written after the value in the tooltip. A stack rounds only its topmost positive and lowest negative segment. Upright, a `.kind(SeriesKind::Line)` one is drawn as a line over the bars. |
+| `series` | `Vec<Series>` | required | The bars' series, each with one value per x value. `None` leaves no bar. `.colors([..])` colours bars one by one, `.negative_color(..)` those below 0, and `.errors([(low, high), ..])` draws error bars, written after the value in the tooltip. A stack rounds only its topmost positive and lowest negative segment. Upright, a `.kind(SeriesKind::Line)` one is drawn as a line over the bars. A bar series' `.mark_line(..)` is drawn on upright, `grouped` bars only, and warns in development otherwise. |
 | `title` | `Option<String>` | | Shown above the chart, and its accessible name. |
 | `description` | `Option<String>` | | A sentence under the title: what to read from the chart. |
 | `layout` | `BarLayout` | `grouped` | `grouped` side by side, `stacked`, or `percent`: stacked to 100%. |
@@ -100,7 +100,7 @@ fn Demo() -> Element {
 | `value_label_position` | `BarLabelPosition` | chart-wide: inside on a `horizontal` chart or once any shown series has error ranges, past the end otherwise | `inside` the bar, in the ink that reads on it, or `outside` past its end. A stack always writes inside. |
 | `bar_width` | `Option<f32>` | 5 px off each side of the band | The share of a category's band its bars fill, clamped to `0.1..=1`. |
 | `bar_gap` | `Option<f32>` | `3` | Between two bars of a group, in pixels. |
-| `legend` | `LegendPosition` | bottom with two series or more | `bottom`, `top`, `start`, `end` or `none`. On a chart under 300 px wide, `start` goes above the plot and `end` below it. |
+| `legend` | `LegendPosition` | bottom with two series or more | `bottom`, `top`, `start`, `end` or `none`. On a chart under 25rem (400 px) wide, `start` goes above the plot and `end` below it. |
 | `grid` | `Option<bool>` | `true` | Guide lines across the values. |
 | `value_format` | `ValueFormat` | `Auto` | How values are written on the axis, the bars, in the tooltip and in the summary. On `percent` the axis and the bars write shares in percent. Thousands group as the `Formats` say, as `12,500` or `12.500`. |
 | `unit` | `Option<String>` | | After every value, as `"kg"`. |
@@ -115,7 +115,7 @@ fn Demo() -> Element {
 | `default_hidden` | `Vec<String>` | `[]` | Seeds the hidden series once. Ignored when `hidden` is set. |
 | `onhiddenchange` | `Option<EventHandler<Vec<String>>>` | | The hidden series a legend button asks for. The last shown series stays. |
 | `zoom` | `Option<bool>` | `false` | Zoom and pan along the categories: Ctrl or Cmd with the wheel, a pinch, a drag (Shift or Alt with it once `onrange` is set), the keys. Reset it from code with the `handle`. |
-| `onrange` | `Option<EventHandler<Option<ChartRange>>>` | | Set, a drag or Shift with an arrow brushes a band of categories; Shift or Alt with a drag pans instead. `None` when Escape clears it. |
+| `onrange` | `Option<EventHandler<Option<ChartRange>>>` | | Set, a drag or Shift with an arrow brushes a band of categories; Shift or Alt with a drag pans instead. `None` when Escape, or a tap or click that does not drag, clears it. |
 | `handle` | `Option<ChartHandle>` | | From `use_chart()`: reads the drawing as SVG or PNG, saves it (through `save_file`: a download on the web, the share sheet on Android), resets the zoom and says whether it is zoomed. `is_zoomed()` re-runs the component that reads it. |
 
 ### `FunnelChart`
@@ -126,7 +126,7 @@ fn Demo() -> Element {
 | `title` | `Option<String>` | | Shown above the chart, and its accessible name. |
 | `description` | `Option<String>` | | A sentence under the title: what to read from the chart. |
 | `labels` | `PieLabels` | `percent` | On each stage: `percent`, its share of the first stage, `value`, `name` or `none`, in the ink that reads there. A label wider than its stage is left out; the tooltip and the summary keep it. |
-| `legend` | `LegendPosition` | bottom with two stages or more | `bottom`, `top`, `start`, `end` or `none`. On a chart under 300 px wide, `start` goes above the plot and `end` below it. |
+| `legend` | `LegendPosition` | bottom with two stages or more | `bottom`, `top`, `start`, `end` or `none`. On a chart under 25rem (400 px) wide, `start` goes above the plot and `end` below it. |
 | `value_format` | `ValueFormat` | `Auto` | How values are written on the stages, in the tooltip and in the summary. Thousands group as the `Formats` say, as `12,500` or `12.500`. |
 | `unit` | `Option<String>` | | After every value, as `"kg"`. |
 | `grid` | `Option<bool>` | | Shared with the other charts; a funnel has no grid to draw. |
@@ -190,7 +190,7 @@ fn Demo() -> Element {
 | `x_title` | `Option<String>` | | Under the periods: what they are. |
 | `y_title` | `Option<String>` | | Beside the price axis, read upward: what it measures. |
 | `zoom` | `Option<bool>` | `false` | Zoom and pan the periods: Ctrl or Cmd with the wheel, a pinch, a drag (Shift or Alt with it once `onrange` is set), the keys. Reset it from code with the `handle`. |
-| `onrange` | `Option<EventHandler<Option<ChartRange>>>` | | Set, a drag or Shift with an arrow brushes a band of periods; Shift or Alt with a drag pans instead. `None` when Escape clears it. |
+| `onrange` | `Option<EventHandler<Option<ChartRange>>>` | | Set, a drag or Shift with an arrow brushes a band of periods; Shift or Alt with a drag pans instead. `None` when Escape, or a tap or click that does not drag, clears it. |
 | `legend` | `LegendPosition` | bottom | The Up and Down key, under the plot; `none` leaves it out. |
 | `grid` | `Option<bool>` | `true` | Horizontal guide lines. |
 | `value_format` | `ValueFormat` | `Auto` | How prices are written on the axis, in the tooltip and in the summary. Thousands group as the `Formats` say, as `12,500` or `12.500`. |
@@ -224,7 +224,7 @@ fn Demo() -> Element {
 | `min_label_angle` | `Option<f32>` | `0` | A slice narrower than this many degrees gets no label; the summary still names it. |
 | `slice_gap` | `Option<f32>` | `1` | Between two slices, in pixels, in the page's colour. |
 | `slice_radius` | `Size` | `none` | Corner radius of a slice, on the theme's radius scale; a thin slice or a thin ring takes less. Unset, square. |
-| `legend` | `LegendPosition` | bottom with two slices or more | `bottom`, `top`, `start`, `end` or `none`. On a chart under 300 px wide, `start` goes above the plot and `end` below it. |
+| `legend` | `LegendPosition` | bottom with two slices or more | `bottom`, `top`, `start`, `end` or `none`. On a chart under 25rem (400 px) wide, `start` goes above the plot and `end` below it. |
 | `value_format` | `ValueFormat` | `Auto` | How values are written beside the slices, in the tooltip and in the summary. Thousands group as the `Formats` say, as `12,500` or `12.500`. |
 | `unit` | `Option<String>` | | After every value, as `"kg"`. |
 | `grid` | `Option<bool>` | | Shared with the other charts; a pie has no grid to draw. |
@@ -350,7 +350,7 @@ Like every component, each chart also takes the shared props `sx`, `class`,
   bar ticks its open left and its close right.
 - The legend's entries are toggle buttons: pressed while their series or slice
   shows, struck through when hidden. The last shown one's button is
-  `aria-disabled`. Should `hidden` or `default_hidden` name every one, the plot
+  `aria-disabled` and dimmed a little. Should `hidden` or `default_hidden` name every one, the plot
   and the summary say "All series are hidden." and the legend stays. A dashed
   line's key is a dash, as drawn; once a line sets a `symbol`, each key is its
   line's point shape. A line among bars is keyed by a short stroke, the bars by
@@ -361,7 +361,9 @@ Like every component, each chart also takes the shared props `sx`, `class`,
   "Showing Tue to Fri". Ctrl or Cmd with the wheel zooms only a zoomable plot, so
   the page zoom works everywhere else.
 - A drag with `onrange` set brushes; Shift or Alt with it pans. The band is
-  outlined as well as tinted, and announced as "Selected Tue to Thu".
+  outlined as well as tinted, and announced as "Selected Tue to Thu". A tap or a
+  click that does not drag clears it, so a touch screen without a keyboard can
+  too.
 - A saved SVG is self-contained: its colours resolved, its font named, the
   chart's `title` as its `<title>`.
 - The chart draws no buttons: the ones you render from the `use_chart()` handle

@@ -6,8 +6,8 @@ use super::{
     export::ExportSource,
     frame::{
         Frame, Interaction, axis_titles, band_summary, chart_unit, hex, is_named, mark_line_specs,
-        mark_point_specs, overlay_series, series_specs, shown_places, summary, use_plot_size,
-        with_extras,
+        mark_point_specs, names_its_one, overlay_series, series_specs, shown_places, summary,
+        use_plot_size, with_extras,
     },
     legend::use_hidden_series,
     overlay::Layout,
@@ -29,7 +29,8 @@ chart_props! {
         #[props(into)]
         x: XValues,
         /// The bars' series, each with one value per x value. Upright, a
-        /// [`SeriesKind::Line`](super::SeriesKind) one is drawn as a line over the bars.
+        /// [`SeriesKind::Line`](super::SeriesKind) one is drawn as a line over the bars. A bar
+        /// series' [`Series::mark_line`] is drawn only on upright, `grouped` bars.
         series: Vec<Series>,
         /// Side by side, stacked, or stacked to 100%. Unset, the theme's.
         #[props(default, into)]
@@ -84,7 +85,7 @@ chart_props! {
         #[props(default)]
         zoom: Option<bool>,
         /// Set, a drag or Shift with an arrow key selects a band of categories; `None`
-        /// when Escape clears it. With `zoom`, Shift or Alt with a drag pans.
+        /// when Escape or a tap clears it. With `zoom`, Shift or Alt with a drag pans.
         #[props(default)]
         onrange: Option<EventHandler<Option<ChartRange>>>,
     }
@@ -235,6 +236,19 @@ pub fn BarChart(props: BarChartProps) -> Element {
     };
     // Only upright bars side by side stand at their own values; a line always does.
     let upright_grouped = !horizontal && layout == BarLayout::Grouped;
+    let dropped_lines = !upright_grouped
+        && props
+            .series
+            .iter()
+            .zip(&all_specs)
+            .any(|(series, spec)| !spec.extras.line && !series.mark_lines.is_empty());
+    use_hook(move || {
+        if dropped_lines {
+            warn(
+                "BarChart: a `mark_line` on bars is drawn only when they are upright and `grouped`; this chart draws none.",
+            );
+        }
+    });
     let marking: Vec<Series> = props
         .series
         .iter()
@@ -340,14 +354,19 @@ pub fn BarChart(props: BarChartProps) -> Element {
             if !lines.is_empty() {
                 sentences.push(fill(labels.lines, &[("names", &lines.join(", "))]));
             }
-            if !right.is_empty() {
+            if !right.is_empty() && !names_its_one(&props.y2_title, &right) {
                 let names: Vec<&str> = right.iter().map(|series| series.name.as_str()).collect();
                 sentences.push(fill(labels.secondary, &[("names", &names.join(", "))]));
             }
+            // By side, as drawn: lying bars put the categories on the y axis.
+            let (bottom, side) = match horizontal {
+                true => (&props.y_title, &props.x_title),
+                false => (&props.x_title, &props.y_title),
+            };
             sentences.extend(axis_titles(
                 &labels,
-                &props.x_title,
-                &props.y_title,
+                bottom,
+                side,
                 &props.y2_title.clone().filter(|_| !right.is_empty()),
             ));
             sentences
@@ -487,6 +506,29 @@ mod tests {
         assert!(html.contains("aria-label=\"chart\""), "{html}");
         assert!(
             !html.contains("aria-labelledby=\"") || !html.contains("-title\""),
+            "{html}"
+        );
+    }
+
+    /// Todo 5116: lying bars draw the categories on the y axis, and the summary says so.
+    #[test]
+    fn a_lying_chart_names_its_axes_by_side() {
+        let html = render(|| {
+            rsx! {
+                LiberoProvider {
+                    BarChart {
+                        title: "Profit",
+                        x: ["Q1", "Q2"],
+                        orientation: "horizontal",
+                        x_title: "Quarter",
+                        y_title: "Profit",
+                        series: vec![Series::new("2025", [3.0, 5.0])],
+                    }
+                }
+            }
+        });
+        assert!(
+            html.contains("X axis: Profit.") && html.contains("Y axis: Quarter."),
             "{html}"
         );
     }
@@ -680,8 +722,9 @@ mod tests {
             upright.contains("Drawn as a line over the bars: Margin."),
             "{upright}"
         );
+        // Its title names its one series: said once (5110).
         assert!(
-            upright.contains("On the right y axis: Margin."),
+            !upright.contains("On the right y axis: Margin."),
             "{upright}"
         );
         assert!(upright.contains("Right y axis: Margin."), "{upright}");

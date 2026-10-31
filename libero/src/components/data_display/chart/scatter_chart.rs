@@ -318,7 +318,7 @@ fn summary(
                 &[("kind", &kind), ("first", &write_x(low))],
             ),
             false => fill(
-                labels.range,
+                labels.scatter_range,
                 &[
                     ("kind", &kind),
                     ("first", &write_x(low)),
@@ -438,7 +438,7 @@ mod tests {
 
         assert!(html.contains("role=\"figure\""), "{html}");
         assert!(html.contains("<svg"), "{html}");
-        assert!(html.contains("Scatter chart from 150 to 180."), "{html}");
+        assert!(html.contains("Scatter chart, x from 150 to 180."), "{html}");
         assert!(
             html.contains("Girls: 2 points, x from 150 to 160, y from 42.5 kg to 51 kg."),
             "{html}"

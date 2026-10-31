@@ -451,12 +451,14 @@ pub(super) fn fit_x_labels(svg: &str, labels: &[String], width: f32, height: f32
 }
 
 /// Gives every label drawn on a slice the ink that reads on that slice; one off every
-/// slice takes `off`.
+/// slice takes `off`. A label must fit its slice `ends` times its renderer width across, and
+/// at its box's corners `corners` times that width across.
 pub(super) fn ink_slice_labels(
     svg: &str,
     marks: &[Mark],
     ink: impl Fn(usize) -> HexColor,
     off: HexColor,
+    (ends, corners): (f32, f32),
 ) -> String {
     let outlines: Vec<(usize, _)> = marks
         .iter()
@@ -501,10 +503,10 @@ pub(super) fn ink_slice_labels(
                 .find(|(_, outline)| super::super::hit::contains(outline, x, y))
         });
         // A label wider or taller than its slice is dropped; the summary still has it.
-        let half = text_width(&attributes, label.trim()) / 2.0;
+        let width = text_width(&attributes, label.trim());
+        let half = width * ends / 2.0;
         let rise = number("font-size").unwrap_or(14.0) * 0.35;
-        // Glyphs leave a box's corners empty: those are checked a little in.
-        let inset = half * 0.8;
+        let inset = width * corners / 2.0;
         if let (Some((x, y)), Some((_, outline))) = (middle, on)
             && ![
                 (-half, 0.0),

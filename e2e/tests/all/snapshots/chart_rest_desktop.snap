@@ -1,6 +1,5 @@
 ---
 source: e2e/src/suite.rs
-assertion_line: 618
 description: chart at desktop (rest)
 expression: tree
 ---
@@ -27,7 +26,7 @@ figure "Visitors"
   description "Line chart from Mon to Wed. This week: 101 to 132, highest at Tue. Last week: 98 to 115, highest at Wed."
   StaticText "Visitors"
   application "Visitors" [roledescription=chart]
-    description "Arrow keys move between points, Enter selects one."
+    description "Arrow keys move between points, Home and End to the first and last. Up and down move between series."
   status [atomic] [live=polite]
   list "Series"
     listitem [level=1]

@@ -11,6 +11,8 @@ pub struct ChartLabels {
     pub funnel: &'static str,
     pub scatter: &'static str,
     pub range: &'static str,
+    /// `range` of a scatter chart: `{first}` and `{last}` the ends of its x values.
+    pub scatter_range: &'static str,
     /// `range` of an x axis with one value, `{first}`.
     pub range_one: &'static str,
     pub series: &'static str,
@@ -69,6 +71,10 @@ pub struct ChartLabels {
     pub chart: &'static str,
     /// How to walk the plot's points, read after its name.
     pub keys: &'static str,
+    /// After `keys` when a click handler is set: Enter selects the point.
+    pub select_key: &'static str,
+    /// After `keys` when more than one series is drawn.
+    pub series_keys: &'static str,
     /// The legend's name: its buttons show and hide series.
     pub legend: &'static str,
     /// A pie legend's name: its buttons show and hide slices.
@@ -151,6 +157,7 @@ impl ChartLabels {
         funnel: "Funnel chart",
         scatter: "Scatter chart",
         range: "{kind} from {first} to {last}.",
+        scatter_range: "{kind}, x from {first} to {last}.",
         range_one: "{kind} for {first}.",
         series: "{name}: {min} to {max}, highest at {x}.",
         series_empty: "{name}: no values.",
@@ -184,7 +191,9 @@ impl ChartLabels {
         all_hidden: "All series are hidden.",
         loading: "Loading chart",
         chart: "chart",
-        keys: "Arrow keys move between points, Enter selects one.",
+        keys: "Arrow keys move between points, Home and End to the first and last.",
+        select_key: "Enter selects one.",
+        series_keys: "Up and down move between series.",
         legend: "Series",
         slices: "Slices",
         stages: "Stages",
@@ -231,6 +240,7 @@ impl ChartLabels {
         funnel: "Trichterdiagramm",
         scatter: "Streudiagramm",
         range: "{kind} von {first} bis {last}.",
+        scatter_range: "{kind}, x von {first} bis {last}.",
         range_one: "{kind} für {first}.",
         series: "{name}: {min} bis {max}, am höchsten bei {x}.",
         series_empty: "{name}: keine Werte.",
@@ -264,7 +274,9 @@ impl ChartLabels {
         all_hidden: "Alle Reihen sind ausgeblendet.",
         loading: "Diagramm wird geladen",
         chart: "Diagramm",
-        keys: "Pfeiltasten wechseln zwischen den Punkten, Eingabe wählt einen aus.",
+        keys: "Pfeiltasten wechseln zwischen den Punkten, Pos1 und Ende zum ersten und letzten.",
+        select_key: "Eingabe wählt einen aus.",
+        series_keys: "Pfeil nach oben und unten wechseln zwischen den Reihen.",
         legend: "Reihen",
         slices: "Segmente",
         stages: "Stufen",

@@ -36,7 +36,7 @@ fn the_summary_says_each_series_and_its_trend() {
         )
         .await;
         for want in [
-            "Scatter chart from 10 to 30.",
+            "Scatter chart, x from 10 to 30.",
             "A: 3 points, x from 10 to 30, y from 30 to 45.",
             "A: linear trend, rising.",
             "B: 2 points, x from 13 to 28, y from 20 to 25.",

@@ -1699,6 +1699,27 @@ fn a_ring_keeps_its_wide_slices_labels() {
     );
 }
 
+/// Todo 5115: at phone width a full pie's "10%" reached past its slice's corner into the
+/// next one in the page's font: its whole box must fit, so it is left out.
+#[test]
+fn a_full_pie_drops_a_label_whose_corner_crosses_its_slice() {
+    let mut phone = pie(PieLabels::Percent, None);
+    (phone.width, phone.height) = (325.0, 244.0);
+    phone.labels_inside = true;
+    phone.slices = [("A", 62.0), ("B", 20.0), ("C", 10.0), ("D", 8.0)]
+        .map(|(name, value)| spec(name, &[Some(value)]))
+        .to_vec();
+    let svg = draw_pie(&phone).expect("drawn").svg;
+    let labels = text_contents(&svg);
+    assert!(
+        ["62", "20"]
+            .iter()
+            .all(|share| labels.iter().any(|label| label.starts_with(share))),
+        "{svg}"
+    );
+    assert!(!labels.iter().any(|label| label.starts_with("10")), "{svg}");
+}
+
 fn text_contents(svg: &str) -> Vec<&str> {
     svg.split("<text ")
         .skip(1)
@@ -2378,6 +2399,19 @@ fn a_funnel_writes_percent_of_the_first_stage() {
 
     let drawn = draw_funnel(&funnel(PieLabels::None, &[2.0, 1.0])).expect("drawn");
     assert!(texts(&drawn.svg).is_empty(), "{}", drawn.svg);
+}
+
+/// Todo 5106: at phone width the narrow last stage's percent is checked in the page's
+/// wider font, as a name is, and left out rather than spilt onto the card.
+#[test]
+fn a_funnel_drops_a_percent_wider_than_its_stage() {
+    let mut phone = funnel(PieLabels::Percent, &[1200.0, 860.0, 480.0, 300.0, 210.0]);
+    (phone.width, phone.height) = (325.0, 244.0);
+    phone.formats = &Formats::GERMAN;
+    let drawn = draw_funnel(&phone).expect("drawn");
+    let labels: Vec<_> = texts(&drawn.svg).into_iter().map(|t| t.3).collect();
+    assert!(labels.contains(&"100%".to_string()), "{labels:?}");
+    assert!(!labels.contains(&"17,5%".to_string()), "{labels:?}");
 }
 
 fn radar(values: &[&[Option<f64>]]) -> RadarSpec {

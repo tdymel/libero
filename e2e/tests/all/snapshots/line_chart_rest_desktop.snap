@@ -7,7 +7,7 @@ figure "Visitors"
   description "Line chart from Mon to Fri. This week: 90 to 134, highest at Thu. Last week: 20 to 40, highest at Fri."
   StaticText "Visitors"
   application "Visitors" [roledescription=chart]
-    description "Arrow keys move between points, Enter selects one."
+    description "Arrow keys move between points, Home and End to the first and last. Up and down move between series. Enter selects one."
   status [atomic] [live=polite]
   list "Series"
     listitem [level=1]

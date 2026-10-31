@@ -7,7 +7,7 @@ figure "Sales"
   description "Bar chart from Q1 to Q3. 2025: 101 to 132, highest at Q2. 2026: 140 to 150, highest at Q3."
   StaticText "Sales"
   application "Sales" [roledescription=chart]
-    description "Arrow keys move between points, Enter selects one."
+    description "Arrow keys move between points, Home and End to the first and last. Up and down move between series. Enter selects one."
   status [atomic] [live=polite]
   list "Series"
     listitem [level=1]

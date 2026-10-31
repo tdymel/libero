@@ -59,7 +59,7 @@ chart_props! {
         #[props(default)]
         zoom: Option<bool>,
         /// Set, a drag or Shift with an arrow key selects a band of periods; `None` when
-        /// Escape clears it. With `zoom`, Shift or Alt with a drag pans.
+        /// Escape or a tap clears it. With `zoom`, Shift or Alt with a drag pans.
         #[props(default)]
         onrange: Option<EventHandler<Option<ChartRange>>>,
     }

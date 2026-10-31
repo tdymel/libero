@@ -4,10 +4,10 @@ description: scatter_chart at desktop (rest)
 expression: tree
 ---
 figure "Spend and sales"
-  description "Scatter chart from 10 to 30. A: 3 points, x from 10 to 30, y from 30 to 45. A: linear trend, rising. B: 2 points, x from 13 to 28, y from 20 to 25. B: linear trend, rising."
+  description "Scatter chart, x from 10 to 30. A: 3 points, x from 10 to 30, y from 30 to 45. A: linear trend, rising. B: 2 points, x from 13 to 28, y from 20 to 25. B: linear trend, rising."
   StaticText "Spend and sales"
   application "Spend and sales" [roledescription=chart]
-    description "Arrow keys move between points, Enter selects one."
+    description "Arrow keys move between points, Home and End to the first and last. Up and down move between series. Enter selects one."
   status [atomic] [live=polite]
   list "Series"
     listitem [level=1]
@@ -17,7 +17,7 @@ figure "Spend and sales"
       button "B" [pressed]
         StaticText "B"
   paragraph
-    StaticText "Scatter chart from 10 to 30."
+    StaticText "Scatter chart, x from 10 to 30."
   paragraph
     StaticText "A: 3 points, x from 10 to 30, y from 30 to 45."
   paragraph

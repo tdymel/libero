@@ -371,10 +371,7 @@ impl Ticks {
             false => self.suffix,
         };
         let number = format!("{}{suffix}", formats.write_number(&shown));
-        match unit.filter(|unit| !unit.is_empty()) {
-            Some(unit) => format!("{number} {unit}"),
-            None => number,
-        }
+        super::super::data::with_unit(number, unit)
     }
 }
 

@@ -398,8 +398,20 @@ fn y2_title(values: &DemoValues) -> Option<&'static str> {
     }
 }
 
+/// No mark line drawn: a type other than line or bar, or bars that are not grouped and upright.
+fn no_mark_line(values: &DemoValues) -> bool {
+    match values.str("type").as_str() {
+        "line" => false,
+        "bar" => values.str("layout") != "grouped" || values.str("orientation") == "horizontal",
+        _ => true,
+    }
+}
+
 /// The first series' mark line, in code and as built, for the chart type.
 fn mark_line(values: &DemoValues) -> Option<(String, MarkLine)> {
+    if no_mark_line(values) {
+        return None;
+    }
     let target = match values.str("type").as_str() {
         "bar" => 50.0,
         _ => 200.0,
@@ -555,7 +567,7 @@ fn data_table(values: &DemoValues) -> Element {
 pub fn ChartPage() -> Element {
     let theme = use_theme();
     let legend = ["bottom", "top", "start", "end", "none"];
-    let mut selected = use_signal(|| None::<ChartRange>);
+    let mut selected = use_signal(|| None::<(String, ChartRange)>);
     let chart = use_chart();
     rsx! {
         DocPage {
@@ -578,7 +590,7 @@ pub fn ChartPage() -> Element {
                     prop("x_title", "Option<String>").doc("Under the x axis: what it counts."),
                     prop("y_title", "Option<String>").doc("Beside the y axis, read upward: what it measures."),
                     prop("y2_title", "Option<String>").doc("Beside the right y axis, read downward: what its `Series::secondary_axis()` series measure."),
-                    prop("legend", "LegendPosition").default("bottom with two series or more").doc("`bottom`, `top`, `start`, `end` or `none`. On a chart under 300 px wide, `start` goes above the plot and `end` below it."),
+                    prop("legend", "LegendPosition").default("bottom with two series or more").doc("`bottom`, `top`, `start`, `end` or `none`. On a chart under 25rem (400 px) wide, `start` goes above the plot and `end` below it."),
                     prop("grid", "Option<bool>").default(on(theme.chart.grid)).doc("Horizontal guide lines."),
                     prop("value_format", "ValueFormat").default("Auto").doc("How values are written on the axis, in the tooltip and in the summary. Thousands group as the `Formats` say, as `12,500` or `12.500`."),
                     prop("unit", "Option<String>").doc("After every value, as `\"kg\"`."),
@@ -593,12 +605,12 @@ pub fn ChartPage() -> Element {
                     prop("default_hidden", "Vec<String>").default("[]").doc("Seeds the hidden lines once. Ignored when `hidden` is set."),
                     prop("onhiddenchange", "Option<EventHandler<Vec<String>>>").doc("The hidden lines a legend button asks for. The last shown line stays."),
                     prop("zoom", "Option<bool>").default(on(theme.chart.zoom)).doc("Zoom and pan the x axis: Ctrl or Cmd with the wheel, a pinch, a drag (Shift or Alt with it once `onrange` is set), the keys. Reset it from code with the `handle`."),
-                    prop("onrange", "Option<EventHandler<Option<ChartRange>>>").doc("Set, a drag or Shift with an arrow brushes a band of x values; Shift or Alt with a drag pans instead. `None` when Escape clears it."),
+                    prop("onrange", "Option<EventHandler<Option<ChartRange>>>").doc("Set, a drag or Shift with an arrow brushes a band of x values; Shift or Alt with a drag pans instead. `None` when Escape, or a tap or click that does not drag, clears it."),
                     prop("handle", "Option<ChartHandle>").doc("From `use_chart()`: reads the drawing as SVG or PNG, saves it (through `save_file`: a download on the web, the share sheet on Android), resets the zoom and says whether it is zoomed. `is_zoomed()` re-runs the component that reads it."),
                 ]),
                 props("BarChart", vec![
                     prop("x", "XValues").default("required").doc("The categories, one per bar or group of bars."),
-                    prop("series", "Vec<Series>").default("required").doc("The bars' series, each with one value per x value. `None` leaves no bar. `.colors([..])` colours bars one by one, `.negative_color(..)` those below 0, and `.errors([(low, high), ..])` draws error bars, written after the value in the tooltip. A stack rounds only its topmost positive and lowest negative segment. Upright, a `.kind(SeriesKind::Line)` one is drawn as a line over the bars."),
+                    prop("series", "Vec<Series>").default("required").doc("The bars' series, each with one value per x value. `None` leaves no bar. `.colors([..])` colours bars one by one, `.negative_color(..)` those below 0, and `.errors([(low, high), ..])` draws error bars, written after the value in the tooltip. A stack rounds only its topmost positive and lowest negative segment. Upright, a `.kind(SeriesKind::Line)` one is drawn as a line over the bars. A bar series' `.mark_line(..)` is drawn on upright, `grouped` bars only, and warns in development otherwise."),
                     prop("title", "Option<String>").doc("Shown above the chart, and its accessible name."),
                     prop("description", "Option<String>").doc("A sentence under the title: what to read from the chart."),
                     prop("layout", "BarLayout").default(theme.chart.bar_layout.as_str()).doc("`grouped` side by side, `stacked`, or `percent`: stacked to 100%."),
@@ -614,7 +626,7 @@ pub fn ChartPage() -> Element {
                     prop("value_label_position", "BarLabelPosition").default("chart-wide: inside on a `horizontal` chart or once any shown series has error ranges, past the end otherwise").doc("`inside` the bar, in the ink that reads on it, or `outside` past its end. A stack always writes inside."),
                     prop("bar_width", "Option<f32>").default("5 px each side of a band").doc("The share of a category's band its bars fill, clamped to `0.1..=1`."),
                     prop("bar_gap", "Option<f32>").default(theme.chart.bar_gap.to_string()).doc("Between two bars of a group, in pixels."),
-                    prop("legend", "LegendPosition").default("bottom with two series or more").doc("`bottom`, `top`, `start`, `end` or `none`. On a chart under 300 px wide, `start` goes above the plot and `end` below it."),
+                    prop("legend", "LegendPosition").default("bottom with two series or more").doc("`bottom`, `top`, `start`, `end` or `none`. On a chart under 25rem (400 px) wide, `start` goes above the plot and `end` below it."),
                     prop("grid", "Option<bool>").default(on(theme.chart.grid)).doc("Guide lines across the values."),
                     prop("value_format", "ValueFormat").default("Auto").doc("How values are written on the axis, the bars, in the tooltip and in the summary. On `percent` the axis and the bars write shares in percent. Thousands group as the `Formats` say, as `12,500` or `12.500`."),
                     prop("unit", "Option<String>").doc("After every value, as `\"kg\"`."),
@@ -629,7 +641,7 @@ pub fn ChartPage() -> Element {
                     prop("default_hidden", "Vec<String>").default("[]").doc("Seeds the hidden series once. Ignored when `hidden` is set."),
                     prop("onhiddenchange", "Option<EventHandler<Vec<String>>>").doc("The hidden series a legend button asks for. The last shown series stays."),
                     prop("zoom", "Option<bool>").default(on(theme.chart.zoom)).doc("Zoom and pan along the categories: Ctrl or Cmd with the wheel, a pinch, a drag (Shift or Alt with it once `onrange` is set), the keys. Reset it from code with the `handle`."),
-                    prop("onrange", "Option<EventHandler<Option<ChartRange>>>").doc("Set, a drag or Shift with an arrow brushes a band of categories; Shift or Alt with a drag pans instead. `None` when Escape clears it."),
+                    prop("onrange", "Option<EventHandler<Option<ChartRange>>>").doc("Set, a drag or Shift with an arrow brushes a band of categories; Shift or Alt with a drag pans instead. `None` when Escape, or a tap or click that does not drag, clears it."),
                     prop("handle", "Option<ChartHandle>").doc("From `use_chart()`: reads the drawing as SVG or PNG, saves it (through `save_file`: a download on the web, the share sheet on Android), resets the zoom and says whether it is zoomed. `is_zoomed()` re-runs the component that reads it."),
                 ]),
                 props("FunnelChart", vec![
@@ -637,7 +649,7 @@ pub fn ChartPage() -> Element {
                     prop("title", "Option<String>").doc("Shown above the chart, and its accessible name."),
                     prop("description", "Option<String>").doc("A sentence under the title: what to read from the chart."),
                     prop("labels", "PieLabels").default(theme.chart.pie_labels.as_str()).doc("On each stage: `percent`, its share of the first stage, `value`, `name` or `none`, in the ink that reads there. A label wider than its stage is left out; the tooltip and the summary keep it."),
-                    prop("legend", "LegendPosition").default("bottom with two stages or more").doc("`bottom`, `top`, `start`, `end` or `none`. On a chart under 300 px wide, `start` goes above the plot and `end` below it."),
+                    prop("legend", "LegendPosition").default("bottom with two stages or more").doc("`bottom`, `top`, `start`, `end` or `none`. On a chart under 25rem (400 px) wide, `start` goes above the plot and `end` below it."),
                     prop("value_format", "ValueFormat").default("Auto").doc("How values are written on the stages, in the tooltip and in the summary. Thousands group as the `Formats` say, as `12,500` or `12.500`."),
                     prop("unit", "Option<String>").doc("After every value, as `\"kg\"`."),
                     prop("grid", "Option<bool>").doc("Shared with the other charts; a funnel has no grid to draw."),
@@ -695,7 +707,7 @@ pub fn ChartPage() -> Element {
                     prop("x_title", "Option<String>").doc("Under the periods: what they are."),
                     prop("y_title", "Option<String>").doc("Beside the price axis, read upward: what it measures."),
                     prop("zoom", "Option<bool>").default(on(theme.chart.zoom)).doc("Zoom and pan the periods: Ctrl or Cmd with the wheel, a pinch, a drag (Shift or Alt with it once `onrange` is set), the keys. Reset it from code with the `handle`."),
-                    prop("onrange", "Option<EventHandler<Option<ChartRange>>>").doc("Set, a drag or Shift with an arrow brushes a band of periods; Shift or Alt with a drag pans instead. `None` when Escape clears it."),
+                    prop("onrange", "Option<EventHandler<Option<ChartRange>>>").doc("Set, a drag or Shift with an arrow brushes a band of periods; Shift or Alt with a drag pans instead. `None` when Escape, or a tap or click that does not drag, clears it."),
                     prop("legend", "LegendPosition").default("bottom").doc("The Up and Down key, under the plot; `none` leaves it out."),
                     prop("grid", "Option<bool>").default(on(theme.chart.grid)).doc("Horizontal guide lines."),
                     prop("value_format", "ValueFormat").default("Auto").doc("How prices are written on the axis, in the tooltip and in the summary. Thousands group as the `Formats` say, as `12,500` or `12.500`."),
@@ -726,7 +738,7 @@ pub fn ChartPage() -> Element {
                     prop("min_label_angle", "Option<f32>").default(theme.chart.min_label_angle.to_string()).doc("A slice narrower than this many degrees gets no label; the summary still names it."),
                     prop("slice_gap", "Option<f32>").default(theme.chart.slice_gap.to_string()).doc("Between two slices, in pixels, in the page's colour."),
                     prop("slice_radius", "Size").default(theme.chart.slice_radius.map_or("none", |size| size.as_str())).doc("Corner radius of a slice, on the theme's radius scale; a thin slice or a thin ring takes less. Unset, square."),
-                    prop("legend", "LegendPosition").default("bottom with two slices or more").doc("`bottom`, `top`, `start`, `end` or `none`. On a chart under 300 px wide, `start` goes above the plot and `end` below it."),
+                    prop("legend", "LegendPosition").default("bottom with two slices or more").doc("`bottom`, `top`, `start`, `end` or `none`. On a chart under 25rem (400 px) wide, `start` goes above the plot and `end` below it."),
                     prop("value_format", "ValueFormat").default("Auto").doc("How values are written beside the slices, in the tooltip and in the summary. Thousands group as the `Formats` say, as `12,500` or `12.500`."),
                     prop("unit", "Option<String>").doc("After every value, as `\"kg\"`."),
                     prop("grid", "Option<bool>").doc("Shared with the other charts; a pie has no grid to draw."),
@@ -811,10 +823,10 @@ pub fn ChartPage() -> Element {
                     "The plot is one tab stop, a `role=\"application\"` described as a chart, so a screen reader hands it the arrows. Each point the keys reach is announced, as \"This week, Tue: 132\", \"Chrome: 62, 62%.\" \"Online: x 12, y 34, size 80\" or, for a heatmap's cell, \"Tue, 12: 46\"; a candle reads its four prices and its direction, as \"Price, May: open 33, high 44, low 32, close 43, up\".",
                     "A heatmap never tells by colour alone: each cell writes its value where it fits, in black or white by the cell; an empty cell is outlined, dashed, and the scale under the plot keys it as \"No value\".",
                     "A candle never tells its direction by colour alone: a rising one is hollow, a falling one filled, and the key under the plot says which is which; an OHLC bar ticks its open left and its close right.",
-                    "The legend's entries are toggle buttons: pressed while their series or slice shows, struck through when hidden. The last shown one's button is `aria-disabled`. Should `hidden` or `default_hidden` name every one, the plot and the summary say \"All series are hidden.\" and the legend stays. A dashed line's key is a dash, as drawn; once a line sets a `symbol`, each key is its line's point shape. A line among bars is keyed by a short stroke, the bars by squares.",
+                    "The legend's entries are toggle buttons: pressed while their series or slice shows, struck through when hidden. The last shown one's button is `aria-disabled` and dimmed a little. Should `hidden` or `default_hidden` name every one, the plot and the summary say \"All series are hidden.\" and the legend stays. A dashed line's key is a dash, as drawn; once a line sets a `symbol`, each key is its line's point shape. A line among bars is keyed by a short stroke, the bars by squares.",
                     "On a touch screen a tap pins a point's tooltip, a second tap on it clicks; a vertical swipe still scrolls the page.",
                     "With `zoom`, the shown range is announced once a zoom or pan settles, as \"Showing Tue to Fri\". Ctrl or Cmd with the wheel zooms only a zoomable plot, so the page zoom works everywhere else.",
-                    "A drag with `onrange` set brushes; Shift or Alt with it pans. The band is outlined as well as tinted, and announced as \"Selected Tue to Thu\".",
+                    "A drag with `onrange` set brushes; Shift or Alt with it pans. The band is outlined as well as tinted, and announced as \"Selected Tue to Thu\". A tap or a click that does not drag clears it, so a touch screen without a keyboard can too.",
                     "A saved SVG is self-contained: its colours resolved, its font named, the chart's `title` as its `<title>`.",
                     "The chart draws no buttons: the ones you render from the `use_chart()` handle are yours to name, to announce what they saved and to keep focusable while there is nothing to reset.",
                     "Each series' or slice's palette colour reaches 3:1 on the page and on a card, in every shipped theme and color scheme; one too close to an earlier one, also for colour-blind eyes, is skipped.",
@@ -1088,7 +1100,7 @@ pub fn ChartPage() -> Element {
                         .code(|_, _| vec![]),
                     Control::toggle("mark_line", ["average", "target", "none"])
                         .default("average")
-                        .hidden_when(is("series"))
+                        .hidden_when(no_mark_line)
                         .code(|_, _| vec![]),
                     Control::switch("error_band")
                         .default("true")
@@ -1171,7 +1183,13 @@ pub fn ChartPage() -> Element {
                     );
                     let zoom = values.str("zoom") == "true";
                     let handle = (values.str("buttons") == "true").then_some(chart);
-                    let onrange = zoom.then_some(EventHandler::new(move |range: Option<ChartRange>| selected.set(range)));
+                    // Keyed by type: another type's chart draws no band, so it reads no range.
+                    let kind = values.str("type");
+                    let onrange = zoom.then_some(EventHandler::new({
+                        let kind = kind.clone();
+                        move |range: Option<ChartRange>| selected.set(range.map(|range| (kind.clone(), range)))
+                    }));
+                    let selected = selected.read().clone().filter(|(of, _)| *of == kind).map(|(_, range)| range);
                     let drawn = match values.str("type").as_str() {
                         "bar" => brushed(zoom, selected, rsx! {
                             BarChart {
@@ -1294,8 +1312,8 @@ pub fn ChartPage() -> Element {
 }
 
 /// The demo's `chart`, with the brushed band under it while it zooms.
-fn brushed(zoom: bool, selected: Signal<Option<ChartRange>>, chart: Element) -> Element {
-    let text = match &*selected.read() {
+fn brushed(zoom: bool, selected: Option<ChartRange>, chart: Element) -> Element {
+    let text = match &selected {
         Some(range) => format!("Selected {} to {}", range.from, range.to),
         None => "Drag across the plot to select a range.".to_string(),
     };
