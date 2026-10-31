@@ -1,7 +1,9 @@
 //! `ColorPicker`.
 
 use dioxus::prelude::*;
-use libero::components::{Button, ColorCode, ColorPicker, Flex, SliderChangeEvent, Text};
+use libero::components::{
+    AlphaSlider, Button, ColorCode, ColorPicker, Flex, HueSlider, Slider, SliderChangeEvent, Text,
+};
 
 use crate::Routes;
 
@@ -13,7 +15,28 @@ pub const ROUTES: Routes = &[
         || rsx! { ColorPickerSwatchesPage {} },
     ),
     ("/color-picker-sizes", || rsx! { ColorPickerSizesPage {} }),
+    ("/color-sliders-rtl", || rsx! { ColorSlidersRtlPage {} }),
 ];
+
+/// Todo 5119: on an RTL page the colour scales still run left to right, while a plain
+/// `Slider` mirrors. Each sits a quarter of the way along its range.
+#[component]
+fn ColorSlidersRtlPage() -> Element {
+    rsx! {
+        div { dir: "rtl",
+            Flex { direction: "column", gap: "lg", max_width: "320px",
+                HueSlider { id: "hue", value: 90.0, aria_label: "Hue" }
+                AlphaSlider {
+                    id: "alpha",
+                    value: 0.25,
+                    color: ColorCode::hex(0x1c7ed6),
+                    aria_label: "Alpha",
+                }
+                Slider { id: "plain", value: 25.0, aria_label: "Plain", oninput: move |_| {} }
+            }
+        }
+    }
+}
 
 /// The two sizes whose sliders sit closest, each with alpha and a swatch row beneath.
 #[component]

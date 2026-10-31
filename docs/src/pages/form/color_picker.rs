@@ -37,17 +37,26 @@ Text { size: "sm", "{hue()}°" }"#;
 
 const ALPHA_SLIDER: &str = r#"let mut alpha = use_signal(|| 0.6);
 
+Text { size: "sm", "Opacity" }
 AlphaSlider {
     value: alpha(),
     color: ColorCode::hex(0x228be6),
     oninput: move |event: SliderChangeEvent| alpha.set(event.value()),
     aria_label: "Opacity",
 }
-Text { size: "sm", "{alpha()}" }"#;
+Text { size: "sm", "{(alpha() * 100.0).round()}%" }"#;
 
-const COLOR_SWATCH: &str = r#"ColorSwatch { color: ColorCode::hex(0x228be6), role: "img", aria_label: "Blue" }
+const COLOR_SWATCH: &str = r#"let mut picked = use_signal(|| false);
+
+ColorSwatch { color: ColorCode::hex(0x228be6), role: "img", aria_label: "Blue" }
 ColorSwatch { color: "rgba(250, 82, 82, 0.4)".parse().unwrap(), role: "img", aria_label: "Translucent red" }
-ColorSwatch { color: ColorCode::hex(0x40c057), onclick: move |_| {}, aria_label: "Green", "✓" }"#;
+ColorSwatch {
+    color: ColorCode::hex(0x40c057),
+    onclick: move |_| picked.toggle(),
+    aria_label: "Green",
+    aria_pressed: picked().to_string(),
+    if picked() { "✓" }
+}"#;
 
 /// The preview prints the value in three formats under the picker, which is
 /// how the page shows that one `ColorCode` converts to every CSS form.
@@ -182,7 +191,11 @@ pub fn ColorPickerPage() -> Element {
                     Code { source: "rgb()" }
                     " or "
                     Code { source: "hsl()" }
-                    " and converts back to any of them. "
+                    " and converts back to any of them. It reads commas, spaces and "
+                    Code { source: "/" }
+                    " alike and clamps a value out of range, as CSS does, but knows no named colors: "
+                    Code { source: "\"red\"" }
+                    " is an error. "
                     Code { source: "ColorCode::hex(0x228be6)" }
                     " and its siblings build one, and a theme "
                     Code { source: "HexColor" }
@@ -238,13 +251,7 @@ pub fn ColorPickerPage() -> Element {
                 render: move |values: DemoValues| match values.str("component").as_str() {
                     "hue" => rsx! { HueSliderPreview {} },
                     "alpha" => rsx! { AlphaSliderPreview {} },
-                    "swatch" => rsx! {
-                        Flex { direction: "row", gap: "sm", align: "center",
-                            ColorSwatch { color: ColorCode::hex(0x228be6), role: "img", aria_label: "Blue" }
-                            ColorSwatch { color: ColorCode::rgba(250, 82, 82, 0.4), role: "img", aria_label: "Translucent red" }
-                            ColorSwatch { color: ColorCode::hex(0x40c057), onclick: move |_| {}, aria_label: "Green", "✓" }
-                        }
-                    },
+                    "swatch" => rsx! { ColorSwatchPreview {} },
                     _ => rsx! { ColorPickerDemo { values } },
                 },
             }
@@ -303,13 +310,33 @@ fn AlphaSliderPreview() -> Element {
     let mut alpha = use_signal(|| 0.6);
     rsx! {
         Flex { direction: "column", gap: "xs", sx: libero::sx::sx().width("240px"),
+            Text { size: "sm", "Opacity" }
             AlphaSlider {
                 value: alpha(),
                 color: ColorCode::hex(0x228be6),
                 oninput: move |event: SliderChangeEvent| alpha.set(event.value()),
                 aria_label: "Opacity",
             }
-            Text { size: "sm", "{alpha()}" }
+            Text { size: "sm", "{(alpha() * 100.0).round()}%" }
+        }
+    }
+}
+
+/// The clickable swatch toggles, so a press shows: its check and `aria-pressed` follow it.
+#[component]
+fn ColorSwatchPreview() -> Element {
+    let mut picked = use_signal(|| false);
+    rsx! {
+        Flex { direction: "row", gap: "sm", align: "center",
+            ColorSwatch { color: ColorCode::hex(0x228be6), role: "img", aria_label: "Blue" }
+            ColorSwatch { color: ColorCode::rgba(250, 82, 82, 0.4), role: "img", aria_label: "Translucent red" }
+            ColorSwatch {
+                color: ColorCode::hex(0x40c057),
+                onclick: move |_| picked.toggle(),
+                aria_label: "Green",
+                aria_pressed: picked().to_string(),
+                if picked() { "✓" }
+            }
         }
     }
 }

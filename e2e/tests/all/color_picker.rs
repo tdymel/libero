@@ -42,6 +42,37 @@ fn the_alpha_slider_meets_the_baseline() {
         .run();
 }
 
+/// Todo 5119: under a `dir=rtl` page a colour scale's thumb follows its gradient, left to
+/// right, while an ordinary `Slider` still mirrors.
+#[test]
+fn colour_scales_stay_left_to_right_on_an_rtl_page() {
+    const AT: &str = r#"(() => ['hue', 'alpha', 'plain'].map(id => {
+        const root = document.getElementById(id);
+        const track = root.querySelector('[data-slot=track]').getBoundingClientRect();
+        const thumb = root.querySelector('[data-slot=thumb]').getBoundingClientRect();
+        return Math.round(100 * (thumb.x + thumb.width / 2 - track.x) / track.width);
+    }).join(','))()"#;
+    block_on(async {
+        let fixture = Fixture::open("/color-sliders-rtl", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        wait::for_visible(page, "#plain [data-slot=thumb]")
+            .await
+            .unwrap();
+        let at: String = page
+            .evaluate_bounded(AT)
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        let at: Vec<i64> = at.split(',').map(|n| n.parse().unwrap()).collect();
+        assert!(at[0] < 40 && at[1] < 40, "colour thumbs mirrored: {at:?}");
+        assert!(at[2] > 60, "the plain slider no longer mirrors: {at:?}");
+        fixture.close().await.unwrap();
+    });
+}
+
 /// Todo 2819: forced colours keep a swatch's colour, which `background-image` carries.
 #[test]
 fn a_swatch_keeps_its_colour_in_forced_colours() {

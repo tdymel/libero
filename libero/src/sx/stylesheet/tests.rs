@@ -542,7 +542,9 @@ fn an_rtl_arm_also_matches_under_a_dir_attribute() {
     let class = base.class_name();
 
     assert!(css.contains(&format!(".{class}:dir(rtl) > svg{{height:1px;}}")));
-    assert!(css.contains(&format!(":where([dir=rtl]) .{class} > svg{{height:1px;}}")));
+    assert!(css.contains(&format!(
+        ":where([dir=rtl]) .{class}:where(:not([dir=ltr], [dir=rtl] [dir=ltr] *)) > svg{{height:1px;}}"
+    )));
 }
 
 #[test]

@@ -4,13 +4,13 @@ use super::{
     ColorCode,
     color_code::round_alpha,
     color_picker::ColorPickerPart,
-    color_slider::{CHECKERBOARD, ColorSliderPart, color_slider_sx, ltr_scale},
+    color_slider::{CHECKERBOARD, ColorSliderPart, color_slider_sx, ltr_scale, scale_gradient},
 };
 use crate::{
     components::{
         common::{Input, Part, base_props, use_name_warning},
         form::SliderChangeEvent,
-        form::slider::{SliderCore, SliderCoreValue},
+        form::slider::{SliderCore, SliderCoreValue, SliderPart},
         form::use_fieldset_disabled,
     },
     hooks::{use_localization, use_theme},
@@ -65,12 +65,14 @@ pub fn AlphaSlider(props: AlphaSliderProps) -> Element {
     // A bare `transparent` is transparent black, which greys the gradient's
     // middle in older engines.
     let track = format!(
-        "linear-gradient(to right, {}, {}), {CHECKERBOARD}",
-        props.color.with_alpha(0.0).to_rgba(),
-        props.color.opaque().to_rgba(),
+        "{}, {CHECKERBOARD}",
+        scale_gradient(&[
+            (&props.color.with_alpha(0.0).to_rgba(), 0.0),
+            (&props.color.opaque().to_rgba(), 1.0),
+        ]),
     );
     let thumb_fill = props.color.with_alpha(props.value).to_rgba();
-    alpha_slider(props, track, thumb_fill, false)
+    alpha_slider(props, track, thumb_fill, SliderPart::Control.slot())
 }
 
 /// `r, g, b` of the picker's color, set on its root: its alpha slider paints
@@ -88,11 +90,14 @@ pub(super) fn PickerAlphaSlider(
     oninput: Option<EventHandler<SliderChangeEvent>>,
 ) -> Element {
     let rgb = COLOR_PICKER_RGB.value();
-    let track =
-        format!("linear-gradient(to right, rgba({rgb}, 0), rgba({rgb}, 1)), {CHECKERBOARD}");
+    let track = format!(
+        "{}, {CHECKERBOARD}",
+        scale_gradient(&[
+            (&format!("rgba({rgb}, 0)"), 0.0),
+            (&format!("rgba({rgb}, 1)"), 1.0)
+        ]),
+    );
     let thumb_fill = format!("rgba({rgb}, {})", round_alpha(value));
-    // A display-only picker hands no `oninput`: read-only, not a forgotten handler (4310).
-    let readonly = oninput.is_none();
     let props = AlphaSliderProps {
         value,
         color: ColorCode::default(),
@@ -107,7 +112,7 @@ pub(super) fn PickerAlphaSlider(
         sx: Input::default(),
         states: Input::default(),
     };
-    alpha_slider(props, track, thumb_fill, readonly)
+    alpha_slider(props, track, thumb_fill, ColorPickerPart::Alpha.slot())
 }
 
 /// Both sliders' render, past the track's colors. `props.color` is unread.
@@ -115,7 +120,7 @@ fn alpha_slider(
     props: AlphaSliderProps,
     track: String,
     thumb_fill: String,
-    readonly: bool,
+    slot: &'static str,
 ) -> Element {
     let theme = use_theme();
     let size = props.size.copied_or(theme.color_picker.size);
@@ -133,6 +138,8 @@ fn alpha_slider(
     // A disabled `Fieldset` disables it, as it does `Slider` (todo 4243).
     let in_disabled_group = use_fieldset_disabled();
     let disabled = props.disabled.unwrap_or(false) || in_disabled_group;
+    // Without `oninput` it only shows an alpha: read-only, not a forgotten handler (4310).
+    let readonly = props.oninput.is_none();
     let oninput = props.oninput;
     let emit = use_callback(move |event: SliderChangeEvent<SliderCoreValue>| {
         if let Some(oninput) = &oninput {
@@ -173,7 +180,7 @@ fn alpha_slider(
             plain: true,
             focusable: props.focusable.unwrap_or(true),
             thumb_fill: Some(thumb_fill),
-            slot: ColorPickerPart::Alpha.slot(),
+            slot,
         }
     }
 }

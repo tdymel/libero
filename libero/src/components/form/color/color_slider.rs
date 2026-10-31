@@ -1,6 +1,8 @@
 //! What `HueSlider` and `AlphaSlider` share: both are a plain `SliderCore`
 //! whose track is a gradient as tall as its thumb.
 
+use std::sync::LazyLock;
+
 use dioxus::prelude::Attribute;
 
 use super::saturation::THUMB_RING;
@@ -14,7 +16,28 @@ use crate::{
 };
 
 /// Red round the wheel and back to red, at even sixths.
-pub(super) const HUE_GRADIENT: &str = "linear-gradient(to right, #ff0000 0%, #ffff00 16.67%, #00ff00 33.33%, #00ffff 50%, #0000ff 66.67%, #ff00ff 83.33%, #ff0000 100%)";
+pub(super) static HUE_GRADIENT: LazyLock<String> = LazyLock::new(|| {
+    let hues = [
+        "#ff0000", "#ffff00", "#00ff00", "#00ffff", "#0000ff", "#ff00ff", "#ff0000",
+    ];
+    let stops: Vec<_> = hues
+        .iter()
+        .enumerate()
+        .map(|(index, hue)| (*hue, index as f64 / 6.0))
+        .collect();
+    scale_gradient(&stops)
+});
+
+/// A left-to-right gradient over the thumb centre's travel, inset half a thumb at each
+/// end, so the thumb sits on the colour it points at (todo 5120).
+pub(super) fn scale_gradient(stops: &[(&str, f64)]) -> String {
+    let thumb = SLIDER_THUMB.value();
+    let stops: Vec<_> = stops
+        .iter()
+        .map(|(color, at)| format!("{color} calc({thumb} / 2 + (100% - {thumb}) * {at:.4})"))
+        .collect();
+    format!("linear-gradient(to right, {})", stops.join(", "))
+}
 
 /// What shows through a translucent color. A background *layer*, so it goes
 /// last in a comma-separated `background`.
@@ -127,6 +150,20 @@ mod tests {
             .find("@media (forced-colors: active)")
             .unwrap_or_else(|| panic!("no forced-colours rule: {css}"));
         assert!(css[forced..].contains("forced-color-adjust:none"), "{css}");
+    }
+
+    /// Todo 5120: the ends sit half a thumb in, where the thumb's centre stops.
+    #[test]
+    fn the_scale_gradient_is_inset_by_half_a_thumb() {
+        let thumb = SLIDER_THUMB.value();
+        assert_eq!(
+            scale_gradient(&[("red", 0.0), ("blue", 1.0)]),
+            format!(
+                "linear-gradient(to right, red calc({thumb} / 2 + (100% - {thumb}) * 0.0000), \
+                 blue calc({thumb} / 2 + (100% - {thumb}) * 1.0000))"
+            )
+        );
+        assert!(HUE_GRADIENT.contains("#00ffff calc"), "{}", *HUE_GRADIENT);
     }
 
     #[test]

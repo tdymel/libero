@@ -164,6 +164,52 @@ fn a_blank_slider_name_is_not_rendered() {
     }
 }
 
+/// Todos 5121, 5122: without `oninput` a lone colour slider only shows its value, and
+/// only a picker's own sliders take its `hue` and `alpha` slots.
+#[test]
+fn a_lone_colour_slider_is_read_only_without_oninput_and_takes_no_picker_slot() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider {
+                HueSlider { value: 10.0, aria_label: "Hue" }
+                AlphaSlider { value: 0.5, color: ColorCode::default(), aria_label: "Alpha" }
+            }
+        }
+    }
+    let html = body(&render(app));
+    let sliders = tags_with(&html, r#"role="slider""#);
+    assert_eq!(sliders.len(), 2, "{html}");
+    for slider in sliders {
+        assert_eq!(
+            slider.get("aria-readonly").map(String::as_str),
+            Some("true"),
+            "{slider:?}"
+        );
+    }
+    for slot in ["hue", "alpha"] {
+        assert!(
+            tags_with(&html, &format!(r#"data-slot="{slot}""#)).is_empty(),
+            "{html}"
+        );
+    }
+
+    fn picker() -> Element {
+        rsx! {
+            LiberoProvider {
+                ColorPicker { value: ColorCode::default(), oninput: move |_| {}, with_alpha: true }
+            }
+        }
+    }
+    let html = body(&render(picker));
+    for slot in ["hue", "alpha"] {
+        assert_eq!(
+            tags_with(&html, &format!(r#"data-slot="{slot}""#)).len(),
+            1,
+            "{html}"
+        );
+    }
+}
+
 thread_local! {
     static VALUE: std::cell::Cell<Option<Signal<ColorCode>>> = const { std::cell::Cell::new(None) };
 }

@@ -9,7 +9,7 @@ use crate::{
     components::{
         common::{Input, Part, base_props, use_name_warning},
         form::SliderChangeEvent,
-        form::slider::{SliderCore, SliderCoreValue},
+        form::slider::{SliderCore, SliderCoreValue, SliderPart},
         form::use_fieldset_disabled,
     },
     hooks::{use_localization, use_theme},
@@ -58,10 +58,10 @@ base_props! {
 /// Docs: <https://libero-ui.dev/form/color-picker>
 #[component]
 pub fn HueSlider(props: HueSliderProps) -> Element {
-    hue_slider(props, false, 360.0)
+    hue_slider(props, 360.0, SliderPart::Control.slot())
 }
 
-/// `ColorPicker`'s hue slider: read-only without `oninput`, not a forgotten handler (4310).
+/// `ColorPicker`'s hue slider: `hue` slot, and 360 left out as it is 0.
 #[component]
 pub(super) fn PickerHueSlider(
     value: f64,
@@ -70,7 +70,6 @@ pub(super) fn PickerHueSlider(
     focusable: bool,
     oninput: Option<EventHandler<SliderChangeEvent>>,
 ) -> Element {
-    let readonly = oninput.is_none();
     let props = HueSliderProps {
         value,
         oninput,
@@ -84,10 +83,10 @@ pub(super) fn PickerHueSlider(
         sx: Input::default(),
         states: Input::default(),
     };
-    hue_slider(props, readonly, MAX_HUE)
+    hue_slider(props, MAX_HUE, ColorPickerPart::Hue.slot())
 }
 
-fn hue_slider(props: HueSliderProps, readonly: bool, max: f64) -> Element {
+fn hue_slider(props: HueSliderProps, max: f64, slot: &'static str) -> Element {
     let theme = use_theme();
     let size = props.size.copied_or(theme.color_picker.size);
     let sx = color_slider_sx(&props.sx, &props.parts);
@@ -104,6 +103,8 @@ fn hue_slider(props: HueSliderProps, readonly: bool, max: f64) -> Element {
     // A disabled `Fieldset` disables it, as it does `Slider` (todo 4243).
     let in_disabled_group = use_fieldset_disabled();
     let disabled = props.disabled.unwrap_or(false) || in_disabled_group;
+    // Without `oninput` it only shows a hue: read-only, not a forgotten handler (4310).
+    let readonly = props.oninput.is_none();
     let oninput = props.oninput;
     let emit = use_callback(move |event: SliderChangeEvent<SliderCoreValue>| {
         if let Some(oninput) = &oninput {
@@ -139,11 +140,11 @@ fn hue_slider(props: HueSliderProps, readonly: bool, max: f64) -> Element {
             // The same `use_callback` every render, so the core's props can
             // compare equal.
             oninput: props.oninput.is_some().then_some(emit),
-            track: Some(HUE_GRADIENT.to_string()),
+            track: Some(HUE_GRADIENT.clone()),
             plain: true,
             focusable: props.focusable.unwrap_or(true),
             thumb_fill: Some(ColorCode::hsva(props.value, 1.0, 1.0, 1.0).to_hex()),
-            slot: ColorPickerPart::Hue.slot(),
+            slot,
         }
     }
 }

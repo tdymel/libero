@@ -156,10 +156,14 @@ impl Sx {
 
     /// Styles under a right-to-left direction. Blitz's stylo does not match
     /// `:dir()`, so an `[dir=rtl]` ancestor arm repeats it there (todo 735).
+    /// That arm yields to a `dir=ltr` on the element or nested inside the rtl one (todo 5119).
     pub(crate) fn rtl(self, nested: Sx) -> Self {
         self.selector("&:dir(rtl)", nested.clone())
-            .selector(":where([dir=rtl]) &", nested)
+            .selector(Self::RTL_FALLBACK, nested)
     }
+
+    /// The guard sits in `:where`, so the arm keeps the specificity of a bare `&`.
+    const RTL_FALLBACK: &str = ":where([dir=rtl]) &:where(:not([dir=ltr], [dir=rtl] [dir=ltr] *))";
 
     /// Styles from the viewport width of `breakpoint` up (`min-width`, mobile first).
     pub fn breakpoint(self, breakpoint: Size, nested: Sx) -> Self {

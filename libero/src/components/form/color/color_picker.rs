@@ -621,7 +621,7 @@ mod tests {
         });
         assert!(!picker.iter().any(|warning| warning == never), "{picker:?}");
 
-        // A standalone skin without `oninput` is not read-only: it still warns.
+        // A standalone one without `oninput` is read-only as well (todo 5121): no warning.
         let hue = crate::utils::warnings_of(|| {
             rsx! {
                 crate::LiberoProvider {
@@ -629,7 +629,7 @@ mod tests {
                 }
             }
         });
-        assert!(hue.iter().any(|warning| warning == never), "{hue:?}");
+        assert!(!hue.iter().any(|warning| warning == never), "{hue:?}");
 
         // A readonly `Slider` without `oninput` never changing is the point.
         let readonly = crate::utils::warnings_of(|| {

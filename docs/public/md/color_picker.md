@@ -9,8 +9,9 @@ Description: A saturation panel and a hue slider, with optional alpha and preset
 
 A saturation panel and a hue slider, with an optional alpha slider and preset
 swatches. The value is a `ColorCode`, which parses from hex, `rgb()` or `hsl()`
-and converts back to any of them. `ColorCode::hex(0x228be6)` and its siblings
-build one, and a theme `HexColor` converts into one. It prints as `#rrggbb`, or
+and converts back to any of them. It reads commas, spaces and `/` alike and
+clamps a value out of range, as CSS does, but knows no named colors: `"red"` is
+an error. `ColorCode::hex(0x228be6)` and its siblings build one, and a theme `HexColor` converts into one. It prints as `#rrggbb`, or
 `#rrggbbaa` when translucent, which a `style` accepts.
 
 ## Usage

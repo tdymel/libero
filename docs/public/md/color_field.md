@@ -58,7 +58,7 @@ fn Demo() -> Element {
 | `value` | `ColorCode` | - | Strictly controlled. Pair it with `oninput`. |
 | `oninput` | `EventHandler<SliderChangeEvent<ColorCode>>` | - | Every new color. A drag in the dropdown sends `Start` and `End` around its moves. A key press, a swatch and the eyedropper send `Change` then `End`. Typed text sends `Change` each time it parses and one `End` on Enter or blur. |
 | `validate` | `Validators<ColorCode>` | - | Rules over the color, shown once the field loses focus or its form is submitted. |
-| `format` | `ColorFormat` | hex, or hexa with alpha | How the text shows the color once the field loses focus. Typing accepts every form either way. |
+| `format` | `ColorFormat` | hex, or hexa with alpha | How the text shows the color once the field loses focus. Typing accepts every hex, `rgb()` and `hsl()` form either way, with commas, spaces or `/` between values and a value out of range clamped, as CSS does. Named colors such as `red` do not parse. |
 | `with_alpha` | `bool` | `false` | Shows the alpha slider in the dropdown. Without it a translucent color arrives opaque. |
 | `swatches` | `Swatches` | - | Preset colors in the dropdown. Takes `ColorCode`s or CSS strings. |
 | `swatches_per_row` | `usize` | - | Caps how many swatches share a row. Unset, they wrap to fill the width. |

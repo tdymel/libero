@@ -10,6 +10,7 @@ use crate::theme::{ColorFormat, HexColor};
 ///
 /// Parses from any CSS hex, rgb or hsl form (`"#228be6".parse()`); writes back
 /// with [`to_hex`](Self::to_hex), [`to_rgba`](Self::to_rgba) and the rest.
+/// Named colours (`"red"`) are not parsed; see [`from_str`](Self::from_str).
 ///
 /// ```rust
 /// use libero::components::{ColorCode, ColorFormat};
@@ -272,8 +273,11 @@ impl FromStr for ColorCode {
     type Err = ParseColorError;
 
     /// Hex with 3, 4, 6 or 8 digits (`#` optional), `rgb[a]()` and `hsl[a]()`,
-    /// comma or space separated, rgb channels and alpha as a number or percentage,
-    /// hue in any CSS angle unit.
+    /// rgb channels and alpha as a number or percentage, hue in any CSS angle unit.
+    ///
+    /// Lenient: commas, spaces and `/` all separate, in any mix, and a value out of
+    /// range clamps as CSS does (`rgb(300 0 0)` is red). Only unparsable text is an
+    /// error, and named colours (`red`, `transparent`) are one: there is no name table.
     fn from_str(text: &str) -> Result<Self, Self::Err> {
         let text = text.trim().to_ascii_lowercase();
 
@@ -356,16 +360,13 @@ fn number(text: &str) -> Result<f64, ParseColorError> {
         .ok_or(ParseColorError)
 }
 
-/// `255` or `100%`.
+/// `255` or `100%`, clamped into range as CSS Color 4 does (todo 5127).
 fn byte(text: &str) -> Result<u8, ParseColorError> {
     let value = match text.strip_suffix('%') {
         Some(percent) => number(percent)? / 100.0 * 255.0,
         None => number(text)?,
     };
-    match (0.0..=255.0).contains(&value) {
-        true => Ok(value.round() as u8),
-        false => Err(ParseColorError),
-    }
+    Ok(value.clamp(0.0, 255.0).round() as u8)
 }
 
 /// A CSS hue in degrees: bare, `deg`, `grad`, `rad` or `turn`.
@@ -385,28 +386,19 @@ fn hue(text: &str) -> Result<f64, ParseColorError> {
     }
 }
 
-/// `80%` or `80`, as `0.0..=1.0`; a bare number is a percent, as in CSS `hsl()`.
+/// `80%` or `80`, as `0.0..=1.0` clamped; a bare number is a percent, as in CSS `hsl()`.
 fn percent(text: &str) -> Result<f64, ParseColorError> {
-    let value = match text.strip_suffix('%') {
-        Some(percent) => number(percent)? / 100.0,
-        None => number(text)? / 100.0,
-    };
-    match (0.0..=1.0).contains(&value) {
-        true => Ok(value),
-        false => Err(ParseColorError),
-    }
+    let value = number(text.strip_suffix('%').unwrap_or(text))? / 100.0;
+    Ok(value.clamp(0.0, 1.0))
 }
 
-/// `0.5` or `50%`.
+/// `0.5` or `50%`, clamped to `0.0..=1.0`.
 fn alpha(text: &str) -> Result<f64, ParseColorError> {
     let value = match text.strip_suffix('%') {
         Some(percent) => number(percent)? / 100.0,
         None => number(text)?,
     };
-    match (0.0..=1.0).contains(&value) {
-        true => Ok(value),
-        false => Err(ParseColorError),
-    }
+    Ok(value.clamp(0.0, 1.0))
 }
 
 fn parse_hex(hex: &str) -> Result<ColorCode, ParseColorError> {
@@ -499,10 +491,17 @@ mod tests {
         ] {
             assert_eq!(parse(text).to_hex(), "#00ff00", "{text}");
         }
-        assert_eq!(
-            "rgb(101%, 0%, 0%)".parse::<ColorCode>(),
-            Err(ParseColorError)
-        );
+    }
+
+    /// Todo 5127: CSS Color 4 clamps an out-of-range value instead of dropping the colour.
+    #[test]
+    fn out_of_range_values_clamp_as_css_does() {
+        assert_eq!(parse("rgb(101%, 0%, 0%)").to_hex(), "#ff0000");
+        assert_eq!(parse("rgb(300, -5, 0)").to_hex(), "#ff0000");
+        assert_eq!(parse("rgba(0, 0, 0, 2)").to_hexa(), "#000000ff");
+        assert_eq!(parse("rgb(0 0 0 / -50%)").alpha(), 0.0);
+        assert_eq!(parse("hsl(0, 120%, 50%)").to_hex(), "#ff0000");
+        assert_eq!(parse("hsl(0, 100%, 150%)").to_hex(), "#ffffff");
     }
 
     #[test]
@@ -516,9 +515,6 @@ mod tests {
             "green",
             "rgb(1, 2)",
             "rgb(1, 2, 3, 4, 5)",
-            "rgb(300, 0, 0)",
-            "rgba(0, 0, 0, 2)",
-            "hsl(0, 120%, 50%)",
             "rgb(a, b, c)",
             "rgb(nan, 0, 0)",
             "#€€€",

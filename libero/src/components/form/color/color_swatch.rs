@@ -39,8 +39,10 @@ static COLOR_SWATCH_SX: StaticSx = StaticSx::new(|| {
         // Forced colours would drop the colour and its ring: the swatch is the colour.
         .forced_color_adjust("none")
         .padding("0")
-        // A clickable swatch is a `<button>`, which inherits neither (todo 2376).
+        // A clickable swatch is a `<button>`, which inherits none of these (todos 2376, 5123).
         .font_family("inherit")
+        .font_size("inherit")
+        .line_height("inherit")
         .letter_spacing("inherit")
         // Near the paper colour the faint ring is under 3:1 (WCAG 1.4.11, todo 2293): a muted one.
         .when(
@@ -146,7 +148,8 @@ pub fn ColorSwatch(props: ColorSwatchProps) -> Element {
         .prepare();
 
     match props.onclick {
-        // Soft-disabled as `Button`: a native `disabled` would drop its focus (todo 3873).
+        // Disabled as a disabled `Button`: `aria-disabled` and out of the tab order, no
+        // native `disabled`, which would drop a focused swatch's focus (todos 3873, 5124).
         Some(onclick) => swatch
             .attr_default("type", "button")
             .attr("aria-disabled", disabled.then_some("true"))

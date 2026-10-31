@@ -53,7 +53,7 @@ pub fn ColorFieldPage() -> Element {
                         .doc("Rules over the color, shown once the field loses focus or its form is submitted."),
                     prop("format", "ColorFormat")
                         .default("hex, or hexa with alpha")
-                        .doc("How the text shows the color once the field loses focus. Typing accepts every form either way."),
+                        .doc("How the text shows the color once the field loses focus. Typing accepts every hex, `rgb()` and `hsl()` form either way, with commas, spaces or `/` between values and a value out of range clamped, as CSS does. Named colors such as `red` do not parse."),
                     prop("with_alpha", "bool")
                         .default("false")
                         .doc("Shows the alpha slider in the dropdown. Without it a translucent color arrives opaque."),
