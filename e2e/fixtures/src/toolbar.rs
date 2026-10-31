@@ -20,7 +20,30 @@ pub const ROUTES: Routes = &[
     ),
     ("/toolbar-fields", || rsx! { ToolbarFieldsPage {} }),
     ("/toolbar-editor", || rsx! { ToolbarEditorPage {} }),
+    ("/toolbar-stop", || rsx! { ToolbarStopPage {} }),
 ];
+
+/// The tab stop off items that cannot take focus (todos 5165, 5166): a hard-disabled first
+/// item, one hidden with `display: none`, one hard-disabled later. In a row, so a hidden
+/// item shrinks the bar.
+#[component]
+fn ToolbarStopPage() -> Element {
+    let mut hide = use_signal(|| false);
+    let mut off = use_signal(|| false);
+    rsx! {
+        button { id: "before", "before" }
+        Flex { direction: "row", gap: "md",
+            Toolbar { "aria-label": "Stops",
+                Button { id: "gone", disabled: true, focusable_when_disabled: false, "Gone" }
+                Button { id: "one", style: if hide() { "display: none" } else { "" }, "One" }
+                Button { id: "two", disabled: off(), focusable_when_disabled: false, "Two" }
+                Button { id: "three", "Three" }
+            }
+        }
+        button { id: "hide", onclick: move |_| hide.set(true), "Hide one" }
+        button { id: "off", onclick: move |_| off.set(true), "Disable two" }
+    }
+}
 
 #[derive(Clone, PartialEq, Options)]
 enum Font {

@@ -29,10 +29,15 @@ pub(crate) fn with_own(extra: Option<Sx>, own: &Input<Sx>) -> Input<Sx> {
 }
 
 /// A plain CSS length in px: `12px`, `0.5rem` (at a 16px root) or `0`. `None` for
-/// anything only layout can resolve: `calc()`, `var()`, a percentage.
+/// anything only layout can resolve: `calc()`, `var()`, a percentage. `None` for a negative
+/// or exponent length too, which a `gap` cannot be (todo 5173).
 pub(crate) fn css_px(css: &str) -> Option<f32> {
     let css = css.trim();
-    let number = |value: &str| value.trim().parse::<f32>().ok().filter(|n| n.is_finite());
+    let number = |value: &str| {
+        let value = value.trim();
+        let plain = !value.is_empty() && value.chars().all(|c| c.is_ascii_digit() || c == '.');
+        plain.then(|| value.parse::<f32>().ok()).flatten()
+    };
     if let Some(px) = css.strip_suffix("px") {
         number(px)
     } else if let Some(rem) = css.strip_suffix("rem") {
@@ -130,6 +135,15 @@ mod tests {
         assert_eq!(css_px("calc(1rem + 2px)"), None);
         assert_eq!(css_px("5%"), None);
         assert_eq!(css_px("3"), None);
+    }
+
+    #[test]
+    fn negative_and_exponent_lengths_read_as_nothing() {
+        assert_eq!(css_px("-4px"), None);
+        assert_eq!(css_px("1e3px"), None);
+        assert_eq!(css_px("-0.5rem"), None);
+        assert_eq!(css_px("+4px"), None);
+        assert_eq!(css_px("px"), None);
     }
 
     #[test]

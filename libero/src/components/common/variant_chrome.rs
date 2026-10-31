@@ -238,8 +238,9 @@ pub(crate) fn variant_selected_sx(
                     .value_or(vars.contrast.value_or("inherit")),
             ),
         ),
+        // A literal stays on the surface: its colour under its own label hid it (todo 5164).
         Variant::Elevated => sx()
-            .background(selected_var.value_or(color.value()))
+            .background(selected_var.value_or(PAPER_BACKGROUND.value()))
             .color(on_state.value_or(color.value())),
         Variant::Outlined | Variant::Standard => sx()
             .background(selected_var.value_or("transparent"))
@@ -303,5 +304,23 @@ mod tests {
         let active = &css[css.find(":active").expect("a pressed rule")..];
 
         assert!(active.contains(&format!("box-shadow:{rest};")), "{css}");
+    }
+
+    /// A literal publishes no selected tint: the label's colour must not become the fill.
+    #[test]
+    fn a_selected_elevated_literal_keeps_the_surface_under_its_label() {
+        let sx = variant_selected_sx(
+            Variant::Elevated,
+            &BUTTON_VARS,
+            &BUTTON_SELECTED_VAR,
+            &BUTTON_ON_STATE_VAR,
+        );
+        let css = Stylesheet::from(&sx).as_str().to_string();
+        let paper = PAPER_BACKGROUND.value();
+
+        assert!(
+            css.contains(&format!("background:var(--lsx-button-selected, {paper})")),
+            "{css}"
+        );
     }
 }

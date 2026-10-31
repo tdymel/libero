@@ -431,7 +431,7 @@ fn action_icon(mut props: ActionIconProps, keyshortcuts: Option<String>) -> Elem
     // A toolbar keeps its disabled items in the arrow order.
     let soft_disabled = disabled && props.focusable_when_disabled.unwrap_or(item.is_some());
     // An explicit `false` takes a toolbar item out of the arrow order too.
-    let item = item.filter(|_| !disabled || soft_disabled);
+    let item = item.and_then(|item| item.join(!disabled || soft_disabled));
 
     // Once per instance, as the bad-chord warning.
     let warned = use_warn_once();

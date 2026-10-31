@@ -327,7 +327,7 @@ pub fn Button(props: ButtonProps) -> Element {
             .or(group.focusable_when_disabled)
             .unwrap_or(item.is_some());
     // An explicit `false` takes a toolbar item out of the arrow order too.
-    let item = item.filter(|_| !disabled || soft_disabled);
+    let item = item.and_then(|item| item.join(!disabled || soft_disabled));
 
     if is_link && props.loading == Some(true) {
         warn("Button: `loading` is ignored on a link - an `<a>` has nothing to wait for.");

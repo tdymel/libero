@@ -318,7 +318,7 @@ fn balanced_end(text: &str, from: usize, open: &str, close: &str) -> usize {
 }
 
 /// Prism token name/alias to `lsx-tok-*` class. Anything unmatched stays unstyled.
-const TOKEN_CLASSES: &[(&str, &str)] = &[
+pub(super) const TOKEN_CLASSES: &[(&str, &str)] = &[
     ("comment", "lsx-tok-comment"),
     ("string", "lsx-tok-string"),
     ("char", "lsx-tok-string"),

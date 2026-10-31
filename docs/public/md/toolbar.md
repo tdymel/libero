@@ -23,12 +23,31 @@ use pictogram_icons_lucide as lucide;
 
 #[component]
 fn Demo() -> Element {
+    let mut bold = use_signal(|| false);
+    let mut italic = use_signal(|| false);
+    let mut underline = use_signal(|| false);
+
     rsx! {
         Toolbar { "aria-label": "Formatting",
             ToolbarGroup { "aria-label": "Style",
-                ActionIcon { aria_label: "Bold", icon: lucide::bold::outlined }
-                ActionIcon { aria_label: "Italic", icon: lucide::italic::outlined }
-                ActionIcon { aria_label: "Underline", icon: lucide::underline::outlined }
+                ActionIcon {
+                    aria_label: "Bold",
+                    selected: bold(),
+                    onclick: move |_| bold.toggle(),
+                    icon: lucide::bold::outlined,
+                }
+                ActionIcon {
+                    aria_label: "Italic",
+                    selected: italic(),
+                    onclick: move |_| italic.toggle(),
+                    icon: lucide::italic::outlined,
+                }
+                ActionIcon {
+                    aria_label: "Underline",
+                    selected: underline(),
+                    onclick: move |_| underline.toggle(),
+                    icon: lucide::underline::outlined,
+                }
             }
             ToolbarSeparator {}
             ToolbarGroup { "aria-label": "History",
@@ -87,7 +106,8 @@ parts work.
 - Under a finger a small control's 44px touch box reaches at most half the gap
   along the bar, so a tap never runs its neighbour.
 - An arrow passes over a control that cannot take focus, such as one hidden
-  with `display: none`.
+  with `display: none`. When the tab stop is such a control, it moves to the
+  first that can.
 
 ### You must
 
@@ -100,7 +120,8 @@ parts work.
 
 An editor bar, `Toolbar { "aria-label": "Formatting" }` with `ToolbarGroup`s
 named "Style" and "History": Tab enters on one button, the arrows move through
-Bold, Italic, Undo and Redo, and Tab leaves the bar.
+Bold, Italic, Undo and Redo, and Tab leaves the bar. Bold, Italic and Underline
+are toggles, `selected` on each, so a screen reader hears whether they are on.
 
 ### Limits
 
@@ -108,6 +129,8 @@ Bold, Italic, Undo and Redo, and Tab leaves the bar.
   `SegmentedControl`, `TextField` and `NumberField` (and what is built on them)
   join the arrow order. Another focusable element inside stays its own tab
   stop.
+- In a desktop WebView the arrow order is the order the controls mounted in, so
+  a control shown later through an `if` comes last there.
 - A long horizontal bar wraps. A `ToolbarSeparator` stays where the flow puts
   it, so it can end a row; it is not dropped at a wrap.
 

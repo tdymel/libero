@@ -153,7 +153,7 @@ pub fn HoverCard(props: HoverCardProps) -> Element {
                 Some(css) => css_px(&css).map_or_else(
                     || {
                         warn(&format!(
-                            "HoverCard: gap `{css}` is not a px or rem length, so the card is placed by the theme's gap."
+                            "HoverCard: gap `{css}` is not a px or rem length of 0 or more, so the card is placed by the theme's gap."
                         ));
                         theme.popover.gap
                     },

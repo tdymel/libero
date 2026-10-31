@@ -45,3 +45,20 @@ pub(crate) fn use_token_theme() {
         CssLayer::Framework,
     );
 }
+
+#[cfg(test)]
+mod tests {
+    use super::TOKEN_STYLESHEET;
+    use crate::components::typography::code::highlight::TOKEN_CLASSES;
+
+    /// A class the highlighter emits with no rule here renders unstyled (todo 5171).
+    #[test]
+    fn every_token_class_has_a_rule() {
+        for (_, class) in TOKEN_CLASSES {
+            assert!(
+                TOKEN_STYLESHEET.contains(&format!(".{class}{{")),
+                "{class} has no rule"
+            );
+        }
+    }
+}

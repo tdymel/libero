@@ -142,6 +142,16 @@ pub fn Toolbar(props: ToolbarProps) -> Element {
     let scope = use_provide_toolbar(orientation);
     let bar = use_element();
 
+    // A hidden or disabled stop leaves the bar with no Tab stop (todos 5165, 5167); a resize
+    // catches an item a breakpoint hides.
+    use_effect(move || {
+        let _ = bar.mount_token();
+        scope.watch();
+        settle_stop(&bar, scope);
+    });
+    let onresize = move |_: Event<ResizeData>| settle_stop(&bar, scope);
+    crate::hooks::use_resize_fallback(bar, onresize);
+
     let mut attributes = props.attributes;
     let named = names_itself(&attributes);
     use_name_warning(
@@ -340,6 +350,7 @@ pub fn Toolbar(props: ToolbarProps) -> Element {
         .event("onkeydown", onkeydown)
         .event("onfocusin", onfocusin)
         .event("onfocusout", onfocusout)
+        .event("onresize", onresize)
         .attr("role", "toolbar")
         // `horizontal` is the role's default.
         .attr(
@@ -377,6 +388,39 @@ fn follow_focus(bar: &ElementHandle, scope: ToolbarScope) {
     if let Some(id) = id {
         scope.focused(id);
     }
+}
+
+/// Puts the tab stop on the first item that can take focus, in DOM order, unless the
+/// focused stop still can. A WebView queries nothing and keeps its stop.
+fn settle_stop(bar: &ElementHandle, scope: ToolbarScope) {
+    let Ok(items) = bar.query_selector_all(&format!("[{TOOLBAR_ITEM}]")) else {
+        return;
+    };
+    spawn(async move {
+        let mut usable = Vec::new();
+        for item in &items {
+            // `display: none` measures 0 by 0.
+            let shown = item
+                .dimensions()
+                .await
+                .is_ok_and(|size| size.width > 0.0 || size.height > 0.0);
+            if shown
+                && !item.matches(":disabled").unwrap_or(false)
+                && let Some(id) = marked_id(item.as_ref())
+            {
+                usable.push(id);
+            }
+        }
+        let Some(&first) = usable.first() else {
+            return;
+        };
+        let keep = scope
+            .stop()
+            .is_some_and(|stop| usable.contains(&stop) && (scope.chosen() || stop == first));
+        if !keep {
+            scope.settle(first);
+        }
+    });
 }
 
 /// Where focus may go from the bar and Escape still hands back: the bar, its popups.

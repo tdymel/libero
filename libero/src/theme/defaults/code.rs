@@ -33,7 +33,8 @@ pub struct CodeDefaults {
 impl CodeDefaults {
     pub const DEFAULT: Self = Self {
         font_family: MONO_FONT_FAMILY,
-        tok_keyword: "#cf222e",
+        // GitHub's red one step darker: `#cf222e` cleared inline `Code` by 0.03 (todo 5172).
+        tok_keyword: "#a40e26",
         tok_string: "#0a3069",
         // The block's `muted_text`: GitHub's grey fell to 4.27:1 on a tint (todo 241).
         tok_comment: "var(--lsx-muted-7)",

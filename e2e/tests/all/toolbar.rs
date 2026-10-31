@@ -137,6 +137,40 @@ async fn a_late_item_keeps_its_place<D: Driver>(d: &mut D, _route: &str) -> Resu
     Ok(())
 }
 
+/// A hard-disabled first item takes no focus, so Tab enters on the next (todo 5166).
+async fn a_hard_disabled_first_item_is_no_stop<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    d.focus("#before").await?;
+    d.press(keyboard::TAB).await?;
+    eventually_focused(d, "#one", "Tab into the bar").await
+}
+
+/// Hiding the stop moves it to the first item that can take focus (todo 5165).
+async fn a_hidden_stop_moves_on<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    d.click("#hide").await?;
+    eventually(d, "the stop to leave the hidden #one", async |d| {
+        Ok(d.attr("#two", "tabindex").await?.as_deref() == Some("0"))
+    })
+    .await?;
+    d.focus("#before").await?;
+    d.press(keyboard::TAB).await?;
+    eventually_focused(d, "#two", "Tab past the hidden stop").await
+}
+
+/// A stop that turns hard-disabled hands the stop on (todo 5166).
+async fn a_stop_turning_hard_disabled_moves_on<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    d.click("#two").await?;
+    eventually_focused(d, "#two", "a click on two").await?;
+    d.click("#off").await?;
+    // A hard-disabled `Button` keeps no native `disabled` (todo 3838), only `tabindex=-1`.
+    eventually(d, "the stop to leave the disabled #two", async |d| {
+        Ok(d.attr("#one", "tabindex").await?.as_deref() == Some("0"))
+    })
+    .await?;
+    d.focus("#before").await?;
+    d.press(keyboard::TAB).await?;
+    eventually_focused(d, "#one", "Tab past the disabled stop").await
+}
+
 const SEGMENT: &str = "[role=radiogroup] input:focus";
 
 /// Home and End scroll the page in WKWebView; there Cmd+Left and Cmd+Right move the caret.
@@ -317,6 +351,24 @@ e2e::scenario!(
     an_item_shown_later_keeps_its_dom_place,
     "/toolbar-script-focus",
     a_late_item_keeps_its_place
+);
+e2e::scenario!(
+    tab_skips_a_hard_disabled_first_item,
+    "/toolbar-stop",
+    a_hard_disabled_first_item_is_no_stop
+);
+e2e::scenario!(
+    a_hidden_tab_stop_hands_the_stop_on,
+    "/toolbar-stop",
+    a_hidden_stop_moves_on,
+    android: skip("5165: a WebView queries no item, so its stop stays"),
+    desktop: skip("5165: a WebView queries no item, so its stop stays"),
+    ios: skip("5165: a WebView queries no item, so its stop stays")
+);
+e2e::scenario!(
+    a_tab_stop_turning_hard_disabled_hands_the_stop_on,
+    "/toolbar-stop",
+    a_stop_turning_hard_disabled_moves_on
 );
 e2e::scenario!(
     the_arrows_rove_over_every_kind_of_item,

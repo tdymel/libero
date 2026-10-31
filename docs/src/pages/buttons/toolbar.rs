@@ -17,14 +17,19 @@ pub(super) fn focus_from(values: &DemoValues) -> bool {
     values.str("focus_from") == "true"
 }
 
-/// With `focus_from`, prints the handle and the editor it names.
+/// Prints the toggles' signals; with `focus_from`, the handle and the editor it names too.
 fn wrap(values: &DemoValues, source: &str) -> String {
-    if !focus_from(values) {
-        return source.to_string();
+    let from = focus_from(values);
+    let mut code = FILE.section("signals");
+    code.push('\n');
+    if from {
+        code.push_str("let editor = use_element();\n");
     }
-    let mut code = String::from("let editor = use_element();\n\nrsx! {\n");
+    code.push_str("\nrsx! {\n");
     code.push_str(&indent(source));
-    code.push_str(&indent(&FILE.section("editor")));
+    if from {
+        code.push_str(&indent(&FILE.section("editor")));
+    }
     code.push('}');
     code
 }
@@ -81,15 +86,15 @@ pub fn ToolbarPage() -> Element {
                     "`NumberField`'s Up and Down stay its stepper, in a vertical bar too; its stepper buttons stay out of the arrow order.",
                     "`ToolbarGroup` is a `role=\"group\"`; `ToolbarSeparator` a `role=\"separator\"` across the bar.",
                     "Under a finger a small control's 44px touch box reaches at most half the gap along the bar, so a tap never runs its neighbour.",
-                    "An arrow passes over a control that cannot take focus, such as one hidden with `display: none`.",
-                ])
+                    "An arrow passes over a control that cannot take focus, such as one hidden with `display: none`. When the tab stop is such a control, it moves to the first that can.",                ])
                 .must([
                     "Name the bar with `aria-label`, or `aria-labelledby` on a visible heading. Without either it warns in debug builds.",
                     "Name each `ToolbarGroup` with `aria-label`. Without it the group warns in debug builds too.",
                 ])
-                .example("An editor bar, `Toolbar { \"aria-label\": \"Formatting\" }` with `ToolbarGroup`s named \"Style\" and \"History\": Tab enters on one button, the arrows move through Bold, Italic, Undo and Redo, and Tab leaves the bar.")
+                .example("An editor bar, `Toolbar { \"aria-label\": \"Formatting\" }` with `ToolbarGroup`s named \"Style\" and \"History\": Tab enters on one button, the arrows move through Bold, Italic, Undo and Redo, and Tab leaves the bar. Bold, Italic and Underline are toggles, `selected` on each, so a screen reader hears whether they are on.")
                 .limits([
                     "Only `Button`, `ActionIcon`, `Select`, `Checkbox`, `Switch`, `SegmentedControl`, `TextField` and `NumberField` (and what is built on them) join the arrow order. Another focusable element inside stays its own tab stop.",
+                    "In a desktop WebView the arrow order is the order the controls mounted in, so a control shown later through an `if` comes last there.",
                     "A long horizontal bar wraps. A `ToolbarSeparator` stays where the flow puts it, so it can end a row; it is not dropped at a wrap.",
                 ]),
             lead: rsx! {
