@@ -48,6 +48,8 @@ pub use chrono_field::{ChronoField, ChronoFieldProps};
 pub use chrono_picker::{ChronoPicker, ChronoPickerPart, ChronoPickerProps};
 pub use date_value::DateValue;
 #[cfg(feature = "date-field")]
+pub(crate) use fields::day_example;
+#[cfg(feature = "date-field")]
 pub use fields::{
     DateField, DateFieldProps, DateRangeField, DateRangeFieldProps, DateTimeField,
     DateTimeFieldProps, DateTimeRangeField, DateTimeRangeFieldProps, TimeField, TimeFieldProps,

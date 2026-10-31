@@ -184,11 +184,12 @@ pub fn TableColumnsButton() -> Element {
                 .disabled(last)
                 .keep_open()
                 .onselect(move |_| {
-                    let said = (!off).then(|| (labels.column_hidden)(&header));
+                    let said = match off {
+                        true => (labels.column_shown)(&header),
+                        false => (labels.column_hidden)(&header),
+                    };
                     hidden.set_then(toggle_column(&hidden.read(), &header, off), move || {
-                        if let Some(said) = said {
-                            announcer.say(said);
-                        }
+                        announcer.say(said);
                     });
                 })
                 .into()

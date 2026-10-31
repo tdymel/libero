@@ -5,8 +5,10 @@ use pictogram_icons_lucide as lucide;
 
 use super::{
     cell_value::FilterKind,
-    column_filter::{ColumnFilter, FilterLogic, FilterOperator, SelectOption},
-    filter_popover::{FILTER_POPOVER_SX, FilterTarget, FilterValue, operator_choices},
+    column_filter::{CellTest, ColumnFilter, FilterLogic, FilterOperator, SelectOption, filter_of},
+    filter_popover::{
+        FILTER_POPOVER_SX, FilterTarget, FilterValue, holds_something, operator_choices,
+    },
     use_table::StateSlice,
 };
 use crate::{
@@ -20,12 +22,12 @@ use crate::{
     context::IconSlot,
     hooks::{
         Align, ElementHandle, PopoverOptions, Side, id_selector, listener, use_debounced_callback,
-        use_element, use_id, use_popover, use_theme,
+        use_element, use_formats, use_id, use_popover, use_theme,
     },
     localization::TableLabels,
     platform::{ElementApi, PlatformError, focus_selector, is_tab, next_task},
     sx::{StaticSx, sx},
-    theme::{Size, SizeCss},
+    theme::{ColorCss, ColorShade, DIVIDER_THICKNESS, Size, SizeCss},
 };
 
 static FILTER_PANEL_SX: StaticSx = StaticSx::new(|| {
@@ -39,6 +41,16 @@ static FILTER_PANEL_SX: StaticSx = StaticSx::new(|| {
                 .flex_wrap("wrap")
                 .align_items("center")
                 .gap(SizeCss::SPACING.value(Size::Xs)),
+        )
+        // A rule between lines: wrapped at 375 px, one line's two rows read as one (5152).
+        .selector(
+            "& > [data-filter-line] + [data-filter-line]",
+            sx().border_top(format!(
+                "{} solid {}",
+                DIVIDER_THICKNESS.value(Size::Xs),
+                ColorCss::MUTED.value(ColorShade::S4)
+            ))
+            .padding_top(SizeCss::SPACING.value(Size::Sm)),
         )
         .selector(
             "& > [data-filter-line] > *",
@@ -68,11 +80,70 @@ impl Options for PanelColumn {
     }
 }
 
+/// A panel-local id per line, in the lines' order: the rsx key and the draft's key (5151).
+#[derive(Clone, Copy)]
+struct LineIds(CopyValue<(Vec<u64>, u64)>);
+
+impl LineIds {
+    /// The ids for `len` lines: new ones for lines added at the end since.
+    fn sync(self, len: usize) -> Vec<u64> {
+        let mut inner = self.0;
+        let mut held = inner.write();
+        let (ids, next) = &mut *held;
+        ids.truncate(len);
+        while ids.len() < len {
+            *next += 1;
+            ids.push(*next);
+        }
+        ids.clone()
+    }
+
+    fn line(self, id: u64) -> Option<usize> {
+        self.0.read().0.iter().position(|&each| each == id)
+    }
+
+    fn remove(self, line: usize) {
+        let mut inner = self.0;
+        let ids = &mut inner.write().0;
+        if line < ids.len() {
+            ids.remove(line);
+        }
+    }
+
+    /// Keeps the lines whose `keep` is true.
+    fn retain(self, keep: &[bool]) {
+        let mut inner = self.0;
+        let ids = &mut inner.write().0;
+        let mut keep = keep.iter();
+        ids.retain(|_| keep.next().copied().unwrap_or(true));
+    }
+}
+
+/// The line that takes the focus when `line` of `len` goes, by its index now: the next
+/// one, which moves into its place, else the one before. `None`: no line remains.
+fn taking_place(line: usize, len: usize) -> Option<usize> {
+    match len <= 1 {
+        true => None,
+        false if line + 1 < len => Some(line + 1),
+        false => line.checked_sub(1),
+    }
+}
+
 /// What takes the focus once the panel's lines render.
 #[derive(Clone, Copy, PartialEq)]
 enum PanelFocus {
     Line(usize),
     Add,
+}
+
+/// The control a column opened the panel from, which takes the focus back on close.
+#[derive(Clone, PartialEq)]
+struct PanelOpener {
+    button: ElementHandle,
+    /// Takes it instead once the column's filter is gone: a filtered-header button goes with it.
+    fallback: ElementHandle,
+    column: String,
+    kind: FilterKind,
 }
 
 /// The panel's open state and its button, shared with the column menus.
@@ -81,6 +152,8 @@ pub(super) struct PanelControl {
     open: Signal<bool>,
     anchor: ElementHandle,
     focus: Signal<Option<PanelFocus>>,
+    /// `None`: opened from the toolbar's Filters button.
+    opener: Signal<Option<PanelOpener>>,
 }
 
 pub(super) fn use_panel_control() -> PanelControl {
@@ -88,12 +161,25 @@ pub(super) fn use_panel_control() -> PanelControl {
         open: use_signal(|| false),
         anchor: use_element(),
         focus: use_signal(|| None),
+        opener: use_signal(|| None),
     }
 }
 
 impl PanelControl {
-    /// Opens on `target`'s line, adding one when the column has none.
-    pub fn open_for(mut self, target: &FilterTarget) {
+    /// Opens on `target`'s line from `button`, adding a line when the column has none.
+    /// Focus goes back to `button` on close, or to `fallback` once the filter is gone.
+    pub fn open_for(
+        mut self,
+        target: &FilterTarget,
+        button: ElementHandle,
+        fallback: ElementHandle,
+    ) {
+        self.opener.set(Some(PanelOpener {
+            button,
+            fallback,
+            column: target.column.clone(),
+            kind: target.kind,
+        }));
         let mut filters = target.slice.peek();
         let line = match filters.iter().position(|item| item.column == target.column) {
             Some(line) => line,
@@ -107,6 +193,16 @@ impl PanelControl {
         self.focus.set(Some(PanelFocus::Line(line)));
         self.open.set(true);
     }
+
+    /// Whether the panel is open from `button`, for its `aria-expanded`. Reactive.
+    pub fn expanded_from(&self, button: ElementHandle) -> bool {
+        (self.open)()
+            && self
+                .opener
+                .read()
+                .as_ref()
+                .is_some_and(|opener| opener.button == button)
+    }
 }
 
 /// The toolbar's Filters button, with the active filters' count.
@@ -117,7 +213,7 @@ pub(super) fn FilterPanelButton(
     size: Size,
     active: usize,
 ) -> Element {
-    let mut open = control.open;
+    let (mut open, mut opener) = (control.open, control.opener);
     let mut attributes = vec![
         attr("aria-haspopup", "dialog"),
         attr("aria-expanded", open().to_string()),
@@ -130,7 +226,10 @@ pub(super) fn FilterPanelButton(
             variant: "standard",
             size,
             attributes,
-            onclick: move |_| open.toggle(),
+            onclick: move |_| {
+                opener.set(None);
+                open.toggle();
+            },
             icon: rsx! {
                 Icon { variant: "standard", size: "sm", color: "inherit",
                     Glyph { slot: IconSlot::Filter, icon: lucide::funnel::outlined }
@@ -163,18 +262,20 @@ pub(super) fn FilterPanel(
         mut open,
         anchor,
         mut focus,
+        opener,
     } = control;
     let box_id = use_id();
-    // Typed values by line, applied together once typing settles.
-    let mut drafts = use_signal(BTreeMap::<usize, String>::new);
+    let ids = LineIds(use_hook(|| CopyValue::new((Vec::new(), 0))));
+    // Typed values by line id, applied together once typing settles.
+    let mut drafts = use_signal(BTreeMap::<u64, String>::new);
     let mut flush = move || {
         let pending = std::mem::take(&mut *drafts.write());
         if pending.is_empty() {
             return;
         }
         let mut filters = slice.peek();
-        for (line, text) in pending {
-            if let Some(item) = filters.get_mut(line) {
+        for (id, text) in pending {
+            if let Some(item) = ids.line(id).and_then(|line| filters.get_mut(line)) {
                 item.value = text;
             }
         }
@@ -182,14 +283,29 @@ pub(super) fn FilterPanel(
         onfilter.call(());
     };
     let apply = use_debounced_callback(move |()| flush(), 300);
-    let edit = move |line: usize, change: Box<dyn FnOnce(&mut ColumnFilter)>| {
+    let edit = move |id: u64, change: Box<dyn FnOnce(&mut ColumnFilter)>| {
         let mut filters = slice.peek();
-        if let Some(item) = filters.get_mut(line) {
+        if let Some(item) = ids.line(id).and_then(|line| filters.get_mut(line)) {
             change(item);
             slice.set(filters);
             onfilter.call(());
         }
     };
+    let formats = use_formats();
+    // The column's control it opened from, else the Filters button (5148).
+    let back = use_memo(move || match &*opener.read() {
+        None => anchor,
+        Some(PanelOpener {
+            button,
+            fallback,
+            column,
+            kind,
+        }) => {
+            let kept = filter_of(&slice.read(), column)
+                .is_some_and(|item| CellTest::new(item, *kind, formats).is_some());
+            if kept { *button } else { *fallback }
+        }
+    });
     let popover = use_popover(
         anchor,
         open(),
@@ -199,24 +315,52 @@ pub(super) fn FilterPanel(
             .remeasure(slice.read().len() as u64)
             .dismiss(true),
     );
+    use_effect(move || {
+        if open() && popover.placed() {
+            popover.return_focus_to(back());
+        }
+    });
     let close = move |refocus: bool| {
         open.set(false);
         if refocus {
-            let _ = anchor.focus();
+            let _ = back.peek().focus();
         }
     };
     let mut dismiss = close;
     // The shared focus return decides: a focus moved elsewhere stays (3551).
     popover.on_dismiss(move || dismiss(false));
     let floating = *popover.floating();
-    let filters = slice.read();
     // Opened from the button: the first line, else Add. Once per opening: a
     // re-placement (natively a picker's listbox opening) must not move focus.
     let mut entered = use_hook(|| CopyValue::new(false));
+    let prune_columns = columns.clone();
     use_effect(move || {
         let (open, placed) = (open(), popover.placed());
         if !open {
-            entered.set(false);
+            // Lines a column's Filter added and nobody filled go with the close (5149).
+            if entered.replace(false) {
+                flush();
+                let filters = slice.peek();
+                let keep: Vec<bool> = filters
+                    .iter()
+                    .map(|item| {
+                        let kind = prune_columns
+                            .iter()
+                            .find(|column| column.header == item.column)
+                            .map_or(FilterKind::Text, |column| column.kind);
+                        holds_something(item, kind)
+                    })
+                    .collect();
+                if keep.contains(&false) {
+                    ids.retain(&keep);
+                    let mut keep = keep.into_iter();
+                    let kept = filters
+                        .into_iter()
+                        .filter(|_| keep.next() == Some(true))
+                        .collect();
+                    slice.set(kept);
+                }
+            }
             return;
         }
         if !placed || entered.replace(true) {
@@ -272,18 +416,25 @@ pub(super) fn FilterPanel(
             .find(|candidate| candidate.header == column)
             .map_or(FilterKind::Text, |column| column.kind)
     };
+    let filters = slice.read();
+    let line_ids = ids.sync(filters.len());
     let shown_drafts = drafts.read().clone();
     let lines: Vec<Element> = filters
         .iter()
+        .zip(line_ids)
         .enumerate()
-        .map(|(line, item)| {
+        .map(|(line, (item, id))| {
             let kind = kind_of(&item.column);
             let header = item.column.clone();
             let picked = columns.iter().find(|column| column.header == header).cloned();
             let options = picked.as_ref().map(|column| column.options.clone()).unwrap_or_default();
             let (operators, operator) = operator_choices(kind, item.operator, labels);
             rsx! {
-                div { key: "{line}", "data-filter-line": "{line}",
+                div {
+                    key: "{id}",
+                    role: "group",
+                    aria_label: header.clone(),
+                    "data-filter-line": "{line}",
                     NativeSelect {
                         // Not the caller's form data: a surrounding Fieldset's `required` skips it (4018).
                         required: false,
@@ -293,8 +444,8 @@ pub(super) fn FilterPanel(
                         options: columns.to_vec(),
                         onchange: move |column: PanelColumn| {
                             // The new column starts empty: text typed for the old one is dropped.
-                            drafts.write().remove(&line);
-                            edit(line, Box::new(move |item| {
+                            drafts.write().remove(&id);
+                            edit(id, Box::new(move |item| {
                                 *item = ColumnFilter::new(column.header, FilterOperator::of(column.kind)[0], "");
                             }));
                         },
@@ -308,7 +459,7 @@ pub(super) fn FilterPanel(
                             options: operators,
                             onchange: move |choice: Choice<FilterOperator>| {
                                 flush();
-                                edit(line, Box::new(move |item| item.operator = choice.value));
+                                edit(id, Box::new(move |item| item.operator = choice.value));
                             },
                         }
                     }
@@ -318,30 +469,30 @@ pub(super) fn FilterPanel(
                         labels,
                         size,
                         filter: Some(item.clone()),
-                        draft: shown_drafts.get(&line).cloned(),
+                        draft: shown_drafts.get(&id).cloned(),
                         name: (labels.filter_line_value)(&header),
                         ontext: move |text: String| {
-                            drafts.write().insert(line, text);
+                            drafts.write().insert(id, text);
                             apply.call(());
                         },
                         onpick: move |on: Option<bool>| {
-                            edit(line, Box::new(move |item| {
+                            edit(id, Box::new(move |item| {
                                 item.operator = FilterOperator::Is;
                                 item.value = on.map(|on| on.to_string()).unwrap_or_default();
                             }));
                         },
                         onday: move |(to, text): (bool, String)| {
-                            edit(line, Box::new(move |item| match to {
+                            edit(id, Box::new(move |item| match to {
                                 true => item.value_to = text,
                                 false => item.value = text,
                             }));
                         },
                         options,
                         onoption: move |option: Option<String>| {
-                            edit(line, Box::new(move |item| item.value = option.unwrap_or_default()));
+                            edit(id, Box::new(move |item| item.value = option.unwrap_or_default()));
                         },
                         onany: move |values: Vec<String>| {
-                            edit(line, Box::new(move |item| item.values = values));
+                            edit(id, Box::new(move |item| item.values = values));
                         },
                     }
                     ActionIcon {
@@ -351,12 +502,16 @@ pub(super) fn FilterPanel(
                         attributes: vec![attr("data-filter-remove", true)],
                         onclick: move |_| {
                             flush();
-                            // Focus moves first: a focused node going would dismiss the panel.
-                            let next = match line {
-                                0 => "[data-filter-add]".to_string(),
-                                _ => format!(
-                                    "[data-filter-line=\"{}\"] :is(select, [role=combobox])",
-                                    line - 1
+                            let Some(line) = ids.line(id) else {
+                                return;
+                            };
+                            let len = slice.peek().len();
+                            // Focus moves first: a focused node going would dismiss the panel. The
+                            // line taking this one's place, else the one before, else Add (5150).
+                            let next = match taking_place(line, len) {
+                                None => "[data-filter-add]".to_string(),
+                                Some(next) => format!(
+                                    "[data-filter-line=\"{next}\"] :is(select, [role=combobox])"
                                 ),
                             };
                             match floating.query_selector(&next) {
@@ -373,6 +528,7 @@ pub(super) fn FilterPanel(
                             let mut filters = slice.peek();
                             if line < filters.len() {
                                 filters.remove(line);
+                                ids.remove(line);
                                 slice.set(filters);
                                 onfilter.call(());
                             }
@@ -476,4 +632,18 @@ pub(super) fn FilterPanel(
     });
     popover.show(content);
     rsx! {}
+}
+
+#[cfg(test)]
+mod tests {
+    use super::taking_place;
+
+    /// 5150: the next line moves into a removed one's place; the last falls back to the one before.
+    #[test]
+    fn a_removed_line_hands_the_focus_to_the_line_taking_its_place() {
+        assert_eq!(taking_place(0, 1), None);
+        assert_eq!(taking_place(0, 2), Some(1));
+        assert_eq!(taking_place(1, 3), Some(2));
+        assert_eq!(taking_place(2, 3), Some(1));
+    }
 }

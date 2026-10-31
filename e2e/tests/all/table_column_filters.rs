@@ -101,7 +101,9 @@ async fn the_column_filters_narrow_the_rows<D: Driver>(d: &mut D, _route: &str) 
         Ok(!d.exists("[data-filtered]").await?)
     })
     .await?;
-    eventually_text(d, "#filters", "", "Clear").await
+    eventually_text(d, "#filters", "", "Clear").await?;
+    // Todo 5153: the value field takes the focus from the Clear that turned inert.
+    eventually_focused(d, &format!("{POPOVER} input"), "Clear").await
 }
 
 e2e::scenario!(
@@ -465,9 +467,32 @@ async fn the_filter_panel_edits_every_filter<D: Driver>(d: &mut D, _route: &str)
     if d.attr(BUTTON, "aria-label").await?.as_deref() != Some("Filters, 1 active") {
         bail!("the button does not name the active count");
     }
+    let escape_closes = async |d: &mut D, line: &str| -> Result<()> {
+        if d.platform() == Platform::Ios {
+            d.focus(&format!("{line} input")).await?;
+        }
+        d.press(keyboard::ESCAPE).await?;
+        eventually(d, "the closed panel", async |d| {
+            Ok(!d.exists(PANEL).await?)
+        })
+        .await
+    };
+
+    // 5147, 5148: the filtered header's button says the panel it opened is expanded, and takes the focus back.
+    const FILTERED: &str = "[data-filtered]";
+    d.click(FILTERED).await?;
+    eventually(d, "the panel from the filtered header", async |d| {
+        Ok(d.exists(PANEL).await?
+            && d.attr(FILTERED, "aria-expanded").await?.as_deref() == Some("true"))
+    })
+    .await?;
+    eventually_focused(d, &format!("{LINE_0} {PICKER}"), "the filtered header").await?;
+    escape_closes(d, LINE_0).await?;
+    eventually_focused(d, FILTERED, "Escape from the filtered header's panel").await?;
 
     // No settle: the closed panel's late focus-out check took focus from the reopened one (1656).
-    d.click("[aria-label=\"Stock column options\"]").await?;
+    const STOCK_MENU: &str = "[aria-label=\"Stock column options\"]";
+    d.click(STOCK_MENU).await?;
     // Kept from the read that found it, not read again (1675).
     let item = menu_entry(d, "Filter").await?;
     d.click(&item).await?;
@@ -476,6 +501,32 @@ async fn the_filter_panel_edits_every_filter<D: Driver>(d: &mut D, _route: &str)
     })
     .await?;
     eventually_focused(d, &format!("{LINE_1} {PICKER}"), "the menu's Filter").await?;
+    // 5150, 5152: removing the first line focuses the one taking its place, a group named by its column.
+    d.click(&format!("{LINE_0} [data-filter-remove]")).await?;
+    eventually_focused(d, &format!("{LINE_0} {PICKER}"), "removing the first line").await?;
+    let (role, name) = (
+        d.attr(LINE_0, "role").await?,
+        d.attr(LINE_0, "aria-label").await?,
+    );
+    if role.as_deref() != Some("group") || name.as_deref() != Some("Stock") {
+        bail!("the line is no group named by its column: {role:?} {name:?}");
+    }
+    // 5148, 5149: Escape returns to the menu's button, and the line left empty goes.
+    escape_closes(d, LINE_0).await?;
+    eventually_focused(d, STOCK_MENU, "Escape from the menu's panel").await?;
+    eventually(d, "the empty line dropped on close", async |d| {
+        Ok(d.text("#filters").await?.is_empty())
+    })
+    .await?;
+
+    d.click(STOCK_MENU).await?;
+    let item = menu_entry(d, "Filter").await?;
+    d.click(&item).await?;
+    eventually(d, "the panel from the menu again", async |d| {
+        d.exists(PANEL).await
+    })
+    .await?;
+    eventually_focused(d, &format!("{LINE_0} {PICKER}"), "the menu's Filter again").await?;
     // A real press outside still closes the reopened panel.
     d.click("#filters").await?;
     eventually(d, "the panel closed by a press outside", async |d| {

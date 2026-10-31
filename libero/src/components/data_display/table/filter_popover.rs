@@ -1,5 +1,8 @@
 #[cfg(feature = "date-field")]
-use crate::{components::form::DateField, platform::reads_dom_synchronously};
+use crate::{
+    components::form::{DateField, day_example},
+    platform::reads_dom_synchronously,
+};
 #[cfg(feature = "date-field")]
 use chrono::NaiveDate;
 use dioxus::prelude::*;
@@ -109,6 +112,14 @@ fn operator_of(filters: &[ColumnFilter], column: &str, kind: FilterKind) -> Filt
     filter_of(filters, column).map_or(FilterOperator::of(kind)[0], |filter| filter.operator)
 }
 
+/// Whether `filter` is worth keeping: a value, or an operator other than `kind`'s default.
+pub(super) fn holds_something(filter: &ColumnFilter, kind: FilterKind) -> bool {
+    !filter.value.is_empty()
+        || !filter.value_to.is_empty()
+        || !filter.values.is_empty()
+        || filter.operator != FilterOperator::of(kind)[0]
+}
+
 /// Lets `edit` change `column`'s filter, keeping the rest. Emptied with the default
 /// operator, the item goes: it holds nothing worth keeping.
 fn commit(
@@ -123,11 +134,7 @@ fn commit(
         .cloned()
         .unwrap_or_else(|| ColumnFilter::new(column, operator, ""));
     edit(&mut next);
-    let keeps = !next.value.is_empty()
-        || !next.value_to.is_empty()
-        || !next.values.is_empty()
-        || operator != FilterOperator::of(kind)[0];
-    let next = keeps.then_some(next);
+    let next = holds_something(&next, kind).then_some(next);
     if filter_of(&filters, column) != next.as_ref() {
         slice.set(with_filter(&filters, column, next));
     }
@@ -412,6 +419,8 @@ pub(super) fn FilterValue(
                         label,
                         aria_label,
                         size,
+                        // Typed text reads in the locale's format, not ISO: the hint shows it (5156).
+                        placeholder: day_example(),
                         value: value.parse::<NaiveDate>().ok(),
                         "data-filter-value": (!end).then_some(true),
                         onchange: move |day: Option<NaiveDate>| {
@@ -578,11 +587,11 @@ pub(super) fn FilterPopover(
     // The shared focus return decides: a focus moved elsewhere stays (3551).
     popover.on_dismiss(move || close.call(false));
     let floating = *popover.floating();
-    // The value field takes focus once placed, else the operator picker.
-    let mut entered = use_signal(|| false);
-    use_effect(move || match (open(), popover.placed()) {
-        (true, true) if !*entered.peek() => {
-            entered.set(true);
+    // The value field takes focus once placed, else the operator picker; again after Clear.
+    let mut wants_focus = use_signal(|| true);
+    use_effect(move || match (open(), popover.placed(), wants_focus()) {
+        (true, true, true) => {
+            wants_focus.set(false);
             const VALUE: &str = "input[data-filter-value]";
             const PICKER: &str = ":is(select, [role=combobox])";
             let target = floating
@@ -603,7 +612,7 @@ pub(super) fn FilterPopover(
                 }
             }
         }
-        (false, _) => entered.set(false),
+        (false, _, false) => wants_focus.set(true),
         _ => {}
     });
 
@@ -712,6 +721,8 @@ pub(super) fn FilterPopover(
                             draft.set(None);
                             slice.set(without_column(&slice.peek(), &clear_column));
                             onfilter.call(());
+                            // The button turns inert under the focus: the value field takes it (5153).
+                            wants_focus.set(true);
                         },
                         "{labels.clear_filter}"
                     }
@@ -731,13 +742,17 @@ pub(super) fn FilteredButton(
     /// This button, and the popover's focus target while it opens from here.
     handle: ElementHandle,
     opener: Signal<ElementHandle>,
-    /// Set with `filter_panel`: opens the panel instead.
+    /// Set with `filter_panel`: opens the panel instead, from this button.
     #[props(default)]
-    onopen: Option<EventHandler<()>>,
+    onopen: Option<EventHandler<ElementHandle>>,
+    /// With `filter_panel`: whether the panel is open from this button (5147).
+    #[props(default)]
+    expanded: Option<bool>,
     /// In a grid the column menu's Filter is the keyboard route: out of the Tab order.
     grid: bool,
 ) -> Element {
     let (mut open, mut opener) = (open, opener);
+    let expanded = expanded.unwrap_or_else(&*open);
     rsx! {
         button {
             r#type: "button",
@@ -745,10 +760,10 @@ pub(super) fn FilteredButton(
             tabindex: grid.then_some("-1"),
             aria_label: (labels.filtered)(&column),
             aria_haspopup: "dialog",
-            aria_expanded: "{open()}",
+            aria_expanded: "{expanded}",
             onmounted: handle.mount(),
             onclick: move |_| match onopen {
-                Some(onopen) => onopen.call(()),
+                Some(onopen) => onopen.call(handle),
                 // Blitz focuses the button after the click and reports it at the
                 // poll's end, which would dismiss a popover opened in it.
                 None => {

@@ -48,6 +48,8 @@ pub(super) struct MenuColumn {
 pub(super) struct MenuFocus {
     /// The menu buttons by column key.
     triggers: CopyValue<BTreeMap<String, ElementHandle>>,
+    /// The filtered-header buttons by column key: the filter panel, in the table's scope, focuses them.
+    filtered: CopyValue<BTreeMap<String, ElementHandle>>,
     owed: Signal<Option<String>>,
     owner: ScopeId,
 }
@@ -55,6 +57,7 @@ pub(super) struct MenuFocus {
 pub(super) fn use_menu_focus() -> MenuFocus {
     let mut focus = MenuFocus {
         triggers: use_hook(|| CopyValue::new(BTreeMap::new())),
+        filtered: use_hook(|| CopyValue::new(BTreeMap::new())),
         owed: use_signal(|| None),
         owner: current_scope_id(),
     };
@@ -77,6 +80,14 @@ impl MenuFocus {
         *triggers.write().entry(key.to_string()).or_insert_with(|| {
             ElementHandle::new_in_scope(self.owner).retag(observes_by_tag().then(next_observe_tag))
         })
+    }
+
+    fn filtered_button(self, key: &str) -> ElementHandle {
+        let mut filtered = self.filtered;
+        *filtered
+            .write()
+            .entry(key.to_string())
+            .or_insert_with(|| ElementHandle::new_in_scope(self.owner))
     }
 
     /// Opens column `key`'s menu as a click on its button would, else focuses the button.
@@ -200,7 +211,7 @@ pub(super) fn ColumnMenu(
     let trigger = focus.trigger(&columns[index].key);
     let mut filter_open = use_signal(|| false);
     let filter_marker = use_press_marker();
-    let filtered_button = use_hook(ElementHandle::new);
+    let filtered_button = focus.filtered_button(&columns[index].key);
     let mut opener = use_signal(move || trigger);
     let column = &columns[index];
     let own_key = column.key.clone();
@@ -264,9 +275,10 @@ pub(super) fn ColumnMenu(
     }
     // Sort, filter, group, move, width, pin, hide.
     let target = filter.clone();
-    let open_panel = use_callback(move |()| {
+    // From the menu's Filter or the filtered-header button; the menu button once that goes.
+    let open_panel = use_callback(move |button: ElementHandle| {
         if let (Some(panel), Some(target)) = (panel, &target) {
-            panel.open_for(target);
+            panel.open_for(target, button, trigger);
         }
     });
     let open_panel = (panel.is_some() && filter.is_some()).then_some(open_panel);
@@ -274,7 +286,7 @@ pub(super) fn ColumnMenu(
         items.push(
             MenuItem::new(labels.filter)
                 .onselect(move |_| match open_panel {
-                    Some(open_panel) => open_panel.call(()),
+                    Some(open_panel) => open_panel.call(trigger),
                     None => {
                         opener.set(trigger);
                         filter_open.set(true);
@@ -405,8 +417,11 @@ pub(super) fn ColumnMenu(
                     .disabled(last)
                     .keep_open()
                     .onselect(move |_| {
-                        let (said, neighbour) =
-                            ((labels.column_hidden)(&header), neighbour_key.clone());
+                        let said = match off {
+                            true => (labels.column_shown)(&header),
+                            false => (labels.column_hidden)(&header),
+                        };
+                        let neighbour = neighbour_key.clone();
                         hidden.set_then(toggle_column(&hidden.read(), &header, off), move || {
                             // Hiding its own column unmounts this menu, as Hide does (todo 1490):
                             // the checkbox is gone before its state is read.
@@ -416,9 +431,7 @@ pub(super) fn ColumnMenu(
                             {
                                 focus.owe(neighbour);
                             }
-                            if !off {
-                                announcer.say(said);
-                            }
+                            announcer.say(said);
                         });
                     })
                     .into()
@@ -452,6 +465,7 @@ pub(super) fn ColumnMenu(
                 handle: filtered_button,
                 opener,
                 onopen: open_panel,
+                expanded: panel.map(|panel| panel.expanded_from(filtered_button)),
                 grid,
             }
         }

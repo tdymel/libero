@@ -205,6 +205,14 @@ pub struct TableLabels {
     /// assert_eq!((TableLabels::ENGLISH.column_hidden)("Name"), "Name hidden");
     /// ```
     pub column_hidden: fn(&str) -> String,
+    /// Announced after a Columns list shows a hidden column again, from the header text.
+    ///
+    /// ```
+    /// use libero::localization::TableLabels;
+    ///
+    /// assert_eq!((TableLabels::ENGLISH.column_shown)("Name"), "Name shown");
+    /// ```
+    pub column_shown: fn(&str) -> String,
     /// A header's resize grip, a separator the arrow keys move, from the header text.
     ///
     /// ```
@@ -634,6 +642,14 @@ fn german_column_hidden(column: &str) -> String {
     format!("{column} ausgeblendet")
 }
 
+fn english_column_shown(column: &str) -> String {
+    format!("{column} shown")
+}
+
+fn german_column_shown(column: &str) -> String {
+    format!("{column} eingeblendet")
+}
+
 fn english_resize_column(column: &str) -> String {
     format!("Resize {column}")
 }
@@ -866,6 +882,7 @@ impl TableLabels {
         column_sorted_descending: english_sorted_descending,
         column_unsorted: english_unsorted,
         column_hidden: english_column_hidden,
+        column_shown: english_column_shown,
         resize_column: english_resize_column,
         reorder: "Reorder",
         reorder_unavailable: "Clear the sort, filters and grouping to reorder rows",
@@ -955,6 +972,7 @@ impl TableLabels {
         column_sorted_descending: german_sorted_descending,
         column_unsorted: german_unsorted,
         column_hidden: german_column_hidden,
+        column_shown: german_column_shown,
         resize_column: german_resize_column,
         reorder: "Neu anordnen",
         reorder_unavailable: "Sortierung, Filter und Gruppierung aufheben, um Zeilen neu anzuordnen",
@@ -1039,6 +1057,7 @@ mod tests {
                 labels.column_sorted_descending,
                 labels.column_unsorted,
                 labels.column_hidden,
+                labels.column_shown,
                 labels.group_by,
                 labels.ungroup,
                 labels.column_grouped,

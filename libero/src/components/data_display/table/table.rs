@@ -1308,7 +1308,8 @@ pub struct TableProps<T: Clone + PartialEq + 'static> {
     #[props(default)]
     manual_filter: bool,
     /// The column filters, one per column, all applying; set, they are
-    /// controlled. A hidden column's filter keeps filtering.
+    /// controlled. A hidden column's filter keeps filtering. A filter names its
+    /// column by header: filterable columns sharing a header filter as one.
     #[props(default)]
     column_filters: Option<Vec<ColumnFilter>>,
     /// Seeds the column filters once. Ignored when `column_filters` is set.
@@ -1333,6 +1334,7 @@ pub struct TableProps<T: Clone + PartialEq + 'static> {
     /// A dialog of every column filter, several per column, joined by
     /// `filter_logic`, opened by a Filters button at the toolbar's start, or
     /// with a `toolbar`, by its `TableFilterButton`. `column_menu`'s Filter opens it too.
+    /// Its lines pick columns by header: give filterable columns distinct headers.
     #[props(default)]
     filter_panel: bool,
     #[props(extends = GlobalAttributes)]

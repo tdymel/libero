@@ -6,13 +6,25 @@ use chrono::{NaiveDate, NaiveDateTime, NaiveTime};
 
 use super::{
     DateRange,
+    calendar::DateLevel,
     chrono_field::{FieldOptions, chrono_field},
     date_value::DayGrid,
-    format::{Token, WeekdayWidth, tokens, uses_twelve_hours},
+    format::{Token, WeekdayWidth, format_date, tokens, uses_twelve_hours},
     picker_field::picker_field,
     props::date_props,
 };
-use crate::components::common::Input;
+use crate::{
+    components::common::Input,
+    hooks::{current_formats, current_localization},
+};
+
+/// A day written in the active locale's format, as a `DateField` placeholder: the
+/// 31st of December shows where the day and month go. Not a hook.
+pub(crate) fn day_example() -> String {
+    let day = NaiveDate::from_ymd_opt(2026, 12, 31).unwrap_or_default();
+    let format = (current_formats().date)(DateLevel::Day);
+    format_date(day, format, &current_localization().date)
+}
 
 /// The theme's time format adjusted for `with_seconds` and `twelve_hour`.
 /// Separators, padding and text stay.

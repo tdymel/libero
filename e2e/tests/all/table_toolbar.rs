@@ -85,6 +85,15 @@ async fn the_pieces_work<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
         "an export without Stock",
     )
     .await?;
+    // Todo 5154: showing it again is said too.
+    open(d, "columns").await?;
+    pick(d, "Stock").await?;
+    eventually_text(d, "[role=status]", "Stock shown", "the show announcement").await?;
+    d.press(keyboard::ESCAPE).await?;
+    eventually(d, "the menu to close again", async |d| {
+        Ok(!d.exists("[role^=menuitem]").await?)
+    })
+    .await?;
 
     // A cell: Blitz lays out no box for a `tr`.
     const CELL: &str = "tbody tr > *";
