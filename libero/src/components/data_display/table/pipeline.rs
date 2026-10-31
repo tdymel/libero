@@ -30,6 +30,8 @@ pub(super) struct GroupInfo {
     pub depth: usize,
     /// Its text, or the empty-group label.
     pub label: String,
+    /// Its label after its outer groups' labels, joined by `, `: the name a screen reader gets.
+    pub trail: String,
     /// Its rows' `data` indices, nested groups' too, in sorted order.
     pub leaves: Vec<usize>,
     pub id: String,
@@ -61,6 +63,7 @@ pub(super) fn nest_rows(
         rows: &mut rows,
         groups: &mut groups,
         path: Vec::new(),
+        labels: Vec::new(),
     };
     nest.level(leaves);
     (rows, groups)
@@ -73,6 +76,7 @@ struct Nest<'a> {
     rows: &'a mut Vec<VisibleRow>,
     groups: &'a mut Vec<GroupInfo>,
     path: Vec<String>,
+    labels: Vec<String>,
 }
 
 impl Nest<'_> {
@@ -100,10 +104,12 @@ impl Nest<'_> {
                 true => self.empty.to_string(),
                 false => text.to_string(),
             };
+            self.labels.push(label.clone());
             self.rows.push(VisibleRow::Group(self.groups.len()));
             self.groups.push(GroupInfo {
                 path: self.path.clone(),
                 depth,
+                trail: self.labels.join(", "),
                 label,
                 leaves: leaves.clone(),
                 id,
@@ -113,6 +119,7 @@ impl Nest<'_> {
                 self.level(leaves);
             }
             self.path.pop();
+            self.labels.pop();
         }
     }
 }
@@ -265,6 +272,10 @@ mod tests {
             [Group(0), Group(1), Data(0), Group(2), Data(1), Group(3)]
         );
         assert_eq!(groups[2].path, ["x", "2"]);
+        assert_eq!(
+            (groups[0].trail.as_str(), groups[2].trail.as_str()),
+            ("x", "x, 2")
+        );
         assert_eq!((groups[2].depth, groups[2].id.as_str()), (1, "x/2"));
         // A closed group lists no nested group rows, but counts every row.
         assert_eq!((groups.len(), groups[3].leaves.len()), (4, 1));
@@ -275,6 +286,7 @@ mod tests {
         let texts = texts(&[&["", "a", ""]]);
         let (_, groups) = nest_rows(&data(&[0, 1, 2]), &texts, &|_| false, "(empty)");
         assert_eq!(groups[0].label, "(empty)");
+        assert_eq!(groups[0].trail, "(empty)");
         assert_eq!((groups[0].id.as_str(), groups[0].leaves.len()), ("", 2));
     }
 

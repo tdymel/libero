@@ -182,6 +182,8 @@ pub(super) type GroupSelect = (Rc<CheckboxLook>, Callback<(String, bool)>);
 pub(super) fn GroupRow(
     id: String,
     label: String,
+    /// The label under its outer groups' labels: what the toggle and the box are named by.
+    trail: String,
     count: usize,
     depth: usize,
     open: bool,
@@ -206,7 +208,7 @@ pub(super) fn GroupRow(
         toggle,
         select,
     } = cells;
-    let name = (labels.group_toggle)(&label, count);
+    let name = (labels.group_toggle)(&trail, count);
     // The checkbox column leads after the handles and toggles, so it gets its own cell.
     let indexed = colindex.is_some();
     let select = select.zip(selected).map(|((look, choose), state)| {
@@ -222,7 +224,7 @@ pub(super) fn GroupRow(
                     event.prevent_default();
                 },
                 MixedSelect {
-                    aria_label: (labels.select_group)(&label, count),
+                    aria_label: (labels.select_group)(&trail, count),
                     look,
                     state,
                     onchange: move |on| choose((id.clone(), on)),
@@ -340,6 +342,7 @@ mod tests {
             path: vec![id.to_string()],
             depth: 0,
             label: id.to_string(),
+            trail: id.to_string(),
             leaves: leaves.to_vec(),
             id: id.to_string(),
             open: false,

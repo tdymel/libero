@@ -10,9 +10,9 @@ use crate::{
     components::{
         accessibility::use_announcer,
         common::{
-            ClassList, HtmlTag, Input, LogicalTextAlign, Parts, Sides, States, Variables, attr,
-            coarse_hit_area_sx, inset_focus_ring_sx, inset_ring_sides_sx, names_itself,
-            use_name_warning, variables,
+            COARSE_POINTER, ClassList, HtmlTag, Input, LogicalTextAlign, Parts, Sides, States,
+            Variables, attr, coarse_hit_area_sx, inset_focus_ring_sx, inset_ring_sides_sx,
+            names_itself, use_name_warning, variables,
         },
         form::use_checkbox_look,
         layout::{scroll_area_base, use_box},
@@ -626,7 +626,17 @@ static TABLE_SX: StaticSx = StaticSx::new(|| {
     )
     .selector(
         "& [data-reorder-controls]",
-        sx().display("flex").align_items("center"),
+        sx().display("flex").align_items("center").media(
+            COARSE_POINTER,
+            // The handle beside the move buttons, which stack: one 44px less wide.
+            sx().display("grid")
+                .with("grid-template-columns", "auto auto")
+                .selector(
+                    "& [data-reorder-handle]",
+                    sx().with("grid-row", "1 / span 2"),
+                )
+                .selector("& [data-reorder-move]", sx().with("grid-column", "2")),
+        ),
     )
     // A finger's 44px hit areas on the 24px handle and move buttons (todo 4669).
     .selector(

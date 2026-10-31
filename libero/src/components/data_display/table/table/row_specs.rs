@@ -96,6 +96,7 @@ pub(super) fn group_row<T: 'static>(spec: GroupSpec<'_, T>) -> GroupRowFn {
                 key: "\u{1f}{group.id}",
                 id: group.id.clone(),
                 label: group.label.clone(),
+                trail: group.trail.clone(),
                 count: group.leaves.len(),
                 depth: group.depth,
                 open: group.open,

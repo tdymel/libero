@@ -77,8 +77,13 @@ pub(crate) fn sortable_item_sx() -> Sx {
         )
 }
 
-pub(crate) static SORTABLE_HANDLE_SX: StaticSx =
-    StaticSx::new(|| control_sx().and(drag_handle_sx()).cursor("grab"));
+/// The handle: a grab cursor, dimmed like the move buttons while a host turns it off.
+pub(crate) static SORTABLE_HANDLE_SX: StaticSx = StaticSx::new(|| {
+    control_sx().and(drag_handle_sx()).cursor("grab").selector(
+        "&[aria-disabled=\"true\"]",
+        sx().opacity("0.4").cursor("default"),
+    )
+});
 
 /// The handle's and the move buttons' box.
 fn control_sx() -> Sx {
@@ -432,6 +437,17 @@ mod tests {
 
             assert!(css[coarse..].contains("min-width:44px"), "{css}");
             assert!(css[coarse..].contains("min-height:44px"), "{css}");
+        }
+    }
+
+    #[test]
+    fn an_off_handle_dims_like_the_move_buttons() {
+        for sx in [&SORTABLE_HANDLE_SX, &SORTABLE_MOVE_SX] {
+            let css = Stylesheet::from(sx).as_str().to_string();
+            let off = css.find("[aria-disabled=\"true\"]").expect(&css);
+
+            assert!(css[off..].contains("opacity:0.4"), "{css}");
+            assert!(css[off..].contains("cursor:default"), "{css}");
         }
     }
 

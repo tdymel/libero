@@ -24,8 +24,7 @@ const COLUMNS: &str = r#"columns: vec![
     column("Name")
         .value(|p: &Person| p.name.clone())
         .sortable()
-        .row_header()
-        .aggregate(Aggregate::Count),
+        .row_header(),
     column("Role")
         .value(|p: &Person| p.role.clone())
         .sortable()
@@ -53,8 +52,7 @@ const GROUPED_COLUMNS: &str = r#"columns: vec![
     column("Name")
         .value(|p: &Person| p.name.clone())
         .sortable()
-        .row_header()
-        .aggregate(Aggregate::Count),
+        .row_header(),
     column("Role")
         .value(|p: &Person| p.role.clone())
         .sortable()
@@ -227,6 +225,11 @@ fn sticks(values: &DemoValues) -> bool {
 /// The server's batches have no signal of the demo's own to reorder.
 fn reorders(values: &DemoValues) -> bool {
     values.str("reorder_rows") == "true" && !from_server(values) && !tree(values)
+}
+
+/// Grouping shows unless a tree replaces it or the reordering needs ungrouped rows.
+fn groups(values: &DemoValues) -> bool {
+    values.str("row_grouping") == "true" && !tree(values) && !reorders(values)
 }
 
 // snippet: item #[derive(Clone, PartialEq)] struct Person { name: String }
@@ -447,12 +450,12 @@ pub fn TablePage() -> Element {
                 .key(["Tab", "Shift+Tab"], "In a filter popover: moves between its fields; past either end it closes and Tab goes on from the button that opened it.")
                 .handles([
                     "A debug build warns about an unnamed table, about `selectable`, `row_detail` or `onrowreorder` without `row_key`, about `selectable` with a first row whose name cell has no text, about an editable column without `onrowupdate`, and about a pinned column after one with no `width`.",
-                    "`.row_header()` cells are `th scope=\"row\"`, so a screen reader reads the row's name as it moves down any other column. A group header is a `th scope=\"colgroup\"`, read with each cell under it.",
+                    "`.row_header()` cells are `th scope=\"row\"`, so a screen reader reads the row's name as it moves down any other column. A group header is a `th scope=\"colgroup\"` over a declared `colgroup`, read with each cell under it.",
                     "With `scroll` or `max_height`, an overflowing table with no button in it is a named region and a tab stop, so the arrows can scroll it. With header buttons there is no extra stop: the arrows scroll from a focused button.",
                     "Only sorted headers carry `aria-sort`. With `multi_sort`, each sort button's name adds its place, \"sort order 2\", and a tap always adds the column, as touch has no Shift.",
                     "Each row's checkbox is named \"Select\" plus the row's name: the row header's text, else the first cell's, else the row's key (\"Select 0\"), so give that column text. The header checkbox reads mixed while some rows are selected. A selected row carries `aria-selected=\"true\"`.",
                     "Each detail toggle is a button named \"Details for\" plus the row's name, with `aria-expanded` and, while open, `aria-controls`.",
-                    "Each group toggle is a button named by the group's text and row count, \"Admin, 2 rows\", with `aria-expanded`; opening or closing it is said in a polite live region, \"Admin expanded\". The table keeps its table role: group rows are rows with a button, not a tree.",
+                    "Each group toggle is a button named by the group's text and row count, \"Admin, 2 rows\", a nested one after its outer groups too, \"Owner, Yes, 2 rows\", with `aria-expanded`; opening or closing it is said in a polite live region, \"Admin expanded\". The table keeps its table role: group rows are rows with a button, not a tree.",
                     "A polite live region says what changed: the selected count, \"2 rows selected\"; the page range when the page or its size changes, \"4–6 of 7\"; a sort the reader picks, \"Sorted by Age, ascending\"; the rows left after a filter, \"2 rows\"; the rows loaded by `onbottomreached`, \"200 rows\"; an export, \"Exported 12 rows\". The first render says nothing.",
                     "Page buttons sit in a `nav` named after the caption, and the page-size picker is labelled. The quick-filter is a labelled search field described by the table's name, so two tables' fields differ.",
                     "Filter popovers and the filter panel are named dialogs with labelled fields. Focus moves in on open, and Escape closes them onto their button. A filtered header reads \"Age is filtered\". A select column's Is any of is a named group of checkboxes, one per option, and in the header filters row a named multi-select.",
@@ -595,10 +598,11 @@ pub fn TablePage() -> Element {
                         false => vec![],
                     }).hidden_when(windowed),
                     // On, so the group rows show without another switch; every group starts open.
-                    Control::switch("row_grouping").default("true").code(|_, values| match values.str("row_grouping") == "true" {
+                    // Rows don't reorder while grouped, so Reorder rows takes the grouping off.
+                    Control::switch("row_grouping").default("true").code(|_, values| match groups(values) {
                         true => vec![GROUPING.to_string()],
                         false => vec![],
-                    }).hidden_when(tree),
+                    }).hidden_when(|values| tree(values) || reorders(values)),
                     // A tree replaces the grouping and does not reorder; the rows nest under their `manager`.
                     Control::switch("tree_rows").code(|_, values| match tree(values) {
                         true => vec![TREE.to_string()],

@@ -172,8 +172,7 @@ fn team_columns(grouped: bool, editable: bool) -> Vec<Column<Person>> {
         column("Name")
             .value(|p: &Person| p.name.clone())
             .sortable()
-            .row_header()
-            .aggregate(Aggregate::Count),
+            .row_header(),
         group(
             column("Role")
                 .value(|p: &Person| p.role.clone())
@@ -240,6 +239,7 @@ pub fn TeamTable(values: DemoValues) -> Element {
             && !(windowed && WINDOW_HIDES.contains(&name))
             && !(tree && TREE_HIDES.contains(&name))
             && !(server && name == "loading")
+            && !(reorders(&values) && name == "row_grouping")
     };
     // Pins need the scroll area to hold against.
     let scrolls = on("scroll") || on("pinned");

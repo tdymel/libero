@@ -205,6 +205,31 @@ fn group_header_cells_are_grid_cells() {
     assert_eq!(tags_with(head, "tabindex=\"-1\"").len(), 2, "{html}");
 }
 
+/// A `colgroup`-scoped header needs the column groups it spans: one per top header cell.
+#[test]
+fn column_groups_are_declared_for_the_group_headers() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider {
+                Table {
+                    caption: "People",
+                    data: people(),
+                    columns: vec![
+                        column("Name").value(|p: &Person| p.name),
+                        column("Age").value(|p: &Person| p.age).group("Person"),
+                        column("City").value(|p: &Person| p.name).group("Person"),
+                    ],
+                }
+            }
+        }
+    }
+
+    let html = render(app);
+    let spans = html.matches("<colgroup").count();
+    assert_eq!(spans, 2, "{html}");
+    assert!(html.contains("<colgroup span=\"2\""), "{html}");
+}
+
 /// A paged grid counts every page's rows: the header row, then two of three.
 #[test]
 fn the_grid_counts_rows_when_paged() {

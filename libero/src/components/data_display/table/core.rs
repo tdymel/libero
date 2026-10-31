@@ -650,7 +650,23 @@ pub(super) fn render_body(body: BodySpec) -> Element {
     let mut select_all = select_all;
     let mut detail_header = detail_header;
     let mut reorder_header = reorder_header;
-    let head_rows: Vec<Element> = header_rows(&paths, |at| pin_edge_at(&headers, &shown, at))
+    let levels = header_rows(&paths, |at| pin_edge_at(&headers, &shown, at));
+    // A `colgroup`-scoped header applies to the column groups the table declares.
+    let column_groups = levels
+        .iter()
+        .flatten()
+        .any(|cell| matches!(cell, HeaderCell::Group { .. }))
+        .then(|| {
+            let spans = levels.first().into_iter().flatten().map(|cell| match cell {
+                HeaderCell::Group { span, .. } => *span,
+                HeaderCell::Column { .. } => 1,
+            });
+            std::iter::once(lead_columns)
+                .filter(|&lead| lead > 0)
+                .chain(spans)
+                .collect::<Vec<usize>>()
+        });
+    let head_rows: Vec<Element> = levels
         .into_iter()
         .enumerate()
         .map(|(level, cells)| {
@@ -809,6 +825,11 @@ pub(super) fn render_body(body: BodySpec) -> Element {
     rsx! {
         if let Some(spec) = caption {
             caption { id: spec.id, "{spec.text}" }
+        }
+        if let Some(spans) = column_groups {
+            for (at , span) in spans.into_iter().enumerate() {
+                colgroup { key: "{at}", span: "{span}" }
+            }
         }
         thead {
             onmounted: thead.mount(),
