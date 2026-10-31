@@ -8,6 +8,15 @@ use std::collections::HashSet;
 /// The page's own source: the printed parts are cut from its live demo.
 const FILE: DemoFile = DemoFile(include_str!("button_group.rs"));
 
+/// A single group keeps one of the styles Multiple pressed, the first in button order (5084).
+fn first_style(selected: &HashSet<String>) -> HashSet<String> {
+    ["bold", "italic", "underline"]
+        .into_iter()
+        .find(|style| selected.contains(*style))
+        .map(|style| HashSet::from([style.to_string()]))
+        .unwrap_or_default()
+}
+
 #[component]
 pub fn ButtonGroupPage() -> Element {
     let mut selected = use_signal(|| HashSet::from(["bold".to_string()]));
@@ -85,11 +94,12 @@ pub fn ButtonGroupPage() -> Element {
                     Control::sizes("radius")
                         .default("sm"),
                     Control::switch("disabled"),
-                    Control::switch("focusable_when_disabled"),
-                    // On, so the pressed look shows without another switch.
+                    Control::switch("focusable_when_disabled")
+                        .hidden_when(|values| values.str("disabled") != "true"),
+                    // On, so the pressed look shows without another switch; text styles combine.
                     Control::toggle("selection", ["off", "single", "multiple"])
                         .labels(["Off", "Single", "Multiple"])
-                        .default("single")
+                        .default("multiple")
                         .code(|_, values| match values.str("selection").as_str() {
                             "off" => vec![],
                             "single" => vec![
@@ -107,7 +117,11 @@ pub fn ButtonGroupPage() -> Element {
                     ButtonGroup {
                         "aria-label": "Text style",
                         orientation: values.str("orientation"),
-                        value: (values.str("selection") != "off").then(|| selected.cloned()),
+                        value: match values.str("selection").as_str() {
+                            "off" => None,
+                            "single" => Some(first_style(&selected.read())),
+                            _ => Some(selected.cloned()),
+                        },
                         multiple: values.str("selection") == "multiple",
                         onchange: move |next| selected.set(next),
                         variant: values.str("variant"),

@@ -422,6 +422,35 @@ e2e::scenario!(
     disabled_defaults
 );
 
+/// Todo 5083: under a finger an `xs` group's compact icons are as tall as its Buttons, row or column.
+#[test]
+fn under_a_finger_an_xs_group_keeps_one_height() {
+    use e2e::{Fixture, Viewport, browser::block_on};
+    block_on(async {
+        let fixture = Fixture::open("/button-group/compact", Viewport::Mobile)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        crate::hit_area::emulate_coarse_pointer(page).await;
+        let heights: Vec<f64> = e2e::js(
+            page,
+            "['#cr1', '#cr2', '#cr3', '#cc1', '#cc2'].map(s => document.querySelector(s).getBoundingClientRect().height)",
+        )
+        .await;
+        assert!(
+            heights
+                .iter()
+                .all(|height| (height - heights[0]).abs() < 0.5 && *height >= 43.5),
+            "heights under a finger: {heights:?}"
+        );
+        fixture
+            .console
+            .assert_clean("measuring the xs groups")
+            .unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
 #[test]
 fn it_meets_the_baseline() {
     Suite::new("button_group", "/button-group")

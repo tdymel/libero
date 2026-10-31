@@ -106,9 +106,13 @@ explains how parts work.
 - Each switch is a native checkbox announced as a switch, with its own label,
   and its description is read with it.
 - At `max_checked`, the off switches are disabled and leave the tab order, and
-  a line under the switches says the cap, from `common.at_most` in the
-  localization. The group's `aria-describedby` holds that line, and the switch
-  that reaches the cap announces it. A `readonly` group disables nothing.
+  a line under the switches says the cap, from `common.at_most_on` in the
+  localization. The group's `aria-describedby` holds that line after the
+  description and before the helper and status, as on screen, and the switch
+  that reaches the cap announces it. A `readonly` group disables nothing, and
+  neither a `readonly` nor a `disabled` group shows the line.
+- With an error status, every off track turns red, as on a lone `Switch`; only
+  the group is `aria-invalid`.
 - A group with no name logs a warning.
 
 ### You must

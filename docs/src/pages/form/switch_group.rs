@@ -11,7 +11,7 @@ struct AlertCopy;
 
 impl FieldCopy for AlertCopy {
     const LABEL: &'static str = "Alerts";
-    const DESCRIPTION: &'static str = "Two at most, the rest stay off.";
+    const DESCRIPTION: &'static str = "Where we reach you.";
     const HELPER: &'static str = "Text messages cost extra with your carrier.";
     const WARNING: &'static str = "Push needs notifications allowed.";
     const ERROR: &'static str = "Pick a channel to continue.";
@@ -158,7 +158,8 @@ pub fn SwitchGroupPage() -> Element {
                     "Its description, helper and status make up the group's `aria-describedby`.",
                     "A required group says \"Required\" after its label, from `common.required` in the localization: `aria-required` is not allowed on a `group`.",
                     "Each switch is a native checkbox announced as a switch, with its own label, and its description is read with it.",
-                    "At `max_checked`, the off switches are disabled and leave the tab order, and a line under the switches says the cap, from `common.at_most` in the localization. The group's `aria-describedby` holds that line, and the switch that reaches the cap announces it. A `readonly` group disables nothing.",
+                    "At `max_checked`, the off switches are disabled and leave the tab order, and a line under the switches says the cap, from `common.at_most_on` in the localization. The group's `aria-describedby` holds that line after the description and before the helper and status, as on screen, and the switch that reaches the cap announces it. A `readonly` group disables nothing, and neither a `readonly` nor a `disabled` group shows the line.",
+                    "With an error status, every off track turns red, as on a lone `Switch`; only the group is `aria-invalid`.",
                     "A group with no name logs a warning.",
                 ])
                 .must([
@@ -211,7 +212,7 @@ pub fn SwitchGroupPage() -> Element {
                             None => vec![],
                         }),
                 ], field_controls::<AlertCopy>().into_iter().map(|control| match control.name {
-                    // The description states the cap the demo sets by default.
+                    // On, so the cap line shows between the description and the helper.
                     "description" => control.default("true"),
                     _ => control,
                 }).collect(), vec![

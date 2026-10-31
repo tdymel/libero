@@ -18,7 +18,26 @@ pub const ROUTES: Routes = &[
         }
     }),
     ("/button-group/toggle", || rsx! { ButtonGroupToggle {} }),
+    ("/button-group/compact", || rsx! { ButtonGroupCompact {} }),
 ];
+
+/// Todo 5083: `xs` rows and a column mixing Buttons and compact icons, measured under a finger.
+#[component]
+fn ButtonGroupCompact() -> Element {
+    rsx! {
+        Flex { direction: "column", gap: "md", align: "start",
+            ButtonGroup { id: "compact-row", "aria-label": "Row", variant: "outlined", size: "xs",
+                Button { id: "cr1", "Bold" }
+                ActionIcon { id: "cr2", size: "xs", aria_label: "Underline", "U" }
+                span { display: "contents", ActionIcon { id: "cr3", size: "sm", aria_label: "Strike", "S" } }
+            }
+            ButtonGroup { id: "compact-column", "aria-label": "Column", variant: "outlined", size: "xs", orientation: "vertical",
+                Button { id: "cc1", "Bold" }
+                ActionIcon { id: "cc2", size: "xs", aria_label: "Underline", "U" }
+            }
+        }
+    }
+}
 
 fn sorted(set: &HashSet<String>) -> String {
     let mut values: Vec<_> = set.iter().map(String::as_str).collect();

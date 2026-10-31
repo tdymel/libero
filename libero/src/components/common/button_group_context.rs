@@ -30,14 +30,23 @@ impl ButtonGroupContext {
         let (Some(selected), Some(onchange)) = (&self.value, &self.onchange) else {
             return;
         };
+        onchange.call(self.toggled(selected, value));
+    }
+
+    /// The set after a press on `value`: a single group asks for one key at most (5084).
+    fn toggled(&self, selected: &HashSet<String>, value: &str) -> HashSet<String> {
+        let pressed = selected.contains(value);
+        if !self.multiple {
+            return match pressed {
+                true => HashSet::new(),
+                false => HashSet::from([value.to_string()]),
+            };
+        }
         let mut next = selected.clone();
         if !next.remove(value) {
-            if !self.multiple {
-                next.clear();
-            }
             next.insert(value.to_string());
         }
-        onchange.call(next);
+        next
     }
 }
 
@@ -59,4 +68,28 @@ pub(crate) fn use_button_group() -> ButtonGroupContext {
     scope
         .map(|scope| scope.0.read().clone())
         .unwrap_or_default()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn set(keys: &[&str]) -> HashSet<String> {
+        keys.iter().map(|key| key.to_string()).collect()
+    }
+
+    /// Todo 5084: a single group over several held keys asks for one at most.
+    #[test]
+    fn a_single_group_toggles_to_one_key_at_most() {
+        let single = ButtonGroupContext::default();
+        let held = set(&["a", "b"]);
+        assert_eq!(single.toggled(&held, "c"), set(&["c"]));
+        assert_eq!(single.toggled(&held, "a"), set(&[]));
+        let multiple = ButtonGroupContext {
+            multiple: true,
+            ..Default::default()
+        };
+        assert_eq!(multiple.toggled(&held, "a"), set(&["b"]));
+        assert_eq!(multiple.toggled(&held, "c"), set(&["a", "b", "c"]));
+    }
 }

@@ -4,9 +4,10 @@ use dioxus::prelude::*;
 
 use crate::{
     components::{
+        buttons::action_icon::ACTION_ICON_COMPACT,
         common::{
-            ButtonGroupContext, COARSE_POINTER, HtmlTag, Input, Orientation, States, Variant,
-            base_props, names_itself, use_name_warning, use_provide_button_group,
+            ButtonGroupContext, COARSE_POINTER, COARSE_TARGET, HtmlTag, Input, Orientation, States,
+            Variant, base_props, names_itself, use_name_warning, use_provide_button_group,
         },
         layout::use_box,
     },
@@ -72,6 +73,18 @@ static BUTTON_GROUP_SX: StaticSx = StaticSx::new(|| {
         .max_width("100%")
         // The focused control's ring over its neighbours.
         .selector(format!("& {CONTROL}:focus-visible"), sx().z_index("1"))
+        // Under a finger an `xs`/`sm` icon is as tall as the Buttons beside it, so the row stays level (5083).
+        .media(COARSE_POINTER, {
+            let compact = format!("[data-state~=\"{ACTION_ICON_COMPACT}\"]");
+            sx().selector(
+                format!("& > {CONTROL}{compact}"),
+                sx().min_height(COARSE_TARGET),
+            )
+            .selector(
+                format!("& > * > {CONTROL}{compact}"),
+                sx().min_height(COARSE_TARGET),
+            )
+        })
         .when(
             Orientation::Horizontal.state_name(),
             // Logical sides: under RTL the previous item is on the right.
@@ -230,8 +243,19 @@ pub fn ButtonGroup(props: ButtonGroupProps) -> Element {
         multiple: props.multiple,
         onchange: props.onchange,
     });
-    if props.value.is_some() && props.onchange.is_none() {
+    // Once per mount, as `use_name_warning`: the same props warn on every render after (5087).
+    let mut warned_onchange = use_hook(|| CopyValue::new(false));
+    if props.value.is_some() && props.onchange.is_none() && !*warned_onchange.peek() {
+        warned_onchange.set(true);
         warn("ButtonGroup: without `onchange` the selection can never change.");
+    }
+    let mut warned_several = use_hook(|| CopyValue::new(false));
+    let several = props.value.as_ref().is_some_and(|value| value.len() > 1);
+    if several && !props.multiple && !*warned_several.peek() {
+        warned_several.set(true);
+        warn(
+            "ButtonGroup: `value` holds several keys without `multiple`, so several show pressed.",
+        );
     }
 
     let states: Input<States> = props
@@ -248,4 +272,38 @@ pub fn ButtonGroup(props: ButtonGroupProps) -> Element {
         .prepare()
         .attr("role", "group")
         .render(HtmlTag::Div, props.attributes, props.children)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// Todos 5084, 5087: each prop warning once per mount, not on every render.
+    #[test]
+    fn a_group_warns_once_per_mount() {
+        let mut dom = VirtualDom::new(|| {
+            let tick = use_context_provider(|| Signal::new(0));
+            rsx! {
+                ButtonGroup {
+                    "aria-label": "Style {tick}",
+                    value: HashSet::from(["a".to_string(), "b".to_string()]),
+                }
+            }
+        });
+        crate::utils::take_warnings();
+        dom.rebuild_in_place();
+        dom.in_scope(ScopeId::APP, || {
+            *consume_context::<Signal<i32>>().write() += 1
+        });
+        dom.render_immediate(&mut dioxus::dioxus_core::NoOpMutations);
+        let warnings = crate::utils::take_warnings();
+        let count = |text: &str| {
+            warnings
+                .iter()
+                .filter(|warning| warning.contains(text))
+                .count()
+        };
+        assert_eq!(count("without `onchange`"), 1, "{warnings:?}");
+        assert_eq!(count("without `multiple`"), 1, "{warnings:?}");
+    }
 }

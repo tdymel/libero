@@ -19,9 +19,10 @@ pub struct CommonLabels {
     /// Said after a required group's label, as `aria-required` is not allowed on
     /// `role="group"`: `CheckboxGroup`, `SwitchGroup`.
     pub required: &'static str,
-    /// Read with a group at its `max_checked`, whose other options are off: `CheckboxGroup`,
-    /// `SwitchGroup`. `{max}` is the limit.
+    /// Read with a `CheckboxGroup` at its `max_checked`, whose other options are off. `{max}` is the limit.
     pub at_most: &'static str,
+    /// `at_most` for a `SwitchGroup`, whose options are turned on rather than selected.
+    pub at_most_on: &'static str,
     /// Said after a picker field's label on the picker's own text box, which a finger types
     /// in: `ChronoField`, `ColorField`.
     pub type_in: &'static str,
@@ -37,6 +38,7 @@ impl CommonLabels {
         warning: "Warning:",
         required: "Required",
         at_most: "At most {max} can be selected",
+        at_most_on: "At most {max} can be on",
         type_in: "Type it in",
     };
 
@@ -49,6 +51,7 @@ impl CommonLabels {
         warning: "Warnung:",
         required: "Pflichtfeld",
         at_most: "Höchstens {max} können ausgewählt werden",
+        at_most_on: "Höchstens {max} können eingeschaltet sein",
         type_in: "Eintippen",
     };
 }

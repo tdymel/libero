@@ -304,8 +304,8 @@ fn check_group<T: Options, P: Part>(kind: Kind, props: Group<T, P>) -> Element {
     }
     let count = checked.iter().filter(|on| **on).count();
     let full = props.max_checked.is_some_and(|max| count >= max);
-    // A readonly group disables nothing at the cap, so it has nothing to explain (4603).
-    let capped = full && !readonly;
+    // A readonly or disabled group has no cap to explain (4603, 5077).
+    let capped = full && !readonly && !disabled;
     let mut warned_over = use_hook(|| CopyValue::new(false));
     if props.max_checked.is_some_and(|max| count > max) && !*warned_over.peek() {
         warned_over.set(true);
@@ -315,7 +315,7 @@ fn check_group<T: Options, P: Part>(kind: Kind, props: Group<T, P>) -> Element {
         ));
     }
 
-    let mut field = use_field()
+    let field = use_field()
         .labelled_by()
         .names_group()
         .label(&props.label)
@@ -367,7 +367,13 @@ fn check_group<T: Options, P: Part>(kind: Kind, props: Group<T, P>) -> Element {
 
     // Through `emit`, so a pick also drops an error set from code (todo 4289).
     let emit = bound.emit(props.onchange);
-    let at_most = use_localization().common.at_most;
+    let common = use_localization().common;
+    let at_most = match kind {
+        #[cfg(feature = "checkbox-group")]
+        Kind::Checkbox => common.at_most,
+        #[cfg(feature = "switch-group")]
+        Kind::Switch => common.at_most_on,
+    };
     let limit_words = props.max_checked.map(|max| fill(at_most, &[("max", &max)]));
     // A tick that reaches the cap says so: the description changes on the group, not the box (4779).
     let announcer = use_announcer();
@@ -402,8 +408,23 @@ fn check_group<T: Options, P: Part>(kind: Kind, props: Group<T, P>) -> Element {
 
     // Says why the unchecked options are off, which their disabled state alone does not (4604).
     let limit_id = format!("{}-limit", field.id());
+    // Read where it is drawn: after the description, before the helper and status (5081).
+    let describedby = {
+        let mut ids: Vec<String> = field
+            .describedby()
+            .map(|ids| ids.split_whitespace().map(String::from).collect())
+            .unwrap_or_default();
+        if capped && limit_words.is_some() {
+            let description = format!("{}-description", field.id());
+            let at = ids
+                .iter()
+                .position(|id| *id == description)
+                .map_or(0, |at| at + 1);
+            ids.insert(at, limit_id.clone());
+        }
+        (!ids.is_empty()).then(|| ids.join(" "))
+    };
     let limit = limit_words.clone().filter(|_| capped).map(|words| {
-        field.describe_also(limit_id.clone());
         rsx! {
             div {
                 key: "{limit_id}",
@@ -420,6 +441,18 @@ fn check_group<T: Options, P: Part>(kind: Kind, props: Group<T, P>) -> Element {
 
     let option_disabled = list.disabled();
     let variant = props.variant.copied_or(theme_variant);
+    let error = field.invalid();
+    // By value, so a reordered source keeps each option's scope; by position when values repeat (5082).
+    let mut keys: Vec<String> = values
+        .iter()
+        .map(|option| format!("value-{}", option.value()))
+        .collect();
+    let unique = keys.iter().collect::<std::collections::HashSet<_>>().len() == keys.len();
+    if !unique {
+        keys = (0..values.len())
+            .map(|index| format!("index-{index}"))
+            .collect();
+    }
     let options = values.iter().enumerate().map(|(index, option)| {
         let label = match &props.option_label {
             Some(format) => format.call(option.clone()),
@@ -432,9 +465,10 @@ fn check_group<T: Options, P: Part>(kind: Kind, props: Group<T, P>) -> Element {
             .filter(|description| !description.is_empty());
         rsx! {
             GroupOption {
-                key: "{index}",
+                key: "{keys[index]}",
                 kind,
                 index,
+                error,
                 label,
                 description,
                 size,
@@ -464,7 +498,7 @@ fn check_group<T: Options, P: Part>(kind: Kind, props: Group<T, P>) -> Element {
         .attr("data-slot", "control")
         .attr("role", "group")
         .attr("aria-labelledby", field.label_id())
-        .attr("aria-describedby", field.describedby())
+        .attr("aria-describedby", describedby)
         // `aria-invalid` is allowed on a group, `aria-required` is not: the label says it (todo 4287).
         .attr("aria-invalid", field.invalid().then_some("true"))
         // An empty group while the options load is not a group with none.
@@ -487,6 +521,8 @@ fn check_group<T: Options, P: Part>(kind: Kind, props: Group<T, P>) -> Element {
 struct GroupOptionProps {
     kind: Kind,
     index: usize,
+    /// The group's error, drawn on every box and track as a lone control's (5078).
+    error: bool,
     label: String,
     description: Option<String>,
     size: Size,
@@ -503,6 +539,7 @@ fn GroupOption(props: GroupOptionProps) -> Element {
     let GroupOptionProps {
         kind,
         index,
+        error,
         label,
         description,
         size,
@@ -513,6 +550,8 @@ fn GroupOption(props: GroupOptionProps) -> Element {
         readonly,
         toggle,
     } = props;
+    // A state, not a status: the group alone is `aria-invalid` and reads the message.
+    let states: Input<States> = States::default().with("error", error).into();
     // The group carries `required` and posts the value, so no option does either.
     match kind {
         #[cfg(feature = "checkbox-group")]
@@ -527,6 +566,7 @@ fn GroupOption(props: GroupOptionProps) -> Element {
                 disabled,
                 readonly,
                 required: false,
+                states,
                 onchange: move |_| toggle.call(index),
             }
         },
@@ -542,6 +582,7 @@ fn GroupOption(props: GroupOptionProps) -> Element {
                 disabled,
                 readonly,
                 required: false,
+                states,
                 onchange: move |_| toggle.call(index),
             }
         },
@@ -630,6 +671,122 @@ mod tests {
             .filter(|warning| warning.contains("not in `options`"))
             .count();
         assert_eq!(unlisted, 1);
+    }
+
+    /// Todos 5077, 5080: a disabled group at the cap draws no cap line; a switch one says "on".
+    #[test]
+    fn the_cap_line_says_on_and_leaves_a_disabled_group() {
+        let page = html(|| {
+            rsx! {
+                crate::LiberoProvider {
+                    SwitchGroup::<String> {
+                        label: "Alerts",
+                        options: options(),
+                        value: vec!["A".to_string()],
+                        max_checked: 1,
+                        onchange: |_| {},
+                    }
+                    SwitchGroup::<String> {
+                        label: "Off",
+                        options: options(),
+                        value: vec!["A".to_string()],
+                        max_checked: 1,
+                        disabled: true,
+                        onchange: |_| {},
+                    }
+                }
+            }
+        });
+        assert_eq!(page.matches("At most 1 can be on").count(), 1, "{page}");
+        assert_eq!(page.matches("data-slot=\"limit\"").count(), 1, "{page}");
+    }
+
+    /// Todo 5081: the cap is read after the description and before the helper and status.
+    #[test]
+    fn the_cap_is_described_in_screen_order() {
+        let page = html(|| {
+            rsx! {
+                crate::LiberoProvider {
+                    CheckboxGroup::<String> {
+                        id: "pick",
+                        label: "Pick",
+                        description: "How to choose",
+                        helper: "What it changes",
+                        status: "Pick fewer",
+                        options: options(),
+                        value: vec!["A".to_string()],
+                        max_checked: 1,
+                        onchange: |_| {},
+                    }
+                }
+            }
+        });
+        assert!(
+            page.contains(
+                "aria-describedby=\"pick-description pick-limit pick-helper pick-status\""
+            ),
+            "{page}"
+        );
+    }
+
+    /// Todo 5078: the group's error reaches every box, but only the group is invalid.
+    #[test]
+    fn the_group_error_reaches_every_option() {
+        let page = html(|| {
+            rsx! {
+                crate::LiberoProvider {
+                    CheckboxGroup::<String> {
+                        label: "Pick",
+                        status: "Pick one",
+                        options: options(),
+                        onchange: |_| {},
+                    }
+                }
+            }
+        });
+        assert_eq!(page.matches("aria-invalid=\"true\"").count(), 1, "{page}");
+        let erring = page
+            .split("data-state=\"")
+            .skip(1)
+            .filter(|state| {
+                state
+                    .split('"')
+                    .next()
+                    .is_some_and(|state| state.split(' ').any(|word| word == "error"))
+            })
+            .count();
+        assert!(erring > 3, "{erring}: {page}");
+    }
+
+    /// Todo 5082: options are keyed by value, so a reordered source keeps each option's ids.
+    #[test]
+    fn a_reordered_source_keeps_each_option_scope() {
+        let mut dom = VirtualDom::new(|| {
+            let order = use_context_provider(|| Signal::new(options()));
+            rsx! {
+                crate::LiberoProvider {
+                    CheckboxGroup::<String> {
+                        label: "Pick",
+                        options: order(),
+                        onchange: |_| {},
+                    }
+                }
+            }
+        });
+        dom.rebuild_in_place();
+        let before = dioxus_ssr::render(&dom);
+        let id_of = |page: &str, label: &str| {
+            let at = page.find(&format!(">{label}<")).expect("label");
+            let start = page[..at].rfind("id=\"").expect("id") + 4;
+            page[start..start + page[start..].find('"').unwrap()].to_string()
+        };
+        let a_before = id_of(&before, "A");
+        dom.in_scope(ScopeId::APP, || {
+            consume_context::<Signal<Vec<String>>>().set(["C", "B", "A"].map(String::from).to_vec())
+        });
+        dom.render_immediate(&mut dioxus::dioxus_core::NoOpMutations);
+        let after = dioxus_ssr::render(&dom);
+        assert_eq!(id_of(&after, "A"), a_before, "{after}");
     }
 
     /// Todo 4046: a tick on a named group re-diffs the keyed options next to the hidden inputs.
