@@ -64,7 +64,7 @@ it is on (Notes).
 | `button-group` | ButtonGroup | box | off |  |
 | `copy` | Copy | action-icon, use-clipboard, use-timers | off |  |
 | `direction-toggle` | DirectionToggle | action-icon, use-direction | off |  |
-| `floating-action-button` | FloatingActionButton | action-icon, button, float | off |  |
+| `floating-action-button` | FloatingActionButton, FloatingActionButtonAction | action-icon, button, float, use-popover | off |  |
 | `repository` | Repository | action-icon, use-local-storage | off | The Simple Icons brand marks (pictogram-icons-simple). |
 | `share` | Share | action-icon, icon, button, use-share | off |  |
 | `theme-switcher` | ThemeSwitcher | menu, action-icon, use-color-scheme | off |  |

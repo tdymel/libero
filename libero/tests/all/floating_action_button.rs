@@ -5,7 +5,10 @@
 use crate::common::{attributes_of, body, render};
 
 use dioxus::prelude::*;
-use libero::{LiberoProvider, components::FloatingActionButton};
+use libero::{
+    LiberoProvider,
+    components::{FloatingActionButton, FloatingActionButtonAction},
+};
 
 fn icon_only() -> Element {
     rsx! {
@@ -127,6 +130,76 @@ fn a_fixed_top_one_clears_the_top_safe_area_only() {
         "{html}"
     );
     assert!(!html.contains("margin-inline"), "{html}");
+}
+
+#[test]
+fn hidden_fades_it_out_of_the_tab_order_and_the_tree() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider {
+                FloatingActionButton { aria_label: "Add", hidden: true, icon: rsx! { svg {} } }
+            }
+        }
+    }
+    let html = render(app);
+    assert!(
+        attributes_of(&body(&html), "div").contains_key("inert"),
+        "{html}"
+    );
+    assert!(html.contains("visibility:hidden"), "{html}");
+    assert!(
+        html.contains("visibility 0s linear var(--lsx-transition-duration)"),
+        "visibility flips after the fade: {html}"
+    );
+    assert!(html.contains("prefers-reduced-motion"), "{html}");
+    assert!(!attributes_of(&body(&render(icon_only)), "div").contains_key("inert"));
+}
+
+fn speed_dial(opened: bool) -> Element {
+    let open = use_signal(|| opened);
+    rsx! {
+        LiberoProvider {
+            FloatingActionButton {
+                aria_label: "Create",
+                open,
+                to: "/ignored",
+                icon: rsx! { svg {} },
+                actions: rsx! {
+                    FloatingActionButtonAction { icon: rsx! { svg {} }, "Message" }
+                    FloatingActionButtonAction { icon: rsx! { svg {} }, "Event" }
+                },
+            }
+        }
+    }
+}
+
+#[test]
+fn a_closed_speed_dial_is_a_collapsed_button_without_its_actions() {
+    let html = body(&render(|| speed_dial(false)));
+    let button = attributes_of(&html, "button");
+    assert_eq!(button["aria-expanded"], "false", "{html}");
+    assert!(!button.contains_key("aria-controls"), "{html}");
+    assert!(!html.contains("Message"), "{html}");
+    assert!(!html.contains("<a"), "`to` is ignored with actions: {html}");
+}
+
+#[test]
+fn an_open_speed_dial_controls_the_actions_after_it() {
+    let html = body(&render(|| speed_dial(true)));
+    let button = attributes_of(&html, "button");
+    assert_eq!(button["aria-expanded"], "true", "{html}");
+    let list = format!("id=\"{}\"", button["aria-controls"]);
+    let at = html
+        .find(&list)
+        .unwrap_or_else(|| panic!("no list: {html}"));
+    assert!(
+        at > html.find("aria-expanded").unwrap(),
+        "the list follows the button: {html}"
+    );
+    assert!(
+        html[at..].contains("Message") && html[at..].contains("Event"),
+        "{html}"
+    );
 }
 
 #[test]

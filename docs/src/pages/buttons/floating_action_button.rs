@@ -1,12 +1,15 @@
 use crate::components::{Child, Control, Demo, DemoValues, DocPage, a11y, prop, props};
 use dioxus::prelude::*;
-use libero::components::{Box, Code, FloatingActionButton, Input, Pictogram, Text};
+use libero::components::{
+    Box, Code, FloatingActionButton, FloatingActionButtonAction, Input, Pictogram, Text,
+};
 use libero::sx::sx;
 use libero::use_theme;
 use pictogram_icons_lucide as lucide;
 
 const ICON: &str = "icon: rsx! { Pictogram { icon: lucide::plus::outlined } }";
 const LABEL: &str = "New message";
+const ACTIONS: &str = "actions: rsx! {\n    FloatingActionButtonAction { icon: rsx! { Pictogram { icon: lucide::mail::outlined } }, \"Message\" }\n    FloatingActionButtonAction { icon: rsx! { Pictogram { icon: lucide::calendar::outlined } }, \"Event\" }\n}";
 
 fn extended(values: &DemoValues) -> bool {
     values.str("children") == "true"
@@ -75,6 +78,11 @@ fn controls(variant: &str, size: &str, radius: &str, placement: &str) -> Vec<Con
         Control::switch("tooltip").hidden_when(extended),
         Control::switch("disabled"),
         Control::switch("loading"),
+        Control::switch("actions").code(|_, values| match values.str("actions") == "true" {
+            true => vec![ACTIONS.to_string()],
+            false => vec![],
+        }),
+        Control::switch("hidden"),
     ]
 }
 
@@ -141,6 +149,29 @@ pub fn FloatingActionButtonPage() -> Element {
                     .doc("The link's `target` attribute. `\"_blank\"` adds a hidden \"(opens in a new tab)\"."),
                 prop("children", "Element")
                     .doc("A visible label: an extended button, the `icon` before the label."),
+                prop("hidden", "bool")
+                    .default("false")
+                    .doc("Fades it out, and out of the tab order and the accessibility tree at once, as for hiding it while the page scrolls down. Instant under reduced motion."),
+                prop("actions", "Element")
+                    .doc("`FloatingActionButtonAction`s: a press on the button opens them as a speed dial, above it, or below a top one, at its inline side. Escape, a press outside or an action's press closes it. `to` is ignored."),
+                prop("open", "Signal<bool>")
+                    .doc("Whether the `actions` show, for a speed dial the app controls. Unset, the button owns it."),
+            ]), props("FloatingActionButtonAction", vec![
+                prop("icon", "Element")
+                    .default("required")
+                    .doc("The glyph before the label."),
+                prop("children", "Element")
+                    .default("required")
+                    .doc("The visible label, which names the action."),
+                prop("onclick", "EventHandler<MouseEvent>")
+                    .doc("Runs the action; the speed dial then closes and focus returns to its button."),
+                prop("to", "NavigationTarget")
+                    .doc("Renders a link instead of a `<button>`."),
+                prop("target", "String")
+                    .doc("The link's `target` attribute."),
+                prop("disabled", "bool")
+                    .default("false")
+                    .doc("Disables and dims the action."),
             ])],
             accessibility: a11y()
                 .handles([
@@ -148,6 +179,9 @@ pub fn FloatingActionButtonPage() -> Element {
                     "Its shadow steps aside on keyboard focus, so the focus ring is drawn whole over it.",
                     "Under a finger the button is at least 44 by 44px, at every size.",
                     "A fixed one sits above a docked `NavigationBar` and out of the safe areas; `start` and `end` flip under `dir=\"rtl\"`.",
+                    "With `actions`, the button is a disclosure: `aria-expanded` says whether the actions show, and `aria-controls` points at them while open. They follow it in the tab order.",
+                    "Escape or an action's press closes the speed dial and returns focus to the button; a press outside or Tab past the last action closes it where focus went.",
+                    "`hidden` takes it out of the tab order and the accessibility tree at once, before the fade ends.",
                 ])
                 .must([
                     "Name an icon-only button after its action with `aria_label`, such as \"New message\".",
@@ -170,7 +204,11 @@ pub fn FloatingActionButtonPage() -> Element {
                     Code { source: "offset" }
                     " from the edges and above a docked "
                     Code { source: "NavigationBar" }
-                    ". The preview sets "
+                    ". "
+                    Code { source: "actions" }
+                    " make it a speed dial, and "
+                    Code { source: "hidden" }
+                    " fades it out. The preview sets "
                     Code { source: "fixed: false" }
                     " to stay inside its frame."
                 }
@@ -200,6 +238,11 @@ pub fn FloatingActionButtonPage() -> Element {
                             offset: values.str("offset"),
                             disabled: values.str("disabled") == "true",
                             loading: values.str("loading") == "true",
+                            hidden: values.str("hidden") == "true",
+                            actions: (values.str("actions") == "true").then(|| rsx! {
+                                FloatingActionButtonAction { icon: rsx! { Pictogram { icon: lucide::mail::outlined } }, "Message" }
+                                FloatingActionButtonAction { icon: rsx! { Pictogram { icon: lucide::calendar::outlined } }, "Event" }
+                            }),
                             children: extended(&values).then(|| rsx! { {LABEL} }),
                         }
                     }

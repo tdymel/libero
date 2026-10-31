@@ -244,7 +244,7 @@ button = ["loader", "anchor"]
 button-group = ["box"]
 copy = ["action-icon", "use-clipboard", "use-timers"]
 direction-toggle = ["action-icon", "use-direction"]
-floating-action-button = ["action-icon", "button", "float"]
+floating-action-button = ["action-icon", "button", "float", "use-popover"]
 # Pulls in the simple-icons brand marks.
 repository = ["action-icon", "dep:pictogram-icons-simple", "use-local-storage"]
 share = ["action-icon", "icon", "button", "use-share"]

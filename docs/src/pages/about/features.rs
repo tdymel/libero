@@ -58,7 +58,7 @@ pub(crate) const FEATURES: &[Feature] = &[
     feature("button-group", "buttons", "ButtonGroup", &["box"], false, &["/buttons/button-group"]),
     feature("copy", "buttons", "Copy", &["action-icon", "use-clipboard", "use-timers"], false, &["/buttons/copy"]),
     feature("direction-toggle", "buttons", "DirectionToggle", &["action-icon", "use-direction"], false, &["/buttons/direction-toggle"]),
-    feature("floating-action-button", "buttons", "FloatingActionButton", &["action-icon", "button", "float"], false, &["/buttons/floating-action-button"]),
+    feature("floating-action-button", "buttons", "FloatingActionButton, FloatingActionButtonAction", &["action-icon", "button", "float", "use-popover"], false, &["/buttons/floating-action-button"]),
     noted(
         feature("repository", "buttons", "Repository", &["action-icon", "use-local-storage"], false, &["/buttons/repository"]),
         "The Simple Icons brand marks (pictogram-icons-simple).",

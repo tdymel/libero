@@ -1,8 +1,8 @@
 # FloatingActionButton
 
 Crate: `libero`
-Import: `use libero::components::FloatingActionButton;`
-Feature: `floating-action-button` (off by default, turns on `action-icon`, `button`, `float`; [features.md](features.md))
+Import: `use libero::components::{FloatingActionButton, FloatingActionButtonAction};`
+Feature: `floating-action-button` (off by default, turns on `action-icon`, `button`, `float`, `use-popover`; [features.md](features.md))
 Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/buttons/floating_action_button.rs>
 Index: [index.md](index.md) lists every other page
 Description: The main action of a screen as a button that floats over the page at a corner, icon-only or extended with a label.
@@ -12,8 +12,8 @@ corner, also called a FAB. Icon-only by default, named by `aria_label`;
 `children` make it an extended button with a label. It is fixed to the
 viewport, `offset` from the edges and above a docked `NavigationBar`. It is
 a [Float](float.md) around an [ActionIcon](action_icon.md), or a
-[Button](button.md) with `children`. There is no speed dial and no
-hide-on-scroll: render it conditionally to hide it.
+[Button](button.md) with `children`. `actions` turn it into a speed dial,
+and `hidden` fades it out for an app's own hide-on-scroll.
 
 ## Usage
 
@@ -52,6 +52,29 @@ fn Demo() -> Element {
 }
 ```
 
+A speed dial: a press shows the actions above the button, and an action's
+press closes it again:
+
+```rust
+use dioxus::prelude::*;
+use libero::components::{FloatingActionButton, FloatingActionButtonAction, Pictogram};
+use pictogram_icons_lucide as lucide;
+
+#[component]
+fn Demo() -> Element {
+    rsx! {
+        FloatingActionButton {
+            aria_label: "Create",
+            icon: rsx! { Pictogram { icon: lucide::plus::outlined } },
+            actions: rsx! {
+                FloatingActionButtonAction { icon: rsx! { Pictogram { icon: lucide::mail::outlined } }, "Message" }
+                FloatingActionButtonAction { icon: rsx! { Pictogram { icon: lucide::calendar::outlined } }, "Event" }
+            },
+        }
+    }
+}
+```
+
 ## Props
 
 | Prop | Type | Default | Description |
@@ -76,6 +99,20 @@ fn Demo() -> Element {
 | `to` | `NavigationTarget` | - | Renders a link instead of a `<button>`: a path, a URL or a typed route. |
 | `target` | `String` | - | The link's `target` attribute. `"_blank"` adds a hidden "(opens in a new tab)". |
 | `children` | `Element` | - | A visible label: an extended button, the `icon` before the label. |
+| `hidden` | `bool` | `false` | Fades it out, and out of the tab order and the accessibility tree at once, as for hiding it while the page scrolls down. Instant under reduced motion. |
+| `actions` | `Element` | - | `FloatingActionButtonAction`s: a press on the button opens them as a speed dial, above it, or below a top one, at its inline side. Escape, a press outside or an action's press closes it. `to` is ignored. |
+| `open` | `Signal<bool>` | - | Whether the `actions` show, for a speed dial the app controls. Unset, the button owns it. |
+
+### FloatingActionButtonAction
+
+| Prop | Type | Default | Description |
+|---|---|---|---|
+| `icon` | `Element` | required | The glyph before the label. |
+| `children` | `Element` | required | The visible label, which names the action. |
+| `onclick` | `EventHandler<MouseEvent>` | - | Runs the action; the speed dial then closes and focus returns to its button. |
+| `to` | `NavigationTarget` | - | Renders a link instead of a `<button>`. |
+| `target` | `String` | - | The link's `target` attribute. |
+| `disabled` | `bool` | `false` | Disables and dims the action. |
 
 Like every component, `FloatingActionButton` also takes the shared props
 `sx`, `class`, `style`, `states`, and any extra HTML attributes. They land on
@@ -96,6 +133,14 @@ shadow's `elevation` step (`md`).
 - Under a finger the button is at least 44 by 44px, at every size.
 - A fixed one sits above a docked `NavigationBar` and out of the safe areas;
   `start` and `end` flip under `dir="rtl"`.
+- With `actions`, the button is a disclosure: `aria-expanded` says whether
+  the actions show, and `aria-controls` points at them while open. They
+  follow it in the tab order.
+- Escape or an action's press closes the speed dial and returns focus to the
+  button; a press outside or Tab past the last action closes it where focus
+  went.
+- `hidden` takes it out of the tab order and the accessibility tree at once,
+  before the fade ends.
 
 ### You must
 
