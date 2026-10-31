@@ -553,8 +553,8 @@ fn a_medium_icon_in_a_group_keeps_its_own_box_under_a_finger() {
     });
 }
 
-/// Todo 3691: a compact icon in a group takes a finger across its own width only, and keeps
-/// the 44px height, so its box does not cover the neighbours' ends.
+/// Todo 3691: a compact icon in a group takes a finger across its own width only, and is itself
+/// 44px tall (5083), so its box does not cover the neighbours' ends.
 #[test]
 fn a_compact_icon_in_a_group_keeps_its_width_under_a_finger() {
     use chromiumoxide::cdp::browser_protocol::emulation::SetTouchEmulationEnabledParams;
@@ -584,7 +584,8 @@ fn a_compact_icon_in_a_group_keeps_its_width_under_a_finger() {
                         const r = icon.getBoundingClientRect(), y = r.y + r.height / 2;
                         if (!own(icon, r.x + 3, y)) misses.push(ids[i] + ' start taken');
                         if (!own(icon, r.right - 3, y)) misses.push(ids[i] + ' end taken');
-                        if (!own(icon, r.x + r.width / 2, r.y - 5)) misses.push(ids[i] + ' lost its height');
+                        if (r.height < 43.5) misses.push(ids[i] + ' lost its height ' + r.height);
+                        if (!own(icon, r.x + r.width / 2, r.y + 3)) misses.push(ids[i] + ' top taken');
                     });
                     const stacked = ['first', 'second'].map(id => document.querySelector('#stacked-' + id));
                     stacked.forEach((icon, i) => {

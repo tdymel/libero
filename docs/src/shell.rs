@@ -374,7 +374,9 @@ fn site_tools(search: SpotlightHandle) -> Element {
                         // the next item gets back its outer corners and loses the seam.
                         .selector("& > :nth-child(2) :is(button, a)", first_item_sx())
                         .selector("& > :nth-child(2):is(button, a)", first_item_sx()),
-                ),
+                )
+                // The group's finger-sized height (5083) would wrap the row (4993).
+                .media("(pointer: coarse)", sx().selector("& :is(button, a)", sx().min_height("0"))),
             // No 44px boxes under a finger: they wrapped the row on a phone (4993); `sm` keeps 24px.
             // Below `Sm`, the field's own breakpoint: one of the two always shows, also
             // with a raised default font size (a `px` query and a `rem` one drift apart).
