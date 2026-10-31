@@ -4,8 +4,9 @@
 
 use dioxus::prelude::*;
 use libero::components::{
-    Button, Cascader, CascaderDropdown, CascaderOption, ChronoField, ColorField, Flex, MultiSelect,
-    NumberField, OptionList, Options, PhoneField, Select, Tabs, Text, TouchInput, use_cascader,
+    Button, Cascader, CascaderDropdown, CascaderOption, ChronoField, ColorCode, ColorField, Flex,
+    MultiSelect, NumberField, OptionList, Options, PhoneField, Select, SliderChangeEvent, Tabs,
+    Text, TouchInput, use_cascader,
 };
 use libero::chrono::NaiveDate;
 
@@ -164,9 +165,16 @@ enum Section {
 
 #[component]
 fn LowColorPage() -> Element {
+    let mut color = use_signal(ColorCode::default);
+
     rsx! {
         LowField {
-            ColorField { label: "Brand color", helper: "Shown in the theme preview." }
+            ColorField {
+                label: "Brand color",
+                helper: "Shown in the theme preview.",
+                value: color(),
+                oninput: move |event: SliderChangeEvent<ColorCode>| color.set(event.value()),
+            }
         }
     }
 }

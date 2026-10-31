@@ -41,11 +41,18 @@ pub const ROUTES: Routes = &[
 /// Todo 4757: a label tap focuses a popup field and leaves its popup shut.
 #[component]
 fn LabelTapPage() -> Element {
+    let mut colour = use_signal(|| ColorCode::rgba(1, 2, 3, 1.0));
+
     rsx! {
         Flex { direction: "column", gap: "md", max_width: "320px",
             TextField { id: "name", label: "Name" }
             DateField { id: "due", label: "Due" }
-            ColorField { id: "colour", label: "Colour", value: ColorCode::rgba(1, 2, 3, 1.0) }
+            ColorField {
+                id: "colour",
+                label: "Colour",
+                value: colour(),
+                oninput: move |event: SliderChangeEvent<ColorCode>| colour.set(event.value()),
+            }
         }
     }
 }

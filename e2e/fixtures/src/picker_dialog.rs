@@ -22,9 +22,17 @@ pub const ROUTES: Routes = &[
 /// A control after the field, for Tab past the dropdown's last stop (todo 4042).
 #[component]
 fn ColorTabOutPage() -> Element {
+    let mut color = use_signal(ColorCode::default);
+
     rsx! {
         Flex { direction: "column", gap: "md", max_width: "320px",
-            ColorField { id: "color-field", label: "Accent", swatches: vec!["#fa5252", "#40c057"] }
+            ColorField {
+                id: "color-field",
+                label: "Accent",
+                swatches: vec!["#fa5252", "#40c057"],
+                value: color(),
+                oninput: move |event: SliderChangeEvent<ColorCode>| color.set(event.value()),
+            }
             button { id: "after", "After" }
         }
     }
