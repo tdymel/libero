@@ -34,6 +34,7 @@ use crate::{
         COLOR_PICKER_SPACING, FIELD_LABEL_FONT_SIZE, SLIDER_THUMB, SLIDER_TRACK, Size, SizeCss,
         Z_INDEX_POPOVER,
     },
+    utils::warn,
 };
 
 static COLOR_FIELD_DROPDOWN_SX: StaticSx = StaticSx::new(|| {
@@ -227,6 +228,13 @@ pub fn ColorField(props: ColorFieldProps) -> Element {
     // Like the other dropdown fields: the text takes the native `readonly`,
     // the dropdown refuses to open and the eyedropper stands down.
     let readonly = props.readonly.unwrap_or(false);
+    let dead = props.oninput.is_none() && !bound.is_bound() && !readonly && !disabled;
+    // Once per mount: the field renders again as its effects land.
+    use_hook(|| {
+        if dead {
+            warn("ColorField: without `oninput` or a bound `name` the color can never change.");
+        }
+    });
     let has_palette = with_picker || !props.swatches.is_empty();
     let has_dropdown = opens_dropdown(has_palette, recent_cap, recents.read().len()) && !disabled;
 
@@ -846,6 +854,31 @@ mod tests {
         assert!(opens_dropdown(false, 5, 1));
         assert!(!opens_dropdown(false, 5, 0));
         assert!(opens_dropdown(true, 0, 0));
+    }
+
+    /// Todo 5094: a field nothing can hear warns; a handler, a readonly or disabled field stay silent.
+    #[test]
+    fn a_field_without_oninput_warns_unless_it_is_display_only() {
+        let never = "ColorField: without `oninput` or a bound `name` the color can never change.";
+        let bare = crate::utils::warnings_of(|| {
+            rsx! { crate::LiberoProvider { ColorField { label: "Accent" } } }
+        });
+        assert_eq!(bare, [never], "{bare:?}");
+
+        let handled = crate::utils::warnings_of(|| {
+            rsx! { crate::LiberoProvider { ColorField { label: "Accent", oninput: move |_| {} } } }
+        });
+        assert!(handled.is_empty(), "{handled:?}");
+
+        let readonly = crate::utils::warnings_of(|| {
+            rsx! { crate::LiberoProvider { ColorField { label: "Accent", readonly: true } } }
+        });
+        assert!(readonly.is_empty(), "{readonly:?}");
+
+        let disabled = crate::utils::warnings_of(|| {
+            rsx! { crate::LiberoProvider { ColorField { label: "Accent", disabled: true } } }
+        });
+        assert!(disabled.is_empty(), "{disabled:?}");
     }
 
     #[test]

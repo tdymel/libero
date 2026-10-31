@@ -148,11 +148,10 @@ pub fn NavigationBarPage() -> Element {
                     "Put a badge's count in the item's `aria-label`, starting with the visible label: \"Inbox, 3 unread\".",
                     "With `position: \"fixed\"`, pad the page by `var(--lsx-navigation-bar-height)`, or a fixed rail's inline-start by `var(--lsx-navigation-rail-width)`.",
                     "Switch to the rail with the same items in the same order, so the page keeps its landmarks and current item at every width.",
-                    "A sticky bar closing a scrolling pane of its own: give the pane `scroll-padding-bottom: var(--lsx-navigation-bar-height)`, so a focused element in it scrolls clear of the bar.",
+                    "A sticky bar closing a scrolling pane of its own: give the pane `scroll-padding-bottom: var(--lsx-navigation-bar-height)`, so a focused element in it scrolls clear of the bar. In a native app set `--lsx-scroll-padding-bottom` to the same value beside it.",
                 ])
                 .limits([
                     "A native app has no line clamp: a long label is cut at two lines without an ellipsis.",
-                    "A native app's focus scroll ignores that padding, so a link reached with Tab can sit under a sticky bar.",
                     "A label word too wide for its item, as \"Search\" at 200% zoom, breaks with a hyphen only where the browser can hyphenate it in the page's `lang`: never a one-syllable word, and nothing in Chromium on Linux, which has no hyphenation dictionaries. There it breaks mid-word without one.",
                 ])
                 .example("An app bar, `NavigationBar { \"aria-label\": \"Main\" }` with Home, Search and an Inbox item labelled `\"aria-label\": \"Inbox, 3 unread\"`: a screen reader lists the \"Main\" navigation, and the current item reads as the current page."),
