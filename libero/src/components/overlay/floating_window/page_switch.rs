@@ -76,7 +76,10 @@ pub(super) fn use_page_switch(
                 }
             }
         } else {
-            page.set(active_element());
+            // The body takes no focus back: `None` keeps the blur branch for every later F6.
+            page.set(
+                active_element().filter(|active| !matches!(active.matches("body, html"), Ok(true))),
+            );
             let _ = root.focus();
         }
     });

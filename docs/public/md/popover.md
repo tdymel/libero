@@ -133,6 +133,8 @@ same signal: Escape closes it and puts focus back on Filter.
 
 ### Limits
 
+- The hook draws no arrow pointing at the anchor. Only `Tooltip` and `HoverCard`
+  draw one.
 - Safari does not focus a button on click, so there a press outside a box
   opened by pointer does not close it.
 - On Android, a box opened without a tap (on mount or from a timer) may let

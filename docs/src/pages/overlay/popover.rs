@@ -244,6 +244,7 @@ pub fn PopoverPage() -> Element {
                     "If you animate the close, give the closing box `visibility: hidden` or `inert`. Until it unmounts, it is still tabbable and still announced.",
                 ])
                 .limits([
+                    "The hook draws no arrow pointing at the anchor. Only `Tooltip` and `HoverCard` draw one.",
                     "Only the web tells the box when the page scrolls: elsewhere an open popover drifts. No backend tracks a resize, so use `remeasure`.",
                     "A press outside needs to know where focus is. The web and Blitz can tell, a WebView cannot, so there only Escape and your own handlers close the box.",
                     "Safari does not focus a button on click, so there a press outside a box opened by pointer does not close it.",

@@ -98,7 +98,8 @@ impl<T> OptionList<T> {
     }
 
     /// A named run of choices, after the ones already added. Order is kept: a repeated,
-    /// non-adjacent label draws its heading twice rather than merging.
+    /// non-adjacent label draws its heading twice rather than merging. An empty group
+    /// draws nothing, not even its heading.
     pub fn group(
         mut self,
         label: impl Into<String>,
@@ -284,6 +285,17 @@ mod tests {
         assert_eq!(list.values(), ["Apple", "Banana"]);
         assert_eq!(list.group_labels(), [None, None]);
         assert_eq!(list.disabled(), [false, false]);
+    }
+
+    /// Headings come from the rows, so an empty group leaves no trace.
+    #[test]
+    fn an_empty_group_draws_nothing() {
+        let list = OptionList::grouped()
+            .group("Empty", Vec::<&str>::new())
+            .group("France", ["Paris"]);
+        assert_eq!(list.values(), ["Paris"]);
+        assert_eq!(list.group_labels(), [Some("France".to_string())]);
+        assert_eq!(list.disabled(), [false]);
     }
 
     /// Groups flatten into one index space, and the parallel arrays line up with it.

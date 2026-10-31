@@ -874,6 +874,27 @@ fn f6_moves_focus_between_the_page_and_the_top_window() {
             "F6 to return focus where it left the page",
         )
         .await;
+
+        // Todo 5142: from the body, F6 keeps finding its way back out of the window.
+        page.evaluate_bounded("document.activeElement.blur()")
+            .await
+            .unwrap();
+        for _ in 0..2 {
+            keyboard::press(page, F6).await.unwrap();
+            wait_for(
+                page,
+                "document.querySelectorAll('[role=dialog]')[1].contains(document.activeElement)",
+                "F6 from the body to move focus into the top window",
+            )
+            .await;
+            keyboard::press(page, F6).await.unwrap();
+            wait_for(
+                page,
+                "document.activeElement === document.body",
+                "F6 to leave the window for the body",
+            )
+            .await;
+        }
         fixture.console.assert_clean("F6").unwrap();
         fixture.close().await.unwrap();
     });

@@ -196,7 +196,7 @@ fn loading_code(_: &Control, values: &DemoValues) -> Vec<String> {
 
 /// Every branch of `file_tree()`.
 fn folders() -> HashSet<String> {
-    HashSet::from(["src", "src/components"].map(str::to_string))
+    HashSet::from(["src", "src/components", "src/hooks"].map(str::to_string))
 }
 
 /// The selection props the code prints: `selected` with its handler, and `multiple` for the multi mode.

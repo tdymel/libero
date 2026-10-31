@@ -51,7 +51,8 @@ fn file_tree() -> Vec<TreeNode<FileEntry>> {
                 TreeNode::new("src/components/list.rs", FileEntry { name: "list.rs" }),
                 TreeNode::new("src/components/tree.rs", FileEntry { name: "tree.rs" }),
             ]),
-            TreeNode::new("src/hooks", FileEntry { name: "hooks" }),
+            TreeNode::new("src/hooks", FileEntry { name: "hooks" })
+                .children(vec![TreeNode::new("src/hooks/use_tree.rs", FileEntry { name: "use_tree.rs" })]),
             TreeNode::new("src/lib.rs", FileEntry { name: "lib.rs" }),
         ]),
         TreeNode::new("Cargo.toml", FileEntry { name: "Cargo.toml" }),
@@ -61,7 +62,7 @@ fn file_tree() -> Vec<TreeNode<FileEntry>> {
 
 /// Every branch of `file_tree()`.
 fn folders() -> HashSet<String> {
-    HashSet::from(["src", "src/components"].map(str::to_string))
+    HashSet::from(["src", "src/components", "src/hooks"].map(str::to_string))
 }
 
 #[component]

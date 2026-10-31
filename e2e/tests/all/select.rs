@@ -699,6 +699,26 @@ pub fn selected_row_is_marked(route: &str) {
         let [on_it, image, _] = rows().await;
         assert_eq!(on_it, "true", "{route}: the list opens on the selected row");
         assert_eq!(image, "none", "{route}: the active selected row has no bar");
+        // Todo 5143: a single Select checks its pick too; Combobox draws no check.
+        if !route.starts_with("/combobox") {
+            let checks: [u32; 2] = page
+                .evaluate_bounded(
+                    "[...document.querySelectorAll('[role=option]')].reduce((n, r) => { \
+                     const c = r.querySelector('[data-slot=check]'); \
+                     const shown = !!c && c.getBoundingClientRect().width > 0; \
+                     const on = r.getAttribute('aria-selected') === 'true'; \
+                     n[on ? 0 : 1] += on !== shown; return n; }, [0, 0])",
+                )
+                .await
+                .unwrap()
+                .into_value()
+                .unwrap();
+            assert_eq!(
+                checks,
+                [0, 0],
+                "{route}: [picked rows without a check, others with one]"
+            );
+        }
 
         keyboard::press(page, keyboard::ARROW_DOWN).await.unwrap();
         let [on_it, image, off] = rows().await;

@@ -393,6 +393,19 @@ fn picked(
     }
 }
 
+/// The first selected row in tree order, or the branch hiding it (APG tab stop).
+fn first_selected(
+    order: &[VisibleNode],
+    selected: &HashSet<String>,
+    hiding_branch: impl Fn(&str) -> Option<String>,
+) -> Option<String> {
+    let shown: HashSet<String> = selected.iter().filter_map(|id| hiding_branch(id)).collect();
+    order
+        .iter()
+        .find(|node| shown.contains(node.id))
+        .map(|node| node.id.to_string())
+}
+
 fn enabled_between(order: &[VisibleNode], from: usize, to: usize) -> Vec<String> {
     order[from.min(to)..=from.max(to)]
         .iter()
@@ -847,6 +860,7 @@ fn TreeCore(props: TreeCoreProps) -> Element {
             Some(order[index].id.to_string())
         })
         .or_else(|| hiding_branch(props.current.as_deref()?))
+        .or_else(|| first_selected(&order, props.selected.as_ref()?, hiding_branch))
         .or_else(|| order.first().map(|node| node.id.to_string()));
     if let Some(index) = resolved_active
         .as_deref()
@@ -1228,6 +1242,30 @@ mod tests {
         );
         assert_eq!(visible_path(&nodes, &open(&["b"]), "x"), Some(vec![1, 0]));
         assert_eq!(visible_path(&nodes, &open(&[]), "x"), None);
+    }
+
+    /// The tab stop lands on the first selected row in tree order, or the branch hiding it.
+    #[test]
+    fn the_first_selected_row_takes_the_tab_stop() {
+        let nodes = tree(&[("a", &["x"]), ("b", &["y"])]);
+        let ids = |ids: &[&str]| ids.iter().map(|id| id.to_string()).collect::<HashSet<_>>();
+        let at = |open: &[&str], selected: &[&str]| {
+            let open = ids(open);
+            let order = visible_order(&nodes, &open, false);
+            let visible = |id: &String| order.iter().any(|node| node.id == id);
+            let hiding = |id: &str| {
+                path_to(&nodes, id)?
+                    .into_iter()
+                    .rev()
+                    .map(str::to_string)
+                    .find(|id| visible(id))
+            };
+            first_selected(&order, &ids(selected), hiding)
+        };
+        assert_eq!(at(&["a", "b"], &["y", "x"]), Some("x".into()));
+        assert_eq!(at(&["b"], &["y", "x"]), Some("a".into()));
+        assert_eq!(at(&[], &["y"]), Some("b".into()));
+        assert_eq!(at(&[], &[]), None);
     }
 
     fn node<'a>(id: &'a str, label: &'a str, disabled: bool) -> VisibleNode<'a> {

@@ -195,6 +195,46 @@ fn the_mobile_drawer_fills_the_screen() {
     });
 }
 
+/// Todo 5146: under RTL on a phone the closed drawer, out past the right edge, widens no page.
+#[test]
+fn the_rtl_page_is_as_wide_as_the_phone() {
+    block_on(async {
+        let fixture = Fixture::open_until(
+            "/data-display/list",
+            Viewport::Mobile,
+            Scheme::Light,
+            "#docs-main h1",
+        )
+        .await
+        .unwrap();
+        let page = &fixture.page;
+        page.evaluate_bounded(
+            "[...document.querySelectorAll('button')] \
+             .find(b => /right-to-left/i.test(b.getAttribute('aria-label') || b.textContent)).click()",
+        )
+        .await
+        .unwrap();
+        wait::for_js_true(
+            page,
+            "document.documentElement.dir === 'rtl' \
+             && document.querySelector('nav#docs-nav').getBoundingClientRect().left >= innerWidth - 1",
+            "the page to turn RTL with the drawer past the right edge",
+        )
+        .await
+        .unwrap();
+        let widths: [f64; 2] = page
+            .evaluate_bounded(
+                "[document.documentElement.scrollWidth, document.documentElement.clientWidth]",
+            )
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        assert_eq!(widths[0], widths[1], "[scrollWidth, clientWidth] under RTL");
+        close(fixture).await;
+    });
+}
+
 /// Todo 3410: a drawer narrower than the page closes on a press outside it (Home has the
 /// drawer at every width).
 #[test]

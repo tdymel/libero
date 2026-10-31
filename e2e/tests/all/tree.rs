@@ -986,7 +986,17 @@ fn checkbox_clicks_cascade_through_a_branch() {
         )
         .await
         .unwrap();
-        pointer::click(page, "[data-tree-id='a1'] [data-slot=control]")
+        // Todo 5141: just before the drawn box still checks, inside its 24px target.
+        let [x, y]: [f64; 2] = page
+            .evaluate_bounded(
+                "(() => { const r = document.querySelector(\"[data-tree-id='a1'] [data-slot=control]\") \
+                 .getBoundingClientRect(); return [r.left - (24 - r.width) / 4, r.top + r.height / 2]; })()",
+            )
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        pointer::click_at(page, pointer::Point { x, y })
             .await
             .unwrap();
         wait::for_js_true(

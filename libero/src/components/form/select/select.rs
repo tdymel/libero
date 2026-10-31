@@ -213,6 +213,8 @@ pub fn Select<T: Options>(props: SelectProps<T>) -> Element {
             row_disabled,
             row_labels,
             loading: loading.then(|| common.loading.to_string()),
+            // The pick is marked by more than a tint (WCAG 1.4.1, todo 5143).
+            checks: props.option.is_none(),
             onpick,
             selection,
             placeholder: props.placeholder,

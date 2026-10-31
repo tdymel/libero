@@ -316,7 +316,7 @@ pub fn SelectPage() -> Element {
                         .doc("Narrows or reorders the list. A runtime set, such as `String`s or records from a server, goes here. An enum from another crate takes a `Choices` list built by `choices!`, with `T` a `Choice<Fruit>` that derefs to the `Fruit`. A `Vec<T>` converts, an `OptionList<T>` adds named groups and disabled options, and a `Resource<Vec<T>>` adds the loader while it fetches. A failed fetch is an empty list, so show your own error beside the field. Order is kept, so a group label used again after another group draws its heading again."),
                     prop("option", "Callback<SelectOptionArgs<T>, Element>")
                         .default("T::label()")
-                        .doc("Draws one row's content. The highlight, selection and click stay the component's. Hide a decorative glyph such as an emoji with `aria-hidden`, or a screen reader reads it before the label."),
+                        .doc("Draws one row's content. Unset, the selected row ends in a check mark; a custom row draws its own from `selected` on the args. The highlight, selection and click stay the component's. Hide a decorative glyph such as an emoji with `aria-hidden`, or a screen reader reads it before the label."),
                     prop("selection", "Callback<T, Element>")
                         .default("T::label()")
                         .doc("Draws the selected value inside the trigger."),

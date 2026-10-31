@@ -177,8 +177,9 @@ pub(crate) fn AppShell() -> Element {
                 align: "stretch",
                 // Nav and page side by side at every width.
                 wrap: false,
-                // The drawer's containing block.
-                sx: sx().position("relative").flex("1").min_height("0"),
+                // The drawer's containing block. Clipped: under RTL a phone widened the
+                // page to show the closed drawer past the right edge (5146).
+                sx: sx().position("relative").flex("1").min_height("0").overflow("clip"),
                 // The drag's handle on the drawer, to measure its width.
                 div { display: "contents", onmounted: nav_box.mount(),
                     DocsNav {
