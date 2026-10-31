@@ -149,7 +149,10 @@ fn default_group_expansion_opens_the_first_levels() {
     // Every team open, every city inside it closed.
     assert_eq!(body.matches("aria-expanded=\"true\"").count(), 3, "{body}");
     assert_eq!(body.matches("aria-expanded=\"false\"").count(), 4, "{body}");
-    assert!(body.contains("aria-label=\"Sales, Berlin, 1 row\""), "{body}");
+    assert!(
+        body.contains("aria-label=\"Sales, Berlin, 1 row\""),
+        "{body}"
+    );
     assert!(!shows(&body, "Ada"), "{body}");
 }
 
