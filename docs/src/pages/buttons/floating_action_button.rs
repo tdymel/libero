@@ -78,10 +78,12 @@ fn controls(variant: &str, size: &str, radius: &str, placement: &str) -> Vec<Con
         Control::switch("tooltip").hidden_when(extended),
         Control::switch("disabled"),
         Control::switch("loading"),
-        Control::switch("actions").code(|_, values| match values.str("actions") == "true" {
-            true => vec![ACTIONS.to_string()],
-            false => vec![],
-        }),
+        Control::switch("actions")
+            .default("true")
+            .code(|_, values| match values.str("actions") == "true" {
+                true => vec![ACTIONS.to_string()],
+                false => vec![],
+            }),
         Control::switch("hidden"),
     ]
 }
