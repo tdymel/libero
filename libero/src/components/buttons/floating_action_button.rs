@@ -1,4 +1,4 @@
-use dioxus::prelude::*;
+use dioxus::{core::AttributeValue, prelude::*};
 
 use crate::{
     components::{
@@ -100,7 +100,8 @@ base_props! {
         #[props(default)]
         disabled: Option<bool>,
         /// The visible label, which names the action.
-        children: Element,
+        #[props(into)]
+        label: String,
     }
 }
 
@@ -143,19 +144,21 @@ fn actions_sx(placement: Placement) -> Sx {
 }
 
 /// The fade of `hidden`; `visibility` flips at the end, so it stays drawn while fading.
+/// `scale`, not `transform`, which holds `Float`'s placement.
 fn hidden_sx(hidden: bool) -> Sx {
     let duration = TRANSITION_DURATION.value();
     let easing = TRANSITION_EASING.value();
+    let motion = format!("opacity {duration} {easing}, scale {duration} {easing}");
     let fade = if hidden {
         sx().opacity("0")
+            .with("scale", "0.6")
             .visibility("hidden")
             .pointer_events("none")
-            .transition(format!(
-                "opacity {duration} {easing}, visibility 0s linear {duration}"
-            ))
+            .transition(format!("{motion}, visibility 0s linear {duration}"))
     } else {
         sx().opacity("1")
-            .transition(format!("opacity {duration} {easing}, visibility 0s"))
+            .with("scale", "1")
+            .transition(format!("{motion}, visibility 0s"))
     };
     fade.media(REDUCED_MOTION, sx().transition("none"))
 }
@@ -293,11 +296,26 @@ pub fn FloatingActionButton(props: FloatingActionButtonProps) -> Element {
         close: Callback::new(move |()| dismiss.dismiss()),
     });
     let list_id = use_id();
+    let own_id = use_id();
     let list_sx: Input<Sx> = actions_sx(placement).into();
     let list = use_box().sx(&list_sx).prepare();
 
     let mut attributes = props.attributes.clone();
+    // The group is named by the button, through the caller's `id` or one of its own.
+    let caller_id = attributes
+        .iter()
+        .rev()
+        .find_map(|attribute| match &attribute.value {
+            AttributeValue::Text(id) if attribute.name == "id" && !id.trim().is_empty() => {
+                Some(id.clone())
+            }
+            _ => None,
+        });
+    let trigger_id = caller_id.clone().unwrap_or_else(|| own_id.cloned());
     if dial {
+        if caller_id.is_none() {
+            attributes.push(attr("id", trigger_id.clone()));
+        }
         // The trigger outlives every opening, so it is remembered once, on mount.
         attributes.extend(anchor.attributes());
         attributes.push(listener("onmounted", move |event: Event<MountedData>| {
@@ -385,6 +403,8 @@ pub fn FloatingActionButton(props: FloatingActionButtonProps) -> Element {
                 {
                     list.element(&floating)
                         .attr("id", list_id())
+                        .attr("role", "group")
+                        .attr("aria-labelledby", trigger_id)
                         .render(HtmlTag::Div, dismiss.floating_events(), props.actions.clone().unwrap_or(VNode::empty()))
                 }
             }
@@ -405,8 +425,8 @@ pub fn FloatingActionButton(props: FloatingActionButtonProps) -> Element {
 ///         aria_label: "Create",
 ///         icon: rsx! { Pictogram { icon: lucide::plus::outlined } },
 ///         actions: rsx! {
-///             FloatingActionButtonAction { icon: rsx! { Pictogram { icon: lucide::mail::outlined } }, "Message" }
-///             FloatingActionButtonAction { icon: rsx! { Pictogram { icon: lucide::calendar::outlined } }, "Event" }
+///             FloatingActionButtonAction { label: "Message", icon: rsx! { Pictogram { icon: lucide::mail::outlined } } }
+///             FloatingActionButtonAction { label: "Event", icon: rsx! { Pictogram { icon: lucide::calendar::outlined } } }
 ///         },
 ///     }
 /// }
@@ -449,7 +469,7 @@ pub fn FloatingActionButtonAction(props: FloatingActionButtonActionProps) -> Ele
             states: props.states.clone(),
             attributes: props.attributes.clone(),
             icon: props.icon.clone(),
-            {props.children}
+            "{props.label}"
         }
     }
 }

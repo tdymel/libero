@@ -36,12 +36,12 @@ fn DialPage() -> Element {
                     id: "message",
                     icon: rsx! { Pictogram { icon: lucide::mail::outlined } },
                     onclick: move |_| sent += 1,
-                    "Message"
+                    label: "Message",
                 }
                 FloatingActionButtonAction {
                     id: "event",
                     icon: rsx! { Pictogram { icon: lucide::calendar::outlined } },
-                    "Event"
+                    label: "Event",
                 }
             },
         }

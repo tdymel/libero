@@ -67,8 +67,8 @@ fn Demo() -> Element {
             aria_label: "Create",
             icon: rsx! { Pictogram { icon: lucide::plus::outlined } },
             actions: rsx! {
-                FloatingActionButtonAction { icon: rsx! { Pictogram { icon: lucide::mail::outlined } }, "Message" }
-                FloatingActionButtonAction { icon: rsx! { Pictogram { icon: lucide::calendar::outlined } }, "Event" }
+                FloatingActionButtonAction { label: "Message", icon: rsx! { Pictogram { icon: lucide::mail::outlined } } }
+                FloatingActionButtonAction { label: "Event", icon: rsx! { Pictogram { icon: lucide::calendar::outlined } } }
             },
         }
     }
@@ -108,7 +108,7 @@ fn Demo() -> Element {
 | Prop | Type | Default | Description |
 |---|---|---|---|
 | `icon` | `Element` | required | The glyph before the label. |
-| `children` | `Element` | required | The visible label, which names the action. |
+| `label` | `String` | required | The visible label, which names the action. |
 | `onclick` | `EventHandler<MouseEvent>` | - | Runs the action; the speed dial then closes and focus returns to its button. |
 | `to` | `NavigationTarget` | - | Renders a link instead of a `<button>`. |
 | `target` | `String` | - | The link's `target` attribute. |
@@ -134,7 +134,7 @@ shadow's `elevation` step (`md`).
 - A fixed one sits above a docked `NavigationBar` and out of the safe areas;
   `start` and `end` flip under `dir="rtl"`.
 - With `actions`, the button is a disclosure: `aria-expanded` says whether
-  the actions show, and `aria-controls` points at them while open. They
+  the actions show, and `aria-controls` points at them while open, a group named by the button. They
   follow it in the tab order.
 - Escape or an action's press closes the speed dial and returns focus to the
   button; a press outside or Tab past the last action closes it where focus

@@ -9,7 +9,7 @@ use pictogram_icons_lucide as lucide;
 
 const ICON: &str = "icon: rsx! { Pictogram { icon: lucide::plus::outlined } }";
 const LABEL: &str = "New message";
-const ACTIONS: &str = "actions: rsx! {\n    FloatingActionButtonAction { icon: rsx! { Pictogram { icon: lucide::mail::outlined } }, \"Message\" }\n    FloatingActionButtonAction { icon: rsx! { Pictogram { icon: lucide::calendar::outlined } }, \"Event\" }\n}";
+const ACTIONS: &str = "actions: rsx! {\n    FloatingActionButtonAction { label: \"Message\", icon: rsx! { Pictogram { icon: lucide::mail::outlined } } }\n    FloatingActionButtonAction { label: \"Event\", icon: rsx! { Pictogram { icon: lucide::calendar::outlined } } }\n}";
 
 fn extended(values: &DemoValues) -> bool {
     values.str("children") == "true"
@@ -160,7 +160,7 @@ pub fn FloatingActionButtonPage() -> Element {
                 prop("icon", "Element")
                     .default("required")
                     .doc("The glyph before the label."),
-                prop("children", "Element")
+                prop("label", "String")
                     .default("required")
                     .doc("The visible label, which names the action."),
                 prop("onclick", "EventHandler<MouseEvent>")
@@ -179,7 +179,7 @@ pub fn FloatingActionButtonPage() -> Element {
                     "Its shadow steps aside on keyboard focus, so the focus ring is drawn whole over it.",
                     "Under a finger the button is at least 44 by 44px, at every size.",
                     "A fixed one sits above a docked `NavigationBar` and out of the safe areas; `start` and `end` flip under `dir=\"rtl\"`.",
-                    "With `actions`, the button is a disclosure: `aria-expanded` says whether the actions show, and `aria-controls` points at them while open. They follow it in the tab order.",
+                    "With `actions`, the button is a disclosure: `aria-expanded` says whether the actions show, and `aria-controls` points at them while open, a group named by the button. They follow it in the tab order.",
                     "Escape or an action's press closes the speed dial and returns focus to the button; a press outside or Tab past the last action closes it where focus went.",
                     "`hidden` takes it out of the tab order and the accessibility tree at once, before the fade ends.",
                 ])
@@ -240,8 +240,8 @@ pub fn FloatingActionButtonPage() -> Element {
                             loading: values.str("loading") == "true",
                             hidden: values.str("hidden") == "true",
                             actions: (values.str("actions") == "true").then(|| rsx! {
-                                FloatingActionButtonAction { icon: rsx! { Pictogram { icon: lucide::mail::outlined } }, "Message" }
-                                FloatingActionButtonAction { icon: rsx! { Pictogram { icon: lucide::calendar::outlined } }, "Event" }
+                                FloatingActionButtonAction { label: "Message", icon: rsx! { Pictogram { icon: lucide::mail::outlined } } }
+                                FloatingActionButtonAction { label: "Event", icon: rsx! { Pictogram { icon: lucide::calendar::outlined } } }
                             }),
                             children: extended(&values).then(|| rsx! { {LABEL} }),
                         }

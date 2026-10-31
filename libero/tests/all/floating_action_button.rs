@@ -147,6 +147,7 @@ fn hidden_fades_it_out_of_the_tab_order_and_the_tree() {
         "{html}"
     );
     assert!(html.contains("visibility:hidden"), "{html}");
+    assert!(html.contains("scale:0.6"), "{html}");
     assert!(
         html.contains("visibility 0s linear var(--lsx-transition-duration)"),
         "visibility flips after the fade: {html}"
@@ -165,8 +166,8 @@ fn speed_dial(opened: bool) -> Element {
                 to: "/ignored",
                 icon: rsx! { svg {} },
                 actions: rsx! {
-                    FloatingActionButtonAction { icon: rsx! { svg {} }, "Message" }
-                    FloatingActionButtonAction { icon: rsx! { svg {} }, "Event" }
+                    FloatingActionButtonAction { label: "Message", icon: rsx! { svg {} } }
+                    FloatingActionButtonAction { label: "Event", icon: rsx! { svg {} } }
                 },
             }
         }
@@ -192,6 +193,10 @@ fn an_open_speed_dial_controls_the_actions_after_it() {
     let at = html
         .find(&list)
         .unwrap_or_else(|| panic!("no list: {html}"));
+    let at = html[..at].rfind("<div").unwrap();
+    let group = format!("aria-labelledby=\"{}\"", button["id"]);
+    assert!(html[at..].contains(&group), "named by the button: {html}");
+    assert!(html[at..].contains("role=\"group\""), "{html}");
     assert!(
         at > html.find("aria-expanded").unwrap(),
         "the list follows the button: {html}"

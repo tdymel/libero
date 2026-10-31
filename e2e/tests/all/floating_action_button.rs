@@ -5,12 +5,25 @@
 
 use e2e::browser::block_on;
 use e2e::passes::{focus, keyboard, pointer};
+use e2e::suite::Step;
 use e2e::{Fixture, Suite, Viewport, js, wait};
 use serde_json::Value;
 
 const FAB: &str = "#fab";
 const SMALL: &str = "#small";
 const MESSAGE: &str = "#message";
+
+/// The open speed dial too: axe on the named group and its actions.
+#[test]
+fn a_speed_dial_meets_the_baseline() {
+    Suite::new(
+        "floating_action_button_dial",
+        "/floating-action-button/dial",
+    )
+    .focusable(FAB)
+    .state("open", &[Step::Click(FAB)], MESSAGE)
+    .run();
+}
 
 #[test]
 fn it_meets_the_baseline() {
@@ -236,6 +249,12 @@ fn hidden_it_drops_out_of_the_tab_order() {
         wait::for_visible(page, FAB).await.unwrap();
         pointer::click(page, "#hide").await.unwrap();
         wait::for_hidden(page, FAB).await.unwrap();
+        let inert: bool = js(
+            page,
+            "document.querySelector('#fab').closest('[inert]') !== null",
+        )
+        .await;
+        assert!(inert, "out of the accessibility tree at once");
         focus::wait_for_focus(page, "#hide", "the switch")
             .await
             .unwrap();
