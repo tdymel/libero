@@ -144,7 +144,7 @@ async fn a_hard_disabled_first_item_is_no_stop<D: Driver>(d: &mut D, _route: &st
     eventually_focused(d, "#one", "Tab into the bar").await
 }
 
-/// Hiding the stop moves it to the first item that can take focus (todo 5165).
+/// Hiding the stop moves it to the first item that can take focus (todos 5165, 5175).
 async fn a_hidden_stop_moves_on<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
     d.click("#hide").await?;
     eventually(d, "the stop to leave the hidden #one", async |d| {
@@ -360,6 +360,14 @@ e2e::scenario!(
 e2e::scenario!(
     a_hidden_tab_stop_hands_the_stop_on,
     "/toolbar-stop",
+    a_hidden_stop_moves_on,
+    android: skip("5165: a WebView queries no item, so its stop stays"),
+    desktop: skip("5165: a WebView queries no item, so its stop stays"),
+    ios: skip("5165: a WebView queries no item, so its stop stays")
+);
+e2e::scenario!(
+    a_hidden_tab_stop_in_a_bar_that_keeps_its_size_hands_the_stop_on,
+    "/toolbar-stop-wide",
     a_hidden_stop_moves_on,
     android: skip("5165: a WebView queries no item, so its stop stays"),
     desktop: skip("5165: a WebView queries no item, so its stop stays"),

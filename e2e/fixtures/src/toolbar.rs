@@ -21,7 +21,24 @@ pub const ROUTES: Routes = &[
     ("/toolbar-fields", || rsx! { ToolbarFieldsPage {} }),
     ("/toolbar-editor", || rsx! { ToolbarEditorPage {} }),
     ("/toolbar-stop", || rsx! { ToolbarStopPage {} }),
+    ("/toolbar-stop-wide", || rsx! { ToolbarStopWidePage {} }),
 ];
+
+/// A full-width bar keeps its size when an item goes: the class a render sets hides the
+/// stop (todo 5175).
+#[component]
+fn ToolbarStopWidePage() -> Element {
+    let mut hide = use_signal(|| false);
+    rsx! {
+        style { ".gone {{ display: none; }}" }
+        button { id: "before", "before" }
+        Toolbar { "aria-label": "Wide",
+            Button { id: "one", class: if hide() { "gone" } else { "" }, "One" }
+            Button { id: "two", "Two" }
+        }
+        button { id: "hide", onclick: move |_| hide.set(true), "Hide one" }
+    }
+}
 
 /// The tab stop off items that cannot take focus (todos 5165, 5166): a hard-disabled first
 /// item, one hidden with `display: none`, one hard-disabled later. In a row, so a hidden

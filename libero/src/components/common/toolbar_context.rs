@@ -22,6 +22,10 @@ pub(crate) struct ToolbarScope {
     orientation: Signal<Orientation>,
     /// An item left the arrow at its end to the bar, for the press bubbling now.
     passed: CopyValue<bool>,
+    /// Bumped when a render may have shown or hidden an item: the bar measures them again.
+    rechecks: Signal<u64>,
+    /// A recheck is requested and not yet taken, so one render's items ask once.
+    asked: CopyValue<bool>,
 }
 
 impl ToolbarScope {
@@ -45,10 +49,35 @@ impl ToolbarScope {
         resolve_stop(*self.current.peek(), &self.order.peek(), &self.out.peek())
     }
 
-    /// Subscribes the caller to the stop and to items leaving the order.
+    /// Subscribes the caller to the stop, to items leaving the order and to rechecks,
+    /// and takes the pending recheck.
     pub(crate) fn watch(&self) {
         let _ = self.current.read();
         let _ = self.out.read();
+        let _ = self.rechecks.read();
+        let mut asked = self.asked;
+        asked.set(false);
+    }
+
+    /// Asks the bar to measure its items again once this render is out, as a class or
+    /// style it rendered may have hidden one. From a queued effect: no write in render.
+    pub(crate) fn recheck_after_render(&self) {
+        let scope = *self;
+        dioxus::core::queue_effect(move || scope.ask_recheck());
+    }
+
+    fn ask_recheck(&self) {
+        let (mut asked, mut rechecks) = (self.asked, self.rechecks);
+        // A bar dropped since the render has nothing to measure.
+        let Ok(mut asked) = asked.try_write() else {
+            return;
+        };
+        if std::mem::replace(&mut *asked, true) {
+            return;
+        }
+        if let Ok(mut rechecks) = rechecks.try_write() {
+            *rechecks += 1;
+        }
     }
 
     /// Whether an item was focused or picked as the stop, not just first by default.
@@ -118,6 +147,8 @@ pub(crate) fn use_provide_toolbar(orientation: Orientation) -> ToolbarScope {
         out: Signal::new(Vec::new()),
         orientation: Signal::new(orientation),
         passed: CopyValue::new(false),
+        rechecks: Signal::new(0),
+        asked: CopyValue::new(false),
     });
     use_context_provider(|| ToolbarContext(Some(scope)));
     // From an effect: a write in the body re-runs every reader mid-render (todo 5169).
@@ -223,6 +254,7 @@ pub(crate) fn use_toolbar_item() -> Option<ToolbarItem> {
     });
 
     let scope = scope?;
+    scope.recheck_after_render();
     let current = *scope.current.read();
     let stop = resolve_stop(current, &scope.order.peek(), &scope.out.read()) == Some(id);
     Some(ToolbarItem { id, stop, scope })

@@ -143,7 +143,8 @@ pub fn Toolbar(props: ToolbarProps) -> Element {
     let bar = use_element();
 
     // A hidden or disabled stop leaves the bar with no Tab stop (todos 5165, 5167); a resize
-    // catches an item a breakpoint hides.
+    // catches an item a breakpoint hides, a render one a class or style hides (todo 5175).
+    scope.recheck_after_render();
     use_effect(move || {
         let _ = bar.mount_token();
         scope.watch();
@@ -475,6 +476,10 @@ base_props! {
 #[component]
 pub fn ToolbarGroup(props: ToolbarGroupProps) -> Element {
     use_outside_warning("ToolbarGroup");
+    // A group hidden by its own render hides its items without rendering them.
+    if let Some(scope) = use_toolbar() {
+        scope.recheck_after_render();
+    }
     use_name_warning(
         names_itself(&props.attributes),
         "ToolbarGroup: no `aria-label` or `aria-labelledby`, so it is announced as just \"group\".",

@@ -1,6 +1,6 @@
 # Skipped e2e scenarios
 
-Scenarios: 728
+Scenarios: 732
 
 Generated from the `scenario!` skips in `e2e/tests/all` by `cargo test -p e2e --lib skips`; edit the skip, not this file. A reason starting `upstream:` waits on Dioxus, Blitz, wry or the engine (revisit on their update, todo 3362), a number names the todo that removes it.
 
@@ -421,6 +421,12 @@ The performance scenarios (units `perf`, `table_perf`) are no skips but run on r
 | `tags_field::the_chip_cursor_reaches_the_tags` | native | 3406: Blitz hands a removed chip's focus to a container div, parked with native |
 | `theme_defaults::an_unset_hover_card_align_follows_the_theme` | ios | a touch screen has no hover |
 | `theme_defaults::an_unset_hover_card_side_follows_the_theme` | ios | a touch screen has no hover |
+| `toolbar::a_hidden_tab_stop_hands_the_stop_on` | android | 5165: a WebView queries no item, so its stop stays |
+| `toolbar::a_hidden_tab_stop_hands_the_stop_on` | desktop | 5165: a WebView queries no item, so its stop stays |
+| `toolbar::a_hidden_tab_stop_hands_the_stop_on` | ios | 5165: a WebView queries no item, so its stop stays |
+| `toolbar::a_hidden_tab_stop_in_a_bar_that_keeps_its_size_hands_the_stop_on` | android | 5165: a WebView queries no item, so its stop stays |
+| `toolbar::a_hidden_tab_stop_in_a_bar_that_keeps_its_size_hands_the_stop_on` | desktop | 5165: a WebView queries no item, so its stop stays |
+| `toolbar::a_hidden_tab_stop_in_a_bar_that_keeps_its_size_hands_the_stop_on` | ios | 5165: a WebView queries no item, so its stop stays |
 | `tooltip::a_long_press_leaves_a_text_entry_unfocused` | desktop | 1126: no touch input under Xvfb |
 | `tooltip::a_long_press_leaves_a_text_entry_unfocused` | native | 3237: the native driver reads no script |
 | `tooltip::a_long_press_on_a_link_trigger_opens_no_link_menu` | desktop | 1126: no touch input under Xvfb |

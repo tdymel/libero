@@ -107,7 +107,9 @@ parts work.
   along the bar, so a tap never runs its neighbour.
 - An arrow passes over a control that cannot take focus, such as one hidden
   with `display: none`. When the tab stop is such a control, it moves to the
-  first that can.
+  first that can. The bar looks again when a resize or a render of the bar, a
+  group or an item may have hidden it; a script that hides one with no render
+  is seen at the next of these.
 
 ### You must
 
