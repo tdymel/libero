@@ -276,6 +276,12 @@ fn a_tap_outside_closes_the_speed_dial() {
         wait::for_visible(page, MESSAGE).await.unwrap();
         pointer::tap(page, "#sent").await.unwrap();
         wait::for_hidden(page, MESSAGE).await.unwrap();
+
+        // Opened with focus elsewhere, as by an iOS tap, which focuses no button.
+        js::<bool>(page, "(document.querySelector('#fab').click(), true)").await;
+        wait::for_visible(page, MESSAGE).await.unwrap();
+        pointer::tap(page, "#sent").await.unwrap();
+        wait::for_hidden(page, MESSAGE).await.unwrap();
         fixture.console.assert_clean("an outside tap").unwrap();
         fixture.close().await.unwrap();
     });
