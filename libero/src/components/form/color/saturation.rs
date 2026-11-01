@@ -50,6 +50,7 @@ static PANEL_SX: StaticSx = StaticSx::new(|| {
         // Forced colours drop the gradient, and the panel is the only way to pick a shade.
         .media(FORCED_COLORS, sx().forced_color_adjust("none"))
         .when("disabled", disabled_look_sx("not-allowed"))
+        .when("readonly", sx().cursor("default"))
 });
 
 /// The dark rings round a white thumb border, shared with the hue and alpha thumbs.
@@ -72,6 +73,9 @@ static THUMB_SX: StaticSx = StaticSx::new(|| {
         .and(shadow_sx(THUMB_RING.to_string()))
         .background(SATURATION_COLOR.value())
         .cursor("grab")
+        // Nothing drags when disabled or read-only, so the thumb stops inviting it.
+        .when("disabled", sx().cursor("not-allowed"))
+        .when("readonly", sx().cursor("default"))
 });
 
 /// The panel and its handlers. Only [`SaturationThumb`] reads `value` in
@@ -238,9 +242,13 @@ pub(super) fn Saturation(props: SaturationProps) -> Element {
         emit.call(SliderChangeEvent::End(moved));
     });
 
-    let states: Input<States> = States::new().with("disabled", disabled).into();
-    let panel_style = use_box().framework_sx(&PANEL_SX).states(&states).prepare();
     // As `Slider`: without `oninput` the thumb stays a tab stop, read-only (todo 4245).
+    let readonly = props.oninput.is_none() && !disabled;
+    let states: Input<States> = States::new()
+        .with("disabled", disabled)
+        .with("readonly", readonly)
+        .into();
+    let panel_style = use_box().framework_sx(&PANEL_SX).states(&states).prepare();
     let thumb = rsx! {
         SaturationThumb {
             value,
@@ -248,7 +256,7 @@ pub(super) fn Saturation(props: SaturationProps) -> Element {
             aria_label: props.aria_label,
             tab_stop: !disabled && focusable,
             disabled,
-            readonly: props.oninput.is_none() && !disabled,
+            readonly,
             onkeydown,
         }
     };
@@ -281,8 +289,13 @@ fn SaturationThumb(
         .with(SATURATION_Y, (1.0 - value.value()).to_string())
         .with(SATURATION_COLOR, value.opaque().to_hex())
         .into();
+    let thumb_states: Input<States> = States::new()
+        .with("disabled", disabled)
+        .with("readonly", readonly)
+        .into();
     let thumb_style = use_box()
         .framework_sx(&THUMB_SX)
+        .states(&thumb_states)
         .variables(&thumb_variables)
         .prepare();
 

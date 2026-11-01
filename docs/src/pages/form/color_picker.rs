@@ -171,8 +171,8 @@ pub fn ColorPickerPage() -> Element {
                 ]),
             ],
             accessibility: a11y()
-                .key(["ArrowRight", "ArrowDown"], "In the swatch row: the next swatch, wrapping to the first. Down goes to the next swatch, not the one below it.")
-                .key(["ArrowLeft", "ArrowUp"], "In the swatch row: the previous swatch, wrapping to the last.")
+                .key(["ArrowRight", "ArrowDown"], "In the swatch row: the next swatch, wrapping to the first. The row is one list even where it wraps onto several lines, so Down is the next swatch, not the one below it.")
+                .key(["ArrowLeft", "ArrowUp"], "In the swatch row: the previous swatch, wrapping to the last. Up is the previous swatch, not the one above it.")
                 .key(["Home", "End"], "In the swatch row: the first or the last swatch.")
                 .handles([
                     "Each thumb is a slider with the usual keys. In a `ColorPicker` the hue runs from 0 to 359 degrees, since 360 is the same hue as 0.",

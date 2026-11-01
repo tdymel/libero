@@ -13,7 +13,7 @@ use crate::{
     components::{
         common::{
             COARSE_POINTER, Glyph, HtmlTag, Input, Part, States, Variables, base_props,
-            has_shortcut_modifier, input_from_str, parts_enum, variables,
+            disabled_look_sx, has_shortcut_modifier, input_from_str, parts_enum, variables,
         },
         form::{Disabled, SliderChangeEvent},
         layout::use_box,
@@ -115,6 +115,16 @@ static COLOR_PICKER_SX: StaticSx = StaticSx::new(|| {
         .selector(
             "& > [data-slot='swatches'] svg",
             sx().width("60%").height("60%"),
+        )
+        // The preview is no control, yet it fades with the rest of a disabled picker.
+        .when(
+            "disabled",
+            sx().selector("& [data-slot='preview'] > *", disabled_look_sx("default")),
+        )
+        // Disabled keeps its own not-allowed, so only a read-only picker gets this one.
+        .when(
+            "readonly",
+            sx().selector("& > [data-slot='swatches'] > *", sx().cursor("default")),
         )
 });
 
@@ -287,6 +297,8 @@ pub fn ColorPicker(props: ColorPickerProps) -> Element {
         .unwrap_or_default()
         .with(size.state_name(), true)
         .with("full-width", props.full_width.unwrap_or(false))
+        .with("disabled", disabled)
+        .with("readonly", readonly && !disabled)
         .into();
     let root_variables: Input<Variables> = variables()
         .with(

@@ -109,6 +109,9 @@ fn the_filter_button_sits_in_the_row_and_names_the_count() {
     );
     assert!(body.contains("aria-label=\"Filters, 1 active\""), "{body}");
     assert!(body.contains("data-filter-count"), "{body}");
+    // 5226: the count sits in the button's trailing slot, which gives the gap to the label.
+    let slot = body.find("button-trailing-icon").expect(&body);
+    assert!(slot < body.find("data-filter-count").unwrap(), "{body}");
     assert!(!body.contains("data-filter-panel=true"), "{body}");
     assert_eq!(
         body.matches("data-filter-panel-button").count(),

@@ -427,6 +427,7 @@ async fn the_filter_panel_edits_every_filter<D: Driver>(d: &mut D, _route: &str)
     const PANEL: &str = "[data-filter-panel]";
     const LINE_0: &str = "[data-filter-line=\"0\"]";
     const LINE_1: &str = "[data-filter-line=\"1\"]";
+    const VALUE: &str = "input[data-filter-value]";
     d.click(BUTTON).await?;
     eventually(d, "the opened panel", async |d| d.exists(PANEL).await).await?;
     eventually_focused(d, "[data-filter-add]", "an empty panel").await?;
@@ -501,7 +502,7 @@ async fn the_filter_panel_edits_every_filter<D: Driver>(d: &mut D, _route: &str)
             && d.attr(FILTERED, "aria-expanded").await?.as_deref() == Some("true"))
     })
     .await?;
-    eventually_focused(d, &format!("{LINE_0} {PICKER}"), "the filtered header").await?;
+    eventually_focused(d, &format!("{LINE_0} {VALUE}"), "the filtered header").await?;
     escape_closes(d, LINE_0).await?;
     eventually_focused(d, FILTERED, "Escape from the filtered header's panel").await?;
 
@@ -515,7 +516,7 @@ async fn the_filter_panel_edits_every_filter<D: Driver>(d: &mut D, _route: &str)
         d.exists(PANEL).await
     })
     .await?;
-    eventually_focused(d, &format!("{LINE_1} {PICKER}"), "the menu's Filter").await?;
+    eventually_focused(d, &format!("{LINE_1} {VALUE}"), "the menu's Filter").await?;
     // 5150, 5152: removing the first line focuses the one taking its place, a group named by its column.
     d.click(&format!("{LINE_0} [data-filter-remove]")).await?;
     eventually_focused(d, &format!("{LINE_0} {PICKER}"), "removing the first line").await?;
@@ -541,7 +542,10 @@ async fn the_filter_panel_edits_every_filter<D: Driver>(d: &mut D, _route: &str)
         d.exists(PANEL).await
     })
     .await?;
-    eventually_focused(d, &format!("{LINE_0} {PICKER}"), "the menu's Filter again").await?;
+    eventually_focused(d, &format!("{LINE_0} {VALUE}"), "the menu's Filter again").await?;
+    // 5222: typing at once lands in the value field, so the line is kept.
+    d.type_text("7").await?;
+    eventually_text(d, "#filters", "Stock Equals 7", "text typed on opening").await?;
     // A real press outside still closes the reopened panel.
     d.click("#filters").await?;
     eventually(d, "the panel closed by a press outside", async |d| {

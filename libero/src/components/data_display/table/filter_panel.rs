@@ -25,7 +25,7 @@ use crate::{
         use_element, use_formats, use_id, use_popover, use_theme,
     },
     localization::TableLabels,
-    platform::{ElementApi, PlatformError, focus_selector, is_tab, next_task},
+    platform::{ElementApi, PlatformError, focus_first_of, focus_selector, is_tab, next_task},
     sx::{StaticSx, sx},
     theme::{ColorCss, ColorShade, DIVIDER_THICKNESS, Size, SizeCss},
 };
@@ -132,7 +132,10 @@ fn taking_place(line: usize, len: usize) -> Option<usize> {
 /// What takes the focus once the panel's lines render.
 #[derive(Clone, Copy, PartialEq)]
 enum PanelFocus {
+    /// The line's column picker.
     Line(usize),
+    /// The line's value field, for a panel opened from its column.
+    Value(usize),
     Add,
 }
 
@@ -190,7 +193,7 @@ impl PanelControl {
                 filters.len() - 1
             }
         };
-        self.focus.set(Some(PanelFocus::Line(line)));
+        self.focus.set(Some(PanelFocus::Value(line)));
         self.open.set(true);
     }
 
@@ -235,12 +238,13 @@ pub(super) fn FilterPanelButton(
                     Glyph { slot: IconSlot::Filter, icon: lucide::funnel::outlined }
                 }
             },
-            "{labels.filters}"
-            if active > 0 {
+            trailing_icon: (active > 0).then(|| rsx! {
+                // The button's trailing slot gives the gap, flipped under RTL.
                 span { "aria-hidden": "true", "data-filter-count": true,
                     Badge { size: "xs", "{active}" }
                 }
-            }
+            }),
+            "{labels.filters}"
         }
     }
 }
@@ -381,29 +385,46 @@ pub(super) fn FilterPanel(
         if !(open() && popover.placed()) {
             return;
         }
-        let selector = match target {
-            // Natively `NativeSelect` draws a listbox combobox, no `<select>`.
-            PanelFocus::Line(line) => {
-                format!("[data-filter-line=\"{line}\"] :is(select, [role=combobox])")
+        // Natively `NativeSelect` draws a listbox combobox, no `<select>`.
+        const PICKER: &str = ":is(select, [role=combobox])";
+        // The first that exists takes it.
+        let candidates = match target {
+            PanelFocus::Line(line) => vec![format!("[data-filter-line=\"{line}\"] {PICKER}")],
+            // The value field, else the picker standing in as it (the second child), else the column's.
+            PanelFocus::Value(line) => {
+                let at = format!("[data-filter-line=\"{line}\"]");
+                vec![
+                    format!("{at} input[data-filter-value]"),
+                    format!("{at} > :nth-child(2){PICKER}"),
+                    format!("{at} > :nth-child(2) {PICKER}"),
+                    format!("{at} {PICKER}"),
+                ]
             }
-            PanelFocus::Add => "[data-filter-add]".to_string(),
+            PanelFocus::Add => vec!["[data-filter-add]".to_string()],
         };
         // The lines render in a portal after this pass.
         spawn(async move {
-            for _ in 0..5 {
+            'tries: for _ in 0..5 {
                 next_task().await;
-                match floating.query_selector(&selector) {
-                    Ok(element) => {
-                        let _ = element.focus();
-                        break;
+                for selector in &candidates {
+                    match floating.query_selector(selector) {
+                        Ok(element) => {
+                            let _ = element.focus();
+                            break 'tries;
+                        }
+                        // A WebView queries nothing: the page focuses it inside the box (958).
+                        Err(PlatformError::Unsupported) => {
+                            let inside = id_selector(&box_id.peek());
+                            let _ = focus_first_of(
+                                &candidates
+                                    .iter()
+                                    .map(|selector| format!("{inside} {selector}"))
+                                    .collect::<Vec<_>>(),
+                            );
+                            break 'tries;
+                        }
+                        Err(_) => {}
                     }
-                    // A WebView queries nothing: the page focuses it inside the box (958).
-                    Err(PlatformError::Unsupported) => {
-                        let inside = format!("{} {selector}", id_selector(&box_id.peek()));
-                        let _ = focus_selector(&inside);
-                        break;
-                    }
-                    Err(_) => {}
                 }
             }
             focus.set(None);

@@ -113,12 +113,13 @@ fn a_swatch_keeps_its_colour_in_forced_colours() {
     });
 }
 
-/// Todo 5195: a disabled picker's hue and alpha sliders fade like its pad and swatches.
+/// Todos 5195, 5223: a disabled picker's hue and alpha sliders and its alpha preview fade like
+/// its pad and swatches.
 #[test]
 fn a_disabled_picker_dims_its_sliders() {
     const OPACITY: &str = r#"(() => ['#disabled', '#readonly'].map(id => {
         const dim = sel => getComputedStyle(document.querySelector(`${id} ${sel}`)).opacity;
-        return ['[data-slot=saturation]', '[data-slot=hue]', '[data-slot=alpha]', '[data-slot=swatch]']
+        return ['[data-slot=saturation]', '[data-slot=hue]', '[data-slot=alpha]', '[data-slot=swatch]', '[data-slot=preview] > *']
             .map(dim).join(' ');
     }).join(','))()"#;
     block_on(async {
@@ -135,7 +136,68 @@ fn a_disabled_picker_dims_its_sliders() {
             .unwrap()
             .into_value()
             .unwrap();
-        assert_eq!(opacity, "0.5 0.5 0.5 0.5,1 1 1 1");
+        assert_eq!(opacity, "0.5 0.5 0.5 0.5 0.5,1 1 1 1 1");
+        fixture.close().await.unwrap();
+    });
+}
+
+/// Todo 5224: the pad, its thumb and the swatches stop inviting a drag or a press when the
+/// picker is disabled (not-allowed) or read-only (default).
+#[test]
+fn a_disabled_or_readonly_picker_shows_no_drag_cursor() {
+    const CURSORS: &str = r#"(() => ['#disabled', '#readonly'].map(id => {
+        const cursor = sel => getComputedStyle(document.querySelector(`${id} ${sel}`)).cursor;
+        return ['[data-slot=saturation]', '[data-slot=saturation] > [data-slot=thumb]', '[data-slot=swatch]']
+            .map(cursor).join(' ');
+    }).join(','))()"#;
+    block_on(async {
+        let fixture = Fixture::open("/color-picker-states", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        wait::for_visible(page, "#readonly [data-slot=swatch]")
+            .await
+            .unwrap();
+        let cursors: String = page
+            .evaluate_bounded(CURSORS)
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        assert_eq!(
+            cursors,
+            "not-allowed not-allowed not-allowed,default default default"
+        );
+        fixture.close().await.unwrap();
+    });
+}
+
+/// Todo 5225: the swatch row is one list even where it wraps, so Down and Up step to the
+/// next and previous swatch, as the page's key table says.
+#[test]
+fn the_vertical_arrows_step_the_swatch_row_as_a_list() {
+    block_on(async {
+        let fixture = Fixture::open("/color-picker-swatches", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        wait::for_visible(page, "[data-slot=swatch]").await.unwrap();
+        keyboard::tab_to(page, "[aria-label='#fa5252']", 10)
+            .await
+            .unwrap();
+        for (key, label, name) in [
+            (keyboard::ARROW_DOWN, "#40c057", "ArrowDown"),
+            (keyboard::ARROW_UP, "#fa5252", "ArrowUp"),
+        ] {
+            keyboard::press(page, key).await.unwrap();
+            wait::for_js_true(
+                page,
+                &format!("document.activeElement.getAttribute('aria-label') === '{label}'"),
+                &format!("{name} to focus {label}"),
+            )
+            .await
+            .unwrap();
+        }
         fixture.close().await.unwrap();
     });
 }

@@ -137,8 +137,8 @@ explains how parts work. `ColorSwatch` is one element and has no parts.
 
 | Key | Action |
 |---|---|
-| `ArrowRight`, `ArrowDown` | In the swatch row: the next swatch, wrapping to the first. Down goes to the next swatch, not the one below it. |
-| `ArrowLeft`, `ArrowUp` | In the swatch row: the previous swatch, wrapping to the last. |
+| `ArrowRight`, `ArrowDown` | In the swatch row: the next swatch, wrapping to the first. The row is one list even where it wraps onto several lines, so Down is the next swatch, not the one below it. |
+| `ArrowLeft`, `ArrowUp` | In the swatch row: the previous swatch, wrapping to the last. Up is the previous swatch, not the one above it. |
 | `Home`, `End` | In the swatch row: the first or the last swatch. |
 
 ### Libero handles
