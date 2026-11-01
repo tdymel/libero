@@ -704,6 +704,10 @@ fn the_list_sorts_by_the_localized_name() {
                 const list = document.querySelector('[role=listbox]');
                 const area = [list, ...list.querySelectorAll('*')].find(e => e.scrollHeight > e.clientHeight + 100);
                 const frame = () => new Promise(requestAnimationFrame);
+                // A tall area: each scroll step costs a debug-wasm render, so few steps keep it in budget.
+                for (let e = area; e !== document.body; e = e.parentElement) e.style.setProperty('max-height', 'none', 'important');
+                area.style.setProperty('height', '3000px', 'important');
+                await frame();
                 const names = new Map();
                 for (let top = 0; ; top = Math.min(top + area.clientHeight, area.scrollHeight - area.clientHeight)) {
                     const view = area.getBoundingClientRect();

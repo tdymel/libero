@@ -46,6 +46,7 @@ mod lightbox;
 mod list;
 mod marquee;
 mod max_length;
+mod media_controls;
 mod menu_link;
 mod menubar;
 mod nav_link;

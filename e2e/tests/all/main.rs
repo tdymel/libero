@@ -94,6 +94,7 @@ mod loader;
 mod long_labels;
 mod mark;
 mod marquee;
+mod media_controls;
 mod menu;
 mod menubar;
 mod modal;
