@@ -201,6 +201,7 @@ const EXTRA_FIXTURES: &[(&str, &[&str])] = &[
             "tree",
         ],
     ),
+    ("select", &["combobox"]),
     ("slider", &["range_slider"]),
     (
         "text_field",
