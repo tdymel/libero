@@ -8,6 +8,7 @@ use crate::{
             navigation_chord, parts_enum, recast_parts, use_combobox, use_name_warning,
         },
         feedback::Loader,
+        form::with_drawn_placeholder,
         layout::{Box, ScrollArea},
         overlay::{
             Dialog,
@@ -16,7 +17,7 @@ use crate::{
         typography::Kbd,
     },
     hooks::{Hotkey, use_dismiss_layer, use_hotkeys, use_localization, use_theme},
-    platform,
+    platform::{self, PLACEHOLDER_CELL_ATTR},
     sx::{StaticSx, Sx, sx},
     theme::{
         SPOTLIGHT_DESCRIPTION_COLOR, SPOTLIGHT_GROUP_COLOR, SPOTLIGHT_MAX_LIST_HEIGHT,
@@ -34,8 +35,8 @@ parts_enum! {
     pub enum SpotlightPart {
         /// Holds the search box, the list and the status line.
         Body = "body" => "& > [data-slot='body']",
-        /// The search `input`.
-        Search = "search" => "& > [data-slot='body'] > [data-slot='search']",
+        /// The search `input`; on Blitz it shares a box with its drawn placeholder.
+        Search = "search" => "& > [data-slot='body'] [data-slot='search']",
         /// The `listbox`, a `ScrollArea`.
         List = "list" => "& > [data-slot='body'] > [data-slot='list']",
         /// A named group of rows.
@@ -55,14 +56,24 @@ parts_enum! {
     }
 }
 
+/// The search box, a child of the body or, on Blitz, of its placeholder cell.
+const SEARCH: &str = "& [data-slot='search']";
+/// The search box's padding and underline, where Blitz draws its placeholder.
+const SEARCH_INSET: &str = "12px 12px 14px";
+
 // Rows are styled from here, the `Menu` shape. Hover tints like the keyboard's row
 // (todo 2628); only the keyboard's row takes a ring.
 static SPOTLIGHT_BODY_SX: StaticSx = StaticSx::new(|| {
     sx().display("flex")
         .flex_direction("column")
         .gap(SPOTLIGHT_PADDING.value())
+        // Blitz's drawn placeholder takes the search box's size.
         .selector(
-            "& > [data-slot='search']",
+            format!("& > [{PLACEHOLDER_CELL_ATTR}]"),
+            sx().font_size(SPOTLIGHT_SEARCH_FONT_SIZE.value()),
+        )
+        .selector(
+            SEARCH,
             sx().width("100%")
                 .padding("12px")
                 .font("inherit")
@@ -75,13 +86,10 @@ static SPOTLIGHT_BODY_SX: StaticSx = StaticSx::new(|| {
                 .border_bottom("2px solid var(--lsx-muted-3)")
                 .outline("none"),
         )
-        .selector(
-            "& > [data-slot='search']::placeholder",
-            sx().color("text-dimmed"),
-        )
+        .selector(format!("{SEARCH}::placeholder"), sx().color("text-dimmed"))
         // The input always holds focus: its indicator is the underline, not a ring.
         .selector(
-            "& > [data-slot='search']:focus",
+            format!("{SEARCH}:focus"),
             sx().border_bottom_color("primary.6"),
         )
         .selector(
@@ -170,8 +178,8 @@ pub struct SpotlightOptions {
     pub clear_on_close: bool,
     /// Names the dialog and its list.
     pub aria_label: Option<String>,
-    /// Ctrl/Cmd plus this key toggles the palette from anywhere. Web only: no
-    /// other renderer has a document-level key listener yet.
+    /// Ctrl/Cmd plus this key toggles the palette from anywhere: on the web, a
+    /// WebView and native (Blitz), as `use_hotkeys`. A server render binds nothing.
     pub shortcut: Option<char>,
     /// The actions are still being fetched: a loader replaces the rows.
     pub loading: bool,
@@ -420,7 +428,7 @@ pub fn use_spotlight(options: SpotlightOptions) -> SpotlightHandle {
                     }
                 },
                 Box { framework_sx: &SPOTLIGHT_BODY_SX, "data-slot": SpotlightPart::Body.slot(),
-                    input {
+                    {with_drawn_placeholder(Some(&placeholder), SEARCH_INSET, rsx! { input {
                         onmousedown: move |_| {
                             let mut pressed_input = pressed_input;
                             pressed_input.set(true);
@@ -453,7 +461,7 @@ pub fn use_spotlight(options: SpotlightOptions) -> SpotlightHandle {
                         onkeydown,
                         // The listbox is drawn while open, rows or none.
                         ..state.aria(true),
-                    }
+                    } })}
                     ScrollArea {
                         id: "{listbox}",
                         "data-slot": SpotlightPart::List.slot(),
@@ -669,7 +677,7 @@ mod tests {
         let option = format!("{list} [data-slot='option']");
         let expected: Vec<(&str, String)> = vec![
             ("body", body.into()),
-            ("search", format!("{body} > [data-slot='search']")),
+            ("search", format!("{body} [data-slot='search']")),
             ("list", list.clone()),
             ("group", format!("{list} [data-slot='group']")),
             (

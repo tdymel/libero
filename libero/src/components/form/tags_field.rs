@@ -320,16 +320,18 @@ pub fn TagsField(props: TagsFieldProps) -> Element {
     );
     // The x's press blurs the input before its click, and that blur must not commit the draft.
     let mut clearing = use_hook(|| CopyValue::new(false));
+    // Kept by the input's focus events: a WebView handle never reports focus.
+    let focused = use_hook(|| CopyValue::new(false));
     let cancelled_add = add.clone();
     let clear = clear.map(|button| {
         rsx! {
             span {
                 style: "display: contents",
                 // Only a press that blurs the input defers its draft.
-                onmousedown: move |_| clearing.set(input_element.is_focused()),
+                onmousedown: move |_| clearing.set(*focused.peek()),
                 // A press dragged off the x never becomes a click: the draft its blur kept commits (4367).
                 onmouseleave: move |_| {
-                    if !clearing.replace(false) || input_element.is_focused() {
+                    if !clearing.replace(false) || *focused.peek() {
                         return;
                     }
                     let draft = text.peek().clone();
@@ -379,6 +381,7 @@ pub fn TagsField(props: TagsFieldProps) -> Element {
             focus,
             entering,
             clearing,
+            focused,
             refusals,
             item,
         },
@@ -739,6 +742,8 @@ struct Draft {
     entering: CopyValue<bool>,
     /// Set by a press on the clear x, whose blur drops the draft rather than committing it.
     clearing: CopyValue<bool>,
+    /// Whether the input holds focus, by its own focus and blur.
+    focused: CopyValue<bool>,
     /// Emptied on a keystroke, so a refusal does not outlive the text it was about.
     refusals: Announcer,
     item: Option<ToolbarItem>,
@@ -767,6 +772,7 @@ fn tags_field_input<F: Fn(Vec<String>) + Clone + 'static>(
         focus,
         mut entering,
         mut clearing,
+        mut focused,
         refusals,
         item,
     } = draft;
@@ -894,11 +900,13 @@ fn tags_field_input<F: Fn(Vec<String>) + Clone + 'static>(
         })
         // A hand-off or a press on the x that never blurred the input leaves no blur to reset them.
         .event("onfocus", move |_: FocusEvent| {
+            focused.set(true);
             entering.set(false);
             clearing.set(false);
         })
         // An uncommitted draft becomes a tag rather than being thrown away.
         .event("onblur", move |_: FocusEvent| {
+            focused.set(false);
             let draft = text();
             // `clearing` stays set until the click, or the press leaving the x, settles the draft.
             let kept = entering.replace(false) | *clearing.peek();

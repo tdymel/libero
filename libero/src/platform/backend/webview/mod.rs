@@ -68,13 +68,13 @@ pub(super) use focus::{
 pub(crate) use geolocation::geolocation;
 pub(super) use guards::{
     follow_pointer, guard_defaults, guard_typed_values, on_pointer_release, reset_selector,
-    set_value_by_id,
 };
 pub(super) use keyboard::{claim_escape, keyboard};
 pub(crate) use media::{fullscreen, media};
 pub(super) use media_query::media_query;
 pub(super) use observe::{
     command_by_tag, computed_px, has_match, observe_content, observe_resize, on_intersection,
+    set_value_by_tag,
 };
 pub(crate) use permission::permission;
 pub(super) use press::{PORTAL_ATTR, press, swallow_outside_clicks};

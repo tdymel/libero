@@ -31,9 +31,13 @@ fn flag_emoji(iso: &str) -> String {
         .collect()
 }
 
-/// A flag emoji for every country; the library ships no flags.
+/// A flag emoji for every country; the library ships no flags. None natively:
+/// Blitz draws the pair as letter boxes, and the dial code names the country.
 #[component]
 fn Flag(iso: String) -> Element {
+    if cfg!(not(target_arch = "wasm32")) {
+        return rsx! {};
+    }
     rsx! {
         span { "aria-hidden": "true", "{flag_emoji(&iso)}" }
     }

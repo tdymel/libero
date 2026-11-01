@@ -88,7 +88,7 @@ pub fn spotlight_filter(query: &str, actions: &[SpotlightAction]) -> Vec<Spotlig
 | `close_on_action` | `bool` | `true` | Closes after running an action. |
 | `clear_on_close` | `bool` | `true` | Starts every opening with an empty query. |
 | `aria_label` | `String` | `"Command palette"` | Names the dialog and its list. |
-| `shortcut` | `Option<char>` | `Some('k')` | Ctrl (Cmd on a Mac) plus this key toggles the palette. `None` for no hotkey. Web only. A key the browser already uses, such as L, T or W, warns in a debug build. Elsewhere, open the palette from a button. Two palettes on one page should not share a key. |
+| `shortcut` | `Option<char>` | `Some('k')` | Ctrl (Cmd on a Mac) plus this key toggles the palette. `None` for no hotkey. Works on the web, a desktop WebView and native (Blitz); a server render binds nothing. A key the browser already uses, such as L, T or W, warns in a debug build. Two palettes on one page should not share a key. |
 | `highlight_first_on_query` | `bool` | `true` | Highlights the first row after every keystroke, so Enter runs it. Off, Enter does nothing until the arrows pick a row. |
 | `loading` | `bool` | `false` | The results are still coming. A loader replaces the rows, and a screen reader hears "Searching". |
 | `onquery` | `Callback<String>` | - | Called with the query on every keystroke. Set `loading` and start the search here, cancelling the previous one first: a newer query supersedes it, and a slow answer to an older one would overwrite the newer rows. Return the results from `actions` out of a signal. |

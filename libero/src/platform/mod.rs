@@ -99,8 +99,7 @@ pub(crate) use element::{
     focus_closest_of_focused, focus_first_of, focus_kept, focus_selector, focus_tab_from,
     focus_tab_within, focused_attribute, forget_rtl_tag, input_value, is_rtl, is_rtl_by_tag, join,
     join_all, keep_focused, load_failed, mounted_by_selector, on_content_change, on_form_reset,
-    on_image_error, read_rtl_tag, reset_selector, scroll_padding_properties, set_value_by_id,
-    sets_indeterminate,
+    on_image_error, read_rtl_tag, reset_selector, scroll_padding_properties, sets_indeterminate,
 };
 pub use element::{Dimensions, ElementApi, Read};
 pub use error::PlatformError;
@@ -139,7 +138,7 @@ pub(crate) use indexed_db::{IndexedDbApi, MemoryIndexedDb, fake_indexed_db};
 pub(crate) use indexed_db::{Op, indexed_db};
 pub(crate) use intersection::{
     INTERSECT_ATTR, OBSERVE_ATTR, OWNER_ATTR, TagCommand, command_by_tag, computed_px_by_tag,
-    has_match_by_tag, next_observe_tag, observes_by_tag, on_intersection,
+    has_match_by_tag, next_observe_tag, observes_by_tag, on_intersection, set_value_by_tag,
 };
 pub(crate) use keyboard::arrow_target;
 pub(crate) use keyboard::caret_edges;

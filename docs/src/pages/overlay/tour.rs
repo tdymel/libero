@@ -170,9 +170,11 @@ fn TourDemo(side: String, mask_click: String, custom: bool) -> Element {
                     onclick: move |_| searches += 1,
                     "Search"
                 }
+                // One line: Blitz broke it per word after the tour's restyle.
                 Text {
                     size: "sm",
                     role: "status",
+                    sx: sx().white_space("nowrap"),
                     if tour.seen() { "Seen" } else { "Not seen yet" }
                     ", searches: {searches}"
                 }

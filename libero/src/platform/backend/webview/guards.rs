@@ -69,21 +69,6 @@ pub(crate) fn guard_typed_values() {
     }
 }
 
-/// Queued like [`WebViewDocument::set_root_attribute`](super::WebViewDocument), so an edit dioxus sends
-/// later still lands over it.
-pub(crate) fn set_value_by_id(id: &str, value: &str) -> Result<(), PlatformError> {
-    if !runs_scripts() {
-        return Err(PlatformError::Unsupported);
-    }
-    eval_with(
-        json!([id, value]),
-        "const [id, value] = data;
-        const el = document.getElementById(id);
-        if (el && el.value !== value) el.value = value;",
-    );
-    Ok(())
-}
-
 /// The page's first `<form>` matching `data` resets, then each `data-controlled` control gets
 /// its value back, as the web's `ElementApi::reset`. Its own `reset` event stays in the page.
 const RESET_FORM: &str = "const form = document.querySelector(data);

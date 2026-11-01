@@ -47,6 +47,27 @@ fn a_narrowed_list_keeps_each_label_on_one_line() {
     assert_eq!(page.wrapped_text("[role=option]"), Vec::<String>::new());
 }
 
+/// Blitz draws no `placeholder`: the search box draws its own until a key is typed (5207).
+#[test]
+fn the_search_box_draws_its_placeholder_while_empty() {
+    const SHOWN: &str = "[data-lsx-placeholder-shown]";
+    let mut page = mount(narrowing);
+    page.focus("#page");
+    page.press_with(Key::Character("k".into()), Modifiers::CONTROL);
+    assert!(
+        page.wait_for(|page| page.exists(SHOWN)),
+        "no placeholder shown:\n{}",
+        page.tree()
+    );
+    assert_eq!(page.text(SHOWN), "Search...");
+    page.press(Key::Character("G".into()));
+    assert!(
+        page.wait_for(|page| !page.exists(SHOWN)),
+        "still shown after typing:\n{}",
+        page.tree()
+    );
+}
+
 /// With nothing focused, closing handed focus to `<html>`, above the wrapper
 /// every key subscription listens on: Ctrl+K never opened it again.
 #[test]

@@ -347,8 +347,12 @@ impl ElementApi for ElementHandle {
         }
     }
 
+    /// On a WebView by [`attributes`](Self::attributes)' tag, which the element must carry.
     fn set_value(&self, value: &str) -> Result<(), PlatformError> {
-        self.get()?.set_value(value)
+        match (self.get()?.set_value(value), self.tag) {
+            (Err(PlatformError::Unsupported), Some(tag)) => platform::set_value_by_tag(tag, value),
+            (result, _) => result,
+        }
     }
 
     fn attribute(&self, name: &str) -> Result<Option<String>, PlatformError> {

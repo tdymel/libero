@@ -192,6 +192,17 @@ pub(crate) fn command_by_tag(
 }
 
 /// Only a WebView finds an element by its tag; see [`observes_by_tag`].
+pub(crate) fn set_value_by_tag(tag: u64, value: &str) -> Result<(), super::PlatformError> {
+    #[cfg(all(not(target_arch = "wasm32"), not(feature = "native")))]
+    return webview::set_value_by_tag(tag, value);
+    #[cfg(any(target_arch = "wasm32", feature = "native"))]
+    {
+        let _ = (tag, value);
+        Err(super::PlatformError::Unsupported)
+    }
+}
+
+/// Only a WebView finds an element by its tag; see [`observes_by_tag`].
 pub(crate) fn has_match_by_tag(tag: u64, selector: &str) -> super::Read<bool> {
     #[cfg(all(not(target_arch = "wasm32"), not(feature = "native")))]
     return webview::has_match(tag, selector);
@@ -908,17 +919,6 @@ pub(crate) fn rtl_target(event: &Event<KeyboardData>) -> bool {
     return blitz::rtl_target();
     #[cfg(all(not(target_arch = "wasm32"), not(feature = "native")))]
     return webview::rtl_target();
-}
-
-/// Only a WebView - see [`set_value_by_id`](crate::platform::set_value_by_id).
-pub(crate) fn set_value_by_id(id: &str, value: &str) -> Result<(), super::PlatformError> {
-    #[cfg(all(not(target_arch = "wasm32"), not(feature = "native")))]
-    return webview::set_value_by_id(id, value);
-    #[cfg(any(target_arch = "wasm32", feature = "native"))]
-    return {
-        let _ = (id, value);
-        Err(super::PlatformError::Unsupported)
-    };
 }
 
 /// Only a WebView - see [`focus_selector`](crate::platform::focus_selector).

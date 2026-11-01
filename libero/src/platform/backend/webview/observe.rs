@@ -77,6 +77,20 @@ pub(crate) fn command_by_tag(tag: u64, command: TagCommand) -> Result<(), Platfo
     Ok(())
 }
 
+/// Queued, as [`command_by_tag`]; an equal value is left alone, so the caret stays.
+pub(crate) fn set_value_by_tag(tag: u64, value: &str) -> Result<(), PlatformError> {
+    if !runs_scripts() {
+        return Err(PlatformError::Unsupported);
+    }
+    eval_with(
+        json!([OBSERVE_ATTR, tag.to_string(), value]),
+        "const [attr, tag, value] = data;
+        const element = document.querySelector(`[${attr}=\"${tag}\"]`);
+        if (element && element.value !== value) element.value = value;",
+    );
+    Ok(())
+}
+
 /// Whether a descendant of the element tagged `tag` matches `selector`;
 /// `Unsupported` while no element carries the tag.
 pub(crate) fn has_match(tag: u64, selector: &str) -> Read<bool> {

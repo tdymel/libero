@@ -19,7 +19,7 @@ use crate::{
     },
     hooks::{ElementHandle, use_element, use_localization, use_theme},
     localization::fill,
-    platform::{ElementApi, PlatformError, meta_held, set_value_by_id},
+    platform::{ElementApi, PlatformError, meta_held},
     sx::{StaticSx, sx},
     theme::{FIELD_HEIGHT, PIN_FIELD_GAP, PinFieldDefaults},
     utils::fold_digit,
@@ -250,7 +250,6 @@ pub fn PinField(props: PinFieldProps) -> Element {
         kind,
         root,
         handles,
-        id: field.id().to_string(),
         readonly,
         report,
     };
@@ -365,8 +364,6 @@ struct PinEdit {
     kind: PinKind,
     root: ElementHandle,
     handles: CellHandles,
-    /// The field's id; cell `n` is `{id}-{n + 1}`.
-    id: String,
     readonly: bool,
     report: Report,
     /// The middle cell just cleared: the next character typed there goes in
@@ -432,12 +429,10 @@ impl PinEdit {
         (next, cursor.min(self.length - 1))
     }
 
-    /// Writes cell `index`'s text. A WebView handle cannot, so it goes by id there.
+    /// Writes cell `index`'s text.
     fn show(&self, index: usize, character: Option<char>) {
         let text = character.map(String::from).unwrap_or_default();
-        let _ = cell_at(&self.root, &self.handles, index)
-            .and_then(|cell| cell.set_value(&text))
-            .or_else(|_| set_value_by_id(&format!("{}-{}", self.id, index + 1), &text));
+        let _ = cell_at(&self.root, &self.handles, index).and_then(|cell| cell.set_value(&text));
     }
 
     /// Where a character for cell `index` lands: that cell when it is filled,

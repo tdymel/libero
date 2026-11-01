@@ -51,6 +51,12 @@ pub(crate) fn command_by_tag(tag: u64, command: TagCommand) -> Result<(), super:
     backend::command_by_tag(tag, command)
 }
 
+/// Writes `value` into the input carrying `tag`, queued, by the page's script: a WebView's
+/// handles cannot. `Unsupported` on every other renderer.
+pub(crate) fn set_value_by_tag(tag: u64, value: &str) -> Result<(), super::PlatformError> {
+    backend::set_value_by_tag(tag, value)
+}
+
 /// Whether something under the element carrying `tag` matches `selector`, read
 /// by the page's script. `Unsupported` on every other renderer.
 pub(crate) fn has_match_by_tag(tag: u64, selector: &str) -> super::Read<bool> {

@@ -33,12 +33,6 @@ pub(crate) fn on_form_reset(
     backend::on_form_reset(mounted, on_reset, submits)
 }
 
-/// Sets the `value` of the element with `id`, for a WebView, whose handles cannot
-/// set one (1030). `Unsupported` elsewhere: an [`ElementApi`] there can.
-pub(crate) fn set_value_by_id(id: &str, value: &str) -> Result<(), PlatformError> {
-    backend::set_value_by_id(id, value)
-}
-
 /// Focuses the page's first match of `selector`, for a WebView, where no handle
 /// can query (1191). `Unsupported` elsewhere: `query_selector` there can.
 pub(crate) fn focus_selector(selector: &str) -> Result<(), PlatformError> {
