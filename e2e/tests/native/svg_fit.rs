@@ -154,21 +154,34 @@ fn a_zoomed_svg_stays_centred_in_its_frame() {
     );
 }
 
-/// The frame round a shrunk picture still zooms on a double-click.
+fn double_click_at(page: &mut Page, x: f32, y: f32) -> String {
+    page.click_at(x, y);
+    page.click_at(x, y);
+    page.wait(Duration::from_millis(20));
+    page.advance(1.0);
+    page.computed(PICTURE, "transform")
+}
+
+/// Only a double press on the shrunk picture zooms, not one on the bare frame
+/// round it (todo 4842).
 #[test]
-fn a_double_click_beside_a_shrunk_svg_zooms() {
+fn a_double_click_on_a_shrunk_svg_zooms() {
     let mut page = opened();
     let frame = "[data-lightbox-frame=\"0\"]";
     let (x, y, width, height) = page.rect(frame);
     // Between the slide control and the picture.
     let (px, py) = ((x + width * 0.3) as f32, (y + height / 2.0) as f32);
     assert!(page.hits_at(frame, px, py) && !page.hits_at(PICTURE, px, py));
-    page.click_at(px, py);
-    page.click_at(px, py);
-    page.wait(Duration::from_millis(20));
-    page.advance(1.0);
-    let transform = page.computed(PICTURE, "transform");
-    assert!(transform.starts_with("scale(2)"), "not at 2x: {transform}");
+    let beside = double_click_at(&mut page, px, py);
+    assert!(
+        !beside.starts_with("scale("),
+        "zoomed from beside: {beside}"
+    );
+
+    let (cx, cy) = ((x + width / 2.0) as f32, (y + height / 2.0) as f32);
+    assert!(page.hits_at(PICTURE, cx, cy));
+    let on = double_click_at(&mut page, cx, cy);
+    assert!(on.starts_with("scale(2)"), "not at 2x: {on}");
 }
 
 fn finger(x: f32, y: f32, down: bool) -> BlitzPointerEvent {
