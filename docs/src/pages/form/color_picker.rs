@@ -130,7 +130,7 @@ pub fn ColorPickerPage() -> Element {
                         .doc("Dims the panel, the sliders and the swatches and takes them out of the tab order. The hidden input no longer posts. A disabled `Fieldset` does the same."),
                     prop("readonly", "bool")
                         .default("false")
-                        .doc("Shows the color but ignores drags, keys and swatch clicks, `oninput` included. The thumbs stay tab stops and read as read-only."),
+                        .doc("Shows the color but ignores drags, keys and swatch clicks, `oninput` included. The thumbs stay tab stops and read as read-only; the swatches stay focusable buttons marked `aria-disabled`."),
                     prop("saturation_label", "String").default("color.saturation").doc("Names the saturation panel's thumb. Unset, the localization's `color.saturation`."),
                     prop("hue_label", "String").default("color.hue").doc("Names the hue slider's thumb. Unset, the localization's `color.hue`."),
                     prop("alpha_label", "String").default("color.alpha").doc("Names the alpha slider's thumb. Unset, the localization's `color.alpha`."),

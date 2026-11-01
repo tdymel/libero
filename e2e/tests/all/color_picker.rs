@@ -113,6 +113,57 @@ fn a_swatch_keeps_its_colour_in_forced_colours() {
     });
 }
 
+/// Todo 5195: a disabled picker's hue and alpha sliders fade like its pad and swatches.
+#[test]
+fn a_disabled_picker_dims_its_sliders() {
+    const OPACITY: &str = r#"(() => ['#disabled', '#readonly'].map(id => {
+        const dim = sel => getComputedStyle(document.querySelector(`${id} ${sel}`)).opacity;
+        return ['[data-slot=saturation]', '[data-slot=hue]', '[data-slot=alpha]', '[data-slot=swatch]']
+            .map(dim).join(' ');
+    }).join(','))()"#;
+    block_on(async {
+        let fixture = Fixture::open("/color-picker-states", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        wait::for_visible(page, "#disabled [data-slot=hue] [data-slot=thumb]")
+            .await
+            .unwrap();
+        let opacity: String = page
+            .evaluate_bounded(OPACITY)
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        assert_eq!(opacity, "0.5 0.5 0.5 0.5,1 1 1 1");
+        fixture.close().await.unwrap();
+    });
+}
+
+/// Todo 5196: a read-only picker's swatches stay focusable buttons and say they are disabled.
+#[test]
+fn a_readonly_picker_marks_its_swatches_aria_disabled() {
+    const SWATCHES: &str = "[...document.querySelectorAll('#readonly [data-slot=swatch]')]\
+         .map(b => `${b.tagName}:${b.getAttribute('aria-disabled')}:${b.tabIndex}`).join(',')";
+    block_on(async {
+        let fixture = Fixture::open("/color-picker-states", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        wait::for_visible(page, "#readonly [data-slot=swatch]")
+            .await
+            .unwrap();
+        let swatches: String = page
+            .evaluate_bounded(SWATCHES)
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        assert_eq!(swatches, "BUTTON:true:-1,BUTTON:true:0");
+        fixture.close().await.unwrap();
+    });
+}
+
 /// Todo 3150: at `xs` and `sm`, where the sliders sit closest, a press within 12px of a
 /// slider thumb still reaches that slider, and no thumb's area takes the pad's or a
 /// swatch's presses (WCAG 2.5.8, by hit test).

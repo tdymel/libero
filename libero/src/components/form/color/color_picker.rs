@@ -200,7 +200,7 @@ base_props! {
         /// Takes every thumb and swatch out of the tab order, and the hidden input out of the form.
         #[props(default)]
         disabled: Option<bool>,
-        /// Shows the color but ignores drags, keys and swatch clicks; the thumbs stay tab stops.
+        /// Shows the color but ignores drags, keys and swatch clicks; the thumbs and swatches stay tab stops, the swatches `aria-disabled`.
         #[props(default)]
         readonly: Option<bool>,
     }
@@ -418,6 +418,7 @@ pub fn ColorPicker(props: ColorPickerProps) -> Element {
                 size,
                 radius,
                 focusable,
+                readonly,
                 oninput,
                 onswatchclick,
             }
@@ -458,6 +459,8 @@ struct SwatchRowProps {
     size: Size,
     radius: ThemeAwareValue,
     focusable: bool,
+    /// Marks each swatch `aria-disabled`, yet focusable: it shows the color but picks nothing.
+    readonly: bool,
     oninput: Option<EventHandler<SliderChangeEvent<ColorCode>>>,
     onswatchclick: Option<EventHandler<ColorCode>>,
 }
@@ -472,6 +475,7 @@ fn SwatchRow(props: SwatchRowProps) -> Element {
         size,
         radius,
         focusable,
+        readonly,
         oninput,
         onswatchclick,
     } = props;
@@ -529,6 +533,7 @@ fn SwatchRow(props: SwatchRowProps) -> Element {
                 "data-slot": ColorPickerPart::Swatch.slot(),
                 aria_label: name,
                 aria_pressed: pressed.to_string(),
+                aria_disabled: readonly.then_some("true"),
                 id: "{id}-{index}",
                 tabindex: if focusable && tab_stop == index { "0" } else { "-1" },
                 onfocus: move |_| stop.set(Some(index)),
@@ -679,6 +684,33 @@ mod tests {
             }
         });
         assert!(warnings.is_empty(), "{warnings:?}");
+    }
+
+    /// Todo 5196: a read-only picker's swatches are `aria-disabled` buttons, still tab stops.
+    #[test]
+    fn the_readonly_prop_marks_swatches_aria_disabled() {
+        let html = |readonly| {
+            dioxus_ssr::render_element(rsx! {
+                crate::LiberoProvider {
+                    ColorPicker {
+                        value: ColorCode::default(),
+                        with_picker: false,
+                        swatches: ["#fa5252"],
+                        readonly,
+                    }
+                }
+            })
+            .replace('"', "")
+        };
+        let readonly = html(true);
+        let swatch = readonly
+            .split('<')
+            .find(|tag| tag.contains("data-slot=swatch "))
+            .unwrap_or_else(|| panic!("{readonly}"));
+        assert!(swatch.starts_with("button"), "{swatch}");
+        assert!(swatch.contains("aria-disabled=true"), "{swatch}");
+        assert!(swatch.contains("tabindex=0"), "{swatch}");
+        assert!(!html(false).contains("aria-disabled"), "{}", html(false));
     }
 
     /// Todo 4245: without `oninput` all three thumbs are read-only tab stops, as `Slider`'s.

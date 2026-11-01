@@ -16,7 +16,34 @@ pub const ROUTES: Routes = &[
     ),
     ("/color-picker-sizes", || rsx! { ColorPickerSizesPage {} }),
     ("/color-sliders-rtl", || rsx! { ColorSlidersRtlPage {} }),
+    ("/color-picker-states", || rsx! { ColorPickerStatesPage {} }),
 ];
+
+/// Todos 5195, 5196: a disabled and a read-only picker, each with alpha and swatches.
+#[component]
+fn ColorPickerStatesPage() -> Element {
+    let value = "#1c7ed6".parse::<ColorCode>().unwrap();
+    rsx! {
+        Flex { direction: "column", gap: "md", max_width: "320px",
+            ColorPicker {
+                id: "disabled",
+                value,
+                with_alpha: true,
+                swatches: ["#fa5252", "#1c7ed6"],
+                disabled: true,
+                oninput: move |_| {},
+            }
+            ColorPicker {
+                id: "readonly",
+                value,
+                with_alpha: true,
+                swatches: ["#fa5252", "#1c7ed6"],
+                readonly: true,
+                oninput: move |_| {},
+            }
+        }
+    }
+}
 
 /// Todo 5119: on an RTL page the colour scales still run left to right, while a plain
 /// `Slider` mirrors. Each sits a quarter of the way along its range.
