@@ -16,15 +16,29 @@ pub const ROUTES: Routes = &[
     ("/floating-action-button/bar", || rsx! { BarPage {} }),
     ("/floating-action-button/dial", || rsx! { DialPage {} }),
     ("/floating-action-button/dial/rtl", || rsx! { div { dir: "rtl", DialPage {} } }),
+    (
+        "/floating-action-button/dial/in-place",
+        || rsx! { DialPage { in_place: true } },
+    ),
 ];
 
 /// A speed dial, a hide switch for it, and a count of the action presses.
+/// `in_place`: the switch keeps focus where it is, as a hide-on-scroll does.
 #[component]
-fn DialPage() -> Element {
+fn DialPage(#[props(default)] in_place: bool) -> Element {
     let mut hidden = use_signal(|| false);
     let mut sent = use_signal(|| 0);
     rsx! {
-        button { id: "hide", onclick: move |_| hidden.toggle(), "Hide" }
+        button {
+            id: "hide",
+            onmousedown: move |event: MouseEvent| {
+                if in_place {
+                    event.prevent_default();
+                }
+            },
+            onclick: move |_| hidden.toggle(),
+            "Hide"
+        }
         p { id: "sent", "{sent}" }
         FloatingActionButton {
             id: "fab",

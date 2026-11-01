@@ -24,6 +24,14 @@ fn text_child(values: &DemoValues) -> String {
     }
 }
 
+/// A centred button's dial opens from mid-frame, so it needs room above the button.
+fn frame_height(values: &DemoValues) -> &'static str {
+    match values.str("placement").starts_with("center") {
+        true => "360px",
+        false => "240px",
+    }
+}
+
 fn color(values: &DemoValues) -> Input<libero::sx::ThemeAwareValue> {
     match values.str("color").as_str() {
         "primary" => Input::None,
@@ -153,7 +161,7 @@ pub fn FloatingActionButtonPage() -> Element {
                     .doc("A visible label: an extended button, the `icon` before the label."),
                 prop("hidden", "bool")
                     .default("false")
-                    .doc("Fades it out, and out of the tab order and the accessibility tree at once, as for hiding it while the page scrolls down. Instant under reduced motion."),
+                    .doc("Fades it out, and out of the tab order and the accessibility tree at once, as for hiding it while the page scrolls down. Instant under reduced motion. It closes a speed dial the button owns; a controlled `open` stays as it is."),
                 prop("actions", "Element")
                     .doc("`FloatingActionButtonAction`s: a press on the button opens them as a speed dial, above it, or below a top one, at its inline side. Escape, a press outside or an action's press closes it. `to` is ignored."),
                 prop("open", "Signal<bool>")
@@ -189,6 +197,7 @@ pub fn FloatingActionButtonPage() -> Element {
                     "Name an icon-only button after its action with `aria_label`, such as \"New message\".",
                     "Render it where its action belongs in the reading order, such as at the end of `main`: Tab reaches it in DOM order, not where it floats.",
                     "Pad the end of the page by its height plus `offset`, so it never covers the last content or the control that has focus.",
+                    "Move focus elsewhere before setting `hidden` while focus may be on it or an action: hidden, it drops focus to the page.",
                     "Keep it apart from `Notifications`, whose stack also sits at `bottom-end`: move one with `Notifications { placement }`.",
                 ])
                 .limits([
@@ -226,7 +235,7 @@ pub fn FloatingActionButtonPage() -> Element {
                     defaults.placement.as_str(),
                 ),
                 render: move |values: DemoValues| rsx! {
-                    Box { sx: sx().position("relative").width("100%").height("240px"),
+                    Box { sx: sx().position("relative").width("100%").height(frame_height(&values)),
                         FloatingActionButton {
                             fixed: false,
                             icon: rsx! { Pictogram { icon: lucide::plus::outlined } },

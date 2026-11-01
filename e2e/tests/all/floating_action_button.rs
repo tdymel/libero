@@ -1,7 +1,8 @@
 //! `FloatingActionButton` in Chromium: it stays at its corner while the page scrolls,
 //! flips under `dir="rtl"`, clears a fixed `NavigationBar`, keeps its focus ring
 //! whole and gives a finger a 44px target at every size. A speed dial opens and closes
-//! back to its button, and a hidden one leaves the tab order.
+//! back to its button or from a press outside, and a hidden one leaves the tab order
+//! and closes its dial.
 
 use e2e::browser::block_on;
 use e2e::passes::{focus, keyboard, pointer};
@@ -162,6 +163,14 @@ fn keyboard_focus_draws_the_ring_over_the_shadow() {
     });
 }
 
+async fn expanded(page: &chromiumoxide::Page) -> String {
+    js(
+        page,
+        "document.querySelector('#fab').getAttribute('aria-expanded')",
+    )
+    .await
+}
+
 /// The action's box against the button's, LTR or RTL.
 async fn dial_boxes(page: &chromiumoxide::Page) -> Value {
     js::<Value>(
@@ -217,6 +226,80 @@ fn a_speed_dial_opens_above_and_closes_back_to_the_button() {
         wait::for_hidden(page, MESSAGE).await.unwrap();
         focus::wait_for_focus(page, FAB, "Escape").await.unwrap();
         fixture.console.assert_clean("the speed dial").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
+/// The web has no outside-press transport: a click on plain text or on another
+/// control closes the dial, focus staying where it went (todo 5182).
+#[test]
+fn a_click_outside_closes_the_speed_dial() {
+    block_on(async {
+        let fixture = Fixture::open("/floating-action-button/dial", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        wait::for_visible(page, FAB).await.unwrap();
+        pointer::click(page, FAB).await.unwrap();
+        wait::for_visible(page, MESSAGE).await.unwrap();
+        pointer::click(page, "#sent").await.unwrap();
+        wait::for_hidden(page, MESSAGE).await.unwrap();
+        assert_eq!(expanded(page).await, "false");
+
+        pointer::click(page, FAB).await.unwrap();
+        wait::for_visible(page, MESSAGE).await.unwrap();
+        pointer::click(page, "#after").await.unwrap();
+        wait::for_hidden(page, MESSAGE).await.unwrap();
+        focus::wait_for_focus(page, "#after", "a click on another control")
+            .await
+            .unwrap();
+
+        // Opened with focus elsewhere, as by an iOS tap, which focuses no button.
+        js::<bool>(page, "(document.querySelector('#fab').click(), true)").await;
+        wait::for_visible(page, MESSAGE).await.unwrap();
+        pointer::click(page, "#sent").await.unwrap();
+        wait::for_hidden(page, MESSAGE).await.unwrap();
+        fixture.console.assert_clean("an outside click").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
+#[test]
+fn a_tap_outside_closes_the_speed_dial() {
+    block_on(async {
+        let fixture = Fixture::open("/floating-action-button/dial", Viewport::Mobile)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        wait::for_visible(page, FAB).await.unwrap();
+        pointer::tap(page, FAB).await.unwrap();
+        wait::for_visible(page, MESSAGE).await.unwrap();
+        pointer::tap(page, "#sent").await.unwrap();
+        wait::for_hidden(page, MESSAGE).await.unwrap();
+        fixture.console.assert_clean("an outside tap").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
+/// Hiding closes an own dial, so showing the button again leaves it closed (todo 5183).
+/// The switch keeps focus on the button, as a scroll does, so no focusout closes it.
+#[test]
+fn hidden_then_shown_leaves_the_dial_closed() {
+    block_on(async {
+        let fixture = Fixture::open("/floating-action-button/dial/in-place", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        wait::for_visible(page, FAB).await.unwrap();
+        pointer::click(page, FAB).await.unwrap();
+        wait::for_visible(page, MESSAGE).await.unwrap();
+        pointer::click(page, "#hide").await.unwrap();
+        wait::for_hidden(page, FAB).await.unwrap();
+        pointer::click(page, "#hide").await.unwrap();
+        wait::for_visible(page, FAB).await.unwrap();
+        assert_eq!(expanded(page).await, "false");
+        assert!(!wait::is_visible(page, MESSAGE).await.unwrap());
+        fixture.console.assert_clean("hide and show").unwrap();
         fixture.close().await.unwrap();
     });
 }

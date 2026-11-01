@@ -99,7 +99,7 @@ fn Demo() -> Element {
 | `to` | `NavigationTarget` | - | Renders a link instead of a `<button>`: a path, a URL or a typed route. |
 | `target` | `String` | - | The link's `target` attribute. `"_blank"` adds a hidden "(opens in a new tab)". |
 | `children` | `Element` | - | A visible label: an extended button, the `icon` before the label. |
-| `hidden` | `bool` | `false` | Fades it out, and out of the tab order and the accessibility tree at once, as for hiding it while the page scrolls down. Instant under reduced motion. |
+| `hidden` | `bool` | `false` | Fades it out, and out of the tab order and the accessibility tree at once, as for hiding it while the page scrolls down. Instant under reduced motion. It closes a speed dial the button owns; a controlled `open` stays as it is. |
 | `actions` | `Element` | - | `FloatingActionButtonAction`s: a press on the button opens them as a speed dial, above it, or below a top one, at its inline side. Escape, a press outside or an action's press closes it. `to` is ignored. |
 | `open` | `Signal<bool>` | - | Whether the `actions` show, for a speed dial the app controls. Unset, the button owns it. |
 
@@ -150,6 +150,8 @@ shadow's `elevation` step (`md`).
   of `main`: Tab reaches it in DOM order, not where it floats.
 - Pad the end of the page by its height plus `offset`, so it never covers the
   last content or the control that has focus.
+- Move focus elsewhere before setting `hidden` while focus may be on it or an
+  action: hidden, it drops focus to the page.
 - Keep it apart from `Notifications`, whose stack also sits at `bottom-end`:
   move one with `Notifications { placement }`.
 

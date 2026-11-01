@@ -7,6 +7,7 @@ use crate::{
         layout::{Float, Placement, use_box},
     },
     hooks::{DismissOptions, listener, use_dismiss, use_element, use_id, use_theme},
+    platform::focus_without_ring,
     sx::{REDUCED_MOTION, Sx, ThemeAwareValue, sx},
     theme::{
         CssVar, Gradient, ICON_SIZE, OWN_SHADOW, Size, SizeCss, TRANSITION_DURATION,
@@ -74,6 +75,8 @@ base_props! {
         #[props(default)]
         children: Option<Element>,
         /// Fades it out of view, the tab order and the accessibility tree, as for hide-on-scroll.
+        /// It closes an own speed dial; a controlled `open` survives. Focus inside drops to the
+        /// page, so the app moves focus first when hiding it while it may hold focus.
         #[props(default)]
         hidden: bool,
         /// `FloatingActionButtonAction`s: a press opens them as a speed dial above the button,
@@ -276,7 +279,12 @@ pub fn FloatingActionButton(props: FloatingActionButtonProps) -> Element {
         .clone()
         .filter(|label| !label.trim().is_empty());
 
-    let own_open = use_signal(|| false);
+    let mut own_open = use_signal(|| false);
+    // Hiding closes an own dial, so showing it again does not reopen it.
+    let hidden = props.hidden;
+    use_effect(use_reactive!(|hidden| if hidden {
+        own_open.set(false);
+    }));
     let mut open = props.open.unwrap_or(own_open);
     let dial = props.actions.is_some();
     let is_open = dial && open() && !props.hidden;
@@ -327,12 +335,20 @@ pub fn FloatingActionButton(props: FloatingActionButtonProps) -> Element {
             attributes.push(attr("aria-controls", list_id()));
         }
         attributes.extend(dismiss.anchor_events());
+        // The web has no outside-press transport: focus leaving the button closes the dial.
+        if is_open {
+            attributes.push(dismiss.focusout_listener());
+        }
     }
     let user_onclick = props.onclick;
     let onclick = (dial || user_onclick.is_some()).then(|| {
         EventHandler::new(move |event: MouseEvent| {
             if dial {
                 let next = !*open.peek();
+                // iOS leaves a tapped button unfocused, and the dial closes on focus leaving it.
+                if next && let Some(node) = anchor.mounted() {
+                    focus_without_ring(&node);
+                }
                 open.set(next);
             }
             if let Some(onclick) = user_onclick {
