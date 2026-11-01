@@ -265,6 +265,20 @@ static TABLE_SX: StaticSx = StaticSx::new(|| {
         "& [data-column-menu] svg, & [data-filtered] svg",
         sx().width("16px").height("16px"),
     )
+    // A finger gets the full cell height, as the grip lane (5194).
+    .selector(
+        "& [data-header] > [data-menu-wrapper]",
+        sx().media(COARSE, sx().with("align-self", "stretch").display("flex")),
+    )
+    .selector(
+        "& [data-header] [data-column-menu], & [data-header] > [data-filtered]",
+        sx().media(
+            COARSE,
+            sx().with("align-self", "stretch")
+                .height("auto")
+                .min_height("44px"),
+        ),
+    )
     // A filtered header's button: as the menu button, but always shown.
     .selector(
         "& [data-filtered]",
@@ -1308,8 +1322,8 @@ pub struct TableProps<T: Clone + PartialEq + 'static> {
     #[props(default)]
     manual_filter: bool,
     /// The column filters, one per column, all applying; set, they are
-    /// controlled. A hidden column's filter keeps filtering. A filter names its
-    /// column by header: filterable columns sharing a header filter as one.
+    /// controlled. A hidden column's filter keeps filtering. A filter names its column
+    /// by header: of filterable columns sharing a header, it tests the first only.
     #[props(default)]
     column_filters: Option<Vec<ColumnFilter>>,
     /// Seeds the column filters once. Ignored when `column_filters` is set.
@@ -1329,6 +1343,7 @@ pub struct TableProps<T: Clone + PartialEq + 'static> {
     #[props(default)]
     onfilterlogicchange: Option<EventHandler<FilterLogic>>,
     /// A row of filter fields under the headers, one per `filterable` column.
+    /// Columns sharing a header edit one filter, which tests the first of them.
     #[props(default)]
     header_filters: bool,
     /// A dialog of every column filter, several per column, joined by
@@ -1442,10 +1457,23 @@ pub fn Table<T: Clone + PartialEq + 'static>(mut props: TableProps<T>) -> Elemen
     });
     // A column filter change announces the rows left once it settles (WCAG 4.1.3).
     let mut filtered_count = use_hook(|| CopyValue::new(0usize));
-    let onfilter = use_debounced_callback(
-        move |()| announcer.say((labels.results)(*filtered_count.peek())),
+    // The count before the first change of a settling run: an unchanged count is not said (5189).
+    let mut count_before = use_hook(|| CopyValue::new(None::<usize>));
+    let say_count = use_debounced_callback(
+        move |()| {
+            let now = *filtered_count.peek();
+            if count_before.take() != Some(now) {
+                announcer.say((labels.results)(now));
+            }
+        },
         500,
     );
+    let onfilter = use_callback(move |()| {
+        if count_before.peek().is_none() {
+            count_before.set(Some(*filtered_count.peek()));
+        }
+        say_count.call(());
+    });
     let filter = FilterBase {
         state,
         labels,
@@ -1569,6 +1597,7 @@ pub fn Table<T: Clone + PartialEq + 'static>(mut props: TableProps<T>) -> Elemen
                 sort: user_sort,
                 news: pin_news,
                 grid: cell_focus,
+                leads: lead_count((has_reorder, has_detail, props.selectable)),
             },
         ),
         false => Vec::new(),
@@ -1895,12 +1924,15 @@ pub fn Table<T: Clone + PartialEq + 'static>(mut props: TableProps<T>) -> Elemen
             select,
             editable: columns.iter().map(|column| column.edit.is_some()).collect(),
             tree,
+            last: *grid_focus.last.peek(),
         }
     });
     // The stop's cell, the first header cell until one took focus; a tree's first row without cells.
     let grid_stop = grid
         .as_ref()
         .and_then(|rows| rows.stop(grid_focus.stop.cloned()));
+    let mut last_stop = grid_focus.last;
+    last_stop.set(grid.as_ref().and_then(|rows| rows.at(grid_stop)));
     if tree {
         grid_focus.follow_shown(grid_stop);
     }

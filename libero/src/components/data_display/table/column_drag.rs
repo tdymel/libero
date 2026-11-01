@@ -69,7 +69,7 @@ pub(super) struct DropPlan {
     pub ranked: Vec<(String, String)>,
     /// The shown, unpinned columns in display order: header index and key.
     pub unpinned: Vec<(usize, String)>,
-    /// The shown columns pinned before them, and all shown: a drop says its place.
+    /// The lead and pinned columns before them, and all shown with the lead ones: a drop says its place.
     pub lead: usize,
     pub shown: usize,
 }

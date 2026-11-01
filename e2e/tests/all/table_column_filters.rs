@@ -51,6 +51,21 @@ async fn the_column_filters_narrow_the_rows<D: Driver>(d: &mut D, _route: &str) 
     eventually_text(d, LIVE, "1 row", "the settled count").await?;
     d.press(keyboard::BACKSPACE).await?;
     eventually_text(d, "tbody th", "Fig", "an emptied header filter").await?;
+    // Todo 5189: a number that does not parse keeps every row, and its field says so.
+    d.type_text("abc").await?;
+    eventually(d, "the unparsed number marked invalid", async |d| {
+        Ok(d.attr(STOCK, "aria-invalid").await?.as_deref() == Some("true"))
+    })
+    .await?;
+    for _ in 0..3 {
+        d.press(keyboard::BACKSPACE).await?;
+    }
+    eventually(d, "the emptied field valid again", async |d| {
+        Ok(d.attr(STOCK, "aria-invalid")
+            .await?
+            .is_none_or(|v| v == "false"))
+    })
+    .await?;
 
     // Filter follows the sort entries: first, as Name does not sort.
     d.focus(MENU).await?;

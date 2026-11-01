@@ -198,24 +198,30 @@ pub(super) fn tree_step(at: usize, by: Move, nodes: &[TreeNode], cells: bool) ->
 }
 
 /// The stop's cell among the shown `order` and `layout` (header indices in display
-/// order), else the first cell: its row or column is gone. `None` without a cell.
+/// order). A gone row or column takes the place it had at `last`, the stop's last
+/// position, which its neighbour now holds; the first cell without one. `None` without a cell.
 pub(super) fn resolve(
     stop: Option<FocusTarget>,
     order: &[GridRow],
     layout: &[usize],
+    last: Option<Pos>,
     spans: impl Fn(usize) -> Vec<usize>,
 ) -> Option<Pos> {
     if order.is_empty() || layout.is_empty() {
         return None;
     }
     let (row, col) = stop
-        .and_then(|stop| {
-            let row = order.iter().position(|&row| row == stop.row)?;
+        .map(|stop| {
+            let row = order.iter().position(|&row| row == stop.row);
             let col = match stop.col {
-                Some(col) => layout.iter().position(|&shown| shown == col)?,
-                None => 0,
+                Some(col) => layout.iter().position(|&shown| shown == col),
+                None => Some(0),
             };
-            Some((row, col))
+            let last = last.unwrap_or(Pos { row: 0, col: 0 });
+            (
+                row.unwrap_or(last.row.min(order.len() - 1)),
+                col.unwrap_or(last.col.min(layout.len() - 1)),
+            )
         })
         .unwrap_or((0, 0));
     Some(Pos {
@@ -324,18 +330,52 @@ mod tests {
     fn a_lost_stop_falls_back_to_the_first_cell() {
         let order = [2, 0, 1].map(|index| GridRow::Body(VisibleRow::Data(index)));
         let layout = [4, 1, 3];
-        let stop = |row, col| {
-            Some(FocusTarget {
-                row: GridRow::Body(VisibleRow::Data(row)),
-                col: Some(col),
-            })
-        };
         let three = |_| vec![1, 1, 1];
-        assert_eq!(resolve(stop(0, 3), &order, &layout, three), Some(at(1, 2)));
-        assert_eq!(resolve(stop(9, 3), &order, &layout, three), Some(at(0, 0)));
-        assert_eq!(resolve(stop(0, 7), &order, &layout, three), Some(at(0, 0)));
-        assert_eq!(resolve(None, &order, &layout, three), Some(at(0, 0)));
-        assert_eq!(resolve(None, &[], &layout, three), None);
+        let found = resolve(stop(0, 3), &order, &layout, None, three);
+        assert_eq!(found, Some(at(1, 2)));
+        assert_eq!(
+            resolve(stop(9, 7), &order, &layout, None, three),
+            Some(at(0, 0))
+        );
+        assert_eq!(resolve(None, &order, &layout, None, three), Some(at(0, 0)));
+        assert_eq!(resolve(None, &[], &layout, None, three), None);
+    }
+
+    fn stop(row: usize, col: usize) -> Option<FocusTarget> {
+        Some(FocusTarget {
+            row: GridRow::Body(VisibleRow::Data(row)),
+            col: Some(col),
+        })
+    }
+
+    /// Todo 5187: a hidden column keeps the row, a filtered row the column.
+    #[test]
+    fn a_gone_column_or_row_takes_its_neighbour() {
+        let order = [2, 0, 1].map(|index| GridRow::Body(VisibleRow::Data(index)));
+        let three = |_| vec![1, 1, 1];
+        // Column 7 was at place 1: its right neighbour slid in; the last place clamps.
+        let last = Some(at(1, 1));
+        assert_eq!(
+            resolve(stop(0, 7), &order, &[4, 1, 3], last, three),
+            Some(at(1, 1))
+        );
+        assert_eq!(
+            resolve(stop(0, 7), &order, &[4, 1, 3], Some(at(1, 5)), three),
+            Some(at(1, 2))
+        );
+        assert_eq!(
+            resolve(stop(0, 7), &order, &[4, 1, 3], None, three),
+            Some(at(1, 0))
+        );
+        // Row 9 was at place 2: the row now there takes the stop, clamped to the last.
+        assert_eq!(
+            resolve(stop(9, 3), &order, &[4, 1, 3], Some(at(2, 0)), three),
+            Some(at(2, 2))
+        );
+        assert_eq!(
+            resolve(stop(9, 3), &order, &[4, 1, 3], Some(at(8, 0)), three),
+            Some(at(2, 2))
+        );
     }
 
     /// a (open) > b (closed), c (leaf); d a closed root.

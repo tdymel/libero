@@ -4,7 +4,7 @@
 //! edits or (`/kept`) only logs them, `/button` with a button in each City cell,
 //! `/custom` with its own Age editor, `/windowed` with fixed 28px rows, `/sticky` with a sum footer, `/formats`
 //! with empty yes/no and date cells, `/header-filters` with a filtered Name column,
-//! `/wide` with 45vw columns, the third partly in view.
+//! `/wide` with 45vw columns, the third partly in view, `/hide` with a button after it that hides Age.
 
 use dioxus::prelude::*;
 use libero::{
@@ -23,6 +23,7 @@ pub const ROUTES: Routes = &[
     ("/table-grid/resizable", || rsx! { GridPage { resizable: true } }),
     ("/table-grid/header-filters", || rsx! { GridPage { header_filters: true } }),
     ("/table-grid/wide", || rsx! { GridPage { wide: true } }),
+    ("/table-grid/hide", || rsx! { GridPage { hide: true } }),
     ("/table-grid/windowed", || rsx! { WindowedGridPage {} }),
     ("/table-grid/sticky", || rsx! { StickyGridPage {} }),
     ("/table-grid/editable", || rsx! { EditableGridPage { store: true } }),
@@ -61,7 +62,9 @@ fn GridPage(
     #[props(default)] resizable: bool,
     #[props(default)] header_filters: bool,
     #[props(default)] wide: bool,
+    #[props(default)] hide: bool,
 ) -> Element {
+    let mut hidden = use_signal(Vec::<String>::new);
     let mut columns = vec![
         column("Name").value(|p: &Person| p.name.to_string()).sortable().row_header(),
         column("Age").value(|p: &Person| p.age).sortable(),
@@ -87,6 +90,8 @@ fn GridPage(
             column_menu: selectable || resizable || header_filters,
             resizable_columns: resizable,
             header_filters,
+            hidden_columns: hide.then(|| hidden.cloned()),
+            onhiddencolumnschange: move |next| hidden.set(next),
             default_column_filters: if header_filters {
                 vec![ColumnFilter::new("Name", FilterOperator::Contains, "e")]
             } else {
@@ -97,6 +102,9 @@ fn GridPage(
             row_key: |p: &Person| p.name.to_string(),
         }
         button { id: "after", "After" }
+        if hide {
+            button { id: "hide-age", onclick: move |_| hidden.set(vec!["Age".to_string()]), "Hide Age" }
+        }
     }
 }
 

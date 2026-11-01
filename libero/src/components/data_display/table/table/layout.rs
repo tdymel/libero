@@ -139,11 +139,13 @@ pub(super) fn header_layout<T: Clone + PartialEq + 'static>(
                 .filter(|&&index| headers[index].pin.is_none())
                 .map(|&index| (index, headers[index].key.clone()))
                 .collect(),
-            lead: layout
-                .iter()
-                .take_while(|&&index| headers[index].pin.is_some())
-                .count(),
-            shown: layout.len(),
+            // The handle, toggle and checkbox columns count, as a reader's table keys do (5190).
+            lead: leads.len()
+                + layout
+                    .iter()
+                    .take_while(|&&index| headers[index].pin.is_some())
+                    .count(),
+            shown: leads.len() + layout.len(),
         };
         let mut current = drag.plan;
         if *current.peek() != plan {
@@ -236,6 +238,8 @@ pub(super) struct MenuSpec {
     pub news: PinNews,
     /// `cell_focus`: the header cell is the stop.
     pub grid: bool,
+    /// The handle, toggle and checkbox columns before the data ones.
+    pub leads: usize,
 }
 
 /// One column menu per header, by header index.
@@ -262,6 +266,7 @@ pub(super) fn column_menus<T: Clone + PartialEq + 'static>(
         sort,
         news,
         grid,
+        leads,
     } = spec;
     let FilterBase {
         state,
@@ -286,11 +291,14 @@ pub(super) fn column_menus<T: Clone + PartialEq + 'static>(
                     columns: columns.clone(),
                     // A move swaps it with the next shown unpinned column: one place over.
                     moves: (
-                        moved(headers, column_order, index, false).zip(at),
+                        moved(headers, column_order, index, false)
+                            .zip(at)
+                            .map(|(next, at)| (next, leads + at)),
                         moved(headers, column_order, index, true)
                             .zip(at)
-                            .map(|(next, at)| (next, at + 2)),
+                            .map(|(next, at)| (next, leads + at + 2)),
                     ),
+                    leads,
                     order: state.column_order,
                     width: resize.zip(headers[index].resize).map(|(resize, limits)| MenuWidth {
                         resize,

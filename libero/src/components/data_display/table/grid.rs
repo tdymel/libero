@@ -66,6 +66,8 @@ pub(super) struct GridFocus {
     inside: CopyValue<bool>,
     /// A window's rows at the last render.
     held: CopyValue<Option<Rc<[VisibleRow]>>>,
+    /// The stop's place at the last render.
+    pub last: CopyValue<Option<Pos>>,
     table: ElementHandle,
     region: ElementHandle,
 }
@@ -104,6 +106,8 @@ pub(super) struct GridRows {
     pub editable: Rc<[bool]>,
     /// With `parent_key`: the rows are a treegrid's.
     pub tree: Option<TreeNav>,
+    /// The stop's place at the last render, which a gone row or column falls back to.
+    pub last: Option<Pos>,
 }
 
 /// A treegrid's rows: each one a stop of its own, its cells too with `cells`.
@@ -179,7 +183,9 @@ impl GridRows {
 
     /// The stop's cell, by position.
     pub fn at(&self, stop: Option<FocusTarget>) -> Option<Pos> {
-        resolve(stop, &self.order, &self.layout, |row| self.row_spans(row))
+        resolve(stop, &self.order, &self.layout, self.last, |row| {
+            self.row_spans(row)
+        })
     }
 
     /// The cell at `at`: a header cell by the level it starts at.
@@ -331,6 +337,7 @@ pub(super) fn use_grid_focus(table: ElementHandle, region: ElementHandle) -> Gri
         id,
         inside,
         held: use_hook(|| CopyValue::new(None)),
+        last: use_hook(|| CopyValue::new(None)),
         table,
         region,
     };

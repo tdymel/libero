@@ -237,11 +237,11 @@ async fn a_menu_moves_a_column<D: Driver>(d: &mut D, _route: &str) -> Result<()>
     }
     d.click(right).await?;
     eventually_text(d, "#columns", "Stock Name Origin", "Move right").await?;
-    // Todo 1428: the closed menu hides the move, so it is said.
+    // Todo 1428: the closed menu hides the move, so it is said; 5190: the handle column counts.
     eventually_text(
         d,
         "[role=status]",
-        "Name moved to column 2 of 3",
+        "Name moved to column 3 of 4",
         "the move announcement",
     )
     .await?;
@@ -348,7 +348,8 @@ e2e::scenario!(
 async fn german_menu_announcements<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
     let button = |header: &str| format!("button[aria-label=\"Optionen für Spalte {header}\"]");
     for (header, entry, said) in [
-        ("Name", "Nach rechts", "Name an Spalte 2 von 3 verschoben"),
+        // 5190: the handle column counts.
+        ("Name", "Nach rechts", "Name an Spalte 3 von 4 verschoben"),
         ("Name", "Am Ende fixieren", "Name am Ende fixiert"),
         ("Name", "Am Anfang fixieren", "Name am Anfang fixiert"),
         ("Name", "Fixierung lösen", "Fixierung von Name gelöst"),
@@ -681,7 +682,7 @@ async fn a_grip_drag_moves_a_column<D: Driver>(d: &mut D, _route: &str) -> Resul
     eventually_text(
         d,
         "[role=status]",
-        "Name moved to column 3 of 3",
+        "Name moved to column 4 of 4",
         "the drop announcement",
     )
     .await?;

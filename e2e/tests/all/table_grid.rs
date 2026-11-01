@@ -443,6 +443,30 @@ e2e::scenario!(
     android: skip("958: roving keys are inert in the emulator's WebView")
 );
 
+/// Todo 5187: hiding the stop's column keeps its row, the stop on the column now in its place.
+async fn a_hidden_column_keeps_the_row<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    into_body(d, 1).await?;
+    d.press(keyboard::ARROW_DOWN).await?;
+    d.press(keyboard::ARROW_RIGHT).await?;
+    at(d, 2, 2, "ArrowDown and ArrowRight to Ben's Age").await?;
+    // From outside the grid: a column menu's pick moves the stop to its header first.
+    d.click("#hide-age").await?;
+    eventually(d, "Ben's City to take the stop", async |d| {
+        Ok(
+            d.attr(&cell(2, 2), "tabindex").await?.as_deref() == Some("0")
+                && d.text(&cell(2, 2)).await? == "Berlin",
+        )
+    })
+    .await
+}
+
+e2e::scenario!(
+    a_hidden_column_keeps_the_stops_row,
+    "/table-grid/hide",
+    a_hidden_column_keeps_the_row,
+    android: skip("958: roving keys are inert in the emulator's WebView")
+);
+
 /// The collator sorts by the app's language, not the browser's: in Swedish "Ä" comes after "Z".
 async fn sorts_by_language<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
     eventually(d, "the page language", async |d| {

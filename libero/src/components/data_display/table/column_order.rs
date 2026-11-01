@@ -94,21 +94,21 @@ pub(super) fn as_headers<'a>(
     (order_keys(&headers) == keys).then_some(headers)
 }
 
-/// The column order, every header by rank, after dropping `header` into gap
-/// `gap` of `unpinned`, the shown unpinned headers in display order (gap `n`
+/// The column order, every column key by rank, after dropping `key` into gap
+/// `gap` of `unpinned`, the shown unpinned keys in display order (gap `n`
 /// before its `n`th, the last after it). `None` when nothing moves.
 pub(super) fn dropped(
     ranked: &[String],
     unpinned: &[String],
-    header: &str,
+    key: &str,
     gap: usize,
 ) -> Option<Vec<String>> {
-    let mut next: Vec<String> = ranked.iter().filter(|h| *h != header).cloned().collect();
+    let mut next: Vec<String> = ranked.iter().filter(|k| *k != key).cloned().collect();
     let at = match unpinned.get(gap) {
-        Some(before) => next.iter().position(|h| h == before)?,
-        None => next.iter().position(|h| Some(h) == unpinned.last())? + 1,
+        Some(before) => next.iter().position(|k| k == before)?,
+        None => next.iter().position(|k| Some(k) == unpinned.last())? + 1,
     };
-    next.insert(at, header.to_string());
+    next.insert(at, key.to_string());
     (next != ranked).then_some(next)
 }
 

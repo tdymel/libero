@@ -157,8 +157,8 @@ pub struct TableLabels {
     pub column_width: fn(&str, f64) -> String,
     /// Announced after a menu Reset width, from the header text.
     pub column_width_reset: fn(&str) -> String,
-    /// Announced after a menu Move left or right: the header, its place among the
-    /// shown columns from 1, and their count.
+    /// Announced after a menu Move left or right or a drag: the header, its place among the
+    /// shown columns from 1, and their count, both with the checkbox, detail and reorder columns.
     ///
     /// ```
     /// use libero::localization::TableLabels;
@@ -375,7 +375,7 @@ pub struct TableLabels {
     /// A cell editor's cancel button, shown on a touch screen, where no Escape is.
     pub cancel_edit: &'static str,
     /// What a cell editor shows and announces for text that is not a value of the
-    /// column's type.
+    /// column's type, and a number filter field shows for text that is not a number.
     pub invalid_value: &'static str,
     /// The form a date cell editor takes, as its placeholder and description.
     pub edit_hint_date: &'static str,

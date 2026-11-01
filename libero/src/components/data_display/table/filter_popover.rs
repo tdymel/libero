@@ -11,7 +11,8 @@ use pictogram_icons_lucide as lucide;
 use super::{
     cell_value::FilterKind,
     column_filter::{
-        ColumnFilter, FilterOperator, SelectOption, filter_of, with_filter, without_column,
+        ColumnFilter, FilterOperator, SelectOption, filter_of, parse_number, with_filter,
+        without_column,
     },
     use_table::StateSlice,
 };
@@ -25,7 +26,8 @@ use crate::{
     context::IconSlot,
     hooks::{
         Align, ElementHandle, POPOVER_AVAILABLE_HEIGHT, PopoverOptions, PressMarker, Side,
-        id_selector, placement_sx, use_debounced_callback, use_id, use_marked_popover, use_theme,
+        id_selector, placement_sx, use_debounced_callback, use_formats, use_id, use_marked_popover,
+        use_theme,
     },
     localization::TableLabels,
     platform::{
@@ -298,6 +300,7 @@ pub(super) fn FilterValue(
     #[props(default)]
     compact: bool,
 ) -> Element {
+    let formats = use_formats();
     let current = filter.as_ref();
     let operator = current.map_or(FilterOperator::of(kind)[0], |filter| filter.operator);
     let name = name.unwrap_or_else(|| (labels.filter_column)(&column));
@@ -462,12 +465,18 @@ pub(super) fn FilterValue(
     let text = draft
         .or_else(|| current.map(|filter| filter.value.clone()))
         .unwrap_or_default();
+    // An applied number that does not parse keeps every row: say so (5189).
+    let unparsed = kind == FilterKind::Number
+        && current.is_some_and(|filter| {
+            !filter.value.trim().is_empty() && parse_number(&filter.value, formats).is_none()
+        });
     rsx! {
         TextField {
             required: false,
             label,
             aria_label,
             size,
+            status: unparsed.then_some(labels.invalid_value),
             value: text,
             inputmode: (kind == FilterKind::Number).then_some("decimal"),
             "data-filter-value": true,

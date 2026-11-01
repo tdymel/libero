@@ -188,6 +188,8 @@ pub(super) fn ColumnMenu(
     /// The column order after a move towards the start and towards the end, with the
     /// column's place among the shown ones from 1; `None` at that edge.
     moves: (ColumnMove, ColumnMove),
+    /// The handle, toggle and checkbox columns, which a move's place and count take in (5190).
+    leads: usize,
     order: StateSlice<Vec<String>>,
     /// With `resizable_columns`, unless the column opted out.
     width: Option<MenuWidth>,
@@ -331,7 +333,7 @@ pub(super) fn ColumnMenu(
                     .disabled(next.is_none())
                     .onselect(move |_| {
                         if let Some((next, place)) = next.clone() {
-                            let said = (labels.column_moved)(&header, place, shown);
+                            let said = (labels.column_moved)(&header, place, leads + shown);
                             order.set_then(next, move || announcer.say(said));
                         }
                     })
