@@ -1,71 +1,102 @@
 use dioxus::prelude::*;
 
-use crate::{hooks::ElementHandle, platform::ElementApi};
+#[cfg(feature = "table")]
+use crate::platform::{element, mounted_by_selector};
+use crate::{
+    hooks::ElementHandle,
+    platform::{ElementApi, PlatformError},
+};
 
 /// Scrolls `strip` sideways just enough to show its descendant `selector`, as
 /// `scrollIntoView` `nearest` would, without scrolling the page. Keeps the
 /// strip's `scroll-padding-inline` free, as a focus scroll does.
 pub(crate) fn reveal_inline(strip: ElementHandle, selector: &str) {
-    reveal(strip, selector, false);
+    reveal(strip, [found(strip.query_selector(selector)), None]);
 }
 
 /// [`reveal_inline`] down the block axis, for a vertical strip (3976).
 pub(crate) fn reveal_block(strip: ElementHandle, selector: &str) {
-    reveal(strip, selector, true);
+    reveal(strip, [None, found(strip.query_selector(selector))]);
 }
 
-fn reveal(strip: ElementHandle, selector: &str, block: bool) {
-    let Ok(target) = strip.query_selector(selector) else {
+/// Shows `inline`'s match sideways and `block`'s down `strip` in one scroll, so neither undoes
+/// the other. Both are unique in the page: a WebView, whose handles cannot query, looks there (5232).
+#[cfg(feature = "table")]
+pub(crate) fn reveal_unique(strip: ElementHandle, inline: &str, block: Option<&str>) {
+    let find = |selector: &str| match strip.query_selector(selector) {
+        Err(PlatformError::Unsupported) => mounted_by_selector(selector).map(|page| Target {
+            element: element(&page),
+            page: true,
+        }),
+        queried => found(queried),
+    };
+    reveal(strip, [find(inline), block.and_then(find)]);
+}
+
+struct Target {
+    element: Box<dyn ElementApi>,
+    /// Looked up page-side, which measures no match 0x0.
+    page: bool,
+}
+
+fn found(queried: Result<Box<dyn ElementApi>, PlatformError>) -> Option<Target> {
+    queried.ok().map(|element| Target {
+        element,
+        page: false,
+    })
+}
+
+/// `targets` holds the inline axis's target, then the block axis's.
+fn reveal(strip: ElementHandle, targets: [Option<Target>; 2]) {
+    if targets.iter().all(Option::is_none) {
         return;
-    };
-    // Physical sides, which the browser resolves from the logical ones.
-    let (start, end) = match block {
-        true => ("scroll-padding-top", "scroll-padding-bottom"),
-        false => ("scroll-padding-left", "scroll-padding-right"),
-    };
+    }
     let reads = (
         strip.client_offset(),
         strip.dimensions(),
         strip.scroll_offset(),
-        target.client_offset(),
-        target.dimensions(),
-        strip.computed_px(start),
-        strip.computed_px(end),
     );
+    // Physical sides, which the browser resolves from the logical ones.
+    let padding = [
+        ("scroll-padding-left", "scroll-padding-right"),
+        ("scroll-padding-top", "scroll-padding-bottom"),
+    ]
+    .map(|(start, end)| (strip.computed_px(start), strip.computed_px(end)));
+    let targets = targets.map(|target| {
+        target.map(|Target { element, page }| (element.client_offset(), element.dimensions(), page))
+    });
     spawn(async move {
-        let (strip_at, strip_size, scroll, target_at, target_size, start, end) = reads;
-        let (
-            Ok((strip_x, strip_y)),
-            Ok(strip_size),
-            Ok((scroll_x, scroll_y)),
-            Ok((target_x, target_y)),
-            Ok(target_size),
-        ) = (
-            strip_at.await,
-            strip_size.await,
-            scroll.await,
-            target_at.await,
-            target_size.await,
-        )
+        let (Ok((strip_x, strip_y)), Ok(strip_size), Ok((scroll_x, scroll_y))) =
+            (reads.0.await, reads.1.await, reads.2.await)
         else {
             return;
         };
-        // `auto`, or a backend without computed styles: no room.
-        let room = |side: Result<Option<f64>, _>| side.ok().flatten().unwrap_or(0.0);
-        let (start, end) = (room(start.await), room(end.await));
-        let shift = nearest_shift(
-            match block {
-                true => (strip_y, strip_size.height, target_y, target_size.height),
-                false => (strip_x, strip_size.width, target_x, target_size.width),
-            },
-            start,
-            end,
-        );
-        if shift != 0.0 {
-            let _ = match block {
-                true => strip.scroll_to(scroll_x, scroll_y + shift),
-                false => strip.scroll_to(scroll_x + shift, scroll_y),
+        let mut shift = [0.0; 2];
+        for (axis, (target, (start, end))) in targets.into_iter().zip(padding).enumerate() {
+            let Some((at, size, page)) = target else {
+                continue;
             };
+            let (Ok((target_x, target_y)), Ok(size)) = (at.await, size.await) else {
+                continue;
+            };
+            if page && size.width == 0.0 && size.height == 0.0 {
+                continue;
+            }
+            // `auto`, or a backend without computed styles: no room.
+            let room =
+                |side: Result<Option<f64>, PlatformError>| side.ok().flatten().unwrap_or(0.0);
+            let (start, end) = (room(start.await), room(end.await));
+            shift[axis] = nearest_shift(
+                match axis {
+                    0 => (strip_x, strip_size.width, target_x, size.width),
+                    _ => (strip_y, strip_size.height, target_y, size.height),
+                },
+                start,
+                end,
+            );
+        }
+        if shift != [0.0; 2] {
+            let _ = strip.scroll_to(scroll_x + shift[0], scroll_y + shift[1]);
         }
     });
 }

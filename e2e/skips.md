@@ -178,8 +178,6 @@ The performance scenarios (units `perf`, `table_perf`) are no skips but run on r
 | `line_chart::hovering_shows_the_point_s_tooltip_and_marker` | ios | a touch screen has no hover |
 | `line_chart::the_chart_exports_as_svg_and_png` | native | the PNG export never lands on Blitz |
 | `line_chart::the_tooltip_keeps_its_height_from_point_to_point` | native | Blitz has no script reads |
-| `list::a_keyed_insert_renumbers_the_items_in_dom_order` | web | the browser numbers the items itself; no inline marker to read |
-| `list::a_keyed_move_in_a_child_component_renumbers_in_dom_order` | web | the browser numbers the items itself; no inline marker to read |
 | `menu::a_click_outside_closes_it_and_leaves_focus_where_it_went` | ios | upstream: WebKit does not focus a clicked button |
 | `menu::a_click_outside_closes_it_and_leaves_focus_where_it_went` | macos desktop | upstream: WebKit does not focus a clicked button |
 | `menu::a_menu_item_opens_the_file_picker` | desktop | 1126: the GTK file chooser is not driven |

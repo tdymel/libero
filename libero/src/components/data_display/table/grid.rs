@@ -15,7 +15,7 @@ use super::{
     window::reveal_slot,
 };
 use crate::{
-    components::common::{attr, reveal_block, reveal_inline},
+    components::common::{attr, reveal_unique},
     hooks::{ElementHandle, listener, use_id, use_silent_focus_in, use_silent_focus_out_of},
     platform::{
         ElementApi, PlatformError, arrow_target, element, focus_selector, focused_tag,
@@ -296,7 +296,7 @@ pub(super) fn use_grid_focus(table: ElementHandle, region: ElementHandle) -> Gri
         // A pinned cell is in view already: its scroll padding would push it back.
         let unpinned = format!("{selector}:not([data-pin])");
         let body = format!("tbody {selector}");
-        let focus = move || {
+        let focus = move |block: Option<&str>| {
             match table.query_selector(&selector) {
                 Ok(cell) => {
                     let _ = cell.focus();
@@ -307,11 +307,10 @@ pub(super) fn use_grid_focus(table: ElementHandle, region: ElementHandle) -> Gri
                 }
             }
             // Chrome's `focus()` scrolls only a fully hidden cell: a partly hidden one shows whole (todo 4667).
-            reveal_inline(region, &unpinned);
+            reveal_unique(region, &unpinned, block);
         };
         let Some(reveal) = reveal else {
-            focus();
-            reveal_block(region, &body);
+            focus(Some(&body));
             return;
         };
         // Once the window's new rows are laid out: Blitz lays out after effects.
@@ -321,7 +320,7 @@ pub(super) fn use_grid_focus(table: ElementHandle, region: ElementHandle) -> Gri
             moved: None,
         };
         when_laid_out(move || {
-            focus();
+            focus(None);
             // Blitz scrolls nothing into view on a `focus()`.
             reveal_by_scroll(region, reveal, settle, REVEAL_TRIES);
         });

@@ -95,6 +95,8 @@ pub use polymorphic::HtmlTag;
 pub(crate) use polymorphic::{IntoChildren, render_polymorphic, styling_attributes};
 pub(crate) use rail::{Rail, RailInset};
 pub(crate) use responsive_sx::{ScaleOrCss, as_length, css_px, responsive_sx, with_own};
+#[cfg(all(feature = "use-element", feature = "table"))]
+pub(crate) use reveal_inline::reveal_unique;
 #[cfg(feature = "use-element")]
 pub(crate) use reveal_inline::{reveal_block, reveal_inline};
 pub(crate) use style_attributes::{

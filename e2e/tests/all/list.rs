@@ -2,7 +2,7 @@
 
 use anyhow::Result;
 use e2e::browser::block_on;
-use e2e::driver::{Driver, eventually};
+use e2e::driver::{Driver, Platform, eventually};
 use e2e::wait::PageBounded;
 use e2e::{Fixture, Suite, Viewport, ax, wait};
 
@@ -171,17 +171,31 @@ async fn markers<D: Driver>(d: &mut D) -> Result<Vec<String>> {
         .collect())
 }
 
+const ITEM_TEXTS: &str =
+    "[...document.querySelectorAll('#keyed > li')].map(e => e.textContent.trim())";
+
+/// The items number 1, 2, 3 holding `labels` in DOM order: natively by their inline markers;
+/// a WebView numbers them itself, so there none may carry one (todo 5232).
+async fn numbered_in_dom_order<D: Driver>(d: &mut D, labels: [&str; 3]) -> Result<bool> {
+    let markers = markers(d).await?;
+    if d.platform() == Platform::Native {
+        return Ok(markers == ["1.\u{a0}", "2.\u{a0}", "3.\u{a0}"]);
+    }
+    let texts: Vec<String> = serde_json::from_value(d.evaluate(ITEM_TEXTS).await?)?;
+    Ok(markers.iter().all(String::is_empty) && texts == labels)
+}
+
 /// Todo 4401: a keyed insert and a reversal renumber in DOM order, not mount order, on Blitz.
 async fn a_keyed_insert_renumbers<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
     d.click("#insert").await?;
     eventually(d, "three items", async |d| Ok(markers(d).await?.len() == 3)).await?;
     eventually(d, "1, 2, 3 in DOM order after the insert", async |d| {
-        Ok(markers(d).await? == ["1.\u{a0}", "2.\u{a0}", "3.\u{a0}"])
+        numbered_in_dom_order(d, ["A", "X", "B"]).await
     })
     .await?;
     d.click("#swap").await?;
     eventually(d, "1, 2, 3 in DOM order after the swap", async |d| {
-        Ok(markers(d).await? == ["1.\u{a0}", "2.\u{a0}", "3.\u{a0}"])
+        numbered_in_dom_order(d, ["B", "X", "A"]).await
     })
     .await
 }
@@ -189,14 +203,13 @@ async fn a_keyed_insert_renumbers<D: Driver>(d: &mut D, _route: &str) -> Result<
 e2e::scenario!(
     a_keyed_insert_renumbers_the_items_in_dom_order,
     "/list/keyed-insert",
-    a_keyed_insert_renumbers,
-    web: skip("the browser numbers the items itself; no inline marker to read")
+    a_keyed_insert_renumbers
 );
 
 /// Todo 4422: a keyed move made inside a child component renumbers in DOM order on Blitz.
 async fn a_keyed_move_in_a_child_renumbers<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
     eventually(d, "1, 2, 3 at first", async |d| {
-        Ok(markers(d).await? == ["1.\u{a0}", "2.\u{a0}", "3.\u{a0}"])
+        numbered_in_dom_order(d, ["A", "B", "C"]).await
     })
     .await?;
     d.click("#swap").await?;
@@ -205,7 +218,7 @@ async fn a_keyed_move_in_a_child_renumbers<D: Driver>(d: &mut D, _route: &str) -
     })
     .await?;
     eventually(d, "1, 2, 3 in DOM order after the swap", async |d| {
-        Ok(markers(d).await? == ["1.\u{a0}", "2.\u{a0}", "3.\u{a0}"])
+        numbered_in_dom_order(d, ["C", "B", "A"]).await
     })
     .await
 }
@@ -213,6 +226,5 @@ async fn a_keyed_move_in_a_child_renumbers<D: Driver>(d: &mut D, _route: &str) -
 e2e::scenario!(
     a_keyed_move_in_a_child_component_renumbers_in_dom_order,
     "/list/keyed-child",
-    a_keyed_move_in_a_child_renumbers,
-    web: skip("the browser numbers the items itself; no inline marker to read")
+    a_keyed_move_in_a_child_renumbers
 );
