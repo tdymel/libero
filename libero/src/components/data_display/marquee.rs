@@ -104,10 +104,31 @@ static MARQUEE_BASE_SX: StaticSx = StaticSx::new(|| {
     // by the margin. The scroll axis is clipped by the root, so it pads in (todo 2424).
     let ring_room = FOCUS_RING_HALO_SPREAD.value();
     let back = format!("calc(-1 * {ring_room})");
+    // Blitz clips both axes at the root's padding box: natively the root pads the cross
+    // axis too, so the track's ring room is inside its clip (todo 5203).
+    let native = cfg!(all(not(target_arch = "wasm32"), feature = "native"));
+    let cross_room = |horizontal: bool| {
+        let room = match horizontal {
+            true => sx()
+                .padding_top(ring_room.clone())
+                .padding_bottom(ring_room.clone())
+                .margin_top(back.clone())
+                .margin_bottom(back.clone()),
+            false => sx()
+                .padding_left(ring_room.clone())
+                .padding_right(ring_room.clone())
+                .margin_left(back.clone())
+                .margin_right(back.clone()),
+        };
+        match native {
+            true => sx().selector("&:focus-within", room),
+            false => sx(),
+        }
+    };
 
     // `clip` on one axis keeps focus rings visible on the other (`hidden` forces
     // it to `auto`). The zero minimum lets the non-scroller shrink as a flex item.
-    let horizontal = sx()
+    let horizontal = cross_room(true)
         .overflow_x("clip")
         .min_width("0")
         .media(REDUCED_MOTION, sx().overflow_x("auto"))
@@ -131,7 +152,7 @@ static MARQUEE_BASE_SX: StaticSx = StaticSx::new(|| {
                 .margin_bottom("auto"),
         );
 
-    let vertical = sx()
+    let vertical = cross_room(false)
         .overflow_y("clip")
         .min_height("0")
         .media(REDUCED_MOTION, sx().overflow_y("auto"))

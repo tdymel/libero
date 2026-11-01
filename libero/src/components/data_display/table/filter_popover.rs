@@ -771,10 +771,10 @@ pub(super) fn FilteredButton(
             aria_haspopup: "dialog",
             aria_expanded: "{expanded}",
             onmounted: handle.mount(),
+            // Blitz focuses the button after the click and reports it at the
+            // poll's end, which would dismiss a panel or popover opened in it.
             onclick: move |_| match onopen {
-                Some(onopen) => onopen.call(handle),
-                // Blitz focuses the button after the click and reports it at the
-                // poll's end, which would dismiss a popover opened in it.
+                Some(onopen) => when_laid_out(move || onopen.call(handle)),
                 None => {
                     opener.set(handle);
                     when_laid_out(move || {

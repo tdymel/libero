@@ -284,6 +284,27 @@ static VIDEO_SX: StaticSx = StaticSx::new(|| {
             sx().margin_top(SizeCss::SPACING.value(Size::Xs))
                 .color(ColorCss::MUTED.value(ColorShade::S7)),
         )
+        // Where nothing plays (Blitz): the poster, the fallback on the bar's scrim over its foot (5200).
+        .selector(
+            format!("{}[data-poster]", VideoPart::Message.selector()),
+            sx().display("grid")
+                .margin_top("0")
+                .background_color(BLACK)
+                .color("#fff")
+                .selector("& > *", sx().with("grid-area", "1 / 1").min_width("0"))
+                .selector(
+                    "& > img",
+                    sx().display("block").width("100%").height("auto"),
+                )
+                .selector(
+                    "& > div",
+                    sx().with("align-self", "end")
+                        .padding(SizeCss::SPACING.value(Size::Sm))
+                        .background_color(SCRIM)
+                        .selector("& > p", sx().margin("0")),
+                )
+                .selector("& a", sx().color("#fff").text_decoration("underline")),
+        )
         .selector("&:fullscreen", filled.clone())
         .selector(
             format!("&[{FULLSCREEN_ATTR}='drawn']"),
@@ -833,11 +854,21 @@ pub fn Video(props: VideoProps) -> Element {
 
     use_source_reload(media, &props.src, &props.sources);
     let (src, sources) = media_sources(&props.src, &props.sources);
+    let poster = props
+        .poster
+        .as_deref()
+        .and_then(|poster| media_url(poster, "Video `poster`"));
+    // Kept mounted, as its handle answers `supported`; Blitz drew it as an empty black box (5200).
+    let style = match unsupported {
+        true => format!("{style}display: none;"),
+        false => style,
+    };
+    let poster_attribute = poster.clone();
     let body = rsx! {
         video {
             "data-slot": VideoPart::Media.slot(),
             src,
-            poster: props.poster.as_deref().and_then(|poster| media_url(poster, "Video `poster`")),
+            poster: poster_attribute,
             style,
             autoplay: props.autoplay,
             muted: props.muted,
@@ -871,7 +902,7 @@ pub fn Video(props: VideoProps) -> Element {
             }
         }
         if unsupported {
-            MediaFallback { src: props.src.clone(), children: props.children }
+            MediaFallback { src: props.src.clone(), poster, children: props.children }
         } else {
             MediaControls {
                 media,
@@ -976,7 +1007,8 @@ mod tests {
             }
         });
         assert!(!html.contains("script:"), "{html}");
-        assert!(!html.contains("poster"), "{html}");
+        // The attribute only: the stylesheet names `[data-poster]`.
+        assert!(!html.contains("poster="), "{html}");
         assert!(
             html.contains("/ok.webm") && html.contains("/ok.vtt"),
             "{html}"

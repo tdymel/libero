@@ -7,7 +7,7 @@ use super::{
     ChartColor, ChartHandle, ChartPart, ChartPoint, ChartRange, Series, ValueFormat,
     data::{MarkLineAt, MarkPoint},
     engine::{Drawn, Plot, SeriesExtras, SeriesSpec},
-    export::ExportSource,
+    export::{ExportSource, with_family},
     legend::{ChartLegend, HiddenSeries, LegendEntry, legend_sx},
     overlay::{ChartOverlay, Layout, OverlaySeries, overlay_sx},
     zoom::Zoom,
@@ -405,7 +405,11 @@ impl Frame {
             LegendPosition::Top | LegendPosition::Start => (legend_element, None),
             _ => (None, legend_element),
         };
-        let svg = drawn.read().as_ref().map(|drawn| drawn.svg.clone());
+        let native = cfg!(all(not(target_arch = "wasm32"), feature = "native"));
+        let svg = drawn.read().as_ref().map(|drawn| match native {
+            true => with_family(&drawn.svg, export.font),
+            false => drawn.svg.clone(),
+        });
         let center_style = drawn.read().as_ref().map(|drawn| {
             let geometry = &drawn.geometry;
             center_style(geometry.plot, geometry.width, geometry.height)

@@ -11,11 +11,12 @@ use crate::{
         accessibility::VisuallyHidden,
         buttons::{ActionIcon, Button, TooltipOpenDelay},
         common::{
-            COARSE_POINTER, COARSE_TARGET, Glyph, HtmlTag, Input, Part, Parts, allowed_href,
+            COARSE_POINTER, COARSE_TARGET, Glyph, HtmlTag, Input, Part, Parts,
             has_shortcut_modifier, parts_enum,
         },
         form::{HoverPreview, Slider, SliderChangeEvent, SliderSegment, SliderTrack},
         layout::{paper_sx, use_box},
+        navigation::Anchor,
         overlay::{Menu, MenuEntry, MenuItem, Shortcut, ShortcutHelp, use_menu},
     },
     context::IconSlot,
@@ -899,19 +900,31 @@ pub(super) fn MediaSeek(
 }
 
 /// The fallback where nothing plays media: `children`, else a sentence and a link to `src`.
+/// With a `poster` (Video), drawn over it in one box (todo 5200).
 #[component]
-pub(super) fn MediaFallback(src: String, children: Element) -> Element {
+pub(super) fn MediaFallback(
+    src: String,
+    #[props(default)] poster: Option<String>,
+    children: Element,
+) -> Element {
     let labels = use_localization().media;
+    let text = rsx! {
+        if children != VNode::empty() {
+            {children}
+        } else {
+            p { {labels.unsupported} }
+            // External: a router would otherwise route the file's path (5201).
+            Anchor { to: NavigationTarget::<String>::External(src), {labels.download} }
+        }
+    };
+    let has_poster = poster.is_some().then_some("true");
     rsx! {
-        div { "data-slot": MESSAGE,
-            if children != VNode::empty() {
-                {children}
+        div { "data-slot": MESSAGE, "data-poster": has_poster,
+            if let Some(poster) = poster {
+                img { src: poster, alt: "" }
+                div { {text} }
             } else {
-                p { {labels.unsupported} }
-                a {
-                    href: allowed_href(&src, "Media `src`").then_some(src),
-                    {labels.download}
-                }
+                {text}
             }
         }
     }

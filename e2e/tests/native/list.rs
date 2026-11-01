@@ -48,7 +48,10 @@ fn an_icon_or_action_item_counts_in_an_ordered_list() {
     let page = mount(ordered);
     let markers = ["#first", "#last", "#down-first", "#down-last", "#started"]
         .map(|selector| page.list_marker(selector).unwrap_or_default());
-    assert_eq!(markers, ["1. ", "4. ", "3. ", "1. ", "8. "]);
+    assert_eq!(
+        markers,
+        ["1.\u{a0}", "4.\u{a0}", "3.\u{a0}", "1.\u{a0}", "8.\u{a0}"]
+    );
 }
 
 /// Todo 4559: a flex action item has no marker, so it draws its number as a leading span.
@@ -58,6 +61,58 @@ fn an_action_item_draws_its_own_number() {
     assert_eq!(page.laid_out_text("#acted > [data-slot=marker]"), "3.");
     assert!(!page.exists("#iconed > [data-slot=marker]"));
     assert!(!page.exists("#first > [data-slot=marker]"));
+}
+
+fn numbered() -> Element {
+    rsx! {
+        List { ordered: true,
+            ListItem { id: "plain", span { id: "plain-text", "First" } }
+            ListItem {
+                id: "action",
+                action: rsx! { button { "Edit" } },
+                span { id: "action-text", "Second" }
+            }
+        }
+    }
+}
+
+/// The number's glyphs (id, x) left of the item's text, and the text's left edge.
+fn number_and_text(page: &Page, item: &str) -> (Vec<(u32, f64)>, f64) {
+    let text = page.rect(&format!("#{item}-text")).0;
+    let number = page
+        .painted_glyphs(&format!("#{item}"))
+        .into_iter()
+        .filter(|(_, x)| *x < text - 0.5)
+        .collect();
+    (number, text)
+}
+
+/// Todo 5199: an action item's number and text line up with a plain item's, and a
+/// plain number keeps its gap before the text ("1.First" lost it).
+#[test]
+fn every_number_and_text_share_one_column() {
+    let page = mount(numbered);
+    let (plain, plain_text) = number_and_text(&page, "plain");
+    let (action, action_text) = number_and_text(&page, "action");
+    let shown = format!("plain {plain:?} at {plain_text}, action {action:?} at {action_text}");
+    // The '.' is the glyph both numbers share.
+    let dot = |number: &[(u32, f64)], other: &[(u32, f64)]| {
+        number
+            .iter()
+            .find(|(id, _)| other.iter().any(|(other, _)| other == id))
+            .map(|(_, x)| *x)
+    };
+    let (Some(plain_dot), Some(action_dot)) = (dot(&plain, &action), dot(&action, &plain)) else {
+        panic!("no '.' in both numbers: {shown}");
+    };
+    assert!(
+        (plain_dot - action_dot).abs() < 1.0 && (plain_text - action_text).abs() < 1.0,
+        "{shown}"
+    );
+    // The '.' is ~4.5px wide at 16px: a space adds as much again.
+    for (dot, text) in [(plain_dot, plain_text), (action_dot, action_text)] {
+        assert!(text - dot >= 7.5, "{shown}");
+    }
 }
 
 /// The icon's, the body's and the column's boxes as (left, top, right, bottom).

@@ -58,6 +58,11 @@ impl Shown {
         let from = nth(&cards, position);
         (from, drop_index(&indices, Some(from), to))
     }
+
+    /// How many cards are mounted. Reactive.
+    pub(super) fn count(self) -> usize {
+        self.cards.read().len()
+    }
 }
 
 pub(super) fn use_shown() -> Shown {

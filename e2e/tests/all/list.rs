@@ -176,12 +176,12 @@ async fn a_keyed_insert_renumbers<D: Driver>(d: &mut D, _route: &str) -> Result<
     d.click("#insert").await?;
     eventually(d, "three items", async |d| Ok(markers(d).await?.len() == 3)).await?;
     eventually(d, "1, 2, 3 in DOM order after the insert", async |d| {
-        Ok(markers(d).await? == ["1. ", "2. ", "3. "])
+        Ok(markers(d).await? == ["1.\u{a0}", "2.\u{a0}", "3.\u{a0}"])
     })
     .await?;
     d.click("#swap").await?;
     eventually(d, "1, 2, 3 in DOM order after the swap", async |d| {
-        Ok(markers(d).await? == ["1. ", "2. ", "3. "])
+        Ok(markers(d).await? == ["1.\u{a0}", "2.\u{a0}", "3.\u{a0}"])
     })
     .await
 }
@@ -196,7 +196,7 @@ e2e::scenario!(
 /// Todo 4422: a keyed move made inside a child component renumbers in DOM order on Blitz.
 async fn a_keyed_move_in_a_child_renumbers<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
     eventually(d, "1, 2, 3 at first", async |d| {
-        Ok(markers(d).await? == ["1. ", "2. ", "3. "])
+        Ok(markers(d).await? == ["1.\u{a0}", "2.\u{a0}", "3.\u{a0}"])
     })
     .await?;
     d.click("#swap").await?;
@@ -205,7 +205,7 @@ async fn a_keyed_move_in_a_child_renumbers<D: Driver>(d: &mut D, _route: &str) -
     })
     .await?;
     eventually(d, "1, 2, 3 in DOM order after the swap", async |d| {
-        Ok(markers(d).await? == ["1. ", "2. ", "3. "])
+        Ok(markers(d).await? == ["1.\u{a0}", "2.\u{a0}", "3.\u{a0}"])
     })
     .await
 }

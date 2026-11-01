@@ -47,15 +47,24 @@ static LIST_ITEM_BASE_SX: StaticSx = StaticSx::new(|| {
         .when("with-action", action_sx())
 });
 
+/// Natively, an action item's number to its text: a plain item's marker space.
+const MARKER_GAP: &str = "0.3em";
+
 /// The action takes the item's end, so the body is no float's neighbour.
 fn action_sx() -> Sx {
     if NATIVE {
         return sx()
             .list_style_type("none")
             .display("flex")
+            // Hung into the list's padding as the plain items' markers are: one number column (5199).
             .selector(
                 "& > [data-slot='marker']",
-                sx().flex_shrink("0").margin_inline_end("0.5em"),
+                sx().flex_shrink("0")
+                    .box_sizing("border-box")
+                    .width("2em")
+                    .margin_inline_start("-2em")
+                    .padding_inline_end(MARKER_GAP)
+                    .text_align("end"),
             )
             .selector(
                 ListItemPart::Body.selector(),
@@ -183,7 +192,8 @@ pub fn ListItem(props: ListItemProps) -> Element {
         .map(|number| format!("{number}."));
     let number = number
         .filter(|_| icon.is_none() && props.action.is_none())
-        .map(|number| format!("list-style-type: \"{number}. \""));
+        // Blitz drops a marker string's trailing space; a no-break one stays (5199).
+        .map(|number| format!("list-style-type: \"{number}.\u{a0}\""));
     // Native only: where `List` reads the items' DOM order from.
     let order = context
         .filter(|context| NATIVE && context.numbering.read().is_some())

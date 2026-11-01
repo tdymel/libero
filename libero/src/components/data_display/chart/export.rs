@@ -89,18 +89,24 @@ pub(super) fn standalone(
         .filter(|title| !title.trim().is_empty())
         .map(|title| format!("<title>{}</title>", escape(title)))
         .unwrap_or_default();
+    let body = with_family(&svg[close + 1..], font);
+    format!(
+        "<svg width=\"{width}\" height=\"{height}\"{xmlns}{}>{title}<rect width=\"100%\" height=\"100%\" fill=\"{background}\"/>{body}",
+        &root[4..]
+    )
+}
+
+/// The drawing's `inherit` font as `font`, for a file, and natively: Blitz's SVG
+/// renderer resolves `inherit` to its first face, a Symbol font (todo 5202).
+pub(super) fn with_family(svg: &str, font: &str) -> String {
     // Quotes would end the attribute; a `var()` means nothing outside the page.
     let font = match font.contains("var(") {
         true => "sans-serif".to_string(),
         false => escape(&font.replace('"', "'")),
     };
-    let body = svg[close + 1..].replace(
+    svg.replace(
         "font-family=\"inherit\"",
         &format!("font-family=\"{font}\""),
-    );
-    format!(
-        "<svg width=\"{width}\" height=\"{height}\"{xmlns}{}>{title}<rect width=\"100%\" height=\"100%\" fill=\"{background}\"/>{body}",
-        &root[4..]
     )
 }
 
@@ -283,6 +289,19 @@ pub fn use_chart() -> ChartHandle {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// Natively the page's drawing takes it too: Blitz drew `inherit` in a Symbol font (5202).
+    #[test]
+    fn the_theme_font_writes_a_concrete_family() {
+        let svg = with_family(
+            "<text font-family=\"inherit\">Mon</text>",
+            crate::theme::TextDefaults::DEFAULT.font_family,
+        );
+        assert!(
+            !svg.contains("inherit") && !svg.contains("var(") && svg.contains("sans-serif"),
+            "{svg}"
+        );
+    }
 
     #[test]
     fn the_file_stands_alone() {

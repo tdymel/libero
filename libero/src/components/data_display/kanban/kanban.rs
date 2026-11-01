@@ -549,6 +549,21 @@ pub fn KanbanColumn(props: KanbanColumnProps) -> Element {
         (true, false) => words.kanban.touch_move_to,
         (false, _) => words.kanban.instructions,
     };
+    // Natively a column that lost a card mounts fresh ones: Blitz kept a survivor's text
+    // layout, wider than its card (todo 5198, as Spotlight's 627).
+    let mut layout = use_hook(|| CopyValue::new((0usize, 0u32)));
+    let cards = match cfg!(all(not(target_arch = "wasm32"), feature = "native")) {
+        true => {
+            let count = shown.count();
+            let (last, mut generation) = *layout.peek();
+            if count < last {
+                generation = generation.wrapping_add(1);
+            }
+            layout.set((count, generation));
+            rsx! { Fragment { key: "{generation}", {props.children} } }
+        }
+        false => props.children,
+    };
     // The slot a card from another column opens grows the list, not past its edge.
     let room = room();
     let items = use_box()
@@ -566,7 +581,7 @@ pub fn KanbanColumn(props: KanbanColumnProps) -> Element {
         .event("onpointermove", list.onpointermove)
         .event("onpointerup", list.onpointerup)
         .event("onpointercancel", list.onpointercancel)
-        .render(HtmlTag::Ul, Vec::new(), props.children);
+        .render(HtmlTag::Ul, Vec::new(), cards);
 
     // A column never drags while a card does, by pointer or keys.
     let (card_drag, column_drag) = (board.drag.sorting, board.columns);
