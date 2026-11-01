@@ -186,6 +186,8 @@ impl Desktop {
     fn calibrate(&mut self) -> Result<()> {
         #[cfg(target_os = "macos")]
         self.find_routes()?;
+        #[cfg(not(any(target_os = "macos", windows)))]
+        self.fits_screen()?;
         self.bridge.run("window.__e2eMove = null; addEventListener('mousemove', e => { __e2eMove = [e.clientX, e.clientY]; })")?;
         let at = self.park_pointer()?;
         let started = Instant::now();
@@ -261,6 +263,35 @@ impl Desktop {
             }
             std::thread::sleep(Duration::from_millis(50));
         }
+    }
+
+    /// X clamps the pointer to the screen: a window past its edge skews the calibration and
+    /// takes no clicks there (an 880 px window on an 800 px screen missed by 79 px, todo 5210).
+    fn fits_screen(&self) -> Result<()> {
+        let geometry = xdotool(&["getwindowgeometry", "--shell", &self.window])?;
+        let read = |key: &str| -> Result<f64> {
+            Ok(geometry
+                .lines()
+                .find_map(|line| line.strip_prefix(key))
+                .with_context(|| format!("xdotool gave no {key}"))?
+                .parse()?)
+        };
+        let screen = xdotool(&["getdisplaygeometry"])?;
+        let mut screen = screen.split_whitespace().map(str::parse::<f64>);
+        let (Some(Ok(width)), Some(Ok(height))) = (screen.next(), screen.next()) else {
+            bail!("xdotool gave no display size");
+        };
+        let (right, bottom) = (
+            read("X=")? + read("WIDTH=")?,
+            read("Y=")? + read("HEIGHT=")?,
+        );
+        if right > width || bottom > height {
+            bail!(
+                "the fixture window reaches {right}x{bottom} on a {width}x{height} screen: \
+                 grow the Xvfb screen in desktop_runner.rs"
+            );
+        }
+        Ok(())
     }
 
     /// Moves the pointer to the window's bottom-left corner; that point in window px.

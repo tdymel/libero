@@ -97,7 +97,8 @@ pub fn run(mut filters: Vec<String>) -> Result<()> {
             Command::new(env!("CARGO"))
         } else {
             let mut xvfb = Command::new("xvfb-run");
-            xvfb.args(["-a", "-s", "-screen 0 1280x800x24", env!("CARGO")]);
+            // Taller than the fixture's 880 px window: X clamps the pointer to the screen (5210).
+            xvfb.args(["-a", "-s", "-screen 0 1920x1200x24", env!("CARGO")]);
             xvfb
         };
         let mut tests = command

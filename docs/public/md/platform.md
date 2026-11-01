@@ -49,6 +49,10 @@ one. Give yours `position: relative; z-index: 0`, or use `ScrollArea`. This
 covers a sticky `Header`, and a `Tooltip` or `HoverCard` trigger, which natively
 carries a `z-index` so the pointer reaches it.
 
+A button in the inline flow of a block with padding takes no click natively,
+only keys. Make the parent a flex box, or wrap the button in a plain `div`. This
+covers an `ActionIcon` or a `Burger` placed straight in a padded `div`.
+
 ## Links in a WebView
 
 On desktop and Android, `http`, `https` and `mailto` links open in the system

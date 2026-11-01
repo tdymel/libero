@@ -3,7 +3,7 @@
 
 use dioxus::prelude::*;
 use e2e::native::mount;
-use libero::components::ActionIcon;
+use libero::components::{ActionIcon, Burger};
 
 fn app() -> Element {
     rsx! {
@@ -57,6 +57,32 @@ fn a_small_action_icon_takes_presses_in_its_24px_box() {
         page.click_at(cx + dx, cy + dy);
     }
     assert_eq!(page.text("#count"), "3", "the 24px box or the miss past it");
+}
+
+/// Todo 5211: an `ActionIcon` or `Burger` in a padded block's inline flow takes its clicks
+/// (gap 3930; the Platform page names the flex or wrapper way round).
+#[test]
+#[ignore = "3930"]
+fn an_action_icon_in_a_padded_block_takes_its_clicks() {
+    fn icon_app() -> Element {
+        let mut count = use_signal(|| 0);
+        rsx! {
+            div { padding_left: "200px",
+                ActionIcon { id: "icon", aria_label: "Go", onclick: move |_| count += 1,
+                    svg { view_box: "0 0 24 24", circle { cx: "12", cy: "12", r: "8" } }
+                }
+            }
+            div { padding_left: "200px", Burger { id: "burger", onclick: move |_| count += 1 } }
+            span { id: "count", "{count}" }
+        }
+    }
+    let mut page = mount(icon_app);
+    for id in ["#icon", "#burger"] {
+        assert!(page.hits(id), "{id} at {:?} takes no hit", page.rect(id));
+    }
+    page.click("#icon");
+    page.click("#burger");
+    assert_eq!(page.text("#count"), "2");
 }
 
 #[test]

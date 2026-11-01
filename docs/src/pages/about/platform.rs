@@ -141,6 +141,18 @@ pub fn PlatformPage() -> Element {
                     Code { source: "z-index" }
                     " so the pointer reaches it."
                 }
+                Text {
+                    "A button in the inline flow of a block with padding takes no click natively, "
+                    "only keys. Make the parent a flex box, or wrap the button in a plain "
+                    Code { source: "div" }
+                    ". This covers an "
+                    Code { source: "ActionIcon" }
+                    " or a "
+                    Code { source: "Burger" }
+                    " placed straight in a padded "
+                    Code { source: "div" }
+                    "."
+                }
             }
 
             DocSection {
