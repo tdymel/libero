@@ -384,6 +384,34 @@ e2e::scenario!(
     android: skip("958: roving keys are inert in the emulator's WebView")
 );
 
+/// Ctrl+End moves both axes in one key: neither scroll may undo the other's (todo 5234).
+async fn reveals_both_axes<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    into_body(d, 1).await?;
+    let (cell, area) = (d.rect(STOP).await?, d.rect(AREA).await?);
+    if cell.width * 3.0 <= area.width {
+        bail!("{}px columns do not overflow {}px", cell.width, area.width);
+    }
+    d.press_ctrl(keyboard::END).await?;
+    eventually(d, "Ctrl+End shows the far cell whole", async |d| {
+        if stop_id(d).await? != 250_000 || !d.is_focused(STOP).await? {
+            return Ok(false);
+        }
+        let (cell, area) = (d.rect(STOP).await?, d.rect(AREA).await?);
+        Ok(cell.x >= area.x - 1.0
+            && cell.x + cell.width <= area.x + area.width + 1.0
+            && cell.y >= area.y - 1.0
+            && cell.y + cell.height <= area.y + area.height + 1.0)
+    })
+    .await
+}
+
+e2e::scenario!(
+    ctrl_end_shows_the_far_cell_on_both_axes,
+    "/table-grid/windowed/wide",
+    reveals_both_axes,
+    android: skip("958: roving keys are inert in the emulator's WebView")
+);
+
 /// Enter on the Age header cell sorts it up, Space down; focus stays on the cell.
 async fn header_sorts<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
     d.focus(STOP).await?;

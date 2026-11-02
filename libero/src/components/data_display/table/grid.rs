@@ -307,10 +307,10 @@ pub(super) fn use_grid_focus(table: ElementHandle, region: ElementHandle) -> Gri
                 }
             }
             // Chrome's `focus()` scrolls only a fully hidden cell: a partly hidden one shows whole (todo 4667).
-            reveal_unique(region, &unpinned, block);
+            reveal_unique(region, &unpinned, block)
         };
         let Some(reveal) = reveal else {
-            focus(Some(&body));
+            spawn(focus(Some(&body)));
             return;
         };
         // Once the window's new rows are laid out: Blitz lays out after effects.
@@ -320,9 +320,13 @@ pub(super) fn use_grid_focus(table: ElementHandle, region: ElementHandle) -> Gri
             moved: None,
         };
         when_laid_out(move || {
-            focus(None);
-            // Blitz scrolls nothing into view on a `focus()`.
-            reveal_by_scroll(region, reveal, settle, REVEAL_TRIES);
+            let revealed = focus(None);
+            spawn(async move {
+                // First: both reading the old offset, the later write undoes the other's axis (5234).
+                revealed.await;
+                // Blitz scrolls nothing into view on a `focus()`.
+                reveal_by_scroll(region, reveal, settle, REVEAL_TRIES);
+            });
         });
     });
     let grid = GridFocus {

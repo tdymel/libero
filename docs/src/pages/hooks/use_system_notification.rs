@@ -60,7 +60,11 @@ pub fn UseSystemNotificationPage() -> Element {
                     Code { source: "is_pending()" }
                     " and "
                     Code { source: "is_supported()" }
-                    "; all are reactive. "
+                    "; all are reactive. With several workers, "
+                    Code { source: "service_worker" }
+                    " names the one to show through, by the URL you pass to "
+                    Code { source: "register()" }
+                    ". "
                     Code { source: "use_push_subscription(PushOptions)" }
                     " registers your service worker and subscribes with your server's VAPID public key; its "
                     Code { source: "endpoint()" }

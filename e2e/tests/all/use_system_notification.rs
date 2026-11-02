@@ -352,3 +352,89 @@ fn the_web_shows_closes_and_reports_a_denial() {
         fixture.close().await.unwrap();
     });
 }
+
+/// Todo 4585: a named worker shows it among several, without the constructor; one that is
+/// not active fails, even with another active; a page without workers ignores the name.
+#[test]
+fn a_named_worker_shows_it_or_the_show_fails() {
+    block_on(async {
+        let _permissions = PERMISSIONS.lock().await;
+        let fixture = Fixture::open("/use-system-notification", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        set_permission(page, PermissionSetting::Granted)
+            .await
+            .unwrap();
+        reads(page, "#permission", "Granted").await.unwrap();
+        page.evaluate_bounded(
+            "window.plain = 0; window.worked = [];
+            window.Notification = class extends Notification {
+                constructor(title, options) { super(title, options); window.plain++; }
+            };
+            const proto = ServiceWorkerRegistration.prototype;
+            const { showNotification } = proto;
+            proto.showNotification = function (title, options) {
+                const call = { scope: this.scope, actions: options?.actions?.length ?? 0, done: false };
+                window.worked.push(call);
+                return showNotification.call(this, title, options).then((result) => {
+                    call.done = true;
+                    return result;
+                });
+            };
+            const workers = navigator.serviceWorker;
+            Promise.all([workers.register('/sw.js'), workers.register('/sw.js?second', { scope: '/nested/' })])
+                .then(() => true)",
+        )
+        .await
+        .unwrap();
+        wait::for_js_true(
+            page,
+            "navigator.serviceWorker.getRegistrations()
+                .then((all) => all.filter((found) => found.active).length === 2)",
+            "both workers to activate",
+        )
+        .await
+        .unwrap();
+
+        click(page, "#show-missing").await;
+        reads(page, "#error", "Some(Failed)").await.unwrap();
+        let untouched = "window.worked.length === 0 && window.plain === 0";
+        wait::for_js_true(page, untouched, "no other way to show it")
+            .await
+            .unwrap();
+
+        click(page, "#show-named").await;
+        wait::for_js_true(
+            page,
+            "window.worked.length === 1 && window.worked[0].done && window.worked[0].actions === 1
+                && window.worked[0].scope.endsWith('/nested/') && window.plain === 0",
+            "the named worker's notification",
+        )
+        .await
+        .unwrap();
+        reads(page, "#error", "None").await.unwrap();
+
+        page.evaluate_bounded(
+            "navigator.serviceWorker.getRegistrations()
+                .then((all) => Promise.all(all.map((found) => found.unregister())))
+                .then(() => {
+                    Object.defineProperty(navigator, 'serviceWorker', { value: undefined });
+                    return true;
+                })",
+        )
+        .await
+        .unwrap();
+        click(page, "#show-named").await;
+        wait::for_js_true(page, "window.plain === 1", "the page's own notification")
+            .await
+            .unwrap();
+        reads(page, "#error", "None").await.unwrap();
+
+        set_permission(page, PermissionSetting::Prompt)
+            .await
+            .unwrap();
+        fixture.console.assert_clean("the named worker").unwrap();
+        fixture.close().await.unwrap();
+    });
+}

@@ -13,7 +13,8 @@ operating system draws, outside the page; the in-app toasts are
 `show(SystemNotification)` shows one, `close(tag)` closes it; its `actions`
 are buttons whose id comes back in `on_action`. Read
 `permission()`, `error()`, `is_pending()` and `is_supported()`; all are
-reactive. `use_push_subscription(PushOptions)` registers your service worker and
+reactive. With several workers, `service_worker` names the one to show through,
+by the URL you pass to `register()`. `use_push_subscription(PushOptions)` registers your service worker and
 subscribes with your server's VAPID public key; its `endpoint()` is what your
 server pushes to.
 
@@ -118,6 +119,7 @@ pub struct SystemNotification {
     pub on_click: Option<Callback<()>>,
     pub actions: Vec<NotificationAction>,
     pub on_action: Option<Callback<String>>,
+    pub service_worker: Option<String>,
 }
 
 pub struct NotificationAction {
@@ -151,6 +153,7 @@ pub enum PermissionState { Granted, Denied, Prompt, Unknown, Unsupported }
 | `on_click` | `None` | Runs on a click while the component is mounted, after the click focused the page's window. |
 | `actions` | `[]` | Buttons, each a `NotificationAction::new(id, title)`. The web shows them only through a service worker. |
 | `on_action` | `None` | Runs with the pressed action's `id`, as `on_click` runs. |
+| `service_worker` | `None` | The script URL passed to `register()`, e.g. `/sw.js`. Shows through that active worker, or fails with `Failed` when it is not active. Ignored where the page has no service workers. |
 
 | Method of `SystemNotifier` | Description |
 |---|---|

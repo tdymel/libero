@@ -73,10 +73,14 @@ impl SystemNotificationApi for WebViewSystemNotification {
     ) -> Shown {
         let slot = Slot::new();
         let script = eval_with(
-            json!([notification.title, options_of(notification)]),
+            json!([
+                notification.title,
+                options_of(notification),
+                notification.service_worker
+            ]),
             &format!(
                 "{NOTIFICATION_SCRIPT}
-                const shown = await show(data[0], data[1], (event) => dioxus.send(event));
+                const shown = await show(data[0], data[1], data[2], (event) => dioxus.send(event));
                 if (typeof shown === 'string') return dioxus.send(shown);
                 dioxus.send('shown');
                 {}

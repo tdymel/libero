@@ -4,7 +4,8 @@
 //! edits or (`/kept`) only logs them, `/button` with a button in each City cell,
 //! `/custom` with its own Age editor, `/windowed` with fixed 28px rows, `/sticky` with a sum footer, `/formats`
 //! with empty yes/no and date cells, `/header-filters` with a filtered Name column,
-//! `/wide` with 45vw columns, the third partly in view, `/hide` with a button after it that hides Age.
+//! `/wide` with 45vw columns, the third partly in view, `/hide` with a button after it that hides Age,
+//! `/windowed/wide` windowed with 45vw columns, overflowing on both axes.
 
 use dioxus::prelude::*;
 use libero::{
@@ -25,6 +26,7 @@ pub const ROUTES: Routes = &[
     ("/table-grid/wide", || rsx! { GridPage { wide: true } }),
     ("/table-grid/hide", || rsx! { GridPage { hide: true } }),
     ("/table-grid/windowed", || rsx! { WindowedGridPage {} }),
+    ("/table-grid/windowed/wide", || rsx! { WindowedGridPage { wide: true } }),
     ("/table-grid/sticky", || rsx! { StickyGridPage {} }),
     ("/table-grid/editable", || rsx! { EditableGridPage { store: true } }),
     ("/table-grid/editable/kept", || rsx! { EditableGridPage { store: false } }),
@@ -284,7 +286,15 @@ fn StickyGridPage() -> Element {
 }
 
 #[component]
-fn WindowedGridPage() -> Element {
+fn WindowedGridPage(#[props(default)] wide: bool) -> Element {
+    let mut columns = vec![
+        column("Id").value(|item: &Item| item.id).row_header(),
+        column("Double").value(|item: &Item| item.id * 2),
+        column("Square").value(|item: &Item| item.id * item.id),
+    ];
+    if wide {
+        columns = columns.into_iter().map(|column| column.width("45vw")).collect();
+    }
     rsx! {
         Table {
             aria_label: "Items",
@@ -292,11 +302,7 @@ fn WindowedGridPage() -> Element {
             max_height: "300px",
             virtual_row_height: 40.0,
             data: (1..=500).map(|id| Item { id }).collect::<Vec<_>>(),
-            columns: vec![
-                column("Id").value(|item: &Item| item.id).row_header(),
-                column("Double").value(|item: &Item| item.id * 2),
-                column("Square").value(|item: &Item| item.id * item.id),
-            ],
+            columns,
             row_key: |item: &Item| item.id.to_string(),
         }
     }

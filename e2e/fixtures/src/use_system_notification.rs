@@ -52,6 +52,17 @@ fn Notifying() -> Element {
             }),
             "Show with actions"
         }
+        for (id, worker) in [("show-named", "/sw.js?second"), ("show-missing", "/missing.js")] {
+            button {
+                id,
+                onclick: move |_| notifier.show(SystemNotification {
+                    actions: vec![NotificationAction::new("open", "Open")],
+                    service_worker: Some(worker.into()),
+                    ..SystemNotification::new("Fixture")
+                }),
+                "Show through {worker}"
+            }
+        }
         button { id: "close", onclick: move |_| notifier.close("fixture"), "Close" }
         button { id: "subscribe", onclick: move |_| push.subscribe(), "Subscribe" }
         p { id: "supported", "{notifier.is_supported()}" }

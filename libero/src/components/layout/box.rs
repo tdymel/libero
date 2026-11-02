@@ -1,4 +1,4 @@
-use std::marker::PhantomData;
+use std::{cell::Cell, marker::PhantomData};
 
 use dioxus::core::{AttributeValue, IntoAttributeValue, ListenerCallback};
 use dioxus::html::{EventHandlerValue, PlatformEventData};
@@ -11,7 +11,9 @@ use crate::{
         with_parts,
     },
     hooks::SxSource,
+    platform::OBSERVE_ATTR,
     sx::{StaticSx, Sx},
+    utils::warn,
 };
 
 base_props! {
@@ -354,6 +356,9 @@ impl BoxStyle {
                 attributes.push(attribute);
             }
         }
+        if cfg!(debug_assertions) {
+            warn_on_two_observe_tags(component, &attributes);
+        }
 
         render_polymorphic(
             component,
@@ -363,6 +368,29 @@ impl BoxStyle {
             attributes,
             children.into_children(),
         )
+    }
+}
+
+thread_local! {
+    static OBSERVE_TAGS_WARNED: Cell<bool> = const { Cell::new(false) };
+}
+
+/// An element holds one observe tag, so a second one silently loses the first handle
+/// (5231). Once per thread: `render` is no hook context, and a per-render warning floods.
+fn warn_on_two_observe_tags(component: HtmlTag, attributes: &[Attribute]) {
+    let mut tags = attributes
+        .iter()
+        .filter(|attribute| attribute.name == OBSERVE_ATTR)
+        .map(|attribute| &attribute.value);
+    let Some(first) = tags.next() else {
+        return;
+    };
+    if tags.any(|tag| tag != first) && !OBSERVE_TAGS_WARNED.replace(true) {
+        warn(&format!(
+            "A <{}> got two different {OBSERVE_ATTR} values: the last one wins, so the \
+             caller's ElementHandle finds nothing on a WebView.",
+            component.as_str()
+        ));
     }
 }
 
@@ -407,4 +435,54 @@ pub fn Box(props: BoxProps) -> Element {
         props.attributes,
         props.children,
     )
+}
+
+#[cfg(all(test, debug_assertions))]
+mod tests {
+    use dioxus::core::AttributeValue;
+
+    use super::*;
+    use crate::utils::{take_warnings, warnings_of};
+
+    fn tag(value: &str) -> Attribute {
+        Attribute::new(
+            OBSERVE_ATTR,
+            AttributeValue::Text(value.to_string()),
+            None,
+            false,
+        )
+    }
+
+    /// `render`, as a caller's handle and the component's own would reach it.
+    #[component]
+    fn TwoTags() -> Element {
+        use_box()
+            .prepare()
+            .attr(OBSERVE_ATTR, "2")
+            .render(HtmlTag::Ul, vec![tag("1")], rsx! {})
+    }
+
+    fn two_tags() -> Element {
+        rsx! {
+            crate::LiberoProvider { TwoTags {} }
+        }
+    }
+
+    #[test]
+    fn two_different_observe_tags_warn_once_naming_the_element() {
+        let warnings = warnings_of(two_tags);
+        assert_eq!(warnings.len(), 1, "{warnings:?}");
+        assert!(warnings[0].contains("<ul>"), "{warnings:?}");
+        assert!(warnings[0].contains("last one wins"), "{warnings:?}");
+        assert_eq!(warnings_of(two_tags), Vec::<String>::new());
+    }
+
+    #[test]
+    fn one_tag_or_the_same_tag_twice_does_not_warn() {
+        take_warnings();
+        warn_on_two_observe_tags(HtmlTag::Div, &[]);
+        warn_on_two_observe_tags(HtmlTag::Div, &[tag("1")]);
+        warn_on_two_observe_tags(HtmlTag::Div, &[tag("1"), tag("1")]);
+        assert_eq!(take_warnings(), Vec::<String>::new());
+    }
 }

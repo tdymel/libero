@@ -27,6 +27,9 @@ pub struct SystemNotification {
     pub actions: Vec<NotificationAction>,
     /// Runs with the [`NotificationAction::id`] the user pressed, as `on_click` runs.
     pub on_action: Option<Callback<String>>,
+    /// The URL passed to `register()`, e.g. `/sw.js`. On the web, shows through that active worker
+    /// or fails with `Failed`; without it, a page's own notification, else the page's worker.
+    pub service_worker: Option<String>,
 }
 
 impl SystemNotification {
@@ -143,9 +146,10 @@ pub(crate) const NOTIFICATION_SCRIPT: &str = "
     const probe = () => typeof Notification === 'undefined' ? null : Notification.permission;
     const request = async () => typeof Notification === 'undefined'
         ? null : await Notification.requestPermission();
-    const show = async (title, options, send) => {
+    const show = async (title, options, script, send) => {
         if (typeof Notification === 'undefined') return 'Unsupported';
         if (Notification.permission !== 'granted') return 'Denied';
+        const workers = navigator.serviceWorker;
         const plain = () => {
             const shown = new Notification(title, options);
             shown.onclick = () => { window.focus(); send('click'); };
@@ -155,19 +159,7 @@ pub(crate) const NOTIFICATION_SCRIPT: &str = "
                 detach: () => { shown.onclick = null; shown.onclose = null; },
             };
         };
-        try {
-            return plain();
-        } catch (error) {
-            const workers = navigator.serviceWorker;
-            // A worker under `/assets/` has a scope that misses the page, so fall back to any active one.
-            const registration = await workers?.getRegistration()
-                ?? (await workers?.getRegistrations())?.find((found) => found.active);
-            if (!registration) {
-                // Only a worker shows actions: without one, the notification goes without them.
-                if (!options.actions) return 'Failed';
-                delete options.actions;
-                try { return plain(); } catch (error) { return 'Failed'; }
-            }
+        const through = async (registration) => {
             const token = `${Date.now()}-${Math.random()}`;
             const data = { libero: token };
             try { await registration.showNotification(title, { ...options, data }); } catch (error) { return 'Failed'; }
@@ -185,6 +177,29 @@ pub(crate) const NOTIFICATION_SCRIPT: &str = "
                 }
             };
             return { close, detach: () => workers.removeEventListener('message', listen) };
+        };
+        // By the script's URL, not `getRegistration`: a scope match may be another app's worker.
+        if (script && workers) {
+            let named;
+            try {
+                const url = new URL(script, location.href).href;
+                named = (await workers.getRegistrations()).find((found) => found.active?.scriptURL === url);
+            } catch (error) { return 'Failed'; }
+            return named ? through(named) : 'Failed';
+        }
+        try {
+            return plain();
+        } catch (error) {
+            // A worker under `/assets/` has a scope that misses the page, so fall back to any active one.
+            const registration = await workers?.getRegistration()
+                ?? (await workers?.getRegistrations())?.find((found) => found.active);
+            if (!registration) {
+                // Only a worker shows actions: without one, the notification goes without them.
+                if (!options.actions) return 'Failed';
+                delete options.actions;
+                try { return plain(); } catch (error) { return 'Failed'; }
+            }
+            return through(registration);
         }
     };";
 
@@ -215,7 +230,7 @@ pub(crate) fn options_of(notification: &SystemNotification) -> serde_json::Value
 mod web {
     use std::rc::Rc;
 
-    use js_sys::{Function, JSON, Object, Promise, Reflect};
+    use js_sys::{Array, Function, JSON, Object, Promise, Reflect};
     use wasm_bindgen::{JsCast, JsValue, closure::Closure};
     use wasm_bindgen_futures::JsFuture;
 
@@ -278,12 +293,23 @@ mod web {
                     events(event);
                 }
             });
-            let shown = script("title, options, send", "return show(title, options, send);").call3(
-                &JsValue::NULL,
-                &JsValue::from_str(&notification.title),
-                &options,
-                send.as_ref(),
-            );
+            let worker = notification
+                .service_worker
+                .as_deref()
+                .map_or(JsValue::NULL, JsValue::from_str);
+            let arguments: Array = [
+                JsValue::from_str(&notification.title),
+                options,
+                worker,
+                send.as_ref().clone(),
+            ]
+            .iter()
+            .collect();
+            let shown = script(
+                "title, options, worker, send",
+                "return show(title, options, worker, send);",
+            )
+            .apply(&JsValue::NULL, &arguments);
             Box::pin(async move {
                 let shown = settle(shown).await.ok_or(SystemNotificationError::Failed)?;
                 if let Some(error) = shown.as_string() {
