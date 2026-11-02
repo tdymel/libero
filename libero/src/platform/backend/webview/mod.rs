@@ -74,7 +74,7 @@ pub(crate) use media::{fullscreen, media};
 pub(super) use media_query::media_query;
 pub(super) use observe::{
     command_by_tag, computed_px, has_match, observe_content, observe_resize, on_intersection,
-    set_value_by_tag,
+    set_value_by_tag, unpinned_scroll,
 };
 pub(crate) use permission::permission;
 pub(super) use press::{PORTAL_ATTR, press, swallow_outside_clicks};

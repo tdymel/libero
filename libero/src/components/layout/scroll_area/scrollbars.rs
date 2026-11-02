@@ -10,7 +10,10 @@ use crate::{
         layout::use_box,
     },
     hooks::{DragMove, DragOptions, ElementHandle, use_drag, use_element},
-    platform::{ElementApi, scroll_timelines, when_laid_out, when_laid_out_retry},
+    platform::{
+        Dimensions, ElementApi, PinnedLayers, scroll_timelines, unpinned_scroll, when_laid_out,
+        when_laid_out_retry,
+    },
     sx::{FORCED_COLORS, StaticSx, sx},
     theme::{
         SCROLL_AREA_RANGE_X, SCROLL_AREA_RANGE_Y, SCROLL_AREA_THUMB_TRAVEL, ScrollAxis,
@@ -236,6 +239,8 @@ pub(super) struct DrawnBars {
     /// The latest read, offsets included: under scroll timelines a scroll alone
     /// leaves `metrics` behind.
     pub latest: CopyValue<Option<ScrollMetrics>>,
+    /// Bumped when a re-measure found the layers holding a stale range.
+    pub unheld: Signal<u64>,
 }
 
 impl DrawnBars {
@@ -265,6 +270,40 @@ impl DrawnBars {
     /// the tracks it replaced may have stretched the overflow it measured.
     pub fn measure(self, tries: u8) {
         self.read(tries, UNLAID_TRIES);
+    }
+
+    /// `read` again with the layers lifted, when they may be what it measured (5306).
+    async fn without_the_pin(self, read: ScrollMetrics) -> ScrollMetrics {
+        let Some(mounted) = self.root.mounted() else {
+            return read;
+        };
+        let view = Dimensions {
+            width: read.view_width,
+            height: read.view_height,
+        };
+        let (range_y, range_x) = (SCROLL_AREA_RANGE_Y, SCROLL_AREA_RANGE_X);
+        let layers = PinnedLayers {
+            layer: ":scope > [data-slot='scrollbars']",
+            inline_layer: ":scope > [data-scrollbars-x]",
+            range_y: range_y.name(),
+            range_x: range_x.name(),
+        };
+        let lifted = unpinned_scroll(&mounted, self.root.tag(), layers, view).await;
+        let Ok(Some((content, (left, y)))) = lifted else {
+            return read;
+        };
+        let lifted = ScrollMetrics {
+            content_width: content.width,
+            content_height: content.height,
+            x: inline_x(left),
+            y,
+            left,
+            ..read
+        };
+        if lifted != read {
+            crate::utils::bump(self.unheld);
+        }
+        lifted
     }
 
     /// A layer of no height is unlaid, not changed: asked again on the backoff (3546).
@@ -298,6 +337,7 @@ impl DrawnBars {
                     y,
                     left,
                 };
+                let measured = self.without_the_pin(measured).await;
                 if self.update(measured) && tries > 0 {
                     self.read(tries - 1, UNLAID_TRIES);
                 }

@@ -213,6 +213,34 @@ pub(crate) fn has_match_by_tag(tag: u64, selector: &str) -> super::Read<bool> {
     }
 }
 
+/// The web holds the node, a WebView finds it by `tag`; Blitz draws no bars. See
+/// [`unpinned_scroll`](crate::platform::unpinned_scroll).
+pub(crate) fn unpinned_scroll(
+    root: &Rc<MountedData>,
+    tag: Option<u64>,
+    layers: crate::platform::PinnedLayers<'_>,
+    view: Dimensions,
+) -> Read<Option<(Dimensions, (f64, f64))>> {
+    #[cfg(target_arch = "wasm32")]
+    {
+        let _ = tag;
+        web::unpinned_scroll(root, layers, view)
+    }
+    #[cfg(all(not(target_arch = "wasm32"), not(feature = "native")))]
+    {
+        let _ = root;
+        match tag {
+            Some(tag) => webview::unpinned_scroll(tag, layers, view),
+            None => Box::pin(std::future::ready(Err(super::PlatformError::Unsupported))),
+        }
+    }
+    #[cfg(all(not(target_arch = "wasm32"), feature = "native"))]
+    {
+        let _ = (root, tag, layers, view);
+        Box::pin(std::future::ready(Err(super::PlatformError::Unsupported)))
+    }
+}
+
 /// Only a WebView; see [`on_element_scroll`](crate::platform::scroll::on_element_scroll).
 pub(crate) fn on_element_scroll(
     tag: u64,

@@ -16,14 +16,81 @@ use crate::platform::a11y_media::A11yMediaSubscription;
 use crate::platform::{
     A11yMediaApi, ColorSchemeApi, ColorSchemeSubscription, ContentSubscription, Dimensions,
     DocumentApi, ElementApi, KeyChord, KeySubscription, KeyboardApi, MediaQueryApi,
-    MediaQuerySubscription, PlatformError, Read, ScrollApi, ScrollSubscription, StyleRulesApi,
-    TimerApi, TimerSubscription,
+    MediaQuerySubscription, PinnedLayers, PlatformError, Read, ScrollApi, ScrollSubscription,
+    StyleRulesApi, TimerApi, TimerSubscription,
     keyboard::{takes_arrows, takes_typing, warn_reserved_chord},
     storage::{keep, kept},
 };
 use crate::tokens::{
     AccessibilityPreferences, COLOR_SCHEME_STORAGE_KEY, ColorScheme, ColorSchemeSetting, Contrast,
 };
+
+/// See [`unpinned_scroll`](crate::platform::unpinned_scroll): synchronous here, so one task.
+pub(super) fn unpinned_scroll(
+    root: &Rc<MountedData>,
+    layers: PinnedLayers<'_>,
+    view: Dimensions,
+) -> Read<Option<(Dimensions, (f64, f64))>> {
+    let styled = |parent: &web_sys::Element, selector: &str| {
+        let found = parent.query_selector(selector).ok().flatten()?;
+        let style = found.dyn_ref::<web_sys::HtmlElement>()?.style();
+        Some((found, style))
+    };
+    let Some(root) = root.downcast::<web_sys::Element>() else {
+        return Box::pin(std::future::ready(Err(PlatformError::Unsupported)));
+    };
+    let Some((layer, style)) = styled(root, layers.layer) else {
+        return Box::pin(std::future::ready(Err(PlatformError::Unsupported)));
+    };
+    if !range_may_be_held(root) {
+        return Box::pin(std::future::ready(Ok(None)));
+    }
+    let _ = style.set_property("display", "none");
+    let content = Dimensions {
+        width: root.scroll_width() as f64,
+        height: root.scroll_height() as f64,
+    };
+    let (left, top) = (root.scroll_left() as f64, root.scroll_top() as f64);
+    let _ = style.remove_property("display");
+    let _ = style.set_property("translate", &format!("0 {top}px"));
+    let range_y = (content.height - view.height).max(0.0);
+    let _ = style.set_property(layers.range_y, &format!("{range_y}px"));
+    if let Some((_, inline)) = styled(&layer, layers.inline_layer) {
+        let leftwards = inline
+            .get_property_value(layers.range_x)
+            .is_ok_and(|range| range.starts_with('-'));
+        let range_x = (content.width - view.width).max(0.0);
+        let range_x = if leftwards { -range_x } else { range_x };
+        let _ = inline.set_property("translate", &format!("{left}px 0"));
+        let _ = inline.set_property(layers.range_x, &format!("{range_x}px"));
+    }
+    Box::pin(std::future::ready(Ok(Some((content, (left, top))))))
+}
+
+/// Whether the content's last box ends short of the range, or a scroll sits at the inline end,
+/// as the WebView's script checks: a read costs less than a lift on each wheel step.
+fn range_may_be_held(root: &web_sys::Element) -> bool {
+    let mut last = root.last_element_child();
+    let mut end = None;
+    while let Some(element) = last {
+        let rect = element.get_bounding_client_rect();
+        if rect.width() > 0.0 || rect.height() > 0.0 {
+            end = Some(rect.bottom());
+            break;
+        }
+        last = element.last_element_child();
+    }
+    let padding = web_sys::window()
+        .and_then(|window| window.get_computed_style(root).ok().flatten())
+        .and_then(|style| style.get_property_value("padding-bottom").ok())
+        .and_then(|padding| padding.trim_end_matches("px").parse::<f64>().ok())
+        .unwrap_or(0.0);
+    let top = root.get_bounding_client_rect().top() + root.client_top() as f64;
+    let extent = end.map_or(0.0, |end| end - top + root.scroll_top() as f64 + padding);
+    let left = (root.scroll_left() as f64).abs();
+    extent + 1.0 < root.scroll_height() as f64
+        || (left > 0.0 && left + root.client_width() as f64 + 1.0 >= root.scroll_width() as f64)
+}
 
 /// dioxus-web backs a mounted element with the `web_sys::Element` itself, so
 /// the whole trait is answerable - no id, no document lookup.

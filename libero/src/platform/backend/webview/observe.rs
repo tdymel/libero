@@ -5,7 +5,8 @@ use serde_json::json;
 
 use super::{Slot, WebViewListener, eval_with, runs_scripts};
 use crate::platform::{
-    ContentSubscription, INTERSECT_ATTR, OBSERVE_ATTR, PlatformError, Read, TagCommand,
+    ContentSubscription, Dimensions, INTERSECT_ATTR, OBSERVE_ATTR, PinnedLayers, PlatformError,
+    Read, TagCommand,
 };
 
 /// An `IntersectionObserver` on the element carrying the tag, started once it
@@ -30,6 +31,69 @@ const ON_INTERSECTION: &str = "const [attr, tag, rootAttr, rootTag, margin, thre
         if (start()) waiting.disconnect();
     });
     waiting?.observe(document.documentElement, { childList: true, subtree: true, attributes: true, attributeFilter: [attr] });";
+
+/// See [`unpinned_scroll`](crate::platform::unpinned_scroll). The script is the one task.
+pub(crate) fn unpinned_scroll(
+    tag: u64,
+    layers: PinnedLayers<'_>,
+    view: Dimensions,
+) -> Read<Option<(Dimensions, (f64, f64))>> {
+    if !runs_scripts() {
+        return Box::pin(std::future::ready(Err(PlatformError::Unsupported)));
+    }
+    let read = eval_with(
+        json!([
+            OBSERVE_ATTR,
+            tag.to_string(),
+            layers.layer,
+            layers.inline_layer,
+            layers.range_y,
+            layers.range_x,
+            view.width,
+            view.height
+        ]),
+        "const [attr, tag, layerAt, inlineAt, rangeY, rangeX, viewWidth, viewHeight] = data;
+        const root = document.querySelector(`[${attr}=\"${tag}\"]`);
+        const layer = root && root.querySelector(layerAt);
+        if (!layer) return [false, null];
+        // The last box ends the content: a real read costs less than a lift on each wheel step.
+        let last = root.lastElementChild, end = null;
+        while (last && end === null) {
+            const rect = last.getBoundingClientRect();
+            if (rect.width > 0 || rect.height > 0) end = rect.bottom;
+            last = last.lastElementChild;
+        }
+        const padding = parseFloat(getComputedStyle(root).paddingBottom) || 0;
+        const start = root.getBoundingClientRect().top + root.clientTop;
+        const extent = end === null ? 0 : end - start + root.scrollTop + padding;
+        const scrolled = Math.abs(root.scrollLeft);
+        const held = extent + 1 < root.scrollHeight
+            || (scrolled > 0 && scrolled + root.clientWidth + 1 >= root.scrollWidth);
+        if (!held) return [true, null];
+        layer.style.display = 'none';
+        const read = [root.scrollWidth, root.scrollHeight, root.scrollLeft, root.scrollTop];
+        layer.style.display = '';
+        const [width, height, left, top] = read;
+        layer.style.translate = `0 ${top}px`;
+        layer.style.setProperty(rangeY, `${Math.max(height - viewHeight, 0)}px`);
+        const inline = layer.querySelector(inlineAt);
+        if (inline) {
+            const sign = inline.style.getPropertyValue(rangeX).startsWith('-') ? -1 : 1;
+            inline.style.translate = `${left}px 0`;
+            inline.style.setProperty(rangeX, `${sign * Math.max(width - viewWidth, 0)}px`);
+        }
+        return [true, read];",
+    );
+    Box::pin(async move {
+        match read.join::<(bool, Option<(f64, f64, f64, f64)>)>().await {
+            Ok((true, read)) => {
+                Ok(read
+                    .map(|(width, height, left, top)| (Dimensions { width, height }, (left, top))))
+            }
+            _ => Err(PlatformError::Unsupported),
+        }
+    })
+}
 
 /// A computed CSS length of the element tagged `tag` (no handle reaches the DOM
 /// here, 958); `Unsupported` while no element carries the tag.

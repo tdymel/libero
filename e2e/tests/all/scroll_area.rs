@@ -1026,6 +1026,229 @@ fn timelines_the_app_misses_never_grow_the_range() {
     });
 }
 
+/// Each area of `/scroll-area/shrink` with what its 20px lines leave after `#shrink`, in px:
+/// the content's height and the offset that shows its end.
+const SHRUNK: [(&str, f64, f64); 5] = [
+    ("#shrink-some", 160.0, 40.0),
+    ("#shrink-none", 120.0, 0.0),
+    ("#shrink-list", 160.0, 40.0),
+    ("#shrink-inner", 160.0, 40.0),
+    ("#shrink-outer", 320.0, 120.0),
+];
+
+/// The drawn bars ride the scroll offset, so at depth they held the old height: a blank
+/// viewport after any shrink until the reader scrolled up (5306).
+async fn a_shrink_at_depth_gives_the_range_back<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    for (area, ..) in SHRUNK {
+        d.scroll_to(area, 0.0, 400.0).await?;
+    }
+    eventually(d, "every area at depth", async |d| {
+        for (area, ..) in SHRUNK {
+            // On Blitz by wheel: the inner area takes most of the outer one's.
+            if d.scroll_pos(area).await?.1 < 100.0 {
+                return Ok(false);
+            }
+        }
+        Ok(true)
+    })
+    .await?;
+
+    d.click("#shrink").await?;
+    eventually(d, "every area clamped to its shorter content", async |d| {
+        for (area, height, end) in SHRUNK {
+            let top = d.scroll_pos(area).await?.1;
+            if d.scroll_height(area).await? > height + 1.0 || top > end + 1.0 {
+                return Ok(false);
+            }
+        }
+        Ok(true)
+    })
+    .await?;
+
+    // And back: the bars hold nothing the other way either.
+    d.click("#shrink").await?;
+    eventually(d, "the range back", async |d| {
+        for (area, ..) in SHRUNK {
+            if d.scroll_height(area).await? < 700.0 {
+                return Ok(false);
+            }
+        }
+        Ok(true)
+    })
+    .await
+}
+
+e2e::scenario!(
+    a_shrink_at_depth_clamps_to_the_shorter_content,
+    "/scroll-area/shrink",
+    a_shrink_at_depth_gives_the_range_back,
+);
+
+/// Whether `area` ended clamped at `end` px over `height` px of content.
+fn clamped(area: &str, height: f64, end: f64) -> String {
+    format!(
+        "(a => a.scrollHeight <= {height} + 1 && a.scrollTop <= {end} + 1)\
+         (document.querySelector('{area}'))"
+    )
+}
+
+/// Goes deep and shrinks: the bars stay in their corner, the range holds over the next
+/// frames (a stale range var would stretch it again), and the last tab stop goes (5306).
+async fn shrink_keeps_the_bars_in_place(page: &chromiumoxide::Page) {
+    for (area, ..) in SHRUNK {
+        page.evaluate_bounded(format!("document.querySelector('{area}').scrollTop = 400"))
+            .await
+            .unwrap();
+    }
+    page.evaluate_bounded("document.querySelector('#shrink').click()")
+        .await
+        .unwrap();
+    for (area, height, end) in SHRUNK {
+        wait::for_js_true(page, &clamped(area, height, end), "the area clamped")
+            .await
+            .unwrap();
+    }
+    page.evaluate_bounded(
+        "new Promise(r => requestAnimationFrame(() => requestAnimationFrame(() => r(true))))",
+    )
+    .await
+    .unwrap();
+    for (area, height, end) in SHRUNK {
+        assert!(
+            page.evaluate_bounded(clamped(area, height, end))
+                .await
+                .unwrap()
+                .into_value::<bool>()
+                .unwrap(),
+            "{area} stretched again"
+        );
+    }
+    wait::for_js_true(
+        page,
+        &part(
+            "shrink-some",
+            V_TRACK,
+            "Math.abs(p.top) < 1 && Math.abs(p.right) < 1",
+        ),
+        "the track in its corner",
+    )
+    .await
+    .unwrap();
+    wait::for_js_true(
+        page,
+        "document.querySelector('#shrink-none').getAttribute('tabindex') === '-1'",
+        "no tab stop on an area with nothing left to scroll",
+    )
+    .await
+    .unwrap();
+}
+
+#[test]
+fn a_shrink_at_depth_keeps_the_bars_in_place() {
+    block_on(async {
+        let fixture = Fixture::open("/scroll-area/shrink", Viewport::Desktop)
+            .await
+            .unwrap();
+        wait::for_js_true(
+            &fixture.page,
+            &part("shrink-some", V_TRACK, "true"),
+            "the track",
+        )
+        .await
+        .unwrap();
+        shrink_keeps_the_bars_in_place(&fixture.page).await;
+        fixture.console.assert_clean("the shrink").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
+/// A `Virtualize` commits on every wheel step, and a lift costs a layout and restarts the
+/// animations: its content reaches the range, so the layers stay as they are (5306).
+#[test]
+fn a_wheel_step_lifts_no_layer() {
+    block_on(async {
+        let fixture = Fixture::open("/scroll-area", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        wait::for_js_true(
+            page,
+            &format!("!!document.querySelector('{LIST} > [data-slot=scrollbars]')"),
+            "the layer",
+        )
+        .await
+        .unwrap();
+        page.evaluate_bounded(format!(
+            "(() => {{ window.__lifts = 0; new MutationObserver(records => {{ \
+             window.__lifts += records.length; }}).observe(\
+             document.querySelector('{LIST} > [data-slot=scrollbars]'), \
+             {{ attributes: true, attributeFilter: ['style'] }}); }})()"
+        ))
+        .await
+        .unwrap();
+        let first_row = format!("document.querySelector('{LIST_ROWS}').dataset.row");
+        let before: String = page
+            .evaluate_bounded(first_row.as_str())
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        for _ in 0..5 {
+            wheel_step(page, LIST).await;
+        }
+        wait::for_js_true(
+            page,
+            &format!("{first_row} !== '{before}'"),
+            "the window to move",
+        )
+        .await
+        .unwrap();
+        let lifts: f64 = page
+            .evaluate_bounded("window.__lifts")
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        assert_eq!(lifts, 0.0, "the layer's style moved under a wheel step");
+        fixture.console.assert_clean("the wheel steps").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
+/// Firefox's path: no timelines, so the inline offset is what holds the height.
+#[test]
+fn without_scroll_timelines_a_shrink_at_depth_keeps_the_bars_in_place() {
+    block_on(async {
+        let fixture = Fixture::open("/scroll-area/shrink", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        page.execute_bounded(AddScriptToEvaluateOnNewDocumentParams::new(
+            "(() => { const supports = CSS.supports.bind(CSS); \
+             CSS.supports = (...a) => !String(a.join(':')).includes('animation-timeline') && supports(...a); \
+             addEventListener('DOMContentLoaded', () => { const s = document.createElement('style'); \
+             s.textContent = '[data-slot=scrollbars],[data-scrollbars-x],[data-scrollbars-x] [data-slot=thumb]{animation:none!important}'; \
+             document.head.append(s); }); })()",
+        ))
+        .await
+        .unwrap();
+        page.reload_bounded().await.unwrap();
+        wait::for_js_true(
+            page,
+            "!CSS.supports('animation-timeline: scroll()') && !!document.querySelector('#shrink-some')",
+            "the reloaded app",
+        )
+        .await
+        .unwrap();
+        wait::for_js_true(page, &part("shrink-some", V_TRACK, "true"), "the track")
+            .await
+            .unwrap();
+        shrink_keeps_the_bars_in_place(page).await;
+        fixture.console.assert_clean("the fallback").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
 /// One 120px wheel notch down over `selector`'s centre, waited until it scrolled.
 async fn wheel_step(page: &chromiumoxide::Page, selector: &str) {
     let at = pointer::centre_of(page, selector).await.unwrap();

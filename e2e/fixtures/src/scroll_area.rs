@@ -26,7 +26,47 @@ pub const ROUTES: Routes = &[
     ("/scroll-area/offset", || rsx! { OffsetPage {} }),
     ("/scroll-area/cover", || rsx! { CoverPage {} }),
     ("/scroll-area/flip", || rsx! { FlipPage {} }),
+    ("/scroll-area/shrink", || rsx! { ShrinkPage {} }),
 ];
+
+/// `#shrink` cuts each area's content: one keeps some overflow, one none, a windowed list
+/// keeps a few rows, and one sits in an outer area that shrinks too (5306).
+#[component]
+fn ShrinkPage() -> Element {
+    let mut short = use_signal(|| false);
+    let lines = move |long: usize, cut: usize| {
+        let count = if short() { cut } else { long };
+        (0..count).map(|i| rsx! { p { key: "{i}", style: "margin: 0; height: 20px; line-height: 20px", "Line {i}" } })
+    };
+    rsx! {
+        Button { id: "shrink", onclick: move |_| short.toggle(), "Shrink" }
+        div { style: "width: 240px; height: 120px",
+            ScrollArea { id: "shrink-some", "aria-label": "Some left", {lines(40, 8)} }
+        }
+        div { style: "width: 240px; height: 120px",
+            ScrollArea { id: "shrink-none", "aria-label": "None left", {lines(40, 2)} }
+        }
+        div { style: "width: 240px; height: 120px",
+            ScrollArea { id: "shrink-list", "aria-label": "Rows",
+                Virtualize {
+                    count: if short() { 8 } else { 1000 },
+                    item_size: Some(20.0),
+                    item: move |i: usize| rsx! {
+                        div { style: "height: 20px; line-height: 20px", "Row {i}" }
+                    },
+                }
+            }
+        }
+        div { style: "width: 240px; height: 200px",
+            ScrollArea { id: "shrink-outer", "aria-label": "Outer",
+                div { style: "height: 120px",
+                    ScrollArea { id: "shrink-inner", "aria-label": "Inner", {lines(40, 8)} }
+                }
+                {lines(40, 10)}
+            }
+        }
+    }
+}
 
 /// One `ScrollArea` scope that is a plain list first and, after `#flip`, a windowed one under a
 /// caller's handle: the root's tag changes in place (todos 3452, 3453).

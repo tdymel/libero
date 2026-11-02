@@ -1,10 +1,10 @@
-use std::time::Duration;
+use std::{rc::Rc, time::Duration};
 
 use dioxus::html::geometry::WheelDelta;
 pub(crate) use dioxus::prelude::ScrollData;
-use dioxus::prelude::WheelData;
+use dioxus::prelude::{MountedData, WheelData};
 
-use super::backend;
+use super::{Dimensions, Read, backend};
 
 const NATIVE: bool = cfg!(all(not(target_arch = "wasm32"), feature = "native"));
 
@@ -32,6 +32,29 @@ pub(crate) fn clips_z_indexed() -> bool {
 /// browser may overlay and fade its bars; Blitz keeps painting its own.
 pub(crate) fn draws_own_scrollbars() -> bool {
     !NATIVE
+}
+
+/// How [`unpinned_scroll`] finds what a scroller pins by its scroll offset.
+#[derive(Clone, Copy)]
+#[cfg_attr(all(not(target_arch = "wasm32"), feature = "native"), allow(dead_code))]
+pub(crate) struct PinnedLayers<'a> {
+    /// From the scroller, the layer riding the block offset.
+    pub layer: &'a str,
+    /// From `layer`, the one riding the inline offset; absent while nothing is drawn.
+    pub inline_layer: &'a str,
+    pub range_y: &'a str,
+    pub range_x: &'a str,
+}
+
+/// Content size and `(left, top)` measured in one task with the layers out of the overflow they
+/// hold (5306), then restored at the new range; `None` while the content reaches the range anyway.
+pub(crate) fn unpinned_scroll(
+    root: &Rc<MountedData>,
+    tag: Option<u64>,
+    layers: PinnedLayers<'_>,
+    view: Dimensions,
+) -> Read<Option<(Dimensions, (f64, f64))>> {
+    backend::unpinned_scroll(root, tag, layers, view)
 }
 
 /// Whether a windowed table reserves its skipped rows in its body: a browser

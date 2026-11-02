@@ -417,6 +417,23 @@ fn measure_offset(root: ElementHandle, mut geometry: Signal<Option<ScrollGeometr
     });
 }
 
+/// Blitz keeps an offset past a range that shrank, over a blank viewport (5306).
+fn clamp_to_range(root: ElementHandle) {
+    when_laid_out(move || {
+        let (size, view, offset) = (root.scroll_size(), root.dimensions(), root.scroll_offset());
+        spawn(async move {
+            let (Ok(size), Ok(view), Ok((x, y))) = (size.await, view.await, offset.await) else {
+                return;
+            };
+            let max_x = (size.width - view.width).max(0.0);
+            let max_y = (size.height - view.height).max(0.0);
+            if x > max_x || y > max_y {
+                let _ = root.scroll_to(x.min(max_x), y.min(max_y));
+            }
+        });
+    });
+}
+
 /// Reads the area's position once laid out, for `check` (`x`, `y`, `max_x`, `max_y`).
 fn measure_edges(root: ElementHandle, check: impl Fn(f64, f64, f64, f64) + 'static) {
     when_laid_out(move || {
@@ -569,6 +586,7 @@ pub fn ScrollArea(mut props: ScrollAreaProps) -> Element {
         layer: use_element(),
         metrics: use_signal(|| None::<ScrollMetrics>),
         latest: use_hook(|| CopyValue::new(None)),
+        unheld: use_signal(|| 0u64),
     };
     let measure_bars_now = move |own_bars: bool| {
         if own_bars && root.is_mounted() && drawn_bars.layer.is_mounted() {
@@ -597,20 +615,30 @@ pub fn ScrollArea(mut props: ScrollAreaProps) -> Element {
     let content = use_element();
     // Only while the area picks its own stop: a change inside a child component
     // re-renders nothing here (todo 681).
-    let changes = use_content_changes(content, automatic || own_bars);
+    let changes = use_content_changes(content, automatic || own_bars || !draws_own_scrollbars());
     // After the DOM has the content: on mount (the effect reads the mount), on
     // new content, on a change deeper down, and on resize (`onresize`).
     let children = props.children.clone();
-    let mut seen = use_hook(|| CopyValue::new(None::<(Option<usize>, u64, bool)>));
+    let mut seen = use_hook(|| CopyValue::new(None::<(Option<usize>, u64, u64, bool)>));
+    let unheld = drawn_bars.unheld;
     use_effect(use_reactive!(|children, own_bars| {
         let _ = &children;
-        let now = (root.mount_token(), changes.count.cloned(), own_bars);
+        // A range the bars held made the tab-stop check read it too (5306).
+        let now = (
+            root.mount_token(),
+            changes.count.cloned(),
+            unheld(),
+            own_bars,
+        );
         // Only new children: a watched subtree that changed bumps `count` anyway, so
         // a parent's redraw (a theme switch) forces no layout (todo 2094).
         let redraw_only = seen.replace(Some(now)) == Some(now) && changes.watching();
         if now.0.is_some() && !redraw_only {
             check_stop();
             measure_bars_now(own_bars);
+            if !draws_own_scrollbars() {
+                clamp_to_range(root);
+            }
         }
     }));
     let tab_stop = props.focusable || (automatic && auto_stop());
