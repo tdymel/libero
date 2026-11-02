@@ -19,12 +19,15 @@ use crate::{
         use_typeahead,
     },
     platform::{
-        ElementApi, OBSERVE_ATTR, PlatformError, click_selector, focus_closest_of_focused,
-        focus_selector, logical_key, meta_held, when_free,
+        ElementApi, PlatformError, click_selector, focus_closest_of_focused, focus_selector,
+        logical_key, meta_held, when_free,
     },
     theme::Size,
     utils::warn,
 };
+
+/// The root's WebView tag under Tree's own name: `List`'s handle overwrites the observe tag.
+const ROOT_ATTR: &str = "data-tree-root";
 
 use super::{
     tree_node::{
@@ -454,7 +457,7 @@ struct TreeDom {
 impl TreeDom {
     fn page_row(self, id: &str) -> String {
         let tag = self.root.tag().unwrap_or_default();
-        format!("[{OBSERVE_ATTR}='{tag}'] [data-tree-id={}]", css_string(id))
+        format!("[{ROOT_ATTR}='{tag}'] [data-tree-id={}]", css_string(id))
     }
 
     // A leaf's link, button or `TreeItem` is out of the tab order, so Enter clicks it from here.
@@ -1149,14 +1152,10 @@ fn TreeCore(props: TreeCoreProps) -> Element {
             "role": "tree",
             "aria-label": Some(props.aria_label).filter(|label| !label.trim().is_empty()),
             "aria-multiselectable": multiple.then_some("true"),
+            "data-tree-root": root.tag().map(|tag| tag.to_string()),
             onkeydown,
             onclick,
-            attributes: [
-                props.attributes,
-                root.attributes(),
-                focus_attributes,
-            ]
-            .concat(),
+            attributes: [props.attributes, focus_attributes].concat(),
             for (index , node) in props.data.iter().enumerate() {
                 TreeRow {
                     key: "{node.id}",
