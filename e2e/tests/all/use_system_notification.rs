@@ -438,3 +438,92 @@ fn a_named_worker_shows_it_or_the_show_fails() {
         fixture.close().await.unwrap();
     });
 }
+
+/// Todo 5240: a worker missing by its URL answers for no other worker's subscription, whose
+/// scope covers its URL; a registered one reads and ends its own.
+#[test]
+fn a_named_worker_answers_only_for_its_own_subscription() {
+    block_on(async {
+        let fixture = Fixture::open("/use-system-notification", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        page.evaluate_bounded("navigator.serviceWorker.register('/sw.js').then(() => true)")
+            .await
+            .unwrap();
+        wait::for_js_true(
+            page,
+            "navigator.serviceWorker.getRegistrations()
+                .then((all) => all.some((found) => found.active))",
+            "the worker to activate",
+        )
+        .await
+        .unwrap();
+        // A stub: the push service may refuse a real subscription offline.
+        page.evaluate_bounded(
+            "window.lookups = 0; window.asked = 0; window.cancelled = 0;
+            const container = ServiceWorkerContainer.prototype;
+            const { getRegistrations } = container;
+            container.getRegistrations = function () {
+                window.lookups++;
+                return getRegistrations.call(this);
+            };
+            PushManager.prototype.getSubscription = async function () {
+                window.asked++;
+                return {
+                    toJSON: () => ({ endpoint: 'https://push.test/own', keys: { p256dh: 'a', auth: 'b' } }),
+                    unsubscribe: async () => { window.cancelled++; return true; },
+                };
+            };
+            true",
+        )
+        .await
+        .unwrap();
+        let number = async |script: &str| {
+            page.evaluate_bounded(script)
+                .await
+                .unwrap()
+                .into_value::<u32>()
+                .unwrap()
+        };
+
+        click(page, "#push-absent").await;
+        wait::for_js_true(
+            page,
+            "window.lookups >= 1 || window.asked > 0",
+            "the mount's read",
+        )
+        .await
+        .unwrap();
+        let asked = number("window.asked").await;
+        click(page, "#named-unsubscribe").await;
+        wait::for_js_true(
+            page,
+            "window.lookups >= 2 || window.cancelled > 0",
+            "the unsubscribe's read",
+        )
+        .await
+        .unwrap();
+        let cancelled = number("window.cancelled").await;
+        assert_eq!(
+            (asked, cancelled),
+            (0, 0),
+            "(read, cancelled) another worker's subscription"
+        );
+        reads(page, "#named-subscription", "false").await.unwrap();
+
+        click(page, "#push-own").await;
+        reads(page, "#named-subscription", "true").await.unwrap();
+        click(page, "#named-unsubscribe").await;
+        wait::for_js_true(page, "window.cancelled === 1", "the own unsubscribe")
+            .await
+            .unwrap();
+        reads(page, "#named-subscription", "false").await.unwrap();
+
+        fixture
+            .console
+            .assert_clean("the named push worker")
+            .unwrap();
+        fixture.close().await.unwrap();
+    });
+}

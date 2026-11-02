@@ -94,6 +94,25 @@ impl ElementHandle {
         Self { tag, ..self }
     }
 
+    /// This handle under the tag a caller spread on its element, taken off `attributes`:
+    /// the element holds one, and every WebView lookup has to find it (5253).
+    pub(crate) fn adopt_spread_tag(self, attributes: &mut Vec<Attribute>) -> Self {
+        let Some(at) = attributes
+            .iter()
+            .position(|attribute| attribute.name == OBSERVE_ATTR)
+        else {
+            return self;
+        };
+        let tag = match &attributes[at].value {
+            AttributeValue::Text(tag) => tag.parse().ok(),
+            _ => None,
+        };
+        if tag.is_some() {
+            attributes.remove(at);
+        }
+        self.retag(tag)
+    }
+
     /// Points this handle at `source`'s element. Reading `source` subscribes the
     /// calling effect, so a copy a portal reads follows the caller's mounts.
     pub(crate) fn follow(&self, source: Option<&ElementHandle>) {

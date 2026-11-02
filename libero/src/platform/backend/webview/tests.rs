@@ -34,6 +34,62 @@ fn a_page_observes_by_tag_and_a_server_does_not() {
     assert!(!observes(&server));
 }
 
+/// Todo 5253: a caller's spread tag is the only one its root holds.
+#[test]
+fn a_spread_observe_tag_is_the_only_one_on_its_root() {
+    use crate::components::{List, ScrollArea, Tree, TreeNode};
+
+    fn list() -> Element {
+        rsx! {
+            crate::LiberoProvider {
+                List { "data-lsx-observe": "987654" }
+            }
+        }
+    }
+    fn tree() -> Element {
+        rsx! {
+            crate::LiberoProvider {
+                Tree {
+                    aria_label: "Files",
+                    data: vec![TreeNode::new("a", "Alpha".to_string())],
+                    "data-lsx-observe": "987654",
+                }
+            }
+        }
+    }
+    fn area() -> Element {
+        rsx! {
+            crate::LiberoProvider {
+                ScrollArea { "data-lsx-observe": "987654" }
+            }
+        }
+    }
+
+    let mut doubled = Vec::new();
+    for (name, app) in [
+        ("List", list as fn() -> Element),
+        ("Tree", tree),
+        ("ScrollArea", area),
+    ] {
+        let page = FakePage {
+            dark: false,
+            owners: RefCell::default(),
+        };
+        let mut dom = VirtualDom::new(app).with_root_context(Rc::new(page) as Rc<dyn Document>);
+        dom.rebuild_in_place();
+        let html = dioxus_ssr::render(&dom);
+        let spread = html
+            .find("data-lsx-observe=\"987654\"")
+            .unwrap_or_else(|| panic!("{name} lost the caller's tag: {html}"));
+        let start = html[..spread].rfind('<').unwrap();
+        let end = spread + html[spread..].find('>').unwrap();
+        if html[start..end].matches("data-lsx-observe").count() != 1 {
+            doubled.push(name);
+        }
+    }
+    assert_eq!(doubled, Vec::<&str>::new());
+}
+
 #[test]
 fn a_slot_call_binds_its_argument_as_data() {
     let script = Slot::new().call_script("move", &serde_json::json!("x\"); alert(1); (\""));

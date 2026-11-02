@@ -63,9 +63,13 @@ const PUSH_SCRIPT: &str = "
     };
     const failure = (error) => error?.name === 'NotAllowedError' ? 'Denied'
         : error?.name === 'NotSupportedError' ? 'Unsupported' : 'Failed';
-    // By the script's URL: its default scope may not cover the page (`/assets/sw.js`).
-    const subscription = async (script) =>
-        (await navigator.serviceWorker.getRegistration(script))?.pushManager.getSubscription();
+    // By the script's URL, not `getRegistration`: a scope match may be another worker's, and
+    // a worker's default scope may not cover the page (`/assets/sw.js`).
+    const subscription = async (script) => {
+        const url = new URL(script, location.href).href;
+        const registrations = await navigator.serviceWorker.getRegistrations();
+        return registrations.find((found) => found.active?.scriptURL === url)?.pushManager.getSubscription();
+    };
     const key = (base64url) => {
         const base64 = base64url.replace(/-/g, '+').replace(/_/g, '/');
         const text = atob(base64 + '='.repeat((4 - base64.length % 4) % 4));

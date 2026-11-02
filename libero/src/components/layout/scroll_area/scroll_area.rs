@@ -18,11 +18,11 @@ use crate::{
     },
     hooks::{ElementHandle, use_content_changes, use_element, use_resize_fallback, use_theme},
     platform::{
-        Dimensions, ElementApi, OBSERVE_ATTR, PlatformError, Read, SCROLL_QUIET,
-        ScrollSubscription, TimerSubscription, clips_z_indexed, draws_own_scrollbars,
-        fires_scroll_end, fires_scroll_on_scroll_to, has_match_by_tag, on_element_scroll,
-        reserves_rows_in_tables, scroll, scroll_range, scrolls_on_keys, timer, when_free,
-        when_laid_out, when_laid_out_retry,
+        Dimensions, ElementApi, PlatformError, Read, SCROLL_QUIET, ScrollSubscription,
+        TimerSubscription, clips_z_indexed, draws_own_scrollbars, fires_scroll_end,
+        fires_scroll_on_scroll_to, has_match_by_tag, on_element_scroll, reserves_rows_in_tables,
+        scroll, scroll_range, scrolls_on_keys, timer, when_free, when_laid_out,
+        when_laid_out_retry,
     },
     sx::{StaticSx, Sx, ThemeAwareValue, sx},
     theme::{
@@ -534,11 +534,15 @@ fn ScrollAreaContent(content: ElementHandle, children: Element) -> Element {
 ///
 /// Docs: <https://libero-ui.dev/layout/scroll-area>
 #[component]
-pub fn ScrollArea(props: ScrollAreaProps) -> Element {
+pub fn ScrollArea(mut props: ScrollAreaProps) -> Element {
     let theme = use_theme();
     // Always called, for a stable hook order; unmounted under a caller's handle.
     let own = use_element();
-    let root = props.handle.map_or(own, |handle| handle.element);
+    // A WebView finds the root by its tag: a caller's spread one wins, never a second.
+    let root = props
+        .handle
+        .map_or(own, |handle| handle.element)
+        .adopt_spread_tag(&mut props.attributes);
 
     let scrollbars = props.scrollbars.copied_or(theme.scroll_area.scrollbars);
     if let Some(mut axes) = props.handle.and_then(|handle| handle.axes)
@@ -578,16 +582,7 @@ pub fn ScrollArea(props: ScrollAreaProps) -> Element {
         });
     let auto_stop = use_signal(|| false);
     let automatic = !props.focusable && !owned;
-    // A WebView finds the root by its tag: a caller's spread one wins, never a second.
-    let spread_tag = props
-        .attributes
-        .iter()
-        .find(|attribute| attribute.name == OBSERVE_ATTR)
-        .map(|attribute| match &attribute.value {
-            AttributeValue::Text(tag) => tag.parse().ok(),
-            _ => None,
-        });
-    let tag = spread_tag.unwrap_or(root.tag());
+    let tag = root.tag();
     let check_stop = move || {
         if automatic {
             check_tab_stop(root, tag, scrollbars, auto_stop, UNLAID_TRIES);
@@ -867,9 +862,6 @@ pub fn ScrollArea(props: ScrollAreaProps) -> Element {
     let mut attributes = props.attributes;
     if !has_role {
         attributes.retain(|attribute| !matches!(attribute.name, "aria-label" | "aria-labelledby"));
-    }
-    if (automatic || reported) && spread_tag.is_none() {
-        attributes.extend(root.attributes());
     }
 
     let virtualized = virtualized();

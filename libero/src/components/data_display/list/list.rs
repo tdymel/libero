@@ -177,7 +177,7 @@ fn use_dom_order(context: ListContext, element: ElementHandle, ordered: bool) {
 ///
 /// Docs: <https://libero-ui.dev/data-display/list>
 #[component]
-pub fn List(props: ListProps) -> Element {
+pub fn List(mut props: ListProps) -> Element {
     let theme = use_theme();
     let size = props.size.copied_or(theme.list.size);
 
@@ -189,7 +189,8 @@ pub fn List(props: ListProps) -> Element {
         list: order_id(),
         version: Signal::new(0),
     });
-    let element = use_element();
+    // Tree's root too: a caller's spread tag wins, or its handle finds nothing on a WebView.
+    let element = use_element().adopt_spread_tag(&mut props.attributes);
     use_dom_order(context, element, props.ordered);
     // Only a hoisted or absent icon skips the write: `VNode` compares by `Rc`
     // pointer, so an inline `rsx!` icon is unequal and wakes the items every render.

@@ -26,6 +26,7 @@ fn Notifying() -> Element {
     let clicked = use_callback(move |()| clicks += 1);
     let mut action = use_signal(String::new);
     let acted = use_callback(move |id: String| action.set(id));
+    let mut named = use_signal(|| None::<&'static str>);
 
     rsx! {
         button { id: "request", onclick: move |_| notifier.request(), "Request" }
@@ -75,5 +76,24 @@ fn Notifying() -> Element {
         p { id: "push-error", "{push.error():?}" }
         p { id: "push-pending", "{push.is_pending()}" }
         p { id: "subscription", "{push.endpoint().is_some()}" }
+        for (id, worker) in [("push-absent", "/sw.js?absent"), ("push-own", "/sw.js")] {
+            button { id, onclick: move |_| named.set(Some(worker)), "Read {worker}" }
+        }
+        if let Some(worker) = named() {
+            NamedPush { key: "{worker}", worker }
+        }
+    }
+}
+
+/// Mounted on demand: the hook reads its subscription once, after mount.
+#[component]
+fn NamedPush(worker: &'static str) -> Element {
+    let mut push = use_push_subscription(PushOptions {
+        service_worker: worker.into(),
+        vapid_public_key: VAPID_KEY.into(),
+    });
+    rsx! {
+        button { id: "named-unsubscribe", onclick: move |_| push.unsubscribe(), "Unsubscribe" }
+        p { id: "named-subscription", "{push.endpoint().is_some()}" }
     }
 }
