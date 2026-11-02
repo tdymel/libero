@@ -25,7 +25,7 @@ pub fn run(mut filters: Vec<String>) -> Result<()> {
     let tools: &[&str] = if cfg!(any(target_os = "macos", windows)) {
         &[]
     } else {
-        &["xvfb-run", "xdotool"]
+        &["Xvfb", "xdotool"]
     };
     for tool in tools {
         let found = Command::new("which").arg(tool).output()?;
@@ -91,16 +91,13 @@ pub fn run(mut filters: Vec<String>) -> Result<()> {
     } else {
         usize::MAX
     };
+    // Never the Maintainer's display (`DISPLAY=:0`).
+    #[cfg(not(any(target_os = "macos", windows)))]
+    let xvfb = Xvfb::start(&artifacts, &mut guard)?;
     for batch in batches(&names, budget) {
-        // Never the Maintainer's display (`DISPLAY=:0`).
-        let mut command = if cfg!(any(target_os = "macos", windows)) {
-            Command::new(env!("CARGO"))
-        } else {
-            let mut xvfb = Command::new("xvfb-run");
-            // Taller than the fixture's 880 px window: X clamps the pointer to the screen (5210).
-            xvfb.args(["-a", "-s", "-screen 0 1920x1200x24", env!("CARGO")]);
-            xvfb
-        };
+        let mut command = Command::new(env!("CARGO"));
+        #[cfg(not(any(target_os = "macos", windows)))]
+        command.env("DISPLAY", &xvfb.display);
         let mut tests = command
             .current_dir(&root)
             .args([
@@ -152,6 +149,66 @@ pub fn run(mut filters: Vec<String>) -> Result<()> {
         );
     }
     Ok(())
+}
+
+/// The run's own X server. `xvfb-run -a` picks a display by lock file and runs the command there
+/// even when its Xvfb lost that display: two runs then shared one, and took each other's input (3417, 3445).
+#[cfg(not(any(target_os = "macos", windows)))]
+struct Xvfb {
+    server: std::process::Child,
+    display: String,
+}
+
+#[cfg(not(any(target_os = "macos", windows)))]
+impl Xvfb {
+    /// `-displayfd`: the server binds the first free display itself and prints its number.
+    fn start(artifacts: &Path, guard: &mut Guard) -> Result<Self> {
+        use std::io::BufRead;
+        let log = std::fs::File::create(artifacts.join("xvfb.log"))?;
+        let mut server = Command::new("Xvfb")
+            // Taller than the fixture's 880 px window: X clamps the pointer to the screen (5210).
+            .args([
+                "-displayfd",
+                "1",
+                "-screen",
+                "0",
+                "1920x1200x24",
+                "-nolisten",
+                "tcp",
+            ])
+            .stdin(Stdio::null())
+            .stdout(Stdio::piped())
+            .stderr(log)
+            .own_group()
+            .spawn()
+            .context("start Xvfb")?;
+        guard.tell(&format!("group {}", server.id()));
+        let mut number = String::new();
+        let stdout = server.stdout.take().context("Xvfb's stdout")?;
+        std::io::BufReader::new(stdout).read_line(&mut number)?;
+        let number = number.trim();
+        if number.is_empty() {
+            let _ = server.kill();
+            let _ = server.wait();
+            bail!(
+                "Xvfb named no display; see {}",
+                artifacts.join("xvfb.log").display()
+            );
+        }
+        eprintln!("e2e desktop: Xvfb on :{number}");
+        Ok(Self {
+            display: format!(":{number}"),
+            server,
+        })
+    }
+}
+
+#[cfg(not(any(target_os = "macos", windows)))]
+impl Drop for Xvfb {
+    fn drop(&mut self) {
+        super::process::signal_pid(self.server.id(), Signal::Term);
+        let _ = self.server.wait();
+    }
 }
 
 /// The names in runs whose command line stays within the budget.
