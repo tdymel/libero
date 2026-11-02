@@ -420,7 +420,8 @@ fn measure_offset(root: ElementHandle, mut geometry: Signal<Option<ScrollGeometr
 /// Blitz keeps an offset past a range that shrank, over a blank viewport (5306).
 fn clamp_to_range(root: ElementHandle) {
     when_laid_out(move || {
-        let (size, view, offset) = (root.scroll_size(), root.dimensions(), root.scroll_offset());
+        // The client box: an offset moves over the padding box, a border stays out of it (5325).
+        let (size, view, offset) = (root.scroll_size(), root.client_size(), root.scroll_offset());
         spawn(async move {
             let (Ok(size), Ok(view), Ok((x, y))) = (size.await, view.await, offset.await) else {
                 return;

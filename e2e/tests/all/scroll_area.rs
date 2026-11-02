@@ -1084,6 +1084,69 @@ e2e::scenario!(
     a_shrink_at_depth_gives_the_range_back,
 );
 
+/// A border is no part of what an offset moves over: the clamp still reaches the last line,
+/// here 160px of content in a 100px client box (5325).
+async fn a_bordered_shrink_stops_at_the_end<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    const AREA: &str = "#shrink-bordered";
+    d.scroll_to(AREA, 0.0, 400.0).await?;
+    eventually(d, "the area at depth", async |d| {
+        Ok(d.scroll_pos(AREA).await?.1 > 100.0)
+    })
+    .await?;
+    d.click("#shrink").await?;
+    eventually(
+        d,
+        "the offset at the end of the shorter content",
+        async |d| Ok((d.scroll_pos(AREA).await?.1 - 60.0).abs() <= 1.0),
+    )
+    .await
+}
+
+e2e::scenario!(
+    a_bordered_shrink_clamps_to_the_end,
+    "/scroll-area/shrink",
+    a_bordered_shrink_stops_at_the_end,
+);
+
+/// A horizontal shrink away from the inline end, and at the start under RTL: the gate lifts
+/// nothing here, so this pins that no engine holds the old width (WebKitGTK measured, 5324).
+async fn a_wide_shrink_gives_the_width_back<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    const AREAS: [&str; 3] = ["#shrink-wide", "#shrink-both", "#shrink-wide-rtl"];
+    let width = |area: &str| format!("document.querySelector('{area}').scrollWidth");
+    d.scroll_to(AREAS[0], 20.0, 0.0).await?;
+    eventually(d, "the area scrolled along", async |d| {
+        Ok(d.scroll_pos(AREAS[0]).await?.0 >= 10.0)
+    })
+    .await?;
+    d.click("#shrink").await?;
+    eventually(d, "the shorter width", async |d| {
+        for area in AREAS {
+            if number(d, &width(area)).await? > 301.0 {
+                return Ok(false);
+            }
+        }
+        Ok(true)
+    })
+    .await?;
+    d.click("#shrink").await?;
+    eventually(d, "the width back", async |d| {
+        for area in AREAS {
+            if number(d, &width(area)).await? < 799.0 {
+                return Ok(false);
+            }
+        }
+        Ok(true)
+    })
+    .await
+}
+
+e2e::scenario!(
+    a_wide_shrink_away_from_the_end_gives_the_width_back,
+    "/scroll-area/shrink",
+    a_wide_shrink_gives_the_width_back,
+    native: skip("Blitz draws no layer to hold a width"),
+);
+
 /// Whether `area` ended clamped at `end` px over `height` px of content.
 fn clamped(area: &str, height: f64, end: f64) -> String {
     format!(
@@ -1100,6 +1163,12 @@ async fn shrink_keeps_the_bars_in_place(page: &chromiumoxide::Page) {
             .await
             .unwrap();
     }
+    // The layers ride the offset from the next frame: a click before it finds nothing held.
+    page.evaluate_bounded(
+        "new Promise(r => requestAnimationFrame(() => requestAnimationFrame(() => r(true))))",
+    )
+    .await
+    .unwrap();
     page.evaluate_bounded("document.querySelector('#shrink').click()")
         .await
         .unwrap();
@@ -1248,6 +1317,154 @@ fn without_scroll_timelines_a_shrink_at_depth_keeps_the_bars_in_place() {
         fixture.close().await.unwrap();
     });
 }
+
+/// Logs a drag of `#shrink-some`'s thumb in `__drag`: each capture event, move and release with
+/// whether it reached the thumb, and `lift` when the layer's `display: none` came and went.
+const DRAG_LOG: &str = "(() => { \
+    const area = document.querySelector('#shrink-some'); \
+    const layer = area.querySelector(':scope > [data-slot=scrollbars]'); \
+    const thumb = layer.querySelector('[data-slot=thumb]'); \
+    const log = window.__drag = []; \
+    new MutationObserver(records => { \
+        if (records.some(r => (r.oldValue || '').includes('display: none'))) log.push('lift'); \
+    }).observe(layer, { attributes: true, attributeFilter: ['style'], attributeOldValue: true }); \
+    for (const type of ['gotpointercapture', 'lostpointercapture', 'pointermove', 'pointerup', 'pointercancel']) \
+        document.addEventListener(type, e => log.push(`${type}:${e.target === thumb}`), true); \
+    return true; \
+})()";
+
+/// The capture held through the lift: what came after it still reached the thumb, and only
+/// the release let go. `Ok(false)` while the release or the lift is still to come.
+fn the_capture_held(log: &[String]) -> Result<bool> {
+    let at = |entry: &str| log.iter().position(|seen| seen == entry);
+    let (Some(up), Some(lift)) = (at("pointerup:true").or(at("pointerup:false")), at("lift"))
+    else {
+        return Ok(false);
+    };
+    ensure!(lift < up, "released before the lift: {log:?}");
+    ensure!(
+        log[up] == "pointerup:true",
+        "the release missed the thumb: {log:?}"
+    );
+    let lost = at("lostpointercapture:true").or(at("lostpointercapture:false"));
+    ensure!(
+        lost.is_none_or(|lost| lost > up),
+        "the capture went early: {log:?}"
+    );
+    ensure!(
+        log[lift..up].iter().all(|seen| seen != "pointermove:false"),
+        "a move after the lift missed the thumb: {log:?}"
+    );
+    Ok(true)
+}
+
+/// A real press held over a lift (5326): the drag goes on after the shrink, off the thumb.
+#[test]
+fn a_thumb_drag_outlives_a_lift() {
+    block_on(async {
+        let fixture = Fixture::open("/scroll-area/shrink", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        wait::for_js_true(page, &part("shrink-some", V_THUMB, "true"), "the thumb")
+            .await
+            .unwrap();
+        page.evaluate_bounded(DRAG_LOG).await.unwrap();
+        let from = pointer::centre_of(page, &format!("#shrink-some {V_THUMB}"))
+            .await
+            .unwrap();
+        let at = |dy: f64| pointer::Point {
+            x: from.x + 150.0,
+            y: from.y + dy,
+        };
+        pointer::drag_held(page, from, at(60.0), 5).await.unwrap();
+        wait::for_js_true(
+            page,
+            "document.querySelector('#shrink-some').scrollTop > 100",
+            "the drag to scroll",
+        )
+        .await
+        .unwrap();
+        page.evaluate_bounded("document.querySelector('#shrink').click()")
+            .await
+            .unwrap();
+        wait::for_js_true(page, "window.__drag.includes('lift')", "the lift")
+            .await
+            .unwrap();
+        wait::for_js_true(
+            page,
+            &clamped("#shrink-some", 160.0, 40.0),
+            "the area clamped",
+        )
+        .await
+        .unwrap();
+
+        // Back up the track: only a drag still in hand follows it.
+        pointer::move_to(page, at(8.0)).await.unwrap();
+        wait::for_js_true(
+            page,
+            "document.querySelector('#shrink-some').scrollTop < 20",
+            "the drag to go on after the lift",
+        )
+        .await
+        .unwrap();
+        pointer::release(page, at(8.0)).await.unwrap();
+        wait::for_js_true(
+            page,
+            "window.__drag.some(seen => seen.startsWith('pointerup'))",
+            "the release",
+        )
+        .await
+        .unwrap();
+        let log: Vec<String> = page
+            .evaluate_bounded("window.__drag")
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        assert!(the_capture_held(&log).unwrap(), "{log:?}");
+        fixture.console.assert_clean("the drag").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
+/// A WebView's turn: `drag` cannot hold a press until the app's lift, so the first scroll
+/// does what the lift does to the layer, in one task, and the drag runs on past it.
+async fn a_drag_over_a_lift_keeps_the_capture<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    let thumb = format!("#shrink-some {V_THUMB}");
+    let probe = format!("!!document.querySelector('{thumb}')");
+    eventually(d, "the thumb", async |d| {
+        Ok(d.evaluate(&probe).await?.as_bool() == Some(true))
+    })
+    .await?;
+    d.evaluate(DRAG_LOG).await?;
+    d.evaluate(
+        "(() => { const area = document.querySelector('#shrink-some'); \
+         area.addEventListener('scroll', () => { \
+             const layer = area.querySelector(':scope > [data-slot=scrollbars]'); \
+             layer.style.display = 'none'; \
+             void area.scrollHeight; \
+             layer.style.display = ''; \
+         }, { once: true }); return true; })()",
+    )
+    .await?;
+    d.drag(&thumb, 150.0, 60.0).await?;
+    eventually(d, "the capture to hold over the lift", async |d| {
+        let log: Vec<String> = serde_json::from_value(d.evaluate("window.__drag").await?)?;
+        the_capture_held(&log)
+    })
+    .await
+}
+
+e2e::scenario!(
+    a_drag_over_a_lift_keeps_the_capture_in_a_webview,
+    "/scroll-area/shrink",
+    a_drag_over_a_lift_keeps_the_capture,
+    web: skip("a_thumb_drag_outlives_a_lift holds the press across the lift"),
+    native: skip("Blitz draws no thumb of ours"),
+    android: skip("a finger at the thumb's centre never reached it here, emulator libero-docs"),
+    ios: skip("a finger at the thumb's centre never reached it on Android, not run here"),
+);
 
 /// One 120px wheel notch down over `selector`'s centre, waited until it scrolled.
 async fn wheel_step(page: &chromiumoxide::Page, selector: &str) {

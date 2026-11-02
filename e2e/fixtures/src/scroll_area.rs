@@ -38,6 +38,12 @@ fn ShrinkPage() -> Element {
         let count = if short() { cut } else { long };
         (0..count).map(|i| rsx! { p { key: "{i}", style: "margin: 0; height: 20px; line-height: 20px", "Line {i}" } })
     };
+    // A new node, so the content watch sees it. As tall as its area: a last box ending short
+    // would lift the layers anyway, whatever the width.
+    let wide = move || {
+        let width = if short() { 300 } else { 800 };
+        rsx! { div { key: "{width}", style: "width: {width}px; height: 60px", "Wide" } }
+    };
     rsx! {
         Button { id: "shrink", onclick: move |_| short.toggle(), "Shrink" }
         div { style: "width: 240px; height: 120px",
@@ -63,6 +69,39 @@ fn ShrinkPage() -> Element {
                     ScrollArea { id: "shrink-inner", "aria-label": "Inner", {lines(40, 8)} }
                 }
                 {lines(40, 10)}
+            }
+        }
+        div { style: "width: 240px; height: 120px",
+            ScrollArea {
+                id: "shrink-bordered",
+                "aria-label": "Bordered",
+                style: "border: 10px solid",
+                {lines(40, 8)}
+            }
+        }
+        div { style: "width: 240px; height: 60px",
+            ScrollArea {
+                id: "shrink-wide",
+                scrollbars: "horizontal",
+                "aria-label": "Wide",
+                {wide()}
+            }
+        }
+        div { style: "width: 240px; height: 60px",
+            ScrollArea {
+                id: "shrink-both",
+                scrollbars: "both",
+                "aria-label": "Wide and tall",
+                {wide()}
+                div { style: "height: 200px", "Tall" }
+            }
+        }
+        div { dir: "rtl", style: "width: 240px; height: 60px",
+            ScrollArea {
+                id: "shrink-wide-rtl",
+                scrollbars: "horizontal",
+                "aria-label": "Wide, right to left",
+                {wide()}
             }
         }
     }
