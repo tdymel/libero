@@ -69,6 +69,7 @@ fn Demo() -> Element {
 | `search_placeholder` | `String` | - | What the empty search box says. |
 | `label` | `Caption` | - | The caption above the control, and the select's name. |
 | `description` | `Caption` | - | Between the label and the control. What to pick. |
+| `description_position` | `DescriptionPosition` | `Above` | Where the description sits: `above` the control, or `below` it. `below` keeps the controls of side-by-side fields level when only some have a description; give the row `align: "flex-start"`. Unset, the theme's `field.description_position`. A checkbox, switch or radio draws its description under the label either way. |
 | `helper` | `Caption` | - | Under the control. Constraints, or what the choice changes. |
 | `status` | `FieldStatus` | `Valid` | Validation state, under the helper. A bare `&str` is an error; an empty one or `None` is `Valid`. |
 | `required` | `bool` | `false` | Sets `aria-required` and marks the label; a field without a visible `label` shows no mark. Inside a `Form`, an empty one fails the submit. |

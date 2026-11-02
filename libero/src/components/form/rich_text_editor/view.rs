@@ -906,6 +906,7 @@ pub fn RichTextEditor(props: RichTextEditorProps) -> Element {
         .labelled_by()
         .label(&props.label)
         .description(&props.description)
+        .description_position(&props.description_position)
         .helper(&props.helper)
         .status(&props.status)
         .rules(bound.check(&props.validate, value.clone()))

@@ -39,7 +39,7 @@ use crate::{
     localization::Localization,
     platform::is_tab,
     sx::{StaticSx, Sx, ThemeAwareValue, sx},
-    theme::{Size, SizeCss, Z_INDEX_POPOVER},
+    theme::{DescriptionPosition, Size, SizeCss, Z_INDEX_POPOVER},
 };
 
 static PICKER_FIELD_DROPDOWN_SX: StaticSx = StaticSx::new(|| {
@@ -99,6 +99,7 @@ pub(super) struct PickerField<'a, V: 'static> {
     pub trailing: Option<Element>,
     pub label: &'a Caption,
     pub description: &'a Caption,
+    pub description_position: &'a Input<DescriptionPosition>,
     pub helper: &'a Caption,
     pub status: &'a Input<FieldStatus>,
     pub size: Input<Size>,
@@ -141,6 +142,7 @@ macro_rules! picker_field {
             trailing: $props.trailing.clone(),
             label: &$props.label,
             description: &$props.description,
+            description_position: &$props.description_position,
             helper: &$props.helper,
             status: &$props.status,
             size: $props.size.clone(),
@@ -334,6 +336,7 @@ pub(super) fn use_picker_field<V: FieldValue>(
         .label_only_focuses()
         .label(field.label)
         .description(field.description)
+        .description_position(field.description_position)
         .helper(field.helper)
         .status(&status)
         .rules(

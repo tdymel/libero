@@ -1,6 +1,6 @@
 use crate::components::{
-    Control, Demo, DemoValues, DocPage, FieldCopy, a11y, field_controls, field_props, prop, props,
-    readonly_prop, status_prop,
+    Control, Demo, DemoValues, DocPage, FieldCopy, a11y, description_position_prop, field_controls,
+    field_props, prop, props, readonly_prop, status_prop,
 };
 use dioxus::prelude::*;
 use libero::components::FileFieldPart;
@@ -226,6 +226,7 @@ pub fn FileFieldPage() -> Element {
                     prop("label", "Caption")
                         .doc("The field's caption. It names the field and its Browse button."),
                     prop("description", "Caption").doc("Between the label and the control. Which files are wanted."),
+                    description_position_prop(),
                     prop("helper", "Caption").doc("Under the control. Size limits, formats."),
                     status_prop(),
                     prop("required", "bool").default("false").doc("Marks the field required and adds an asterisk to the label; a field without a visible `label` shows none, so give a required field one. Inside a `Form`, an empty one fails the submit."),
@@ -421,6 +422,7 @@ fn FileFieldDemo(values: DemoValues) -> Element {
                 label: field.label,
                 aria_label: field.aria_label,
                 description: field.description,
+                description_position: field.description_position,
                 helper: field.helper,
                 status: field.status,
                 required: is_on(&values, "required").then_some(true),

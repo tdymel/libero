@@ -140,6 +140,7 @@ and `DateTimeRangeField`, with only the props that type uses and no turbofish.
 | `trailing` | `Element` | - | Inside the frame, after the text, such as a decorative icon or a unit. Not read with the input. |
 | `label` | `Caption` | - | The caption above the control, and the field's name. |
 | `description` | `Caption` | - | Between the label and the control. What to enter. |
+| `description_position` | `DescriptionPosition` | `Above` | Where the description sits: `above` the control, or `below` it. `below` keeps the controls of side-by-side fields level when only some have a description; give the row `align: "flex-start"`. Unset, the theme's `field.description_position`. A checkbox, switch or radio draws its description under the label either way. |
 | `helper` | `Caption` | - | Under the control. Formatting rules, or what the entry changes. |
 | `status` | `FieldStatus` | `Valid` | Validation state, under the helper. Text the field cannot accept shows its own error instead, such as `DateLocale::invalid_date`, `invalid_duration` or the bound it missed. |
 | `required` | `bool` | `false` | Sets `required` on the input and marks the label. Inside a `Form`, an empty one fails the submit. |

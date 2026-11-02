@@ -22,6 +22,7 @@ pub(crate) struct PreparedField {
     pub(super) busy: bool,
     pub(super) required: bool,
     pub(super) inline: bool,
+    pub(super) description_below: bool,
     pub(super) labelled_by: bool,
     pub(super) activation: Option<Activation>,
     pub(super) wrapper: BoxStyle,
@@ -55,6 +56,11 @@ impl PreparedField {
     /// The filled caption slots, joined. What `aria-describedby` should hold.
     pub fn describedby(&self) -> Option<String> {
         self.describedby.clone()
+    }
+
+    /// Whether the description is drawn under the control.
+    pub fn description_below(&self) -> bool {
+        self.description_below
     }
 
     /// Adds `id`, a control's own hint, after the caption slots in `aria-describedby`.
@@ -112,12 +118,16 @@ impl PreparedField {
     }
 
     /// Label, description, control, helper, status in the wrapper; an inline
-    /// control comes first.
+    /// control comes first, and a description set below follows the control.
     pub fn render(self, control: Element) -> Element {
         let mut children = Vec::with_capacity(5);
         if self.inline {
             children.push(control);
             children.extend(self.label);
+            children.extend(self.description);
+        } else if self.description_below {
+            children.extend(self.label);
+            children.push(control);
             children.extend(self.description);
         } else {
             children.extend(self.label);

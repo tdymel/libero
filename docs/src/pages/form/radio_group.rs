@@ -1,6 +1,6 @@
 use crate::components::{
-    Control, Demo, DemoValues, DocPage, FieldCopy, Wrap, a11y, field_controls, field_props, prop,
-    props, readonly_prop, required_prop, status_prop,
+    Control, Demo, DemoValues, DocPage, FieldCopy, Wrap, a11y, description_position_prop,
+    field_controls, field_props, prop, props, readonly_prop, required_prop, status_prop,
 };
 use dioxus::prelude::*;
 use libero::components::{Code, OptionList, Options, RadioGroup, Text};
@@ -119,6 +119,7 @@ pub fn RadioGroupPage() -> Element {
                         .doc("The question, and the group's name."),
                     prop("description", "Caption")
                         .doc("Between the question and the options. How to choose."),
+                    description_position_prop(),
                     prop("helper", "Caption")
                         .doc("Under the options. What the choice changes."),
                     status_prop(),
@@ -161,6 +162,7 @@ pub fn RadioGroupPage() -> Element {
                         .doc("Size of the circle and its label."),
                     prop("label", "Caption").doc("The text beside the circle, and the radio's name."),
                     prop("description", "Caption").doc("A second line under the label."),
+                    description_position_prop(),
                     prop("helper", "Caption").doc("A caption under the radio."),
                     status_prop(),
                     required_prop().also("In a group, set it on `RadioGroup`: a lone `Radio` cannot see its siblings, so a `Form` does not block a submit on it."),
@@ -269,6 +271,7 @@ pub fn RadioGroupPage() -> Element {
                             label: field.label,
                             "aria-label": field.aria_label,
                             description: field.description,
+                            description_position: field.description_position,
                             helper: field.helper,
                             status: field.status,
                             required: is_on(&values, "required").then_some(true),

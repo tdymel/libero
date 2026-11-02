@@ -1,6 +1,6 @@
 use crate::components::{
-    Control, Demo, DemoValues, DocPage, FieldCopy, a11y, disabled_prop, field_controls,
-    field_props, prop, props, readonly_prop, status_prop,
+    Control, Demo, DemoValues, DocPage, FieldCopy, a11y, description_position_prop, disabled_prop,
+    field_controls, field_props, prop, props, readonly_prop, status_prop,
 };
 use dioxus::prelude::*;
 use libero::components::FieldPart;
@@ -63,6 +63,7 @@ pub fn TextFieldPage() -> Element {
                         .doc("The field's caption, above the control. It names the field. Takes a string or an `Element`. The label's element id is `{id}-label`, so a `Combobox`'s `labelled_by` can name its list from it."),
                     prop("description", "Caption")
                         .doc("Between the label and the control. What to enter."),
+                    description_position_prop(),
                     prop("helper", "Caption")
                         .doc("Under the control. Formatting rules, limits or a counter."),
                     status_prop(),
@@ -117,6 +118,13 @@ pub fn TextFieldPage() -> Element {
                     "'s "
                     Code { source: "pending_loader" }
                     "."
+                    " Fields side by side in a "
+                    Code { source: "Flex" }
+                    " row line up when the row sets "
+                    Code { source: "align: \"flex-start\"" }
+                    " (a row centres by default) and each field puts its description under the control with "
+                    Code { source: "description_position: \"below\"" }
+                    ", so a description on one does not push its control down."
                 }
             },
             // snippet: let mut value = use_signal(String::new);
@@ -171,6 +179,7 @@ pub fn TextFieldPage() -> Element {
                         label: field.label,
                         aria_label: field.aria_label,
                         description: field.description,
+                        description_position: field.description_position,
                         helper: field.helper,
                         status: field.status,
                         placeholder: (values.str("placeholder") == "true")

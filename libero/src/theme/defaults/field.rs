@@ -36,6 +36,16 @@ str_enum! {
     }
 }
 
+str_enum! {
+    /// Where a field's description sits against its control. `Below` keeps the
+    /// control's top the same whether or not a field has a description.
+    pub enum DescriptionPosition {
+        #[default]
+        Above = "above",
+        Below = "below",
+    }
+}
+
 /// One size step of a field: the slots around the control, and its frame.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct FieldSizeLevel {
@@ -61,6 +71,8 @@ pub struct FieldDefaults {
     pub gap: &'static str,
     /// Horizontal gap between the frame's leading, control and trailing.
     pub frame_gap: &'static str,
+    /// Where the description sits when `description_position` is omitted.
+    pub description_position: DescriptionPosition,
     pub sizes: Sizes<FieldSizeLevel>,
     /// Inner padding of a field drawn as a card, per size step.
     pub card_paddings: Sizes<&'static str>,
@@ -70,6 +82,7 @@ impl FieldDefaults {
     pub const DEFAULT: Self = Self {
         gap: "4px",
         frame_gap: "8px",
+        description_position: DescriptionPosition::Above,
         sizes: Sizes::new(
             // 12px label and caption, as Badge (todo 4556).
             FieldSizeLevel {

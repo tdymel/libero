@@ -48,6 +48,7 @@ fn Demo() -> Element {
 | `validate` | `Validators<bool>` | - | Rules over `checked`, shown once the checkbox loses focus or its form is submitted. |
 | `label` | `Caption` | - | The caption beside the box, and the checkbox's name. |
 | `description` | `Caption` | - | Under the label. What checking it means. |
+| `description_position` | `DescriptionPosition` | `Above` | Where the description sits: `above` the control, or `below` it. `below` keeps the controls of side-by-side fields level when only some have a description; give the row `align: "flex-start"`. Unset, the theme's `field.description_position`. A checkbox, switch or radio draws its description under the label either way. |
 | `helper` | `Caption` | - | Under the description, in the label's column. |
 | `status` | `FieldStatus` | `Valid` | Validation state, under the helper. A bare `&str` is an error; an empty one or `None` is `Valid`. |
 | `required` | `bool` | `false` | Sets `aria-required` and marks the label; a field without a visible `label` shows no mark. Inside a `Form`, an empty one fails the submit. |

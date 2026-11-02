@@ -20,6 +20,7 @@ fn every_str_enum_input_takes_its_own_value() {
     converts::<CascaderLayout>();
     converts::<ChoiceVariant>();
     converts::<ColorFormat>();
+    converts::<DescriptionPosition>();
     converts::<DrawerAnchor>();
     converts::<FileFieldVariant>();
     converts::<FlexDirection>();

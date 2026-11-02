@@ -3,7 +3,9 @@ use super::slider_demo::{
     event_text, is_on, mark_values, marks_code, max_options, min_options, number, number_code,
     quality_code, quality_of, within,
 };
-use crate::components::{Control, Demo, DemoValues, DocPage, Wrap, a11y, indent, prop, props};
+use crate::components::{
+    Control, Demo, DemoValues, DocPage, Wrap, a11y, description_position_prop, indent, prop, props,
+};
 use dioxus::prelude::*;
 use libero::components::{SliderPart, SliderValue};
 use libero::{
@@ -228,6 +230,7 @@ pub fn SliderPage() -> Element {
                         .doc("The caption above the track, and the thumb's name."),
                     prop("description", "Caption")
                         .doc("Between the label and the track. What the value means."),
+                    description_position_prop(),
                     prop("helper", "Caption")
                         .doc("Under the track, below the mark captions."),
                     prop("status", "FieldStatus")

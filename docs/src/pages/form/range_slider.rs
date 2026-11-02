@@ -4,8 +4,8 @@ use super::slider_demo::{
     quality_of, within,
 };
 use crate::components::{
-    Control, Demo, DemoValues, DocPage, FieldCopy, Wrap, a11y, field_controls, field_props, indent,
-    prop, props, readonly_prop, status_prop,
+    Control, Demo, DemoValues, DocPage, FieldCopy, Wrap, a11y, description_position_prop,
+    field_controls, field_props, indent, prop, props, readonly_prop, status_prop,
 };
 use dioxus::prelude::*;
 use libero::components::{SliderPart, SliderValue};
@@ -164,6 +164,7 @@ pub fn RangeSliderPage() -> Element {
                         .doc("The caption above the track. Both thumbs' names start with it."),
                     prop("description", "Caption")
                         .doc("Between the label and the track. What the range means."),
+                    description_position_prop(),
                     prop("helper", "Caption")
                         .doc("Under the track, below the mark captions."),
                     status_prop(),
@@ -313,6 +314,7 @@ pub fn RangeSliderPage() -> Element {
                                         }),
                                     label: field.label.clone(),
                                     description: field.description.clone(),
+                                    description_position: field.description_position.clone(),
                                     helper: field.helper.clone(),
                                     status: field.status.clone(),
                                     required: is_on(&values, "required").then_some(true),
@@ -344,6 +346,7 @@ pub fn RangeSliderPage() -> Element {
                                         .then(|| Callback::new(|value: f64| format!("{value} EUR"))),
                                     label: field.label,
                                     description: field.description,
+                                    description_position: field.description_position,
                                     helper: field.helper,
                                     status: field.status,
                                     required: is_on(&values, "required").then_some(true),

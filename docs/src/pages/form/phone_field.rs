@@ -1,7 +1,7 @@
 use super::dropdown_parts::{PHONE_DROPDOWN, list_dropdown_parts};
 use crate::components::{
-    Control, Demo, DemoValues, DocPage, FieldCopy, a11y, disabled_prop, field_controls,
-    field_props, prop, props, readonly_prop, status_prop,
+    Control, Demo, DemoValues, DocPage, FieldCopy, a11y, description_position_prop, disabled_prop,
+    field_controls, field_props, prop, props, readonly_prop, status_prop,
 };
 use dioxus::prelude::*;
 use libero::components::PhoneFieldPart;
@@ -89,6 +89,7 @@ pub fn PhoneFieldPage() -> Element {
                         .doc("The field's caption, above the control. It names the input."),
                     prop("description", "Caption")
                         .doc("Between the label and the control. What to enter."),
+                    description_position_prop(),
                     prop("helper", "Caption")
                         .doc("Under the control. The format, or an example."),
                     status_prop(),
@@ -207,6 +208,7 @@ pub fn PhoneFieldPage() -> Element {
                                 label: field.label,
                                 aria_label: field.aria_label,
                                 description: field.description,
+                                description_position: field.description_position,
                                 helper: field.helper,
                                 placeholder: (values.str("placeholder") == "true")
                                     .then(|| "213 373 4253".to_string()),

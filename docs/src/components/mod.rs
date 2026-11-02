@@ -13,14 +13,14 @@ pub use demo::DemoCode;
 pub use demo::{
     Child, Control, Demo, DemoFile, DemoValues, FieldCopy, PageScroll, UNSET, Wrap, align_of,
     delay_of, field_controls, field_props, gradient_controls, gradient_value, indent,
-    not_gradient_variant, or_unset, side_of,
+    inline_field_controls, not_gradient_variant, or_unset, side_of,
 };
 pub use doc_page::{DocPage, ExtraTab};
 pub use doc_section::{DocSection, SectionLink};
 pub use icon_catalogue::IconCatalogue;
 pub use pictogram_note::PictogramNote;
 pub use prop_doc::{
-    PartsPanel, PropGroup, PropertyTable, disabled_prop, prop, props, prose, readonly_prop,
-    required_prop, status_prop,
+    PartsPanel, PropGroup, PropertyTable, description_position_prop, disabled_prop, prop, props,
+    prose, readonly_prop, required_prop, status_prop,
 };
 pub use remount::Remount;

@@ -138,6 +138,7 @@ pub fn SegmentedControl<T: Options>(props: SegmentedControlProps<T>) -> Element 
         .names_group()
         .label(&props.label)
         .description(&props.description)
+        .description_position(&props.description_position)
         .helper(&props.helper)
         .status(&props.status)
         .rules(

@@ -204,6 +204,7 @@ pub fn TagsField(props: TagsFieldProps) -> Element {
         .label_with_id()
         .label(&props.label)
         .description(&props.description)
+        .description_position(&props.description_position)
         .helper(&props.helper)
         .status(&props.status)
         .rules(props.validate.check(&held))

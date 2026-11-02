@@ -1,6 +1,6 @@
 use crate::components::{
-    Control, Demo, DemoValues, DocPage, FieldCopy, Wrap, a11y, field_controls, field_props, prop,
-    props, readonly_prop, status_prop,
+    Control, Demo, DemoValues, DocPage, FieldCopy, Wrap, a11y, description_position_prop,
+    field_controls, field_props, prop, props, readonly_prop, status_prop,
 };
 use dioxus::prelude::*;
 use libero::components::CheckboxGroupPart;
@@ -127,6 +127,7 @@ pub fn CheckboxGroupPage() -> Element {
                         .doc("The question, and the group's name."),
                     prop("description", "Caption")
                         .doc("Between the question and the options. How to choose."),
+                    description_position_prop(),
                     prop("helper", "Caption")
                         .doc("Under the options. What the choice changes."),
                     status_prop(),
@@ -242,6 +243,7 @@ pub fn CheckboxGroupPage() -> Element {
                             label: field.label,
                             "aria-label": field.aria_label,
                             description: field.description,
+                            description_position: field.description_position,
                             helper: field.helper,
                             status: field.status,
                             required: is_on(&values, "required").then_some(true),

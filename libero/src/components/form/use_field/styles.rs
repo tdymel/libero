@@ -2,12 +2,13 @@ use crate::{
     components::common::{COARSE_POINTER, COARSE_TARGET, input_from_str},
     sx::{StaticSx, sx},
     theme::{
-        ChoiceVariant, FIELD_CAPTIONS, FIELD_CARD_PADDING, FIELD_FRAME_GAP, FieldDefaults,
-        PAPER_BACKGROUND, PAPER_BORDER_COLOR, PAPER_RADIUS, SizeCss,
+        ChoiceVariant, DescriptionPosition, FIELD_CAPTIONS, FIELD_CARD_PADDING, FIELD_FRAME_GAP,
+        FieldDefaults, PAPER_BACKGROUND, PAPER_BORDER_COLOR, PAPER_RADIUS, SizeCss,
     },
 };
 
 input_from_str!(ChoiceVariant);
+input_from_str!(DescriptionPosition);
 
 /// The wrapper styles all four text slots by `data-slot`, saving four
 /// stylesheet registrations per field.

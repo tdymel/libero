@@ -160,6 +160,7 @@ pub fn NotesEditor(values: DemoValues, mut doc: Signal<Doc>) -> Element {
             label: field.label,
             aria_label: field.aria_label,
             description: field.description,
+            description_position: field.description_position,
             helper: field.helper,
             status: field.status,
             placeholder: (values.str("placeholder") == "true").then(|| "Start writing".to_string()),

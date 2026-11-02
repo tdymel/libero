@@ -61,6 +61,7 @@ fn Demo() -> Element {
 | `size` | `Size` | `md` | Size of the boxes and their labels. |
 | `label` | `Caption` | - | The question, and the group's name. |
 | `description` | `Caption` | - | Between the question and the options. How to choose. |
+| `description_position` | `DescriptionPosition` | `Above` | Where the description sits: `above` the control, or `below` it. `below` keeps the controls of side-by-side fields level when only some have a description; give the row `align: "flex-start"`. Unset, the theme's `field.description_position`. A checkbox, switch or radio draws its description under the label either way. |
 | `helper` | `Caption` | - | Under the options. What the choice changes. |
 | `status` | `FieldStatus` | `Valid` | Validation state, under the helper. A bare `&str` is an error; an empty one or `None` is `Valid`. |
 | `required` | `bool` | `false` | Marks the label. Inside a `Form`, a group with nothing checked fails the submit. No option is required on its own. |

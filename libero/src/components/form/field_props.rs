@@ -32,9 +32,14 @@ macro_rules! field_props {
                 /// The field's caption, above the control. Its element id is `{id}-label`.
                 #[props(default, into)]
                 label: crate::components::form::Caption,
-                /// Between the label and the control. What to enter.
+                /// What to enter: between the label and the control, or under it per `description_position`.
                 #[props(default, into)]
                 description: crate::components::form::Caption,
+                /// `below` puts the description under the control, so a row of fields keeps
+                /// their controls level. Unset, the theme's `field.description_position`.
+                /// Ignored by an inline field, which draws it under the label.
+                #[props(default, into)]
+                description_position: Input<crate::theme::DescriptionPosition>,
                 /// Under the control. Formatting rules, constraints, counters.
                 #[props(default, into)]
                 helper: crate::components::form::Caption,

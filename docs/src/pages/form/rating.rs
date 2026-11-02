@@ -1,4 +1,6 @@
-use crate::components::{Control, Demo, DemoValues, DocPage, a11y, prop, props, status_prop};
+use crate::components::{
+    Control, Demo, DemoValues, DocPage, a11y, description_position_prop, prop, props, status_prop,
+};
 use dioxus::prelude::*;
 use libero::components::RatingPart;
 use libero::components::{Code, Rating, Text};
@@ -82,6 +84,7 @@ pub fn RatingPage() -> Element {
                     .doc("Rules over the value, shown once the rating loses focus or its form is submitted."),
                 prop("label", "Caption").doc("The caption above the stars, and the slider's name."),
                 prop("description", "Caption").doc("Under the label."),
+                description_position_prop(),
                 prop("helper", "Caption").doc("Under the stars."),
                 status_prop(),
                 prop("required", "bool")

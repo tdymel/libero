@@ -1,6 +1,7 @@
 use super::dropdown_parts::{SUGGESTION_DROPDOWN, list_dropdown_parts};
 use crate::components::{
-    Control, Demo, DemoValues, DocPage, Wrap, a11y, prop, props, readonly_prop, status_prop,
+    Control, Demo, DemoValues, DocPage, Wrap, a11y, description_position_prop, prop, props,
+    readonly_prop, status_prop,
 };
 use dioxus::prelude::*;
 use libero::components::TagsFieldPart;
@@ -183,6 +184,7 @@ pub fn TagsFieldPage() -> Element {
                         .doc("Draws one tag, remove control included. `args.remove` removes it. Make that control a `<button>` with `tabindex: \"-1\"`, and leave it out when `args.disabled` or `args.readonly` is set."),
                     prop("label", "Caption").doc("The field's caption, above the control."),
                     prop("description", "Caption").doc("Between the label and the control. What to enter."),
+                    description_position_prop(),
                     prop("helper", "Caption").doc("Under the control. Formatting rules, or what the entry affects."),
                     status_prop(),
                     prop("required", "bool").default("false").doc("Marks the field required and adds an asterisk to the label; a field without a visible `label` shows no mark. Inside a `Form`, an empty one fails the submit."),

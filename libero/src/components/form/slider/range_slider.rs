@@ -129,6 +129,7 @@ pub fn RangeSlider<V: SliderValue>(props: RangeSliderProps<V>) -> Element {
         .labelled_by()
         .label(&props.label)
         .description(&props.description)
+        .description_position(&props.description_position)
         .helper(&props.helper)
         .status(&props.status)
         .rules(props.validate.check(&value))

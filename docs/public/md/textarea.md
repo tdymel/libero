@@ -49,6 +49,7 @@ fn Demo() -> Element {
 | `counter` | `bool` | `false` | Shows `12/200` in the frame's bottom corner while a `maxlength` attribute is set. It counts as `maxlength` does, so an emoji counts two. A `value` past the limit is an error, "2 characters too many", which blocks a `Form`'s submit. |
 | `label` | `Caption` | - | The field's caption, above the control. It names the field. |
 | `description` | `Caption` | - | Between the label and the control. What to enter. |
+| `description_position` | `DescriptionPosition` | `Above` | Where the description sits: `above` the control, or `below` it. `below` keeps the controls of side-by-side fields level when only some have a description; give the row `align: "flex-start"`. Unset, the theme's `field.description_position`. A checkbox, switch or radio draws its description under the label either way. |
 | `helper` | `Caption` | - | Under the control. Formatting rules or limits. |
 | `status` | `FieldStatus` | `Valid` | Validation state, under the helper. A bare `&str` is an error; an empty one or `None` is `Valid`. |
 | `required` | `bool` | `false` | Marks the field required and adds an asterisk to the label; a field without a visible `label` shows no mark. Inside a `Form`, an empty one fails the submit. |

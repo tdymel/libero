@@ -12,7 +12,24 @@ use crate::Routes;
 pub const ROUTES: Routes = &[
     ("/field-props/readonly", || rsx! { ReadonlyPage {} }),
     ("/field-props/chips", || rsx! { ChipsPage {} }),
+    ("/field-props/description", || rsx! { DescriptionPage {} }),
 ];
+
+#[component]
+fn DescriptionPage() -> Element {
+    rsx! {
+        Flex { direction: "column", gap: "md", max_width: "480px",
+            Flex { direction: "row", wrap: "nowrap", align: "flex-start", gap: "md",
+                TextField { id: "below-a", label: "First", description: "As on the card.", description_position: "below", oninput: move |_| {} }
+                TextField { id: "below-b", label: "Second", description_position: "below", oninput: move |_| {} }
+            }
+            Flex { direction: "row", wrap: "nowrap", align: "flex-start", gap: "md",
+                TextField { id: "above-a", label: "First", description: "As on the card.", oninput: move |_| {} }
+                TextField { id: "above-b", label: "Second", oninput: move |_| {} }
+            }
+        }
+    }
+}
 
 #[component]
 fn ReadonlyPage() -> Element {

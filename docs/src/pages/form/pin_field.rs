@@ -1,6 +1,6 @@
 use crate::components::{
-    Control, Demo, DemoValues, DocPage, FieldCopy, a11y, field_controls, field_props, prop, props,
-    readonly_prop, status_prop,
+    Control, Demo, DemoValues, DocPage, FieldCopy, a11y, description_position_prop, field_controls,
+    field_props, prop, props, readonly_prop, status_prop,
 };
 use dioxus::prelude::*;
 use libero::components::FieldPart;
@@ -49,6 +49,7 @@ pub fn PinFieldPage() -> Element {
                     prop("label", "Caption")
                         .doc("The field's caption, above the cells. It names the group of cells."),
                     prop("description", "Caption").doc("Between the label and the cells. Where the code came from."),
+                    description_position_prop(),
                     prop("helper", "Caption").doc("Under the cells. How long the code lasts, how to get another."),
                     status_prop(),
                     prop("required", "bool").default("false").doc("Marks the field required and adds an asterisk to the label; a field without a visible `label` shows no mark. Inside a `Form`, an empty one fails the submit."),
@@ -161,6 +162,7 @@ fn PinFieldDemo(values: DemoValues) -> Element {
                 label: field.label,
                 aria_label: field.aria_label,
                 description: field.description,
+                description_position: field.description_position,
                 helper: field.helper,
                 status: field.status,
                 separator: (values.str("separator") == "true").then(|| rsx! { "-" }),

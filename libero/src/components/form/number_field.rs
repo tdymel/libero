@@ -576,6 +576,7 @@ fn NumberFieldShell<T: NumberValue>(
     let mut field = field
         .label(&props.label)
         .description(&props.description)
+        .description_position(&props.description_position)
         .helper(&props.helper)
         .status(&status)
         .rules(rules)

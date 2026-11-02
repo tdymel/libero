@@ -29,6 +29,28 @@ fn read_only_fields_stay_reachable_and_are_not_disabled() {
     });
 }
 
+/// A description under the control keeps side-by-side controls level; above, it pushes one down.
+#[test]
+fn a_description_below_keeps_side_by_side_controls_level() {
+    block_on(async {
+        let fixture = Fixture::open("/field-props/description", Viewport::Desktop)
+            .await
+            .unwrap();
+        let tops: Vec<f64> = fixture
+            .page
+            .evaluate_bounded(
+                "['below-a', 'below-b', 'above-a', 'above-b'].map(id => document.getElementById(id).getBoundingClientRect().top)",
+            )
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        assert_eq!(tops[0], tops[1], "below: {tops:?}");
+        assert!(tops[2] > tops[3], "above: {tops:?}");
+        fixture.close().await.unwrap();
+    });
+}
+
 /// The x sits at the end of its chip in both directions.
 #[test]
 fn the_remove_button_ends_its_chip_in_both_directions() {

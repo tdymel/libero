@@ -1,6 +1,6 @@
 use crate::components::{
-    Control, Demo, DemoValues, DocPage, FieldCopy, Wrap, a11y, disabled_prop, field_controls,
-    field_props, prop, props, required_prop, status_prop,
+    Control, Demo, DemoValues, DocPage, FieldCopy, Wrap, a11y, description_position_prop,
+    disabled_prop, field_controls, field_props, prop, props, required_prop, status_prop,
 };
 use dioxus::prelude::*;
 use libero::components::FieldPart;
@@ -82,6 +82,7 @@ pub fn NativeSelectPage() -> Element {
                         .doc("The caption above the control, and the select's name. A string or an `Element`."),
                     prop("description", "Caption")
                         .doc("Between the label and the control. What to pick."),
+                    description_position_prop(),
                     prop("helper", "Caption")
                         .doc("Under the control. Constraints, or what the choice changes."),
                     status_prop(),
@@ -167,6 +168,7 @@ pub fn NativeSelectPage() -> Element {
                             label: field.label,
                             aria_label: field.aria_label,
                             description: field.description,
+                            description_position: field.description_position,
                             helper: field.helper,
                             status: field.status,
                             required: (values.str("required") == "true").then_some(true),

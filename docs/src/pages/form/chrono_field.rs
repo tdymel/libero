@@ -6,7 +6,8 @@ use super::date_common::{
 };
 use super::dropdown_parts::chrono_dropdown_parts;
 use crate::components::{
-    Control, Demo, DemoValues, DocPage, Wrap, a11y, prop, props, readonly_prop,
+    Control, Demo, DemoValues, DocPage, Wrap, a11y, description_position_prop, prop, props,
+    readonly_prop,
 };
 use dioxus::prelude::*;
 use libero::chrono::{NaiveDate, NaiveDateTime, NaiveTime, TimeDelta};
@@ -114,6 +115,7 @@ pub fn ChronoFieldPage() -> Element {
                     prop("trailing", "Element").doc("Inside the frame, after the text, such as a decorative icon or a unit. Not read with the input."),
                     prop("label", "Caption").doc("The caption above the control, and the field's name."),
                     prop("description", "Caption").doc("Between the label and the control. What to enter."),
+                    description_position_prop(),
                     prop("helper", "Caption").doc("Under the control. Formatting rules, or what the entry changes."),
                     prop("status", "FieldStatus")
                         .default("Valid")

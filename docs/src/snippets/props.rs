@@ -262,9 +262,10 @@ fn form_pages_read_theme_defaults() {
 }
 
 /// What `field_props!` adds to a struct: `without(readonly)` and `without(radius)` drop one.
-const FIELD_PROPS: [&str; 9] = [
+const FIELD_PROPS: [&str; 10] = [
     "label",
     "description",
+    "description_position",
     "helper",
     "status",
     "size",

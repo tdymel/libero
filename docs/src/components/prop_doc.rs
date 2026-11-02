@@ -52,6 +52,12 @@ pub fn status_prop() -> PropDoc {
         .doc("Validation state, under the helper. A bare `&str` is an error; an empty one or `None` is `Valid`.")
 }
 
+pub fn description_position_prop() -> PropDoc {
+    prop("description_position", "DescriptionPosition")
+        .default("Above")
+        .doc("Where the description sits: `above` the control, or `below` it. `below` keeps the controls of side-by-side fields level when only some have a description; give the row `align: \"flex-start\"`. Unset, the theme's `field.description_position`. A checkbox, switch or radio draws its description under the label either way.")
+}
+
 pub fn required_prop() -> PropDoc {
     prop("required", "bool")
         .default("false")

@@ -198,6 +198,7 @@ fn NativeSelectShell<T: Options>(live: Signal<Option<T>>, field: NativeSelectPro
     let field = use_field()
         .label(&props.label)
         .description(&props.description)
+        .description_position(&props.description_position)
         .helper(&props.helper)
         .status(&props.status)
         .rules(rules)

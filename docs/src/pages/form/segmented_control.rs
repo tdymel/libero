@@ -1,6 +1,6 @@
 use crate::components::{
-    Control, Demo, DemoFile, DemoValues, DocPage, FieldCopy, Wrap, a11y, field_controls,
-    field_props, indent, or_unset, prop, props, readonly_prop, status_prop,
+    Control, Demo, DemoFile, DemoValues, DocPage, FieldCopy, Wrap, a11y, description_position_prop,
+    field_controls, field_props, indent, or_unset, prop, props, readonly_prop, status_prop,
 };
 use libero::components::Pictogram;
 use libero::components::SegmentedControlPart;
@@ -123,6 +123,7 @@ pub fn SegmentedControlPage() -> Element {
                         .doc("The question, and the group's name."),
                     prop("description", "Caption")
                         .doc("Between the label and the segments. How to choose."),
+                    description_position_prop(),
                     prop("helper", "Caption")
                         .doc("Under the segments. What the choice changes."),
                     status_prop(),
@@ -264,6 +265,7 @@ pub fn SegmentedControlPage() -> Element {
                             label: field.label,
                             "aria-label": field.aria_label,
                             description: field.description,
+                            description_position: field.description_position,
                             helper: field.helper,
                             status: field.status,
                             required: is_on(&values, "required").then_some(true),

@@ -1,6 +1,6 @@
 use crate::components::{
-    Control, Demo, DemoValues, DocPage, FieldCopy, Wrap, a11y, disabled_prop, field_controls,
-    field_props, prop, props, readonly_prop, status_prop,
+    Control, Demo, DemoValues, DocPage, FieldCopy, Wrap, a11y, description_position_prop,
+    disabled_prop, field_controls, field_props, prop, props, readonly_prop, status_prop,
 };
 use dioxus::prelude::*;
 use libero::components::FieldPart;
@@ -159,6 +159,7 @@ pub fn NumberFieldPage() -> Element {
                         .doc("The field's caption, above the control. It names the field."),
                     prop("description", "Caption")
                         .doc("Between the label and the control. What to enter."),
+                    description_position_prop(),
                     prop("helper", "Caption")
                         .doc("Under the control. Units, ranges, what the number means."),
                     status_prop(),
@@ -365,8 +366,14 @@ pub fn NumberFieldPage() -> Element {
                 ]].concat(),
                 render: move |values: DemoValues| {
                     let field = field_props::<QuantityCopy>(&values);
-                    let (label, aria_label, description, helper, status) =
-                        (field.label, field.aria_label, field.description, field.helper, field.status);
+                    let (label, aria_label, description, description_position, helper, status) = (
+                        field.label,
+                        field.aria_label,
+                        field.description,
+                        field.description_position,
+                        field.helper,
+                        field.status,
+                    );
                     let size = values.str("size");
                     let radius = values.str("radius");
                     let required = (values.str("required") == "true").then_some(true);
@@ -386,7 +393,7 @@ pub fn NumberFieldPage() -> Element {
                     match values.str("type").as_str() {
                         "f64" if values.str("affix") == "currency" => rsx! {
                             NumberField {
-                                size, radius, label, aria_label, description, helper, status,
+                                size, radius, label, aria_label, description, description_position, helper, status,
                                 required, disabled, readonly, steppers, increment_label, decrement_label, group_digits, touch_input,
                                 leading: rsx! { "$" },
                                 describe_leading: true,
@@ -399,7 +406,7 @@ pub fn NumberFieldPage() -> Element {
                         },
                         "f64" if percent(&values) => rsx! {
                             NumberField {
-                                size, radius, label, aria_label, description, helper, status,
+                                size, radius, label, aria_label, description, description_position, helper, status,
                                 required, disabled, readonly, steppers, increment_label, decrement_label, group_digits, touch_input,
                                 trailing: rsx! { "%" },
                                 describe_trailing: true,
@@ -412,7 +419,7 @@ pub fn NumberFieldPage() -> Element {
                         },
                         "f64" => rsx! {
                             NumberField {
-                                size, radius, label, aria_label, description, helper, status,
+                                size, radius, label, aria_label, description, description_position, helper, status,
                                 required, disabled, readonly, steppers, increment_label, decrement_label, group_digits, touch_input,
                                 step: 0.5f64,
                                 min: ranged.then_some(0.0f64),
@@ -423,7 +430,7 @@ pub fn NumberFieldPage() -> Element {
                         },
                         "cents" => rsx! {
                             NumberField {
-                                size, radius, label, aria_label, description, helper, status,
+                                size, radius, label, aria_label, description, description_position, helper, status,
                                 required, disabled, readonly, steppers, increment_label, decrement_label, group_digits, touch_input,
                                 min: ranged.then_some(Cents(0)),
                                 max: ranged.then_some(Cents(10_000)),
@@ -433,7 +440,7 @@ pub fn NumberFieldPage() -> Element {
                         },
                         _ => rsx! {
                             NumberField {
-                                size, radius, label, aria_label, description, helper, status,
+                                size, radius, label, aria_label, description, description_position, helper, status,
                                 required, disabled, readonly, steppers, increment_label, decrement_label, group_digits, touch_input,
                                 min: ranged.then_some(1i32),
                                 max: ranged.then_some(99i32),

@@ -319,6 +319,7 @@ pub fn ColorField(props: ColorFieldProps) -> Element {
         .label_only_focuses()
         .label(&props.label)
         .description(&props.description)
+        .description_position(&props.description_position)
         .helper(&props.helper)
         .status(&status)
         // Cleared text posts nothing, so the rules do not judge the color it hides (4384).

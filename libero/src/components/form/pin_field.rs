@@ -163,6 +163,7 @@ pub fn PinField(props: PinFieldProps) -> Element {
         .labelled_by()
         .label(&props.label)
         .description(&props.description)
+        .description_position(&props.description_position)
         .helper(&props.helper)
         .status(&props.status)
         // The cut value, as posted (4351).

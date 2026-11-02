@@ -16,7 +16,7 @@ use crate::{
     hooks::{use_localization, use_theme},
     localization::fill,
     sx::{StaticSx, ThemeAwareValue, sx},
-    theme::{ChoiceVariant, FIELD_CAPTION_FONT_SIZE, FIELD_GAP, Size},
+    theme::{ChoiceVariant, DescriptionPosition, FIELD_CAPTION_FONT_SIZE, FIELD_GAP, Size},
     utils::warn,
 };
 
@@ -158,6 +158,7 @@ struct Group<T: Options, P: Part> {
     color: Input<ThemeAwareValue>,
     label: Caption,
     description: Caption,
+    description_position: Input<DescriptionPosition>,
     helper: Caption,
     status: Input<FieldStatus>,
     size: Input<Size>,
@@ -187,6 +188,7 @@ macro_rules! group {
             color: $props.color,
             label: $props.label,
             description: $props.description,
+            description_position: $props.description_position,
             helper: $props.helper,
             status: $props.status,
             size: $props.size,
@@ -320,6 +322,7 @@ fn check_group<T: Options, P: Part>(kind: Kind, props: Group<T, P>) -> Element {
         .names_group()
         .label(&props.label)
         .description(&props.description)
+        .description_position(&props.description_position)
         .helper(&props.helper)
         .status(&props.status)
         .rules(props.validate.check(&held))
@@ -408,7 +411,7 @@ fn check_group<T: Options, P: Part>(kind: Kind, props: Group<T, P>) -> Element {
 
     // Says why the unchecked options are off, which their disabled state alone does not (4604).
     let limit_id = format!("{}-limit", field.id());
-    // Read where it is drawn: after the description, before the helper and status (5081).
+    // Read where it is drawn: in the control, so after a description above and before one below (5081).
     let describedby = {
         let mut ids: Vec<String> = field
             .describedby()
@@ -416,10 +419,11 @@ fn check_group<T: Options, P: Part>(kind: Kind, props: Group<T, P>) -> Element {
             .unwrap_or_default();
         if capped && limit_words.is_some() {
             let description = format!("{}-description", field.id());
+            let after = usize::from(!field.description_below());
             let at = ids
                 .iter()
                 .position(|id| *id == description)
-                .map_or(0, |at| at + 1);
+                .map_or(0, |at| at + after);
             ids.insert(at, limit_id.clone());
         }
         (!ids.is_empty()).then(|| ids.join(" "))

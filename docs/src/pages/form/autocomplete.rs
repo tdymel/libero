@@ -1,7 +1,7 @@
 use super::dropdown_parts::{SUGGESTION_DROPDOWN, list_dropdown_parts};
 use crate::components::{
-    Control, Demo, DemoFile, DemoValues, DocPage, FieldCopy, Wrap, a11y, field_controls,
-    field_props, prop, props, readonly_prop, required_prop, status_prop,
+    Control, Demo, DemoFile, DemoValues, DocPage, FieldCopy, Wrap, a11y, description_position_prop,
+    field_controls, field_props, prop, props, readonly_prop, required_prop, status_prop,
 };
 use dioxus::prelude::*;
 use libero::components::FieldPart;
@@ -143,6 +143,7 @@ pub fn AutocompletePage() -> Element {
                         .doc("The same for `trailing`."),
                     prop("label", "Caption").doc("The caption above the control, and the field's name."),
                     prop("description", "Caption").doc("Between the label and the control. What to enter."),
+                    description_position_prop(),
                     prop("helper", "Caption").doc("Under the control. Formatting rules, or what the entry changes."),
                     status_prop(),
                     required_prop().also("Inside a `Form`, an empty one fails the submit."),
@@ -278,6 +279,7 @@ pub fn AutocompletePage() -> Element {
                         label: field.label,
                         aria_label: field.aria_label,
                         description: field.description,
+                        description_position: field.description_position,
                         helper: field
                             .helper
                             .or_else(|| picked().map(|country| format!("Picked a city in {country}."))),

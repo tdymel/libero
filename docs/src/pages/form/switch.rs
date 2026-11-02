@@ -1,6 +1,6 @@
 use crate::components::{
-    Control, Demo, DemoValues, DocPage, FieldCopy, a11y, disabled_prop, field_controls,
-    field_props, prop, props, readonly_prop, required_prop, status_prop,
+    Control, Demo, DemoValues, DocPage, FieldCopy, a11y, description_position_prop, disabled_prop,
+    field_props, inline_field_controls, prop, props, readonly_prop, required_prop, status_prop,
 };
 use dioxus::prelude::*;
 use libero::components::SwitchPart;
@@ -51,6 +51,7 @@ pub fn SwitchPage() -> Element {
                     .doc("The caption beside the track, and the switch's name."),
                 prop("description", "Caption")
                     .doc("Under the label. What turning it on does."),
+                description_position_prop(),
                 prop("helper", "Caption")
                     .doc("Under the description, in the label's column."),
                 status_prop(),
@@ -117,7 +118,7 @@ pub fn SwitchPage() -> Element {
                     // `0` is plain CSS, next to the size scale.
                     Control::slider("radius", ["0", "xs", "sm", "md", "lg", "xl", "xxl"])
                         .default(theme.switch.radius.as_str()),
-                ], field_controls::<NotificationsCopy>(), vec![
+                ], inline_field_controls::<NotificationsCopy>(), vec![
                     // `checked` + `onchange` as a pair (the library warns on one alone); the
                     // preview writes `onchange` back into this control.
                     Control::switch("checked").default("true").code(|_, _| {

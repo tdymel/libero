@@ -147,8 +147,9 @@ mod tests {
         PinKind, SidebarSide, Variant,
     };
     use crate::theme::{
-        BarLayout, ChoiceVariant, Curve, LegendPosition, LoaderVariant, LoadingPosition, PieLabels,
-        Placement, QrRobustness, ScrollAxis, ScrollbarSize, ScrollbarVisibility,
+        BarLayout, ChoiceVariant, Curve, DescriptionPosition, LegendPosition, LoaderVariant,
+        LoadingPosition, PieLabels, Placement, QrRobustness, ScrollAxis, ScrollbarSize,
+        ScrollbarVisibility,
     };
 
     /// Add every new `str_enum!` here - the checks below iterate this list.
@@ -164,6 +165,7 @@ mod tests {
             $check!(LabelVisibility);
             $check!(Variant);
             $check!(ChoiceVariant);
+            $check!(DescriptionPosition);
             $check!(DrawerAnchor);
             $check!(FlexDirection);
             $check!(FlexWrap);

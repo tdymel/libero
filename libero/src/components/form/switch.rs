@@ -231,6 +231,7 @@ pub fn Switch(props: SwitchProps) -> Element {
         .enter_activates(!in_form)
         .label(&props.label)
         .description(&props.description)
+        .description_position(&props.description_position)
         .helper(&props.helper)
         .status(&props.status)
         .rules(props.validate.check(&checked))

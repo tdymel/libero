@@ -85,6 +85,7 @@ fn Demo() -> Element {
 | `validate` | `Validators<V>` | - | Rules over the value, shown once the slider loses focus or its form is submitted. |
 | `label` | `Caption` | - | The caption above the track, and the thumb's name. |
 | `description` | `Caption` | - | Between the label and the track. What the value means. |
+| `description_position` | `DescriptionPosition` | `Above` | Where the description sits: `above` the control, or `below` it. `below` keeps the controls of side-by-side fields level when only some have a description; give the row `align: "flex-start"`. Unset, the theme's `field.description_position`. A checkbox, switch or radio draws its description under the label either way. |
 | `helper` | `Caption` | - | Under the track, below the mark captions. |
 | `status` | `FieldStatus` | `Valid` | Validation state, under the helper. A bare `&str` is an error; an empty one or `None` is `Valid`. |
 | `required` | `bool` | `false` | Adds an asterisk to the label. No `aria-required`: ARIA does not allow it on a slider, which always holds a value. |

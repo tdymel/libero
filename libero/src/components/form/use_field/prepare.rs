@@ -13,9 +13,9 @@ use crate::{
         form::{Caption, FieldEntry, FieldPart, FieldStatus, Parse, worst},
         layout::use_box,
     },
-    hooks::{ElementHandle, use_localization, use_root_id, use_silent_focus_out},
+    hooks::{ElementHandle, use_localization, use_root_id, use_silent_focus_out, use_theme},
     platform,
-    theme::SizeCss,
+    theme::{DescriptionPosition, SizeCss},
     utils::warn,
 };
 
@@ -25,6 +25,7 @@ impl FieldBuilder<'_> {
         let id = use_root_id(self.attributes);
         let id_value = id();
         let words = use_localization();
+        let theme = use_theme();
         let warning_word = words.common.warning;
         let required_text = self.asks.text(&words.form);
 
@@ -165,13 +166,35 @@ impl FieldBuilder<'_> {
         // Only a `Text` caption is named: markup the caller built is theirs to
         // describe, and the status message is always text. In reading order.
         let [leading, trailing] = self.text_slots;
-        let described = [
-            ("description", description.text().is_some()),
-            ("leading", leading),
-            ("trailing", trailing),
+        let below = !self.inline
+            && self
+                .description_position
+                .and_then(Input::as_ref)
+                .copied()
+                .unwrap_or(theme.field.description_position)
+                == DescriptionPosition::Below;
+        let description_slot = ("description", description.text().is_some());
+        let text_slots = [("leading", leading), ("trailing", trailing)];
+        let captions = [
             ("helper", helper.text().is_some()),
             ("status", status.and_then(FieldStatus::message).is_some()),
         ];
+        let described = match below {
+            true => [
+                text_slots[0],
+                text_slots[1],
+                description_slot,
+                captions[0],
+                captions[1],
+            ],
+            false => [
+                description_slot,
+                text_slots[0],
+                text_slots[1],
+                captions[0],
+                captions[1],
+            ],
+        };
         let describedby = join_ids(&id_value, described);
 
         // The frame and controls inherit it past their own `per_radius` reset.
@@ -281,6 +304,7 @@ impl FieldBuilder<'_> {
             busy: matches!(status, Some(FieldStatus::Pending)),
             required: self.required,
             inline: self.inline,
+            description_below: below,
             activation,
             states,
             wrapper,

@@ -14,7 +14,7 @@ use crate::{
     hooks::{ElementHandle, SxSource},
     localization::FormLabels,
     sx::Sx,
-    theme::Size,
+    theme::{DescriptionPosition, Size},
 };
 
 /// The chrome every field stacks around its control, and its a11y wiring.
@@ -29,6 +29,7 @@ pub(crate) type MappedState = (Option<FieldStatus>, Parse);
 pub(crate) struct FieldBuilder<'a> {
     pub(super) label: Option<&'a Caption>,
     pub(super) description: Option<&'a Caption>,
+    pub(super) description_position: Option<&'a Input<DescriptionPosition>>,
     pub(super) helper: Option<&'a Caption>,
     pub(super) status: Option<&'a Input<FieldStatus>>,
     pub(super) rules: Option<FieldStatus>,
@@ -69,6 +70,7 @@ impl Default for FieldBuilder<'_> {
         Self {
             label: None,
             description: None,
+            description_position: None,
             helper: None,
             status: None,
             rules: None,
@@ -137,6 +139,13 @@ impl<'a> FieldBuilder<'a> {
     #[inline]
     pub fn description(mut self, description: &'a Caption) -> Self {
         self.description = Some(description);
+        self
+    }
+
+    /// The `description_position` prop; unset, the theme's.
+    #[inline]
+    pub fn description_position(mut self, position: &'a Input<DescriptionPosition>) -> Self {
+        self.description_position = Some(position);
         self
     }
 

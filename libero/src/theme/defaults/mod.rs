@@ -205,9 +205,9 @@ pub use divider::{
 };
 pub use drawer::{DRAWER_SIZE, DrawerDefaults};
 pub use field::{
-    ChoiceVariant, FIELD_CAPTION_FONT_SIZE, FIELD_CARD_PADDING, FIELD_FONT_SIZE, FIELD_FRAME_GAP,
-    FIELD_GAP, FIELD_HEIGHT, FIELD_LABEL_FONT_SIZE, FIELD_PADDING_X, FIELD_PADDING_Y,
-    FieldDefaults, FieldSizeLevel,
+    ChoiceVariant, DescriptionPosition, FIELD_CAPTION_FONT_SIZE, FIELD_CARD_PADDING,
+    FIELD_FONT_SIZE, FIELD_FRAME_GAP, FIELD_GAP, FIELD_HEIGHT, FIELD_LABEL_FONT_SIZE,
+    FIELD_PADDING_X, FIELD_PADDING_Y, FieldDefaults, FieldSizeLevel,
 };
 pub(crate) use field::{FIELD_CAPTIONS, ios_text_floor_sx};
 pub use file_field::{

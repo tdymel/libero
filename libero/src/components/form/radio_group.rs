@@ -169,6 +169,7 @@ pub fn RadioGroup<T: Options>(props: RadioGroupProps<T>) -> Element {
         .names_group()
         .label(&props.label)
         .description(&props.description)
+        .description_position(&props.description_position)
         .helper(&props.helper)
         .status(&props.status)
         .rules(props.validate.check(&current))

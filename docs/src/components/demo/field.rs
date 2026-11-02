@@ -13,8 +13,8 @@ pub trait FieldCopy {
     const ARIA_LABEL: &'static str = "aria_label";
 }
 
-/// The `status` toggle and the `label`, `description` and `helper` switches; `label` off
-/// prints `C::ARIA_LABEL` instead.
+/// The `status` toggle, the `label`, `description` and `helper` switches and the
+/// `description_position` toggle; `label` off prints `C::ARIA_LABEL` instead.
 pub fn field_controls<C: FieldCopy>() -> Vec<Control> {
     vec![
         Control::toggle("status", ["valid", "pending", "warning", "error"])
@@ -38,7 +38,25 @@ pub fn field_controls<C: FieldCopy>() -> Vec<Control> {
         Control::switch("description")
             .code(|_, values| caption(values, "description", C::DESCRIPTION)),
         Control::switch("helper").code(|_, values| caption(values, "helper", C::HELPER)),
+        Control::toggle("description_position", ["above", "below"])
+            .labels(["Above", "Below"])
+            .default("above")
+            .code(|_, values| {
+                let below = values.str("description_position") == "below";
+                match below && values.str("description") == "true" {
+                    true => vec![r#"description_position: "below""#.to_string()],
+                    false => vec![],
+                }
+            }),
     ]
+}
+
+/// [`field_controls`] without `description_position`, for a field that draws its
+/// description under the label either way.
+pub fn inline_field_controls<C: FieldCopy>() -> Vec<Control> {
+    let mut controls = field_controls::<C>();
+    controls.retain(|control| control.name != "description_position");
+    controls
 }
 
 fn caption(values: &DemoValues, name: &str, text: &str) -> Vec<String> {
@@ -53,6 +71,7 @@ pub struct FieldProps {
     pub label: Option<String>,
     pub aria_label: Option<&'static str>,
     pub description: Option<String>,
+    pub description_position: String,
     pub helper: Option<String>,
     pub status: FieldStatus,
 }
@@ -63,6 +82,7 @@ pub fn field_props<C: FieldCopy>(values: &DemoValues) -> FieldProps {
         label: on("label").then(|| C::LABEL.to_string()),
         aria_label: (!on("label")).then_some(C::LABEL),
         description: on("description").then(|| C::DESCRIPTION.to_string()),
+        description_position: values.str("description_position"),
         helper: on("helper").then(|| C::HELPER.to_string()),
         status: match values.str("status").as_str() {
             "pending" => FieldStatus::Pending,
@@ -93,6 +113,8 @@ mod tests {
         let values = DemoValues::defaults(&controls)
             .with("label", "false")
             .with("helper", "true")
+            .with("description", "true")
+            .with("description_position", "below")
             .with("status", "error");
         let code: Vec<String> = controls
             .iter()
@@ -103,7 +125,9 @@ mod tests {
             [
                 r#"status: "Write a few words.""#,
                 r#"aria_label: "Notes""#,
-                r#"helper: "Markdown works.""#
+                r#"description: "What changed.""#,
+                r#"helper: "Markdown works.""#,
+                r#"description_position: "below""#
             ]
         );
         let props = field_props::<Notes>(&values);
