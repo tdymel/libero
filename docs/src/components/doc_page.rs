@@ -335,8 +335,9 @@ fn doc_tabs_sx() -> Sx {
             sx().display("none"),
         ),
     )
+    // 16px text in DejaVu needs a 362px phone (5339): this tier ends past it, with 375px still at 16px.
     .media(
-        "(max-width: 22.5rem)",
+        "(max-width: 23rem)",
         sx().selector("& > [role=tablist] > [role=tab]", sx().font_size("0.875rem")),
     )
     // DejaVu, a wide fallback, needs this at 320px: tighter padding would read as one run of words.

@@ -40,10 +40,10 @@ pub fn MenubarPage() -> Element {
                         .doc("Whether the arrow keys wrap at the ends, along the bar and down each menu."),
                     prop("side", "Side")
                         .default("Bottom")
-                        .doc("Which side of its trigger every menu opens on. It flips when that side has no room. `Start`/`End` are logical: `Start` is the left under `dir=\"ltr\"`, the right under `rtl`."),
+                        .doc("Which side of its trigger every menu opens on. It flips when that side has no room. `Start`/`End` are logical: `Start` is the left under `dir=\"ltr\"`, the right under `rtl`. A phone-width menu is a bottom sheet and ignores it."),
                     prop("align", "Align")
                         .default("Start")
-                        .doc("Where each menu lines up along that side."),
+                        .doc("Where each menu lines up along that side. A phone-width menu is a bottom sheet and ignores it."),
                     prop("size", "Size")
                         .default(theme.menubar.size.as_str())
                         .doc("The triggers' font and padding, and each menu's item size."),
@@ -76,6 +76,7 @@ pub fn MenubarPage() -> Element {
                 .key(["Left"], "In an open menu: closes a submenu, or on the top level moves to the previous menu.")
                 .key(["Escape"], "Closes the menu and returns focus to its trigger.")
                 .handles([
+                    "Left and Right follow the visual direction under RTL: Left moves to the trigger on the left.",
                     "On a trigger, typing jumps to a trigger by its label.",
                     "A disabled trigger takes focus and opens nothing.",
                     "The rest works as in `Menu`, including `MenuItem`'s `shortcut` and `checkbox`.",

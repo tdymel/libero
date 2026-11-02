@@ -47,7 +47,7 @@ fn the_four_doc_tabs_fit_a_phone() {
             .unwrap();
         let page = &fixture.page;
         wait::for_visible(page, "[role=tablist]").await.unwrap();
-        for width in [375, 320] {
+        for width in [375, 368, 369, 361, 320] {
             page.execute_bounded(SetDeviceMetricsOverrideParams::new(width, 700, 1.0, true))
                 .await
                 .unwrap();
@@ -189,6 +189,7 @@ fn the_fixture_copy_matches_the_docs_shell() {
         "page_area",
         "use_skip_to_main",
         "skip_link",
+        "landing_sx",
         "use_kept_palette",
         "use_keep_palette",
     ] {
@@ -280,6 +281,17 @@ fn the_skip_link_closes_the_drawer_and_focuses_main() {
         )
         .await
         .unwrap();
+        // Todo 5329: the keyboard landing matches :focus-visible, and Container's inset ring stays off.
+        let ring: String = page
+            .evaluate_bounded(
+                "(() => { const main = document.querySelector('#docs-main'); \
+                   return `${main.matches(':focus-visible')} ${getComputedStyle(main).boxShadow}`; })()",
+            )
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        assert_eq!(ring, "true none");
         fixture.console.assert_clean("the skip link").unwrap();
         fixture.close().await.unwrap();
     });

@@ -74,6 +74,8 @@ parts work.
 - Set `underline: "always"` on a link inside a paragraph: the default `hover`
   draws it only on hover and `never` not at all, so at rest the link stands out
   by color alone.
+- Give a nav row of Anchors its own padding for a 44 px finger target. Running
+  text is exempt from WCAG 2.5.8, and an Anchor cannot tell which it is in.
 
 ### Example
 

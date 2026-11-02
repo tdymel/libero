@@ -244,7 +244,7 @@ pub(crate) fn AppShell() -> Element {
                                 .height("auto")
                                 .padding("24px 16px")
                                 .breakpoint(Size::Sm, sx().padding("48px 64px"))
-                                .selector("&:focus", sx().outline("none"))
+                                .and(landing_sx())
                                 .and(if swipes { edge_swipe_sx() } else { sx() }),
                             Outlet::<Route> {}
                         }
@@ -283,6 +283,11 @@ fn page_layer_sx() -> Sx {
         "&:has([data-fullscreen='drawn'])",
         sx().z_index(Z_INDEX_MODAL.value()),
     )
+}
+
+/// `main` takes focus from the skip link only and no keyboard use: without Container's inset ring (5329).
+fn landing_sx() -> Sx {
+    sx().selector("&:focus", sx().outline("none").box_shadow("none"))
 }
 
 /// The skip link's press. An open drawer leaves `main` inert, so it closes first and focus

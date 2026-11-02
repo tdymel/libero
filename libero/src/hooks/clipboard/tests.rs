@@ -84,6 +84,47 @@ fn a_denied_write_reports_failed() {
     assert_eq!(flags, (false, true), "(copied, failed)");
 }
 
+/// Answers only once polled, and says so: a reset ran before the write settled.
+struct LateClipboard {
+    answered: Rc<Cell<bool>>,
+}
+
+impl ClipboardApi for LateClipboard {
+    fn write_text(&self, _text: String) -> Write {
+        let answered = self.answered.clone();
+        Box::pin(async move {
+            answered.set(true);
+            Ok(())
+        })
+    }
+}
+
+/// Todo 5333: tap Copy, tap away, and the slow write settles on an unfocused button.
+#[test]
+fn a_write_settling_after_a_reset_shows_nothing() {
+    let answered = Rc::new(Cell::new(false));
+    let fake = Box::leak(Box::new(LateClipboard {
+        answered: answered.clone(),
+    }));
+    let _guard = fake_clipboard(fake);
+    let mut dom = started(hook_app);
+    dom.in_scope(ScopeId::APP, || {
+        let mut clipboard = CLIPBOARD.with(Cell::get).expect("rendered");
+        clipboard.copy("text");
+        clipboard.reset();
+    });
+    pump_until(&mut dom, "the write to settle", |_| answered.get());
+    assert_eq!(dom.in_runtime(copied_and_failed), (false, false));
+    // A new copy after the reset still lands.
+    dom.in_scope(ScopeId::APP, || {
+        let mut clipboard = CLIPBOARD.with(Cell::get).expect("rendered");
+        clipboard.copy("again");
+    });
+    pump_until(&mut dom, "the second write", |dom| {
+        dom.in_runtime(copied_and_failed) == (true, false)
+    });
+}
+
 /// The last element with a click listener: `CodeBlock`'s copy button.
 #[derive(Default)]
 struct LastClick {

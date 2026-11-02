@@ -5,7 +5,7 @@ use crate::components::{
 use dioxus::prelude::*;
 use libero::{
     components::{Anchor, Box, Code, Header, Input, ScrollArea, Text},
-    sx::sx,
+    sx::{Sx, sx},
     use_theme,
 };
 
@@ -27,9 +27,25 @@ Box {
     component: "nav",
     aria_label: "Demo links",
     sx: sx().display("flex").gap("md").with("margin-inline-start", "auto"),
-    Anchor { to: Route::GettingStarted {}, "Docs" }
-    Anchor { to: Route::HeaderPage {}, "Header" }
+    Anchor {
+        to: Route::GettingStarted {},
+        sx: sx().padding("sm").min_height("44px").display("inline-flex").align_items("center"),
+        "Docs"
+    }
+    Anchor {
+        to: Route::HeaderPage {},
+        sx: sx().padding("sm").min_height("44px").display("inline-flex").align_items("center"),
+        "Header"
+    }
 }"#;
+
+/// A nav row's 44 px finger target: an Anchor brings none, running text needs none.
+fn nav_link_sx() -> Sx {
+    sx().padding("sm")
+        .min_height("44px")
+        .display("inline-flex")
+        .align_items("center")
+}
 
 fn no_gradient(values: &DemoValues) -> bool {
     values.str("gradient") != "true"
@@ -150,8 +166,8 @@ pub fn HeaderPage() -> Element {
                                     component: "nav",
                                     aria_label: "Demo links",
                                     sx: sx().display("flex").gap("md").with("margin-inline-start", "auto"),
-                                    Anchor { to: crate::Route::GettingStarted {}, "Docs" }
-                                    Anchor { to: crate::Route::HeaderPage {}, "Header" }
+                                    Anchor { to: crate::Route::GettingStarted {}, sx: nav_link_sx(), "Docs" }
+                                    Anchor { to: crate::Route::HeaderPage {}, sx: nav_link_sx(), "Header" }
                                 }
                             }
                             Box {

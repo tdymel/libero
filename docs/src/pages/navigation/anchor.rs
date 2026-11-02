@@ -53,6 +53,7 @@ pub fn AnchorPage() -> Element {
                 .must([
                     "Make the link text say where the link goes: it is the accessible name.",
                     "Set `underline: \"always\"` on a link inside a paragraph: the default `hover` draws it only on hover and `never` not at all, so at rest the link stands out by color alone.",
+                    "Give a nav row of Anchors its own padding for a 44 px finger target. Running text is exempt from WCAG 2.5.8, and an Anchor cannot tell which it is in.",
                 ])
                 .example("A link in a paragraph, `Anchor { to: \"https://www.rust-lang.org\", target: \"_blank\", underline: \"always\", \"The Rust website\" }`: it keeps its underline, and a screen reader reads \"The Rust website (opens in a new tab)\"."),
             lead: rsx! {

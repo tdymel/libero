@@ -138,3 +138,24 @@ fn a_press_while_one_is_pending_is_ignored() {
     let (share, _, _) = share_through_the_hook(ShareOutcome::Shared, true, 2);
     assert_eq!(share.shared.borrow().len(), 1);
 }
+
+/// Todo 5333: tap Share, tap away, and the rejected share settles on an unfocused button.
+#[test]
+fn a_share_settling_after_a_reset_shows_nothing_and_still_reports() {
+    let (share, clipboard) = fakes(ShareOutcome::Failed("no".into()), true);
+    let _share = fake_share(share);
+    let _clipboard = fake_clipboard(clipboard);
+    let done = std::rc::Rc::new(Cell::new(false));
+    let mut dom = started(hook_app);
+    dom.in_scope(ScopeId::APP, || {
+        let mut hook = the_share();
+        let done = done.clone();
+        hook.share_then(data(), move |_| done.set(true));
+        hook.reset();
+    });
+    pump_until(&mut dom, "the share to settle", |dom| {
+        dom.in_runtime(|| !*the_share().pending.peek())
+    });
+    assert!(done.get(), "onshare still fires");
+    assert_eq!(dom.in_runtime(|| the_share().outcome.peek().clone()), None);
+}

@@ -213,7 +213,7 @@ impl Control {
             .enumerate()
             .map(|(at, option)| {
                 if at == 0 || at == last {
-                    SliderMark::labeled(at as f64, self.label_of(option))
+                    SliderMark::labeled(at as f64, self.drawn_label_of(option))
                 } else {
                     SliderMark::new(at as f64)
                 }
@@ -272,6 +272,11 @@ impl Control {
         };
         self.labels = Some(self.options.iter().map(capital).collect());
         self
+    }
+
+    /// [`label_of`](Self::label_of) as the panel draws it: `-lg` and `2 s` keep their order under RTL.
+    pub fn drawn_label_of(&self, value: &str) -> String {
+        isolated(self.label_of(value))
     }
 
     /// What an option reads as - its own value unless `labels` renames it.
@@ -336,5 +341,25 @@ pub fn generate_code(
             let child = child.as_deref().map(super::indent).unwrap_or_default();
             format!("{component} {{\n{props}{child}}}")
         }
+    }
+}
+
+/// A label with neutrals in a first-strong isolate: bidi moves them under RTL otherwise.
+fn isolated(label: String) -> String {
+    match label.chars().all(char::is_alphanumeric) {
+        true => label,
+        false => format!("\u{2068}{label}\u{2069}"),
+    }
+}
+
+#[cfg(test)]
+mod isolated_tests {
+    use super::isolated;
+
+    #[test]
+    fn a_label_with_neutrals_is_isolated_and_a_word_is_left_alone() {
+        assert_eq!(isolated("-lg".into()), "\u{2068}-lg\u{2069}");
+        assert_eq!(isolated("2 s".into()), "\u{2068}2 s\u{2069}");
+        assert_eq!(isolated("auto".into()), "auto");
     }
 }

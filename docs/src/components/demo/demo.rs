@@ -304,7 +304,7 @@ fn ToggleSegments(control: Control, value: String, onchange: EventHandler<String
             "aria-label": label(control.name),
             value,
             options: control.options.clone(),
-            option_label: move |option: String| OptionLabel::from(control.label_of(&option)),
+            option_label: move |option: String| OptionLabel::from(control.drawn_label_of(&option)),
             onchange: move |next: String| onchange.call(next),
         }
     }
@@ -467,7 +467,7 @@ fn DemoControl(
                         // The bubble and the valuetext show the option's label, not the step index.
                         format: {
                             let control = control.clone();
-                            move |at: f64| control.label_of(&control.options[at as usize])
+                            move |at: f64| control.drawn_label_of(&control.options[at as usize])
                         },
                         marks: control.marks(),
                         oninput: {
@@ -495,7 +495,7 @@ fn DemoControl(
                         options: control.options.clone(),
                         option_label: {
                             let control = control.clone();
-                            move |option: String| control.label_of(&option)
+                            move |option: String| control.drawn_label_of(&option)
                         },
                         onchange: move |value: String| {
                             values.write().0[index].1 = value;
@@ -537,7 +537,7 @@ fn DemoControl(
                                 options: control.options.clone(),
                                 option_label: {
                                     let control = control.clone();
-                                    move |option: String| control.label_of(&option)
+                                    move |option: String| control.drawn_label_of(&option)
                                 },
                                 onchange: move |value: String| {
                                     values.write().0[index].1 = value;

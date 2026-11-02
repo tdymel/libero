@@ -38,7 +38,9 @@ fn underline_sx(underline: AnchorUnderline) -> Sx {
 // Text's theme-level sizing, not `Text` itself - it has no href/target/rel
 // escape hatch to render a real anchor with.
 static ANCHOR_BASE_SX: StaticSx = StaticSx::new(|| {
-    let base = AnchorDefaults::theme_vars().margin("0");
+    let base = AnchorDefaults::theme_vars()
+        .margin("0")
+        .overflow_wrap("anywhere");
 
     AnchorUnderline::ALL.iter().fold(base, |base, &underline| {
         base.when(underline.state_name(), underline_sx(underline))

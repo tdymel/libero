@@ -135,6 +135,7 @@ static DIVIDER_LABEL_HORIZONTAL_SX: StaticSx = StaticSx::new(|| {
     // Wraps: a long label must not run out of a narrow container.
     sx().padding("0 12px")
         .min_width("0")
+        .overflow_wrap("anywhere")
         .text_align("center")
         .user_select("none")
 });

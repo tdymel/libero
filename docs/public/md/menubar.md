@@ -85,8 +85,8 @@ fn Demo() -> Element {
 | `menus` | `Vec<MenubarMenu>` | required | The top-level menus, in order. |
 | `aria_label` | `String` | required | The bar's accessible name. |
 | `loop_focus` | `bool` | `true` | Whether the arrow keys wrap at the ends, along the bar and down each menu. |
-| `side` | `Side` | `Bottom` | Which side of its trigger every menu opens on. It flips when that side has no room. `Start`/`End` are logical: `Start` is the left under `dir="ltr"`, the right under `rtl`. |
-| `align` | `Align` | `Start` | Where each menu lines up along that side. |
+| `side` | `Side` | `Bottom` | Which side of its trigger every menu opens on. It flips when that side has no room. `Start`/`End` are logical: `Start` is the left under `dir="ltr"`, the right under `rtl`. A phone-width menu is a bottom sheet and ignores it. |
+| `align` | `Align` | `Start` | Where each menu lines up along that side. A phone-width menu is a bottom sheet and ignores it. |
 | `size` | `Size` | `md` | The triggers' font and padding, and each menu's item size. |
 | `radius` | `ThemeAwareValue` | `sm` | The triggers' and the menus' corner radius, or any CSS, e.g. `radius: "0"`. |
 | `menu_parts` | `Parts<MenuPart>` | - | Every menu's `parts`, the `Menu` page's Style API table. The menus open in a portal, out of the bar's `sx` and `parts`. |
@@ -132,6 +132,7 @@ parts work. The menus open in a portal, outside the bar: style them with
 
 ### Libero handles
 
+- Left and Right follow the visual direction under RTL: Left moves to the trigger on the left.
 - On a trigger, typing jumps to a trigger by its label.
 - A disabled trigger takes focus and opens nothing.
 - The rest works as in [`Menu`](menu.md), including `MenuItem`'s `shortcut`

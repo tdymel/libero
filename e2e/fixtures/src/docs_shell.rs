@@ -7,7 +7,7 @@
 use dioxus::prelude::*;
 use libero::{
     LiberoProvider,
-    components::{Box, Button, ScrollArea, ScrollAreaHandle, Tabs, use_scroll_area},
+    components::{Box, Button, Container, ScrollArea, ScrollAreaHandle, Tabs, use_scroll_area},
     hooks::{ElementHandle, use_element, use_fullscreen, use_local_storage, use_theme_set},
     platform::ElementApi,
     sx::{Sx, sx},
@@ -154,6 +154,11 @@ fn page_area(open: bool, area: ScrollAreaHandle, page: Element) -> Element {
     }
 }
 
+/// `main` takes focus from the skip link only and no keyboard use: without Container's inset ring (5329).
+fn landing_sx() -> Sx {
+    sx().selector("&:focus", sx().outline("none").box_shadow("none"))
+}
+
 /// The skip link's press. An open drawer leaves `main` inert, so it closes first and focus
 /// follows once the page is live again, the order of 1693 (5310).
 fn use_skip_to_main(mut open: Signal<bool>, main: ElementHandle) -> Callback<()> {
@@ -216,7 +221,12 @@ fn DrawerPage() -> Element {
             Button { id: "burger", onclick: move |_| open.set(!open()), "Menu" }
             div { display: "flex", flex: "1", min_height: "0",
                 {page_area(open(), area, rsx! {
-                    main { id: "docs-main", tabindex: "-1", onmounted: main_area.mount(),
+                    Container {
+                        component: "main",
+                        id: "docs-main",
+                        tabindex: "-1",
+                        onmounted: main_area.mount(),
+                        sx: landing_sx(),
                         div { height: "1500px", "The page" }
                     }
                 })}
@@ -328,8 +338,9 @@ fn doc_tabs_sx() -> Sx {
             sx().display("none"),
         ),
     )
+    // 16px text in DejaVu needs a 362px phone (5339): this tier ends past it, with 375px still at 16px.
     .media(
-        "(max-width: 22.5rem)",
+        "(max-width: 23rem)",
         sx().selector("& > [role=tablist] > [role=tab]", sx().font_size("0.875rem")),
     )
     // DejaVu, a wide fallback, needs this at 320px: tighter padding would read as one run of words.

@@ -153,7 +153,7 @@ pub(crate) const FEATURES: &[Feature] = &[
     feature("flex", "layout", "Flex", &["box"], true, &["/layout/flex"]),
     feature("float", "layout", "Float", &["box"], true, &["/layout/float"]),
     feature("grid", "layout", "Grid, GridItem, GridZone", &["box"], true, &["/layout/grid"]),
-    feature("header", "layout", "Header", &["paper", "use-id", "use-icon", "visually-hidden"], true, &["/layout/header"]),
+    feature("header", "layout", "Header", &["paper", "use-id"], true, &["/layout/header"]),
     feature("paper", "layout", "Paper", &["box"], true, &["/layout/paper"]),
     feature("scroll-area", "layout", "ScrollArea, use_scroll_area", &["box", "use-drag"], true, &["/layout/scroll-area"]),
     feature("scroller", "layout", "Scroller, use_scroller", &["scroll-area", "use-icon", "use-id", "visually-hidden"], true, &["/layout/scroller"]),

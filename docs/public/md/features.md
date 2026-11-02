@@ -135,7 +135,7 @@ it is on (Notes).
 | `flex` | Flex | box | on |  |
 | `float` | Float | box | on |  |
 | `grid` | Grid, GridItem, GridZone | box | on |  |
-| `header` | Header | paper, use-id, use-icon, visually-hidden | on |  |
+| `header` | Header | paper, use-id | on |  |
 | `paper` | Paper | box | on |  |
 | `scroll-area` | ScrollArea, use_scroll_area | box, use-drag | on |  |
 | `scroller` | Scroller, use_scroller | scroll-area, use-icon, use-id, visually-hidden | on |  |

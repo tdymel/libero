@@ -26,6 +26,8 @@ use crate::platform::{ShareData, ShareOutcome, clipboard, share};
 pub struct Share {
     outcome: Signal<Option<ShareOutcome>>,
     pending: Signal<bool>,
+    /// Bumped by a reset: a share still open from before it shows nothing (5333).
+    resets: CopyValue<u32>,
 }
 
 impl Share {
@@ -49,6 +51,7 @@ impl Share {
         self.pending.set(true);
         self.outcome.set(None);
         let mut this = *self;
+        let at = *self.resets.peek();
         spawn(async move {
             let mut outcome = sharing.await;
             if outcome == ShareOutcome::Unsupported
@@ -57,13 +60,16 @@ impl Share {
                 outcome = copied(text).await;
             }
             this.pending.set(false);
-            this.outcome.set(Some(outcome.clone()));
+            if *this.resets.peek() == at {
+                this.outcome.set(Some(outcome.clone()));
+            }
             done(outcome);
         });
     }
 
-    /// Clears the outcome.
+    /// Clears the outcome, also the one a share still open would show.
     pub fn reset(&mut self) {
+        self.resets += 1;
         self.outcome.set(None);
     }
 
@@ -115,6 +121,7 @@ pub fn use_share() -> Share {
     Share {
         outcome: use_signal(|| None),
         pending: use_signal(|| false),
+        resets: use_hook(|| CopyValue::new(0)),
     }
 }
 

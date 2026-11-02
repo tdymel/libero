@@ -26,6 +26,8 @@ use crate::platform::clipboard;
 pub struct Clipboard {
     copied: Signal<bool>,
     failed: Signal<bool>,
+    /// Bumped by a reset: a write still out from before it shows nothing (5333).
+    resets: CopyValue<u32>,
 }
 
 impl Clipboard {
@@ -39,13 +41,16 @@ impl Clipboard {
         };
         let write = clipboard.write_text(text.into());
         let mut this = *self;
+        let at = *self.resets.peek();
         spawn(async move {
             let written = write.await.is_ok();
             if !written {
                 // A denied permission, the common failure on the web.
                 crate::utils::warn("clipboard write failed");
             }
-            this.settle(written);
+            if *this.resets.peek() == at {
+                this.settle(written);
+            }
         });
     }
 
@@ -54,8 +59,9 @@ impl Clipboard {
         self.failed.set(!written);
     }
 
-    /// Clears both `copied()` and `failed()`.
+    /// Clears both `copied()` and `failed()`, also for a write still out.
     pub fn reset(&mut self) {
+        self.resets += 1;
         self.copied.set(false);
         self.failed.set(false);
     }
@@ -77,6 +83,7 @@ pub fn use_clipboard() -> Clipboard {
     Clipboard {
         copied: use_signal(|| false),
         failed: use_signal(|| false),
+        resets: use_hook(|| CopyValue::new(0)),
     }
 }
 

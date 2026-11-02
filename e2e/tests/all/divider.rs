@@ -177,3 +177,28 @@ fn a_long_label_wraps_inside_its_column() {
         fixture.close().await.unwrap();
     });
 }
+
+/// Todo 5334: one word longer than the column breaks inside the rule.
+#[test]
+fn a_long_word_stays_inside_its_column() {
+    block_on(async {
+        let fixture = Fixture::open("/divider/long-word", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        wait::for_visible(page, "#long-word").await.unwrap();
+        let inside: bool = page
+            .evaluate_bounded(
+                "(() => { const rule = document.querySelector('#long-word'); \
+                   const label = rule.querySelector('[data-slot=label]'); \
+                   return label.getBoundingClientRect().right <= rule.getBoundingClientRect().right + 0.5 \
+                     && rule.scrollWidth <= rule.clientWidth; })()",
+            )
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        assert!(inside, "the long word ran out of the rule");
+        fixture.close().await.unwrap();
+    });
+}

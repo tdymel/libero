@@ -6,7 +6,20 @@ use libero::components::{Divider, Flex, Text};
 
 use crate::Routes;
 
-pub const ROUTES: Routes = &[("/divider", || rsx! { DividerPage {} })];
+pub const ROUTES: Routes = &[
+    ("/divider", || rsx! { DividerPage {} }),
+    ("/divider/long-word", || rsx! { LongWordPage {} }),
+];
+
+/// One word longer than the 320px column.
+#[component]
+fn LongWordPage() -> Element {
+    rsx! {
+        div { max_width: "320px",
+            Divider { id: "long-word", "Versandkostenberechnungsgrundlagenverordnungsentwurfsfassungsmuster" }
+        }
+    }
+}
 
 #[component]
 fn DividerPage() -> Element {
