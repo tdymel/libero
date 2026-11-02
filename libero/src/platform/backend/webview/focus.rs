@@ -274,7 +274,7 @@ pub(crate) fn focus_lands_in(boundary: &str) -> Read<bool> {
 }
 
 /// Keeps the focused element in the page under the returned token, for [`focus_kept`].
-/// With focus on the page itself, the first element of `selectors` instead.
+/// With focus on the page itself, `selectors`, resolved by [`focus_kept`] to their first element.
 pub(crate) fn keep_focused(selectors: &[String]) -> Option<u64> {
     if !runs_scripts() {
         return None;
@@ -282,11 +282,9 @@ pub(crate) fn keep_focused(selectors: &[String]) -> Option<u64> {
     let token = NEXT_SLOT.fetch_add(1, Ordering::Relaxed);
     eval_with(
         json!({ "token": token, "selectors": selectors }),
-        "let el = document.activeElement;
-        if (!el || el === document.body) {
-            el = data.selectors.map(s => document.querySelector(s)).find(Boolean) ?? el;
-        }
-        (window.__lsxKept ??= new Map()).set(data.token, el);",
+        "const el = document.activeElement;
+        const lost = (!el || el === document.body) && data.selectors.length > 0;
+        (window.__lsxKept ??= new Map()).set(data.token, lost ? data.selectors : el);",
     );
     Some(token)
 }
@@ -295,8 +293,9 @@ pub(crate) fn keep_focused(selectors: &[String]) -> Option<u64> {
 pub(crate) fn focus_kept(token: u64) {
     eval_with(
         json!(token),
-        "const el = window.__lsxKept?.get(data);
+        "let el = window.__lsxKept?.get(data);
         window.__lsxKept?.delete(data);
+        if (Array.isArray(el)) el = el.map(s => document.querySelector(s)).find(Boolean);
         if (el?.isConnected && el !== document.body) el.focus();",
     );
 }

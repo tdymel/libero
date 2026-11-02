@@ -178,7 +178,16 @@ async fn escape_finds_an_unfocused_trigger<D: Driver>(d: &mut D, _route: &str) -
     placed(d, MENU).await?;
     d.press(keyboard::ESCAPE).await?;
     expanded(d, false).await?;
-    eventually_focused(d, TRIGGER, "Escape").await
+    eventually_focused(d, TRIGGER, "Escape").await?;
+
+    // Opened in code from a focused control, it returns there.
+    d.focus("#opener").await?;
+    d.press(keyboard::ENTER).await?;
+    expanded(d, true).await?;
+    placed(d, MENU).await?;
+    d.press(keyboard::ESCAPE).await?;
+    expanded(d, false).await?;
+    eventually_focused(d, "#opener", "Escape after a code open").await
 }
 
 e2e::scenario!(

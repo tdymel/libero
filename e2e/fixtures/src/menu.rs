@@ -506,6 +506,8 @@ fn MenuUnfocusedTriggerPage() -> Element {
                 "Actions"
             }
         }
+        // A focused control that opens it in code: focus goes back here, not to the trigger.
+        button { id: "opener", onclick: move |_| menu.open(), "Open actions" }
     }
 }
 

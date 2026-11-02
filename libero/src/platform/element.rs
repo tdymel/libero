@@ -117,7 +117,7 @@ pub(crate) fn focused_attribute(attr: &str) -> super::Read<Option<String>> {
 
 /// Keeps the focused element page-side, for a WebView, whose `DocumentApi` names
 /// no active element. `None` elsewhere. [`focus_kept`] focuses it.
-/// With focus on the page itself, keeps the first element of `selectors` instead.
+/// With focus on the page itself, keeps `selectors`, whose first element [`focus_kept`] focuses.
 pub(crate) fn keep_focused(selectors: &[String]) -> Option<u64> {
     backend::keep_focused(selectors)
 }
