@@ -13,6 +13,7 @@ use dioxus::{
 use super::checked_async::Checking;
 use crate::{
     components::form::{FieldError, FieldStatus, Parse, Validators, word, worst},
+    platform,
     utils::warn,
 };
 
@@ -28,6 +29,8 @@ pub(crate) struct FormScope {
     submitted: Signal<bool>,
     /// Bumped by a reset; a field drops its own touched flag when it moved.
     generation: Signal<u32>,
+    /// The input the last reset ran in: see [`reset_this_input`](Self::reset_this_input).
+    reset_at: Signal<Option<u64>>,
     /// Bumped by every submit and every reset, not only the first submit.
     settled: Signal<u32>,
     /// Bumped by every reset, native reset button included.
@@ -117,6 +120,7 @@ impl FormScope {
             touched: Signal::new(BTreeSet::new()),
             submitted: Signal::new(false),
             generation: Signal::new(0),
+            reset_at: Signal::new(None),
             settled: Signal::new(0),
             resets: Signal::new(0),
             next_key: Signal::new(0),
@@ -168,6 +172,13 @@ impl FormScope {
         *self.generation.peek()
     }
 
+    /// Whether a reset ran since the last press or key: a leave heard now is that press's own
+    /// focus move, which Blitz makes after the click, and nobody has left the fresh form (5336).
+    pub fn reset_this_input(&self) -> bool {
+        let at = *self.reset_at.peek();
+        at.is_some() && at == platform::input_serial()
+    }
+
     /// How many submits and resets the form has seen. Reactive, so what a
     /// field shows only while it is edited - a revealed password - can end.
     pub fn settled(&self) -> u32 {
@@ -202,6 +213,7 @@ impl FormScope {
             self.submitted.set(false);
         }
         *self.generation.write_unchecked() += 1;
+        *self.reset_at.write_unchecked() = platform::input_serial();
         if !self.drafts.peek().is_empty() {
             self.drafts.write_unchecked().clear();
         }

@@ -47,11 +47,20 @@ thread_local! {
     /// Where focus goes back to after a press that cancelled its `mousedown`,
     /// until the press has ended. See [`mouse_pressed`].
     static KEPT: Cell<Option<NodeId>> = const { Cell::new(None) };
+    /// Counts presses and keys. See [`input_serial`].
+    static INPUT: Cell<u64> = const { Cell::new(0) };
+}
+
+/// Which press or key the app is at: focus moves after a press's click handlers, so what those
+/// did can be told apart from the move they come before (5336).
+pub(in crate::platform::backend) fn input_serial() -> u64 {
+    INPUT.get()
 }
 
 /// A `mousedown` reaching [`Listener`](super::Listener). Cancelled, the web
 /// leaves focus where it is; Blitz moves it on the release all the same.
 pub(super) fn mouse_pressed(event: &Event<MouseData>) {
+    INPUT.set(INPUT.get() + 1);
     KEPT.set(None);
     if event.default_action_enabled() {
         return;
@@ -95,6 +104,7 @@ pub(in crate::platform::backend) fn press_kept_focus() -> bool {
 
 /// A key ends any press.
 pub(super) fn forget_kept() {
+    INPUT.set(INPUT.get() + 1);
     KEPT.set(None);
 }
 

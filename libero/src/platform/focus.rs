@@ -89,6 +89,12 @@ pub(crate) fn blur_counts(event: &Event<FocusData>) -> bool {
     !backend::press_kept_focus()
 }
 
+/// Which press or key the app is at. `None` where focus moves before a press's click handlers:
+/// Blitz alone moves it after them, so a handler's work can precede the leave it caused.
+pub(crate) fn input_serial() -> Option<u64> {
+    backend::input_serial()
+}
+
 /// Whether this `focusin`'s element matches `:focus-visible`, the browser's call
 /// on keyboard vs pointer. `None` off the web: the caller keeps its heuristic.
 pub(crate) fn focus_visible(event: &Event<FocusData>) -> Option<bool> {

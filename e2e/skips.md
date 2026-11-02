@@ -119,7 +119,6 @@ The performance scenarios (units `perf`, `table_perf`) are no skips but run on r
 | `focus_trap::tab_passes_over_a_stop_that_is_not_rendered` | android | 958: element identity on the WebView |
 | `focus_trap::tab_passes_over_a_stop_that_is_not_rendered` | desktop | 958: element identity on the WebView |
 | `focus_trap::tab_passes_over_a_stop_that_is_not_rendered` | ios | 958: element identity on the WebView |
-| `form::a_held_press_out_of_a_fieldset_lands_on_every_platform` | native | 5336: Blitz moves focus after the click, so the reveal lands after the reset |
 | `home::arrow_down_after_typing_enters_on_the_typed_day` | android | 958: element identity on the WebView |
 | `home::arrow_down_after_typing_enters_on_the_typed_day` | desktop | 958: element identity on the WebView |
 | `home::arrow_down_after_typing_enters_on_the_typed_day` | ios | 958: element identity on the WebView |
@@ -520,10 +519,10 @@ The performance scenarios (units `perf`, `table_perf`) are no skips but run on r
 | `use_swipe::an_edge_swipe_reopens_a_drawer_five_times` | desktop | 1126: no touch input under Xvfb |
 | `use_swipe::an_edge_swipe_yields_on_a_scroller_control` | desktop | 1126: no touch input under Xvfb |
 | `use_swipe::an_edge_swipe_yields_on_a_scroller_control_under_rtl` | desktop | 1126: no touch input under Xvfb |
-| `use_swipe::an_edge_swipe_yields_on_a_scroller_control_under_rtl` | native | 5338: a negative scroll offset stays at 0 on Blitz |
+| `use_swipe::an_edge_swipe_yields_on_a_scroller_control_under_rtl` | native | 707: Blitz clamps an RTL scroller at 0, so its left overflow is out of reach |
 | `use_swipe::an_edge_swipe_yields_to_a_scrolled_inner_scroller` | desktop | 1126: no touch input under Xvfb |
 | `use_swipe::an_edge_swipe_yields_to_a_scrolled_inner_scroller_under_rtl` | desktop | 1126: no touch input under Xvfb |
-| `use_swipe::an_edge_swipe_yields_to_a_scrolled_inner_scroller_under_rtl` | native | 5338: a negative scroll offset stays at 0 on Blitz |
+| `use_swipe::an_edge_swipe_yields_to_a_scrolled_inner_scroller_under_rtl` | native | 707: Blitz clamps an RTL scroller at 0, so its left overflow is out of reach |
 | `video::every_audio_source_failing_shows_the_error` | native | Blitz plays no media and shows the fallback |
 | `video::every_audio_source_failing_shows_the_error` | web | audio::every_source_failing_shows_the_error is the web's arm |
 | `video::every_video_source_failing_shows_the_error` | native | Blitz plays no media and shows the fallback |

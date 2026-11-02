@@ -438,7 +438,8 @@ fn clamp_to_range(root: ElementHandle) {
 /// Reads the area's position once laid out, for `check` (`x`, `y`, `max_x`, `max_y`).
 fn measure_edges(root: ElementHandle, check: impl Fn(f64, f64, f64, f64) + 'static) {
     when_laid_out(move || {
-        let (size, view, offset) = (root.scroll_size(), root.dimensions(), root.scroll_offset());
+        // The client box, as in `clamp_to_range`: a border counts in no end (5352).
+        let (size, view, offset) = (root.scroll_size(), root.client_size(), root.scroll_offset());
         spawn(async move {
             let (Ok(size), Ok(view), Ok((x, y))) = (size.await, view.await, offset.await) else {
                 return;

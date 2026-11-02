@@ -285,6 +285,9 @@ pub fn Fieldset<V: FormValue>(props: FieldsetProps<V>) -> Element {
     // (5323). A reset that click ran is a form nobody left yet.
     platform::watch_presses();
     let leave = move || {
+        if scope.reset_this_input() {
+            return;
+        }
         let at = scope.generation();
         platform::after_press(move || {
             let mut left_at = left_at;

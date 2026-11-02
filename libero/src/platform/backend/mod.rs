@@ -830,6 +830,14 @@ pub(crate) fn press_kept_focus() -> bool {
     return false;
 }
 
+/// Only Blitz moves focus after a press's click - see [`input_serial`](crate::platform::input_serial).
+pub(crate) fn input_serial() -> Option<u64> {
+    #[cfg(all(not(target_arch = "wasm32"), feature = "native"))]
+    return Some(blitz::input_serial());
+    #[cfg(not(all(not(target_arch = "wasm32"), feature = "native")))]
+    return None;
+}
+
 /// Only Blitz rewrites them - see [`focus_selectors`](crate::platform::focus_selectors).
 pub(crate) fn focus_selectors(css: &str) -> std::borrow::Cow<'_, str> {
     #[cfg(all(not(target_arch = "wasm32"), feature = "native"))]

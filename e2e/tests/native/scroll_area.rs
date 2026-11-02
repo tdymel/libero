@@ -517,6 +517,39 @@ fn end_reaches_the_bottom_once() {
     assert_eq!(reached_after(&mut page), "1");
 }
 
+fn edged_bordered() -> Element {
+    let mut reached = use_signal(|| 0u32);
+    rsx! {
+        span { id: "reached", "{reached}" }
+        div { id: "list-pane", height: "120px",
+            ScrollArea {
+                aria_label: "Rows",
+                style: "border: 10px solid",
+                onbottomreached: move |_| reached += 1,
+                for i in 0..30 {
+                    div { "data-row": i, height: "20px", "Row {i}" }
+                }
+            }
+        }
+    }
+}
+
+/// Todo 5352: a border counts in no end, so 500 of a 500 range is the bottom, not 480.
+#[test]
+fn a_bordered_area_reaches_its_bottom_at_its_real_end() {
+    const AREA: &str = "#list-pane > [role=region]";
+    let mut page = mount(edged_bordered);
+    page.hover("[data-row='2']");
+    page.wheel("[data-row='2']", 490.0);
+    page.wait_for(|page| page.scroll_top(AREA) >= 490.0);
+    for _ in 0..5 {
+        page.wait(Duration::from_millis(20));
+    }
+    assert_eq!(page.text("#reached"), "0", "10 px short of the end");
+    page.wheel("[data-row='25']", 2000.0);
+    assert_eq!(reached_after(&mut page), "1");
+}
+
 fn one_axis() -> Element {
     rsx! {
         div { width: "200px", height: "80px",

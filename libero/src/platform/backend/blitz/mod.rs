@@ -49,7 +49,7 @@ pub(super) use drag::follow_pointer;
 use drag::followed;
 use element::{BlitzElement, is_rendered, node_of};
 pub(super) use element::{element, element_contains, mounted_by_selector};
-pub(super) use focus::{focus_lands_in, press_kept_focus, silent_focus};
+pub(super) use focus::{focus_lands_in, input_serial, press_kept_focus, silent_focus};
 pub(super) use focused::{arrow_target, caret_edges, focus_is_in, typing_target, watch_focus};
 use form::checked_attr;
 pub(super) use form::{activated_submitter, form_values, implicit_submission};

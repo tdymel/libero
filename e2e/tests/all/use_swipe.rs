@@ -160,7 +160,8 @@ async fn the_band_yields_to_a_scrolled_scroller<D: Driver>(d: &mut D, _route: &s
     d.scroll_to("#wide", 0.0, 0.0).await?;
     d.swipe_from(IN_BAND, y, 120.0, 0.0).await?;
     text_is(d, "#opens", "1").await?;
-    // Chromium sometimes lands on exactly 1 here, cause unknown; a pan would move it further.
+    // Chromium itself moves it to exactly 1 in some runs, mid-swipe with every move prevented and
+    // no script scroll (5345); a rightward pan cannot move it off 0 at all.
     let left = wide_scroll_left(d).await?;
     assert!(left.abs() <= 1.0, "the band swipe scrolled it to {left}");
     Ok(())
@@ -410,7 +411,7 @@ e2e::scenario!(
     "/use-swipe/drawer-rtl",
     the_band_yields_under_rtl,
     desktop: skip("1126: no touch input under Xvfb"),
-    native: skip("5338: a negative scroll offset stays at 0 on Blitz")
+    native: skip("707: Blitz clamps an RTL scroller at 0, so its left overflow is out of reach")
 );
 e2e::scenario!(
     an_edge_swipe_yields_on_a_scroller_control,
@@ -423,5 +424,5 @@ e2e::scenario!(
     "/use-swipe/drawer-rtl",
     the_band_yields_on_a_scroller_control,
     desktop: skip("1126: no touch input under Xvfb"),
-    native: skip("5338: a negative scroll offset stays at 0 on Blitz")
+    native: skip("707: Blitz clamps an RTL scroller at 0, so its left overflow is out of reach")
 );

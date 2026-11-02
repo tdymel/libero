@@ -206,6 +206,9 @@ impl FieldBuilder<'_> {
         let touch = {
             let hook = hook.clone();
             move || {
+                if scope.is_some_and(|scope| scope.reset_this_input()) {
+                    return;
+                }
                 let settled = match (scope, &name) {
                     (Some(mut scope), Some(name)) => {
                         scope.touch(name);
