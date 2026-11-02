@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
 # Types into the first field of a fixture page in the desktop WebView (wry) and
 # reads it back through the clipboard. WebKitGTK has no DevTools socket, so this
-# drives X directly: headless under xvfb-run, never on the desktop display (1026).
+# drives X directly: headless under xvfb.sh, never on the desktop display (1026).
 #
 #   e2e/desktop/type.sh <target-dir> <route> <text> <delay-ms> [runs] [expected]
 #   e2e/desktop/type.sh "$PWD/target/dev" /text-field/echo button 12 4
 #
-# Needs xvfb-run, xdotool and xclip. Exits 1 when a run reads back other than
+# Needs Xvfb, xdotool and xclip. Exits 1 when a run reads back other than
 # `expected` (default: the typed text).
 set -u
 
@@ -14,7 +14,7 @@ if [ -z "${LSX_IN_XVFB:-}" ]; then
     [ $# -ge 4 ] || { grep '^#   e2e' "$0"; exit 2; }
     root=$(cd "$(dirname "$0")/../.." && pwd)
     (cd "$root" && RUSTC_WRAPPER=sccache cargo build -q -p e2e-fixtures --features desktop --target-dir "$1") || exit 2
-    LSX_IN_XVFB=1 exec xvfb-run -a -s "-screen 0 1280x800x24" "$0" "$@"
+    LSX_IN_XVFB=1 exec "$(dirname "$0")/xvfb.sh" -s "-screen 0 1280x800x24" "$0" "$@"
 fi
 
 bin=$1/debug/e2e-fixtures route=$2 text=$3 delay=$4 runs=${5:-3} expected=${6:-$3}

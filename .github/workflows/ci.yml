@@ -189,7 +189,7 @@ jobs:
       - run: cargo test -p e2e --features native --test native
       # The shared e2e scenarios on the Blitz backend (822).
       - if: success() || failure()
-        run: xvfb-run -a -s "-screen 0 1280x800x24" cargo test -p e2e --features native --test all -- ::native
+        run: e2e/desktop/xvfb.sh -s "-screen 0 1280x800x24" cargo test -p e2e --features native --test all -- ::native
 
   e2e:
     strategy:

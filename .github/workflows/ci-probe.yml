@@ -190,7 +190,7 @@ jobs:
                 exit "$red"
               fi
               xvfb=()
-              if [ "$RUNNER_OS" = Linux ]; then xvfb=(xvfb-run -a -s "-screen 0 1280x800x24"); fi
+              if [ "$RUNNER_OS" = Linux ]; then xvfb=(e2e/desktop/xvfb.sh -s "-screen 0 1280x800x24"); fi
               # shellcheck disable=SC2086
               "${xvfb[@]}" cargo test -p e2e --features native --test all -- $args 2>&1 | tee "$logs/all.log" || red=1
               exit "$red" ;;
