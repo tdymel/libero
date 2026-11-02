@@ -78,7 +78,7 @@ reader reads an image named "Warning". The same icon next to the word
 | Field | Type | Description |
 |---|---|---|
 | `variant` | `Variant` | Default `variant` when the prop is omitted (`filled`). |
-| `sizes` | `Sizes<u16>` | Width and height in px per size step, `16, 20, 24, 32, 40, 48` by default. |
+| `sizes` | `Sizes<u16>` | Width and height in px per size step, `16, 20, 24, 32, 36, 48` by default, steps that keep Lucide's 24 px grid crisp. |
 
 The `color`, `size` and `radius` fallbacks (`primary`, `md`, `sm`) are not
 theme fields.

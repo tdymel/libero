@@ -23,7 +23,8 @@ impl IconDefaults {
         variant: Variant::Filled,
         size: Size::Md,
         radius: Size::Sm,
-        sizes: Sizes::new(16, 20, 24, 32, 40, 48),
+        // Xl 36, not 40: a Lucide stroke lands on whole pixels at 1.5x its 24 px grid (5362).
+        sizes: Sizes::new(16, 20, 24, 32, 36, 48),
     };
 }
 
@@ -33,5 +34,18 @@ impl ToCssDeclarations for IconDefaults {
         declarations.push(ICON_DEFAULT_SIZE.declare(ICON_SIZE.value(self.size)));
         declarations.push(ICON_DEFAULT_RADIUS.declare(SizeCss::RADIUS.value(self.radius)));
         declarations
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn steps_from_md_up_sit_on_half_multiples_of_the_lucide_grid() {
+        let sizes = IconDefaults::DEFAULT.sizes;
+        for step in [sizes.md, sizes.xl, sizes.xxl] {
+            assert_eq!(step % 12, 0, "{step}");
+        }
     }
 }
