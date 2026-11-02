@@ -1,0 +1,68 @@
+# The performance scenarios every night (4375): on demand only, a MenuLevel render regression
+# sat unseen for three days (4341). Informational: not part of the required `ci` check, so a red
+# run reports without blocking main. Linux web only.
+name: Perf nightly
+
+on:
+  schedule:
+    # Off the hour: GitHub delays or drops schedules at the top of an hour under load.
+    - cron: "37 2 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: perf-nightly-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  CARGO_TERM_COLOR: always
+  CARGO_INCREMENTAL: 0
+  # No debug info: CI prints no backtraces, and a Windows probe built 16% faster (3407).
+  # The same in every workflow, since the cargo cache key hashes it.
+  CARGO_PROFILE_DEV_DEBUG: 0
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  perf:
+    runs-on: ubuntu-24.04
+    # ~3 min warm (2026-11-02), a cold build ~15 min; 30 min is one hung scenario's budget.
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v7
+      - uses: ./.github/actions/setup
+        with:
+          targets: wasm32-unknown-unknown
+          # ci.yml's e2e build, restored only: the 10 GB cache budget has no room for a key (3413).
+          cache-key: e2e
+          save-cache: false
+      - uses: ./.github/actions/dx
+      # The same pin as ci.yml's `e2e` job.
+      - id: chrome
+        uses: browser-actions/setup-chrome@v2
+        with:
+          chrome-version: 152.0.7977.82
+      # Ubuntu 24.04 blocks the unprivileged user namespaces Chrome's sandbox needs.
+      - run: sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
+      # `perf::` is a prefix, so `table_perf::` stays out: its millisecond budgets are noise here.
+      - run: |
+          cargo run -p e2e -- perf:: 2>&1 | tee "$RUNNER_TEMP/e2e.log"
+        env:
+          CHROME: ${{ steps.chrome.outputs.chrome-path }}
+          E2E_PERF: 1
+      # The red tests as annotations on the run page.
+      - if: failure() || cancelled()
+        run: python3 .github/scripts/ci_annotate.py "$RUNNER_TEMP/e2e.log"
+      - if: always()
+        run: python3 .github/scripts/ci_probe.py summary "$RUNNER_TEMP/e2e.log"
+      - if: failure() || cancelled()
+        uses: actions/upload-artifact@v7
+        with:
+          name: perf-nightly-artifacts
+          path: /tmp/e2e-artifacts
+          if-no-files-found: ignore
+          retention-days: 7
