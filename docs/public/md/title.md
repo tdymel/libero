@@ -40,7 +40,7 @@ fn Demo() -> Element {
 | `gradient` | `Gradient` | - | Paints the glyphs with a gradient from the theme's first stop to a second, as `("info", 90)` or `Gradient::default().to("info").deg(90)`; `Gradient::default()` is the theme's. The contrast of a literal CSS stop is yours to check, and a debug build warns when a hex stop reads under 4.5:1 on the page background. Solid in its first stop in print and in native windows, the system text color in forced colors. |
 | `truncate` | `Truncate` | - | Cuts the title on one line with an ellipsis at its `end` or `start`. `line_clamp` wins when both are set. |
 | `line_clamp` | `u32` | - | Cuts the title after this many lines with an ellipsis. Over `truncate`; `0` is off. On Blitz there is no line clamp: the title is cut at that many lines, without the ellipsis. |
-| `children` | `Element` | required | The heading text. |
+| `children` | `Element` | required | The heading text. An `Anchor` inside it takes the title's font, size and weight. |
 
 Like every component, `Title` also takes the shared props `sx`, `class`, `style`,
 `states`, and any extra HTML attributes.

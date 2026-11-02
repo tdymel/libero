@@ -1,13 +1,18 @@
 use crate::components::{
-    Control, Demo, DemoValues, DocPage, UNSET, a11y, gradient_controls, gradient_value, prop, props,
+    Child, Control, Demo, DemoValues, DocPage, UNSET, a11y, gradient_controls, gradient_value,
+    prop, props,
 };
 use dioxus::prelude::*;
-use libero::components::{Code, HtmlTag, Input, Text, Title};
+use libero::components::{Anchor, Code, HtmlTag, Input, Text, Title};
 use libero::sx::sx;
 use libero::use_theme;
 
 /// Long enough to fill three lines of `CUT_WIDTH` at the default size.
 const TEXT: &str = "The quick brown fox jumps over the lazy dog and keeps running";
+
+/// The words the demo's link wraps, early enough that a cut title still shows them.
+const LINK_WORDS: &str = "quick brown";
+const LINK_TO: &str = "https://dioxuslabs.com";
 
 /// Narrow enough that `TEXT` needs a cut.
 const CUT_WIDTH: &str = "20rem";
@@ -55,7 +60,7 @@ pub fn TitlePage() -> Element {
                     .doc("Cuts the title on one line with an ellipsis at its `end` or `start`. `line_clamp` wins when both are set."),
                 prop("line_clamp", "u32")
                     .doc("Cuts the title after this many lines with an ellipsis. Over `truncate`; `0` is off. On Blitz there is no line clamp: the title is cut at that many lines, without the ellipsis."),
-                prop("children", "Element").default("required").doc("The heading text."),
+                prop("children", "Element").default("required").doc("The heading text. An `Anchor` inside it takes the title's font, size and weight."),
             ])],
             accessibility: a11y()
                 .handles([
@@ -98,6 +103,13 @@ pub fn TitlePage() -> Element {
             Demo {
                     component: "Title",
                     children_text: TEXT,
+                    code_child: Child(|values: &DemoValues| match values.str("link").as_str() {
+                        "true" => {
+                            let (head, tail) = TEXT.split_once(LINK_WORDS).unwrap_or_default();
+                            format!("{head:?}\nAnchor {{ to: {LINK_TO:?}, {LINK_WORDS:?} }}\n{tail:?}")
+                        }
+                        _ => format!("{TEXT:?}"),
+                    }),
                     controls: vec![
                         Control::sizes("size")
                             .default(theme.title.size.as_str()),
@@ -111,6 +123,8 @@ pub fn TitlePage() -> Element {
                             "auto" => vec![],
                             tag => vec![format!("component: {tag:?}")],
                         }),
+                        // On, so a link in a title shows its inherited type without another switch.
+                        Control::switch("link").default("true"),
                         // The theme's own second stop and angle print as `Gradient::default()`.
                         Control::switch("gradient").code(|_, values| {
                             let default = values.str("gradient_to") == "secondary"
@@ -152,7 +166,13 @@ pub fn TitlePage() -> Element {
                                 tag => Input::Value(HtmlTag::from(tag)),
                             },
                             gradient: (values.str("gradient") == "true").then(|| gradient_value(&values)),
-                            {TEXT}
+                            if values.str("link") == "true" {
+                                {TEXT.split_once(LINK_WORDS).map(|(head, _)| head)}
+                                Anchor { to: LINK_TO, {LINK_WORDS} }
+                                {TEXT.split_once(LINK_WORDS).map(|(_, tail)| tail)}
+                            } else {
+                                {TEXT}
+                            }
                         }
                 },
             }

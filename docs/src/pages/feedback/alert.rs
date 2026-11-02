@@ -113,7 +113,7 @@ pub fn AlertPage() -> Element {
                             _ => vec![],
                         }
                     }),
-                    Control::switch("icon").code(|_, values| {
+                    Control::switch("icon").default("true").code(|_, values| {
                         match values.str("icon").as_str() {
                             "true" => vec!["icon: rsx! { Pictogram { icon: lucide::check::outlined } }".to_string()],
                             _ => vec![],
