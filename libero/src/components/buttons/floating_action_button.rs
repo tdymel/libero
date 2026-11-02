@@ -1,17 +1,16 @@
-use dioxus::{core::AttributeValue, prelude::*};
+use dioxus::prelude::*;
 
 use crate::{
     components::{
         buttons::{ActionIcon, Button},
-        common::{HtmlTag, Input, States, Variant, attr, base_props},
-        layout::{Float, Placement, use_box},
+        common::{Input, States, Variant, attr, base_props},
+        layout::{Float, Placement},
     },
-    hooks::{DismissOptions, listener, use_dismiss, use_element, use_id, use_theme},
-    platform::focus_without_ring,
+    hooks::use_theme,
     sx::{REDUCED_MOTION, Sx, ThemeAwareValue, sx},
     theme::{
-        CssVar, Gradient, ICON_SIZE, OWN_SHADOW, Size, SizeCss, TRANSITION_DURATION,
-        TRANSITION_EASING, Z_INDEX_HEADER,
+        CssVar, Gradient, ICON_SIZE, OWN_SHADOW, SizeCss, TRANSITION_DURATION, TRANSITION_EASING,
+        Z_INDEX_HEADER,
     },
 };
 
@@ -75,74 +74,9 @@ base_props! {
         #[props(default)]
         children: Option<Element>,
         /// Fades it out of view, the tab order and the accessibility tree, as for hide-on-scroll.
-        /// It closes an own speed dial; a controlled `open` survives. Focus inside drops to the
-        /// page, so the app moves focus first when hiding it while it may hold focus.
+        /// Focus on it drops to the page, so the app moves focus first when it may hold focus.
         #[props(default)]
         hidden: bool,
-        /// `FloatingActionButtonAction`s: a press opens them as a speed dial above the button,
-        /// or below a top one. `to` is ignored then.
-        #[props(default)]
-        actions: Option<Element>,
-        /// Whether the `actions` show, for a controlled speed dial; unset, the button owns it.
-        #[props(default)]
-        open: Option<Signal<bool>>,
-    }
-}
-
-base_props! {
-    pub struct FloatingActionButtonActionProps {
-        /// The glyph before the label.
-        icon: Element,
-        #[props(default)]
-        onclick: Option<EventHandler<MouseEvent>>,
-        /// Renders a router link instead of a `<button>`.
-        #[props(default, into)]
-        to: Input<NavigationTarget>,
-        #[props(default)]
-        target: Option<String>,
-        #[props(default)]
-        disabled: Option<bool>,
-        /// The visible label, which names the action.
-        #[props(into)]
-        label: String,
-    }
-}
-
-/// Closes the speed dial from a pressed action, handing focus back to the button.
-#[derive(Clone, Copy)]
-struct SpeedDial {
-    close: Callback<()>,
-}
-
-/// Where the actions open: away from the placed edge, aligned to the button's inline side.
-fn actions_sx(placement: Placement) -> Sx {
-    use Placement::*;
-    let gap = SizeCss::SPACING.value(Size::Sm);
-    let mut list = sx()
-        .position("absolute")
-        .display("flex")
-        .gap(gap.clone())
-        .width("max-content");
-    list = match placement {
-        TopStart | TopCenter | TopEnd => list
-            .top("100%")
-            .flex_direction("column")
-            .padding_block_start(gap),
-        _ => list
-            .bottom("100%")
-            .flex_direction("column-reverse")
-            .padding_block_end(gap),
-    };
-    // Logical, so the column hugs the button's end edge under `dir="rtl"` too.
-    match placement {
-        TopStart | CenterStart | BottomStart => {
-            list.inset_inline_start("0").align_items("flex-start")
-        }
-        TopEnd | CenterEnd | BottomEnd => list.inset_inline_end("0").align_items("flex-end"),
-        TopCenter | CenterCenter | BottomCenter => list
-            .left("50%")
-            .transform("translateX(-50%)")
-            .align_items("center"),
     }
 }
 
@@ -209,7 +143,8 @@ fn elevation_sx(shadow: String) -> Sx {
 }
 
 /// A button that floats over the page at a corner, for its main action: icon-only,
-/// or extended with a label in `children`. `class`, `sx` and attributes land on the button.
+/// or extended with a label in `children`. `class`, `sx` and attributes land on the button,
+/// so for several actions it is a `Menu`'s trigger through `menu.a11y_attributes()`.
 ///
 /// ```no_run
 /// # use dioxus::prelude::*;
@@ -278,85 +213,6 @@ pub fn FloatingActionButton(props: FloatingActionButtonProps) -> Element {
         .aria_label
         .clone()
         .filter(|label| !label.trim().is_empty());
-
-    let mut own_open = use_signal(|| false);
-    // Hiding closes an own dial, so showing it again does not reopen it.
-    let hidden = props.hidden;
-    use_effect(use_reactive!(|hidden| if hidden {
-        own_open.set(false);
-    }));
-    let mut open = props.open.unwrap_or(own_open);
-    let dial = props.actions.is_some();
-    let is_open = dial && open() && !props.hidden;
-    let anchor = use_element();
-    let floating = use_element();
-    let close = use_callback(move |()| open.set(false));
-    let dismiss = use_dismiss(
-        anchor,
-        floating,
-        is_open,
-        true,
-        Some(close),
-        DismissOptions::default(),
-    );
-    let focus_return = dismiss.focus_return();
-    use_context_provider(|| SpeedDial {
-        close: Callback::new(move |()| dismiss.dismiss()),
-    });
-    let list_id = use_id();
-    let own_id = use_id();
-    let list_sx: Input<Sx> = actions_sx(placement).into();
-    let list = use_box().sx(&list_sx).prepare();
-
-    let mut attributes = props.attributes.clone();
-    // The group is named by the button, through the caller's `id` or one of its own.
-    let caller_id = attributes
-        .iter()
-        .rev()
-        .find_map(|attribute| match &attribute.value {
-            AttributeValue::Text(id) if attribute.name == "id" && !id.trim().is_empty() => {
-                Some(id.clone())
-            }
-            _ => None,
-        });
-    let trigger_id = caller_id.clone().unwrap_or_else(|| own_id.cloned());
-    if dial {
-        if caller_id.is_none() {
-            attributes.push(attr("id", trigger_id.clone()));
-        }
-        // The trigger outlives every opening, so it is remembered once, on mount.
-        attributes.extend(anchor.attributes());
-        attributes.push(listener("onmounted", move |event: Event<MountedData>| {
-            anchor.mount()(event.clone());
-            focus_return.remember(event);
-        }));
-        attributes.push(attr("aria-expanded", is_open.to_string()));
-        if is_open {
-            attributes.push(attr("aria-controls", list_id()));
-        }
-        attributes.extend(dismiss.anchor_events());
-        // The web has no outside-press transport: focus leaving the button closes the dial.
-        if is_open {
-            attributes.push(dismiss.focusout_listener());
-        }
-    }
-    let user_onclick = props.onclick;
-    let onclick = (dial || user_onclick.is_some()).then(|| {
-        EventHandler::new(move |event: MouseEvent| {
-            if dial {
-                let next = !*open.peek();
-                // iOS leaves a tapped button unfocused, and the dial closes on focus leaving it.
-                if next && let Some(node) = anchor.mounted() {
-                    focus_without_ring(&node);
-                }
-                open.set(next);
-            }
-            if let Some(onclick) = user_onclick {
-                onclick.call(event);
-            }
-        })
-    });
-    let to = if dial { Input::None } else { props.to.clone() };
     let mut float_attributes = Vec::new();
     if props.hidden {
         float_attributes.push(attr("inert", "true"));
@@ -380,14 +236,14 @@ pub fn FloatingActionButton(props: FloatingActionButtonProps) -> Element {
                     loading: props.loading,
                     loader: props.loader.clone(),
                     ripple: props.ripple,
-                    onclick,
-                    to: to.clone(),
+                    onclick: props.onclick,
+                    to: props.to.clone(),
                     target: props.target.clone(),
                     aria_label,
                     class: props.class.clone(),
                     sx: button_sx.clone(),
                     states: states.clone(),
-                    attributes: attributes.clone(),
+                    attributes: props.attributes.clone(),
                     icon: props.icon.clone(),
                     {children}
                 }
@@ -404,88 +260,16 @@ pub fn FloatingActionButton(props: FloatingActionButtonProps) -> Element {
                     loading: props.loading,
                     loader: props.loader.clone(),
                     ripple: props.ripple,
-                    onclick,
-                    to,
+                    onclick: props.onclick,
+                    to: props.to.clone(),
                     target: props.target.clone(),
                     class: props.class.clone(),
                     sx: button_sx,
                     states,
-                    attributes,
+                    attributes: props.attributes.clone(),
                     {props.icon.clone()}
                 }
             }
-            // After the button: a disclosure's content follows its trigger in the reading order.
-            if is_open {
-                {
-                    list.element(&floating)
-                        .attr("id", list_id())
-                        .attr("role", "group")
-                        .attr("aria-labelledby", trigger_id)
-                        .render(HtmlTag::Div, dismiss.floating_events(), props.actions.clone().unwrap_or(VNode::empty()))
-                }
-            }
-        }
-    }
-}
-
-/// One action of a `FloatingActionButton`'s speed dial: a labelled pill that closes
-/// the dial when pressed. `class`, `sx` and attributes land on the button.
-///
-/// ```no_run
-/// # use dioxus::prelude::*;
-/// # use libero::components::{FloatingActionButton, FloatingActionButtonAction, Pictogram};
-/// # use pictogram_icons_lucide as lucide;
-/// # fn app() -> Element {
-/// rsx! {
-///     FloatingActionButton {
-///         aria_label: "Create",
-///         icon: rsx! { Pictogram { icon: lucide::plus::outlined } },
-///         actions: rsx! {
-///             FloatingActionButtonAction { label: "Message", icon: rsx! { Pictogram { icon: lucide::mail::outlined } } }
-///             FloatingActionButtonAction { label: "Event", icon: rsx! { Pictogram { icon: lucide::calendar::outlined } } }
-///         },
-///     }
-/// }
-/// # }
-/// ```
-///
-/// Docs: <https://libero-ui.dev/buttons/floating-action-button>
-#[component]
-pub fn FloatingActionButtonAction(props: FloatingActionButtonActionProps) -> Element {
-    let dial = try_use_context::<SpeedDial>();
-    let user_onclick = props.onclick;
-    let onclick = move |event: MouseEvent| {
-        if let Some(onclick) = user_onclick {
-            onclick.call(event);
-        }
-        if let Some(dial) = dial {
-            dial.close.call(());
-        }
-    };
-    let glyph = ICON_SIZE.value(Size::Md);
-    let mut action_sx = elevation_sx(SizeCss::SHADOW.value(Size::Sm)).selector(
-        "& :where([data-slot='button-icon'] > svg)",
-        sx().width(glyph.clone()).height(glyph),
-    );
-    if let Some(own) = props.sx.as_ref() {
-        action_sx = action_sx.and(own.clone());
-    }
-
-    rsx! {
-        Button {
-            variant: Variant::Tonal,
-            size: Size::Md,
-            radius: ThemeAwareValue::Size(Size::Xxl),
-            disabled: props.disabled,
-            onclick,
-            to: props.to.clone(),
-            target: props.target.clone(),
-            class: props.class.clone(),
-            sx: action_sx,
-            states: props.states.clone(),
-            attributes: props.attributes.clone(),
-            icon: props.icon.clone(),
-            "{props.label}"
         }
     }
 }

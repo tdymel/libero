@@ -1,15 +1,35 @@
-use crate::components::{Child, Control, Demo, DemoValues, DocPage, a11y, prop, props};
+use crate::components::{
+    Child, Control, Demo, DemoValues, DocPage, Wrap, a11y, indent, prop, props,
+};
 use dioxus::prelude::*;
 use libero::components::{
-    Box, Code, FloatingActionButton, FloatingActionButtonAction, Input, Pictogram, Text,
+    Box, Code, FloatingActionButton, Input, Menu, MenuEntry, MenuItem, Pictogram, Text, use_menu,
 };
+use libero::hooks::{Align, Side};
 use libero::sx::sx;
 use libero::use_theme;
 use pictogram_icons_lucide as lucide;
 
 const ICON: &str = "icon: rsx! { Pictogram { icon: lucide::plus::outlined } }";
 const LABEL: &str = "New message";
-const ACTIONS: &str = "actions: rsx! {\n    FloatingActionButtonAction { label: \"Message\", icon: rsx! { Pictogram { icon: lucide::mail::outlined } } }\n    FloatingActionButtonAction { label: \"Event\", icon: rsx! { Pictogram { icon: lucide::calendar::outlined } } }\n}";
+
+fn menu_items() -> Vec<MenuEntry> {
+    vec![
+        MenuItem::new("Message").onselect(|_| {}).into(),
+        MenuItem::new("Event").onselect(|_| {}).into(),
+    ]
+}
+
+/// What the `menu` switch prints around the button, as `render` draws it.
+fn wrap(values: &DemoValues, source: &str) -> String {
+    match values.str("menu") == "true" {
+        true => format!(
+            "let menu = use_menu();\n\nrsx! {{\n    Menu {{\n        state: menu,\n        side: Side::Top,\n        align: Align::End,\n        items: vec![\n            MenuItem::new(\"Message\").onselect(|_| {{}}).into(),\n            MenuItem::new(\"Event\").onselect(|_| {{}}).into(),\n        ],\n{}\n    }}\n}}",
+            indent(&indent(source))
+        ),
+        false => source.to_string(),
+    }
+}
 
 fn extended(values: &DemoValues) -> bool {
     values.str("children") == "true"
@@ -21,14 +41,6 @@ fn text_child(values: &DemoValues) -> String {
         LABEL.to_string()
     } else {
         String::new()
-    }
-}
-
-/// A centred button's dial opens from mid-frame, so it needs room above the button.
-fn frame_height(values: &DemoValues) -> &'static str {
-    match values.str("placement").starts_with("center") {
-        true => "360px",
-        false => "240px",
     }
 }
 
@@ -86,13 +98,14 @@ fn controls(variant: &str, size: &str, radius: &str, placement: &str) -> Vec<Con
         Control::switch("tooltip").hidden_when(extended),
         Control::switch("disabled"),
         Control::switch("loading"),
-        Control::switch("actions")
-            .default("true")
-            .code(|_, values| match values.str("actions") == "true" {
-                true => vec![ACTIONS.to_string()],
-                false => vec![],
-            }),
         Control::switch("hidden"),
+        // The trigger of a `Menu`, not a prop: `wrap` prints the Menu around the button.
+        Control::switch("menu").default("true").code(|_, values| {
+            match values.str("menu") == "true" {
+                true => vec!["attributes: menu.a11y_attributes()".to_string()],
+                false => vec![],
+            }
+        }),
     ]
 }
 
@@ -100,6 +113,7 @@ fn controls(variant: &str, size: &str, radius: &str, placement: &str) -> Vec<Con
 pub fn FloatingActionButtonPage() -> Element {
     let theme = use_theme();
     let defaults = theme.floating_action_button;
+    let menu = use_menu();
     rsx! {
         DocPage {
             title: "FloatingActionButton",
@@ -161,27 +175,7 @@ pub fn FloatingActionButtonPage() -> Element {
                     .doc("A visible label: an extended button, the `icon` before the label."),
                 prop("hidden", "bool")
                     .default("false")
-                    .doc("Fades it out, and out of the tab order and the accessibility tree at once, as for hiding it while the page scrolls down. Instant under reduced motion. It closes a speed dial the button owns; a controlled `open` stays as it is."),
-                prop("actions", "Element")
-                    .doc("`FloatingActionButtonAction`s: a press on the button opens them as a speed dial, above it, or below a top one, at its inline side. Escape, a press outside or an action's press closes it. `to` is ignored."),
-                prop("open", "Signal<bool>")
-                    .doc("Whether the `actions` show, for a speed dial the app controls. Unset, the button owns it."),
-            ]), props("FloatingActionButtonAction", vec![
-                prop("icon", "Element")
-                    .default("required")
-                    .doc("The glyph before the label."),
-                prop("label", "String")
-                    .default("required")
-                    .doc("The visible label, which names the action."),
-                prop("onclick", "EventHandler<MouseEvent>")
-                    .doc("Runs the action; the speed dial then closes and focus returns to its button."),
-                prop("to", "NavigationTarget")
-                    .doc("Renders a link instead of a `<button>`."),
-                prop("target", "String")
-                    .doc("The link's `target` attribute."),
-                prop("disabled", "bool")
-                    .default("false")
-                    .doc("Disables and dims the action."),
+                    .doc("Fades it out, and out of the tab order and the accessibility tree at once, as for hiding it while the page scrolls down. Instant under reduced motion."),
             ])],
             accessibility: a11y()
                 .handles([
@@ -189,15 +183,13 @@ pub fn FloatingActionButtonPage() -> Element {
                     "Its shadow steps aside on keyboard focus, so the focus ring is drawn whole over it.",
                     "Under a finger the button is at least 44 by 44px, at every size.",
                     "A fixed one sits above a docked `NavigationBar` and out of the safe areas; `start` and `end` flip under `dir=\"rtl\"`.",
-                    "With `actions`, the button is a disclosure: `aria-expanded` says whether the actions show, and `aria-controls` points at them while open, a group named by the button. They follow it in the tab order.",
-                    "Escape or an action's press closes the speed dial and returns focus to the button; a press outside or Tab past the last action closes it where focus went.",
                     "`hidden` takes it out of the tab order and the accessibility tree at once, before the fade ends.",
                 ])
                 .must([
                     "Name an icon-only button after its action with `aria_label`, such as \"New message\".",
                     "Render it where its action belongs in the reading order, such as at the end of `main`: Tab reaches it in DOM order, not where it floats.",
                     "Pad the end of the page by its height plus `offset`, so it never covers the last content or the control that has focus.",
-                    "Move focus elsewhere before setting `hidden` while focus may be on it or an action: hidden, it drops focus to the page.",
+                    "Move focus elsewhere before setting `hidden` while focus may be on it: hidden, it drops focus to the page.",
                     "Keep it apart from `Notifications`, whose stack also sits at `bottom-end`: move one with `Notifications { placement }`.",
                 ])
                 .limits([
@@ -215,9 +207,11 @@ pub fn FloatingActionButtonPage() -> Element {
                     Code { source: "offset" }
                     " from the edges and above a docked "
                     Code { source: "NavigationBar" }
-                    ". "
-                    Code { source: "actions" }
-                    " make it a speed dial, and "
+                    ". For several actions, make it the trigger of a "
+                    Code { source: "Menu" }
+                    " with "
+                    Code { source: "menu.a11y_attributes()" }
+                    ", as the preview does. "
                     Code { source: "hidden" }
                     " fades it out. The preview sets "
                     Code { source: "fixed: false" }
@@ -227,6 +221,7 @@ pub fn FloatingActionButtonPage() -> Element {
             Demo {
                 component: "FloatingActionButton",
                 children_text: "",
+                wrap: Wrap(wrap),
                 fixed: vec![ICON.to_string(), "fixed: false".to_string()],
                 controls: controls(
                     defaults.variant.as_str(),
@@ -234,8 +229,9 @@ pub fn FloatingActionButtonPage() -> Element {
                     defaults.radius.as_str(),
                     defaults.placement.as_str(),
                 ),
-                render: move |values: DemoValues| rsx! {
-                    Box { sx: sx().position("relative").width("100%").height(frame_height(&values)),
+                render: move |values: DemoValues| {
+                    let in_menu = values.str("menu") == "true";
+                    let button = rsx! {
                         FloatingActionButton {
                             fixed: false,
                             icon: rsx! { Pictogram { icon: lucide::plus::outlined } },
@@ -250,11 +246,23 @@ pub fn FloatingActionButtonPage() -> Element {
                             disabled: values.str("disabled") == "true",
                             loading: values.str("loading") == "true",
                             hidden: values.str("hidden") == "true",
-                            actions: (values.str("actions") == "true").then(|| rsx! {
-                                FloatingActionButtonAction { label: "Message", icon: rsx! { Pictogram { icon: lucide::mail::outlined } } }
-                                FloatingActionButtonAction { label: "Event", icon: rsx! { Pictogram { icon: lucide::calendar::outlined } } }
-                            }),
+                            attributes: if in_menu { menu.a11y_attributes() } else { Vec::new() },
                             children: extended(&values).then(|| rsx! { {LABEL} }),
+                        }
+                    };
+                    rsx! {
+                        Box { sx: sx().position("relative").width("100%").height("240px"),
+                            if in_menu {
+                                Menu {
+                                    state: menu,
+                                    side: Side::Top,
+                                    align: Align::End,
+                                    items: menu_items(),
+                                    {button}
+                                }
+                            } else {
+                                {button}
+                            }
                         }
                     }
                 },

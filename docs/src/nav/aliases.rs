@@ -77,7 +77,7 @@ fn label_aliases(label: &str) -> &'static [&'static str] {
         "ButtonGroup" => &["button group", "attached buttons", "split button"],
         "Copy" => &["clipboard", "copy"],
         "DirectionToggle" => &["rtl", "ltr", "direction"],
-        "FloatingActionButton" => &["fab", "floating action button", "speed dial"],
+        "FloatingActionButton" => &["fab", "floating action button"],
         "Repository" => &["github", "repository"],
         "Share" => &["share", "share sheet", "web share", "send link"],
         "ThemeSwitcher" => &["dark mode", "color scheme", "light dark"],

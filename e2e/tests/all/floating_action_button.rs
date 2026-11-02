@@ -1,30 +1,17 @@
 //! `FloatingActionButton` in Chromium: it stays at its corner while the page scrolls,
 //! flips under `dir="rtl"`, clears a fixed `NavigationBar`, keeps its focus ring
-//! whole and gives a finger a 44px target at every size. A speed dial opens and closes
-//! back to its button or from a press outside, and a hidden one leaves the tab order
-//! and closes its dial.
+//! whole and gives a finger a 44px target at every size. A hidden one leaves the tab
+//! order, and as a `Menu`'s trigger it opens the menu and takes focus back.
 
 use e2e::browser::block_on;
 use e2e::passes::{focus, keyboard, pointer};
-use e2e::suite::Step;
 use e2e::{Fixture, Suite, Viewport, js, wait};
 use serde_json::Value;
 
 const FAB: &str = "#fab";
 const SMALL: &str = "#small";
-const MESSAGE: &str = "#message";
-
-/// The open speed dial too: axe on the named group and its actions.
-#[test]
-fn a_speed_dial_meets_the_baseline() {
-    Suite::new(
-        "floating_action_button_dial",
-        "/floating-action-button/dial",
-    )
-    .focusable(FAB)
-    .state("open", &[Step::Click(FAB)], MESSAGE)
-    .run();
-}
+const TRIGGER: &str = "[aria-haspopup='menu']";
+const MENU: &str = "[role='menu']";
 
 #[test]
 fn it_meets_the_baseline() {
@@ -163,40 +150,27 @@ fn keyboard_focus_draws_the_ring_over_the_shadow() {
     });
 }
 
-async fn expanded(page: &chromiumoxide::Page) -> String {
-    js(
-        page,
-        "document.querySelector('#fab').getAttribute('aria-expanded')",
-    )
-    .await
-}
-
-/// The action's box against the button's, LTR or RTL.
-async fn dial_boxes(page: &chromiumoxide::Page) -> Value {
-    js::<Value>(
-        page,
-        "(() => { const f = document.querySelector('#fab').getBoundingClientRect(); \
-            const m = document.querySelector('#message').getBoundingClientRect(); \
-            return { fab_top: f.top, fab_left: f.left, fab_right: f.right, bottom: m.bottom, \
-                left: m.left, right: m.right, \
-                expanded: document.querySelector('#fab').getAttribute('aria-expanded') }; })()",
-    )
-    .await
-}
-
-/// A press opens the actions above the button, at its end edge; an action's press runs
-/// it and closes the dial, and Escape closes it too, each handing focus back.
+/// Actions go through a `Menu`: a press opens it above the button at its end edge, an
+/// item runs and hands focus back, Escape does too, and a press outside closes it.
 #[test]
-fn a_speed_dial_opens_above_and_closes_back_to_the_button() {
+fn it_opens_a_menu_as_its_trigger() {
     block_on(async {
-        let fixture = Fixture::open("/floating-action-button/dial", Viewport::Mobile)
+        let fixture = Fixture::open("/floating-action-button/menu", Viewport::Desktop)
             .await
             .unwrap();
         let page = &fixture.page;
-        wait::for_visible(page, FAB).await.unwrap();
-        pointer::click(page, FAB).await.unwrap();
-        wait::for_visible(page, MESSAGE).await.unwrap();
-        let at = dial_boxes(page).await;
+        wait::for_visible(page, TRIGGER).await.unwrap();
+        pointer::click(page, TRIGGER).await.unwrap();
+        wait::for_visible(page, MENU).await.unwrap();
+        let at = js::<Value>(
+            page,
+            "(() => { const t = document.querySelector(\"[aria-haspopup='menu']\"); \
+                const b = t.getBoundingClientRect(); \
+                const m = document.querySelector(\"[role='menu']\").getBoundingClientRect(); \
+                return { fab_top: b.top, fab_right: b.right, bottom: m.bottom, right: m.right, \
+                    expanded: t.getAttribute('aria-expanded') }; })()",
+        )
+        .await;
         assert_eq!(at["expanded"], "true", "{at}");
         assert!(
             at["bottom"].as_f64().unwrap() <= at["fab_top"].as_f64().unwrap(),
@@ -207,122 +181,32 @@ fn a_speed_dial_opens_above_and_closes_back_to_the_button() {
             "{at}"
         );
 
-        pointer::click(page, MESSAGE).await.unwrap();
-        wait::for_hidden(page, MESSAGE).await.unwrap();
+        keyboard::press(page, keyboard::ENTER).await.unwrap();
+        wait::for_hidden(page, MENU).await.unwrap();
         wait::for_js_true(
             page,
             "document.querySelector('#sent').textContent === '1'",
-            "the action",
+            "the item",
         )
         .await
         .unwrap();
-        focus::wait_for_focus(page, FAB, "an action's press")
+        focus::wait_for_focus(page, TRIGGER, "an item's press")
             .await
             .unwrap();
 
-        pointer::click(page, FAB).await.unwrap();
-        wait::for_visible(page, MESSAGE).await.unwrap();
+        pointer::click(page, TRIGGER).await.unwrap();
+        wait::for_visible(page, MENU).await.unwrap();
         keyboard::press(page, keyboard::ESCAPE).await.unwrap();
-        wait::for_hidden(page, MESSAGE).await.unwrap();
-        focus::wait_for_focus(page, FAB, "Escape").await.unwrap();
-        fixture.console.assert_clean("the speed dial").unwrap();
-        fixture.close().await.unwrap();
-    });
-}
-
-/// The web has no outside-press transport: a click on plain text or on another
-/// control closes the dial, focus staying where it went (todo 5182).
-#[test]
-fn a_click_outside_closes_the_speed_dial() {
-    block_on(async {
-        let fixture = Fixture::open("/floating-action-button/dial", Viewport::Desktop)
+        wait::for_hidden(page, MENU).await.unwrap();
+        focus::wait_for_focus(page, TRIGGER, "Escape")
             .await
             .unwrap();
-        let page = &fixture.page;
-        wait::for_visible(page, FAB).await.unwrap();
-        pointer::click(page, FAB).await.unwrap();
-        wait::for_visible(page, MESSAGE).await.unwrap();
+
+        pointer::click(page, TRIGGER).await.unwrap();
+        wait::for_visible(page, MENU).await.unwrap();
         pointer::click(page, "#sent").await.unwrap();
-        wait::for_hidden(page, MESSAGE).await.unwrap();
-        assert_eq!(expanded(page).await, "false");
-
-        pointer::click(page, FAB).await.unwrap();
-        wait::for_visible(page, MESSAGE).await.unwrap();
-        pointer::click(page, "#after").await.unwrap();
-        wait::for_hidden(page, MESSAGE).await.unwrap();
-        focus::wait_for_focus(page, "#after", "a click on another control")
-            .await
-            .unwrap();
-
-        // Opened with focus elsewhere, as by an iOS tap, which focuses no button.
-        js::<bool>(page, "(document.querySelector('#fab').click(), true)").await;
-        wait::for_visible(page, MESSAGE).await.unwrap();
-        pointer::click(page, "#sent").await.unwrap();
-        wait::for_hidden(page, MESSAGE).await.unwrap();
-        fixture.console.assert_clean("an outside click").unwrap();
-        fixture.close().await.unwrap();
-    });
-}
-
-#[test]
-fn a_tap_outside_closes_the_speed_dial() {
-    block_on(async {
-        let fixture = Fixture::open("/floating-action-button/dial", Viewport::Mobile)
-            .await
-            .unwrap();
-        let page = &fixture.page;
-        wait::for_visible(page, FAB).await.unwrap();
-        pointer::tap(page, FAB).await.unwrap();
-        wait::for_visible(page, MESSAGE).await.unwrap();
-        pointer::tap(page, "#sent").await.unwrap();
-        wait::for_hidden(page, MESSAGE).await.unwrap();
-
-        // Opened with focus elsewhere, as by an iOS tap, which focuses no button.
-        js::<bool>(page, "(document.querySelector('#fab').click(), true)").await;
-        wait::for_visible(page, MESSAGE).await.unwrap();
-        pointer::tap(page, "#sent").await.unwrap();
-        wait::for_hidden(page, MESSAGE).await.unwrap();
-        fixture.console.assert_clean("an outside tap").unwrap();
-        fixture.close().await.unwrap();
-    });
-}
-
-/// Hiding closes an own dial, so showing the button again leaves it closed (todo 5183).
-/// The switch keeps focus on the button, as a scroll does, so no focusout closes it.
-#[test]
-fn hidden_then_shown_leaves_the_dial_closed() {
-    block_on(async {
-        let fixture = Fixture::open("/floating-action-button/dial/in-place", Viewport::Desktop)
-            .await
-            .unwrap();
-        let page = &fixture.page;
-        wait::for_visible(page, FAB).await.unwrap();
-        pointer::click(page, FAB).await.unwrap();
-        wait::for_visible(page, MESSAGE).await.unwrap();
-        pointer::click(page, "#hide").await.unwrap();
-        wait::for_hidden(page, FAB).await.unwrap();
-        pointer::click(page, "#hide").await.unwrap();
-        wait::for_visible(page, FAB).await.unwrap();
-        assert_eq!(expanded(page).await, "false");
-        assert!(!wait::is_visible(page, MESSAGE).await.unwrap());
-        fixture.console.assert_clean("hide and show").unwrap();
-        fixture.close().await.unwrap();
-    });
-}
-
-#[test]
-fn speed_dial_actions_hug_the_start_side_under_rtl() {
-    block_on(async {
-        let fixture = Fixture::open("/floating-action-button/dial/rtl", Viewport::Mobile)
-            .await
-            .unwrap();
-        let page = &fixture.page;
-        wait::for_visible(page, FAB).await.unwrap();
-        pointer::click(page, FAB).await.unwrap();
-        wait::for_visible(page, MESSAGE).await.unwrap();
-        let at = dial_boxes(page).await;
-        assert!(near(&at["left"], at["fab_left"].as_f64().unwrap()), "{at}");
-        fixture.console.assert_clean("rtl dial").unwrap();
+        wait::for_hidden(page, MENU).await.unwrap();
+        fixture.console.assert_clean("the menu").unwrap();
         fixture.close().await.unwrap();
     });
 }
@@ -331,7 +215,7 @@ fn speed_dial_actions_hug_the_start_side_under_rtl() {
 #[test]
 fn hidden_it_drops_out_of_the_tab_order() {
     block_on(async {
-        let fixture = Fixture::open("/floating-action-button/dial", Viewport::Desktop)
+        let fixture = Fixture::open("/floating-action-button/hide", Viewport::Desktop)
             .await
             .unwrap();
         let page = &fixture.page;

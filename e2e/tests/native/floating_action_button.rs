@@ -1,9 +1,12 @@
 //! `FloatingActionButton` natively (todo 5062): docked to the window's corner through a
-//! scroll, its `env(safe-area-inset-*)` margins fall back to 0px, and it takes a click.
+//! scroll, its `env(safe-area-inset-*)` margins fall back to 0px, it takes a click, and
+//! it opens a `Menu` as its trigger.
 
 use dioxus::prelude::*;
 use e2e::native::{Page, mount};
-use libero::components::{FloatingActionButton, NavigationBar, NavigationBarItem};
+use libero::components::{
+    FloatingActionButton, Menu, MenuItem, NavigationBar, NavigationBarItem, use_menu,
+};
 
 fn page() -> Element {
     let mut count = use_signal(|| 0);
@@ -82,6 +85,39 @@ fn a_click_at_its_centre_reaches_it() {
     page.click_at((x + w / 2.0) as f32, (y + h / 2.0) as f32);
     page.wait_for(|page| page.text("#count") == "1");
     assert_eq!(page.text("#count"), "1", "{}", page.tree());
+}
+
+#[test]
+fn it_opens_a_menu_as_its_trigger() {
+    fn app() -> Element {
+        let menu = use_menu();
+        rsx! {
+            Menu {
+                state: menu,
+                items: vec![MenuItem::new("Message").into()],
+                FloatingActionButton {
+                    aria_label: "Create",
+                    icon: rsx! { "+" },
+                    attributes: menu.a11y_attributes(),
+                }
+            }
+        }
+    }
+    let mut page = mount(app);
+    page.click("[aria-haspopup=menu]");
+    page.advance(0.5);
+    assert_eq!(
+        page.attr("[aria-haspopup=menu]", "aria-expanded")
+            .as_deref(),
+        Some("true"),
+        "{}",
+        page.tree()
+    );
+    assert!(
+        page.text("[role=menu]").contains("Message"),
+        "{}",
+        page.tree()
+    );
 }
 
 /// A fixed bar publishes its height, and the button keeps its offset above the bar.

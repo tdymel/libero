@@ -1,11 +1,12 @@
 //! `FloatingActionButton` over a tall page: icon-only at `bottom-end`, a small one at
-//! `top-start`, the same page under `dir="rtl"`, one above a fixed `NavigationBar`, and
-//! a speed dial that a switch hides.
+//! `top-start`, the same page under `dir="rtl"`, one above a fixed `NavigationBar`, one
+//! that a switch hides, and one as a `Menu`'s trigger.
 
 use dioxus::prelude::*;
 use libero::components::{
-    FloatingActionButton, FloatingActionButtonAction, NavigationBar, NavigationBarItem, Pictogram,
+    FloatingActionButton, Menu, MenuItem, NavigationBar, NavigationBarItem, Pictogram, use_menu,
 };
+use libero::hooks::{Align, Side};
 use pictogram_icons_lucide as lucide;
 
 use crate::Routes;
@@ -14,52 +15,46 @@ pub const ROUTES: Routes = &[
     ("/floating-action-button", || rsx! { FabPage {} }),
     ("/floating-action-button/rtl", || rsx! { div { dir: "rtl", FabPage {} } }),
     ("/floating-action-button/bar", || rsx! { BarPage {} }),
-    ("/floating-action-button/dial", || rsx! { DialPage {} }),
-    ("/floating-action-button/dial/rtl", || rsx! { div { dir: "rtl", DialPage {} } }),
-    (
-        "/floating-action-button/dial/in-place",
-        || rsx! { DialPage { in_place: true } },
-    ),
+    ("/floating-action-button/hide", || rsx! { HidePage {} }),
+    ("/floating-action-button/menu", || rsx! { MenuPage {} }),
 ];
 
-/// A speed dial, a hide switch for it, and a count of the action presses.
-/// `in_place`: the switch keeps focus where it is, as a hide-on-scroll does.
 #[component]
-fn DialPage(#[props(default)] in_place: bool) -> Element {
+fn HidePage() -> Element {
     let mut hidden = use_signal(|| false);
-    let mut sent = use_signal(|| 0);
     rsx! {
-        button {
-            id: "hide",
-            onmousedown: move |event: MouseEvent| {
-                if in_place {
-                    event.prevent_default();
-                }
-            },
-            onclick: move |_| hidden.toggle(),
-            "Hide"
-        }
-        p { id: "sent", "{sent}" }
+        button { id: "hide", onclick: move |_| hidden.toggle(), "Hide" }
         FloatingActionButton {
             id: "fab",
             aria_label: "Create",
             hidden: hidden(),
             icon: rsx! { Pictogram { icon: lucide::plus::outlined } },
-            actions: rsx! {
-                FloatingActionButtonAction {
-                    id: "message",
-                    icon: rsx! { Pictogram { icon: lucide::mail::outlined } },
-                    onclick: move |_| sent += 1,
-                    label: "Message",
-                }
-                FloatingActionButtonAction {
-                    id: "event",
-                    icon: rsx! { Pictogram { icon: lucide::calendar::outlined } },
-                    label: "Event",
-                }
-            },
         }
         button { id: "after", "After" }
+    }
+}
+
+/// Actions go through a `Menu`, with the button as its trigger.
+#[component]
+fn MenuPage() -> Element {
+    let menu = use_menu();
+    let mut sent = use_signal(|| 0);
+    rsx! {
+        p { id: "sent", "{sent}" }
+        Menu {
+            state: menu,
+            side: Side::Top,
+            align: Align::End,
+            items: vec![
+                MenuItem::new("Message").onselect(move |_| sent += 1).into(),
+                MenuItem::new("Event").into(),
+            ],
+            FloatingActionButton {
+                aria_label: "Create",
+                icon: rsx! { Pictogram { icon: lucide::plus::outlined } },
+                attributes: menu.a11y_attributes(),
+            }
+        }
     }
 }
 

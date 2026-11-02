@@ -7,7 +7,7 @@ use crate::common::{attributes_of, body, render};
 use dioxus::prelude::*;
 use libero::{
     LiberoProvider,
-    components::{FloatingActionButton, FloatingActionButtonAction},
+    components::{FloatingActionButton, Menu, MenuItem, use_menu},
 };
 
 fn icon_only() -> Element {
@@ -156,55 +156,30 @@ fn hidden_fades_it_out_of_the_tab_order_and_the_tree() {
     assert!(!attributes_of(&body(&render(icon_only)), "div").contains_key("inert"));
 }
 
-fn speed_dial(opened: bool) -> Element {
-    let open = use_signal(|| opened);
-    rsx! {
-        LiberoProvider {
-            FloatingActionButton {
-                aria_label: "Create",
-                open,
-                to: "/ignored",
-                icon: rsx! { svg {} },
-                actions: rsx! {
-                    FloatingActionButtonAction { label: "Message", icon: rsx! { svg {} } }
-                    FloatingActionButtonAction { label: "Event", icon: rsx! { svg {} } }
-                },
+/// `menu.a11y_attributes()` land on the button itself, so the menu anchors on it.
+#[test]
+fn it_is_a_menu_trigger_through_its_attributes() {
+    fn app() -> Element {
+        let menu = use_menu();
+        rsx! {
+            LiberoProvider {
+                Menu {
+                    state: menu,
+                    items: vec![MenuItem::new("Message").into()],
+                    FloatingActionButton {
+                        aria_label: "Create",
+                        icon: rsx! { svg {} },
+                        attributes: menu.a11y_attributes(),
+                    }
+                }
             }
         }
     }
-}
-
-#[test]
-fn a_closed_speed_dial_is_a_collapsed_button_without_its_actions() {
-    let html = body(&render(|| speed_dial(false)));
+    let html = body(&render(app));
     let button = attributes_of(&html, "button");
+    assert_eq!(button["aria-haspopup"], "menu", "{html}");
     assert_eq!(button["aria-expanded"], "false", "{html}");
-    assert!(!button.contains_key("aria-controls"), "{html}");
-    assert!(!html.contains("Message"), "{html}");
-    assert!(!html.contains("<a"), "`to` is ignored with actions: {html}");
-}
-
-#[test]
-fn an_open_speed_dial_controls_the_actions_after_it() {
-    let html = body(&render(|| speed_dial(true)));
-    let button = attributes_of(&html, "button");
-    assert_eq!(button["aria-expanded"], "true", "{html}");
-    let list = format!("id=\"{}\"", button["aria-controls"]);
-    let at = html
-        .find(&list)
-        .unwrap_or_else(|| panic!("no list: {html}"));
-    let at = html[..at].rfind("<div").unwrap();
-    let group = format!("aria-labelledby=\"{}\"", button["id"]);
-    assert!(html[at..].contains(&group), "named by the button: {html}");
-    assert!(html[at..].contains("role=\"group\""), "{html}");
-    assert!(
-        at > html.find("aria-expanded").unwrap(),
-        "the list follows the button: {html}"
-    );
-    assert!(
-        html[at..].contains("Message") && html[at..].contains("Event"),
-        "{html}"
-    );
+    assert_eq!(button["aria-label"], "Create", "{html}");
 }
 
 #[test]

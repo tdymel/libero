@@ -36,10 +36,7 @@ pub use copy::{Copy, CopyProps};
 #[cfg(feature = "direction-toggle")]
 pub use direction_toggle::{DirectionToggle, DirectionToggleProps};
 #[cfg(feature = "floating-action-button")]
-pub use floating_action_button::{
-    FloatingActionButton, FloatingActionButtonAction, FloatingActionButtonActionProps,
-    FloatingActionButtonProps,
-};
+pub use floating_action_button::{FloatingActionButton, FloatingActionButtonProps};
 #[cfg(feature = "repository")]
 pub use repository::{RepoHost, Repository, RepositoryPart, RepositoryProps};
 #[cfg(feature = "share")]
