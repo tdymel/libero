@@ -247,7 +247,7 @@ struct Rested {
 
 #[cfg(not(any(target_os = "macos", windows)))]
 impl Desktop {
-    fn find_window(&self) -> Result<String> {
+    fn find_window(&mut self) -> Result<String> {
         let pid = self.app.id().to_string();
         let started = Instant::now();
         loop {
@@ -256,7 +256,9 @@ impl Desktop {
                 .output()
                 .context("run xdotool")?;
             if let Some(window) = String::from_utf8_lossy(&found.stdout).lines().next() {
-                return Ok(window.to_string());
+                let window = window.to_string();
+                self.bridge.run(SEEN)?;
+                return Ok(window);
             }
             if started.elapsed() > LAUNCH {
                 bail!("no visible window for the fixture app (pid {pid})");
@@ -369,15 +371,23 @@ impl Desktop {
         xdotool(&["windowfocus", "--sync", &self.window]).map(drop)
     }
 
+    // xdotool returns once X has the events, before WebKitGTK handled them: each op waits
+    // for the page to see its last event (5372).
     fn move_to(&mut self, x: f64, y: f64) -> Result<()> {
-        self.pointer(x, y, &[])
+        self.pointer(x, y, &[])?;
+        self.seen(
+            &format!("Math.abs(s.move?.[0] - {x}) <= 1 && Math.abs(s.move?.[1] - {y}) <= 1"),
+            "",
+        )
     }
 
     fn click_point(&mut self, x: f64, y: f64, count: u32) -> Result<()> {
         if count == 2 {
-            return self.pointer(x, y, &["click", "--repeat", "2", "--delay", "80", "1"]);
+            self.pointer(x, y, &["click", "--repeat", "2", "--delay", "80", "1"])?;
+        } else {
+            self.pointer(x, y, &["click", "1"])?;
         }
-        self.pointer(x, y, &["click", "1"])
+        self.saw("up", count.into())
     }
 
     fn drag_by(&mut self, x: f64, y: f64, dx: f64, dy: f64) -> Result<()> {
@@ -387,25 +397,35 @@ impl Desktop {
             self.pointer(x + dx * t, y + dy * t, &[])?;
             std::thread::sleep(Duration::from_millis(16));
         }
-        xdotool(&["mouseup", "1"]).map(drop)
+        xdotool(&["mouseup", "1"])?;
+        self.saw("up", 1)
     }
 
     /// X buttons 4 and 5, one notch per [`WHEEL_NOTCH`] px of `dy`, at least one.
     fn wheel_at(&mut self, x: f64, y: f64, dy: f64) -> Result<()> {
-        let notches = (dy.abs() / WHEEL_NOTCH).round().max(1.0).to_string();
+        let notches = (dy.abs() / WHEEL_NOTCH).round().max(1.0) as u64;
         let button = if dy < 0.0 { "4" } else { "5" };
         self.pointer(
             x,
             y,
-            &["click", "--repeat", &notches, "--delay", "16", button],
-        )
+            &[
+                "click",
+                "--repeat",
+                &notches.to_string(),
+                "--delay",
+                "16",
+                button,
+            ],
+        )?;
+        self.saw("wheel", notches)
     }
 
     /// `key` with `mods` among `shift`, `ctrl` and `alt`, as one X chord.
     fn chord(&mut self, mods: &[&str], key: Key) -> Result<()> {
         let mut chord: Vec<&str> = mods.to_vec();
         chord.push(keysym(key.key));
-        self.key(&chord.join("+"))
+        self.key(&chord.join("+"))?;
+        self.saw("key", 1)
     }
 
     /// Real X key events at `ms` a key, through WebKitGTK's own input path.
@@ -417,18 +437,44 @@ impl Desktop {
             "--delay",
             &ms.to_string(),
             text,
-        ])
-        .map(drop)
+        ])?;
+        self.saw("key", text.chars().count() as u64)
+    }
+
+    /// `add` more `kind` events past the last op's, then that count is the next op's base.
+    fn saw(&mut self, kind: &str, add: u64) -> Result<()> {
+        self.seen(
+            &format!("s.{kind} >= s.base.{kind} + {add}"),
+            &format!("s.base.{kind} = s.{kind};"),
+        )
+    }
+
+    /// Waits in the page, one eval, until `condition` on `s` (`__e2eSeen`) holds, then runs
+    /// `then`: at most a second, as a disabled control gets no pointer events at all.
+    fn seen(&mut self, condition: &str, then: &str) -> Result<()> {
+        let held: bool = self.bridge.json(&format!(
+            "await (async () => {{ const s = window.__e2eSeen; if (!s) return true; \
+             const started = performance.now(); let held = true; \
+             while (!({condition})) {{ if (performance.now() - started > 1000) {{ held = false; break; }} \
+             await new Promise((r) => setTimeout(r, 5)); }} {then} return held; }})()"
+        ))?;
+        if !held {
+            eprintln!("e2e desktop: the page did not see `{condition}` within 1 s");
+        }
+        Ok(())
     }
 }
 
-/// Counts what input the page saw, so an op's effects are in before the next eval (2782).
-#[cfg(target_os = "macos")]
-const SEEN: &str = "window.__e2eSeen = { up: 0, key: 0, wheel: 0, move: null };
-    addEventListener('mouseup', () => { __e2eSeen.up += 1; }, true);
-    addEventListener('keyup', () => { __e2eSeen.key += 1; }, true);
-    addEventListener('wheel', () => { __e2eSeen.wheel += 1; }, true);
-    addEventListener('mousemove', (e) => { __e2eSeen.move = [e.clientX, e.clientY]; }, true)";
+/// Counts the trusted input the page saw, so an op's effects are in before the next eval
+/// (2782, 5372). Pointer events: a drag that cancels `pointerdown` gets no `mouseup`.
+#[cfg(not(windows))]
+const SEEN: &str = "window.__e2eSeen = { up: 0, key: 0, wheel: 0, move: null, base: { up: 0, key: 0, wheel: 0 } };
+    addEventListener('pointerup', (e) => { if (e.isTrusted) __e2eSeen.up += 1; }, true);
+    addEventListener('keyup', (e) => {
+        if (e.isTrusted && !['Shift', 'Control', 'Alt', 'Meta', 'AltGraph'].includes(e.key)) __e2eSeen.key += 1;
+    }, true);
+    addEventListener('wheel', (e) => { if (e.isTrusted) __e2eSeen.wheel += 1; }, true);
+    addEventListener('pointermove', (e) => { if (e.isTrusted) __e2eSeen.move = [e.clientX, e.clientY]; }, true)";
 
 /// Each pointer route moves to its own x, so a late event never counts for the next route.
 #[cfg(target_os = "macos")]
