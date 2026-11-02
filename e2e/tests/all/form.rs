@@ -5,7 +5,7 @@ use anyhow::{Result, ensure};
 use chromiumoxide::Page;
 use e2e::browser::Scheme;
 use e2e::browser::block_on;
-use e2e::driver::{Driver, Platform, eventually, eventually_focused, eventually_text};
+use e2e::driver::{Driver, eventually, eventually_focused, eventually_text};
 use e2e::passes::{contrast, focus, keyboard, pointer};
 use e2e::wait::PageBounded;
 use e2e::{Fixture, Viewport, wait};
@@ -311,12 +311,7 @@ fn tabbing_out_of_a_fieldset_reveals_its_named_rule() {
 /// leaves no rule behind.
 async fn a_held_press_out_of_a_fieldset_lands<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
     let input = "#value";
-    // Blitz has no form reset, so a `type=reset` button does nothing there.
-    let buttons: &[&str] = match d.platform() {
-        Platform::Native => &["#clear"],
-        _ => &["#clear", "#native-reset"],
-    };
-    for button in buttons {
+    for button in ["#clear", "#native-reset"] {
         d.click(input).await?;
         eventually_focused(d, input, "New password").await?;
         d.type_text("abc").await?;

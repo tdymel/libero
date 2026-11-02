@@ -43,6 +43,28 @@ fn owning_form(doc: &BaseDocument, node_id: NodeId) -> Option<NodeId> {
 }
 
 pub(in crate::platform::backend) fn activated_submitter(form: &Rc<MountedData>) -> bool {
+    activated_in(form, is_submitter)
+}
+
+/// An enabled reset button, which Blitz gives no default action.
+fn is_resetter(doc: &BaseDocument, node_id: NodeId) -> bool {
+    doc.get_node(node_id)
+        .and_then(|node| node.element_data())
+        .is_some_and(|element| {
+            matches!(&*element.name.local, "button" | "input")
+                && element
+                    .attr(local_name!("type"))
+                    .is_some_and(|kind| kind.eq_ignore_ascii_case("reset"))
+                && element.attr(local_name!("disabled")).is_none()
+        })
+}
+
+pub(in crate::platform::backend) fn activated_resetter(form: &Rc<MountedData>) -> bool {
+    activated_in(form, is_resetter)
+}
+
+/// Whether the press just activated a node of `form` that passes `test`.
+fn activated_in(form: &Rc<MountedData>, test: fn(&BaseDocument, NodeId) -> bool) -> bool {
     let Some(form) = form.downcast::<NodeHandle>() else {
         return false;
     };
@@ -50,7 +72,7 @@ pub(in crate::platform::backend) fn activated_submitter(form: &Rc<MountedData>) 
         return false;
     };
     activated(&doc).is_some_and(|target| {
-        is_submitter(&doc, target) && owning_form(&doc, target) == Some(form.node_id())
+        test(&doc, target) && owning_form(&doc, target) == Some(form.node_id())
     })
 }
 

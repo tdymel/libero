@@ -1337,6 +1337,15 @@ pub(crate) fn activated_submitter(form: &Rc<MountedData>) -> bool {
     return false;
 }
 
+pub(crate) fn activated_resetter(form: &Rc<MountedData>) -> bool {
+    #[cfg(not(all(not(target_arch = "wasm32"), feature = "native")))]
+    let _ = form;
+    #[cfg(all(not(target_arch = "wasm32"), feature = "native"))]
+    return blitz::activated_resetter(form);
+    #[cfg(not(all(not(target_arch = "wasm32"), feature = "native")))]
+    return false;
+}
+
 pub(crate) fn implicit_submission(form: &Rc<MountedData>) -> bool {
     #[cfg(not(all(not(target_arch = "wasm32"), feature = "native")))]
     let _ = form;

@@ -118,6 +118,10 @@ async fn on_row<D: Driver>(d: &mut D, at: usize, after: &str) -> Result<()> {
     let focused = eventually_focused(d, &row(at), after).await;
     // 3445: a stop still on the cell is a lost key; one on the row with focus elsewhere a lost focus.
     if let Err(error) = focused {
+        // Blitz runs no script, so the stop goes unnamed there.
+        if matches!(d.platform(), Platform::Native) {
+            return Err(error);
+        }
         let stop = d
             .evaluate(
                 "document.querySelector('[data-cell-stop]')?.outerHTML.slice(0, 120) ?? 'none'",

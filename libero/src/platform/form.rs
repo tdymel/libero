@@ -15,19 +15,26 @@ pub(crate) fn lifts_legends() -> bool {
 
 /// `Form`'s `onclick` and `onkeydown` where the renderer fires no `submit` of
 /// its own (Blitz): a submit button's click and Enter in a text field `request`
-/// one, which the caller runs once the event's writes have rendered. `None`
-/// where it does.
+/// one, which the caller runs once the event's writes have rendered; a reset
+/// button's click calls `reset`. `None` where it does.
 pub(crate) fn submit_listeners(
     form: impl Fn() -> Option<Rc<MountedData>> + Copy + 'static,
     request: Callback<()>,
+    reset: Callback<()>,
 ) -> Option<(
     impl FnMut(MouseEvent) + 'static,
     impl FnMut(KeyboardEvent) + 'static,
 )> {
     backend::emulates_submit().then_some((
         move |event: MouseEvent| {
-            if event.default_action_enabled() && submit_click(form()) {
+            if !event.default_action_enabled() {
+                return;
+            }
+            let form = form();
+            if submit_click(form.clone()) {
                 request.call(());
+            } else if form.is_some_and(|form| backend::activated_resetter(&form)) {
+                reset.call(());
             }
         },
         move |event: KeyboardEvent| {

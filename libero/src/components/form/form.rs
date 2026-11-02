@@ -351,8 +351,12 @@ pub fn Form<V: FormValue>(props: FormProps<V>) -> Element {
         }
     });
     let request = use_callback(move |()| requested.set(true));
+    // Nor a `reset` (5374): a reset button runs the handle's reset, as `onreset` below does.
+    let reset = use_callback(move |()| {
+        spawn(async move { handle.reset() });
+    });
     let (submit_click, implicit_submit) =
-        platform::submit_listeners(move || form_element.mounted(), request).unzip();
+        platform::submit_listeners(move || form_element.mounted(), request, reset).unzip();
 
     let mut items = summary.visible(&scope);
     let hidden = props.summary == SummaryMode::Hidden;
