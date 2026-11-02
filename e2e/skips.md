@@ -1,6 +1,6 @@
 # Skipped e2e scenarios
 
-Scenarios: 749
+Scenarios: 750
 
 Generated from the `scenario!` skips in `e2e/tests/all` by `cargo test -p e2e --lib skips`; edit the skip, not this file. A reason starting `upstream:` waits on Dioxus, Blitz, wry or the engine (revisit on their update, todo 3362), a number names the todo that removes it.
 
@@ -115,6 +115,7 @@ The performance scenarios (units `perf`, `table_perf`) are no skips but run on r
 | `focus_trap::tab_passes_over_a_stop_that_is_not_rendered` | android | 958: element identity on the WebView |
 | `focus_trap::tab_passes_over_a_stop_that_is_not_rendered` | desktop | 958: element identity on the WebView |
 | `focus_trap::tab_passes_over_a_stop_that_is_not_rendered` | ios | 958: element identity on the WebView |
+| `form::a_held_press_out_of_a_fieldset_lands_on_every_platform` | native | 5336: Blitz moves focus after the click, so the reveal lands after the reset |
 | `home::arrow_down_after_typing_enters_on_the_typed_day` | android | 958: element identity on the WebView |
 | `home::arrow_down_after_typing_enters_on_the_typed_day` | desktop | 958: element identity on the WebView |
 | `home::arrow_down_after_typing_enters_on_the_typed_day` | ios | 958: element identity on the WebView |

@@ -172,6 +172,177 @@ e2e::scenario!(
     a_held_press_on_submit_lands
 );
 
+const FRESH_FORM: &str = "!document.querySelector('[aria-invalid=true]') \
+     && !document.body.textContent.includes('Repeat the password.') \
+     && !document.body.textContent.includes('Use at least 8 characters.')";
+
+/// A press that leaves the group: a held mouse press, so a render under it moves the button, or a tap.
+async fn press_out_of_the_group(page: &Page, touch: bool, button: &str) -> Result<()> {
+    match touch {
+        true => pointer::tap(page, "#value").await?,
+        false => pointer::click(page, "#value").await?,
+    }
+    focus::wait_for_focus(page, "#value", "New password").await?;
+    keyboard::type_text(page, "abc").await?;
+    if touch {
+        return pointer::tap(page, button).await;
+    }
+    let at = pointer::centre_of(page, button).await?;
+    pointer::drag_held(page, at, at, 0).await?;
+    e2e::clock::settle(page).await?;
+    pointer::release(page, at).await
+}
+
+/// Todo 5323: the rule a leave reveals above the submit button waits for the press on it.
+fn a_press_out_of_the_group_submits(touch: bool) {
+    block_on(async {
+        let fixture = Fixture::open("/form/fieldset-press", Viewport::Mobile)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        press_out_of_the_group(page, touch, "#create")
+            .await
+            .unwrap();
+        wait::for_js_true(
+            page,
+            "!!document.querySelector('[data-slot=summary]')",
+            "the press on Create account to submit",
+        )
+        .await
+        .unwrap();
+        fixture
+            .console
+            .assert_clean("a press out of a group")
+            .unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
+/// Todos 5323, 5319: a press on a reset button lands, and a waiting reveal stays out of the fresh form.
+fn a_press_out_of_the_group_resets(touch: bool, button: &str) {
+    block_on(async {
+        let fixture = Fixture::open("/form/fieldset-press", Viewport::Mobile)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        press_out_of_the_group(page, touch, button).await.unwrap();
+        wait::for_js_true(
+            page,
+            "document.querySelector('#value').value === ''",
+            "the press to empty the field",
+        )
+        .await
+        .unwrap();
+        e2e::clock::settle(page).await.unwrap();
+        let fresh = page
+            .evaluate_bounded(FRESH_FORM)
+            .await
+            .unwrap()
+            .into_value::<bool>()
+            .unwrap();
+        assert!(
+            fresh,
+            "the press on {button} left an error on the fresh form"
+        );
+        fixture
+            .console
+            .assert_clean("a reset out of a group")
+            .unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
+#[test]
+fn a_mouse_press_out_of_a_fieldset_submits() {
+    a_press_out_of_the_group_submits(false);
+}
+
+#[test]
+fn a_tap_out_of_a_fieldset_submits() {
+    a_press_out_of_the_group_submits(true);
+}
+
+#[test]
+fn a_mouse_press_out_of_a_fieldset_on_clear_leaves_a_fresh_form() {
+    a_press_out_of_the_group_resets(false, "#clear");
+}
+
+#[test]
+fn a_tap_out_of_a_fieldset_on_clear_leaves_a_fresh_form() {
+    a_press_out_of_the_group_resets(true, "#clear");
+}
+
+#[test]
+fn a_mouse_press_out_of_a_fieldset_on_a_native_reset_leaves_a_fresh_form() {
+    a_press_out_of_the_group_resets(false, "#native-reset");
+}
+
+#[test]
+fn a_tap_out_of_a_fieldset_on_a_native_reset_leaves_a_fresh_form() {
+    a_press_out_of_the_group_resets(true, "#native-reset");
+}
+
+/// Todo 5246 through the deferred leave: Tab out of the group still reveals the named rule.
+#[test]
+fn tabbing_out_of_a_fieldset_reveals_its_named_rule() {
+    block_on(async {
+        let fixture = Fixture::open("/form/fieldset-press", Viewport::Mobile)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        pointer::click(page, "#repeat").await.unwrap();
+        focus::wait_for_focus(page, "#repeat", "Repeat password")
+            .await
+            .unwrap();
+        keyboard::press(page, keyboard::TAB).await.unwrap();
+        wait::for_js_true(
+            page,
+            "document.querySelector('#repeat').ariaInvalid === 'true' \
+             && document.body.textContent.includes('Repeat the password.')",
+            "the named rule once Tab left the group",
+        )
+        .await
+        .unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
+/// The same held press on every platform: it lands on Clear and on Create account, and the reset
+/// leaves no rule behind.
+async fn a_held_press_out_of_a_fieldset_lands<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    let input = "#value";
+    for button in ["#clear", "#native-reset"] {
+        d.click(input).await?;
+        eventually_focused(d, input, "New password").await?;
+        d.type_text("abc").await?;
+        d.drag(button, 0.0, 0.0).await?;
+        eventually(d, "the held press to empty the field", async |d| {
+            Ok(d.value(input).await?.is_empty())
+        })
+        .await?;
+        d.settle().await?;
+        ensure!(
+            !d.exists("[aria-invalid=true]").await?,
+            "the held press on {button} left an error on the fresh form"
+        );
+    }
+    d.click(input).await?;
+    eventually_focused(d, input, "New password").await?;
+    d.type_text("abc").await?;
+    d.drag("#create", 0.0, 0.0).await?;
+    eventually(d, "the held press on Create account to submit", async |d| {
+        d.exists("[data-slot=summary]").await
+    })
+    .await
+}
+
+e2e::scenario!(
+    a_held_press_out_of_a_fieldset_lands_on_every_platform,
+    "/form/fieldset-press",
+    a_held_press_out_of_a_fieldset_lands,
+    native: skip("5336: Blitz moves focus after the click, so the reveal lands after the reset")
+);
+
 /// Todo 4757: a label click or tap on a popup field focuses it and opens nothing, as a native
 /// select's label does.
 #[test]

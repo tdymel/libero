@@ -244,7 +244,14 @@ impl FieldBuilder<'_> {
             wrapper = wrapper.event("onfocusout", move |event: FocusEvent| {
                 if focus_left(&event, root) {
                     // The reveal waits for the press's click: an error above the pressed button moves it (4756).
-                    platform::after_press(touch.clone());
+                    // A reset that click ran leaves nothing touched (5319).
+                    let at = scope.map(|scope| scope.generation());
+                    let touch = touch.clone();
+                    platform::after_press(move || {
+                        if scope.map(|scope| scope.generation()) == at {
+                            touch();
+                        }
+                    });
                 }
             });
         }

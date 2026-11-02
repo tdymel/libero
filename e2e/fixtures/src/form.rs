@@ -35,6 +35,7 @@ pub const ROUTES: Routes = &[
     ("/form/order", || rsx! { OrderPage { hidden: false } }),
     ("/form/order-hidden", || rsx! { OrderPage { hidden: true } }),
     ("/form/blur-submit", || rsx! { BlurSubmitPage {} }),
+    ("/form/fieldset-press", || rsx! { FieldsetPressPage {} }),
     ("/form/label-tap", || rsx! { LabelTapPage {} }),
 ];
 
@@ -82,6 +83,50 @@ fn BlurSubmitForm(case: &'static str) -> Element {
                     validate: min_length(8).error("Use at least 8 characters."),
                 }
                 Button { r#type: "submit", "Create account" }
+            }
+        }
+    }
+}
+
+#[derive(Clone, PartialEq, Default, Fields)]
+struct Passwords {
+    value: String,
+    repeat: String,
+}
+
+#[derive(Clone, PartialEq, Default, Fields)]
+struct PressSignup {
+    password: Passwords,
+}
+
+/// Todo 5323, 5319: the group's rule fails on the empty value too, so a leave counted after a
+/// reset shows on the fresh form.
+#[component]
+fn FieldsetPressPage() -> Element {
+    let signup = use_store(PressSignup::default);
+    let form = use_form();
+    rsx! {
+        Flex { direction: "column", gap: "md", max_width: "320px",
+            Form { form, value: signup,
+                Fieldset {
+                    label: "Choose a password",
+                    path: PressSignup::FIELDS.password(),
+                    validate: (|p: &Passwords| !p.repeat.is_empty() && p.value == p.repeat)
+                        .error("Repeat the password.")
+                        .on([Passwords::FIELDS.repeat()]),
+                    TextField {
+                        id: "value",
+                        label: "New password",
+                        name: Passwords::FIELDS.value(),
+                        validate: min_length(8).error("Use at least 8 characters."),
+                    }
+                    TextField { id: "repeat", label: "Repeat password", name: Passwords::FIELDS.repeat() }
+                }
+                Flex { gap: "sm",
+                    Button { id: "create", r#type: "submit", "Create account" }
+                    Button { id: "clear", onclick: move |_| form.reset(), "Clear" }
+                    Button { id: "native-reset", r#type: "reset", "Reset" }
+                }
             }
         }
     }

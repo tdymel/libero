@@ -14,7 +14,7 @@ use crate::{
         layout::use_box,
     },
     hooks::{use_element, use_form_owner, use_silent_focus_out_of},
-    platform::lifts_legends,
+    platform::{self, lifts_legends},
     sx::{StaticSx, sx},
     theme::{FIELD_CAPTION_FONT_SIZE, FIELD_LABEL_FONT_SIZE, FIELDSET_GAP, FieldsetDefaults, Size},
     utils::warn,
@@ -281,12 +281,17 @@ pub fn Fieldset<V: FormValue>(props: FieldsetProps<V>) -> Element {
     }
     scope.raise(key, issues);
 
+    // Waits for the press's click, as a field's reveal does: a rule above the button moves it
+    // (5323). A reset that click ran is a form nobody left yet.
+    platform::watch_presses();
     let leave = move || {
-        let mut left_at = left_at;
-        let now = Some(scope.generation());
-        if *left_at.peek() != now {
-            left_at.set(now);
-        }
+        let at = scope.generation();
+        platform::after_press(move || {
+            let mut left_at = left_at;
+            if scope.generation() == at && *left_at.peek() != Some(at) {
+                left_at.set(Some(at));
+            }
+        });
     };
     use_silent_focus_out_of(element, leave);
     let revealed = !props.validate.is_empty() && (scope.submitted() || left);
