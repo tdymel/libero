@@ -1,4 +1,5 @@
 use dioxus::prelude::*;
+use pictogram_core::Svg as SvgData;
 use pictogram_icons_lucide as lucide;
 
 use super::crop::{CropRect, CropShape, Grip};
@@ -972,7 +973,8 @@ pub fn ImageCropper(props: ImageCropperProps) -> Element {
     }
     let resizes = buttons.split_off(4);
     let moves = buttons;
-    let button = move |(label, slot, icon, rect)| {
+    // Annotated: the docs' release wasm build cannot infer the tuple from the body.
+    let button = move |(label, slot, icon, rect): (&'static str, IconSlot, SvgData, CropRect)| {
         rsx! {
             ActionIcon {
                 key: "{label}",
