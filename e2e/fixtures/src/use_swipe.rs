@@ -9,6 +9,7 @@ use libero::{
         DragMove, DragOptions, EdgeSwipeOptions, SwipeDirection, SwipeEvent, SwipeOptions,
         drag_handle_sx, edge_swipe_sx, use_drag, use_edge_swipe, use_element, use_swipe,
     },
+    platform::ElementApi,
     sx::sx,
     theme::Direction,
 };
@@ -23,7 +24,6 @@ pub const ROUTES: Routes = &[
     ("/use-swipe/drawer-drag", || rsx! { DrawerPage { handle: true } }),
     ("/use-swipe/drawer-canvas", || rsx! { DrawerPage { canvas: true } }),
     ("/use-swipe/drawer-rtl", || rsx! { DrawerRtlPage {} }),
-    ("/use-swipe/drawer-ltr", || rsx! { DrawerLtrPage {} }),
 ];
 
 /// An app's own `touch-action: none` canvas in the band, no `use_drag` (todo 4800).
@@ -46,10 +46,14 @@ fn BandCanvas() -> Element {
 #[component]
 fn BandHandle() -> Element {
     let track = use_element();
+    let handle = use_element();
     let mut x = use_signal(|| 0.0);
     let drag = use_drag(DragOptions {
         capture: track,
-        onstart: Callback::new(|_| {}),
+        // The hook focuses the pressed tab stop on the web only; elsewhere `onstart` does.
+        onstart: Callback::new(move |_| {
+            let _ = handle.focus();
+        }),
         onmove: Callback::new(move |step: DragMove| x.set(step.delta().x)),
         onend: Callback::new(|()| {}),
     });
@@ -62,6 +66,7 @@ fn BandHandle() -> Element {
             onpointercancel: move |event| drag.onpointercancel.call(event),
             Box {
                 id: "handle",
+                onmounted: handle.mount(),
                 tabindex: 0,
                 aria_label: "Drag",
                 onpointerdown: move |event| drag.onpointerdown.call(event),
@@ -204,14 +209,6 @@ fn DrawerPage(#[props(default)] handle: bool, #[props(default)] canvas: bool) ->
 fn DrawerRtlPage() -> Element {
     rsx! {
         LiberoProvider { direction: Direction::Rtl, DrawerPage {} }
-    }
-}
-
-/// An earlier RTL page in the same WebView leaves the document's `dir`; a Scroller reads it.
-#[component]
-fn DrawerLtrPage() -> Element {
-    rsx! {
-        LiberoProvider { direction: Direction::Ltr, DrawerPage {} }
     }
 }
 

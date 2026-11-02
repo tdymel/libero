@@ -282,6 +282,28 @@ mod an_edge_swipe_yields_to_a_flinging_scroller {
     }
 }
 
+/// Todo 5332: `Android::open` keeps the WebView, and an RTL route's `dir` stays out of the next one.
+mod a_later_route_starts_without_the_rtl_routes_direction {
+    #[cfg(feature = "android")]
+    #[test]
+    fn android() {
+        use e2e::driver::{Android, Driver, eventually};
+
+        e2e::android::block_on(async {
+            let mut d = Android::open("/use-swipe/drawer-rtl").await.unwrap();
+            eventually(&mut d, "the RTL route to set the root's dir", async |d| {
+                Ok(d.attr("html", "dir").await?.as_deref() == Some("rtl"))
+            })
+            .await
+            .unwrap();
+            let mut d = Android::open("/use-swipe/drawer").await.unwrap();
+            let dir = d.attr("html", "dir").await.unwrap();
+            assert_eq!(dir, None, "the plain route starts with dir={dir:?}");
+            d.finish("use_swipe").await.unwrap();
+        });
+    }
+}
+
 /// Todo 2190: in a fling Chromium sends a touch's first move uncancelable, an inner
 /// scroller pans and the pointer is cancelled; the touch still opens the drawer.
 mod an_edge_swipe_opens_while_the_page_flings {
@@ -392,7 +414,7 @@ e2e::scenario!(
 );
 e2e::scenario!(
     an_edge_swipe_yields_on_a_scroller_control,
-    "/use-swipe/drawer-ltr",
+    "/use-swipe/drawer",
     the_band_yields_on_a_scroller_control,
     desktop: skip("1126: no touch input under Xvfb")
 );

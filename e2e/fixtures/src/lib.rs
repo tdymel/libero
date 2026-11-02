@@ -91,7 +91,13 @@ fn route_hook(mut generation: Signal<u64>) {
     use_future(move || async move {
         let mut hook = document::eval(
             "let generation = 0;
-             window.__route = (path) => { generation += 1; dioxus.send([path, generation]); return generation; };
+             window.__route = (path) => {
+                 // The WebView stays: an RTL route's `dir` must not reach the next route (5332).
+                 document.documentElement.removeAttribute('dir');
+                 generation += 1;
+                 dioxus.send([path, generation]);
+                 return generation;
+             };
              await new Promise(() => {});",
         );
         while let Ok((path, next)) = hook.recv::<(String, u64)>().await {

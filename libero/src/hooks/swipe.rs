@@ -3,7 +3,7 @@ use dioxus::prelude::*;
 use crate::{
     hooks::{DragPoint, drag::take_press_claim, use_direction, use_subscription_slot},
     platform::{
-        self, EDGE_SWIPE_MARK, EdgeBand, ScrollSubscription, hold_edge_pan,
+        self, EDGE_SWIPE_MARK, EdgeBand, SCRIPT_READY, ScrollSubscription, hold_edge_pan,
         holds_edge_pan_by_pointer, refuses_edge_swipe,
     },
     sx::{Sx, sx},
@@ -277,6 +277,25 @@ fn holds_pan(delta: DragPoint, left: bool) -> Option<bool> {
     Some(inward > delta.y.abs())
 }
 
+/// What a swipe that would open does, by what the script said of its press.
+#[derive(Clone, Copy, Debug, PartialEq)]
+enum PressGate {
+    Open,
+    Refused,
+    Wait,
+}
+
+/// A running script answers every press, so with no word on `pressed` yet the swipe waits (5331).
+/// No script, as on Blitz or before it is installed: nothing will say, and the swipe goes on.
+fn press_gate(script_runs: bool, pressed: Option<i32>, verdict: Option<(i32, bool)>) -> PressGate {
+    match verdict.filter(|(id, _)| Some(*id) == pressed) {
+        Some((_, true)) => PressGate::Refused,
+        Some((_, false)) => PressGate::Open,
+        None if script_runs => PressGate::Wait,
+        None => PressGate::Open,
+    }
+}
+
 /// A band touch [`use_edge_swipe`] holds the pan for, where [`holds_edge_pan_by_pointer`].
 #[derive(Clone, Copy, Debug, PartialEq)]
 struct Held {
@@ -355,15 +374,23 @@ pub fn use_edge_swipe(on_swipe: Callback, options: EdgeSwipeOptions) -> Swipe {
     let mut waiting = use_signal(|| None::<SwipeEvent>);
     // The press a drag handle inside took: it drags, it never opens (4741).
     let mut claimed = use_signal(|| None::<i32>);
-    // The press an app's `touch-action: none` box or a scroller with room keeps (4800, 5311), and
-    // the current press: the script's report may land after the press in a WebView.
-    let refused = use_signal(|| None::<i32>);
+    // Whether the press an app's `touch-action: none` box or a scroller with room keeps (4800, 5311),
+    // the current press, and whether a script reports: in a WebView its word lands late (5331).
+    let verdict = use_signal(|| None::<(i32, bool)>);
     let mut pressed = use_signal(|| None::<i32>);
+    let script_runs = use_signal(|| false);
     // By the pointer, or after its cancel by the touch the browser took from it.
     let on_track = use_callback(move |event: SwipeEvent| {
-        if claimed.peek().is_some() || refused.peek().is_some_and(|id| Some(id) == *pressed.peek())
-        {
+        if claimed.peek().is_some() {
             return;
+        }
+        match press_gate(*script_runs.peek(), *pressed.peek(), *verdict.peek()) {
+            PressGate::Open => {}
+            PressGate::Refused => return,
+            PressGate::Wait => {
+                waiting.set(Some(event));
+                return;
+            }
         }
         match decide.call(event) {
             Some(true) => on_swipe.call(()),
@@ -373,6 +400,8 @@ pub fn use_edge_swipe(on_swipe: Callback, options: EdgeSwipeOptions) -> Swipe {
     });
     use_effect(use_reactive!(|(options, rtl)| {
         holding.clear();
+        let mut script_runs = script_runs;
+        script_runs.set(false);
         holding.set(hold_edge_pan(
             EdgeBand {
                 inset: options.inset,
@@ -390,9 +419,20 @@ pub fn use_edge_swipe(on_swipe: Callback, options: EdgeSwipeOptions) -> Swipe {
                     });
                 }
             }),
-            Box::new(move |pointer_id| {
-                let mut refused = refused;
-                refused.set(Some(pointer_id));
+            Box::new(move |pointer_id, refuses| {
+                if pointer_id == SCRIPT_READY {
+                    let mut script_runs = script_runs;
+                    script_runs.set(true);
+                    return;
+                }
+                let mut verdict = verdict;
+                verdict.set(Some((pointer_id, refuses)));
+                let parked = *waiting.peek();
+                if let Some(event) = parked {
+                    let mut waiting = waiting;
+                    waiting.set(None);
+                    on_track.call(event);
+                }
             }),
         ));
     }));
@@ -434,6 +474,11 @@ pub fn use_edge_swipe(on_swipe: Callback, options: EdgeSwipeOptions) -> Swipe {
             if held.peek().is_some() {
                 held.set(None);
             }
+            // A verdict that never came opens nothing. A swipe waiting for the viewport still may.
+            let gate = press_gate(*script_runs.peek(), *pressed.peek(), *verdict.peek());
+            if gate == PressGate::Wait && waiting.peek().is_some() {
+                waiting.set(None);
+            }
             handler.call(event);
         })
     };
@@ -464,10 +509,10 @@ pub fn use_edge_swipe(on_swipe: Callback, options: EdgeSwipeOptions) -> Swipe {
             // Blitz reuses a finger's pointer id, so each press sets or clears it.
             let left = (options.edge == SwipeEdge::Start) != rtl;
             let refuses = touch && refuses_edge_swipe(&event, left);
-            let refusal = refuses.then_some(event.pointer_id());
-            if *refused.peek() != refusal {
-                let mut refused = refused;
-                refused.set(refusal);
+            let said = Some((event.pointer_id(), refuses));
+            if *verdict.peek() != said {
+                let mut verdict = verdict;
+                verdict.set(said);
             }
             let next =
                 (touch && !refuses && in_band(at.x, *viewport.peek(), &options, rtl) == Some(true))
@@ -494,9 +539,7 @@ pub fn use_edge_swipe(on_swipe: Callback, options: EdgeSwipeOptions) -> Swipe {
             let held = *waiting.peek();
             if let Some(event) = held {
                 waiting.set(None);
-                if decide.call(event) == Some(true) {
-                    on_swipe.call(());
-                }
+                on_track.call(event);
             }
         });
     });
@@ -515,6 +558,30 @@ mod tests {
 
     fn at(x: f64, y: f64) -> DragPoint {
         DragPoint { x, y }
+    }
+
+    #[test]
+    fn a_swipe_waits_for_the_running_scripts_word_on_its_press() {
+        // The refusal lands after the 48 px (5331): the swipe must not open before it.
+        assert_eq!(press_gate(true, Some(7), None), PressGate::Wait);
+        assert_eq!(press_gate(true, Some(7), Some((6, true))), PressGate::Wait);
+        assert_eq!(press_gate(true, Some(7), Some((6, false))), PressGate::Wait);
+        assert_eq!(
+            press_gate(true, Some(7), Some((7, true))),
+            PressGate::Refused
+        );
+        assert_eq!(press_gate(true, Some(7), Some((7, false))), PressGate::Open);
+    }
+
+    #[test]
+    fn with_no_script_a_swipe_does_not_wait() {
+        assert_eq!(press_gate(false, Some(7), None), PressGate::Open);
+        assert_eq!(press_gate(false, Some(7), Some((6, true))), PressGate::Open);
+        // Blitz's own hit test says it at the press.
+        assert_eq!(
+            press_gate(false, Some(7), Some((7, true))),
+            PressGate::Refused
+        );
     }
 
     #[test]
