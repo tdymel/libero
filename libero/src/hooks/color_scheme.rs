@@ -41,7 +41,17 @@ impl ColorSchemeHandle {
         *self.context.scheme_setting.read()
     }
 
-    /// Which scheme is actually on screen.
+    /// Which scheme is actually on screen, a [`ColorScheme`](crate::theme::ColorScheme)
+    /// to name in your own signatures.
+    ///
+    /// ```rust
+    /// # use dioxus::prelude::*;
+    /// # use libero::{theme::ColorScheme, use_color_scheme};
+    /// # fn app() -> Element {
+    /// let shown: ColorScheme = use_color_scheme().resolved();
+    /// # rsx! { "{shown:?}" }
+    /// # }
+    /// ```
     pub fn resolved(&self) -> ColorScheme {
         self.setting().resolve(*self.context.system_scheme.read())
     }
