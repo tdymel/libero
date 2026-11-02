@@ -96,8 +96,7 @@ explains how parts work.
   cell.
 - A separator is decoration, hidden from screen readers.
 - Each cell is named for its place, such as "Character 1 of 6", from the
-  localization's `PinFieldLabels`. The description, helper and status are on
-  the group, read once on entering it, and each cell says when it is invalid.
+  localization's `PinFieldLabels`, and reads the helper and the error too.
 
 ### You must
 
