@@ -9,6 +9,7 @@ use crate::{
         A11yAnswers, a11y_media, apply_direction, clear_root_direction, color_scheme, document,
         forget_direction, set_current_a11y_answers, store_direction,
     },
+    sx::SCHEME_ATTRIBUTE,
     theme::{THEME_ATTRIBUTE, Theme, ThemeSet, theme_sheet_css},
     tokens::{AccessibilityPreferences, ColorScheme, ColorSchemeSetting, Direction},
     utils::warn,
@@ -130,8 +131,25 @@ impl LiberoContext {
             return;
         }
         css.set(theme_sheet_css(theme, None));
+        self.mark_scheme(Some(theme));
         active.set(name);
         current.set(theme);
+    }
+
+    /// Writes the root's `data-lsx-scheme` from `theme`'s surface, or clears it for the
+    /// platform to decide; what `Sx::dark` and `Sx::light` read.
+    fn mark_scheme(&self, theme: Option<&Theme>) {
+        let scheme = theme.map(|theme| theme.surface.color_scheme());
+        let _ = document()
+            .is_some_and(|document| document.set_root_attribute(SCHEME_ATTRIBUTE, scheme));
+    }
+
+    /// A set with one theme has no platform choice to wait for: its scheme is its surface's.
+    pub(crate) fn mark_lone_theme(&self) {
+        let themes = self.themes.peek();
+        if themes.dark_theme().is_none() {
+            self.mark_scheme(Some(themes.light_theme()));
+        }
     }
 
     /// Pins one scheme of the pair, or hands the choice back to the platform.
@@ -177,6 +195,7 @@ impl LiberoContext {
 
         let carried = document()
             .is_some_and(|document| document.set_root_attribute(THEME_ATTRIBUTE, Some(name)));
+        self.mark_scheme(Some(theme));
         let mut css = self.theme_css;
         if !carried {
             css.set(theme_sheet_css(theme, None));
@@ -203,6 +222,7 @@ impl LiberoContext {
 
         let cleared =
             document().is_some_and(|document| document.set_root_attribute(THEME_ATTRIBUTE, None));
+        self.mark_scheme(themes.dark_theme().is_none().then_some(theme));
         if !cleared || stale {
             // No attribute to clear: rebuild with the whole set, whose media
             // block follows the system on its own.

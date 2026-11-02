@@ -763,25 +763,17 @@ fn the_cached_theme_sheet_is_the_built_one() {
     assert_ne!(*lone, *pair);
 }
 
-/// `Sx::dark` and `Sx::light` match the root the pair's sheet switches on (todo 5367).
+/// `Sx::dark` and `Sx::light` key on the root's scheme, not the theme's name (todo 5383).
 #[test]
-fn sx_dark_and_light_follow_the_pair_sheet() {
-    use crate::sx::{DARK_SCHEME_QUERY, THEME_ATTRIBUTE, sx};
+fn sx_dark_and_light_follow_the_root_scheme() {
+    use crate::sx::{DARK_SCHEME_QUERY, SCHEME_ATTRIBUTE, THEME_ATTRIBUTE, sx};
 
-    let sheet = Stylesheet::from(&ThemeSet::default()).as_str().to_string();
-    let system = format!(":root:not([{THEME_ATTRIBUTE}])");
-    assert!(
-        sheet.contains(&format!("@media {DARK_SCHEME_QUERY}{{{system}{{")),
-        "{sheet}"
-    );
-
+    let system = format!(":root:not([{SCHEME_ATTRIBUTE}])");
     for (name, query) in [
         (ThemeSet::DARK, DARK_SCHEME_QUERY),
         (ThemeSet::LIGHT, "(prefers-color-scheme: light)"),
     ] {
-        let pinned = format!(":root[{THEME_ATTRIBUTE}=\"{name}\"]");
-        assert!(sheet.contains(&format!("{pinned}{{")), "{sheet}");
-
+        let pinned = format!(":root[{SCHEME_ATTRIBUTE}=\"{name}\"]");
         let nested = sx().color("red");
         let styled = match name {
             ThemeSet::DARK => sx().dark(nested),
@@ -791,5 +783,6 @@ fn sx_dark_and_light_follow_the_pair_sheet() {
         assert!(css.contains(&format!(":where({pinned}) .")), "{css}");
         assert!(css.contains(&format!("@media {query}")), "{css}");
         assert!(css.contains(&format!(":where({system}) .")), "{css}");
+        assert!(!css.contains(THEME_ATTRIBUTE), "{css}");
     }
 }

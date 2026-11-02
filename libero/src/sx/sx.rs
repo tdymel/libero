@@ -13,6 +13,9 @@ pub(crate) const FORCED_COLORS: &str = "(forced-colors: active)";
 /// The attribute a document root carries to pin one theme of the pair.
 pub(crate) const THEME_ATTRIBUTE: &str = "data-lsx-theme";
 
+/// The attribute a pinned theme's document root carries with its surface's scheme, `light` or `dark`.
+pub(crate) const SCHEME_ATTRIBUTE: &str = "data-lsx-scheme";
+
 /// The dark half's media query, which the web backend also reads the platform scheme from.
 pub(crate) const DARK_SCHEME_QUERY: &str = "(prefers-color-scheme: dark)";
 
@@ -181,10 +184,9 @@ impl Sx {
     /// The guard sits in `:where`, so the arm keeps the specificity of a bare `&`.
     const RTL_FALLBACK: &str = ":where([dir=rtl]) &:where(:not([dir=ltr], [dir=rtl] [dir=ltr] *))";
 
-    /// Styles while the dark theme of the pair shows: pinned by the app's switch, or
-    /// picked by the OS while nothing is pinned, as the theme sheet does.
-    /// A single-`Theme` app follows the OS here; a named theme matches neither this nor
-    /// [`light`](Self::light).
+    /// Styles while a dark theme shows: the root's `data-lsx-scheme` says so once a theme
+    /// is pinned (the pair's, a [named](crate::theme::ThemeSet::named) or a lone one), the
+    /// OS's `prefers-color-scheme` while nothing is pinned. A theme counts as dark by its surface.
     ///
     /// ```
     /// # use libero::sx::sx;
@@ -194,7 +196,7 @@ impl Sx {
         self.scheme("dark", DARK_SCHEME_QUERY, nested)
     }
 
-    /// Styles while the light theme of the pair shows; [`dark`](Self::dark)'s mirror.
+    /// Styles while a light theme shows; [`dark`](Self::dark)'s mirror.
     pub fn light(self, nested: Sx) -> Self {
         self.scheme("light", "(prefers-color-scheme: light)", nested)
     }
@@ -202,11 +204,11 @@ impl Sx {
     /// The `:where` guards keep a bare `&`'s specificity, as [`rtl`](Self::rtl) does.
     fn scheme(self, name: &str, query: &str, nested: Sx) -> Self {
         self.selector(
-            format!(":where(:root[{THEME_ATTRIBUTE}=\"{name}\"]) &"),
+            format!(":where(:root[{SCHEME_ATTRIBUTE}=\"{name}\"]) &"),
             nested.clone(),
         )
         .selector(
-            format!(":where(:root:not([{THEME_ATTRIBUTE}])) &"),
+            format!(":where(:root:not([{SCHEME_ATTRIBUTE}])) &"),
             Sx::new().media(query, nested),
         )
     }

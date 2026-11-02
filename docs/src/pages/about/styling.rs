@@ -445,10 +445,12 @@ pub fn StylingPage() -> Element {
                     Code { source: "dark" }
                     " and "
                     Code { source: "light" }
-                    " style one half of the theme pair: the one the app pins with "
-                    Code { source: "use_color_scheme" }
-                    ", or the OS's while nothing is pinned. Prefer a theme color, which "
-                    "follows the pair by itself. An app with a single theme follows the OS here."
+                    " style while a dark or light theme shows: the root's "
+                    Code { source: "data-lsx-scheme" }
+                    " says which once a theme is pinned (the pair's, a named one or a lone one), "
+                    "the OS's setting while nothing is. A theme counts as dark by its "
+                    Code { source: "surface" }
+                    ". Prefer a theme color, which follows the theme by itself."
                 }
                 CodeBlock { source: DARK, label: "Dark mode", language: "rust" }
                 Text {

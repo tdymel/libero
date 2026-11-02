@@ -2,19 +2,19 @@
 /// [`COLOR_SCHEME_RESTORE_SCRIPT`]. Public contract: an app may write it itself.
 pub const COLOR_SCHEME_STORAGE_KEY: &str = "lsx-color-scheme";
 
-/// Restores a stored scheme onto the document root **before first paint**, which the
-/// wasm bundle runs too late for. Paste it into your `index.html`'s `<head>`:
+/// Restores a stored scheme onto the document root **before first paint** (`data-lsx-theme`
+/// and `data-lsx-scheme`), which the wasm bundle runs too late for. Paste it into your `index.html`'s `<head>`:
 ///
 /// ```html
-/// <script>try{var s=localStorage.getItem('lsx-color-scheme');if(s==='light'||s==='dark')document.documentElement.setAttribute('data-lsx-theme',s)}catch(e){}</script>
+/// <script>try{var s=localStorage.getItem('lsx-color-scheme');if(s==='light'||s==='dark'){var r=document.documentElement;r.setAttribute('data-lsx-theme',s);r.setAttribute('data-lsx-scheme',s)}}catch(e){}</script>
 /// ```
 ///
 /// Keep it on one line: a newline changes the hash. `LiberoProvider` can't emit it: an inserted
-/// `<script>` never runs. A strict CSP needs its hash:`sha256-i2dSUtjYkvH3Km+1WnMbJX1ZfgYnbdyuKeoc3clqFQ0=` (pinned by a test).
+/// `<script>` never runs. A strict CSP needs its hash:`sha256-IpTF2Y5itfnrcJewmeJF3LoQyi6LUPlzfaeZJAYfW8g=` (pinned by a test).
 ///
 /// Docs: <https://libero-ui.dev/about/theming>
 pub const COLOR_SCHEME_RESTORE_SCRIPT: &str = "try{var s=localStorage.getItem('lsx-color-scheme');\
-if(s==='light'||s==='dark')document.documentElement.setAttribute('data-lsx-theme',s)}catch(e){}";
+if(s==='light'||s==='dark'){var r=document.documentElement;r.setAttribute('data-lsx-theme',s);r.setAttribute('data-lsx-scheme',s)}}catch(e){}";
 
 /// The resolved light or dark scheme on screen. What the app asked for, "system"
 /// included, is a [`ColorSchemeSetting`]; [`use_color_scheme`](crate::hooks::use_color_scheme) resolves it.
@@ -123,6 +123,7 @@ mod tests {
     fn the_restore_script_matches_the_names_it_depends_on() {
         assert!(COLOR_SCHEME_RESTORE_SCRIPT.contains(COLOR_SCHEME_STORAGE_KEY));
         assert!(COLOR_SCHEME_RESTORE_SCRIPT.contains(crate::theme::THEME_ATTRIBUTE));
+        assert!(COLOR_SCHEME_RESTORE_SCRIPT.contains(crate::sx::SCHEME_ATTRIBUTE));
         assert!(COLOR_SCHEME_RESTORE_SCRIPT.contains(ColorSchemeSetting::Light.as_str()));
         assert!(COLOR_SCHEME_RESTORE_SCRIPT.contains(ColorSchemeSetting::Dark.as_str()));
         // The system case must leave the root alone for the media block.
@@ -131,7 +132,7 @@ mod tests {
         assert_eq!(
             COLOR_SCHEME_RESTORE_SCRIPT,
             "try{var s=localStorage.getItem('lsx-color-scheme');\
-if(s==='light'||s==='dark')document.documentElement.setAttribute('data-lsx-theme',s)}catch(e){}"
+if(s==='light'||s==='dark'){var r=document.documentElement;r.setAttribute('data-lsx-theme',s);r.setAttribute('data-lsx-scheme',s)}}catch(e){}"
         );
     }
 

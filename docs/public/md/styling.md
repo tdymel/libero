@@ -193,10 +193,10 @@ sx().when(
 )
 ```
 
-`dark` and `light` style one half of the theme pair: the one the app pins with
-`use_color_scheme`, or the OS's while nothing is pinned. Prefer a theme color,
-which follows the pair by itself. An app with a single theme follows the OS
-here.
+`dark` and `light` style while a dark or light theme shows: the root's
+`data-lsx-scheme` says which once a theme is pinned (the pair's, a named one or
+a lone one), the OS's setting while nothing is. A theme counts as dark by its
+`surface`. Prefer a theme color, which follows the theme by itself.
 
 ```rust,ignore
 sx()

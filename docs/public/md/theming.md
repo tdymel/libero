@@ -134,6 +134,10 @@ where local storage has a directory (see `libero::platform::set_storage_dir`). T
 paint, paste `libero::theme::COLOR_SCHEME_RESTORE_SCRIPT` into the head of your
 `index.html`.
 
+While a theme is pinned (the pair's, a named one or a lone one) the document root
+carries `data-lsx-scheme="light|dark"`, taken from the theme's `surface`; `Sx::dark`
+and `Sx::light` key on it. It is absent while the system decides.
+
 ## Reading the theme
 
 `use_theme()` returns the active theme, for a value you need in Rust rather than

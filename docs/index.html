@@ -34,11 +34,11 @@
              head so it runs before the first paint: the wasm bundle has not
              booted then, so the Rust-side restore is one flash of the wrong
              scheme too late. Under a strict CSP this needs
-             sha256-i2dSUtjYkvH3Km+1WnMbJX1ZfgYnbdyuKeoc3clqFQ0= -->
+             sha256-IpTF2Y5itfnrcJewmeJF3LoQyi6LUPlzfaeZJAYfW8g= -->
         <!-- A sideways touch swipe on the page, as for the drawer, must not
              navigate history back (Chromium's overscroll navigation). -->
         <style>html, body { overscroll-behavior-x: none; }</style>
-        <script>try{var s=localStorage.getItem('lsx-color-scheme');if(s==='light'||s==='dark')document.documentElement.setAttribute('data-lsx-theme',s)}catch(e){}</script>
+        <script>try{var s=localStorage.getItem('lsx-color-scheme');if(s==='light'||s==='dark'){var r=document.documentElement;r.setAttribute('data-lsx-theme',s);r.setAttribute('data-lsx-scheme',s)}}catch(e){}</script>
     </head>
     <body>
         <div id="main"></div>

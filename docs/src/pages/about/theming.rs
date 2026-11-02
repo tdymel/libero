@@ -267,6 +267,17 @@ pub fn ThemingPage() -> Element {
                     Code { source: "ThemeSwitcher" }
                     " is a ready-made switch."
                 }
+                Text {
+                    "While a theme is pinned (the pair's, a named one or a lone one) the document root carries "
+                    Code { source: "data-lsx-scheme=\"light|dark\"" }
+                    ", taken from the theme's "
+                    Code { source: "surface" }
+                    "; "
+                    Code { source: "Sx::dark" }
+                    " and "
+                    Code { source: "Sx::light" }
+                    " key on it. It is absent while the system decides."
+                }
             }
 
             DocSection {

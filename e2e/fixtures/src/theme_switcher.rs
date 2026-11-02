@@ -2,7 +2,7 @@
 
 use dioxus::prelude::*;
 use libero::LiberoContext;
-use libero::components::{Button, Flex, MenuPart, Parts, Text, ThemeSwitcher};
+use libero::components::{Box, Button, Flex, MenuPart, Parts, Text, ThemeSwitcher};
 use libero::sx::sx;
 use libero::theme::{ColorSchemeSetting, HexColor, Theme, ThemeSet};
 
@@ -13,6 +13,7 @@ pub const ROUTES: Routes = &[
     ("/theme-switcher/themes", || rsx! { ThemesPage {} }),
     ("/theme-switcher/system", || rsx! { SystemPage {} }),
     ("/theme-switcher/named", || rsx! { NamedPage {} }),
+    ("/theme-switcher/scheme", || rsx! { SchemePage {} }),
     ("/theme-switcher/labelled", || rsx! { LabelledPage {} }),
     ("/theme-switcher/off", || rsx! { OffPage {} }),
     ("/theme-switcher/small", || rsx! { SmallPage {} }),
@@ -63,6 +64,33 @@ fn NamedPage() -> Element {
                 "Sepia"
             }
             Button { id: "dark", onclick: move |_| context.set_active_theme(ThemeSet::DARK), "Dark" }
+        }
+    }
+}
+
+/// Todo 5383: `Sx::dark` follows a named theme with a dark surface, the pair's pins and back.
+#[component]
+fn SchemePage() -> Element {
+    static OCEAN: Theme = Theme::DARK;
+    let context = use_context::<LiberoContext>();
+    let (ocean, light, dark) = (context.clone(), context.clone(), context);
+    rsx! {
+        Flex { direction: "row", gap: "md", align: "center",
+            Button {
+                id: "ocean",
+                onclick: move |_| {
+                    ocean.set_theme_set(ThemeSet::new().named("ocean", &OCEAN));
+                    ocean.set_active_theme("ocean");
+                },
+                "Ocean"
+            }
+            Button { id: "light", onclick: move |_| light.set_active_theme(ThemeSet::LIGHT), "Light" }
+            Button { id: "dark", onclick: move |_| dark.set_active_theme(ThemeSet::DARK), "Dark" }
+            Box {
+                id: "probe",
+                sx: sx().background_color("#ff0000").dark(sx().background_color("#008000")),
+                "Probe"
+            }
         }
     }
 }

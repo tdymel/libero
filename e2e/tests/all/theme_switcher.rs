@@ -211,6 +211,42 @@ fn a_pinned_scheme_after_a_named_theme_shows_the_pair() {
     });
 }
 
+/// Todo 5383: `Sx::dark` matches a named theme with a dark surface, through the root's scheme.
+#[test]
+fn sx_dark_follows_the_root_scheme_of_a_named_theme() {
+    block_on(async {
+        let fixture = Fixture::open("/theme-switcher/scheme", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        page.evaluate_bounded(SHIELD_STORAGE).await.unwrap();
+
+        for (button, scheme, fill) in [
+            ("#ocean", "dark", "rgb(0, 128, 0)"),
+            ("#light", "light", "rgb(255, 0, 0)"),
+            ("#dark", "dark", "rgb(0, 128, 0)"),
+        ] {
+            pointer::click(page, button).await.unwrap();
+            wait::for_js_true(
+                page,
+                &format!(
+                    "document.documentElement.getAttribute('data-lsx-scheme') === '{scheme}' \
+                     && getComputedStyle(document.querySelector('#probe')).backgroundColor === '{fill}'"
+                ),
+                &format!("{button}: scheme {scheme}, probe {fill}"),
+            )
+            .await
+            .unwrap();
+        }
+
+        fixture
+            .console
+            .assert_clean("Sx::dark on a named theme")
+            .unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
 /// Todo 1045: a press on nothing closes the theme menu, by touch too.
 async fn a_press_outside_closes_the_theme_menu<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
     for _ in 0..2 {

@@ -224,10 +224,10 @@ pub fn LiberoProvider(
 
     // A stored choice must reach the root, or the media block keeps answering.
     // The inline script does it before paint; this covers a client-only build.
-    use_hook(|| {
-        if let Some(pinned) = setting.fixed() {
-            context.set_color_scheme(pinned.into());
-        }
+    // A lone theme has no choice, but its scheme still reaches the root.
+    use_hook(|| match setting.fixed() {
+        Some(pinned) => context.set_color_scheme(pinned.into()),
+        None => context.mark_lone_theme(),
     });
 
     let portal_entries = use_signal(Vec::new);

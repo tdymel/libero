@@ -21,7 +21,8 @@ pub use static_sx::StaticSx;
 #[cfg(test)]
 pub(crate) use sx::hover_guarded;
 pub(crate) use sx::{
-    DARK_SCHEME_QUERY, FORCED_COLORS, REDUCED_MOTION, THEME_ATTRIBUTE, class_name_from_hash,
+    DARK_SCHEME_QUERY, FORCED_COLORS, REDUCED_MOTION, SCHEME_ATTRIBUTE, THEME_ATTRIBUTE,
+    class_name_from_hash,
 };
 pub use sx::{Sx, sx};
 pub use sx_entry::SxEntry;
