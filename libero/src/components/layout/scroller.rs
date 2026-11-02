@@ -19,8 +19,9 @@ use crate::{
         use_localization, use_resize_fallback, use_silent_focus_in, use_theme,
     },
     platform::{
-        ElementApi, PlatformError, element, is_measured_resize, mounted_by_selector,
-        nested_interactive_pointer, next_task, scroll, when_laid_out, when_laid_out_retry,
+        ElementApi, PlatformError, element, focus_press_without_ring, is_measured_resize,
+        mounted_by_selector, nested_interactive_pointer, next_task, scroll, when_laid_out,
+        when_laid_out_retry,
     },
     sx::{REDUCED_MOTION, StaticSx, Sx, ThemeAwareValue, sx},
     theme::{
@@ -628,6 +629,13 @@ pub fn Scroller(props: ScrollerProps) -> Element {
         // from an input or link in the strip, which a mouse must still be able to focus.
         if !nested_interactive_pointer(&event, "[data-slot='viewport']") {
             event.prevent_default();
+            // The cancelled press took the focus arrow keys need, and a drag's would draw a ring.
+            let ringless = viewport
+                .mounted()
+                .is_some_and(|node| focus_press_without_ring(&node));
+            if !ringless {
+                let _ = viewport.focus();
+            }
         }
         // Read now: read at drag start, the first move would use the last origin.
         let offset = viewport.scroll_offset();

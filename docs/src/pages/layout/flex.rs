@@ -12,10 +12,30 @@ const CHILDREN: &str = r#"Box { sx: sx().padding("8px 16px").background("primary
 Box { sx: sx().padding("8px 16px").background("primary.1"), "Two" }
 Box { sx: sx().padding("8px 16px").background("primary.1"), "Three" }"#;
 
+/// A row's children: enough to break a line in the demo's 400px box at any gap, so `wrap` shows.
+const ROW_CHILDREN: &str = r#"Box { sx: sx().padding("8px 16px").background("primary.1"), "One" }
+Box { sx: sx().padding("8px 16px").background("primary.1"), "Two" }
+Box { sx: sx().padding("8px 16px").background("primary.1"), "Three" }
+Box { sx: sx().padding("8px 16px").background("primary.1"), "Four" }
+Box { sx: sx().padding("8px 16px").background("primary.1"), "Five" }
+Box { sx: sx().padding("8px 16px").background("primary.1"), "Six" }
+Box { sx: sx().padding("8px 16px").background("primary.1"), "Seven" }
+Box { sx: sx().padding("8px 16px").background("primary.1"), "Eight" }"#;
+
+const ROW_WORDS: [&str; 8] = [
+    "One", "Two", "Three", "Four", "Five", "Six", "Seven", "Eight",
+];
+
 /// The equal-widths recipe: each child grows from a zero basis, and `min_width` lets a long one shrink.
 const EQUAL_CHILDREN: &str = r#"Box { sx: sx().flex("1 1 0").min_width("0").padding("8px 16px").background("primary.1"), "One" }
 Box { sx: sx().flex("1 1 0").min_width("0").padding("8px 16px").background("primary.1"), "Two" }
 Box { sx: sx().flex("1 1 0").min_width("0").padding("8px 16px").background("primary.1"), "Three, the longest" }"#;
+
+/// A row, also `Row from md`; equal widths never break a line, as each child's basis is 0.
+fn shows_wrap(values: &DemoValues) -> bool {
+    let row = !values.str("direction").starts_with("column");
+    row && values.str("equal_widths") != "true"
+}
 
 fn child_sx(values: &DemoValues) -> Sx {
     let child = sx().padding("8px 16px").background("primary.1");
@@ -27,7 +47,7 @@ fn child_sx(values: &DemoValues) -> Sx {
 
 /// `align` and `justify` distribute spare space, so the flex itself needs a box bigger than its children.
 // snippet: in Flex { .. }
-const BOX_SX: &str = r#"sx: sx().width("100%").max_width("400px").height("200px").padding("8px").background("muted.1")"#;
+const BOX_SX: &str = r#"sx: sx().width("100%").max_width("400px").min_height("200px").padding("8px").background("muted.1")"#;
 
 /// The `responsive` switch's gap: tight on a phone, wide from a laptop up.
 const RESPONSIVE_GAP: Responsive<Size> = responsive(Size::Xs).md(Size::Xl);
@@ -180,6 +200,7 @@ pub fn FlexPage() -> Element {
                 children_code: CHILDREN,
                 code_child: Child(|values: &DemoValues| match values.str("equal_widths").as_str() {
                     "true" => EQUAL_CHILDREN.to_string(),
+                    _ if shows_wrap(values) => ROW_CHILDREN.to_string(),
                     _ => CHILDREN.to_string(),
                 }),
                 fixed: vec![BOX_SX.to_string()],
@@ -189,7 +210,7 @@ pub fn FlexPage() -> Element {
                         sx: sx()
                             .width("100%")
                             .max_width("400px")
-                            .height("200px")
+                            .min_height("200px")
                             .padding("8px")
                             .background("muted.1"),
                         direction: direction(&values),
@@ -197,10 +218,16 @@ pub fn FlexPage() -> Element {
                         align: or_unset(values.str("align")),
                         justify: or_unset(values.str("justify")),
                         wrap: or_unset(values.str("wrap")),
-                        Box { sx: child_sx(&values), "One" }
-                        Box { sx: child_sx(&values), "Two" }
-                        Box { sx: child_sx(&values),
-                            if values.str("equal_widths") == "true" { "Three, the longest" } else { "Three" }
+                        if shows_wrap(&values) {
+                            for word in ROW_WORDS {
+                                Box { key: "{word}", sx: child_sx(&values), "{word}" }
+                            }
+                        } else {
+                            Box { sx: child_sx(&values), "One" }
+                            Box { sx: child_sx(&values), "Two" }
+                            Box { sx: child_sx(&values),
+                                if values.str("equal_widths") == "true" { "Three, the longest" } else { "Three" }
+                            }
                         }
                     }
                 },

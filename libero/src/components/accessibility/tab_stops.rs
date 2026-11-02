@@ -227,6 +227,11 @@ fn walk_stops(
         }
         takes(at)
             || groups[at].is_some_and(|group| {
+                // Focus already inside the group: leave it, or a walk out never ends (5256).
+                let member = |other: usize| groups[other] == Some(group);
+                if (0..items.len()).any(|other| member(other) && items[other].is_focused()) {
+                    return false;
+                }
                 let others = order[step + 1..].iter().chain(&order[..step]);
                 others
                     .filter(|&&other| groups[other] == Some(group))
@@ -548,6 +553,48 @@ mod tests {
         focused.set(0);
         assert!(focus_first_stop(&root, &items, 2..4, false));
         assert_eq!(focused.get(), 4);
+    }
+
+    /// Shift+Tab from the group's last radio, its checked radio hidden: focus leaves the group,
+    /// where the fallback offered the radio already focused and counted that as taken (5256).
+    #[test]
+    fn a_walk_out_of_a_group_whose_checked_radio_refuses_leaves_it() {
+        let focused = Rc::new(Cell::new(0));
+        let plain = |id| Fake {
+            id,
+            focused: focused.clone(),
+            ..Fake::default()
+        };
+        let hidden = Fake {
+            checked: true,
+            refuses: true,
+            ..radio(2, &focused, "size")
+        };
+        let items = boxed(&[
+            plain(1),
+            hidden,
+            radio(3, &focused, "size"),
+            radio(4, &focused, "size"),
+            plain(5),
+        ]);
+        let root = Fake::default();
+        // From `after` backwards the group's last radio takes it, as 4601 wants.
+        focused.set(5);
+        assert!(focus_first_stop(
+            &root,
+            &items,
+            [3, 2, 1, 0, 4].into_iter(),
+            true
+        ));
+        assert_eq!(focused.get(), 4);
+        // From there backwards the walk goes on to `before`, not back to the same radio.
+        assert!(focus_first_stop(
+            &root,
+            &items,
+            [2, 1, 0, 4, 3].into_iter(),
+            true
+        ));
+        assert_eq!(focused.get(), 1);
     }
 
     /// Only a hidden control is left: the walk reports no stop, so a caller crosses past it (4793).

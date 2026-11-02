@@ -241,12 +241,13 @@ base_props! {
 /// ```
 /// # use dioxus::prelude::*;
 /// # use libero::components::{Button, Paper, Text, Transition, TransitionKind};
+/// # use libero::sx::sx;
 /// # fn app() -> Element {
 /// let mut show = use_signal(|| false);
 /// rsx! {
 ///     Button { aria_expanded: show(), onclick: move |_| show.toggle(), "Toggle" }
 ///     Transition { kind: TransitionKind::FadeUp, open: show(),
-///         Paper { Text { "Hello" } }
+///         Paper { sx: sx().padding("sm"), Text { "Hello" } }
 ///     }
 /// }
 /// # }

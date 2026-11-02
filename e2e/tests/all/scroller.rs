@@ -526,6 +526,39 @@ fn a_click_on_a_field_in_a_draggable_strip_focuses_it() {
     });
 }
 
+/// Todo 5254: a click and a drag on a draggable strip focus it, so arrow keys scroll it, and a
+/// mouse press draws no ring.
+#[test]
+fn a_mouse_press_focuses_a_draggable_strip_without_a_ring() {
+    const STEPPED: &str = "#stepped > [role=region]";
+    const NO_RING: &str = "document.activeElement === document.querySelector('#stepped > [role=region]') \
+        && !document.activeElement.matches(':focus-visible')";
+    block_on(async {
+        let fixture = Fixture::open("/scroller/drag", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        pointer::click(page, STEPPED).await.unwrap();
+        wait::for_js_true(page, NO_RING, "a click to focus the strip with no ring")
+            .await
+            .unwrap();
+        page.evaluate_bounded("document.activeElement.blur()")
+            .await
+            .unwrap();
+        let from = pointer::centre_of(page, STEPPED).await.unwrap();
+        let to = pointer::Point {
+            x: from.x - 120.0,
+            y: from.y,
+        };
+        pointer::drag(page, from, to, 12).await.unwrap();
+        wait::for_js_true(page, NO_RING, "a drag to focus the strip with no ring")
+            .await
+            .unwrap();
+        fixture.console.assert_clean("a press on a strip").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
 /// 2.4.11 under RTL: an item is measured from the right edge, where the
 /// strip starts.
 #[test]

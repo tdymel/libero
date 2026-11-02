@@ -22,7 +22,7 @@ pub fn TransitionDemo(
             gap: "sm",
             Button { aria_expanded: show(), onclick: move |_| show.toggle(), "Toggle" }
             Transition { kind, duration, open: show(), from: filter.map(|filter| sx().filter(filter)),
-                Paper { Text { "Hello" } }
+                Paper { sx: sx().padding("sm"), Text { "Hello" } }
             }
         }
     }

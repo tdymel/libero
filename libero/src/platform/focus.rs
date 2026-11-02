@@ -21,6 +21,12 @@ pub(crate) fn focus_without_ring(mounted: &Rc<MountedData>) -> bool {
     backend::focus_without_ring(mounted)
 }
 
+/// [`focus_without_ring`] for a press the caller cancelled: the page stays where it is, as under
+/// the press's own focus. A browser without `focusVisible` keeps its own ring heuristic.
+pub(crate) fn focus_press_without_ring(mounted: &Rc<MountedData>) -> bool {
+    backend::focus_press_without_ring(mounted)
+}
+
 /// Whether focus is on `mounted` or inside it; a WebView answers `false`.
 pub(crate) fn focus_is_in(mounted: &Rc<MountedData>) -> bool {
     backend::focus_is_in(mounted)

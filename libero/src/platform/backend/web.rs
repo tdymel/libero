@@ -430,6 +430,14 @@ pub(super) fn focus_ring_shown() -> Option<bool> {
 }
 
 pub(super) fn focus_without_ring(mounted: &Rc<MountedData>) -> bool {
+    focus_ringless(mounted, false)
+}
+
+pub(super) fn focus_press_without_ring(mounted: &Rc<MountedData>) -> bool {
+    focus_ringless(mounted, true)
+}
+
+fn focus_ringless(mounted: &Rc<MountedData>, prevent_scroll: bool) -> bool {
     let Some(element) = mounted.downcast::<web_sys::Element>() else {
         return false;
     };
@@ -438,6 +446,7 @@ pub(super) fn focus_without_ring(mounted: &Rc<MountedData>) -> bool {
     };
     let options = web_sys::FocusOptions::new();
     options.set_focus_visible(false);
+    options.set_prevent_scroll(prevent_scroll);
     element.focus_with_options(&options).is_ok()
 }
 
