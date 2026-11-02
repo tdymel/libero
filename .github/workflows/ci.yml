@@ -109,8 +109,7 @@ jobs:
       - run: cargo clippy -p libero --target wasm32-unknown-unknown -- -D warnings
       - run: cargo clippy -p docs --target wasm32-unknown-unknown -- -D warnings
       # What Pages builds: release type-checks differently, and a dev build passed where it failed.
-      # No `-D warnings`: helpers kept for debug assertions read as dead code here.
-      - run: cargo clippy -p docs --target wasm32-unknown-unknown --release
+      - run: cargo clippy -p docs --target wasm32-unknown-unknown --release -- -D warnings
 
   # The `cfg(target_os = "android")` code. The `cfg_attr` allows of `missing_const_for_thread_local`
   # in libero/src/lib.rs, tests/all/main.rs and render_cost.rs go once clippy stops flagging `const {}` (3343).

@@ -35,6 +35,7 @@ macro_rules! properties {
             }
 
             /// Whether the value is one colour, which a misspelled theme colour name breaks.
+            #[cfg(any(debug_assertions, test))]
             pub(crate) const fn takes_color(self) -> bool {
                 match self {
                     $(Self::$variant => properties!(@color $($kind)?),)*

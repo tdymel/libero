@@ -7,7 +7,9 @@ use std::fmt;
 use dioxus::core::{VComponent, view::ViewExt};
 use dioxus::prelude::*;
 
-use super::model::{Attrs, NodeRegistry};
+use super::model::Attrs;
+#[cfg(any(debug_assertions, test))]
+use super::model::NodeRegistry;
 
 /// What a node view gets: the node and, for a node with content, that content.
 #[derive(Props, Clone, PartialEq)]
@@ -75,6 +77,7 @@ impl NodeViews {
     }
 
     /// The view names `registry` does not know: typos that silently fall back.
+    #[cfg(any(debug_assertions, test))]
     pub(crate) fn unregistered<'a>(
         &'a self,
         registry: &'a NodeRegistry,
