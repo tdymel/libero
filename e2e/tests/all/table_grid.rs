@@ -475,8 +475,10 @@ e2e::scenario!(
 async fn a_hidden_column_keeps_the_row<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
     into_body(d, 1).await?;
     d.press(keyboard::ARROW_DOWN).await?;
+    // A WebView's focus lands a task later: a key before it reaches the old cell.
+    at(d, 2, 1, "ArrowDown to Ben").await?;
     d.press(keyboard::ARROW_RIGHT).await?;
-    at(d, 2, 2, "ArrowDown and ArrowRight to Ben's Age").await?;
+    at(d, 2, 2, "ArrowRight to Ben's Age").await?;
     // From outside the grid: a column menu's pick moves the stop to its header first.
     d.click("#hide-age").await?;
     eventually(d, "Ben's City to take the stop", async |d| {

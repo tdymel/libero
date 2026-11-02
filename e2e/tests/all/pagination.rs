@@ -176,7 +176,9 @@ async fn arrows_alone_step_the_page<D: Driver>(d: &mut D, _route: &str) -> Resul
 e2e::scenario!(
     pagination_arrows_alone_step_the_page,
     "/pagination/arrows",
-    arrows_alone_step_the_page
+    arrows_alone_step_the_page,
+    macos: skip("upstream: WebKit does not focus a clicked button"),
+    ios: skip("upstream: WebKit does not focus a clicked button")
 );
 e2e::scenario!(
     a_disabling_arrow_hands_focus_to_the_current_page,

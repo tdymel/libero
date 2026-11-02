@@ -330,7 +330,9 @@ async fn every_form_opens<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
 e2e::scenario!(
     every_form_opens_the_menu_and_takes_focus_back,
     "/floating-action-button/menu-states",
-    every_form_opens
+    every_form_opens,
+    macos: skip("upstream: WebKit does not focus a clicked button"),
+    ios: skip("upstream: WebKit does not focus a clicked button")
 );
 
 /// Todo 5272, on a phone's WebView: the sheet at the screen's foot in the page's direction, a

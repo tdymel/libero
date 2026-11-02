@@ -82,7 +82,8 @@ pub async fn expanded<D: Driver>(d: &mut D, trigger: &str, open: bool, what: &st
 pub async fn tap_into_search<D: Driver>(d: &mut D, trigger: &str) -> Result<()> {
     const BOX: &str = "[data-slot=dropdown] [data-slot=search]";
     d.click(trigger).await?;
-    if d.platform() == Platform::Android {
+    // A phone's sheet leaves the search box to a tap, which raises the keyboard.
+    if matches!(d.platform(), Platform::Android | Platform::Ios) {
         eventually(d, "the sheet's search box", async |d| d.exists(BOX).await).await?;
         d.click(BOX).await?;
     }

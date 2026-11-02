@@ -75,6 +75,8 @@ The performance scenarios (units `perf`, `table_perf`) are no skips but run on r
 | `floating_action_button::a_phone_opens_the_menu_as_a_sheet_and_a_hidden_button_opens_nothing` | desktop | 5272: a phone's WebView |
 | `floating_action_button::a_phone_opens_the_menu_as_a_sheet_and_a_hidden_button_opens_nothing` | native | 5272: a phone's WebView |
 | `floating_action_button::a_phone_opens_the_menu_as_a_sheet_and_a_hidden_button_opens_nothing` | web | 5272: a phone's WebView; `menu::below_sm_the_menu_is_a_sheet_that_closes_every_way` has Chromium |
+| `floating_action_button::every_form_opens_the_menu_and_takes_focus_back` | ios | upstream: WebKit does not focus a clicked button |
+| `floating_action_button::every_form_opens_the_menu_and_takes_focus_back` | macos desktop | upstream: WebKit does not focus a clicked button |
 | `floating_action_button::under_rtl_a_phone_opens_the_menu_as_a_sheet_and_a_hidden_button_opens_nothing` | desktop | 5272: a phone's WebView |
 | `floating_action_button::under_rtl_a_phone_opens_the_menu_as_a_sheet_and_a_hidden_button_opens_nothing` | native | 5272: a phone's WebView |
 | `floating_action_button::under_rtl_a_phone_opens_the_menu_as_a_sheet_and_a_hidden_button_opens_nothing` | web | 5272: a phone's WebView; `menu::below_sm_the_menu_is_a_sheet_that_closes_every_way` has Chromium |
@@ -158,6 +160,7 @@ The performance scenarios (units `perf`, `table_perf`) are no skips but run on r
 | `kanban::a_refused_move_is_void_once_the_app_removes_its_card` | desktop | 958: element identity on the WebView |
 | `kanban::a_refused_move_is_void_when_the_data_change_renders_only_a_column` | desktop | 958: element identity on the WebView |
 | `kanban::a_removed_column_is_no_longer_offered_by_move_to_or_the_arrow_keys` | desktop | 958: element identity on the WebView |
+| `kanban::a_removed_column_is_no_longer_offered_by_move_to_or_the_arrow_keys` | ios | upstream: WebKit does not focus a clicked button |
 | `kanban::a_same_column_key_or_button_move_the_app_refuses_is_not_announced` | desktop | 958: element identity on the WebView |
 | `kanban::left_and_right_put_a_lifted_card_in_the_next_column_of_a_right_to_left_board_mirrored` | macos desktop | upstream: WebKit orders the RTL columns unlike WebKitGTK |
 | `kanban::left_moves_a_lifted_column_forward_on_a_right_to_left_board` | macos desktop | upstream: WebKit orders the RTL columns unlike WebKitGTK |
@@ -242,6 +245,8 @@ The performance scenarios (units `perf`, `table_perf`) are no skips but run on r
 | `pagination::a_late_answer_hands_focus_to_the_current_page_too` | android | 958: element identity on the WebView |
 | `pagination::a_late_answer_hands_focus_to_the_current_page_too` | desktop | 958: element identity on the WebView |
 | `pagination::a_late_answer_hands_focus_to_the_current_page_too` | ios | 958: element identity on the WebView |
+| `pagination::pagination_arrows_alone_step_the_page` | ios | upstream: WebKit does not focus a clicked button |
+| `pagination::pagination_arrows_alone_step_the_page` | macos desktop | upstream: WebKit does not focus a clicked button |
 | `phone_field::a_picker_the_keyboard_covers_scrolls_back_with_its_list` | android | the keyboard's height is the device's: the first scenario covers it |
 | `phone_field::a_picker_the_keyboard_covers_scrolls_back_with_its_list` | desktop | no soft keyboard, and wry's window is not resized here |
 | `phone_field::a_picker_the_keyboard_covers_scrolls_back_with_its_list` | ios | the simulator cannot shrink the viewport as a soft keyboard does |
@@ -317,6 +322,10 @@ The performance scenarios (units `perf`, `table_perf`) are no skips but run on r
 | `slider_touch_keyboard::a_touch_held_on_the_thumb_leaves_no_bubble_after_the_release` | desktop | 1126: no touch input under Xvfb |
 | `splitter::a_double_click_collapses_pane_a_and_restores_it` | ios | 3702: the simulator holds a batched double tap's second touch 0.7-1.1 s, no dblclick |
 | `spotlight::a_hovered_row_is_tinted_and_does_not_move_the_highlight` | ios | a touch screen has no hover |
+| `spotlight::the_active_row_is_scrolled_into_a_short_window` | android | no viewport resize on a phone |
+| `spotlight::the_active_row_is_scrolled_into_a_short_window` | ios | no viewport resize on a phone |
+| `spotlight::the_active_row_is_scrolled_into_a_short_window` | macos desktop | the desktop harness resizes only an X window |
+| `spotlight::the_active_row_is_scrolled_into_a_short_window` | windows desktop | the desktop harness resizes only an X window |
 | `stepper::a_clicked_continue_returns_focus_horizontally` | android | 958: element identity on the WebView |
 | `stepper::a_clicked_continue_returns_focus_horizontally` | desktop | 958: element identity on the WebView |
 | `stepper::a_clicked_continue_returns_focus_horizontally` | ios | 958: element identity on the WebView |
@@ -401,6 +410,7 @@ The performance scenarios (units `perf`, `table_perf`) are no skips but run on r
 | `table_row_groups::a_windowed_grouped_table_renders_the_rows_in_view` | ios | 3633: End reaches the page but scrolls no region, as in Safari |
 | `table_scroll::a_capped_table_scrolls_from_its_header` | android | 958: element identity on the WebView |
 | `table_scroll::a_focused_row_control_is_not_hidden_by_the_sticky_header` | android | 958: element identity on the WebView |
+| `table_scroll::a_page_sticky_header_holds_at_its_offset` | ios | upstream: iOS WebKit does not scroll the page to a script-focused control |
 | `table_scroll::a_plain_capped_table_scrolls_as_a_named_region` | android | 958: element identity on the WebView |
 | `table_scroll::a_tabbed_header_scrolls_into_its_region` | android | 958: element identity on the WebView |
 | `table_scroll::a_tabbed_header_scrolls_into_its_region` | ios | 958: element identity on the WebView |

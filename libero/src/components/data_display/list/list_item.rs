@@ -47,9 +47,6 @@ static LIST_ITEM_BASE_SX: StaticSx = StaticSx::new(|| {
         .when("with-action", action_sx())
 });
 
-/// Natively, an action item's number to its text: a plain item's marker space.
-const MARKER_GAP: &str = "0.3em";
-
 /// The action takes the item's end, so the body is no float's neighbour.
 fn action_sx() -> Sx {
     if NATIVE {
@@ -63,7 +60,6 @@ fn action_sx() -> Sx {
                     .box_sizing("border-box")
                     .width("2em")
                     .margin_inline_start("-2em")
-                    .padding_inline_end(MARKER_GAP)
                     .text_align("end"),
             )
             .selector(
@@ -187,12 +183,13 @@ pub fn ListItem(props: ListItemProps) -> Element {
     // marker) draws it as a leading span (todo 4559); an icon item takes the icon instead.
     let id = use_hook(order_id);
     let number = use_number(context, id);
+    // Blitz drops a marker string's trailing space; a no-break one stays (5199). The span
+    // ends on the same one, as a font's space is no fixed width.
     let marker = number
         .filter(|_| icon.is_none() && props.action.is_some())
-        .map(|number| format!("{number}."));
+        .map(|number| format!("{number}.\u{a0}"));
     let number = number
         .filter(|_| icon.is_none() && props.action.is_none())
-        // Blitz drops a marker string's trailing space; a no-break one stays (5199).
         .map(|number| format!("list-style-type: \"{number}.\u{a0}\""));
     // Native only: where `List` reads the items' DOM order from.
     let order = context

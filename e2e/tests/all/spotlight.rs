@@ -1025,7 +1025,11 @@ async fn the_active_row_stays_in_a_short_window<D: Driver>(d: &mut D, _route: &s
 e2e::scenario!(
     the_active_row_is_scrolled_into_a_short_window,
     "/spotlight-tall",
-    the_active_row_stays_in_a_short_window
+    the_active_row_stays_in_a_short_window,
+    macos: skip("the desktop harness resizes only an X window"),
+    windows: skip("the desktop harness resizes only an X window"),
+    android: skip("no viewport resize on a phone"),
+    ios: skip("no viewport resize on a phone")
 );
 
 /// Todo 5281: under RTL a row's hint read `N + Ctrl`.

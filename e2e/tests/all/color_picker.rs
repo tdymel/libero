@@ -3,7 +3,7 @@
 
 use anyhow::Result;
 use e2e::browser::block_on;
-use e2e::driver::{Driver, eventually, eventually_focused, eventually_text};
+use e2e::driver::{Driver, Platform, eventually, eventually_focused, eventually_text};
 use e2e::passes::{keyboard, pointer};
 use e2e::wait::PageBounded;
 use e2e::{Fixture, Suite, Viewport, wait};
@@ -775,6 +775,14 @@ async fn a_drag_moves_both_axes<D: Driver>(d: &mut D, _route: &str) -> Result<()
         Ok(s < 87 && b < 84)
     })
     .await?;
+    // A finger's drag leaves focus where it was, or the ring shows after every touch (4997).
+    if matches!(d.platform(), Platform::Android | Platform::Ios) {
+        anyhow::ensure!(
+            !d.is_focused(THUMB).await?,
+            "a finger's drag focused the thumb"
+        );
+        return Ok(());
+    }
     eventually_focused(d, THUMB, "the drag").await
 }
 
