@@ -203,9 +203,9 @@ pub(crate) fn use_swipe_close(
 
     // The web and a WebView: a script holds the touch, so a scroller can hand it over.
     let holding = use_subscription_slot::<dyn ScrollSubscription>();
-    let mounted = capture.is_mounted();
-    use_effect(use_reactive!(|mounted| {
-        if !mounted {
+    // Read in the effect: a read in render redraws the consumer once per open (5298).
+    use_effect(move || {
+        if !capture.is_mounted() {
             holding.clear();
         } else if !holding.is_some() {
             holding.set(hold_sheet_pan(
@@ -217,7 +217,7 @@ pub(crate) fn use_swipe_close(
                 }),
             ));
         }
-    }));
+    });
 
     // Blitz, and a pen on the strip elsewhere (one firing no touch events): the box's pointer listeners.
     let mut press = use_hook(|| CopyValue::new(None::<Press>));

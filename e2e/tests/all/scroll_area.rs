@@ -791,7 +791,7 @@ e2e::scenario!(
     a_spread_tag_keeps_the_handle_s_rtl_scroll_to,
     "/scroll-area/rtl-spread",
     a_spread_tag_keeps_rtl_scroll_to,
-    native: skip("5264: a spread tag is a WebView's; on Blitz `attributes()` is empty, so nothing is spread"),
+    native: skip("707: Blitz clamps an RTL scroll_to at 0, so neither area moves; a spread tag is a WebView's anyway"),
 );
 
 /// An area with only `on*reached` handlers still listens for scrolls (todo 29

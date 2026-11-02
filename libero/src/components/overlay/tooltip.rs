@@ -142,9 +142,9 @@ impl PressFocus {
 const CAPTION_ATTR: &str = "data-tooltip-clear";
 
 /// Provided above a `Tooltip` whose trigger has captions at its inline end, marked
-/// `data-tooltip-clear` inside this element (an upright slider's marks, todo 4775).
+/// `data-tooltip-clear` inside this element (an upright slider's marks, todo 4775); `None` has none.
 #[derive(Clone, Copy)]
-pub(crate) struct TooltipClear(pub(crate) ElementHandle);
+pub(crate) struct TooltipClear(pub(crate) CopyValue<Option<ElementHandle>>);
 
 /// How far the [`CAPTION_ATTR`] elements in `root` reach past `anchor`'s inline end, 0 with none.
 pub(crate) fn clear_reach(
@@ -589,10 +589,11 @@ fn TooltipBubble(
     let padding = theme.popover.padding;
 
     // Placed once the captions it clears are measured, so it never lands on one first.
-    let clear = use_hook(try_consume_context::<TooltipClear>);
+    let clear =
+        use_hook(|| try_consume_context::<TooltipClear>().and_then(|clear| *clear.0.peek()));
     let mut reach = use_signal(|| None::<f64>);
     use_effect(move || {
-        if let Some(TooltipClear(root)) = clear {
+        if let Some(root) = clear {
             let measure = clear_reach(root, anchor);
             spawn(async move { reach.set(Some(measure.await)) });
         }

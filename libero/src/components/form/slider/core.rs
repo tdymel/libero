@@ -1345,8 +1345,9 @@ fn SliderBody(live: Signal<Live>, core: SliderCoreProps) -> Element {
     // Names each thumb's value bubble, so the thumb can point at it.
     let bubble_id = use_id();
     let press_focus = use_context_provider(PressFocus::default);
-    // An upright track's marked captions only; a line's carry no marker.
-    use_context_provider(|| TooltipClear(elements.track));
+    // An upright track's marked captions only: a line's carry none, so its bubble waits for no measure (5298).
+    let mut clear = use_context_provider(|| TooltipClear(CopyValue::new(None)));
+    clear.0.set(props.vertical.then_some(elements.track));
 
     let (min, max) = grid_bounds(props.min, props.max, props.step);
     let grid = Grid {

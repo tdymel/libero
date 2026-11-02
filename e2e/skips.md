@@ -294,7 +294,7 @@ The performance scenarios (units `perf`, `table_perf`) are no skips but run on r
 | `scatter_chart::the_legend_hides_and_shows_a_series` | native | Blitz has no script reads |
 | `scroll_area::a_jump_mid_list_renders_the_window_there` | android | 2177: the WebView does not follow the jump |
 | `scroll_area::a_scroll_right_after_the_plain_to_windowed_switch_moves_the_window` | android | 2177: the WebView does not follow the jump |
-| `scroll_area::a_spread_tag_keeps_the_handle_s_rtl_scroll_to` | native | 5264: a spread tag is a WebView's; on Blitz `attributes()` is empty, so nothing is spread |
+| `scroll_area::a_spread_tag_keeps_the_handle_s_rtl_scroll_to` | native | 707: Blitz clamps an RTL scroll_to at 0, so neither area moves; a spread tag is a WebView's anyway |
 | `scroll_area::rows_stay_in_view_through_a_fling` | android | 2131: rows trail a WebView fling; skeleton bars paint the gap |
 | `scroll_area::rows_stay_in_view_through_a_fling` | desktop | 2131: rows trail a WebView fling, 80px of 120; skeleton bars paint the gap |
 | `scroll_area::rows_stay_in_view_through_a_fling` | ios | 2131: rows trail a WebView fling, 80px of 120; skeleton bars paint the gap |

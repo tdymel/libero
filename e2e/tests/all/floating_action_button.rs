@@ -17,6 +17,49 @@ const TRIGGER: &str = "[aria-haspopup='menu']";
 const MENU: &str = "[role='menu']";
 const STATES: &str = "/floating-action-button/menu-states";
 
+/// Todo 5297: the portal sits outside a local `dir`, as the Localization page says.
+#[test]
+fn a_menu_under_a_local_rtl_wrapper_takes_the_document_s_direction() {
+    block_on(async {
+        let fixture = Fixture::open("/floating-action-button/menu-local-rtl", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        pointer::click(page, TRIGGER).await.unwrap();
+        wait::for_js_true(
+            page,
+            &format!(
+                "getComputedStyle(document.querySelector(\"{TRIGGER}\")).direction === 'rtl' \
+                 && getComputedStyle(document.querySelector(\"{MENU}\")).direction === 'ltr'"
+            ),
+            "an rtl trigger and an ltr menu",
+        )
+        .await
+        .unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
+/// Todo 5297: what the Localization page offers instead of a local `dir`.
+#[test]
+fn a_menu_under_a_provider_s_rtl_direction_is_rtl() {
+    block_on(async {
+        let fixture = Fixture::open("/floating-action-button/menu-states-rtl", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        pointer::click(page, TRIGGER).await.unwrap();
+        wait::for_js_true(
+            page,
+            &format!("getComputedStyle(document.querySelector(\"{MENU}\")).direction === 'rtl'"),
+            "an rtl menu",
+        )
+        .await
+        .unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
 #[test]
 fn it_meets_the_baseline() {
     Suite::new("floating_action_button", "/floating-action-button")

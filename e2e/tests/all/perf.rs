@@ -320,12 +320,30 @@ fn a_searchable_select_filter_and_arrow_stay_in_budget() {
             ],
             "a key filtering 300 windowed rows to 138",
         );
-        reset(page).await;
-        keyboard::press(page, keyboard::ARROW_DOWN).await.unwrap();
-        wait::for_js_true(page, &active_row_is(1), "the arrow")
+        // Only an arrow past the last row in view scrolls the list (4835).
+        let in_view: usize = page
+            .evaluate_bounded(ROWS_IN_VIEW)
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        for row in 1..in_view {
+            keyboard::press(page, keyboard::ARROW_DOWN).await.unwrap();
+            wait::for_js_true(
+                page,
+                &active_row_is(row),
+                "the walk to the last row in view",
+            )
             .await
             .unwrap();
-        // The highlight scrolls the list, and a scroll report lands up to half a second late.
+        }
+        settled(page, "walking").await;
+        reset(page).await;
+        keyboard::press(page, keyboard::ARROW_DOWN).await.unwrap();
+        wait::for_js_true(page, &active_row_is(in_view), "the arrow")
+            .await
+            .unwrap();
+        // A scroll report lands up to half a second late.
         wait::for_js_true(
             page,
             "document.querySelector('[role=listbox]').scrollTop > 0",
@@ -452,6 +470,11 @@ fn option_count_is(count: usize) -> String {
 }
 
 /// The focused control names the `row`th drawn option as active.
+const ROWS_IN_VIEW: &str = "(() => { const list = document.querySelector('[role=listbox]'); \
+     const bottom = list.getBoundingClientRect().bottom; \
+     return [...list.querySelectorAll('[role=option]')] \
+     .filter(row => row.getBoundingClientRect().bottom <= bottom + 0.5).length; })()";
+
 fn active_row_is(row: usize) -> String {
     format!(
         "(() => {{ const id = document.activeElement.getAttribute('aria-activedescendant'); \

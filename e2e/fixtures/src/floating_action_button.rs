@@ -19,6 +19,7 @@ pub const ROUTES: Routes = &[
     ("/floating-action-button/bar", || rsx! { BarPage {} }),
     ("/floating-action-button/hide", || rsx! { HidePage {} }),
     ("/floating-action-button/menu", || rsx! { MenuPage {} }),
+    ("/floating-action-button/menu-local-rtl", || rsx! { div { dir: "rtl", MenuPage {} } }),
     ("/floating-action-button/menu-states", || rsx! { MenuStatesPage {} }),
     ("/floating-action-button/menu-states-rtl", || rsx! {
         LiberoProvider { direction: Direction::Rtl, MenuStatesPage {} }
