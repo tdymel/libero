@@ -198,7 +198,7 @@ pub use date::{
     TimePickerVariant,
 };
 pub(crate) use dialog::DIALOG_DEFAULT_SIZE;
-pub use dialog::{DIALOG_SIZE, DialogDefaults};
+pub use dialog::{DIALOG_SIZE, DialogDefaults, DialogFullScreen};
 pub use direction_toggle::DirectionToggleDefaults;
 pub use divider::{
     DIVIDER_LINE, DIVIDER_SPACING, DIVIDER_THICKNESS, DividerDefaults, LabelPosition,

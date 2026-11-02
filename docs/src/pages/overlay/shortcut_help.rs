@@ -28,7 +28,7 @@ pub fn ShortcutHelpPage() -> Element {
                     prop("close_label", "String").default("\"Close\"").doc("The close button's accessible name, such as \"Close shortcuts\". Unset, the localization's `common.close`."),
                     prop("full_screen", "DialogFullScreen")
                         .default("never")
-                        .doc("Inside a modal, fills the screen edge to edge instead of centring: `\"phone\"` below the `sm` breakpoint, `\"always\"` at every width. The list then grows past its 24rem cap and the modal scrolls. Outside a modal it does nothing."),
+                        .doc("Inside a modal, fills the screen edge to edge instead of centring: `\"phone\"` below the `sm` breakpoint, `\"always\"` at every width. The list then grows past its 24rem cap and the modal scrolls. Outside a modal it does nothing. Unset, the theme's `dialog.full_screen`."),
                 ]),
             ],
             accessibility: a11y()

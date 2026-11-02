@@ -70,9 +70,11 @@ fn MenuPhonePage() -> Element {
 
     rsx! {
         Flex { direction: "column", gap: "md", padding: "16px",
+            // Todo 5364: larger rows on the sheet only.
             Menu {
                 state: menu,
                 items,
+                sheet_size: "lg",
                 Button { variant: "outlined", attributes: menu.a11y_attributes(), "Actions" }
             }
             Text { id: "last", "{last}" }

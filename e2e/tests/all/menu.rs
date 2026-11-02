@@ -1395,6 +1395,53 @@ fn below_sm_a_submenu_stacks_and_closes_alone() {
     });
 }
 
+/// Todo 5364: `sheet_size` sizes every sheet below `sm`; from `sm` up, `size` holds.
+#[test]
+fn sheet_size_applies_below_sm_only() {
+    use chromiumoxide::cdp::browser_protocol::emulation::SetDeviceMetricsOverrideParams;
+    const FONTS: &str = "[...document.querySelectorAll('[role=menu]')].map(m => \
+         m.getAttribute('data-state').split(' ').find(s => s.startsWith('size-')) + ':' \
+         + getComputedStyle(m.querySelector('[data-slot=label]')).fontSize).join()";
+    block_on(async {
+        let fixture = phone("/menu-phone").await;
+        let page = &fixture.page;
+        tap(page, TRIGGER).await.unwrap();
+        sheets_shown(page, 1).await.unwrap();
+        tap(page, "[role=menuitem][aria-haspopup=menu]")
+            .await
+            .unwrap();
+        sheets_shown(page, 2).await.unwrap();
+        wait::for_js_true(
+            page,
+            &format!("{FONTS} === 'size-lg:18px,size-lg:18px'"),
+            "both sheets at lg",
+        )
+        .await
+        .unwrap();
+        keyboard::press(page, keyboard::ESCAPE).await.unwrap();
+        keyboard::press(page, keyboard::ESCAPE).await.unwrap();
+        wait::for_js_true(page, MENU_GONE, "the sheets closed")
+            .await
+            .unwrap();
+
+        page.execute_bounded(SetDeviceMetricsOverrideParams::new(1024, 780, 1.0, false))
+            .await
+            .unwrap();
+        tap(page, TRIGGER).await.unwrap();
+        wait::for_js_true(
+            page,
+            "!!document.querySelector('[role=menu] [data-slot=label]')",
+            "the popover open",
+        )
+        .await
+        .unwrap();
+        let fonts: String = e2e::js(page, FONTS).await;
+        assert_eq!(fonts, "size-md:16px");
+        fixture.console.assert_clean("sheet_size").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
 /// Todo 4111: a `FileField` trigger keeps the field's id, names the menu by the field's
 /// label, and an item reaches `args.open`; a trigger beside its `Menu` keeps its own id too.
 #[test]

@@ -38,7 +38,9 @@ pub(crate) mod lightbox;
 pub(crate) mod use_modal;
 
 #[cfg(feature = "dialog")]
-pub use dialog::{Dialog, DialogFullScreen, DialogPart, DialogProps};
+pub use crate::theme::DialogFullScreen;
+#[cfg(feature = "dialog")]
+pub use dialog::{Dialog, DialogPart, DialogProps};
 #[cfg(feature = "drawer")]
 pub(crate) use drawer::Drawer;
 #[cfg(feature = "drawer")]

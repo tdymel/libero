@@ -13,9 +13,10 @@ use crate::{
     },
     context::{Dismiss, IconSlot, ModalContext},
     hooks::{current_localization, use_id, use_theme},
-    str_enum::str_enum,
     sx::{FORCED_COLORS, StaticSx, Sx, ThemeAwareValue, sx},
-    theme::{CssVar, DIALOG_DEFAULT_SIZE, DIALOG_SIZE, PAPER_RADIUS, Size, SizeCss},
+    theme::{
+        CssVar, DIALOG_DEFAULT_SIZE, DIALOG_SIZE, DialogFullScreen, PAPER_RADIUS, Size, SizeCss,
+    },
     utils::warn,
 };
 
@@ -57,18 +58,6 @@ fn full_screen_sx() -> Sx {
         .with("padding-right", safe_area_padding(&padding, "right"))
         .with("padding-bottom", safe_area_padding(&padding, "bottom"))
         .with("padding-left", safe_area_padding(&padding, "left"))
-}
-
-str_enum! {
-    /// When a [`Dialog`] in a modal fills the screen instead of centring.
-    pub enum DialogFullScreen {
-        /// Centred at every width.
-        #[default]
-        Never = "never",
-        /// Below the `sm` breakpoint, where a centred dialog leaves slivers of page.
-        Phone = "phone",
-        Always = "always",
-    }
 }
 
 input_from_str!(DialogFullScreen);
@@ -159,7 +148,8 @@ base_props! {
         #[props(default, into)]
         size: Input<ThemeAwareValue>,
         /// Inside a modal, fills the screen edge to edge instead of centring: `"phone"`
-        /// below the `sm` breakpoint, `"always"` at every width. Unset, centred.
+        /// below the `sm` breakpoint, `"always"` at every width. Unset,
+        /// `theme.dialog.full_screen`, else centred.
         #[props(default, into)]
         full_screen: Input<DialogFullScreen>,
         /// Layered onto Dialog's own - e.g. `Drawer`'s anchor/size vars.
@@ -269,12 +259,13 @@ pub fn Dialog(props: DialogProps) -> Element {
             *slot = None;
         }
     });
-    let variables: Input<Variables> = dialog_variables(&props, use_theme().dialog.radius)
+    let defaults = use_theme().dialog;
+    let variables: Input<Variables> = dialog_variables(&props, defaults.radius)
         .merge(props.variables.unwrap_or_default())
         .into();
     // Outside a modal there is no frame to fill.
     let full_screen = match is_modal {
-        true => props.full_screen.copied_or_default(),
+        true => props.full_screen.copied_or(defaults.full_screen),
         false => DialogFullScreen::Never,
     };
     let states: Input<States> = props
@@ -463,6 +454,43 @@ mod tests {
             "{html}"
         );
         assert!(html.contains("data-state=\"full-screen-phone\""), "{html}");
+    }
+
+    /// 5365: an unset `full_screen` takes `theme.dialog.full_screen`; a prop beats it.
+    #[test]
+    fn an_unset_full_screen_follows_the_theme() {
+        static PHONE: crate::theme::Theme = crate::theme::Theme {
+            dialog: crate::theme::DialogDefaults {
+                full_screen: DialogFullScreen::Phone,
+                ..crate::theme::Theme::DEFAULT.dialog
+            },
+            ..crate::theme::Theme::DEFAULT
+        };
+        #[component]
+        fn InModal() -> Element {
+            use_context_provider(|| ModalContext {
+                onclose: Some(Callback::new(|()| {})),
+                dismiss_guard: None,
+            });
+            rsx! {
+                Dialog { title: "Themed", "one" }
+                Dialog { title: "Own", full_screen: "never", "two" }
+            }
+        }
+        fn app() -> Element {
+            rsx! {
+                crate::LiberoProvider { themes: &PHONE, InModal {} }
+            }
+        }
+        let mut dom = VirtualDom::new(app);
+        dom.rebuild_in_place();
+        let html = dioxus_ssr::render(&dom);
+
+        assert_eq!(
+            html.matches("data-state=\"full-screen-phone\"").count(),
+            1,
+            "{html}"
+        );
     }
 
     /// Todo 4847: a header holding only the close button drops its margin below.

@@ -70,6 +70,8 @@ pub(super) struct MenuLevelProps {
     side: Side,
     align: Align,
     size: Size,
+    /// `size` on the phone sheet, below `sm`.
+    sheet_size: Option<Size>,
     radius: ScaleOrCss,
     loop_focus: bool,
     close_on_select: bool,
@@ -321,10 +323,14 @@ pub(super) fn MenuLevel(props: MenuLevelProps) -> Element {
         )
     });
 
+    let size = match (narrow(), props.sheet_size) {
+        (true, Some(sheet_size)) => sheet_size,
+        _ => props.size,
+    };
     let states: Input<States> = props
         .states
         .unwrap_or_default()
-        .with(props.size.state_name(), true)
+        .with(size.state_name(), true)
         .with(props.radius.size.radius_state_name(), true)
         .with("bordered", true)
         .into();
@@ -431,6 +437,7 @@ pub(super) fn MenuLevel(props: MenuLevelProps) -> Element {
                 side: submenu_side,
                 align: Align::Start,
                 size: props.size,
+                sheet_size: props.sheet_size,
                 radius: props.radius.clone(),
                 loop_focus: props.loop_focus,
                 close_on_select: props.close_on_select,

@@ -49,7 +49,7 @@ fn Demo() -> Element {
 | `shortcuts` | `Vec<Shortcut>` | required | The rows, each `Shortcut::new(chord, what it does)`. A chord `use_hotkeys` would not bind is left out, with a warning in debug builds. |
 | `title` | `String` | - | The heading. Unset, the localization's `shortcut_help.title`, "Keyboard shortcuts". |
 | `close_label` | `String` | `"Close"` | The close button's accessible name, such as "Close shortcuts". Unset, the localization's `common.close`. |
-| `full_screen` | `DialogFullScreen` | `never` | Inside a modal, fills the screen edge to edge instead of centring: `"phone"` below the `sm` breakpoint, `"always"` at every width. The list then grows past its 24rem cap and the modal scrolls. Outside a modal it does nothing. |
+| `full_screen` | `DialogFullScreen` | `never` | Inside a modal, fills the screen edge to edge instead of centring: `"phone"` below the `sm` breakpoint, `"always"` at every width. The list then grows past its 24rem cap and the modal scrolls. Outside a modal it does nothing. Unset, the theme's `dialog.full_screen`. |
 
 Like every component, `ShortcutHelp` also takes the shared props `sx`, `class`,
 `style`, `states`, and any extra HTML attributes. They go to its `Dialog`.

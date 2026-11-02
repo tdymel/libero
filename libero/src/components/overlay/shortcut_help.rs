@@ -9,7 +9,7 @@ use crate::{
         typography::{chord_kbd, chord_words},
     },
     context::ModalContext,
-    hooks::{Chord, current_localization, use_css, use_element, use_resize_fallback},
+    hooks::{Chord, current_localization, use_css, use_element, use_resize_fallback, use_theme},
     platform::{ElementApi, mod_is_meta},
     sx::{StaticSx, sx},
     theme::Size,
@@ -78,7 +78,8 @@ base_props! {
         #[props(default, into)]
         close_label: Option<String>,
         /// Inside a modal, fills the screen edge to edge instead of centring: `"phone"`
-        /// below the `sm` breakpoint, `"always"` at every width. Unset, centred.
+        /// below the `sm` breakpoint, `"always"` at every width. Unset,
+        /// `theme.dialog.full_screen`, else centred.
         #[props(default, into)]
         full_screen: Input<DialogFullScreen>,
     }
@@ -162,8 +163,9 @@ pub fn ShortcutHelp(props: ShortcutHelpProps) -> Element {
     let in_modal = try_use_context::<ModalContext>()
         .filter(ModalContext::is_modal)
         .is_some();
+    let theme_full_screen = use_theme().dialog.full_screen;
     let full_screen = match in_modal {
-        true => props.full_screen.copied_or_default(),
+        true => props.full_screen.copied_or(theme_full_screen),
         false => DialogFullScreen::Never,
     };
     let states: Input<States> = States::default()
