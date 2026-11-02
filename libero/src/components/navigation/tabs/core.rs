@@ -21,6 +21,7 @@ use crate::{
 };
 
 const TABS_COLOR: CssVar = CssVar::new("--lsx-tabs-color");
+const TABS_THUMB_LIFT: &str = "6px";
 
 static TABS_SX: StaticSx = StaticSx::new(|| {
     let line = format!("inset 0 -1px 0 {}", TABS_BORDER_COLOR.value());
@@ -35,8 +36,24 @@ static TABS_SX: StaticSx = StaticSx::new(|| {
                 .align_items("stretch")
                 .overflow_x("auto")
                 .box_shadow(line)
-                // Lifts the 3px indicator above a phone's overlay scrollbar thumb (todo 4635).
-                .media(COARSE_POINTER, sx().padding_bottom("6px")),
+                // Lifts the 3px indicator above a phone's overlay scrollbar thumb (todo 4635);
+                // the line is drawn above that padding, under the indicator (todo 5357).
+                .media(
+                    COARSE_POINTER,
+                    sx().padding_bottom(TABS_THUMB_LIFT)
+                        .box_shadow("none")
+                        .with(
+                            "background-image",
+                            format!("linear-gradient({0}, {0})", TABS_BORDER_COLOR.value()),
+                        )
+                        .with("background-repeat", "no-repeat")
+                        .with(
+                            "background-position",
+                            format!("0 calc(100% - {TABS_THUMB_LIFT})"),
+                        )
+                        .with("background-size", "100% 1px")
+                        .with("background-attachment", "scroll"),
+                ),
         )
         .selector(
             "& [role=\"tab\"]",
@@ -137,7 +154,10 @@ fn vertical_sx() -> crate::sx::Sx {
                 .overflow_x("visible")
                 .overflow_y("auto")
                 .max_width("50%")
-                .media(COARSE_POINTER, sx().padding_bottom("0")),
+                .media(
+                    COARSE_POINTER,
+                    sx().padding_bottom("0").with("background-image", "none"),
+                ),
         )
         .selector(
             "& > [role=\"tablist\"] > [role=\"tab\"]",

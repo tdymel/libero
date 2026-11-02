@@ -11,7 +11,7 @@ use libero::{
     hooks::{ElementHandle, use_element, use_fullscreen, use_local_storage, use_theme_set},
     platform::ElementApi,
     sx::{Sx, sx},
-    theme::{NamedColorCss, ThemeSet, Z_INDEX_HEADER, Z_INDEX_MODAL},
+    theme::{NamedColorCss, TABS_BORDER_COLOR, ThemeSet, Z_INDEX_HEADER, Z_INDEX_MODAL},
 };
 
 use crate::Routes;
@@ -324,6 +324,28 @@ fn doc_tabs_sx() -> Sx {
         .with("background-position", "0 0, 100% 0, 0 0, 100% 0")
         .with("background-size", "2rem 100%, 2rem 100%, 0.75rem 100%, 0.75rem 100%")
         .with("background-attachment", "local, local, scroll, scroll"),
+    )
+    // The Tabs line is a background on a phone (todo 5357): this row's replaces it, so it re-adds it on top.
+    .media(
+        "(pointer: coarse)",
+        sx().selector(
+            "& > [role=tablist]",
+            sx().with(
+                "background-image",
+                format!(
+                    "linear-gradient({line}, {line}), \
+                     linear-gradient(to right, {page} 30%, transparent), \
+                     linear-gradient(to left, {page} 30%, transparent), \
+                     radial-gradient(farthest-side at 0 50%, color-mix(in srgb, currentColor 30%, transparent), transparent), \
+                     radial-gradient(farthest-side at 100% 50%, color-mix(in srgb, currentColor 30%, transparent), transparent)",
+                    line = TABS_BORDER_COLOR.value(),
+                    page = NamedColorCss::SURFACE.value(),
+                ),
+            )
+            .with("background-position", "0 calc(100% - 6px), 0 0, 100% 0, 0 0, 100% 0")
+            .with("background-size", "100% 1px, 2rem 100%, 2rem 100%, 0.75rem 100%, 0.75rem 100%")
+            .with("background-attachment", "scroll, local, local, scroll, scroll"),
+        ),
     )
     // Tight columns drop the icons and tighten the tabs, so four fit (todo 5305). The sidebar
     // keeps the column narrow up to this width, a phone's is 375px or 320px.

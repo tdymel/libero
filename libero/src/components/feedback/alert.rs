@@ -58,8 +58,13 @@ static ALERT_BASE_SX: StaticSx = StaticSx::new(|| {
                 .align_items("center")
                 .justify_content("center")
                 .width(ALERT_ICON_SIZE.value())
-                .height(ALERT_ICON_SIZE.value())
-                .selector("& svg", sx().width("100%").height("100%")),
+                // At least one line box tall, so the icon centres on the first line (todo 5360).
+                .height(format!("max({}, 1lh)", ALERT_ICON_SIZE.value()))
+                .selector(
+                    "& svg",
+                    sx().width(ALERT_ICON_SIZE.value())
+                        .height(ALERT_ICON_SIZE.value()),
+                ),
         )
         // An empty icon would still take its size and the `gap`. `:empty`
         // ignores dioxus' placeholder, so an `if` that rendered nothing counts.

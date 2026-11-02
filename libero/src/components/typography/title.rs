@@ -8,7 +8,7 @@ use crate::{
         layout::use_box,
     },
     hooks::{use_gradient_style, use_theme},
-    sx::StaticSx,
+    sx::{StaticSx, sx},
     theme::{Gradient, Size, TITLE_LINE_HEIGHT, TitleDefaults},
     utils::{Warned, use_warn_once},
 };
@@ -20,6 +20,15 @@ static TITLE_BASE_SX: StaticSx = StaticSx::new(|| {
         // A long word at `xxl` is wider than a 320px column (WCAG 1.4.10). Unlike
         // `break-word`, `anywhere` also shrinks min-content, so a flex parent stays narrow.
         .overflow_wrap("anywhere")
+        // A link in a title takes the title's type, not `Anchor`'s own Text sizing (todo 5359).
+        .selector(
+            "& a[data-state*=\"underline-\"]",
+            sx().font_family("inherit")
+                .font_size("inherit")
+                .font_weight("inherit")
+                .letter_spacing("inherit")
+                .line_height("inherit"),
+        )
         .when("gradient", gradient_text_sx())
 });
 
