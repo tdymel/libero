@@ -108,7 +108,15 @@ pub fn TextFieldPage() -> Element {
                     Code { source: "leading" }
                     " and "
                     Code { source: "trailing" }
-                    " put content inside the border, beside the control."
+                    " put content inside the border, beside the control. The "
+                    Code { source: "Pending" }
+                    " status sets "
+                    Code { source: "aria-busy" }
+                    "; its loader comes from a surrounding "
+                    Code { source: "Form" }
+                    "'s "
+                    Code { source: "pending_loader" }
+                    "."
                 }
             },
             // snippet: let mut value = use_signal(String::new);

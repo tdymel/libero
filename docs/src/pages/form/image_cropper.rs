@@ -216,7 +216,9 @@ fn ImageCropperDemo(values: DemoValues) -> Element {
                 onchange: move |next: CropRect| crop.set(Some((key.clone(), next))),
             }
             Text { size: "sm",
-                "{pixels.width} x {pixels.height} px at {pixels.x}, {pixels.y} of 1600 x 900"
+                bdi { dir: "ltr",
+                    "{pixels.width} x {pixels.height} px at {pixels.x}, {pixels.y} of 1600 x 900"
+                }
             }
         }
     }

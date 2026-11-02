@@ -16,6 +16,7 @@ pub const ROUTES: Routes = &[
     ("/text-field", || rsx! { TextFieldPage {} }),
     ("/text-field/form", || rsx! { PasswordFormPage {} }),
     ("/text-field/raw-form", || rsx! { PasswordRawFormPage {} }),
+    ("/text-field/reveal-gone", || rsx! { PasswordRevealGonePage {} }),
     ("/text-field/echo", || rsx! { TextFieldEchoPage {} }),
     ("/text-field/upper", || rsx! { TextFieldUpperPage {} }),
     ("/text-field/password-echo", || rsx! { PasswordEchoPage {} }),
@@ -198,6 +199,29 @@ fn TextFieldPage() -> Element {
                     helper: "Markdown works.",
                     required: true,
                     validate: not_empty.error("Bio needed"),
+                }
+            }
+        }
+    }
+}
+
+/// Todo 5321: each switch takes away what could hide the secret again.
+#[component]
+fn PasswordRevealGonePage() -> Element {
+    let mut offered = use_signal(|| true);
+    let mut disabled = use_signal(|| false);
+    let mut locked = use_signal(|| false);
+    rsx! {
+        Flex { direction: "column", gap: "md", max_width: "320px",
+            button { id: "offered", onclick: move |_| offered.toggle(), "Offer reveal" }
+            button { id: "disabled", onclick: move |_| disabled.toggle(), "Disable" }
+            button { id: "locked", onclick: move |_| locked.toggle(), "Lock fieldset" }
+            div { "data-case": "own",
+                PasswordField { label: "Own", reveal_button: offered(), disabled: disabled() }
+            }
+            div { "data-case": "grouped",
+                Fieldset::<String> { label: "Group", disabled: locked(),
+                    PasswordField { label: "Grouped" }
                 }
             }
         }

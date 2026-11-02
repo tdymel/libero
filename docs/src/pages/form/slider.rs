@@ -22,15 +22,24 @@ const WAVEFORM: [f64; 24] = [
     0.7, 0.5, 0.3, 0.4, 0.2,
 ];
 
+fn vertical(values: &DemoValues) -> bool {
+    values.str("orientation") == "vertical"
+}
+
+/// A vertical track is a line, so the demo never hands it `bars` or `segments`.
+fn bars_on(values: &DemoValues) -> bool {
+    is_on(values, "bars") && !vertical(values)
+}
+
 fn track(values: &DemoValues) -> SliderTrack {
-    match is_on(values, "bars") {
+    match bars_on(values) {
         true => SliderTrack::Bars(WAVEFORM.to_vec()),
         false => SliderTrack::Line,
     }
 }
 
 fn bars_code(_control: &Control, values: &DemoValues) -> Vec<String> {
-    match is_on(values, "bars") {
+    match bars_on(values) {
         true => vec![format!("track: SliderTrack::Bars(vec!{WAVEFORM:?})")],
         false => vec![],
     }
@@ -76,7 +85,7 @@ fn max_value_options(values: &DemoValues) -> Vec<String> {
 
 /// On by default, so the gaps show; a `Bars` track draws no segments, so they go quiet there.
 fn segments_on(values: &DemoValues) -> bool {
-    is_on(values, "segments") && !is_on(values, "bars")
+    is_on(values, "segments") && !is_on(values, "bars") && !vertical(values)
 }
 
 /// "Loud" from 70% of the *current* range, as `mark_values` follows it too.
@@ -355,9 +364,12 @@ pub fn SliderPage() -> Element {
                             "error" => vec![r#"status: "Pick a lower setting.""#.to_string()],
                             _ => vec![],
                         }),
-                    Control::switch("bars").code(bars_code),
+                    Control::switch("bars").code(bars_code).hidden_when(vertical),
                     Control::switch("marks").code(marks_code),
-                    Control::switch("segments").default("true").code(segments_code),
+                    Control::switch("segments")
+                        .default("true")
+                        .code(segments_code)
+                        .hidden_when(vertical),
                     Control::switch("format").code(format_code),
                     // Separators show from 1,000 up, so pick the largest `max_value`.
                     Control::switch("group_digits").hidden_when(discrete),
@@ -516,5 +528,22 @@ mod tests {
             max_value_options(&values),
             ["auto", "50.0", "200.0", "1000000.0"]
         );
+    }
+
+    /// Todo 5322: the library warns when a vertical track gets either, so the demo drops them.
+    #[test]
+    fn a_vertical_demo_hands_the_slider_no_bars_or_segments() {
+        let on = DemoValues::defaults(&[
+            Control::toggle("orientation", ["horizontal", "vertical"]).default("horizontal"),
+            Control::switch("bars"),
+            Control::switch("segments").default("true"),
+        ]);
+        assert!(segments_on(&on));
+        assert!(bars_on(&on.clone().with("bars", "true")));
+
+        let upright = on.with("orientation", "vertical").with("bars", "true");
+        assert!(!segments_on(&upright));
+        assert!(!bars_on(&upright));
+        assert!(!segments_on(&upright.with("bars", "false")));
     }
 }

@@ -257,6 +257,15 @@ static IMAGE_CROPPER_SX: StaticSx = StaticSx::new(|| {
                 .line_height("normal")
                 .media(COARSE, sx().gap(CONTROLS_GAP_COARSE)),
         )
+        // Arrows mean their physical direction, so the row of them does not mirror (5320, 3013).
+        .selector(
+            "& > [data-slot='controls'] > [data-slot='moves']",
+            sx().direction("ltr")
+                .display("flex")
+                .flex_wrap("wrap")
+                .justify_content("center")
+                .media(COARSE, sx().gap(CONTROLS_GAP_COARSE)),
+        )
         // Clipped apart from the box, so a handle on the image's edge keeps
         // its whole hit area. Under the frame, it takes a drag or pinch begun on the image (2113).
         .selector(
@@ -386,7 +395,10 @@ static IMAGE_CROPPER_SX: StaticSx = StaticSx::new(|| {
                 )
                 .selector(
                     "& > [data-slot='controls']",
-                    sx().grid_area("3 / 1").background(PAPER_BACKGROUND.value()),
+                    // Positioned, or the zoomed image's stacking context paints over the row (5320).
+                    sx().grid_area("3 / 1")
+                        .position("relative")
+                        .background(PAPER_BACKGROUND.value()),
                 ),
         )
         // `controls: false`: out of sight, back while focus is inside, so a keyboard keeps them.
@@ -958,6 +970,24 @@ pub fn ImageCropper(props: ImageCropperProps) -> Element {
             resize(ZOOM_STEP),
         ));
     }
+    let resizes = buttons.split_off(4);
+    let moves = buttons;
+    let button = move |(label, slot, icon, rect)| {
+        rsx! {
+            ActionIcon {
+                key: "{label}",
+                variant: "standard",
+                color: "muted",
+                size: "sm",
+                aria_label: label,
+                disabled: !interactive,
+                "aria-disabled": (interactive && press_message(&words, pan, shown, rect).is_none())
+                    .then_some("true"),
+                onclick: move |_| pressed(rect),
+                Glyph { slot, icon }
+            }
+        }
+    };
 
     let percent = |fraction: f64| (fraction * 100.0).round();
     let (scale, image_x, image_y) = shown.image_transform();
@@ -1139,20 +1169,8 @@ pub fn ImageCropper(props: ImageCropperProps) -> Element {
                             "data-slot": ImageCropperPart::Controls.slot(),
                             role: "group",
                             "aria-label": words.controls,
-                            for (label , slot , icon , rect) in buttons {
-                                ActionIcon {
-                                    key: "{label}",
-                                    variant: "standard",
-                                    color: "muted",
-                                    size: "sm",
-                                    aria_label: label,
-                                    disabled: !interactive,
-                                    "aria-disabled": (interactive && press_message(&words, pan, shown, rect).is_none())
-                                        .then_some("true"),
-                                    onclick: move |_| pressed(rect),
-                                    Glyph { slot, icon }
-                                }
-                            }
+                            div { "data-slot": "moves", {moves.into_iter().map(&button)} }
+                            {resizes.into_iter().map(&button)}
                         }
                     }
                 }

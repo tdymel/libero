@@ -421,6 +421,34 @@ fn the_summary_lines_are_underlined_also_in_forced_colours() {
     });
 }
 
+/// Todo 5321: a wrapped line keeps its bullet by its first line, so the link is a block, and
+/// its finger-sized padding and underline stay.
+#[test]
+fn the_summary_links_are_blocks_with_their_padding() {
+    block_on(async {
+        let fixture = Fixture::open("/form/summary", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        pointer::click(page, "input[type=email]").await.unwrap();
+        keyboard::press(page, keyboard::ENTER).await.unwrap();
+        focus::wait_for_focus(page, "[data-slot=summary]", "a blocked submit")
+            .await
+            .unwrap();
+        wait::for_js_true(
+            page,
+            "(() => { const links = [...document.querySelectorAll('[data-slot=summary] a')]; \
+             return links.length > 0 && links.every(a => { const style = getComputedStyle(a); \
+             return style.display === 'block' && style.paddingTop === '10px' \
+             && style.textDecorationLine.includes('underline'); }); })()",
+            "block summary links",
+        )
+        .await
+        .unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
 /// A group field has no single control to carry the id its summary line links
 /// to: the line must still focus the group's tab stop. Every validated field type (1274).
 /// A field named by `aria_label` only is named in its line (1526). A fieldset in error has a

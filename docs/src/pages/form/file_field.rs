@@ -309,7 +309,15 @@ pub fn FileFieldPage() -> Element {
                     " refuse files past a limit; other checks go in "
                     Code { source: "onchange" }
                     ", where the files are already in hand. Under Blitz the field opens the "
-                    "system file dialog."
+                    "system file dialog. The "
+                    Code { source: "Pending" }
+                    " status sets "
+                    Code { source: "aria-busy" }
+                    "; its loader comes from a surrounding "
+                    Code { source: "Form" }
+                    "'s "
+                    Code { source: "pending_loader" }
+                    "."
                 }
             },
             // snippet: let mut files = use_signal(Files::default);

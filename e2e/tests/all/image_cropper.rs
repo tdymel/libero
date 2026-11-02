@@ -215,8 +215,7 @@ fn a_failed_crop_keeps_the_dialog_and_emits_nothing() {
         let page = &fixture.page;
         crate::file_field::drop_files(page, "[data-fixture-ready] [role=group]", file.drop_arg())
             .await;
-        let apply =
-            "[role=dialog] :not([data-slot=controls]) > button:last-of-type:not(:first-of-type)";
+        let apply = "[role=dialog] :not([data-slot=controls], [data-slot=moves]) > button:last-of-type:not(:first-of-type)";
         wait::for_js_true(
             page,
             &format!(
@@ -280,8 +279,7 @@ fn a_dropped_image_is_cropped_before_the_field_takes_it() {
         .await
         .unwrap();
         // Cancel, then Apply, the footer's last button.
-        let apply =
-            "[role=dialog] :not([data-slot=controls]) > button:last-of-type:not(:first-of-type)";
+        let apply = "[role=dialog] :not([data-slot=controls], [data-slot=moves]) > button:last-of-type:not(:first-of-type)";
         wait::for_js_true(
             page,
             &format!(
@@ -329,8 +327,7 @@ async fn crop_under_the_limit(file: &TempFile, tight: bool) -> Fixture {
         pointer::click(page, "#tight").await.unwrap();
     }
     crate::file_field::drop_files(page, "[data-fixture-ready] [role=group]", file.drop_arg()).await;
-    let apply =
-        "[role=dialog] :not([data-slot=controls]) > button:last-of-type:not(:first-of-type)";
+    let apply = "[role=dialog] :not([data-slot=controls], [data-slot=moves]) > button:last-of-type:not(:first-of-type)";
     wait::for_js_true(
         page,
         &format!(
@@ -432,8 +429,7 @@ async fn a_picked_image_is_cropped<D: Driver>(d: &mut D, _route: &str) -> Result
     })
     .await?;
     // Cancel, then Apply, the footer's last button; enabled once the box settles.
-    let apply =
-        "[role=dialog] :not([data-slot=controls]) > button:last-of-type:not(:first-of-type)";
+    let apply = "[role=dialog] :not([data-slot=controls], [data-slot=moves]) > button:last-of-type:not(:first-of-type)";
     eventually(d, "Apply to be enabled", async |d| {
         Ok(d.attr(apply, "disabled").await?.is_none())
     })
@@ -1238,6 +1234,70 @@ fn the_zoom_slider_zooms_with_one_pointer() {
         .await
         .unwrap();
         fixture.console.assert_clean("the slider").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
+/// Todo 5320: the bar of move buttons paints over the zoomed picture, as the zoom bar does.
+/// The picture takes no pointer, so the test lends it one for the hit test to see the order.
+#[test]
+fn the_pan_controls_paint_over_the_zoomed_picture() {
+    block_on(async {
+        let fixture = Fixture::open("/image-cropper/pan", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        let thumb = "#cropper [data-slot=zoom] [role=slider]";
+        wait::for_visible(page, thumb).await.unwrap();
+        page.evaluate_bounded(format!("document.querySelector('{thumb}').focus()"))
+            .await
+            .unwrap();
+        keyboard::press(page, keyboard::END).await.unwrap();
+        wait::for_js_true(
+            page,
+            &format!("document.querySelector('{thumb}').getAttribute('aria-valuetext') !== '100%'"),
+            "End to the closest zoom",
+        )
+        .await
+        .unwrap();
+        wait::for_js_true(
+            page,
+            // The row's own corner, as a button is positioned and comes above either way.
+            "(() => { document.querySelector('#cropper [data-slot=image]').style.pointerEvents = 'auto'; \
+             const controls = document.querySelector('#cropper [data-slot=controls]'); \
+             const { left, top } = controls.getBoundingClientRect(); \
+             return document.elementFromPoint(left + 1, top + 1) === controls; })()",
+            "the controls above the picture",
+        )
+        .await
+        .unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
+/// Todo 5320: arrows keep their physical meaning right to left (3013), so the move buttons
+/// keep their physical order, whichever way the row runs.
+#[test]
+fn the_move_buttons_keep_their_physical_order_right_to_left() {
+    block_on(async {
+        let fixture = Fixture::open("/image-cropper", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        wait::for_visible(page, BOX).await.unwrap();
+        page.evaluate_bounded("document.documentElement.dir = 'rtl'")
+            .await
+            .unwrap();
+        wait::for_js_true(
+            page,
+            "(() => { const left = name => document.querySelector(`#cropper [aria-label='${name}']`) \
+             .getBoundingClientRect().left; \
+             return left('Move left') < left('Move up') && left('Move up') < left('Move down') \
+             && left('Move down') < left('Move right'); })()",
+            "Move left to Move right, left to right",
+        )
+        .await
+        .unwrap();
         fixture.close().await.unwrap();
     });
 }

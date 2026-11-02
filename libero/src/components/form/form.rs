@@ -46,8 +46,9 @@ static SUMMARY_LIST_SX: StaticSx = StaticSx::new(|| {
             sx().color("inherit")
                 .text_decoration("underline")
                 .cursor("pointer")
-                // A finger-sized line: inline-block lets the padding count.
-                .display("inline-block")
+                // A finger-sized line: a block lets the padding count, and keeps a wrapped line's
+                // bullet by its first line (5321).
+                .display("block")
                 .padding_block("10px"),
         )
 });

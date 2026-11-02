@@ -5,7 +5,7 @@ use crate::components::{
 use dioxus::prelude::*;
 use libero::components::FieldPart;
 use libero::components::{Code, PasswordField, Text};
-use libero::use_theme;
+use libero::{sx::sx, use_theme};
 
 struct PasswordCopy;
 
@@ -125,6 +125,8 @@ pub fn PasswordFieldPage() -> Element {
                     let field = field_props::<PasswordCopy>(&values);
                     rsx! {
                     PasswordField {
+                        // As `TextField`'s demo: the frame holds its width at every size.
+                        sx: sx().width("100%").max_width("320px"),
                         size: values.str("size"),
                         radius: values.str("radius"),
                         label: field.label,

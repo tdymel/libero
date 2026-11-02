@@ -151,3 +151,59 @@ fn a_plain_form_submit_hides_the_secret_again() {
         fixture.close().await.unwrap();
     });
 }
+
+/// Todo 5321: a secret shows only while its button can hide it; taking the button away or
+/// disabling the field hides it for good, and giving them back does not show it again.
+#[test]
+fn a_secret_stays_hidden_once_nothing_could_hide_it() {
+    block_on(async {
+        let fixture = Fixture::open("/text-field/reveal-gone", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+
+        for (case, switch) in [
+            ("own", "#offered"),
+            ("own", "#disabled"),
+            ("grouped", "#locked"),
+        ] {
+            let input = format!("[data-case={case}] input");
+            let reveal = format!("[data-case={case}] [data-slot=trailing] button");
+            let kind = format!("document.querySelector({input:?}).type");
+            let pressed = format!(
+                "(document.querySelector({reveal:?})?.getAttribute('aria-pressed') ?? 'false')"
+            );
+            pointer::click(page, &reveal).await.unwrap();
+            wait::for_js_true(page, &format!("{kind} === 'text'"), "the reveal click")
+                .await
+                .unwrap();
+            pointer::click(page, switch).await.unwrap();
+            wait::for_js_true(
+                page,
+                &format!("{kind} === 'password' && {pressed} === 'false'"),
+                &format!("{switch} hiding the secret"),
+            )
+            .await
+            .unwrap();
+            pointer::click(page, switch).await.unwrap();
+            // The button is back and enabled, so its render is done: the type is the answer.
+            wait::for_js_true(
+                page,
+                &format!("document.querySelector({reveal:?})?.disabled === false"),
+                &format!("{switch} giving the button back"),
+            )
+            .await
+            .unwrap();
+            let shown: String = page
+                .evaluate_bounded(format!("{kind} + ' ' + {pressed}"))
+                .await
+                .unwrap()
+                .into_value()
+                .unwrap();
+            assert_eq!(shown, "password false", "{switch} brought the secret back");
+        }
+
+        fixture.console.assert_clean("hiding a secret").unwrap();
+        fixture.close().await.unwrap();
+    });
+}

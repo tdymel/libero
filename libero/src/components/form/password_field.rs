@@ -5,7 +5,10 @@ use crate::{
     components::{
         buttons::ActionIcon,
         common::{Glyph, Input},
-        form::{FormScope, SLOT_BUTTON_SX, TextField, field_props, slot_icon_size},
+        form::{
+            FormScope, SLOT_BUTTON_SX, TextField, field_props, slot_icon_size,
+            use_fieldset_disabled,
+        },
     },
     context::IconSlot,
     hooks::{listener, use_element, use_form_settles, use_localization, use_theme},
@@ -83,7 +86,15 @@ pub fn PasswordField(props: PasswordFieldProps) -> Element {
     let owner = use_form_settles(button, form.is_none() && reveal_button);
     let settled = form.map_or(0, |form| form.settled()) + owner().unwrap_or(0);
     let mut revealed_at = use_signal(|| None::<u32>);
-    let revealed = move || revealed_at() == Some(settled);
+    // Shown only while its button can hide it; once it cannot, the reveal is over (5321).
+    let in_disabled_group = use_fieldset_disabled();
+    let hideable = reveal_button && !props.disabled.unwrap_or(false) && !in_disabled_group;
+    let revealed = move || hideable && revealed_at() == Some(settled);
+    use_effect(use_reactive!(|hideable| {
+        if !hideable {
+            revealed_at.set(None);
+        }
+    }));
 
     // One static name plus `aria-pressed`: a name that flips is announced as a
     // different button, not as a state change (todo 498).
