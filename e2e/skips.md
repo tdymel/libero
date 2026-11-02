@@ -515,8 +515,10 @@ The performance scenarios (units `perf`, `table_perf`) are no skips but run on r
 | `use_swipe::an_edge_swipe_reopens_a_drawer_five_times` | desktop | 1126: no touch input under Xvfb |
 | `use_swipe::an_edge_swipe_yields_on_a_scroller_control` | desktop | 1126: no touch input under Xvfb |
 | `use_swipe::an_edge_swipe_yields_on_a_scroller_control_under_rtl` | desktop | 1126: no touch input under Xvfb |
+| `use_swipe::an_edge_swipe_yields_on_a_scroller_control_under_rtl` | native | 5338: a negative scroll offset stays at 0 on Blitz |
 | `use_swipe::an_edge_swipe_yields_to_a_scrolled_inner_scroller` | desktop | 1126: no touch input under Xvfb |
 | `use_swipe::an_edge_swipe_yields_to_a_scrolled_inner_scroller_under_rtl` | desktop | 1126: no touch input under Xvfb |
+| `use_swipe::an_edge_swipe_yields_to_a_scrolled_inner_scroller_under_rtl` | native | 5338: a negative scroll offset stays at 0 on Blitz |
 | `video::every_audio_source_failing_shows_the_error` | native | Blitz plays no media and shows the fallback |
 | `video::every_audio_source_failing_shows_the_error` | web | audio::every_source_failing_shows_the_error is the web's arm |
 | `video::every_video_source_failing_shows_the_error` | native | Blitz plays no media and shows the fallback |

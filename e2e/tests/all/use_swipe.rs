@@ -201,14 +201,19 @@ async fn the_band_yields_on_a_scroller_control<D: Driver>(d: &mut D, route: &str
     };
     let strip = d.rect(VIEWPORT).await?;
     let y = strip.y + strip.height / 2.0;
-    // A strip scrolls smoothly, far too slowly on an emulator, so this one jumps. Its control
-    // takes no press until it has left the start.
-    let jump = |left: f64| {
-        format!(
+    // A strip scrolls smoothly, far too slowly on an emulator, so this one jumps; Blitz reads no
+    // script and has no smooth scroll to skip. Its control takes no press until it has left the start.
+    async fn jump<D: Driver>(d: &mut D, left: f64) -> Result<()> {
+        if d.platform() == Platform::Native {
+            return d.scroll_to(VIEWPORT, left, 0.0).await;
+        }
+        d.evaluate(&format!(
             "document.querySelector(\"{VIEWPORT}\").scrollTo({{ left: {left}, behavior: 'instant' }})"
-        )
-    };
-    d.evaluate(&jump(forward)).await?;
+        ))
+        .await?;
+        Ok(())
+    }
+    jump(d, forward).await?;
     eventually(d, "the backward control to take a press", async |d| {
         Ok(d.attr(CONTROL, "aria-disabled").await?.as_deref() == Some("false"))
     })
@@ -228,7 +233,7 @@ async fn the_band_yields_on_a_scroller_control<D: Driver>(d: &mut D, route: &str
         (kept - forward).abs() < 1.0,
         "the swipe on the control scrolled the strip to {kept}"
     );
-    d.evaluate(&jump(0.0)).await?;
+    jump(d, 0.0).await?;
     eventually(d, "the strip to reach its start", async |d| {
         Ok(d.attr(CONTROL, "aria-disabled").await?.as_deref() == Some("true"))
     })
@@ -381,7 +386,8 @@ e2e::scenario!(
     an_edge_swipe_yields_to_a_scrolled_inner_scroller_under_rtl,
     "/use-swipe/drawer-rtl",
     the_band_yields_under_rtl,
-    desktop: skip("1126: no touch input under Xvfb")
+    desktop: skip("1126: no touch input under Xvfb"),
+    native: skip("5338: a negative scroll offset stays at 0 on Blitz")
 );
 e2e::scenario!(
     an_edge_swipe_yields_on_a_scroller_control,
@@ -393,5 +399,6 @@ e2e::scenario!(
     an_edge_swipe_yields_on_a_scroller_control_under_rtl,
     "/use-swipe/drawer-rtl",
     the_band_yields_on_a_scroller_control,
-    desktop: skip("1126: no touch input under Xvfb")
+    desktop: skip("1126: no touch input under Xvfb"),
+    native: skip("5338: a negative scroll offset stays at 0 on Blitz")
 );
