@@ -17,7 +17,45 @@ pub const ROUTES: Routes = &[
     ("/carousel/drag-loop", || drag_end(true)),
     ("/carousel/scroll-by", || rsx! { ScrollByPage {} }),
     ("/carousel/drag-free", || rsx! { DragFreePage {} }),
+    ("/carousel/vertical", || rsx! { VerticalPage {} }),
+    ("/carousel/text-loop", || text_strip(true)),
+    ("/carousel/text-plain", || text_strip(false)),
 ];
+
+/// A vertical strip, for what a swipe at its end hands the page.
+#[component]
+fn VerticalPage() -> Element {
+    rsx! {
+        Flex { direction: "column", gap: "md", max_width: "420px",
+            Carousel {
+                aria_label: "Stacked",
+                orientation: "vertical",
+                height: "200px",
+                slides: (1..=3).map(|n| rsx! { Text { "Slide {n}" } }).collect(),
+            }
+        }
+    }
+}
+
+/// Selectable text with the last slide peeking: a selection run back over it scrolls the strip
+/// slide by slide, with no `scrollend` (todo 5292).
+fn text_strip(looping: bool) -> Element {
+    rsx! {
+        div { style: "width: 340px",
+            Carousel {
+                aria_label: "Selectable slides",
+                r#loop: looping,
+                per_view: 1.3,
+                align: "center",
+                slides: (1..=6)
+                    .map(|n| rsx! {
+                        Text { "Slide {n}, a line of text long enough to select across the strip." }
+                    })
+                    .collect(),
+            }
+        }
+    }
+}
 
 /// Five slides, a step of two: Next from the first reaches the third, then the last.
 #[component]

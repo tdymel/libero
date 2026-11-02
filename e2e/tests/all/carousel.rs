@@ -654,6 +654,223 @@ fn a_drag_released_on_a_clone_crosses_the_seam() {
     });
 }
 
+/// Grows the page, so it has somewhere to scroll and the strip room above a swipe.
+async fn tall_page(page: &Page) {
+    page.evaluate_bounded(
+        "document.body.style.paddingTop = '300px'; document.body.style.minHeight = '300vh';",
+    )
+    .await
+    .unwrap();
+}
+
+/// A finger swipe up from the track's centre.
+async fn swipe_up(page: &Page) {
+    let from = pointer::centre_of(page, TRACK).await.unwrap();
+    let to = pointer::Point {
+        x: from.x,
+        y: from.y - 200.0,
+    };
+    pointer::swipe(page, from, to, 8).await.unwrap();
+}
+
+/// The track's computed `overscroll-behavior`, x then y.
+async fn overscroll(page: &Page) -> Vec<String> {
+    page.evaluate_bounded(format!(
+        "(() => {{ const s = getComputedStyle(document.querySelector({TRACK:?})); \
+         return [s.overscrollBehaviorX, s.overscrollBehaviorY]; }})()"
+    ))
+    .await
+    .unwrap()
+    .into_value()
+    .unwrap()
+}
+
+/// Todo 5290: a vertical swipe starting on a horizontal strip scrolls the page.
+#[test]
+fn a_vertical_swipe_on_a_horizontal_strip_scrolls_the_page() {
+    block_on(async {
+        let fixture = Fixture::open("/carousel/text", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        instant_scroll(page).await;
+        tall_page(page).await;
+        swipe_up(page).await;
+        wait::for_js_true(
+            page,
+            "document.scrollingElement.scrollTop > 0",
+            "a vertical swipe on the strip to scroll the page",
+        )
+        .await
+        .unwrap();
+        assert_eq!(overscroll(page).await, ["contain", "auto"]);
+        fixture.console.assert_clean("a vertical swipe").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
+/// Todo 5290: a horizontal swipe still moves the strip and, past the last slide, stays on it.
+/// History navigation itself cannot run headless: `contain` above is what stops it.
+#[test]
+fn a_horizontal_swipe_moves_the_strip_and_stays_at_its_end() {
+    block_on(async {
+        let fixture = Fixture::open("/carousel/text", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        instant_scroll(page).await;
+        // Over half the strip's 420px, or the snap brings it back; clear of the controls.
+        let centre = pointer::centre_of(page, TRACK).await.unwrap();
+        let (from, to) = (
+            pointer::Point {
+                x: centre.x + 130.0,
+                y: centre.y,
+            },
+            pointer::Point {
+                x: centre.x - 130.0,
+                y: centre.y,
+            },
+        );
+        pointer::swipe(page, from, to, 8).await.unwrap();
+        wait::until("a swipe to leave the first slide", || async move {
+            Ok(status(page).await != "Slide 1 of 4")
+        })
+        .await
+        .unwrap();
+
+        reach(page, TRACK).await.unwrap();
+        keyboard::press(page, keyboard::END).await.unwrap();
+        wait::until("End to reach the last slide", || async move {
+            Ok(status(page).await == "Slide 4 of 4")
+        })
+        .await
+        .unwrap();
+        let (url, rest) = (page.url().await.unwrap(), scroll_left(page).await);
+        pointer::swipe(page, from, to, 8).await.unwrap();
+        e2e::clock::settle(page).await.unwrap();
+        assert_eq!(status(page).await, "Slide 4 of 4");
+        assert_eq!(
+            scroll_left(page).await,
+            rest,
+            "the strip moved past its end"
+        );
+        assert_eq!(page.url().await.unwrap(), url);
+        fixture.console.assert_clean("a horizontal swipe").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
+/// Todo 5290: at its last slide a vertical strip hands the swipe to the page.
+#[test]
+fn a_vertical_strip_at_its_end_hands_the_swipe_to_the_page() {
+    block_on(async {
+        let fixture = Fixture::open("/carousel/vertical", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        instant_scroll(page).await;
+        tall_page(page).await;
+        reach(page, TRACK).await.unwrap();
+        keyboard::press(page, keyboard::END).await.unwrap();
+        wait::until("End to reach the last slide", || async move {
+            Ok(status(page).await == "Slide 3 of 3")
+        })
+        .await
+        .unwrap();
+        // The swipe has to start on the strip with the page at its top.
+        page.evaluate_bounded("document.scrollingElement.scrollTop = 0")
+            .await
+            .unwrap();
+        swipe_up(page).await;
+        wait::for_js_true(
+            page,
+            "document.scrollingElement.scrollTop > 0",
+            "a swipe at the strip's end to scroll the page",
+        )
+        .await
+        .unwrap();
+        assert_eq!(overscroll(page).await, ["auto", "auto"]);
+        fixture.console.assert_clean("a swipe at the end").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
+/// Moves to slide 3, then runs a mouse selection off the page's left edge until its autoscroll
+/// has brought the strip to 0, and releases. No `scrollend` follows that scroll (todo 5292).
+async fn select_back_to_the_start(page: &Page) {
+    instant_scroll(page).await;
+    reach(page, TRACK).await.unwrap();
+    keyboard::press(page, keyboard::ARROW_RIGHT).await.unwrap();
+    keyboard::press(page, keyboard::ARROW_RIGHT).await.unwrap();
+    wait::until("the keys to reach slide 3", || async move {
+        Ok(status(page).await == "Slide 3 of 6")
+    })
+    .await
+    .unwrap();
+    let from = pointer::centre_of(page, TRACK).await.unwrap();
+    let to = pointer::Point {
+        x: from.x - 300.0,
+        y: from.y,
+    };
+    pointer::drag_held(page, from, to, 12).await.unwrap();
+    wait::until("the selection to scroll the strip to 0", || async move {
+        Ok(scroll_left(page).await == 0.0)
+    })
+    .await
+    .unwrap();
+    pointer::release(page, to).await.unwrap();
+}
+
+/// Todo 5292: a selection that scrolls a looping strip onto a clone crosses the seam on release:
+/// the status names what shows, and the next step moves one slide on.
+#[test]
+fn a_selection_scrolling_a_looping_strip_lands_off_the_clone() {
+    block_on(async {
+        let fixture = Fixture::open("/carousel/text-loop", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        select_back_to_the_start(page).await;
+        wait::until("the release to land on a real slide", || async move {
+            Ok(status(page).await != "Slide 3 of 6" && scroll_left(page).await > 0.0)
+        })
+        .await
+        .unwrap();
+        let landed = status(page).await;
+        let rest = scroll_left(page).await;
+
+        // A press that scrolls nothing lands nothing new.
+        let at = pointer::centre_of(page, TRACK).await.unwrap();
+        pointer::drag(page, at, at, 1).await.unwrap();
+        e2e::clock::settle(page).await.unwrap();
+        assert_eq!(
+            (status(page).await, scroll_left(page).await),
+            (landed, rest)
+        );
+        fixture.console.assert_clean("a selection scroll").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
+/// Todo 5292 without `loop`: the same scroll left the status on the slide it came from.
+#[test]
+fn a_selection_scrolling_a_plain_strip_updates_the_status() {
+    block_on(async {
+        let fixture = Fixture::open("/carousel/text-plain", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        select_back_to_the_start(page).await;
+        wait::until("the release to land on the first slide", || async move {
+            Ok(status(page).await == "Slide 1 of 6")
+        })
+        .await
+        .unwrap();
+        fixture.console.assert_clean("a selection scroll").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
 const PREVIOUS: &str = "[aria-roledescription=carousel] button[aria-label='Previous slide']";
 
 async fn scroll_left(page: &Page) -> f64 {

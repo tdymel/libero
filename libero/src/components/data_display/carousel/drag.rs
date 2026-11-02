@@ -7,7 +7,7 @@ use crate::{
         layout::{inline_x, physical_x},
     },
     hooks::{Drag, DragMove, DragOptions, DragStart, use_distance_drag},
-    platform::{ElementApi, snaps_scroll},
+    platform::{ElementApi, snaps_scroll, watch_presses},
 };
 
 /// Mouse drag-to-scroll over the track. No `drag_handle_sx()`: its
@@ -24,6 +24,8 @@ pub(super) fn use_carousel_drag(
     let mut drag_origin = state.drag_origin;
     // Under RTL a drag to the right heads for the end, as in `Scroller`.
     let mut rtl = use_hook(|| CopyValue::new(false));
+    // Before the first press `after_press` waits on (the track's, todo 5292).
+    use_hook(watch_presses);
 
     // Only once it moves, so a click on a slide's link or button stays one (todo 2358).
     use_distance_drag(DragOptions {
@@ -71,7 +73,7 @@ pub(super) fn use_carousel_drag(
 
 /// Releasing hands the strip back to the browser, which snaps and fires `onscrollend`.
 /// Not on a snap point already (an end, todo 3117), nor on Blitz or a free drag: the release lands here.
-fn settle_release(nav: Nav, orientation: Orientation) {
+pub(super) fn settle_release(nav: Nav, orientation: Orientation) {
     let element = nav.track.element;
     let (offset, content, view) = (
         element.scroll_offset(),

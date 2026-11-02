@@ -332,6 +332,44 @@ fn the_pause_toggle_keeps_its_44px_finger_box() {
     });
 }
 
+/// Todo 5288: `fade_color` is what the ends fade from; unset, the paper surface.
+#[test]
+fn the_fade_starts_from_fade_color() {
+    block_on(async {
+        for (route, expected) in [
+            ("/marquee-fade-color", "rgb(1, 2, 3)"),
+            ("/marquee-fade", "paper"),
+        ] {
+            let fixture = Fixture::open(route, Viewport::Desktop).await.unwrap();
+            let page = &fixture.page;
+            wait::for_visible(page, PAUSE).await.unwrap();
+            let (fades, paper): (Vec<String>, String) = page
+                .evaluate_bounded(
+                    "(() => { const root = document.querySelector('[data-slot=track]').parentElement; \
+                     const probe = document.createElement('i'); \
+                     probe.style.color = 'var(--lsx-paper-background)'; root.append(probe); \
+                     const paper = getComputedStyle(probe).color; probe.remove(); \
+                     return [['::before', '::after'].map(p => getComputedStyle(root, p).backgroundImage), paper]; })()",
+                )
+                .await
+                .unwrap()
+                .into_value()
+                .unwrap();
+            let expected = if expected == "paper" {
+                paper.as_str()
+            } else {
+                expected
+            };
+            assert!(
+                fades.iter().all(|fade| fade.contains(expected)),
+                "{route}: {fades:?} does not start from {expected}"
+            );
+            fixture.console.assert_clean("the fade colour").unwrap();
+            fixture.close().await.unwrap();
+        }
+    });
+}
+
 /// Todo 2857: the fade is opaque paper at the ends, so it hides while focus is in the strip.
 #[test]
 fn the_fade_steps_aside_for_a_focused_link() {

@@ -22,6 +22,9 @@ const LINKS: [(&str, &str); 6] = [
 /// height, so the demo gives it one and prints it.
 const VERTICAL_HEIGHT: &str = "160px";
 
+/// What the docs page sits on, so the fade runs into it.
+const PAGE_SURFACE: &str = "var(--lsx-surface)";
+
 fn children_code() -> String {
     CHIPS
         .iter()
@@ -108,6 +111,7 @@ fn MarqueePreview(values: DemoValues) -> Element {
                 pause_control: !own_control,
                 paused: own_control.then(&*paused),
                 fade_edges: values.str("fade_edges") == "true",
+                    fade_color: PAGE_SURFACE,
                 if links(&values) {
                     for (name, url) in LINKS {
                         Anchor { to: url, "{name}" }
@@ -165,7 +169,10 @@ pub fn MarqueePage() -> Element {
                     .doc("Renders the pause toggle. Turn it off only when the page offers its own control through `paused`."),
                 prop("fade_edges", "bool")
                     .default("false")
-                    .doc("Fades both ends into the surface color, `--lsx-paper-background`. Only right on a surface of that color."),
+                    .doc("Fades both ends into the surface color, `fade_color`."),
+                prop("fade_color", "ThemeAwareValue")
+                    .default("paper background")
+                    .doc("What the ends fade from. Assumes a paper surface unless set, so set it to the surface the marquee sits on."),
                 prop("parts", "Parts<MarqueePart>")
                     .doc("Styles for the inner parts in the Style API tab, under `sx`."),
             ])
@@ -233,7 +240,16 @@ pub fn MarqueePage() -> Element {
                             _ => vec!["pause_control: false".to_string(), "paused: paused()".to_string()],
                         }
                     }),
-                    Control::switch("fade_edges"),
+                    // On, so the fade shows; `fade_color` is the docs page's surface, not paper.
+                    Control::switch("fade_edges").default("true").code(|_, values| {
+                        match values.str("fade_edges").as_str() {
+                            "true" => vec![
+                                "fade_edges: true".to_string(),
+                                format!("fade_color: {PAGE_SURFACE:?}"),
+                            ],
+                            _ => vec![],
+                        }
+                    }),
                     Control::switch("links").code(|_, _| vec![]),
                 ],
                 wrap: Wrap(wrap),

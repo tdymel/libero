@@ -103,7 +103,7 @@ pub(super) static CAROUSEL_PAUSE_SX: StaticSx = StaticSx::new(|| {
         // First in the DOM for Tab order, so the viewport would paint over it.
         .z_index("1")
         .bottom(CAROUSEL_CONTROLS_OFFSET.value())
-        .right(CAROUSEL_CONTROLS_OFFSET.value())
+        .inset_inline_end(CAROUSEL_CONTROLS_OFFSET.value())
         .display("inline-flex")
         .align_items("center")
         .justify_content("center")
@@ -120,7 +120,7 @@ pub(super) static CAROUSEL_PAUSE_SX: StaticSx = StaticSx::new(|| {
         // Beside Next's column: on a short strip it covered Next.
         .when(
             "beside-next",
-            sx().right(format!(
+            sx().inset_inline_end(format!(
                 "calc(2 * {} + {})",
                 CAROUSEL_CONTROLS_OFFSET.value(),
                 CAROUSEL_CONTROL_SIZE.value()
@@ -291,9 +291,10 @@ pub(super) fn carousel_pause_button(view: CarouselView, controls: bool) -> Eleme
                     pressing.set(false);
                 }
             },
-            // Released off the button, the press clicks nothing (todo 3118).
-            onpointerleave: move |_| {
-                if !*focused.peek() && *pressing.peek() {
+            // Released off the button, the press clicks nothing (todo 3118). A mouse only: a
+            // lift always leaves, ahead of its focus and click, and a pan cancels (todo 5286).
+            onpointerleave: move |event: Event<PointerData>| {
+                if event.data().pointer_type() == "mouse" && !*focused.peek() && *pressing.peek() {
                     pressing.set(false);
                 }
             },

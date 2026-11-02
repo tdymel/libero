@@ -2,6 +2,7 @@ use dioxus::prelude::*;
 
 use super::{
     CAROUSEL_HEIGHT, CarouselPart,
+    drag::settle_release,
     state::{CarouselView, Nav},
 };
 use crate::{
@@ -12,7 +13,7 @@ use crate::{
         layout::{ScrollArea, ScrollAreaBase, ScrollPositionEvent, scroll_area_base},
     },
     hooks::Drag,
-    platform::{arrow_target, key_taken, logical_key, typing_target},
+    platform::{after_press, arrow_target, key_taken, logical_key, snaps_scroll, typing_target},
     sx::{REDUCED_MOTION, StaticSx, sx},
     theme::CAROUSEL_GAP,
 };
@@ -29,8 +30,9 @@ pub(super) static CAROUSEL_TRACK_SX: StaticSx = StaticSx::new(|| {
             .when("vertical", sx().scroll_snap_type("y mandatory"))
             // Keeps a fast flick from skipping past a slide.
             .scroll_snap_stop("always")
-            .overscroll_behavior_x("contain")
-            .overscroll_behavior_y("contain")
+            // Not on the other axis, or a swipe across the strip leaves the page still (todo
+            // 5290); a horizontal strip's end must not go back in history.
+            .when("horizontal", sx().overscroll_behavior_x("contain"))
             .height(CAROUSEL_HEIGHT.value_or("auto"))
             .scroll_behavior("smooth")
             // Chrome and Safari keep smooth scrolling under reduced motion.
@@ -142,8 +144,15 @@ pub(super) fn carousel_track(
             // Mouse only: a touch is already scrolling the track natively, and
             // dragging it too would move it twice.
             onpointerdown: move |event: Event<PointerData>| {
-                if draggable && event.data().pointer_type() == "mouse" {
-                    drag.onpointerdown.call(event);
+                if event.data().pointer_type() != "mouse" {
+                    return;
+                }
+                match draggable {
+                    true => drag.onpointerdown.call(event),
+                    // A selection's autoscroll fires no `scrollend` and leaves the strip on a
+                    // snap point, maybe a clone: its release lands it (todo 5292). No snap on Blitz.
+                    false if snaps_scroll() => after_press(move || settle_release(nav, orientation)),
+                    false => {}
                 }
             },
             onpointermove: drag.onpointermove,

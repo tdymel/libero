@@ -12,6 +12,13 @@ pub const ROUTES: Routes = &[
     ("/marquee-rtl", || rsx! { RtlPage {} }),
     ("/marquee-short", || rsx! { ShortPage {} }),
     ("/marquee-fade", || rsx! { FadePage {} }),
+    ("/marquee-fade-color", || rsx! {
+        Marquee { fade_edges: true, fade_color: "rgb(1, 2, 3)",
+            for n in 1..=16 {
+                span { "S{n}" }
+            }
+        }
+    }),
     ("/marquee-pair", || rsx! { PairPage {} }),
     ("/marquee-hover", || rsx! { HoverPage {} }),
 ];

@@ -89,16 +89,16 @@ static AUDIO_SX: StaticSx = StaticSx::new(|| {
             seek_sx()
                 .flex_shrink("1")
                 // The thumb's 44px target at 0 stops at the wrapper's start, off Play (todo 4866).
-                .media(
-                    COARSE_POINTER,
+                // Narrowed by as much, so the track ends inside the box, off the time (todo 5291).
+                // Here, not the box's padding: the thumb's size is not set above the slider.
+                .media(COARSE_POINTER, {
+                    let room = format!("calc(22px - {} / 2)", SLIDER_THUMB.value());
                     sx().selector(
                         "& [data-slot='control']",
-                        sx().margin_inline_start(format!(
-                            "calc(22px - {} / 2)",
-                            SLIDER_THUMB.value()
-                        )),
-                    ),
-                )
+                        sx().margin_inline_start(room.clone())
+                            .width(format!("calc(100% - {room})")),
+                    )
+                })
                 // Half the bars where the track is short, or they run together.
                 .selector(
                     "& [data-slot='bars'] > span:nth-child(even)",

@@ -706,6 +706,54 @@ fn the_speed_button_cycles() {
     });
 }
 
+/// Todo 5291, under a finger at xs and md, both directions: the seek track, and so its thumb at
+/// the end, stays inside its box and off the time.
+#[test]
+fn under_a_finger_the_seek_track_ends_inside_its_box() {
+    use chromiumoxide::cdp::browser_protocol::emulation::SetTouchEmulationEnabledParams;
+    block_on(async {
+        let fixture = Fixture::open("/audio/phone", Viewport::Mobile)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        page.execute_bounded(SetTouchEmulationEnabledParams::new(true))
+            .await
+            .unwrap();
+        wait::for_js_true(
+            page,
+            "matchMedia('(pointer: coarse)').matches \
+             && !!document.querySelector('#md [data-slot=seek] [role=slider]:not([aria-disabled=true])')",
+            "a coarse pointer and the players",
+        )
+        .await
+        .unwrap();
+        for dir in ["ltr", "rtl"] {
+            let overflow: Vec<String> = page
+                .evaluate_bounded(format!(
+                    "(() => {{ document.documentElement.dir = {dir:?}; const out = [];
+                     for (const id of ['xs', 'md']) {{
+                         const seek = document.querySelector(`#${{id}} [data-slot=seek]`);
+                         const box = seek.getBoundingClientRect();
+                         const c = seek.querySelector('[data-slot=control]').getBoundingClientRect();
+                         if (c.left < box.left - 0.5 || c.right > box.right + 0.5)
+                             out.push(`${{id}} control ${{c.left}}-${{c.right}} in box ${{box.left}}-${{box.right}}`);
+                         const time = document.querySelector(`#${{id}} [data-slot=time]`);
+                         const t = time.getBoundingClientRect();
+                         if (t.width > 0 && c.left < t.right && t.left < c.right)
+                             out.push(`${{id}} control ${{c.left}}-${{c.right}} over time ${{t.left}}-${{t.right}}`);
+                     }}
+                     return out; }})()"
+                ))
+                .await
+                .unwrap()
+                .into_value()
+                .unwrap();
+            assert!(overflow.is_empty(), "{dir}: {overflow:?}");
+        }
+        fixture.close().await.unwrap();
+    });
+}
+
 /// Todos 4865-4867, under a finger at xs and md: no seek or volume pseudo covers a button
 /// outside the bar, Play keeps its whole box off the seek thumb, Mute keeps its 44px reach
 /// clear of the chevron, and the speed pill is the icons' height with a 44px target.

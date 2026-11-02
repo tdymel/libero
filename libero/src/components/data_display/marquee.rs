@@ -14,8 +14,8 @@ use crate::{
     hooks::{use_localization, use_theme},
     sx::{REDUCED_MOTION, StaticSx, ThemeAwareValue, sx},
     theme::{
-        FOCUS_RING_HALO_SPREAD, MARQUEE_ANIMATION, MARQUEE_DURATION, MARQUEE_FADE_SIZE,
-        MARQUEE_GAP, MARQUEE_MIN_REPEAT, MARQUEE_REPEAT, MARQUEE_SHIFT, PAPER_BACKGROUND, Size,
+        FOCUS_RING_HALO_SPREAD, MARQUEE_ANIMATION, MARQUEE_DURATION, MARQUEE_FADE,
+        MARQUEE_FADE_SIZE, MARQUEE_GAP, MARQUEE_MIN_REPEAT, MARQUEE_REPEAT, MARQUEE_SHIFT, Size,
         SizeCss,
     },
     utils::warn,
@@ -48,7 +48,7 @@ fn shift(axis: &str, rtl: bool) -> String {
 fn fade(side: &str) -> String {
     format!(
         "linear-gradient(to {side}, {}, transparent)",
-        PAPER_BACKGROUND.value()
+        MARQUEE_FADE.overridable()
     )
 }
 
@@ -269,9 +269,13 @@ base_props! {
         /// The pause toggle. Turn it off only when the page drives `paused` itself.
         #[props(default)]
         pause_control: Option<bool>,
-        /// Fades both ends into the surface colour.
+        /// Fades both ends into the surface colour: see `fade_color`.
         #[props(default)]
         fade_edges: Option<bool>,
+        /// What the ends fade from. Assumes a paper surface unless set: set it to the
+        /// surface the marquee sits on.
+        #[props(default, into)]
+        fade_color: Input<ThemeAwareValue>,
         /// What scrolls. Only the first copy is interactive; the others are `inert`.
         /// Rendered once per copy, so give it no `id`: it would repeat.
         children: Element,
@@ -373,6 +377,13 @@ pub fn Marquee(props: MarqueeProps) -> Element {
         .with(
             MARQUEE_DURATION.override_var(),
             props.duration.map(|duration| format!("{duration}ms")),
+        )
+        .with(
+            MARQUEE_FADE.override_var(),
+            props
+                .fade_color
+                .as_ref()
+                .and_then(|value| value.resolve(None)),
         )
         .into();
 

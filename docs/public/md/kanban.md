@@ -173,6 +173,9 @@ button there.
   window, use the Move to menu.
 - A board with a height of its own scrolls its cards by wheel and touch; the
   scrollbar's gutter stays reserved, so a drag never changes the board's width.
+- Right to left with a classic scrollbar, Chromium shifts the board's start by that
+  gutter and no scroll gets past it: on a board narrower than its columns, about 15 px
+  of the first column stay clipped. Overlay scrollbars, as on phones, are fine.
 - Right to left, the drags are checked in browsers only, not on Android or
   under the native renderer.
 - In a filtered column a dragged card lands just before the next card shown,

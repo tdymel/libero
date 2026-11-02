@@ -209,6 +209,68 @@ fn a_play_click_from_outside_the_carousel_keeps_it_playing() {
     );
 }
 
+/// Todo 5287: Blitz places the logical inset, at the strip's end and beside Next's column.
+#[test]
+fn the_toggle_sits_at_the_inline_end() {
+    let page = mount(autoplaying);
+    let (toggle_x, _, toggle_width, _) = page.rect(TOGGLE);
+    let (root_x, _, root_width, _) = page.rect("[aria-roledescription=carousel]");
+    let gap = root_x + root_width - (toggle_x + toggle_width);
+    assert!(
+        (0.0..root_width / 3.0).contains(&gap),
+        "{gap}px off the end of a {root_width}px strip"
+    );
+}
+
+/// Todo 5286: a finger's first tap pauses on Blitz too, whose focus comes after the click (2394).
+#[test]
+fn a_first_tap_from_outside_the_carousel_pauses() {
+    let mut page = mount(autoplaying);
+    page.click("#before");
+    let (x, y) = page.touch_down(TOGGLE);
+    page.touch_up(x, y);
+    assert_eq!(
+        pressed(&page).as_deref(),
+        Some("true"),
+        "the first tap did not pause, focus on {}",
+        page.focus_owner()
+    );
+}
+
+/// Todo 3118 on Blitz: a mouse press released off the toggle leaves the next entry an entry;
+/// its pointer type has to read as a mouse for the leave to clear it (5286).
+#[test]
+fn a_press_released_off_the_toggle_leaves_the_next_entry_an_entry() {
+    let mut page = mount(autoplaying);
+    page.click("#before");
+    let centre = |page: &Page, selector: &str| {
+        let (x, y, width, height) = page.rect(selector);
+        ((x + width / 2.0) as f32, (y + height / 2.0) as f32)
+    };
+    let (x, y) = centre(&page, TOGGLE);
+    page.press_at(x, y);
+    let (away_x, away_y) = centre(&page, "#before");
+    page.move_to(away_x, away_y);
+    page.release_at(away_x, away_y);
+    assert_eq!(
+        pressed(&page).as_deref(),
+        Some("false"),
+        "the press clicked"
+    );
+
+    page.press(Key::Named(NamedKey::Tab));
+    assert!(
+        page.is_focused(TOGGLE),
+        "Tab did not reach the toggle, focus on {}",
+        page.focus_owner()
+    );
+    assert_eq!(
+        pressed(&page).as_deref(),
+        Some("true"),
+        "focus entering after the press did not pause"
+    );
+}
+
 const STATUS: &str = "[aria-roledescription=carousel] [role=status]";
 
 fn live(page: &Page) -> Option<String> {

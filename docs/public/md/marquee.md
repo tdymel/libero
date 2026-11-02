@@ -47,7 +47,8 @@ fn Demo() -> Element {
 | `paused` | `Option<bool>` | `None` | Controlled when set, so pair it with `onpausechange`. `None` leaves the state to the built-in toggle. |
 | `onpausechange` | `EventHandler<bool>` | `None` | The built-in toggle was pressed, with the state it asks for. |
 | `pause_control` | `bool` | `true` | Renders the pause toggle. Turn it off only when the page offers its own control through `paused`. |
-| `fade_edges` | `bool` | `false` | Fades both ends into the surface color, `--lsx-paper-background`. Only right on a surface of that color. |
+| `fade_edges` | `bool` | `false` | Fades both ends into the surface color, `fade_color`. |
+| `fade_color` | `ThemeAwareValue` | paper background | What the ends fade from. Assumes a paper surface unless set, so set it to the surface the marquee sits on. |
 
 Like every component, `Marquee` also takes the shared props `sx`, `class`,
 `states`, and any extra HTML attributes.
@@ -112,8 +113,9 @@ Enter.
 | `gap` | `Size` | Gap step, `Md`. |
 | `pause_on_hover` | `bool` | `false`. |
 | `pause_control` | `bool` | `true`, for WCAG 2.2.2. |
-| `fade_edges` | `bool` | `false`. The fade is only right on a `Paper`-coloured surface. |
+| `fade_edges` | `bool` | `false`. The fade is only right on a surface of `fade_color`. |
 | `fade_size` | `&'static str` | How far the fade reaches in, `5%`. |
+| `fade_color` | `&'static str` | What the ends fade from, `var(--lsx-paper-background)`. |
 
 The toggle's accessible name, `"Pause"`, is `MarqueeLabels::pause` in the
 [localization](localization.md).
@@ -125,6 +127,7 @@ The toggle's accessible name, `"Pause"`, is `MarqueeLabels::pause` in the
 | `--lsx-marquee-duration` | One cycle, from the theme, on `:root`. |
 | `--lsx-marquee-duration-override` | Set by the `duration` prop. Wins over the theme's. |
 | `--lsx-marquee-fade-size` | The fade's reach, on `:root`. |
+| `--lsx-marquee-fade` | What the ends fade from, on `:root`; `fade_color` writes its `-override` twin on the root. |
 | `--lsx-marquee-repeat` | The copy count in effect, per instance. |
 | `--lsx-marquee-gap` | The gap in effect, per instance. |
 | `--lsx-marquee-shift` | Where a cycle ends, one copy plus one gap along the axis. |

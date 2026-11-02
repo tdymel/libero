@@ -425,6 +425,122 @@ fn a_press_released_off_pause_leaves_the_next_entry_an_entry() {
     });
 }
 
+/// Todo 5286: a lift fires `pointerleave` ahead of the focus and the click, so the first tap
+/// pauses; a mouse press released off the toggle still leaves the next entry an entry (3118).
+#[test]
+fn a_first_tap_on_pause_pauses() {
+    block_on(async {
+        let fixture = Fixture::open("/carousel/autoplay", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        hold_rotation(page).await;
+        instant_scroll(page).await;
+        tap_and_settle(page).await;
+        assert_pressed(page, "true", "the first tap on Pause").await;
+
+        // Focus gone again, the next tap is a first one too.
+        reach(page, "#before").await.unwrap();
+        tap_and_settle(page).await;
+        assert_pressed(page, "false", "a tap on Play from outside").await;
+
+        reach(page, "#before").await.unwrap();
+        page.evaluate_bounded(format!(
+            "(() => {{ const b = document.querySelector({PAUSE:?}); \
+             const o = {{ bubbles: true, pointerType: 'mouse', isPrimary: true }}; \
+             b.dispatchEvent(new PointerEvent('pointerdown', o)); \
+             b.dispatchEvent(new PointerEvent('pointerleave', {{ ...o, bubbles: false }})); }})()"
+        ))
+        .await
+        .unwrap();
+        keyboard::press(page, keyboard::TAB).await.unwrap();
+        assert_pressed(page, "true", "a Tab entry after a press released off Pause").await;
+        fixture.console.assert_clean("a tap on Pause").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
+/// Todo 5286: an abandoned touch ends in `pointercancel`, which clears the press its leave no
+/// longer does; the next focus entry still stops the rotation.
+#[test]
+fn a_cancelled_touch_on_pause_leaves_the_next_entry_an_entry() {
+    block_on(async {
+        let fixture = Fixture::open("/carousel/autoplay", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        hold_rotation(page).await;
+        instant_scroll(page).await;
+        page.evaluate_bounded(format!(
+            "(() => {{ const b = document.querySelector({PAUSE:?}); \
+             const o = {{ bubbles: true, pointerType: 'touch', isPrimary: true }}; \
+             b.dispatchEvent(new PointerEvent('pointerdown', o)); \
+             b.dispatchEvent(new PointerEvent('pointercancel', o)); \
+             b.dispatchEvent(new PointerEvent('pointerleave', {{ ...o, bubbles: false }})); }})()"
+        ))
+        .await
+        .unwrap();
+        reach(page, PAUSE).await.unwrap();
+        assert_pressed(page, "true", "focus entering after a cancelled touch").await;
+        fixture.console.assert_clean("a cancelled touch").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
+/// A finger tap on the toggle, past its `click` and that click's render: a focus entry the
+/// click undoes shows `true` for a moment.
+async fn tap_and_settle(page: &Page) {
+    page.evaluate_bounded(format!(
+        "(() => {{ window.__clicked = false; document.querySelector({PAUSE:?})\
+         .addEventListener('click', () => window.__clicked = true, {{ once: true }}); }})()"
+    ))
+    .await
+    .unwrap();
+    pointer::tap(page, PAUSE).await.unwrap();
+    wait::for_js_true(page, "window.__clicked", "the tap's click")
+        .await
+        .unwrap();
+    clock::settle(page).await.unwrap();
+}
+
+/// Todo 5287: the toggle mirrors under RTL, beside Next there too.
+#[test]
+fn the_pause_control_mirrors_under_rtl() {
+    block_on(async {
+        let fixture = Fixture::open("/carousel/autoplay", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        hold_rotation(page).await;
+        let gaps = format!(
+            "(() => {{ const r = document.querySelector('[aria-roledescription=carousel]').getBoundingClientRect(); \
+             const b = document.querySelector({PAUSE:?}).getBoundingClientRect(); \
+             return [b.left - r.left, r.right - b.right]; }})()"
+        );
+        let ltr: Vec<f64> = page
+            .evaluate_bounded(gaps.clone())
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        page.evaluate_bounded("document.documentElement.dir = 'rtl'")
+            .await
+            .unwrap();
+        let rtl: Vec<f64> = page
+            .evaluate_bounded(gaps)
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        assert!(
+            (ltr[1] - rtl[0]).abs() <= 1.0 && (ltr[0] - rtl[1]).abs() <= 1.0,
+            "gaps to the (left, right) edges: LTR {ltr:?}, RTL {rtl:?}"
+        );
+        fixture.console.assert_clean("the mirrored toggle").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
 /// Todo 2393: Tab from Pause to the track moves within the carousel: no new focus entry
 /// that stops the rotation Play just started.
 #[test]

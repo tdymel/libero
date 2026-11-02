@@ -5,6 +5,11 @@ use crate::theme::{CssVar, Size};
 pub const MARQUEE_DURATION: CssVar = CssVar::new("--lsx-marquee-duration");
 /// How far the fade reaches in from each end.
 pub const MARQUEE_FADE_SIZE: CssVar = CssVar::new("--lsx-marquee-fade-size");
+/// What the fade starts from; a `fade_color` prop writes the `-override` twin.
+pub const MARQUEE_FADE: CssVar = CssVar::new("--lsx-marquee-fade");
+
+/// `PAPER_BACKGROUND.value()` as a `const`, for `Theme::DEFAULT`.
+pub const MARQUEE_FADE_DEFAULT: &str = "var(--lsx-paper-background)";
 
 // Per instance, from props; the shift reads both.
 pub const MARQUEE_REPEAT: CssVar = CssVar::new("--lsx-marquee-repeat");
@@ -33,10 +38,12 @@ pub struct MarqueeDefaults {
     pub pause_on_hover: bool,
     /// The built-in pause toggle, on for WCAG 2.2.2 (motion over five seconds).
     pub pause_control: bool,
-    /// Off: the fade is drawn in `Paper`'s surface colour, wrong on any other.
+    /// Off: the fade assumes a surface of `fade_color`, wrong on any other.
     pub fade_edges: bool,
     /// Any CSS length or percentage of the marquee's length.
     pub fade_size: &'static str,
+    /// A CSS colour; `Paper`'s surface colour by default.
+    pub fade_color: &'static str,
 }
 
 impl MarqueeDefaults {
@@ -48,6 +55,7 @@ impl MarqueeDefaults {
         pause_control: true,
         fade_edges: false,
         fade_size: "5%",
+        fade_color: MARQUEE_FADE_DEFAULT,
     };
 }
 
@@ -56,6 +64,19 @@ impl ToCssDeclarations for MarqueeDefaults {
         vec![
             MARQUEE_DURATION.declare(format!("{}ms", self.duration)),
             MARQUEE_FADE_SIZE.declare(self.fade_size),
+            MARQUEE_FADE.declare(self.fade_color),
         ]
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::theme::PAPER_BACKGROUND;
+
+    /// A second spelling of the paper surface would show the ends as a band.
+    #[test]
+    fn the_fade_is_the_paper_surface() {
+        assert_eq!(MARQUEE_FADE_DEFAULT, PAPER_BACKGROUND.value());
     }
 }

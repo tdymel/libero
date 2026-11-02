@@ -203,7 +203,7 @@ fn the_fade_hides_while_focus_is_inside() {
     assert!(html.contains(&rule), "{rule} in {html}");
 }
 
-/// The fade is `Paper`'s surface colour, not a literal white.
+/// The fade reads its variable, `Paper`'s surface colour by default, not a literal white.
 #[test]
 fn the_fade_reads_the_paper_token() {
     fn app() -> Element {
@@ -214,12 +214,33 @@ fn the_fade_reads_the_paper_token() {
 
     let html = render(app);
     assert!(
-        html.contains(
-            "background:linear-gradient(to right, var(--lsx-paper-background), transparent);"
-        ),
+        html.contains(&format!(
+            "background:linear-gradient(to right, {}, transparent);",
+            libero::theme::MARQUEE_FADE.overridable()
+        )),
+        "{html}"
+    );
+    assert!(
+        html.contains("--lsx-marquee-fade:var(--lsx-paper-background)"),
         "{html}"
     );
     assert!(body(&html).contains(r#"data-state="horizontal fade-edges""#));
+}
+
+/// Todo 5288: `fade_color` writes the variable's override on the root.
+#[test]
+fn fade_color_overrides_the_fade() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider { Marquee { fade_edges: true, fade_color: "rgb(1, 2, 3)", "x" } }
+        }
+    }
+
+    let html = render(app);
+    assert!(
+        body(&html).contains("--lsx-marquee-fade-override:rgb(1, 2, 3)"),
+        "{html}"
+    );
 }
 
 /// Keyboard focus inside the content stops it at its start, with no opt-in: a
