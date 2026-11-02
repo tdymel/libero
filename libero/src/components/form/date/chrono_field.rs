@@ -10,6 +10,7 @@ use super::{
     format::uses_twelve_hours,
     picker_field::{DropdownArgs, PickerField, picker_field, use_picker_field},
     props::date_props,
+    time_picker::CompleteScope,
 };
 use crate::{
     components::common::Input,
@@ -230,33 +231,37 @@ pub(super) fn chrono_field<V: DateValue>(
         move |next| close && !V::scrolls(&picker, *narrow.peek()) && V::closes(next),
         // A phone sheet no pick closes has a control to finish with, not only a swipe (5129).
         V::scrolls(&picker, narrow()) || narrow() && !(close && V::pick_closes()),
+        // The phone sheet closes on the clock's last hand; Save stays as the fallback (5355).
+        move || close && *narrow.peek(),
         // Only the props `V` reads, so the picker has nothing to warn about.
         move |args: DropdownArgs<V>| {
             rsx! {
-                ChronoPicker::<V> {
-                    value: args.value,
-                    onchange: args.pick,
-                    min: picker.min,
-                    max: picker.max,
-                    exclude_date: used::<V, _>("exclude_date", picker.exclude_date).flatten().filter(|_| day),
-                    columns: used::<V, _>("columns", picker.columns).flatten().filter(|_| day),
-                    level: used::<V, _>("level", level),
-                    open_to: used::<V, _>("open_to", picker.open_to).flatten(),
-                    today: used::<V, _>("today", args.today).flatten(),
-                    size: args.size,
-                    variant: used::<V, _>("variant", picker.variant).map_or(Input::None, Input::Value),
-                    with_seconds: used::<V, _>("with_seconds", picker.with_seconds),
-                    step: used::<V, _>("step", picker.step).flatten(),
-                    hour_step: used::<V, _>("hour_step", picker.hour_step).flatten(),
-                    second_step: used::<V, _>("second_step", picker.second_step).flatten(),
-                    twelve_hour: used::<V, _>("twelve_hour", picker.twelve_hour),
-                    calendar: used::<V, _>("calendar", picker.calendar).filter(|_| day).map_or(Input::None, Input::Value),
-                    days: used::<V, _>("days", picker.days).filter(|_| day),
-                    week_numbers: used::<V, _>("week_numbers", picker.grid.week_numbers).filter(|_| day),
-                    weekend_days: used::<V, _>("weekend_days", picker.grid.weekend_days()).filter(|_| day),
-                    hide_weekdays: used::<V, _>("hide_weekdays", picker.grid.hide_weekdays).filter(|_| day),
-                    hide_outside_days: used::<V, _>("hide_outside_days", picker.grid.hide_outside_days).filter(|_| day),
-                    presets: used::<V, _>("presets", presets.clone()).filter(|_| day).unwrap_or_default(),
+                CompleteScope { complete: args.complete,
+                    ChronoPicker::<V> {
+                        value: args.value,
+                        onchange: args.pick,
+                        min: picker.min,
+                        max: picker.max,
+                        exclude_date: used::<V, _>("exclude_date", picker.exclude_date).flatten().filter(|_| day),
+                        columns: used::<V, _>("columns", picker.columns).flatten().filter(|_| day),
+                        level: used::<V, _>("level", level),
+                        open_to: used::<V, _>("open_to", picker.open_to).flatten(),
+                        today: used::<V, _>("today", args.today).flatten(),
+                        size: args.size,
+                        variant: used::<V, _>("variant", picker.variant).map_or(Input::None, Input::Value),
+                        with_seconds: used::<V, _>("with_seconds", picker.with_seconds),
+                        step: used::<V, _>("step", picker.step).flatten(),
+                        hour_step: used::<V, _>("hour_step", picker.hour_step).flatten(),
+                        second_step: used::<V, _>("second_step", picker.second_step).flatten(),
+                        twelve_hour: used::<V, _>("twelve_hour", picker.twelve_hour),
+                        calendar: used::<V, _>("calendar", picker.calendar).filter(|_| day).map_or(Input::None, Input::Value),
+                        days: used::<V, _>("days", picker.days).filter(|_| day),
+                        week_numbers: used::<V, _>("week_numbers", picker.grid.week_numbers).filter(|_| day),
+                        weekend_days: used::<V, _>("weekend_days", picker.grid.weekend_days()).filter(|_| day),
+                        hide_weekdays: used::<V, _>("hide_weekdays", picker.grid.hide_weekdays).filter(|_| day),
+                        hide_outside_days: used::<V, _>("hide_outside_days", picker.grid.hide_outside_days).filter(|_| day),
+                        presets: used::<V, _>("presets", presets.clone()).filter(|_| day).unwrap_or_default(),
+                    }
                 }
             }
         },

@@ -112,6 +112,8 @@ pub(super) struct PickerField<'a, V: 'static> {
     pub dropdown_parts: &'a Input<Parts<ChronoDropdownPart>>,
     pub states: &'a Input<States>,
     pub attributes: Vec<Attribute>,
+    pub hide_save: Option<bool>,
+    pub hide_entry_input: Option<bool>,
 }
 
 /// What the dropdown's picker is drawn from.
@@ -121,6 +123,8 @@ pub struct DropdownArgs<V: 'static> {
     pub size: Size,
     /// Emits a picked value, closing the dropdown when the field's close rule says so.
     pub pick: Callback<Option<V>>,
+    /// The picker's last unit is picked: closes the dropdown when the field's rule says so (5355).
+    pub complete: Callback<()>,
 }
 
 /// Builds a [`PickerField`] from a field's props.
@@ -150,6 +154,8 @@ macro_rules! picker_field {
             dropdown_parts: &$props.dropdown_parts,
             states: &$props.states,
             attributes: $props.attributes,
+            hide_save: $props.hide_save,
+            hide_entry_input: $props.hide_entry_input,
         }
     };
 }
@@ -163,6 +169,7 @@ pub(super) fn use_picker_field<V: FieldValue>(
     closes: impl Fn(Option<V>) -> bool + 'static,
     // The picker leaves the closing to a Save under it (3903).
     saves: bool,
+    completes: impl Fn() -> bool + 'static,
     dropdown: impl FnOnce(DropdownArgs<V>) -> Element,
 ) -> Element {
     let theme = use_theme();
@@ -558,8 +565,16 @@ pub(super) fn use_picker_field<V: FieldValue>(
             open_to(false);
         }
     });
+    let complete = use_callback(move |()| {
+        if completes() {
+            if picker_focus.in_dropdown() {
+                focus_input();
+            }
+            open_to(false);
+        }
+    });
     // Closes as Escape does: a whole pick is committed already, a half range is dropped (3903).
-    let save = saves.then(|| {
+    let save = (saves && !field.hide_save.unwrap_or(false)).then(|| {
         rsx! {
             div { "data-slot": "save",
                 Button {
@@ -577,33 +592,36 @@ pub(super) fn use_picker_field<V: FieldValue>(
     });
     // Shares the field's draft: Enter commits and hands focus back, a blur commits (3905).
     let locale = use_localization();
-    let picker_input = keyboardless.input(PickerInput {
-        field_id: field_box.id().to_string(),
-        labelled: !field.label.is_none(),
-        fallback_label: V::dialog_label(names),
-        value: full_text,
-        refusal: rejected().map(|error| error.message(locale)),
-        oninput: move |event: FormEvent| {
-            rejected.set(None);
-            announcer.clear();
-            draft.set(Some(event.value()));
-        },
-        onkeydown: move |event: KeyboardEvent| {
-            if event.key() != Key::Named(NamedKey::Enter) || event.is_composing() {
-                return;
-            }
-            match commit_in_picker() {
-                Some(error) => announcer.say(error),
-                None => {
-                    focus_input();
-                    open_to(false);
+    let hide_entry = field.hide_entry_input.unwrap_or(false);
+    let picker_input = keyboardless
+        .input(PickerInput {
+            field_id: field_box.id().to_string(),
+            labelled: !field.label.is_none(),
+            fallback_label: V::dialog_label(names),
+            value: full_text,
+            refusal: rejected().map(|error| error.message(locale)),
+            oninput: move |event: FormEvent| {
+                rejected.set(None);
+                announcer.clear();
+                draft.set(Some(event.value()));
+            },
+            onkeydown: move |event: KeyboardEvent| {
+                if event.key() != Key::Named(NamedKey::Enter) || event.is_composing() {
+                    return;
                 }
-            }
-        },
-        onblur: move |_: FocusEvent| {
-            commit_on_picker_blur();
-        },
-    });
+                match commit_in_picker() {
+                    Some(error) => announcer.say(error),
+                    None => {
+                        focus_input();
+                        open_to(false);
+                    }
+                }
+            },
+            onblur: move |_: FocusEvent| {
+                commit_on_picker_blur();
+            },
+        })
+        .filter(|_| !hide_entry);
     popover.show(showing.then(|| {
         dropdown_box
             .element(popover.floating())
@@ -635,6 +653,7 @@ pub(super) fn use_picker_field<V: FieldValue>(
                         today,
                         size,
                         pick,
+                        complete,
                     })}
                     {save}
                     {picker_input}

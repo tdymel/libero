@@ -104,7 +104,9 @@ pub fn ChronoFieldPage() -> Element {
                     prop("calendar", "CalendarVariant").default(theme.chrono_picker.calendar.as_str()).doc("A month of days, or `mini`, one row of days with buttons that page it. For a day or a date-time."),
                     prop("days", "usize").default(theme.chrono_picker.days.to_string()).doc("Days in the mini calendar's row."),
                     prop("columns", "usize").default("1, or 2 for a range above sm").doc("Months side by side; below `sm` only as many as fit, at least one. Unset, a range of days below `sm` shows its months in one scrolling column, with its ends on top and a Save button."),
-                    prop("close_on_change", "bool").default(theme.chrono_field.close_on_change.to_string()).doc("Picking a day, or a range's second end, closes the dropdown. Below `sm`, a sheet that no pick closes has a Save button that closes it: a range's scrolling months, a time, a date-time, a duration, or any value with this off."),
+                    prop("close_on_change", "bool").default(theme.chrono_field.close_on_change.to_string()).doc("Picking a day, or a range's second end, closes the dropdown. Below `sm`, a sheet that no pick closes has a Save button that closes it: a range's scrolling months, a time, a date-time, a duration, or any value with this off. With it on, the clock's last hand closes the sheet, by a tap or Enter; arrows only step it."),
+                    prop("hide_save", "bool").default("false").doc("Hides the sheet's Save button. The sheet still closes on a swipe down, a tap outside, focus leaving it, Escape, Enter in its text box, or the pick that completes the value."),
+                    prop("hide_entry_input", "bool").default("false").doc("Hides the text box under the picker on a touch screen. The field's own text keeps the keyboard down there, so the value is then only picked."),
                     prop("name", "FieldName<Option<V>>").doc("What the field posts as, the value in ISO 8601 whatever the text shows. A path also binds it to the surrounding `Form`'s value when it has no `onchange`."),
                     prop("validate", "Validators<Option<V>>").doc("Rules over the value, shown once the field loses focus or its form is submitted."),
                     prop("placeholder", "String").doc("Shown while the text is empty."),
@@ -269,6 +271,15 @@ pub fn ChronoFieldPage() -> Element {
                                 false => vec!["close_on_change: false".to_string()],
                             }
                         }),
+                        // The phone sheet's Save and the touch screen's text box (5355).
+                        Control::switch("hide_save").code(|_, values| match is_on(values, "hide_save") {
+                            true => vec!["hide_save: true".to_string()],
+                            false => vec![],
+                        }),
+                        Control::switch("hide_entry_input").code(|_, values| match is_on(values, "hide_entry_input") {
+                            true => vec!["hide_entry_input: true".to_string()],
+                            false => vec![],
+                        }),
                         Control::switch("validate").code(|_, values| match is_on(values, "validate") {
                             true => vec![r#"validate: not_empty.error("Pick a value.")"#.to_string()],
                             false => vec![],
@@ -337,6 +348,7 @@ fn ChronoFieldDemo(values: DemoValues) -> Element {
         on("hide_weekdays"),
         on("hide_outside_days"),
     );
+    let (hide_save, hide_entry_input) = (on("hide_save"), on("hide_entry_input"));
     let open_to = open_to_of(&values);
     let twelve_hour = twelve_hour_of(&values);
     let today = today_of(&values);
@@ -363,7 +375,7 @@ fn ChronoFieldDemo(values: DemoValues) -> Element {
                     value: month(), onchange: move |next| month.set(next), level: DateLevel::Month,
                     min: min_day, max: max_day, today, close_on_change, open_to,
                     validate: rules(validate),
-                    size, radius, label, aria_label, description, helper, placeholder, status, required, disabled, leading,
+                    size, radius, label, aria_label, description, helper, placeholder, status, required, disabled, leading, hide_save, hide_entry_input,
                 }
             },
             shown(month()),
@@ -374,7 +386,7 @@ fn ChronoFieldDemo(values: DemoValues) -> Element {
                     value: year(), onchange: move |next| year.set(next), level: DateLevel::Year,
                     min: min_day, max: max_day, today, close_on_change,
                     validate: rules(validate),
-                    size, radius, label, aria_label, description, helper, placeholder, status, required, disabled, leading,
+                    size, radius, label, aria_label, description, helper, placeholder, status, required, disabled, leading, hide_save, hide_entry_input,
                 }
             },
             shown(year()),
@@ -385,7 +397,7 @@ fn ChronoFieldDemo(values: DemoValues) -> Element {
                     value: time(), onchange: move |next| time.set(next),
                     min: min_time, max: max_time, time_format, variant, with_seconds, step, hour_step, second_step, twelve_hour,
                     validate: rules(validate),
-                    size, radius, label, aria_label, description, helper, placeholder, status, required, disabled, leading,
+                    size, radius, label, aria_label, description, helper, placeholder, status, required, disabled, leading, hide_save, hide_entry_input,
                 }
             },
             shown(time()),
@@ -398,7 +410,7 @@ fn ChronoFieldDemo(values: DemoValues) -> Element {
                     with_seconds, step, hour_step, second_step, twelve_hour, close_on_change, calendar, days,
                     week_numbers, hide_weekdays, hide_outside_days,
                     validate: rules(validate),
-                    size, radius, label, aria_label, description, helper, placeholder, status, required, disabled, leading,
+                    size, radius, label, aria_label, description, helper, placeholder, status, required, disabled, leading, hide_save, hide_entry_input,
                 }
             },
             shown(date_time()),
@@ -410,7 +422,7 @@ fn ChronoFieldDemo(values: DemoValues) -> Element {
                     min: min_day, max: max_day, format, exclude_date, columns, today, close_on_change,
                     week_numbers, hide_weekdays, hide_outside_days, presets: range_presets(&values),
                     validate: rules(validate),
-                    size, radius, label, aria_label, description, helper, placeholder, status, required, disabled, leading,
+                    size, radius, label, aria_label, description, helper, placeholder, status, required, disabled, leading, hide_save, hide_entry_input,
                 }
             },
             shown(date_range()),
@@ -423,7 +435,7 @@ fn ChronoFieldDemo(values: DemoValues) -> Element {
                     with_seconds, step, hour_step, second_step, twelve_hour, close_on_change,
                     week_numbers, hide_weekdays, hide_outside_days,
                     validate: rules(validate),
-                    size, radius, label, aria_label, description, helper, placeholder, status, required, disabled, leading,
+                    size, radius, label, aria_label, description, helper, placeholder, status, required, disabled, leading, hide_save, hide_entry_input,
                 }
             },
             shown(date_time_range()),
@@ -434,7 +446,7 @@ fn ChronoFieldDemo(values: DemoValues) -> Element {
                     value: duration(), onchange: move |next| duration.set(next),
                     min: min_duration, max: max_duration, with_seconds, step,
                     validate: rules(validate),
-                    size, radius, label, aria_label, description, helper, placeholder, status, required, disabled, leading,
+                    size, radius, label, aria_label, description, helper, placeholder, status, required, disabled, leading, hide_save, hide_entry_input,
                 }
             },
             shown(duration()),
@@ -446,7 +458,7 @@ fn ChronoFieldDemo(values: DemoValues) -> Element {
                     min: min_day, max: max_day, format, exclude_date, today, close_on_change, calendar, days,
                     week_numbers, hide_weekdays, hide_outside_days, open_to, presets: day_presets(&values),
                     validate: rules(validate),
-                    size, radius, label, aria_label, description, helper, placeholder, status, required, disabled, leading,
+                    size, radius, label, aria_label, description, helper, placeholder, status, required, disabled, leading, hide_save, hide_entry_input,
                 }
             },
             shown(date()),

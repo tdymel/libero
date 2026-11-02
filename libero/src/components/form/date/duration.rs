@@ -10,7 +10,7 @@ use super::{
     ChronoPickerPart,
     range::Iso,
     spin_column::{SpinAt, SpinColumn, SpinOption},
-    time_picker::TIME_PICKER_SX,
+    time_picker::{TIME_PICKER_SX, use_completes},
 };
 use crate::{
     components::{
@@ -153,15 +153,20 @@ pub(super) fn DurationClock(props: DurationClockProps) -> Element {
 
     // One identity across renders, so a pick in one column skips the others.
     let pick = use_callback(move |(column, index): (&'static str, usize)| view.pick(column, index));
-    // Enter, or typing that fills a column, moves on to the next.
+    // Enter, or typing that fills a column, moves on to the next; after the last a field may close.
+    let complete = use_completes();
     let ondone = use_callback(move |column: &'static str| {
         let next = COLUMNS
             .into_iter()
             .skip_while(|name| *name != column)
             .skip(1)
             .find_map(|name| root.query_selector(&format!("[data-column='{name}']")).ok());
-        if let Some(next) = next {
-            let _ = next.focus();
+        match (next, complete) {
+            (Some(next), _) => {
+                let _ = next.focus();
+            }
+            (None, Some(complete)) => complete.call(()),
+            (None, None) => {}
         }
     });
 

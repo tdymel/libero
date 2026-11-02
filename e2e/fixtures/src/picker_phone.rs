@@ -2,7 +2,8 @@
 //! the clock face (3926), the color sheet (3923), the short range text (3904), the scrolling
 //! range (3903), the swiped day (3924), the swiped-away sheet (3957) and a range's explicit
 //! `columns` cut to the months that fit (3958), the outside tap that only closes (4826) and, on
-//! its own page, the mini row and presets over week numbers (4825).
+//! its own page, the mini row and presets over week numbers (4825); a clock with no Save and no
+//! text box (5355).
 
 use dioxus::prelude::*;
 use libero::{
@@ -32,6 +33,7 @@ fn PickerPhonePage() -> Element {
     let mut due = use_signal(move || day(14));
     let mut at = use_signal(|| NaiveTime::from_hms_opt(9, 30, 0));
     let mut digital = use_signal(|| NaiveTime::from_hms_opt(9, 30, 0));
+    let mut bare = use_signal(|| NaiveTime::from_hms_opt(9, 30, 0));
     let mut color = use_signal(|| "#228be6".parse::<ColorCode>().unwrap());
     let mut taps = use_signal(|| 0u32);
 
@@ -75,6 +77,15 @@ fn PickerPhonePage() -> Element {
                     onchange: move |next| digital.set(next),
                 }
             }
+            div { id: "bare",
+                ChronoField::<NaiveTime> {
+                    label: "Bare",
+                    hide_save: true,
+                    hide_entry_input: true,
+                    value: bare(),
+                    onchange: move |next| bare.set(next),
+                }
+            }
             div { id: "color",
                 ColorField {
                     label: "Accent",
@@ -83,7 +94,7 @@ fn PickerPhonePage() -> Element {
                     oninput: move |event: SliderChangeEvent<ColorCode>| color.set(event.value()),
                 }
             }
-            Text { id: "echo", "{stay:?} {due:?} {at:?} {color:?}" }
+            Text { id: "echo", "{stay:?} {due:?} {at:?} {color:?} bare {bare:?}" }
         }
     }
 }

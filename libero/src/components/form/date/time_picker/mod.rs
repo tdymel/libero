@@ -86,6 +86,24 @@ pub fn TimePicker(props: TimePickerProps) -> Element {
     })
 }
 
+/// A field's close after the last hand, for a [`Clock`] with no `oncomplete` of its own (5355).
+#[derive(Clone, Copy)]
+#[cfg_attr(not(feature = "date-field"), allow(dead_code))]
+struct Completes(Callback<()>);
+
+/// The surrounding field's close after the last unit, if any.
+pub(super) fn use_completes() -> Option<Callback<()>> {
+    try_use_context::<Completes>().map(|Completes(complete)| complete)
+}
+
+/// Hands `complete` to the clocks inside, past the portal the dropdown is drawn in.
+#[cfg(feature = "date-field")]
+#[component]
+pub(super) fn CompleteScope(complete: Callback<()>, children: Element) -> Element {
+    use_context_provider(|| Completes(complete));
+    children
+}
+
 /// What `TimePicker` draws, every option resolved. Plain props, so `ChronoPicker` can pass attributes on.
 #[derive(Props, Clone, PartialEq)]
 pub(super) struct ClockProps {
@@ -129,6 +147,7 @@ pub(super) fn Clock(props: ClockProps) -> Element {
     let disabled = props.disabled || in_disabled_group;
 
     let hand = use_signal(|| Hand::Hour);
+    let oncomplete = props.oncomplete.or(use_completes());
     let clock = ClockView {
         names: &use_localization().date,
         value,
@@ -145,7 +164,7 @@ pub(super) fn Clock(props: ClockProps) -> Element {
         focusable: props.focusable && !disabled,
         disabled,
         hand,
-        oncomplete: props.oncomplete,
+        oncomplete,
     };
     let root = use_element();
 
@@ -158,7 +177,6 @@ pub(super) fn Clock(props: ClockProps) -> Element {
     });
     // Enter, or typing that fills a column, moves on to the next, as a native
     // time input; after the last the time is complete.
-    let oncomplete = props.oncomplete;
     let ondone = use_callback(move |name: &'static str| {
         let later = Column::ALL
             .into_iter()

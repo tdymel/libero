@@ -195,6 +195,15 @@ macro_rules! date_props {
                 dropdown_parts: $crate::components::common::Input<
                     $crate::components::common::Parts<$crate::components::form::ChronoDropdownPart>,
                 >,
+                /// Hides the Save button under the picker in the phone sheet. The sheet then
+                /// closes on a swipe down, a tap outside, focus leaving it, Escape, Enter in its
+                /// text box, or the pick that completes the value.
+                #[props(default)]
+                hide_save: Option<bool>,
+                /// Hides the text box under the picker on a touch screen, which takes typing
+                /// while the field's own text keeps the keyboard down.
+                #[props(default)]
+                hide_entry_input: Option<bool>,
             }
         }
     };

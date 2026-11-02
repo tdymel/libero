@@ -1,6 +1,6 @@
 //! The picker fields at 360px: the phone sheet (todo 3900), a finger's keyboardless tap and the
 //! picker's own text box (3905, 3923), the clock face (3926), 44px targets (3901), short ranges (3904),
-//! the scrolling range (3903) and the swiped month (3924).
+//! the scrolling range (3903), the swiped month (3924) and the close on the last hand (5355).
 
 use anyhow::{Result, bail};
 use chromiumoxide::Page;
@@ -390,6 +390,122 @@ fn a_sheet_no_pick_closes_has_a_save() {
             .await
             .unwrap();
         fixture.console.assert_clean("a time sheet's Save").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
+/// The centre of the sheet's clock mark labelled `label`.
+async fn mark(page: &Page, label: &str) -> pointer::Point {
+    let js = format!(
+        "[...document.querySelectorAll('{SHEET} [data-slot=mark]')].some((m) => m.textContent === {label:?})"
+    );
+    wait::for_js_true(page, &js, &format!("the mark {label}"))
+        .await
+        .unwrap();
+    page.evaluate_bounded(format!(
+        "(() => {{ const r = [...document.querySelectorAll('{SHEET} [data-slot=mark]')] \
+         .find((m) => m.textContent === {label:?}).getBoundingClientRect(); \
+         return {{ x: r.x + r.width / 2, y: r.y + r.height / 2 }}; }})()"
+    ))
+    .await
+    .unwrap()
+    .into_value()
+    .unwrap()
+}
+
+/// Todo 5355: the hour's tap keeps the sheet, the minute's closes it with the time.
+#[test]
+fn the_minutes_tap_closes_the_time_sheet() {
+    block_on(async {
+        let fixture = phone().await;
+        let page = &fixture.page;
+        tap(page, &input("at")).await.unwrap();
+        sheet_shown(page).await.unwrap();
+        pointer::tap_at(page, mark(page, "11").await).await.unwrap();
+        // The minute face is drawn in the sheet still open.
+        pointer::tap_at(page, mark(page, "45").await).await.unwrap();
+        let closed = format!(
+            "!document.querySelector({SHEET:?}) \
+             && document.querySelector('#echo').textContent.includes('11:45:00')"
+        );
+        wait::for_js_true(page, &closed, "the minute closed the sheet on 11:45")
+            .await
+            .unwrap();
+        fixture.console.assert_clean("a minute's tap").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
+/// Todo 5355: arrows step the hands with the sheet open; Enter on the minutes closes it.
+#[test]
+fn enter_on_the_minutes_closes_the_time_sheet() {
+    block_on(async {
+        let fixture = phone().await;
+        let page = &fixture.page;
+        let field = input("at");
+        page.evaluate(format!("document.querySelector({field:?}).focus()"))
+            .await
+            .unwrap();
+        keyboard::press(page, keyboard::ARROW_DOWN).await.unwrap();
+        sheet_shown(page).await.unwrap();
+        let face = "document.activeElement?.dataset.slot === 'face'";
+        wait::for_js_true(page, face, "focus on the face")
+            .await
+            .unwrap();
+        for key in [keyboard::ARROW_UP, keyboard::ENTER, keyboard::ARROW_UP] {
+            keyboard::press(page, key).await.unwrap();
+        }
+        let open = format!(
+            "!!document.querySelector({SHEET:?}) \
+             && document.querySelector('#echo').textContent.includes('10:35:00')"
+        );
+        wait::for_js_true(page, &open, "10:35 picked, the sheet open")
+            .await
+            .unwrap();
+        keyboard::press(page, keyboard::ENTER).await.unwrap();
+        let closed = format!(
+            "!document.querySelector({SHEET:?}) \
+             && document.activeElement === document.querySelector({field:?})"
+        );
+        wait::for_js_true(page, &closed, "Enter closed the sheet, focus on the field")
+            .await
+            .unwrap();
+        fixture
+            .console
+            .assert_clean("Enter on the minutes")
+            .unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
+/// Todo 5355: `hide_save` and `hide_entry_input` drop both; an outside tap still leaves
+/// with the hour picked.
+#[test]
+fn a_sheet_without_save_or_text_box_still_closes() {
+    block_on(async {
+        let fixture = phone().await;
+        let page = &fixture.page;
+        tap(page, &input("bare")).await.unwrap();
+        sheet_shown(page).await.unwrap();
+        let bare = format!(
+            "!!document.querySelector('{SHEET} [data-slot=face]') \
+             && !document.querySelector('{SHEET} [data-slot=save]') \
+             && !document.querySelector({TYPED:?})"
+        );
+        wait::for_js_true(page, &bare, "a face, no Save, no text box")
+            .await
+            .unwrap();
+        pointer::tap_at(page, mark(page, "11").await).await.unwrap();
+        mark(page, "45").await;
+        tap(page, "#tally").await.unwrap();
+        let closed = format!(
+            "!document.querySelector({SHEET:?}) \
+             && document.querySelector('#echo').textContent.includes('bare Some(11:30:00)')"
+        );
+        wait::for_js_true(page, &closed, "the outside tap closed it on 11:30")
+            .await
+            .unwrap();
+        fixture.console.assert_clean("a bare time sheet").unwrap();
         fixture.close().await.unwrap();
     });
 }
