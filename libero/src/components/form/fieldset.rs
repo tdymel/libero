@@ -95,7 +95,8 @@ base_props! {
         /// or a different `path`, remounts the fields.
         #[props(default)]
         value: Option<Store<V>>,
-        /// Composite rules over `value`; `.on(..)` shows one on the named fields.
+        /// Composite rules over `value`, shown once focus left the group or a submit was tried;
+        /// `.on(..)` shows one on the named fields.
         #[props(default, into)]
         validate: Validators<V>,
         /// Where the group sits in the form's value; names inside are relative to it.
@@ -259,10 +260,15 @@ pub fn Fieldset<V: FormValue>(props: FieldsetProps<V>) -> Element {
          and its question is never read.",
     );
 
+    // The group's own rules wait for focus to leave the group, or a submit (4257, 5246). Counted
+    // per reset, like a field's touched flag; no rules, no issue, so no subscription.
+    let left_at = use_signal(|| None::<u32>);
+    let left = !props.validate.is_empty() && left_at() == Some(scope.generation());
+
     let prefix = binding.prefix();
     let warned_blank = use_hook(|| Rc::new(Cell::new(false)));
     // A disabled group's own rules are barred like its fields' (4208): the user cannot fix them.
-    let issues = match props.validate.is_empty() || disabled {
+    let mut issues = match props.validate.is_empty() || disabled {
         true => Vec::new(),
         false => binding
             .with::<V, _>(&[], |value| {
@@ -270,11 +276,11 @@ pub fn Fieldset<V: FormValue>(props: FieldsetProps<V>) -> Element {
             })
             .unwrap_or_default(),
     };
+    for issue in &mut issues {
+        issue.left = left;
+    }
     scope.raise(key, issues);
 
-    // The group's own rule waits for focus to leave the group, or a submit (4257). Counted per
-    // reset, like a field's touched flag; no rules, no unnamed issue, so no subscription.
-    let left_at = use_signal(|| None::<u32>);
     let leave = move || {
         let mut left_at = left_at;
         let now = Some(scope.generation());
@@ -283,8 +289,7 @@ pub fn Fieldset<V: FormValue>(props: FieldsetProps<V>) -> Element {
         }
     };
     use_silent_focus_out_of(element, leave);
-    let revealed =
-        !props.validate.is_empty() && (scope.submitted() || left_at() == Some(scope.generation()));
+    let revealed = !props.validate.is_empty() && (scope.submitted() || left);
     let unnamed = match revealed {
         true => scope.unnamed_issue(key),
         false => FieldStatus::Valid,

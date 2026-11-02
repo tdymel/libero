@@ -81,6 +81,10 @@ fn why(rejection: TagRejection) -> String {
     }
 }
 
+fn offers(values: &DemoValues) -> bool {
+    values.str("suggestions") == "true" || values.str("open_on_focus") == "true"
+}
+
 fn refusing(values: &DemoValues) -> bool {
     values.str("onreject") == "true"
 }
@@ -151,6 +155,9 @@ pub fn TagsFieldPage() -> Element {
                         .doc("Called with the whole list the caller should hold next."),
                     prop("suggestions", "Vec<String>")
                         .doc("Adds a dropdown of tags to pick. Tags already held are not offered."),
+                    prop("open_on_focus", "bool")
+                        .default("false")
+                        .doc("Opens the `suggestions` when the field takes focus, by Tab or a press, so a phone user sees them before typing. Focus coming back from a tag leaves them closed."),
                     prop("split_chars", "Vec<String>")
                         .default("[\",\"]")
                         .doc("Each one commits the text before it, typed or pasted."),
@@ -201,6 +208,7 @@ pub fn TagsFieldPage() -> Element {
                 .key(["Backspace"], "On an empty input: removes the last tag.")
                 .key(["Left"], "On an empty input, or with the caret before the typed text: moves onto the tags and keeps the text.")
                 .key(["Left", "Right"], "On the tags: walk them. `Right` past the last returns to the input.")
+                .key(["Left", "Right"], "In a right-to-left layout they follow the direction you see, so the two swap: `Right` moves from the input onto the tags.")
                 .key(["Delete", "Backspace", "Enter"], "On a tag: removes it.")
                 .key(["Down", "Up"], "With `suggestions`: open the list and move the highlight.")
                 .key(["PageUp", "PageDown"], "With `suggestions`, open: moves the highlight 10 rows, stopping at the first or last.")
@@ -305,12 +313,12 @@ pub fn TagsFieldPage() -> Element {
                             _ => vec![],
                         }
                     }),
-                    Control::switch("suggestions").code(|_, values| {
-                        match values.str("suggestions").as_str() {
-                            "true" => vec![SUGGESTIONS.to_string()],
-                            _ => vec![],
-                        }
+                    Control::switch("suggestions").code(|_, values| match offers(values) {
+                        true => vec![SUGGESTIONS.to_string()],
+                        false => vec![],
                     }),
+                    // Brings the suggestions with it: alone it would open nothing.
+                    Control::switch("open_on_focus"),
                     // Rules over one tag, not the list.
                     Control::switch("tag_rules").code(|_, values| {
                         match values.str("tag_rules").as_str() {
@@ -327,6 +335,7 @@ pub fn TagsFieldPage() -> Element {
                     Control::switch("clearable"),
                     Control::switch("required"),
                     Control::switch("disabled"),
+                    Control::switch("readonly"),
                 ],
                 render: move |values: DemoValues| {
                     let ruled = values.str("tag_rules") == "true";
@@ -348,9 +357,10 @@ pub fn TagsFieldPage() -> Element {
                             placeholder: (values.str("placeholder") == "true")
                                 .then(|| "Add a topic".to_string()),
                             status: refused().filter(|_| refuses).map(FieldStatus::Error).unwrap_or(status),
-                            suggestions: (values.str("suggestions") == "true").then(|| {
+                            suggestions: offers(&values).then(|| {
                                 ["rust", "dioxus", "wasm", "css"].map(String::from).to_vec()
                             }),
+                            open_on_focus: values.str("open_on_focus") == "true",
                             tag_rules: ruled
                                 .then(|| Callback::new(|tag: String| tag.chars().count() >= 3)),
                             onreject: move |rejection: TagRejection| {
@@ -364,6 +374,7 @@ pub fn TagsFieldPage() -> Element {
                             clearable: (values.str("clearable") == "true").then_some(true),
                             required: (values.str("required") == "true").then_some(true),
                             disabled: (values.str("disabled") == "true").then_some(true),
+                            readonly: (values.str("readonly") == "true").then_some(true),
                             value: value(),
                             onchange: move |next| {
                                 refused.set(None);

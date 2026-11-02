@@ -137,6 +137,7 @@ explains how parts work.
 | `Tab` | Enters the group at the selected option, or the first one that is not disabled. Pressed again, leaves the group. |
 | `Down` or `Right` | Moves to the next option and selects it, wrapping at the end. |
 | `Up` or `Left` | Moves to the previous option and selects it, wrapping at the start. |
+| `Left` or `Right` | In a right-to-left layout they follow the direction you see, so the two swap: `Left` moves to the next option. |
 
 ### Libero handles
 

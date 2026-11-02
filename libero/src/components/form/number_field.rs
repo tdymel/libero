@@ -40,12 +40,12 @@ use crate::{
 static STEPPERS_SX: StaticSx =
     StaticSx::new(|| sx().display("flex").align_items("center").gap("2px"));
 
-/// The input is `dir="ltr"`; its text still sits at the page's start.
+/// The input is `dir="ltr"`; its text still sits at the page's start, by its adornment.
 static NUMBER_CONTROL_SX: StaticSx = StaticSx::new(|| {
     field_control_sx()
         .width("100%")
         .text_align("start")
-        .rtl(sx().text_align("right"))
+        .rtl_around(sx().text_align("right"))
 });
 
 /// A stepper's hit area, `side` px wide, stops mid-gap so the two meet; spare width goes

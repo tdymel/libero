@@ -10,10 +10,10 @@ use crate::{
             aria_label_of, ring_overlay, use_combobox, use_no_toolbar, use_toolbar_item,
         },
         form::{
-            CaretKeys, ChipFocus, ComboboxCore, ComboboxOption, DropdownPart, FormScope,
+            CaretKeys, ChipFocus, ComboboxCore, ComboboxOption, DropdownPart, FocusOpen, FormScope,
             SelectionArgs, clear_button, field_control_sx, field_parts_enum, field_props,
             framed_remove_sx, removable_chip, row_label, use_bound, use_chip_announcer,
-            use_chip_handles, use_edited, use_field, use_field_frame, use_prefill,
+            use_chip_handles, use_edited, use_field, use_field_frame, use_focus_open, use_prefill,
         },
         layout::{BoxStyle, use_box},
     },
@@ -74,6 +74,10 @@ field_props! {
         /// Offers a dropdown of tags to pick; held tags are never offered.
         #[props(default)]
         suggestions: Option<Vec<String>>,
+        /// Opens the `suggestions` when the field takes focus, by Tab or a press; not when
+        /// focus comes back to it from a tag.
+        #[props(default)]
+        open_on_focus: bool,
         /// Each one commits the text before it, typed or pasted. Defaults to `[","]`.
         #[props(default)]
         split_chars: Option<Vec<String>>,
@@ -188,6 +192,12 @@ pub fn TagsField(props: TagsFieldProps) -> Element {
 
     let suggestions = props.suggestions.clone();
     let has_suggestions = suggestions.is_some();
+    let focus_open = use_focus_open(
+        props.open_on_focus && has_suggestions && !disabled && !readonly,
+        input_element,
+        use_callback(move |()| state.open()),
+        Some(handles.to_trigger()),
+    );
 
     // The label also names the listbox, which `for` cannot reach.
     let field = use_field()
@@ -382,6 +392,7 @@ pub fn TagsField(props: TagsFieldProps) -> Element {
             entering,
             clearing,
             focused,
+            focus_open,
             refusals,
             item,
         },
@@ -570,6 +581,25 @@ fn split(text: &str, split_chars: &[String]) -> Vec<String> {
     pieces
 }
 
+/// Whether an edit put in at most one character, whatever it replaced: a keystroke. Told by the
+/// text put in, as a paste over a selection can leave the draft shorter (5244).
+fn inserted_at_most_one(before: &str, after: &str) -> bool {
+    let before: Vec<char> = before.chars().collect();
+    let after: Vec<char> = after.chars().collect();
+    let prefix = before
+        .iter()
+        .zip(&after)
+        .take_while(|(a, b)| a == b)
+        .count();
+    let suffix = before[prefix..]
+        .iter()
+        .rev()
+        .zip(after[prefix..].iter().rev())
+        .take_while(|(a, b)| a == b)
+        .count();
+    after.len() - prefix - suffix <= 1
+}
+
 /// `split`, except a keystroke leaves the text after the last separator as the
 /// draft; a paste (`typed` false) commits every piece.
 fn split_typed(raw: &str, typed: bool, split_chars: &[String]) -> (Vec<String>, String) {
@@ -744,6 +774,7 @@ struct Draft {
     clearing: CopyValue<bool>,
     /// Whether the input holds focus, by its own focus and blur.
     focused: CopyValue<bool>,
+    focus_open: FocusOpen,
     /// Emptied on a keystroke, so a refusal does not outlive the text it was about.
     refusals: Announcer,
     item: Option<ToolbarItem>,
@@ -773,6 +804,7 @@ fn tags_field_input<F: Fn(Vec<String>) + Clone + 'static>(
         mut entering,
         mut clearing,
         mut focused,
+        focus_open,
         refusals,
         item,
     } = draft;
@@ -812,7 +844,7 @@ fn tags_field_input<F: Fn(Vec<String>) + Clone + 'static>(
                 return;
             }
             refusals.clear();
-            let typed = raw.chars().count() <= text().chars().count() + 1;
+            let typed = inserted_at_most_one(&text(), &raw);
             let (pieces, tail) = split_typed(&raw, typed, &split_chars);
             match pieces.is_empty() {
                 // A stray separator before the first letter is dropped with it.
@@ -903,10 +935,12 @@ fn tags_field_input<F: Fn(Vec<String>) + Clone + 'static>(
             focused.set(true);
             entering.set(false);
             clearing.set(false);
+            focus_open.focus();
         })
         // An uncommitted draft becomes a tag rather than being thrown away.
         .event("onblur", move |_: FocusEvent| {
             focused.set(false);
+            focus_open.blur();
             let draft = text();
             // `clearing` stays set until the click, or the press leaving the x, settles the draft.
             let kept = entering.replace(false) | *clearing.peek();
@@ -967,6 +1001,34 @@ mod tests {
             split_typed("a,b,c", false, &comma),
             (tags(&["a", "b", "c"]), String::new())
         );
+    }
+
+    /// Todo 5244: a paste is told by what it put in, not by the draft's new length.
+    #[test]
+    fn an_edit_is_typed_when_it_puts_in_at_most_one_character() {
+        for (before, after) in [
+            ("", "a"),
+            ("abc", "abcd"),
+            ("abc", "abXc"),
+            ("aa", "aaa"),
+            ("abc", "ab"),
+            ("abcdef", ""),
+            ("abcdef", "x"),
+            ("abcd", "aXd"),
+            ("", ","),
+            ("é", "éü"),
+        ] {
+            assert!(inserted_at_most_one(before, after), "{before} -> {after}");
+        }
+        for (before, after) in [
+            ("abcdef", "x,y"),
+            ("", "x,y"),
+            ("abc", "abcd,"),
+            ("abcd", "aX,d"),
+            ("ü", "x,"),
+        ] {
+            assert!(!inserted_at_most_one(before, after), "{before} -> {after}");
+        }
     }
 
     /// A paste and the same tags typed one after another have to land the same

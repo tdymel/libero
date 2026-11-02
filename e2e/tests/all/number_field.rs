@@ -584,6 +584,9 @@ async fn a_negative_number_reads_left_to_right<D: Driver>(d: &mut D, _route: &st
     anyhow::ensure!(direction == "ltr", "the input runs {direction}");
     let value = d.value("#delta").await?;
     anyhow::ensure!(value == "-5", "the input holds {value:?}");
+    // Todo 5245: the text still sits at the page's start, by the leading slot.
+    let align = d.style("#delta", "text-align").await?;
+    anyhow::ensure!(align == "right", "the input's text aligns {align}");
     Ok(())
 }
 

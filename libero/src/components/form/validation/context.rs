@@ -59,6 +59,8 @@ pub(crate) struct Issue {
     /// Full paths of the fields it concerns; empty when it names none.
     pub paths: Vec<String>,
     pub status: FieldStatus,
+    /// Focus left the `Fieldset` that raised it, so its fields show it untouched (5246).
+    pub left: bool,
 }
 
 /// A mapped field's typed text, shown in place of the stored value's while
@@ -319,7 +321,7 @@ impl FormScope {
     }
 
     /// The worst composite issue naming `name` that may show: after a submit,
-    /// or once every field it names is touched. Reactive, but on `touched` only while
+    /// once every field it names is touched, or once focus left its `Fieldset`. Reactive, but on `touched` only while
     /// an issue names `name`: a blur elsewhere re-renders no other field.
     pub fn visible_issue(&self, name: &str) -> FieldStatus {
         let issues = self.issues.read();
@@ -334,7 +336,9 @@ impl FormScope {
         let submitted = self.submitted();
         let touched = self.touched.read();
         naming
-            .filter(|issue| submitted || issue.paths.iter().all(|path| touched.contains(path)))
+            .filter(|issue| {
+                submitted || issue.left || issue.paths.iter().all(|path| touched.contains(path))
+            })
             .fold(FieldStatus::Valid, |status, issue| {
                 worst(status, issue.status.clone())
             })
@@ -766,7 +770,11 @@ pub(crate) fn issues_of<V>(
                      to read. Give it a text, or use `FieldStatus::Valid`.",
                 );
             }
-            (!status.is_valid()).then_some(Issue { paths, status })
+            (!status.is_valid()).then_some(Issue {
+                paths,
+                status,
+                left: false,
+            })
         })
         .collect()
 }

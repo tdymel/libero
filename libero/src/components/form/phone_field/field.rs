@@ -11,8 +11,8 @@ use crate::{
             coarse_hit_area_sx, inset_focus_ring_sx, use_combobox,
         },
         form::{
-            CaretKeys, ComboboxCore, ComboboxOption, DropdownPart, FIELD_CONTROL_SX, FormScope,
-            TouchHold, field_parts_enum, field_props, use_bound, use_field, use_field_frame,
+            CaretKeys, ComboboxCore, ComboboxOption, DropdownPart, FormScope, TouchHold,
+            field_control_sx, field_parts_enum, field_props, use_bound, use_field, use_field_frame,
             use_prefill, use_touch_hold, with_drawn_placeholder,
         },
         layout::{BoxStyle, use_box},
@@ -30,6 +30,13 @@ use crate::{
 };
 
 use super::countries::{self, COUNTRIES, Country};
+
+/// The input is `dir="ltr"`; its text still sits at the page's start, by the dial code.
+static PHONE_CONTROL_SX: StaticSx = StaticSx::new(|| {
+    field_control_sx()
+        .width("100%")
+        .rtl_around(sx().text_align("right"))
+});
 
 /// The picker in the leading slot: a real `<button>` and tab stop, the only
 /// way to reach what it does.
@@ -503,7 +510,7 @@ pub fn PhoneField(props: PhoneFieldProps) -> Element {
 
     // The frame draws the ring, so the control must not draw a second one.
     let control = use_box()
-        .framework_sx(&FIELD_CONTROL_SX)
+        .framework_sx(&PHONE_CONTROL_SX)
         .focus_ring(false)
         .prepare();
     // `field.aria()` by hand: the bare dial code is visible text the input's

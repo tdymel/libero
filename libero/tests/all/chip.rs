@@ -335,6 +335,11 @@ fn a_readonly_chip_says_so_and_stays_enabled() {
         Some("tags"),
         "{html}"
     );
+    // Todo 5247: a caller styles it through its states.
+    assert_eq!(
+        attributes_of(&html, "span")["data-state"],
+        "filled size-md radius-xl checked selectable readonly"
+    );
 }
 
 /// Events dispatched the way a renderer does, through [`crate::dispatch`].

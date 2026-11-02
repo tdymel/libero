@@ -273,7 +273,6 @@ pub fn PinField(props: PinFieldProps) -> Element {
             frame: CellFrame { frame, states },
             id: field.id().to_string(),
             cell_label,
-            describedby: field.describedby(),
             length,
             kind,
             input_type,
@@ -663,7 +662,6 @@ struct Cells {
     frame: CellFrame,
     id: String,
     cell_label: &'static str,
-    describedby: Option<String>,
     length: usize,
     kind: PinKind,
     input_type: &'static str,
@@ -684,7 +682,6 @@ fn pin_cells(parts: Cells, separator: Option<&Element>) -> Vec<Element> {
         frame,
         id,
         cell_label,
-        describedby,
         length,
         kind,
         input_type,
@@ -716,7 +713,6 @@ fn pin_cells(parts: Cells, separator: Option<&Element>) -> Vec<Element> {
                 frame: frame.clone(),
                 id: id.clone(),
                 label: fill(cell_label, &[("n", &(index + 1)), ("m", &length)]),
-                describedby: describedby.clone(),
                 kind,
                 input_type,
                 disabled,
@@ -745,7 +741,6 @@ fn PinCell(
     frame: CellFrame,
     id: String,
     label: String,
-    describedby: Option<String>,
     kind: PinKind,
     input_type: &'static str,
     disabled: bool,
@@ -784,10 +779,9 @@ fn PinCell(
         .attr("value", cell.map(String::from).unwrap_or_default())
         .attr("data-controlled", true)
         .attr("data-pin-index", index.to_string())
-        // The group names the pin; each cell names its place in it, and the
-        // error or helper reaches the focused cell too (todos 507, 591).
+        // The group names and describes the pin; each cell names its place in it. A description
+        // on every cell is read again on each auto-advance (5248).
         .attr("aria-label", label)
-        .attr("aria-describedby", describedby)
         .attr("disabled", disabled)
         .attr("readonly", readonly)
         // `aria-required` is not allowed on the group, so each cell says it.

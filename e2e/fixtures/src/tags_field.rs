@@ -16,7 +16,28 @@ pub const ROUTES: Routes = &[
     ("/tags-field/clear", || rsx! { TagsClearPage {} }),
     ("/tags-field/outside", || rsx! { TagsOutsidePage {} }),
     ("/tags-field/named", || rsx! { TagsNamedPage {} }),
+    ("/tags-field/open-on-focus", || rsx! { TagsOpenOnFocusPage {} }),
 ];
+
+/// Todo 5243: suggestions that open on focus, between two stops, one tag held.
+#[component]
+fn TagsOpenOnFocusPage() -> Element {
+    let mut topics = use_signal(|| vec!["rust".to_string()]);
+
+    rsx! {
+        Flex { direction: "column", gap: "md", max_width: "320px",
+            Button { id: "before", "Before" }
+            TagsField {
+                label: "Topics",
+                open_on_focus: true,
+                suggestions: vec!["dioxus".to_string(), "wasm".to_string()],
+                value: topics(),
+                onchange: move |next| topics.set(next),
+            }
+            Button { id: "after", "After" }
+        }
+    }
+}
 
 /// Todo 4305: a field with a `name` and no `onchange`, in a raw `<form>`.
 #[component]

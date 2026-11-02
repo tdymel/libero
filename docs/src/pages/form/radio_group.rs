@@ -191,6 +191,7 @@ pub fn RadioGroupPage() -> Element {
                 .key(["Tab"], "Enters the group at the selected option, or the first one that is not disabled. Pressed again, leaves the group.")
                 .key(["Down", "Right"], "Moves to the next option and selects it, wrapping at the end.")
                 .key(["Up", "Left"], "Moves to the previous option and selects it, wrapping at the start.")
+                .key(["Left", "Right"], "In a right-to-left layout they follow the direction you see, so the two swap: `Left` moves to the next option.")
                 .handles([
                     "The group is a `radiogroup` named by its `label`, so the question is read on entering it.",
                     "`required`, an error and read-only are set on the group, and its description, helper and status make up its `aria-describedby`.",

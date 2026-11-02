@@ -162,6 +162,16 @@ impl Sx {
             .selector(Self::RTL_FALLBACK, nested)
     }
 
+    /// [`rtl`](Self::rtl) for an element with its own `dir=ltr`, which neither of its arms
+    /// matches: it reads the direction around it, and an `ltr` subtree still overrides.
+    pub(crate) fn rtl_around(self, nested: Sx) -> Self {
+        self.selector(":where(:dir(rtl)) > &", nested.clone())
+            .selector(
+                ":where([dir=rtl]) &:where(:not([dir=rtl] [dir=ltr] *))",
+                nested,
+            )
+    }
+
     /// The guard sits in `:where`, so the arm keeps the specificity of a bare `&`.
     const RTL_FALLBACK: &str = ":where([dir=rtl]) &:where(:not([dir=ltr], [dir=rtl] [dir=ltr] *))";
 

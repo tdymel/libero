@@ -180,6 +180,11 @@ impl ChipHandles {
     pub(crate) fn trigger(self) -> ElementHandle {
         self.trigger
     }
+
+    /// Set when a chip hands focus to the trigger, for `use_focus_open`.
+    pub(crate) fn to_trigger(self) -> CopyValue<bool> {
+        self.to_trigger
+    }
 }
 
 pub(crate) fn use_chip_handles() -> ChipHandles {

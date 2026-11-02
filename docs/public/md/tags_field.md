@@ -64,6 +64,7 @@ fn Demo() -> Element {
 | `value` | `Vec<String>` | `[]` | The tags, in order. Controlled with `onchange`; a path `name` binds the list to the `Form` instead. With neither, the field starts from it and keeps its own edits until a form reset. |
 | `onchange` | `EventHandler<Vec<String>>` | - | Called with the whole list the caller should hold next. |
 | `suggestions` | `Vec<String>` | - | Adds a dropdown of tags to pick. Tags already held are not offered. |
+| `open_on_focus` | `bool` | `false` | Opens the `suggestions` when the field takes focus, by Tab or a press, so a phone user sees them before typing. Focus coming back from a tag leaves them closed. |
 | `split_chars` | `Vec<String>` | `[","]` | Each one commits the text before it, typed or pasted. |
 | `allow_duplicates` | `bool` | `false` | Lets the same tag be added twice. Off, tags are compared trimmed and case-insensitive. |
 | `max_tags` | `usize` | - | The most tags the field accepts. A paste fills the room that is left and refuses the rest. |
@@ -130,6 +131,7 @@ The dropdown is portaled out of the field, so its parts take the
 | `Backspace` | On an empty input: removes the last tag. |
 | `Left` | On an empty input, or with the caret before the typed text: moves onto the tags and keeps the text. |
 | `Left` or `Right` | On the tags: walk them. `Right` past the last returns to the input. |
+| `Left` or `Right` | In a right-to-left layout they follow the direction you see, so the two swap: `Right` moves from the input onto the tags. |
 | `Delete`, `Backspace` or `Enter` | On a tag: removes it. |
 | `Down` or `Up` | With `suggestions`: open the list and move the highlight. |
 | `PageUp` or `PageDown` | With `suggestions`, open: moves the highlight 10 rows, stopping at the first or last. |

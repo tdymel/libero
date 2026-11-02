@@ -245,10 +245,10 @@ fn it_meets_the_baseline() {
         .run();
 }
 
-/// Todos 507 and 591: a focused cell names its place and carries the error
-/// and helper, not only the group.
+/// Todos 507 and 5248: a focused cell names its place and says it is invalid; the error and
+/// helper are on the group alone, or every auto-advance reads them again.
 #[test]
-fn every_cell_is_named_and_described() {
+fn every_cell_is_named_and_the_group_described() {
     block_on(async {
         let fixture = Fixture::open("/pin-field/error", Viewport::Desktop)
             .await
@@ -256,19 +256,30 @@ fn every_cell_is_named_and_described() {
         let page = &fixture.page;
         let checks: String = page
             .evaluate_bounded(
-                "[...document.querySelectorAll('[role=group] input')].map((cell, i) => { \
-                    const ids = (cell.getAttribute('aria-describedby') || '').split(' '); \
-                    const text = ids.map(id => document.getElementById(id)?.textContent).join(' '); \
-                    return cell.getAttribute('aria-label') === `Character ${i + 1} of 4` \
-                        && text.includes('That code is wrong.') \
-                        && text.includes('It expires in ten minutes.'); \
-                }).join()",
+                "[...document.querySelectorAll('[role=group] input')].map((cell, i) => \
+                    cell.getAttribute('aria-label') === `Character ${i + 1} of 4` \
+                        && cell.getAttribute('aria-invalid') === 'true' \
+                        && !cell.hasAttribute('aria-describedby') \
+                ).join()",
             )
             .await
             .unwrap()
             .into_value()
             .unwrap();
         assert_eq!(checks, "true,true,true,true");
+        let group: String = page
+            .evaluate_bounded(
+                "(document.querySelector('[role=group]').getAttribute('aria-describedby') || '') \
+                    .split(' ').map(id => document.getElementById(id)?.textContent).join(' ')",
+            )
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        assert!(
+            group.contains("That code is wrong.") && group.contains("It expires in ten minutes."),
+            "the group reads {group:?}"
+        );
 
         fixture.console.assert_clean("pin field names").unwrap();
         fixture.close().await.unwrap();

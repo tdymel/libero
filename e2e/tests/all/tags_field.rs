@@ -224,6 +224,65 @@ fn a_pasted_list_leaves_no_text_behind() {
     });
 }
 
+/// Todo 5244: a list pasted over a selected draft commits every piece, shorter than the draft or not.
+#[test]
+fn a_list_pasted_over_a_selected_draft_commits_every_piece() {
+    block_on(async {
+        let fixture = Fixture::open("/tags-field/echo", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        keyboard::tab_to(page, TRIGGER, 10).await.unwrap();
+        keyboard::type_text(page, "abcdef").await.unwrap();
+        page.evaluate_bounded(format!("document.querySelector('{TRIGGER}').select()"))
+            .await
+            .unwrap();
+        keyboard::insert_text(page, "x,y").await.unwrap();
+        wait::for_js_true(
+            page,
+            &format!(
+                "document.querySelector('#echo').textContent === '[\"rust\", \"x\", \"y\"]' \
+                 && document.querySelector('{TRIGGER}').value === ''"
+            ),
+            "x and y added and the input emptied",
+        )
+        .await
+        .unwrap();
+        fixture
+            .console
+            .assert_clean("a paste over a draft")
+            .unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
+/// Todo 5243: Tab and a press open the suggestions; Escape and a return from a tag leave them closed.
+async fn open_on_focus<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    use crate::select::expanded;
+    d.focus("#before").await?;
+    d.press(keyboard::TAB).await?;
+    expanded(d, TRIGGER, true, "Tab to open the suggestions").await?;
+    d.press(keyboard::ESCAPE).await?;
+    expanded(d, TRIGGER, false, "Escape to close them").await?;
+    d.press(keyboard::TAB).await?;
+    eventually_focused(d, "#after", "Tab out").await?;
+    d.click(TRIGGER).await?;
+    expanded(d, TRIGGER, true, "a click to open them").await?;
+    d.press(keyboard::ARROW_LEFT).await?;
+    expanded(d, TRIGGER, false, "the list to close on the tag").await?;
+    d.press(keyboard::ARROW_RIGHT).await?;
+    eventually_focused(d, TRIGGER, "the input, back from the tag").await?;
+    // A key after the return: the open it would have caused has rendered by now.
+    d.press(keyboard::HOME).await?;
+    expanded(d, TRIGGER, false, "the list to stay closed").await
+}
+
+e2e::scenario!(
+    open_on_focus_opens_the_suggestions,
+    "/tags-field/open-on-focus",
+    open_on_focus
+);
+
 #[test]
 fn typing_keeps_home_end_and_expanded_honest() {
     super::autocomplete::editable_combobox_typing("/tags-field", "s");

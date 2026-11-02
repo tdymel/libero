@@ -377,6 +377,7 @@ pub fn Chip(props: ChipProps) -> Element {
         .with(radius.size.radius_state_name(), true)
         .with("checked", checked)
         .with("selectable", selectable)
+        .with("readonly", selectable && props.readonly.unwrap_or(false))
         .with("disabled", disabled)
         .with("clickable", clickable && !selectable)
         .into();

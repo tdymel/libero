@@ -800,6 +800,20 @@ fn the_dial_code_reads_left_to_right_under_rtl() {
             [("+49".to_string(), true), ("+49".to_string(), true)],
             "the plus drawn left of the digits, picker then pinned"
         );
+        // Todo 5245: `dir=ltr` keeps the digit order, not the text at the far side of the dial code.
+        let aligns: Vec<String> = page
+            .evaluate_bounded(
+                "[...document.querySelectorAll('input[type=tel]')].map(el => getComputedStyle(el).textAlign)",
+            )
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        assert_eq!(
+            aligns,
+            ["right", "right"],
+            "each number sits by its dial code"
+        );
         fixture.console.assert_clean("/phone-field/rtl").unwrap();
         fixture.close().await.unwrap();
     });

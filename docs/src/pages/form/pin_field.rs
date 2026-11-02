@@ -77,7 +77,7 @@ pub fn PinFieldPage() -> Element {
                     "Each cell is a tab stop.",
                     "The pin has no holes: clearing a middle cell moves the characters after it one cell left, and a character typed past the pin lands in the first empty cell.",
                     "A separator is decoration, hidden from screen readers.",
-                    "Each cell is named for its place, such as \"Character 1 of 6\", from the localization's `PinFieldLabels`, and reads the helper and the error too.",
+                    "Each cell is named for its place, such as \"Character 1 of 6\", from the localization's `PinFieldLabels`. The description, helper and status are on the group, read once on entering it, and each cell says when it is invalid.",
                 ])
                 .must(["Give the field a `label`, which names the whole group."])
                 .example("A sign-in code, `PinField { label: \"Verification code\", length: 6, .. }`: a screen reader reads the group as \"Verification code\" and each cell as \"Character 1 of 6\" and so on."),
@@ -127,6 +127,7 @@ pub fn PinFieldPage() -> Element {
                     Control::switch("mask"),
                     Control::switch("required"),
                     Control::switch("disabled"),
+                    Control::switch("readonly"),
                 ]].concat(),
                 render: move |values: DemoValues| rsx! {
                     PinFieldDemo { values }
@@ -166,6 +167,7 @@ fn PinFieldDemo(values: DemoValues) -> Element {
                 mask: (values.str("mask") == "true").then_some(true),
                 required: (values.str("required") == "true").then_some(true),
                 disabled: (values.str("disabled") == "true").then_some(true),
+                readonly: (values.str("readonly") == "true").then_some(true),
                 value: value(),
                 oninput: move |next| {
                     value.set(next);

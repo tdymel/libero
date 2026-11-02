@@ -361,6 +361,7 @@ pub fn NumberFieldPage() -> Element {
                     }),
                     Control::switch("required"),
                     Control::switch("disabled"),
+                    Control::switch("readonly"),
                 ]].concat(),
                 render: move |values: DemoValues| {
                     let field = field_props::<QuantityCopy>(&values);
@@ -370,6 +371,7 @@ pub fn NumberFieldPage() -> Element {
                     let radius = values.str("radius");
                     let required = (values.str("required") == "true").then_some(true);
                     let disabled = (values.str("disabled") == "true").then_some(true);
+                    let readonly = (values.str("readonly") == "true").then_some(true);
                     let ranged = values.str("range") == "true";
                     let steppers = values.str("steppers") == "true";
                     let named = values.str("increment_label") == "true";
@@ -385,7 +387,7 @@ pub fn NumberFieldPage() -> Element {
                         "f64" if values.str("affix") == "currency" => rsx! {
                             NumberField {
                                 size, radius, label, aria_label, description, helper, status,
-                                required, disabled, steppers, increment_label, decrement_label, group_digits, touch_input,
+                                required, disabled, readonly, steppers, increment_label, decrement_label, group_digits, touch_input,
                                 leading: rsx! { "$" },
                                 describe_leading: true,
                                 decimals: Decimals::Exactly(2),
@@ -398,7 +400,7 @@ pub fn NumberFieldPage() -> Element {
                         "f64" if percent(&values) => rsx! {
                             NumberField {
                                 size, radius, label, aria_label, description, helper, status,
-                                required, disabled, steppers, increment_label, decrement_label, group_digits, touch_input,
+                                required, disabled, readonly, steppers, increment_label, decrement_label, group_digits, touch_input,
                                 trailing: rsx! { "%" },
                                 describe_trailing: true,
                                 decimals: Decimals::AtMost(1),
@@ -411,7 +413,7 @@ pub fn NumberFieldPage() -> Element {
                         "f64" => rsx! {
                             NumberField {
                                 size, radius, label, aria_label, description, helper, status,
-                                required, disabled, steppers, increment_label, decrement_label, group_digits, touch_input,
+                                required, disabled, readonly, steppers, increment_label, decrement_label, group_digits, touch_input,
                                 step: 0.5f64,
                                 min: ranged.then_some(0.0f64),
                                 max: ranged.then_some(10.0f64),
@@ -422,7 +424,7 @@ pub fn NumberFieldPage() -> Element {
                         "cents" => rsx! {
                             NumberField {
                                 size, radius, label, aria_label, description, helper, status,
-                                required, disabled, steppers, increment_label, decrement_label, group_digits, touch_input,
+                                required, disabled, readonly, steppers, increment_label, decrement_label, group_digits, touch_input,
                                 min: ranged.then_some(Cents(0)),
                                 max: ranged.then_some(Cents(10_000)),
                                 value: price(),
@@ -432,7 +434,7 @@ pub fn NumberFieldPage() -> Element {
                         _ => rsx! {
                             NumberField {
                                 size, radius, label, aria_label, description, helper, status,
-                                required, disabled, steppers, increment_label, decrement_label, group_digits, touch_input,
+                                required, disabled, readonly, steppers, increment_label, decrement_label, group_digits, touch_input,
                                 min: ranged.then_some(1i32),
                                 max: ranged.then_some(99i32),
                                 value: quantity(),
