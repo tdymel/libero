@@ -1084,7 +1084,7 @@ pub(crate) fn keep_focused(selectors: &[String]) -> Option<u64> {
     #[cfg(any(target_arch = "wasm32", feature = "native"))]
     {
         let _ = selectors;
-        return None;
+        None
     }
 }
 
