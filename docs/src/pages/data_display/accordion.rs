@@ -63,6 +63,10 @@ fn review_off(values: &DemoValues) -> bool {
     values.str("disabled_option") == "true"
 }
 
+fn review_plain(values: &DemoValues) -> bool {
+    values.str("has_panel") == "false"
+}
+
 /// One mode's panels. With `review_off` the step into Review is disabled: a host-opened
 /// disabled section cannot be closed from its trigger.
 fn one_steps(
@@ -126,6 +130,9 @@ pub fn AccordionPage() -> Element {
                     prop("panel", "Callback<T, Element>")
                         .default("None")
                         .doc("A section's body. A closed panel is not mounted, so it keeps no state. A closure that captures a plain value redraws only when its section's value or open state changes."),
+                    prop("has_panel", "Callback<T, bool>")
+                        .default("every section")
+                        .doc("A section it returns `false` for is a plain heading: no button, no chevron and no panel, not dimmed, outside the Tab order and skipped by the arrow keys. `open` cannot open it, e.g. `has_panel: |step: Step| step != Step::Review` for a closing summary line."),
                     prop("options", "OptionSource<T>")
                         .default("T::options()")
                         .doc("The sections to show. A `Vec<T>` converts. An `OptionList<T>` can disable a section, which renders, cannot be toggled and stays a tab stop. A disabled section the host opens through `open` cannot be closed from its trigger, so open only enabled ones. Groups are drawn flat."),
@@ -200,7 +207,7 @@ pub fn AccordionPage() -> Element {
                         .labels(["One", "Many"])
                         .code(|_, values| {
                             let mode = if many(values) { "many" } else { "one" };
-                            let disabled = match review_off(values) {
+                            let disabled = match review_off(values) || review_plain(values) {
                                 true => "disabled: true, ",
                                 false => "",
                             };
@@ -227,6 +234,14 @@ pub fn AccordionPage() -> Element {
                             vec![]
                         }
                     }),
+                    // Off: Review turns into a plain heading, the way to its panel closed.
+                    Control::switch("has_panel").default("true").code(|_, values| {
+                        if review_plain(values) {
+                            vec!["has_panel: |step: Step| step != Step::Review".to_string()]
+                        } else {
+                            vec![]
+                        }
+                    }),
                     Control::switch("rich_label").code(|_, values| {
                         if values.str("rich_label") == "true" {
                             vec![format!("option_label: |step: Step| {}", FILE.section("rich"))]
@@ -239,7 +254,8 @@ pub fn AccordionPage() -> Element {
                     let is_many = many(&values);
                     let mut open = if is_many { several } else { one };
                     let off = review_off(&values);
-                    let panel = match (is_many, off) {
+                    let plain = review_plain(&values);
+                    let panel = match (is_many, off || plain) {
                         (true, _) => many_panel,
                         (false, true) => one_panel_review_off,
                         (false, false) => one_panel,
@@ -254,9 +270,10 @@ pub fn AccordionPage() -> Element {
                     // Keyed by mode and the disabled option, so a switch remounts it: a section
                     // redraws only when its value or open state changes, not with `panel`.
                     rsx! {
-                        for (mode, off) in [(is_many, off)] {
+                        for (mode, off, plain) in [(is_many, off, plain)] {
                             Accordion {
-                                key: "{mode}-{off}",
+                                key: "{mode}-{off}-{plain}",
+                                has_panel: plain.then(|| Callback::new(|step: Step| step != Step::Review)),
                                 size: values.str("size"),
                                 heading: values.str("heading"),
                                 collapsible: values.str("collapsible") == "true",

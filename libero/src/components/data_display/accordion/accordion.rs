@@ -1,3 +1,5 @@
+use std::{cell::Cell, rc::Rc};
+
 use dioxus::prelude::*;
 
 use super::core::{AccordionView, SectionSpec, render_accordion};
@@ -91,6 +93,10 @@ base_props! {
         /// value or open state changes.
         #[props(default)]
         panel: Option<Callback<T, Element>>,
+        /// Default: every section. A section it returns `false` for is a plain heading:
+        /// no button, chevron or panel, outside the Tab order and the arrow keys.
+        #[props(default)]
+        has_panel: Option<Callback<T, bool>>,
         /// The sections; defaults to every `Options::options()`. Groups are flattened,
         /// and a pending source draws none. A disabled section the host opens through
         /// `open` cannot be closed from its trigger, so open only enabled ones.
@@ -178,10 +184,31 @@ pub fn Accordion<T: Options>(props: AccordionProps<T>) -> Element {
     let option_disabled = list.disabled();
     let pinned = !props.collapsible.unwrap_or(true) && matches!(props.open, AccordionOpen::One(_));
 
+    let plain: Vec<bool> = values
+        .iter()
+        .map(|value| {
+            props
+                .has_panel
+                .as_ref()
+                .is_some_and(|has_panel| !has_panel.call(value.clone()))
+        })
+        .collect();
+    let warned = use_hook(|| Rc::new(Cell::new(false)));
+    if !warned.get()
+        && values
+            .iter()
+            .zip(&plain)
+            .any(|(value, &plain)| plain && props.open.is_open(value))
+    {
+        warned.set(true);
+        warn("Accordion: `open` names a section without a panel; it stays closed.");
+    }
+
     let sections: Vec<SectionSpec<T>> = values
         .iter()
         .zip(&option_disabled)
-        .map(|(value, &option_disabled)| SectionSpec {
+        .zip(&plain)
+        .map(|((value, &option_disabled), &plain)| SectionSpec {
             value: value.clone(),
             // Resolved here, never stale: only a rich label redraws its section each time.
             label: match &props.option_label {
@@ -189,8 +216,9 @@ pub fn Accordion<T: Options>(props: AccordionProps<T>) -> Element {
                 None => OptionLabel::from(value.label()),
             },
             disabled: option_disabled,
-            open: props.open.is_open(value),
-            pinned: pinned && props.open.is_open(value),
+            open: !plain && props.open.is_open(value),
+            pinned: !plain && pinned && props.open.is_open(value),
+            plain,
         })
         .collect();
 
@@ -199,6 +227,7 @@ pub fn Accordion<T: Options>(props: AccordionProps<T>) -> Element {
     let toggle = use_callback(move |index: usize| {
         if let Some(onchange) = &onchange
             && let Some(value) = values.get(index)
+            && !plain.get(index).copied().unwrap_or(false)
             && !(pinned && open.is_open(value))
         {
             onchange.call(open.toggled(value.clone()));

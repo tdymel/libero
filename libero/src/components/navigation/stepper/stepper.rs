@@ -52,6 +52,10 @@ pub struct StepperProps<T: Options> {
     /// The current and completed markers, and the connectors behind them.
     #[props(default, into)]
     color: Input<ThemeAwareValue>,
+    /// The lines between steps; `theme.stepper.connectors` (`true`) by default. `false`
+    /// spreads horizontal steps over the row in even columns.
+    #[props(default)]
+    connectors: Option<bool>,
     #[props(extends = GlobalAttributes)]
     attributes: Vec<Attribute>,
     #[props(default, into)]
@@ -179,6 +183,7 @@ pub fn Stepper<T: Options>(props: StepperProps<T>) -> Element {
             onstepclick: interactive.then_some(pick),
             allow_next_steps: props.allow_next_steps.unwrap_or(false),
             orientation,
+            connectors: props.connectors.unwrap_or(theme.stepper.connectors),
             label_position: props.label_position.copied_or(theme.stepper.label_position),
             size: props.size.copied_or(theme.stepper.size),
             color,

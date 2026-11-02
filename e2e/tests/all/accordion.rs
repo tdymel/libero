@@ -271,6 +271,59 @@ fn a_non_collapsible_accordion_keeps_one_section_open() {
     });
 }
 
+/// Todo 5368: a section without a panel is plain heading text, full colour, outside the
+/// Tab order and the arrow keys.
+#[test]
+fn a_section_without_a_panel_is_a_plain_heading() {
+    block_on(async {
+        let fixture = Fixture::open("/accordion-plain", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        wait::for_visible(page, "#plain-trigger-0").await.unwrap();
+        let [buttons, plain, expanded, opacity, same_colour]: [String; 5] = js(
+            page,
+            "(() => { const root = document.querySelector('#plain'); \
+             const span = root.querySelector('h3 > [data-accordion-plain]'); \
+             const trigger = root.querySelector('#plain-trigger-0'); \
+             return [String(root.querySelectorAll('button').length), span.textContent, \
+             String(root.querySelectorAll('[aria-expanded]').length), getComputedStyle(span).opacity, \
+             String(getComputedStyle(span).color === getComputedStyle(trigger).color)]; })()",
+        )
+        .await;
+        assert_eq!(
+            [buttons, plain, expanded, opacity, same_colour],
+            ["2", "Payment", "2", "1", "true"],
+            "[buttons, plain text, aria-expanded count, opacity, trigger colour]"
+        );
+        keyboard::tab_to(page, "#plain-trigger-0", 10)
+            .await
+            .unwrap();
+        keyboard::press(page, keyboard::TAB).await.unwrap();
+        e2e::passes::focus::wait_for_focus(page, "#plain-trigger-2", "Tab past the plain heading")
+            .await
+            .unwrap();
+        keyboard::press(page, keyboard::ARROW_UP).await.unwrap();
+        e2e::passes::focus::wait_for_focus(
+            page,
+            "#plain-trigger-0",
+            "ArrowUp past the plain heading",
+        )
+        .await
+        .unwrap();
+        keyboard::press(page, keyboard::ARROW_DOWN).await.unwrap();
+        e2e::passes::focus::wait_for_focus(
+            page,
+            "#plain-trigger-2",
+            "ArrowDown past the plain heading",
+        )
+        .await
+        .unwrap();
+        fixture.console.assert_clean("a plain section").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
 /// Todos 4141, 4142: the chevron leads the label and stays down on an open section.
 #[test]
 fn the_chevron_can_lead_and_stay_still() {

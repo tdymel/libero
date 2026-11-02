@@ -62,6 +62,13 @@ static ACCORDION_SX: StaticSx = StaticSx::new(|| {
             "& > [data-accordion-item] > [data-accordion-heading] > button > span:not([data-accordion-chevron])",
             sx().min_width("0").with("overflow-wrap", "anywhere"),
         )
+        // A section without a panel: the trigger's box and type, nothing to press.
+        .selector(
+            "& > [data-accordion-item] > [data-accordion-heading] > [data-accordion-plain]",
+            sx().display("block")
+                .padding(format!("{} {}", ACCORDION_PAD_Y.value(), ACCORDION_PAD_X.value()))
+                .with("overflow-wrap", "anywhere"),
+        )
         // Inset: a full-width outset ring gets clipped by the container.
         // Doubled to outrank a `Button`'s ring whatever the stylesheet order.
         .selector(
@@ -144,6 +151,8 @@ pub(crate) struct SectionSpec<T> {
     pub open: bool,
     /// Open and not closable: `Accordion`'s `collapsible: false`.
     pub pinned: bool,
+    /// No panel: a plain heading, no trigger.
+    pub plain: bool,
 }
 
 pub(crate) struct AccordionView<T: Options> {
@@ -250,7 +259,11 @@ pub(crate) fn render_accordion<T: Options>(view: AccordionView<T>, root: String)
         .with("static-chevron", !rotate_chevron)
         .into();
 
-    let disabled: Vec<bool> = sections.iter().map(|section| section.disabled).collect();
+    // A plain heading is no arrow target either.
+    let skipped: Vec<bool> = sections
+        .iter()
+        .map(|section| section.disabled || section.plain)
+        .collect();
 
     let items = rsx! {
         for ((index, section), key) in sections.into_iter().enumerate().zip(keys) {
@@ -262,7 +275,8 @@ pub(crate) fn render_accordion<T: Options>(view: AccordionView<T>, root: String)
                 open: section.open,
                 disabled: section.disabled,
                 pinned: section.pinned && !section.disabled,
-                targets: arrow_targets(&disabled, index),
+                plain: section.plain,
+                targets: arrow_targets(&skipped, index),
                 level,
                 root: root.clone(),
                 root_element,
@@ -292,6 +306,7 @@ fn AccordionSection<T: Options>(
     open: bool,
     disabled: bool,
     pinned: bool,
+    plain: bool,
     /// From [`arrow_targets`].
     targets: Option<[usize; 4]>,
     level: HtmlTag,
@@ -312,6 +327,14 @@ fn AccordionSection<T: Options>(
     // Built while open; a closing panel animates out with its last body, and
     // `Collapse` drops it once closed.
     let kept = use_hook(|| Rc::new(RefCell::new(None::<Element>)));
+    // After the hooks: `has_panel` can flip a mounted section.
+    if plain {
+        return rsx! {
+            div { "data-accordion-item": "",
+                {heading(level, rsx! { span { "data-accordion-plain": "", {content} } })}
+            }
+        };
+    }
     let body = match (&panel, open) {
         (Some(panel), true) => {
             let body = panel.call(value.clone());

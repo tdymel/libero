@@ -71,6 +71,8 @@ pub struct StepperDefaults {
     pub line_width: u8,
     /// Around a vertical step's content.
     pub content_padding: Size,
+    /// The lines between steps; `false` spreads horizontal steps evenly instead.
+    pub connectors: bool,
 }
 
 /// The auto-contrast twin of a shade, so a filled marker's glyph comes from
@@ -139,6 +141,7 @@ impl StepperDefaults {
         description_color: ColorValue::Text(Color::Muted, ColorShade::S7),
         line_width: 2,
         content_padding: Size::Md,
+        connectors: true,
     };
 
     pub fn size_sx(size: Size) -> Sx {

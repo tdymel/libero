@@ -52,6 +52,7 @@ fn Demo() -> Element {
 | `open` | `AccordionOpen<T>` | `One(None)` | Which sections are open. `One(Option<T>)` holds at most one, `Many(Vec<T>)` any number. Controlled, so pair it with `onchange`. An `Option<T>` or a `Vec<T>` converts into one. |
 | `onchange` | `EventHandler<AccordionOpen<T>>` | `None` | Called with the whole new open set, in the same mode, ready to store. |
 | `panel` | `Callback<T, Element>` | `None` | A section's body. A closed panel is not mounted, so it keeps no state. A closure that captures a plain value redraws only when its section's value or open state changes. |
+| `has_panel` | `Callback<T, bool>` | `every section` | A section it returns `false` for is a plain heading: no button, no chevron and no panel, not dimmed, outside the Tab order and skipped by the arrow keys. `open` cannot open it, e.g. `has_panel: \|step: Step\| step != Step::Review` for a closing summary line. |
 | `options` | `OptionSource<T>` | `T::options()` | The sections to show. A `Vec<T>` converts. An `OptionList<T>` can disable a section, which renders, cannot be toggled and stays a tab stop. A disabled section the host opens through `open` cannot be closed from its trigger, so open only enabled ones. Groups are drawn flat. |
 | `option_label` | `Callback<T, OptionLabel>` | `T::label()` | Renames a section. `OptionLabel::rich` draws the trigger as rsx and still names it. |
 | `heading` | `HtmlTag` | `h3` | The heading around each trigger, `h1` to `h6`. |

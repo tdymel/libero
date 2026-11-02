@@ -15,7 +15,29 @@ pub const ROUTES: Routes = &[
     ("/stepper-named", || rsx! { NamedPage {} }),
     ("/stepper-many", || rsx! { ManyStepsPage {} }),
     ("/stepper-wide", || rsx! { WidePanelPage {} }),
+    ("/stepper-even", || rsx! { EvenPage {} }),
 ];
+
+/// Todo 5369: no connectors, even columns horizontally and a bare rail vertically.
+#[component]
+fn EvenPage() -> Element {
+    rsx! {
+        Flex { direction: "column", gap: "md",
+            Stepper {
+                id: "even",
+                value: Some(Stage::Shipping),
+                label_position: "below",
+                connectors: false,
+            }
+            Stepper {
+                id: "even-vertical",
+                value: Some(Stage::Shipping),
+                orientation: "vertical",
+                connectors: false,
+            }
+        }
+    }
+}
 
 /// Todo 2464: a vertical step's panel led by a button, then a word with no break
 /// opportunity and a child wider than a phone.

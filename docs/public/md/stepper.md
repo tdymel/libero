@@ -75,6 +75,7 @@ fn Demo() -> Element {
 | `label_position` | `StepLabelPosition` | `side` | `side` or `below` the marker. Ignored when vertical. Under 7.5rem a step (22.5rem for three, 360px at a 16px root), `side` draws as `below`. |
 | `size` | `Size` | `md` | Marker, type and spacing. |
 | `color` | `ThemeAwareValue` | `primary` | The current and completed markers, and the connectors behind them. |
+| `connectors` | `bool` | `true` | The lines between steps. `false` drops them: horizontal steps share the row in even columns, so they never shrink to dashes on a phone, and a vertical stepper keeps its spacing without the rail. |
 | `parts` | `Parts<StepperPart>` | - | Styles for the inner parts in the Style API tab, under `sx`. |
 
 It also takes `sx`, `class`, `states`, and any extra HTML attributes. An `id`
@@ -128,6 +129,6 @@ and Payment: a screen reader reads the list as "Checkout steps", and with
 
 `StepperDefaults` on the theme: `size`, `sizes` (marker, font sizes, gaps),
 `label_position`, `color`, `pending_color`, `error_color`, `connector_color`,
-`description_color`, `line_width` and `content_padding`. The vertical collapse
+`description_color`, `line_width`, `content_padding` and `connectors`. The vertical collapse
 takes `theme.collapse.duration`. The status words are `StepperLabels`
 (`completed`, `error`, `steps`) in the [localization](localization.md).

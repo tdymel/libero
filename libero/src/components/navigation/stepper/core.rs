@@ -278,6 +278,21 @@ static STEPPER_SX: StaticSx = StaticSx::new(|| {
                 ),
         );
 
+    // The connector selectors again, so these tie with them and win on order.
+    let no_connectors = sx().selector(
+        "& > ol > li + li::before, & > ol > li:not(:last-of-type)::before",
+        sx().display("none"),
+    );
+    // Even columns, the first included; a vertical rail keeps its spacing, minus the line.
+    let even_columns = sx()
+        .selector("& > ol", sx().gap(STEPPER_SPACING.value()))
+        .selector("& > ol > li, & > ol > li + li", sx().flex("1 1 0"))
+        // The header fills its column, so a label below the marker centres in it.
+        .selector(
+            format!("& > ol > li > {}", slot(StepperPart::Header)),
+            sx().flex("1 1 auto"),
+        );
+
     let side_state = format!(
         "{} && {}",
         Orientation::Horizontal.state_name(),
@@ -372,6 +387,11 @@ static STEPPER_SX: StaticSx = StaticSx::new(|| {
         .when(side_state, side)
         .and(by_count)
         .when(Orientation::Vertical.state_name(), vertical)
+        .when("no-connectors", no_connectors)
+        .when(
+            format!("{} && no-connectors", Orientation::Horizontal.state_name()),
+            even_columns,
+        )
 });
 
 /// One step, with `T` already gone.
@@ -398,6 +418,7 @@ pub(crate) struct StepperView {
     pub onstepclick: Option<Callback<usize>>,
     pub allow_next_steps: bool,
     pub orientation: Orientation,
+    pub connectors: bool,
     pub label_position: StepLabelPosition,
     pub size: Size,
     /// Per-instance override: `(text, fill, foreground on the fill)`.
@@ -432,6 +453,7 @@ pub(crate) fn render_stepper(view: StepperView, root: String) -> Element {
         onstepclick,
         allow_next_steps,
         orientation,
+        connectors,
         label_position,
         size,
         color,
@@ -485,7 +507,8 @@ pub(crate) fn render_stepper(view: StepperView, root: String) -> Element {
         .unwrap_or_default()
         .with(size.state_name(), true)
         .with(orientation.state_name(), true)
-        .with(label_position.state_name(), !vertical);
+        .with(label_position.state_name(), !vertical)
+        .with("no-connectors", !connectors);
     if let Some(count) = step_count_state(steps.len()) {
         states = states.with(count, true);
     }

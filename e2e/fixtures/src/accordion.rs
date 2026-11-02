@@ -18,7 +18,23 @@ pub const ROUTES: Routes = &[
     ("/accordion-growing", || rsx! { GrowingPage {} }),
     ("/accordion-insert", || rsx! { InsertPage {} }),
     ("/accordion-small", || rsx! { SmallPage {} }),
+    ("/accordion-plain", || rsx! { PlainPage {} }),
 ];
+
+/// Todo 5368: Payment has no panel, a plain heading between two triggers.
+#[component]
+fn PlainPage() -> Element {
+    let mut open = use_signal(|| AccordionOpen::One(None::<Step>));
+    rsx! {
+        Accordion {
+            id: "plain",
+            open: open(),
+            onchange: move |next| open.set(next),
+            has_panel: |step: Step| step != Step::Payment,
+            panel: |_: Step| rsx! { Text { "Body." } },
+        }
+    }
+}
 
 /// Todo 5269: the two sizes whose triggers are under 44px by their padding alone.
 #[component]

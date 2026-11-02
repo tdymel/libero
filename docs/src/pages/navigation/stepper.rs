@@ -107,6 +107,7 @@ pub fn StepperPage() -> Element {
                     prop("label_position", "StepLabelPosition").default(theme.stepper.label_position.as_str()).doc("`side` or `below` the marker. Ignored when vertical. Under 7.5rem a step (22.5rem for three, 360px at a 16px root), `side` draws as `below`."),
                     prop("size", "Size").default(theme.stepper.size.as_str()).doc("Marker, type and spacing."),
                     prop("color", "ThemeAwareValue").default("primary").doc("The current and completed markers, and the connectors behind them."),
+                    prop("connectors", "bool").default(theme.stepper.connectors.to_string()).doc("The lines between steps. `false` drops them: horizontal steps share the row in even columns, so they never shrink to dashes on a phone, and a vertical stepper keeps its spacing without the rail."),
                     prop("parts", "Parts<StepperPart>")
                         .doc("Styles for the inner parts in the Style API tab, under `sx`."),
                 ])
@@ -168,6 +169,15 @@ pub fn StepperPage() -> Element {
                     Control::sizes("size")
                         .default(theme.stepper.size.as_str()),
                     Control::color("color"),
+                    Control::switch("connectors")
+                        .default(theme.stepper.connectors.to_string())
+                        .code(|_, values| {
+                            if on(values, "connectors") {
+                                vec![]
+                            } else {
+                                vec!["connectors: false".to_string()]
+                            }
+                        }),
                     Control::switch("clickable").code(|_, values| {
                         if on(values, "clickable") {
                             vec!["onstepclick: move |s| stage.set(Some(s))".to_string()]
@@ -240,6 +250,7 @@ pub fn StepperPage() -> Element {
                                 },
                                 onstepclick: on(&values, "clickable")
                                     .then(|| EventHandler::new(move |s| stage.set(Some(s)))),
+                                connectors: on(&values, "connectors"),
                                 allow_next_steps: on(&values, "allow_next_steps"),
                                 option_description: on(&values, "option_description")
                                     .then(|| Callback::new(description)),

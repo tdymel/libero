@@ -167,6 +167,37 @@ fn a_disabled_section_stays_reachable() {
     assert_eq!(triggers[0]["aria-disabled"], "false");
 }
 
+fn plain_app() -> Element {
+    rsx! {
+        LiberoProvider {
+            Accordion::<Step> {
+                id: "plain",
+                open: AccordionOpen::One(Some(Step::Payment)),
+                onchange: |_| {},
+                panel: panel,
+                has_panel: |step: Step| step != Step::Payment,
+            }
+        }
+    }
+}
+
+/// Todo 5368: no trigger, region or panel for a section without one, even when `open` names it.
+#[test]
+fn a_section_without_a_panel_is_a_plain_heading() {
+    let html = render(plain_app);
+    let body = body(&html);
+    let triggers = buttons(&html);
+
+    assert_eq!(triggers.len(), 2, "{html}");
+    assert_eq!(triggers[1]["id"], "plain-trigger-2");
+    assert!(
+        body.contains("<h3 data-accordion-heading=\"\"><span data-accordion-plain=\"\">Payment method</span></h3>"),
+        "{html}"
+    );
+    assert!(!body.contains("plain-region-1"), "{html}");
+    assert!(!body.contains("payment body"), "{html}");
+}
+
 fn heading_h2_app() -> Element {
     rsx! {
         LiberoProvider {

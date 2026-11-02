@@ -18,6 +18,7 @@ macro_rules! looks {
 fn theme_looks(component: &str) -> Vec<(&'static str, String)> {
     let mut looks = theme_enum_looks(component);
     looks.extend(looks! { component, to_string;
+        "Stepper" => stepper: connectors;
         "Toolbar" => toolbar: loop_focus;
     });
     looks

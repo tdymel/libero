@@ -260,6 +260,41 @@ type Many = Vec<(String, f64, f64, f64, f64, String)>;
 
 /// Steps that no longer fit once the connectors shrank scroll in their strip rather than
 /// split a word; the page never scrolls sideways (1.4.10, 1573, 2030).
+/// Todo 5369: `connectors: false` draws no line in either arm, and the steps share
+/// the row in even columns.
+#[test]
+fn without_connectors_the_steps_share_the_row_evenly() {
+    block_on(async {
+        let fixture = Fixture::open("/stepper-even", Viewport::Mobile)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        wait::for_visible(page, "#even-step-2").await.unwrap();
+        let (lines, widths): (Vec<String>, Vec<f64>) = page
+            .evaluate_bounded(
+                "(() => { const lines = [...document.querySelectorAll('#even li, #even-vertical li')] \
+                 .map(li => { const b = getComputedStyle(li, '::before'); \
+                 return b.display === 'none' || ['none', 'normal'].includes(b.content) ? 'none' : b.display; }); \
+                 const widths = [...document.querySelectorAll('#even li')] \
+                 .map(li => li.getBoundingClientRect().width); return [lines, widths]; })()",
+            )
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        assert!(
+            lines.iter().all(|display| display == "none"),
+            "a connector is drawn: {lines:?}"
+        );
+        assert!(
+            widths.iter().all(|width| (width - widths[0]).abs() < 1.0),
+            "the columns differ: {widths:?}"
+        );
+        fixture.console.assert_clean("no connectors").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
 #[test]
 fn many_steps_shrink_then_scroll_in_their_strip() {
     block_on(async {
