@@ -38,8 +38,8 @@ fn Demo() -> Element {
 |---|---|---|---|
 | `title` | `String` | - | The title, and the alert's accessible name. Text only. |
 | `icon` | `Option<Element>` | - | A leading icon of your own, hidden from screen readers. |
-| `color` | `ThemeAwareValue` | `info` | The tint. A theme color name or any CSS color. `error` and `warning` make the role `alert`, the rest `status`. |
-| `variant` | `Variant` | `tonal` | Visual style, shared with `Button`: `filled`, `tonal`, `elevated`, `outlined`, `standard`, `gradient`. |
+| `color` | `ThemeAwareValue` | `info` | The tint. A theme color name or any CSS color. `error` and `warning` make the role `alert`, the rest `status`. A `gradient` surface keeps the theme's gradient: there only the role follows this. |
+| `variant` | `Variant` | `tonal` | Visual style, shared with `Button`: `filled`, `tonal`, `elevated`, `outlined`, `standard`, `gradient`. `gradient` paints the theme's gradient whatever the `color`. |
 | `radius` | `ThemeAwareValue` | `md` | Corner radius, a size step from `xs` to `xxl`, or any CSS, e.g. `radius: "0"`. |
 | `actions` | `Option<Element>` | - | Buttons or links beside the message, before the close button. Give each a label that says what it does: `Button { variant: "standard", color: "currentColor", size: "xs" }` reads on every variant. |
 | `onclose` | `EventHandler<()>` | - | Shows the close button and fires when it is pressed. Unmount the alert to close it. |

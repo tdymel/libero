@@ -10,7 +10,7 @@ use crate::{
     },
     hooks::{use_element, use_id},
     localization::TableLabels,
-    platform::ElementApi,
+    platform::{ElementApi, click_stopped},
 };
 
 /// The checkbox column: the selection, the rows select-all covers, and its live region.
@@ -98,6 +98,7 @@ impl Selection {
                     onclick: |event| {
                         event.stop_propagation();
                         event.prevent_default();
+                        click_stopped();
                     },
                     MixedSelect {
                         aria_label: (self.labels.select_row)(name),
@@ -151,6 +152,7 @@ fn RowSelect(
             onclick: |event| {
                 event.stop_propagation();
                 event.prevent_default();
+                click_stopped();
             },
             {look.render_found(input, state, aria_label, move |on| toggle((row.clone(), on)))}
         }

@@ -77,6 +77,7 @@ base_props! {
         #[props(default, into)]
         radius: Input<ThemeAwareValue>,
         /// Adds a chevron beside the toggle that opens a menu of these theme sets.
+        /// The app persists the picked set: Libero stores only the scheme and the direction.
         #[props(default)]
         themes: Option<&'static [&'static ThemeSet]>,
         /// Adds following the system to the cycle. Off, a press flips between light and dark,

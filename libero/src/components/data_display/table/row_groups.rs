@@ -18,6 +18,7 @@ use crate::{
     },
     context::IconSlot,
     localization::TableLabels,
+    platform::click_stopped,
     theme::TABLE_GROUP_INDENT,
 };
 
@@ -222,6 +223,7 @@ pub(super) fn GroupRow(
                 onclick: |event| {
                     event.stop_propagation();
                     event.prevent_default();
+                    click_stopped();
                 },
                 MixedSelect {
                     aria_label: (labels.select_group)(&trail, count),

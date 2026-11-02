@@ -339,6 +339,25 @@ e2e::scenario!(
     native: skip("3406: Blitz hands a removed chip's focus to a container div, parked with native")
 );
 
+/// Todo 5300: ArrowLeft from the trigger hands focus to the last chip and closes an open list.
+async fn arrow_left_hands_an_open_list_over_closed<D: Driver>(
+    d: &mut D,
+    _route: &str,
+) -> Result<()> {
+    eventually_text(d, "#echo", "[Apple, Banana, Cherry]", "mounting").await?;
+    d.focus(TRIGGER).await?;
+    crate::select::expanded(d, TRIGGER, true, "the focus to open the list").await?;
+    d.press(keyboard::ARROW_LEFT).await?;
+    eventually_focused(d, &chip_x("Cherry"), "ArrowLeft to the last chip").await?;
+    crate::select::expanded(d, TRIGGER, false, "the list to close on the chip").await
+}
+
+e2e::scenario!(
+    arrow_left_from_an_open_multi_select_closes_its_list,
+    "/multi-select/open-on-focus",
+    arrow_left_hands_an_open_list_over_closed
+);
+
 /// Todo 3982: with `open_on_focus`, focus walking from a chip back to the trigger leaves the list closed.
 async fn a_chip_hands_focus_back_closed<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
     eventually_text(d, "#echo", "[Apple, Banana, Cherry]", "mounting").await?;

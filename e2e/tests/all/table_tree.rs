@@ -259,6 +259,26 @@ e2e::scenario!(
     ios: skip("3604: while the tapped box's input has focus, WebKit swallows a tap on the box above (no touchstart); a blur frees it")
 );
 
+/// Todo 5301: a press in a box's cell, beside the box, moves focus off the last control.
+async fn a_press_beside_a_box<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    const FIRST_BOX: &str = "tbody tr:nth-child(1) td[data-select] input";
+    d.focus(FIRST_BOX).await?;
+    eventually_focused(d, FIRST_BOX, "focusing the first box").await?;
+    let cell = d.rect("tbody tr:nth-child(3) td[data-select]").await?;
+    d.click_at(cell.x + 1.0, cell.y + 1.0).await?;
+    eventually(d, "focus to leave the first box", async |d| {
+        Ok(!d.is_focused(FIRST_BOX).await?)
+    })
+    .await
+}
+
+e2e::scenario!(
+    a_press_beside_a_tree_rows_box_moves_focus,
+    "/table-tree-select",
+    a_press_beside_a_box,
+    ios: skip("upstream: a WebKit tap on a plain cell keeps the focus")
+);
+
 /// A row with `row_has_children` opens before its children load, then shows them.
 async fn lazy_children<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
     // Named alone until its children load: "0 rows" would be false (3304).

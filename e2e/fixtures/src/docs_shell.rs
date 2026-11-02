@@ -1,15 +1,15 @@
 //! The docs shell's heading focus and scroll. The hooks are a copy of
 //! `docs/src/heading_focus.rs`: e2e never includes docs source (todo 951);
 //! `e2e/src/docs_copy.rs` keeps the copied functions equal (1802). `page_layer_sx`
-//! copies `docs/src/shell.rs`.
+//! copies `docs/src/shell.rs`, `doc_tabs_sx` `docs/src/components/doc_page.rs`.
 
 use dioxus::prelude::*;
 use libero::{
-    components::{Button, ScrollArea, ScrollAreaHandle, use_scroll_area},
+    components::{Button, ScrollArea, ScrollAreaHandle, Tabs, use_scroll_area},
     hooks::{ElementHandle, use_element, use_fullscreen},
     platform::ElementApi,
     sx::{Sx, sx},
-    theme::Z_INDEX_MODAL,
+    theme::{NamedColorCss, Z_INDEX_MODAL},
 };
 
 use crate::Routes;
@@ -126,6 +126,7 @@ pub const ROUTES: Routes = &[
     ("/docs-shell/section", || rsx! { SectionPage {} }),
     ("/docs-shell/fragment", || rsx! { FragmentPage {} }),
     ("/docs-shell/fullscreen", || rsx! { FullscreenPage {} }),
+    ("/docs-shell/tabs", || rsx! { TabsPage {} }),
 ];
 
 /// The page area is a stacking context (`ScrollArea`): a drawn fullscreen inside lifts
@@ -135,6 +136,75 @@ fn page_layer_sx() -> Sx {
         "&:has([data-fullscreen='drawn'])",
         sx().z_index(Z_INDEX_MODAL.value()),
     )
+}
+
+/// The tab row. Equal tabs that never shrink below icon and label: the tablist scrolls instead.
+/// Child combinators, or the Tabs page's demo strip matches too.
+fn doc_tabs_sx() -> Sx {
+    sx().selector(
+        "& > [role=tablist] > [role=tab]",
+        sx().flex("1 0 0")
+            .min_width("max-content")
+            .white_space("nowrap"),
+    )
+    // A row that scrolls shows a shadow at each edge with tabs beyond it: the covers
+    // scroll with the content (`local`) and hide the fixed shadows at either end.
+    // In the page's own surface: the paper is lighter than the dark page (todo 4858).
+    .selector(
+        "& > [role=tablist]",
+        sx().with(
+            "background-image",
+            format!(
+                "linear-gradient(to right, {page} 30%, transparent), \
+                 linear-gradient(to left, {page} 30%, transparent), \
+                 radial-gradient(farthest-side at 0 50%, color-mix(in srgb, currentColor 30%, transparent), transparent), \
+                 radial-gradient(farthest-side at 100% 50%, color-mix(in srgb, currentColor 30%, transparent), transparent)",
+                page = NamedColorCss::SURFACE.value(),
+            ),
+        )
+        .with("background-repeat", "no-repeat")
+        .with("background-position", "0 0, 100% 0, 0 0, 100% 0")
+        .with("background-size", "2rem 100%, 2rem 100%, 0.75rem 100%, 0.75rem 100%")
+        .with("background-attachment", "local, local, scroll, scroll"),
+    )
+    // Tight columns drop the icons and tighten the tabs, so four fit (todo 5305). The sidebar
+    // keeps the column narrow up to this width, a phone's is 375px or 320px.
+    .media(
+        "(max-width: 64rem)",
+        sx().selector(
+            "& > [role=tablist] > [role=tab]",
+            sx().padding_inline("xs").font_size("1rem"),
+        )
+        .selector(
+            "& > [role=tablist] > [role=tab] > [data-slot=icon]",
+            sx().display("none"),
+        ),
+    )
+    .media(
+        "(max-width: 22.5rem)",
+        sx().selector("& > [role=tablist] > [role=tab]", sx().font_size("0.875rem")),
+    )
+}
+
+/// A docs page's four tabs at the docs page's column width: 1rem of padding each side.
+#[component]
+fn TabsPage() -> Element {
+    let mut tab = use_signal(|| "Usage".to_string());
+    let tabs = ["Usage", "Properties", "Style API", "Accessibility"].map(str::to_string);
+    rsx! {
+        div { width: "calc(100vw - 2rem)",
+            Tabs {
+                aria_label: "Documentation sections",
+                options: tabs.to_vec(),
+                value: tab(),
+                onchange: move |next| tab.set(next),
+                panel: move |selected: String| rsx! { "{selected}" },
+                size: "lg",
+                full_width: true,
+                sx: doc_tabs_sx(),
+            }
+        }
+    }
 }
 
 /// The panel refuses the Fullscreen API, as an iframe or WebView does; marks it once set.

@@ -1,6 +1,6 @@
 # Skipped e2e scenarios
 
-Scenarios: 743
+Scenarios: 745
 
 Generated from the `scenario!` skips in `e2e/tests/all` by `cargo test -p e2e --lib skips`; edit the skip, not this file. A reason starting `upstream:` waits on Dioxus, Blitz, wry or the engine (revisit on their update, todo 3362), a number names the todo that removes it.
 
@@ -406,6 +406,7 @@ The performance scenarios (units `perf`, `table_perf`) are no skips but run on r
 | `table_scroll::a_tabbed_header_scrolls_into_its_region` | ios | 958: element identity on the WebView |
 | `table_scroll::a_windowed_table_renders_the_rows_in_view` | ios | 3633: End reaches the page but scrolls no region, as in Safari |
 | `table_scroll::end_at_the_bottom_loads_more_rows` | ios | 3633: End reaches the page but scrolls no region, as in Safari |
+| `table_tree::a_press_beside_a_tree_rows_box_moves_focus` | ios | upstream: a WebKit tap on a plain cell keeps the focus |
 | `table_tree::a_tree_box_selects_its_descendants_and_mixes_its_ancestors` | ios | 3604: while the tapped box's input has focus, WebKit swallows a tap on the box above (no touchstart); a blur frees it |
 | `table_tree::a_tree_with_cell_focus_moves_between_rows_and_cells` | android | 958: roving keys are inert in the emulator's WebView |
 | `table_tree::the_arrows_move_and_open_the_tree_rows` | android | 958: roving keys are inert in the emulator's WebView |

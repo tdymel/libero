@@ -129,44 +129,6 @@ pub fn DocPage(
         .cloned()
         .collect();
     let extra_label = extra_tab.as_ref().map(|extra| extra.label);
-    // Equal tabs that never shrink below icon and label: the tablist scrolls instead.
-    // Child combinators, or the Tabs page's demo strip matches too.
-    let tabs_sx = sx()
-        .selector(
-            "& > [role=tablist] > [role=tab]",
-            sx().flex("1 0 0")
-                .min_width("max-content")
-                .white_space("nowrap"),
-        )
-        // A row that scrolls shows a shadow at each edge with tabs beyond it: the covers
-        // scroll with the content (`local`) and hide the fixed shadows at either end.
-        // In the page's own surface: the paper is lighter than the dark page (todo 4858).
-        .selector(
-            "& > [role=tablist]",
-            sx().with(
-                "background-image",
-                format!(
-                    "linear-gradient(to right, {page} 30%, transparent), \
-                     linear-gradient(to left, {page} 30%, transparent), \
-                     radial-gradient(farthest-side at 0 50%, color-mix(in srgb, currentColor 30%, transparent), transparent), \
-                     radial-gradient(farthest-side at 100% 50%, color-mix(in srgb, currentColor 30%, transparent), transparent)",
-                    page = NamedColorCss::SURFACE.value(),
-                ),
-            )
-            .with("background-repeat", "no-repeat")
-            .with("background-position", "0 0, 100% 0, 0 0, 100% 0")
-            .with("background-size", "2rem 100%, 2rem 100%, 0.75rem 100%, 0.75rem 100%")
-            .with("background-attachment", "local, local, scroll, scroll"),
-        )
-        // A phone drops the tab icons, so "Accessibility" is not cut at 375px.
-        .media(
-            "(max-width: 30rem)",
-            sx().selector("& > [role=tablist] > [role=tab]", sx().padding_inline("sm"))
-                .selector(
-                    "& > [role=tablist] > [role=tab] > [data-slot=icon]",
-                    sx().display("none"),
-                ),
-        );
 
     rsx! {
         // Every route is a `DocPage`, so this names each one; `App`'s bare
@@ -254,7 +216,7 @@ pub fn DocPage(
                     full_width: true,
                     // Only the text-only panels are a tab stop; the others hold focusable controls.
                     panel_focusable: matches!(current, DocTab::Properties | DocTab::Accessibility),
-                    sx: tabs_sx,
+                    sx: doc_tabs_sx(),
                     option_label: move |selected: DocTab| OptionLabel::rich(
                         match (&selected, extra_label) {
                             (DocTab::Extra, Some(label)) => label.to_string(),
@@ -329,6 +291,54 @@ pub fn DocPage(
             Pager {}
         }
     }
+}
+
+/// The tab row. Equal tabs that never shrink below icon and label: the tablist scrolls instead.
+/// Child combinators, or the Tabs page's demo strip matches too.
+fn doc_tabs_sx() -> Sx {
+    sx().selector(
+        "& > [role=tablist] > [role=tab]",
+        sx().flex("1 0 0")
+            .min_width("max-content")
+            .white_space("nowrap"),
+    )
+    // A row that scrolls shows a shadow at each edge with tabs beyond it: the covers
+    // scroll with the content (`local`) and hide the fixed shadows at either end.
+    // In the page's own surface: the paper is lighter than the dark page (todo 4858).
+    .selector(
+        "& > [role=tablist]",
+        sx().with(
+            "background-image",
+            format!(
+                "linear-gradient(to right, {page} 30%, transparent), \
+                 linear-gradient(to left, {page} 30%, transparent), \
+                 radial-gradient(farthest-side at 0 50%, color-mix(in srgb, currentColor 30%, transparent), transparent), \
+                 radial-gradient(farthest-side at 100% 50%, color-mix(in srgb, currentColor 30%, transparent), transparent)",
+                page = NamedColorCss::SURFACE.value(),
+            ),
+        )
+        .with("background-repeat", "no-repeat")
+        .with("background-position", "0 0, 100% 0, 0 0, 100% 0")
+        .with("background-size", "2rem 100%, 2rem 100%, 0.75rem 100%, 0.75rem 100%")
+        .with("background-attachment", "local, local, scroll, scroll"),
+    )
+    // Tight columns drop the icons and tighten the tabs, so four fit (todo 5305). The sidebar
+    // keeps the column narrow up to this width, a phone's is 375px or 320px.
+    .media(
+        "(max-width: 64rem)",
+        sx().selector(
+            "& > [role=tablist] > [role=tab]",
+            sx().padding_inline("xs").font_size("1rem"),
+        )
+        .selector(
+            "& > [role=tablist] > [role=tab] > [data-slot=icon]",
+            sx().display("none"),
+        ),
+    )
+    .media(
+        "(max-width: 22.5rem)",
+        sx().selector("& > [role=tablist] > [role=tab]", sx().font_size("0.875rem")),
+    )
 }
 
 fn pager_link_sx(end: bool) -> Sx {

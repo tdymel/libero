@@ -7,7 +7,9 @@ Index: [index.md](index.md) lists every other page
 Description: Reads and swaps the active theme set, which a theme picker is built on.
 
 `use_theme_set() -> ThemeSetHandle` reads and swaps the active theme set, the
-light and dark pair the app is drawn in. A theme picker is built on it.
+light and dark pair the app is drawn in. A theme picker is built on it. A swap
+lasts until a reload: the app persists the set, as Libero stores only the scheme
+and the direction.
 [Theming](theming.md) covers theme sets and the catalogue.
 
 ## Usage

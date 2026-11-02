@@ -1157,6 +1157,8 @@ fn trigger_key(event: &KeyboardEvent, keys: &TriggerKeys, typed: &SelectTypeahea
         Key::Named(NamedKey::ArrowLeft) if chip_count > 0 => {
             event.prevent_default();
             chips.focus(Some(chip_count - 1));
+            // Blitz fires no blur for this move, so the list closes here too (as TagsField, 5285).
+            state.close();
         }
         // Like a chip and `TagsField`, a chorded Backspace or Delete keeps the selection.
         Key::Named(NamedKey::Backspace) | Key::Named(NamedKey::Delete)

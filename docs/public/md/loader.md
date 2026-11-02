@@ -35,7 +35,7 @@ fn Demo() -> Element {
 |---|---|---|---|
 | `variant` | `LoaderVariant` | `oval` | The shape: `oval`, `bars` or `dots`. |
 | `size` | `Size` | `md` | The edge of the square, 18px at `xs` to 72px at `xxl`. |
-| `color` | `ThemeAwareValue` | `primary` | A theme color name or any CSS color. |
+| `color` | `ThemeAwareValue` | `primary` | A theme color name paints its text shade, so the ink stands out from the page. Any other CSS color paints as given. |
 
 Like every component, `Loader` also takes the shared props `sx`, `class`,
 `states`, and any extra HTML attributes.
@@ -46,6 +46,8 @@ Like every component, `Loader` also takes the shared props `sx`, `class`,
 
 - The loader is hidden from screen readers.
 - With reduced motion it stops moving but stays visible.
+- A theme color draws in its text shade, at 3:1 or more against the page. Yellow
+  stays short of that on a light page, so `warning` adds a 1px ink edge.
 
 ### You must
 
@@ -80,7 +82,7 @@ Durations are fixed. Override `animation-duration` through `sx` to change one.
 |---|---|
 | `--lsx-loader-size-<size>` | The edge for that step, from `LoaderDefaults`. |
 | `--lsx-loader-size` | The active step's edge, republished unsuffixed on the root; the bars and dots inherit it. Override it for an off-scale size. |
-| `--lsx-loader-color` | Resolved `color`, per instance. |
+| `--lsx-loader-color` | Resolved `color` in its text shade, per instance. |
 
 ## Data attributes
 

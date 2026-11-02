@@ -5,7 +5,7 @@ use crate::{
     components::{
         common::{
             HtmlTag, Input, Part, ScaleOrCss, States, Variables, base_color, base_props,
-            names_itself, parts_enum, text_color, use_name_warning, variables, warning_edge,
+            label_color, names_itself, parts_enum, use_name_warning, variables, warning_edge,
         },
         form::{SliderSegment, segment_filled, track_segments},
         layout::use_box,
@@ -172,8 +172,9 @@ fn sweep_sx(keyframes: &str) -> Sx {
 }
 
 /// The text role: it reads at 4.5:1 on the page, so the bar clears 3:1 on its track (todo 1577).
+/// `label_color`, as a `muted` fill needs the role too (todo 5303).
 fn fill_paint(color: &ThemeAwareValue) -> Option<String> {
-    text_color(color)
+    label_color(color)
 }
 
 /// Yellow stays under 3:1 on a light track even in the text role, so warning gets an
@@ -556,7 +557,16 @@ mod tests {
                 let css = Stylesheet::from(theme).as_str().to_string();
                 let hex = |value: String| sheet_hex(&css, value);
                 let track = hex(ColorCss::MUTED.value(ProgressBarDefaults::DEFAULT.track_shade));
-                for name in ["primary", "error", "info", "success", "warning"] {
+                for name in [
+                    "primary",
+                    "secondary",
+                    "error",
+                    "info",
+                    "success",
+                    "warning",
+                    "neutral",
+                    "muted",
+                ] {
                     let color = base_color(Some(&ThemeAwareValue::from(name)));
                     let reach = |paint: HexColor| {
                         paint

@@ -6,8 +6,8 @@ use crate::{
     CssLayer,
     components::{
         common::{
-            HtmlTag, Input, Part, States, Variables, base_color, base_props, names_itself,
-            parts_enum, text_color, use_name_warning, variables,
+            HtmlTag, Input, Part, States, Variables, base_color, base_props, label_color,
+            names_itself, parts_enum, use_name_warning, variables,
         },
         layout::use_box,
     },
@@ -157,6 +157,11 @@ impl Ring {
         let gap = svg_number(pitch * (1.0 - SPIN_DASH_SHARE));
         format!("{dash} {gap}")
     }
+}
+
+/// The text role, neutral ramps included: a `muted` arc needs it too (todo 5303).
+fn arc_paint(color: &ThemeAwareValue) -> Option<String> {
+    label_color(color)
 }
 
 /// Yellow stays under 3:1 on a light track even in the text role, so a warning arc
@@ -330,7 +335,7 @@ pub fn CircularProgress(props: CircularProgressProps) -> Element {
         .with(INDETERMINATE_STATE, fraction.is_none())
         .into();
     let vars: Input<Variables> = variables()
-        .with(CIRCULAR_PROGRESS_COLOR, text_color(&color))
+        .with(CIRCULAR_PROGRESS_COLOR, arc_paint(&color))
         .with(
             CIRCULAR_PROGRESS_THICKNESS,
             Some(format!("{}", ring.width / 100.0)),
@@ -493,7 +498,16 @@ mod tests {
                     &css,
                     ColorCss::MUTED.value(CircularProgressDefaults::DEFAULT.track_shade),
                 );
-                for name in ["primary", "error", "info", "success", "warning"] {
+                for name in [
+                    "primary",
+                    "secondary",
+                    "error",
+                    "info",
+                    "success",
+                    "warning",
+                    "neutral",
+                    "muted",
+                ] {
                     let color = base_color(Some(&ThemeAwareValue::from(name)));
                     let reach = |paint: HexColor| {
                         paint
@@ -502,7 +516,7 @@ mod tests {
                     };
                     let arc = reach(sheet_hex(
                         &css,
-                        text_color(&color).expect("a palette colour"),
+                        arc_paint(&color).expect("a palette colour"),
                     ));
                     // An edged arc counts when either its body or its edge clears.
                     let edge = inks_an_edge(&color).then(|| {

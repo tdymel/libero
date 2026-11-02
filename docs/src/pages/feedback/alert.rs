@@ -35,10 +35,10 @@ pub fn AlertPage() -> Element {
                     .doc("A leading icon of your own, hidden from screen readers."),
                 prop("color", "ThemeAwareValue")
                     .default("info")
-                    .doc("The tint. A theme color name or any CSS color. `error` and `warning` make the role `alert`, the rest `status`."),
+                    .doc("The tint. A theme color name or any CSS color. `error` and `warning` make the role `alert`, the rest `status`. A `gradient` surface keeps the theme's gradient: there only the role follows this."),
                 prop("variant", "Variant")
                     .default(theme.alert.variant.as_str())
-                    .doc("Visual style, shared with `Button`: `filled`, `tonal`, `elevated`, `outlined`, `standard`, `gradient`."),
+                    .doc("Visual style, shared with `Button`: `filled`, `tonal`, `elevated`, `outlined`, `standard`, `gradient`. `gradient` paints the theme's gradient whatever the `color`."),
                 prop("radius", "ThemeAwareValue")
                     .default(theme.alert.radius.as_str())
                     .doc("Corner radius, a size step from `xs` to `xxl`, or any CSS, e.g. `radius: \"0\"`."),
@@ -101,8 +101,10 @@ pub fn AlertPage() -> Element {
                     )
                     .labels(["Filled", "Tonal", "Elevated", "Outlined", "Standard", "Gradient"])
                     .default(theme.alert.variant.as_str()),
+                    // A gradient surface ignores the swatches: only the role follows `color`.
                     Control::color("color")
-                    .default(theme.alert.color),
+                    .default(theme.alert.color)
+                    .hidden_when(|values| values.str("variant") == "gradient"),
                     Control::sizes("radius")
                         .default(theme.alert.radius.as_str()),
                     Control::switch("title").default("true").code(|_, values| {

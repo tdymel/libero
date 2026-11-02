@@ -44,7 +44,7 @@ pub fn ThemeSwitcherPage() -> Element {
                     .default(theme.action_icon.radius.as_str())
                     .doc("Corner radius, independent of `size`."),
                 prop("themes", "&'static [&'static ThemeSet]")
-                    .doc("Adds the theme picker, a second button that opens a menu of these sets. `class`, `sx` and extra attributes then land on the group around both."),
+                    .doc("Adds the theme picker, a second button that opens a menu of these sets. The app persists the picked set: Libero stores only the scheme and the direction. `class`, `sx` and extra attributes then land on the group around both."),
                 prop("with_system", "bool")
                     .default("false")
                     .doc("Adds following the system to the cycle, as a step of its own with a half-filled disc: system, the scheme the system is not showing, the one it is, and back. Following, an OS change applies at once; a picked scheme stays until the next press. Off, a press flips between light and dark, and flipping to the system's own scheme follows the system again. For your own control, such as a menu of all three choices, build on `use_color_scheme()`: it reads the setting and what it resolves to, and `set`, `toggle` and `cycle` change it."),

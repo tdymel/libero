@@ -52,12 +52,13 @@ pub fn LoaderPage() -> Element {
                     .doc("The edge of the square, 18px at `xs` to 72px at `xxl`."),
                 prop("color", "ThemeAwareValue")
                     .default(theme.loader.color.as_str())
-                    .doc("A theme color name or any CSS color."),
+                    .doc("A theme color name paints its text shade, so the ink stands out from the page. Any other CSS color paints as given."),
             ])],
             accessibility: a11y()
                 .handles([
                     "The loader is hidden from screen readers.",
                     "With reduced motion it stops moving but stays visible.",
+                    "A theme color draws in its text shade, at 3:1 or more against the page. Yellow stays short of that on a light page, so `warning` adds a 1px ink edge.",
                 ])
                 .must([
                     "Say the wait with something else. Beside its own text, the text says it. Inside a control, such as a `Button` with `loading`, the control does.",

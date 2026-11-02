@@ -67,6 +67,8 @@ fn fill() -> libero::sx::Sx {
 fn swatch_button() -> libero::sx::Sx {
     sx().flex("1 1 0")
         .padding("0")
+        // Forced colours would blank the swatch: its paint is what it offers (as todo 2819).
+        .forced_color_adjust("none")
         // An invisible 24px press target (WCAG 2.5.8) for a swatch the row squeezes below it;
         // sideways it grows by at most half the row gap, so neighbouring pads never overlap.
         .position("relative")

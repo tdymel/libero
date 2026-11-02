@@ -16,6 +16,7 @@ pub fn use_theme() -> &'static Theme {
 
 /// The active [`ThemeSet`], and how to swap it: a theme picker's base.
 /// Reactive. A swap rebuilds the stylesheet; the colour-scheme setting survives.
+/// A swap lasts until a reload: Libero stores the scheme and the direction, the app the set.
 /// Panics outside a `LiberoProvider`.
 ///
 /// ```rust

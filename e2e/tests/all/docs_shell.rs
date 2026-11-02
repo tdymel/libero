@@ -35,6 +35,55 @@ fn a_navigation_focuses_the_new_heading_but_a_load_does_not() {
     });
 }
 
+/// Todo 5305: a docs page's four tabs fit a phone, so "Accessibility" is not cut off behind a
+/// scrollbar. The fixture copies the docs' `doc_tabs_sx`.
+#[test]
+fn the_four_doc_tabs_fit_a_phone() {
+    use chromiumoxide::cdp::browser_protocol::emulation::SetDeviceMetricsOverrideParams;
+    block_on(async {
+        let fixture = Fixture::open("/docs-shell/tabs", Viewport::Mobile)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        wait::for_visible(page, "[role=tablist]").await.unwrap();
+        for width in [375, 320] {
+            page.execute_bounded(SetDeviceMetricsOverrideParams::new(width, 700, 1.0, true))
+                .await
+                .unwrap();
+            wait::for_js_true(
+                page,
+                &format!("innerWidth === {width}"),
+                "the phone's width",
+            )
+            .await
+            .unwrap();
+            let (client, scroll): (i64, i64) = page
+                .evaluate_bounded(
+                    "(() => { const row = document.querySelector('[role=tablist]');
+                        return [row.clientWidth, row.scrollWidth]; })()",
+                )
+                .await
+                .unwrap()
+                .into_value()
+                .unwrap();
+            assert!(scroll <= client, "at {width}px: {scroll} in {client}");
+        }
+        fixture.close().await.unwrap();
+    });
+}
+
+#[test]
+fn the_tab_row_copy_matches_the_docs() {
+    let item = |source: &'static str| {
+        let start = source.find("fn doc_tabs_sx(").expect("the copied fn");
+        &source[start..start + source[start..].find("\n}\n").expect("its end")]
+    };
+    assert_eq!(
+        item(include_str!("../../fixtures/src/docs_shell.rs")),
+        item(include_str!("../../../docs/src/components/doc_page.rs")),
+    );
+}
+
 /// The largest `scrollTop` in the fixture's area: whichever box scrolls.
 const AREA_SCROLL: &str = "Math.max(...[document.querySelector('#page-area'), \
     ...document.querySelectorAll('#page-area *')].map((e) => e.scrollTop))";

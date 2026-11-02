@@ -27,7 +27,8 @@ pub fn UseThemeSetPage() -> Element {
                 Text {
                     Code { source: "use_theme_set() -> ThemeSetHandle" }
                     " reads and swaps the active theme set, the light and dark pair the app "
-                    "is drawn in. A theme picker is built on it. "
+                    "is drawn in. A theme picker is built on it. A swap lasts until a reload: "
+                    "the app persists the set, as Libero stores only the scheme and the direction. "
                     Anchor { to: Route::ThemingPage {}, "Theming" }
                     " covers theme sets and the catalogue."
                 }

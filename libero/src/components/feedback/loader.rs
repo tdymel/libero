@@ -3,18 +3,22 @@ use dioxus::prelude::*;
 use crate::{
     components::{
         common::{
-            HtmlTag, Input, States, Variables, base_color, base_props, input_from_str, variables,
+            HtmlTag, Input, States, Variables, base_color, base_props, input_from_str, label_color,
+            variables, warning_edge,
         },
         layout::use_box,
     },
     hooks::use_theme,
     sx::{FORCED_COLORS, REDUCED_MOTION, StaticSx, Sx, ThemeAwareValue, sx},
-    theme::{LOADER_COLOR, LOADER_SIZE, LoaderDefaults, Size},
+    theme::{CssVar, LOADER_COLOR, LOADER_SIZE, LoaderDefaults, Size},
 };
 
 pub use crate::theme::LoaderVariant;
 
 input_from_str!(LoaderVariant);
+
+/// The whole inset shadow, unset for most inks, so they paint none.
+const LOADER_EDGE: CssVar = CssVar::new("--lsx-loader-edge");
 
 fn ink() -> String {
     LOADER_COLOR.value_or("currentColor")
@@ -78,12 +82,14 @@ static LOADER_BASE_SX: StaticSx = StaticSx::new(|| {
             .border_width(ring)
             // The gap makes the rotation visible; a full ring looks static.
             .border_color(format!("{c} {c} {c} transparent"))
+            .box_shadow(LOADER_EDGE.value_or("none"))
             .animation("lsx-loader-oval 1.2s linear infinite")
             .media(REDUCED_MOTION, stop_motion(sx()))
             // Forced colours keep alpha only on backgrounds: the gap would close.
             .media(
                 FORCED_COLORS,
                 sx().forced_color_adjust("none")
+                    .box_shadow("none")
                     .border_color("CanvasText CanvasText CanvasText transparent"),
             ),
     );
@@ -98,6 +104,7 @@ static LOADER_BASE_SX: StaticSx = StaticSx::new(|| {
             sx().flex("1")
                 .height("100%")
                 .background_color(c.clone())
+                .box_shadow(LOADER_EDGE.value_or("none"))
                 .media(FORCED_COLORS, forced()),
         )
         .selector("& > span:nth-child(1)", bar("-240ms"))
@@ -112,6 +119,7 @@ static LOADER_BASE_SX: StaticSx = StaticSx::new(|| {
                 .height(dot_size)
                 .border_radius("50%")
                 .background_color(c)
+                .box_shadow(LOADER_EDGE.value_or("none"))
                 .media(FORCED_COLORS, forced()),
         )
         .selector("& > span:nth-child(1)", dot("0ms"))
@@ -124,8 +132,18 @@ static LOADER_BASE_SX: StaticSx = StaticSx::new(|| {
         .when("dots", dots)
 });
 
+/// The text role: alone in a busy region the ink is the only cue, so it needs 3:1 on the page
+/// (todo 5303, as `ProgressBar`'s 1577). A literal paints as given.
 fn loader_variables(color: &ThemeAwareValue) -> Variables {
-    variables().with(LOADER_COLOR, color.resolve(None))
+    variables()
+        .with(LOADER_COLOR, label_color(color))
+        .with(LOADER_EDGE, ink_edge(color))
+}
+
+/// Yellow stays under 3:1 on a light page even in the text role, so warning gets an inset edge
+/// in ink (todo 2033). On the oval it runs round the ring's inside, gap included.
+fn ink_edge(color: &ThemeAwareValue) -> Option<String> {
+    warning_edge(color).map(|ink| format!("inset 0 0 0 1px {ink}"))
 }
 
 base_props! {
@@ -205,4 +223,75 @@ pub fn Loader(props: LoaderProps) -> Element {
     };
 
     boxed.render(HtmlTag::Span, props.attributes, children)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// Todo 5303: the ink needs 3:1 on the page, by its body or, for warning, its edge.
+    #[test]
+    fn every_shipped_ink_reaches_3_to_1_on_the_page() {
+        use crate::{
+            components::feedback::progress_value::sheet_hex, css::Stylesheet, theme::ThemeSet,
+        };
+
+        let mut short = Vec::new();
+        for set in ThemeSet::CATALOGUE {
+            for theme in [Some(set.light_theme()), set.dark_theme()]
+                .into_iter()
+                .flatten()
+            {
+                let css = Stylesheet::from(theme).as_str().to_string();
+                let on_page = |paint: String| sheet_hex(&css, paint).contrast_ratio(theme.surface);
+                for name in [
+                    "primary",
+                    "secondary",
+                    "error",
+                    "info",
+                    "success",
+                    "warning",
+                    "neutral",
+                    "muted",
+                ] {
+                    let color = base_color(Some(&ThemeAwareValue::from(name)));
+                    let body = on_page(label_color(&color).expect("a palette colour"));
+                    let edge = warning_edge(&color).map(on_page).unwrap_or(0.0);
+                    if body.max(edge) < 3.0 {
+                        let scheme = theme.surface.color_scheme();
+                        let ratio = body.max(edge);
+                        short.push(format!("{} {scheme} {name}: {ratio:.2}:1", set.name()));
+                    }
+                }
+            }
+        }
+        assert!(
+            short.is_empty(),
+            "the shipped inks' contrast moved: {short:?}"
+        );
+    }
+
+    #[test]
+    fn a_literal_ink_paints_as_given_with_no_edge() {
+        for literal in ["currentColor", "#123456"] {
+            let vars = loader_variables(&base_color(Some(&ThemeAwareValue::from(literal))));
+            let vars = vars.to_string();
+            assert!(
+                vars.contains(&format!("{}:{literal};", LOADER_COLOR.name())),
+                "{vars}"
+            );
+            assert!(!vars.contains(LOADER_EDGE.name()), "{vars}");
+        }
+    }
+
+    #[test]
+    fn a_theme_ink_takes_its_text_role_and_only_warning_an_edge() {
+        let vars = |name: &str| {
+            loader_variables(&base_color(Some(&ThemeAwareValue::from(name)))).to_string()
+        };
+        assert!(vars("primary").contains("--lsx-primary-text-6"));
+        assert!(vars("muted").contains("--lsx-muted-text-6"));
+        assert!(!vars("primary").contains(LOADER_EDGE.name()));
+        assert!(vars("warning").contains(LOADER_EDGE.name()));
+    }
 }

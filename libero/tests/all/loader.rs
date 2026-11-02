@@ -103,7 +103,7 @@ fn forced_colours_keep_the_oval_gap() {
     let html = render(app);
     let class = loader_class(&html);
     let rule = format!(
-        r#".{class}[data-state~="oval"]::after{{forced-color-adjust:none;border-color:CanvasText CanvasText CanvasText transparent;}}"#
+        r#".{class}[data-state~="oval"]::after{{forced-color-adjust:none;box-shadow:none;border-color:CanvasText CanvasText CanvasText transparent;}}"#
     );
     assert!(
         html.split("@media (forced-colors: active)")
@@ -145,7 +145,7 @@ fn size_and_colour_resolve_on_the_root() {
     let style = attributes_of(&body(&html), "span")["style"].clone();
 
     assert!(
-        style.contains("--lsx-loader-color:var(--lsx-success-6);"),
+        style.contains("--lsx-loader-color:var(--lsx-success-text-6);"),
         "{style}"
     );
     assert!(

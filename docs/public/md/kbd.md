@@ -50,7 +50,8 @@ Like every component, `Kbd` also takes the shared props `sx`, `class`, `style`,
 
 - Put the separator in the text around the keys. A screen reader reads
   `Kbd { "Ctrl" } " + " Kbd { "S" }` as "Ctrl plus S", but one
-  `Kbd { "Ctrl+S" }` as a single token.
+  `Kbd { "Ctrl+S" }` as a single token. Put `dir: "ltr"` on the element around a
+  chord, or a right-to-left page shows it as `S + Ctrl`.
 
 ### Example
 
