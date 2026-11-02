@@ -1,0 +1,5 @@
+# ted_ci.py probe; read by .github/workflows/ci-probe.yml.
+os=macos
+tier=unit
+filter=hooks::long_press_tests::
+dev=olaf-325
