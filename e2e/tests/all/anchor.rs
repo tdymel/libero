@@ -43,5 +43,7 @@ async fn the_underline_modes_draw_at_rest_and_under_the_pointer<D: Driver>(
 e2e::scenario!(
     the_underline_modes_draw_at_rest_and_under_the_pointer_in_every_renderer,
     "/anchor",
-    the_underline_modes_draw_at_rest_and_under_the_pointer
+    the_underline_modes_draw_at_rest_and_under_the_pointer,
+    android: skip("a touch screen has no hover"),
+    ios: skip("a touch screen has no hover")
 );

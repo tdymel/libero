@@ -110,8 +110,11 @@ async fn a_band_drag_handle_keeps_its_press<D: Driver>(d: &mut D, _route: &str) 
     .await?;
     d.settle().await?;
     text_is(d, "#opens", "0").await?;
-    let owner = d.focus_owner().await?;
-    assert!(d.is_focused("#handle").await?, "focus went to {owner}");
+    // iOS WebKit focuses nothing under a finger.
+    if d.platform() != e2e::driver::Platform::Ios {
+        let owner = d.focus_owner().await?;
+        assert!(d.is_focused("#handle").await?, "focus went to {owner}");
+    }
     Ok(())
 }
 

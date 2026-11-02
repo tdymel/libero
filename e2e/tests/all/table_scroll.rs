@@ -772,7 +772,8 @@ async fn the_header_holds_at_its_offset_under_the_scroll<D: Driver>(
 e2e::scenario!(
     a_page_sticky_header_holds_at_its_offset,
     "/table/page-sticky",
-    the_header_holds_at_its_offset_under_the_scroll
+    the_header_holds_at_its_offset_under_the_scroll,
+    ios: skip("upstream: iOS WebKit does not scroll the page to a script-focused control")
 );
 
 e2e::scenario!(

@@ -856,6 +856,10 @@ impl Driver for Ios {
     }
 
     async fn drag(&mut self, selector: &str, dx: f64, dy: f64) -> Result<()> {
+        // AXe refuses a drag that stays put: that is a held touch.
+        if dx == 0.0 && dy == 0.0 {
+            return self.touch(selector, Some(0.5), true);
+        }
         let from = self.centre(selector)?;
         self.drag_by(from, dx, dy, 0.5)
     }

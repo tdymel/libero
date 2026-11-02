@@ -546,8 +546,11 @@ async fn the_filter_panel_edits_every_filter<D: Driver>(d: &mut D, _route: &str)
     // 5222: typing at once lands in the value field, so the line is kept.
     d.type_text("7").await?;
     eventually_text(d, "#filters", "Stock Equals 7", "text typed on opening").await?;
-    // A real press outside still closes the reopened panel.
-    d.click("#filters").await?;
+    // A real press outside still closes the reopened panel; a phone's panel covers `#filters`.
+    let (width, height) = d.viewport().await?;
+    let panel = d.rect(PANEL).await?;
+    d.click_at(width / 2.0, (panel.y + panel.height + height) / 2.0)
+        .await?;
     eventually(d, "the panel closed by a press outside", async |d| {
         Ok(!d.exists(PANEL).await?)
     })

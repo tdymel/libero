@@ -12,8 +12,9 @@ use dioxus::html::point_interaction::{
 use dioxus::html::{HasPointerData, MouseData, PointerData};
 use dioxus::prelude::*;
 
-use super::polling_tests::{self, pump, pump_until};
+use super::polling_tests::{self, elapse, pump, pump_until};
 use crate::hooks::{LongPress, LongPressOptions, use_long_press};
+use crate::platform::manual_timer;
 use crate::test_converter::FakeMouse;
 
 thread_local! {
@@ -213,12 +214,15 @@ fn the_click_after_a_fired_press_is_swallowed_once() {
 
 #[test]
 fn a_fired_press_released_off_the_element_leaves_the_next_click_alone() {
+    // Held: a loaded runner's real 100ms timer outlasts any fixed wait, and a click ends it.
+    let _clock = manual_timer::install();
     let mut dom = started();
     down(&dom, at(5.0, 5.0));
-    fires(&mut dom);
+    elapse(&mut dom, 60);
+    assert_eq!(fired(), 1);
     dom.in_runtime(|| handlers().onpointerleave.call(event(at(5.0, 5.0))));
     up(&dom, at(5.0, 200.0));
-    pump(&mut dom, 150);
+    elapse(&mut dom, 100);
     assert!(!click(&dom), "the next click was swallowed");
 }
 

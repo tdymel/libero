@@ -475,6 +475,37 @@ e2e::scenario!(
     android: skip("958: element identity on the WebView")
 );
 
+/// A finger's 44px controls grew a windowed row past its pitch: an iPhone's End stopped at
+/// Row 184 of 200 (1245).
+#[test]
+fn a_windowed_row_keeps_its_height_under_a_finger() {
+    use chromiumoxide::cdp::browser_protocol::emulation::SetTouchEmulationEnabledParams;
+    e2e::browser::block_on(async {
+        let fixture = e2e::Fixture::open("/table-reorder-windowed", e2e::Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        page.execute_bounded(SetTouchEmulationEnabledParams::new(true))
+            .await
+            .unwrap();
+        e2e::wait::for_js_true(
+            page,
+            "matchMedia('(pointer: coarse)').matches \
+             && (() => { \
+                const box = selector => document.querySelector(selector).getBoundingClientRect(); \
+                const row = box('tbody tr[data-reorder-row]'); \
+                return Math.abs(row.height - 40) <= 1 \
+                    && box('[data-reorder-move=up]').top === box('[data-reorder-move=down]').top; \
+             })()",
+            "a 40px row with its controls side by side",
+        )
+        .await
+        .unwrap();
+        fixture.console.assert_clean("a finger's row").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
 /// Todo 2233: a drop right after Home, before the scroll moved the window,
 /// keeps the dropped row's node and its handle's focus.
 async fn an_early_drop_keeps_its_focus<D: Driver>(d: &mut D, _route: &str) -> Result<()> {

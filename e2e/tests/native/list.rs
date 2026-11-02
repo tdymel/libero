@@ -58,7 +58,10 @@ fn an_icon_or_action_item_counts_in_an_ordered_list() {
 #[test]
 fn an_action_item_draws_its_own_number() {
     let page = mount(ordered);
-    assert_eq!(page.laid_out_text("#acted > [data-slot=marker]"), "3.");
+    assert_eq!(
+        page.laid_out_text("#acted > [data-slot=marker]"),
+        "3.\u{a0}"
+    );
     assert!(!page.exists("#iconed > [data-slot=marker]"));
     assert!(!page.exists("#first > [data-slot=marker]"));
 }
@@ -109,9 +112,9 @@ fn every_number_and_text_share_one_column() {
         (plain_dot - action_dot).abs() < 1.0 && (plain_text - action_text).abs() < 1.0,
         "{shown}"
     );
-    // The '.' is ~4.5px wide at 16px: a space adds as much again.
-    for (dot, text) in [(plain_dot, plain_text), (action_dot, action_text)] {
-        assert!(text - dot >= 7.5, "{shown}");
+    // The space follows the '.'; its width is the font's (macOS's is 3px, not 4.5).
+    for (number, dot) in [(&plain, plain_dot), (&action, action_dot)] {
+        assert!(number.iter().any(|(_, x)| *x > dot), "{shown}");
     }
 }
 

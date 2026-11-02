@@ -582,11 +582,22 @@ async fn the_box_refits_a_new_picture<D: Driver>(d: &mut D, _route: &str) -> Res
 }
 
 /// At `min_size` the handles' hit areas meet; a drag on the box's centre still moves it (1264).
+/// A mouse's drag focuses what it grabbed; a finger's leaves focus where it was, or the ring
+/// shows after every touch.
+async fn focused_unless_a_finger<D: Driver>(d: &mut D, grabbed: &str) -> Result<()> {
+    use e2e::driver::Platform;
+    if matches!(d.platform(), Platform::Android | Platform::Ios) {
+        anyhow::ensure!(!d.is_focused(grabbed).await?, "a finger's drag took focus");
+        return Ok(());
+    }
+    eventually_focused(d, grabbed, "the drag").await
+}
+
 async fn a_tiny_box_still_moves<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
     let (dx, dy) = tenth_of_the_picture(d).await?;
     d.drag("[data-slot=frame]", -dx, -dy).await?;
     eventually_text(d, "#crop", "30,30,5,5", "a drag on the tiny box").await?;
-    eventually_focused(d, BOX, "the drag").await
+    focused_unless_a_finger(d, BOX).await
 }
 
 /// A finger drags the box without scrolling the page; two pinch it around its
@@ -890,14 +901,14 @@ async fn a_drag_resizes_from_a_corner<D: Driver>(d: &mut D, _route: &str) -> Res
         "a drag on the bottom right corner",
     )
     .await?;
-    eventually_focused(d, SOUTH_EAST, "the drag").await
+    focused_unless_a_finger(d, SOUTH_EAST).await
 }
 
 async fn a_drag_moves_the_box<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
     let (dx, dy) = tenth_of_the_picture(d).await?;
     d.drag("[data-slot=frame]", -dx, -dy).await?;
     eventually_text(d, "#crop", "15,15,50,50", "a drag on the box").await?;
-    eventually_focused(d, BOX, "the drag").await
+    focused_unless_a_finger(d, BOX).await
 }
 
 /// A square on a 2:1 picture starts at 160 px each way, and stays square once

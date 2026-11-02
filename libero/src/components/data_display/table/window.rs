@@ -10,7 +10,7 @@ use super::{
 };
 use crate::{
     components::{
-        common::attr,
+        common::{COARSE_POINTER, attr},
         layout::{RowsInTable, Virtualize},
     },
     hooks::{ElementHandle, listener, use_silent_focus_in, use_silent_focus_out_of},
@@ -236,6 +236,20 @@ pub(super) fn windowed_sx() -> Sx {
             sx().white_space("nowrap")
                 .overflow("hidden")
                 .text_overflow("ellipsis"),
+        )
+        // A taller row would part from its slot and strand the last rows: the reach stays a
+        // block one, as the row keeps its height and the controls stand side by side.
+        .media(
+            COARSE_POINTER,
+            sx().selector("& [data-reorder-controls]", sx().display("flex"))
+                .selector(
+                    "& [data-reorder-handle], & [data-reorder-move]",
+                    sx().min_width("24px").min_height("24px"),
+                )
+                .selector(
+                    "& [data-reorder-handle]::before, & [data-reorder-move]::before",
+                    sx().inset_inline("0"),
+                ),
         )
 }
 

@@ -149,7 +149,12 @@ e2e::scenario!(
 async fn a_click_opens<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
     d.click(TRIGGER).await?;
     expanded(d, true).await?;
-    eventually_focused(d, "[role=menuitem]", "a click on the trigger").await?;
+    // A finger opens the sheet on its box, no row highlighted (4862).
+    let first = match d.platform() {
+        e2e::driver::Platform::Android | e2e::driver::Platform::Ios => MENU,
+        _ => "[role=menuitem]",
+    };
+    eventually_focused(d, first, "a click on the trigger").await?;
     expanded(d, true).await
 }
 
@@ -170,7 +175,8 @@ e2e::scenario!(
 /// parent item (1812; `rtl_keys` covers the mirror).
 async fn a_key_closes_only_the_submenu<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
     const SHARE: &str = "[role=menu] [role=menuitem][aria-haspopup=menu]";
-    const SUBMENU_ITEM: &str = "[role=menu][aria-labelledby$='-item-0'] [role=menuitem]";
+    // By id: a phone's titled sheet is labelled by its title (4617).
+    const SUBMENU_ITEM: &str = "[role=menu][id$='-menu-0'] [role=menuitem]";
     for (key, name) in [
         (keyboard::ESCAPE, "Escape"),
         (keyboard::ARROW_LEFT, "ArrowLeft"),
@@ -237,8 +243,10 @@ async fn a_press_outside_closes<D: Driver>(d: &mut D, _route: &str) -> Result<()
     // A press in the portaled submenu is inside too: its item is chosen.
     d.click(TRIGGER).await?;
     placed(d, MENU).await?;
-    d.click(MENU).await?;
-    let submenu = "[role=menu][aria-labelledby$='-item-0']";
+    // By its row and id: a sheet's centre is another row, and its title labels it (4617).
+    d.click("[role=menu] [role=menuitem][aria-haspopup=menu]")
+        .await?;
+    let submenu = "[role=menu][id$='-menu-0']";
     placed(d, submenu).await?;
     d.click(&format!("{submenu} [role=menuitem]")).await?;
     // `#rename` above renamed the item.
@@ -1066,18 +1074,21 @@ e2e::scenario!(
     a_tall_menu_below_fits_the_room,
     "/menu-tall/below",
     a_tall_menu_fits_the_room,
-    windows: skip("3421: END scrolls by the listbox height from before the popup shrank")
+    windows: skip("3421: END scrolls by the listbox height from before the popup shrank"),
+    ios: skip("below sm a Menu is a sheet, not placed at its trigger")
 );
 e2e::scenario!(
     a_tall_menu_above_fits_the_room,
     "/menu-tall/above",
     a_tall_menu_fits_the_room,
-    windows: skip("3421: END scrolls by the listbox height from before the popup shrank")
+    windows: skip("3421: END scrolls by the listbox height from before the popup shrank"),
+    ios: skip("below sm a Menu is a sheet, not placed at its trigger")
 );
 e2e::scenario!(
     a_short_menu_keeps_its_height,
     "/menu-row",
-    a_short_menu_keeps_its_height
+    a_short_menu_keeps_its_height,
+    ios: skip("below sm a Menu is a sheet, not placed at its trigger")
 );
 
 /// minmax 3893: the wrapper has no box, so a trigger at 100% fills its parent and anchors the menu.
@@ -1121,7 +1132,8 @@ async fn sx_docks_the_menu<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
 e2e::scenario!(
     a_trigger_fills_its_box,
     "/menu-fill",
-    a_trigger_fills_its_box
+    a_trigger_fills_its_box,
+    ios: skip("below sm a Menu is a sheet, not placed at its trigger")
 );
 e2e::scenario!(sx_docks_the_menu, "/menu-docked", sx_docks_the_menu);
 

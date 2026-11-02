@@ -585,7 +585,8 @@ e2e::scenario!(
     a_removed_column_is_no_longer_offered_by_move_to_or_the_arrow_keys,
     "/kanban/remove-column",
     a_removed_column_leaves_no_slot,
-    desktop: skip("958: element identity on the WebView")
+    desktop: skip("958: element identity on the WebView"),
+    ios: skip("upstream: WebKit does not focus a clicked button")
 );
 
 /// Lifts `card` by its handle and waits for the lift to be announced.

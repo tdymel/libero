@@ -395,7 +395,8 @@ e2e::scenario!(
     a_refused_menu_pin_stays_unsaid,
     "/table/pinned-refused",
     a_refused_menu_pin_is_never_said,
-    native: skip("Blitz reads no scripts")
+    native: skip("Blitz reads no scripts"),
+    ios: skip("a phone's narrow table releases the host's second pin")
 );
 
 /// Todo 3256: pinned columns that leave the rest under a third of the area are released

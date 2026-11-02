@@ -370,6 +370,9 @@ each cell of that row, and names the row's toggle "Details for Cherry".
   keyboard and the move buttons reorder there.
 - On Blitz, a header has no drag grip: columns reorder from the column menu
   there.
+- Under a finger, a `virtual_row_height` table's reorder controls stand side by
+  side in the row's height, so their press reach stops at the row's edge: set it
+  at 44 or more for a 44px target.
 - The footer and the leading checkbox, detail and reorder cells carry no
   `aria-colindex`; the leading cells sit at the first places.
 - On Android, the arrows, the page keys, Enter and F2 do not reach a

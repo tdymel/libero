@@ -489,6 +489,7 @@ pub fn TablePage() -> Element {
                     "On Blitz, a `max_height` table with column groups keeps only its last header row in place; the group rows scroll away with the rows. The same holds for the `header_filters` row.",
                     "On Blitz, a row's handle does not drag: Blitz paints no moved table row. The keyboard and the move buttons reorder there.",
                     "On Blitz, a header has no drag grip: columns reorder from the column menu there.",
+                    "Under a finger, a `virtual_row_height` table's reorder controls stand side by side in the row's height, so their press reach stops at the row's edge: set it at 44 or more for a 44px target.",
                     "The footer and the leading checkbox, detail and reorder cells carry no `aria-colindex`; the leading cells sit at the first places.",
                     "On Android, the arrows, the page keys, Enter and F2 do not reach a `cell_focus` grid or a tree's rows in the emulator's WebView (todo 958); a tap, a double click and a second tap do.",
                     "How TalkBack reads a `cell_focus` grid or a treegrid is not checked yet.",

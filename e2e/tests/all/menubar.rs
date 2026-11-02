@@ -85,7 +85,8 @@ async fn hovering_switches<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
 /// goes back to Open recent and File stays open (1812; `rtl_keys` covers the mirror).
 async fn a_key_closes_only_the_submenu<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
     const RECENT: &str = "[role=menu] [role=menuitem][aria-haspopup=menu]";
-    const SUBMENU_ITEM: &str = "[role=menu][aria-labelledby$='-item-2'] [role=menuitem]";
+    // By id: a phone's titled sheet is labelled by its title (4617).
+    const SUBMENU_ITEM: &str = "[role=menu][id$='-menu-2'] [role=menuitem]";
     let item = |index: usize| format!("[role=menu] [data-menu-index=\"{index}\"]");
     for (key, name) in [
         (keyboard::ESCAPE, "Escape"),
