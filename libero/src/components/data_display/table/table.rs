@@ -1104,7 +1104,8 @@ pub struct TableProps<T: Clone + PartialEq + 'static> {
     #[props(default, into)]
     row_key: RowFn<T, String>,
     /// Called with the clicked row. Pointer only: give keyboard users a button
-    /// or link in a cell for the same action.
+    /// or link in a cell for the same action. A click on a button, link or field
+    /// in the row is left to it.
     #[props(default)]
     onrowclick: Option<EventHandler<T>>,
     /// A row's states, as its `data-state`, for `sx().selector("& tbody tr", sx().when(..))`.

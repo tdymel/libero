@@ -123,6 +123,7 @@ pub fn DialogPage() -> Element {
             accessibility: a11y()
                 .handles([
                     "Outside a modal, a close button without `onclose` warns in debug builds.",
+                    "Inside a modal, focus starts on the control marked `\"data-autofocus\": \"\"`, such as `TextField { label: \"Name\", \"data-autofocus\": \"\" }`, whose `<input>` takes it; unmarked, on the first Tab stop. A marked control that takes no focus falls through to that stop.",
                     "`role: \"alertdialog\"`, as a spread attribute, makes it an alert dialog for a message that needs an answer, such as a delete confirmation. It ignores a click on the backdrop: a stray click is no answer (APG). Any other `role` stays `dialog`.",
                 ])
                 .must([

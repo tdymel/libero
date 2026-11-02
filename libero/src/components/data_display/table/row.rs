@@ -25,7 +25,7 @@ use crate::{
     context::IconSlot,
     hooks::listener,
     localization::{Formats, labels::table::TableLabels},
-    platform::{infers_grid_cells, moves_table_rows},
+    platform::{infers_grid_cells, moves_table_rows, nested_interactive},
     theme::TABLE_GROUP_INDENT,
 };
 use pictogram_icons_lucide as lucide;
@@ -257,7 +257,11 @@ impl<T: Clone + 'static> RowContext<T> {
         }
         if let Some(onrowclick) = self.onrowclick {
             let row = row.clone();
-            attributes.push(listener("onclick", move |_: Event<MouseData>| {
+            attributes.push(listener("onclick", move |event: Event<MouseData>| {
+                // The cell bounds it: a grid cell's own `tabindex` is no nested control (5358).
+                if nested_interactive(&event, "td, th") {
+                    return;
+                }
                 onrowclick.call(row.clone());
             }));
         }

@@ -120,6 +120,13 @@ async fn the_rows_report_and_show_their_look<D: Driver>(d: &mut D, _route: &str)
         bail!("the sold-out row's state did not style it: {color}");
     }
     eventually_text(d, &format!("{APPLE} td"), "12 kg", "formatting").await?;
+    // 5358: the button's own click lands, the row's does not; a WebView reads no click target (958).
+    d.click("button[data-order=\"Apple\"]").await?;
+    eventually_text(d, "#ordered", "Apple", "an Order click").await?;
+    let reads_targets = matches!(d.platform(), Platform::Web | Platform::Native);
+    if reads_targets && !d.text("#clicked").await?.is_empty() {
+        bail!("a button in the row also clicked its row");
+    }
     d.click(&format!("{APPLE} td")).await?;
     eventually_text(d, "#clicked", "Apple", "a row click").await
 }

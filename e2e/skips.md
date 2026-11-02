@@ -1,6 +1,6 @@
 # Skipped e2e scenarios
 
-Scenarios: 754
+Scenarios: 755
 
 Generated from the `scenario!` skips in `e2e/tests/all` by `cargo test -p e2e --lib skips`; edit the skip, not this file. A reason starting `upstream:` waits on Dioxus, Blitz, wry or the engine (revisit on their update, todo 3362), a number names the todo that removes it.
 
@@ -100,6 +100,8 @@ The performance scenarios (units `perf`, `table_perf`) are no skips but run on r
 | `focus_return::a_modal_opened_by_keyboard_still_returns_focus_to_its_trigger` | desktop | 958: element identity on the WebView |
 | `focus_start::a_click_on_prose_moves_the_starting_point_away_from_a_focused_control` | ios | upstream: WebKit does not focus a clicked button |
 | `focus_start::a_click_on_prose_moves_the_starting_point_away_from_a_focused_control` | macos desktop | upstream: WebKit does not focus a clicked button |
+| `focus_trap::a_dialog_opens_on_its_autofocus_field` | android | 958: element identity on the WebView |
+| `focus_trap::a_dialog_opens_on_its_autofocus_field` | desktop | 958: element identity on the WebView |
 | `focus_trap::a_nested_trap_moves_focus_once_per_tab` | android | 958: element identity on the WebView |
 | `focus_trap::a_nested_trap_moves_focus_once_per_tab` | desktop | 958: element identity on the WebView |
 | `focus_trap::a_nested_trap_moves_focus_once_per_tab` | ios | 958: element identity on the WebView |

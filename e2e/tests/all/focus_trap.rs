@@ -139,6 +139,21 @@ e2e::scenario!(
     desktop: skip("958: element identity on the WebView")
 );
 
+/// A `TextField` hands `data-autofocus` to its `<input>`, which a real `Dialog` focuses first (5361).
+async fn a_dialog_focuses_its_autofocus_field<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    d.click(OPEN).await?;
+    eventually_focused(d, "input[data-autofocus]", "opening the dialog").await?;
+    Ok(())
+}
+
+e2e::scenario!(
+    a_dialog_opens_on_its_autofocus_field,
+    "/focus-trap/dialog-autofocus",
+    a_dialog_focuses_its_autofocus_field,
+    android: skip("958: element identity on the WebView"),
+    desktop: skip("958: element identity on the WebView")
+);
+
 const SWITCH: &str = "[aria-label='activate focus trap']";
 
 /// The docs demo's exit: Escape and Release each switch the trap off and hand

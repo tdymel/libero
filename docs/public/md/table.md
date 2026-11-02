@@ -83,7 +83,7 @@ fn Demo() -> Element {
 | `default_selection` | `Vec<String>` | `[]` | Seeds the selection once. Ignored when `selection` is set. |
 | `onselectionchange` | `EventHandler<Vec<String>>` | `None` | Called with the selection a checkbox asks for. Select-all covers every row of `data` the quick filter keeps, and keeps keys of the other rows, say from another page of a server. |
 | `row_key` | `RowFn<T, String>` | the row's index | A row's identity, unique per row, from a `\|row: &T\| ..` closure. Its DOM node follows it through a sort or a data change, so focus and state inside a row stay with it. |
-| `onrowclick` | `EventHandler<T>` | `None` | Called with the clicked row. Pointer only: give keyboard users a button or link in a cell for the same action. |
+| `onrowclick` | `EventHandler<T>` | `None` | Called with the clicked row. Pointer only: give keyboard users a button or link in a cell for the same action. A click on a button, link or field in the row is left to it and calls nothing here. |
 | `row_states` | `RowFn<T, States>` | `None` | A row's states, rendered as its `data-state`. Style them with `sx().selector("& tbody tr", sx().when(..))`. |
 | `row_attrs` | `RowFn<T, Vec<Attribute>>` | `None` | Extra attributes on a row's `tr`. |
 | `row_detail` | `RowFn<T, Option<Element>>` | `None` | A row's detail, from a `\|row: &T\| ..` closure. `Some` gives the row a toggle in a leading column; open, the detail shows in a full-width row under it. Called for the shown rows on every render, or only the open ones with `row_has_detail`. Set `row_key` with it, or open details stick to positions in `data`. |

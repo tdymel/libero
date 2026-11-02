@@ -379,6 +379,7 @@ fn WideTablePage() -> Element {
 #[component]
 fn RowsTablePage() -> Element {
     let mut clicked = use_signal(String::new);
+    let mut ordered = use_signal(String::new);
     let mut data = use_signal(fruit);
     rsx! {
         button {
@@ -397,6 +398,13 @@ fn RowsTablePage() -> Element {
                     .value(|fruit: &Fruit| fruit.stock)
                     .format(|fruit: &Fruit| format!("{} kg", fruit.stock))
                     .sortable(),
+                // A press on a control in the row is the control's alone (5358).
+                column("Order").value(|fruit: &Fruit| fruit.name.to_string()).render(move |fruit: &Fruit| {
+                    let name = fruit.name;
+                    rsx! {
+                        button { "data-order": name, aria_label: "Order {name}", onclick: move |_| ordered.set(name.to_string()), "Order" }
+                    }
+                }),
             ],
             row_key: |fruit: &Fruit| fruit.name.to_string(),
             row_states: |fruit: &Fruit| States::new().with("sold-out", fruit.stock == 0),
@@ -405,6 +413,7 @@ fn RowsTablePage() -> Element {
             sx: sx().selector("& tbody tr", sx().when("sold-out", sx().color("red"))),
         }
         p { id: "clicked", "{clicked}" }
+        p { id: "ordered", "{ordered}" }
     }
 }
 

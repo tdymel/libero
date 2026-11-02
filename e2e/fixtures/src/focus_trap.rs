@@ -3,7 +3,7 @@
 
 use dioxus::prelude::*;
 use libero::{
-    components::{Button, Dialog, FocusTrap, FocusTrapInitialFocus, Switch, Text},
+    components::{Button, Dialog, FocusTrap, FocusTrapInitialFocus, Switch, Text, TextField},
     hooks::{ModalScope, use_modal},
 };
 
@@ -15,6 +15,7 @@ pub const ROUTES: Routes = &[
     ("/focus-trap/forms", || rsx! { FormsPage {} }),
     ("/focus-trap/nested", || rsx! { NestedPage {} }),
     ("/focus-trap/dialog", || rsx! { DialogPage {} }),
+    ("/focus-trap/dialog-autofocus", || rsx! { DialogAutofocusPage {} }),
     ("/focus-trap/exit", || rsx! { ExitPage {} }),
     ("/focus-trap/autofocus", || rsx! { AutofocusPage {} }),
     ("/focus-trap/leaving", || rsx! { LeavingPage {} }),
@@ -227,6 +228,22 @@ fn DialogPage() -> Element {
                 Text { id: "dialog-text", "Pick a new name." }
                 Button { id: "keep", variant: "text", onclick: move |_| s.close(), "Keep" }
                 Button { id: "rename", variant: "filled", onclick: move |_| s.close(), "Rename" }
+            }
+        }
+    });
+    rsx! {
+        Button { id: "open-dialog", onclick: move |_| { prompt.open(); }, "Rename file" }
+    }
+}
+
+/// A `Dialog` whose `TextField` asks for the first focus past an earlier button (5361).
+#[component]
+fn DialogAutofocusPage() -> Element {
+    let prompt = use_modal(|s: ModalScope<()>| {
+        rsx! {
+            Dialog { title: "Rename",
+                Button { id: "keep", variant: "text", onclick: move |_| s.close(), "Keep" }
+                TextField { label: "Name", "data-autofocus": "" }
             }
         }
     });
