@@ -5,9 +5,10 @@ use libero::components::{
     Button, FileField, FileTriggerArgs, Files, Flex, Menu, MenuEntry, MenuItem, MenuPart, Parts,
     Text, use_menu,
 };
+use libero::LiberoProvider;
 use libero::hooks::Side;
 use libero::sx::sx;
-use libero::theme::{MENU_MAX_HEIGHT, Size};
+use libero::theme::{MENU_MAX_HEIGHT, MenuDefaults, Size, Theme};
 
 use crate::Routes;
 
@@ -31,6 +32,7 @@ pub const ROUTES: Routes = &[
     ("/menu-fill", || rsx! { MenuFillPage {} }),
     ("/menu-docked", || rsx! { MenuDockedPage {} }),
     ("/menu-phone", || rsx! { MenuPhonePage {} }),
+    ("/menu-phone-themed", || rsx! { MenuPhoneThemedPage {} }),
     ("/menu-phone-docked", || rsx! { MenuPhoneDockedPage {} }),
     ("/menu-phone-long", || rsx! { MenuPhoneLongPage {} }),
     ("/menu-file", || rsx! { MenuFilePage {} }),
@@ -79,6 +81,39 @@ fn MenuPhonePage() -> Element {
             }
             Text { id: "last", "{last}" }
             button { id: "outside", r#type: "button", "Elsewhere" }
+        }
+    }
+}
+
+static SHEET_LG: Theme = Theme {
+    menu: MenuDefaults {
+        sheet_size: Some(Size::Lg),
+        ..Theme::DEFAULT.menu
+    },
+    ..Theme::DEFAULT
+};
+
+/// Todo 5380: a menu with no `sheet_size` takes the theme's; one with its own keeps it.
+#[component]
+fn MenuPhoneThemedPage() -> Element {
+    let themed = use_menu();
+    let own = use_menu();
+    let items = || vec![MenuItem::new("Rename").onselect(|_| {}).into()];
+
+    rsx! {
+        LiberoProvider { themes: &SHEET_LG,
+            Flex { direction: "column", gap: "md", padding: "16px",
+                div { id: "themed",
+                    Menu { state: themed, items: items(),
+                        Button { variant: "outlined", attributes: themed.a11y_attributes(), "Themed" }
+                    }
+                }
+                div { id: "own",
+                    Menu { state: own, items: items(), sheet_size: "sm",
+                        Button { variant: "outlined", attributes: own.a11y_attributes(), "Own" }
+                    }
+                }
+            }
         }
     }
 }

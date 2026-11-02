@@ -63,7 +63,7 @@ base_props! {
         #[props(default, into)]
         size: Input<Size>,
         /// Item height and font size on the phone sheet, below the `sm` breakpoint,
-        /// e.g. `sheet_size: "lg"` for larger rows. Unset, `size`.
+        /// e.g. `sheet_size: "lg"` for larger rows. Unset, `theme.menu.sheet_size`, else `size`.
         #[props(default, into)]
         sheet_size: Input<Size>,
         /// The menu's corner radius: a size word or any CSS, as `radius: "0"`.
@@ -222,7 +222,7 @@ pub fn Menu(props: MenuProps) -> Element {
             side: props.side,
             align: props.align,
             size: props.size.copied_or(theme.menu.size),
-            sheet_size: props.sheet_size.as_ref().copied(),
+            sheet_size: props.sheet_size.as_ref().copied().or(theme.menu.sheet_size),
             radius: ScaleOrCss::new(props.radius.as_ref(), theme.menu.radius),
             loop_focus: props.loop_focus.unwrap_or(theme.menu.loop_focus),
             close_on_select: props

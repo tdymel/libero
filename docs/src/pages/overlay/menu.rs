@@ -98,7 +98,7 @@ pub fn MenuPage() -> Element {
                         .default(theme.menu.size.as_str())
                         .doc("Item height and font size."),
                     prop("sheet_size", "Size")
-                        .default("size")
+                        .default(theme.menu.sheet_size.map_or("size", |size| size.as_str()))
                         .doc("Item height and font size on the phone sheet, below the `sm` breakpoint, e.g. `sheet_size: \"lg\"` for larger rows on a phone and compact ones on a desktop. Submenus follow it."),
                     prop("radius", "ThemeAwareValue")
                         .default(theme.menu.radius.as_str())

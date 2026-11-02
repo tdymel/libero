@@ -1442,6 +1442,30 @@ fn sheet_size_applies_below_sm_only() {
     });
 }
 
+/// Todo 5380: below `sm` a menu with no `sheet_size` follows `theme.menu.sheet_size`; a prop beats it.
+#[test]
+fn sheet_size_follows_the_theme() {
+    const SIZE: &str = "document.querySelector('[role=menu]').getAttribute('data-state')\
+         .split(' ').find(s => s.startsWith('size-'))";
+    block_on(async {
+        let fixture = phone("/menu-phone-themed").await;
+        let page = &fixture.page;
+        for (trigger, font) in [("#themed button", "size-lg"), ("#own button", "size-sm")] {
+            tap(page, trigger).await.unwrap();
+            sheets_shown(page, 1).await.unwrap();
+            wait::for_js_true(page, &format!("{SIZE} === '{font}'"), "the sheet's size")
+                .await
+                .unwrap();
+            keyboard::press(page, keyboard::ESCAPE).await.unwrap();
+            wait::for_js_true(page, MENU_GONE, "the sheet closed")
+                .await
+                .unwrap();
+        }
+        fixture.console.assert_clean("sheet_size_theme").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
 /// Todo 4111: a `FileField` trigger keeps the field's id, names the menu by the field's
 /// label, and an item reaches `args.open`; a trigger beside its `Menu` keeps its own id too.
 #[test]

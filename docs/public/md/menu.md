@@ -223,7 +223,8 @@ shortcut apart, and Escape returns focus to the trigger.
 
 ## Theme defaults
 
-`MenuDefaults` on the theme holds `size`, `radius`, `max_height` (`"340px"`),
+`MenuDefaults` on the theme holds `size`, `radius`, `sheet_size` (`None`: the
+phone sheet keeps `size`), `max_height` (`"340px"`),
 the per-size `sizes`, `submenu_delay` (150ms), and the defaults of
 `close_on_select` and `loop_focus`. The surface is the theme's `paper`.
 

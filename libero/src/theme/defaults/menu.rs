@@ -33,6 +33,8 @@ pub struct MenuSizeLevel {
 pub struct MenuDefaults {
     pub size: Size,
     pub radius: Size,
+    /// Item size on the phone sheet, below `sm`; `None` keeps `size`.
+    pub sheet_size: Option<Size>,
     pub max_height: &'static str,
     pub sizes: Sizes<MenuSizeLevel>,
     /// Milliseconds of hover before a submenu opens or a sibling takes over:
@@ -48,6 +50,7 @@ impl MenuDefaults {
     pub const DEFAULT: Self = Self {
         size: Size::Md,
         radius: Size::Sm,
+        sheet_size: None,
         max_height: "340px",
         sizes: Sizes::new(
             MenuSizeLevel {
