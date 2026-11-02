@@ -152,7 +152,9 @@ const QUILT_HEIGHT_VAR: CssVar = CssVar::new("--lsx-image-list-quilt-height");
 
 /// The `<ul>`: the list reset, plus `woven`, whose rules span neighbouring cells.
 static IMAGE_LIST_SX: StaticSx = StaticSx::new(|| {
+    // Filled, not shrunk to fit: a centring flex parent left quilted's percentage cells narrow.
     sx().list_style("none")
+        .width("100%")
         .margin("0")
         .padding("0")
         // `1fr` keeps rows even where a `Below` bar makes one taller.

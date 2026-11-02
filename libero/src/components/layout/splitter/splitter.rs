@@ -55,7 +55,9 @@ fn restore_point(from: f64, to: f64, min_size: f64, restore_to: f64) -> f64 {
 }
 
 static SPLITTER_BASE_SX: StaticSx = StaticSx::new(|| {
+    // Holds the divider's z-index in, under a caller's sticky header (5278).
     sx().display("flex")
+        .isolation("isolate")
         .height("100%")
         .when("horizontal", sx().flex_direction("column"))
         .when("vertical", sx().flex_direction("row"))

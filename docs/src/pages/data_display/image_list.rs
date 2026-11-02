@@ -192,6 +192,7 @@ pub fn ImageListPage() -> Element {
                 .must([
                     "Give a linked picture an `alt`: without one the link has no name.",
                     "Check the contrast of text you dim yourself in a bar: it can still fall short.",
+                    "With `scrim(false)` the contrast of the bar's text and controls is yours: give them a backing, since nothing else lies between them and the picture.",
                 ])
                 .example("A photo gallery that opens each photo: `ImageItem::new(rsx! { Image { src: \"/harbour.jpg\", alt: \"Harbour at dusk\" } }).to(\"/photos/harbour\")`. Tab lands on a link a screen reader reads as \"Harbour at dusk, link\"."),
             lead: rsx! {

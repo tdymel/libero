@@ -551,6 +551,36 @@ fn ordinary_labels_fit_320px_whole() {
 
 /// Side labels in a box under 360px stack under the marker with whole words; the
 /// full-width `#side` keeps them beside it (542).
+/// Todo 5277: the threshold is in rem, so a 200 percent root stacks labels it has made too wide.
+#[test]
+fn a_larger_root_font_stacks_the_side_labels() {
+    use chromiumoxide::cdp::browser_protocol::emulation::SetDeviceMetricsOverrideParams;
+    block_on(async {
+        let fixture = Fixture::open("/stepper-long", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        page.execute_bounded(SetDeviceMetricsOverrideParams::new(500, 800, 1.0, false))
+            .await
+            .unwrap();
+        let direction_is = |direction: &str| {
+            format!(
+                "getComputedStyle(document.querySelector('#side-step-0')).flexDirection === '{direction}'"
+            )
+        };
+        wait::for_js_true(page, &direction_is("row"), "side labels at a 16px root")
+            .await
+            .unwrap();
+        page.evaluate_bounded("document.documentElement.style.fontSize = '200%'")
+            .await
+            .unwrap();
+        wait::for_js_true(page, &direction_is("column"), "stacked labels at 200%")
+            .await
+            .unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
 #[test]
 fn side_labels_stack_in_a_narrow_box() {
     block_on(async {

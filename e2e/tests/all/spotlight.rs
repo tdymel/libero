@@ -1001,6 +1001,56 @@ fn enter_before_loading_lands_runs_nothing() {
     });
 }
 
+/// Todo 5279: at 375x420 the active row sat under the window's edge, with nothing following it.
+async fn the_active_row_stays_in_a_short_window<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    d.resize_viewport(375.0, 420.0).await?;
+    d.click(TRIGGER).await?;
+    eventually_focused(d, SEARCH, "the palette opening").await?;
+    d.press(keyboard::ARROW_UP).await?;
+    eventually(d, "the last row inside the window", async |d| {
+        let (_, height) = d.viewport().await?;
+        let rows = d.rects(ACTIVE_ROW).await?;
+        Ok(rows
+            .first()
+            .is_some_and(|row| row.y >= -0.5 && row.y + row.height <= height + 0.5))
+    })
+    .await
+}
+
+e2e::scenario!(
+    the_active_row_is_scrolled_into_a_short_window,
+    "/spotlight-tall",
+    the_active_row_stays_in_a_short_window
+);
+
+/// Todo 5281: under RTL a row's hint read `N + Ctrl`.
+#[test]
+fn a_shortcut_hint_reads_left_to_right_under_rtl() {
+    block_on(async {
+        let fixture = Fixture::open("/spotlight", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        page.evaluate_bounded("document.documentElement.dir = 'rtl'")
+            .await
+            .unwrap();
+        keyboard::tab_to(page, TRIGGER, 3).await.unwrap();
+        keyboard::press(page, keyboard::ENTER).await.unwrap();
+        wait::for_visible(page, "[data-slot=shortcut] kbd")
+            .await
+            .unwrap();
+        let keys: Vec<String> = js(
+            page,
+            "[...document.querySelectorAll('[data-slot=shortcut] kbd')]\
+             .sort((a, b) => a.getBoundingClientRect().x - b.getBoundingClientRect().x)\
+             .map(key => key.textContent)",
+        )
+        .await;
+        assert_eq!(keys, ["Ctrl", "N"]);
+        fixture.close().await.unwrap();
+    });
+}
+
 /// Todo 1307: a long result list leaves the search box and the last row reachable.
 #[test]
 fn a_tall_spotlight_stays_reachable() {

@@ -599,6 +599,45 @@ fn a_finger_zone_leaves_both_panes_past_22px() {
     });
 }
 
+/// Todo 5278: pane B's `position: relative` content painted over the zone and took its press.
+async fn a_press_in_the_zone_over_positioned_content<D: Driver>(
+    d: &mut D,
+    _route: &str,
+) -> Result<()> {
+    let bar = d.rect("#pane-b").await?;
+    d.click_at(bar.x + 10.0, bar.y + bar.height / 2.0).await?;
+    eventually_focused(d, DIVIDER, "a press 10px into pane B").await
+}
+
+e2e::scenario!(
+    the_zone_stays_over_positioned_content_in_pane_b,
+    "/splitter/content",
+    a_press_in_the_zone_over_positioned_content
+);
+
+/// Todo 5278: the divider's z-index stays inside the root, under a caller's sticky header.
+#[test]
+fn the_root_holds_the_divider_z_index_in() {
+    block_on(async {
+        let fixture = Fixture::open("/splitter/content", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        wait::for_visible(page, DIVIDER).await.unwrap();
+        let (isolation, z_index): (String, String) = e2e::js(
+            page,
+            &format!(
+                "(() => {{ const d = document.querySelector({DIVIDER:?}); \
+                 return [getComputedStyle(d.parentElement.parentElement).isolation, \
+                 getComputedStyle(d).zIndex]; }})()"
+            ),
+        )
+        .await;
+        assert_eq!((isolation.as_str(), z_index.as_str()), ("isolate", "1"));
+        fixture.close().await.unwrap();
+    });
+}
+
 async fn now<D: Driver>(d: &mut D, divider: &str) -> Result<String> {
     d.attr(divider, "aria-valuenow")
         .await?

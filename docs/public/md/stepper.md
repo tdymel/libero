@@ -72,7 +72,7 @@ fn Demo() -> Element {
 | `onstepclick` | `EventHandler<T>` | - | Called with the picked step. Without it the steps are plain text with no tab stops of their own; a scrolling strip with no clickable step is one tab stop itself. |
 | `allow_next_steps` | `bool` | `false` | With `onstepclick`, lets steps not reached yet be picked too. |
 | `orientation` | `Orientation` | `horizontal` | `vertical` puts each step's content under the step itself. |
-| `label_position` | `StepLabelPosition` | `side` | `side` or `below` the marker. Ignored when vertical. Under 120px a step (360px for three), `side` draws as `below`. |
+| `label_position` | `StepLabelPosition` | `side` | `side` or `below` the marker. Ignored when vertical. Under 7.5rem a step (22.5rem for three, 360px at a 16px root), `side` draws as `below`. |
 | `size` | `Size` | `md` | Marker, type and spacing. |
 | `color` | `ThemeAwareValue` | `primary` | The current and completed markers, and the connectors behind them. |
 | `parts` | `Parts<StepperPart>` | - | Styles for the inner parts in the Style API tab, under `sx`. |

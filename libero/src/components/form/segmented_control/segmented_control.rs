@@ -229,6 +229,7 @@ pub fn SegmentedControl<T: Options>(props: SegmentedControlProps<T>) -> Element 
             labelledby: field.label_id(),
             describedby: field.describedby(),
             invalid: field.invalid(),
+            busy: field.busy(),
             required,
             element,
             style,

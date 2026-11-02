@@ -311,9 +311,11 @@ fn SpotlightDemo(props: SpotlightDemoProps) -> Element {
             Button { variant: "outlined", onclick: move |_| handle.open(), "Show" }
             if let Some(key) = shortcut {
                 Text { size: "sm",
-                    Kbd { "Ctrl" }
-                    " + "
-                    Kbd { "{key.to_ascii_uppercase()}" }
+                    span { dir: "ltr",
+                        Kbd { "Ctrl" }
+                        " + "
+                        Kbd { "{key.to_ascii_uppercase()}" }
+                    }
                     " toggles it"
                 }
             }

@@ -45,7 +45,7 @@ pub fn TimelinePage() -> Element {
                         .doc("The current event. Bullets up to and including it, and the connectors between them, draw in the accent. An index past the end clamps to the last event, so \"step 7 of 4\" means finished."),
                     prop("align", "TimelineAlign")
                         .default("start")
-                        .doc("`start`, `end`, or `alternate` for content on both sides of a centred rail. Mirrored in a right-to-left layout. `alternate` fills its parent, so a narrower parent makes it narrower."),
+                        .doc("`start`, `end`, or `alternate` for content on both sides of a centred rail. Mirrored in a right-to-left layout. `alternate` fills its parent, so a narrower parent makes it narrower. With an event's `.opposite(..)`, every `align` draws as `start` below `sm`."),
                     prop("color", "ThemeAwareValue")
                         .default("primary")
                         .doc("The active accent. An event's own `.color(..)` overrides it."),

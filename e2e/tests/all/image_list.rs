@@ -34,6 +34,28 @@ pub fn ring_clipped(root: &str) -> String {
     )
 }
 
+/// Todo 5282: a centring flex parent shrank quilted to fit its percentage cells.
+#[test]
+fn a_quilted_list_fills_a_centring_flex_parent() {
+    block_on(async {
+        let fixture = Fixture::open("/image-list-quilted-centred", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        wait::for_visible(page, "[role=list]").await.unwrap();
+        let (list, parent): (f64, f64) = page
+            .evaluate_bounded(
+                "['[role=list]', '#parent'].map(s => document.querySelector(s).getBoundingClientRect().width)",
+            )
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        assert_eq!(list, parent);
+        fixture.close().await.unwrap();
+    });
+}
+
 /// Todo 4959: a tall picture's own height grew its quilted row past the cell ratio.
 #[test]
 fn a_tall_picture_keeps_its_quilted_cell_ratio() {

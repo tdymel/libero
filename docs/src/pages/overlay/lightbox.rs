@@ -54,7 +54,8 @@ fn wrap_hook(values: &DemoValues, _: &str) -> String {
         .collect();
     format!(
         "let lightbox = use_lightbox(LightboxOptions {{\n\
-         {changed}    ..LightboxOptions::default()\n\
+         {changed}    aria_label: Some(\"Gallery\".into()),\n    \
+             ..LightboxOptions::default()\n\
          }});\n\
          let items: Vec<LightboxItem> = photos\n    \
              .iter()\n    \
@@ -93,6 +94,7 @@ fn LightboxDemo(
         captions,
         controls,
         close_on_swipe_down,
+        aria_label: Some("Gallery".into()),
         ..LightboxOptions::default()
     });
     let items: Vec<LightboxItem> = GALLERY

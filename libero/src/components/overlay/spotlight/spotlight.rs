@@ -1,3 +1,5 @@
+use std::{collections::HashMap, rc::Rc};
+
 use dioxus::prelude::*;
 
 use crate::{
@@ -17,7 +19,7 @@ use crate::{
         typography::Kbd,
     },
     hooks::{Hotkey, use_dismiss_layer, use_hotkeys, use_localization, use_theme},
-    platform::{self, PLACEHOLDER_CELL_ATTR},
+    platform::{self, PLACEHOLDER_CELL_ATTR, next_task, scroll_chain_into_view},
     sx::{StaticSx, Sx, sx},
     theme::{
         SPOTLIGHT_DESCRIPTION_COLOR, SPOTLIGHT_GROUP_COLOR, SPOTLIGHT_MAX_LIST_HEIGHT,
@@ -298,6 +300,20 @@ pub fn use_spotlight(options: SpotlightOptions) -> SpotlightHandle {
     // The last render's row count, and the key generation it drew with.
     let layout_generation = use_hook(|| CopyValue::new((0usize, 0u64)));
     let pressed_input = use_hook(|| CopyValue::new(false));
+    let row_elements = use_hook(|| CopyValue::new(HashMap::<usize, Rc<MountedData>>::new()));
+    // The list's own scroll can leave the row below a short window's edge (5279). A task
+    // later, so the list's linear map lands first and this only moves what still hides it.
+    use_effect(move || {
+        let Some(row) = state.active() else {
+            return;
+        };
+        spawn(async move {
+            next_task().await;
+            if let Some(mounted) = row_elements.peek().get(&row) {
+                let _ = scroll_chain_into_view(mounted, false);
+            }
+        });
+    });
     let modal = use_modal(move |scope: ModalScope<()>| {
         let options = &options_for_render;
         let id = state.id();
@@ -328,6 +344,8 @@ pub fn use_spotlight(options: SpotlightOptions) -> SpotlightHandle {
             generation = generation.wrapping_add(1);
         }
         layout_generation.set((count, generation));
+        let mut kept_rows = row_elements;
+        kept_rows.write().retain(|row, _| *row < count);
         let active = state
             .active()
             .filter(|_| count > 0)
@@ -375,7 +393,7 @@ pub fn use_spotlight(options: SpotlightOptions) -> SpotlightHandle {
             spotlight_key(event, state, active, count, move |row| run(callbacks[row]));
         };
 
-        let rows = spotlight_rows(groups, &id, generation, active, run);
+        let rows = spotlight_rows(groups, &id, generation, active, row_elements, run);
 
         let filtered = !loading && !query().trim().is_empty();
         let empty = filtered && count == 0;
@@ -531,6 +549,7 @@ fn spotlight_rows(
     id: &str,
     generation: u64,
     active: Option<usize>,
+    mut row_elements: CopyValue<HashMap<usize, Rc<MountedData>>>,
     run: impl Fn(Option<Callback<()>>) + Copy + 'static,
 ) -> Vec<Element> {
     let mut index = 0usize;
@@ -565,6 +584,9 @@ fn spotlight_rows(
                         // Or the click takes focus out of the search box.
                         onmousedown: move |event: MouseEvent| event.prevent_default(),
                         onclick: move |_| run(onclick),
+                        onmounted: move |event: MountedEvent| {
+                            row_elements.write().insert(row, event.data());
+                        },
                         if let Some(icon) = action.icon {
                             span { "data-slot": SpotlightPart::Icon.slot(), {icon} }
                         }
@@ -579,7 +601,8 @@ fn spotlight_rows(
                             }
                         }
                         if let Some(shortcut) = action.shortcut {
-                            span { id: "{option_id}-shortcut", "data-slot": SpotlightPart::Shortcut.slot(),
+                            // A chord is written left to right, whatever the page's direction (5281).
+                            span { id: "{option_id}-shortcut", "data-slot": SpotlightPart::Shortcut.slot(), dir: "ltr",
                                 for (position, key) in shortcut_keys(&shortcut).into_iter().enumerate() {
                                     if position > 0 {
                                         " + "

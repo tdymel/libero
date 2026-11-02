@@ -28,7 +28,26 @@ pub const ROUTES: Routes = &[
         "/image-list-quilted-tall",
         || rsx! { ImageListQuiltedTallPage {} },
     ),
+    (
+        "/image-list-quilted-centred",
+        || rsx! { ImageListQuiltedCentredPage {} },
+    ),
 ];
+
+/// Todo 5282: the docs preview's parent, a column that centres its children.
+#[component]
+fn ImageListQuiltedCentredPage() -> Element {
+    let cell = || rsx! { div { style: "background: #777" } };
+    rsx! {
+        div { id: "parent", style: "display: flex; flex-direction: column; align-items: center; width: 320px",
+            ImageList {
+                cols: 2u8,
+                variant: "quilted",
+                items: vec![ImageItem::new(cell()), ImageItem::new(cell())],
+            }
+        }
+    }
+}
 
 /// A picture four times taller than wide.
 const TALL_PICTURE: &str = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='400' viewBox='0 0 1 4'%3E%3Crect width='1' height='4' fill='%23369'/%3E%3C/svg%3E";

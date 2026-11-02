@@ -7,6 +7,7 @@ use pictogram_icons_lucide as lucide;
 pub fn demo_items(bullets: bool, dashed: bool, opposite: bool) -> Vec<TimelineEvent> {
     let rows: [(&str, &str, &str); 4] = [
         ("Pushed to main", "3 commits", "09:12"),
+        // Isolated in the body below, so a right-to-left page keeps the handle's `@` in front.
         ("Review requested", "@tom", "09:40"),
         ("Deployed", "v2.4.0 to production", "10:05"),
         ("Rolled back", "reverted in 4 minutes", "10:09"),
@@ -17,7 +18,8 @@ pub fn demo_items(bullets: bool, dashed: bool, opposite: bool) -> Vec<TimelineEv
         .map(|(index, (title, content, time))| {
             let content = content.to_string();
             let time = time.to_string();
-            let mut event = TimelineEvent::new(*title).content(rsx! { Text { "{content}" } });
+            let mut event =
+                TimelineEvent::new(*title).content(rsx! { Text { bdi { "{content}" } } });
             if opposite {
                 event = event.opposite(rsx! { Text { "{time}" } });
             }

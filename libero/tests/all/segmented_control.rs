@@ -12,6 +12,29 @@ enum Emphasis {
     Italic,
 }
 
+/// Todo 5280: an async rule still asking marks the group busy, on the group alone.
+#[test]
+fn a_pending_status_marks_the_group_busy() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider {
+                SegmentedControl {
+                    value: Emphasis::Bold,
+                    status: libero::components::FieldStatus::Pending,
+                    onchange: move |_| {},
+                }
+            }
+        }
+    }
+
+    let html = render(app);
+    let body = body(&html);
+    let body = &body[body[1..].find("<div").expect("the group") + 1..];
+    let root = attributes_of(body, "div");
+    assert_eq!(root["role"], "radiogroup");
+    assert_eq!(root["aria-busy"], "true");
+}
+
 #[test]
 fn a_segmented_control_checks_only_the_selected_radio() {
     fn app() -> Element {

@@ -44,7 +44,7 @@ fn Demo() -> Element {
 |---|---|---|---|
 | `items` | `Vec<TimelineEvent>` | `vec![]` | The events, in render order. |
 | `active` | `Option<usize>` | `None` | The current event. Bullets up to and including it, and the connectors between them, draw in the accent. An index past the end clamps to the last event, so "step 7 of 4" means finished. |
-| `align` | `TimelineAlign` | `start` | `start`, `end`, or `alternate` for content on both sides of a centred rail. Mirrored in a right-to-left layout. `alternate` fills its parent, so a narrower parent makes it narrower. |
+| `align` | `TimelineAlign` | `start` | `start`, `end`, or `alternate` for content on both sides of a centred rail. Mirrored in a right-to-left layout. `alternate` fills its parent, so a narrower parent makes it narrower. With an event's `.opposite(..)`, every `align` draws as `start` below `sm`. |
 | `color` | `ThemeAwareValue` | `primary` | The active accent. An event's own `.color(..)` overrides it. |
 | `bullet_size` | `Size` | `md` | Bullet diameter. |
 | `radius` | `ThemeAwareValue` | `xl` | Bullet corner radius, or any CSS, e.g. `radius: "0"`. `xl` is a dot. |

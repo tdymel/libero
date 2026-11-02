@@ -40,8 +40,10 @@ static SPLITTER_BAR_SX: StaticSx = StaticSx::new(|| {
 // so pane A's own scrollbar stays clear; for a finger into both panes.
 static SPLITTER_HIT_SX: StaticSx = StaticSx::new(|| {
     // A vertical swipe over a vertical divider scrolls the page (1039).
+    // Above a positioned child of pane B, which would take the zone's presses (5278).
     let base = sx()
         .position("absolute")
+        .z_index("1")
         .and(drag_handle_sx())
         .when("vertical", sideways_drag_sx());
 

@@ -114,6 +114,8 @@ explains how parts work.
 - Give a linked picture an `alt`: without one the link has no name.
 - Check the contrast of text you dim yourself in a bar: it can still fall
   short.
+- With `scrim(false)` the contrast of the bar's text and controls is yours:
+  give them a backing, since nothing else lies between them and the picture.
 
 ### Example
 

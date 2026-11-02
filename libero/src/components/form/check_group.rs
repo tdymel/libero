@@ -502,7 +502,10 @@ fn check_group<T: Options, P: Part>(kind: Kind, props: Group<T, P>) -> Element {
         // `aria-invalid` is allowed on a group, `aria-required` is not: the label says it (todo 4287).
         .attr("aria-invalid", field.invalid().then_some("true"))
         // An empty group while the options load is not a group with none.
-        .attr("aria-busy", props.options.is_pending().then_some("true"))
+        .attr(
+            "aria-busy",
+            (props.options.is_pending() || field.busy()).then_some("true"),
+        )
         .render(
             HtmlTag::Div,
             Vec::new(),
@@ -727,6 +730,24 @@ mod tests {
             ),
             "{page}"
         );
+    }
+
+    /// Todo 5280: an async rule still asking marks the group busy.
+    #[test]
+    fn a_pending_status_marks_the_group_busy() {
+        let page = html(|| {
+            rsx! {
+                crate::LiberoProvider {
+                    CheckboxGroup::<String> {
+                        label: "Pick",
+                        status: crate::components::form::FieldStatus::Pending,
+                        options: options(),
+                        onchange: |_| {},
+                    }
+                }
+            }
+        });
+        assert!(page.contains("aria-busy=\"true\""), "{page}");
     }
 
     /// Todo 5078: the group's error reaches every box, but only the group is invalid.

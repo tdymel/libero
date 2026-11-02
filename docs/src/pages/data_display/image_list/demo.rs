@@ -62,8 +62,16 @@ pub(super) fn picture(index: usize) -> Element {
 
 /// A caller's caption. `min-width: 0` and wrapping keep a long title from pushing the control
 /// out; `color: inherit`, since a `<button>` inherits none and the bar's colour is the scrim's.
-pub(super) fn caption(index: usize, mut selected: Signal<[bool; 6]>) -> Element {
+pub(super) fn caption(index: usize, scrim: bool, mut selected: Signal<[bool; 6]>) -> Element {
     let line = sx().overflow_wrap("anywhere");
+    // Scrim off, nothing lies between the caption and the picture: the caller's backing (5283).
+    let backing = match scrim {
+        true => sx(),
+        false => sx()
+            .background("var(--lsx-paper-background)")
+            .padding("4px")
+            .border_radius("4px"),
+    };
     let on = selected()[index];
     // Filled when selected; otherwise the bar's colour, the scrim's. A finger gets 44px.
     let icon = match on {
@@ -84,7 +92,8 @@ pub(super) fn caption(index: usize, mut selected: Signal<[bool; 6]>) -> Element 
                 .display("flex")
                 .flex_wrap("wrap")
                 .align_items("center")
-                .gap("4px"),
+                .gap("4px")
+                .and(backing),
             Box { sx: sx().flex("1 1 6rem").min_width("0"),
                 Box { sx: line.clone().font_weight("500"), "{TITLES[index]}" }
                 // Isolated, so a right-to-left page keeps the handle's `@` in front.
@@ -122,7 +131,7 @@ pub(super) fn items(
             let mut item = ImageItem::new(picture(index));
             if bar != "none" {
                 item = item.bar(
-                    ImageBar::new(caption(index, selected))
+                    ImageBar::new(caption(index, scrim, selected))
                         .position(bar.as_str().into())
                         .scrim(scrim),
                 );

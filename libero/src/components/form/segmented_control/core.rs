@@ -266,6 +266,8 @@ pub(crate) struct SegmentedControlView {
     pub labelledby: Option<String>,
     pub describedby: Option<String>,
     pub invalid: bool,
+    /// An async rule is still asking.
+    pub busy: bool,
     pub required: bool,
     /// The strip itself, so a segment can focus a sibling by id. The label
     /// click has to focus by hand - see the label's handler below.
@@ -332,6 +334,7 @@ pub(crate) fn render_segmented_control(view: SegmentedControlView, root: String)
         labelledby,
         describedby,
         invalid,
+        busy,
         required,
         element,
         style,
@@ -526,6 +529,7 @@ pub(crate) fn render_segmented_control(view: SegmentedControlView, root: String)
         .attr("aria-labelledby", labelledby)
         .attr("aria-describedby", describedby)
         .attr("aria-invalid", invalid.then_some("true"))
+        .attr("aria-busy", busy.then_some("true"))
         .attr("aria-required", required.then_some("true"))
         .attr(
             "aria-readonly",

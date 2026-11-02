@@ -49,9 +49,10 @@ const STEPPER_CONNECTOR: CssVar = CssVar::new("--lsx-stepper-connector");
 /// The root's container name, which the side-label fallback queries.
 const STEPPER_CONTAINER: &str = "lsx-stepper";
 
-/// Under the width `steps` side-labelled steps need, 120px each.
+/// Under the width `steps` side-labelled steps need, 7.5rem each: a larger root font widens them.
 fn narrow(steps: usize) -> String {
-    format!("(max-width: {}.98px)", steps * 120 - 1)
+    // 120px less 0.02px, at a 16px root: whole hundredths divide without float noise.
+    format!("(max-width: {}rem)", (steps * 12000 - 2) as f64 / 1600.0)
 }
 
 /// States for the step counts past three, whose side labels stack under a wider
@@ -756,8 +757,8 @@ mod tests {
 
     #[test]
     fn the_side_fallback_widens_with_the_step_count() {
-        assert_eq!(narrow(3), "(max-width: 359.98px)");
-        assert_eq!(narrow(5), "(max-width: 599.98px)");
+        assert_eq!(narrow(3), "(max-width: 22.49875rem)");
+        assert_eq!(narrow(5), "(max-width: 37.49875rem)");
         assert_eq!(step_count_state(3), None);
         assert_eq!(step_count_state(4), Some("steps-4"));
         assert_eq!(step_count_state(12), Some("steps-8"));

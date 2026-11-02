@@ -81,6 +81,11 @@ impl PreparedField {
         self.invalid
     }
 
+    /// Whether an async rule is still asking, for a control that applies its own `aria-busy`.
+    pub fn busy(&self) -> bool {
+        self.busy
+    }
+
     /// The wrapper's element, always held: a sheet's clearance measures the helper and error in it (4907).
     pub fn root(&self) -> Option<ElementHandle> {
         self.root

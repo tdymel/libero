@@ -335,7 +335,10 @@ pub fn RadioGroup<T: Options>(props: RadioGroupProps<T>) -> Element {
         .attr("aria-invalid", invalid.then_some("true"))
         .attr("aria-required", required.then_some("true"))
         // An empty group while the options load is not a group with none.
-        .attr("aria-busy", props.options.is_pending().then_some("true"))
+        .attr(
+            "aria-busy",
+            (props.options.is_pending() || field.busy()).then_some("true"),
+        )
         .element(&root)
         .event("onkeydown", arrows)
         // Read-only keeps focus on the checked option (todo 746). A task later:
@@ -459,6 +462,20 @@ mod tests {
             }
         });
         assert!(!ready.contains("aria-busy"), "{ready}");
+        // Todo 5280: an async rule still asking marks it too.
+        let asking = html(|| {
+            rsx! {
+                crate::LiberoProvider {
+                    RadioGroup::<String> {
+                        label: "Plan",
+                        options: vec!["Free".to_string()],
+                        status: crate::components::form::FieldStatus::Pending,
+                        onchange: |_| {},
+                    }
+                }
+            }
+        });
+        assert!(asking.contains("aria-busy=\"true\""), "{asking}");
     }
 
     /// Todo 4976: wrapped cards grow from one basis, so their rows line up.
