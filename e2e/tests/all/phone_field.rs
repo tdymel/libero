@@ -800,24 +800,26 @@ fn the_dial_code_reads_left_to_right_under_rtl() {
             [("+49".to_string(), true), ("+49".to_string(), true)],
             "the plus drawn left of the digits, picker then pinned"
         );
-        // Todo 5245: `dir=ltr` keeps the digit order, not the text at the far side of the dial code.
-        let aligns: Vec<String> = page
-            .evaluate_bounded(
-                "[...document.querySelectorAll('input[type=tel]')].map(el => getComputedStyle(el).textAlign)",
-            )
-            .await
-            .unwrap()
-            .into_value()
-            .unwrap();
-        assert_eq!(
-            aligns,
-            ["right", "right"],
-            "each number sits by its dial code"
-        );
         fixture.console.assert_clean("/phone-field/rtl").unwrap();
         fixture.close().await.unwrap();
     });
 }
+
+/// Todo 5245: `dir=ltr` keeps the digit order, not the text at the far side of the dial code.
+/// Natively this pins the computed value: Blitz's editor paints no alignment yet (904).
+async fn each_number_sits_by_its_dial_code<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    for input in ["#mobile", "#office"] {
+        let align = d.style(input, "text-align").await?;
+        anyhow::ensure!(align == "right", "{input}'s text aligns {align}");
+    }
+    Ok(())
+}
+
+e2e::scenario!(
+    each_number_sits_by_its_dial_code_under_rtl,
+    "/phone-field/rtl",
+    each_number_sits_by_its_dial_code
+);
 
 /// Todo 2368: a rule added after mount still treats Tab from the country button to the
 /// number as a move inside the field; only leaving the field shows the error.

@@ -70,8 +70,8 @@ fn PhoneFieldRtlPage() -> Element {
     rsx! {
         div { dir: "rtl",
             Flex { direction: "column", gap: "md", max_width: "320px",
-                PhoneField { label: "Mobile", country: "DE" }
-                PhoneField { label: "Office", country: "DE", country_select: false }
+                PhoneField { id: "mobile", label: "Mobile", country: "DE" }
+                PhoneField { id: "office", label: "Office", country: "DE", country_select: false }
             }
         }
     }
