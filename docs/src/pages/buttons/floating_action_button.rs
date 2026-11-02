@@ -22,9 +22,14 @@ fn menu_items() -> Vec<MenuEntry> {
 
 /// What the `menu` switch prints around the button, as `render` draws it.
 fn wrap(values: &DemoValues, source: &str) -> String {
+    // A busy button stops a press, not the arrow keys, so the `Menu` is disabled with it.
+    let disabled = match values.str("loading") == "true" {
+        true => "        disabled: true,\n",
+        false => "",
+    };
     match values.str("menu") == "true" {
         true => format!(
-            "let menu = use_menu();\n\nrsx! {{\n    Menu {{\n        state: menu,\n        side: Side::Top,\n        align: Align::End,\n        items: vec![\n            MenuItem::new(\"Message\").onselect(|_| {{}}).into(),\n            MenuItem::new(\"Event\").onselect(|_| {{}}).into(),\n        ],\n{}\n    }}\n}}",
+            "let menu = use_menu();\n\nrsx! {{\n    Menu {{\n        state: menu,\n{disabled}        side: Side::Top,\n        align: Align::End,\n        items: vec![\n            MenuItem::new(\"Message\").onselect(|_| {{}}).into(),\n            MenuItem::new(\"Event\").onselect(|_| {{}}).into(),\n        ],\n{}\n    }}\n}}",
             indent(&indent(source))
         ),
         false => source.to_string(),
@@ -184,12 +189,15 @@ pub fn FloatingActionButtonPage() -> Element {
                     "Under a finger the button is at least 44 by 44px, at every size.",
                     "A fixed one sits above a docked `NavigationBar` and out of the safe areas; `start` and `end` flip under `dir=\"rtl\"`.",
                     "`hidden` takes it out of the tab order and the accessibility tree at once, before the fade ends.",
+                    "As a `Menu`'s trigger, a press on it while `loading` or `disabled` opens nothing, and its `tooltip` leaves while the menu is open.",
                 ])
                 .must([
                     "Name an icon-only button after its action with `aria_label`, such as \"New message\".",
                     "Render it where its action belongs in the reading order, such as at the end of `main`: Tab reaches it in DOM order, not where it floats.",
                     "Pad the end of the page by its height plus `offset`, so it never covers the last content or the control that has focus.",
                     "Move focus elsewhere before setting `hidden` while focus may be on it: hidden, it drops focus to the page.",
+                    "As a `Menu`'s trigger, pass `Menu { disabled: loading }` too, as the arrow keys on a loading button still reach the menu.",
+                    "As a `Menu`'s trigger, keep it shown while the menu is open, as with `hidden: scrolled() && !menu.is_open()`: hidden, it leaves the menu nothing to anchor on, and Escape drops focus to the page.",
                     "Keep it apart from `Notifications`, whose stack also sits at `bottom-end`: move one with `Notifications { placement }`.",
                 ])
                 .limits([
@@ -255,6 +263,7 @@ pub fn FloatingActionButtonPage() -> Element {
                             if in_menu {
                                 Menu {
                                     state: menu,
+                                    disabled: values.str("loading") == "true",
                                     side: Side::Top,
                                     align: Align::End,
                                     items: menu_items(),

@@ -47,7 +47,7 @@ fn Demo() -> Element {
 | `size` | `ThemeAwareValue` | `md` | A size word takes `Button`'s height at that step, so the two line up in a row, and sizes the icon inside as `Icon`'s. A length such as `"20px"` sizes the box, and the icon fills it. |
 | `radius` | `ThemeAwareValue` | `sm` | Corner radius, independent of `size`. |
 | `aria_label` | `String` | required | The button's accessible name. |
-| `tooltip` | `bool` | `false` | Shows `aria_label` in a `Tooltip` on hover and keyboard focus. The text is the name itself, so a screen reader does not hear it twice. |
+| `tooltip` | `bool` | `false` | Shows `aria_label` in a `Tooltip` on hover and keyboard focus, except while `aria-expanded` in its attributes reads `true`. The text is the name itself, so a screen reader does not hear it twice. |
 | `shortcut` | `String` | - | The chord that runs the action, as `use_hotkeys` takes it (`"mod+b"`). Shown in the tooltip as keys named for the platform, and set as `aria-keyshortcuts`. Binding the key is up to you. |
 | `selected` | `bool` | - | Makes it a toggle button. A bare toggle shows a 1px ring while on; with `variant` or `color` set it takes that variant's selected look. Leave it unset for a plain action. |
 | `disabled` | `bool` | `false` | Disables and dims the button: `aria-disabled` rather than `disabled`, so a focused button keeps its focus. It leaves the Tab order and ignores presses; inside a `Toolbar` it stays focusable unless `focusable_when_disabled` is `false`. |

@@ -131,6 +131,8 @@ shadow's `elevation` step (`md`).
   `start` and `end` flip under `dir="rtl"`.
 - `hidden` takes it out of the tab order and the accessibility tree at once,
   before the fade ends.
+- As a `Menu`'s trigger, a press on it while `loading` or `disabled` opens
+  nothing, and its `tooltip` leaves while the menu is open.
 
 ### You must
 
@@ -142,6 +144,11 @@ shadow's `elevation` step (`md`).
   last content or the control that has focus.
 - Move focus elsewhere before setting `hidden` while focus may be on it:
   hidden, it drops focus to the page.
+- As a `Menu`'s trigger, pass `Menu { disabled: loading }` too, as the arrow
+  keys on a loading button still reach the menu.
+- As a `Menu`'s trigger, keep it shown while the menu is open, as with
+  `hidden: scrolled() && !menu.is_open()`: hidden, it leaves the menu nothing
+  to anchor on, and Escape drops focus to the page.
 - Keep it apart from `Notifications`, whose stack also sits at `bottom-end`:
   move one with `Notifications { placement }`.
 

@@ -1,4 +1,4 @@
-use dioxus::prelude::*;
+use dioxus::{core::AttributeValue, prelude::*};
 use pictogram_icons_lucide as lucide;
 
 use crate::{
@@ -294,7 +294,8 @@ base_props! {
         radius: Input<ThemeAwareValue>,
         /// Required: an icon-only button has no text to announce.
         aria_label: String,
-        /// Shows `aria_label` in a `Tooltip` on hover and keyboard focus.
+        /// Shows `aria_label` in a `Tooltip` on hover and keyboard focus, except while
+        /// `aria-expanded` in its attributes reads `true`.
         #[props(default)]
         tooltip: Option<bool>,
         /// The chord that runs this action, as `use_hotkeys` takes it (`"mod+b"`): shown
@@ -389,9 +390,15 @@ pub fn ActionIcon(props: ActionIconProps) -> Element {
         label = format!("{label} {}", current_localization().anchor.new_tab);
     }
     let open_delay = try_consume_context::<TooltipOpenDelay>().map(|delay| delay.0);
+    // The popup it opens sits where the bubble would (5259).
+    let expanded = props.attributes.iter().any(|attribute| {
+        attribute.name == "aria-expanded"
+            && matches!(&attribute.value, AttributeValue::Text(value) if value == "true")
+    });
     rsx! {
         Tooltip {
             open_delay,
+            disabled: expanded,
             label: rsx! {
                 "{label}"
                 if let Some(keys) = keys {
@@ -509,8 +516,10 @@ fn action_icon(mut props: ActionIconProps, keyshortcuts: Option<String>) -> Elem
         }
         // Else a busy `type="submit"` still submits, as on `Button`.
         // Android's WebView sends a tap on a disabled button's child a click (990).
+        // Nor does the press bubble, as from a native `disabled`: a `Menu` would open (5259).
         if loading || disabled {
             event.prevent_default();
+            event.stop_propagation();
             return;
         }
         if props.ripple {

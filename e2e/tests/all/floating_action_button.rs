@@ -1,9 +1,12 @@
 //! `FloatingActionButton` in Chromium: it stays at its corner while the page scrolls,
 //! flips under `dir="rtl"`, clears a fixed `NavigationBar`, keeps its focus ring
 //! whole and gives a finger a 44px target at every size. A hidden one leaves the tab
-//! order, and as a `Menu`'s trigger it opens the menu and takes focus back.
+//! order, and as a `Menu`'s trigger it opens the menu and takes focus back, in every form,
+//! opens nothing while busy or disabled, and draws no tooltip over the menu.
 
+use anyhow::{Result, ensure};
 use e2e::browser::block_on;
+use e2e::driver::{Driver, eventually, eventually_focused, eventually_text};
 use e2e::passes::{focus, keyboard, pointer};
 use e2e::{Fixture, Suite, Viewport, js, wait};
 use serde_json::Value;
@@ -12,6 +15,7 @@ const FAB: &str = "#fab";
 const SMALL: &str = "#small";
 const TRIGGER: &str = "[aria-haspopup='menu']";
 const MENU: &str = "[role='menu']";
+const STATES: &str = "/floating-action-button/menu-states";
 
 #[test]
 fn it_meets_the_baseline() {
@@ -207,6 +211,94 @@ fn it_opens_a_menu_as_its_trigger() {
         pointer::click(page, "#sent").await.unwrap();
         wait::for_hidden(page, MENU).await.unwrap();
         fixture.console.assert_clean("the menu").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
+/// A press on the switch's state, then on the trigger, opens nothing: `tick` flushes the press.
+async fn press_opens_nothing<D: Driver>(d: &mut D, switch: &str, tick: &str) -> Result<()> {
+    d.click(switch).await?;
+    eventually(d, "the switch's state", async |d| {
+        Ok(d.attr(TRIGGER, "aria-disabled").await?.as_deref() == Some("true"))
+    })
+    .await?;
+    d.click(TRIGGER).await?;
+    d.click("#tick").await?;
+    eventually_text(d, "#tick", tick, "the flush").await?;
+    let opened = d.text("#opened").await?;
+    ensure!(opened == "0", "{switch} opened the menu {opened} times");
+    d.click(switch).await?;
+    eventually(d, "the switch back", async |d| {
+        Ok(d.attr(TRIGGER, "aria-disabled").await?.is_none())
+    })
+    .await
+}
+
+/// `aria-disabled` is no native `disabled`, so the press used to bubble to `Menu`'s wrapper.
+async fn busy_opens_no_menu<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    press_opens_nothing(d, "#loading", "1").await?;
+    press_opens_nothing(d, "#disabled", "2").await?;
+    // Extended, it is a `Button`, not an `ActionIcon`.
+    d.click("#extended").await?;
+    eventually(d, "the label", async |d| {
+        Ok(d.text(TRIGGER).await?.contains("Create"))
+    })
+    .await?;
+    press_opens_nothing(d, "#loading", "3").await?;
+    press_opens_nothing(d, "#disabled", "4").await?;
+    d.click(TRIGGER).await?;
+    eventually_text(d, "#opened", "1", "a press once it is free").await
+}
+
+e2e::scenario!(
+    a_loading_or_disabled_trigger_opens_no_menu,
+    "/floating-action-button/menu-states",
+    busy_opens_no_menu
+);
+
+/// A press opens it and Escape hands focus back: icon-only, with a tooltip and extended.
+async fn every_form_opens<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    for (switch, opened) in [
+        (None, "1"),
+        (Some("#tooltip"), "2"),
+        (Some("#extended"), "3"),
+    ] {
+        if let Some(switch) = switch {
+            d.click(switch).await?;
+        }
+        d.click(TRIGGER).await?;
+        eventually_text(d, "#opened", opened, "the press").await?;
+        eventually_focused(d, "[role=menuitem]", "the press").await?;
+        ensure!(
+            !d.exists("[role=tooltip]").await?,
+            "a tooltip over the menu"
+        );
+        d.press(keyboard::ESCAPE).await?;
+        eventually_focused(d, TRIGGER, "Escape").await?;
+    }
+    Ok(())
+}
+
+e2e::scenario!(
+    every_form_opens_the_menu_and_takes_focus_back,
+    "/floating-action-button/menu-states",
+    every_form_opens
+);
+
+/// The bubble sits where the menu opens: a showing one leaves when the menu comes.
+#[test]
+fn an_open_menu_hides_a_showing_tooltip() {
+    block_on(async {
+        let fixture = Fixture::open(STATES, Viewport::Desktop).await.unwrap();
+        let page = &fixture.page;
+        pointer::click(page, "#tooltip").await.unwrap();
+        wait::for_visible(page, TRIGGER).await.unwrap();
+        pointer::hover(page, TRIGGER).await.unwrap();
+        wait::for_visible(page, "[role='tooltip']").await.unwrap();
+        pointer::click(page, TRIGGER).await.unwrap();
+        wait::for_visible(page, MENU).await.unwrap();
+        wait::for_hidden(page, "[role='tooltip']").await.unwrap();
+        fixture.console.assert_clean("the tooltip").unwrap();
         fixture.close().await.unwrap();
     });
 }

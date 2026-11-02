@@ -48,7 +48,7 @@ pub fn ActionIconPage() -> Element {
                     .doc("The button's accessible name."),
                 prop("tooltip", "bool")
                     .default("false")
-                    .doc("Shows `aria_label` in a `Tooltip` on hover and keyboard focus. The text is the name itself, so a screen reader does not hear it twice."),
+                    .doc("Shows `aria_label` in a `Tooltip` on hover and keyboard focus, except while `aria-expanded` in its attributes reads `true`. The text is the name itself, so a screen reader does not hear it twice."),
                 prop("shortcut", "String")
                     .doc("The chord that runs the action, as `use_hotkeys` takes it (`\"mod+b\"`). Shown in the tooltip as keys named for the platform, and set as `aria-keyshortcuts`. Binding the key is up to you."),
                 prop("selected", "bool")

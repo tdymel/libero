@@ -426,8 +426,10 @@ pub fn Button(props: ButtonProps) -> Element {
         }
         // Else a busy `type="submit"` still submits, by click or by Enter in a field.
         // Android's WebView sends a tap on a disabled button's child a click (990).
+        // Nor does the press bubble, as from a native `disabled`: a `Menu` would open (5259).
         if loading || disabled {
             event.prevent_default();
+            event.stop_propagation();
             return;
         }
         if props.ripple {
