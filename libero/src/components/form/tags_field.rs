@@ -926,6 +926,8 @@ fn tags_field_input<F: Fn(Vec<String>) + Clone + 'static>(
                     // Cleared by the blur, which a WebView delivers after this handler.
                     entering.set(true);
                     focus.focus(Some(held.len() - 1));
+                    // Blitz fires no blur for this move, so the list closes here too.
+                    state.close();
                 }
                 _ => {}
             }

@@ -67,7 +67,9 @@ pub(super) use portal::{PortalEntry, PortalRoot};
 use press::{
     BLANK_PRESS, HIT, PRESS, activated, focusable_ancestor, forget_press, pressed, tab_from_start,
 };
-pub(super) use press::{focus_pressed, nested_interactive, refuses_edge_swipe, swipe_press};
+pub(super) use press::{
+    click_stopped, focus_pressed, nested_interactive, refuses_edge_swipe, swipe_press,
+};
 pub(super) use resize::{on_content_change, on_intersection, on_resize, on_viewport_resize};
 use scroll::{LAYOUT_TRIES, notify_scroll, show};
 pub(super) use scroll::{reveal, scroll, scroll_chain_into_view, scroll_padding_properties};

@@ -1248,6 +1248,12 @@ pub(crate) fn focus_pressed(event: &Event<PointerData>, within: &Rc<MountedData>
     web::focus_pressed(event, within);
 }
 
+/// Only Blitz moves focus from the click - see [`click_stopped`](crate::platform::click_stopped).
+pub(crate) fn click_stopped() {
+    #[cfg(all(not(target_arch = "wasm32"), feature = "native"))]
+    blitz::click_stopped();
+}
+
 /// Only the web has `:focus-visible` - see [`focus_ring_shown`](crate::platform::focus_ring_shown).
 pub(crate) fn focus_ring_shown() -> Option<bool> {
     #[cfg(target_arch = "wasm32")]

@@ -17,6 +17,7 @@ use crate::{
         navigation::{NewTabHint, wants_new_tab_hint},
     },
     hooks::{ripple_sx, use_cache, use_gradient_style, use_ripple, use_theme},
+    platform::click_stopped,
     sx::{StaticSx, Sx, ThemeAwareValue, sx},
     theme::{
         BUTTON_HEIGHT, ButtonDefaults, CssVar, Gradient, LOADER_SIZE, SURFACE_LABEL, Size, SizeCss,
@@ -430,6 +431,7 @@ pub fn Button(props: ButtonProps) -> Element {
         if loading || disabled {
             event.prevent_default();
             event.stop_propagation();
+            click_stopped();
             return;
         }
         if props.ripple {

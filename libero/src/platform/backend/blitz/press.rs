@@ -6,7 +6,7 @@ use dioxus_native_dom::{NodeHandle, NodeId};
 
 use super::FreeDoc;
 use super::{
-    INTERACTIVE, activate, ancestors, anchor, doc, refused, removed, resolved_style_value,
+    INTERACTIVE, activate, ancestors, anchor, doc, focus, refused, removed, resolved_style_value,
 };
 use crate::platform::scroll::{EDGE_SWIPE_MARK, SWIPE_CLOSE_ATTR, SWIPE_HANDLE_ATTR, SwipePress};
 
@@ -179,6 +179,15 @@ pub(in crate::platform::backend) fn swipe_press(event: &Event<PointerData>, id: 
 pub(super) fn forget_press() {
     PRESS.set(None);
     HIT.set(None);
+}
+
+/// A prevented click stopped short of [`Listener`]: Blitz's default moves no focus, so the
+/// press's move happens here, as the wrapper would have made it.
+pub(in crate::platform::backend) fn click_stopped() {
+    if let Some((before, target)) = PRESS.get().filter(|_| !focus::press_kept_focus()) {
+        activate::focus_pressed(before, target);
+    }
+    forget_press();
 }
 
 /// [`HIT`], walked up to the nearest `boundary`: nested when an interactive

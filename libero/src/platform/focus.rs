@@ -10,6 +10,12 @@ pub(crate) fn focus_pressed(event: &Event<PointerData>, within: &Rc<MountedData>
     backend::focus_pressed(event, within);
 }
 
+/// A handler prevents and stops a click: the press still moves focus, as on the web,
+/// where Blitz's wrapper would have done it from the bubbled click.
+pub(crate) fn click_stopped() {
+    backend::click_stopped();
+}
+
 /// Whether the focused element shows its ring (`:focus-visible`); `None` off the web.
 /// Read before a move that remounts it, to refocus it the same way (4813).
 pub(crate) fn focus_ring_shown() -> Option<bool> {

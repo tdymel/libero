@@ -25,7 +25,7 @@ use crate::{
         Chord, aria_keyshortcuts, child_ripple_sx, current_localization, use_gradient_style,
         use_ripple, use_theme,
     },
-    platform::mod_is_meta,
+    platform::{click_stopped, mod_is_meta},
     sx::{StaticSx, Sx, ThemeAwareValue, sx},
     theme::{
         ACTION_ICON_GLYPH, ACTION_ICON_RADIUS, ACTION_ICON_SIZE, BUTTON_HEIGHT, CssVar, Gradient,
@@ -524,6 +524,7 @@ fn action_icon(mut props: ActionIconProps, keyshortcuts: Option<String>) -> Elem
         if loading || disabled {
             event.prevent_default();
             event.stop_propagation();
+            click_stopped();
             return;
         }
         if props.ripple {
