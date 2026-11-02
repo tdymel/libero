@@ -181,14 +181,26 @@ fn arrow_targets(disabled: &[bool], from: usize) -> Option<[usize; 4]> {
     Some([next, previous, first, last])
 }
 
-fn heading(level: HtmlTag, trigger: Element) -> Element {
+/// `plain_id` marks a heading without a trigger: focusable by script, no tab stop.
+fn heading(level: HtmlTag, plain_id: Option<String>, trigger: Element) -> Element {
+    let tabindex = plain_id.as_ref().map(|_| "-1");
     match level {
-        HtmlTag::H1 => rsx! { h1 { "data-accordion-heading": "", {trigger} } },
-        HtmlTag::H2 => rsx! { h2 { "data-accordion-heading": "", {trigger} } },
-        HtmlTag::H4 => rsx! { h4 { "data-accordion-heading": "", {trigger} } },
-        HtmlTag::H5 => rsx! { h5 { "data-accordion-heading": "", {trigger} } },
-        HtmlTag::H6 => rsx! { h6 { "data-accordion-heading": "", {trigger} } },
-        _ => rsx! { h3 { "data-accordion-heading": "", {trigger} } },
+        HtmlTag::H1 => {
+            rsx! { h1 { "data-accordion-heading": "", id: plain_id, tabindex, {trigger} } }
+        }
+        HtmlTag::H2 => {
+            rsx! { h2 { "data-accordion-heading": "", id: plain_id, tabindex, {trigger} } }
+        }
+        HtmlTag::H4 => {
+            rsx! { h4 { "data-accordion-heading": "", id: plain_id, tabindex, {trigger} } }
+        }
+        HtmlTag::H5 => {
+            rsx! { h5 { "data-accordion-heading": "", id: plain_id, tabindex, {trigger} } }
+        }
+        HtmlTag::H6 => {
+            rsx! { h6 { "data-accordion-heading": "", id: plain_id, tabindex, {trigger} } }
+        }
+        _ => rsx! { h3 { "data-accordion-heading": "", id: plain_id, tabindex, {trigger} } },
     }
 }
 
@@ -246,9 +258,31 @@ pub(crate) fn render_accordion<T: Options>(view: AccordionView<T>, root: String)
             *previous = open_keys;
         }
     }
+    // A section that loses its panel with focus in it hands focus to its plain heading.
+    let plains: Vec<(String, bool)> = (0..sections.len())
+        .map(|i| (keys[i].clone(), sections[i].plain))
+        .collect();
+    let was_plains = use_hook(|| Rc::new(RefCell::new(plains.clone())));
+    {
+        let mut was_plains = was_plains.borrow_mut();
+        if *was_plains != plains {
+            for (at, (key, plain)) in plains.iter().enumerate() {
+                let was = was_plains
+                    .iter()
+                    .position(|(was, was_plain)| was == key && !was_plain);
+                if let Some(was) = was.filter(|_| *plain) {
+                    closing.closing(
+                        id_selector(&format!("{root}-item-{was}")),
+                        id_selector(&format!("{root}-heading-{at}")),
+                    );
+                }
+            }
+            *was_plains = plains.clone();
+        }
+    }
     let repay = closing.clone();
-    use_effect(use_reactive!(|(open,)| {
-        let _ = open;
+    use_effect(use_reactive!(|(open, plains)| {
+        let _ = (open, plains);
         repay.repay();
     }));
 
@@ -317,6 +351,7 @@ fn AccordionSection<T: Options>(
 ) -> Element {
     let trigger_id = format!("{root}-trigger-{index}");
     let region_id = format!("{root}-region-{index}");
+    let item_id = format!("{root}-item-{index}");
     let name = label.name;
     let content = label.content.unwrap_or_else(|| rsx! { "{name}" });
     // Drawn in this scope, not by a `Glyph` scope per section: same `<svg>`, 50 scopes fewer at 50.
@@ -331,7 +366,7 @@ fn AccordionSection<T: Options>(
     if plain {
         return rsx! {
             div { "data-accordion-item": "",
-                {heading(level, rsx! { span { "data-accordion-plain": "", {content} } })}
+                {heading(level, Some(format!("{root}-heading-{index}")), rsx! { span { "data-accordion-plain": "", {content} } })}
             }
         };
     }
@@ -394,8 +429,8 @@ fn AccordionSection<T: Options>(
         }
     };
     rsx! {
-        div { "data-accordion-item": "",
-            {heading(level, trigger)}
+        div { "data-accordion-item": "", id: "{item_id}",
+            {heading(level, None, trigger)}
             Collapse {
                 open,
                 keep_mounted: false,

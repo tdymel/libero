@@ -19,7 +19,31 @@ pub const ROUTES: Routes = &[
     ("/accordion-insert", || rsx! { InsertPage {} }),
     ("/accordion-small", || rsx! { SmallPage {} }),
     ("/accordion-plain", || rsx! { PlainPage {} }),
+    ("/accordion-flip", || rsx! { FlipPage {} }),
 ];
+
+/// Todo 5385: F2 takes Shipping's panel away while its trigger holds the focus.
+#[component]
+fn FlipPage() -> Element {
+    let mut open = use_signal(|| AccordionOpen::One(None::<Step>));
+    let mut with_panel = use_signal(|| true);
+    rsx! {
+        div {
+            onkeydown: move |event: KeyboardEvent| {
+                if event.key() == Key::Named(NamedKey::F2) {
+                    with_panel.set(false);
+                }
+            },
+            Accordion {
+                id: "flip",
+                open: open(),
+                onchange: move |next| open.set(next),
+                has_panel: move |step: Step| step != Step::Shipping || with_panel(),
+                panel: |_: Step| rsx! { Text { "Body." } },
+            }
+        }
+    }
+}
 
 /// Todo 5368: Payment has no panel, a plain heading between two triggers.
 #[component]

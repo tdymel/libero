@@ -32,9 +32,14 @@ fn holds_focus(root: &ElementHandle, region: &str) -> Result<(), PlatformError> 
     root.query_selector(&format!("{region} :focus")).map(drop)
 }
 
+/// The first tab stop under the root, for a target that is gone.
+const FALLBACK: &str =
+    "button:not([disabled]), [href], input:not([disabled]), [tabindex]:not([tabindex='-1'])";
+
 fn focus(root: &ElementHandle, target: &str) {
     let _ = root
         .query_selector(target)
+        .or_else(|_| root.query_selector(FALLBACK))
         .and_then(|target| target.focus());
 }
 

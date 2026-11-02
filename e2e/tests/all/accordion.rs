@@ -608,6 +608,27 @@ e2e::scenario!(
     ios: skip("958: element identity on the WebView")
 );
 
+/// Todo 5385: a section that loses its panel with focus on its trigger hands the focus to its
+/// plain heading, not to the body.
+async fn losing_the_panel_keeps_focus<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    d.focus("#flip-trigger-0").await?;
+    d.press(keyboard::F2).await?;
+    eventually(d, "Shipping's trigger to go", async |d| {
+        Ok(!d.exists("#flip-trigger-0").await?)
+    })
+    .await?;
+    eventually_focused(d, "#flip-heading-0", "Shipping, now a plain heading").await
+}
+
+e2e::scenario!(
+    a_section_losing_its_panel_hands_the_focus_to_its_heading,
+    "/accordion-flip",
+    losing_the_panel_keeps_focus,
+    android: skip("958: element identity on the WebView"),
+    desktop: skip("958: element identity on the WebView"),
+    ios: skip("958: element identity on the WebView")
+);
+
 /// The trigger whose text is `label`, so an insert ahead does not change which one it is.
 fn trigger_named(label: &str) -> String {
     format!(
