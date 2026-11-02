@@ -6,8 +6,8 @@ use crate::{
     components::{
         accessibility::VisuallyHidden,
         common::{
-            Glyph, Input, Part, States, base_props, input_from_str, parts_enum, parts_source,
-            sx_source, use_style_attributes, with_parts,
+            Glyph, HtmlTag, Input, Part, States, base_props, input_from_str, parts_enum,
+            parts_source, sx_source, use_style_attributes, with_parts,
         },
     },
     context::IconSlot,
@@ -16,7 +16,8 @@ use crate::{
     theme::{AnchorDefaults, Size},
 };
 
-use crate::components::layout::render_anchor;
+use crate::components::layout::{box_style, listener_attribute, render_anchor};
+use crate::utils::warn;
 
 pub use crate::theme::AnchorUnderline;
 
@@ -42,9 +43,19 @@ static ANCHOR_BASE_SX: StaticSx = StaticSx::new(|| {
         .margin("0")
         .overflow_wrap("anywhere");
 
-    AnchorUnderline::ALL.iter().fold(base, |base, &underline| {
+    let base = AnchorUnderline::ALL.iter().fold(base, |base, &underline| {
         base.when(underline.state_name(), underline_sx(underline))
-    })
+    });
+    // Without `to` it is a `<button>`: drop the native chrome, keep the link look.
+    base.selector(
+        ":is(button)",
+        sx().display("inline")
+            .background("none")
+            .border("0")
+            .padding("0")
+            .text_align("inherit")
+            .cursor("pointer"),
+    )
 });
 
 static NEW_TAB_HINT_SX: StaticSx = StaticSx::new(|| {
@@ -111,8 +122,12 @@ base_props! {
         #[props(default, into)]
         size: Input<Size>,
         /// A path/URL or a typed route (`Route::Foo {}`); router navigation when mounted.
-        #[props(into)]
-        to: NavigationTarget,
+        /// Unset, a `<button>` with the link look, for an action.
+        #[props(default, into)]
+        to: Input<NavigationTarget>,
+        // `Option`: a defaulted `EventHandler` allocates on every render.
+        #[props(default)]
+        onclick: Option<EventHandler<MouseEvent>>,
         #[props(default)]
         target: Option<String>,
         #[props(default, into)]
@@ -127,7 +142,7 @@ base_props! {
     }
 }
 
-/// A text link to a URL or a router route.
+/// A text link to a URL or a router route; without `to`, a button that looks like one.
 ///
 /// ```
 /// # use dioxus::prelude::*;
@@ -135,6 +150,7 @@ base_props! {
 /// # fn app() -> Element {
 /// rsx! {
 ///     Anchor { to: "https://dioxuslabs.com", target: "_blank", "Dioxus" }
+///     Anchor { onclick: move |_| {}, "Show details" }
 /// }
 /// # }
 /// ```
@@ -169,6 +185,20 @@ pub fn Anchor(props: AnchorProps) -> Element {
         true,
     );
 
+    // Once per mount, before any branch: hook order must not follow `to`.
+    use_hook(|| {
+        if props.to.as_ref().is_none() {
+            warn_link_only_props(&props.target, props.new_tab_hint, props.new_tab_icon);
+        }
+    });
+    let Some(to) = props.to.as_ref().cloned() else {
+        // `<button>` defaults to `submit`; a caller can still ask for it.
+        return box_style(style_attributes)
+            .event("onclick", props.onclick)
+            .attr_default("type", "button")
+            .render(HtmlTag::Button, props.attributes, props.children);
+    };
+
     let children = match wants_new_tab_hint(props.target.as_deref(), props.new_tab_hint) {
         true => rsx! {
             {props.children}
@@ -177,14 +207,31 @@ pub fn Anchor(props: AnchorProps) -> Element {
         false => props.children,
     };
 
+    // A caller's list, so it runs after the router's own click and keeps it.
+    let mut attributes = props.attributes;
+    attributes.extend(listener_attribute("onclick", props.onclick));
     render_anchor(
         style_attributes,
-        props.to,
+        to,
         props.target,
         None::<fn(MountedEvent)>,
-        props.attributes,
+        attributes,
         children,
     )
+}
+
+/// Debug builds: the props only a link reads, set on an `Anchor` without `to`.
+fn warn_link_only_props(target: &Option<String>, new_tab_hint: bool, new_tab_icon: Option<bool>) {
+    let set = [
+        ("target", target.is_some()),
+        ("new_tab_hint", !new_tab_hint),
+        ("new_tab_icon", new_tab_icon.is_some()),
+    ];
+    for (prop, _) in set.iter().filter(|(_, set)| *set) {
+        warn(&format!(
+            "Anchor: `{prop}` is ignored without `to` - the anchor renders a `<button>`."
+        ));
+    }
 }
 
 #[cfg(test)]
@@ -199,5 +246,26 @@ mod tests {
             part_table::<AnchorPart>(),
             [("new-tab", "& > [data-slot='new-tab']")]
         );
+    }
+
+    /// Todo 5363: the link-only props say they do nothing on the button.
+    #[cfg(debug_assertions)]
+    #[test]
+    fn link_only_props_warn_without_to() {
+        fn app() -> Element {
+            rsx! {
+                crate::LiberoProvider {
+                    Anchor { target: "_blank", new_tab_hint: false, onclick: move |_| {}, "Go" }
+                    Anchor { to: "https://example.com", target: "_blank", "Link" }
+                }
+            }
+        }
+        let warnings = crate::utils::warnings_of(app);
+        let ours: Vec<_> = warnings
+            .iter()
+            .filter(|w| w.starts_with("Anchor:"))
+            .collect();
+        assert_eq!(ours.len(), 2, "{warnings:?}");
+        assert!(ours[0].contains("`target`") && ours[1].contains("`new_tab_hint`"));
     }
 }

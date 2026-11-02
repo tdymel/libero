@@ -39,7 +39,7 @@ pub use aspect_ratio::{AspectRatio, AspectRatioProps};
 #[cfg(feature = "box")]
 pub use r#box::{Box, BoxProps};
 #[cfg(feature = "box")]
-pub(crate) use r#box::{BoxStyle, box_style, use_box};
+pub(crate) use r#box::{BoxStyle, box_style, listener_attribute, use_box};
 #[cfg(feature = "center")]
 pub use center::{Center, CenterProps};
 #[cfg(feature = "collapse")]

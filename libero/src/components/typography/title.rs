@@ -22,7 +22,7 @@ static TITLE_BASE_SX: StaticSx = StaticSx::new(|| {
         .overflow_wrap("anywhere")
         // A link in a title takes the title's type, not `Anchor`'s own Text sizing (todo 5359).
         .selector(
-            "& a[data-state*=\"underline-\"]",
+            "& :is(a, button)[data-state*=\"underline-\"]",
             sx().font_family("inherit")
                 .font_size("inherit")
                 .font_weight("inherit")

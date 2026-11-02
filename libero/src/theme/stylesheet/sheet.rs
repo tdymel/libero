@@ -107,11 +107,8 @@ pub(crate) fn theme_sheet_css(light: &'static Theme, dark: Option<&'static Theme
     css
 }
 
-/// The attribute a document root carries to pin one theme of the pair.
-pub(crate) const THEME_ATTRIBUTE: &str = "data-lsx-theme";
-
-/// The dark half's media query, which the web backend also reads the platform scheme from.
-pub(crate) const DARK_SCHEME_QUERY: &str = "(prefers-color-scheme: dark)";
+// In `sx`, which `Sx::dark` and `Sx::light` build the same selectors from.
+pub(crate) use crate::sx::{DARK_SCHEME_QUERY, THEME_ATTRIBUTE};
 
 fn theme_selector(name: &str) -> String {
     format!(":root[{THEME_ATTRIBUTE}=\"{name}\"]")

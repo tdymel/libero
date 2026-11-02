@@ -203,6 +203,23 @@ where
     }
 }
 
+/// A component's own handler as an attribute, for a caller list [`BoxStyle::render`] merges.
+pub(crate) fn listener_attribute<T, Marker>(
+    name: &'static str,
+    handler: impl EventValue<T, Marker>,
+) -> Option<Attribute>
+where
+    T: for<'a> From<&'a PlatformEventData> + 'static,
+{
+    let listener = handler.into_listener()?;
+    Some(Attribute::new(
+        name,
+        AttributeValue::Listener(listener.erase()),
+        None,
+        false,
+    ))
+}
+
 /// The attribute, unless `false` or `None`: those cost ~135 ns to diff for no
 /// markup. A shrinking list still clears them (`tests/all/attributes.rs`).
 fn meaningful<T>(name: &'static str, value: impl IntoAttributeValue<T>) -> Option<Attribute> {
@@ -318,14 +335,7 @@ impl BoxStyle {
     where
         T: for<'a> From<&'a PlatformEventData> + 'static,
     {
-        if let Some(listener) = handler.into_listener() {
-            self.own.push(Attribute::new(
-                name,
-                AttributeValue::Listener(listener.erase()),
-                None,
-                false,
-            ));
-        }
+        self.own.extend(listener_attribute(name, handler));
         self
     }
 

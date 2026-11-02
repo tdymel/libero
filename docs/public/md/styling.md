@@ -193,6 +193,17 @@ sx().when(
 )
 ```
 
+`dark` and `light` style one half of the theme pair: the one the app pins with
+`use_color_scheme`, or the OS's while nothing is pinned. Prefer a theme color,
+which follows the pair by itself. An app with a single theme follows the OS
+here.
+
+```rust,ignore
+sx()
+    .background("#fff")
+    .dark(sx().background("#1a1b1e"))
+```
+
 `supports` nests styles under `@supports`, for a value an older engine would
 reject. Declare the plain value first, then override it inside, since CSS has no
 two values for one property. The condition is passed through verbatim. Native

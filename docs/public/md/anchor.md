@@ -5,11 +5,12 @@ Import: `use libero::components::Anchor;`
 Feature: `anchor` (on by default, turns on `use-icon`, `visually-hidden`; [features.md](features.md))
 Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/navigation/anchor.rs>
 Index: [index.md](index.md) lists every other page
-Description: A real link styled and sized like `Text`, router-aware through `to`.
+Description: A real link styled and sized like `Text`, router-aware through `to`; without `to`, a button with the link look.
 
 A link styled and sized like [`Text`](text.md). A typed route in `to` navigates
 through the app's router without a page reload. Without a router it renders a
-plain `href`.
+plain `href` Without `to` it renders a button with the same
+look, for an action.
 
 ## Usage
 
@@ -36,7 +37,8 @@ fn Demo() -> Element {
 | Prop | Type | Default | Description |
 |---|---|---|---|
 | `size` | `Size` | `md` | Text size. |
-| `to` | `NavigationTarget` | required | A path, a URL or a typed route (`Route::Foo {}`). With a router mounted and `target` unset, an internal target navigates without a page reload; with `"_blank"` it opens a new tab with a full page load. A `javascript:`, `data:` or `vbscript:` URL is blocked, in every link `to` and in `MenuItem::href`: the element renders without an `href`, so a click does nothing, and a warning is logged. |
+| `to` | `NavigationTarget` | - | A path, a URL or a typed route (`Route::Foo {}`). Unset, the anchor renders a `<button type="button">` with the same look, for an action such as "Show details"; `target`, `new_tab_hint` and `new_tab_icon` then do nothing. With a router mounted and `target` unset, an internal target navigates without a page reload; with `"_blank"` it opens a new tab with a full page load. A `javascript:`, `data:` or `vbscript:` URL is blocked, in every link `to` and in `MenuItem::href`: the element renders without an `href`, so a click does nothing, and a warning is logged. |
+| `onclick` | `EventHandler<MouseEvent>` | - | Runs on a click, or on Enter and Space without `to`. With `to` it runs too, after the router's own navigation. |
 | `target` | `String` | - | The link's `target` attribute. `"_blank"` adds a hidden "(opens in a new tab)". |
 | `new_tab_hint` | `bool` | `true` | `false` drops the hidden text a `"_blank"` target adds, and the icon. |
 | `new_tab_icon` | `bool` | `false` | With the hint, draws a small external icon after the text. Unset, the theme's `anchor.new_tab_icon`, which is off. `Button`, `ActionIcon`, `Chip`, `NavLink`, `Repository` and `MenuItem` take it too. |
@@ -61,6 +63,8 @@ parts work.
 
 ### Libero handles
 
+- Without `to` it is a real `<button>`: a screen reader announces a button,
+  and Enter and Space run `onclick`.
 - A `target: "_blank"` link reads a hidden "(opens in a new tab)".
   `new_tab_icon: true` also draws a small external icon, for sighted users.
   `new_tab_hint: false` drops both, for a link whose text already says it.
@@ -70,6 +74,8 @@ parts work.
 
 ### You must
 
+- Leave `to` unset for an action that does not go anywhere, so it is announced
+  as a button, not a link.
 - Make the link text say where the link goes: it is the accessible name.
 - Set `underline: "always"` on a link inside a paragraph: the default `hover`
   draws it only on hover and `never` not at all, so at rest the link stands out

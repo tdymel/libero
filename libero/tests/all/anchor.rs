@@ -383,3 +383,26 @@ fn a_relative_link_without_a_router_gets_no_rel() {
     assert!(!nth_attributes(&html, "a", 0).contains_key("rel"), "{html}");
     assert_eq!(nth_attributes(&html, "a", 1)["rel"], "noopener noreferrer");
 }
+
+/// Todo 5363: without `to`, a `<button type="button">` with the anchor's states, and no `href`.
+#[test]
+fn an_anchor_without_to_renders_a_button() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider {
+                Anchor { onclick: move |_| {}, underline: "always", "Show details" }
+            }
+        }
+    }
+
+    let html = render(app);
+    let attributes = attributes_of(&html, "button");
+
+    assert_eq!(attributes["type"], "button");
+    assert!(
+        attributes["data-state"].contains("underline-always"),
+        "{html}"
+    );
+    assert!(!attributes.contains_key("href"));
+    assert!(!html.contains("<a"), "{html}");
+}

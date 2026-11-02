@@ -10,6 +10,12 @@ pub(crate) const REDUCED_MOTION: &str = "(prefers-reduced-motion: reduce)";
 /// The one forced-colours query for [`Sx::media`], same reason.
 pub(crate) const FORCED_COLORS: &str = "(forced-colors: active)";
 
+/// The attribute a document root carries to pin one theme of the pair.
+pub(crate) const THEME_ATTRIBUTE: &str = "data-lsx-theme";
+
+/// The dark half's media query, which the web backend also reads the platform scheme from.
+pub(crate) const DARK_SCHEME_QUERY: &str = "(prefers-color-scheme: dark)";
+
 /// The one hovering-pointer query, used through [`Sx::hover_tint`].
 /// Blitz reports no pointer at all, hence `(pointer: none)`: a phone's finger is `coarse`.
 const CAN_HOVER: &str = "(hover: hover), (pointer: none)";
@@ -174,6 +180,36 @@ impl Sx {
 
     /// The guard sits in `:where`, so the arm keeps the specificity of a bare `&`.
     const RTL_FALLBACK: &str = ":where([dir=rtl]) &:where(:not([dir=ltr], [dir=rtl] [dir=ltr] *))";
+
+    /// Styles while the dark theme of the pair shows: pinned by the app's switch, or
+    /// picked by the OS while nothing is pinned, as the theme sheet does.
+    /// A single-`Theme` app follows the OS here; a named theme matches neither this nor
+    /// [`light`](Self::light).
+    ///
+    /// ```
+    /// # use libero::sx::sx;
+    /// let card = sx().background("#fff").dark(sx().background("#1a1b1e"));
+    /// ```
+    pub fn dark(self, nested: Sx) -> Self {
+        self.scheme("dark", DARK_SCHEME_QUERY, nested)
+    }
+
+    /// Styles while the light theme of the pair shows; [`dark`](Self::dark)'s mirror.
+    pub fn light(self, nested: Sx) -> Self {
+        self.scheme("light", "(prefers-color-scheme: light)", nested)
+    }
+
+    /// The `:where` guards keep a bare `&`'s specificity, as [`rtl`](Self::rtl) does.
+    fn scheme(self, name: &str, query: &str, nested: Sx) -> Self {
+        self.selector(
+            format!(":where(:root[{THEME_ATTRIBUTE}=\"{name}\"]) &"),
+            nested.clone(),
+        )
+        .selector(
+            format!(":where(:root:not([{THEME_ATTRIBUTE}])) &"),
+            Sx::new().media(query, nested),
+        )
+    }
 
     /// Styles from the viewport width of `breakpoint` up (`min-width`, mobile first).
     pub fn breakpoint(self, breakpoint: Size, nested: Sx) -> Self {

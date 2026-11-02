@@ -96,7 +96,7 @@ each component you use, see [features.md](features.md).
 
 ## Navigation
 
-- [Anchor](anchor.md): A real link styled and sized like `Text`, router-aware through `to`.
+- [Anchor](anchor.md): A real link styled and sized like `Text`, router-aware through `to`; without `to`, a button with the link look.
 - [NavLink](nav_link.md): A navigation list item for a sidebar or nav bar, a link that marks the current page with `aria-current`.
 - [NavigationBar](navigation_bar.md): A phone's bar of three to five top-level destinations, each an icon over a label, the current one marked with `aria-current`.
 - [Burger](burger.md): Three bars that morph into an X, an `ActionIcon` with the ARIA a nav toggle needs.

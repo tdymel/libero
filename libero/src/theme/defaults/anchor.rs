@@ -51,7 +51,7 @@ impl AnchorDefaults {
     pub(crate) fn underline_at_rest() -> Sx {
         sx().selector(
             format!(
-                "& a[data-state~=\"{}\"]",
+                "& :is(a, button)[data-state~=\"{}\"]",
                 AnchorUnderline::Hover.state_name()
             ),
             sx().text_decoration("underline"),

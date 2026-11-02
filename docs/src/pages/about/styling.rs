@@ -108,6 +108,10 @@ sx().when(
         .media("(prefers-reduced-motion: reduce)", sx().transition("none")),
 )"#;
 
+const DARK: &str = r##"sx()
+    .background("#fff")
+    .dark(sx().background("#1a1b1e"))"##;
+
 const CONTAINER: &str = r#"// The ancestor whose width the answer depends on:
 sx().container("demo-card")
 
@@ -437,6 +441,16 @@ pub fn StylingPage() -> Element {
                 }
                 CodeBlock { source: MEDIA, label: "Media queries", language: "rust" }
                 CodeBlock { source: MEDIA_NESTING, label: "Media queries in nested selectors", language: "rust" }
+                Text {
+                    Code { source: "dark" }
+                    " and "
+                    Code { source: "light" }
+                    " style one half of the theme pair: the one the app pins with "
+                    Code { source: "use_color_scheme" }
+                    ", or the OS's while nothing is pinned. Prefer a theme color, which "
+                    "follows the pair by itself. An app with a single theme follows the OS here."
+                }
+                CodeBlock { source: DARK, label: "Dark mode", language: "rust" }
                 Text {
                     Code { source: "supports" }
                     " nests styles under "
