@@ -268,13 +268,14 @@ fn server_command(
         // rebuilt the bundle mid-run (todo 2027).
         "--watch",
         "false",
-        "--hot-reload",
-        "false",
         // So a mid-run rebuild names its trigger in `dx.log` (todo 3374).
         "--verbose",
     ]);
     // `E2E_RELEASE=1`: optimised fixtures, for the frame-time report (1086).
-    if std::env::var_os("E2E_RELEASE").is_some() {
+    if std::env::var_os("E2E_RELEASE").is_none() {
+        // dx refuses it beside `--release`, where hot reload is off anyway (5350).
+        server.args(["--hot-reload", "false"]);
+    } else {
         server.arg("--release");
         // dx serves the last release bundle while it rebuilds, and readiness took that
         // one; the first navigation then timed out (todo 1956).
