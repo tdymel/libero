@@ -339,6 +339,11 @@ fn doc_tabs_sx() -> Sx {
         "(max-width: 22.5rem)",
         sx().selector("& > [role=tablist] > [role=tab]", sx().font_size("0.875rem")),
     )
+    // DejaVu, a wide fallback, needs this at 320px: tighter padding would read as one run of words.
+    .media(
+        "(max-width: 20.5rem)",
+        sx().selector("& > [role=tablist] > [role=tab]", sx().font_size("0.8125rem")),
+    )
 }
 
 fn pager_link_sx(end: bool) -> Sx {
