@@ -219,7 +219,7 @@ pub fn LocalizationPage() -> Element {
                     "Direction comes from the document. Components follow a "
                     Code { source: "dir=\"rtl\"" }
                     " around them, and their directional props say start and end, not left and right. "
-                    "A box that opens in the portal, such as a Menu or a Select's list, sits outside that wrapper and takes the document's direction: for those, set "
+                    "A box that opens in the portal, such as a Menu or a Select's list, sits outside that wrapper and takes the document's direction, while its placement still follows the anchor: for those, set "
                     Code { source: "direction" }
                     " on "
                     Code { source: "LiberoProvider" }
