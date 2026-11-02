@@ -358,10 +358,22 @@ fn a_touch_tap_focuses_the_picker_without_a_ring() {
             !picker_ring(page).await,
             "a tap left the picker's focus ring"
         );
-        // The row after the open's own, Germany, in view.
-        pointer::tap(page, "[role=option][aria-selected=true] + [role=option]")
-            .await
-            .unwrap();
+        // The row after the open's own, Germany, in view. The list exists before it is placed
+        // and scrolled to its row, so a tap at once can land beside it.
+        const NEXT: &str = "[role=option][aria-selected=true] + [role=option]";
+        wait::for_js_true(
+            page,
+            &format!(
+                "(() => {{ const row = document.querySelector({NEXT:?}); \
+                 if (!row || getComputedStyle(row).visibility !== 'visible') return false; \
+                 const r = row.getBoundingClientRect(); \
+                 return row.contains(document.elementFromPoint(r.x + r.width / 2, r.y + r.height / 2)); }})()"
+            ),
+            "the next row to be placed under the finger",
+        )
+        .await
+        .unwrap();
+        pointer::tap(page, NEXT).await.unwrap();
         wait::for_js_true(
             page,
             &format!(

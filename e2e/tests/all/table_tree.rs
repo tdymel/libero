@@ -115,7 +115,17 @@ fn row(row: usize) -> String {
 }
 
 async fn on_row<D: Driver>(d: &mut D, at: usize, after: &str) -> Result<()> {
-    eventually_focused(d, &row(at), after).await
+    let focused = eventually_focused(d, &row(at), after).await;
+    // 3445: a stop still on the cell is a lost key; one on the row with focus elsewhere a lost focus.
+    if let Err(error) = focused {
+        let stop = d
+            .evaluate(
+                "document.querySelector('[data-cell-stop]')?.outerHTML.slice(0, 120) ?? 'none'",
+            )
+            .await?;
+        return Err(error.context(format!("the stop is on {stop}")));
+    }
+    Ok(())
 }
 
 /// Right opens then steps in, Left closes then steps out, Home and End reach the ends.

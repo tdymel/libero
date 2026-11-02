@@ -444,6 +444,8 @@ fn a_named_worker_shows_it_or_the_show_fails() {
 #[test]
 fn a_named_worker_answers_only_for_its_own_subscription() {
     block_on(async {
+        // Workers are the origin's: the other worker tests register theirs and unregister all.
+        let _workers = PERMISSIONS.lock().await;
         let fixture = Fixture::open("/use-system-notification", Viewport::Desktop)
             .await
             .unwrap();

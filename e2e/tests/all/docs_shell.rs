@@ -302,6 +302,16 @@ fn a_picked_palette_survives_a_reload() {
             .await
             .unwrap();
         let page = &fixture.page;
+        // Every page shares one profile, and a pick also stores the scheme (5341): this tab's
+        // session stands in for `localStorage`, which a reload keeps.
+        page.evaluate_on_new_document_bounded(
+            "Object.defineProperty(window, 'localStorage', \
+             { configurable: true, value: window.sessionStorage })"
+                .to_string(),
+        )
+        .await
+        .unwrap();
+        page.reload_bounded().await.unwrap();
         wait::for_visible(page, "#pick").await.unwrap();
         let start = palette(page).await;
         let clean: bool = page
