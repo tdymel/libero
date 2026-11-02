@@ -3,10 +3,10 @@ use dioxus::prelude::*;
 
 use crate::{
     components::{
-        buttons::{ACTION_ICON_COMPACT, ACTION_ICON_GROWS, ActionIcon, is_compact},
+        buttons::{ACTION_ICON_GROWS, ActionIcon, is_compact},
         common::{
-            HtmlTag, Input, Part, States, Variables, base_props, parts_enum, parts_under_sx,
-            use_name_warning, variables,
+            ACTION_ICON_COMPACT, HtmlTag, Input, Part, States, Variables, base_props, parts_enum,
+            parts_under_sx, use_name_warning, variables,
         },
         layout::use_box,
     },

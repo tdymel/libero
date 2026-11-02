@@ -10,10 +10,11 @@ use spinner::{Look, NumberSpinner, Spin};
 use crate::{
     components::{
         accessibility::use_announcer,
-        buttons::{ACTION_ICON_COMPACT, ActionIcon},
+        buttons::ActionIcon,
         common::{
-            COARSE_POINTER, Glyph, HtmlTag, Input, NumberValue, ScaleOrCss, TOOLBAR_ITEM,
-            ToolbarItem, aria_label_of, navigation_chord, use_no_toolbar, use_toolbar_item,
+            ACTION_ICON_COMPACT, COARSE_POINTER, Glyph, HtmlTag, Input, NumberValue, ScaleOrCss,
+            TOOLBAR_ITEM, ToolbarItem, aria_label_of, navigation_chord, use_no_toolbar,
+            use_toolbar_item,
         },
         form::{
             FieldError, FieldStatus, FormScope, LiveControl, LiveSlot, Parse, Typed,

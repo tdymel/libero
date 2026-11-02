@@ -22,9 +22,7 @@ mod tldr;
 mod toolbar;
 
 #[cfg(feature = "action-icon")]
-pub(crate) use action_icon::{
-    ACTION_ICON_COMPACT, ACTION_ICON_GROWS, TooltipOpenDelay, is_compact,
-};
+pub(crate) use action_icon::{ACTION_ICON_GROWS, TooltipOpenDelay, is_compact};
 #[cfg(feature = "action-icon")]
 pub use action_icon::{ActionIcon, ActionIconProps};
 #[cfg(feature = "button")]

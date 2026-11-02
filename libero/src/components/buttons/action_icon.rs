@@ -3,13 +3,13 @@ use pictogram_icons_lucide as lucide;
 
 use crate::{
     components::{
-        common::{ButtonGroupContext, Glyph, use_button_group},
         common::{
-            COARSE_POINTER, COARSE_TARGET, VariantVars, base_color, borderless_on_state_sx,
-            coarse_hit_area_sx, contrast_color, disabled_look_sx, fill_color, focus_ring_sx,
-            interactive_variant_sx, literal_contrast, min_hit_area_sx, names_itself, text_color,
-            use_name_warning, variant_colors, variant_selected_sx,
+            ACTION_ICON_COMPACT, COARSE_POINTER, COARSE_TARGET, VariantVars, base_color,
+            borderless_on_state_sx, coarse_hit_area_sx, contrast_color, disabled_look_sx,
+            fill_color, focus_ring_sx, interactive_variant_sx, literal_contrast, min_hit_area_sx,
+            names_itself, text_color, use_name_warning, variant_colors, variant_selected_sx,
         },
+        common::{ButtonGroupContext, Glyph, use_button_group},
         common::{HtmlTag, Input, States, Variables, Variant, base_props, variables},
         common::{TOOLBAR_ITEM, ToolbarItem, use_toolbar_item},
         data_display::{Pictogram, SvgData},
@@ -42,10 +42,6 @@ const ACTION_ICON_CONTAINER_VAR: CssVar = CssVar::new("--lsx-action-icon-contain
 const ACTION_ICON_ON_CONTAINER_VAR: CssVar = CssVar::new("--lsx-action-icon-on-container");
 const ACTION_ICON_SELECTED_VAR: CssVar = CssVar::new("--lsx-action-icon-selected");
 const ACTION_ICON_ON_STATE_VAR: CssVar = CssVar::new("--lsx-action-icon-on-state");
-
-/// Set on the `xs` and `sm` icons, which grow a 44px touch box: a `Toolbar` or `ButtonGroup` keeps
-/// it off a neighbour, a loose row needs a 10px (`xs`) or 7px (`sm`) gap.
-pub(crate) const ACTION_ICON_COMPACT: &str = "compact";
 
 /// Set on the `md` and larger icons, whose own box grows to 44px under a finger, as `Button`'s does.
 pub(crate) const ACTION_ICON_GROWS: &str = "grows";

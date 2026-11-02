@@ -117,7 +117,7 @@ it is on (Notes).
 | `radio` | Radio | use-accessibility, use-icon, visually-hidden, use-id | off |  |
 | `radio-group` | RadioGroup | radio | off |  |
 | `rating` | Rating | use-icon, visually-hidden, use-id, use-drag | off |  |
-| `rich-text-editor` | RichTextEditor, RichTextView | toolbar, text-field, menu, code, mark, modal, action-icon, button, dialog, shortcut-help, text, flex, use-history | off |  |
+| `rich-text-editor` | RichTextEditor, RichTextView | toolbar, text-field, menu, code, mark, modal, action-icon, button, dialog, icon, shortcut-help, text, flex, use-history | off |  |
 | `segmented-control` | SegmentedControl | button, use-id | off |  |
 | `select` | Select, MultiSelect | combobox, chip, action-icon | on |  |
 | `slider` | Slider, RangeSlider | tooltip, use-icon, visually-hidden, use-id, use-drag | off |  |
@@ -159,7 +159,7 @@ it is on (Notes).
 | `menu` | Menu, use_menu | anchor, kbd, divider, paper, use-popover, use-swipe, use-timers, use-media-query | off |  |
 | `modal` | Modal, use_modal | overlay-backdrop, focus-trap, use-back | on |  |
 | `overlay-backdrop` | Overlay | box | on |  |
-| `loading-overlay` | LoadingOverlay | overlay-backdrop, loader, visually-hidden | off |  |
+| `loading-overlay` | LoadingOverlay | overlay-backdrop, loader, use-id, visually-hidden | off |  |
 | `shortcut-help` | ShortcutHelp | dialog, kbd | on |  |
 | `spotlight` | use_spotlight | combobox, dialog, modal, kbd, loader | off |  |
 | `tooltip` | Tooltip | use-timers, box, use-popover | on |  |

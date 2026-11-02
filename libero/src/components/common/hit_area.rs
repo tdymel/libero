@@ -10,6 +10,10 @@ pub(crate) const COARSE_POINTER: &str = "(pointer: coarse)";
 /// The finger-sized target (WCAG 2.5.5); a row holding a [`coarse_hit_area_sx`] is this tall.
 pub(crate) const COARSE_TARGET: &str = "44px";
 
+/// Set on the `xs` and `sm` action icons, which grow a 44px touch box: a `Toolbar` or `ButtonGroup`
+/// keeps it off a neighbour, a loose row needs a 10px (`xs`) or 7px (`sm`) gap.
+pub(crate) const ACTION_ICON_COMPACT: &str = "compact";
+
 /// Half the shortfall below 44px (WCAG 2.5.5) out on each side; `0` from 44px up.
 pub(crate) const COARSE_INSET: &str = "min(0px, calc((100% - 44px) / 2))";
 

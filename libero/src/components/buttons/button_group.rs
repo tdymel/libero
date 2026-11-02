@@ -4,10 +4,10 @@ use dioxus::prelude::*;
 
 use crate::{
     components::{
-        buttons::action_icon::ACTION_ICON_COMPACT,
         common::{
-            ButtonGroupContext, COARSE_POINTER, COARSE_TARGET, HtmlTag, Input, Orientation, States,
-            Variant, base_props, names_itself, use_name_warning, use_provide_button_group,
+            ACTION_ICON_COMPACT, ButtonGroupContext, COARSE_POINTER, COARSE_TARGET, HtmlTag, Input,
+            Orientation, States, Variant, base_props, names_itself, use_name_warning,
+            use_provide_button_group,
         },
         layout::use_box,
     },

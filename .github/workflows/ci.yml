@@ -46,7 +46,7 @@ jobs:
         with:
           components: clippy
           cache-key: clippy
-      - run: cargo clippy --workspace --all-targets --exclude e2e -- -D warnings
+      - run: cargo clippy --workspace --all-targets --exclude e2e --features libero/test-features -- -D warnings
       - run: cargo clippy -p e2e --all-targets -- -D warnings
 
   # The libero configurations the gate does not build, and e2e with `native`.

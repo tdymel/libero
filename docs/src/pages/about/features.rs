@@ -135,7 +135,7 @@ pub(crate) const FEATURES: &[Feature] = &[
     feature("radio", "form", "Radio", &["use-accessibility", "use-icon", "visually-hidden", "use-id"], false, &[]),
     feature("radio-group", "form", "RadioGroup", &["radio"], false, &["/form/radio-group"]),
     feature("rating", "form", "Rating", &["use-icon", "visually-hidden", "use-id", "use-drag"], false, &["/form/rating"]),
-    feature("rich-text-editor", "form", "RichTextEditor, RichTextView", &["toolbar", "text-field", "menu", "code", "mark", "modal", "action-icon", "button", "dialog", "shortcut-help", "text", "flex", "use-history"], false, &["/form/rich-text-editor"]),
+    feature("rich-text-editor", "form", "RichTextEditor, RichTextView", &["toolbar", "text-field", "menu", "code", "mark", "modal", "action-icon", "button", "dialog", "icon", "shortcut-help", "text", "flex", "use-history"], false, &["/form/rich-text-editor"]),
     feature("segmented-control", "form", "SegmentedControl", &["button", "use-id"], false, &["/form/segmented-control"]),
     feature("select", "form", "Select, MultiSelect", &["combobox", "chip", "action-icon", "button"], true, &["/form/select", "/form/multi-select"]),
     feature("slider", "form", "Slider, RangeSlider", &["tooltip", "use-icon", "visually-hidden", "use-id", "use-drag"], false, &["/form/slider", "/form/range-slider"]),
@@ -178,7 +178,7 @@ pub(crate) const FEATURES: &[Feature] = &[
     feature("modal", "overlay", "Modal, use_modal", &["overlay-backdrop", "focus-trap", "use-back"], true, &["/overlay/modal"]),
     feature("overlay-backdrop", "overlay", "Overlay", &["box"], true, &["/overlay/overlay"]),
     // After `overlay-backdrop`: the page's feature line names the first that lists it.
-    feature("loading-overlay", "overlay", "LoadingOverlay", &["overlay-backdrop", "loader", "visually-hidden"], false, &["/overlay/overlay"]),
+    feature("loading-overlay", "overlay", "LoadingOverlay", &["overlay-backdrop", "loader", "use-id", "visually-hidden"], false, &["/overlay/overlay"]),
     feature("shortcut-help", "overlay", "ShortcutHelp", &["dialog", "kbd", "use-element", "use-hotkeys"], false, &["/overlay/shortcut-help"]),
     feature("spotlight", "overlay", "use_spotlight", &["combobox", "dialog", "modal", "kbd", "loader"], false, &["/overlay/spotlight"]),
     feature("tooltip", "overlay", "Tooltip", &["use-timers", "box", "use-popover"], true, &["/overlay/tooltip"]),
