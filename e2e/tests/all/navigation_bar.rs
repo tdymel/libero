@@ -80,6 +80,45 @@ fn five_items_fit_320px_with_48px_targets() {
     });
 }
 
+/// Todo 5366: `indicator: "color"` drops the pill; the selected icon and label share
+/// the colour, bold, and forced colours still mark it with Highlight.
+#[test]
+fn the_color_indicator_marks_the_item_without_a_pill() {
+    block_on(async {
+        let fixture = Fixture::open("/navigation-bar/color", Viewport::Mobile)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        wait::for_visible(page, "#color-home").await.unwrap();
+        let read = "(() => { \
+                const style = (id, slot) => getComputedStyle(document.querySelector(id + ' > [data-slot=' + slot + ']')); \
+                return { fill: style('#color-home', 'icon').backgroundColor, \
+                    icon: style('#color-home', 'icon').color, \
+                    label: style('#color-home', 'label').color, \
+                    weight: style('#color-home', 'label').fontWeight, \
+                    other: style('#color-search', 'label').color }; \
+            })()";
+
+        let report = js::<serde_json::Value>(page, read).await;
+        assert!(
+            report["fill"].as_str().unwrap().ends_with(", 0)"),
+            "{report}"
+        );
+        assert_eq!(report["icon"], report["label"], "{report}");
+        assert_ne!(report["label"], report["other"], "{report}");
+        assert_eq!(report["weight"], "600", "{report}");
+
+        e2e::browser::force_colours(page).await.unwrap();
+        let forced = js::<serde_json::Value>(page, read).await;
+        assert!(
+            !forced["fill"].as_str().unwrap().ends_with(", 0)"),
+            "{forced}"
+        );
+
+        fixture.close().await.unwrap();
+    });
+}
+
 /// The selected pill is a fill, which forced colours would drop: it takes Highlight.
 #[test]
 fn the_selected_pill_shows_in_forced_colours() {

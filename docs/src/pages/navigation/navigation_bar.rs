@@ -110,7 +110,10 @@ pub fn NavigationBarPage() -> Element {
                     prop("show_labels", "LabelVisibility")
                         .default("always")
                         .doc("`\"always\"`, `\"selected\"` (only the selected item's) or `\"never\"`. A hidden label still names its item."),
-                    prop("color", "ThemeAwareValue").default("primary").doc("Colours the selected item's pill. Only the color family counts: the pill is its lightest shade."),
+                    prop("indicator", "NavigationBarIndicator")
+                        .default("pill")
+                        .doc("How the selected item shows: `\"pill\"`, a light tint behind its icon, or `\"color\"`, its icon and label in `color` without a pill. Keep the pill with `show_labels: \"never\"`: colour alone does not mark the item for everyone, and a debug build warns."),
+                    prop("color", "ThemeAwareValue").default("primary").doc("Colours the selected item. Only the color family counts: under `\"pill\"` the pill is its lightest shade, under `\"color\"` the icon and label take its text tone, at least 4.5:1 on the bar in light and dark themes."),
                     prop("z_index", "ThemeAwareValue").default("the header's").doc("Stacking order of a sticky or fixed bar."),
                     prop("parts", "Parts<NavigationBarPart>").doc("Styles for the inner parts in the Style API tab, under `sx`."),
                     prop("children", "Element").default("required").doc("Three to five `NavigationBarItem`s."),
@@ -140,11 +143,13 @@ pub fn NavigationBarPage() -> Element {
                     "Every item is at least 56px tall and shares the bar's width equally. A long label wraps to two lines, then ends in an ellipsis.",
                     "A rail keeps its items in the same reading and Tab order, top to bottom. At 200% text it stays 88px wide: labels wrap and the rail scrolls rather than covering the page.",
                     "A sticky or fixed bar pads the page's scroll, so a focused element is not hidden under it.",
-                    "In forced colors the selected pill takes the system highlight.",
+                    "In forced colors the selected pill takes the system highlight, under `indicator: \"color\"` too.",
+                    "Under `indicator: \"color\"` the selected item is also bold, and its label and icon reach 4.5:1 on the bar.",
                     "More than five items logs a warning in debug builds.",
                 ])
                 .must([
                     "Name the bar with an `aria-label`, such as \"Main\"; a debug build warns without one.",
+                    "With `indicator: \"color\"`, keep the labels shown: a bar of bare icons then marks the current item by colour alone.",
                     "Put a badge's count in the item's `aria-label`, starting with the visible label: \"Inbox, 3 unread\".",
                     "With `position: \"fixed\"`, pad the page by `var(--lsx-navigation-bar-height)`, or a fixed rail's inline-start by `var(--lsx-navigation-rail-width)`.",
                     "Switch to the rail with the same items in the same order, so the page keeps its landmarks and current item at every width.",
@@ -187,6 +192,8 @@ pub fn NavigationBarPage() -> Element {
                         .labels(["Static", "Sticky"]),
                     Control::toggle("show_labels", ["always", "selected", "never"])
                         .labels(["Always", "Selected", "Never"]),
+                    Control::toggle("indicator", ["pill", "color"])
+                        .labels(["Pill", "Color"]),
                     Control::color("color").default(theme.navigation_bar.color.as_str()),
                     Control::switch("badge").code(|_, _| vec![]),
                     Control::switch("disabled").code(|_, _| vec![]),
@@ -195,6 +202,7 @@ pub fn NavigationBarPage() -> Element {
                     let position = values.str("position");
                     let show_labels = values.str("show_labels");
                     let color = values.str("color");
+                    let indicator = values.str("indicator");
                     let badge = values.str("badge") == "true";
                     let disabled = values.str("disabled") == "true";
                     let variant = values.str("variant");
@@ -237,6 +245,7 @@ pub fn NavigationBarPage() -> Element {
                                 sx: nav,
                                 position: position.as_str(),
                                 show_labels: show_labels.as_str(),
+                                indicator: indicator.as_str(),
                                 color,
                                 for (index, (label, _, _, icon)) in ITEMS.into_iter().enumerate() {
                                     NavigationBarItem {

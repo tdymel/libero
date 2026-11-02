@@ -19,7 +19,25 @@ pub const ROUTES: Routes = &[
     ("/navigation-bar/rail", || rsx! { RailPage { dir: "ltr" } }),
     ("/navigation-bar/rail-rtl", || rsx! { RailPage { dir: "rtl" } }),
     ("/navigation-bar/responsive", || rsx! { ResponsivePage {} }),
+    ("/navigation-bar/color", || rsx! { ColorPage {} }),
 ];
+
+/// `indicator: "color"`: the selected item without a pill (todo 5366).
+#[component]
+fn ColorPage() -> Element {
+    rsx! {
+        div { style: "max-width: 320px;",
+            NavigationBar { id: "color-bar", "aria-label": "Main", indicator: "color",
+                for (index, (id, label, icon)) in ITEMS.into_iter().take(3).enumerate() {
+                    NavigationBarItem { key: "{id}", id: "color-{id}", selected: index == 0,
+                        icon: rsx! { Pictogram { icon } },
+                        "{label}"
+                    }
+                }
+            }
+        }
+    }
+}
 
 /// A fixed bar on a phone, a rail from `sm` up (todo 4127).
 #[component]

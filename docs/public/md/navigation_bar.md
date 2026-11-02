@@ -10,7 +10,8 @@ Description: A phone's bar of three to five top-level destinations, each an icon
 A phone's bar of three to five top-level destinations. It is a `<nav>`
 landmark; each `NavigationBarItem` is an icon over a label and its own Tab
 stop. The selected item gets `aria-current="page"` and a pill in a light tint
-of `color` behind its icon. Left unset, `selected` compares `to` with the
+of `color` behind its icon, or with `indicator: "color"` its icon and label in
+`color` alone. Left unset, `selected` compares `to` with the
 current route.
 
 ## Usage
@@ -64,7 +65,8 @@ fn Demo() -> Element {
 | `variant` | `Responsive<NavigationBarVariant>` | `bar` | `"bar"`, a row along the bottom edge for a phone, or `"rail"`, an 88px column on the inline-start edge for a tablet or a desktop: the right edge in a right-to-left page. A rail spans the viewport's height and sticks to its top, or docks to the viewport with `position: "fixed"`, and publishes its measured width as `--lsx-navigation-rail-width` in place of the bar's height. Set one per breakpoint, as `responsive(NavigationBarVariant::Bar).sm(NavigationBarVariant::Rail)` for a bar on a phone and a rail from the theme's `sm` up: each switch is a CSS media query, so server-rendered HTML and the first paint are right without a script. `position` applies to the shape in effect at each width, and each publishes its own variable there. Keep the same items in the same order at every width. |
 | `position` | `NavigationBarPosition` | `static` | `"static"` stays in the flow. `"sticky"` holds it at the bottom of its scroller, `"fixed"` at the viewport's; both publish the bar's measured height as `--lsx-navigation-bar-height` and keep focus clear of the bar with `scroll-padding-bottom` on `:root`, which a sticky bar at the page's bottom edge needs. A sticky bar in an inner pane sets that root padding too; give the pane its own. Pad the page's end by `var(--lsx-navigation-bar-height)`. `"fixed"` clears a phone's home indicator, and needs `viewport-fit=cover` in the page's viewport meta, or the browser reports no safe area. A native app docks both the same way. |
 | `show_labels` | `LabelVisibility` | `always` | `"always"`, `"selected"` (only the selected item's) or `"never"`. A hidden label still names its item. |
-| `color` | `ThemeAwareValue` | `primary` | Colours the selected item's pill. Only the color family counts: the pill is its lightest shade. |
+| `indicator` | `NavigationBarIndicator` | `pill` | How the selected item shows: `"pill"`, a light tint behind its icon, or `"color"`, its icon and label in `color` without a pill. Keep the pill with `show_labels: "never"`: colour alone does not mark the item for everyone, and a debug build warns. |
+| `color` | `ThemeAwareValue` | `primary` | Colours the selected item. Only the color family counts: under `"pill"` the pill is its lightest shade, under `"color"` the icon and label take its text tone, at least 4.5:1 on the bar in light and dark themes. |
 | `z_index` | `ThemeAwareValue` | the header's | Stacking order of a sticky or fixed bar. |
 | `parts` | `Parts<NavigationBarPart>` | - | Styles for the inner parts in the Style API tab, under `sx`. |
 | `children` | `Element` | required | Three to five `NavigationBarItem`s. |
@@ -112,13 +114,18 @@ parts work.
   covering the page.
 - A sticky or fixed bar pads the page's scroll, so a focused element is not
   hidden under it.
-- In forced colors the selected pill takes the system highlight.
+- In forced colors the selected pill takes the system highlight, under
+  `indicator: "color"` too.
+- Under `indicator: "color"` the selected item is also bold, and its label and
+  icon reach 4.5:1 on the bar.
 - More than five items logs a warning in debug builds.
 
 ### You must
 
 - Name the bar with an `aria-label`, such as "Main"; a debug build warns
   without one.
+- With `indicator: "color"`, keep the labels shown: a bar of bare icons then
+  marks the current item by colour alone.
 - Put a badge's count in the item's `aria-label`, starting with the visible
   label: "Inbox, 3 unread".
 - With `position: "fixed"`, pad the page by `var(--lsx-navigation-bar-height)`,
@@ -161,6 +168,7 @@ lists the "Main" navigation, and the current item reads as the current page.
 | `--lsx-navigation-rail-width` | On `:root` while a rail is mounted, under each width where a rail shows: its measured width, inline-start safe area included. |
 | `--lsx-navigation-bar-pill` | Background of the selected item's pill, the lightest shade of the color family. |
 | `--lsx-navigation-bar-pill-color` | Icon colour on the pill, a darker shade of the color family that reaches 4.5:1 on it. |
+| `--lsx-navigation-bar-selected-color` | Under `indicator: "color"`, the selected label's and icon's colour: the color family's text tone. The pill variable is then `transparent`. |
 
 ## Data attributes
 
@@ -172,6 +180,7 @@ State tokens on the bar's `data-state`.
 | `rail` | `variant: "rail"`. A `variant` per breakpoint sets none of these position and shape tokens. |
 | `rail-fixed` | A rail with `position: "fixed"`. |
 | `labels-selected`, `labels-never` | `show_labels` is set to it. |
+| `indicator-color` | `indicator: "color"`. |
 
 State tokens on an item's `data-state`.
 

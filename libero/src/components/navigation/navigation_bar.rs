@@ -9,9 +9,9 @@ use crate::{
         accessibility::visually_hidden_absolute_sx,
         common::{
             HtmlTag, Input, Part, States, Variables, attr, base_props, disabled_look_sx,
-            forced_on_sx, input_from_str, inset_focus_ring_sx, is_empty_element, names_itself,
-            on_tint_color, parts_enum, safe_area_padding, sx_source, use_name_warning,
-            use_style_attributes, variables,
+            forced_on_sx, input_from_str, inset_focus_ring_sx, is_empty_element, label_color,
+            names_itself, on_tint_color, parts_enum, safe_area_padding, sx_source,
+            use_name_warning, use_style_attributes, variables,
         },
         form::use_fieldset_disabled,
         layout::{Float, box_style, render_anchor, use_box},
@@ -25,7 +25,7 @@ use crate::{
         Color, ColorShade, ColorValue, CssVar, PAPER_BACKGROUND, Responsive, Size, TEXT_FONT_SIZE,
         Z_INDEX_HEADER,
     },
-    utils::warn,
+    utils::{use_warn_once, warn},
 };
 
 str_enum! {
@@ -104,6 +104,20 @@ str_enum! {
 
 input_from_str!(LabelVisibility);
 
+str_enum! {
+    /// How a [`NavigationBar`] marks its selected item.
+    #[state_prefix = "indicator"]
+    pub enum NavigationBarIndicator {
+        /// A tinted pill behind the icon (M3's active indicator).
+        #[default]
+        Pill = "pill",
+        /// The icon and label take the colour, without a pill.
+        Color = "color",
+    }
+}
+
+input_from_str!(NavigationBarIndicator);
+
 /// The bar's height on `:root` while a sticky or fixed one is mounted.
 const NAVIGATION_BAR_HEIGHT_VAR: CssVar = CssVar::new("--lsx-navigation-bar-height");
 /// The rail's width on `:root` while one is mounted.
@@ -113,6 +127,8 @@ const RAIL_WIDTH: &str = "88px";
 
 const PILL_BACKGROUND_VAR: CssVar = CssVar::new("--lsx-navigation-bar-pill");
 const PILL_COLOR_VAR: CssVar = CssVar::new("--lsx-navigation-bar-pill-color");
+/// The selected label's colour under `indicator: "color"`.
+const SELECTED_COLOR_VAR: CssVar = CssVar::new("--lsx-navigation-bar-selected-color");
 
 /// An item's least height, past the 48px touch target.
 const ITEM_HEIGHT: &str = "56px";
@@ -157,6 +173,13 @@ static NAVIGATION_BAR_SX: StaticSx = StaticSx::new(|| {
             sx().selector(
                 "& [data-slot='item']:not([data-state~=\"selected\"]) > [data-slot='label']",
                 visually_hidden_absolute_sx(),
+            ),
+        )
+        .when(
+            NavigationBarIndicator::Color.state_name(),
+            sx().selector(
+                "& [data-slot='item'][data-state~=\"selected\"]",
+                sx().color(SELECTED_COLOR_VAR.value()),
             ),
         )
 });
@@ -345,17 +368,30 @@ static NAVIGATION_BAR_ITEM_SX: StaticSx = StaticSx::new(|| {
         .when("disabled", disabled_look_sx("not-allowed"))
 });
 
-/// The pill's tint and the icon colour that reads on it, as `NavLink`'s.
-fn pill_variables(color: Option<&ThemeAwareValue>, default_color: Color) -> Variables {
+/// The pill's tint and the icon colour that reads on it, as `NavLink`'s; under
+/// `Color`, no pill and the family's text role, 4.5:1 on the bar.
+fn pill_variables(
+    color: Option<&ThemeAwareValue>,
+    default_color: Color,
+    indicator: NavigationBarIndicator,
+) -> Variables {
     let base = nav_link_color(color).unwrap_or(default_color);
-    let background = ThemeAwareValue::ColorValue(ColorValue::Shade(base, ColorShade::S1));
-    let on_tint = on_tint_color(&ThemeAwareValue::ColorValue(ColorValue::Shade(
-        base,
-        ColorShade::S6,
-    )));
-    variables()
-        .with(PILL_BACKGROUND_VAR, background.resolve(None))
-        .with(PILL_COLOR_VAR, on_tint)
+    let shade = ThemeAwareValue::ColorValue(ColorValue::Shade(base, ColorShade::S6));
+    match indicator {
+        NavigationBarIndicator::Pill => {
+            let background = ThemeAwareValue::ColorValue(ColorValue::Shade(base, ColorShade::S1));
+            variables()
+                .with(PILL_BACKGROUND_VAR, background.resolve(None))
+                .with(PILL_COLOR_VAR, on_tint_color(&shade))
+        }
+        NavigationBarIndicator::Color => {
+            let text = label_color(&shade);
+            variables()
+                .with(PILL_BACKGROUND_VAR, Some("transparent".to_string()))
+                .with(PILL_COLOR_VAR, text.clone())
+                .with(SELECTED_COLOR_VAR, text)
+        }
+    }
 }
 
 /// The bar's height and the scroll padding that keeps focus clear of it (2.4.11).
@@ -439,7 +475,13 @@ base_props! {
         /// `always` (default), `selected` or `never`.
         #[props(default, into)]
         show_labels: Input<LabelVisibility>,
-        /// The selected item's pill. Only the color family counts: the pill is its lightest shade.
+        /// `pill` (default), a tint behind the selected icon, or `color`, the icon and label
+        /// in `color` alone. With `show_labels: "never"`, `color` marks the item by hue alone
+        /// (WCAG 1.4.1): keep the pill there.
+        #[props(default, into)]
+        indicator: Input<NavigationBarIndicator>,
+        /// The selected item's colour; only the family counts. Under `pill` the pill is its
+        /// lightest shade; under `color` the icon and label take its text tone, 4.5:1 on the bar.
         #[props(default, into)]
         color: Input<ThemeAwareValue>,
         #[props(default, into)]
@@ -474,6 +516,15 @@ pub fn NavigationBar(props: NavigationBarProps) -> Element {
     let theme = use_theme();
     let position = props.position.copied_or_default();
     let labels = props.show_labels.copied_or_default();
+    let indicator = props.indicator.copied_or_default();
+    let warned = use_warn_once();
+    if indicator == NavigationBarIndicator::Color && labels == LabelVisibility::Never {
+        warned.once("color-only", || {
+            "NavigationBar: `indicator: \"color\"` with `show_labels: \"never\"` marks the selected \
+             item by colour alone (WCAG 1.4.1); keep the pill or show its label."
+                .to_string()
+        });
+    }
 
     let mut attributes = props.attributes;
     let named = names_itself(&attributes);
@@ -551,7 +602,7 @@ pub fn NavigationBar(props: NavigationBarProps) -> Element {
     };
 
     let variables: Input<Variables> =
-        pill_variables(props.color.as_ref(), theme.navigation_bar.color)
+        pill_variables(props.color.as_ref(), theme.navigation_bar.color, indicator)
             .with(Z_INDEX_HEADER.override_var(), props.z_index.resolve(None))
             .into();
     let states: Input<States> = props
@@ -565,6 +616,10 @@ pub fn NavigationBar(props: NavigationBarProps) -> Element {
         )
         .with("labels-never", labels == LabelVisibility::Never)
         .with("labels-selected", labels == LabelVisibility::Selected)
+        .with(
+            NavigationBarIndicator::Color.state_name(),
+            indicator == NavigationBarIndicator::Color,
+        )
         .into();
 
     use_box()
@@ -884,5 +939,93 @@ mod tests {
         let warnings = crate::utils::take_warnings();
         assert_eq!(warnings.len(), 1, "{warnings:?}");
         assert!(warnings[0].contains("more than 5"));
+    }
+
+    /// Todo 5366: no pill, and the label and icon take the family's text tone.
+    #[test]
+    fn the_color_indicator_drops_the_pill_for_the_text_tone() {
+        let color = ThemeAwareValue::ColorValue(ColorValue::Shade(Color::Info, ColorShade::S9));
+        let variables = pill_variables(Some(&color), Color::Primary, NavigationBarIndicator::Color);
+        let text = ColorValue::Text(Color::Info, ColorShade::S6).value();
+        assert_eq!(
+            variables.to_string(),
+            format!(
+                "{}:transparent;{}:{text};{}:{text};",
+                PILL_BACKGROUND_VAR.name(),
+                PILL_COLOR_VAR.name(),
+                SELECTED_COLOR_VAR.name()
+            )
+        );
+        let css = Stylesheet::from(&NAVIGATION_BAR_SX);
+        assert!(
+            css.as_str()
+                .contains("color:var(--lsx-navigation-bar-selected-color)"),
+            "{}",
+            css.as_str()
+        );
+    }
+
+    /// Todo 5366: the label reads at 4.5:1 on the bar (so the icon at 3:1), light and dark.
+    #[test]
+    fn the_color_indicator_reads_on_the_bar_in_both_schemes() {
+        use crate::theme::{HexColor, Theme};
+        for theme in [Theme::DEFAULT, Theme::DARK] {
+            let css = Stylesheet::from(&theme).as_str().to_string();
+            let paper = HexColor::parse(theme.paper.background).expect("a hex paper");
+            for color in [
+                Color::Primary,
+                Color::Secondary,
+                Color::Error,
+                Color::Warning,
+                Color::Info,
+                Color::Success,
+                Color::Neutral,
+                Color::Muted,
+            ] {
+                let value = ColorValue::Text(color, ColorShade::S6).value();
+                let name = value
+                    .trim_start_matches("var(")
+                    .split([',', ')'])
+                    .next()
+                    .expect("a var");
+                let hex = css
+                    .split_once(":root{")
+                    .and_then(|(_, rest)| rest.split_once('}'))
+                    .and_then(|(root, _)| {
+                        root.split(';')
+                            .find_map(|d| d.strip_prefix(&format!("{name}:")))
+                    })
+                    .unwrap_or_else(|| panic!("{name} is declared"));
+                let ratio = HexColor::parse(hex).expect("a hex").contrast_ratio(paper);
+                assert!(
+                    ratio >= crate::tokens::TEXT_CONTRAST,
+                    "{name} {hex} on {paper}: {ratio:.2}"
+                );
+            }
+        }
+    }
+
+    /// Todo 5366: bare icons marked by colour alone fail WCAG 1.4.1.
+    #[cfg(debug_assertions)]
+    #[test]
+    fn the_color_indicator_without_labels_warns() {
+        fn app() -> Element {
+            rsx! {
+                crate::LiberoProvider {
+                    NavigationBar { "aria-label": "Main", indicator: "color", show_labels: "never",
+                        NavigationBarItem { selected: true, icon: rsx! { "a" }, "A" }
+                    }
+                }
+            }
+        }
+        let warnings = crate::utils::warnings_of(app);
+        assert_eq!(
+            warnings
+                .iter()
+                .filter(|w| w.contains("colour alone"))
+                .count(),
+            1,
+            "{warnings:?}"
+        );
     }
 }

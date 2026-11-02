@@ -29,8 +29,9 @@ pub use menubar::{Menubar, MenubarMenu, MenubarPart, MenubarProps};
 pub use nav_link::{NavLink, NavLinkPart, NavLinkProps};
 #[cfg(feature = "navigation-bar")]
 pub use navigation_bar::{
-    LabelVisibility, NavigationBar, NavigationBarItem, NavigationBarItemProps, NavigationBarPart,
-    NavigationBarPosition, NavigationBarProps, NavigationBarVariant,
+    LabelVisibility, NavigationBar, NavigationBarIndicator, NavigationBarItem,
+    NavigationBarItemProps, NavigationBarPart, NavigationBarPosition, NavigationBarProps,
+    NavigationBarVariant,
 };
 #[cfg(feature = "pagination")]
 pub use pagination::{

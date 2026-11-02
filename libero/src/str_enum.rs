@@ -143,8 +143,8 @@ mod tests {
     use crate::components::Truncate;
     use crate::components::{
         AnchorUnderline, DrawerAnchor, FlexDirection, FlexWrap, HeaderPosition, ImageFit,
-        LabelPosition, LabelVisibility, NavigationBarPosition, Orientation, PinKind, SidebarSide,
-        Variant,
+        LabelPosition, LabelVisibility, NavigationBarIndicator, NavigationBarPosition, Orientation,
+        PinKind, SidebarSide, Variant,
     };
     use crate::theme::{
         BarLayout, ChoiceVariant, Curve, LegendPosition, LoaderVariant, LoadingPosition, PieLabels,
@@ -156,6 +156,7 @@ mod tests {
         ($check:ident) => {
             $check!(AnchorUnderline);
             $check!(NavigationBarPosition);
+            $check!(NavigationBarIndicator);
             $check!(BarLayout);
             $check!(Curve);
             $check!(LegendPosition);
