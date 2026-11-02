@@ -112,6 +112,18 @@ fn Page(route: Route) -> Element {
     }
 }
 
+/// A route's page as HTML, for a test of what the site renders.
+pub(crate) fn route_html(route: &Route) -> String {
+    let mut dom = VirtualDom::new_with_props(
+        Page,
+        PageProps {
+            route: route.clone(),
+        },
+    );
+    dom.rebuild_in_place();
+    dioxus_ssr::render(&dom)
+}
+
 /// One static route, rendered once.
 struct Rendered {
     route: Route,

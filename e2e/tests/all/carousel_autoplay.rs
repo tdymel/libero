@@ -487,6 +487,31 @@ fn a_cancelled_touch_on_pause_leaves_the_next_entry_an_entry() {
     });
 }
 
+/// Todo 5312: a real touch moved off the toggle with nothing to pan: Chromium still ends it in
+/// `pointercancel` (all four ways on a page of range 0), so the next focus entry stops the rotation.
+#[test]
+fn a_touch_moved_off_pause_leaves_the_next_entry_an_entry() {
+    block_on(async {
+        let fixture = Fixture::open("/carousel/autoplay", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        hold_rotation(page).await;
+        instant_scroll(page).await;
+        let from = pointer::centre_of(page, PAUSE).await.unwrap();
+        let to = pointer::Point {
+            x: from.x + 120.0,
+            y: from.y,
+        };
+        pointer::swipe(page, from, to, 6).await.unwrap();
+        clock::settle(page).await.unwrap();
+        reach(page, PAUSE).await.unwrap();
+        assert_pressed(page, "true", "focus entering after a moved touch").await;
+        fixture.console.assert_clean("a moved touch").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
 /// A finger tap on the toggle, past its `click` and that click's render: a focus entry the
 /// click undoes shows `true` for a moment.
 async fn tap_and_settle(page: &Page) {

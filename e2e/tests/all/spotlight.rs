@@ -24,6 +24,11 @@ const K: Key = Key {
     text: None,
 };
 
+#[test]
+fn the_panel_keeps_an_edge_in_forced_colours() {
+    block_on(crate::modal::assert_panel_edge("/spotlight", TRIGGER));
+}
+
 async fn ctrl_k_opens<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
     d.focus(TRIGGER).await?;
     d.press_ctrl(K).await?;

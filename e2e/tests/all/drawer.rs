@@ -15,6 +15,11 @@ pub const TRIGGER: &str = "#open-drawer";
 const DIALOG: &str = "[role=dialog]";
 
 #[test]
+fn the_panel_keeps_an_edge_in_forced_colours() {
+    block_on(modal::assert_panel_edge("/drawer", TRIGGER));
+}
+
+#[test]
 fn it_meets_the_baseline() {
     Suite::new("drawer", "/drawer")
         .focusable(TRIGGER)

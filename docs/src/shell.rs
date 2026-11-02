@@ -8,7 +8,10 @@ use libero::{
         SpotlightOptions, ThemeSwitcher, spotlight_filter, use_scroll_area, use_spotlight,
         visually_hidden_sx,
     },
-    hooks::{ElementHandle, edge_swipe_sx, use_back, use_element, use_media_query},
+    hooks::{
+        ElementHandle, edge_swipe_sx, use_back, use_element, use_local_storage, use_media_query,
+        use_theme_set,
+    },
     platform::{ElementApi, KeySubscription, keyboard},
     sx::{Sx, sx},
     theme::{
@@ -23,6 +26,36 @@ use crate::{
     nav::{self, DocsNav, use_nav_drag},
     site::{LOGO, REPO},
 };
+
+const PALETTE_KEY: &str = "docs-palette";
+
+/// The palette kept from the reader's last pick, for `LiberoProvider`: the library keeps the
+/// scheme and direction, the app its palette (5304, 5308). An unknown name gets the default.
+pub(crate) fn use_kept_palette() -> ThemeSet {
+    let kept = use_local_storage(PALETTE_KEY, String::new);
+    use_hook(|| {
+        let name = kept.value();
+        let name = name.peek();
+        ThemeSet::CATALOGUE
+            .iter()
+            .find(|set| set.name() == name.as_str())
+            .map_or_else(ThemeSet::default, |set| (*set).clone())
+    })
+}
+
+/// Stores a palette the reader picks; a load that picked nothing writes nothing.
+fn use_keep_palette() {
+    let themes = use_theme_set();
+    let mut kept = use_local_storage(PALETTE_KEY, String::new);
+    let mut last = use_hook(|| CopyValue::new(themes.name()));
+    use_effect(move || {
+        let name = themes.name();
+        if *last.peek() != name {
+            last.set(name);
+            kept.set(name.to_string());
+        }
+    });
+}
 
 /// A `ButtonGroup` item's start as when it is the first: round corners, no seam overlap.
 fn first_item_sx() -> Sx {
@@ -108,10 +141,12 @@ fn use_drawer_escape(mut open: Signal<bool>, burger: ElementHandle, search: Spot
 #[component]
 pub(crate) fn AppShell() -> Element {
     let mut open = use_signal(|| false);
+    use_keep_palette();
     let burger = use_element();
     let content = use_element();
     // The skip link's target.
     let main = use_element();
+    let skip = use_skip_to_main(open, main);
     // The home page is full width: the nav is a drawer at every width there. A memo, so a
     // navigation re-renders the shell only on the way to or from Home (todo 2148).
     let router = router();
@@ -168,7 +203,7 @@ pub(crate) fn AppShell() -> Element {
             // An engine without `dvh` drops the max and keeps the `100vh` height.
             sx: sx().gap("0").height("100vh").max_height("100dvh"),
             RouteEffects { open, area, content, section }
-            {skip_link(main)}
+            {skip_link(skip)}
             {shell_header(open, burger, home, search, modifier)}
             // The row never scrolls: the nav scrolls itself, and `ScrollArea` (not
             // `Container`) fills the rest and scrolls the page.
@@ -190,17 +225,7 @@ pub(crate) fn AppShell() -> Element {
                         measure: nav_box,
                     }
                 }
-                ScrollArea {
-                    handle: area,
-                    // The overflowing page is a region tab stop: it needs a name.
-                    aria_label: "Page",
-                    sx: sx()
-                        .flex("1")
-                        .min_height("0")
-                        // Default `min-width: auto` let the longest code line push the row
-                        // wider instead of that block scrolling.
-                        .min_width("0")
-                        .and(page_layer_sx()),
+                {page_area(open(), area, rsx! {
                     // Above `main`: the section scroll queries `main` below it.
                     div { display: "contents", onmounted: content.mount(),
                         Container {
@@ -210,9 +235,6 @@ pub(crate) fn AppShell() -> Element {
                             tabindex: "-1",
                             onmounted: main.mount(),
                             size: "xl",
-                            // Inert behind the open drawer. A boolean attribute: omitted when
-                            // closed, since even `"false"` enables it.
-                            inert: open().then_some(true),
                             onpointerdown: move |event| swipe.onpointerdown.call(event),
                             onpointermove: move |event| swipe.onpointermove.call(event),
                             onpointerup: move |event| swipe.onpointerup.call(event),
@@ -227,8 +249,29 @@ pub(crate) fn AppShell() -> Element {
                             Outlet::<Route> {}
                         }
                     }
-                }
+                })}
             }
+        }
+    }
+}
+
+/// The scrolling page. Inert behind the open drawer, the area and not only `main`: its region
+/// stop stayed in the Tab order under the drawer (5310). Omitted closed: even `"false"` enables it.
+fn page_area(open: bool, area: ScrollAreaHandle, page: Element) -> Element {
+    rsx! {
+        ScrollArea {
+            handle: area,
+            inert: open.then_some(true),
+            // The overflowing page is a region tab stop: it needs a name.
+            aria_label: "Page",
+            sx: sx()
+                .flex("1")
+                .min_height("0")
+                // Default `min-width: auto` let the longest code line push the row
+                // wider instead of that block scrolling.
+                .min_width("0")
+                .and(page_layer_sx()),
+            {page}
         }
     }
 }
@@ -242,9 +285,27 @@ fn page_layer_sx() -> Sx {
     )
 }
 
+/// The skip link's press. An open drawer leaves `main` inert, so it closes first and focus
+/// follows once the page is live again, the order of 1693 (5310).
+fn use_skip_to_main(mut open: Signal<bool>, main: ElementHandle) -> Callback<()> {
+    let mut pending = use_signal(|| false);
+    use_effect(move || {
+        if pending() && !open() {
+            pending.set(false);
+            let _ = main.focus();
+        }
+    });
+    use_callback(move |()| {
+        if *open.peek() {
+            open.set(false);
+        }
+        pending.set(true);
+    })
+}
+
 /// WCAG 2.4.1 skip link, off-screen until focused. The click moves focus itself,
 /// so the router never sees the fragment.
-fn skip_link(main: ElementHandle) -> Element {
+fn skip_link(skip: Callback<()>) -> Element {
     rsx! {
         Box {
             sx: sx()
@@ -265,7 +326,7 @@ fn skip_link(main: ElementHandle) -> Element {
                 href: "#docs-main",
                 onclick: move |event: MouseEvent| {
                     event.prevent_default();
-                    let _ = main.focus();
+                    skip.call(());
                 },
                 "Skip to content"
             }

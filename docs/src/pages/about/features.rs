@@ -305,7 +305,8 @@ pub(crate) fn FeatureNote(route: String) -> Element {
     let Some(page) = page_feature(&route) else {
         return rsx! {};
     };
-    let link = rsx! { Anchor { to: Route::FeaturesPage {}, "Features" } };
+    // Anchor sizes itself, not from the Text around it.
+    let link = rsx! { Anchor { to: Route::FeaturesPage {}, size: "sm", "Features" } };
     let turns_on = match page {
         PageFeature::Feature(feature) if !feature.turns_on.is_empty() => {
             format!(". Turns on {}", feature.turns_on.join(", "))
@@ -501,6 +502,15 @@ pub fn FeaturesPage() -> Element {
 mod tests {
     use super::*;
     use std::collections::BTreeMap;
+
+    /// Todo 5308: the note's link has the note's `sm` size: an Anchor sizes itself.
+    #[test]
+    fn the_note_link_takes_the_size_of_its_note() {
+        let html = crate::snippets::route_html(&Route::ButtonPage {});
+        let end = html.find(">Features</a>").expect("no Features link");
+        let tag = &html[html[..end].rfind("<a").unwrap()..end];
+        assert!(tag.contains("size-sm"), "{tag}");
+    }
 
     /// libero's `[features]`: each name and the features it lists.
     fn cargo_features() -> BTreeMap<String, Vec<String>> {

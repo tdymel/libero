@@ -17,6 +17,35 @@ const TRIGGER: &str = "#open-modal";
 const DIALOG: &str = "[role=dialog]";
 const INSIDE: &str = "[role=dialog], [role=dialog] *";
 
+/// Todo 5309: forced colours drop the panel's shadow, so a border is its edge over the page
+/// (emulated forced colours, not a real Windows High Contrast).
+pub async fn assert_panel_edge(route: &str, trigger: &str) {
+    let fixture = Fixture::open(route, Viewport::Desktop).await.unwrap();
+    let page = &fixture.page;
+    e2e::browser::force_colours(page).await.unwrap();
+    pointer::click(page, trigger).await.unwrap();
+    wait::for_visible(page, DIALOG).await.unwrap();
+    let edge: String = page
+        .evaluate_bounded(format!(
+            "(() => {{ const s = getComputedStyle(document.querySelector({DIALOG:?})); \
+             return s.borderTopWidth + ' ' + s.borderTopStyle + ' ' + s.borderTopColor; }})()"
+        ))
+        .await
+        .unwrap()
+        .into_value()
+        .unwrap();
+    assert!(
+        edge.starts_with("1px solid ") && !edge.contains("rgba(0, 0, 0, 0)"),
+        "{route}: {edge}"
+    );
+    fixture.close().await.unwrap();
+}
+
+#[test]
+fn the_panel_keeps_an_edge_in_forced_colours() {
+    block_on(assert_panel_edge("/modal", TRIGGER));
+}
+
 /// Clicks `trigger` until a dialog shows.
 pub async fn open<D: Driver>(d: &mut D, trigger: &str) -> Result<()> {
     d.click(trigger).await?;

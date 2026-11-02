@@ -1,15 +1,17 @@
 //! The docs shell's heading focus and scroll. The hooks are a copy of
 //! `docs/src/heading_focus.rs`: e2e never includes docs source (todo 951);
-//! `e2e/src/docs_copy.rs` keeps the copied functions equal (1802). `page_layer_sx`
-//! copies `docs/src/shell.rs`, `doc_tabs_sx` `docs/src/components/doc_page.rs`.
+//! `e2e/src/docs_copy.rs` keeps the copied functions equal (1802). `page_layer_sx`, the page
+//! area, the skip link and the palette hooks copy `docs/src/shell.rs`, `doc_tabs_sx`
+//! `docs/src/components/doc_page.rs`.
 
 use dioxus::prelude::*;
 use libero::{
-    components::{Button, ScrollArea, ScrollAreaHandle, Tabs, use_scroll_area},
-    hooks::{ElementHandle, use_element, use_fullscreen},
+    LiberoProvider,
+    components::{Box, Button, ScrollArea, ScrollAreaHandle, Tabs, use_scroll_area},
+    hooks::{ElementHandle, use_element, use_fullscreen, use_local_storage, use_theme_set},
     platform::ElementApi,
     sx::{Sx, sx},
-    theme::{NamedColorCss, Z_INDEX_MODAL},
+    theme::{NamedColorCss, ThemeSet, Z_INDEX_HEADER, Z_INDEX_MODAL},
 };
 
 use crate::Routes;
@@ -127,7 +129,153 @@ pub const ROUTES: Routes = &[
     ("/docs-shell/fragment", || rsx! { FragmentPage {} }),
     ("/docs-shell/fullscreen", || rsx! { FullscreenPage {} }),
     ("/docs-shell/tabs", || rsx! { TabsPage {} }),
+    ("/docs-shell/drawer", || rsx! { DrawerPage {} }),
+    ("/docs-shell/palette", || rsx! { PalettePage {} }),
 ];
+
+/// The scrolling page. Inert behind the open drawer, the area and not only `main`: its region
+/// stop stayed in the Tab order under the drawer (5310). Omitted closed: even `"false"` enables it.
+fn page_area(open: bool, area: ScrollAreaHandle, page: Element) -> Element {
+    rsx! {
+        ScrollArea {
+            handle: area,
+            inert: open.then_some(true),
+            // The overflowing page is a region tab stop: it needs a name.
+            aria_label: "Page",
+            sx: sx()
+                .flex("1")
+                .min_height("0")
+                // Default `min-width: auto` let the longest code line push the row
+                // wider instead of that block scrolling.
+                .min_width("0")
+                .and(page_layer_sx()),
+            {page}
+        }
+    }
+}
+
+/// The skip link's press. An open drawer leaves `main` inert, so it closes first and focus
+/// follows once the page is live again, the order of 1693 (5310).
+fn use_skip_to_main(mut open: Signal<bool>, main: ElementHandle) -> Callback<()> {
+    let mut pending = use_signal(|| false);
+    use_effect(move || {
+        if pending() && !open() {
+            pending.set(false);
+            let _ = main.focus();
+        }
+    });
+    use_callback(move |()| {
+        if *open.peek() {
+            open.set(false);
+        }
+        pending.set(true);
+    })
+}
+
+/// WCAG 2.4.1 skip link, off-screen until focused. The click moves focus itself,
+/// so the router never sees the fragment.
+fn skip_link(skip: Callback<()>) -> Element {
+    rsx! {
+        Box {
+            sx: sx()
+                .selector(
+                    "& > a",
+                    sx().position("fixed")
+                        .top("8px")
+                        .left("8px")
+                        .z_index(format!("calc({} + 1)", Z_INDEX_HEADER.value()))
+                        .padding("sm")
+                        .border_radius("sm")
+                        .background("surface")
+                        .color("primary.7")
+                        .transform("translateY(-200%)"),
+                )
+                .selector("& > a:focus", sx().transform("none")),
+            a {
+                href: "#docs-main",
+                onclick: move |event: MouseEvent| {
+                    event.prevent_default();
+                    skip.call(());
+                },
+                "Skip to content"
+            }
+        }
+    }
+}
+
+/// The shell's skip link, burger and page area, with a stop after them to Tab to.
+#[component]
+fn DrawerPage() -> Element {
+    let mut open = use_signal(|| false);
+    let main_area = use_element();
+    let skip = use_skip_to_main(open, main_area);
+    let area = use_scroll_area();
+    rsx! {
+        div { display: "flex", flex_direction: "column", height: "400px",
+            {skip_link(skip)}
+            Button { id: "burger", onclick: move |_| open.set(!open()), "Menu" }
+            div { display: "flex", flex: "1", min_height: "0",
+                {page_area(open(), area, rsx! {
+                    main { id: "docs-main", tabindex: "-1", onmounted: main_area.mount(),
+                        div { height: "1500px", "The page" }
+                    }
+                })}
+            }
+            Button { id: "after", "After the page" }
+        }
+    }
+}
+
+const PALETTE_KEY: &str = "docs-palette";
+
+/// The palette kept from the reader's last pick, for `LiberoProvider`: the library keeps the
+/// scheme and direction, the app its palette (5304, 5308). An unknown name gets the default.
+fn use_kept_palette() -> ThemeSet {
+    let kept = use_local_storage(PALETTE_KEY, String::new);
+    use_hook(|| {
+        let name = kept.value();
+        let name = name.peek();
+        ThemeSet::CATALOGUE
+            .iter()
+            .find(|set| set.name() == name.as_str())
+            .map_or_else(ThemeSet::default, |set| (*set).clone())
+    })
+}
+
+/// Stores a palette the reader picks; a load that picked nothing writes nothing.
+fn use_keep_palette() {
+    let themes = use_theme_set();
+    let mut kept = use_local_storage(PALETTE_KEY, String::new);
+    let mut last = use_hook(|| CopyValue::new(themes.name()));
+    use_effect(move || {
+        let name = themes.name();
+        if *last.peek() != name {
+            last.set(name);
+            kept.set(name.to_string());
+        }
+    });
+}
+
+/// The docs' `App` and shell: a provider that starts on the kept palette, a picker under it.
+#[component]
+fn PalettePage() -> Element {
+    let themes = use_kept_palette();
+    rsx! {
+        LiberoProvider { themes, PalettePicker {} }
+    }
+}
+
+#[component]
+fn PalettePicker() -> Element {
+    use_keep_palette();
+    let themes = use_theme_set();
+    let name = themes.name();
+    let last = ThemeSet::CATALOGUE[ThemeSet::CATALOGUE.len() - 1];
+    rsx! {
+        p { id: "palette", "{name}" }
+        Button { id: "pick", onclick: move |_| themes.set(last.clone()), "{last.name()}" }
+    }
+}
 
 /// The page area is a stacking context (`ScrollArea`): a drawn fullscreen inside lifts
 /// it above the header, else the header covers the box's Exit (5040).

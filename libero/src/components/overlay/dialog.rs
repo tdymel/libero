@@ -14,7 +14,7 @@ use crate::{
     context::{Dismiss, IconSlot, ModalContext},
     hooks::{current_localization, use_id, use_theme},
     str_enum::str_enum,
-    sx::{StaticSx, Sx, ThemeAwareValue, sx},
+    sx::{FORCED_COLORS, StaticSx, Sx, ThemeAwareValue, sx},
     theme::{CssVar, DIALOG_DEFAULT_SIZE, DIALOG_SIZE, PAPER_RADIUS, Size, SizeCss},
     utils::warn,
 };
@@ -33,6 +33,8 @@ static DIALOG_BASE_SX: StaticSx = StaticSx::new(|| {
         .padding("lg")
         .border_radius(DIALOG_RADIUS_VAR.value_or(PAPER_RADIUS.value()))
         .box_shadow(SizeCss::SHADOW.value(Size::Xl))
+        // Forced colours drop the shadow, the panel's only edge over the page (5309).
+        .media(FORCED_COLORS, sx().border("1px solid CanvasText"))
         .when("full-screen-always", full_screen_sx())
         .media(
             format!("not all and (min-width: {})", Size::Sm.breakpoint_value()),

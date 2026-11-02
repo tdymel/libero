@@ -717,21 +717,13 @@ pub fn Demo(
                     }
                 }
             }
-            Box { id: code_id(),
-                CodeBlock {
-                    language: "rust",
-                    source,
-                    label: code_label,
-                    header: false,
-                    sx: sx().border("none").border_radius("0"),
-                }
-            }
-            // Imports and helpers stay folded, as MUI's demos (todo 1858).
+            // Imports and helpers stay folded, as MUI's demos (todo 1858). Above the code, so
+            // the focused toggle stays where it was pressed (5307).
             if cuts {
                 Flex {
                     direction: "row",
                     justify: "flex-end",
-                    sx: sx().padding("8px 12px").border_top(border()),
+                    sx: sx().padding("8px 12px").border_bottom(border()),
                     Button {
                         variant: "text",
                         size: "sm",
@@ -740,6 +732,15 @@ pub fn Demo(
                         onclick: move |_| expanded.toggle(),
                         if expanded() { "Collapse code" } else { "Expand code" }
                     }
+                }
+            }
+            Box { id: code_id(),
+                CodeBlock {
+                    language: "rust",
+                    source,
+                    label: code_label,
+                    header: false,
+                    sx: sx().border("none").border_radius("0"),
                 }
             }
         }
@@ -830,6 +831,19 @@ mod tests {
         for site in sites {
             assert!(site.ends_with(": label(control.name),"), "{site}");
         }
+    }
+
+    /// Todo 5307: the toggle sits above the code it unfolds, so pressing it leaves it in view.
+    #[test]
+    fn the_code_toggle_comes_before_the_code() {
+        let html = crate::snippets::route_html(&crate::Route::KanbanPage {});
+        let toggle = html
+            .find("aria-controls=\"")
+            .expect("no code toggle on Kanban");
+        let rest = &html[toggle + "aria-controls=\"".len()..];
+        let id = &rest[..rest.find('"').unwrap()];
+        let code = html.find(&format!("id=\"{id}\"")).expect("no code box");
+        assert!(toggle < code, "the toggle follows the code");
     }
 
     #[test]

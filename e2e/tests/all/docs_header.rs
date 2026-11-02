@@ -61,7 +61,7 @@ const SHARED: &[&str] = &[
 ];
 
 /// The item `fn name` from its signature to its closing brace, comments and indent dropped.
-fn item(source: &str, name: &str) -> Option<String> {
+pub(crate) fn item(source: &str, name: &str) -> Option<String> {
     let start = source.find(&format!("fn {name}("))?;
     let end = start + source[start..].find("\n}\n")?;
     Some(

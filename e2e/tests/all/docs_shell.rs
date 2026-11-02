@@ -2,6 +2,7 @@
 //! through the docs' own file.
 
 use e2e::browser::block_on;
+use e2e::passes::{keyboard, pointer};
 use e2e::wait::PageBounded;
 use e2e::{Fixture, Viewport, wait};
 
@@ -174,6 +175,166 @@ fn a_fragment_load_lands_on_the_section() {
             .console
             .assert_clean("the fragment fixture")
             .unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
+/// The fixture copies these from the docs shell (e2e never includes docs source, todo 951).
+#[test]
+fn the_fixture_copy_matches_the_docs_shell() {
+    use crate::docs_header::item;
+    let shell = include_str!("../../../docs/src/shell.rs");
+    let copy = include_str!("../../fixtures/src/docs_shell.rs");
+    for name in [
+        "page_area",
+        "use_skip_to_main",
+        "skip_link",
+        "use_kept_palette",
+        "use_keep_palette",
+    ] {
+        let docs = item(shell, name).unwrap_or_else(|| panic!("the docs lost `fn {name}`"));
+        let fixture = item(copy, name).unwrap_or_else(|| panic!("the copy lost `fn {name}`"));
+        assert_eq!(fixture, docs, "`fn {name}` drifted from docs/src/shell.rs");
+    }
+}
+
+/// Todo 5310: with the drawer open the page area is out of the Tab order, not a stop under
+/// the drawer; closed, it is one.
+#[test]
+fn an_open_drawer_takes_the_page_area_out_of_the_tab_order() {
+    block_on(async {
+        let fixture = Fixture::open("/docs-shell/drawer", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        wait::for_js_true(
+            page,
+            "document.querySelector('[aria-label=Page]')?.closest('[role=region],[tabindex=\"0\"]') !== null",
+            "the page area's region stop",
+        )
+        .await
+        .unwrap();
+        pointer::click(page, "#burger").await.unwrap();
+        wait::for_js_true(
+            page,
+            "document.querySelector('#docs-main').closest('[inert]') !== null",
+            "the page to go inert",
+        )
+        .await
+        .unwrap();
+        keyboard::press(page, keyboard::TAB).await.unwrap();
+        wait::for_js_true(
+            page,
+            "document.activeElement.id === 'after'",
+            "Tab from the burger to pass the page area",
+        )
+        .await
+        .unwrap();
+        pointer::click(page, "#burger").await.unwrap();
+        wait::for_js_true(
+            page,
+            "document.querySelector('#docs-main').closest('[inert]') === null",
+            "the page to come back",
+        )
+        .await
+        .unwrap();
+        keyboard::press(page, keyboard::TAB).await.unwrap();
+        wait::for_js_true(
+            page,
+            "document.activeElement.getAttribute('aria-label') === 'Page'",
+            "the page area's stop with the drawer closed",
+        )
+        .await
+        .unwrap();
+        fixture.console.assert_clean("the drawer fixture").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
+/// Todo 5310: Enter on the skip link closes the open drawer, then focuses main; inert, the
+/// focus failed and the link did nothing.
+#[test]
+fn the_skip_link_closes_the_drawer_and_focuses_main() {
+    block_on(async {
+        let fixture = Fixture::open("/docs-shell/drawer", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        pointer::click(page, "#burger").await.unwrap();
+        wait::for_js_true(
+            page,
+            "document.querySelector('#docs-main').closest('[inert]') !== null",
+            "the page to go inert",
+        )
+        .await
+        .unwrap();
+        page.evaluate_bounded("document.querySelector('a[href=\"#docs-main\"]').focus()")
+            .await
+            .unwrap();
+        keyboard::press(page, keyboard::ENTER).await.unwrap();
+        wait::for_js_true(
+            page,
+            "document.activeElement.id === 'docs-main' \
+             && document.querySelector('#docs-main').closest('[inert]') === null",
+            "main focused, the drawer closed",
+        )
+        .await
+        .unwrap();
+        fixture.console.assert_clean("the skip link").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
+async fn palette(page: &chromiumoxide::Page) -> String {
+    page.evaluate_bounded("document.querySelector('#palette').textContent")
+        .await
+        .unwrap()
+        .into_value()
+        .unwrap()
+}
+
+/// Todo 5308: a picked palette survives a reload; a load without a pick stores nothing, and
+/// a name no set answers to gets the default.
+#[test]
+fn a_picked_palette_survives_a_reload() {
+    block_on(async {
+        let fixture = Fixture::open("/docs-shell/palette", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        wait::for_visible(page, "#pick").await.unwrap();
+        let start = palette(page).await;
+        let clean: bool = page
+            .evaluate_bounded("localStorage.getItem('docs-palette') === null")
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        assert!(clean, "a load that picked nothing wrote the palette");
+
+        pointer::click(page, "#pick").await.unwrap();
+        wait::for_js_true(
+            page,
+            "document.querySelector('#palette').textContent === document.querySelector('#pick').textContent \
+             && localStorage.getItem('docs-palette') !== null",
+            "the pick to apply and be stored",
+        )
+        .await
+        .unwrap();
+        let picked = palette(page).await;
+        assert_ne!(picked, start, "the fixture's pick is the default set");
+
+        page.reload_bounded().await.unwrap();
+        wait::for_visible(page, "#pick").await.unwrap();
+        assert_eq!(palette(page).await, picked, "the reload lost the palette");
+
+        page.evaluate_bounded("localStorage.setItem('docs-palette', '\"No such set\"')")
+            .await
+            .unwrap();
+        page.reload_bounded().await.unwrap();
+        wait::for_visible(page, "#pick").await.unwrap();
+        assert_eq!(palette(page).await, start, "an unknown name");
+        fixture.console.assert_clean("the palette").unwrap();
         fixture.close().await.unwrap();
     });
 }

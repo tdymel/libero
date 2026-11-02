@@ -428,10 +428,11 @@ pub(crate) enum Route {
 #[component]
 fn App() -> Element {
     heading_focus::use_load_fragment();
+    let themes = shell::use_kept_palette();
     rsx! {
         document::Title { "Libero" }
         document::Link { rel: "icon", href: LOGO }
-        LiberoProvider { formats: &Formats::GERMAN,
+        LiberoProvider { themes, formats: &Formats::GERMAN,
             Router::<Route> {}
             Notifications {}
         }
