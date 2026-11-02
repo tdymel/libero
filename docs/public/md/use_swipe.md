@@ -112,8 +112,10 @@ pub enum SwipeEdge { Start, End }
 
 `Swipe` is `Copy`. `edge_swipe_sx()` is `touch-action: pan-y pinch-zoom`: the
 page still scrolls and zooms, a sideways move reaches the hook. It stops the
-browser's own sideways pan of that box (inner scrollers keep theirs but from the
-band), so spread
+browser's own sideways pan of that box (an inner scroller keeps its own, also
+from the band while it can still pan the swipe's way, and a press on a
+`Scroller` control with that room opens nothing; with no room left the band
+opens), so spread
 it on the main column, not on a horizontal scroller. The edge swipe
 reads the direction from `use_direction` and the viewport width at each press.
 A press on a `use_drag` handle or on a `touch-action: none` box inside it, such
@@ -124,8 +126,8 @@ as a drawing canvas, stays with that box and never opens.
 ### Libero handles
 
 - A tap, a scroll and a pinch keep working: the hooks prevent no default but an
-  edge swipe's sideways pan of an inner scroller, and a second finger drops the
-  press.
+  edge swipe's sideways pan of an inner scroller at its edge, and a second finger
+  drops the press.
 - The edge swipe starts past Android's system back zone, so Back from the
   screen edge still works.
 - A mouse is ignored, so a desktop click or text selection never turns into a

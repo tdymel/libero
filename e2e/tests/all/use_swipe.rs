@@ -132,16 +132,13 @@ async fn a_band_canvas_keeps_its_press<D: Driver>(d: &mut D, _route: &str) -> Re
     text_is(d, "#opens", "1").await
 }
 
-#[cfg_attr(not(feature = "android"), allow(dead_code))]
-const WIDE_SCROLL_LEFT: &str = "document.querySelector('#wide').scrollLeft";
-
 async fn wide_scroll_left<D: Driver>(d: &mut D) -> Result<f64> {
     Ok(d.scroll_pos("#wide").await?.0)
 }
 
-/// Todo 2586: on a scroller with room to pan back, the band still opens and the
-/// scroller stays put; a swipe from past the band scrolls it instead.
-async fn the_band_wins_over_a_scrolled_scroller<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+/// Todo 5311: a scroller with room towards the swipe pans and the drawer stays shut;
+/// at its start edge the same swipe opens the drawer and the scroller stays put.
+async fn the_band_yields_to_a_scrolled_scroller<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
     let wide = d.rect("#wide").await?;
     let y = wide.y + wide.height / 2.0;
     d.scroll_to("#wide", 600.0, 0.0).await?;
@@ -151,28 +148,95 @@ async fn the_band_wins_over_a_scrolled_scroller<D: Driver>(d: &mut D, _route: &s
         "the scroller is at {set}, not 600"
     );
     d.swipe_from(IN_BAND, y, 120.0, 0.0).await?;
-    text_is(d, "#opens", "1").await?;
-    let left = wide_scroll_left(d).await?;
-    assert!(
-        (left - 600.0).abs() < 1.0,
-        "the band swipe scrolled the scroller to {left}"
-    );
-    d.click("#close").await?;
-    eventually(d, "the drawer to close", async |d| {
-        Ok(!d.exists("#drawer").await?)
-    })
-    .await?;
-    d.swipe_from(IN_BAND + 120.0, y, 120.0, 0.0).await?;
     eventually(d, "the scroller to scroll back", async |d| {
         Ok(wide_scroll_left(d).await? < 590.0)
     })
     .await?;
+    d.settle().await?;
+    text_is(d, "#opens", "0").await?;
+    d.scroll_to("#wide", 0.0, 0.0).await?;
+    d.swipe_from(IN_BAND, y, 120.0, 0.0).await?;
+    text_is(d, "#opens", "1").await?;
+    let left = wide_scroll_left(d).await?;
+    assert!(left.abs() < 1.0, "the band swipe scrolled it to {left}");
+    Ok(())
+}
+
+/// Todo 5311 under RTL: the band sits on the right, and a scroller's forward offsets are negative.
+async fn the_band_yields_under_rtl<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    let (vw, _) = d.viewport().await?;
+    let wide = d.rect("#wide-page").await?;
+    let y = wide.y + wide.height / 2.0;
+    d.scroll_to("#wide-page", -600.0, 0.0).await?;
+    let set = d.scroll_pos("#wide-page").await?.0;
+    assert!(
+        (set + 600.0).abs() < 1.0,
+        "the scroller is at {set}, not -600"
+    );
+    d.swipe_from(vw - IN_BAND, y, -120.0, 0.0).await?;
+    eventually(d, "the scroller to scroll back", async |d| {
+        Ok(d.scroll_pos("#wide-page").await?.0 > -590.0)
+    })
+    .await?;
+    d.settle().await?;
+    text_is(d, "#opens", "0").await?;
+    d.scroll_to("#wide-page", 0.0, 0.0).await?;
+    d.swipe_from(vw - IN_BAND, y, -120.0, 0.0).await?;
     text_is(d, "#opens", "1").await
 }
 
-/// Todo 2586: in a scroller's fling Chromium sends the band touch uncancelable, and its
-/// pan scrolled the scroller back; the scroller now holds still while the drawer opens.
-mod an_edge_swipe_wins_over_a_flinging_scroller {
+/// Todo 5311: a press on a Scroller's control in the band stays out while the strip has room,
+/// and the strip does not pan. Scrolled back, the control is gone and the band opens.
+async fn the_band_yields_on_a_scroller_control<D: Driver>(d: &mut D, route: &str) -> Result<()> {
+    const VIEWPORT: &str = "#strip > [data-slot='viewport']";
+    const CONTROL: &str = "#strip > [data-slot='control']";
+    let (vw, _) = d.viewport().await?;
+    let (x, dx, forward) = if route.ends_with("-rtl") {
+        (vw - IN_BAND, -120.0, -600.0)
+    } else {
+        (IN_BAND, 120.0, 600.0)
+    };
+    let strip = d.rect(VIEWPORT).await?;
+    let y = strip.y + strip.height / 2.0;
+    // A strip scrolls smoothly, far too slowly on an emulator, so this one jumps. Its control
+    // takes no press until it has left the start.
+    let jump = |left: f64| {
+        format!(
+            "document.querySelector(\"{VIEWPORT}\").scrollTo({{ left: {left}, behavior: 'instant' }})"
+        )
+    };
+    d.evaluate(&jump(forward)).await?;
+    eventually(d, "the backward control to take a press", async |d| {
+        Ok(d.attr(CONTROL, "aria-disabled").await?.as_deref() == Some("false"))
+    })
+    .await?;
+    let control = d.rect(CONTROL).await?;
+    assert!(
+        control.x <= x && x <= control.x + control.width,
+        "the control spans {} px from {}, the swipe starts at {x}",
+        control.width,
+        control.x
+    );
+    d.swipe_from(x, y, dx, 0.0).await?;
+    d.settle().await?;
+    text_is(d, "#opens", "0").await?;
+    let kept = d.scroll_pos(VIEWPORT).await?.0;
+    assert!(
+        (kept - forward).abs() < 1.0,
+        "the swipe on the control scrolled the strip to {kept}"
+    );
+    d.evaluate(&jump(0.0)).await?;
+    eventually(d, "the strip to reach its start", async |d| {
+        Ok(d.attr(CONTROL, "aria-disabled").await?.as_deref() == Some("true"))
+    })
+    .await?;
+    d.swipe_from(x, y, dx, 0.0).await?;
+    text_is(d, "#opens", "1").await
+}
+
+/// Todo 5311: a scroller flinging with room towards the swipe gets the band touch too; the
+/// drawer stays shut and the swipe pans it back. Its uncancelable first move was once pinned (2586).
+mod an_edge_swipe_yields_to_a_flinging_scroller {
     #[cfg(feature = "android")]
     #[test]
     fn android() {
@@ -182,20 +246,28 @@ mod an_edge_swipe_wins_over_a_flinging_scroller {
             let mut d = Android::open("/use-swipe/drawer").await.unwrap();
             let wide = d.rect("#wide").await.unwrap();
             let y = wide.y + wide.height / 2.0;
-            d.evaluate(&format!("{} = 300", super::WIDE_SCROLL_LEFT))
-                .await
-                .unwrap();
+            d.evaluate(
+                "(wide => {
+                     wide.scrollLeft = 300;
+                     window.__most = 0;
+                     wide.addEventListener('scroll', () => {
+                         window.__most = Math.max(window.__most, wide.scrollLeft);
+                     });
+                 })(document.querySelector('#wide'))",
+            )
+            .await
+            .unwrap();
             // Flung toward its end: the band swipe lands while it still moves.
             d.fling_from(300.0, y, -150.0, 0.0).await.unwrap();
-            let flung = super::wide_scroll_left(&mut d).await.unwrap();
             d.swipe_from(super::IN_BAND, y, 120.0, 0.0).await.unwrap();
-            super::text_is(&mut d, "#opens", "1").await.unwrap();
-            let left = super::wide_scroll_left(&mut d).await.unwrap();
-            // Before the fix it panned back past the fling's start (441 to 156 px).
-            assert!(
-                left > flung - 10.0,
-                "the band swipe scrolled the flinging scroller back from {flung} to {left}"
-            );
+            // The farthest the fling got, which a read right after it can miss.
+            e2e::driver::eventually(&mut d, "the swipe to pan it back", async |d| {
+                let most = d.evaluate("window.__most").await?.as_f64().unwrap_or(0.0);
+                Ok(super::wide_scroll_left(d).await? < most - 10.0)
+            })
+            .await
+            .unwrap();
+            super::text_is(&mut d, "#opens", "0").await.unwrap();
             d.finish("use_swipe").await.unwrap();
         });
     }
@@ -297,8 +369,26 @@ e2e::scenario!(
     desktop: skip("1126: no touch input under Xvfb")
 );
 e2e::scenario!(
-    an_edge_swipe_wins_over_a_scrolled_inner_scroller,
+    an_edge_swipe_yields_to_a_scrolled_inner_scroller,
     "/use-swipe/drawer",
-    the_band_wins_over_a_scrolled_scroller,
+    the_band_yields_to_a_scrolled_scroller,
+    desktop: skip("1126: no touch input under Xvfb")
+);
+e2e::scenario!(
+    an_edge_swipe_yields_to_a_scrolled_inner_scroller_under_rtl,
+    "/use-swipe/drawer-rtl",
+    the_band_yields_under_rtl,
+    desktop: skip("1126: no touch input under Xvfb")
+);
+e2e::scenario!(
+    an_edge_swipe_yields_on_a_scroller_control,
+    "/use-swipe/drawer-ltr",
+    the_band_yields_on_a_scroller_control,
+    desktop: skip("1126: no touch input under Xvfb")
+);
+e2e::scenario!(
+    an_edge_swipe_yields_on_a_scroller_control_under_rtl,
+    "/use-swipe/drawer-rtl",
+    the_band_yields_on_a_scroller_control,
     desktop: skip("1126: no touch input under Xvfb")
 );

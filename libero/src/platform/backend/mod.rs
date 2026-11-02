@@ -753,12 +753,12 @@ pub(crate) fn swipe_press(
 }
 
 /// See [`refuses_edge_swipe`](crate::platform::scroll::refuses_edge_swipe).
-pub(crate) fn refuses_edge_swipe(press: &dioxus::prelude::PointerEvent) -> bool {
+pub(crate) fn refuses_edge_swipe(press: &dioxus::prelude::PointerEvent, left: bool) -> bool {
     #[cfg(all(not(target_arch = "wasm32"), feature = "native"))]
-    return blitz::refuses_edge_swipe(press);
+    return blitz::refuses_edge_swipe(press, left);
     #[cfg(not(all(not(target_arch = "wasm32"), feature = "native")))]
     return {
-        let _ = press;
+        let _ = (press, left);
         false
     };
 }

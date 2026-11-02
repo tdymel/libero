@@ -243,7 +243,8 @@ pub(crate) struct EdgeBand {
 /// went, `[x, y, dx, dy]` in client px.
 pub(crate) type LostSwipe = Box<dyn Fn([f64; 4])>;
 
-/// A band press on an app's `touch-action: none` box under the swiped element, by pointer id.
+/// A band press the swipe leaves, by pointer id: on an app's `touch-action: none` box under the
+/// swiped element, or on a scroller or a Scroller's control there with room towards the swipe.
 pub(crate) type RefusedPress = Box<dyn Fn(i32)>;
 
 /// The custom property [`hold_edge_pan`] finds the swiped element by, inherited.
@@ -252,38 +253,44 @@ pub(crate) const EDGE_SWIPE_MARK: &str = "--lsx-edge-swipe";
 /// `(inset, width, left, distance, swiped, refused) => remove`: holds every move of a band
 /// touch going inward, mostly sideways, from inner scrollers. One whose pointer was cancelled
 /// anyway (its first move uncancelable in a fling) goes to `swiped` past `distance` (2190).
-/// A band press on a `touch-action: none` box inside goes to `refused` and is never held (4800).
+/// A band press on a `touch-action: none` box inside, or on a scroller or a Scroller's control
+/// with room towards the swipe, goes to `refused` and is never held (4800, 5311).
 #[cfg_attr(all(not(target_arch = "wasm32"), feature = "native"), allow(dead_code))]
 pub(crate) const EDGE_PAN_JS: &str = "(inset, width, left, distance, swiped, refused) => {
     let start = null;
     let origin = null;
     let holding = false;
     let lost = false;
-    let under = [];
-    let pinned = [];
     const reset = () => {
         start = null;
         origin = null;
         holding = false;
         lost = false;
-        under = [];
-    };
-    const release = () => {
-        for (const [box, at, overflow] of pinned) {
-            box.scrollLeft = at;
-            box.style.overflowX = overflow;
-        }
-        pinned = [];
     };
     const inBand = (x) => {
         const from = left ? x : innerWidth - x;
         return from >= inset && from <= inset + width;
     };
     const marked = (box) => getComputedStyle(box).getPropertyValue('--lsx-edge-swipe').trim() === '1';
+    // Room for the pan an inward swipe makes: a finger going right lowers `scrollLeft`.
+    const hasRoom = (box, style) => {
+        const span = box.scrollWidth - box.clientWidth;
+        if (span <= 0 || !/auto|scroll/.test(style.overflowX)) return false;
+        const [low, high] = style.direction === 'rtl' ? [-span, 0] : [0, span];
+        return left ? box.scrollLeft > low + 1 : box.scrollLeft < high - 1;
+    };
     // The mark is inherited: a box without it lies past the swiped element.
     const refuses = (target) => {
+        // A `touch-action` without a sideways pan on the way up keeps the browser from panning.
+        let pans = true;
         for (let box = target; box instanceof Element && marked(box); box = box.parentElement) {
-            if (getComputedStyle(box).touchAction === 'none') return true;
+            const style = getComputedStyle(box);
+            if (style.touchAction === 'none') return true;
+            pans &&= /auto|manipulation|pan-x|pan-left|pan-right/.test(style.touchAction);
+            if (pans && hasRoom(box, style)) return true;
+            // A Scroller's control sits beside the strip it steps.
+            const strip = box.dataset.slot === 'control' && document.getElementById(box.getAttribute('aria-controls'));
+            if (strip && hasRoom(strip, getComputedStyle(strip))) return true;
         }
         return false;
     };
@@ -299,11 +306,6 @@ pub(crate) const EDGE_PAN_JS: &str = "(inset, width, left, distance, swiped, ref
         if (!marked(event.target) || refuses(event.target)) return;
         start = { x: touch.clientX, y: touch.clientY };
         origin = start;
-        for (let box = event.target; box; box = box.parentElement) {
-            if (box.scrollWidth > box.clientWidth && /auto|scroll/.test(getComputedStyle(box).overflowX)) {
-                under.push([box, box.scrollLeft, box.style.overflowX]);
-            }
-        }
     };
     const move = (event) => {
         if (event.touches.length !== 1) reset();
@@ -314,15 +316,6 @@ pub(crate) const EDGE_PAN_JS: &str = "(inset, width, left, distance, swiped, ref
             if (Math.max(Math.abs(dx), dy) < 4) return;
             start = null;
             holding = dx > dy;
-            // In a fling the touch cannot be held: freeze the scrollers under it instead (2586).
-            if (holding && !event.cancelable) {
-                release();
-                pinned = under;
-                for (const [box, at] of pinned) {
-                    box.style.overflowX = 'hidden';
-                    box.scrollLeft = at;
-                }
-            }
         }
         if (!holding) return;
         if (event.cancelable) event.preventDefault();
@@ -336,27 +329,21 @@ pub(crate) const EDGE_PAN_JS: &str = "(inset, width, left, distance, swiped, ref
     const cancel = (event) => {
         if (event.pointerType === 'touch' && (start || holding)) lost = true;
     };
-    // Two frames on, past the fling the lift would start.
-    const end = () => {
-        reset();
-        if (pinned.length) requestAnimationFrame(() => requestAnimationFrame(release));
-    };
     const capture = { capture: true };
     const passive = { capture: true, passive: true };
     addEventListener('pointerdown', press, passive);
     addEventListener('touchstart', down, passive);
     addEventListener('touchmove', move, { capture: true, passive: false });
     addEventListener('pointercancel', cancel, passive);
-    addEventListener('touchend', end, passive);
-    addEventListener('touchcancel', end, passive);
+    addEventListener('touchend', reset, passive);
+    addEventListener('touchcancel', reset, passive);
     return () => {
         removeEventListener('pointerdown', press, capture);
         removeEventListener('touchstart', down, capture);
         removeEventListener('touchmove', move, capture);
         removeEventListener('pointercancel', cancel, capture);
-        removeEventListener('touchend', end, capture);
-        removeEventListener('touchcancel', end, capture);
-        release();
+        removeEventListener('touchend', reset, capture);
+        removeEventListener('touchcancel', reset, capture);
     };
 }";
 
@@ -372,10 +359,11 @@ pub(crate) fn hold_edge_pan(
     backend::hold_edge_pan(band, swiped, refused)
 }
 
-/// Whether `press` lands on a `touch-action: none` box inside the element carrying
-/// [`EDGE_SWIPE_MARK`]: Blitz hit-tests it (4814), elsewhere [`hold_edge_pan`]'s script reports it.
-pub(crate) fn refuses_edge_swipe(press: &dioxus::prelude::PointerEvent) -> bool {
-    backend::refuses_edge_swipe(press)
+/// Whether `press` lands, inside the element carrying [`EDGE_SWIPE_MARK`], on a `touch-action:
+/// none` box, or on a scroller or a Scroller's control with room for a swipe from the `left` band
+/// or the right one: Blitz hit-tests it (4814), elsewhere [`hold_edge_pan`]'s script reports it.
+pub(crate) fn refuses_edge_swipe(press: &dioxus::prelude::PointerEvent, left: bool) -> bool {
+    backend::refuses_edge_swipe(press, left)
 }
 
 /// Whether an edge swipe holds the pan by cancelling its own `pointermove`s: Blitz runs

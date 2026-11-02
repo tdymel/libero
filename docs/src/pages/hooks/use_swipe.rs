@@ -14,7 +14,7 @@ pub fn UseSwipePage() -> Element {
             markdown: "/md/use_swipe.md",
             accessibility: a11y()
                 .handles([
-                    "A tap, a scroll and a pinch keep working: the hooks prevent no default but an edge swipe's sideways pan of an inner scroller, and a second finger drops the press.",
+                    "A tap, a scroll and a pinch keep working: the hooks prevent no default but an edge swipe's sideways pan of an inner scroller at its edge, and a second finger drops the press.",
                     "The edge swipe starts past Android's system back zone, so Back from the screen edge still works.",
                     "A mouse is ignored, so a desktop click or text selection never turns into a swipe.",
                 ])

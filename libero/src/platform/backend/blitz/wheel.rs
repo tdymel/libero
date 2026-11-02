@@ -134,7 +134,7 @@ fn viewport_locked(doc: &BaseDocument, vertical: bool) -> bool {
     matches!(used.as_str(), "hidden" | "clip")
 }
 
-fn can_scroll(doc: &BaseDocument, id: NodeId, dx: f64, dy: f64) -> bool {
+pub(super) fn can_scroll(doc: &BaseDocument, id: NodeId, dx: f64, dy: f64) -> bool {
     let Some(node) = doc.get_node(id).filter(|node| node.is_element()) else {
         return false;
     };

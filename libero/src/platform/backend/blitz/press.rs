@@ -90,9 +90,13 @@ pub(super) fn tab_from_start(event: &Event<KeyboardData>) {
     }
 }
 
-/// The script's walk (`EDGE_PAN_JS`): from the hit up while the inherited mark holds, a box
-/// with `touch-action: none` keeps the press.
-pub(in crate::platform::backend) fn refuses_edge_swipe(event: &Event<PointerData>) -> bool {
+/// The script's walk (`EDGE_PAN_JS`): from the hit up while the inherited mark holds, a box with
+/// `touch-action: none`, or a scroller or a Scroller's control with room for the swipe's pan,
+/// keeps the press.
+pub(in crate::platform::backend) fn refuses_edge_swipe(
+    event: &Event<PointerData>,
+    left: bool,
+) -> bool {
     let point = event.page_coordinates();
     let Some(anchor) = anchor() else {
         return false;
@@ -103,10 +107,33 @@ pub(in crate::platform::backend) fn refuses_edge_swipe(event: &Event<PointerData
     let Some(hit) = doc.hit(point.x as f32, point.y as f32) else {
         return false;
     };
+    // A finger going right lowers the offset.
+    let dx = if left { -1.0 } else { 1.0 };
+    let attr = |id: NodeId, name: &str| {
+        doc.get_node(id)?
+            .element_data()?
+            .attrs
+            .iter()
+            .find(|attr| *attr.name.local == *name)
+            .map(|attr| attr.value.clone())
+    };
+    let mut pans = true;
     ancestors(&doc, hit.node_id)
         .filter(|&id| doc.get_node(id).is_some_and(|node| node.is_element()))
         .take_while(|&id| resolved_style_value(&doc, id, EDGE_SWIPE_MARK).trim() == "1")
-        .any(|id| resolved_style_value(&doc, id, "touch-action") == "none")
+        .any(|id| {
+            let action = resolved_style_value(&doc, id, "touch-action");
+            pans &= ["auto", "manipulation", "pan-x", "pan-left", "pan-right"]
+                .iter()
+                .any(|pan| action.contains(pan));
+            let strip = (attr(id, "data-slot").as_deref() == Some("control"))
+                .then(|| attr(id, "aria-controls"))
+                .flatten()
+                .and_then(|strip| doc.query_selector(&format!("#{strip}")).ok().flatten());
+            action == "none"
+                || (pans && super::wheel::can_scroll(&doc, id, dx, 0.0))
+                || strip.is_some_and(|strip| super::wheel::can_scroll(&doc, strip, dx, 0.0))
+        })
 }
 
 /// The script's walk (`SHEET_PAN_JS`): from the hit up to the box marked `id`.

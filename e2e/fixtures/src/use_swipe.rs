@@ -4,7 +4,7 @@
 use dioxus::prelude::*;
 use libero::{
     LiberoProvider,
-    components::{Box, ScrollArea},
+    components::{Box, ScrollArea, Scroller, ScrollerControls},
     hooks::{
         DragMove, DragOptions, EdgeSwipeOptions, SwipeDirection, SwipeEvent, SwipeOptions,
         drag_handle_sx, edge_swipe_sx, use_drag, use_edge_swipe, use_element, use_swipe,
@@ -22,6 +22,8 @@ pub const ROUTES: Routes = &[
     ("/use-swipe/drawer", || rsx! { DrawerPage {} }),
     ("/use-swipe/drawer-drag", || rsx! { DrawerPage { handle: true } }),
     ("/use-swipe/drawer-canvas", || rsx! { DrawerPage { canvas: true } }),
+    ("/use-swipe/drawer-rtl", || rsx! { DrawerRtlPage {} }),
+    ("/use-swipe/drawer-ltr", || rsx! { DrawerLtrPage {} }),
 ];
 
 /// An app's own `touch-action: none` canvas in the band, no `use_drag` (todo 4800).
@@ -164,6 +166,21 @@ fn DrawerPage(#[props(default)] handle: bool, #[props(default)] canvas: bool) ->
                     style: "overflow-x: auto; height: 120px; background: #efe; direction: ltr;",
                     div { style: "width: 2000px; height: 100px;" }
                 }
+                // The same box following the page's direction: under RTL `scrollLeft` counts down.
+                div {
+                    id: "wide-page",
+                    style: "overflow-x: auto; height: 120px; background: #fee;",
+                    div { style: "width: 2000px; height: 100px;" }
+                }
+                // A Scroller whose backward control lies in the band once scrolled (5311), on both sides.
+                div { style: "padding-inline: 50px;",
+                    Scroller {
+                        id: "strip",
+                        aria_label: "Strip",
+                        controls: ScrollerControls::Always,
+                        div { style: "width: 2000px; height: 60px; background: #eee;" }
+                    }
+                }
             }
         }
         if open() {
@@ -180,6 +197,21 @@ fn DrawerPage(#[props(default)] handle: bool, #[props(default)] canvas: bool) ->
                 button { id: "close", onclick: move |_| open.set(false), "Close" }
             }
         }
+    }
+}
+
+#[component]
+fn DrawerRtlPage() -> Element {
+    rsx! {
+        LiberoProvider { direction: Direction::Rtl, DrawerPage {} }
+    }
+}
+
+/// An earlier RTL page in the same WebView leaves the document's `dir`; a Scroller reads it.
+#[component]
+fn DrawerLtrPage() -> Element {
+    rsx! {
+        LiberoProvider { direction: Direction::Ltr, DrawerPage {} }
     }
 }
 

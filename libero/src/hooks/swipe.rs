@@ -287,8 +287,8 @@ struct Held {
 
 /// `touch-action: pan-y pinch-zoom` for the element an edge swipe is spread on:
 /// the page still scrolls and zooms, a sideways move reaches the hook. It stops
-/// the browser's own sideways pan of that box, and of inner scrollers for a swipe
-/// that starts in the band, so spread it on the main column, not on a horizontal scroller.
+/// the browser's own sideways pan of that box, and of an inner scroller at its edge for a
+/// swipe that starts in the band, so spread it on the main column, not on a horizontal scroller.
 pub fn edge_swipe_sx() -> Sx {
     // The mark tells the hook's touch listener the touch started inside.
     sx().touch_action("pan-y pinch-zoom")
@@ -306,7 +306,10 @@ pub fn edge_swipe_sx() -> Sx {
 /// opens the same drawer (WCAG 2.5.1). RTL follows [`use_direction`]. A swipe
 /// during a running fling, whose pointer the browser cancels, still counts. A press
 /// on a [`use_drag`](super::use_drag) handle inside drags and never opens, nor does one
-/// on a `touch-action: none` box inside, such as a drawing canvas.
+/// on a `touch-action: none` box inside, such as a drawing canvas. Scrollers have priority:
+/// a press on an inner horizontal scroller that can still pan the swipe's way pans it, one on
+/// a [`Scroller`](crate::components::Scroller) control with such room does nothing, and
+/// neither opens; with no room left the band opens.
 ///
 /// ```rust
 /// # use dioxus::prelude::*;
@@ -336,7 +339,7 @@ pub fn edge_swipe_sx() -> Sx {
 pub fn use_edge_swipe(on_swipe: Callback, options: EdgeSwipeOptions) -> Swipe {
     let direction = use_direction();
     let mut viewport = use_signal(|| None::<f64>);
-    // An inner scroller (code block, tab list) would take the band's sideways pan (2170).
+    // An inner scroller (code block, tab list) with no room would take the band's sideways pan (2170).
     let holding = use_subscription_slot::<dyn ScrollSubscription>();
     let rtl = direction.is_rtl();
     let decide = use_callback(move |event: SwipeEvent| {
@@ -352,8 +355,8 @@ pub fn use_edge_swipe(on_swipe: Callback, options: EdgeSwipeOptions) -> Swipe {
     let mut waiting = use_signal(|| None::<SwipeEvent>);
     // The press a drag handle inside took: it drags, it never opens (4741).
     let mut claimed = use_signal(|| None::<i32>);
-    // The press an app's `touch-action: none` box inside keeps (4800), and the current
-    // press: the script's report may land after the press in a WebView.
+    // The press an app's `touch-action: none` box or a scroller with room keeps (4800, 5311), and
+    // the current press: the script's report may land after the press in a WebView.
     let refused = use_signal(|| None::<i32>);
     let mut pressed = use_signal(|| None::<i32>);
     // By the pointer, or after its cancel by the touch the browser took from it.
@@ -459,7 +462,8 @@ pub fn use_edge_swipe(on_swipe: Callback, options: EdgeSwipeOptions) -> Swipe {
             let touch = event.is_primary() && event.pointer_type() != "mouse";
             // No script on Blitz: its hit test finds the app's `touch-action: none` box (4814).
             // Blitz reuses a finger's pointer id, so each press sets or clears it.
-            let refuses = touch && refuses_edge_swipe(&event);
+            let left = (options.edge == SwipeEdge::Start) != rtl;
+            let refuses = touch && refuses_edge_swipe(&event, left);
             let refusal = refuses.then_some(event.pointer_id());
             if *refused.peek() != refusal {
                 let mut refused = refused;

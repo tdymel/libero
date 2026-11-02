@@ -1,6 +1,6 @@
 # Skipped e2e scenarios
 
-Scenarios: 746
+Scenarios: 749
 
 Generated from the `scenario!` skips in `e2e/tests/all` by `cargo test -p e2e --lib skips`; edit the skip, not this file. A reason starting `upstream:` waits on Dioxus, Blitz, wry or the engine (revisit on their update, todo 3362), a number names the todo that removes it.
 
@@ -494,7 +494,10 @@ The performance scenarios (units `perf`, `table_perf`) are no skips but run on r
 | `use_swipe::an_edge_swipe_opens_from_the_right_under_rtl` | desktop | 1126: no touch input under Xvfb |
 | `use_swipe::an_edge_swipe_opens_only_from_the_band_past_the_back_zone` | desktop | 1126: no touch input under Xvfb |
 | `use_swipe::an_edge_swipe_reopens_a_drawer_five_times` | desktop | 1126: no touch input under Xvfb |
-| `use_swipe::an_edge_swipe_wins_over_a_scrolled_inner_scroller` | desktop | 1126: no touch input under Xvfb |
+| `use_swipe::an_edge_swipe_yields_on_a_scroller_control` | desktop | 1126: no touch input under Xvfb |
+| `use_swipe::an_edge_swipe_yields_on_a_scroller_control_under_rtl` | desktop | 1126: no touch input under Xvfb |
+| `use_swipe::an_edge_swipe_yields_to_a_scrolled_inner_scroller` | desktop | 1126: no touch input under Xvfb |
+| `use_swipe::an_edge_swipe_yields_to_a_scrolled_inner_scroller_under_rtl` | desktop | 1126: no touch input under Xvfb |
 | `video::every_audio_source_failing_shows_the_error` | native | Blitz plays no media and shows the fallback |
 | `video::every_audio_source_failing_shows_the_error` | web | audio::every_source_failing_shows_the_error is the web's arm |
 | `video::every_video_source_failing_shows_the_error` | native | Blitz plays no media and shows the fallback |
