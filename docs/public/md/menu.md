@@ -134,7 +134,7 @@ fn Demo() -> Element {
 | `loop_focus` | `bool` | `true` | Whether the arrow keys wrap from the last item to the first. |
 | `size` | `Size` | `md` | Item height and font size. |
 | `radius` | `ThemeAwareValue` | `sm` | The menu's corner radius, or any CSS, e.g. `radius: "0"`. The items' corners follow it. |
-| `disabled` | `bool` | `false` | The trigger opens nothing, and an open menu closes. Disable the trigger too, so it looks disabled. |
+| `disabled` | `bool` | `false` | The trigger opens nothing, and an open menu closes. Disable the trigger too, so it looks disabled. Set it while the trigger is `loading` too: a press on a busy button opens nothing, but the arrow keys still reach the menu. |
 | `onedge` | `Callback<MenuEdge>` | - | Called with ArrowLeft on the top level, or ArrowRight on an item without a submenu. `Menubar` uses it to move to the next menu. |
 | `parts` | `Parts<MenuPart>` | - | Styles for the inner parts in the Style API tab, on every menu level, submenus too, as `sx` does: `Parts::new().part(MenuPart::Label, sx().font_weight("500"))`. |
 

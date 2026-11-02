@@ -390,11 +390,7 @@ pub fn ActionIcon(props: ActionIconProps) -> Element {
         label = format!("{label} {}", current_localization().anchor.new_tab);
     }
     let open_delay = try_consume_context::<TooltipOpenDelay>().map(|delay| delay.0);
-    // The popup it opens sits where the bubble would (5259).
-    let expanded = props.attributes.iter().any(|attribute| {
-        attribute.name == "aria-expanded"
-            && matches!(&attribute.value, AttributeValue::Text(value) if value == "true")
-    });
+    let expanded = popup_open(&props.attributes);
     rsx! {
         Tooltip {
             open_delay,
@@ -409,6 +405,14 @@ pub fn ActionIcon(props: ActionIconProps) -> Element {
             {action_icon(props, keyshortcuts)}
         }
     }
+}
+
+/// The popup it opens sits where the bubble would (5259).
+fn popup_open(attributes: &[Attribute]) -> bool {
+    attributes.iter().any(|attribute| {
+        attribute.name == "aria-expanded"
+            && matches!(&attribute.value, AttributeValue::Text(value) if value == "true")
+    })
 }
 
 /// A live `_blank` link that says so: not a disabled one, which drops its `href`.
@@ -675,6 +679,19 @@ mod tests {
             icon: None,
             children: None,
         }
+    }
+
+    #[test]
+    fn only_a_true_aria_expanded_reads_as_an_open_popup() {
+        use crate::components::common::attr;
+
+        assert!(popup_open(&[
+            attr("id", "x"),
+            attr("aria-expanded", "true")
+        ]));
+        assert!(!popup_open(&[attr("aria-expanded", "false")]));
+        assert!(!popup_open(&[attr("aria-pressed", "true")]));
+        assert!(!popup_open(&[]));
     }
 
     /// Todo 4648: a re-render with the same bad chord does not warn again.

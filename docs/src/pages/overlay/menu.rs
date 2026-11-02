@@ -102,7 +102,7 @@ pub fn MenuPage() -> Element {
                         .doc("The menu's corner radius, or any CSS, e.g. `radius: \"0\"`. The items' corners follow it."),
                     prop("disabled", "bool")
                         .default("false")
-                        .doc("The trigger opens nothing, and an open menu closes. Disable the trigger too, so it looks disabled."),
+                        .doc("The trigger opens nothing, and an open menu closes. Disable the trigger too, so it looks disabled. Set it while the trigger is `loading` too: a press on a busy button opens nothing, but the arrow keys still reach the menu."),
                     prop("onedge", "Callback<MenuEdge>")
                         .doc("Called with ArrowLeft on the top level, or ArrowRight on an item without a submenu. `Menubar` uses it to move to the next menu."),
                     prop("parts", "Parts<MenuPart>")
