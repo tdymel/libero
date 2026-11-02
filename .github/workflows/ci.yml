@@ -69,7 +69,8 @@ jobs:
 
   # Every component, layout and hook feature alone (3909), so a feature list that misses a
   # dependency fails here. Platform and test-only features are left out. The `wasm` leg is the
-  # empty and the default build on wasm32. A shard takes ~5 min, all 186 runs ~15 min.
+  # empty and the default build on wasm32. A shard takes ~5 min, all 192 runs ~20 min.
+  # `ted_gate.py each-feature` is this job locally; keep its `--exclude-features` list in step.
   each-feature:
     strategy:
       fail-fast: false
