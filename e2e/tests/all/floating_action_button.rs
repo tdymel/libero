@@ -6,7 +6,7 @@
 
 use anyhow::{Result, ensure};
 use e2e::browser::block_on;
-use e2e::driver::{Driver, eventually, eventually_focused, eventually_text};
+use e2e::driver::{Driver, Platform, eventually, eventually_focused, eventually_text};
 use e2e::passes::{focus, keyboard, pointer};
 use e2e::{Fixture, Suite, Viewport, js, wait};
 use serde_json::Value;
@@ -258,6 +258,11 @@ e2e::scenario!(
 
 /// A press opens it and Escape hands focus back: icon-only, with a tooltip and extended.
 async fn every_form_opens<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    // A finger opens the sheet on its box, no row highlighted (4862).
+    let first = match d.platform() {
+        Platform::Android | Platform::Ios => MENU,
+        _ => "[role=menuitem]",
+    };
     for (switch, opened) in [
         (None, "1"),
         (Some("#tooltip"), "2"),
@@ -268,7 +273,7 @@ async fn every_form_opens<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
         }
         d.click(TRIGGER).await?;
         eventually_text(d, "#opened", opened, "the press").await?;
-        eventually_focused(d, "[role=menuitem]", "the press").await?;
+        eventually_focused(d, first, "the press").await?;
         ensure!(
             !d.exists("[role=tooltip]").await?,
             "a tooltip over the menu"
@@ -283,6 +288,85 @@ e2e::scenario!(
     every_form_opens_the_menu_and_takes_focus_back,
     "/floating-action-button/menu-states",
     every_form_opens
+);
+
+/// Todo 5272, on a phone's WebView: the sheet at the screen's foot in the page's direction, a
+/// hidden button opening nothing, and a button hidden under an open sheet leaving it working.
+async fn phone_menu<D: Driver>(d: &mut D, route: &str) -> Result<()> {
+    let rtl = route.ends_with("-rtl");
+    let (width, height) = d.viewport().await?;
+    let fab = d.rect(TRIGGER).await?;
+    ensure!((fab.x < width / 2.0) == rtl, "at the wrong corner: {fab:?}");
+
+    d.click(TRIGGER).await?;
+    eventually_text(d, "#opened", "1", "the tap").await?;
+    eventually(d, "the sheet at the screen's foot", async |d| {
+        if !d.exists(MENU).await? {
+            return Ok(false);
+        }
+        let sheet = d.rect(MENU).await?;
+        Ok((sheet.width - width).abs() < 1.0 && (sheet.y + sheet.height - height).abs() < 1.0)
+    })
+    .await?;
+    let direction = d.style(MENU, "direction").await?;
+    let expected = if rtl { "rtl" } else { "ltr" };
+    ensure!(direction == expected, "a {direction} sheet");
+    d.click("[role=menuitem]").await?;
+    eventually_text(d, "#sent", "1", "the row's tap").await?;
+    eventually(d, "the sheet to close", async |d| {
+        Ok(!d.exists(MENU).await?)
+    })
+    .await?;
+
+    d.click("#hide").await?;
+    eventually(d, "the button out of the tree", async |d| {
+        let probe = format!("document.querySelector(\"{TRIGGER}\").closest('[inert]') !== null");
+        Ok(d.evaluate(&probe).await?.as_bool() == Some(true))
+    })
+    .await?;
+    d.click_at(fab.x + fab.width / 2.0, fab.y + fab.height / 2.0)
+        .await?;
+    d.click("#tick").await?;
+    eventually_text(d, "#tick", "1", "the flush").await?;
+    let opened = d.text("#opened").await?;
+    ensure!(opened == "1", "a hidden button opened the menu: {opened}");
+    d.click("#hide").await?;
+    eventually(d, "the button back", async |d| {
+        let probe = format!("document.querySelector(\"{TRIGGER}\").closest('[inert]') === null");
+        Ok(d.evaluate(&probe).await?.as_bool() == Some(true))
+    })
+    .await?;
+
+    d.click(TRIGGER).await?;
+    eventually_text(d, "#opened", "2", "a tap once it is back").await?;
+    eventually(d, "the sheet", async |d| d.exists(MENU).await).await?;
+    d.script_click("#hide").await?;
+    eventually(d, "the button out of the tree", async |d| {
+        let probe = format!("document.querySelector(\"{TRIGGER}\").closest('[inert]') !== null");
+        Ok(d.evaluate(&probe).await?.as_bool() == Some(true))
+    })
+    .await?;
+    ensure!(d.exists(MENU).await?, "hiding the button closed the sheet");
+    d.click("[role=menuitem]").await?;
+    eventually_text(d, "#sent", "2", "the row's tap under a hidden button").await
+}
+
+e2e::scenario!(
+    a_phone_opens_the_menu_as_a_sheet_and_a_hidden_button_opens_nothing,
+    "/floating-action-button/menu-states",
+    phone_menu,
+    web: skip("5272: a phone's WebView; `menu::below_sm_the_menu_is_a_sheet_that_closes_every_way` has Chromium"),
+    native: skip("5272: a phone's WebView"),
+    desktop: skip("5272: a phone's WebView"),
+);
+
+e2e::scenario!(
+    under_rtl_a_phone_opens_the_menu_as_a_sheet_and_a_hidden_button_opens_nothing,
+    "/floating-action-button/menu-states-rtl",
+    phone_menu,
+    web: skip("5272: a phone's WebView; `menu::below_sm_the_menu_is_a_sheet_that_closes_every_way` has Chromium"),
+    native: skip("5272: a phone's WebView"),
+    desktop: skip("5272: a phone's WebView"),
 );
 
 /// The bubble sits where the menu opens: a showing one leaves when the menu comes.

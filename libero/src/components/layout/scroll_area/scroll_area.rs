@@ -19,7 +19,7 @@ use crate::{
     hooks::{ElementHandle, use_content_changes, use_element, use_resize_fallback, use_theme},
     platform::{
         Dimensions, ElementApi, PlatformError, Read, SCROLL_QUIET, ScrollSubscription,
-        TimerSubscription, clips_z_indexed, draws_own_scrollbars, fires_scroll_end,
+        TimerSubscription, alias_rtl_tag, clips_z_indexed, draws_own_scrollbars, fires_scroll_end,
         fires_scroll_on_scroll_to, has_match_by_tag, on_element_scroll, reserves_rows_in_tables,
         scroll, scroll_range, scrolls_on_keys, timer, when_free, when_laid_out,
         when_laid_out_retry,
@@ -543,6 +543,12 @@ pub fn ScrollArea(mut props: ScrollAreaProps) -> Element {
         .handle
         .map_or(own, |handle| handle.element)
         .adopt_spread_tag(&mut props.attributes);
+    // The handle reads direction by its own tag, no longer on the root (5264).
+    if let Some((own, spread)) = props.handle.and_then(|h| h.element.tag()).zip(root.tag())
+        && own != spread
+    {
+        alias_rtl_tag(own, spread);
+    }
 
     let scrollbars = props.scrollbars.copied_or(theme.scroll_area.scrollbars);
     if let Some(mut axes) = props.handle.and_then(|handle| handle.axes)

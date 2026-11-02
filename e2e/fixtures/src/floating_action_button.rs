@@ -6,7 +6,9 @@ use dioxus::prelude::*;
 use libero::components::{
     FloatingActionButton, Menu, MenuItem, NavigationBar, NavigationBarItem, Pictogram, use_menu,
 };
+use libero::LiberoProvider;
 use libero::hooks::{Align, Side};
+use libero::theme::Direction;
 use pictogram_icons_lucide as lucide;
 
 use crate::Routes;
@@ -18,6 +20,9 @@ pub const ROUTES: Routes = &[
     ("/floating-action-button/hide", || rsx! { HidePage {} }),
     ("/floating-action-button/menu", || rsx! { MenuPage {} }),
     ("/floating-action-button/menu-states", || rsx! { MenuStatesPage {} }),
+    ("/floating-action-button/menu-states-rtl", || rsx! {
+        LiberoProvider { direction: Direction::Rtl, MenuStatesPage {} }
+    }),
 ];
 
 #[component]

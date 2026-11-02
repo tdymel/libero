@@ -27,7 +27,8 @@ pub struct ElementHandle {
 impl ElementHandle {
     /// Spread on the element (`..handle.attributes()`) where a WebView has to find
     /// it, as `use_intersection`'s `root`. Empty on the web and Blitz, and on a
-    /// handle made by a component rather than `use_element`.
+    /// handle made by a component rather than `use_element`. On a component with a
+    /// handle of its own the component's tag wins, so spread it on a plain element.
     pub fn attributes(&self) -> Vec<Attribute> {
         self.tag
             .map(|tag| {

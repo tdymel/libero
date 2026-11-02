@@ -5,6 +5,7 @@ use libero::components::{
     Button, Combobox, ComboboxOption, ComboboxOptionArgs, Flex, Paper, ScrollArea,
     ScrollPositionEvent, Text, Virtualize, use_combobox, use_scroll_area,
 };
+use libero::hooks::use_element;
 use libero::sx::sx;
 use libero::theme::SCROLL_AREA_COVER;
 
@@ -19,6 +20,7 @@ pub const ROUTES: Routes = &[
         || rsx! { CallerKeydownPage {} },
     ),
     ("/scroll-area/rtl", || rsx! { RtlPage {} }),
+    ("/scroll-area/rtl-spread", || rsx! { RtlSpreadPage {} }),
     ("/scroll-area/bars", || rsx! { BarsPage {} }),
     ("/scroll-area/rewrap", || rsx! { RewrapPage {} }),
     ("/scroll-area/offset", || rsx! { OffsetPage {} }),
@@ -244,6 +246,47 @@ fn RtlPage() -> Element {
                         onrightreached: move |()| right += 1,
                         div { style: "width: 1000px", "Wide content" }
                     }
+                }
+            }
+        }
+    }
+}
+
+/// Two areas under `dir="rtl"` that `#scroll` moves by handle, one also given a spread tag (5264).
+#[component]
+fn RtlSpreadPage() -> Element {
+    let spread = use_scroll_area();
+    let plain = use_scroll_area();
+    let tag = use_element();
+    let mut attributes = tag.attributes();
+    attributes.push(Attribute::new("aria-label", "Spread", None, false));
+    let wide = || rsx! { div { style: "width: 1000px", "Wide content" } };
+    rsx! {
+        div { dir: "rtl",
+            button {
+                id: "scroll",
+                onclick: move |_| {
+                    spread.scroll_to(100.0, 0.0);
+                    plain.scroll_to(100.0, 0.0);
+                },
+                "Scroll"
+            }
+            div { style: "width: 200px; height: 80px",
+                ScrollArea {
+                    id: "spread",
+                    handle: spread,
+                    scrollbars: "horizontal",
+                    attributes,
+                    {wide()}
+                }
+            }
+            div { style: "width: 200px; height: 80px",
+                ScrollArea {
+                    id: "plain",
+                    handle: plain,
+                    scrollbars: "horizontal",
+                    "aria-label": "Plain",
+                    {wide()}
                 }
             }
         }

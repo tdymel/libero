@@ -1,6 +1,6 @@
 # Skipped e2e scenarios
 
-Scenarios: 738
+Scenarios: 741
 
 Generated from the `scenario!` skips in `e2e/tests/all` by `cargo test -p e2e --lib skips`; edit the skip, not this file. A reason starting `upstream:` waits on Dioxus, Blitz, wry or the engine (revisit on their update, todo 3362), a number names the todo that removes it.
 
@@ -72,6 +72,12 @@ The performance scenarios (units `perf`, `table_perf`) are no skips but run on r
 | `file_field::browse_picks_a_second_time` | desktop | 1126: the GTK file chooser is not driven |
 | `file_field::browse_picks_a_second_time` | ios | 3194: the simulator's picker opens but is not driven; see browse_opens_the_ios_picker |
 | `file_field::browse_picks_a_second_time` | native | rfd opens the desktop portal's dialog, which no driver answers |
+| `floating_action_button::a_phone_opens_the_menu_as_a_sheet_and_a_hidden_button_opens_nothing` | desktop | 5272: a phone's WebView |
+| `floating_action_button::a_phone_opens_the_menu_as_a_sheet_and_a_hidden_button_opens_nothing` | native | 5272: a phone's WebView |
+| `floating_action_button::a_phone_opens_the_menu_as_a_sheet_and_a_hidden_button_opens_nothing` | web | 5272: a phone's WebView; `menu::below_sm_the_menu_is_a_sheet_that_closes_every_way` has Chromium |
+| `floating_action_button::under_rtl_a_phone_opens_the_menu_as_a_sheet_and_a_hidden_button_opens_nothing` | desktop | 5272: a phone's WebView |
+| `floating_action_button::under_rtl_a_phone_opens_the_menu_as_a_sheet_and_a_hidden_button_opens_nothing` | native | 5272: a phone's WebView |
+| `floating_action_button::under_rtl_a_phone_opens_the_menu_as_a_sheet_and_a_hidden_button_opens_nothing` | web | 5272: a phone's WebView; `menu::below_sm_the_menu_is_a_sheet_that_closes_every_way` has Chromium |
 | `floating_window::f6_moves_focus_between_the_window_and_the_page` | android | 958: element identity on the WebView |
 | `floating_window::f6_moves_focus_between_the_window_and_the_page` | desktop | 958: element identity on the WebView |
 | `floating_window::f6_moves_focus_between_the_window_and_the_page` | ios | 958: element identity on the WebView |
@@ -288,6 +294,7 @@ The performance scenarios (units `perf`, `table_perf`) are no skips but run on r
 | `scatter_chart::the_legend_hides_and_shows_a_series` | native | Blitz has no script reads |
 | `scroll_area::a_jump_mid_list_renders_the_window_there` | android | 2177: the WebView does not follow the jump |
 | `scroll_area::a_scroll_right_after_the_plain_to_windowed_switch_moves_the_window` | android | 2177: the WebView does not follow the jump |
+| `scroll_area::a_spread_tag_keeps_the_handle_s_rtl_scroll_to` | native | 5264: a spread tag is a WebView's; on Blitz `attributes()` is empty, so nothing is spread |
 | `scroll_area::rows_stay_in_view_through_a_fling` | android | 2131: rows trail a WebView fling; skeleton bars paint the gap |
 | `scroll_area::rows_stay_in_view_through_a_fling` | desktop | 2131: rows trail a WebView fling, 80px of 120; skeleton bars paint the gap |
 | `scroll_area::rows_stay_in_view_through_a_fling` | ios | 2131: rows trail a WebView fling, 80px of 120; skeleton bars paint the gap |

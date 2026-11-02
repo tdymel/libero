@@ -778,6 +778,22 @@ fn under_rtl_the_percent_counts_from_the_right_edge() {
     });
 }
 
+/// Todo 5264: the handle reads direction by its own tag, which a spread tag takes off the root.
+async fn a_spread_tag_keeps_rtl_scroll_to<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    eventually(d, "both areas 100px from their right edge", async |d| {
+        d.click("#scroll").await?;
+        Ok(d.scroll_pos("#plain").await?.0 == -100.0 && d.scroll_pos("#spread").await?.0 == -100.0)
+    })
+    .await
+}
+
+e2e::scenario!(
+    a_spread_tag_keeps_the_handle_s_rtl_scroll_to,
+    "/scroll-area/rtl-spread",
+    a_spread_tag_keeps_rtl_scroll_to,
+    native: skip("5264: a spread tag is a WebView's; on Blitz `attributes()` is empty, so nothing is spread"),
+);
+
 /// An area with only `on*reached` handlers still listens for scrolls (todo 29
 /// attaches `onscroll` only when something reads it).
 #[test]
