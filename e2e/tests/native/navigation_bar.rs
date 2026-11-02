@@ -156,3 +156,37 @@ fn a_fixed_bar_docks_to_the_window() {
     page.wait_for(|page| page.rect("#content").1 < -100.0 && bottom(page, "#bar") == window);
     assert_eq!(bottom(&page, "#bar"), window, "{}", page.tree());
 }
+
+fn tone(indicator: &'static str) -> Element {
+    rsx! {
+        NavigationBar { id: "bar", "aria-label": "Main", indicator,
+            NavigationBarItem { id: "home", selected: true, onclick: |_| {}, icon: rsx! { "H" }, "Home" }
+            NavigationBarItem { id: "search", onclick: |_| {}, icon: rsx! { "S" }, "Search" }
+        }
+    }
+}
+
+/// Todo 5392 (5366): `indicator: "color"` has no pill; the selected icon and label share a tone, bold.
+#[test]
+fn the_color_indicator_marks_the_selected_item_without_a_pill() {
+    let page = mount(|| tone("color"));
+    let label =
+        |id: &str, property: &str| page.computed(&format!("#{id} > [data-slot=label]"), property);
+    let icon =
+        |id: &str, property: &str| page.computed(&format!("#{id} > [data-slot=icon]"), property);
+
+    assert_eq!(icon("home", "background-color"), "rgba(0, 0, 0, 0)");
+    assert_eq!(icon("home", "color"), label("home", "color"));
+    assert_ne!(label("home", "color"), label("search", "color"));
+    assert_eq!(label("home", "font-weight"), "600");
+    assert_eq!(page.attr("#home", "aria-current").as_deref(), Some("page"));
+}
+
+#[test]
+fn the_pill_indicator_fills_behind_the_selected_icon() {
+    let page = mount(|| tone("pill"));
+    assert_ne!(
+        page.computed("#home > [data-slot=icon]", "background-color"),
+        "rgba(0, 0, 0, 0)"
+    );
+}

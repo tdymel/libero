@@ -89,3 +89,40 @@ fn parts_style_the_inner_parts_natively() {
         "normal"
     );
 }
+
+fn icon_app() -> Element {
+    rsx! {
+        div { style: "width: 480px",
+            Alert { id: "icon", title: "Card expiring",
+                icon: rsx! { svg { width: "20", height: "20", view_box: "0 0 20 20" } },
+                "Update it before the next invoice."
+            }
+        }
+    }
+}
+
+/// Todo 5391 (5360): Blitz resolves `1lh`, so the icon box is the title's line tall and the glyph centres in it.
+#[test]
+fn the_icon_centres_on_the_first_line_natively() {
+    let page = mount(icon_app);
+    let (_, icon_y, _, icon_h) = page.rect("#icon > [data-slot=icon]");
+    let (_, title_y, _, title_h) = page.rect("#icon [data-slot=title]");
+    let (_, svg_y, _, svg_h) = page.rect("#icon > [data-slot=icon] svg");
+
+    assert!(
+        title_h > 20.0,
+        "the line {title_h}px is taller than the 20px icon"
+    );
+    assert!(
+        (icon_y - title_y).abs() < 0.5,
+        "icon box {icon_y} vs title {title_y}"
+    );
+    assert!(
+        (icon_h - title_h).abs() < 0.5,
+        "icon box {icon_h}px vs line {title_h}px"
+    );
+    assert!(
+        ((svg_y + svg_h / 2.0) - (title_y + title_h / 2.0)).abs() < 1.0,
+        "glyph at {svg_y}+{svg_h}, line at {title_y}+{title_h}"
+    );
+}

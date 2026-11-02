@@ -114,3 +114,39 @@ fn switching_labels_below_keeps_the_content_text_on_one_line() {
     page.wait_for(|page| page.wrapped_text("#who").is_empty());
     assert_eq!(page.wrapped_text("#who"), Vec::<String>::new());
 }
+
+fn even(connectors: bool) -> Element {
+    rsx! {
+        div { style: "width: 360px",
+            Stepper { id: "even", value: Some(Stage::Shipping), label_position: "below", connectors }
+        }
+    }
+}
+
+/// Todo 5392 (5369): without connectors the three below-label steps share the row in equal columns.
+#[test]
+fn without_connectors_the_steps_share_the_row_in_equal_columns() {
+    let page = mount(|| even(false));
+    let widths: Vec<f64> = page.rects("#even li").iter().map(|r| r.2).collect();
+    assert_eq!(widths.len(), 3, "{widths:?}");
+    assert!(
+        widths.iter().all(|w| (w - widths[0]).abs() < 1.0),
+        "the columns differ: {widths:?}"
+    );
+    assert!(
+        widths[0] > 100.0,
+        "the columns do not fill the row: {widths:?}"
+    );
+}
+
+/// The control for the test above: with connectors the end steps stay narrower than the middle's line.
+#[test]
+fn with_connectors_the_columns_are_not_even() {
+    let page = mount(|| even(true));
+    let widths: Vec<f64> = page.rects("#even li").iter().map(|r| r.2).collect();
+    assert_eq!(widths.len(), 3, "{widths:?}");
+    assert!(
+        widths.iter().any(|w| (w - widths[0]).abs() > 1.0),
+        "equal columns with connectors: {widths:?}"
+    );
+}

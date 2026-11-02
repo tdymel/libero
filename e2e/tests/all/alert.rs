@@ -200,3 +200,43 @@ fn the_close_button_works_from_the_keyboard() {
         fixture.close().await.unwrap();
     });
 }
+
+/// Todo 5391 (5360): the icon box is at least one line tall, so the glyph centres on the
+/// title's first line at the default size and beside larger text.
+#[test]
+fn the_icon_centres_on_the_first_line() {
+    block_on(async {
+        let fixture = Fixture::open("/alert/icon", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        wait::for_visible(page, "#icon-large").await.unwrap();
+        let rows: Vec<(f64, f64, f64, f64)> = page
+            .evaluate_bounded(
+                "['#icon-default', '#icon-large'].map(id => { \
+                 const top = (el) => el.getBoundingClientRect().top; \
+                 const mid = (el) => { const r = el.getBoundingClientRect(); return r.top + r.height / 2; }; \
+                 const icon = document.querySelector(id + ' > [data-slot=icon]'); \
+                 const title = document.querySelector(id + ' [data-slot=title]'); \
+                 return [top(icon) - top(title), mid(icon.querySelector('svg')) - mid(title), \
+                         icon.getBoundingClientRect().height, title.getBoundingClientRect().height]; })",
+            )
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        for (top, centre, icon_h, title_h) in rows {
+            assert!(top.abs() < 0.5, "the icon box starts {top}px off the title");
+            assert!(
+                centre.abs() < 1.0,
+                "the glyph is {centre}px off the line centre"
+            );
+            assert!(
+                icon_h >= title_h - 0.5,
+                "icon box {icon_h}px, first line {title_h}px"
+            );
+        }
+        fixture.console.assert_clean("the icon").unwrap();
+        fixture.close().await.unwrap();
+    });
+}

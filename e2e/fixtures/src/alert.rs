@@ -1,9 +1,10 @@
 //! `Alert`: every severity in every variant, a dismissible one, a long title and styled parts.
 
 use dioxus::prelude::*;
-use libero::components::{Alert, AlertPart, Anchor, Button, Flex, Part, Parts};
+use libero::components::{Alert, AlertPart, Anchor, Button, Flex, Part, Parts, Pictogram};
 use libero::hooks::use_focus_return;
 use libero::sx::sx;
+use pictogram_icons_lucide as lucide;
 
 use crate::Routes;
 
@@ -11,7 +12,28 @@ pub const ROUTES: Routes = &[
     ("/alert", || rsx! { AlertPage {} }),
     ("/alert/long-action", || rsx! { LongActionPage {} }),
     ("/alert/actions", || rsx! { ActionsPage {} }),
+    ("/alert/icon", || rsx! { IconPage {} }),
 ];
+
+/// Todo 5391: an icon beside a title at the default type size and at a larger one.
+#[component]
+fn IconPage() -> Element {
+    rsx! {
+        Flex { direction: "column", gap: "md", max_width: "480px",
+            Alert { id: "icon-default",
+                title: "Card expiring",
+                icon: rsx! { Pictogram { icon: lucide::check::outlined } },
+                "Update it before the next invoice."
+            }
+            Alert { id: "icon-large",
+                title: "Card expiring",
+                icon: rsx! { Pictogram { icon: lucide::check::outlined } },
+                sx: sx().font_size("2rem"),
+                "Update it before the next invoice."
+            }
+        }
+    }
+}
 
 /// Todo 4837: an action button at each size, so a finger's 44px floor is checked on all.
 #[component]
