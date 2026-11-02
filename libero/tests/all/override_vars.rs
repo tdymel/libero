@@ -89,7 +89,7 @@ fn app() -> Element {
             ImageList { ratio: 1.5, items: items() }
             ImageList { variant: "quilted", items: quilted_items() }
             Indicator { radius: "sm" }
-            Marquee { duration: 9000, "marquee" }
+            Marquee { duration: 9000, fade_color: "red", "marquee" }
             Overlay { opacity: "0.5", z_index: "5", blur: "2px" }
             Paper { shadow: "none", "paper" }
             Scroller { aria_label: "Tags", fade_color: "red", span { "one" } }
