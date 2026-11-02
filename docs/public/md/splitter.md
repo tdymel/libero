@@ -78,6 +78,7 @@ Like every component, `Splitter` also takes the shared props `sx`, `class`,
   visible.
 - The divider's hit area is 24px thick (WCAG 2.5.8), so it takes presses up to
   24px minus the divider's thickness into pane B. Pane A's own scrollbar stays free to grab.
+  Under a touch pointer it is 44px thick and centred on the line, about 22px into each pane.
 - Each pane scrolls its own overflow, so a pane at `min_size` never paints
   over the divider or hides its controls under the other pane.
 - A debug build warns without `aria_label`.
@@ -89,6 +90,9 @@ Like every component, `Splitter` also takes the shared props `sx`, `class`,
 - Keep buttons at pane B's start edge out of the 24px next to the divider,
   which gets no press there. For example, use `padding-inline-start: 24px` on
   pane B of a side-by-side split, `padding-block-start: 24px` of a stacked one.
+  Under a touch pointer, keep controls 22px from the divider in both panes. A pane
+  under 22px lets the divider take presses just past the Splitter's edge, so keep
+  controls that far from a short Splitter too.
 
 ### Example
 

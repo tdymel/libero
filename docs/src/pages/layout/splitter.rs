@@ -197,13 +197,13 @@ pub fn SplitterPage() -> Element {
                     "The divider is a focusable separator.",
                     "Double-clicking the divider resizes without dragging (WCAG 2.5.7): pane A collapses to `min_size`, and the next double-click restores the size it had before the move that reached `min_size`, by a double-click, a drag or `Home`. Arrow keys walking down to `min_size` restore the size one step above it. A single click only focuses the divider.",
                     "In forced colours the divider line takes the system text colour, so it stays visible.",
-                    "The divider's hit area is 24px thick (WCAG 2.5.8), so it takes presses up to 24px minus the divider's thickness into pane B. Pane A's own scrollbar stays free to grab.",
+                    "The divider's hit area is 24px thick (WCAG 2.5.8), so it takes presses up to 24px minus the divider's thickness into pane B. Pane A's own scrollbar stays free to grab. Under a touch pointer it is 44px thick and centred on the line, about 22px into each pane.",
                     "Each pane scrolls its own overflow, so a pane at `min_size` never paints over the divider or hides its controls under the other pane.",
                     "A debug build warns without `aria_label`.",
                 ])
                 .must([
                     "Set `aria_label` to name the divider after the pane it resizes, such as `\"Resize sidebar\"`. It has no name of its own.",
-                    "Keep buttons at pane B's start edge out of the 24px next to the divider, which gets no press there. For example, use `padding-inline-start: 24px` on pane B of a side-by-side split, `padding-block-start: 24px` of a stacked one.",
+                    "Keep buttons at pane B's start edge out of the 24px next to the divider, which gets no press there. For example, use `padding-inline-start: 24px` on pane B of a side-by-side split, `padding-block-start: 24px` of a stacked one. Under a touch pointer, keep controls 22px from the divider in both panes. A pane under 22px lets the divider take presses just past the Splitter's edge, so keep controls that far from a short Splitter too.",
                 ])
                 .example("A file sidebar beside an editor, `Splitter { aria_label: \"Resize sidebar\", .. }`: Tab reaches the divider, Left and Right move it by 1%, and a double-click collapses the sidebar without a drag."),
             lead: rsx! {

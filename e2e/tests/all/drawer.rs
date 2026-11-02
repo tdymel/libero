@@ -340,6 +340,51 @@ fn an_end_drawer_docks_left_in_rtl() {
     });
 }
 
+/// Todo 5267: a top or bottom drawer spans the width under RTL, so no page stays tappable beside it.
+#[test]
+fn a_top_or_bottom_drawer_spans_the_width_in_rtl() {
+    block_on(async {
+        let fixture = Fixture::open("/drawer/edges", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        page.evaluate_bounded("document.documentElement.dir = 'rtl'")
+            .await
+            .unwrap();
+        for trigger in ["#open-top", "#open-bottom"] {
+            keyboard::tab_to(page, trigger, 5).await.unwrap();
+            keyboard::press(page, keyboard::ENTER).await.unwrap();
+            e2e::wait::for_visible(page, DIALOG).await.unwrap();
+            let (x, width, viewport): (f64, f64, f64) = page
+                .evaluate_bounded(
+                    "(() => { const r = document.querySelector('[role=dialog]').getBoundingClientRect(); \
+                     return [r.x, r.width, document.documentElement.clientWidth]; })()",
+                )
+                .await
+                .unwrap()
+                .into_value()
+                .unwrap();
+            assert!(
+                x.abs() <= 1.0 && (width - viewport).abs() <= 1.0,
+                "{trigger}: the panel is {width}px wide at x={x} in a {viewport}px viewport"
+            );
+            keyboard::press(page, keyboard::ESCAPE).await.unwrap();
+            e2e::wait::for_js_true(
+                page,
+                "!document.querySelector('[role=dialog]')",
+                "the drawer to close",
+            )
+            .await
+            .unwrap();
+        }
+        fixture
+            .console
+            .assert_clean("the rtl edge drawers")
+            .unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
 /// 1.4.10: a drawer taller than the viewport scrolls; its last control is reachable.
 #[test]
 fn a_drawer_taller_than_the_viewport_scrolls() {

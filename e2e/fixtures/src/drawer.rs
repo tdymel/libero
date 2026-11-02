@@ -21,7 +21,34 @@ pub const ROUTES: Routes = &[
     ("/drawer/bottom-swipe", || rsx! { BottomSwipeDrawerPage {} }),
     ("/drawer/close-button", || rsx! { CloseButtonDrawerPage {} }),
     ("/drawer/inset", || rsx! { InsetDrawerPage {} }),
+    ("/drawer/edges", || rsx! { EdgeDrawersPage {} }),
 ];
+
+/// Todo 5267: a top and a bottom drawer, each spanning the width in either direction.
+#[component]
+fn EdgeDrawersPage() -> Element {
+    let top = use_drawer(
+        DrawerOptions {
+            anchor: "top".into(),
+            aria_label: Some("Top".into()),
+            ..Default::default()
+        },
+        |s: ModalScope<()>| rsx! { Button { onclick: move |_| s.close(), "Done" } },
+    );
+    let bottom = use_drawer(
+        DrawerOptions {
+            anchor: "bottom".into(),
+            aria_label: Some("Bottom".into()),
+            ..Default::default()
+        },
+        |s: ModalScope<()>| rsx! { Button { onclick: move |_| s.close(), "Done" } },
+    );
+
+    rsx! {
+        Button { id: "open-top", onclick: move |_| { top.open(); }, "Open top" }
+        Button { id: "open-bottom", onclick: move |_| { bottom.open(); }, "Open bottom" }
+    }
+}
 
 /// Todo 4175: the docs' floating-panel recipe, a start drawer inset 16px by `sx`.
 #[component]

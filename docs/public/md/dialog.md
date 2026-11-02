@@ -50,7 +50,7 @@ fn Demo() -> Element {
 | `ondismiss` | `Callback<Dismiss, bool>` | all close, an alertdialog's backdrop does not | Inside a modal: asked before Escape, the backdrop, Back, a bottom drawer's swipe or the close button (`Dismiss::CloseButton`) closes it. Return `false` to keep it open, such as a form with unsaved input. Your own `close()` is not asked. |
 | `close_label` | `String` | `"Close"` | The close button's accessible name, such as "Close cart". Unset, the localization's `common.close`. |
 | `radius` | `ThemeAwareValue` | `md` | Corner radius from the radius scale, or any CSS, e.g. `radius: "0"`. |
-| `size` | `ThemeAwareValue` | `md` | Caps the width from the dialog scale. `md` is 510px. |
+| `size` | `ThemeAwareValue` | `md` | Caps the width from the dialog scale. `md` is 510px. A full-screen dialog ignores it, so with `full_screen: "phone"` it does nothing below the `sm` breakpoint. |
 | `full_screen` | `DialogFullScreen` | `never` | Inside a modal, fills the screen edge to edge with square corners instead of centring: `"phone"` below the `sm` breakpoint, where a centred dialog leaves slivers of page, `"always"` at every width. Outside a modal it does nothing. The Modal page's demo shows it. |
 | `variables` | `Variables` | - | CSS variables layered onto the dialog's own, as `Drawer` does. |
 | `parts` | `Parts<DialogPart>` | - | Styles for the inner parts in the Style API tab, under `sx`: `Parts::new().part(DialogPart::Title, sx().font_size("lg"))`. |

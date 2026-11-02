@@ -94,7 +94,8 @@ static DRAWER_HANDLE_BAR_SX: StaticSx = StaticSx::new(|| {
 
 /// A corner `Float` placement pins two sides; the third offset makes a full edge.
 static DRAWER_FLOAT_VERTICAL_SX: StaticSx = StaticSx::new(|| sx().bottom("0"));
-static DRAWER_FLOAT_HORIZONTAL_SX: StaticSx = StaticSx::new(|| sx().right("0"));
+// Both sides: under RTL the placement pins the right already, and `left` would stay auto.
+static DRAWER_FLOAT_HORIZONTAL_SX: StaticSx = StaticSx::new(|| sx().left("0").right("0"));
 
 fn drawer_float_placement(anchor: DrawerAnchor) -> (Placement, &'static StaticSx) {
     match anchor {

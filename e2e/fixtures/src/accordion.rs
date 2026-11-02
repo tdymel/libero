@@ -17,7 +17,26 @@ pub const ROUTES: Routes = &[
     ("/accordion-chevron", || rsx! { ChevronPage {} }),
     ("/accordion-growing", || rsx! { GrowingPage {} }),
     ("/accordion-insert", || rsx! { InsertPage {} }),
+    ("/accordion-small", || rsx! { SmallPage {} }),
 ];
+
+/// Todo 5269: the two sizes whose triggers are under 44px by their padding alone.
+#[component]
+fn SmallPage() -> Element {
+    let mut open = use_signal(|| AccordionOpen::One(None::<Step>));
+    rsx! {
+        for size in ["xs", "sm"] {
+            Accordion {
+                key: "{size}",
+                id: size,
+                size,
+                open: open(),
+                onchange: move |next| open.set(next),
+                panel: |_: Step| rsx! { Text { "Body." } },
+            }
+        }
+    }
+}
 
 /// One section always open (todo 4140).
 #[component]

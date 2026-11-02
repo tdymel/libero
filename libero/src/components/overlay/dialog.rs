@@ -152,7 +152,8 @@ base_props! {
         /// `theme.dialog.radius`, else `Paper`'s.
         #[props(default, into)]
         radius: Input<ThemeAwareValue>,
-        /// Unset, `theme.dialog.size`.
+        /// Unset, `theme.dialog.size`. A full-screen dialog ignores it, as does
+        /// `full_screen: "phone"` below `sm`.
         #[props(default, into)]
         size: Input<ThemeAwareValue>,
         /// Inside a modal, fills the screen edge to edge instead of centring: `"phone"`

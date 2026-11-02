@@ -381,8 +381,7 @@ fn the_default_hit_area_is_24px_thick() {
     });
 }
 
-/// Todo 4827: under a finger the hit area is 44px across the line, both ways, and still
-/// reaches into pane B only, so pane A's scrollbar stays clear.
+/// Todo 4827: under a finger the hit area is 44px across the line, both ways.
 #[test]
 fn a_finger_gets_a_44px_hit_area_on_either_divider() {
     use chromiumoxide::cdp::browser_protocol::emulation::SetTouchEmulationEnabledParams;
@@ -562,14 +561,13 @@ fn pane_a_scrollbar_is_not_under_the_hit_area() {
     });
 }
 
-/// Todo 4827: the 44px finger hit area still leaves pane A's scrollbar strip to the pane.
+/// Todo 5268: the finger's zone is centred, so a control 30px from the line takes the
+/// tap on either side, and 20px from it the divider does.
 #[test]
-fn pane_a_scrollbar_is_not_under_the_coarse_hit_area() {
+fn a_finger_zone_leaves_both_panes_past_22px() {
     use chromiumoxide::cdp::browser_protocol::emulation::SetTouchEmulationEnabledParams;
     block_on(async {
-        let fixture = Fixture::open_with_scrollbars("/splitter/content", Viewport::Desktop)
-            .await
-            .unwrap();
+        let fixture = Fixture::open("/splitter", Viewport::Desktop).await.unwrap();
         let page = &fixture.page;
         page.execute_bounded(SetTouchEmulationEnabledParams::new(true))
             .await
@@ -581,21 +579,22 @@ fn pane_a_scrollbar_is_not_under_the_coarse_hit_area() {
         )
         .await
         .unwrap();
-        wait::for_visible(page, "#pane-a").await.unwrap();
-        let verdict: String = page
-            .evaluate_bounded(
-                "(() => { const pane = document.getElementById('pane-a').parentElement; \
-                 const bar = pane.offsetWidth - pane.clientWidth; \
-                 if (bar <= 0) return 'pane A has no scrollbar'; \
-                 const r = pane.getBoundingClientRect(); \
-                 const hit = document.elementFromPoint(r.right - bar / 2, r.top + r.height / 2); \
-                 return hit === pane ? 'ok' : 'the scrollbar strip hits ' + hit.outerHTML.slice(0, 60); })()",
-            )
-            .await
-            .unwrap()
-            .into_value()
-            .unwrap();
-        assert_eq!(verdict, "ok");
+        wait::for_visible(page, DIVIDER).await.unwrap();
+        let divider_at: Vec<bool> = e2e::js(
+            page,
+            &format!(
+                "(() => {{ const d = document.querySelector({DIVIDER:?}); \
+                 const r = d.parentElement.getBoundingClientRect(); \
+                 const mid = r.x + r.width / 2, y = r.y + r.height / 2; \
+                 return [-30, -20, 20, 30].map(dx => document.elementFromPoint(mid + dx, y) === d); }})()"
+            ),
+        )
+        .await;
+        assert_eq!(
+            divider_at,
+            [false, true, true, false],
+            "at -30, -20, 20, 30px"
+        );
         fixture.close().await.unwrap();
     });
 }

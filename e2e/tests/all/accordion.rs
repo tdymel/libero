@@ -16,6 +16,39 @@ const TRIGGER: &str = "[data-accordion-heading] > button";
 const FIRST: &str = "#checkout-trigger-0";
 const CONTINUE: &str = "#continue";
 
+/// Todo 5269: under a finger a stacked trigger is 44px tall at every size, by its own box.
+#[test]
+fn a_small_trigger_is_44px_tall_under_a_finger() {
+    use chromiumoxide::cdp::browser_protocol::emulation::SetTouchEmulationEnabledParams;
+    block_on(async {
+        let fixture = Fixture::open("/accordion-small", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        page.execute_bounded(SetTouchEmulationEnabledParams::new(true))
+            .await
+            .unwrap();
+        wait::for_js_true(
+            page,
+            "matchMedia('(pointer: coarse)').matches",
+            "a coarse pointer",
+        )
+        .await
+        .unwrap();
+        wait::for_visible(page, TRIGGER).await.unwrap();
+        let short: Vec<f64> = js(
+            page,
+            &format!(
+                "[...document.querySelectorAll({TRIGGER:?})].map(el => el.getBoundingClientRect().height).filter(h => h < 43.9)"
+            ),
+        )
+        .await;
+        assert!(short.is_empty(), "triggers under 44px: {short:?}");
+        fixture.console.assert_clean("the small triggers").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
 #[test]
 fn it_meets_the_baseline() {
     Suite::new("accordion", "/accordion")

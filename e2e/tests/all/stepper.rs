@@ -396,6 +396,41 @@ fn the_current_step_scrolls_into_its_strip() {
     });
 }
 
+/// Todo 5270 (WCAG 1.4.4): the marker and the label double with the browser's text size.
+#[test]
+fn the_marker_and_label_follow_the_text_size() {
+    const SIZES: &str = "(() => { const m = document.querySelector('#stepper [data-slot=marker]'); \
+         const l = document.querySelector('#stepper [data-slot=label]'); \
+         return [m.getBoundingClientRect().width, parseFloat(getComputedStyle(l).fontSize)]; })()";
+    block_on(async {
+        let fixture = Fixture::open("/stepper", Viewport::Desktop).await.unwrap();
+        let page = &fixture.page;
+        wait::for_visible(page, "#stepper [data-slot=marker]")
+            .await
+            .unwrap();
+        let (marker, label): (f64, f64) = page
+            .evaluate_bounded(SIZES)
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        page.evaluate_bounded("document.documentElement.style.fontSize = '200%'")
+            .await
+            .unwrap();
+        let (big_marker, big_label): (f64, f64) = page
+            .evaluate_bounded(SIZES)
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        assert!(
+            (big_marker - marker * 2.0).abs() < 1.0 && (big_label - label * 2.0).abs() < 0.5,
+            "marker {marker} to {big_marker}, label {label} to {big_label}"
+        );
+        fixture.close().await.unwrap();
+    });
+}
+
 /// Side labels stack under the width their step count needs, not a fixed 360px (todo 1573).
 #[test]
 fn the_side_fallback_follows_the_step_count() {

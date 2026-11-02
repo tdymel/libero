@@ -36,8 +36,8 @@ static SPLITTER_BAR_SX: StaticSx = StaticSx::new(|| {
     })
 });
 
-// Invisible, and negatively inset past the bar into pane B only, so the drag
-// target is larger than the visible line and pane A's own scrollbar stays clear.
+// Invisible, and negatively inset past the bar: for a fine pointer into pane B only,
+// so pane A's own scrollbar stays clear; for a finger into both panes.
 static SPLITTER_HIT_SX: StaticSx = StaticSx::new(|| {
     // A vertical swipe over a vertical divider scrolls the page (1039).
     let base = sx()
@@ -48,9 +48,9 @@ static SPLITTER_HIT_SX: StaticSx = StaticSx::new(|| {
     Size::ALL.into_iter().fold(base, |acc, size| {
         let divider = SPLITTER_DIVIDER_SIZE.value(size);
         let inset = format!("calc({divider} - {})", SPLITTER_HIT_SIZE.value(size));
-        // A finger's 44px, still reaching into pane B only.
+        // A finger's 44px, centred on the line: a phone's scrollbars overlay, so none to clear.
         let coarse = format!(
-            "calc({divider} - max({}, {COARSE_TARGET}))",
+            "calc(({divider} - max({}, {COARSE_TARGET})) / 2)",
             SPLITTER_HIT_SIZE.value(size)
         );
         acc.when(
@@ -60,7 +60,11 @@ static SPLITTER_HIT_SX: StaticSx = StaticSx::new(|| {
                 .inset_inline_start("0")
                 .inset_inline_end(inset.clone())
                 .cursor("col-resize")
-                .media(COARSE_POINTER, sx().inset_inline_end(coarse.clone())),
+                .media(
+                    COARSE_POINTER,
+                    sx().inset_inline_start(coarse.clone())
+                        .inset_inline_end(coarse.clone()),
+                ),
         )
         .when(
             format!("horizontal && {}", size.state_name()),
@@ -69,7 +73,7 @@ static SPLITTER_HIT_SX: StaticSx = StaticSx::new(|| {
                 .top("0")
                 .bottom(inset)
                 .cursor("row-resize")
-                .media(COARSE_POINTER, sx().bottom(coarse)),
+                .media(COARSE_POINTER, sx().top(coarse.clone()).bottom(coarse)),
         )
     })
 });

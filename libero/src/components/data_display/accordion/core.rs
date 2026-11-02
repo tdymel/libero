@@ -6,9 +6,9 @@ use pictogram_icons_lucide as lucide;
 use crate::{
     components::{
         common::{
-            ClassList, HtmlTag, Input, LogicalTextAlign, OptionLabel, Options, States,
-            disabled_look_sx, draw_svg, has_shortcut_modifier, inset_focus_ring_sx,
-            use_closing_focus, use_identity_keys,
+            COARSE_POINTER, COARSE_TARGET, ClassList, HtmlTag, Input, LogicalTextAlign,
+            OptionLabel, Options, States, disabled_look_sx, draw_svg, has_shortcut_modifier,
+            inset_focus_ring_sx, use_closing_focus, use_identity_keys,
         },
         layout::{Collapse, use_box},
     },
@@ -53,7 +53,9 @@ static ACCORDION_SX: StaticSx = StaticSx::new(|| {
                 .letter_spacing("inherit")
                 .color("inherit")
                 .text_align_start()
-                .cursor("pointer"),
+                .cursor("pointer")
+                // A real height: stacked triggers leave no room for a `::before` overhang.
+                .media(COARSE_POINTER, sx().min_height(COARSE_TARGET)),
         )
         // A long word wraps instead of pushing the chevron off-screen (1.4.10).
         .selector(

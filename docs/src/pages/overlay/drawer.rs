@@ -43,7 +43,7 @@ static TABS_CONTENT: &str = r#"Flex {
     Tabs {
         aria_label: "Settings",
         placement: "start",
-        sx: sx().selector("& > [role=\"tablist\"]", sx().max_height("8rem")),
+        sx: sx().selector("& > [role=\"tablist\"]", sx().max_height("7rem")),
         value: setting(),
         onchange: move |next| setting.set(next),
         panel: |setting: Setting| rsx! { Text { "{setting.label()}" } },
@@ -133,7 +133,7 @@ fn DrawerDemo(
                         Tabs {
                             aria_label: "Settings",
                             placement: "start",
-                            sx: sx().selector("& > [role=\"tablist\"]", sx().max_height("8rem")),
+                            sx: sx().selector("& > [role=\"tablist\"]", sx().max_height("7rem")),
                             value: setting(),
                             onchange: move |next| setting.set(next),
                             panel: |setting: Setting| rsx! { Text { "{setting.label()}" } },

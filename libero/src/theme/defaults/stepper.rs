@@ -83,48 +83,49 @@ pub(crate) fn contrast_of(color: ColorValue) -> ColorValue {
 }
 
 impl StepperDefaults {
+    // Marker and type in rem, so they follow the browser's text size (WCAG 1.4.4).
     pub const DEFAULT: Self = Self {
         size: Size::Md,
         sizes: Sizes::new(
             StepperSizeLevel {
-                marker: "24px",
-                font_size: "12px",
-                description_font_size: "11px",
+                marker: "1.5rem",
+                font_size: "0.75rem",
+                description_font_size: "0.6875rem",
                 gap: "6px",
                 spacing: "8px",
             },
             StepperSizeLevel {
-                marker: "28px",
-                font_size: "13px",
-                description_font_size: "12px",
+                marker: "1.75rem",
+                font_size: "0.8125rem",
+                description_font_size: "0.75rem",
                 gap: "8px",
                 spacing: "12px",
             },
             StepperSizeLevel {
-                marker: "32px",
-                font_size: "14px",
-                description_font_size: "12px",
+                marker: "2rem",
+                font_size: "0.875rem",
+                description_font_size: "0.75rem",
                 gap: "10px",
                 spacing: "16px",
             },
             StepperSizeLevel {
-                marker: "36px",
-                font_size: "16px",
-                description_font_size: "14px",
+                marker: "2.25rem",
+                font_size: "1rem",
+                description_font_size: "0.875rem",
                 gap: "12px",
                 spacing: "20px",
             },
             StepperSizeLevel {
-                marker: "40px",
-                font_size: "18px",
-                description_font_size: "16px",
+                marker: "2.5rem",
+                font_size: "1.125rem",
+                description_font_size: "1rem",
                 gap: "14px",
                 spacing: "24px",
             },
             StepperSizeLevel {
-                marker: "48px",
-                font_size: "20px",
-                description_font_size: "18px",
+                marker: "3rem",
+                font_size: "1.25rem",
+                description_font_size: "1.125rem",
                 gap: "16px",
                 spacing: "28px",
             },
@@ -182,5 +183,21 @@ impl ToCssDeclarations for StepperDefaults {
             declarations.push(STEPPER_SPACING_SIZE.declare(size, level.spacing));
         }
         declarations
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// Todo 5270 (WCAG 1.4.4): px would ignore the browser's text size.
+    #[test]
+    fn marker_and_type_are_in_rem_at_every_size() {
+        for size in Size::ALL {
+            let level = StepperDefaults::DEFAULT.sizes.get(size);
+            for value in [level.marker, level.font_size, level.description_font_size] {
+                assert!(value.ends_with("rem"), "{size:?}: {value}");
+            }
+        }
     }
 }
