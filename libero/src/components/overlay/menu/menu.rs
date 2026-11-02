@@ -115,6 +115,7 @@ pub fn Menu(props: MenuProps) -> Element {
     let labelledby = state.labelledby();
     let trigger_selector = id_selector(&state.trigger_element_id());
     let first_child = format!("{wrapper_selector} > *");
+    let trigger_selectors = vec![trigger_selector.clone(), first_child.clone()];
     use_effect(use_reactive!(|wrapper_selector| {
         wrapper.point_at(mounted_by_selector(&wrapper_selector));
     }));
@@ -224,6 +225,7 @@ pub fn Menu(props: MenuProps) -> Element {
                 .unwrap_or(theme.menu.close_on_select),
             depth: 0,
             marker: Some(marker),
+            trigger_selectors,
             attributes: props.attributes,
             class: props.class,
             sx: props.sx,

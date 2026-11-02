@@ -1078,11 +1078,14 @@ pub(crate) fn focused_attribute(attr: &str) -> super::Read<Option<String>> {
 }
 
 /// Only a WebView - see [`keep_focused`](crate::platform::keep_focused).
-pub(crate) fn keep_focused() -> Option<u64> {
+pub(crate) fn keep_focused(selectors: &[String]) -> Option<u64> {
     #[cfg(all(not(target_arch = "wasm32"), not(feature = "native")))]
-    return webview::keep_focused();
+    return webview::keep_focused(selectors);
     #[cfg(any(target_arch = "wasm32", feature = "native"))]
-    return None;
+    {
+        let _ = selectors;
+        return None;
+    }
 }
 
 /// Only a WebView - see [`focus_kept`](crate::platform::focus_kept).

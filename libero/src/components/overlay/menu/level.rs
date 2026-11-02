@@ -77,6 +77,9 @@ pub(super) struct MenuLevelProps {
     /// The wrapper's, on the root only: a press there is the trigger's toggle.
     #[props(default)]
     marker: Option<PressMarker>,
+    /// On the root only: where a WebView finds the trigger when focus is on the page (5342).
+    #[props(default)]
+    trigger_selectors: Vec<String>,
     #[props(default)]
     attributes: Vec<Attribute>,
     #[props(default)]
@@ -197,7 +200,15 @@ pub(super) fn MenuLevel(props: MenuLevelProps) -> Element {
     };
 
     let first = first_focus(&flat);
-    use_level_focus(level, open, placed, props.request, props.initial, first);
+    use_level_focus(
+        level,
+        open,
+        placed,
+        props.request,
+        props.initial,
+        first,
+        &props.trigger_selectors,
+    );
     // A memo: the first focus sets `active` to `first`, which redrew every row for nothing.
     // An active row past a shrunk list falls back to `first`, so one row keeps tabindex 0.
     let tabbable = use_memo(use_reactive!(|(first, len)| active()

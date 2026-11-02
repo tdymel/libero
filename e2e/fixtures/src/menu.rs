@@ -17,6 +17,7 @@ pub const ROUTES: Routes = &[
     ("/menu-items-late", || rsx! { MenuItemsLatePage {} }),
     ("/menu-items-shrink", || rsx! { MenuItemsShrinkPage {} }),
     ("/menu-submenu-reopen", || rsx! { MenuSubmenuReopenPage {} }),
+    ("/menu-unfocused-trigger", || rsx! { MenuUnfocusedTriggerPage {} }),
     ("/menu-submenu-low", || rsx! { MenuSubmenuLowPage {} }),
     ("/menu-choices", || rsx! { MenuChoicesPage {} }),
     ("/menu-row", || rsx! { MenuRowPage {} }),
@@ -485,6 +486,24 @@ fn MenuSubmenuLowPage() -> Element {
                 state: menu,
                 items,
                 Button { variant: "outlined", attributes: menu.a11y_attributes(), "Actions" }
+            }
+        }
+    }
+}
+
+/// Todo 5342: a press that focuses nothing, on every engine as a click on WebKit's button.
+#[component]
+fn MenuUnfocusedTriggerPage() -> Element {
+    let menu = use_menu();
+    let items = vec![MenuItem::new("Rename").onselect(|_| {}).into()];
+    rsx! {
+        Menu {
+            state: menu,
+            items,
+            button {
+                onmousedown: |event: MouseEvent| event.prevent_default(),
+                ..menu.a11y_attributes(),
+                "Actions"
             }
         }
     }

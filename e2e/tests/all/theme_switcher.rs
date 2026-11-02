@@ -238,9 +238,15 @@ e2e::scenario!(
 
 /// Test pages share one profile, so a stored `dark` would leak into later fixtures.
 /// Presses write to a stand-in that records what the component tried to persist.
+/// `__leaked` hears this page only: another page's write reaches the shared store too.
 const SHIELD_STORAGE: &str = r#"(() => {
-    window.__realStorage = window.localStorage;
     window.__stored = [];
+    window.__leaked = [];
+    const write = Storage.prototype.setItem;
+    Storage.prototype.setItem = function (k, v) {
+        window.__leaked.push(k + '=' + v);
+        return write.call(this, k, v);
+    };
     const items = new Map();
     Object.defineProperty(window, 'localStorage', { configurable: true, value: {
         getItem: k => items.has(k) ? items.get(k) : null,
@@ -390,8 +396,8 @@ fn each_press_flips_the_scheme_and_renames_the_button() {
         wait_for_pin(page, None).await;
         wait_for_name(page, "Switch to the dark theme").await;
 
-        let (stored, leaked): (Vec<String>, Option<String>) = page
-            .evaluate_bounded("[window.__stored, window.__realStorage.getItem('lsx-color-scheme')]")
+        let (stored, leaked): (Vec<String>, Vec<String>) = page
+            .evaluate_bounded("[window.__stored, window.__leaked]")
             .await
             .unwrap()
             .into_value()
@@ -401,7 +407,10 @@ fn each_press_flips_the_scheme_and_renames_the_button() {
             ["lsx-color-scheme=dark", "lsx-color-scheme=system"],
             "each press persists the setting it moved to"
         );
-        assert_eq!(leaked, None, "a press reached the shared localStorage");
+        assert!(
+            leaked.is_empty(),
+            "a press reached the shared localStorage: {leaked:?}"
+        );
 
         fixture
             .console
@@ -457,8 +466,8 @@ fn each_press_steps_the_cycle_and_renames_the_button() {
         wait_for_pin(page, None).await;
         wait_for_name(page, "Switch to the dark theme").await;
 
-        let (stored, leaked): (Vec<String>, Option<String>) = page
-            .evaluate_bounded("[window.__stored, window.__realStorage.getItem('lsx-color-scheme')]")
+        let (stored, leaked): (Vec<String>, Vec<String>) = page
+            .evaluate_bounded("[window.__stored, window.__leaked]")
             .await
             .unwrap()
             .into_value()
@@ -472,7 +481,10 @@ fn each_press_steps_the_cycle_and_renames_the_button() {
             ],
             "each press persists the setting it moved to"
         );
-        assert_eq!(leaked, None, "a press reached the shared localStorage");
+        assert!(
+            leaked.is_empty(),
+            "a press reached the shared localStorage: {leaked:?}"
+        );
 
         fixture
             .console

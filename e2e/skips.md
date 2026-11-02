@@ -1,6 +1,6 @@
 # Skipped e2e scenarios
 
-Scenarios: 753
+Scenarios: 754
 
 Generated from the `scenario!` skips in `e2e/tests/all` by `cargo test -p e2e --lib skips`; edit the skip, not this file. A reason starting `upstream:` waits on Dioxus, Blitz, wry or the engine (revisit on their update, todo 3362), a number names the todo that removes it.
 
@@ -156,6 +156,7 @@ The performance scenarios (units `perf`, `table_perf`) are no skips but run on r
 | `kanban::a_filtered_drag_lands_before_the_next_shown_card_behind_a_hidden_one` | desktop | 958: element identity on the WebView |
 | `kanban::a_filtered_key_move_lands_before_the_next_shown_card_behind_a_hidden_one` | desktop | 958: element identity on the WebView |
 | `kanban::a_handle_drag_moves_a_card_into_an_empty_column` | ios | 3416: flaky: the drop at the screen edge races the board's auto-scroll |
+| `kanban::a_handle_drag_moves_a_card_into_another_column_at_the_slot_it_was_let_go` | ios | 5340: the second drag after a drop pans the board, pointercancel after 4 moves |
 | `kanban::a_handle_drag_moves_a_card_into_the_empty_last_column_of_a_right_to_left_board` | ios | 3416: flaky: the drop at the screen edge races the board's auto-scroll |
 | `kanban::a_header_handle_drag_reorders_the_columns_of_a_right_to_left_board` | macos desktop | upstream: WebKit orders the RTL columns unlike WebKitGTK |
 | `kanban::a_move_the_app_refuses_leaves_no_focus_jump_for_a_later_card` | desktop | 958: element identity on the WebView |

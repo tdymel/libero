@@ -257,14 +257,19 @@ pub(super) fn use_level_focus(
     request: u64,
     initial: MenuFocus,
     first: usize,
+    trigger_selectors: &[String],
 ) {
     let (floating, dismiss, len) = (level.floating, level.dismiss, level.len);
+    let trigger_selectors = trigger_selectors.to_vec();
     // Remembered on the opening edge, before focus enters the placed box: the
     // trigger, or a submenu's parent item.
     use_effect(use_reactive!(|(open,)| {
         let (mut active, mut open_child) = (level.active, level.open_child);
         match open {
-            true => dismiss.focus_return().remember_focused(),
+            true if trigger_selectors.is_empty() => dismiss.focus_return().remember_focused(),
+            true => dismiss
+                .focus_return()
+                .remember_focused_or(level.trigger, &trigger_selectors),
             // A set notifies even unchanged, which redrew a closing level twice (todo 2095).
             false => {
                 if active.peek().is_some() {

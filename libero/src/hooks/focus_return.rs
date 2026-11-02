@@ -78,8 +78,21 @@ impl FocusReturn {
         let mut trigger = self.trigger;
         trigger.set(match active {
             Some(active) => Some(Trigger::Active(Rc::from(active))),
-            None => platform::keep_focused().map(Trigger::Kept),
+            None => platform::keep_focused(&[]).map(Trigger::Kept),
         });
+    }
+
+    /// As [`remember_focused`](Self::remember_focused), but focus on the page itself returns to
+    /// `trigger`: WebKit focuses no clicked button (5342). A WebView finds it by `selectors`.
+    pub(crate) fn remember_focused_or(&self, trigger: ElementHandle, selectors: &[String]) {
+        let active = document().and_then(|document| document.active_element());
+        let lost = Trigger::Active(Rc::new(trigger));
+        let mut signal = self.trigger;
+        signal.set(Some(match active {
+            Some(active) if active.matches("body, html").unwrap_or(false) => lost,
+            Some(active) => Trigger::Active(Rc::from(active)),
+            None => platform::keep_focused(selectors).map_or(lost, Trigger::Kept),
+        }));
     }
 
     /// Remembers `element` as a snapshot, consumed by the next

@@ -274,14 +274,19 @@ pub(crate) fn focus_lands_in(boundary: &str) -> Read<bool> {
 }
 
 /// Keeps the focused element in the page under the returned token, for [`focus_kept`].
-pub(crate) fn keep_focused() -> Option<u64> {
+/// With focus on the page itself, the first element of `selectors` instead.
+pub(crate) fn keep_focused(selectors: &[String]) -> Option<u64> {
     if !runs_scripts() {
         return None;
     }
     let token = NEXT_SLOT.fetch_add(1, Ordering::Relaxed);
     eval_with(
-        json!(token),
-        "(window.__lsxKept ??= new Map()).set(data, document.activeElement);",
+        json!({ "token": token, "selectors": selectors }),
+        "let el = document.activeElement;
+        if (!el || el === document.body) {
+            el = data.selectors.map(s => document.querySelector(s)).find(Boolean) ?? el;
+        }
+        (window.__lsxKept ??= new Map()).set(data.token, el);",
     );
     Some(token)
 }

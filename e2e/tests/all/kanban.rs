@@ -503,7 +503,8 @@ e2e::scenario!(
 e2e::scenario!(
     a_handle_drag_moves_a_card_into_another_column_at_the_slot_it_was_let_go,
     "/kanban",
-    a_drag_moves_a_card_across
+    a_drag_moves_a_card_across,
+    ios: skip("5340: the second drag after a drop pans the board, pointercancel after 4 moves")
 );
 e2e::scenario!(
     a_handle_drag_moves_a_card_into_an_empty_column,

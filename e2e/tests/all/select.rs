@@ -544,12 +544,15 @@ fn a_windowed_row_names_a_drawn_group() {
 /// where the click put it; only Escape, a pick or Clear refocus the trigger.
 pub async fn an_outside_click_keeps_its_focus<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
     const OUTSIDE: &str = "#outside";
+    // A phone's sheet swallows the press that closes it, so focus goes to the trigger (4907).
+    let finger = matches!(d.platform(), Platform::Android | Platform::Ios);
+    let target = if finger { TRIGGER } else { OUTSIDE };
     tap_into_search(d, TRIGGER).await?;
     d.click(OUTSIDE).await?;
     let closed = eventually(d, "the list to close on the clicked field", async |d| {
         Ok(
             d.attr(TRIGGER, "aria-expanded").await?.as_deref() == Some("false")
-                && d.is_focused(OUTSIDE).await?,
+                && d.is_focused(target).await?,
         )
     })
     .await;
@@ -558,6 +561,9 @@ pub async fn an_outside_click_keeps_its_focus<D: Driver>(d: &mut D, _route: &str
         let search = d.exists(SEARCH).await?;
         let expanded = d.attr(TRIGGER, "aria-expanded").await?;
         anyhow::bail!("{error}; focus on {owner}, search box {search}, expanded {expanded:?}");
+    }
+    if finger {
+        return Ok(());
     }
     // A round trip later: a late refocus would have taken it by now.
     d.type_text("x").await?;

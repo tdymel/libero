@@ -171,6 +171,22 @@ e2e::scenario!(
     ios: skip("upstream: WebKit does not focus a clicked button")
 );
 
+/// Todo 5342: a press that left focus on the page still hands it to the trigger on Escape.
+async fn escape_finds_an_unfocused_trigger<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    d.click(TRIGGER).await?;
+    expanded(d, true).await?;
+    placed(d, MENU).await?;
+    d.press(keyboard::ESCAPE).await?;
+    expanded(d, false).await?;
+    eventually_focused(d, TRIGGER, "Escape").await
+}
+
+e2e::scenario!(
+    escape_returns_focus_to_a_trigger_the_press_did_not_focus,
+    "/menu-unfocused-trigger",
+    escape_finds_an_unfocused_trigger
+);
+
 /// APG: Escape and ArrowLeft in a submenu close that level only and focus its
 /// parent item (1812; `rtl_keys` covers the mirror).
 async fn a_key_closes_only_the_submenu<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
@@ -223,6 +239,8 @@ async fn a_press_outside_closes<D: Driver>(d: &mut D, _route: &str) -> Result<()
     expanded(d, true).await?;
     d.click("#rename").await?;
     expanded(d, false).await?;
+    // A sheet swallows the click of the press that closes it (4826), so again on the closed menu.
+    d.click("#rename").await?;
 
     // Below the open menu, clear of Android's gesture strip at the very bottom.
     d.click(TRIGGER).await?;
