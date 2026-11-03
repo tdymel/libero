@@ -567,5 +567,6 @@ async fn a_cancelled_touch_keeps_the_band<D: Driver>(d: &mut D, _route: &str) ->
 e2e::scenario!(
     a_cancelled_touch_on_lying_bars_keeps_the_earlier_band,
     "/bar-chart/zoom",
-    a_cancelled_touch_keeps_the_band
+    a_cancelled_touch_keeps_the_band,
+    native: skip("Blitz has no script reads")
 );

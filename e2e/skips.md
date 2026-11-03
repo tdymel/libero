@@ -24,6 +24,7 @@ The performance scenarios (units `perf`, `table_perf`) are no skips but run on r
 | `anchor::the_underline_modes_draw_at_rest_and_under_the_pointer_in_every_renderer` | ios | a touch screen has no hover |
 | `audio::the_bars_rise_with_the_decoded_tone` | native | Blitz has no Web Audio to decode with |
 | `autocomplete::android_suggestions_sit_above_the_keyboard` | all but android | only Android reports and resizes for a soft keyboard |
+| `bar_chart::a_cancelled_touch_on_lying_bars_keeps_the_earlier_band` | native | Blitz has no script reads |
 | `bar_chart::escape_closes_a_hovered_tooltip_without_focus` | android | a touch screen has no hover |
 | `bar_chart::escape_closes_a_hovered_tooltip_without_focus` | ios | a touch screen has no hover |
 | `bar_chart::hovering_shows_the_bar_s_tooltip_and_marker` | android | a touch screen has no hover |
