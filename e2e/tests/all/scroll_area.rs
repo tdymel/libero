@@ -1466,7 +1466,8 @@ e2e::scenario!(
     ios: skip("a finger at the thumb's centre never reached it on Android, not run here"),
 );
 
-/// One 120px wheel notch down over `selector`'s centre, waited until it scrolled.
+/// One 120px wheel notch down over `selector`'s centre, waited until it scrolled. The page
+/// is in front: a tab behind draws a frame a second and a loaded run outwaits the poll (5433).
 async fn wheel_step(page: &chromiumoxide::Page, selector: &str) {
     let at = pointer::centre_of(page, selector).await.unwrap();
     let top = format!("document.querySelector('{selector}').scrollTop");
@@ -1476,21 +1477,22 @@ async fn wheel_step(page: &chromiumoxide::Page, selector: &str) {
         .unwrap()
         .into_value()
         .unwrap();
-    page.execute_bounded(
-        DispatchMouseEventParams::builder()
-            .r#type(DispatchMouseEventType::MouseWheel)
-            .x(at.x)
-            .y(at.y)
-            .delta_x(0.0)
-            .delta_y(120.0)
-            .build()
-            .unwrap(),
-    )
+    e2e::frames::in_front(page, async {
+        page.execute_bounded(
+            DispatchMouseEventParams::builder()
+                .r#type(DispatchMouseEventType::MouseWheel)
+                .x(at.x)
+                .y(at.y)
+                .delta_x(0.0)
+                .delta_y(120.0)
+                .build()
+                .unwrap(),
+        )
+        .await?;
+        wait::for_js_true(page, &format!("{top} !== {before}"), "the wheel to scroll").await
+    })
     .await
     .unwrap();
-    wait::for_js_true(page, &format!("{top} !== {before}"), "the wheel to scroll")
-        .await
-        .unwrap();
 }
 
 /// A scroll redraws nothing under scroll timelines (1954): a resize between two scrolls
