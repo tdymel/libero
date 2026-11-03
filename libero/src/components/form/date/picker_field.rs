@@ -20,8 +20,8 @@ use crate::{
             navigation_chord,
         },
         form::{
-            Caption, ChronoDropdownPart, FIELD_CONTROL_SX, FieldError, FieldName, FieldPart,
-            FieldStatus, FormScope, Parse, Typed, Validators,
+            Caption, ChronoDropdownPart, FieldError, FieldName, FieldPart, FieldStatus, FormScope,
+            Parse, Typed, Validators, field_control_sx,
             keyboardless::{PickerInput, use_keyboardless, use_picker_focus},
             phone_sheet::{
                 SheetSwipe, narrow_query, phone_sheet_sx, sheet_clearance_style, use_scroll_clear,
@@ -41,6 +41,13 @@ use crate::{
     sx::{StaticSx, Sx, ThemeAwareValue, sx},
     theme::{DescriptionPosition, Size, SizeCss, Z_INDEX_POPOVER},
 };
+
+/// The text is `dir="auto"`; an all-digit date, read `ltr`, still sits at an RTL page's start.
+pub(super) static CHRONO_CONTROL_SX: StaticSx = StaticSx::new(|| {
+    field_control_sx()
+        .width("100%")
+        .rtl_around(sx().text_align("right"))
+});
 
 static PICKER_FIELD_DROPDOWN_SX: StaticSx = StaticSx::new(|| {
     paper_sx()
@@ -372,7 +379,7 @@ pub(super) fn use_picker_field<V: FieldValue>(
         .prepare();
     // The frame draws the ring, so the control must not draw a second one.
     let control = use_box()
-        .framework_sx(&FIELD_CONTROL_SX)
+        .framework_sx(&CHRONO_CONTROL_SX)
         .focus_ring(false)
         .prepare();
 

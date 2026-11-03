@@ -380,6 +380,13 @@ mod tests {
             LiberoProvider { ChronoField::<NaiveDate> {} }
         });
         assert!(html.contains(r#"dir="auto""#), "{html}");
+        // An all-digit value resolves `ltr`; under an RTL page it still aligns right.
+        let css = crate::css::Stylesheet::from(&*super::super::picker_field::CHRONO_CONTROL_SX);
+        assert!(
+            css.as_str().contains("text-align:right"),
+            "{}",
+            css.as_str()
+        );
     }
 
     /// Todo 536: each refusal names its rule, the bounds in the field's format.
