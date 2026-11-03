@@ -314,7 +314,7 @@ fn summary(
         let kind = labels.scatter;
         sentences.push(match low == high {
             true => fill(
-                labels.range_one,
+                labels.scatter_one,
                 &[("kind", &kind), ("first", &write_x(low))],
             ),
             false => fill(
@@ -464,6 +464,22 @@ mod tests {
         });
         assert!(html.contains("Cities: sizes from 300 to 1,200."), "{html}");
         assert!(!html.contains("trend"), "{html}");
+    }
+
+    /// Todo 5548: points on one x value say where, in a scatter's words.
+    #[test]
+    fn one_x_value_is_said_as_a_scatter() {
+        let html = render(|| {
+            rsx! {
+                LiberoProvider {
+                    ScatterChart {
+                        title: "One",
+                        series: vec![ScatterSeries::new("A", [(3, 1), (3, 5)])],
+                    }
+                }
+            }
+        });
+        assert!(html.contains("Scatter chart, x at 3."), "{html}");
     }
 
     /// No finite point: the empty state, no drawing.

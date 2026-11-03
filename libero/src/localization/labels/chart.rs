@@ -17,6 +17,8 @@ pub struct ChartLabels {
     pub range: &'static str,
     /// `range` of a scatter chart: `{first}` and `{last}` the ends of its x values.
     pub scatter_range: &'static str,
+    /// `range` of a scatter chart whose points share one x value, `{first}`.
+    pub scatter_one: &'static str,
     /// `range` of an x axis with one value, `{first}`.
     pub range_one: &'static str,
     pub series: &'static str,
@@ -180,6 +182,7 @@ impl ChartLabels {
         scatter: "Scatter chart",
         range: "{kind} from {first} to {last}.",
         scatter_range: "{kind}, x from {first} to {last}.",
+        scatter_one: "{kind}, x at {first}.",
         range_one: "{kind} for {first}.",
         series: "{name}: {min} to {max}, highest at {x}.",
         series_flat: "{name}: {value} throughout.",
@@ -269,6 +272,7 @@ impl ChartLabels {
         scatter: "Streudiagramm",
         range: "{kind} von {first} bis {last}.",
         scatter_range: "{kind}, x von {first} bis {last}.",
+        scatter_one: "{kind}, x bei {first}.",
         range_one: "{kind} für {first}.",
         series: "{name}: {min} bis {max}, am höchsten bei {x}.",
         series_flat: "{name}: durchgehend {value}.",

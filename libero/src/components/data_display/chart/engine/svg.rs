@@ -181,13 +181,18 @@ pub(super) fn root(attributes: &[(&str, &str)]) -> String {
     format!("<svg width=\"100%\" height=\"100%\" aria-hidden=\"true\" focusable=\"false\"{kept}>")
 }
 
-/// Draws `chart`, then once more with a wider margin if a label left the SVG.
+/// Draws `chart`, then once more with a wider margin if a label left the SVG. The `axes`'
+/// titles are cut to the plot first: a long one takes no margin.
 pub(super) fn fitted<C: std::ops::DerefMut<Target = charts_rs::ChartBase>>(
     chart: &mut C,
-    width: f32,
-    height: f32,
+    (width, height): (f32, f32),
+    axes: &Axes,
     draw: impl Fn(&mut C) -> Option<String>,
 ) -> Option<String> {
+    let draw = |chart: &mut C| {
+        let svg = draw(chart)?;
+        Some(cut_titles(&svg, axes, Plot::of(&svg, width, height)))
+    };
     let svg = draw(chart)?;
     let Some([left, top, right, bottom]) = overflow(&svg, width, height) else {
         return Some(svg);

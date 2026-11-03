@@ -91,7 +91,7 @@ pub(crate) fn draw_candles(spec: &CandleSpec) -> Option<Drawn> {
     let auto = spec.format == ValueFormat::Auto;
     let (unit1, compact) = (spec.unit.as_deref(), &spec.axes.compact);
     let axis = |svg: &str| axis_write(svg, AXIS_MARK, auto, unit1, spec.formats, compact, write);
-    let svg = fitted(&mut chart, spec.width, spec.height, |chart| {
+    let svg = fitted(&mut chart, (spec.width, spec.height), &spec.axes, |chart| {
         let mut svg = chart.svg().ok()?;
         let exact = exact_axes(&svg, &chart.y_axis_configs, LabelEdge::Side);
         if let Some(width) = y_width(&svg, &exact, AXIS_MARK, axis(&exact)) {
@@ -121,6 +121,7 @@ pub(crate) fn draw_candles(spec: &CandleSpec) -> Option<Drawn> {
         Some(names) => with_candle_key(&svg, spec, names, plot, spec.height - room),
         None => svg,
     };
+    let svg = cut_titles(&svg, &spec.axes, plot);
     Some(Drawn {
         geometry: Geometry {
             width: spec.width,

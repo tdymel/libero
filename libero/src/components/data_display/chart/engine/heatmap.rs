@@ -54,8 +54,13 @@ pub(crate) fn draw_heatmap(spec: &HeatmapSpec) -> Option<Drawn> {
             Some((below(row) * columns + column, value as f32))
         })
         .collect();
-    let y_drawn: Vec<String> = spec.y.iter().rev().cloned().collect();
-    let mut chart = charts_rs::HeatmapChart::new(data, spec.x.clone(), y_drawn);
+    let mut chart = charts_rs::HeatmapChart::new(data, spec.x.clone(), Vec::new());
+    // The renderer sizes the row-name column by its widest name: a third of the width at most.
+    let size = chart.x_axis.font.size.to_string();
+    let names: Vec<String> = (spec.y.iter())
+        .map(|name| shorten(&[("font-size", &size)], name, spec.width / 3.0))
+        .collect();
+    chart.y_axis_data = names.iter().rev().cloned().collect();
     let room = match spec.scale {
         true => SCALE_ROOM.min(spec.height / 3.0),
         false => 0.0,
@@ -81,11 +86,12 @@ pub(crate) fn draw_heatmap(spec: &HeatmapSpec) -> Option<Drawn> {
     let svg = fit_x_labels(&svg, &spec.x, spec.width, spec.height);
     let (svg, triggers) = inert(&svg, |value| value.to_string(), "", CircleTriggers::Dropped);
     let svg = restyle_cells(&svg, &spec.ink);
+    let names = &names;
     let expected: Vec<_> = (0..rows)
         .rev()
         .flat_map(|row| {
             (0..columns).filter_map(move |column| {
-                Some((row, column, spec.value(row, column)?, spec.y[row].as_str()))
+                Some((row, column, spec.value(row, column)?, names[row].as_str()))
             })
         })
         .collect();

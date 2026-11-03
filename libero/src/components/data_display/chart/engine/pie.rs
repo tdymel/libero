@@ -155,12 +155,14 @@ pub(crate) fn draw_pie(spec: &PieSpec) -> Option<Drawn> {
     };
     let mut radius = full;
     let mut svg = draw(radius)?;
+    // Long labels are cut rather than shrink the pie below a third of the width across.
+    let least = (full * PIE_MIN).max(spec.width / 6.0).min(full);
     // A label moves in by at most what the radius loses: a few rounds settle it.
     for _ in 0..4 {
         let Some(over) = overflow(&svg, spec.width, spec.height) else {
             break;
         };
-        let next = (radius - over.into_iter().fold(0.0, f32::max)).max(full * PIE_MIN);
+        let next = (radius - over.into_iter().fold(0.0, f32::max)).max(least);
         if next >= radius {
             break;
         }

@@ -166,7 +166,7 @@ pub(crate) fn draw_line(spec: &LineSpec) -> Option<Drawn> {
         let plain = move |label| spec.format.format(label, unit, formats);
         axis_write(svg, mark, auto, unit, formats, compact, plain)
     };
-    let svg = fitted(&mut chart, spec.width, spec.height, |chart| {
+    let svg = fitted(&mut chart, (spec.width, spec.height), &spec.axes, |chart| {
         let mut svg = chart.svg().ok()?;
         let exact = exact_axes(&svg, &chart.y_axis_configs, LabelEdge::Side);
         let widths = [
@@ -205,6 +205,7 @@ pub(crate) fn draw_line(spec: &LineSpec) -> Option<Drawn> {
     let lines = series_lines(&marks);
     let svg = label_mark_lines(&svg, &texts, &spec.ink, plot.left, &pins, &[], &lines);
     let svg = pin_mark_points(&svg, &pins, &spec.ink);
+    let svg = cut_titles(&svg, &spec.axes, plot);
     Some(Drawn {
         geometry: Geometry {
             width: spec.width,

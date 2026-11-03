@@ -73,10 +73,15 @@ pub(super) fn round_axis(
     let start = if zero { 0.0 } else { values[0] };
     let low = min.unwrap_or(values.iter().fold(start, |low, v| v.min(low)));
     let high = max.unwrap_or(values.iter().fold(start, |high, v| v.max(high)));
-    // Only zeros: an axis up to 1.
-    let high = match (high > low, max) {
-        (false, None) => low + 1.0,
-        _ => high,
+    // One value: centred, half its power of ten either side; with zero, only zeros, up to 1.
+    let half = match low.abs() > 0.0 {
+        true => 10_f64.powf(low.abs().log10().floor()) / 2.0,
+        false => 0.5,
+    };
+    let (low, high) = match (high > low, min, max) {
+        (false, None, None) if !zero => (low - half, high + half),
+        (false, _, None) => (low, low + 1.0),
+        _ => (low, high),
     };
     if high.partial_cmp(&low) != Some(std::cmp::Ordering::Greater) {
         return;
@@ -194,11 +199,12 @@ pub(super) fn exact_ticks(
             .unwrap_or(0.0);
             let start = svg.len() - svg[close + 1..].trim_start().len() + mark.len_utf8();
             let length = svg[start..].find([' ', '\n', '<']).unwrap_or(0);
-            at.push((place, start, length));
+            let shown = scaled(svg[start..start + length].trim_end_matches('%'));
+            at.push((place, start, length, shown));
         }
         rest = close + 1;
     }
-    if at.len() != n + 1 {
+    if at.is_empty() || at.len() > n + 1 {
         return svg.to_string();
     }
     // Lowest first: leftmost along the bottom, lowest up the side.
@@ -206,21 +212,65 @@ pub(super) fn exact_ticks(
         LabelEdge::Bottom => a.0.total_cmp(&b.0),
         LabelEdge::Side => b.0.total_cmp(&a.0),
     });
+    let Some(ticks) = kept_ticks(&at, n, |i| f64::from(min) + step * i as f64) else {
+        return svg.to_string();
+    };
     let mut values: Vec<_> = at
         .iter()
-        .enumerate()
-        .map(|(i, &(_, start, length))| (start, length, f64::from(min) + step * i as f64))
+        .zip(ticks)
+        .map(|(&(_, start, length, _), i)| (start, length, f64::from(min) + step * i as f64))
         .collect();
     values.sort_by_key(|value| value.0);
+    // The ends are f32: 2.4 reads 2.4000000953674316 unless cut to f32's seven digits.
+    let digits = 6.0 - f64::from(min.abs().max(max.abs())).log10().floor();
+    let digits = if digits.is_finite() { digits } else { 0.0 };
+    let scale = 10_f64.powf(digits.abs());
     let mut out = String::with_capacity(svg.len());
     let mut last = 0;
     for (start, length, value) in values {
         out.push_str(&svg[last..start]);
+        let value = match digits >= 0.0 {
+            true => (value * scale).round() / scale,
+            false => (value / scale).round() * scale,
+        };
         let _ = write!(out, "{value}");
         last = start + length;
     }
     out.push_str(&svg[last..]);
     out
+}
+
+/// Which of the `n + 1` ticks the labels `at`, lowest first, stand for. A short axis keeps
+/// every k-th label from one end: the k and end whose ticks lie nearest the shown values.
+fn kept_ticks(
+    at: &[(f32, usize, usize, Option<f64>)],
+    n: usize,
+    value: impl Fn(usize) -> f64,
+) -> Option<Vec<usize>> {
+    let m = at.len();
+    if m == n + 1 {
+        return Some((0..=n).collect());
+    }
+    let candidates = (1..=n + 1)
+        .filter(|k| (n + 1).div_ceil(*k) == m)
+        .flat_map(|k| [false, true].map(|from_top| (k, from_top)));
+    let ticks = |(k, from_top): (usize, bool)| -> Vec<usize> {
+        (0..m)
+            .map(|p| match from_top {
+                false => p * k,
+                true => n - (m - 1 - p) * k,
+            })
+            .collect()
+    };
+    let off = |ticks: &[usize]| -> f64 {
+        at.iter()
+            .zip(ticks)
+            .filter_map(|(label, &i)| Some((label.3? - value(i)).abs()))
+            .sum()
+    };
+    candidates
+        .map(ticks)
+        .min_by(|a, b| off(a).total_cmp(&off(b)))
 }
 
 /// The value axis of bars whose ranges the renderer does not know of, stacks and lying bars:

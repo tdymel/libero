@@ -163,7 +163,7 @@ pub(crate) fn draw_scatter(spec: &ScatterSpec) -> Option<Drawn> {
         let svg = exact_axes(svg, &chart.y_axis_configs, LabelEdge::Side);
         exact_ticks(&svg, X_MARK, &chart.x_axis_config, LabelEdge::Bottom)
     };
-    let svg = fitted(&mut chart, spec.width, spec.height, |chart| {
+    let svg = fitted(&mut chart, (spec.width, spec.height), &spec.axes, |chart| {
         let svg = chart.svg().ok()?;
         let full = exact(&svg, chart);
         match y_width(&svg, &full, AXIS_MARK, write(&full, AXIS_MARK)) {
@@ -212,11 +212,13 @@ pub(crate) fn draw_scatter(spec: &ScatterSpec) -> Option<Drawn> {
         })
         .collect();
     let marks = match_marks(&scatter_marks(spec), &triggers);
+    let plot = Plot::of(&svg, spec.width, spec.height);
+    let svg = cut_titles(&svg, &spec.axes, plot);
     Some(Drawn {
         geometry: Geometry {
             width: spec.width,
             height: spec.height,
-            plot: Plot::of(&svg, spec.width, spec.height),
+            plot,
             marks,
             hole: 0.0,
             share_of: None,

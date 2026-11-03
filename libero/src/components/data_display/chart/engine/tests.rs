@@ -245,6 +245,34 @@ fn a_long_axis_writes_its_ticks_in_millions() {
     assert!(!svg.contains("Mio."), "{svg}");
 }
 
+/// Todo 5540: a short plot keeps fewer y labels, each its own tick in full, never the
+/// renderer's one-decimal 1.8M for 1 750 000.
+#[test]
+fn a_short_axis_writes_its_kept_ticks_in_full() {
+    let labels = |height: f32| {
+        let mut spec = line(
+            vec![spec("A", &[Some(250_000.0), Some(1_750_000.0)])],
+            &["Q1", "Q2"],
+        );
+        spec.height = height;
+        spec.unit = None;
+        let svg = draw_line(&spec).expect("drawn").svg;
+        let ticks = texts(&svg).into_iter().map(|text| text.3);
+        ticks
+            .filter(|label| label.starts_with(|c: char| c.is_ascii_digit()))
+            .filter(|label| !label.starts_with('Q'))
+            .collect::<Vec<_>>()
+    };
+    let tall = labels(400.0);
+    let short = labels(90.0);
+    assert!(tall.contains(&"1.750.000".to_string()), "{tall:?}");
+    assert!(!short.is_empty() && short.len() < tall.len(), "{short:?}");
+    assert!(
+        short.iter().all(|label| tall.contains(label)),
+        "{short:?} {tall:?}"
+    );
+}
+
 /// Every tick of a tiny axis has the decimals its step needs, so none reads 0 but zero.
 #[test]
 fn a_tiny_axis_writes_every_tick_at_one_precision() {
@@ -1757,7 +1785,8 @@ fn every_label_keeps_inside_the_svg() {
     assert!(path.starts_with("M140,90 "), "{path}");
 }
 
-/// A name too long to fit beside a pie at its least radius ends in an ellipsis.
+/// A name too long to fit beside a pie at its least radius, a third of the width across,
+/// ends in an ellipsis.
 #[test]
 fn a_long_name_beside_a_pie_is_cut_short() {
     let mut small = pie(PieLabels::Name, None);
@@ -1772,7 +1801,8 @@ fn a_long_name_beside_a_pie_is_cut_short() {
     let drawn = draw_pie(&small).expect("drawn");
     assert_eq!(overflow(&drawn.svg, 288.0, 162.0), None, "{}", drawn.svg);
     assert!(drawn.svg.contains('…'), "{}", drawn.svg);
-    assert!(drawn.svg.contains(">\nChrome\n<"), "{}", drawn.svg);
+    assert!(drawn.svg.contains(">\nInternet…\n<"), "{}", drawn.svg);
+    assert!(drawn.svg.contains("A48 48 "), "{}", drawn.svg);
 }
 
 /// The plot is the box inside the axes, grid or not: above the x labels, right of
@@ -2206,6 +2236,23 @@ fn a_heatmap_harvests_its_cells_row_by_row_from_the_top() {
     assert!(!drawn.svg.contains("#6E7079") && !drawn.svg.contains("data-"));
 }
 
+/// Todo 5542: a long row name is shortened, so the name column takes a third of the width
+/// at most and every cell is still harvested.
+#[test]
+fn a_heatmap_s_long_row_name_is_shortened() {
+    let mut spec = heatmap(vec![vec![Some(1.0), Some(2.0)], vec![Some(9.0), None]]);
+    spec.y[0] = "A very long row name that would take most of the chart's width".to_string();
+    let drawn = draw_heatmap(&spec).expect("drawn");
+    assert_eq!(drawn.geometry.marks.len(), 3, "{}", drawn.svg);
+    assert!(
+        drawn.geometry.plot.left <= spec.width / 3.0 + 20.0,
+        "{:?}",
+        drawn.geometry.plot
+    );
+    assert!(drawn.svg.contains("A very long row"), "{}", drawn.svg);
+    assert!(drawn.svg.contains('…'), "{}", drawn.svg);
+}
+
 /// The scale sits under the plot, in classes with `steps`, its ends' values below it.
 #[test]
 fn a_heatmap_draws_its_scale_under_the_plot() {
@@ -2501,4 +2548,138 @@ fn radar_names_read_away_from_the_web() {
         })
         .is_none()
     );
+}
+
+/// Todo 5541: a title longer than the plot is cut with an ellipsis to its width, or its
+/// height up the side, and keeps its whole text in a `<title>`.
+#[test]
+fn a_long_axis_title_is_cut_to_the_plot() {
+    let x = "A very long x axis title that runs much wider than the plot is";
+    let y = "A very long y axis title that runs much taller than the plot is";
+    let mut spec = line(vec![spec("A", &[Some(12.0), Some(31.0)])], &["Q1", "Q2"]);
+    spec.axes.x_title = Some(x.to_string());
+    spec.axes.y_title = Some(y.to_string());
+    let drawn = draw_line(&spec).expect("drawn");
+    let plot = drawn.geometry.plot;
+    for (title, room) in [(x, plot.right - plot.left), (y, plot.bottom - plot.top)] {
+        let whole = format!("\n<title>{title}</title></text>");
+        let at = drawn.svg.find(&whole).expect("a title");
+        let cut = drawn.svg[..at].rsplit('\n').next().expect("cut");
+        assert!(
+            cut.ends_with('…') && title.starts_with(cut.trim_end_matches('…')),
+            "{cut}"
+        );
+        let width = charts_rs::measure_text_width_family(charts_rs::DEFAULT_FONT_FAMILY, 14.0, cut)
+            .expect("measured")
+            .width();
+        assert!(width <= room, "{cut}: {width} > {room}");
+    }
+}
+
+/// Todo 5544: long slice names are cut, not shrink the pie below a third of the width
+/// across; outside labels of small slices that would touch are dropped.
+#[test]
+fn a_pie_with_long_names_keeps_its_size_and_its_labels_apart() {
+    let mut pie_spec = pie(PieLabels::Name, None);
+    pie_spec.width = 343.0;
+    pie_spec.height = 240.0;
+    pie_spec.slices = vec![
+        spec("Northern Europe and Scandinavia", &[Some(50.0)]),
+        spec("Southern Europe and the Mediterranean", &[Some(30.0)]),
+        spec("Tiny", &[Some(1.0)]),
+        spec("Tiny two", &[Some(1.0)]),
+        spec("Tiny three", &[Some(1.0)]),
+    ];
+    let drawn = draw_pie(&pie_spec).expect("drawn");
+    // 343 / 6: the pie is a third of the width across.
+    assert!(drawn.svg.contains("A57.2 57.2 "), "{}", drawn.svg);
+    let labels: Vec<_> = texts(&drawn.svg).into_iter().collect();
+    assert!(
+        labels.iter().any(|label| label.3 == "Northern…"),
+        "{labels:?}"
+    );
+    let tiny = labels
+        .iter()
+        .filter(|label| label.3.starts_with("Tiny"))
+        .count();
+    assert_eq!(tiny, 2, "{labels:?}");
+    assert!(
+        !labels.iter().any(|label| label.3 == "Tiny two"),
+        "{labels:?}"
+    );
+    let boxes: Vec<[f32; 4]> = labels
+        .iter()
+        .map(|(left, right, y, _)| {
+            [
+                *left,
+                y - 10.5,
+                left + (right - left) * PAGE_FONT_SLACK,
+                y + 3.5,
+            ]
+        })
+        .collect();
+    for (i, a) in boxes.iter().enumerate() {
+        for b in &boxes[i + 1..] {
+            let apart = a[2] + 2.0 <= b[0]
+                || b[2] + 2.0 <= a[0]
+                || a[3] + 2.0 <= b[1]
+                || b[3] + 2.0 <= a[1];
+            assert!(apart, "{a:?} {b:?}");
+        }
+    }
+}
+
+/// Todo 5545: long category names and titles leave no empty room right of the plot: the
+/// last label is cut to its band and the titles to the plot, so neither takes a margin.
+#[test]
+fn long_names_leave_no_room_right_of_the_plot() {
+    let x = [
+        "January sales",
+        "February sales",
+        "March sales",
+        "April sales",
+    ];
+    let mut spec = line(
+        vec![spec("A", &[Some(3.0), Some(5.0), Some(4.0), Some(8.0)])],
+        &x,
+    );
+    spec.width = 344.0;
+    spec.axes.x_title =
+        Some("Average revenue per returning customer in the Northern European region".to_string());
+    spec.axes.y_title = spec.axes.x_title.clone();
+    let drawn = draw_line(&spec).expect("drawn");
+    let plot = drawn.geometry.plot;
+    assert!(spec.width - plot.right < 20.0, "{plot:?}");
+    assert!(plot.left < 80.0, "{plot:?}");
+    assert_eq!(
+        overflow(&drawn.svg, spec.width, spec.height),
+        None,
+        "{}",
+        drawn.svg
+    );
+}
+
+/// Todo 5548: a lone x value is centred, not drawn on the plot's corner.
+#[test]
+fn a_lone_scatter_x_value_is_centred() {
+    let mut spec = scatter(&[(3.0, 1.0, None), (3.0, 5.0, None)], PointSymbol::Circle);
+    // A phone's width: steps of 0.2 from 2.4, which f32 cannot hold.
+    spec.width = 343.0;
+    let drawn = draw_scatter(&spec).expect("drawn");
+    let plot = drawn.geometry.plot;
+    let middle = (plot.left + plot.right) / 2.0;
+    for mark in &drawn.geometry.marks {
+        let MarkShape::Point { x, .. } = mark.shape else {
+            panic!("{mark:?}");
+        };
+        assert!((x - middle).abs() < 2.0, "{x} {plot:?}");
+    }
+    // The f32 ends' noise is not written, nor does it shift the labels off their ticks.
+    let below: Vec<_> = texts(&drawn.svg)
+        .into_iter()
+        .filter(|text| text.2 > plot.bottom + 8.0)
+        .collect();
+    assert!(below.len() >= 3, "{below:?}");
+    assert!(below.iter().all(|text| text.3.len() <= 4), "{below:?}");
+    assert!(below.windows(2).all(|w| w[0].1 + 2.0 < w[1].0), "{below:?}");
 }

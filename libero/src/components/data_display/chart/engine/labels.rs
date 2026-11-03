@@ -197,8 +197,8 @@ pub(super) fn centre_inside_labels(svg: &str, centre: (f32, f32), hole: f32) -> 
     out
 }
 
-/// Drops the outside labels that overlap a larger slice's, with their leader lines: the
-/// smaller slice's goes first. `values` are the slices' in drawing order.
+/// Drops the outside labels that touch a larger slice's in the page's font, with their leader
+/// lines: the smaller slice's goes first. `values` are the slices' in drawing order.
 pub(super) fn drop_colliding_labels(svg: &str, values: &[f64]) -> String {
     // Per label: its slice's value, its box, and the byte ranges of its leader and its text.
     let mut labels: Vec<(f64, [f32; 4], Vec<std::ops::Range<usize>>)> = Vec::new();
@@ -230,7 +230,7 @@ pub(super) fn drop_colliding_labels(svg: &str, values: &[f64]) -> String {
                 continue;
             };
             let label = unescape(svg[end..close].trim_end_matches("</text>").trim());
-            let width = text_width(&attributes, &label);
+            let width = roomy(&attributes, &label);
             let left = match attribute(&attributes, "text-anchor") {
                 Some("middle") => x - width / 2.0,
                 Some("end") => x - width,
@@ -252,13 +252,15 @@ pub(super) fn drop_colliding_labels(svg: &str, values: &[f64]) -> String {
     }
     let mut order: Vec<usize> = (0..labels.len()).collect();
     order.sort_by(|a, b| labels[*b].0.total_cmp(&labels[*a].0));
+    // Stacked a line apart, two labels touch in the page's font.
+    const GAP: f32 = 2.0;
     let mut kept: Vec<[f32; 4]> = Vec::new();
     let mut dropped: Vec<std::ops::Range<usize>> = Vec::new();
     for i in order {
         let [left, top, right, bottom] = labels[i].1;
-        let overlaps = kept
-            .iter()
-            .any(|[l, t, r, b]| left < *r && *l < right && top < *b && *t < bottom);
+        let overlaps = kept.iter().any(|[l, t, r, b]| {
+            left < r + GAP && *l < right + GAP && top < b + GAP && *t < bottom + GAP
+        });
         match overlaps {
             true => dropped.extend(labels[i].2.iter().cloned()),
             false => kept.push(labels[i].1),
@@ -319,6 +321,57 @@ pub(super) fn cut_labels(svg: &str, width: f32) -> String {
             .map(|(attribute, value)| format!(" {attribute}=\"{value}\""))
             .collect();
         let _ = write!(out, "<text x=\"{x}\"{kept}>\n{}\n", escape(&cut));
+        rest = &rest[text_end..];
+    }
+    out.push_str(rest);
+    out
+}
+
+/// Cuts an axis title longer than the plot's width, or its height where it runs up the side,
+/// with an ellipsis; a `<title>` keeps the whole text.
+pub(super) fn cut_titles(svg: &str, axes: &Axes, plot: Plot) -> String {
+    let titles: Vec<&str> = [&axes.x_title, &axes.y_title, &axes.y2_title]
+        .into_iter()
+        .flatten()
+        .map(|title| title.trim())
+        .filter(|title| !title.is_empty())
+        .collect();
+    if titles.is_empty() {
+        return svg.to_string();
+    }
+    let mut out = String::with_capacity(svg.len());
+    let mut rest = svg;
+    while let Some(start) = rest.find("<text ") {
+        out.push_str(&rest[..start]);
+        let end = rest[start..]
+            .find('>')
+            .map_or(rest.len(), |end| start + end + 1);
+        let tag = &rest[start..end];
+        out.push_str(tag);
+        rest = &rest[end..];
+        let text_end = rest.find('<').unwrap_or(rest.len());
+        // Cut before, its whole text is in the `<title>` after it.
+        let whole = rest[text_end..].strip_prefix("<title>").and_then(|whole| {
+            let end = whole.find("</title>")?;
+            Some((
+                unescape(&whole[..end]),
+                text_end + "<title>".len() + end + "</title>".len(),
+            ))
+        });
+        let (label, text_end) = whole.unwrap_or((unescape(rest[..text_end].trim()), text_end));
+        if !titles.contains(&label.as_str()) {
+            continue;
+        }
+        let attributes = attributes(tag);
+        let room = match attribute(&attributes, "transform").is_some_and(|t| t.contains("rotate")) {
+            true => plot.bottom - plot.top,
+            false => plot.right - plot.left,
+        };
+        let cut = shorten(&attributes, &label, room / PAGE_FONT_SLACK);
+        let _ = write!(out, "\n{}\n", escape(&cut));
+        if cut != label {
+            let _ = write!(out, "<title>{}</title>", escape(&label));
+        }
         rest = &rest[text_end..];
     }
     out.push_str(rest);

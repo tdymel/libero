@@ -194,6 +194,7 @@ pub(crate) fn draw_bar(spec: &BarSpec) -> Option<Drawn> {
     let svg = svg.replace(ON_BAR_STROKE, &format!("stroke=\"{}\"", spec.ink.label));
     let plot = Plot::of(&svg, spec.width, spec.height);
     let svg = bar_mark_lines(&svg, spec, &marked, &marks, plot.left);
+    let svg = cut_titles(&svg, &spec.axes, plot);
     Some(Drawn {
         geometry: Geometry {
             width: spec.width,
@@ -301,7 +302,7 @@ fn horizontal_bars_svg<W: Fn(f64) -> String>(
     for label in &mut chart.x_axis.data {
         *label = shorten(&[("font-size", &size)], label, room);
     }
-    let svg = fitted(&mut chart, spec.width, spec.height, |chart| {
+    let svg = fitted(&mut chart, (spec.width, spec.height), axes, |chart| {
         let svg = chart.svg().ok()?;
         let exact = exact_axes(&svg, &chart.y_axis_configs, LabelEdge::Bottom);
         Some(pin_to_ticks(&svg, AXIS_MARK, spec.width, axis(&exact)))
@@ -330,7 +331,7 @@ fn vertical_bars_svg<W: Fn(f64) -> String, W2: Fn(f64) -> String>(
         axes.style(&mut chart.base, &mut chart.y_axis_configs, false);
     }
     round_axes(&chart.base, &mut chart.y_axis_configs, percent);
-    let svg = fitted(&mut chart, spec.width, spec.height, |chart| {
+    let svg = fitted(&mut chart, (spec.width, spec.height), axes, |chart| {
         let mut svg = chart.svg().ok()?;
         let exact = exact_axes(&svg, &chart.y_axis_configs, LabelEdge::Side);
         let widths = [
