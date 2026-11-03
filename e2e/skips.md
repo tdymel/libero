@@ -39,8 +39,6 @@ The performance scenarios (units `perf`, `table_perf`) are no skips but run on r
 | `color_field::recent_colors_follow_each_pick_in_the_colour_dialog` | android | 958: element identity on the WebView |
 | `color_field::recent_colors_follow_each_pick_in_the_colour_dialog` | desktop | 958: element identity on the WebView |
 | `color_field::recent_colors_follow_each_pick_in_the_colour_dialog` | ios | 958: element identity on the WebView |
-| `date::a_press_on_a_disabled_picker_focuses_it_and_picks_nothing` | ios | upstream: WebKit does not focus a clicked button |
-| `date::a_press_on_a_disabled_picker_focuses_it_and_picks_nothing` | macos desktop | upstream: WebKit does not focus a clicked button |
 | `drawer::a_backdrop_click_closes_a_drawer` | ios | upstream: WebKit does not focus a clicked button |
 | `drawer::a_backdrop_click_closes_a_drawer` | macos desktop | upstream: WebKit does not focus a clicked button |
 | `drawer::a_button_in_a_drawer_closes_it_and_focus_returns` | ios | upstream: WebKit does not focus a clicked button |
@@ -80,8 +78,6 @@ The performance scenarios (units `perf`, `table_perf`) are no skips but run on r
 | `floating_action_button::a_phone_opens_the_menu_as_a_sheet_and_a_hidden_button_opens_nothing` | desktop | 5272: a phone's WebView |
 | `floating_action_button::a_phone_opens_the_menu_as_a_sheet_and_a_hidden_button_opens_nothing` | native | 5272: a phone's WebView |
 | `floating_action_button::a_phone_opens_the_menu_as_a_sheet_and_a_hidden_button_opens_nothing` | web | 5272: a phone's WebView; `menu::below_sm_the_menu_is_a_sheet_that_closes_every_way` has Chromium |
-| `floating_action_button::every_form_opens_the_menu_and_takes_focus_back` | ios | upstream: WebKit does not focus a clicked button |
-| `floating_action_button::every_form_opens_the_menu_and_takes_focus_back` | macos desktop | upstream: WebKit does not focus a clicked button |
 | `floating_action_button::under_rtl_a_phone_opens_the_menu_as_a_sheet_and_a_hidden_button_opens_nothing` | desktop | 5272: a phone's WebView |
 | `floating_action_button::under_rtl_a_phone_opens_the_menu_as_a_sheet_and_a_hidden_button_opens_nothing` | native | 5272: a phone's WebView |
 | `floating_action_button::under_rtl_a_phone_opens_the_menu_as_a_sheet_and_a_hidden_button_opens_nothing` | web | 5272: a phone's WebView; `menu::below_sm_the_menu_is_a_sheet_that_closes_every_way` has Chromium |

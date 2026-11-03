@@ -319,9 +319,7 @@ async fn press_disabled_pickers<D: Driver>(d: &mut D, _route: &str) -> Result<()
 e2e::scenario!(
     a_press_on_a_disabled_picker_focuses_it_and_picks_nothing,
     "/date/disabled",
-    press_disabled_pickers,
-    macos: skip("upstream: WebKit does not focus a clicked button"),
-    ios: skip("upstream: WebKit does not focus a clicked button")
+    press_disabled_pickers
 );
 
 /// `/date/extras`: a picker's value as its readout's `data-value` says it.
