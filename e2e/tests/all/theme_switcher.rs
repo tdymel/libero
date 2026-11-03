@@ -312,16 +312,20 @@ async fn wait_for_name(page: &Page, expected: &str) {
     }
 }
 
-/// `None` is following the platform: the attribute is removed.
+/// `None` is following the platform: `data-lsx-theme` and `data-lsx-scheme` are removed.
 async fn wait_for_pin(page: &Page, pin: Option<&str>) {
     let expected = match pin {
         Some(scheme) => format!("'{scheme}'"),
         None => "null".to_string(),
     };
+    let root = "document.documentElement";
     wait::for_js_true(
         page,
-        &format!("document.documentElement.getAttribute('data-lsx-theme') === {expected}"),
-        &format!("the document root to be pinned to {expected}"),
+        &format!(
+            "{root}.getAttribute('data-lsx-theme') === {expected} \
+             && {root}.getAttribute('data-lsx-scheme') === {expected}"
+        ),
+        &format!("the document root to be pinned to {expected}, scheme attribute included"),
     )
     .await
     .unwrap();

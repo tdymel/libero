@@ -638,28 +638,35 @@ impl Fixture {
         Ok(fixture)
     }
 
-    /// The page is drawn in `self.scheme`: media query, no pinning `data-lsx-theme`, body
-    /// paint. Else a no-op emulation lets every dark pass measure the light page.
+    /// The page is drawn in `self.scheme`: media query, no pinning `data-lsx-theme` or
+    /// stale `data-lsx-scheme`, body paint. Else a no-op emulation lets every dark pass measure the light page.
     pub async fn assert_scheme(&self) -> Result<()> {
-        let (matches, pinned, luminance): (bool, Option<String>, f64) = self
-            .page
-            .evaluate_bounded(
-                "(() => { \
+        let (matches, pinned, marked, luminance): (bool, Option<String>, Option<String>, f64) =
+            self.page
+                .evaluate_bounded(
+                    "(() => { \
                    const [r, g, b, a = 1] = getComputedStyle(document.body).backgroundColor \
                      .match(/[\\d.]+/g).map(Number); \
                    return [matchMedia('(prefers-color-scheme: dark)').matches, \
                      document.documentElement.getAttribute('data-lsx-theme'), \
+                     document.documentElement.getAttribute('data-lsx-scheme'), \
                      a === 0 ? -1 : (0.2126 * r + 0.7152 * g + 0.0722 * b) / 255]; })()",
-            )
-            .await?
-            .into_value()?;
+                )
+                .await?
+                .into_value()?;
         let dark = self.scheme == Scheme::Dark;
         let pinned_other = pinned.as_deref().is_some_and(|p| p != self.scheme.name());
+        let marked_other = marked.as_deref().is_some_and(|m| m != self.scheme.name());
         // A transparent body (-1) is unreadable, never "dark".
-        if matches != dark || pinned_other || luminance < 0.0 || (luminance < 0.5) != dark {
+        if matches != dark
+            || pinned_other
+            || marked_other
+            || luminance < 0.0
+            || (luminance < 0.5) != dark
+        {
             anyhow::bail!(
                 "the page is not drawn in the {} scheme: prefers-color-scheme: dark {matches}, \
-                 data-lsx-theme {pinned:?}, body luma {luminance:.2}",
+                 data-lsx-theme {pinned:?}, data-lsx-scheme {marked:?}, body luma {luminance:.2}",
                 self.scheme.name()
             );
         }
