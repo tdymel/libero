@@ -383,6 +383,7 @@ impl Sealed for NaiveTime {
         "hour_step",
         "second_step",
         "twelve_hour",
+        "close_on_change",
     ];
 
     fn picker(args: PickerArgs<Self>) -> Element {
@@ -466,6 +467,7 @@ impl Sealed for NaiveDateTime {
         "hour_step",
         "second_step",
         "twelve_hour",
+        "close_on_change",
     ];
 
     fn picker(args: PickerArgs<Self>) -> Element {
@@ -563,6 +565,7 @@ impl Sealed for DateRange<NaiveDateTime> {
         "hour_step",
         "second_step",
         "twelve_hour",
+        "close_on_change",
     ];
 
     fn picker(args: PickerArgs<Self>) -> Element {

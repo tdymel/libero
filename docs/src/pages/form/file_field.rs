@@ -381,6 +381,7 @@ pub fn FileFieldPage() -> Element {
                         .code(trigger_code),
                     Control::switch("required"),
                     Control::switch("disabled"),
+                    Control::switch("readonly"),
                     Control::switch("loading"),
                 ]].concat(),
                 render: move |values: DemoValues| rsx! {
@@ -430,6 +431,7 @@ fn FileFieldDemo(values: DemoValues) -> Element {
                 status: field.status,
                 required: is_on(&values, "required").then_some(true),
                 disabled: is_on(&values, "disabled").then_some(true),
+                readonly: is_on(&values, "readonly").then_some(true),
                 loading: is_on(&values, "loading").then_some(true),
                 trigger: match values.str("trigger").as_str() {
                     "button" => Some(Callback::new(trigger)),

@@ -111,7 +111,7 @@ pub fn ProvidersPage() -> Element {
                 }
                 CodeBlock { source: NESTED, label: "Nested LiberoProvider", language: "rust" }
                 Text {
-                    "Four limits. The theme is a sheet on the document root, so a nested provider's "
+                    "Five limits. The theme is a sheet on the document root, so a nested provider's "
                     Code { source: "themes" }
                     " do not scope to its subtree. "
                     Code { source: "direction" }
@@ -123,7 +123,9 @@ pub fn ProvidersPage() -> Element {
                     Code { source: "lang=\"de\"" }
                     " on an element around an inner provider in another language, as above, or a screen reader reads its words in the page's voice. And hooks such as "
                     Code { source: "use_localization_handle" }
-                    " switch the nearest provider only."
+                    " switch the nearest provider only. A nested provider portals into its own outlet, so its popovers stack inside the nearest stacking context around it, such as a "
+                    Code { source: "ScrollArea" }
+                    ", and a sticky header over that area covers them."
                 }
             }
             DocSection {

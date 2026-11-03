@@ -431,6 +431,34 @@ async fn double_click_selection(page: &Page) -> Result<()> {
     Ok(())
 }
 
+/// Todo 5478: a phone held sideways (812x375) fits the stage, caption and strip without a scroll.
+#[test]
+fn a_landscape_phone_fits_the_strip_on_screen() {
+    use chromiumoxide::cdp::browser_protocol::emulation::SetDeviceMetricsOverrideParams;
+    block_on(async {
+        let fixture = Fixture::open("/lightbox", Viewport::Mobile).await.unwrap();
+        let page = &fixture.page;
+        page.execute_bounded(SetDeviceMetricsOverrideParams::new(812, 375, 1.0, true))
+            .await
+            .unwrap();
+        pointer::click(page, TRIGGER).await.unwrap();
+        wait::for_visible(page, DIALOG).await.unwrap();
+        wait_showing(page, 0).await.unwrap();
+        wait::for_js_true(
+            page,
+            "(() => { const d = document.querySelector('[role=dialog]'); \
+             const thumbs = [...d.querySelectorAll('img')].filter(i => !i.closest('[data-lightbox-frame]')); \
+             return thumbs.length > 0 && d.scrollHeight <= d.clientHeight \
+               && thumbs.every(i => i.getBoundingClientRect().bottom <= innerHeight); })()",
+            "the strip on screen with no dialog scroll at 812x375",
+        )
+        .await
+        .unwrap();
+        fixture.console.assert_clean("landscape lightbox").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
 /// Todo 652: the shown picture is centred on both axes at every viewport; dialog, frame
 /// and picture are each measured.
 #[test]

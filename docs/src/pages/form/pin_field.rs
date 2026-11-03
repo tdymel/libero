@@ -43,7 +43,7 @@ pub fn PinFieldPage() -> Element {
                     prop("one_time_code", "bool")
                         .default("true")
                         .doc("Lets a phone offer the code it just received."),
-                    prop("separator", "Element").doc("Rendered between the cells, such as a dash."),
+                    prop("separator", "Element").doc("Rendered between the cells, such as a dash. On a row too narrow for every cell, the separators shrink away first, so the cells keep their touch size."),
                     prop("name", "FieldName<String>").doc("What the pin posts as. A path such as `Login::FIELDS.code()` also binds the pin to the surrounding `Form`'s value when the field has no `oninput`."),
                     prop("autofocus", "bool").default("false").doc("Focuses the first cell on mount."),
                     prop("label", "Caption")

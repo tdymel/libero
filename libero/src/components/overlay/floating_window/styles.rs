@@ -9,8 +9,19 @@ use crate::{
     },
     hooks::drag_handle_sx,
     sx::{StaticSx, Sx, sx},
-    theme::{PAPER_BORDER_COLOR, Size, SizeCss},
+    theme::{CssVar, PAPER_BORDER_COLOR, Size, SizeCss},
 };
+
+/// The safe-area insets as lengths, so the placement clamps and `read_bounds` see them (5477).
+pub(super) const SAFE_TOP: CssVar = CssVar::new("--lsx-floating-window-safe-top");
+pub(super) const SAFE_RIGHT: CssVar = CssVar::new("--lsx-floating-window-safe-right");
+pub(super) const SAFE_BOTTOM: CssVar = CssVar::new("--lsx-floating-window-safe-bottom");
+pub(super) const SAFE_LEFT: CssVar = CssVar::new("--lsx-floating-window-safe-left");
+
+/// `side`'s inset, `0px` where nothing set it.
+pub(super) fn safe(side: CssVar) -> String {
+    side.value_or("0px")
+}
 
 /// The resize grip's glyph stays 14px; a finger gets a 44px box round it (the corner has no room
 /// outside the clipping window for a `::before`).
@@ -132,13 +143,49 @@ pub(super) static WINDOW_SX: StaticSx = StaticSx::new(|| {
 });
 
 pub(super) fn float_sx() -> Sx {
-    // Its geometry clamps to the viewport itself; no safe-area shift on top (5464).
+    // Its geometry clamps to the safe area itself; no Float shift on top (5464, 5477).
     sx().var(FLOAT_SAFE_AREA_VAR, "0")
+        .var(SAFE_TOP, "env(safe-area-inset-top, 0px)")
+        .var(SAFE_RIGHT, "env(safe-area-inset-right, 0px)")
+        .var(SAFE_BOTTOM, "env(safe-area-inset-bottom, 0px)")
+        .var(SAFE_LEFT, "env(safe-area-inset-left, 0px)")
         .width("max-content")
-        .max_width("100%")
-        .max_height("100dvh")
+        .max_width(format!(
+            "calc(100% - {} - {})",
+            safe(SAFE_LEFT),
+            safe(SAFE_RIGHT)
+        ))
+        .max_height(format!(
+            "calc(100dvh - {} - {})",
+            safe(SAFE_TOP),
+            safe(SAFE_BOTTOM)
+        ))
         .display("flex")
         .flex_direction("column")
 }
 
-pub(super) static FLOAT_SX: StaticSx = StaticSx::new(float_sx);
+/// Unmoved, its anchored edges sit the insets in (the free side's margin is absorbed by
+/// its `auto`), and a centred axis centres in the safe area.
+pub(super) static FLOAT_SX: StaticSx = StaticSx::new(|| {
+    let (top, right, bottom, left) = (
+        safe(SAFE_TOP),
+        safe(SAFE_RIGHT),
+        safe(SAFE_BOTTOM),
+        safe(SAFE_LEFT),
+    );
+    float_sx()
+        .margin_top(top.clone())
+        .margin_right(right.clone())
+        .margin_bottom(bottom.clone())
+        .margin_left(left.clone())
+        .when(
+            "horizontal-center",
+            sx().margin_left(format!("calc(({left} - {right}) / 2)"))
+                .margin_right("0"),
+        )
+        .when(
+            "vertical-center",
+            sx().margin_top(format!("calc(({top} - {bottom}) / 2)"))
+                .margin_bottom("0"),
+        )
+});

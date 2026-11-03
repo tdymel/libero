@@ -45,7 +45,7 @@ fn Demo() -> Element {
 | `oncomplete` | `EventHandler<String>` | - | Fires once when the last empty cell fills. Clearing a cell arms it again. |
 | `mask` | `bool` | `false` | Hides the characters as in a password field. The value is unaffected. |
 | `one_time_code` | `bool` | `true` | Lets a phone offer the code it just received. |
-| `separator` | `Element` | - | Rendered between the cells, such as a dash. |
+| `separator` | `Element` | - | Rendered between the cells, such as a dash. On a row too narrow for every cell, the separators shrink away first, so the cells keep their touch size. |
 | `name` | `FieldName<String>` | - | What the pin posts as. A path such as `Login::FIELDS.code()` also binds the pin to the surrounding `Form`'s value when the field has no `oninput`. |
 | `autofocus` | `bool` | `false` | Focuses the first cell on mount. |
 | `label` | `Caption` | - | The field's caption, above the cells. It names the group of cells. |

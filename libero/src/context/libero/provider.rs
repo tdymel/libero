@@ -22,6 +22,8 @@ use crate::{
 /// portals and the modal stack.
 ///
 /// A nested provider shares the outer one's stylesheets, so its a11y overrides apply page-wide.
+/// It portals into its own outlet, so its popovers stack inside the nearest stacking context
+/// around it, such as a `ScrollArea`.
 ///
 /// ```rust
 /// # use dioxus::prelude::*;

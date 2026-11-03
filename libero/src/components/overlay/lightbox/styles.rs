@@ -71,7 +71,7 @@ pub(super) static LIGHTBOX_BODY_SX: StaticSx = StaticSx::new(|| {
 });
 
 // On a phone the pictures bleed to the safe area's edge, and the stage is a
-// size container so a frame is `100cqh` tall. Never under 60dvh: a long caption scrolls the dialog instead.
+// size container so a frame is `100cqh` tall. Never under 60dvh (40dvh held sideways): a long caption scrolls the dialog instead.
 pub(super) static LIGHTBOX_STAGE_SX: StaticSx = StaticSx::new(|| {
     let bleed = format!("calc(-1 * {})", SizeCss::SPACING.value(Size::Sm));
     sx().media(
@@ -81,6 +81,8 @@ pub(super) static LIGHTBOX_STAGE_SX: StaticSx = StaticSx::new(|| {
             .flex("1 0 60dvh")
             .container_type("size"),
     )
+    // Held sideways, 60dvh plus the header, caption and strip outgrow the screen (5478).
+    .media("(height < 30rem)", sx().flex_basis("40dvh"))
 });
 
 // A picture fits into this box rather than sizing it. The focus ring sits here:

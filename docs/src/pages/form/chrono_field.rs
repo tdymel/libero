@@ -270,7 +270,7 @@ pub fn ChronoFieldPage() -> Element {
                                 false => vec![],
                             }
                         }),
-                        Control::switch("close_on_change").default("true").hidden_when(|values| matches!(values.str("value").as_str(), "time" | "duration")).code(|_, values| {
+                        Control::switch("close_on_change").default("true").hidden_when(|values| values.str("value") == "duration").code(|_, values| {
                             match is_on(values, "close_on_change") {
                                 true => vec![],
                                 false => vec!["close_on_change: false".to_string()],
@@ -401,7 +401,7 @@ fn ChronoFieldDemo(values: DemoValues) -> Element {
             rsx! {
                 ChronoField {
                     value: time(), onchange: move |next| time.set(next),
-                    min: min_time, max: max_time, time_format, variant, with_seconds, step, hour_step, second_step, twelve_hour,
+                    min: min_time, max: max_time, time_format, variant, with_seconds, step, hour_step, second_step, twelve_hour, close_on_change,
                     validate: rules(validate),
                     size, radius, label, aria_label, description, description_position, helper, placeholder, status, required, disabled, leading, hide_save, hide_entry_input,
                 }

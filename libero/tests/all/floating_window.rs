@@ -144,9 +144,10 @@ fn the_viewport_cap_survives_a_callers_max_width() {
         })
         .collect();
     // `100%`, not `100dvw`: the fixed box's block leaves out a classic scrollbar (4510).
+    // Less the safe-area insets (5477).
     for declaration in [
-        "max-width:100%",
-        "max-height:100dvh",
+        "max-width:calc(100%-var(--lsx-floating-window-safe-left",
+        "max-height:calc(100dvh-var(--lsx-floating-window-safe-top",
         "flex-direction:column",
     ] {
         assert!(

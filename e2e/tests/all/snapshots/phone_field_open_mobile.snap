@@ -6,7 +6,6 @@ expression: tree
 LabelText
   StaticText "Mobile"
 button "Country: Germany, DE +49" [expanded] [haspopup=listbox]
-  StaticText "DE"
   StaticText "+49"
 status [atomic] [live=polite]
   StaticText "4 results"

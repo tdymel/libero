@@ -7,7 +7,7 @@ use super::{
     options::{FloatingWindowOptions, FloatingWindowPart},
     page_switch::use_page_switch,
     steps::WindowSteps,
-    styles::{FLOAT_SX, WINDOW_SX, float_sx},
+    styles::{FLOAT_SX, SAFE_BOTTOM, SAFE_LEFT, SAFE_RIGHT, SAFE_TOP, WINDOW_SX, float_sx, safe},
     title_bar::WindowTitleBar,
 };
 use crate::{
@@ -20,6 +20,7 @@ use crate::{
     localization::{FloatingWindowLabels, fill},
     platform::{ElementApi, PlatformError},
     sx::{Sx, ThemeAwareValue},
+    theme::CssVar,
     utils::unique_id,
 };
 
@@ -31,11 +32,12 @@ pub(super) enum Adjust {
     Reset,
 }
 
-/// Clamped into the viewport by CSS, so it re-clamps with no listener. A window
-/// larger than the viewport pins top-left.
-fn clamped(at: f64, size: Option<f64>, viewport: &str) -> String {
+/// Clamped into the viewport's safe area by CSS, so it re-clamps with no listener. A
+/// window larger than that pins top-left.
+fn clamped(at: f64, size: Option<f64>, viewport: &str, (start, end): (CssVar, CssVar)) -> String {
     let size = size.unwrap_or(0.0);
-    format!("clamp(0px, {at}px, calc({viewport} - {size}px))")
+    let (start, end) = (safe(start), safe(end));
+    format!("clamp({start}, {at}px, calc({viewport} - {end} - {size}px))")
 }
 
 /// Names the window's root, so its owner finds it after the window's scope is gone.
@@ -108,8 +110,16 @@ fn float_position(
     };
     (
         Input::Value(left),
-        Input::from(clamped(y, measured.map(|m| m.1), "100dvh")),
-        Input::from(float_sx().with("margin-left", clamped(x, measured.map(|m| m.0), "100%"))),
+        Input::from(clamped(
+            y,
+            measured.map(|m| m.1),
+            "100dvh",
+            (SAFE_TOP, SAFE_BOTTOM),
+        )),
+        Input::from(float_sx().with(
+            "margin-left",
+            clamped(x, measured.map(|m| m.0), "100%", (SAFE_LEFT, SAFE_RIGHT)),
+        )),
     )
 }
 

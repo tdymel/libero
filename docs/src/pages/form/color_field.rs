@@ -212,6 +212,7 @@ pub fn ColorFieldPage() -> Element {
                     Control::switch("close_on_swatch_click"),
                     Control::switch("required"),
                     Control::switch("disabled"),
+                    Control::switch("readonly"),
                 ]].concat(),
                 render: move |values: DemoValues| rsx! {
                     ColorFieldDemo { values }
@@ -260,6 +261,7 @@ fn ColorFieldDemo(values: DemoValues) -> Element {
                 status: field.status,
                 required: is_on(&values, "required").then_some(true),
                 disabled: is_on(&values, "disabled").then_some(true),
+                readonly: is_on(&values, "readonly").then_some(true),
             }
             Text { size: "sm", "value: {color().to_hexa()}" }
         }

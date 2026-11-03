@@ -97,7 +97,8 @@ field_props! {
         /// `autocomplete="one-time-code"` on the first cell. On by default.
         #[props(default)]
         one_time_code: Option<bool>,
-        /// Rendered between the cells, hidden from screen readers.
+        /// Rendered between the cells, hidden from screen readers. On a narrow row it
+        /// shrinks away before a cell does.
         #[props(default, into)]
         separator: Option<Element>,
         /// Posts the pin through a hidden input. A path also binds it to the

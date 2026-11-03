@@ -1,6 +1,9 @@
 use dioxus::prelude::*;
 
-use super::options::WindowRect;
+use super::{
+    options::WindowRect,
+    styles::{SAFE_BOTTOM, SAFE_LEFT, SAFE_RIGHT, SAFE_TOP},
+};
 use crate::{
     components::{common::has_shortcut_modifier, layout::Placement},
     hooks::{
@@ -54,10 +57,12 @@ impl WindowBounds {
     }
 }
 
-/// Reads computed `min-*`/`max-*` and the viewport into `bounds`, if available.
+/// Reads computed `min-*`/`max-*` and the viewport less its safe area into `bounds`, if available.
 pub(super) fn read_bounds(root: ElementHandle, mut bounds: Signal<Option<WindowBounds>>) {
     let reads = ["min-width", "min-height", "max-width", "max-height"]
         .map(|property| root.computed_px(property));
+    let insets =
+        [SAFE_TOP, SAFE_RIGHT, SAFE_BOTTOM, SAFE_LEFT].map(|side| root.computed_px(side.name()));
     let viewport = crate::platform::document().map(|document| document.viewport());
     spawn(async move {
         let mut px = [None; 4];
@@ -65,8 +70,17 @@ pub(super) fn read_bounds(root: ElementHandle, mut bounds: Signal<Option<WindowB
             let Ok(value) = read.await else { return };
             *slot = value;
         }
+        let mut safe = [0.0; 4];
+        for (slot, read) in safe.iter_mut().zip(insets) {
+            *slot = read.await.ok().flatten().unwrap_or(0.0);
+        }
+        let [top, right, bottom, left] = safe;
         let viewport = match viewport {
-            Some(read) => read.await.ok(),
+            Some(read) => read.await.ok().map(|mut v| {
+                v.width -= left + right;
+                v.height -= top + bottom;
+                v
+            }),
             None => None,
         };
         let cap = |max: Option<f64>, screen: Option<f64>| {

@@ -78,7 +78,7 @@ pub fn PhoneFieldPage() -> Element {
                     prop("countries", "Vec<String>")
                         .doc("Narrows the list to these ISO codes, in the order given. It limits the picker only: a typed or pasted dial code of a country outside it still switches the field to that country."),
                     prop("flag", "Callback<String, Element>")
-                        .doc("Draws a flag beside a country, in the picker and in the list. The library ships none. Hide it from screen readers, since the country's name is already read."),
+                        .doc("Draws a flag beside a country, in the picker and in the list. The library ships none. Hide it from screen readers, since the country's name is already read. Below `sm`, a picker with a flag drops its ISO code to leave the number room."),
                     prop("validate", "Validators<String>")
                         .doc("Rules over the E.164, shown once the field loses focus or its form is submitted. The field checks nothing on its own."),
                     prop("name", "FieldName<String>")
@@ -194,6 +194,7 @@ pub fn PhoneFieldPage() -> Element {
                         .default(theme.phone_field.country_select.to_string()),
                     Control::switch("required"),
                     Control::switch("disabled"),
+                    Control::switch("readonly"),
                 ]].concat(),
                 render: move |values: DemoValues| {
                     let field = field_props::<MobileCopy>(&values);
@@ -219,6 +220,7 @@ pub fn PhoneFieldPage() -> Element {
                                 country_select: values.str("country_select") == "true",
                                 required: (values.str("required") == "true").then_some(true),
                                 disabled: (values.str("disabled") == "true").then_some(true),
+                                readonly: (values.str("readonly") == "true").then_some(true),
                                 flag,
                                 value: value(),
                                 oninput: move |next| value.set(next),

@@ -49,7 +49,7 @@ fn Calendars() -> Element {
 }
 ```
 
-Four limits:
+Five limits:
 
 - The theme is a sheet on the document root, so a nested provider's `themes`
   do not scope to its subtree.
@@ -60,6 +60,9 @@ Four limits:
   reader reads its words in the page's voice.
 - `use_localization_handle` and `use_formats_handle` switch the nearest provider
   only.
+- A nested provider portals into its own outlet, so its popovers stack inside
+  the nearest stacking context around it, such as a `ScrollArea`, and a sticky
+  header over that area covers them.
 
 ## Icon providers merge
 

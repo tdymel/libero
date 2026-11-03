@@ -272,6 +272,7 @@ pub fn AutocompletePage() -> Element {
                     }),
                     Control::switch("required"),
                     Control::switch("disabled"),
+                    Control::switch("readonly"),
                 ]].concat(),
                 render: move |values: DemoValues| {
                     let field = field_props::<CityCopy>(&values);
@@ -304,6 +305,7 @@ pub fn AutocompletePage() -> Element {
                         open_on_focus: values.str("open_on_focus") == "true",
                         required: (values.str("required") == "true").then_some(true),
                         disabled: (values.str("disabled") == "true").then_some(true),
+                        readonly: (values.str("readonly") == "true").then_some(true),
                         placeholder: "Start typing",
                         options: cities(),
                         value: value(),

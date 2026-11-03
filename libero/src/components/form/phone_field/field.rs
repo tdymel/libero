@@ -12,8 +12,8 @@ use crate::{
         },
         form::{
             CaretKeys, ComboboxCore, ComboboxOption, DropdownPart, FormScope, TouchHold,
-            field_control_sx, field_parts_enum, field_props, use_bound, use_field, use_field_frame,
-            use_prefill, use_touch_hold, with_drawn_placeholder,
+            field_control_sx, field_parts_enum, field_props, phone_sheet::narrow_query, use_bound,
+            use_field, use_field_frame, use_prefill, use_touch_hold, with_drawn_placeholder,
         },
         layout::{BoxStyle, use_box},
     },
@@ -80,6 +80,15 @@ static PICKER_SX: StaticSx = StaticSx::new(|| {
         .selector(
             format!("& > [data-slot='{}']", PhoneFieldPart::Dial.slot()),
             ltr_isolate().color("text-dimmed"),
+        )
+        // Below `sm` a flag and the dial code name the country, so the ISO code gives the
+        // number its room (5479); the button's label still says it.
+        .media(
+            narrow_query(),
+            sx().selector(
+                "& > [data-slot='iso']:not(:first-child)",
+                sx().display("none"),
+            ),
         )
         .when("disabled", sx().cursor("not-allowed"))
 });

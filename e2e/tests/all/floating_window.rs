@@ -1164,6 +1164,77 @@ fn a_moved_window_stays_clear_of_a_classic_scrollbar() {
     });
 }
 
+/// Todo 5477: placed, and dragged past each corner, the window stays inside the safe-area insets.
+#[test]
+fn the_window_keeps_inside_the_safe_area() {
+    use chromiumoxide::cdp::browser_protocol::emulation::{
+        SafeAreaInsets, SetSafeAreaInsetsOverrideParams,
+    };
+    block_on(async {
+        let fixture = Fixture::open("/floating-window", Viewport::Mobile)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        let insets = SafeAreaInsets {
+            top: Some(47),
+            bottom: Some(34),
+            left: Some(20),
+            right: Some(30),
+            ..Default::default()
+        };
+        page.execute_bounded(SetSafeAreaInsetsOverrideParams::new(insets))
+            .await
+            .unwrap();
+        pointer::click(page, TRIGGER).await.unwrap();
+        wait::for_visible(page, HANDLE).await.unwrap();
+        // Every edge inside the insets; `corner` also names the two it should touch.
+        let inside = |corner: &str| {
+            format!(
+                "(() => {{ const r = document.querySelector('[role=dialog]').getBoundingClientRect(); \
+                 const vw = document.documentElement.clientWidth, vh = innerHeight; \
+                 const gaps = {{ top: r.top - 47, left: r.left - 20, right: vw - 30 - r.right, \
+                 bottom: vh - 34 - r.bottom }}; \
+                 return Object.values(gaps).every(g => g > -0.5) \
+                   && '{corner}'.split(' ').filter(Boolean).every(side => gaps[side] < 2); }})()"
+            )
+        };
+        let gaps = "(() => { const r = document.querySelector('[role=dialog]').getBoundingClientRect(); \
+             return JSON.stringify([r.left, r.top, r.right, r.bottom, document.documentElement.clientWidth, innerHeight, \
+             getComputedStyle(document.querySelector('[role=dialog]')).getPropertyValue('--lsx-floating-window-safe-left')]); })()";
+        let fail = async |e: anyhow::Error| -> ! {
+            let now: String = page
+                .evaluate_bounded(gaps)
+                .await
+                .unwrap()
+                .into_value()
+                .unwrap();
+            panic!("{e}; rect and viewport: {now}")
+        };
+        if let Err(e) =
+            wait::for_js_true(page, &inside(""), "the placed window inside the insets").await
+        {
+            fail(e).await
+        }
+        // To the screen's far corners, which carry the handle past the insets (Mobile is 390x844).
+        for (x, y, corner) in [(389.0, 843.0, "right bottom"), (1.0, 1.0, "left top")] {
+            let from = pointer::centre_of(page, HANDLE).await.unwrap();
+            let to = pointer::Point { x, y };
+            pointer::drag(page, from, to, 8).await.unwrap();
+            if let Err(e) = wait::for_js_true(
+                page,
+                &inside(corner),
+                &format!("the window at the {corner} insets"),
+            )
+            .await
+            {
+                fail(e).await
+            }
+        }
+        fixture.console.assert_clean("safe-area window").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
 /// `FloatingWindow` whose title bar is deaf to the arrows (a capturing listener): nothing a
 /// snapshot or axe sees changes.
 #[test]
