@@ -63,7 +63,10 @@ fn an_action_item_draws_its_own_number() {
         "3.\u{a0}"
     );
     assert!(!page.exists("#iconed > [data-slot=marker]"));
-    assert!(!page.exists("#first > [data-slot=marker]"));
+    assert_eq!(
+        page.computed("#first > [data-slot=marker]", "display"),
+        "none"
+    );
 }
 
 fn numbered() -> Element {
@@ -143,5 +146,52 @@ fn the_icon_sits_beside_the_body_at_the_start_edge() {
     assert!(
         icon.2 >= item.2 - 1.0 && body.2 <= icon.0 && body.1 < icon.3 && body.0 >= item.0 - 1.0,
         "rtl icon {icon:?} body {body:?} item {item:?}"
+    );
+}
+
+fn rtl_numbered() -> Element {
+    rsx! {
+        div { dir: "rtl", style: "width: 240px; padding: 0 48px",
+            List { ordered: true,
+                ListItem { id: "rtl-plain", "Install" }
+                ListItem {
+                    id: "rtl-acted",
+                    action: rsx! { button { "Edit" } },
+                    "Configure"
+                }
+            }
+        }
+    }
+}
+
+/// Todo 5395: under `dir=rtl` a plain item's number hangs in its inline-start (right) gutter,
+/// as an action item's does, and is painted there; Blitz would paint the string marker at the left.
+#[test]
+fn a_plain_number_hangs_in_the_gutter_at_the_right_under_rtl() {
+    let page = mount(rtl_numbered);
+    for item in ["rtl-plain", "rtl-acted"] {
+        let (x, _, width, _) = page.rect(&format!("#{item}"));
+        let edge = x + width;
+        let (marker_x, _, marker_width, _) = page.rect(&format!("#{item} > [data-slot=marker]"));
+        assert!(
+            marker_x >= edge - 1.0 && marker_x + marker_width <= edge + 33.0,
+            "{item}: item right edge {edge}, marker {marker_x}+{marker_width}"
+        );
+        let glyphs = page.painted_glyphs(&format!("#{item}"));
+        assert!(
+            glyphs.iter().any(|(_, at)| *at >= edge - 1.0),
+            "{item}: no glyph right of {edge}: {glyphs:?}"
+        );
+    }
+}
+
+/// The ltr plain item keeps its string marker and shows no span.
+#[test]
+fn a_plain_number_keeps_its_string_marker_under_ltr() {
+    let page = mount(ordered);
+    assert_eq!(page.list_marker("#first").as_deref(), Some("1.\u{a0}"));
+    assert_eq!(
+        page.computed("#first > [data-slot=marker]", "display"),
+        "none"
     );
 }

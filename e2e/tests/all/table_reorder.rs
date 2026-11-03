@@ -905,7 +905,7 @@ e2e::scenario!(
     a_cancelled_grip_drag_moves_no_column,
     "/table-reorder",
     a_cancelled_pointer_moves_no_column,
-    native: skip("Blitz reads no scripts")
+    native: skip("the drag dispatches a pointercancel from a script, and Blitz runs none")
 );
 
 /// Todo 2018: the rows measure at the press, so a finger's drag moves the row soon.

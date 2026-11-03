@@ -395,7 +395,7 @@ e2e::scenario!(
     a_refused_menu_pin_stays_unsaid,
     "/table/pinned-refused",
     a_refused_menu_pin_is_never_said,
-    native: skip("Blitz reads no scripts"),
+    native: skip("a MutationObserver records the live region, and Blitz runs no script"),
     ios: skip("a phone's narrow table releases the host's second pin")
 );
 

@@ -45,7 +45,29 @@ static LIST_ITEM_BASE_SX: StaticSx = StaticSx::new(|| {
                 .selector(ListItemPart::Body.selector(), body.display("flow-root")),
         )
         .when("with-action", action_sx())
+        .when("with-number", plain_number_sx())
 });
+
+/// Native: Blitz paints a string marker left of the item whatever the direction, so under
+/// rtl the plain item hangs its number as a span into the inline-start (right) gutter (5395).
+fn plain_number_sx() -> Sx {
+    let marker = "& > [data-slot='marker']";
+    if !NATIVE {
+        return sx();
+    }
+    sx().selector(marker, sx().display("none")).rtl(
+        sx().list_style_type("none").position("relative").selector(
+            marker,
+            sx().display("block")
+                .position("absolute")
+                .top("0")
+                .right("-2em")
+                .box_sizing("border-box")
+                .width("2em")
+                .text_align("end"),
+        ),
+    )
+}
 
 /// The action takes the item's end, so the body is no float's neighbour.
 fn action_sx() -> Sx {
@@ -188,9 +210,8 @@ pub fn ListItem(props: ListItemProps) -> Element {
     let marker = number
         .filter(|_| icon.is_none() && props.action.is_some())
         .map(|number| format!("{number}.\u{a0}"));
-    let number = number
-        .filter(|_| icon.is_none() && props.action.is_none())
-        .map(|number| format!("list-style-type: \"{number}.\u{a0}\""));
+    let plain = number.filter(|_| icon.is_none() && props.action.is_none());
+    let number = plain.map(|number| format!("list-style-type: \"{number}.\u{a0}\""));
     // Native only: where `List` reads the items' DOM order from.
     let order = context
         .filter(|context| NATIVE && context.numbering.read().is_some())
@@ -201,10 +222,17 @@ pub fn ListItem(props: ListItemProps) -> Element {
         .unwrap_or_default()
         .with("with-icon", icon.is_some())
         .with("with-action", props.action.is_some())
+        .with("with-number", plain.is_some())
         .into();
 
     let children = match (icon, props.action) {
-        (None, None) => props.children,
+        (None, None) => match plain {
+            Some(number) => rsx! {
+                span { "data-slot": "marker", "aria-hidden": "true", "{number}.\u{a0}" }
+                {props.children}
+            },
+            None => props.children,
+        },
         (icon, action) => rsx! {
             if let Some(marker) = marker {
                 span { "data-slot": "marker", "aria-hidden": "true", {marker} }

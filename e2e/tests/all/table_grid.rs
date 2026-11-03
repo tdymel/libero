@@ -143,35 +143,23 @@ e2e::scenario!(
 );
 
 /// A sort or menu button and a resize grip in a header cell are `tabindex=-1`, none missing.
-const HEADER_BUTTONS: &str = "(() => {
-    const count = (selector) => document.querySelectorAll(`thead ${selector}`).length;
-    const stops = [...document.querySelectorAll(
-        'thead [data-sort-button], thead [data-column-menu], thead [data-resize-handle]'
-    )].filter((e) => e.getAttribute('tabindex') !== '-1').map((e) => e.outerHTML.slice(0, 80));
-    return {
-        sort: count('[data-sort-button]'),
-        menu: count('[data-column-menu]'),
-        grip: count('[data-resize-handle]'),
-        stops,
-    };
-})()";
-
 async fn header_buttons_leave_the_tab_order<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
     eventually(d, "the header's buttons", async |d| {
         d.exists("thead [data-column-menu]").await
     })
     .await?;
-    let seen = d.evaluate(HEADER_BUTTONS).await?;
-    for kind in ["sort", "menu", "grip"] {
-        if seen[kind].as_u64().unwrap_or(0) == 0 {
-            bail!("no {kind} in the header: {seen}");
+    for (kind, selector) in [
+        ("sort", "thead [data-sort-button]"),
+        ("menu", "thead [data-column-menu]"),
+        ("grip", "thead [data-resize-handle]"),
+    ] {
+        let tabs = d.attrs(selector, "tabindex").await?;
+        if tabs.is_empty() {
+            bail!("no {kind} in the header");
         }
-    }
-    if seen["stops"]
-        .as_array()
-        .is_none_or(|stops| !stops.is_empty())
-    {
-        bail!("a header button or grip is a Tab stop: {seen}");
+        if tabs.iter().any(|tab| tab != "-1") {
+            bail!("a header {kind} is a Tab stop: {tabs:?}");
+        }
     }
     Ok(())
 }
@@ -179,8 +167,7 @@ async fn header_buttons_leave_the_tab_order<D: Driver>(d: &mut D, _route: &str) 
 e2e::scenario!(
     sort_menu_buttons_and_grips_are_not_tab_stops,
     "/table-grid/resizable",
-    header_buttons_leave_the_tab_order,
-    native: skip("Blitz reads no script")
+    header_buttons_leave_the_tab_order
 );
 
 /// A filtered column's indicator button in a header cell is `tabindex=-1` too (3868).
@@ -189,17 +176,9 @@ async fn filtered_button_leaves_the_tab_order<D: Driver>(d: &mut D, _route: &str
         d.exists("thead [data-filtered]").await
     })
     .await?;
-    let seen = d
-        .evaluate(
-            "[...document.querySelectorAll('thead [data-filtered]')]
-                .map((e) => e.getAttribute('tabindex'))",
-        )
-        .await?;
-    if seen
-        .as_array()
-        .is_none_or(|tabs| tabs.is_empty() || tabs.iter().any(|t| t != "-1"))
-    {
-        bail!("a filtered button is a Tab stop: {seen}");
+    let tabs = d.attrs("thead [data-filtered]", "tabindex").await?;
+    if tabs.is_empty() || tabs.iter().any(|tab| tab != "-1") {
+        bail!("a filtered button is a Tab stop: {tabs:?}");
     }
     Ok(())
 }
@@ -207,8 +186,7 @@ async fn filtered_button_leaves_the_tab_order<D: Driver>(d: &mut D, _route: &str
 e2e::scenario!(
     a_filtered_button_is_not_a_tab_stop,
     "/table-grid/header-filters",
-    filtered_button_leaves_the_tab_order,
-    native: skip("Blitz reads no script")
+    filtered_button_leaves_the_tab_order
 );
 
 /// Ben's age stays the stop when the age sort moves his row from second to fourth.
@@ -799,15 +777,18 @@ async fn error_overlay<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
     retype(d, "200").await?;
     d.press(keyboard::ENTER).await?;
     eventually_text(d, ERROR, "Too old", "the refused commit").await?;
-    let shown = d
-        .evaluate(&format!(
-            "(e => {{ const r = e.getBoundingClientRect(); \
-             const hit = document.elementFromPoint(r.x + r.width / 2, r.y + r.height - 2); \
-             return hit?.closest('[data-cell-error]') === e; }})(document.querySelector('{ERROR}'))"
-        ))
-        .await?;
-    if shown != serde_json::Value::Bool(true) {
-        bail!("the message is clipped by its row");
+    // Native has no script to hit-test with; the row-height check below still runs.
+    if d.platform() != Platform::Native {
+        let shown = d
+            .evaluate(&format!(
+                "(e => {{ const r = e.getBoundingClientRect(); \
+                 const hit = document.elementFromPoint(r.x + r.width / 2, r.y + r.height - 2); \
+                 return hit?.closest('[data-cell-error]') === e; }})(document.querySelector('{ERROR}'))"
+            ))
+            .await?;
+        if shown != serde_json::Value::Bool(true) {
+            bail!("the message is clipped by its row");
+        }
     }
     let row = d.rect("tbody tr:nth-child(1)").await?.height;
     if (row - 28.0).abs() > 0.5 {
@@ -820,8 +801,7 @@ e2e::scenario!(
     an_error_shows_in_a_fixed_row_height_table,
     "/table-grid/editable/windowed",
     error_overlay,
-    android: skip("958: roving keys are inert in the emulator's WebView"),
-    native: skip("no script reads")
+    android: skip("958: roving keys are inert in the emulator's WebView")
 );
 
 /// A handler that stores nothing leaves the caller's value in the cell.
