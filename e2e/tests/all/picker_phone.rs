@@ -13,6 +13,7 @@ use e2e::wait::PageBounded;
 use e2e::{Fixture, Viewport, frames, wait};
 
 const SHEET: &str = "[role=dialog]";
+const SECOND_TAB: &str = "[role=dialog] [role=tablist] [role=tab]:nth-child(2)";
 const TYPED: &str = "[role=dialog] [data-slot=text-input]";
 
 async fn phone() -> Fixture {
@@ -122,6 +123,43 @@ fn the_clock_face_fills_the_sheet() {
             .unwrap();
         fixture.console.assert_clean("a phone's clock").unwrap();
         fixture.close().await.unwrap();
+    });
+}
+
+/// Todo 5426: the flows' clock step fits the sheet's content on tall phones too, no sideways scroll.
+#[test]
+fn a_flows_clock_step_fits_the_sheet() {
+    block_on(async {
+        for (width, height) in [(390, 844), (360, 800), (320, 700)] {
+            for field in ["moment", "span"] {
+                let fixture = Fixture::open("/picker-phone", Viewport::Mobile)
+                    .await
+                    .unwrap();
+                let page = &fixture.page;
+                page.execute_bounded(SetDeviceMetricsOverrideParams::new(
+                    width, height, 1.0, true,
+                ))
+                .await
+                .unwrap();
+                tap(page, &input(field)).await.unwrap();
+                sheet_shown(page).await.unwrap();
+                tap(page, SECOND_TAB).await.unwrap();
+                let js = format!(
+                    "(() => {{ const f = document.querySelector('{SHEET} [data-slot=face]'); \
+                     if (!f) return false; const r = f.getBoundingClientRect(); \
+                     const s = document.querySelector({SHEET:?}); \
+                     return r.width >= 250 && Math.abs(r.width - r.height) < 1 \
+                       && s.scrollWidth <= s.clientWidth \
+                       && document.documentElement.scrollWidth <= innerWidth; }})()"
+                );
+                let what = format!(
+                    "a round face in a sheet without sideways scroll, {field} at {width}x{height}"
+                );
+                wait::for_js_true(page, &js, &what).await.unwrap();
+                fixture.console.assert_clean("a flow's clock step").unwrap();
+                fixture.close().await.unwrap();
+            }
+        }
     });
 }
 

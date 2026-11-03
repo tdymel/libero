@@ -26,8 +26,8 @@ use crate::{
     theme::{Size, TabsPlacement, TimePickerVariant},
 };
 
-/// The tabs and the picker under them share this column.
-const FLOW_STYLE: &str = "display: flex; flex-direction: column; gap: 8px;";
+/// The tabs and the picker under them share this column; `max-width` keeps it inside a centred sheet (5426).
+const FLOW_STYLE: &str = "display: flex; flex-direction: column; gap: 8px; max-width: 100%;";
 /// A picker takes the width it needs, centred under the tabs.
 const PART_STYLE: &str = "display: flex; justify-content: center;";
 

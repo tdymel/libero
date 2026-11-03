@@ -7,7 +7,7 @@
 
 use dioxus::prelude::*;
 use libero::{
-    chrono::{NaiveDate, NaiveTime},
+    chrono::{NaiveDate, NaiveDateTime, NaiveTime},
     components::{
         ChronoField, ColorCode, ColorField, DatePreset, DateRange, Flex, Input, SliderChangeEvent,
         Text,
@@ -32,6 +32,11 @@ fn PickerPhonePage() -> Element {
     let mut pair = use_signal(move || day(14).map(|start| DateRange::new(start, day(16))));
     let mut due = use_signal(move || day(14));
     let mut at = use_signal(|| NaiveTime::from_hms_opt(9, 30, 0));
+    let mut moment = use_signal(move || day(14).and_then(|d| d.and_hms_opt(9, 30, 0)));
+    let mut span = use_signal(move || {
+        let at = |d, h| day(d).and_then(|d| d.and_hms_opt(h, 0, 0));
+        at(14, 9).map(|start| DateRange::new(start, at(16, 17)))
+    });
     let mut digital = use_signal(|| NaiveTime::from_hms_opt(9, 30, 0));
     let mut bare = use_signal(|| NaiveTime::from_hms_opt(9, 30, 0));
     let mut color = use_signal(|| "#228be6".parse::<ColorCode>().unwrap());
@@ -68,6 +73,22 @@ fn PickerPhonePage() -> Element {
             }
             div { id: "at",
                 ChronoField::<NaiveTime> { label: "At", value: at(), onchange: move |next| at.set(next) }
+            }
+            div { id: "moment",
+                ChronoField::<NaiveDateTime> {
+                    label: "Moment",
+                    today: day(9),
+                    value: moment(),
+                    onchange: move |next| moment.set(next),
+                }
+            }
+            div { id: "span",
+                ChronoField::<DateRange<NaiveDateTime>> {
+                    label: "Span",
+                    today: day(9),
+                    value: span(),
+                    onchange: move |next| span.set(next),
+                }
             }
             div { id: "digital",
                 ChronoField::<NaiveTime> {
