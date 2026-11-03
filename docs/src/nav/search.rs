@@ -2,7 +2,7 @@ use dioxus::prelude::*;
 use libero::components::SpotlightAction;
 
 use super::{aliases::aliases, tree::pages};
-use crate::Route;
+use crate::{Route, pages::hook_pages};
 
 /// One palette action per page, grouped under its sidebar section - what the
 /// docs search opens on until a real search index exists. `section` lands a
@@ -20,18 +20,26 @@ pub fn page_actions(section: Signal<Option<String>>) -> Vec<SpotlightAction> {
             action.group = Some(group.to_string());
             action
         });
+    let hooks = hook_pages();
     pages()
         .into_iter()
         .map(|(path, label, group)| {
+            let page_hooks: Vec<_> = hooks
+                .iter()
+                .filter(|(_, page)| *page == path)
+                .map(|(hook, _)| *hook)
+                .collect();
             let mut action = SpotlightAction::new(label).onclick(move |_| {
                 if let Ok(route) = path.parse::<Route>() {
                     navigator().push(route);
                 }
             });
             // The section is a keyword too: "Accessibility" finds its "Overview".
+            // A hook names the page that shows it: `use_clipboard` finds Copy.
             action.keywords = group
                 .into_iter()
                 .chain(aliases(group, label).iter().copied())
+                .chain(page_hooks)
                 .map(str::to_string)
                 .collect();
             action.group = group.map(str::to_string);
@@ -76,6 +84,19 @@ mod tests {
             })
         };
         assert!(hit("Overview") && hit("FocusTrap") && hit("Focus return"));
+    }
+
+    /// Todo 5467: every hook in the Hooks overview finds the page its row links to.
+    #[test]
+    fn every_overview_hook_finds_its_page() {
+        let dom = VirtualDom::new(VNode::empty);
+        let actions = dom.in_scope(ScopeId::ROOT, || page_actions(Signal::new(None)));
+        let paths = pages();
+        for (hook, page) in hook_pages() {
+            let label = paths.iter().find(|(path, ..)| *path == page).unwrap().1;
+            let hits = spotlight_filter(hook, &actions);
+            assert!(hits.iter().any(|hit| hit.label == label), "{hook}: {label}");
+        }
     }
 
     #[test]

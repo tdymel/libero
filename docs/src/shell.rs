@@ -243,6 +243,8 @@ pub(crate) fn AppShell() -> Element {
                             sx: sx()
                                 .height("auto")
                                 .padding("24px 16px")
+                                // Clear of a phone's home indicator at the page end (5473).
+                                .padding_bottom("calc(24px + env(safe-area-inset-bottom, 0px))")
                                 .breakpoint(Size::Sm, sx().padding("48px 64px"))
                                 .and(landing_sx())
                                 .and(if swipes { edge_swipe_sx() } else { sx() }),

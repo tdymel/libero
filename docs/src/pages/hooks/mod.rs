@@ -27,7 +27,7 @@ mod use_theme_set;
 mod use_timers;
 mod use_user_media;
 
-pub use overview::HooksPage;
+pub use overview::{HooksPage, hook_pages};
 pub use save_file::SaveFilePage;
 pub use use_back::UseBackPage;
 pub use use_countdown::UseCountdownPage;

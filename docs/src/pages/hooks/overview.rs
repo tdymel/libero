@@ -2,7 +2,10 @@ use crate::Route;
 use crate::components::{DocPage, DocSection};
 use crate::nav::page_label;
 use dioxus::prelude::*;
-use libero::components::{Anchor, Code, Table, Text, column};
+use libero::{
+    components::{Anchor, Code, Table, Text, column, visually_hidden_sx},
+    sx::{Sx, sx},
+};
 
 #[derive(Clone, PartialEq)]
 struct HookRow {
@@ -17,6 +20,14 @@ fn row(hook: &'static str, purpose: &'static str, route: Route) -> HookRow {
         purpose,
         route,
     }
+}
+
+/// Each public hook with its page's path, so the docs search finds a hook by name (5467).
+pub fn hook_pages() -> Vec<(&'static str, String)> {
+    hooks()
+        .into_iter()
+        .map(|row| (row.hook, row.route.to_string()))
+        .collect()
 }
 
 /// Every public `use_*` of libero: the primitives first, then in the docs' group order.
@@ -395,6 +406,7 @@ pub fn HooksPage() -> Element {
                 Table {
                     caption: "Libero's public hooks",
                     scroll: true,
+                    sx: overview_table_sx(),
                     data: hooks(),
                     columns: vec![
                         column("Hook")
@@ -422,6 +434,21 @@ pub fn HooksPage() -> Element {
             }
         }
     }
+}
+
+/// A hook name never breaks; a phone stacks each row, so its page link is not past the edge (5471).
+fn overview_table_sx() -> Sx {
+    sx().selector("& td:first-child", sx().white_space("nowrap"))
+        .media(
+            "(max-width: 30rem)",
+            sx().selector("& thead", visually_hidden_sx())
+                .selector("& tbody tr", sx().display("block"))
+                .selector("& td", sx().display("block"))
+                .selector(
+                    "& tbody tr > td:not(:last-child)",
+                    sx().border_bottom("none").padding_bottom("0"),
+                ),
+        )
 }
 
 #[cfg(test)]

@@ -1,6 +1,6 @@
 use dioxus::prelude::*;
 use libero::{
-    components::{Code, Flex, Part, Table, Text, Title, column},
+    components::{Code, Flex, Part, Table, Text, Title, column, visually_hidden_sx},
     sx::{Sx, sx},
 };
 
@@ -355,10 +355,11 @@ fn table_sx() -> Sx {
         sx().vertical_align("top").with("overflow-wrap", "anywhere"),
     )
     .selector("& td:last-child code", sx().white_space("normal"))
-    // A phone stacks the description under its name; the header row is then redundant (4705).
+    // A phone stacks the description under its name; the header row is then redundant (4705),
+    // but stays named for a screen reader's table navigation (5470).
     .media(
         "(max-width: 30rem)",
-        sx().selector("& thead", sx().display("none"))
+        sx().selector("& thead", visually_hidden_sx())
             .selector("& tbody tr", sx().display("block"))
             .selector("& td", sx().display("block"))
             // Only a row's last cell keeps the rule, so the stacked cells read as one entry (4733).
@@ -395,7 +396,7 @@ fn PropRows(name: String, properties: Vec<PropDoc>, base: bool, extends: String)
                             sx: sx().min_width("10rem"),
                             Code { source: "{p.name}: {p.ty}", language: "rust" }
                             if !p.default.is_empty() {
-                                Text { size: "xs", color: "muted.6", "default: {p.default}" }
+                                Text { size: "xs", color: "text-dimmed", "default: {p.default}" }
                             }
                         }
                     }),

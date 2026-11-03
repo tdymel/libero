@@ -5,13 +5,13 @@ use crate::{
     components::{
         common::{
             HtmlTag, Input, Part, ScaleOrCss, States, Variables, base_props, input_from_str,
-            names_itself, parts_enum, variables,
+            names_itself, parts_enum, safe_area_padding, variables,
         },
         layout::{ScrollArea, use_box},
     },
     hooks::use_theme,
-    sx::{StaticSx, ThemeAwareValue, sx},
-    theme::{ColorCss, ColorShade, SIDEBAR_SIZE, Size},
+    sx::{StaticSx, Sx, ThemeAwareValue, sx},
+    theme::{ColorCss, ColorShade, SIDEBAR_SIZE, Size, SizeCss},
 };
 
 pub use crate::theme::SidebarSide;
@@ -19,6 +19,25 @@ pub use crate::theme::SidebarSide;
 input_from_str!(SidebarSide);
 
 static SIDEBAR_SCROLL_SX: StaticSx = StaticSx::new(|| sx().padding("lg"));
+static SIDEBAR_SCROLL_START_SX: StaticSx = StaticSx::new(|| safe_side(true));
+static SIDEBAR_SCROLL_END_SX: StaticSx = StaticSx::new(|| safe_side(false));
+
+/// A start or end panel clears a landscape notch on the physical side it sits on (5469).
+fn safe_side(start: bool) -> Sx {
+    let padding = SizeCss::SPACING.value(Size::Lg);
+    let property = if start {
+        "padding-inline-start"
+    } else {
+        "padding-inline-end"
+    };
+    let side = |physical: &str| sx().with(property, safe_area_padding(&padding, physical));
+    let (ltr, rtl) = if start {
+        ("left", "right")
+    } else {
+        ("right", "left")
+    };
+    sx().padding("lg").and(side(ltr)).rtl(side(rtl))
+}
 
 static SIDEBAR_BASE_SX: StaticSx = StaticSx::new(|| {
     let border = format!("1px solid {}", ColorCss::MUTED.value(ColorShade::S4));
@@ -70,6 +89,7 @@ base_props! {
     parts(SidebarPart);
     pub struct SidebarProps {
         /// The side it sits on, its border facing the content, and the axis `size` sizes; it does not place the panel.
+        /// `start` and `end` clear that side's safe area; `top` and `bottom` leave the insets to the `Header` or `NavigationBar`.
         #[props(default, into)]
         side: Input<SidebarSide>,
         /// The width (or height, on `top` or `bottom`): a size word or any CSS, as `size: "18rem"`.
@@ -149,7 +169,11 @@ pub fn Sidebar(props: SidebarProps) -> Element {
             rsx! {
                 ScrollArea {
                     scrollbars: "both",
-                    sx: &SIDEBAR_SCROLL_SX,
+                    sx: match side {
+                        SidebarSide::Start => &SIDEBAR_SCROLL_START_SX,
+                        SidebarSide::End => &SIDEBAR_SCROLL_END_SX,
+                        SidebarSide::Top | SidebarSide::Bottom => &SIDEBAR_SCROLL_SX,
+                    },
                     attributes: scroll_attributes,
                     {props.children}
                 }

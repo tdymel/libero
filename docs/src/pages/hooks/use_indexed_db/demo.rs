@@ -18,6 +18,12 @@ pub fn KeptNotes() -> Element {
         },
         400,
     );
+    // Leaving the page drops a pending save: keep the last keys typed too.
+    use_drop(move || {
+        if let Ok(Some(text)) = typed.try_peek().map(|text| text.clone()) {
+            notes.set(text);
+        }
+    });
     // A fast load shows no loading text at all.
     let mut slow = use_signal(|| false);
     let wait = use_timeout(move || slow.set(true), 500);

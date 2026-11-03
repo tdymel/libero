@@ -173,3 +173,48 @@ fn the_default_sidebar_leaves_content_room_at_320px() {
         fixture.close().await.unwrap();
     });
 }
+
+/// Todo 5469: a start or end panel pads the physical side it sits on by a landscape notch;
+/// top and bottom leave the insets to the Header or NavigationBar.
+#[test]
+fn a_side_panel_clears_the_notch_on_its_side() {
+    use chromiumoxide::cdp::browser_protocol::emulation::{
+        SafeAreaInsets, SetSafeAreaInsetsOverrideParams,
+    };
+    // The extra over the base padding of each scroll area: [left, right].
+    const EXTRA: &str = "['#start', '#end', '#top', '#bottom'].map(id => { \
+         const s = getComputedStyle(document.querySelector(id + \" > [data-slot='scroll']\")); \
+         const [left, right, top] = [s.paddingLeft, s.paddingRight, s.paddingTop].map(parseFloat); \
+         return [left - top, right - top]; })";
+
+    block_on(async {
+        for (dir, start, end) in [
+            ("ltr", [20.0, 0.0], [0.0, 30.0]),
+            ("rtl", [0.0, 30.0], [20.0, 0.0]),
+        ] {
+            let fixture = Fixture::open("/sidebar", Viewport::Desktop).await.unwrap();
+            let page = &fixture.page;
+            page.execute_bounded(SetSafeAreaInsetsOverrideParams::new(SafeAreaInsets {
+                top: Some(47),
+                bottom: Some(34),
+                left: Some(20),
+                right: Some(30),
+                ..Default::default()
+            }))
+            .await
+            .unwrap();
+            page.evaluate_bounded(format!("document.documentElement.dir = '{dir}'"))
+                .await
+                .unwrap();
+            wait::for_visible(page, "#bottom").await.unwrap();
+            let extra: Vec<[f64; 2]> = page
+                .evaluate_bounded(EXTRA)
+                .await
+                .unwrap()
+                .into_value()
+                .unwrap();
+            assert_eq!(extra, [start, end, [0.0, 0.0], [0.0, 0.0]], "{dir}");
+            fixture.close().await.unwrap();
+        }
+    });
+}
