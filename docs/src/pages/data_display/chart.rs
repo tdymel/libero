@@ -175,6 +175,7 @@ fn trend(values: &DemoValues) -> Option<(&'static str, Trend)> {
 fn y_range(values: &DemoValues) -> Option<(f64, f64)> {
     match (values.str("y_range").as_str(), values.str("type").as_str()) {
         ("auto", _) => None,
+        (_, "bar") if values.str("layout") == "grouped" => Some((-30.0, 90.0)),
         (_, "bar") => Some((-60.0, 180.0)),
         (_, "scatter") => Some((0.0, 120.0)),
         (_, "candlestick") => Some((10.0, 70.0)),
@@ -893,6 +894,7 @@ pub fn ChartPage() -> Element {
             Demo {
                 component: "Chart",
                 children_text: "",
+                wide_preview: true,
                 wrap: Wrap(component),
                 controls: vec![
                     // A select: eight types overflow a segmented toggle.

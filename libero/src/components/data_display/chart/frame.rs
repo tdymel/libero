@@ -667,9 +667,14 @@ pub(super) fn summary(
             .enumerate()
             .filter_map(|(i, value)| value.map(|value| (i, value)));
         let min = values.clone().map(|(_, value)| value).reduce(f64::min);
+        let count = values.clone().count();
         // The first of equal highs.
         let max = values.reduce(|high, next| if next.1 > high.1 { next } else { high });
         sentences.push(match (min, max) {
+            (Some(_), Some((_, max))) if count == 1 => fill(
+                labels.point_free,
+                &[("name", &series.name), ("value", &write(series, max))],
+            ),
             (Some(min), Some((_, max))) if min == max => fill(
                 labels.series_flat,
                 &[("name", &series.name), ("value", &write(series, max))],

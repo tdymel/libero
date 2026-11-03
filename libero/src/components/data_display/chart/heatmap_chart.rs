@@ -279,7 +279,7 @@ fn summary(
             ("max", &write(high)),
         ],
     )];
-    if let (Some(highest), Some(lowest)) = (highest, lowest) {
+    if let (Some(highest), Some(lowest), true) = (highest, lowest, cells.len() > 1) {
         sentences.push(fill(
             labels.cell_extremes,
             &[("high", &point(highest)), ("low", &point(lowest))],
@@ -453,5 +453,6 @@ mod tests {
         });
         assert!(html.contains("Heatmap of 1 row by 1 column"), "{html}");
         assert_eq!(html.matches("height=\"10\"").count(), 1, "{html}");
+        assert!(!html.contains("Highest:"), "{html}");
     }
 }

@@ -337,17 +337,36 @@ fn summary(
             sentences.push(fill(labels.series_empty, &[("name", &name)]));
             continue;
         };
-        sentences.push(fill(
-            labels.scatter_summary,
-            &[
-                ("name", &name),
-                ("count", &(labels.points)(points.len())),
-                ("xmin", &write_x(x.0)),
-                ("xmax", &write_x(x.1)),
-                ("min", &write_y(one, y.0)),
-                ("max", &write_y(one, y.1)),
-            ],
-        ));
+        sentences.push(match points.len() {
+            1 => fill(
+                labels.point_free,
+                &[
+                    ("name", &name),
+                    (
+                        "value",
+                        &format!(
+                            "{}, {}",
+                            (labels.points)(1),
+                            fill(
+                                labels.scatter_value,
+                                &[("x", &write_x(x.0)), ("y", &write_y(one, y.0))],
+                            )
+                        ),
+                    ),
+                ],
+            ),
+            _ => fill(
+                labels.scatter_summary,
+                &[
+                    ("name", &name),
+                    ("count", &(labels.points)(points.len())),
+                    ("xmin", &write_x(x.0)),
+                    ("xmax", &write_x(x.1)),
+                    ("min", &write_y(one, y.0)),
+                    ("max", &write_y(one, y.1)),
+                ],
+            ),
+        });
         if let Some((low, high)) = range(&mut points.iter().filter_map(|p| p.2)) {
             sentences.push(fill(
                 labels.bubble_sizes,
@@ -509,6 +528,6 @@ mod tests {
                 }
             }
         });
-        assert!(html.contains("B: 1 point, x from 2 to 2"), "{html}");
+        assert!(html.contains("B: 1 point, x 2, y 3"), "{html}");
     }
 }

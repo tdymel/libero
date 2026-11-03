@@ -2095,35 +2095,41 @@ fn a_mark_line_label_keeps_off_every_series_line_at_each_width() {
 /// RT-2 on bars: the docs' two series, no label of the average over a bar by a pixel or more.
 #[test]
 fn a_mark_line_label_keeps_off_every_bar_at_each_width() {
+    // The docs' two ranges; the wide one has no clear place at 314.
+    let cases = [(-60.0, 180.0, 325.0), (-30.0, 90.0, 314.0)];
     for label in ["Average: 33", "Durchschnitt: 33"] {
-        for width in [325.0, 410.0, 520.0, 634.0] {
-            let mut spec = bars(BarLayout::Grouped, false);
-            spec.x = ["Q1", "Q2", "Q3", "Q4"].map(String::from).to_vec();
-            let mut first = self::spec("2025", &[40.0, 55.0, -25.0, 62.0].map(Some));
-            first.extras.mark_lines = vec![(33.0, label.to_string())];
-            let second = self::spec("2026", &[30.0, -15.0, 20.0, 48.0].map(Some));
-            spec.series = vec![first, second];
-            spec.width = width;
-            spec.height = width * 9.0 / 16.0;
-            let drawn = draw_bar(&spec).expect("drawn");
-            let found = texts(&drawn.svg);
-            let text = found.iter().find(|t| t.3 == label).expect("label");
-            for mark in &drawn.geometry.marks {
-                let MarkShape::Rect {
-                    x,
-                    y,
-                    width: w,
-                    height: h,
-                } = mark.shape
-                else {
-                    continue;
-                };
-                let across = text.0 + 1.0 < x + w && text.1 - 1.0 > x;
-                let level = text.2 - 11.0 < y + h && text.2 + 3.0 > y;
-                assert!(
-                    !(across && level),
-                    "{label} at {width}: {text:?} over the bar at ({x}, {y}, {w}, {h})"
-                );
+        for (min, max, narrowest) in cases {
+            for width in [narrowest, 375.0, 410.0, 520.0, 634.0] {
+                let mut spec = bars(BarLayout::Grouped, false);
+                spec.axes.min = Some(min);
+                spec.axes.max = Some(max);
+                spec.x = ["Q1", "Q2", "Q3", "Q4"].map(String::from).to_vec();
+                let mut first = self::spec("2025", &[40.0, 55.0, -25.0, 62.0].map(Some));
+                first.extras.mark_lines = vec![(33.0, label.to_string())];
+                let second = self::spec("2026", &[30.0, -15.0, 20.0, 48.0].map(Some));
+                spec.series = vec![first, second];
+                spec.width = width;
+                spec.height = width * 9.0 / 16.0;
+                let drawn = draw_bar(&spec).expect("drawn");
+                let found = texts(&drawn.svg);
+                let text = found.iter().find(|t| t.3 == label).expect("label");
+                for mark in &drawn.geometry.marks {
+                    let MarkShape::Rect {
+                        x,
+                        y,
+                        width: w,
+                        height: h,
+                    } = mark.shape
+                    else {
+                        continue;
+                    };
+                    let across = text.0 + 1.0 < x + w && text.1 - 1.0 > x;
+                    let level = text.2 - 11.0 < y + h && text.2 + 3.0 > y;
+                    assert!(
+                        !(across && level),
+                        "{label} at {width}: {text:?} over the bar at ({x}, {y}, {w}, {h})"
+                    );
+                }
             }
         }
     }

@@ -832,4 +832,18 @@ mod tests {
         });
         assert!(html.contains("A: 0 throughout."), "{html}");
     }
+
+    /// Todo 5619: one value is no range.
+    #[test]
+    fn one_value_reads_as_a_point() {
+        let html = render(|| {
+            rsx! {
+                LiberoProvider {
+                    LineChart { title: "One", x: ["Mon"], series: vec![Series::new("A", [120.0])] }
+                }
+            }
+        });
+        assert!(html.contains("A: 120</p>"), "{html}");
+        assert!(!html.contains("throughout"), "{html}");
+    }
 }

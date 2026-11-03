@@ -348,7 +348,7 @@ impl ChartLabels {
         highest: "Höchstwert",
         mark: "Markierung",
         mark_line: "{label}: {value}",
-        mark_line_summary: "{name}: Linie {label} bei {value}.",
+        mark_line_summary: "{name}: {label} als Linie bei {value}.",
         mark_point: "{name}: {label} markiert bei {x}, {value}.",
         band: "{name}: jeder Wert hat einen Bereich, insgesamt {low} bis {high}.",
         compact: ["\u{a0}Mio.", "\u{a0}Mrd.", "\u{a0}Bio."],

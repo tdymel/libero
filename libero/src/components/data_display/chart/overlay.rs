@@ -280,14 +280,18 @@ impl Fit {
 
     /// Where the tooltip goes: its own share across at the point's share across, so it
     /// never leaves the plot's sides; below a point in the top half, above one lower.
-    /// Always by `top`: a `bottom` mid-transition with it would squeeze the box (3462).
-    fn tip_style(self, (x, y): (f32, f32)) -> String {
+    /// An area mark's `edges` (top, bottom), when at most half the plot tall, put the box
+    /// beside the mark instead of on it. Always by `top`: a `bottom` mid-transition with it
+    /// would squeeze the box (3462).
+    fn tip_style(self, (x, y): (f32, f32), edges: Option<(f32, f32)>) -> String {
         let left = (self.left + f64::from(x) * self.scale) / self.width * 100.0;
-        let top = self.top + f64::from(y) * self.scale;
+        let at = |y: f32| self.top + f64::from(y) * self.scale;
         let left = left.clamp(0.0, 100.0);
-        let (top, lift) = match top <= self.height / 2.0 {
-            true => (top + TIP_GAP, 0),
-            false => (top - TIP_GAP, 100),
+        let small = |(top, bottom): (f32, f32)| at(bottom) - at(top) <= self.height / 2.0;
+        let edges = edges.filter(|edges| small(*edges));
+        let (top, lift) = match at(y) <= self.height / 2.0 {
+            true => (at(edges.map_or(y, |edges| edges.1)) + TIP_GAP, 0),
+            false => (at(edges.map_or(y, |edges| edges.0)) - TIP_GAP, 100),
         };
         format!("left:{left:.2}%;top:{top:.1}px;transform:translate(-{left:.2}%,-{lift}%)")
     }
@@ -1101,7 +1105,11 @@ pub(super) fn ChartOverlay(props: ChartOverlayProps) -> Element {
     });
     let tip = match (tooltip, current, fit) {
         (true, Some(mark), Some(fit)) => {
-            let style = fit.tip_style(hit::anchor(&mark.shape));
+            let area = matches!(mark.shape, MarkShape::Sector { .. })
+                || (matches!(mark.shape, MarkShape::Rect { .. })
+                    && geometry.is_some_and(|g| g.cells));
+            let edges = area.then(|| hit::vertical_edges(&mark.shape)).flatten();
+            let style = fit.tip_style(hit::anchor(&mark.shape), edges);
             let body = match tooltip_content {
                 Some(content) => content.call(point_of(mark)),
                 None => tip_body(mark, geometry, &series, &x, &write, formats, layout),
@@ -1265,12 +1273,29 @@ mod tests {
     fn a_tooltip_hugs_its_side_and_flips_below_the_middle() {
         let fit = Fit::of((200.0, 100.0), None);
         assert_eq!(
-            fit.tip_style((0.0, 10.0)),
+            fit.tip_style((0.0, 10.0), None),
             "left:0.00%;top:22.0px;transform:translate(-0.00%,-0%)"
         );
         assert_eq!(
-            fit.tip_style((150.0, 80.0)),
+            fit.tip_style((150.0, 80.0), None),
             "left:75.00%;top:68.0px;transform:translate(-75.00%,-100%)"
+        );
+    }
+
+    #[test]
+    fn a_small_area_marks_tooltip_lies_beside_it() {
+        let fit = Fit::of((200.0, 100.0), None);
+        assert_eq!(
+            fit.tip_style((50.0, 20.0), Some((10.0, 30.0))),
+            "left:25.00%;top:42.0px;transform:translate(-25.00%,-0%)"
+        );
+        assert_eq!(
+            fit.tip_style((50.0, 70.0), Some((60.0, 80.0))),
+            "left:25.00%;top:48.0px;transform:translate(-25.00%,-100%)"
+        );
+        assert_eq!(
+            fit.tip_style((50.0, 20.0), Some((0.0, 90.0))),
+            "left:25.00%;top:32.0px;transform:translate(-25.00%,-0%)"
         );
     }
 }

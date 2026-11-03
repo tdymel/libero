@@ -151,6 +151,19 @@ pub(super) fn anchor(shape: &MarkShape) -> (f32, f32) {
     }
 }
 
+/// A mark's top and bottom edge in SVG units; `None` for a point.
+pub(super) fn vertical_edges(shape: &MarkShape) -> Option<(f32, f32)> {
+    match shape {
+        MarkShape::Point { .. } => None,
+        MarkShape::Rect { y, height, .. } => Some((*y, y + height)),
+        MarkShape::Sector { path } => {
+            let ys = outline(path).concat().into_iter().map(|(_, y)| y);
+            let (top, bottom) = ys.fold((f32::MAX, f32::MIN), |(t, b), y| (t.min(y), b.max(y)));
+            (top <= bottom).then_some((top, bottom))
+        }
+    }
+}
+
 /// An SVG path of moves, lines and circular arcs as closed polygons, arcs sampled.
 pub(super) fn outline(path: &str) -> Vec<Vec<(f32, f32)>> {
     let numbers = |text: &str| -> Vec<f32> {

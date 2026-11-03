@@ -333,15 +333,24 @@ fn summary(
         n.count().to_string()
     };
     let mut sentences = vec![
-        fill(
-            labels.candle_summary,
-            &[
-                ("kind", &labels.candlestick.to_string()),
-                ("count", &(labels.periods)(drawn.len())),
-                ("first", first.0),
-                ("last", last.0),
-            ],
-        ),
+        match drawn.len() {
+            1 => fill(
+                labels.range_one,
+                &[
+                    ("kind", &labels.candlestick.to_string()),
+                    ("first", &format!("{}, {}", (labels.periods)(1), first.0)),
+                ],
+            ),
+            _ => fill(
+                labels.candle_summary,
+                &[
+                    ("kind", &labels.candlestick.to_string()),
+                    ("count", &(labels.periods)(drawn.len())),
+                    ("first", first.0),
+                    ("last", last.0),
+                ],
+            ),
+        },
         fill(
             labels.candle_change,
             &[
@@ -472,5 +481,25 @@ mod tests {
             }
         });
         assert!(!html.contains(">Up</text>"), "{html}");
+    }
+
+    /// Todo 5619: one period is no range.
+    #[test]
+    fn one_period_names_itself() {
+        let html = render(|| {
+            rsx! {
+                LiberoProvider {
+                    CandlestickChart {
+                        title: "One",
+                        x: vec!["Jan".to_string()],
+                        candles: vec![Candle::new(20.0, 38.0, 10.0, 34.0)],
+                    }
+                }
+            }
+        });
+        assert!(
+            html.contains("Candlestick chart for 1 period, Jan."),
+            "{html}"
+        );
     }
 }
