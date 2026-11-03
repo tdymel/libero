@@ -227,7 +227,7 @@ async fn windowed_groups<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
     }
     // Ops follows Sales' 2500 rows.
     let ops = "tr[aria-rowindex=\"2503\"][data-row-group]";
-    let sales_toggle = "button[aria-label=\"Sales, 2500 rows\"]";
+    let sales_toggle = "button[aria-label=\"Sales, 2,500 rows\"]";
     d.focus(sales_toggle).await?;
     d.press(keyboard::END).await?;
     eventually(d, "the last row to show", async |d| {
