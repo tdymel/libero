@@ -138,6 +138,21 @@ fn use_drawer_escape(mut open: Signal<bool>, burger: ElementHandle, search: Spot
     });
 }
 
+/// Chrome that has no place on paper: the nav and the header's buttons.
+pub(crate) fn print_hidden_sx() -> Sx {
+    sx().media("print", sx().display("none !important"))
+}
+
+/// The shell's viewport-tall, clipped boxes grow with the page, so print paginates it.
+fn print_flow_sx() -> Sx {
+    sx().media(
+        "print",
+        sx().height("auto !important")
+            .max_height("none !important")
+            .overflow("visible !important"),
+    )
+}
+
 #[component]
 pub(crate) fn AppShell() -> Element {
     let mut open = use_signal(|| false);
@@ -201,7 +216,7 @@ pub(crate) fn AppShell() -> Element {
             // The row takes what the header leaves: it wraps to two rows at 320 px (4514).
             // The visible viewport: under a phone's toolbar `100vh` hid the page's end.
             // An engine without `dvh` drops the max and keeps the `100vh` height.
-            sx: sx().gap("0").height("100vh").max_height("100dvh"),
+            sx: sx().gap("0").height("100vh").max_height("100dvh").and(print_flow_sx()),
             RouteEffects { open, area, content, section }
             {skip_link(skip)}
             {shell_header(open, burger, home, search, modifier)}
@@ -214,7 +229,12 @@ pub(crate) fn AppShell() -> Element {
                 wrap: false,
                 // The drawer's containing block. Clipped: under RTL a phone widened the
                 // page to show the closed drawer past the right edge (5146).
-                sx: sx().position("relative").flex("1").min_height("0").overflow("clip"),
+                sx: sx()
+                    .position("relative")
+                    .flex("1")
+                    .min_height("0")
+                    .overflow("clip")
+                    .and(print_flow_sx()),
                 // The drag's handle on the drawer, to measure its width.
                 div { display: "contents", onmounted: nav_box.mount(),
                     DocsNav {
@@ -275,7 +295,12 @@ fn page_area(open: bool, area: ScrollAreaHandle, page: Element) -> Element {
                 // Default `min-width: auto` let the longest code line push the row
                 // wider instead of that block scrolling.
                 .min_width("0")
-                .and(page_layer_sx()),
+                .and(page_layer_sx())
+                .and(print_flow_sx())
+                .media(
+                    "print",
+                    sx().selector("& > [data-slot='scrollbars']", sx().display("none")),
+                ),
             {page}
         }
     }
@@ -356,7 +381,7 @@ fn shell_header(
                 "aria-controls": "docs-nav",
                 onclick: move |_| open.set(!open()),
                 onmounted: burger.mount(),
-                sx: burger_sx(home),
+                sx: burger_sx(home).and(print_hidden_sx()),
             }
             // The way home: the nav has no entry for it.
             Anchor {
@@ -427,7 +452,7 @@ fn site_tools(search: SpotlightHandle) -> Element {
             size: "sm",
             // Logical, so the controls stay at the end under RTL. From `Sm` up the
             // search field takes the free space instead.
-            sx: sx()
+            sx: print_hidden_sx()
                 .margin_inline_start("auto")
                 .breakpoint(
                     Size::Sm,
@@ -475,7 +500,7 @@ fn search_button(search: SpotlightHandle, modifier: &'static str) -> Element {
             variant: "standard",
             aria_label: "Search",
             "aria-keyshortcuts": "Control+K Meta+K",
-            sx: sx()
+            sx: print_hidden_sx()
                 .display("none")
                 .color("muted.7")
                 // A placeholder's weight, not a button label's.

@@ -13,7 +13,7 @@ use libero::{
     theme::{SIDEBAR_SIZE, Size},
 };
 
-use crate::{Route, components::Remount};
+use crate::{Route, components::Remount, shell::print_hidden_sx};
 
 mod aliases;
 mod drag;
@@ -185,7 +185,7 @@ pub fn DocsNav(
                 component: "nav",
                 // Names the landmark and, when it overflows, its scroll area's tab stop.
                 aria_label: "Documentation",
-                sx: nav_responsive_sx(open(), drawer),
+                sx: nav_responsive_sx(open(), drawer).and(print_hidden_sx()),
                 // Inline, not a class per finger position; the class's transition takes over on release.
                 style: pulled.map(|px| pulled_style(px, rtl)),
                 attributes: measure.attributes(),

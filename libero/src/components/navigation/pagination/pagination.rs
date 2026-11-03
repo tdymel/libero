@@ -6,7 +6,7 @@ use crate::{
         buttons::ActionIcon,
         common::{
             Glyph, HtmlTag, Input, Part, ScaleOrCss, States, Variables, base_color, base_props,
-            coarse_hit_area_sx, contrast_color, fill_color, focus_ring_sx, focused_disabled_sx,
+            coarse_hit_area_sx, contrast_color, disabled_look_sx, fill_color, focus_ring_sx,
             literal_contrast, on_state_sx, parts_enum, use_name_warning, variables,
         },
         form::use_fieldset_disabled,
@@ -55,9 +55,7 @@ static PAGINATION_LIST_SX: StaticSx = StaticSx::new(|| {
 });
 
 fn faded_sx() -> crate::sx::Sx {
-    sx().opacity("0.5")
-        .cursor("default")
-        .and(focused_disabled_sx())
+    disabled_look_sx("default")
 }
 
 /// One style for every control, arrows included. The size vars sit here, not
