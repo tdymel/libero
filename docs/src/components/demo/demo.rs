@@ -261,21 +261,25 @@ const SEGMENT_WIDTH: usize = 88;
 const SEGMENT_PADDING: f32 = 30.0;
 
 /// The check a selected label gains, by `label_width`: a strip of `average`, `target`,
-/// `none` needs 312px, of `Line`, `Bar`, `Pie` 234px, of five variants (`Outlined`, 59px) 540px.
+/// `none` needs 330px, of `Line`, `Bar`, `Pie` 234px, of five variants (`Outlined`, 59px) 540px.
 const SEGMENT_CHECK: f32 = 21.0;
+
+/// The selected segment is semibold, wider than the regular table below: "Automatic" 71px, not 63.
+const SEMIBOLD_WIDTH: f32 = 1.13;
 
 /// A label's width at `sm`, by what its letters measure: narrow ones, wide ones, the rest.
 fn label_width(label: &str) -> f32 {
-    label
-        .chars()
-        .map(|c| match c {
-            'i' | 'l' | 'j' | 't' | 'f' | 'r' | 'I' | '.' | ',' | ':' | ';' | '(' | ')' | '\''
-            | ' ' => 3.8,
-            'm' | 'w' | 'M' | 'W' => 10.5,
-            c if c.is_uppercase() => 9.0,
-            _ => 8.0,
-        })
-        .sum()
+    SEMIBOLD_WIDTH
+        * label
+            .chars()
+            .map(|c| match c {
+                'i' | 'l' | 'j' | 't' | 'f' | 'r' | 'I' | '.' | ',' | ':' | ';' | '(' | ')'
+                | '\'' | ' ' => 3.8,
+                'm' | 'w' | 'M' | 'W' => 10.5,
+                c if c.is_uppercase() => 9.0,
+                _ => 8.0,
+            })
+            .sum::<f32>()
 }
 
 /// Everything the panel spends on padding, either side of a control.
@@ -848,9 +852,9 @@ mod tests {
         let kind = Control::toggle("type", ["line", "bar", "pie"]).labels(["Line", "Bar", "Pie"]);
         assert_eq!(segments_need(&kind), 3 * 88 + 48);
         let mark = Control::toggle("mark_line", ["average", "target", "none"]);
-        assert_eq!(segments_need(&mark), 3 * 103 + 48);
+        assert_eq!(segments_need(&mark), 3 * 110 + 48);
         let pair = Control::toggle("orientation", ["vertical", "horizontal"]);
-        assert_eq!(segments_need(&pair), 2 * 115 + 48);
+        assert_eq!(segments_need(&pair), 2 * 123 + 48);
     }
 
     /// WCAG 2.5.3: a control's accessible name must contain its visible caption.

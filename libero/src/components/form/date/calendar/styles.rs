@@ -36,7 +36,7 @@ pub(super) static CALENDAR_SX: StaticSx = StaticSx::new(|| {
         .cursor("pointer")
         .hover_tint(":hover", sx().background("muted.1"));
     ChronoPickerDefaults::theme_vars()
-        // Seven always fit the screen: a day grows with large text (todo 5507).
+        // Seven fit the screen; the grid's columns shrink inside a narrower box (todos 5507, 5588).
         .var(
             CALENDAR_DAY,
             format!("min({}, calc((100vw - 24px) / 7))", CHRONO_DAY.value()),
@@ -192,11 +192,13 @@ pub(super) static CALENDAR_SX: StaticSx = StaticSx::new(|| {
         .selector(
             "& [role='grid']",
             sx().display("grid")
-                .grid_template_columns(format!("repeat(7, {day})")),
+                .grid_template_columns(format!("repeat(7, minmax(0, {day}))")),
         )
         .selector(
             "& [role='grid'][data-week-numbers]",
-            sx().grid_template_columns(format!("calc(0.75 * {day}) repeat(7, {day})")),
+            sx().grid_template_columns(format!(
+                "minmax(0, calc(0.75 * {day})) repeat(7, minmax(0, {day}))"
+            )),
         )
         .selector(
             ChronoPickerPart::WeekNumber.selector(),
@@ -222,18 +224,19 @@ pub(super) static CALENDAR_SX: StaticSx = StaticSx::new(|| {
         .selector("& [role='gridcell']", sx().display("flex"))
         .selector(
             ChronoPickerPart::Blank.selector(),
-            sx().width(day.clone()).height(day.clone()),
+            sx().width(day.clone()).max_width("100%").height(day.clone()),
         )
         .selector(
             ChronoPickerPart::Cells.selector(),
             sx().display("grid")
                 .grid_template_columns("repeat(3, 1fr)")
                 .gap("4px")
-                .width(format!("calc(7 * {day})")),
+                .width(format!("calc(7 * {day})"))
+                .max_width("100%"),
         )
         .selector(
             ChronoPickerPart::Day.selector(),
-            button.clone().width(day.clone()).height(day.clone()),
+            button.clone().width(day.clone()).max_width("100%").height(day.clone()),
         )
         // The mini variant: one row of taller days, a month label over the number.
         // Seven days are ~430px: on a narrower page they shrink instead (1.4.10).

@@ -145,7 +145,7 @@ fn PopoverDemo(
 
     rsx! {
         Box {
-            sx: sx().padding("60px").display("flex").justify_content("center"),
+            sx: sx().padding("60px 0").display("flex").justify_content("center"),
             Button {
                 onmounted: anchor.mount(),
                 onclick: move |_| opened.toggle(),
