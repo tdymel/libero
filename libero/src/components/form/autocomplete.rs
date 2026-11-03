@@ -3,8 +3,7 @@ use dioxus::prelude::*;
 use crate::{
     components::{
         common::{
-            HtmlTag, Input, OptionList, OptionSource, Options, Parts, ScaleOrCss, aria_label_of,
-            use_combobox,
+            HtmlTag, Input, OptionSource, Options, Parts, ScaleOrCss, aria_label_of, use_combobox,
         },
         form::{
             CaretKeys, ComboboxCore, ComboboxOption, DropdownPart, FIELD_CONTROL_SX, clear_button,
@@ -230,7 +229,7 @@ pub fn Autocomplete<T: Options>(props: AutocompleteProps<T>) -> Element {
     // list never leaves a stale row on screen.
     let option = props.option;
     let row_keys: Vec<usize> = matches.iter().map(|(key, _)| *key).collect();
-    let (row_disabled, groups) = kept_flags(&row_keys, list);
+    let (row_disabled, groups) = list.kept_flags(&row_keys);
     let rows = row_cache.rows(
         matches
             .into_iter()
@@ -380,20 +379,6 @@ pub fn Autocomplete<T: Options>(props: AutocompleteProps<T>) -> Element {
     field.render(listbox)
 }
 
-/// The kept rows' `disabled` flags and group labels, parallel to `row_keys` (todo 4231).
-fn kept_flags<T>(row_keys: &[usize], list: &OptionList<T>) -> (Vec<bool>, Vec<Option<String>>) {
-    let (disabled, groups) = (list.disabled(), list.group_labels());
-    row_keys
-        .iter()
-        .map(|key| {
-            (
-                disabled.get(*key).copied().unwrap_or(false),
-                groups.get(*key).cloned().flatten(),
-            )
-        })
-        .unzip()
-}
-
 /// Everything a row draws from. A caller's `content` never compares equal, so such a row redraws per key.
 #[derive(Clone, PartialEq)]
 struct AutocompleteRowInputs<T: 'static> {
@@ -411,31 +396,5 @@ fn autocomplete_row<T: Options>(_key: usize, inputs: &AutocompleteRowInputs<T>) 
     let label = content.unwrap_or_else(|| row_label(value.label()));
     rsx! {
         ComboboxOption { onpick: move |_| pick.call(value.clone()), {label} }
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use crate::components::common::OptionItem;
-
-    /// Todo 4231: a narrowed list keeps each kept row's `disabled` flag and group.
-    #[test]
-    fn kept_rows_keep_their_flags_and_groups() {
-        let list = OptionList::grouped()
-            .group("North", ["Berlin".to_string(), "Hamburg".to_string()])
-            .group(
-                "South",
-                [
-                    OptionItem::new("Munich".to_string()).disabled(true),
-                    "Bonn".to_string().into(),
-                ],
-            );
-        let (disabled, groups) = kept_flags(&[1, 2], &list);
-        assert_eq!(disabled, [false, true]);
-        assert_eq!(
-            groups,
-            [Some("North".to_string()), Some("South".to_string())]
-        );
     }
 }

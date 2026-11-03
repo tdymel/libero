@@ -7,8 +7,8 @@ use dioxus::prelude::*;
 use libero::components::TagsFieldPart;
 use libero::{
     components::{
-        ActionIcon, Chip, Code, FieldStatus, SelectionArgs, TagRejectReason, TagRejection,
-        TagsField, Text,
+        ActionIcon, Chip, Code, FieldStatus, Flex, OptionSource, SelectionArgs, TagRejectReason,
+        TagRejection, TagsField, TagsFieldOptionArgs, Text,
     },
     hooks::use_localization,
     localization::{Localization, fill},
@@ -53,6 +53,67 @@ const CUSTOM_TAG: &str = r##"tag: move |t: SelectionArgs<String>| rsx! {
 const SUGGESTIONS: &str =
     r#"suggestions: vec!["rust".into(), "dioxus".into(), "wasm".into(), "css".into()]"#;
 
+/// A row with the topic's area under it. The highlight and click stay the field's.
+// snippet: let mut topics = use_signal(Vec::<String>::new);
+// snippet: in TagsField { value: topics(), onchange: move |next| topics.set(next), suggestions: vec!["rust".to_string()], .. }
+const TOPIC_ROW: &str = r#"option: |o: TagsFieldOptionArgs| {
+    let area = match o.value.as_str() {
+        "rust" => "Systems",
+        "dioxus" => "UI",
+        _ => "Web",
+    };
+    rsx! {
+        Flex { direction: "column", align: "flex-start", sx: sx().gap("0"),
+            Text { component: "span", size: "sm", "{o.value}" }
+            // Shade 7 keeps 4.5:1 on the active row in both schemes.
+            Text { component: "span", size: "xs", sx: sx().color("muted.7"), "{area}" }
+        }
+    }
+}"#;
+
+/// Printed above the snippet while `onquery` is on: the caller's own search.
+const SEARCH: &str = r#"/// A stand-in for a server search. It also matches the area, which the field's own filter would not.
+fn search_topics(query: &str) -> Vec<String> {
+    let query = query.trim().to_lowercase();
+    [("rust", "systems"), ("dioxus", "ui"), ("wasm", "web"), ("css", "web")]
+        .into_iter()
+        .filter(|(topic, area)| topic.contains(&query) || area.contains(&query))
+        .map(|(topic, _)| topic.to_string())
+        .collect()
+}
+
+"#;
+
+/// The demo's copy of `SEARCH`.
+fn search_topics(query: &str) -> Vec<String> {
+    let query = query.trim().to_lowercase();
+    [
+        ("rust", "systems"),
+        ("dioxus", "ui"),
+        ("wasm", "web"),
+        ("css", "web"),
+    ]
+    .into_iter()
+    .filter(|(topic, area)| topic.contains(&query) || area.contains(&query))
+    .map(|(topic, _)| topic.to_string())
+    .collect()
+}
+
+/// The demo's copy of `TOPIC_ROW`.
+fn topic_row(o: TagsFieldOptionArgs) -> Element {
+    let area = match o.value.as_str() {
+        "rust" => "Systems",
+        "dioxus" => "UI",
+        _ => "Web",
+    };
+    rsx! {
+        Flex { direction: "column", align: "flex-start", sx: sx().gap("0"),
+            Text { component: "span", size: "sm", "{o.value}" }
+            Text { component: "span", size: "xs", sx: sx().color("muted.7"), "{area}" }
+        }
+    }
+}
+
 /// One tag at a time, before it joins the list.
 // snippet: let mut topics = use_signal(Vec::<String>::new);
 // snippet: in TagsField { value: topics(), onchange: move |next| topics.set(next), .. }
@@ -82,8 +143,15 @@ fn why(rejection: TagRejection) -> String {
     }
 }
 
+/// `open_on_focus`, `option` and `onquery` bring the suggestions with them: alone they would show nothing.
 fn offers(values: &DemoValues) -> bool {
-    values.str("suggestions") == "true" || values.str("open_on_focus") == "true"
+    ["suggestions", "open_on_focus", "option", "onquery"]
+        .iter()
+        .any(|name| values.str(name) == "true")
+}
+
+fn querying(values: &DemoValues) -> bool {
+    values.str("onquery") == "true"
 }
 
 fn refusing(values: &DemoValues) -> bool {
@@ -133,6 +201,7 @@ fn max_tags(values: &DemoValues) -> Option<usize> {
 pub fn TagsFieldPage() -> Element {
     let mut value = use_signal(Vec::<String>::new);
     let mut refused = use_signal(|| None::<String>);
+    let mut query = use_signal(String::new);
     let words = use_localization();
     let theme = use_theme();
 
@@ -154,8 +223,24 @@ pub fn TagsFieldPage() -> Element {
                         .doc("The tags, in order. Controlled with `onchange`; a path `name` binds the list to the `Form` instead. With neither, the field starts from it and keeps its own edits until a form reset."),
                     prop("onchange", "EventHandler<Vec<String>>")
                         .doc("Called with the whole list the caller should hold next."),
-                    prop("suggestions", "Vec<String>")
-                        .doc("Adds a dropdown of tags to pick. Tags already held are not offered."),
+                    prop("suggestions", "OptionSource<String>")
+                        .doc("Adds a dropdown of tags to pick. Tags already held are not offered. A `Vec<String>` converts, an `OptionList<String>` adds groups and disabled rows, and a `Resource<Vec<String>>` or an `Option<OptionList<String>>` that is `None` while you fetch shows the loader and says `loading_label`, never \"No results\" for an answer that has not arrived. Upgrading from an `Option<Vec<String>>`: pass the `Vec` itself, and leave the prop out for none, since `None` now means a list still on its way."),
+                    prop("option", "Callback<TagsFieldOptionArgs, Element>")
+                        .default("the text")
+                        .doc("Draws one suggestion row's content. The highlight and click stay the field's, and a pick adds the row's `value`."),
+                    prop("filter", "Callback<TagsFieldFilterArgs, bool>")
+                        .default("contains")
+                        .doc("Narrows `suggestions` by what is typed. Defaults to a case-insensitive `contains`, ignoring spaces around the text."),
+                    prop("prefiltered", "bool")
+                        .default("false")
+                        .doc("`suggestions` arrives already narrowed, such as a list fetched per `onquery`. Skips filtering, so `filter` never runs. Held tags are still left out."),
+                    prop("onquery", "EventHandler<String>")
+                        .doc("Fires with the typed text, untrimmed, whenever it changes: per keystroke, and with `\"\"` after a pick, Enter, the clear button or leaving the field. Not at mount. Fetch from it, debounced with `use_debounce` for a server."),
+                    prop("empty", "Element")
+                        .doc("Shown in place of the rows when the typed text matches nothing. Screen readers hear the localization's `combobox.nothing_found` either way."),
+                    prop("loading_label", "String")
+                        .default("common.loading")
+                        .doc("What screen readers hear while `suggestions` is pending."),
                     prop("open_on_focus", "bool")
                         .default("false")
                         .doc("Opens the `suggestions` when the field takes focus, by Tab or a press, so a phone user sees them before typing. Focus coming back from a tag leaves them closed."),
@@ -164,7 +249,7 @@ pub fn TagsFieldPage() -> Element {
                         .doc("Each one commits the text before it, typed or pasted."),
                     prop("allow_duplicates", "bool")
                         .default("false")
-                        .doc("Lets the same tag be added twice. Off, tags are compared trimmed and case-insensitive."),
+                        .doc("Lets the same tag be added twice. Off, tags are compared trimmed and case-insensitive. Tags already held stay out of the `suggestions` either way."),
                     prop("max_tags", "usize")
                         .doc("The most tags the field accepts. A paste fills the room that is left and refuses the rest."),
                     prop("tag_rules", "Callback<String, bool>")
@@ -205,6 +290,16 @@ pub fn TagsFieldPage() -> Element {
                 ])
                 .dropdown_parts("DropdownPart", list_dropdown_parts(SUGGESTION_DROPDOWN))
                 .extends("input"),
+                props("TagsFieldOptionArgs", vec![
+                    prop("value", "String").doc("The suggestion this row draws."),
+                    prop("index", "usize").doc("The row's position in the narrowed list."),
+                ])
+                .without_base_props(),
+                props("TagsFieldFilterArgs", vec![
+                    prop("value", "String").doc("The suggestion under test."),
+                    prop("query", "String").doc("The typed text, untrimmed."),
+                ])
+                .without_base_props(),
             ],
             accessibility: a11y()
                 .key(["Backspace"], "On an empty input: removes the last tag.")
@@ -238,6 +333,17 @@ pub fn TagsFieldPage() -> Element {
                     " of your own type."
                 }
                 Text {
+                    "To fetch suggestions while the user types, answer "
+                    Code { source: "onquery" }
+                    " with a new "
+                    Code { source: "suggestions" }
+                    " list and set "
+                    Code { source: "prefiltered" }
+                    ". "
+                    Code { source: "option" }
+                    " draws a richer row, and a pick still adds the row's text as a tag."
+                }
+                Text {
                     "The field turns the browser's saved entries off, so they do not cover the "
                     "suggestions. You can pass your own "
                     Code { source: "autocomplete" }
@@ -248,13 +354,15 @@ pub fn TagsFieldPage() -> Element {
             },
             // snippet: let mut topics = use_signal(Vec::<String>::new);
             // snippet: let mut refused = use_signal(|| None::<String>);
+            // snippet: let mut query = use_signal(String::new);
             // snippet: let words = use_localization();
             Demo {
                 component: "TagsField",
                 children_text: "",
-                wrap: Wrap(|values: &DemoValues, source: &str| match refusing(values) {
-                    true => format!("{WHY}{source}"),
-                    false => source.to_string(),
+                wrap: Wrap(|values: &DemoValues, source: &str| {
+                    let why = if refusing(values) { WHY } else { "" };
+                    let search = if querying(values) { SEARCH } else { "" };
+                    format!("{why}{search}{source}")
                 }),
                 fixed: vec![
                     "sx: sx().width(\"100%\").max_width(\"320px\")".to_string(),
@@ -315,11 +423,25 @@ pub fn TagsFieldPage() -> Element {
                             _ => vec![],
                         }
                     }),
-                    Control::switch("suggestions").code(|_, values| match offers(values) {
-                        true => vec![SUGGESTIONS.to_string()],
+                    Control::switch("suggestions").code(|_, values| {
+                        match offers(values) && !querying(values) {
+                            true => vec![SUGGESTIONS.to_string()],
+                            false => vec![],
+                        }
+                    }),
+                    // The caller's search answers each draft, so the field skips its own filter.
+                    Control::switch("onquery").code(|_, values| match querying(values) {
+                        true => vec![
+                            "onquery: move |text: String| query.set(text)".to_string(),
+                            "prefiltered: true".to_string(),
+                            "suggestions: search_topics(&query())".to_string(),
+                        ],
                         false => vec![],
                     }),
-                    // Brings the suggestions with it: alone it would open nothing.
+                    Control::switch("option").code(|_, values| match values.str("option").as_str() {
+                        "true" => vec![TOPIC_ROW.to_string()],
+                        _ => vec![],
+                    }),
                     Control::switch("open_on_focus"),
                     // Rules over one tag, not the list.
                     Control::switch("tag_rules").code(|_, values| {
@@ -359,9 +481,16 @@ pub fn TagsFieldPage() -> Element {
                             placeholder: (values.str("placeholder") == "true")
                                 .then(|| "Add a topic".to_string()),
                             status: refused().filter(|_| refuses).map(FieldStatus::Error).unwrap_or(status),
-                            suggestions: offers(&values).then(|| {
-                                ["rust", "dioxus", "wasm", "css"].map(String::from).to_vec()
-                            }),
+                            suggestions: match (querying(&values), offers(&values)) {
+                                (true, _) => OptionSource::from(search_topics(&query())),
+                                (false, true) => {
+                                    OptionSource::from(["rust", "dioxus", "wasm", "css"].map(String::from).to_vec())
+                                }
+                                (false, false) => OptionSource::default(),
+                            },
+                            onquery: move |text: String| query.set(text),
+                            prefiltered: querying(&values).then_some(true),
+                            option: (values.str("option") == "true").then(|| Callback::new(topic_row)),
                             open_on_focus: values.str("open_on_focus") == "true",
                             tag_rules: ruled
                                 .then(|| Callback::new(|tag: String| tag.chars().count() >= 3)),

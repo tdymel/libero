@@ -339,6 +339,29 @@ e2e::scenario!(
     native: skip("3406: Blitz hands a removed chip's focus to a container div, parked with native")
 );
 
+/// Todo 5356: with the cursor on the last chip, a click on an earlier chip's x keeps that chip
+/// focused, although the index-keyed last wrapper is the one dropped.
+async fn a_pointer_removal_keeps_the_chip_focus_on<D: Driver>(
+    d: &mut D,
+    _route: &str,
+) -> Result<()> {
+    eventually_text(d, "#echo", "[Apple, Banana, Cherry]", "mounting").await?;
+    d.focus(TRIGGER).await?;
+    eventually_focused(d, TRIGGER, "focusing the trigger").await?;
+    d.press(keyboard::ARROW_LEFT).await?;
+    eventually_focused(d, &chip_x("Cherry"), "ArrowLeft onto the last chip").await?;
+    d.click(&chip_x("Apple")).await?;
+    eventually_text(d, "#echo", "[Banana, Cherry]", "a click on an earlier x").await?;
+    eventually_focused(d, &chip_x("Cherry"), "a click on an earlier x").await
+}
+
+e2e::scenario!(
+    a_pointer_removal_keeps_the_chip_focus,
+    "/multi-select/chips",
+    a_pointer_removal_keeps_the_chip_focus_on,
+    native: skip("3406: Blitz hands a removed chip's focus to a container div, parked with native")
+);
+
 /// Todo 5300: ArrowLeft from the trigger hands focus to the last chip and closes an open list.
 async fn arrow_left_hands_an_open_list_over_closed<D: Driver>(
     d: &mut D,

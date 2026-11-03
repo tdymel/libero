@@ -1,7 +1,9 @@
 //! `TagsField` for the combobox archetype, with `suggestions`: without them there is no listbox.
 
 use dioxus::prelude::*;
-use libero::components::{Button, Flex, SelectionArgs, TagRejection, TagsField, Text};
+use libero::components::{
+    Button, Flex, SelectionArgs, TagRejection, TagsField, TagsFieldOptionArgs, Text,
+};
 
 use crate::Routes;
 
@@ -17,7 +19,49 @@ pub const ROUTES: Routes = &[
     ("/tags-field/outside", || rsx! { TagsOutsidePage {} }),
     ("/tags-field/named", || rsx! { TagsNamedPage {} }),
     ("/tags-field/open-on-focus", || rsx! { TagsOpenOnFocusPage {} }),
+    ("/tags-field/query", || rsx! { TagsQueryPage {} }),
 ];
+
+/// A server-style search: it matches the area too, which the field's own `contains` would drop.
+fn search_topics(query: &str) -> Vec<String> {
+    let query = query.trim().to_lowercase();
+    [("rust", "systems"), ("dioxus", "ui"), ("wasm", "web"), ("css", "web")]
+        .into_iter()
+        .filter(|(topic, area)| topic.contains(&query) || area.contains(&query))
+        .map(|(topic, _)| topic.to_string())
+        .collect()
+}
+
+/// Todo 5356: suggestions answered per `onquery`, logged as `[draft]` in `#queries`, with rich rows.
+#[component]
+fn TagsQueryPage() -> Element {
+    let mut topics = use_signal(Vec::<String>::new);
+    let mut query = use_signal(String::new);
+    let mut queries = use_signal(String::new);
+
+    rsx! {
+        Flex { direction: "column", gap: "md", max_width: "320px",
+            TagsField {
+                id: "query",
+                label: "Topics",
+                prefiltered: true,
+                suggestions: search_topics(&query()),
+                onquery: move |text: String| {
+                    queries.write().push_str(&format!("[{text}]"));
+                    query.set(text);
+                },
+                option: |o: TagsFieldOptionArgs| rsx! {
+                    span { "{o.value} " }
+                    span { "data-area": "", "#{o.index}" }
+                },
+                value: topics(),
+                onchange: move |next: Vec<String>| topics.set(next),
+            }
+            Text { id: "echo", "{topics().join(\",\")}" }
+            Text { id: "queries", "{queries}" }
+        }
+    }
+}
 
 /// Todo 5243: suggestions that open on focus, between two stops, one tag held.
 #[component]
@@ -240,6 +284,7 @@ fn TagsCursorPage() -> Element {
                 onchange: move |next| topics.set(next),
             }
             Text { id: "echo", "{topics().join(\",\")}" }
+            Button { id: "away", "Away" }
         }
     }
 }

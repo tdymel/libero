@@ -7,7 +7,7 @@ use crate::common::{attributes_of, body, render};
 use dioxus::prelude::*;
 use libero::{
     LiberoProvider,
-    components::{SelectionArgs, TagsField},
+    components::{OptionList, SelectionArgs, TagsField},
 };
 
 fn tagged() -> Element {
@@ -41,6 +41,21 @@ fn suggesting() -> Element {
             TagsField {
                 label: "Topics",
                 suggestions: vec!["rust".to_string()],
+                onchange: move |_: Vec<String>| {},
+            }
+        }
+    }
+}
+
+/// A caller fetching per `onquery`: `None` is pending, not "no suggestions".
+fn fetching() -> Element {
+    rsx! {
+        LiberoProvider {
+            TagsField {
+                label: "Topics",
+                suggestions: None::<OptionList<String>>,
+                prefiltered: true,
+                onquery: move |_: String| {},
                 onchange: move |_: Vec<String>| {},
             }
         }
@@ -139,6 +154,17 @@ fn the_input_is_only_a_combobox_when_there_are_suggestions() {
     assert_eq!(
         combobox.get("aria-autocomplete").map(String::as_str),
         Some("list")
+    );
+}
+
+/// A pending `suggestions` source is still a dropdown on its way, so the input stays a combobox (5356).
+#[test]
+fn a_pending_suggestion_source_is_still_a_combobox() {
+    let combobox = attributes_of(&body(&render(fetching)), "input");
+    assert_eq!(combobox.get("role").map(String::as_str), Some("combobox"));
+    assert_eq!(
+        combobox.get("aria-expanded").map(String::as_str),
+        Some("false")
     );
 }
 

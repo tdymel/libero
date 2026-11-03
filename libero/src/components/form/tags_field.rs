@@ -6,14 +6,16 @@ use crate::{
     components::{
         accessibility::{Announcer, use_announcer},
         common::{
-            ComboboxState, HtmlTag, Input, Part, Parts, ScaleOrCss, TOOLBAR_ITEM, ToolbarItem,
-            aria_label_of, ring_overlay, use_combobox, use_no_toolbar, use_toolbar_item,
+            ComboboxState, HtmlTag, Input, OptionSource, Part, Parts, ScaleOrCss, TOOLBAR_ITEM,
+            ToolbarItem, aria_label_of, ring_overlay, use_combobox, use_no_toolbar,
+            use_toolbar_item,
         },
         form::{
             CaretKeys, ChipFocus, ComboboxCore, ComboboxOption, DropdownPart, FocusOpen, FormScope,
             SelectionArgs, clear_button, field_control_sx, field_parts_enum, field_props,
             framed_remove_sx, removable_chip, row_label, use_bound, use_chip_announcer,
             use_chip_handles, use_edited, use_field, use_field_frame, use_focus_open, use_prefill,
+            use_row_cache,
         },
         layout::{BoxStyle, use_box},
     },
@@ -22,6 +24,7 @@ use crate::{
     platform::{ElementApi, caret_edges, is_tab, logical_key},
     sx::{StaticSx, sx},
     theme::Size,
+    utils::warn,
 };
 
 /// The chips and the draft input on one wrapping flow. The field's id and
@@ -71,9 +74,29 @@ field_props! {
         /// Called with the whole list the caller should hold next.
         #[props(default)]
         onchange: Option<EventHandler<Vec<String>>>,
-        /// Offers a dropdown of tags to pick; held tags are never offered.
+        /// Offers a dropdown of tags to pick; held tags are never offered. A `Vec<String>`, an [`OptionList`](crate::components::OptionList)
+        /// (groups, `disabled`), or a [`Resource`] or `Option` (`None` while fetching).
+        #[props(default, into)]
+        suggestions: OptionSource<String>,
+        /// Draws one suggestion row's content. Defaults to the text.
         #[props(default)]
-        suggestions: Option<Vec<String>>,
+        option: Option<Callback<TagsFieldOptionArgs, Element>>,
+        /// Narrows `suggestions` by the draft. Defaults to a case-insensitive `contains` of the trimmed draft.
+        #[props(default)]
+        filter: Option<Callback<TagsFieldFilterArgs, bool>>,
+        /// `suggestions` arrives already narrowed, e.g. fetched per `onquery`; `filter` is skipped.
+        #[props(default)]
+        prefiltered: Option<bool>,
+        /// Fires with the raw draft on every change, typed or not: `""` after a pick, Enter, clear or blur.
+        #[props(default)]
+        onquery: Option<EventHandler<String>>,
+        /// Shown in place of the rows when the draft matches nothing. Announced as
+        /// `combobox.nothing_found` either way.
+        #[props(default)]
+        empty: Option<Element>,
+        /// Said while `suggestions` are fetched. Defaults to [`CommonLabels::loading`](crate::localization::CommonLabels::loading).
+        #[props(default, into)]
+        loading_label: Option<String>,
         /// Opens the `suggestions` when the field takes focus, by Tab or a press; not when
         /// focus comes back to it from a tag.
         #[props(default)]
@@ -82,7 +105,7 @@ field_props! {
         #[props(default)]
         split_chars: Option<Vec<String>>,
         /// Lets the same tag be added twice. Off, the comparison is trimmed and
-        /// case-insensitive.
+        /// case-insensitive. Held tags still stay out of the `suggestions` rows.
         #[props(default)]
         allow_duplicates: Option<bool>,
         /// The most tags the field accepts; the rest are refused one by one.
@@ -162,6 +185,7 @@ pub fn TagsField(props: TagsFieldProps) -> Element {
     // The draft is the component's own, as `SelectCore` owns its query.
     let mut text = use_signal(String::new);
     let state = use_combobox();
+    let row_cache = use_row_cache();
     // The chips' focus walks as on `MultiSelect`, with the draft input as its trigger.
     let handles = use_chip_handles();
     let input_element = handles.trigger();
@@ -190,8 +214,12 @@ pub fn TagsField(props: TagsFieldProps) -> Element {
         .clone()
         .unwrap_or_else(|| vec![",".to_string()]);
 
-    let suggestions = props.suggestions.clone();
-    let has_suggestions = suggestions.is_some();
+    let has_suggestions = !props.suggestions.is_unset();
+    let prefiltered = props.prefiltered.unwrap_or(false);
+    if prefiltered && props.filter.is_some() {
+        warn("TagsField: `prefiltered` skips filtering, so `filter` never runs.");
+    }
+    use_query_event(text, props.onquery);
     let focus_open = use_focus_open(
         props.open_on_focus && has_suggestions && !disabled && !readonly,
         input_element,
@@ -295,23 +323,66 @@ pub fn TagsField(props: TagsFieldProps) -> Element {
 
     // Every pick would be refused, so the list says why instead of offering rows.
     let full = has_suggestions && props.max_tags.is_some_and(|max| held.len() >= max);
-    let rows = tags_field_rows(
-        suggestions.filter(|_| !full),
-        &held,
-        &text(),
-        &add,
-        text,
-        state,
+    // A pending list draws the loader, never stale rows or "nothing found".
+    let loading = props.suggestions.is_pending();
+    let list = props.suggestions.list();
+    let values = list.values();
+    let draft = text();
+    let row_keys = match full {
+        true => Vec::new(),
+        false => suggestion_keys(&values, &held, &draft, prefiltered, props.filter),
+    };
+    let (row_disabled, groups) = list.kept_flags(&row_keys);
+    let pick_add = add.clone();
+    let pick = use_callback(move |suggestion: String| {
+        // The draft was only a filter here, so it goes either way.
+        let _ = pick_add(vec![suggestion]);
+        text.set(String::new());
+        state.set_active(None);
+    });
+    let rows = row_cache.rows(
+        row_keys.iter().enumerate().map(|(index, key)| {
+            let value = values[*key].clone();
+            let content = props.option.as_ref().map(|option| {
+                option.call(TagsFieldOptionArgs {
+                    value: value.clone(),
+                    index,
+                })
+            });
+            (
+                *key,
+                TagsFieldRowInputs {
+                    value,
+                    pick,
+                    content,
+                },
+            )
+        }),
+        tags_field_row,
     );
     let row_count = rows.len();
     let nothing_found = match full {
         true => Some(limit_message(&words)),
-        false => (!text().trim().is_empty()
-            && props
-                .suggestions
-                .as_ref()
-                .is_some_and(|all| !all.is_empty()))
+        // Typed text against a list that had rows to match, a fetched one, or a caller's `empty`.
+        false => (!draft.trim().is_empty()
+            && (prefiltered || !values.is_empty() || props.empty.is_some()))
         .then(|| localization.combobox.nothing_found.to_string()),
+    };
+    let empty = props.empty.filter(|_| nothing_found.is_some() && !full);
+    let loading = (loading && !full).then(|| {
+        props
+            .loading_label
+            .clone()
+            .unwrap_or_else(|| localization.common.loading.to_string())
+    });
+    // The count `ComboboxCore` tells the state: none while fetching.
+    let combobox_attributes = match has_suggestions {
+        true => state.a11y_attributes_for(match loading {
+            Some(_) => &[],
+            None => &row_keys,
+        }),
+        // Without a dropdown the input is a plain text input.
+        false => Vec::new(),
     };
 
     let clear_change = onchange.clone();
@@ -383,6 +454,7 @@ pub fn TagsField(props: TagsFieldProps) -> Element {
             add,
             split_chars,
             has_suggestions,
+            combobox_attributes,
             disabled,
             readonly,
             required,
@@ -420,6 +492,9 @@ pub fn TagsField(props: TagsFieldProps) -> Element {
         true => rsx! {
             ComboboxCore {
                 rows,
+                row_keys,
+                groups,
+                row_disabled,
                 active: state.active(),
                 onactive: move |row| state.set_active(Some(row)),
                 // No row left to offer is not open: `aria-expanded` must not
@@ -427,10 +502,12 @@ pub fn TagsField(props: TagsFieldProps) -> Element {
                 opened: state.is_open()
                     && !disabled
                     && !readonly
-                    && (row_count > 0 || nothing_found.is_some()),
+                    && (row_count > 0 || loading.is_some() || nothing_found.is_some()),
                 onopened: move |opened| state.set_open(opened),
                 state,
+                empty,
                 nothing_found,
+                loading,
                 caret_keys: CaretKeys::Unhighlighted,
                 labelled_by: field.label_id(),
                 aria_label,
@@ -455,6 +532,24 @@ pub fn TagsField(props: TagsFieldProps) -> Element {
         {announcer}
         {refusals.render()}
     })
+}
+
+/// Tells `onquery` every draft change, after the fact; not the empty draft at mount.
+fn use_query_event(text: Signal<String>, onquery: Option<EventHandler<String>>) {
+    // The latest handler, as the effect outlives the render that made it.
+    let mut handler = use_hook(|| CopyValue::new(None));
+    handler.set(onquery);
+    let mut sent = use_hook(|| CopyValue::new(String::new()));
+    use_effect(move || {
+        let draft = text();
+        if *sent.peek() == draft {
+            return;
+        }
+        sent.set(draft.clone());
+        if let Some(onquery) = *handler.peek() {
+            onquery.call(draft);
+        }
+    });
 }
 
 /// The one path that adds tags. Returns the first refused tag, if any.
@@ -484,6 +579,22 @@ pub enum TagRejectReason {
     Full,
     /// `tag_rules` refused it.
     NotAllowed,
+}
+
+/// One suggestion, handed to `TagsField`'s `option` callback to draw the row's content.
+#[derive(Clone, PartialEq)]
+pub struct TagsFieldOptionArgs {
+    pub value: String,
+    /// The row's position in the *narrowed* list.
+    pub index: usize,
+}
+
+/// One suggestion under test, handed to `TagsField`'s `filter` callback.
+#[derive(Clone, PartialEq)]
+pub struct TagsFieldFilterArgs {
+    pub value: String,
+    /// The draft, untrimmed.
+    pub query: String,
 }
 
 /// What one edit did: the list to emit, and the tags it turned away.
@@ -639,6 +750,8 @@ fn tags_field_chips<F: Fn(Vec<String>) + Clone + 'static>(
             };
             // Only a focused tag moves the focus: a mouse removal never focused it.
             focus.before_removal(index);
+            // A pressed x with focus outside the field hands it to the input, as on `MultiSelect`.
+            focus.keep_in_field();
             let mut next = list.clone();
             next.remove(index);
             onchange(next);
@@ -697,42 +810,54 @@ fn tags_field_chips<F: Fn(Vec<String>) + Clone + 'static>(
     }
 }
 
-/// The suggestion rows not yet held, narrowed by the draft. Drawn eagerly: a
-/// `Callback` would let the rows memoize and leave stale ones on screen.
-fn tags_field_rows(
-    suggestions: Option<Vec<String>>,
+/// The kept suggestions' places in `values`: not yet held, narrowed by the draft unless `prefiltered`.
+/// Held tags stay out even prefiltered, or a fetched row would be a sure `Duplicate`.
+fn suggestion_keys(
+    values: &[String],
     held: &[String],
     draft: &str,
-    add: &Add,
-    mut text: Signal<String>,
-    state: ComboboxState,
-) -> Vec<Element> {
+    prefiltered: bool,
+    filter: Option<Callback<TagsFieldFilterArgs, bool>>,
+) -> Vec<usize> {
     let query = draft.trim().to_lowercase();
     let picked: Vec<String> = held.iter().map(|tag| tag.trim().to_lowercase()).collect();
-
-    suggestions
-        .unwrap_or_default()
-        .into_iter()
-        .filter(|suggestion| {
-            let folded = suggestion.trim().to_lowercase();
-            !picked.contains(&folded) && folded.contains(&query)
-        })
-        .map(|suggestion| {
-            let label = suggestion.clone();
-            let pick = add.clone();
-            rsx! {
-                ComboboxOption {
-                    onpick: move |_| {
-                        // The draft was only a filter here, so it goes either way.
-                        let _ = pick(vec![suggestion.clone()]);
-                        text.set(String::new());
-                        state.set_active(None);
-                    },
-                    {row_label(label)}
+    values
+        .iter()
+        .enumerate()
+        .filter(|(_, value)| {
+            let folded = value.trim().to_lowercase();
+            !picked.contains(&folded)
+                && match (prefiltered, filter) {
+                    (true, _) => true,
+                    (false, Some(filter)) => filter.call(TagsFieldFilterArgs {
+                        value: (*value).clone(),
+                        query: draft.to_string(),
+                    }),
+                    (false, None) => folded.contains(&query),
                 }
-            }
         })
+        .map(|(key, _)| key)
         .collect()
+}
+
+/// Everything a row draws from. A caller's `content` never compares equal, so such a row redraws.
+#[derive(Clone, PartialEq)]
+struct TagsFieldRowInputs {
+    value: String,
+    pick: Callback<String>,
+    content: Option<Element>,
+}
+
+fn tags_field_row(_key: usize, inputs: &TagsFieldRowInputs) -> Element {
+    let TagsFieldRowInputs {
+        value,
+        pick,
+        content,
+    } = inputs.clone();
+    let label = content.unwrap_or_else(|| row_label(value.clone()));
+    rsx! {
+        ComboboxOption { onpick: move |_| pick.call(value.clone()), {label} }
+    }
 }
 
 /// A hidden input per tag, as `MultiSelect` and `<select multiple>` post.
@@ -762,6 +887,8 @@ struct Draft {
     add: Add,
     split_chars: Vec<String>,
     has_suggestions: bool,
+    /// The combobox wiring, empty without `suggestions`.
+    combobox_attributes: Vec<Attribute>,
     disabled: bool,
     readonly: bool,
     required: bool,
@@ -795,6 +922,7 @@ fn tags_field_input<F: Fn(Vec<String>) + Clone + 'static>(
         add,
         split_chars,
         has_suggestions,
+        combobox_attributes: mut attributes,
         disabled,
         readonly,
         required,
@@ -811,11 +939,6 @@ fn tags_field_input<F: Fn(Vec<String>) + Clone + 'static>(
     } = draft;
     let (typing, committing, blurring) = (add.clone(), add.clone(), add);
 
-    let mut attributes = match has_suggestions {
-        true => state.a11y_attributes(),
-        // Without a dropdown the input is a plain text input.
-        false => Vec::new(),
-    };
     attributes.extend(extra);
     control
         .attr_default("type", "text")
@@ -970,6 +1093,20 @@ mod tests {
             max_tags,
             rule: None,
         }
+    }
+
+    /// 5356: a prefiltered list skips the draft match but still hides held tags, or a fetched row
+    /// would be a sure `Duplicate`.
+    #[test]
+    fn suggestions_hide_held_tags_and_match_the_trimmed_draft_unless_prefiltered() {
+        let values = tags(&["Rust", "dioxus", "wasm"]);
+        let held = tags(&[" rust "]);
+        assert_eq!(suggestion_keys(&values, &held, " DI ", false, None), [1]);
+        assert_eq!(
+            suggestion_keys(&values, &held, "web", false, None),
+            Vec::<usize>::new()
+        );
+        assert_eq!(suggestion_keys(&values, &held, "web", true, None), [1, 2]);
     }
 
     /// No splitter in the text means "still a draft", which is how `oninput`

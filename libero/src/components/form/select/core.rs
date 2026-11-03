@@ -264,12 +264,17 @@ impl ChipFocus {
     }
 
     /// Moves focus off chip `index` before it goes: the next chip slides in, else the one before, else the trigger.
+    /// A focused later chip moves one back with its tag, as the index-keyed last wrapper is the one dropped.
     pub(crate) fn before_removal(&self, index: usize) {
-        if *self.handles.cursor.peek() == Some(index) {
-            self.focus(match index + 1 < self.count {
+        // Copied out: the focus move below writes the cursor synchronously.
+        let cursor = *self.handles.cursor.peek();
+        match cursor {
+            Some(cursor) if cursor == index => self.focus(match index + 1 < self.count {
                 true => Some(index),
                 false => index.checked_sub(1),
-            });
+            }),
+            Some(cursor) if cursor > index => self.focus(Some(cursor - 1)),
+            _ => {}
         }
     }
 

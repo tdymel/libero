@@ -13,6 +13,10 @@ and so does leaving the field. A tag is trimmed first. To pick from a fixed set
 instead, use [MultiSelect](multi_select.md), whose value is a `Vec<T>` of your
 own type.
 
+To fetch suggestions while the user types, answer `onquery` with a new
+`suggestions` list and set `prefiltered`. `option` draws a richer row, and a
+pick still adds the row's text as a tag.
+
 The field turns the browser's saved entries off, so they do not cover the
 suggestions. You can pass your own `autocomplete` token, such as `email` for a
 list of addresses, and the saved entries then cover the suggestions.
@@ -63,10 +67,16 @@ fn Demo() -> Element {
 | `radius` | `ThemeAwareValue` | `sm` | Corner radius of the frame and the list, independent of `size`. Or any CSS, e.g. `radius: "0"`. |
 | `value` | `Vec<String>` | `[]` | The tags, in order. Controlled with `onchange`; a path `name` binds the list to the `Form` instead. With neither, the field starts from it and keeps its own edits until a form reset. |
 | `onchange` | `EventHandler<Vec<String>>` | - | Called with the whole list the caller should hold next. |
-| `suggestions` | `Vec<String>` | - | Adds a dropdown of tags to pick. Tags already held are not offered. |
+| `suggestions` | `OptionSource<String>` | - | Adds a dropdown of tags to pick. Tags already held are not offered. A `Vec<String>` converts, an `OptionList<String>` adds groups and disabled rows, and a `Resource<Vec<String>>` or an `Option<OptionList<String>>` that is `None` while you fetch shows the loader and says `loading_label`, never "No results" for an answer that has not arrived. Upgrading from an `Option<Vec<String>>`: pass the `Vec` itself, and leave the prop out for none, since `None` now means a list still on its way. |
+| `option` | `Callback<TagsFieldOptionArgs, Element>` | the text | Draws one suggestion row's content. The highlight and click stay the field's, and a pick adds the row's `value`. |
+| `filter` | `Callback<TagsFieldFilterArgs, bool>` | `contains` | Narrows `suggestions` by what is typed. Defaults to a case-insensitive `contains`, ignoring spaces around the text. |
+| `prefiltered` | `bool` | `false` | `suggestions` arrives already narrowed, such as a list fetched per `onquery`. Skips filtering, so `filter` never runs. Held tags are still left out. |
+| `onquery` | `EventHandler<String>` | - | Fires with the typed text, untrimmed, whenever it changes: per keystroke, and with `""` after a pick, Enter, the clear button or leaving the field. Not at mount. Fetch from it, debounced with `use_debounce` for a server. |
+| `empty` | `Element` | - | Shown in place of the rows when the typed text matches nothing. Screen readers hear the localization's `combobox.nothing_found` either way. |
+| `loading_label` | `String` | `common.loading` | What screen readers hear while `suggestions` is pending. |
 | `open_on_focus` | `bool` | `false` | Opens the `suggestions` when the field takes focus, by Tab or a press, so a phone user sees them before typing. Focus coming back from a tag leaves them closed. |
 | `split_chars` | `Vec<String>` | `[","]` | Each one commits the text before it, typed or pasted. |
-| `allow_duplicates` | `bool` | `false` | Lets the same tag be added twice. Off, tags are compared trimmed and case-insensitive. |
+| `allow_duplicates` | `bool` | `false` | Lets the same tag be added twice. Off, tags are compared trimmed and case-insensitive. Tags already held stay out of the `suggestions` either way. |
 | `max_tags` | `usize` | - | The most tags the field accepts. A paste fills the room that is left and refuses the rest. |
 | `tag_rules` | `Callback<String, bool>` | - | Accepts or refuses one tag before it is added. A refused tag stays in the input, and the field tells screen readers why. |
 | `onreject` | `EventHandler<TagRejection>` | - | A tag was rejected: its `tag` and a `TagRejectReason` of `Duplicate`, `Full` (past `max_tags`) or `NotAllowed` (by `tag_rules`). Called after the same edit's `onchange`. The field shows no message, so say why on screen, such as through `status`, and clear it on the next change. |
@@ -91,6 +101,20 @@ fn Demo() -> Element {
 `TagsField` also takes the `<input>` HTML attributes and, like every component,
 the shared props `sx`, `class`, `style`, `states`, and any extra HTML
 attributes. They land on the input.
+
+### `TagsFieldOptionArgs`
+
+| Prop | Type | Default | Description |
+|---|---|---|---|
+| `value` | `String` | - | The suggestion this row draws. |
+| `index` | `usize` | - | The row's position in the narrowed list. |
+
+### `TagsFieldFilterArgs`
+
+| Prop | Type | Default | Description |
+|---|---|---|---|
+| `value` | `String` | - | The suggestion under test. |
+| `query` | `String` | - | The typed text, untrimmed. |
 
 ## Style API
 

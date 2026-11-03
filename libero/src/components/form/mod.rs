@@ -201,7 +201,10 @@ pub use submit::Submit;
 #[cfg(feature = "switch")]
 pub use switch::{Switch, SwitchPart, SwitchProps};
 #[cfg(feature = "tags-field")]
-pub use tags_field::{TagRejectReason, TagRejection, TagsField, TagsFieldPart, TagsFieldProps};
+pub use tags_field::{
+    TagRejectReason, TagRejection, TagsField, TagsFieldFilterArgs, TagsFieldOptionArgs,
+    TagsFieldPart, TagsFieldProps,
+};
 #[cfg(feature = "text-field")]
 pub use text_field::{TextField, TextFieldProps};
 #[cfg(feature = "textarea")]

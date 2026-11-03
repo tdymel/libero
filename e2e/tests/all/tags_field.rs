@@ -747,3 +747,89 @@ fn a_chorded_backspace_keeps_the_last_tag() {
         fixture.close().await.unwrap();
     });
 }
+
+/// Todo 5356: a pointer removal keeps the focus where it was. The leading x with the input
+/// focused leaves it on the input; with the cursor on the last tag, an earlier x keeps that tag
+/// focused although the index-keyed last wrapper is the one dropped.
+async fn a_pointer_removal_keeps_the_focus_on<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    eventually_text(d, "#echo", "rust,dioxus,wasm,css", "mounting").await?;
+    d.focus(CURSOR).await?;
+    eventually_focused(d, CURSOR, "focusing the draft").await?;
+    d.click(&chip("rust")).await?;
+    eventually_text(d, "#echo", "dioxus,wasm,css", "a click on the leading x").await?;
+    eventually_focused(d, CURSOR, "a click on the leading x").await?;
+
+    d.press(keyboard::ARROW_LEFT).await?;
+    eventually_focused(d, &chip("css"), "ArrowLeft onto the last tag").await?;
+    d.click(&chip("dioxus")).await?;
+    eventually_text(d, "#echo", "wasm,css", "a click on an earlier x").await?;
+    eventually_focused(d, &chip("css"), "a click on an earlier x").await
+}
+
+e2e::scenario!(
+    a_pointer_removal_keeps_the_focus,
+    "/tags-field/cursor",
+    a_pointer_removal_keeps_the_focus_on,
+    native: skip("3406: Blitz hands a removed chip's focus to a container div, parked with native")
+);
+
+/// Todo 5356: a press on a tag's x while focus is outside the field hands it to the input
+/// (as `MultiSelect`, 4834). A WebView cannot say where focus is, so web only.
+#[test]
+fn a_tapped_x_from_outside_focuses_the_input() {
+    use e2e::passes::focus::wait_for_focus;
+    block_on(async {
+        let fixture = Fixture::open("/tags-field/cursor", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        keyboard::tab_to(page, "#away", 10).await.unwrap();
+        pointer::click(page, &chip("wasm")).await.unwrap();
+        wait_for_focus(page, CURSOR, "a click on an x from outside")
+            .await
+            .unwrap();
+        assert_eq!(tags(page).await, ["rust", "dioxus", "css"]);
+        fixture.console.assert_clean("an x from outside").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
+const QUERY: &str = "#query";
+
+/// Todo 5356: `onquery` is told every draft change but not the mount, the caller's prefiltered
+/// answer shows rows the local filter would drop, drawn by `option`, and a pick sends `""`.
+async fn onquery_drives_the_suggestions_on<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    eventually_text(d, "#queries", "", "mounting").await?;
+    d.focus(QUERY).await?;
+    eventually_focused(d, QUERY, "focusing the draft").await?;
+    d.type_text("web").await?;
+    eventually(d, "the caller's rows for web", async |d| {
+        Ok(d.exists("[role=listbox]").await?
+            && d.text("[role=listbox]").await?.contains("wasm #0")
+            && d.text("[role=listbox]").await?.contains("css #1"))
+    })
+    .await?;
+    ensure!(
+        d.text("#queries").await?.ends_with("[web]"),
+        "onquery missed the draft: {}",
+        d.text("#queries").await?
+    );
+    d.press(keyboard::ARROW_DOWN).await?;
+    d.press(keyboard::ENTER).await?;
+    eventually_text(d, "#echo", "wasm", "Enter on the first row").await?;
+    eventually(d, "onquery told the emptied draft", async |d| {
+        Ok(d.text("#queries").await?.ends_with("[web][]"))
+    })
+    .await?;
+    d.type_text("zzz").await?;
+    eventually(d, "nothing found for an empty answer", async |d| {
+        d.exists("[data-slot='nothing-found']").await
+    })
+    .await
+}
+
+e2e::scenario!(
+    onquery_drives_the_suggestions,
+    "/tags-field/query",
+    onquery_drives_the_suggestions_on
+);

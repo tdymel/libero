@@ -152,6 +152,20 @@ impl<T> OptionList<T> {
             .flat_map(|(label, members)| members.iter().map(move |_| label.clone()))
             .collect()
     }
+
+    /// The kept rows' `disabled` flags and group labels, parallel to `row_keys` (todo 4231).
+    pub(crate) fn kept_flags(&self, row_keys: &[usize]) -> (Vec<bool>, Vec<Option<String>>) {
+        let (disabled, groups) = (self.disabled(), self.group_labels());
+        row_keys
+            .iter()
+            .map(|key| {
+                (
+                    disabled.get(*key).copied().unwrap_or(false),
+                    groups.get(*key).cloned().flatten(),
+                )
+            })
+            .unzip()
+    }
 }
 
 impl<T: super::Options> OptionList<T> {
@@ -380,5 +394,25 @@ mod tests {
         let failed = OptionSource::from(Some(OptionList::<&str>::default()));
         assert!(!failed.is_pending());
         assert!(failed.list().values().is_empty());
+    }
+
+    /// Todo 4231: a narrowed list keeps each kept row's `disabled` flag and group.
+    #[test]
+    fn kept_rows_keep_their_flags_and_groups() {
+        let list = OptionList::grouped()
+            .group("North", ["Berlin".to_string(), "Hamburg".to_string()])
+            .group(
+                "South",
+                [
+                    OptionItem::new("Munich".to_string()).disabled(true),
+                    "Bonn".to_string().into(),
+                ],
+            );
+        let (disabled, groups) = list.kept_flags(&[1, 2]);
+        assert_eq!(disabled, [false, true]);
+        assert_eq!(
+            groups,
+            [Some("North".to_string()), Some("South".to_string())]
+        );
     }
 }
