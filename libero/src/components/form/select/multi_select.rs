@@ -287,6 +287,7 @@ pub fn MultiSelect<T: Options>(props: MultiSelectProps<T>) -> Element {
             onclear,
             label: props.label,
             description: props.description,
+            description_position: props.description_position,
             helper: props.helper,
             status: props.status,
             size,

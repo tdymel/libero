@@ -3,8 +3,8 @@
 use dioxus::prelude::*;
 use libero::chrono::NaiveDate;
 use libero::components::{
-    Cascader, CascaderOption, DateField, Flex, MultiSelect, RangeSlider, Rating, TagsField,
-    TextField, Textarea,
+    Cascader, CascaderOption, DateField, Flex, MultiSelect, PasswordField, RangeSlider, Rating,
+    Select, TagsField, TextField, Textarea,
 };
 
 use crate::Routes;
@@ -13,7 +13,37 @@ pub const ROUTES: Routes = &[
     ("/field-props/readonly", || rsx! { ReadonlyPage {} }),
     ("/field-props/chips", || rsx! { ChipsPage {} }),
     ("/field-props/description", || rsx! { DescriptionPage {} }),
+    ("/field-props/description-below", || rsx! { DescriptionBelowPage {} }),
 ];
+
+#[component]
+fn DescriptionBelowPage() -> Element {
+    let options = || vec!["Cheese".to_string(), "Olives".to_string()];
+    rsx! {
+        Flex { direction: "column", gap: "md", max_width: "320px",
+            div { id: "select",
+                Select { label: "Pick", description: "One of these.", description_position: "below", options: options(), onchange: move |_| {} }
+            }
+            div { id: "multi",
+                MultiSelect { label: "Pick", description: "Some of these.", description_position: "below", options: options(), onchange: move |_| {} }
+            }
+            div { id: "cascader",
+                Cascader {
+                    label: "Category",
+                    description: "A path.",
+                    description_position: "below",
+                    data: vec![CascaderOption::<String>::new("fruit", "Fruit").children(vec![
+                        CascaderOption::new("apple", "Apple"),
+                    ])],
+                    onchange: move |_| {},
+                }
+            }
+            div { id: "password",
+                PasswordField { label: "Password", description: "Eight or more.", description_position: "below", oninput: move |_| {} }
+            }
+        }
+    }
+}
 
 #[component]
 fn DescriptionPage() -> Element {

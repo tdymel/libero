@@ -112,6 +112,7 @@ pub fn PasswordField(props: PasswordFieldProps) -> Element {
             r#type: if revealed() { "text" } else { "password" },
             label: props.label,
             description: props.description,
+            description_position: props.description_position,
             helper: props.helper,
             status: props.status,
             validate: props.validate,

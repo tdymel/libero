@@ -212,6 +212,7 @@ pub fn Cascader<T: Options>(props: CascaderProps<T>) -> Element {
             rules,
             label: props.label,
             description: props.description,
+            description_position: props.description_position,
             helper: props.helper,
             status: props.status,
             size: props.size.copied_or(theme.cascader.size),

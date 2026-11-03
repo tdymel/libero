@@ -229,6 +229,7 @@ pub fn Select<T: Options>(props: SelectProps<T>) -> Element {
             onclear,
             label: props.label,
             description: props.description,
+            description_position: props.description_position,
             helper: props.helper,
             status: props.status,
             size: props.size.copied_or(theme.select.size),

@@ -51,6 +51,31 @@ fn a_description_below_keeps_side_by_side_controls_level() {
     });
 }
 
+/// Select, MultiSelect, Cascader and PasswordField draw a `below` description under the control (todo 5399).
+#[test]
+fn a_description_below_follows_the_control_on_select_cascader_and_password() {
+    block_on(async {
+        let fixture = Fixture::open("/field-props/description-below", Viewport::Desktop)
+            .await
+            .unwrap();
+        let bad: Vec<String> = fixture
+            .page
+            .evaluate_bounded(
+                "['select', 'multi', 'cascader', 'password'].filter(id => { \
+                 const root = document.getElementById(id), \
+                 control = root.querySelector('input, button, [role=combobox]'), \
+                 description = root.querySelector(\"[data-slot='description']\"); \
+                 return !description || description.getBoundingClientRect().top < control.getBoundingClientRect().bottom - 1; })",
+            )
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        assert!(bad.is_empty(), "description not under the control: {bad:?}");
+        fixture.close().await.unwrap();
+    });
+}
+
 /// The x sits at the end of its chip in both directions.
 #[test]
 fn the_remove_button_ends_its_chip_in_both_directions() {
