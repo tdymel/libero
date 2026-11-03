@@ -300,7 +300,13 @@ pub fn Header(props: HeaderProps) -> Element {
     let position = props.position.copied_or_default();
     let glass = props.glass && draws_backdrop_filter();
     let tint = use_glass_tint(
-        glass_tint_color(props.color.as_ref(), props.glass, props.gradient.is_some()).as_ref(),
+        glass_tint_color(
+            "Header",
+            props.color.as_ref(),
+            props.glass,
+            props.gradient.is_some(),
+        )
+        .as_ref(),
     );
     let variables: Input<Variables> = header_variables(&props, tint).into();
 

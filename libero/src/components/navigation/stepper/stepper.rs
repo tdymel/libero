@@ -166,7 +166,7 @@ pub fn Stepper<T: Options>(props: StepperProps<T>) -> Element {
     });
 
     let color = props.color.as_ref().and_then(|color| {
-        let base = base_color(Some(color));
+        let base = base_color("Stepper", Some(color));
         let contrast = contrast_color(&base)
             .and_then(|contrast| contrast.resolve(None))
             .or_else(|| literal_contrast(&base));

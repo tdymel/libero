@@ -181,7 +181,7 @@ field_props! {
 #[component]
 pub fn Switch(props: SwitchProps) -> Element {
     let theme = use_theme();
-    let color = base_color_or(props.color.as_ref(), theme.switch.color);
+    let color = base_color_or("Switch", props.color.as_ref(), theme.switch.color);
 
     let size = props.size.copied_or(theme.switch.size);
     let radius = ScaleOrCss::new(props.radius.as_ref(), theme.switch.radius);

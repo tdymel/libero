@@ -324,8 +324,8 @@ pub fn Rating(props: RatingProps) -> Element {
     );
 
     let color = match props.color.as_ref() {
-        Some(color) => base_color(Some(color)),
-        None => base_color(Some(&ThemeAwareValue::Color(theme.rating.color))),
+        Some(color) => base_color("Rating", Some(color)),
+        None => base_color("Rating", Some(&ThemeAwareValue::Color(theme.rating.color))),
     };
     let edge = warning_edge(&color);
     let dragging = (drag.dragging)();

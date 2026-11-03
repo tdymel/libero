@@ -302,7 +302,7 @@ pub fn ProgressBar(props: ProgressBarProps) -> Element {
         .as_ref()
         .cloned()
         .unwrap_or_else(|| ThemeAwareValue::from(theme.progress_bar.color));
-    let color = base_color(Some(&color));
+    let color = base_color("ProgressBar", Some(&color));
 
     let size = props.size.copied_or(theme.progress_bar.size);
     let radius = ScaleOrCss::new(props.radius.as_ref(), theme.progress_bar.radius);
@@ -567,7 +567,7 @@ mod tests {
                     "neutral",
                     "muted",
                 ] {
-                    let color = base_color(Some(&ThemeAwareValue::from(name)));
+                    let color = base_color("ProgressBar", Some(&ThemeAwareValue::from(name)));
                     let reach = |paint: HexColor| {
                         paint
                             .contrast_ratio(track)

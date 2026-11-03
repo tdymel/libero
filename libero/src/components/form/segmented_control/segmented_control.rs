@@ -200,7 +200,11 @@ pub fn SegmentedControl<T: Options>(props: SegmentedControlProps<T>) -> Element 
     });
 
     let variant = props.variant.copied_or(theme.segmented_control.variant);
-    let color = base_color_or(props.color.as_ref(), theme.segmented_control.color);
+    let color = base_color_or(
+        "SegmentedControl",
+        props.color.as_ref(),
+        theme.segmented_control.color,
+    );
     // Colour resolution plus rendering is ~790 ns, and `(variant, color, disabled)` is
     // the same on almost every render.
     let style = use_cache((variant, color, disabled), |(variant, color, disabled)| {

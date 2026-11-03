@@ -208,7 +208,7 @@ pub fn Pagination(props: PaginationProps) -> Element {
         .as_ref()
         .cloned()
         .unwrap_or(ThemeAwareValue::Color(defaults.color));
-    let active = base_color(Some(&picked));
+    let active = base_color("Pagination", Some(&picked));
     // A literal fill has no ramp, so it gets black or white (todo 1587).
     let on_active = contrast_color(&active)
         .and_then(|on_active| on_active.resolve(None))

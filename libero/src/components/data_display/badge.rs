@@ -90,7 +90,7 @@ static BADGE_LABEL_SX: StaticSx = StaticSx::new(|| {
 const TRAILING_ICON_SLOT: &str = "badge-trailing-icon";
 
 fn badge_variables(props: &BadgeProps, color: &ThemeAwareValue, variant: Variant) -> Variables {
-    let base = base_color(Some(color));
+    let base = base_color("Badge", Some(color));
     let contrast = contrast_color(&base);
     let colors = variant_colors(variant, &base);
 

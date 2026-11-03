@@ -82,7 +82,7 @@ pub fn Text(props: TextProps) -> Element {
     // Under a gradient the colour is its first stop instead.
     let plain = color
         .filter(|_| gradient.is_none())
-        .and_then(|color| text_color(&base_color(Some(color))));
+        .and_then(|color| text_color(&base_color("Text", Some(color))));
     let colored = plain.is_some();
     let style = gradient.or_else(|| colored.then(|| variables().with(TEXT_COLOR, plain).render()));
 

@@ -12,7 +12,11 @@ const SELECTED_DARKER_STEPS: usize = 2;
 
 /// The base color a filled/outlined/plain variant is built from. Anything but
 /// a bare theme color name passes through untouched.
-pub(crate) fn base_color(value: Option<&ThemeAwareValue>) -> ThemeAwareValue {
+#[cfg_attr(not(debug_assertions), allow(unused_variables))]
+pub(crate) fn base_color(
+    component: &'static str,
+    value: Option<&ThemeAwareValue>,
+) -> ThemeAwareValue {
     match value {
         None => ThemeAwareValue::ColorValue(ColorValue::Shade(Color::Primary, DEFAULT_SHADE)),
         Some(ThemeAwareValue::Color(color)) => {
@@ -21,7 +25,7 @@ pub(crate) fn base_color(value: Option<&ThemeAwareValue>) -> ThemeAwareValue {
         Some(other) => {
             #[cfg(debug_assertions)]
             if let ThemeAwareValue::String(raw) = other {
-                crate::sx::unknown_color::warn_unknown_component_color(raw);
+                crate::sx::unknown_color::warn_unknown_component_color(component, raw);
             }
             other.clone()
         }
@@ -29,8 +33,15 @@ pub(crate) fn base_color(value: Option<&ThemeAwareValue>) -> ThemeAwareValue {
 }
 
 /// [`base_color`] where an unset value takes the theme's `default` colour.
-pub(crate) fn base_color_or(value: Option<&ThemeAwareValue>, default: Color) -> ThemeAwareValue {
-    base_color(Some(value.unwrap_or(&ThemeAwareValue::Color(default))))
+pub(crate) fn base_color_or(
+    component: &'static str,
+    value: Option<&ThemeAwareValue>,
+    default: Color,
+) -> ThemeAwareValue {
+    base_color(
+        component,
+        Some(value.unwrap_or(&ThemeAwareValue::Color(default))),
+    )
 }
 
 /// `base` as a text colour, as `sx`'s `color()` resolves it; for colours that travel
@@ -195,11 +206,11 @@ mod tests {
     #[test]
     fn a_bare_theme_color_gets_the_default_shade() {
         assert_eq!(
-            base_color(Some(&ThemeAwareValue::Color(Color::Error))),
+            base_color("Button", Some(&ThemeAwareValue::Color(Color::Error))),
             ThemeAwareValue::ColorValue(ColorValue::Shade(Color::Error, DEFAULT_SHADE))
         );
         assert_eq!(
-            base_color(None),
+            base_color("Button", None),
             ThemeAwareValue::ColorValue(ColorValue::Shade(Color::Primary, DEFAULT_SHADE))
         );
     }
@@ -207,7 +218,7 @@ mod tests {
     #[test]
     fn a_literal_color_passes_through_and_has_no_contrast_or_hover() {
         let literal = ThemeAwareValue::from("#123456");
-        assert_eq!(base_color(Some(&literal)), literal);
+        assert_eq!(base_color("Button", Some(&literal)), literal);
         assert_eq!(contrast_color(&literal), None);
         assert_eq!(hover_color(&literal, true), None);
         assert_eq!(hover_color(&literal, false), None);
@@ -218,11 +229,12 @@ mod tests {
     fn an_unknown_color_name_warns_once_and_passes_through_unchanged() {
         crate::utils::take_warnings();
         let typo = ThemeAwareValue::from("dimmed");
-        assert_eq!(base_color(Some(&typo)), typo);
-        assert_eq!(base_color(Some(&typo)), typo);
+        assert_eq!(base_color("Button", Some(&typo)), typo);
+        assert_eq!(base_color("Button", Some(&typo)), typo);
         let warnings = crate::utils::take_warnings();
         assert_eq!(warnings.len(), 1, "{warnings:?}");
         assert!(warnings[0].contains("\"dimmed\""), "{warnings:?}");
+        assert!(warnings[0].contains("`Button`"), "{warnings:?}");
     }
 
     #[cfg(debug_assertions)]
@@ -237,7 +249,7 @@ mod tests {
             "#fff",
             "var(--x)",
         ] {
-            base_color(Some(&ThemeAwareValue::from(value)));
+            base_color("Button", Some(&ThemeAwareValue::from(value)));
         }
         assert!(crate::utils::take_warnings().is_empty());
     }
@@ -274,7 +286,7 @@ mod tests {
     /// Ink's own "tint" was ink: its label vanished on hover (1335).
     #[test]
     fn ink_tints_with_the_muted_ramp_and_keeps_its_label() {
-        let ink = base_color(Some(&ThemeAwareValue::Color(Color::Ink)));
+        let ink = base_color("Button", Some(&ThemeAwareValue::Color(Color::Ink)));
         let muted = |shade| Some(ColorValue::Fill(Color::Muted, shade).value());
         assert_eq!(hover_color(&ink, false), muted(HOVER_TINT_SHADE));
         assert_eq!(selected_color(&ink, false), muted(SELECTED_TINT_SHADE));
@@ -285,7 +297,7 @@ mod tests {
     /// A muted tint under a light surface label read poorly (1351): a layer of the label instead.
     #[test]
     fn surface_tints_with_a_layer_of_its_label() {
-        let surface = base_color(Some(&ThemeAwareValue::Color(Color::Surface)));
+        let surface = base_color("Button", Some(&ThemeAwareValue::Color(Color::Surface)));
         let label = text_color(&surface).unwrap();
         let layer = |percent| {
             Some(format!(
@@ -300,14 +312,14 @@ mod tests {
     /// a disabled label, stays the quiet brand grey.
     #[test]
     fn a_muted_label_reads_while_muted_text_stays_quiet() {
-        let muted = base_color(Some(&ThemeAwareValue::Color(Color::Muted)));
+        let muted = base_color("Button", Some(&ThemeAwareValue::Color(Color::Muted)));
         assert_eq!(
             label_color(&muted).as_deref(),
             Some("var(--lsx-muted-text-6)")
         );
         assert_eq!(text_color(&muted).as_deref(), Some("var(--lsx-muted-6)"));
 
-        let primary = base_color(Some(&ThemeAwareValue::Color(Color::Primary)));
+        let primary = base_color("Button", Some(&ThemeAwareValue::Color(Color::Primary)));
         assert_eq!(label_color(&primary), text_color(&primary));
         let literal = ThemeAwareValue::from("#123456");
         assert_eq!(label_color(&literal).as_deref(), Some("#123456"));

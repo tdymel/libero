@@ -191,7 +191,7 @@ pub fn Loader(props: LoaderProps) -> Element {
         .as_ref()
         .cloned()
         .unwrap_or(ThemeAwareValue::Color(theme.loader.color));
-    let color = base_color(Some(&requested));
+    let color = base_color("Loader", Some(&requested));
     let variables: Input<Variables> = loader_variables(&color).into();
 
     let states: Input<States> = props
@@ -254,7 +254,7 @@ mod tests {
                     "neutral",
                     "muted",
                 ] {
-                    let color = base_color(Some(&ThemeAwareValue::from(name)));
+                    let color = base_color("Loader", Some(&ThemeAwareValue::from(name)));
                     let body = on_page(label_color(&color).expect("a palette colour"));
                     let edge = warning_edge(&color).map(on_page).unwrap_or(0.0);
                     if body.max(edge) < 3.0 {
@@ -274,7 +274,8 @@ mod tests {
     #[test]
     fn a_literal_ink_paints_as_given_with_no_edge() {
         for literal in ["currentColor", "#123456"] {
-            let vars = loader_variables(&base_color(Some(&ThemeAwareValue::from(literal))));
+            let vars =
+                loader_variables(&base_color("Loader", Some(&ThemeAwareValue::from(literal))));
             let vars = vars.to_string();
             assert!(
                 vars.contains(&format!("{}:{literal};", LOADER_COLOR.name())),
@@ -287,7 +288,7 @@ mod tests {
     #[test]
     fn a_theme_ink_takes_its_text_role_and_only_warning_an_edge() {
         let vars = |name: &str| {
-            loader_variables(&base_color(Some(&ThemeAwareValue::from(name)))).to_string()
+            loader_variables(&base_color("Loader", Some(&ThemeAwareValue::from(name)))).to_string()
         };
         assert!(vars("primary").contains("--lsx-primary-text-6"));
         assert!(vars("muted").contains("--lsx-muted-text-6"));

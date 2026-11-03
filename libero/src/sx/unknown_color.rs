@@ -221,10 +221,11 @@ fn is_identifier(value: &str) -> bool {
 }
 
 /// Whether `value` looks like a name but is neither a theme colour nor a CSS keyword
-/// `property` takes, and this is the first time it is seen on that property.
-fn is_new_unknown_color_name(property: Property, value: &str) -> bool {
+/// `property` takes, and this is the first time it is seen on that property and `component`
+/// (empty for `sx`).
+fn is_new_unknown_color_name(component: &'static str, property: Property, value: &str) -> bool {
     thread_local! {
-        static WARNED: std::cell::RefCell<Vec<(Property, String)>> = const { std::cell::RefCell::new(Vec::new()) };
+        static WARNED: std::cell::RefCell<Vec<(&'static str, Property, String)>> = const { std::cell::RefCell::new(Vec::new()) };
     }
     // A palette name with a shade, `primry.7`, is still a name (todo 4474).
     let name = match value.split_once('.') {
@@ -246,11 +247,11 @@ fn is_new_unknown_color_name(property: Property, value: &str) -> bool {
         return false;
     }
     WARNED.with_borrow_mut(|warned| {
-        let first = !warned
-            .iter()
-            .any(|(seen, seen_value)| *seen == property && seen_value == value);
+        let first = !warned.iter().any(|(seen_in, seen, seen_value)| {
+            *seen_in == component && *seen == property && seen_value == value
+        });
         if first {
-            warned.push((property, value.to_string()));
+            warned.push((component, property, value.to_string()));
         }
         first
     })
@@ -259,7 +260,7 @@ fn is_new_unknown_color_name(property: Property, value: &str) -> bool {
 /// Warns once per property and string about a raw value on a colour property
 /// that looks like a name but is neither a theme colour nor a CSS keyword it takes.
 pub(crate) fn warn_unknown_color_name(property: Property, value: &str) {
-    if is_new_unknown_color_name(property, value) {
+    if is_new_unknown_color_name("", property, value) {
         warn(&format!(
             "`{value}` on `{}` is neither a theme colour nor a CSS colour keyword; \
              it is emitted as-is and paints nothing.",
@@ -269,16 +270,17 @@ pub(crate) fn warn_unknown_color_name(property: Property, value: &str) {
 }
 
 /// The same for a component's `color` prop, which reaches CSS through a custom property
-/// and never through `sx`: `Text { color: "dimmed" }` renders plain text.
-pub(crate) fn warn_unknown_component_color(value: &str) {
-    if is_new_unknown_color_name(Property::Color, value) {
+/// and never through `sx`: `Text { color: "dimmed" }` renders plain text. Warns once per
+/// `component` and string.
+pub(crate) fn warn_unknown_component_color(component: &'static str, value: &str) {
+    if is_new_unknown_color_name(component, Property::Color, value) {
         let hint = if value.eq_ignore_ascii_case("dimmed") {
             " (the quiet text colour is `text-dimmed`)"
         } else {
             ""
         };
         warn(&format!(
-            "`color: {value:?}` is neither a theme colour nor a CSS colour keyword{hint}; \
+            "`{component}` `color: {value:?}` is neither a theme colour nor a CSS colour keyword{hint}; \
              the browser ignores it and the component keeps its plain look."
         ));
     }
@@ -359,12 +361,18 @@ mod tests {
     fn an_unknown_component_colour_warns_once_with_the_dimmed_hint() {
         use super::warn_unknown_component_color;
         take_warnings();
-        warn_unknown_component_color("dimmed");
-        warn_unknown_component_color("dimmed");
-        warn_unknown_component_color("primry");
+        warn_unknown_component_color("Text", "dimmed");
+        warn_unknown_component_color("Text", "dimmed");
+        warn_unknown_component_color("Text", "primry");
+        warn_unknown_component_color("Badge", "primry");
         let warnings = take_warnings();
-        assert_eq!(warnings.len(), 2, "{warnings:?}");
-        assert!(warnings[0].contains("\"dimmed\"") && warnings[0].contains("`text-dimmed`"));
+        assert_eq!(warnings.len(), 3, "{warnings:?}");
+        assert!(
+            warnings[0].contains("`Text` `color: \"dimmed\"`"),
+            "{warnings:?}"
+        );
+        assert!(warnings[0].contains("`text-dimmed`"));
+        assert!(warnings[2].contains("`Badge`"), "{warnings:?}");
         assert!(warnings[1].contains("\"primry\"") && !warnings[1].contains("text-dimmed"));
     }
 

@@ -314,7 +314,7 @@ pub fn CircularProgress(props: CircularProgressProps) -> Element {
         .as_ref()
         .cloned()
         .unwrap_or_else(|| ThemeAwareValue::from(theme.circular_progress.color));
-    let color = base_color(Some(&color));
+    let color = base_color("CircularProgress", Some(&color));
     let size = props.size.copied_or(theme.circular_progress.size);
     let thickness = props.thickness.copied_or(theme.circular_progress.thickness);
     let percent = theme.circular_progress.thicknesses.get(thickness);
@@ -508,7 +508,7 @@ mod tests {
                     "neutral",
                     "muted",
                 ] {
-                    let color = base_color(Some(&ThemeAwareValue::from(name)));
+                    let color = base_color("CircularProgress", Some(&ThemeAwareValue::from(name)));
                     let reach = |paint: HexColor| {
                         paint
                             .contrast_ratio(track)

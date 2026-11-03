@@ -165,7 +165,7 @@ fn step_tabs(
                 div { "data-slot": "part", style: PART_STYLE, {panel} }
             },
             onselect,
-            color: base_color(None),
+            color: base_color("Tabs", None),
             full_width: true,
             placement: TabsPlacement::Top,
             manual: false,

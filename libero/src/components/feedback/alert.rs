@@ -269,7 +269,7 @@ pub fn Alert(props: AlertProps) -> Element {
         .as_ref()
         .cloned()
         .unwrap_or_else(|| ThemeAwareValue::from(theme.alert.color));
-    let base = base_color(Some(&color));
+    let base = base_color("Alert", Some(&color));
     let role = alert_role(&color);
 
     let variables: Input<Variables> = alert_variables(&props, &base, variant).into();

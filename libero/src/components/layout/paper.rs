@@ -160,12 +160,13 @@ fn colored_sx() -> Sx {
 /// The palette `color` a glass tint is measured for, shared with `Header`; a
 /// literal's label is the caller's. `None` off glass, natively and under a gradient.
 pub(crate) fn glass_tint_color(
+    component: &'static str,
     color: Option<&ThemeAwareValue>,
     glass: bool,
     gradient: bool,
 ) -> Option<ThemeAwareValue> {
     let glass = glass && draws_backdrop_filter() && !gradient;
-    let base = base_color(Some(color.filter(|_| glass)?));
+    let base = base_color(component, Some(color.filter(|_| glass)?));
     contrast_color(&base).is_some().then_some(base)
 }
 
@@ -175,7 +176,7 @@ fn paper_variables(props: &PaperProps, tint: Option<GlassTint>) -> Option<String
     if props.gradient.is_some() {
         return None;
     }
-    let base = base_color(Some(props.color.as_ref()?));
+    let base = base_color("Paper", Some(props.color.as_ref()?));
     let (contrast, share, sheen) = match tint {
         Some(tint) => (
             Some(tint.label),
@@ -274,7 +275,13 @@ pub fn Paper(mut props: PaperProps) -> Element {
         props.glass && draws_backdrop_filter(),
     );
     let tint = use_glass_tint(
-        glass_tint_color(props.color.as_ref(), props.glass, props.gradient.is_some()).as_ref(),
+        glass_tint_color(
+            "Paper",
+            props.color.as_ref(),
+            props.glass,
+            props.gradient.is_some(),
+        )
+        .as_ref(),
     );
     // At most one is set: a gradient takes `color` as its first stop.
     let style = paper_variables(&props, tint).or(gradient);
@@ -336,7 +343,7 @@ fn paper_states(props: &PaperProps) -> Input<States> {
     let stepped = interactive
         && colored
         && !glass
-        && hover_color(&base_color(props.color.as_ref()), true).is_some();
+        && hover_color(&base_color("Paper", props.color.as_ref()), true).is_some();
 
     if radius.is_none()
         && shadow.is_none()
@@ -625,7 +632,10 @@ mod tests {
 
         assert!(style.contains("--lsx-paper-fill:#123456;"), "{style}");
         assert!(!style.contains("--lsx-paper-fill-contrast"), "{style}");
-        assert_eq!(glass_tint_color(props.color.as_ref(), true, false), None);
+        assert_eq!(
+            glass_tint_color("Paper", props.color.as_ref(), true, false),
+            None
+        );
     }
 
     /// Under glass the tint's label and share replace the solid fill's label.
@@ -655,9 +665,9 @@ mod tests {
         assert!(style.contains("--lsx-focus-contrast:#000000;"), "{style}");
         let color = props.color.as_ref();
         #[cfg(not(feature = "native"))]
-        assert!(glass_tint_color(color, true, false).is_some());
-        assert_eq!(glass_tint_color(color, false, false), None);
-        assert_eq!(glass_tint_color(color, true, true), None);
+        assert!(glass_tint_color("Paper", color, true, false).is_some());
+        assert_eq!(glass_tint_color("Paper", color, false, false), None);
+        assert_eq!(glass_tint_color("Paper", color, true, true), None);
     }
 
     /// A coloured glass saturates its backdrop and carries a highlight and a sheen.

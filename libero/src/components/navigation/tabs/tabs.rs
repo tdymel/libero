@@ -168,7 +168,7 @@ pub fn Tabs<T: Options>(props: TabsProps<T>) -> Element {
             selected,
             panel,
             onselect: pick,
-            color: base_color(Some(&color)),
+            color: base_color("Tabs", Some(&color)),
             full_width: props.full_width.unwrap_or(false),
             placement: props.placement.copied_or(TabsPlacement::Top),
             manual: props.activation.copied_or(theme.tabs.activation) == TabsActivation::Manual,

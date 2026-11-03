@@ -235,7 +235,7 @@ fn action_icon_variables(
         return result;
     }
 
-    let base = base_color(props.color.as_ref());
+    let base = base_color("ActionIcon", props.color.as_ref());
     let contrast = contrast_color(&base);
     let colors = variant_colors(variant, &base);
 

@@ -307,7 +307,7 @@ pub fn Button(props: ButtonProps) -> Element {
         .variant
         .copied_or(group.variant.unwrap_or(theme.button.variant));
     let color_prop = props.color.as_ref().or(group.color.as_ref());
-    let color = base_color(color_prop);
+    let color = base_color("Button", color_prop);
     let is_link = props.to.as_ref().is_some();
     // A disabled `Fieldset` reaches no link, as a native one (todo 3873).
     let in_disabled_group = use_fieldset_disabled() && !is_link;
@@ -586,7 +586,7 @@ mod tests {
     /// `Button` passes `base_color`'s output, already an explicit shade.
     #[test]
     fn a_filled_button_darkens_on_hover_where_an_outlined_one_tints() {
-        let base = base_color(Some(&ThemeAwareValue::Color(Color::Primary)));
+        let base = base_color("Button", Some(&ThemeAwareValue::Color(Color::Primary)));
         let filled = button_variables(Variant::Filled, &base, false, false);
         let outlined = button_variables(Variant::Outlined, &base, false, false);
 
@@ -624,7 +624,7 @@ mod tests {
     /// Todos 1663, 1833: only an uncoloured `standard` or `outlined` label falls back through a fill's label.
     #[test]
     fn an_uncolored_standard_or_outlined_label_takes_the_surface_label() {
-        let base = base_color(None);
+        let base = base_color("Button", None);
         let label = |variant, uncolored| {
             let variables = button_variables(variant, &base, uncolored, false);
             variables
@@ -683,7 +683,7 @@ mod tests {
     /// container var would be dead weight in every elevated button's `style`.
     #[test]
     fn only_the_tonal_variant_emits_a_container() {
-        let base = base_color(None);
+        let base = base_color("Button", None);
 
         let tonal = button_variables(Variant::Tonal, &base, false, false);
         assert!(tonal.contains(BUTTON_CONTAINER_VAR.name()));
@@ -713,7 +713,7 @@ mod tests {
     /// `muted.6`, as WCAG exempts it.
     #[test]
     fn a_disabled_muted_label_stays_quiet() {
-        let base = base_color(Some(&ThemeAwareValue::Color(Color::Muted)));
+        let base = base_color("Button", Some(&ThemeAwareValue::Color(Color::Muted)));
         let label = |disabled| {
             let variables = button_variables(Variant::Outlined, &base, false, disabled);
             variables

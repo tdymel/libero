@@ -150,7 +150,7 @@ field_props! {
 #[component]
 pub fn Radio(props: RadioProps) -> Element {
     let theme = use_theme();
-    let color = base_color_or(props.color.as_ref(), theme.radio.color);
+    let color = base_color_or("Radio", props.color.as_ref(), theme.radio.color);
 
     let size = props.size.copied_or(theme.radio.size);
     // A disabled `Fieldset` disables the input, but not the circle and label that pick it.

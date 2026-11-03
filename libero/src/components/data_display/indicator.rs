@@ -152,7 +152,7 @@ pub fn Indicator(props: IndicatorProps) -> Element {
         .as_ref()
         .cloned()
         .unwrap_or(ThemeAwareValue::Color(theme.indicator.color));
-    let color = base_color(Some(&requested));
+    let color = base_color("Indicator", Some(&requested));
     let contrast = contrast_color(&color);
     let variables: Input<Variables> = variables()
         .with(INDICATOR_COLOR_VAR, fill_color(&color))

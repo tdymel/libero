@@ -1387,7 +1387,7 @@ fn SliderBody(live: Signal<Live>, core: SliderCoreProps) -> Element {
         .as_ref()
         .cloned()
         .unwrap_or_else(|| ThemeAwareValue::from(theme.slider.color));
-    let color = base_color(Some(&color));
+    let color = base_color("Slider", Some(&color));
     let disabled = props.disabled.unwrap_or(false);
 
     let interactive = props.oninput.is_some() && !disabled;
@@ -1972,7 +1972,7 @@ mod tests {
             {
                 let css = Stylesheet::from(theme).as_str().to_string();
                 for name in ["primary", "error", "info", "success", "warning"] {
-                    let color = base_color(Some(&ThemeAwareValue::from(name)));
+                    let color = base_color("Slider", Some(&ThemeAwareValue::from(name)));
                     let fill = slider_variables(&color).to_string();
                     let fill = fill
                         .trim_start_matches(&format!("{}:", SLIDER_COLOR.name()))

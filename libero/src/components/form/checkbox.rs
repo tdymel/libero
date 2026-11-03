@@ -170,7 +170,7 @@ field_props! {
 #[component]
 pub fn Checkbox(props: CheckboxProps) -> Element {
     let theme = use_theme();
-    let color = base_color_or(props.color.as_ref(), theme.checkbox.color);
+    let color = base_color_or("Checkbox", props.color.as_ref(), theme.checkbox.color);
 
     let size = props.size.copied_or(theme.checkbox.size);
     let radius = ScaleOrCss::new(props.radius.as_ref(), theme.checkbox.radius);
@@ -435,7 +435,7 @@ pub(crate) struct CheckboxLook {
 /// stylesheet, unless `enabled`.
 pub(crate) fn use_checkbox_look(size: Size, enabled: bool) -> Option<CheckboxLook> {
     let theme = use_theme();
-    let color = base_color_or(None, theme.checkbox.color);
+    let color = base_color_or("Checkbox", None, theme.checkbox.color);
     let base = States::new()
         .with(size.state_name(), true)
         .with(theme.checkbox.radius.radius_state_name(), true);

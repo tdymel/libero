@@ -104,7 +104,7 @@ fn IconMask(src: String) -> Element {
 }
 
 fn icon_variables(props: &IconProps, variant: Variant) -> Variables {
-    let base = base_color(props.color.as_ref());
+    let base = base_color("Icon", props.color.as_ref());
     let contrast = contrast_color(&base);
     let colors = variant_colors(variant, &base);
 

@@ -117,7 +117,7 @@ pub(super) fn avatar_variables(
     variant: Variant,
     radius: Option<&ThemeAwareValue>,
 ) -> Variables {
-    let base = base_color(color);
+    let base = base_color("Avatar", color);
     let contrast = contrast_color(&base);
     let colors = variant_colors(variant, &base);
 
