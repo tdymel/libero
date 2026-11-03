@@ -135,6 +135,15 @@ pub(super) static CALENDAR_SX: StaticSx = StaticSx::new(|| {
         )
         // Drawn only to measure how many months fit (todo 3958); opacity keeps focus.
         .selector("&[data-state~='measuring']", sx().opacity("0"))
+        // Measured at its full width: the shrinking columns (todo 5588) would hide how many fit.
+        .selector(
+            "&[data-state~='measuring'] [role='grid']",
+            sx().min_width(format!("calc(7 * {day})")),
+        )
+        .selector(
+            "&[data-state~='measuring'] [role='grid'][data-week-numbers]",
+            sx().min_width(format!("calc(7.75 * {day})")),
+        )
         // Below `sm` a range scrolls its months under the readout (todo 3903).
         // A sheet's flex column shrinks it; inline, the months stop at 60% of the screen.
         .selector(
