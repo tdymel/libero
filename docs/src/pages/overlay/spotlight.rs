@@ -177,12 +177,15 @@ fn wrap_example(values: &DemoValues, _: &str) -> String {
     options.push("..Default::default()".into());
 
     let key = values.str("shortcut");
-    let hint = if key == "none" {
-        String::new()
+    let (ctrl, hint) = if key == "none" {
+        (String::new(), String::new())
     } else {
-        format!(
-            "    Text {{ size: \"sm\", Kbd {{ \"Ctrl\" }} \" + \" Kbd {{ {:?} }} \" toggles it\" }}\n",
-            key.to_uppercase()
+        (
+            "let ctrl = use_localization().shortcut_help.ctrl;\n".to_string(),
+            format!(
+                "    Text {{ size: \"sm\", Kbd {{ \"{{ctrl}}\" }} \" + \" Kbd {{ {:?} }} \" toggles it\" }}\n",
+                key.to_uppercase()
+            ),
         )
     };
     let actions_code = FILE.section(actions_code);
@@ -190,7 +193,7 @@ fn wrap_example(values: &DemoValues, _: &str) -> String {
         "{actions_code}\n\n{}\n\
          {setup}\
          let {handle} = use_spotlight(SpotlightOptions {{\n{}}});\n\n\
-         rsx! {{\n    \
+         {ctrl}rsx! {{\n    \
              Button {{ variant: \"outlined\", onclick: move |_| {handle}.open(), \"Show\" }}\n\
          {hint}    \
              Text {{ size: \"sm\", role: \"status\", \"Last run: {{last()}}\" }}\n\
