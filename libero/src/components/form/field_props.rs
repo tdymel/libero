@@ -337,7 +337,7 @@ mod tests {
     /// Todo 5431: a `parts` style on the new parts targets the markup `label_trailing` renders.
     #[test]
     fn the_label_row_parts_name_the_rendered_slots() {
-        use crate::{LiberoProvider, components::TextField};
+        use crate::{LiberoProvider, components::form::TextField};
         let mut dom = VirtualDom::new(|| {
             rsx! { LiberoProvider { TextField { label: "A", label_trailing: "Optional" } } }
         });
