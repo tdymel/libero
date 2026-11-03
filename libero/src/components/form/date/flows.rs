@@ -94,7 +94,11 @@ pub(super) fn short_days(range: DateRange<NaiveDate>, names: &DateLocale) -> Str
     };
     match (start.year() == end.year(), start.month() == end.month()) {
         (true, true) if start == end => short_day(start, false, names),
-        (true, true) => format!("{}–{}", start.day(), short_day(end, false, names)),
+        (true, true) => {
+            let month = names.months_short[end.month0() as usize];
+            // The isolate keeps "12–14" in order on an RTL page.
+            format!("\u{2066}{}–{}\u{2069} {month}", start.day(), end.day())
+        }
         (true, false) => format!(
             "{} – {}",
             short_day(start, false, names),
@@ -627,7 +631,10 @@ mod tests {
     fn a_range_of_days_shows_short() {
         let names = &DateLocale::ENGLISH;
         let range = |start, end| short_days(DateRange::new(start, end), names);
-        assert_eq!(range(day(10, 12), Some(day(10, 14))), "12–14 Oct");
+        assert_eq!(
+            range(day(10, 12), Some(day(10, 14))),
+            "\u{2066}12–14\u{2069} Oct"
+        );
         assert_eq!(range(day(9, 30), Some(day(10, 2))), "30 Sep – 2 Oct");
         assert_eq!(range(day(10, 12), Some(day(10, 12))), "12 Oct");
         assert_eq!(range(day(10, 12), None), "12 Oct –");

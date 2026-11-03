@@ -141,6 +141,39 @@ fn lazy_file_tree(loaded: &HashSet<String>) -> Vec<TreeNode<FileEntry>> {
         .collect()
 }
 
+fn find_node<'a>(nodes: &'a [TreeNode<FileEntry>], id: &str) -> Option<&'a TreeNode<FileEntry>> {
+    nodes.iter().find_map(|node| match node.id == id {
+        true => Some(node),
+        false => find_node(&node.children, id),
+    })
+}
+
+/// The status for the folders being fetched: "Loading src…".
+fn loading_text(ids: &HashSet<String>) -> String {
+    let tree = file_tree();
+    let mut names: Vec<_> = ids
+        .iter()
+        .filter_map(|id| find_node(&tree, id).map(|node| node.data.name))
+        .collect();
+    names.sort_unstable();
+    format!("Loading {}…", names.join(", "))
+}
+
+/// The status for the folders that just opened: "src: 3 items".
+fn arrived_text(ids: &HashSet<String>) -> String {
+    let tree = file_tree();
+    let mut lines: Vec<_> = ids
+        .iter()
+        .filter_map(|id| find_node(&tree, id))
+        .map(|node| match node.children.len() {
+            1 => format!("{}: 1 item", node.data.name),
+            count => format!("{}: {count} items", node.data.name),
+        })
+        .collect();
+    lines.sort_unstable();
+    lines.join(", ")
+}
+
 /// The comment over the row's loader, dropped with it when lazy loading is off.
 const LOADER_MARK: &str = "Silent: the status below";
 
@@ -240,8 +273,10 @@ fn LazyReset(
     loaded: Signal<HashSet<String>>,
     expanded: Signal<HashSet<String>>,
     pending: Signal<HashSet<String>>,
+    status: Signal<String>,
 ) -> Element {
     use_drop(move || {
+        status.set(String::new());
         loaded.set(HashSet::new());
         expanded.set(HashSet::new());
         pending.set(HashSet::new());
@@ -260,10 +295,12 @@ pub fn TreePage() -> Element {
     let mut lazy_expanded = use_signal(HashSet::<String>::new);
     let mut loaded = use_signal(HashSet::<String>::new);
     let mut pending = use_signal(HashSet::<String>::new);
+    let mut status = use_signal(String::new);
     // Stands in for a fetch: whatever opened meanwhile arrives at once.
     let fetch = use_timeout(
         move || {
             let arrived = pending.take();
+            status.set(arrived_text(&arrived));
             loaded.write().extend(arrived.iter().cloned());
             lazy_expanded.write().extend(arrived);
         },
@@ -278,6 +315,7 @@ pub fn TreePage() -> Element {
                 next.remove(id);
             }
             pending.write().extend(opened);
+            status.set(loading_text(&pending.read()));
             fetch.start();
         }
         lazy_expanded.set(next);
@@ -427,7 +465,10 @@ pub fn TreePage() -> Element {
             // snippet: item use std::collections::HashSet;
             // snippet: item fn folders() -> HashSet<String> { HashSet::new() }
             // snippet: let mut current = use_signal(|| None::<String>);
+            // snippet: item fn loading_text(_: &HashSet<String>) -> String { String::new() }
+            // snippet: item fn arrived_text(_: &HashSet<String>) -> String { String::new() }
             // snippet: let pending = use_signal(HashSet::<String>::new);
+            // snippet: let status = use_signal(String::new);
             // snippet: let mut expanded = use_signal(folders);
             // snippet: let mut picked = use_signal(|| HashSet::from(["src/lib.rs".to_string()]));
             // snippet: let mut checks = use_signal(|| HashSet::from(["src/components/list.rs".to_string()]));
@@ -458,7 +499,7 @@ pub fn TreePage() -> Element {
                         // preview under the pointer.
                         sx: sx().width("100%").max_width("320px"),
                         if lazy_on {
-                            LazyReset { loaded, expanded: lazy_expanded, pending }
+                            LazyReset { loaded, expanded: lazy_expanded, pending, status }
                         }
                         if !lazy_on {
                             // demo-code: buttons start
@@ -513,9 +554,7 @@ pub fn TreePage() -> Element {
                         if lazy_on {
                             // demo-code: loading start
                             Text { role: "status", size: "sm",
-                                if !pending.read().is_empty() {
-                                    "Loading…"
-                                }
+                                "{status}"
                             }
                             // demo-code: loading end
                         }

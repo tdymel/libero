@@ -243,7 +243,7 @@ fn filter_sort_and_page_compose_and_select_all_covers_the_kept_rows() {
     });
     let body = body(&html);
     assert!(body.contains("Lyon") && !body.contains("Paris"), "{body}");
-    assert!(body.contains("1–1 of 2"), "{body}");
+    assert!(body.contains("\u{2066}1–1\u{2069} of 2"), "{body}");
     assert!(!body.contains("aria-checked=\"mixed\""), "{body}");
 }
 

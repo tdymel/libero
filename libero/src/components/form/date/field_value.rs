@@ -471,7 +471,10 @@ mod tests {
         let day = |month, day| NaiveDate::from_ymd_opt(2026, month, day).expect("a real day");
         let at = |month, date, hour| day(month, date).and_hms_opt(hour, 0, 0).expect("a time");
         let days = DateRange::new(day(9, 14), Some(day(9, 16)));
-        assert_eq!(days.show_short(&formats).as_deref(), Some("14–16 Sep"));
+        assert_eq!(
+            days.show_short(&formats).as_deref(),
+            Some("\u{2066}14–16\u{2069} Sep")
+        );
         let moments = DateRange::new(at(9, 14, 9), Some(at(9, 16, 17)));
         assert_eq!(
             moments.show_short(&formats).as_deref(),

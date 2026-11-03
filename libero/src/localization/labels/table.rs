@@ -100,7 +100,7 @@ pub struct TableLabels {
     /// ```
     /// use libero::localization::TableLabels;
     ///
-    /// assert_eq!((TableLabels::ENGLISH.range)(11, 20, 95), "11–20 of 95");
+    /// assert_eq!((TableLabels::ENGLISH.range)(11, 20, 95), "\u{2066}11–20\u{2069} of 95");
     /// ```
     pub range: fn(usize, usize, usize) -> String,
     /// The page buttons' landmark, for a table without a caption.
@@ -554,14 +554,17 @@ fn grouped(number: impl ToString) -> String {
     active_formats().write_number(&number.to_string())
 }
 
+/// `from–to` in a left-to-right isolate, so an RTL page keeps "2–4" in order.
+fn span(from: usize, to: usize) -> String {
+    format!("\u{2066}{}–{}\u{2069}", grouped(from), grouped(to))
+}
+
 fn english_range(from: usize, to: usize, total: usize) -> String {
-    let (from, to, total) = (grouped(from), grouped(to), grouped(total));
-    format!("{from}–{to} of {total}")
+    format!("{} of {}", span(from, to), grouped(total))
 }
 
 fn german_range(from: usize, to: usize, total: usize) -> String {
-    let (from, to, total) = (grouped(from), grouped(to), grouped(total));
-    format!("{from}–{to} von {total}")
+    format!("{} von {}", span(from, to), grouped(total))
 }
 
 fn english_pages_of(table: &str) -> String {
@@ -1054,7 +1057,10 @@ mod tests {
         use crate::localization::Formats;
         use dioxus::prelude::*;
 
-        assert_eq!((TableLabels::GERMAN.range)(1, 25, 1234), "1–25 von 1,234");
+        assert_eq!(
+            (TableLabels::GERMAN.range)(1, 25, 1234),
+            "\u{2066}1–25\u{2069} von 1,234"
+        );
         let mut dom = VirtualDom::new(|| {
             rsx! {
                 crate::LiberoProvider { formats: &Formats::GERMAN,
@@ -1078,7 +1084,7 @@ mod tests {
         let html = dioxus_ssr::render(&dom);
         assert!(
             html.contains(
-                "1.001–1.025 von 12.345|1.234 Zeilen|2.000 Zeilen ausgewählt|\
+                "\u{2066}1.001–1.025\u{2069} von 12.345|1.234 Zeilen|2.000 Zeilen ausgewählt|\
                  1.500 Zeilen exportiert|Name: 1.240,5 px"
             ),
             "{html}"

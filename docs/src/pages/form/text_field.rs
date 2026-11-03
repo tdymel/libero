@@ -5,7 +5,7 @@ use crate::components::{
 use dioxus::prelude::*;
 use libero::components::FieldPart;
 use libero::components::{Button, Code, Text, TextField};
-use libero::{sx::sx, use_theme};
+use libero::{hooks::use_element, platform::ElementApi, sx::sx, use_theme};
 
 struct UsernameCopy;
 
@@ -25,9 +25,15 @@ fn label_trailing_on(values: &DemoValues) -> bool {
     values.str("label") == "true" && values.str("label_trailing") == "true"
 }
 
+// A disabled or read-only field takes no suggestion.
+fn locked(values: &DemoValues) -> bool {
+    values.str("disabled") == "true" || values.str("readonly") == "true"
+}
+
 #[component]
 pub fn TextFieldPage() -> Element {
     let mut value = use_signal(String::new);
+    let field_element = use_element();
     let theme = use_theme();
 
     rsx! {
@@ -155,10 +161,12 @@ pub fn TextFieldPage() -> Element {
                         .default("true")
                         .hidden_when(|values| values.str("label") != "true")
                         .code(|_, values| match label_trailing_on(values) {
-                            true => vec![
-                                r#"label_trailing: rsx! { Button { variant: "text", size: "xs", onclick: move |_| value.set("ada_lovelace".to_string()), "Suggest" } }"#
-                                    .to_string(),
-                            ],
+                            true => {
+                                let disabled = if locked(values) { ", disabled: true" } else { "" };
+                                vec![format!(
+                                    r#"label_trailing: rsx! {{ Button {{ variant: "text", size: "xs", aria_label: "Suggest a username"{disabled}, onclick: move |_| value.set("ada_lovelace".to_string()), "Suggest" }} }}"#
+                                )]
+                            }
                             false => vec![],
                         }),
                     Control::switch("placeholder").default("true").code(|_, values| {
@@ -190,7 +198,12 @@ pub fn TextFieldPage() -> Element {
                 ]].concat(),
                 render: move |values: DemoValues| {
                     let field = field_props::<UsernameCopy>(&values);
+                    let locked = locked(&values);
                     rsx! {
+                    // `display: contents` keeps the field the flex item; the div finds its input.
+                    div {
+                        style: "display: contents",
+                        onmounted: field_element.mount(),
                     TextField {
                         // Sized by content, it is narrower than the card on a phone.
                         sx: sx().width("100%").max_width("320px"),
@@ -201,7 +214,14 @@ pub fn TextFieldPage() -> Element {
                             Button {
                                 variant: "text",
                                 size: "xs",
-                                onclick: move |_| value.set("ada_lovelace".to_string()),
+                                aria_label: "Suggest a username",
+                                disabled: locked.then_some(true),
+                                onclick: move |_| {
+                                    value.set("ada_lovelace".to_string());
+                                    let _ = field_element
+                                        .query_selector("input")
+                                        .and_then(|input| input.focus());
+                                },
                                 "Suggest"
                             }
                         }),
@@ -224,6 +244,7 @@ pub fn TextFieldPage() -> Element {
                         readonly: (values.str("readonly") == "true").then_some(true),
                         value: value(),
                         oninput: move |next| value.set(next),
+                    }
                     }
                 }
                 },

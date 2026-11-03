@@ -2689,3 +2689,13 @@ fn a_lone_scatter_x_value_is_centred() {
     assert!(below.iter().all(|text| text.3.len() <= 4), "{below:?}");
     assert!(below.windows(2).all(|w| w[0].1 + 2.0 < w[1].0), "{below:?}");
 }
+
+/// A right-to-left title keeps its ellipsis at the end in the left-to-right SVG.
+#[test]
+fn a_shortened_hebrew_title_ends_in_an_ellipsis_and_a_rtl_mark() {
+    let attributes = [("font-size", "14")];
+    let hebrew = labels::shorten(&attributes, "מכירות רבעוניות לפי אזור ולפי מוצר", 60.0);
+    assert!(hebrew.ends_with("…\u{200F}"), "{hebrew:?}");
+    let latin = labels::shorten(&attributes, "Quarterly sales by region and product", 60.0);
+    assert!(latin.ends_with('…'), "{latin:?}");
+}

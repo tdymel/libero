@@ -749,9 +749,9 @@ fn a_paged_table_turns_its_pages_under_rtl() {
     }
     const RANGE: &str = "[data-slot=range]";
     let mut page = mount(app);
-    assert_eq!(page.text(RANGE), "1–3 of 7");
+    assert_eq!(page.text(RANGE), "\u{2066}1–3\u{2069} of 7");
     page.click("button[aria-label=\"Go to next page\"]");
-    page.wait_for(|page| page.text(RANGE) == "4–6 of 7");
+    page.wait_for(|page| page.text(RANGE) == "\u{2066}4–6\u{2069} of 7");
     page.click("button[aria-label=\"Go to page 3\"]");
-    page.wait_for(|page| page.text(RANGE) == "7–7 of 7");
+    page.wait_for(|page| page.text(RANGE) == "\u{2066}7–7\u{2069} of 7");
 }

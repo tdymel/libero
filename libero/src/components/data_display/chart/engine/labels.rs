@@ -392,7 +392,19 @@ pub(super) fn shorten(attributes: &[(&str, &str)], label: &str, room: f32) -> St
             break;
         }
     }
+    // The SVG is left to right: the mark keeps a right-to-left label's "…" at its end.
+    if first_strong_is_rtl(label) {
+        cut.push('\u{200F}');
+    }
     cut
+}
+
+/// Whether the first letter of `text` belongs to a right-to-left script.
+fn first_strong_is_rtl(text: &str) -> bool {
+    let strong = text.chars().find(|c| c.is_alphabetic());
+    strong.is_some_and(|c| {
+        matches!(u32::from(c), 0x0590..=0x08FF | 0xFB1D..=0xFDFF | 0xFE70..=0xFEFF | 0x10800..=0x10FFF | 0x1E800..=0x1EFFF)
+    })
 }
 
 /// Fits the category `labels` under the plot each into its band, cut with an ellipsis; where

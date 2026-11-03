@@ -366,10 +366,11 @@ pub fn SliderPage() -> Element {
                     Control::slider("step_value", ["auto", "0.1", "5.0", "10.0", "25.0"])
                         .code(number_code)
                         .hidden_when(discrete),
-                    Control::toggle("status", ["valid", "warning", "error"])
-                        .labels(["Valid", "Warning", "Error"])
+                    Control::toggle("status", ["valid", "pending", "warning", "error"])
+                        .labels(["Valid", "Pending", "Warning", "Error"])
                         .default("valid")
                         .code(|_, values| match values.str("status").as_str() {
+                            "pending" => vec!["status: FieldStatus::Pending".to_string()],
                             "warning" => vec![
                                 r#"status: FieldStatus::Warning("Above the free tier.".into())"#
                                     .to_string(),
@@ -452,6 +453,7 @@ pub fn SliderPage() -> Element {
                                     helper: is_on(&values, "helper")
                                         .then(|| "Higher costs more.".to_string()),
                                     status: match values.str("status").as_str() {
+                                        "pending" => FieldStatus::Pending,
                                         "warning" => {
                                             FieldStatus::Warning("Above the free tier.".to_string())
                                         }
@@ -499,6 +501,7 @@ pub fn SliderPage() -> Element {
                                     helper: is_on(&values, "helper")
                                         .then(|| "Higher costs more.".to_string()),
                                     status: match values.str("status").as_str() {
+                                        "pending" => FieldStatus::Pending,
                                         "warning" => {
                                             FieldStatus::Warning("Above the free tier.".to_string())
                                         }

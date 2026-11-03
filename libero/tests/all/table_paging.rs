@@ -62,10 +62,10 @@ fn a_default_page_shows_its_slice_and_range() {
     let html = render(app);
     let body = body(&html);
     assert_eq!(shown(&body), ["Cy", "Dan"], "{body}");
-    assert!(body.contains("3–4 of 5"), "{body}");
+    assert!(body.contains("\u{2066}3–4\u{2069} of 5"), "{body}");
     assert!(body.contains("aria-label=\"Pages of People\""), "{body}");
     assert!(
-        body.contains("data-slot=\"range\">3–4 of 5</span>"),
+        body.contains("data-slot=\"range\">\u{2066}3–4\u{2069} of 5</span>"),
         "{body}"
     );
     // The live region starts empty: the first range is no news.
@@ -120,7 +120,7 @@ fn a_controlled_page_past_the_end_shows_the_last_page() {
     let html = render(app);
     let body = body(&html);
     assert_eq!(shown(&body), ["Eve"], "{body}");
-    assert!(body.contains("5–5 of 5"), "{body}");
+    assert!(body.contains("\u{2066}5–5\u{2069} of 5"), "{body}");
     assert!(body.contains("aria-current=\"page\""), "{body}");
 }
 
@@ -181,7 +181,7 @@ fn manual_stages_draw_data_as_given() {
     // Source order, though the header says descending: the caller sorted.
     assert_eq!(shown(&body), ["Ada", "Bea"], "{body}");
     assert!(body.contains("aria-sort=\"descending\""), "{body}");
-    assert!(body.contains("5–6 of 50"), "{body}");
+    assert!(body.contains("\u{2066}5–6\u{2069} of 50"), "{body}");
 }
 
 #[test]
@@ -204,6 +204,6 @@ fn page_sizes_draw_a_localized_picker() {
     // The first size seeds the page.
     assert_eq!(shown(&body), ["Ada", "Bea", "Cy"], "{body}");
     assert!(body.contains("Zeilen pro Seite"), "{body}");
-    assert!(body.contains("1–3 von 5"), "{body}");
+    assert!(body.contains("\u{2066}1–3\u{2069} von 5"), "{body}");
     assert!(body.contains("aria-label=\"Seiten von Leute\""), "{body}");
 }
