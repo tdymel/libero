@@ -5,7 +5,7 @@ use crate::{
             COARSE_POINTER, COARSE_TARGET, Part, coarse_hit_area_sx, focus_ring_sx,
             inset_focus_ring_sx, min_hit_area_sx,
         },
-        layout::paper_sx,
+        layout::{FLOAT_SAFE_AREA_VAR, paper_sx},
     },
     hooks::drag_handle_sx,
     sx::{StaticSx, Sx, sx},
@@ -132,7 +132,9 @@ pub(super) static WINDOW_SX: StaticSx = StaticSx::new(|| {
 });
 
 pub(super) fn float_sx() -> Sx {
-    sx().width("max-content")
+    // Its geometry clamps to the viewport itself; no safe-area shift on top (5464).
+    sx().var(FLOAT_SAFE_AREA_VAR, "0")
+        .width("max-content")
         .max_width("100%")
         .max_height("100dvh")
         .display("flex")

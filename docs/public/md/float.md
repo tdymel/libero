@@ -44,7 +44,7 @@ fn Demo() -> Element {
 | `offset_x` | `ThemeAwareValue` | `0px` | Shift to the right, a spacing step or a CSS length. A negative step like `"-md"` shifts left. |
 | `offset_y` | `ThemeAwareValue` | `0px` | Shift down, a spacing step or a CSS length. A negative step shifts up. |
 | `z_index` | `ThemeAwareValue` | `1` | Stacking order. The default sits below a sticky `Header`; raise it to go over one. |
-| `fixed` | `bool` | `false` | Anchors to the viewport instead of the parent, so it stays put while the page scrolls. An ancestor with a `transform`, `filter`, `contain` or `container-type` still captures it. It stays below overlays and modals. |
+| `fixed` | `bool` | `false` | Anchors to the viewport instead of the parent, so it stays put while the page scrolls. An ancestor with a `transform`, `filter`, `contain` or `container-type` still captures it. It stays below overlays and modals. The edges it is anchored to clear the safe-area insets: the notch, the status bar and the home indicator. |
 | `children` | `Element` | required | The anchored content. |
 
 Like every component, `Float` also takes the shared props `sx`, `class`,

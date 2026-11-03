@@ -8,6 +8,7 @@ use anyhow::{Result, ensure};
 use e2e::browser::block_on;
 use e2e::driver::{Driver, Platform, eventually, eventually_focused, eventually_text};
 use e2e::passes::{focus, keyboard, pointer};
+use e2e::wait::PageBounded;
 use e2e::{Fixture, Suite, Viewport, js, wait};
 use serde_json::Value;
 
@@ -108,6 +109,43 @@ fn it_holds_its_corner_while_the_page_scrolls() {
         );
         assert!(near(&at["width"], 60.0), "{at}");
         fixture.console.assert_clean("scrolling").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
+/// Todo 5464: it clears the home indicator once, by its own margin, not again by `Float`'s.
+#[test]
+fn it_clears_the_home_indicator_once() {
+    use chromiumoxide::cdp::browser_protocol::emulation::{
+        SafeAreaInsets, SetSafeAreaInsetsOverrideParams,
+    };
+    block_on(async {
+        let fixture = Fixture::open("/floating-action-button", Viewport::Mobile)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        wait::for_visible(page, FAB).await.unwrap();
+        let insets = SafeAreaInsets {
+            bottom: Some(34),
+            ..Default::default()
+        };
+        page.execute_bounded(SetSafeAreaInsetsOverrideParams::new(insets))
+            .await
+            .unwrap();
+        wait::for_js_true(
+            page,
+            "document.querySelector('#fab').getBoundingClientRect().bottom < innerHeight - 40",
+            "the inset to apply",
+        )
+        .await
+        .unwrap();
+        let at = placed(page).await;
+        let gap = at["gap"].as_f64().unwrap();
+        assert!(
+            near(&at["bottom"], at["vh"].as_f64().unwrap() - 34.0 - gap),
+            "{at}"
+        );
+        fixture.console.assert_clean("in a safe area").unwrap();
         fixture.close().await.unwrap();
     });
 }

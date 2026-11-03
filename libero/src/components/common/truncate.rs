@@ -1,9 +1,9 @@
 use crate::{
-    components::common::{Input, Variables, input_from_str, variables},
+    components::common::{Input, Variables, input_from_str, inset_focus_ring_sx, variables},
     platform::clamps_lines,
     str_enum::str_enum,
     sx::{Sx, sx},
-    theme::{CssVar, Size, SizeCss},
+    theme::{CssVar, FOCUS_RING_WIDTH, Size, SizeCss},
 };
 
 str_enum! {
@@ -64,9 +64,18 @@ impl Cut {
     }
 }
 
+// Clip, not hidden: focus cannot scroll a clip box, so a tabbed-to link leaves the line in place (5462).
+fn clip_sx() -> Sx {
+    sx().overflow("clip").selector(
+        "& :focus-visible",
+        // Inset: the cut box clips an outer ring (5463).
+        inset_focus_ring_sx(&format!("calc(-1 * {})", FOCUS_RING_WIDTH.value())),
+    )
+}
+
 fn one_line_sx() -> Sx {
-    sx().display("block")
-        .overflow("hidden")
+    clip_sx()
+        .display("block")
         .text_overflow("ellipsis")
         .white_space("nowrap")
 }
@@ -78,7 +87,7 @@ pub(crate) fn truncate_sx(line_height: SizeCss) -> Sx {
         .with("direction", "rtl")
         .text_align("left")
         .rtl(sx().with("direction", "ltr").text_align("right"));
-    let clamp = sx().overflow("hidden");
+    let clamp = clip_sx();
     // Blitz has no line clamp: a height of N lines cuts the text, without the ellipsis.
     let clamp = match clamps_lines() {
         true => clamp
@@ -140,6 +149,7 @@ mod tests {
             "text-overflow:ellipsis",
             "white-space:nowrap",
             "direction:rtl",
+            "overflow:clip",
         ] {
             assert!(css.contains(declaration), "{declaration} missing: {css}");
         }

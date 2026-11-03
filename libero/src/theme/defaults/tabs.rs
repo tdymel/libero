@@ -124,11 +124,15 @@ impl TabsDefaults {
     };
 
     pub fn size_sx(size: Size) -> Sx {
-        sx().font_size(TABS_FONT_SIZE.value(size))
-            .var(TABS_PAD_X, TABS_PADDING_X.value(size))
-            .var(TABS_PAD_Y, TABS_PADDING_Y.value(size))
-            .var(TABS_LINE, TABS_INDICATOR.value(size))
-            .var(TABS_GAP, TABS_ICON_GAP.value(size))
+        // The strip's scale only: the panel keeps its surroundings' font (5458).
+        sx().selector(
+            "& > [role=\"tablist\"]",
+            sx().font_size(TABS_FONT_SIZE.value(size)),
+        )
+        .var(TABS_PAD_X, TABS_PADDING_X.value(size))
+        .var(TABS_PAD_Y, TABS_PADDING_Y.value(size))
+        .var(TABS_LINE, TABS_INDICATOR.value(size))
+        .var(TABS_GAP, TABS_ICON_GAP.value(size))
     }
 
     pub fn theme_vars() -> Sx {

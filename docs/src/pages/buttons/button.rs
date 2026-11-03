@@ -4,10 +4,13 @@ use crate::components::{
 };
 use dioxus::prelude::*;
 use libero::components::{Button, ButtonPart, Code, Input, Loader, Pictogram, Text};
-use libero::use_theme;
+use libero::{sx::sx, use_theme};
 use pictogram_icons_lucide as lucide;
 
 const TRAILING_ICON: &str = "trailing_icon: rsx! { Pictogram { icon: lucide::chevron_right::outlined, width: \"1.25em\", height: \"1.25em\" } }";
+
+// Mirrored under RTL, as library chevrons are, so it points along the reading direction (5451).
+const MIRROR_TRAILING_ICON: &str = "parts: [(ButtonPart::TrailingIcon, sx().selector(\"&:dir(rtl)\", sx().transform(\"scaleX(-1)\")))]";
 
 const CUSTOM_LOADER: &str =
     "loader: rsx! { Loader { variant: \"dots\", size: \"xs\", color: \"currentColor\" } }";
@@ -165,7 +168,10 @@ pub fn ButtonPage() -> Element {
                     // On, so the icon shows without another switch.
                     Control::switch("trailing_icon").default("true").code(|_, values| {
                         match values.str("trailing_icon").as_str() {
-                            "true" => vec![TRAILING_ICON.to_string()],
+                            "true" => vec![
+                                TRAILING_ICON.to_string(),
+                                MIRROR_TRAILING_ICON.to_string(),
+                            ],
                             _ => vec![],
                         }
                     }),
@@ -266,6 +272,7 @@ pub fn ButtonPage() -> Element {
                         new_tab_icon: (values.str("new_tab_icon") == "true").then_some(true),
                         trailing_icon: (values.str("trailing_icon") == "true")
                             .then(|| rsx! { Pictogram { icon: lucide::chevron_right::outlined, width: "1.25em", height: "1.25em" } }),
+                        parts: [(ButtonPart::TrailingIcon, sx().selector("&:dir(rtl)", sx().transform("scaleX(-1)")))],
                         "Save changes"
                     }
                 },

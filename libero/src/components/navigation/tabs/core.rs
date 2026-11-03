@@ -464,3 +464,20 @@ fn TabStrip(
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// Todo 5458: the size scales the strip; the panel keeps its surroundings' font.
+    #[test]
+    fn the_size_font_applies_to_the_tablist_only() {
+        let css = crate::css::Stylesheet::from(&TABS_SX);
+        let css = css.as_str();
+        let font = "font-size:var(--lsx-tabs-font-size-xs)";
+        let at = css.find(font).expect(css);
+        let rule = &css[..at];
+        let rule = &rule[rule.rfind('}').map_or(0, |end| end + 1)..];
+        assert!(rule.contains("[role=\"tablist\"]"), "{rule}");
+    }
+}

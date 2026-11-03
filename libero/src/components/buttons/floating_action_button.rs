@@ -4,7 +4,7 @@ use crate::{
     components::{
         buttons::{ActionIcon, Button},
         common::{Input, States, Variant, attr, base_props},
-        layout::{Float, Placement},
+        layout::{FLOAT_SAFE_AREA_VAR, Float, Placement},
     },
     hooks::use_theme,
     sx::{REDUCED_MOTION, Sx, ThemeAwareValue, sx},
@@ -105,7 +105,8 @@ fn hidden_sx(hidden: bool) -> Sx {
 fn edge_sx(placement: Placement, offset: &str, fixed: bool) -> Sx {
     use Placement::*;
     // Flex, so no line box: Blitz put a 6px strut under the inline-flex button (todo 5062).
-    let mut edges = sx().display("flex");
+    // Its margins clear the safe area already, so `Float`'s own clearance is off.
+    let mut edges = sx().display("flex").var(FLOAT_SAFE_AREA_VAR, "0");
     match placement {
         TopStart | TopCenter | TopEnd => {
             let top = if fixed {

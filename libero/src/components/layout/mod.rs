@@ -51,6 +51,7 @@ pub use divider::{Divider, DividerPart, DividerProps};
 #[cfg(feature = "flex")]
 pub use flex::{Flex, FlexDirection, FlexProps, FlexWrap};
 #[cfg(feature = "float")]
+pub(crate) use float::FLOAT_SAFE_AREA_VAR;
 pub use float::{Float, FloatProps, Placement};
 #[cfg(feature = "grid")]
 pub use grid::{

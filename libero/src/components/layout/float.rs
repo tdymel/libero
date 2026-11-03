@@ -28,6 +28,7 @@ static FLOAT_BASE_SX: StaticSx = StaticSx::new(|| {
         .var(FLOAT_OFFSET_X.override_var(), "initial")
         .var(FLOAT_OFFSET_Y.override_var(), "initial")
         .var(Z_INDEX_FLOAT.override_var(), "initial")
+        .var(FLOAT_SAFE_AREA_VAR, "initial")
         .z_index(Z_INDEX_FLOAT.override_var().value_or(FLOAT_DEFAULT_Z_INDEX))
         .transform(format!(
             "translate(calc({} + {}), calc({} + {}))",
@@ -57,7 +58,33 @@ static FLOAT_BASE_SX: StaticSx = StaticSx::new(|| {
         )
         // A state, not a second sheet: the placement rules above serve both arms.
         .when("fixed", sx().position("fixed"))
+        // Against the viewport, the anchored edges clear the notch and bars (5464).
+        .when("fixed && vertical-top", sx().top(safe_inset("top")))
+        .when(
+            "fixed && vertical-bottom",
+            sx().bottom(safe_inset("bottom")),
+        )
+        .when(
+            "fixed && horizontal-start",
+            sx().left(safe_inset("left"))
+                .rtl(sx().left("auto").right(safe_inset("right"))),
+        )
+        .when(
+            "fixed && horizontal-end",
+            sx().right(safe_inset("right"))
+                .rtl(sx().right("auto").left(safe_inset("left"))),
+        )
 });
+
+/// Set to `0` by a caller that clears the safe area itself, as FAB and the toast stack do.
+pub(crate) const FLOAT_SAFE_AREA_VAR: CssVar = CssVar::new("--lsx-float-safe-area");
+
+fn safe_inset(side: &str) -> String {
+    format!(
+        "calc(env(safe-area-inset-{side}, 0px) * {})",
+        FLOAT_SAFE_AREA_VAR.value_or("1")
+    )
+}
 
 fn float_variables(props: &FloatProps) -> Variables {
     variables()
@@ -86,7 +113,8 @@ base_props! {
         offset_y: Input<ThemeAwareValue>,
         #[props(default, into)]
         z_index: Input<ThemeAwareValue>,
-        /// Place against the viewport (`position: fixed`) instead.
+        /// Place against the viewport (`position: fixed`) instead; the anchored edges
+        /// clear the safe-area insets.
         #[props(default)]
         fixed: bool,
         children: Element,

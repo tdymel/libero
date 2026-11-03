@@ -1076,9 +1076,13 @@ fn a_viewport_stack_clears_the_safe_area_and_a_navigation_bar() {
         );
         let [top, bottom, left, right, height, width]: [f64; 6] = js(page, &rect).await;
         let bottom_stack = top > height / 2.0;
+        // Exact: a fixed `Float` clearing the inset as well would double it (5464).
         match bottom_stack {
-            true => assert!(bottom <= height - 46.0 + 1.0, "bottom {bottom} of {height}"),
-            false => assert!(top >= 59.0 - 1.0, "top {top}"),
+            true => assert!(
+                (bottom - (height - 46.0)).abs() < 1.0,
+                "bottom {bottom} of {height}"
+            ),
+            false => assert!((top - 59.0).abs() < 1.0, "top {top}"),
         }
         assert!(
             left >= 20.0 - 1.0 && right <= width - 30.0 + 1.0,

@@ -5,8 +5,8 @@ use libero::{
     components::{
         ActionIcon, Anchor, Box, Burger, Button, ButtonGroup, Container, DirectionToggle, Flex,
         Header, Icon, Kbd, Pictogram, Repository, ScrollArea, ScrollAreaHandle, SpotlightHandle,
-        SpotlightOptions, ThemeSwitcher, spotlight_filter, use_scroll_area, use_spotlight,
-        visually_hidden_sx,
+        SpotlightOptions, ThemeSwitcher, VisuallyHidden, spotlight_filter, use_scroll_area,
+        use_spotlight, visually_hidden_sx,
     },
     hooks::{
         ElementHandle, edge_swipe_sx, use_back, use_element, use_local_storage, use_media_query,
@@ -16,7 +16,7 @@ use libero::{
     sx::{Sx, sx},
     theme::{
         ACTION_ICON_RADIUS, BUTTON_HEIGHT, PAPER_BACKGROUND, Size, TITLE_FONT_FAMILY, ThemeSet,
-        TitleDefaults, Z_INDEX_HEADER, Z_INDEX_MODAL,
+        TitleDefaults, Z_INDEX_MODAL,
     },
 };
 use pictogram_icons_lucide as lucide;
@@ -314,21 +314,11 @@ fn use_skip_to_main(mut open: Signal<bool>, main: ElementHandle) -> Callback<()>
 /// so the router never sees the fragment.
 fn skip_link(skip: Callback<()>) -> Element {
     rsx! {
-        Box {
+        // Logical: the shown link sits at the inline start, so RTL keeps it off the header tools.
+        VisuallyHidden { focusable: true,
             sx: sx()
-                .selector(
-                    "& > a",
-                    sx().position("fixed")
-                        .top("8px")
-                        .left("8px")
-                        .z_index(format!("calc({} + 1)", Z_INDEX_HEADER.value()))
-                        .padding("sm")
-                        .border_radius("sm")
-                        .background("surface")
-                        .color("primary.7")
-                        .transform("translateY(-200%)"),
-                )
-                .selector("& > a:focus", sx().transform("none")),
+                .border_radius("sm")
+                .selector("& > a", sx().display("block").padding("sm").color("primary.7")),
             a {
                 href: "#docs-main",
                 onclick: move |event: MouseEvent| {

@@ -85,7 +85,8 @@ pub fn GridItem(props: GridItemProps) -> Element {
     let state = zone.map(|zone| *zone.state.read());
     let masonry = state.is_some_and(|state| state.masonry);
 
-    // Also the mount-time measurement, via `ResizeObserver`'s initial observation.
+    // Also the mount-time measurement, via `ResizeObserver`'s initial observation. The span it sets
+    // grows the observed zone in the same pass, so Chrome logs a benign loop error (5450).
     // An element with no box (`display: none`) stays unmeasured.
     let onresize = masonry.then_some(move |event: Event<ResizeData>| {
         let Ok(size) = event.get_border_box_size() else {

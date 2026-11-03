@@ -14,14 +14,22 @@ static CONTAINER_BASE_SX: StaticSx = StaticSx::new(|| {
         .margin_left("auto")
         .margin_right("auto")
         .max_width(CONTAINER_SIZE.overridable())
-        .padding_left(CONTAINER_GUTTERS.overridable())
-        .padding_right(CONTAINER_GUTTERS.overridable())
+        // A landscape notch eats the gutter otherwise (5465).
+        .padding_left(safe_gutter("left"))
+        .padding_right(safe_gutter("right"))
         // Inset: a full-width container's outer ring is clipped at the viewport sides.
         .focus_visible(inset_focus_ring_sx(&format!(
             "calc(-1 * {})",
             FOCUS_RING_WIDTH.value()
         )))
 });
+
+fn safe_gutter(side: &str) -> String {
+    format!(
+        "max({}, env(safe-area-inset-{side}, 0px))",
+        CONTAINER_GUTTERS.overridable()
+    )
+}
 
 fn container_variables(props: &ContainerProps) -> Variables {
     variables()
@@ -43,7 +51,7 @@ base_props! {
         /// Maximum width, a breakpoint size or any CSS length.
         #[props(default, into)]
         size: Input<ThemeAwareValue>,
-        /// Inline padding on both sides.
+        /// Inline padding on both sides, at least the safe-area inset on that side.
         #[props(default, into)]
         gutters: Input<ThemeAwareValue>,
         children: Element,
@@ -111,5 +119,18 @@ mod tests {
                 SizeCss::SPACING.value(Size::Lg)
             )
         );
+    }
+
+    /// Todo 5465: each gutter grows to the viewport inset on its side.
+    #[test]
+    fn the_gutters_clear_the_side_safe_area() {
+        let css = crate::css::Stylesheet::from(&CONTAINER_BASE_SX);
+        let css = css.as_str();
+        for side in ["left", "right"] {
+            assert!(
+                css.contains(&format!("env(safe-area-inset-{side}, 0px))")),
+                "{css}"
+            );
+        }
     }
 }

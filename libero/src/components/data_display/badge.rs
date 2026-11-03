@@ -126,7 +126,7 @@ base_props! {
         /// A step on the badge's own radius scale, or any CSS, as `radius: "0"`; the default is a pill.
         #[props(default, into)]
         radius: Input<ThemeAwareValue>,
-        /// A circle for a one- or two-character count.
+        /// A circle for a one- or two-character count; with a `trailing_icon` it stays a pill.
         #[props(default)]
         circle: Option<bool>,
         /// Drawn after the label, as `Icon { .. }` after "Verified".
@@ -178,7 +178,11 @@ pub fn Badge(props: BadgeProps) -> Element {
         .unwrap_or_default()
         .with(variant.state_name(), true)
         .with(size.state_name(), true)
-        .with("circle", props.circle.unwrap_or(false))
+        // The box can't be round with an icon beside the label: a pill keeps its padding (5449).
+        .with(
+            "circle",
+            props.circle.unwrap_or(false) && props.trailing_icon.is_none(),
+        )
         .into();
 
     let label = use_box()
@@ -202,4 +206,28 @@ pub fn Badge(props: BadgeProps) -> Element {
         .style(gradient)
         .prepare()
         .render(HtmlTag::Span, props.attributes, content)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// Todo 5449: with an icon beside the label the box can't be round, so it stays a pill.
+    #[test]
+    fn a_circle_with_a_trailing_icon_stays_a_pill() {
+        let circle = |icon: bool| {
+            let html = dioxus_ssr::render_element(rsx! {
+                crate::LiberoProvider {
+                    Badge { circle: true, trailing_icon: icon.then(|| rsx! { span {} }), "3" }
+                }
+            });
+            html.split("data-state=\"").skip(1).any(|state| {
+                state[..state.find('"').unwrap()]
+                    .split(' ')
+                    .any(|s| s == "circle")
+            })
+        };
+        assert!(circle(false));
+        assert!(!circle(true));
+    }
 }

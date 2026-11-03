@@ -452,6 +452,12 @@ pub fn Timeline(props: TimelineProps) -> Element {
                 }
             };
 
+            // Reading order follows the drawn one: a `content-end` opposite sits first (5452).
+            // Below `sm` every opposite is drawn first; the others keep body first there (accepted).
+            let children = match opposed && content_end {
+                true => vec![bullet, opposite, body],
+                false => vec![bullet, body, opposite],
+            };
             item_style
                 .clone()
                 .attr("data-state", item_states.data_state())
@@ -459,7 +465,7 @@ pub fn Timeline(props: TimelineProps) -> Element {
                 // Only the current event; hidden text on every done one is noise.
                 .attr("aria-current", is_current.then_some("step"))
                 .attr("data-slot", TimelinePart::Item.slot())
-                .render(HtmlTag::Li, Vec::new(), vec![bullet, body, opposite])
+                .render(HtmlTag::Li, Vec::new(), children)
         })
         .collect::<Vec<_>>();
 

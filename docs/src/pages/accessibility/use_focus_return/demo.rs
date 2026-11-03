@@ -1,7 +1,7 @@
 use dioxus::prelude::*;
 use libero::{
     components::{Button, Checkbox, Flex},
-    hooks::use_focus_return,
+    hooks::{use_focus_return, use_id},
     sx::sx,
 };
 
@@ -10,13 +10,15 @@ pub fn Filters() -> Element {
     let mut open = use_signal(|| false);
     let mut in_stock = use_signal(|| false);
     let trigger = use_focus_return();
+    let panel = use_id();
 
     rsx! {
         Flex { direction: "column", align: "flex-start", gap: "sm",
             Button {
                 variant: "outlined",
                 aria_expanded: open(),
-                aria_controls: "filters-panel",
+                // Only while the panel exists: a closed one leaves no id to point at.
+                aria_controls: open().then_some(panel()),
                 onclick: move |_| {
                     if !open() {
                         trigger.remember_active();
@@ -27,7 +29,7 @@ pub fn Filters() -> Element {
             }
             if open() {
                 Flex {
-                    id: "filters-panel",
+                    id: panel(),
                     direction: "column",
                     align: "flex-start",
                     gap: "sm",

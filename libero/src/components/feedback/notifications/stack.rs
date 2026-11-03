@@ -4,7 +4,7 @@ use super::item::{ItemProps, NotificationItem};
 use crate::{
     components::{
         common::{HtmlTag, Input},
-        layout::{Box, Float},
+        layout::{Box, FLOAT_SAFE_AREA_VAR, Float},
     },
     sx::{StaticSx, sx},
     theme::{CssVar, NOTIFICATION_GAP, NOTIFICATION_OFFSET, NOTIFICATION_WIDTH, Placement},
@@ -29,7 +29,9 @@ static STACK_SX: StaticSx = StaticSx::new(|| {
         )
         .var(INSET_END_VAR, format!("env(safe-area-inset-{end}, 0px)"))
     };
-    sx().display("flex")
+    // The offsets and margins below clear the safe area, not `Float`.
+    sx().var(FLOAT_SAFE_AREA_VAR, "0")
+        .display("flex")
         .flex_direction("column")
         .width(format!(
             "min({}, calc(100% - 2 * {offset} - {start} - {end}))",
