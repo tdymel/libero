@@ -86,22 +86,23 @@ pub fn TimePicker(props: TimePickerProps) -> Element {
     })
 }
 
-/// A field's close after the last hand, for a [`Clock`] with no `oncomplete` of its own (5355).
+/// A `ChronoPicker`'s `oncomplete`, for a [`Clock`] with no `oncomplete` of its own (5355).
 #[derive(Clone, Copy)]
-#[cfg_attr(not(feature = "date-field"), allow(dead_code))]
 struct Completes(Callback<()>);
 
-/// The surrounding field's close after the last unit, if any.
+/// The surrounding picker's `oncomplete`, if any.
 pub(super) fn use_completes() -> Option<Callback<()>> {
     try_use_context::<Completes>().map(|Completes(complete)| complete)
 }
 
-/// Hands `complete` to the clocks inside, past the portal the dropdown is drawn in.
-#[cfg(feature = "date-field")]
-#[component]
-pub(super) fn CompleteScope(complete: Callback<()>, children: Element) -> Element {
+/// Hands `oncomplete` to the clock or duration columns inside, without a scope of its own (5398).
+pub(super) fn use_provide_completes(oncomplete: Option<Callback<()>>) {
+    let complete = use_callback(move |()| {
+        if let Some(oncomplete) = oncomplete {
+            oncomplete.call(());
+        }
+    });
     use_context_provider(|| Completes(complete));
-    children
 }
 
 /// What `TimePicker` draws, every option resolved. Plain props, so `ChronoPicker` can pass attributes on.

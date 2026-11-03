@@ -42,6 +42,7 @@ fn Demo() -> Element {
 |---|---|---|---|
 | `value` | `Option<V>` | - | The picked value. Its type picks what the picker draws, and the picker opens on its month, else today's. Pair it with `onchange`: a typed `value` alone does not name `V`, so store into a typed signal or use a turbofish. |
 | `onchange` | `EventHandler<Option<V>>` | - | Called with the value to hold next. |
+| `oncomplete` | `Callback<()>` | - | Fires once the last unit of a time, a date-time or a duration is picked, after its `onchange`: the last hand on the clock face, or Enter or a filled column in the last column. A date or a range of dates alone never fires it. |
 | `level` | `DateLevel` | `Day` | Picks a `NaiveDate` as a day, a month (its first day) or a year (its January 1). Ignored for other values. |
 | `min` | `V::Bound` | - | The earliest value that can be picked. For a range, the earliest end. |
 | `max` | `V::Bound` | - | The latest value that can be picked. For a range, the latest end. |

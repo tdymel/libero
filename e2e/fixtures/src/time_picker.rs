@@ -14,7 +14,30 @@ pub const ROUTES: Routes = &[
     ("/time-picker/date-time-pinned", || rsx! { DateTimePage { today: NaiveDate::from_ymd_opt(2026, 3, 18) } }),
     ("/time-picker/analog", || rsx! { AnalogPage {} }),
     ("/time-picker/range", || rsx! { RangePage {} }),
+    ("/time-picker/complete", || rsx! { CompletePage {} }),
 ];
+
+/// A `ChronoPicker` clock face from 09:30, counting its `oncomplete` calls into `#completes`.
+#[component]
+fn CompletePage() -> Element {
+    let mut time = use_signal(|| NaiveTime::from_hms_opt(9, 30, 0));
+    let mut completes = use_signal(|| 0);
+    let shown = time().map(|value| value.to_string()).unwrap_or_default();
+
+    rsx! {
+        ChronoPicker::<NaiveTime> {
+            id: "analog",
+            variant: "analog",
+            twelve_hour: false,
+            step: 5,
+            value: time(),
+            onchange: move |next: Option<NaiveTime>| time.set(next),
+            oncomplete: move |()| completes += 1,
+        }
+        span { id: "analog-value", {shown} }
+        span { id: "completes", "{completes}" }
+    }
+}
 
 /// An empty date-time range picker on the digital clock, `today` pinned to
 /// 2026-03-18, echoing its value.

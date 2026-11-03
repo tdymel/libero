@@ -42,6 +42,7 @@ pub fn ChronoPickerPage() -> Element {
                 props("ChronoPicker<V: DateValue>", vec![
                     prop("value", "Option<V>").doc("The picked value. Its type picks what the picker draws, and the picker opens on its month, else today's. Pair it with `onchange`: a typed `value` alone does not name `V`, so store into a typed signal or use a turbofish."),
                     prop("onchange", "EventHandler<Option<V>>").doc("Called with the value to hold next."),
+                    prop("oncomplete", "Callback<()>").doc("Fires once the last unit of a time, a date-time or a duration is picked, after its `onchange`: the last hand on the clock face, or Enter or a filled column in the last column. A date or a range of dates alone never fires it."),
                     prop("level", "DateLevel").default("Day").doc("Picks a `NaiveDate` as a day, a month (its first day) or a year (its January 1). Ignored for other values."),
                     prop("min", "V::Bound").doc("The earliest value that can be picked. For a range, the earliest end."),
                     prop("max", "V::Bound").doc("The latest value that can be picked. For a range, the latest end."),

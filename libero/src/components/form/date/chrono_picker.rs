@@ -5,6 +5,7 @@ use super::{
     date_value::{DateValue, DayGrid, PickerArgs, PickerOptions, use_ignored_props_warning},
     format::uses_twelve_hours,
     props::date_props,
+    time_picker::use_provide_completes,
 };
 use crate::{
     components::common::{Input, parts_enum},
@@ -74,7 +75,7 @@ parts_enum! {
 }
 
 date_props! {
-    picker ChronoPickerProps<V: DateValue>(V, V::Bound): limits, exclude_date, allow_deselect, columns, level, open_to, calendar, grid, presets, today, clock
+    picker ChronoPickerProps<V: DateValue>(V, V::Bound): limits, exclude_date, allow_deselect, columns, level, open_to, calendar, grid, presets, today, clock, oncomplete
 }
 
 /// One picker for every date and time value; the value's type picks what it draws.
@@ -97,6 +98,7 @@ date_props! {
 pub fn ChronoPicker<V: DateValue>(props: ChronoPickerProps<V>) -> Element {
     let theme = use_theme();
     let time_format = use_formats().time;
+    use_provide_completes(props.oncomplete);
     let level = props.level.unwrap_or(DateLevel::Day);
     use_ignored_props_warning::<V>(
         "ChronoPicker",

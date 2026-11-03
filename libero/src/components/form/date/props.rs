@@ -86,6 +86,14 @@ macro_rules! date_props {
             twelve_hour: Option<bool>,
         ] $($rest)*);
     };
+    (@munch $kind:ident $head:tt $types:tt [$($acc:tt)*] oncomplete $($rest:ident)*) => {
+        $crate::components::form::date::props::date_props!(@munch $kind $head $types [$($acc)*
+            /// Fires once the last unit of a time, a date-time or a duration is picked,
+            /// after its `onchange`. A date or a range of dates alone never fires it.
+            #[props(default)]
+            oncomplete: Option<Callback<()>>,
+        ] $($rest)*);
+    };
     (@munch $kind:ident $head:tt $types:tt [$($acc:tt)*] calendar $($rest:ident)*) => {
         $crate::components::form::date::props::date_props!(@munch $kind $head $types [$($acc)*
             /// A month of days, or one row of days with buttons that page it.

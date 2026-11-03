@@ -333,6 +333,35 @@ fn an_analog_pick_takes_the_hour_then_the_minute() {
     });
 }
 
+/// Todo 5398: a standalone `ChronoPicker`'s `oncomplete` fires on the last hand, not the first.
+#[test]
+fn a_chrono_pickers_oncomplete_fires_after_the_last_hand() {
+    block_on(async {
+        let fixture = Fixture::open("/time-picker/complete", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        let completes = |count: &'static str| {
+            format!("document.getElementById('completes').textContent === {count:?}")
+        };
+
+        expect_mark(page, "09:30:00", "9", "desktop").await;
+        click_mark(page, "11").await;
+        expect_mark(page, "11:30:00", "30", "desktop").await;
+        wait::for_js_true(page, &completes("0"), "no oncomplete after the hour")
+            .await
+            .unwrap();
+        click_mark(page, "45").await;
+        expect_mark(page, "11:45:00", "45", "desktop").await;
+        wait::for_js_true(page, &completes("1"), "one oncomplete after the minute")
+            .await
+            .unwrap();
+
+        fixture.console.assert_clean("oncomplete").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
 /// A time picked before any day lands on today, from the clock, when the
 /// picker has no `today` prop (todo 26).
 #[test]
