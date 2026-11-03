@@ -245,7 +245,10 @@ pub(crate) fn AppShell() -> Element {
                                 .padding("24px 16px")
                                 // Clear of a phone's home indicator at the page end (5473).
                                 .padding_bottom("calc(24px + env(safe-area-inset-bottom, 0px))")
-                                .breakpoint(Size::Sm, sx().padding("48px 64px"))
+                                // The nav arrives at Sm: the padding grows only where the body stays
+                                // wider than a 600px phone's 568px (5537).
+                                .breakpoint(Size::Md, sx().padding("48px 32px"))
+                                .breakpoint(Size::Lg, sx().padding("48px 64px"))
                                 .and(landing_sx())
                                 .and(if swipes { edge_swipe_sx() } else { sx() }),
                             Outlet::<Route> {}

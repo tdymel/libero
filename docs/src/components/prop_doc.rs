@@ -1,6 +1,6 @@
 use dioxus::prelude::*;
 use libero::{
-    components::{Code, Flex, Part, Table, Text, Title, column, visually_hidden_sx},
+    components::{Box, Code, Flex, Part, Table, Text, Title, column, visually_hidden_sx},
     sx::{Sx, sx},
 };
 
@@ -347,18 +347,34 @@ pub fn PartsPanel(properties: Vec<PropGroup>) -> Element {
     }
 }
 
+/// The props and parts tables' wrapper: they stack on its width, as the nav keeps the column
+/// narrow past a phone's viewport (5538).
+const DOC_TABLE: &str = "doc-table";
+
+/// `nested` once the table's box is a phone's. Blitz has no container queries (3932):
+/// natively the window stands in.
+fn stacked(base: Sx, nested: Sx) -> Sx {
+    if cfg!(any(feature = "native", feature = "native-cpu")) {
+        base.media("(max-width: 30rem)", nested)
+    } else {
+        // Below this the 10rem name column left the description a few words a line.
+        base.container_query(DOC_TABLE, "(max-width: 32rem)", nested)
+    }
+}
+
 /// Top-aligned; cells break inside words, and a description's short chip may wrap too: its
 /// nowrap held the table past a 375px page (4609).
 fn table_sx() -> Sx {
-    sx().selector(
-        "& td",
-        sx().vertical_align("top").with("overflow-wrap", "anywhere"),
-    )
-    .selector("& td:last-child code", sx().white_space("normal"))
+    let base = sx()
+        .selector(
+            "& td",
+            sx().vertical_align("top").with("overflow-wrap", "anywhere"),
+        )
+        .selector("& td:last-child code", sx().white_space("normal"));
     // A phone stacks the description under its name; the header row is then redundant (4705),
     // but stays named for a screen reader's table navigation (5470).
-    .media(
-        "(max-width: 30rem)",
+    stacked(
+        base,
         sx().selector("& thead", visually_hidden_sx())
             .selector("& tbody tr", sx().display("block"))
             .selector("& td", sx().display("block"))
@@ -378,32 +394,34 @@ fn PropRows(name: String, properties: Vec<PropDoc>, base: bool, extends: String)
     }
 
     rsx! {
-        Table {
-            aria_label: name,
-            scroll: true,
-            sx: table_sx(),
-            data: rows,
-            columns: vec![
-                column("Name")
-                    .value(|p: &PropDoc| p.name.clone())
-                    .render(|p: &PropDoc| rsx! {
-                        Flex {
-                            wrap: "wrap",
-                            gap: "xs",
-                            align: "baseline",
-                            // Breaking anywhere let a phone squeeze the column to
-                            // a few characters a line; a type now breaks only past this.
-                            sx: sx().min_width("10rem"),
-                            Code { source: "{p.name}: {p.ty}", language: "rust" }
-                            if !p.default.is_empty() {
-                                Text { size: "xs", color: "text-dimmed", "default: {p.default}" }
+        Box { sx: sx().container(DOC_TABLE),
+            Table {
+                aria_label: name,
+                scroll: true,
+                sx: table_sx(),
+                data: rows,
+                columns: vec![
+                    column("Name")
+                        .value(|p: &PropDoc| p.name.clone())
+                        .render(|p: &PropDoc| rsx! {
+                            Flex {
+                                wrap: "wrap",
+                                gap: "xs",
+                                align: "baseline",
+                                // Breaking anywhere let a phone squeeze the column to
+                                // a few characters a line; a type now breaks only past this.
+                                sx: sx().min_width("10rem"),
+                                Code { source: "{p.name}: {p.ty}", language: "rust" }
+                                if !p.default.is_empty() {
+                                    Text { size: "xs", color: "text-dimmed", "default: {p.default}" }
+                                }
                             }
-                        }
-                    }),
-                column("Description")
-                    .value(|p: &PropDoc| p.description.clone())
-                    .render(|p: &PropDoc| prose(&p.description)),
-            ],
+                        }),
+                    column("Description")
+                        .value(|p: &PropDoc| p.description.clone())
+                        .render(|p: &PropDoc| prose(&p.description)),
+                ],
+            }
         }
     }
 }
@@ -411,29 +429,31 @@ fn PropRows(name: String, properties: Vec<PropDoc>, base: bool, extends: String)
 #[component]
 fn PartRows(name: String, parts: Vec<PartDoc>) -> Element {
     rsx! {
-        Table {
-            aria_label: name,
-            scroll: true,
-            // The hidden header leaves the stacked slot cell without its column name (4733).
-            sx: table_sx().media(
-                "(max-width: 30rem)",
-                sx().selector(
-                    "& td:nth-child(2)::before",
-                    sx().with("content", "\"data-slot: \"").with("opacity", "0.7"),
+        Box { sx: sx().container(DOC_TABLE),
+            Table {
+                aria_label: name,
+                scroll: true,
+                // The hidden header leaves the stacked slot cell without its column name (4733).
+                sx: stacked(
+                    table_sx(),
+                    sx().selector(
+                        "& td:nth-child(2)::before",
+                        sx().with("content", "\"data-slot: \"").with("opacity", "0.7"),
+                    ),
                 ),
-            ),
-            data: parts,
-            columns: vec![
-                column("Part")
-                    .value(|p: &PartDoc| p.name.clone())
-                    .render(|p: &PartDoc| rsx! { Code { source: "{p.name}", language: "rust" } }),
-                column("data-slot")
-                    .value(|p: &PartDoc| p.slot.to_string())
-                    .render(|p: &PartDoc| rsx! { Code { source: "{p.slot}" } }),
-                column("Description")
-                    .value(|p: &PartDoc| p.description.clone())
-                    .render(|p: &PartDoc| prose(&p.description)),
-            ],
+                data: parts,
+                columns: vec![
+                    column("Part")
+                        .value(|p: &PartDoc| p.name.clone())
+                        .render(|p: &PartDoc| rsx! { Code { source: "{p.name}", language: "rust" } }),
+                    column("data-slot")
+                        .value(|p: &PartDoc| p.slot.to_string())
+                        .render(|p: &PartDoc| rsx! { Code { source: "{p.slot}" } }),
+                    column("Description")
+                        .value(|p: &PartDoc| p.description.clone())
+                        .render(|p: &PartDoc| prose(&p.description)),
+                ],
+            }
         }
     }
 }
