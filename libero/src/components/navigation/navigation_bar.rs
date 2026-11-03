@@ -642,7 +642,7 @@ base_props! {
         /// Without `to`, the item is a button that calls this.
         #[props(default)]
         onclick: Option<EventHandler<MouseEvent>>,
-        /// Marks the current destination. Unset, `to` is compared against the router's route.
+        /// Marks the current destination. Unset, `to` marks the route's path and the sub-paths below it.
         #[props(default)]
         selected: Option<bool>,
         /// Decorative: the label names the item.
@@ -717,7 +717,7 @@ pub fn NavigationBarItem(props: NavigationBarItemProps) -> Element {
     let disabled = props.disabled.unwrap_or(false) || in_disabled_group;
     let selected = props.selected.unwrap_or_else(|| match props.to.as_ref() {
         Some(NavigationTarget::Internal(path)) => try_router()
-            .map(|router| route_matches(&router.full_route_string(), path))
+            .map(|router| item_matches(&router.full_route_string(), path))
             .unwrap_or(false),
         _ => false,
     });
@@ -793,9 +793,51 @@ pub fn NavigationBarItem(props: NavigationBarItemProps) -> Element {
     }
 }
 
+/// The route matches `to`, or sits below its path; the root only matches itself.
+fn item_matches(route: &str, to: &str) -> bool {
+    if route_matches(route, to) {
+        return true;
+    }
+    let base = to.trim_end_matches('/');
+    if base.is_empty() || to.contains(['?', '#']) {
+        return false;
+    }
+    let path = route.split(['?', '#']).next().unwrap_or(route);
+    path.strip_prefix(base)
+        .is_some_and(|rest| rest.starts_with('/'))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn a_query_on_the_route_keeps_the_item_selected() {
+        assert!(item_matches("/home?tab=games", "/home"));
+        assert!(item_matches("/home?tab=games#top", "/home"));
+        assert!(!item_matches("/home?tab=games", "/home?tab=music"));
+    }
+
+    #[test]
+    fn a_sub_path_keeps_the_item_selected() {
+        assert!(item_matches("/home/games", "/home"));
+        assert!(item_matches("/home/games/7?tab=a", "/home/"));
+        assert!(!item_matches("/homes", "/home"));
+        assert!(!item_matches("/home", "/home/games"));
+    }
+
+    #[test]
+    fn the_root_item_only_matches_the_root() {
+        assert!(item_matches("/", "/"));
+        assert!(item_matches("/?x=1", "/"));
+        assert!(!item_matches("/home", "/"));
+    }
+
+    #[test]
+    fn a_query_or_fragment_in_to_stays_exact() {
+        assert!(!item_matches("/search/more?q=rust", "/search?q=rust"));
+        assert!(!item_matches("/form/x#summary", "/form#summary"));
+    }
 
     /// The slot names are public: a rename here is a breaking change.
     #[test]

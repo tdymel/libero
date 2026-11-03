@@ -128,7 +128,7 @@ pub fn NavigationBarPage() -> Element {
                     prop("onclick", "EventHandler<MouseEvent>").doc("Without `to`, the item is a button that calls this."),
                     prop("selected", "bool")
                         .default("follows the route")
-                        .doc("Unset, it compares `to` with the current route. Set it for `onclick` items."),
+                        .doc("Unset, `to` marks its own path and the sub-paths below it, ignoring the query (the root `/` only itself). Set it for `onclick` items."),
                     prop("icon", "Element").default("required").doc("Drawn in the pill above the label, hidden from screen readers."),
                     prop("badge", "Element").doc("A count or dot over the icon, such as an `Indicator`. Put its count in the item's `aria-label` too."),
                     prop("disabled", "bool").default("false").doc("Dims the item and takes it out of the Tab order."),
@@ -170,9 +170,9 @@ pub fn NavigationBarPage() -> Element {
                     Code { source: "color" }
                     ". Left unset, "
                     Code { source: "selected" }
-                    " compares "
+                    " matches "
                     Code { source: "to" }
-                    " with the current route, as in the code below; the preview has no "
+                    " and the sub-paths below it against the current route, as in the code below; the preview has no "
                     "routes, so its items select on click instead."
                 }
             },
