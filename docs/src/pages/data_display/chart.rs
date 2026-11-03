@@ -347,7 +347,7 @@ fn table_code(values: &DemoValues) -> String {
         })
         .collect::<String>();
     format!(
-        "Table {{\n    caption: {caption:?},\n    data: vec![\n{data}    ],\n    columns: vec![\n        column({first:?}).value(|row: {row}| row.0.to_string()).row_header(),\n{columns}    ],\n}}"
+        "Table {{\n    caption: {caption:?},\n    data: vec![\n{data}    ],\n    columns: vec![\n        column({first:?}).value(|row: {row}| row.0.to_string()).row_header(),\n{columns}    ],\n    scroll: true,\n}}"
     )
 }
 
@@ -559,7 +559,7 @@ fn data_table(values: &DemoValues) -> Element {
             .map(|(i, name)| column(name).value(move |row: &Row| row.1[i]).sortable()),
     );
     rsx! {
-        Table { caption, data: rows, columns }
+        Table { caption, data: rows, columns, scroll: true }
     }
 }
 
@@ -819,7 +819,8 @@ pub fn ChartPage() -> Element {
                 .handles([
                     "The chart is a `role=\"figure\"` named by `title`, else by a spread `aria-label`, else \"chart\". The drawing is hidden from screen readers.",
                     "A loading chart says \"Loading chart\" in a live region when it starts, and its summary says it too.",
-                    "A hidden summary gives the x range and each series' lowest and highest value, and where the highest is, then each mark line's name and value and each marked point's place and value, each line's error band and each bar series' error bars with their outer ends, the series drawn as a line over bars, the series on the right y axis, the axes' titles and, stacked, that the top line is the total; a pie's, the total, then each slice's value and share; a funnel's, its first and last stage, then each stage's value and share of the first; a scatter's, each series' count of points and its x and y ranges, a bubble series' sizes and each trend line's kind and direction, as \"Online: linear trend, rising.\"; a heatmap's, its rows by columns and its lowest and highest value, the highest and the lowest cell, then each row's cells (above 12 rows or 150 cells, only the empty cells the keys skip, then a pointer to the keys); a candlestick chart's, its periods, the first open and the last close with the change, the highest high and the lowest low with their periods, and how many candles rose, fell and stayed; a radar's, its axes, then each series' highest and lowest axis, by share of the axis maximum as drawn, and the axes it has no value on.",
+                    "A hidden summary gives the x range and each series' lowest and highest value, and where the highest is, then each mark line's name and value and each marked point's place and value, each line's error band and each bar series' error bars with their outer ends, the series drawn as a line over bars, the series on the right y axis, the axes' titles and, stacked, that the top line is the total; a pie's, the total, then each slice's value and share; a funnel's, its first and last stage, then each stage's value and share of the first; a scatter's, each series' count of points and its x and y ranges, a bubble series' sizes and each trend line's kind and direction, as \"Online: linear trend, rising.\"; a heatmap's, its rows by columns and its lowest and highest value, the highest and the lowest cell, then each row's cells (above 12 rows or 150 cells, only the empty cells the keys skip, then a pointer to the keys); a candlestick chart's, its periods, the first open and the last close with the change, the highest high and the lowest low with their periods, and how many candles rose, fell and stayed; a radar's, its axes, then each series' highest and lowest axis, by share of the axis maximum as drawn, each value with its axis maximum when those differ (\"5 of 10\"), and the axes it has no value on. A series whose values are all equal reads \"Online: 40 throughout.\", and a count of one is singular, as \"1 row\".",
+                    "Upgrading from 0.6: `ChartLabels`' `heatmap_range`, `candle_range` and `scatter_series` are `heatmap_summary`, `candle_summary` and `scatter_summary`; their `{rows}`, `{columns}` and `{count}` now hold the noun too, as the `rows`, `columns`, `periods` and `points` fns write it, so drop the noun from your own template.",
                     "The plot is one tab stop, a `role=\"application\"` described as a chart, so a screen reader hands it the arrows. Each point the keys reach is announced, as \"This week, Tue: 132\", \"Chrome: 62, 62%.\" \"Online: x 12, y 34, size 80\" or, for a heatmap's cell, \"Tue, 12: 46\"; a candle reads its four prices and its direction, as \"Price, May: open 33, high 44, low 32, close 43, up\".",
                     "A heatmap never tells by colour alone: each cell writes its value where it fits, in black or white by the cell; an empty cell is outlined, dashed, and the scale under the plot keys it as \"No value\".",
                     "A candle never tells its direction by colour alone: a rising one is hollow, a falling one filled, and the key under the plot says which is which; an OHLC bar ticks its open left and its close right.",
@@ -831,7 +832,7 @@ pub fn ChartPage() -> Element {
                     "The chart draws no buttons: the ones you render from the `use_chart()` handle are yours to name, to announce what they saved and to keep focusable while there is nothing to reset.",
                     "Each series' or slice's palette colour reaches 3:1 on the page and on a card, in every shipped theme and color scheme; one too close to an earlier one, also for colour-blind eyes, is skipped.",
                     "In forced colours the lines, bars and slices keep their colours on the system background; axes and labels take the system text colour.",
-                    "A bar's or a point's error range is written after its value in the tooltip and the announcement, as \"120 (110–130)\".",
+                    "A bar's or a point's error range is written after its value in the tooltip and the announcement, as \"120 (110–130)\", left to right on a right-to-left page too.",
                     "A label on a bar or a slice takes black or white, whichever reads on it.",
                 ])
                 .must([
@@ -856,7 +857,7 @@ pub fn ChartPage() -> Element {
                     "`zoom` and `onrange` are for lines and bars; a pie, a funnel, a scatter, a heatmap, a candlestick chart and a radar export only.",
                     "A radar's web writes no values on its rings; each axis may have its own rim, so the tooltip, the announcement and the summary give the values. A value past its axis' `max` is drawn at the rim.",
                     "A bubble's size and a trend line are read by eye; the tooltip, the announcement and the summary give the sizes and each trend's direction. Bubbles are drawn largest first, so a small one stays on top.",
-                    "A heatmap's scale is drawn under the plot whatever `legend` says, but `none`; in forced colours its cells keep the scale's colours and their black or white values; the axes, the names and an empty cell's outline take the system's.",
+                    "A heatmap's scale is drawn under the plot whatever `legend` says, but `none`; with one value alone it is a single swatch with that value, the cells in the scale's middle colour; in forced colours its cells keep the scale's colours and their black or white values; the axes, the names and an empty cell's outline take the system's.",
                     "A funnel is drawn widest stage first; the keys, the summary and the legend keep the order of `stages`. A hidden stage leaves the drawing and the others widen to the largest shown; percent labels stay shares of the first stage.",
                     "An export keeps the normal palette in forced colours. `png()` is `None` on Blitz and on the server, and `save_png` returns `SaveOutcome::Failed`.",
                     "A mark line is drawn on a line chart that is not `stacked`, on upright, `grouped` bars and on a line among upright bars, and only inside the y axis' ends; the summary leaves out the ones not drawn, except past the ends. A marked point is drawn on a line only, in a line chart or among upright bars.",

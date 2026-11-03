@@ -338,10 +338,10 @@ fn summary(
             continue;
         };
         sentences.push(fill(
-            labels.scatter_series,
+            labels.scatter_summary,
             &[
                 ("name", &name),
-                ("count", &points.len().to_string()),
+                ("count", &(labels.points)(points.len())),
                 ("xmin", &write_x(x.0)),
                 ("xmax", &write_x(x.1)),
                 ("min", &write_y(one, y.0)),
@@ -481,5 +481,18 @@ mod tests {
         });
         assert!(html.contains("No data"), "{html}");
         assert!(!html.contains("<svg"), "{html}");
+    }
+
+    /// Todo 5547: one point is singular.
+    #[test]
+    fn one_point_is_singular() {
+        let html = render(|| {
+            rsx! {
+                LiberoProvider {
+                    ScatterChart { title: "One", series: vec![ScatterSeries::new("A", [(1.0, 2.0), (3.0, 4.0)]), ScatterSeries::new("B", [(2.0, 3.0)])] }
+                }
+            }
+        });
+        assert!(html.contains("B: 1 point, x from 2 to 2"), "{html}");
     }
 }

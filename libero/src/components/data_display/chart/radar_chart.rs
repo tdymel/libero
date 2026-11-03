@@ -277,6 +277,7 @@ fn summary(
     write: impl Fn(&Series, f64) -> String,
 ) -> Vec<String> {
     let names: Vec<&str> = axes.iter().map(|(name, _)| name.as_str()).collect();
+    let even = axes.windows(2).all(|pair| pair[0].1 == pair[1].1);
     let mut sentences = vec![fill(
         labels.radar_axes,
         &[
@@ -301,16 +302,33 @@ fn summary(
             sentences.push(fill(labels.series_empty, &[("name", &one.name)]));
             continue;
         };
-        sentences.push(fill(
-            labels.radar_series,
-            &[
-                ("name", &one.name),
-                ("high", &names[high]),
-                ("max", &write(one, max)),
-                ("low", &names[low]),
-                ("min", &write(one, min)),
-            ],
-        ));
+        // Shares rank the axes: with rims that differ, each value says its rim.
+        let of_rim = |i: usize, value: f64| match even {
+            true => write(one, value),
+            false => fill(
+                labels.of_rim,
+                &[
+                    ("value", &write(one, value)),
+                    ("rim", &write(one, axes[i].1)),
+                ],
+            ),
+        };
+        sentences.push(match even && min == max {
+            true => fill(
+                labels.series_flat,
+                &[("name", &one.name), ("value", &write(one, max))],
+            ),
+            false => fill(
+                labels.radar_series,
+                &[
+                    ("name", &one.name),
+                    ("high", &names[high]),
+                    ("max", &of_rim(high, max)),
+                    ("low", &names[low]),
+                    ("min", &of_rim(low, min)),
+                ],
+            ),
+        });
         let missing: Vec<&str> = (0..axes.len())
             .filter(|i| one.values[*i].is_none())
             .map(|i| names[i])
@@ -387,7 +405,7 @@ mod tests {
             }
         });
         assert!(
-            html.contains("A: highest on Battery, 9; lowest on Price, 200."),
+            html.contains("A: highest on Battery, 9 of 10; lowest on Price, 200 of 1,000."),
             "{html}"
         );
     }
@@ -417,5 +435,22 @@ mod tests {
         assert_eq!(round_up(240.0), 250.0);
         assert_eq!(round_up(500.0), 500.0);
         assert_eq!(round_up(0.0), 1.0);
+    }
+
+    /// Todo 5549: equal values on equal rims read "throughout".
+    #[test]
+    fn a_flat_series_reads_throughout() {
+        let html = render(|| {
+            rsx! {
+                LiberoProvider {
+                    RadarChart {
+                        title: "Flat",
+                        axes: vec!["A".into(), "B".into(), "C".into()],
+                        series: vec![Series::new("S", [4.0, 4.0, 4.0])],
+                    }
+                }
+            }
+        });
+        assert!(html.contains("S: 4 throughout."), "{html}");
     }
 }

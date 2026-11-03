@@ -37,8 +37,8 @@ fn the_summary_says_each_series_highest_and_lowest() {
         .await;
         for want in [
             "Radar chart over 4 axes: Speed, Power, Range, Cost.",
-            "X: highest on Speed, 8; lowest on Range, 7.",
-            "Y: highest on Range, 18; lowest on Cost, 4.",
+            "X: highest on Speed, 8 of 10; lowest on Range, 7 of 20.",
+            "Y: highest on Range, 18 of 20; lowest on Cost, 4 of 10.",
             "Y: no value on Power, drawn at the centre.",
         ] {
             assert!(summary.contains(want), "{want:?} in {summary}");

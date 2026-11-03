@@ -1204,6 +1204,8 @@ fn tip_body(
     };
     // A point's own text, as a candle's four prices, wraps; a plain value never breaks.
     let long = own.is_some();
+    // Numbers keep their order in RTL ("110 (99–121)"); a point's own text finds its own.
+    let dir = (!long).then_some("ltr");
     rsx! {
         if let Some(heading) = heading {
             div { "{heading}" }
@@ -1216,7 +1218,9 @@ fn tip_body(
                 "data-wrap": long.then_some("true"),
                 span { "data-chart-swatch": true, style: "--lsx-chart-swatch:{color}" }
                 span { "{name}" }
-                span { "{value}" }
+                span {
+                    bdi { dir, "{value}" }
+                }
             }
         }
     }

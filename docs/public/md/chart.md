@@ -338,7 +338,15 @@ Like every component, each chart also takes the shared props `sx`, `class`,
   its periods, the first open and the last close with the change, the highest
   high and the lowest low with their periods, and how many candles rose, fell
   and stayed; a radar's, its axes, then each series' highest and lowest axis,
-  by share of the axis maximum as drawn, and the axes it has no value on.
+  by share of the axis maximum as drawn, each value with its axis maximum when
+  those differ ("5 of 10"), and the axes it has no value on. A series whose
+  values are all equal reads "Online: 40 throughout.", and a count of one is
+  singular, as "1 row".
+- Upgrading from 0.6: `ChartLabels`' `heatmap_range`, `candle_range` and
+  `scatter_series` are `heatmap_summary`, `candle_summary` and
+  `scatter_summary`; their `{rows}`, `{columns}` and `{count}` now hold the
+  noun too, as the `rows`, `columns`, `periods` and `points` fns write it, so
+  drop the noun from your own template.
 - The plot is one tab stop, a `role="application"` described as a chart, so a
   screen reader hands it the arrows. Each point the keys reach is announced, as
   "This week, Tue: 132", "Chrome: 62, 62%." "Online: x 12, y 34, size 80" or, for a heatmap's cell, "Tue, 12: 46"; a candle reads its four prices and its direction, as "Price, May: open 33, high 44, low 32, close 43, up".
@@ -375,7 +383,8 @@ Like every component, each chart also takes the shared props `sx`, `class`,
 - In forced colours the lines, bars and slices keep their colours on the system
   background; axes and labels take the system text colour.
 - A bar's or a point's error range is written after its value in the tooltip
-  and the announcement, as "120 (110–130)".
+  and the announcement, as "120 (110–130)", left to right on a right-to-left
+  page too.
 - A label on a bar or a slice takes black or white, whichever reads on it.
 
 ### You must
@@ -422,6 +431,8 @@ Like every component, each chart also takes the shared props `sx`, `class`,
   announcement and the summary give the sizes and each trend's direction.
   Bubbles are drawn largest first, so a small one stays on top.
 - A heatmap's scale is drawn under the plot whatever `legend` says, but `none`;
+  with one value alone it is a single swatch with that value, the cells in the
+  scale's middle colour;
   in forced colours its cells keep the scale's colours and their black or white
   values; the axes, the names and an empty cell's outline take the system's.
 - A funnel is drawn widest stage first; the keys, the summary and the legend

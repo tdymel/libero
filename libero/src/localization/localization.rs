@@ -188,7 +188,7 @@ mod tests {
     use super::*;
 
     /// Every template with a hole, in one order for every language.
-    fn templates(words: &Localization) -> [&'static str; 110] {
+    fn templates(words: &Localization) -> [&'static str; 112] {
         [
             words.common.remove,
             words.common.at_most,
@@ -259,19 +259,20 @@ mod tests {
             words.chart.range,
             words.chart.range_one,
             words.chart.series,
+            words.chart.series_flat,
             words.chart.series_empty,
             words.chart.total,
             words.chart.slice,
             words.chart.slice_empty,
             words.chart.stage,
             words.chart.stage_value,
-            words.chart.heatmap_range,
+            words.chart.heatmap_summary,
             words.chart.cell_extremes,
             words.chart.row,
             words.chart.cell,
             words.chart.cell_empty,
             words.chart.candle,
-            words.chart.candle_range,
+            words.chart.candle_summary,
             words.chart.candle_change,
             words.chart.candle_extremes,
             words.chart.candle_count,
@@ -279,11 +280,12 @@ mod tests {
             words.chart.point_free,
             words.chart.scatter_value,
             words.chart.bubble_value,
-            words.chart.scatter_series,
+            words.chart.scatter_summary,
             words.chart.bubble_sizes,
             words.chart.trend,
             words.chart.radar_axes,
             words.chart.radar_series,
+            words.chart.of_rim,
             words.chart.radar_missing,
             words.chart.x_axis,
             words.chart.y_axis,
@@ -367,6 +369,7 @@ mod tests {
             ("low_x", &"Mon"),
             ("open", &"3"),
             ("rate", &"1.5"),
+            ("rim", &10),
             ("rows", &2),
             ("segment", &"Hours"),
             ("size", &7),

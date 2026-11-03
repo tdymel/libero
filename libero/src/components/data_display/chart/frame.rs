@@ -670,6 +670,10 @@ pub(super) fn summary(
         // The first of equal highs.
         let max = values.reduce(|high, next| if next.1 > high.1 { next } else { high });
         sentences.push(match (min, max) {
+            (Some(min), Some((_, max))) if min == max => fill(
+                labels.series_flat,
+                &[("name", &series.name), ("value", &write(series, max))],
+            ),
             (Some(min), Some((at, max))) => fill(
                 labels.series,
                 &[

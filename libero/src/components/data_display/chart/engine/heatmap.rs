@@ -70,8 +70,7 @@ pub(crate) fn draw_heatmap(spec: &HeatmapSpec) -> Option<Drawn> {
     chart.x_axis.stroke_color = ink(spec.ink.axis);
     chart.x_axis.font.color = ink(spec.ink.label);
     chart.x_axis.label_overflow = AxisLabelOverflow::Ellipsis;
-    let (low, high) = spec.range;
-    let high = if high > low { high } else { low + 1.0 };
+    let (low, high) = ends(spec.range);
     let scale = &mut chart.heatmap_series;
     scale.min = low as f32;
     scale.max = high as f32;
@@ -145,10 +144,17 @@ pub(super) fn gradient(colors: &[HexColor], position: f64) -> HexColor {
     )
 }
 
+/// The scale's ends as coloured: one value alone sits in the middle.
+fn ends((low, high): (f64, f64)) -> (f64, f64) {
+    match high > low {
+        true => (low, high),
+        false => (low - 1.0, low + 1.0),
+    }
+}
+
 /// The colour of the cell of `value`: its class's on a stepped scale, else its gradient's.
 fn cell_color(spec: &HeatmapSpec, value: f64) -> HexColor {
-    let (low, high) = spec.range;
-    let high = if high > low { high } else { low + 1.0 };
+    let (low, high) = ends(spec.range);
     let share = ((value - low) / (high - low)).clamp(0.0, 1.0);
     let position = match spec.steps >= 2 {
         true => {
@@ -191,6 +197,22 @@ pub(super) fn with_scale(
         room + 16.0
     });
     let (left, width) = (plot.left, (plot.right - plot.left - key).max(0.0));
+    // One value has no gradient to read: one swatch in its cells' colour, its value beside.
+    if high <= low {
+        let _ = write!(
+            scale,
+            "<rect x=\"{left}\" y=\"{bar_top}\" width=\"{SCALE_BAR}\" height=\"{SCALE_BAR}\" fill=\"{}\"/>",
+            cell_color(spec, low)
+        );
+        scale.push_str(&label(
+            left + SCALE_BAR + 6.0,
+            bar_top + SCALE_BAR,
+            "start",
+            &write(low),
+        ));
+        scale.push_str("</g>");
+        return appended(svg, spec.width, spec.height, &scale);
+    }
     let pieces = match spec.steps >= 2 {
         true => spec.steps,
         false => SCALE_PIECES,

@@ -270,11 +270,11 @@ fn summary(
     let highest = cells.iter().find(|cell| cell.2 == high);
     let lowest = cells.iter().find(|cell| cell.2 == low);
     let mut sentences = vec![fill(
-        labels.heatmap_range,
+        labels.heatmap_summary,
         &[
             ("kind", &labels.heatmap),
-            ("rows", &rows.to_string()),
-            ("columns", &columns.to_string()),
+            ("rows", &(labels.rows)(rows)),
+            ("columns", &(labels.columns)(columns)),
             ("min", &write(low)),
             ("max", &write(high)),
         ],
@@ -434,5 +434,24 @@ mod tests {
         });
         assert!(html.contains("No data"), "{html}");
         assert!(!html.contains("<svg"), "{html}");
+    }
+
+    /// Todos 5547, 5550: one value draws one swatch, not a "5 … 5" gradient; one row is singular.
+    #[test]
+    fn one_value_draws_one_swatch() {
+        let html = render(|| {
+            rsx! {
+                LiberoProvider {
+                    HeatmapChart {
+                        title: "One",
+                        x: names(&["9 am"]),
+                        y: names(&["Mon"]),
+                        values: vec![vec![5.0]],
+                    }
+                }
+            }
+        });
+        assert!(html.contains("Heatmap of 1 row by 1 column"), "{html}");
+        assert_eq!(html.matches("height=\"10\"").count(), 1, "{html}");
     }
 }

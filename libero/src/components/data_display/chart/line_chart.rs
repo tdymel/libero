@@ -819,4 +819,17 @@ mod tests {
         assert!(html.contains("aria-busy=\"true\""), "{html}");
         assert!(html.contains("Loading chart"), "{html}");
     }
+
+    /// Todo 5549: a flat series reads "throughout", not "0 to 0, highest at Mon".
+    #[test]
+    fn a_flat_series_reads_throughout() {
+        let html = render(|| {
+            rsx! {
+                LiberoProvider {
+                    LineChart { title: "Flat", x: ["Mon", "Tue"], series: vec![Series::new("A", [0.0, 0.0])] }
+                }
+            }
+        });
+        assert!(html.contains("A: 0 throughout."), "{html}");
+    }
 }

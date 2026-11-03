@@ -3,6 +3,10 @@
 /// `{min}` and `{max}` its lowest and highest value, `{x}` where the highest is. A pie's
 /// `total` and `slice` say `{total}` of all slices, a slice's `{value}` and `{share}`.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[allow(
+    unpredictable_function_pointer_comparisons,
+    reason = "compares by address; a miss on a copied closure only re-renders"
+)]
 pub struct ChartLabels {
     /// A line chart's kind, the start of its summary.
     pub line: &'static str,
@@ -16,6 +20,8 @@ pub struct ChartLabels {
     /// `range` of an x axis with one value, `{first}`.
     pub range_one: &'static str,
     pub series: &'static str,
+    /// A series whose values are all `{value}`.
+    pub series_flat: &'static str,
     /// A series with no value at all.
     pub series_empty: &'static str,
     /// The start of a pie's summary.
@@ -28,8 +34,21 @@ pub struct ChartLabels {
     /// A stage when the first has no value to share.
     pub stage_value: &'static str,
     pub heatmap: &'static str,
-    /// The start of a heatmap's summary: `{rows}`, `{columns}`, its lowest and highest value.
-    pub heatmap_range: &'static str,
+    /// The start of a heatmap's summary: `{rows}` and `{columns}` as `rows` and `columns`
+    /// count them, its lowest and highest value.
+    pub heatmap_summary: &'static str,
+    /// A count of rows, of columns, of periods and of points. Fns, for plural forms.
+    ///
+    /// ```
+    /// use libero::localization::ChartLabels;
+    ///
+    /// assert_eq!((ChartLabels::ENGLISH.rows)(1), "1 row");
+    /// assert_eq!((ChartLabels::GERMAN.points)(3), "3 Punkte");
+    /// ```
+    pub rows: fn(usize) -> String,
+    pub columns: fn(usize) -> String,
+    pub periods: fn(usize) -> String,
+    pub points: fn(usize) -> String,
     /// A heatmap's `{high}` and `{low}` cell, each as `point` writes it.
     pub cell_extremes: &'static str,
     /// A heatmap's row in its summary: `{name}` and its `{cells}`, each `cell` or `cell_empty`.
@@ -51,8 +70,9 @@ pub struct ChartLabels {
     /// The keys of a rising and a falling candle under the plot.
     pub up_key: &'static str,
     pub down_key: &'static str,
-    /// The start of a candlestick chart's summary: `{count}` periods, `{first}` to `{last}`.
-    pub candle_range: &'static str,
+    /// The start of a candlestick chart's summary: `{count}` as `periods` counts it,
+    /// `{first}` to `{last}`.
+    pub candle_summary: &'static str,
     /// The first `{open}` and the last `{close}`, and the `{change}` between them.
     pub candle_change: &'static str,
     /// The highest `{high}` on `{high_x}` and the lowest `{low}` on `{low_x}`.
@@ -89,9 +109,9 @@ pub struct ChartLabels {
     pub scatter_value: &'static str,
     /// The same for a bubble, with its `{size}`.
     pub bubble_value: &'static str,
-    /// A scatter series in the summary: `{count}` points, x from `{xmin}` to `{xmax}`, y from
-    /// `{min}` to `{max}`.
-    pub scatter_series: &'static str,
+    /// A scatter series in the summary: `{count}` as `points` counts it, x from `{xmin}` to
+    /// `{xmax}`, y from `{min}` to `{max}`.
+    pub scatter_summary: &'static str,
     /// After a bubble series' sentence: its sizes from `{min}` to `{max}`.
     pub bubble_sizes: &'static str,
     /// A scatter series' trend line in the summary: `{kind}` one of `trends`, `{direction}`
@@ -106,6 +126,8 @@ pub struct ChartLabels {
     pub radar_axes: &'static str,
     /// A radar series: `{max}` its highest value on axis `{high}`, `{min}` its lowest on `{low}`.
     pub radar_series: &'static str,
+    /// A radar `{value}` beside its axis' `{rim}`, when the axes' rims differ.
+    pub of_rim: &'static str,
     /// After a radar series' sentence: the `{axes}` it has no value on, drawn at the centre.
     pub radar_missing: &'static str,
     /// The x axis' `{title}`, in the summary.
@@ -160,6 +182,7 @@ impl ChartLabels {
         scatter_range: "{kind}, x from {first} to {last}.",
         range_one: "{kind} for {first}.",
         series: "{name}: {min} to {max}, highest at {x}.",
+        series_flat: "{name}: {value} throughout.",
         series_empty: "{name}: no values.",
         total: "{kind}, total {total}.",
         slice: "{name}: {value}, {share}.",
@@ -167,7 +190,11 @@ impl ChartLabels {
         stage: "{name}: {value}, {share} of the first.",
         stage_value: "{name}: {value}.",
         heatmap: "Heatmap",
-        heatmap_range: "{kind} of {rows} rows by {columns} columns, values {min} to {max}.",
+        heatmap_summary: "{kind} of {rows} by {columns}, values {min} to {max}.",
+        rows: |count| counted(count, "row", "rows"),
+        columns: |count| counted(count, "column", "columns"),
+        periods: |count| counted(count, "period", "periods"),
+        points: |count| counted(count, "point", "points"),
         cell_extremes: "Highest: {high}. Lowest: {low}.",
         row: "{name}: {cells}.",
         cell: "{x}: {value}",
@@ -182,7 +209,7 @@ impl ChartLabels {
         unchanged: "unchanged",
         up_key: "Up",
         down_key: "Down",
-        candle_range: "{kind} of {count} periods from {first} to {last}.",
+        candle_summary: "{kind} of {count} from {first} to {last}.",
         candle_change: "Opened at {open}, closed at {close}: {change}.",
         candle_extremes: "Highest: {high} on {high_x}. Lowest: {low} on {low_x}.",
         candle_count: "{up} up, {down} down, {flat} unchanged.",
@@ -201,7 +228,7 @@ impl ChartLabels {
         point_free: "{name}: {value}",
         scatter_value: "x {x}, y {y}",
         bubble_value: "x {x}, y {y}, size {size}",
-        scatter_series: "{name}: {count} points, x from {xmin} to {xmax}, y from {min} to {max}.",
+        scatter_summary: "{name}: {count}, x from {xmin} to {xmax}, y from {min} to {max}.",
         bubble_sizes: "{name}: sizes from {min} to {max}.",
         trend: "{name}: {kind} trend, {direction}.",
         trends: ["linear", "exponential", "logarithmic", "polynomial"],
@@ -209,6 +236,7 @@ impl ChartLabels {
         radar: "Radar chart",
         radar_axes: "{kind} over {count} axes: {names}.",
         radar_series: "{name}: highest on {high}, {max}; lowest on {low}, {min}.",
+        of_rim: "{value} of {rim}",
         radar_missing: "{name}: no value on {axes}, drawn at the centre.",
         x_axis: "X axis: {title}.",
         y_axis: "Y axis: {title}.",
@@ -243,6 +271,7 @@ impl ChartLabels {
         scatter_range: "{kind}, x von {first} bis {last}.",
         range_one: "{kind} für {first}.",
         series: "{name}: {min} bis {max}, am höchsten bei {x}.",
+        series_flat: "{name}: durchgehend {value}.",
         series_empty: "{name}: keine Werte.",
         total: "{kind}, insgesamt {total}.",
         slice: "{name}: {value}, {share}.",
@@ -250,7 +279,11 @@ impl ChartLabels {
         stage: "{name}: {value}, {share} der ersten Stufe.",
         stage_value: "{name}: {value}.",
         heatmap: "Heatmap",
-        heatmap_range: "{kind} mit {rows} Zeilen und {columns} Spalten, Werte von {min} bis {max}.",
+        heatmap_summary: "{kind} mit {rows} und {columns}, Werte von {min} bis {max}.",
+        rows: |count| counted(count, "Zeile", "Zeilen"),
+        columns: |count| counted(count, "Spalte", "Spalten"),
+        periods: |count| counted(count, "Periode", "Perioden"),
+        points: |count| counted(count, "Punkt", "Punkte"),
         cell_extremes: "Höchster Wert: {high}. Niedrigster Wert: {low}.",
         row: "{name}: {cells}.",
         cell: "{x}: {value}",
@@ -265,7 +298,7 @@ impl ChartLabels {
         unchanged: "unverändert",
         up_key: "Gestiegen",
         down_key: "Gefallen",
-        candle_range: "{kind} mit {count} Perioden von {first} bis {last}.",
+        candle_summary: "{kind} mit {count} von {first} bis {last}.",
         candle_change: "Eröffnet bei {open}, geschlossen bei {close}: {change}.",
         candle_extremes: "Höchster Kurs: {high} am {high_x}. Tiefster Kurs: {low} am {low_x}.",
         candle_count: "{up} gestiegen, {down} gefallen, {flat} unverändert.",
@@ -284,7 +317,7 @@ impl ChartLabels {
         point_free: "{name}: {value}",
         scatter_value: "x {x}, y {y}",
         bubble_value: "x {x}, y {y}, Größe {size}",
-        scatter_series: "{name}: {count} Punkte, x von {xmin} bis {xmax}, y von {min} bis {max}.",
+        scatter_summary: "{name}: {count}, x von {xmin} bis {xmax}, y von {min} bis {max}.",
         bubble_sizes: "{name}: Größen von {min} bis {max}.",
         trend: "{name}: {kind}er Trend, {direction}.",
         trends: ["linear", "exponentiell", "logarithmisch", "polynomial"],
@@ -292,6 +325,7 @@ impl ChartLabels {
         radar: "Netzdiagramm",
         radar_axes: "{kind} mit {count} Achsen: {names}.",
         radar_series: "{name}: am höchsten bei {high}, {max}; am niedrigsten bei {low}, {min}.",
+        of_rim: "{value} von {rim}",
         radar_missing: "{name}: kein Wert bei {axes}, in der Mitte gezeichnet.",
         x_axis: "X-Achse: {title}.",
         y_axis: "Y-Achse: {title}.",
@@ -315,4 +349,9 @@ impl ChartLabels {
         band: "{name}: jeder Wert hat einen Bereich, insgesamt {low} bis {high}.",
         compact: ["\u{a0}Mio.", "\u{a0}Mrd.", "\u{a0}Bio."],
     };
+}
+
+/// `count` and its noun, `one` for 1 (English and German alike).
+fn counted(count: usize, one: &str, many: &str) -> String {
+    format!("{count} {}", if count == 1 { one } else { many })
 }

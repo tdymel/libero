@@ -334,10 +334,10 @@ fn summary(
     };
     let mut sentences = vec![
         fill(
-            labels.candle_range,
+            labels.candle_summary,
             &[
                 ("kind", &labels.candlestick.to_string()),
-                ("count", &drawn.len().to_string()),
+                ("count", &(labels.periods)(drawn.len())),
                 ("first", first.0),
                 ("last", last.0),
             ],
