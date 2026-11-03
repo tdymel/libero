@@ -90,7 +90,7 @@ pub fn SegmentedControlPage() -> Element {
                     prop("onchange", "EventHandler<T>")
                         .doc("Called with the segment to select next."),
                     prop("name", "FieldName<T>")
-                        .doc("What the control posts as. A path such as `Settings::FIELDS.align()` also binds it to the surrounding `Form`'s value when it has no `onchange`."),
+                        .doc("What the control posts as. A path such as `Settings::FIELDS.align()` also binds it to the surrounding `Form`'s value when it has no `onchange`. The path stays a `FieldName<T>`, not an `Option<T>` as on `Select`: exactly one segment is always selected."),
                     prop("validate", "Validators<T>")
                         .doc("Rules over the selection, shown once the control loses focus or its form is submitted."),
                     prop("options", "OptionSource<T>")

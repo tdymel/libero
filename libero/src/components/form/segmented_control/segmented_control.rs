@@ -29,6 +29,7 @@ field_props! {
         #[props(default)]
         onchange: Option<EventHandler<T>>,
         /// What the control posts as. A path also binds it to the surrounding `Form`.
+        /// The path is a `FieldName<T>`, not `Select`'s `Option<T>`: one segment is always selected.
         #[props(default, into)]
         name: crate::components::form::FieldName<T>,
         /// Rules over the selection, shown on blur or submit.

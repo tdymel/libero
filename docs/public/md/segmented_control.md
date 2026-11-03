@@ -48,7 +48,7 @@ fn Demo() -> Element {
 |---|---|---|---|
 | `value` | `T` | - | The selected segment. Pair it with `onchange`. A control bound to a `Form` through `name` leaves it out. |
 | `onchange` | `EventHandler<T>` | - | Called with the segment to select next. |
-| `name` | `FieldName<T>` | - | What the control posts as. A path such as `Settings::FIELDS.align()` also binds it to the surrounding `Form`'s value when it has no `onchange`. |
+| `name` | `FieldName<T>` | - | What the control posts as. A path such as `Settings::FIELDS.align()` also binds it to the surrounding `Form`'s value when it has no `onchange`. The path stays a `FieldName<T>`, not an `Option<T>` as on `Select`: exactly one segment is always selected. |
 | `validate` | `Validators<T>` | - | Rules over the selection, shown once the control loses focus or its form is submitted. |
 | `options` | `OptionSource<T>` | `T::options()` | Narrows or reorders the strip. A runtime set of `String`s goes here. A `Vec<T>` converts, and an `OptionList<T>` can disable single segments. Named groups are drawn flat, without headings. |
 | `option_label` | `Callback<T, OptionLabel>` | `T::label()` | Renames a segment, or draws it with `OptionLabel::rich`. Runs during render, so it can read a locale from context. `#[option(label = "..")]` renames one at the type. |
