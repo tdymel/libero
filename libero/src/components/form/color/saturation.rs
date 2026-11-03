@@ -302,7 +302,8 @@ fn SaturationThumb(
     // One `role="slider"` for a 2D control: the text names brightness too, or
     // an Up/Down press would announce nothing.
     let formats = use_formats();
-    let percent = |fraction: f64| formats.write_percent(&(fraction * 100.0).round().to_string());
+    let number = |fraction: f64| (fraction * 100.0).round();
+    let percent = |fraction: f64| formats.write_percent(&number(fraction).to_string());
     let valuetext = fill(
         use_localization().color.saturation_value,
         &[
@@ -320,7 +321,7 @@ fn SaturationThumb(
         )
         .attr("aria-valuemin", 0)
         .attr("aria-valuemax", 100)
-        .attr("aria-valuenow", percent(value.saturation()))
+        .attr("aria-valuenow", number(value.saturation()))
         .attr("aria-valuetext", valuetext)
         .attr("aria-disabled", disabled.then_some("true"))
         .attr("aria-readonly", readonly.then_some("true"))
