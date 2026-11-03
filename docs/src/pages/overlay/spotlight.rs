@@ -192,8 +192,9 @@ fn wrap_example(values: &DemoValues, _: &str) -> String {
     format!(
         "{actions_code}\n\n{}\n\
          {setup}\
-         let {handle} = use_spotlight(SpotlightOptions {{\n{}}});\n\n\
-         {ctrl}rsx! {{\n    \
+         let {handle} = use_spotlight(SpotlightOptions {{\n{}}});\n\
+         {ctrl}\n\
+         rsx! {{\n    \
              Button {{ variant: \"outlined\", onclick: move |_| {handle}.open(), \"Show\" }}\n\
          {hint}    \
              Text {{ size: \"sm\", role: \"status\", \"Last run: {{last()}}\" }}\n\
