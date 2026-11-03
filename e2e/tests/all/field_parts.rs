@@ -34,6 +34,8 @@ fn parts_style_the_inner_parts() {
                 "3px",
             ),
             ("#text", "letterSpacing", "5px"),
+            ("[data-slot=label-row]", "paddingTop", "6px"),
+            ("[data-slot=label-trailing]", "letterSpacing", "4px"),
             ("#nested", "letterSpacing", "normal"),
             ("label[for=nested]", "fontStyle", "normal"),
             ("#textarea ~ [data-slot=counter]", "letterSpacing", "3px"),

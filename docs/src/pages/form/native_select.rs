@@ -94,6 +94,8 @@ pub fn NativeSelectPage() -> Element {
                 .parts("FieldPart", vec![
                     (FieldPart::Label, "The label above the control."),
                     (FieldPart::Required, "The required asterisk, in the label."),
+                    (FieldPart::LabelRow, "The row holding the label and its `label_trailing`; drawn only with a trailing slot."),
+                    (FieldPart::LabelTrailing, "The `label_trailing` slot, at the end of the label row."),
                     (FieldPart::Description, "The caption between the label and the control."),
                     (FieldPart::Frame, "The bordered box around the control."),
                     (FieldPart::Control, "The element the label names."),

@@ -72,6 +72,8 @@ explains how parts work.
 |---|---|---|
 | `CheckboxPart::Label` | `label` | The label beside the control. |
 | `CheckboxPart::Required` | `required` | The required asterisk, in the label. |
+| `CheckboxPart::LabelRow` | `label-row` | The row holding the label and its `label_trailing`; drawn only with a trailing slot. |
+| `CheckboxPart::LabelTrailing` | `label-trailing` | The `label_trailing` slot, at the end of the label row. |
 | `CheckboxPart::Description` | `description` | The caption between the label and the control. |
 | `CheckboxPart::Control` | `control` | Holds the hidden input and the box, beside the label. |
 | `CheckboxPart::Box` | `box` | The drawn square and its mark. |

@@ -180,6 +180,8 @@ explains how parts work.
 |---|---|---|
 | `CascaderPart::Label` | `label` | The label above the control. |
 | `CascaderPart::Required` | `required` | The required asterisk, in the label. |
+| `CascaderPart::LabelRow` | `label-row` | The row holding the label and its `label_trailing`; drawn only with a trailing slot. |
+| `CascaderPart::LabelTrailing` | `label-trailing` | The `label_trailing` slot, at the end of the label row. |
 | `CascaderPart::Description` | `description` | The caption between the label and the control. |
 | `CascaderPart::Frame` | `frame` | The bordered box around the control. |
 | `CascaderPart::Control` | `control` | The element the label names. |

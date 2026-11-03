@@ -143,6 +143,8 @@ pub fn SegmentedControlPage() -> Element {
                 .parts("SegmentedControlPart", vec![
                     (SegmentedControlPart::Label, "The label above the control."),
                     (SegmentedControlPart::Required, "The required asterisk, in the label."),
+                    (SegmentedControlPart::LabelRow, "The row holding the label and its `label_trailing`; drawn only with a trailing slot."),
+                    (SegmentedControlPart::LabelTrailing, "The `label_trailing` slot, at the end of the label row."),
                     (SegmentedControlPart::Description, "The caption between the label and the control."),
                     (SegmentedControlPart::Control, "The connected strip."),
                     (SegmentedControlPart::Segment, "One segment's visible label."),

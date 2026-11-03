@@ -64,7 +64,10 @@ fn FieldPartsPage() -> Element {
     rsx! {
         Flex { direction: "column", gap: "md", max_width: "360px",
             TextField { id: "text", label: "Name", required: true, helper: "Your full name",
+                label_trailing: "Optional",
                 parts: Parts::new()
+                    .part(FieldPart::LabelRow, sx().padding_top("6px"))
+                    .part(FieldPart::LabelTrailing, sx().letter_spacing("4px"))
                     .part(FieldPart::Label, sx().font_style("italic"))
                     .part(FieldPart::Required, sx().letter_spacing("3px"))
                     .part(FieldPart::Helper, sx().letter_spacing("2px"))

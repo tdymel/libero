@@ -312,6 +312,8 @@ pub fn TagsFieldPage() -> Element {
                 .parts("TagsFieldPart", vec![
                     (TagsFieldPart::Label, "The label above the control."),
                     (TagsFieldPart::Required, "The required asterisk, in the label."),
+                    (TagsFieldPart::LabelRow, "The row holding the label and its `label_trailing`; drawn only with a trailing slot."),
+                    (TagsFieldPart::LabelTrailing, "The `label_trailing` slot, at the end of the label row."),
                     (TagsFieldPart::Description, "The caption between the label and the control."),
                     (TagsFieldPart::Frame, "The bordered box around the control."),
                     (TagsFieldPart::Control, "The element the label names."),

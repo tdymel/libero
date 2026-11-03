@@ -73,6 +73,8 @@ pub fn CheckboxPage() -> Element {
                 .parts("CheckboxPart", vec![
                     (CheckboxPart::Label, "The label beside the control."),
                     (CheckboxPart::Required, "The required asterisk, in the label."),
+                    (CheckboxPart::LabelRow, "The row holding the label and its `label_trailing`; drawn only with a trailing slot."),
+                    (CheckboxPart::LabelTrailing, "The `label_trailing` slot, at the end of the label row."),
                     (CheckboxPart::Description, "The caption between the label and the control."),
                     (CheckboxPart::Control, "Holds the hidden input and the box, beside the label."),
                     (CheckboxPart::Box, "The drawn square and its mark."),

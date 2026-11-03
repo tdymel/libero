@@ -131,9 +131,9 @@ pub(super) fn label_row(label: Option<Element>, trailing: &Caption) -> Option<El
 
     let content = caption_content(trailing);
     Some(rsx! {
-        div { "data-slot": "label-row",
+        div { "data-slot": FieldPart::LabelRow.slot(),
             {label}
-            span { "data-slot": "label-trailing", {content} }
+            span { "data-slot": FieldPart::LabelTrailing.slot(), {content} }
         }
     })
 }

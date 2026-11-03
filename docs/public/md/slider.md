@@ -127,6 +127,8 @@ explains how parts work.
 |---|---|---|
 | `SliderPart::Label` | `label` | The label above the control. |
 | `SliderPart::Required` | `required` | The required asterisk, in the label. |
+| `SliderPart::LabelRow` | `label-row` | The row holding the label and its `label_trailing`; drawn only with a trailing slot. |
+| `SliderPart::LabelTrailing` | `label-trailing` | The `label_trailing` slot, at the end of the label row. |
 | `SliderPart::Description` | `description` | The caption between the label and the control. |
 | `SliderPart::Control` | `control` | The slider under the label: the track and the room around it. |
 | `SliderPart::Track` | `track` | The rail the thumbs run along. |

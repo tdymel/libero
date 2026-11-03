@@ -75,6 +75,8 @@ explains how parts work.
 |---|---|---|
 | `RatingPart::Label` | `label` | The label above the control. |
 | `RatingPart::Required` | `required` | The required asterisk, in the label. |
+| `RatingPart::LabelRow` | `label-row` | The row holding the label and its `label_trailing`; drawn only with a trailing slot. |
+| `RatingPart::LabelTrailing` | `label-trailing` | The `label_trailing` slot, at the end of the label row. |
 | `RatingPart::Description` | `description` | The caption between the label and the control. |
 | `RatingPart::Control` | `control` | The row of symbols. |
 | `RatingPart::Symbol` | `symbol` | One symbol with its hit area. |

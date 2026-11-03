@@ -143,6 +143,8 @@ pub fn SwitchGroupPage() -> Element {
                 .parts("SwitchGroupPart", vec![
                     (SwitchGroupPart::Label, "The label above the control."),
                     (SwitchGroupPart::Required, "The required asterisk, in the label."),
+                    (SwitchGroupPart::LabelRow, "The row holding the label and its `label_trailing`; drawn only with a trailing slot."),
+                    (SwitchGroupPart::LabelTrailing, "The `label_trailing` slot, at the end of the label row."),
                     (SwitchGroupPart::Description, "The caption between the label and the control."),
                     (SwitchGroupPart::Control, "The `group` holding the options."),
                     (SwitchGroupPart::Track, "Each option's track."),

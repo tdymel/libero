@@ -127,6 +127,8 @@ explains how parts work.
 |---|---|---|
 | `TagsFieldPart::Label` | `label` | The label above the control. |
 | `TagsFieldPart::Required` | `required` | The required asterisk, in the label. |
+| `TagsFieldPart::LabelRow` | `label-row` | The row holding the label and its `label_trailing`; drawn only with a trailing slot. |
+| `TagsFieldPart::LabelTrailing` | `label-trailing` | The `label_trailing` slot, at the end of the label row. |
 | `TagsFieldPart::Description` | `description` | The caption between the label and the control. |
 | `TagsFieldPart::Frame` | `frame` | The bordered box around the control. |
 | `TagsFieldPart::Control` | `control` | The element the label names. |

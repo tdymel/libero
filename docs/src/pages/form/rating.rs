@@ -103,6 +103,8 @@ pub fn RatingPage() -> Element {
             .parts("RatingPart", vec![
                 (RatingPart::Label, "The label above the control."),
                 (RatingPart::Required, "The required asterisk, in the label."),
+                (RatingPart::LabelRow, "The row holding the label and its `label_trailing`; drawn only with a trailing slot."),
+                (RatingPart::LabelTrailing, "The `label_trailing` slot, at the end of the label row."),
                 (RatingPart::Description, "The caption between the label and the control."),
                 (RatingPart::Control, "The row of symbols."),
                 (RatingPart::Symbol, "One symbol with its hit area."),

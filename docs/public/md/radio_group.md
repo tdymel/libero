@@ -112,6 +112,8 @@ explains how parts work.
 |---|---|---|
 | `RadioGroupPart::Label` | `label` | The label above the control. |
 | `RadioGroupPart::Required` | `required` | The required asterisk, in the label. |
+| `RadioGroupPart::LabelRow` | `label-row` | The row holding the label and its `label_trailing`; drawn only with a trailing slot. |
+| `RadioGroupPart::LabelTrailing` | `label-trailing` | The `label_trailing` slot, at the end of the label row. |
 | `RadioGroupPart::Description` | `description` | The caption between the label and the control. |
 | `RadioGroupPart::Control` | `control` | The `radiogroup` holding the options. |
 | `RadioGroupPart::Circle` | `circle` | Each option's ring. |
@@ -125,6 +127,8 @@ explains how parts work.
 |---|---|---|
 | `RadioPart::Label` | `label` | The label beside the control. |
 | `RadioPart::Required` | `required` | The required asterisk, in the label. |
+| `RadioPart::LabelRow` | `label-row` | The row holding the label and its `label_trailing`; drawn only with a trailing slot. |
+| `RadioPart::LabelTrailing` | `label-trailing` | The `label_trailing` slot, at the end of the label row. |
 | `RadioPart::Description` | `description` | The caption between the label and the control. |
 | `RadioPart::Control` | `control` | Holds the hidden input and the circle, beside the label. |
 | `RadioPart::Circle` | `circle` | The drawn ring. |

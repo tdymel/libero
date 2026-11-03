@@ -143,6 +143,8 @@ pub fn CheckboxGroupPage() -> Element {
                 .parts("CheckboxGroupPart", vec![
                     (CheckboxGroupPart::Label, "The label above the control."),
                     (CheckboxGroupPart::Required, "The required asterisk, in the label."),
+                    (CheckboxGroupPart::LabelRow, "The row holding the label and its `label_trailing`; drawn only with a trailing slot."),
+                    (CheckboxGroupPart::LabelTrailing, "The `label_trailing` slot, at the end of the label row."),
                     (CheckboxGroupPart::Description, "The caption between the label and the control."),
                     (CheckboxGroupPart::Control, "The `group` holding the options."),
                     (CheckboxGroupPart::Box, "Each option's box."),

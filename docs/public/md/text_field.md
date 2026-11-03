@@ -76,6 +76,8 @@ explains how parts work.
 |---|---|---|
 | `FieldPart::Label` | `label` | The label above the control. |
 | `FieldPart::Required` | `required` | The required asterisk, in the label. |
+| `FieldPart::LabelRow` | `label-row` | The row holding the label and its `label_trailing`; drawn only with a trailing slot. |
+| `FieldPart::LabelTrailing` | `label-trailing` | The `label_trailing` slot, at the end of the label row. |
 | `FieldPart::Description` | `description` | The caption between the label and the control. |
 | `FieldPart::Frame` | `frame` | The bordered box around the control. |
 | `FieldPart::Leading` | `leading` | The slot before the control: an icon, a prefix. |

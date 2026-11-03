@@ -187,6 +187,8 @@ pub fn RangeSliderPage() -> Element {
                 .parts("SliderPart", vec![
                     (SliderPart::Label, "The label above the control."),
                     (SliderPart::Required, "The required asterisk, in the label."),
+                    (SliderPart::LabelRow, "The row holding the label and its `label_trailing`; drawn only with a trailing slot."),
+                    (SliderPart::LabelTrailing, "The `label_trailing` slot, at the end of the label row."),
                     (SliderPart::Description, "The caption between the label and the control."),
                     (SliderPart::Control, "The slider under the label: the track and the room around it."),
                     (SliderPart::Track, "The rail the thumbs run along."),

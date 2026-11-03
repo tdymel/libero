@@ -136,6 +136,8 @@ pub fn RadioGroupPage() -> Element {
                 .parts("RadioGroupPart", vec![
                     (RadioGroupPart::Label, "The label above the control."),
                     (RadioGroupPart::Required, "The required asterisk, in the label."),
+                    (RadioGroupPart::LabelRow, "The row holding the label and its `label_trailing`; drawn only with a trailing slot."),
+                    (RadioGroupPart::LabelTrailing, "The `label_trailing` slot, at the end of the label row."),
                     (RadioGroupPart::Description, "The caption between the label and the control."),
                     (RadioGroupPart::Control, "The `radiogroup` holding the options."),
                     (RadioGroupPart::Circle, "Each option's ring."),
@@ -184,6 +186,8 @@ pub fn RadioGroupPage() -> Element {
                 .parts("RadioPart", vec![
                     (RadioPart::Label, "The label beside the control."),
                     (RadioPart::Required, "The required asterisk, in the label."),
+                    (RadioPart::LabelRow, "The row holding the label and its `label_trailing`; drawn only with a trailing slot."),
+                    (RadioPart::LabelTrailing, "The `label_trailing` slot, at the end of the label row."),
                     (RadioPart::Description, "The caption between the label and the control."),
                     (RadioPart::Control, "Holds the hidden input and the circle, beside the label."),
                     (RadioPart::Circle, "The drawn ring."),

@@ -69,6 +69,8 @@ pub fn SwitchPage() -> Element {
             .parts("SwitchPart", vec![
                 (SwitchPart::Label, "The label beside the control."),
                 (SwitchPart::Required, "The required asterisk, in the label."),
+                (SwitchPart::LabelRow, "The row holding the label and its `label_trailing`; drawn only with a trailing slot."),
+                (SwitchPart::LabelTrailing, "The `label_trailing` slot, at the end of the label row."),
                 (SwitchPart::Description, "The caption between the label and the control."),
                 (SwitchPart::Control, "Holds the hidden input and the track, beside the label."),
                 (SwitchPart::Track, "The pill the thumb slides along."),

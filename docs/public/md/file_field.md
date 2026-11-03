@@ -118,6 +118,8 @@ explains how parts work.
 |---|---|---|
 | `FileFieldPart::Label` | `label` | The label above the control. |
 | `FileFieldPart::Required` | `required` | The required asterisk, in the label. |
+| `FileFieldPart::LabelRow` | `label-row` | The row holding the label and its `label_trailing`; drawn only with a trailing slot. |
+| `FileFieldPart::LabelTrailing` | `label-trailing` | The `label_trailing` slot, at the end of the label row. |
 | `FileFieldPart::Description` | `description` | The caption between the label and the control. |
 | `FileFieldPart::Frame` | `frame` | The `Input` variant's bordered box. |
 | `FileFieldPart::Control` | `control` | The group holding the Browse button: inside the frame, or the dropzone's surface. |

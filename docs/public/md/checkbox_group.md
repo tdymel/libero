@@ -87,6 +87,8 @@ explains how parts work.
 |---|---|---|
 | `CheckboxGroupPart::Label` | `label` | The label above the control. |
 | `CheckboxGroupPart::Required` | `required` | The required asterisk, in the label. |
+| `CheckboxGroupPart::LabelRow` | `label-row` | The row holding the label and its `label_trailing`; drawn only with a trailing slot. |
+| `CheckboxGroupPart::LabelTrailing` | `label-trailing` | The `label_trailing` slot, at the end of the label row. |
 | `CheckboxGroupPart::Description` | `description` | The caption between the label and the control. |
 | `CheckboxGroupPart::Control` | `control` | The `group` holding the options. |
 | `CheckboxGroupPart::Box` | `box` | Each option's box. |

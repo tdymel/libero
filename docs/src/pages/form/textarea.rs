@@ -69,6 +69,8 @@ pub fn TextareaPage() -> Element {
                 .parts("TextareaPart", vec![
                     (TextareaPart::Label, "The label above the control."),
                     (TextareaPart::Required, "The required asterisk, in the label."),
+                    (TextareaPart::LabelRow, "The row holding the label and its `label_trailing`; drawn only with a trailing slot."),
+                    (TextareaPart::LabelTrailing, "The `label_trailing` slot, at the end of the label row."),
                     (TextareaPart::Description, "The caption between the label and the control."),
                     (TextareaPart::Frame, "The bordered box around the control."),
                     (TextareaPart::Control, "The element the label names."),

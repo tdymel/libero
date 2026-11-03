@@ -81,6 +81,8 @@ explains how parts work.
 |---|---|---|
 | `SwitchGroupPart::Label` | `label` | The label above the control. |
 | `SwitchGroupPart::Required` | `required` | The required asterisk, in the label. |
+| `SwitchGroupPart::LabelRow` | `label-row` | The row holding the label and its `label_trailing`; drawn only with a trailing slot. |
+| `SwitchGroupPart::LabelTrailing` | `label-trailing` | The `label_trailing` slot, at the end of the label row. |
 | `SwitchGroupPart::Description` | `description` | The caption between the label and the control. |
 | `SwitchGroupPart::Control` | `control` | The `group` holding the options. |
 | `SwitchGroupPart::Track` | `track` | Each option's track. |

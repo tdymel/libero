@@ -343,6 +343,8 @@ pub fn CascaderPage() -> Element {
                 .parts("CascaderPart", vec![
                     (CascaderPart::Label, "The label above the control."),
                     (CascaderPart::Required, "The required asterisk, in the label."),
+                    (CascaderPart::LabelRow, "The row holding the label and its `label_trailing`; drawn only with a trailing slot."),
+                    (CascaderPart::LabelTrailing, "The `label_trailing` slot, at the end of the label row."),
                     (CascaderPart::Description, "The caption between the label and the control."),
                     (CascaderPart::Frame, "The bordered box around the control."),
                     (CascaderPart::Control, "The element the label names."),

@@ -237,6 +237,8 @@ pub fn FileFieldPage() -> Element {
                 .parts("FileFieldPart", vec![
                     (FileFieldPart::Label, "The label above the control."),
                     (FileFieldPart::Required, "The required asterisk, in the label."),
+                    (FileFieldPart::LabelRow, "The row holding the label and its `label_trailing`; drawn only with a trailing slot."),
+                    (FileFieldPart::LabelTrailing, "The `label_trailing` slot, at the end of the label row."),
                     (FileFieldPart::Description, "The caption between the label and the control."),
                     (FileFieldPart::Frame, "The `Input` variant's bordered box."),
                     (FileFieldPart::Control, "The group holding the Browse button: inside the frame, or the dropzone's surface."),

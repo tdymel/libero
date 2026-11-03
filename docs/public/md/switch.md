@@ -71,6 +71,8 @@ explains how parts work.
 |---|---|---|
 | `SwitchPart::Label` | `label` | The label beside the control. |
 | `SwitchPart::Required` | `required` | The required asterisk, in the label. |
+| `SwitchPart::LabelRow` | `label-row` | The row holding the label and its `label_trailing`; drawn only with a trailing slot. |
+| `SwitchPart::LabelTrailing` | `label-trailing` | The `label_trailing` slot, at the end of the label row. |
 | `SwitchPart::Description` | `description` | The caption between the label and the control. |
 | `SwitchPart::Control` | `control` | Holds the hidden input and the track, beside the label. |
 | `SwitchPart::Track` | `track` | The pill the thumb slides along. |

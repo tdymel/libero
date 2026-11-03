@@ -127,6 +127,10 @@ macro_rules! field_parts_enum {
                 Label = "label" => "& > [data-slot='label'], & > [data-slot='label-row'] > [data-slot='label']",
                 /// The required asterisk, in the label.
                 Required = "required" => "& > [data-slot='label'] > [data-slot='required'], & > [data-slot='label-row'] > [data-slot='label'] > [data-slot='required']",
+                /// The row holding the label and its `label_trailing`; present only with a trailing slot.
+                LabelRow = "label-row" => "& > [data-slot='label-row']",
+                /// The `label_trailing` slot, at the end of the label row.
+                LabelTrailing = "label-trailing" => "& > [data-slot='label-row'] > [data-slot='label-trailing']",
                 /// The caption between the label and the control.
                 Description = "description" => "& > [data-slot='description']",
                 $($frame)*
@@ -181,6 +185,8 @@ field_parts_enum! {
 
 #[cfg(test)]
 mod tests {
+    use dioxus::prelude::*;
+
     use crate::components::{
         common::Part,
         form::{
@@ -210,7 +216,13 @@ mod tests {
     #[test]
     fn the_part_tables_are_stable() {
         let caption = |own: &[&'static str]| {
-            let mut slots = vec!["label", "required", "description"];
+            let mut slots = vec![
+                "label",
+                "required",
+                "label-row",
+                "label-trailing",
+                "description",
+            ];
             slots.extend(own);
             slots.extend(["helper", "status"]);
             slots
@@ -312,5 +324,35 @@ mod tests {
         assert_eq!(SelectPart::Control.selector(), shared(FieldPart::Control));
         assert_eq!(TextareaPart::Label.selector(), shared(FieldPart::Label));
         assert_eq!(SliderPart::Status.selector(), shared(FieldPart::Status));
+        assert_eq!(
+            CheckboxPart::LabelTrailing.selector(),
+            shared(FieldPart::LabelTrailing)
+        );
+        assert_eq!(
+            FileFieldPart::LabelRow.selector(),
+            shared(FieldPart::LabelRow)
+        );
+    }
+
+    /// Todo 5431: a `parts` style on the new parts targets the markup `label_trailing` renders.
+    #[test]
+    fn the_label_row_parts_name_the_rendered_slots() {
+        use crate::{LiberoProvider, components::TextField};
+        let mut dom = VirtualDom::new(|| {
+            rsx! { LiberoProvider { TextField { label: "A", label_trailing: "Optional" } } }
+        });
+        dom.rebuild_in_place();
+        let page = dioxus_ssr::render(&dom);
+        for part in [FieldPart::LabelRow, FieldPart::LabelTrailing] {
+            assert!(
+                page.contains(&format!("data-slot=\"{}\"", part.slot())),
+                "{page}"
+            );
+        }
+        let selector = FieldPart::LabelTrailing.selector();
+        assert_eq!(
+            selector,
+            "& > [data-slot='label-row'] > [data-slot='label-trailing']"
+        );
     }
 }

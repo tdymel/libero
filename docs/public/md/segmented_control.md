@@ -102,6 +102,8 @@ explains how parts work.
 |---|---|---|
 | `SegmentedControlPart::Label` | `label` | The label above the control. |
 | `SegmentedControlPart::Required` | `required` | The required asterisk, in the label. |
+| `SegmentedControlPart::LabelRow` | `label-row` | The row holding the label and its `label_trailing`; drawn only with a trailing slot. |
+| `SegmentedControlPart::LabelTrailing` | `label-trailing` | The `label_trailing` slot, at the end of the label row. |
 | `SegmentedControlPart::Description` | `description` | The caption between the label and the control. |
 | `SegmentedControlPart::Control` | `control` | The connected strip. |
 | `SegmentedControlPart::Segment` | `segment` | One segment's visible label. |

@@ -105,6 +105,8 @@ pub fn PhoneFieldPage() -> Element {
                 .parts("PhoneFieldPart", vec![
                     (PhoneFieldPart::Label, "The label above the control."),
                     (PhoneFieldPart::Required, "The required asterisk, in the label."),
+                    (PhoneFieldPart::LabelRow, "The row holding the label and its `label_trailing`; drawn only with a trailing slot."),
+                    (PhoneFieldPart::LabelTrailing, "The `label_trailing` slot, at the end of the label row."),
                     (PhoneFieldPart::Description, "The caption between the label and the control."),
                     (PhoneFieldPart::Frame, "The bordered box around the control."),
                     (PhoneFieldPart::Leading, "The slot before the control: an icon, a prefix."),
