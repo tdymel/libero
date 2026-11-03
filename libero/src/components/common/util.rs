@@ -1,5 +1,10 @@
 use std::fmt::Write as _;
 
+use crate::{
+    sx::{Sx, sx},
+    theme::CssVar,
+};
+
 /// A non-global attribute to push into a `Vec<Attribute>` by hand.
 pub(crate) fn attr<T>(
     name: &'static str,
@@ -35,9 +40,46 @@ pub(crate) fn safe_area_padding(base: &str, side: &str) -> String {
     format!("calc({base} + env(safe-area-inset-{side}, 0px))")
 }
 
+/// A docked `NavigationBar`'s height on `:root`, its bottom inset included; FAB and toasts rise above it.
+pub(crate) const NAVIGATION_BAR_HEIGHT_VAR: CssVar = CssVar::new("--lsx-navigation-bar-height");
+
+/// Set to `0` by a panel that pads that inline side's safe area, so a `Sidebar` inside skips it (5519).
+pub(crate) const SAFE_AREA_INLINE_START_VAR: CssVar = CssVar::new("--lsx-safe-area-inline-start");
+pub(crate) const SAFE_AREA_INLINE_END_VAR: CssVar = CssVar::new("--lsx-safe-area-inline-end");
+
+/// `padding-inline-start` (or `-end`) plus the inset of the physical side it lands on, flipped
+/// under RTL. `nested` scales the inset by that side's var above.
+pub(crate) fn safe_inline_padding(base: &str, start: bool, nested: bool) -> Sx {
+    let (property, var, ltr, rtl) = if start {
+        (
+            "padding-inline-start",
+            SAFE_AREA_INLINE_START_VAR,
+            "left",
+            "right",
+        )
+    } else {
+        (
+            "padding-inline-end",
+            SAFE_AREA_INLINE_END_VAR,
+            "right",
+            "left",
+        )
+    };
+    let side = |physical: &str| {
+        let inset = format!("env(safe-area-inset-{physical}, 0px)");
+        let inset = if nested {
+            format!("{inset} * {}", var.value_or("1"))
+        } else {
+            inset
+        };
+        sx().with(property, format!("calc({base} + {inset})"))
+    };
+    sx().and(side(ltr)).rtl(side(rtl))
+}
+
 #[cfg(test)]
 mod tests {
-    use super::{css_string, safe_area_padding};
+    use super::{css_string, safe_area_padding, safe_inline_padding};
 
     #[test]
     fn safe_area_padding_adds_the_inset_to_the_base() {
@@ -45,6 +87,21 @@ mod tests {
             safe_area_padding("8px", "bottom"),
             "calc(8px + env(safe-area-inset-bottom, 0px))"
         );
+    }
+
+    /// Todo 5523: the start side is the left, the right under RTL; nested scales the inset.
+    #[test]
+    fn inline_padding_flips_under_rtl() {
+        let css = crate::css::Stylesheet::from(&safe_inline_padding("8px", true, true));
+        let css = css.as_str();
+        for side in ["left", "right"] {
+            assert!(
+                css.contains(&format!(
+                    "padding-inline-start:calc(8px + env(safe-area-inset-{side}, 0px) * var(--lsx-safe-area-inline-start, 1))"
+                )),
+                "{css}"
+            );
+        }
     }
 
     #[test]

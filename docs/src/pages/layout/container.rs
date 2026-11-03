@@ -31,7 +31,7 @@ pub fn ContainerPage() -> Element {
                     .doc("Max width, a breakpoint (`xs` is 36rem, `xxl` 101rem) or a CSS length."),
                 prop("gutters", "ThemeAwareValue")
                     .default(theme.container.gutters.as_str())
-                    .doc("Horizontal padding, a spacing step or a CSS length. Each side grows to the safe-area inset when that is wider, as beside a landscape notch."),
+                    .doc("Horizontal padding, a spacing step or a CSS length. It ignores the safe area: a full-bleed `Container` at the screen edge pads the notch itself, with `env(safe-area-inset-left)` and `-right` in its `sx`."),
                 prop("children", "Element").doc("The container's content."),
             ])],
             accessibility: a11y()

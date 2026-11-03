@@ -2,7 +2,7 @@
 //! default size beside content at 320px, and content wider than the panel scrolling.
 
 use e2e::browser::block_on;
-use e2e::passes::keyboard;
+use e2e::passes::{keyboard, pointer};
 use e2e::wait::PageBounded;
 use e2e::{Fixture, Suite, Viewport, ax, wait};
 
@@ -214,6 +214,72 @@ fn a_side_panel_clears_the_notch_on_its_side() {
                 .into_value()
                 .unwrap();
             assert_eq!(extra, [start, end, [0.0, 0.0], [0.0, 0.0]], "{dir}");
+            fixture.close().await.unwrap();
+        }
+    });
+}
+
+/// Todos 5519, 5525: a Container is not edge-bound and pads no inset; a start Sidebar inside a
+/// start drawer leaves the notch to the drawer, so neither clears it twice.
+#[test]
+fn only_the_outermost_edge_panel_clears_the_notch() {
+    use chromiumoxide::cdp::browser_protocol::emulation::{
+        SafeAreaInsets, SetSafeAreaInsetsOverrideParams,
+    };
+    // [left, right] padding of one element.
+    const PADDING: &str = "(sel => { const s = getComputedStyle(document.querySelector(sel)); \
+         return [s.paddingLeft, s.paddingRight].map(parseFloat); })";
+    const SCROLL: &str = " > [data-slot='scroll']";
+
+    block_on(async {
+        for (dir, beside) in [("ltr", [63.0, 16.0]), ("rtl", [16.0, 63.0])] {
+            let fixture = Fixture::open("/sidebar/safe-area", Viewport::Mobile)
+                .await
+                .unwrap();
+            let page = &fixture.page;
+            page.execute_bounded(SetSafeAreaInsetsOverrideParams::new(SafeAreaInsets {
+                left: Some(47),
+                right: Some(47),
+                ..Default::default()
+            }))
+            .await
+            .unwrap();
+            page.evaluate_bounded(format!("document.documentElement.dir = '{dir}'"))
+                .await
+                .unwrap();
+            wait::for_visible(page, "#content").await.unwrap();
+            let padding = async |selector: String| -> [f64; 2] {
+                page.evaluate_bounded(format!("{PADDING}({selector:?})"))
+                    .await
+                    .unwrap()
+                    .into_value()
+                    .unwrap()
+            };
+
+            // The start Sidebar at the edge: lg (16px) plus the 47px inset on its side.
+            assert_eq!(padding(format!("#beside{SCROLL}")).await, beside, "{dir}");
+            // Plain gutters on both sides, the inset left to the panel beside it.
+            let gutters = padding("#content".into()).await;
+            assert!(
+                gutters[0] == gutters[1] && gutters[0] < 47.0,
+                "{dir}: the container {gutters:?}"
+            );
+
+            pointer::click(page, "#open").await.unwrap();
+            wait::for_visible(page, "#in-drawer").await.unwrap();
+            let start = match dir {
+                "ltr" => 0,
+                _ => 1,
+            };
+            let dialog = padding("[role=dialog]".into()).await;
+            assert_eq!(dialog[start], 63.0, "{dir}: the drawer {dialog:?}");
+            let nested = padding(format!("#in-drawer{SCROLL}")).await;
+            assert_eq!(nested, [16.0, 16.0], "{dir}: the nested sidebar");
+
+            fixture
+                .console
+                .assert_clean(&format!("safe-area panels, {dir}"))
+                .unwrap();
             fixture.close().await.unwrap();
         }
     });

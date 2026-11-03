@@ -36,7 +36,7 @@ fn Demo() -> Element {
 |---|---|---|---|
 | `component` | `HtmlTag` | `div` | The element to render. |
 | `size` | `ThemeAwareValue` | `lg` | Max width, a breakpoint (`xs` is 36rem, `xxl` 101rem) or a CSS length. |
-| `gutters` | `ThemeAwareValue` | `md` | Horizontal padding, a spacing step or a CSS length. Each side grows to the safe-area inset when that is wider, as beside a landscape notch. |
+| `gutters` | `ThemeAwareValue` | `md` | Horizontal padding, a spacing step or a CSS length. It ignores the safe area: a full-bleed `Container` at the screen edge pads the notch itself, with `env(safe-area-inset-left)` and `-right` in its `sx`. |
 | `children` | `Element` | required | The container's content. |
 
 Like every component, `Container` also takes the shared props `sx`, `class`,

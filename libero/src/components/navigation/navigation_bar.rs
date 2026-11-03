@@ -8,9 +8,9 @@ use crate::{
     components::{
         accessibility::visually_hidden_absolute_sx,
         common::{
-            HtmlTag, Input, Part, States, Variables, attr, base_props, disabled_look_sx,
-            forced_on_sx, input_from_str, inset_focus_ring_sx, is_empty_element, label_color,
-            names_itself, on_tint_color, parts_enum, safe_area_padding, sx_source,
+            HtmlTag, Input, NAVIGATION_BAR_HEIGHT_VAR, Part, States, Variables, attr, base_props,
+            disabled_look_sx, forced_on_sx, input_from_str, inset_focus_ring_sx, is_empty_element,
+            label_color, names_itself, on_tint_color, parts_enum, safe_area_padding, sx_source,
             use_name_warning, use_style_attributes, variables,
         },
         form::use_fieldset_disabled,
@@ -118,8 +118,6 @@ str_enum! {
 
 input_from_str!(NavigationBarIndicator);
 
-/// The bar's height on `:root` while a sticky or fixed one is mounted.
-const NAVIGATION_BAR_HEIGHT_VAR: CssVar = CssVar::new("--lsx-navigation-bar-height");
 /// The rail's width on `:root` while one is mounted.
 const NAVIGATION_RAIL_WIDTH_VAR: CssVar = CssVar::new("--lsx-navigation-rail-width");
 /// The rail's width, its border included (M3).

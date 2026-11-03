@@ -879,6 +879,64 @@ fn f8_focuses_the_newest_notification() {
     });
 }
 
+/// Todo 5520: a mouse press on a toast, then F8 in, then a close with no key or press inside
+/// returns focus with a ring: the press counted only until focus came by keyboard.
+#[test]
+fn f8_after_a_mouse_press_returns_focus_with_a_ring() {
+    block_on(async {
+        let fixture = Fixture::open("/notifications-clear", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+
+        pointer::click(page, TRIGGER).await.unwrap();
+        wait::for_visible(page, "[aria-live] li").await.unwrap();
+        // Its padding corner: on the toast, off its button.
+        let [x, y]: [f64; 2] = js(
+            page,
+            "(r => [r.left + 4, r.top + 4])(document.querySelector('[aria-live] li').getBoundingClientRect())",
+        )
+        .await;
+        pointer::click_at(page, pointer::Point { x, y })
+            .await
+            .unwrap();
+        wait::for_js_true(
+            page,
+            "document.activeElement?.matches('[aria-live] li') ?? false",
+            "the press to focus the toast",
+        )
+        .await
+        .unwrap();
+        pointer::click(page, TRIGGER).await.unwrap();
+
+        keyboard::press(page, F8).await.unwrap();
+        wait::for_js_true(
+            page,
+            "document.activeElement?.matches('li .clear-all') ?? false",
+            "F8 to focus the newest notification",
+        )
+        .await
+        .unwrap();
+        // A programmatic close, as an auto-close: no keydown inside clears the flag.
+        let _: bool = js(page, "(document.activeElement.click(), true)").await;
+        wait::for_js_true(
+            page,
+            &format!(
+                "!document.querySelector('[aria-live] li') && \
+                 document.activeElement === document.querySelector({TRIGGER:?})"
+            ),
+            "the close to return focus to the trigger",
+        )
+        .await
+        .unwrap();
+        let ring: bool = js(page, "document.activeElement.matches(':focus-visible')").await;
+        assert!(ring, "focus came back without a ring after F8");
+
+        fixture.console.assert_clean("F8 after a press").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
 /// Todo 670: with the app's host and a contained one both showing, F8 goes to
 /// the newest notification across both, and only one host moves focus.
 #[test]

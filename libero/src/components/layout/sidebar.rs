@@ -5,7 +5,7 @@ use crate::{
     components::{
         common::{
             HtmlTag, Input, Part, ScaleOrCss, States, Variables, base_props, input_from_str,
-            names_itself, parts_enum, safe_area_padding, variables,
+            names_itself, parts_enum, safe_inline_padding, variables,
         },
         layout::{ScrollArea, use_box},
     },
@@ -22,21 +22,11 @@ static SIDEBAR_SCROLL_SX: StaticSx = StaticSx::new(|| sx().padding("lg"));
 static SIDEBAR_SCROLL_START_SX: StaticSx = StaticSx::new(|| safe_side(true));
 static SIDEBAR_SCROLL_END_SX: StaticSx = StaticSx::new(|| safe_side(false));
 
-/// A start or end panel clears a landscape notch on the physical side it sits on (5469).
+/// A start or end panel clears a landscape notch on its side (5469), unless a Drawer around it does (5519).
 fn safe_side(start: bool) -> Sx {
     let padding = SizeCss::SPACING.value(Size::Lg);
-    let property = if start {
-        "padding-inline-start"
-    } else {
-        "padding-inline-end"
-    };
-    let side = |physical: &str| sx().with(property, safe_area_padding(&padding, physical));
-    let (ltr, rtl) = if start {
-        ("left", "right")
-    } else {
-        ("right", "left")
-    };
-    sx().padding("lg").and(side(ltr)).rtl(side(rtl))
+    sx().padding("lg")
+        .and(safe_inline_padding(&padding, start, true))
 }
 
 static SIDEBAR_BASE_SX: StaticSx = StaticSx::new(|| {
@@ -89,7 +79,7 @@ base_props! {
     parts(SidebarPart);
     pub struct SidebarProps {
         /// The side it sits on, its border facing the content, and the axis `size` sizes; it does not place the panel.
-        /// `start` and `end` clear that side's safe area; `top` and `bottom` leave the insets to the `Header` or `NavigationBar`.
+        /// `start` and `end` clear that side's safe area, unless a drawer around it does; `top` and `bottom` leave the insets to the `Header` or `NavigationBar`.
         #[props(default, into)]
         side: Input<SidebarSide>,
         /// The width (or height, on `top` or `bottom`): a size word or any CSS, as `size: "18rem"`.

@@ -2,7 +2,10 @@ use dioxus::prelude::*;
 
 use crate::{
     components::{
-        common::{Input, ScaleOrCss, base_props, input_from_str, safe_area_padding, with_own},
+        common::{
+            Input, SAFE_AREA_INLINE_END_VAR, SAFE_AREA_INLINE_START_VAR, ScaleOrCss, base_props,
+            input_from_str, safe_area_padding, safe_inline_padding, with_own,
+        },
         layout::{Float, Placement},
         overlay::Dialog,
     },
@@ -69,23 +72,15 @@ static DRAWER_SX: StaticSx = StaticSx::new(|| {
 /// A side panel clears the notch on its inline edge and the bars above and below (5443).
 fn safe_edges(start: bool) -> Sx {
     let padding = SizeCss::SPACING.value(Size::Lg);
-    let side = |physical: &str| {
-        let property = if start {
-            "padding-inline-start"
-        } else {
-            "padding-inline-end"
-        };
-        sx().with(property, safe_area_padding(&padding, physical))
-    };
-    let (ltr, rtl) = if start {
-        ("left", "right")
+    let var = if start {
+        SAFE_AREA_INLINE_START_VAR
     } else {
-        ("right", "left")
+        SAFE_AREA_INLINE_END_VAR
     };
     sx().with("padding-top", safe_area_padding(&padding, "top"))
         .with("padding-bottom", safe_area_padding(&padding, "bottom"))
-        .and(side(ltr))
-        .rtl(side(rtl))
+        .and(safe_inline_padding(&padding, start, false))
+        .var(var, "0")
 }
 
 /// A top or bottom panel clears the bar at its edge and the notch on both sides.
@@ -94,6 +89,8 @@ fn safe_sides(edge: &str) -> Sx {
     sx().with(format!("padding-{edge}"), safe_area_padding(&padding, edge))
         .with("padding-left", safe_area_padding(&padding, "left"))
         .with("padding-right", safe_area_padding(&padding, "right"))
+        .var(SAFE_AREA_INLINE_START_VAR, "0")
+        .var(SAFE_AREA_INLINE_END_VAR, "0")
 }
 
 // As tall as the panel's top padding, whatever sets it: no padding, no strip.

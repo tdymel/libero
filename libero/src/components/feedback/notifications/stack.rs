@@ -3,14 +3,13 @@ use dioxus::prelude::*;
 use super::item::{ItemProps, NotificationItem};
 use crate::{
     components::{
-        common::{HtmlTag, Input},
+        common::{HtmlTag, Input, NAVIGATION_BAR_HEIGHT_VAR},
         layout::{Box, FLOAT_SAFE_AREA_VAR, Float},
     },
     sx::{StaticSx, sx},
     theme::{CssVar, NOTIFICATION_GAP, NOTIFICATION_OFFSET, NOTIFICATION_WIDTH, Placement},
 };
 
-const NAVIGATION_BAR_HEIGHT_VAR: CssVar = CssVar::new("--lsx-navigation-bar-height");
 // The viewport's insets on the stack's inline sides; zero in a contained host (5442).
 const INSET_START_VAR: CssVar = CssVar::new("--lsx-notification-inset-start");
 const INSET_END_VAR: CssVar = CssVar::new("--lsx-notification-inset-end");

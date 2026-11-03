@@ -208,6 +208,10 @@ pub(super) fn NotificationItem(props: ItemProps) -> Element {
     let mut elements = store.elements;
     let mut pressed = store.pressed;
     let mut finger = use_hook(|| CopyValue::new(false));
+    // Set until the focus or click it causes (a tap focuses after `pointerup`); a focusin
+    // without it came by keyboard or the hotkey (5520).
+    let mut pressing = use_hook(|| CopyValue::new(false));
+    let mut focusin = focus.focusin(0);
 
     use_box()
         .framework_sx(&ITEM_SX)
@@ -233,6 +237,7 @@ pub(super) fn NotificationItem(props: ItemProps) -> Element {
         })
         .event("onpointerdown", move |event: Event<PointerData>| {
             pressed.set(true);
+            pressing.set(true);
             finger.set(event.data().pointer_type() != "mouse");
         })
         // A finger on the body focuses nothing, so nothing pauses (5441, 576); a control still takes it.
@@ -245,7 +250,16 @@ pub(super) fn NotificationItem(props: ItemProps) -> Element {
         .event("onkeydown", move |_: Event<KeyboardData>| {
             pressed.set(false)
         })
-        .event("onfocusin", focus.focusin(0))
+        .event("onclick", move |_: Event<MouseData>| pressing.set(false))
+        .event("onpointercancel", move |_: Event<PointerData>| {
+            pressing.set(false)
+        })
+        .event("onfocusin", move |event: Event<FocusData>| {
+            if !pressing.replace(false) {
+                pressed.set(false);
+            }
+            focusin(event)
+        })
         .event("onfocusout", focus.focusout(0))
         .render(
             HtmlTag::Li,

@@ -3,19 +3,16 @@ use dioxus::prelude::*;
 use crate::{
     components::{
         buttons::{ActionIcon, Button},
-        common::{Input, States, Variant, attr, base_props},
+        common::{Input, NAVIGATION_BAR_HEIGHT_VAR, States, Variant, attr, base_props},
         layout::{FLOAT_SAFE_AREA_VAR, Float, Placement},
     },
     hooks::use_theme,
     sx::{REDUCED_MOTION, Sx, ThemeAwareValue, sx},
     theme::{
-        CssVar, Gradient, ICON_SIZE, OWN_SHADOW, SizeCss, TRANSITION_DURATION, TRANSITION_EASING,
+        Gradient, ICON_SIZE, OWN_SHADOW, SizeCss, TRANSITION_DURATION, TRANSITION_EASING,
         Z_INDEX_HEADER,
     },
 };
-
-/// What a docked `NavigationBar` publishes, the bottom safe-area inset included.
-const NAVIGATION_BAR_HEIGHT_VAR: CssVar = CssVar::new("--lsx-navigation-bar-height");
 
 base_props! {
     pub struct FloatingActionButtonProps {

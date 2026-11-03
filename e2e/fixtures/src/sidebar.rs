@@ -3,7 +3,8 @@
 //! content wider than the panel, and the default size beside content.
 
 use dioxus::prelude::*;
-use libero::components::{Box as LBox, Flex, Sidebar};
+use libero::components::{Box as LBox, Button, Container, Flex, Sidebar};
+use libero::hooks::{DrawerOptions, ModalScope, use_drawer};
 use libero::sx::sx;
 
 use crate::Routes;
@@ -12,7 +13,33 @@ pub const ROUTES: Routes = &[
     ("/sidebar", || rsx! { SidebarPage {} }),
     ("/sidebar/narrow", || rsx! { NarrowPage {} }),
     ("/sidebar/short", || rsx! { ShortPage {} }),
+    ("/sidebar/safe-area", || rsx! { SafeAreaPage {} }),
 ];
+
+/// Todo 5519: a Container beside a start Sidebar, and a start Sidebar inside a start drawer.
+#[component]
+fn SafeAreaPage() -> Element {
+    let drawer = use_drawer(
+        DrawerOptions {
+            anchor: "start".into(),
+            aria_label: Some("Menu".into()),
+            ..Default::default()
+        },
+        |_: ModalScope<()>| {
+            rsx! {
+                Sidebar { id: "in-drawer", aria_label: "Drawer filters", "Filters" }
+            }
+        },
+    );
+
+    rsx! {
+        Flex { direction: "row", align: "stretch", wrap: false, height: "120px",
+            Sidebar { id: "beside", size: "xs", aria_label: "Filters", "Filters" }
+            Container { id: "content", "Results" }
+        }
+        Button { id: "open", onclick: move |_| { drawer.open(); }, "Open" }
+    }
+}
 
 /// The default `md` top and bottom panel, each in a 256px column; not in the baseline
 /// (todo 2645).

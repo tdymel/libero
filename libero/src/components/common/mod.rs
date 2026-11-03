@@ -114,7 +114,10 @@ pub(crate) use toolbar_context::{
 pub use truncate::Truncate;
 #[cfg(any(feature = "text", feature = "title"))]
 pub(crate) use truncate::{Cut, truncate_sx};
-pub(crate) use util::{attr, css_string, safe_area_padding};
+pub(crate) use util::{
+    NAVIGATION_BAR_HEIGHT_VAR, SAFE_AREA_INLINE_END_VAR, SAFE_AREA_INLINE_START_VAR, attr,
+    css_string, safe_area_padding, safe_inline_padding,
+};
 pub use variant::Variant;
 pub(crate) use variant_chrome::{
     ACTIVE, BUTTON_COLOR_VAR, BUTTON_CONTAINER_VAR, BUTTON_CONTRAST_VAR, BUTTON_FILL_VAR,
