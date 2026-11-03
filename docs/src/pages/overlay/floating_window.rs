@@ -142,10 +142,11 @@ fn WindowDemo(resizable: bool, pinned: bool, report: bool, values: DemoValues) -
         pinned,
         // A narrow phone page keeps room beside a window.
         sx: if resizable {
-            sx().width("18rem")
-                .min_width("16rem")
+            // `min()` keeps each inside a phone at large text (1.4.10).
+            sx().width("min(18rem, 100%)")
+                .min_width("min(16rem, 100%)")
                 .min_height("8rem")
-                .max_width("40rem")
+                .max_width("min(40rem, 100%)")
                 .into()
         } else {
             sx().max_width("18rem").into()

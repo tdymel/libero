@@ -48,7 +48,8 @@ pub(super) static WINDOW_SX: StaticSx = StaticSx::new(|| {
         .max_width("100%")
         .max_height("100dvh")
         // A resize never shrinks it past the title bar and Close (todo 1535).
-        .min_width("12rem")
+        // `min()`, or the minimum beats the viewport cap at large text (1.4.10).
+        .min_width("min(12rem, 100%)")
         .min_height("6rem")
         .overflow("hidden")
         .selector("&:focus-visible", focus_ring_sx())

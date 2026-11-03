@@ -524,6 +524,47 @@ fn an_upright_thumb_tooltip_clears_the_captions() {
     });
 }
 
+/// Todo 5508: captions that would touch at large text or on a narrower track thin out, keeping
+/// the ends, and come back when there is room again.
+#[test]
+fn crowded_mark_captions_thin_out_and_return() {
+    block_on(async {
+        let fixture = Fixture::open("/slider/crowded-captions", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        // The hidden count, or a note when two shown captions touch or an end is hidden.
+        const STATE: &str = "(() => { const all = [...document.querySelectorAll('#crowded [data-slot=mark-label]')]; \
+            const shown = all.filter((e) => getComputedStyle(e).visibility !== 'hidden'); \
+            if (shown[0] !== all[0] || shown.at(-1) !== all.at(-1)) return 'an end hidden'; \
+            const boxes = shown.map((e) => e.getBoundingClientRect()).sort((a, b) => a.left - b.left); \
+            if (boxes.some((b, i) => i > 0 && b.left < boxes[i - 1].right)) return 'shown captions touch'; \
+            return String(all.length - shown.length); })()";
+        let outcome = async {
+            wait::for_js_true(page, &format!("{STATE} === '0'"), "all four captions at 100 % text").await?;
+            for (act, what) in [
+                ("document.documentElement.style.fontSize = '250%'", "large text"),
+                ("document.documentElement.style.fontSize = ''; document.getElementById('crowded').style.width = '160px'", "a narrow track"),
+            ] {
+                page.evaluate_bounded(act).await?;
+                // A count above 0: thinned, the ends shown and no two touching.
+                wait::for_js_true(page, &format!("/^[1-9]/.test({STATE})"), what).await?;
+                page.evaluate_bounded(
+                    "document.documentElement.style.fontSize = ''; document.getElementById('crowded').style.width = '280px'",
+                )
+                .await?;
+                wait::for_js_true(page, &format!("{STATE} === '0'"), "all four back").await?;
+            }
+            Ok::<_, anyhow::Error>(())
+        }
+        .await;
+        let console = fixture.console.assert_clean("thinning the captions");
+        fixture.close().await.unwrap();
+        outcome.unwrap();
+        console.unwrap();
+    });
+}
+
 /// Todo 5406: a description set below starts under the mark captions, at phone to desktop width.
 #[test]
 fn a_description_below_sits_under_the_mark_captions() {

@@ -2,6 +2,7 @@ use std::{future::Future, pin::Pin};
 
 use dioxus::prelude::*;
 
+use super::captions::MarkCaptions;
 use super::slider_value::{SliderChangeEvent, SliderMark, SliderSegment};
 use super::value::{SliderCoreValue, fraction, grid_bounds, on_track};
 use crate::{
@@ -1465,6 +1466,10 @@ fn SliderBody(live: Signal<Live>, core: SliderCoreProps) -> Element {
     });
     let onpointerleave = move |_: Event<PointerData>| hover.leave();
     let onresize = move |_: Event<ResizeData>| hover.resize();
+    // The captions' re-thin on a track resize; Blitz measures it itself.
+    let mut track_resized = use_signal(|| 0_u64);
+    let ontrackresize = move |_: Event<ResizeData>| track_resized += 1;
+    crate::hooks::use_resize_fallback(elements.track, ontrackresize);
 
     // One handler for both thumbs: the focused thumb is the one the keys
     // move, so the index comes from whichever element fired.
@@ -1568,6 +1573,7 @@ fn SliderBody(live: Signal<Live>, core: SliderCoreProps) -> Element {
                     "data-slot": SliderPart::Track.slot(),
                     style: track_style,
                     onmounted: elements.track.mount(),
+                    onresize: ontrackresize,
                     SliderThumbs {
                         live,
                         min,
@@ -1599,6 +1605,7 @@ fn SliderBody(live: Signal<Live>, core: SliderCoreProps) -> Element {
                         dragging: drag.dragging,
                         active: steps.active,
                         thumb_track,
+                        layout: track_resized,
                     }
                 }
                 {preview}
@@ -1640,6 +1647,8 @@ struct SliderThumbsProps {
     dragging: ReadSignal<bool>,
     active: Signal<usize>,
     thumb_track: Signal<Option<ThumbTrack>>,
+    /// Bumped when the track resizes, so the captions re-thin.
+    layout: ReadSignal<u64>,
 }
 
 #[component]
@@ -1696,7 +1705,19 @@ fn SliderThumbs(props: SliderThumbsProps) -> Element {
     // The bare value's bubble, `0,5` under `Formats::GERMAN`.
     let formats = use_formats();
 
-    let captions_hidden = props.captions_hidden.then_some("true");
+    let captions: Vec<(String, String)> = props
+        .marks
+        .iter()
+        .filter_map(|mark| {
+            let at = variables()
+                .with(
+                    SLIDER_MARK_AT,
+                    Some(fraction(mark.value, min, max).to_string()),
+                )
+                .render();
+            mark.label.clone().map(|label| (at, label))
+        })
+        .collect();
     let marks = props.marks.iter().map(|mark| {
         let mark_at = fraction(mark.value, min, max);
         let at = variables()
@@ -1705,19 +1726,6 @@ fn SliderThumbs(props: SliderThumbsProps) -> Element {
         // A state, not a var set only when filled: a raw `style` that drops a
         // declaration keeps its last value ([[codebase/css-vars]]).
         let filled = (bar.0 <= mark_at && mark_at <= bar.1).then_some("filled");
-        let caption = mark.label.clone().map(|label| {
-            rsx! {
-                span {
-                    class: mark_label_class.clone(),
-                    "data-slot": SliderPart::MarkLabel.slot(),
-                    // An upright track's captions sit where a thumb's bubble lands.
-                    "data-tooltip-clear": vertical.then_some("true"),
-                    style: "{at}",
-                    "aria-hidden": captions_hidden,
-                    {label}
-                }
-            }
-        });
         rsx! {
             if !on_boundary(&props.segments, mark.value) {
                 span {
@@ -1727,7 +1735,6 @@ fn SliderThumbs(props: SliderThumbsProps) -> Element {
                     style: "{at}",
                 }
             }
-            {caption}
         }
     });
 
@@ -1921,6 +1928,15 @@ fn SliderThumbs(props: SliderThumbsProps) -> Element {
             div { class: bar_class, "data-slot": SliderPart::Bar.slot(), style: bar_style }
         }
         {marks}
+        if !captions.is_empty() {
+            MarkCaptions {
+                captions,
+                class: mark_label_class.clone(),
+                vertical,
+                aria_hidden: props.captions_hidden,
+                layout: props.layout,
+            }
+        }
         {thumbs}
     }
 }

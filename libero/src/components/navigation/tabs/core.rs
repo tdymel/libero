@@ -166,11 +166,11 @@ fn vertical_sx() -> crate::sx::Sx {
         )
         .selector(
             "& > [role=\"tablist\"] > [role=\"tab\"]",
-            // The column sizes to its labels: a word breaks only when it must (todo 4589).
+            // The column sizes to its max-content labels, so a word breaks only past the
+            // 50% cap (todo 4589); the tab's `anywhere` lets it break there.
             sx().border_bottom("0")
                 .justify_content("flex-start")
-                .text_align("start")
-                .with("overflow-wrap", "break-word"),
+                .text_align("start"),
         )
         .selector(
             "& > [role=\"tabpanel\"]",

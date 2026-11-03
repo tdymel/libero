@@ -83,28 +83,29 @@ impl ChronoPickerDefaults {
         calendar: CalendarVariant::Full,
         days: 7,
         sizes: Sizes::new(
+            // `rem`, so a cell grows with its digits at large text (todo 5507).
             ChronoSizeLevel {
-                day_size: "28px",
+                day_size: "1.75rem",
                 font_size: "0.75rem",
             },
             ChronoSizeLevel {
-                day_size: "32px",
+                day_size: "2rem",
                 font_size: "0.875rem",
             },
             ChronoSizeLevel {
-                day_size: "36px",
+                day_size: "2.25rem",
                 font_size: "1rem",
             },
             ChronoSizeLevel {
-                day_size: "40px",
+                day_size: "2.5rem",
                 font_size: "1.125rem",
             },
             ChronoSizeLevel {
-                day_size: "44px",
+                day_size: "2.75rem",
                 font_size: "1.25rem",
             },
             ChronoSizeLevel {
-                day_size: "48px",
+                day_size: "3rem",
                 font_size: "1.5rem",
             },
         ),

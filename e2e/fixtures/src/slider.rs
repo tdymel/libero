@@ -25,7 +25,24 @@ pub const ROUTES: Routes = &[
     ("/slider/preview-vertical", || rsx! { SliderPreviewVerticalPage {} }),
     ("/slider/captions-vertical", || rsx! { SliderCaptionsVerticalPage {} }),
     ("/slider/description-below", || rsx! { SliderDescriptionBelowPage {} }),
+    ("/slider/crowded-captions", || rsx! { SliderCrowdedCaptionsPage {} }),
 ];
+
+/// Todo 5508: four captions that fit at 100 % text and run together at large text or on a narrower track.
+#[component]
+fn SliderCrowdedCaptionsPage() -> Element {
+    let marks = vec![
+        SliderMark::labeled(0.0, "Low"),
+        SliderMark::labeled(33.0, "Medium"),
+        SliderMark::labeled(67.0, "High"),
+        SliderMark::labeled(100.0, "Max"),
+    ];
+    rsx! {
+        div { id: "crowded", style: "width: 280px; padding: 16px",
+            Slider { label: "Quality", value: 40.0f64, marks, oninput: move |_: SliderChangeEvent<f64>| {} }
+        }
+    }
+}
 
 /// Todos 5406, 5415, 5416: a description set below sits under the sliders' mark captions, with a
 /// helper or status too, and adds no room above an unlabelled control.

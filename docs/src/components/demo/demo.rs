@@ -15,6 +15,9 @@ use super::{Control, ControlKind, color::ColorControl};
 /// The card is the query container the control panel keys off.
 const DEMO_CARD: &str = "demo-card";
 
+/// The panel, the container a toggle's segments-or-select query keys off.
+const DEMO_PANEL: &str = "demo-panel";
+
 /// The sidebar and page padding around the card on a desktop window.
 const CARD_INSET: usize = 388;
 
@@ -25,6 +28,18 @@ fn card_query(base: Sx, min_width: usize, nested: Sx) -> Sx {
         base.media(format!("(min-width: {}px)", min_width + CARD_INSET), nested)
     } else {
         base.container_query(DEMO_CARD, format!("(min-width: {min_width}px)"), nested)
+    }
+}
+
+/// `nested` once the panel is `min_width` wide at 16px text; the content box in `em`, so
+/// large text needs a wider panel (todo 5509). Natively the card's query stands in.
+fn panel_query(base: Sx, min_width: usize, nested: Sx) -> Sx {
+    if cfg!(any(feature = "native", feature = "native-cpu")) {
+        card_query(base, min_width, nested)
+    } else {
+        // A container query measures the content box: the panel's px padding stays out.
+        let em = min_width.saturating_sub(PANEL_PADDING) as f32 / 16.0;
+        base.container_query(DEMO_PANEL, format!("(min-width: {em}em)"), nested)
     }
 }
 
@@ -270,8 +285,8 @@ const PANEL_PADDING: usize = 48;
 /// (512px wide, see the panel's `sx` below).
 const WIDE_PANEL_CONTROL: usize = 512 - PANEL_PADDING;
 
-/// The card width a toggle's segments need. Narrow segments ellipsize their labels, so a
-/// narrower card falls back to a select; the longest label sizes every segment.
+/// The panel width a toggle's segments need. Narrow segments ellipsize their labels, so a
+/// narrower panel falls back to a select; the longest label sizes every segment.
 fn segments_need(control: &Control) -> usize {
     let options = control.options.len();
     let labels = control
@@ -409,10 +424,10 @@ fn DemoControl(
     values: Signal<DemoValues>,
 ) -> Element {
     let (control, mut values) = (control.0, values);
-    // Switches spread over the row, centred to read as a group;
-    // the min keeps a long label from wrapping under its switch.
+    // Switches spread over the row, centred to read as a group; the min, in `em`
+    // so it grows with the text, keeps a long label inside its column (todo 5513).
     let row_sx = if control.kind == ControlKind::Switch {
-        sx().flex("1 1 0").min_width("104px").align_items("center")
+        sx().flex("1 1 0").min_width("6.5em").align_items("center")
     } else {
         sx().width("100%")
     };
@@ -512,13 +527,13 @@ fn DemoControl(
                         },
                     }
                 },
-                // Too wide for the card, a select: a container query shows one,
+                // Too wide for the panel, a select: a container query shows one,
                 // and `display: none` keeps the other out of tab order and a11y tree.
                 ControlKind::Toggle => {
                     let needed = segments_need(&control);
                     rsx! {
                         Box {
-                            sx: card_query(sx().display("none"), needed, sx().display("block")),
+                            sx: panel_query(sx().display("none"), needed, sx().display("block")),
                             ToggleSegments {
                                 control: control.clone(),
                                 value: value.clone(),
@@ -528,7 +543,7 @@ fn DemoControl(
                             }
                         }
                         Box {
-                            sx: card_query(sx().display("block"), needed, sx().display("none")),
+                            sx: panel_query(sx().display("block"), needed, sx().display("none")),
                             NativeSelect {
                                 size: "sm",
                                 // The row's `Text` names it: no second label.
@@ -702,7 +717,8 @@ pub fn Demo(
                                 .width("100%")
                                 .flex_shrink("0")
                                 .padding("24px")
-                                .border_top(border());
+                                .border_top(border())
+                                .container(DEMO_PANEL);
                             if wide_preview {
                                 // Below the preview at every width, so the
                                 // preview gets the card's whole width.

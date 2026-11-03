@@ -505,7 +505,10 @@ pub fn CascaderPage() -> Element {
                     }
                     let field = field_props::<CategoryCopy>(&values);
                     rsx! {
+                        // The column holds the cap too: a flex-start column takes the field's
+                        // max-content width and outgrows the preview at large text (todo 5512).
                         Flex { direction: "column", gap: "sm", align: "flex-start",
+                            sx: sx().width("100%").max_width("320px"),
                             Cascader {
                                 sx: sx().width("100%").max_width("320px"),
                                 size: values.str("size"),

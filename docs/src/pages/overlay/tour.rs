@@ -158,10 +158,11 @@ fn TourDemo(side: String, mask_click: String, custom: bool) -> Element {
     // The status stays in Search's row: the card opens above or below it and would cover any other.
     rsx! {
         Flex { direction: "column", gap: "sm",
+            // Wrapping rows: at large text a phone holds them only on several lines (todo 5514).
             Flex {
                 direction: "row",
                 gap: "sm",
-                wrap: "nowrap",
+                wrap: "wrap",
                 align: "center",
                 Button {
                     variant: "outlined",
@@ -170,11 +171,15 @@ fn TourDemo(side: String, mask_click: String, custom: bool) -> Element {
                     onclick: move |_| searches += 1,
                     "Search"
                 }
-                // One line: Blitz broke it per word after the tour's restyle.
+                // One line natively: Blitz broke it per word after the tour's restyle.
                 Text {
                     size: "sm",
                     role: "status",
-                    sx: sx().white_space("nowrap"),
+                    sx: if cfg!(any(feature = "native", feature = "native-cpu")) {
+                        sx().white_space("nowrap")
+                    } else {
+                        sx()
+                    },
                     if tour.seen() { "Seen" } else { "Not seen yet" }
                     ", searches: {searches}"
                 }
@@ -182,6 +187,7 @@ fn TourDemo(side: String, mask_click: String, custom: bool) -> Element {
             Flex {
                 direction: "row",
                 gap: "sm",
+                wrap: "wrap",
                 // Found by its id: no handle to pass down.
                 Button { id: "tour-demo-create", variant: "outlined", "New project" }
                 Button { onclick: move |_| tour.start(), "Take the tour" }

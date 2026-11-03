@@ -31,14 +31,15 @@ const SWITCHES: [&str; 5] = [
 
 static GRID_SX: StaticSx = StaticSx::new(|| {
     sx().display("grid")
-        .grid_template_columns("repeat(3, 96px)")
+        // Shrinks below 96px, so three fit a 320px phone (todo 5515).
+        .grid_template_columns("repeat(3, minmax(0, 96px))")
         .gap("xs")
 });
 
 static THUMB_SX: StaticSx = StaticSx::new(|| {
     sx().display("block")
-        .width("96px")
-        .height("96px")
+        .width("100%")
+        .with("aspect-ratio", "1")
         .padding("0")
         .border_width("0")
         .cursor("zoom-in")

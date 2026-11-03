@@ -1,3 +1,4 @@
+mod captions;
 mod core;
 mod range_slider;
 mod scale;

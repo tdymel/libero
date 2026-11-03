@@ -36,7 +36,11 @@ pub(super) static CALENDAR_SX: StaticSx = StaticSx::new(|| {
         .cursor("pointer")
         .hover_tint(":hover", sx().background("muted.1"));
     ChronoPickerDefaults::theme_vars()
-        .var(CALENDAR_DAY, CHRONO_DAY.value())
+        // Seven always fit the screen: a day grows with large text (todo 5507).
+        .var(
+            CALENDAR_DAY,
+            format!("min({}, calc((100vw - 24px) / 7))", CHRONO_DAY.value()),
+        )
         .media(
             COARSE_POINTER,
             sx().var(
@@ -62,7 +66,8 @@ pub(super) static CALENDAR_SX: StaticSx = StaticSx::new(|| {
             button
                 .clone()
                 .flex("1 1 0")
-                .height(day.clone())
+                // A minimum: at large text on a phone the month wraps to two lines.
+                .min_height(day.clone())
                 .font_weight("600"),
         )
         .selector(
