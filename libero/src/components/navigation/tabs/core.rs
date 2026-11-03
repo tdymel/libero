@@ -98,13 +98,18 @@ static TABS_SX: StaticSx = StaticSx::new(|| {
                 .border_bottom_color(TABS_COLOR.value()),
         )
         // Forced colours paint every transparent underline; keep only the selected one.
+        // The strip's line is a shadow, which forced colours drop (todo 5501).
         .media(
             FORCED_COLORS,
-            sx().selector("& [role=\"tab\"]", sx().border_bottom_color("Canvas"))
-                .selector(
-                    "& [role=\"tab\"][aria-selected=\"true\"]",
-                    sx().border_bottom_color("Highlight"),
-                ),
+            sx().selector(
+                "& > [role=\"tablist\"]",
+                sx().border_bottom("1px solid CanvasText"),
+            )
+            .selector("& [role=\"tab\"]", sx().border_bottom_color("Canvas"))
+            .selector(
+                "& [role=\"tab\"][aria-selected=\"true\"]",
+                sx().border_bottom_color("Highlight"),
+            ),
         )
         .selector(
             "& [role=\"tab\"][aria-disabled=\"true\"]",
@@ -195,11 +200,16 @@ fn vertical_side_sx(edge: &str, ltr: &str, rtl: &str) -> crate::sx::Sx {
         )
         .media(
             FORCED_COLORS,
-            sx().selector(tab, sx().with(format!("{border}-color"), "Canvas"))
-                .selector(
-                    format!("{tab}[aria-selected=\"true\"]"),
-                    sx().with(format!("{border}-color"), "Highlight"),
-                ),
+            sx().selector(
+                "& > [role=\"tablist\"]",
+                sx().border_bottom("0")
+                    .with(&border, "1px solid CanvasText"),
+            )
+            .selector(tab, sx().with(format!("{border}-color"), "Canvas"))
+            .selector(
+                format!("{tab}[aria-selected=\"true\"]"),
+                sx().with(format!("{border}-color"), "Highlight"),
+            ),
         )
         .selector(
             "& > [role=\"tabpanel\"]",

@@ -56,6 +56,11 @@ Forced colors is a Windows mode, not a WCAG success criterion, and covering it
 properly means work on most of the library plus tests to keep it. If you need
 more of it, open an issue. A real user asking is what would change this.
 
+Libero does not respond to `prefers-contrast: more` either. To honour it, read
+`use_accessibility().contrast()` (or
+`use_media_query("(prefers-contrast: more)")`) and switch to a higher-contrast
+theme of your own.
+
 ## Focus after a route change
 
 Libero has no router helper, so an app moves focus itself, usually to the new

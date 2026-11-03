@@ -13,7 +13,7 @@ use crate::{
         },
     },
     hooks::{use_cache, use_css, use_element, use_form_owner, use_theme},
-    sx::{REDUCED_MOTION, StaticSx, ThemeAwareValue, sx},
+    sx::{FORCED_COLORS, REDUCED_MOTION, StaticSx, ThemeAwareValue, sx},
     theme::{
         ChoiceVariant, CssVar, NamedColorCss, SWITCH_RADIUS, SWITCH_THUMB, SWITCH_TRACK_H,
         SWITCH_TRACK_W, SizeCss, SwitchDefaults,
@@ -44,6 +44,23 @@ static SWITCH_CONTROL_SX: StaticSx = StaticSx::new(|| {
             choice::checked_card_sx(SWITCH_COLOR_VAR.value()),
         )
         .when("disabled", disabled_look_within_sx("not-allowed"))
+        // On fills with `Highlight`, as `forced_on_sx`: else only the thumb's side tells (todo 5502).
+        .when(
+            "checked",
+            sx().media(
+                FORCED_COLORS,
+                sx().selector(
+                    "& > [data-slot='track']",
+                    sx().forced_color_adjust("none")
+                        .background("Highlight")
+                        .outline_color("Highlight"),
+                )
+                .selector(
+                    "& > [data-slot='track'] > [data-slot='thumb']",
+                    sx().background("Canvas"),
+                ),
+            ),
+        )
 });
 
 static SWITCH_TRACK_SX: StaticSx = StaticSx::new(|| {

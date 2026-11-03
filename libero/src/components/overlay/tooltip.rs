@@ -21,7 +21,7 @@ use crate::{
         use_press_away, use_press_marker, use_resize_fallback, use_theme,
     },
     platform::{Dimensions, ElementApi, document, keyboard, when_laid_out},
-    sx::{REDUCED_MOTION, StaticSx, Sx, ThemeAwareValue, sx},
+    sx::{FORCED_COLORS, REDUCED_MOTION, StaticSx, Sx, ThemeAwareValue, sx},
     theme::{
         CssVar, POPOVER_PADDING, Size, SizeCss, TOOLTIP_DURATION, TOOLTIP_IN, TooltipDefaults,
         Z_INDEX_POPOVER,
@@ -74,15 +74,37 @@ fn bubble_sx() -> Sx {
         ))
         // A path or hash wider than the cap breaks inside the bubble (WCAG 1.4.10).
         .with("overflow-wrap", "anywhere")
+        // Forced colours drop the fill; they paint a transparent outline (todo 5498).
+        .outline("1px solid transparent")
         .selector("&::before", sx().content("\"\"").position("absolute"))
         .animation(format!("{TOOLTIP_IN} {} ease", TOOLTIP_DURATION.value()))
         .media(REDUCED_MOTION, sx().animation("none"))
 }
 
+/// The arrow's two sides outside the bubble, drawn under forced colours.
+fn arrow_edge_sx(side: Side) -> Sx {
+    let edges = |a: &str, b: &str| {
+        sx().selector(
+            "& > [data-slot='arrow']",
+            sx().media(
+                FORCED_COLORS,
+                sx().with(format!("border-{a}-color"), "CanvasText")
+                    .with(format!("border-{b}-color"), "CanvasText"),
+            ),
+        )
+    };
+    match side {
+        Side::Top => edges("right", "bottom"),
+        Side::Bottom => edges("top", "left"),
+        Side::Start => edges("top", "right").rtl(edges("bottom", "left")),
+        Side::End => edges("bottom", "left").rtl(edges("top", "right")),
+    }
+}
+
 static TOOLTIP_BUBBLE_SX: StaticSx = StaticSx::new(|| {
     let placed = bubble_sx().and(placement_sx(false));
     Side::ALL.iter().fold(placed, |base, &side| {
-        base.when(side.state_name(), bridge_sx(side))
+        base.when(side.state_name(), bridge_sx(side).and(arrow_edge_sx(side)))
     })
 });
 
@@ -95,6 +117,14 @@ static TOOLTIP_ARROW_SX: StaticSx = StaticSx::new(|| {
         .position("absolute")
         .z_index("-1")
         .background("inherit")
+        // Unforced, so only the two sides past the bubble are drawn (`arrow_edge_sx`).
+        .media(
+            FORCED_COLORS,
+            sx().forced_color_adjust("none")
+                .box_sizing("border-box")
+                .background("Canvas")
+                .border("1px solid transparent"),
+        )
 });
 
 /// `flex: none`: a 0x0 point would shrink it to its longest word.

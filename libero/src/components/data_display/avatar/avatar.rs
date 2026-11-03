@@ -93,6 +93,21 @@ pub(super) fn avatar_sx() -> Sx {
             )
         });
 
+    // Forced colours drop the fill; they paint this outline, so the circle stays (todo 5505).
+    // Not in a group, whose `Canvas` ring separates the overlaps.
+    let base = Variant::ALL
+        .iter()
+        .filter(|&&variant| variant != Variant::Outlined)
+        .fold(base, |base, &variant| {
+            base.when(
+                variant.state_name(),
+                sx().selector(
+                    "&:not([data-state~=\"grouped\"])",
+                    sx().outline("1px solid transparent"),
+                ),
+            )
+        });
+
     // A border on the outlined arm only: elsewhere it would inset the picture.
     base.when(
         Variant::Outlined.state_name(),

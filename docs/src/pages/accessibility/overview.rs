@@ -91,6 +91,15 @@ pub fn AccessibilityPage() -> Element {
                     "keep it. If you need more of it, open an issue. A real user asking is "
                     "what would change this."
                 }
+                Text {
+                    "Libero does not respond to "
+                    Code { source: "prefers-contrast: more" }
+                    " either. To honour it, read "
+                    Code { source: "use_accessibility().contrast()" }
+                    " (or "
+                    Code { source: "use_media_query(\"(prefers-contrast: more)\")" }
+                    ") and switch to a higher-contrast theme of your own."
+                }
             }
 
             DocSection {

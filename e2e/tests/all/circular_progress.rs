@@ -97,10 +97,13 @@ fn the_arc_keeps_its_contrast_and_shows_in_forced_colours() {
             page,
             &format!(
                 "(() => {{ const ring = document.querySelector('{UPLOAD}');
-                    const track = getComputedStyle(ring, '::before').borderTopColor;
+                    const before = getComputedStyle(ring, '::before');
+                    const track = before.borderTopColor;
                     const arc = getComputedStyle(ring.querySelector('[data-slot=arc]')).color;
+                    // A page-coloured track, edged so it shows (todo 5500).
                     return matchMedia('(forced-colors: active)').matches
-                        && track !== getComputedStyle(document.body).backgroundColor
+                        && track === getComputedStyle(document.body).backgroundColor
+                        && before.boxShadow.includes('inset')
                         && arc !== track; }})()"
             ),
             "a track and an arc apart from it in forced colours",

@@ -4,7 +4,7 @@ use crate::{
         form::{drag_over_sx, field_control_sx, framed_remove_sx},
     },
     platform::draws_placeholders,
-    sx::{StaticSx, Sx, sx},
+    sx::{FORCED_COLORS, StaticSx, Sx, sx},
     theme::{
         FILE_FIELD_DROPZONE_HEIGHT, FILE_FIELD_PADDING, FILE_FIELD_RADIUS, FileFieldDefaults,
         SizeCss,
@@ -101,7 +101,9 @@ pub(super) static FILE_BROWSE_SX: StaticSx = StaticSx::new(|| {
                 .min_width("0")
                 .overflow("hidden")
                 .text_overflow("ellipsis")
-                .white_space("nowrap"),
+                .white_space("nowrap")
+                // As a native `::placeholder`, so it does not read as a picked name (todo 5503).
+                .media(FORCED_COLORS, sx().color("GrayText")),
         )
         // The picker cue once chips fill the line, at the end beside the clear x;
         // 3:1 on the field (WCAG 1.4.11).

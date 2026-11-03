@@ -51,7 +51,14 @@ static CIRCULAR_PROGRESS_SX: StaticSx = StaticSx::new(|| {
                     "calc({edge} * {})",
                     CIRCULAR_PROGRESS_THICKNESS.value_or("0.1")
                 ))
-                .border_color(CIRCULAR_PROGRESS_TRACK.value()),
+                .border_color(CIRCULAR_PROGRESS_TRACK.value())
+                // A forced CanvasText track would leave the Highlight arc under 3:1 (todo 5500).
+                .media(
+                    FORCED_COLORS,
+                    sx().forced_color_adjust("none")
+                        .border_color("Canvas")
+                        .box_shadow("0 0 0 1px CanvasText, inset 0 0 0 1px CanvasText"),
+                ),
         )
 });
 

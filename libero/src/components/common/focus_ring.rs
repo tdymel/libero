@@ -200,15 +200,19 @@ pub(crate) fn forced_on_sx() -> crate::sx::Sx {
 /// leaves the stripe under 3:1 on some themes (1.4.11, todo 2810).
 const FOCUSED_DISABLED_OPACITY: &str = "0.75";
 
-/// The disabled look: half opacity, and `GrayText` under forced colours.
+/// The disabled look: half opacity, and `GrayText` at full opacity under forced colours.
 pub(crate) fn disabled_look_sx(cursor: &str) -> crate::sx::Sx {
     crate::sx::sx()
         .opacity("0.5")
         .cursor(cursor)
         .and(focused_disabled_sx())
+        // `GrayText` is the cue; halving it took the text to 3.4:1 (todo 5504).
         .media(
             crate::sx::FORCED_COLORS,
-            crate::sx::sx().color("GrayText").border_color("GrayText"),
+            crate::sx::sx()
+                .color("GrayText")
+                .border_color("GrayText")
+                .opacity("1 !important"),
         )
 }
 

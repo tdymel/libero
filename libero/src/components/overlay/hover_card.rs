@@ -34,6 +34,8 @@ static HOVER_CARD_SX: StaticSx = StaticSx::new(|| {
     paper_sx()
         .and(placement_sx(true))
         .z_index(Z_INDEX_POPOVER.value())
+        // Its edge is a shadow, which forced colours drop; they paint this outline (todo 5499).
+        .outline("1px solid transparent")
         .padding(SizeCss::SPACING.value(Size::Md))
         // Never past the room on its side: it scrolls instead (WCAG 1.4.10).
         .max_height(POPOVER_AVAILABLE_HEIGHT.value_or("none"))
