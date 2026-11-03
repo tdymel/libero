@@ -191,7 +191,7 @@ fn a_section_without_a_panel_is_a_plain_heading() {
     assert_eq!(triggers.len(), 2, "{html}");
     assert_eq!(triggers[1]["id"], "plain-trigger-2");
     assert!(
-        body.contains("<h3 data-accordion-heading=\"\"><span data-accordion-plain=\"\">Payment method</span></h3>"),
+        body.contains("<h3 data-accordion-heading=\"\" id=\"plain-heading-1\" tabindex=\"-1\"><span data-accordion-plain=\"\">Payment method</span></h3>"),
         "{html}"
     );
     assert!(!body.contains("plain-region-1"), "{html}");
