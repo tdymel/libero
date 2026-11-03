@@ -10,6 +10,8 @@ use e2e::wait::PageBounded;
 use e2e::{Fixture, Suite, Viewport, frames, wait};
 
 const BOX: &str = "[data-slot=box]";
+const MINUS_GLYPH: &str = "#cropper [data-slot=zoom] > [data-zoom-step]:first-child";
+const PLUS_GLYPH: &str = "#cropper [data-slot=zoom] > [data-zoom-step]:last-child";
 const SOUTH_EAST: &str = "[aria-label='Bottom right corner']";
 const NORTH_WEST: &str = "[aria-label='Top left corner']";
 
@@ -1052,8 +1054,8 @@ async fn the_zoom_bar_leaves_the_box_clear<D: Driver>(d: &mut D, _route: &str) -
     );
     // Minus and plus glyphs flank the track (5004).
     let (minus, plus, track) = (
-        d.rect("[data-slot=zoom] > svg:first-child").await?,
-        d.rect("[data-slot=zoom] > svg:last-child").await?,
+        d.rect(MINUS_GLYPH).await?,
+        d.rect(PLUS_GLYPH).await?,
         d.rect("[data-slot=zoom] [data-slot=track]").await?,
     );
     anyhow::ensure!(
@@ -1067,6 +1069,52 @@ e2e::scenario!(
     the_zoom_bar_leaves_the_box_clear,
     "/image-cropper/pan",
     the_zoom_bar_leaves_the_box_clear
+);
+
+/// Pan mode: a press on the zoom bar's plus or minus zooms one key step and keeps focus;
+/// at the limit the glyph dims and its press changes nothing (5575).
+async fn the_zoom_glyphs_zoom<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    eventually_text(d, "#crop", "30,10,40,80", "the starting square").await?;
+    d.focus(BOX).await?;
+    d.click(PLUS_GLYPH).await?;
+    eventually_text(d, "#crop", "32,14,36,73", "a press on plus").await?;
+    eventually_focused(d, BOX, "a press on plus").await?;
+    d.click(MINUS_GLYPH).await?;
+    eventually_text(d, "#crop", "30,10,40,80", "a press on minus").await?;
+    anyhow::ensure!(
+        d.attr(MINUS_GLYPH, "data-limit").await?.is_none(),
+        "minus dims mid-range"
+    );
+    // Out until the image fits the box, each press waited for.
+    for _ in 0..10 {
+        if d.attr(MINUS_GLYPH, "data-limit").await?.is_some() {
+            break;
+        }
+        let before = d.text("#crop").await?;
+        d.click(MINUS_GLYPH).await?;
+        eventually(d, "a press on minus to zoom out", async |d| {
+            Ok(d.text("#crop").await? != before)
+        })
+        .await?;
+    }
+    eventually(d, "minus to dim at the limit", async |d| {
+        Ok(d.attr(MINUS_GLYPH, "data-limit").await?.as_deref() == Some("true"))
+    })
+    .await?;
+    let limit = d.text("#crop").await?;
+    d.click(MINUS_GLYPH).await?;
+    d.settle().await?;
+    anyhow::ensure!(
+        d.text("#crop").await? == limit,
+        "a press on a dimmed minus zoomed"
+    );
+    eventually_focused(d, BOX, "the presses on minus").await
+}
+
+e2e::scenario!(
+    the_zoom_glyphs_zoom_the_image,
+    "/image-cropper/pan",
+    the_zoom_glyphs_zoom
 );
 
 /// Pan mode: the box holds still while a finger pans the image under it and

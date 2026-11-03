@@ -9,8 +9,9 @@ use crate::{
         buttons::ActionIcon,
         common::{
             Glyph, HtmlTag, Input, Part, States, Variables, base_props, coarse_hit_area_sx,
-            disabled_look_within_sx, focus_ring_sx, has_shortcut_modifier, media_url,
-            on_failed_after_mount, parts_enum, use_svg_probe, variables,
+            disabled_look_sx, disabled_look_within_sx, focus_ring_sx, has_shortcut_modifier,
+            media_url, min_hit_area_sx, on_failed_after_mount, parts_enum, use_svg_probe,
+            variables,
         },
         form::{Slider, SliderChangeEvent},
         layout::use_box,
@@ -391,11 +392,29 @@ static IMAGE_CROPPER_SX: StaticSx = StaticSx::new(|| {
                         // A finger's height round the 16px slider, so its hit area stays in the bar.
                         .media(COARSE, sx().padding_block("14px")),
                 )
+                // A press on a glyph zooms one step (5575); over the track's coarse reach.
                 .selector(
-                    "& > [data-slot='zoom'] > svg",
-                    sx().flex("none").width("16px").height("16px"),
+                    "& > [data-slot='zoom'] > [data-zoom-step]",
+                    sx().flex("none")
+                        .display("inline-flex")
+                        .position("relative")
+                        .z_index("1")
+                        .cursor("pointer")
+                        .and(min_hit_area_sx("::before"))
+                        .and(coarse_hit_area_sx("::before")),
                 )
-                .selector("& > [data-slot='zoom'] > :not(svg)", sx().flex("1").min_width("0"))
+                .selector(
+                    "& > [data-slot='zoom'] > [data-zoom-step] > svg",
+                    sx().width("16px").height("16px"),
+                )
+                .selector(
+                    "& > [data-slot='zoom'] > [data-zoom-step][data-limit]",
+                    disabled_look_sx("default"),
+                )
+                .selector(
+                    "& > [data-slot='zoom'] > :not([data-zoom-step])",
+                    sx().flex("1").min_width("0"),
+                )
                 .selector(
                     "& > [data-slot='zoom'] [data-slot='track']",
                     coarse_hit_area_sx("::before"),
@@ -421,7 +440,7 @@ static IMAGE_CROPPER_SX: StaticSx = StaticSx::new(|| {
             "disabled",
             disabled_look_within_sx("not-allowed")
                 .selector(
-                    "& > [data-slot='mask'], & > [data-slot='frame'], & > [data-slot='frame'] > [data-slot='handle']",
+                    "& > [data-slot='mask'], & > [data-slot='frame'], & > [data-slot='frame'] > [data-slot='handle'], & > [data-slot='zoom'] > [data-zoom-step]",
                     sx().cursor("not-allowed"),
                 )
                 // A disabled cropper lets the page scroll from its image.
@@ -936,6 +955,7 @@ pub fn ImageCropper(props: ImageCropperProps) -> Element {
     // Each button's box: one that reads as now is `aria-disabled`, not a silent press (4999).
     let nudge = move |dx: f64, dy: f64| shift(Grip::Move, dx, dy);
     let resize = move |factor: f64| shown.scaled(factor, min);
+    let zoom = move |factor: f64| shown.zoomed(factor, (0.5, 0.5), (0.5, 0.5), min);
     let has_controls = props.onchange.is_some();
     // Pan mode zooms through its slider instead of the last two.
     let mut buttons = vec![
@@ -993,6 +1013,25 @@ pub fn ImageCropper(props: ImageCropperProps) -> Element {
                 "aria-disabled": (interactive && press_message(&words, formats, pan, shown, rect).is_none())
                     .then_some("true"),
                 onclick: move |_| pressed(rect),
+                Glyph { slot, icon }
+            }
+        }
+    };
+    // Pan mode's zoom glyphs step as + and - do (5575): pointer-only, hidden and no tab stop,
+    // as the slider gives keys and screen readers the same steps. A press keeps focus where it is.
+    let zoom_step = move |slot: IconSlot, icon: SvgData, rect: CropRect| {
+        let limit = interactive && press_message(&words, formats, pan, shown, rect).is_none();
+        rsx! {
+            span {
+                "data-zoom-step": "",
+                "aria-hidden": "true",
+                "data-limit": limit.then_some("true"),
+                onmousedown: move |event: Event<MouseData>| event.prevent_default(),
+                onclick: move |_| {
+                    if interactive {
+                        pressed(rect);
+                    }
+                },
                 Glyph { slot, icon }
             }
         }
@@ -1153,7 +1192,7 @@ pub fn ImageCropper(props: ImageCropperProps) -> Element {
                     span { id: keys_id(), hidden: true, "{keys}" }
                     if pan {
                         div { "data-slot": ImageCropperPart::Zoom.slot(),
-                            Glyph { slot: IconSlot::Minus, icon: lucide::minus::outlined }
+                            {zoom_step(IconSlot::Minus, lucide::minus::outlined, zoom(1.0 / ZOOM_STEP))}
                             // On ln(zoom), so every step zooms by the same factor (1476).
                             Slider::<f64> {
                                 value: scale.ln(),
@@ -1171,7 +1210,7 @@ pub fn ImageCropper(props: ImageCropperProps) -> Element {
                                     }
                                 },
                             }
-                            Glyph { slot: IconSlot::Plus, icon: lucide::plus::outlined }
+                            {zoom_step(IconSlot::Plus, lucide::plus::outlined, zoom(ZOOM_STEP))}
                         }
                     }
                     if has_controls {

@@ -126,7 +126,9 @@ explains how parts work.
 - With `pan` a slider named "Zoom" under the image zooms around the box's
   centre, by one pointer or its keys, so no pinch is needed (WCAG 2.5.1). Every
   step zooms by the same factor. Its value is the zoom, "100%", the same number
-  the box says. Minus and plus glyphs, hidden from assistive tech, mark its ends.
+  the box says. Minus and plus glyphs, hidden from assistive tech, mark its ends;
+  a press on one zooms a step, as - and + do, and leaves focus where it is. One
+  that would change nothing dims.
 - Under the image a group named "Crop area controls" holds buttons for every drag
   (WCAG 2.5.7): "Move left", "Move up", "Move down" and "Move right" move the
   box 5% of the image, with `pan` the image under it; "Smaller" and "Larger"
