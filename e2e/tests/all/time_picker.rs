@@ -217,7 +217,7 @@ fn a_date_time_range_takes_the_days_then_both_times() {
             .await;
             assert_eq!(
                 tabs().await,
-                "Dates, 12–14 Mar|*Start time, 00:00|End time, 00:00",
+                "Dates, \u{2066}12–14\u{2069} Mar|*Start time, 00:00|End time, 00:00",
                 "at {at}"
             );
 
@@ -239,7 +239,7 @@ fn a_date_time_range_takes_the_days_then_both_times() {
             .await;
             assert_eq!(
                 tabs().await,
-                "Dates, 12–14 Mar|Start time, 09:00|*End time, 17:30",
+                "Dates, \u{2066}12–14\u{2069} Mar|Start time, 09:00|*End time, 17:30",
                 "at {at}"
             );
 
