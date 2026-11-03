@@ -8,9 +8,9 @@ use crate::{
     CssLayer,
     components::{
         common::{
-            COARSE_POINTER, ClassList, HtmlTag, Input, Part, States, Variables, base_color,
-            coarse_hit_area_sx, disabled_look_within_sx, has_shortcut_modifier, shadow_sx,
-            text_color, variables,
+            COARSE_POINTER, COARSE_TARGET, ClassList, HtmlTag, Input, Part, States, Variables,
+            base_color, coarse_hit_area_sx, disabled_look_within_sx, has_shortcut_modifier,
+            shadow_sx, text_color, variables,
         },
         form::field_parts_enum,
         layout::use_box,
@@ -117,14 +117,26 @@ static SLIDER_ROOT_SX: StaticSx = StaticSx::new(|| {
             ),
         )
         // Room for the captions: their offset and a line, less the track the box holds.
-        // Padding, not margin, which would collapse.
+        // Padding, not margin, which would collapse. The press stays centred on the track (5417).
         .when(
             "marks-labeled",
             sx().padding_bottom(format!(
                 "calc({} - {} + 1.5em)",
                 SLIDER_THUMB.value(),
                 SLIDER_TRACK.value()
-            )),
+            ))
+            .media(
+                COARSE_POINTER,
+                sx().selector(
+                    "::after",
+                    sx().top(format!(
+                        "calc({} / 2 - {COARSE_TARGET} / 2)",
+                        SLIDER_TRACK.value()
+                    ))
+                    .bottom("auto")
+                    .height(COARSE_TARGET),
+                ),
+            ),
         )
         // No grab cursor for a drag `onstart` refuses.
         .when("readonly", sx().selector("& *", sx().cursor("default")))
@@ -157,6 +169,11 @@ static SLIDER_ROOT_SX: StaticSx = StaticSx::new(|| {
                 .align_items("flex-start")
                 .height("12rem")
                 .padding_bottom("0")
+                // The tall box already holds the press, caption room or not.
+                .media(
+                    COARSE_POINTER,
+                    sx().selector("::after", sx().top("0").bottom("0").height("auto")),
+                )
                 // Only the track's width takes the drag; a full-width root swallowed page swipes.
                 .width("fit-content")
                 // A vertical swipe is the drag, not a scroll.

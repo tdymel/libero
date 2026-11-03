@@ -555,6 +555,70 @@ fn a_description_below_sits_under_the_mark_captions() {
     });
 }
 
+/// Todo 5415: a helper or status message leaves the description as close under the captions
+/// as a slider without one.
+#[test]
+fn a_helper_leaves_the_description_under_the_captions() {
+    block_on(async {
+        for viewport in [Viewport::Mobile, Viewport::Desktop] {
+            let fixture = Fixture::open("/slider/description-below", viewport)
+                .await
+                .unwrap();
+            let gaps: Vec<f64> = fixture
+                .page
+                .evaluate_bounded(
+                    "['single', 'helper', 'range', 'status'].map(id => { \
+                     const root = document.getElementById(id); \
+                     const caption = root.querySelector('[data-slot=mark-label]').getBoundingClientRect(); \
+                     const description = root.querySelector(\"[data-slot='description']\").getBoundingClientRect(); \
+                     return description.top - caption.bottom; })",
+                )
+                .await
+                .unwrap()
+                .into_value()
+                .unwrap();
+            assert!(
+                (gaps[0] - gaps[1]).abs() < 0.5 && (gaps[2] - gaps[3]).abs() < 0.5,
+                "at {}: gaps under the captions (single, helper, range, status): {gaps:?}",
+                viewport.name()
+            );
+            fixture.close().await.unwrap();
+        }
+    });
+}
+
+/// Todo 5417: under a finger the 44px press is centred on the track, not on the box that
+/// also holds the caption room.
+#[test]
+fn a_finger_press_on_a_captioned_slider_is_centred_on_the_track() {
+    block_on(async {
+        let fixture = Fixture::open("/slider/description-below", Viewport::Mobile)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        crate::hit_area::emulate_coarse_pointer(page).await;
+        let misses: Vec<String> = page
+            .evaluate_bounded(
+                "['single', 'range', 'discrete'].flatMap(id => { \
+                 const track = document.getElementById(id).querySelector(\"[data-slot='track']\").getBoundingClientRect(); \
+                 const x = track.left + track.width * 0.9, middle = track.top + track.height / 2; \
+                 const inside = el => !!el && !!el.closest(\"[data-slot='control']\"); \
+                 const out = []; \
+                 for (const side of [-1, 1]) { \
+                   if (side < 0 && !inside(document.elementFromPoint(x, middle - 21))) out.push(id + ': 21px above the track is not pressable'); \
+                   if (side < 0 && inside(document.elementFromPoint(x, middle - 23))) out.push(id + ': 23px above the track is pressable'); \
+                 } \
+                 return out; })",
+            )
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        assert!(misses.is_empty(), "press area off the track: {misses:?}");
+        fixture.close().await.unwrap();
+    });
+}
+
 /// WCAG 2.5.8 on the 16px thumb's 24px hit area (302): hit-tests 11.5px out, 13px as the
 /// failing control, then drags from 11px above, outside the drawn box.
 #[test]

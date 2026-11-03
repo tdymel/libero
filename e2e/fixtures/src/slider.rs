@@ -3,7 +3,7 @@
 use dioxus::prelude::*;
 use libero::{
     components::{
-        Flex, RangeSlider, Slider, SliderChangeEvent, SliderMark, SliderSegment, SliderTrack,
+        FieldStatus, Flex, RangeSlider, Slider, SliderChangeEvent, SliderMark, SliderSegment, SliderTrack,
         SliderValue, Text,
     },
     sx::sx,
@@ -27,7 +27,7 @@ pub const ROUTES: Routes = &[
     ("/slider/description-below", || rsx! { SliderDescriptionBelowPage {} }),
 ];
 
-/// Todo 5406: a description set below sits under the sliders' mark captions.
+/// Todos 5406, 5415: a description set below sits under the sliders' mark captions, with a helper or status too.
 #[component]
 fn SliderDescriptionBelowPage() -> Element {
     let marks = || vec![SliderMark::labeled(0.0, "Low"), SliderMark::labeled(100.0, "High")];
@@ -48,6 +48,28 @@ fn SliderDescriptionBelowPage() -> Element {
                     label: "Price",
                     description: "Within this span.",
                     description_position: "below",
+                    value: (20.0f64, 60.0f64),
+                    marks: marks(),
+                    oninput: move |_: SliderChangeEvent<(f64, f64)>| {},
+                }
+            }
+            div { id: "helper",
+                Slider {
+                    label: "Quality",
+                    description: "What the encoder aims for.",
+                    description_position: "below",
+                    helper: "Higher is slower.",
+                    value: 40.0f64,
+                    marks: marks(),
+                    oninput: move |_: SliderChangeEvent<f64>| {},
+                }
+            }
+            div { id: "status",
+                RangeSlider {
+                    label: "Price",
+                    description: "Within this span.",
+                    description_position: "below",
+                    status: FieldStatus::Error("Too wide.".into()),
                     value: (20.0f64, 60.0f64),
                     marks: marks(),
                     oninput: move |_: SliderChangeEvent<(f64, f64)>| {},

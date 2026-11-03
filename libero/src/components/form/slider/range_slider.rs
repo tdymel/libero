@@ -158,11 +158,7 @@ pub fn RangeSlider<V: SliderValue>(props: RangeSliderProps<V>) -> Element {
         "RangeSlider: no `label` or `aria_label`, so the thumbs are announced as just \"Minimum\" and \"Maximum\".",
     );
 
-    let control_sx = control_spacing(
-        !props.label.is_none() || !props.description.is_none(),
-        !props.helper.is_none(),
-        props.status.as_ref(),
-    );
+    let control_sx = control_spacing(!props.label.is_none() || !props.description.is_none());
 
     // Unlabelled, each thumb's own name carries the group's and says required,
     // as the label's id would.

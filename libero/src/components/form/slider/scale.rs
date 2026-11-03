@@ -6,10 +6,7 @@ use dioxus::prelude::*;
 use super::slider_value::{SliderChangeEvent, SliderMark, SliderStep, SliderValue};
 use super::value::{SliderCoreValue, sane_bounds};
 use crate::{
-    components::{
-        common::Input,
-        form::{Bound, FieldStatus},
-    },
+    components::{common::Input, form::Bound},
     sx::{Sx, sx},
     theme::{Size, SizeCss},
 };
@@ -147,23 +144,10 @@ pub(super) fn use_emit<T: Clone + 'static>(
     })
 }
 
-/// Keeps the label off the overhanging thumb and the helper off the mark
-/// captions: the field's gap only reaches the control's box.
-pub(super) fn control_spacing(
-    above: bool,
-    helper: bool,
-    status: Option<&FieldStatus>,
-) -> Input<Sx> {
-    let below = helper || status.and_then(FieldStatus::message).is_some();
-    if !above && !below {
-        return Input::default();
+/// Keeps the label off the thumb that overhangs the track above the control's box.
+pub(super) fn control_spacing(above: bool) -> Input<Sx> {
+    match above {
+        true => sx().margin_top(SizeCss::SPACING.value(Size::Sm)).into(),
+        false => Input::default(),
     }
-    let mut spacing = sx();
-    if above {
-        spacing = spacing.margin_top(SizeCss::SPACING.value(Size::Sm));
-    }
-    if below {
-        spacing = spacing.margin_bottom(SizeCss::SPACING.value(Size::Md));
-    }
-    spacing.into()
 }

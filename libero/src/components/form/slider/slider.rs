@@ -173,11 +173,7 @@ pub fn Slider<V: SliderValue>(props: SliderProps<V>) -> Element {
         "Slider: no `label` or `aria_label`, so the thumb is announced as just \"slider\".",
     );
 
-    let control_sx = control_spacing(
-        !props.label.is_none() || !props.description.is_none(),
-        !props.helper.is_none(),
-        props.status.as_ref(),
-    );
+    let control_sx = control_spacing(!props.label.is_none() || !props.description.is_none());
 
     let control = rsx! {
         SliderCore {
