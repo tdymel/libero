@@ -554,7 +554,12 @@ async fn a_removed_column_leaves_no_slot<D: Driver>(d: &mut D, _route: &str) -> 
     })
     .await?;
     d.click("#Alpha [data-slot=move-to]").await?;
-    eventually_focused(d, "[role=menuitem]", "a click on the trigger").await?;
+    // A finger opens the sheet on its box, no row highlighted (4862).
+    let first = match d.platform().is_touch() {
+        true => "[role=menu]",
+        false => "[role=menuitem]",
+    };
+    eventually_focused(d, first, "a click on the trigger").await?;
     ensure!(
         d.exists(&row(1)).await? && !d.exists(&row(2)).await?,
         "Move to offers a column more than the board has"
@@ -586,8 +591,7 @@ e2e::scenario!(
     a_removed_column_is_no_longer_offered_by_move_to_or_the_arrow_keys,
     "/kanban/remove-column",
     a_removed_column_leaves_no_slot,
-    desktop: skip("958: element identity on the WebView"),
-    ios: skip("upstream: WebKit does not focus a clicked button")
+    desktop: skip("958: element identity on the WebView")
 );
 
 /// Lifts `card` by its handle and waits for the lift to be announced.

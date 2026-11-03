@@ -164,7 +164,6 @@ The performance scenarios (units `perf`, `table_perf`) are no skips but run on r
 | `kanban::a_refused_move_is_void_once_the_app_removes_its_card` | desktop | 958: element identity on the WebView |
 | `kanban::a_refused_move_is_void_when_the_data_change_renders_only_a_column` | desktop | 958: element identity on the WebView |
 | `kanban::a_removed_column_is_no_longer_offered_by_move_to_or_the_arrow_keys` | desktop | 958: element identity on the WebView |
-| `kanban::a_removed_column_is_no_longer_offered_by_move_to_or_the_arrow_keys` | ios | upstream: WebKit does not focus a clicked button |
 | `kanban::a_same_column_key_or_button_move_the_app_refuses_is_not_announced` | desktop | 958: element identity on the WebView |
 | `kanban::left_and_right_put_a_lifted_card_in_the_next_column_of_a_right_to_left_board_mirrored` | macos desktop | upstream: WebKit orders the RTL columns unlike WebKitGTK |
 | `kanban::left_moves_a_lifted_column_forward_on_a_right_to_left_board` | macos desktop | upstream: WebKit orders the RTL columns unlike WebKitGTK |
