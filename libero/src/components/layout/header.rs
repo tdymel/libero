@@ -50,7 +50,13 @@ fn header_base_color(value: Option<&ThemeAwareValue>) -> Option<ThemeAwareValue>
         Some(ThemeAwareValue::Color(color)) => Some(ThemeAwareValue::ColorValue(
             ColorValue::Shade(*color, HEADER_DEFAULT_SHADE),
         )),
-        Some(other) => Some(other.clone()),
+        Some(other) => {
+            #[cfg(debug_assertions)]
+            if let ThemeAwareValue::String(raw) = other {
+                crate::sx::unknown_color::warn_unknown_component_color("Header", raw);
+            }
+            Some(other.clone())
+        }
     }
 }
 
@@ -386,6 +392,22 @@ mod tests {
             gradient: None,
             children: rsx! {},
         }
+    }
+
+    #[cfg(debug_assertions)]
+    #[test]
+    fn an_unknown_color_name_warns_without_glass_and_a_known_one_does_not() {
+        crate::utils::take_warnings();
+        header_variables(&header_props("header-typo".into()), None);
+        header_variables(&header_props("tomato".into()), None);
+        header_variables(&header_props("#1a1a2e".into()), None);
+        let warnings = crate::utils::take_warnings();
+
+        assert_eq!(warnings.len(), 1, "{warnings:?}");
+        assert!(
+            warnings[0].contains("`Header` `color: \"header-typo\"`"),
+            "{warnings:?}"
+        );
     }
 
     #[test]
