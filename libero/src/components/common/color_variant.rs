@@ -18,7 +18,13 @@ pub(crate) fn base_color(value: Option<&ThemeAwareValue>) -> ThemeAwareValue {
         Some(ThemeAwareValue::Color(color)) => {
             ThemeAwareValue::ColorValue(ColorValue::Shade(*color, DEFAULT_SHADE))
         }
-        Some(other) => other.clone(),
+        Some(other) => {
+            #[cfg(debug_assertions)]
+            if let ThemeAwareValue::String(raw) = other {
+                crate::sx::unknown_color::warn_unknown_component_color(raw);
+            }
+            other.clone()
+        }
     }
 }
 
@@ -205,6 +211,35 @@ mod tests {
         assert_eq!(contrast_color(&literal), None);
         assert_eq!(hover_color(&literal, true), None);
         assert_eq!(hover_color(&literal, false), None);
+    }
+
+    #[cfg(debug_assertions)]
+    #[test]
+    fn an_unknown_color_name_warns_once_and_passes_through_unchanged() {
+        crate::utils::take_warnings();
+        let typo = ThemeAwareValue::from("dimmed");
+        assert_eq!(base_color(Some(&typo)), typo);
+        assert_eq!(base_color(Some(&typo)), typo);
+        let warnings = crate::utils::take_warnings();
+        assert_eq!(warnings.len(), 1, "{warnings:?}");
+        assert!(warnings[0].contains("\"dimmed\""), "{warnings:?}");
+    }
+
+    #[cfg(debug_assertions)]
+    #[test]
+    fn real_color_spellings_stay_silent() {
+        crate::utils::take_warnings();
+        for value in [
+            "primary",
+            "primary.7",
+            "text-dimmed",
+            "currentColor",
+            "#fff",
+            "var(--x)",
+        ] {
+            base_color(Some(&ThemeAwareValue::from(value)));
+        }
+        assert!(crate::utils::take_warnings().is_empty());
     }
 
     #[test]

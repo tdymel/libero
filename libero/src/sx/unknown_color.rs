@@ -220,9 +220,9 @@ fn is_identifier(value: &str) -> bool {
         && bytes.all(|byte| byte.is_ascii_alphanumeric() || byte == b'-')
 }
 
-/// Warns once per property and string about a raw value on a colour property
-/// that looks like a name but is neither a theme colour nor a CSS keyword it takes.
-pub(crate) fn warn_unknown_color_name(property: Property, value: &str) {
+/// Whether `value` looks like a name but is neither a theme colour nor a CSS keyword
+/// `property` takes, and this is the first time it is seen on that property.
+fn is_new_unknown_color_name(property: Property, value: &str) -> bool {
     thread_local! {
         static WARNED: std::cell::RefCell<Vec<(Property, String)>> = const { std::cell::RefCell::new(Vec::new()) };
     }
@@ -236,16 +236,16 @@ pub(crate) fn warn_unknown_color_name(property: Property, value: &str) {
         _ => value,
     };
     if !property.takes_color() || !is_identifier(name) {
-        return;
+        return false;
     }
     let lower = value.to_ascii_lowercase();
     let known = CSS_COLOR_KEYWORDS.contains(&lower.as_str())
         || OTHER_COLOR_KEYWORDS.contains(&lower.as_str())
         || (property == Property::Background && BACKGROUND_KEYWORDS.contains(&lower.as_str()));
     if known {
-        return;
+        return false;
     }
-    let first = WARNED.with_borrow_mut(|warned| {
+    WARNED.with_borrow_mut(|warned| {
         let first = !warned
             .iter()
             .any(|(seen, seen_value)| *seen == property && seen_value == value);
@@ -253,12 +253,33 @@ pub(crate) fn warn_unknown_color_name(property: Property, value: &str) {
             warned.push((property, value.to_string()));
         }
         first
-    });
-    if first {
+    })
+}
+
+/// Warns once per property and string about a raw value on a colour property
+/// that looks like a name but is neither a theme colour nor a CSS keyword it takes.
+pub(crate) fn warn_unknown_color_name(property: Property, value: &str) {
+    if is_new_unknown_color_name(property, value) {
         warn(&format!(
             "`{value}` on `{}` is neither a theme colour nor a CSS colour keyword; \
              it is emitted as-is and paints nothing.",
             property.as_str()
+        ));
+    }
+}
+
+/// The same for a component's `color` prop, which reaches CSS through a custom property
+/// and never through `sx`: `Text { color: "dimmed" }` renders plain text.
+pub(crate) fn warn_unknown_component_color(value: &str) {
+    if is_new_unknown_color_name(Property::Color, value) {
+        let hint = if value.eq_ignore_ascii_case("dimmed") {
+            " (the quiet text colour is `text-dimmed`)"
+        } else {
+            ""
+        };
+        warn(&format!(
+            "`color: {value:?}` is neither a theme colour nor a CSS colour keyword{hint}; \
+             the browser ignores it and the component keeps its plain look."
         ));
     }
 }
@@ -332,6 +353,19 @@ mod tests {
             assert!(warnings.is_empty(), "{value}: {warnings:?}");
         }
         assert!(warnings_of(sx().background("none")).is_empty());
+    }
+
+    #[test]
+    fn an_unknown_component_colour_warns_once_with_the_dimmed_hint() {
+        use super::warn_unknown_component_color;
+        take_warnings();
+        warn_unknown_component_color("dimmed");
+        warn_unknown_component_color("dimmed");
+        warn_unknown_component_color("primry");
+        let warnings = take_warnings();
+        assert_eq!(warnings.len(), 2, "{warnings:?}");
+        assert!(warnings[0].contains("\"dimmed\"") && warnings[0].contains("`text-dimmed`"));
+        assert!(warnings[1].contains("\"primry\"") && !warnings[1].contains("text-dimmed"));
     }
 
     #[test]

@@ -106,19 +106,35 @@ macro_rules! str_enum {
                     // otherwise invisible. `""` warns too - a prop is unset
                     // via `Input`'s `None`, not an empty string.
                     _ => {
-                        $crate::utils::warn(&format!(
-                            concat!(
-                                stringify!($name),
-                                ": unrecognized value {:?}, using {:?}. Accepted: {}."
-                            ),
-                            value,
-                            Self::default().as_str(),
-                            Self::ALL
-                                .iter()
-                                .map(|variant| format!("{:?}", variant.as_str()))
-                                .collect::<Vec<_>>()
-                                .join(", "),
-                        ));
+                        // Once per bad value: an rsx prop re-parses on every render.
+                        #[cfg(debug_assertions)]
+                        {
+                            thread_local! {
+                                static WARNED: ::std::cell::RefCell<Vec<String>> =
+                                    const { ::std::cell::RefCell::new(Vec::new()) };
+                            }
+                            if WARNED.with_borrow_mut(|warned| {
+                                let first = !warned.iter().any(|seen| seen == value);
+                                if first {
+                                    warned.push(value.to_string());
+                                }
+                                first
+                            }) {
+                                $crate::utils::warn(&format!(
+                                    concat!(
+                                        stringify!($name),
+                                        ": unrecognized value {:?}, using {:?}. Accepted: {}."
+                                    ),
+                                    value,
+                                    Self::default().as_str(),
+                                    Self::ALL
+                                        .iter()
+                                        .map(|variant| format!("{:?}", variant.as_str()))
+                                        .collect::<Vec<_>>()
+                                        .join(", "),
+                                ));
+                            }
+                        }
                         Self::default()
                     }
                 }
@@ -241,6 +257,18 @@ mod tests {
     fn an_unknown_string_falls_back_to_the_default_variant() {
         assert_eq!(Variant::from("nonsense"), Variant::default());
         assert_eq!(Variant::from(""), Variant::Filled);
+    }
+
+    #[cfg(debug_assertions)]
+    #[test]
+    fn an_unknown_string_warns_once_naming_the_value_and_the_accepted_ones() {
+        crate::utils::take_warnings();
+        assert_eq!(Variant::from("subtle"), Variant::Filled);
+        assert_eq!(Variant::from("outlined"), Variant::Outlined);
+        let warnings = crate::utils::take_warnings();
+        assert_eq!(warnings.len(), 1, "{warnings:?}");
+        assert!(warnings[0].contains("\"subtle\""), "{warnings:?}");
+        assert!(warnings[0].contains("\"outlined\""), "{warnings:?}");
     }
 
     #[test]
