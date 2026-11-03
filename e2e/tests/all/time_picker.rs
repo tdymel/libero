@@ -362,6 +362,120 @@ fn a_chrono_pickers_oncomplete_fires_after_the_last_hand() {
     });
 }
 
+/// Presses and releases the face at `label`'s mark with no click after, as a release whose
+/// click never comes: the completion wait stays armed.
+async fn release_without_click(page: &chromiumoxide::Page, label: &str) {
+    let at = mark_centre(page, "#analog", label).await;
+    page.evaluate_bounded(format!(
+        "(() => {{ const face = document.querySelector('#analog [data-slot=face]'); \
+         const init = {{ bubbles: true, pointerId: 7, isPrimary: true, pointerType: 'mouse', \
+                         button: 0, clientX: {}, clientY: {} }}; \
+         face.dispatchEvent(new PointerEvent('pointerdown', {{ ...init, buttons: 1 }})); \
+         face.dispatchEvent(new PointerEvent('pointerup', {{ ...init, buttons: 0 }})); }})()",
+        at.x, at.y
+    ))
+    .await
+    .unwrap();
+}
+
+/// Todo 5428: Enter on the face while the completion wait is armed completes once.
+#[test]
+fn enter_during_the_completion_wait_completes_once() {
+    block_on(async {
+        let fixture = Fixture::open("/time-picker/complete", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        e2e::clock::hold(page, &[400]).await.unwrap();
+        click_mark(page, "11").await;
+        expect_mark(page, "11:30:00", "30", "desktop").await;
+        release_without_click(page, "45").await;
+        expect_mark(page, "11:45:00", "45", "desktop").await;
+        e2e::clock::until_armed(page, 400, 1, "the click wait after the minute")
+            .await
+            .unwrap();
+        page.evaluate_bounded("document.querySelector('#analog [data-slot=face]').focus()")
+            .await
+            .unwrap();
+        keyboard::press(page, keyboard::ENTER).await.unwrap();
+        wait::for_js_true(
+            page,
+            "document.getElementById('completes').textContent === '1'",
+            "Enter completed",
+        )
+        .await
+        .unwrap();
+        e2e::clock::until_armed(page, 400, 0, "Enter cancelled the click wait")
+            .await
+            .unwrap();
+        e2e::clock::settle(page).await.unwrap();
+        wait::for_js_true(
+            page,
+            "document.getElementById('completes').textContent === '1'",
+            "still one oncomplete",
+        )
+        .await
+        .unwrap();
+        fixture.console.assert_clean("enter completes").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
+/// Todo 5428: a readout press during the completion wait cancels it, so nothing completes late.
+#[test]
+fn a_readout_press_cancels_the_completion_wait() {
+    block_on(async {
+        let fixture = Fixture::open("/time-picker/complete", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        e2e::clock::hold(page, &[400]).await.unwrap();
+        click_mark(page, "11").await;
+        expect_mark(page, "11:30:00", "30", "desktop").await;
+        release_without_click(page, "45").await;
+        expect_mark(page, "11:45:00", "45", "desktop").await;
+        e2e::clock::until_armed(page, 400, 1, "the click wait after the minute")
+            .await
+            .unwrap();
+        pointer::click(page, "#analog [data-slot=readout] button:nth-of-type(1)")
+            .await
+            .unwrap();
+        e2e::clock::until_armed(page, 400, 0, "the readout press cancelled the wait")
+            .await
+            .unwrap();
+        e2e::clock::settle(page).await.unwrap();
+        wait::for_js_true(
+            page,
+            "document.getElementById('completes').textContent === '0'",
+            "nothing completed under the readout press",
+        )
+        .await
+        .unwrap();
+        fixture.console.assert_clean("readout cancels").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
+/// Todo 5428: a `ChronoPicker` with no `oncomplete` arms no completion wait.
+#[test]
+fn a_picker_without_oncomplete_arms_no_completion_wait() {
+    block_on(async {
+        let fixture = Fixture::open("/time-picker/complete-silent", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        e2e::clock::hold(page, &[400]).await.unwrap();
+        click_mark(page, "11").await;
+        expect_mark(page, "11:30:00", "30", "desktop").await;
+        release_without_click(page, "45").await;
+        expect_mark(page, "11:45:00", "45", "desktop").await;
+        e2e::clock::settle(page).await.unwrap();
+        assert_eq!(e2e::clock::armed(page, 400).await.unwrap(), 0);
+        fixture.console.assert_clean("silent picker").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
 /// A time picked before any day lands on today, from the clock, when the
 /// picker has no `today` prop (todo 26).
 #[test]

@@ -88,21 +88,29 @@ pub fn TimePicker(props: TimePickerProps) -> Element {
 
 /// A `ChronoPicker`'s `oncomplete`, for a [`Clock`] with no `oncomplete` of its own (5355).
 #[derive(Clone, Copy)]
-struct Completes(Callback<()>);
+struct Completes {
+    call: Callback<()>,
+    /// Whether the picker has an `oncomplete`; without one a clock arms no completion wait.
+    listening: CopyValue<bool>,
+}
 
-/// The surrounding picker's `oncomplete`, if any.
+/// The surrounding picker's `oncomplete`, if it has one.
 pub(super) fn use_completes() -> Option<Callback<()>> {
-    try_use_context::<Completes>().map(|Completes(complete)| complete)
+    try_use_context::<Completes>()
+        .filter(|completes| completes.listening.cloned())
+        .map(|completes| completes.call)
 }
 
 /// Hands `oncomplete` to the clock or duration columns inside, without a scope of its own (5398).
 pub(super) fn use_provide_completes(oncomplete: Option<Callback<()>>) {
-    let complete = use_callback(move |()| {
+    let mut listening = use_hook(|| CopyValue::new(oncomplete.is_some()));
+    listening.set(oncomplete.is_some());
+    let call = use_callback(move |()| {
         if let Some(oncomplete) = oncomplete {
             oncomplete.call(());
         }
     });
-    use_context_provider(|| Completes(complete));
+    use_context_provider(|| Completes { call, listening });
 }
 
 /// What `TimePicker` draws, every option resolved. Plain props, so `ChronoPicker` can pass attributes on.

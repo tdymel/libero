@@ -225,7 +225,11 @@ impl ClockView {
     pub(super) fn analog_view(
         self,
         face: ElementHandle,
-        FaceDrag { drag, onclick }: FaceDrag,
+        FaceDrag {
+            drag,
+            onclick,
+            cancel,
+        }: FaceDrag,
     ) -> Element {
         let ClockView {
             names,
@@ -241,6 +245,7 @@ impl ClockView {
         let aria_disabled = disabled.then_some("true");
         let show = move |next: Hand| {
             if !disabled {
+                cancel.call(());
                 { hand }.set(next);
             }
         };
@@ -309,6 +314,7 @@ impl ClockView {
                     "aria-disabled": aria_disabled,
                     tabindex,
                     onclick: move |_| {
+                        cancel.call(());
                         if let Some(next) = am_at {
                             self.emit(next);
                         }
@@ -323,6 +329,7 @@ impl ClockView {
                     "aria-disabled": aria_disabled,
                     tabindex,
                     onclick: move |_| {
+                        cancel.call(());
                         if let Some(next) = pm_at {
                             self.emit(next);
                         }
@@ -403,7 +410,7 @@ impl ClockView {
                 "aria-valuemin": 0,
                 "aria-valuemax": face_max,
                 onmounted: face.mount(),
-                onkeydown: move |event| self.face_keydown(event),
+                onkeydown: move |event| self.face_keydown(event, cancel),
                 // Disabled, no drag: its `prevent_default` would cancel the press's focus (3883).
                 onpointerdown: move |event| if !self.disabled { drag.onpointerdown.call(event) },
                 onpointermove: drag.onpointermove,

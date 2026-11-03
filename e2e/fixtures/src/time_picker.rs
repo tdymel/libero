@@ -15,11 +15,13 @@ pub const ROUTES: Routes = &[
     ("/time-picker/analog", || rsx! { AnalogPage {} }),
     ("/time-picker/range", || rsx! { RangePage {} }),
     ("/time-picker/complete", || rsx! { CompletePage {} }),
+    ("/time-picker/complete-silent", || rsx! { CompletePage { listens: false } }),
 ];
 
-/// A `ChronoPicker` clock face from 09:30, counting its `oncomplete` calls into `#completes`.
+/// A `ChronoPicker` clock face from 09:30, counting its `oncomplete` calls into `#completes`;
+/// with `listens` false it has no `oncomplete`.
 #[component]
-fn CompletePage() -> Element {
+fn CompletePage(#[props(default = true)] listens: bool) -> Element {
     let mut time = use_signal(|| NaiveTime::from_hms_opt(9, 30, 0));
     let mut completes = use_signal(|| 0);
     let shown = time().map(|value| value.to_string()).unwrap_or_default();
@@ -32,7 +34,7 @@ fn CompletePage() -> Element {
             step: 5,
             value: time(),
             onchange: move |next: Option<NaiveTime>| time.set(next),
-            oncomplete: move |()| completes += 1,
+            oncomplete: listens.then(|| Callback::new(move |()| completes += 1)),
         }
         span { id: "analog-value", {shown} }
         span { id: "completes", "{completes}" }

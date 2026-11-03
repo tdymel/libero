@@ -266,7 +266,8 @@ impl ClockView {
 
     /// The face is a slider over its hand: arrows step past what `min`/`max` rule out,
     /// Page keys a quarter face, Home/End the first/last open value, Enter the next hand.
-    pub(super) fn face_keydown(self, event: KeyboardEvent) {
+    /// `cancel` drops a pending completion wait, so Enter completes once.
+    pub(super) fn face_keydown(self, event: KeyboardEvent, cancel: Callback<()>) {
         // Ctrl/Alt/Meta chords are the browser's.
         if self.disabled || has_shortcut_modifier(&event) {
             return;
@@ -300,6 +301,7 @@ impl ClockView {
             }
             Key::Named(NamedKey::Enter) => {
                 event.prevent_default();
+                cancel.call(());
                 self.advance();
                 return;
             }
@@ -373,6 +375,8 @@ pub(super) struct FaceDrag {
     pub(super) drag: Drag,
     /// The face's click, which completes a pick that closes the field (5400).
     pub(super) onclick: Callback<()>,
+    /// Drops the pending completion wait: a key or readout press took over.
+    pub(super) cancel: Callback<()>,
 }
 
 /// How long a completing release waits for its click before it completes anyway.
@@ -400,6 +404,10 @@ pub(super) fn use_face_drag(clock: ClockView, face: ElementHandle) -> FaceDrag {
         }
     });
     let fallback = use_timeout(move || complete.call(()), CLICK_WAIT_MS);
+    let cancel = use_callback(move |()| {
+        fallback.stop();
+        waiting.set(false);
+    });
     let pick = move |clock: ClockView, x: f64, y: f64| {
         let Some(Press {
             centre: Some((cx, cy, half)),
@@ -486,5 +494,6 @@ pub(super) fn use_face_drag(clock: ClockView, face: ElementHandle) -> FaceDrag {
     FaceDrag {
         drag,
         onclick: complete,
+        cancel,
     }
 }
