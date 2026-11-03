@@ -17,10 +17,10 @@ use crate::{
     },
     context::IconSlot,
     hooks::{
-        DragMove, DragOptions, DragPoint, DragStart, use_drag, use_element, use_id,
+        DragMove, DragOptions, DragPoint, DragStart, use_drag, use_element, use_formats, use_id,
         use_local_state, use_localization,
     },
-    localization::{ImageCropperLabels, fill},
+    localization::{Formats, ImageCropperLabels, fill},
     platform::{self, ElementApi, when_laid_out},
     sx::{StaticSx, sx},
     theme::{CssVar, PAPER_BACKGROUND},
@@ -148,8 +148,13 @@ pub(super) fn min_side(min_size: Option<f64>) -> f64 {
 }
 
 /// The box's `aria-valuetext`, which the move and resize buttons say too (4322).
-pub(super) fn value_text(words: &ImageCropperLabels, pan: bool, rect: CropRect) -> String {
-    let percent = |fraction: f64| (fraction * 100.0).round();
+pub(super) fn value_text(
+    words: &ImageCropperLabels,
+    formats: &Formats,
+    pan: bool,
+    rect: CropRect,
+) -> String {
+    let percent = |fraction: f64| formats.write_percent(&(fraction * 100.0).round().to_string());
     let (width, height, x, y) = (
         percent(rect.width),
         percent(rect.height),
@@ -174,12 +179,13 @@ pub(super) fn value_text(words: &ImageCropperLabels, pan: bool, rect: CropRect) 
 /// can still move it by a rounding error, as five 5% steps leave `y` at 1e-17.
 pub(super) fn press_message(
     words: &ImageCropperLabels,
+    formats: &Formats,
     pan: bool,
     before: CropRect,
     after: CropRect,
 ) -> Option<String> {
-    let said = value_text(words, pan, after);
-    (said != value_text(words, pan, before)).then_some(said)
+    let said = value_text(words, formats, pan, after);
+    (said != value_text(words, formats, pan, before)).then_some(said)
 }
 
 /// The zoom a slider value on ln(zoom) stands for: `exact` while it is `exact` snapped to the step.
@@ -511,6 +517,7 @@ base_props! {
 #[component]
 pub fn ImageCropper(props: ImageCropperProps) -> Element {
     let words = use_localization().image_cropper;
+    let formats = use_formats();
     let root = use_element();
     let image = use_element();
     // Pan mode's image cell, the cropper less the bars under it.
@@ -921,7 +928,7 @@ pub fn ImageCropper(props: ImageCropperProps) -> Element {
         emit.call(rect);
         // An effect, not a task: a task can run before this field's own rerender (4383).
         dioxus::core::queue_effect(move || {
-            if let Some(message) = press_message(&words, pan, shown, *latest.peek()) {
+            if let Some(message) = press_message(&words, formats, pan, shown, *latest.peek()) {
                 announcer.say(message);
             }
         });
@@ -983,7 +990,7 @@ pub fn ImageCropper(props: ImageCropperProps) -> Element {
                 size: "sm",
                 aria_label: label,
                 disabled: !interactive,
-                "aria-disabled": (interactive && press_message(&words, pan, shown, rect).is_none())
+                "aria-disabled": (interactive && press_message(&words, formats, pan, shown, rect).is_none())
                     .then_some("true"),
                 onclick: move |_| pressed(rect),
                 Glyph { slot, icon }
@@ -993,7 +1000,7 @@ pub fn ImageCropper(props: ImageCropperProps) -> Element {
 
     let percent = |fraction: f64| (fraction * 100.0).round();
     let (scale, image_x, image_y) = shown.image_transform();
-    let valuetext = value_text(&words, pan, shown);
+    let valuetext = value_text(&words, formats, pan, shown);
     // The zoom at the largest and the smallest crop of this shape.
     let zoom_range = (
         shown.scaled(f64::MAX, min).image_transform().0,
@@ -1004,7 +1011,8 @@ pub fn ImageCropper(props: ImageCropperProps) -> Element {
     exact_zoom.set(scale);
     let zoom_text = use_callback(move |zoom: f64| {
         let zoom = slider_zoom(zoom, *exact_zoom.peek());
-        fill(words.zoom_value, &[("zoom", &percent(zoom))])
+        let zoom = formats.write_percent(&percent(zoom).to_string());
+        fill(words.zoom_value, &[("zoom", &zoom)])
     });
     let keys = if pan { words.pan_keys } else { words.keys };
     let tabindex = if interactive { "0" } else { "-1" };

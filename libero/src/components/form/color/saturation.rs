@@ -15,7 +15,7 @@ use crate::{
     },
     hooks::{
         DragMove, DragOptions, DragStart, ElementHandle, drag_handle_sx, use_drag, use_element,
-        use_local_state, use_localization,
+        use_formats, use_local_state, use_localization,
     },
     localization::fill,
     platform::ElementApi,
@@ -301,7 +301,8 @@ fn SaturationThumb(
 
     // One `role="slider"` for a 2D control: the text names brightness too, or
     // an Up/Down press would announce nothing.
-    let percent = |fraction: f64| (fraction * 100.0).round();
+    let formats = use_formats();
+    let percent = |fraction: f64| formats.write_percent(&(fraction * 100.0).round().to_string());
     let valuetext = fill(
         use_localization().color.saturation_value,
         &[

@@ -13,7 +13,8 @@ use libero::components::{
     Aggregate, Button, Chip, Column, ColumnWidths, PinnedColumns, RowFn, RowUpdate, Table,
     TableColumnsButton, TableDensityButton, TableExportButton, TableFilterButton, column,
 };
-use libero::hooks::SortableMove;
+use libero::hooks::{SortableMove, use_formats};
+use libero::localization::Formats;
 use libero::platform::{TimerSubscription, save_file, timer};
 use libero::sx::sx;
 
@@ -144,7 +145,7 @@ fn fetch(from: usize) -> Vec<Person> {
 }
 // demo-code: server end
 
-fn team_columns(grouped: bool, editable: bool) -> Vec<Column<Person>> {
+fn team_columns(grouped: bool, editable: bool, formats: &'static Formats) -> Vec<Column<Person>> {
     let group = |column: Column<Person>| match grouped {
         true => column.group("Membership"),
         false => column,
@@ -193,9 +194,13 @@ fn team_columns(grouped: bool, editable: bool) -> Vec<Column<Person>> {
         group(edit(
             column("Bonus")
                 .value(|p: &Person| p.bonus)
-                .format(|p: &Person| p.bonus.map(|b| format!("{b:.1} %")).unwrap_or_default())
+                .format(move |p: &Person| {
+                    p.bonus
+                        .map(|b| formats.write_percent(&format!("{b:.1}")))
+                        .unwrap_or_default()
+                })
                 .aggregate(Aggregate::Avg)
-                .aggregate_format(|b| format!("{b:.1} %"))
+                .aggregate_format(move |b| formats.write_percent(&format!("{b:.1}")))
                 .sortable(),
         )),
     ]
@@ -204,6 +209,7 @@ fn team_columns(grouped: bool, editable: bool) -> Vec<Column<Person>> {
 /// The main demo's table: a component, so reordered rows and resized widths have a signal to land in.
 #[component]
 pub fn TeamTable(values: DemoValues) -> Element {
+    let formats = use_formats();
     let mut rows = use_signal(team);
     // Built on the first flip only, then kept: a flip re-renders the table, not the data.
     let many = use_hook(|| Rc::new(OnceCell::<Vec<Person>>::new()));
@@ -354,7 +360,7 @@ pub fn TeamTable(values: DemoValues) -> Element {
                     (false, true) => Vec::new(),
                     (false, false) => rows(),
                 },
-                columns: team_columns(on("column_groups"), edits(&values)),
+                columns: team_columns(on("column_groups"), edits(&values), formats),
             }
         }
     }

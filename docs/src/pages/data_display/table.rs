@@ -19,6 +19,7 @@ fn from_server(values: &DemoValues) -> bool {
 // snippet: item use libero::chrono::NaiveDate;
 // snippet: item #[derive(Clone, PartialEq)] struct Person { name: String, role: String, joined: NaiveDate, review: Option<NaiveDate>, active: bool, bonus: Option<f64> }
 // snippet: let people: Vec<Person> = Vec::new();
+// snippet: let formats = use_formats();
 // snippet: in Table { caption: "Team members", data: people, .. }
 const COLUMNS: &str = r#"columns: vec![
     column("Name")
@@ -38,15 +39,18 @@ const COLUMNS: &str = r#"columns: vec![
         .sortable(),
     column("Bonus")
         .value(|p: &Person| p.bonus)
-        .format(|p: &Person| p.bonus.map(|b| format!("{b:.1} %")).unwrap_or_default())
+        .format(move |p: &Person| {
+            p.bonus.map(|b| formats.write_percent(&format!("{b:.1}"))).unwrap_or_default()
+        })
         .aggregate(Aggregate::Avg)
-        .aggregate_format(|b| format!("{b:.1} %"))
+        .aggregate_format(move |b| formats.write_percent(&format!("{b:.1}")))
         .sortable(),
 ]"#;
 
 // snippet: item use libero::chrono::NaiveDate;
 // snippet: item #[derive(Clone, PartialEq)] struct Person { name: String, role: String, joined: NaiveDate, review: Option<NaiveDate>, active: bool, bonus: Option<f64> }
 // snippet: let people: Vec<Person> = Vec::new();
+// snippet: let formats = use_formats();
 // snippet: in Table { caption: "Team members", data: people, .. }
 const GROUPED_COLUMNS: &str = r#"columns: vec![
     column("Name")
@@ -68,9 +72,11 @@ const GROUPED_COLUMNS: &str = r#"columns: vec![
         .group("Membership"),
     column("Bonus")
         .value(|p: &Person| p.bonus)
-        .format(|p: &Person| p.bonus.map(|b| format!("{b:.1} %")).unwrap_or_default())
+        .format(move |p: &Person| {
+            p.bonus.map(|b| formats.write_percent(&format!("{b:.1}"))).unwrap_or_default()
+        })
         .aggregate(Aggregate::Avg)
-        .aggregate_format(|b| format!("{b:.1} %"))
+        .aggregate_format(move |b| formats.write_percent(&format!("{b:.1}")))
         .sortable()
         .group("Membership"),
 ]"#;
@@ -109,6 +115,8 @@ fn wrap_data(values: &DemoValues, code: &str) -> String {
             false => items.push(FILE.section("team")),
         }
     }
+    // The Bonus column writes its percent in the site's formats.
+    people.push_str("\nlet formats = use_formats();");
     if resizes(values) {
         people.push_str("\nlet mut widths = use_signal(ColumnWidths::new);");
     }

@@ -11,5 +11,6 @@ pub use duration::DurationStyle;
 pub(crate) use duration::{ZeroIn, clock};
 pub use fill::fill;
 pub use formats::Formats;
+pub(crate) use formats::{ActiveFormats, active_formats};
 pub use labels::*;
 pub use localization::Localization;

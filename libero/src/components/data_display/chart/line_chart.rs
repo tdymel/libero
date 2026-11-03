@@ -399,7 +399,7 @@ mod tests {
         });
         assert!(
             // A `%` unit is written as `ValueFormat::Percent` writes a share (todo 5118).
-            html.contains("Revenue: 12.500,5 EUR to ") && html.contains("Margin: 12,5% to "),
+            html.contains("Revenue: 12.500,5 EUR to ") && html.contains("Margin: 12,5\u{a0}% to "),
             "{html}"
         );
 

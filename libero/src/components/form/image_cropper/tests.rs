@@ -1,6 +1,6 @@
 use super::crop::{CropRect, Grip};
 use super::image_cropper::{min_side, press_message, slider_zoom, value_text};
-use crate::localization::ImageCropperLabels;
+use crate::localization::{Formats, ImageCropperLabels};
 
 fn rect(x: f64, y: f64, width: f64, height: f64) -> CropRect {
     CropRect {
@@ -251,23 +251,46 @@ fn a_button_press_says_the_new_box_and_a_no_op_says_nothing() {
     let words = ImageCropperLabels::ENGLISH;
     let crop = rect(0.0, 0.1, 0.4, 0.5);
     assert_eq!(
-        press_message(&words, false, crop, crop.moved(-0.05, 0.0)),
+        press_message(
+            &words,
+            &Formats::AMERICAN,
+            false,
+            crop,
+            crop.moved(-0.05, 0.0)
+        ),
         None
     );
     let moved = crop.moved(0.05, 0.0);
-    let said = press_message(&words, false, crop, moved);
+    let said = press_message(&words, &Formats::AMERICAN, false, crop, moved);
     assert_eq!(said.as_deref(), Some("40% by 50%, at 5%, 10%"));
-    assert_eq!(said, Some(value_text(&words, false, moved)));
+    assert_eq!(
+        said,
+        Some(value_text(&words, &Formats::AMERICAN, false, moved))
+    );
     // Five 5% steps up leave a rounding error the sixth, at the edge, takes away.
     let top = (0..5).fold(rect(0.3, 0.25, 0.5, 0.5), |at, _| at.moved(0.0, -0.05));
     assert_eq!(
-        press_message(&words, false, top, top.moved(0.0, -0.05)),
+        press_message(
+            &words,
+            &Formats::AMERICAN,
+            false,
+            top,
+            top.moved(0.0, -0.05)
+        ),
         None
     );
     // Pan mode says the zoom too.
     let zoomed = crop.zoomed(2.0, (0.5, 0.5), (0.5, 0.5), 0.05);
-    let said = press_message(&words, true, crop, zoomed).unwrap();
+    let said = press_message(&words, &Formats::AMERICAN, true, crop, zoomed).unwrap();
     assert!(said.contains("zoom"), "{said}");
+}
+
+/// Todo 5558: German writes its percent with a no-break space, from the formats.
+#[test]
+fn the_box_text_follows_the_formats_percent() {
+    let crop = rect(0.05, 0.1, 0.4, 0.5);
+    let german = value_text(&ImageCropperLabels::GERMAN, &Formats::GERMAN, false, crop);
+    assert_eq!(german, "40\u{a0}% mal 50\u{a0}%, bei 5\u{a0}%, 10\u{a0}%");
 }
 
 /// The region is there before any press: one inserted with its text is not read.

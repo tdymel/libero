@@ -5,11 +5,12 @@ pub struct ColorLabels {
     pub saturation: &'static str,
     pub hue: &'static str,
     pub alpha: &'static str,
-    /// The panel's value: `{s}` saturation and `{v}` brightness, in percent.
+    /// The panel's value: `{s}` saturation and `{v}` brightness, percentages in the
+    /// formats' `percent` style.
     pub saturation_value: &'static str,
     /// The hue slider's value: `{value}` in degrees.
     pub hue_value: &'static str,
-    /// The alpha slider's value: `{value}` in percent.
+    /// The alpha slider's value: `{value}`, a percentage.
     pub alpha_value: &'static str,
     /// Names `ColorField`'s dropdown.
     pub choose: &'static str,
@@ -28,9 +29,9 @@ impl ColorLabels {
         saturation: "Saturation",
         hue: "Hue",
         alpha: "Alpha",
-        saturation_value: "Saturation {s}%, brightness {v}%",
+        saturation_value: "Saturation {s}, brightness {v}",
         hue_value: "{value} degrees",
-        alpha_value: "{value}%",
+        alpha_value: "{value}",
         choose: "Choose color",
         eye_dropper: "Pick a color from the screen",
         invalid: "Not a valid color",
@@ -42,9 +43,9 @@ impl ColorLabels {
         saturation: "Sättigung",
         hue: "Farbton",
         alpha: "Deckkraft",
-        saturation_value: "Sättigung {s} %, Helligkeit {v} %",
+        saturation_value: "Sättigung {s}, Helligkeit {v}",
         hue_value: "{value} Grad",
-        alpha_value: "{value} %",
+        alpha_value: "{value}",
         choose: "Farbe wählen",
         eye_dropper: "Farbe vom Bildschirm aufnehmen",
         invalid: "Keine gültige Farbe",

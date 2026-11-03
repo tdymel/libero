@@ -5,7 +5,7 @@ use dioxus::prelude::*;
 use crate::{
     components::accessibility::Announcer,
     hooks::{DragPoint, ElementHandle},
-    localization::{LightboxLabels, fill},
+    localization::{Formats, LightboxLabels, fill},
     platform::{Dimensions, ElementApi},
 };
 
@@ -379,13 +379,19 @@ pub(super) struct Zooming {
     pub(super) max_zoom: f64,
     pub(super) announcer: Announcer,
     pub(super) labels: LightboxLabels,
+    pub(super) formats: &'static Formats,
 }
 
 impl Zooming {
     /// Says the new scale: a zoom is otherwise silent to a screen reader.
     pub(super) fn announce(self, scale: f64) {
         self.announcer.say(match scale > 1.0 {
-            true => fill(self.labels.zoomed, &[("n", &(scale * 100.0).round())]),
+            true => {
+                let percent = self
+                    .formats
+                    .write_percent(&(scale * 100.0).round().to_string());
+                fill(self.labels.zoomed, &[("n", &percent)])
+            }
             false => self.labels.fitted.to_string(),
         });
     }

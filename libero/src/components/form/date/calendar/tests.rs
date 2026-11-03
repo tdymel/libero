@@ -69,3 +69,21 @@ fn a_complete_range_ignores_the_mouse() {
     assert_eq!(complete.marks(day(15), Some(day(20))), (false, false));
     assert!(!complete.awaits_end());
 }
+
+/// Todo 5560: the drawn month and day lead, the rest follows the formats' Day pattern.
+#[test]
+fn a_mini_day_is_named_in_its_locale() {
+    use crate::localization::{DateLocale, Formats};
+    let name = |formats, names: &DateLocale| {
+        let month = format_date(day(14), "MMM", names);
+        render::strip_day_name(day(14), &month, formats, names)
+    };
+    assert_eq!(
+        name(&Formats::AMERICAN, &DateLocale::ENGLISH),
+        "Sep 14, Monday, September 14, 2026"
+    );
+    assert_eq!(
+        name(&Formats::GERMAN, &DateLocale::GERMAN),
+        "Sept 14, Montag, 14. September 2026"
+    );
+}

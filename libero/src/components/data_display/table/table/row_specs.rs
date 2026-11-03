@@ -18,7 +18,10 @@ use super::super::{
     tree::TreeLevel,
     window::{BodyRows, RowFocus, RowWindow, window_attributes},
 };
-use crate::{components::common::attr, localization::labels::table::TableLabels};
+use crate::{
+    components::common::attr,
+    localization::{Formats, labels::table::TableLabels},
+};
 
 /// A group row by its group's index, with the attributes its place asks for.
 pub(super) type GroupRowFn = Rc<dyn Fn(usize, Vec<Attribute>) -> Element>;
@@ -40,6 +43,7 @@ pub(super) struct GroupSpec<'a, T> {
     /// With `cell_focus` and a hidden column: each column's `aria-colindex`.
     pub colindex: Option<&'a [usize]>,
     pub labels: TableLabels,
+    pub formats: &'static Formats,
     /// Opens or closes a group: its id, its label and the new state.
     pub toggle: Callback<(String, String, bool)>,
     /// Turns the rows of a group, by its id, on or off.
@@ -59,6 +63,7 @@ pub(super) fn group_row<T: 'static>(spec: GroupSpec<'_, T>) -> GroupRowFn {
         leads,
         colindex,
         labels,
+        formats,
         toggle,
         select,
     } = spec;
@@ -85,7 +90,9 @@ pub(super) fn group_row<T: 'static>(spec: GroupSpec<'_, T>) -> GroupRowFn {
         let aggregates = values.as_ref().map(|values| {
             layout
                 .iter()
-                .map(|&index| aggregate_cell(&columns[index], values[at][index], &labels))
+                .map(|&index| {
+                    aggregate_cell(&columns[index], values[at][index], (&labels, formats))
+                })
                 .collect()
         });
         let selected = selects

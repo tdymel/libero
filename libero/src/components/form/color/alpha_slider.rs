@@ -13,7 +13,7 @@ use crate::{
         form::slider::{SliderCore, SliderCoreValue, SliderPart},
         form::use_fieldset_disabled,
     },
-    hooks::{use_localization, use_theme},
+    hooks::{use_formats, use_localization, use_theme},
     localization::fill,
     theme::{CssVar, Size},
 };
@@ -148,8 +148,11 @@ fn alpha_slider(
     });
     // Alpha is heard as the opacity it gives, not as a 0-1 fraction.
     let template = use_localization().color.alpha_value;
-    let valuetext =
-        use_callback(move |alpha: f64| fill(template, &[("value", &(alpha * 100.0).round())]));
+    let formats = use_formats();
+    let valuetext = use_callback(move |alpha: f64| {
+        let percent = formats.write_percent(&(alpha * 100.0).round().to_string());
+        fill(template, &[("value", &percent)])
+    });
 
     rsx! {
         SliderCore {

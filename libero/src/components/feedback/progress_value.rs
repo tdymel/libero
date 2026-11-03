@@ -1,6 +1,6 @@
 //! The value maths and ARIA numbers `ProgressBar` and `CircularProgress` share.
 
-use crate::platform::warn_once;
+use crate::{localization::Formats, platform::warn_once};
 
 /// The drawn share, in `0.0..=1.0`. A broken range warns once and draws empty.
 pub(crate) fn fraction(component: &str, value: f64, min: f64, max: f64) -> f64 {
@@ -30,17 +30,24 @@ pub(crate) fn value_max(min: f64, max: f64) -> f64 {
     if min > max { min } else { max }
 }
 
-/// The rounded share, held at 1% until the value is empty and at 99% until it is full.
-pub(crate) fn percentage(fraction: f64) -> String {
+/// The rounded share, held at 1 until the value is empty and at 99 until it is full.
+fn whole_percent(fraction: f64) -> f64 {
     let percent = (fraction * 100.0).round();
-    format!(
-        "{}%",
-        if fraction > 0.0 && fraction < 1.0 {
-            percent.clamp(1.0, 99.0)
-        } else {
-            percent
-        }
-    )
+    if fraction > 0.0 && fraction < 1.0 {
+        percent.clamp(1.0, 99.0)
+    } else {
+        percent
+    }
+}
+
+/// [`whole_percent`] as a CSS length: `43%`.
+pub(crate) fn percentage(fraction: f64) -> String {
+    format!("{}%", whole_percent(fraction))
+}
+
+/// [`whole_percent`] as text in the site's formats: `43%`, `43\u{a0}%`.
+pub(crate) fn percentage_text(fraction: f64, formats: &Formats) -> String {
+    formats.write_percent(&whole_percent(fraction).to_string())
 }
 
 /// Whole numbers without a decimal tail: "3 of 10", not "3 of 10.0". `None` for a
@@ -145,6 +152,13 @@ mod tests {
     fn the_percentage_reads_100_only_when_full() {
         assert_eq!(percentage(0.995), "99%");
         assert_eq!(percentage(0.9999), "99%");
+    }
+
+    #[test]
+    fn the_percentage_text_follows_the_formats() {
+        assert_eq!(percentage_text(0.425, &Formats::AMERICAN), "43%");
+        assert_eq!(percentage_text(0.425, &Formats::GERMAN), "43\u{a0}%");
+        assert_eq!(percentage(0.425), "43%");
     }
 
     /// Todo 4919: 0.4 of 100 draws a sliver, so it must not read "0%".

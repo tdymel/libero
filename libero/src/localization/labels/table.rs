@@ -1,4 +1,4 @@
-use crate::theme::Size;
+use crate::{localization::active_formats, theme::Size};
 
 /// How a table's column filters join: a row stays when it passes all of them,
 /// or any one. The quick filter applies on top either way.
@@ -77,6 +77,9 @@ pub struct TableLabels {
     pub select_row: fn(&str) -> String,
     /// Announced after a selection change. A fn, for plural forms.
     ///
+    /// The shipped fns write the numbers in the active `Formats`; an override gets them
+    /// plain and can call [`Formats::write_number`](crate::localization::Formats::write_number).
+    ///
     /// ```
     /// use libero::localization::TableLabels;
     ///
@@ -90,6 +93,9 @@ pub struct TableLabels {
     /// The page-size picker's label.
     pub rows_per_page: &'static str,
     /// The shown rows: first and last row number, and the rows over all pages.
+    ///
+    /// The shipped fns write the numbers in the active `Formats`; an override gets them
+    /// plain and can call [`Formats::write_number`](crate::localization::Formats::write_number).
     ///
     /// ```
     /// use libero::localization::TableLabels;
@@ -126,6 +132,9 @@ pub struct TableLabels {
     pub no_results: &'static str,
     /// Announced once typing in the quick filter settles. A fn, for plural forms.
     ///
+    /// The shipped fns write the numbers in the active `Formats`; an override gets them
+    /// plain and can call [`Formats::write_number`](crate::localization::Formats::write_number).
+    ///
     /// ```
     /// use libero::localization::TableLabels;
     ///
@@ -148,6 +157,9 @@ pub struct TableLabels {
     /// Drops a resized column's width, back to its own.
     pub reset_column_width: &'static str,
     /// Announced after a menu Widen or Narrow step: the header and the new width in px.
+    ///
+    /// The shipped fns write the numbers in the active `Formats`; an override gets them
+    /// plain and can call [`Formats::write_number`](crate::localization::Formats::write_number).
     ///
     /// ```
     /// use libero::localization::TableLabels;
@@ -318,6 +330,9 @@ pub struct TableLabels {
     /// The toolbar's `TableExportButton`.
     pub export: &'static str,
     /// Announced after an export, from the rows it holds. A fn, for plural forms.
+    ///
+    /// The shipped fns write the numbers in the active `Formats`; an override gets them
+    /// plain and can call [`Formats::write_number`](crate::localization::Formats::write_number).
     ///
     /// ```
     /// use libero::localization::TableLabels;
@@ -507,7 +522,7 @@ fn english_selected(count: usize) -> String {
     match count {
         0 => "No rows selected".to_string(),
         1 => "1 row selected".to_string(),
-        _ => format!("{count} rows selected"),
+        _ => format!("{} rows selected", grouped(count)),
     }
 }
 
@@ -516,29 +531,36 @@ fn german_selected(count: usize) -> String {
     match count {
         0 => "Keine Zeilen ausgewählt".to_string(),
         1 => "1 Zeile ausgewählt".to_string(),
-        _ => format!("{count} Zeilen ausgewählt"),
+        _ => format!("{} Zeilen ausgewählt", grouped(count)),
     }
 }
 
 fn english_results(count: usize) -> String {
     match count {
         1 => "1 row".to_string(),
-        _ => format!("{count} rows"),
+        _ => format!("{} rows", grouped(count)),
     }
 }
 
 fn german_results(count: usize) -> String {
     match count {
         1 => "1 Zeile".to_string(),
-        _ => format!("{count} Zeilen"),
+        _ => format!("{} Zeilen", grouped(count)),
     }
 }
 
+/// A number in the active formats' separators: `1,234`, `1.234`.
+fn grouped(number: impl ToString) -> String {
+    active_formats().write_number(&number.to_string())
+}
+
 fn english_range(from: usize, to: usize, total: usize) -> String {
+    let (from, to, total) = (grouped(from), grouped(to), grouped(total));
     format!("{from}–{to} of {total}")
 }
 
 fn german_range(from: usize, to: usize, total: usize) -> String {
+    let (from, to, total) = (grouped(from), grouped(to), grouped(total));
     format!("{from}–{to} von {total}")
 }
 
@@ -559,7 +581,7 @@ fn german_column_menu(column: &str) -> String {
 }
 
 fn column_width(column: &str, width: f64) -> String {
-    format!("{column}: {width} px")
+    format!("{column}: {} px", grouped(width))
 }
 
 fn english_column_width_reset(column: &str) -> String {
@@ -677,14 +699,14 @@ fn german_density_name(size: Size) -> &'static str {
 fn english_exported(count: usize) -> String {
     match count {
         1 => "Exported 1 row".to_string(),
-        _ => format!("Exported {count} rows"),
+        _ => format!("Exported {} rows", grouped(count)),
     }
 }
 
 fn german_exported(count: usize) -> String {
     match count {
         1 => "1 Zeile exportiert".to_string(),
-        _ => format!("{count} Zeilen exportiert"),
+        _ => format!("{} Zeilen exportiert", grouped(count)),
     }
 }
 
@@ -1025,6 +1047,43 @@ impl TableLabels {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// Todo 5559: the shipped fns group in the provider's formats, plainly outside one.
+    #[test]
+    fn the_counts_follow_the_active_formats() {
+        use crate::localization::Formats;
+        use dioxus::prelude::*;
+
+        assert_eq!((TableLabels::GERMAN.range)(1, 25, 1234), "1–25 von 1,234");
+        let mut dom = VirtualDom::new(|| {
+            rsx! {
+                crate::LiberoProvider { formats: &Formats::GERMAN,
+                    Said {}
+                }
+            }
+        });
+        #[component]
+        fn Said() -> Element {
+            let labels = TableLabels::GERMAN;
+            let said = [
+                (labels.range)(1001, 1025, 12345),
+                (labels.results)(1234),
+                (labels.selected)(2000),
+                (labels.exported)(1500),
+                (labels.column_width)("Name", 1240.5),
+            ];
+            rsx! { "{said.join(\"|\")}" }
+        }
+        dom.rebuild_in_place();
+        let html = dioxus_ssr::render(&dom);
+        assert!(
+            html.contains(
+                "1.001–1.025 von 12.345|1.234 Zeilen|2.000 Zeilen ausgewählt|\
+                 1.500 Zeilen exportiert|Name: 1.240,5 px"
+            ),
+            "{html}"
+        );
+    }
 
     /// 1400: every panel line control names its column, and the button its count.
     #[test]

@@ -50,8 +50,8 @@ impl CommonLabels {
         search: "Suchen",
         warning: "Warnung:",
         required: "Pflichtfeld",
-        at_most: "Höchstens {max} können ausgewählt werden",
-        at_most_on: "Höchstens {max} können eingeschaltet sein",
+        at_most: "Höchstens {max} auswählbar",
+        at_most_on: "Höchstens {max} eingeschaltet",
         type_in: "Eintippen",
     };
 }

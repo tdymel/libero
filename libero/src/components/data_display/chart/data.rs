@@ -696,18 +696,18 @@ impl ValueFormat {
                     1
                 };
                 let share = trim_zeros(format!("{share:.decimals$}"));
-                return with_unit(formats.write_number(&share), Some("%"));
+                return formats.write_percent(&share);
             }
         };
-        with_unit(formats.write_number(&number), unit)
+        with_unit(formats.write_number(&number), unit, formats)
     }
 }
 
-/// `number` with its `unit` after a space; a `%` right after it, as `Percent` writes it, so
-/// a chart has one percent style.
-pub(crate) fn with_unit(number: String, unit: Option<&str>) -> String {
+/// The written `number` with its `unit` after a space; a `%` in the formats' percent style,
+/// as `Percent` writes it, so a chart has one percent style.
+pub(crate) fn with_unit(number: String, unit: Option<&str>, formats: &Formats) -> String {
     match unit.filter(|unit| !unit.is_empty()) {
-        Some("%") => format!("{number}%"),
+        Some("%") => formats.percent.replace("{n}", &number),
         Some(unit) => format!("{number} {unit}"),
         None => number,
     }
@@ -764,9 +764,10 @@ mod tests {
         assert_eq!(auto.format(0.00999, None, en), "0.01");
         assert_eq!(auto.format(0.0, None, en), "0");
         assert_eq!(ValueFormat::Fixed(2).format(1.0, None, en), "1.00");
-        assert_eq!(ValueFormat::Percent.format(0.425, None, de), "42,5%");
+        assert_eq!(ValueFormat::Percent.format(0.425, None, de), "42,5\u{a0}%");
         // A `%` unit takes `Percent`'s style: one per chart (5118).
-        assert_eq!(auto.format(2.6, Some("%"), de), "2,6%");
+        assert_eq!(auto.format(2.6, Some("%"), de), "2,6\u{a0}%");
+        assert_eq!(auto.format(2.6, Some("%"), en), "2.6%");
     }
 
     #[test]
@@ -774,8 +775,8 @@ mod tests {
         let (en, de) = (&Formats::AMERICAN, &Formats::GERMAN);
         let percent = ValueFormat::Percent;
         assert_eq!(percent.format(0.0004, None, en), "0.04%");
-        assert_eq!(percent.format(-0.00012, None, de), "-0,01%");
-        assert_eq!(percent.format(0.000012, None, de), "0,0012%");
+        assert_eq!(percent.format(-0.00012, None, de), "-0,01\u{a0}%");
+        assert_eq!(percent.format(0.000012, None, de), "0,0012\u{a0}%");
         assert_eq!(percent.format(0.0, None, en), "0%");
         assert_eq!(percent.format(0.0123, None, en), "1.2%");
     }

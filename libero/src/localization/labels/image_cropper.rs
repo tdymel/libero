@@ -7,16 +7,17 @@ pub struct ImageCropperLabels {
     pub controls: &'static str,
     /// The box's and corners' description: their keys.
     pub keys: &'static str,
-    /// `aria-valuetext`: `{width}`, `{height}`, `{x}` and `{y}` in percent of the image.
+    /// `aria-valuetext`: `{width}`, `{height}`, `{x}` and `{y}`, percentages of the image
+    /// in the formats' `percent` style.
     pub value: &'static str,
     /// The pan mode's `keys`.
     pub pan_keys: &'static str,
-    /// The pan mode's `value`: `value`'s holes and `{zoom}`, in percent of the
+    /// The pan mode's `value`: `value`'s holes and `{zoom}`, a percentage of the
     /// starting zoom.
     pub pan_value: &'static str,
     /// Names the pan mode's zoom slider.
     pub zoom: &'static str,
-    /// The zoom slider's `aria-valuetext`: `{zoom}` in percent of the starting zoom.
+    /// The zoom slider's `aria-valuetext`: `{zoom}`, a percentage of the starting zoom.
     pub zoom_value: &'static str,
     pub top_left: &'static str,
     pub top_right: &'static str,
@@ -47,11 +48,11 @@ impl ImageCropperLabels {
         label: "Crop area",
         controls: "Crop area controls",
         keys: "Arrow keys move the crop area, or resize it from a corner. Shift moves further.",
-        value: "{width}% by {height}%, at {x}%, {y}%",
+        value: "{width} by {height}, at {x}, {y}",
         pan_keys: "Arrow keys move the image, plus and minus zoom it. Shift moves further.",
-        pan_value: "{width}% by {height}%, at {x}%, {y}%, zoom {zoom}%",
+        pan_value: "{width} by {height}, at {x}, {y}, zoom {zoom}",
         zoom: "Zoom",
-        zoom_value: "{zoom}%",
+        zoom_value: "{zoom}",
         top_left: "Top left corner",
         top_right: "Top right corner",
         bottom_right: "Bottom right corner",
@@ -73,11 +74,11 @@ impl ImageCropperLabels {
         label: "Zuschnitt",
         controls: "Zuschnitt-Steuerung",
         keys: "Pfeiltasten verschieben den Zuschnitt oder ändern an einer Ecke seine Größe. Mit Umschalt weiter.",
-        value: "{width} % mal {height} %, bei {x} %, {y} %",
+        value: "{width} mal {height}, bei {x}, {y}",
         pan_keys: "Pfeiltasten verschieben das Bild, Plus und Minus zoomen es. Mit Umschalt weiter.",
-        pan_value: "{width} % mal {height} %, bei {x} %, {y} %, Zoom {zoom} %",
+        pan_value: "{width} mal {height}, bei {x}, {y}, Zoom {zoom}",
         zoom: "Zoom",
-        zoom_value: "{zoom} %",
+        zoom_value: "{zoom}",
         top_left: "Ecke oben links",
         top_right: "Ecke oben rechts",
         bottom_right: "Ecke unten rechts",

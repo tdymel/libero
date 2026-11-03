@@ -24,7 +24,9 @@ use crate::{
         overlay::{Dialog, use_modal::use_modal_close},
     },
     context::IconSlot,
-    hooks::{ElementHandle, id_selector, use_element, use_id, use_localization, use_theme},
+    hooks::{
+        ElementHandle, id_selector, use_element, use_formats, use_id, use_localization, use_theme,
+    },
     platform::{ElementApi, mounted_by_selector},
     sx::{StaticSx, Sx},
 };
@@ -129,6 +131,7 @@ pub(crate) fn Lightbox(opening: LightboxOpening, options: LightboxOptions) -> El
         max_zoom: options.max_zoom.unwrap_or(theme.lightbox.max_zoom).max(1.0),
         announcer: use_announcer(),
         labels: localization.lightbox,
+        formats: use_formats(),
     };
     let keys_id = use_id();
 

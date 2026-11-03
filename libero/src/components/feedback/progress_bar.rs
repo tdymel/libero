@@ -10,7 +10,7 @@ use crate::{
         form::{SliderSegment, segment_filled, track_segments},
         layout::use_box,
     },
-    hooks::{use_css, use_localization, use_theme},
+    hooks::{use_css, use_formats, use_localization, use_theme},
     localization::fill,
     sx::{FORCED_COLORS, REDUCED_MOTION, StaticSx, Sx, ThemeAwareValue, sx},
     theme::{
@@ -22,7 +22,9 @@ use crate::{
     utils::warn,
 };
 
-use super::progress_value::{aria_number, fraction, percentage, value_max, value_now};
+use super::progress_value::{
+    aria_number, fraction, percentage, percentage_text, value_max, value_now,
+};
 
 /// Its own state, as an `Sx` condition cannot say "not indeterminate".
 const DETERMINATE_STATE: &str = "determinate";
@@ -319,12 +321,14 @@ pub fn ProgressBar(props: ProgressBarProps) -> Element {
     };
     // A labelled stretch names itself after the percentage, as on `Slider` (todo 2403).
     let segment_text = use_localization().slider.segment;
-    let default_text = match (percentage.clone(), stage) {
+    let formats = use_formats();
+    let text = fraction.map(|fraction| percentage_text(fraction, formats));
+    let default_text = match (text, stage) {
         (Some(value), Some(stage)) => Some(fill(
             segment_text,
             &[("value", &value), ("segment", &stage)],
         )),
-        (percentage, _) => percentage,
+        (text, _) => text,
     };
     let segmented = !segments.is_empty();
 
@@ -339,7 +343,7 @@ pub fn ProgressBar(props: ProgressBarProps) -> Element {
         .into();
 
     // On the track, where the radius var and its `per_radius` reset live.
-    let vars: Input<Variables> = progress_bar_variables(&color, percentage.clone())
+    let vars: Input<Variables> = progress_bar_variables(&color, percentage)
         .with(
             SizeCss::RADIUS.override_var(),
             radius.custom_css(SizeCss::RADIUS),

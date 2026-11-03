@@ -1,4 +1,5 @@
 use chrono::Weekday;
+use dioxus::{core::Runtime, prelude::*};
 
 use crate::theme::DateLevel;
 
@@ -66,11 +67,31 @@ pub struct Formats {
     /// or a `NumberField`, `Slider` or `RangeSlider` with `group_digits` writes it:
     /// `12,500`, `12.500`; empty for none.
     pub group_separator: &'static str,
+    /// A percentage, `{n}` the number in these separators: `40%`, `40\u{a0}%`.
+    pub percent: &'static str,
+}
+
+/// The provider's formats, for a label fn that cannot take them as an argument.
+#[derive(Clone, Copy)]
+pub(crate) struct ActiveFormats(pub(crate) Signal<&'static Formats>);
+
+/// The formats of the `LiberoProvider` around the running scope; `AMERICAN` outside one.
+pub(crate) fn active_formats() -> &'static Formats {
+    Runtime::try_current()
+        .and_then(|runtime| runtime.try_current_scope_id())
+        .and_then(|_| try_consume_context::<ActiveFormats>())
+        .map_or(&Formats::AMERICAN, |active| *active.0.read())
 }
 
 impl Formats {
     /// A number Rust wrote (`-12500.5`) in these separators (`-12,500.5`, `-12.500,5`).
-    pub(crate) fn write_number(&self, number: &str) -> String {
+    ///
+    /// ```
+    /// use libero::localization::Formats;
+    ///
+    /// assert_eq!(Formats::GERMAN.write_number("-12500.5"), "-12.500,5");
+    /// ```
+    pub fn write_number(&self, number: &str) -> String {
         let (whole, fraction) = number.split_once('.').unwrap_or((number, ""));
         let (sign, digits) = match whole.strip_prefix('-') {
             Some(digits) => ("-", digits),
@@ -90,6 +111,18 @@ impl Formats {
         }
         out
     }
+
+    /// A percentage Rust wrote (`12.5`) in these formats (`12.5%`, `12,5\u{a0}%`).
+    ///
+    /// ```
+    /// use libero::localization::Formats;
+    ///
+    /// assert_eq!(Formats::AMERICAN.write_percent("12.5"), "12.5%");
+    /// assert_eq!(Formats::GERMAN.write_percent("12.5"), "12,5\u{a0}%");
+    /// ```
+    pub fn write_percent(&self, number: &str) -> String {
+        self.percent.replace("{n}", &self.write_number(number))
+    }
 }
 
 impl Formats {
@@ -102,6 +135,7 @@ impl Formats {
         range_separator: " – ",
         decimal_separator: ".",
         group_separator: ",",
+        percent: "{n}%",
     };
 
     /// Monday first, a 24-hour clock, `14. September 2026`, `12.500,4`.
@@ -113,6 +147,7 @@ impl Formats {
         range_separator: " – ",
         decimal_separator: ",",
         group_separator: ".",
+        percent: "{n}\u{a0}%",
     };
 }
 
@@ -130,6 +165,8 @@ mod tests {
         assert_eq!(american.time, "h:mm A");
         assert_eq!(american.decimal_separator, ".");
         assert_eq!(american.group_separator, ",");
+        assert_eq!(american.write_percent("12.5"), "12.5%");
+        assert_eq!(american.write_percent("-1250"), "-1,250%");
     }
 
     #[test]
@@ -142,6 +179,14 @@ mod tests {
         assert_eq!(german.time, "HH:mm");
         assert_eq!(german.decimal_separator, ",");
         assert_eq!(german.group_separator, ".");
+        assert_eq!(german.write_percent("12.5"), "12,5\u{a0}%");
+        assert_eq!(german.write_percent("1250"), "1.250\u{a0}%");
+    }
+
+    /// Outside a runtime, as in a plain test, a shipped label fn writes American numbers.
+    #[test]
+    fn the_active_formats_are_american_outside_a_provider() {
+        assert_eq!(active_formats(), &Formats::AMERICAN);
     }
 
     /// A copy compares equal, so the same formats twice does not re-render.

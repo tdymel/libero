@@ -964,7 +964,7 @@ fn percent_bars_fill_the_stack_and_keep_their_values() {
     assert!((b.1 + b.3 - a.1).abs() < 1.0, "{a:?} {b:?}");
     assert_eq!(marks[0].value, 1.0);
     assert!(
-        drawn.svg.contains("25%") && drawn.svg.contains("100%"),
+        drawn.svg.contains("25\u{a0}%") && drawn.svg.contains("100\u{a0}%"),
         "{}",
         drawn.svg
     );
@@ -992,8 +992,11 @@ fn a_percent_axis_with_losses_stays_within_100() {
     ];
     spec.axes.ticks = 8;
     let svg = draw_bar(&spec).expect("drawn").svg;
-    assert!(svg.contains("100%") && svg.contains("60%"), "{svg}");
-    assert!(!svg.contains("120%"), "{svg}");
+    assert!(
+        svg.contains("100\u{a0}%") && svg.contains("60\u{a0}%"),
+        "{svg}"
+    );
+    assert!(!svg.contains("120\u{a0}%"), "{svg}");
     let axes = percent_axes(&spec.axes, &spec.series);
     assert_eq!(
         (axes.min, axes.max, axes.ticks),
@@ -1496,7 +1499,7 @@ fn a_pie_starts_at_the_top_and_writes_its_labels() {
     assert!((top.0 - 160.0).abs() < 0.5 && top.1 < 160.0, "{path}");
     assert!(end.0 > 160.0 && (end.1 - 160.0).abs() < 0.5, "{path}");
     assert!(
-        drawn.svg.contains("25%") && drawn.svg.contains("75%"),
+        drawn.svg.contains("25\u{a0}%") && drawn.svg.contains("75\u{a0}%"),
         "{}",
         drawn.svg
     );
@@ -1596,7 +1599,10 @@ fn labels_inside_read_on_their_slice() {
 
     inside.min_label_angle = 100.0;
     let svg = draw_pie(&inside).expect("drawn").svg;
-    assert!(svg.contains("75%") && !svg.contains("25%"), "{svg}");
+    assert!(
+        svg.contains("75\u{a0}%") && !svg.contains("25\u{a0}%"),
+        "{svg}"
+    );
 }
 
 /// Of two outside labels that overlap, the smaller slice's leaves with its leader line;
@@ -1714,6 +1720,8 @@ fn a_ring_keeps_its_wide_slices_labels() {
     let mut ring = pie(PieLabels::Percent, Some(0.4));
     (ring.width, ring.height) = (304.0, 168.0);
     ring.labels_inside = true;
+    // The ring's fit is the point: German's no-break space leaves "62 %" a hair too wide.
+    ring.formats = &Formats::AMERICAN;
     ring.slices = [("A", 62.0), ("B", 20.0), ("C", 10.0), ("D", 8.0)]
         .map(|(name, value)| spec(name, &[Some(value)]))
         .to_vec();
@@ -2457,8 +2465,8 @@ fn a_funnel_drops_a_percent_wider_than_its_stage() {
     phone.formats = &Formats::GERMAN;
     let drawn = draw_funnel(&phone).expect("drawn");
     let labels: Vec<_> = texts(&drawn.svg).into_iter().map(|t| t.3).collect();
-    assert!(labels.contains(&"100%".to_string()), "{labels:?}");
-    assert!(!labels.contains(&"17,5%".to_string()), "{labels:?}");
+    assert!(labels.contains(&"100\u{a0}%".to_string()), "{labels:?}");
+    assert!(!labels.contains(&"17,5\u{a0}%".to_string()), "{labels:?}");
 }
 
 fn radar(values: &[&[Option<f64>]]) -> RadarSpec {

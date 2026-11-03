@@ -11,7 +11,7 @@ use super::{
 };
 use crate::{
     hooks::ElementHandle,
-    localization::{Aggregate, TableLabels},
+    localization::{Aggregate, Formats, TableLabels},
 };
 
 /// The footer's cells by header index: an aggregate's name and its text.
@@ -76,17 +76,17 @@ pub(super) fn aggregate_values<T>(
         .collect()
 }
 
-/// An aggregate's name and its value as the column formats it.
+/// An aggregate's name and its value as the column formats it, or in the site's `formats`.
 pub(super) fn aggregate_cell<T>(
     column: &Column<T>,
     value: Option<f64>,
-    labels: &TableLabels,
+    (labels, formats): (&TableLabels, &Formats),
 ) -> Option<(&'static str, String)> {
     let aggregate = column.aggregate?;
     let value = value?;
     let text = match &column.aggregate_format {
         Some(format) => format(value),
-        None => value.to_string(),
+        None => formats.write_number(&value.to_string()),
     };
     Some(((labels.aggregate_name)(aggregate), text))
 }
@@ -112,7 +112,7 @@ impl<T: PartialEq> FooterRows<T> {
         data: &Rc<Vec<T>>,
         columns: &[Column<T>],
         kept: Option<&[bool]>,
-        labels: &TableLabels,
+        labels: (&TableLabels, &Formats),
     ) -> Option<FooterCells> {
         if columns.iter().all(|column| column.aggregate.is_none()) {
             self.0.clear();
@@ -265,7 +265,12 @@ mod tests {
         let data = Rc::new(vec![1, 2, 3, 4]);
         let mut footer = FooterRows::default();
         let cells = |footer: &mut FooterRows<u32>, kept: Option<&[bool]>| {
-            footer.cells(&data, &counted, kept, &TableLabels::ENGLISH)
+            footer.cells(
+                &data,
+                &counted,
+                kept,
+                (&TableLabels::ENGLISH, &Formats::AMERICAN),
+            )
         };
 
         let all_but_second = [true, false, true, true];
@@ -292,7 +297,30 @@ mod tests {
         let columns = vec![column("N").value(|n: &u32| *n)];
         let data = Rc::new(vec![1]);
 
-        let cells = FooterRows::default().cells(&data, &columns, None, &TableLabels::ENGLISH);
+        let cells = FooterRows::default().cells(
+            &data,
+            &columns,
+            None,
+            (&TableLabels::ENGLISH, &Formats::AMERICAN),
+        );
         assert_eq!(cells, None);
+    }
+
+    /// Todo 5559: without `aggregate_format` the value takes the site's separators.
+    #[test]
+    fn an_unformatted_aggregate_is_written_in_the_formats() {
+        let columns = vec![column("N").value(|n: &f64| *n).aggregate(Aggregate::Sum)];
+        let data = Rc::new(vec![1234.25, 1.0]);
+        let sum = |formats| {
+            FooterRows::default().cells(&data, &columns, None, (&TableLabels::GERMAN, formats))
+        };
+        assert_eq!(
+            sum(&Formats::GERMAN),
+            Some(vec![Some(("Summe", "1.235,25".to_string()))])
+        );
+        assert_eq!(
+            sum(&Formats::AMERICAN),
+            Some(vec![Some(("Summe", "1,235.25".to_string()))])
+        );
     }
 }

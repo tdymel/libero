@@ -1647,7 +1647,7 @@ pub fn Table<T: Clone + PartialEq + 'static>(mut props: TableProps<T>) -> Elemen
         &kept_rows,
         &columns,
         &active,
-        (&layout, labels, lang),
+        (&layout, labels, lang, formats),
         tools,
     );
     filtered_count.set(results);
@@ -1856,6 +1856,7 @@ pub fn Table<T: Clone + PartialEq + 'static>(mut props: TableProps<T>) -> Elemen
         leads: lead_columns,
         colindex: colindex.as_deref(),
         labels,
+        formats,
         toggle: toggle_group,
         select: select_group,
     });

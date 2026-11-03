@@ -9,7 +9,7 @@ use super::{
 };
 use crate::{
     context::{ModalHost, PortalHost, PortalOutlet, WindowHost, window::ZLayers},
-    localization::{Formats, Localization},
+    localization::{ActiveFormats, Formats, Localization},
     platform::{
         self, A11yAnswers, a11y_media, answers_a11y_media, apply_direction, color_scheme,
         set_current_a11y_answers, set_root_direction, stored_direction,
@@ -71,6 +71,8 @@ pub fn LiberoProvider(
     let outermost = outer_css.is_none();
     let localization = use_signal(|| localization);
     let formats = use_signal(|| formats);
+    // For the label fns, which sit below this layer.
+    use_context_provider(|| ActiveFormats(formats));
     // Read at mount, so the first render paints the kept scheme, not a light flash.
     let setting = use_hook(|| {
         color_scheme()

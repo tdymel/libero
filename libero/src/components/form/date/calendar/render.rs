@@ -11,6 +11,7 @@ use crate::{
     },
     context::IconSlot,
     hooks::{use_formats, use_localization},
+    localization::{DateLocale, Formats},
     sx::ThemeAwareValue,
     theme::Size,
 };
@@ -160,12 +161,7 @@ impl View {
         let cell = move |day: NaiveDate| {
             let (picked, _) = selection.marks(day, None);
             let month = format_date(day, "MMM", names);
-            // Starts with the visible "Sep 14", so voice control finds it (WCAG 2.5.3).
-            let label = format!(
-                "{month} {}, {}",
-                day.day(),
-                format_date(day, (formats.date)(DateLevel::Day), names)
-            );
+            let label = strip_day_name(day, &month, formats, names);
             rsx! {
                 div {
                     key: "{day}",
@@ -629,6 +625,18 @@ pub(super) fn Nav(props: NavProps) -> Element {
             }
         }
     }
+}
+
+/// A mini day's name: the drawn `month` and day first, so voice control finds it
+/// (WCAG 2.5.3), then the weekday and full date in the formats' Day pattern.
+pub(super) fn strip_day_name(
+    day: NaiveDate,
+    month: &str,
+    formats: &Formats,
+    names: &DateLocale,
+) -> String {
+    let full = format!("dddd, {}", (formats.date)(DateLevel::Day));
+    format!("{month} {}, {}", day.day(), format_date(day, &full, names))
 }
 
 /// The nav button size for a picker size: `ActionIcon`'s scale climbs faster, so two share one.

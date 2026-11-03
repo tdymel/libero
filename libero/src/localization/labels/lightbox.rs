@@ -8,7 +8,7 @@ pub struct LightboxLabels {
     pub thumbnail: &'static str,
     /// The zoomable picture's description: its keys.
     pub keys: &'static str,
-    /// Announced after a zoom: `{n}` is the scale in percent of the fitted size.
+    /// Announced after a zoom: `{n}` is the scale, a percentage of the fitted size.
     pub zoomed: &'static str,
     /// Announced once a zoom is back to the fitted size.
     pub fitted: &'static str,
@@ -24,7 +24,7 @@ impl LightboxLabels {
         thumbnails: "Thumbnails",
         thumbnail: "Go to picture {n}",
         keys: "Z, plus or minus to zoom. Arrow keys pan a zoomed picture, or change the picture. Home and End go to the first and last picture.",
-        zoomed: "Zoomed to {n}%",
+        zoomed: "Zoomed to {n}",
         fitted: "Zoom reset",
         zoom_in: "Zoom in",
         zoom_out: "Zoom out",
@@ -35,7 +35,7 @@ impl LightboxLabels {
         thumbnails: "Vorschaubilder",
         thumbnail: "Zu Bild {n}",
         keys: "Z, Plus oder Minus zum Zoomen. Pfeiltasten verschieben ein vergrößertes Bild oder wechseln das Bild. Pos1 und Ende springen zum ersten und letzten Bild.",
-        zoomed: "Auf {n} % gezoomt",
+        zoomed: "Auf {n} gezoomt",
         fitted: "Zoom zurückgesetzt",
         zoom_in: "Vergrößern",
         zoom_out: "Verkleinern",

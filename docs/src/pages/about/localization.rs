@@ -13,15 +13,33 @@ use libero::{
 };
 use std::{cell::Cell, rc::Rc};
 
-/// What ships: the const, its first weekday, a day and a time.
-const SHIPPED: [(&str, &str, &str, &str); 2] = [
+/// One shipped formats row: the const, its first weekday, a day, a time, a number, a percentage.
+type Shipped = (
+    &'static str,
+    &'static str,
+    &'static str,
+    &'static str,
+    &'static str,
+    &'static str,
+);
+
+const SHIPPED: [Shipped; 2] = [
     (
         "Formats::AMERICAN (default)",
         "Sunday",
         "September 14, 2026",
         "3:30 PM",
+        "12,500.4",
+        "40%",
     ),
-    ("Formats::GERMAN", "Monday", "14. September 2026", "15:30"),
+    (
+        "Formats::GERMAN",
+        "Monday",
+        "14. September 2026",
+        "15:30",
+        "12.500,4",
+        "40\u{a0}%",
+    ),
 ];
 
 const CUSTOM_FORMATS: &str = r#"static SWISS: Formats = Formats {
@@ -158,11 +176,13 @@ pub fn LocalizationPage() -> Element {
                     data: SHIPPED.to_vec(),
                     columns: vec![
                         column("Formats")
-                            .value(|row: &(&str, &str, &str, &str)| row.0)
-                            .render(|row: &(&str, &str, &str, &str)| rsx! { Code { source: row.0, sx: sx().white_space("nowrap") } }),
-                        column("First weekday").value(|row: &(&str, &str, &str, &str)| row.1),
-                        column("Day").value(|row: &(&str, &str, &str, &str)| row.2),
-                        column("Time").value(|row: &(&str, &str, &str, &str)| row.3),
+                            .value(|row: &Shipped| row.0)
+                            .render(|row: &Shipped| rsx! { Code { source: row.0, sx: sx().white_space("nowrap") } }),
+                        column("First weekday").value(|row: &Shipped| row.1),
+                        column("Day").value(|row: &Shipped| row.2),
+                        column("Time").value(|row: &Shipped| row.3),
+                        column("Number").value(|row: &Shipped| row.4),
+                        column("Percent").value(|row: &Shipped| row.5),
                     ],
                 }
             }
@@ -174,7 +194,13 @@ pub fn LocalizationPage() -> Element {
                     Code { source: "static" }
                     ". The format patterns use dayjs tokens such as "
                     Code { source: "D. MMMM YYYY" }
-                    "."
+                    ". "
+                    Code { source: "percent" }
+                    " places the sign of every percentage a component writes, from a progress value to a chart label: "
+                    Code { source: "{{n}}%" }
+                    ", or "
+                    Code { source: "{{n}}\\u{{a0}}%" }
+                    " with a no-break space."
                 }
                 CodeBlock { source: CUSTOM_FORMATS, label: "Custom formats", language: "rust" }
                 Text {

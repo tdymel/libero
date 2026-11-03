@@ -19,6 +19,7 @@ use crate::{
         typography::Kbd,
     },
     hooks::{Hotkey, use_dismiss_layer, use_hotkeys, use_localization, use_theme},
+    localization::ShortcutHelpLabels,
     platform::{self, PLACEHOLDER_CELL_ATTR, next_task, scroll_chain_into_view},
     sx::{StaticSx, Sx, sx},
     theme::{
@@ -293,6 +294,7 @@ pub fn use_spotlight(options: SpotlightOptions) -> SpotlightHandle {
     );
 
     let labels = use_localization().spotlight;
+    let key_words = use_localization().shortcut_help;
     let close_on_action = options.close_on_action;
     let highlight_first = options.highlight_first_on_query;
     let onquery = options.onquery;
@@ -393,7 +395,14 @@ pub fn use_spotlight(options: SpotlightOptions) -> SpotlightHandle {
             spotlight_key(event, state, active, count, move |row| run(callbacks[row]));
         };
 
-        let rows = spotlight_rows(groups, &id, generation, active, row_elements, run);
+        let rows = spotlight_rows(
+            groups,
+            (&id, &key_words),
+            generation,
+            active,
+            row_elements,
+            run,
+        );
 
         let filtered = !loading && !query().trim().is_empty();
         let empty = filtered && count == 0;
@@ -546,7 +555,7 @@ fn use_shortcut(handle: SpotlightHandle, shortcut: Option<char>) {
 /// only options and groups. A new `generation` remounts the rows.
 fn spotlight_rows(
     groups: Vec<(Option<String>, Vec<SpotlightAction>)>,
-    id: &str,
+    (id, key_words): (&str, &ShortcutHelpLabels),
     generation: u64,
     active: Option<usize>,
     mut row_elements: CopyValue<HashMap<usize, Rc<MountedData>>>,
@@ -603,7 +612,7 @@ fn spotlight_rows(
                         if let Some(shortcut) = action.shortcut {
                             // A chord is written left to right, whatever the page's direction (5281).
                             span { id: "{option_id}-shortcut", "data-slot": SpotlightPart::Shortcut.slot(), dir: "ltr",
-                                for (position, key) in shortcut_keys(&shortcut).into_iter().enumerate() {
+                                for (position, key) in shortcut_keys(&shortcut, key_words).into_iter().enumerate() {
                                     if position > 0 {
                                         " + "
                                     }
@@ -643,11 +652,21 @@ fn spotlight_rows(
     rows
 }
 
-/// A shortcut hint's keys, split on spaces and `+`: one `Kbd` each.
-fn shortcut_keys(shortcut: &str) -> Vec<&str> {
+/// A shortcut hint's keys, split on spaces and `+`, in `ShortcutHelp`'s words: one `Kbd` each.
+fn shortcut_keys<'a>(shortcut: &'a str, words: &ShortcutHelpLabels) -> Vec<&'a str> {
     shortcut
         .split(|c: char| c == '+' || c.is_whitespace())
         .filter(|key| !key.is_empty())
+        .map(|key| match key.to_ascii_lowercase().as_str() {
+            "ctrl" | "control" => words.ctrl,
+            "alt" => words.alt,
+            "option" => words.option,
+            "shift" => words.shift,
+            "cmd" | "command" => words.meta,
+            "meta" => words.meta_other,
+            "space" => words.space,
+            _ => words.key_name(key),
+        })
         .collect()
 }
 
@@ -691,6 +710,18 @@ fn spotlight_key(
 mod tests {
     use super::*;
     use crate::components::common::part_table;
+
+    /// Todo 5561: a hint names its keys as `ShortcutHelp` does, "Strg" on a German site.
+    #[test]
+    fn a_shortcut_hint_is_written_in_the_localization() {
+        let german = ShortcutHelpLabels::GERMAN;
+        assert_eq!(shortcut_keys("Ctrl N", &german), ["Strg", "N"]);
+        assert_eq!(shortcut_keys("shift+Escape", &german), ["Umschalt", "Esc"]);
+        assert_eq!(
+            shortcut_keys("Ctrl + Delete", &ShortcutHelpLabels::ENGLISH),
+            ["Ctrl", "Del"]
+        );
+    }
 
     /// The slot names are public: a rename here is a breaking change.
     #[test]

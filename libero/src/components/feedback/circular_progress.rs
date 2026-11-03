@@ -11,7 +11,7 @@ use crate::{
         },
         layout::use_box,
     },
-    hooks::{use_accessibility, use_css, use_theme},
+    hooks::{use_accessibility, use_css, use_formats, use_theme},
     sx::{FORCED_COLORS, REDUCED_MOTION, StaticSx, Sx, ThemeAwareValue, sx},
     theme::{
         CIRCULAR_PROGRESS_COLOR, CIRCULAR_PROGRESS_SIZE, CIRCULAR_PROGRESS_THICKNESS,
@@ -20,7 +20,7 @@ use crate::{
     },
 };
 
-use super::progress_value::{aria_number, fraction, percentage, value_max, value_now};
+use super::progress_value::{aria_number, fraction, percentage_text, value_max, value_now};
 
 const DETERMINATE_STATE: &str = "determinate";
 const INDETERMINATE_STATE: &str = "indeterminate";
@@ -379,6 +379,7 @@ pub fn CircularProgress(props: CircularProgressProps) -> Element {
         span { class: label_class, "data-slot": CircularProgressPart::Label.slot(), "aria-hidden": "true", {props.children} }
     };
 
+    let formats = use_formats();
     let root = use_box()
         .framework_sx(&CIRCULAR_PROGRESS_SX)
         .class(&props.class)
@@ -404,7 +405,10 @@ pub fn CircularProgress(props: CircularProgressProps) -> Element {
     // The percentage is only a default: a spread `aria-valuetext` beats it.
     let root = match props.aria_valuetext {
         Some(text) => root.attr("aria-valuetext", text),
-        None => root.attr_default("aria-valuetext", fraction.map(percentage)),
+        None => root.attr_default(
+            "aria-valuetext",
+            fraction.map(|fraction| percentage_text(fraction, formats)),
+        ),
     };
 
     root.render(HtmlTag::Span, attributes, inner)

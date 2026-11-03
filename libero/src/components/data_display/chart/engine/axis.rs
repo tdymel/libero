@@ -421,7 +421,7 @@ impl Ticks {
             false => self.suffix,
         };
         let number = format!("{}{suffix}", formats.write_number(&shown));
-        super::super::data::with_unit(number, unit)
+        super::super::data::with_unit(number, unit, formats)
     }
 }
 

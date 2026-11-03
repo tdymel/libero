@@ -20,7 +20,11 @@ use super::super::{
     use_table::TableState,
 };
 use super::TableProps;
-use crate::{localization::labels::table::TableLabels, theme::Size, utils::warn};
+use crate::{
+    localization::{Formats, labels::table::TableLabels},
+    theme::Size,
+    utils::warn,
+};
 
 /// A tree's parents by `data` index, kept while the row keys stay.
 type ParentsMemo = Memo<Rc<[String]>, Rc<[usize]>>;
@@ -173,7 +177,7 @@ pub(super) fn order_rows<T: Clone + PartialEq + 'static>(
     rows: &KeptRows<T>,
     columns: &Rc<Vec<Column<T>>>,
     active: &ActiveSort,
-    (layout, labels, lang): (&[usize], TableLabels, &'static str),
+    (layout, labels, lang, formats): (&[usize], TableLabels, &'static str, &Formats),
     tools: TableTools,
 ) -> OrderedRows {
     let RowCaches {
@@ -203,7 +207,9 @@ pub(super) fn order_rows<T: Clone + PartialEq + 'static>(
     let mut order = visible_rows(sorted_order, kept_rows);
     // The rows passing the filters, group rows not counted.
     let results = order.len();
-    let footer = footer.write().cells(data, columns, kept_rows, &labels);
+    let footer = footer
+        .write()
+        .cells(data, columns, kept_rows, (&labels, formats));
     // Groups nest the sorted rows; the footer above and an export count the rows alone.
     let levels = match tree {
         true => Vec::new(),
