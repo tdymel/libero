@@ -572,8 +572,6 @@ fn a_date_time_range_end_clock_starts_on_the_hour() {
     assert_eq!(page.attr(face, "aria-label").as_deref(), Some("Hours"));
     click_mark(&mut page, "9");
     click_mark(&mut page, "30");
-    // This driver's release brings no face click, so the 400 ms fallback completes the pick (5400).
-    page.wait_for(|page| page.attr(face, "aria-label").as_deref() == Some("Hours"));
     assert_eq!(
         page.attr(face, "aria-label").as_deref(),
         Some("Hours"),

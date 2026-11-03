@@ -378,18 +378,25 @@ pub(super) struct FaceDrag {
 /// How long a completing release waits for its click before it completes anyway.
 const CLICK_WAIT_MS: u64 = 400;
 
+/// Blitz sends the face no click after a release, so waiting for one only delays the pick.
+const AWAITS_CLICK: bool = !cfg!(feature = "native");
+
 /// Pointer picks on the analog face: a press or a drag sets the hand shown to
 /// the pointer's angle, and the release moves on to the next hand. The last hand's
 /// release completes after its click, or the click lands on the page under a closed sheet.
 pub(super) fn use_face_drag(clock: ClockView, face: ElementHandle) -> FaceDrag {
     let mut press = use_hook(|| CopyValue::new(None::<Press>));
     let mut waiting = use_hook(|| CopyValue::new(false));
+    // The press's click landed before its release finished measuring.
+    let mut clicked = use_hook(|| CopyValue::new(false));
     let complete = use_callback(move |()| {
         if waiting.cloned() {
             waiting.set(false);
             if let Some(oncomplete) = clock.oncomplete {
                 oncomplete.call(());
             }
+        } else {
+            clicked.set(true);
         }
     });
     let fallback = use_timeout(move || complete.call(()), CLICK_WAIT_MS);
@@ -416,7 +423,10 @@ pub(super) fn use_face_drag(clock: ClockView, face: ElementHandle) -> FaceDrag {
     let finish = move |clock: ClockView| {
         let picked = press.cloned().is_some_and(|press| press.picked);
         { press }.set(None);
-        match (picked, clock.completes()) {
+        match (
+            picked,
+            clock.completes() && AWAITS_CLICK && !clicked.cloned(),
+        ) {
             (true, true) => {
                 { waiting }.set(true);
                 fallback.start();
@@ -429,6 +439,7 @@ pub(super) fn use_face_drag(clock: ClockView, face: ElementHandle) -> FaceDrag {
         // Started here, awaited in the task: see `platform::Read`.
         let (offset, size) = (face.client_offset(), face.dimensions());
         { waiting }.set(false);
+        { clicked }.set(false);
         fallback.stop();
         press.set(Some(Press {
             centre: None,
