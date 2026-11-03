@@ -34,6 +34,8 @@ pub(in super::super) static TIME_PICKER_SX: StaticSx = StaticSx::new(|| {
         .display("inline-flex")
         .flex_direction("column")
         .align_items("center")
+        // Never wider than its parent, so a sheet's border or scrollbar cannot push the face out (5405).
+        .max_width("100%")
         .gap("8px")
         .font_size(CHRONO_FONT_SIZE.value())
         // A digital clock: `HH:MM`, each number between its faded neighbours.

@@ -102,7 +102,7 @@ fn a_finger_opens_the_sheet_and_types_in_it() {
     });
 }
 
-/// Todo 3926: the clock face fills the sheet's width.
+/// Todo 3926: the clock face fills the sheet's width; todo 5405: inside its border, no sideways scroll.
 #[test]
 fn the_clock_face_fills_the_sheet() {
     block_on(async {
@@ -113,7 +113,9 @@ fn the_clock_face_fills_the_sheet() {
         let js = format!(
             "(() => {{ const f = document.querySelector('{SHEET} [data-slot=face]'); \
              if (!f) return false; const r = f.getBoundingClientRect(); \
-             return r.width >= 300 && Math.abs(r.width - r.height) < 1; }})()"
+             const s = document.querySelector({SHEET:?}); \
+             return r.width >= 300 && Math.abs(r.width - r.height) < 1 \
+               && s.scrollWidth <= s.clientWidth; }})()"
         );
         wait::for_js_true(page, &js, "a face 300px or wider, round")
             .await

@@ -78,6 +78,8 @@ static PICKER_FIELD_DROPDOWN_SX: StaticSx = StaticSx::new(|| {
                         "min(calc(100vw - 2 * {}), 50dvh)",
                         SizeCss::SPACING.value(Size::Sm)
                     ))
+                    // The sheet's border and a scrollbar narrow its content below the vw sum (5405).
+                    .max_width("100%")
                     .height("auto")
                     .with("aspect-ratio", "1"),
                 ),
