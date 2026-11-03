@@ -61,7 +61,7 @@ fn Demo() -> Element {
 | `x_title` | `Option<String>` | | Under the x axis: what it counts. |
 | `y_title` | `Option<String>` | | Beside the y axis, read upward: what it measures. |
 | `y2_title` | `Option<String>` | | Beside the right y axis, read downward: what its `Series::secondary_axis()` series measure. |
-| `legend` | `LegendPosition` | bottom with two series or more | `bottom`, `top`, `start`, `end` or `none`. On a chart under 25rem (400 px) wide, `start` goes above the plot and `end` below it. |
+| `legend` | `LegendPosition` | bottom with two series or more | `bottom`, `top`, `start`, `end` or `none`. On a chart under 30rem (480 px) wide, `start` goes above the plot and `end` below it. |
 | `grid` | `Option<bool>` | `true` | Horizontal guide lines. |
 | `value_format` | `ValueFormat` | `Auto` | How values are written on the axis, in the tooltip and in the summary. Thousands group as the `Formats` say, as `12,500` or `12.500`. |
 | `unit` | `Option<String>` | | After every value, as `"kg"`. |
@@ -100,7 +100,7 @@ fn Demo() -> Element {
 | `value_label_position` | `BarLabelPosition` | chart-wide: inside on a `horizontal` chart or once any shown series has error ranges, past the end otherwise | `inside` the bar, in the ink that reads on it, or `outside` past its end. A stack always writes inside. |
 | `bar_width` | `Option<f32>` | 5 px off each side of the band | The share of a category's band its bars fill, clamped to `0.1..=1`. |
 | `bar_gap` | `Option<f32>` | `3` | Between two bars of a group, in pixels. |
-| `legend` | `LegendPosition` | bottom with two series or more | `bottom`, `top`, `start`, `end` or `none`. On a chart under 25rem (400 px) wide, `start` goes above the plot and `end` below it. |
+| `legend` | `LegendPosition` | bottom with two series or more | `bottom`, `top`, `start`, `end` or `none`. On a chart under 30rem (480 px) wide, `start` goes above the plot and `end` below it. |
 | `grid` | `Option<bool>` | `true` | Guide lines across the values. |
 | `value_format` | `ValueFormat` | `Auto` | How values are written on the axis, the bars, in the tooltip and in the summary. On `percent` the axis and the bars write shares in percent. Thousands group as the `Formats` say, as `12,500` or `12.500`. |
 | `unit` | `Option<String>` | | After every value, as `"kg"`. |
@@ -126,7 +126,7 @@ fn Demo() -> Element {
 | `title` | `Option<String>` | | Shown above the chart, and its accessible name. |
 | `description` | `Option<String>` | | A sentence under the title: what to read from the chart. |
 | `labels` | `PieLabels` | `percent` | On each stage: `percent`, its share of the first stage, `value`, `name` or `none`, in the ink that reads there. A label wider than its stage is left out; the tooltip and the summary keep it. |
-| `legend` | `LegendPosition` | bottom with two stages or more | `bottom`, `top`, `start`, `end` or `none`. On a chart under 25rem (400 px) wide, `start` goes above the plot and `end` below it. |
+| `legend` | `LegendPosition` | bottom with two stages or more | `bottom`, `top`, `start`, `end` or `none`. On a chart under 30rem (480 px) wide, `start` goes above the plot and `end` below it. |
 | `value_format` | `ValueFormat` | `Auto` | How values are written on the stages, in the tooltip and in the summary. Thousands group as the `Formats` say, as `12,500` or `12.500`. |
 | `unit` | `Option<String>` | | After every value, as `"kg"`. |
 | `grid` | `Option<bool>` | | Shared with the other charts; a funnel has no grid to draw. |
@@ -224,7 +224,7 @@ fn Demo() -> Element {
 | `min_label_angle` | `Option<f32>` | `0` | A slice narrower than this many degrees gets no label; the summary still names it. |
 | `slice_gap` | `Option<f32>` | `1` | Between two slices, in pixels, in the page's colour. |
 | `slice_radius` | `Size` | `none` | Corner radius of a slice, on the theme's radius scale; a thin slice or a thin ring takes less. Unset, square. |
-| `legend` | `LegendPosition` | bottom with two slices or more | `bottom`, `top`, `start`, `end` or `none`. On a chart under 25rem (400 px) wide, `start` goes above the plot and `end` below it. |
+| `legend` | `LegendPosition` | bottom with two slices or more | `bottom`, `top`, `start`, `end` or `none`. On a chart under 30rem (480 px) wide, `start` goes above the plot and `end` below it. |
 | `value_format` | `ValueFormat` | `Auto` | How values are written beside the slices, in the tooltip and in the summary. Thousands group as the `Formats` say, as `12,500` or `12.500`. |
 | `unit` | `Option<String>` | | After every value, as `"kg"`. |
 | `grid` | `Option<bool>` | | Shared with the other charts; a pie has no grid to draw. |

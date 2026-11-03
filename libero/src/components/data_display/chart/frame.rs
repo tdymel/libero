@@ -205,8 +205,8 @@ static CHART_BASE_SX: StaticSx = StaticSx::new(|| {
 
 const CHART_CONTAINER: &str = "lsx-chart";
 /// Under this, a legend beside the plot would leave it too small: it goes above or below.
-/// A phone-width chart is under it.
-const NARROW: &str = "(max-width: 25rem)";
+/// A phone and a tablet-width chart are under it.
+const NARROW: &str = "(max-width: 30rem)";
 
 /// A side legend over or under the plot, in DOM order: the start's above, the end's below.
 fn stacked() -> Sx {

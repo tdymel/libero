@@ -4,7 +4,7 @@ description: candlestick_chart at mobile (rest)
 expression: tree
 ---
 figure "Share price"
-  description "Candlestick chart of 3 periods from Mon to Wed. Opened at 20, closed at 30: +10 (+50%). Highest: 40 on Tue. Lowest: 10 on Mon. 1 up, 1 down, 1 unchanged."
+  description "Candlestick chart of 3 periods from Mon to Wed. Opened at 20, closed at 30: +10 (+50%). Highest: 40 at Tue. Lowest: 10 at Mon. 1 up, 1 down, 1 unchanged."
   StaticText "Share price"
   application "Share price" [roledescription=chart]
     description "Arrow keys move between points, Home and End to the first and last. Enter selects one."
@@ -14,7 +14,7 @@ figure "Share price"
   paragraph
     StaticText "Opened at 20, closed at 30: +10 (+50%)."
   paragraph
-    StaticText "Highest: 40 on Tue. Lowest: 10 on Mon."
+    StaticText "Highest: 40 at Tue. Lowest: 10 at Mon."
   paragraph
     StaticText "1 up, 1 down, 1 unchanged."
 paragraph

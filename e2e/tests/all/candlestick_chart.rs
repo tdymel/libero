@@ -41,7 +41,7 @@ fn the_key_and_the_summary_tell_rising_from_falling() {
         assert!(
             summary.contains("Candlestick chart of 3 periods from Mon to Wed.")
                 && summary.contains("Opened at 20, closed at 30: +10 (+50%).")
-                && summary.contains("Highest: 40 on Tue. Lowest: 10 on Mon.")
+                && summary.contains("Highest: 40 at Tue. Lowest: 10 at Mon.")
                 && summary.contains("1 up, 1 down, 1 unchanged."),
             "{summary}"
         );

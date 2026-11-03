@@ -422,7 +422,7 @@ mod tests {
             "{html}"
         );
         assert!(
-            html.contains("Highest: 40 on Tue. Lowest: 10 on Mon."),
+            html.contains("Highest: 40 at Tue. Lowest: 10 at Mon."),
             "{html}"
         );
         assert!(html.contains("1 up, 1 down, 1 unchanged."), "{html}");

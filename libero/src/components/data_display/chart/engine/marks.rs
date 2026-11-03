@@ -52,10 +52,10 @@ pub(super) fn label_mark_lines(
     lines: &[[f32; 4]],
 ) -> String {
     let is_mark = |tag: &str| tag.contains("dy=\"-6\"") && tag.contains("text-anchor=\"end\"");
-    // Covering a text or a pin costs ten times covering a bar, a series line three times.
+    // Covering a text, a pin or a series line costs ten times covering a bar.
     let mut crowd: Vec<([f32; 4], f32)> = pins.iter().map(|pin| (pin.rect(), 10.0)).collect();
     crowd.extend(bars.iter().map(|bar| (*bar, 1.0)));
-    crowd.extend(lines.iter().map(|line| (*line, 3.0)));
+    crowd.extend(lines.iter().map(|line| (*line, 10.0)));
     let mut scan = svg;
     while let Some(open) = scan.find("<text ") {
         let Some(close) = scan[open..].find('>').map(|close| open + close) else {
@@ -115,7 +115,7 @@ pub(super) fn label_mark_lines(
                         .sum();
                     covered + shift + if dy == above { 0.0 } else { 20.0 }
                 };
-                let slide = (0..=((x - wide - left).max(0.0) / 4.0) as u32).map(|n| n as f32 * 4.0);
+                let slide = (0..=(x - wide - left).max(0.0) as u32).map(|n| n as f32);
                 slide
                     .flat_map(|shift| [(above, shift), (below, shift)])
                     .min_by(|a, b| cost(a.0, a.1).total_cmp(&cost(b.0, b.1)))

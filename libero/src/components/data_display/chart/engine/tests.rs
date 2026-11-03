@@ -2034,6 +2034,101 @@ fn a_mark_line_label_keeps_off_the_series_lines() {
     }
 }
 
+/// RT-2: the docs' three series, the label's text and the plot widths of a phone, a tablet
+/// and a laptop; no label crosses any series line.
+#[test]
+fn a_mark_line_label_keeps_off_every_series_line_at_each_width() {
+    let days = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+    let this_week = [120.0, 132.0, 101.0, 134.0, 90.0, 230.0, 210.0];
+    let last_week = [98.0, 110.0, 115.0, 120.0, 104.0, 170.0, 180.0];
+    let conversion = [2.1, 2.4, 1.8, 2.6, 1.5, 3.4, 3.1];
+    let range = [
+        (88.0, 108.0),
+        (98.0, 122.0),
+        (100.0, 130.0),
+        (110.0, 130.0),
+        (92.0, 116.0),
+        (150.0, 190.0),
+        (160.0, 200.0),
+    ];
+    for label in ["Average: 145,29", "Durchschnitt: 145,29"] {
+        for width in [325.0, 410.0, 520.0, 634.0] {
+            let mut first = spec("This week", &this_week.map(Some));
+            first.extras.mark_lines = vec![(145.29, label.to_string())];
+            let mut second = spec("Last week", &last_week.map(Some));
+            second.dashed = true;
+            let mut third = spec("Conversion", &conversion.map(Some));
+            third.extras.secondary = true;
+            let mut spec = line(vec![first, second, third], &days);
+            spec.errors = vec![vec![], range.map(Some).to_vec(), vec![]];
+            spec.area = Some(0.15);
+            spec.width = width;
+            spec.height = width * 9.0 / 16.0;
+            let drawn = draw_line(&spec).expect("drawn");
+            let found = texts(&drawn.svg);
+            let text = found.iter().find(|t| t.3 == label).expect("label");
+            let mut points: Vec<Vec<(f32, f32)>> = vec![Vec::new(); 3];
+            for mark in &drawn.geometry.marks {
+                if let MarkShape::Point { x, y } = mark.shape {
+                    points[mark.series].push((x, y));
+                }
+            }
+            for line in points {
+                for pair in line.windows(2) {
+                    for step in 0..=40 {
+                        let t = step as f32 / 40.0;
+                        let x = pair[0].0 + (pair[1].0 - pair[0].0) * t;
+                        let y = pair[0].1 + (pair[1].1 - pair[0].1) * t;
+                        let inside =
+                            x > text.0 && x < text.1 && y > text.2 - 11.0 && y < text.2 + 3.0;
+                        assert!(
+                            !inside,
+                            "{label} at {width}: {text:?} crossed at ({x}, {y})"
+                        );
+                    }
+                }
+            }
+        }
+    }
+}
+
+/// RT-2 on bars: the docs' two series, no label of the average over a bar by a pixel or more.
+#[test]
+fn a_mark_line_label_keeps_off_every_bar_at_each_width() {
+    for label in ["Average: 33", "Durchschnitt: 33"] {
+        for width in [325.0, 410.0, 520.0, 634.0] {
+            let mut spec = bars(BarLayout::Grouped, false);
+            spec.x = ["Q1", "Q2", "Q3", "Q4"].map(String::from).to_vec();
+            let mut first = self::spec("2025", &[40.0, 55.0, -25.0, 62.0].map(Some));
+            first.extras.mark_lines = vec![(33.0, label.to_string())];
+            let second = self::spec("2026", &[30.0, -15.0, 20.0, 48.0].map(Some));
+            spec.series = vec![first, second];
+            spec.width = width;
+            spec.height = width * 9.0 / 16.0;
+            let drawn = draw_bar(&spec).expect("drawn");
+            let found = texts(&drawn.svg);
+            let text = found.iter().find(|t| t.3 == label).expect("label");
+            for mark in &drawn.geometry.marks {
+                let MarkShape::Rect {
+                    x,
+                    y,
+                    width: w,
+                    height: h,
+                } = mark.shape
+                else {
+                    continue;
+                };
+                let across = text.0 + 1.0 < x + w && text.1 - 1.0 > x;
+                let level = text.2 - 11.0 < y + h && text.2 + 3.0 > y;
+                assert!(
+                    !(across && level),
+                    "{label} at {width}: {text:?} over the bar at ({x}, {y}, {w}, {h})"
+                );
+            }
+        }
+    }
+}
+
 #[test]
 fn dense_x_labels_leave_room_for_a_wider_font() {
     let x: Vec<String> = (1..=40).map(|i| format!("Week {i}")).collect();
