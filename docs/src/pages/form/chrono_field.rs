@@ -342,6 +342,7 @@ fn ChronoFieldDemo(values: DemoValues) -> Element {
     let status = status_of(&values);
     let required = is_on(&values, "required").then_some(true);
     let disabled = is_on(&values, "disabled").then_some(true);
+    let readonly = is_on(&values, "readonly").then_some(true);
     let time_format = Some(values.str("time_format")).filter(|format| format != "default");
     let columns = values.str("columns").parse::<usize>().ok();
     let calendar = values.str("calendar");
@@ -382,7 +383,7 @@ fn ChronoFieldDemo(values: DemoValues) -> Element {
                     value: month(), onchange: move |next| month.set(next), level: DateLevel::Month,
                     min: min_day, max: max_day, today, close_on_change, open_to,
                     validate: rules(validate),
-                    size, radius, label, aria_label, description, description_position, helper, placeholder, status, required, disabled, leading, hide_save, hide_entry_input,
+                    size, radius, label, aria_label, description, description_position, helper, placeholder, status, required, disabled, readonly, leading, hide_save, hide_entry_input,
                 }
             },
             shown(month()),
@@ -393,7 +394,7 @@ fn ChronoFieldDemo(values: DemoValues) -> Element {
                     value: year(), onchange: move |next| year.set(next), level: DateLevel::Year,
                     min: min_day, max: max_day, today, close_on_change,
                     validate: rules(validate),
-                    size, radius, label, aria_label, description, description_position, helper, placeholder, status, required, disabled, leading, hide_save, hide_entry_input,
+                    size, radius, label, aria_label, description, description_position, helper, placeholder, status, required, disabled, readonly, leading, hide_save, hide_entry_input,
                 }
             },
             shown(year()),
@@ -404,7 +405,7 @@ fn ChronoFieldDemo(values: DemoValues) -> Element {
                     value: time(), onchange: move |next| time.set(next),
                     min: min_time, max: max_time, time_format, variant, with_seconds, step, hour_step, second_step, twelve_hour, close_on_change,
                     validate: rules(validate),
-                    size, radius, label, aria_label, description, description_position, helper, placeholder, status, required, disabled, leading, hide_save, hide_entry_input,
+                    size, radius, label, aria_label, description, description_position, helper, placeholder, status, required, disabled, readonly, leading, hide_save, hide_entry_input,
                 }
             },
             shown(time()),
@@ -417,7 +418,7 @@ fn ChronoFieldDemo(values: DemoValues) -> Element {
                     with_seconds, step, hour_step, second_step, twelve_hour, close_on_change, calendar, days,
                     week_numbers, hide_weekdays, hide_outside_days,
                     validate: rules(validate),
-                    size, radius, label, aria_label, description, description_position, helper, placeholder, status, required, disabled, leading, hide_save, hide_entry_input,
+                    size, radius, label, aria_label, description, description_position, helper, placeholder, status, required, disabled, readonly, leading, hide_save, hide_entry_input,
                 }
             },
             shown(date_time()),
@@ -429,7 +430,7 @@ fn ChronoFieldDemo(values: DemoValues) -> Element {
                     min: min_day, max: max_day, format, exclude_date, columns, today, close_on_change,
                     week_numbers, hide_weekdays, hide_outside_days, presets: range_presets(&values),
                     validate: rules(validate),
-                    size, radius, label, aria_label, description, description_position, helper, placeholder, status, required, disabled, leading, hide_save, hide_entry_input,
+                    size, radius, label, aria_label, description, description_position, helper, placeholder, status, required, disabled, readonly, leading, hide_save, hide_entry_input,
                 }
             },
             shown(date_range()),
@@ -442,7 +443,7 @@ fn ChronoFieldDemo(values: DemoValues) -> Element {
                     with_seconds, step, hour_step, second_step, twelve_hour, close_on_change,
                     week_numbers, hide_weekdays, hide_outside_days,
                     validate: rules(validate),
-                    size, radius, label, aria_label, description, description_position, helper, placeholder, status, required, disabled, leading, hide_save, hide_entry_input,
+                    size, radius, label, aria_label, description, description_position, helper, placeholder, status, required, disabled, readonly, leading, hide_save, hide_entry_input,
                 }
             },
             shown(date_time_range()),
@@ -453,7 +454,7 @@ fn ChronoFieldDemo(values: DemoValues) -> Element {
                     value: duration(), onchange: move |next| duration.set(next),
                     min: min_duration, max: max_duration, with_seconds, step,
                     validate: rules(validate),
-                    size, radius, label, aria_label, description, description_position, helper, placeholder, status, required, disabled, leading, hide_save, hide_entry_input,
+                    size, radius, label, aria_label, description, description_position, helper, placeholder, status, required, disabled, readonly, leading, hide_save, hide_entry_input,
                 }
             },
             shown(duration()),
@@ -465,7 +466,7 @@ fn ChronoFieldDemo(values: DemoValues) -> Element {
                     min: min_day, max: max_day, format, exclude_date, today, close_on_change, calendar, days,
                     week_numbers, hide_weekdays, hide_outside_days, open_to, presets: day_presets(&values),
                     validate: rules(validate),
-                    size, radius, label, aria_label, description, description_position, helper, placeholder, status, required, disabled, leading, hide_save, hide_entry_input,
+                    size, radius, label, aria_label, description, description_position, helper, placeholder, status, required, disabled, readonly, leading, hide_save, hide_entry_input,
                 }
             },
             shown(date()),

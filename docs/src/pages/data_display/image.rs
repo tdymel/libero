@@ -13,6 +13,16 @@ const FIXED: [&str; 1] = [r#"sx: sx().width("160px").height("160px").background(
 
 const ALT: &str = "A stylised landscape";
 
+/// The fallback keeps `alt`, so a source known to fail words it for the crossed-out picture.
+const BROKEN_ALT: &str = "Picture unavailable";
+
+fn alt_of(values: &DemoValues) -> &'static str {
+    match values.str("broken_src").as_str() {
+        "true" => BROKEN_ALT,
+        _ => ALT,
+    }
+}
+
 const MISSING_SRC: &str = "/does-not-exist.png";
 
 #[component]
@@ -105,7 +115,7 @@ pub fn ImagePage() -> Element {
                     // `alt` unless decorative: `decorative` wins over it, with a warning.
                     Control::switch("decorative").code(|_, values| match values.str("decorative").as_str() {
                         "true" => vec!["decorative: true".to_string()],
-                        _ => vec![format!("alt: {ALT:?}")],
+                        _ => vec![format!("alt: {:?}", alt_of(values))],
                     }),
                     // Drives `src` too: a fallback only shows once the
                     // real source fails, so the switch has to break it.
@@ -127,7 +137,7 @@ pub fn ImagePage() -> Element {
                             _ => crate::samples::SAMPLE_IMAGE.to_string(),
                         },
                         fallback_src: crate::samples::FALLBACK_IMAGE.to_string(),
-                        alt: (values.str("decorative") != "true").then(|| ALT.to_string()),
+                        alt: (values.str("decorative") != "true").then(|| alt_of(&values).to_string()),
                         decorative: values.str("decorative") == "true",
                         fit: values.str("fit"),
                         radius: match values.str("radius").as_str() {

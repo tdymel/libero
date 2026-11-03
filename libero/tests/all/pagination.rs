@@ -367,3 +367,27 @@ fn a_blank_name_neither_labels_the_nav_nor_masks_a_spread_one() {
         Some("Results")
     );
 }
+
+/// Todo 5570: a disabled Pagination leaves the Tab order, as `Button`'s disabled default (3838).
+#[test]
+fn a_disabled_pagination_takes_every_control_out_of_the_tab_order() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider {
+                Pagination { total: 10, page: 4, aria_label: "Pages", disabled: true, onchange: |_| {} }
+            }
+        }
+    }
+
+    let html = markup(app);
+    for name in [
+        "Go to previous page",
+        "Go to next page",
+        "Go to page 3",
+        "Page 4",
+    ] {
+        let tag = control(&html, name);
+        assert!(tag.contains(r#"aria-disabled="true""#), "{name}: {tag}");
+        assert!(tag.contains(r#"tabindex="-1""#), "{name}: {tag}");
+    }
+}

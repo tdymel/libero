@@ -497,6 +497,7 @@ pub fn CascaderPage() -> Element {
                     Control::switch("clearable"),
                     Control::switch("required"),
                     Control::switch("disabled"),
+                    Control::switch("readonly"),
                 ]].concat().into_iter().map(|control| control.hidden_when(dropdown)).collect()].concat(),
                 wrap: Wrap(wrap_value),
                 render: move |values: DemoValues| {
@@ -530,6 +531,7 @@ pub fn CascaderPage() -> Element {
                                 clearable: (values.str("clearable") == "true").then_some(true),
                                 required: (values.str("required") == "true").then_some(true),
                                 disabled: (values.str("disabled") == "true").then_some(true),
+                                readonly: (values.str("readonly") == "true").then_some(true),
                                 data: categories(),
                                 value: chosen(),
                                 onchange: move |next: Option<String>| chosen.set(next),

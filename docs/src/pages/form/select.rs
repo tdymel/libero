@@ -10,8 +10,8 @@ use libero::use_theme;
 use libero::{
     choices,
     components::{
-        Choices, Code, Flex, OptionItem, OptionList, Options, Select, SelectFilterArgs,
-        SelectOptionArgs, Text,
+        Choices, Code, Flex, OptionItem, OptionList, OptionSource, Options, Select,
+        SelectFilterArgs, SelectOptionArgs, Text,
     },
     sx::sx,
 };
@@ -241,6 +241,10 @@ fn fruit_filter(f: SelectFilterArgs<Fruit>) -> bool {
 
 /// The two switches drive one prop, so the list is built once from both.
 /// Cherry is the out-of-season row, which is why `status: warning` says so.
+fn loading_options(values: &DemoValues) -> bool {
+    values.str("loading_options") == "true"
+}
+
 fn fruit_options(values: &DemoValues) -> OptionList<Fruit> {
     let out_of_season = values.str("unavailable") == "true";
     let cherry = OptionItem::new(Fruit::Cherry).disabled(out_of_season);
@@ -477,7 +481,7 @@ pub fn SelectPage() -> Element {
                         }),
                     // Named runs, drawn as `role="group"` with a heading each.
                     Control::switch("grouped").hidden_when(foreign).code(|_, values| {
-                        if foreign(values) {
+                        if foreign(values) || loading_options(values) {
                             return vec![];
                         }
                         match (values.str("grouped").as_str(), values.str("unavailable").as_str()) {
@@ -495,6 +499,13 @@ pub fn SelectPage() -> Element {
                             (true, true) => vec!["options: FRUITS.list().disabling(|fruit| **fruit == Fruit::Cherry)".to_string()],
                             (true, false) => vec!["options: FRUITS.list()".to_string()],
                             _ => vec![],
+                        }
+                    }),
+                    // A fetch that has not answered: the loader and `aria-busy`, in place of the rows.
+                    Control::switch("loading_options").hidden_when(foreign).code(|_, values| {
+                        match loading_options(values) && !foreign(values) {
+                            true => vec!["options: None::<OptionList<Fruit>>".to_string()],
+                            false => vec![],
                         }
                     }),
                     Control::switch("clearable"),
@@ -542,7 +553,10 @@ pub fn SelectPage() -> Element {
                         description_position: field.description_position,
                         helper: field.helper,
                         status: field.status,
-                        options: fruit_options(&values),
+                        options: match loading_options(&values) {
+                            true => OptionSource::from(None::<OptionList<Fruit>>),
+                            false => fruit_options(&values).into(),
+                        },
                         option: custom(&values).then(|| Callback::new(fruit_row)),
                         selection: custom(&values).then(|| Callback::new(fruit_selection)),
                         searchable: (values.str("searchable") == "true").then_some(true),

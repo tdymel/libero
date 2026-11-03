@@ -2495,3 +2495,39 @@ mod dispatched {
         );
     }
 }
+
+/// Todo 5564: an async rule still asking marks the control busy, once, as 5280 did for groups.
+#[test]
+fn a_pending_status_marks_each_control_busy_once() {
+    use libero::components::{FieldStatus, FileField, PhoneField, RangeSlider, Slider};
+    fn phone() -> Element {
+        rsx! { LiberoProvider { PhoneField { label: "Mobile", country: "US", value: "", status: FieldStatus::Pending, oninput: move |_: String| {} } } }
+    }
+    fn pin() -> Element {
+        rsx! { LiberoProvider { PinField { label: "Code", length: 4usize, value: "", status: FieldStatus::Pending } } }
+    }
+    fn range() -> Element {
+        rsx! { LiberoProvider { RangeSlider { label: "Price", value: (10.0, 20.0), status: FieldStatus::Pending, oninput: move |_| {} } } }
+    }
+    fn slider() -> Element {
+        rsx! { LiberoProvider { Slider { label: "Volume", value: 10.0, status: FieldStatus::Pending, oninput: move |_| {} } } }
+    }
+    fn file() -> Element {
+        rsx! { LiberoProvider { FileField { label: "Receipt", status: FieldStatus::Pending, onchange: move |_| {} } } }
+    }
+
+    for (name, app) in [
+        ("PhoneField", phone as fn() -> Element),
+        ("PinField", pin),
+        ("RangeSlider", range),
+        ("Slider", slider),
+        ("FileField", file),
+    ] {
+        let body = body(&render(app));
+        assert_eq!(
+            body.matches(r#"aria-busy="true""#).count(),
+            1,
+            "{name}: {body}"
+        );
+    }
+}

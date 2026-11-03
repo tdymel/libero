@@ -125,6 +125,7 @@ pub fn PasswordFieldPage() -> Element {
                     Control::switch("reveal_button").default("true"),
                     Control::switch("required"),
                     Control::switch("disabled"),
+                    Control::switch("readonly"),
                 ]].concat(),
                 render: move |values: DemoValues| {
                     let field = field_props::<PasswordCopy>(&values);
@@ -145,6 +146,7 @@ pub fn PasswordFieldPage() -> Element {
                         reveal_button: values.str("reveal_button") == "true",
                         required: (values.str("required") == "true").then_some(true),
                         disabled: (values.str("disabled") == "true").then_some(true),
+                        readonly: (values.str("readonly") == "true").then_some(true),
                         autocomplete: "current-password",
                         value: value(),
                         oninput: move |next| value.set(next),

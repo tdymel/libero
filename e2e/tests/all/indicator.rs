@@ -85,6 +85,13 @@ fn the_ping_runs_and_stops_under_reduced_motion() {
         wait::for_js_true(page, &format!("{PING} === 'none'"), "the ping to stop")
             .await
             .unwrap();
+        // Todo 5571: still, it stays a visible halo rather than vanishing.
+        let halo: String = e2e::js(
+            page,
+            "(s => s.opacity + '/' + s.transform)(getComputedStyle(document.querySelector('#processing'), '::before'))",
+        )
+        .await;
+        assert_eq!(halo, "0.35/matrix(1.8, 0, 0, 1.8, 0, 0)", "the still halo");
         fixture.close().await.unwrap();
     });
 }

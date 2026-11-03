@@ -704,6 +704,9 @@ pub(in crate::components::form) struct SliderCoreProps {
     describedby: Option<String>,
     /// The field's status is an error.
     invalid: bool,
+    /// An async rule is still asking: `aria-busy` on the group, or a lone thumb.
+    #[props(default)]
+    busy: bool,
     name: Option<String>,
     oninput: Option<EventHandler<SliderChangeEvent<SliderCoreValue>>>,
     /// A CSS `background` for the track in place of its grey - a hue or an
@@ -1557,6 +1560,10 @@ fn SliderBody(live: Signal<Live>, core: SliderCoreProps) -> Element {
         .attr("role", role)
         .attr("aria-labelledby", grouped)
         .attr("aria-label", group_label)
+        .attr(
+            "aria-busy",
+            (props.busy && role.is_some()).then_some("true"),
+        )
         .element(&elements.root)
         .event("onpointerdown", onpointerdown)
         .event("onpointermove", onpointermove)
@@ -1590,6 +1597,7 @@ fn SliderBody(live: Signal<Live>, core: SliderCoreProps) -> Element {
                         labelledby: props.labelledby,
                         describedby: props.describedby,
                         invalid: props.invalid,
+                        busy: props.busy && role.is_none(),
                         readonly: props.readonly,
                         plain: props.plain,
                         bars,
@@ -1632,6 +1640,7 @@ struct SliderThumbsProps {
     labelledby: Option<String>,
     describedby: Option<String>,
     invalid: bool,
+    busy: bool,
     readonly: bool,
     plain: bool,
     bars: Option<Vec<f64>>,
@@ -1797,6 +1806,7 @@ fn SliderThumbs(props: SliderThumbsProps) -> Element {
             .attr("aria-labelledby", labelledby)
             .attr("aria-describedby", describedby)
             .attr("aria-invalid", props.invalid.then_some("true"))
+            .attr("aria-busy", props.busy.then_some("true"))
             // No `aria-required`: ARIA 1.2 does not allow it on `slider`, and a
             // slider always holds a value anyway (todo 532).
             .attr("aria-disabled", props.disabled)

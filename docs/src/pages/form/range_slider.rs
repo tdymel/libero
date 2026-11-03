@@ -292,6 +292,7 @@ pub fn RangeSliderPage() -> Element {
                     }),
                     Control::switch("required"),
                     Control::switch("disabled"),
+                    Control::switch("readonly"),
                 ]].concat(),
                 render: move |values: DemoValues| {
                     let field = field_props::<PriceCopy>(&values);
@@ -324,6 +325,7 @@ pub fn RangeSliderPage() -> Element {
                                     status: field.status.clone(),
                                     required: is_on(&values, "required").then_some(true),
                                     disabled: is_on(&values, "disabled").then_some(true),
+                                    readonly: is_on(&values, "readonly").then_some(true),
                                     preview_on_hover: is_on(&values, "preview_on_hover"),
                                     oninput: move |event: SliderChangeEvent<(Quality, Quality)>| {
                                         quality.set(event.value());
@@ -356,6 +358,7 @@ pub fn RangeSliderPage() -> Element {
                                     status: field.status,
                                     required: is_on(&values, "required").then_some(true),
                                     disabled: is_on(&values, "disabled").then_some(true),
+                                    readonly: is_on(&values, "readonly").then_some(true),
                                     preview_on_hover: is_on(&values, "preview_on_hover"),
                                     oninput: move |event: SliderChangeEvent<(f64, f64)>| {
                                         price.set(event.value());

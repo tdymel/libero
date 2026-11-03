@@ -239,6 +239,7 @@ pub fn SegmentedControlPage() -> Element {
                     Control::switch("selected_check").default(if theme.segmented_control.selected_check { "true" } else { "false" }),
                     Control::switch("required"),
                     Control::switch("disabled"),
+                    Control::switch("readonly"),
                     // The flag lives inside `options`, so the switch stands
                     // for one named segment rather than for a prop of its own.
                     Control::switch("disabled_option").code(|_, values| {
@@ -279,6 +280,7 @@ pub fn SegmentedControlPage() -> Element {
                             status: field.status,
                             required: is_on(&values, "required").then_some(true),
                             disabled: is_on(&values, "disabled").then_some(true),
+                            readonly: is_on(&values, "readonly").then_some(true),
                             option_label: match values.str("labels").as_str() {
                                 "renamed" => Some(Callback::new(renamed)),
                                 "rich" => Some(Callback::new(rich)),

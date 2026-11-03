@@ -537,6 +537,7 @@ pub fn PhoneField(props: PhoneFieldProps) -> Element {
         .attr("id", field.id().to_string())
         .attr("aria-describedby", describedby)
         .attr("aria-invalid", field.invalid().then_some("true"))
+        .attr("aria-busy", field.busy().then_some("true"))
         .attr("aria-required", required.then_some("true"));
 
     let entry = Entry {

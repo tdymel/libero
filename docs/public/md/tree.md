@@ -149,7 +149,7 @@ Like every component, `Tree` also takes the shared props `sx`, `class`, `style`,
 |---|---|---|---|
 | `id` | `String` | required | The node's unique id. |
 | `data` | `T` | required | Your data for this node. |
-| `children` | `Vec<TreeNode<T>>` | - | Nested nodes. Without any, the node is a leaf, so a branch whose children load later holds a disabled placeholder row, such as "Loading…", until then. `onexpandedchange` says when the branch opens, and a focused placeholder hands focus to the first loaded row. |
+| `children` | `Vec<TreeNode<T>>` | - | Nested nodes. Without any, the node is a leaf, so a branch whose children load later holds a stand-in child until then. `onexpandedchange` says when the branch opens; keep it out of `expanded` while it fetches, so the stand-in never shows, and add it once the children arrive. |
 | `disabled` | `bool` | `false` | The arrow keys still reach it, but it does not activate, expand, collapse, select or check. Its descendants are disabled too. |
 
 ### `TreeNodeRenderArgs<T>`

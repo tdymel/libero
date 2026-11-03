@@ -411,6 +411,7 @@ pub fn SliderPage() -> Element {
                     }),
                     Control::switch("required"),
                     Control::switch("disabled"),
+                    Control::switch("readonly"),
                 ],
                 render: move |values: DemoValues| {
                     rsx! {
@@ -456,6 +457,7 @@ pub fn SliderPage() -> Element {
                                     },
                                     required: is_on(&values, "required").then_some(true),
                                     disabled: is_on(&values, "disabled").then_some(true),
+                                    readonly: is_on(&values, "readonly").then_some(true),
                                     preview_on_hover: is_on(&values, "preview_on_hover"),
                                     oninput: move |event: SliderChangeEvent<Quality>| {
                                         quality.set(event.value());
@@ -502,6 +504,7 @@ pub fn SliderPage() -> Element {
                                     },
                                     required: is_on(&values, "required").then_some(true),
                                     disabled: is_on(&values, "disabled").then_some(true),
+                                    readonly: is_on(&values, "readonly").then_some(true),
                                     preview_on_hover: is_on(&values, "preview_on_hover"),
                                     oninput: move |event: SliderChangeEvent| {
                                         volume.set(event.value());

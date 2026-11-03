@@ -407,6 +407,7 @@ pub fn MultiSelectPage() -> Element {
                     Control::switch("clearable"),
                     Control::switch("required"),
                     Control::switch("disabled"),
+                    Control::switch("readonly"),
                 ]].concat(),
                 render: move |values: DemoValues| {
                     let field = field_props::<ToppingsCopy>(&values);
@@ -432,6 +433,7 @@ pub fn MultiSelectPage() -> Element {
                         clearable: (values.str("clearable") == "true").then_some(true),
                         required: (values.str("required") == "true").then_some(true),
                         disabled: (values.str("disabled") == "true").then_some(true),
+                        readonly: (values.str("readonly") == "true").then_some(true),
                         placeholder: "Pick toppings",
                         value: value(),
                         onchange: move |next| value.set(next),

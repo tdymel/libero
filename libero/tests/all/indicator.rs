@@ -154,7 +154,7 @@ fn the_reduced_motion_guard_uses_the_ping_selector() {
 
     assert!(
         html.contains(&format!(
-            "@media (prefers-reduced-motion: reduce){{{selector}{{animation:none;}}"
+            "@media (prefers-reduced-motion: reduce){{{selector}{{animation:none;opacity:0.35;transform:scale(1.8);}}"
         )),
         "{html}"
     );

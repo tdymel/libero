@@ -132,6 +132,7 @@ pub fn TextareaPage() -> Element {
                     }),
                     Control::switch("required"),
                     Control::switch("disabled"),
+                    Control::switch("readonly"),
                 ]].concat(),
                 render: move |values: DemoValues| {
                     let field = field_props::<NotesCopy>(&values);
@@ -152,6 +153,7 @@ pub fn TextareaPage() -> Element {
                             .then(|| "Start typing".to_string()),
                         required: (values.str("required") == "true").then_some(true),
                         disabled: (values.str("disabled") == "true").then_some(true),
+                        readonly: (values.str("readonly") == "true").then_some(true),
                         counter: values.str("counter") == "true",
                         maxlength: (values.str("counter") == "true").then_some(200),
                         value: value(),

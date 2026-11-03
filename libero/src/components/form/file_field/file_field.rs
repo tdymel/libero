@@ -362,6 +362,8 @@ pub fn FileField(props: FileFieldProps) -> Element {
     // they would otherwise hold while `field.render` consumes it.
     let (labelledby, describedby, invalid) =
         (field.label_id(), field.describedby(), field.invalid());
+    // An async rule still asking is busy too, without the upload's loader.
+    let busy = loading || field.busy();
 
     let (remove_at, drop_at) = use_removals(&value, editable, emit, owed);
 
@@ -432,7 +434,7 @@ pub fn FileField(props: FileFieldProps) -> Element {
         required,
         interactive,
         editable,
-        loading,
+        loading: busy,
         open,
         // A dropzone has no chips - its cards are ordinary tab stops outside
         // the group - so its button only ever opens.
@@ -492,7 +494,7 @@ pub fn FileField(props: FileFieldProps) -> Element {
                 describedby,
                 invalid,
                 surface,
-                loading,
+                loading: busy,
                 has_files,
             },
             input,

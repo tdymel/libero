@@ -311,6 +311,7 @@ pub fn PinField(props: PinFieldProps) -> Element {
         .attr("aria-labelledby", field.label_id())
         .attr("aria-describedby", field.describedby())
         .attr("aria-invalid", field.invalid().then_some("true"))
+        .attr("aria-busy", field.busy().then_some("true"))
         .element(&root)
         .render(HtmlTag::Div, props.attributes, children);
 

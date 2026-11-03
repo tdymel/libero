@@ -141,7 +141,7 @@ base_props! {
         /// Fill of the current page.
         #[props(default, into)]
         color: Input<ThemeAwareValue>,
-        /// Disables every control at once, as `aria-disabled`: focus stays where it is.
+        /// Disables every control at once, as `aria-disabled` out of the Tab order: focus stays where it is.
         #[props(default)]
         disabled: Option<bool>,
         /// The page numbers. On by default; `false` leaves the arrows, for a "Page 3 of 10" of your own.
@@ -320,8 +320,6 @@ pub fn Pagination(props: PaginationProps) -> Element {
                     size,
                     radius: radius.clone(),
                     disabled: disabled || at_end,
-                    // An end arrow stays natively disabled; the focus repair covers it.
-                    focusable: disabled,
                     onarrow,
                 }
             }
@@ -418,7 +416,6 @@ fn PaginationArrow(
     size: Size,
     radius: String,
     disabled: bool,
-    focusable: bool,
     onarrow: Callback<PaginationLabel>,
 ) -> Element {
     let (slot, icon) = match label {
@@ -440,7 +437,6 @@ fn PaginationArrow(
             size: PAGINATION_CONTROL_SIZE.value(size),
             radius,
             disabled,
-            focusable_when_disabled: focusable,
             onclick: move |_| {
                 if !disabled {
                     onarrow.call(label)
@@ -493,8 +489,9 @@ fn page_button(
         .attr("type", "button")
         .attr("aria-label", label)
         .attr("aria-current", current.then_some("page"))
-        // Soft: a native `disabled` would drop the focused button's focus to the page.
+        // Soft, out of the Tab order as `Button` (todo 3838): a native `disabled` drops its focus.
         .attr("aria-disabled", disabled.then_some("true"))
+        .attr("tabindex", disabled.then_some("-1"))
         .event("onclick", move |_: Event<MouseData>| {
             // The current page is no change: no `onchange`, like Select's same-value pick.
             if !disabled && !current {

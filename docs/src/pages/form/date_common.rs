@@ -63,6 +63,7 @@ pub fn field_controls() -> Vec<Control> {
         }),
         Control::switch("required"),
         Control::switch("disabled"),
+        Control::switch("readonly"),
     ]
 }
 

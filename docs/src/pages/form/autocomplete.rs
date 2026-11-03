@@ -7,7 +7,10 @@ use crate::components::{
 use dioxus::prelude::*;
 use libero::components::FieldPart;
 use libero::{
-    components::{Autocomplete, AutocompleteFilterArgs, AutocompleteOptionArgs, Code, Flex, Text},
+    components::{
+        Autocomplete, AutocompleteFilterArgs, AutocompleteOptionArgs, Code, Flex, OptionList,
+        OptionSource, Text,
+    },
     sx::sx,
     use_theme,
 };
@@ -35,6 +38,24 @@ const CITIES: [(&str, &str); 6] = [
     ("Copenhagen", "Denmark"),
     ("Cologne", "Germany"),
 ];
+
+fn loading_options(values: &DemoValues) -> bool {
+    values.str("loading_options") == "true"
+}
+
+/// The snippet with a fetch still out: `cities()` gives way to the pending list.
+fn pending_source(source: &str) -> String {
+    source
+        .split_inclusive('\n')
+        .map(|line| match line.trim() == "options: cities()," {
+            true => {
+                let indent = &line[..line.len() - line.trim_start().len()];
+                format!("{indent}options: None::<OptionList<String>>,\n{indent}loading_label: \"Loading cities\",\n")
+            }
+            false => line.to_string(),
+        })
+        .collect()
+}
 
 fn cities() -> Vec<String> {
     CITIES.iter().map(|(city, _)| city.to_string()).collect()
@@ -222,7 +243,11 @@ pub fn AutocompletePage() -> Element {
                 children_text: "",
                 // `country` only exists in the snippet while the rows or the
                 // pick handler call it.
-                wrap: Wrap(|_values: &DemoValues, source: &str| {
+                wrap: Wrap(|values: &DemoValues, source: &str| {
+                    let source = match loading_options(values) {
+                        true => pending_source(source),
+                        false => source.to_string(),
+                    };
                     format!("{}\n\n{source}", FILE.section("cities"))
                 }),
                 fixed: vec![
@@ -265,6 +290,9 @@ pub fn AutocompletePage() -> Element {
                         ],
                         _ => vec![],
                     }),
+                    // A fetch that has not answered: the loader, `aria-busy` and the loading label.
+                    // Prints through `wrap`, in place of the fixed `options: cities()`.
+                    Control::switch("loading_options").code(|_, _| vec![]),
                     Control::switch("clearable"),
                     Control::switch("open_on_focus").code(|_, values| match values.str("open_on_focus").as_str() {
                         "true" => vec!["open_on_focus: true".to_string()],
@@ -307,7 +335,11 @@ pub fn AutocompletePage() -> Element {
                         disabled: (values.str("disabled") == "true").then_some(true),
                         readonly: (values.str("readonly") == "true").then_some(true),
                         placeholder: "Start typing",
-                        options: cities(),
+                        options: match loading_options(&values) {
+                            true => OptionSource::from(None::<OptionList<String>>),
+                            false => cities().into(),
+                        },
+                        loading_label: loading_options(&values).then(|| "Loading cities".to_string()),
                         value: value(),
                         oninput: move |next| value.set(next),
                     }

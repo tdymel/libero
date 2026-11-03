@@ -7,8 +7,8 @@ use crate::components::{
 use dioxus::prelude::*;
 use libero::{
     components::{
-        Button, Code, Flex, SvgData, Text, Tree, TreeItem, TreeLabel, TreeNode, TreeNodeRenderArgs,
-        TreePart,
+        Button, Code, Flex, Loader, SvgData, Text, Tree, TreeItem, TreeLabel, TreeNode,
+        TreeNodeRenderArgs, TreePart,
     },
     hooks::use_timeout,
     sx::sx,
@@ -118,8 +118,8 @@ fn file_icon(entry: &FileEntry, expanded: Option<bool>) -> SvgData {
 /// The page's own source: the printed parts are cut from its live demo.
 const FILE: DemoFile = DemoFile(include_str!("tree.rs"));
 
-/// A branch whose children have not arrived holds a disabled "Loading…" row,
-/// which keeps it a branch.
+/// A branch whose children have not arrived holds a stand-in child, which keeps it a branch.
+/// It never shows: the branch stays shut until the children come.
 fn lazy_file_tree(loaded: &HashSet<String>) -> Vec<TreeNode<FileEntry>> {
     fn hold(node: TreeNode<FileEntry>, loaded: &HashSet<String>) -> TreeNode<FileEntry> {
         let children = match (node.children.is_empty(), loaded.contains(&node.id)) {
@@ -141,6 +141,9 @@ fn lazy_file_tree(loaded: &HashSet<String>) -> Vec<TreeNode<FileEntry>> {
         .collect()
 }
 
+/// The comment over the row's loader, dropped with it when lazy loading is off.
+const LOADER_MARK: &str = "Silent: the status below";
+
 fn lazy(values: &DemoValues) -> bool {
     values.str("lazy_loading") == "true"
 }
@@ -157,8 +160,16 @@ fn fixed() -> Vec<String> {
 
 /// The expansion is the page's state, not `Tree`'s, so the buttons and the
 /// readout are part of the example. Lazy loading swaps the buttons for its
-/// fetch state.
+/// fetch state, and only it prints the row's loader.
 fn wrap_selection(values: &DemoValues, code: &str) -> String {
+    let code = match lazy(values) {
+        true => code.to_string(),
+        false => code
+            .split_inclusive('\n')
+            .filter(|line| !line.contains(LOADER_MARK) && !line.contains("pending.read()"))
+            .collect(),
+    };
+    let code = code.as_str();
     let (buttons, status) = match lazy(values) {
         true => (
             String::new(),
@@ -253,14 +264,19 @@ pub fn TreePage() -> Element {
     let fetch = use_timeout(
         move || {
             let arrived = pending.take();
-            loaded.write().extend(arrived);
+            loaded.write().extend(arrived.iter().cloned());
+            lazy_expanded.write().extend(arrived);
         },
         800,
     );
-    let mut on_lazy_expand = move |next: HashSet<String>| {
+    let mut on_lazy_expand = move |mut next: HashSet<String>| {
         let opened = next.iter().filter(|id| !loaded.read().contains(*id));
         let opened: Vec<String> = opened.cloned().collect();
         if !opened.is_empty() {
+            // Shut while it fetches, so no stand-in row shows; it opens once the children arrive.
+            for id in &opened {
+                next.remove(id);
+            }
             pending.write().extend(opened);
             fetch.start();
         }
@@ -323,7 +339,7 @@ pub fn TreePage() -> Element {
                 props("TreeNode<T>", vec![
                     prop("id", "String").default("required").doc("The node's unique id."),
                     prop("data", "T").default("required").doc("Your data for this node."),
-                    prop("children", "Vec<TreeNode<T>>").doc("Nested nodes. Without any, the node is a leaf, so a branch whose children load later holds a disabled placeholder row, such as \"Loading…\", until then. `onexpandedchange` says when the branch opens, and a focused placeholder hands focus to the first loaded row."),
+                    prop("children", "Vec<TreeNode<T>>").doc("Nested nodes. Without any, the node is a leaf, so a branch whose children load later holds a stand-in child until then. `onexpandedchange` says when the branch opens; keep it out of `expanded` while it fetches, so the stand-in never shows, and add it once the children arrive."),
                     prop("disabled", "bool").default("false").doc("The arrow keys still reach it, but it does not activate, expand, collapse, select or check. Its descendants are disabled too."),
                 ]).without_base_props(),
                 props("TreeNodeRenderArgs<T>", vec![
@@ -396,10 +412,11 @@ pub fn TreePage() -> Element {
                     Code { source: "expanded" }
                     " paired with "
                     Code { source: "onexpandedchange" }
-                    ", as here. To load a branch's children when it opens, give it a disabled "
-                    "placeholder row and swap in the children from "
-                    Code { source: "onexpandedchange" }
-                    ", as the lazy loading switch shows."
+                    ", as here. To load a branch's children when it opens, give it a stand-in child so it "
+                    "stays a branch, keep it shut with a "
+                    Code { source: "Loader" }
+                    " in its row and a polite status while they load, then open it with the children, as "
+                    "the lazy loading switch shows."
                 }
             },
             // snippet: item #[derive(Clone, PartialEq)] struct FileEntry { name: &'static str }
@@ -410,6 +427,7 @@ pub fn TreePage() -> Element {
             // snippet: item use std::collections::HashSet;
             // snippet: item fn folders() -> HashSet<String> { HashSet::new() }
             // snippet: let mut current = use_signal(|| None::<String>);
+            // snippet: let pending = use_signal(HashSet::<String>::new);
             // snippet: let mut expanded = use_signal(folders);
             // snippet: let mut picked = use_signal(|| HashSet::from(["src/lib.rs".to_string()]));
             // snippet: let mut checks = use_signal(|| HashSet::from(["src/components/list.rs".to_string()]));
@@ -476,6 +494,8 @@ pub fn TreePage() -> Element {
                                     TreeItem {
                                         onclick: move |_| current.set(Some(id.clone())),
                                         icon: file_icon(&args.data, args.expanded),
+                                        // Silent: the status below says what is loading.
+                                        trailing: pending.read().contains(&args.id).then(|| rsx! { Loader { size: "xs" } }),
                                         "{args.data.name}"
                                     }
                                 }

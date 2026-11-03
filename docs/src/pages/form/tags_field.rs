@@ -120,10 +120,11 @@ fn topic_row(o: TagsFieldOptionArgs) -> Element {
 // snippet: in TagsField { value: topics(), onchange: move |next| topics.set(next), suggestions: vec!["rust".to_string()], .. }
 const FILTER: &str = r#"filter: |args: TagsFieldFilterArgs| args.value.starts_with(args.query.trim().to_lowercase().as_str())"#;
 
-/// Printed while `empty` is on: drawn when the typed text matches no suggestion.
+/// Printed while `empty` is on: drawn when the typed text matches no suggestion. Its "Enter adds
+/// it" hint lives in `description`, which a screen reader hears too; the status says "No results".
 // snippet: let mut topics = use_signal(Vec::<String>::new);
 // snippet: in TagsField { value: topics(), onchange: move |next| topics.set(next), suggestions: vec!["rust".to_string()], .. }
-const EMPTY: &str = r#"empty: rsx! { Text { size: "sm", "No such topic. Enter adds it." } }"#;
+const EMPTY: &str = r#"empty: rsx! { Text { size: "sm", "No such topic." } }"#;
 
 /// Printed while `pending` is on: a fetch that has not answered yet.
 // snippet: let mut topics = use_signal(Vec::<String>::new);
@@ -174,6 +175,11 @@ fn offers(values: &DemoValues) -> bool {
 
 fn querying(values: &DemoValues) -> bool {
     values.str("onquery") == "true"
+}
+
+/// `empty` brings the description along: it holds the hint the empty state would show to sight alone.
+fn described(values: &DemoValues) -> bool {
+    values.str("description") == "true" || values.str("empty") == "true"
 }
 
 fn pending(values: &DemoValues) -> bool {
@@ -445,11 +451,9 @@ pub fn TagsFieldPage() -> Element {
                             _ => vec!["aria_label: \"Topics\"".to_string()],
                         }
                     }),
-                    Control::switch("description").code(|_, values| {
-                        match values.str("description").as_str() {
-                            "true" => vec!["description: \"Comma or Enter adds one.\"".to_string()],
-                            _ => vec![],
-                        }
+                    Control::switch("description").code(|_, values| match described(values) {
+                        true => vec!["description: \"Comma or Enter adds one.\"".to_string()],
+                        false => vec![],
                     }),
                     description_position_control(),
                     Control::switch("placeholder").default("true").code(|_, values| {
@@ -531,7 +535,7 @@ pub fn TagsFieldPage() -> Element {
                             radius: values.str("radius"),
                             label: (values.str("label") == "true").then(|| "Topics".to_string()),
                             aria_label: (values.str("label") != "true").then_some("Topics"),
-                            description: (values.str("description") == "true")
+                            description: described(&values)
                                 .then(|| "Comma or Enter adds one.".to_string()),
                             description_position: values.str("description_position"),
                             placeholder: (values.str("placeholder") == "true")
@@ -550,7 +554,7 @@ pub fn TagsFieldPage() -> Element {
                                 args.value.starts_with(args.query.trim().to_lowercase().as_str())
                             })),
                             empty: (values.str("empty") == "true")
-                                .then(|| rsx! { Text { size: "sm", "No such topic. Enter adds it." } }),
+                                .then(|| rsx! { Text { size: "sm", "No such topic." } }),
                             onquery: move |text: String| query.set(text),
                             prefiltered: querying(&values).then_some(true),
                             option: (values.str("option") == "true").then(|| Callback::new(topic_row)),

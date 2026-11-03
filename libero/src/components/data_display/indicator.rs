@@ -53,8 +53,8 @@ static INDICATOR_BASE_SX: StaticSx = StaticSx::new(|| {
             sx().outline(format!("{} solid Canvas", INDICATOR_BORDER_WIDTH.value())),
         );
 
-    // A copy behind the dot grows and fades. The reduced-motion guard sits on
-    // this same rule: anywhere else it loses on specificity.
+    // A copy behind the dot grows and fades; under reduced motion it holds still as a halo.
+    // The guard sits on this same rule: anywhere else it loses on specificity.
     let processing = sx().selector(
         "&::before",
         sx().content("\"\"")
@@ -67,7 +67,12 @@ static INDICATOR_BASE_SX: StaticSx = StaticSx::new(|| {
                 "lsx-indicator-processing {} linear infinite",
                 INDICATOR_PROCESSING_DURATION.value()
             ))
-            .media(REDUCED_MOTION, sx().animation("none"))
+            .media(
+                REDUCED_MOTION,
+                sx().animation("none")
+                    .opacity("0.35")
+                    .transform("scale(1.8)"),
+            )
             // Else forced to `Canvas`, invisible on the page.
             .media(FORCED_COLORS, sx().background("CanvasText")),
     );
