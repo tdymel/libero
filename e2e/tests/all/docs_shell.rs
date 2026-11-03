@@ -75,14 +75,18 @@ fn the_four_doc_tabs_fit_a_phone() {
 
 #[test]
 fn the_tab_row_copy_matches_the_docs() {
-    let item = |source: &'static str| {
-        let start = source.find("fn doc_tabs_sx(").expect("the copied fn");
+    let item = |source: &'static str, name: &str| {
+        let start = source.find(&format!("fn {name}(")).expect("the copied fn");
         &source[start..start + source[start..].find("\n}\n").expect("its end")]
     };
-    assert_eq!(
-        item(include_str!("../../fixtures/src/docs_shell.rs")),
-        item(include_str!("../../../docs/src/components/doc_page.rs")),
-    );
+    let copy = include_str!("../../fixtures/src/docs_shell.rs");
+    let docs = include_str!("../../../docs/src/components/doc_page.rs");
+    assert_eq!(item(copy, "doc_tabs_sx"), item(docs, "doc_tabs_sx"));
+    // The copy keeps only the web branch of `tight_tabs`: each of its lines is in the docs'.
+    let tight = item(docs, "tight_tabs");
+    for line in item(copy, "tight_tabs").lines().skip(1) {
+        assert!(tight.contains(line.trim()), "`tight_tabs` drifted: {line}");
+    }
 }
 
 /// The largest `scrollTop` in the fixture's area: whichever box scrolls.

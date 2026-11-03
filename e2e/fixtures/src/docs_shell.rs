@@ -288,6 +288,15 @@ fn page_layer_sx() -> Sx {
     )
 }
 
+/// The tab row, the container the tight tier keys off.
+const DOC_TABS: &str = "doc-tabs";
+
+/// The docs' `tight_tabs`, its web branch only: the fixtures have no native build.
+fn tight_tabs(nested: Sx) -> Sx {
+    sx().selector("& > [role=tablist]", sx().container(DOC_TABS))
+        .container_query(DOC_TABS, "(max-width: 38.75rem)", nested)
+}
+
 /// The tab row. Equal tabs that never shrink below icon and label: the tablist scrolls instead.
 /// Child combinators, or the Tabs page's demo strip matches too.
 fn doc_tabs_sx() -> Sx {
@@ -339,10 +348,8 @@ fn doc_tabs_sx() -> Sx {
             .with("background-attachment", "scroll, local, local, scroll, scroll"),
         ),
     )
-    // Tight columns drop the icons and tighten the tabs, so four fit (todo 5305). The sidebar
-    // keeps the column narrow up to this width, a phone's is 375px or 320px.
-    .media(
-        "(max-width: 64rem)",
+    // Tight columns drop the icons and tighten the tabs, so four fit (todo 5305).
+    .and(tight_tabs(
         sx().selector(
             "& > [role=tablist] > [role=tab]",
             sx().padding_inline("xs").font_size("1rem"),
@@ -351,7 +358,7 @@ fn doc_tabs_sx() -> Sx {
             "& > [role=tablist] > [role=tab] > [data-slot=icon]",
             sx().display("none"),
         ),
-    )
+    ))
     // 16px text in DejaVu needs a 362px phone (5339): this tier ends past it, with 375px still at 16px.
     .media(
         "(max-width: 23rem)",
